@@ -1,0 +1,48 @@
+name: verify
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+# A new commit on the same pull request cancels the run already in flight.
+concurrency:
+  group: verify-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    # No secrets, by design. The tests run against an in-process Postgres and
+    # never reach a real database or an external service.
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 11
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: pnpm
+
+      # Exactly the lockfile: the result must not change because a transitive
+      # dependency published a new version overnight.
+      - run: pnpm install --frozen-lockfile
+
+      - run: pnpm typecheck
+      - run: pnpm lint
+      - run: pnpm test
+      - run: pnpm check:dashes
+      - run: pnpm check:tokens
+
+      - name: openspec validate
+        # Pinned: an unpinned validator turns someone else's release into a
+        # red build on a pull request that touched nothing.
+        run: pnpm dlx @fission-ai/openspec@1.5.0 validate --all
+
+      - run: pnpm build
+
+      - run: pnpm exec playwright install --with-deps chromium
+      - run: pnpm e2e

@@ -1,0 +1,38 @@
+schema: spec-driven
+
+context: |
+  Veridia: plataforma white-label multi-tenant para cartorios (serventias extrajudiciais)
+  brasileiros. Um unico codebase e um unico deploy servem N serventias; cada uma tem seu dominio,
+  marca, conteudo e conjunto de secoes. Duas faces: site publico (identidade do cartorio) e painel
+  admin (estetica da plataforma, fixa, nunca tematizavel por cartorio).
+
+  Stack: Next 16 (App Router, TypeScript strict), Tailwind v4 CSS-first, PostgreSQL na Neon com
+  Drizzle, Route Handlers e Server Actions (sem NestJS), Better Auth com sessao em banco, Zod,
+  node --test e Playwright (sem Vitest), Biome, pnpm, Vercel em projeto unico, OpenSpec.
+
+  Principios inegociaveis:
+  - Customizacao e configuracao, nunca fork. Nada de codigo especifico de um cartorio.
+  - Regra de negocio vive em nucleo puro (src/core), sem framework e sem I/O. Next, Drizzle e
+    Better Auth sao transporte descartavel: chamam o nucleo, nunca contem a regra.
+  - Esconder botao nao e controle de acesso: checagem sempre no servidor.
+  - Design system separa estrutura (fixa) de marca (varia por tenant). Nenhum hex fora de @theme.
+  - Gating de secoes e por atribuicao legal apenas. Nao existe plano comercial nem entitlement.
+  - Migracao destrutiva de banco exige dois deploys (expand, depois contract).
+
+  Convencao de idioma: codigo 100% em ingles (identificadores, arquivos, comentarios, commits,
+  nomes de teste), sem hibrido do tipo temaVars. Specs e propostas em portugues. Texto visivel ao
+  usuario em portugues, vindo de config, nunca hardcoded. Siglas oficiais de atribuicao (RCPN,
+  NOTAS, RI, PROTESTO, RTD, RCPJ) e slugs de tenant permanecem como estao.
+
+  Glossario obrigatorio: cartorio/serventia = tenant, atribuicao = attribution, ato = act,
+  emolumento = emolument, fundos = funds, custas = fees, pedido de servico = serviceRequest,
+  protocolo = protocolNumber, exigencia = requirement, certidao = certificate, edital =
+  publicNotice, proclamas = marriageBanns, ouvidoria = ombudsman, selo digital = digitalSeal,
+  encarregado/DPO = dpo, marca = brand, rascunho/publicado = draft/published, auditoria = auditLog.
+
+rules:
+  proposal:
+    - Sempre incluir secao de nao-objetivos explicita
+  tasks:
+    - Cada fluxo e escrito do zero. O sistema anterior (cartorio-marinho) e referencia de
+      comportamento para conferir regra de negocio, nunca fonte de copia de codigo.
