@@ -3,6 +3,7 @@ import { drizzleAdapter } from "better-auth/adapters/drizzle";
 import { nextCookies } from "better-auth/next-js";
 // Relative imports, not the "@/" alias: the seed script runs this module
 // under plain node, which does not read tsconfig paths.
+import { isRegisteredHost } from "../core/tenant/resolve.ts";
 import * as authSchema from "../db/auth-schema.ts";
 import { db } from "../db/index.ts";
 
@@ -19,6 +20,18 @@ export const auth = betterAuth({
   database: drizzleAdapter(db, { provider: "pg", schema: authSchema }),
   secret,
   baseURL: process.env.BETTER_AUTH_URL,
+  // Every office answers on its own domain, so a single trusted origin taken
+  // from BETTER_AUTH_URL would break the login on every other one. Trust the
+  // request's own origin, and only when its host is a registered office.
+  trustedOrigins: (request) => {
+    const origin = request?.headers.get("origin");
+    if (!origin) return [];
+    try {
+      return isRegisteredHost(new URL(origin).hostname) ? [origin] : [];
+    } catch {
+      return [];
+    }
+  },
   emailAndPassword: {
     enabled: true,
     // No public sign up: panel users are created by seed or internal invite.

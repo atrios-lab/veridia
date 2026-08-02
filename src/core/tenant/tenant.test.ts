@@ -1,7 +1,12 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 import { enabledSections, isSectionEnabled, noticeSectors } from "./gating.ts";
-import { normalizeHost, resolveTenant, TENANTS } from "./resolve.ts";
+import {
+  isRegisteredHost,
+  normalizeHost,
+  resolveTenant,
+  TENANTS,
+} from "./resolve.ts";
 import { parseTenant, type Tenant } from "./schema.ts";
 import { tabelionatoAurora } from "./tenants/aurora.ts";
 import { cartorioMarinho } from "./tenants/marinho.ts";
@@ -49,6 +54,15 @@ test("host resolves through case, port and www", () => {
     assert.equal(resolveTenant(host, MISSING).slug, "cartorio-marinho", host);
   }
   assert.equal(normalizeHost("WWW.Example.COM:8080"), "example.com");
+});
+
+test("only a registered host is recognized as ours", () => {
+  assert.ok(isRegisteredHost("cartorioielmomarinhorn.com"));
+  assert.ok(isRegisteredHost("WWW.TabelionatoAurora.com.br"));
+  assert.ok(isRegisteredHost("aurora.localhost"));
+  assert.equal(isRegisteredHost("cartorioielmomarinhorn.com.evil.test"), false);
+  assert.equal(isRegisteredHost(""), false);
+  assert.equal(isRegisteredHost(undefined), false);
 });
 
 test("unknown host falls back to the default office", () => {

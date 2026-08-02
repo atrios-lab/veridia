@@ -21,6 +21,12 @@ const HOST_MAP: Record<string, string> = Object.fromEntries(
   ),
 );
 
+/** True when the host belongs to a registered office. */
+export function isRegisteredHost(host: string | undefined): boolean {
+  const normalized = normalizeHost(host);
+  return normalized !== "" && normalized in HOST_MAP;
+}
+
 /**
  * Resolves the office from the request host, falling back to the default slug
  * when the host is not mapped. A broken fallback throws instead of silently

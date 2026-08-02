@@ -1,12 +1,24 @@
+import { existsSync } from "node:fs";
 import { defineConfig } from "drizzle-kit";
+
+// drizzle-kit does not read .env.local on its own, and Next does. Loading it
+// here is what keeps one environment file for the whole project instead of
+// two that drift apart. In the deploy the variable comes from the platform
+// and the file is simply absent.
+if (existsSync(".env.local")) process.loadEnvFile(".env.local");
+
+const url = process.env.DATABASE_URL;
+if (!url) {
+  throw new Error(
+    "DATABASE_URL nao esta definida. Preencha em .env.local com a URL da Neon.",
+  );
+}
 
 export default defineConfig({
   dialect: "postgresql",
   schema: ["./src/db/schema.ts", "./src/db/auth-schema.ts"],
   out: "./drizzle",
-  dbCredentials: {
-    url: process.env.DATABASE_URL ?? "",
-  },
+  dbCredentials: { url },
   // `generate` writes SQL for a human to review; `push` would apply a diff
   // straight to the database with no history. See docs/migrations.md.
   strict: true,
