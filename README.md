@@ -63,6 +63,24 @@ Um host não mapeado cai no `DEFAULT_TENANT`. Toda serventia nova precisa declar
 Uma serventia nova é um arquivo em `src/core/tenant/tenants/` mais uma linha no registro de
 `src/core/tenant/resolve.ts`. O teste de ponta a ponta passa a cobri-la sem nenhum caso novo.
 
+## Deploy
+
+As mesmas variáveis do `.env.local` precisam existir no ambiente do deploy. Sem elas o painel não
+sobe, e cada uma falha de um jeito diferente:
+
+| Faltando | O que acontece |
+| --- | --- |
+| `BETTER_AUTH_SECRET` | A aplicação não inicia. É proposital: um segredo padrão é o mesmo em toda instalação da biblioteca. |
+| `DATABASE_URL` | As páginas públicas funcionam, mas login e painel falham na primeira consulta. |
+| `DEFAULT_TENANT` | Host não mapeado cai no Cartório Marinho, que é o padrão embutido. |
+| `BETTER_AUTH_URL` | Opcional. Sem ela a biblioteca deduz a URL base da requisição, que é o que se quer num sistema com vários domínios. Se preencher, use o domínio real, não o do preview. |
+
+O `db:migrate` roda apontando para o banco de produção só no deploy de produção. Preview usa banco
+próprio ou nenhum. Ver [docs/migrations.md](docs/migrations.md).
+
+O login funciona em qualquer domínio: o do deploy, o de preview e o de cada serventia. Não é
+preciso declarar o domínio do deploy em lugar nenhum.
+
 ## Verificação
 
 O mesmo que o CI roda:
