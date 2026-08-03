@@ -21,6 +21,15 @@ const HOST_MAP: Record<string, string> = Object.fromEntries(
   ),
 );
 
+/**
+ * True when the slug names a registered office. Object.hasOwn, not "in":
+ * "constructor" and "toString" are on every object's prototype, and this
+ * predicate guards authorization.
+ */
+export function isRegisteredSlug(slug: string): boolean {
+  return Object.hasOwn(TENANTS, slug);
+}
+
 /** True when the host belongs to a registered office. */
 export function isRegisteredHost(host: string | undefined): boolean {
   const normalized = normalizeHost(host);

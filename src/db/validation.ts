@@ -1,9 +1,29 @@
 import { createInsertSchema, createSelectSchema } from "drizzle-zod";
 import { z } from "zod";
+import { isRegisteredSlug } from "../core/tenant/resolve.ts";
+import { user } from "./auth-schema.ts";
 import { auditLog, tenantBranding, tenantContent } from "./schema.ts";
 
 // One validation stack from the form to the database: the shape comes from
 // the table, and only the business rules are written by hand on top.
+
+/**
+ * An office slug that exists in the registry. There is no foreign key to lean
+ * on, because the registry is code and not a table, so this is where a typo
+ * gets caught: at the boundary, before a user nobody can sign in as is
+ * written to the database.
+ */
+export const registeredTenantSlugSchema = z
+  .string()
+  .min(1)
+  .refine(isRegisteredSlug, {
+    message: "Serventia nao existe no registro.",
+  });
+
+export const userInsertSchema = createInsertSchema(user, {
+  tenantSlug: () => registeredTenantSlugSchema,
+  email: (s) => s.min(1),
+});
 
 export const tenantBrandingSelectSchema = createSelectSchema(tenantBranding);
 export const tenantBrandingInsertSchema = createInsertSchema(tenantBranding, {

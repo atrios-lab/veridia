@@ -5,6 +5,7 @@ import { nextCookies } from "better-auth/next-js";
 // under plain node, which does not read tsconfig paths.
 import { isRegisteredHost, normalizeHost } from "../core/tenant/resolve.ts";
 import * as authSchema from "../db/auth-schema.ts";
+import { USER_ADDITIONAL_FIELDS } from "../db/auth-schema.ts";
 import { db } from "../db/index.ts";
 
 // A missing secret has to stop the process, not quietly fall back to a
@@ -50,13 +51,10 @@ export const auth = betterAuth({
     // unlinked endpoint is still an endpoint.
     disableSignUp: true,
   },
-  user: {
-    additionalFields: {
-      // Declared here only so the session carries it. What the role may do
-      // is decided in src/core/auth/roles.ts, never by the library.
-      role: { type: "string", input: false, defaultValue: "staff" },
-    },
-  },
+  // What the role may do, and which office it may act on, is decided in
+  // src/core/auth/roles.ts. These are declared only so the session carries
+  // them.
+  user: { additionalFields: USER_ADDITIONAL_FIELDS },
   session: {
     // Sessions live in the database. Revoking a row has to take effect on the
     // next request, so nothing may be cached in the cookie itself.

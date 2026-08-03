@@ -1,6 +1,8 @@
-// The auth library answers "who is this". What each role may do is decided
-// here, as pure functions, so replacing the library never means rewriting
-// authorization.
+import { isRegisteredSlug } from "../tenant/resolve.ts";
+
+// The auth library answers "who is this". What each role may do, and which
+// office they may do it in, is decided here, as pure functions, so replacing
+// the library never means rewriting authorization.
 
 export const ROLES = ["admin", "staff"] as const;
 export type Role = (typeof ROLES)[number];
@@ -27,4 +29,20 @@ export function isRole(value: string): value is Role {
 
 export function can(role: string, permission: Permission): boolean {
   return isRole(role) && ROLE_PERMISSIONS[role].includes(permission);
+}
+
+/**
+ * Whether a panel user may act on an office. A user belongs to exactly one,
+ * and no role widens that: the role says what the person does, this says
+ * where. Callers combine the two, so each one can report which failed.
+ *
+ * An orphan slug, one whose office left the registry, authorizes nothing.
+ * The failure mode has to be no access, never access to the wrong office.
+ */
+export function canAccessTenant(
+  userTenantSlug: string,
+  tenantSlug: string,
+): boolean {
+  if (!userTenantSlug || !isRegisteredSlug(userTenantSlug)) return false;
+  return userTenantSlug === tenantSlug;
 }

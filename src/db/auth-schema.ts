@@ -12,9 +12,26 @@ export const user = pgTable("user", {
   image: text("image"),
   // Business role, read by the pure authorization functions in src/core.
   role: text("role").notNull().default("staff"),
+  // The office this user belongs to, and the only one they may act on. It
+  // references the config as code registry in src/core/tenant, which is not a
+  // table, so there is no foreign key to declare. Not nullable: a user with no
+  // office is a state nobody would remember to handle.
+  tenantSlug: text("tenant_slug").notNull(),
   createdAt: timestamp("created_at").notNull().defaultNow(),
   updatedAt: timestamp("updated_at").notNull().defaultNow(),
 });
+
+/**
+ * The columns above that Better Auth does not know about on its own. It has
+ * to be told, or the adapter drops the value on insert and the session never
+ * carries it. Declared here, next to the columns, so the two cannot drift.
+ */
+export const USER_ADDITIONAL_FIELDS = {
+  role: { type: "string", input: false, defaultValue: "staff" },
+  // No default: which office a user belongs to is never a guess. It is set
+  // where the user is created, and validated against the registry there.
+  tenantSlug: { type: "string", input: false, required: true },
+} as const;
 
 export const session = pgTable("session", {
   id: text("id").primaryKey(),

@@ -16,6 +16,7 @@ import * as authSchema from "./auth-schema.ts";
 
 const MIGRATIONS_DIR = "drizzle";
 const CREDENTIALS = { email: "admin@exemplo.com", password: "senha-de-teste" };
+const TENANT = "cartorio-marinho";
 
 type Db = ReturnType<typeof drizzle<typeof authSchema>>;
 
@@ -24,6 +25,7 @@ function buildAuth(database: Db) {
     database: drizzleAdapter(database, { provider: "pg", schema: authSchema }),
     secret: "segredo-somente-de-teste-sem-valor-nenhum-fora-daqui",
     baseURL: "http://localhost:3000",
+    user: { additionalFields: authSchema.USER_ADDITIONAL_FIELDS },
     // Sign up is enabled here only to create the fixture. The application
     // config keeps it disabled; see src/lib/auth.ts.
     emailAndPassword: { enabled: true },
@@ -38,10 +40,11 @@ before(async () => {
   client = new PGlite();
   db = drizzle(client, { schema: authSchema });
 
-  // Running the committed SQL is also a smoke test of the migration itself.
-  for (const file of readdirSync(MIGRATIONS_DIR).filter((f) =>
-    f.endsWith(".sql"),
-  )) {
+  // Running the committed SQL is also a smoke test of the migrations. Sorted,
+  // because they only make sense applied in order.
+  for (const file of readdirSync(MIGRATIONS_DIR)
+    .filter((f) => f.endsWith(".sql"))
+    .sort()) {
     const sql = readFileSync(join(MIGRATIONS_DIR, file), "utf8");
     for (const statement of sql.split("--> statement-breakpoint")) {
       if (statement.trim()) await client.exec(statement);
@@ -50,8 +53,21 @@ before(async () => {
 
   auth = buildAuth(db);
 
-  await auth.api.signUpEmail({
-    body: { ...CREDENTIALS, name: "Administrador" },
+  // Created the way the seed creates users, not through sign up: sign up is
+  // disabled in the application and cannot set the office anyway.
+  const ctx = await auth.$context;
+  const created = await ctx.internalAdapter.createUser({
+    email: CREDENTIALS.email,
+    name: "Administrador",
+    emailVerified: true,
+    role: "admin",
+    tenantSlug: TENANT,
+  });
+  await ctx.internalAdapter.linkAccount({
+    userId: created.id,
+    providerId: "credential",
+    accountId: created.id,
+    password: await ctx.password.hash(CREDENTIALS.password),
   });
 });
 

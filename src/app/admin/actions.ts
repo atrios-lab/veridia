@@ -3,6 +3,7 @@
 import { APIError } from "better-auth/api";
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
+import { canAccessTenant } from "@/core/auth/roles.ts";
 import { recordAudit } from "@/lib/audit.ts";
 import { auth } from "@/lib/auth.ts";
 import { isRateLimited } from "@/lib/rate-limit.ts";
@@ -18,12 +19,14 @@ export async function signIn(formData: FormData) {
   const next = String(formData.get("next") ?? "/admin");
 
   let userId: string;
+  let userTenantSlug: string;
   try {
     const result = await auth.api.signInEmail({
       body: { email, password },
       headers: requestHeaders,
     });
     userId = result.user.id;
+    userTenantSlug = result.user.tenantSlug;
   } catch (error) {
     // One generic outcome for every failure. Telling the visitor which field
     // was wrong turns the login form into a list of valid e-mail addresses.
@@ -32,6 +35,25 @@ export async function signIn(formData: FormData) {
   }
 
   const tenant = await getTenant();
+
+  // The credential is valid, the office is not theirs. Ending the session
+  // here is what keeps a live cookie for the wrong office from existing at
+  // all, instead of leaving every future route to remember to check.
+  if (!canAccessTenant(userTenantSlug, tenant.slug)) {
+    await auth.api.signOut({ headers: requestHeaders });
+    await recordAudit({
+      tenantSlug: tenant.slug,
+      actorId: userId,
+      action: "session.denied-tenant",
+      targetType: "tenant",
+      targetId: tenant.slug,
+    });
+    // Same answer as a wrong password. Saying "that account belongs to
+    // another office" confirms the address exists and says where the person
+    // works.
+    redirect("/admin/login?erro=1");
+  }
+
   await recordAudit({
     tenantSlug: tenant.slug,
     actorId: userId,

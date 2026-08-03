@@ -8,6 +8,13 @@
       "when": 1785618625740,
       "tag": "0000_parallel_mariko_yashida",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1785693652395,
+      "tag": "0001_regular_human_torch",
+      "breakpoints": true
     }
   ]
 }
