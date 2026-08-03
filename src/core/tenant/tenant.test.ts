@@ -26,11 +26,16 @@ test("config missing a required field is rejected", () => {
   assert.throws(() => parseTenant(withoutCns));
 });
 
-test("registry holds at least two offices with different attributions", () => {
+test("the registry is never a single shape", () => {
   const offices = Object.values(TENANTS);
   assert.ok(offices.length >= 2);
+
+  // At least two different attribution sets have to exist: a registry of
+  // clones would never catch data leaking between offices. It does not
+  // require every office to be unique, because two of them legitimately
+  // share a set, and a new office must not have to be exotic to be added.
   const shapes = new Set(offices.map((t) => [...t.attributions].sort().join()));
-  assert.equal(shapes.size, offices.length);
+  assert.ok(shapes.size >= 2);
 });
 
 test("mapped host resolves the office", () => {
