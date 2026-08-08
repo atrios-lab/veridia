@@ -15,10 +15,10 @@ export interface AdminNavItem {
  * The sidebar, as data.
  *
  * Only routes that exist in the application are listed. The approved design
- * shows eight items across three groups, and six of them point at screens
- * this repository does not have yet: a menu entry that leads to a 404 spends
- * more of the registrar's trust than a short sidebar saves. Each delivery
- * adds its own line here when its screen lands.
+ * shows nine items across three groups, and one of them (Usuários) points at
+ * a screen this repository does not have yet: a menu entry that leads to a
+ * 404 spends more of the registrar's trust than a short sidebar saves. Each
+ * delivery adds its own line here when its screen lands.
  *
  * The permission field only decides what is *offered*. Hiding a link is a
  * courtesy, never the access check: the route behind it checks for itself.
@@ -36,6 +36,27 @@ export const ADMIN_NAV: readonly AdminNavItem[] = [
     href: "/admin/pedidos",
     icon: "inbox",
     permission: "requests.manage",
+  },
+  {
+    group: "Canais do cidadão",
+    label: "Requerimentos LGPD",
+    href: "/admin/lgpd",
+    icon: "shield",
+    permission: "channels.manage",
+  },
+  {
+    group: "Canais do cidadão",
+    label: "Ouvidoria",
+    href: "/admin/ouvidoria",
+    icon: "megaphone",
+    permission: "channels.manage",
+  },
+  {
+    group: "Canais do cidadão",
+    label: "Agenda de atendimentos",
+    href: "/admin/agenda",
+    icon: "calendar",
+    permission: "channels.manage",
   },
   {
     group: "Canais do cidadão",

@@ -23,6 +23,7 @@ import {
   type RequestKind,
   type ServiceRequestStatus,
   TERMINAL_SERVICE_REQUEST_STATUSES,
+  TERMINAL_STATUSES,
 } from "@/core/request/kinds.ts";
 import { formatProtocolNumber } from "@/core/request/protocol.ts";
 import type { IsoDate } from "@/core/scheduling/calendar.ts";
@@ -209,6 +210,186 @@ export async function appointmentOccupancy(
   return occupancy;
 }
 
+/**
+ * Sends the office's answer to a record's citizen — the same two columns
+ * (`officeReply`/`officeRepliedAt`) the protocol consult and the registration
+ * lookup already read for `data-rights` and `ombudsman`. Any draft in
+ * `details.draftReply` is cleared: once the real answer is sent, keeping the
+ * draft around would be a second, stale copy of the same text.
+ */
+export async function respondToRecord(
+  tenantSlug: string,
+  id: string,
+  kind: RequestKind,
+  reply: string,
+  status: string,
+  actorId: string,
+): Promise<void> {
+  await db
+    .update(serviceRequests)
+    .set({
+      officeReply: reply,
+      officeRepliedAt: new Date(),
+      status,
+      // The Postgres jsonb "remove key" operator: no need to read the row
+      // back first just to drop one field and write the rest unchanged.
+      details: sql`${serviceRequests.details} - 'draftReply'`,
+      updatedAt: new Date(),
+    })
+    .where(
+      and(
+        eq(serviceRequests.tenantSlug, tenantSlug),
+        eq(serviceRequests.id, id),
+      ),
+    );
+  await recordAudit({
+    tenantSlug,
+    actorId,
+    action: `${kind}.respond`,
+    targetType: kind,
+    targetId: id,
+  });
+}
+
+/**
+ * Moves a record of any kind to a new status — confirm, cancel or mark an
+ * appointment attended. Unlike `updateRequestStatus`, there is no closed list
+ * to validate against here: each caller (one Server Action per button, same
+ * pattern as `/admin/pedidos`) already only ever passes a status that action
+ * means to set.
+ */
+export async function updateRecordStatus(
+  tenantSlug: string,
+  id: string,
+  kind: RequestKind,
+  status: string,
+  action: string,
+  actorId: string,
+): Promise<void> {
+  await db
+    .update(serviceRequests)
+    .set({ status, updatedAt: new Date() })
+    .where(
+      and(
+        eq(serviceRequests.tenantSlug, tenantSlug),
+        eq(serviceRequests.id, id),
+      ),
+    );
+  await recordAudit({
+    tenantSlug,
+    actorId,
+    action,
+    targetType: kind,
+    targetId: id,
+  });
+}
+
+/**
+ * The office proposing a different band than the one asked for. Merges the
+ * proposal into `details` (the date and band originally asked for stay put)
+ * and moves the status to `"proposed"` in the same write — the citizen's own
+ * consult (`acceptProposedSlot`) is what turns the proposal into the
+ * appointment.
+ */
+export async function proposeAppointmentSlot(
+  tenantSlug: string,
+  id: string,
+  date: string,
+  slotHour: number,
+  actorId: string,
+): Promise<void> {
+  const patch = JSON.stringify({
+    proposedDate: date,
+    proposedSlotHour: slotHour,
+    proposedAt: new Date().toISOString(),
+  });
+  await db
+    .update(serviceRequests)
+    .set({
+      status: "proposed",
+      details: sql`${serviceRequests.details} || ${patch}::jsonb`,
+      updatedAt: new Date(),
+    })
+    .where(
+      and(
+        eq(serviceRequests.tenantSlug, tenantSlug),
+        eq(serviceRequests.id, id),
+      ),
+    );
+  await recordAudit({
+    tenantSlug,
+    actorId,
+    action: "appointment.propose",
+    targetType: "appointment",
+    targetId: id,
+  });
+}
+
+/**
+ * Saves the office's answer in progress, without sending anything. Merges
+ * one key into `details` (the jsonb "concatenate" operator), leaving the
+ * kind's own fields (the right chosen, the manifestation type) untouched.
+ */
+export async function saveDraftReply(
+  tenantSlug: string,
+  id: string,
+  kind: RequestKind,
+  draftReply: string,
+  actorId: string,
+): Promise<void> {
+  await db
+    .update(serviceRequests)
+    .set({
+      details: sql`${serviceRequests.details} || ${JSON.stringify({ draftReply })}::jsonb`,
+      updatedAt: new Date(),
+    })
+    .where(
+      and(
+        eq(serviceRequests.tenantSlug, tenantSlug),
+        eq(serviceRequests.id, id),
+      ),
+    );
+  await recordAudit({
+    tenantSlug,
+    actorId,
+    action: `${kind}.draft`,
+    targetType: kind,
+    targetId: id,
+  });
+}
+
+/**
+ * The ombudsman-only note for a manifestation with no contact to answer to.
+ * Never sent anywhere, never read by the citizen's consult — see
+ * `ombudsmanDetailsSchema.internalNote`.
+ */
+export async function saveInternalNote(
+  tenantSlug: string,
+  id: string,
+  note: string,
+  actorId: string,
+): Promise<void> {
+  await db
+    .update(serviceRequests)
+    .set({
+      details: sql`${serviceRequests.details} || ${JSON.stringify({ internalNote: note })}::jsonb`,
+      updatedAt: new Date(),
+    })
+    .where(
+      and(
+        eq(serviceRequests.tenantSlug, tenantSlug),
+        eq(serviceRequests.id, id),
+      ),
+    );
+  await recordAudit({
+    tenantSlug,
+    actorId,
+    action: "ombudsman.internal-note",
+    targetType: "ombudsman",
+    targetId: id,
+  });
+}
+
 /** Replaces the kind specific fields of a record, already parsed by the core. */
 export async function updateDetails(
   tenantSlug: string,
@@ -277,6 +458,56 @@ export async function listServiceRequests(
     .from(serviceRequests)
     .where(and(...conditions))
     .orderBy(desc(serviceRequests.createdAt));
+}
+
+/**
+ * Every record of one channel kind, newest first — the admin queue for
+ * agenda, ouvidoria and LGPD. Unlike `listServiceRequests`, there is no
+ * attribution filter: only `service-request` has an ato to filter by.
+ */
+export async function listRecordsByKind(
+  tenantSlug: string,
+  kind: RequestKind,
+  filters: { status?: string; search?: string } = {},
+) {
+  const conditions = [
+    eq(serviceRequests.tenantSlug, tenantSlug),
+    eq(serviceRequests.kind, kind),
+  ];
+  if (filters.status)
+    conditions.push(eq(serviceRequests.status, filters.status));
+  if (filters.search) {
+    const term = `%${filters.search}%`;
+    const match = or(
+      ilike(serviceRequests.protocolNumber, term),
+      ilike(serviceRequests.applicantName, term),
+    );
+    if (match) conditions.push(match);
+  }
+  return db
+    .select()
+    .from(serviceRequests)
+    .where(and(...conditions))
+    .orderBy(desc(serviceRequests.createdAt));
+}
+
+/** Records of one channel kind still open — the sidebar badge and the
+ * Visão geral counters. */
+export async function openCountByKind(
+  tenantSlug: string,
+  kind: RequestKind,
+): Promise<number> {
+  const [row] = await db
+    .select({ count: sql<number>`count(*)::int` })
+    .from(serviceRequests)
+    .where(
+      and(
+        eq(serviceRequests.tenantSlug, tenantSlug),
+        eq(serviceRequests.kind, kind),
+        notInArray(serviceRequests.status, [...TERMINAL_STATUSES[kind]]),
+      ),
+    );
+  return row?.count ?? 0;
 }
 
 /** Requests that still need the operator's attention — the sidebar badge. */
@@ -652,6 +883,40 @@ export async function listRequestHistory(
       and(
         eq(auditLog.tenantSlug, tenantSlug),
         eq(auditLog.targetType, "service-request"),
+        or(
+          eq(auditLog.targetId, requestId),
+          eq(auditLog.targetId, protocolNumber),
+        ),
+      ),
+    )
+    .orderBy(desc(auditLog.createdAt));
+}
+
+/**
+ * The audit trail for one record of any kind. Generalises
+ * `listRequestHistory`, which hardcodes `targetType: "service-request"` —
+ * `createRecord` already audits every kind's creation under its own
+ * `targetType` (`"appointment"`, `"data-rights"`, `"ombudsman"`), so this is
+ * the same join, parameterised.
+ */
+export async function listRecordHistory(
+  tenantSlug: string,
+  kind: RequestKind,
+  requestId: string,
+  protocolNumber: string,
+): Promise<RequestHistoryEntry[]> {
+  return db
+    .select({
+      action: auditLog.action,
+      actorName: user.name,
+      createdAt: auditLog.createdAt,
+    })
+    .from(auditLog)
+    .leftJoin(user, eq(auditLog.actorId, user.id))
+    .where(
+      and(
+        eq(auditLog.tenantSlug, tenantSlug),
+        eq(auditLog.targetType, kind),
         or(
           eq(auditLog.targetId, requestId),
           eq(auditLog.targetId, protocolNumber),

@@ -2,7 +2,10 @@ import assert from "node:assert/strict";
 import { test } from "node:test";
 import {
   isOpenServiceRequestStatus,
+  isOpenStatus,
   isServiceRequestStatus,
+  ombudsmanDetailsSchema,
+  parseDetails,
   SERVICE_REQUEST_STATUSES,
   statusLabel,
   suggestedNextStatuses,
@@ -37,4 +40,50 @@ test("suggested transitions match what the detail screen offers", () => {
     "cancelled",
   ]);
   assert.deepEqual(suggestedNextStatuses("archived"), []);
+});
+
+test("isOpenStatus counts everything short of each kind's terminal statuses", () => {
+  assert.ok(isOpenStatus("appointment", "requested"));
+  assert.ok(isOpenStatus("appointment", "proposed"));
+  assert.ok(isOpenStatus("appointment", "confirmed"));
+  assert.equal(isOpenStatus("appointment", "done"), false);
+  assert.equal(isOpenStatus("appointment", "cancelled"), false);
+
+  assert.ok(isOpenStatus("data-rights", "new"));
+  assert.equal(isOpenStatus("data-rights", "answered"), false);
+  assert.equal(isOpenStatus("data-rights", "cancelled"), false);
+
+  assert.ok(isOpenStatus("ombudsman", "new"));
+  assert.ok(isOpenStatus("ombudsman", "in-review"));
+  assert.equal(isOpenStatus("ombudsman", "answered"), false);
+  assert.equal(isOpenStatus("ombudsman", "done"), false);
+});
+
+test("isOpenStatus agrees with isOpenServiceRequestStatus for service requests", () => {
+  for (const status of SERVICE_REQUEST_STATUSES) {
+    assert.equal(
+      isOpenStatus("service-request", status),
+      isOpenServiceRequestStatus(status),
+    );
+  }
+});
+
+test("draft reply and internal note round-trip through details", () => {
+  const details = parseDetails("ombudsman", {
+    manifestationType: "complaint",
+    anonymous: true,
+    confidential: false,
+    draftReply: "rascunho",
+    internalNote: "nota interna",
+  });
+  assert.equal(details.draftReply, "rascunho");
+  assert.equal(details.internalNote, "nota interna");
+
+  const bare = ombudsmanDetailsSchema.parse({
+    manifestationType: "praise",
+    anonymous: false,
+    confidential: false,
+  });
+  assert.equal(bare.draftReply, undefined);
+  assert.equal(bare.internalNote, undefined);
 });
