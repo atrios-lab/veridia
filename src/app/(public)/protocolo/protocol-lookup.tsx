@@ -9,6 +9,7 @@ import {
 } from "@/core/request/channels.ts";
 import { formatShortDate } from "@/core/scheduling/calendar.ts";
 import { Icon } from "../_components/icon.tsx";
+import { ProtocolSearchButton } from "../_components/protocol-search-button.tsx";
 import { type AttachState, attachSignedForm } from "../solicitar/actions.ts";
 import {
   type AcceptProposalState,
@@ -174,17 +175,13 @@ export function ProtocolLookup({
               <input
                 id="numero"
                 name="numero"
+                required
                 defaultValue={initialNumber}
                 placeholder="REQ.2026.000148"
                 className="w-full bg-transparent py-3 text-sm text-brand-text outline-none placeholder:text-brand-faint"
               />
             </div>
-            <button
-              type="submit"
-              className="shrink-0 rounded-xl bg-brand-primary px-4 py-3 text-sm font-semibold text-white hover:bg-brand-primary-soft"
-            >
-              Consultar
-            </button>
+            <ProtocolSearchButton className="shrink-0 rounded-xl px-4 py-3" />
           </div>
         </form>
 
@@ -280,7 +277,7 @@ export function ProtocolLookup({
                     disabled={pending}
                     className="shrink-0 rounded-xl bg-brand-primary px-3.5 py-3 text-sm font-semibold text-white hover:bg-brand-primary-soft disabled:opacity-60"
                   >
-                    {pending ? "..." : "Ver detalhes"}
+                    {pending ? "Verificando…" : "Ver detalhes"}
                   </button>
                 </div>
                 <p className="mt-2 text-[11.5px] leading-relaxed text-brand-muted">

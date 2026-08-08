@@ -172,7 +172,7 @@ export async function attachSignedForm(
   if (await isRateLimited(await headers())) {
     return {
       status: "error",
-      message: "Muitos envios seguidos. Aguarde um minuto.",
+      message: "Muitos envios seguidos. Aguarde um minuto e tente de novo.",
     };
   }
 

@@ -60,6 +60,7 @@ export function ChatWidget({ tenant }: { tenant: Tenant }) {
   >(null);
   const [error, setError] = useState<string | null>(null);
   const [sending, setSending] = useState(false);
+  const [actionPending, setActionPending] = useState(false);
   const lastMessageAt = useRef<string | undefined>(undefined);
 
   // Restores a conversation the citizen already had, from a non-sensitive id
@@ -208,9 +209,14 @@ export function ChatWidget({ tenant }: { tenant: Tenant }) {
   async function sendMessage(formData: FormData) {
     if (!conversationId) return;
     setSending(true);
+    setError(null);
     try {
       const data = await postForm(`/api/chat/${conversationId}`, formData);
-      if (!data.error) await refreshConversation(conversationId);
+      if (data.error) {
+        setError("Não foi possível enviar. Tente de novo.");
+        return;
+      }
+      await refreshConversation(conversationId);
     } finally {
       setSending(false);
     }
@@ -218,22 +224,32 @@ export function ChatWidget({ tenant }: { tenant: Tenant }) {
 
   async function closeConversation() {
     if (!conversationId) return;
-    const formData = new FormData();
-    formData.set("intent", "close");
-    await postForm(`/api/chat/${conversationId}`, formData);
-    await refreshConversation(conversationId);
+    setActionPending(true);
+    try {
+      const formData = new FormData();
+      formData.set("intent", "close");
+      await postForm(`/api/chat/${conversationId}`, formData);
+      await refreshConversation(conversationId);
+    } finally {
+      setActionPending(false);
+    }
   }
 
   async function submitRating(formData: FormData) {
     if (!conversationId) return;
-    formData.set("intent", "rate");
-    await postForm(`/api/chat/${conversationId}`, formData);
-    window.localStorage.removeItem(CONVERSATION_ID_STORAGE_KEY);
-    setConversationId(null);
-    setConversation(null);
-    setMessages([]);
-    lastMessageAt.current = undefined;
-    setPanel({ kind: "closed" });
+    setActionPending(true);
+    try {
+      formData.set("intent", "rate");
+      await postForm(`/api/chat/${conversationId}`, formData);
+      window.localStorage.removeItem(CONVERSATION_ID_STORAGE_KEY);
+      setConversationId(null);
+      setConversation(null);
+      setMessages([]);
+      lastMessageAt.current = undefined;
+      setPanel({ kind: "closed" });
+    } finally {
+      setActionPending(false);
+    }
   }
 
   if (!available.enabled) return null;
@@ -287,6 +303,8 @@ export function ChatWidget({ tenant }: { tenant: Tenant }) {
               messages={messages}
               matchedProtocolNumber={matchedProtocolNumber}
               pending={sending}
+              error={error}
+              actionPending={actionPending}
               onSend={sendMessage}
               onGiveUp={closeConversation}
               onClose={closeConversation}
@@ -294,7 +312,11 @@ export function ChatWidget({ tenant }: { tenant: Tenant }) {
           )}
 
           {panel.kind === "rating" && (
-            <RatingView conversation={conversation} onSubmit={submitRating} />
+            <RatingView
+              conversation={conversation}
+              onSubmit={submitRating}
+              pending={actionPending}
+            />
           )}
         </div>
       )}
@@ -465,6 +487,8 @@ function ConversationView({
   messages,
   matchedProtocolNumber,
   pending,
+  error,
+  actionPending,
   onSend,
   onGiveUp,
   onClose,
@@ -473,6 +497,8 @@ function ConversationView({
   messages: MessageView[];
   matchedProtocolNumber: string | null;
   pending: boolean;
+  error: string | null;
+  actionPending: boolean;
   onSend: (formData: FormData) => void;
   onGiveUp: () => void;
   onClose: () => void;
@@ -500,9 +526,10 @@ function ConversationView({
         <button
           type="button"
           onClick={onGiveUp}
-          className="mt-1 rounded-[10px] border border-brand-border px-4 py-2 font-bold text-[12.5px] text-brand-muted"
+          disabled={actionPending}
+          className="mt-1 rounded-[10px] border border-brand-border px-4 py-2 font-bold text-[12.5px] text-brand-muted disabled:opacity-60"
         >
-          Desistir da espera
+          {actionPending ? "Saindo…" : "Desistir da espera"}
         </button>
       </div>
     );
@@ -547,13 +574,19 @@ function ConversationView({
           <Icon name="send" className="h-4 w-4" />
         </button>
       </form>
+      {error && (
+        <p className="bg-brand-card px-3.5 pb-2 text-center text-[11.5px] font-semibold text-red-700">
+          {error}
+        </p>
+      )}
       <div className="border-t border-brand-border bg-brand-card px-3.5 py-2.5 text-center">
         <button
           type="button"
           onClick={onClose}
-          className="text-[12px] font-semibold text-brand-faint underline"
+          disabled={actionPending}
+          className="text-[12px] font-semibold text-brand-faint underline disabled:opacity-60"
         >
-          Encerrar conversa
+          {actionPending ? "Encerrando…" : "Encerrar conversa"}
         </button>
       </div>
     </>
@@ -594,9 +627,11 @@ function MessageBubble({ message }: { message: MessageView }) {
 function RatingView({
   conversation,
   onSubmit,
+  pending,
 }: {
   conversation: ConversationView | null;
   onSubmit: (formData: FormData) => void;
+  pending: boolean;
 }) {
   const [rating, setRating] = useState(0);
 
@@ -659,10 +694,10 @@ function RatingView({
       </label>
       <button
         type="submit"
-        disabled={rating === 0}
+        disabled={rating === 0 || pending}
         className="rounded-xl bg-brand-primary py-3 text-center font-bold text-[14px] text-white disabled:opacity-50"
       >
-        Enviar avaliação
+        {pending ? "Enviando…" : "Enviar avaliação"}
       </button>
     </form>
   );

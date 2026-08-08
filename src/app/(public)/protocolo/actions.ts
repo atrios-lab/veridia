@@ -239,7 +239,7 @@ export async function acceptProposedSlot(
   if (await isRateLimited(await headers())) {
     return {
       status: "error",
-      message: "Muitas tentativas seguidas. Aguarde um minuto.",
+      message: "Muitas tentativas seguidas. Aguarde um minuto e tente de novo.",
     };
   }
 
@@ -304,7 +304,7 @@ export async function attachExtraDocument(
   if (await isRateLimited(await headers())) {
     return {
       status: "error",
-      message: "Muitos envios seguidos. Aguarde um minuto.",
+      message: "Muitos envios seguidos. Aguarde um minuto e tente de novo.",
     };
   }
 
@@ -356,7 +356,7 @@ export async function fulfillRequirementAction(
   if (await isRateLimited(await headers())) {
     return {
       status: "error",
-      message: "Muitos envios seguidos. Aguarde um minuto.",
+      message: "Muitos envios seguidos. Aguarde um minuto e tente de novo.",
     };
   }
 

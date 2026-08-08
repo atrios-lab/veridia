@@ -30,7 +30,9 @@ export async function signIn(formData: FormData) {
   } catch (error) {
     // One generic outcome for every failure. Telling the visitor which field
     // was wrong turns the login form into a list of valid e-mail addresses.
-    if (error instanceof APIError) redirect("/admin/login?erro=1");
+    if (error instanceof APIError) {
+      redirect(`/admin/login?erro=1&email=${encodeURIComponent(email)}`);
+    }
     throw error;
   }
 
@@ -51,7 +53,7 @@ export async function signIn(formData: FormData) {
     // Same answer as a wrong password. Saying "that account belongs to
     // another office" confirms the address exists and says where the person
     // works.
-    redirect("/admin/login?erro=1");
+    redirect(`/admin/login?erro=1&email=${encodeURIComponent(email)}`);
   }
 
   await recordAudit({

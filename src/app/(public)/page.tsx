@@ -15,6 +15,7 @@ import type { Section } from "@/core/tenant/schema.ts";
 import { livePublications } from "@/lib/publications.ts";
 import { getTenant } from "@/lib/tenant.ts";
 import { Icon, type IconName } from "./_components/icon.tsx";
+import { ProtocolSearchButton } from "./_components/protocol-search-button.tsx";
 
 // The home's own section shows only the most recent ones; there is no
 // listing page to send the rest to yet, so an unbounded list would just grow
@@ -149,12 +150,7 @@ export default async function Home() {
                       className="w-full bg-transparent text-sm text-brand-text outline-none placeholder:text-brand-faint md:text-[15px]"
                     />
                   </label>
-                  <button
-                    type="submit"
-                    className="rounded-[9px] bg-brand-primary px-4 py-2.5 text-sm font-semibold text-white hover:bg-brand-primary-soft md:px-6"
-                  >
-                    Consultar
-                  </button>
+                  <ProtocolSearchButton />
                 </form>
                 <p className="mt-2 text-[11px] text-brand-on-dark-muted md:text-xs">
                   <span className="md:hidden">

@@ -4,6 +4,7 @@ import { getSession } from "@/lib/session.ts";
 import { getTenant } from "@/lib/tenant.ts";
 import { AdminIcon } from "../_components/icon.tsx";
 import { PasswordField } from "../_components/password-field.tsx";
+import { SubmitButton } from "../_components/submit-button.tsx";
 import { signIn } from "../actions.ts";
 
 export const metadata = { title: "Entrar" };
@@ -34,10 +35,11 @@ export default async function LoginPage({
     next?: string;
     motivo?: string;
     saiu?: string;
+    email?: string;
   }>;
 }) {
   if (await getSession()) redirect("/admin");
-  const { erro, next, motivo, saiu } = await searchParams;
+  const { erro, next, motivo, saiu, email } = await searchParams;
   const tenant = await getTenant();
   const destination = next ?? "/admin";
   const limited = erro === "limite";
@@ -150,6 +152,7 @@ export default async function LoginPage({
                   name="email"
                   type="email"
                   required
+                  defaultValue={email ?? ""}
                   className="w-full rounded-lg border border-admin-input-border bg-admin-input-bg px-3.5 py-2.5 text-sm text-admin-text outline-none"
                 />
               </div>
@@ -158,13 +161,7 @@ export default async function LoginPage({
                 name="password"
                 autoComplete="current-password"
               />
-              <button
-                type="submit"
-                disabled={limited}
-                className="mt-1 rounded-lg bg-admin-primary-soft px-5 py-3 text-sm font-bold text-white disabled:cursor-not-allowed disabled:opacity-60"
-              >
-                {limited ? "Aguarde…" : "Entrar"}
-              </button>
+              <SubmitButton limited={limited} />
             </form>
           </div>
 
