@@ -17,6 +17,7 @@ export const cartorioMarinho: Tenant = parseTenant({
     email: "cartorioim@gmail.com",
   },
   openingHours: "Segunda a sexta, das 8h às 14h",
+  scheduling: { startHour: 8, endHour: 14, capacityPerSlot: 2 },
   owner: {
     name: "Maria Marreiro de Lima",
     status: "provido",
@@ -29,10 +30,16 @@ export const cartorioMarinho: Tenant = parseTenant({
     email: "joelison@cartorioielmomarinhorn.com",
   },
   issRate: 0.05, // 5%, municipality joined the national NFS-e portal
+  theme: "verde-dourado", // the office's own green and gold, kept from the redesign
+  heroImage: "/hero-home.jpg", // aerial photograph of Ielmo Marinho
+  home: { title: "Ofício Único de Ielmo Marinho / RN" }, // same text as `subtitle`, today's hero behavior
   logos: {
     light: "/logos/CM-Logo-preto.png",
     dark: "/logos/CM-Logo-branco.png",
-    seal: "/logos/CM-Sublogo-preto.png",
+    seal: {
+      light: "/logos/CM-Sublogo-preto.png",
+      dark: "/logos/CM-Sublogo-branco.png",
+    },
   },
   legalFooter:
     "Obedecendo à Lei de Acesso à Informação (LAI), Lei nº 12.527/2011, Ato normativo nº " +

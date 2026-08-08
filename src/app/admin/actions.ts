@@ -80,5 +80,5 @@ export async function signOut() {
     });
   }
   await auth.api.signOut({ headers: await headers() });
-  redirect("/admin/login");
+  redirect("/admin/login?saiu=1");
 }

@@ -4,8 +4,8 @@ import { TENANTS } from "../src/core/tenant/resolve.ts";
 
 // Parameterized over the registry, so a new office is covered the moment it
 // is registered, with no new test case to write. Structure only: which office
-// answers and which sections it exposes. Nothing visual is asserted here;
-// there is nothing to photograph until the design system lands.
+// answers and which sections it exposes. What the pages look like is asserted
+// in service-request.spec.ts, against the journey the redesign defines.
 
 const PORT = process.env.PORT ?? "3000";
 
@@ -31,7 +31,9 @@ for (const tenant of Object.values(TENANTS)) {
 
     test("the host serves this office", async ({ page }) => {
       await page.goto(baseURL);
-      await expect(page.locator("h1")).toHaveText(tenant.name);
+      // The hero leads with what the office is, which is the subtitle; the
+      // name is in the header and in the tab.
+      await expect(page.locator("h1")).toHaveText(tenant.subtitle);
       await expect(page).toHaveTitle(tenant.name);
     });
 
@@ -46,7 +48,8 @@ for (const tenant of Object.values(TENANTS)) {
     });
 
     test("the notice sectors match the attributions", async ({ page }) => {
-      await page.goto(baseURL);
+      // The sectors live on the notices page now, not on the home.
+      await page.goto(`${baseURL}/editais`);
       const rendered = await page
         .locator("[data-notice-sector]")
         .evaluateAll((nodes) =>
@@ -61,7 +64,7 @@ test("two hosts answer with two different offices", async ({ page }) => {
   const names: string[] = [];
   for (const tenant of Object.values(TENANTS)) {
     await page.goto(`http://${devHost(tenant.hosts)}:${PORT}`);
-    names.push((await page.locator("h1").textContent()) ?? "");
+    names.push((await page.locator("header").first().innerText()) ?? "");
   }
   expect(new Set(names).size).toBe(names.length);
 });
@@ -72,5 +75,5 @@ test("the admin panel is closed to a visitor without a session", async ({
   const tenant = Object.values(TENANTS)[0];
   await page.goto(`http://${devHost(tenant.hosts)}:${PORT}/admin`);
   await expect(page).toHaveURL(/\/admin\/login/);
-  await expect(page.locator("h1")).toHaveText("Entrar");
+  await expect(page.getByRole("heading", { name: "Entrar" })).toBeVisible();
 });

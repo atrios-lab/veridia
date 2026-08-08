@@ -16,6 +16,7 @@ export const tabelionatoAurora: Tenant = parseTenant({
     email: "contato@tabelionatoaurora.com.br",
   },
   openingHours: "Segunda a sexta, das 8h às 17h",
+  scheduling: { startHour: 8, endHour: 17, capacityPerSlot: 3 },
   owner: {
     name: "Antônio Bezerra da Silva",
     status: "interino",
@@ -25,10 +26,16 @@ export const tabelionatoAurora: Tenant = parseTenant({
     email: "dpo@tabelionatoaurora.com.br",
   },
   issRate: 0.03, // 3%, different municipality from the pilot
+  // A different theme from the pilot, on purpose: two offices sharing one
+  // palette would never catch the theme being hardcoded somewhere.
+  theme: "marinho-bronze",
   logos: {
     light: "/logos/CM-Logo-preto.png",
     dark: "/logos/CM-Logo-branco.png",
-    seal: "/logos/CM-Sublogo-preto.png",
+    seal: {
+      light: "/logos/CM-Sublogo-preto.png",
+      dark: "/logos/CM-Sublogo-branco.png",
+    },
   },
   legalFooter:
     "Obedecendo à Lei de Acesso à Informação (LAI), Lei nº 12.527/2011, Lei nº 13.709/2018 (LGPD) " +
@@ -36,4 +43,5 @@ export const tabelionatoAurora: Tenant = parseTenant({
   // Override on top of the gate: the office holds NOTAS, so protocol lookup
   // would be enabled, but it does not publish one yet.
   disabledSections: ["consulta-protocolo"],
+  home: { title: "2º Tabelionato de Notas de Aurora / RN" }, // same text as `subtitle`
 });

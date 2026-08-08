@@ -12,15 +12,20 @@ export const PERMISSIONS = [
   "content.edit",
   "content.publish",
   "branding.edit",
+  "billing.edit",
   "user.manage",
+  "requests.manage",
 ] as const;
 export type Permission = (typeof PERMISSIONS)[number];
 
 const ROLE_PERMISSIONS: Record<Role, readonly Permission[]> = {
   admin: PERMISSIONS,
-  // Staff drafts and edits, but publishing and user management stay with the
-  // office owner: those are the two actions nobody can undo quietly.
-  staff: ["admin.access", "content.edit"],
+  // Staff drafts and edits, but publishing, billing and user management stay
+  // with the office owner: those are the actions nobody can undo quietly, and
+  // the Pix key is where the citizen's money lands. Working the request
+  // queue is the opposite: it is staff's actual day job, so it is granted
+  // here too.
+  staff: ["admin.access", "content.edit", "requests.manage"],
 };
 
 export function isRole(value: string): value is Role {

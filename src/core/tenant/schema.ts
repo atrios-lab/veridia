@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { isValidPixKey, PixKeyTypeSchema } from "./pix.ts";
 
 // The six legal attributions of a Brazilian extrajudicial notary office.
 // Official acronyms, never translated: they are the legal identifiers.
@@ -19,6 +20,7 @@ export const SECTIONS = [
   "inicio",
   "dpo-lgpd",
   "pedidos",
+  "agendamento",
   "consulta-protocolo",
   "ouvidoria",
   "transparencia",
@@ -28,6 +30,21 @@ export const SECTIONS = [
 ] as const;
 export const SectionSchema = z.enum(SECTIONS);
 export type Section = z.infer<typeof SectionSchema>;
+
+// The visual themes an office may pick. Structure and journey are identical
+// across them: a theme only swaps the palette and the serif face, and both
+// live in the stylesheet. Registering an office is picking one of these, never
+// writing CSS. The values are theme identifiers, kept in Portuguese because
+// they name colours the registrar recognises.
+export const THEMES = [
+  "verde-dourado",
+  "marinho-bronze",
+  "vinho-perola",
+  "grafite-cobre",
+  "oliva-terracota",
+] as const;
+export const ThemeSchema = z.enum(THEMES);
+export type Theme = z.infer<typeof ThemeSchema>;
 
 export const OwnerStatusSchema = z.enum(["provido", "interino", "a confirmar"]);
 
@@ -44,6 +61,21 @@ export const TenantSchema = z.object({
     email: z.email(),
   }),
   openingHours: z.string().min(1),
+  // The same counter hours as the sentence above, in numbers, because the
+  // appointment bands need arithmetic and reading a number out of Portuguese
+  // prose breaks on the first office that writes it differently. The sentence
+  // stays: it is what the citizen reads.
+  scheduling: z
+    .object({
+      startHour: z.number().int().min(0).max(23).default(8),
+      endHour: z.number().int().min(1).max(24).default(14),
+      // How many appointments the office takes inside one hour long band.
+      capacityPerSlot: z.number().int().min(1).default(2),
+    })
+    .refine((s) => s.endHour > s.startHour, {
+      message: "A hora de encerramento tem de ser depois da de abertura.",
+    })
+    .default({ startHour: 8, endHour: 14, capacityPerSlot: 2 }),
   owner: z.object({
     name: z.string().min(1),
     status: OwnerStatusSchema,
@@ -56,15 +88,52 @@ export const TenantSchema = z.object({
   }),
   // ISS rate as a decimal (5% = 0.05). Municipal parameter, per office.
   issRate: z.number().min(0).max(1),
+  theme: ThemeSchema,
   logos: z.object({
     light: z.string().min(1), // logo for light backgrounds
     dark: z.string().min(1), // logo for dark backgrounds
-    seal: z.string().min(1), // sublogo, used as favicon and watermark
+    // Sublogo, used as favicon, watermark, and the admin login panel. Same
+    // light/dark split as the main logo above, for the same reason: the
+    // admin panel's institutional side is a fixed dark background, never the
+    // tenant's own theme.
+    seal: z.object({
+      light: z.string().min(1),
+      dark: z.string().min(1),
+    }),
+  }),
+  // Photograph behind the home hero. Optional: an office that has not sent
+  // one yet gets the plain gradient, which is a worse hero but never a
+  // broken one.
+  heroImage: z.string().min(1).optional(),
+  // The two lines of text on the home hero. `eyebrow` defaults because every
+  // office reads the same one today; `title` has no default because it has
+  // always varied per office (it used to just be `subtitle`), so each tenant
+  // config states it explicitly.
+  home: z.object({
+    eyebrow: z.string().min(1).default("Serviços notariais e de registro"),
+    title: z.string().min(1),
   }),
   legalFooter: z.string().min(1),
   // Override: turns sections off even when the attribution grants them.
   // It never turns a section on beyond the gate.
   disabledSections: z.array(SectionSchema).default([]),
+  // The office's Pix key, where the citizen's payment lands. Optional: most
+  // offices have not registered one yet, and "no key" is a permanent, valid
+  // state, not a transition. The key is validated against its own type
+  // below, and stored normalized (see `normalizePixKey`).
+  pix: z
+    .object({ type: PixKeyTypeSchema, key: z.string().min(1) })
+    .superRefine((value, ctx) => {
+      if (!isValidPixKey(value.type, value.key)) {
+        ctx.addIssue({
+          code: "custom",
+          path: ["key"],
+          message:
+            "Isso não parece uma chave Pix válida para o tipo escolhido.",
+        });
+      }
+    })
+    .optional(),
 });
 
 export type Tenant = z.infer<typeof TenantSchema>;

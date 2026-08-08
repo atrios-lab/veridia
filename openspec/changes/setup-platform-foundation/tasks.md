@@ -65,6 +65,20 @@
 ## 7. Baseline de seguranca
 
 - [x] 7.1 Cabecalhos de seguranca (CSP, HSTS) em `next.config.ts`
+- [x] 7.1b **Corrigido em 05/08/2026.** O `script-src 'self'` sem `unsafe-inline` e sem nonce
+      bloqueava os próprios scripts inline que o Next injeta para hidratar (payload RSC,
+      `self.__next_f.push(...)`), sem opção de desativar. Efeito em produção: nenhum componente
+      client-side hidratava — nenhuma validação client-side, nenhum `onClick`, nada além de link
+      puro e `<form action>` sem JS. Passava despercebido porque `pnpm dev` tolera
+      `unsafe-inline` e a suíte e2e nunca tinha sido rodada contra `next build && next start` até
+      a mudança `add-admin-office-settings` rodar. Corrigido com CSP por nonce, gerado por
+      request em `src/middleware.ts` (que passou a rodar em todo o site, não só `/admin`, e por
+      isso ganhou uma guarda explícita para não redirecionar visitante anônimo do site público
+      pro login do painel). O header CSP saiu de `next.config.ts` — dois headers CSP na mesma
+      resposta se combinam, e o antigo (sem nonce) voltaria a bloquear tudo. Confirmado: as 27
+      cenas de `channels.spec.ts` e `service-request.spec.ts`, que já estavam escritas e sempre
+      falharam contra o build de produção, passam agora sem nenhuma mudança nelas — a evidência
+      de que o teste estava certo e a plataforma estava quebrada, não o contrário
 - [x] 7.2 Rate limit nas rotas de autenticacao e nas publicas de escrita
 - [x] 7.3 `audit_log` gravando ator, acao, alvo e data, sem dado sensivel
 - [x] 7.4 Conferir que nenhum segredo esta versionado e que todos vem de env

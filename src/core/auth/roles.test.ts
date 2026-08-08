@@ -10,10 +10,15 @@ test("admin may publish and manage users", () => {
   assert.ok(can("admin", "user.manage"));
 });
 
-test("staff may edit but not publish or manage users", () => {
+test("staff may edit but not publish, bill or manage users", () => {
   assert.ok(can("staff", "content.edit"));
   assert.equal(can("staff", "content.publish"), false);
+  assert.equal(can("staff", "billing.edit"), false);
   assert.equal(can("staff", "user.manage"), false);
+});
+
+test("admin may edit billing", () => {
+  assert.ok(can("admin", "billing.edit"));
 });
 
 test("an unknown role gets nothing", () => {

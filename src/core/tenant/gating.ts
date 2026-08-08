@@ -8,6 +8,8 @@ const SECTION_REQUIRES: Record<Section, Attribution[] | "always"> = {
   inicio: "always",
   "dpo-lgpd": "always", // data protection channel, required by law
   pedidos: ["RCPN", "NOTAS", "RI", "PROTESTO", "RTD", "RCPJ"],
+  // Every office has a counter, so every office can take an appointment for it.
+  agendamento: "always",
   "consulta-protocolo": ["RCPN", "NOTAS", "RI", "PROTESTO", "RTD", "RCPJ"],
   // NOTAS has no public notice board; every other attribution has one.
   editais: ["RCPN", "RI", "PROTESTO", "RTD", "RCPJ"],
@@ -15,6 +17,39 @@ const SECTION_REQUIRES: Record<Section, Attribution[] | "always"> = {
   transparencia: "always",
   "selo-tjrn": "always",
   "centrais-contato": "always",
+};
+
+/**
+ * Public path of each section. The section names are gating keys, not URLs:
+ * the addresses below are the ones citizens already know from the offices'
+ * current sites, and breaking them to match an internal key would cost real
+ * traffic. Keyed by Section, so a new section cannot ship without an address.
+ */
+export const SECTION_ROUTES: Record<Section, string> = {
+  inicio: "/",
+  "dpo-lgpd": "/lgpd",
+  pedidos: "/solicitar",
+  agendamento: "/agendar",
+  "consulta-protocolo": "/protocolo",
+  editais: "/editais",
+  ouvidoria: "/ouvidoria",
+  transparencia: "/transparencia",
+  "selo-tjrn": "/selo",
+  "centrais-contato": "/centrais",
+};
+
+/** Navigation label of each section, as the citizen reads it. */
+export const SECTION_LABELS: Record<Section, string> = {
+  inicio: "Início",
+  "dpo-lgpd": "Canal LGPD",
+  pedidos: "Solicitar serviço",
+  agendamento: "Agendar atendimento",
+  "consulta-protocolo": "Consultar protocolo",
+  editais: "Editais",
+  ouvidoria: "Ouvidoria",
+  transparencia: "Transparência",
+  "selo-tjrn": "Selo digital",
+  "centrais-contato": "Centrais e contato",
 };
 
 // Sectors inside the "editais" section, each one bound to an attribution.
@@ -33,13 +68,30 @@ export function hasAttribution(tenant: Tenant, a: Attribution): boolean {
   return tenant.attributions.includes(a);
 }
 
+// Sections a citizen must always be able to reach: institutional, or
+// required by law regardless of attribution. Declared here, independent of
+// SECTION_REQUIRES's "always", so the visual identity tab's own override
+// schema can point at one list without inferring it from gating internals.
+export const MANDATORY_SECTIONS: Section[] = [
+  "inicio",
+  "dpo-lgpd",
+  "ouvidoria",
+  "transparencia",
+];
+
 /**
  * Single source of truth for gating, consumed by navigation and by routes.
  * The override only disables: it never enables a section the attributions
- * do not grant.
+ * do not grant, and it can never disable a mandatory one (not even a row
+ * written into the database by hand).
  */
 export function isSectionEnabled(tenant: Tenant, section: Section): boolean {
-  if (tenant.disabledSections.includes(section)) return false;
+  if (
+    tenant.disabledSections.includes(section) &&
+    !MANDATORY_SECTIONS.includes(section)
+  ) {
+    return false;
+  }
   const requires = SECTION_REQUIRES[section];
   if (requires === "always") return true;
   return requires.some((a) => tenant.attributions.includes(a));
@@ -50,6 +102,27 @@ export function enabledSections(tenant: Tenant): Section[] {
   return (Object.keys(SECTION_REQUIRES) as Section[]).filter((s) =>
     isSectionEnabled(tenant, s),
   );
+}
+
+/**
+ * Sections the office's attributions grant and that are not mandatory: the
+ * ones the visual identity tab draws with a toggle. Mandatory sections get a
+ * lock instead, never a control that implies they could be turned off.
+ */
+export function optionalSections(tenant: Tenant): Section[] {
+  return enabledOrGrantable(tenant).filter(
+    (s) => !MANDATORY_SECTIONS.includes(s),
+  );
+}
+
+/** Sections the attribution grants, regardless of the override's on/off state. */
+function enabledOrGrantable(tenant: Tenant): Section[] {
+  return (Object.keys(SECTION_REQUIRES) as Section[]).filter((s) => {
+    const requires = SECTION_REQUIRES[s];
+    return (
+      requires === "always" || requires.some((a) => hasAttribution(tenant, a))
+    );
+  });
 }
 
 /** Notice sectors available to the office (subitems of the notices section). */

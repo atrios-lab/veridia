@@ -1,26 +1,14 @@
 import type { NextConfig } from "next";
 
-const isDev = process.env.NODE_ENV === "development";
-
-// One CSP for the whole site. 'unsafe-eval' is tolerated only in development,
-// where the dev server needs it. 'unsafe-inline' stays on styles because Next
-// emits inline style attributes; tightening that needs a nonce, which belongs
-// with the design system change, not here.
-const csp = [
-  "default-src 'self'",
-  `script-src 'self'${isDev ? " 'unsafe-eval' 'unsafe-inline'" : ""}`,
-  "style-src 'self' 'unsafe-inline'",
-  "img-src 'self' data: blob:",
-  "font-src 'self'",
-  "connect-src 'self'",
-  "frame-ancestors 'none'",
-  "base-uri 'self'",
-  "form-action 'self'",
-  "object-src 'none'",
-].join("; ");
-
+// Content-Security-Policy is not here: it needs a fresh nonce per request so
+// Next's own hydration payload can carry one, and a static header from this
+// file cannot do that. It is built and set in src/middleware.ts. It must
+// stay out of this list — a second, nonce-less CSP header from here would
+// combine with the nonced one from the middleware, and a browser presented
+// with two Content-Security-Policy headers enforces both: the nonce-less
+// script-src from here would still block every hydration script the nonced
+// one was written to allow.
 const securityHeaders = [
-  { key: "Content-Security-Policy", value: csp },
   {
     key: "Strict-Transport-Security",
     value: "max-age=63072000; includeSubDomains; preload",
@@ -36,6 +24,27 @@ const securityHeaders = [
 
 const nextConfig: NextConfig = {
   poweredByHeader: false,
+  experimental: {
+    // The request form posts through a server action carrying the citizen's
+    // attachments: up to 5 files of 8 MB (src/core/request/attachment.ts),
+    // so the default 1 MB body cap rejects any real upload. 45mb covers the
+    // legitimate maximum plus multipart overhead; each file's own size and
+    // count are still enforced server side.
+    serverActions: { bodySizeLimit: "45mb" },
+  },
+  // pdfkit reads its standard font metrics from files at runtime, which a
+  // bundler rewrites into paths that no longer exist. Left external, it loads
+  // them the way it expects to.
+  serverExternalPackages: ["pdfkit"],
+  // Brand images (logotype, hero) publish to Vercel Blob when
+  // BLOB_READ_WRITE_TOKEN is set (see src/lib/uploads.ts). next/image needs
+  // that host allow-listed by exact hostname, never a wildcard pattern — the
+  // same host also has to be added to img-src in src/middleware.ts.
+  images: {
+    remotePatterns: process.env.BLOB_PUBLIC_HOST
+      ? [{ protocol: "https", hostname: process.env.BLOB_PUBLIC_HOST }]
+      : [],
+  },
   async headers() {
     return [{ source: "/:path*", headers: securityHeaders }];
   },

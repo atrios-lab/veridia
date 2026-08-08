@@ -15,6 +15,27 @@
       "when": 1785693652395,
       "tag": "0001_regular_human_torch",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1785860122868,
+      "tag": "0002_lovely_purple_man",
+      "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1785891233824,
+      "tag": "0003_youthful_thing",
+      "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1786015841549,
+      "tag": "0004_narrow_scarlet_witch",
+      "breakpoints": true
     }
   ]
 }
