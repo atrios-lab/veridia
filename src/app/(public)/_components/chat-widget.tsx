@@ -120,7 +120,18 @@ export function ChatWidget({ tenant }: { tenant: Tenant }) {
     setConversation(data.conversation);
     if (data.messages.length > 0) {
       lastMessageAt.current = data.messages.at(-1).createdAt;
-      setMessages((prev) => [...prev, ...data.messages]);
+      // The `after` cursor is a millisecond ISO string round-tripped from a
+      // microsecond-precision Postgres timestamp, so it can fail to exclude
+      // the very row it came from — the same message would then come back
+      // on every poll. De-duping by id here is what actually guarantees no
+      // repeats, regardless of that precision loss.
+      setMessages((prev) => {
+        const seen = new Set(prev.map((m) => m.id));
+        return [
+          ...prev,
+          ...data.messages.filter((m: MessageView) => !seen.has(m.id)),
+        ];
+      });
       setUnreadCount((prevCount) =>
         panelKindRef.current === "closed"
           ? prevCount + data.messages.length
@@ -230,7 +241,7 @@ export function ChatWidget({ tenant }: { tenant: Tenant }) {
   return (
     <div className="fixed right-4 bottom-4 z-40 flex flex-col items-end gap-3 md:right-8 md:bottom-8">
       {panel.kind !== "closed" && (
-        <div className="flex max-h-[70vh] w-[calc(100vw-2rem)] max-w-[390px] flex-col overflow-hidden rounded-2xl border border-brand-border bg-brand-card shadow-2xl">
+        <div className="flex h-[min(70vh,560px)] w-[calc(100vw-2rem)] max-w-[390px] flex-col overflow-hidden rounded-2xl border border-brand-border bg-brand-card shadow-2xl">
           <div className="flex items-center gap-2.5 bg-brand-primary px-4.5 py-3.5 text-white">
             <span className="flex h-9 w-9 flex-none items-center justify-center rounded-full bg-white/15">
               <Icon name="chat" className="h-4.5 w-4.5" />
@@ -322,7 +333,7 @@ function PrechatForm({
   return (
     <form
       action={onSubmit}
-      className="flex flex-col gap-3 overflow-y-auto p-4.5"
+      className="flex flex-1 flex-col gap-3 overflow-y-auto p-4.5"
     >
       <p className="text-[13.5px] text-brand-muted">
         Como podemos ajudar? Preencha para falar com a equipe.
@@ -400,7 +411,7 @@ function FormField({
 function HoursClosedView({ tenant }: { tenant: Tenant }) {
   const opening = nextChatOpening(tenant, new Date());
   return (
-    <div className="flex flex-col gap-4 overflow-y-auto p-4.5">
+    <div className="flex flex-1 flex-col gap-4 overflow-y-auto p-4.5">
       <div className="text-center">
         <div className="mx-auto mb-2 flex h-12 w-12 items-center justify-center rounded-full bg-brand-tint">
           <Icon name="clock" className="h-5.5 w-5.5 text-brand-accent" />
@@ -468,7 +479,7 @@ function ConversationView({
 }) {
   if (conversation?.status === "waiting") {
     return (
-      <div className="flex flex-col items-center gap-3 p-6 text-center">
+      <div className="flex flex-1 flex-col items-center justify-center gap-3 p-6 text-center">
         <span className="flex h-11 w-11 items-center justify-center rounded-full bg-brand-tint">
           <Icon name="clock" className="h-5 w-5 text-brand-primary" />
         </span>
@@ -590,7 +601,10 @@ function RatingView({
   const [rating, setRating] = useState(0);
 
   return (
-    <form action={onSubmit} className="flex flex-col gap-4 p-4.5">
+    <form
+      action={onSubmit}
+      className="flex flex-1 flex-col justify-center gap-4 overflow-y-auto p-4.5"
+    >
       <input type="hidden" name="rating" value={rating} />
       <div className="text-center">
         {conversation?.attendantName && (

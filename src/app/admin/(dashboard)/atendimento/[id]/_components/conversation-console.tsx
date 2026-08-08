@@ -61,7 +61,18 @@ export function ConversationConsole({
     setStatus(data.conversation.status);
     if (data.messages.length > 0) {
       lastAt.current = data.messages.at(-1).createdAt;
-      setMessages((prev) => [...prev, ...data.messages]);
+      // The `after` cursor is a millisecond ISO string round-tripped from a
+      // microsecond-precision Postgres timestamp, so it can fail to exclude
+      // the very row it came from — the same message would then come back
+      // on every poll. De-duping by id here is what actually guarantees no
+      // repeats, regardless of that precision loss.
+      setMessages((prev) => {
+        const seen = new Set(prev.map((m) => m.id));
+        return [
+          ...prev,
+          ...data.messages.filter((m: MessageView) => !seen.has(m.id)),
+        ];
+      });
     }
   }, [conversationId]);
 
