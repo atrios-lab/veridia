@@ -1,11 +1,12 @@
 "use server";
 
 import { APIError } from "better-auth/api";
-import { eq } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { canAccessTenant } from "@/core/auth/roles.ts";
 import {
+  account as accountTable,
   user as userTable,
   verification as verificationTable,
 } from "@/db/auth-schema.ts";
@@ -40,6 +41,20 @@ export async function acceptInvite(formData: FormData) {
     .where(eq(userTable.id, row.userId));
   if (!invitedUser) redirect("/admin/redefinir-senha");
 
+  // Read before resetPassword changes it: whether this account already had
+  // a credential decides which audit verb is true — "primeiro acesso" for a
+  // conta convidada that never had one, "nova senha" for a returning one.
+  const [existingCredential] = await db
+    .select({ id: accountTable.id })
+    .from(accountTable)
+    .where(
+      and(
+        eq(accountTable.userId, row.userId),
+        eq(accountTable.providerId, "credential"),
+      ),
+    );
+  const wasFirstAccess = !existingCredential;
+
   const requestHeaders = await headers();
   try {
     await auth.api.resetPassword({
@@ -57,7 +72,7 @@ export async function acceptInvite(formData: FormData) {
   await recordAudit({
     tenantSlug: tenant.slug,
     actorId: row.userId,
-    action: "session.first-access",
+    action: wasFirstAccess ? "session.first-access" : "user.password-changed",
     targetType: "user",
     targetId: row.userId,
   });

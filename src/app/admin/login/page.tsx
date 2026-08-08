@@ -8,10 +8,18 @@ import { signIn } from "../actions.ts";
 
 export const metadata = { title: "Entrar" };
 
-// Grows as the panel gains protected routes beyond /admin itself (Entrega 6
-// em diante). Unmapped destinations fall back to the generic phrase below.
+// Grows as the panel gains protected routes beyond /admin itself. Unmapped
+// destinations fall back to the generic phrase below.
 const ADMIN_DESTINATION_LABELS: Record<string, string> = {
   "/admin": "ao painel",
+  "/admin/pedidos": "aos Pedidos de serviço",
+  "/admin/lgpd": "aos Requerimentos LGPD",
+  "/admin/ouvidoria": "à Ouvidoria",
+  "/admin/agenda": "à Agenda de atendimentos",
+  "/admin/atendimento": "ao Atendimento online",
+  "/admin/publicacoes": "às Publicações",
+  "/admin/configuracoes": "às Configurações",
+  "/admin/usuarios": "aos Usuários",
 };
 
 function destinationLabel(next: string): string {

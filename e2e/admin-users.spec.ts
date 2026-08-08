@@ -1,0 +1,120 @@
+import { neon } from "@neondatabase/serverless";
+import { expect, type Page, test } from "@playwright/test";
+
+// Entrega 9: convite e login. This screen creates real accounts, so every
+// test here needs a database and cleans up the row it created — same
+// posture as admin-settings.spec.ts.
+
+const PORT = process.env.PORT ?? "3000";
+const baseURL = `http://marinho.localhost:${PORT}`;
+const CONVIDADA_EMAIL = "julia.e2e@exemplo.com";
+
+test.describe("tela de Usuários", () => {
+  test.describe.configure({ mode: "serial" });
+
+  test.skip(
+    !process.env.DATABASE_URL ||
+      !process.env.ADMIN_SEED_EMAIL ||
+      !process.env.ADMIN_SEED_PASSWORD,
+    "precisa de DATABASE_URL, ADMIN_SEED_EMAIL e ADMIN_SEED_PASSWORD: a tela fica atrás do login",
+  );
+
+  const email = process.env.ADMIN_SEED_EMAIL as string;
+  const password = process.env.ADMIN_SEED_PASSWORD as string;
+
+  async function signIn(page: Page) {
+    await page.goto(`${baseURL}/admin/login`);
+    await page.getByLabel("E-mail").fill(email);
+    await page.getByLabel("Senha", { exact: true }).fill(password);
+    await page.getByRole("button", { name: "Entrar" }).click();
+    await expect(page).toHaveURL(`${baseURL}/admin`);
+  }
+
+  test.afterEach(async () => {
+    // Cascades to the account/session rows via the FKs in auth-schema.ts.
+    const sql = neon(process.env.DATABASE_URL as string);
+    await sql`delete from "user" where email = ${CONVIDADA_EMAIL}`;
+  });
+
+  test("Usuários appears in the sidebar for a registrador", async ({
+    page,
+  }) => {
+    await signIn(page);
+    await expect(
+      page.getByRole("navigation").getByRole("link", { name: "Usuários" }),
+    ).toBeVisible();
+  });
+
+  test("creating an account shows the confirmation, lists the account as waiting, role in Portuguese, and lets it be resent", async ({
+    page,
+  }) => {
+    await signIn(page);
+    await page
+      .getByRole("navigation")
+      .getByRole("link", { name: "Usuários" })
+      .click();
+    await expect(page).toHaveURL(`${baseURL}/admin/usuarios`);
+
+    await page.getByLabel("Nome").fill("Júlia E2E");
+    await page.getByLabel("E-mail").fill(CONVIDADA_EMAIL);
+    await page.getByLabel("Papel").selectOption({ label: "Operador" });
+    await page.getByRole("button", { name: "Criar conta" }).click();
+
+    await expect(
+      page.getByText("Conta criada — e-mail enviado."),
+    ).toBeVisible();
+
+    const row = page.getByText(CONVIDADA_EMAIL).locator("..").locator("..");
+    await expect(row.getByText("Aguardando 1º acesso")).toBeVisible();
+    await expect(row.getByText("Operador", { exact: true })).toBeVisible();
+
+    // The e-mail has no provider configured in this test run (see
+    // playwright.config.ts), so it logs instead of sending — the assertion
+    // that matters here is that resending does not error and the account
+    // stays in the same "waiting" state, not the log line itself.
+    await row.getByRole("button", { name: "Reenviar convite" }).click();
+    await expect(row.getByText("Aguardando 1º acesso")).toBeVisible();
+
+    // A duplicate e-mail is refused with a field error, not a crash.
+    await page.getByLabel("Nome").fill("Outra Pessoa");
+    await page.getByLabel("E-mail").fill(CONVIDADA_EMAIL);
+    await page.getByLabel("Papel").selectOption({ label: "Operador" });
+    await page.getByRole("button", { name: "Criar conta" }).click();
+    await expect(
+      page.getByText("Já existe uma conta com esse e-mail."),
+    ).toBeVisible();
+  });
+
+  test("a first-access link opens the locked shell with no navigation", async ({
+    page,
+  }) => {
+    await signIn(page);
+    await page.goto(`${baseURL}/admin/usuarios`);
+    await page.getByLabel("Nome").fill("Júlia E2E");
+    await page.getByLabel("E-mail").fill(CONVIDADA_EMAIL);
+    await page.getByLabel("Papel").selectOption({ label: "Operador" });
+    await page.getByRole("button", { name: "Criar conta" }).click();
+    await expect(
+      page.getByText("Conta criada — e-mail enviado."),
+    ).toBeVisible();
+
+    const sql = neon(process.env.DATABASE_URL as string);
+    const [row] = (await sql`
+      select split_part(identifier, ':', 2) as token from verification
+      where identifier like 'reset-password:%'
+        and value = (select id from "user" where email = ${CONVIDADA_EMAIL})
+    `) as { token: string }[];
+    expect(row?.token).toBeTruthy();
+    const token = row.token;
+
+    await page.context().clearCookies();
+    await page.goto(`${baseURL}/admin/redefinir-senha?token=${token}`);
+    await expect(
+      page.getByRole("heading", { name: "Bem-vindo(a), Júlia" }),
+    ).toBeVisible();
+    await expect(page.getByRole("navigation")).toHaveCount(0);
+    await expect(
+      page.getByText("Crie sua senha para liberar o painel."),
+    ).toBeVisible();
+  });
+});
