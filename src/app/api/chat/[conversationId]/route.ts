@@ -28,6 +28,15 @@ export const runtime = "nodejs";
  * citizen may only reach the one their cookie's token actually opens, and
  * only when it matches the id in the URL — a browser tab open to someone
  * else's conversation link gets nothing back.
+ *
+ * The citizen cookie is checked first. Both the widget and the console hit
+ * this same route, and the public site and `/admin` share a host, so a
+ * browser that is *also* signed in as staff (an attendant testing their own
+ * widget, or just a developer logged into both at once) still carries the
+ * admin session cookie on the widget's requests. Checking the citizen
+ * cookie first — and only for *this* conversation — is what keeps that from
+ * being misread as the attendant talking to themselves: a leftover staff
+ * session never wins over a token that genuinely opens this conversation.
  */
 async function authorize(conversationId: string): Promise<
   | {
@@ -39,6 +48,16 @@ async function authorize(conversationId: string): Promise<
   | { ok: false }
 > {
   const tenant = await getTenant();
+
+  const cookieStore = await cookies();
+  const token = cookieStore.get(CHAT_TOKEN_COOKIE)?.value;
+  if (token) {
+    const conversation = await getConversationForCitizen(tenant.slug, token);
+    if (conversation && conversation.id === conversationId) {
+      return { ok: true, forCitizen: true, conversation };
+    }
+  }
+
   const session = await getSession();
   if (session && can(session.user.role ?? "", "chat.manage")) {
     const conversation = await getConversation(tenant.slug, conversationId);
@@ -51,14 +70,7 @@ async function authorize(conversationId: string): Promise<
     };
   }
 
-  const cookieStore = await cookies();
-  const token = cookieStore.get(CHAT_TOKEN_COOKIE)?.value;
-  if (!token) return { ok: false };
-  const conversation = await getConversationForCitizen(tenant.slug, token);
-  if (!conversation || conversation.id !== conversationId) {
-    return { ok: false };
-  }
-  return { ok: true, forCitizen: true, conversation };
+  return { ok: false };
 }
 
 function serializeMessage(message: ChatMessage) {

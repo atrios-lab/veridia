@@ -48,7 +48,7 @@ export default async function DashboardLayout({
   };
 
   return (
-    <div className="flex min-h-screen">
+    <div className="flex h-screen overflow-hidden">
       <AdminSidebar
         tenant={tenant}
         user={{
@@ -59,7 +59,17 @@ export default async function DashboardLayout({
         pathname={pathname}
         counts={counts}
       />
-      <div className="flex min-w-0 flex-1 flex-col">{children}</div>
+      {/*
+        `h-screen overflow-hidden` above bounds the whole shell to the
+        viewport so the sidebar never scrolls away; `overflow-y-auto` here is
+        where an ordinary page's own length scrolls. A screen that manages
+        its own internal scroll region (the chat conversation, see
+        atendimento/[id]/page.tsx) fills this exactly instead and this div
+        never actually overflows for it.
+      */}
+      <div className="flex min-w-0 flex-1 flex-col overflow-y-auto">
+        {children}
+      </div>
     </div>
   );
 }
