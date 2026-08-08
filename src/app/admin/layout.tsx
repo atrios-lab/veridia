@@ -1,3 +1,4 @@
+import { Toaster } from "sonner";
 import { SERIF } from "@/lib/fonts.ts";
 import { getTenant } from "@/lib/tenant.ts";
 
@@ -15,6 +16,18 @@ export default async function AdminLayout({
       className={`${serif.variable} min-h-screen bg-admin-surface text-admin-text`}
     >
       {children}
+      <Toaster
+        position="bottom-right"
+        toastOptions={{
+          unstyled: true,
+          classNames: {
+            toast:
+              "flex w-full items-center gap-2 rounded-lg px-3.5 py-2.5 text-sm font-semibold shadow-md",
+            success: "bg-admin-success-bg text-admin-success-text",
+            error: "bg-admin-error-bg text-admin-error-text",
+          },
+        }}
+      />
     </div>
   );
 }

@@ -1,6 +1,7 @@
 "use client";
 
 import { useActionState, useEffect, useMemo, useState } from "react";
+import { toast } from "sonner";
 import {
   MANDATORY_SECTIONS,
   optionalSections,
@@ -171,10 +172,10 @@ function ImageField({
 }
 
 export function VisualIdentityForm({ tenant }: { tenant: Tenant }) {
-  const [state, formAction] = useActionState<VisualIdentityState, FormData>(
-    saveVisualIdentity,
-    { status: "idle" },
-  );
+  const [state, formAction, saving] = useActionState<
+    VisualIdentityState,
+    FormData
+  >(saveVisualIdentity, { status: "idle" });
   const fieldErrors = state.status === "error" ? state.fieldErrors : {};
 
   const [theme, setTheme] = useState<Theme>(tenant.theme);
@@ -196,6 +197,10 @@ export function VisualIdentityForm({ tenant }: { tenant: Tenant }) {
   const heroPreview = useObjectUrl(heroFile, tenant.heroImage);
 
   const optional = useMemo(() => optionalSections(tenant), [tenant]);
+
+  useEffect(() => {
+    if (state.status === "saved") toast.success("Publicado.");
+  }, [state]);
 
   function toggleSection(section: Section) {
     setDisabledSections((prev) => {
@@ -420,30 +425,22 @@ export function VisualIdentityForm({ tenant }: { tenant: Tenant }) {
         <div className="flex flex-wrap items-center gap-3.5">
           <button
             type="submit"
+            disabled={saving}
             className="rounded-[9px] bg-admin-primary-soft px-5.5 py-2.5 text-[13.5px] font-bold text-white disabled:opacity-70"
           >
-            Salvar e publicar
+            {saving ? "Salvando…" : "Salvar e publicar"}
           </button>
           <button
             type="button"
             onClick={handleDiscard}
-            className="rounded-[9px] border border-admin-input-border bg-admin-card px-5 py-2.5 text-[13.5px] font-bold text-admin-muted"
+            disabled={saving}
+            className="rounded-[9px] border border-admin-input-border bg-admin-card px-5 py-2.5 text-[13.5px] font-bold text-admin-muted disabled:opacity-60"
           >
             Descartar mudanças
           </button>
           <span className="text-[12.5px] text-admin-faint">
             As mudanças só valem depois de "Salvar e publicar".
           </span>
-          {state.status === "saved" && (
-            <output className="flex items-center gap-1.5 rounded-full bg-admin-success-bg px-3 py-1.5 text-[12.5px] font-semibold text-admin-success-text">
-              <AdminIcon
-                name="check"
-                className="h-3.5 w-3.5"
-                strokeWidth={2.4}
-              />
-              Publicado.
-            </output>
-          )}
         </div>
       </form>
 

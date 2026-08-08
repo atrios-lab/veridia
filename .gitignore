@@ -50,3 +50,5 @@ next-env.d.ts
 
 # imagens de marca gravadas em disco no desenvolvimento (sem BLOB_READ_WRITE_TOKEN)
 /public/uploads/
+
+.playwright-mcp
