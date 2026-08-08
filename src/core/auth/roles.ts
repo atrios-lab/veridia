@@ -17,6 +17,7 @@ export const PERMISSIONS = [
   "requests.manage",
   "chat.manage",
   "chat.settings",
+  "channels.manage",
 ] as const;
 export type Permission = (typeof PERMISSIONS)[number];
 
@@ -25,12 +26,17 @@ const ROLE_PERMISSIONS: Record<Role, readonly Permission[]> = {
   // Staff drafts and edits, but publishing, billing and user management stay
   // with the office owner: those are the actions nobody can undo quietly, and
   // the Pix key is where the citizen's money lands. Working the request
-  // queue is the opposite: it is staff's actual day job, so it is granted
-  // here too. Handling chat conversations is the same kind of day-to-day
-  // work as the request queue (chat.manage); turning the office's chat on or
-  // off for the whole public site is not (chat.settings), same split as
-  // billing.
-  staff: ["admin.access", "content.edit", "requests.manage", "chat.manage"],
+  // queue and the citizen channels (agenda, ouvidoria, LGPD, chat) is the
+  // opposite: it is staff's actual day job, so it is granted here too.
+  // Turning the office's chat on or off for the whole public site is not
+  // (chat.settings), same split as billing.
+  staff: [
+    "admin.access",
+    "content.edit",
+    "requests.manage",
+    "channels.manage",
+    "chat.manage",
+  ],
 };
 
 export function isRole(value: string): value is Role {

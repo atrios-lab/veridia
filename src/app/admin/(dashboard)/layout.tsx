@@ -2,7 +2,7 @@ import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { can } from "@/core/auth/roles.ts";
 import { waitingCount } from "@/lib/chat.ts";
-import { openRequestCount } from "@/lib/service-request.ts";
+import { openCountByKind, openRequestCount } from "@/lib/service-request.ts";
 import { getSession } from "@/lib/session.ts";
 import { getTenant } from "@/lib/tenant.ts";
 import { AdminSidebar } from "../_components/sidebar.tsx";
@@ -34,6 +34,13 @@ export default async function DashboardLayout({
   const counts: Record<string, number> = {
     ...(can(role, "requests.manage")
       ? { "/admin/pedidos": await openRequestCount(tenant.slug) }
+      : {}),
+    ...(can(role, "channels.manage")
+      ? {
+          "/admin/lgpd": await openCountByKind(tenant.slug, "data-rights"),
+          "/admin/ouvidoria": await openCountByKind(tenant.slug, "ombudsman"),
+          "/admin/agenda": await openCountByKind(tenant.slug, "appointment"),
+        }
       : {}),
     ...(can(role, "chat.manage")
       ? { "/admin/atendimento": await waitingCount(tenant.slug) }

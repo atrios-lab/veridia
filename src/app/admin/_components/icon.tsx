@@ -50,6 +50,17 @@ const PATHS = {
   // Sidebar navigation and header indicator: support chat (a speech bubble).
   chat: ["M7.9 20A9 9 0 1 0 4 16.1L2 22Z"],
   x: ["M18 6 6 18", "M6 6l12 12"],
+  // Sidebar navigation: the appointment queue.
+  calendar: [
+    "M8 2v4M16 2v4M3 10h18M5 4h14a2 2 0 0 1 2 2v13a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2Z",
+  ],
+  // Sidebar navigation: the ombudsman queue.
+  megaphone: ["M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"],
+  // Sidebar navigation: the data rights (LGPD) queue.
+  shield: [
+    "M5.5 10h13A1.5 1.5 0 0 1 20 11.5v8A1.5 1.5 0 0 1 18.5 21h-13A1.5 1.5 0 0 1 4 19.5v-8A1.5 1.5 0 0 1 5.5 10Z",
+    "M8 10V7a4 4 0 0 1 8 0v3",
+  ],
 } as const;
 
 export type AdminIconName = keyof typeof PATHS;

@@ -93,6 +93,23 @@ export function suggestedNextStatuses(
 }
 
 /**
+ * The statuses that no longer need the operator's attention, per kind — the
+ * same idea as `TERMINAL_SERVICE_REQUEST_STATUSES`, generalised so the
+ * sidebar badge and the Visão geral counters can ask it of any of the four
+ * kinds the same way.
+ */
+export const TERMINAL_STATUSES: Record<RequestKind, readonly string[]> = {
+  "service-request": TERMINAL_SERVICE_REQUEST_STATUSES,
+  appointment: ["done", "cancelled"],
+  "data-rights": ["answered", "cancelled"],
+  ombudsman: ["answered", "done"],
+};
+
+export function isOpenStatus(kind: RequestKind, status: string): boolean {
+  return !TERMINAL_STATUSES[kind].includes(status);
+}
+
+/**
  * Status of a record, per kind. Only the first value of each kind is written
  * by the citizen's own screens; the rest are written by the office in the
  * admin panel, and are declared here so the consult can name them today.
@@ -109,7 +126,7 @@ const STATUS_LABELS: Record<RequestKind, Record<string, string>> = {
     archived: "Arquivado",
   },
   appointment: {
-    requested: "Aguardando confirmação",
+    requested: "Pedido enviado",
     proposed: "Proposto",
     confirmed: "Confirmado",
     done: "Atendido",
@@ -179,7 +196,12 @@ export const DATA_RIGHTS = [
 export const DataRightSchema = z.enum(DATA_RIGHTS);
 export type DataRight = z.infer<typeof DataRightSchema>;
 
-export const dataRightsDetailsSchema = z.object({ right: DataRightSchema });
+export const dataRightsDetailsSchema = z.object({
+  right: DataRightSchema,
+  // The office's answer in progress, never read by the citizen's consult —
+  // only `officeReply` is. Cleared once the final answer is sent.
+  draftReply: z.string().optional(),
+});
 export type DataRightsDetails = z.infer<typeof dataRightsDetailsSchema>;
 
 export const MANIFESTATION_TYPES = [
@@ -197,6 +219,12 @@ export const ombudsmanDetailsSchema = z.object({
   anonymous: z.boolean(),
   /** Signed, but the name does not travel with the case. */
   confidential: z.boolean(),
+  // Same as `dataRightsDetailsSchema.draftReply`: office-only, never read by
+  // the citizen's consult.
+  draftReply: z.string().optional(),
+  // Only ever offered when the manifestation has no contact to answer to —
+  // never sent anywhere, never read by the citizen's consult.
+  internalNote: z.string().optional(),
 });
 export type OmbudsmanDetails = z.infer<typeof ombudsmanDetailsSchema>;
 
