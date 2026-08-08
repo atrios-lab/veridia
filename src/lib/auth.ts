@@ -50,6 +50,10 @@ export const auth = betterAuth({
     // The endpoint stays disabled rather than merely unlinked, because an
     // unlinked endpoint is still an endpoint.
     disableSignUp: true,
+    // How long a first-access invite (scripts/invite-admin.ts) stays usable.
+    // The 48h in the approved redesign. Reused by resetPassword's own token
+    // (same primitive, see src/app/admin/redefinir-senha).
+    resetPasswordTokenExpiresIn: 60 * 60 * 48,
   },
   // What the role may do, and which office it may act on, is decided in
   // src/core/auth/roles.ts. These are declared only so the session carries

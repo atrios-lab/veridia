@@ -1,16 +1,102 @@
 import "server-only";
+import { and, eq, inArray } from "drizzle-orm";
 import { headers } from "next/headers";
+import { cache } from "react";
+import { type IsoDate, toIsoDate } from "@/core/scheduling/calendar.ts";
+import { applyTenantOverrides } from "@/core/tenant/overrides.ts";
 import { resolveTenant } from "@/core/tenant/resolve.ts";
 import type { Tenant } from "@/core/tenant/schema.ts";
+import { db } from "@/db/index.ts";
+import { tenantContent } from "@/db/schema.ts";
 
 /**
- * Resolves the office for the current request. Server only: the host header
- * is the only input, so a client component could never get this right.
+ * The office's time zone. The offices served are all in Brazil, and the
+ * server runs in UTC: without this, from nine at night the site would offer
+ * tomorrow as if it were today.
  */
-export async function getTenant(): Promise<Tenant> {
+export const OFFICE_TIME_ZONE = "America/Sao_Paulo";
+
+/** Today on the office's wall calendar. */
+export function today(): IsoDate {
+  return toIsoDate(new Date(), OFFICE_TIME_ZONE);
+}
+
+/**
+ * The `tenant_content` rows holding what the office edits about itself in the
+ * panel: counter hours and the three contact channels (`office-contact`),
+ * theme, logos, hero and sections (`office-brand`), the Data Protection
+ * Officer's contact (`office-dpo`), and the office's Pix key (`office-pix`).
+ */
+export const OFFICE_CONTACT_KEY = "office-contact";
+export const OFFICE_BRAND_KEY = "office-brand";
+export const OFFICE_DPO_KEY = "office-dpo";
+export const OFFICE_PIX_KEY = "office-pix";
+
+/**
+ * Reads the office's own edits, both keys in one query: `getTenant` is
+ * called by nearly every route, so a second query per key would double the
+ * database load this function already adds.
+ *
+ * Written straight to `published`: a phone number and a logotype are both
+ * operational, not editorial, and the office that corrects one needs the
+ * correction live now, not after someone remembers to publish.
+ *
+ * A database that is down returns no overrides rather than an error. The
+ * site then serves the configured values, which is a stale telephone number
+ * instead of a stale telephone number and no site.
+ */
+async function readTenantOverrides(tenantSlug: string): Promise<{
+  contact: unknown;
+  brand: unknown;
+  dpo: unknown;
+  pix: unknown;
+}> {
+  try {
+    const rows = await db
+      .select({ key: tenantContent.key, published: tenantContent.published })
+      .from(tenantContent)
+      .where(
+        and(
+          eq(tenantContent.tenantSlug, tenantSlug),
+          inArray(tenantContent.key, [
+            OFFICE_CONTACT_KEY,
+            OFFICE_BRAND_KEY,
+            OFFICE_DPO_KEY,
+            OFFICE_PIX_KEY,
+          ]),
+        ),
+      );
+    return {
+      contact:
+        rows.find((r) => r.key === OFFICE_CONTACT_KEY)?.published ?? null,
+      brand: rows.find((r) => r.key === OFFICE_BRAND_KEY)?.published ?? null,
+      dpo: rows.find((r) => r.key === OFFICE_DPO_KEY)?.published ?? null,
+      pix: rows.find((r) => r.key === OFFICE_PIX_KEY)?.published ?? null,
+    };
+  } catch {
+    return { contact: null, brand: null, dpo: null, pix: null };
+  }
+}
+
+/**
+ * Resolves the office for the current request, with its own edits laid over
+ * the configuration. Server only: the host header is the only input, so a
+ * client component could never get this right.
+ *
+ * Cached per request because the layout, the page and the action all ask for
+ * the office in the same render, and without this that is one query each.
+ *
+ * There is deliberately no second function that skips the override. Two
+ * near-identical getters is how one screen ends up showing last month's
+ * telephone number. `resolveTenant` stays pure and I/O free for the
+ * middleware, which runs on the edge and cannot reach the database.
+ */
+export const getTenant = cache(async (): Promise<Tenant> => {
   const headerList = await headers();
-  return resolveTenant(
+  const tenant = resolveTenant(
     headerList.get("host") ?? undefined,
     process.env.DEFAULT_TENANT ?? "cartorio-marinho",
   );
-}
+  const overrides = await readTenantOverrides(tenant.slug);
+  return applyTenantOverrides(tenant, overrides);
+});

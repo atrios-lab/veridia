@@ -44,3 +44,9 @@ next-env.d.ts
 # playwright
 /test-results/
 /playwright-report/
+
+# anexos gravados em disco no desenvolvimento (UPLOAD_DIR)
+/var/
+
+# imagens de marca gravadas em disco no desenvolvimento (sem BLOB_READ_WRITE_TOKEN)
+/public/uploads/

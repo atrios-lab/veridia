@@ -10,6 +10,14 @@ de sessao com HttpOnly, Secure e `SameSite=Lax`.
 - **WHEN** qualquer pagina e servida
 - **THEN** os cabecalhos de seguranca estao presentes
 
+#### Scenario: O CSP nao impede a propria hidratacao
+
+- **WHEN** uma pagina e servida pelo build de producao
+- **THEN** o script de hidratacao que o proprio Next injeta executa, e todo componente
+  client-side (validacao, `onClick`, `useActionState`) funciona — o CSP protege contra script
+  injetado sem depender de `unsafe-inline`, que teria o mesmo efeito de deixar um script
+  injetado executar
+
 ### Requirement: Segredos apenas em variaveis de ambiente
 
 O repositorio NAO DEVE (SHALL NOT) conter segredo algum. Toda credencial DEVE (SHALL) vir de

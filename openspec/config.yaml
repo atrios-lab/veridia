@@ -3,8 +3,9 @@ schema: spec-driven
 context: |
   Veridia: plataforma white-label multi-tenant para cartorios (serventias extrajudiciais)
   brasileiros. Um unico codebase e um unico deploy servem N serventias; cada uma tem seu dominio,
-  marca, conteudo e conjunto de secoes. Duas faces: site publico (identidade do cartorio) e painel
-  admin (estetica da plataforma, fixa, nunca tematizavel por cartorio).
+  marca, conteudo e conjunto de secoes. Duas faces: site publico e painel admin, e as duas
+  refletem a identidade visual (tema, fonte) que a propria serventia publica — o painel herda o
+  tema do tenant da sessao, nunca tem seletor proprio.
 
   Stack: Next 16 (App Router, TypeScript strict), Tailwind v4 CSS-first, PostgreSQL na Neon com
   Drizzle, Route Handlers e Server Actions (sem NestJS), Better Auth com sessao em banco, Zod,

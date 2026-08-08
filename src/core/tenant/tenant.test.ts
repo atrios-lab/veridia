@@ -1,13 +1,19 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { enabledSections, isSectionEnabled, noticeSectors } from "./gating.ts";
+import {
+  enabledSections,
+  isSectionEnabled,
+  MANDATORY_SECTIONS,
+  noticeSectors,
+  optionalSections,
+} from "./gating.ts";
 import {
   isRegisteredHost,
   normalizeHost,
   resolveTenant,
   TENANTS,
 } from "./resolve.ts";
-import { parseTenant, type Tenant } from "./schema.ts";
+import { parseTenant, type Tenant, THEMES } from "./schema.ts";
 import { tabelionatoAurora } from "./tenants/aurora.ts";
 import { cartorioMarinho } from "./tenants/marinho.ts";
 
@@ -24,6 +30,29 @@ test("valid config is accepted and typed", () => {
 test("config missing a required field is rejected", () => {
   const { cns: _cns, ...withoutCns } = cartorioMarinho;
   assert.throws(() => parseTenant(withoutCns));
+});
+
+test("every office declares a theme from the offered set", () => {
+  for (const tenant of Object.values(TENANTS)) {
+    assert.ok(THEMES.includes(tenant.theme), tenant.slug);
+  }
+  assert.throws(() => parseTenant({ ...cartorioMarinho, theme: "roxo-neon" }));
+});
+
+test("every office has both variants of the seal", () => {
+  // The admin login panel is a fixed dark background, regardless of theme:
+  // it needs the light variant just as much as the public header needs dark.
+  for (const tenant of Object.values(TENANTS)) {
+    assert.ok(tenant.logos.seal.light, tenant.slug);
+    assert.ok(tenant.logos.seal.dark, tenant.slug);
+  }
+});
+
+test("the registry exercises more than one theme", () => {
+  // A registry where every office looks the same would never catch a colour
+  // hardcoded in a component instead of read from the theme.
+  const themes = new Set(Object.values(TENANTS).map((t) => t.theme));
+  assert.ok(themes.size >= 2);
 });
 
 test("the registry is never a single shape", () => {
@@ -125,4 +154,29 @@ test("override disables a section the attribution would grant", () => {
 test("override never enables a section the attributions do not grant", () => {
   const forced: Tenant = { ...tabelionatoAurora, disabledSections: [] };
   assert.equal(isSectionEnabled(forced, "editais"), false);
+});
+
+test("a mandatory section stays on even when listed as disabled", () => {
+  for (const section of MANDATORY_SECTIONS) {
+    const overridden: Tenant = {
+      ...cartorioMarinho,
+      disabledSections: [section],
+    };
+    assert.ok(isSectionEnabled(overridden, section), section);
+  }
+});
+
+test("optionalSections never includes a mandatory one", () => {
+  for (const tenant of Object.values(TENANTS)) {
+    for (const section of optionalSections(tenant)) {
+      assert.ok(!MANDATORY_SECTIONS.includes(section), section);
+    }
+  }
+});
+
+test("optionalSections only offers what the attribution grants", () => {
+  // NOTAS only: no notice board, so editais must not appear even as an off
+  // switch.
+  assert.ok(!optionalSections(tabelionatoAurora).includes("editais"));
+  assert.ok(optionalSections(cartorioMarinho).includes("editais"));
 });
