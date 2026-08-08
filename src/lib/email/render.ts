@@ -1,0 +1,83 @@
+import type { AccountEmailText } from "@/core/auth/invite.ts";
+
+export interface EmailTenantIdentity {
+  name: string;
+  subtitle: string;
+  /** Absolute URL: an e-mail client cannot resolve a path relative to the app. */
+  sealUrl: string;
+}
+
+// Fixed institutional palette, not the tenant's live `--brand-*` theme: an
+// e-mail client cannot read a CSS variable, and threading five theme
+// palettes into a second, JS-side copy is out of scope for this delivery
+// (see design.md). Same posture as src/lib/pdf.ts, which renders the
+// certificate PDF with no brand color at all.
+const COLORS = {
+  background: "#f7f5ef",
+  card: "#ffffff",
+  border: "#e3dfd4",
+  primary: "#123c2a",
+  muted: "#8f9a90",
+  text: "#1c211e",
+  button: "#1c5638",
+} as const;
+
+const HTML_ESCAPES: Record<string, string> = {
+  "&": "&amp;",
+  "<": "&lt;",
+  ">": "&gt;",
+  '"': "&quot;",
+  "'": "&#39;",
+};
+
+function escapeHtml(value: string): string {
+  return value.replace(/[&<>"']/g, (char) => HTML_ESCAPES[char] ?? char);
+}
+
+/** The HTML body sent to the recipient's inbox. */
+export function renderAccountEmailHtml(
+  text: AccountEmailText,
+  tenant: EmailTenantIdentity,
+  actionUrl: string,
+): string {
+  const paragraphs = text.paragraphs
+    .map(
+      (paragraph) =>
+        `<p style="font-size:14px;color:${COLORS.text};line-height:1.65;margin:0 0 16px;">${escapeHtml(paragraph)}</p>`,
+    )
+    .join("");
+
+  return `<!doctype html>
+<html lang="pt-BR">
+  <body style="margin:0;padding:32px 16px;background:${COLORS.background};font-family:Arial,Helvetica,sans-serif;">
+    <table role="presentation" width="100%" style="max-width:560px;margin:0 auto;background:${COLORS.card};border:1px solid ${COLORS.border};border-radius:14px;border-collapse:separate;overflow:hidden;">
+      <tr>
+        <td style="padding:24px 28px;border-bottom:1px solid ${COLORS.border};">
+          <img src="${escapeHtml(tenant.sealUrl)}" alt="" width="38" height="38" style="display:block;object-fit:contain;">
+        </td>
+      </tr>
+      <tr>
+        <td style="padding:30px 28px 32px;">
+          <p style="font-size:17px;font-weight:700;color:${COLORS.primary};margin:0 0 4px;">${escapeHtml(tenant.name)}</p>
+          <p style="font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:${COLORS.muted};margin:0 0 20px;">${escapeHtml(tenant.subtitle)}</p>
+          ${paragraphs}
+          <a href="${escapeHtml(actionUrl)}" style="display:inline-block;background:${COLORS.button};color:#ffffff;font-size:14px;font-weight:700;border-radius:9px;padding:13px 24px;text-decoration:none;margin:4px 0 20px;">${escapeHtml(text.buttonLabel)}</a>
+          <p style="font-size:12px;color:${COLORS.muted};line-height:1.6;border-top:1px solid ${COLORS.border};padding-top:14px;margin:0;">${escapeHtml(text.footnote)}</p>
+        </td>
+      </tr>
+    </table>
+  </body>
+</html>`;
+}
+
+/** Plain-text fallback for clients that do not render HTML. */
+export function renderAccountEmailText(
+  text: AccountEmailText,
+  actionUrl: string,
+): string {
+  return [
+    ...text.paragraphs,
+    `${text.buttonLabel}: ${actionUrl}`,
+    text.footnote,
+  ].join("\n\n");
+}

@@ -6,19 +6,19 @@ import type { Tenant } from "@/core/tenant/schema.ts";
 import { signOut } from "../actions.ts";
 import { AdminIcon } from "./icon.tsx";
 import { ADMIN_NAV, navGroups } from "./nav.ts";
-
-// What the person is called in the panel. The role decides what they may do;
-// this only decides what the sidebar prints under their name.
-const ROLE_LABELS: Record<Role, string> = {
-  admin: "Registrador",
-  staff: "Atendimento",
-};
+import { ROLE_LABELS } from "./role-labels.ts";
 
 /**
  * Two letters for the avatar. Accounts born from an invite may have no name
  * yet, so the e-mail answers for them rather than leaving an empty circle.
+ * Exported: the locked shell at /admin/redefinir-senha (see
+ * locked-sidebar.tsx) shows the same avatar for a person who has no session
+ * yet, only the account the invite or reset link names.
  */
-function initials(name: string | null | undefined, email: string): string {
+export function initials(
+  name: string | null | undefined,
+  email: string,
+): string {
   const words = (name ?? "").trim().split(/\s+/).filter(Boolean);
   if (words.length >= 2) return (words[0][0] + words.at(-1)?.[0]).toUpperCase();
   if (words.length === 1) return words[0].slice(0, 2).toUpperCase();

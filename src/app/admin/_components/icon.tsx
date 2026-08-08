@@ -61,6 +61,13 @@ const PATHS = {
     "M5.5 10h13A1.5 1.5 0 0 1 20 11.5v8A1.5 1.5 0 0 1 18.5 21h-13A1.5 1.5 0 0 1 4 19.5v-8A1.5 1.5 0 0 1 5.5 10Z",
     "M8 10V7a4 4 0 0 1 8 0v3",
   ],
+  // Sidebar navigation: the Usuários screen.
+  users: [
+    "M2 21v-1.5A4.5 4.5 0 0 1 6.5 15h4a4.5 4.5 0 0 1 4.5 4.5V21",
+    "M8.5 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8Z",
+    "M16 6.2a4 4 0 0 1 0 7.6",
+    "M22 21v-1.5a4.5 4.5 0 0 0-3.2-4.3",
+  ],
 } as const;
 
 export type AdminIconName = keyof typeof PATHS;
