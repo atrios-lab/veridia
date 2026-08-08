@@ -38,6 +38,20 @@ export const ADMIN_NAV: readonly AdminNavItem[] = [
     permission: "requests.manage",
   },
   {
+    group: "Canais do cidadão",
+    label: "Atendimento online",
+    href: "/admin/atendimento",
+    icon: "chat",
+    permission: "chat.manage",
+  },
+  {
+    group: "Serventia",
+    label: "Publicações",
+    href: "/admin/publicacoes",
+    icon: "file",
+    permission: "content.edit",
+  },
+  {
     group: "Serventia",
     label: "Configurações",
     href: "/admin/configuracoes",

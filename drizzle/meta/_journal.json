@@ -36,6 +36,20 @@
       "when": 1786015841549,
       "tag": "0004_narrow_scarlet_witch",
       "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1786206984232,
+      "tag": "0005_keen_thunderbolt",
+      "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1786207888932,
+      "tag": "0006_broad_ozymandias",
+      "breakpoints": true
     }
   ]
 }

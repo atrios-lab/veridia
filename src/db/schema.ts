@@ -1,5 +1,7 @@
 import { sql } from "drizzle-orm";
 import {
+  boolean,
+  date,
   index,
   integer,
   jsonb,
@@ -9,6 +11,7 @@ import {
   uniqueIndex,
   uuid,
 } from "drizzle-orm/pg-core";
+import { user } from "./auth-schema.ts";
 
 // Every table carries the office slug. The slug is not a foreign key: the
 // office registry is config as code, in src/core/tenant, and the database
@@ -211,4 +214,160 @@ export const serviceRequestRequirements = pgTable(
     fulfilledAt: timestamp("fulfilled_at", { withTimezone: true }),
   },
   (t) => [index("service_request_requirements_request").on(t.requestId)],
+);
+
+/**
+ * What a serventia publishes to the "Proclamas e avisos" home section:
+ * marriage banns, a general notice, or a formal notice. `publishAt` and
+ * `expireAt` are calendar dates, not instants — a publication is on the site
+ * for whole days, read on the wall calendar of the office, same discipline as
+ * `IsoDate` in `src/core/scheduling/calendar.ts`. Null `publishAt` is a
+ * draft; state (draft/scheduled/live/archived) is never stored, only
+ * computed from these dates and `archivedAt` — see
+ * `src/core/publications/state.ts`.
+ */
+export const officePublications = pgTable(
+  "office_publications",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    tenantSlug,
+    kind: text("kind").notNull(),
+    title: text("title").notNull(),
+    body: text("body").notNull(),
+    publishAt: date("publish_at"),
+    expireAt: date("expire_at"),
+    // Set only by manual archiving ("Arquivar agora"); automatic expiry is a
+    // read-time calculation and never writes here.
+    archivedAt: timestamp("archived_at", { withTimezone: true }),
+    createdBy: text("created_by"),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (t) => [
+    index("office_publications_tenant_publish_at").on(
+      t.tenantSlug,
+      t.publishAt,
+    ),
+  ],
+);
+
+/**
+ * A live conversation between a citizen and the office's support chat.
+ * Unlike the four kinds in `service_requests` — one submission, one eventual
+ * reply — a conversation has many messages, an attendant that can change
+ * mid-life (transfer), and both sides poll it at once. That shape is why it
+ * is its own table instead of a fifth request kind — see
+ * add-support-chat/design.md.
+ *
+ * There is deliberately no protocol number and no access key here: the
+ * citizen only needs this to survive a reload of the same browser tab, not
+ * to prove ownership from another device later (see design.md, "Sem
+ * protocolo nem chave de acesso para a conversa"). The citizen's own token
+ * is never stored — only its hash, in `chat_citizen_token_hash`, read the
+ * same way `access_key_hash` already is for the other four channels.
+ */
+export const chatConversations = pgTable(
+  "chat_conversations",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    tenantSlug,
+    status: text("status").notNull().default("waiting"),
+    citizenName: text("citizen_name").notNull(),
+    citizenContact: text("citizen_contact").notNull(),
+    subject: text("subject").notNull(),
+    // Hash of the opaque cookie token that lets the citizen's browser find
+    // this conversation again — same discipline as `access_key_hash`
+    // elsewhere: the value itself never touches the database.
+    citizenTokenHash: text("citizen_token_hash").notNull(),
+    // What the citizen typed in the pre-chat, kept verbatim even if it
+    // matches nothing — the attendant still sees what was typed.
+    informedProtocolNumber: text("informed_protocol_number"),
+    // Set only when informedProtocolNumber matches a real record.
+    matchedRequestId: uuid("matched_request_id").references(
+      () => serviceRequests.id,
+      { onDelete: "set null" },
+    ),
+    // The public page the citizen opened the widget from.
+    sourcePath: text("source_path"),
+    assignedUserId: text("assigned_user_id").references(() => user.id, {
+      onDelete: "set null",
+    }),
+    // Copied from the attendant's own `chat_sector` at the moment they take
+    // the conversation, not read live from `user` — a transcript has to keep
+    // saying "Registro Civil" even if that attendant's sector changes later
+    // (same reasoning as `service_requests.attribution`).
+    assignedSector: text("assigned_sector"),
+    lastActivityAt: timestamp("last_activity_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    waitingSince: timestamp("waiting_since", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    closedAt: timestamp("closed_at", { withTimezone: true }),
+    closedReason: text("closed_reason"),
+    // Set at closing time, either by linking to an existing request or by
+    // the manual entry launched from this conversation.
+    linkedRequestId: uuid("linked_request_id").references(
+      () => serviceRequests.id,
+      { onDelete: "set null" },
+    ),
+    rating: integer("rating"),
+    ratingComment: text("rating_comment"),
+    wantsTranscriptEmail: boolean("wants_transcript_email")
+      .notNull()
+      .default(false),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (t) => [
+    index("chat_conversations_tenant_status").on(t.tenantSlug, t.status),
+    index("chat_conversations_tenant_waiting_since").on(
+      t.tenantSlug,
+      t.waitingSince,
+    ),
+  ],
+);
+
+/**
+ * One message, note or system event inside a conversation. `authorType`
+ * carries `note` as its own value rather than a flag on top of `staff` — a
+ * note must never reach the citizen, and a boolean next to a shared type is
+ * the kind of field a query forgets to filter (see design.md).
+ *
+ * The attachment columns mirror `service_request_attachments`'s shape and
+ * stay null on every message that is not one.
+ */
+export const chatMessages = pgTable(
+  "chat_messages",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    conversationId: uuid("conversation_id")
+      .notNull()
+      .references(() => chatConversations.id, { onDelete: "cascade" }),
+    tenantSlug,
+    authorType: text("author_type").notNull(),
+    authorUserId: text("author_user_id").references(() => user.id, {
+      onDelete: "set null",
+    }),
+    body: text("body").notNull().default(""),
+    attachmentStoredName: text("attachment_stored_name"),
+    attachmentDisplayName: text("attachment_display_name"),
+    attachmentPath: text("attachment_path"),
+    attachmentMimeType: text("attachment_mime_type"),
+    attachmentSizeBytes: integer("attachment_size_bytes"),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (t) => [
+    index("chat_messages_conversation_created_at").on(
+      t.conversationId,
+      t.createdAt,
+    ),
+  ],
 );

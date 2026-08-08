@@ -6,6 +6,7 @@ import { can } from "@/core/auth/roles.ts";
 import { generateAccessKey, hashAccessKey } from "@/core/request/access-key.ts";
 import { serviceRequestSchema } from "@/core/request/form.ts";
 import { parseCentsInput } from "@/core/request/money.ts";
+import { closeConversation } from "@/lib/chat.ts";
 import {
   createServiceRequest,
   setRequestAmount,
@@ -71,15 +72,29 @@ export async function createManualServiceRequest(
 
   const accessKey = generateAccessKey();
   const amountCents = parseCentsInput(String(formData.get("amount") ?? ""));
+  // Present only when this form was opened from "Lançar um pedido novo a
+  // partir desta conversa" at closing time (see
+  // atendimento/[id]/_components/close-dialog.tsx).
+  const fromConversationId =
+    String(formData.get("fromConversationId") ?? "").trim() || undefined;
 
   try {
     const { id, protocolNumber } = await createServiceRequest(tenant, act, {
       ...parsed.data,
       accessKeyHash: hashAccessKey(accessKey),
-      details: { channel: "counter" },
+      details: { channel: fromConversationId ? "chat" : "counter" },
     });
     if (amountCents !== undefined) {
       await setRequestAmount(tenant.slug, id, amountCents, session.user.id);
+    }
+    if (fromConversationId) {
+      await closeConversation(
+        tenant.slug,
+        fromConversationId,
+        { kind: "staff", userId: session.user.id },
+        { linkedRequestId: id },
+      );
+      revalidatePath("/admin/atendimento");
     }
     revalidatePath("/admin", "layout");
     return { status: "success", protocolNumber, accessKey };

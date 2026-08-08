@@ -40,6 +40,16 @@ const PATHS = {
     "M4 12h4l2 3h4l2-3h4",
     "M4 12 5.5 5A2 2 0 0 1 7.4 3.5h9.2A2 2 0 0 1 18.5 5L20 12v6a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2v-6Z",
   ],
+  // Sidebar navigation: publications (a folded document with two lines).
+  file: [
+    "M4 22V4a2 2 0 0 1 2-2h9l5 5v15a1 1 0 0 1-1 1H6a2 2 0 0 1-2-2Z",
+    "M14 2v6h6",
+    "M8 13h8",
+    "M8 17h5",
+  ],
+  // Sidebar navigation and header indicator: support chat (a speech bubble).
+  chat: ["M7.9 20A9 9 0 1 0 4 16.1L2 22Z"],
+  x: ["M18 6 6 18", "M6 6l12 12"],
 } as const;
 
 export type AdminIconName = keyof typeof PATHS;

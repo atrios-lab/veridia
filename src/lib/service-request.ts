@@ -528,6 +528,22 @@ export async function deleteRequest(
     );
 }
 
+/** The request by id — for a screen that already knows the id, not the
+ * protocol (e.g. a chat conversation's matched or linked request). */
+export async function findById(tenantSlug: string, id: string) {
+  const [request] = await db
+    .select()
+    .from(serviceRequests)
+    .where(
+      and(
+        eq(serviceRequests.tenantSlug, tenantSlug),
+        eq(serviceRequests.id, id),
+      ),
+    )
+    .limit(1);
+  return request;
+}
+
 /** The request behind a protocol, scoped to the office that served it. */
 export async function findByProtocol(
   tenantSlug: string,
