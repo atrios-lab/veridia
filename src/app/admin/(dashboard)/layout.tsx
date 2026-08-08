@@ -1,6 +1,7 @@
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { can } from "@/core/auth/roles.ts";
+import { waitingCount } from "@/lib/chat.ts";
 import { openRequestCount } from "@/lib/service-request.ts";
 import { getSession } from "@/lib/session.ts";
 import { getTenant } from "@/lib/tenant.ts";
@@ -30,9 +31,14 @@ export default async function DashboardLayout({
   const role = session.user.role ?? "";
   // Only queried when the item is actually offered: the badge is a courtesy
   // on top of a link that is itself hidden without the permission.
-  const counts: Record<string, number> = can(role, "requests.manage")
-    ? { "/admin/pedidos": await openRequestCount(tenant.slug) }
-    : {};
+  const counts: Record<string, number> = {
+    ...(can(role, "requests.manage")
+      ? { "/admin/pedidos": await openRequestCount(tenant.slug) }
+      : {}),
+    ...(can(role, "chat.manage")
+      ? { "/admin/atendimento": await waitingCount(tenant.slug) }
+      : {}),
+  };
 
   return (
     <div className="flex min-h-screen">

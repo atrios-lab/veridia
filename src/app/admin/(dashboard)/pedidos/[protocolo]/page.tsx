@@ -10,6 +10,7 @@ import {
 } from "@/core/request/kinds.ts";
 import { formatCents } from "@/core/request/money.ts";
 import { formatDate, toIsoDate } from "@/core/scheduling/calendar.ts";
+import { linkedConversations } from "@/lib/chat.ts";
 import {
   findByProtocol,
   listAttachments,
@@ -97,11 +98,13 @@ export default async function ServiceRequestDetailPage({
     ? request.status
     : "new";
 
-  const [attachments, requirementRows, history] = await Promise.all([
-    listAttachments(tenant.slug, request.id),
-    listRequirements(tenant.slug, request.id),
-    listRequestHistory(tenant.slug, request.id, request.protocolNumber),
-  ]);
+  const [attachments, requirementRows, history, conversations] =
+    await Promise.all([
+      listAttachments(tenant.slug, request.id),
+      listRequirements(tenant.slug, request.id),
+      listRequestHistory(tenant.slug, request.id, request.protocolNumber),
+      linkedConversations(tenant.slug, request.id),
+    ]);
 
   const citizenAttachments = attachments.filter((a) => a.kind !== "office");
   const deliveredAttachments = attachments
@@ -234,6 +237,33 @@ export default async function ServiceRequestDetailPage({
                 toIsoDate(request.createdAt, OFFICE_TIME_ZONE),
               )}
             />
+
+            {conversations.length > 0 && (
+              <div className="rounded-[14px] border border-admin-border bg-admin-card p-4.5">
+                <h4 className="font-serif text-[15.5px] font-semibold text-admin-primary">
+                  Atendimentos vinculados
+                </h4>
+                <ul className="mt-3 flex flex-col gap-2">
+                  {conversations.map((conversation) => (
+                    <li key={conversation.id}>
+                      <Link
+                        href={`/admin/atendimento/${conversation.id}`}
+                        className="flex items-center justify-between gap-2 rounded-[9px] border border-admin-border bg-admin-input-bg px-3 py-2 text-[12px] hover:border-admin-primary-soft"
+                      >
+                        <span className="text-admin-text">
+                          {conversation.attendantName ?? "Atendente"}
+                        </span>
+                        <span className="text-admin-faint">
+                          {conversation.closedAt
+                            ? formatDayMonthTime(conversation.closedAt)
+                            : "—"}
+                        </span>
+                      </Link>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
 
             <div className="rounded-[14px] border border-admin-border bg-admin-card p-4.5">
               <h4 className="font-serif text-[15.5px] font-semibold text-admin-primary">

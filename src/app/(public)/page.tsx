@@ -2,13 +2,24 @@ import Image from "next/image";
 import Link from "next/link";
 import { ATTRIBUTION_SHORT_NAMES } from "@/core/acts/catalog.ts";
 import {
+  PUBLICATION_KIND_LABELS,
+  type PublicationKind,
+} from "@/core/publications/publication.ts";
+import { formatDate } from "@/core/scheduling/calendar.ts";
+import {
   isSectionEnabled,
   SECTION_LABELS,
   SECTION_ROUTES,
 } from "@/core/tenant/gating.ts";
 import type { Section } from "@/core/tenant/schema.ts";
+import { livePublications } from "@/lib/publications.ts";
 import { getTenant } from "@/lib/tenant.ts";
 import { Icon, type IconName } from "./_components/icon.tsx";
+
+// The home's own section shows only the most recent ones; there is no
+// listing page to send the rest to yet, so an unbounded list would just grow
+// forever on an office that never archives manually (see design.md, Risks).
+const MAX_HOME_PUBLICATIONS = 6;
 
 // The three tasks that bring a citizen here, in the order the redesign puts
 // them. Each one is a section, so an office that does not offer it simply
@@ -68,6 +79,10 @@ export default async function Home() {
     isSectionEnabled(tenant, l.section),
   );
   const canLookUp = isSectionEnabled(tenant, "consulta-protocolo");
+  const publications = (await livePublications(tenant.slug)).slice(
+    0,
+    MAX_HOME_PUBLICATIONS,
+  );
 
   return (
     <>
@@ -218,6 +233,41 @@ export default async function Home() {
             </Link>
           ))}
         </section>
+
+        {/* Only exists on the site at all when there is a live publication —
+            no publication, no section, same rule as any other optional home
+            block (compare `citizenLinks.length > 0` below). */}
+        {publications.length > 0 && (
+          <section className="pb-6 md:pb-10">
+            <span className="text-[11px] font-bold uppercase tracking-[0.16em] text-brand-accent">
+              Proclamas e avisos
+            </span>
+            <div className="mt-2.5 flex flex-col gap-2.5 md:mt-3.5 md:grid md:grid-cols-2">
+              {publications.map((publication) => (
+                <div
+                  key={publication.id}
+                  className="rounded-2xl border border-brand-border bg-brand-card p-4"
+                >
+                  <span className="text-[10px] font-bold uppercase tracking-[0.06em] text-brand-accent">
+                    {
+                      PUBLICATION_KIND_LABELS[
+                        publication.kind as PublicationKind
+                      ]
+                    }
+                    {publication.publishAt &&
+                      ` · ${formatDate(publication.publishAt)}`}
+                  </span>
+                  <p className="mt-1 text-sm font-semibold text-brand-primary">
+                    {publication.title}
+                  </p>
+                  <p className="mt-1 line-clamp-2 text-xs text-brand-muted">
+                    {publication.body}
+                  </p>
+                </div>
+              ))}
+            </div>
+          </section>
+        )}
 
         {/* On a phone the attributions are their own section; on desktop they
             live inside the "Quem somos" card, the way the redesign draws it. */}

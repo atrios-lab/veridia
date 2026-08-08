@@ -6,8 +6,10 @@ import {
   SECTION_LABELS,
   SECTION_ROUTES,
 } from "@/core/tenant/gating.ts";
+import { isChatEnabled } from "@/lib/chat.ts";
 import { SERIF } from "@/lib/fonts.ts";
 import { getTenant } from "@/lib/tenant.ts";
+import { ChatWidget } from "./_components/chat-widget.tsx";
 import { Icon } from "./_components/icon.tsx";
 
 // The redesign's header: home, the two tasks, notices and contact, with the
@@ -28,6 +30,11 @@ export default async function PublicLayout({
   const headerSections = HEADER_SECTIONS.filter((s) =>
     isSectionEnabled(tenant, s),
   );
+  // Server-side gate on the office's switch: an office with chat off never
+  // ships the component to the client at all. The client then polls its own
+  // state to react within seconds if the switch flips mid-session (see
+  // chat-widget.tsx) — this only covers page load.
+  const chatEnabled = await isChatEnabled(tenant.slug);
 
   return (
     <div
@@ -145,6 +152,8 @@ export default async function PublicLayout({
           </div>
         </div>
       </footer>
+
+      {chatEnabled && <ChatWidget tenant={tenant} />}
     </div>
   );
 }

@@ -21,6 +21,16 @@ test("admin may edit billing", () => {
   assert.ok(can("admin", "billing.edit"));
 });
 
+test("staff may manage chat conversations but not the office's chat switch", () => {
+  assert.ok(can("staff", "chat.manage"));
+  assert.equal(can("staff", "chat.settings"), false);
+});
+
+test("admin may manage chat conversations and the office's chat switch", () => {
+  assert.ok(can("admin", "chat.manage"));
+  assert.ok(can("admin", "chat.settings"));
+});
+
 test("an unknown role gets nothing", () => {
   assert.equal(isRole("superuser"), false);
   assert.equal(can("superuser", "admin.access"), false);

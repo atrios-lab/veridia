@@ -31,6 +31,11 @@ export const OFFICE_CONTACT_KEY = "office-contact";
 export const OFFICE_BRAND_KEY = "office-brand";
 export const OFFICE_DPO_KEY = "office-dpo";
 export const OFFICE_PIX_KEY = "office-pix";
+// Not part of Tenant/applyTenantOverrides: whether the office's chat is on
+// is operational switch state, not branding or editorial content, so it is
+// read and written directly by src/lib/chat.ts, never merged into the
+// config-as-code shape the other four keys layer onto.
+export const OFFICE_CHAT_KEY = "office-chat";
 
 /**
  * Reads the office's own edits, both keys in one query: `getTenant` is

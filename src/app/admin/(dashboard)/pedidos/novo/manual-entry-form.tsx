@@ -22,7 +22,13 @@ function FieldError({ message }: { message?: string }) {
   );
 }
 
-export function ManualEntryForm({ tenant }: { tenant: Tenant }) {
+export function ManualEntryForm({
+  tenant,
+  fromConversation,
+}: {
+  tenant: Tenant;
+  fromConversation?: { id: string; name: string; contact: string };
+}) {
   const [attribution, setAttribution] = useState<Attribution>(
     tenant.attributions[0],
   );
@@ -68,6 +74,19 @@ export function ManualEntryForm({ tenant }: { tenant: Tenant }) {
       action={formAction}
       className="rounded-[14px] border border-admin-border bg-admin-card p-6.5"
     >
+      {fromConversation && (
+        <>
+          <input
+            type="hidden"
+            name="fromConversationId"
+            value={fromConversation.id}
+          />
+          <p className="mb-4.5 rounded-[10px] border border-admin-input-border bg-admin-input-bg px-3.5 py-2.5 text-[12.5px] text-admin-muted">
+            A partir da conversa com <b>{fromConversation.name}</b>. Ao
+            registrar, o atendimento é encerrado e vinculado a este pedido.
+          </p>
+        </>
+      )}
       <span className="mb-3 block text-[11.5px] font-bold uppercase tracking-[0.09em] text-admin-accent">
         Atribuição
       </span>
@@ -125,6 +144,7 @@ export function ManualEntryForm({ tenant }: { tenant: Tenant }) {
           <input
             id="applicantName"
             name="applicantName"
+            defaultValue={fromConversation?.name}
             className={FIELD_CLASS}
           />
           <FieldError message={fieldErrors.applicantName} />
@@ -148,6 +168,7 @@ export function ManualEntryForm({ tenant }: { tenant: Tenant }) {
           <input
             id="contact"
             name="contact"
+            defaultValue={fromConversation?.contact}
             placeholder="Para avisar sobre o andamento"
             className={FIELD_CLASS}
           />

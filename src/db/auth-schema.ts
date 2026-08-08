@@ -17,6 +17,15 @@ export const user = pgTable("user", {
   // table, so there is no foreign key to declare. Not nullable: a user with no
   // office is a state nobody would remember to handle.
   tenantSlug: text("tenant_slug").notNull(),
+  // Self-service presence for the support chat console — Disponível, Ocupado
+  // ou Ausente. Not access control, just what colleagues see in the transfer
+  // list (see add-support-chat/design.md).
+  chatStatus: text("chat_status").notNull().default("available"),
+  // Which attribution the attendant specializes in, shown next to their name
+  // in the transfer list. Optional and set only at invite/seed time — there
+  // is no user management screen yet (see add-support-chat/design.md,
+  // "Setor do atendente é campo opcional no convite, não uma tela nova").
+  chatSector: text("chat_sector"),
   createdAt: timestamp("created_at").notNull().defaultNow(),
   updatedAt: timestamp("updated_at").notNull().defaultNow(),
 });
@@ -31,6 +40,8 @@ export const USER_ADDITIONAL_FIELDS = {
   // No default: which office a user belongs to is never a guess. It is set
   // where the user is created, and validated against the registry there.
   tenantSlug: { type: "string", input: false, required: true },
+  chatStatus: { type: "string", input: false, defaultValue: "available" },
+  chatSector: { type: "string", input: false, required: false },
 } as const;
 
 export const session = pgTable("session", {
