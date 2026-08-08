@@ -40,6 +40,17 @@ const PATHS = {
     "M4 12h4l2 3h4l2-3h4",
     "M4 12 5.5 5A2 2 0 0 1 7.4 3.5h9.2A2 2 0 0 1 18.5 5L20 12v6a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2v-6Z",
   ],
+  // Sidebar navigation: the appointment queue.
+  calendar: [
+    "M8 2v4M16 2v4M3 10h18M5 4h14a2 2 0 0 1 2 2v13a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2Z",
+  ],
+  // Sidebar navigation: the ombudsman queue.
+  megaphone: ["M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"],
+  // Sidebar navigation: the data rights (LGPD) queue.
+  shield: [
+    "M5.5 10h13A1.5 1.5 0 0 1 20 11.5v8A1.5 1.5 0 0 1 18.5 21h-13A1.5 1.5 0 0 1 4 19.5v-8A1.5 1.5 0 0 1 5.5 10Z",
+    "M8 10V7a4 4 0 0 1 8 0v3",
+  ],
 } as const;
 
 export type AdminIconName = keyof typeof PATHS;

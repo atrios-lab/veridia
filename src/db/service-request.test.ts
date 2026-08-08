@@ -221,6 +221,49 @@ test("a requirement is fulfilled by linking its resolving attachment", async () 
   assert.equal(rows[0].resolution_attachment_id, attachmentId);
 });
 
+test("a channel's queue only ever sees its own kind", async () => {
+  // Two ombudsman rows exist by now (one from "each kind has its own
+  // counter", one from "an anonymous manifestation is filed...") alongside
+  // several REQ, AGD and SOL rows sharing this table; a query scoped to one
+  // kind must not leak another's rows into its count.
+  const { rows } = await client.query<{ count: string }>(
+    "SELECT count(*)::text AS count FROM service_requests WHERE tenant_slug = $1 AND kind = 'ombudsman'",
+    ["cartorio-marinho"],
+  );
+  assert.equal(rows[0].count, "2");
+});
+
+test("responding to a data-rights request writes the reply and clears the draft", async () => {
+  await fileRecord("data-rights", "SOL", "cartorio-marinho", 2028, 1);
+  await client.query(
+    `UPDATE service_requests
+     SET details = '{"right":"access","draftReply":"rascunho"}'
+     WHERE protocol_number = 'SOL.2028.000001'`,
+  );
+
+  // What `respondToRecord` does: write the reply, stamp the time, move the
+  // status, and drop `draftReply` from `details` in the same write.
+  await client.query(
+    `UPDATE service_requests
+     SET office_reply = $1, office_replied_at = now(), status = 'answered',
+         details = details - 'draftReply'
+     WHERE protocol_number = 'SOL.2028.000001'`,
+    ["Segue a resposta ao titular."],
+  );
+
+  const { rows } = await client.query<{
+    office_reply: string;
+    status: string;
+    details: { right: string; draftReply?: string };
+  }>(
+    "SELECT office_reply, status, details FROM service_requests WHERE protocol_number = 'SOL.2028.000001'",
+  );
+  assert.equal(rows[0].office_reply, "Segue a resposta ao titular.");
+  assert.equal(rows[0].status, "answered");
+  assert.equal(rows[0].details.right, "access");
+  assert.equal(rows[0].details.draftReply, undefined);
+});
+
 test("reissuing the access key leaves only the new hash valid", async () => {
   await fileRequest("cartorio-marinho", 2028, 3);
   await client.query(

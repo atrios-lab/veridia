@@ -15,6 +15,7 @@ export const PERMISSIONS = [
   "billing.edit",
   "user.manage",
   "requests.manage",
+  "channels.manage",
 ] as const;
 export type Permission = (typeof PERMISSIONS)[number];
 
@@ -23,9 +24,9 @@ const ROLE_PERMISSIONS: Record<Role, readonly Permission[]> = {
   // Staff drafts and edits, but publishing, billing and user management stay
   // with the office owner: those are the actions nobody can undo quietly, and
   // the Pix key is where the citizen's money lands. Working the request
-  // queue is the opposite: it is staff's actual day job, so it is granted
-  // here too.
-  staff: ["admin.access", "content.edit", "requests.manage"],
+  // queue and the three citizen channels (agenda, ouvidoria, LGPD) is the
+  // opposite: it is staff's actual day job, so it is granted here too.
+  staff: ["admin.access", "content.edit", "requests.manage", "channels.manage"],
 };
 
 export function isRole(value: string): value is Role {
