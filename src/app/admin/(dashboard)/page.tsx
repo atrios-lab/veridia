@@ -1,17 +1,35 @@
-import Link from "next/link";
 import { can } from "@/core/auth/roles.ts";
-import type { RequestKind } from "@/core/request/kinds.ts";
 import {
-  activitySentence,
-  CHANNEL_CHIP_LABELS,
-  listRecentActivity,
-  listStalledFulfilledRequirements,
-  listUpcomingDataRightsDeadlines,
+  countCriticalDeskItems,
+  type DeskItemInput,
+  rankDeskItems,
+  rankTodayAppointments,
+  type TodayAppointmentInput,
+} from "@/core/overview/desk.ts";
+import type { RequestKind } from "@/core/request/kinds.ts";
+import { parseDetails } from "@/core/request/kinds.ts";
+import { toIsoDate } from "@/core/scheduling/calendar.ts";
+import {
+  ACTIVITY_VERBS,
+  type DeskRecord,
+  findResumePoint,
+  listDeskItems,
+  listTodayAppointments,
+  type TodayAppointmentRecord,
 } from "@/lib/admin-overview.ts";
-import { openCountByKind, openRequestCount } from "@/lib/service-request.ts";
+import { isChatEnabled, waitingConversations } from "@/lib/chat.ts";
 import { getSession } from "@/lib/session.ts";
 import { getTenant, OFFICE_TIME_ZONE, today } from "@/lib/tenant.ts";
-import { AdminPageHeader } from "../_components/page-header.tsx";
+import type { ActionShortcut } from "./_components/action-shortcuts.tsx";
+import { ActionShortcuts } from "./_components/action-shortcuts.tsx";
+import type { ChannelStatusRow } from "./_components/channel-status.tsx";
+import { ChannelStatus } from "./_components/channel-status.tsx";
+import { DeskList } from "./_components/desk-list.tsx";
+import { KeyboardShortcutsCard } from "./_components/keyboard-shortcuts-card.tsx";
+import { LiveChatCard } from "./_components/live-chat-card.tsx";
+import { OverviewHeader } from "./_components/overview-header.tsx";
+import { ResumeCard } from "./_components/resume-card.tsx";
+import { TodayAgenda } from "./_components/today-agenda.tsx";
 
 export const metadata = { title: "Painel" };
 
@@ -22,17 +40,11 @@ const ROUTE_BY_KIND: Record<RequestKind, string> = {
   ombudsman: "/admin/ouvidoria",
 };
 
-const CARD_LABELS: Record<RequestKind, { title: string; caption: string }> = {
-  "service-request": {
-    title: "Pedidos de serviço",
-    caption: "pendentes de ação",
-  },
-  "data-rights": {
-    title: "Requerimentos LGPD",
-    caption: "aguardando resposta",
-  },
-  ombudsman: { title: "Ouvidoria", caption: "aguardando resposta" },
-  appointment: { title: "Agenda de atendimentos", caption: "em aberto" },
+const CHANNEL_STATUS_LABELS: Record<RequestKind, string> = {
+  "service-request": "pedidos de serviço em aberto",
+  "data-rights": "requerimentos LGPD em aberto",
+  ombudsman: "manifestações na Ouvidoria",
+  appointment: "horários aguardando ação",
 };
 
 function greeting(): string {
@@ -53,6 +65,67 @@ function firstName(name: string | null | undefined, email: string): string {
   return first || email;
 }
 
+function officeHour(instant: Date): number {
+  return Number(
+    new Intl.DateTimeFormat("pt-BR", {
+      hour: "numeric",
+      hour12: false,
+      timeZone: OFFICE_TIME_ZONE,
+    }).format(instant),
+  );
+}
+
+function toDeskItemInput(record: DeskRecord): DeskItemInput {
+  const base = {
+    kind: record.kind,
+    protocolNumber: record.protocolNumber,
+    applicantName: record.applicantName,
+    status: record.status,
+    createdAt: record.createdAt,
+  };
+  switch (record.kind) {
+    case "data-rights": {
+      const details = parseDetails("data-rights", record.details);
+      return {
+        ...base,
+        requestedOn: toIsoDate(record.createdAt, OFFICE_TIME_ZONE),
+        right: details.right,
+      };
+    }
+    case "service-request":
+      return {
+        ...base,
+        hasFulfilledPendingRequirement: record.hasFulfilledPendingRequirement,
+      };
+    case "appointment": {
+      const details = parseDetails("appointment", record.details);
+      return {
+        ...base,
+        appointmentDate: details.date,
+        slotHour: details.slotHour,
+        subject: details.subject,
+      };
+    }
+    case "ombudsman": {
+      const details = parseDetails("ombudsman", record.details);
+      return { ...base, manifestationType: details.manifestationType };
+    }
+  }
+}
+
+function toTodayAppointmentInput(
+  record: TodayAppointmentRecord,
+): TodayAppointmentInput {
+  const details = parseDetails("appointment", record.details);
+  return {
+    protocolNumber: record.protocolNumber,
+    applicantName: record.applicantName,
+    subject: details.subject,
+    slotHour: details.slotHour,
+    status: record.status,
+  };
+}
+
 export default async function AdminHome() {
   const session = await getSession();
   if (!session) return null;
@@ -61,146 +134,140 @@ export default async function AdminHome() {
 
   const canRequests = can(role, "requests.manage");
   const canChannels = can(role, "channels.manage");
+  const canPublish = can(role, "content.edit");
+  const canChat = can(role, "chat.manage");
   const kinds: RequestKind[] = [
     ...(canRequests ? (["service-request"] as const) : []),
+    // Same order the sidebar's "Canais do cidadão" group lists them in
+    // (nav.ts): LGPD, Ouvidoria, Agenda. "Situação dos canais" reads this
+    // order directly.
     ...(canChannels
-      ? (["appointment", "ombudsman", "data-rights"] as const)
+      ? (["data-rights", "ombudsman", "appointment"] as const)
       : []),
   ];
 
-  const [counts, activity, dataRightsDeadlines, stalled] = await Promise.all([
-    Promise.all(
-      kinds.map(
-        async (kind) =>
-          [
-            kind,
-            kind === "service-request"
-              ? await openRequestCount(tenant.slug)
-              : await openCountByKind(tenant.slug, kind),
-          ] as const,
-      ),
-    ),
-    listRecentActivity(tenant.slug, kinds, 8),
-    canChannels
-      ? listUpcomingDataRightsDeadlines(tenant.slug, today())
-      : Promise.resolve([]),
-    canRequests
-      ? listStalledFulfilledRequirements(tenant.slug)
-      : Promise.resolve([]),
-  ]);
-  const countByKind = new Map(counts);
+  const todayIso = today();
+  const [deskRecords, todayAppointmentRecords, resumePoint, waitingChat] =
+    await Promise.all([
+      listDeskItems(tenant.slug, kinds),
+      canChannels
+        ? listTodayAppointments(tenant.slug, todayIso)
+        : Promise.resolve([]),
+      findResumePoint(tenant.slug, session.user.id),
+      canChat
+        ? Promise.all([
+            isChatEnabled(tenant.slug),
+            waitingConversations(tenant.slug),
+          ])
+        : Promise.resolve([false, []] as const),
+    ]);
+
+  const now = new Date();
+  const deskItems = deskRecords.map(toDeskItemInput);
+  const rankedDesk = rankDeskItems(deskItems, todayIso, now);
+  const criticalCount = countCriticalDeskItems(deskItems, todayIso);
+  const rankedAgenda = rankTodayAppointments(
+    todayAppointmentRecords.map(toTodayAppointmentInput),
+    officeHour(now),
+  );
+
+  const [chatEnabled, waiting] = waitingChat;
+  const nextWaiting = waiting[0];
+
+  const pendingConfirmCount = deskRecords.filter(
+    (record) =>
+      record.kind === "appointment" &&
+      (record.status === "requested" || record.status === "proposed"),
+  ).length;
+
+  const shortcuts: ActionShortcut[] = [
+    ...(canRequests
+      ? [
+          {
+            key: "novo-pedido",
+            href: "/admin/pedidos/novo",
+            icon: "plus" as const,
+            title: "Novo pedido no balcão",
+            caption: "tecla N",
+          },
+        ]
+      : []),
+    ...(canChannels
+      ? [
+          {
+            key: "confirmar-horario",
+            href: "/admin/agenda",
+            icon: "checkCircle" as const,
+            title: "Confirmar horário",
+            caption:
+              pendingConfirmCount > 0
+                ? `${pendingConfirmCount} pendente${pendingConfirmCount === 1 ? "" : "s"}`
+                : "nenhum pendente",
+          },
+        ]
+      : []),
+    ...(canPublish
+      ? [
+          {
+            key: "nova-publicacao",
+            href: "/admin/publicacoes",
+            icon: "file" as const,
+            title: "Nova publicação",
+            caption: "edital ou aviso",
+          },
+        ]
+      : []),
+  ];
+
+  const countByKind = new Map<RequestKind, number>();
+  for (const record of deskRecords) {
+    countByKind.set(record.kind, (countByKind.get(record.kind) ?? 0) + 1);
+  }
+  const channelRows: ChannelStatusRow[] = kinds.map((kind) => ({
+    kind,
+    label: CHANNEL_STATUS_LABELS[kind],
+    count: countByKind.get(kind) ?? 0,
+    critical: kind === "data-rights" && criticalCount > 0,
+  }));
 
   return (
     <>
-      <AdminPageHeader
-        title={`${greeting()}, ${firstName(session.user.name, session.user.email)}`}
+      <OverviewHeader
+        greeting={`${greeting()}, ${firstName(session.user.name, session.user.email)}`}
+        deskCount={deskItems.length}
+        criticalCount={criticalCount}
+        today={todayIso}
       />
-      <main className="flex flex-col gap-5.5 px-[30px] py-7">
-        {kinds.length > 0 && (
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-            {kinds.map((kind) => (
-              <Link
-                key={kind}
-                href={ROUTE_BY_KIND[kind]}
-                className="rounded-[14px] border border-admin-border bg-admin-card p-5"
-              >
-                <span className="text-xs font-bold uppercase tracking-[0.04em] text-admin-muted">
-                  {CARD_LABELS[kind].title}
-                </span>
-                <div className="mt-2.5 font-serif text-[34px] font-semibold text-admin-primary">
-                  {countByKind.get(kind) ?? 0}
-                </div>
-                <div className="mt-0.5 text-[12.5px] text-admin-muted">
-                  {CARD_LABELS[kind].caption}
-                </div>
-              </Link>
-            ))}
-          </div>
-        )}
+      <main className="flex flex-col gap-4.5 px-[30px] py-7">
+        <ActionShortcuts shortcuts={shortcuts} />
 
-        <div className="grid grid-cols-1 gap-4 lg:grid-cols-[1fr_340px] lg:items-start">
-          <div className="rounded-[14px] border border-admin-border bg-admin-card p-5.5">
-            <h4 className="font-serif text-[16.5px] font-semibold text-admin-primary">
-              Atividade recente
-            </h4>
-            {activity.length === 0 ? (
-              <p className="mt-3 text-[13px] text-admin-muted">
-                Nenhum evento registrado ainda.
-              </p>
-            ) : (
-              <div className="mt-3.5 flex flex-col gap-3">
-                {activity.map((entry, index) => (
-                  <div
-                    key={`${entry.action}-${entry.createdAt.toISOString()}-${index}`}
-                    className="flex items-start gap-2.5"
-                  >
-                    <span className="flex-none rounded-full bg-admin-surface px-2.5 py-0.5 text-[10.5px] font-bold text-admin-primary">
-                      {CHANNEL_CHIP_LABELS[entry.kind]}
-                    </span>
-                    <span className="flex-1 text-[13px] text-admin-text">
-                      {entry.protocolNumber ? (
-                        <Link
-                          href={`${ROUTE_BY_KIND[entry.kind]}/${encodeURIComponent(entry.protocolNumber)}`}
-                          className="hover:underline"
-                        >
-                          {activitySentence(entry)}
-                        </Link>
-                      ) : (
-                        activitySentence(entry)
-                      )}
-                    </span>
-                  </div>
-                ))}
-              </div>
-            )}
+        <div className="grid grid-cols-1 gap-4 lg:grid-cols-[1fr_348px] lg:items-start">
+          <div className="flex min-w-0 flex-col gap-4">
+            <DeskList items={rankedDesk} />
+            {canChannels && <TodayAgenda appointments={rankedAgenda} />}
           </div>
 
-          <div className="rounded-[14px] border border-admin-border bg-admin-surface p-5">
-            <h4 className="font-serif text-[15.5px] font-semibold text-admin-primary">
-              Prazos a acompanhar
-            </h4>
-            {dataRightsDeadlines.length === 0 && stalled.length === 0 ? (
-              <p className="mt-3 text-[12.5px] text-admin-muted">
-                Nenhum prazo pendente no momento.
-              </p>
-            ) : (
-              <div className="mt-3 flex flex-col gap-2.5">
-                {dataRightsDeadlines.map((item) => (
-                  <Link
-                    key={item.id}
-                    href={`/admin/lgpd/${encodeURIComponent(item.protocolNumber)}`}
-                    className="block rounded-[10px] border border-admin-border bg-admin-card px-3.5 py-3"
-                  >
-                    <div className="text-[12.5px] font-bold text-admin-primary">
-                      {item.protocolNumber} ·{" "}
-                      {item.applicantName ?? "Nome não informado"}
-                    </div>
-                    <div className="mt-0.5 text-[12px] font-semibold text-admin-error-text">
-                      {item.daysLeft < 0
-                        ? `Prazo legal vencido há ${-item.daysLeft} dia${item.daysLeft === -1 ? "" : "s"}`
-                        : item.daysLeft === 0
-                          ? "Prazo legal vence hoje"
-                          : `Prazo legal vence em ${item.daysLeft} dia${item.daysLeft === 1 ? "" : "s"}`}
-                    </div>
-                  </Link>
-                ))}
-                {stalled.map((item) => (
-                  <Link
-                    key={item.id}
-                    href={`/admin/pedidos/${encodeURIComponent(item.protocolNumber)}`}
-                    className="block rounded-[10px] border border-admin-border bg-admin-card px-3.5 py-3"
-                  >
-                    <div className="text-[12.5px] font-bold text-admin-primary">
-                      {item.protocolNumber} ·{" "}
-                      {item.applicantName ?? "Nome não informado"}
-                    </div>
-                    <div className="mt-0.5 text-[12px] font-semibold text-admin-warning-text">
-                      Exigência cumprida. Retome a análise.
-                    </div>
-                  </Link>
-                ))}
-              </div>
+          <div className="flex flex-col gap-4">
+            {canChat && chatEnabled && nextWaiting && (
+              <LiveChatCard
+                citizenName={nextWaiting.citizenName}
+                subject={nextWaiting.subject}
+                waitMinutes={Math.floor(
+                  (now.getTime() - nextWaiting.waitingSince.getTime()) / 60_000,
+                )}
+              />
             )}
+
+            {resumePoint && (
+              <ResumeCard
+                protocolNumber={resumePoint.protocolNumber}
+                description={`Você ${ACTIVITY_VERBS[resumePoint.action] ?? "agiu neste item"}`}
+                href={`${ROUTE_BY_KIND[resumePoint.kind]}/${encodeURIComponent(resumePoint.protocolNumber)}`}
+              />
+            )}
+
+            <ChannelStatus rows={channelRows} />
+            <KeyboardShortcutsCard />
           </div>
         </div>
       </main>

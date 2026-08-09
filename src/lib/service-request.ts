@@ -18,6 +18,7 @@ import {
 } from "@/core/request/access-key.ts";
 import {
   isServiceRequestStatus,
+  KIND_BY_PREFIX,
   KIND_PREFIXES,
   LIVE_APPOINTMENT_STATUSES,
   type RequestKind,
@@ -25,7 +26,11 @@ import {
   TERMINAL_SERVICE_REQUEST_STATUSES,
   TERMINAL_STATUSES,
 } from "@/core/request/kinds.ts";
-import { formatProtocolNumber } from "@/core/request/protocol.ts";
+import {
+  formatProtocolNumber,
+  type ProtocolPrefix,
+} from "@/core/request/protocol.ts";
+import type { SearchTerm } from "@/core/request/search.ts";
 import type { IsoDate } from "@/core/scheduling/calendar.ts";
 import type { Occupancy } from "@/core/scheduling/slots.ts";
 import type { Tenant } from "@/core/tenant/schema.ts";
@@ -508,6 +513,100 @@ export async function openCountByKind(
       ),
     );
   return row?.count ?? 0;
+}
+
+export interface SearchResult {
+  kind: RequestKind;
+  id: string;
+  protocolNumber: string;
+  applicantName: string | null;
+  status: string;
+  createdAt: Date;
+}
+
+const SEARCH_LIMIT = 8;
+const searchColumns = {
+  id: serviceRequests.id,
+  kind: serviceRequests.kind,
+  protocolNumber: serviceRequests.protocolNumber,
+  applicantName: serviceRequests.applicantName,
+  status: serviceRequests.status,
+  createdAt: serviceRequests.createdAt,
+};
+
+function toSearchResults(
+  rows: { kind: string; [key: string]: unknown }[],
+): SearchResult[] {
+  return rows.map(
+    (row) => ({ ...row, kind: row.kind as RequestKind }) as SearchResult,
+  );
+}
+
+/**
+ * The global search's one query: what `term` classified to decides the
+ * comparison, protocol is an equality on the normalized number, CPF an
+ * equality ignoring both sides' mask, name an `ilike`. Restricted to `kinds`
+ * so a session missing `channels.manage` never sees a LGPD, ouvidoria or
+ * agenda hit, whatever it types.
+ */
+export async function searchRecords(
+  tenantSlug: string,
+  term: SearchTerm,
+  kinds: readonly RequestKind[],
+): Promise<SearchResult[]> {
+  if (kinds.length === 0) return [];
+  const scope = and(
+    eq(serviceRequests.tenantSlug, tenantSlug),
+    inArray(serviceRequests.kind, kinds),
+  );
+
+  if (term.type === "protocol") {
+    const kind = KIND_BY_PREFIX[term.parsed.prefix as ProtocolPrefix];
+    if (!kind || !kinds.includes(kind)) return [];
+    const protocolNumber = formatProtocolNumber(
+      term.parsed.prefix as ProtocolPrefix,
+      term.parsed.year,
+      term.parsed.sequence,
+    );
+    const rows = await db
+      .select(searchColumns)
+      .from(serviceRequests)
+      .where(and(scope, eq(serviceRequests.protocolNumber, protocolNumber)))
+      .limit(SEARCH_LIMIT);
+    return toSearchResults(rows);
+  }
+
+  if (term.type === "cpf") {
+    const rows = await db
+      .select(searchColumns)
+      .from(serviceRequests)
+      .where(
+        and(
+          scope,
+          sql`regexp_replace(${serviceRequests.cpf}, '\\D', '', 'g') = ${term.digits}`,
+        ),
+      )
+      .orderBy(desc(serviceRequests.createdAt))
+      .limit(SEARCH_LIMIT);
+    return toSearchResults(rows);
+  }
+
+  const like = `%${term.raw}%`;
+  const rows = await db
+    .select(searchColumns)
+    .from(serviceRequests)
+    .where(
+      and(
+        scope,
+        or(
+          ilike(serviceRequests.applicantName, like),
+          ilike(serviceRequests.protocolNumber, like),
+        ),
+      ),
+    )
+    .orderBy(desc(serviceRequests.createdAt))
+    .limit(SEARCH_LIMIT);
+  return toSearchResults(rows);
 }
 
 /** Requests that still need the operator's attention — the sidebar badge. */

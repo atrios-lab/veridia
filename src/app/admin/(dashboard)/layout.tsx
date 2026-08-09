@@ -5,6 +5,8 @@ import { waitingCount } from "@/lib/chat.ts";
 import { openCountByKind, openRequestCount } from "@/lib/service-request.ts";
 import { getSession } from "@/lib/session.ts";
 import { getTenant } from "@/lib/tenant.ts";
+import { GlobalSearchProvider } from "../_components/global-search.tsx";
+import { ShortcutListener } from "../_components/shortcut-listener.tsx";
 import { AdminSidebar } from "../_components/sidebar.tsx";
 
 // The protected skeleton. The check runs on every request and hits the
@@ -48,28 +50,34 @@ export default async function DashboardLayout({
   };
 
   return (
-    <div className="flex h-screen overflow-hidden">
-      <AdminSidebar
-        tenant={tenant}
-        user={{
-          name: session.user.name,
-          email: session.user.email,
-          role,
-        }}
-        pathname={pathname}
-        counts={counts}
+    <GlobalSearchProvider>
+      <ShortcutListener
+        canRequests={can(role, "requests.manage")}
+        canChannels={can(role, "channels.manage")}
       />
-      {/*
-        `h-screen overflow-hidden` above bounds the whole shell to the
-        viewport so the sidebar never scrolls away; `overflow-y-auto` here is
-        where an ordinary page's own length scrolls. A screen that manages
-        its own internal scroll region (the chat conversation, see
-        atendimento/[id]/page.tsx) fills this exactly instead and this div
-        never actually overflows for it.
-      */}
-      <div className="flex min-w-0 flex-1 flex-col overflow-y-auto">
-        {children}
+      <div className="flex h-screen overflow-hidden">
+        <AdminSidebar
+          tenant={tenant}
+          user={{
+            name: session.user.name,
+            email: session.user.email,
+            role,
+          }}
+          pathname={pathname}
+          counts={counts}
+        />
+        {/*
+          `h-screen overflow-hidden` above bounds the whole shell to the
+          viewport so the sidebar never scrolls away; `overflow-y-auto` here is
+          where an ordinary page's own length scrolls. A screen that manages
+          its own internal scroll region (the chat conversation, see
+          atendimento/[id]/page.tsx) fills this exactly instead and this div
+          never actually overflows for it.
+        */}
+        <div className="flex min-w-0 flex-1 flex-col overflow-y-auto">
+          {children}
+        </div>
       </div>
-    </div>
+    </GlobalSearchProvider>
   );
 }

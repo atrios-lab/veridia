@@ -9,9 +9,9 @@ import {
 import { getSession } from "@/lib/session.ts";
 import { getTenant } from "@/lib/tenant.ts";
 import { AdminPageHeader } from "../../_components/page-header.tsx";
+import { QueuePoller } from "../../_components/queue-poller.tsx";
 import { AssignButton } from "./_components/assign-button.tsx";
 import { ChatToggle } from "./_components/chat-toggle.tsx";
-import { QueuePoller } from "./_components/queue-poller.tsx";
 import { StatusControl } from "./_components/status-control.tsx";
 
 export const metadata = { title: "Atendimento online" };

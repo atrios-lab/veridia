@@ -1,16 +1,24 @@
 import { neon } from "@neondatabase/serverless";
 import { expect, type Page, test } from "@playwright/test";
 
-// Entrega 7a: Visão geral — contadores, atividade recente e prazos a
-// acompanhar. Roda depois dos outros três canais (Agenda, Ouvidoria, LGPD),
-// que a Visão geral só agrega.
+// Entrega 7a v2: a mesa de trabalho. Roda depois dos outros três canais
+// (Agenda, Ouvidoria, LGPD), que a Visão geral só agrega.
 
 const PORT = process.env.PORT ?? "3000";
 const baseURL = `http://marinho.localhost:${PORT}`;
-const AGD = "AGD.2097.000001";
 const SOL_DUE_SOON = "SOL.2097.000001";
+const REQ_STALLED = "REQ.2097.000001";
+const AGD_TODAY = "AGD.2097.000001";
 
-test.describe("Visão geral", () => {
+/** The office's wall calendar day, same computation as `toIsoDate` in
+ * src/core/scheduling/calendar.ts: "Agenda de hoje" filters on this. */
+function officeToday(): string {
+  return new Intl.DateTimeFormat("en-CA", {
+    timeZone: "America/Sao_Paulo",
+  }).format(new Date());
+}
+
+test.describe("Visão geral (mesa de trabalho)", () => {
   test.describe.configure({ mode: "serial" });
 
   test.skip(
@@ -33,24 +41,8 @@ test.describe("Visão geral", () => {
 
   test.beforeEach(async () => {
     const sql = neon(process.env.DATABASE_URL as string);
-    await sql`
-      insert into service_requests
-        (tenant_slug, kind, protocol_year, protocol_sequence, protocol_number,
-         applicant_name, contact, access_key_hash, status, details)
-      values
-        ('cartorio-marinho', 'appointment', 2097, 1, ${AGD},
-         'Antônio Ferreira Lima', '(84) 98888-1212', 'hash', 'requested',
-         '{"date":"2097-01-05","slotHour":9}'::jsonb)
-      on conflict do nothing
-    `;
-    // The queue reads straight from the table, but "Atividade recente" reads
-    // audit_log — a raw insert needs its own entry, the same one
-    // `createRecord` would have written.
-    await sql`
-      insert into audit_log (tenant_slug, actor_id, action, target_type, target_id)
-      values ('cartorio-marinho', null, 'appointment.create', 'appointment', ${AGD})
-    `;
-    // Due in two days: filed thirteen days ago, term ends day 15.
+    // Due in one day: filed thirteen days ago, term ends day 15 (the mesa's
+    // most urgent tier).
     await sql`
       insert into service_requests
         (tenant_slug, kind, protocol_year, protocol_sequence, protocol_number,
@@ -61,41 +53,100 @@ test.describe("Visão geral", () => {
          '{"right":"access"}'::jsonb, now() - interval '13 days')
       on conflict do nothing
     `;
+    // Em análise with a fulfilled requirement and none pending: the mesa's
+    // second tier, "Retomar análise".
+    await sql`
+      insert into service_requests
+        (tenant_slug, kind, protocol_year, protocol_sequence, protocol_number,
+         applicant_name, contact, access_key_hash, status, details)
+      values
+        ('cartorio-marinho', 'service-request', 2097, 1, ${REQ_STALLED},
+         'Rosa Almeida Fontes', 'rosa@email.com', 'hash', 'in-review', '{}'::jsonb)
+      on conflict do nothing
+    `;
+    const [request] = await sql`
+      select id from service_requests where protocol_number = ${REQ_STALLED}
+    `;
+    await sql`
+      insert into service_request_requirements (tenant_slug, request_id, text, status, fulfilled_at)
+      values ('cartorio-marinho', ${request.id}, 'Documento de identidade', 'fulfilled', now())
+    `;
+    // A pedido de horário for today, still awaiting confirmation: feeds both
+    // "Confirmar horário" (atalho) and "Agenda de hoje".
+    await sql`
+      insert into service_requests
+        (tenant_slug, kind, protocol_year, protocol_sequence, protocol_number,
+         applicant_name, contact, access_key_hash, status, details)
+      values
+        ('cartorio-marinho', 'appointment', 2097, 1, ${AGD_TODAY},
+         'Antônio Ferreira Lima', '(84) 98888-1212', 'hash', 'requested',
+         ${JSON.stringify({ date: officeToday(), slotHour: 14 })}::jsonb)
+      on conflict do nothing
+    `;
   });
 
   test.afterEach(async () => {
     const sql = neon(process.env.DATABASE_URL as string);
-    await sql`delete from audit_log where target_id = ${AGD}`;
-    await sql`delete from service_requests where protocol_number in (${AGD}, ${SOL_DUE_SOON})`;
+    await sql`delete from service_request_requirements where request_id in (
+      select id from service_requests where protocol_number = ${REQ_STALLED}
+    )`;
+    await sql`delete from service_requests where protocol_number in (${SOL_DUE_SOON}, ${REQ_STALLED}, ${AGD_TODAY})`;
   });
 
-  test("shows a counter card per channel the session can operate", async ({
+  test("a mesa lista o requerimento LGPD perto do prazo antes da exigência cumprida, cada um com o próximo passo", async ({
     page,
   }) => {
     await signIn(page);
-    const main = page.getByRole("main");
-    await expect(main.getByText("Pedidos de serviço").first()).toBeVisible();
-    await expect(main.getByText("Requerimentos LGPD").first()).toBeVisible();
-    await expect(main.getByText("Ouvidoria").first()).toBeVisible();
+    const desk = page.getByText("Sua mesa hoje").locator("..").locator("..");
+
+    const solRow = desk.getByText(SOL_DUE_SOON).locator("../..");
+    const reqRow = desk.getByText(REQ_STALLED).locator("../..");
+    await expect(solRow).toBeVisible();
+    await expect(reqRow).toBeVisible();
+
+    const solBox = await solRow.boundingBox();
+    const reqBox = await reqRow.boundingBox();
+    expect(solBox && reqBox && solBox.y).toBeLessThan(reqBox?.y ?? Infinity);
+
     await expect(
-      main.getByText("Agenda de atendimentos").first(),
-    ).toBeVisible();
+      solRow.getByRole("link", { name: "Responder agora" }),
+    ).toHaveAttribute("href", `/admin/lgpd/${SOL_DUE_SOON}`);
+    await expect(
+      reqRow.getByRole("link", { name: "Retomar análise" }),
+    ).toHaveAttribute("href", `/admin/pedidos/${REQ_STALLED}`);
   });
 
-  test("recent activity links back to the record", async ({ page }) => {
+  test("o atalho de confirmar horário mostra a contagem de pendentes e leva à agenda", async ({
+    page,
+  }) => {
     await signIn(page);
-    const link = page.getByRole("link", { name: new RegExp(AGD) });
+    // The mesa's own next-step button shares the "Confirmar horário" label
+    // (see admin-overview spec, "Mesa de trabalho... AGD para hoje"), so the
+    // shortcut is the one whose accessible name also carries the count.
+    const shortcut = page.getByRole("link", {
+      name: /Confirmar horário.*pendentes?/,
+    });
+    await expect(shortcut).toBeVisible();
+    await shortcut.click();
+    await expect(page).toHaveURL(`${baseURL}/admin/agenda`);
+  });
+
+  test("a agenda de hoje mostra o pedido de horário aguardando confirmação", async ({
+    page,
+  }) => {
+    await signIn(page);
+    const agenda = page.getByText("Agenda de hoje").locator("..").locator("..");
+    await expect(agenda).toContainText("Antônio Ferreira Lima");
+    await expect(agenda).toContainText("aguardando sua confirmação");
+  });
+
+  test("situação dos canais leva à fila do canal", async ({ page }) => {
+    await signIn(page);
+    const link = page.getByRole("link", {
+      name: /requerimentos LGPD em aberto/,
+    });
     await expect(link).toBeVisible();
     await link.click();
-    await expect(page.getByRole("heading", { name: AGD })).toBeVisible();
-  });
-
-  test("an LGPD requerimento close to its deadline appears in prazos a acompanhar", async ({
-    page,
-  }) => {
-    await signIn(page);
-    const link = page.getByRole("link", { name: new RegExp(SOL_DUE_SOON) });
-    await expect(link).toBeVisible();
-    await expect(link).toContainText(/vence em \d dias?/i);
+    await expect(page).toHaveURL(`${baseURL}/admin/lgpd`);
   });
 });

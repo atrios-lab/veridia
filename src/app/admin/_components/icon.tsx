@@ -68,6 +68,15 @@ const PATHS = {
     "M16 6.2a4 4 0 0 1 0 7.6",
     "M22 21v-1.5a4.5 4.5 0 0 0-3.2-4.3",
   ],
+  // Visão geral: the global search trigger and overlay.
+  search: ["M11 19a8 8 0 1 0 0-16 8 8 0 0 0 0 16Z", "m21 21-4.35-4.35"],
+  // Visão geral: "novo pedido no balcão" and other action shortcuts.
+  plus: ["M12 5v14M5 12h14"],
+  // Visão geral: "acontecendo agora" (chat waiting) and "confirmar horário".
+  checkCircle: [
+    "M12 22a10 10 0 1 0 0-20 10 10 0 0 0 0 20Z",
+    "m8.5 12.5 2.5 2.5 5-5",
+  ],
 } as const;
 
 export type AdminIconName = keyof typeof PATHS;

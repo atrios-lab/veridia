@@ -6,11 +6,17 @@ import {
   exists,
   inArray,
   notExists,
+  notInArray,
   or,
   sql,
 } from "drizzle-orm";
 import { dataRightsDayOfDeadline } from "@/core/request/channels.ts";
-import type { RequestKind } from "@/core/request/kinds.ts";
+import {
+  isOpenStatus,
+  REQUEST_KINDS,
+  type RequestKind,
+  TERMINAL_STATUSES,
+} from "@/core/request/kinds.ts";
 import type { IsoDate } from "@/core/scheduling/calendar.ts";
 import { user } from "@/db/auth-schema.ts";
 import { db } from "@/db/index.ts";
@@ -183,7 +189,7 @@ export const CHANNEL_CHIP_LABELS: Record<RequestKind, string> = {
   ombudsman: "Ouvidoria",
 };
 
-const ACTIVITY_VERBS: Record<string, string> = {
+export const ACTIVITY_VERBS: Record<string, string> = {
   "service-request.create": "enviou um novo pedido de serviço",
   "service-request.status": "mudou o andamento do pedido",
   "service-request.requirement.register": "registrou uma exigência no pedido",
@@ -217,4 +223,159 @@ export function activitySentence(entry: RecentActivityEntry): string {
   return entry.protocolNumber
     ? `${subject} ${verb} (${entry.protocolNumber})`
     : `${subject} ${verb}`;
+}
+
+export interface DeskRecord {
+  kind: RequestKind;
+  id: string;
+  protocolNumber: string;
+  applicantName: string | null;
+  status: string;
+  createdAt: Date;
+  details: unknown;
+  /** Only ever true for `service-request`: an exigência was cumprida and
+   * none is still pending (see `listStalledFulfilledRequirements`). */
+  hasFulfilledPendingRequirement: boolean;
+}
+
+/**
+ * Every open record of the channels the session may see: the raw material
+ * for "Sua mesa hoje". Ranking (urgency, chip, next step) is
+ * `rankDeskItems`'s job in `src/core/overview/desk.ts`, not this query's:
+ * this only fetches what still needs the operator's attention.
+ */
+export async function listDeskItems(
+  tenantSlug: string,
+  kinds: readonly RequestKind[],
+): Promise<DeskRecord[]> {
+  if (kinds.length === 0) return [];
+
+  const [rows, stalled] = await Promise.all([
+    db
+      .select({
+        id: serviceRequests.id,
+        kind: serviceRequests.kind,
+        protocolNumber: serviceRequests.protocolNumber,
+        applicantName: serviceRequests.applicantName,
+        status: serviceRequests.status,
+        createdAt: serviceRequests.createdAt,
+        details: serviceRequests.details,
+      })
+      .from(serviceRequests)
+      .where(
+        and(
+          eq(serviceRequests.tenantSlug, tenantSlug),
+          or(
+            ...kinds.map((kind) =>
+              and(
+                eq(serviceRequests.kind, kind),
+                notInArray(serviceRequests.status, [
+                  ...TERMINAL_STATUSES[kind],
+                ]),
+              ),
+            ),
+          ),
+        ),
+      ),
+    kinds.includes("service-request")
+      ? listStalledFulfilledRequirements(tenantSlug)
+      : Promise.resolve([]),
+  ]);
+
+  const stalledIds = new Set(stalled.map((row) => row.id));
+  return rows.map((row) => ({
+    ...row,
+    kind: row.kind as RequestKind,
+    hasFulfilledPendingRequirement: stalledIds.has(row.id),
+  }));
+}
+
+export interface TodayAppointmentRecord {
+  id: string;
+  protocolNumber: string;
+  applicantName: string | null;
+  status: string;
+  details: unknown;
+}
+
+/** Today's pedidos de horário (office time zone), on the wall calendar the
+ * office reads. Cancelled ones excluded, everything else including
+ * already-atendido kept so the day's list reads complete. */
+export async function listTodayAppointments(
+  tenantSlug: string,
+  todayIso: IsoDate,
+): Promise<TodayAppointmentRecord[]> {
+  return db
+    .select({
+      id: serviceRequests.id,
+      protocolNumber: serviceRequests.protocolNumber,
+      applicantName: serviceRequests.applicantName,
+      status: serviceRequests.status,
+      details: serviceRequests.details,
+    })
+    .from(serviceRequests)
+    .where(
+      and(
+        eq(serviceRequests.tenantSlug, tenantSlug),
+        eq(serviceRequests.kind, "appointment"),
+        sql`${serviceRequests.details}->>'date' = ${todayIso}`,
+        notInArray(serviceRequests.status, ["cancelled"]),
+      ),
+    );
+}
+
+export interface ResumePoint {
+  kind: RequestKind;
+  protocolNumber: string;
+  applicantName: string | null;
+  action: string;
+}
+
+/**
+ * The most recent item the session's own user acted on that is still open:
+ * "Continuar de onde parou". Same id-or-protocol join `listRecentActivity`
+ * already resolves; scanned in memory because "still open" depends on
+ * `isOpenStatus`, which is per-kind logic no SQL `WHERE` here should carry.
+ */
+export async function findResumePoint(
+  tenantSlug: string,
+  userId: string,
+): Promise<ResumePoint | undefined> {
+  const rows = await db
+    .select({
+      action: auditLog.action,
+      kind: auditLog.targetType,
+      protocolNumber: serviceRequests.protocolNumber,
+      applicantName: serviceRequests.applicantName,
+      status: serviceRequests.status,
+    })
+    .from(auditLog)
+    .innerJoin(
+      serviceRequests,
+      and(
+        eq(serviceRequests.tenantSlug, tenantSlug),
+        or(
+          eq(sql`${serviceRequests.id}::text`, auditLog.targetId),
+          eq(serviceRequests.protocolNumber, auditLog.targetId),
+        ),
+      ),
+    )
+    .where(
+      and(eq(auditLog.tenantSlug, tenantSlug), eq(auditLog.actorId, userId)),
+    )
+    .orderBy(desc(auditLog.createdAt))
+    .limit(20);
+
+  const open = rows.find(
+    (row) =>
+      (REQUEST_KINDS as readonly string[]).includes(row.kind) &&
+      isOpenStatus(row.kind as RequestKind, row.status),
+  );
+  if (!open) return undefined;
+  return {
+    kind: open.kind as RequestKind,
+    protocolNumber: open.protocolNumber,
+    applicantName: open.applicantName,
+    action: open.action,
+  };
 }
