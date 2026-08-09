@@ -1,6 +1,7 @@
 "use client";
 
-import { useActionState } from "react";
+import { useActionState, useEffect } from "react";
+import { toast } from "sonner";
 import { type ActionState, deliverDocumentAction } from "../actions.ts";
 
 export function DeliverySection({
@@ -14,6 +15,13 @@ export function DeliverySection({
     deliverDocumentAction,
     { status: "idle" },
   );
+
+  useEffect(() => {
+    if (state.status === "success") {
+      toast.success("Documento entregue. Já aparece na consulta do cidadão.");
+    }
+    if (state.status === "error") toast.error(state.message);
+  }, [state]);
 
   return (
     <div className="rounded-[14px] border border-admin-border bg-admin-card p-6">
