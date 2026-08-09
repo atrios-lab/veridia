@@ -14,9 +14,8 @@ export type ActionState =
   | { status: "error"; message: string }
   | { status: "success" };
 
-const NO_PERMISSION = "Você não tem permissão para alterar este pedido.";
-const GENERIC_ERROR =
-  "Não foi possível salvar agora. Tente novamente em instantes.";
+const NO_PERMISSION =
+  "Você não tem permissão para alterar este pedido. Peça acesso a um administrador.";
 
 /** Every action here re-checks on the server, same discipline as
  * `/admin/pedidos`: hiding the link and the page 404-ing are a courtesy. */
@@ -52,7 +51,11 @@ export async function confirmAppointment(
     );
   } catch (error) {
     console.error("agenda.confirm", error);
-    return { status: "error", message: GENERIC_ERROR };
+    return {
+      status: "error",
+      message:
+        "Não foi possível confirmar agora. Tente novamente em instantes.",
+    };
   }
   revalidateAdmin();
   return { status: "success" };
@@ -78,7 +81,10 @@ export async function cancelAppointment(
     );
   } catch (error) {
     console.error("agenda.cancel", error);
-    return { status: "error", message: GENERIC_ERROR };
+    return {
+      status: "error",
+      message: "Não foi possível cancelar agora. Tente novamente em instantes.",
+    };
   }
   revalidateAdmin();
   return { status: "success" };
@@ -104,7 +110,11 @@ export async function markAppointmentAttended(
     );
   } catch (error) {
     console.error("agenda.attend", error);
-    return { status: "error", message: GENERIC_ERROR };
+    return {
+      status: "error",
+      message:
+        "Não foi possível registrar agora. Tente novamente em instantes.",
+    };
   }
   revalidateAdmin();
   return { status: "success" };
@@ -135,7 +145,11 @@ export async function proposeOtherSlot(
     );
   } catch (error) {
     console.error("agenda.propose", error);
-    return { status: "error", message: GENERIC_ERROR };
+    return {
+      status: "error",
+      message:
+        "Não foi possível enviar a proposta agora. Tente novamente em instantes.",
+    };
   }
   revalidateAdmin();
   return { status: "success" };

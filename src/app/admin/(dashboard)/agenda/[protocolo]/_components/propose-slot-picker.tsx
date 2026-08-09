@@ -1,6 +1,7 @@
 "use client";
 
-import { useActionState, useState } from "react";
+import { useActionState, useEffect, useState } from "react";
+import { toast } from "sonner";
 import type { IsoDate } from "@/core/scheduling/calendar.ts";
 import type { Slot } from "@/core/scheduling/slots.ts";
 import { type ActionState, proposeOtherSlot } from "../actions.ts";
@@ -32,6 +33,19 @@ export function ProposeSlotPicker({
   );
 
   const selectedDay = days.find((d) => d.date === selectedDate);
+
+  /* On success the panel closes and the selection resets — leaving it open
+   * with no feedback is what invited double proposals. */
+  useEffect(() => {
+    if (state.status === "success") {
+      toast.success(
+        "Proposta enviada. O cidadão escolhe pela consulta de protocolo.",
+      );
+      setOpen(false);
+      setSelectedHour(undefined);
+    }
+    if (state.status === "error") toast.error(state.message);
+  }, [state]);
 
   if (!open) {
     return (
@@ -75,23 +89,33 @@ export function ProposeSlotPicker({
       <span className="mt-3.5 mb-2 block text-[12.5px] font-bold text-admin-primary">
         Faixa livre
       </span>
-      <div className="flex flex-wrap gap-1.5">
-        {(selectedDay?.bands ?? []).map((slot) => (
-          <button
-            key={slot.hour}
-            type="button"
-            disabled={slot.state === "taken"}
-            onClick={() => setSelectedHour(slot.hour)}
-            className={`rounded-[9px] border px-3 py-1.5 text-[12px] font-semibold disabled:cursor-not-allowed disabled:opacity-50 ${
-              selectedHour === slot.hour
-                ? "border-admin-primary bg-admin-primary text-white"
-                : "border-admin-input-border bg-admin-card text-admin-text"
-            }`}
-          >
-            {slot.label}
-          </button>
-        ))}
-      </div>
+      {(selectedDay?.bands ?? []).length === 0 ? (
+        <p className="text-[12px] text-admin-muted">
+          Sem faixas livres neste dia. Escolha outro dia.
+        </p>
+      ) : (
+        <div className="flex flex-wrap gap-1.5">
+          {(selectedDay?.bands ?? []).map((slot) => (
+            <button
+              key={slot.hour}
+              type="button"
+              disabled={slot.state === "taken"}
+              title={slot.state === "taken" ? "Ocupado" : undefined}
+              aria-label={
+                slot.state === "taken" ? `${slot.label} — ocupado` : undefined
+              }
+              onClick={() => setSelectedHour(slot.hour)}
+              className={`rounded-[9px] border px-3 py-1.5 text-[12px] font-semibold disabled:cursor-not-allowed disabled:opacity-50 ${
+                selectedHour === slot.hour
+                  ? "border-admin-primary bg-admin-primary text-white"
+                  : "border-admin-input-border bg-admin-card text-admin-text"
+              }`}
+            >
+              {slot.label}
+            </button>
+          ))}
+        </div>
+      )}
 
       <form action={action} className="mt-3.5 flex items-center gap-2.5">
         <input type="hidden" name="requestId" value={requestId} />
@@ -109,7 +133,7 @@ export function ProposeSlotPicker({
           onClick={() => setOpen(false)}
           className="text-[12px] font-semibold text-admin-muted"
         >
-          Cancelar
+          Fechar
         </button>
       </form>
 

@@ -34,7 +34,8 @@ export default async function AppointmentQueuePage() {
 
           {appointments.length === 0 ? (
             <p className="px-5 py-8 text-center text-[13px] text-admin-muted">
-              Nenhum pedido de horário registrado ainda.
+              Nenhum pedido de horário por enquanto. Os pedidos feitos pelo
+              formulário público aparecem aqui.
             </p>
           ) : (
             appointments.map((record) => {

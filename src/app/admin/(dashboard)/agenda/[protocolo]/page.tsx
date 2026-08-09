@@ -146,6 +146,7 @@ export default async function AppointmentDetailPage({
 
               <ActionsSection
                 requestId={record.id}
+                protocolNumber={record.protocolNumber}
                 status={record.status}
                 days={dayOptions}
               />
@@ -171,11 +172,13 @@ export default async function AppointmentDetailPage({
                       <strong className="text-admin-primary">
                         {entry.actorName ?? "Sistema"}
                       </strong>{" "}
-                      {HISTORY_LABELS[entry.action] ?? entry.action}
-                      <br />
-                      <span className="text-[11px] text-admin-faint">
+                      {HISTORY_LABELS[entry.action] ?? "atualizou o pedido"}
+                      <time
+                        dateTime={entry.createdAt.toISOString()}
+                        className="block text-[11px] text-admin-faint"
+                      >
                         {formatDayMonthTime(entry.createdAt)}
-                      </span>
+                      </time>
                     </li>
                   ))}
                 </ul>
