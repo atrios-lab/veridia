@@ -8,7 +8,11 @@ import { globSync, readFileSync } from "node:fs";
 const HEX = /#[0-9a-fA-F]{3,8}\b/;
 const PATTERNS = ["src/**/*.{ts,tsx,css}", "e2e/**/*.ts"];
 // Font files declare their own family metadata and never carry colour.
-const ALLOWED_FILES = /\/fonts?\//;
+// `palette.ts` is the one exception that does carry colour: the PDF documents
+// are drawn by PDFKit, which cannot read CSS, so the theme colours need a
+// TypeScript mirror. `palette.test.ts` compares it against the @theme block
+// and fails if they drift, which is what keeps the stylesheet the reference.
+const ALLOWED_FILES = /\/fonts?\/|\/tenant\/palette\.ts$/;
 
 const failures = [];
 

@@ -20,12 +20,35 @@ export interface RequerimentoSection {
   paragraphs?: string[];
 }
 
+/**
+ * The protocol and the access key, kept out of the sections on purpose. A
+ * document that carries this block gets it drawn on a page of its own, the
+ * last one, so the sheet the citizen signs and sends back can be detached
+ * from the credential that opens the request.
+ */
+export interface RequerimentoCredentials {
+  heading: string;
+  rows: RequerimentoRow[];
+  note: string;
+}
+
 export interface RequerimentoDocument {
+  /** Small letterspaced line above the title ("Serviços on-line"). */
+  eyebrow: string;
   title: string;
+  /** Protocol and date, right under the title, where the eye lands first. */
+  subtitle: string;
   office: string[];
   sections: RequerimentoSection[];
+  /**
+   * Who signs, when someone does. Present, the renderer leaves blank space to
+   * sign by hand, draws the rule and prints this name under it. Absent (the
+   * receipt), there is no signing and no space is wasted pretending there is.
+   */
+  signee?: string;
   signature: string[];
   footer: string;
+  credentials?: RequerimentoCredentials;
 }
 
 export interface RequerimentoData {
@@ -64,13 +87,13 @@ export function buildRequerimento(
   ];
   if (data.cpf) applicant.push({ label: "CPF", value: formatCpf(data.cpf) });
 
+  // Protocol and date live in the subtitle, not here: they identify the
+  // document and read best right under the title. The access key is the
+  // credential and goes on its own page below, never in the body.
   const request: RequerimentoRow[] = [
-    { label: "Protocolo", value: data.protocolNumber },
-    { label: "Chave de acesso", value: data.accessKey },
     { label: "Atribuição", value: ATTRIBUTION_NAMES[act.attribution] },
     { label: "Ato requerido", value: act.name },
     { label: "Base legal", value: act.legalBasis },
-    { label: "Data do pedido", value: formatDate(data.createdAt) },
   ];
   if (data.purpose) request.push({ label: "Finalidade", value: data.purpose });
   if (data.parameterValue) {
@@ -111,7 +134,9 @@ export function buildRequerimento(
   });
 
   return {
+    eyebrow: "Serviços on-line",
     title: "Requerimento de serviço",
+    subtitle: `Protocolo ${data.protocolNumber} · ${formatDate(data.createdAt)}`,
     office: [
       tenant.name,
       tenant.subtitle,
@@ -119,15 +144,27 @@ export function buildRequerimento(
       `${tenant.contacts.phone} · ${tenant.contacts.email}`,
     ],
     sections,
+    signee: data.applicantName,
     signature: [
-      "Assine este requerimento digitalmente pelo Gov.br (assinador.iti.br) " +
-        "ou de próprio punho, e envie o arquivo assinado pela consulta do " +
-        "protocolo ou entregue no balcão.",
-      "",
-      "___________________________________________",
-      data.applicantName,
+      "Assine este requerimento pelo Gov.br (assinador.iti.br) ou imprima e " +
+        "assine de próprio punho. Depois, envie o arquivo assinado pela " +
+        "consulta do protocolo ou entregue o papel no balcão da serventia.",
     ],
     footer: `${tenant.name} · Protocolo ${data.protocolNumber} · ${tenant.legalFooter}`,
+    credentials: {
+      heading: "Comprovante de acesso",
+      rows: [
+        { label: "Protocolo", value: data.protocolNumber },
+        { label: "Chave de acesso", value: data.accessKey },
+      ],
+      note:
+        "Guarde esta página. É com o protocolo e a chave acima que você " +
+        "acompanha o pedido e lê a resposta da serventia. O site não mostra " +
+        "a chave de novo; se perder, peça outra à serventia. Destaque esta " +
+        "página antes de enviar o requerimento assinado: o requerimento não " +
+        "precisa dela, e quem recebe o arquivo assinado não deve receber a " +
+        "chave.",
+    },
   };
 }
 
@@ -147,6 +184,10 @@ export interface DataRightsReceiptData {
  * The receipt of a data subject's requirement. It is not a form to sign: it is
  * proof of what was asked, when, and by when the office has to answer, which
  * is what the holder needs if the term goes by unanswered.
+ *
+ * Which is why it carries no `credentials` block: nobody signs this and sends
+ * it back, so there is no sheet to detach the key from. It stays in the body,
+ * where the holder reads it.
  */
 export function buildDataRightsReceipt(
   tenant: Tenant,
@@ -160,7 +201,9 @@ export function buildDataRightsReceipt(
   if (data.cpf) holder.push({ label: "CPF", value: formatCpf(data.cpf) });
 
   return {
-    title: "Recibo de requerimento ao Encarregado de Dados",
+    eyebrow: "Encarregado de Dados · LGPD",
+    title: "Recibo do requerimento",
+    subtitle: `Protocolo ${data.protocolNumber} · ${formatDate(data.createdAt)}`,
     office: [
       tenant.name,
       tenant.subtitle,
@@ -172,11 +215,11 @@ export function buildDataRightsReceipt(
       {
         heading: "Requerimento",
         rows: [
-          { label: "Protocolo", value: data.protocolNumber },
+          // The key stays in the body here: nobody signs a receipt and sends
+          // it back, so there is no sheet to detach it from.
           { label: "Chave de acesso", value: data.accessKey },
           { label: "Direito exercido", value: option.legalName },
           { label: "Pedido do titular", value: option.label },
-          { label: "Data do pedido", value: formatDate(data.createdAt) },
           {
             label: "Prazo legal para resposta",
             value: `${data.deadline} (15 dias, Lei 13.709/2018)`,
@@ -187,8 +230,8 @@ export function buildDataRightsReceipt(
       {
         heading: "Declarações",
         paragraphs: [
-          "O titular declarou ser o titular dos dados pessoais ou seu " +
-            "representante legal.",
+          "Quem enviou este requerimento declarou ser o titular dos dados " +
+            "pessoais ou seu representante legal.",
           "A resposta do Encarregado fica disponível na consulta do protocolo, " +
             "protegida pela chave de acesso acima. Se houver dúvida sobre a " +
             "titularidade, o Encarregado pode pedir comprovação pela própria " +
@@ -198,7 +241,7 @@ export function buildDataRightsReceipt(
     ],
     signature: [
       "Este recibo comprova o registro do requerimento. Guarde a chave de " +
-        "acesso: é com ela que a resposta é lida.",
+        "acesso: é com ela que você lê a resposta na consulta do protocolo.",
     ],
     footer: `${tenant.name} · Protocolo ${data.protocolNumber} · ${tenant.legalFooter}`,
   };

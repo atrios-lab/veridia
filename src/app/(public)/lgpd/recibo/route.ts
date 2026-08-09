@@ -2,6 +2,7 @@ import { dataRightsDeadline } from "@/core/request/channels.ts";
 import { parseDetails } from "@/core/request/kinds.ts";
 import { buildDataRightsReceipt } from "@/core/request/requerimento.ts";
 import { formatDate, toIsoDate } from "@/core/scheduling/calendar.ts";
+import { brandFor } from "@/lib/document-brand.ts";
 import { renderDocument } from "@/lib/pdf.ts";
 import { findByProtocolWithKey } from "@/lib/service-request.ts";
 import { getTenant, OFFICE_TIME_ZONE } from "@/lib/tenant.ts";
@@ -44,6 +45,7 @@ export async function POST(request: Request): Promise<Response> {
       createdAt: stored.createdAt,
       deadline: formatDate(dataRightsDeadline(requestedOn)),
     }),
+    brandFor(tenant, `${new URL(request.url).origin}/protocolo`),
   );
 
   return new Response(new Uint8Array(bytes), {

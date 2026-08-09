@@ -1,6 +1,7 @@
 import { getActForTenant } from "@/core/acts/catalog.ts";
 import { verifyAccessKey } from "@/core/request/access-key.ts";
 import { buildRequerimento } from "@/core/request/requerimento.ts";
+import { brandFor } from "@/lib/document-brand.ts";
 import { renderDocument } from "@/lib/pdf.ts";
 import { findByProtocol } from "@/lib/service-request.ts";
 import { getTenant } from "@/lib/tenant.ts";
@@ -51,6 +52,9 @@ export async function POST(request: Request): Promise<Response> {
       parameterValue: stored.parameterValue,
       createdAt: stored.createdAt,
     }),
+    // The QR on the letterhead points at the protocol lookup of the same host
+    // the citizen is on, which is the tenant's own domain.
+    brandFor(tenant, `${new URL(request.url).origin}/protocolo`),
   );
 
   return new Response(new Uint8Array(bytes), {
