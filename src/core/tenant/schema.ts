@@ -43,7 +43,7 @@ export const THEMES = [
   "grafite-cobre",
   "oliva-terracota",
 ] as const;
-export const ThemeSchema = z.enum(THEMES);
+export const ThemeSchema = z.enum(THEMES, "Escolha o estilo do site.");
 export type Theme = z.infer<typeof ThemeSchema>;
 
 export const OwnerStatusSchema = z.enum(["provido", "interino", "a confirmar"]);
@@ -56,11 +56,11 @@ export const TenantSchema = z.object({
   cns: z.string().min(1),
   attributions: z.array(AttributionSchema).nonempty(),
   contacts: z.object({
-    phone: z.string().min(1),
-    whatsapp: z.string().min(1),
-    email: z.email(),
+    phone: z.string().min(1, "Informe o telefone."),
+    whatsapp: z.string().min(1, "Informe o WhatsApp."),
+    email: z.email("Informe um e-mail válido."),
   }),
-  openingHours: z.string().min(1),
+  openingHours: z.string().min(1, "Informe o horário de atendimento."),
   // The same counter hours as the sentence above, in numbers, because the
   // appointment bands need arithmetic and reading a number out of Portuguese
   // prose breaks on the first office that writes it differently. The sentence
@@ -83,8 +83,8 @@ export const TenantSchema = z.object({
   // Data protection officer. Required by LGPD art. 41 §3: this is an
   // institutional channel, never a personal address.
   dpo: z.object({
-    name: z.string().min(1),
-    email: z.email(),
+    name: z.string().min(1, "Informe o nome do encarregado."),
+    email: z.email("Informe um e-mail válido."),
   }),
   // ISS rate as a decimal (5% = 0.05). Municipal parameter, per office.
   issRate: z.number().min(0).max(1),
@@ -110,8 +110,11 @@ export const TenantSchema = z.object({
   // always varied per office (it used to just be `subtitle`), so each tenant
   // config states it explicitly.
   home: z.object({
-    eyebrow: z.string().min(1).default("Serviços notariais e de registro"),
-    title: z.string().min(1),
+    eyebrow: z
+      .string()
+      .min(1, "Informe a frase de destaque.")
+      .default("Serviços notariais e de registro"),
+    title: z.string().min(1, "Informe o título de boas-vindas."),
   }),
   legalFooter: z.string().min(1),
   // Override: turns sections off even when the attribution grants them.
@@ -122,7 +125,10 @@ export const TenantSchema = z.object({
   // state, not a transition. The key is validated against its own type
   // below, and stored normalized (see `normalizePixKey`).
   pix: z
-    .object({ type: PixKeyTypeSchema, key: z.string().min(1) })
+    .object({
+      type: PixKeyTypeSchema,
+      key: z.string().min(1, "Informe a chave."),
+    })
     .superRefine((value, ctx) => {
       if (!isValidPixKey(value.type, value.key)) {
         ctx.addIssue({

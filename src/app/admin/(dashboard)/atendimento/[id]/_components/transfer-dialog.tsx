@@ -1,6 +1,7 @@
 "use client";
 
 import { useActionState, useEffect, useState } from "react";
+import { toast } from "sonner";
 import type { Colleague } from "@/lib/chat.ts";
 import { type ActionState, transferConversationAction } from "../actions.ts";
 
@@ -26,7 +27,10 @@ export function TransferDialog({
   const [toUserId, setToUserId] = useState<string>("");
 
   useEffect(() => {
-    if (state.status === "success") onDone();
+    if (state.status === "success") {
+      toast.success("Conversa transferida.");
+      onDone();
+    }
   }, [state, onDone]);
 
   return (

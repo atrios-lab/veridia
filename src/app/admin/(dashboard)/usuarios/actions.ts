@@ -86,7 +86,10 @@ export async function createUser(
   // still crash on the database's own unique index instead of failing here.
   const existing = await ctx.internalAdapter.findUserByEmail(parsed.data.email);
   if (existing) {
-    return fail("Já existe uma conta com esse e-mail.", values, {
+    // Same top-level phrasing as a schema failure below: the specific
+    // reason already lives next to the e-mail field, so the banner does not
+    // repeat it verbatim and render it twice on screen.
+    return fail("Confira os campos destacados.", values, {
       email: "Já existe uma conta com esse e-mail.",
     });
   }
@@ -142,7 +145,21 @@ async function findOwnAccount(userId: string, tenantSlug: string) {
   return row ?? null;
 }
 
-export async function resendInvite(formData: FormData): Promise<void> {
+// The two row actions below share this shape so the same client component
+// (AccountRowActions) can drive either one through useActionState and show
+// the same two feedback states: a toast on success, a toast with the
+// specific reason on failure.
+export type AccountActionState =
+  | { status: "idle" }
+  | { status: "sent" }
+  | { status: "error"; message: string };
+
+export const IDLE_ACCOUNT_ACTION_STATE: AccountActionState = { status: "idle" };
+
+export async function resendInvite(
+  _previous: AccountActionState,
+  formData: FormData,
+): Promise<AccountActionState> {
   const userId = String(formData.get("userId") ?? "");
   const session = await getSession();
   if (!session || !can(session.user.role ?? "", "user.manage")) notFound();
@@ -156,14 +173,22 @@ export async function resendInvite(formData: FormData): Promise<void> {
   const requestHeaders = await headers();
   const actionUrl = buildResetPasswordUrl(resolveOrigin(requestHeaders), token);
 
-  await sendInviteEmail({
-    to: target.email,
-    recipientName: target.name,
-    inviterName: session.user.name || session.user.email,
-    roleLabel: ROLE_LABELS[target.role as Role] ?? target.role,
-    actionUrl,
-    tenant,
-  });
+  try {
+    await sendInviteEmail({
+      to: target.email,
+      recipientName: target.name,
+      inviterName: session.user.name || session.user.email,
+      roleLabel: ROLE_LABELS[target.role as Role] ?? target.role,
+      actionUrl,
+      tenant,
+    });
+  } catch {
+    return {
+      status: "error",
+      message:
+        "Não deu para reenviar o convite agora. Tente de novo em instantes.",
+    };
+  }
 
   await recordAudit({
     tenantSlug: tenant.slug,
@@ -174,9 +199,13 @@ export async function resendInvite(formData: FormData): Promise<void> {
   });
 
   revalidatePath(USERS_PATH);
+  return { status: "sent" };
 }
 
-export async function triggerPasswordReset(formData: FormData): Promise<void> {
+export async function triggerPasswordReset(
+  _previous: AccountActionState,
+  formData: FormData,
+): Promise<AccountActionState> {
   const userId = String(formData.get("userId") ?? "");
   const session = await getSession();
   if (!session || !can(session.user.role ?? "", "user.manage")) notFound();
@@ -190,12 +219,20 @@ export async function triggerPasswordReset(formData: FormData): Promise<void> {
   const requestHeaders = await headers();
   const actionUrl = buildResetPasswordUrl(resolveOrigin(requestHeaders), token);
 
-  await sendPasswordResetEmail({
-    to: target.email,
-    recipientName: target.name,
-    actionUrl,
-    tenant,
-  });
+  try {
+    await sendPasswordResetEmail({
+      to: target.email,
+      recipientName: target.name,
+      actionUrl,
+      tenant,
+    });
+  } catch {
+    return {
+      status: "error",
+      message:
+        "Não deu para enviar o link de nova senha agora. Tente de novo em instantes.",
+    };
+  }
 
   await recordAudit({
     tenantSlug: tenant.slug,
@@ -206,4 +243,5 @@ export async function triggerPasswordReset(formData: FormData): Promise<void> {
   });
 
   revalidatePath(USERS_PATH);
+  return { status: "sent" };
 }

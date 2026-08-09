@@ -156,18 +156,24 @@ export default async function ServiceRequestDetailPage({
                 Dados do solicitante
               </h4>
               <div className="mt-4 grid grid-cols-1 gap-3.5 md:grid-cols-2">
-                <Field label="Nome" value={request.applicantName ?? "—"} />
+                <Field
+                  label="Nome"
+                  value={request.applicantName ?? "Não informado"}
+                />
                 <Field
                   label="CPF"
                   value={request.cpf ? maskCpf(request.cpf) : "Não informado"}
                 />
-                <Field label="Contato" value={request.contact ?? "—"} />
+                <Field
+                  label="Contato"
+                  value={request.contact ?? "Não informado"}
+                />
                 <Field
                   label="Ato"
                   value={
                     act
                       ? `${act.name} · ${ATTRIBUTION_NAMES[act.attribution]}`
-                      : "—"
+                      : "Ato não identificado"
                   }
                 />
               </div>
@@ -256,7 +262,7 @@ export default async function ServiceRequestDetailPage({
                         <span className="text-admin-faint">
                           {conversation.closedAt
                             ? formatDayMonthTime(conversation.closedAt)
-                            : "—"}
+                            : "Em andamento"}
                         </span>
                       </Link>
                     </li>

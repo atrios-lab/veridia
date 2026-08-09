@@ -449,7 +449,7 @@ function ConfirmationScreen({ result }: { result: AppointmentSuccess }) {
           />
         </span>
         <h1 className="mt-3 font-serif text-[23px] font-semibold text-white">
-          Pedido de horário enviado
+          Pedido de horário registrado
         </h1>
         <p className="mt-1 text-[13px] text-brand-on-dark-body">
           {formatLongDate(result.date)} · {band}
@@ -466,7 +466,7 @@ function ConfirmationScreen({ result }: { result: AppointmentSuccess }) {
         </span>
         <div>
           <h1 className="font-serif text-[28px] font-semibold text-brand-primary">
-            Pedido de horário enviado
+            Pedido de horário registrado
           </h1>
           <p className="text-[13.5px] text-brand-muted">
             {formatLongDate(result.date)} · {band}

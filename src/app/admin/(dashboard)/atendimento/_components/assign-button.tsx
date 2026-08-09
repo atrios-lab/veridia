@@ -20,7 +20,7 @@ export function AssignButton({ conversationId }: { conversationId: string }) {
         disabled={pending}
         className="rounded-lg bg-admin-primary-soft px-3.5 py-1.5 text-[12px] font-bold text-white disabled:opacity-70"
       >
-        {pending ? "Assumindo…" : "Atender"}
+        {pending ? "Atendendo…" : "Atender"}
       </button>
       {state.status === "error" && (
         <span className="text-[10.5px] font-semibold text-admin-error-text">

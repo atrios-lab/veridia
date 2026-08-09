@@ -1,6 +1,7 @@
 "use client";
 
-import { useActionState } from "react";
+import { useActionState, useEffect } from "react";
+import { toast } from "sonner";
 import { type ActionState, toggleChatEnabledAction } from "../actions.ts";
 
 /**
@@ -16,10 +17,14 @@ export function ChatToggle({
   enabled: boolean;
   canToggle: boolean;
 }) {
-  const [, formAction, pending] = useActionState<ActionState, FormData>(
+  const [state, formAction, pending] = useActionState<ActionState, FormData>(
     toggleChatEnabledAction,
     { status: "idle" },
   );
+
+  useEffect(() => {
+    if (state.status === "error") toast.error(state.message);
+  }, [state]);
 
   if (!canToggle) {
     return (
@@ -47,7 +52,11 @@ export function ChatToggle({
             : "bg-admin-readonly-bg text-admin-muted"
         }`}
       >
-        {enabled ? "Disponível para o chat" : "Indisponível para o chat"}
+        {pending
+          ? "Atualizando…"
+          : enabled
+            ? "Disponível para o chat"
+            : "Indisponível para o chat"}
         <span
           aria-hidden="true"
           className={`relative inline-block h-5 w-8.5 rounded-full ${

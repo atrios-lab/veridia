@@ -27,7 +27,8 @@ import {
 import { getTenant, OFFICE_TIME_ZONE, today } from "@/lib/tenant.ts";
 import { AttachmentError, storeAttachments } from "@/lib/uploads.ts";
 
-const NOT_FOUND = "Protocolo ou chave de acesso inválidos.";
+const NOT_FOUND =
+  "Protocolo ou chave de acesso inválidos. Confira os dados e tente de novo.";
 const GENERIC_ERROR =
   "Não foi possível consultar agora. Tente novamente em instantes.";
 
@@ -248,7 +249,8 @@ export async function acceptProposedSlot(
     if (!details.proposedDate || details.proposedSlotHour === undefined) {
       return {
         status: "error",
-        message: "Não há horário proposto para aceitar.",
+        message:
+          "Não há mais horário para aceitar. Atualize a página para ver a situação atual.",
       };
     }
 
@@ -371,7 +373,8 @@ export async function fulfillRequirementAction(
     if (!requirement) {
       return {
         status: "error",
-        message: "Exigência não encontrada ou já cumprida.",
+        message:
+          "Esta exigência não foi encontrada ou já foi cumprida. Atualize a página para ver a situação atual.",
       };
     }
 

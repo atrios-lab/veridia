@@ -144,9 +144,15 @@ export function ConversationConsole({
       )}
 
       <div className="flex flex-1 flex-col gap-2.5 overflow-y-auto bg-admin-input-bg p-4">
-        {messages.map((message) => (
-          <MessageRow key={message.id} message={message} />
-        ))}
+        {messages.length === 0 ? (
+          <p className="self-center py-6 text-center text-[13px] text-admin-muted">
+            Ainda não há mensagens nesta conversa.
+          </p>
+        ) : (
+          messages.map((message) => (
+            <MessageRow key={message.id} message={message} />
+          ))
+        )}
       </div>
 
       <div className="border-t border-admin-border bg-admin-card p-3.5">
@@ -181,7 +187,7 @@ export function ConversationConsole({
             disabled={closed || messagePending}
             className="rounded-[10px] bg-admin-primary-soft px-4.5 py-2.5 text-[13px] font-bold text-white disabled:opacity-60"
           >
-            Enviar
+            {messagePending ? "Enviando…" : "Enviar"}
           </button>
         </form>
         {messageState.status === "error" && (
@@ -203,7 +209,7 @@ export function ConversationConsole({
             disabled={closed || notePending}
             className="rounded-[10px] border border-admin-warning-bg bg-admin-warning-bg px-3.5 py-2 text-[12px] font-bold text-admin-warning-text disabled:opacity-60"
           >
-            + Nota
+            {notePending ? "Salvando…" : "+ Nota"}
           </button>
         </form>
         {noteState.status === "error" && (

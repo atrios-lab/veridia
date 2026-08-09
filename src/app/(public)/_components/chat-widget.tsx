@@ -37,10 +37,54 @@ type PanelView =
   | { kind: "conversation" }
   | { kind: "rating" };
 
+// Network failures and non-JSON responses both come back the same way, as
+// an `{ error: "network" }` payload, so every caller can read `data.error`
+// without its own try/catch around the fetch itself.
 async function postForm(url: string, body: FormData) {
-  const response = await fetch(url, { method: "POST", body });
-  return response.json();
+  try {
+    const response = await fetch(url, { method: "POST", body });
+    return await response.json();
+  } catch {
+    return { error: "network" };
+  }
 }
+
+function describePrechatError(code: string): string {
+  switch (code) {
+    case "invalid":
+      return "Confira os campos destacados.";
+    case "rate_limited":
+      return "Muitas tentativas seguidas. Aguarde um minuto e tente de novo.";
+    case "closed":
+      return "O atendimento encerrou agora há pouco. Tente novamente durante o horário de atendimento.";
+    case "network":
+      return "Sem conexão com a internet. Verifique e tente de novo.";
+    default:
+      return "Não foi possível iniciar o atendimento agora. Tente novamente em instantes.";
+  }
+}
+
+function describeSendError(code: string, message?: string): string {
+  switch (code) {
+    case "invalid":
+      return message || "Confira sua mensagem e tente de novo.";
+    case "rate_limited":
+      return "Muitas tentativas seguidas. Aguarde um minuto e tente de novo.";
+    case "closed":
+      return "Este atendimento foi encerrado.";
+    case "not_found":
+      return "Não encontramos mais este atendimento. Feche a janela e comece um novo.";
+    case "network":
+      return "Sem conexão com a internet. Verifique e tente de novo.";
+    default:
+      return "Não foi possível enviar sua mensagem agora. Tente novamente em instantes.";
+  }
+}
+
+const CLOSE_ERROR =
+  "Não foi possível encerrar agora. Tente novamente em instantes.";
+const RATING_ERROR =
+  "Não foi possível enviar sua avaliação agora. Tente novamente em instantes.";
 
 export function ChatWidget({ tenant }: { tenant: Tenant }) {
   const pathname = usePathname();
@@ -185,11 +229,7 @@ export function ChatWidget({ tenant }: { tenant: Tenant }) {
     try {
       const data = await postForm("/api/chat", formData);
       if (data.error) {
-        setError(
-          data.error === "invalid"
-            ? "Confira os campos e tente de novo."
-            : "Não foi possível iniciar o atendimento agora.",
-        );
+        setError(describePrechatError(data.error));
         return;
       }
       if (!data.id) {
@@ -213,7 +253,7 @@ export function ChatWidget({ tenant }: { tenant: Tenant }) {
     try {
       const data = await postForm(`/api/chat/${conversationId}`, formData);
       if (data.error) {
-        setError("Não foi possível enviar. Tente de novo.");
+        setError(describeSendError(data.error, data.message));
         return;
       }
       await refreshConversation(conversationId);
@@ -225,10 +265,15 @@ export function ChatWidget({ tenant }: { tenant: Tenant }) {
   async function closeConversation() {
     if (!conversationId) return;
     setActionPending(true);
+    setError(null);
     try {
       const formData = new FormData();
       formData.set("intent", "close");
-      await postForm(`/api/chat/${conversationId}`, formData);
+      const data = await postForm(`/api/chat/${conversationId}`, formData);
+      if (data.error) {
+        setError(CLOSE_ERROR);
+        return;
+      }
       await refreshConversation(conversationId);
     } finally {
       setActionPending(false);
@@ -238,9 +283,14 @@ export function ChatWidget({ tenant }: { tenant: Tenant }) {
   async function submitRating(formData: FormData) {
     if (!conversationId) return;
     setActionPending(true);
+    setError(null);
     try {
       formData.set("intent", "rate");
-      await postForm(`/api/chat/${conversationId}`, formData);
+      const data = await postForm(`/api/chat/${conversationId}`, formData);
+      if (data.error) {
+        setError(RATING_ERROR);
+        return;
+      }
       window.localStorage.removeItem(CONVERSATION_ID_STORAGE_KEY);
       setConversationId(null);
       setConversation(null);
@@ -316,6 +366,7 @@ export function ChatWidget({ tenant }: { tenant: Tenant }) {
               conversation={conversation}
               onSubmit={submitRating}
               pending={actionPending}
+              error={error}
             />
           )}
         </div>
@@ -372,7 +423,7 @@ function PrechatForm({
       />
       <FormField label="Nome completo" name="name" required />
       <FormField
-        label="E-mail ou telefone"
+        label="E-mail ou WhatsApp"
         name="contact"
         required
         hint="Usamos para retorno e envio da transcrição."
@@ -391,7 +442,7 @@ function PrechatForm({
         disabled={pending}
         className="rounded-xl bg-brand-primary py-3 text-center font-bold text-[14px] text-white disabled:opacity-70"
       >
-        {pending ? "Enviando…" : "Entrar na fila de atendimento"}
+        {pending ? "Enviando..." : "Entrar na fila de atendimento"}
       </button>
       <p className="text-[11px] text-brand-faint">
         Seus dados são usados apenas para este atendimento.
@@ -476,7 +527,7 @@ function HoursClosedView({ tenant }: { tenant: Tenant }) {
         </a>
       </div>
       <p className="text-[11.5px] text-brand-faint">
-        Não recebemos recados fora do horário — assim ninguém fica sem resposta.
+        Não recebemos recados fora do horário: assim, ninguém fica sem resposta.
       </p>
     </div>
   );
@@ -503,7 +554,24 @@ function ConversationView({
   onGiveUp: () => void;
   onClose: () => void;
 }) {
-  if (conversation?.status === "waiting") {
+  // The conversation itself only lands a moment after the widget opens with
+  // an id remembered from a previous visit (see the `refreshConversation`
+  // effect above) — until then there is nothing to show but a connecting
+  // state, not an empty chat.
+  if (!conversation) {
+    return (
+      <div className="flex flex-1 flex-col items-center justify-center gap-3 p-6 text-center">
+        <span className="flex h-11 w-11 items-center justify-center rounded-full bg-brand-tint">
+          <Icon name="clock" className="h-5 w-5 text-brand-primary" />
+        </span>
+        <p className="font-serif text-[17px] font-semibold text-brand-primary">
+          Conectando...
+        </p>
+      </div>
+    );
+  }
+
+  if (conversation.status === "waiting") {
     return (
       <div className="flex flex-1 flex-col items-center justify-center gap-3 p-6 text-center">
         <span className="flex h-11 w-11 items-center justify-center rounded-full bg-brand-tint">
@@ -529,8 +597,11 @@ function ConversationView({
           disabled={actionPending}
           className="mt-1 rounded-[10px] border border-brand-border px-4 py-2 font-bold text-[12.5px] text-brand-muted disabled:opacity-60"
         >
-          {actionPending ? "Saindo…" : "Desistir da espera"}
+          {actionPending ? "Saindo..." : "Desistir da espera"}
         </button>
+        {error && (
+          <p className="text-[12px] font-semibold text-red-700">{error}</p>
+        )}
       </div>
     );
   }
@@ -538,11 +609,16 @@ function ConversationView({
   return (
     <>
       <div className="flex flex-1 flex-col gap-2.5 overflow-y-auto bg-brand-surface p-3.5">
-        {conversation?.needsInactivityWarning && (
+        {conversation.needsInactivityWarning && (
           <div className="self-center rounded-full bg-brand-tint px-3 py-1 text-center text-[11.5px] text-brand-primary">
             Ainda está aí? Sem resposta em alguns minutos, o atendimento é
             encerrado.
           </div>
+        )}
+        {messages.length === 0 && (
+          <p className="self-center pt-2 text-center text-[12.5px] text-brand-faint">
+            Escreva sua mensagem para começar a conversa.
+          </p>
         )}
         {messages.map((message) => (
           <MessageBubble key={message.id} message={message} />
@@ -558,17 +634,20 @@ function ConversationView({
             type="file"
             name="attachment"
             className="sr-only"
+            disabled={pending}
             onChange={(event) => event.target.form?.requestSubmit()}
           />
         </label>
         <input
           name="body"
-          placeholder="Escreva sua mensagem…"
+          placeholder="Escreva sua mensagem..."
           className="min-w-0 flex-1 rounded-[10px] border border-brand-border bg-brand-surface px-3.5 py-2.5 text-[13.5px] outline-none focus:border-brand-accent"
         />
         <button
           type="submit"
           disabled={pending}
+          aria-label={pending ? "Enviando mensagem..." : "Enviar mensagem"}
+          aria-busy={pending}
           className="flex h-11 w-11 flex-none items-center justify-center rounded-[10px] bg-brand-primary text-white disabled:opacity-70"
         >
           <Icon name="send" className="h-4 w-4" />
@@ -586,7 +665,7 @@ function ConversationView({
           disabled={actionPending}
           className="text-[12px] font-semibold text-brand-faint underline disabled:opacity-60"
         >
-          {actionPending ? "Encerrando…" : "Encerrar conversa"}
+          {actionPending ? "Encerrando..." : "Encerrar conversa"}
         </button>
       </div>
     </>
@@ -628,10 +707,12 @@ function RatingView({
   conversation,
   onSubmit,
   pending,
+  error,
 }: {
   conversation: ConversationView | null;
   onSubmit: (formData: FormData) => void;
   pending: boolean;
+  error: string | null;
 }) {
   const [rating, setRating] = useState(0);
 
@@ -692,12 +773,17 @@ function RatingView({
         />
         Receber a transcrição por e-mail
       </label>
+      {error && (
+        <p className="text-center text-[12.5px] font-semibold text-red-700">
+          {error}
+        </p>
+      )}
       <button
         type="submit"
         disabled={rating === 0 || pending}
         className="rounded-xl bg-brand-primary py-3 text-center font-bold text-[14px] text-white disabled:opacity-50"
       >
-        {pending ? "Enviando…" : "Enviar avaliação"}
+        {pending ? "Enviando..." : "Enviar avaliação"}
       </button>
     </form>
   );

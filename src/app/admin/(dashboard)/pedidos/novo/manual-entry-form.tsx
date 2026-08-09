@@ -49,7 +49,7 @@ export function ManualEntryForm({
           Pedido registrado
         </h3>
         <p className="mt-2 text-[13px] text-admin-muted">
-          Protocolo e chave de acesso — mostrados só agora, guarde-os:
+          Protocolo e chave de acesso, mostrados só agora, guarde-os:
         </p>
         <div className="mt-3 flex flex-wrap gap-3">
           <div className="rounded-[9px] border border-admin-input-border bg-admin-input-bg px-4 py-2.5 font-bold text-admin-primary">
@@ -220,8 +220,8 @@ export function ManualEntryForm({
           className="h-[18px] w-[18px] accent-admin-primary-soft"
         />
         <span className="text-[12.5px] text-admin-text">
-          Pedido recebido presencialmente no balcão — documentos já estão em
-          mãos da serventia.
+          Pedido recebido presencialmente no balcão: documentos já estão em mãos
+          da serventia.
         </span>
       </label>
 

@@ -39,12 +39,12 @@ export function buildAccountEmailText(
       paragraphs: [
         `Olá, ${name}. ${input.inviterName} criou uma conta para você no ` +
           `painel administrativo da serventia, com o papel de ${input.roleLabel}.`,
-        "Clique abaixo para criar a sua senha — só você vai conhecê-la.",
+        "Clique abaixo para criar a sua senha. Só você vai conhecê-la.",
       ],
       buttonLabel: "Criar minha senha",
       footnote:
         "O link vale 48 horas e só funciona uma vez. Se você não esperava " +
-        "este e-mail, é só ignorá-lo — nenhuma conta será usada sem a " +
+        "este e-mail, é só ignorá-lo. Nenhuma conta será usada sem a " +
         "senha que você criar.",
     };
   }

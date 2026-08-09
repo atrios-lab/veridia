@@ -172,7 +172,8 @@ export default async function AdminHome() {
                     className="block rounded-[10px] border border-admin-border bg-admin-card px-3.5 py-3"
                   >
                     <div className="text-[12.5px] font-bold text-admin-primary">
-                      {item.protocolNumber} · {item.applicantName ?? "—"}
+                      {item.protocolNumber} ·{" "}
+                      {item.applicantName ?? "Nome não informado"}
                     </div>
                     <div className="mt-0.5 text-[12px] font-semibold text-admin-error-text">
                       {item.daysLeft < 0
@@ -190,10 +191,11 @@ export default async function AdminHome() {
                     className="block rounded-[10px] border border-admin-border bg-admin-card px-3.5 py-3"
                   >
                     <div className="text-[12.5px] font-bold text-admin-primary">
-                      {item.protocolNumber} · {item.applicantName ?? "—"}
+                      {item.protocolNumber} ·{" "}
+                      {item.applicantName ?? "Nome não informado"}
                     </div>
                     <div className="mt-0.5 text-[12px] font-semibold text-admin-warning-text">
-                      Exigência cumprida — retomar análise
+                      Exigência cumprida. Retome a análise.
                     </div>
                   </Link>
                 ))}

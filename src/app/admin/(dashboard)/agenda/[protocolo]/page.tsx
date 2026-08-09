@@ -7,7 +7,7 @@ import {
   nextBusinessDays,
   shortWeekday,
 } from "@/core/scheduling/calendar.ts";
-import { OFFERED_DAYS, slots } from "@/core/scheduling/slots.ts";
+import { OFFERED_DAYS, slotLabel, slots } from "@/core/scheduling/slots.ts";
 import {
   appointmentOccupancy,
   findByProtocol,
@@ -29,10 +29,6 @@ const HISTORY_LABELS: Record<string, string> = {
   "appointment.cancel": "cancelou o pedido",
   "appointment.attend": "marcou como atendido",
 };
-
-function band(hour: number): string {
-  return `${hour}h – ${hour + 1}h`;
-}
 
 function Field({ label, value }: { label: string; value: string }) {
   return (
@@ -117,9 +113,12 @@ export default async function AppointmentDetailPage({
               <div className="grid grid-cols-1 gap-3.5 md:grid-cols-2">
                 <Field
                   label="Solicitante"
-                  value={record.applicantName ?? "—"}
+                  value={record.applicantName ?? "Não informado"}
                 />
-                <Field label="Contato" value={record.contact ?? "—"} />
+                <Field
+                  label="Contato"
+                  value={record.contact ?? "Não informado"}
+                />
               </div>
               {details.subject && (
                 <div className="mt-3.5">
@@ -133,13 +132,13 @@ export default async function AppointmentDetailPage({
               <div className="mt-5 border-t border-admin-border pt-4.5">
                 <span className="text-[13px] font-bold text-admin-primary">
                   Faixa pedida: {formatShortDate(details.date)} ·{" "}
-                  {band(details.slotHour)}
+                  {slotLabel(details.slotHour)}
                 </span>
                 {details.proposedDate &&
                   details.proposedSlotHour !== undefined && (
                     <p className="mt-1.5 text-[12.5px] text-admin-muted">
                       Faixa proposta: {formatShortDate(details.proposedDate)} ·{" "}
-                      {band(details.proposedSlotHour)}
+                      {slotLabel(details.proposedSlotHour)}
                       {details.acceptedAt && " · aceita pelo cidadão"}
                     </p>
                   )}

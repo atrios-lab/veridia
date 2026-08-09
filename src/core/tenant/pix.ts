@@ -10,7 +10,10 @@ export const PIX_KEY_TYPES = [
   "phone",
   "random",
 ] as const;
-export const PixKeyTypeSchema = z.enum(PIX_KEY_TYPES);
+export const PixKeyTypeSchema = z.enum(
+  PIX_KEY_TYPES,
+  "Escolha o tipo da chave.",
+);
 export type PixKeyType = z.infer<typeof PixKeyTypeSchema>;
 
 /** Digits only, the way a CNPJ is stored and compared. */

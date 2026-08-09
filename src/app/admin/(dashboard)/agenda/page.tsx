@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import { can } from "@/core/auth/roles.ts";
 import { parseDetails, statusLabel } from "@/core/request/kinds.ts";
 import { formatShortDate } from "@/core/scheduling/calendar.ts";
+import { slotLabel } from "@/core/scheduling/slots.ts";
 import { listRecordsByKind } from "@/lib/service-request.ts";
 import { getSession } from "@/lib/session.ts";
 import { getTenant } from "@/lib/tenant.ts";
@@ -10,10 +11,6 @@ import { AdminPageHeader } from "../../_components/page-header.tsx";
 import { AppointmentStatusBadge } from "./_components/status-badge.tsx";
 
 export const metadata = { title: "Agenda de atendimentos" };
-
-function band(hour: number): string {
-  return `${hour}h–${hour + 1}h`;
-}
 
 export default async function AppointmentQueuePage() {
   const session = await getSession();
@@ -31,13 +28,13 @@ export default async function AppointmentQueuePage() {
             <span>Protocolo</span>
             <span>Solicitante</span>
             <span>Faixa pedida</span>
-            <span>Status</span>
+            <span>Situação</span>
             <span />
           </div>
 
           {appointments.length === 0 ? (
             <p className="px-5 py-8 text-center text-[13px] text-admin-muted">
-              Nenhum pedido de horário registrado.
+              Nenhum pedido de horário registrado ainda.
             </p>
           ) : (
             appointments.map((record) => {
@@ -53,14 +50,15 @@ export default async function AppointmentQueuePage() {
                   </span>
                   <span className="min-w-0">
                     <span className="block truncate font-semibold text-admin-text">
-                      {record.applicantName ?? "—"}
+                      {record.applicantName ?? "Não informado"}
                     </span>
                     <span className="block truncate text-[11.5px] text-admin-faint">
                       {record.contact ?? ""}
                     </span>
                   </span>
                   <span className="truncate text-admin-muted">
-                    {formatShortDate(details.date)} · {band(details.slotHour)}
+                    {formatShortDate(details.date)} ·{" "}
+                    {slotLabel(details.slotHour)}
                   </span>
                   <AppointmentStatusBadge
                     status={record.status}

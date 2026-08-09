@@ -161,7 +161,12 @@ export default async function LoginPage({
                 name="password"
                 autoComplete="current-password"
               />
-              <SubmitButton limited={limited} />
+              <SubmitButton
+                label="Entrar"
+                pendingLabel="Entrando…"
+                blocked={limited}
+                blockedLabel="Aguarde…"
+              />
             </form>
           </div>
 

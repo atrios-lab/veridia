@@ -119,8 +119,14 @@ export default async function DataRightsDetailPage({
               )}
 
               <div className="mt-3.5 grid grid-cols-1 gap-3.5 md:grid-cols-2">
-                <Field label="Titular" value={request.applicantName ?? "—"} />
-                <Field label="E-mail" value={request.contact ?? "—"} />
+                <Field
+                  label="Titular"
+                  value={request.applicantName ?? "Não informado"}
+                />
+                <Field
+                  label="E-mail"
+                  value={request.contact ?? "Não informado"}
+                />
               </div>
 
               {identityAttachment && (

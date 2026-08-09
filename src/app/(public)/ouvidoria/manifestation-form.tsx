@@ -37,7 +37,7 @@ function FieldError({ message }: { message?: string }) {
 
 const GUARANTEES = [
   ["lock", "Pode ser anônima: nome e contato são opcionais"],
-  ["shield", "Sigilo garantido em toda a tramitação"],
+  ["shield", "Sigilo garantido em todo o andamento"],
   ["chat", "Resposta pelos canais oficiais"],
 ] as const;
 
@@ -183,7 +183,7 @@ export function ManifestationScreen() {
                 htmlFor="applicantName"
                 className="mb-1.5 block text-[13px] font-semibold"
               >
-                Nome{" "}
+                Nome completo{" "}
                 <span className="font-normal text-brand-muted">· opcional</span>
               </label>
               <input
@@ -199,7 +199,7 @@ export function ManifestationScreen() {
                 htmlFor="contact"
                 className="mb-1.5 block text-[13px] font-semibold"
               >
-                Contato{" "}
+                E-mail ou WhatsApp{" "}
                 <span className="font-normal text-brand-muted">· opcional</span>
               </label>
               <input
@@ -268,7 +268,7 @@ export function ManifestationScreen() {
               </span>
               <span className="mt-0.5 block text-[11.5px] leading-relaxed text-brand-muted">
                 Você se identifica para a serventia responder, mas seu nome não
-                circula na tramitação.
+                circula no andamento.
               </span>
             </span>
           </label>

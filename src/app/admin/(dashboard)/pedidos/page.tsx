@@ -53,6 +53,7 @@ export default async function ServiceRequestQueuePage({
       ? (atribuicao as Attribution)
       : undefined;
   const search = q?.trim() || undefined;
+  const hasFilters = Boolean(status || attribution || search);
 
   const requests = await listServiceRequests(tenant.slug, {
     status,
@@ -139,7 +140,9 @@ export default async function ServiceRequestQueuePage({
 
           {requests.length === 0 ? (
             <p className="px-5 py-8 text-center text-[13px] text-admin-muted">
-              Nenhum pedido encontrado com esses filtros.
+              {hasFilters
+                ? "Nenhum pedido encontrado com esses filtros."
+                : "Nenhum pedido registrado ainda."}
             </p>
           ) : (
             requests.map((request) => {
@@ -158,14 +161,14 @@ export default async function ServiceRequestQueuePage({
                   </span>
                   <span className="min-w-0">
                     <span className="block truncate font-semibold text-admin-text">
-                      {request.applicantName ?? "—"}
+                      {request.applicantName ?? "Não informado"}
                     </span>
                     <span className="block truncate text-[11.5px] text-admin-faint">
                       {request.contact ?? ""}
                     </span>
                   </span>
                   <span className="truncate text-admin-muted">
-                    {act?.name ?? "—"}
+                    {act?.name ?? "Ato não identificado"}
                   </span>
                   <StatusBadge
                     status={requestStatus}
@@ -174,7 +177,7 @@ export default async function ServiceRequestQueuePage({
                   <span className="tabular-nums text-admin-text">
                     {request.amountCents != null
                       ? formatCents(request.amountCents)
-                      : "—"}
+                      : "A definir"}
                   </span>
                   <span className="text-admin-faint">
                     {shortDate(request.createdAt)}

@@ -114,7 +114,7 @@ export function CreateAccountForm() {
         {state.status === "created" && (
           <output className="flex items-center gap-1.5 rounded-full bg-admin-success-bg px-3 py-1.5 text-[12.5px] font-semibold text-admin-success-text">
             <AdminIcon name="check" className="h-3.5 w-3.5" strokeWidth={2.4} />
-            Conta criada — e-mail enviado.
+            Conta criada. E-mail enviado.
           </output>
         )}
       </form>

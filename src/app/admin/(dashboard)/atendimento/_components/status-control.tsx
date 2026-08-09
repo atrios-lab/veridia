@@ -1,6 +1,7 @@
 "use client";
 
-import { useActionState, useState } from "react";
+import { useActionState, useEffect, useState } from "react";
+import { toast } from "sonner";
 import { type ActionState, setStatusAction } from "../actions.ts";
 
 const LABELS: Record<string, string> = {
@@ -16,10 +17,14 @@ const DOT_CLASS: Record<string, string> = {
 
 export function StatusControl({ currentStatus }: { currentStatus: string }) {
   const [status, setStatus] = useState(currentStatus);
-  const [, formAction] = useActionState<ActionState, FormData>(
+  const [state, formAction] = useActionState<ActionState, FormData>(
     setStatusAction,
     { status: "idle" },
   );
+
+  useEffect(() => {
+    if (state.status === "error") toast.error(state.message);
+  }, [state]);
 
   return (
     <form

@@ -126,7 +126,7 @@ export function PublicationForm({
             name="title"
             value={title}
             onChange={(event) => setTitle(event.target.value)}
-            placeholder="Ex.: Edital de proclamas nº 113/2026 — nomes dos nubentes"
+            placeholder="Ex.: Edital de proclamas nº 113/2026, nomes dos nubentes"
             className={fieldErrors.title ? ERROR_FIELD_CLASS : FIELD_CLASS}
           />
           <FieldError message={fieldErrors.title} />
@@ -221,7 +221,7 @@ export function PublicationForm({
             disabled={pending}
             className="rounded-[9px] border border-admin-input-border bg-admin-card px-5 py-2.5 text-[13.5px] font-bold text-admin-muted disabled:opacity-70"
           >
-            Salvar rascunho
+            {pending ? "Salvando…" : "Salvar rascunho"}
           </button>
           {state.status === "success" && (
             <span className="text-[12.5px] font-semibold text-admin-success-text">
@@ -245,7 +245,7 @@ export function PublicationForm({
         />
         <p className="text-xs leading-relaxed text-admin-faint">
           A seção "Proclamas e avisos" só aparece no site quando há publicação
-          vigente — sem nenhuma, ela some da home.
+          vigente. Sem nenhuma, ela some da home.
         </p>
       </div>
     </div>

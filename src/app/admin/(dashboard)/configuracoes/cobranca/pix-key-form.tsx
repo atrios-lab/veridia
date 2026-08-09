@@ -1,6 +1,7 @@
 "use client";
 
-import { useActionState } from "react";
+import { useActionState, useEffect } from "react";
+import { toast } from "sonner";
 import { PIX_KEY_TYPES, type PixKeyType } from "@/core/tenant/pix.ts";
 import type { Tenant } from "@/core/tenant/schema.ts";
 import { AdminIcon } from "../../../_components/icon.tsx";
@@ -77,6 +78,10 @@ export function PixKeyForm({
     PixKeyState,
     FormData
   >(removePixKey, { status: "idle" });
+
+  useEffect(() => {
+    if (removeState.status === "removed") toast.success("Chave Pix removida.");
+  }, [removeState]);
 
   if (!canEdit) return <ReadOnlyView tenant={tenant} />;
 
@@ -195,7 +200,19 @@ export function PixKeyForm({
       </form>
 
       {hasKey && (
-        <form action={removeAction} className="mt-3">
+        <form
+          action={removeAction}
+          className="mt-3"
+          onSubmit={(event) => {
+            if (
+              !confirm(
+                "Remover a chave Pix da serventia? Sem chave, a consulta de protocolo deixa de mostrar QR Code para o cidadão.",
+              )
+            ) {
+              event.preventDefault();
+            }
+          }}
+        >
           <button
             type="submit"
             disabled={removePending}

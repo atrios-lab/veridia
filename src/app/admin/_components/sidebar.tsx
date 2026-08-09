@@ -7,6 +7,7 @@ import { signOut } from "../actions.ts";
 import { AdminIcon } from "./icon.tsx";
 import { ADMIN_NAV, navGroups } from "./nav.ts";
 import { ROLE_LABELS } from "./role-labels.ts";
+import { SignOutButton } from "./sign-out-button.tsx";
 
 /**
  * Two letters for the avatar. Accounts born from an invite may have no name
@@ -118,9 +119,7 @@ export function AdminSidebar({
             <span>{ROLE_LABELS[user.role as Role] ?? "Painel"}</span>
             <span aria-hidden="true">·</span>
             <form action={signOut}>
-              <button type="submit" className="underline hover:text-white">
-                Sair
-              </button>
+              <SignOutButton />
             </form>
           </div>
         </div>

@@ -39,7 +39,7 @@ export function AmountSection({
       <p className="mt-1 text-[12.5px] text-admin-muted">
         {amountLabel
           ? `Valor atual: ${amountLabel}`
-          : "Ainda não informado — o cidadão só vê e paga depois que você preencher aqui."}
+          : "Ainda não informado: o cidadão só vê e paga depois que você preencher aqui."}
       </p>
 
       {editing && (

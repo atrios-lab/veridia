@@ -91,7 +91,8 @@ export default async function PublicationsPage({
         <div className="overflow-hidden rounded-[14px] border border-admin-border bg-admin-card">
           {visible.length === 0 ? (
             <p className="px-5 py-8 text-center text-[13px] text-admin-muted">
-              Nenhuma publicação nesta aba.
+              Nenhuma publicação nesta aba. O formulário abaixo cria uma nova
+              publicação.
             </p>
           ) : (
             visible.map(({ row, state }) => (

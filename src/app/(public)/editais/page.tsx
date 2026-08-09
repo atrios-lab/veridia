@@ -26,17 +26,23 @@ export default async function PublicNoticesPage() {
         <h2 className="font-serif text-lg font-semibold text-brand-primary">
           Setores que esta serventia publica
         </h2>
-        <ul className="mt-3 flex flex-wrap gap-2">
-          {sectors.map((sector) => (
-            <li
-              key={sector}
-              data-notice-sector={sector}
-              className="rounded-lg bg-brand-tint px-3 py-1.5 text-xs font-semibold text-brand-primary"
-            >
-              {SECTOR_LABELS[sector]}
-            </li>
-          ))}
-        </ul>
+        {sectors.length > 0 ? (
+          <ul className="mt-3 flex flex-wrap gap-2">
+            {sectors.map((sector) => (
+              <li
+                key={sector}
+                data-notice-sector={sector}
+                className="rounded-lg bg-brand-tint px-3 py-1.5 text-xs font-semibold text-brand-primary"
+              >
+                {SECTOR_LABELS[sector]}
+              </li>
+            ))}
+          </ul>
+        ) : (
+          <p className="mt-3 text-sm text-brand-muted">
+            Em breve informamos aqui quais setores publicam editais.
+          </p>
+        )}
       </div>
     </ComingSoon>
   );

@@ -14,6 +14,7 @@ import { AdminIcon } from "../_components/icon.tsx";
 import { AdminLockedSidebar } from "../_components/locked-sidebar.tsx";
 import { PasswordField } from "../_components/password-field.tsx";
 import { ROLE_LABELS } from "../_components/role-labels.ts";
+import { SubmitButton } from "../_components/submit-button.tsx";
 import { acceptInvite } from "./actions.ts";
 
 export const metadata = { title: "Criar senha" };
@@ -84,17 +85,17 @@ export default async function AcceptInvitePage({
             </span>
             <div>
               <h1 className="font-serif text-xl font-semibold text-admin-primary">
-                Este convite venceu
+                Este link venceu
               </h1>
               <p className="mt-1.5 text-sm leading-relaxed text-admin-muted">
-                Por segurança, o link de primeiro acesso vale 48 horas. Peça um
-                novo a quem responde pela serventia: o registrador reenvia pela
-                tela de Usuários, e chega no mesmo e-mail.
+                Por segurança, os links de acesso ao painel valem 48 horas. Peça
+                um novo a quem responde pela serventia: o registrador reenvia
+                pela tela de Usuários, e chega no mesmo e-mail.
               </p>
             </div>
             <p className="text-xs leading-relaxed text-admin-faint">
-              Sem botão de "reenviar para mim": quem não tem senha ainda não tem
-              como se autenticar para pedir.
+              Sem botão de "reenviar para mim": por segurança, só quem
+              administra as contas pode gerar um novo link.
             </p>
           </div>
         </div>
@@ -177,12 +178,10 @@ export default async function AcceptInvitePage({
                 name="confirmPassword"
                 autoComplete="new-password"
               />
-              <button
-                type="submit"
-                className="mt-1 rounded-lg bg-admin-primary-soft px-5 py-3 text-sm font-bold text-white"
-              >
-                Criar senha e entrar
-              </button>
+              <SubmitButton
+                label="Criar senha e entrar"
+                pendingLabel="Criando senha…"
+              />
             </form>
           </div>
         </div>

@@ -19,7 +19,7 @@ export function ProtocolSearchButton({
       onClick={() => setTimeout(() => setPending(true), 0)}
       className={`bg-brand-primary text-sm font-semibold text-white hover:bg-brand-primary-soft disabled:opacity-70 ${className}`}
     >
-      {pending ? "Buscando…" : "Consultar"}
+      {pending ? "Buscando..." : "Consultar"}
     </button>
   );
 }

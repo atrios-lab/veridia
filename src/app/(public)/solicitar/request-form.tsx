@@ -518,7 +518,8 @@ function SuccessScreen({ result }: { result: SubmitSuccess }) {
 
         <Step number={2} title="Baixe o requerimento e assine">
           <p className="text-[12px] leading-relaxed text-brand-muted">
-            Digitalmente pelo Gov.br (assinador.iti.br) ou de próprio punho.
+            Digitalmente pelo Gov.br (assinador.iti.br), ou imprima e assine de
+            próprio punho.
           </p>
           {/* POST, not a link: the key would otherwise sit in the address bar,
               in the browser history and in every access log on the way. */}

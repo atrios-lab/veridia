@@ -277,7 +277,7 @@ export function ProtocolLookup({
                     disabled={pending}
                     className="shrink-0 rounded-xl bg-brand-primary px-3.5 py-3 text-sm font-semibold text-white hover:bg-brand-primary-soft disabled:opacity-60"
                   >
-                    {pending ? "Verificando…" : "Ver detalhes"}
+                    {pending ? "Verificando..." : "Ver detalhes"}
                   </button>
                 </div>
                 <p className="mt-2 text-[11.5px] leading-relaxed text-brand-muted">
@@ -1353,7 +1353,7 @@ function OmbudsmanCard({ result }: { result: OmbudsmanDetail }) {
             </div>
           )}
 
-          <Timeline title="Histórico do tratamento">
+          <Timeline>
             <TimelineStep
               done
               label="Manifestação registrada"

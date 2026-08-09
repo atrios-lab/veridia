@@ -215,6 +215,6 @@ export function activitySentence(entry: RecentActivityEntry): string {
   const subject = entry.actorName ?? entry.applicantName ?? "Alguém";
   const verb = ACTIVITY_VERBS[entry.action] ?? "registrou um evento";
   return entry.protocolNumber
-    ? `${subject} ${verb} — ${entry.protocolNumber}`
+    ? `${subject} ${verb} (${entry.protocolNumber})`
     : `${subject} ${verb}`;
 }

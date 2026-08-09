@@ -1,13 +1,18 @@
 "use client";
 
-import { useActionState } from "react";
+import { useActionState, useEffect } from "react";
+import { toast } from "sonner";
 import { type ArchiveState, archivePublicationAction } from "../actions.ts";
 
 export function ArchiveButton({ id }: { id: string }) {
-  const [, formAction, pending] = useActionState<ArchiveState, FormData>(
+  const [state, formAction, pending] = useActionState<ArchiveState, FormData>(
     archivePublicationAction,
     { status: "idle" },
   );
+
+  useEffect(() => {
+    if (state.status === "error") toast.error(state.message);
+  }, [state]);
 
   return (
     <form action={formAction}>

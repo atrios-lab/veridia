@@ -32,7 +32,7 @@ export function InternalNoteSection({
           strokeWidth={1.9}
         />
         <p className="text-[12.5px] leading-relaxed text-admin-warning-text">
-          Sem nome nem contato informado — não há como enviar resposta a quem
+          Sem nome nem contato informado: não há como enviar resposta a quem
           manifestou. Só é possível deixar uma nota interna para a equipe.
         </p>
       </div>

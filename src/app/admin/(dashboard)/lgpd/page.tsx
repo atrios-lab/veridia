@@ -35,7 +35,7 @@ export default async function DataRightsQueuePage() {
 
           {requests.length === 0 ? (
             <p className="px-5 py-8 text-center text-[13px] text-admin-muted">
-              Nenhum requerimento registrado.
+              Nenhum requerimento registrado ainda.
             </p>
           ) : (
             requests.map((request) => {
@@ -55,7 +55,7 @@ export default async function DataRightsQueuePage() {
                   </span>
                   <span className="min-w-0">
                     <span className="block truncate font-semibold text-admin-text">
-                      {request.applicantName ?? "—"}
+                      {request.applicantName ?? "Não informado"}
                     </span>
                     <span className="block truncate text-[11.5px] text-admin-faint">
                       {request.contact ?? ""}

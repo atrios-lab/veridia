@@ -38,7 +38,7 @@ export default async function OmbudsmanQueuePage() {
 
           {manifestations.length === 0 ? (
             <p className="px-5 py-8 text-center text-[13px] text-admin-muted">
-              Nenhuma manifestação registrada.
+              Nenhuma manifestação registrada ainda.
             </p>
           ) : (
             manifestations.map((record) => {

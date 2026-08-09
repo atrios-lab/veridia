@@ -10,7 +10,7 @@ import { getSession } from "@/lib/session.ts";
 import { getTenant } from "@/lib/tenant.ts";
 import { AdminPageHeader } from "../../_components/page-header.tsx";
 import { ROLE_LABELS } from "../../_components/role-labels.ts";
-import { resendInvite, triggerPasswordReset } from "./actions.ts";
+import { AccountRowActions } from "./account-row-actions.tsx";
 import { CreateAccountForm } from "./create-account-form.tsx";
 
 export const metadata = { title: "Usuários" };
@@ -95,27 +95,10 @@ export default async function UsuariosPage() {
                   )}
                 </span>
                 <div className="flex justify-end">
-                  {account.active ? (
-                    <form action={triggerPasswordReset}>
-                      <input type="hidden" name="userId" value={account.id} />
-                      <button
-                        type="submit"
-                        className="rounded-lg border-2 border-admin-accent px-3 py-1.5 text-xs font-bold text-admin-primary-soft"
-                      >
-                        Nova senha
-                      </button>
-                    </form>
-                  ) : (
-                    <form action={resendInvite}>
-                      <input type="hidden" name="userId" value={account.id} />
-                      <button
-                        type="submit"
-                        className="rounded-lg border-2 border-admin-accent px-3 py-1.5 text-xs font-bold text-admin-primary-soft"
-                      >
-                        Reenviar convite
-                      </button>
-                    </form>
-                  )}
+                  <AccountRowActions
+                    userId={account.id}
+                    active={account.active}
+                  />
                 </div>
               </div>
             ))}
