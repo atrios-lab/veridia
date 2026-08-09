@@ -51,6 +51,11 @@ export interface RequirementView {
   resolutionFileName?: string;
 }
 
+export interface DeliveredDocumentView {
+  id: string;
+  createdAt: string;
+}
+
 export interface ServiceRequestDetail extends BaseDetail {
   kind: "service-request";
   actName: string;
@@ -59,6 +64,8 @@ export interface ServiceRequestDetail extends BaseDetail {
   signedFormReceivedAt?: string;
   /** What the office is waiting on, cumprida through this same screen. */
   requirements: RequirementView[];
+  /** Files the office attached through DeliverySection, downloadable here. */
+  deliveredDocuments: DeliveredDocumentView[];
 }
 
 export interface AppointmentDetail extends BaseDetail {
@@ -193,6 +200,9 @@ export async function lookupProtocolDetail(
       attributionName: ATTRIBUTION_NAMES[act.attribution],
       hasSignedForm: Boolean(signedForm),
       signedFormReceivedAt: signedForm?.createdAt.toISOString(),
+      deliveredDocuments: attachments
+        .filter((a) => a.kind === "office")
+        .map((a) => ({ id: a.id, createdAt: a.createdAt.toISOString() })),
       requirements: requirements.map((r) => ({
         id: r.id,
         text: r.text,

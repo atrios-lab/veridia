@@ -768,17 +768,65 @@ function RequestDetail({
             <span className="text-[11px] font-bold uppercase tracking-[0.16em] text-brand-accent">
               Documentos da serventia
             </span>
-            <div className="mt-2.5 flex items-start gap-2.5">
-              <Icon
-                name="clock"
-                className="mt-0.5 h-4 w-4 shrink-0 text-brand-faint"
-              />
-              <p className="text-[12px] leading-relaxed text-brand-muted">
-                Nada por enquanto. Quando a serventia concluir, o arquivo
-                aparece aqui e avisamos pelo seu contato. Fica disponível por{" "}
-                <strong>30 dias</strong>.
-              </p>
-            </div>
+            {result.deliveredDocuments.length > 0 ? (
+              <div className="mt-2.5 flex flex-col gap-2">
+                {result.deliveredDocuments.map((doc, index) => (
+                  <form
+                    key={doc.id}
+                    action="/protocolo/documento"
+                    method="post"
+                    className="flex items-center gap-2.5 border-b border-brand-border pb-2 last:border-b-0 last:pb-0"
+                  >
+                    <Icon
+                      name="file"
+                      className="h-4.5 w-4.5 shrink-0 text-brand-accent"
+                    />
+                    <div className="flex-1">
+                      <div className="text-[13px] font-semibold text-brand-primary">
+                        {result.deliveredDocuments.length > 1
+                          ? `Documento ${index + 1}`
+                          : "Documento entregue"}
+                      </div>
+                      <div className="text-[11px] text-brand-faint">
+                        recebido em {formatDate(doc.createdAt)}
+                      </div>
+                    </div>
+                    <input
+                      type="hidden"
+                      name="protocolNumber"
+                      value={result.protocolNumber}
+                    />
+                    <input
+                      type="hidden"
+                      name="accessKey"
+                      value={result.accessKey}
+                    />
+                    <input type="hidden" name="attachmentId" value={doc.id} />
+                    <button
+                      type="submit"
+                      className="shrink-0 text-[12px] font-bold text-brand-primary-soft"
+                    >
+                      Baixar
+                    </button>
+                  </form>
+                ))}
+                <p className="text-[11px] text-brand-faint">
+                  Disponível por <strong>30 dias</strong>.
+                </p>
+              </div>
+            ) : (
+              <div className="mt-2.5 flex items-start gap-2.5">
+                <Icon
+                  name="clock"
+                  className="mt-0.5 h-4 w-4 shrink-0 text-brand-faint"
+                />
+                <p className="text-[12px] leading-relaxed text-brand-muted">
+                  Nada por enquanto. Quando a serventia concluir, o arquivo
+                  aparece aqui e avisamos pelo seu contato. Fica disponível por{" "}
+                  <strong>30 dias</strong>.
+                </p>
+              </div>
+            )}
           </div>
 
           <div className="flex items-center gap-2.5 rounded-2xl border border-brand-border bg-brand-card p-4">

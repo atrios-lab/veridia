@@ -929,6 +929,30 @@ export async function listAttachments(tenantSlug: string, requestId: string) {
     .orderBy(asc(serviceRequestAttachments.createdAt));
 }
 
+/**
+ * One file the office delivered back, scoped to its own request so an id
+ * guessed from another citizen's request can't be pulled through this.
+ */
+export async function getOfficeAttachment(
+  tenantSlug: string,
+  requestId: string,
+  attachmentId: string,
+) {
+  const [attachment] = await db
+    .select()
+    .from(serviceRequestAttachments)
+    .where(
+      and(
+        eq(serviceRequestAttachments.tenantSlug, tenantSlug),
+        eq(serviceRequestAttachments.requestId, requestId),
+        eq(serviceRequestAttachments.id, attachmentId),
+        eq(serviceRequestAttachments.kind, "office"),
+      ),
+    )
+    .limit(1);
+  return attachment;
+}
+
 /** Adds the signed form (or any later file) to a request already filed. */
 export async function attachToRequest(
   tenantSlug: string,
