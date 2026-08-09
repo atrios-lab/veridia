@@ -192,19 +192,19 @@ function drawSection(
 }
 
 /**
- * The last page, and the only thing on it: the citizen detaches this sheet and
- * sends the rest, signed, without the key that opens their request.
+ * The highlighted card carrying protocol and key. It belongs to the access
+ * receipt, a file of its own, so it is drawn in the flow of the page rather
+ * than pushed onto one — in that document it is the content, not an appendix.
  */
-function drawCredentialsPage(
+function drawCredentials(
   pdf: Pdf,
   credentials: RequerimentoCredentials,
   brand: DocumentBrand,
 ): void {
   const { palette } = brand;
-  pdf.addPage();
 
   const width = contentWidth(pdf);
-  const top = 150;
+  const top = pdf.y + 26;
   const height = 74 + credentials.rows.length * 46;
 
   pdf
@@ -312,6 +312,10 @@ export async function renderDocument(
 
   for (const section of document.sections) drawSection(pdf, section, brand);
 
+  if (document.credentials) {
+    drawCredentials(pdf, document.credentials, brand);
+  }
+
   if (document.signee) {
     // The signature is anchored at the foot of the page: everything between
     // the last section and the rule is room to sign by hand, which is the
@@ -338,7 +342,7 @@ export async function renderDocument(
         align: "center",
       });
     pdf.moveDown(0.6);
-  } else {
+  } else if (document.signature.length) {
     pdf.moveDown(2);
     if (pdf.y > bottom(pdf) - HEADING_ORPHAN_GUARD) pdf.addPage();
   }
@@ -349,10 +353,6 @@ export async function renderDocument(
       width: contentWidth(pdf) - 80,
       align: "center",
     });
-  }
-
-  if (document.credentials) {
-    drawCredentialsPage(pdf, document.credentials, brand);
   }
 
   pdf.end();

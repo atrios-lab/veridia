@@ -323,6 +323,31 @@ test.describe("filing a request", () => {
       form: { protocolNumber, accessKey: "AAAA-BBBB-CCCC" },
     });
     expect(refused.status()).toBe(404);
+
+    // The credential rides in a second file, so the one that gets signed and
+    // sent back never holds it. Same route, same gate.
+    const receipt = await request.post(`${baseURL}/solicitar/requerimento`, {
+      form: { protocolNumber, accessKey, documento: "comprovante" },
+    });
+    expect(receipt.status()).toBe(200);
+    expect(receipt.headers()["content-disposition"]).toContain(
+      `comprovante-${protocolNumber}.pdf`,
+    );
+    expect(granted.headers()["content-disposition"]).toContain(
+      `requerimento-${protocolNumber}.pdf`,
+    );
+
+    const refusedReceipt = await request.post(
+      `${baseURL}/solicitar/requerimento`,
+      {
+        form: {
+          protocolNumber,
+          accessKey: "AAAA-BBBB-CCCC",
+          documento: "comprovante",
+        },
+      },
+    );
+    expect(refusedReceipt.status()).toBe(404);
   });
 
   test("a pending exigência is answered through the same consult", async ({

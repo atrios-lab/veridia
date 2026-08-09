@@ -472,6 +472,20 @@ function ActContext({
   );
 }
 
+/** The pair every download form has to carry, in a hidden field each. */
+function ProtocolFields({ result }: { result: SubmitSuccess }) {
+  return (
+    <>
+      <input
+        type="hidden"
+        name="protocolNumber"
+        value={result.protocolNumber}
+      />
+      <input type="hidden" name="accessKey" value={result.accessKey} />
+    </>
+  );
+}
+
 function SuccessScreen({ result }: { result: SubmitSuccess }) {
   const [attachState, attachAction, attaching] = useActionState<
     AttachState,
@@ -504,44 +518,55 @@ function SuccessScreen({ result }: { result: SubmitSuccess }) {
         className="rounded-b-2xl"
       >
         <strong className="text-brand-alert">A chave aparece só agora.</strong>{" "}
-        O site não guarda nem reenvia. Ela também vai impressa no PDF do
-        requerimento.
+        O site não guarda nem reenvia. Baixe o comprovante de acesso no passo 2
+        para ficar com ela.
       </ProtocolReveal>
 
       <ol className="mt-4 flex flex-col gap-2.5">
         <Step number={1} title="Guarde o protocolo e a chave">
           <p className="text-[12px] leading-relaxed text-brand-muted">
             Eles dão acesso ao andamento e aos documentos em{" "}
-            <strong>Consultar protocolo</strong>.
+            <strong>Consultar protocolo</strong>. O comprovante de acesso, no
+            passo 2, é um PDF só com eles.
           </p>
         </Step>
 
         <Step number={2} title="Baixe o requerimento e assine">
           <p className="text-[12px] leading-relaxed text-brand-muted">
             Digitalmente pelo Gov.br (assinador.iti.br), ou imprima e assine de
-            próprio punho.
+            próprio punho. O requerimento não traz a chave: ela vai no
+            comprovante, que é só seu.
           </p>
-          {/* POST, not a link: the key would otherwise sit in the address bar,
-              in the browser history and in every access log on the way. */}
-          <form
-            action="/solicitar/requerimento"
-            method="post"
-            className="mt-2.5"
-          >
-            <input
-              type="hidden"
-              name="protocolNumber"
-              value={result.protocolNumber}
-            />
-            <input type="hidden" name="accessKey" value={result.accessKey} />
-            <button
-              type="submit"
-              className="inline-flex items-center gap-2 rounded-xl bg-brand-primary px-3.5 py-2.5 text-[12.5px] font-semibold text-white hover:bg-brand-primary-soft"
-            >
-              <Icon name="download" className="h-3.5 w-3.5" strokeWidth={2} />
-              Baixar requerimento (PDF)
-            </button>
-          </form>
+          {/* Two files, two forms. POST, not a link: the key would otherwise
+              sit in the address bar, in the browser history and in every
+              access log on the way. */}
+          <div className="mt-2.5 flex flex-wrap gap-2">
+            <form action="/solicitar/requerimento" method="post">
+              <ProtocolFields result={result} />
+              <button
+                type="submit"
+                className="inline-flex items-center gap-2 rounded-xl bg-brand-primary px-3.5 py-2.5 text-[12.5px] font-semibold text-white hover:bg-brand-primary-soft"
+              >
+                <Icon name="download" className="h-3.5 w-3.5" strokeWidth={2} />
+                Baixar requerimento (PDF)
+              </button>
+            </form>
+            <form action="/solicitar/requerimento" method="post">
+              <ProtocolFields result={result} />
+              <input type="hidden" name="documento" value="comprovante" />
+              <button
+                type="submit"
+                className="inline-flex items-center gap-2 rounded-xl border border-brand-border px-3.5 py-2.5 text-[12.5px] font-semibold text-brand-primary hover:border-brand-accent"
+              >
+                <Icon
+                  name="download"
+                  className="h-3.5 w-3.5 text-brand-accent"
+                  strokeWidth={2}
+                />
+                Baixar comprovante
+              </button>
+            </form>
+          </div>
         </Step>
 
         <Step number={3} title="Envie o requerimento assinado">

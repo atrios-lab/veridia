@@ -555,6 +555,10 @@ function RequestDetail({
               </div>
 
               <div className="mt-3 flex flex-col gap-2">
+                {/* Only the requerimento here. The access receipt is issued
+                    once, when the request is filed, or by the office at the
+                    counter: a screen anyone reaches by typing the key is not
+                    where a credential gets handed out again. */}
                 <form
                   action="/solicitar/requerimento"
                   method="post"
@@ -564,16 +568,7 @@ function RequestDetail({
                   <span className="flex-1 text-[12.5px] font-semibold text-brand-primary">
                     Baixe o requerimento preenchido
                   </span>
-                  <input
-                    type="hidden"
-                    name="protocolNumber"
-                    value={result.protocolNumber}
-                  />
-                  <input
-                    type="hidden"
-                    name="accessKey"
-                    value={result.accessKey}
-                  />
+                  <ProtocolFields result={result} />
                   <button
                     type="submit"
                     className="inline-flex shrink-0 items-center gap-1.5 rounded-lg bg-brand-primary px-3 py-2 text-[11.5px] font-semibold text-white hover:bg-brand-primary-soft"
@@ -708,12 +703,7 @@ function RequestDetail({
                   gerado com os dados do pedido
                 </div>
               </div>
-              <input
-                type="hidden"
-                name="protocolNumber"
-                value={result.protocolNumber}
-              />
-              <input type="hidden" name="accessKey" value={result.accessKey} />
+              <ProtocolFields result={result} />
               <button
                 type="submit"
                 className="shrink-0 text-[12px] font-bold text-brand-primary-soft"
@@ -858,6 +848,28 @@ function RequestDetail({
         Nova consulta
       </Link>
     </div>
+  );
+}
+
+/**
+ * The pair every download form has to carry, in a hidden field each. POST, not
+ * a link: a key in the query string ends up in the address bar, in the browser
+ * history and in every access log on the way.
+ */
+function ProtocolFields({
+  result,
+}: {
+  result: { protocolNumber: string; accessKey: string };
+}) {
+  return (
+    <>
+      <input
+        type="hidden"
+        name="protocolNumber"
+        value={result.protocolNumber}
+      />
+      <input type="hidden" name="accessKey" value={result.accessKey} />
+    </>
   );
 }
 

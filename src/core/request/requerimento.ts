@@ -21,10 +21,9 @@ export interface RequerimentoSection {
 }
 
 /**
- * The protocol and the access key, kept out of the sections on purpose. A
- * document that carries this block gets it drawn on a page of its own, the
- * last one, so the sheet the citizen signs and sends back can be detached
- * from the credential that opens the request.
+ * The protocol and the access key, highlighted as a card. Only the access
+ * receipt carries this: it is a document of its own precisely so the
+ * requerimento, which gets signed and sent back, never holds the credential.
  */
 export interface RequerimentoCredentials {
   heading: string;
@@ -53,8 +52,8 @@ export interface RequerimentoDocument {
 
 export interface RequerimentoData {
   protocolNumber: string;
-  /** Printed on the form so losing the screen does not lose the key. */
-  accessKey: string;
+  // No access key here on purpose: this document is signed and sent back, so
+  // the credential never enters it. It rides in `buildAccessReceipt` instead.
   applicantName: string;
   contact: string;
   cpf?: string | null;
@@ -151,19 +150,53 @@ export function buildRequerimento(
         "consulta do protocolo ou entregue o papel no balcão da serventia.",
     ],
     footer: `${tenant.name} · Protocolo ${data.protocolNumber} · ${tenant.legalFooter}`,
+  };
+}
+
+export interface AccessReceiptData {
+  protocolNumber: string;
+  accessKey: string;
+  createdAt: Date;
+}
+
+/**
+ * The access credential, as a file of its own. It is deliberately not part of
+ * the requerimento: signing at Gov.br signs the whole PDF, and that signed PDF
+ * is what comes back to the office through the site. A page the citizen was
+ * told to detach only protects whoever prints; a separate file protects
+ * everyone.
+ */
+export function buildAccessReceipt(
+  tenant: Tenant,
+  data: AccessReceiptData,
+): RequerimentoDocument {
+  return {
+    eyebrow: "Serviços on-line",
+    title: "Comprovante de acesso",
+    subtitle: `Protocolo ${data.protocolNumber} · ${formatDate(data.createdAt)}`,
+    office: [
+      tenant.name,
+      tenant.subtitle,
+      `CNS ${tenant.cns}`,
+      `${tenant.contacts.phone} · ${tenant.contacts.email}`,
+    ],
+    // No sections and no signee: there is nothing to sign on a receipt.
+    sections: [],
+    signature: [],
+    footer: `${tenant.name} · Protocolo ${data.protocolNumber} · ${tenant.legalFooter}`,
     credentials: {
-      heading: "Comprovante de acesso",
+      heading: "Guarde estes dados",
       rows: [
         { label: "Protocolo", value: data.protocolNumber },
         { label: "Chave de acesso", value: data.accessKey },
       ],
       note:
-        "Guarde esta página. É com o protocolo e a chave acima que você " +
-        "acompanha o pedido e lê a resposta da serventia. O site não mostra " +
-        "a chave de novo; se perder, peça outra à serventia. Destaque esta " +
-        "página antes de enviar o requerimento assinado: o requerimento não " +
-        "precisa dela, e quem recebe o arquivo assinado não deve receber a " +
-        "chave.",
+        "É com o protocolo e a chave acima que você acompanha o pedido e lê " +
+        "a resposta da serventia, na consulta de protocolo do site. O site " +
+        "não mostra a chave de novo; se perder, peça outra à serventia. " +
+        "Guarde este arquivo só para você: ele não faz parte do " +
+        "requerimento e não deve ser enviado junto com o requerimento " +
+        "assinado.",
     },
   };
 }

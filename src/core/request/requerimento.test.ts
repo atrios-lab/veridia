@@ -2,15 +2,20 @@ import assert from "node:assert/strict";
 import { test } from "node:test";
 import { getAct } from "../acts/catalog.ts";
 import { cartorioMarinho } from "../tenant/tenants/marinho.ts";
-import { buildDataRightsReceipt, buildRequerimento } from "./requerimento.ts";
+import {
+  buildAccessReceipt,
+  buildDataRightsReceipt,
+  buildRequerimento,
+} from "./requerimento.ts";
 
 const marriage = getAct("rcpn-habilitacao-casamento");
 const nameChange = getAct("rcpn-alteracao-prenome");
 if (!marriage || !nameChange) throw new Error("catalogo incompleto");
 
+const ACCESS_KEY = "BBM8-6XVB-8PUK";
+
 const data = {
   protocolNumber: "REQ.2026.000148",
-  accessKey: "BBM8-6XVB-8PUK",
   applicantName: "Maria José da Silva",
   contact: "(84) 99999-0000",
   cpf: "52998224725",
@@ -30,27 +35,15 @@ function flatten(sections: ReturnType<typeof buildRequerimento>["sections"]) {
     .join("\n");
 }
 
-test("the form carries the pair that opens the request", () => {
-  // Printed here on purpose: the screen shows the key once, and this is the
-  // copy the citizen keeps. It rides in its own block, which is what lets the
-  // renderer put it on a page that detaches.
-  const credentials = buildRequerimento(
-    cartorioMarinho,
-    marriage,
-    data,
-  ).credentials;
-  const text = (credentials?.rows ?? [])
-    .map((row) => `${row.label}: ${row.value}`)
-    .join("\n");
-  assert.match(text, /REQ\.2026\.000148/);
-  assert.match(text, /BBM8-6XVB-8PUK/);
-});
+const receipt = {
+  protocolNumber: data.protocolNumber,
+  accessKey: ACCESS_KEY,
+  createdAt: data.createdAt,
+};
 
-test("the key is nowhere on the sheet that gets signed", () => {
-  // The whole point of the separate page: the signed requerimento goes back
-  // to the office through the site, and it must not carry the credential.
-  const document = buildRequerimento(cartorioMarinho, marriage, data);
-  const signed = [
+/** Every string the document puts on paper, credentials block included. */
+function everything(document: ReturnType<typeof buildRequerimento>): string {
+  return [
     document.eyebrow,
     document.title,
     document.subtitle,
@@ -59,22 +52,45 @@ test("the key is nowhere on the sheet that gets signed", () => {
     document.signee ?? "",
     ...document.signature,
     document.footer,
+    document.credentials?.heading ?? "",
+    ...(document.credentials?.rows ?? []).map((r) => `${r.label}: ${r.value}`),
+    document.credentials?.note ?? "",
   ].join("\n");
-  assert.equal(signed.includes("BBM8-6XVB-8PUK"), false);
+}
+
+test("the receipt carries the pair that opens the request", () => {
+  // The screen shows the key once, and this file is the copy the citizen
+  // keeps.
+  const document = buildAccessReceipt(cartorioMarinho, receipt);
+  const text = (document.credentials?.rows ?? [])
+    .map((row) => `${row.label}: ${row.value}`)
+    .join("\n");
+  assert.match(text, /REQ\.2026\.000148/);
+  assert.match(text, new RegExp(ACCESS_KEY));
+});
+
+test("the key is nowhere in the file that gets signed", () => {
+  // The whole point of the split: signing at Gov.br signs the entire PDF, and
+  // that PDF comes back to the office. It must not carry the credential — not
+  // on any page, not in any block.
+  const document = buildRequerimento(cartorioMarinho, marriage, data);
+  const signed = everything(document);
+  assert.equal(document.credentials, undefined);
+  assert.equal(signed.includes(ACCESS_KEY), false);
   assert.equal(signed.includes("Chave de acesso"), false);
   // The protocol stays: without it the office cannot find the request.
   assert.match(signed, /REQ\.2026\.000148/);
 });
 
-test("the credential page says why it is a page of its own", () => {
-  const credentials = buildRequerimento(
-    cartorioMarinho,
-    marriage,
-    data,
-  ).credentials;
-  assert.ok(credentials);
-  assert.match(credentials.note, /Destaque esta página/);
-  assert.match(credentials.note, /assinado/);
+test("the access receipt is a document nobody signs", () => {
+  const document = buildAccessReceipt(cartorioMarinho, receipt);
+  assert.equal(document.signee, undefined);
+  assert.deepEqual(document.sections, []);
+  assert.match(document.title, /Comprovante de acesso/);
+  // It has to say what the two codes are for, and that it travels alone.
+  assert.ok(document.credentials);
+  assert.match(document.credentials.note, /consulta de protocolo/);
+  assert.match(document.credentials.note, /não deve ser enviado/);
 });
 
 test("the form identifies the office and the act it is for", () => {
