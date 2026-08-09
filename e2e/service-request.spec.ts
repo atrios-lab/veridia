@@ -380,8 +380,7 @@ test.describe("filing a request", () => {
       from service_requests where protocol_number = ${protocolNumber}
     `;
 
-    await page.goto(`${baseURL}/protocolo`);
-    await page.getByLabel("Número do protocolo").fill(protocolNumber);
+    await page.goto(`${baseURL}/protocolo?numero=${protocolNumber}`);
     await page.getByPlaceholder("Ex.: BBM8-6XVB-8PUK").fill(accessKey);
     await page.getByRole("button", { name: "Ver detalhes" }).click();
 
@@ -399,5 +398,206 @@ test.describe("filing a request", () => {
 
     await expect(page.getByText("Cumprida")).toBeVisible();
     await expect(page.getByText("Aguardando você")).toHaveCount(0);
+  });
+
+  test("the amount and Pix QR stay behind the access key, never on the locked summary", async ({
+    page,
+  }) => {
+    await page.goto(
+      `${baseURL}/solicitar?atribuicao=RCPN&ato=rcpn-habilitacao-casamento`,
+    );
+    await fillForm(page);
+    await page.getByRole("button", { name: "Enviar requerimento" }).click();
+
+    const protocolNumber =
+      (await page
+        .getByText(/REQ\.\d{4}\.\d{6}/)
+        .first()
+        .textContent()) ?? "";
+    const accessKey =
+      (await page
+        .getByText(/[A-Z2-9]{4}-[A-Z2-9]{4}-[A-Z2-9]{4}/)
+        .first()
+        .textContent()) ?? "";
+
+    // Setting the amount is the admin panel's job (AmountSection); simulated
+    // here with a direct write, the same way the exigência test above
+    // simulates the office's writes.
+    const sql = neon(process.env.DATABASE_URL as string);
+    await sql`
+      update service_requests set amount_cents = 25000
+      where tenant_slug = 'cartorio-marinho' and protocol_number = ${protocolNumber}
+    `;
+    // A key from another test (or a run of this same test) may already be
+    // registered; cleared so the "no QR yet" assertion below is not at the
+    // mercy of whatever ran before it.
+    await sql`
+      delete from tenant_content
+      where tenant_slug = 'cartorio-marinho' and key = 'office-pix'
+    `;
+
+    // Locked summary, no access key: the amount identifies nothing on its
+    // own, but the office decided it should still wait behind the key with
+    // everything else, so neither the value nor a QR belongs here.
+    await page.goto(`${baseURL}/protocolo?numero=${protocolNumber}`);
+    await expect(page.getByText("R$ 250,00")).toHaveCount(0);
+    await expect(page.getByText("Valor do pedido")).toHaveCount(0);
+
+    // With the key, but before the office has a Pix key/city: the amount
+    // shows, with the counter-payment instruction, no QR.
+    await page.getByPlaceholder("Ex.: BBM8-6XVB-8PUK").fill(accessKey);
+    await page.getByRole("button", { name: "Ver detalhes" }).click();
+    await expect(page.getByText("R$ 250,00")).toBeVisible();
+    await expect(
+      page.getByText("Pague no balcão da serventia", { exact: false }),
+    ).toBeVisible();
+
+    // The office registering a Pix key and city is the Cobrança panel's job;
+    // simulated the same way.
+    await sql`
+      insert into tenant_content (tenant_slug, key, published, published_at)
+      values (
+        'cartorio-marinho',
+        'office-pix',
+        ${JSON.stringify({ pix: { type: "cpf", key: "52998224725", city: "IELMO MARINHO" } })}::jsonb,
+        now()
+      )
+      on conflict (tenant_slug, key)
+      do update set published = excluded.published, published_at = excluded.published_at
+    `;
+
+    await page.goto(`${baseURL}/protocolo?numero=${protocolNumber}`);
+    await page.getByPlaceholder("Ex.: BBM8-6XVB-8PUK").fill(accessKey);
+    await page.getByRole("button", { name: "Ver detalhes" }).click();
+    await expect(page.getByText("R$ 250,00")).toBeVisible();
+    await expect(page.getByText("PIX COPIA E COLA")).toBeVisible();
+    await expect(
+      page.getByText(protocolNumber.replace(/\./g, ""), { exact: false }),
+    ).toBeVisible();
+  });
+
+  test("a paid request without a delivered document shows preparation as the current step", async ({
+    page,
+  }) => {
+    await page.goto(
+      `${baseURL}/solicitar?atribuicao=RCPN&ato=rcpn-habilitacao-casamento`,
+    );
+    await fillForm(page);
+    await page.getByRole("button", { name: "Enviar requerimento" }).click();
+
+    const protocolNumber =
+      (await page
+        .getByText(/REQ\.\d{4}\.\d{6}/)
+        .first()
+        .textContent()) ?? "";
+    const accessKey =
+      (await page
+        .getByText(/[A-Z2-9]{4}-[A-Z2-9]{4}-[A-Z2-9]{4}/)
+        .first()
+        .textContent()) ?? "";
+
+    // Marking the request "Pago" is the office's job (StatusSection);
+    // simulated here the same way the other office writes in this suite are.
+    const sql = neon(process.env.DATABASE_URL as string);
+    await sql`
+      update service_requests set status = 'paid'
+      where tenant_slug = 'cartorio-marinho' and protocol_number = ${protocolNumber}
+    `;
+
+    await page.goto(`${baseURL}/protocolo?numero=${protocolNumber}`);
+    await page.getByPlaceholder("Ex.: BBM8-6XVB-8PUK").fill(accessKey);
+    await page.getByRole("button", { name: "Ver detalhes" }).click();
+
+    await expect(page.getByText("Em preparo na serventia")).toBeVisible();
+    await expect(page.getByText("Conclusão e entrega")).toBeVisible();
+    await expect(
+      page.locator("li", { hasText: "Documento entregue" }),
+    ).toHaveCount(0);
+  });
+
+  test("a delivered document closes the timeline with its own date", async ({
+    page,
+  }) => {
+    await page.goto(
+      `${baseURL}/solicitar?atribuicao=RCPN&ato=rcpn-habilitacao-casamento`,
+    );
+    await fillForm(page);
+    await page.getByRole("button", { name: "Enviar requerimento" }).click();
+
+    const protocolNumber =
+      (await page
+        .getByText(/REQ\.\d{4}\.\d{6}/)
+        .first()
+        .textContent()) ?? "";
+    const accessKey =
+      (await page
+        .getByText(/[A-Z2-9]{4}-[A-Z2-9]{4}-[A-Z2-9]{4}/)
+        .first()
+        .textContent()) ?? "";
+
+    // Delivering the finished document is DeliverySection's job; simulated
+    // here the same way the exigência test above simulates the office's writes.
+    const sql = neon(process.env.DATABASE_URL as string);
+    await sql`
+      insert into service_request_attachments
+        (tenant_slug, request_id, kind, stored_name, display_name, path, mime_type, size_bytes)
+      select 'cartorio-marinho', id, 'office', 'documento.pdf', 'documento.pdf', 'documento.pdf', 'application/pdf', 1024
+      from service_requests where protocol_number = ${protocolNumber}
+    `;
+    await sql`
+      update service_requests set status = 'done'
+      where tenant_slug = 'cartorio-marinho' and protocol_number = ${protocolNumber}
+    `;
+
+    await page.goto(`${baseURL}/protocolo?numero=${protocolNumber}`);
+    await page.getByPlaceholder("Ex.: BBM8-6XVB-8PUK").fill(accessKey);
+    await page.getByRole("button", { name: "Ver detalhes" }).click();
+
+    // Scoped to the timeline's own <li>: the delivered-documents card also
+    // names its single file "Documento entregue", and the two must not be
+    // confused with each other.
+    const deliveredStep = page.locator("li", { hasText: "Documento entregue" });
+    await expect(deliveredStep).toBeVisible();
+    await expect(deliveredStep).toContainText(/\d{2}\/\d{2}\/\d{4}/);
+  });
+
+  test("a rejected request ends the timeline in the outcome, not invented next steps", async ({
+    page,
+  }) => {
+    await page.goto(
+      `${baseURL}/solicitar?atribuicao=RCPN&ato=rcpn-habilitacao-casamento`,
+    );
+    await fillForm(page);
+    await page.getByRole("button", { name: "Enviar requerimento" }).click();
+
+    const protocolNumber =
+      (await page
+        .getByText(/REQ\.\d{4}\.\d{6}/)
+        .first()
+        .textContent()) ?? "";
+    const accessKey =
+      (await page
+        .getByText(/[A-Z2-9]{4}-[A-Z2-9]{4}-[A-Z2-9]{4}/)
+        .first()
+        .textContent()) ?? "";
+
+    // Indeferindo the request is the office's job (StatusSection); simulated
+    // here the same way the other office writes in this suite are.
+    const sql = neon(process.env.DATABASE_URL as string);
+    await sql`
+      update service_requests set status = 'rejected'
+      where tenant_slug = 'cartorio-marinho' and protocol_number = ${protocolNumber}
+    `;
+
+    await page.goto(`${baseURL}/protocolo?numero=${protocolNumber}`);
+    await page.getByPlaceholder("Ex.: BBM8-6XVB-8PUK").fill(accessKey);
+    await page.getByRole("button", { name: "Ver detalhes" }).click();
+
+    await expect(page.getByText("Pedido recebido")).toBeVisible();
+    await expect(page.getByText("Pedido indeferido")).toBeVisible();
+    await expect(
+      page.getByText("Aguardando requerimento assinado"),
+    ).toHaveCount(0);
+    await expect(page.getByText("Em preparo na serventia")).toHaveCount(0);
   });
 });

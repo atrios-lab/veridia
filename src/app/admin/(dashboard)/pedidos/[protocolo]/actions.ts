@@ -7,7 +7,9 @@ import { isServiceRequestStatus } from "@/core/request/kinds.ts";
 import { parseCentsInput } from "@/core/request/money.ts";
 import { requirementTextSchema } from "@/core/request/requirement.ts";
 import {
+  AttachmentInUseError,
   attachToRequest,
+  deleteAttachment,
   deleteRequest,
   registerRequirement,
   reissueAccessKey,
@@ -16,7 +18,11 @@ import {
 } from "@/lib/service-request.ts";
 import { getSession } from "@/lib/session.ts";
 import { getTenant } from "@/lib/tenant.ts";
-import { AttachmentError, storeAttachments } from "@/lib/uploads.ts";
+import {
+  AttachmentError,
+  deleteStoredFile,
+  storeAttachments,
+} from "@/lib/uploads.ts";
 
 export type ActionState =
   | { status: "idle" }
@@ -151,6 +157,37 @@ export async function deliverDocumentAction(
       return { status: "error", message: error.message };
     }
     console.error("pedidos.deliver-document", error);
+    return { status: "error", message: GENERIC_ERROR };
+  }
+  revalidateAdmin();
+  return { status: "success" };
+}
+
+export async function deleteAttachmentAction(
+  _previous: ActionState,
+  formData: FormData,
+): Promise<ActionState> {
+  const session = await authorize();
+  if (!session) return { status: "error", message: NO_PERMISSION };
+
+  const requestId = String(formData.get("requestId") ?? "");
+  const attachmentId = String(formData.get("attachmentId") ?? "");
+  const tenant = await getTenant();
+  try {
+    const deleted = await deleteAttachment(
+      tenant.slug,
+      requestId,
+      attachmentId,
+    );
+    if (!deleted) {
+      return { status: "error", message: "Documento não encontrado." };
+    }
+    await deleteStoredFile(deleted.path);
+  } catch (error) {
+    if (error instanceof AttachmentInUseError) {
+      return { status: "error", message: error.message };
+    }
+    console.error("pedidos.delete-attachment", error);
     return { status: "error", message: GENERIC_ERROR };
   }
   revalidateAdmin();

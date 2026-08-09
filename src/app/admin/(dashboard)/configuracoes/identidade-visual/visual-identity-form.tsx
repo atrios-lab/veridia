@@ -155,7 +155,7 @@ function ImageField({
       <div className="min-w-0 flex-1">
         <p className="text-[13px] font-bold text-admin-primary">{label}</p>
         <p className="mt-0.5 text-[12px] text-admin-muted">{hint}</p>
-        <label className="mt-2 inline-flex cursor-pointer items-center gap-1.5 rounded-lg border border-admin-input-border px-3 py-1.5 text-[12px] font-bold text-admin-muted hover:border-admin-primary-soft hover:text-admin-primary">
+        <label className="relative mt-2 inline-flex cursor-pointer items-center gap-1.5 rounded-lg border border-admin-input-border px-3 py-1.5 text-[12px] font-bold text-admin-muted hover:border-admin-primary-soft hover:text-admin-primary">
           <AdminIcon name="upload" className="h-3.5 w-3.5" />
           Trocar imagem
           <input

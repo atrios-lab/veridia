@@ -1,6 +1,9 @@
 /** Postgres unique violation: someone took the value between read and write. */
 export const UNIQUE_VIOLATION = "23505";
 
+/** Postgres foreign key violation: the row is still referenced elsewhere. */
+export const FOREIGN_KEY_VIOLATION = "23503";
+
 /**
  * Drizzle wraps the driver's error in one of its own ("Failed query: ..."),
  * and the driver's may itself be wrapped, so the SQLSTATE code is somewhere

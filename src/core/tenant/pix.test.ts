@@ -1,6 +1,11 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { isValidPixKey, normalizePixKey } from "./pix.ts";
+import {
+  isValidPixCity,
+  isValidPixKey,
+  normalizePixCity,
+  normalizePixKey,
+} from "./pix.ts";
 
 test("cpf: valid digits pass, formatted input normalizes to digits", () => {
   assert.equal(isValidPixKey("cpf", "529.982.247-25"), true);
@@ -49,4 +54,22 @@ test("random: uuid passes, normalizes to lower case", () => {
 
 test("random: not a uuid fails", () => {
   assert.equal(isValidPixKey("random", "not-a-uuid"), false);
+});
+
+test("city: accents and lower case normalize to upper case ascii", () => {
+  assert.equal(normalizePixCity("Ielmo Marinho"), "IELMO MARINHO");
+  assert.equal(normalizePixCity("São Paulo"), "SAO PAULO");
+});
+
+test("city: within the 15-character limit passes", () => {
+  assert.equal(isValidPixCity("Ielmo Marinho"), true);
+});
+
+test("city: over the 15-character limit fails, even after accents are stripped", () => {
+  assert.equal(isValidPixCity("São Gonçalo do Amarante"), false);
+});
+
+test("city: blank fails", () => {
+  assert.equal(isValidPixCity(""), false);
+  assert.equal(isValidPixCity("   "), false);
 });

@@ -94,3 +94,25 @@ export function isValidPixKey(type: PixKeyType, value: string): boolean {
       return RANDOM_KEY.test(value.trim());
   }
 }
+
+/** The Pix payload's Merchant City limit — set by the Central Bank's own
+ * standard, not a choice made here. */
+export const PIX_CITY_MAX_LENGTH = 15;
+
+/**
+ * Upper case, no diacritics: the same shape the EMV "Copia e Cola" payload's
+ * Merchant City field requires, stored normalized so nothing at read time
+ * has to re-derive it.
+ */
+export function normalizePixCity(value: string): string {
+  return value
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .trim()
+    .toUpperCase();
+}
+
+export function isValidPixCity(value: string): boolean {
+  const normalized = normalizePixCity(value);
+  return normalized.length > 0 && normalized.length <= PIX_CITY_MAX_LENGTH;
+}

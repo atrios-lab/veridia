@@ -5,15 +5,15 @@ import { revalidatePath } from "next/cache";
 import { can } from "@/core/auth/roles.ts";
 import { OfficePixSchema } from "@/core/tenant/overrides.ts";
 import type { PixKeyType } from "@/core/tenant/pix.ts";
-import { normalizePixKey } from "@/core/tenant/pix.ts";
+import { normalizePixCity, normalizePixKey } from "@/core/tenant/pix.ts";
 import { db } from "@/db/index.ts";
 import { tenantContent } from "@/db/schema.ts";
 import { recordAudit } from "@/lib/audit.ts";
 import { getSession } from "@/lib/session.ts";
 import { getTenant, OFFICE_PIX_KEY } from "@/lib/tenant.ts";
 
-/** The two fields as they were typed, unvalidated. */
-export type PixKeyValues = { type: string; key: string };
+/** The three fields as they were typed, unvalidated. */
+export type PixKeyValues = { type: string; key: string; city: string };
 
 export type PixKeyState =
   | { status: "idle" }
@@ -47,6 +47,7 @@ export async function savePixKey(
   const values: PixKeyValues = {
     type: String(formData.get("type") ?? ""),
     key: String(formData.get("key") ?? "").trim(),
+    city: String(formData.get("city") ?? "").trim(),
   };
 
   const session = await getSession();
@@ -59,7 +60,11 @@ export async function savePixKey(
   const tenant = await getTenant();
 
   const parsed = OfficePixSchema.safeParse({
-    pix: { type: values.type as PixKeyType, key: values.key },
+    pix: {
+      type: values.type as PixKeyType,
+      key: values.key,
+      city: values.city,
+    },
   });
   if (!parsed.success) {
     const fieldErrors: Record<string, string> = {};
@@ -70,6 +75,14 @@ export async function savePixKey(
     }
     return fail("Confira os campos destacados.", values, fieldErrors);
   }
+  // Required to save, unlike the shared read-side type: a key registered
+  // before this field existed still has to load with no city (see
+  // TenantSchema), but a save always submits one alongside the key.
+  if (!values.city) {
+    return fail("Confira os campos destacados.", values, {
+      city: "Informe a cidade.",
+    });
+  }
 
   // Normalized before it is stored: what is kept is what a payload would one
   // day need, not the formatting the registrar happened to type.
@@ -77,6 +90,7 @@ export async function savePixKey(
     pix: {
       type: parsed.data.pix.type,
       key: normalizePixKey(parsed.data.pix.type, parsed.data.pix.key),
+      city: normalizePixCity(values.city),
     },
   };
 
@@ -127,6 +141,7 @@ export async function removePixKey(
     return fail("Você não tem permissão para remover a chave.", {
       type: "",
       key: "",
+      city: "",
     });
   }
   const tenant = await getTenant();
@@ -143,7 +158,7 @@ export async function removePixKey(
         ),
       );
   } catch {
-    return fail(GENERIC_ERROR, { type: "", key: "" });
+    return fail(GENERIC_ERROR, { type: "", key: "", city: "" });
   }
 
   await recordAudit({

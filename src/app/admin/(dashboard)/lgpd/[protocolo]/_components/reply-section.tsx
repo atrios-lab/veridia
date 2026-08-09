@@ -46,7 +46,7 @@ export function ReplySection({
       <form action={respondAction} className="mt-2.5">
         <input type="hidden" name="requestId" value={requestId} />
         <input type="hidden" name="reply" value={reply} />
-        <label className="mt-1 flex cursor-pointer flex-col items-center gap-1 rounded-[10px] border-[1.5px] border-dashed border-admin-input-border px-4 py-3.5 text-center">
+        <label className="relative mt-1 flex cursor-pointer flex-col items-center gap-1 rounded-[10px] border-[1.5px] border-dashed border-admin-input-border px-4 py-3.5 text-center">
           <span className="text-[12.5px] font-semibold text-admin-primary">
             Anexar relatório de dados (opcional)
           </span>

@@ -1,8 +1,5 @@
 import { readFile } from "node:fs/promises";
-import {
-  findByProtocolWithKey,
-  getOfficeAttachment,
-} from "@/lib/service-request.ts";
+import { findByProtocolWithKey, getAttachment } from "@/lib/service-request.ts";
 import { getTenant } from "@/lib/tenant.ts";
 
 export const runtime = "nodejs";
@@ -28,11 +25,10 @@ export async function POST(request: Request): Promise<Response> {
   );
   if (!stored) return new Response("Não encontrado", { status: 404 });
 
-  const attachment = await getOfficeAttachment(
-    tenant.slug,
-    stored.id,
-    attachmentId,
-  );
+  // The office's own deliveries and the citizen's own uploads both live
+  // here: ownership is already proven by the protocol + key above, so kind
+  // isn't a security boundary for this route.
+  const attachment = await getAttachment(tenant.slug, stored.id, attachmentId);
   if (!attachment) return new Response("Não encontrado", { status: 404 });
 
   const bytes = attachment.path.startsWith("http")

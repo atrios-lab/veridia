@@ -2,7 +2,13 @@
 
 import { zodResolver } from "@hookform/resolvers/zod";
 import Link from "next/link";
-import { startTransition, useActionState, useRef, useState } from "react";
+import {
+  startTransition,
+  useActionState,
+  useEffect,
+  useRef,
+  useState,
+} from "react";
 import { useForm } from "react-hook-form";
 import type { Act } from "@/core/acts/catalog.ts";
 import { ATTRIBUTION_SHORT_NAMES } from "@/core/acts/catalog.ts";
@@ -491,6 +497,14 @@ function SuccessScreen({ result }: { result: SubmitSuccess }) {
     AttachState,
     FormData
   >(attachSignedForm, { status: "idle" });
+  // Lets someone who sent the wrong file try again: opens the upload form
+  // back up even after a success, and closes it once a new upload lands.
+  const [replacingFile, setReplacingFile] = useState(false);
+  const showUploadForm = attachState.status !== "success" || replacingFile;
+
+  useEffect(() => {
+    if (attachState.status === "success") setReplacingFile(false);
+  }, [attachState]);
 
   return (
     <div className="mt-5 md:mx-auto md:max-w-3xl">
@@ -574,46 +588,60 @@ function SuccessScreen({ result }: { result: SubmitSuccess }) {
             Aqui, agora, ou depois pela consulta, ou em papel no balcão. O
             pedido não trava.
           </p>
-          <form action={attachAction} className="mt-2.5">
-            <input
-              type="hidden"
-              name="protocolNumber"
-              value={result.protocolNumber}
-            />
-            <input type="hidden" name="accessKey" value={result.accessKey} />
-            {/* One gesture, like the redesign draws it: picking the file is
-                the send. The input is hidden but keeps working for keyboard
-                and screen reader; the dashed box is the visible control. */}
-            <label
-              className={`flex cursor-pointer items-center justify-center gap-2 rounded-[10px] border-[1.5px] border-dashed border-brand-border px-3 py-2.5 text-[12.5px] font-semibold text-brand-primary hover:border-brand-accent has-[:focus-visible]:border-brand-accent ${attaching ? "opacity-60" : ""}`}
-            >
-              <Icon name="plus" className="h-3.5 w-3.5 text-brand-accent" />
-              {attaching ? "Enviando..." : "Anexar requerimento assinado"}
-              <input
-                type="file"
-                name="requerimento"
-                accept="image/jpeg,image/png,image/webp,image/heic,application/pdf"
-                className="sr-only"
-                disabled={attaching}
-                onChange={(event) => {
-                  if (event.target.files?.length) {
-                    event.target.form?.requestSubmit();
-                  }
-                }}
+          {!showUploadForm ? (
+            <div className="mt-2.5 flex items-center gap-2 rounded-[10px] border-[1.5px] border-brand-border bg-brand-card px-3.5 py-2.5">
+              <Icon
+                name="check"
+                className="h-3.5 w-3.5 shrink-0 text-brand-primary-soft"
+                strokeWidth={2.4}
               />
-            </label>
-            {attachState.status !== "idle" && (
-              <output
-                className={`mt-2 block text-[12px] font-semibold ${
-                  attachState.status === "error"
-                    ? "text-brand-alert"
-                    : "text-brand-primary-soft"
-                }`}
-              >
+              <output className="flex-1 text-[12px] font-semibold text-brand-primary-soft">
                 {attachState.message}
               </output>
-            )}
-          </form>
+              <button
+                type="button"
+                onClick={() => setReplacingFile(true)}
+                className="shrink-0 text-[12px] font-semibold text-brand-primary underline underline-offset-2 hover:text-brand-primary-soft"
+              >
+                Trocar arquivo
+              </button>
+            </div>
+          ) : (
+            <form action={attachAction} className="mt-2.5">
+              <input
+                type="hidden"
+                name="protocolNumber"
+                value={result.protocolNumber}
+              />
+              <input type="hidden" name="accessKey" value={result.accessKey} />
+              {/* One gesture, like the redesign draws it: picking the file is
+                  the send. The input is hidden but keeps working for keyboard
+                  and screen reader; the dashed box is the visible control. */}
+              <label
+                className={`flex cursor-pointer items-center justify-center gap-2 rounded-[10px] border-[1.5px] border-dashed border-brand-border px-3 py-2.5 text-[12.5px] font-semibold text-brand-primary hover:border-brand-accent has-[:focus-visible]:border-brand-accent ${attaching ? "opacity-60" : ""}`}
+              >
+                <Icon name="plus" className="h-3.5 w-3.5 text-brand-accent" />
+                {attaching ? "Enviando..." : "Anexar requerimento assinado"}
+                <input
+                  type="file"
+                  name="requerimento"
+                  accept="image/jpeg,image/png,image/webp,image/heic,application/pdf"
+                  className="sr-only"
+                  disabled={attaching}
+                  onChange={(event) => {
+                    if (event.target.files?.length) {
+                      event.target.form?.requestSubmit();
+                    }
+                  }}
+                />
+              </label>
+              {attachState.status === "error" && (
+                <output className="mt-2 block text-[12px] font-semibold text-brand-alert">
+                  {attachState.message}
+                </output>
+              )}
+            </form>
+          )}
         </Step>
       </ol>
 

@@ -21,9 +21,9 @@ code (e "Pix Copia e Cola") já com o valor fixado — sem precisar digitar nada
   do pedido quando ele estiver informado. Com chave Pix cadastrada pela serventia, mostra também o
   QR code e o código "Copia e Cola"; sem chave, mostra só o valor com a instrução de pagar no
   balcão.
-- O valor e o QR aparecem tanto na consulta "trancada" (sem a chave de acesso, resumo público) —
-  já que valor e status de pagamento não identificam o requerente — quanto no detalhe completo
-  (com a chave de acesso).
+- O valor e o QR aparecem apenas no detalhe completo, depois que o cidadão informa a chave de
+  acesso — nunca no resumo "trancado" público. O protocolo é sequencial e não é segredo; a chave
+  é o único fator que prova que quem está consultando tem relação com o pedido.
 
 ## Capabilities
 

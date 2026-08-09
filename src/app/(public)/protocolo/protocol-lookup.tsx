@@ -9,6 +9,7 @@ import {
 } from "@/core/request/channels.ts";
 import { formatShortDate } from "@/core/scheduling/calendar.ts";
 import { Icon } from "../_components/icon.tsx";
+import { CopyField } from "../_components/protocol-reveal.tsx";
 import { ProtocolSearchButton } from "../_components/protocol-search-button.tsx";
 import { type AttachState, attachSignedForm } from "../solicitar/actions.ts";
 import {
@@ -33,6 +34,12 @@ export interface PublicStatus {
   statusLabel: string;
   createdAt: string;
   updatedAt: string;
+}
+
+/** Same shape `pixChargeFor` (`src/lib/pix-qr.ts`) returns. */
+interface PixCharge {
+  copyPaste: string;
+  qrSvg: string;
 }
 
 interface Contacts {
@@ -313,28 +320,94 @@ function StatusBadge({ label }: { label: string }) {
   );
 }
 
+/**
+ * The value the office informed, and however the citizen pays it: a QR
+ * (rendered server-side, see `src/lib/pix-qr.ts`) plus its Copia e Cola
+ * text when the office has a Pix key and city registered, or a plain
+ * instruction to pay at the counter when it doesn't. The value itself is
+ * never withheld for lack of a QR.
+ *
+ * Once the office marks the request "Pago" (or moves it further along),
+ * `settled` drops the QR and the counter instruction: the amount stays as a
+ * receipt, but nothing keeps inviting a payment that already happened.
+ */
+function PaymentCard({
+  amountLabel,
+  pix,
+  settled,
+}: {
+  amountLabel: string;
+  pix?: PixCharge;
+  settled?: boolean;
+}) {
+  return (
+    <div className="rounded-2xl border-[1.5px] border-brand-accent-line bg-brand-accent-soft p-4">
+      <span className="text-[11px] font-bold uppercase tracking-[0.16em] text-brand-accent">
+        Valor do pedido
+      </span>
+      <div className="mt-1 font-serif text-[22px] font-semibold text-brand-primary">
+        {amountLabel}
+      </div>
+      {settled ? (
+        <p className="mt-2 flex items-center gap-1.5 text-[12px] font-semibold text-brand-primary-soft">
+          <Icon name="check" className="h-3.5 w-3.5" strokeWidth={2.4} />
+          Pagamento confirmado. Nada pendente aqui.
+        </p>
+      ) : pix ? (
+        <div className="mt-3 flex flex-col gap-3">
+          <div
+            className="flex justify-center rounded-xl bg-white p-3 [&>svg]:h-40 [&>svg]:w-40"
+            // biome-ignore lint/security/noDangerouslySetInnerHtml: pix.qrSvg is deterministic SVG rendered server-side by `qrcode`, never citizen input.
+            dangerouslySetInnerHTML={{ __html: pix.qrSvg }}
+          />
+          <CopyField label="Pix Copia e Cola" value={pix.copyPaste} />
+        </div>
+      ) : (
+        <p className="mt-2 text-[12px] leading-relaxed text-brand-text-soft">
+          Pague no balcão da serventia. Assim que a chave Pix estiver
+          cadastrada, o QR aparece aqui.
+        </p>
+      )}
+    </div>
+  );
+}
+
 function TimelineStep({
   done,
   label,
   detail,
   lineBelow,
+  alert,
 }: {
   done?: boolean;
   label: string;
   detail?: string;
   lineBelow?: boolean;
+  alert?: boolean;
 }) {
   return (
     <li className="flex gap-2.5">
       <span className="flex flex-col items-center">
         <span
-          className={`mt-1 h-2.5 w-2.5 shrink-0 rounded-full ${done ? "bg-brand-accent" : "border-2 border-brand-border bg-brand-surface"}`}
+          className={`mt-1 h-2.5 w-2.5 shrink-0 rounded-full ${
+            alert
+              ? "bg-brand-alert"
+              : done
+                ? "bg-brand-accent"
+                : "border-2 border-brand-border bg-brand-surface"
+          }`}
         />
         {lineBelow && <span className="w-0.5 flex-1 bg-brand-border" />}
       </span>
       <div className={lineBelow ? "pb-3.5" : ""}>
         <div
-          className={`text-[13px] font-semibold ${done ? "text-brand-primary" : "text-brand-faint"}`}
+          className={`text-[13px] font-semibold ${
+            alert
+              ? "text-brand-alert"
+              : done
+                ? "text-brand-primary"
+                : "text-brand-faint"
+          }`}
         >
           {label}
         </div>
@@ -344,6 +417,103 @@ function TimelineStep({
       </div>
     </li>
   );
+}
+
+interface TimelineStepData {
+  label: string;
+  done?: boolean;
+  detail?: string;
+  alert?: boolean;
+}
+
+/**
+ * The service request's andamento, in citizen language: what's cumprido, what's
+ * next, and — when the office indeferiu or the citizen cancelou — that it
+ * won't go further. Derived from status + the data the consult already
+ * loads, never from the auditLog (admin trail, not citizen-facing).
+ */
+function timelineSteps(
+  result: ServiceRequestDetail,
+  hasSignedForm: boolean,
+): TimelineStepData[] {
+  const steps: TimelineStepData[] = [
+    {
+      label: "Pedido recebido",
+      done: true,
+      detail: formatDateTime(result.createdAt),
+    },
+    hasSignedForm
+      ? {
+          label: "Requerimento assinado recebido",
+          done: true,
+          detail: result.signedFormReceivedAt
+            ? formatDateTime(result.signedFormReceivedAt)
+            : undefined,
+        }
+      : {
+          label: "Aguardando requerimento assinado",
+          detail: "o passo acima resolve isto",
+        },
+  ];
+
+  if (result.requirements.some((r) => r.status === "pending")) {
+    steps.push({
+      label: "Exigência aguardando sua resposta",
+      detail: "responda no cartão de exigências",
+    });
+  }
+
+  if (result.amountLabel) {
+    steps.push(
+      result.paymentSettled
+        ? { label: "Pagamento confirmado", done: true }
+        : { label: "Aguardando pagamento", detail: "valor e QR ao lado" },
+    );
+  }
+
+  if (
+    result.requestStatus === "rejected" ||
+    result.requestStatus === "cancelled"
+  ) {
+    return [
+      ...steps.filter((step) => step.done),
+      {
+        label:
+          result.requestStatus === "rejected"
+            ? "Pedido indeferido"
+            : "Pedido cancelado",
+        done: true,
+        alert: true,
+      },
+    ];
+  }
+
+  const delivered = result.deliveredDocuments.length > 0;
+  const finished =
+    delivered ||
+    result.requestStatus === "done" ||
+    result.requestStatus === "archived";
+  const preparing =
+    result.requestStatus === "paid" ||
+    ((result.requestStatus === "new" || result.requestStatus === "in-review") &&
+      !result.amountLabel);
+
+  if (finished || preparing) {
+    steps.push({ label: "Em preparo na serventia", done: finished });
+    steps.push(
+      delivered
+        ? {
+            label: "Documento entregue",
+            done: true,
+            detail: formatDateTime(result.deliveredDocuments[0].createdAt),
+          }
+        : finished
+          ? { label: "Documento entregue", done: true }
+          : { label: "Conclusão e entrega" },
+    );
+  }
+
+  return steps;
 }
 
 function RequirementRow({
@@ -488,6 +658,9 @@ function RequestDetail({
   // successful upload in this same visit flips it without asking the server
   // to look everything up again.
   const [hasSignedForm, setHasSignedForm] = useState(result.hasSignedForm);
+  const [citizenDocuments, setCitizenDocuments] = useState(
+    result.citizenDocuments,
+  );
   const [signState, signAction, signing] = useActionState<
     AttachState,
     FormData
@@ -500,6 +673,12 @@ function RequestDetail({
   useEffect(() => {
     if (signState.status === "success") setHasSignedForm(true);
   }, [signState]);
+
+  useEffect(() => {
+    if (docState.status === "success") {
+      setCitizenDocuments((prev) => [...prev, ...docState.documents]);
+    }
+  }, [docState]);
 
   return (
     <div>
@@ -519,6 +698,13 @@ function RequestDetail({
 
       <div className="mt-3.5 md:grid md:grid-cols-[1.1fr_0.9fr] md:items-start md:gap-4">
         <div className="flex flex-col gap-3.5">
+          {result.amountLabel && (
+            <PaymentCard
+              amountLabel={result.amountLabel}
+              pix={result.pix}
+              settled={result.paymentSettled}
+            />
+          )}
           <RequirementsCard result={result} />
           {hasSignedForm ? (
             <div className="flex items-start gap-2.5 rounded-2xl border border-brand-border bg-brand-card p-4">
@@ -655,28 +841,13 @@ function RequestDetail({
               Andamento
             </span>
             <ol className="mt-2.5 flex flex-col">
-              <TimelineStep
-                done
-                label="Pedido recebido"
-                detail={formatDateTime(result.createdAt)}
-                lineBelow
-              />
-              {hasSignedForm ? (
+              {timelineSteps(result, hasSignedForm).map((step, index, all) => (
                 <TimelineStep
-                  done
-                  label="Requerimento assinado recebido"
-                  detail={
-                    result.signedFormReceivedAt
-                      ? formatDateTime(result.signedFormReceivedAt)
-                      : undefined
-                  }
+                  key={step.label}
+                  {...step}
+                  lineBelow={index < all.length - 1}
                 />
-              ) : (
-                <TimelineStep
-                  label="Aguardando requerimento assinado"
-                  detail="o passo acima resolve isto"
-                />
-              )}
+              ))}
             </ol>
           </div>
         </div>
@@ -711,6 +882,48 @@ function RequestDetail({
                 Baixar
               </button>
             </form>
+            {citizenDocuments.length > 0 && (
+              <div className="mt-3 flex flex-col gap-2 border-b border-brand-border pb-3">
+                {citizenDocuments.map((doc) => (
+                  <form
+                    key={doc.id}
+                    action="/protocolo/documento"
+                    method="post"
+                    className="flex items-center gap-2.5"
+                  >
+                    <Icon
+                      name="file"
+                      className="h-4.5 w-4.5 shrink-0 text-brand-accent"
+                    />
+                    <div className="flex-1 overflow-hidden">
+                      <div className="truncate text-[13px] font-semibold text-brand-primary">
+                        {doc.displayName}
+                      </div>
+                      <div className="text-[11px] text-brand-faint">
+                        enviado em {formatDate(doc.createdAt)}
+                      </div>
+                    </div>
+                    <input
+                      type="hidden"
+                      name="protocolNumber"
+                      value={result.protocolNumber}
+                    />
+                    <input
+                      type="hidden"
+                      name="accessKey"
+                      value={result.accessKey}
+                    />
+                    <input type="hidden" name="attachmentId" value={doc.id} />
+                    <button
+                      type="submit"
+                      className="shrink-0 text-[12px] font-bold text-brand-primary-soft"
+                    >
+                      Baixar
+                    </button>
+                  </form>
+                ))}
+              </div>
+            )}
             <form action={docAction} className="mt-3">
               <input
                 type="hidden"

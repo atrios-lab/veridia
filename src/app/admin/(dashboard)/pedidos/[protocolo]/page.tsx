@@ -22,6 +22,7 @@ import { getTenant, OFFICE_TIME_ZONE } from "@/lib/tenant.ts";
 import { AdminPageHeader } from "../../../_components/page-header.tsx";
 import { StatusBadge } from "../_components/status-badge.tsx";
 import { AmountSection } from "./_components/amount-section.tsx";
+import { AttachmentsSection } from "./_components/attachments-section.tsx";
 import { DangerSection } from "./_components/danger-section.tsx";
 import { DeliverySection } from "./_components/delivery-section.tsx";
 import { KeySection } from "./_components/key-section.tsx";
@@ -194,32 +195,15 @@ export default async function ServiceRequestDetailPage({
               requirements={requirements}
             />
 
-            <div className="rounded-[14px] border border-admin-border bg-admin-card p-6">
-              <h4 className="font-serif text-[17px] font-semibold text-admin-primary">
-                Documentos anexados pelo cidadão
-              </h4>
-              {citizenAttachments.length === 0 ? (
-                <p className="mt-2 text-[12.5px] text-admin-muted">
-                  Nenhum documento anexado.
-                </p>
-              ) : (
-                <div className="mt-3.5 flex flex-col gap-2">
-                  {citizenAttachments.map((a) => (
-                    <div
-                      key={a.id}
-                      className="flex items-center gap-2.5 rounded-[10px] border border-admin-border bg-admin-input-bg px-3.5 py-2.5"
-                    >
-                      <span className="flex-1 text-[13px] text-admin-text">
-                        {a.displayName}
-                      </span>
-                      <span className="text-[11.5px] text-admin-faint">
-                        enviado em {formatDayMonth(a.createdAt)}
-                      </span>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
+            <AttachmentsSection
+              requestId={request.id}
+              protocolNumber={request.protocolNumber}
+              attachments={citizenAttachments.map((a) => ({
+                id: a.id,
+                displayName: a.displayName,
+                createdAtLabel: formatDayMonth(a.createdAt),
+              }))}
+            />
 
             <DeliverySection
               requestId={request.id}

@@ -35,7 +35,11 @@ import type { IsoDate } from "@/core/scheduling/calendar.ts";
 import type { Occupancy } from "@/core/scheduling/slots.ts";
 import type { Tenant } from "@/core/tenant/schema.ts";
 import { user } from "@/db/auth-schema.ts";
-import { isPostgresError, UNIQUE_VIOLATION } from "@/db/errors.ts";
+import {
+  FOREIGN_KEY_VIOLATION,
+  isPostgresError,
+  UNIQUE_VIOLATION,
+} from "@/db/errors.ts";
 import { db } from "@/db/index.ts";
 import {
   auditLog,
@@ -930,10 +934,12 @@ export async function listAttachments(tenantSlug: string, requestId: string) {
 }
 
 /**
- * One file the office delivered back, scoped to its own request so an id
- * guessed from another citizen's request can't be pulled through this.
+ * One attachment on a request, scoped to tenant + request so an id guessed
+ * from another citizen's request can't be pulled through this. Kind-agnostic:
+ * both the admin panel and the citizen's own consult use it, each already
+ * gated by their own access check before reaching here.
  */
-export async function getOfficeAttachment(
+export async function getAttachment(
   tenantSlug: string,
   requestId: string,
   attachmentId: string,
@@ -946,11 +952,49 @@ export async function getOfficeAttachment(
         eq(serviceRequestAttachments.tenantSlug, tenantSlug),
         eq(serviceRequestAttachments.requestId, requestId),
         eq(serviceRequestAttachments.id, attachmentId),
-        eq(serviceRequestAttachments.kind, "office"),
       ),
     )
     .limit(1);
   return attachment;
+}
+
+export class AttachmentInUseError extends Error {}
+
+/**
+ * Removes one attachment a citizen sent by mistake. Returns the deleted row
+ * so the caller can also remove the underlying file/blob — scoped to
+ * tenant + request, same reasoning as `getAttachment`.
+ *
+ * A file that answered a requirement is still referenced by that
+ * requirement's `resolutionAttachmentId`, so Postgres rejects the delete
+ * with a foreign key violation — turned into a message the office can act
+ * on, instead of the generic "try again".
+ */
+export async function deleteAttachment(
+  tenantSlug: string,
+  requestId: string,
+  attachmentId: string,
+) {
+  try {
+    const [deleted] = await db
+      .delete(serviceRequestAttachments)
+      .where(
+        and(
+          eq(serviceRequestAttachments.tenantSlug, tenantSlug),
+          eq(serviceRequestAttachments.requestId, requestId),
+          eq(serviceRequestAttachments.id, attachmentId),
+        ),
+      )
+      .returning();
+    return deleted;
+  } catch (error) {
+    if (isPostgresError(error, FOREIGN_KEY_VIOLATION)) {
+      throw new AttachmentInUseError(
+        "Este documento respondeu a uma exigência e não pode ser excluído.",
+      );
+    }
+    throw error;
+  }
 }
 
 /** Adds the signed form (or any later file) to a request already filed. */
@@ -959,20 +1003,23 @@ export async function attachToRequest(
   requestId: string,
   attachments: StoredAttachment[],
   kind: string,
-): Promise<void> {
-  if (attachments.length === 0) return;
-  await db.insert(serviceRequestAttachments).values(
-    attachments.map((a) => ({
-      tenantSlug,
-      requestId,
-      kind,
-      storedName: a.storedName,
-      displayName: a.displayName,
-      path: a.path,
-      mimeType: a.mimeType,
-      sizeBytes: a.sizeBytes,
-    })),
-  );
+) {
+  if (attachments.length === 0) return [];
+  return db
+    .insert(serviceRequestAttachments)
+    .values(
+      attachments.map((a) => ({
+        tenantSlug,
+        requestId,
+        kind,
+        storedName: a.storedName,
+        displayName: a.displayName,
+        path: a.path,
+        mimeType: a.mimeType,
+        sizeBytes: a.sizeBytes,
+      })),
+    )
+    .returning();
 }
 
 export interface RequestHistoryEntry {

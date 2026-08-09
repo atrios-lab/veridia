@@ -48,7 +48,7 @@ export function DeliverySection({
       <form action={action} className="mt-3.5">
         <input type="hidden" name="requestId" value={requestId} />
         <label
-          className={`flex cursor-pointer flex-col items-center gap-1 rounded-[11px] border-[1.5px] border-dashed border-admin-input-border px-5 py-5 text-center ${pending ? "opacity-60" : ""}`}
+          className={`relative flex cursor-pointer flex-col items-center gap-1 rounded-[11px] border-[1.5px] border-dashed border-admin-input-border px-5 py-5 text-center ${pending ? "opacity-60" : ""}`}
         >
           <span className="text-[13px] font-bold text-admin-primary">
             {pending ? "Enviando…" : "Anexar documento final"}

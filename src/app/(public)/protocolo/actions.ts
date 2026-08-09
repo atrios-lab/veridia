@@ -8,13 +8,17 @@ import {
 } from "@/core/request/channels.ts";
 import type { DataRight } from "@/core/request/kinds.ts";
 import {
+  isOpenServiceRequestStatus,
   type ManifestationType,
   parseDetails,
   type RequestKind,
+  type ServiceRequestStatus,
   statusLabel,
 } from "@/core/request/kinds.ts";
+import { formatCents } from "@/core/request/money.ts";
 import { toIsoDate } from "@/core/scheduling/calendar.ts";
 import { isSectionEnabled } from "@/core/tenant/gating.ts";
+import { type PixCharge, pixChargeFor } from "@/lib/pix-qr.ts";
 import { isRateLimited } from "@/lib/rate-limit.ts";
 import {
   attachToRequest,
@@ -56,8 +60,17 @@ export interface DeliveredDocumentView {
   createdAt: string;
 }
 
+export interface CitizenDocumentView {
+  id: string;
+  createdAt: string;
+  displayName: string;
+}
+
 export interface ServiceRequestDetail extends BaseDetail {
   kind: "service-request";
+  /** The raw andamento, for the timeline to derive its steps from — distinct
+   * from `BaseDetail.status`, the "success"/"error" discriminant. */
+  requestStatus: ServiceRequestStatus;
   actName: string;
   attributionName: string;
   hasSignedForm: boolean;
@@ -66,6 +79,14 @@ export interface ServiceRequestDetail extends BaseDetail {
   requirements: RequirementView[];
   /** Files the office attached through DeliverySection, downloadable here. */
   deliveredDocuments: DeliveredDocumentView[];
+  /** Files the citizen sent — at filing time and later — downloadable here. */
+  citizenDocuments: CitizenDocumentView[];
+  amountLabel?: string;
+  /** True once the office marked the request "Pago" or moved it past that
+   * point — the amount still shows as a receipt, but nothing invites the
+   * citizen to pay again. */
+  paymentSettled?: boolean;
+  pix?: PixCharge;
 }
 
 export interface AppointmentDetail extends BaseDetail {
@@ -192,17 +213,43 @@ export async function lookupProtocolDetail(
     const attachments = await listAttachments(tenant.slug, record.id);
     const signedForm = attachments.find((a) => a.kind === "signed-form");
     const requirements = await listRequirements(tenant.slug, record.id);
+    // "Paid" itself is not a terminal andamento (the office still moves it
+    // on to "done"), so it needs its own check alongside the terminal ones:
+    // once paid, nothing should invite the citizen to pay again.
+    const paymentSettled =
+      record.status === "paid" || !isOpenServiceRequestStatus(record.status);
 
     return {
       ...base,
       kind: "service-request",
+      requestStatus: record.status as ServiceRequestStatus,
       actName: act.name,
       attributionName: ATTRIBUTION_NAMES[act.attribution],
       hasSignedForm: Boolean(signedForm),
       signedFormReceivedAt: signedForm?.createdAt.toISOString(),
+      amountLabel:
+        record.amountCents != null
+          ? formatCents(record.amountCents)
+          : undefined,
+      paymentSettled,
+      pix:
+        record.amountCents != null && !paymentSettled
+          ? await pixChargeFor(
+              tenant,
+              record.protocolNumber,
+              record.amountCents,
+            )
+          : undefined,
       deliveredDocuments: attachments
         .filter((a) => a.kind === "office")
         .map((a) => ({ id: a.id, createdAt: a.createdAt.toISOString() })),
+      citizenDocuments: attachments
+        .filter((a) => a.kind === "citizen")
+        .map((a) => ({
+          id: a.id,
+          createdAt: a.createdAt.toISOString(),
+          displayName: a.displayName,
+        })),
       requirements: requirements.map((r) => ({
         id: r.id,
         text: r.text,
@@ -291,7 +338,7 @@ export async function acceptProposedSlot(
 export type AttachDocumentState =
   | { status: "idle" }
   | { status: "error"; message: string }
-  | { status: "success"; message: string };
+  | { status: "success"; message: string; documents: CitizenDocumentView[] };
 
 /**
  * A document the citizen sends after the fact, separate from the signed
@@ -328,8 +375,21 @@ export async function attachExtraDocument(
     if (stored.length === 0) {
       return { status: "error", message: "Escolha um arquivo para enviar." };
     }
-    await attachToRequest(tenant.slug, request.id, stored, "citizen");
-    return { status: "success", message: "Documento recebido." };
+    const inserted = await attachToRequest(
+      tenant.slug,
+      request.id,
+      stored,
+      "citizen",
+    );
+    return {
+      status: "success",
+      message: "Documento recebido.",
+      documents: inserted.map((a) => ({
+        id: a.id,
+        createdAt: a.createdAt.toISOString(),
+        displayName: a.displayName,
+      })),
+    };
   } catch (error) {
     if (error instanceof AttachmentError) {
       return { status: "error", message: error.message };

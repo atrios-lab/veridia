@@ -1,8 +1,8 @@
 import "server-only";
 import { randomUUID } from "node:crypto";
-import { mkdir, writeFile } from "node:fs/promises";
+import { mkdir, unlink, writeFile } from "node:fs/promises";
 import { join, resolve } from "node:path";
-import { put } from "@vercel/blob";
+import { del, put } from "@vercel/blob";
 import {
   checkAttachments,
   describeProblem,
@@ -63,6 +63,23 @@ async function store(
   const path = join(dir, storedName);
   await writeFile(path, bytes);
   return path;
+}
+
+/**
+ * Removes a file written by `store`. Best-effort: the DB row is the source
+ * of truth, so a storage-side failure here shouldn't stop the delete the
+ * admin asked for, only leave an orphaned file behind.
+ */
+export async function deleteStoredFile(path: string): Promise<void> {
+  try {
+    if (path.startsWith("http")) {
+      await del(path);
+    } else {
+      await unlink(path);
+    }
+  } catch (error) {
+    console.error("uploads.delete", error);
+  }
 }
 
 export class AttachmentError extends Error {}

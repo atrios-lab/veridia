@@ -54,6 +54,10 @@ function ReadOnlyView({ tenant }: { tenant: Tenant }) {
           value={tenant.pix ? TYPE_LABELS[tenant.pix.type] : "Sem chave"}
         />
         <ReadOnlyField label="Chave" value={tenant.pix?.key ?? "Sem chave"} />
+        <ReadOnlyField
+          label="Cidade"
+          value={tenant.pix?.city ?? "Sem cidade"}
+        />
       </div>
       <p className="mt-3.5 text-xs leading-relaxed text-admin-muted">
         Quem responde pela serventia pode alterar a chave. A ausência do botão
@@ -90,6 +94,7 @@ export function PixKeyForm({
     saveState.status === "error" ? saveState.values : undefined;
   const removed = removeState.status === "removed";
   const hasKey = Boolean(tenant.pix) && !removed;
+  const hasCity = Boolean(tenant.pix?.city) && !removed;
 
   return (
     <div>
@@ -107,6 +112,12 @@ export function PixKeyForm({
         <p className="mt-3.5 rounded-lg bg-admin-warning-bg px-3.5 py-2.5 text-[12.5px] font-semibold text-admin-warning-text">
           Sem chave, a consulta de protocolo não mostra QR Code: o cidadão vê
           apenas o valor e a instrução de pagar no balcão.
+        </p>
+      )}
+      {hasKey && !hasCity && (
+        <p className="mt-3.5 rounded-lg bg-admin-warning-bg px-3.5 py-2.5 text-[12.5px] font-semibold text-admin-warning-text">
+          Falta a cidade para o QR Code aparecer: até preencher, a consulta de
+          protocolo mostra só o valor e a instrução de pagar no balcão.
         </p>
       )}
 
@@ -164,6 +175,28 @@ export function PixKeyForm({
                 className="mt-1.5 text-xs font-semibold text-admin-error-text"
               >
                 {fieldErrors.key}
+              </p>
+            )}
+          </div>
+          <div>
+            <label className={LABEL_CLASS} htmlFor="city">
+              Cidade
+            </label>
+            <input
+              id="city"
+              name="city"
+              type="text"
+              defaultValue={sent?.city ?? tenant.pix?.city ?? ""}
+              aria-invalid={fieldErrors.city ? true : undefined}
+              aria-describedby={fieldErrors.city ? "city-erro" : undefined}
+              className={fieldErrors.city ? ERROR_FIELD_CLASS : FIELD_CLASS}
+            />
+            {fieldErrors.city && (
+              <p
+                id="city-erro"
+                className="mt-1.5 text-xs font-semibold text-admin-error-text"
+              >
+                {fieldErrors.city}
               </p>
             )}
           </div>

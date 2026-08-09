@@ -19,8 +19,8 @@ Cola", então este design precisa introduzi-lo.
 ## Goals / Non-Goals
 
 **Goals:**
-- Quando um pedido tem `amountCents` definido, a consulta pública de protocolo (com ou sem a
-  chave de acesso) exibe esse valor.
+- Quando um pedido tem `amountCents` definido, a consulta pública de protocolo exibe esse valor
+  no detalhe completo, depois que o cidadão informa a chave de acesso — nunca antes.
 - Quando, além do valor, a serventia tem chave Pix e cidade cadastradas, a mesma tela exibe um QR
   code Pix com o valor já fixado, mais o código "Copia e Cola" equivalente, com botão de copiar.
 - Sem chave Pix (ou sem cidade) cadastrada, a tela mostra o valor e uma instrução textual de pagar
@@ -106,13 +106,15 @@ simultaneamente. Faltando qualquer um dos três, a tela mostra o valor formatado
 (`formatCents`) com o texto "pague no balcão da serventia" — nunca esconde o valor por falta de
 QR, e nunca tenta desenhar um QR incompleto.
 
-### 5. Valor e pagamento aparecem mesmo na consulta sem chave de acesso
+### 5. Valor e pagamento ficam atrás da chave de acesso, como todo o resto do detalhe
 
-Diferente de nome do requerente, documentos e exigências (que exigem a chave de acesso), o valor
-e o QR de pagamento entram no resumo público "trancado" (`PublicStatus`, sem chave) — é
-informação que não identifica ninguém e que quem está prestes a pagar precisa ver sem digitar a
-chave de novo. Mantém-se o texto já existente ("nomes, documentos e valores ficam protegidos")
-ajustado, já que valor deixa de ser protegido — ver spec delta.
+Considerada a alternativa de expor valor e QR no resumo público "trancado" (`PublicStatus`, sem
+chave) por não identificarem o requerente sozinhos. Rejeitada: o número de protocolo é sequencial
+e não é segredo — qualquer pessoa que o adivinhe ou veja (ex. no balcão, numa aba compartilhada)
+passaria a ver quanto pagar e a poder pagar pelo pedido de outra pessoa sem nunca ter a chave. O
+valor e o QR entram no detalhe completo (`ServiceRequestDetail`), atrás da mesma chave de acesso
+que já protege nome, documentos e exigências — nenhuma exceção a essa regra. O texto do resumo
+trancado ("nomes, documentos e valores ficam protegidos") permanece válido sem alteração.
 
 ### 6. Reaproveitar `CopyField` para o "Copia e Cola"
 

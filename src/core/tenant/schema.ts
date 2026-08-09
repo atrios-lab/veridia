@@ -1,5 +1,10 @@
 import { z } from "zod";
-import { isValidPixKey, PixKeyTypeSchema } from "./pix.ts";
+import {
+  isValidPixCity,
+  isValidPixKey,
+  PIX_CITY_MAX_LENGTH,
+  PixKeyTypeSchema,
+} from "./pix.ts";
 
 // The six legal attributions of a Brazilian extrajudicial notary office.
 // Official acronyms, never translated: they are the legal identifiers.
@@ -128,6 +133,13 @@ export const TenantSchema = z.object({
     .object({
       type: PixKeyTypeSchema,
       key: z.string().min(1, "Informe a chave."),
+      // Merchant City of the Pix EMV payload. Optional here, not because a
+      // charge can be built without it (it can't — see pix-charge.ts), but
+      // because offices that registered a key before this field existed have
+      // it absent in the JSONB row, with no migration to backfill. Required
+      // at save time instead (cobranca/actions.ts); a key with no city just
+      // means no QR yet, never a key that fails to load.
+      city: z.string().optional(),
     })
     .superRefine((value, ctx) => {
       if (!isValidPixKey(value.type, value.key)) {
@@ -136,6 +148,13 @@ export const TenantSchema = z.object({
           path: ["key"],
           message:
             "Isso não parece uma chave Pix válida para o tipo escolhido.",
+        });
+      }
+      if (value.city !== undefined && !isValidPixCity(value.city)) {
+        ctx.addIssue({
+          code: "custom",
+          path: ["city"],
+          message: `A cidade deve ter até ${PIX_CITY_MAX_LENGTH} caracteres (sem acento).`,
         });
       }
     })
