@@ -16,9 +16,7 @@ test.describe("aviso de cookies", () => {
     ).toBeVisible();
 
     await page.getByRole("button", { name: "Entendi" }).click();
-    await expect(page.getByRole("button", { name: "Entendi" })).toHaveCount(
-      0,
-    );
+    await expect(page.getByRole("button", { name: "Entendi" })).toHaveCount(0);
   });
 
   test("a ciência é lembrada e o aviso não volta depois de recarregar", async ({
