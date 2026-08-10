@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState, useEffect } from "react";
+import { useActionState, useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 
 export interface AttachmentItem {
@@ -14,6 +14,11 @@ type ActionState =
   | { status: "idle" }
   | { status: "error"; message: string }
   | { status: "success" };
+
+type DeleteAction = (
+  previous: ActionState,
+  formData: FormData,
+) => Promise<ActionState>;
 
 /**
  * Stored names are deliberately not the ones the browser sent: that string is
@@ -40,8 +45,9 @@ export function documentHref(requestId: string, attachmentId: string): string {
  * One attached file, everywhere the panel shows one: the name opens it, the
  * date says when it arrived, and the office can take it back.
  *
- * `onDelete` is optional on purpose. A file the citizen sent is their evidence,
- * not the office's to remove; a file the office published is.
+ * `onDelete` is optional only because some places have nothing to call — the
+ * file that answered a requirement is pinned by it, and the server refuses to
+ * remove it anyway.
  */
 export function AttachmentRow({
   requestId,
@@ -53,50 +59,63 @@ export function AttachmentRow({
   attachment: AttachmentItem;
   /** Reads before the date: "enviado em", "entregue em". */
   meta: string;
-  onDelete?: (
-    previous: ActionState,
-    formData: FormData,
-  ) => Promise<ActionState>;
+  onDelete?: DeleteAction;
 }) {
+  const [armed, setArmed] = useState(false);
   const label = attachmentLabel(attachment.displayName);
   const when = `${meta} ${attachment.createdAtLabel}`;
 
   return (
-    <div className="flex items-center gap-2.5 rounded-[10px] border border-admin-border bg-admin-input-bg px-3.5 py-2.5">
-      <a
-        href={documentHref(requestId, attachment.id)}
-        target="_blank"
-        rel="noopener"
-        className="min-w-0 flex-1 truncate text-[13px] text-admin-text underline-offset-2 hover:underline"
-      >
-        {label}
-      </a>
-      <span className="shrink-0 text-[11.5px] text-admin-faint">{when}</span>
-      {onDelete && (
-        <DeleteButton
+    <div className="rounded-[10px] border border-admin-border bg-admin-input-bg px-3.5 py-2.5">
+      <div className="flex items-center gap-2.5">
+        <a
+          href={documentHref(requestId, attachment.id)}
+          target="_blank"
+          rel="noopener"
+          className="min-w-0 flex-1 truncate text-[13px] text-admin-text underline-offset-2 hover:underline"
+        >
+          {label}
+        </a>
+        <span className="shrink-0 text-[11.5px] text-admin-faint">{when}</span>
+        {onDelete && !armed && (
+          <button
+            type="button"
+            onClick={() => setArmed(true)}
+            className="shrink-0 text-[11.5px] font-semibold text-admin-error-text underline"
+          >
+            Excluir
+          </button>
+        )}
+      </div>
+      {onDelete && armed && (
+        <DeleteConfirm
           requestId={requestId}
           attachmentId={attachment.id}
-          // Two deliveries carry the same label, so the label alone cannot say
-          // which one is about to disappear from the citizen's screen.
-          describe={`${label}, ${when}`}
           action={onDelete}
+          onCancel={() => setArmed(false)}
         />
       )}
     </div>
   );
 }
 
-function DeleteButton({
+/**
+ * Confirmation in the row, not a native `confirm()`: after a few dialogs the
+ * browser offers to block them for the tab, and a blocked `confirm()` returns
+ * false forever with no sign — the button would just stop working.
+ */
+function DeleteConfirm({
   requestId,
   attachmentId,
-  describe,
   action,
+  onCancel,
 }: {
   requestId: string;
   attachmentId: string;
-  describe: string;
-  action: (previous: ActionState, formData: FormData) => Promise<ActionState>;
+  action: DeleteAction;
+  onCancel: () => void;
 }) {
+  const confirmRef = useRef<HTMLButtonElement>(null);
   const [state, formAction, pending] = useActionState<ActionState, FormData>(
     // The toast fires here, not in an effect: on success the action revalidates
     // and this row leaves the tree in the same commit, so an effect on it would
@@ -112,31 +131,49 @@ function DeleteButton({
     { status: "idle" },
   );
 
+  // Arming moves the target: the key that opened this has to land on it.
   useEffect(() => {
-    // The row survives an error, so the message stays where the row is.
-    if (state.status === "error") toast.error(state.message);
-  }, [state]);
+    confirmRef.current?.focus();
+  }, []);
 
   return (
     <form
       action={formAction}
-      className="shrink-0"
-      onSubmit={(event) => {
-        // Deleting reaches the citizen's screen, so it asks first.
-        if (!confirm(`Excluir "${describe}"? O cidadão perde o acesso.`)) {
-          event.preventDefault();
-        }
-      }}
+      className="mt-2 border-t border-admin-border pt-2"
     >
       <input type="hidden" name="requestId" value={requestId} />
       <input type="hidden" name="attachmentId" value={attachmentId} />
-      <button
-        type="submit"
-        disabled={pending}
-        className="text-[11.5px] font-semibold text-admin-error-text underline disabled:opacity-60"
-      >
-        {pending ? "Excluindo…" : "Excluir"}
-      </button>
+      <div className="flex flex-wrap items-center gap-x-3 gap-y-1.5">
+        <span className="flex-1 text-[11.5px] text-admin-muted">
+          Excluir este arquivo? O cidadão perde o acesso a ele na consulta.
+        </span>
+        <button
+          ref={confirmRef}
+          type="submit"
+          disabled={pending}
+          className="shrink-0 text-[11.5px] font-semibold text-admin-error-text underline disabled:opacity-60"
+        >
+          {pending ? "Excluindo…" : "Confirmar exclusão"}
+        </button>
+        <button
+          type="button"
+          onClick={onCancel}
+          disabled={pending}
+          className="shrink-0 text-[11.5px] font-semibold text-admin-muted underline disabled:opacity-60"
+        >
+          Cancelar
+        </button>
+      </div>
+      {/* The row survives an error, so the message stays with the row instead
+          of in a toast that leaves before it is read. */}
+      {state.status === "error" && (
+        <p
+          role="alert"
+          className="mt-1.5 text-[11.5px] font-semibold text-admin-error-text"
+        >
+          {state.message}
+        </p>
+      )}
     </form>
   );
 }

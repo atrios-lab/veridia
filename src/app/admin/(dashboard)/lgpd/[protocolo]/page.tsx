@@ -15,7 +15,7 @@ import { AttachmentRow } from "../../../_components/attachment-row.tsx";
 import { AdminPageHeader } from "../../../_components/page-header.tsx";
 import { DeadlineBadge } from "../_components/deadline-badge.tsx";
 import { ReplySection } from "./_components/reply-section.tsx";
-import { deleteReportAction } from "./actions.ts";
+import { deleteAttachmentAction } from "./actions.ts";
 
 export const metadata = { title: "Requerimento LGPD" };
 
@@ -133,8 +133,6 @@ export default async function DataRightsDetailPage({
 
               {identityAttachment && (
                 <div className="mt-3.5">
-                  {/* No delete: this is the holder's own evidence of who they
-                      are, and it has to stay openable, not just named. */}
                   <AttachmentRow
                     requestId={request.id}
                     attachment={{
@@ -144,7 +142,8 @@ export default async function DataRightsDetailPage({
                         identityAttachment.createdAt,
                       ),
                     }}
-                    meta="anexado em"
+                    meta="enviado em"
+                    onDelete={deleteAttachmentAction}
                   />
                 </div>
               )}
@@ -172,8 +171,8 @@ export default async function DataRightsDetailPage({
                           displayName: a.displayName,
                           createdAtLabel: formatDayMonthTime(a.createdAt),
                         }}
-                        meta="enviado em"
-                        onDelete={deleteReportAction}
+                        meta="entregue em"
+                        onDelete={deleteAttachmentAction}
                       />
                     ))}
                   </div>

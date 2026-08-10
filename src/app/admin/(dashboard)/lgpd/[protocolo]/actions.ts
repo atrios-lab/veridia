@@ -110,11 +110,11 @@ export async function saveDataRightsDraft(
 }
 
 /**
- * Removes a report the office attached to its reply. Only the office's own
- * files: what the holder sent to prove who they are is their evidence, and the
- * panel never offers to delete it.
+ * Removes any file hanging off this requirement — the report the office
+ * attached to its reply, or the document the holder sent to identify
+ * themselves. Same reach the service request panel has.
  */
-export async function deleteReportAction(
+export async function deleteAttachmentAction(
   _previous: ActionState,
   formData: FormData,
 ): Promise<ActionState> {
@@ -138,7 +138,7 @@ export async function deleteReportAction(
     if (error instanceof AttachmentInUseError) {
       return { status: "error", message: error.message };
     }
-    console.error("lgpd.delete-report", error);
+    console.error("lgpd.delete-attachment", error);
     return { status: "error", message: GENERIC_ERROR };
   }
   revalidateAdmin();
