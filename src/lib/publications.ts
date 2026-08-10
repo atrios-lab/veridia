@@ -44,21 +44,44 @@ export async function getPublication(
  * same split already drawn between the two permissions elsewhere in the
  * panel.
  */
+/** The edital's own document, when the operator attached one. */
+export interface PublicationAttachment {
+  storedName: string;
+  displayName: string;
+  path: string;
+  mimeType: string;
+  sizeBytes: number;
+}
+
+function attachmentColumns(file: PublicationAttachment | undefined) {
+  if (!file) return {};
+  return {
+    attachmentStoredName: file.storedName,
+    attachmentDisplayName: file.displayName,
+    attachmentPath: file.path,
+    attachmentMimeType: file.mimeType,
+    attachmentSizeBytes: file.sizeBytes,
+  };
+}
+
 export async function createPublication(
   tenantSlug: string,
   data: PublicationFormInput,
   actorId: string,
+  file?: PublicationAttachment,
 ): Promise<{ id: string }> {
   const [created] = await db
     .insert(officePublications)
     .values({
       tenantSlug,
       kind: data.kind,
+      sector: data.sector,
       title: data.title,
       body: data.body,
       publishAt: data.publishAt ?? null,
       expireAt: data.expireAt ?? null,
       createdBy: actorId,
+      ...attachmentColumns(file),
     })
     .returning({ id: officePublications.id });
   await recordAudit({
@@ -82,16 +105,20 @@ export async function updatePublication(
   id: string,
   data: PublicationFormInput,
   actorId: string,
+  /** Absent leaves the current file alone; present replaces it. */
+  file?: PublicationAttachment,
 ): Promise<void> {
   await db
     .update(officePublications)
     .set({
       kind: data.kind,
+      sector: data.sector,
       title: data.title,
       body: data.body,
       publishAt: data.publishAt ?? null,
       expireAt: data.expireAt ?? null,
       updatedAt: new Date(),
+      ...attachmentColumns(file),
     })
     .where(
       and(

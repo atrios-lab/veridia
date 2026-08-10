@@ -47,15 +47,22 @@ for (const tenant of Object.values(TENANTS)) {
       expect(rendered).toEqual(enabledSections(tenant));
     });
 
-    test("the notice sectors match the attributions", async ({ page }) => {
-      // The sectors live on the notices page now, not on the home.
+    test("no sector on the notices page is outside the attributions", async ({
+      page,
+    }) => {
+      // The page lists sectors that actually have something live, so the set
+      // is a subset that shrinks to zero on a quiet week — what must never
+      // happen is a sector this office has no attribution for.
       await page.goto(`${baseURL}/editais`);
       const rendered = await page
         .locator("[data-notice-sector]")
         .evaluateAll((nodes) =>
           nodes.map((n) => n.getAttribute("data-notice-sector")),
         );
-      expect(rendered).toEqual(noticeSectors(tenant));
+      const allowed = noticeSectors(tenant);
+      for (const sector of rendered) {
+        expect(allowed).toContain(sector);
+      }
     });
   });
 }

@@ -10,6 +10,8 @@ import {
   publicationState,
 } from "@/core/publications/state.ts";
 import { formatDate } from "@/core/scheduling/calendar.ts";
+import type { NoticeSector } from "@/core/tenant/gating.ts";
+import { NOTICE_SECTOR_META } from "@/core/tenant/gating.ts";
 import { listPublications, type PublicationRow } from "@/lib/publications.ts";
 import { getSession } from "@/lib/session.ts";
 import { getTenant, today } from "@/lib/tenant.ts";
@@ -102,6 +104,9 @@ export default async function PublicationsPage({
               >
                 <span className="mt-0.5 flex-none rounded-full bg-admin-warning-bg px-2.5 py-1 text-[10.5px] font-bold text-admin-warning-text">
                   {PUBLICATION_KIND_LABELS[row.kind as PublicationKind]}
+                  {row.sector
+                    ? ` · ${NOTICE_SECTOR_META[row.sector as NoticeSector].acronym}`
+                    : ""}
                 </span>
                 <span className="min-w-0 flex-1">
                   <span className="block truncate text-[13.5px] font-bold text-admin-text">

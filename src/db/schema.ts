@@ -245,8 +245,20 @@ export const officePublications = pgTable(
     id: uuid("id").primaryKey().defaultRandom(),
     tenantSlug,
     kind: text("kind").notNull(),
+    // Which sector of the public notices page this belongs to. Null on
+    // notices (home-only) and on rows older than the column; banns are
+    // always "proclamas", written by the form schema, not trusted from UI.
+    sector: text("sector"),
     title: text("title").notNull(),
     body: text("body").notNull(),
+    // The signed edital itself, optional. Same column shape as the chat
+    // message attachment: the file hangs off the row it belongs to, and the
+    // body stays required — the document is the proof, not the reading.
+    attachmentStoredName: text("attachment_stored_name"),
+    attachmentDisplayName: text("attachment_display_name"),
+    attachmentPath: text("attachment_path"),
+    attachmentMimeType: text("attachment_mime_type"),
+    attachmentSizeBytes: integer("attachment_size_bytes"),
     publishAt: date("publish_at"),
     expireAt: date("expire_at"),
     // Set only by manual archiving ("Arquivar agora"); automatic expiry is a

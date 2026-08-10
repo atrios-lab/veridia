@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { can } from "@/core/auth/roles.ts";
 import { publicationFormSchema } from "@/core/publications/publication.ts";
+import { noticeSectors } from "@/core/tenant/gating.ts";
 import {
   archivePublication,
   createPublication,
@@ -11,6 +12,11 @@ import {
 } from "@/lib/publications.ts";
 import { getSession } from "@/lib/session.ts";
 import { getTenant } from "@/lib/tenant.ts";
+import {
+  AttachmentError,
+  deleteStoredFile,
+  storeAttachments,
+} from "@/lib/uploads.ts";
 
 export type SaveState =
   | { status: "idle" }
@@ -69,8 +75,12 @@ export async function savePublication(
     ? ""
     : String(formData.get("expireAt") ?? "").trim();
 
-  const parsed = publicationFormSchema.safeParse({
+  const tenant = await getTenant();
+  // The factory takes what this office's attributions allow: hiding an
+  // option in the form is not what enforces it.
+  const parsed = publicationFormSchema(noticeSectors(tenant)).safeParse({
     kind: formData.get("kind"),
+    sector: String(formData.get("sector") ?? "").trim() || undefined,
     title: formData.get("title"),
     body: formData.get("body"),
     publishAt: publishAt || undefined,
@@ -84,7 +94,6 @@ export async function savePublication(
     };
   }
 
-  const tenant = await getTenant();
   const existing = id ? await getPublication(tenant.slug, id) : undefined;
   const isFirstPublish = !existing?.publishAt && Boolean(parsed.data.publishAt);
   if (isFirstPublish && !can(session.user.role ?? "", "content.publish")) {
@@ -96,17 +105,40 @@ export async function savePublication(
   }
 
   try {
+    // One document per publication: the edital itself. `storeAttachments`
+    // brings the shared type and size limits with it, so this screen does not
+    // grow its own idea of what a valid file is.
+    const chosen = formData
+      .getAll("arquivo")
+      .filter((f): f is File => f instanceof File);
+    const [stored] = await storeAttachments(chosen, { kind: "edital" });
+
     if (existing) {
       await updatePublication(
         tenant.slug,
         existing.id,
         parsed.data,
         session.user.id,
+        stored,
       );
+      // Only after the row points at the new file: losing the old one while
+      // the row still references it would leave a broken link instead of a
+      // missing extra.
+      if (stored && existing.attachmentPath) {
+        await deleteStoredFile(existing.attachmentPath);
+      }
     } else {
-      await createPublication(tenant.slug, parsed.data, session.user.id);
+      await createPublication(
+        tenant.slug,
+        parsed.data,
+        session.user.id,
+        stored,
+      );
     }
   } catch (error) {
+    if (error instanceof AttachmentError) {
+      return { status: "error", message: error.message, fieldErrors: {} };
+    }
     console.error("publicacoes.save", error);
     return { status: "error", message: GENERIC_ERROR, fieldErrors: {} };
   }

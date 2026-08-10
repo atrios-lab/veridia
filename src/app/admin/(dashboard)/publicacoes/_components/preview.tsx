@@ -1,5 +1,7 @@
 import type { PublicationKind } from "@/core/publications/publication.ts";
 import { PUBLICATION_KIND_LABELS } from "@/core/publications/publication.ts";
+import type { NoticeSector } from "@/core/tenant/gating.ts";
+import { NOTICE_SECTOR_META } from "@/core/tenant/gating.ts";
 import type { Theme } from "@/core/tenant/schema.ts";
 import { SERIF } from "@/lib/fonts.ts";
 
@@ -15,6 +17,7 @@ export function PublicationPreview({
   sealLight,
   officeName,
   kind,
+  sector,
   title,
   body,
 }: {
@@ -22,6 +25,7 @@ export function PublicationPreview({
   sealLight: string;
   officeName: string;
   kind: PublicationKind;
+  sector?: NoticeSector | "";
   title: string;
   body: string;
 }) {
@@ -45,6 +49,7 @@ export function PublicationPreview({
         <div className="mt-2.5 rounded-[9px] border border-brand-border bg-brand-card px-3 py-2.5">
           <div className="text-[10px] font-bold tracking-[0.06em] text-brand-accent uppercase">
             {PUBLICATION_KIND_LABELS[kind]}
+            {sector ? ` · ${NOTICE_SECTOR_META[sector].acronym}` : ""}
           </div>
           <div className="mt-1 line-clamp-2 text-xs font-bold text-brand-text">
             {title || "Título da publicação"}

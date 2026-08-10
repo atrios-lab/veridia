@@ -64,6 +64,58 @@ export const NOTICE_SECTOR_ATTRIBUTION = {
 
 export type NoticeSector = keyof typeof NOTICE_SECTOR_ATTRIBUTION;
 
+/**
+ * What each sector says about itself on the public notices page: which kind
+ * of edital it publishes and on what legal basis. Fixed prose, identical
+ * across offices — config as code, same nature as the acts catalog, never
+ * per-tenant content.
+ */
+export const NOTICE_SECTOR_META: Record<
+  NoticeSector,
+  { acronym: string; name: string; noticeType: string; legalNote: string }
+> = {
+  proclamas: {
+    acronym: "RCPN",
+    name: "Registro Civil",
+    noticeType: "Proclamas de casamento",
+    legalNote:
+      "Habilitação de casamento, na forma do Código Civil. Quem souber de " +
+      "algum impedimento deve declará-lo à serventia dentro do prazo legal.",
+  },
+  "registro-imoveis": {
+    acronym: "RI",
+    name: "Registro de Imóveis",
+    noticeType: "Editais próprios",
+    legalNote:
+      "Editais de usucapião extrajudicial, dúvida e demais procedimentos " +
+      "que exigem publicação, na forma da Lei 6.015/1973.",
+  },
+  protesto: {
+    acronym: "Protesto",
+    name: "Protesto",
+    noticeType: "Edital de intimação",
+    legalNote:
+      "Intimação do devedor não localizado para pagamento, aceite ou " +
+      "devolução do título, na forma da Lei 9.492/1997.",
+  },
+  rtd: {
+    acronym: "RTD",
+    name: "Títulos e Documentos",
+    noticeType: "Edital de notificação",
+    legalNote:
+      "Notificação extrajudicial de pessoa em local incerto e não sabido, " +
+      "para ciência do teor apresentado.",
+  },
+  rcpj: {
+    acronym: "RCPJ",
+    name: "Pessoas Jurídicas",
+    noticeType: "Editais próprios",
+    legalNote:
+      "Editais próprios do registro civil de pessoas jurídicas, para " +
+      "ciência de terceiros e produção dos efeitos legais.",
+  },
+};
+
 export function hasAttribution(tenant: Tenant, a: Attribution): boolean {
   return tenant.attributions.includes(a);
 }

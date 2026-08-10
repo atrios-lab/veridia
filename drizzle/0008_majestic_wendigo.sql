@@ -1,0 +1,1 @@
+ALTER TABLE "office_publications" ADD COLUMN "sector" text;

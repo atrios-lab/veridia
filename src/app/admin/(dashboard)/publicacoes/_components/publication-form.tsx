@@ -7,6 +7,8 @@ import {
   PUBLICATION_KINDS,
   type PublicationKind,
 } from "@/core/publications/publication.ts";
+import type { NoticeSector } from "@/core/tenant/gating.ts";
+import { NOTICE_SECTOR_META, noticeSectors } from "@/core/tenant/gating.ts";
 import type { Tenant } from "@/core/tenant/schema.ts";
 import type { PublicationRow } from "@/lib/publications.ts";
 import { type SaveState, savePublication } from "../actions.ts";
@@ -54,6 +56,12 @@ export function PublicationForm({
   const [kind, setKind] = useState<PublicationKind>(
     (editing?.kind as PublicationKind) ?? "marriageBanns",
   );
+  const [sector, setSector] = useState<NoticeSector | "">(
+    (editing?.sector as NoticeSector | null) ?? "",
+  );
+  // Only an edital asks: banns are always proclamas and a notice never has
+  // one — the schema writes both regardless of what the form posts.
+  const sectorOptions = noticeSectors(tenant);
   const [title, setTitle] = useState(editing?.title ?? "");
   const [body, setBody] = useState(editing?.body ?? "");
   const [publishAt, setPublishAt] = useState(editing?.publishAt ?? "");
@@ -62,6 +70,9 @@ export function PublicationForm({
   // has not been hand-edited away — matches "aviso e edital não têm
   // sugestão" and "o operador pode alterá-la" from the spec.
   const [expirySuggested, setExpirySuggested] = useState(false);
+  // Only the chosen file's name: the input is visually hidden, so without
+  // this the operator has no sign that the pick registered.
+  const [file, setFile] = useState<string | null>(null);
 
   function handleKindChange(next: PublicationKind) {
     setKind(next);
@@ -116,6 +127,36 @@ export function PublicationForm({
           ))}
           <input type="hidden" name="kind" value={kind} />
         </div>
+
+        {kind === "publicNotice" && (
+          <div className="mt-3.5">
+            <label className={LABEL_CLASS} htmlFor="sector">
+              Setor
+            </label>
+            <select
+              id="sector"
+              name="sector"
+              value={sector}
+              onChange={(event) =>
+                setSector(event.target.value as NoticeSector | "")
+              }
+              className={fieldErrors.sector ? ERROR_FIELD_CLASS : FIELD_CLASS}
+            >
+              <option value="">Escolha o setor…</option>
+              {sectorOptions.map((option) => (
+                <option key={option} value={option}>
+                  {NOTICE_SECTOR_META[option].name} ·{" "}
+                  {NOTICE_SECTOR_META[option].noticeType}
+                </option>
+              ))}
+            </select>
+            <FieldError message={fieldErrors.sector} />
+            <p className="mt-1.5 text-[11px] text-admin-faint">
+              O edital aparece em /editais dentro do setor escolhido. Proclamas
+              não perguntam: têm setor próprio.
+            </p>
+          </div>
+        )}
 
         <div className="mt-3.5">
           <label className={LABEL_CLASS} htmlFor="title">
@@ -195,6 +236,37 @@ export function PublicationForm({
           Você pode ajustar.
         </p>
 
+        <div className="mt-3.5">
+          <span className={LABEL_CLASS}>Documento do edital (opcional)</span>
+          {editing?.attachmentPath && !file && (
+            <p className="mb-1.5 text-[11.5px] text-admin-muted">
+              Já anexado. Escolher outro substitui o atual.
+            </p>
+          )}
+          <label
+            className={`flex cursor-pointer items-center justify-center gap-2 rounded-[10px] border-[1.5px] border-dashed border-admin-input-border px-4 py-3 text-center text-[12.5px] font-semibold text-admin-primary focus-within:border-admin-accent focus-within:ring-2 focus-within:ring-admin-accent ${pending ? "cursor-not-allowed opacity-60" : ""}`}
+          >
+            {file ??
+              (editing?.attachmentPath
+                ? "Trocar o documento"
+                : "Anexar o documento (PDF ou imagem)")}
+            <input
+              type="file"
+              name="arquivo"
+              accept="application/pdf,image/jpeg,image/png,image/webp,image/heic"
+              className="sr-only"
+              disabled={pending}
+              onChange={(event) =>
+                setFile(event.target.files?.[0]?.name ?? null)
+              }
+            />
+          </label>
+          <p className="mt-1.5 text-[11px] text-admin-faint">
+            O texto acima continua sendo o que o cidadão lê na página. O arquivo
+            é o documento assinado, oferecido para download ao lado dele.
+          </p>
+        </div>
+
         {state.status === "error" && (
           <p
             role="alert"
@@ -240,6 +312,7 @@ export function PublicationForm({
           sealLight={tenant.logos.seal.light}
           officeName={tenant.name}
           kind={kind}
+          sector={kind === "publicNotice" ? sector : undefined}
           title={title}
           body={body}
         />
