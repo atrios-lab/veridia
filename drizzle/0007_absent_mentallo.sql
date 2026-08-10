@@ -1,0 +1,3 @@
+ALTER TABLE "service_request_attachments" ADD COLUMN "requirement_id" uuid;--> statement-breakpoint
+ALTER TABLE "service_request_attachments" ADD CONSTRAINT "service_request_attachments_requirement_id_service_request_requirements_id_fk" FOREIGN KEY ("requirement_id") REFERENCES "public"."service_request_requirements"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
+CREATE INDEX "service_request_attachments_requirement" ON "service_request_attachments" USING btree ("requirement_id");

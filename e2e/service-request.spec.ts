@@ -350,6 +350,41 @@ test.describe("filing a request", () => {
     expect(refusedReceipt.status()).toBe(404);
   });
 
+  test("the counter sheet needs a session, and the receipt needs the key", async ({
+    page,
+    request,
+  }) => {
+    await page.goto(
+      `${baseURL}/solicitar?atribuicao=RCPN&ato=rcpn-habilitacao-casamento`,
+    );
+    await fillForm(page);
+    await page.getByRole("button", { name: "Enviar requerimento" }).click();
+    await expect(
+      page.getByRole("heading", { name: "Pedido registrado" }),
+    ).toBeVisible();
+    const protocolNumber =
+      (await page
+        .getByText(/REQ\.\d{4}\.\d{6}/)
+        .first()
+        .textContent()) ?? "";
+
+    // `request` carries no admin session: printing is panel work, and the
+    // route is the gate, not the button that links to it.
+    const sheet = await request.get(
+      `${baseURL}/admin/pedidos/${protocolNumber}/imprimir`,
+      { maxRedirects: 0 },
+    );
+    expect([302, 307, 403]).toContain(sheet.status());
+
+    // And the receipt refuses a wrong key even before the session question:
+    // the key is what the document is made of.
+    const receipt = await request.post(
+      `${baseURL}/admin/pedidos/${protocolNumber}/imprimir`,
+      { form: { chave: "AAAA-BBBB-CCCC" }, maxRedirects: 0 },
+    );
+    expect(receipt.status()).not.toBe(200);
+  });
+
   test("a pending exigência is answered through the same consult", async ({
     page,
   }) => {

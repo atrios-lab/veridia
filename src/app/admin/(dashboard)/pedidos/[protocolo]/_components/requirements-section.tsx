@@ -1,8 +1,15 @@
 "use client";
 
 import { useActionState, useEffect, useState } from "react";
+import type { AttachmentItem } from "../../../../_components/attachment-link.ts";
 import { documentHref } from "../../../../_components/attachment-link.ts";
-import { type ActionState, registerRequirementAction } from "../actions.ts";
+import { AttachmentRow } from "../../../../_components/attachment-row.tsx";
+import {
+  type ActionState,
+  attachRequirementFormAction,
+  deleteAttachmentAction,
+  registerRequirementAction,
+} from "../actions.ts";
 
 export interface RequirementItem {
   id: string;
@@ -12,6 +19,8 @@ export interface RequirementItem {
   fulfilledAt: Date | null;
   resolutionFileName?: string;
   resolutionAttachmentId?: string;
+  /** Forms the office attached for the citizen to print and present. */
+  forms: AttachmentItem[];
 }
 
 function formatDayMonth(date: Date): string {
@@ -19,6 +28,77 @@ function formatDayMonth(date: Date): string {
     day: "2-digit",
     month: "2-digit",
   }).format(date);
+}
+
+/**
+ * The form the citizen has to print and present. It lives in the requirement's
+ * card on both sides — here and in the protocol consult — and nowhere near the
+ * request's deliveries.
+ */
+function RequirementForms({
+  requestId,
+  requirementId,
+  forms,
+}: {
+  requestId: string;
+  requirementId: string;
+  forms: AttachmentItem[];
+}) {
+  const [state, action, pending] = useActionState<ActionState, FormData>(
+    attachRequirementFormAction,
+    { status: "idle" },
+  );
+
+  return (
+    <div className="mt-2.5 border-t border-admin-border pt-2.5">
+      {forms.length > 0 && (
+        <div className="mb-2 flex flex-col gap-2">
+          {forms.map((form) => (
+            <AttachmentRow
+              key={form.id}
+              requestId={requestId}
+              attachment={form}
+              meta="anexado em"
+              onDelete={deleteAttachmentAction}
+            />
+          ))}
+        </div>
+      )}
+      <form action={action}>
+        <input type="hidden" name="requestId" value={requestId} />
+        <input type="hidden" name="requirementId" value={requirementId} />
+        <label
+          className={`flex cursor-pointer items-center justify-center gap-2 rounded-[9px] border-[1.5px] border-dashed border-admin-input-border px-3 py-2 text-center text-[12px] font-semibold text-admin-primary focus-within:border-admin-accent focus-within:ring-2 focus-within:ring-admin-accent ${pending ? "cursor-not-allowed opacity-60" : ""}`}
+        >
+          {pending
+            ? "Enviando…"
+            : forms.length
+              ? "Anexar outro formulário"
+              : "Anexar formulário para o cidadão imprimir"}
+          <input
+            type="file"
+            name="formulario"
+            accept="application/pdf,image/jpeg,image/png,image/webp,image/heic"
+            className="sr-only"
+            disabled={pending}
+            onChange={(event) => {
+              if (event.target.files?.length) {
+                event.target.form?.requestSubmit();
+              }
+            }}
+          />
+        </label>
+      </form>
+      {state.status === "error" && (
+        <p
+          role="alert"
+          className="mt-1.5 text-[11.5px] font-semibold text-admin-error-text"
+        >
+          {state.message}
+        </p>
+      )}
+    </div>
+  );
 }
 
 export function RequirementsSection({
@@ -109,6 +189,11 @@ export function RequirementsSection({
                     {requirement.resolutionFileName}
                   </a>
                 )}
+              <RequirementForms
+                requestId={requestId}
+                requirementId={requirement.id}
+                forms={requirement.forms}
+              />
             </div>
           ))}
         </div>

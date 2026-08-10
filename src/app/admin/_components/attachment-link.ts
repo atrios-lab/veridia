@@ -25,6 +25,7 @@ const LABELS: Record<string, string> = {
   "documento-final": "Documento final",
   "requerimento-assinado": "Requerimento assinado",
   office: "Relatório de dados",
+  "formulario-exigencia": "Formulário da exigência",
 };
 
 export function attachmentLabel(displayName: string): string {

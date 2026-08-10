@@ -277,3 +277,58 @@ test("reissuing the access key leaves only the new hash valid", async () => {
   assert.equal(rows[0].access_key_hash, "new-hash");
   assert.notEqual(rows[0].access_key_hash, "hash");
 });
+
+test("a requirement's form goes when the requirement goes", async () => {
+  // The office attaches a form for the citizen to print. It hangs off the
+  // requirement, not the request, and the cascade is what keeps a deleted
+  // exigência from leaving an orphan file the delivery list would show.
+  await fileRequest("cartorio-marinho", 2028, 4);
+  const { rows: request } = await client.query<{ id: string }>(
+    "SELECT id FROM service_requests WHERE protocol_number = 'REQ.2028.000004'",
+  );
+  const requestId = request[0].id;
+
+  const { rows: requirement } = await client.query<{ id: string }>(
+    `INSERT INTO service_request_requirements (tenant_slug, request_id, text)
+     VALUES ('cartorio-marinho', $1, 'Apresente a declaração.') RETURNING id`,
+    [requestId],
+  );
+
+  const attach = (requirementId: string | null) =>
+    client.query(
+      `INSERT INTO service_request_attachments
+         (tenant_slug, request_id, kind, stored_name, display_name, path,
+          mime_type, size_bytes, requirement_id)
+       VALUES ('cartorio-marinho', $1, 'office', 's.pdf', $2, '/tmp/s.pdf',
+               'application/pdf', 10, $3)`,
+      [
+        requestId,
+        requirementId ? "formulario-exigencia" : "documento-final",
+        requirementId,
+      ],
+    );
+  await attach(requirement[0].id);
+  await attach(null); // a real delivery, which must survive
+
+  const deliveries = async () => {
+    const { rows } = await client.query<{ n: number }>(
+      `SELECT count(*)::int AS n FROM service_request_attachments
+       WHERE request_id = $1 AND requirement_id IS NULL`,
+      [requestId],
+    );
+    return rows[0].n;
+  };
+  // The form is never one of the request's own documents, not even before
+  // anything is deleted: that filter is the whole isolation.
+  assert.equal(await deliveries(), 1);
+
+  await client.query("DELETE FROM service_request_requirements WHERE id = $1", [
+    requirement[0].id,
+  ]);
+  const { rows: left } = await client.query<{ n: number }>(
+    "SELECT count(*)::int AS n FROM service_request_attachments WHERE request_id = $1",
+    [requestId],
+  );
+  assert.equal(left[0].n, 1, "só a entrega sobrevive à exclusão da exigência");
+  assert.equal(await deliveries(), 1);
+});

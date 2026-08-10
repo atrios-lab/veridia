@@ -516,6 +516,57 @@ function timelineSteps(
   return steps;
 }
 
+/**
+ * The form the office attached to a requirement, for the citizen to print and
+ * present. POST with protocol and key, like every other document here: the key
+ * never goes in a URL.
+ */
+function RequirementForms({
+  forms,
+  protocolNumber,
+  accessKey,
+}: {
+  forms: RequirementView["forms"];
+  protocolNumber: string;
+  accessKey: string;
+}) {
+  if (forms.length === 0) return null;
+  return (
+    <div className="mt-2.5 flex flex-col gap-1.5">
+      <span className="text-[11px] font-semibold text-brand-muted">
+        {forms.length > 1
+          ? "Formulários para imprimir e apresentar"
+          : "Formulário para imprimir e apresentar"}
+      </span>
+      {forms.map((form, index) => (
+        <form
+          key={form.id}
+          action="/protocolo/documento"
+          method="post"
+          className="flex items-center gap-2 rounded-[10px] border border-brand-border bg-brand-card px-3 py-2"
+        >
+          <Icon
+            name="file"
+            className="h-3.5 w-3.5 shrink-0 text-brand-accent"
+          />
+          <span className="flex-1 truncate text-[12.5px] text-brand-text">
+            {forms.length > 1 ? `Formulário ${index + 1}` : "Formulário"}
+          </span>
+          <input type="hidden" name="protocolNumber" value={protocolNumber} />
+          <input type="hidden" name="accessKey" value={accessKey} />
+          <input type="hidden" name="attachmentId" value={form.id} />
+          <button
+            type="submit"
+            className="shrink-0 text-[12px] font-bold text-brand-primary-soft"
+          >
+            Baixar
+          </button>
+        </form>
+      ))}
+    </div>
+  );
+}
+
 function RequirementRow({
   requirement,
   protocolNumber,
@@ -557,6 +608,11 @@ function RequirementRow({
             {requirement.resolutionFileName}
           </div>
         )}
+        <RequirementForms
+          forms={requirement.forms}
+          protocolNumber={protocolNumber}
+          accessKey={accessKey}
+        />
       </div>
     );
   }
@@ -574,6 +630,11 @@ function RequirementRow({
       <p className="mt-2 text-[13px] font-semibold text-brand-primary">
         {requirement.text}
       </p>
+      <RequirementForms
+        forms={requirement.forms}
+        protocolNumber={protocolNumber}
+        accessKey={accessKey}
+      />
       <form action={action} className="mt-2.5">
         <input type="hidden" name="protocolNumber" value={protocolNumber} />
         <input type="hidden" name="accessKey" value={accessKey} />

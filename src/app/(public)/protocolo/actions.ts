@@ -26,6 +26,7 @@ import {
   fulfillRequirement,
   listAttachments,
   listRequirements,
+  requestOwnAttachments,
   updateDetails,
 } from "@/lib/service-request.ts";
 import { getTenant, OFFICE_TIME_ZONE, today } from "@/lib/tenant.ts";
@@ -53,6 +54,8 @@ export interface RequirementView {
   createdAt: string;
   fulfilledAt?: string;
   resolutionFileName?: string;
+  /** Forms the office attached for the citizen to print and present. */
+  forms: Array<{ id: string; createdAt: string }>;
 }
 
 export interface DeliveredDocumentView {
@@ -240,10 +243,12 @@ export async function lookupProtocolDetail(
               record.amountCents,
             )
           : undefined,
-      deliveredDocuments: attachments
+      // A requirement's form is that requirement's, not a delivery: it belongs
+      // in its card and never in "Documentos da serventia".
+      deliveredDocuments: requestOwnAttachments(attachments)
         .filter((a) => a.kind === "office")
         .map((a) => ({ id: a.id, createdAt: a.createdAt.toISOString() })),
-      citizenDocuments: attachments
+      citizenDocuments: requestOwnAttachments(attachments)
         .filter((a) => a.kind === "citizen")
         .map((a) => ({
           id: a.id,
@@ -260,6 +265,9 @@ export async function lookupProtocolDetail(
           ? attachments.find((a) => a.id === r.resolutionAttachmentId)
               ?.displayName
           : undefined,
+        forms: attachments
+          .filter((a) => a.requirementId === r.id)
+          .map((a) => ({ id: a.id, createdAt: a.createdAt.toISOString() })),
       })),
     };
   } catch (error) {

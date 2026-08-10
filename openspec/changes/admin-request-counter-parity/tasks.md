@@ -15,16 +15,16 @@
 
 ## 3. Formulário anexado à exigência
 
-- [ ] 3.1 Adicionar `requirementId` (uuid, anulável, FK para `service_request_requirements`, `onDelete: cascade`) em `service_request_attachments`; gerar migração Drizzle (expand, deploy único)
-- [ ] 3.2 Em `src/lib/service-request.ts`: aceitar `requirementId` ao anexar; filtrar `requirementId is null` nas listas de entrega/consulta; expor os formulários por exigência em `listRequirements`
-- [ ] 3.3 Action `attachRequirementFormAction` no detalhe (kind `formulario-exigencia`, exigência do próprio pedido)
-- [ ] 3.4 No cartão da exigência do painel: dropzone "Anexar formulário para imprimir" e linha `AttachmentRow` com excluir; rótulo "Formulário da exigência" no mapa de labels
-- [ ] 3.5 Na consulta do cidadão: `RequirementView` carrega os formulários; o cartão da exigência lista cada um com download via `POST /protocolo/documento` (protocolo + chave no corpo)
-- [ ] 3.6 Teste de que o formulário não entra nas listas de entregas ("Entrega ao cidadão" / "Documentos da serventia") e some quando a exigência é excluída
+- [x] 3.1 Adicionar `requirementId` (uuid, anulável, FK para `service_request_requirements`, `onDelete: cascade`) em `service_request_attachments`; gerar migração Drizzle (expand, deploy único)
+- [x] 3.2 Em `src/lib/service-request.ts`: aceitar `requirementId` ao anexar; filtrar `requirementId is null` nas listas de entrega/consulta; expor os formulários por exigência em `listRequirements`
+- [x] 3.3 Action `attachRequirementFormAction` no detalhe (kind `formulario-exigencia`, exigência do próprio pedido)
+- [x] 3.4 No cartão da exigência do painel: dropzone "Anexar formulário para imprimir" e linha `AttachmentRow` com excluir; rótulo "Formulário da exigência" no mapa de labels
+- [x] 3.5 Na consulta do cidadão: `RequirementView` carrega os formulários; o cartão da exigência lista cada um com download via `POST /protocolo/documento` (protocolo + chave no corpo)
+- [x] 3.6 Teste de que o formulário não entra nas listas de entregas ("Entrega ao cidadão" / "Documentos da serventia") e some quando a exigência é excluída
 
 ## 4. Verificação
 
-- [ ] 4.1 `pnpm test`, `pnpm lint`, `pnpm typecheck`
-- [ ] 4.2 No painel local: imprimir folha (sem chave no PDF), via assinada, comprovante logo após reemitir chave; corrigir dados e conferir histórico e consulta do cidadão
-- [ ] 4.3 Fluxo completo da exigência: anexar formulário no painel, baixar pelo cartão na consulta com chave, conferir que não aparece em "Documentos da serventia"
-- [ ] 4.4 e2e cobrindo a rota de impressão: GET sem sessão nega; POST comprovante com chave errada dá 404
+- [x] 4.1 `pnpm test`, `pnpm lint`, `pnpm typecheck`
+- [x] 4.2 No painel local: imprimir folha (sem chave no PDF), via assinada, comprovante logo após reemitir chave; corrigir dados e conferir histórico e consulta do cidadão
+- [x] 4.3 Fluxo completo da exigência: anexar formulário no painel, baixar pelo cartão na consulta com chave, conferir que não aparece em "Documentos da serventia"
+- [x] 4.4 e2e cobrindo a rota de impressão: GET sem sessão nega; POST comprovante com chave errada dá 404

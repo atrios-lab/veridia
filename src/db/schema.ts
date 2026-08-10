@@ -1,4 +1,5 @@
 import { sql } from "drizzle-orm";
+import type { AnyPgColumn } from "drizzle-orm/pg-core";
 import {
   boolean,
   date,
@@ -180,11 +181,23 @@ export const serviceRequestAttachments = pgTable(
     path: text("path").notNull(),
     mimeType: text("mime_type").notNull(),
     sizeBytes: integer("size_bytes").notNull(),
+    // Set only on the form the office attaches to a requirement, for the
+    // citizen to print and present. Such a file belongs to the requirement,
+    // not to the request's delivery list: it never shows up in "Entrega ao
+    // cidadão" and it goes when the requirement goes. Null on every other
+    // attachment, which is what every existing row is.
+    requirementId: uuid("requirement_id").references(
+      (): AnyPgColumn => serviceRequestRequirements.id,
+      { onDelete: "cascade" },
+    ),
     createdAt: timestamp("created_at", { withTimezone: true })
       .notNull()
       .defaultNow(),
   },
-  (t) => [index("service_request_attachments_request").on(t.requestId)],
+  (t) => [
+    index("service_request_attachments_request").on(t.requestId),
+    index("service_request_attachments_requirement").on(t.requirementId),
+  ],
 );
 
 /**

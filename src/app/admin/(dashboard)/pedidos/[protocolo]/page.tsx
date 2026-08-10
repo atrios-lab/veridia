@@ -20,6 +20,7 @@ import {
   listAttachments,
   listRequestHistory,
   listRequirements,
+  requestOwnAttachments,
 } from "@/lib/service-request.ts";
 import { getSession } from "@/lib/session.ts";
 import { getTenant, OFFICE_TIME_ZONE } from "@/lib/tenant.ts";
@@ -99,15 +100,17 @@ export default async function ServiceRequestDetailPage({
     displayName: a.displayName,
     createdAtLabel: formatDayMonthTime(a.createdAt),
   });
-  const citizenAttachments = attachments
+  // Everything a requirement carries is that requirement's, not the request's.
+  const ownAttachments = requestOwnAttachments(attachments);
+  const citizenAttachments = ownAttachments
     .filter((a) => a.kind !== "office")
     .map(row);
   // The signed requerimento, most recent first: it is the paper the office
   // files, so printing means opening it rather than generating a blank.
-  const signed = attachments
+  const signed = ownAttachments
     .filter((a) => a.displayName === "requerimento-assinado")
     .toSorted((a, b) => b.createdAt.getTime() - a.createdAt.getTime())[0];
-  const deliveredAttachments = attachments
+  const deliveredAttachments = ownAttachments
     .filter((a) => a.kind === "office")
     .map(row);
 
@@ -121,6 +124,7 @@ export default async function ServiceRequestDetailPage({
       ? attachments.find((a) => a.id === r.resolutionAttachmentId)?.displayName
       : undefined,
     resolutionAttachmentId: r.resolutionAttachmentId ?? undefined,
+    forms: attachments.filter((a) => a.requirementId === r.id).map(row),
   }));
 
   return (

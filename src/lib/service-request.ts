@@ -968,6 +968,19 @@ export async function listAttachments(tenantSlug: string, requestId: string) {
 }
 
 /**
+ * What hangs off the request itself. A form the office attached to a
+ * requirement is not one of these: it belongs to that requirement, shows up
+ * in its card, and must never appear among the request's deliveries. Every
+ * list that means "the documents of this request" goes through here, so a new
+ * one cannot quietly forget the distinction.
+ */
+export function requestOwnAttachments<
+  T extends { requirementId: string | null },
+>(attachments: T[]): T[] {
+  return attachments.filter((a) => a.requirementId === null);
+}
+
+/**
  * One attachment on a request, scoped to tenant + request so an id guessed
  * from another citizen's request can't be pulled through this. Kind-agnostic:
  * both the admin panel and the citizen's own consult use it, each already
@@ -1037,6 +1050,8 @@ export async function attachToRequest(
   requestId: string,
   attachments: StoredAttachment[],
   kind: string,
+  /** Set only for the form a requirement carries; see `requestOwnAttachments`. */
+  requirementId?: string,
 ) {
   if (attachments.length === 0) return [];
   return db
@@ -1046,6 +1061,7 @@ export async function attachToRequest(
         tenantSlug,
         requestId,
         kind,
+        requirementId,
         storedName: a.storedName,
         displayName: a.displayName,
         path: a.path,

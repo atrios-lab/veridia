@@ -14,6 +14,7 @@ import {
   deleteAttachment,
   deleteRequest,
   findById,
+  listRequirements,
   registerRequirement,
   reissueAccessKey,
   setRequestAmount,
@@ -161,6 +162,55 @@ export async function deliverDocumentAction(
       return { status: "error", message: error.message };
     }
     console.error("pedidos.deliver-document", error);
+    return { status: "error", message: GENERIC_ERROR };
+  }
+  revalidateAdmin();
+  return { status: "success" };
+}
+
+/**
+ * The form the office attaches to a requirement, for the citizen to print and
+ * present. It is stored against the requirement, so it never reaches the
+ * request's delivery list and it goes when the requirement goes.
+ */
+export async function attachRequirementFormAction(
+  _previous: ActionState,
+  formData: FormData,
+): Promise<ActionState> {
+  const session = await authorize();
+  if (!session) return { status: "error", message: NO_PERMISSION };
+
+  const requestId = String(formData.get("requestId") ?? "");
+  const requirementId = String(formData.get("requirementId") ?? "");
+  const tenant = await getTenant();
+  try {
+    // The requirement has to be one of this request's: an id from another
+    // request would otherwise hang a file off someone else's exigência.
+    const requirements = await listRequirements(tenant.slug, requestId);
+    if (!requirements.some((r) => r.id === requirementId)) {
+      return { status: "error", message: "Exigência não encontrada." };
+    }
+    const files = formData
+      .getAll("formulario")
+      .filter((f): f is File => f instanceof File);
+    const stored = await storeAttachments(files, {
+      kind: "formulario-exigencia",
+    });
+    if (stored.length === 0) {
+      return { status: "error", message: "Escolha um arquivo para anexar." };
+    }
+    await attachToRequest(
+      tenant.slug,
+      requestId,
+      stored,
+      "office",
+      requirementId,
+    );
+  } catch (error) {
+    if (error instanceof AttachmentError) {
+      return { status: "error", message: error.message };
+    }
+    console.error("pedidos.attach-requirement-form", error);
     return { status: "error", message: GENERIC_ERROR };
   }
   revalidateAdmin();
