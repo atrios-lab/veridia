@@ -8,6 +8,8 @@ export interface AttachmentItem {
   id: string;
   displayName: string;
   createdAtLabel: string;
+  /** Shown so a blank 14 KB scan or a 40 MB PDF is caught before opening. */
+  sizeBytes?: number;
 }
 
 /** Where the panel serves any attachment, whatever section it belongs to. */

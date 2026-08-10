@@ -1,12 +1,13 @@
 "use client";
 
-import { useActionState, useEffect, useRef, useState } from "react";
+import { useActionState, useEffect, useId, useRef, useState } from "react";
 import { toast } from "sonner";
 import {
   type AttachmentItem,
   attachmentLabel,
   documentHref,
 } from "./attachment-link.ts";
+import { AdminIcon } from "./icon.tsx";
 
 export type { AttachmentItem };
 
@@ -21,9 +22,19 @@ type DeleteAction = (
   formData: FormData,
 ) => Promise<ActionState>;
 
+/** "259 KB", "1.4 MB" — the size the operator sees before opening. */
+function formatFileSize(bytes: number): string {
+  if (bytes < 1024 * 1024) return `${Math.max(1, Math.round(bytes / 1024))} KB`;
+  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+}
+
+const BUTTON =
+  "shrink-0 rounded-[8px] border border-admin-active-border px-2.5 py-1.5 text-[11.5px] font-bold text-admin-muted hover:border-admin-accent hover:text-admin-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-admin-accent";
+
 /**
- * One attached file, everywhere the panel shows one: the name opens it, the
- * date says when it arrived, and the office can take it back.
+ * One attached file, everywhere the panel shows one: icon, name, when it
+ * arrived, how big it is, and explicit "Ver" and "Excluir" buttons — the
+ * registrar asked for buttons that look like buttons, not links.
  *
  * `onDelete` is optional only because some places have nothing to call — the
  * file that answered a requirement is pinned by it, and the server refuses to
@@ -43,25 +54,39 @@ export function AttachmentRow({
 }) {
   const [armed, setArmed] = useState(false);
   const label = attachmentLabel(attachment.displayName);
-  const when = `${meta} ${attachment.createdAtLabel}`;
 
   return (
-    <div className="rounded-[10px] border border-admin-border bg-admin-input-bg px-3.5 py-2.5">
-      <div className="flex items-center gap-2.5">
+    <div className="rounded-[10px] border border-admin-border bg-admin-input-bg px-3 py-2.5">
+      <div className="flex items-center gap-3">
+        <span className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-[7px] bg-admin-readonly-bg text-admin-muted">
+          <AdminIcon name="file" className="h-4 w-4" />
+        </span>
+        <span className="min-w-0 flex-1">
+          <span className="block truncate text-[13px] font-semibold text-admin-text">
+            {label}
+          </span>
+          <span className="block text-[11px] text-admin-muted">
+            {meta} {attachment.createdAtLabel}
+          </span>
+        </span>
+        {attachment.sizeBytes != null && (
+          <span className="shrink-0 text-[11.5px] text-admin-muted">
+            {formatFileSize(attachment.sizeBytes)}
+          </span>
+        )}
         <a
           href={documentHref(requestId, attachment.id)}
           target="_blank"
           rel="noopener"
-          className="min-w-0 flex-1 truncate text-[13px] text-admin-text underline-offset-2 hover:underline"
+          className={BUTTON}
         >
-          {label}
+          Ver
         </a>
-        <span className="shrink-0 text-[11.5px] text-admin-faint">{when}</span>
         {onDelete && !armed && (
           <button
             type="button"
             onClick={() => setArmed(true)}
-            className="shrink-0 text-[11.5px] font-semibold text-admin-error-text underline"
+            className="shrink-0 rounded-[8px] border border-admin-error-border px-2.5 py-1.5 text-[11.5px] font-bold text-admin-error-text hover:bg-admin-error-bg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-admin-accent"
           >
             Excluir
           </button>
@@ -96,6 +121,8 @@ function DeleteConfirm({
   onCancel: () => void;
 }) {
   const confirmRef = useRef<HTMLButtonElement>(null);
+  // Focus lands on the button; this is how the question travels with it.
+  const questionId = useId();
   const [state, formAction, pending] = useActionState<ActionState, FormData>(
     // The toast fires here, not in an effect: on success the action revalidates
     // and this row leaves the tree in the same commit, so an effect on it would
@@ -119,19 +146,20 @@ function DeleteConfirm({
   return (
     <form
       action={formAction}
-      className="mt-2 border-t border-admin-border pt-2"
+      className="mt-2.5 border-t border-admin-border pt-2.5"
     >
       <input type="hidden" name="requestId" value={requestId} />
       <input type="hidden" name="attachmentId" value={attachmentId} />
-      <div className="flex flex-wrap items-center gap-x-3 gap-y-1.5">
-        <span className="flex-1 text-[11.5px] text-admin-muted">
+      <div className="flex flex-wrap items-center gap-2.5">
+        <span id={questionId} className="flex-1 text-[11.5px] text-admin-muted">
           Excluir este arquivo? O cidadão perde o acesso a ele na consulta.
         </span>
         <button
           ref={confirmRef}
           type="submit"
+          aria-describedby={questionId}
           disabled={pending}
-          className="shrink-0 text-[11.5px] font-semibold text-admin-error-text underline disabled:opacity-60"
+          className="shrink-0 rounded-[8px] border border-admin-error-border bg-admin-error-bg px-2.5 py-1.5 text-[11.5px] font-bold text-admin-error-text focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-admin-accent disabled:opacity-60"
         >
           {pending ? "Excluindo…" : "Confirmar exclusão"}
         </button>
@@ -139,7 +167,7 @@ function DeleteConfirm({
           type="button"
           onClick={onCancel}
           disabled={pending}
-          className="shrink-0 text-[11.5px] font-semibold text-admin-muted underline disabled:opacity-60"
+          className={`${BUTTON} disabled:opacity-60`}
         >
           Cancelar
         </button>

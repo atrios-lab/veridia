@@ -99,6 +99,7 @@ export default async function ServiceRequestDetailPage({
     id: a.id,
     displayName: a.displayName,
     createdAtLabel: formatDayMonthTime(a.createdAt),
+    sizeBytes: a.sizeBytes,
   });
   // Everything a requirement carries is that requirement's, not the request's.
   const ownAttachments = requestOwnAttachments(attachments);

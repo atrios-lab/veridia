@@ -141,6 +141,7 @@ export default async function DataRightsDetailPage({
                       createdAtLabel: formatDayMonthTime(
                         identityAttachment.createdAt,
                       ),
+                      sizeBytes: identityAttachment.sizeBytes,
                     }}
                     meta="enviado em"
                     onDelete={deleteAttachmentAction}
@@ -170,6 +171,7 @@ export default async function DataRightsDetailPage({
                           id: a.id,
                           displayName: a.displayName,
                           createdAtLabel: formatDayMonthTime(a.createdAt),
+                          sizeBytes: a.sizeBytes,
                         }}
                         meta="entregue em"
                         onDelete={deleteAttachmentAction}
