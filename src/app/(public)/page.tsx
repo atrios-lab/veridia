@@ -40,13 +40,13 @@ const ACTION_CARDS: {
   {
     section: "selo-tjrn",
     icon: "seal",
-    description: "Confira a autenticidade de um ato",
+    description: "Confira a autenticidade de um documento",
   },
   // Desktop only: the phone keeps the three tasks, as the redesign draws.
   {
     section: "centrais-contato",
     icon: "external",
-    description: "Links oficiais por atribuição, sem sites falsos",
+    description: "Links oficiais de cada serviço, sem sites falsos",
     desktopOnly: true,
   },
 ];
@@ -115,7 +115,7 @@ export default async function Home() {
               {tenant.home.title}
             </h1>
             <p className="mt-2 text-sm leading-relaxed text-brand-on-dark-body md:mt-3.5 md:max-w-[44ch] md:text-base">
-              Fé pública e segurança jurídica para cada ato da vida da
+              Segurança e validade legal para cada ato da vida da
               comunidade
               <span className="md:hidden">
                 , sem sair de casa: peça, agende ou acompanhe.

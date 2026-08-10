@@ -9,9 +9,9 @@ export const tabelionatoAurora: Tenant = parseTenant({
   name: "Tabelionato Aurora",
   subtitle: "2º Tabelionato de Notas de Aurora / RN",
   about:
-    "O Tabelionato Aurora é o 2º Tabelionato de Notas de Aurora / RN, serventia dotada " +
-    "de fé pública dedicada aos atos notariais: escrituras, procurações, autenticações " +
-    "e reconhecimento de firmas, com segurança jurídica para o cidadão e para os negócios.",
+    "O Tabelionato Aurora é o 2º Tabelionato de Notas de Aurora / RN, cartório dedicado " +
+    "a escrituras, procurações, autenticações e reconhecimento de firmas, com " +
+    "segurança jurídica para o cidadão e para os negócios.",
   cns: "000000",
   attributions: ["NOTAS"],
   contacts: {

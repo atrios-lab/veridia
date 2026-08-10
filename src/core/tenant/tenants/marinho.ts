@@ -10,8 +10,8 @@ export const cartorioMarinho: Tenant = parseTenant({
   name: "Cartório Marinho",
   subtitle: "Ofício Único de Ielmo Marinho / RN",
   about:
-    "O Cartório Marinho é o Ofício Único de Ielmo Marinho / RN, serventia dotada de fé " +
-    "pública que reúne as atribuições extrajudiciais do município. Sua função é dar " +
+    "O Cartório Marinho é o Ofício Único de Ielmo Marinho / RN, o cartório que reúne " +
+    "todos os serviços de registro e notas do município. Sua função é dar " +
     "segurança jurídica, autenticidade e publicidade aos atos da vida do cidadão, do " +
     "nascimento aos negócios.",
   cns: "094615",

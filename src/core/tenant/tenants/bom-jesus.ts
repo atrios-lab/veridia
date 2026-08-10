@@ -8,8 +8,8 @@ export const cartorioBomJesus: Tenant = parseTenant({
   name: "Cartório de Bom Jesus",
   subtitle: "Ofício Único de Bom Jesus / RN",
   about:
-    "O Ofício Único de Bom Jesus / RN é serventia dotada de fé pública que reúne as " +
-    "atribuições extrajudiciais do município desde 1962. Sua função é dar segurança " +
+    "O Ofício Único de Bom Jesus / RN é o cartório que reúne todos os serviços de " +
+    "registro e notas do município desde 1962. Sua função é dar segurança " +
     "jurídica, autenticidade e publicidade aos atos da vida do cidadão, do nascimento " +
     "aos negócios.",
   cns: "094730",
