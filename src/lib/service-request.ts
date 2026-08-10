@@ -16,6 +16,7 @@ import {
   hashAccessKey,
   verifyAccessKey,
 } from "@/core/request/access-key.ts";
+import type { RequestDataEdit } from "@/core/request/edit.ts";
 import {
   isServiceRequestStatus,
   KIND_BY_PREFIX,
@@ -773,6 +774,39 @@ export async function setRequestAmount(
     tenantSlug,
     actorId,
     action: "service-request.amount",
+    targetType: "service-request",
+    targetId: id,
+  });
+}
+
+/**
+ * Corrects what the counter typed. `createdAt` is editable on purpose: the
+ * office files the walk-in later, and the protocol is worth the moment of the
+ * attendance, not the moment someone got to the keyboard.
+ *
+ * The act and the protocol number are not here and must never be: changing the
+ * act changes the attribution and the legal basis of something already
+ * protocolled, which is a new request, not an edit.
+ */
+export async function updateRequestData(
+  tenantSlug: string,
+  id: string,
+  data: RequestDataEdit,
+  actorId: string,
+): Promise<void> {
+  await db
+    .update(serviceRequests)
+    .set({ ...data, updatedAt: new Date() })
+    .where(
+      and(
+        eq(serviceRequests.tenantSlug, tenantSlug),
+        eq(serviceRequests.id, id),
+      ),
+    );
+  await recordAudit({
+    tenantSlug,
+    actorId,
+    action: "service-request.edit",
     targetType: "service-request",
     targetId: id,
   });

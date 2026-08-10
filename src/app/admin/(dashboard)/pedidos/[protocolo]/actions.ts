@@ -2,7 +2,9 @@
 
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
+import { getActForTenant } from "@/core/acts/catalog.ts";
 import { can } from "@/core/auth/roles.ts";
+import { purposeFor, requestDataEditSchema } from "@/core/request/edit.ts";
 import { isServiceRequestStatus } from "@/core/request/kinds.ts";
 import { parseCentsInput } from "@/core/request/money.ts";
 import { requirementTextSchema } from "@/core/request/requirement.ts";
@@ -11,13 +13,15 @@ import {
   attachToRequest,
   deleteAttachment,
   deleteRequest,
+  findById,
   registerRequirement,
   reissueAccessKey,
   setRequestAmount,
+  updateRequestData,
   updateRequestStatus,
 } from "@/lib/service-request.ts";
 import { getSession } from "@/lib/session.ts";
-import { getTenant } from "@/lib/tenant.ts";
+import { getTenant, OFFICE_TIME_ZONE } from "@/lib/tenant.ts";
 import {
   AttachmentError,
   deleteStoredFile,
@@ -198,6 +202,52 @@ export type ReissueKeyState =
   | { status: "idle" }
   | { status: "error"; message: string }
   | { status: "success"; key: string };
+
+export async function updateRequestDataAction(
+  _previous: ActionState,
+  formData: FormData,
+): Promise<ActionState> {
+  const session = await authorize();
+  if (!session) return { status: "error", message: NO_PERMISSION };
+
+  const parsed = requestDataEditSchema(new Date(), OFFICE_TIME_ZONE).safeParse({
+    applicantName: formData.get("applicantName") ?? "",
+    contact: formData.get("contact") ?? "",
+    cpf: formData.get("cpf") ?? "",
+    purpose: formData.get("purpose") ?? "",
+    description: formData.get("description") ?? "",
+    createdAt: formData.get("createdAt") ?? "",
+  });
+  if (!parsed.success) {
+    return {
+      status: "error",
+      message: parsed.error.issues[0]?.message ?? "Confira os campos.",
+    };
+  }
+
+  const requestId = String(formData.get("requestId") ?? "");
+  const tenant = await getTenant();
+  try {
+    const stored = await findById(tenant.slug, requestId);
+    if (!stored) return { status: "error", message: GENERIC_ERROR };
+    // Lei 6.015 art. 17: the act decides whether a purpose may exist at all,
+    // and hiding the input is not what enforces it.
+    const act = stored.actId
+      ? getActForTenant(tenant, stored.actId)
+      : undefined;
+    await updateRequestData(
+      tenant.slug,
+      requestId,
+      { ...parsed.data, purpose: purposeFor(act, parsed.data.purpose) },
+      session.user.id,
+    );
+  } catch (error) {
+    console.error("pedidos.update-data", error);
+    return { status: "error", message: GENERIC_ERROR };
+  }
+  revalidateAdmin();
+  return { status: "success" };
+}
 
 export async function reissueKeyAction(
   _previous: ReissueKeyState,

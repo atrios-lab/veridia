@@ -9,7 +9,11 @@ import {
   suggestedNextStatuses,
 } from "@/core/request/kinds.ts";
 import { formatCents } from "@/core/request/money.ts";
-import { formatDate, toIsoDate } from "@/core/scheduling/calendar.ts";
+import {
+  formatDate,
+  toIsoDate,
+  toZonedDateTimeInput,
+} from "@/core/scheduling/calendar.ts";
 import { linkedConversations } from "@/lib/chat.ts";
 import {
   findByProtocol,
@@ -19,9 +23,11 @@ import {
 } from "@/lib/service-request.ts";
 import { getSession } from "@/lib/session.ts";
 import { getTenant, OFFICE_TIME_ZONE } from "@/lib/tenant.ts";
+import { documentHref } from "../../../_components/attachment-link.ts";
 import { AdminPageHeader } from "../../../_components/page-header.tsx";
 import { StatusBadge } from "../_components/status-badge.tsx";
 import { AmountSection } from "./_components/amount-section.tsx";
+import { ApplicantSection } from "./_components/applicant-section.tsx";
 import { AttachmentsSection } from "./_components/attachments-section.tsx";
 import { DangerSection } from "./_components/danger-section.tsx";
 import { DeliverySection } from "./_components/delivery-section.tsx";
@@ -37,20 +43,8 @@ const HISTORY_LABELS: Record<string, string> = {
   "service-request.requirement.fulfill": "cumpriu uma exigência",
   "service-request.amount": "informou o valor do pedido",
   "service-request.key-reissue": "emitiu uma nova chave de acesso",
+  "service-request.edit": "corrigiu os dados do pedido",
 };
-
-function Field({ label, value }: { label: string; value: string }) {
-  return (
-    <div>
-      <span className="mb-1.5 block text-xs font-bold text-admin-primary">
-        {label}
-      </span>
-      <p className="rounded-[9px] border border-admin-input-border bg-admin-input-bg px-3.5 py-2.5 text-[13.5px] text-admin-text">
-        {value}
-      </p>
-    </div>
-  );
-}
 
 function formatDayMonthTime(date: Date): string {
   return new Intl.DateTimeFormat("pt-BR", {
@@ -108,6 +102,11 @@ export default async function ServiceRequestDetailPage({
   const citizenAttachments = attachments
     .filter((a) => a.kind !== "office")
     .map(row);
+  // The signed requerimento, most recent first: it is the paper the office
+  // files, so printing means opening it rather than generating a blank.
+  const signed = attachments
+    .filter((a) => a.displayName === "requerimento-assinado")
+    .toSorted((a, b) => b.createdAt.getTime() - a.createdAt.getTime())[0];
   const deliveredAttachments = attachments
     .filter((a) => a.kind === "office")
     .map(row);
@@ -140,6 +139,21 @@ export default async function ServiceRequestDetailPage({
             status={status}
             label={statusLabel("service-request", status)}
           />
+          {/* Counter work: the citizen signs on paper, here, now. Once they
+              have returned a signed one, that is the sheet the office files,
+              so the same action opens it instead of printing a fresh blank. */}
+          <a
+            href={
+              signed
+                ? documentHref(request.id, signed.id)
+                : `/admin/pedidos/${encodeURIComponent(request.protocolNumber)}/imprimir`
+            }
+            target="_blank"
+            rel="noopener"
+            className="ml-auto inline-flex items-center gap-1.5 rounded-[9px] border border-admin-active-border px-3 py-1.5 text-[12px] font-bold text-admin-primary hover:border-admin-accent"
+          >
+            {signed ? "Imprimir via assinada" : "Imprimir folha"}
+          </a>
         </div>
 
         <div className="grid grid-cols-1 gap-5 lg:grid-cols-[1fr_340px] lg:items-start">
@@ -153,43 +167,28 @@ export default async function ServiceRequestDetailPage({
               suggested={suggestedNextStatuses(status)}
             />
 
-            <div className="rounded-[14px] border border-admin-border bg-admin-card p-6">
-              <h4 className="font-serif text-[17px] font-semibold text-admin-primary">
-                Dados do solicitante
-              </h4>
-              <div className="mt-4 grid grid-cols-1 gap-3.5 md:grid-cols-2">
-                <Field
-                  label="Nome"
-                  value={request.applicantName ?? "Não informado"}
-                />
-                <Field
-                  label="CPF"
-                  value={request.cpf ? maskCpf(request.cpf) : "Não informado"}
-                />
-                <Field
-                  label="Contato"
-                  value={request.contact ?? "Não informado"}
-                />
-                <Field
-                  label="Ato"
-                  value={
-                    act
-                      ? `${act.name} · ${ATTRIBUTION_NAMES[act.attribution]}`
-                      : "Ato não identificado"
-                  }
-                />
-              </div>
-              {request.purpose && (
-                <div className="mt-3.5">
-                  <Field label="Finalidade" value={request.purpose} />
-                </div>
-              )}
-              {request.description && (
-                <div className="mt-3.5">
-                  <Field label="Descrição" value={request.description} />
-                </div>
-              )}
-            </div>
+            <ApplicantSection
+              requestId={request.id}
+              actLabel={
+                act
+                  ? `${act.name} · ${ATTRIBUTION_NAMES[act.attribution]}`
+                  : "Ato não identificado"
+              }
+              cpfMasked={request.cpf ? maskCpf(request.cpf) : "Não informado"}
+              filedLabel={formatDayMonthTime(request.createdAt)}
+              allowsPurpose={act?.requiresPurpose ?? false}
+              data={{
+                applicantName: request.applicantName ?? "",
+                contact: request.contact ?? "",
+                cpf: request.cpf ?? "",
+                purpose: request.purpose ?? "",
+                description: request.description ?? "",
+                createdAt: toZonedDateTimeInput(
+                  request.createdAt,
+                  OFFICE_TIME_ZONE,
+                ),
+              }}
+            />
 
             <RequirementsSection
               requestId={request.id}
@@ -219,6 +218,7 @@ export default async function ServiceRequestDetailPage({
           <div className="flex flex-col gap-4.5">
             <KeySection
               requestId={request.id}
+              protocolNumber={request.protocolNumber}
               issuedLabel={formatDate(
                 toIsoDate(request.createdAt, OFFICE_TIME_ZONE),
               )}

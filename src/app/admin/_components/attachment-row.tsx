@@ -2,12 +2,13 @@
 
 import { useActionState, useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
+import {
+  type AttachmentItem,
+  attachmentLabel,
+  documentHref,
+} from "./attachment-link.ts";
 
-export interface AttachmentItem {
-  id: string;
-  displayName: string;
-  createdAtLabel: string;
-}
+export type { AttachmentItem };
 
 /** What every attachment action in the panel returns. */
 type ActionState =
@@ -19,27 +20,6 @@ type DeleteAction = (
   previous: ActionState,
   formData: FormData,
 ) => Promise<ActionState>;
-
-/**
- * Stored names are deliberately not the ones the browser sent: that string is
- * attacker controlled and routinely carries the citizen's full name (see
- * `src/core/request/attachment.ts`). What it stores instead is a slug, and a
- * slug is not something to show a registrar — least of all "office".
- */
-const LABELS: Record<string, string> = {
-  "documento-final": "Documento final",
-  "requerimento-assinado": "Requerimento assinado",
-  office: "Relatório de dados",
-};
-
-export function attachmentLabel(displayName: string): string {
-  return LABELS[displayName] ?? displayName;
-}
-
-/** Where the panel serves any attachment, whatever section it belongs to. */
-export function documentHref(requestId: string, attachmentId: string): string {
-  return `/admin/documento?requestId=${requestId}&attachmentId=${attachmentId}`;
-}
 
 /**
  * One attached file, everywhere the panel shows one: the name opens it, the

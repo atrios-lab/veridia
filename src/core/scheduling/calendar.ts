@@ -19,6 +19,65 @@ export function toIsoDate(instant: Date, timeZone: string): IsoDate {
   return new Intl.DateTimeFormat("en-CA", { timeZone }).format(instant);
 }
 
+/** How far the wall clock of a zone runs from UTC at a given instant. */
+function zoneOffsetMs(instant: Date, timeZone: string): number {
+  const parts = new Intl.DateTimeFormat("en-US", {
+    timeZone,
+    hour12: false,
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+    second: "2-digit",
+  }).formatToParts(instant);
+  const at = (type: string) =>
+    Number(parts.find((p) => p.type === type)?.value ?? 0);
+  const wall = Date.UTC(
+    at("year"),
+    at("month") - 1,
+    at("day"),
+    // Some locales render midnight as "24"; Date.UTC would roll it a day on.
+    at("hour") % 24,
+    at("minute"),
+    at("second"),
+  );
+  return wall - instant.getTime();
+}
+
+/**
+ * The instant a "YYYY-MM-DDTHH:mm" typed into a `datetime-local` means on the
+ * office's wall clock. `new Date(local)` would read it in the server's zone,
+ * and the server runs in UTC — three hours off, silently, every time.
+ *
+ * Two passes because the offset belongs to the instant, not to the text: the
+ * first guess picks the offset, the second applies the offset that actually
+ * holds there. Brazil has no DST today, so the second pass is a no-op — and it
+ * is one line to stay correct the day that changes, or the day another office
+ * sits in a zone that does.
+ */
+export function fromZonedDateTime(local: string, timeZone: string): Date {
+  const guess = new Date(`${local}:00Z`);
+  if (Number.isNaN(guess.getTime())) return guess;
+  const first = new Date(guess.getTime() - zoneOffsetMs(guess, timeZone));
+  return new Date(guess.getTime() - zoneOffsetMs(first, timeZone));
+}
+
+/** The "YYYY-MM-DDTHH:mm" a `datetime-local` needs to show this instant. */
+export function toZonedDateTimeInput(instant: Date, timeZone: string): string {
+  const parts = new Intl.DateTimeFormat("sv-SE", {
+    timeZone,
+    hour12: false,
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+  }).formatToParts(instant);
+  const at = (type: string) => parts.find((p) => p.type === type)?.value ?? "";
+  return `${at("year")}-${at("month")}-${at("day")}T${at("hour")}:${at("minute")}`;
+}
+
 function toUtc(date: IsoDate): number {
   const [year, month, day] = date.split("-").map(Number);
   return Date.UTC(year, month - 1, day);

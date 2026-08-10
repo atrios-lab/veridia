@@ -1,7 +1,7 @@
 "use client";
 
 import { useActionState, useEffect, useState } from "react";
-import { documentHref } from "../../../../_components/attachment-row.tsx";
+import { documentHref } from "../../../../_components/attachment-link.ts";
 import { type ActionState, registerRequirementAction } from "../actions.ts";
 
 export interface RequirementItem {
