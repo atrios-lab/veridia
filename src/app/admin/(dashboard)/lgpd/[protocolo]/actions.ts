@@ -3,13 +3,19 @@
 import { revalidatePath } from "next/cache";
 import { can } from "@/core/auth/roles.ts";
 import {
+  AttachmentInUseError,
   attachToRequest,
+  deleteAttachment,
   respondToRecord,
   saveDraftReply,
 } from "@/lib/service-request.ts";
 import { getSession } from "@/lib/session.ts";
 import { getTenant } from "@/lib/tenant.ts";
-import { AttachmentError, storeAttachments } from "@/lib/uploads.ts";
+import {
+  AttachmentError,
+  deleteStoredFile,
+  storeAttachments,
+} from "@/lib/uploads.ts";
 
 export type ActionState =
   | { status: "idle" }
@@ -97,6 +103,42 @@ export async function saveDataRightsDraft(
     );
   } catch (error) {
     console.error("lgpd.save-draft", error);
+    return { status: "error", message: GENERIC_ERROR };
+  }
+  revalidateAdmin();
+  return { status: "success" };
+}
+
+/**
+ * Removes a report the office attached to its reply. Only the office's own
+ * files: what the holder sent to prove who they are is their evidence, and the
+ * panel never offers to delete it.
+ */
+export async function deleteReportAction(
+  _previous: ActionState,
+  formData: FormData,
+): Promise<ActionState> {
+  const session = await authorize();
+  if (!session) return { status: "error", message: NO_PERMISSION };
+
+  const requestId = String(formData.get("requestId") ?? "");
+  const attachmentId = String(formData.get("attachmentId") ?? "");
+  const tenant = await getTenant();
+  try {
+    const deleted = await deleteAttachment(
+      tenant.slug,
+      requestId,
+      attachmentId,
+    );
+    if (!deleted) {
+      return { status: "error", message: "Documento não encontrado." };
+    }
+    await deleteStoredFile(deleted.path);
+  } catch (error) {
+    if (error instanceof AttachmentInUseError) {
+      return { status: "error", message: error.message };
+    }
+    console.error("lgpd.delete-report", error);
     return { status: "error", message: GENERIC_ERROR };
   }
   revalidateAdmin();

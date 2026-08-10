@@ -52,13 +52,6 @@ function Field({ label, value }: { label: string; value: string }) {
   );
 }
 
-function formatDayMonth(date: Date): string {
-  return new Intl.DateTimeFormat("pt-BR", {
-    day: "2-digit",
-    month: "2-digit",
-  }).format(date);
-}
-
 function formatDayMonthTime(date: Date): string {
   return new Intl.DateTimeFormat("pt-BR", {
     day: "2-digit",
@@ -107,10 +100,17 @@ export default async function ServiceRequestDetailPage({
       linkedConversations(tenant.slug, request.id),
     ]);
 
-  const citizenAttachments = attachments.filter((a) => a.kind !== "office");
+  const row = (a: (typeof attachments)[number]) => ({
+    id: a.id,
+    displayName: a.displayName,
+    createdAtLabel: formatDayMonthTime(a.createdAt),
+  });
+  const citizenAttachments = attachments
+    .filter((a) => a.kind !== "office")
+    .map(row);
   const deliveredAttachments = attachments
     .filter((a) => a.kind === "office")
-    .map((a) => a.displayName);
+    .map(row);
 
   const requirements: RequirementItem[] = requirementRows.map((r) => ({
     id: r.id,
@@ -121,6 +121,7 @@ export default async function ServiceRequestDetailPage({
     resolutionFileName: r.resolutionAttachmentId
       ? attachments.find((a) => a.id === r.resolutionAttachmentId)?.displayName
       : undefined,
+    resolutionAttachmentId: r.resolutionAttachmentId ?? undefined,
   }));
 
   return (
@@ -197,12 +198,7 @@ export default async function ServiceRequestDetailPage({
 
             <AttachmentsSection
               requestId={request.id}
-              protocolNumber={request.protocolNumber}
-              attachments={citizenAttachments.map((a) => ({
-                id: a.id,
-                displayName: a.displayName,
-                createdAtLabel: formatDayMonth(a.createdAt),
-              }))}
+              attachments={citizenAttachments}
             />
 
             <DeliverySection

@@ -1,6 +1,7 @@
 "use client";
 
 import { useActionState, useEffect, useState } from "react";
+import { documentHref } from "../../../../_components/attachment-row.tsx";
 import { type ActionState, registerRequirementAction } from "../actions.ts";
 
 export interface RequirementItem {
@@ -10,6 +11,7 @@ export interface RequirementItem {
   createdAt: Date;
   fulfilledAt: Date | null;
   resolutionFileName?: string;
+  resolutionAttachmentId?: string;
 }
 
 function formatDayMonth(date: Date): string {
@@ -90,11 +92,23 @@ export function RequirementsSection({
               <p className="mt-2 text-[13px] text-admin-text">
                 {requirement.text}
               </p>
-              {requirement.resolutionFileName && (
-                <div className="mt-1.5 text-[12px] font-semibold text-admin-success-text">
-                  {requirement.resolutionFileName}
-                </div>
-              )}
+              {/* The file that answered the requirement has to open: reading
+                  it is how the office decides whether the requirement is
+                  actually met. No delete — it is the citizen's answer, and
+                  the server refuses it anyway while a requirement points at
+                  it. */}
+              {requirement.resolutionFileName &&
+                requirement.resolutionAttachmentId && (
+                  <a
+                    href={documentHref(
+                      requestId,
+                      requirement.resolutionAttachmentId,
+                    )}
+                    className="mt-1.5 inline-block text-[12px] font-semibold text-admin-success-text underline-offset-2 hover:underline"
+                  >
+                    {requirement.resolutionFileName}
+                  </a>
+                )}
             </div>
           ))}
         </div>

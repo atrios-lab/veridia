@@ -11,9 +11,11 @@ import {
 } from "@/lib/service-request.ts";
 import { getSession } from "@/lib/session.ts";
 import { getTenant, OFFICE_TIME_ZONE, today } from "@/lib/tenant.ts";
+import { AttachmentRow } from "../../../_components/attachment-row.tsx";
 import { AdminPageHeader } from "../../../_components/page-header.tsx";
 import { DeadlineBadge } from "../_components/deadline-badge.tsx";
 import { ReplySection } from "./_components/reply-section.tsx";
+import { deleteReportAction } from "./actions.ts";
 
 export const metadata = { title: "Requerimento LGPD" };
 
@@ -130,13 +132,20 @@ export default async function DataRightsDetailPage({
               </div>
 
               {identityAttachment && (
-                <div className="mt-3.5 flex items-center gap-2.5 rounded-[10px] border border-admin-border bg-admin-input-bg px-3.5 py-2.5">
-                  <span className="flex-1 text-[13px] text-admin-text">
-                    {identityAttachment.displayName}
-                  </span>
-                  <span className="text-[11.5px] text-admin-faint">
-                    anexado pela titular
-                  </span>
+                <div className="mt-3.5">
+                  {/* No delete: this is the holder's own evidence of who they
+                      are, and it has to stay openable, not just named. */}
+                  <AttachmentRow
+                    requestId={request.id}
+                    attachment={{
+                      id: identityAttachment.id,
+                      displayName: identityAttachment.displayName,
+                      createdAtLabel: formatDayMonthTime(
+                        identityAttachment.createdAt,
+                      ),
+                    }}
+                    meta="anexado em"
+                  />
                 </div>
               )}
 
@@ -153,14 +162,21 @@ export default async function DataRightsDetailPage({
                   <p className="mt-2 rounded-[10px] border border-admin-border bg-admin-input-bg px-3.5 py-3 text-[13.5px] text-admin-text">
                     {request.officeReply}
                   </p>
-                  {reportAttachments.map((a) => (
-                    <p
-                      key={a.id}
-                      className="mt-2 text-[12.5px] font-semibold text-admin-success-text"
-                    >
-                      {a.displayName}
-                    </p>
-                  ))}
+                  <div className="mt-2 flex flex-col gap-2">
+                    {reportAttachments.map((a) => (
+                      <AttachmentRow
+                        key={a.id}
+                        requestId={request.id}
+                        attachment={{
+                          id: a.id,
+                          displayName: a.displayName,
+                          createdAtLabel: formatDayMonthTime(a.createdAt),
+                        }}
+                        meta="enviado em"
+                        onDelete={deleteReportAction}
+                      />
+                    ))}
+                  </div>
                 </div>
               )}
             </div>
