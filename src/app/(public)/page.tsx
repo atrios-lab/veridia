@@ -293,11 +293,7 @@ export default async function Home() {
               {tenant.name}
             </h2>
             <p className="mt-2 text-[13px] leading-relaxed text-brand-muted md:text-[13.5px]">
-              O Cartório Marinho é o Ofício Único de Ielmo Marinho / RN,
-              serventia dotada de fé pública que reúne as atribuições
-              extrajudiciais do município. Sua função é dar segurança jurídica,
-              autenticidade e publicidade aos atos da vida do cidadão, do
-              nascimento aos negócios.
+              {tenant.about}
             </p>
             <ul className="mt-3.5 hidden flex-wrap gap-2 md:flex">
               {tenant.attributions.map((attribution) => (

@@ -9,6 +9,11 @@ export const cartorioMarinho: Tenant = parseTenant({
   hosts: ["cartorioielmomarinhorn.com", "marinho.localhost"],
   name: "Cartório Marinho",
   subtitle: "Ofício Único de Ielmo Marinho / RN",
+  about:
+    "O Cartório Marinho é o Ofício Único de Ielmo Marinho / RN, serventia dotada de fé " +
+    "pública que reúne as atribuições extrajudiciais do município. Sua função é dar " +
+    "segurança jurídica, autenticidade e publicidade aos atos da vida do cidadão, do " +
+    "nascimento aos negócios.",
   cns: "094615",
   attributions: ["RCPN", "NOTAS", "RI", "PROTESTO", "RTD", "RCPJ"],
   contacts: {

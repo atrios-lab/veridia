@@ -165,6 +165,18 @@
   --font-serif: var(--font-brand-serif), Georgia, serif;
 }
 
+/* Entrance of the cookie notice card: rises once and stays put. */
+@theme {
+  --animate-notice-rise: notice-rise 0.4s cubic-bezier(0.16, 1, 0.3, 1) both;
+
+  @keyframes notice-rise {
+    from {
+      opacity: 0;
+      transform: translateY(0.75rem);
+    }
+  }
+}
+
 /*
  * One block per theme. The default on :root is what an unthemed page inherits;
  * it shares the pilot's block rather than repeating it.

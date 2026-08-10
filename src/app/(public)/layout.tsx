@@ -1,3 +1,4 @@
+import { cookies } from "next/headers";
 import Image from "next/image";
 import Link from "next/link";
 import {
@@ -10,7 +11,9 @@ import { isChatEnabled } from "@/lib/chat.ts";
 import { SERIF } from "@/lib/fonts.ts";
 import { getTenant } from "@/lib/tenant.ts";
 import { ChatWidget } from "./_components/chat-widget.tsx";
+import { CookieNotice } from "./_components/cookie-notice.tsx";
 import { Icon } from "./_components/icon.tsx";
+import { COOKIE_NOTICE_COOKIE } from "./_lib/cookie-notice.ts";
 
 // The redesign's header: home, the two tasks, notices and contact, with the
 // lookup as the highlighted button. The full gated list lives in the footer,
@@ -35,6 +38,8 @@ export default async function PublicLayout({
   // state to react within seconds if the switch flips mid-session (see
   // chat-widget.tsx) — this only covers page load.
   const chatEnabled = await isChatEnabled(tenant.slug);
+  const cookieStore = await cookies();
+  const cookieNoticeAcknowledged = cookieStore.has(COOKIE_NOTICE_COOKIE);
 
   return (
     <div
@@ -149,11 +154,20 @@ export default async function PublicLayout({
             </span>
             <span>CNS {tenant.cns}</span>
             <span>{tenant.legalFooter}</span>
+            <Link href="/privacidade" className="hover:text-white">
+              Política de privacidade
+            </Link>
           </div>
         </div>
       </footer>
 
-      {chatEnabled && <ChatWidget tenant={tenant} />}
+      {/* The chat waits for the cookie notice: both live in the bottom-right
+          corner, and the chat sets its own cookie — it only shows up once the
+          citizen has seen the notice. */}
+      {chatEnabled && cookieNoticeAcknowledged && (
+        <ChatWidget tenant={tenant} />
+      )}
+      {!cookieNoticeAcknowledged && <CookieNotice />}
     </div>
   );
 }

@@ -337,7 +337,7 @@ export function DataRightsScreen(props: DataRightsScreenProps) {
         </div>
 
         <Link
-          href="/transparencia"
+          href="/privacidade"
           className="flex items-center gap-2.5 rounded-2xl border border-brand-border bg-brand-card px-4 py-3.5 hover:border-brand-accent"
         >
           <Icon name="file" className="h-4 w-4 shrink-0 text-brand-accent" />

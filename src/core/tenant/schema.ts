@@ -58,6 +58,9 @@ export const TenantSchema = z.object({
   hosts: z.array(z.string()).default([]),
   name: z.string().min(1),
   subtitle: z.string().min(1),
+  // The "Quem somos" paragraph on the home page. Per office: it describes
+  // the serventia itself, so there is no sensible shared default.
+  about: z.string().min(1, "Escreva o texto de apresentação do cartório."),
   cns: z.string().min(1),
   attributions: z.array(AttributionSchema).nonempty(),
   contacts: z.object({
