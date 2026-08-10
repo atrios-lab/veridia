@@ -100,7 +100,7 @@ export function ApplicantSection({
           <button
             type="button"
             onClick={() => setEditing(true)}
-            className="rounded-lg border border-admin-active-border px-3 py-1.5 text-[12px] font-bold text-admin-muted"
+            className="btn btn-admin-secondary btn-sm"
           >
             Editar dados
           </button>
@@ -200,7 +200,7 @@ export function ApplicantSection({
             <button
               type="submit"
               disabled={pending}
-              className="rounded-[9px] bg-admin-primary-soft px-4 py-2 text-[12.5px] font-bold text-white disabled:opacity-60"
+              className="btn btn-admin-primary btn-md"
             >
               {pending ? "Salvando…" : "Salvar dados"}
             </button>
@@ -208,7 +208,7 @@ export function ApplicantSection({
               type="button"
               onClick={() => setEditing(false)}
               disabled={pending}
-              className="rounded-[9px] border border-admin-active-border px-4 py-2 text-[12.5px] font-bold text-admin-muted disabled:opacity-60"
+              className="btn btn-admin-secondary btn-md"
             >
               Cancelar
             </button>

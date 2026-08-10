@@ -286,7 +286,7 @@ export function ManifestationScreen() {
         <button
           type="submit"
           disabled={pending}
-          className="mt-5 w-full rounded-xl bg-brand-primary px-6 py-4 text-[15px] font-semibold text-white hover:bg-brand-primary-soft disabled:opacity-60 md:w-auto md:px-7 md:py-3.5"
+          className="btn btn-primary btn-lg mt-5 w-full md:w-auto"
         >
           {pending ? "Enviando..." : "Registrar manifestação"}
         </button>
@@ -372,21 +372,21 @@ function ConfirmationScreen({ result }: { result: OmbudsmanSuccess }) {
             {result.accessKey ? (
               <Link
                 href={`/protocolo?numero=${encodeURIComponent(result.protocolNumber)}`}
-                className="flex-1 rounded-xl bg-brand-primary px-4 py-3.5 text-center text-[13.5px] font-semibold text-white md:flex-none md:px-6"
+                className="btn btn-primary btn-lg flex-1 md:flex-none"
               >
                 Acompanhar pelo registro
               </Link>
             ) : (
               <Link
                 href="/"
-                className="flex-1 rounded-xl bg-brand-primary px-4 py-3.5 text-center text-[13.5px] font-semibold text-white md:flex-none md:px-6"
+                className="btn btn-primary btn-lg flex-1 md:flex-none"
               >
                 Voltar ao início
               </Link>
             )}
             <Link
               href="/ouvidoria"
-              className="shrink-0 rounded-xl border border-brand-border bg-brand-card px-4 py-3.5 text-center text-[13.5px] font-semibold text-brand-primary md:px-6"
+              className="btn btn-secondary btn-lg shrink-0"
             >
               Nova manifestação
             </Link>

@@ -1,6 +1,7 @@
 "use client";
 
 import { useActionState } from "react";
+import { ConfirmAction } from "../../../../_components/confirm-action.tsx";
 import { type ReissueKeyState, reissueKeyAction } from "../actions.ts";
 
 export function KeySection({
@@ -40,47 +41,25 @@ export function KeySection({
           className="mt-2.5"
         >
           <input type="hidden" name="chave" value={state.key} />
-          <button
-            type="submit"
-            className="rounded-[8px] border border-admin-active-border px-3.5 py-1.5 text-[12px] font-bold text-admin-primary hover:border-admin-accent"
-          >
+          <button type="submit" className="btn btn-admin-secondary btn-sm">
             Imprimir comprovante
           </button>
         </form>
       )}
-      <form
-        action={action}
-        onSubmit={(event) => {
-          if (
-            !confirm(
-              "Emitir uma nova chave invalida a anterior na hora. Continuar?",
-            )
-          ) {
-            event.preventDefault();
-          }
-        }}
-        className="mt-2.5"
-      >
-        <input type="hidden" name="requestId" value={requestId} />
-        <button
-          type="submit"
-          disabled={pending}
-          className="rounded-[8px] border border-admin-active-border px-3.5 py-1.5 text-[12px] font-bold text-admin-primary disabled:opacity-60"
+      <div className="mt-2.5">
+        <ConfirmAction
+          action={action}
+          pending={pending}
+          error={state.status === "error" ? state.message : null}
+          trigger="Emitir nova chave"
+          question="Emitir uma nova chave de acesso?"
+          consequence="A chave atual para de funcionar na hora, e quem já tiver a antiga perde o acesso à consulta até receber a nova. A nova só aparece uma vez, nesta tela."
+          confirmLabel="Confirmar emissão"
+          pendingLabel="Emitindo…"
         >
-          {pending ? "Emitindo…" : "Emitir nova chave"}
-        </button>
-      </form>
-      <p className="mt-2 text-[11px] text-admin-faint">
-        Emitir uma nova invalida a chave anterior na hora.
-      </p>
-      {state.status === "error" && (
-        <p
-          role="alert"
-          className="mt-2 text-[11.5px] font-semibold text-admin-error-text"
-        >
-          {state.message}
-        </p>
-      )}
+          <input type="hidden" name="requestId" value={requestId} />
+        </ConfirmAction>
+      </div>
     </div>
   );
 }

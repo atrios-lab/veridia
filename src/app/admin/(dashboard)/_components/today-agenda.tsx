@@ -19,10 +19,7 @@ export function TodayAgenda({
         <h4 className="flex-1 font-serif text-[16.5px] font-semibold text-admin-primary">
           Agenda de hoje
         </h4>
-        <Link
-          href="/admin/agenda"
-          className="text-[12px] font-semibold text-admin-primary"
-        >
+        <Link href="/admin/agenda" className="btn btn-admin-ghost btn-sm px-0">
           abrir agenda
         </Link>
       </div>

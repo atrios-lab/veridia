@@ -25,7 +25,7 @@ export function LiveChatCard({
       </p>
       <Link
         href="/admin/atendimento"
-        className="mt-3.5 block rounded-[9px] bg-admin-on-dark-accent py-2.5 text-center text-[12.5px] font-bold text-admin-primary"
+        className="btn btn-admin-primary btn-md mt-3.5 w-full bg-admin-on-dark-accent text-admin-primary"
       >
         Assumir conversa
       </Link>

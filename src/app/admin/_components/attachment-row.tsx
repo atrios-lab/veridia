@@ -1,12 +1,13 @@
 "use client";
 
-import { useActionState, useEffect, useId, useRef, useState } from "react";
+import { useActionState } from "react";
 import { toast } from "sonner";
 import {
   type AttachmentItem,
   attachmentLabel,
   documentHref,
 } from "./attachment-link.ts";
+import { ConfirmAction } from "./confirm-action.tsx";
 import { AdminIcon } from "./icon.tsx";
 
 export type { AttachmentItem };
@@ -28,8 +29,7 @@ function formatFileSize(bytes: number): string {
   return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
 }
 
-const BUTTON =
-  "shrink-0 rounded-[8px] border border-admin-active-border px-2.5 py-1.5 text-[11.5px] font-bold text-admin-muted hover:border-admin-accent hover:text-admin-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-admin-accent";
+const BUTTON = "btn btn-admin-secondary btn-sm shrink-0";
 
 /**
  * One attached file, everywhere the panel shows one: icon, name, when it
@@ -52,7 +52,6 @@ export function AttachmentRow({
   meta: string;
   onDelete?: DeleteAction;
 }) {
-  const [armed, setArmed] = useState(false);
   const label = attachmentLabel(attachment.displayName);
 
   return (
@@ -82,47 +81,31 @@ export function AttachmentRow({
         >
           Ver
         </a>
-        {onDelete && !armed && (
-          <button
-            type="button"
-            onClick={() => setArmed(true)}
-            className="shrink-0 rounded-[8px] border border-admin-error-border px-2.5 py-1.5 text-[11.5px] font-bold text-admin-error-text hover:bg-admin-error-bg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-admin-accent"
-          >
-            Excluir
-          </button>
+        {onDelete && (
+          <DeleteButton
+            requestId={requestId}
+            attachmentId={attachment.id}
+            label={label}
+            action={onDelete}
+          />
         )}
       </div>
-      {onDelete && armed && (
-        <DeleteConfirm
-          requestId={requestId}
-          attachmentId={attachment.id}
-          action={onDelete}
-          onCancel={() => setArmed(false)}
-        />
-      )}
     </div>
   );
 }
 
-/**
- * Confirmation in the row, not a native `confirm()`: after a few dialogs the
- * browser offers to block them for the tab, and a blocked `confirm()` returns
- * false forever with no sign — the button would just stop working.
- */
-function DeleteConfirm({
+function DeleteButton({
   requestId,
   attachmentId,
+  label,
   action,
-  onCancel,
 }: {
   requestId: string;
   attachmentId: string;
+  /** The file's name, so the dialog names what is about to go. */
+  label: string;
   action: DeleteAction;
-  onCancel: () => void;
 }) {
-  const confirmRef = useRef<HTMLButtonElement>(null);
-  // Focus lands on the button; this is how the question travels with it.
-  const questionId = useId();
   const [state, formAction, pending] = useActionState<ActionState, FormData>(
     // The toast fires here, not in an effect: on success the action revalidates
     // and this row leaves the tree in the same commit, so an effect on it would
@@ -138,50 +121,20 @@ function DeleteConfirm({
     { status: "idle" },
   );
 
-  // Arming moves the target: the key that opened this has to land on it.
-  useEffect(() => {
-    confirmRef.current?.focus();
-  }, []);
-
   return (
-    <form
+    <ConfirmAction
       action={formAction}
-      className="mt-2.5 border-t border-admin-border pt-2.5"
+      pending={pending}
+      error={state.status === "error" ? state.message : null}
+      trigger="Excluir"
+      question="Excluir este arquivo?"
+      consequence={`"${label}" sai do sistema e o cidadão perde o acesso a ele na consulta. Não dá para desfazer.`}
+      confirmLabel="Confirmar exclusão"
+      pendingLabel="Excluindo…"
+      className="shrink-0"
     >
       <input type="hidden" name="requestId" value={requestId} />
       <input type="hidden" name="attachmentId" value={attachmentId} />
-      <div className="flex flex-wrap items-center gap-2.5">
-        <span id={questionId} className="flex-1 text-[11.5px] text-admin-muted">
-          Excluir este arquivo? O cidadão perde o acesso a ele na consulta.
-        </span>
-        <button
-          ref={confirmRef}
-          type="submit"
-          aria-describedby={questionId}
-          disabled={pending}
-          className="shrink-0 rounded-[8px] border border-admin-error-border bg-admin-error-bg px-2.5 py-1.5 text-[11.5px] font-bold text-admin-error-text focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-admin-accent disabled:opacity-60"
-        >
-          {pending ? "Excluindo…" : "Confirmar exclusão"}
-        </button>
-        <button
-          type="button"
-          onClick={onCancel}
-          disabled={pending}
-          className={`${BUTTON} disabled:opacity-60`}
-        >
-          Cancelar
-        </button>
-      </div>
-      {/* The row survives an error, so the message stays with the row instead
-          of in a toast that leaves before it is read. */}
-      {state.status === "error" && (
-        <p
-          role="alert"
-          className="mt-1.5 text-[11.5px] font-semibold text-admin-error-text"
-        >
-          {state.message}
-        </p>
-      )}
-    </form>
+    </ConfirmAction>
   );
 }

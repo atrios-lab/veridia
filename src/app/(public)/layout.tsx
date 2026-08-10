@@ -88,7 +88,7 @@ export default async function PublicLayout({
             {isSectionEnabled(tenant, "consulta-protocolo") && (
               <Link
                 href={SECTION_ROUTES["consulta-protocolo"]}
-                className="rounded-xl bg-brand-primary px-4 py-2.5 text-sm font-semibold text-white hover:bg-brand-primary-soft"
+                className="btn btn-primary btn-md"
               >
                 Consultar protocolo
               </Link>

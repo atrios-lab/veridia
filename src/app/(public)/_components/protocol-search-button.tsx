@@ -2,8 +2,13 @@
 
 import { useState } from "react";
 
+/**
+ * `h-11 py-0` and not just `btn-lg`: this button is half of a search row, and
+ * the field beside it is 44px. At btn-lg's own height it stood 8px taller and
+ * the pair stopped reading as one control.
+ */
 export function ProtocolSearchButton({
-  className = "rounded-[9px] px-4 py-2.5 md:px-6",
+  className = "btn-lg h-11 py-0",
 }: {
   className?: string;
 }) {
@@ -17,7 +22,7 @@ export function ProtocolSearchButton({
       // the browser's default submit before it starts — the state update
       // has to land on the next tick, after the navigation is underway.
       onClick={() => setTimeout(() => setPending(true), 0)}
-      className={`bg-brand-primary text-sm font-semibold text-white hover:bg-brand-primary-soft disabled:opacity-70 ${className}`}
+      className={`btn btn-primary ${className}`}
     >
       {pending ? "Buscando..." : "Consultar"}
     </button>

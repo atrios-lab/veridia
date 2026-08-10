@@ -99,7 +99,7 @@ export function DpoForm({ tenant }: { tenant: Tenant }) {
         <button
           type="submit"
           disabled={pending}
-          className="rounded-[9px] bg-admin-primary-soft px-5 py-2.5 text-[13.5px] font-bold text-white disabled:opacity-70"
+          className="btn btn-admin-primary btn-lg"
         >
           {pending ? "Salvando…" : "Salvar"}
         </button>

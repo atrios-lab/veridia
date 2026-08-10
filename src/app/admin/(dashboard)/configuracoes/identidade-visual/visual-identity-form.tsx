@@ -426,7 +426,7 @@ export function VisualIdentityForm({ tenant }: { tenant: Tenant }) {
           <button
             type="submit"
             disabled={saving}
-            className="rounded-[9px] bg-admin-primary-soft px-5.5 py-2.5 text-[13.5px] font-bold text-white disabled:opacity-70"
+            className="btn btn-admin-primary btn-lg"
           >
             {saving ? "Salvando…" : "Salvar e publicar"}
           </button>
@@ -434,7 +434,7 @@ export function VisualIdentityForm({ tenant }: { tenant: Tenant }) {
             type="button"
             onClick={handleDiscard}
             disabled={saving}
-            className="rounded-[9px] border border-admin-input-border bg-admin-card px-5 py-2.5 text-[13.5px] font-bold text-admin-muted disabled:opacity-60"
+            className="btn btn-admin-secondary btn-lg"
           >
             Descartar mudanças
           </button>

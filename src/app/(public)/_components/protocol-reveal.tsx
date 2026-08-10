@@ -34,7 +34,7 @@ export function CopyField({ label, value }: { label: string; value: string }) {
             () => setCopied(false),
           );
         }}
-        className="inline-flex items-center gap-1.5 rounded-lg bg-brand-tint px-2.5 py-1.5 text-[11.5px] font-bold text-brand-primary-soft"
+        className="btn btn-secondary btn-sm"
       >
         <Icon name="copy" className="h-3 w-3" strokeWidth={2} />
         {copied ? "copiado" : "copiar"}

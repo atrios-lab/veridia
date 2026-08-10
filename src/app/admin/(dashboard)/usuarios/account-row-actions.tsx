@@ -9,8 +9,7 @@ import {
   triggerPasswordReset,
 } from "./actions.ts";
 
-const BUTTON_CLASS =
-  "rounded-lg border-2 border-admin-accent px-3 py-1.5 text-xs font-bold text-admin-primary-soft disabled:cursor-not-allowed disabled:opacity-60";
+const BUTTON_CLASS = "btn btn-admin-secondary btn-sm";
 
 /**
  * The "Nova senha" / "Reenviar convite" button for one row of the Contas do

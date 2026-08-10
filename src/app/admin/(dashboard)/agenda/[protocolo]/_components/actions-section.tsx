@@ -1,7 +1,8 @@
 "use client";
 
-import { useActionState, useEffect, useState } from "react";
+import { useActionState, useEffect } from "react";
 import { toast } from "sonner";
+import { ConfirmAction } from "../../../../_components/confirm-action.tsx";
 import {
   type ActionState,
   cancelAppointment,
@@ -53,9 +54,8 @@ function ActionButton({
   );
 }
 
-/** Cancelling is terminal, so the destructive button only arms the inline
- * confirmation panel — same closed-button/open-panel shape as the
- * `ProposeSlotPicker` beside it. */
+/** Cancelling is terminal, so it goes through the shared arm-then-confirm
+ * panel every destructive action in the panel uses. */
 function CancelRequestButton({
   requestId,
   protocolNumber,
@@ -63,65 +63,30 @@ function CancelRequestButton({
   requestId: string;
   protocolNumber: string;
 }) {
-  const [confirming, setConfirming] = useState(false);
   const [state, boundAction, pending] = useActionState<ActionState, FormData>(
     cancelAppointment,
     { status: "idle" },
   );
 
+  // Only the success toast: an error is shown inside the dialog, which stays
+  // open for it, and a toast fired under a modal is a toast nobody reads.
   useEffect(() => {
     if (state.status === "success") toast.success("Pedido cancelado.");
-    if (state.status === "error") toast.error(state.message);
   }, [state]);
 
-  if (!confirming) {
-    return (
-      <button
-        type="button"
-        onClick={() => setConfirming(true)}
-        className="rounded-[9px] border border-admin-error-border px-4 py-2.5 text-[12.5px] font-bold text-admin-error-text"
-      >
-        Cancelar pedido
-      </button>
-    );
-  }
-
   return (
-    <div className="mt-3.5 w-full rounded-[11px] border border-admin-error-border bg-admin-card p-4">
-      <h4 className="font-serif text-[15px] font-semibold text-admin-primary">
-        Cancelar este pedido?
-      </h4>
-      <p className="mt-1.5 text-[12.5px] leading-snug text-admin-text">
-        O pedido {protocolNumber} será encerrado e a faixa ficará livre. O
-        cidadão vê o cancelamento na consulta de protocolo. Não dá para
-        desfazer.
-      </p>
-      <form action={boundAction} className="mt-3 flex items-center gap-2.5">
-        <input type="hidden" name="requestId" value={requestId} />
-        <button
-          type="submit"
-          disabled={pending}
-          className="rounded-[9px] border border-admin-error-border px-4 py-2.5 text-[12.5px] font-bold text-admin-error-text disabled:opacity-60"
-        >
-          {pending ? "Cancelando…" : "Cancelar pedido"}
-        </button>
-        <button
-          type="button"
-          onClick={() => setConfirming(false)}
-          className="text-[12px] font-semibold text-admin-muted"
-        >
-          Voltar
-        </button>
-      </form>
-      {state.status === "error" && (
-        <p
-          role="alert"
-          className="mt-2 text-[12px] font-semibold text-admin-error-text"
-        >
-          {state.message}
-        </p>
-      )}
-    </div>
+    <ConfirmAction
+      action={boundAction}
+      pending={pending}
+      error={state.status === "error" ? state.message : null}
+      trigger="Cancelar pedido"
+      question="Cancelar este pedido?"
+      consequence={`O pedido ${protocolNumber} será encerrado e a faixa ficará livre. O cidadão vê o cancelamento na consulta de protocolo. Não dá para desfazer.`}
+      confirmLabel="Confirmar cancelamento"
+      pendingLabel="Cancelando…"
+    >
+      <input type="hidden" name="requestId" value={requestId} />
+    </ConfirmAction>
   );
 }
 
@@ -151,7 +116,7 @@ export function ActionsSection({
             pendingLabel="Confirmando…"
             successMessage="Horário confirmado."
             action={confirmAppointment}
-            className="rounded-[9px] bg-admin-primary-soft px-4.5 py-2.5 text-[13px] font-bold text-white disabled:opacity-60"
+            className="btn btn-admin-primary btn-md"
           />
         )}
         {canAttend && (
@@ -161,7 +126,7 @@ export function ActionsSection({
             pendingLabel="Marcando…"
             successMessage="Atendimento registrado."
             action={markAppointmentAttended}
-            className="rounded-[9px] bg-admin-primary-soft px-4.5 py-2.5 text-[13px] font-bold text-white disabled:opacity-60"
+            className="btn btn-admin-primary btn-md"
           />
         )}
         {canAct && <ProposeSlotPicker requestId={requestId} days={days} />}

@@ -112,16 +112,13 @@ export default async function ServiceRequestQueuePage({
               placeholder="Buscar por protocolo ou nome"
               className="min-w-[220px] flex-1 rounded-[9px] border border-admin-input-border bg-admin-card px-3.5 py-2.5 text-[13px] text-admin-text placeholder:text-admin-faint"
             />
-            <button
-              type="submit"
-              className="rounded-[9px] border border-admin-input-border bg-admin-card px-4 py-2.5 text-[13px] font-semibold text-admin-primary"
-            >
+            <button type="submit" className="btn btn-admin-secondary btn-md">
               Filtrar
             </button>
           </form>
           <Link
             href="/admin/pedidos/novo"
-            className="inline-flex items-center gap-1.5 rounded-[9px] bg-admin-primary-soft px-4.5 py-2.5 text-[13px] font-bold text-white"
+            className="btn btn-admin-primary btn-md"
           >
             + Lançar pedido
           </Link>

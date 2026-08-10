@@ -440,7 +440,7 @@ function PrechatForm({
       <button
         type="submit"
         disabled={pending}
-        className="rounded-xl bg-brand-primary py-3 text-center font-bold text-[14px] text-white disabled:opacity-70"
+        className="btn btn-primary btn-lg"
       >
         {pending ? "Enviando..." : "Entrar na fila de atendimento"}
       </button>
@@ -506,21 +506,21 @@ function HoursClosedView({ tenant }: { tenant: Tenant }) {
         </span>
         <a
           href={`mailto:${tenant.contacts.email}`}
-          className="flex items-center gap-2.5 rounded-[10px] border border-brand-border px-3.5 py-3 text-[13.5px] font-semibold text-brand-primary"
+          className="btn btn-secondary btn-lg justify-start"
         >
           <Icon name="phone" className="h-4 w-4" />
           {tenant.contacts.email}
         </a>
         <a
           href={SECTION_ROUTES["consulta-protocolo"]}
-          className="flex items-center gap-2.5 rounded-[10px] border border-brand-border px-3.5 py-3 text-[13.5px] font-semibold text-brand-primary"
+          className="btn btn-secondary btn-lg justify-start"
         >
           <Icon name="search" className="h-4 w-4" />
           Acompanhar um pedido pelo protocolo
         </a>
         <a
           href={SECTION_ROUTES.agendamento}
-          className="flex items-center gap-2.5 rounded-[10px] border border-brand-border px-3.5 py-3 text-[13.5px] font-semibold text-brand-primary"
+          className="btn btn-secondary btn-lg justify-start"
         >
           <Icon name="calendar" className="h-4 w-4" />
           Pedir um horário de atendimento
@@ -595,7 +595,7 @@ function ConversationView({
           type="button"
           onClick={onGiveUp}
           disabled={actionPending}
-          className="mt-1 rounded-[10px] border border-brand-border px-4 py-2 font-bold text-[12.5px] text-brand-muted disabled:opacity-60"
+          className="btn btn-secondary btn-md mt-1"
         >
           {actionPending ? "Saindo..." : "Desistir da espera"}
         </button>
@@ -663,7 +663,7 @@ function ConversationView({
           type="button"
           onClick={onClose}
           disabled={actionPending}
-          className="text-[12px] font-semibold text-brand-faint underline disabled:opacity-60"
+          className="btn btn-ghost btn-sm"
         >
           {actionPending ? "Encerrando..." : "Encerrar conversa"}
         </button>
@@ -781,7 +781,7 @@ function RatingView({
       <button
         type="submit"
         disabled={rating === 0 || pending}
-        className="rounded-xl bg-brand-primary py-3 text-center font-bold text-[14px] text-white disabled:opacity-50"
+        className="btn btn-primary btn-lg"
       >
         {pending ? "Enviando..." : "Enviar avaliação"}
       </button>

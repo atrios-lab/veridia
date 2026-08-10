@@ -120,11 +120,11 @@ export default async function PublicationsPage({
                   <>
                     <Link
                       href={`/admin/publicacoes?aba=${aba ?? "no-site"}&editar=${row.id}`}
-                      className="flex-none rounded-lg border border-admin-input-border px-3 py-1.5 text-[11.5px] font-bold text-admin-muted"
+                      className="btn btn-admin-secondary btn-sm flex-none"
                     >
                       Editar
                     </Link>
-                    <ArchiveButton id={row.id} />
+                    <ArchiveButton id={row.id} title={row.title} />
                   </>
                 )}
               </div>

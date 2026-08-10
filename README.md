@@ -15,6 +15,9 @@ domínio, sua marca e seu conteúdo.
 | `e2e/` | Playwright, parametrizado sobre as serventias registradas. |
 | `drizzle/` | Migrações SQL versionadas. Ver [docs/migrations.md](docs/migrations.md). |
 
+Botão novo em qualquer tela sai das classes de [docs/design-system.md](docs/design-system.md),
+declaradas em `src/app/globals.css`. Não se escreve `rounded-*`, `bg-*` nem `hover:*` num botão.
+
 A regra do `src/core/`: importar `next`, `react`, `drizzle-orm`, `better-auth` ou `node:fs` ali
 dentro é erro de lint, verificado no CI.
 

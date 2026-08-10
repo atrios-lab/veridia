@@ -232,6 +232,7 @@ export async function deleteAttachmentAction(
       tenant.slug,
       requestId,
       attachmentId,
+      session.user.id,
     );
     if (!deleted) {
       return { status: "error", message: "Documento não encontrado." };

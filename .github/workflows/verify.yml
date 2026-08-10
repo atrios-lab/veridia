@@ -36,6 +36,7 @@ jobs:
       - run: pnpm test
       - run: pnpm check:dashes
       - run: pnpm check:tokens
+      - run: pnpm check:destructive
 
       - name: openspec validate
         # Pinned: an unpinned validator turns someone else's release into a

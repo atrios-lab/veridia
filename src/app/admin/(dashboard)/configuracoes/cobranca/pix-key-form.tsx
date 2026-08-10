@@ -4,6 +4,7 @@ import { useActionState, useEffect } from "react";
 import { toast } from "sonner";
 import { PIX_KEY_TYPES, type PixKeyType } from "@/core/tenant/pix.ts";
 import type { Tenant } from "@/core/tenant/schema.ts";
+import { ConfirmAction } from "../../../_components/confirm-action.tsx";
 import { AdminIcon } from "../../../_components/icon.tsx";
 import {
   type PixKeyState,
@@ -215,7 +216,7 @@ export function PixKeyForm({
           <button
             type="submit"
             disabled={savePending}
-            className="rounded-[9px] bg-admin-primary-soft px-5 py-2.5 text-[13.5px] font-bold text-white disabled:opacity-70"
+            className="btn btn-admin-primary btn-lg"
           >
             {savePending ? "Salvando…" : "Salvar chave"}
           </button>
@@ -233,36 +234,18 @@ export function PixKeyForm({
       </form>
 
       {hasKey && (
-        <form
-          action={removeAction}
-          className="mt-3"
-          onSubmit={(event) => {
-            if (
-              !confirm(
-                "Remover a chave Pix da serventia? Sem chave, a consulta de protocolo deixa de mostrar QR Code para o cidadão.",
-              )
-            ) {
-              event.preventDefault();
-            }
-          }}
-        >
-          <button
-            type="submit"
-            disabled={removePending}
-            className="text-[12.5px] font-semibold text-admin-error-text underline disabled:opacity-70"
-          >
-            {removePending ? "Removendo…" : "Remover chave"}
-          </button>
-        </form>
-      )}
-
-      {removeState.status === "error" && (
-        <p
-          role="alert"
-          className="mt-3 rounded-lg bg-admin-error-bg px-3.5 py-2.5 text-sm font-semibold text-admin-error-text"
-        >
-          {removeState.message}
-        </p>
+        <div className="mt-3">
+          <ConfirmAction
+            action={removeAction}
+            pending={removePending}
+            error={removeState.status === "error" ? removeState.message : null}
+            trigger="Remover chave"
+            question="Remover a chave Pix da serventia?"
+            consequence="Sem chave, a consulta de protocolo deixa de mostrar QR Code, e o cidadão perde a forma de pagar pelo site. Dá para cadastrar outra depois."
+            confirmLabel="Confirmar remoção"
+            pendingLabel="Removendo…"
+          />
+        </div>
       )}
     </div>
   );

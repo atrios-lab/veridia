@@ -61,7 +61,7 @@ export function ManualEntryForm({
         </div>
         <a
           href="/admin/pedidos"
-          className="mt-4 inline-block text-[12.5px] font-semibold text-admin-primary-soft underline"
+          className="btn btn-admin-ghost btn-sm mt-4 px-0"
         >
           Voltar à fila
         </a>
@@ -238,7 +238,7 @@ export function ManualEntryForm({
         <button
           type="submit"
           disabled={pending}
-          className="rounded-[9px] bg-admin-primary-soft px-5.5 py-2.5 text-[13.5px] font-bold text-white disabled:opacity-70"
+          className="btn btn-admin-primary btn-lg"
         >
           {pending ? "Registrando…" : "Registrar pedido"}
         </button>

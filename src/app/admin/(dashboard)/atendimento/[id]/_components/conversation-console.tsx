@@ -114,7 +114,7 @@ export function ConversationConsole({
           type="button"
           onClick={() => setShowTransfer((v) => !v)}
           disabled={closed}
-          className="rounded-lg border border-admin-input-border px-3.5 py-1.5 text-[12.5px] font-bold text-admin-muted disabled:opacity-50"
+          className="btn btn-admin-secondary btn-sm"
         >
           Transferir
         </button>
@@ -122,7 +122,7 @@ export function ConversationConsole({
           type="button"
           onClick={() => setShowClose((v) => !v)}
           disabled={closed}
-          className="rounded-lg border border-admin-error-border px-3.5 py-1.5 text-[12.5px] font-bold text-admin-error-text disabled:opacity-50"
+          className="btn btn-admin-danger btn-sm"
         >
           {closed ? "Conversa encerrada" : "Encerrar conversa"}
         </button>
@@ -185,7 +185,7 @@ export function ConversationConsole({
           <button
             type="submit"
             disabled={closed || messagePending}
-            className="rounded-[10px] bg-admin-primary-soft px-4.5 py-2.5 text-[13px] font-bold text-white disabled:opacity-60"
+            className="btn btn-admin-primary btn-md"
           >
             {messagePending ? "Enviando…" : "Enviar"}
           </button>

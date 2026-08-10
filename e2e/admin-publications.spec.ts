@@ -111,6 +111,10 @@ test.describe("publicações", () => {
 
     const row = page.locator("div", { hasText: TITLE }).last();
     await row.getByRole("button", { name: "Arquivar agora" }).click();
+    // Arming only opens the panel: nothing leaves the site until the second
+    // button is pressed, which is the whole point of the confirmation.
+    await expect(page.getByText("Arquivar esta publicação?")).toBeVisible();
+    await page.getByRole("button", { name: "Confirmar arquivamento" }).click();
     await expect(page.getByText("Arquivando…")).toHaveCount(0);
 
     await page.reload();

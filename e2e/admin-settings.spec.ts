@@ -243,6 +243,10 @@ test.describe("configurações, aba Cobrança", () => {
     );
 
     await page.getByRole("button", { name: "Remover chave" }).click();
+    await expect(
+      page.getByText("Remover a chave Pix da serventia?"),
+    ).toBeVisible();
+    await page.getByRole("button", { name: "Confirmar remoção" }).click();
     await page.reload();
     await expect(
       page.getByText("Sem chave, a consulta de protocolo não mostra QR Code"),

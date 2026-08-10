@@ -155,7 +155,7 @@ export default async function ServiceRequestDetailPage({
             }
             target="_blank"
             rel="noopener"
-            className="ml-auto inline-flex items-center gap-1.5 rounded-[9px] border border-admin-active-border px-3 py-1.5 text-[12px] font-bold text-admin-primary hover:border-admin-accent"
+            className="btn btn-admin-secondary btn-sm ml-auto"
           >
             {signed ? "Imprimir via assinada" : "Imprimir folha"}
           </a>

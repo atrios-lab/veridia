@@ -180,7 +180,7 @@ export function StatusSection({
           <button
             type="submit"
             disabled={pending}
-            className="rounded-[9px] bg-admin-primary-soft px-4 py-2 text-[12.5px] font-bold text-white disabled:opacity-60"
+            className="btn btn-admin-primary btn-md"
           >
             {pending ? "Aplicando…" : "Aplicar"}
           </button>

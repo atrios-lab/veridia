@@ -118,6 +118,8 @@ test.describe("fila e detalhe da agenda", () => {
     );
 
     await page.getByRole("button", { name: "Cancelar pedido" }).click();
+    await expect(page.getByText("Cancelar este pedido?")).toBeVisible();
+    await page.getByRole("button", { name: "Confirmar cancelamento" }).click();
     await expect(page.getByText("Cancelado", { exact: true })).toBeVisible();
   });
 

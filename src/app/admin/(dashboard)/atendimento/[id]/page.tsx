@@ -51,7 +51,7 @@ export default async function ConversationPage({
           {matchedRequest && (
             <Link
               href={`/admin/pedidos/${encodeURIComponent(matchedRequest.protocolNumber)}`}
-              className="rounded-lg border border-admin-input-border px-3.5 py-1.5 text-[12px] font-bold text-admin-muted"
+              className="btn btn-admin-secondary btn-sm"
             >
               Abrir {matchedRequest.protocolNumber}
             </Link>

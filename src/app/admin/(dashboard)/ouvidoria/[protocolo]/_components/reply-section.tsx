@@ -49,7 +49,7 @@ export function ReplySection({
         <button
           type="submit"
           disabled={pending || !reply.trim()}
-          className="rounded-[9px] bg-admin-primary-soft px-4.5 py-2.5 text-[13px] font-bold text-white disabled:opacity-60"
+          className="btn btn-admin-primary btn-md"
         >
           {respondPending ? "Enviando…" : "Enviar resposta e concluir"}
         </button>
@@ -57,7 +57,7 @@ export function ReplySection({
           type="submit"
           formAction={draftAction}
           disabled={pending}
-          className="rounded-[9px] border border-admin-input-border px-4 py-2.5 text-[12.5px] font-bold text-admin-muted disabled:opacity-60"
+          className="btn btn-admin-secondary btn-md"
         >
           {draftPending ? "Salvando…" : "Salvar rascunho"}
         </button>

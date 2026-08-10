@@ -52,7 +52,7 @@ export function ProposeSlotPicker({
       <button
         type="button"
         onClick={() => setOpen(true)}
-        className="rounded-[9px] border border-admin-input-border px-4 py-2.5 text-[12.5px] font-bold text-admin-muted"
+        className="btn btn-admin-secondary btn-md"
       >
         Propor outro horário
       </button>
@@ -124,14 +124,14 @@ export function ProposeSlotPicker({
         <button
           type="submit"
           disabled={pending || selectedHour === undefined}
-          className="rounded-[9px] bg-admin-primary-soft px-4 py-2.5 text-[12.5px] font-bold text-white disabled:opacity-60"
+          className="btn btn-admin-primary btn-md"
         >
           {pending ? "Enviando…" : "Propor este horário"}
         </button>
         <button
           type="button"
           onClick={() => setOpen(false)}
-          className="text-[12px] font-semibold text-admin-muted"
+          className="btn btn-admin-ghost btn-sm"
         >
           Fechar
         </button>

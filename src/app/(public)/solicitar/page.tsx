@@ -69,10 +69,7 @@ export default async function RequestPage({
             <span className="text-xs font-bold text-brand-primary">
               {ATTRIBUTION_SHORT_NAMES[attribution]}
             </span>
-            <Link
-              href="/solicitar"
-              className="text-xs font-semibold text-brand-primary-soft underline"
-            >
+            <Link href="/solicitar" className="btn btn-ghost btn-sm">
               trocar
             </Link>
           </span>

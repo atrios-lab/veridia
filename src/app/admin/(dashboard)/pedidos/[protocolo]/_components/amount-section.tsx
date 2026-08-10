@@ -30,7 +30,7 @@ export function AmountSection({
           <button
             type="button"
             onClick={() => setEditing(true)}
-            className="rounded-lg border border-admin-active-border px-3 py-1.5 text-[12px] font-bold text-admin-muted"
+            className="btn btn-admin-secondary btn-sm"
           >
             {amountLabel ? "Corrigir valor" : "Informar valor"}
           </button>
@@ -55,7 +55,7 @@ export function AmountSection({
           <button
             type="submit"
             disabled={pending}
-            className="rounded-[9px] bg-admin-primary-soft px-4 py-2 text-[12.5px] font-bold text-white disabled:opacity-60"
+            className="btn btn-admin-primary btn-md"
           >
             {pending ? "Salvando…" : "Salvar"}
           </button>

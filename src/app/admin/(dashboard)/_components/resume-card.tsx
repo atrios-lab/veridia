@@ -18,10 +18,7 @@ export function ResumeCard({
         {protocolNumber}
       </p>
       <p className="mt-0.5 text-[12px] text-admin-muted">{description}</p>
-      <Link
-        href={href}
-        className="mt-3 inline-block rounded-[8px] border border-admin-input-border bg-admin-card px-3.5 py-2 text-[12px] font-bold text-admin-primary"
-      >
+      <Link href={href} className="btn btn-admin-secondary btn-sm mt-3">
         Continuar
       </Link>
     </div>

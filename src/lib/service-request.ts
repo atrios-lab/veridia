@@ -1021,6 +1021,7 @@ export async function deleteAttachment(
   tenantSlug: string,
   requestId: string,
   attachmentId: string,
+  actorId: string,
 ) {
   try {
     const [deleted] = await db
@@ -1033,6 +1034,19 @@ export async function deleteAttachment(
         ),
       )
       .returning();
+    // Recorded here and not in the actions: this is the one place both the
+    // service-request panel and the LGPD panel route through, and the row is
+    // gone for good the moment it returns — the citizen's document with it.
+    // A caller that forgets the trail is a deletion nobody can account for.
+    if (deleted) {
+      await recordAudit({
+        tenantSlug,
+        actorId,
+        action: "service-request.attachment.delete",
+        targetType: "attachment",
+        targetId: attachmentId,
+      });
+    }
     return deleted;
   } catch (error) {
     if (isPostgresError(error, FOREIGN_KEY_VIOLATION)) {

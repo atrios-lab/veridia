@@ -48,7 +48,7 @@ function NoticeCard({ row }: { row: PublicationRow }) {
           href={`/editais/${row.id}/arquivo`}
           target="_blank"
           rel="noopener"
-          className="mt-3.5 inline-flex items-center gap-1.5 text-sm font-semibold text-brand-primary underline-offset-2 hover:underline"
+          className="btn btn-ghost btn-sm mt-3.5 px-0"
         >
           <Icon name="file" className="h-4 w-4 text-brand-accent" />
           Ver o edital assinado
@@ -106,7 +106,7 @@ export default async function PublicNoticesPage() {
                   key={sector}
                   href={`#${sector}`}
                   data-notice-sector={sector}
-                  className="rounded-lg bg-brand-tint px-3 py-1.5 text-xs font-semibold text-brand-primary hover:bg-brand-accent-soft"
+                  className="btn btn-secondary btn-sm"
                 >
                   {NOTICE_SECTOR_META[sector].name}
                 </a>

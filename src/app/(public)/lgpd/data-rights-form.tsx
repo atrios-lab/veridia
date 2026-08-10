@@ -295,7 +295,7 @@ export function DataRightsScreen(props: DataRightsScreenProps) {
             <button
               type="submit"
               disabled={pending}
-              className="w-full rounded-xl bg-brand-primary px-6 py-4 text-[15px] font-semibold text-white hover:bg-brand-primary-soft disabled:opacity-60 md:w-auto md:shrink-0 md:px-7 md:py-3.5"
+              className="btn btn-primary btn-lg w-full md:w-auto md:shrink-0 md:px-7 md:py-3.5"
             >
               {pending ? "Enviando..." : "Enviar pedido ao DPO"}
             </button>
@@ -422,7 +422,7 @@ function ConfirmationScreen({ result }: { result: DataRightsSuccess }) {
           <div className="mt-3.5 flex gap-2.5">
             <Link
               href={`/protocolo?numero=${encodeURIComponent(result.protocolNumber)}`}
-              className="flex-1 rounded-xl bg-brand-primary px-4 py-3.5 text-center text-[13.5px] font-semibold text-white md:flex-none md:px-6"
+              className="btn btn-primary btn-lg flex-1 md:flex-none"
             >
               Acompanhar pelo protocolo
             </Link>
@@ -435,10 +435,7 @@ function ConfirmationScreen({ result }: { result: DataRightsSuccess }) {
                 value={result.protocolNumber}
               />
               <input type="hidden" name="accessKey" value={result.accessKey} />
-              <button
-                type="submit"
-                className="rounded-xl border border-brand-border bg-brand-card px-4 py-3.5 text-[13.5px] font-semibold text-brand-primary md:px-6"
-              >
+              <button type="submit" className="btn btn-secondary btn-lg">
                 Baixar recibo
               </button>
             </form>

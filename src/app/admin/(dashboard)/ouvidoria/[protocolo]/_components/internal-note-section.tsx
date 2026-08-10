@@ -58,7 +58,7 @@ export function InternalNoteSection({
         <button
           type="submit"
           disabled={pending}
-          className="rounded-[9px] bg-admin-primary-soft px-4.5 py-2.5 text-[13px] font-bold text-white disabled:opacity-60"
+          className="btn btn-admin-primary btn-md"
         >
           {pending ? "Salvando…" : "Salvar anotação"}
         </button>

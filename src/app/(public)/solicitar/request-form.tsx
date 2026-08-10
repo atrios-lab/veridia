@@ -397,7 +397,7 @@ export function RequestForm({
           <button
             type="submit"
             disabled={pending}
-            className="w-full rounded-xl bg-brand-primary px-6 py-4 text-[15px] font-semibold text-white hover:bg-brand-primary-soft disabled:opacity-60 md:w-auto md:shrink-0 md:px-7 md:py-3.5"
+            className="btn btn-primary btn-lg w-full md:w-auto md:shrink-0 md:px-7 md:py-3.5"
           >
             {pending ? "Enviando..." : "Enviar requerimento"}
           </button>
@@ -466,7 +466,7 @@ function ActContext({
         </div>
         <Link
           href={`/solicitar?atribuicao=${attribution}`}
-          className="text-xs font-semibold text-brand-primary-soft underline"
+          className="btn btn-ghost btn-sm"
         >
           trocar
         </Link>
@@ -557,10 +557,7 @@ function SuccessScreen({ result }: { result: SubmitSuccess }) {
           <div className="mt-2.5 flex flex-wrap gap-2">
             <form action="/solicitar/requerimento" method="post">
               <ProtocolFields result={result} />
-              <button
-                type="submit"
-                className="inline-flex items-center gap-2 rounded-xl bg-brand-primary px-3.5 py-2.5 text-[12.5px] font-semibold text-white hover:bg-brand-primary-soft"
-              >
+              <button type="submit" className="btn btn-primary btn-md">
                 <Icon name="download" className="h-3.5 w-3.5" strokeWidth={2} />
                 Baixar requerimento (PDF)
               </button>
@@ -568,10 +565,7 @@ function SuccessScreen({ result }: { result: SubmitSuccess }) {
             <form action="/solicitar/requerimento" method="post">
               <ProtocolFields result={result} />
               <input type="hidden" name="documento" value="comprovante" />
-              <button
-                type="submit"
-                className="inline-flex items-center gap-2 rounded-xl border border-brand-border px-3.5 py-2.5 text-[12.5px] font-semibold text-brand-primary hover:border-brand-accent"
-              >
+              <button type="submit" className="btn btn-secondary btn-md">
                 <Icon
                   name="download"
                   className="h-3.5 w-3.5 text-brand-accent"
@@ -601,7 +595,7 @@ function SuccessScreen({ result }: { result: SubmitSuccess }) {
               <button
                 type="button"
                 onClick={() => setReplacingFile(true)}
-                className="shrink-0 text-[12px] font-semibold text-brand-primary underline underline-offset-2 hover:text-brand-primary-soft"
+                className="btn btn-ghost btn-sm shrink-0"
               >
                 Trocar arquivo
               </button>
@@ -648,14 +642,11 @@ function SuccessScreen({ result }: { result: SubmitSuccess }) {
       <div className="mt-4 flex gap-2.5">
         <Link
           href={`/protocolo?numero=${encodeURIComponent(result.protocolNumber)}`}
-          className="flex-1 rounded-xl bg-brand-primary px-4 py-3.5 text-center text-[13.5px] font-semibold text-white"
+          className="btn btn-primary btn-lg flex-1"
         >
           Acompanhar pedido
         </Link>
-        <Link
-          href="/solicitar"
-          className="flex-1 rounded-xl border border-brand-border bg-brand-card px-4 py-3.5 text-center text-[13.5px] font-semibold text-brand-primary"
-        >
+        <Link href="/solicitar" className="btn btn-secondary btn-lg flex-1">
           Novo pedido
         </Link>
       </div>

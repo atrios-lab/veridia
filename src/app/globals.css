@@ -163,6 +163,11 @@
 
   --font-sans: var(--font-brand-sans), system-ui, sans-serif;
   --font-serif: var(--font-brand-serif), Georgia, serif;
+
+  /* The one radius every .btn uses — see the button system below. Was
+     12 different values (8px through 16px) across admin and public before
+     this existed; 10px sits at the middle of that range. */
+  --radius-control: 0.625rem;
 }
 
 /* Entrance of the cookie notice card: rises once and stays put. */
@@ -288,6 +293,273 @@
       );
     }
   }
+
+  /*
+   * Button system — one shape, two vocabularies.
+   *
+   * An audit of every <button>/<a>/<Link> styled as a button found 12
+   * different border-radius values and no shared component anywhere: each
+   * screen had copy-pasted and slightly mutated its own class string.
+   * `.btn` fixes the shape (radius, weight, gap, transition, cursor,
+   * disabled) once; `.btn-*` picks the fill. Two families exist because the
+   * panel and the public site already read two different token sets
+   * (--color-admin-* vs --color-brand-*, see the theme blocks above) — not
+   * because the shape differs. Full reference: docs/design-system.md.
+   */
+  .btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    /* Every variant carries the border, filled ones included, so a solid and
+       an outline standing side by side are the same height. Without it the
+       filled button is 2px shorter than the cancel next to it, everywhere the
+       two appear as a pair. */
+    border: 1px solid transparent;
+    border-radius: var(--radius-control);
+    font-weight: 600;
+    white-space: nowrap;
+    transition:
+      background-color 150ms ease,
+      border-color 150ms ease,
+      color 150ms ease,
+      opacity 150ms ease;
+  }
+  .btn:disabled,
+  .btn[aria-disabled="true"] {
+    opacity: 0.6;
+  }
+
+  /* Sizes: sm for a dense row action, md the default, lg for a form's own
+     submit — the one control on the screen a thumb has to land on easily. */
+  .btn-sm {
+    padding: 0.375rem 0.75rem;
+    font-size: 0.75rem;
+  }
+  .btn-md {
+    padding: 0.5rem 1rem;
+    font-size: 0.8125rem;
+  }
+  .btn-lg {
+    padding: 0.875rem 1.5rem;
+    font-size: 0.9375rem;
+  }
+
+  /* Public site. */
+  .btn-primary {
+    background: var(--color-brand-primary);
+    color: white;
+  }
+  .btn-primary:hover:not(:disabled) {
+    background: var(--color-brand-primary-soft);
+  }
+  .btn-secondary {
+    background: var(--color-brand-card);
+    color: var(--color-brand-primary);
+    border: 1px solid var(--color-brand-border);
+  }
+  .btn-secondary:hover:not(:disabled) {
+    border-color: var(--color-brand-accent);
+  }
+  .btn-danger {
+    background: transparent;
+    color: var(--color-brand-alert);
+    border: 1px solid var(--color-brand-alert);
+  }
+  .btn-danger:hover:not(:disabled) {
+    background: color-mix(in srgb, var(--color-brand-alert) 10%, transparent);
+  }
+  .btn-ghost {
+    background: transparent;
+    color: var(--color-brand-primary);
+    text-decoration: underline;
+    text-underline-offset: 2px;
+  }
+  .btn-ghost:hover:not(:disabled) {
+    color: var(--color-brand-primary-soft);
+  }
+
+  /* Admin panel. */
+  .btn-admin-primary {
+    background: var(--color-admin-primary-soft);
+    color: white;
+  }
+  .btn-admin-primary:hover:not(:disabled) {
+    background: var(--color-admin-primary);
+  }
+  .btn-admin-secondary {
+    background: var(--color-admin-card);
+    color: var(--color-admin-muted);
+    border: 1px solid var(--color-admin-input-border);
+  }
+  .btn-admin-secondary:hover:not(:disabled) {
+    border-color: var(--color-admin-accent);
+    color: var(--color-admin-primary);
+  }
+  .btn-admin-danger {
+    background: transparent;
+    color: var(--color-admin-error-text);
+    border: 1px solid var(--color-admin-error-border);
+  }
+  .btn-admin-danger:hover:not(:disabled) {
+    background: var(--color-admin-error-bg);
+  }
+  /*
+   * Filled, for the button that actually commits inside a confirmation
+   * dialog. The outline `.btn-admin-danger` above is the trigger, which sits
+   * in a row of ordinary controls and should not shout; this one is the last
+   * thing pressed before something is gone, and it carries the weight. White
+   * on this red measures 7.4:1, past AAA.
+   */
+  .btn-admin-danger-solid {
+    background: var(--color-admin-error-text);
+    color: white;
+  }
+  .btn-admin-danger-solid:hover:not(:disabled) {
+    background: color-mix(in srgb, var(--color-admin-error-text) 85%, black);
+  }
+  .btn-admin-ghost {
+    background: transparent;
+    color: var(--color-admin-muted);
+    font-weight: 700;
+    text-decoration: underline;
+    text-underline-offset: 2px;
+  }
+  .btn-admin-ghost:hover:not(:disabled) {
+    color: var(--color-admin-primary);
+  }
+
+  /*
+   * The modal shell every confirmation in the panel opens into.
+   *
+   * A native <dialog> driven by showModal(), not a positioned div: the top
+   * layer, the focus trap, Escape, and an inert background come with it. A
+   * hand-rolled overlay has to reimplement those four, and it gets them wrong
+   * one at a time, usually the focus trap, which is the one a keyboard user
+   * notices and a mouse user never does.
+   */
+  .dialog {
+    margin: auto;
+    width: min(30rem, calc(100vw - 2rem));
+    /* Never taller than the screen. Without this a long list (the colleagues
+       in a transfer, say) pushes the footer past the bottom edge, and since
+       the element clips instead of scrolling, the operator is left inside a
+       focus trap whose only two buttons are off screen. */
+    max-height: calc(100dvh - 2rem);
+    /* No padding here: the body and the footer carry their own, so the rule
+       between them reaches both edges instead of floating inside a gutter. */
+    padding: 0;
+    border: 1px solid var(--color-admin-border);
+    border-radius: 14px;
+    background: var(--color-admin-card);
+    color: var(--color-admin-text);
+    overflow: hidden;
+  }
+  /* Scoped to [open] because a <dialog> is `display: none` while closed, and
+     an unconditional `display: flex` would show it.
+
+     The form is included because two of these dialogs wrap body and footer in
+     one, and that form has to split the height like the dialog does. It is
+     excluded again when the form IS the footer, which is the shape
+     ConfirmAction uses: without the :not() this rule outranks .dialog-footer
+     and lays the actions out in a column on every screen size. */
+  .dialog[open],
+  .dialog[open] > form:not(.dialog-footer) {
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+  }
+  .dialog[open] > form:not(.dialog-footer) {
+    flex: 1;
+  }
+  /* The part that scrolls. The footer never does: the way out of the dialog
+     has to be on screen no matter how long the body gets. */
+  .dialog-body {
+    flex: 1;
+    min-height: 0;
+    overflow-y: auto;
+    padding: 1.5rem;
+  }
+  /* Strong enough that the panel behind stops competing for attention: this
+     is the last screen before something irreversible. */
+  .dialog::backdrop {
+    background: rgb(0 0 0 / 0.55);
+  }
+  /*
+   * The dialog's action row. Ruled off from the body, actions to the right.
+   *
+   * The column reverses on a narrow screen so the confirming action sits on
+   * top under a thumb, while cancel stays first in the DOM and keeps the
+   * initial focus `showModal()` hands out. Order in the DOM and order on the
+   * screen answer to two different needs here, and neither may override the
+   * other.
+   */
+  .dialog-footer {
+    display: flex;
+    flex: none;
+    flex-direction: column-reverse;
+    gap: 0.625rem;
+    border-top: 1px solid var(--color-admin-border);
+    padding: 1rem;
+  }
+  /* Thumb-sized while it is a phone. The panel is a desktop tool the rest of
+     the time, where .btn-md is the density the rows are built around. */
+  .dialog-footer > .btn {
+    min-height: 2.75rem;
+  }
+  @media (width >= 40rem) {
+    .dialog-footer {
+      flex-direction: row;
+      align-items: center;
+      justify-content: flex-end;
+    }
+    .dialog-footer > .btn {
+      min-height: 0;
+    }
+  }
+
+  /*
+   * The entrance, as a transition out of @starting-style rather than a
+   * keyframe animation.
+   *
+   * The difference is what happens when the animation does not run. A
+   * keyframe starting at `opacity: 0` leaves the dialog invisible if the
+   * browser never advances it — and an invisible confirmation dialog is a
+   * modal the operator cannot see but that still has their keyboard. The
+   * transition below settles at the visible state and only backs into the
+   * hidden one at the moment of opening, so anything that goes wrong,
+   * including a browser with no @starting-style at all, goes wrong by
+   * showing the dialog immediately.
+   */
+  .dialog[open] {
+    opacity: 1;
+    transform: none;
+    transition:
+      opacity 150ms ease-out,
+      transform 150ms ease-out;
+  }
+  @starting-style {
+    .dialog[open] {
+      opacity: 0;
+      transform: translateY(0.375rem) scale(0.98);
+    }
+  }
+  .dialog[open]::backdrop {
+    opacity: 1;
+    transition: opacity 150ms ease-out;
+  }
+  @starting-style {
+    .dialog[open]::backdrop {
+      opacity: 0;
+    }
+  }
+  /* The dialog still opens; it just stops moving. */
+  @media (prefers-reduced-motion: reduce) {
+    .dialog[open],
+    .dialog[open]::backdrop {
+      transition: none;
+    }
+  }
 }
 
 @layer base {
@@ -302,5 +574,38 @@
   h3,
   h4 {
     font-family: var(--font-serif);
+  }
+
+  /*
+   * Safety net, not the design system itself: every real button and link in
+   * the product gets an explicit pointer cursor and a visible keyboard focus
+   * ring here, unconditionally, whether or not its className was migrated to
+   * the .btn family below. An audit found 88 of 92 <button>s and all <a>/
+   * <Link> used as buttons with no focus-visible state at all — the kind of
+   * gap that is invisible with a mouse and disqualifying with a keyboard.
+   * This rule means no future button can ship without one by omission.
+   *
+   * `:where()` keeps this at specificity zero, so any component's own
+   * cursor/outline utility (the dropzones' cursor-not-allowed while
+   * pending, `.btn`'s own richer ring below) still wins without `!important`.
+   */
+  :where(button, a[href], [role="button"]) {
+    cursor: pointer;
+  }
+  :where(button:disabled, [aria-disabled="true"]) {
+    cursor: not-allowed;
+  }
+  :where(
+      button,
+      a[href],
+      [role="button"],
+      input,
+      select,
+      textarea
+    ):focus-visible {
+    outline: none;
+    box-shadow:
+      0 0 0 2px var(--color-brand-card),
+      0 0 0 4px var(--color-brand-accent);
   }
 }
