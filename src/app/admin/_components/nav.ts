@@ -73,6 +73,13 @@ export const ADMIN_NAV: readonly AdminNavItem[] = [
   },
   {
     group: "Serventia",
+    label: "Transparência",
+    href: "/admin/transparencia",
+    icon: "globe",
+    permission: "content.edit",
+  },
+  {
+    group: "Serventia",
     label: "Configurações",
     href: "/admin/configuracoes",
     icon: "settings",

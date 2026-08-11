@@ -1,6 +1,7 @@
 import { sql } from "drizzle-orm";
 import type { AnyPgColumn } from "drizzle-orm/pg-core";
 import {
+  bigint,
   boolean,
   date,
   index,
@@ -393,6 +394,92 @@ export const chatMessages = pgTable(
     index("chat_messages_conversation_created_at").on(
       t.conversationId,
       t.createdAt,
+    ),
+  ],
+);
+
+/**
+ * A public transparency document — a fee table, a cost table, a notice — the
+ * office publishes to meet the Lei de Acesso à Informação. Same file columns
+ * as `office_publications` (the document is the point, so it is required, not
+ * optional here). What differs: no body, no dates. State is stored, because
+ * there is nothing to derive it from, and `position` is explicit because the
+ * order on the panel is the order on the site — see add-transparency-module.
+ */
+export const transparencyDocuments = pgTable(
+  "transparency_documents",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    tenantSlug,
+    category: text("category").notNull(),
+    title: text("title").notNull(),
+    // Free text: "2026" or "vigência 19/03/2026". Never sorted on — the order
+    // is `position` — so its shape does not matter to anything but the reader.
+    yearLabel: text("year_label").notNull(),
+    fileStoredName: text("file_stored_name").notNull(),
+    fileDisplayName: text("file_display_name").notNull(),
+    filePath: text("file_path").notNull(),
+    fileMimeType: text("file_mime_type").notNull(),
+    fileSizeBytes: integer("file_size_bytes").notNull(),
+    // "draft" | "published" | "unpublished" — see core/transparency/documents.
+    status: text("status").notNull().default("draft"),
+    // The rank in the list, ascending. Moving swaps two rows' positions.
+    position: integer("position").notNull(),
+    // When it last left the site, for the "fora do site desde" line.
+    unpublishedAt: timestamp("unpublished_at", { withTimezone: true }),
+    createdBy: text("created_by"),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (t) => [
+    index("transparency_documents_tenant_position").on(
+      t.tenantSlug,
+      t.position,
+    ),
+  ],
+);
+
+/**
+ * The monthly revenue bulletin. Four figures the office types plus a state;
+ * the balance is never stored, it is arithmetic on the four
+ * (core/transparency/bulletin). Money is centavos, in bigint: a busy month in
+ * centavos passes the 2.1-billion ceiling of a 32-bit integer.
+ *
+ * One bulletin per (office, month) — the unique index is what makes
+ * "publishing again replaces the month's bulletin" an upsert the database
+ * enforces, not a race the application hopes to win.
+ */
+export const transparencyBulletins = pgTable(
+  "transparency_bulletins",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    tenantSlug,
+    // The first day of the month it covers; the day is always 01.
+    referenceMonth: date("reference_month").notNull(),
+    actsCount: integer("acts_count").notNull(),
+    grossRevenueCents: bigint("gross_revenue_cents", {
+      mode: "number",
+    }).notNull(),
+    taxesPaidCents: bigint("taxes_paid_cents", { mode: "number" }).notNull(),
+    expensesCents: bigint("expenses_cents", { mode: "number" }).notNull(),
+    // "preliminary" | "consolidated" — see core/transparency/bulletin.
+    status: text("status").notNull().default("preliminary"),
+    createdBy: text("created_by"),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (t) => [
+    uniqueIndex("transparency_bulletins_tenant_month").on(
+      t.tenantSlug,
+      t.referenceMonth,
     ),
   ],
 );

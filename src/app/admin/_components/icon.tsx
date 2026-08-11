@@ -47,6 +47,12 @@ const PATHS = {
     "M8 13h8",
     "M8 17h5",
   ],
+  // Sidebar navigation: transparency (a globe, for public documents).
+  globe: [
+    "M12 3a9 9 0 1 0 0 18 9 9 0 0 0 0-18Z",
+    "M3 12h18",
+    "M12 3c2.5 2.5 3.8 5.7 3.8 9s-1.3 6.5-3.8 9c-2.5-2.5-3.8-5.7-3.8-9s1.3-6.5 3.8-9Z",
+  ],
   // Sidebar navigation and header indicator: support chat (a speech bubble).
   chat: ["M7.9 20A9 9 0 1 0 4 16.1L2 22Z"],
   x: ["M18 6 6 18", "M6 6l12 12"],

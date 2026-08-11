@@ -194,7 +194,7 @@ function drawSection(
 /**
  * The highlighted card carrying protocol and key. It belongs to the access
  * receipt, a file of its own, so it is drawn in the flow of the page rather
- * than pushed onto one — in that document it is the content, not an appendix.
+ * than pushed onto one: in that document it is the content, not an appendix.
  */
 function drawCredentials(
   pdf: Pdf,
@@ -354,6 +354,178 @@ export async function renderDocument(
       align: "center",
     });
   }
+
+  pdf.end();
+  return done;
+}
+
+/** What the monthly bulletin PDF draws. Money is centavos, formatted by the
+ * caller with the same core the on-screen preview uses, so the file and the
+ * preview never disagree on a number. */
+export interface BulletinDocument {
+  office: string[];
+  title: string;
+  period: string;
+  preliminary: boolean;
+  rows: {
+    actsCount: string;
+    grossRevenue: string;
+    taxesPaid: string;
+    expenses: string;
+  };
+  balance: string;
+  footer: string;
+}
+
+/**
+ * The monthly revenue bulletin, as its own drawing. It shares the letterhead
+ * and footer machinery with `renderDocument` but not its body: a bulletin is
+ * two figure blocks and a balance strip, not a flowing form, so it lays those
+ * out directly. Same palette, same seal, same legal footer: one office,
+ * whichever document it prints.
+ */
+export async function renderBulletin(
+  document: BulletinDocument,
+  brand: DocumentBrand,
+): Promise<Buffer> {
+  const { palette } = brand;
+  const pdf = new PDFDocument({
+    size: "A4",
+    margin: MARGIN,
+    autoFirstPage: false,
+  });
+  const chunks: Buffer[] = [];
+  pdf.on("data", (chunk: Buffer) => chunks.push(chunk));
+  const done = new Promise<Buffer>((resolve) => {
+    pdf.on("end", () => resolve(Buffer.concat(chunks)));
+  });
+  pdf.on("pageAdded", () => {
+    drawFooter(pdf, document.footer, brand);
+    pdf.x = MARGIN;
+    pdf.y = MARGIN;
+  });
+
+  pdf.addPage();
+  drawLetterhead(
+    pdf,
+    // The letterhead only reads `office`; the rest is unused for a bulletin.
+    { office: document.office } as RequerimentoDocument,
+    brand,
+    undefined,
+  );
+
+  const width = contentWidth(pdf);
+
+  // Everything below is placed with explicit Y coordinates, never `pdf.y`:
+  // the two side-by-side cards each advance the cursor, so leaning on the
+  // shared `pdf.y` is what made the columns collide. Here nothing reads it.
+  const titleY = HEADER_BOTTOM;
+  pdf
+    .font("Helvetica-Bold")
+    .fontSize(19)
+    .fillColor(palette.primary)
+    .text(document.title, MARGIN, titleY, { width: width - 160 });
+
+  if (document.preliminary) {
+    const tag = "Dados preliminares";
+    pdf.font("Helvetica-Bold").fontSize(8.5);
+    const tw = pdf.widthOfString(tag) + 20;
+    const tagX = pdf.page.width - MARGIN - tw;
+    pdf.roundedRect(tagX, titleY + 2, tw, 20, 10).fill(palette.accentSoft);
+    pdf
+      .fillColor(palette.accent)
+      .text(tag, tagX, titleY + 8, { width: tw, align: "center" });
+  }
+
+  const periodY = titleY + 30;
+  pdf
+    .font("Helvetica")
+    .fontSize(10)
+    .fillColor(NEUTRALS.textSoft)
+    .text(`Período: ${document.period}`, MARGIN, periodY, { width });
+
+  // Two bordered cards, side by side, matching the on-screen preview.
+  const gap = 16;
+  const colW = (width - gap) / 2;
+  const cardsTop = periodY + 24;
+  const cardH = 96;
+  const rightX = MARGIN + colW + gap;
+
+  /** A label on the left and its value on the right, inside a card. */
+  const cardRow = (
+    cardLeft: number,
+    y: number,
+    label: string,
+    value: string,
+    sublabel?: string,
+  ) => {
+    pdf
+      .font("Helvetica")
+      .fontSize(9.5)
+      .fillColor(NEUTRALS.textSoft)
+      .text(label, cardLeft + 14, y, { width: colW - 28 });
+    if (sublabel) {
+      pdf
+        .font("Helvetica")
+        .fontSize(7)
+        .fillColor(palette.muted)
+        .text(sublabel, cardLeft + 14, y + 12, { width: colW - 28 });
+    }
+    pdf
+      .font("Helvetica-Bold")
+      .fontSize(11.5)
+      .fillColor(palette.primary)
+      .text(value, cardLeft + 14, y, { width: colW - 28, align: "right" });
+  };
+
+  for (const [cardLeft, eyebrow] of [
+    [MARGIN, "De onde veio"] as const,
+    [rightX, "Para onde foi"] as const,
+  ]) {
+    pdf
+      .roundedRect(cardLeft, cardsTop, colW, cardH, 10)
+      .lineWidth(0.8)
+      .stroke(palette.border);
+    pdf
+      .font("Helvetica-Bold")
+      .fontSize(8.5)
+      .fillColor(palette.accent)
+      .text(eyebrow.toUpperCase(), cardLeft + 14, cardsTop + 14, {
+        width: colW - 28,
+        characterSpacing: 1.2,
+      });
+  }
+
+  const rowOneY = cardsTop + 38;
+  const rowTwoY = cardsTop + 64;
+  cardRow(MARGIN, rowOneY, "Atos praticados", document.rows.actsCount);
+  cardRow(MARGIN, rowTwoY, "Arrecadação", document.rows.grossRevenue);
+  cardRow(
+    rightX,
+    rowOneY,
+    "Tributos pagos",
+    document.rows.taxesPaid,
+    "FCRCPN, FRMP, FDJ, FUNAF, ISS",
+  );
+  cardRow(rightX, rowTwoY, "Despesas", document.rows.expenses);
+
+  // Balance strip, full width, the office's ink.
+  const stripY = cardsTop + cardH + 16;
+  const stripH = 46;
+  pdf.roundedRect(MARGIN, stripY, width, stripH, 8).fill(palette.primary);
+  pdf
+    .font("Helvetica-Bold")
+    .fontSize(12)
+    .fillColor(NEUTRALS.card)
+    .text("Saldo final do mês", MARGIN + 18, stripY + 16, { width: width / 2 });
+  pdf
+    .font("Helvetica-Bold")
+    .fontSize(16)
+    .fillColor(NEUTRALS.card)
+    .text(document.balance, MARGIN, stripY + 14, {
+      width: width - 18,
+      align: "right",
+    });
 
   pdf.end();
   return done;

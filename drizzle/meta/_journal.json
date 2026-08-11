@@ -71,6 +71,13 @@
       "when": 1786370332303,
       "tag": "0009_bouncy_proemial_gods",
       "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "7",
+      "when": 1786417252094,
+      "tag": "0010_spicy_blob",
+      "breakpoints": true
     }
   ]
 }
