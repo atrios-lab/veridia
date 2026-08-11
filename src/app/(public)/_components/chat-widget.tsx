@@ -222,6 +222,18 @@ export function ChatWidget({ tenant }: { tenant: Tenant }) {
     setPanel({ kind: "prechat" });
   }
 
+  // Contract: any page can open the widget by dispatching this event, without
+  // importing the widget itself — used by the Contato page's "Atendimento
+  // online" button.
+  useEffect(() => {
+    function handleOpenChat() {
+      openWidget();
+    }
+    window.addEventListener("veridia:open-chat", handleOpenChat);
+    return () =>
+      window.removeEventListener("veridia:open-chat", handleOpenChat);
+  });
+
   async function submitPrechat(formData: FormData) {
     setSending(true);
     setError(null);

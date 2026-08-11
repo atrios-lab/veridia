@@ -162,6 +162,12 @@ export const TenantSchema = z.object({
       }
     })
     .optional(),
+  // Street address of the serventia, for the Contato page's map card and
+  // "Como chegar" route. Optional for the same reason as `pix.city`:
+  // offices registered before this field existed have no value to backfill,
+  // and there is no migration for it — without it, the page just omits the
+  // address/map card instead of showing a broken state.
+  address: z.string().min(1).optional(),
 });
 
 export type Tenant = z.infer<typeof TenantSchema>;
