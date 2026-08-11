@@ -115,8 +115,7 @@ export default async function Home() {
               {tenant.home.title}
             </h1>
             <p className="mt-2 text-sm leading-relaxed text-brand-on-dark-body md:mt-3.5 md:max-w-[44ch] md:text-base">
-              Segurança e validade legal para cada ato da vida da
-              comunidade
+              Segurança e validade legal para cada ato da vida da comunidade
               <span className="md:hidden">
                 , sem sair de casa: peça, agende ou acompanhe.
               </span>
