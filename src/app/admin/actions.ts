@@ -19,6 +19,7 @@ export async function signIn(formData: FormData) {
   const next = String(formData.get("next") ?? "/admin");
 
   let userId: string;
+  let userRole: string;
   let userTenantSlug: string;
   try {
     const result = await auth.api.signInEmail({
@@ -26,6 +27,7 @@ export async function signIn(formData: FormData) {
       headers: requestHeaders,
     });
     userId = result.user.id;
+    userRole = result.user.role;
     userTenantSlug = result.user.tenantSlug;
   } catch (error) {
     // One generic outcome for every failure. Telling the visitor which field
@@ -41,7 +43,7 @@ export async function signIn(formData: FormData) {
   // The credential is valid, the office is not theirs. Ending the session
   // here is what keeps a live cookie for the wrong office from existing at
   // all, instead of leaving every future route to remember to check.
-  if (!canAccessTenant(userTenantSlug, tenant.slug)) {
+  if (!canAccessTenant(userRole, userTenantSlug, tenant.slug)) {
     await auth.api.signOut({ headers: requestHeaders });
     await recordAudit({
       tenantSlug: tenant.slug,

@@ -1,6 +1,12 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { can, canAccessTenant, isRole } from "./roles.ts";
+import { isRegisteredSlug } from "../tenant/resolve.ts";
+import {
+  can,
+  canAccessTenant,
+  isRole,
+  SUPERADMIN_TENANT_SLUG,
+} from "./roles.ts";
 
 const MARINHO = "cartorio-marinho";
 const AURORA = "tabelionato-aurora";
@@ -38,42 +44,73 @@ test("an unknown role gets nothing", () => {
 });
 
 test("a user acts on their own office", () => {
-  assert.ok(canAccessTenant(MARINHO, MARINHO));
-  assert.ok(canAccessTenant(AURORA, AURORA));
+  assert.ok(canAccessTenant("admin", MARINHO, MARINHO));
+  assert.ok(canAccessTenant("staff", AURORA, AURORA));
 });
 
 test("a user does not act on another office", () => {
-  assert.equal(canAccessTenant(AURORA, MARINHO), false);
-  assert.equal(canAccessTenant(MARINHO, AURORA), false);
+  assert.equal(canAccessTenant("admin", AURORA, MARINHO), false);
+  assert.equal(canAccessTenant("staff", MARINHO, AURORA), false);
 });
 
 test("being an admin does not widen the scope", () => {
   // The role grants every permission there is, and still no access next door.
   assert.ok(can("admin", "user.manage"));
-  assert.equal(canAccessTenant(AURORA, MARINHO), false);
+  assert.equal(canAccessTenant("admin", AURORA, MARINHO), false);
 });
 
 test("the right office without the role is not enough", () => {
-  assert.ok(canAccessTenant(MARINHO, MARINHO));
+  assert.ok(canAccessTenant("admin", MARINHO, MARINHO));
   assert.equal(can("visitante", "admin.access"), false);
 });
 
 test("an empty or orphan office slug authorizes nothing", () => {
-  assert.equal(canAccessTenant("", ""), false);
-  assert.equal(canAccessTenant("", MARINHO), false);
+  assert.equal(canAccessTenant("admin", "", ""), false);
+  assert.equal(canAccessTenant("admin", "", MARINHO), false);
   assert.equal(
-    canAccessTenant("serventia-que-saiu-do-registro", MARINHO),
+    canAccessTenant("admin", "serventia-que-saiu-do-registro", MARINHO),
     false,
   );
   // Same slug on both sides is still refused when the office is not registered.
   assert.equal(
-    canAccessTenant("serventia-que-saiu", "serventia-que-saiu"),
+    canAccessTenant("admin", "serventia-que-saiu", "serventia-que-saiu"),
     false,
   );
 });
 
 test("a prototype property is not an office", () => {
   // "constructor" in TENANTS is true; Object.hasOwn is what makes it false.
-  assert.equal(canAccessTenant("constructor", "constructor"), false);
-  assert.equal(canAccessTenant("toString", "toString"), false);
+  assert.equal(canAccessTenant("admin", "constructor", "constructor"), false);
+  assert.equal(canAccessTenant("admin", "toString", "toString"), false);
+});
+
+test("superadmin acts on any registered office", () => {
+  assert.ok(canAccessTenant("superadmin", "atrios", MARINHO));
+  assert.ok(canAccessTenant("superadmin", "atrios", AURORA));
+});
+
+test("superadmin does not act on an unregistered office", () => {
+  assert.equal(
+    canAccessTenant("superadmin", "atrios", "serventia-que-saiu"),
+    false,
+  );
+});
+
+test("the superadmin sentinel office is never a registered one", () => {
+  // What keeps a superadmin off every tenant's own /admin/usuarios list:
+  // that page filters by eq(userTable.tenantSlug, tenant.slug), and
+  // tenant.slug is always a registered one.
+  assert.equal(isRegisteredSlug(SUPERADMIN_TENANT_SLUG), false);
+});
+
+test("superadmin has every permission", () => {
+  for (const permission of [
+    "admin.access",
+    "content.publish",
+    "billing.edit",
+    "user.manage",
+    "chat.settings",
+  ] as const) {
+    assert.ok(can("superadmin", permission));
+  }
 });

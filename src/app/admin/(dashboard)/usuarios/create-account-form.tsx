@@ -1,7 +1,7 @@
 "use client";
 
 import { useActionState } from "react";
-import { ROLES } from "@/core/auth/roles.ts";
+import { PANEL_ROLES } from "@/core/auth/roles.ts";
 import { AdminIcon } from "../../_components/icon.tsx";
 import { ROLE_LABELS } from "../../_components/role-labels.ts";
 import { type CreateAccountState, createUser } from "./actions.ts";
@@ -81,7 +81,7 @@ export function CreateAccountForm() {
             defaultValue={sent?.role ?? "staff"}
             className={fieldErrors.role ? ERROR_FIELD_CLASS : FIELD_CLASS}
           >
-            {ROLES.map((role) => (
+            {PANEL_ROLES.map((role) => (
               <option key={role} value={role}>
                 {ROLE_LABELS[role]}
               </option>

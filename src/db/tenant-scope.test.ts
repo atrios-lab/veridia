@@ -103,7 +103,11 @@ test("a user of one office is refused by every other one", async () => {
       // Exactly the pair of conditions the panel guard applies.
       const allowed: boolean =
         can(session.user.role ?? "", "admin.access") &&
-        canAccessTenant(session.user.tenantSlug ?? "", other);
+        canAccessTenant(
+          session.user.role ?? "",
+          session.user.tenantSlug ?? "",
+          other,
+        );
       assert.equal(allowed, slug === other, `${slug} no painel de ${other}`);
     }
   }

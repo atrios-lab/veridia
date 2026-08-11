@@ -17,6 +17,7 @@
     "db:generate": "drizzle-kit generate",
     "db:migrate": "drizzle-kit migrate",
     "db:seed": "node --env-file=.env.local scripts/seed-admin.ts",
+    "db:seed-superadmin": "node --env-file=.env.local scripts/seed-superadmin.ts",
     "db:invite": "node --env-file=.env.local scripts/invite-admin.ts",
     "check:destructive": "node scripts/check-destructive.mjs"
   },

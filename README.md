@@ -39,6 +39,7 @@ Copie `.env.example` para `.env.local` e preencha:
 | `BETTER_AUTH_URL` | URL base da aplicação. |
 | `ADMIN_SEED_EMAIL`, `ADMIN_SEED_PASSWORD` | Usuário criado pelo seed. Não há cadastro público. |
 | `ADMIN_SEED_TENANT` | Serventia do usuário criado pelo seed. Sem ela, vale o `DEFAULT_TENANT`. |
+| `SUPERADMIN_SEED_EMAIL`, `SUPERADMIN_SEED_PASSWORD` | Conta da Átrios criada por `pnpm db:seed-superadmin`, opcional. |
 | `UPSTASH_REDIS_REST_URL`, `UPSTASH_REDIS_REST_TOKEN` | Rate limit. Sem elas, o limite fica desligado. |
 
 Com o banco de pé:
@@ -55,8 +56,10 @@ pnpm dev
 
 ## Usuários do painel
 
-O painel é de cada serventia. Todo usuário pertence a exatamente uma, e não existe conta que abra
-mais de um painel, nem para suporte. Quem precisa operar o painel de uma serventia tem usuário nela.
+O painel é de cada serventia. Todo usuário de serventia pertence a exatamente uma, e não existe
+conta de serventia que abra mais de um painel. Quem precisa operar o painel de uma serventia tem
+usuário nela. A única exceção é a conta da plataforma Átrios (`pnpm db:seed-superadmin`), que
+entra em qualquer serventia registrada — ver `openspec/changes/add-atrios-super-admin`.
 
 Na prática: um usuário do Cartório Marinho não entra em `aurora.localhost:3000/admin`, e a tentativa
 devolve a mesma mensagem de credencial inválida, sem revelar que a conta existe em outra serventia.

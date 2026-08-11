@@ -171,3 +171,52 @@ test.describe("autenticação de verdade", () => {
     await page.getByRole("button", { name: "Sair" }).click();
   });
 });
+
+test.describe("superadmin da Átrios", () => {
+  test.skip(
+    !process.env.DATABASE_URL ||
+      !process.env.SUPERADMIN_SEED_EMAIL ||
+      !process.env.SUPERADMIN_SEED_PASSWORD,
+    "precisa de DATABASE_URL, SUPERADMIN_SEED_EMAIL e SUPERADMIN_SEED_PASSWORD (pnpm db:seed-superadmin)",
+  );
+
+  const email = process.env.SUPERADMIN_SEED_EMAIL as string;
+  const password = process.env.SUPERADMIN_SEED_PASSWORD as string;
+
+  async function signIn(page: import("@playwright/test").Page, url: string) {
+    await page.goto(url);
+    await page.getByLabel("E-mail").fill(email);
+    await page.getByLabel("Senha", { exact: true }).fill(password);
+    await page.getByRole("button", { name: "Entrar" }).click();
+  }
+
+  test("the same account enters the panel of two different offices", async ({
+    page,
+  }) => {
+    await signIn(page, `${baseURL}/admin/login`);
+    await expect(page).toHaveURL(`${baseURL}/admin`);
+    await page.getByRole("button", { name: "Sair" }).click();
+
+    await signIn(page, `${auroraURL}/admin/login`);
+    await expect(page).toHaveURL(`${auroraURL}/admin`);
+    await page.getByRole("button", { name: "Sair" }).click();
+  });
+
+  test("sign-in is audited under the office actually accessed", async ({
+    page,
+  }) => {
+    await signIn(page, `${auroraURL}/admin/login`);
+    await expect(page).toHaveURL(`${auroraURL}/admin`);
+
+    const sql = neon(process.env.DATABASE_URL as string);
+    const rows = await sql`
+      select tenant_slug from audit_log
+      where actor_id = (select id from "user" where email = ${email})
+        and action = 'session.sign-in'
+      order by created_at desc limit 1
+    `;
+    expect(rows[0]?.tenant_slug).toBe("tabelionato-aurora");
+
+    await page.getByRole("button", { name: "Sair" }).click();
+  });
+});

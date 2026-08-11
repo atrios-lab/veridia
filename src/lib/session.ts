@@ -19,7 +19,14 @@ export async function getSession() {
   if (!session) return null;
 
   const tenant = await getTenant();
-  if (!canAccessTenant(session.user.tenantSlug ?? "", tenant.slug)) return null;
+  if (
+    !canAccessTenant(
+      session.user.role ?? "",
+      session.user.tenantSlug ?? "",
+      tenant.slug,
+    )
+  )
+    return null;
 
   return session;
 }

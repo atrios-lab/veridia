@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { ROLES } from "./roles.ts";
+import { PANEL_ROLES } from "./roles.ts";
 
 /**
  * What the registrador may set when creating an account: name, e-mail and
@@ -13,6 +13,6 @@ import { ROLES } from "./roles.ts";
 export const CreateAccountSchema = z.object({
   name: z.string().trim().min(1, "Informe o nome."),
   email: z.email("Informe um e-mail válido."),
-  role: z.enum(ROLES, "Escolha um papel."),
+  role: z.enum(PANEL_ROLES, "Escolha um papel."),
 });
 export type CreateAccountInput = z.infer<typeof CreateAccountSchema>;

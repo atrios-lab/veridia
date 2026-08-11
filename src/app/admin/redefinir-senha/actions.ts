@@ -84,7 +84,7 @@ export async function acceptInvite(formData: FormData) {
 
   // Same guard as the regular sign-in: the password is now set, but a link
   // opened on the wrong office's domain still may not enter that office.
-  if (!canAccessTenant(result.user.tenantSlug, tenant.slug)) {
+  if (!canAccessTenant(result.user.role, result.user.tenantSlug, tenant.slug)) {
     await auth.api.signOut({ headers: requestHeaders });
     redirect("/admin/login?erro=1");
   }
