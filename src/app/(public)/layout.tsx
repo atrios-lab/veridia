@@ -4,8 +4,8 @@ import Link from "next/link";
 import {
   enabledSections,
   isSectionEnabled,
-  SECTION_LABELS,
   SECTION_ROUTES,
+  sectionNavLinks,
 } from "@/core/tenant/gating.ts";
 import { isChatEnabled } from "@/lib/chat.ts";
 import { SERIF } from "@/lib/fonts.ts";
@@ -76,15 +76,17 @@ export default async function PublicLayout({
             >
               Início
             </Link>
-            {headerSections.map((section) => (
-              <Link
-                key={section}
-                href={SECTION_ROUTES[section]}
-                className="text-sm font-medium text-brand-primary hover:text-brand-primary-soft"
-              >
-                {SECTION_LABELS[section]}
-              </Link>
-            ))}
+            {headerSections.flatMap((section) =>
+              sectionNavLinks(section).map((link) => (
+                <Link
+                  key={link.href}
+                  href={link.href}
+                  className="text-sm font-medium text-brand-primary hover:text-brand-primary-soft"
+                >
+                  {link.label}
+                </Link>
+              )),
+            )}
             {isSectionEnabled(tenant, "consulta-protocolo") && (
               <Link
                 href={SECTION_ROUTES["consulta-protocolo"]}
@@ -103,15 +105,17 @@ export default async function PublicLayout({
               <span className="sr-only">Abrir menu</span>
             </summary>
             <nav className="absolute right-0 z-20 mt-2 w-60 rounded-2xl border border-brand-border bg-brand-card p-2 shadow-lg">
-              {sections.map((section) => (
-                <Link
-                  key={section}
-                  href={SECTION_ROUTES[section]}
-                  className="block rounded-xl px-3 py-2.5 text-sm font-medium text-brand-primary hover:bg-brand-tint"
-                >
-                  {SECTION_LABELS[section]}
-                </Link>
-              ))}
+              {sections.flatMap((section) =>
+                sectionNavLinks(section).map((link) => (
+                  <Link
+                    key={link.href}
+                    href={link.href}
+                    className="block rounded-xl px-3 py-2.5 text-sm font-medium text-brand-primary hover:bg-brand-tint"
+                  >
+                    {link.label}
+                  </Link>
+                )),
+              )}
             </nav>
           </details>
         </div>
@@ -135,16 +139,18 @@ export default async function PublicLayout({
           </div>
 
           <nav className="flex flex-wrap gap-x-5 gap-y-2">
-            {sections.map((section) => (
-              <Link
-                key={section}
-                data-section={section}
-                href={SECTION_ROUTES[section]}
-                className="text-xs text-brand-on-dark-body hover:text-white"
-              >
-                {SECTION_LABELS[section]}
-              </Link>
-            ))}
+            {sections.flatMap((section) =>
+              sectionNavLinks(section).map((link) => (
+                <Link
+                  key={link.href}
+                  data-section={section}
+                  href={link.href}
+                  className="text-xs text-brand-on-dark-body hover:text-white"
+                >
+                  {link.label}
+                </Link>
+              )),
+            )}
           </nav>
 
           <div className="flex flex-col gap-1 text-[11px] text-brand-on-dark-muted">

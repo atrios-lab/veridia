@@ -52,6 +52,24 @@ export const SECTION_LABELS: Record<Section, string> = {
   "centrais-contato": "Centrais e contato",
 };
 
+/**
+ * Navigation entries a section expands to. Almost every section is one link,
+ * but "centrais-contato" gates two separate pages (official portals, and the
+ * office's own contact details) under a single permission, so its button
+ * must not silently drop one of the two the label promises.
+ */
+export function sectionNavLinks(
+  section: Section,
+): { label: string; href: string }[] {
+  if (section === "centrais-contato") {
+    return [
+      { label: "Centrais", href: "/centrais" },
+      { label: "Contato", href: "/contato" },
+    ];
+  }
+  return [{ label: SECTION_LABELS[section], href: SECTION_ROUTES[section] }];
+}
+
 // Sectors inside the "editais" section, each one bound to an attribution.
 // Keys are route slugs, so they stay in Portuguese.
 export const NOTICE_SECTOR_ATTRIBUTION = {
