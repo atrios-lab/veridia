@@ -30,6 +30,11 @@ const ACTION_CARDS: {
   icon: IconName;
   description: string;
   desktopOnly?: boolean;
+  // Overrides SECTION_LABELS for this card only. Needed for
+  // "centrais-contato": the shared label is "Centrais e contato", but this
+  // card's description and link are about the official portals alone — the
+  // contact page has its own entry in the site nav.
+  label?: string;
 }[] = [
   {
     section: "pedidos",
@@ -48,6 +53,7 @@ const ACTION_CARDS: {
     icon: "external",
     description: "Links oficiais de cada serviço, sem sites falsos",
     desktopOnly: true,
+    label: "Centrais",
   },
 ];
 
@@ -213,7 +219,7 @@ export default async function Home() {
               </span>
               <span className="flex-1">
                 <span className="block font-serif text-base font-semibold text-brand-primary md:text-lg">
-                  {SECTION_LABELS[card.section]}
+                  {card.label ?? SECTION_LABELS[card.section]}
                 </span>
                 <span className="block text-xs text-brand-muted md:mt-1 md:text-[13px]">
                   {card.section === "agendamento"
