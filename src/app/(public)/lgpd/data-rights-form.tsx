@@ -2,7 +2,7 @@
 
 import { zodResolver } from "@hookform/resolvers/zod";
 import Link from "next/link";
-import { startTransition, useActionState, useState } from "react";
+import { startTransition, useActionState, useRef, useState } from "react";
 import { useForm } from "react-hook-form";
 import {
   DATA_RIGHT_OPTIONS,
@@ -23,6 +23,11 @@ import {
 
 const inputClass =
   "w-full rounded-xl border border-brand-border bg-brand-card px-3.5 py-3 text-sm text-brand-text outline-none placeholder:text-brand-faint focus:border-brand-accent";
+
+function formatFileSize(bytes: number): string {
+  if (bytes < 1024 * 1024) return `${Math.max(1, Math.round(bytes / 1024))} KB`;
+  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+}
 
 function FieldError({ message }: { message?: string }) {
   if (!message) return null;
@@ -47,6 +52,17 @@ export function DataRightsScreen(props: DataRightsScreenProps) {
     FormData
   >(submitDataRights, { status: "idle" });
   const [attachments, setAttachments] = useState<File[]>([]);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  function removeAttachment(index: number) {
+    const next = attachments.filter((_, i) => i !== index);
+    setAttachments(next);
+    // The form posts the input's own FileList, so it has to be rebuilt too,
+    // not just the state that renders the list.
+    const transfer = new DataTransfer();
+    for (const file of next) transfer.items.add(file);
+    if (fileInputRef.current) fileInputRef.current.files = transfer.files;
+  }
 
   const {
     register,
@@ -238,6 +254,7 @@ export function DataRightsScreen(props: DataRightsScreenProps) {
                   </span>
                 </span>
                 <input
+                  ref={fileInputRef}
                   id="anexos"
                   name="anexos"
                   type="file"
@@ -251,7 +268,7 @@ export function DataRightsScreen(props: DataRightsScreenProps) {
               </label>
               {attachments.length > 0 && (
                 <ul className="mt-2 flex flex-col gap-1.5">
-                  {attachments.map((file) => (
+                  {attachments.map((file, index) => (
                     <li
                       key={`${file.name}-${file.lastModified}`}
                       className="flex items-center gap-2 rounded-lg border border-brand-border bg-brand-card px-3 py-2"
@@ -260,9 +277,20 @@ export function DataRightsScreen(props: DataRightsScreenProps) {
                         name="file"
                         className="h-4 w-4 shrink-0 text-brand-accent"
                       />
-                      <span className="truncate text-[12.5px] text-brand-text">
+                      <span className="flex-1 truncate text-[12.5px] text-brand-text">
                         {file.name}
                       </span>
+                      <span className="shrink-0 text-[11px] text-brand-faint">
+                        {formatFileSize(file.size)}
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => removeAttachment(index)}
+                        className="shrink-0 text-brand-faint hover:text-brand-alert"
+                        aria-label={`Remover ${file.name}`}
+                      >
+                        <Icon name="x" className="h-4 w-4" strokeWidth={2} />
+                      </button>
                     </li>
                   ))}
                 </ul>
