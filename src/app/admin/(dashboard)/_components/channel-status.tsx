@@ -12,7 +12,7 @@ export interface ChannelStatusRow {
 export function ChannelStatus({ rows }: { rows: ChannelStatusRow[] }) {
   if (rows.length === 0) return null;
   return (
-    <div className="rounded-[14px] border border-admin-border bg-admin-surface p-5">
+    <div className="rounded-[14px] border border-admin-border bg-admin-card p-5">
       <span className="text-[11px] font-bold uppercase tracking-[0.08em] text-admin-muted">
         Situação dos canais
       </span>

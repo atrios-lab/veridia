@@ -83,14 +83,25 @@ export function RequestForm({
   const [attachments, setAttachments] = useState<File[]>([]);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  function removeAttachment(index: number) {
-    const next = attachments.filter((_, i) => i !== index);
+  // The form posts the input's own FileList, so it has to be rebuilt
+  // whenever `attachments` changes, not just the state that renders the list.
+  function syncAttachments(next: File[]) {
     setAttachments(next);
-    // The form posts the input's own FileList, so it has to be rebuilt too,
-    // not just the state that renders the list.
     const transfer = new DataTransfer();
     for (const file of next) transfer.items.add(file);
     if (fileInputRef.current) fileInputRef.current.files = transfer.files;
+  }
+
+  function removeAttachment(index: number) {
+    syncAttachments(attachments.filter((_, i) => i !== index));
+  }
+
+  // A file picker's selection replaces itself each time it opens, so a
+  // second pick would otherwise wipe out the first: add to what's already
+  // there instead, capped at the limit the server also enforces.
+  function addAttachments(selected: FileList | null) {
+    if (!selected) return;
+    syncAttachments([...attachments, ...selected].slice(0, MAX_ATTACHMENTS));
   }
 
   const {
@@ -305,9 +316,7 @@ export function RequestForm({
               multiple
               accept="image/jpeg,image/png,image/webp,image/heic,application/pdf"
               className="sr-only"
-              onChange={(event) =>
-                setAttachments([...(event.target.files ?? [])])
-              }
+              onChange={(event) => addAttachments(event.target.files)}
             />
           </label>
           {attachments.length > 0 && (
@@ -532,28 +541,32 @@ function SuccessScreen({ result }: { result: SubmitSuccess }) {
         className="rounded-b-2xl"
       >
         <strong className="text-brand-alert">A chave aparece só agora.</strong>{" "}
-        O site não guarda nem reenvia. Baixe o comprovante de acesso no passo 2
-        para ficar com ela.
+        O site não guarda nem reenvia — o comprovante abaixo é o único lugar
+        onde ela fica registrada.
       </ProtocolReveal>
 
       <ol className="mt-4 flex flex-col gap-2.5">
         <Step number={1} title="Guarde o protocolo e a chave">
           <p className="text-[12px] leading-relaxed text-brand-muted">
-            Eles dão acesso ao andamento e aos documentos em{" "}
-            <strong>Consultar protocolo</strong>. O comprovante de acesso, no
-            passo 2, é um PDF só com eles.
+            Eles servem para consultar o andamento do pedido.
           </p>
+          {/* POST, not a link: the key would otherwise sit in the address
+              bar, in the browser history and in every access log on the way. */}
+          <form action="/solicitar/requerimento" method="post" className="mt-2.5">
+            <ProtocolFields result={result} />
+            <input type="hidden" name="documento" value="comprovante" />
+            <button type="submit" className="btn btn-primary btn-md">
+              <Icon name="download" className="h-3.5 w-3.5" strokeWidth={2} />
+              Baixar comprovante (PDF)
+            </button>
+          </form>
         </Step>
 
         <Step number={2} title="Baixe o requerimento e assine">
           <p className="text-[12px] leading-relaxed text-brand-muted">
-            Digitalmente pelo Gov.br (assinador.iti.br), ou imprima e assine de
-            próprio punho. O requerimento não traz a chave: ela vai no
-            comprovante, que é só seu.
+            Digitalmente pelo Gov.br (assinador.iti.br), ou imprima e assine
+            de próprio punho.
           </p>
-          {/* Two files, two forms. POST, not a link: the key would otherwise
-              sit in the address bar, in the browser history and in every
-              access log on the way. */}
           <div className="mt-2.5 flex flex-wrap gap-2">
             <form action="/solicitar/requerimento" method="post">
               <ProtocolFields result={result} />
@@ -562,25 +575,13 @@ function SuccessScreen({ result }: { result: SubmitSuccess }) {
                 Baixar requerimento (PDF)
               </button>
             </form>
-            <form action="/solicitar/requerimento" method="post">
-              <ProtocolFields result={result} />
-              <input type="hidden" name="documento" value="comprovante" />
-              <button type="submit" className="btn btn-secondary btn-md">
-                <Icon
-                  name="download"
-                  className="h-3.5 w-3.5 text-brand-accent"
-                  strokeWidth={2}
-                />
-                Baixar comprovante
-              </button>
-            </form>
           </div>
         </Step>
 
         <Step number={3} title="Envie o requerimento assinado">
           <p className="text-[12px] leading-relaxed text-brand-muted">
-            Aqui, agora, ou depois pela consulta, ou em papel no balcão. O
-            pedido não trava.
+            Pode ser agora, depois pela consulta do protocolo, ou em papel no
+            balcão.
           </p>
           {!showUploadForm ? (
             <div className="mt-2.5 flex items-center gap-2 rounded-[10px] border-[1.5px] border-brand-border bg-brand-card px-3.5 py-2.5">

@@ -1,6 +1,6 @@
 import "server-only";
 import { headers } from "next/headers";
-import { canAccessTenant } from "@/core/auth/roles.ts";
+import { canAccessTenant, isAccountDisabled } from "@/core/auth/roles.ts";
 import { auth } from "./auth.ts";
 import { getTenant } from "./tenant.ts";
 
@@ -17,6 +17,7 @@ import { getTenant } from "./tenant.ts";
 export async function getSession() {
   const session = await auth.api.getSession({ headers: await headers() });
   if (!session) return null;
+  if (isAccountDisabled(session.user.disabledAt)) return null;
 
   const tenant = await getTenant();
   if (

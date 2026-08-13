@@ -55,6 +55,26 @@ export function isRole(value: string): value is Role {
   return (ROLES as readonly string[]).includes(value);
 }
 
+/**
+ * Whether deactivating this account would leave the office with zero active
+ * Registrador accounts — the one role that holds `user.manage`, so losing
+ * the last of them locks the office out of ever undoing it. An Operador
+ * leaving never trips this: only "admin" counts.
+ */
+export function isLastActiveAdmin(
+  role: string,
+  otherActiveAdminCount: number,
+): boolean {
+  return role === "admin" && otherActiveAdminCount <= 0;
+}
+
+/** A session whose account had its access turned off carries this. */
+export function isAccountDisabled(
+  disabledAt: Date | null | undefined,
+): boolean {
+  return disabledAt != null;
+}
+
 export function can(role: string, permission: Permission): boolean {
   return isRole(role) && ROLE_PERMISSIONS[role].includes(permission);
 }

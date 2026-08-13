@@ -1,12 +1,15 @@
 "use server";
 
-import { and, eq } from "drizzle-orm";
+import { and, count, eq, isNull, ne } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { headers } from "next/headers";
 import { notFound } from "next/navigation";
 import { CreateAccountSchema } from "@/core/auth/account.ts";
-import { can, type Role } from "@/core/auth/roles.ts";
-import { user as userTable } from "@/db/auth-schema.ts";
+import { can, isLastActiveAdmin, type Role } from "@/core/auth/roles.ts";
+import {
+  session as sessionTable,
+  user as userTable,
+} from "@/db/auth-schema.ts";
 import { db } from "@/db/index.ts";
 import { recordAudit } from "@/lib/audit.ts";
 import { auth } from "@/lib/auth.ts";
@@ -154,8 +157,6 @@ export type AccountActionState =
   | { status: "sent" }
   | { status: "error"; message: string };
 
-export const IDLE_ACCOUNT_ACTION_STATE: AccountActionState = { status: "idle" };
-
 export async function resendInvite(
   _previous: AccountActionState,
   formData: FormData,
@@ -238,6 +239,97 @@ export async function triggerPasswordReset(
     tenantSlug: tenant.slug,
     actorId: session.user.id,
     action: "user.password-reset-request",
+    targetType: "user",
+    targetId: target.id,
+  });
+
+  revalidatePath(USERS_PATH);
+  return { status: "sent" };
+}
+
+export async function deactivateAccount(
+  _previous: AccountActionState,
+  formData: FormData,
+): Promise<AccountActionState> {
+  const userId = String(formData.get("userId") ?? "");
+  const session = await getSession();
+  if (!session || !can(session.user.role ?? "", "user.manage")) notFound();
+
+  if (userId === session.user.id) {
+    return {
+      status: "error",
+      message: "Você não pode desativar a própria conta.",
+    };
+  }
+
+  const tenant = await getTenant();
+  const target = await findOwnAccount(userId, tenant.slug);
+  if (!target) notFound();
+
+  // Counts the *other* active Registrador accounts in the office — the
+  // target is excluded because it is the one about to leave that count.
+  const [{ value: otherActiveAdmins }] = await db
+    .select({ value: count() })
+    .from(userTable)
+    .where(
+      and(
+        eq(userTable.tenantSlug, tenant.slug),
+        eq(userTable.role, "admin"),
+        isNull(userTable.disabledAt),
+        ne(userTable.id, target.id),
+      ),
+    );
+
+  if (isLastActiveAdmin(target.role, otherActiveAdmins)) {
+    return {
+      status: "error",
+      message: "É preciso manter ao menos um Registrador com acesso ativo.",
+    };
+  }
+
+  await db
+    .update(userTable)
+    .set({ disabledAt: new Date() })
+    .where(eq(userTable.id, target.id));
+  // Ends every session that account already had open, not just future
+  // logins — getSession() has nothing left to find on the next request.
+  await db.delete(sessionTable).where(eq(sessionTable.userId, target.id));
+
+  await recordAudit({
+    tenantSlug: tenant.slug,
+    actorId: session.user.id,
+    action: "user.deactivate",
+    targetType: "user",
+    targetId: target.id,
+  });
+
+  revalidatePath(USERS_PATH);
+  return { status: "sent" };
+}
+
+export async function reactivateAccount(
+  _previous: AccountActionState,
+  formData: FormData,
+): Promise<AccountActionState> {
+  const userId = String(formData.get("userId") ?? "");
+  const session = await getSession();
+  if (!session || !can(session.user.role ?? "", "user.manage")) notFound();
+
+  const tenant = await getTenant();
+  const target = await findOwnAccount(userId, tenant.slug);
+  if (!target) notFound();
+
+  // No new invite or password link: the one the account already had before
+  // being deactivated keeps working, same as design.md settled on.
+  await db
+    .update(userTable)
+    .set({ disabledAt: null })
+    .where(eq(userTable.id, target.id));
+
+  await recordAudit({
+    tenantSlug: tenant.slug,
+    actorId: session.user.id,
+    action: "user.reactivate",
     targetType: "user",
     targetId: target.id,
   });

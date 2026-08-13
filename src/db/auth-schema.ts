@@ -26,6 +26,11 @@ export const user = pgTable("user", {
   // is no user management screen yet (see add-support-chat/design.md,
   // "Setor do atendente é campo opcional no convite, não uma tela nova").
   chatSector: text("chat_sector"),
+  // Null while the account has access. Set to when an admin turned it off —
+  // not a boolean, so the audit trail and the UI get "how long ago" for
+  // free. Independent of whether a credential row exists: an account can be
+  // both "already has its own password" and "access turned off".
+  disabledAt: timestamp("disabled_at"),
   createdAt: timestamp("created_at").notNull().defaultNow(),
   updatedAt: timestamp("updated_at").notNull().defaultNow(),
 });
@@ -42,6 +47,7 @@ export const USER_ADDITIONAL_FIELDS = {
   tenantSlug: { type: "string", input: false, required: true },
   chatStatus: { type: "string", input: false, defaultValue: "available" },
   chatSector: { type: "string", input: false, required: false },
+  disabledAt: { type: "date", input: false, required: false },
 } as const;
 
 export const session = pgTable("session", {

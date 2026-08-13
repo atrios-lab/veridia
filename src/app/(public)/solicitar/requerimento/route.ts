@@ -81,7 +81,7 @@ export async function POST(request: Request): Promise<Response> {
   return new Response(new Uint8Array(bytes), {
     headers: {
       "Content-Type": "application/pdf",
-      "Content-Disposition": `attachment; filename="${name}-${stored.protocolNumber}.pdf"`,
+      "Content-Disposition": `inline; filename="${name}-${stored.protocolNumber}.pdf"`,
       // Personal data: no shared cache may keep a copy.
       "Cache-Control": "private, no-store",
     },

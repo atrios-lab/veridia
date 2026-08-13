@@ -6,11 +6,9 @@ import { type ReissueKeyState, reissueKeyAction } from "../actions.ts";
 
 export function KeySection({
   requestId,
-  protocolNumber,
   issuedLabel,
 }: {
   requestId: string;
-  protocolNumber: string;
   issuedLabel: string;
 }) {
   const [state, action, pending] = useActionState<ReissueKeyState, FormData>(
@@ -31,21 +29,6 @@ export function KeySection({
       <div className="mt-2.5 rounded-[9px] border border-admin-input-border bg-admin-input-bg px-3.5 py-2.5 text-[14px] font-bold tracking-[0.2em] text-admin-primary">
         {state.status === "success" ? state.key : "••••  ••••  ••••"}
       </div>
-      {/* Only reachable while the key is on screen, and the key travels in the
-          body: the server keeps a hash, so it cannot print this on its own. */}
-      {state.status === "success" && (
-        <form
-          action={`/admin/pedidos/${encodeURIComponent(protocolNumber)}/imprimir`}
-          method="post"
-          target="_blank"
-          className="mt-2.5"
-        >
-          <input type="hidden" name="chave" value={state.key} />
-          <button type="submit" className="btn btn-admin-secondary btn-sm">
-            Imprimir comprovante
-          </button>
-        </form>
-      )}
       <div className="mt-2.5">
         <ConfirmAction
           action={action}

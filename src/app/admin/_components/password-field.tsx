@@ -23,14 +23,14 @@ export function PasswordField({
       >
         {label}
       </label>
-      <div className="flex items-center rounded-lg border border-admin-input-border bg-admin-input-bg px-3.5 py-2.5">
+      <div className="flex items-center rounded-lg border border-admin-input-border bg-admin-input-bg px-3.5 py-2.5 focus-within:border-admin-accent focus-within:ring-2 focus-within:ring-admin-accent">
         <input
           id={id}
           name={name}
           type={visible ? "text" : "password"}
           autoComplete={autoComplete}
           required
-          className="min-w-0 flex-1 bg-transparent text-sm text-admin-text outline-none"
+          className="min-w-0 flex-1 bg-transparent text-sm text-admin-text outline-none focus-visible:shadow-none"
         />
         <button
           type="button"

@@ -10,7 +10,16 @@ import { Icon } from "./icon.tsx";
  * nothing can bring the key back: the office stores a hash of it, and the
  * citizen has no account to recover it from.
  */
-export function CopyField({ label, value }: { label: string; value: string }) {
+export function CopyField({
+  label,
+  value,
+  small,
+}: {
+  label: string;
+  value: string;
+  /** For long machine strings (e.g. Pix Copia e Cola) that shouldn't shout like a protocol number. */
+  small?: boolean;
+}) {
   const [copied, setCopied] = useState(false);
 
   return (
@@ -19,7 +28,13 @@ export function CopyField({ label, value }: { label: string; value: string }) {
         <div className="text-[9.5px] font-bold uppercase tracking-[0.14em] text-brand-accent">
           {label}
         </div>
-        <div className="break-all text-[16.5px] font-bold tracking-wide text-brand-primary">
+        <div
+          className={
+            small
+              ? "break-all font-mono text-[11px] leading-snug text-brand-primary"
+              : "break-all text-[16.5px] font-bold tracking-wide text-brand-primary"
+          }
+        >
           {value}
         </div>
       </div>

@@ -360,7 +360,7 @@ function PaymentCard({
             // biome-ignore lint/security/noDangerouslySetInnerHtml: pix.qrSvg is deterministic SVG rendered server-side by `qrcode`, never citizen input.
             dangerouslySetInnerHTML={{ __html: pix.qrSvg }}
           />
-          <CopyField label="Pix Copia e Cola" value={pix.copyPaste} />
+          <CopyField label="Pix Copia e Cola" value={pix.copyPaste} small />
         </div>
       ) : (
         <p className="mt-2 text-[12px] leading-relaxed text-brand-text-soft">
@@ -374,12 +374,17 @@ function PaymentCard({
 
 function TimelineStep({
   done,
+  current,
   label,
   detail,
   lineBelow,
   alert,
 }: {
   done?: boolean;
+  /** The step the request is at right now: styled distinct from both a
+   * completed step and one still to come, so "in progress" doesn't read as
+   * indistinguishable from "not started yet". */
+  current?: boolean;
   label: string;
   detail?: string;
   lineBelow?: boolean;
@@ -394,7 +399,9 @@ function TimelineStep({
               ? "bg-brand-alert"
               : done
                 ? "bg-brand-accent"
-                : "border-2 border-brand-border bg-brand-surface"
+                : current
+                  ? "border-2 border-brand-accent bg-brand-surface"
+                  : "border-2 border-brand-border bg-brand-surface"
           }`}
         />
         {lineBelow && <span className="w-0.5 flex-1 bg-brand-border" />}
@@ -406,7 +413,9 @@ function TimelineStep({
               ? "text-brand-alert"
               : done
                 ? "text-brand-primary"
-                : "text-brand-faint"
+                : current
+                  ? "text-brand-accent"
+                  : "text-brand-faint"
           }`}
         >
           {label}
@@ -424,6 +433,15 @@ interface TimelineStepData {
   done?: boolean;
   detail?: string;
   alert?: boolean;
+  current?: boolean;
+}
+
+/** The first not-yet-done, non-alert step is where the request is stuck right
+ * now — flag it so it renders distinct from a step still further out. */
+function markCurrentStep(steps: TimelineStepData[]): TimelineStepData[] {
+  const current = steps.find((step) => !step.done && !step.alert);
+  if (current) current.current = true;
+  return steps;
 }
 
 /**
@@ -475,7 +493,7 @@ function timelineSteps(
     result.requestStatus === "rejected" ||
     result.requestStatus === "cancelled"
   ) {
-    return [
+    return markCurrentStep([
       ...steps.filter((step) => step.done),
       {
         label:
@@ -485,7 +503,7 @@ function timelineSteps(
         done: true,
         alert: true,
       },
-    ];
+    ]);
   }
 
   const delivered = result.deliveredDocuments.length > 0;
@@ -513,7 +531,7 @@ function timelineSteps(
     );
   }
 
-  return steps;
+  return markCurrentStep(steps);
 }
 
 /**
@@ -764,21 +782,7 @@ function RequestDetail({
             />
           )}
           <RequirementsCard result={result} />
-          {hasSignedForm ? (
-            <div className="flex items-start gap-2.5 rounded-2xl border border-brand-border bg-brand-card p-4">
-              <Icon
-                name="check"
-                className="mt-0.5 h-4 w-4 shrink-0 text-brand-primary-soft"
-                strokeWidth={2.4}
-              />
-              <p className="text-[12.5px] leading-relaxed text-brand-text-soft">
-                <strong className="text-brand-primary">
-                  Requerimento assinado recebido.
-                </strong>{" "}
-                A serventia já pode dar andamento ao pedido.
-              </p>
-            </div>
-          ) : (
+          {!hasSignedForm && (
             <div className="rounded-2xl border-[1.5px] border-brand-accent-line bg-brand-accent-soft p-4">
               <div className="flex items-center gap-2.5">
                 <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-brand-accent">
@@ -918,6 +922,7 @@ function RequestDetail({
             <form
               action="/solicitar/requerimento"
               method="post"
+              target="_blank"
               className="mt-2.5 flex items-center gap-2.5 border-b border-brand-border pb-3"
             >
               <Icon
@@ -934,7 +939,7 @@ function RequestDetail({
               </div>
               <ProtocolFields result={result} />
               <button type="submit" className="btn btn-ghost btn-sm shrink-0">
-                Baixar
+                Ver
               </button>
             </form>
             {citizenDocuments.length > 0 && (

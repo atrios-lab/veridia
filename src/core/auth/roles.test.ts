@@ -4,6 +4,8 @@ import { isRegisteredSlug } from "../tenant/resolve.ts";
 import {
   can,
   canAccessTenant,
+  isAccountDisabled,
+  isLastActiveAdmin,
   isRole,
   SUPERADMIN_TENANT_SLUG,
 } from "./roles.ts";
@@ -113,4 +115,25 @@ test("superadmin has every permission", () => {
   ] as const) {
     assert.ok(can("superadmin", permission));
   }
+});
+
+test("the last active admin cannot be deactivated", () => {
+  assert.ok(isLastActiveAdmin("admin", 0));
+});
+
+test("an admin is not the last one when another admin is still active", () => {
+  assert.equal(isLastActiveAdmin("admin", 1), false);
+});
+
+test("staff never trips the last-admin protection", () => {
+  assert.equal(isLastActiveAdmin("staff", 0), false);
+});
+
+test("an account with disabledAt set is disabled", () => {
+  assert.ok(isAccountDisabled(new Date()));
+});
+
+test("an account with no disabledAt is not disabled", () => {
+  assert.equal(isAccountDisabled(null), false);
+  assert.equal(isAccountDisabled(undefined), false);
 });

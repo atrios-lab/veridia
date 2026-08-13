@@ -24,7 +24,6 @@ import {
 } from "@/lib/service-request.ts";
 import { getSession } from "@/lib/session.ts";
 import { getTenant, OFFICE_TIME_ZONE } from "@/lib/tenant.ts";
-import { documentHref } from "../../../_components/attachment-link.ts";
 import { AdminPageHeader } from "../../../_components/page-header.tsx";
 import { StatusBadge } from "../_components/status-badge.tsx";
 import { AmountSection } from "./_components/amount-section.tsx";
@@ -106,11 +105,6 @@ export default async function ServiceRequestDetailPage({
   const citizenAttachments = ownAttachments
     .filter((a) => a.kind !== "office")
     .map(row);
-  // The signed requerimento, most recent first: it is the paper the office
-  // files, so printing means opening it rather than generating a blank.
-  const signed = ownAttachments
-    .filter((a) => a.displayName === "requerimento-assinado")
-    .toSorted((a, b) => b.createdAt.getTime() - a.createdAt.getTime())[0];
   const deliveredAttachments = ownAttachments
     .filter((a) => a.kind === "office")
     .map(row);
@@ -144,21 +138,6 @@ export default async function ServiceRequestDetailPage({
             status={status}
             label={statusLabel("service-request", status)}
           />
-          {/* Counter work: the citizen signs on paper, here, now. Once they
-              have returned a signed one, that is the sheet the office files,
-              so the same action opens it instead of printing a fresh blank. */}
-          <a
-            href={
-              signed
-                ? documentHref(request.id, signed.id)
-                : `/admin/pedidos/${encodeURIComponent(request.protocolNumber)}/imprimir`
-            }
-            target="_blank"
-            rel="noopener"
-            className="btn btn-admin-secondary btn-sm ml-auto"
-          >
-            {signed ? "Imprimir via assinada" : "Imprimir folha"}
-          </a>
         </div>
 
         <div className="grid grid-cols-1 gap-5 lg:grid-cols-[1fr_340px] lg:items-start">
@@ -223,7 +202,6 @@ export default async function ServiceRequestDetailPage({
           <div className="flex flex-col gap-4.5">
             <KeySection
               requestId={request.id}
-              protocolNumber={request.protocolNumber}
               issuedLabel={formatDate(
                 toIsoDate(request.createdAt, OFFICE_TIME_ZONE),
               )}

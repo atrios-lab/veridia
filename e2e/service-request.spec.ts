@@ -220,7 +220,7 @@ test.describe("filing a request", () => {
     // Picking the signed form is the send: no separate button to find.
     await page.locator("input[name=requerimento]").setInputFiles([fakePdf]);
     await expect(
-      page.getByText("Requerimento assinado recebido", { exact: false }),
+      page.getByText("Requerimento enviado", { exact: false }),
     ).toBeVisible();
   });
 
@@ -407,8 +407,16 @@ test.describe("filing a request", () => {
 
     // Registering the exigência is the admin panel's job (delivery 6); it is
     // simulated here with a direct write, the same way this suite already
-    // simulates the office's own writes elsewhere.
+    // simulates the office's own writes elsewhere. The signed form is
+    // simulated as already received too, so the exigência — not the form —
+    // is the step actually blocking the request.
     const sql = neon(process.env.DATABASE_URL as string);
+    await sql`
+      insert into service_request_attachments
+        (tenant_slug, request_id, kind, stored_name, display_name, path, mime_type, size_bytes)
+      select 'cartorio-marinho', id, 'signed-form', 'requerimento.pdf', 'requerimento.pdf', 'requerimento.pdf', 'application/pdf', 1024
+      from service_requests where protocol_number = ${protocolNumber}
+    `;
     await sql`
       insert into service_request_requirements (tenant_slug, request_id, text)
       select 'cartorio-marinho', id, 'Falta cópia legível do documento de identidade.'
@@ -423,6 +431,12 @@ test.describe("filing a request", () => {
     await expect(
       page.getByText("Falta cópia legível do documento de identidade."),
     ).toBeVisible();
+
+    // The pending exigência is what's blocking the request right now, so its
+    // timeline step gets the current-step highlight.
+    await expect(
+      page.getByText("Exigência aguardando sua resposta"),
+    ).toHaveClass(/text-brand-accent/);
 
     const fakePdf = {
       name: "resposta.pdf",
@@ -533,7 +547,15 @@ test.describe("filing a request", () => {
 
     // Marking the request "Pago" is the office's job (StatusSection);
     // simulated here the same way the other office writes in this suite are.
+    // The signed form is simulated as already received too, so "Em preparo"
+    // — not the form — is the step actually blocking the request.
     const sql = neon(process.env.DATABASE_URL as string);
+    await sql`
+      insert into service_request_attachments
+        (tenant_slug, request_id, kind, stored_name, display_name, path, mime_type, size_bytes)
+      select 'cartorio-marinho', id, 'signed-form', 'requerimento.pdf', 'requerimento.pdf', 'requerimento.pdf', 'application/pdf', 1024
+      from service_requests where protocol_number = ${protocolNumber}
+    `;
     await sql`
       update service_requests set status = 'paid'
       where tenant_slug = 'cartorio-marinho' and protocol_number = ${protocolNumber}
@@ -548,6 +570,15 @@ test.describe("filing a request", () => {
     await expect(
       page.locator("li", { hasText: "Documento entregue" }),
     ).toHaveCount(0);
+
+    // "Em preparo" is where the request is stuck right now, so it gets the
+    // current-step highlight; the step after it is still just a future one.
+    await expect(page.getByText("Em preparo na serventia")).toHaveClass(
+      /text-brand-accent/,
+    );
+    await expect(page.getByText("Conclusão e entrega")).not.toHaveClass(
+      /text-brand-accent/,
+    );
   });
 
   test("a delivered document closes the timeline with its own date", async ({
@@ -634,5 +665,9 @@ test.describe("filing a request", () => {
       page.getByText("Aguardando requerimento assinado"),
     ).toHaveCount(0);
     await expect(page.getByText("Em preparo na serventia")).toHaveCount(0);
+
+    // The outcome step ends the timeline as a completed alert, not a step
+    // still in progress — nothing in it should carry the current-step ring.
+    await expect(page.locator("ol .border-brand-accent")).toHaveCount(0);
   });
 });

@@ -78,6 +78,13 @@
       "when": 1786417252094,
       "tag": "0010_spicy_blob",
       "breakpoints": true
+    },
+    {
+      "idx": 11,
+      "version": "7",
+      "when": 1786612607693,
+      "tag": "0011_serious_pestilence",
+      "breakpoints": true
     }
   ]
 }

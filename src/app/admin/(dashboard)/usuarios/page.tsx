@@ -19,6 +19,8 @@ export const metadata = { title: "Usuários" };
  * "Ativa" vs. "Aguardando 1º acesso" is derived, not stored: a row in
  * `account` for the `credential` provider only exists once the person has
  * set their own password (see design.md — no new column needed for this).
+ * "Acesso desativado" outranks both: an account can already have its own
+ * password and still have `disabledAt` set.
  */
 async function listAccounts(tenantSlug: string) {
   const rows = await db
@@ -28,6 +30,7 @@ async function listAccounts(tenantSlug: string) {
       email: userTable.email,
       role: userTable.role,
       credentialId: accountTable.id,
+      disabledAt: userTable.disabledAt,
     })
     .from(userTable)
     .leftJoin(
@@ -40,7 +43,11 @@ async function listAccounts(tenantSlug: string) {
     .where(eq(userTable.tenantSlug, tenantSlug))
     .orderBy(userTable.createdAt);
 
-  return rows.map((row) => ({ ...row, active: row.credentialId !== null }));
+  return rows.map((row) => ({
+    ...row,
+    active: row.credentialId !== null,
+    disabled: row.disabledAt !== null,
+  }));
 }
 
 export default async function UsuariosPage() {
@@ -64,7 +71,7 @@ export default async function UsuariosPage() {
             {accounts.map((account) => (
               <div
                 key={account.id}
-                className="grid grid-cols-[minmax(0,1fr)_110px_170px_150px] items-center gap-3 px-5 py-3.5"
+                className="grid grid-cols-[minmax(0,1fr)_110px_170px_minmax(150px,max-content)] items-center gap-3 px-5 py-3.5"
               >
                 <div className="min-w-0">
                   <p className="truncate text-[13.5px] font-semibold text-admin-text">
@@ -84,7 +91,11 @@ export default async function UsuariosPage() {
                   {ROLE_LABELS[account.role as Role] ?? account.role}
                 </span>
                 <span>
-                  {account.active ? (
+                  {account.disabled ? (
+                    <span className="rounded-full bg-admin-error-bg px-2.5 py-1 text-[11px] font-bold text-admin-error-text">
+                      Acesso desativado
+                    </span>
+                  ) : account.active ? (
                     <span className="rounded-full bg-admin-success-bg px-2.5 py-1 text-[11px] font-bold text-admin-success-text">
                       Ativa
                     </span>
@@ -98,6 +109,8 @@ export default async function UsuariosPage() {
                   <AccountRowActions
                     userId={account.id}
                     active={account.active}
+                    disabled={account.disabled}
+                    isSelf={account.id === session.user.id}
                   />
                 </div>
               </div>

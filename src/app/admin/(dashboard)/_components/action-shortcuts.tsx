@@ -24,7 +24,7 @@ export function ActionShortcuts({
 }) {
   if (shortcuts.length === 0) return null;
   return (
-    <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
+    <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-[1fr_1fr_348px]">
       {shortcuts.map((shortcut, index) => (
         <Link
           key={shortcut.key}

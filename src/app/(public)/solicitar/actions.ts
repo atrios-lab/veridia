@@ -192,8 +192,7 @@ export async function attachSignedForm(
     await attachToRequest(tenant.slug, request.id, stored, "signed-form");
     return {
       status: "success",
-      message:
-        "Requerimento assinado recebido. A serventia já pode dar andamento.",
+      message: "Requerimento enviado. A serventia vai analisar em seguida.",
     };
   } catch (error) {
     if (error instanceof AttachmentError) {

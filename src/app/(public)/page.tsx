@@ -135,7 +135,7 @@ export default async function Home() {
                 <form
                   action={SECTION_ROUTES["consulta-protocolo"]}
                   method="get"
-                  className="mt-4 flex gap-1.5 rounded-[13px] bg-brand-card p-1.5 shadow-lg md:mt-5 md:max-w-lg"
+                  className="mt-4 flex gap-1.5 rounded-[13px] bg-brand-card p-1.5 shadow-lg focus-within:ring-2 focus-within:ring-brand-accent md:mt-5 md:max-w-lg"
                 >
                   <label
                     htmlFor="numero"
@@ -152,7 +152,7 @@ export default async function Home() {
                       type="text"
                       required
                       placeholder="Nº do protocolo"
-                      className="w-full bg-transparent text-sm text-brand-text outline-none placeholder:text-brand-faint md:text-[15px]"
+                      className="w-full bg-transparent text-sm text-brand-text outline-none placeholder:text-brand-faint focus-visible:shadow-none md:text-[15px]"
                     />
                   </label>
                   <ProtocolSearchButton />

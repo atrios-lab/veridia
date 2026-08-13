@@ -24,7 +24,7 @@ function DocumentRow({ doc }: { doc: TransparencyDocumentRow }) {
       href={`/transparencia/documento/${doc.id}`}
       target="_blank"
       rel="noopener"
-      className="flex items-center gap-3 border-b border-brand-border px-4 py-3.5 last:border-b-0 hover:bg-brand-tint"
+      className="flex items-center gap-3 border-b border-brand-border p-5 last:border-b-0 hover:bg-brand-tint"
     >
       <Icon name="file" className="h-5 w-5 flex-none text-brand-accent" />
       <span className="min-w-0 flex-1">
@@ -50,7 +50,7 @@ function BulletinRow({ row }: { row: TransparencyBulletinRow }) {
       href={`/transparencia/boletim/${row.id}`}
       target="_blank"
       rel="noopener"
-      className="flex items-center gap-3 border-b border-brand-border px-4 py-3.5 last:border-b-0 hover:bg-brand-tint"
+      className="flex items-center gap-3 border-b border-brand-border p-5 last:border-b-0 hover:bg-brand-tint"
     >
       <span className="min-w-0 flex-1 text-sm font-semibold text-brand-primary">
         {formatMonthYear(month, year)}
