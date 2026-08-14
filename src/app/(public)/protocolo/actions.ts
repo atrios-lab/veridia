@@ -16,15 +16,22 @@ import {
   statusLabel,
 } from "@/core/request/kinds.ts";
 import { formatCents } from "@/core/request/money.ts";
+import {
+  deriveQuestionThreadStatus,
+  type QuestionThreadStatus,
+  questionBodySchema,
+} from "@/core/request/question.ts";
 import { toIsoDate } from "@/core/scheduling/calendar.ts";
 import { isSectionEnabled } from "@/core/tenant/gating.ts";
 import { type PixCharge, pixChargeFor } from "@/lib/pix-qr.ts";
 import { isRateLimited } from "@/lib/rate-limit.ts";
 import {
+  addCitizenQuestion,
   attachToRequest,
   findByProtocolWithKey,
   fulfillRequirement,
   listAttachments,
+  listQuestions,
   listRequirements,
   requestOwnAttachments,
   updateDetails,
@@ -69,6 +76,13 @@ export interface CitizenDocumentView {
   displayName: string;
 }
 
+export interface QuestionView {
+  id: string;
+  authorType: "citizen" | "staff";
+  createdAt: string;
+  body: string;
+}
+
 export interface ServiceRequestDetail extends BaseDetail {
   kind: "service-request";
   /** The raw andamento, for the timeline to derive its steps from — distinct
@@ -90,6 +104,8 @@ export interface ServiceRequestDetail extends BaseDetail {
    * citizen to pay again. */
   paymentSettled?: boolean;
   pix?: PixCharge;
+  questions: QuestionView[];
+  questionStatus: QuestionThreadStatus;
 }
 
 export interface AppointmentDetail extends BaseDetail {
@@ -216,6 +232,7 @@ export async function lookupProtocolDetail(
     const attachments = await listAttachments(tenant.slug, record.id);
     const signedForm = attachments.find((a) => a.kind === "signed-form");
     const requirements = await listRequirements(tenant.slug, record.id);
+    const questions = await listQuestions(tenant.slug, record.id);
     // "Paid" itself is not a terminal andamento (the office still moves it
     // on to "done"), so it needs its own check alongside the terminal ones:
     // once paid, nothing should invite the citizen to pay again.
@@ -269,6 +286,13 @@ export async function lookupProtocolDetail(
           .filter((a) => a.requirementId === r.id)
           .map((a) => ({ id: a.id, createdAt: a.createdAt.toISOString() })),
       })),
+      questions: questions.map((q) => ({
+        id: q.id,
+        authorType: q.authorType,
+        createdAt: q.createdAt.toISOString(),
+        body: q.body,
+      })),
+      questionStatus: deriveQuestionThreadStatus(questions),
     };
   } catch (error) {
     console.error("protocolo.lookup", error);
@@ -470,6 +494,76 @@ export async function fulfillRequirementAction(
       return { status: "error", message: error.message };
     }
     console.error("protocolo.fulfill-requirement", error);
+    return { status: "error", message: GENERIC_ERROR };
+  }
+}
+
+export type SubmitQuestionState =
+  | { status: "idle" }
+  | { status: "error"; message: string }
+  | { status: "success"; question: QuestionView };
+
+/**
+ * The citizen posts a question through the same consult they already
+ * unlocked — no e-mail, no phone, and no expectation of an immediate answer
+ * (US-07): the office replies whenever it gets to it.
+ */
+export async function submitQuestionAction(
+  _previous: SubmitQuestionState,
+  formData: FormData,
+): Promise<SubmitQuestionState> {
+  const tenant = await getTenant();
+  if (!isSectionEnabled(tenant, "consulta-protocolo")) {
+    return { status: "error", message: NOT_FOUND };
+  }
+
+  const protocolNumber = String(formData.get("protocolNumber") ?? "");
+  const accessKey = String(formData.get("accessKey") ?? "");
+
+  const request = await findByProtocolWithKey(
+    tenant.slug,
+    protocolNumber,
+    accessKey,
+  );
+  if (!request || request.kind !== "service-request") {
+    return { status: "error", message: NOT_FOUND };
+  }
+
+  if (await isRateLimited(await headers())) {
+    return {
+      status: "error",
+      message: "Muitos envios seguidos. Aguarde um minuto e tente de novo.",
+    };
+  }
+
+  const parsed = questionBodySchema.safeParse(
+    String(formData.get("body") ?? ""),
+  );
+  if (!parsed.success) {
+    return {
+      status: "error",
+      message:
+        parsed.error.issues[0]?.message ?? "Escreva algo antes de enviar.",
+    };
+  }
+
+  try {
+    const inserted = await addCitizenQuestion(
+      tenant.slug,
+      request.id,
+      parsed.data,
+    );
+    return {
+      status: "success",
+      question: {
+        id: inserted.id,
+        authorType: "citizen",
+        createdAt: new Date().toISOString(),
+        body: parsed.data,
+      },
+    };
+  } catch (error) {
+    console.error("protocolo.submit-question", error);
     return { status: "error", message: GENERIC_ERROR };
   }
 }

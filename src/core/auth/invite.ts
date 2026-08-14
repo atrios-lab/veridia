@@ -3,12 +3,9 @@
 // this module only decides what it says, in Portuguese, so it can be tested
 // without a network or a database.
 
-export interface AccountEmailText {
-  subject: string;
-  paragraphs: readonly string[];
-  buttonLabel: string;
-  footnote: string;
-}
+import type { EmailText } from "../email/text.ts";
+
+export type AccountEmailText = EmailText;
 
 interface InviteEmailInput {
   kind: "convite";

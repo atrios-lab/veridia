@@ -7,9 +7,11 @@ import { can } from "@/core/auth/roles.ts";
 import { purposeFor, requestDataEditSchema } from "@/core/request/edit.ts";
 import { isServiceRequestStatus } from "@/core/request/kinds.ts";
 import { parseCentsInput } from "@/core/request/money.ts";
+import { questionBodySchema } from "@/core/request/question.ts";
 import { requirementTextSchema } from "@/core/request/requirement.ts";
 import {
   AttachmentInUseError,
+  addStaffQuestionReply,
   attachToRequest,
   deleteAttachment,
   deleteRequest,
@@ -107,6 +109,45 @@ export async function registerRequirementAction(
     );
   } catch (error) {
     console.error("pedidos.register-requirement", error);
+    return { status: "error", message: GENERIC_ERROR };
+  }
+  revalidateAdmin();
+  return { status: "success" };
+}
+
+/**
+ * The office replies to a question the citizen posted. There is no
+ * expectation of an immediate answer (US-07): this just records the reply
+ * and, best-effort, lets the citizen know one exists.
+ */
+export async function replyQuestionAction(
+  _previous: ActionState,
+  formData: FormData,
+): Promise<ActionState> {
+  const session = await authorize();
+  if (!session) return { status: "error", message: NO_PERMISSION };
+
+  const requestId = String(formData.get("requestId") ?? "");
+  const parsed = questionBodySchema.safeParse(
+    String(formData.get("body") ?? ""),
+  );
+  if (!parsed.success) {
+    return {
+      status: "error",
+      message: parsed.error.issues[0]?.message ?? "Texto inválido.",
+    };
+  }
+
+  const tenant = await getTenant();
+  try {
+    await addStaffQuestionReply(
+      tenant,
+      requestId,
+      parsed.data,
+      session.user.id,
+    );
+  } catch (error) {
+    console.error("pedidos.reply-question", error);
     return { status: "error", message: GENERIC_ERROR };
   }
   revalidateAdmin();

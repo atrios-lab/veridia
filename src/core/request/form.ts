@@ -79,6 +79,16 @@ export function isValidContact(value: string): boolean {
   return digits.length === 10 || digits.length === 11;
 }
 
+/**
+ * Whether the mixed contact field holds an e-mail rather than a phone
+ * number — conservative on purpose: anything that does not clearly match
+ * gets treated as "not an e-mail", so a notification never fires at a
+ * malformed address instead of quietly not firing at all.
+ */
+export function isEmailContact(value: string): boolean {
+  return EMAIL.test(value.trim());
+}
+
 const requiredText = (max: number) =>
   z
     .string()

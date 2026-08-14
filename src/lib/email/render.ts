@@ -1,10 +1,26 @@
-import type { AccountEmailText } from "@/core/auth/invite.ts";
+import type { EmailText } from "@/core/email/text.ts";
+import type { Tenant } from "@/core/tenant/schema.ts";
 
 export interface EmailTenantIdentity {
   name: string;
   subtitle: string;
   /** Absolute URL: an e-mail client cannot resolve a path relative to the app. */
   sealUrl: string;
+}
+
+/** The tenant fields every outgoing e-mail's header shows, from the full `Tenant`. */
+export function tenantEmailIdentity(tenant: Tenant): EmailTenantIdentity {
+  const host = tenant.hosts[0];
+  if (!host) {
+    throw new Error(`Serventia "${tenant.slug}" não tem host registrado.`);
+  }
+  return {
+    name: tenant.name,
+    subtitle: tenant.subtitle,
+    // The seal for a light background (dark ink), same one the invite e-mail
+    // mockup uses on its white body — see tenant.logos.seal in schema.ts.
+    sealUrl: `https://${host}${tenant.logos.seal.light}`,
+  };
 }
 
 // Fixed institutional palette, not the tenant's live `--brand-*` theme: an
@@ -35,8 +51,8 @@ function escapeHtml(value: string): string {
 }
 
 /** The HTML body sent to the recipient's inbox. */
-export function renderAccountEmailHtml(
-  text: AccountEmailText,
+export function renderEmailCardHtml(
+  text: EmailText,
   tenant: EmailTenantIdentity,
   actionUrl: string,
 ): string {
@@ -71,8 +87,8 @@ export function renderAccountEmailHtml(
 }
 
 /** Plain-text fallback for clients that do not render HTML. */
-export function renderAccountEmailText(
-  text: AccountEmailText,
+export function renderEmailCardText(
+  text: EmailText,
   actionUrl: string,
 ): string {
   return [

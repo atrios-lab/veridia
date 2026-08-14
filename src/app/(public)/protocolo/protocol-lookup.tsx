@@ -1,12 +1,13 @@
 "use client";
 
 import Link from "next/link";
-import { useActionState, useEffect, useState } from "react";
+import { useActionState, useEffect, useRef, useState } from "react";
 import {
   DATA_RIGHT_OPTIONS,
   DATA_RIGHTS_DEADLINE_DAYS,
   manifestationLabel,
 } from "@/core/request/channels.ts";
+import { deriveQuestionThreadStatus } from "@/core/request/question.ts";
 import { formatShortDate } from "@/core/scheduling/calendar.ts";
 import { Icon } from "../_components/icon.tsx";
 import { CopyField } from "../_components/protocol-reveal.tsx";
@@ -24,8 +25,11 @@ import {
   type LookupState,
   lookupProtocolDetail,
   type OmbudsmanDetail,
+  type QuestionView,
   type RequirementView,
   type ServiceRequestDetail,
+  type SubmitQuestionState,
+  submitQuestionAction,
 } from "./actions.ts";
 
 export interface PublicStatus {
@@ -126,7 +130,13 @@ export function ProtocolLookup({
       case "ombudsman":
         return <OmbudsmanCard result={state} />;
       default:
-        return <RequestDetail result={state} contacts={contacts} />;
+        return (
+          <RequestDetail
+            result={state}
+            contacts={contacts}
+            tenantName={tenantName}
+          />
+        );
     }
   }
 
@@ -726,9 +736,11 @@ function RequirementsCard({ result }: { result: ServiceRequestDetail }) {
 function RequestDetail({
   result,
   contacts,
+  tenantName,
 }: {
   result: ServiceRequestDetail;
   contacts: Contacts;
+  tenantName: string;
 }) {
   // The lookup already answered whether the signed form arrived; a
   // successful upload in this same visit flips it without asking the server
@@ -924,6 +936,7 @@ function RequestDetail({
               method="post"
               target="_blank"
               className="mt-2.5 flex items-center gap-2.5 border-b border-brand-border pb-3"
+              rel="noopener"
             >
               <Icon
                 name="file"
@@ -1092,31 +1105,193 @@ function RequestDetail({
             )}
           </div>
 
-          <div className="flex items-center gap-2.5 rounded-2xl border border-brand-border bg-brand-card p-4">
-            <span className="flex-1 text-[12.5px] text-brand-text-soft">
-              Dúvida sobre este pedido?
-            </span>
-            <a
-              href={`https://wa.me/55${digits(contacts.whatsapp)}`}
-              className="btn btn-secondary btn-sm shrink-0"
-            >
-              <Icon name="chat" className="h-3.5 w-3.5" strokeWidth={1.8} />
-              WhatsApp
-            </a>
-            <a
-              href={`tel:+55${digits(contacts.phone)}`}
-              className="btn btn-secondary btn-sm shrink-0"
-            >
-              <Icon name="phone" className="h-3.5 w-3.5" strokeWidth={1.8} />
-              Ligar
-            </a>
-          </div>
+          <QuestionsCard
+            result={result}
+            contacts={contacts}
+            tenantName={tenantName}
+          />
         </div>
       </div>
 
       <Link href="/protocolo" className="btn btn-ghost btn-sm mt-4">
         Nova consulta
       </Link>
+    </div>
+  );
+}
+
+function QuestionBadge({
+  status,
+}: {
+  status: ReturnType<typeof deriveQuestionThreadStatus>;
+}) {
+  if (status === "none") return null;
+  if (status === "answered") {
+    return (
+      <span className="rounded-full bg-brand-primary-soft px-2.5 py-0.5 text-[10.5px] font-bold text-white">
+        Respondida
+      </span>
+    );
+  }
+  return (
+    <span className="rounded-full bg-brand-accent px-2.5 py-0.5 text-[10.5px] font-bold text-white">
+      Aguardando resposta
+    </span>
+  );
+}
+
+function QuestionMessageBubble({
+  message,
+  tenantName,
+}: {
+  message: QuestionView;
+  tenantName: string;
+}) {
+  const isCitizen = message.authorType === "citizen";
+  return (
+    <div>
+      <div className="flex items-baseline gap-1.5">
+        <span className="text-[12.5px] font-bold text-brand-primary">
+          {isCitizen ? "Você" : tenantName}
+        </span>
+        <span className="text-[10.5px] text-brand-faint">
+          {formatDateTime(message.createdAt)}
+        </span>
+      </div>
+      <div
+        className={`mt-1 rounded-xl px-3 py-2.5 ${isCitizen ? "bg-brand-surface" : "bg-brand-accent-soft"}`}
+      >
+        <p className="text-[12.5px] leading-relaxed text-brand-text">
+          {message.body}
+        </p>
+      </div>
+    </div>
+  );
+}
+
+/**
+ * Not a live chat: the citizen posts, the office answers in its own time
+ * (US-07) — no polling, no "digitando", no read receipt. A fresh submit is
+ * appended locally so the thread updates without a full reload; the badge is
+ * always derived from whatever `questions` holds right now, never cached.
+ */
+function QuestionComposer({
+  protocolNumber,
+  accessKey,
+  onSubmitted,
+}: {
+  protocolNumber: string;
+  accessKey: string;
+  onSubmitted: (question: QuestionView) => void;
+}) {
+  const formRef = useRef<HTMLFormElement>(null);
+  const [state, action, pending] = useActionState<
+    SubmitQuestionState,
+    FormData
+  >(submitQuestionAction, { status: "idle" });
+
+  useEffect(() => {
+    if (state.status === "success") {
+      onSubmitted(state.question);
+      formRef.current?.reset();
+    }
+  }, [state, onSubmitted]);
+
+  return (
+    <form ref={formRef} action={action} className="mt-4">
+      <input type="hidden" name="protocolNumber" value={protocolNumber} />
+      <input type="hidden" name="accessKey" value={accessKey} />
+      <textarea
+        name="body"
+        rows={2}
+        placeholder="Escreva sua pergunta…"
+        className={inputClass}
+      />
+      <div className="mt-2 flex items-center justify-between gap-2">
+        {state.status === "error" ? (
+          <output
+            role="alert"
+            className="text-[11.5px] font-semibold text-brand-alert"
+          >
+            {state.message}
+          </output>
+        ) : (
+          <span />
+        )}
+        <button
+          type="submit"
+          disabled={pending}
+          className="btn btn-primary btn-sm shrink-0"
+        >
+          {pending ? "Enviando…" : "Enviar pergunta"}
+        </button>
+      </div>
+    </form>
+  );
+}
+
+function QuestionsCard({
+  result,
+  contacts,
+  tenantName,
+}: {
+  result: ServiceRequestDetail;
+  contacts: Contacts;
+  tenantName: string;
+}) {
+  const [questions, setQuestions] = useState(result.questions);
+  const status = deriveQuestionThreadStatus(questions);
+
+  return (
+    <div className="rounded-2xl border border-brand-border bg-brand-card p-4">
+      <div className="flex items-center gap-2">
+        <h3 className="flex-1 font-serif text-[15.5px] font-semibold text-brand-primary">
+          Perguntas sobre este pedido
+        </h3>
+        <QuestionBadge status={status} />
+      </div>
+      <p className="mt-1.5 text-[11.5px] leading-relaxed text-brand-faint">
+        Escreva sua dúvida aqui: o cartório responde em até 1 dia útil, direto
+        neste protocolo.
+      </p>
+
+      {questions.length > 0 && (
+        <div className="mt-3.5 flex flex-col gap-3.5">
+          {questions.map((question) => (
+            <QuestionMessageBubble
+              key={question.id}
+              message={question}
+              tenantName={tenantName}
+            />
+          ))}
+        </div>
+      )}
+
+      <QuestionComposer
+        protocolNumber={result.protocolNumber}
+        accessKey={result.accessKey}
+        onSubmitted={(question) => setQuestions((prev) => [...prev, question])}
+      />
+
+      <div className="mt-4 flex items-center gap-2.5 border-t border-brand-border pt-3.5">
+        <span className="flex-1 text-[11.5px] text-brand-text-soft">
+          Prefere falar direto?
+        </span>
+        <a
+          href={`https://wa.me/55${digits(contacts.whatsapp)}`}
+          className="btn btn-secondary btn-sm shrink-0"
+        >
+          <Icon name="chat" className="h-3.5 w-3.5" strokeWidth={1.8} />
+          WhatsApp
+        </a>
+        <a
+          href={`tel:+55${digits(contacts.phone)}`}
+          className="btn btn-secondary btn-sm shrink-0"
+        >
+          <Icon name="phone" className="h-3.5 w-3.5" strokeWidth={1.8} />
+          Ligar
+        </a>
+      </div>
     </div>
   );
 }

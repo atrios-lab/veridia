@@ -18,6 +18,7 @@ import { linkedConversations } from "@/lib/chat.ts";
 import {
   findByProtocol,
   listAttachments,
+  listQuestions,
   listRequestHistory,
   listRequirements,
   requestOwnAttachments,
@@ -32,6 +33,7 @@ import { AttachmentsSection } from "./_components/attachments-section.tsx";
 import { DangerSection } from "./_components/danger-section.tsx";
 import { DeliverySection } from "./_components/delivery-section.tsx";
 import { KeySection } from "./_components/key-section.tsx";
+import { QuestionsSection } from "./_components/questions-section.tsx";
 import type { RequirementItem } from "./_components/requirements-section.tsx";
 import { RequirementsSection } from "./_components/requirements-section.tsx";
 import { StatusSection } from "./_components/status-section.tsx";
@@ -44,6 +46,8 @@ const HISTORY_LABELS: Record<string, string> = {
   "service-request.amount": "informou o valor do pedido",
   "service-request.key-reissue": "emitiu uma nova chave de acesso",
   "service-request.edit": "corrigiu os dados do pedido",
+  "service-request.question": "enviou uma pergunta",
+  "service-request.question.reply": "respondeu uma pergunta do cidadão",
 };
 
 function formatDayMonthTime(date: Date): string {
@@ -86,12 +90,13 @@ export default async function ServiceRequestDetailPage({
     ? request.status
     : "new";
 
-  const [attachments, requirementRows, history, conversations] =
+  const [attachments, requirementRows, history, conversations, questions] =
     await Promise.all([
       listAttachments(tenant.slug, request.id),
       listRequirements(tenant.slug, request.id),
       listRequestHistory(tenant.slug, request.id, request.protocolNumber),
       linkedConversations(tenant.slug, request.id),
+      listQuestions(tenant.slug, request.id),
     ]);
 
   const row = (a: (typeof attachments)[number]) => ({
@@ -177,6 +182,12 @@ export default async function ServiceRequestDetailPage({
             <RequirementsSection
               requestId={request.id}
               requirements={requirements}
+            />
+
+            <QuestionsSection
+              requestId={request.id}
+              applicantName={request.applicantName ?? "Solicitante"}
+              questions={questions}
             />
 
             <AttachmentsSection

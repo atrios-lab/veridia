@@ -1,22 +1,12 @@
 import "server-only";
 import { buildAccountEmailText } from "@/core/auth/invite.ts";
 import type { Tenant } from "@/core/tenant/schema.ts";
-import { renderAccountEmailHtml, renderAccountEmailText } from "./render.ts";
+import {
+  renderEmailCardHtml,
+  renderEmailCardText,
+  tenantEmailIdentity,
+} from "./render.ts";
 import { sendEmail } from "./send.ts";
-
-function tenantIdentity(tenant: Tenant) {
-  const host = tenant.hosts[0];
-  if (!host) {
-    throw new Error(`Serventia "${tenant.slug}" não tem host registrado.`);
-  }
-  return {
-    name: tenant.name,
-    subtitle: tenant.subtitle,
-    // The seal for a light background (dark ink), same one the invite e-mail
-    // mockup uses on its white body — see tenant.logos.seal in schema.ts.
-    sealUrl: `https://${host}${tenant.logos.seal.light}`,
-  };
-}
 
 export interface SendInviteEmailParams {
   to: string;
@@ -40,12 +30,12 @@ export async function sendInviteEmail(
     to: params.to,
     fromName: params.tenant.name,
     subject: text.subject,
-    html: renderAccountEmailHtml(
+    html: renderEmailCardHtml(
       text,
-      tenantIdentity(params.tenant),
+      tenantEmailIdentity(params.tenant),
       params.actionUrl,
     ),
-    text: renderAccountEmailText(text, params.actionUrl),
+    text: renderEmailCardText(text, params.actionUrl),
   });
 }
 
@@ -67,11 +57,11 @@ export async function sendPasswordResetEmail(
     to: params.to,
     fromName: params.tenant.name,
     subject: text.subject,
-    html: renderAccountEmailHtml(
+    html: renderEmailCardHtml(
       text,
-      tenantIdentity(params.tenant),
+      tenantEmailIdentity(params.tenant),
       params.actionUrl,
     ),
-    text: renderAccountEmailText(text, params.actionUrl),
+    text: renderEmailCardText(text, params.actionUrl),
   });
 }

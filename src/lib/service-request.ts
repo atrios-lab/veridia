@@ -17,6 +17,7 @@ import {
   verifyAccessKey,
 } from "@/core/request/access-key.ts";
 import type { RequestDataEdit } from "@/core/request/edit.ts";
+import { isEmailContact } from "@/core/request/form.ts";
 import {
   isServiceRequestStatus,
   KIND_BY_PREFIX,
@@ -31,6 +32,7 @@ import {
   formatProtocolNumber,
   type ProtocolPrefix,
 } from "@/core/request/protocol.ts";
+import type { QuestionAuthorType } from "@/core/request/question.ts";
 import type { SearchTerm } from "@/core/request/search.ts";
 import type { IsoDate } from "@/core/scheduling/calendar.ts";
 import type { Occupancy } from "@/core/scheduling/slots.ts";
@@ -45,10 +47,12 @@ import { db } from "@/db/index.ts";
 import {
   auditLog,
   serviceRequestAttachments,
+  serviceRequestQuestions,
   serviceRequestRequirements,
   serviceRequests,
 } from "@/db/schema.ts";
 import { recordAudit } from "./audit.ts";
+import { sendQuestionAnsweredEmail } from "./email/question.ts";
 import type { StoredAttachment } from "./uploads.ts";
 
 export interface NewServiceRequest {
@@ -752,6 +756,122 @@ export async function fulfillRequirement(
     targetType: "service-request",
     targetId: requirement.requestId,
   });
+}
+
+export interface QuestionMessage {
+  id: string;
+  authorType: QuestionAuthorType;
+  /** Who wrote it, when it is the office — null on every citizen message,
+   * who has no account to name it after. */
+  authorName: string | null;
+  body: string;
+  createdAt: Date;
+}
+
+/** The question-and-answer thread on one request, oldest first. */
+export async function listQuestions(
+  tenantSlug: string,
+  requestId: string,
+): Promise<QuestionMessage[]> {
+  const rows = await db
+    .select({
+      id: serviceRequestQuestions.id,
+      authorType: serviceRequestQuestions.authorType,
+      authorName: user.name,
+      body: serviceRequestQuestions.body,
+      createdAt: serviceRequestQuestions.createdAt,
+    })
+    .from(serviceRequestQuestions)
+    .leftJoin(user, eq(serviceRequestQuestions.authorId, user.id))
+    .where(
+      and(
+        eq(serviceRequestQuestions.tenantSlug, tenantSlug),
+        eq(serviceRequestQuestions.requestId, requestId),
+      ),
+    )
+    .orderBy(asc(serviceRequestQuestions.createdAt));
+  return rows.map((row) => ({
+    ...row,
+    authorType: row.authorType as QuestionAuthorType,
+  }));
+}
+
+/**
+ * The citizen posts a question through the protocol consult they already
+ * have — no e-mail, no phone, same protocol and key as everything else on
+ * that screen.
+ */
+export async function addCitizenQuestion(
+  tenantSlug: string,
+  requestId: string,
+  body: string,
+): Promise<{ id: string }> {
+  const [inserted] = await db
+    .insert(serviceRequestQuestions)
+    .values({ tenantSlug, requestId, authorType: "citizen", body })
+    .returning({ id: serviceRequestQuestions.id });
+
+  await recordAudit({
+    tenantSlug,
+    actorId: null, // the citizen has no account
+    action: "service-request.question",
+    targetType: "service-request",
+    targetId: requestId,
+  });
+
+  return inserted;
+}
+
+/**
+ * The office replies to a question thread. There is no expectation of an
+ * immediate answer (US-07), so this is a plain write, not a live channel —
+ * the citizen finds out either by returning to the consult or, when their
+ * contact is an e-mail, through the notice below. A failure to notify never
+ * costs the reply that already landed.
+ */
+export async function addStaffQuestionReply(
+  tenant: Tenant,
+  requestId: string,
+  body: string,
+  actorId: string,
+): Promise<{ id: string }> {
+  const [inserted] = await db
+    .insert(serviceRequestQuestions)
+    .values({
+      tenantSlug: tenant.slug,
+      requestId,
+      authorType: "staff",
+      authorId: actorId,
+      body,
+    })
+    .returning({ id: serviceRequestQuestions.id });
+
+  await recordAudit({
+    tenantSlug: tenant.slug,
+    actorId,
+    action: "service-request.question.reply",
+    targetType: "service-request",
+    targetId: requestId,
+  });
+
+  try {
+    const request = await findById(tenant.slug, requestId);
+    const host = tenant.hosts[0];
+    if (request?.contact && host && isEmailContact(request.contact)) {
+      await sendQuestionAnsweredEmail({
+        to: request.contact,
+        protocolNumber: request.protocolNumber,
+        tenant,
+        // The protocol consult, never the record itself: the citizen still
+        // types the access key there, same as every other visit.
+        actionUrl: `https://${host}/protocolo?numero=${encodeURIComponent(request.protocolNumber)}`,
+      });
+    }
+  } catch (error) {
+    console.error("service-request.question-answered-email", error);
+  }
+
+  return inserted;
 }
 
 /** The office records what the request is worth. Corrects freely once set. */

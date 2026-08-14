@@ -231,6 +231,42 @@ export const serviceRequestRequirements = pgTable(
 );
 
 /**
+ * One message in the question-and-answer thread attached to a service
+ * request — not a live chat: the citizen posts, the office replies in its
+ * own time. Its own row for the same reason `serviceRequestRequirements`
+ * has one instead of a field in `details`: both sides write here, and a
+ * JSON blob shared by two writers is how one overwrites the other.
+ */
+export const serviceRequestQuestions = pgTable(
+  "service_request_questions",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    tenantSlug,
+    requestId: uuid("request_id")
+      .notNull()
+      .references(() => serviceRequests.id, { onDelete: "cascade" }),
+    // "citizen" or "staff" — see QUESTION_AUTHOR_TYPES in
+    // src/core/request/question.ts.
+    authorType: text("author_type").notNull(),
+    // Set only on a staff reply; null on the citizen's own messages, who has
+    // no account to reference.
+    authorId: text("author_id").references(() => user.id, {
+      onDelete: "set null",
+    }),
+    body: text("body").notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (t) => [
+    index("service_request_questions_request_created_at").on(
+      t.requestId,
+      t.createdAt,
+    ),
+  ],
+);
+
+/**
  * What a serventia publishes to the "Proclamas e avisos" home section:
  * marriage banns, a general notice, or a formal notice. `publishAt` and
  * `expireAt` are calendar dates, not instants — a publication is on the site
