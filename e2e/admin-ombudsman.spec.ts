@@ -1,5 +1,5 @@
-import { neon } from "@neondatabase/serverless";
 import { expect, type Page, test } from "@playwright/test";
+import postgres from "postgres";
 import { hashAccessKey } from "../src/core/request/access-key.ts";
 
 // Entrega 7c: fila e detalhe de manifestações da ouvidoria.
@@ -37,7 +37,7 @@ test.describe("fila e detalhe de manifestações", () => {
   }
 
   test.beforeEach(async () => {
-    const sql = neon(process.env.DATABASE_URL as string);
+    const sql = postgres(process.env.DATABASE_URL as string);
     await sql`
       insert into service_requests
         (tenant_slug, kind, protocol_year, protocol_sequence, protocol_number,
@@ -63,7 +63,7 @@ test.describe("fila e detalhe de manifestações", () => {
   });
 
   test.afterEach(async () => {
-    const sql = neon(process.env.DATABASE_URL as string);
+    const sql = postgres(process.env.DATABASE_URL as string);
     await sql`delete from service_requests where protocol_number like 'OUV.2098.%'`;
   });
 

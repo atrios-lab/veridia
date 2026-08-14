@@ -33,7 +33,8 @@ Copie `.env.example` para `.env.local` e preencha:
 
 | Variável | Para quê |
 | --- | --- |
-| `DATABASE_URL` | PostgreSQL na Neon. |
+| `DATABASE_URL` | PostgreSQL na Supabase, via pooler (porta 6543). Usada em runtime. |
+| `DIRECT_URL` | Conexão direta à Supabase (porta 5432), sem pooler. Usada só por `db:generate`/`db:migrate`. |
 | `DEFAULT_TENANT` | Serventia servida quando o host não está mapeado. |
 | `BETTER_AUTH_SECRET` | Segredo da sessão. Gere com `openssl rand -base64 32`. |
 | `BETTER_AUTH_URL` | URL base da aplicação. |

@@ -1,5 +1,5 @@
-import { neon } from "@neondatabase/serverless";
 import { expect, type Page, test } from "@playwright/test";
+import postgres from "postgres";
 import { hashAccessKey } from "../src/core/request/access-key.ts";
 
 // Entrega 7d: fila e detalhe de requerimentos LGPD.
@@ -37,7 +37,7 @@ test.describe("fila e detalhe de requerimentos LGPD", () => {
   }
 
   test.beforeEach(async () => {
-    const sql = neon(process.env.DATABASE_URL as string);
+    const sql = postgres(process.env.DATABASE_URL as string);
     // Due in three days: filed today, term ends day 15.
     await sql`
       insert into service_requests
@@ -65,7 +65,7 @@ test.describe("fila e detalhe de requerimentos LGPD", () => {
   });
 
   test.afterEach(async () => {
-    const sql = neon(process.env.DATABASE_URL as string);
+    const sql = postgres(process.env.DATABASE_URL as string);
     await sql`delete from service_requests where protocol_number like 'SOL.2098.%'`;
   });
 

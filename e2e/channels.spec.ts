@@ -1,5 +1,5 @@
-import { neon } from "@neondatabase/serverless";
 import { expect, test } from "@playwright/test";
+import postgres from "postgres";
 import { isBusinessDay } from "../src/core/scheduling/calendar.ts";
 
 // Agendar, canal LGPD e ouvidoria, on a phone: the three channels of the
@@ -329,7 +329,7 @@ test.describe("depois da confirmação", () => {
       await page.getByText(/[A-Z0-9]{4}-[A-Z0-9]{4}-[A-Z0-9]{4}/).innerText()
     ).trim();
 
-    const sql = neon(process.env.DATABASE_URL as string);
+    const sql = postgres(process.env.DATABASE_URL as string);
     const proposal = JSON.stringify({
       proposedDate: "2099-08-07",
       proposedSlotHour: 8,
@@ -373,7 +373,7 @@ test.describe("depois da confirmação", () => {
       await page.getByText(/[A-Z0-9]{4}-[A-Z0-9]{4}-[A-Z0-9]{4}/).innerText()
     ).trim();
 
-    const sql = neon(process.env.DATABASE_URL as string);
+    const sql = postgres(process.env.DATABASE_URL as string);
     await sql`update service_requests
               set office_reply = 'Seguem os dados que constam do cadastro em seu nome.',
                   office_replied_at = now(), status = 'answered'

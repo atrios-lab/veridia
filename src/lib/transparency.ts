@@ -172,11 +172,11 @@ export async function unpublishDocument(
 
 /**
  * Moves a document one step up or down by swapping positions with its
- * neighbour. One statement, not two writes: neon-http has no interactive
- * transaction, so a CASE update is what keeps the swap atomic: a crash can
- * never leave one row moved and the other not. A no-op (no neighbour, at an
- * end) returns false, and the action does not audit it: reordering is not a
- * change to public content, only to its order, and it happens often.
+ * neighbour. One statement, not two writes: a CASE update keeps the swap
+ * atomic without needing a transaction, so a crash can never leave one row
+ * moved and the other not. A no-op (no neighbour, at an end) returns false,
+ * and the action does not audit it: reordering is not a change to public
+ * content, only to its order, and it happens often.
  */
 export async function moveDocument(
   tenantSlug: string,

@@ -1,5 +1,5 @@
-import { neon } from "@neondatabase/serverless";
 import { expect, type Page, test } from "@playwright/test";
+import postgres from "postgres";
 
 // Entrega 8a/8e: o console do atendente. Conversas são inseridas direto no
 // banco (como service-request.test.ts faz para pedidos) em vez de passar
@@ -39,7 +39,7 @@ test.describe("console do atendente", () => {
   }
 
   async function insertWaiting(citizenName: string): Promise<string> {
-    const sql = neon(process.env.DATABASE_URL as string);
+    const sql = postgres(process.env.DATABASE_URL as string);
     const rows = await sql`
       insert into chat_conversations
         (tenant_slug, status, citizen_name, citizen_contact, subject, citizen_token_hash)
@@ -50,13 +50,13 @@ test.describe("console do atendente", () => {
   }
 
   test.beforeAll(async () => {
-    const sql = neon(process.env.DATABASE_URL as string);
+    const sql = postgres(process.env.DATABASE_URL as string);
     const [row] = await sql`select id from "user" where email = ${email}`;
     sessionUserId = row.id as string;
   });
 
   test.afterEach(async () => {
-    const sql = neon(process.env.DATABASE_URL as string);
+    const sql = postgres(process.env.DATABASE_URL as string);
     await sql`delete from chat_messages where tenant_slug = ${TENANT} and conversation_id in (select id from chat_conversations where subject = ${SUBJECT})`;
     await sql`delete from chat_conversations where tenant_slug = ${TENANT} and subject = ${SUBJECT}`;
     await sql`delete from tenant_content where tenant_slug = ${TENANT} and key = 'office-chat'`;
@@ -114,7 +114,7 @@ test.describe("console do atendente", () => {
   test("a fourth conversation is refused past the limit of three", async ({
     page,
   }) => {
-    const sql = neon(process.env.DATABASE_URL as string);
+    const sql = postgres(process.env.DATABASE_URL as string);
     const ids = await Promise.all([
       insertWaiting("Cidadão Um"),
       insertWaiting("Cidadão Dois"),
@@ -144,7 +144,7 @@ test.describe("console do atendente", () => {
   test("transferring back to the general queue requires a note", async ({
     page,
   }) => {
-    const sql = neon(process.env.DATABASE_URL as string);
+    const sql = postgres(process.env.DATABASE_URL as string);
     const id = await insertWaiting("Rosa Almeida Fontes");
     await sql`update chat_conversations set status = 'active', assigned_user_id = ${sessionUserId} where id = ${id}`;
 
@@ -175,7 +175,7 @@ test.describe("console do atendente", () => {
   test("closing links the transcript to an informed protocol", async ({
     page,
   }) => {
-    const sql = neon(process.env.DATABASE_URL as string);
+    const sql = postgres(process.env.DATABASE_URL as string);
     const [request] = await sql`
       insert into service_requests
         (tenant_slug, kind, protocol_year, protocol_sequence, protocol_number,

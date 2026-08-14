@@ -1,5 +1,5 @@
-import { neon } from "@neondatabase/serverless";
 import { expect, test } from "@playwright/test";
+import postgres from "postgres";
 
 // Entrega 8c/8d: o widget do cidadão. A janela de horário depende do
 // relógio real no momento do teste (tenant.scheduling é config estática,
@@ -31,7 +31,7 @@ test.describe("widget com o chat ligado", () => {
   );
 
   test.beforeAll(async () => {
-    const sql = neon(process.env.DATABASE_URL as string);
+    const sql = postgres(process.env.DATABASE_URL as string);
     await sql`
       insert into tenant_content (tenant_slug, key, published, published_at)
       values ('cartorio-marinho', 'office-chat', '{"enabled": true}'::jsonb, now())
@@ -40,7 +40,7 @@ test.describe("widget com o chat ligado", () => {
   });
 
   test.afterAll(async () => {
-    const sql = neon(process.env.DATABASE_URL as string);
+    const sql = postgres(process.env.DATABASE_URL as string);
     await sql`delete from tenant_content where tenant_slug = 'cartorio-marinho' and key = 'office-chat'`;
     await sql`delete from chat_conversations where tenant_slug = 'cartorio-marinho' and subject = 'Teste e2e'`;
   });

@@ -1,5 +1,5 @@
-import { neon } from "@neondatabase/serverless";
 import { expect, type Page, test } from "@playwright/test";
+import postgres from "postgres";
 
 // Entrega 8b: publicações — proclamas, avisos e editais com vigência
 // automática. Everything here needs a real session and a real row, so most
@@ -47,7 +47,7 @@ test.describe("publicações", () => {
   }
 
   test.afterEach(async () => {
-    const sql = neon(process.env.DATABASE_URL as string);
+    const sql = postgres(process.env.DATABASE_URL as string);
     await sql`delete from office_publications where title = ${TITLE}`;
   });
 

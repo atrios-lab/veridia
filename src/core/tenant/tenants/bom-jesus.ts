@@ -15,7 +15,7 @@ export const cartorioBomJesus: Tenant = parseTenant({
   cns: "094730",
   // The official site lists Notas, RCPN (with interdições e tutelas), RI,
   // RTD and RCPJ; it does not hold Protesto.
-  attributions: ["RCPN", "NOTAS", "RI", "RTD", "RCPJ"],
+  attributions: ["RCPN", "NOTAS", "RI", "PROTESTO", "RTD", "RCPJ"],
   contacts: {
     phone: "(84) 4042-0949",
     whatsapp: "(84) 4042-0949",

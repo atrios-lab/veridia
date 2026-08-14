@@ -7,10 +7,13 @@ import { defineConfig } from "drizzle-kit";
 // and the file is simply absent.
 if (existsSync(".env.local")) process.loadEnvFile(".env.local");
 
-const url = process.env.DATABASE_URL;
+// The direct connection (not the Supavisor pooler DATABASE_URL uses at
+// runtime), because DDL is not reliably supported behind a transaction-mode
+// pooler.
+const url = process.env.DIRECT_URL;
 if (!url) {
   throw new Error(
-    "DATABASE_URL nao esta definida. Preencha em .env.local com a URL da Neon.",
+    "DIRECT_URL nao esta definida. Preencha em .env.local com a URL de conexao direta da Supabase.",
   );
 }
 

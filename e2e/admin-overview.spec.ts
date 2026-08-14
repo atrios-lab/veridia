@@ -1,5 +1,5 @@
-import { neon } from "@neondatabase/serverless";
 import { expect, type Page, test } from "@playwright/test";
+import postgres from "postgres";
 
 // Entrega 7a v2: a mesa de trabalho. Roda depois dos outros três canais
 // (Agenda, Ouvidoria, LGPD), que a Visão geral só agrega.
@@ -40,7 +40,7 @@ test.describe("Visão geral (mesa de trabalho)", () => {
   }
 
   test.beforeEach(async () => {
-    const sql = neon(process.env.DATABASE_URL as string);
+    const sql = postgres(process.env.DATABASE_URL as string);
     // Due in one day: filed thirteen days ago, term ends day 15 (the mesa's
     // most urgent tier).
     await sql`
@@ -86,7 +86,7 @@ test.describe("Visão geral (mesa de trabalho)", () => {
   });
 
   test.afterEach(async () => {
-    const sql = neon(process.env.DATABASE_URL as string);
+    const sql = postgres(process.env.DATABASE_URL as string);
     await sql`delete from service_request_requirements where request_id in (
       select id from service_requests where protocol_number = ${REQ_STALLED}
     )`;

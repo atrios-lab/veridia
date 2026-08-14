@@ -23,7 +23,6 @@
   },
   "dependencies": {
     "@hookform/resolvers": "^5.7.1",
-    "@neondatabase/serverless": "^1.1.0",
     "@upstash/ratelimit": "^2.0.8",
     "@upstash/redis": "^1.38.1",
     "@vercel/blob": "^2.6.1",
@@ -32,6 +31,7 @@
     "drizzle-zod": "^0.8.3",
     "next": "16.2.12",
     "pdfkit": "^0.19.1",
+    "postgres": "^3.4.9",
     "qrcode": "^1.5.4",
     "react": "19.2.4",
     "react-dom": "19.2.4",

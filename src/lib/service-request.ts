@@ -704,9 +704,8 @@ export async function registerRequirement(
 
 /**
  * The citizen answers a pending requirement with one attachment, through the
- * protocol consult. No transaction: the neon-http driver does not support
- * one, the same trade-off `createRecord` already makes for request +
- * attachments.
+ * protocol consult. No transaction, the same trade-off `createRecord`
+ * already makes for request + attachments.
  */
 export async function fulfillRequirement(
   tenantSlug: string,

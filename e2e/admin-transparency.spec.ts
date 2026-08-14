@@ -1,5 +1,5 @@
-import { neon } from "@neondatabase/serverless";
 import { expect, type Page, test } from "@playwright/test";
+import postgres from "postgres";
 
 // Entrega 10: transparência: documentos públicos e boletim mensal. Same
 // discipline as e2e/admin-publications.spec.ts: the screen is behind the
@@ -46,7 +46,7 @@ test.describe("transparência", () => {
   }
 
   test.afterEach(async () => {
-    const sql = neon(process.env.DATABASE_URL as string);
+    const sql = postgres(process.env.DATABASE_URL as string);
     await sql`delete from transparency_documents where tenant_slug = ${TENANT} and title = ${DOC_TITLE}`;
     await sql`delete from transparency_bulletins where tenant_slug = ${TENANT} and reference_month = ${TEST_MONTH}`;
   });
@@ -145,7 +145,7 @@ test.describe("transparência", () => {
   test("consolidating replaces the month's preliminary bulletin", async ({
     page,
   }) => {
-    const sql = neon(process.env.DATABASE_URL as string);
+    const sql = postgres(process.env.DATABASE_URL as string);
     await sql`
       insert into transparency_bulletins
         (tenant_slug, reference_month, acts_count, gross_revenue_cents,

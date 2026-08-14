@@ -25,12 +25,15 @@ aplicação, sem alterar nenhuma regra de negócio.
 
 ### New Capabilities
 
-(nenhuma)
+- `database-connection`: como a aplicação se conecta ao PostgreSQL — conexão via pooler
+  compatível com execução serverless em runtime, conexão direta só para migrations, e o
+  placeholder que mantém `next build` funcionando sem banco e sem segredo. Não existia spec para
+  isso até agora; a troca de provedor é a oportunidade de registrar esse comportamento.
 
 ### Modified Capabilities
 
-(nenhuma — troca de provedor de banco é um detalhe de implementação; nenhum requisito de
-capability existente muda de comportamento observável)
+(nenhuma — a troca de provedor de banco não muda o comportamento de nenhuma capability já
+especificada em `openspec/specs/`)
 
 ## Non-goals
 
@@ -44,7 +47,9 @@ capability existente muda de comportamento observável)
 
 ## Impact
 
-- Código: `src/db/index.ts`, `drizzle.config.ts`.
+- Código: `src/db/index.ts`, `drizzle.config.ts`, e os 17 arquivos em `e2e/*.spec.ts` que
+  importam `@neondatabase/serverless` diretamente para setup/assert via SQL bruto (descoberto
+  durante a implementação — não estava listado aqui originalmente).
 - Dependências: remove `@neondatabase/serverless`; adiciona o driver Postgres escolhido em
   design.md.
 - Configuração: `.env.example`, `README.md` (seção de variáveis de ambiente).

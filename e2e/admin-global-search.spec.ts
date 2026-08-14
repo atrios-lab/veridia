@@ -1,5 +1,5 @@
-import { neon } from "@neondatabase/serverless";
 import { expect, type Page, test } from "@playwright/test";
+import postgres from "postgres";
 
 // Busca global (Ctrl K): protocolo e CPF, de qualquer tela do painel.
 
@@ -30,7 +30,7 @@ test.describe("Busca global", () => {
   }
 
   test.beforeEach(async () => {
-    const sql = neon(process.env.DATABASE_URL as string);
+    const sql = postgres(process.env.DATABASE_URL as string);
     await sql`
       insert into service_requests
         (tenant_slug, kind, protocol_year, protocol_sequence, protocol_number,
@@ -43,7 +43,7 @@ test.describe("Busca global", () => {
   });
 
   test.afterEach(async () => {
-    const sql = neon(process.env.DATABASE_URL as string);
+    const sql = postgres(process.env.DATABASE_URL as string);
     await sql`delete from service_requests where protocol_number = ${PROTOCOL}`;
   });
 

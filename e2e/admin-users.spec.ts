@@ -1,5 +1,5 @@
-import { neon } from "@neondatabase/serverless";
 import { expect, type Page, test } from "@playwright/test";
+import postgres from "postgres";
 
 // Entrega 9: convite e login. This screen creates real accounts, so every
 // test here needs a database and cleans up the row it created — same
@@ -32,7 +32,7 @@ test.describe("tela de Usuários", () => {
 
   test.afterEach(async () => {
     // Cascades to the account/session rows via the FKs in auth-schema.ts.
-    const sql = neon(process.env.DATABASE_URL as string);
+    const sql = postgres(process.env.DATABASE_URL as string);
     await sql`delete from "user" where email = ${CONVIDADA_EMAIL}`;
   });
 
@@ -98,7 +98,7 @@ test.describe("tela de Usuários", () => {
       page.getByText("Conta criada — e-mail enviado."),
     ).toBeVisible();
 
-    const sql = neon(process.env.DATABASE_URL as string);
+    const sql = postgres(process.env.DATABASE_URL as string);
     const [row] = (await sql`
       select split_part(identifier, ':', 2) as token from verification
       where identifier like 'reset-password:%'

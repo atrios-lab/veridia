@@ -1,5 +1,5 @@
-import { neon } from "@neondatabase/serverless";
 import { expect, type Page, test } from "@playwright/test";
+import postgres from "postgres";
 
 // Entrega 4: painel administrativo, aba Identidade Visual. Same shape as
 // admin-settings.spec.ts: a real session and a real row are what the screen
@@ -34,7 +34,7 @@ test.describe("configurações, aba Identidade Visual", () => {
   // Each test leaves the office as it found it: the override row is what the
   // public site serves, so a test that forgets it changes the next one.
   test.afterEach(async () => {
-    const sql = neon(process.env.DATABASE_URL as string);
+    const sql = postgres(process.env.DATABASE_URL as string);
     await sql`delete from tenant_content where tenant_slug = 'cartorio-marinho' and key = 'office-brand'`;
   });
 

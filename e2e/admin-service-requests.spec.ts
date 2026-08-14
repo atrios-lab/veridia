@@ -1,5 +1,5 @@
-import { neon } from "@neondatabase/serverless";
 import { expect, type Page, test } from "@playwright/test";
+import postgres from "postgres";
 
 // Entrega 6: painel administrativo, fila e detalhe de pedidos de serviço.
 // Everything here needs a real session and a real row, so most of the file
@@ -38,7 +38,7 @@ test.describe("fila e detalhe de pedidos", () => {
   }
 
   test.beforeEach(async () => {
-    const sql = neon(process.env.DATABASE_URL as string);
+    const sql = postgres(process.env.DATABASE_URL as string);
     await sql`
       insert into service_requests
         (tenant_slug, kind, protocol_year, protocol_sequence, protocol_number,
@@ -51,7 +51,7 @@ test.describe("fila e detalhe de pedidos", () => {
   });
 
   test.afterEach(async () => {
-    const sql = neon(process.env.DATABASE_URL as string);
+    const sql = postgres(process.env.DATABASE_URL as string);
     await sql`delete from service_requests where protocol_number = ${PROTOCOL}`;
     await sql`delete from service_requests where protocol_number like 'REQ.2098.%' and protocol_number != ${PROTOCOL}`;
   });

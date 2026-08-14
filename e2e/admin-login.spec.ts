@@ -1,5 +1,5 @@
-import { neon } from "@neondatabase/serverless";
 import { expect, test } from "@playwright/test";
+import postgres from "postgres";
 
 // Entrega 5: login e autenticação do painel. The warning states
 // (erro/motivo/saiu) are pure rendering off searchParams, so they need no
@@ -152,8 +152,8 @@ test.describe("autenticação de verdade", () => {
       .find((cookie) => cookie.name.endsWith("session_token"))
       ?.value.split(".")[0];
     expect(token, "a sessão precisa existir para ser revogada").toBeTruthy();
-    const sql = neon(process.env.DATABASE_URL as string);
-    await sql`delete from session where token = ${token}`;
+    const sql = postgres(process.env.DATABASE_URL as string);
+    await sql`delete from session where token = ${token as string}`;
 
     await page.goto(`${baseURL}/admin`);
     await expect(page).toHaveURL(
@@ -208,7 +208,7 @@ test.describe("superadmin da Átrios", () => {
     await signIn(page, `${auroraURL}/admin/login`);
     await expect(page).toHaveURL(`${auroraURL}/admin`);
 
-    const sql = neon(process.env.DATABASE_URL as string);
+    const sql = postgres(process.env.DATABASE_URL as string);
     const rows = await sql`
       select tenant_slug from audit_log
       where actor_id = (select id from "user" where email = ${email})

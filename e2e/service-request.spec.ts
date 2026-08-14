@@ -1,5 +1,5 @@
-import { neon } from "@neondatabase/serverless";
 import { expect, test } from "@playwright/test";
+import postgres from "postgres";
 import { TENANTS } from "../src/core/tenant/resolve.ts";
 
 // The citizen arrives on a phone, so the journey is asserted at 390 wide.
@@ -410,7 +410,7 @@ test.describe("filing a request", () => {
     // simulates the office's own writes elsewhere. The signed form is
     // simulated as already received too, so the exigência — not the form —
     // is the step actually blocking the request.
-    const sql = neon(process.env.DATABASE_URL as string);
+    const sql = postgres(process.env.DATABASE_URL as string);
     await sql`
       insert into service_request_attachments
         (tenant_slug, request_id, kind, stored_name, display_name, path, mime_type, size_bytes)
@@ -472,7 +472,7 @@ test.describe("filing a request", () => {
     // Setting the amount is the admin panel's job (AmountSection); simulated
     // here with a direct write, the same way the exigência test above
     // simulates the office's writes.
-    const sql = neon(process.env.DATABASE_URL as string);
+    const sql = postgres(process.env.DATABASE_URL as string);
     await sql`
       update service_requests set amount_cents = 25000
       where tenant_slug = 'cartorio-marinho' and protocol_number = ${protocolNumber}
@@ -549,7 +549,7 @@ test.describe("filing a request", () => {
     // simulated here the same way the other office writes in this suite are.
     // The signed form is simulated as already received too, so "Em preparo"
     // — not the form — is the step actually blocking the request.
-    const sql = neon(process.env.DATABASE_URL as string);
+    const sql = postgres(process.env.DATABASE_URL as string);
     await sql`
       insert into service_request_attachments
         (tenant_slug, request_id, kind, stored_name, display_name, path, mime_type, size_bytes)
@@ -603,7 +603,7 @@ test.describe("filing a request", () => {
 
     // Delivering the finished document is DeliverySection's job; simulated
     // here the same way the exigência test above simulates the office's writes.
-    const sql = neon(process.env.DATABASE_URL as string);
+    const sql = postgres(process.env.DATABASE_URL as string);
     await sql`
       insert into service_request_attachments
         (tenant_slug, request_id, kind, stored_name, display_name, path, mime_type, size_bytes)
@@ -649,7 +649,7 @@ test.describe("filing a request", () => {
 
     // Indeferindo the request is the office's job (StatusSection); simulated
     // here the same way the other office writes in this suite are.
-    const sql = neon(process.env.DATABASE_URL as string);
+    const sql = postgres(process.env.DATABASE_URL as string);
     await sql`
       update service_requests set status = 'rejected'
       where tenant_slug = 'cartorio-marinho' and protocol_number = ${protocolNumber}

@@ -1,5 +1,5 @@
-import { neon } from "@neondatabase/serverless";
 import { expect, type Page, test } from "@playwright/test";
+import postgres from "postgres";
 
 // Entrega 4: painel administrativo, aba Serventia. Everything here needs a
 // real session and a real row, so the whole file skips without a database:
@@ -36,7 +36,7 @@ test.describe("configurações — aba Serventia", () => {
   // Each test leaves the office as it found it: the override row is what the
   // public site serves, so a test that forgets it changes the next one.
   test.afterEach(async () => {
-    const sql = neon(process.env.DATABASE_URL as string);
+    const sql = postgres(process.env.DATABASE_URL as string);
     await sql`delete from tenant_content where tenant_slug = 'cartorio-marinho' and key = 'office-contact'`;
   });
 
@@ -159,7 +159,7 @@ test.describe("configurações, aba Encarregado", () => {
   }
 
   test.afterEach(async () => {
-    const sql = neon(process.env.DATABASE_URL as string);
+    const sql = postgres(process.env.DATABASE_URL as string);
     await sql`delete from tenant_content where tenant_slug = 'cartorio-marinho' and key = 'office-dpo'`;
   });
 
@@ -222,7 +222,7 @@ test.describe("configurações, aba Cobrança", () => {
   }
 
   test.afterEach(async () => {
-    const sql = neon(process.env.DATABASE_URL as string);
+    const sql = postgres(process.env.DATABASE_URL as string);
     await sql`delete from tenant_content where tenant_slug = 'cartorio-marinho' and key = 'office-pix'`;
   });
 

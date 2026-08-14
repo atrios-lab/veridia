@@ -1,5 +1,5 @@
-import { neon } from "@neondatabase/serverless";
 import { expect, type Page, test } from "@playwright/test";
+import postgres from "postgres";
 import { hashAccessKey } from "../src/core/request/access-key.ts";
 
 // Entrega 12: perguntas do pedido, um registro de perguntas e respostas
@@ -11,7 +11,7 @@ const PORT = process.env.PORT ?? "3000";
 const baseURL = `http://marinho.localhost:${PORT}`;
 
 async function seedRequest(protocolNumber: string, accessKey: string) {
-  const sql = neon(process.env.DATABASE_URL as string);
+  const sql = postgres(process.env.DATABASE_URL as string);
   await sql`
     insert into service_requests
       (tenant_slug, kind, protocol_year, protocol_sequence, protocol_number,
@@ -26,7 +26,7 @@ async function seedRequest(protocolNumber: string, accessKey: string) {
 }
 
 async function cleanupRequest(protocolNumber: string) {
-  const sql = neon(process.env.DATABASE_URL as string);
+  const sql = postgres(process.env.DATABASE_URL as string);
   // service_request_questions cascades from the deleted request.
   await sql`delete from service_requests where protocol_number = ${protocolNumber}`;
 }
@@ -102,7 +102,7 @@ test.describe("painel administrativo: perguntas do cidadão", () => {
   test("o operador vê a pergunta, responde, e a resposta chega à consulta do cidadão", async ({
     page,
   }) => {
-    const sql = neon(process.env.DATABASE_URL as string);
+    const sql = postgres(process.env.DATABASE_URL as string);
     const [request] = await sql`
       select id from service_requests where protocol_number = ${PROTOCOL}
     `;
