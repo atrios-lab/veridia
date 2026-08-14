@@ -347,19 +347,19 @@
 
   /* Public site. */
   .btn-primary {
-    background: var(--color-brand-primary);
+    background: var(--brand-primary);
     color: white;
   }
   .btn-primary:hover:not(:disabled) {
-    background: var(--color-brand-primary-soft);
+    background: var(--brand-primary-soft);
   }
   .btn-secondary {
     background: var(--color-brand-card);
-    color: var(--color-brand-primary);
-    border: 1px solid var(--color-brand-border);
+    color: var(--brand-primary);
+    border: 1px solid var(--brand-border);
   }
   .btn-secondary:hover:not(:disabled) {
-    border-color: var(--color-brand-accent);
+    border-color: var(--brand-accent);
   }
   .btn-danger {
     background: transparent;
@@ -371,30 +371,30 @@
   }
   .btn-ghost {
     background: transparent;
-    color: var(--color-brand-primary);
+    color: var(--brand-primary);
     text-decoration: underline;
     text-underline-offset: 2px;
   }
   .btn-ghost:hover:not(:disabled) {
-    color: var(--color-brand-primary-soft);
+    color: var(--brand-primary-soft);
   }
 
   /* Admin panel. */
   .btn-admin-primary {
-    background: var(--color-admin-primary-soft);
+    background: var(--brand-primary-soft);
     color: white;
   }
   .btn-admin-primary:hover:not(:disabled) {
-    background: var(--color-admin-primary);
+    background: var(--brand-primary);
   }
   .btn-admin-secondary {
     background: var(--color-admin-card);
-    color: var(--color-admin-muted);
+    color: var(--brand-muted);
     border: 1px solid var(--color-admin-input-border);
   }
   .btn-admin-secondary:hover:not(:disabled) {
-    border-color: var(--color-admin-accent);
-    color: var(--color-admin-primary);
+    border-color: var(--brand-accent);
+    color: var(--brand-primary);
   }
   .btn-admin-danger {
     background: transparent;
@@ -420,13 +420,13 @@
   }
   .btn-admin-ghost {
     background: transparent;
-    color: var(--color-admin-muted);
+    color: var(--brand-muted);
     font-weight: 700;
     text-decoration: underline;
     text-underline-offset: 2px;
   }
   .btn-admin-ghost:hover:not(:disabled) {
-    color: var(--color-admin-primary);
+    color: var(--brand-primary);
   }
 
   /*
@@ -449,7 +449,7 @@
     /* No padding here: the body and the footer carry their own, so the rule
        between them reaches both edges instead of floating inside a gutter. */
     padding: 0;
-    border: 1px solid var(--color-admin-border);
+    border: 1px solid var(--brand-border);
     border-radius: 14px;
     background: var(--color-admin-card);
     color: var(--color-admin-text);
@@ -499,7 +499,7 @@
     flex: none;
     flex-direction: column-reverse;
     gap: 0.625rem;
-    border-top: 1px solid var(--color-admin-border);
+    border-top: 1px solid var(--brand-border);
     padding: 1rem;
   }
   /* Thumb-sized while it is a phone. The panel is a desktop tool the rest of
@@ -606,6 +606,6 @@
     outline: none;
     box-shadow:
       0 0 0 2px var(--color-brand-card),
-      0 0 0 4px var(--color-brand-accent);
+      0 0 0 4px var(--brand-accent);
   }
 }
