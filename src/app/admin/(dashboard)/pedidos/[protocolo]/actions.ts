@@ -5,23 +5,30 @@ import { redirect } from "next/navigation";
 import { getActForTenant } from "@/core/acts/catalog.ts";
 import { can } from "@/core/auth/roles.ts";
 import { purposeFor, requestDataEditSchema } from "@/core/request/edit.ts";
-import { isServiceRequestStatus } from "@/core/request/kinds.ts";
+import {
+  isAllowedTransition,
+  isServiceRequestStatus,
+  type ServiceRequestStatus,
+} from "@/core/request/kinds.ts";
 import { parseCentsInput } from "@/core/request/money.ts";
-import { questionBodySchema } from "@/core/request/question.ts";
 import { requirementTextSchema } from "@/core/request/requirement.ts";
+import { notifyCitizen } from "@/lib/email/service-request.ts";
 import {
   AttachmentInUseError,
-  addStaffQuestionReply,
   attachToRequest,
   deleteAttachment,
   deleteRequest,
+  deleteRequirement,
   findById,
   listRequirements,
   registerRequirement,
   reissueAccessKey,
+  resolveRequirement,
   setRequestAmount,
   updateRequestData,
   updateRequestStatus,
+  updateRequirementText,
+  writeStaffMessage,
 } from "@/lib/service-request.ts";
 import { getSession } from "@/lib/session.ts";
 import { getTenant, OFFICE_TIME_ZONE } from "@/lib/tenant.ts";
@@ -72,7 +79,34 @@ export async function changeStatus(
 
   const tenant = await getTenant();
   try {
+    const request = await findById(tenant.slug, requestId);
+    if (!request) return { status: "error", message: "Pedido não encontrado." };
+    // Moving to the andamento it is already in would only write an event
+    // carrying no information.
+    if (!isAllowedTransition(request.status as ServiceRequestStatus, status)) {
+      return {
+        status: "error",
+        message: "O pedido já está neste andamento.",
+      };
+    }
+
     await updateRequestStatus(tenant.slug, requestId, status, session.user.id);
+
+    // Only the two that end the story. The citizen follows the rest through
+    // the consult, and a message per andamento would train them to ignore all
+    // of them.
+    if (status === "done" || status === "cancelled") {
+      void notifyCitizen({
+        tenant,
+        contact: request.contact,
+        protocolNumber: request.protocolNumber,
+        subject: status === "done" ? "Pedido concluído" : "Pedido cancelado",
+        body:
+          status === "done"
+            ? "O seu pedido foi concluído."
+            : "O seu pedido foi cancelado.",
+      });
+    }
   } catch (error) {
     console.error("pedidos.change-status", error);
     return { status: "error", message: GENERIC_ERROR };
@@ -107,47 +141,19 @@ export async function registerRequirementAction(
       parsed.data,
       session.user.id,
     );
+    const request = await findById(tenant.slug, requestId);
+    // Without the text: what the office is asking for is behind the key.
+    if (request) {
+      void notifyCitizen({
+        tenant,
+        contact: request.contact,
+        protocolNumber: request.protocolNumber,
+        subject: "Exigência registrada",
+        body: "Há uma exigência no seu pedido. Consulte o protocolo com a sua chave de acesso para ver o que foi solicitado e responder.",
+      });
+    }
   } catch (error) {
     console.error("pedidos.register-requirement", error);
-    return { status: "error", message: GENERIC_ERROR };
-  }
-  revalidateAdmin();
-  return { status: "success" };
-}
-
-/**
- * The office replies to a question the citizen posted. There is no
- * expectation of an immediate answer (US-07): this just records the reply
- * and, best-effort, lets the citizen know one exists.
- */
-export async function replyQuestionAction(
-  _previous: ActionState,
-  formData: FormData,
-): Promise<ActionState> {
-  const session = await authorize();
-  if (!session) return { status: "error", message: NO_PERMISSION };
-
-  const requestId = String(formData.get("requestId") ?? "");
-  const parsed = questionBodySchema.safeParse(
-    String(formData.get("body") ?? ""),
-  );
-  if (!parsed.success) {
-    return {
-      status: "error",
-      message: parsed.error.issues[0]?.message ?? "Texto inválido.",
-    };
-  }
-
-  const tenant = await getTenant();
-  try {
-    await addStaffQuestionReply(
-      tenant,
-      requestId,
-      parsed.data,
-      session.user.id,
-    );
-  } catch (error) {
-    console.error("pedidos.reply-question", error);
     return { status: "error", message: GENERIC_ERROR };
   }
   revalidateAdmin();
@@ -198,6 +204,17 @@ export async function deliverDocumentAction(
       return { status: "error", message: "Escolha um arquivo para anexar." };
     }
     await attachToRequest(tenant.slug, requestId, stored, "office");
+
+    const request = await findById(tenant.slug, requestId);
+    if (request) {
+      void notifyCitizen({
+        tenant,
+        contact: request.contact,
+        protocolNumber: request.protocolNumber,
+        subject: "Documento disponível",
+        body: "A serventia disponibilizou um documento no seu pedido. Consulte o protocolo com a sua chave de acesso para baixá-lo.",
+      });
+    }
   } catch (error) {
     if (error instanceof AttachmentError) {
       return { status: "error", message: error.message };
@@ -379,4 +396,187 @@ export async function deleteRequestAction(
   // Outside the try block: redirect() throws by design, and catching that
   // here would turn a successful deletion into a reported failure.
   redirect("/admin/pedidos");
+}
+
+/**
+ * The office declares the requirement met. The citizen sending something is
+ * evidence, never the verdict: only whoever asked can say the answer answers.
+ */
+export async function resolveRequirementAction(
+  _previous: ActionState,
+  formData: FormData,
+): Promise<ActionState> {
+  const session = await authorize();
+  if (!session) return { status: "error", message: NO_PERMISSION };
+
+  const requirementId = String(formData.get("requirementId") ?? "");
+  const tenant = await getTenant();
+  try {
+    const done = await resolveRequirement(
+      tenant.slug,
+      requirementId,
+      session.user.id,
+    );
+    if (!done) {
+      return {
+        status: "error",
+        message: "Esta exigência não foi encontrada ou já está cumprida.",
+      };
+    }
+  } catch (error) {
+    console.error("pedidos.resolve-requirement", error);
+    return { status: "error", message: GENERIC_ERROR };
+  }
+  revalidateAdmin();
+  return { status: "success" };
+}
+
+/** Corrects the wording of a requirement the citizen has not answered yet. */
+export async function editRequirementAction(
+  _previous: ActionState,
+  formData: FormData,
+): Promise<ActionState> {
+  const session = await authorize();
+  if (!session) return { status: "error", message: NO_PERMISSION };
+
+  const requirementId = String(formData.get("requirementId") ?? "");
+  const parsed = requirementTextSchema.safeParse(
+    String(formData.get("text") ?? ""),
+  );
+  if (!parsed.success) {
+    return {
+      status: "error",
+      message: parsed.error.issues[0]?.message ?? "Texto inválido.",
+    };
+  }
+
+  const tenant = await getTenant();
+  try {
+    const updated = await updateRequirementText(
+      tenant.slug,
+      requirementId,
+      parsed.data,
+      session.user.id,
+    );
+    if (!updated) {
+      return {
+        status: "error",
+        message: "Só é possível editar uma exigência ainda pendente.",
+      };
+    }
+  } catch (error) {
+    console.error("pedidos.edit-requirement", error);
+    return { status: "error", message: GENERIC_ERROR };
+  }
+  revalidateAdmin();
+  return { status: "success" };
+}
+
+/** Undoes a requirement raised by mistake, with its conversation and files. */
+export async function deleteRequirementAction(
+  _previous: ActionState,
+  formData: FormData,
+): Promise<ActionState> {
+  const session = await authorize();
+  if (!session) return { status: "error", message: NO_PERMISSION };
+
+  const requirementId = String(formData.get("requirementId") ?? "");
+  const tenant = await getTenant();
+  try {
+    // The rows go by cascade; the bytes are ours to remove, and only after
+    // the rows that pointed at them are gone.
+    const paths = await deleteRequirement(
+      tenant.slug,
+      requirementId,
+      session.user.id,
+    );
+    for (const path of paths) await deleteStoredFile(path);
+  } catch (error) {
+    console.error("pedidos.delete-requirement", error);
+    return { status: "error", message: GENERIC_ERROR };
+  }
+  revalidateAdmin();
+  return { status: "success" };
+}
+
+/** The office answers in the requirement's conversation. */
+export async function replyRequirementAction(
+  _previous: ActionState,
+  formData: FormData,
+): Promise<ActionState> {
+  const session = await authorize();
+  if (!session) return { status: "error", message: NO_PERMISSION };
+
+  const requirementId = String(formData.get("requirementId") ?? "");
+  const body = String(formData.get("body") ?? "").trim();
+  if (!body) {
+    return { status: "error", message: "Escreva a resposta." };
+  }
+
+  const tenant = await getTenant();
+  try {
+    const written = await writeStaffMessage(
+      tenant.slug,
+      requirementId,
+      body,
+      session.user.id,
+    );
+    if (!written) {
+      return {
+        status: "error",
+        message: "Esta exigência não foi encontrada ou já está cumprida.",
+      };
+    }
+
+    const request = await findById(tenant.slug, written.requestId);
+    // The answer itself stays behind the key; this only says one arrived.
+    if (request) {
+      void notifyCitizen({
+        tenant,
+        contact: request.contact,
+        protocolNumber: request.protocolNumber,
+        subject: "Mensagem da serventia",
+        body: "A serventia respondeu na exigência do seu pedido. Consulte o protocolo com a sua chave de acesso para ler e responder.",
+      });
+    }
+  } catch (error) {
+    console.error("pedidos.reply-requirement", error);
+    return { status: "error", message: GENERIC_ERROR };
+  }
+  revalidateAdmin();
+  return { status: "success" };
+}
+
+/**
+ * The counter case: the citizen arrives with the paper in hand, and whoever
+ * is serving them scans it and attaches it here. It lands in the citizen's
+ * own document list, the same place the ones sent through the site land.
+ */
+export async function attachCitizenDocumentAction(
+  _previous: ActionState,
+  formData: FormData,
+): Promise<ActionState> {
+  const session = await authorize();
+  if (!session) return { status: "error", message: NO_PERMISSION };
+
+  const requestId = String(formData.get("requestId") ?? "");
+  const tenant = await getTenant();
+  try {
+    const files = formData
+      .getAll("documento")
+      .filter((f): f is File => f instanceof File);
+    const stored = await storeAttachments(files);
+    if (stored.length === 0) {
+      return { status: "error", message: "Escolha um arquivo para anexar." };
+    }
+    await attachToRequest(tenant.slug, requestId, stored, "citizen");
+  } catch (error) {
+    if (error instanceof AttachmentError) {
+      return { status: "error", message: error.message };
+    }
+    console.error("pedidos.attach-citizen-document", error);
+    return { status: "error", message: GENERIC_ERROR };
+  }
+  revalidateAdmin();
+  return { status: "success" };
 }

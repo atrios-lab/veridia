@@ -552,7 +552,11 @@ function SuccessScreen({ result }: { result: SubmitSuccess }) {
           </p>
           {/* POST, not a link: the key would otherwise sit in the address
               bar, in the browser history and in every access log on the way. */}
-          <form action="/solicitar/requerimento" method="post" className="mt-2.5">
+          <form
+            action="/solicitar/requerimento"
+            method="post"
+            className="mt-2.5"
+          >
             <ProtocolFields result={result} />
             <input type="hidden" name="documento" value="comprovante" />
             <button type="submit" className="btn btn-primary btn-md">
@@ -564,8 +568,8 @@ function SuccessScreen({ result }: { result: SubmitSuccess }) {
 
         <Step number={2} title="Baixe o requerimento e assine">
           <p className="text-[12px] leading-relaxed text-brand-muted">
-            Digitalmente pelo Gov.br (assinador.iti.br), ou imprima e assine
-            de próprio punho.
+            Digitalmente pelo Gov.br (assinador.iti.br), ou imprima e assine de
+            próprio punho.
           </p>
           <div className="mt-2.5 flex flex-wrap gap-2">
             <form action="/solicitar/requerimento" method="post">

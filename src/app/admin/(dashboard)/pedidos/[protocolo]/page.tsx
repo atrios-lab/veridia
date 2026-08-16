@@ -18,8 +18,8 @@ import { linkedConversations } from "@/lib/chat.ts";
 import {
   findByProtocol,
   listAttachments,
-  listQuestions,
   listRequestHistory,
+  listRequirementMessages,
   listRequirements,
   requestOwnAttachments,
 } from "@/lib/service-request.ts";
@@ -33,7 +33,6 @@ import { AttachmentsSection } from "./_components/attachments-section.tsx";
 import { DangerSection } from "./_components/danger-section.tsx";
 import { DeliverySection } from "./_components/delivery-section.tsx";
 import { KeySection } from "./_components/key-section.tsx";
-import { QuestionsSection } from "./_components/questions-section.tsx";
 import type { RequirementItem } from "./_components/requirements-section.tsx";
 import { RequirementsSection } from "./_components/requirements-section.tsx";
 import { StatusSection } from "./_components/status-section.tsx";
@@ -90,13 +89,12 @@ export default async function ServiceRequestDetailPage({
     ? request.status
     : "new";
 
-  const [attachments, requirementRows, history, conversations, questions] =
+  const [attachments, requirementRows, history, conversations] =
     await Promise.all([
       listAttachments(tenant.slug, request.id),
       listRequirements(tenant.slug, request.id),
       listRequestHistory(tenant.slug, request.id, request.protocolNumber),
       linkedConversations(tenant.slug, request.id),
-      listQuestions(tenant.slug, request.id),
     ]);
 
   const row = (a: (typeof attachments)[number]) => ({
@@ -114,7 +112,13 @@ export default async function ServiceRequestDetailPage({
     .filter((a) => a.kind === "office")
     .map(row);
 
-  const requirements: RequirementItem[] = requirementRows.map((r) => ({
+  // One read per requirement: an office raises a handful on a request, and a
+  // join would fan the request's rows out per message.
+  const requirementMessages = await Promise.all(
+    requirementRows.map((r) => listRequirementMessages(tenant.slug, r.id)),
+  );
+
+  const requirements: RequirementItem[] = requirementRows.map((r, i) => ({
     id: r.id,
     text: r.text,
     status: r.status === "fulfilled" ? "fulfilled" : "pending",
@@ -125,6 +129,22 @@ export default async function ServiceRequestDetailPage({
       : undefined,
     resolutionAttachmentId: r.resolutionAttachmentId ?? undefined,
     forms: attachments.filter((a) => a.requirementId === r.id).map(row),
+    messages: requirementMessages[i].map((m) => ({
+      id: m.id,
+      author: m.author,
+      // A deactivated operator's account loses the name but keeps the side it
+      // spoke from, which is why `author` is its own column.
+      authorName:
+        m.author === "staff"
+          ? (m.authorName ?? "Serventia")
+          : (request.applicantName ?? "Cidadão"),
+      body: m.body,
+      createdAt: m.createdAt,
+      attachments: m.attachments.map((a) => ({
+        id: a.id,
+        displayName: a.displayName,
+      })),
+    })),
   }));
 
   return (
@@ -182,12 +202,6 @@ export default async function ServiceRequestDetailPage({
             <RequirementsSection
               requestId={request.id}
               requirements={requirements}
-            />
-
-            <QuestionsSection
-              requestId={request.id}
-              applicantName={request.applicantName ?? "Solicitante"}
-              questions={questions}
             />
 
             <AttachmentsSection

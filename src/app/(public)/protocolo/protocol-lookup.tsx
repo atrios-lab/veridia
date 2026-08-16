@@ -1,13 +1,12 @@
 "use client";
 
 import Link from "next/link";
-import { useActionState, useEffect, useRef, useState } from "react";
+import { useActionState, useEffect, useState } from "react";
 import {
   DATA_RIGHT_OPTIONS,
   DATA_RIGHTS_DEADLINE_DAYS,
   manifestationLabel,
 } from "@/core/request/channels.ts";
-import { deriveQuestionThreadStatus } from "@/core/request/question.ts";
 import { formatShortDate } from "@/core/scheduling/calendar.ts";
 import { Icon } from "../_components/icon.tsx";
 import { CopyField } from "../_components/protocol-reveal.tsx";
@@ -21,15 +20,12 @@ import {
   attachExtraDocument,
   type DataRightsDetail,
   type FulfillRequirementState,
-  fulfillRequirementAction,
   type LookupState,
   lookupProtocolDetail,
   type OmbudsmanDetail,
-  type QuestionView,
   type RequirementView,
   type ServiceRequestDetail,
-  type SubmitQuestionState,
-  submitQuestionAction,
+  writeRequirementMessageAction,
 } from "./actions.ts";
 
 export interface PublicStatus {
@@ -130,13 +126,7 @@ export function ProtocolLookup({
       case "ombudsman":
         return <OmbudsmanCard result={state} />;
       default:
-        return (
-          <RequestDetail
-            result={state}
-            contacts={contacts}
-            tenantName={tenantName}
-          />
-        );
+        return <RequestDetail result={state} />;
     }
   }
 
@@ -592,26 +582,179 @@ function RequirementForms({
   );
 }
 
-function RequirementRow({
+/** Two letters in a circle, so a glance tells the two sides apart. */
+function Initials({ name, staff }: { name: string; staff: boolean }) {
+  const letters = name
+    .trim()
+    .split(/\s+/)
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((w) => w[0]?.toUpperCase() ?? "")
+    .join("");
+  return (
+    <span
+      className={`inline-flex h-8 w-8 flex-none items-center justify-center rounded-full text-[11px] font-bold ${
+        staff
+          ? "bg-brand-primary text-white"
+          : "bg-brand-accent-soft text-brand-accent"
+      }`}
+      aria-hidden="true"
+    >
+      {letters || "?"}
+    </span>
+  );
+}
+
+/**
+ * The conversation of one requirement. It lives inside the requirement's card
+ * and nowhere else: this is about what was asked, not a support channel for
+ * the request (the office's chat exists for that).
+ */
+function RequirementConversation({
   requirement,
   protocolNumber,
   accessKey,
-  onFulfilled,
 }: {
   requirement: RequirementView;
   protocolNumber: string;
   accessKey: string;
-  onFulfilled: (id: string) => void;
 }) {
   const [state, action, pending] = useActionState<
     FulfillRequirementState,
     FormData
-  >(fulfillRequirementAction, { status: "idle" });
+  >(writeRequirementMessageAction, { status: "idle" });
+  const closed = requirement.status === "fulfilled";
 
-  useEffect(() => {
-    if (state.status === "success") onFulfilled(requirement.id);
-  }, [state, requirement.id, onFulfilled]);
+  if (closed && requirement.messages.length === 0) return null;
 
+  return (
+    <div className="mt-3 border-t border-brand-border pt-3">
+      {requirement.messages.length > 0 && (
+        <div className="flex flex-col gap-2.5">
+          {requirement.messages.map((message) => (
+            <div key={message.id} className="flex items-start gap-2.5">
+              <Initials
+                name={message.authorName}
+                staff={message.author === "staff"}
+              />
+              <div className="min-w-0 flex-1">
+                <div className="flex flex-wrap items-baseline gap-2">
+                  <span className="text-[12.5px] font-bold text-brand-primary">
+                    {message.authorName}
+                  </span>
+                  <span className="text-[11px] text-brand-faint">
+                    {formatDate(message.createdAt)}
+                  </span>
+                </div>
+                {message.body && (
+                  <p className="mt-1 whitespace-pre-line rounded-xl bg-brand-card px-3 py-2 text-[13px] leading-relaxed text-brand-text">
+                    {message.body}
+                  </p>
+                )}
+                {message.attachments.map((file) => (
+                  <form
+                    key={file.id}
+                    action="/protocolo/documento"
+                    method="post"
+                    className="mt-1.5 flex items-center gap-2 rounded-[10px] border border-brand-border bg-brand-card px-3 py-2"
+                  >
+                    <Icon
+                      name="file"
+                      className="h-3.5 w-3.5 shrink-0 text-brand-accent"
+                    />
+                    <span className="flex-1 truncate text-[12.5px] text-brand-text">
+                      {file.displayName}
+                    </span>
+                    <input
+                      type="hidden"
+                      name="protocolNumber"
+                      value={protocolNumber}
+                    />
+                    <input type="hidden" name="accessKey" value={accessKey} />
+                    <input type="hidden" name="attachmentId" value={file.id} />
+                    <button
+                      type="submit"
+                      className="btn btn-ghost btn-sm shrink-0"
+                    >
+                      Baixar
+                    </button>
+                  </form>
+                ))}
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {closed ? (
+        <p className="mt-2.5 text-[11.5px] text-brand-faint">
+          A serventia marcou esta exigência como cumprida. A conversa está
+          encerrada.
+        </p>
+      ) : (
+        <form action={action} className="mt-2.5">
+          <input type="hidden" name="protocolNumber" value={protocolNumber} />
+          <input type="hidden" name="accessKey" value={accessKey} />
+          <input type="hidden" name="requirementId" value={requirement.id} />
+          {/* Invisible to a person, irresistible to a script. */}
+          <input
+            type="text"
+            name="website"
+            tabIndex={-1}
+            autoComplete="off"
+            className="sr-only"
+            aria-hidden="true"
+          />
+          <textarea
+            name="mensagem"
+            rows={2}
+            disabled={pending}
+            placeholder="Escreva para a serventia sobre esta exigência..."
+            className="w-full rounded-xl border border-brand-border bg-brand-card px-3 py-2.5 text-[13px] text-brand-text placeholder:text-brand-faint"
+          />
+          <div className="mt-2 flex flex-wrap items-center gap-2">
+            <label
+              className={`btn btn-secondary btn-sm cursor-pointer ${pending ? "opacity-60" : ""}`}
+            >
+              <Icon name="paperclip" className="h-3.5 w-3.5" />
+              Anexar
+              <input
+                type="file"
+                name="resposta"
+                multiple
+                accept="image/jpeg,image/png,image/webp,image/heic,application/pdf"
+                className="sr-only"
+                disabled={pending}
+              />
+            </label>
+            <button
+              type="submit"
+              disabled={pending}
+              className="btn btn-primary btn-lg ml-auto"
+            >
+              {pending ? "Enviando..." : "Enviar"}
+            </button>
+          </div>
+          {state.status === "error" && (
+            <output className="mt-1.5 block text-[11.5px] font-semibold text-brand-alert">
+              {state.message}
+            </output>
+          )}
+        </form>
+      )}
+    </div>
+  );
+}
+
+function RequirementRow({
+  requirement,
+  protocolNumber,
+  accessKey,
+}: {
+  requirement: RequirementView;
+  protocolNumber: string;
+  accessKey: string;
+}) {
   if (requirement.status === "fulfilled") {
     return (
       <div className="rounded-xl border border-brand-border bg-brand-card p-3.5 opacity-85">
@@ -638,6 +781,11 @@ function RequirementRow({
           protocolNumber={protocolNumber}
           accessKey={accessKey}
         />
+        <RequirementConversation
+          requirement={requirement}
+          protocolNumber={protocolNumber}
+          accessKey={accessKey}
+        />
       </div>
     );
   }
@@ -660,34 +808,11 @@ function RequirementRow({
         protocolNumber={protocolNumber}
         accessKey={accessKey}
       />
-      <form action={action} className="mt-2.5">
-        <input type="hidden" name="protocolNumber" value={protocolNumber} />
-        <input type="hidden" name="accessKey" value={accessKey} />
-        <input type="hidden" name="requirementId" value={requirement.id} />
-        <label
-          className={`flex cursor-pointer items-center justify-center gap-2 rounded-lg border-[1.5px] border-dashed border-brand-accent-line bg-brand-card px-3 py-2.5 text-[12px] font-semibold text-brand-primary hover:border-brand-accent ${pending ? "opacity-60" : ""}`}
-        >
-          <Icon name="plus" className="h-3.5 w-3.5 text-brand-accent" />
-          {pending ? "Enviando..." : "Enviar resposta"}
-          <input
-            type="file"
-            name="resposta"
-            accept="image/jpeg,image/png,image/webp,image/heic,application/pdf"
-            className="sr-only"
-            disabled={pending}
-            onChange={(event) => {
-              if (event.target.files?.length) {
-                event.target.form?.requestSubmit();
-              }
-            }}
-          />
-        </label>
-        {state.status === "error" && (
-          <output className="mt-1.5 block text-[11.5px] font-semibold text-brand-alert">
-            {state.message}
-          </output>
-        )}
-      </form>
+      <RequirementConversation
+        requirement={requirement}
+        protocolNumber={protocolNumber}
+        accessKey={accessKey}
+      />
     </div>
   );
 }
@@ -698,8 +823,10 @@ function RequirementRow({
  * with the protocol and key they already typed once.
  */
 function RequirementsCard({ result }: { result: ServiceRequestDetail }) {
-  const [requirements, setRequirements] = useState(result.requirements);
-  if (requirements.length === 0) return null;
+  // No optimistic "cumprida" any more: sending something no longer resolves
+  // the requirement, the office does after reading it. Claiming otherwise on
+  // screen would be the interface promising what the office has not decided.
+  if (result.requirements.length === 0) return null;
 
   return (
     <div className="rounded-2xl border border-brand-border bg-brand-card p-4">
@@ -707,25 +834,12 @@ function RequirementsCard({ result }: { result: ServiceRequestDetail }) {
         Exigências
       </span>
       <div className="mt-2.5 flex flex-col gap-2.5">
-        {requirements.map((requirement) => (
+        {result.requirements.map((requirement) => (
           <RequirementRow
             key={requirement.id}
             requirement={requirement}
             protocolNumber={result.protocolNumber}
             accessKey={result.accessKey}
-            onFulfilled={(id) =>
-              setRequirements((prev) =>
-                prev.map((r) =>
-                  r.id === id
-                    ? {
-                        ...r,
-                        status: "fulfilled",
-                        fulfilledAt: new Date().toISOString(),
-                      }
-                    : r,
-                ),
-              )
-            }
           />
         ))}
       </div>
@@ -733,15 +847,7 @@ function RequirementsCard({ result }: { result: ServiceRequestDetail }) {
   );
 }
 
-function RequestDetail({
-  result,
-  contacts,
-  tenantName,
-}: {
-  result: ServiceRequestDetail;
-  contacts: Contacts;
-  tenantName: string;
-}) {
+function RequestDetail({ result }: { result: ServiceRequestDetail }) {
   // The lookup already answered whether the signed form arrived; a
   // successful upload in this same visit flips it without asking the server
   // to look everything up again.
@@ -1104,194 +1210,12 @@ function RequestDetail({
               </div>
             )}
           </div>
-
-          <QuestionsCard
-            result={result}
-            contacts={contacts}
-            tenantName={tenantName}
-          />
         </div>
       </div>
 
       <Link href="/protocolo" className="btn btn-ghost btn-sm mt-4">
         Nova consulta
       </Link>
-    </div>
-  );
-}
-
-function QuestionBadge({
-  status,
-}: {
-  status: ReturnType<typeof deriveQuestionThreadStatus>;
-}) {
-  if (status === "none") return null;
-  if (status === "answered") {
-    return (
-      <span className="rounded-full bg-brand-primary-soft px-2.5 py-0.5 text-[10.5px] font-bold text-white">
-        Respondida
-      </span>
-    );
-  }
-  return (
-    <span className="rounded-full bg-brand-accent px-2.5 py-0.5 text-[10.5px] font-bold text-white">
-      Aguardando resposta
-    </span>
-  );
-}
-
-function QuestionMessageBubble({
-  message,
-  tenantName,
-}: {
-  message: QuestionView;
-  tenantName: string;
-}) {
-  const isCitizen = message.authorType === "citizen";
-  return (
-    <div>
-      <div className="flex items-baseline gap-1.5">
-        <span className="text-[12.5px] font-bold text-brand-primary">
-          {isCitizen ? "Você" : tenantName}
-        </span>
-        <span className="text-[10.5px] text-brand-faint">
-          {formatDateTime(message.createdAt)}
-        </span>
-      </div>
-      <div
-        className={`mt-1 rounded-xl px-3 py-2.5 ${isCitizen ? "bg-brand-surface" : "bg-brand-accent-soft"}`}
-      >
-        <p className="text-[12.5px] leading-relaxed text-brand-text">
-          {message.body}
-        </p>
-      </div>
-    </div>
-  );
-}
-
-/**
- * Not a live chat: the citizen posts, the office answers in its own time
- * (US-07) — no polling, no "digitando", no read receipt. A fresh submit is
- * appended locally so the thread updates without a full reload; the badge is
- * always derived from whatever `questions` holds right now, never cached.
- */
-function QuestionComposer({
-  protocolNumber,
-  accessKey,
-  onSubmitted,
-}: {
-  protocolNumber: string;
-  accessKey: string;
-  onSubmitted: (question: QuestionView) => void;
-}) {
-  const formRef = useRef<HTMLFormElement>(null);
-  const [state, action, pending] = useActionState<
-    SubmitQuestionState,
-    FormData
-  >(submitQuestionAction, { status: "idle" });
-
-  useEffect(() => {
-    if (state.status === "success") {
-      onSubmitted(state.question);
-      formRef.current?.reset();
-    }
-  }, [state, onSubmitted]);
-
-  return (
-    <form ref={formRef} action={action} className="mt-4">
-      <input type="hidden" name="protocolNumber" value={protocolNumber} />
-      <input type="hidden" name="accessKey" value={accessKey} />
-      <textarea
-        name="body"
-        rows={2}
-        placeholder="Escreva sua pergunta…"
-        className={inputClass}
-      />
-      <div className="mt-2 flex items-center justify-between gap-2">
-        {state.status === "error" ? (
-          <output
-            role="alert"
-            className="text-[11.5px] font-semibold text-brand-alert"
-          >
-            {state.message}
-          </output>
-        ) : (
-          <span />
-        )}
-        <button
-          type="submit"
-          disabled={pending}
-          className="btn btn-primary btn-sm shrink-0"
-        >
-          {pending ? "Enviando…" : "Enviar pergunta"}
-        </button>
-      </div>
-    </form>
-  );
-}
-
-function QuestionsCard({
-  result,
-  contacts,
-  tenantName,
-}: {
-  result: ServiceRequestDetail;
-  contacts: Contacts;
-  tenantName: string;
-}) {
-  const [questions, setQuestions] = useState(result.questions);
-  const status = deriveQuestionThreadStatus(questions);
-
-  return (
-    <div className="rounded-2xl border border-brand-border bg-brand-card p-4">
-      <div className="flex items-center gap-2">
-        <h3 className="flex-1 font-serif text-[15.5px] font-semibold text-brand-primary">
-          Perguntas sobre este pedido
-        </h3>
-        <QuestionBadge status={status} />
-      </div>
-      <p className="mt-1.5 text-[11.5px] leading-relaxed text-brand-faint">
-        Escreva sua dúvida aqui: o cartório responde em até 1 dia útil, direto
-        neste protocolo.
-      </p>
-
-      {questions.length > 0 && (
-        <div className="mt-3.5 flex flex-col gap-3.5">
-          {questions.map((question) => (
-            <QuestionMessageBubble
-              key={question.id}
-              message={question}
-              tenantName={tenantName}
-            />
-          ))}
-        </div>
-      )}
-
-      <QuestionComposer
-        protocolNumber={result.protocolNumber}
-        accessKey={result.accessKey}
-        onSubmitted={(question) => setQuestions((prev) => [...prev, question])}
-      />
-
-      <div className="mt-4 flex items-center gap-2.5 border-t border-brand-border pt-3.5">
-        <span className="flex-1 text-[11.5px] text-brand-text-soft">
-          Prefere falar direto?
-        </span>
-        <a
-          href={`https://wa.me/55${digits(contacts.whatsapp)}`}
-          className="btn btn-secondary btn-sm shrink-0"
-        >
-          <Icon name="chat" className="h-3.5 w-3.5" strokeWidth={1.8} />
-          WhatsApp
-        </a>
-        <a
-          href={`tel:+55${digits(contacts.phone)}`}
-          className="btn btn-secondary btn-sm shrink-0"
-        >
-          <Icon name="phone" className="h-3.5 w-3.5" strokeWidth={1.8} />
-          Ligar
-        </a>
-      </div>
     </div>
   );
 }

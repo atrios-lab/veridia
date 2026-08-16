@@ -14,6 +14,7 @@ import {
 import { looksLikeBot, serviceRequestSchema } from "@/core/request/form.ts";
 import { formatProtocolNumber } from "@/core/request/protocol.ts";
 import { isSectionEnabled } from "@/core/tenant/gating.ts";
+import { notifyCitizen } from "@/lib/email/service-request.ts";
 import { isRateLimited } from "@/lib/rate-limit.ts";
 import {
   attachToRequest,
@@ -117,12 +118,31 @@ export async function submitServiceRequest(
       .filter((f): f is File => f instanceof File);
     const attachments = await storeAttachments(files);
 
+    // The consent is stamped at the moment it is given, into the record it
+    // belongs to: the proof of consent is the controller's to keep (LGPD
+    // art. 8 §2), and the schema above only checks the boxes were ticked.
+    const consentedAt = new Date().toISOString();
+
     const { protocolNumber } = await createServiceRequest(
       tenant,
       act,
-      { ...parsed.data, accessKeyHash: hashAccessKey(accessKey) },
+      {
+        ...parsed.data,
+        accessKeyHash: hashAccessKey(accessKey),
+        details: { consents: { lgpd: consentedAt, truth: consentedAt } },
+      },
       attachments,
     );
+
+    // The key is never in the e-mail: it was shown once, on the screen the
+    // citizen is looking at, and putting it in a mailbox would undo that.
+    void notifyCitizen({
+      tenant,
+      contact: parsed.data.contact,
+      protocolNumber,
+      subject: "Pedido recebido",
+      body: "Recebemos o seu pedido. Guarde o número do protocolo e a chave de acesso mostrados na tela de envio.",
+    });
 
     return {
       status: "success",

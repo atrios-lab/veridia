@@ -2,7 +2,7 @@
 
 import { Fragment, useActionState } from "react";
 import {
-  SERVICE_REQUEST_STATUSES,
+  SERVICE_REQUEST_PHASES,
   type ServiceRequestStatus,
   statusLabel,
 } from "@/core/request/kinds.ts";
@@ -165,10 +165,17 @@ export function StatusSection({
               defaultValue={status}
               className="appearance-none rounded-[9px] border border-admin-input-border bg-admin-input-bg py-2 pr-9 pl-3 text-[13px] text-admin-text"
             >
-              {SERVICE_REQUEST_STATUSES.map((s) => (
-                <option key={s} value={s}>
-                  {statusLabel("service-request", s)}
-                </option>
+              {/* Grouped by phase: eighteen flat options is a wall, and the
+                  operator is looking for a step of the title's life, which is
+                  exactly what the groups name. */}
+              {SERVICE_REQUEST_PHASES.map((phase) => (
+                <optgroup key={phase.id} label={phase.label}>
+                  {phase.statuses.map((s) => (
+                    <option key={s} value={s}>
+                      {statusLabel("service-request", s)}
+                    </option>
+                  ))}
+                </optgroup>
               ))}
             </select>
             <AdminIcon

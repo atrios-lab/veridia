@@ -31,17 +31,36 @@ export const KIND_BY_PREFIX: Record<ProtocolPrefix, RequestKind> = {
 };
 
 /**
- * The eight andamentos a service request may be in, in the order the queue's
- * progress bar shows them plus the two off-ramps (Indeferido, Arquivado). A
- * closed list, not a database enum — every other kind's vocabulary lives in
- * `STATUS_LABELS` below the same way, so a new value is a code change here,
- * never a migration.
+ * The eighteen andamentos a service request may be in: the general ones every
+ * request passes through plus the registral steps of a title's life, which is
+ * the vocabulary the registrar actually works in (prenotação, qualificação,
+ * registro, averbação). A closed list, not a database enum: every other
+ * kind's vocabulary lives in `STATUS_LABELS` below the same way, so a new
+ * value is a code change here, never a migration.
+ *
+ * The identifiers stay English like the rest of the product, even though the
+ * office says them in Portuguese. `service_requests.status` is one column
+ * shared by all four kinds, and `new`, `done` and `cancelled` already belong
+ * to appointments and the other channels too: adopting the legacy system's
+ * Portuguese identifiers for this kind alone would leave `em_qualificacao`
+ * and `confirmed` side by side in the same column, forever. The pt→en map for
+ * the eventual data migration lives in the change's design.md.
  */
 export const SERVICE_REQUEST_STATUSES = [
   "new",
   "in-review",
   "awaiting-payment",
   "paid",
+  "filed",
+  "pre-noted",
+  "in-qualification",
+  "with-requirement",
+  "awaiting-compliance",
+  "processing",
+  "registered",
+  "annotated",
+  "granted",
+  "ready-for-pickup",
   "done",
   "rejected",
   "cancelled",
@@ -52,6 +71,60 @@ export type ServiceRequestStatus = (typeof SERVICE_REQUEST_STATUSES)[number];
 /** Andamentos that no longer need the operator's attention. */
 export const TERMINAL_SERVICE_REQUEST_STATUSES: readonly ServiceRequestStatus[] =
   ["done", "rejected", "cancelled", "archived"];
+
+/**
+ * The phases the queue groups the eighteen into. Eighteen steps do not fit a
+ * progress bar, and the citizen does not need "averbado" to know where their
+ * request stands. The office does, and the office reads the detail screen.
+ */
+export const SERVICE_REQUEST_PHASES = [
+  { id: "intake", label: "Entrada", statuses: ["new", "filed"] },
+  {
+    id: "analysis",
+    label: "Análise",
+    statuses: [
+      "in-review",
+      "pre-noted",
+      "in-qualification",
+      "with-requirement",
+      "awaiting-compliance",
+    ],
+  },
+  {
+    id: "payment",
+    label: "Pagamento",
+    statuses: ["awaiting-payment", "paid"],
+  },
+  {
+    id: "processing",
+    label: "Processamento",
+    statuses: ["processing", "registered", "annotated", "granted"],
+  },
+  { id: "delivery", label: "Entrega", statuses: ["ready-for-pickup"] },
+  {
+    id: "closed",
+    label: "Encerrado",
+    statuses: ["done", "rejected", "cancelled", "archived"],
+  },
+] as const satisfies readonly {
+  id: string;
+  label: string;
+  statuses: readonly ServiceRequestStatus[];
+}[];
+
+export type ServiceRequestPhaseId =
+  (typeof SERVICE_REQUEST_PHASES)[number]["id"];
+
+/** Which phase an andamento belongs to. Every one belongs to exactly one. */
+export function phaseOfStatus(
+  status: ServiceRequestStatus,
+): ServiceRequestPhaseId {
+  for (const phase of SERVICE_REQUEST_PHASES) {
+    if ((phase.statuses as readonly string[]).includes(status)) return phase.id;
+  }
+  // Unreachable while the phases cover the list; the test below proves they do.
+  return "intake";
+}
 
 export function isOpenServiceRequestStatus(status: string): boolean {
   return !(TERMINAL_SERVICE_REQUEST_STATUSES as readonly string[]).includes(
@@ -67,22 +140,34 @@ export function isServiceRequestStatus(
 
 /**
  * The andamentos offered as the next step from each one, curated for the
- * detail screen. This is UX guidance, not a state machine: the server only
- * enforces that the value is one of the eight above, so a correction that
- * falls outside this table (moving a request back out of "Cancelado", say)
- * is still accepted.
+ * detail screen. This is UX guidance, not a state machine: the andamento of a
+ * title does not fit one (a prenotação may go to exigência, an exigência back
+ * to qualificação, a concluído may reopen), so the server enforces only that
+ * the value is one of the eighteen above and that it is not the current one.
+ * A correction outside this table (moving a request back out of "Cancelado",
+ * say) is still accepted.
  */
 const SUGGESTED_NEXT_STATUSES: Record<
   ServiceRequestStatus,
   readonly ServiceRequestStatus[]
 > = {
-  new: ["in-review", "cancelled"],
-  "in-review": ["awaiting-payment", "rejected", "cancelled"],
+  new: ["in-review", "filed", "cancelled"],
+  "in-review": ["awaiting-payment", "pre-noted", "rejected", "cancelled"],
   "awaiting-payment": ["paid", "cancelled"],
-  paid: ["done", "cancelled"],
+  paid: ["processing", "pre-noted", "done"],
+  filed: ["pre-noted", "in-review", "cancelled"],
+  "pre-noted": ["in-qualification", "with-requirement", "cancelled"],
+  "in-qualification": ["with-requirement", "registered", "rejected"],
+  "with-requirement": ["awaiting-compliance", "in-qualification", "cancelled"],
+  "awaiting-compliance": ["in-qualification", "with-requirement", "cancelled"],
+  processing: ["registered", "granted", "ready-for-pickup"],
+  registered: ["annotated", "ready-for-pickup", "done"],
+  annotated: ["ready-for-pickup", "done"],
+  granted: ["ready-for-pickup", "done"],
+  "ready-for-pickup": ["done", "archived"],
   done: ["archived"],
   rejected: ["archived"],
-  cancelled: ["archived"],
+  cancelled: ["in-review", "archived"],
   archived: [],
 };
 
@@ -90,6 +175,18 @@ export function suggestedNextStatuses(
   status: ServiceRequestStatus,
 ): readonly ServiceRequestStatus[] {
   return SUGGESTED_NEXT_STATUSES[status];
+}
+
+/**
+ * Whether the office may move a request from one andamento to another. Free
+ * flow on purpose (see above); the one refusal is moving to the andamento it
+ * is already in, which would only write an event carrying no information.
+ */
+export function isAllowedTransition(
+  from: ServiceRequestStatus,
+  to: ServiceRequestStatus,
+): boolean {
+  return from !== to;
 }
 
 /**
@@ -120,6 +217,16 @@ const STATUS_LABELS: Record<RequestKind, Record<string, string>> = {
     "in-review": "Em análise",
     "awaiting-payment": "Aguardando pagamento",
     paid: "Pago",
+    filed: "Protocolado",
+    "pre-noted": "Prenotado",
+    "in-qualification": "Em qualificação",
+    "with-requirement": "Com exigência",
+    "awaiting-compliance": "Aguardando exigência",
+    processing: "Em processamento",
+    registered: "Registrado",
+    annotated: "Averbado",
+    granted: "Deferido",
+    "ready-for-pickup": "Disponível para retirada",
     done: "Concluído",
     rejected: "Indeferido",
     cancelled: "Cancelado",
@@ -172,6 +279,12 @@ export const serviceRequestDetailsSchema = z.object({
   // Absent means "online", the default every citizen-filed request already
   // was before the counter could file one directly.
   channel: z.enum(SERVICE_REQUEST_CHANNELS).optional(),
+  // What the citizen agreed to, and when. The proof of consent is the
+  // controller's to keep (LGPD art. 8 §2), and a checkbox validated and then
+  // thrown away is not proof. Absent on requests filed before this was
+  // recorded, and on counter-filed ones, where the consent is on the paper the
+  // citizen signs at the desk.
+  consents: z.object({ lgpd: isoInstant, truth: isoInstant }).optional(),
 });
 export type ServiceRequestDetails = z.infer<typeof serviceRequestDetailsSchema>;
 

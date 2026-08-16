@@ -1,6 +1,6 @@
 {
-  "id": "f40e9d9a-a51a-44b4-a34f-7cac52d0f5bf",
-  "prevId": "86b4a4a8-a393-45d2-934b-aeb40704f3b2",
+  "id": "86f1fa23-fb20-48ca-9e7c-4b41bb522655",
+  "prevId": "b831aade-c815-4fd7-815b-9688f422cdf7",
   "version": "7",
   "dialect": "postgresql",
   "tables": {
@@ -269,12 +269,8 @@
           "name": "chat_conversations_matched_request_id_service_requests_id_fk",
           "tableFrom": "chat_conversations",
           "tableTo": "service_requests",
-          "columnsFrom": [
-            "matched_request_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["matched_request_id"],
+          "columnsTo": ["id"],
           "onDelete": "set null",
           "onUpdate": "no action"
         },
@@ -282,12 +278,8 @@
           "name": "chat_conversations_assigned_user_id_user_id_fk",
           "tableFrom": "chat_conversations",
           "tableTo": "user",
-          "columnsFrom": [
-            "assigned_user_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["assigned_user_id"],
+          "columnsTo": ["id"],
           "onDelete": "set null",
           "onUpdate": "no action"
         },
@@ -295,12 +287,8 @@
           "name": "chat_conversations_linked_request_id_service_requests_id_fk",
           "tableFrom": "chat_conversations",
           "tableTo": "service_requests",
-          "columnsFrom": [
-            "linked_request_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["linked_request_id"],
+          "columnsTo": ["id"],
           "onDelete": "set null",
           "onUpdate": "no action"
         }
@@ -419,12 +407,8 @@
           "name": "chat_messages_conversation_id_chat_conversations_id_fk",
           "tableFrom": "chat_messages",
           "tableTo": "chat_conversations",
-          "columnsFrom": [
-            "conversation_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["conversation_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
@@ -432,12 +416,8 @@
           "name": "chat_messages_author_user_id_user_id_fk",
           "tableFrom": "chat_messages",
           "tableTo": "user",
-          "columnsFrom": [
-            "author_user_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["author_user_id"],
+          "columnsTo": ["id"],
           "onDelete": "set null",
           "onUpdate": "no action"
         }
@@ -654,6 +634,12 @@
           "primaryKey": false,
           "notNull": false
         },
+        "requirement_message_id": {
+          "name": "requirement_message_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": false
+        },
         "created_at": {
           "name": "created_at",
           "type": "timestamp with time zone",
@@ -692,6 +678,21 @@
           "concurrently": false,
           "method": "btree",
           "with": {}
+        },
+        "service_request_attachments_requirement_message": {
+          "name": "service_request_attachments_requirement_message",
+          "columns": [
+            {
+              "expression": "requirement_message_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
         }
       },
       "foreignKeys": {
@@ -699,12 +700,8 @@
           "name": "service_request_attachments_request_id_service_requests_id_fk",
           "tableFrom": "service_request_attachments",
           "tableTo": "service_requests",
-          "columnsFrom": [
-            "request_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["request_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
@@ -712,13 +709,214 @@
           "name": "service_request_attachments_requirement_id_service_request_requirements_id_fk",
           "tableFrom": "service_request_attachments",
           "tableTo": "service_request_requirements",
-          "columnsFrom": [
-            "requirement_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["requirement_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
+          "onUpdate": "no action"
+        },
+        "service_request_attachments_requirement_message_id_service_request_requirement_messages_id_fk": {
+          "name": "service_request_attachments_requirement_message_id_service_request_requirement_messages_id_fk",
+          "tableFrom": "service_request_attachments",
+          "tableTo": "service_request_requirement_messages",
+          "columnsFrom": ["requirement_message_id"],
+          "columnsTo": ["id"],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.service_request_questions": {
+      "name": "service_request_questions",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "gen_random_uuid()"
+        },
+        "tenant_slug": {
+          "name": "tenant_slug",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "request_id": {
+          "name": "request_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "author_type": {
+          "name": "author_type",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "author_id": {
+          "name": "author_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "body": {
+          "name": "body",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {
+        "service_request_questions_request_created_at": {
+          "name": "service_request_questions_request_created_at",
+          "columns": [
+            {
+              "expression": "request_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "created_at",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "service_request_questions_request_id_service_requests_id_fk": {
+          "name": "service_request_questions_request_id_service_requests_id_fk",
+          "tableFrom": "service_request_questions",
+          "tableTo": "service_requests",
+          "columnsFrom": ["request_id"],
+          "columnsTo": ["id"],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        },
+        "service_request_questions_author_id_user_id_fk": {
+          "name": "service_request_questions_author_id_user_id_fk",
+          "tableFrom": "service_request_questions",
+          "tableTo": "user",
+          "columnsFrom": ["author_id"],
+          "columnsTo": ["id"],
+          "onDelete": "set null",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.service_request_requirement_messages": {
+      "name": "service_request_requirement_messages",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "gen_random_uuid()"
+        },
+        "tenant_slug": {
+          "name": "tenant_slug",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "requirement_id": {
+          "name": "requirement_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "author": {
+          "name": "author",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "author_user_id": {
+          "name": "author_user_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "body": {
+          "name": "body",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {
+        "service_request_requirement_messages_requirement": {
+          "name": "service_request_requirement_messages_requirement",
+          "columns": [
+            {
+              "expression": "requirement_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "created_at",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "service_request_requirement_messages_requirement_id_service_request_requirements_id_fk": {
+          "name": "service_request_requirement_messages_requirement_id_service_request_requirements_id_fk",
+          "tableFrom": "service_request_requirement_messages",
+          "tableTo": "service_request_requirements",
+          "columnsFrom": ["requirement_id"],
+          "columnsTo": ["id"],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        },
+        "service_request_requirement_messages_author_user_id_user_id_fk": {
+          "name": "service_request_requirement_messages_author_user_id_user_id_fk",
+          "tableFrom": "service_request_requirement_messages",
+          "tableTo": "user",
+          "columnsFrom": ["author_user_id"],
+          "columnsTo": ["id"],
+          "onDelete": "set null",
           "onUpdate": "no action"
         }
       },
@@ -806,12 +1004,8 @@
           "name": "service_request_requirements_request_id_service_requests_id_fk",
           "tableFrom": "service_request_requirements",
           "tableTo": "service_requests",
-          "columnsFrom": [
-            "request_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["request_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
@@ -819,12 +1013,8 @@
           "name": "service_request_requirements_resolution_attachment_id_service_request_attachments_id_fk",
           "tableFrom": "service_request_requirements",
           "tableTo": "service_request_attachments",
-          "columnsFrom": [
-            "resolution_attachment_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["resolution_attachment_id"],
+          "columnsTo": ["id"],
           "onDelete": "no action",
           "onUpdate": "no action"
         }
@@ -1540,12 +1730,8 @@
           "name": "account_user_id_user_id_fk",
           "tableFrom": "account",
           "tableTo": "user",
-          "columnsFrom": [
-            "user_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["user_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -1617,12 +1803,8 @@
           "name": "session_user_id_user_id_fk",
           "tableFrom": "session",
           "tableTo": "user",
-          "columnsFrom": [
-            "user_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["user_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -1632,9 +1814,7 @@
         "session_token_unique": {
           "name": "session_token_unique",
           "nullsNotDistinct": false,
-          "columns": [
-            "token"
-          ]
+          "columns": ["token"]
         }
       },
       "policies": {},
@@ -1730,9 +1910,7 @@
         "user_email_unique": {
           "name": "user_email_unique",
           "nullsNotDistinct": false,
-          "columns": [
-            "email"
-          ]
+          "columns": ["email"]
         }
       },
       "policies": {},

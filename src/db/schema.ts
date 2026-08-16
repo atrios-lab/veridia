@@ -191,6 +191,15 @@ export const serviceRequestAttachments = pgTable(
       (): AnyPgColumn => serviceRequestRequirements.id,
       { onDelete: "cascade" },
     ),
+    // Set on a file sent inside a message of the requirement's conversation.
+    // `requestId` stays filled alongside it: the owner is still the request,
+    // which is how a future purge finds the file to delete by walking the
+    // request. Without that, deleting the request would leave the bytes in
+    // storage with nobody pointing at them.
+    requirementMessageId: uuid("requirement_message_id").references(
+      (): AnyPgColumn => serviceRequestRequirementMessages.id,
+      { onDelete: "cascade" },
+    ),
     createdAt: timestamp("created_at", { withTimezone: true })
       .notNull()
       .defaultNow(),
@@ -198,6 +207,9 @@ export const serviceRequestAttachments = pgTable(
   (t) => [
     index("service_request_attachments_request").on(t.requestId),
     index("service_request_attachments_requirement").on(t.requirementId),
+    index("service_request_attachments_requirement_message").on(
+      t.requirementMessageId,
+    ),
   ],
 );
 
@@ -231,11 +243,15 @@ export const serviceRequestRequirements = pgTable(
 );
 
 /**
- * One message in the question-and-answer thread attached to a service
- * request — not a live chat: the citizen posts, the office replies in its
- * own time. Its own row for the same reason `serviceRequestRequirements`
- * has one instead of a field in `details`: both sides write here, and a
- * JSON blob shared by two writers is how one overwrites the other.
+ * Superseded by `serviceRequestRequirementMessages` below, and kept declared
+ * only so no migration drops it behind anyone's back. It carried the first
+ * pass at a citizen conversation, hung off the request; the conversation the
+ * office asked for lives inside the requirement it is about, closes when the
+ * requirement is met, and takes attachments. Nothing reads or writes this
+ * table any more.
+ *
+ * Removing it is a deliberate step of its own, once whoever owns the data has
+ * confirmed there is nothing in it worth keeping.
  */
 export const serviceRequestQuestions = pgTable(
   "service_request_questions",
@@ -245,11 +261,7 @@ export const serviceRequestQuestions = pgTable(
     requestId: uuid("request_id")
       .notNull()
       .references(() => serviceRequests.id, { onDelete: "cascade" }),
-    // "citizen" or "staff" — see QUESTION_AUTHOR_TYPES in
-    // src/core/request/question.ts.
     authorType: text("author_type").notNull(),
-    // Set only on a staff reply; null on the citizen's own messages, who has
-    // no account to reference.
     authorId: text("author_id").references(() => user.id, {
       onDelete: "set null",
     }),
@@ -261,6 +273,52 @@ export const serviceRequestQuestions = pgTable(
   (t) => [
     index("service_request_questions_request_created_at").on(
       t.requestId,
+      t.createdAt,
+    ),
+  ],
+);
+
+/**
+ * The conversation inside a requirement: the citizen asks what the office
+ * actually wants, the office answers, both in the card the requirement
+ * already occupies on either screen. It exists because "anexe o documento" is
+ * not always enough: the office's legacy system grew this exact feature
+ * after the fact, which is the strongest evidence it was needed.
+ *
+ * `author` is its own column rather than a `authorUserId IS NULL` test: an
+ * operator's account may be deactivated, which sets the id to null, and the
+ * message would then present itself as the citizen's. Whoever spoke is a fact
+ * about the message, not about the account that still exists.
+ *
+ * There is no status column: "awaiting the office", "answered" and "closed"
+ * are read off the last message and the requirement's own state, the same way
+ * a publication's state is computed and never stored.
+ */
+export const serviceRequestRequirementMessages = pgTable(
+  "service_request_requirement_messages",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    tenantSlug,
+    requirementId: uuid("requirement_id")
+      .notNull()
+      .references(() => serviceRequestRequirements.id, {
+        onDelete: "cascade",
+      }),
+    // "citizen" | "staff".
+    author: text("author").notNull(),
+    // Null when the citizen wrote it (no account), or when the operator's
+    // account was later removed.
+    authorUserId: text("author_user_id").references(() => user.id, {
+      onDelete: "set null",
+    }),
+    body: text("body").notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (t) => [
+    index("service_request_requirement_messages_requirement").on(
+      t.requirementId,
       t.createdAt,
     ),
   ],

@@ -17,7 +17,6 @@ import {
   verifyAccessKey,
 } from "@/core/request/access-key.ts";
 import type { RequestDataEdit } from "@/core/request/edit.ts";
-import { isEmailContact } from "@/core/request/form.ts";
 import {
   isServiceRequestStatus,
   KIND_BY_PREFIX,
@@ -32,7 +31,6 @@ import {
   formatProtocolNumber,
   type ProtocolPrefix,
 } from "@/core/request/protocol.ts";
-import type { QuestionAuthorType } from "@/core/request/question.ts";
 import type { SearchTerm } from "@/core/request/search.ts";
 import type { IsoDate } from "@/core/scheduling/calendar.ts";
 import type { Occupancy } from "@/core/scheduling/slots.ts";
@@ -47,12 +45,11 @@ import { db } from "@/db/index.ts";
 import {
   auditLog,
   serviceRequestAttachments,
-  serviceRequestQuestions,
+  serviceRequestRequirementMessages,
   serviceRequestRequirements,
   serviceRequests,
 } from "@/db/schema.ts";
 import { recordAudit } from "./audit.ts";
-import { sendQuestionAnsweredEmail } from "./email/question.ts";
 import type { StoredAttachment } from "./uploads.ts";
 
 export interface NewServiceRequest {
@@ -703,15 +700,20 @@ export async function registerRequirement(
 }
 
 /**
- * The citizen answers a pending requirement with one attachment, through the
- * protocol consult. No transaction, the same trade-off `createRecord`
- * already makes for request + attachments.
+ * The office declares a requirement met. This is the office's call, never the
+ * citizen's: what the citizen sends is evidence, and only whoever raised the
+ * requirement can say the evidence satisfies it. Sending a file used to mark
+ * the requirement fulfilled by itself, which meant a blurry scan closed it as
+ * surely as a good one.
+ *
+ * Closing it also closes the conversation: neither side writes into a
+ * requirement that is done.
  */
-export async function fulfillRequirement(
+export async function resolveRequirement(
   tenantSlug: string,
   requirementId: string,
-  attachment: StoredAttachment,
-): Promise<void> {
+  actorId: string,
+): Promise<boolean> {
   const [requirement] = await db
     .select({ requestId: serviceRequestRequirements.requestId })
     .from(serviceRequestRequirements)
@@ -723,154 +725,269 @@ export async function fulfillRequirement(
       ),
     )
     .limit(1);
-  if (!requirement) return;
-
-  const [stored] = await db
-    .insert(serviceRequestAttachments)
-    .values({
-      tenantSlug,
-      requestId: requirement.requestId,
-      kind: "citizen",
-      storedName: attachment.storedName,
-      displayName: attachment.displayName,
-      path: attachment.path,
-      mimeType: attachment.mimeType,
-      sizeBytes: attachment.sizeBytes,
-    })
-    .returning({ id: serviceRequestAttachments.id });
+  if (!requirement) return false;
 
   await db
     .update(serviceRequestRequirements)
-    .set({
-      status: "fulfilled",
-      fulfilledAt: new Date(),
-      resolutionAttachmentId: stored.id,
-    })
+    .set({ status: "fulfilled", fulfilledAt: new Date() })
     .where(eq(serviceRequestRequirements.id, requirementId));
 
   await recordAudit({
     tenantSlug,
-    actorId: null, // the citizen has no account
+    actorId,
     action: "service-request.requirement.fulfill",
     targetType: "service-request",
     targetId: requirement.requestId,
   });
+  return true;
 }
 
-export interface QuestionMessage {
+/** One message of a requirement's conversation, with whatever came attached. */
+export interface RequirementMessage {
   id: string;
-  authorType: QuestionAuthorType;
-  /** Who wrote it, when it is the office — null on every citizen message,
-   * who has no account to name it after. */
+  author: "citizen" | "staff";
   authorName: string | null;
   body: string;
   createdAt: Date;
+  attachments: {
+    id: string;
+    displayName: string;
+    sizeBytes: number;
+  }[];
 }
 
-/** The question-and-answer thread on one request, oldest first. */
-export async function listQuestions(
+/**
+ * The conversation of a requirement, oldest first, with the staff author's
+ * name resolved. A message whose operator account was later removed keeps its
+ * `author` and loses only the name, which is why `author` is a column of its
+ * own (see the schema).
+ */
+export async function listRequirementMessages(
   tenantSlug: string,
-  requestId: string,
-): Promise<QuestionMessage[]> {
+  requirementId: string,
+): Promise<RequirementMessage[]> {
   const rows = await db
     .select({
-      id: serviceRequestQuestions.id,
-      authorType: serviceRequestQuestions.authorType,
+      id: serviceRequestRequirementMessages.id,
+      author: serviceRequestRequirementMessages.author,
+      body: serviceRequestRequirementMessages.body,
+      createdAt: serviceRequestRequirementMessages.createdAt,
       authorName: user.name,
-      body: serviceRequestQuestions.body,
-      createdAt: serviceRequestQuestions.createdAt,
     })
-    .from(serviceRequestQuestions)
-    .leftJoin(user, eq(serviceRequestQuestions.authorId, user.id))
+    .from(serviceRequestRequirementMessages)
+    .leftJoin(user, eq(serviceRequestRequirementMessages.authorUserId, user.id))
     .where(
       and(
-        eq(serviceRequestQuestions.tenantSlug, tenantSlug),
-        eq(serviceRequestQuestions.requestId, requestId),
+        eq(serviceRequestRequirementMessages.tenantSlug, tenantSlug),
+        eq(serviceRequestRequirementMessages.requirementId, requirementId),
       ),
     )
-    .orderBy(asc(serviceRequestQuestions.createdAt));
+    .orderBy(asc(serviceRequestRequirementMessages.createdAt));
+  if (rows.length === 0) return [];
+
+  const files = await db
+    .select({
+      id: serviceRequestAttachments.id,
+      displayName: serviceRequestAttachments.displayName,
+      sizeBytes: serviceRequestAttachments.sizeBytes,
+      messageId: serviceRequestAttachments.requirementMessageId,
+    })
+    .from(serviceRequestAttachments)
+    .where(
+      inArray(
+        serviceRequestAttachments.requirementMessageId,
+        rows.map((r) => r.id),
+      ),
+    );
+
   return rows.map((row) => ({
-    ...row,
-    authorType: row.authorType as QuestionAuthorType,
+    id: row.id,
+    author: row.author === "staff" ? "staff" : "citizen",
+    authorName: row.authorName ?? null,
+    body: row.body,
+    createdAt: row.createdAt,
+    attachments: files
+      .filter((f) => f.messageId === row.id)
+      .map(({ id, displayName, sizeBytes }) => ({
+        id,
+        displayName,
+        sizeBytes,
+      })),
   }));
 }
 
-/**
- * The citizen posts a question through the protocol consult they already
- * have — no e-mail, no phone, same protocol and key as everything else on
- * that screen.
- */
-export async function addCitizenQuestion(
-  tenantSlug: string,
-  requestId: string,
-  body: string,
-): Promise<{ id: string }> {
-  const [inserted] = await db
-    .insert(serviceRequestQuestions)
-    .values({ tenantSlug, requestId, authorType: "citizen", body })
-    .returning({ id: serviceRequestQuestions.id });
-
-  await recordAudit({
-    tenantSlug,
-    actorId: null, // the citizen has no account
-    action: "service-request.question",
-    targetType: "service-request",
-    targetId: requestId,
-  });
-
-  return inserted;
+/** A requirement that is still open, with the request it belongs to. */
+async function pendingRequirement(tenantSlug: string, requirementId: string) {
+  const [row] = await db
+    .select({ requestId: serviceRequestRequirements.requestId })
+    .from(serviceRequestRequirements)
+    .where(
+      and(
+        eq(serviceRequestRequirements.tenantSlug, tenantSlug),
+        eq(serviceRequestRequirements.id, requirementId),
+        // A fulfilled requirement's conversation is closed to both sides.
+        eq(serviceRequestRequirements.status, "pending"),
+      ),
+    )
+    .limit(1);
+  return row;
 }
 
 /**
- * The office replies to a question thread. There is no expectation of an
- * immediate answer (US-07), so this is a plain write, not a live channel —
- * the citizen finds out either by returning to the consult or, when their
- * contact is an e-mail, through the notice below. A failure to notify never
- * costs the reply that already landed.
+ * The citizen writes into a requirement, through the protocol consult. The
+ * files ride along on the message but belong to the request as well
+ * (`requestId` filled), so a future purge finds them by walking the request.
+ *
+ * Returns null when the requirement is not open, which the caller answers the
+ * same way it answers a wrong key: without saying which it was.
  */
-export async function addStaffQuestionReply(
-  tenant: Tenant,
-  requestId: string,
+export async function writeCitizenMessage(
+  tenantSlug: string,
+  requirementId: string,
+  body: string,
+  attachments: StoredAttachment[] = [],
+): Promise<{ id: string } | null> {
+  const requirement = await pendingRequirement(tenantSlug, requirementId);
+  if (!requirement) return null;
+
+  const [message] = await db
+    .insert(serviceRequestRequirementMessages)
+    .values({ tenantSlug, requirementId, author: "citizen", body })
+    .returning({ id: serviceRequestRequirementMessages.id });
+
+  if (attachments.length > 0) {
+    await db.insert(serviceRequestAttachments).values(
+      attachments.map((a) => ({
+        tenantSlug,
+        requestId: requirement.requestId,
+        requirementMessageId: message.id,
+        kind: "citizen",
+        storedName: a.storedName,
+        displayName: a.displayName,
+        path: a.path,
+        mimeType: a.mimeType,
+        sizeBytes: a.sizeBytes,
+      })),
+    );
+  }
+  return message;
+}
+
+/**
+ * The office answers in the requirement's conversation. Audited, unlike the
+ * citizen's message: this is an act of the office on the citizen's record.
+ * Returns the request id so the caller can notify the citizen.
+ */
+export async function writeStaffMessage(
+  tenantSlug: string,
+  requirementId: string,
   body: string,
   actorId: string,
-): Promise<{ id: string }> {
-  const [inserted] = await db
-    .insert(serviceRequestQuestions)
-    .values({
-      tenantSlug: tenant.slug,
-      requestId,
-      authorType: "staff",
-      authorId: actorId,
-      body,
-    })
-    .returning({ id: serviceRequestQuestions.id });
+): Promise<{ requestId: string } | null> {
+  const requirement = await pendingRequirement(tenantSlug, requirementId);
+  if (!requirement) return null;
 
-  await recordAudit({
-    tenantSlug: tenant.slug,
-    actorId,
-    action: "service-request.question.reply",
-    targetType: "service-request",
-    targetId: requestId,
+  await db.insert(serviceRequestRequirementMessages).values({
+    tenantSlug,
+    requirementId,
+    author: "staff",
+    authorUserId: actorId,
+    body,
   });
 
-  try {
-    const request = await findById(tenant.slug, requestId);
-    const host = tenant.hosts[0];
-    if (request?.contact && host && isEmailContact(request.contact)) {
-      await sendQuestionAnsweredEmail({
-        to: request.contact,
-        protocolNumber: request.protocolNumber,
-        tenant,
-        // The protocol consult, never the record itself: the citizen still
-        // types the access key there, same as every other visit.
-        actionUrl: `https://${host}/protocolo?numero=${encodeURIComponent(request.protocolNumber)}`,
-      });
-    }
-  } catch (error) {
-    console.error("service-request.question-answered-email", error);
-  }
+  await recordAudit({
+    tenantSlug,
+    actorId,
+    action: "service-request.requirement.reply",
+    targetType: "service-request",
+    targetId: requirement.requestId,
+  });
+  return { requestId: requirement.requestId };
+}
 
-  return inserted;
+/** Corrects the wording of a requirement the citizen has not answered yet. */
+export async function updateRequirementText(
+  tenantSlug: string,
+  requirementId: string,
+  text: string,
+  actorId: string,
+): Promise<boolean> {
+  const [updated] = await db
+    .update(serviceRequestRequirements)
+    .set({ text })
+    .where(
+      and(
+        eq(serviceRequestRequirements.tenantSlug, tenantSlug),
+        eq(serviceRequestRequirements.id, requirementId),
+        // Fulfilled is immutable: it is the record of what was asked and met.
+        eq(serviceRequestRequirements.status, "pending"),
+      ),
+    )
+    .returning({ requestId: serviceRequestRequirements.requestId });
+  if (!updated) return false;
+
+  await recordAudit({
+    tenantSlug,
+    actorId,
+    action: "service-request.requirement.edit",
+    targetType: "service-request",
+    targetId: updated.requestId,
+  });
+  return true;
+}
+
+/**
+ * Undoes a requirement raised by mistake. The conversation and every file
+ * sent inside it go with it (cascade), so the caller removes the stored bytes
+ * afterwards using the paths returned here.
+ *
+ * `recordAudit` lives in this function, not in the action: this is the only
+ * path a requirement leaves by, and check:destructive fails the build for a
+ * removal with no trail beside it.
+ */
+export async function deleteRequirement(
+  tenantSlug: string,
+  requirementId: string,
+  actorId: string,
+): Promise<string[]> {
+  const [requirement] = await db
+    .select({
+      requestId: serviceRequestRequirements.requestId,
+      status: serviceRequestRequirements.status,
+    })
+    .from(serviceRequestRequirements)
+    .where(
+      and(
+        eq(serviceRequestRequirements.tenantSlug, tenantSlug),
+        eq(serviceRequestRequirements.id, requirementId),
+      ),
+    )
+    .limit(1);
+  if (!requirement || requirement.status !== "pending") return [];
+
+  // Read the paths before the cascade takes the rows with it.
+  const files = await db
+    .select({ path: serviceRequestAttachments.path })
+    .from(serviceRequestAttachments)
+    .where(eq(serviceRequestAttachments.requirementId, requirementId));
+
+  await db
+    .delete(serviceRequestRequirements)
+    .where(
+      and(
+        eq(serviceRequestRequirements.tenantSlug, tenantSlug),
+        eq(serviceRequestRequirements.id, requirementId),
+      ),
+    );
+
+  await recordAudit({
+    tenantSlug,
+    actorId,
+    action: "service-request.requirement.delete",
+    targetType: "service-request",
+    targetId: requirement.requestId,
+  });
+  return files.map((f) => f.path);
 }
 
 /** The office records what the request is worth. Corrects freely once set. */
@@ -1094,9 +1211,19 @@ export async function listAttachments(tenantSlug: string, requestId: string) {
  * one cannot quietly forget the distinction.
  */
 export function requestOwnAttachments<
-  T extends { requirementId: string | null },
+  T extends {
+    requirementId: string | null;
+    requirementMessageId?: string | null;
+  },
 >(attachments: T[]): T[] {
-  return attachments.filter((a) => a.requirementId === null);
+  // Two kinds of file hang off a requirement instead of the request: the form
+  // the office attached to it, and whatever rode along a message in its
+  // conversation. Neither belongs in the request's own document lists, where
+  // they would show up twice and outlive the requirement that gives them
+  // meaning.
+  return attachments.filter(
+    (a) => a.requirementId === null && !a.requirementMessageId,
+  );
 }
 
 /**

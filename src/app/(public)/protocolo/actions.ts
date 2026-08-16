@@ -6,6 +6,7 @@ import {
   dataRightsDayOfDeadline,
   dataRightsDeadline,
 } from "@/core/request/channels.ts";
+import { looksLikeBot } from "@/core/request/form.ts";
 import type { DataRight } from "@/core/request/kinds.ts";
 import {
   isOpenServiceRequestStatus,
@@ -16,25 +17,19 @@ import {
   statusLabel,
 } from "@/core/request/kinds.ts";
 import { formatCents } from "@/core/request/money.ts";
-import {
-  deriveQuestionThreadStatus,
-  type QuestionThreadStatus,
-  questionBodySchema,
-} from "@/core/request/question.ts";
 import { toIsoDate } from "@/core/scheduling/calendar.ts";
 import { isSectionEnabled } from "@/core/tenant/gating.ts";
 import { type PixCharge, pixChargeFor } from "@/lib/pix-qr.ts";
 import { isRateLimited } from "@/lib/rate-limit.ts";
 import {
-  addCitizenQuestion,
   attachToRequest,
   findByProtocolWithKey,
-  fulfillRequirement,
   listAttachments,
-  listQuestions,
+  listRequirementMessages,
   listRequirements,
   requestOwnAttachments,
   updateDetails,
+  writeCitizenMessage,
 } from "@/lib/service-request.ts";
 import { getTenant, OFFICE_TIME_ZONE, today } from "@/lib/tenant.ts";
 import { AttachmentError, storeAttachments } from "@/lib/uploads.ts";
@@ -54,6 +49,16 @@ interface BaseDetail {
   createdAt: string;
 }
 
+export interface RequirementMessageView {
+  id: string;
+  author: "citizen" | "staff";
+  /** Who to show beside the message: the operator's name, or the applicant's. */
+  authorName: string;
+  body: string;
+  createdAt: string;
+  attachments: Array<{ id: string; displayName: string }>;
+}
+
 export interface RequirementView {
   id: string;
   text: string;
@@ -63,6 +68,8 @@ export interface RequirementView {
   resolutionFileName?: string;
   /** Forms the office attached for the citizen to print and present. */
   forms: Array<{ id: string; createdAt: string }>;
+  /** The conversation inside this requirement, oldest first. */
+  messages: RequirementMessageView[];
 }
 
 export interface DeliveredDocumentView {
@@ -74,13 +81,6 @@ export interface CitizenDocumentView {
   id: string;
   createdAt: string;
   displayName: string;
-}
-
-export interface QuestionView {
-  id: string;
-  authorType: "citizen" | "staff";
-  createdAt: string;
-  body: string;
 }
 
 export interface ServiceRequestDetail extends BaseDetail {
@@ -104,8 +104,6 @@ export interface ServiceRequestDetail extends BaseDetail {
    * citizen to pay again. */
   paymentSettled?: boolean;
   pix?: PixCharge;
-  questions: QuestionView[];
-  questionStatus: QuestionThreadStatus;
 }
 
 export interface AppointmentDetail extends BaseDetail {
@@ -232,7 +230,12 @@ export async function lookupProtocolDetail(
     const attachments = await listAttachments(tenant.slug, record.id);
     const signedForm = attachments.find((a) => a.kind === "signed-form");
     const requirements = await listRequirements(tenant.slug, record.id);
-    const questions = await listQuestions(tenant.slug, record.id);
+    // One read per requirement: an office raises a handful on a request, not
+    // hundreds, and the alternative is a join that would still fan the rows
+    // out per message.
+    const conversations = await Promise.all(
+      requirements.map((r) => listRequirementMessages(tenant.slug, r.id)),
+    );
     // "Paid" itself is not a terminal andamento (the office still moves it
     // on to "done"), so it needs its own check alongside the terminal ones:
     // once paid, nothing should invite the citizen to pay again.
@@ -272,7 +275,7 @@ export async function lookupProtocolDetail(
           createdAt: a.createdAt.toISOString(),
           displayName: a.displayName,
         })),
-      requirements: requirements.map((r) => ({
+      requirements: requirements.map((r, i) => ({
         id: r.id,
         text: r.text,
         status: r.status as "pending" | "fulfilled",
@@ -285,14 +288,23 @@ export async function lookupProtocolDetail(
         forms: attachments
           .filter((a) => a.requirementId === r.id)
           .map((a) => ({ id: a.id, createdAt: a.createdAt.toISOString() })),
+        messages: conversations[i].map((m) => ({
+          id: m.id,
+          author: m.author,
+          // The office speaks with the operator's name; the citizen with the
+          // name they filed under, which is the one they will recognise.
+          authorName:
+            m.author === "staff"
+              ? (m.authorName ?? "Serventia")
+              : (record.applicantName ?? "Você"),
+          body: m.body,
+          createdAt: m.createdAt.toISOString(),
+          attachments: m.attachments.map((a) => ({
+            id: a.id,
+            displayName: a.displayName,
+          })),
+        })),
       })),
-      questions: questions.map((q) => ({
-        id: q.id,
-        authorType: q.authorType,
-        createdAt: q.createdAt.toISOString(),
-        body: q.body,
-      })),
-      questionStatus: deriveQuestionThreadStatus(questions),
     };
   } catch (error) {
     console.error("protocolo.lookup", error);
@@ -441,7 +453,12 @@ export type FulfillRequirementState =
  * consult they already have — no e-mail, no phone, same protocol and key as
  * everything else on this screen.
  */
-export async function fulfillRequirementAction(
+/**
+ * The citizen writes into a requirement's conversation, with up to three files
+ * riding along. It does not close the requirement: the office decides whether
+ * what arrived answers what was asked, and says so from the panel.
+ */
+export async function writeRequirementMessageAction(
   _previous: FulfillRequirementState,
   formData: FormData,
 ): Promise<FulfillRequirementState> {
@@ -449,6 +466,10 @@ export async function fulfillRequirementAction(
   const protocolNumber = String(formData.get("protocolNumber") ?? "");
   const accessKey = String(formData.get("accessKey") ?? "");
   const requirementId = String(formData.get("requirementId") ?? "");
+
+  // Invisible to a person: a filled honeypot is a script, and it gets the
+  // same silent success the public form gives one, never a hint it was seen.
+  if (looksLikeBot(formData.get("website"))) return { status: "success" };
 
   const request = await findByProtocolWithKey(
     tenant.slug,
@@ -466,7 +487,7 @@ export async function fulfillRequirementAction(
 
   try {
     // Scoped to this exact request: knowing a requirement id from another
-    // record the citizen does not hold the key to must not let them resolve
+    // record the citizen does not hold the key to must not let them write into
     // it just by having a valid protocol and key of their own.
     const requirements = await listRequirements(tenant.slug, request.id);
     const requirement = requirements.find(
@@ -480,90 +501,40 @@ export async function fulfillRequirementAction(
       };
     }
 
+    const body = String(formData.get("mensagem") ?? "").trim();
     const files = formData
       .getAll("resposta")
-      .filter((f): f is File => f instanceof File);
+      .filter((f): f is File => f instanceof File)
+      // Three, like a chat message: this is a reply, not a filing. Sending a
+      // pile of documents is what the request's own upload is for.
+      .slice(0, 3);
     const stored = await storeAttachments(files);
-    if (stored.length === 0) {
-      return { status: "error", message: "Escolha um arquivo para enviar." };
+    if (!body && stored.length === 0) {
+      return {
+        status: "error",
+        message: "Escreva uma mensagem ou anexe um arquivo para enviar.",
+      };
     }
-    await fulfillRequirement(tenant.slug, requirementId, stored[0]);
+
+    const written = await writeCitizenMessage(
+      tenant.slug,
+      requirementId,
+      body,
+      stored,
+    );
+    if (!written) {
+      return {
+        status: "error",
+        message:
+          "Esta exigência não foi encontrada ou já foi cumprida. Atualize a página para ver a situação atual.",
+      };
+    }
     return { status: "success" };
   } catch (error) {
     if (error instanceof AttachmentError) {
       return { status: "error", message: error.message };
     }
-    console.error("protocolo.fulfill-requirement", error);
-    return { status: "error", message: GENERIC_ERROR };
-  }
-}
-
-export type SubmitQuestionState =
-  | { status: "idle" }
-  | { status: "error"; message: string }
-  | { status: "success"; question: QuestionView };
-
-/**
- * The citizen posts a question through the same consult they already
- * unlocked — no e-mail, no phone, and no expectation of an immediate answer
- * (US-07): the office replies whenever it gets to it.
- */
-export async function submitQuestionAction(
-  _previous: SubmitQuestionState,
-  formData: FormData,
-): Promise<SubmitQuestionState> {
-  const tenant = await getTenant();
-  if (!isSectionEnabled(tenant, "consulta-protocolo")) {
-    return { status: "error", message: NOT_FOUND };
-  }
-
-  const protocolNumber = String(formData.get("protocolNumber") ?? "");
-  const accessKey = String(formData.get("accessKey") ?? "");
-
-  const request = await findByProtocolWithKey(
-    tenant.slug,
-    protocolNumber,
-    accessKey,
-  );
-  if (!request || request.kind !== "service-request") {
-    return { status: "error", message: NOT_FOUND };
-  }
-
-  if (await isRateLimited(await headers())) {
-    return {
-      status: "error",
-      message: "Muitos envios seguidos. Aguarde um minuto e tente de novo.",
-    };
-  }
-
-  const parsed = questionBodySchema.safeParse(
-    String(formData.get("body") ?? ""),
-  );
-  if (!parsed.success) {
-    return {
-      status: "error",
-      message:
-        parsed.error.issues[0]?.message ?? "Escreva algo antes de enviar.",
-    };
-  }
-
-  try {
-    const inserted = await addCitizenQuestion(
-      tenant.slug,
-      request.id,
-      parsed.data,
-    );
-    return {
-      status: "success",
-      question: {
-        id: inserted.id,
-        authorType: "citizen",
-        createdAt: new Date().toISOString(),
-        body: parsed.data,
-      },
-    };
-  } catch (error) {
-    console.error("protocolo.submit-question", error);
+    console.error("protocolo.requirement-message", error);
     return { status: "error", message: GENERIC_ERROR };
   }
 }
