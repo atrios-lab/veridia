@@ -243,42 +243,6 @@ export const serviceRequestRequirements = pgTable(
 );
 
 /**
- * Superseded by `serviceRequestRequirementMessages` below, and kept declared
- * only so no migration drops it behind anyone's back. It carried the first
- * pass at a citizen conversation, hung off the request; the conversation the
- * office asked for lives inside the requirement it is about, closes when the
- * requirement is met, and takes attachments. Nothing reads or writes this
- * table any more.
- *
- * Removing it is a deliberate step of its own, once whoever owns the data has
- * confirmed there is nothing in it worth keeping.
- */
-export const serviceRequestQuestions = pgTable(
-  "service_request_questions",
-  {
-    id: uuid("id").primaryKey().defaultRandom(),
-    tenantSlug,
-    requestId: uuid("request_id")
-      .notNull()
-      .references(() => serviceRequests.id, { onDelete: "cascade" }),
-    authorType: text("author_type").notNull(),
-    authorId: text("author_id").references(() => user.id, {
-      onDelete: "set null",
-    }),
-    body: text("body").notNull(),
-    createdAt: timestamp("created_at", { withTimezone: true })
-      .notNull()
-      .defaultNow(),
-  },
-  (t) => [
-    index("service_request_questions_request_created_at").on(
-      t.requestId,
-      t.createdAt,
-    ),
-  ],
-);
-
-/**
  * The conversation inside a requirement: the citizen asks what the office
  * actually wants, the office answers, both in the card the requirement
  * already occupies on either screen. It exists because "anexe o documento" is
