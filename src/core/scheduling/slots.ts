@@ -12,7 +12,7 @@ export type { SlotTime };
  * What the citizen may still take, out of what the office declared.
  *
  * Two inputs and no clock: the grid the serventia configured, and the times
- * already booked on a given day. One citizen per time — a time that is taken
+ * already booked on a given day. One citizen per time: a time that is taken
  * is simply not offered, which is why nothing here counts capacity.
  */
 
@@ -100,7 +100,7 @@ export function freeSlots(
   );
 }
 
-/** Whether one specific time may still be booked — the server's own check
+/** Whether one specific time may still be booked, the server's own check
  * before writing, not a courtesy repeated from the page. */
 export function isSlotFree(
   config: AgendaConfig,

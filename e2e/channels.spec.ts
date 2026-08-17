@@ -118,7 +118,7 @@ test.describe("agendar", () => {
    * O último dia oferecido, que as próprias reservas da suíte ainda não
    * encheram. Os horários são ocupação real num banco compartilhado, e um
    * teste que usasse sempre o primeiro dia passaria a falhar quando ele
-   * lotasse — o que não diz nada sobre o código.
+   * lotasse, o que não diz nada sobre o código.
    *
    * Devolve false quando a serventia não tem grade configurada: nesse caso a
    * página mostra o estado "agende pelo telefone", que é o próprio teste

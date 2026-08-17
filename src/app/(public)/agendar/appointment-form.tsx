@@ -43,7 +43,7 @@ export interface SchedulingScreenProps {
   openingHours: string;
   phone: string;
   whatsapp: string;
-  /** Set when there is nothing to offer, and why — the two cases read very
+  /** Set when there is nothing to offer, and why: the two cases read very
    * differently to the citizen and must not share a screen. */
   unavailable?: "unconfigured" | "full";
   days?: IsoDate[];

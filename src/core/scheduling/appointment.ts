@@ -4,7 +4,7 @@ import { createHash, randomBytes } from "node:crypto";
  * What an appointment is, once it exists: a state and a credential.
  *
  * There is no "requested" and no "proposed" here. The citizen who took a free
- * time has an appointment, not a request the office still has to answer —
+ * time has an appointment, not a request the office still has to answer,
  * which is the whole point of the change this module was written for.
  */
 
@@ -18,13 +18,13 @@ export type AppointmentStatus = (typeof APPOINTMENT_STATUSES)[number];
 /**
  * Two different questions, and they have different answers.
  *
- * "Does it still hold the time?" — everything except a cancellation. An
+ * "Does it still hold the time?": everything except a cancellation. An
  * appointment already attended has spent that hour of the counter's day; it
  * is not free. Treating "attended" as free reopened the slot the moment an
  * operator marked an early-arriving citizen as served, and the next person
  * could book an hour that was already used.
  *
- * "Can the office still act on it?" — only one that is still booked. An
+ * "Can the office still act on it?": only one that is still booked. An
  * attended visit is not cancelled afterwards, and a cancelled one is not
  * attended.
  */

@@ -73,7 +73,7 @@ export const TenantSchema = z.object({
   // a number out of Portuguese prose breaks on the first office that writes it
   // differently. The sentence stays: it is what the citizen reads.
   //
-  // This is when the counter is open — which is what the chat's availability
+  // This is when the counter is open, which is what the chat's availability
   // and the "Aberto agora" line read. It is NOT the appointment grid: the days
   // and times the office receives by appointment are configured in the panel
   // (see src/core/scheduling/agenda.ts), and an office open every day may well

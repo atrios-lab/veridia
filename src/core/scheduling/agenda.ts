@@ -8,7 +8,7 @@ import type { IsoDate } from "./calendar.ts";
  *
  * Config, not code: the times a counter opens are the office's to change on a
  * Tuesday afternoon, and "drive-thru" is one office's particularity, not a
- * platform concept. Nothing here is a business rule — the rules that read this
+ * platform concept. Nothing here is a business rule: the rules that read this
  * live in `slots.ts`.
  */
 
@@ -77,7 +77,7 @@ export type AgendaConfig = z.infer<typeof agendaConfigSchema>;
  * What an office starts with before anyone configures it: no grid, so the
  * public page says "agende pelo telefone" instead of inventing hours nobody
  * promised. The two modes every serventia has are seeded because they are the
- * floor, not a guess — an office that only receives at the counter deletes
+ * floor, not a guess (an office that only receives at the counter deletes
  * one.
  */
 export const DEFAULT_AGENDA_CONFIG: AgendaConfig = {
@@ -143,7 +143,7 @@ export function closedDate(
 
 /**
  * The times declared for a weekday, by its `weekday()` number. Days outside
- * Monday–Friday simply have none, which is what the calendar already says.
+ * Monday to Friday simply have none, which is what the calendar already says.
  */
 export function timesForWeekday(config: AgendaConfig, day: number): SlotTime[] {
   const key = String(day) as `${AgendaWeekday}`;

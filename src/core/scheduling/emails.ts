@@ -7,7 +7,7 @@ import { formatLongDate, type IsoDate } from "./calendar.ts";
  *
  * There is no protocol to quote and no access key to guard, so unlike the
  * notices in `src/lib/email/service-request.ts` these carry the whole thing:
- * the day, the time and what it is for. The appointment IS the content — an
+ * the day, the time and what it is for. The appointment IS the content: an
  * e-mail that made someone log in to find out when to show up would be a
  * worse version of a paper card.
  */
@@ -34,7 +34,7 @@ function firstName(name: string): string {
 }
 
 /**
- * The confirmation. It is already booked when this goes out — nothing here
+ * The confirmation. It is already booked when this goes out, and nothing here
  * asks the citizen to wait for an answer, because there is no answer coming.
  */
 export function buildAppointmentBookedEmail(
@@ -67,7 +67,7 @@ export function buildAppointmentCancelledEmail(
     subject: `Agendamento cancelado · ${formatLongDate(facts.date)} às ${facts.slotTime}`,
     paragraphs: [
       `${firstName(facts.citizenName)}, a serventia precisou cancelar o seu atendimento.`,
-      `Estava marcado para ${when(facts.date, facts.slotTime)} — ${facts.serviceLabel}.`,
+      `Estava marcado para ${when(facts.date, facts.slotTime)}, para ${facts.serviceLabel}.`,
       `Motivo informado pela serventia: ${facts.reason}`,
       "Você pode escolher um novo horário agora, pelo botão abaixo.",
     ],
@@ -88,7 +88,7 @@ export function buildAgendaDayClosedEmail(
     subject: `Atendimento cancelado · ${formatLongDate(facts.date)}`,
     paragraphs: [
       `${firstName(facts.citizenName)}, a serventia não vai atender em ${formatLongDate(facts.date)} e todos os agendamentos do dia foram cancelados.`,
-      `O seu era ${when(facts.date, facts.slotTime)} — ${facts.serviceLabel}.`,
+      `O seu era ${when(facts.date, facts.slotTime)}, para ${facts.serviceLabel}.`,
       `Motivo informado pela serventia: ${facts.reason}`,
       "Escolha um novo dia e horário pelo botão abaixo.",
     ],

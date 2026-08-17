@@ -16,8 +16,8 @@ import { DayAgenda } from "./_components/day-agenda.tsx";
 export const metadata = { title: "Agenda de atendimentos" };
 
 /**
- * The day, not a queue of requests. The office works a date at a time — who
- * is coming, at what hour, for what — so the date is the page's axis and it
+ * The day, not a queue of requests. The office works a date at a time (who
+ * is coming, at what hour, for what), so the date is the page's axis and it
  * lives in the query string, where a bookmark and the back button work.
  */
 export default async function AgendaPage({

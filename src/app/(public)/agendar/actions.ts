@@ -117,7 +117,7 @@ export async function submitAppointment(
   try {
     // Checked here as well as on the page: between rendering the times and
     // pressing the button, someone else may have taken this one. The database
-    // is still the referee — this only turns the common case into a clear
+    // is still the referee: this only turns the common case into a clear
     // message instead of a unique violation.
     const taken = await takenTimesByDay(
       tenant.slug,

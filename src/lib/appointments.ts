@@ -28,7 +28,7 @@ export class SlotTakenError extends Error {}
 /**
  * The office's agenda settings. Read directly, not through `getTenant()`'s
  * override merge: which Tuesdays a counter receives is operational state, not
- * branding or editorial content — same posture as `OFFICE_CHAT_KEY`.
+ * branding or editorial content: same posture as `OFFICE_CHAT_KEY`.
  *
  * A database that is down returns the seed rather than throwing, which is an
  * agenda offering nothing instead of a page that will not load.
@@ -94,7 +94,7 @@ export async function saveAgendaConfig(
 
 /**
  * Which times are already taken, per day, over a range. Only a cancellation
- * gives a time back — the same rule the partial unique index enforces on the
+ * gives a time back, the same rule the partial unique index enforces on the
  * way in, so the page never offers what the insert would refuse.
  */
 export async function takenTimesByDay(
@@ -155,7 +155,7 @@ export async function findByCancelToken(
   return row;
 }
 
-/** How many appointments the office has booked from today on — the sidebar
+/** How many appointments the office has booked from today on, for the sidebar
  * badge and the overview both ask this. */
 export async function bookedCountFrom(
   tenantSlug: string,
@@ -192,7 +192,7 @@ export interface NewAppointment {
 /**
  * Books the time. The partial unique index is the referee: two citizens on
  * the last slot both reach this, one row lands and the other comes back as
- * `SlotTakenError` for the page to explain. No lock, no count, no retry —
+ * `SlotTakenError` for the page to explain. No lock, no count, no retry:
  * retrying would only book a time the citizen did not choose.
  */
 export async function bookAppointment(
@@ -235,7 +235,7 @@ export async function bookAppointment(
 
 /**
  * Cancels one appointment. `actorId` is null when the citizen cancelled it
- * from the e-mail link, and a reason only exists when the office did it — the
+ * from the e-mail link, and a reason only exists when the office did it, because the
  * citizen owes nobody an explanation for not coming.
  *
  * Returns the row as it was cancelled, so the caller can write the e-mail
@@ -281,7 +281,7 @@ export async function cancelAppointment(
 /**
  * Closes a whole day: every live appointment on it is cancelled with the same
  * reason, in one statement. The rows come back so the caller can write to each
- * citizen — sending is the caller's job, and a failed e-mail must not undo a
+ * citizen. Sending is the caller's job, and a failed e-mail must not undo a
  * cancellation the office already decided.
  */
 export async function cancelDay(

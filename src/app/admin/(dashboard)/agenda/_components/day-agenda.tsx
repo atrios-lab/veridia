@@ -155,7 +155,7 @@ function AttendButton({ id }: { id: string }) {
 }
 
 /** The reason is required by the action, and it is what the citizen reads in
- * the e-mail — so the field says so instead of being an anonymous box. */
+ * the e-mail, so the field says so instead of being an anonymous box. */
 function CancelForm({
   id,
   citizenName,
@@ -357,7 +357,7 @@ function ClosedDayBanner({ date, reason }: { date: string; reason: string }) {
         </p>
         <p className="mt-1 text-[12.5px] text-admin-warning-text">
           O site não oferece esta data. Reabrir volta a oferecer os horários
-          livres — os agendamentos já cancelados seguem cancelados.
+          livres; os agendamentos já cancelados seguem cancelados.
         </p>
       </div>
       <form action={formAction} className="shrink-0">

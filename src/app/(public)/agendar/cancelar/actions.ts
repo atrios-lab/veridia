@@ -13,7 +13,7 @@ export type CancelState =
  * e-mail. No reason is asked for: nobody owes the counter an explanation for
  * not coming, and a required field here would only produce "não posso".
  *
- * A token that matches nothing gets the same answer as one already used —
+ * A token that matches nothing gets the same answer as one already used:
  * the link clicked twice must not report a different outcome than a link
  * someone else guessed.
  */

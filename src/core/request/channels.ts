@@ -35,7 +35,7 @@ const optionalText = (max: number) =>
  * A day, a time, who is coming and what for.
  *
  * The e-mail is required and is not one of two options: it is the only channel
- * the appointment has — confirmation, cancellation and the link that lets the
+ * the appointment has: confirmation, cancellation and the link that lets the
  * citizen call it off all travel through it. The telephone is the office's way
  * of reaching a person the same day. The CPF is optional on purpose: most
  * counter visits do not need it before the citizen shows up with the document.

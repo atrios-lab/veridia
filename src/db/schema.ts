@@ -503,7 +503,7 @@ export const transparencyDocuments = pgTable(
 
 /**
  * An appointment: one citizen, one day, one time. Its own table rather than a
- * kind of `service_requests`, because it shares nothing with a filing — no
+ * kind of `service_requests`, because it shares nothing with a filing: no
  * protocol, no access key, no attachments, no phases. What the citizen gets
  * back is an e-mail, and the link inside it is the only credential.
  *
@@ -513,12 +513,12 @@ export const transparencyDocuments = pgTable(
  * was still true.
  *
  * Only a cancellation falls out of the index. An attended visit has spent
- * that hour of the counter's day and must keep holding it — otherwise marking
+ * that hour of the counter's day and must keep holding it. Otherwise marking
  * an early-arriving citizen as served would put their slot back on sale.
  *
  * `serviceLabel` is stored next to `serviceId` on purpose: the office edits
  * its own service list, and a record has to survive a service being renamed
- * or dropped — same discipline as the act catalogue.
+ * or dropped, same discipline as the act catalogue.
  */
 export const appointments = pgTable(
   "appointments",
@@ -541,7 +541,7 @@ export const appointments = pgTable(
     serviceId: text("service_id").notNull(),
     serviceLabel: text("service_label").notNull(),
     mode: text("mode").notNull(),
-    // "booked" | "attended" | "cancelled" — see core/scheduling/appointment.
+    // "booked" | "attended" | "cancelled", see core/scheduling/appointment.
     status: text("status").notNull().default("booked"),
     // Why the office called it off, sent to the citizen. Null when the
     // citizen cancelled it themselves.

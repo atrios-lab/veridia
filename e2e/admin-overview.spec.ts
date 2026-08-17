@@ -73,7 +73,7 @@ test.describe("Visão geral (mesa de trabalho)", () => {
       values ('cartorio-marinho', ${request.id}, 'Documento de identidade', 'fulfilled', now())
     `;
     // Um agendamento para hoje: alimenta o atalho "Agenda do dia" e o bloco
-    // "Agenda de hoje". Já está marcado — nada aqui espera confirmação.
+    // "Agenda de hoje". Já está marcado: nada aqui espera confirmação.
     await sql`
       insert into appointments
         (tenant_slug, date, slot_time, citizen_name, email, phone,

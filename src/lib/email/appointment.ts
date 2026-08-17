@@ -14,7 +14,7 @@ import { sendEmail } from "./send.ts";
 
 /**
  * The three letters the agenda sends. Unlike the protocol notices next door,
- * these carry the appointment itself — there is nothing behind a key to
+ * these carry the appointment itself: there is nothing behind a key to
  * protect, and the whole point is that the citizen can read when to show up
  * without opening anything.
  *
@@ -135,7 +135,7 @@ export async function sendAppointmentCancelledEmail(
 /**
  * Writes to everyone whose appointment a closed day just cancelled. Sent one
  * after another rather than through a queue: a day holds a handful of
- * appointments, and each `send` already swallows its own failure — one
+ * appointments, and each `send` already swallows its own failure, so one
  * unreachable mailbox must not cost the others their warning.
  */
 export async function sendAgendaDayClosedEmails(

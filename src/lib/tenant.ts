@@ -48,8 +48,8 @@ export const OFFICE_DPO_KEY = "office-dpo";
 export const OFFICE_PIX_KEY = "office-pix";
 // Not part of Tenant/applyTenantOverrides: whether the office's chat is on,
 // and which days and times it receives by appointment, are operational state,
-// not branding or editorial content. Both are read and written directly —
-// chat by src/lib/chat.ts, the agenda by src/lib/appointments.ts — never
+// not branding or editorial content. Both are read and written directly:
+// chat by src/lib/chat.ts, the agenda by src/lib/appointments.ts, never
 // merged into the config-as-code shape the other four keys layer onto.
 export const OFFICE_CHAT_KEY = "office-chat";
 export const OFFICE_AGENDA_KEY = "office-agenda";

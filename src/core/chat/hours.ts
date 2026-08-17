@@ -27,7 +27,7 @@ function hourInZone(instant: Date, timeZone: string): number {
  * Whether the chat is inside the office's attendance window right now: a
  * business day (see `isBusinessDay`, weekday and not a national holiday) and
  * the wall-clock hour falls in `tenant.counterHours`, the hours the counter
- * itself keeps. Chat hours are not a separate setting — see support-chat
+ * itself keeps. Chat hours are not a separate setting, see support-chat
  * spec, "Horário do chat segue o horário de atendimento configurado". Note
  * this is the counter's window, not the appointment grid: an office open
  * every day may receive by appointment on Tuesdays only.

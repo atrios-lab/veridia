@@ -14,7 +14,7 @@ export const metadata = { title: "Cancelar agendamento" };
  * would fire the moment a mail client prefetched the link.
  *
  * A token that matches nothing gets the same neutral answer as one already
- * used. There is nothing to enumerate here — the token is 256 bits — but the
+ * used. There is nothing to enumerate here (the token is 256 bits), but the
  * screen must not become a way to learn whether an appointment exists.
  */
 export default async function CancelAppointmentPage({

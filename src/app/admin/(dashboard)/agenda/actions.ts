@@ -117,7 +117,7 @@ export async function cancelOneAppointment(
 /**
  * Closing a whole day. Everything live on it is cancelled with the same
  * reason and the date is added to `closedDates`, so the public page stops
- * offering it — cancelling without closing would let the next citizen book
+ * offering it, because cancelling without closing would let the next citizen book
  * the morning the office just called off.
  */
 export async function closeAgendaDay(
@@ -286,7 +286,7 @@ function splitList(value: string): string[] {
 
 /**
  * Ids derived from the labels, so the citizen's choice survives a reorder of
- * the list. A rename still produces a new id — which is exactly why the
+ * the list. A rename still produces a new id, which is exactly why the
  * appointment keeps its own copy of the label.
  *
  * Two labels that reduce to the same slug ("Certidão" and "Certidao") get a
