@@ -3,26 +3,39 @@
 ## Purpose
 
 TBD
-
 ## Requirements
-
-
 ### Requirement: Dias oferecidos são dias de atendimento
 
-A página de agendamento SHALL oferecer apenas dias em que a serventia atende: de segunda a
-sexta, excluídos os feriados nacionais (fixos e móveis) e o próprio dia corrente depois do
-encerramento do expediente. O cidadão MUST NOT ser capaz de escolher uma data digitando-a: a
-escolha é feita entre os dias oferecidos.
+A página de agendamento SHALL oferecer apenas dias em que a serventia atende: dias úteis (de
+segunda a sexta, excluídos os feriados nacionais fixos e móveis) **que tenham horários na grade
+semanal configurada pela serventia** e que não estejam fechados por exceção. O cidadão MUST NOT
+ser capaz de escolher uma data digitando-a: a escolha é feita entre os dias oferecidos.
 
 #### Scenario: Fim de semana não aparece
 
 - **WHEN** a faixa de dias oferecida cobre um sábado ou domingo
-- **THEN** esses dias não aparecem entre as opções, e a faixa avança para o próximo dia útil
+- **THEN** esses dias não aparecem entre as opções, e a faixa avança para o próximo dia oferecido
 
 #### Scenario: Feriado nacional móvel não aparece
 
 - **WHEN** a faixa de dias inclui sexta-feira santa, carnaval ou Corpus Christi do ano corrente
 - **THEN** esse dia não aparece entre as opções
+
+#### Scenario: Dia da semana sem grade não aparece
+
+- **WHEN** a serventia configurou horários apenas para terças e quintas
+- **THEN** segundas, quartas e sextas não aparecem entre os dias oferecidos
+
+#### Scenario: Dia fechado pela serventia não aparece
+
+- **WHEN** a serventia fechou uma data específica com motivo
+- **THEN** essa data não aparece entre os dias oferecidos
+
+#### Scenario: Grade não configurada
+
+- **WHEN** a serventia ainda não configurou nenhum horário na grade semanal
+- **THEN** a página não oferece dias nem inventa uma grade padrão: mostra o aviso para agendar
+  pelos contatos da serventia, com telefone e WhatsApp
 
 #### Scenario: Dia é apresentado por extenso
 
@@ -30,77 +43,95 @@ escolha é feita entre os dias oferecidos.
 - **THEN** ele é exibido com o dia da semana abreviado, o dia do mês e o mês abreviado
   (ex.: "qua 06 ago"), nunca em formato numérico americano
 
-### Requirement: Faixas de uma hora com ocupação visível
+### Requirement: Confirmação do agendamento
 
-O horário SHALL ser escolhido em faixas de uma hora dentro da janela de atendimento configurada
-para a serventia, e cada faixa SHALL declarar seu estado: livre, escolhida ou ocupada. Uma faixa
-está ocupada quando o número de pedidos de agendamento vivos naquele dia e faixa alcança a
-capacidade configurada. Faixa ocupada MUST NOT ser selecionável.
+A tela de confirmação SHALL mostrar o dia e o horário agendados, avisar que a confirmação e o
+link de cancelamento foram enviados para o e-mail informado, e oferecer o atalho para adicionar
+o horário à agenda. A tela MUST NOT exibir protocolo nem chave de acesso: o e-mail é o canal do
+agendamento.
 
-#### Scenario: Faixa ocupada é recusada no servidor
+#### Scenario: Arquivo de agenda
 
-- **WHEN** um pedido chega com uma faixa cuja capacidade já foi alcançada
-- **THEN** o pedido não é gravado e a resposta explica que a faixa fechou, oferecendo o próximo
-  dia com vaga
+- **WHEN** o cidadão escolhe "Adicionar à agenda"
+- **THEN** o site entrega um arquivo `.ics` com o dia, o horário, o nome da serventia, o
+  endereço e o serviço no corpo do evento
 
-#### Scenario: Dia sem faixa livre
+#### Scenario: E-mail de confirmação
 
-- **WHEN** todas as faixas do dia escolhido estão ocupadas
-- **THEN** a página mostra o bloco "Este dia está cheio", nomeia o próximo dia com vaga, oferece
-  o atalho para ele e o contato da serventia
-- **AND** o botão de envio não fica disponível enquanto não houver faixa escolhida
+- **WHEN** um agendamento é gravado
+- **THEN** o cidadão recebe um e-mail com dia, horário, serviço, modo de atendimento, endereço
+  da serventia, o arquivo de agenda e o link para cancelar o agendamento
 
-### Requirement: Pedido de horário com contato e motivo livre
+### Requirement: Horários oferecidos são os livres da grade
 
-O formulário SHALL exigir apenas dia, faixa de horário, nome completo e um contato (e-mail ou
-telefone com DDD). O motivo do atendimento SHALL ser texto livre e opcional — o cidadão MUST NOT
-precisar saber o nome do ato. O formulário SHALL usar campo-armadilha invisível contra robô e
-MUST NOT usar CAPTCHA.
+A página SHALL oferecer, para o dia escolhido, apenas os horários de início configurados na
+grade semanal que ainda não foram tomados. Um horário SHALL comportar exatamente um cidadão:
+horário agendado deixa de ser oferecido. No dia corrente, horários cujo início já passou no
+relógio da serventia MUST NOT ser oferecidos.
 
-#### Scenario: Envio válido gera protocolo AGD e chave
+#### Scenario: Horário tomado some da oferta
 
-- **WHEN** o cidadão envia dia, faixa, nome e contato válidos
-- **THEN** o agendamento é gravado com protocolo `AGD.AAAA.NNNNNN`, sequência própria do tipo
-  por serventia e ano, e uma chave de acesso é exibida uma única vez, armazenada apenas como
-  hash
+- **WHEN** um cidadão agenda o horário de 09:00 de um dia
+- **THEN** a página passa a oferecer esse dia sem o horário de 09:00
+
+#### Scenario: Atendimento realizado não devolve a faixa
+
+- **WHEN** a serventia marca um agendamento como atendido
+- **THEN** o horário continua fora da oferta: a hora do balcão foi gasta, não liberada
+
+#### Scenario: Corrida pelo mesmo horário
+
+- **WHEN** dois envios disputam o último estado livre de um mesmo dia e horário
+- **THEN** apenas um é gravado; o outro recebe a explicação de que o horário acabou de ser
+  preenchido e a grade atualizada do dia
+
+#### Scenario: Dia sem horário livre
+
+- **WHEN** todos os horários do dia escolhido foram tomados
+- **THEN** a página informa que o dia está cheio, nomeia o próximo dia com horário livre e
+  oferece o atalho para ele
+
+### Requirement: Agendamento imediato com serviço e modo de atendimento
+
+O formulário SHALL exigir dia, horário, nome completo, e-mail e telefone; CPF SHALL ser
+opcional. O cidadão SHALL escolher o serviço desejado na lista configurada pela serventia e o
+modo de atendimento na lista configurada. O envio válido SHALL gravar o agendamento
+imediatamente, sem confirmação posterior da serventia. O formulário SHALL usar campo-armadilha
+invisível contra robô e MUST NOT usar CAPTCHA nem gerar protocolo ou chave.
+
+#### Scenario: Envio válido agenda na hora
+
+- **WHEN** o cidadão envia dia, horário livre, nome, e-mail e telefone válidos, com serviço e
+  modo escolhidos
+- **THEN** o agendamento é gravado como confirmado, a tela de confirmação é exibida e o e-mail
+  de confirmação é enviado
 
 #### Scenario: Campo-armadilha preenchido
 
 - **WHEN** o campo invisível chega preenchido
 - **THEN** a tela de sucesso é exibida e nada é gravado
 
-#### Scenario: Expectativa dita junto do botão
+#### Scenario: E-mail ausente
 
-- **WHEN** a tela do formulário é exibida
-- **THEN** o aviso de que se trata de um pedido, confirmado ou contraproposto pela serventia,
-  aparece imediatamente antes do botão de envio
+- **WHEN** o envio chega sem e-mail válido
+- **THEN** o agendamento não é gravado e o formulário explica que o e-mail é necessário para a
+  confirmação
 
-### Requirement: Confirmação do agendamento
+### Requirement: Cancelamento pelo link do e-mail
 
-A tela de confirmação SHALL mostrar o dia e a faixa pedidos, o protocolo e a chave em destaque
-com o aviso de que a chave aparece só naquele momento, o que acontece em seguida, e os atalhos
-para acompanhar pelo protocolo e para adicionar o horário à agenda.
+O e-mail de confirmação SHALL conter um link de cancelamento com token de uso único, armazenado
+apenas como hash. A página do link SHALL mostrar o agendamento e pedir confirmação antes de
+cancelar; o cancelamento SHALL liberar o horário na oferta. Token inválido e agendamento já
+cancelado ou atendido SHALL receber a mesma resposta neutra, sem revelar se o agendamento
+existe.
 
-#### Scenario: Arquivo de agenda
+#### Scenario: Cidadão cancela pelo link
 
-- **WHEN** o cidadão escolhe "Adicionar à agenda"
-- **THEN** o site entrega um arquivo `.ics` com o dia, a faixa de horário, o nome da serventia,
-  o endereço e o protocolo no corpo do evento
+- **WHEN** o cidadão abre o link do e-mail e confirma o cancelamento de um agendamento ativo
+- **THEN** o agendamento passa a cancelado e o horário volta a ser oferecido na página pública
 
-### Requirement: Acompanhamento e horário proposto
+#### Scenario: Token inválido
 
-A consulta por protocolo e chave SHALL mostrar o andamento do agendamento a partir das datas do
-próprio registro. Quando a serventia propõe outro horário, a consulta SHALL destacar o bloco "É
-a sua vez", comparar o horário pedido com o proposto e oferecer aceitar ou pedir outro.
+- **WHEN** a página de cancelamento recebe um token que não corresponde a agendamento ativo
+- **THEN** a resposta é a mensagem neutra de link inválido ou expirado, sem detalhes
 
-#### Scenario: Aceite da proposta
-
-- **WHEN** o cidadão aceita o horário proposto informando protocolo e chave
-- **THEN** o agendamento passa a valer com o horário proposto, o aceite entra no andamento e o
-  bloco "É a sua vez" some
-
-#### Scenario: Chave errada
-
-- **WHEN** a chave informada não corresponde ao protocolo
-- **THEN** a consulta responde com a mesma mensagem de protocolo ou chave inválidos, sem revelar
-  se o protocolo existe

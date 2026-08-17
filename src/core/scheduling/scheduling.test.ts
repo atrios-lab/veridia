@@ -1,6 +1,13 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 import {
+  type AgendaConfig,
+  DEFAULT_AGENDA_CONFIG,
+  hasGrid,
+  parseAgendaConfig,
+  slotEndTime,
+} from "./agenda.ts";
+import {
   addDays,
   easterSunday,
   formatFullDate,
@@ -13,20 +20,26 @@ import {
 } from "./calendar.ts";
 import {
   firstFreeSlot,
+  freeSlots,
   hasFreeSlot,
   isSlotFree,
   nextDayWithSlot,
-  type Occupancy,
-  type SchedulingWindow,
-  slotLabel,
-  slots,
+  offeredDays,
+  type TakenTimes,
 } from "./slots.ts";
 
-const window: SchedulingWindow = {
-  startHour: 8,
-  endHour: 14,
-  capacityPerSlot: 2,
+// Tuesdays and Thursdays only, the way the office's own Calendly was set up.
+// 2026-08-04 is a Tuesday, 2026-08-06 a Thursday.
+const config: AgendaConfig = {
+  ...DEFAULT_AGENDA_CONFIG,
+  grid: {
+    "2": ["08:30", "09:00", "09:30"],
+    "4": ["08:30", "13:30"],
+  },
+  services: [{ id: "tabeliao", label: "Tabelião" }],
 };
+
+const taken = (...times: string[]): TakenTimes => new Set(times);
 
 test("a day is the day on the office's wall, not the server's", () => {
   // Nine at night in Natal is already the next day in UTC.
@@ -77,45 +90,97 @@ test("day labels are written for a citizen in Portuguese", () => {
   assert.equal(addDays("2026-12-31", 1), "2027-01-01");
 });
 
-test("a band is taken once the office's capacity for it is reached", () => {
-  const state = slots(window, { 9: 1, 10: 2, 12: 3 });
-  assert.deepEqual(
-    state.map((slot) => [slot.hour, slot.state]),
-    [
-      [8, "free"],
-      [9, "free"],
-      [10, "taken"],
-      [11, "free"],
-      [12, "taken"],
-      [13, "free"],
-    ],
-  );
-  assert.equal(slotLabel(8), "8h às 9h");
-  assert.equal(isSlotFree(window, { 10: 2 }, 10), false);
-  // A band outside the office's window is never free, whatever it says.
-  assert.equal(isSlotFree(window, {}, 15), false);
+test("only the weekdays the office declared are offered", () => {
+  // From a Monday: Tuesday and Thursday of that week, then the next Tuesday.
+  assert.deepEqual(offeredDays(config, "2026-08-03", 3), [
+    "2026-08-04",
+    "2026-08-06",
+    "2026-08-11",
+  ]);
 });
 
-test("a full day names the next day with a band", () => {
-  const full = { 8: 2, 9: 2, 10: 2, 11: 2, 12: 2, 13: 2 };
-  assert.equal(hasFreeSlot(window, full), false);
-  assert.equal(firstFreeSlot(window, full), undefined);
-  assert.equal(firstFreeSlot(window, { 8: 2, 9: 2 })?.hour, 10);
+test("an office with no grid offers nothing instead of a default", () => {
+  assert.equal(hasGrid(DEFAULT_AGENDA_CONFIG), false);
+  assert.equal(hasGrid(config), true);
+  assert.deepEqual(offeredDays(DEFAULT_AGENDA_CONFIG, "2026-08-03", 5), []);
+});
 
-  const days = ["2026-08-05", "2026-08-06", "2026-08-07"];
-  const occupancy = new Map<string, Occupancy>([
-    ["2026-08-05", full],
-    ["2026-08-06", full],
-    ["2026-08-07", { 8: 1 }],
+test("a date the office closed is not offered", () => {
+  const closed: AgendaConfig = {
+    ...config,
+    closedDates: [{ date: "2026-08-06", reason: "Manutenção elétrica." }],
+  };
+  assert.deepEqual(offeredDays(closed, "2026-08-03", 2), [
+    "2026-08-04",
+    "2026-08-11",
+  ]);
+  assert.deepEqual(freeSlots(closed, "2026-08-06", taken()), []);
+});
+
+test("a taken time simply stops being offered", () => {
+  assert.deepEqual(freeSlots(config, "2026-08-04", taken()), [
+    "08:30",
+    "09:00",
+    "09:30",
+  ]);
+  assert.deepEqual(freeSlots(config, "2026-08-04", taken("09:00")), [
+    "08:30",
+    "09:30",
   ]);
   assert.equal(
-    nextDayWithSlot(window, days, occupancy, "2026-08-05"),
-    "2026-08-07",
+    isSlotFree(config, "2026-08-04", "09:00", taken("09:00")),
+    false,
+  );
+  // A time the office never declared is never free, whatever the form says.
+  assert.equal(isSlotFree(config, "2026-08-04", "11:00", taken()), false);
+  // Nor is a time declared for another weekday.
+  assert.equal(isSlotFree(config, "2026-08-04", "13:30", taken()), false);
+});
+
+test("today stops offering times that have already started", () => {
+  const now = { date: "2026-08-04", time: "09:10" };
+  assert.deepEqual(freeSlots(config, "2026-08-04", taken(), now), ["09:30"]);
+  // A later day keeps every time, whatever the hour is today.
+  assert.deepEqual(freeSlots(config, "2026-08-06", taken(), now), [
+    "08:30",
+    "13:30",
+  ]);
+});
+
+test("a full day names the next day with a time", () => {
+  const full = taken("08:30", "09:00", "09:30");
+  assert.equal(hasFreeSlot(config, "2026-08-04", full), false);
+  assert.equal(firstFreeSlot(config, "2026-08-04", full), undefined);
+  assert.equal(firstFreeSlot(config, "2026-08-04", taken("08:30")), "09:00");
+
+  const days = offeredDays(config, "2026-08-03", 3);
+  const takenByDay = new Map<string, TakenTimes>([
+    ["2026-08-04", full],
+    ["2026-08-06", taken("08:30", "13:30")],
+    ["2026-08-11", taken("08:30")],
+  ]);
+  assert.equal(
+    nextDayWithSlot(config, days, takenByDay, "2026-08-04"),
+    "2026-08-11",
   );
   assert.equal(
-    nextDayWithSlot(window, days, occupancy, "2026-08-07"),
+    nextDayWithSlot(config, days, takenByDay, "2026-08-11"),
     undefined,
   );
+});
+
+test("agenda config survives a malformed row and sorts the day's times", () => {
+  assert.deepEqual(parseAgendaConfig(null), DEFAULT_AGENDA_CONFIG);
+  assert.deepEqual(
+    parseAgendaConfig({ grid: "nonsense" }),
+    DEFAULT_AGENDA_CONFIG,
+  );
+  const parsed = parseAgendaConfig({
+    grid: { "2": ["09:30", "08:30", "09:30"] },
+  });
+  assert.deepEqual(parsed.grid["2"], ["08:30", "09:30"]);
+  assert.equal(slotEndTime("08:30"), "09:30");
+  assert.equal(slotEndTime("13:30"), "14:30");
 });
 
 test("the panel header date is written out in Portuguese", () => {

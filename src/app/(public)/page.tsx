@@ -159,12 +159,11 @@ export default async function Home() {
                 </form>
                 <p className="mt-2 text-[11px] text-brand-on-dark-muted md:text-xs">
                   <span className="md:hidden">
-                    Um campo só: pedido (REQ), agendamento (AGD), LGPD (SOL) ou
-                    ouvidoria.
+                    Um campo só: pedido (REQ), LGPD (SOL) ou ouvidoria (OUV).
                   </span>
                   <span className="hidden md:inline">
-                    Informe o protocolo de solicitação de serviço, agendamento,
-                    LGPD ou ouvidoria.
+                    Informe o protocolo de solicitação de serviço, LGPD ou
+                    ouvidoria.
                   </span>
                 </p>
               </>

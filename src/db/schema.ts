@@ -502,6 +502,71 @@ export const transparencyDocuments = pgTable(
 );
 
 /**
+ * An appointment: one citizen, one day, one time. Its own table rather than a
+ * kind of `service_requests`, because it shares nothing with a filing — no
+ * protocol, no access key, no attachments, no phases. What the citizen gets
+ * back is an e-mail, and the link inside it is the only credential.
+ *
+ * The partial unique index is the whole capacity rule: one live appointment
+ * per office, day and time. Two citizens racing for the last slot are decided
+ * by the database, not by a count the application read a moment ago and hoped
+ * was still true.
+ *
+ * Only a cancellation falls out of the index. An attended visit has spent
+ * that hour of the counter's day and must keep holding it — otherwise marking
+ * an early-arriving citizen as served would put their slot back on sale.
+ *
+ * `serviceLabel` is stored next to `serviceId` on purpose: the office edits
+ * its own service list, and a record has to survive a service being renamed
+ * or dropped — same discipline as the act catalogue.
+ */
+export const appointments = pgTable(
+  "appointments",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    tenantSlug,
+    // The day on the office's wall calendar, and "HH:mm" on its wall clock.
+    // Never an instant: an appointment at 09:00 is 09:00 at the counter,
+    // whatever zone the server or the citizen's phone is in.
+    date: date("date").notNull(),
+    slotTime: text("slot_time").notNull(),
+    citizenName: text("citizen_name").notNull(),
+    // The channel for everything: confirmation, cancellation, the link that
+    // lets the citizen call it off. Required, unlike every other channel here.
+    email: text("email").notNull(),
+    phone: text("phone").notNull(),
+    // Minimised on purpose: most counter visits do not need it before the
+    // citizen shows up with the document in hand.
+    cpf: text("cpf"),
+    serviceId: text("service_id").notNull(),
+    serviceLabel: text("service_label").notNull(),
+    mode: text("mode").notNull(),
+    // "booked" | "attended" | "cancelled" — see core/scheduling/appointment.
+    status: text("status").notNull().default("booked"),
+    // Why the office called it off, sent to the citizen. Null when the
+    // citizen cancelled it themselves.
+    cancelReason: text("cancel_reason"),
+    cancelledAt: timestamp("cancelled_at", { withTimezone: true }),
+    // The citizen's only credential, hashed like every other one here. The
+    // token itself lives in exactly one place: the e-mail that was sent.
+    cancelTokenHash: text("cancel_token_hash").notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (t) => [
+    uniqueIndex("appointments_tenant_date_slot_live")
+      .on(t.tenantSlug, t.date, t.slotTime)
+      .where(sql`${t.status} <> 'cancelled'`),
+    index("appointments_tenant_date").on(t.tenantSlug, t.date),
+    index("appointments_cancel_token").on(t.cancelTokenHash),
+  ],
+);
+
+/**
  * The monthly revenue bulletin. Four figures the office types plus a state;
  * the balance is never stored, it is arithmetic on the four
  * (core/transparency/bulletin). Money is centavos, in bigint: a busy month in

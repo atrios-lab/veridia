@@ -19,7 +19,7 @@ import {
 } from "@/lib/admin-overview.ts";
 import { isChatEnabled, waitingConversations } from "@/lib/chat.ts";
 import { getSession } from "@/lib/session.ts";
-import { getTenant, OFFICE_TIME_ZONE, today } from "@/lib/tenant.ts";
+import { getTenant, OFFICE_TIME_ZONE, officeNow, today } from "@/lib/tenant.ts";
 import type { ActionShortcut } from "./_components/action-shortcuts.tsx";
 import { ActionShortcuts } from "./_components/action-shortcuts.tsx";
 import type { ChannelStatusRow } from "./_components/channel-status.tsx";
@@ -44,7 +44,7 @@ const CHANNEL_STATUS_LABELS: Record<RequestKind, string> = {
   "service-request": "pedidos de serviço em aberto",
   "data-rights": "requerimentos LGPD em aberto",
   ombudsman: "manifestações na Ouvidoria",
-  appointment: "horários aguardando ação",
+  appointment: "agendamentos",
 };
 
 function greeting(): string {
@@ -63,16 +63,6 @@ function greeting(): string {
 function firstName(name: string | null | undefined, email: string): string {
   const first = (name ?? "").trim().split(/\s+/)[0];
   return first || email;
-}
-
-function officeHour(instant: Date): number {
-  return Number(
-    new Intl.DateTimeFormat("pt-BR", {
-      hour: "numeric",
-      hour12: false,
-      timeZone: OFFICE_TIME_ZONE,
-    }).format(instant),
-  );
 }
 
 function toDeskItemInput(record: DeskRecord): DeskItemInput {
@@ -97,15 +87,10 @@ function toDeskItemInput(record: DeskRecord): DeskItemInput {
         ...base,
         hasFulfilledPendingRequirement: record.hasFulfilledPendingRequirement,
       };
-    case "appointment": {
-      const details = parseDetails("appointment", record.details);
-      return {
-        ...base,
-        appointmentDate: details.date,
-        slotHour: details.slotHour,
-        subject: details.subject,
-      };
-    }
+    // Appointments never reach the desk any more; the branch stays only to
+    // keep the switch total over `RequestKind`.
+    case "appointment":
+      return base;
     case "ombudsman": {
       const details = parseDetails("ombudsman", record.details);
       return { ...base, manifestationType: details.manifestationType };
@@ -116,12 +101,11 @@ function toDeskItemInput(record: DeskRecord): DeskItemInput {
 function toTodayAppointmentInput(
   record: TodayAppointmentRecord,
 ): TodayAppointmentInput {
-  const details = parseDetails("appointment", record.details);
   return {
-    protocolNumber: record.protocolNumber,
-    applicantName: record.applicantName,
-    subject: details.subject,
-    slotHour: details.slotHour,
+    id: record.id,
+    citizenName: record.citizenName,
+    serviceLabel: record.serviceLabel,
+    slotTime: record.slotTime,
     status: record.status,
   };
 }
@@ -141,9 +125,9 @@ export default async function AdminHome() {
     // Same order the sidebar's "Canais do cidadão" group lists them in
     // (nav.ts): LGPD, Ouvidoria, Agenda. "Situação dos canais" reads this
     // order directly.
-    ...(canChannels
-      ? (["data-rights", "ombudsman", "appointment"] as const)
-      : []),
+    // Agendamento não entra: um horário marcado já está resolvido, e a
+    // "Situação dos canais" mede o que está em aberto.
+    ...(canChannels ? (["data-rights", "ombudsman"] as const) : []),
   ];
 
   const todayIso = today();
@@ -168,17 +152,11 @@ export default async function AdminHome() {
   const criticalCount = countCriticalDeskItems(deskItems, todayIso);
   const rankedAgenda = rankTodayAppointments(
     todayAppointmentRecords.map(toTodayAppointmentInput),
-    officeHour(now),
+    officeNow().time,
   );
 
   const [chatEnabled, waiting] = waitingChat;
   const nextWaiting = waiting[0];
-
-  const pendingConfirmCount = deskRecords.filter(
-    (record) =>
-      record.kind === "appointment" &&
-      (record.status === "requested" || record.status === "proposed"),
-  ).length;
 
   const shortcuts: ActionShortcut[] = [
     ...(canRequests
@@ -195,14 +173,14 @@ export default async function AdminHome() {
     ...(canChannels
       ? [
           {
-            key: "confirmar-horario",
+            key: "agenda-do-dia",
             href: "/admin/agenda",
             icon: "checkCircle" as const,
-            title: "Confirmar horário",
+            title: "Agenda do dia",
             caption:
-              pendingConfirmCount > 0
-                ? `${pendingConfirmCount} pendente${pendingConfirmCount === 1 ? "" : "s"}`
-                : "nenhum pendente",
+              rankedAgenda.length > 0
+                ? `${rankedAgenda.length} ${rankedAgenda.length === 1 ? "atendimento" : "atendimentos"} hoje`
+                : "sem atendimentos hoje",
           },
         ]
       : []),

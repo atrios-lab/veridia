@@ -23,7 +23,7 @@ export const cartorioMarinho: Tenant = parseTenant({
   },
   address: "Rua José Camilo Bezerra, 44, Centro, Ielmo Marinho / RN",
   openingHours: "Segunda a sexta, das 8h às 14h",
-  scheduling: { startHour: 8, endHour: 14, capacityPerSlot: 2 },
+  counterHours: { startHour: 8, endHour: 14 },
   owner: {
     name: "Maria Marreiro de Lima",
     status: "provido",

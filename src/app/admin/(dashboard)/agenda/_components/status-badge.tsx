@@ -1,8 +1,6 @@
 const STATUS_STYLES: Record<string, string> = {
-  requested: "bg-admin-warning-bg text-admin-warning-text",
-  proposed: "bg-admin-warning-bg text-admin-warning-text",
-  confirmed: "bg-admin-success-bg text-admin-success-text",
-  done: "bg-admin-primary text-white",
+  booked: "bg-admin-success-bg text-admin-success-text",
+  attended: "bg-admin-primary text-white",
   cancelled: "bg-admin-readonly-bg text-admin-muted",
 };
 

@@ -1,17 +1,21 @@
 import { expect, type Page, test } from "@playwright/test";
 import postgres from "postgres";
 
-// Entrega 7b: fila e detalhe da agenda de atendimentos.
+// Agenda do dia no painel: listar, atender, cancelar com motivo e fechar o dia.
 
 const PORT = process.env.PORT ?? "3000";
 const baseURL = `http://marinho.localhost:${PORT}`;
 
-test("a visitor with no session never reaches the queue", async ({ page }) => {
+// Uma data no futuro distante, para nunca colidir com dados reais nem com o
+// "hoje" que a tela abre por padrão. 2098-01-06 é uma quinta-feira.
+const DATE = "2098-01-06";
+
+test("a visitor with no session never reaches the agenda", async ({ page }) => {
   await page.goto(`${baseURL}/admin/agenda`);
   await expect(page).toHaveURL(/\/admin\/login\?next=%2Fadmin%2Fagenda$/);
 });
 
-test.describe("fila e detalhe da agenda", () => {
+test.describe("agenda do dia", () => {
   test.describe.configure({ mode: "serial" });
 
   test.skip(
@@ -32,109 +36,92 @@ test.describe("fila e detalhe da agenda", () => {
     await expect(page).toHaveURL(`${baseURL}/admin`);
   }
 
-  async function seed(protocolNumber: string, sequence: number) {
+  async function seed(slotTime: string, citizenName: string) {
     const sql = postgres(process.env.DATABASE_URL as string);
     await sql`
-      insert into service_requests
-        (tenant_slug, kind, protocol_year, protocol_sequence, protocol_number,
-         applicant_name, contact, access_key_hash, status, details)
+      insert into appointments
+        (tenant_slug, date, slot_time, citizen_name, email, phone,
+         service_id, service_label, mode, status, cancel_token_hash)
       values
-        ('cartorio-marinho', 'appointment', 2098, ${sequence}, ${protocolNumber},
-         'Antônio Ferreira Lima', '(84) 98888-1212', 'hash', 'requested',
-         '{"date":"2098-01-05","slotHour":9,"subject":"Dúvida sobre certidão"}'::jsonb)
+        ('cartorio-marinho', ${DATE}, ${slotTime}, ${citizenName},
+         'teste@exemplo.com', '(84) 98888-1212', 'procuracao', 'Procuração',
+         'Presencial', 'booked', ${`hash-${slotTime}`})
       on conflict do nothing
     `;
+    await sql.end();
   }
 
   test.afterEach(async () => {
     const sql = postgres(process.env.DATABASE_URL as string);
-    await sql`delete from service_requests where protocol_number like 'AGD.2098.%'`;
+    await sql`delete from appointments where date = ${DATE}`;
+    await sql.end();
   });
 
-  test("the queue lists the requested band and links to the detail", async ({
+  test("the day lists who is coming, at what time and for what", async ({
     page,
   }) => {
-    await seed("AGD.2098.000001", 1);
+    await seed("09:00", "Antônio Ferreira Lima");
     await signIn(page);
-    await page.goto(`${baseURL}/admin/agenda`);
+    await page.goto(`${baseURL}/admin/agenda?dia=${DATE}`);
 
-    const row = page.locator("a", { hasText: "AGD.2098.000001" });
-    await expect(row.getByText("Antônio Ferreira Lima")).toBeVisible();
-    await expect(row.getByText("Pedido enviado")).toBeVisible();
-
-    await row.click();
-    await expect(
-      page.getByRole("heading", { name: "AGD.2098.000001" }),
-    ).toBeVisible();
-    await expect(page.getByText(/Faixa pedida:/)).toBeVisible();
+    await expect(page.getByText("Antônio Ferreira Lima")).toBeVisible();
+    await expect(page.getByText("09:00")).toBeVisible();
+    await expect(page.getByText("Procuração")).toBeVisible();
+    await expect(page.getByText("Agendado", { exact: true })).toBeVisible();
   });
 
-  test("confirming the requested band updates the queue", async ({ page }) => {
-    await seed("AGD.2098.000002", 2);
+  test("marking attended closes the appointment", async ({ page }) => {
+    await seed("10:00", "Maria José da Silva");
     await signIn(page);
-    await page.goto(
-      `${baseURL}/admin/agenda/${encodeURIComponent("AGD.2098.000002")}`,
-    );
+    await page.goto(`${baseURL}/admin/agenda?dia=${DATE}`);
 
-    await page.getByRole("button", { name: "Confirmar este horário" }).click();
-    await expect(page.getByText("Confirmado", { exact: true })).toBeVisible();
-
-    await page.goto(`${baseURL}/admin/agenda`);
-    const row = page.locator("a", { hasText: "AGD.2098.000002" });
-    await expect(row.getByText("Confirmado")).toBeVisible();
-  });
-
-  test("proposing another band keeps the original and records the proposal", async ({
-    page,
-  }) => {
-    await seed("AGD.2098.000003", 3);
-    await signIn(page);
-    await page.goto(
-      `${baseURL}/admin/agenda/${encodeURIComponent("AGD.2098.000003")}`,
-    );
-
-    await page.getByRole("button", { name: "Propor outro horário" }).click();
-    await page
-      .getByRole("button", { name: /^(dom|seg|ter|qua|qui|sex|sáb) \d/ })
-      .first()
-      .click();
-    await page
-      .getByRole("button", { name: /h às \d{1,2}h/ })
-      .and(page.locator(":not([disabled])"))
-      .first()
-      .click();
-    await page.getByRole("button", { name: "Propor este horário" }).click();
-
-    await expect(page.getByText("Proposto", { exact: true })).toBeVisible();
-    await expect(page.getByText(/Faixa proposta:/)).toBeVisible();
-    await expect(page.getByText(/Faixa pedida: .*9h/)).toBeVisible();
-  });
-
-  test("cancelling the request marks it cancelled", async ({ page }) => {
-    await seed("AGD.2098.000004", 4);
-    await signIn(page);
-    await page.goto(
-      `${baseURL}/admin/agenda/${encodeURIComponent("AGD.2098.000004")}`,
-    );
-
-    await page.getByRole("button", { name: "Cancelar pedido" }).click();
-    await expect(page.getByText("Cancelar este pedido?")).toBeVisible();
-    await page.getByRole("button", { name: "Confirmar cancelamento" }).click();
-    await expect(page.getByText("Cancelado", { exact: true })).toBeVisible();
-  });
-
-  test("marking a confirmed appointment attended closes it", async ({
-    page,
-  }) => {
-    await seed("AGD.2098.000005", 5);
-    await signIn(page);
-    await page.goto(
-      `${baseURL}/admin/agenda/${encodeURIComponent("AGD.2098.000005")}`,
-    );
-    await page.getByRole("button", { name: "Confirmar este horário" }).click();
-    await expect(page.getByText("Confirmado", { exact: true })).toBeVisible();
-
-    await page.getByRole("button", { name: "Marcar como atendido" }).click();
+    await page.getByRole("button", { name: "Atendido" }).click();
     await expect(page.getByText("Atendido", { exact: true })).toBeVisible();
+  });
+
+  test("cancelling one appointment demands a reason", async ({ page }) => {
+    await seed("11:00", "Sérgio Alves");
+    await signIn(page);
+    await page.goto(`${baseURL}/admin/agenda?dia=${DATE}`);
+
+    await page.getByRole("button", { name: "Cancelar" }).click();
+    // O motivo é obrigatório: é ele que o cidadão lê no e-mail.
+    await expect(page.getByLabel(/Motivo do cancelamento/)).toBeVisible();
+    await page
+      .getByLabel(/Motivo do cancelamento/)
+      .fill("O tabelião foi convocado para uma diligência.");
+    await page.getByRole("button", { name: "Cancelar e avisar" }).click();
+
+    await expect(page.getByText(/cidadão avisado/i)).toBeVisible();
+    await page.reload();
+    await expect(page.getByText("Cancelado", { exact: true })).toBeVisible();
+    await expect(page.getByText(/diligência/)).toBeVisible();
+  });
+
+  test("closing the day cancels everyone on it and stops offering the date", async ({
+    page,
+  }) => {
+    await seed("09:00", "Antônio Ferreira Lima");
+    await seed("14:00", "Joana Barros");
+    await signIn(page);
+    await page.goto(`${baseURL}/admin/agenda?dia=${DATE}`);
+
+    await page.getByRole("button", { name: "Fechar o dia" }).click();
+    await expect(
+      page.getByText(/2 agendamentos serão cancelados/),
+    ).toBeVisible();
+    await page
+      .getByLabel("Motivo", { exact: false })
+      .fill("A serventia não abrirá por falta de energia elétrica.");
+    await page.getByRole("button", { name: "Fechar o dia e avisar" }).click();
+
+    await expect(page.getByText(/2 cidadãos avisados/)).toBeVisible();
+
+    await page.reload();
+    await expect(page.getByText("Este dia está fechado")).toBeVisible();
+    await expect(page.getByText(/falta de energia/)).toBeVisible();
+    // Reabrir devolve a data à oferta; quem já foi cancelado segue cancelado.
+    await page.getByRole("button", { name: "Reabrir o dia" }).click();
+    await expect(page.getByText("Dia reaberto.")).toBeVisible();
   });
 });

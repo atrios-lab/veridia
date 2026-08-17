@@ -5,7 +5,7 @@ import type {
   RequestKind,
 } from "../request/kinds.ts";
 import type { IsoDate } from "../scheduling/calendar.ts";
-import { slotLabel } from "../scheduling/slots.ts";
+import type { SlotTime } from "../scheduling/slots.ts";
 import { dataRightsUrgency } from "./urgency.ts";
 
 /** Where each kind's detail screen lives (the mesa's next-step link and the
@@ -39,10 +39,6 @@ export interface DeskItemInput {
   right?: DataRight;
   /** service-request only: exigência cumprida, andamento parado desde então. */
   hasFulfilledPendingRequirement?: boolean;
-  /** appointment only. */
-  appointmentDate?: IsoDate;
-  slotHour?: number;
-  subject?: string;
   /** ombudsman only. */
   manifestationType?: ManifestationType;
 }
@@ -62,8 +58,8 @@ export interface RankedDeskItem {
 
 interface RankedDeskItemInternal extends RankedDeskItem {
   /** Lower sorts first. 1: LGPD perto do prazo/vencido, 2: REQ exigência
-   * cumprida, 3: AGD hoje não confirmado, 4: todo o resto. */
-  tier: 1 | 2 | 3 | 4;
+   * cumprida, 4: todo o resto. */
+  tier: 1 | 2 | 4;
   /** Lower sorts first, within the same tier. */
   tieBreak: number;
 }
@@ -110,8 +106,11 @@ function defaultSummary(item: DeskItemInput): string {
       return item.manifestationType
         ? manifestationLabel(item.manifestationType)
         : "Manifestação registrada";
+    // Appointments no longer reach the desk: one that is booked is settled,
+    // and nothing about it waits on the office. It is kept in the union
+    // because the kind still exists on dormant rows.
     case "appointment":
-      return item.subject?.trim() ? item.subject : "Pedido de horário";
+      return "Agendamento";
     case "data-rights":
       return "Requerimento LGPD";
   }
@@ -179,28 +178,6 @@ function rankOne(
     };
   }
 
-  if (
-    item.kind === "appointment" &&
-    item.appointmentDate === today &&
-    (item.status === "requested" || item.status === "proposed")
-  ) {
-    return {
-      kind: item.kind,
-      protocolNumber: item.protocolNumber,
-      displayName: name,
-      summary:
-        item.slotHour != null
-          ? `Pediu horário para hoje, ${slotLabel(item.slotHour)}, aguardando confirmação`
-          : "Pediu horário para hoje, aguardando confirmação",
-      chipLabel: "para hoje",
-      chipTone: "warning",
-      actionLabel: "Confirmar horário",
-      actionHref: href,
-      tier: 3,
-      tieBreak: createdAtMs,
-    };
-  }
-
   return {
     kind: item.kind,
     protocolNumber: item.protocolNumber,
@@ -216,10 +193,11 @@ function rankOne(
 }
 
 /**
- * The mesa de trabalho: every open item across the four channels, ranked by
+ * The mesa de trabalho: every open item across the channels, ranked by
  * urgency (LGPD perto do prazo/vencido, then REQ com exigência cumprida,
- * then AGD de hoje não confirmado, then o resto (mais antigo primeiro) and
- * cut to the most urgent `DESK_LIMIT`. The rest stays reachable through
+ * then o resto, mais antigo primeiro) and cut to the most urgent
+ * `DESK_LIMIT`. Agendamentos não entram: um horário marcado já está
+ * resolvido. The rest stays reachable through
  * "Situação dos canais", never silently dropped from the panel.
  */
 export function rankDeskItems(
@@ -248,17 +226,13 @@ export function countCriticalDeskItems(
   }).length;
 }
 
-export type TodayAppointmentState =
-  | "done"
-  | "next"
-  | "awaiting-confirmation"
-  | "upcoming";
+export type TodayAppointmentState = "done" | "next" | "upcoming";
 
 export interface TodayAppointmentInput {
-  protocolNumber: string;
-  applicantName: string | null;
-  subject?: string;
-  slotHour: number;
+  id: string;
+  citizenName: string;
+  serviceLabel: string;
+  slotTime: SlotTime;
   status: string;
 }
 
@@ -267,22 +241,21 @@ export interface RankedTodayAppointment extends TodayAppointmentInput {
 }
 
 /**
- * The day's compromissos in order, with the next confirmed one still ahead
- * highlighted. A pedido not yet confirmed shows as awaiting confirmation
- * regardless of its hour: there is no accepted slot to compare against the
- * clock yet.
+ * The day's compromissos in order, with the next one still ahead
+ * highlighted. Nothing here waits on the office to confirm: every
+ * appointment on this list is already the office's word.
  */
 export function rankTodayAppointments(
   items: readonly TodayAppointmentInput[],
-  nowHour: number,
+  nowTime: SlotTime,
 ): RankedTodayAppointment[] {
-  const sorted = [...items].sort((a, b) => a.slotHour - b.slotHour);
+  // Zero padded "HH:mm" sorts and compares correctly as text.
+  const sorted = [...items].sort((a, b) =>
+    a.slotTime.localeCompare(b.slotTime),
+  );
   let nextAssigned = false;
   return sorted.map((item) => {
-    if (item.status === "requested" || item.status === "proposed") {
-      return { ...item, state: "awaiting-confirmation" as const };
-    }
-    if (item.status === "done" || item.slotHour < nowHour) {
+    if (item.status === "attended" || item.slotTime < nowTime) {
       return { ...item, state: "done" as const };
     }
     if (!nextAssigned) {

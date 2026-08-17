@@ -1,7 +1,11 @@
 import { z } from "zod";
 import { addDays, type IsoDate } from "../scheduling/calendar.ts";
-import type { SchedulingWindow } from "../scheduling/slots.ts";
-import { isValidContact, isValidCpf, normalizeCpf } from "./form.ts";
+import {
+  isValidContact,
+  isValidCpf,
+  isValidPhone,
+  normalizeCpf,
+} from "./form.ts";
 import {
   type DataRight,
   DataRightSchema,
@@ -28,27 +32,49 @@ const optionalText = (max: number) =>
 /* ------------------------------------------------------------------ agendar */
 
 /**
- * A band, a day and how to be reached. No act, no purpose, no document list:
- * the citizen who needs the counter should not have to know the name of the
- * act to ask for an hour of it.
+ * A day, a time, who is coming and what for.
+ *
+ * The e-mail is required and is not one of two options: it is the only channel
+ * the appointment has — confirmation, cancellation and the link that lets the
+ * citizen call it off all travel through it. The telephone is the office's way
+ * of reaching a person the same day. The CPF is optional on purpose: most
+ * counter visits do not need it before the citizen shows up with the document.
+ *
+ * The service and the mode are checked against what the office actually
+ * offers, not against a list this module knows: both are the serventia's to
+ * edit.
  */
-export function appointmentSchema(window: SchedulingWindow) {
+export function appointmentSchema(options: {
+  serviceIds: readonly string[];
+  modes: readonly string[];
+}) {
   return z.object({
     date: z
       .string()
       .regex(/^\d{4}-\d{2}-\d{2}$/, "Escolha um dia de atendimento."),
-    slotHour: z.coerce
-      .number()
-      .int()
-      .refine(
-        (hour) => hour >= window.startHour && hour < window.endHour,
-        "Escolha uma faixa de horário do atendimento.",
-      ),
-    applicantName: requiredText(160),
-    contact: requiredText(160).refine(isValidContact, {
-      message: "Informe um e-mail válido ou um telefone com DDD.",
+    slotTime: z
+      .string()
+      .regex(/^([01]\d|2[0-3]):[0-5]\d$/, "Escolha um horário livre."),
+    citizenName: requiredText(160),
+    email: z.email("Informe um e-mail válido para receber a confirmação."),
+    phone: requiredText(40).refine(isValidPhone, {
+      message: "Informe um telefone com DDD.",
     }),
-    subject: optionalText(500),
+    cpf: z
+      .string()
+      .default("")
+      .transform((s) => normalizeCpf(s))
+      .refine((s) => s === "" || isValidCpf(s), { message: "CPF inválido." })
+      .transform((s) => (s === "" ? undefined : s)),
+    serviceId: z
+      .string()
+      .refine((id) => options.serviceIds.includes(id), "Escolha um serviço."),
+    mode: z
+      .string()
+      .refine(
+        (mode) => options.modes.includes(mode),
+        "Escolha o modo de atendimento.",
+      ),
   });
 }
 

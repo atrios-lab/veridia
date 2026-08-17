@@ -45,22 +45,21 @@ test("LGPD perto do prazo encabeça a mesa, antes de exigência cumprida e de no
   assert.equal(ranked[0].chipTone, "error");
 });
 
-test("AGD para hoje não confirmado vem antes de itens comuns, depois de LGPD e exigência", () => {
-  const today3pm = item({
+test("agendamento não ocupa a mesa: um horário marcado já está resolvido", () => {
+  const booked = item({
     kind: "appointment",
     protocolNumber: "AGD.2026.000001",
-    status: "requested",
-    appointmentDate: TODAY,
-    slotHour: 15,
+    status: "booked",
   });
   const fresh = item({ protocolNumber: "REQ.2026.000003" });
 
-  const ranked = rankDeskItems([fresh, today3pm], TODAY, NOW);
+  // Nada de "para hoje", nada de confirmar: se chegar um registro do modelo
+  // antigo, ele desce para o mesmo balde de todo o resto.
+  const ranked = rankDeskItems([fresh, booked], TODAY, NOW);
   assert.deepEqual(
-    ranked.map((r) => r.protocolNumber),
-    ["AGD.2026.000001", "REQ.2026.000003"],
+    ranked.map((r) => r.chipLabel),
+    ["novo", "novo"],
   );
-  assert.equal(ranked[0].chipLabel, "para hoje");
 });
 
 test("demais itens ordenam do mais antigo para o mais novo", () => {
@@ -102,32 +101,65 @@ test("corta nos seis mais urgentes", () => {
   assert.equal(ranked.length, 6);
 });
 
-test("rankTodayAppointments destaca o próximo confirmado e marca os já passados", () => {
+test("rankTodayAppointments destaca o próximo e marca os já passados", () => {
+  const ranked = rankTodayAppointments(
+    [
+      // Fora de ordem de propósito: quem ordena é a função.
+      {
+        id: "c",
+        citizenName: "Antônio",
+        serviceLabel: "Escritura",
+        slotTime: "14:00",
+        status: "booked",
+      },
+      {
+        id: "a",
+        citizenName: "Ana",
+        serviceLabel: "Procuração",
+        slotTime: "09:00",
+        status: "booked",
+      },
+      {
+        id: "b",
+        citizenName: "Sérgio",
+        serviceLabel: "Tabelião",
+        slotTime: "11:30",
+        status: "booked",
+      },
+    ],
+    "10:15",
+  );
+
+  assert.deepEqual(
+    ranked.map((r) => [r.slotTime, r.state]),
+    [
+      ["09:00", "done"],
+      ["11:30", "next"],
+      ["14:00", "upcoming"],
+    ],
+  );
+});
+
+test("um atendimento já realizado conta como concluído, mesmo mais tarde no dia", () => {
   const ranked = rankTodayAppointments(
     [
       {
-        protocolNumber: "AGD.2026.000001",
-        applicantName: "Ana",
-        slotHour: 9,
-        status: "confirmed",
+        id: "a",
+        citizenName: "Ana",
+        serviceLabel: "Procuração",
+        slotTime: "16:00",
+        status: "attended",
       },
       {
-        protocolNumber: "AGD.2026.000002",
-        applicantName: "Sérgio",
-        slotHour: 11,
-        status: "confirmed",
-      },
-      {
-        protocolNumber: "AGD.2026.000003",
-        applicantName: "Antônio",
-        slotHour: 14,
-        status: "requested",
+        id: "b",
+        citizenName: "Sérgio",
+        serviceLabel: "Tabelião",
+        slotTime: "17:00",
+        status: "booked",
       },
     ],
-    10,
+    "10:15",
   );
-
   assert.equal(ranked[0].state, "done");
   assert.equal(ranked[1].state, "next");
-  assert.equal(ranked[2].state, "awaiting-confirmation");
 });

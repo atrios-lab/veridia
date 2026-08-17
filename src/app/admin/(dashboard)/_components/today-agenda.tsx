@@ -4,7 +4,6 @@ import type { RankedTodayAppointment } from "@/core/overview/desk.ts";
 const STATE_LABEL: Record<RankedTodayAppointment["state"], string> = {
   done: "concluído",
   next: "próximo · agora",
-  "awaiting-confirmation": "aguardando sua confirmação",
   upcoming: "",
 };
 
@@ -31,7 +30,7 @@ export function TodayAgenda({
         <div className="mt-3 flex flex-col">
           {appointments.map((appointment) => (
             <div
-              key={appointment.protocolNumber}
+              key={appointment.id}
               className={`flex items-center gap-3 py-2.5 ${
                 appointment.state === "next"
                   ? "-mx-2.5 rounded-[8px] bg-admin-surface px-2.5"
@@ -39,13 +38,13 @@ export function TodayAgenda({
               }`}
             >
               <span
-                className={`w-[42px] flex-none text-[12.5px] font-bold ${
+                className={`w-[46px] flex-none text-[12.5px] font-bold ${
                   appointment.state === "next"
                     ? "text-admin-primary-soft"
                     : "text-admin-faint"
                 }`}
               >
-                {appointment.slotHour}h
+                {appointment.slotTime}
               </span>
               <span
                 className={`flex-1 truncate text-[13px] ${
@@ -54,17 +53,14 @@ export function TodayAgenda({
                     : "text-admin-muted"
                 }`}
               >
-                {appointment.applicantName ?? "Não informado"} ·{" "}
-                {appointment.subject?.trim() || "Atendimento"}
+                {appointment.citizenName} · {appointment.serviceLabel}
               </span>
               {appointment.state !== "upcoming" && (
                 <span
                   className={`flex-none text-[11px] font-semibold ${
                     appointment.state === "next"
                       ? "text-admin-primary-soft"
-                      : appointment.state === "awaiting-confirmation"
-                        ? "text-admin-warning-text"
-                        : "text-admin-faint"
+                      : "text-admin-faint"
                   }`}
                 >
                   {STATE_LABEL[appointment.state]}

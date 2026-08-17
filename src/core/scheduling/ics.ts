@@ -1,11 +1,13 @@
+import type { SlotTime } from "./agenda.ts";
 import type { IsoDate } from "./calendar.ts";
 
 export interface CalendarEvent {
   /** Stable identifier of the event, so a second download updates the first. */
   uid: string;
   date: IsoDate;
-  startHour: number;
-  endHour: number;
+  /** "HH:mm" on the office's wall clock. */
+  startTime: SlotTime;
+  endTime: SlotTime;
   title: string;
   description: string;
   location: string;
@@ -22,8 +24,8 @@ function escapeText(value: string): string {
     .replace(/\r?\n/g, "\\n");
 }
 
-function localStamp(date: IsoDate, hour: number): string {
-  return `${date.replace(/-/g, "")}T${String(hour).padStart(2, "0")}0000`;
+function localStamp(date: IsoDate, time: SlotTime): string {
+  return `${date.replace(/-/g, "")}T${time.replace(":", "")}00`;
 }
 
 function utcStamp(instant: Date): string {
@@ -50,8 +52,8 @@ export function buildCalendarEvent(
     "BEGIN:VEVENT",
     `UID:${escapeText(event.uid)}`,
     `DTSTAMP:${utcStamp(event.stamp)}`,
-    `DTSTART;TZID=${timeZone}:${localStamp(event.date, event.startHour)}`,
-    `DTEND;TZID=${timeZone}:${localStamp(event.date, event.endHour)}`,
+    `DTSTART;TZID=${timeZone}:${localStamp(event.date, event.startTime)}`,
+    `DTEND;TZID=${timeZone}:${localStamp(event.date, event.endTime)}`,
     `SUMMARY:${escapeText(event.title)}`,
     `DESCRIPTION:${escapeText(event.description)}`,
     `LOCATION:${escapeText(event.location)}`,
