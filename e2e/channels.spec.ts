@@ -108,30 +108,36 @@ test.describe("ouvidoria", () => {
 });
 
 test.describe("agendar", () => {
-  // Reading which bands are free is a database query, so the page needs one.
+  // A grade e os horários livres vêm do banco, então a página precisa de um.
   test.skip(
     !process.env.DATABASE_URL,
-    "precisa de DATABASE_URL: as faixas vêm da ocupação real",
+    "precisa de DATABASE_URL: a grade e os horários livres vêm do banco",
   );
 
   /**
-   * The last day offered, which the suite's own bookings have not filled.
-   * The bands are real occupancy in a shared database, so a test that always
-   * used the first day would start failing once it filled up, which says
-   * nothing about the code.
+   * O último dia oferecido, que as próprias reservas da suíte ainda não
+   * encheram. Os horários são ocupação real num banco compartilhado, e um
+   * teste que usasse sempre o primeiro dia passaria a falhar quando ele
+   * lotasse, o que não diz nada sobre o código.
+   *
+   * Devolve false quando a serventia não tem grade configurada: nesse caso a
+   * página mostra o estado "agende pelo telefone", que é o próprio teste
+   * abaixo, e não há formulário a exercitar.
    */
-  async function openDayWithBands(page: import("@playwright/test").Page) {
+  async function openDayWithTimes(page: import("@playwright/test").Page) {
     await page.goto(`${baseURL}/agendar`);
     const days = await page
       .locator("a[href^='/agendar?dia=']")
       .evaluateAll((links) =>
         links.map((link) => link.getAttribute("href") ?? ""),
       );
+    if (days.length === 0) return false;
     await page.goto(`${baseURL}${days[days.length - 1]}`);
+    return true;
   }
 
-  test("only days the office opens are offered", async ({ page }) => {
-    await openDayWithBands(page);
+  test("only days the office receives on are offered", async ({ page }) => {
+    await page.goto(`${baseURL}/agendar`);
     await expect(
       page.getByRole("heading", { name: "Escolha quando vir à serventia" }),
     ).toBeVisible();
@@ -141,65 +147,115 @@ test.describe("agendar", () => {
       .evaluateAll((links) =>
         links.map((link) => link.getAttribute("href")?.slice(-10) ?? ""),
       );
-    expect(days.length).toBeGreaterThan(0);
+
+    if (days.length === 0) {
+      // Sem grade publicada a página manda ligar, em vez de inventar horários.
+      await expect(page.getByText("Agendamento pelo telefone")).toBeVisible();
+      return;
+    }
     for (const day of days) expect(isBusinessDay(day)).toBe(true);
 
-    // The expectation is set next to the button, where it is being made.
-    await expect(page.getByText("Este é um", { exact: false })).toBeVisible();
-    await expect(page.getByText("AGD").first()).toBeVisible();
+    // O horário sai marcado na hora: nada de "pedido" nem de protocolo AGD.
+    await expect(page.getByText("marcado na hora")).toBeVisible();
+    await expect(page.getByText("AGD")).toHaveCount(0);
   });
 
-  test("nothing is sent without a band", async ({ page }) => {
-    await openDayWithBands(page);
+  /**
+   * Tudo o que o formulário exige menos o campo que cada teste quer provar
+   * ausente. Serviço e modo são obrigatórios como o horário e o e-mail, então
+   * preencher só metade faria todo teste "passar" pelo motivo errado.
+   */
+  async function fillBooking(
+    page: import("@playwright/test").Page,
+    omit?: "time" | "email",
+  ) {
+    if (omit !== "time") await page.getByRole("radio").first().check();
+    await page.getByLabel("Do que você precisa").selectOption({ index: 1 });
+    await page.getByLabel("Modo de atendimento").selectOption({ index: 1 });
     await page.getByLabel("Nome completo").fill("Antônio Ferreira Lima");
-    await page.getByLabel(/E-mail ou WhatsApp/).fill("(84) 98888-1212");
-    await page.getByRole("button", { name: "Pedir agendamento" }).click();
+    if (omit !== "email") {
+      await page.getByLabel(/E-mail/).fill("antonio@exemplo.com");
+    }
+    await page.getByLabel("Telefone").fill("(84) 98888-1212");
+  }
+
+  test("nothing is booked without a time", async ({ page }) => {
+    test.skip(!(await openDayWithTimes(page)), "serventia sem grade publicada");
+
+    await fillBooking(page, "time");
+    await page.getByRole("button", { name: "Confirmar agendamento" }).click();
+
+    await expect(page.getByText("Escolha um horário livre")).toBeVisible();
     await expect(
-      page.getByText("Escolha uma faixa de horário", { exact: false }),
-    ).toBeVisible();
-    await expect(
-      page.getByRole("heading", { name: "Pedido de horário enviado" }),
+      page.getByRole("heading", { name: "Agendamento confirmado" }),
     ).toHaveCount(0);
   });
 
-  test("a filed appointment hands back a protocol and a key, once", async ({
+  test("the e-mail is required: it is the only channel", async ({ page }) => {
+    test.skip(!(await openDayWithTimes(page)), "serventia sem grade publicada");
+
+    await fillBooking(page, "email");
+    await page.getByRole("button", { name: "Confirmar agendamento" }).click();
+
+    await expect(
+      page.getByText("Informe um e-mail válido", { exact: false }),
+    ).toBeVisible();
+    await expect(
+      page.getByRole("heading", { name: "Agendamento confirmado" }),
+    ).toHaveCount(0);
+  });
+
+  test("a booked time is confirmed on the spot and leaves the offer", async ({
     page,
   }) => {
-    await openDayWithBands(page);
-    // The first free band of that day.
-    await page.getByRole("radio").and(page.locator(":enabled")).first().check();
-    await page.getByLabel("Nome completo").fill("Antônio Ferreira Lima");
-    await page.getByLabel(/E-mail ou WhatsApp/).fill("(84) 98888-1212");
-    await page.getByRole("button", { name: "Pedir agendamento" }).click();
+    test.skip(!(await openDayWithTimes(page)), "serventia sem grade publicada");
+
+    const dayUrl = page.url();
+    // O primeiro horário livre do dia, e o rótulo dele para conferir depois.
+    const chosen = (
+      await page
+        .getByRole("radio")
+        .first()
+        .locator("xpath=../span[1]")
+        .innerText()
+    ).trim();
+
+    await fillBooking(page);
+    await page.getByRole("button", { name: "Confirmar agendamento" }).click();
 
     await expect(
-      page.getByRole("heading", { name: "Pedido de horário enviado" }),
+      page.getByRole("heading", { name: "Agendamento confirmado" }),
     ).toBeVisible();
-    await expect(page.getByText(/AGD\.\d{4}\.\d{6}/)).toBeVisible();
+    // Sem protocolo e sem chave: o e-mail é o comprovante.
+    await expect(page.getByText(/AGD\.\d{4}\.\d{6}/)).toHaveCount(0);
     await expect(
       page.getByText(/[A-Z0-9]{4}-[A-Z0-9]{4}-[A-Z0-9]{4}/),
-    ).toBeVisible();
-    await expect(
-      page.getByText("A chave aparece só agora", { exact: false }),
-    ).toBeVisible();
+    ).toHaveCount(0);
+    await expect(page.getByText("antonio@exemplo.com")).toBeVisible();
 
-    // The day chips and the sidebar are gone: there is nothing left to choose.
+    // Os chips de dia somem: não há mais nada a escolher.
     await expect(page.locator("a[href^='/agendar?dia=']")).toHaveCount(0);
 
-    const ics = await page.request.post(`${baseURL}/agendar/agenda`, {
-      form: {
-        protocolNumber: (
-          await page.getByText(/AGD\.\d{4}\.\d{6}/).innerText()
-        ).trim(),
-        accessKey: (
-          await page
-            .getByText(/[A-Z0-9]{4}-[A-Z0-9]{4}-[A-Z0-9]{4}/)
-            .innerText()
-        ).trim(),
-      },
-    });
-    expect(ics.status()).toBe(200);
-    expect(await ics.text()).toContain("BEGIN:VEVENT");
+    const ics = await page.getByRole("button", { name: "Adicionar à agenda" });
+    await expect(ics).toBeVisible();
+
+    // E o horário pego sai da oferta daquele dia.
+    await page.goto(dayUrl);
+    const stillOffered = await page
+      .locator("input[name=slotTime]")
+      .evaluateAll((inputs) =>
+        inputs.map((input) => (input as HTMLInputElement).value),
+      );
+    expect(stillOffered).not.toContain(chosen);
+  });
+
+  test("a cancellation link that matches nothing answers neutrally", async ({
+    page,
+  }) => {
+    await page.goto(`${baseURL}/agendar/cancelar?token=nao-existe`);
+    await expect(page.getByText("Este link não vale mais")).toBeVisible();
+    // Não revela se existe agendamento algum por trás do token.
+    await expect(page.getByText(/Cancelar este agendamento\?/)).toHaveCount(0);
   });
 });
 
@@ -303,55 +359,10 @@ test.describe("canal LGPD, gravando", () => {
 });
 
 test.describe("depois da confirmação", () => {
-  // The office proposing another band is the admin panel's job (delivery 6).
-  // Until it exists, the proposal is written straight into the record, which
-  // is what the panel will do, so the citizen's side can be tested today.
   test.skip(
     !process.env.DATABASE_URL,
-    "precisa de DATABASE_URL: a proposta é gravada no registro",
+    "precisa de DATABASE_URL: a resposta é gravada no registro",
   );
-
-  test("the citizen accepts the band the office proposed", async ({ page }) => {
-    await page.goto(`${baseURL}/agendar`);
-    const days = await page
-      .locator("a[href^='/agendar?dia=']")
-      .evaluateAll((links) => links.map((l) => l.getAttribute("href") ?? ""));
-    await page.goto(`${baseURL}${days[days.length - 1]}`);
-    await page.getByRole("radio").and(page.locator(":enabled")).first().check();
-    await page.getByLabel("Nome completo").fill("Antônio Ferreira Lima");
-    await page.getByLabel(/E-mail ou WhatsApp/).fill("(84) 98888-1212");
-    await page.getByRole("button", { name: "Pedir agendamento" }).click();
-
-    const protocolNumber = (
-      await page.getByText(/AGD\.\d{4}\.\d{6}/).innerText()
-    ).trim();
-    const accessKey = (
-      await page.getByText(/[A-Z0-9]{4}-[A-Z0-9]{4}-[A-Z0-9]{4}/).innerText()
-    ).trim();
-
-    const sql = postgres(process.env.DATABASE_URL as string);
-    const proposal = JSON.stringify({
-      proposedDate: "2099-08-07",
-      proposedSlotHour: 8,
-      proposedAt: new Date().toISOString(),
-    });
-    await sql`update service_requests
-              set details = details || ${proposal}::jsonb, status = 'proposed'
-              where protocol_number = ${protocolNumber}`;
-
-    await page.goto(`${baseURL}/protocolo?numero=${protocolNumber}`);
-    await page.getByPlaceholder("Ex.: BBM8-6XVB-8PUK").fill(accessKey);
-    await page.getByRole("button", { name: "Ver detalhes" }).click();
-
-    // The citizen's turn, with both bands side by side.
-    await expect(page.getByText("É a sua vez")).toBeVisible();
-    await expect(page.getByText("você pediu", { exact: true })).toBeVisible();
-    await expect(page.getByText("proposta", { exact: true })).toBeVisible();
-
-    await page.getByRole("button", { name: /Aceitar/ }).click();
-    await expect(page.getByText("Horário confirmado por você")).toBeVisible();
-    await expect(page.getByText("É a sua vez")).toHaveCount(0);
-  });
 
   test("the officer's answer is only read with protocol and key", async ({
     page,

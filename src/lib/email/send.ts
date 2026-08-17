@@ -1,5 +1,11 @@
 import "server-only";
 
+export interface EmailAttachment {
+  filename: string;
+  /** The file's bytes as text. Only text formats are attached today (.ics). */
+  content: string;
+}
+
 export interface OutgoingEmail {
   to: string;
   /** Display name only — the technical sending address is platform-wide. */
@@ -7,6 +13,7 @@ export interface OutgoingEmail {
   subject: string;
   html: string;
   text: string;
+  attachments?: EmailAttachment[];
 }
 
 const RESEND_ENDPOINT = "https://api.resend.com/emails";
@@ -50,6 +57,15 @@ export async function sendEmail(email: OutgoingEmail): Promise<void> {
       subject: email.subject,
       html: email.html,
       text: email.text,
+      // Resend takes attachment bytes base64 encoded.
+      ...(email.attachments?.length
+        ? {
+            attachments: email.attachments.map((file) => ({
+              filename: file.filename,
+              content: Buffer.from(file.content, "utf8").toString("base64"),
+            })),
+          }
+        : {}),
     }),
   });
 

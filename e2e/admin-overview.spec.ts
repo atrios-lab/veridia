@@ -8,7 +8,8 @@ const PORT = process.env.PORT ?? "3000";
 const baseURL = `http://marinho.localhost:${PORT}`;
 const SOL_DUE_SOON = "SOL.2097.000001";
 const REQ_STALLED = "REQ.2097.000001";
-const AGD_TODAY = "AGD.2097.000001";
+// A agenda de hoje vem da própria tabela de agendamentos, sem protocolo.
+const AGENDA_TOKEN_HASH = "hash-overview-2097";
 
 /** The office's wall calendar day, same computation as `toIsoDate` in
  * src/core/scheduling/calendar.ts: "Agenda de hoje" filters on this. */
@@ -71,16 +72,17 @@ test.describe("Visão geral (mesa de trabalho)", () => {
       insert into service_request_requirements (tenant_slug, request_id, text, status, fulfilled_at)
       values ('cartorio-marinho', ${request.id}, 'Documento de identidade', 'fulfilled', now())
     `;
-    // A pedido de horário for today, still awaiting confirmation: feeds both
-    // "Confirmar horário" (atalho) and "Agenda de hoje".
+    // Um agendamento para hoje: alimenta o atalho "Agenda do dia" e o bloco
+    // "Agenda de hoje". Já está marcado: nada aqui espera confirmação.
     await sql`
-      insert into service_requests
-        (tenant_slug, kind, protocol_year, protocol_sequence, protocol_number,
-         applicant_name, contact, access_key_hash, status, details)
+      insert into appointments
+        (tenant_slug, date, slot_time, citizen_name, email, phone,
+         service_id, service_label, mode, status, cancel_token_hash)
       values
-        ('cartorio-marinho', 'appointment', 2097, 1, ${AGD_TODAY},
-         'Antônio Ferreira Lima', '(84) 98888-1212', 'hash', 'requested',
-         ${JSON.stringify({ date: officeToday(), slotHour: 14 })}::jsonb)
+        ('cartorio-marinho', ${officeToday()}, '14:00',
+         'Antônio Ferreira Lima', 'antonio@exemplo.com', '(84) 98888-1212',
+         'procuracao', 'Procuração', 'Presencial', 'booked',
+         ${AGENDA_TOKEN_HASH})
       on conflict do nothing
     `;
   });
@@ -90,7 +92,8 @@ test.describe("Visão geral (mesa de trabalho)", () => {
     await sql`delete from service_request_requirements where request_id in (
       select id from service_requests where protocol_number = ${REQ_STALLED}
     )`;
-    await sql`delete from service_requests where protocol_number in (${SOL_DUE_SOON}, ${REQ_STALLED}, ${AGD_TODAY})`;
+    await sql`delete from service_requests where protocol_number in (${SOL_DUE_SOON}, ${REQ_STALLED})`;
+    await sql`delete from appointments where cancel_token_hash = ${AGENDA_TOKEN_HASH}`;
   });
 
   test("a mesa lista o requerimento LGPD perto do prazo antes da exigência cumprida, cada um com o próximo passo", async ({
@@ -116,28 +119,27 @@ test.describe("Visão geral (mesa de trabalho)", () => {
     ).toHaveAttribute("href", `/admin/pedidos/${REQ_STALLED}`);
   });
 
-  test("o atalho de confirmar horário mostra a contagem de pendentes e leva à agenda", async ({
+  test("o atalho da agenda conta os atendimentos de hoje e leva à agenda", async ({
     page,
   }) => {
     await signIn(page);
-    // The mesa's own next-step button shares the "Confirmar horário" label
-    // (see admin-overview spec, "Mesa de trabalho... AGD para hoje"), so the
-    // shortcut is the one whose accessible name also carries the count.
     const shortcut = page.getByRole("link", {
-      name: /Confirmar horário.*pendentes?/,
+      name: /Agenda do dia.*atendimentos?/,
     });
     await expect(shortcut).toBeVisible();
     await shortcut.click();
     await expect(page).toHaveURL(`${baseURL}/admin/agenda`);
   });
 
-  test("a agenda de hoje mostra o pedido de horário aguardando confirmação", async ({
+  test("a agenda de hoje mostra o atendimento marcado, sem pedir confirmação", async ({
     page,
   }) => {
     await signIn(page);
     const agenda = page.getByText("Agenda de hoje").locator("..").locator("..");
     await expect(agenda).toContainText("Antônio Ferreira Lima");
-    await expect(agenda).toContainText("aguardando sua confirmação");
+    await expect(agenda).toContainText("14:00");
+    await expect(agenda).toContainText("Procuração");
+    await expect(agenda).not.toContainText("aguardando");
   });
 
   test("situação dos canais leva à fila do canal", async ({ page }) => {

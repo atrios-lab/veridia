@@ -28,7 +28,6 @@ import {
   listRequirementMessages,
   listRequirements,
   requestOwnAttachments,
-  updateDetails,
   writeCitizenMessage,
 } from "@/lib/service-request.ts";
 import { getTenant, OFFICE_TIME_ZONE, today } from "@/lib/tenant.ts";
@@ -106,18 +105,6 @@ export interface ServiceRequestDetail extends BaseDetail {
   pix?: PixCharge;
 }
 
-export interface AppointmentDetail extends BaseDetail {
-  kind: "appointment";
-  date: string;
-  slotHour: number;
-  subject?: string;
-  /** Written by the office when the asked band closed before confirmation. */
-  proposedDate?: string;
-  proposedSlotHour?: number;
-  proposedAt?: string;
-  acceptedAt?: string;
-}
-
 export interface DataRightsDetail extends BaseDetail {
   kind: "data-rights";
   right: DataRight;
@@ -137,10 +124,9 @@ export interface OmbudsmanDetail extends BaseDetail {
   repliedAt?: string;
 }
 
-/** One consult, four shapes: the citizen types the same protocol and key. */
+/** One consult, three shapes: the citizen types the same protocol and key. */
 export type ProtocolDetail =
   | ServiceRequestDetail
-  | AppointmentDetail
   | DataRightsDetail
   | OmbudsmanDetail;
 
@@ -191,10 +177,10 @@ export async function lookupProtocolDetail(
       createdAt: record.createdAt.toISOString(),
     };
 
-    if (kind === "appointment") {
-      return { ...base, kind, ...parseDetails("appointment", record.details) };
-    }
-
+    // Appointments are not consulted here any more: they carry no protocol
+    // and no key, and the citizen's own e-mail holds everything the consult
+    // used to show. A dormant AGD row from before the change falls through to
+    // the same neutral "not found" as any other unknown number.
     if (kind === "data-rights") {
       const { right } = parseDetails("data-rights", record.details);
       const requestedOn = toIsoDate(record.createdAt, OFFICE_TIME_ZONE);
@@ -308,73 +294,6 @@ export async function lookupProtocolDetail(
     };
   } catch (error) {
     console.error("protocolo.lookup", error);
-    return { status: "error", message: GENERIC_ERROR };
-  }
-}
-
-export type AcceptProposalState =
-  | { status: "idle" }
-  | { status: "error"; message: string }
-  | { status: "success"; date: string; slotHour: number };
-
-/**
- * The citizen accepting the band the office proposed. It is the one write the
- * consult allows: everything else on this screen is the office's to change.
- */
-export async function acceptProposedSlot(
-  _previous: AcceptProposalState,
-  formData: FormData,
-): Promise<AcceptProposalState> {
-  const tenant = await getTenant();
-  const protocolNumber = String(formData.get("protocolNumber") ?? "");
-  const accessKey = String(formData.get("accessKey") ?? "");
-
-  const record = await findByProtocolWithKey(
-    tenant.slug,
-    protocolNumber,
-    accessKey,
-  );
-  if (!record || record.kind !== "appointment") {
-    return { status: "error", message: NOT_FOUND };
-  }
-
-  if (await isRateLimited(await headers())) {
-    return {
-      status: "error",
-      message: "Muitas tentativas seguidas. Aguarde um minuto e tente de novo.",
-    };
-  }
-
-  try {
-    const details = parseDetails("appointment", record.details);
-    if (!details.proposedDate || details.proposedSlotHour === undefined) {
-      return {
-        status: "error",
-        message:
-          "Não há mais horário para aceitar. Atualize a página para ver a situação atual.",
-      };
-    }
-
-    // The proposal becomes the appointment, and the band originally asked for
-    // stays in the record: the timeline reads as what happened, not as what
-    // ended up true.
-    await updateDetails(
-      tenant.slug,
-      record.id,
-      parseDetails("appointment", {
-        ...details,
-        acceptedAt: new Date().toISOString(),
-      }),
-      "confirmed",
-    );
-
-    return {
-      status: "success",
-      date: details.proposedDate,
-      slotHour: details.proposedSlotHour,
-    };
-  } catch (error) {
-    console.error("protocolo.accept-proposal", error);
     return { status: "error", message: GENERIC_ERROR };
   }
 }

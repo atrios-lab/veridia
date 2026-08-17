@@ -2,7 +2,12 @@ import "server-only";
 import { and, eq, inArray } from "drizzle-orm";
 import { headers } from "next/headers";
 import { cache } from "react";
-import { type IsoDate, toIsoDate } from "@/core/scheduling/calendar.ts";
+import {
+  type IsoDate,
+  toIsoDate,
+  toZonedDateTimeInput,
+} from "@/core/scheduling/calendar.ts";
+import type { AgendaNow } from "@/core/scheduling/slots.ts";
 import { applyTenantOverrides } from "@/core/tenant/overrides.ts";
 import { resolveTenant } from "@/core/tenant/resolve.ts";
 import type { Tenant } from "@/core/tenant/schema.ts";
@@ -22,6 +27,16 @@ export function today(): IsoDate {
 }
 
 /**
+ * The office's wall clock right now, day and "HH:mm", for the agenda's cutoff
+ * on today's times. The core never reads a clock; this is where the clock is
+ * read and handed to it.
+ */
+export function officeNow(): AgendaNow {
+  const stamp = toZonedDateTimeInput(new Date(), OFFICE_TIME_ZONE);
+  return { date: stamp.slice(0, 10), time: stamp.slice(11, 16) };
+}
+
+/**
  * The `tenant_content` rows holding what the office edits about itself in the
  * panel: counter hours and the three contact channels (`office-contact`),
  * theme, logos, hero and sections (`office-brand`), the Data Protection
@@ -31,11 +46,13 @@ export const OFFICE_CONTACT_KEY = "office-contact";
 export const OFFICE_BRAND_KEY = "office-brand";
 export const OFFICE_DPO_KEY = "office-dpo";
 export const OFFICE_PIX_KEY = "office-pix";
-// Not part of Tenant/applyTenantOverrides: whether the office's chat is on
-// is operational switch state, not branding or editorial content, so it is
-// read and written directly by src/lib/chat.ts, never merged into the
-// config-as-code shape the other four keys layer onto.
+// Not part of Tenant/applyTenantOverrides: whether the office's chat is on,
+// and which days and times it receives by appointment, are operational state,
+// not branding or editorial content. Both are read and written directly:
+// chat by src/lib/chat.ts, the agenda by src/lib/appointments.ts, never
+// merged into the config-as-code shape the other four keys layer onto.
 export const OFFICE_CHAT_KEY = "office-chat";
+export const OFFICE_AGENDA_KEY = "office-agenda";
 
 /**
  * Reads the office's own edits, both keys in one query: `getTenant` is

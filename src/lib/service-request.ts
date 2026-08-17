@@ -21,7 +21,6 @@ import {
   isServiceRequestStatus,
   KIND_BY_PREFIX,
   KIND_PREFIXES,
-  LIVE_APPOINTMENT_STATUSES,
   type RequestKind,
   type ServiceRequestStatus,
   TERMINAL_SERVICE_REQUEST_STATUSES,
@@ -32,8 +31,6 @@ import {
   type ProtocolPrefix,
 } from "@/core/request/protocol.ts";
 import type { SearchTerm } from "@/core/request/search.ts";
-import type { IsoDate } from "@/core/scheduling/calendar.ts";
-import type { Occupancy } from "@/core/scheduling/slots.ts";
 import type { Tenant } from "@/core/tenant/schema.ts";
 import { user } from "@/db/auth-schema.ts";
 import {
@@ -187,41 +184,6 @@ export async function createRecord(
 }
 
 /**
- * How many appointments already hold each band, for every day in the range.
- * Counted from the records themselves: a band is not a row to be reserved, it
- * is how many people already asked for that hour.
- */
-export async function appointmentOccupancy(
-  tenantSlug: string,
-  from: IsoDate,
-  to: IsoDate,
-): Promise<Map<IsoDate, Occupancy>> {
-  const day = sql<string>`${serviceRequests.details} ->> 'date'`;
-  const hour = sql<number>`(${serviceRequests.details} ->> 'slotHour')::int`;
-
-  const rows = await db
-    .select({ day, hour, taken: sql<number>`count(*)::int` })
-    .from(serviceRequests)
-    .where(
-      and(
-        eq(serviceRequests.tenantSlug, tenantSlug),
-        eq(serviceRequests.kind, "appointment"),
-        inArray(serviceRequests.status, [...LIVE_APPOINTMENT_STATUSES]),
-        sql`${serviceRequests.details} ->> 'date' between ${from} and ${to}`,
-      ),
-    )
-    .groupBy(day, hour);
-
-  const occupancy = new Map<IsoDate, Occupancy>();
-  for (const row of rows) {
-    const bands = occupancy.get(row.day) ?? {};
-    bands[row.hour] = (bands[row.hour] ?? 0) + Number(row.taken);
-    occupancy.set(row.day, bands);
-  }
-  return occupancy;
-}
-
-/**
  * Sends the office's answer to a record's citizen — the same two columns
  * (`officeReply`/`officeRepliedAt`) the protocol consult and the registration
  * lookup already read for `data-rights` and `ombudsman`. Any draft in
@@ -296,47 +258,6 @@ export async function updateRecordStatus(
 }
 
 /**
- * The office proposing a different band than the one asked for. Merges the
- * proposal into `details` (the date and band originally asked for stay put)
- * and moves the status to `"proposed"` in the same write — the citizen's own
- * consult (`acceptProposedSlot`) is what turns the proposal into the
- * appointment.
- */
-export async function proposeAppointmentSlot(
-  tenantSlug: string,
-  id: string,
-  date: string,
-  slotHour: number,
-  actorId: string,
-): Promise<void> {
-  const patch = JSON.stringify({
-    proposedDate: date,
-    proposedSlotHour: slotHour,
-    proposedAt: new Date().toISOString(),
-  });
-  await db
-    .update(serviceRequests)
-    .set({
-      status: "proposed",
-      details: sql`${serviceRequests.details} || ${patch}::jsonb`,
-      updatedAt: new Date(),
-    })
-    .where(
-      and(
-        eq(serviceRequests.tenantSlug, tenantSlug),
-        eq(serviceRequests.id, id),
-      ),
-    );
-  await recordAudit({
-    tenantSlug,
-    actorId,
-    action: "appointment.propose",
-    targetType: "appointment",
-    targetId: id,
-  });
-}
-
-/**
  * Saves the office's answer in progress, without sending anything. Merges
  * one key into `details` (the jsonb "concatenate" operator), leaving the
  * kind's own fields (the right chosen, the manifestation type) untouched.
@@ -399,28 +320,6 @@ export async function saveInternalNote(
     targetType: "ombudsman",
     targetId: id,
   });
-}
-
-/** Replaces the kind specific fields of a record, already parsed by the core. */
-export async function updateDetails(
-  tenantSlug: string,
-  id: string,
-  details: unknown,
-  status?: string,
-): Promise<void> {
-  await db
-    .update(serviceRequests)
-    .set({
-      details,
-      ...(status ? { status } : {}),
-      updatedAt: new Date(),
-    })
-    .where(
-      and(
-        eq(serviceRequests.tenantSlug, tenantSlug),
-        eq(serviceRequests.id, id),
-      ),
-    );
 }
 
 /** Files a service request: the record whose kind carries an act. */

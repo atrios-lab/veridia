@@ -22,7 +22,7 @@ export const cartorioBomJesus: Tenant = parseTenant({
     email: "cartoriounicodebomjesus@gmail.com",
   },
   openingHours: "Segunda a sexta, das 8h às 14h",
-  scheduling: { startHour: 8, endHour: 14, capacityPerSlot: 2 },
+  counterHours: { startHour: 8, endHour: 14 },
   owner: {
     name: "Natanailde de Souza Delgado Andrade",
     // Delegated after concurso per the site, but not yet checked against

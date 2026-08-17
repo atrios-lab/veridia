@@ -89,6 +89,16 @@ export function isEmailContact(value: string): boolean {
   return EMAIL.test(value.trim());
 }
 
+/**
+ * A Brazilian number with area code, mobile or landline. Its own check
+ * because the agenda asks for the telephone in its own field, next to a
+ * required e-mail, rather than in the either/or field the other channels use.
+ */
+export function isValidPhone(value: string): boolean {
+  const digits = value.replace(/\D/g, "");
+  return digits.length === 10 || digits.length === 11;
+}
+
 const requiredText = (max: number) =>
   z
     .string()

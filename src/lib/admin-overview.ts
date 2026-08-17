@@ -21,6 +21,7 @@ import type { IsoDate } from "@/core/scheduling/calendar.ts";
 import { user } from "@/db/auth-schema.ts";
 import { db } from "@/db/index.ts";
 import {
+  appointments,
   auditLog,
   serviceRequestRequirements,
   serviceRequests,
@@ -197,11 +198,12 @@ export const ACTIVITY_VERBS: Record<string, string> = {
   "service-request.amount": "informou o valor do pedido",
   "service-request.key-reissue": "emitiu uma nova chave de acesso",
   "service-request.delete": "excluiu um pedido",
-  "appointment.create": "pediu um horário",
-  "appointment.confirm": "confirmou o horário",
-  "appointment.propose": "propôs outro horário",
-  "appointment.cancel": "cancelou o pedido de horário",
+  "appointment.book": "agendou um atendimento",
+  "appointment.give-up": "cancelou o próprio agendamento",
+  "appointment.cancel": "cancelou um agendamento",
+  "appointment.close-day": "fechou um dia da agenda",
   "appointment.attend": "marcou o atendimento como realizado",
+  "agenda.settings": "alterou a configuração da agenda",
   "data-rights.create": "registrou um requerimento LGPD",
   "data-rights.respond": "respondeu ao titular",
   "data-rights.draft": "salvou um rascunho de resposta",
@@ -292,34 +294,33 @@ export async function listDeskItems(
 
 export interface TodayAppointmentRecord {
   id: string;
-  protocolNumber: string;
-  applicantName: string | null;
+  citizenName: string;
+  serviceLabel: string;
+  slotTime: string;
   status: string;
-  details: unknown;
 }
 
-/** Today's pedidos de horário (office time zone), on the wall calendar the
- * office reads. Cancelled ones excluded, everything else including
- * already-atendido kept so the day's list reads complete. */
+/** Today's appointments (office time zone), on the wall calendar the office
+ * reads. Cancelled ones excluded, already-attended kept so the day's list
+ * reads complete. */
 export async function listTodayAppointments(
   tenantSlug: string,
   todayIso: IsoDate,
 ): Promise<TodayAppointmentRecord[]> {
   return db
     .select({
-      id: serviceRequests.id,
-      protocolNumber: serviceRequests.protocolNumber,
-      applicantName: serviceRequests.applicantName,
-      status: serviceRequests.status,
-      details: serviceRequests.details,
+      id: appointments.id,
+      citizenName: appointments.citizenName,
+      serviceLabel: appointments.serviceLabel,
+      slotTime: appointments.slotTime,
+      status: appointments.status,
     })
-    .from(serviceRequests)
+    .from(appointments)
     .where(
       and(
-        eq(serviceRequests.tenantSlug, tenantSlug),
-        eq(serviceRequests.kind, "appointment"),
-        sql`${serviceRequests.details}->>'date' = ${todayIso}`,
-        notInArray(serviceRequests.status, ["cancelled"]),
+        eq(appointments.tenantSlug, tenantSlug),
+        eq(appointments.date, todayIso),
+        notInArray(appointments.status, ["cancelled"]),
       ),
     );
 }

@@ -232,6 +232,9 @@ const STATUS_LABELS: Record<RequestKind, Record<string, string>> = {
     cancelled: "Cancelado",
     archived: "Arquivado",
   },
+  // Appointments live in their own table now (see core/scheduling/appointment
+  // for the statuses in use). These labels remain only so a dormant AGD row
+  // filed before that change still names itself in the audit trail.
   appointment: {
     requested: "Pedido enviado",
     proposed: "Proposto",
@@ -256,13 +259,6 @@ const STATUS_LABELS: Record<RequestKind, Record<string, string>> = {
 export function statusLabel(kind: RequestKind, status: string): string {
   return STATUS_LABELS[kind][status] ?? "Em andamento";
 }
-
-/** Appointment statuses that still hold a band of the office's day. */
-export const LIVE_APPOINTMENT_STATUSES = [
-  "requested",
-  "proposed",
-  "confirmed",
-] as const;
 
 const isoDate = z.string().regex(/^\d{4}-\d{2}-\d{2}$/);
 const isoInstant = z.iso.datetime();

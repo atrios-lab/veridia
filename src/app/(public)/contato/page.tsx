@@ -36,7 +36,7 @@ export default async function ContactPage() {
   const open = isWithinChatHours(tenant, now);
   let statusLabel: string;
   if (open) {
-    statusLabel = `Aberto agora · fecha às ${tenant.scheduling.endHour}h`;
+    statusLabel = `Aberto agora · fecha às ${tenant.counterHours.endHour}h`;
   } else {
     const opening = nextChatOpening(tenant, now);
     const today = toIsoDate(now, TIME_ZONE);

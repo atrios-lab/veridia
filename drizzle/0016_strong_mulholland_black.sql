@@ -1,0 +1,2 @@
+DROP INDEX "appointments_tenant_date_slot_live";--> statement-breakpoint
+CREATE UNIQUE INDEX "appointments_tenant_date_slot_live" ON "appointments" USING btree ("tenant_slug","date","slot_time") WHERE "appointments"."status" <> 'cancelled';

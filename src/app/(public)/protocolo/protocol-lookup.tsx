@@ -7,16 +7,12 @@ import {
   DATA_RIGHTS_DEADLINE_DAYS,
   manifestationLabel,
 } from "@/core/request/channels.ts";
-import { formatShortDate } from "@/core/scheduling/calendar.ts";
 import { Icon } from "../_components/icon.tsx";
 import { CopyField } from "../_components/protocol-reveal.tsx";
 import { ProtocolSearchButton } from "../_components/protocol-search-button.tsx";
 import { type AttachState, attachSignedForm } from "../solicitar/actions.ts";
 import {
-  type AcceptProposalState,
-  type AppointmentDetail,
   type AttachDocumentState,
-  acceptProposedSlot,
   attachExtraDocument,
   type DataRightsDetail,
   type FulfillRequirementState,
@@ -119,8 +115,6 @@ export function ProtocolLookup({
 
   if (state.status === "success") {
     switch (state.kind) {
-      case "appointment":
-        return <AppointmentCard result={state} contacts={contacts} />;
       case "data-rights":
         return <DataRightsCard result={state} />;
       case "ombudsman":
@@ -152,9 +146,8 @@ export function ProtocolLookup({
             Consultar protocolo
           </h1>
           <p className="mt-3 max-w-xl leading-relaxed text-brand-muted md:max-w-[42ch]">
-            Campo único para pedido de serviço, agendamento, LGPD ou ouvidoria.
-            Sem a chave você vê o andamento; com ela, o detalhe completo e os
-            documentos.
+            Campo único para pedido de serviço, LGPD ou ouvidoria. Sem a chave
+            você vê o andamento; com ela, o detalhe completo e os documentos.
           </p>
         </div>
 
@@ -170,8 +163,8 @@ export function ProtocolLookup({
             Número do protocolo
           </label>
           <p className="mb-2.5 text-[12.5px] leading-relaxed text-brand-muted md:hidden">
-            Serve para qualquer número: pedido (REQ), agendamento (AGD), LGPD
-            (SOL) ou ouvidoria (OUV).
+            Serve para qualquer número: pedido (REQ), LGPD (SOL) ou ouvidoria
+            (OUV).
           </p>
           <div className="flex gap-1.5">
             <div className="flex flex-1 items-center gap-2 rounded-xl border border-brand-border bg-brand-surface px-3">
@@ -1287,250 +1280,6 @@ function Timeline({
         {title}
       </span>
       <ol className="mt-2.5 flex flex-col">{children}</ol>
-    </div>
-  );
-}
-
-function band(hour: number): string {
-  return `${hour}h às ${hour + 1}h`;
-}
-
-/**
- * The appointment. When the office proposed another band, the citizen's turn
- * is the loudest thing on the screen: nothing moves until they answer.
- */
-function AppointmentCard({
-  result,
-  contacts,
-}: {
-  result: AppointmentDetail;
-  contacts: Contacts;
-}) {
-  const [acceptState, acceptAction, accepting] = useActionState<
-    AcceptProposalState,
-    FormData
-  >(acceptProposedSlot, { status: "idle" });
-
-  const accepted = acceptState.status === "success" ? acceptState : undefined;
-  const isAccepted = Boolean(result.acceptedAt) || Boolean(accepted);
-  const hasProposal =
-    Boolean(result.proposedDate) && result.proposedSlotHour !== undefined;
-
-  const currentDate =
-    isAccepted && hasProposal ? (result.proposedDate as string) : result.date;
-  const currentHour =
-    isAccepted && hasProposal
-      ? (result.proposedSlotHour as number)
-      : result.slotHour;
-
-  return (
-    <div>
-      <DetailHeader
-        protocolNumber={result.protocolNumber}
-        subtitle="Agendamento de atendimento"
-        statusLabel={isAccepted ? "Confirmado" : result.statusLabel}
-      />
-
-      <div className="mt-3.5 md:grid md:grid-cols-[1.1fr_0.9fr] md:items-start md:gap-4">
-        <div className="flex flex-col gap-3.5">
-          {hasProposal && !isAccepted ? (
-            <div className="rounded-2xl border-[1.5px] border-brand-accent-line bg-brand-accent-soft p-4">
-              <div className="flex items-center gap-2.5">
-                <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-brand-accent">
-                  <Icon
-                    name="calendar"
-                    className="h-3.5 w-3.5 text-white"
-                    strokeWidth={2}
-                  />
-                </span>
-                <div>
-                  <div className="text-[10.5px] font-bold uppercase tracking-[0.14em] text-brand-accent">
-                    É a sua vez
-                  </div>
-                  <div className="font-serif text-[16.5px] font-semibold text-brand-primary">
-                    Confirme o novo horário
-                  </div>
-                </div>
-              </div>
-              <p className="mt-2.5 text-[12.5px] leading-relaxed text-brand-text-soft">
-                A faixa que você pediu fechou. A serventia propôs outra:
-              </p>
-              <div className="mt-2.5 flex gap-2">
-                <div className="flex-1 rounded-xl border border-brand-accent-line bg-brand-card px-3.5 py-2.5">
-                  <div className="text-[10px] uppercase tracking-[0.12em] text-brand-faint">
-                    você pediu
-                  </div>
-                  <div className="mt-0.5 text-[13px] font-bold text-brand-faint line-through">
-                    {formatShortDate(result.date)} · {band(result.slotHour)}
-                  </div>
-                </div>
-                <div className="flex-1 rounded-xl border-[1.5px] border-brand-primary bg-brand-card px-3.5 py-2.5">
-                  <div className="text-[10px] font-bold uppercase tracking-[0.12em] text-brand-accent">
-                    proposta
-                  </div>
-                  <div className="mt-0.5 text-[13px] font-bold text-brand-primary">
-                    {formatShortDate(result.proposedDate as string)} ·{" "}
-                    {band(result.proposedSlotHour as number)}
-                  </div>
-                </div>
-              </div>
-              <form action={acceptAction} className="mt-3 flex gap-2">
-                <input
-                  type="hidden"
-                  name="protocolNumber"
-                  value={result.protocolNumber}
-                />
-                <input
-                  type="hidden"
-                  name="accessKey"
-                  value={result.accessKey}
-                />
-                <button
-                  type="submit"
-                  disabled={accepting}
-                  className="btn btn-primary btn-lg flex-1"
-                >
-                  {accepting
-                    ? "Confirmando..."
-                    : `Aceitar ${formatShortDate(result.proposedDate as string)}`}
-                </button>
-                <a
-                  href={`https://wa.me/55${digits(contacts.whatsapp)}`}
-                  className="btn btn-secondary btn-lg shrink-0"
-                >
-                  Pedir outro
-                </a>
-              </form>
-              {acceptState.status === "error" && (
-                <p
-                  role="alert"
-                  className="mt-2 text-[12px] font-semibold text-brand-alert"
-                >
-                  {acceptState.message}
-                </p>
-              )}
-              <p className="mt-2 text-[11px] text-brand-faint">
-                Sem resposta em 2 dias úteis, a proposta expira e o pedido volta
-                para você escolher.
-              </p>
-            </div>
-          ) : (
-            <div className="flex items-start gap-2.5 rounded-2xl border border-brand-border bg-brand-card p-4">
-              <Icon
-                name="calendar"
-                className="mt-0.5 h-4 w-4 shrink-0 text-brand-accent"
-                strokeWidth={1.9}
-              />
-              <p className="text-[12.5px] leading-relaxed text-brand-text-soft">
-                <strong className="text-brand-primary">
-                  {formatShortDate(currentDate)} · {band(currentHour)}
-                </strong>
-                {isAccepted
-                  ? ". Horário confirmado: compareça com documento com foto."
-                  : ". A serventia confirma pelo contato informado, ou propõe outro horário aqui."}
-              </p>
-            </div>
-          )}
-
-          <Timeline>
-            <TimelineStep
-              done
-              label="Pedido de horário recebido"
-              detail={`${formatDateTime(result.createdAt)} · ${formatShortDate(result.date)}, ${band(result.slotHour)}`}
-              lineBelow={hasProposal || isAccepted}
-            />
-            {hasProposal && (
-              <TimelineStep
-                done
-                label={`Serventia propôs ${formatShortDate(result.proposedDate as string)}, ${band(result.proposedSlotHour as number)}`}
-                detail={
-                  result.proposedAt
-                    ? formatDateTime(result.proposedAt)
-                    : undefined
-                }
-                lineBelow
-              />
-            )}
-            {isAccepted ? (
-              <TimelineStep
-                done
-                label="Horário confirmado por você"
-                detail={
-                  result.acceptedAt
-                    ? formatDateTime(result.acceptedAt)
-                    : "agora"
-                }
-              />
-            ) : (
-              <TimelineStep
-                label={
-                  hasProposal
-                    ? "Aguardando sua confirmação"
-                    : "Aguardando confirmação da serventia"
-                }
-                detail={
-                  hasProposal ? "os botões acima resolvem isto" : undefined
-                }
-              />
-            )}
-          </Timeline>
-        </div>
-
-        <div className="mt-3.5 flex flex-col gap-3.5 md:mt-0">
-          {result.subject && (
-            <div className="rounded-2xl border border-brand-border bg-brand-card p-4">
-              <span className="text-[11px] font-bold uppercase tracking-[0.16em] text-brand-accent">
-                Sobre o atendimento
-              </span>
-              <p className="mt-2 text-[12.5px] leading-relaxed text-brand-text-soft">
-                {result.subject}
-              </p>
-            </div>
-          )}
-
-          {/* POST, not a link: the key would otherwise sit in the address bar
-              and in every access log on the way. */}
-          <form
-            action="/agendar/agenda"
-            method="post"
-            className="flex items-center gap-2.5 rounded-2xl border border-brand-border bg-brand-card p-4"
-          >
-            <Icon
-              name="calendar"
-              className="h-4.5 w-4.5 shrink-0 text-brand-accent"
-            />
-            <span className="flex-1 text-[13px] font-semibold text-brand-primary">
-              Adicionar à agenda
-            </span>
-            <input
-              type="hidden"
-              name="protocolNumber"
-              value={result.protocolNumber}
-            />
-            <input type="hidden" name="accessKey" value={result.accessKey} />
-            <button type="submit" className="btn btn-ghost btn-sm shrink-0">
-              Baixar
-            </button>
-          </form>
-
-          <div className="flex items-center gap-2.5 rounded-2xl border border-brand-border bg-brand-card p-4">
-            <span className="flex-1 text-[12.5px] text-brand-text-soft">
-              Nenhum desses dias serve?
-            </span>
-            <a
-              href={`https://wa.me/55${digits(contacts.whatsapp)}`}
-              className="btn btn-secondary btn-sm shrink-0"
-            >
-              <Icon name="chat" className="h-3.5 w-3.5" strokeWidth={1.8} />
-              WhatsApp
-            </a>
-          </div>
-        </div>
-      </div>
-
-      <Link href="/protocolo" className="btn btn-ghost btn-sm mt-4">
-        Nova consulta
-      </Link>
     </div>
   );
 }

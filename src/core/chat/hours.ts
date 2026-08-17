@@ -26,10 +26,11 @@ function hourInZone(instant: Date, timeZone: string): number {
 /**
  * Whether the chat is inside the office's attendance window right now: a
  * business day (see `isBusinessDay`, weekday and not a national holiday) and
- * the wall-clock hour falls in `tenant.scheduling`, the same window the
- * appointment page already offers. Chat hours are not a separate setting —
- * see support-chat spec, "Horário do chat segue o horário de atendimento
- * configurado".
+ * the wall-clock hour falls in `tenant.counterHours`, the hours the counter
+ * itself keeps. Chat hours are not a separate setting, see support-chat
+ * spec, "Horário do chat segue o horário de atendimento configurado". Note
+ * this is the counter's window, not the appointment grid: an office open
+ * every day may receive by appointment on Tuesdays only.
  */
 export function isWithinChatHours(
   tenant: Tenant,
@@ -40,7 +41,7 @@ export function isWithinChatHours(
   if (!isBusinessDay(day)) return false;
   const hour = hourInZone(now, timeZone);
   return (
-    hour >= tenant.scheduling.startHour && hour < tenant.scheduling.endHour
+    hour >= tenant.counterHours.startHour && hour < tenant.counterHours.endHour
   );
 }
 
@@ -56,9 +57,9 @@ export function nextChatOpening(
 ): { day: IsoDate; hour: number } {
   const today = toIsoDate(now, timeZone);
   const hour = hourInZone(now, timeZone);
-  if (isBusinessDay(today) && hour < tenant.scheduling.startHour) {
-    return { day: today, hour: tenant.scheduling.startHour };
+  if (isBusinessDay(today) && hour < tenant.counterHours.startHour) {
+    return { day: today, hour: tenant.counterHours.startHour };
   }
   const [nextDay] = nextBusinessDays(addDays(today, 1), 1);
-  return { day: nextDay, hour: tenant.scheduling.startHour };
+  return { day: nextDay, hour: tenant.counterHours.startHour };
 }

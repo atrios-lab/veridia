@@ -1,53 +1,39 @@
-import { parseDetails } from "@/core/request/kinds.ts";
+import { slotEndTime } from "@/core/scheduling/agenda.ts";
 import { buildCalendarEvent } from "@/core/scheduling/ics.ts";
-import { findByProtocolWithKey } from "@/lib/service-request.ts";
+import { findByCancelToken } from "@/lib/appointments.ts";
 import { getTenant, OFFICE_TIME_ZONE } from "@/lib/tenant.ts";
 
 export const runtime = "nodejs";
 
 /**
- * POST, not GET: the form carries the access key, and a key in the query
- * string ends up in the address bar, in the browser history and in every log
- * between here and the citizen.
+ * POST, not GET: the form carries the appointment's token, and a token in the
+ * query string ends up in the address bar, in the browser history and in every
+ * log between here and the citizen. The same file also travels attached to
+ * the confirmation e-mail, where a link is unavoidable.
  */
 export async function POST(request: Request): Promise<Response> {
   const tenant = await getTenant();
   const form = await request.formData();
-  const protocolNumber = String(form.get("protocolNumber") ?? "");
-  const accessKey = String(form.get("accessKey") ?? "");
+  const token = String(form.get("token") ?? "");
 
-  // One answer for "no such protocol" and for "wrong key". Telling them apart
-  // would let someone confirm a protocol exists by guessing numbers.
-  const stored = await findByProtocolWithKey(
-    tenant.slug,
-    protocolNumber,
-    accessKey,
-  );
-  if (!stored || stored.kind !== "appointment") {
+  const appointment = token
+    ? await findByCancelToken(tenant.slug, token)
+    : undefined;
+  if (!appointment) {
     return new Response("Não encontrado", { status: 404 });
   }
 
-  const details = parseDetails("appointment", stored.details);
-  // The office may have proposed another band and the citizen accepted it:
-  // the calendar has to carry the hour that is actually valid.
-  const date = details.acceptedAt
-    ? (details.proposedDate ?? details.date)
-    : details.date;
-  const hour = details.acceptedAt
-    ? (details.proposedSlotHour ?? details.slotHour)
-    : details.slotHour;
-
   const ics = buildCalendarEvent(
     {
-      uid: `${stored.protocolNumber}@${tenant.slug}`,
-      date,
-      startHour: hour,
-      endHour: hour + 1,
+      uid: `agendamento-${appointment.id}@${tenant.slug}`,
+      date: appointment.date,
+      startTime: appointment.slotTime,
+      endTime: slotEndTime(appointment.slotTime),
       title: `Atendimento no ${tenant.name}`,
       description:
-        `Protocolo ${stored.protocolNumber}. ` +
-        "Leve um documento com foto. A serventia confirma o horário pelo contato informado.",
-      location: `${tenant.name}, ${tenant.subtitle}`,
+        `${appointment.serviceLabel} · ${appointment.mode}. ` +
+        "Leve um documento com foto.",
+      location: tenant.address ?? `${tenant.name}, ${tenant.subtitle}`,
       stamp: new Date(),
     },
     OFFICE_TIME_ZONE,
@@ -56,7 +42,7 @@ export async function POST(request: Request): Promise<Response> {
   return new Response(ics, {
     headers: {
       "Content-Type": "text/calendar; charset=utf-8",
-      "Content-Disposition": `attachment; filename="agendamento-${stored.protocolNumber}.ics"`,
+      "Content-Disposition": `attachment; filename="agendamento-${appointment.date}.ics"`,
       // Personal data: no shared cache may keep a copy.
       "Cache-Control": "private, no-store",
     },

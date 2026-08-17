@@ -20,7 +20,7 @@ export const tabelionatoAurora: Tenant = parseTenant({
     email: "contato@tabelionatoaurora.com.br",
   },
   openingHours: "Segunda a sexta, das 8h às 17h",
-  scheduling: { startHour: 8, endHour: 17, capacityPerSlot: 3 },
+  counterHours: { startHour: 8, endHour: 17 },
   owner: {
     name: "Antônio Bezerra da Silva",
     status: "interino",

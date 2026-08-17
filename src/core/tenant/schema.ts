@@ -69,21 +69,24 @@ export const TenantSchema = z.object({
     email: z.email("Informe um e-mail válido."),
   }),
   openingHours: z.string().min(1, "Informe o horário de atendimento."),
-  // The same counter hours as the sentence above, in numbers, because the
-  // appointment bands need arithmetic and reading a number out of Portuguese
-  // prose breaks on the first office that writes it differently. The sentence
-  // stays: it is what the citizen reads.
-  scheduling: z
+  // The same counter hours as the sentence above, in numbers, because reading
+  // a number out of Portuguese prose breaks on the first office that writes it
+  // differently. The sentence stays: it is what the citizen reads.
+  //
+  // This is when the counter is open, which is what the chat's availability
+  // and the "Aberto agora" line read. It is NOT the appointment grid: the days
+  // and times the office receives by appointment are configured in the panel
+  // (see src/core/scheduling/agenda.ts), and an office open every day may well
+  // schedule on Tuesdays only.
+  counterHours: z
     .object({
       startHour: z.number().int().min(0).max(23).default(8),
       endHour: z.number().int().min(1).max(24).default(14),
-      // How many appointments the office takes inside one hour long band.
-      capacityPerSlot: z.number().int().min(1).default(2),
     })
     .refine((s) => s.endHour > s.startHour, {
       message: "A hora de encerramento tem de ser depois da de abertura.",
     })
-    .default({ startHour: 8, endHour: 14, capacityPerSlot: 2 }),
+    .default({ startHour: 8, endHour: 14 }),
   owner: z.object({
     name: z.string().min(1),
     status: OwnerStatusSchema,
