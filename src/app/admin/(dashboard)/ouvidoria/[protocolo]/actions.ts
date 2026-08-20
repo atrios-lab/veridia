@@ -2,7 +2,9 @@
 
 import { revalidatePath } from "next/cache";
 import { can } from "@/core/auth/roles.ts";
+import { notifyCitizen } from "@/lib/email/service-request.ts";
 import {
+  findById,
   respondToRecord,
   saveDraftReply,
   saveInternalNote as saveInternalNoteRecord,
@@ -49,6 +51,11 @@ export async function respondManifestation(
 
   const tenant = await getTenant();
   try {
+    const request = await findById(tenant.slug, requestId);
+    if (!request) {
+      return { status: "error", message: "Manifestação não encontrada." };
+    }
+
     await respondToRecord(
       tenant.slug,
       requestId,
@@ -57,6 +64,19 @@ export async function respondManifestation(
       "answered",
       session.user.id,
     );
+
+    // No check for anonymity here on purpose: `notifyCitizen` already gives up
+    // silently on a null contact and on a telephone. A manifestation with
+    // nobody to write to is what the channel promises on its first screen, not
+    // a delivery that failed, and logging it would fill the log with noise
+    // about people exercising a right.
+    void notifyCitizen({
+      tenant,
+      contact: request.contact,
+      protocolNumber: request.protocolNumber,
+      subject: "Manifestação respondida",
+      body: "A ouvidoria respondeu à sua manifestação. Consulte o registro com a sua chave de acesso para ler a resposta.",
+    });
   } catch (error) {
     console.error("ouvidoria.respond", error);
     return { status: "error", message: GENERIC_ERROR };

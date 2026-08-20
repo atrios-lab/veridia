@@ -17,6 +17,7 @@ import {
 import {
   formatCpf,
   formatPhone,
+  isEmailContact,
   isValidContact,
   isValidCpf,
   looksLikeBot,
@@ -119,6 +120,24 @@ test("contact accepts an e-mail or a phone with area code", () => {
   assert.ok(isValidContact("8440420940"));
   assert.equal(isValidContact("maria"), false);
   assert.equal(isValidContact("99999-0000"), false);
+});
+
+test("only an e-mail contact can be written to", () => {
+  // The gate every notice passes through: the office answers a requerimento or
+  // a manifestação and the citizen is written to only if there is a mailbox.
+  // A telephone is a valid contact and not somewhere to send mail, and an
+  // anonymous manifestação has no contact at all: both are ordinary states of
+  // the channels, never a delivery that failed.
+  assert.ok(isEmailContact("maria@example.com"));
+  assert.ok(isEmailContact("  maria@example.com  "), "espaços são aparados");
+
+  assert.equal(isEmailContact("(84) 99999-0000"), false);
+  assert.equal(isEmailContact("8440420940"), false);
+  assert.equal(isEmailContact(""), false);
+  // Conservative on purpose: anything that does not clearly match is treated
+  // as "not an e-mail", so a notice never fires at a malformed address.
+  assert.equal(isEmailContact("maria@"), false);
+  assert.equal(isEmailContact("maria arroba exemplo.com"), false);
 });
 
 test("a complete request is accepted and trimmed", () => {
