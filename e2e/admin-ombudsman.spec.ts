@@ -8,7 +8,12 @@ const PORT = process.env.PORT ?? "3000";
 const baseURL = `http://marinho.localhost:${PORT}`;
 const IDENTIFIED = "OUV.2098.000001";
 const ANONYMOUS = "OUV.2098.000002";
+// Identificada, mas alcançável só por telefone: a serventia responde e o
+// manifestante lê pela consulta, sem aviso por e-mail. Ver design.md de
+// aviso-de-resposta, "O que a verificação alcança".
+const BY_PHONE = "OUV.2098.000003";
 const ACCESS_KEY = "TEST-OUVK-0001";
+const PHONE_ACCESS_KEY = "TEST-OUVK-0003";
 
 test("a visitor with no session never reaches the queue", async ({ page }) => {
   await page.goto(`${baseURL}/admin/ouvidoria`);
@@ -60,6 +65,18 @@ test.describe("fila e detalhe de manifestações", () => {
          'new', '{"manifestationType":"suggestion","anonymous":true,"confidential":false}'::jsonb)
       on conflict do nothing
     `;
+    await sql`
+      insert into service_requests
+        (tenant_slug, kind, protocol_year, protocol_sequence, protocol_number,
+         applicant_name, contact, description, access_key_hash, status, details)
+      values
+        ('cartorio-marinho', 'ombudsman', 2098, 3, ${BY_PHONE},
+         'Raimundo Nonato Alves', '(84) 98888-1212',
+         'O atendimento por telefone cai antes de alguém atender.',
+         ${hashAccessKey(PHONE_ACCESS_KEY)}, 'new',
+         '{"manifestationType":"complaint","anonymous":false,"confidential":false}'::jsonb)
+      on conflict do nothing
+    `;
   });
 
   test.afterEach(async () => {
@@ -104,6 +121,34 @@ test.describe("fila e detalhe de manifestações", () => {
     await page.getByRole("button", { name: "Ver detalhes" }).click();
     await expect(
       page.getByText("Apuramos o ocorrido: reforçamos a escala do balcão."),
+    ).toBeVisible();
+  });
+
+  test("a manifestation reachable only by phone is answered the same way", async ({
+    page,
+  }) => {
+    await signIn(page);
+    await page.goto(
+      `${baseURL}/admin/ouvidoria/${encodeURIComponent(BY_PHONE)}`,
+    );
+
+    // Há contato, então o formulário aparece: quem só deixou telefone é
+    // respondido igual, e a serventia o alcança pelo telefone que ele deixou.
+    await expect(page.getByText("(84) 98888-1212")).toBeVisible();
+    await page
+      .getByPlaceholder(/Escreva a apuração/)
+      .fill("Verificamos a linha e trocamos o aparelho da recepção.");
+    await page
+      .getByRole("button", { name: "Enviar resposta e concluir" })
+      .click();
+    await expect(page.getByText("Resposta enviada")).toBeVisible();
+
+    // A resposta chega pela consulta, que é o canal que não depende de e-mail.
+    await page.goto(`${baseURL}/protocolo?numero=${BY_PHONE}`);
+    await page.getByPlaceholder("Ex.: BBM8-6XVB-8PUK").fill(PHONE_ACCESS_KEY);
+    await page.getByRole("button", { name: "Ver detalhes" }).click();
+    await expect(
+      page.getByText("Verificamos a linha e trocamos o aparelho da recepção."),
     ).toBeVisible();
   });
 

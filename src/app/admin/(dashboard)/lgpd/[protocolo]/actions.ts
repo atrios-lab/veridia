@@ -2,10 +2,12 @@
 
 import { revalidatePath } from "next/cache";
 import { can } from "@/core/auth/roles.ts";
+import { notifyCitizen } from "@/lib/email/service-request.ts";
 import {
   AttachmentInUseError,
   attachToRequest,
   deleteAttachment,
+  findById,
   respondToRecord,
   saveDraftReply,
 } from "@/lib/service-request.ts";
@@ -56,6 +58,14 @@ export async function respondDataRights(
 
   const tenant = await getTenant();
   try {
+    // Read before writing: the notice below needs the holder's e-mail and the
+    // protocol number, and a `requestId` that matches nothing should be
+    // refused here rather than written into silently.
+    const request = await findById(tenant.slug, requestId);
+    if (!request) {
+      return { status: "error", message: "Requerimento não encontrado." };
+    }
+
     const files = formData
       .getAll("relatorio")
       .filter((f): f is File => f instanceof File);
@@ -71,6 +81,17 @@ export async function respondDataRights(
       "answered",
       session.user.id,
     );
+
+    // The answer itself stays behind the key: a data rights requerimento
+    // carries the holder's own personal data, and e-mail is the channel the
+    // office does not control. Best effort, like every other notice here.
+    void notifyCitizen({
+      tenant,
+      contact: request.contact,
+      protocolNumber: request.protocolNumber,
+      subject: "Requerimento respondido",
+      body: "O Encarregado respondeu ao seu requerimento. Consulte o protocolo com a sua chave de acesso para ler a resposta.",
+    });
   } catch (error) {
     if (error instanceof AttachmentError) {
       return { status: "error", message: error.message };
