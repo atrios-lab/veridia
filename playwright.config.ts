@@ -7,14 +7,17 @@ export default defineConfig({
   fullyParallel: true,
   forbidOnly: !!process.env.CI,
   retries: process.env.CI ? 1 : 0,
-  // A shared two-vCPU runner falls behind a fully parallel suite hitting the
-  // same Next server: the failures were never assertions being wrong, they
-  // were net::ERR_ABORTED and 30s timeouts on ordinary pages, which is what
-  // contention looks like, not a bug. Fewer workers means less racing for the
-  // one server; a longer action timeout gives a slow response room to land
-  // instead of being cut off mid-navigation. Local runs keep their own pace.
+  // Two vCPUs did not turn out to be the story: the 2-worker cap changed
+  // nothing (still 6 failed, still ~7 minutes), and the failures themselves
+  // read "Timeout: 5000ms", which is `expect()`'s own poll timeout, a clock
+  // this file never touched. Fifteen retries in one run mostly succeeded on
+  // their second attempt, which is what a too-tight budget looks like under
+  // a slower machine, not exhaustion: exhaustion would keep failing on retry.
+  // Local runs never miss the 5s default because the machine answers fast
+  // enough that the assertion never needs to poll past the first tick.
   workers: process.env.CI ? 2 : undefined,
   reporter: process.env.CI ? "github" : "list",
+  expect: { timeout: process.env.CI ? 15_000 : undefined },
   use: {
     trace: "on-first-retry",
     actionTimeout: process.env.CI ? 15_000 : undefined,
