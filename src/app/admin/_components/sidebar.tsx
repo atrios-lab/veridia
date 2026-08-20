@@ -114,7 +114,7 @@ export function AdminSidebar({
             {user.name?.trim() || user.email}
           </p>
           {/* A div, not a p: the sign out form lives here, and HTML does not
-              allow a form inside a paragraph — React hydrates it wrong. */}
+              allow a form inside a paragraph: React hydrates it wrong. */}
           <div className="flex items-center gap-1.5 text-[11px] text-admin-on-dark-subtitle">
             <span>{ROLE_LABELS[user.role as Role] ?? "Painel"}</span>
             <span aria-hidden="true">·</span>

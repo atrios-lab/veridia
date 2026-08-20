@@ -9,7 +9,7 @@ import postgres from "postgres";
 const PORT = process.env.PORT ?? "3000";
 const baseURL = `http://marinho.localhost:${PORT}`;
 
-test.describe("configurações — aba Serventia", () => {
+test.describe("configurações: aba Serventia", () => {
   // Serial: every test in here writes and clears the one override row for the
   // pilot office. In parallel they read each other's half-finished edits, and
   // the failure looks like a bug in the screen instead of in the fixture.

@@ -71,7 +71,7 @@ test("the receipt carries the pair that opens the request", () => {
 
 test("the key is nowhere in the file that gets signed", () => {
   // The whole point of the split: signing at Gov.br signs the entire PDF, and
-  // that PDF comes back to the office. It must not carry the credential — not
+  // that PDF comes back to the office. It must not carry the credential: not
   // on any page, not in any block.
   const document = buildRequerimento(cartorioMarinho, marriage, data);
   const signed = everything(document);

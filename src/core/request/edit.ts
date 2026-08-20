@@ -5,7 +5,7 @@ import { isValidCpf } from "./form.ts";
 /**
  * What the counter may correct on a request that already exists.
  *
- * Not the public form's schema: that one validates what a citizen submits —
+ * Not the public form's schema: that one validates what a citizen submits,
  * acceptances, honeypot, a description gated by the act. This is an operator
  * fixing loose fields on something already protocolled, and the two are
  * different conversations.

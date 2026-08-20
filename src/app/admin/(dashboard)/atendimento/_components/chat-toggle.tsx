@@ -5,7 +5,7 @@ import { toast } from "sonner";
 import { type ActionState, toggleChatEnabledAction } from "../actions.ts";
 
 /**
- * "Disponível para o chat", restricted to `chat.settings` — a `staff`
+ * "Disponível para o chat", restricted to `chat.settings`: a `staff`
  * session sees the same pill `AdminPageHeader` already shows everywhere,
  * read-only, never the switch (see admin-support-chat spec, "Sem a
  * permissão").

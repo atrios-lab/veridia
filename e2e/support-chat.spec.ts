@@ -3,7 +3,7 @@ import postgres from "postgres";
 
 // Entrega 8c/8d: o widget do cidadão. A janela de horário depende do
 // relógio real no momento do teste (tenant.scheduling é config estática,
-// sem como injetar "agora" num servidor de verdade) — a cobertura de "fora
+// sem como injetar "agora" num servidor de verdade): a cobertura de "fora
 // do horário" fica em src/core/chat/hours.test.ts, que injeta o `Date`; aqui
 // só os cenários que não dependem de que horas são agora.
 

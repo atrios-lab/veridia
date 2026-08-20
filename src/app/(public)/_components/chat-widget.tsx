@@ -108,7 +108,7 @@ export function ChatWidget({ tenant }: { tenant: Tenant }) {
   const lastMessageAt = useRef<string | undefined>(undefined);
 
   // Restores a conversation the citizen already had, from a non-sensitive id
-  // kept in localStorage — the actual proof of ownership is the httpOnly
+  // kept in localStorage: the actual proof of ownership is the httpOnly
   // cookie the server checks, this is only a pointer to poll.
   useEffect(() => {
     const stored = window.localStorage.getItem(CONVERSATION_ID_STORAGE_KEY);
@@ -167,7 +167,7 @@ export function ChatWidget({ tenant }: { tenant: Tenant }) {
       lastMessageAt.current = data.messages.at(-1).createdAt;
       // The `after` cursor is a millisecond ISO string round-tripped from a
       // microsecond-precision Postgres timestamp, so it can fail to exclude
-      // the very row it came from — the same message would then come back
+      // the very row it came from: the same message would then come back
       // on every poll. De-duping by id here is what actually guarantees no
       // repeats, regardless of that precision loss.
       setMessages((prev) => {
@@ -184,7 +184,7 @@ export function ChatWidget({ tenant }: { tenant: Tenant }) {
       );
     }
     // Only jumps to the rating screen when the citizen already has the
-    // conversation open — a conversation closed in the background (staff, or
+    // conversation open: a conversation closed in the background (staff, or
     // inactivity) while the panel itself is closed should raise the unread
     // badge above, not pop the panel open uninvited.
     if (
@@ -223,7 +223,7 @@ export function ChatWidget({ tenant }: { tenant: Tenant }) {
   }
 
   // Contract: any page can open the widget by dispatching this event, without
-  // importing the widget itself — used by the Contato page's "Atendimento
+  // importing the widget itself: used by the Contato page's "Atendimento
   // online" button.
   useEffect(() => {
     function handleOpenChat() {
@@ -423,7 +423,7 @@ function PrechatForm({
       <p className="text-[13.5px] text-brand-muted">
         Como podemos ajudar? Preencha para falar com a equipe.
       </p>
-      {/* Invisible to a person, filled only by a script — see support-chat
+      {/* Invisible to a person, filled only by a script: see support-chat
           spec, "Pré-chat obrigatório antes da fila". */}
       <input
         type="text"
@@ -568,7 +568,7 @@ function ConversationView({
 }) {
   // The conversation itself only lands a moment after the widget opens with
   // an id remembered from a previous visit (see the `refreshConversation`
-  // effect above) — until then there is nothing to show but a connecting
+  // effect above): until then there is nothing to show but a connecting
   // state, not an empty chat.
   if (!conversation) {
     return (

@@ -133,7 +133,7 @@ export const serviceRequests = pgTable(
     officeRepliedAt: timestamp("office_replied_at", { withTimezone: true }),
     status: text("status").notNull().default("new"),
     // Null until the office informs it. A service request is never priced by
-    // the citizen's own submission — only the operator, working the request,
+    // the citizen's own submission: only the operator, working the request,
     // knows what band or table applies.
     amountCents: integer("amount_cents"),
     createdAt: timestamp("created_at", { withTimezone: true })
@@ -216,8 +216,8 @@ export const serviceRequestAttachments = pgTable(
 /**
  * A requirement (exigência) the office raises on a service request: something
  * missing before the request can move forward. It has its own row, not a
- * field in `details`, because both sides write it — the office registers it,
- * the citizen resolves it from the protocol consult — and a JSON blob shared
+ * field in `details`, because both sides write it (the office registers it,
+ * the citizen resolves it from the protocol consult) and a JSON blob shared
  * by two writers is how one overwrites the other.
  */
 export const serviceRequestRequirements = pgTable(
@@ -291,11 +291,11 @@ export const serviceRequestRequirementMessages = pgTable(
 /**
  * What a serventia publishes to the "Proclamas e avisos" home section:
  * marriage banns, a general notice, or a formal notice. `publishAt` and
- * `expireAt` are calendar dates, not instants — a publication is on the site
+ * `expireAt` are calendar dates, not instants: a publication is on the site
  * for whole days, read on the wall calendar of the office, same discipline as
  * `IsoDate` in `src/core/scheduling/calendar.ts`. Null `publishAt` is a
  * draft; state (draft/scheduled/live/archived) is never stored, only
- * computed from these dates and `archivedAt` — see
+ * computed from these dates and `archivedAt`: see
  * `src/core/publications/state.ts`.
  */
 export const officePublications = pgTable(
@@ -312,7 +312,7 @@ export const officePublications = pgTable(
     body: text("body").notNull(),
     // The signed edital itself, optional. Same column shape as the chat
     // message attachment: the file hangs off the row it belongs to, and the
-    // body stays required — the document is the proof, not the reading.
+    // body stays required: the document is the proof, not the reading.
     attachmentStoredName: text("attachment_stored_name"),
     attachmentDisplayName: text("attachment_display_name"),
     attachmentPath: text("attachment_path"),
@@ -341,17 +341,17 @@ export const officePublications = pgTable(
 
 /**
  * A live conversation between a citizen and the office's support chat.
- * Unlike the four kinds in `service_requests` — one submission, one eventual
- * reply — a conversation has many messages, an attendant that can change
+ * Unlike the four kinds in `service_requests` (one submission, one eventual
+ * reply), a conversation has many messages, an attendant that can change
  * mid-life (transfer), and both sides poll it at once. That shape is why it
- * is its own table instead of a fifth request kind — see
+ * is its own table instead of a fifth request kind: see
  * add-support-chat/design.md.
  *
  * There is deliberately no protocol number and no access key here: the
  * citizen only needs this to survive a reload of the same browser tab, not
  * to prove ownership from another device later (see design.md, "Sem
  * protocolo nem chave de acesso para a conversa"). The citizen's own token
- * is never stored — only its hash, in `chat_citizen_token_hash`, read the
+ * is never stored: only its hash, in `chat_citizen_token_hash`, read the
  * same way `access_key_hash` already is for the other four channels.
  */
 export const chatConversations = pgTable(
@@ -364,11 +364,11 @@ export const chatConversations = pgTable(
     citizenContact: text("citizen_contact").notNull(),
     subject: text("subject").notNull(),
     // Hash of the opaque cookie token that lets the citizen's browser find
-    // this conversation again — same discipline as `access_key_hash`
+    // this conversation again: same discipline as `access_key_hash`
     // elsewhere: the value itself never touches the database.
     citizenTokenHash: text("citizen_token_hash").notNull(),
     // What the citizen typed in the pre-chat, kept verbatim even if it
-    // matches nothing — the attendant still sees what was typed.
+    // matches nothing: the attendant still sees what was typed.
     informedProtocolNumber: text("informed_protocol_number"),
     // Set only when informedProtocolNumber matches a real record.
     matchedRequestId: uuid("matched_request_id").references(
@@ -381,7 +381,7 @@ export const chatConversations = pgTable(
       onDelete: "set null",
     }),
     // Copied from the attendant's own `chat_sector` at the moment they take
-    // the conversation, not read live from `user` — a transcript has to keep
+    // the conversation, not read live from `user`: a transcript has to keep
     // saying "Registro Civil" even if that attendant's sector changes later
     // (same reasoning as `service_requests.attribution`).
     assignedSector: text("assigned_sector"),
@@ -419,7 +419,7 @@ export const chatConversations = pgTable(
 
 /**
  * One message, note or system event inside a conversation. `authorType`
- * carries `note` as its own value rather than a flag on top of `staff` — a
+ * carries `note` as its own value rather than a flag on top of `staff`: a
  * note must never reach the citizen, and a boolean next to a shared type is
  * the kind of field a query forgets to filter (see design.md).
  *
@@ -457,12 +457,12 @@ export const chatMessages = pgTable(
 );
 
 /**
- * A public transparency document — a fee table, a cost table, a notice — the
+ * A public transparency document, a fee table, a cost table, a notice, the
  * office publishes to meet the Lei de Acesso à Informação. Same file columns
  * as `office_publications` (the document is the point, so it is required, not
  * optional here). What differs: no body, no dates. State is stored, because
  * there is nothing to derive it from, and `position` is explicit because the
- * order on the panel is the order on the site — see add-transparency-module.
+ * order on the panel is the order on the site: see add-transparency-module.
  */
 export const transparencyDocuments = pgTable(
   "transparency_documents",
@@ -471,15 +471,15 @@ export const transparencyDocuments = pgTable(
     tenantSlug,
     category: text("category").notNull(),
     title: text("title").notNull(),
-    // Free text: "2026" or "vigência 19/03/2026". Never sorted on — the order
-    // is `position` — so its shape does not matter to anything but the reader.
+    // Free text: "2026" or "vigência 19/03/2026". Never sorted on, the order
+    // is `position`, so its shape does not matter to anything but the reader.
     yearLabel: text("year_label").notNull(),
     fileStoredName: text("file_stored_name").notNull(),
     fileDisplayName: text("file_display_name").notNull(),
     filePath: text("file_path").notNull(),
     fileMimeType: text("file_mime_type").notNull(),
     fileSizeBytes: integer("file_size_bytes").notNull(),
-    // "draft" | "published" | "unpublished" — see core/transparency/documents.
+    // "draft" | "published" | "unpublished": see core/transparency/documents.
     status: text("status").notNull().default("draft"),
     // The rank in the list, ascending. Moving swaps two rows' positions.
     position: integer("position").notNull(),
@@ -572,7 +572,7 @@ export const appointments = pgTable(
  * (core/transparency/bulletin). Money is centavos, in bigint: a busy month in
  * centavos passes the 2.1-billion ceiling of a 32-bit integer.
  *
- * One bulletin per (office, month) — the unique index is what makes
+ * One bulletin per (office, month): the unique index is what makes
  * "publishing again replaces the month's bulletin" an upsert the database
  * enforces, not a race the application hopes to win.
  */
@@ -589,7 +589,7 @@ export const transparencyBulletins = pgTable(
     }).notNull(),
     taxesPaidCents: bigint("taxes_paid_cents", { mode: "number" }).notNull(),
     expensesCents: bigint("expenses_cents", { mode: "number" }).notNull(),
-    // "preliminary" | "consolidated" — see core/transparency/bulletin.
+    // "preliminary" | "consolidated": see core/transparency/bulletin.
     status: text("status").notNull().default("preliminary"),
     createdBy: text("created_by"),
     createdAt: timestamp("created_at", { withTimezone: true })

@@ -68,7 +68,7 @@ export default async function PrivacyPolicyPage() {
           </h2>
           <p>
             Atos registrais (registros, averbações, certidões) têm guarda
-            obrigatória por prazo indeterminado, por força de lei — a exclusão
+            obrigatória por prazo indeterminado, por força de lei: a exclusão
             desses dados não é possível. Os demais dados, como manifestações de
             ouvidoria e conversas de atendimento, são mantidos pelo prazo
             necessário à finalidade e à guarda legal aplicável.

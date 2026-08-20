@@ -1,7 +1,7 @@
 import { PIX_CITY_MAX_LENGTH } from "../tenant/pix.ts";
 
 /**
- * Pix EMV ("Copia e Cola") static charge payload — the Central Bank's BR
+ * Pix EMV ("Copia e Cola") static charge payload: the Central Bank's BR
  * Code format, written by hand with the same discipline as
  * `../tenant/pix.ts`: a short, stable public standard that does not change,
  * not worth a dependency for.
@@ -20,7 +20,7 @@ function tlv(id: string, value: string): string {
 
 /**
  * CRC16-CCITT (polynomial `0x1021`, initial value `0xFFFF`, no reflection,
- * no final XOR) — the checksum the Pix payload standard requires in its
+ * no final XOR): the checksum the Pix payload standard requires in its
  * last field, computed over everything before it (including the `6304`
  * field id and length of the CRC field itself).
  */
@@ -63,7 +63,7 @@ export function deriveTxId(protocolNumber: string): string {
 
 /**
  * Whether a charge can be built at all. Needs the amount, the office's Pix
- * key and its city all at once — missing any one of the three means "no
+ * key and its city all at once: missing any one of the three means "no
  * charge available", never a broken or partial payload. Pure and separate
  * from `buildPixCharge` so callers (and tests) can decide whether to render
  * a QR at all without going near the rendering dependency.
@@ -79,9 +79,9 @@ export function canBuildPixCharge(input: {
 }
 
 export interface PixChargeInput {
-  /** Already normalized — see `normalizePixKey` in `../tenant/pix.ts`. */
+  /** Already normalized: see `normalizePixKey` in `../tenant/pix.ts`. */
   pixKey: string;
-  /** Already normalized — see `normalizePixCity` in `../tenant/pix.ts`. */
+  /** Already normalized: see `normalizePixCity` in `../tenant/pix.ts`. */
   city: string;
   /** The office's own name, sanitized here to the standard's alphabet. */
   merchantName: string;
@@ -90,7 +90,7 @@ export interface PixChargeInput {
 }
 
 /**
- * Builds a static Pix charge (initiation point `11`) — the same category of
+ * Builds a static Pix charge (initiation point `11`): the same category of
  * QR a small shop prints with a fixed price, not a dynamic one pointing at a
  * PSP endpoint. Pure transform, no I/O: four already-known values in,
  * one "Copia e Cola" string out.

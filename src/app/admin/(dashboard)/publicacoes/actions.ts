@@ -47,7 +47,7 @@ function fieldErrorsOf(error: {
 
 /**
  * Creates or updates a publication, depending on whether `id` is present.
- * `content.edit` covers both — writing a draft, or editing one already on
+ * `content.edit` covers both: writing a draft, or editing one already on
  * the site. `content.publish` is required additionally, only at the instant
  * an entry date first appears where there was none before: that is the act
  * of publishing, the one thing staff cannot do (see design.md, "content.edit

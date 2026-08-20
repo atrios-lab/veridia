@@ -6,7 +6,7 @@ import type { Theme } from "@/core/tenant/schema.ts";
 import { SERIF } from "@/lib/fonts.ts";
 
 /**
- * How the publication reads inside the "Proclamas e avisos" home section —
+ * How the publication reads inside the "Proclamas e avisos" home section:
  * not the real home page (same trade-off as `VisualIdentityPreview`: an
  * <iframe> of the live site would need a preview session this repository
  * does not have), just the one block this screen is actually asking the

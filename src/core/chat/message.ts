@@ -1,7 +1,7 @@
 import { z } from "zod";
 
 /**
- * Who wrote a message. `note` is its own type, not a flag on `staff` — see
+ * Who wrote a message. `note` is its own type, not a flag on `staff`: see
  * design.md, "`note` é seu próprio `author_type`": a note must never reach
  * the citizen, and a boolean next to a shared type is the kind of field a
  * query forgets to filter.

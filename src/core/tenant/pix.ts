@@ -95,7 +95,7 @@ export function isValidPixKey(type: PixKeyType, value: string): boolean {
   }
 }
 
-/** The Pix payload's Merchant City limit — set by the Central Bank's own
+/** The Pix payload's Merchant City limit: set by the Central Bank's own
  * standard, not a choice made here. */
 export const PIX_CITY_MAX_LENGTH = 15;
 

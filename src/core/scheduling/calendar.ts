@@ -48,11 +48,11 @@ function zoneOffsetMs(instant: Date, timeZone: string): number {
 /**
  * The instant a "YYYY-MM-DDTHH:mm" typed into a `datetime-local` means on the
  * office's wall clock. `new Date(local)` would read it in the server's zone,
- * and the server runs in UTC — three hours off, silently, every time.
+ * and the server runs in UTC: three hours off, silently, every time.
  *
  * Two passes because the offset belongs to the instant, not to the text: the
  * first guess picks the offset, the second applies the offset that actually
- * holds there. Brazil has no DST today, so the second pass is a no-op — and it
+ * holds there. Brazil has no DST today, so the second pass is a no-op, and it
  * is one line to stay correct the day that changes, or the day another office
  * sits in a zone that does.
  */
@@ -255,7 +255,7 @@ const MONTH_LONG = [
 ];
 
 /**
- * "Quarta, 5 de agosto de 2026" — the date written out, the way the panel's
+ * "Quarta, 5 de agosto de 2026": the date written out, the way the panel's
  * header carries it. Capitalised and without the "-feira" the weekday would
  * take in full prose: it is a stamp on a header, not a sentence.
  */

@@ -71,7 +71,7 @@ export function ApplicantSection({
   /**
    * Whether this act may be asked what the document is for. Lei 6.015 art. 17
    * says a certificate may not, and the counter is the same office asking as
-   * the public form — the server drops it either way.
+   * the public form: the server drops it either way.
    */
   allowsPurpose: boolean;
 }) {

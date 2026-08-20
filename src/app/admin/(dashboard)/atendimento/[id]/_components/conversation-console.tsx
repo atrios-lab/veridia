@@ -63,7 +63,7 @@ export function ConversationConsole({
       lastAt.current = data.messages.at(-1).createdAt;
       // The `after` cursor is a millisecond ISO string round-tripped from a
       // microsecond-precision Postgres timestamp, so it can fail to exclude
-      // the very row it came from — the same message would then come back
+      // the very row it came from: the same message would then come back
       // on every poll. De-duping by id here is what actually guarantees no
       // repeats, regardless of that precision loss.
       setMessages((prev) => {

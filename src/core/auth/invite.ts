@@ -1,5 +1,5 @@
 // The text of the two account e-mails (convite, nova senha), as data: no
-// HTML, no I/O. src/lib/email renders this into a message and sends it —
+// HTML, no I/O. src/lib/email renders this into a message and sends it:
 // this module only decides what it says, in Portuguese, so it can be tested
 // without a network or a database.
 

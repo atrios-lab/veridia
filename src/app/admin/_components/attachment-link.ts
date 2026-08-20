@@ -21,7 +21,7 @@ export function documentHref(requestId: string, attachmentId: string): string {
  * Stored names are deliberately not the ones the browser sent: that string is
  * attacker controlled and routinely carries the citizen's full name (see
  * `src/core/request/attachment.ts`). What it stores instead is a slug, and a
- * slug is not something to show a registrar — least of all "office".
+ * slug is not something to show a registrar, least of all "office".
  */
 const LABELS: Record<string, string> = {
   "documento-final": "Documento final",

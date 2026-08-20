@@ -2,8 +2,8 @@
 // imported directly by src/lib/auth-tokens.test.ts under plain
 // `node --test`, and auth.ts throws at import time when
 // BETTER_AUTH_SECRET is unset (as it is for a unit test). Callers already
-// hold a `ctx` (from `await auth.$context`) for their own reasons — see
-// usuarios/actions.ts and scripts/invite-admin.ts — and pass it in, the
+// hold a `ctx` (from `await auth.$context`) for their own reasons: see
+// usuarios/actions.ts and scripts/invite-admin.ts, and pass it in, the
 // same way session-revocation.test.ts and invite.test.ts build their own
 // auth instance rather than reaching for the app's singleton.
 import { randomBytes } from "node:crypto";
@@ -14,7 +14,7 @@ const RESET_TOKEN_PREFIX = "reset-password:";
  * Only the slice of the better-auth context this function touches. Not the
  * library's own `AuthContext<Options>`: that type carries the exact literal
  * `Options` an instance was built with, so the app's `auth` and a test's
- * smaller local instance — same shape, different literal options — are not
+ * smaller local instance, same shape, different literal options, are not
  * assignable to one shared alias of it. This one is structural on purpose,
  * so either satisfies it.
  */

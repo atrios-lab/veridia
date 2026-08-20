@@ -21,7 +21,7 @@ export default async function ManualEntryPage({
   // time (see atendimento/[id]/_components/close-dialog.tsx): the form
   // pre-fills who the citizen already told the widget they were, and
   // submitting it links the new request back to the conversation and closes
-  // it — see manual-entry-form.tsx and its action.
+  // it: see manual-entry-form.tsx and its action.
   const { deConversa } = await searchParams;
   const conversation = deConversa
     ? await getConversation(tenant.slug, deConversa)

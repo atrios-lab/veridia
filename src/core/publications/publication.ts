@@ -32,7 +32,7 @@ const NoticeSectorSchema = z.enum(
 );
 
 /**
- * The form's input. `publishAt` absent means "save as draft" — everything
+ * The form's input. `publishAt` absent means "save as draft": everything
  * else about the publication can be filled in before it is ever scheduled.
  * `expireAt` is required only once `publishAt` is set: a draft has no exit
  * date to validate yet.
@@ -41,7 +41,7 @@ const NoticeSectorSchema = z.enum(
  * asking: banns are always `proclamas` and never ask; an edital must pick
  * one of the sectors this office's attributions allow; a notice is home-only
  * and carries none. The allowed list comes from `noticeSectors(tenant)` at
- * the single server call site — hiding an option in the form is not what
+ * the single server call site: hiding an option in the form is not what
  * enforces it.
  */
 export function publicationFormSchema(allowedSectors: readonly NoticeSector[]) {
@@ -108,7 +108,7 @@ export interface Publication {
   sector: NoticeSector | null;
   title: string;
   body: string;
-  /** Null while a draft — see publicationFormSchema. */
+  /** Null while a draft: see publicationFormSchema. */
   publishAt: string | null;
   expireAt: string | null;
   /** Set only by manual archiving; automatic expiry never writes this. */

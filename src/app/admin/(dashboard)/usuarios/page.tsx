@@ -18,7 +18,7 @@ export const metadata = { title: "Usuários" };
 /**
  * "Ativa" vs. "Aguardando 1º acesso" is derived, not stored: a row in
  * `account` for the `credential` provider only exists once the person has
- * set their own password (see design.md — no new column needed for this).
+ * set their own password (see design.md: no new column needed for this).
  * "Acesso desativado" outranks both: an account can already have its own
  * password and still have `disabledAt` set.
  */
@@ -51,7 +51,7 @@ async function listAccounts(tenantSlug: string) {
 }
 
 export default async function UsuariosPage() {
-  // Hiding "Usuários" from the sidebar is a courtesy, not the gate — see
+  // Hiding "Usuários" from the sidebar is a courtesy, not the gate: see
   // admin-shell spec. This is the gate.
   const session = await getSession();
   if (!session || !can(session.user.role ?? "", "user.manage")) notFound();

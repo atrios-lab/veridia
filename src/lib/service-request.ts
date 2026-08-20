@@ -184,7 +184,7 @@ export async function createRecord(
 }
 
 /**
- * Sends the office's answer to a record's citizen — the same two columns
+ * Sends the office's answer to a record's citizen: the same two columns
  * (`officeReply`/`officeRepliedAt`) the protocol consult and the registration
  * lookup already read for `data-rights` and `ombudsman`. Any draft in
  * `details.draftReply` is cleared: once the real answer is sent, keeping the
@@ -225,7 +225,7 @@ export async function respondToRecord(
 }
 
 /**
- * Moves a record of any kind to a new status — confirm, cancel or mark an
+ * Moves a record of any kind to a new status: confirm, cancel or mark an
  * appointment attended. Unlike `updateRequestStatus`, there is no closed list
  * to validate against here: each caller (one Server Action per button, same
  * pattern as `/admin/pedidos`) already only ever passes a status that action
@@ -292,7 +292,7 @@ export async function saveDraftReply(
 
 /**
  * The ombudsman-only note for a manifestation with no contact to answer to.
- * Never sent anywhere, never read by the citizen's consult — see
+ * Never sent anywhere, never read by the citizen's consult: see
  * `ombudsmanDetailsSchema.internalNote`.
  */
 export async function saveInternalNote(
@@ -338,7 +338,7 @@ export async function createServiceRequest(
 }
 
 /**
- * Every service request the office holds, newest first — the admin queue.
+ * Every service request the office holds, newest first: the admin queue.
  * Scoped to `kind = "service-request"`: the other three channels have their
  * own future screens and are never mixed into this one.
  */
@@ -371,7 +371,7 @@ export async function listServiceRequests(
 }
 
 /**
- * Every record of one channel kind, newest first — the admin queue for
+ * Every record of one channel kind, newest first: the admin queue for
  * agenda, ouvidoria and LGPD. Unlike `listServiceRequests`, there is no
  * attribution filter: only `service-request` has an ato to filter by.
  */
@@ -401,7 +401,7 @@ export async function listRecordsByKind(
     .orderBy(desc(serviceRequests.createdAt));
 }
 
-/** Records of one channel kind still open — the sidebar badge and the
+/** Records of one channel kind still open: the sidebar badge and the
  * Visão geral counters. */
 export async function openCountByKind(
   tenantSlug: string,
@@ -514,7 +514,7 @@ export async function searchRecords(
   return toSearchResults(rows);
 }
 
-/** Requests that still need the operator's attention — the sidebar badge. */
+/** Requests that still need the operator's attention: the sidebar badge. */
 export async function openRequestCount(tenantSlug: string): Promise<number> {
   const [row] = await db
     .select({ count: sql<number>`count(*)::int` })
@@ -533,7 +533,7 @@ export async function openRequestCount(tenantSlug: string): Promise<number> {
 
 /**
  * Moves a request to a new andamento. The server accepts any of the eight
- * valid values, not only the transition the detail screen suggests — the
+ * valid values, not only the transition the detail screen suggests: the
  * suggestion is UX curation, not a state machine (see design.md).
  */
 export async function updateRequestStatus(
@@ -949,7 +949,7 @@ export async function updateRequestData(
 
 /**
  * Generates a new access key and overwrites the stored hash. The old key
- * stops matching the moment this returns — there is nothing else to revoke.
+ * stops matching the moment this returns: there is nothing else to revoke.
  * The plaintext is returned once, for the caller's response only; it is
  * never read back from the database, same discipline as the original key.
  */
@@ -980,7 +980,7 @@ export async function reissueAccessKey(
 
 /**
  * Removes a request and, by cascade, its attachments and requirements.
- * Reserved for a protocol opened by mistake — a real request that should not
+ * Reserved for a protocol opened by mistake: a real request that should not
  * proceed is moved to "Cancelado" instead, which is why this has no undo.
  *
  * Audited before the delete, not after: once the row is gone this entry is
@@ -1031,7 +1031,7 @@ export async function deleteRequest(
     );
 }
 
-/** The request by id — for a screen that already knows the id, not the
+/** The request by id: for a screen that already knows the id, not the
  * protocol (e.g. a chat conversation's matched or linked request). */
 export async function findById(tenantSlug: string, id: string) {
   const [request] = await db
@@ -1154,12 +1154,12 @@ export class AttachmentInUseError extends Error {}
 
 /**
  * Removes one attachment a citizen sent by mistake. Returns the deleted row
- * so the caller can also remove the underlying file/blob — scoped to
+ * so the caller can also remove the underlying file/blob: scoped to
  * tenant + request, same reasoning as `getAttachment`.
  *
  * A file that answered a requirement is still referenced by that
  * requirement's `resolutionAttachmentId`, so Postgres rejects the delete
- * with a foreign key violation — turned into a message the office can act
+ * with a foreign key violation: turned into a message the office can act
  * on, instead of the generic "try again".
  */
 export async function deleteAttachment(
@@ -1181,7 +1181,7 @@ export async function deleteAttachment(
       .returning();
     // Recorded here and not in the actions: this is the one place both the
     // service-request panel and the LGPD panel route through, and the row is
-    // gone for good the moment it returns — the citizen's document with it.
+    // gone for good the moment it returns: the citizen's document with it.
     // A caller that forgets the trail is a deletion nobody can account for.
     if (deleted) {
       await recordAudit({
@@ -1273,7 +1273,7 @@ export async function listRequestHistory(
 
 /**
  * The audit trail for one record of any kind. Generalises
- * `listRequestHistory`, which hardcodes `targetType: "service-request"` —
+ * `listRequestHistory`, which hardcodes `targetType: "service-request"`,
  * `createRecord` already audits every kind's creation under its own
  * `targetType` (`"appointment"`, `"data-rights"`, `"ombudsman"`), so this is
  * the same join, parameterised.

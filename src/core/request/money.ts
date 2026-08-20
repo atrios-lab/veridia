@@ -13,7 +13,7 @@ export function formatCents(cents: number): string {
 }
 
 /**
- * Reads what a person typed — "62,10", "62.10", "6210" — as cents. Refuses
+ * Reads what a person typed, "62,10", "62.10", "6210", as cents. Refuses
  * anything that is not a positive amount, so a blank or a stray letter never
  * silently becomes zero.
  */

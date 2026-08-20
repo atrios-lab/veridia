@@ -21,7 +21,7 @@ export const metadata = { title: "Criar senha" };
 
 /**
  * Whether this token is a first-access invite or a "nova senha" is not
- * stored anywhere — it is read off whether the account already has a
+ * stored anywhere: it is read off whether the account already has a
  * `credential` row in `account` at the moment the link is opened. Once the
  * form below is submitted it always will, so this only ever needs to be
  * checked before that.

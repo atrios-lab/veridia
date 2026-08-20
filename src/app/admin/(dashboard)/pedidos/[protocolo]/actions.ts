@@ -48,7 +48,7 @@ const GENERIC_ERROR =
   "Não foi possível salvar agora. Tente novamente em instantes.";
 
 /** Every action here re-checks on the server: the sidebar hiding the link, and
- * the page 404-ing, are both a courtesy — never the gate. */
+ * the page 404-ing, are both a courtesy: never the gate. */
 async function authorize() {
   const session = await getSession();
   if (!session || !can(session.user.role ?? "", "requests.manage")) {

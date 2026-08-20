@@ -23,7 +23,7 @@ export function ManifestationStatusBadge({
   );
 }
 
-/** "Identificada", "Anônima" or "Identidade em sigilo" — the line every
+/** "Identificada", "Anônima" or "Identidade em sigilo": the line every
  * queue row and detail header needs next to the manifestation's type. */
 export function identificationLabel(input: {
   applicantName?: string | null;

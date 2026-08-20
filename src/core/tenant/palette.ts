@@ -7,8 +7,9 @@ import type { Theme } from "./schema.ts";
  * it and fails if these two ever disagree.
  *
  * This is the only module outside the stylesheet allowed to write a colour
- * down (see `scripts/check-tokens.mjs`), and it exists for one consumer:
- * `src/lib/pdf.ts`.
+ * down (see `scripts/check-tokens.mjs`). Its consumers are the two renderers
+ * that cannot read a stylesheet: `src/lib/pdf.ts`, which draws the documents,
+ * and `src/lib/email/render.ts`, which writes inline styles into an e-mail.
  */
 export interface Palette {
   primary: string;
@@ -104,3 +105,23 @@ export const NEUTRALS = {
 export function paletteFor(theme: Theme): Palette {
   return PALETTES[theme];
 }
+
+/**
+ * The outgoing e-mail's own palette. Fixed and institutional, deliberately
+ * not one of the five themes above: an e-mail client cannot read a CSS
+ * variable, so every colour is inlined into the markup, and threading five
+ * tenant palettes through that is work no recipient would notice.
+ *
+ * It lives here rather than beside the renderer for one reason: this module is
+ * where a colour is allowed to be written down, and the invariant is worth
+ * more than the proximity.
+ */
+export const EMAIL_PALETTE = {
+  background: "#f7f5ef",
+  card: "#ffffff",
+  border: "#e3dfd4",
+  primary: "#123c2a",
+  muted: "#8f9a90",
+  text: "#1c211e",
+  button: "#1c5638",
+} as const;

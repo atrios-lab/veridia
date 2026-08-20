@@ -7,7 +7,7 @@ import { type ActionState, saveInternalNote } from "../actions.ts";
 /**
  * The manifestation has no name and no contact: there is nobody to send a
  * reply to, so this offers only an internal note. Never a resend of the same
- * form with the button removed — the copy above it says outright why there
+ * form with the button removed: the copy above it says outright why there
  * is no way to answer, instead of a form that quietly does nothing.
  */
 export function InternalNoteSection({

@@ -22,8 +22,8 @@ export const runtime = "nodejs";
  * Two documents come out of here, picked by the `documento` field: the
  * requerimento, which gets signed and sent back, and the access receipt, which
  * carries the key and never leaves the citizen. Same route because the
- * expensive, delicate half — verifying the key and answering 404 the same way
- * for "wrong key" and "no such protocol" — is identical, and a copy of it is
+ * expensive, delicate half (verifying the key and answering 404 the same way
+ * for "wrong key" and "no such protocol") is identical, and a copy of it is
  * how the two drift apart.
  */
 export async function POST(request: Request): Promise<Response> {

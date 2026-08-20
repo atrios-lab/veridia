@@ -140,7 +140,7 @@ export const TenantSchema = z.object({
       type: PixKeyTypeSchema,
       key: z.string().min(1, "Informe a chave."),
       // Merchant City of the Pix EMV payload. Optional here, not because a
-      // charge can be built without it (it can't — see pix-charge.ts), but
+      // charge can be built without it (it can't, see pix-charge.ts), but
       // because offices that registered a key before this field existed have
       // it absent in the JSONB row, with no migration to backfill. Required
       // at save time instead (cobranca/actions.ts); a key with no city just
@@ -168,7 +168,7 @@ export const TenantSchema = z.object({
   // Street address of the serventia, for the Contato page's map card and
   // "Como chegar" route. Optional for the same reason as `pix.city`:
   // offices registered before this field existed have no value to backfill,
-  // and there is no migration for it — without it, the page just omits the
+  // and there is no migration for it: without it, the page just omits the
   // address/map card instead of showing a broken state.
   address: z.string().min(1).optional(),
 });

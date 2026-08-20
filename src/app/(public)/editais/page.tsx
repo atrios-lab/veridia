@@ -14,8 +14,8 @@ import { requireSection } from "../_lib/section.ts";
 export const metadata = { title: "Editais" };
 
 /**
- * Which sector a live publication files under. Banns are always proclamas —
- * the form schema wrote that — and an edital predating the sector column
+ * Which sector a live publication files under. Banns are always proclamas
+ * (the form schema wrote that), and an edital predating the sector column
  * lands in the office's generic group rather than disappearing.
  */
 function sectorOf(row: PublicationRow): NoticeSector | null {
@@ -73,7 +73,7 @@ export default async function PublicNoticesPage() {
   }
 
   // Gating order, generic bucket last. Only sectors with something live
-  // appear at all — an empty sector is not information, it is furniture.
+  // appear at all: an empty sector is not information, it is furniture.
   const sectors = (
     Object.keys(NOTICE_SECTOR_ATTRIBUTION) as NoticeSector[]
   ).filter((sector) => (groups.get(sector) ?? []).length > 0);

@@ -2,7 +2,7 @@
  * The four ready-made replies the design offers (US-16). A fixed list, not a
  * per-office editable set: nothing in the user stories asks the panel to
  * manage this content, and text visible to the citizen still comes from
- * here, never hardcoded in a component — see openspec/config.yaml,
+ * here, never hardcoded in a component: see openspec/config.yaml,
  * "Convenção de idioma".
  */
 export interface CannedResponse {

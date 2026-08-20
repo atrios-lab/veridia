@@ -190,7 +190,7 @@ export function isAllowedTransition(
 }
 
 /**
- * The statuses that no longer need the operator's attention, per kind — the
+ * The statuses that no longer need the operator's attention, per kind: the
  * same idea as `TERMINAL_SERVICE_REQUEST_STATUSES`, generalised so the
  * sidebar badge and the Visão geral counters can ask it of any of the four
  * kinds the same way.
@@ -307,7 +307,7 @@ export type DataRight = z.infer<typeof DataRightSchema>;
 
 export const dataRightsDetailsSchema = z.object({
   right: DataRightSchema,
-  // The office's answer in progress, never read by the citizen's consult —
+  // The office's answer in progress, never read by the citizen's consult:
   // only `officeReply` is. Cleared once the final answer is sent.
   draftReply: z.string().optional(),
 });
@@ -331,7 +331,7 @@ export const ombudsmanDetailsSchema = z.object({
   // Same as `dataRightsDetailsSchema.draftReply`: office-only, never read by
   // the citizen's consult.
   draftReply: z.string().optional(),
-  // Only ever offered when the manifestation has no contact to answer to —
+  // Only ever offered when the manifestation has no contact to answer to:
   // never sent anywhere, never read by the citizen's consult.
   internalNote: z.string().optional(),
 });

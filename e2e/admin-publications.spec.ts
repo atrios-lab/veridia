@@ -1,7 +1,7 @@
 import { expect, type Page, test } from "@playwright/test";
 import postgres from "postgres";
 
-// Entrega 8b: publicações — proclamas, avisos e editais com vigência
+// Entrega 8b: publicações (proclamas, avisos e editais com vigência)
 // automática. Everything here needs a real session and a real row, so most
 // of the file skips without a database and the seeded admin account, same
 // discipline as e2e/admin-service-requests.spec.ts.

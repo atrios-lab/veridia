@@ -44,14 +44,18 @@ for (const tenant of Object.values(TENANTS)) {
         .evaluateAll((nodes) =>
           nodes.map((n) => n.getAttribute("data-section")),
         );
-      expect(rendered).toEqual(enabledSections(tenant));
+      // Uma seção pode render mais de um link: "centrais-contato" abre tanto
+      // /centrais quanto /contato (ver sectionNavLinks). O que a gating decide
+      // é quais seções aparecem, não quantos links cada uma abre, então a
+      // comparação é sobre as seções distintas, na ordem em que surgem.
+      expect([...new Set(rendered)]).toEqual(enabledSections(tenant));
     });
 
     test("no sector on the notices page is outside the attributions", async ({
       page,
     }) => {
       // The page lists sectors that actually have something live, so the set
-      // is a subset that shrinks to zero on a quiet week — what must never
+      // is a subset that shrinks to zero on a quiet week: what must never
       // happen is a sector this office has no attribution for.
       await page.goto(`${baseURL}/editais`);
       const rendered = await page

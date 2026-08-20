@@ -84,7 +84,7 @@ export async function GET(
 /**
  * The access receipt, printable only while the key the panel just reissued is
  * still on screen and gets posted back here. The database holds a hash, so the
- * server cannot produce this document on its own — "only right after
+ * server cannot produce this document on its own: "only right after
  * reissuing" is a property of the design, not a rule the UI is asked to keep.
  */
 export async function POST(

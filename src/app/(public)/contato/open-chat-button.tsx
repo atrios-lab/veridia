@@ -1,6 +1,6 @@
 "use client";
 
-// Dispatches the contract chat-widget.tsx listens for — see the comment
+// Dispatches the contract chat-widget.tsx listens for: see the comment
 // there. Kept as its own client component so the rest of the page stays a
 // server component.
 export function OpenChatButton() {

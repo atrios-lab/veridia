@@ -8,7 +8,7 @@ export const ROLES = ["admin", "staff", "superadmin"] as const;
 export type Role = (typeof ROLES)[number];
 
 // The subset a registrador may assign from the panel. Superadmin is an
-// Átrios platform role, created only by scripts/seed-superadmin.ts — never
+// Átrios platform role, created only by scripts/seed-superadmin.ts: never
 // offered in the account form or accepted from a forged submission.
 export const PANEL_ROLES = ["admin", "staff"] as const;
 
@@ -57,7 +57,7 @@ export function isRole(value: string): value is Role {
 
 /**
  * Whether deactivating this account would leave the office with zero active
- * Registrador accounts — the one role that holds `user.manage`, so losing
+ * Registrador accounts: the one role that holds `user.manage`, so losing
  * the last of them locks the office out of ever undoing it. An Operador
  * leaving never trips this: only "admin" counts.
  */

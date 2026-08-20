@@ -3,8 +3,8 @@ import type { Publication } from "./publication.ts";
 
 /**
  * The four tabs the panel shows. Every one is computed from dates at read
- * time — see design.md, "Estado é sempre calculado, nunca gravado por uma
- * tarefa" — never written by a background job.
+ * time: see design.md, "Estado é sempre calculado, nunca gravado por uma
+ * tarefa": never written by a background job.
  */
 export const PUBLICATION_STATES = [
   "draft",
@@ -17,8 +17,8 @@ export type PublicationState = (typeof PUBLICATION_STATES)[number];
 /**
  * Manual archiving wins over any date. Otherwise: no entry date is a draft,
  * an exit date already passed is archived (automatic expiry, no write), an
- * entry date still ahead is scheduled, and anything else — entry date
- * reached, exit date not yet reached — is live.
+ * entry date still ahead is scheduled, and anything else (entry date
+ * reached, exit date not yet reached) is live.
  */
 export function publicationState(
   pub: Pick<Publication, "publishAt" | "expireAt" | "archivedAt">,

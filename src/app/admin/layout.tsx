@@ -3,7 +3,7 @@ import { SERIF } from "@/lib/fonts.ts";
 import { getTenant } from "@/lib/tenant.ts";
 
 // The panel repaints with the tenant's published style, same brand tokens
-// and serif the public site uses for it — see theme-admin-panel.
+// and serif the public site uses for it: see theme-admin-panel.
 export default async function AdminLayout({
   children,
 }: Readonly<{ children: React.ReactNode }>) {

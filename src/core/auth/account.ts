@@ -3,7 +3,7 @@ import { PANEL_ROLES } from "./roles.ts";
 
 /**
  * What the registrador may set when creating an account: name, e-mail and
- * role — nothing else, and never a password. Whoever the invite reaches
+ * role: nothing else, and never a password. Whoever the invite reaches
  * chooses their own password later, at `/admin/redefinir-senha`.
  */
 // Trimming and lowercasing the e-mail happens where the raw form value is

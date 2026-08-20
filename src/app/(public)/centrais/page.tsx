@@ -78,7 +78,7 @@ export default async function OfficialPortalsPage() {
         />
         <p className="text-[13px] leading-relaxed text-brand-primary-soft">
           <strong>Todos os links abaixo levam a sites oficiais.</strong> Confira
-          o endereço no navegador ao chegar — o cartório nunca pede senha nem
+          o endereço no navegador ao chegar: o cartório nunca pede senha nem
           pagamento fora desses sites.
         </p>
       </div>

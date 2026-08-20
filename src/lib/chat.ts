@@ -30,12 +30,12 @@ export class ChatTransferError extends Error {}
 
 // The cookie that carries the citizen's opaque token. Named here, not in the
 // Route Handlers, because Next's app router restricts a `route.ts` file to
-// HTTP method exports and a short list of route config — anything else is
+// HTTP method exports and a short list of route config: anything else is
 // silently dropped or warned about, so shared constants live in the data
 // layer both handlers already import.
 export const CHAT_TOKEN_COOKIE = "chat_token";
 // A shift's worth of headroom past the longest realistic wait-plus-chat, not
-// a promise the conversation stays reachable that long — closed and stale
+// a promise the conversation stays reachable that long: closed and stale
 // conversations already refuse new messages regardless of the cookie.
 export const CHAT_TOKEN_MAX_AGE_SECONDS = 60 * 60 * 12;
 
@@ -46,7 +46,7 @@ const PROTOCOL_PREFIX_VALUES: readonly string[] =
   Object.values(PROTOCOL_PREFIXES);
 
 // The citizen's only credential for this conversation: an opaque token held
-// in an httpOnly cookie, never in localStorage — see design.md, "Sem
+// in an httpOnly cookie, never in localStorage: see design.md, "Sem
 // protocolo nem chave de acesso para a conversa". Only its hash is stored,
 // same discipline as access-key.ts, but with no human-typed alphabet to
 // normalize: nobody ever reads this one out loud.
@@ -59,26 +59,35 @@ function hashCitizenToken(token: string): string {
 }
 
 /** Whether the office's chat is switched on. Read directly, not through
- * `getTenant()`'s override merge — this is operational state, not part of
+ * `getTenant()`'s override merge: this is operational state, not part of
  * the Tenant shape (see src/lib/tenant.ts, OFFICE_CHAT_KEY). */
 export async function isChatEnabled(tenantSlug: string): Promise<boolean> {
-  const [row] = await db
-    .select({ published: tenantContent.published })
-    .from(tenantContent)
-    .where(
-      and(
-        eq(tenantContent.tenantSlug, tenantSlug),
-        eq(tenantContent.key, OFFICE_CHAT_KEY),
-      ),
-    )
-    .limit(1);
-  const settings = row?.published as { enabled?: boolean } | null | undefined;
-  return settings?.enabled ?? false;
+  try {
+    const [row] = await db
+      .select({ published: tenantContent.published })
+      .from(tenantContent)
+      .where(
+        and(
+          eq(tenantContent.tenantSlug, tenantSlug),
+          eq(tenantContent.key, OFFICE_CHAT_KEY),
+        ),
+      )
+      .limit(1);
+    const settings = row?.published as { enabled?: boolean } | null | undefined;
+    return settings?.enabled ?? false;
+  } catch {
+    // A database that is down leaves the chat off rather than taking the
+    // whole public page down with it, the same posture `readTenantOverrides`
+    // takes in src/lib/tenant.ts. The office loses a channel for as long as
+    // the outage lasts; the site keeps serving the address and the telephone,
+    // which is what a citizen needs most while nothing else works.
+    return false;
+  }
 }
 
 /**
  * Switches the office's chat on or off. Turning it off only stops the
- * floating button from appearing on the next poll — conversations already
+ * floating button from appearing on the next poll: conversations already
  * `active` are untouched, see admin-support-chat spec, "Interruptor
  * 'Disponível para o chat' some o botão na hora".
  */
@@ -117,7 +126,7 @@ export async function setChatEnabled(
 /**
  * Starts a conversation from the widget's pre-chat. When the citizen typed a
  * protocol number that matches a real record of this office, it is
- * attached — a value that matches nothing is still accepted (see
+ * attached: a value that matches nothing is still accepted (see
  * support-chat spec, "Protocolo não encontrado não bloqueia").
  */
 export async function startConversation(
@@ -164,7 +173,7 @@ export async function startConversation(
 
 /**
  * Closes a conversation on its own once it has gone quiet too long,
- * recording why and leaving a system message — see design.md, "Inatividade
+ * recording why and leaving a system message: see design.md, "Inatividade
  * e fechamento automático avaliados de forma preguiçosa, sem cron". Called
  * from every read path that can reach an `active` conversation, never from
  * a scheduled job.
@@ -221,7 +230,7 @@ export async function getConversationForCitizen(
   return closeIfStale(row, new Date());
 }
 
-/** The conversation by id, for the panel — permission is checked by the caller. */
+/** The conversation by id, for the panel: permission is checked by the caller. */
 export async function getConversation(
   tenantSlug: string,
   id: string,
@@ -267,7 +276,7 @@ export async function listMessages(
 
 /**
  * Records a message. A citizen's message refreshes `last_activity_at`,
- * which is the only clock `isStale`/`needsInactivityWarning` read — an
+ * which is the only clock `isStale`/`needsInactivityWarning` read: an
  * attendant typing never counts as the citizen still being there.
  */
 export async function sendMessage(
@@ -337,7 +346,7 @@ export async function waitingConversations(
 }
 
 /** Every conversation currently being attended, for the queue screen's
- * "Em atendimento" column — across every attendant of the office, not just
+ * "Em atendimento" column: across every attendant of the office, not just
  * the one looking. */
 export async function activeConversations(
   tenantSlug: string,
@@ -354,7 +363,7 @@ export async function activeConversations(
     .orderBy(asc(chatConversations.lastActivityAt));
 }
 
-/** How many conversations are waiting — the sidebar badge. */
+/** How many conversations are waiting: the sidebar badge. */
 export async function waitingCount(tenantSlug: string): Promise<number> {
   const [row] = await db
     .select({ count: sql<number>`count(*)::int` })
@@ -388,7 +397,7 @@ async function activeCountForUser(
 /**
  * Assigns a waiting conversation to the attendant who clicked "Atender".
  * Refuses at the limit of three, and refuses a conversation someone else
- * already took — the `status = 'waiting'` guard in the `WHERE` clause is
+ * already took: the `status = 'waiting'` guard in the `WHERE` clause is
  * what makes the second click lose instead of double-assigning.
  */
 export async function assignConversation(
@@ -438,7 +447,7 @@ function sectorLabel(sector: string | null): string | undefined {
 /**
  * Transfers a conversation to a colleague, or back to the general queue
  * when `toUserId` is null. A note explaining why is mandatory (see
- * admin-support-chat spec, "Transferência exige nota interna") — it is
+ * admin-support-chat spec, "Transferência exige nota interna"): it is
  * written as its own `note` message, alongside the `system` message the
  * citizen actually sees.
  */
@@ -532,9 +541,9 @@ function closedReasonOf(actor: CloseActor): ClosedReason {
 
 /**
  * Closes a conversation, with or without a link. `linkedRequestId` covers
- * both cases the design offers at closing time — the transcript already
+ * both cases the design offers at closing time: the transcript already
  * points at an existing protocol, or at a request just launched from this
- * conversation — never both, but this function does not care which.
+ * conversation: never both, but this function does not care which.
  */
 export async function closeConversation(
   tenantSlug: string,
@@ -577,7 +586,7 @@ export async function closeConversation(
 }
 
 /**
- * Records the citizen's rating on a conversation that is already closed —
+ * Records the citizen's rating on a conversation that is already closed:
  * separate from `closeConversation` because the conversation may have been
  * closed by staff or by inactivity, and rating it afterwards must not
  * overwrite `closedReason` with something that did not happen.
@@ -663,7 +672,7 @@ export interface LinkedConversation {
 }
 
 /**
- * The chat transcripts linked to a service request — for the "Atendimentos
+ * The chat transcripts linked to a service request: for the "Atendimentos
  * vinculados" block on its detail page. A conversation links to at most one
  * request (`linked_request_id`), so this is a plain lookup, not a join
  * table.

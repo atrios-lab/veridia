@@ -31,8 +31,8 @@ function FieldError({ message }: { message?: string }) {
 
 /**
  * `today()` on the client reads the visitor's own clock, not the office's.
- * That is fine here — it only pre-fills a suggestion the operator can always
- * change — but it is why this never becomes a validity check: the server,
+ * That is fine here: it only pre-fills a suggestion the operator can always
+ * change, but it is why this never becomes a validity check: the server,
  * which uses the office's wall calendar, is the one place that could refuse
  * a date, and it does not.
  */
@@ -60,14 +60,14 @@ export function PublicationForm({
     (editing?.sector as NoticeSector | null) ?? "",
   );
   // Only an edital asks: banns are always proclamas and a notice never has
-  // one — the schema writes both regardless of what the form posts.
+  // one: the schema writes both regardless of what the form posts.
   const sectorOptions = noticeSectors(tenant);
   const [title, setTitle] = useState(editing?.title ?? "");
   const [body, setBody] = useState(editing?.body ?? "");
   const [publishAt, setPublishAt] = useState(editing?.publishAt ?? "");
   const [expireAt, setExpireAt] = useState(editing?.expireAt ?? "");
   // Only true once the operator has typed an entry date and the suggestion
-  // has not been hand-edited away — matches "aviso e edital não têm
+  // has not been hand-edited away: matches "aviso e edital não têm
   // sugestão" and "o operador pode alterá-la" from the spec.
   const [expirySuggested, setExpirySuggested] = useState(false);
   // Only the chosen file's name: the input is visually hidden, so without
