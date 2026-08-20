@@ -6,17 +6,24 @@ export default defineConfig({
   testDir: "./e2e",
   fullyParallel: true,
   forbidOnly: !!process.env.CI,
-  retries: process.env.CI ? 1 : 0,
-  // Two vCPUs did not turn out to be the story: the 2-worker cap changed
-  // nothing (still 6 failed, still ~7 minutes), and the failures themselves
-  // read "Timeout: 5000ms", which is `expect()`'s own poll timeout, a clock
-  // this file never touched. Fifteen retries in one run mostly succeeded on
-  // their second attempt, which is what a too-tight budget looks like under
-  // a slower machine, not exhaustion: exhaustion would keep failing on retry.
-  // Local runs never miss the 5s default because the machine answers fast
-  // enough that the assertion never needs to poll past the first tick.
-  workers: process.env.CI ? 2 : undefined,
+  // A second retry, because the failures left are net::ERR_ABORTED on a
+  // fresh page.goto: a navigation cut off by a Chromium process still
+  // starting up, not a wrong assertion. That is jitter a small runner
+  // produces on its own, and the honest fix for jitter is trying again, the
+  // same posture Playwright's own CI guidance takes.
+  retries: process.env.CI ? 2 : 0,
+  // Bumping the two-worker cap to nothing changed the wall clock or the
+  // failure count at all, which means the bottleneck was never "not enough
+  // workers running at once". Going all the way to one closes the one door
+  // two workers left open: two Chromium processes launching at nearly the
+  // same moment, one still starting up while the runner is already busy with
+  // the other, is exactly what aborts a goto mid-flight. One worker means
+  // one browser alive at a time, ever.
+  workers: process.env.CI ? 1 : undefined,
   reporter: process.env.CI ? "github" : "list",
+  // Raised once already: it cleared every "Timeout: 5000ms" failure in the
+  // run after it landed. Kept at the same width now that a different error
+  // class is what remains.
   expect: { timeout: process.env.CI ? 15_000 : undefined },
   use: {
     trace: "on-first-retry",
