@@ -7,8 +7,19 @@ export default defineConfig({
   fullyParallel: true,
   forbidOnly: !!process.env.CI,
   retries: process.env.CI ? 1 : 0,
+  // A shared two-vCPU runner falls behind a fully parallel suite hitting the
+  // same Next server: the failures were never assertions being wrong, they
+  // were net::ERR_ABORTED and 30s timeouts on ordinary pages, which is what
+  // contention looks like, not a bug. Fewer workers means less racing for the
+  // one server; a longer action timeout gives a slow response room to land
+  // instead of being cut off mid-navigation. Local runs keep their own pace.
+  workers: process.env.CI ? 2 : undefined,
   reporter: process.env.CI ? "github" : "list",
-  use: { trace: "on-first-retry" },
+  use: {
+    trace: "on-first-retry",
+    actionTimeout: process.env.CI ? 15_000 : undefined,
+    navigationTimeout: process.env.CI ? 45_000 : undefined,
+  },
   projects: [{ name: "chromium", use: { ...devices["Desktop Chrome"] } }],
   webServer: {
     // The production build, not the dev server: the test asserts what the
