@@ -12,6 +12,14 @@ export default defineConfig({
   // produces on its own, and the honest fix for jitter is trying again, the
   // same posture Playwright's own CI guidance takes.
   retries: process.env.CI ? 2 : 0,
+  // The gap in the two commits before this one: actionTimeout, navigationTimeout
+  // and expect.timeout all grew, but the timeout wrapping the whole test stayed
+  // at Playwright's own default, 30 seconds. A test with two navigations, each
+  // now allowed up to 45s on its own, can outrun a 30s umbrella even when
+  // neither navigation is individually slow enough to trip its own limit, and
+  // that is what a test timeout firing mid-navigation looks like from the
+  // browser's side: net::ERR_ABORTED, the page closed out from under it.
+  timeout: process.env.CI ? 90_000 : undefined,
   // Bumping the two-worker cap to nothing changed the wall clock or the
   // failure count at all, which means the bottleneck was never "not enough
   // workers running at once". Going all the way to one closes the one door
