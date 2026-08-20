@@ -31,7 +31,7 @@ function fail(
 
 /**
  * The counter's own version of `submitServiceRequest`: same schema, same
- * protocol and key generation, no honeypot and no rate limit — this route is
+ * protocol and key generation, no honeypot and no rate limit: this route is
  * already behind an authenticated session with `requests.manage`, so the
  * defenses built for an anonymous form do not apply here.
  */
@@ -55,7 +55,7 @@ export async function createManualServiceRequest(
     description: formData.get("description") ?? "",
     purpose: formData.get("purpose") ?? "",
     parameterValue: "",
-    // Filed in person: the physical process at the counter is the consent —
+    // Filed in person: the physical process at the counter is the consent,
     // there is no screen here for the citizen to tick these themselves, the
     // way there is in the public wizard.
     lgpdConsent: "on",

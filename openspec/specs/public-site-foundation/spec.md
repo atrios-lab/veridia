@@ -6,8 +6,6 @@ TBD
 
 ## Requirements
 
-## ADDED Requirements
-
 ### Requirement: Tema do site público por configuração do tenant
 O site público DEVE (SHALL) renderizar com a marca do tenant resolvido pelo host, mantendo
 estrutura, layout e jornada idênticos entre tenants. A configuração do tenant nomeia um dos

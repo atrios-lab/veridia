@@ -85,7 +85,7 @@ export async function createUser(
   const ctx = await auth.$context;
 
   // E-mail is unique platform-wide (see auth-schema.ts), not only within
-  // this serventia — the check has to match, or a forged submission could
+  // this serventia: the check has to match, or a forged submission could
   // still crash on the database's own unique index instead of failing here.
   const existing = await ctx.internalAdapter.findUserByEmail(parsed.data.email);
   if (existing) {
@@ -131,7 +131,7 @@ export async function createUser(
 }
 
 /**
- * Looks up an account by id, scoped to the session's own serventia — the
+ * Looks up an account by id, scoped to the session's own serventia: the
  * shared guard for both actions below, so neither can be pointed at another
  * office's account by a forged `userId`.
  */
@@ -266,7 +266,7 @@ export async function deactivateAccount(
   const target = await findOwnAccount(userId, tenant.slug);
   if (!target) notFound();
 
-  // Counts the *other* active Registrador accounts in the office — the
+  // Counts the *other* active Registrador accounts in the office: the
   // target is excluded because it is the one about to leave that count.
   const [{ value: otherActiveAdmins }] = await db
     .select({ value: count() })
@@ -292,7 +292,7 @@ export async function deactivateAccount(
     .set({ disabledAt: new Date() })
     .where(eq(userTable.id, target.id));
   // Ends every session that account already had open, not just future
-  // logins — getSession() has nothing left to find on the next request.
+  // logins: getSession() has nothing left to find on the next request.
   await db.delete(sessionTable).where(eq(sessionTable.userId, target.id));
 
   await recordAudit({

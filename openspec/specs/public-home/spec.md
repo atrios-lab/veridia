@@ -6,8 +6,6 @@ TBD
 
 ## Requirements
 
-## ADDED Requirements
-
 ### Requirement: Ação na primeira dobra
 A home DEVE (SHALL) apresentar, dentro da hero (imagem oficial da serventia com overlay da cor
 primária), o campo único de consulta de protocolo — visível na primeira dobra em viewport

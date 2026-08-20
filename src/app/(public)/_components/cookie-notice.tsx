@@ -11,7 +11,7 @@ import { Icon } from "./icon.tsx";
 
 /**
  * Acknowledgement, not opt-in: the site only sets essential cookies, so
- * there is nothing to accept or decline — see cookie-consent spec, "Aviso de
+ * there is nothing to accept or decline: see cookie-consent spec, "Aviso de
  * cookies na primeira visita". Rendered only when the server finds no prior
  * acknowledgement (see layout.tsx), so this never flashes for a return visit.
  */
@@ -32,7 +32,7 @@ export function CookieNotice() {
 
   return (
     // A compact card in the bottom-right corner, where the chat widget will
-    // live once the notice is acknowledged — the two never coexist. The
+    // live once the notice is acknowledged: the two never coexist. The
     // layout is the design's (Claude Design project 558c4556, "Banner de
     // Cookies", variant A): icon column on the left, and title, text and
     // actions on one axis beside it. The sizes are the site's own card and
@@ -55,7 +55,7 @@ export function CookieNotice() {
             Sua privacidade
           </h2>
           <p className="mt-0.5 text-[12px] leading-relaxed text-brand-muted">
-            Este site usa apenas cookies essenciais ao seu funcionamento — nada
+            Este site usa apenas cookies essenciais ao seu funcionamento: nada
             de rastreamento ou publicidade.
           </p>
           <div className="mt-3.5 flex items-center gap-4">

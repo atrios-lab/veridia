@@ -16,7 +16,7 @@ export interface AdminNavItem {
  *
  * Only routes that exist in the application are listed: a menu entry that
  * leads to a 404 spends more of the registrar's trust than a short sidebar
- * saves. Each delivery adds its own line here when its screen lands — the
+ * saves. Each delivery adds its own line here when its screen lands: the
  * approved design's nine items across three groups are all here now.
  *
  * The permission field only decides what is *offered*. Hiding a link is a

@@ -5,7 +5,7 @@ import type { PublicationKind } from "./publication.ts";
 const MARRIAGE_BANNS_NOTICE_DAYS = 15;
 
 /**
- * The exit date the form pre-fills, given the entry date — 15 days later for
+ * The exit date the form pre-fills, given the entry date: 15 days later for
  * marriage banns (the edital's legal notice period), nothing for the other
  * two kinds, which have no statutory default. The operator can always
  * override before saving; the server never rejects a different date.

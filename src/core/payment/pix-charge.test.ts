@@ -33,7 +33,7 @@ function crc16CcittTableDriven(payload: string): string {
 
 test("crc16: matches the standard CRC-16/CCITT-FALSE check value for '123456789'", () => {
   // The catalogued check value for this exact variant (poly 0x1021, init
-  // 0xFFFF, no reflection, no xor-out) — the one Pix specifies.
+  // 0xFFFF, no reflection, no xor-out): the one Pix specifies.
   assert.equal(crc16Ccitt("123456789"), "29B1");
 });
 

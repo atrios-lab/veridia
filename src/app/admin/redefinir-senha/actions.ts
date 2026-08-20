@@ -42,7 +42,7 @@ export async function acceptInvite(formData: FormData) {
   if (!invitedUser) redirect("/admin/redefinir-senha");
 
   // Read before resetPassword changes it: whether this account already had
-  // a credential decides which audit verb is true — "primeiro acesso" for a
+  // a credential decides which audit verb is true: "primeiro acesso" for a
   // conta convidada that never had one, "nova senha" for a returning one.
   const [existingCredential] = await db
     .select({ id: accountTable.id })

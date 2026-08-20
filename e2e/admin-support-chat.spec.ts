@@ -3,7 +3,7 @@ import postgres from "postgres";
 
 // Entrega 8a/8e: o console do atendente. Conversas são inseridas direto no
 // banco (como service-request.test.ts faz para pedidos) em vez de passar
-// pelo widget público a cada cenário — mais rápido, e o widget já tem sua
+// pelo widget público a cada cenário: mais rápido, e o widget já tem sua
 // própria cobertura em support-chat.spec.ts.
 
 const PORT = process.env.PORT ?? "3000";
@@ -153,7 +153,7 @@ test.describe("console do atendente", () => {
     await page.getByRole("button", { name: "Transferir" }).click();
 
     // Both the button that opened this panel and its own submit button read
-    // "Transferir" — scoping to the form is what picks the right one.
+    // "Transferir": scoping to the form is what picks the right one.
     const transferForm = page.locator("form", {
       has: page.getByText("Devolver à fila geral"),
     });

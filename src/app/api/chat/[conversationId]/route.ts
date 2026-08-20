@@ -26,7 +26,7 @@ export const runtime = "nodejs";
  * Resolves who is asking and which conversation they may reach: an
  * attendant with `chat.manage` may open any conversation of their office; a
  * citizen may only reach the one their cookie's token actually opens, and
- * only when it matches the id in the URL — a browser tab open to someone
+ * only when it matches the id in the URL: a browser tab open to someone
  * else's conversation link gets nothing back.
  *
  * The citizen cookie is checked first. Both the widget and the console hit
@@ -34,7 +34,7 @@ export const runtime = "nodejs";
  * browser that is *also* signed in as staff (an attendant testing their own
  * widget, or just a developer logged into both at once) still carries the
  * admin session cookie on the widget's requests. Checking the citizen
- * cookie first — and only for *this* conversation — is what keeps that from
+ * cookie first, and only for *this* conversation, is what keeps that from
  * being misread as the attendant talking to themselves: a leftover staff
  * session never wins over a token that genuinely opens this conversation.
  */
@@ -155,8 +155,8 @@ export async function POST(
   const form = await request.formData();
   const intent = String(form.get("intent") ?? "message");
 
-  // Rating a conversation happens after it is already closed — by the
-  // citizen giving up, by staff, or by inactivity — so it is handled before
+  // Rating a conversation happens after it is already closed: by the
+  // citizen giving up, by staff, or by inactivity: so it is handled before
   // the "closed conversations refuse writes" guard below applies to it.
   if (intent === "rate") {
     if (auth.conversation.status !== "closed" || !auth.forCitizen) {
@@ -185,7 +185,7 @@ export async function POST(
 
   // "Desistir da espera" and "Encerrar conversa" on the citizen's side: the
   // conversation ends with no one assigned, or with whoever was already
-  // handling it — closeConversation does not care which, it only needs to
+  // handling it: closeConversation does not care which, it only needs to
   // know it was the citizen who ended it.
   if (intent === "close") {
     if (!auth.forCitizen) {
@@ -204,7 +204,7 @@ export async function POST(
       | undefined;
     if (file instanceof File && file.size > 0) {
       // No `kind` override: same positional "anexo-1" label the citizen
-      // wizard already uses (src/app/(public)/solicitar/actions.ts) — the
+      // wizard already uses (src/app/(public)/solicitar/actions.ts): the
       // stored file name is never the browser-supplied one either way.
       const stored = await storeAttachments([file]);
       attachment = stored[0];

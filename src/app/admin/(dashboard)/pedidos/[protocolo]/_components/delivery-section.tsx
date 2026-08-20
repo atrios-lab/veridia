@@ -29,7 +29,7 @@ export function DeliverySection({
     if (state.status !== "success") return;
     toast.success("Documento entregue. Já aparece na consulta do cidadão.");
     // Without this the input keeps the file it just sent, so picking the very
-    // same file again fires no change event and nothing happens, silently —
+    // same file again fires no change event and nothing happens, silently:
     // which is exactly what someone does right after deleting a wrong upload.
     formRef.current?.reset();
   }, [state]);

@@ -40,7 +40,7 @@ test("informed protocol number is optional", () => {
 });
 
 test("an informed protocol number that matches nothing is still accepted here", () => {
-  // Matching it against a real record is src/lib/chat.ts's job — this schema
+  // Matching it against a real record is src/lib/chat.ts's job: this schema
   // only shapes the input, it never looks anything up.
   const parsed = prechatSchema.safeParse({
     ...base,

@@ -430,7 +430,7 @@ interface TimelineStepData {
 }
 
 /** The first not-yet-done, non-alert step is where the request is stuck right
- * now — flag it so it renders distinct from a step still further out. */
+ * now: flag it so it renders distinct from a step still further out. */
 function markCurrentStep(steps: TimelineStepData[]): TimelineStepData[] {
   const current = steps.find((step) => !step.done && !step.alert);
   if (current) current.current = true;
@@ -439,7 +439,7 @@ function markCurrentStep(steps: TimelineStepData[]): TimelineStepData[] {
 
 /**
  * The service request's andamento, in citizen language: what's cumprido, what's
- * next, and — when the office indeferiu or the citizen cancelou — that it
+ * next, and, when the office indeferiu or the citizen cancelou, that it
  * won't go further. Derived from status + the data the consult already
  * loads, never from the auditLog (admin trail, not citizen-facing).
  */

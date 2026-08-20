@@ -8,7 +8,7 @@ export interface EmailAttachment {
 
 export interface OutgoingEmail {
   to: string;
-  /** Display name only — the technical sending address is platform-wide. */
+  /** Display name only: the technical sending address is platform-wide. */
   fromName: string;
   subject: string;
   html: string;
@@ -21,7 +21,7 @@ const RESEND_ENDPOINT = "https://api.resend.com/emails";
 // Single verified sending domain for the whole platform: verifying SPF/DKIM
 // for each serventia's own domain is out of scope for this delivery (see
 // design.md, "Remetente único da plataforma"). What the recipient sees
-// still varies — `fromName` carries the tenant's own name — only the
+// still varies, `fromName` carries the tenant's own name, only the
 // technical domain is shared across every office.
 const FROM_ADDRESS =
   process.env.EMAIL_FROM_ADDRESS ?? "nao-responda@notificacoes.veridia.app";
@@ -39,7 +39,7 @@ function configured(): boolean {
 export async function sendEmail(email: OutgoingEmail): Promise<void> {
   if (!configured()) {
     console.log(
-      `[email] sem RESEND_API_KEY — registrando em vez de enviar.\n` +
+      `[email] sem RESEND_API_KEY: registrando em vez de enviar.\n` +
         `Para: ${email.to}\nAssunto: ${email.subject}\n\n${email.text}`,
     );
     return;

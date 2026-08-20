@@ -1,4 +1,5 @@
 import type { EmailText } from "@/core/email/text.ts";
+import { EMAIL_PALETTE } from "@/core/tenant/palette.ts";
 import type { Tenant } from "@/core/tenant/schema.ts";
 
 export interface EmailTenantIdentity {
@@ -18,25 +19,17 @@ export function tenantEmailIdentity(tenant: Tenant): EmailTenantIdentity {
     name: tenant.name,
     subtitle: tenant.subtitle,
     // The seal for a light background (dark ink), same one the invite e-mail
-    // mockup uses on its white body — see tenant.logos.seal in schema.ts.
+    // mockup uses on its white body: see tenant.logos.seal in schema.ts.
     sealUrl: `https://${host}${tenant.logos.seal.light}`,
   };
 }
 
 // Fixed institutional palette, not the tenant's live `--brand-*` theme: an
-// e-mail client cannot read a CSS variable, and threading five theme
-// palettes into a second, JS-side copy is out of scope for this delivery
-// (see design.md). Same posture as src/lib/pdf.ts, which renders the
-// certificate PDF with no brand color at all.
-const COLORS = {
-  background: "#f7f5ef",
-  card: "#ffffff",
-  border: "#e3dfd4",
-  primary: "#123c2a",
-  muted: "#8f9a90",
-  text: "#1c211e",
-  button: "#1c5638",
-} as const;
+// e-mail client cannot read a CSS variable, and threading five theme palettes
+// into the markup is work no recipient would notice. The values live in
+// `palette.ts` because that is the one module allowed to write a colour down
+// (see scripts/check-tokens.mjs); same posture as src/lib/pdf.ts.
+const COLORS = EMAIL_PALETTE;
 
 const HTML_ESCAPES: Record<string, string> = {
   "&": "&amp;",
@@ -77,7 +70,7 @@ export function renderEmailCardHtml(
           <p style="font-size:17px;font-weight:700;color:${COLORS.primary};margin:0 0 4px;">${escapeHtml(tenant.name)}</p>
           <p style="font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:${COLORS.muted};margin:0 0 20px;">${escapeHtml(tenant.subtitle)}</p>
           ${paragraphs}
-          <a href="${escapeHtml(actionUrl)}" style="display:inline-block;background:${COLORS.button};color:#ffffff;font-size:14px;font-weight:700;border-radius:9px;padding:13px 24px;text-decoration:none;margin:4px 0 20px;">${escapeHtml(text.buttonLabel)}</a>
+          <a href="${escapeHtml(actionUrl)}" style="display:inline-block;background:${COLORS.button};color:${COLORS.card};font-size:14px;font-weight:700;border-radius:9px;padding:13px 24px;text-decoration:none;margin:4px 0 20px;">${escapeHtml(text.buttonLabel)}</a>
           <p style="font-size:12px;color:${COLORS.muted};line-height:1.6;border-top:1px solid ${COLORS.border};padding-top:14px;margin:0;">${escapeHtml(text.footnote)}</p>
         </td>
       </tr>
@@ -131,7 +124,7 @@ export function renderNoticeEmailHtml(notice: NoticeEmail): string {
           <p style="font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:${COLORS.muted};margin:0 0 20px;">${escapeHtml(notice.officeSubtitle)}</p>
           <p style="font-size:14px;color:${COLORS.text};line-height:1.65;margin:0 0 16px;">${escapeHtml(notice.body)}</p>
           <p style="font-size:13px;color:${COLORS.muted};margin:0 0 20px;">Protocolo <strong style="color:${COLORS.primary};font-size:15px;">${escapeHtml(notice.protocolNumber)}</strong></p>
-          <a href="${escapeHtml(notice.consultUrl)}" style="display:inline-block;background:${COLORS.button};color:#ffffff;font-size:14px;font-weight:700;border-radius:9px;padding:13px 24px;text-decoration:none;margin:0 0 20px;">Consultar o protocolo</a>
+          <a href="${escapeHtml(notice.consultUrl)}" style="display:inline-block;background:${COLORS.button};color:${COLORS.card};font-size:14px;font-weight:700;border-radius:9px;padding:13px 24px;text-decoration:none;margin:0 0 20px;">Consultar o protocolo</a>
           <p style="font-size:12px;color:${COLORS.muted};line-height:1.6;border-top:1px solid ${COLORS.border};padding-top:14px;margin:0;">Para ver os detalhes, informe o protocolo e a sua chave de acesso na consulta. Este aviso não traz o conteúdo por segurança.</p>
         </td>
       </tr>

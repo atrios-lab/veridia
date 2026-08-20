@@ -3,7 +3,7 @@ import { isValidContact } from "../request/form.ts";
 
 /**
  * A conversation's life: waiting for an attendant, being answered, or
- * closed. There is no "abandoned" or "resolved" — only how it got to
+ * closed. There is no "abandoned" or "resolved": only how it got to
  * `closed` (`ClosedReason`) distinguishes those, because the citizen side
  * never needs to filter by outcome, only by whether it is still live.
  */
@@ -12,7 +12,7 @@ export type ConversationStatus = (typeof CONVERSATION_STATUSES)[number];
 
 /**
  * Why a conversation closed. `citizen` covers both giving up the wait and
- * ending the chat themselves — the widget never distinguishes the two to
+ * ending the chat themselves: the widget never distinguishes the two to
  * the attendant, so neither does this vocabulary.
  */
 export const CLOSED_REASONS = ["citizen", "inactivity", "staff"] as const;
@@ -28,7 +28,7 @@ const requiredText = (max: number) =>
 
 /**
  * The pre-chat: name, one contact and a subject before a citizen can queue.
- * The protocol is optional and never validated against the catalogue here —
+ * The protocol is optional and never validated against the catalogue here:
  * a value that matches nothing is still accepted (see support-chat spec,
  * "Protocolo não encontrado não bloqueia"); matching it against real records
  * is `src/lib/chat.ts`'s job, which has the database this schema does not.

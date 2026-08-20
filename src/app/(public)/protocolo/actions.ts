@@ -84,7 +84,7 @@ export interface CitizenDocumentView {
 
 export interface ServiceRequestDetail extends BaseDetail {
   kind: "service-request";
-  /** The raw andamento, for the timeline to derive its steps from — distinct
+  /** The raw andamento, for the timeline to derive its steps from: distinct
    * from `BaseDetail.status`, the "success"/"error" discriminant. */
   requestStatus: ServiceRequestStatus;
   actName: string;
@@ -95,11 +95,11 @@ export interface ServiceRequestDetail extends BaseDetail {
   requirements: RequirementView[];
   /** Files the office attached through DeliverySection, downloadable here. */
   deliveredDocuments: DeliveredDocumentView[];
-  /** Files the citizen sent — at filing time and later — downloadable here. */
+  /** Files the citizen sent, at filing time and later, downloadable here. */
   citizenDocuments: CitizenDocumentView[];
   amountLabel?: string;
   /** True once the office marked the request "Pago" or moved it past that
-   * point — the amount still shows as a receipt, but nothing invites the
+   * point: the amount still shows as a receipt, but nothing invites the
    * citizen to pay again. */
   paymentSettled?: boolean;
   pix?: PixCharge;
@@ -369,7 +369,7 @@ export type FulfillRequirementState =
 
 /**
  * The citizen answers a pending requirement with one file, through the
- * consult they already have — no e-mail, no phone, same protocol and key as
+ * consult they already have: no e-mail, no phone, same protocol and key as
  * everything else on this screen.
  */
 /**

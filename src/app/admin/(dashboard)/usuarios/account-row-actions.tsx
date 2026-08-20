@@ -20,7 +20,7 @@ const IDLE_ACCOUNT_ACTION_STATE: AccountActionState = { status: "idle" };
  * The "Nova senha" / "Reenviar convite" button for one row of the Contas do
  * painel table. A secondary action on a list, not the screen's main
  * submission, so its feedback is a toast (see admin/layout.tsx's Toaster),
- * not a full-page state — same posture as Identidade Visual's "Publicado.".
+ * not a full-page state: same posture as Identidade Visual's "Publicado.".
  */
 function KeyAction({ userId, active }: { userId: string; active: boolean }) {
   const action = active ? triggerPasswordReset : resendInvite;
@@ -57,7 +57,7 @@ function KeyAction({ userId, active }: { userId: string; active: boolean }) {
 }
 
 /**
- * "Desativar acesso" — turns access off for someone who left, so it goes
+ * "Desativar acesso": turns access off for someone who left, so it goes
  * through the same confirm-modal pattern as every other irreversible-feeling
  * action in the panel, not a bare button.
  */
@@ -124,7 +124,7 @@ export function AccountRowActions({
   return (
     <div className="flex items-center gap-2">
       <KeyAction userId={userId} active={active} />
-      {/* Own row never offers this — see design.md, the server refuses it
+      {/* Own row never offers this: see design.md, the server refuses it
           too, this is only the courtesy of not showing a button that would
           just come back as an error. */}
       {!isSelf && <DeactivateAction userId={userId} />}

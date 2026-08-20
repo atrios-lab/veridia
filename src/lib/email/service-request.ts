@@ -39,7 +39,7 @@ function plainText(params: NotifyCitizenParams): string {
 /**
  * Awaited by nobody: call it with `void notifyCitizen(...)`. It swallows its
  * own failure into a log so the caller has nothing to catch and no reason to
- * wait — see the "best effort" half of the contract above.
+ * wait: see the "best effort" half of the contract above.
  */
 export async function notifyCitizen(
   params: NotifyCitizenParams,

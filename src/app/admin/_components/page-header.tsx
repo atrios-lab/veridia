@@ -5,7 +5,7 @@ import { AdminIcon } from "./icon.tsx";
 
 /**
  * The date and the "Disponível para o chat" indicator appear on every panel
- * screen, so this fetches its own data rather than taking it as a prop —
+ * screen, so this fetches its own data rather than taking it as a prop:
  * same reasoning as `today()` below, and it is what keeps every existing
  * `<AdminPageHeader title="..." />` call site from having to learn about
  * chat. Replaces the purely visual element registered as a Non-Goal in

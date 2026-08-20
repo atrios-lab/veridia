@@ -17,16 +17,16 @@ export const user = pgTable("user", {
   // table, so there is no foreign key to declare. Not nullable: a user with no
   // office is a state nobody would remember to handle.
   tenantSlug: text("tenant_slug").notNull(),
-  // Self-service presence for the support chat console — Disponível, Ocupado
+  // Self-service presence for the support chat console: Disponível, Ocupado
   // ou Ausente. Not access control, just what colleagues see in the transfer
   // list (see add-support-chat/design.md).
   chatStatus: text("chat_status").notNull().default("available"),
   // Which attribution the attendant specializes in, shown next to their name
-  // in the transfer list. Optional and set only at invite/seed time — there
+  // in the transfer list. Optional and set only at invite/seed time: there
   // is no user management screen yet (see add-support-chat/design.md,
   // "Setor do atendente é campo opcional no convite, não uma tela nova").
   chatSector: text("chat_sector"),
-  // Null while the account has access. Set to when an admin turned it off —
+  // Null while the account has access. Set to when an admin turned it off:
   // not a boolean, so the audit trail and the UI get "how long ago" for
   // free. Independent of whether a credential row exists: an account can be
   // both "already has its own password" and "access turned off".

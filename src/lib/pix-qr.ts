@@ -7,7 +7,7 @@ import {
 import type { Tenant } from "@/core/tenant/schema.ts";
 
 export interface PixCharge {
-  /** The "Copia e Cola" text — same payload the QR encodes. */
+  /** The "Copia e Cola" text: same payload the QR encodes. */
   copyPaste: string;
   /** Inline SVG markup, rendered on the server: no client JS, no
    * round-trip, and the payload (which carries the amount) never leaves
@@ -17,7 +17,7 @@ export interface PixCharge {
 
 /**
  * The charge for one request, or nothing when it can't be built. Needs the
- * amount, the office's Pix key and its city all at once — missing any one
+ * amount, the office's Pix key and its city all at once: missing any one
  * of the three means "no QR yet", never a broken or partial one (see
  * `openspec/changes/add-request-payment-qr/design.md`, decision 4).
  */

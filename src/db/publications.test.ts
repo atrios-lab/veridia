@@ -6,7 +6,7 @@ import { PGlite } from "@electric-sql/pglite";
 
 // office_publications against Postgres in process: the four states are
 // computed in src/core/publications/state.ts, never stored, so what belongs
-// here is the shape of the table itself — nullable dates, the index used by
+// here is the shape of the table itself: nullable dates, the index used by
 // the public query, and that inserting the four kinds of row it holds works.
 
 const MIGRATIONS_DIR = "drizzle";

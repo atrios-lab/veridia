@@ -408,7 +408,7 @@ test.describe("filing a request", () => {
     // Registering the exigência is the admin panel's job (delivery 6); it is
     // simulated here with a direct write, the same way this suite already
     // simulates the office's own writes elsewhere. The signed form is
-    // simulated as already received too, so the exigência — not the form —
+    // simulated as already received too, so the exigência (not the form)
     // is the step actually blocking the request.
     const sql = postgres(process.env.DATABASE_URL as string);
     await sql`
@@ -548,7 +548,7 @@ test.describe("filing a request", () => {
     // Marking the request "Pago" is the office's job (StatusSection);
     // simulated here the same way the other office writes in this suite are.
     // The signed form is simulated as already received too, so "Em preparo"
-    // — not the form — is the step actually blocking the request.
+    // (not the form) is the step actually blocking the request.
     const sql = postgres(process.env.DATABASE_URL as string);
     await sql`
       insert into service_request_attachments
@@ -667,7 +667,7 @@ test.describe("filing a request", () => {
     await expect(page.getByText("Em preparo na serventia")).toHaveCount(0);
 
     // The outcome step ends the timeline as a completed alert, not a step
-    // still in progress — nothing in it should carry the current-step ring.
+    // still in progress: nothing in it should carry the current-step ring.
     await expect(page.locator("ol .border-brand-accent")).toHaveCount(0);
   });
 });

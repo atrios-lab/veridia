@@ -110,7 +110,7 @@ export async function saveDataRightsDraft(
 }
 
 /**
- * Removes any file hanging off this requirement — the report the office
+ * Removes any file hanging off this requirement: the report the office
  * attached to its reply, or the document the holder sent to identify
  * themselves. Same reach the service request panel has.
  */

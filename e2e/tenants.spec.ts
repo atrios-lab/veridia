@@ -51,7 +51,7 @@ for (const tenant of Object.values(TENANTS)) {
       page,
     }) => {
       // The page lists sectors that actually have something live, so the set
-      // is a subset that shrinks to zero on a quiet week — what must never
+      // is a subset that shrinks to zero on a quiet week: what must never
       // happen is a sector this office has no attribution for.
       await page.goto(`${baseURL}/editais`);
       const rendered = await page

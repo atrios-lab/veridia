@@ -5,9 +5,9 @@ import { initials } from "./sidebar.tsx";
 /**
  * The panel's shell for a person who has no session yet: the invite and
  * "nova senha" screens at /admin/redefinir-senha. Same institutional chrome
- * as AdminSidebar (selo, name, "Painel administrativo") but no navigation —
- * every route it could point to would still refuse them — replaced by the
- * sentence explaining why. No "Sair" either: there is no session to end.
+ * as AdminSidebar (selo, name, "Painel administrativo") but no navigation,
+ * since every route it could point to would still refuse them: it is
+ * replaced by the sentence explaining why. No "Sair" either: there is no session to end.
  */
 export function AdminLockedSidebar({
   tenant,

@@ -2,7 +2,7 @@ import { expect, type Page, test } from "@playwright/test";
 import postgres from "postgres";
 
 // Entrega 9: convite e login. This screen creates real accounts, so every
-// test here needs a database and cleans up the row it created — same
+// test here needs a database and cleans up the row it created: same
 // posture as admin-settings.spec.ts.
 
 const PORT = process.env.PORT ?? "3000";
@@ -60,16 +60,14 @@ test.describe("tela de Usuários", () => {
     await page.getByLabel("Papel").selectOption({ label: "Operador" });
     await page.getByRole("button", { name: "Criar conta" }).click();
 
-    await expect(
-      page.getByText("Conta criada — e-mail enviado."),
-    ).toBeVisible();
+    await expect(page.getByText("Conta criada. E-mail enviado.")).toBeVisible();
 
     const row = page.getByText(CONVIDADA_EMAIL).locator("..").locator("..");
     await expect(row.getByText("Aguardando 1º acesso")).toBeVisible();
     await expect(row.getByText("Operador", { exact: true })).toBeVisible();
 
     // The e-mail has no provider configured in this test run (see
-    // playwright.config.ts), so it logs instead of sending — the assertion
+    // playwright.config.ts), so it logs instead of sending: the assertion
     // that matters here is that resending does not error and the account
     // stays in the same "waiting" state, not the log line itself.
     await row.getByRole("button", { name: "Reenviar convite" }).click();
@@ -94,9 +92,7 @@ test.describe("tela de Usuários", () => {
     await page.getByLabel("E-mail").fill(CONVIDADA_EMAIL);
     await page.getByLabel("Papel").selectOption({ label: "Operador" });
     await page.getByRole("button", { name: "Criar conta" }).click();
-    await expect(
-      page.getByText("Conta criada — e-mail enviado."),
-    ).toBeVisible();
+    await expect(page.getByText("Conta criada. E-mail enviado.")).toBeVisible();
 
     const sql = postgres(process.env.DATABASE_URL as string);
     const [row] = (await sql`

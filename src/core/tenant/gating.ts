@@ -85,7 +85,7 @@ export type NoticeSector = keyof typeof NOTICE_SECTOR_ATTRIBUTION;
 /**
  * What each sector says about itself on the public notices page: which kind
  * of edital it publishes and on what legal basis. Fixed prose, identical
- * across offices — config as code, same nature as the acts catalog, never
+ * across offices: config as code, same nature as the acts catalog, never
  * per-tenant content.
  */
 export const NOTICE_SECTOR_META: Record<

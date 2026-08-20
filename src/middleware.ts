@@ -19,7 +19,7 @@ const isDev = process.env.NODE_ENV === "development";
  * which means no client component ever hydrates: no client-side validation,
  * no click handler, nothing but plain links and native form posts. That was
  * the CSP this file's `headers()` used to carry, before this became
- * middleware — the whole app "worked" in development only because dev mode
+ * middleware: the whole app "worked" in development only because dev mode
  * tolerates `unsafe-inline`, and broke silently the moment anything ran
  * against a production build.
  *
@@ -27,12 +27,12 @@ const isDev = process.env.NODE_ENV === "development";
  * of the `Content-Security-Policy` response header it receives and stamps
  * every script tag it emits with it, so only scripts the server actually
  * sent execute. `unsafe-inline` would have fixed hydration too, but it also
- * lets an attacker's injected `<script>` execute exactly like the app's own
- * — the one thing this CSP exists to stop.
+ * lets an attacker's injected `<script>` execute exactly like the app's own,
+ * which is the one thing this CSP exists to stop.
  *
  * There is no explicit `<script>` in this codebase (checked before writing
  * this), so nothing here has to read the nonce back out and stamp its own
- * tag with it. The day one is added — analytics, structured data — it reads
+ * tag with it. The day one is added (analytics, structured data) it reads
  * the nonce from `headers().get("x-nonce")` and passes it as the `nonce`
  * prop; Next does not stamp author-written tags on its own.
  */
@@ -78,7 +78,7 @@ export function middleware(request: NextRequest) {
   // not the authorization check. The admin layout revalidates the session
   // against the database on every request, which is what makes revocation
   // immediate. Scoped to /admin explicitly now that this file also carries
-  // the CSP for the public site — without the guard every anonymous visit
+  // the CSP for the public site: without the guard every anonymous visit
   // to the public site would be redirected to the admin login.
   const guardsThisRoute =
     pathname.startsWith("/admin") &&

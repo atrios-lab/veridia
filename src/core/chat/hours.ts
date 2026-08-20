@@ -9,7 +9,7 @@ import type { Tenant } from "../tenant/schema.ts";
 
 // Every office served today is in Brazil; a per-tenant time zone is not a
 // field the platform has, so this mirrors the single constant in
-// src/lib/tenant.ts rather than importing it — that module is "server-only"
+// src/lib/tenant.ts rather than importing it: that module is "server-only"
 // and reaches the database, which src/core must never depend on.
 const DEFAULT_TIME_ZONE = "America/Sao_Paulo";
 
@@ -46,8 +46,8 @@ export function isWithinChatHours(
 }
 
 /**
- * When the chat opens next — today, if attendance has not started yet, or
- * the next business day otherwise — for the "Voltamos segunda-feira às 8h"
+ * When the chat opens next: today, if attendance has not started yet, or
+ * the next business day otherwise: for the "Voltamos segunda-feira às 8h"
  * line the closed widget shows.
  */
 export function nextChatOpening(

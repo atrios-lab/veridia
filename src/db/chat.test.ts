@@ -5,9 +5,9 @@ import { after, before, test } from "node:test";
 import { PGlite } from "@electric-sql/pglite";
 
 // chat_conversations and chat_messages, against Postgres in process. What
-// belongs here is the shape of the two tables — the cascade from a deleted
+// belongs here is the shape of the two tables: the cascade from a deleted
 // conversation to its messages, and that the indexes the queue and the
-// polling endpoint depend on actually exist — not the domain rules already
+// polling endpoint depend on actually exist: not the domain rules already
 // covered in src/core/chat/*.test.ts.
 
 const MIGRATIONS_DIR = "drizzle";

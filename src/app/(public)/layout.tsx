@@ -36,7 +36,7 @@ export default async function PublicLayout({
   // Server-side gate on the office's switch: an office with chat off never
   // ships the component to the client at all. The client then polls its own
   // state to react within seconds if the switch flips mid-session (see
-  // chat-widget.tsx) — this only covers page load.
+  // chat-widget.tsx): this only covers page load.
   const chatEnabled = await isChatEnabled(tenant.slug);
   const cookieStore = await cookies();
   const cookieNoticeAcknowledged = cookieStore.has(COOKIE_NOTICE_COOKIE);
@@ -168,7 +168,7 @@ export default async function PublicLayout({
       </footer>
 
       {/* The chat waits for the cookie notice: both live in the bottom-right
-          corner, and the chat sets its own cookie — it only shows up once the
+          corner, and the chat sets its own cookie: it only shows up once the
           citizen has seen the notice. */}
       {chatEnabled && cookieNoticeAcknowledged && (
         <ChatWidget tenant={tenant} />

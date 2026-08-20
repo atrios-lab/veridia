@@ -5,7 +5,7 @@ import { getTenant } from "@/lib/tenant.ts";
 export const runtime = "nodejs";
 
 /**
- * POST, not GET: same reasoning as the other protocol downloads — the
+ * POST, not GET: same reasoning as the other protocol downloads, the
  * access key would otherwise sit in the address bar and in every log on
  * the way.
  */
@@ -17,7 +17,7 @@ export async function POST(request: Request): Promise<Response> {
   const attachmentId = String(form.get("attachmentId") ?? "");
 
   // One answer for "no such protocol", "wrong key" and "not this request's
-  // file" — nothing here should tell a guesser which part was wrong.
+  // file": nothing here should tell a guesser which part was wrong.
   const stored = await findByProtocolWithKey(
     tenant.slug,
     protocolNumber,

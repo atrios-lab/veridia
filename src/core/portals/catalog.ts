@@ -37,7 +37,7 @@ export const SERP_PORTAL: OfficialPortal = {
 /**
  * Groups by attribution, in the order the design draws them. A group
  * appears on `/centrais` only when the tenant holds at least one of its
- * attributions — see `portalGroupsFor`.
+ * attributions: see `portalGroupsFor`.
  */
 export const PORTAL_GROUPS: PortalGroup[] = [
   {

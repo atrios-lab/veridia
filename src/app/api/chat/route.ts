@@ -15,7 +15,7 @@ export const runtime = "nodejs";
 
 /**
  * Starts a conversation from the widget's pre-chat. Mirrors the honeypot and
- * rate-limit discipline the other public forms already use — see
+ * rate-limit discipline the other public forms already use: see
  * src/app/(public)/solicitar/actions.ts.
  */
 export async function POST(request: Request): Promise<Response> {
@@ -24,7 +24,7 @@ export async function POST(request: Request): Promise<Response> {
 
   if (looksLikeBot(form.get("website"))) {
     // The tela advances as if the conversation was created, but nothing is
-    // written and no cookie is set — see support-chat spec, "Campo-armadilha
+    // written and no cookie is set: see support-chat spec, "Campo-armadilha
     // preenchido".
     return Response.json({ id: null, token: null });
   }

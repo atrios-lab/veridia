@@ -14,7 +14,7 @@ import * as authSchema from "./auth-schema.ts";
 // approach as tenant-scope.test.ts and session-revocation.test.ts: what is
 // asserted here is exactly what deactivateAccount/reactivateAccount
 // (src/app/admin/(dashboard)/usuarios/actions.ts) do to the row, to open
-// sessions, and to the next sign-in attempt — not the Next.js action
+// sessions, and to the next sign-in attempt: not the Next.js action
 // wrapper itself, which needs a request context this suite does not build.
 
 const MIGRATIONS_DIR = "drizzle";

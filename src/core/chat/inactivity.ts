@@ -3,7 +3,7 @@ import type { ConversationStatus } from "./conversation.ts";
 // 10 minutes without a word from the citizen closes the conversation
 // automatically; the warning fires two minutes before that, at 8. Both are
 // read from the same clock: the citizen's last message, never the
-// attendant's — an attendant typing does not keep a silent citizen "active".
+// attendant's: an attendant typing does not keep a silent citizen "active".
 export const INACTIVITY_TIMEOUT_MINUTES = 10;
 export const INACTIVITY_WARNING_MINUTES = 8;
 
@@ -18,9 +18,9 @@ function minutesSince(instant: Date, now: Date): number {
 
 /**
  * Whether an `active` conversation has gone quiet long enough to close on
- * its own. Evaluated lazily wherever a conversation is read — see
+ * its own. Evaluated lazily wherever a conversation is read: see
  * design.md, "Inatividade e fechamento automático avaliados de forma
- * preguiçosa, sem cron" — never by a scheduled job.
+ * preguiçosa, sem cron", never by a scheduled job.
  */
 export function isStale(conversation: ActivityState, now: Date): boolean {
   if (conversation.status !== "active") return false;

@@ -81,7 +81,7 @@
 /*
  * Admin, state only. Identity (primary, accent, surface, border, muted) now
  * comes from --brand-*, resolved by the [data-theme] the admin layout sets
- * from the tenant's published style — the panel repaints with the tenant,
+ * from the tenant's published style: the panel repaints with the tenant,
  * same as the public site. What stays fixed here is meaning that must not
  * vary by tenant: error is always this red, a read-only field is always
  * this texture, regardless of which of the five styles is published.
@@ -164,7 +164,7 @@
   --font-sans: var(--font-brand-sans), system-ui, sans-serif;
   --font-serif: var(--font-brand-serif), Georgia, serif;
 
-  /* The one radius every .btn uses — see the button system below. Was
+  /* The one radius every .btn uses: see the button system below. Was
      12 different values (8px through 16px) across admin and public before
      this existed; 10px sits at the middle of that range. */
   --radius-control: 0.625rem;
@@ -295,7 +295,7 @@
   }
 
   /*
-   * Button system — one shape, two vocabularies.
+   * Button system: one shape, two vocabularies.
    *
    * An audit of every <button>/<a>/<Link> styled as a button found 12
    * different border-radius values and no shared component anywhere: each
@@ -303,7 +303,7 @@
    * `.btn` fixes the shape (radius, weight, gap, transition, cursor,
    * disabled) once; `.btn-*` picks the fill. Two families exist because the
    * panel and the public site already read two different token sets
-   * (--color-admin-* vs --color-brand-*, see the theme blocks above) — not
+   * (--color-admin-* vs --color-brand-*, see the theme blocks above): not
    * because the shape differs. Full reference: docs/design-system.md.
    */
   .btn {
@@ -331,7 +331,7 @@
   }
 
   /* Sizes: sm for a dense row action, md the default, lg for a form's own
-     submit — the one control on the screen a thumb has to land on easily. */
+     submit: the one control on the screen a thumb has to land on easily. */
   .btn-sm {
     padding: 0.375rem 0.75rem;
     font-size: 0.75rem;
@@ -524,7 +524,7 @@
    *
    * The difference is what happens when the animation does not run. A
    * keyframe starting at `opacity: 0` leaves the dialog invisible if the
-   * browser never advances it — and an invisible confirmation dialog is a
+   * browser never advances it, and an invisible confirmation dialog is a
    * modal the operator cannot see but that still has their keyboard. The
    * transition below settles at the visible state and only backs into the
    * hidden one at the moment of opening, so anything that goes wrong,
@@ -581,7 +581,7 @@
    * the product gets an explicit pointer cursor and a visible keyboard focus
    * ring here, unconditionally, whether or not its className was migrated to
    * the .btn family below. An audit found 88 of 92 <button>s and all <a>/
-   * <Link> used as buttons with no focus-visible state at all — the kind of
+   * <Link> used as buttons with no focus-visible state at all: the kind of
    * gap that is invisible with a mouse and disqualifying with a keyboard.
    * This rule means no future button can ship without one by omission.
    *

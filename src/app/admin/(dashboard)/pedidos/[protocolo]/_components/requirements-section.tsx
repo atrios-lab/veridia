@@ -61,7 +61,7 @@ function formatDayMonth(date: Date): string {
 
 /**
  * The form the citizen has to print and present. It lives in the requirement's
- * card on both sides — here and in the protocol consult — and nowhere near the
+ * card on both sides, here and in the protocol consult, and nowhere near the
  * request's deliveries.
  */
 function RequirementForms({

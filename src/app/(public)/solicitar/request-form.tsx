@@ -541,8 +541,8 @@ function SuccessScreen({ result }: { result: SubmitSuccess }) {
         className="rounded-b-2xl"
       >
         <strong className="text-brand-alert">A chave aparece só agora.</strong>{" "}
-        O site não guarda nem reenvia — o comprovante abaixo é o único lugar
-        onde ela fica registrada.
+        O site não guarda nem reenvia: o comprovante abaixo é o único lugar onde
+        ela fica registrada.
       </ProtocolReveal>
 
       <ol className="mt-4 flex flex-col gap-2.5">

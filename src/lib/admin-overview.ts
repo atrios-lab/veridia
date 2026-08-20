@@ -44,7 +44,7 @@ export interface RecentActivityEntry {
  * id) exists.
  *
  * `service-request.delete`'s audit entry has no matching row by design (the
- * row is gone) — it joins to nothing, and the caller's sentence map falls
+ * row is gone): it joins to nothing, and the caller's sentence map falls
  * back to a generic label when `protocolNumber` comes back null.
  */
 export async function listRecentActivity(
@@ -95,7 +95,7 @@ export interface UpcomingDataRightsDeadline {
 }
 
 /** Open LGPD requerimentos within three days of the legal term, overdue ones
- * included — the same horizon `DeadlineBadge` uses, closest deadline first. */
+ * included: the same horizon `DeadlineBadge` uses, closest deadline first. */
 export async function listUpcomingDataRightsDeadlines(
   tenantSlug: string,
   today: IsoDate,
@@ -139,7 +139,7 @@ export interface StalledRequest {
 
 /**
  * Service requests still "Em análise" whose most recent exigência was
- * cumprida but whose andamento has not moved since — the operator's turn,
+ * cumprida but whose andamento has not moved since: the operator's turn,
  * waiting.
  */
 export async function listStalledFulfilledRequirements(
@@ -216,7 +216,7 @@ export const ACTIVITY_VERBS: Record<string, string> = {
 /**
  * The sentence a row of `listRecentActivity` reads as. The subject is
  * whoever acted: the operator when the action carries one, the citizen's own
- * name otherwise (creation and citizen-side writes have no `actorId`) —
+ * name otherwise (creation and citizen-side writes have no `actorId`):
  * exactly like the design's activity feed mixes both.
  */
 export function activitySentence(entry: RecentActivityEntry): string {

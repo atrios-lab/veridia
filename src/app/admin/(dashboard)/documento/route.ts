@@ -14,7 +14,7 @@ export const runtime = "nodejs";
  *
  * Not under a protocol segment: the attachment is found by request and
  * attachment id alone, and the same handler serves every section of the panel
- * that shows a file — a service request, an LGPD requirement, whatever comes
+ * that shows a file: a service request, an LGPD requirement, whatever comes
  * next.
  */
 /** Types a registrar reads on screen; anything else is handed over to save. */

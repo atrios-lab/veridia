@@ -23,7 +23,7 @@ type DeleteAction = (
   formData: FormData,
 ) => Promise<ActionState>;
 
-/** "259 KB", "1.4 MB" — the size the operator sees before opening. */
+/** "259 KB", "1.4 MB": the size the operator sees before opening. */
 function formatFileSize(bytes: number): string {
   if (bytes < 1024 * 1024) return `${Math.max(1, Math.round(bytes / 1024))} KB`;
   return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
@@ -33,10 +33,10 @@ const BUTTON = "btn btn-admin-secondary btn-sm shrink-0";
 
 /**
  * One attached file, everywhere the panel shows one: icon, name, when it
- * arrived, how big it is, and explicit "Ver" and "Excluir" buttons — the
+ * arrived, how big it is, and explicit "Ver" and "Excluir" buttons: the
  * registrar asked for buttons that look like buttons, not links.
  *
- * `onDelete` is optional only because some places have nothing to call — the
+ * `onDelete` is optional only because some places have nothing to call: the
  * file that answered a requirement is pinned by it, and the server refuses to
  * remove it anyway.
  */

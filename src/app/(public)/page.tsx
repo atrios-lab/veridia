@@ -32,7 +32,7 @@ const ACTION_CARDS: {
   desktopOnly?: boolean;
   // Overrides SECTION_LABELS for this card only. Needed for
   // "centrais-contato": the shared label is "Centrais e contato", but this
-  // card's description and link are about the official portals alone — the
+  // card's description and link are about the official portals alone: the
   // contact page has its own entry in the site nav.
   label?: string;
 }[] = [
@@ -234,7 +234,7 @@ export default async function Home() {
           ))}
         </section>
 
-        {/* Only exists on the site at all when there is a live publication —
+        {/* Only exists on the site at all when there is a live publication:
             no publication, no section, same rule as any other optional home
             block (compare `citizenLinks.length > 0` below). */}
         {publications.length > 0 && (

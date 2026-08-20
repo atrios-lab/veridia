@@ -2,7 +2,7 @@ import { z } from "zod";
 
 /**
  * Something the office needs from the citizen before a service request can
- * move forward — a missing document, an unsigned form. It has its own
+ * move forward: a missing document, an unsigned form. It has its own
  * lifecycle, is registered by the office and resolved by the citizen through
  * the protocol consult they already have, with a single attachment as the
  * answer.
