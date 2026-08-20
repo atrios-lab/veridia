@@ -169,16 +169,25 @@ export async function archivePublication(
 export async function livePublications(
   tenantSlug: string,
 ): Promise<PublicationRow[]> {
-  const rows = await db
-    .select()
-    .from(officePublications)
-    .where(
-      and(
-        eq(officePublications.tenantSlug, tenantSlug),
-        isNull(officePublications.archivedAt),
-      ),
-    )
-    .orderBy(desc(officePublications.publishAt));
+  let rows: PublicationRow[];
+  try {
+    rows = await db
+      .select()
+      .from(officePublications)
+      .where(
+        and(
+          eq(officePublications.tenantSlug, tenantSlug),
+          isNull(officePublications.archivedAt),
+        ),
+      )
+      .orderBy(desc(officePublications.publishAt));
+  } catch {
+    // Same posture as `readTenantOverrides` in src/lib/tenant.ts: a database
+    // that is down serves a home page without the editais section instead of
+    // no home page at all. The section already disappears when the office has
+    // published nothing, so the empty case is a shape the page knows.
+    return [];
+  }
   const day = today();
   return rows.filter((row) => isLive(row, day));
 }

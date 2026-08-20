@@ -62,18 +62,27 @@ function hashCitizenToken(token: string): string {
  * `getTenant()`'s override merge: this is operational state, not part of
  * the Tenant shape (see src/lib/tenant.ts, OFFICE_CHAT_KEY). */
 export async function isChatEnabled(tenantSlug: string): Promise<boolean> {
-  const [row] = await db
-    .select({ published: tenantContent.published })
-    .from(tenantContent)
-    .where(
-      and(
-        eq(tenantContent.tenantSlug, tenantSlug),
-        eq(tenantContent.key, OFFICE_CHAT_KEY),
-      ),
-    )
-    .limit(1);
-  const settings = row?.published as { enabled?: boolean } | null | undefined;
-  return settings?.enabled ?? false;
+  try {
+    const [row] = await db
+      .select({ published: tenantContent.published })
+      .from(tenantContent)
+      .where(
+        and(
+          eq(tenantContent.tenantSlug, tenantSlug),
+          eq(tenantContent.key, OFFICE_CHAT_KEY),
+        ),
+      )
+      .limit(1);
+    const settings = row?.published as { enabled?: boolean } | null | undefined;
+    return settings?.enabled ?? false;
+  } catch {
+    // A database that is down leaves the chat off rather than taking the
+    // whole public page down with it, the same posture `readTenantOverrides`
+    // takes in src/lib/tenant.ts. The office loses a channel for as long as
+    // the outage lasts; the site keeps serving the address and the telephone,
+    // which is what a citizen needs most while nothing else works.
+    return false;
+  }
 }
 
 /**
