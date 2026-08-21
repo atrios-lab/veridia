@@ -3,6 +3,8 @@ import {
   PROTOCOL_TYPE_LABELS,
   parseProtocolNumber,
 } from "@/core/request/protocol.ts";
+import { appointmentStatusLabel } from "@/core/scheduling/appointment.ts";
+import { findAppointmentByProtocol } from "@/lib/appointments.ts";
 import { findByProtocol } from "@/lib/service-request.ts";
 import { requireSection } from "../_lib/section.ts";
 import { ProtocolLookup, type PublicStatus } from "./protocol-lookup.tsx";
@@ -24,6 +26,23 @@ export default async function ProtocolLookupPage({
   if (protocolNumber) {
     try {
       const request = await findByProtocol(tenant.slug, protocolNumber);
+      // AGD numbers issued after appointments moved to their own table live
+      // there, not in service_requests; dormant legacy rows still win above.
+      if (!request && parseProtocolNumber(protocolNumber)?.prefix === "AGD") {
+        const appointment = await findAppointmentByProtocol(
+          tenant.slug,
+          protocolNumber,
+        );
+        if (appointment?.protocolNumber) {
+          publicStatus = {
+            protocolNumber: appointment.protocolNumber,
+            typeLabel: PROTOCOL_TYPE_LABELS.AGD,
+            statusLabel: appointmentStatusLabel(appointment.status),
+            createdAt: appointment.createdAt.toISOString(),
+            updatedAt: appointment.updatedAt.toISOString(),
+          };
+        }
+      }
       if (request) {
         const parsed = parseProtocolNumber(request.protocolNumber);
         publicStatus = {

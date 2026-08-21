@@ -345,6 +345,7 @@ function AppointmentForm({
   const {
     register,
     handleSubmit,
+    watch,
     formState: { errors: clientErrors },
   } = useForm({
     resolver: zodResolver(
@@ -441,9 +442,19 @@ function AppointmentForm({
               {services.map((service) => (
                 <option key={service.id} value={service.id}>
                   {service.label}
+                  {service.notaryOnly ? " · só com o tabelião" : ""}
                 </option>
               ))}
             </select>
+            {/* Said before the citizen commits to an hour: an appointment
+                that depends on the notary being in is worth knowing about
+                while there is still time to pick another service or day. */}
+            {services.find((service) => service.id === watch("serviceId"))
+              ?.notaryOnly && (
+              <p className="mt-1.5 text-[12px] leading-relaxed text-brand-muted">
+                Este serviço é atendido só com o tabelião presente.
+              </p>
+            )}
             <FieldError message={errorFor("serviceId")} />
           </div>
 

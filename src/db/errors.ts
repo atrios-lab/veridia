@@ -21,3 +21,20 @@ export function isPostgresError(error: unknown, code: string): boolean {
   }
   return false;
 }
+
+/**
+ * Which unique constraint a violation names, from wherever in the cause chain
+ * the driver's error sits. An insert guarded by two different unique indexes
+ * needs this to tell "the slot is taken" from "the number is taken".
+ */
+export function violatedConstraint(error: unknown): string | undefined {
+  const seen = new Set<unknown>();
+  let current: unknown = error;
+  while (current && typeof current === "object" && !seen.has(current)) {
+    seen.add(current);
+    const name = (current as { constraint_name?: unknown }).constraint_name;
+    if (typeof name === "string" && name) return name;
+    current = (current as { cause?: unknown }).cause;
+  }
+  return undefined;
+}

@@ -11,6 +11,7 @@ import { createHash, randomBytes } from "node:crypto";
 export const APPOINTMENT_STATUSES = [
   "booked",
   "attended",
+  "no_show",
   "cancelled",
 ] as const;
 export type AppointmentStatus = (typeof APPOINTMENT_STATUSES)[number];
@@ -31,14 +32,26 @@ export type AppointmentStatus = (typeof APPOINTMENT_STATUSES)[number];
 export const SLOT_HOLDING_STATUSES: readonly AppointmentStatus[] = [
   "booked",
   "attended",
+  // The citizen did not come, but the counter's hour was reserved and spent
+  // waiting: re-offering it after the fact would book a time already past.
+  "no_show",
 ];
 export const ACTIONABLE_APPOINTMENT_STATUS: AppointmentStatus = "booked";
 
 const STATUS_LABELS: Record<AppointmentStatus, string> = {
   booked: "Agendado",
   attended: "Atendido",
+  no_show: "Faltou",
   cancelled: "Cancelado",
 };
+
+/**
+ * Who put the appointment in the book: the citizen through the site, or the
+ * office at the counter ("Reservar para um cidadão"). A fact of the record,
+ * not presentation: the badge and the audit trail both read it.
+ */
+export const APPOINTMENT_ORIGINS = ["site", "desk"] as const;
+export type AppointmentOrigin = (typeof APPOINTMENT_ORIGINS)[number];
 
 /** What the panel and the e-mails call it. An unknown value never leaks a raw
  * column value onto a screen. */

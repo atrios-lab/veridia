@@ -203,6 +203,8 @@ export const ACTIVITY_VERBS: Record<string, string> = {
   "appointment.cancel": "cancelou um agendamento",
   "appointment.close-day": "fechou um dia da agenda",
   "appointment.attend": "marcou o atendimento como realizado",
+  "appointment.no-show": "registrou a falta do cidadão",
+  "appointment.desk-book": "reservou um horário no balcão",
   "agenda.settings": "alterou a configuração da agenda",
   "data-rights.create": "registrou um requerimento LGPD",
   "data-rights.respond": "respondeu ao titular",

@@ -255,7 +255,11 @@ export function rankTodayAppointments(
   );
   let nextAssigned = false;
   return sorted.map((item) => {
-    if (item.status === "attended" || item.slotTime < nowTime) {
+    if (
+      item.status === "attended" ||
+      item.status === "no_show" ||
+      item.slotTime < nowTime
+    ) {
       return { ...item, state: "done" as const };
     }
     if (!nextAssigned) {

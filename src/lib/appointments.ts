@@ -1,17 +1,23 @@
 import "server-only";
 import { and, asc, eq, inArray, sql } from "drizzle-orm";
+import { formatProtocolNumber } from "@/core/request/protocol.ts";
 import {
   type AgendaConfig,
   parseAgendaConfig,
 } from "@/core/scheduling/agenda.ts";
 import {
   ACTIONABLE_APPOINTMENT_STATUS,
+  type AppointmentOrigin,
   hashCancelToken,
   SLOT_HOLDING_STATUSES,
 } from "@/core/scheduling/appointment.ts";
 import type { IsoDate } from "@/core/scheduling/calendar.ts";
 import type { SlotTime, TakenTimes } from "@/core/scheduling/slots.ts";
-import { isPostgresError, UNIQUE_VIOLATION } from "@/db/errors.ts";
+import {
+  isPostgresError,
+  UNIQUE_VIOLATION,
+  violatedConstraint,
+} from "@/db/errors.ts";
 import { db } from "@/db/index.ts";
 import { appointments, tenantContent } from "@/db/schema.ts";
 import { OFFICE_AGENDA_KEY } from "@/lib/tenant.ts";
@@ -187,7 +193,31 @@ export interface NewAppointment {
   serviceLabel: string;
   mode: string;
   cancelTokenHash: string;
+  /** Defaults to "site": the citizen booked it themselves. */
+  origin?: AppointmentOrigin;
 }
+
+/** The next AGD number of the office's year, same read as service-request:
+ * max + 1, and the unique index settles any race. */
+async function nextProtocolSequence(
+  tenantSlug: string,
+  year: number,
+): Promise<number> {
+  const [last] = await db
+    .select({ sequence: appointments.protocolSequence })
+    .from(appointments)
+    .where(
+      and(
+        eq(appointments.tenantSlug, tenantSlug),
+        eq(appointments.protocolYear, year),
+      ),
+    )
+    .orderBy(sql`${appointments.protocolSequence} desc nulls last`)
+    .limit(1);
+  return (last?.sequence ?? 0) + 1;
+}
+
+const PROTOCOL_ATTEMPTS = 5;
 
 /**
  * Books the time. The partial unique index is the referee: two citizens on
@@ -198,38 +228,60 @@ export interface NewAppointment {
 export async function bookAppointment(
   tenantSlug: string,
   input: NewAppointment,
+  actorId: string | null = null,
 ): Promise<Appointment> {
-  try {
-    const [created] = await db
-      .insert(appointments)
-      .values({
-        tenantSlug,
-        date: input.date,
-        slotTime: input.slotTime,
-        citizenName: input.citizenName,
-        email: input.email,
-        phone: input.phone,
-        cpf: input.cpf ?? null,
-        serviceId: input.serviceId,
-        serviceLabel: input.serviceLabel,
-        mode: input.mode,
-        cancelTokenHash: input.cancelTokenHash,
-      })
-      .returning();
+  const year = new Date().getFullYear();
+  const origin = input.origin ?? "site";
 
-    await recordAudit({
-      tenantSlug,
-      actorId: null, // booked by the citizen, who has no account by design
-      action: "appointment.book",
-      targetType: "appointment",
-      targetId: created.id,
-    });
-    return created;
-  } catch (error) {
-    if (isPostgresError(error, UNIQUE_VIOLATION)) {
+  // Two unique indexes referee this insert, and they mean different things:
+  // the slot index means the time is gone (tell the caller), the protocol
+  // index means another booking took this number first (ask for the next).
+  for (let attempt = 1; ; attempt++) {
+    const sequence = await nextProtocolSequence(tenantSlug, year);
+    try {
+      const [created] = await db
+        .insert(appointments)
+        .values({
+          tenantSlug,
+          date: input.date,
+          slotTime: input.slotTime,
+          citizenName: input.citizenName,
+          email: input.email,
+          phone: input.phone,
+          cpf: input.cpf ?? null,
+          serviceId: input.serviceId,
+          serviceLabel: input.serviceLabel,
+          mode: input.mode,
+          cancelTokenHash: input.cancelTokenHash,
+          origin,
+          protocolYear: year,
+          protocolSequence: sequence,
+          protocolNumber: formatProtocolNumber("AGD", year, sequence),
+        })
+        .returning();
+
+      await recordAudit({
+        tenantSlug,
+        // Null when booked by the citizen, who has no account by design.
+        actorId,
+        action:
+          origin === "desk" ? "appointment.desk-book" : "appointment.book",
+        targetType: "appointment",
+        targetId: created.id,
+      });
+      return created;
+    } catch (error) {
+      if (!isPostgresError(error, UNIQUE_VIOLATION)) throw error;
+      const constraint = violatedConstraint(error);
+      if (
+        constraint === "appointments_tenant_year_sequence" ||
+        constraint === "appointments_tenant_protocol"
+      ) {
+        if (attempt >= PROTOCOL_ATTEMPTS) throw error;
+        continue;
+      }
       throw new SlotTakenError("Este horário acabou de ser preenchido.");
     }
-    throw error;
   }
 }
 
@@ -341,6 +393,101 @@ export async function markAttended(
     targetType: "appointment",
     targetId: id,
   });
+}
+
+/** The citizen did not come. Same live guard as `markAttended`; no e-mail:
+ * telling someone they missed what they missed serves nobody. */
+export async function markNoShow(
+  tenantSlug: string,
+  id: string,
+  actorId: string,
+): Promise<void> {
+  await db
+    .update(appointments)
+    .set({ status: "no_show", updatedAt: new Date() })
+    .where(
+      and(
+        eq(appointments.tenantSlug, tenantSlug),
+        eq(appointments.id, id),
+        eq(appointments.status, ACTIONABLE_APPOINTMENT_STATUS),
+      ),
+    );
+  await recordAudit({
+    tenantSlug,
+    actorId,
+    action: "appointment.no-show",
+    targetType: "appointment",
+    targetId: id,
+  });
+}
+
+/** Non-cancelled appointments per day of a window, for the day strip's
+ * "X de Y" occupancy. */
+export async function liveCountsByDay(
+  tenantSlug: string,
+  from: IsoDate,
+  to: IsoDate,
+): Promise<Map<IsoDate, number>> {
+  const rows = await db
+    .select({ date: appointments.date, count: sql<number>`count(*)::int` })
+    .from(appointments)
+    .where(
+      and(
+        eq(appointments.tenantSlug, tenantSlug),
+        sql`${appointments.status} <> 'cancelled'`,
+        sql`${appointments.date} between ${from} and ${to}`,
+      ),
+    )
+    .groupBy(appointments.date);
+  return new Map(rows.map((row) => [row.date, row.count]));
+}
+
+/**
+ * Live future appointments counted by (weekday, time), so the settings form
+ * can warn before a chip with people behind it is removed.
+ */
+export async function futureLiveByWeekdayTime(
+  tenantSlug: string,
+  from: IsoDate,
+): Promise<Record<string, number>> {
+  const rows = await db
+    .select({
+      // Postgres dow: 0 is Sunday, same numbering as core's weekday().
+      day: sql<number>`extract(dow from ${appointments.date})::int`,
+      slotTime: appointments.slotTime,
+      count: sql<number>`count(*)::int`,
+    })
+    .from(appointments)
+    .where(
+      and(
+        eq(appointments.tenantSlug, tenantSlug),
+        eq(appointments.status, ACTIONABLE_APPOINTMENT_STATUS),
+        sql`${appointments.date} >= ${from}`,
+      ),
+    )
+    .groupBy(sql`1`, appointments.slotTime);
+  return Object.fromEntries(
+    rows.map((row) => [`${row.day}|${row.slotTime}`, row.count]),
+  );
+}
+
+/** The appointment a public AGD protocol lookup names. Any status: the point
+ * of the lookup is to answer what became of it. */
+export async function findAppointmentByProtocol(
+  tenantSlug: string,
+  protocolNumber: string,
+): Promise<Appointment | undefined> {
+  const [row] = await db
+    .select()
+    .from(appointments)
+    .where(
+      and(
+        eq(appointments.tenantSlug, tenantSlug),
+        eq(appointments.protocolNumber, protocolNumber),
+      ),
+    )
+    .limit(1);
+  return row;
 }
 
 /**
