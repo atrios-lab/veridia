@@ -2,7 +2,7 @@
 
 import { zodResolver } from "@hookform/resolvers/zod";
 import Link from "next/link";
-import { startTransition, useActionState, useState } from "react";
+import { useActionState, useState } from "react";
 import { useForm } from "react-hook-form";
 import {
   MANIFESTATION_OPTIONS,
@@ -12,6 +12,11 @@ import {
 import type { ManifestationType } from "@/core/request/kinds.ts";
 import { Icon, type IconName } from "../_components/icon.tsx";
 import { ProtocolReveal } from "../_components/protocol-reveal.tsx";
+import {
+  ATTACHMENT_ACCEPT,
+  useAttachmentUpload,
+  validateAttachments,
+} from "../_lib/attachments.tsx";
 import {
   type OmbudsmanState,
   type OmbudsmanSuccess,
@@ -69,6 +74,15 @@ export function ManifestationScreen() {
     { status: "idle" },
   );
   const [attachments, setAttachments] = useState<File[]>([]);
+  // The files reach the store before the form is sent (see
+  // ../_lib/attachments.tsx): a platform function's body is too small for one.
+  const {
+    send,
+    uploading,
+    error: attachmentError,
+    setError: setAttachmentError,
+  } = useAttachmentUpload(formAction);
+  const sending = pending || uploading;
 
   const {
     register,
@@ -88,8 +102,7 @@ export function ManifestationScreen() {
       | undefined) ?? serverErrors[name];
 
   const onSubmit = handleSubmit((_data, event) => {
-    const form = event?.target as HTMLFormElement;
-    startTransition(() => formAction(new FormData(form)));
+    void send(event?.target as HTMLFormElement, "anexos");
   });
 
   return (
@@ -227,11 +240,13 @@ export function ManifestationScreen() {
                 name="anexos"
                 type="file"
                 multiple
-                accept="image/jpeg,image/png,image/webp,image/heic,application/pdf"
+                accept={ATTACHMENT_ACCEPT}
                 className="sr-only"
-                onChange={(event) =>
-                  setAttachments([...(event.target.files ?? [])])
-                }
+                onChange={(event) => {
+                  const picked = [...(event.target.files ?? [])];
+                  setAttachmentError(validateAttachments(picked));
+                  setAttachments(picked);
+                }}
               />
             </label>
             {attachments.length > 0 && (
@@ -251,6 +266,11 @@ export function ManifestationScreen() {
                   </li>
                 ))}
               </ul>
+            )}
+            {attachmentError && (
+              <output className="mt-2 block text-xs font-semibold text-brand-alert">
+                {attachmentError}
+              </output>
             )}
           </div>
 
@@ -285,10 +305,10 @@ export function ManifestationScreen() {
 
         <button
           type="submit"
-          disabled={pending}
+          disabled={sending}
           className="btn btn-primary btn-lg mt-5 w-full md:w-auto"
         >
-          {pending ? "Enviando..." : "Registrar manifestação"}
+          {sending ? "Enviando..." : "Registrar manifestação"}
         </button>
         <p className="mt-2 text-center text-[11px] text-brand-faint md:text-left">
           Toda manifestação recebe número de registro e vai ao responsável.

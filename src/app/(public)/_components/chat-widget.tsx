@@ -6,6 +6,10 @@ import { isWithinChatHours, nextChatOpening } from "@/core/chat/hours.ts";
 import { formatFullDate } from "@/core/scheduling/calendar.ts";
 import { SECTION_ROUTES } from "@/core/tenant/gating.ts";
 import type { Tenant } from "@/core/tenant/schema.ts";
+import {
+  ATTACHMENT_ACCEPT,
+  useAttachmentPrepare,
+} from "../_lib/attachments.tsx";
 import { Icon } from "./icon.tsx";
 
 const CONVERSATION_ID_STORAGE_KEY = "chat:conversationId";
@@ -566,6 +570,9 @@ function ConversationView({
   onGiveUp: () => void;
   onClose: () => void;
 }) {
+  const { prepare, uploading, error: uploadError } = useAttachmentPrepare();
+  const sending = pending || uploading;
+
   // The conversation itself only lands a moment after the widget opens with
   // an id remembered from a previous visit (see the `refreshConversation`
   // effect above): until then there is nothing to show but a connecting
@@ -637,7 +644,16 @@ function ConversationView({
         ))}
       </div>
       <form
-        action={onSend}
+        onSubmit={async (event) => {
+          event.preventDefault();
+          const form = event.currentTarget;
+          // The file goes to the store first, like every other attachment on
+          // this site: the route that receives this request cannot carry one.
+          const data = await prepare(new FormData(form), "attachment", 1);
+          if (!data) return;
+          form.reset();
+          onSend(data);
+        }}
         className="flex items-center gap-2 border-t border-brand-border bg-brand-card p-3"
       >
         <label className="flex h-11 w-11 flex-none cursor-pointer items-center justify-center rounded-[10px] border border-brand-border text-brand-primary">
@@ -645,8 +661,9 @@ function ConversationView({
           <input
             type="file"
             name="attachment"
+            accept={ATTACHMENT_ACCEPT}
             className="sr-only"
-            disabled={pending}
+            disabled={sending}
             onChange={(event) => event.target.form?.requestSubmit()}
           />
         </label>
@@ -657,17 +674,17 @@ function ConversationView({
         />
         <button
           type="submit"
-          disabled={pending}
-          aria-label={pending ? "Enviando mensagem..." : "Enviar mensagem"}
-          aria-busy={pending}
+          disabled={sending}
+          aria-label={sending ? "Enviando mensagem..." : "Enviar mensagem"}
+          aria-busy={sending}
           className="flex h-11 w-11 flex-none items-center justify-center rounded-[10px] bg-brand-primary text-white disabled:opacity-70"
         >
           <Icon name="send" className="h-4 w-4" />
         </button>
       </form>
-      {error && (
+      {(uploadError ?? error) && (
         <p className="bg-brand-card px-3.5 pb-2 text-center text-[11.5px] font-semibold text-red-700">
-          {error}
+          {uploadError ?? error}
         </p>
       )}
       <div className="border-t border-brand-border bg-brand-card px-3.5 py-2.5 text-center">

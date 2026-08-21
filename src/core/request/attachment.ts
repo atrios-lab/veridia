@@ -4,7 +4,7 @@
  * checked on the server, where the upload actually arrives.
  */
 export const MAX_ATTACHMENTS = 5;
-export const MAX_ATTACHMENT_BYTES = 8 * 1024 * 1024;
+export const MAX_ATTACHMENT_BYTES = 20 * 1024 * 1024;
 
 // A photograph of a document or a PDF covers everything the counter accepts.
 // An office wanting more asks for it; an allowlist that grows on a guess is
@@ -25,15 +25,64 @@ const EXTENSIONS: Record<string, string> = {
   "application/pdf": "pdf",
 };
 
+/**
+ * ISO base media brands that mean "this is a HEIF still image". Chrome on
+ * Windows and Android hand a `.heic` file over with an empty type, so the
+ * brand in the file's own header is the only honest signal left.
+ */
+const HEIC_BRANDS = ["heic", "heix", "mif1", "heim", "heis", "hevc"];
+
+/** How many leading bytes `resolveMimeType` needs to recognise a HEIC file. */
+export const SNIFF_BYTES = 12;
+
+function hasHeicExtension(fileName: string): boolean {
+  const lower = fileName.toLowerCase();
+  return lower.endsWith(".heic") || lower.endsWith(".heif");
+}
+
+function looksLikeHeic(headBytes: Uint8Array): boolean {
+  if (headBytes.length < SNIFF_BYTES) return false;
+  const ascii = String.fromCharCode(...headBytes.subarray(4, SNIFF_BYTES));
+  return ascii.startsWith("ftyp") && HEIC_BRANDS.includes(ascii.slice(4, 8));
+}
+
+/**
+ * The type to judge the file by. A browser that names the type is believed
+ * (it is checked against the allowlist next); one that stays silent on a
+ * `.heic` file is answered by reading the file's own header, when the caller
+ * has the bytes to read.
+ *
+ * The client calls this without bytes: there the extension alone is enough,
+ * because rejecting early is a courtesy, and the server still decides. The
+ * server calls it with the first `SNIFF_BYTES`, where the extension alone
+ * would let any renamed file through.
+ */
+export function resolveMimeType(
+  fileName: string,
+  mimeType: string,
+  headBytes?: Uint8Array,
+): string {
+  if (mimeType) return mimeType;
+  if (!hasHeicExtension(fileName)) return "";
+  if (!headBytes) return "image/heic";
+  return looksLikeHeic(headBytes) ? "image/heic" : "";
+}
+
 export interface IncomingFile {
   mimeType: string;
   size: number;
 }
 
+/** An upload the browser already sent to the store, named by its URL. */
+export interface UploadedRef extends IncomingFile {
+  url: string;
+}
+
 export type AttachmentProblem =
   | { kind: "too-many"; limit: number }
   | { kind: "type"; mimeType: string }
-  | { kind: "size"; limit: number };
+  | { kind: "size"; limit: number }
+  | { kind: "origin" };
 
 export function describeProblem(problem: AttachmentProblem): string {
   switch (problem.kind) {
@@ -43,15 +92,18 @@ export function describeProblem(problem: AttachmentProblem): string {
       return "Cada arquivo precisa ser uma imagem (JPG, PNG, WEBP, HEIC) ou um PDF.";
     case "size":
       return `Cada arquivo precisa ter no máximo ${Math.round(problem.limit / (1024 * 1024))} MB.`;
+    case "origin":
+      return "Não foi possível confirmar o envio do arquivo. Tente anexar de novo.";
   }
 }
 
 /** The first problem found, or undefined when the batch may be stored. */
 export function checkAttachments(
   files: IncomingFile[],
+  limit = MAX_ATTACHMENTS,
 ): AttachmentProblem | undefined {
-  if (files.length > MAX_ATTACHMENTS) {
-    return { kind: "too-many", limit: MAX_ATTACHMENTS };
+  if (files.length > limit) {
+    return { kind: "too-many", limit };
   }
   for (const file of files) {
     if (!(ALLOWED_MIME_TYPES as readonly string[]).includes(file.mimeType)) {
@@ -62,6 +114,54 @@ export function checkAttachments(
     }
   }
   return undefined;
+}
+
+/**
+ * The same limits, applied to files the browser uploaded straight to the
+ * store. Everything here arrives from the client, so the URL is checked too:
+ * a reference pointing anywhere but our own store would make the request
+ * carry a file we never received.
+ */
+export function checkUploadedAttachments(
+  refs: UploadedRef[],
+  allowedHost: string,
+  limit = MAX_ATTACHMENTS,
+): AttachmentProblem | undefined {
+  const problem = checkAttachments(refs, limit);
+  if (problem) return problem;
+  for (const ref of refs) {
+    if (!isFromStore(ref.url, allowedHost)) return { kind: "origin" };
+  }
+  return undefined;
+}
+
+function isFromStore(url: string, allowedHost: string): boolean {
+  if (!allowedHost) return false;
+  try {
+    const parsed = new URL(url);
+    return parsed.protocol === "https:" && parsed.hostname === allowedHost;
+  } catch {
+    return false;
+  }
+}
+
+/** Where a citizen's attachment is stored, inside the blob store. */
+export const ATTACHMENT_FOLDER = "anexos";
+
+const GENERATED_PATH = new RegExp(
+  `^${ATTACHMENT_FOLDER}/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\\.(${Object.values(
+    EXTENSIONS,
+  ).join("|")})$`,
+);
+
+/**
+ * Whether a name the browser asked to upload under is one this system would
+ * have generated. The browser is free to ask for anything, and the name it
+ * knows is the citizen's own file name — which routinely carries their full
+ * name — so the shape is checked rather than trusted.
+ */
+export function isGeneratedAttachmentPath(pathname: string): boolean {
+  return GENERATED_PATH.test(pathname);
 }
 
 /**

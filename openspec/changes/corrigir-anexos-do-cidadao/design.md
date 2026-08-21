@@ -62,6 +62,18 @@ fica na borda (rota/action), o núcleo recebe o resultado.
 `describeProblem` (já são puros e importáveis no cliente) e mostra a mensagem junto ao campo,
 descartando o arquivo recusado. Servidor permanece a fronteira de confiança.
 
+**7. O CSP precisa deixar o navegador falar com o store.** `connect-src 'self'` (src/middleware.ts)
+bloqueia o upload direto: a política que existe para conter script injetado barraria exatamente
+esta correção. Entram dois hosts exatos, nunca curinga, no mesmo padrão de `img-src`:
+`https://vercel.com` (a API que o SDK cliente chama) e o host do store
+(`BLOB_PUBLIC_HOST`, para onde a chamada é redirecionada).
+
+**8. A rota de upload tem orçamento próprio de rate limit.** Cada arquivo é uma requisição: uma
+submissão com cinco anexos gastaria seis das dez chamadas por minuto do limitador compartilhado,
+e "muitos envios seguidos" passaria a ser a resposta normal a anexar o que o formulário permite.
+Um segundo limitador (`veridia:upload`, 40/min) mantém a proteção contra abuso do store sem
+transformar o limite em um segundo jeito de o cidadão não conseguir anexar.
+
 ## Risks / Trade-offs
 
 - [URL do blob passa a existir no navegador do remetente] → é o próprio dono do arquivo; o

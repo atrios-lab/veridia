@@ -18,7 +18,7 @@ import {
 import { isRateLimited } from "@/lib/rate-limit.ts";
 import { getSession } from "@/lib/session.ts";
 import { getTenant } from "@/lib/tenant.ts";
-import { AttachmentError, storeAttachments } from "@/lib/uploads.ts";
+import { AttachmentError, collectAttachments } from "@/lib/uploads.ts";
 
 export const runtime = "nodejs";
 
@@ -196,19 +196,15 @@ export async function POST(
   }
 
   const rawBody = String(form.get("body") ?? "");
-  const file = form.get("attachment");
 
   try {
-    let attachment:
-      | Awaited<ReturnType<typeof storeAttachments>>[number]
-      | undefined;
-    if (file instanceof File && file.size > 0) {
-      // No `kind` override: same positional "anexo-1" label the citizen
-      // wizard already uses (src/app/(public)/solicitar/actions.ts): the
-      // stored file name is never the browser-supplied one either way.
-      const stored = await storeAttachments([file]);
-      attachment = stored[0];
-    }
+    // No `kind` override: same positional "anexo-1" label the citizen
+    // wizard already uses (src/app/(public)/solicitar/actions.ts): the
+    // stored file name is never the browser-supplied one either way. The
+    // file may have gone straight to the store, in which case only its
+    // reference travelled in this request.
+    const [attachment]: Awaited<ReturnType<typeof collectAttachments>> =
+      await collectAttachments(form, "attachment", { limit: 1 });
 
     if (!attachment) {
       const parsed = messageBodySchema.safeParse(rawBody);

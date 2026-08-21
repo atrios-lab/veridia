@@ -25,12 +25,14 @@ const securityHeaders = [
 const nextConfig: NextConfig = {
   poweredByHeader: false,
   experimental: {
-    // The request form posts through a server action carrying the citizen's
-    // attachments: up to 5 files of 8 MB (src/core/request/attachment.ts),
-    // so the default 1 MB body cap rejects any real upload. 45mb covers the
-    // legitimate maximum plus multipart overhead; each file's own size and
-    // count are still enforced server side.
-    serverActions: { bodySizeLimit: "45mb" },
+    // Only development posts attachments through a server action: a deploy
+    // with Blob configured uploads them straight from the browser, because a
+    // platform function's request body is capped around 4.5 MB no matter what
+    // this number says — which is why a citizen's photograph never arrived.
+    // 110mb covers the local maximum (5 files of 20 MB, see
+    // src/core/request/attachment.ts) plus multipart overhead; each file's own
+    // size and count are still enforced server side.
+    serverActions: { bodySizeLimit: "110mb" },
   },
   // pdfkit reads its standard font metrics from files at runtime, which a
   // bundler rewrites into paths that no longer exist. Left external, it loads

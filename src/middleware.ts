@@ -51,7 +51,13 @@ function buildCsp(nonce: string): string {
     "style-src 'self' 'unsafe-inline'",
     `img-src 'self' data: blob:${blobPublicHost ? ` https://${blobPublicHost}` : ""}`,
     "font-src 'self'",
-    "connect-src 'self'",
+    // The citizen's attachments are uploaded by the browser straight to the
+    // Blob store, so the page has to be allowed to talk to it: vercel.com is
+    // the API the client SDK posts to, and the store's own host is where it
+    // is redirected. Exact hosts, never a wildcard, same as img-src. Without
+    // these two the upload is blocked by this very policy and the citizen is
+    // back to not being able to attach anything.
+    `connect-src 'self' https://vercel.com${blobPublicHost ? ` https://${blobPublicHost}` : ""}`,
     "frame-ancestors 'none'",
     "base-uri 'self'",
     "form-action 'self'",

@@ -2,7 +2,7 @@
 
 import { zodResolver } from "@hookform/resolvers/zod";
 import Link from "next/link";
-import { startTransition, useActionState, useRef, useState } from "react";
+import { useActionState, useRef, useState } from "react";
 import { useForm } from "react-hook-form";
 import {
   DATA_RIGHT_OPTIONS,
@@ -14,6 +14,11 @@ import { formatCpf } from "@/core/request/form.ts";
 import { formatDate } from "@/core/scheduling/calendar.ts";
 import { Icon } from "../_components/icon.tsx";
 import { ProtocolReveal } from "../_components/protocol-reveal.tsx";
+import {
+  ATTACHMENT_ACCEPT,
+  useAttachmentUpload,
+  validateAttachments,
+} from "../_lib/attachments.tsx";
 import { withMask } from "../_lib/mask.ts";
 import {
   type DataRightsState,
@@ -53,8 +58,18 @@ export function DataRightsScreen(props: DataRightsScreenProps) {
   >(submitDataRights, { status: "idle" });
   const [attachments, setAttachments] = useState<File[]>([]);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  // The files reach the store before the form is sent (see
+  // ../_lib/attachments.tsx): a platform function's body is too small for one.
+  const {
+    send,
+    uploading,
+    error: attachmentError,
+    setError: setAttachmentError,
+  } = useAttachmentUpload(formAction);
+  const sending = pending || uploading;
 
   function removeAttachment(index: number) {
+    setAttachmentError(undefined);
     const next = attachments.filter((_, i) => i !== index);
     setAttachments(next);
     // The form posts the input's own FileList, so it has to be rebuilt too,
@@ -82,8 +97,7 @@ export function DataRightsScreen(props: DataRightsScreenProps) {
       | undefined) ?? serverErrors[name];
 
   const onSubmit = handleSubmit((_data, event) => {
-    const form = event?.target as HTMLFormElement;
-    startTransition(() => formAction(new FormData(form)));
+    void send(event?.target as HTMLFormElement, "anexos");
   });
 
   const initials = props.dpoName
@@ -259,11 +273,13 @@ export function DataRightsScreen(props: DataRightsScreenProps) {
                   name="anexos"
                   type="file"
                   multiple
-                  accept="image/jpeg,image/png,image/webp,image/heic,application/pdf"
+                  accept={ATTACHMENT_ACCEPT}
                   className="sr-only"
-                  onChange={(event) =>
-                    setAttachments([...(event.target.files ?? [])])
-                  }
+                  onChange={(event) => {
+                    const picked = [...(event.target.files ?? [])];
+                    setAttachmentError(validateAttachments(picked));
+                    setAttachments(picked);
+                  }}
                 />
               </label>
               {attachments.length > 0 && (
@@ -295,6 +311,11 @@ export function DataRightsScreen(props: DataRightsScreenProps) {
                   ))}
                 </ul>
               )}
+              {attachmentError && (
+                <output className="mt-2 block text-xs font-semibold text-brand-alert">
+                  {attachmentError}
+                </output>
+              )}
             </div>
 
             <label className="flex items-start gap-2.5">
@@ -322,10 +343,10 @@ export function DataRightsScreen(props: DataRightsScreenProps) {
           <div className="mt-5 md:flex md:items-center md:gap-4">
             <button
               type="submit"
-              disabled={pending}
+              disabled={sending}
               className="btn btn-primary btn-lg w-full md:w-auto md:shrink-0 md:px-7 md:py-3.5"
             >
-              {pending ? "Enviando..." : "Enviar pedido ao DPO"}
+              {sending ? "Enviando..." : "Enviar pedido ao DPO"}
             </button>
             <p className="mt-2 text-center text-[11px] text-brand-faint md:mt-0 md:text-left">
               Você recebe protocolo <strong>SOL</strong> e chave: a resposta do

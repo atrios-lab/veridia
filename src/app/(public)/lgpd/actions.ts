@@ -14,7 +14,7 @@ import { isSectionEnabled } from "@/core/tenant/gating.ts";
 import { isRateLimited } from "@/lib/rate-limit.ts";
 import { createRecord } from "@/lib/service-request.ts";
 import { getTenant, today } from "@/lib/tenant.ts";
-import { AttachmentError, storeAttachments } from "@/lib/uploads.ts";
+import { AttachmentError, collectAttachments } from "@/lib/uploads.ts";
 
 export interface DataRightsSuccess {
   status: "success";
@@ -90,10 +90,7 @@ export async function submitDataRights(
   const { right, applicantName, email, cpf, description } = parsed.data;
 
   try {
-    const files = formData
-      .getAll("anexos")
-      .filter((f): f is File => f instanceof File);
-    const stored = await storeAttachments(files);
+    const stored = await collectAttachments(formData, "anexos");
 
     const accessKey = generateAccessKey();
     const { protocolNumber } = await createRecord(

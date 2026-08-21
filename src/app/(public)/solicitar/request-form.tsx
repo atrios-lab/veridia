@@ -2,13 +2,7 @@
 
 import { zodResolver } from "@hookform/resolvers/zod";
 import Link from "next/link";
-import {
-  startTransition,
-  useActionState,
-  useEffect,
-  useRef,
-  useState,
-} from "react";
+import { useActionState, useEffect, useRef, useState } from "react";
 import { useForm } from "react-hook-form";
 import type { Act } from "@/core/acts/catalog.ts";
 import { ATTRIBUTION_SHORT_NAMES } from "@/core/acts/catalog.ts";
@@ -21,6 +15,11 @@ import {
 import type { Attribution } from "@/core/tenant/schema.ts";
 import { Icon } from "../_components/icon.tsx";
 import { ProtocolReveal } from "../_components/protocol-reveal.tsx";
+import {
+  ATTACHMENT_ACCEPT,
+  useAttachmentUpload,
+  validateAttachments,
+} from "../_lib/attachments.tsx";
 import { withMask } from "../_lib/mask.ts";
 import { ProcessingBadge } from "./_components/badges.tsx";
 import {
@@ -83,6 +82,16 @@ export function RequestForm({
   const [attachments, setAttachments] = useState<File[]>([]);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
+  // The files go to the store before the form is sent, so the action never
+  // carries them in its body (see ../_lib/attachments.tsx).
+  const {
+    send,
+    uploading,
+    error: attachmentError,
+    setError: setAttachmentError,
+  } = useAttachmentUpload(formAction);
+  const sending = pending || uploading;
+
   // The form posts the input's own FileList, so it has to be rebuilt
   // whenever `attachments` changes, not just the state that renders the list.
   function syncAttachments(next: File[]) {
@@ -93,15 +102,28 @@ export function RequestForm({
   }
 
   function removeAttachment(index: number) {
+    setAttachmentError(undefined);
     syncAttachments(attachments.filter((_, i) => i !== index));
   }
 
   // A file picker's selection replaces itself each time it opens, so a
   // second pick would otherwise wipe out the first: add to what's already
   // there instead, capped at the limit the server also enforces.
+  // Each file is judged on its own so one oversized photograph does not
+  // throw away the four that were fine, and the refusal is said here rather
+  // than after a minute of uploading on a phone connection.
   function addAttachments(selected: FileList | null) {
     if (!selected) return;
-    syncAttachments([...attachments, ...selected].slice(0, MAX_ATTACHMENTS));
+    const accepted: File[] = [];
+    let problem: string | undefined;
+    for (const file of selected) {
+      const message = validateAttachments([file]);
+      if (message) problem ??= message;
+      else accepted.push(file);
+    }
+    const merged = [...attachments, ...accepted];
+    setAttachmentError(problem ?? validateAttachments(merged));
+    syncAttachments(merged.slice(0, MAX_ATTACHMENTS));
   }
 
   const {
@@ -126,8 +148,7 @@ export function RequestForm({
   // Validation gates the send; the untouched FormData (honeypot and
   // attachments included) still goes to the same server action.
   const onSubmit = handleSubmit((_data, event) => {
-    const form = event?.target as HTMLFormElement;
-    startTransition(() => formAction(new FormData(form)));
+    void send(event?.target as HTMLFormElement, "anexos");
   });
 
   return (
@@ -314,7 +335,7 @@ export function RequestForm({
               name="anexos"
               type="file"
               multiple
-              accept="image/jpeg,image/png,image/webp,image/heic,application/pdf"
+              accept={ATTACHMENT_ACCEPT}
               className="sr-only"
               onChange={(event) => addAttachments(event.target.files)}
             />
@@ -347,6 +368,11 @@ export function RequestForm({
                 </li>
               ))}
             </ul>
+          )}
+          {attachmentError && (
+            <output className="mt-2 block text-xs font-semibold text-brand-alert">
+              {attachmentError}
+            </output>
           )}
           <p className="mt-2 text-[11px] text-brand-faint">
             Até {MAX_ATTACHMENTS} arquivos (foto ou PDF). Pode enviar depois,
@@ -405,10 +431,10 @@ export function RequestForm({
         <div className="md:flex md:items-center md:gap-4">
           <button
             type="submit"
-            disabled={pending}
+            disabled={sending}
             className="btn btn-primary btn-lg w-full md:w-auto md:shrink-0 md:px-7 md:py-3.5"
           >
-            {pending ? "Enviando..." : "Enviar requerimento"}
+            {sending ? "Enviando..." : "Enviar requerimento"}
           </button>
           <p className="mt-2 text-[11px] text-brand-faint md:mt-0 md:max-w-[40ch]">
             Pagamentos e emissão do ato acontecem na serventia. Sem CAPTCHA: a
@@ -506,6 +532,12 @@ function SuccessScreen({ result }: { result: SubmitSuccess }) {
     AttachState,
     FormData
   >(attachSignedForm, { status: "idle" });
+  const {
+    send,
+    uploading,
+    error: uploadError,
+  } = useAttachmentUpload(attachAction);
+  const sending = attaching || uploading;
   // Lets someone who sent the wrong file try again: opens the upload form
   // back up even after a success, and closes it once a new upload lands.
   const [replacingFile, setReplacingFile] = useState(false);
@@ -606,7 +638,13 @@ function SuccessScreen({ result }: { result: SubmitSuccess }) {
               </button>
             </div>
           ) : (
-            <form action={attachAction} className="mt-2.5">
+            <form
+              onSubmit={(event) => {
+                event.preventDefault();
+                void send(event.currentTarget, "requerimento", 1);
+              }}
+              className="mt-2.5"
+            >
               <input
                 type="hidden"
                 name="protocolNumber"
@@ -617,16 +655,16 @@ function SuccessScreen({ result }: { result: SubmitSuccess }) {
                   the send. The input is hidden but keeps working for keyboard
                   and screen reader; the dashed box is the visible control. */}
               <label
-                className={`flex cursor-pointer items-center justify-center gap-2 rounded-[10px] border-[1.5px] border-dashed border-brand-border px-3 py-2.5 text-[12.5px] font-semibold text-brand-primary hover:border-brand-accent has-[:focus-visible]:border-brand-accent ${attaching ? "opacity-60" : ""}`}
+                className={`flex cursor-pointer items-center justify-center gap-2 rounded-[10px] border-[1.5px] border-dashed border-brand-border px-3 py-2.5 text-[12.5px] font-semibold text-brand-primary hover:border-brand-accent has-[:focus-visible]:border-brand-accent ${sending ? "opacity-60" : ""}`}
               >
                 <Icon name="plus" className="h-3.5 w-3.5 text-brand-accent" />
-                {attaching ? "Enviando..." : "Anexar requerimento assinado"}
+                {sending ? "Enviando..." : "Anexar requerimento assinado"}
                 <input
                   type="file"
                   name="requerimento"
-                  accept="image/jpeg,image/png,image/webp,image/heic,application/pdf"
+                  accept={ATTACHMENT_ACCEPT}
                   className="sr-only"
-                  disabled={attaching}
+                  disabled={sending}
                   onChange={(event) => {
                     if (event.target.files?.length) {
                       event.target.form?.requestSubmit();
@@ -634,9 +672,10 @@ function SuccessScreen({ result }: { result: SubmitSuccess }) {
                   }}
                 />
               </label>
-              {attachState.status === "error" && (
+              {(uploadError || attachState.status === "error") && (
                 <output className="mt-2 block text-[12px] font-semibold text-brand-alert">
-                  {attachState.message}
+                  {uploadError ??
+                    (attachState.status === "error" && attachState.message)}
                 </output>
               )}
             </form>

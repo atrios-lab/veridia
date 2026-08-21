@@ -10,6 +10,10 @@ import {
 import { Icon } from "../_components/icon.tsx";
 import { CopyField } from "../_components/protocol-reveal.tsx";
 import { ProtocolSearchButton } from "../_components/protocol-search-button.tsx";
+import {
+  ATTACHMENT_ACCEPT,
+  useAttachmentUpload,
+} from "../_lib/attachments.tsx";
 import { type AttachState, attachSignedForm } from "../solicitar/actions.ts";
 import {
   type AttachDocumentState,
@@ -616,6 +620,8 @@ function RequirementConversation({
     FulfillRequirementState,
     FormData
   >(writeRequirementMessageAction, { status: "idle" });
+  const { send, uploading, error: uploadError } = useAttachmentUpload(action);
+  const sending = pending || uploading;
   const closed = requirement.status === "fulfilled";
 
   if (closed && requirement.messages.length === 0) return null;
@@ -685,7 +691,13 @@ function RequirementConversation({
           encerrada.
         </p>
       ) : (
-        <form action={action} className="mt-2.5">
+        <form
+          onSubmit={(event) => {
+            event.preventDefault();
+            void send(event.currentTarget, "resposta", 3);
+          }}
+          className="mt-2.5"
+        >
           <input type="hidden" name="protocolNumber" value={protocolNumber} />
           <input type="hidden" name="accessKey" value={accessKey} />
           <input type="hidden" name="requirementId" value={requirement.id} />
@@ -701,13 +713,13 @@ function RequirementConversation({
           <textarea
             name="mensagem"
             rows={2}
-            disabled={pending}
+            disabled={sending}
             placeholder="Escreva para a serventia sobre esta exigência..."
             className="w-full rounded-xl border border-brand-border bg-brand-card px-3 py-2.5 text-[13px] text-brand-text placeholder:text-brand-faint"
           />
           <div className="mt-2 flex flex-wrap items-center gap-2">
             <label
-              className={`btn btn-secondary btn-sm cursor-pointer ${pending ? "opacity-60" : ""}`}
+              className={`btn btn-secondary btn-sm cursor-pointer ${sending ? "opacity-60" : ""}`}
             >
               <Icon name="paperclip" className="h-3.5 w-3.5" />
               Anexar
@@ -715,22 +727,22 @@ function RequirementConversation({
                 type="file"
                 name="resposta"
                 multiple
-                accept="image/jpeg,image/png,image/webp,image/heic,application/pdf"
+                accept={ATTACHMENT_ACCEPT}
                 className="sr-only"
-                disabled={pending}
+                disabled={sending}
               />
             </label>
             <button
               type="submit"
-              disabled={pending}
+              disabled={sending}
               className="btn btn-primary btn-lg ml-auto"
             >
-              {pending ? "Enviando..." : "Enviar"}
+              {sending ? "Enviando..." : "Enviar"}
             </button>
           </div>
-          {state.status === "error" && (
+          {(uploadError || state.status === "error") && (
             <output className="mt-1.5 block text-[11.5px] font-semibold text-brand-alert">
-              {state.message}
+              {uploadError ?? (state.status === "error" && state.message)}
             </output>
           )}
         </form>
@@ -848,14 +860,18 @@ function RequestDetail({ result }: { result: ServiceRequestDetail }) {
   const [citizenDocuments, setCitizenDocuments] = useState(
     result.citizenDocuments,
   );
-  const [signState, signAction, signing] = useActionState<
+  const [signState, signAction, savingSignedForm] = useActionState<
     AttachState,
     FormData
   >(attachSignedForm, { status: "idle" });
-  const [docState, docAction, sendingDoc] = useActionState<
+  const [docState, docAction, savingDoc] = useActionState<
     AttachDocumentState,
     FormData
   >(attachExtraDocument, { status: "idle" });
+  const signUpload = useAttachmentUpload(signAction);
+  const docUpload = useAttachmentUpload(docAction);
+  const signing = savingSignedForm || signUpload.uploading;
+  const sendingDoc = savingDoc || docUpload.uploading;
 
   useEffect(() => {
     if (signState.status === "success") setHasSignedForm(true);
@@ -953,7 +969,17 @@ function RequestDetail({ result }: { result: ServiceRequestDetail }) {
                       <div className="text-[12.5px] font-semibold text-brand-primary">
                         Envie o arquivo assinado
                       </div>
-                      <form action={signAction} className="mt-2">
+                      <form
+                        onSubmit={(event) => {
+                          event.preventDefault();
+                          void signUpload.send(
+                            event.currentTarget,
+                            "requerimento",
+                            1,
+                          );
+                        }}
+                        className="mt-2"
+                      >
                         <input
                           type="hidden"
                           name="protocolNumber"
@@ -977,7 +1003,7 @@ function RequestDetail({ result }: { result: ServiceRequestDetail }) {
                           <input
                             type="file"
                             name="requerimento"
-                            accept="image/jpeg,image/png,image/webp,image/heic,application/pdf"
+                            accept={ATTACHMENT_ACCEPT}
                             className="sr-only"
                             disabled={signing}
                             onChange={(event) => {
@@ -988,15 +1014,16 @@ function RequestDetail({ result }: { result: ServiceRequestDetail }) {
                           />
                         </label>
                       </form>
-                      {signState.status !== "idle" && (
+                      {(signUpload.error || signState.status !== "idle") && (
                         <output
                           className={`mt-1.5 block text-[11.5px] font-semibold ${
-                            signState.status === "error"
+                            signUpload.error || signState.status === "error"
                               ? "text-brand-alert"
                               : "text-brand-primary-soft"
                           }`}
                         >
-                          {signState.message}
+                          {signUpload.error ??
+                            (signState.status !== "idle" && signState.message)}
                         </output>
                       )}
                       <div className="mt-1.5 text-[11px] text-brand-faint">
@@ -1096,7 +1123,13 @@ function RequestDetail({ result }: { result: ServiceRequestDetail }) {
                 ))}
               </div>
             )}
-            <form action={docAction} className="mt-3">
+            <form
+              onSubmit={(event) => {
+                event.preventDefault();
+                void docUpload.send(event.currentTarget, "documento", 1);
+              }}
+              className="mt-3"
+            >
               <input
                 type="hidden"
                 name="protocolNumber"
@@ -1111,7 +1144,7 @@ function RequestDetail({ result }: { result: ServiceRequestDetail }) {
                 <input
                   type="file"
                   name="documento"
-                  accept="image/jpeg,image/png,image/webp,image/heic,application/pdf"
+                  accept={ATTACHMENT_ACCEPT}
                   className="sr-only"
                   disabled={sendingDoc}
                   onChange={(event) => {
@@ -1121,15 +1154,16 @@ function RequestDetail({ result }: { result: ServiceRequestDetail }) {
                   }}
                 />
               </label>
-              {docState.status !== "idle" && (
+              {(docUpload.error || docState.status !== "idle") && (
                 <output
                   className={`mt-1.5 block text-[11.5px] font-semibold ${
-                    docState.status === "error"
+                    docUpload.error || docState.status === "error"
                       ? "text-brand-alert"
                       : "text-brand-primary-soft"
                   }`}
                 >
-                  {docState.message}
+                  {docUpload.error ??
+                    (docState.status !== "idle" && docState.message)}
                 </output>
               )}
             </form>
