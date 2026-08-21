@@ -204,7 +204,10 @@ export async function POST(
     // file may have gone straight to the store, in which case only its
     // reference travelled in this request.
     const [attachment]: Awaited<ReturnType<typeof collectAttachments>> =
-      await collectAttachments(form, "attachment", { limit: 1 });
+      await collectAttachments(form, "attachment", {
+        tenantSlug: tenant.slug,
+        limit: 1,
+      });
 
     if (!attachment) {
       const parsed = messageBodySchema.safeParse(rawBody);

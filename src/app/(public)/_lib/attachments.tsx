@@ -19,21 +19,30 @@ import {
 export const ATTACHMENT_ACCEPT =
   "image/jpeg,image/png,image/webp,image/heic,image/heif,application/pdf,.heic,.heif";
 
+interface BlobUploadState {
+  enabled: boolean;
+  /** The tenant this page belongs to: every direct upload lands in its folder. */
+  tenantSlug: string;
+}
+
 /**
- * Whether this deploy uploads straight from the browser to the Blob store.
- * A context, not a prop threaded through a dozen components: it is one
- * boolean the whole public site reads, decided once on the server.
+ * Whether this deploy uploads straight from the browser to the Blob store,
+ * and which tenant's folder it uploads into. A context, not a prop threaded
+ * through a dozen components: it is one value the whole public site reads,
+ * decided once on the server.
  */
-const BlobUploadContext = createContext(false);
+const BlobUploadContext = createContext<BlobUploadState>({
+  enabled: false,
+  tenantSlug: "",
+});
 
 export function BlobUploadProvider({
   enabled,
+  tenantSlug,
   children,
-}: {
-  enabled: boolean;
-  children: React.ReactNode;
-}) {
-  return <BlobUploadContext value={enabled}>{children}</BlobUploadContext>;
+}: BlobUploadState & { children: React.ReactNode }) {
+  const value = { enabled, tenantSlug };
+  return <BlobUploadContext value={value}>{children}</BlobUploadContext>;
 }
 
 function pickedFiles(data: FormData, field: string): File[] {
@@ -64,11 +73,12 @@ export function validateAttachments(
   return problem ? describeProblem(problem) : undefined;
 }
 
-async function uploadOne(file: File) {
+async function uploadOne(file: File, tenantSlug: string) {
   const mimeType = resolveMimeType(file.name, file.type);
-  // The name is a bare UUID: the route refuses anything else, because the
-  // name the browser knows is the citizen's own and says who they are.
-  const pathname = `${ATTACHMENT_FOLDER}/${storedFileName(mimeType, crypto.randomUUID())}`;
+  // The name is a bare UUID under this tenant's own folder: the route
+  // refuses anything else, because the name the browser knows is the
+  // citizen's own and says who they are.
+  const pathname = `${ATTACHMENT_FOLDER}/${storedFileName(mimeType, crypto.randomUUID(), tenantSlug)}`;
   const blob = await upload(pathname, file, {
     access: "public",
     contentType: mimeType,
@@ -87,7 +97,7 @@ async function uploadOne(file: File) {
  * body and the action stores them itself, exactly as before.
  */
 export function useAttachmentPrepare() {
-  const enabled = useContext(BlobUploadContext);
+  const { enabled, tenantSlug } = useContext(BlobUploadContext);
   const [uploading, setUploading] = useState(false);
   const [error, setError] = useState<string>();
 
@@ -113,7 +123,9 @@ export function useAttachmentPrepare() {
 
     setUploading(true);
     try {
-      const refs = await Promise.all(files.map(uploadOne));
+      const refs = await Promise.all(
+        files.map((file) => uploadOne(file, tenantSlug)),
+      );
       data.delete(field);
       for (const ref of refs) {
         data.append(`${field}Ref`, JSON.stringify(ref));

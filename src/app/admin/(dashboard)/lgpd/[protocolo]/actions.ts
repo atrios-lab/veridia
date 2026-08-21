@@ -69,7 +69,10 @@ export async function respondDataRights(
     const files = formData
       .getAll("relatorio")
       .filter((f): f is File => f instanceof File);
-    const stored = await storeAttachments(files, { kind: "office" });
+    const stored = await storeAttachments(files, {
+      tenantSlug: tenant.slug,
+      kind: "office",
+    });
     if (stored.length > 0) {
       await attachToRequest(tenant.slug, requestId, stored, "office");
     }

@@ -5,6 +5,7 @@ import {
   MAX_ATTACHMENT_BYTES,
 } from "@/core/request/attachment.ts";
 import { isUploadRateLimited } from "@/lib/rate-limit.ts";
+import { getTenant } from "@/lib/tenant.ts";
 
 /**
  * Issues the short-lived token the browser needs to upload one attachment
@@ -38,15 +39,18 @@ export async function POST(request: Request): Promise<Response> {
     );
   }
 
+  const tenant = await getTenant();
+
   try {
     const body = (await request.json()) as HandleUploadBody;
     const result = await handleUpload({
       body,
       request,
       onBeforeGenerateToken: async (pathname) => {
-        // The name has to be one this system would have generated: a bare
-        // UUID under the attachments folder, never what the browser knows.
-        if (!isGeneratedAttachmentPath(pathname)) {
+        // The name has to be one this system would have generated for this
+        // tenant: a bare UUID under this tenant's own folder, never what the
+        // browser knows, and never another tenant's folder.
+        if (!isGeneratedAttachmentPath(pathname, tenant.slug)) {
           throw new Error("pathname recusado");
         }
         return {

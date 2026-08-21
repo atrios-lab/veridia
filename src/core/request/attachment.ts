@@ -148,30 +148,49 @@ function isFromStore(url: string, allowedHost: string): boolean {
 /** Where a citizen's attachment is stored, inside the blob store. */
 export const ATTACHMENT_FOLDER = "anexos";
 
-const GENERATED_PATH = new RegExp(
-  `^${ATTACHMENT_FOLDER}/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\\.(${Object.values(
-    EXTENSIONS,
-  ).join("|")})$`,
-);
+// Slugs are provisioned by the platform, not typed by a citizen, but the
+// route that checks a pathname against one is a security boundary: an
+// unrecognised shape is rejected outright rather than interpolated into a
+// regex.
+const TENANT_SLUG_PATTERN = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
+
+const GENERATED_ID = `[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\\.(${Object.values(
+  EXTENSIONS,
+).join("|")})`;
 
 /**
  * Whether a name the browser asked to upload under is one this system would
- * have generated. The browser is free to ask for anything, and the name it
- * knows is the citizen's own file name (which routinely carries their full
- * name), so the shape is checked rather than trusted.
+ * have generated for this tenant. The browser is free to ask for anything,
+ * and the name it knows is the citizen's own file name (which routinely
+ * carries their full name), so the shape is checked rather than trusted —
+ * and the tenant segment has to match the tenant the request actually
+ * belongs to, or nothing here would stop one tenant's site from writing into
+ * another's folder.
  */
-export function isGeneratedAttachmentPath(pathname: string): boolean {
-  return GENERATED_PATH.test(pathname);
+export function isGeneratedAttachmentPath(
+  pathname: string,
+  tenantSlug: string,
+): boolean {
+  if (!TENANT_SLUG_PATTERN.test(tenantSlug)) return false;
+  const pattern = new RegExp(
+    `^${ATTACHMENT_FOLDER}/${tenantSlug}/${GENERATED_ID}$`,
+  );
+  return pattern.test(pathname);
 }
 
 /**
  * The stored name comes from the type and a random id, never from the name the
  * browser sent: that one is attacker controlled, and it routinely carries the
- * citizen's full name in it.
+ * citizen's full name in it. The tenant's own slug is the folder it lands in,
+ * so files from different serventias never share a directory.
  */
-export function storedFileName(mimeType: string, id: string): string {
+export function storedFileName(
+  mimeType: string,
+  id: string,
+  tenantSlug: string,
+): string {
   const extension = EXTENSIONS[mimeType] ?? "bin";
-  return `${id}.${extension}`;
+  return `${tenantSlug}/${id}.${extension}`;
 }
 
 /** Positional, for the same reason: "anexo-1" leaks nothing. */

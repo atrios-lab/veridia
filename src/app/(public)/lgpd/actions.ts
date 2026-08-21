@@ -90,7 +90,9 @@ export async function submitDataRights(
   const { right, applicantName, email, cpf, description } = parsed.data;
 
   try {
-    const stored = await collectAttachments(formData, "anexos");
+    const stored = await collectAttachments(formData, "anexos", {
+      tenantSlug: tenant.slug,
+    });
 
     const accessKey = generateAccessKey();
     const { protocolNumber } = await createRecord(

@@ -111,7 +111,10 @@ export async function savePublication(
     const chosen = formData
       .getAll("arquivo")
       .filter((f): f is File => f instanceof File);
-    const [stored] = await storeAttachments(chosen, { kind: "edital" });
+    const [stored] = await storeAttachments(chosen, {
+      tenantSlug: tenant.slug,
+      kind: "edital",
+    });
 
     if (existing) {
       await updatePublication(

@@ -198,6 +198,7 @@ export async function deliverDocumentAction(
       .getAll("documento")
       .filter((f): f is File => f instanceof File);
     const stored = await storeAttachments(files, {
+      tenantSlug: tenant.slug,
       kind: "documento-final",
     });
     if (stored.length === 0) {
@@ -252,6 +253,7 @@ export async function attachRequirementFormAction(
       .getAll("formulario")
       .filter((f): f is File => f instanceof File);
     const stored = await storeAttachments(files, {
+      tenantSlug: tenant.slug,
       kind: "formulario-exigencia",
     });
     if (stored.length === 0) {
@@ -565,7 +567,7 @@ export async function attachCitizenDocumentAction(
     const files = formData
       .getAll("documento")
       .filter((f): f is File => f instanceof File);
-    const stored = await storeAttachments(files);
+    const stored = await storeAttachments(files, { tenantSlug: tenant.slug });
     if (stored.length === 0) {
       return { status: "error", message: "Escolha um arquivo para anexar." };
     }

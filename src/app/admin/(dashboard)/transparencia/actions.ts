@@ -114,7 +114,10 @@ export async function uploadDocumentAction(
 
   const tenant = await getTenant();
   try {
-    const [stored] = await storeAttachments([file], { kind: "documento" });
+    const [stored] = await storeAttachments([file], {
+      tenantSlug: tenant.slug,
+      kind: "documento",
+    });
     if (!stored) {
       return {
         status: "error",

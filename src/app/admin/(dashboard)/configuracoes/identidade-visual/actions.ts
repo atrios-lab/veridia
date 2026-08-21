@@ -57,10 +57,11 @@ async function resolveImage(
   field: string,
   kind: "logo-light" | "logo-dark" | "hero",
   current: string | undefined,
+  tenantSlug: string,
 ): Promise<string | undefined> {
   const file = formData.get(field);
   if (!(file instanceof File) || file.size === 0) return current;
-  return storeBrandImage(file, kind);
+  return storeBrandImage(file, kind, tenantSlug);
 }
 
 export async function saveVisualIdentity(
@@ -100,18 +101,21 @@ export async function saveVisualIdentity(
       "logoLight",
       "logo-light",
       tenant.logos.light,
+      tenant.slug,
     );
     logoDark = await resolveImage(
       formData,
       "logoDark",
       "logo-dark",
       tenant.logos.dark,
+      tenant.slug,
     );
     heroImage = await resolveImage(
       formData,
       "heroImage",
       "hero",
       tenant.heroImage,
+      tenant.slug,
     );
   } catch (error) {
     if (error instanceof BrandImageError) {

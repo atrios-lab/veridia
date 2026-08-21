@@ -87,7 +87,9 @@ export async function submitManifestation(
   const confidential = anonymous ? false : parsed.data.confidential;
 
   try {
-    const stored = await collectAttachments(formData, "anexos");
+    const stored = await collectAttachments(formData, "anexos", {
+      tenantSlug: tenant.slug,
+    });
 
     /*
      * No key for an anonymous manifestation: there is no personal data to

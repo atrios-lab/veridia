@@ -127,7 +127,10 @@ export default async function PublicLayout({
           server-side fact (see src/lib/uploads.ts) that every upload on the
           public site has to know. */}
       <main className="flex-1">
-        <BlobUploadProvider enabled={blobUploadEnabled()}>
+        <BlobUploadProvider
+          enabled={blobUploadEnabled()}
+          tenantSlug={tenant.slug}
+        >
           {children}
         </BlobUploadProvider>
       </main>

@@ -60,9 +60,17 @@ export function checkBrandImage(
   return undefined;
 }
 
-/** The stored name, from the type and a random id, never from the sent name. */
-export function brandImageFileName(mimeType: string, id: string): string {
+/**
+ * The stored name, from the type and a random id, never from the sent name.
+ * The tenant's own slug is the folder it lands in, so brand images from
+ * different serventias never share a directory.
+ */
+export function brandImageFileName(
+  mimeType: string,
+  id: string,
+  tenantSlug: string,
+): string {
   const extension =
     EXTENSIONS[mimeType as (typeof ALLOWED_BRAND_MIME_TYPES)[number]] ?? "bin";
-  return `${id}.${extension}`;
+  return `${tenantSlug}/${id}.${extension}`;
 }

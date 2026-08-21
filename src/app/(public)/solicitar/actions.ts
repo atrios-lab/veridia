@@ -113,7 +113,9 @@ export async function submitServiceRequest(
   const accessKey = generateAccessKey();
 
   try {
-    const attachments = await collectAttachments(formData, "anexos");
+    const attachments = await collectAttachments(formData, "anexos", {
+      tenantSlug: tenant.slug,
+    });
 
     // The consent is stamped at the moment it is given, into the record it
     // belongs to: the proof of consent is the controller's to keep (LGPD
@@ -195,6 +197,7 @@ export async function attachSignedForm(
 
   try {
     const stored = await collectAttachments(formData, "requerimento", {
+      tenantSlug: tenant.slug,
       kind: "requerimento-assinado",
       limit: 1,
     });
