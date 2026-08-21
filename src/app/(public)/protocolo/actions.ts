@@ -332,6 +332,7 @@ export async function attachExtraDocument(
 
   try {
     const stored = await collectAttachments(formData, "documento", {
+      tenantSlug: tenant.slug,
       limit: 1,
     });
     if (stored.length === 0) {
@@ -422,7 +423,10 @@ export async function writeRequirementMessageAction(
     const body = String(formData.get("mensagem") ?? "").trim();
     // Three, like a chat message: this is a reply, not a filing. Sending a
     // pile of documents is what the request's own upload is for.
-    const stored = await collectAttachments(formData, "resposta", { limit: 3 });
+    const stored = await collectAttachments(formData, "resposta", {
+      tenantSlug: tenant.slug,
+      limit: 3,
+    });
     if (!body && stored.length === 0) {
       return {
         status: "error",

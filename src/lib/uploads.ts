@@ -1,13 +1,14 @@
 import "server-only";
 import { randomUUID } from "node:crypto";
 import { mkdir, unlink, writeFile } from "node:fs/promises";
-import { join, resolve } from "node:path";
+import { dirname, join, resolve } from "node:path";
 import { del, head, put } from "@vercel/blob";
 import {
   checkAttachments,
   checkUploadedAttachments,
   describeProblem,
   displayFileName,
+  isGeneratedAttachmentPath,
   resolveMimeType,
   SNIFF_BYTES,
   storedFileName,
@@ -62,9 +63,10 @@ async function store(
     return blob.url;
   }
 
-  const dir = uploadDir();
-  await mkdir(dir, { recursive: true });
-  const path = join(dir, storedName);
+  // `storedName` carries the tenant's own subfolder (see `storedFileName`),
+  // so the directory to create is the file's, not just the upload root.
+  const path = join(uploadDir(), storedName);
+  await mkdir(dirname(path), { recursive: true });
   await writeFile(path, bytes);
   return path;
 }
@@ -95,7 +97,12 @@ export class AttachmentError extends Error {}
  */
 export async function storeAttachments(
   files: File[],
-  options: { startIndex?: number; kind?: string; limit?: number } = {},
+  options: {
+    tenantSlug: string;
+    startIndex?: number;
+    kind?: string;
+    limit?: number;
+  },
 ): Promise<StoredAttachment[]> {
   // An untouched file input still arrives: a server action encodes it as an
   // empty part named "blob", so the size is the only honest signal that the
@@ -127,7 +134,11 @@ export async function storeAttachments(
   const startIndex = options.startIndex ?? 0;
   const stored: StoredAttachment[] = [];
   for (const [index, file] of read.entries()) {
-    const storedName = storedFileName(file.mimeType, randomUUID());
+    const storedName = storedFileName(
+      file.mimeType,
+      randomUUID(),
+      options.tenantSlug,
+    );
     const path = await store(file.bytes, storedName, file.mimeType);
     stored.push({
       storedName,
@@ -149,7 +160,12 @@ export async function storeAttachments(
  */
 export async function acceptUploadedAttachments(
   refs: UploadedRef[],
-  options: { startIndex?: number; kind?: string; limit?: number } = {},
+  options: {
+    tenantSlug: string;
+    startIndex?: number;
+    kind?: string;
+    limit?: number;
+  },
 ): Promise<StoredAttachment[]> {
   if (refs.length === 0) return [];
 
@@ -161,6 +177,13 @@ export async function acceptUploadedAttachments(
   const stored: StoredAttachment[] = [];
   for (const [index, ref] of refs.entries()) {
     const blob = await head(ref.url);
+    // The token route already restricted which pathname could be uploaded
+    // to, but this is the checkpoint that ties a blob to a citizen's record:
+    // worth confirming again here that it still sits under this tenant's own
+    // folder, not just the store's own host.
+    if (!isGeneratedAttachmentPath(blob.pathname, options.tenantSlug)) {
+      throw new AttachmentError(describeProblem({ kind: "origin" }));
+    }
     const declared = checkAttachments(
       [{ mimeType: blob.contentType ?? ref.mimeType, size: blob.size }],
       options.limit,
@@ -189,7 +212,12 @@ export async function acceptUploadedAttachments(
 export async function collectAttachments(
   formData: FormData,
   field: string,
-  options: { startIndex?: number; kind?: string; limit?: number } = {},
+  options: {
+    tenantSlug: string;
+    startIndex?: number;
+    kind?: string;
+    limit?: number;
+  },
 ): Promise<StoredAttachment[]> {
   const refs = formData.getAll(`${field}Ref`).map(parseRef);
   if (refs.length > 0) return acceptUploadedAttachments(refs, options);
@@ -241,9 +269,10 @@ async function storeBrandBytes(
     return blob.url;
   }
 
-  const dir = brandImageDevDir();
-  await mkdir(dir, { recursive: true });
-  await writeFile(join(dir, storedName), bytes);
+  // `storedName` carries the tenant's own subfolder (see `brandImageFileName`).
+  const path = join(brandImageDevDir(), storedName);
+  await mkdir(dirname(path), { recursive: true });
+  await writeFile(path, bytes);
   return `/uploads/marca/${storedName}`;
 }
 
@@ -260,6 +289,7 @@ async function storeBrandBytes(
 export async function storeBrandImage(
   file: File,
   kind: BrandImageKind,
+  tenantSlug: string,
 ): Promise<string> {
   const problem = checkBrandImage(kind, {
     mimeType: file.type,
@@ -267,7 +297,7 @@ export async function storeBrandImage(
   });
   if (problem) throw new BrandImageError(describeBrandImageProblem(problem));
 
-  const storedName = brandImageFileName(file.type, randomUUID());
+  const storedName = brandImageFileName(file.type, randomUUID(), tenantSlug);
   const bytes = Buffer.from(await file.arrayBuffer());
   return storeBrandBytes(bytes, storedName, file.type);
 }

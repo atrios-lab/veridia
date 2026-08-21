@@ -307,33 +307,68 @@ test("uploaded references are held to the limits and to our own store", () => {
   );
 });
 
-test("only a name this system would have generated may be uploaded", () => {
-  const generated = `anexos/${storedFileName("application/pdf", "0f8fad5b-d9cb-469f-a165-70867728950e")}`;
-  assert.ok(isGeneratedAttachmentPath(generated));
+test("only a name this system would have generated for this tenant may be uploaded", () => {
+  const generated = `anexos/${storedFileName("application/pdf", "0f8fad5b-d9cb-469f-a165-70867728950e", "cartorio-marinho")}`;
+  assert.ok(isGeneratedAttachmentPath(generated, "cartorio-marinho"));
+  // Another tenant's site may never write into this one's folder.
+  assert.equal(isGeneratedAttachmentPath(generated, "1o-tabelionato"), false);
   // The citizen's own file name is exactly what must never be stored.
-  assert.equal(isGeneratedAttachmentPath("anexos/maria-jose-rg.pdf"), false);
+  assert.equal(
+    isGeneratedAttachmentPath(
+      "anexos/cartorio-marinho/maria-jose-rg.pdf",
+      "cartorio-marinho",
+    ),
+    false,
+  );
   // Nor may an upload land outside the attachments folder.
   assert.equal(
-    isGeneratedAttachmentPath("marca/0f8fad5b-d9cb-469f-a165-70867728950e.pdf"),
+    isGeneratedAttachmentPath(
+      "marca/cartorio-marinho/0f8fad5b-d9cb-469f-a165-70867728950e.pdf",
+      "cartorio-marinho",
+    ),
     false,
   );
+  // Nor the old, flat shape from before tenants had their own folder.
   assert.equal(
     isGeneratedAttachmentPath(
-      "anexos/../marca/0f8fad5b-d9cb-469f-a165-70867728950e.pdf",
+      "anexos/0f8fad5b-d9cb-469f-a165-70867728950e.pdf",
+      "cartorio-marinho",
     ),
     false,
   );
   assert.equal(
     isGeneratedAttachmentPath(
-      "anexos/0f8fad5b-d9cb-469f-a165-70867728950e.exe",
+      "anexos/cartorio-marinho/../../marca/0f8fad5b-d9cb-469f-a165-70867728950e.pdf",
+      "cartorio-marinho",
     ),
+    false,
+  );
+  assert.equal(
+    isGeneratedAttachmentPath(
+      "anexos/cartorio-marinho/0f8fad5b-d9cb-469f-a165-70867728950e.exe",
+      "cartorio-marinho",
+    ),
+    false,
+  );
+  // A malformed slug never gets interpolated into the check.
+  assert.equal(
+    isGeneratedAttachmentPath(generated, "cartorio-marinho/../marca"),
     false,
   );
 });
 
 test("stored and displayed names carry nothing from the sender", () => {
-  assert.equal(storedFileName("application/pdf", "abc123"), "abc123.pdf");
-  assert.equal(storedFileName("image/jpeg", "abc123"), "abc123.jpg");
-  assert.equal(storedFileName("text/x-weird", "abc123"), "abc123.bin");
+  assert.equal(
+    storedFileName("application/pdf", "abc123", "cartorio-marinho"),
+    "cartorio-marinho/abc123.pdf",
+  );
+  assert.equal(
+    storedFileName("image/jpeg", "abc123", "cartorio-marinho"),
+    "cartorio-marinho/abc123.jpg",
+  );
+  assert.equal(
+    storedFileName("text/x-weird", "abc123", "cartorio-marinho"),
+    "cartorio-marinho/abc123.bin",
+  );
   assert.equal(displayFileName(0), "anexo-1");
 });
