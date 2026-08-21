@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { formatFullDate } from "@/core/scheduling/calendar.ts";
 import { isChatEnabled } from "@/lib/chat.ts";
 import { getTenant, today } from "@/lib/tenant.ts";
@@ -12,13 +13,28 @@ import { AdminIcon } from "./icon.tsx";
  * add-admin-service-requests (see admin-shell spec, "Indicador 'Disponível
  * para o chat'... reflete estado real").
  */
-export async function AdminPageHeader({ title }: { title: string }) {
+export async function AdminPageHeader({
+  title,
+  back,
+}: {
+  title: string;
+  /** A subordinate screen's way home, rendered as "‹ Label" before the title. */
+  back?: { href: string; label: string };
+}) {
   const tenant = await getTenant();
   const chatEnabled = await isChatEnabled(tenant.slug);
 
   return (
     <header className="flex items-center gap-4 border-b border-admin-border bg-admin-card px-[30px] py-4">
-      <h1 className="flex-1 font-serif text-xl font-semibold text-admin-primary">
+      <h1 className="flex flex-1 items-baseline gap-3 font-serif text-xl font-semibold text-admin-primary">
+        {back && (
+          <Link
+            href={back.href}
+            className="font-sans text-[13.5px] font-semibold text-admin-muted hover:text-admin-primary"
+          >
+            ‹ {back.label}
+          </Link>
+        )}
         {title}
       </h1>
       <span

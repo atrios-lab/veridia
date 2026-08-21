@@ -4,18 +4,28 @@ import { revalidatePath } from "next/cache";
 import { can } from "@/core/auth/roles.ts";
 import { agendaConfigSchema } from "@/core/scheduling/agenda.ts";
 import {
+  generateCancelToken,
+  hashCancelToken,
+} from "@/core/scheduling/appointment.ts";
+import { isSlotFree } from "@/core/scheduling/slots.ts";
+import {
+  bookAppointment,
   cancelAppointment,
   cancelDay,
   getAgendaConfig,
   markAttended,
+  markNoShow,
+  SlotTakenError,
   saveAgendaConfig,
+  takenTimesByDay,
 } from "@/lib/appointments.ts";
 import {
   sendAgendaDayClosedEmails,
+  sendAppointmentBookedEmail,
   sendAppointmentCancelledEmail,
 } from "@/lib/email/appointment.ts";
 import { getSession } from "@/lib/session.ts";
-import { getTenant } from "@/lib/tenant.ts";
+import { getTenant, officeNow } from "@/lib/tenant.ts";
 
 export type ActionState =
   | { status: "idle" }
@@ -61,6 +71,128 @@ export async function attendAppointment(
   }
   revalidateAdmin();
   return { status: "success" };
+}
+
+/** The citizen did not come. No e-mail goes out; the record and the audit
+ * trail are the point. */
+export async function markAppointmentNoShow(
+  _previous: ActionState,
+  formData: FormData,
+): Promise<ActionState> {
+  const session = await authorize();
+  if (!session) return { status: "error", message: NO_PERMISSION };
+
+  const id = String(formData.get("id") ?? "");
+  const tenant = await getTenant();
+  try {
+    await markNoShow(tenant.slug, id, session.user.id);
+  } catch (error) {
+    console.error("agenda.no-show", error);
+    return {
+      status: "error",
+      message:
+        "Não foi possível registrar agora. Tente novamente em instantes.",
+    };
+  }
+  revalidateAdmin();
+  return { status: "success" };
+}
+
+/**
+ * "Reservar para um cidadão": the office booking a free slot at the counter.
+ * Same rules as the site (offered day, free slot, the database as referee),
+ * because a desk that skips the rules double-books the same hour. E-mail is
+ * optional here: the citizen is on the phone or in front of the operator.
+ */
+export async function reserveDeskAppointment(
+  _previous: ActionState,
+  formData: FormData,
+): Promise<ActionState> {
+  const session = await authorize();
+  if (!session) return { status: "error", message: NO_PERMISSION };
+
+  const date = String(formData.get("date") ?? "");
+  const slotTime = String(formData.get("slotTime") ?? "");
+  const citizenName = String(formData.get("citizenName") ?? "").trim();
+  const phone = String(formData.get("phone") ?? "").trim();
+  const email = String(formData.get("email") ?? "").trim();
+  const serviceId = String(formData.get("serviceId") ?? "");
+  const mode = String(formData.get("mode") ?? "");
+
+  if (!citizenName || !phone) {
+    return {
+      status: "error",
+      message: "Informe ao menos o nome e o telefone do cidadão.",
+    };
+  }
+
+  const tenant = await getTenant();
+  try {
+    const config = await getAgendaConfig(tenant.slug);
+    const service = config.services.find((item) => item.id === serviceId);
+    if (!service || !config.modes.includes(mode)) {
+      return {
+        status: "error",
+        message: "Escolha um serviço e um modo das listas configuradas.",
+      };
+    }
+
+    const taken = await takenTimesByDay(tenant.slug, date, date);
+    if (
+      !isSlotFree(
+        config,
+        date,
+        slotTime,
+        taken.get(date) ?? new Set<string>(),
+        officeNow(),
+      )
+    ) {
+      return {
+        status: "error",
+        message: "Este horário já não está livre. Atualize a página.",
+      };
+    }
+
+    const cancelToken = generateCancelToken();
+    const appointment = await bookAppointment(
+      tenant.slug,
+      {
+        date,
+        slotTime,
+        citizenName,
+        email,
+        phone,
+        serviceId,
+        serviceLabel: service.label,
+        mode,
+        cancelTokenHash: hashCancelToken(cancelToken),
+        origin: "desk",
+      },
+      session.user.id,
+    );
+    if (email) {
+      await sendAppointmentBookedEmail(tenant, appointment, cancelToken);
+    }
+  } catch (error) {
+    if (error instanceof SlotTakenError) {
+      return {
+        status: "error",
+        message: "Este horário acabou de ser preenchido. Atualize a página.",
+      };
+    }
+    console.error("agenda.desk-book", error);
+    return {
+      status: "error",
+      message: "Não foi possível reservar agora. Tente novamente.",
+    };
+  }
+  revalidateAdmin();
+  return {
+    status: "success",
+    message: email
+      ? "Horário reservado e confirmação enviada por e-mail."
+      : "Horário reservado no balcão.",
+  };
 }
 
 /**
@@ -227,17 +359,33 @@ export async function saveAgenda(
   const tenant = await getTenant();
   try {
     const current = await getAgendaConfig(tenant.slug);
+    // The form sends the whole config as one JSON field: the grid chips,
+    // services and modes are structured client state, and one field parsed by
+    // one schema keeps "a grid half-saved" impossible.
+    let submitted: {
+      grid?: unknown;
+      services?: Array<{ label?: unknown; notaryOnly?: unknown }>;
+      modes?: unknown;
+    };
+    try {
+      submitted = JSON.parse(String(formData.get("config") ?? ""));
+    } catch {
+      return {
+        status: "error",
+        message: "Não foi possível ler o formulário. Recarregue a página.",
+      };
+    }
     const parsed = agendaConfigSchema.safeParse({
-      grid: Object.fromEntries(
-        ["1", "2", "3", "4", "5"].map((day) => [
-          day,
-          splitList(String(formData.get(`grid.${day}`) ?? "")),
-        ]),
-      ),
+      grid: submitted.grid ?? {},
       services: withUniqueIds(
-        splitList(String(formData.get("services") ?? "")),
+        (submitted.services ?? []).map((service) => ({
+          label: String(service.label ?? "").trim(),
+          notaryOnly: service.notaryOnly === true,
+        })),
       ),
-      modes: splitList(String(formData.get("modes") ?? "")),
+      modes: Array.isArray(submitted.modes)
+        ? submitted.modes.map((item) => String(item).trim()).filter(Boolean)
+        : [],
       // Closed dates are owned by the day-closing action, not by this form.
       closedDates: current.closedDates,
     });
@@ -275,15 +423,6 @@ export async function saveAgenda(
   return { status: "success", message: "Agenda salva e já valendo no site." };
 }
 
-/** One text field per list, split on commas and new lines: the office types
- * "08:30, 09:00" the way it would write it down, not one input per time. */
-function splitList(value: string): string[] {
-  return value
-    .split(/[,\n]/)
-    .map((item) => item.trim())
-    .filter(Boolean);
-}
-
 /**
  * Ids derived from the labels, so the citizen's choice survives a reorder of
  * the list. A rename still produces a new id, which is exactly why the
@@ -293,19 +432,23 @@ function splitList(value: string): string[] {
  * suffix: an id shared by two services would hand the second one's citizens
  * the first one's name.
  */
-function withUniqueIds(labels: string[]): Array<{ id: string; label: string }> {
+function withUniqueIds(
+  services: Array<{ label: string; notaryOnly: boolean }>,
+): Array<{ id: string; label: string; notaryOnly: boolean }> {
   const used = new Set<string>();
-  return labels.map((label) => {
-    const base =
-      label
-        .normalize("NFD")
-        .replace(/[\u0300-\u036f]/g, "")
-        .toLowerCase()
-        .replace(/[^a-z0-9]+/g, "-")
-        .replace(/^-|-$/g, "") || "servico";
-    let id = base;
-    for (let n = 2; used.has(id); n++) id = `${base}-${n}`;
-    used.add(id);
-    return { id, label };
-  });
+  return services
+    .filter((service) => service.label)
+    .map(({ label, notaryOnly }) => {
+      const base =
+        label
+          .normalize("NFD")
+          .replace(/[\u0300-\u036f]/g, "")
+          .toLowerCase()
+          .replace(/[^a-z0-9]+/g, "-")
+          .replace(/^-|-$/g, "") || "servico";
+      let id = base;
+      for (let n = 2; used.has(id); n++) id = `${base}-${n}`;
+      used.add(id);
+      return { id, label, notaryOnly };
+    });
 }

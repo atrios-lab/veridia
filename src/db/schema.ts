@@ -541,8 +541,18 @@ export const appointments = pgTable(
     serviceId: text("service_id").notNull(),
     serviceLabel: text("service_label").notNull(),
     mode: text("mode").notNull(),
-    // "booked" | "attended" | "cancelled", see core/scheduling/appointment.
+    // "booked" | "attended" | "no_show" | "cancelled", see
+    // core/scheduling/appointment.
     status: text("status").notNull().default("booked"),
+    // "site" when the citizen booked it, "desk" when the office reserved it
+    // at the counter ("Reservado no balcão").
+    origin: text("origin").notNull().default("site"),
+    // AGD.2026.000071: the office's yearly counter, same book-keeping as
+    // service_requests. Nullable: appointments predating the numbering have
+    // none, and the panel simply omits it.
+    protocolYear: integer("protocol_year"),
+    protocolSequence: integer("protocol_sequence"),
+    protocolNumber: text("protocol_number"),
     // Why the office called it off, sent to the citizen. Null when the
     // citizen cancelled it themselves.
     cancelReason: text("cancel_reason"),
@@ -561,6 +571,17 @@ export const appointments = pgTable(
     uniqueIndex("appointments_tenant_date_slot_live")
       .on(t.tenantSlug, t.date, t.slotTime)
       .where(sql`${t.status} <> 'cancelled'`),
+    // Two bookings racing for the same number lose here, and the loser asks
+    // for the next sequence. NULLs are distinct, so legacy rows coexist.
+    uniqueIndex("appointments_tenant_year_sequence").on(
+      t.tenantSlug,
+      t.protocolYear,
+      t.protocolSequence,
+    ),
+    uniqueIndex("appointments_tenant_protocol").on(
+      t.tenantSlug,
+      t.protocolNumber,
+    ),
     index("appointments_tenant_date").on(t.tenantSlug, t.date),
     index("appointments_cancel_token").on(t.cancelTokenHash),
   ],

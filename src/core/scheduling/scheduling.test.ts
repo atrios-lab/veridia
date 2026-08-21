@@ -8,6 +8,10 @@ import {
   slotEndTime,
 } from "./agenda.ts";
 import {
+  appointmentStatusLabel,
+  SLOT_HOLDING_STATUSES,
+} from "./appointment.ts";
+import {
   addDays,
   easterSunday,
   formatFullDate,
@@ -36,7 +40,7 @@ const config: AgendaConfig = {
     "2": ["08:30", "09:00", "09:30"],
     "4": ["08:30", "13:30"],
   },
-  services: [{ id: "tabeliao", label: "Tabelião" }],
+  services: [{ id: "tabeliao", label: "Tabelião", notaryOnly: false }],
 };
 
 const taken = (...times: string[]): TakenTimes => new Set(times);
@@ -199,4 +203,19 @@ test("the header shows the office's day, not the server's", () => {
     formatFullDate(toIsoDate(lateEvening, "America/Sao_Paulo")),
     "Quarta, 5 de agosto de 2026",
   );
+});
+
+test("no_show is labelled Faltou and still holds the slot", () => {
+  assert.equal(appointmentStatusLabel("no_show"), "Faltou");
+  assert.ok(SLOT_HOLDING_STATUSES.includes("no_show"));
+});
+
+test("a config saved before notaryOnly existed parses with the flag off", () => {
+  const config = parseAgendaConfig({
+    grid: { "1": ["09:00"] },
+    services: [{ id: "procuracao", label: "Procuração" }],
+    modes: ["Presencial"],
+    closedDates: [],
+  });
+  assert.equal(config.services[0].notaryOnly, false);
 });

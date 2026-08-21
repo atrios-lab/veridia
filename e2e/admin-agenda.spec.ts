@@ -54,6 +54,22 @@ test.describe("agenda do dia", () => {
   test.afterEach(async () => {
     const sql = postgres(process.env.DATABASE_URL as string);
     await sql`delete from appointments where date = ${DATE}`;
+    // Um teste que fechou o dia e falhou antes de reabrir não pode
+    // envenenar a próxima rodada: a data sai de closedDates sempre.
+    await sql`
+      update tenant_content
+      set published = jsonb_set(
+        published,
+        '{closedDates}',
+        coalesce(
+          (select jsonb_agg(closed) from jsonb_array_elements(published->'closedDates') closed
+            where closed->>'date' <> ${DATE}),
+          '[]'::jsonb
+        )
+      )
+      where tenant_slug = 'cartorio-marinho' and key = 'office-agenda'
+        and published ? 'closedDates'
+    `;
     await sql.end();
   });
 
@@ -75,8 +91,19 @@ test.describe("agenda do dia", () => {
     await signIn(page);
     await page.goto(`${baseURL}/admin/agenda?dia=${DATE}`);
 
-    await page.getByRole("button", { name: "Atendido" }).click();
+    await page.getByRole("button", { name: "Marcar atendido" }).click();
     await expect(page.getByText("Atendido", { exact: true })).toBeVisible();
+  });
+
+  test("marking a no-show records it without emailing anyone", async ({
+    page,
+  }) => {
+    await seed("10:00", "Josefa Dantas");
+    await signIn(page);
+    await page.goto(`${baseURL}/admin/agenda?dia=${DATE}`);
+
+    await page.getByRole("button", { name: "Faltou" }).click();
+    await expect(page.getByText("Faltou", { exact: true })).toBeVisible();
   });
 
   test("cancelling one appointment demands a reason", async ({ page }) => {
@@ -98,6 +125,56 @@ test.describe("agenda do dia", () => {
     await expect(page.getByText(/diligência/)).toBeVisible();
   });
 
+  // A tela de configuração já foi inalcançável: o único link para ela vivia
+  // dentro do aviso de grade vazia, que some no primeiro horário salvo.
+  test("the configuration screen stays reachable once the grid is filled", async ({
+    page,
+  }) => {
+    const sql = postgres(process.env.DATABASE_URL as string);
+    const [before] = await sql`
+      select published from tenant_content
+      where tenant_slug = 'cartorio-marinho' and key = 'office-agenda'
+    `;
+    await sql`
+      insert into tenant_content (tenant_slug, key, published, published_at)
+      values ('cartorio-marinho', 'office-agenda',
+              ${sql.json({ grid: { "4": ["09:00"] }, services: [{ id: "procuracao", label: "Procuração" }], modes: ["Presencial"], closedDates: [] })},
+              now())
+      on conflict (tenant_slug, key)
+        do update set published = excluded.published, published_at = now()
+    `;
+
+    try {
+      await signIn(page);
+      await page.goto(`${baseURL}/admin/agenda?dia=${DATE}`);
+      // Com a grade preenchida o aviso não existe, e o caminho tem de existir
+      // mesmo assim.
+      await expect(
+        page.getByText("A agenda ainda não tem horários"),
+      ).toHaveCount(0);
+      await page.getByRole("link", { name: /Configurar horários/ }).click();
+
+      await expect(page).toHaveURL(`${baseURL}/admin/agenda/configuracao`);
+      // A grade agora é um chip por horário; o × acessível nomeia o dia.
+      await expect(
+        page.getByRole("button", { name: "Remover 09:00 de quinta" }),
+      ).toBeVisible();
+    } finally {
+      if (before?.published) {
+        await sql`
+          update tenant_content set published = ${sql.json(before.published)}
+          where tenant_slug = 'cartorio-marinho' and key = 'office-agenda'
+        `;
+      } else {
+        await sql`
+          delete from tenant_content
+          where tenant_slug = 'cartorio-marinho' and key = 'office-agenda'
+        `;
+      }
+      await sql.end();
+    }
+  });
+
   test("closing the day cancels everyone on it and stops offering the date", async ({
     page,
   }) => {
@@ -106,22 +183,25 @@ test.describe("agenda do dia", () => {
     await signIn(page);
     await page.goto(`${baseURL}/admin/agenda?dia=${DATE}`);
 
-    await page.getByRole("button", { name: "Fechar o dia" }).click();
+    await page.getByRole("button", { name: /^Fechar .+\.\.\.$/ }).click();
     await expect(
-      page.getByText(/2 agendamentos serão cancelados/),
+      page.getByText(/2 agendamentos de .+ são cancelados/),
     ).toBeVisible();
     await page
       .getByLabel("Motivo", { exact: false })
       .fill("A serventia não abrirá por falta de energia elétrica.");
     await page.getByRole("button", { name: "Fechar o dia e avisar" }).click();
 
-    await expect(page.getByText(/2 cidadãos avisados/)).toBeVisible();
-
-    await page.reload();
+    // A revalidação troca o cartão de fechar pelo de dia fechado no mesmo
+    // instante em que a action volta; o estado durável é o que se afirma.
     await expect(page.getByText("Este dia está fechado")).toBeVisible();
-    await expect(page.getByText(/falta de energia/)).toBeVisible();
+    // O motivo aparece no cartão do dia e em cada linha cancelada.
+    await expect(page.getByText(/falta de energia/).first()).toBeVisible();
     // Reabrir devolve a data à oferta; quem já foi cancelado segue cancelado.
     await page.getByRole("button", { name: "Reabrir o dia" }).click();
-    await expect(page.getByText("Dia reaberto.")).toBeVisible();
+    // Reaberto, o cartão de fechar volta ao lugar do aviso de dia fechado.
+    await expect(
+      page.getByRole("button", { name: /^Fechar .+\.\.\.$/ }),
+    ).toBeVisible();
   });
 });

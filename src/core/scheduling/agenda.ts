@@ -55,6 +55,10 @@ const weekdayKey = z.enum(["1", "2", "3", "4", "5"]);
 export const agendaServiceSchema = z.object({
   id: z.string().min(1),
   label: z.string().min(1, "Dê um nome ao serviço."),
+  // "Só com o tabelião": the public form announces it before the citizen
+  // picks a time. Default false, so configs saved before the flag existed
+  // parse unchanged.
+  notaryOnly: z.boolean().default(false),
 });
 export type AgendaService = z.infer<typeof agendaServiceSchema>;
 
