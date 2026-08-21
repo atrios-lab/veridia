@@ -157,8 +157,8 @@ const GENERATED_PATH = new RegExp(
 /**
  * Whether a name the browser asked to upload under is one this system would
  * have generated. The browser is free to ask for anything, and the name it
- * knows is the citizen's own file name — which routinely carries their full
- * name — so the shape is checked rather than trusted.
+ * knows is the citizen's own file name (which routinely carries their full
+ * name), so the shape is checked rather than trusted.
  */
 export function isGeneratedAttachmentPath(pathname: string): boolean {
   return GENERATED_PATH.test(pathname);

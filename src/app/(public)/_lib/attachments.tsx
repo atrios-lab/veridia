@@ -80,7 +80,7 @@ async function uploadOne(file: File) {
 /**
  * Sends a form whose attachments must not travel in its body. The files go
  * to the store first, straight from the browser, and the action receives
- * references to them instead — a platform function's request body is capped
+ * references to them instead: a platform function's request body is capped
  * far below one photograph of a document, which is why this exists.
  *
  * Where the store is not configured (development), the files stay in the
@@ -93,7 +93,7 @@ export function useAttachmentPrepare() {
 
   /**
    * The form's data with its attachments already where the server expects
-   * them, or undefined when the files were refused — in which case `error`
+   * them, or undefined when the files were refused, in which case `error`
    * is what the citizen needs to read.
    */
   async function prepare(

@@ -144,7 +144,7 @@ export async function storeAttachments(
  * The other half of the same job, for files the browser already uploaded
  * straight to the store. Nothing here is trusted because the client said so:
  * count, type and size go through the same core check, the URL has to belong
- * to our own store, and the size is read back from the blob itself — a client
+ * to our own store, and the size is read back from the blob itself: a client
  * is free to declare a 1 KB file and upload 400 MB.
  */
 export async function acceptUploadedAttachments(
