@@ -162,9 +162,9 @@ const GENERATED_ID = `[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{1
  * Whether a name the browser asked to upload under is one this system would
  * have generated for this tenant. The browser is free to ask for anything,
  * and the name it knows is the citizen's own file name (which routinely
- * carries their full name), so the shape is checked rather than trusted —
- * and the tenant segment has to match the tenant the request actually
- * belongs to, or nothing here would stop one tenant's site from writing into
+ * carries their full name), so the shape is checked rather than trusted, and
+ * the tenant segment has to match the tenant the request actually belongs
+ * to, or nothing here would stop one tenant's site from writing into
  * another's folder.
  */
 export function isGeneratedAttachmentPath(
