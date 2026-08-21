@@ -31,7 +31,7 @@ import {
   writeCitizenMessage,
 } from "@/lib/service-request.ts";
 import { getTenant, OFFICE_TIME_ZONE, today } from "@/lib/tenant.ts";
-import { AttachmentError, storeAttachments } from "@/lib/uploads.ts";
+import { AttachmentError, collectAttachments } from "@/lib/uploads.ts";
 
 const NOT_FOUND =
   "Protocolo ou chave de acesso inválidos. Confira os dados e tente de novo.";
@@ -331,10 +331,9 @@ export async function attachExtraDocument(
   }
 
   try {
-    const files = formData
-      .getAll("documento")
-      .filter((f): f is File => f instanceof File);
-    const stored = await storeAttachments(files);
+    const stored = await collectAttachments(formData, "documento", {
+      limit: 1,
+    });
     if (stored.length === 0) {
       return { status: "error", message: "Escolha um arquivo para enviar." };
     }
@@ -421,13 +420,9 @@ export async function writeRequirementMessageAction(
     }
 
     const body = String(formData.get("mensagem") ?? "").trim();
-    const files = formData
-      .getAll("resposta")
-      .filter((f): f is File => f instanceof File)
-      // Three, like a chat message: this is a reply, not a filing. Sending a
-      // pile of documents is what the request's own upload is for.
-      .slice(0, 3);
-    const stored = await storeAttachments(files);
+    // Three, like a chat message: this is a reply, not a filing. Sending a
+    // pile of documents is what the request's own upload is for.
+    const stored = await collectAttachments(formData, "resposta", { limit: 3 });
     if (!body && stored.length === 0) {
       return {
         status: "error",

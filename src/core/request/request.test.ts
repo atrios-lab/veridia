@@ -9,9 +9,12 @@ import {
 } from "./access-key.ts";
 import {
   checkAttachments,
+  checkUploadedAttachments,
   displayFileName,
+  isGeneratedAttachmentPath,
   MAX_ATTACHMENT_BYTES,
   MAX_ATTACHMENTS,
+  resolveMimeType,
   storedFileName,
 } from "./attachment.ts";
 import {
@@ -238,6 +241,93 @@ test("attachments are held to type, size and count", () => {
       { mimeType: "image/png", size: MAX_ATTACHMENT_BYTES + 1 },
     ])?.kind,
     "size",
+  );
+});
+
+function heicHeader(brand: string): Uint8Array {
+  const bytes = new Uint8Array(12);
+  bytes.set([0, 0, 0, 0x18], 0);
+  for (const [index, char] of [...`ftyp${brand}`].entries()) {
+    bytes[4 + index] = char.charCodeAt(0);
+  }
+  return bytes;
+}
+
+test("a silent browser is answered by the file's own header", () => {
+  // Chrome on Windows hands a .heic file over with no type at all.
+  assert.equal(
+    resolveMimeType("foto.HEIC", "", heicHeader("heic")),
+    "image/heic",
+  );
+  assert.equal(
+    resolveMimeType("foto.heif", "", heicHeader("mif1")),
+    "image/heic",
+  );
+  // No bytes to read: the client rejects early on the extension alone, and
+  // the server still gets the last word.
+  assert.equal(resolveMimeType("foto.heic", ""), "image/heic");
+  // A renamed executable has the extension but never the brand.
+  assert.equal(resolveMimeType("virus.heic", "", heicHeader("exe!")), "");
+  assert.equal(resolveMimeType("virus.heic", "", new Uint8Array(4)), "");
+  assert.equal(resolveMimeType("documento.zip", ""), "");
+  // A browser that names the type is believed; the allowlist judges it next.
+  assert.equal(resolveMimeType("foto.heic", "image/png"), "image/png");
+});
+
+test("uploaded references are held to the limits and to our own store", () => {
+  const host = "blob.example.com";
+  const ok = {
+    url: `https://${host}/anexos/abc.pdf`,
+    mimeType: "application/pdf",
+    size: 1024,
+  };
+  assert.equal(checkUploadedAttachments([ok, ok], host), undefined);
+  assert.equal(
+    checkUploadedAttachments(
+      [{ ...ok, url: "https://attacker.example/anexos/abc.pdf" }],
+      host,
+    )?.kind,
+    "origin",
+  );
+  assert.equal(
+    checkUploadedAttachments([{ ...ok, url: "nao-e-url" }], host)?.kind,
+    "origin",
+  );
+  // No store configured is not a reason to trust whatever arrives.
+  assert.equal(checkUploadedAttachments([ok], "")?.kind, "origin");
+  // The batch limits still apply before the URL is even looked at.
+  assert.equal(
+    checkUploadedAttachments([{ ...ok, size: MAX_ATTACHMENT_BYTES + 1 }], host)
+      ?.kind,
+    "size",
+  );
+  assert.equal(
+    checkUploadedAttachments([ok, ok, ok], host, 2)?.kind,
+    "too-many",
+  );
+});
+
+test("only a name this system would have generated may be uploaded", () => {
+  const generated = `anexos/${storedFileName("application/pdf", "0f8fad5b-d9cb-469f-a165-70867728950e")}`;
+  assert.ok(isGeneratedAttachmentPath(generated));
+  // The citizen's own file name is exactly what must never be stored.
+  assert.equal(isGeneratedAttachmentPath("anexos/maria-jose-rg.pdf"), false);
+  // Nor may an upload land outside the attachments folder.
+  assert.equal(
+    isGeneratedAttachmentPath("marca/0f8fad5b-d9cb-469f-a165-70867728950e.pdf"),
+    false,
+  );
+  assert.equal(
+    isGeneratedAttachmentPath(
+      "anexos/../marca/0f8fad5b-d9cb-469f-a165-70867728950e.pdf",
+    ),
+    false,
+  );
+  assert.equal(
+    isGeneratedAttachmentPath(
+      "anexos/0f8fad5b-d9cb-469f-a165-70867728950e.exe",
+    ),
+    false,
   );
 });
 

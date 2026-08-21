@@ -4,8 +4,10 @@
 
 ### Requirement: Upload de anexos direto do navegador para o storage
 Os anexos do cidadão DEVEM (SHALL) subir do navegador direto para o storage de blobs, sem
-transitar no corpo da server action, em todos os fluxos do cidadão: anexos do pedido em
-`/solicitar`, requerimento assinado, "anexar outro documento" e resposta de exigência. A
+transitar no corpo da server action ou do route handler, em todos os fluxos em que o cidadão
+anexa arquivo: anexos do pedido em `/solicitar`, requerimento assinado, "anexar outro
+documento" e resposta de exigência na consulta de protocolo, pedido de direitos LGPD,
+manifestação de ouvidoria e anexo do chat de atendimento. A
 emissão do token de upload DEVE (SHALL) ser autorizada por rota do servidor que impõe tipo
 permitido, tamanho máximo de 20 MB por arquivo e pathname gerado pelo servidor (nunca o nome vindo do
 navegador), com rate limit. A server action que grava o pedido DEVE (SHALL) revalidar as
@@ -25,6 +27,14 @@ storage de blobs configurado, o envio DEVE (SHALL) seguir pelo corpo da action c
 #### Scenario: Action não confia na referência do cliente
 - **WHEN** a submissão chega com referência de anexo apontando para fora do nosso store, ou declarando tipo/tamanho fora dos limites
 - **THEN** o servidor rejeita a submissão com mensagem clara e nada é gravado
+
+#### Scenario: A política de segurança não barra o próprio envio
+- **WHEN** a página carrega com o CSP do site
+- **THEN** `connect-src` permite os hosts do storage, e o upload direto acontece em vez de ser bloqueado pela própria política
+
+#### Scenario: Anexar cinco arquivos não esgota o rate limit
+- **WHEN** o cidadão anexa cinco arquivos e envia o pedido, cada arquivo sendo uma requisição de upload
+- **THEN** o envio conclui sem cair no limite de requisições, que para uploads tem orçamento próprio
 
 #### Scenario: Desenvolvimento sem storage de blobs
 - **WHEN** o app roda sem token do storage configurado

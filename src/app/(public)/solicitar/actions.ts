@@ -22,7 +22,7 @@ import {
   findByProtocol,
 } from "@/lib/service-request.ts";
 import { getTenant } from "@/lib/tenant.ts";
-import { AttachmentError, storeAttachments } from "@/lib/uploads.ts";
+import { AttachmentError, collectAttachments } from "@/lib/uploads.ts";
 
 export interface SubmitSuccess {
   status: "success";
@@ -113,10 +113,7 @@ export async function submitServiceRequest(
   const accessKey = generateAccessKey();
 
   try {
-    const files = formData
-      .getAll("anexos")
-      .filter((f): f is File => f instanceof File);
-    const attachments = await storeAttachments(files);
+    const attachments = await collectAttachments(formData, "anexos");
 
     // The consent is stamped at the moment it is given, into the record it
     // belongs to: the proof of consent is the controller's to keep (LGPD
@@ -197,11 +194,9 @@ export async function attachSignedForm(
   }
 
   try {
-    const files = formData
-      .getAll("requerimento")
-      .filter((f): f is File => f instanceof File);
-    const stored = await storeAttachments(files, {
+    const stored = await collectAttachments(formData, "requerimento", {
       kind: "requerimento-assinado",
+      limit: 1,
     });
     if (stored.length === 0) {
       return {

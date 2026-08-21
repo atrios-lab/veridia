@@ -169,6 +169,32 @@ test.describe("client-side validation", () => {
       page.getByRole("heading", { name: "Pedido registrado" }),
     ).toHaveCount(0);
   });
+
+  test("a file too large is refused at the picker, before any upload", async ({
+    page,
+  }) => {
+    // The refusal has to happen here, not after the citizen spent a minute of
+    // their data plan uploading: 20 MB is the limit, so 21 is one over.
+    const tooBig = {
+      name: "gigante.pdf",
+      mimeType: "application/pdf",
+      buffer: Buffer.concat([
+        Buffer.from("%PDF-1.4\n"),
+        Buffer.alloc(21 * 1024 * 1024, 0x20),
+      ]),
+    };
+
+    await page.goto(formURL);
+    let uploaded = false;
+    page.on("request", (r) => {
+      if (r.method() !== "GET") uploaded = true;
+    });
+    await page.locator("#anexos").setInputFiles([tooBig]);
+    await expect(page.getByText("no máximo 20 MB")).toBeVisible();
+    // Refused means not listed: nothing was kept to be sent.
+    await expect(page.getByText("gigante.pdf")).toHaveCount(0);
+    expect(uploaded).toBe(false);
+  });
 });
 
 test.describe("filing a request", () => {
@@ -221,6 +247,29 @@ test.describe("filing a request", () => {
     await page.locator("input[name=requerimento]").setInputFiles([fakePdf]);
     await expect(
       page.getByText("Requerimento enviado", { exact: false }),
+    ).toBeVisible();
+  });
+
+  test("a HEIC the browser cannot name still goes through", async ({
+    page,
+  }) => {
+    // Chrome on Windows hands every .heic over with an empty type. The file
+    // is judged by its own header instead, on both sides.
+    const heic = Buffer.alloc(64, 0);
+    heic.set([0, 0, 0, 0x18], 0);
+    heic.write("ftypheic", 4, "ascii");
+
+    await page.goto(
+      `${baseURL}/solicitar?atribuicao=RCPN&ato=rcpn-habilitacao-casamento`,
+    );
+    await fillForm(page);
+    await page
+      .locator("#anexos")
+      .setInputFiles([{ name: "foto.heic", mimeType: "", buffer: heic }]);
+    await expect(page.getByText("foto.heic").first()).toBeVisible();
+    await page.getByRole("button", { name: "Enviar requerimento" }).click();
+    await expect(
+      page.getByRole("heading", { name: "Pedido registrado" }),
     ).toBeVisible();
   });
 

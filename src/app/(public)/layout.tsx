@@ -10,9 +10,11 @@ import {
 import { isChatEnabled } from "@/lib/chat.ts";
 import { SERIF } from "@/lib/fonts.ts";
 import { getTenant } from "@/lib/tenant.ts";
+import { blobUploadEnabled } from "@/lib/uploads.ts";
 import { ChatWidget } from "./_components/chat-widget.tsx";
 import { CookieNotice } from "./_components/cookie-notice.tsx";
 import { Icon } from "./_components/icon.tsx";
+import { BlobUploadProvider } from "./_lib/attachments.tsx";
 import { COOKIE_NOTICE_COOKIE } from "./_lib/cookie-notice.ts";
 
 // The redesign's header: home, the two tasks, notices and contact, with the
@@ -121,7 +123,14 @@ export default async function PublicLayout({
         </div>
       </header>
 
-      <main className="flex-1">{children}</main>
+      {/* Whether the citizen's attachments go straight to the store is a
+          server-side fact (see src/lib/uploads.ts) that every upload on the
+          public site has to know. */}
+      <main className="flex-1">
+        <BlobUploadProvider enabled={blobUploadEnabled()}>
+          {children}
+        </BlobUploadProvider>
+      </main>
 
       <footer className="bg-brand-primary text-white">
         <div className="mx-auto flex max-w-6xl flex-col gap-4 px-4 py-8 md:px-10">

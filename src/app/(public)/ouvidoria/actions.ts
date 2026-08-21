@@ -11,7 +11,7 @@ import { isSectionEnabled } from "@/core/tenant/gating.ts";
 import { isRateLimited } from "@/lib/rate-limit.ts";
 import { createRecord } from "@/lib/service-request.ts";
 import { getTenant } from "@/lib/tenant.ts";
-import { AttachmentError, storeAttachments } from "@/lib/uploads.ts";
+import { AttachmentError, collectAttachments } from "@/lib/uploads.ts";
 
 export interface OmbudsmanSuccess {
   status: "success";
@@ -87,10 +87,7 @@ export async function submitManifestation(
   const confidential = anonymous ? false : parsed.data.confidential;
 
   try {
-    const files = formData
-      .getAll("anexos")
-      .filter((f): f is File => f instanceof File);
-    const stored = await storeAttachments(files);
+    const stored = await collectAttachments(formData, "anexos");
 
     /*
      * No key for an anonymous manifestation: there is no personal data to
