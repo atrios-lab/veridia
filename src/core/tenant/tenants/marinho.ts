@@ -40,7 +40,7 @@ export const cartorioMarinho: Tenant = parseTenant({
   issRate: 0.05, // 5%, municipality joined the national NFS-e portal
   theme: "verde-dourado", // the office's own green and gold, kept from the redesign
   heroImage: "/hero-home.jpg", // aerial photograph of Ielmo Marinho
-  home: { title: "Ofício Único de Ielmo Marinho / RN" }, // same text as `subtitle`, today's hero behavior
+  home: { title: "OFÍCIO ÚNICO DE IELMO MARINHO/RN" }, // same text as `subtitle`, today's hero behavior
   logos: {
     light: "/logos/CM-Logo-preto.png",
     dark: "/logos/CM-Logo-branco.png",
