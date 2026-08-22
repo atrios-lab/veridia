@@ -4,6 +4,7 @@ import {
   buildAgendaDayClosedEmail,
   buildAppointmentBookedEmail,
   buildAppointmentCancelledEmail,
+  buildAppointmentSelfCancelledEmail,
 } from "@/core/scheduling/emails.ts";
 import { buildCalendarEvent } from "@/core/scheduling/ics.ts";
 import type { Tenant } from "@/core/tenant/schema.ts";
@@ -13,7 +14,7 @@ import { renderEmailCardHtml, renderEmailCardText } from "./render.ts";
 import { sendEmail } from "./send.ts";
 
 /**
- * The three letters the agenda sends. Unlike the protocol notices next door,
+ * The four letters the agenda sends. Unlike the protocol notices next door,
  * these carry the appointment itself: there is nothing behind a key to
  * protect, and the whole point is that the citizen can read when to show up
  * without opening anything.
@@ -131,6 +132,32 @@ export async function sendAppointmentCancelledEmail(
     });
   } catch (error) {
     console.error("appointment.email.cancelled", appointment.id, error);
+  }
+}
+
+/**
+ * The receipt for a cancellation the citizen made themselves, from the link in
+ * their confirmation. They already saw the screen saying it worked; this is
+ * the copy that stays, and the one that overrides the confirmation still
+ * sitting in the same inbox saying the appointment is on.
+ */
+export async function sendAppointmentSelfCancelledEmail(
+  tenant: Tenant,
+  appointment: Appointment,
+): Promise<void> {
+  const text = buildAppointmentSelfCancelledEmail(facts(tenant, appointment));
+  const agendaUrl = `${baseUrl(tenant)}/agendar`;
+  try {
+    await sendEmail({
+      to: appointment.email,
+      fromName: tenant.name,
+      fromAddress: tenant.emailFrom,
+      subject: text.subject,
+      html: renderEmailCardHtml(text, identity(tenant), agendaUrl),
+      text: renderEmailCardText(text, agendaUrl),
+    });
+  } catch (error) {
+    console.error("appointment.email.self-cancelled", appointment.id, error);
   }
 }
 

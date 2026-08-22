@@ -282,6 +282,20 @@ export async function attachRequirementFormAction(
       "office",
       requirementId,
     );
+
+    // Same courtesy the delivered document gets: the form is something the
+    // citizen has to print and bring, and one sitting unseen behind the
+    // access key is an exigência nobody can meet.
+    const request = await findById(tenant.slug, requestId);
+    if (request) {
+      notifyCitizen({
+        tenant,
+        contact: request.contact,
+        protocolNumber: request.protocolNumber,
+        subject: "Formulário disponível",
+        body: "A serventia anexou um formulário à exigência do seu pedido. Consulte o protocolo com a sua chave de acesso para baixá-lo e imprimi-lo.",
+      });
+    }
   } catch (error) {
     if (error instanceof AttachmentError) {
       return { status: "error", message: error.message };

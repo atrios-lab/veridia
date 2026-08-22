@@ -1,6 +1,7 @@
 "use server";
 
 import { cancelAppointment, findByCancelToken } from "@/lib/appointments.ts";
+import { sendAppointmentSelfCancelledEmail } from "@/lib/email/appointment.ts";
 import { getTenant } from "@/lib/tenant.ts";
 
 export type CancelState =
@@ -36,6 +37,12 @@ export async function cancelByToken(
       };
     }
     await cancelAppointment(tenant.slug, appointment.id);
+
+    // The receipt, from the appointment already in hand: no second query, and
+    // no reason to fail the cancellation over a mail provider, which is why
+    // the send swallows its own error one level down.
+    await sendAppointmentSelfCancelledEmail(tenant, appointment);
+
     return { status: "cancelled" };
   } catch (error) {
     console.error("agendar.cancelar", error);

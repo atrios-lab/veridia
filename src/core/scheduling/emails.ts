@@ -77,6 +77,29 @@ export function buildAppointmentCancelledEmail(
 }
 
 /**
+ * The citizen's own cancellation, coming back to them as a receipt. No reason
+ * anywhere, because nobody owes the counter one, and no apology either: this
+ * is not bad news being broken, it is a thing they just did being confirmed.
+ * The button leads back to the agenda, for the case where the visit still has
+ * to happen, only on another day.
+ */
+export function buildAppointmentSelfCancelledEmail(
+  facts: AppointmentEmailFacts,
+): EmailText {
+  return {
+    subject: `Cancelamento confirmado · ${formatLongDate(facts.date)} às ${facts.slotTime}`,
+    paragraphs: [
+      `${firstName(facts.citizenName)}, o seu agendamento foi cancelado, como você pediu.`,
+      `Era ${when(facts.date, facts.slotTime)}, para ${facts.serviceLabel}.`,
+      "O horário voltou a ficar disponível para outra pessoa.",
+      "Se ainda precisar do atendimento, escolha um novo horário pelo botão abaixo.",
+    ],
+    buttonLabel: "Agendar novo horário",
+    footnote: `${facts.officeName} · Este e-mail confirma o cancelamento. O link do agendamento anterior não vale mais.`,
+  };
+}
+
+/**
  * The whole day called off. Same facts as a single cancellation and a
  * different first line: the citizen has to understand it was not about them,
  * or the next thing they do is call to ask what they did wrong.
