@@ -22,6 +22,7 @@ export const cartorioBomJesus: Tenant = parseTenant({
     whatsapp: "(84) 4042-0949",
     email: "cartoriounicodebomjesus@gmail.com",
   },
+  address: "Praça Padre João Maria, 24, Bom Jesus - RN, 59270-000",
   openingHours: "Segunda a sexta, das 8h às 14h",
   counterHours: { startHour: 8, endHour: 14 },
   owner: {
