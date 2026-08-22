@@ -1,13 +1,15 @@
-import { ComingSoon } from "../_components/coming-soon.tsx";
+import { TJ_LOOKUP_URL } from "@/lib/tj-seal.ts";
+import { requireSection } from "../_lib/section.ts";
+import { SealLookup } from "./seal-lookup.tsx";
 
 export const metadata = { title: "Selo digital" };
 
-export default function DigitalSealPage() {
+export default async function DigitalSealPage() {
+  const tenant = await requireSection("selo-tjrn");
+
   return (
-    <ComingSoon
-      section="selo-tjrn"
-      description="Verificação da autenticidade de um ato pelo selo digital do
-        Tribunal de Justiça, sem sair do site da serventia."
-    />
+    <div className="mx-auto max-w-6xl px-4 py-6 md:px-10 md:py-10">
+      <SealLookup tenantName={tenant.name} officialUrl={TJ_LOOKUP_URL} />
+    </div>
   );
 }

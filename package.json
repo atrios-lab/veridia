@@ -19,6 +19,7 @@
     "db:seed": "node --env-file=.env.local scripts/seed-admin.ts",
     "db:seed-superadmin": "node --env-file=.env.local scripts/seed-superadmin.ts",
     "db:invite": "node --env-file=.env.local scripts/invite-admin.ts",
+    "capture:seal": "node --conditions=react-server scripts/capture-seal-fixture.ts",
     "check:destructive": "node scripts/check-destructive.mjs"
   },
   "dependencies": {
