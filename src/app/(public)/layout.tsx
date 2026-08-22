@@ -52,14 +52,14 @@ export default async function PublicLayout({
         <div className="mx-auto flex max-w-6xl items-center justify-between gap-4 px-4 py-3 md:px-10 md:py-4">
           <Link href="/" className="flex items-center gap-3">
             {/* The seals ship as 1480px squares: served raw they would be a
-                40 KB download for a 40px mark. */}
+                40 KB download for a 48px mark. */}
             <Image
               src={tenant.logos.seal.light}
               alt=""
-              width={40}
-              height={40}
+              width={48}
+              height={48}
               priority
-              className="h-9 w-9 shrink-0 object-contain md:h-10 md:w-10"
+              className="h-11 w-11 shrink-0 object-contain md:h-12 md:w-12"
             />
             <span className="block">
               <span className="block font-serif text-[15px] font-semibold text-brand-primary md:text-[17px]">
