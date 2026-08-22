@@ -12,6 +12,7 @@ import {
   checkUploadedAttachments,
   displayFileName,
   isGeneratedAttachmentPath,
+  isTenantAttachmentPath,
   MAX_ATTACHMENT_BYTES,
   MAX_ATTACHMENTS,
   resolveMimeType,
@@ -353,6 +354,37 @@ test("only a name this system would have generated for this tenant may be upload
   // A malformed slug never gets interpolated into the check.
   assert.equal(
     isGeneratedAttachmentPath(generated, "cartorio-marinho/../marca"),
+    false,
+  );
+});
+
+test("a blob read back from the store is accepted despite its random suffix", () => {
+  // What the store actually names the blob: the generated name plus the
+  // suffix it appends itself. Checking this against the shape the upload
+  // route enforces would refuse every real upload.
+  const stored =
+    "anexos/cartorio-bom-jesus/0f8fad5b-d9cb-469f-a165-70867728950e-Xy9Ab2Cd3Ef.pdf";
+  assert.ok(isTenantAttachmentPath(stored, "cartorio-bom-jesus"));
+  assert.equal(isGeneratedAttachmentPath(stored, "cartorio-bom-jesus"), false);
+  // The folder is still the boundary: another tenant's blob is refused.
+  assert.equal(isTenantAttachmentPath(stored, "cartorio-marinho"), false);
+  assert.equal(
+    isTenantAttachmentPath(
+      "marca/cartorio-bom-jesus/0f8fad5b-x.pdf",
+      "cartorio-bom-jesus",
+    ),
+    false,
+  );
+  // Nor may a nested path smuggle another tenant's folder past the check.
+  assert.equal(
+    isTenantAttachmentPath(
+      "anexos/cartorio-bom-jesus/../cartorio-marinho/x.pdf",
+      "cartorio-bom-jesus",
+    ),
+    false,
+  );
+  assert.equal(
+    isTenantAttachmentPath(stored, "cartorio-bom-jesus/../marca"),
     false,
   );
 });

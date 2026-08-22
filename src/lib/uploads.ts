@@ -8,7 +8,7 @@ import {
   checkUploadedAttachments,
   describeProblem,
   displayFileName,
-  isGeneratedAttachmentPath,
+  isTenantAttachmentPath,
   resolveMimeType,
   SNIFF_BYTES,
   storedFileName,
@@ -181,7 +181,7 @@ export async function acceptUploadedAttachments(
     // to, but this is the checkpoint that ties a blob to a citizen's record:
     // worth confirming again here that it still sits under this tenant's own
     // folder, not just the store's own host.
-    if (!isGeneratedAttachmentPath(blob.pathname, options.tenantSlug)) {
+    if (!isTenantAttachmentPath(blob.pathname, options.tenantSlug)) {
       throw new AttachmentError(describeProblem({ kind: "origin" }));
     }
     const declared = checkAttachments(

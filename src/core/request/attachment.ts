@@ -179,6 +179,28 @@ export function isGeneratedAttachmentPath(
 }
 
 /**
+ * Whether a blob already written to the store sits in this tenant's own
+ * attachments folder. Deliberately not the check above: the store appends its
+ * own random suffix when it writes (see the upload route's
+ * `addRandomSuffix`), so the name read back is never the generated one. What
+ * matters at this point is the folder, since the upload route already gated
+ * the shape of every name that could be written into it.
+ */
+export function isTenantAttachmentPath(
+  pathname: string,
+  tenantSlug: string,
+): boolean {
+  if (!TENANT_SLUG_PATTERN.test(tenantSlug)) return false;
+  const segments = pathname.split("/");
+  return (
+    segments.length === 3 &&
+    segments[0] === ATTACHMENT_FOLDER &&
+    segments[1] === tenantSlug &&
+    segments[2] !== ""
+  );
+}
+
+/**
  * The stored name comes from the type and a random id, never from the name the
  * browser sent: that one is attacker controlled, and it routinely carries the
  * citizen's full name in it. The tenant's own slug is the folder it lands in,
