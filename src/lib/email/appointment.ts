@@ -7,6 +7,7 @@ import {
   buildAppointmentSelfCancelledEmail,
 } from "@/core/scheduling/emails.ts";
 import { buildCalendarEvent } from "@/core/scheduling/ics.ts";
+import { brandImageUrl } from "@/core/tenant/brand-image.ts";
 import type { Tenant } from "@/core/tenant/schema.ts";
 import type { Appointment } from "@/lib/appointments.ts";
 import { OFFICE_TIME_ZONE } from "@/lib/tenant.ts";
@@ -30,7 +31,7 @@ function identity(tenant: Tenant) {
   return {
     name: tenant.name,
     subtitle: tenant.subtitle,
-    sealUrl: host ? `https://${host}${tenant.logos.seal.light}` : "",
+    sealUrl: brandImageUrl(tenant.logos.seal.light, host),
   };
 }
 

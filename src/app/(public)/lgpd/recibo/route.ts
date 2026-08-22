@@ -45,7 +45,7 @@ export async function POST(request: Request): Promise<Response> {
       createdAt: stored.createdAt,
       deadline: formatDate(dataRightsDeadline(requestedOn)),
     }),
-    brandFor(tenant, `${new URL(request.url).origin}/protocolo`),
+    await brandFor(tenant, `${new URL(request.url).origin}/protocolo`),
   );
 
   return new Response(new Uint8Array(bytes), {

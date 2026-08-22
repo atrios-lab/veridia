@@ -53,9 +53,9 @@ function drawLetterhead(
   const top = 44;
 
   let textLeft = MARGIN;
-  if (brand.sealPath) {
+  if (brand.seal) {
     try {
-      pdf.image(brand.sealPath, MARGIN, top, {
+      pdf.image(brand.seal, MARGIN, top, {
         fit: [SEAL_SIZE, SEAL_SIZE],
       });
       textLeft = MARGIN + SEAL_SIZE + 18;

@@ -1,4 +1,5 @@
 import type { EmailText } from "@/core/email/text.ts";
+import { brandImageUrl } from "@/core/tenant/brand-image.ts";
 import { EMAIL_PALETTE } from "@/core/tenant/palette.ts";
 import type { Tenant } from "@/core/tenant/schema.ts";
 
@@ -20,7 +21,7 @@ export function tenantEmailIdentity(tenant: Tenant): EmailTenantIdentity {
     subtitle: tenant.subtitle,
     // The seal for a light background (dark ink), same one the invite e-mail
     // mockup uses on its white body: see tenant.logos.seal in schema.ts.
-    sealUrl: `https://${host}${tenant.logos.seal.light}`,
+    sealUrl: brandImageUrl(tenant.logos.seal.light, host),
   };
 }
 

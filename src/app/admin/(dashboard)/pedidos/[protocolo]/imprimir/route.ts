@@ -30,7 +30,7 @@ async function load(request: Request, protocolo: string) {
   return {
     tenant,
     stored,
-    brand: brandFor(tenant, `${new URL(request.url).origin}/protocolo`),
+    brand: await brandFor(tenant, `${new URL(request.url).origin}/protocolo`),
   };
 }
 

@@ -74,7 +74,7 @@ export async function POST(request: Request): Promise<Response> {
     document,
     // The QR on the letterhead points at the protocol lookup of the same host
     // the citizen is on, which is the tenant's own domain.
-    brandFor(tenant, `${new URL(request.url).origin}/protocolo`),
+    await brandFor(tenant, `${new URL(request.url).origin}/protocolo`),
   );
 
   const name = wantsReceipt ? "comprovante" : "requerimento";

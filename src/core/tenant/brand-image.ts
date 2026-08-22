@@ -81,3 +81,21 @@ export function brandImageFileName(
     EXTENSIONS[mimeType as (typeof ALLOWED_BRAND_MIME_TYPES)[number]] ?? "bin";
   return `${tenantSlug}/${id}.${extension}`;
 }
+
+/**
+ * The absolute URL of a stored brand image. An office that sent its own
+ * image is already holding an absolute URL from the blob store; one still on
+ * the file shipped in config holds a path relative to its own site, which an
+ * e-mail client has no way to resolve. Prefixing the host unconditionally is
+ * what turned a freshly uploaded seal into a broken image in every notice.
+ *
+ * An office with no host registered gets an empty string: a header with no
+ * seal, rather than a link to nowhere.
+ */
+export function brandImageUrl(
+  stored: string,
+  host: string | undefined,
+): string {
+  if (/^https?:\/\//.test(stored)) return stored;
+  return host ? `https://${host}${stored}` : "";
+}

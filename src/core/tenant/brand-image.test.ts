@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { checkBrandImage } from "./brand-image.ts";
+import { brandImageUrl, checkBrandImage } from "./brand-image.ts";
 
 test("a small PNG logo passes", () => {
   assert.equal(
@@ -54,4 +54,15 @@ test("the seal carries the logotype's 1 MB limit, not the hero's", () => {
     checkBrandImage("seal-dark", { mimeType: "image/png", size: 300_000 }),
     undefined,
   );
+});
+
+test("an uploaded seal keeps its own absolute URL, a shipped one gets the host", () => {
+  const blob = "https://store.public.blob.vercel-storage.com/marca/a/b.png";
+  assert.equal(brandImageUrl(blob, "www.cartorio.com.br"), blob);
+  assert.equal(
+    brandImageUrl("/logos/CM-Sublogo-preto.png", "www.cartorio.com.br"),
+    "https://www.cartorio.com.br/logos/CM-Sublogo-preto.png",
+  );
+  // No host registered: no seal, rather than a link to nowhere.
+  assert.equal(brandImageUrl("/logos/CM-Sublogo-preto.png", undefined), "");
 });

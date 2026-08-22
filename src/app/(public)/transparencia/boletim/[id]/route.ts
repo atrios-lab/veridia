@@ -53,7 +53,7 @@ export async function GET(
     footer: `${tenant.name} · ${tenant.legalFooter}`,
   };
 
-  const pdf = await renderBulletin(document, brandFor(tenant));
+  const pdf = await renderBulletin(document, await brandFor(tenant));
   const name = `boletim-${row.referenceMonth.slice(0, 7)}.pdf`;
 
   return new Response(new Uint8Array(pdf), {

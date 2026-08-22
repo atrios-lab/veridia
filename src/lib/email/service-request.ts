@@ -1,6 +1,7 @@
 import "server-only";
 import { after } from "next/server";
 import { isEmailContact } from "@/core/request/form.ts";
+import { brandImageUrl } from "@/core/tenant/brand-image.ts";
 import type { Tenant } from "@/core/tenant/schema.ts";
 import { renderNoticeEmailHtml } from "./render.ts";
 import { sendEmail } from "./send.ts";
@@ -66,9 +67,7 @@ export function notifyCitizen(params: NotifyCitizenParams): void {
         html: renderNoticeEmailHtml({
           officeName: params.tenant.name,
           officeSubtitle: params.tenant.subtitle,
-          sealUrl: host
-            ? `https://${host}${params.tenant.logos.seal.light}`
-            : "",
+          sealUrl: brandImageUrl(params.tenant.logos.seal.light, host),
           body: params.body,
           protocolNumber: params.protocolNumber,
           consultUrl: host ? `https://${host}/protocolo` : "",
