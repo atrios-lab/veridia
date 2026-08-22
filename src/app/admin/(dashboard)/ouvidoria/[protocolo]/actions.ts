@@ -70,7 +70,7 @@ export async function respondManifestation(
     // nobody to write to is what the channel promises on its first screen, not
     // a delivery that failed, and logging it would fill the log with noise
     // about people exercising a right.
-    void notifyCitizen({
+    notifyCitizen({
       tenant,
       contact: request.contact,
       protocolNumber: request.protocolNumber,

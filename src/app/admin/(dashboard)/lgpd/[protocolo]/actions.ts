@@ -88,7 +88,7 @@ export async function respondDataRights(
     // The answer itself stays behind the key: a data rights requerimento
     // carries the holder's own personal data, and e-mail is the channel the
     // office does not control. Best effort, like every other notice here.
-    void notifyCitizen({
+    notifyCitizen({
       tenant,
       contact: request.contact,
       protocolNumber: request.protocolNumber,

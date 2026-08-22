@@ -96,7 +96,7 @@ export async function changeStatus(
     // the consult, and a message per andamento would train them to ignore all
     // of them.
     if (status === "done" || status === "cancelled") {
-      void notifyCitizen({
+      notifyCitizen({
         tenant,
         contact: request.contact,
         protocolNumber: request.protocolNumber,
@@ -144,7 +144,7 @@ export async function registerRequirementAction(
     const request = await findById(tenant.slug, requestId);
     // Without the text: what the office is asking for is behind the key.
     if (request) {
-      void notifyCitizen({
+      notifyCitizen({
         tenant,
         contact: request.contact,
         protocolNumber: request.protocolNumber,
@@ -208,7 +208,7 @@ export async function deliverDocumentAction(
 
     const request = await findById(tenant.slug, requestId);
     if (request) {
-      void notifyCitizen({
+      notifyCitizen({
         tenant,
         contact: request.contact,
         protocolNumber: request.protocolNumber,
@@ -533,7 +533,7 @@ export async function replyRequirementAction(
     const request = await findById(tenant.slug, written.requestId);
     // The answer itself stays behind the key; this only says one arrived.
     if (request) {
-      void notifyCitizen({
+      notifyCitizen({
         tenant,
         contact: request.contact,
         protocolNumber: request.protocolNumber,

@@ -135,7 +135,7 @@ export async function submitServiceRequest(
 
     // The key is never in the e-mail: it was shown once, on the screen the
     // citizen is looking at, and putting it in a mailbox would undo that.
-    void notifyCitizen({
+    notifyCitizen({
       tenant,
       contact: parsed.data.contact,
       protocolNumber,

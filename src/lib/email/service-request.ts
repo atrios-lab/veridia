@@ -1,4 +1,5 @@
 import "server-only";
+import { after } from "next/server";
 import { isEmailContact } from "@/core/request/form.ts";
 import type { Tenant } from "@/core/tenant/schema.ts";
 import { renderNoticeEmailHtml } from "./render.ts";
@@ -37,35 +38,45 @@ function plainText(params: NotifyCitizenParams): string {
 }
 
 /**
- * Awaited by nobody: call it with `void notifyCitizen(...)`. It swallows its
- * own failure into a log so the caller has nothing to catch and no reason to
- * wait: see the "best effort" half of the contract above.
+ * Returns before the message is sent, and swallows its own failure into a
+ * log: the caller has nothing to await and nothing to catch, per the "best
+ * effort" half of the contract above.
+ *
+ * The send is handed to `after` rather than left as a floating promise. On a
+ * platform function the response ends the invocation, and a fetch still in
+ * flight is suspended with it: the socket then times out unnoticed, and the
+ * error only surfaces minutes later, on whatever unrelated request happens
+ * to wake that instance. `after` is what keeps the invocation alive until
+ * the send finishes.
  */
-export async function notifyCitizen(
-  params: NotifyCitizenParams,
-): Promise<void> {
+export function notifyCitizen(params: NotifyCitizenParams): void {
   // A phone number is a valid contact for a request and not a mailbox. The
   // office reaches those the way it always did, by calling.
-  if (!params.contact || !isEmailContact(params.contact)) return;
+  const contact = params.contact;
+  if (!contact || !isEmailContact(contact)) return;
 
   const host = params.tenant.hosts[0];
-  try {
-    await sendEmail({
-      to: params.contact.trim(),
-      fromName: params.tenant.name,
-      fromAddress: params.tenant.emailFrom,
-      subject: `${params.subject} · ${params.protocolNumber}`,
-      html: renderNoticeEmailHtml({
-        officeName: params.tenant.name,
-        officeSubtitle: params.tenant.subtitle,
-        sealUrl: host ? `https://${host}${params.tenant.logos.seal.light}` : "",
-        body: params.body,
-        protocolNumber: params.protocolNumber,
-        consultUrl: host ? `https://${host}/protocolo` : "",
-      }),
-      text: plainText(params),
-    });
-  } catch (error) {
-    console.error("email.notify-citizen", error);
-  }
+  after(async () => {
+    try {
+      await sendEmail({
+        to: contact.trim(),
+        fromName: params.tenant.name,
+        fromAddress: params.tenant.emailFrom,
+        subject: `${params.subject} · ${params.protocolNumber}`,
+        html: renderNoticeEmailHtml({
+          officeName: params.tenant.name,
+          officeSubtitle: params.tenant.subtitle,
+          sealUrl: host
+            ? `https://${host}${params.tenant.logos.seal.light}`
+            : "",
+          body: params.body,
+          protocolNumber: params.protocolNumber,
+          consultUrl: host ? `https://${host}/protocolo` : "",
+        }),
+        text: plainText(params),
+      });
+    } catch (error) {
+      console.error("email.notify-citizen", error);
+    }
+  });
 }
