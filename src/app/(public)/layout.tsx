@@ -72,8 +72,11 @@ export default async function PublicLayout({
           </Link>
 
           <nav className="hidden items-center gap-6 md:flex">
+            {/* data-section: no rodapé enxuto "Início" não tem link próprio,
+                então é este aqui que prova ao e2e de gating que a seção rendeu. */}
             <Link
               href="/"
+              data-section="inicio"
               className="text-sm font-medium text-brand-primary hover:text-brand-primary-soft"
             >
               Início
@@ -136,45 +139,115 @@ export default async function PublicLayout({
       </main>
 
       <footer className="bg-brand-primary text-white">
-        <div className="mx-auto flex max-w-6xl flex-col gap-4 px-4 py-8 md:px-10">
-          <div className="flex items-center gap-3">
-            <Image
-              src={tenant.logos.dark}
-              alt=""
-              width={32}
-              height={32}
-              className="h-8 w-8 object-contain"
-            />
-            <span className="font-serif text-sm font-semibold">
-              {tenant.name}
-            </span>
+        <div className="mx-auto max-w-6xl px-4 py-8 md:px-10 md:py-10">
+          <div className="grid grid-cols-1 gap-8 sm:grid-cols-2 md:grid-cols-[1.5fr_1fr_1fr]">
+            <div className="flex flex-col gap-4 sm:col-span-2 md:col-span-1">
+              <div className="flex items-center gap-3">
+                <Image
+                  src={tenant.logos.seal.dark}
+                  alt=""
+                  width={44}
+                  height={44}
+                  className="h-11 w-11 shrink-0 object-contain"
+                />
+                <span className="block">
+                  <span className="block font-serif text-base font-semibold">
+                    {tenant.name}
+                  </span>
+                  <span className="block text-xs text-brand-on-dark-body">
+                    {tenant.subtitle}
+                  </span>
+                </span>
+              </div>
+
+              <p className="max-w-sm text-sm leading-relaxed text-brand-on-dark-body">
+                Serventia dotada de fé pública. Presença digital em conformidade
+                com a Lei Geral de Proteção de Dados e o Provimento 213 do CNJ.
+              </p>
+            </div>
+
+            {/* Colunas por tarefa, não pela ordem de navegação: o e2e de
+                gating compara os data-section como conjunto (ver
+                tenants.spec.ts), e "Início" fica coberto pelo link do header.
+                Uma seção nova precisa entrar em uma das listas abaixo, senão
+                o e2e acusa a ausência. */}
+            {(
+              [
+                {
+                  title: "Serviços",
+                  hrefs: [
+                    "/solicitar",
+                    "/agendar",
+                    "/protocolo",
+                    "/editais",
+                    "/selo",
+                    "/centrais",
+                  ],
+                },
+                {
+                  title: "Cidadão",
+                  hrefs: ["/lgpd", "/ouvidoria", "/transparencia", "/contato"],
+                },
+              ] as const
+            ).map(({ title, hrefs }) => (
+              // No toque os links ficam mais afastados: apertar a lista é um
+              // ganho de altura na tela grande, não no dedo.
+              <nav key={title} className="flex flex-col gap-3 md:gap-2.5">
+                <span className="text-xs font-semibold uppercase tracking-[0.14em] text-brand-on-dark-accent">
+                  {title}
+                </span>
+                {sections
+                  .flatMap((section) =>
+                    sectionNavLinks(section).map((link) => ({
+                      ...link,
+                      section,
+                    })),
+                  )
+                  .filter((link) =>
+                    (hrefs as readonly string[]).includes(link.href),
+                  )
+                  .map((link) => (
+                    <Link
+                      key={link.href}
+                      data-section={link.section}
+                      href={link.href}
+                      className="text-sm text-brand-on-dark-body hover:text-white"
+                    >
+                      {link.label}
+                    </Link>
+                  ))}
+                {title === "Cidadão" && (
+                  <Link
+                    href="/privacidade"
+                    className="text-sm text-brand-on-dark-body hover:text-white"
+                  >
+                    Política de privacidade
+                  </Link>
+                )}
+              </nav>
+            ))}
           </div>
 
-          <nav className="flex flex-wrap gap-x-5 gap-y-2">
-            {sections.flatMap((section) =>
-              sectionNavLinks(section).map((link) => (
-                <Link
-                  key={link.href}
-                  data-section={section}
-                  href={link.href}
-                  className="text-xs text-brand-on-dark-body hover:text-white"
-                >
-                  {link.label}
-                </Link>
-              )),
-            )}
-          </nav>
-
-          <div className="flex flex-col gap-1 text-[11px] text-brand-on-dark-muted">
+          <div className="mt-8 flex flex-col gap-2 border-t border-white/15 pt-5 text-xs text-brand-on-dark-muted md:flex-row md:items-center md:justify-between">
             <span>
-              {tenant.openingHours} · {tenant.contacts.phone} ·{" "}
-              {tenant.contacts.email}
+              {tenant.name} · {tenant.subtitle}. Todos os direitos reservados.
             </span>
-            <span>CNS {tenant.cns}</span>
-            <span>{tenant.legalFooter}</span>
-            <Link href="/privacidade" className="hover:text-white">
-              Política de privacidade
-            </Link>
+            <span className="flex items-center gap-2">
+              {/* Duas paths e fill currentColor: inline, a marca acompanha a
+                  cor do crédito sem virar um segundo request. */}
+              <svg
+                viewBox="0 0 400 400"
+                className="h-[18px] w-[18px]"
+                fill="currentColor"
+                fillRule="evenodd"
+                clipRule="evenodd"
+                aria-hidden="true"
+              >
+                <path d="M39.04 128.87c-1.23,77.99 -0.52,163.71 -0.22,240.81 11.39,-3.28 84.14,-35.7 89.52,-40.65l-0.01 -155.23c2.75,-2.73 11.89,-8.51 15.41,-10.74l32.07 -21.05c4.81,-3.37 11.76,-7.08 16.56,-11.1 0.97,-27.3 0.07,-71.63 0.14,-101.19l-153.47 99.15z" />
+                <path d="M207.59 131.2c4.74,2.03 11.39,7.13 16.07,10.19l48.52 31.16 -0.58 157.71c10.39,3.14 70.09,34.07 89.51,40.04l0.55 -241.76 -76.79 -49.37c-17.31,-11.87 -39.72,-24.95 -57.79,-37.18 -4.81,-3.26 -15.12,-10.65 -19.67,-12.29l0.18 101.5z" />
+              </svg>
+              Desenvolvido por Átrios
+            </span>
           </div>
         </div>
       </footer>

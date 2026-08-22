@@ -46,9 +46,12 @@ for (const tenant of Object.values(TENANTS)) {
         );
       // Uma seção pode render mais de um link: "centrais-contato" abre tanto
       // /centrais quanto /contato (ver sectionNavLinks). O que a gating decide
-      // é quais seções aparecem, não quantos links cada uma abre, então a
-      // comparação é sobre as seções distintas, na ordem em que surgem.
-      expect([...new Set(rendered)]).toEqual(enabledSections(tenant));
+      // é quais seções aparecem, não quantos links cada uma abre nem em que
+      // ordem: o rodapé agrupa por tarefa ("Serviços" / "Cidadão") e "Início"
+      // vive no header, então a comparação é sobre o conjunto de seções.
+      expect([...new Set(rendered)].sort()).toEqual(
+        enabledSections(tenant).sort(),
+      );
     });
 
     test("no sector on the notices page is outside the attributions", async ({
