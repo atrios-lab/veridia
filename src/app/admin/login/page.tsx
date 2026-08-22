@@ -1,4 +1,5 @@
 import Image from "next/image";
+import Link from "next/link";
 import { redirect } from "next/navigation";
 import { getSession } from "@/lib/session.ts";
 import { getTenant } from "@/lib/tenant.ts";
@@ -171,9 +172,15 @@ export default async function LoginPage({
           </div>
 
           <p className="text-xs leading-relaxed text-admin-faint">
-            Esqueceu a senha ou ainda não tem conta? Fale com quem responde pela
-            serventia: o registrador reenvia o convite de acesso pela tela de
-            Usuários.
+            Esqueceu a senha?{" "}
+            <Link
+              href="/admin/esqueci-senha"
+              className="font-semibold text-admin-primary underline"
+            >
+              Peça um link de nova senha
+            </Link>
+            . Ainda não tem conta? Fale com quem responde pela serventia: o
+            registrador envia o convite de acesso pela tela de Usuários.
           </p>
         </div>
       </div>

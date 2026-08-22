@@ -77,6 +77,16 @@ export async function issueResetTokenWith(
   return token;
 }
 
+/** Same-origin URL an e-mail's button sends the recipient back to. Lives here
+ * rather than beside either caller: both the office's own reset and the one a
+ * person asks for themselves need it, and it is the origin `buildResetPasswordUrl`
+ * below consumes. */
+export function resolveOrigin(requestHeaders: Headers): string {
+  const host = requestHeaders.get("host") ?? "localhost:3000";
+  const proto = process.env.NODE_ENV === "production" ? "https" : "http";
+  return `${proto}://${host}`;
+}
+
 /** Where the account e-mail's button sends the recipient. */
 export function buildResetPasswordUrl(origin: string, token: string): string {
   return `${origin}/admin/redefinir-senha?token=${token}`;

@@ -1,4 +1,5 @@
 import { and, eq } from "drizzle-orm";
+import Link from "next/link";
 import { redirect } from "next/navigation";
 import type { Role } from "@/core/auth/roles.ts";
 import { formatFullDate } from "@/core/scheduling/calendar.ts";
@@ -89,13 +90,18 @@ export default async function AcceptInvitePage({
               </h1>
               <p className="mt-1.5 text-sm leading-relaxed text-admin-muted">
                 Por segurança, os links de acesso ao painel valem 48 horas. Peça
-                um novo a quem responde pela serventia: o registrador reenvia
-                pela tela de Usuários, e chega no mesmo e-mail.
+                um novo com o seu e-mail: ele chega no mesmo endereço.
               </p>
             </div>
+            <Link
+              href="/admin/esqueci-senha"
+              className="text-sm font-semibold text-admin-primary underline"
+            >
+              Pedir um novo link
+            </Link>
             <p className="text-xs leading-relaxed text-admin-faint">
-              Sem botão de "reenviar para mim": por segurança, só quem
-              administra as contas pode gerar um novo link.
+              Se a sua conta ainda não existe, ou foi desativada, o link não
+              chega: nesse caso, fale com quem responde pela serventia.
             </p>
           </div>
         </div>

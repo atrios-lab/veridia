@@ -2,10 +2,18 @@ import { getSessionCookie } from "better-auth/cookies";
 import { type NextRequest, NextResponse } from "next/server";
 
 const LOGIN_PATH = "/admin/login";
-// A person opening a first-access invite has no session cookie yet, by
-// definition: the whole point of the link is to get their first one. The
-// route itself decides valid vs. expired from the token, not from a cookie.
-const INVITE_PATH = "/admin/redefinir-senha";
+
+// The panel routes a person reaches without a session, by definition: the
+// login itself, the first-access invite (the whole point of the link is to
+// get a first cookie, and the route decides valid vs. expired from the
+// token) and the screen where someone locked out asks for a new link. Each
+// one does its own checking; none of them can be behind the cookie gate
+// below without becoming unreachable to exactly who needs it.
+const UNAUTHENTICATED_PATHS = new Set([
+  LOGIN_PATH,
+  "/admin/redefinir-senha",
+  "/admin/esqueci-senha",
+]);
 
 const isDev = process.env.NODE_ENV === "development";
 
@@ -87,9 +95,7 @@ export function middleware(request: NextRequest) {
   // the CSP for the public site: without the guard every anonymous visit
   // to the public site would be redirected to the admin login.
   const guardsThisRoute =
-    pathname.startsWith("/admin") &&
-    pathname !== LOGIN_PATH &&
-    pathname !== INVITE_PATH;
+    pathname.startsWith("/admin") && !UNAUTHENTICATED_PATHS.has(pathname);
 
   if (guardsThisRoute && !getSessionCookie(request)) {
     const login = new URL(LOGIN_PATH, request.url);

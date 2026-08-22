@@ -16,6 +16,7 @@ import { auth } from "@/lib/auth.ts";
 import {
   buildResetPasswordUrl,
   issueResetTokenWith,
+  resolveOrigin,
 } from "@/lib/auth-tokens.ts";
 import { sendInviteEmail, sendPasswordResetEmail } from "@/lib/email/index.ts";
 import { getSession } from "@/lib/session.ts";
@@ -23,13 +24,6 @@ import { getTenant } from "@/lib/tenant.ts";
 import { ROLE_LABELS } from "../../_components/role-labels.ts";
 
 const USERS_PATH = "/admin/usuarios";
-
-/** Same-origin URL an e-mail's button sends the recipient back to. */
-function resolveOrigin(requestHeaders: Headers): string {
-  const host = requestHeaders.get("host") ?? "localhost:3000";
-  const proto = process.env.NODE_ENV === "production" ? "https" : "http";
-  return `${proto}://${host}`;
-}
 
 export type CreateAccountValues = { name: string; email: string; role: string };
 
