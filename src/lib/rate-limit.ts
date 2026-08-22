@@ -53,3 +53,24 @@ export async function isUploadRateLimited(headers: Headers): Promise<boolean> {
   const { success } = await uploadLimiter.limit(addressOf(headers));
   return !success;
 }
+
+// The seal lookup spends somebody else's server: every consultation is two
+// requests to the TJ (a session with its captcha, then the submission). The
+// budget is what a person needs (a few captchas misread in a row) and
+// nothing more, because being a heavy guest there is how the office loses
+// the lookup for everyone.
+const sealLimiter = configured
+  ? new Ratelimit({
+      redis: Redis.fromEnv(),
+      limiter: Ratelimit.slidingWindow(10, "1 m"),
+      prefix: "veridia:seal",
+      analytics: false,
+    })
+  : null;
+
+/** The seal lookup's budget, covering both the captcha and the submission. */
+export async function isSealRateLimited(headers: Headers): Promise<boolean> {
+  if (!sealLimiter) return false;
+  const { success } = await sealLimiter.limit(addressOf(headers));
+  return !success;
+}
