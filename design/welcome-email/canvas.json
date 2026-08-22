@@ -2,12 +2,12 @@
   "artboards": [
     { "file": "Main.dc.html", "x": 0, "y": 0, "w": 680, "h": 800 },
     { "file": "Mobile.dc.html", "x": 760, "y": 0, "w": 390, "h": 844, "title": "Celular" },
-    { "file": "VarianteAtrios.dc.html", "x": 0, "y": 980, "w": 680, "h": 940, "title": "Variante: assinada pela Átrios" },
-    { "file": "Texto.dc.html", "x": 760, "y": 980, "w": 560, "h": 720, "title": "Assunto e texto puro" }
+    { "file": "VarianteAtrios.dc.html", "x": 0, "y": 980, "w": 680, "h": 940, "title": "Variante: assinada pela Atrios" },
+    { "file": "Texto.dc.html", "x": 760, "y": 980, "w": 560, "h": 800, "title": "Assunto e texto puro" }
   ],
   "annotations": [
     { "id": "nota-shell", "x": 0, "y": -150, "w": 500, "text": "Boas-vindas ao titular: primeiro acesso ao painel da própria serventia.\nCasca idêntica à de src/lib/email/render.ts, cores de EMAIL_PALETTE." },
-    { "id": "nota-variante", "x": 0, "y": 830, "w": 500, "text": "Alternativa, caso queira dizer no cabeçalho que a entrega é da Átrios e listar os primeiros passos." }
+    { "id": "nota-variante", "x": 0, "y": 830, "w": 500, "text": "Alternativa, caso queira dizer no cabeçalho que a entrega é da Atrios e listar os primeiros passos." }
   ],
   "launch": { "view": "canvas" }
 }
