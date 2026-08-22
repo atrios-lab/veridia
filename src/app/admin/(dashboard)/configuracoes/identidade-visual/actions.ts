@@ -93,26 +93,10 @@ export async function saveVisualIdentity(
     grantable.has(s as Section),
   ) as Section[];
 
-  let logoLight: string | undefined;
-  let logoDark: string | undefined;
   let sealLight: string | undefined;
   let sealDark: string | undefined;
   let heroImage: string | undefined;
   try {
-    logoLight = await resolveImage(
-      formData,
-      "logoLight",
-      "logo-light",
-      tenant.logos.light,
-      tenant.slug,
-    );
-    logoDark = await resolveImage(
-      formData,
-      "logoDark",
-      "logo-dark",
-      tenant.logos.dark,
-      tenant.slug,
-    );
     sealLight = await resolveImage(
       formData,
       "sealLight",
@@ -143,9 +127,13 @@ export async function saveVisualIdentity(
 
   const parsed = OfficeBrandSchema.safeParse({
     theme: values.theme as Theme,
+    // A single upload now covers every use: header, footer, favicon,
+    // e-mails and documents. `light`/`dark` mirror the seal rather than
+    // asking the office to pick the same image twice for a distinction the
+    // panel no longer draws.
     logos: {
-      light: logoLight,
-      dark: logoDark,
+      light: sealLight,
+      dark: sealDark,
       seal: { light: sealLight, dark: sealDark },
     },
     heroImage,

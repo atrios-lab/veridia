@@ -184,8 +184,6 @@ export function VisualIdentityForm({ tenant }: { tenant: Tenant }) {
   const [disabledSections, setDisabledSections] = useState<Set<Section>>(
     () => new Set(tenant.disabledSections),
   );
-  const [logoLightFile, setLogoLightFile] = useState<File | null>(null);
-  const [logoDarkFile, setLogoDarkFile] = useState<File | null>(null);
   const [sealLightFile, setSealLightFile] = useState<File | null>(null);
   const [sealDarkFile, setSealDarkFile] = useState<File | null>(null);
   const [heroFile, setHeroFile] = useState<File | null>(null);
@@ -194,8 +192,6 @@ export function VisualIdentityForm({ tenant }: { tenant: Tenant }) {
   // file input for the same reason it refused it to us here).
   const [formKey, setFormKey] = useState(0);
 
-  const logoLightPreview = useObjectUrl(logoLightFile, tenant.logos.light);
-  const logoDarkPreview = useObjectUrl(logoDarkFile, tenant.logos.dark);
   const sealLightPreview = useObjectUrl(sealLightFile, tenant.logos.seal.light);
   const sealDarkPreview = useObjectUrl(sealDarkFile, tenant.logos.seal.dark);
   const heroPreview = useObjectUrl(heroFile, tenant.heroImage);
@@ -220,8 +216,6 @@ export function VisualIdentityForm({ tenant }: { tenant: Tenant }) {
     setEyebrow(tenant.home.eyebrow);
     setTitle(tenant.home.title);
     setDisabledSections(new Set(tenant.disabledSections));
-    setLogoLightFile(null);
-    setLogoDarkFile(null);
     setSealLightFile(null);
     setSealDarkFile(null);
     setHeroFile(null);
@@ -273,36 +267,8 @@ export function VisualIdentityForm({ tenant }: { tenant: Tenant }) {
             Logotipo
           </h2>
           <p className="mt-1 text-[12.5px] text-admin-muted">
-            PNG com fundo transparente, até 1 MB. A serventia tem duas versões:
-            uma para fundo claro e outra para fundo escuro.
-          </p>
-          <div className="mt-4 flex flex-col gap-4">
-            <ImageField
-              label="Para fundo claro"
-              hint="Rodapé do site."
-              name="logoLight"
-              previewSrc={logoLightPreview}
-              previewBg="bg-admin-card-surface"
-              onChange={setLogoLightFile}
-            />
-            <ImageField
-              label="Para fundo escuro"
-              hint="Sidebar do painel e rodapé do site."
-              name="logoDark"
-              previewSrc={logoDarkPreview}
-              previewBg="bg-admin-primary"
-              onChange={setLogoDarkFile}
-            />
-          </div>
-        </div>
-
-        <div className="rounded-[14px] border border-admin-border bg-admin-card p-6">
-          <h2 className="font-serif text-[17px] font-semibold text-admin-primary">
-            Selo
-          </h2>
-          <p className="mt-1 text-[12.5px] text-admin-muted">
-            A marca quadrada, em PNG com fundo transparente, até 1 MB. É ela que
-            aparece no cabeçalho do site, no ícone da aba, nos e-mails e nos
+            A marca quadrada, em PNG com fundo transparente, até 1 MB. Aparece
+            no cabeçalho e rodapé do site, no ícone da aba, nos e-mails e nos
             documentos.
           </p>
           <div className="mt-4 flex flex-col gap-4">
@@ -316,7 +282,7 @@ export function VisualIdentityForm({ tenant }: { tenant: Tenant }) {
             />
             <ImageField
               label="Para fundo escuro"
-              hint="Sidebar e tela de entrada do painel."
+              hint="Rodapé do site, sidebar e tela de entrada do painel."
               name="sealDark"
               previewSrc={sealDarkPreview}
               previewBg="bg-admin-primary"
