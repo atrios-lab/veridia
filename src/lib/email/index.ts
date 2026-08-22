@@ -29,6 +29,7 @@ export async function sendInviteEmail(
   await sendEmail({
     to: params.to,
     fromName: params.tenant.name,
+    fromAddress: params.tenant.emailFrom,
     subject: text.subject,
     html: renderEmailCardHtml(
       text,
@@ -56,6 +57,7 @@ export async function sendPasswordResetEmail(
   await sendEmail({
     to: params.to,
     fromName: params.tenant.name,
+    fromAddress: params.tenant.emailFrom,
     subject: text.subject,
     html: renderEmailCardHtml(
       text,

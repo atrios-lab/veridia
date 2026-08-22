@@ -6,6 +6,7 @@ export const cartorioBomJesus: Tenant = parseTenant({
   slug: "cartorio-bom-jesus",
   hosts: ["cartoriobomjesusrn.com", "bomjesus.localhost"],
   name: "Cartório de Bom Jesus",
+  emailFrom: "nao-responda@cartoriobomjesusrn.com",
   subtitle: "Ofício Único de Bom Jesus / RN",
   about:
     "O Ofício Único de Bom Jesus / RN é o cartório que reúne todos os serviços de " +

@@ -8,61 +8,65 @@ export interface EmailAttachment {
 
 export interface OutgoingEmail {
   to: string;
-  /** Display name only: the technical sending address is platform-wide. */
+  /** Display name shown to the recipient, the tenant's own name. */
   fromName: string;
+  /**
+   * Tenant's own sending address (`tenant.emailFrom`). Its domain must be
+   * verified in Postmark; absent, the platform-wide fallback below is used.
+   */
+  fromAddress?: string;
   subject: string;
   html: string;
   text: string;
   attachments?: EmailAttachment[];
 }
 
-const RESEND_ENDPOINT = "https://api.resend.com/emails";
+const POSTMARK_ENDPOINT = "https://api.postmarkapp.com/email";
 
-// Single verified sending domain for the whole platform: verifying SPF/DKIM
-// for each serventia's own domain is out of scope for this delivery (see
-// design.md, "Remetente único da plataforma"). What the recipient sees
-// still varies, `fromName` carries the tenant's own name, only the
-// technical domain is shared across every office.
+// Platform-wide fallback sender, used when the tenant has no `emailFrom`
+// of its own (i.e. its domain is not yet verified in Postmark).
 const FROM_ADDRESS =
-  process.env.EMAIL_FROM_ADDRESS ?? "nao-responda@notificacoes.veridia.app";
-
-function configured(): boolean {
-  return Boolean(process.env.RESEND_API_KEY);
-}
+  process.env.EMAIL_FROM_ADDRESS ?? "nao-responda@atrioss.com";
 
 /**
- * Sends through Resend's HTTP API when `RESEND_API_KEY` is set; otherwise
- * logs what would have been sent instead of failing. Same posture as
- * `isRateLimited` without Upstash configured: development and CI stay
+ * Sends through Postmark's HTTP API when `POSTMARK_SERVER_TOKEN` is set;
+ * otherwise logs what would have been sent instead of failing. Same posture
+ * as `isRateLimited` without Upstash configured: development and CI stay
  * functional with no provider credential.
  */
 export async function sendEmail(email: OutgoingEmail): Promise<void> {
-  if (!configured()) {
+  const token = process.env.POSTMARK_SERVER_TOKEN;
+  if (!token) {
     console.log(
-      `[email] sem RESEND_API_KEY: registrando em vez de enviar.\n` +
+      `[email] sem POSTMARK_SERVER_TOKEN: registrando em vez de enviar.\n` +
         `Para: ${email.to}\nAssunto: ${email.subject}\n\n${email.text}`,
     );
     return;
   }
 
-  const response = await fetch(RESEND_ENDPOINT, {
+  const response = await fetch(POSTMARK_ENDPOINT, {
     method: "POST",
     headers: {
-      Authorization: `Bearer ${process.env.RESEND_API_KEY}`,
+      "X-Postmark-Server-Token": token,
       "Content-Type": "application/json",
+      Accept: "application/json",
     },
     body: JSON.stringify({
-      from: `${email.fromName} <${FROM_ADDRESS}>`,
-      to: [email.to],
-      subject: email.subject,
-      html: email.html,
-      text: email.text,
-      // Resend takes attachment bytes base64 encoded.
+      From: `${email.fromName} <${email.fromAddress ?? FROM_ADDRESS}>`,
+      To: email.to,
+      Subject: email.subject,
+      HtmlBody: email.html,
+      TextBody: email.text,
+      MessageStream: "outbound",
+      // Postmark takes attachment bytes base64 encoded.
       ...(email.attachments?.length
         ? {
-            attachments: email.attachments.map((file) => ({
-              filename: file.filename,
-              content: Buffer.from(file.content, "utf8").toString("base64"),
+            Attachments: email.attachments.map((file) => ({
+              Name: file.filename,
+              Content: Buffer.from(file.content, "utf8").toString("base64"),
+              // ponytail: only .ics is attached today; branch on extension
+              // if another format ever shows up.
+              ContentType: "text/calendar",
             })),
           }
         : {}),
@@ -71,7 +75,7 @@ export async function sendEmail(email: OutgoingEmail): Promise<void> {
 
   if (!response.ok) {
     throw new Error(
-      `Falha ao enviar e-mail via Resend (${response.status}): ${await response.text()}`,
+      `Falha ao enviar e-mail via Postmark (${response.status}): ${await response.text()}`,
     );
   }
 }

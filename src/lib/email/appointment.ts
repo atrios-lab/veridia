@@ -87,6 +87,7 @@ export async function sendAppointmentBookedEmail(
     await sendEmail({
       to: appointment.email,
       fromName: tenant.name,
+      fromAddress: tenant.emailFrom,
       subject: text.subject,
       html: renderEmailCardHtml(text, identity(tenant), cancelUrl),
       text: renderEmailCardText(text, cancelUrl),
@@ -123,6 +124,7 @@ export async function sendAppointmentCancelledEmail(
     await sendEmail({
       to: appointment.email,
       fromName: tenant.name,
+      fromAddress: tenant.emailFrom,
       subject: text.subject,
       html: renderEmailCardHtml(text, identity(tenant), agendaUrl),
       text: renderEmailCardText(text, agendaUrl),

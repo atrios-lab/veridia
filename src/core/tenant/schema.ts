@@ -63,6 +63,11 @@ export const TenantSchema = z.object({
   about: z.string().min(1, "Escreva o texto de apresentação do cartório."),
   cns: z.string().min(1),
   attributions: z.array(AttributionSchema).nonempty(),
+  // Sender address for this office's transactional email (the "From").
+  // The address's domain must be verified in Postmark (DKIM + Return-Path);
+  // absent, delivery falls back to the platform-wide sender (see
+  // src/lib/email/send.ts).
+  emailFrom: z.email().optional(),
   contacts: z.object({
     phone: z.string().min(1, "Informe o telefone."),
     whatsapp: z.string().min(1, "Informe o WhatsApp."),

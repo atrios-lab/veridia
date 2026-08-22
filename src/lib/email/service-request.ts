@@ -53,6 +53,7 @@ export async function notifyCitizen(
     await sendEmail({
       to: params.contact.trim(),
       fromName: params.tenant.name,
+      fromAddress: params.tenant.emailFrom,
       subject: `${params.subject} · ${params.protocolNumber}`,
       html: renderNoticeEmailHtml({
         officeName: params.tenant.name,

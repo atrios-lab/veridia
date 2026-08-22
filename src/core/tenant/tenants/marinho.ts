@@ -8,6 +8,8 @@ export const cartorioMarinho: Tenant = parseTenant({
   // The ".localhost" entry is what lets a developer serve this office locally.
   hosts: ["cartorioielmomarinhorn.com", "marinho.localhost"],
   name: "Cartório Marinho",
+  // emailFrom: waiting on cartorioielmomarinhorn.com being verified in
+  // Postmark (DKIM + Return-Path); until then the platform fallback sends.
   subtitle: "Ofício Único de Ielmo Marinho / RN",
   about:
     "O Cartório Marinho é o Ofício Único de Ielmo Marinho / RN, o cartório que reúne " +
