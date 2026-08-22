@@ -175,7 +175,23 @@ export async function setAmountAction(
 
   const tenant = await getTenant();
   try {
+    // Read before the write: whether the pedido already had a value is the
+    // whole difference between informing it and correcting it, and only the
+    // first is news to the citizen. Correcting cents on a value already sent
+    // would put an e-mail in a mailbox saying nothing new.
+    const request = await findById(tenant.slug, requestId);
+
     await setRequestAmount(tenant.slug, requestId, cents, session.user.id);
+
+    if (request && request.amountCents === null) {
+      notifyCitizen({
+        tenant,
+        contact: request.contact,
+        protocolNumber: request.protocolNumber,
+        subject: "Valor do pedido informado",
+        body: "A serventia informou o valor do seu pedido. Consulte o protocolo com a sua chave de acesso para ver o valor e como pagar.",
+      });
+    }
   } catch (error) {
     console.error("pedidos.set-amount", error);
     return { status: "error", message: GENERIC_ERROR };

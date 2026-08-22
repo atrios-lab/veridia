@@ -7,6 +7,7 @@ import { generateAccessKey, hashAccessKey } from "@/core/request/access-key.ts";
 import { serviceRequestSchema } from "@/core/request/form.ts";
 import { parseCentsInput } from "@/core/request/money.ts";
 import { closeConversation } from "@/lib/chat.ts";
+import { notifyCitizen } from "@/lib/email/service-request.ts";
 import {
   createServiceRequest,
   setRequestAmount,
@@ -87,6 +88,18 @@ export async function createManualServiceRequest(
     if (amountCents !== undefined) {
       await setRequestAmount(tenant.slug, id, amountCents, session.user.id);
     }
+
+    // The counter already handed over the protocol and the key, on paper or
+    // on the operator's screen. This is the copy that survives the walk home.
+    // The key stays out of it, the same way it does on the public wizard.
+    notifyCitizen({
+      tenant,
+      contact: parsed.data.contact,
+      protocolNumber,
+      subject: "Pedido recebido",
+      body: "Recebemos o seu pedido. Guarde o número do protocolo e a chave de acesso entregues no atendimento.",
+    });
+
     if (fromConversationId) {
       await closeConversation(
         tenant.slug,

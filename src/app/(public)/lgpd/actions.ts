@@ -11,6 +11,7 @@ import type { DataRight } from "@/core/request/kinds.ts";
 import { parseDetails } from "@/core/request/kinds.ts";
 import { formatProtocolNumber } from "@/core/request/protocol.ts";
 import { isSectionEnabled } from "@/core/tenant/gating.ts";
+import { notifyCitizen } from "@/lib/email/service-request.ts";
 import { isRateLimited } from "@/lib/rate-limit.ts";
 import { createRecord } from "@/lib/service-request.ts";
 import { getTenant, today } from "@/lib/tenant.ts";
@@ -108,6 +109,16 @@ export async function submitDataRights(
       },
       stored,
     );
+
+    // The key is never in the e-mail: it was shown once, on the screen the
+    // titular is looking at, and putting it in a mailbox would undo that.
+    notifyCitizen({
+      tenant,
+      contact: email,
+      protocolNumber,
+      subject: "Requerimento recebido",
+      body: "Recebemos o seu requerimento. Guarde o número do protocolo e a chave de acesso mostrados na tela de envio.",
+    });
 
     return {
       status: "success",

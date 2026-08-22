@@ -8,6 +8,7 @@ import type { ManifestationType } from "@/core/request/kinds.ts";
 import { parseDetails } from "@/core/request/kinds.ts";
 import { formatProtocolNumber } from "@/core/request/protocol.ts";
 import { isSectionEnabled } from "@/core/tenant/gating.ts";
+import { notifyCitizen } from "@/lib/email/service-request.ts";
 import { isRateLimited } from "@/lib/rate-limit.ts";
 import { createRecord } from "@/lib/service-request.ts";
 import { getTenant } from "@/lib/tenant.ts";
@@ -114,6 +115,17 @@ export async function submitManifestation(
       },
       stored,
     );
+
+    // No check for anonymity here on purpose: an anonymous manifestation has
+    // no contact, and `notifyCitizen` gives up on one. The key is never in
+    // the e-mail, the same way it is never in the one the wizard sends.
+    notifyCitizen({
+      tenant,
+      contact: contact ?? null,
+      protocolNumber,
+      subject: "Manifestação recebida",
+      body: "Recebemos a sua manifestação. Guarde o número do registro e a chave de acesso mostrados na tela de envio.",
+    });
 
     return {
       status: "success",
