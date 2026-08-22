@@ -1,6 +1,7 @@
 import type { Tenant } from "./schema.ts";
 import { tabelionatoAurora } from "./tenants/aurora.ts";
 import { cartorioBomJesus } from "./tenants/bom-jesus.ts";
+import { cartorioMajorSales } from "./tenants/major-sales.ts";
 import { cartorioMarinho } from "./tenants/marinho.ts";
 
 // Registry of offices (config as code). Every new office is added here.
@@ -8,6 +9,7 @@ export const TENANTS: Record<string, Tenant> = {
   [cartorioMarinho.slug]: cartorioMarinho,
   [tabelionatoAurora.slug]: tabelionatoAurora,
   [cartorioBomJesus.slug]: cartorioBomJesus,
+  [cartorioMajorSales.slug]: cartorioMajorSales,
 };
 
 /** Lowercases the host and drops the port and the "www." prefix. */
