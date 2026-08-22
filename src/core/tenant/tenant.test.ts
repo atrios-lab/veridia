@@ -8,6 +8,7 @@ import {
   optionalSections,
 } from "./gating.ts";
 import {
+  isPlatformHost,
   isRegisteredHost,
   normalizeHost,
   resolveTenant,
@@ -99,16 +100,38 @@ test("only a registered host is recognized as ours", () => {
   assert.equal(isRegisteredHost(undefined), false);
 });
 
-test("unknown host falls back to the default office", () => {
-  assert.equal(
-    resolveTenant("quem-sabe.example", "tabelionato-aurora").slug,
-    "tabelionato-aurora",
-  );
+test("only platform hosts may fall back to the default office", () => {
+  for (const host of [
+    "localhost:3000",
+    "127.0.0.1:3000",
+    "veridia.vercel.app",
+  ]) {
+    assert.ok(isPlatformHost(host), host);
+    assert.equal(
+      resolveTenant(host, "tabelionato-aurora").slug,
+      "tabelionato-aurora",
+      host,
+    );
+  }
 });
 
-test("unknown host with a broken default throws instead of guessing", () => {
+test("unknown host is refused instead of served the default office", () => {
+  // The leak this guards: an office's host hitting a process that predates
+  // its registration (or a typo, or a spoofed Host header) must never get
+  // another office's site.
+  for (const host of ["quem-sabe.example", "majorsales-typo.localhost"]) {
+    assert.equal(isPlatformHost(host), false, host);
+    assert.throws(
+      () => resolveTenant(host, "tabelionato-aurora"),
+      /nao pertence a nenhuma serventia/,
+      host,
+    );
+  }
+});
+
+test("missing host with a broken default throws instead of guessing", () => {
   assert.throws(
-    () => resolveTenant("quem-sabe.example", MISSING),
+    () => resolveTenant(undefined, MISSING),
     /Serventia nao encontrada/,
   );
 });

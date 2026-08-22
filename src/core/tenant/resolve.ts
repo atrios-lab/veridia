@@ -41,16 +41,40 @@ export function isRegisteredHost(host: string | undefined): boolean {
 }
 
 /**
- * Resolves the office from the request host, falling back to the default slug
- * when the host is not mapped. A broken fallback throws instead of silently
- * serving another office's data, which is the failure that actually hurts.
+ * The hosts that are the platform's own rather than any office's: plain
+ * localhost in development and Vercel's deploy URLs. Only these may fall
+ * back to the default office; any other unmapped host is someone reaching a
+ * site this deploy does not serve, and answering it with the default
+ * office's brand and data is a cross-tenant leak (an office's host served
+ * by a process that predates its registration, a typoed domain, a spoofed
+ * Host header).
+ */
+export function isPlatformHost(host: string | undefined): boolean {
+  const normalized = normalizeHost(host);
+  return (
+    normalized === "localhost" ||
+    normalized === "127.0.0.1" ||
+    normalized.endsWith(".vercel.app")
+  );
+}
+
+/**
+ * Resolves the office from the request host. The default slug answers only
+ * on platform hosts (see `isPlatformHost`); an unmapped host that is not the
+ * platform's own throws instead of silently serving another office's data,
+ * which is the failure that actually hurts. Callers that can turn this into
+ * a 404 should check `isRegisteredHost`/`isPlatformHost` first.
  */
 export function resolveTenant(
   host: string | undefined,
   defaultSlug: string,
 ): Tenant {
   const normalized = normalizeHost(host);
-  const slug = (normalized && HOST_MAP[normalized]) || defaultSlug;
+  const mapped = normalized ? HOST_MAP[normalized] : undefined;
+  if (!mapped && normalized && !isPlatformHost(normalized)) {
+    throw new Error(`Host "${normalized}" nao pertence a nenhuma serventia.`);
+  }
+  const slug = mapped || defaultSlug;
   const tenant = TENANTS[slug];
   if (!tenant) {
     throw new Error(`Serventia nao encontrada para o slug "${slug}".`);

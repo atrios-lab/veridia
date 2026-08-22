@@ -1,6 +1,7 @@
 import "server-only";
 import { and, eq, inArray } from "drizzle-orm";
 import { headers } from "next/headers";
+import { notFound } from "next/navigation";
 import { cache } from "react";
 import {
   type IsoDate,
@@ -9,7 +10,11 @@ import {
 } from "@/core/scheduling/calendar.ts";
 import type { AgendaNow } from "@/core/scheduling/slots.ts";
 import { applyTenantOverrides } from "@/core/tenant/overrides.ts";
-import { resolveTenant } from "@/core/tenant/resolve.ts";
+import {
+  isPlatformHost,
+  isRegisteredHost,
+  resolveTenant,
+} from "@/core/tenant/resolve.ts";
 import type { Tenant } from "@/core/tenant/schema.ts";
 import { db } from "@/db/index.ts";
 import { tenantContent } from "@/db/schema.ts";
@@ -115,8 +120,14 @@ async function readTenantOverrides(tenantSlug: string): Promise<{
  */
 export const getTenant = cache(async (): Promise<Tenant> => {
   const headerList = await headers();
+  const host = headerList.get("host") ?? undefined;
+  // A host that is neither an office's nor the platform's own gets a 404,
+  // never the default office's site: serving one office's brand and data on
+  // another's (or an unknown) host is the cross-tenant leak this exists to
+  // stop.
+  if (!isRegisteredHost(host) && !isPlatformHost(host)) notFound();
   const tenant = resolveTenant(
-    headerList.get("host") ?? undefined,
+    host,
     process.env.DEFAULT_TENANT ?? "cartorio-marinho",
   );
   const overrides = await readTenantOverrides(tenant.slug);
