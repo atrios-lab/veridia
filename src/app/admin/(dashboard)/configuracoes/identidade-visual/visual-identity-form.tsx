@@ -186,14 +186,18 @@ export function VisualIdentityForm({ tenant }: { tenant: Tenant }) {
   );
   const [logoLightFile, setLogoLightFile] = useState<File | null>(null);
   const [logoDarkFile, setLogoDarkFile] = useState<File | null>(null);
+  const [sealLightFile, setSealLightFile] = useState<File | null>(null);
+  const [sealDarkFile, setSealDarkFile] = useState<File | null>(null);
   const [heroFile, setHeroFile] = useState<File | null>(null);
-  // Bumped on discard to remount the form: it clears the three file inputs,
+  // Bumped on discard to remount the form: it clears the file inputs,
   // which cannot be reset any other way (the browser refuses `value=` on a
   // file input for the same reason it refused it to us here).
   const [formKey, setFormKey] = useState(0);
 
   const logoLightPreview = useObjectUrl(logoLightFile, tenant.logos.light);
   const logoDarkPreview = useObjectUrl(logoDarkFile, tenant.logos.dark);
+  const sealLightPreview = useObjectUrl(sealLightFile, tenant.logos.seal.light);
+  const sealDarkPreview = useObjectUrl(sealDarkFile, tenant.logos.seal.dark);
   const heroPreview = useObjectUrl(heroFile, tenant.heroImage);
 
   const optional = useMemo(() => optionalSections(tenant), [tenant]);
@@ -218,6 +222,8 @@ export function VisualIdentityForm({ tenant }: { tenant: Tenant }) {
     setDisabledSections(new Set(tenant.disabledSections));
     setLogoLightFile(null);
     setLogoDarkFile(null);
+    setSealLightFile(null);
+    setSealDarkFile(null);
     setHeroFile(null);
     setFormKey((k) => k + 1);
   }
@@ -273,7 +279,7 @@ export function VisualIdentityForm({ tenant }: { tenant: Tenant }) {
           <div className="mt-4 flex flex-col gap-4">
             <ImageField
               label="Para fundo claro"
-              hint="Cabeçalho e rodapé do site."
+              hint="Rodapé do site."
               name="logoLight"
               previewSrc={logoLightPreview}
               previewBg="bg-admin-card-surface"
@@ -286,6 +292,35 @@ export function VisualIdentityForm({ tenant }: { tenant: Tenant }) {
               previewSrc={logoDarkPreview}
               previewBg="bg-admin-primary"
               onChange={setLogoDarkFile}
+            />
+          </div>
+        </div>
+
+        <div className="rounded-[14px] border border-admin-border bg-admin-card p-6">
+          <h2 className="font-serif text-[17px] font-semibold text-admin-primary">
+            Selo
+          </h2>
+          <p className="mt-1 text-[12.5px] text-admin-muted">
+            A marca quadrada, em PNG com fundo transparente, até 1 MB. É ela que
+            aparece no cabeçalho do site, no ícone da aba, nos e-mails e nos
+            documentos.
+          </p>
+          <div className="mt-4 flex flex-col gap-4">
+            <ImageField
+              label="Para fundo claro"
+              hint="Cabeçalho do site, ícone da aba, e-mails e documentos."
+              name="sealLight"
+              previewSrc={sealLightPreview}
+              previewBg="bg-admin-card-surface"
+              onChange={setSealLightFile}
+            />
+            <ImageField
+              label="Para fundo escuro"
+              hint="Sidebar e tela de entrada do painel."
+              name="sealDark"
+              previewSrc={sealDarkPreview}
+              previewBg="bg-admin-primary"
+              onChange={setSealDarkFile}
             />
           </div>
         </div>
@@ -453,8 +488,8 @@ export function VisualIdentityForm({ tenant }: { tenant: Tenant }) {
           eyebrow={eyebrow}
           title={title}
           heroSrc={heroPreview}
-          sealLight={tenant.logos.seal.light}
-          sealDark={tenant.logos.seal.dark}
+          sealLight={sealLightPreview ?? tenant.logos.seal.light}
+          sealDark={sealDarkPreview ?? tenant.logos.seal.dark}
           officeName={tenant.name}
           sections={enabledPreviewSections}
         />

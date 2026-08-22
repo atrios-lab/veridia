@@ -1,10 +1,15 @@
 /**
- * What the office may send as its own imagery: logotype (light and dark
- * variants) and the home hero photograph. Same discipline as
+ * What the office may send as its own imagery: logotype and seal (each with
+ * a light and a dark variant) and the home hero photograph. Same discipline as
  * core/request/attachment.ts, validated here before anything ever touches
  * disk or the network, so the pure rule can be tested without either.
  */
-export type BrandImageKind = "logo-light" | "logo-dark" | "hero";
+export type BrandImageKind =
+  | "logo-light"
+  | "logo-dark"
+  | "seal-light"
+  | "seal-dark"
+  | "hero";
 
 const LOGO_MAX_BYTES = 1 * 1024 * 1024;
 const HERO_MAX_BYTES = 4 * 1024 * 1024;
@@ -12,6 +17,8 @@ const HERO_MAX_BYTES = 4 * 1024 * 1024;
 const MAX_BYTES: Record<BrandImageKind, number> = {
   "logo-light": LOGO_MAX_BYTES,
   "logo-dark": LOGO_MAX_BYTES,
+  "seal-light": LOGO_MAX_BYTES,
+  "seal-dark": LOGO_MAX_BYTES,
   hero: HERO_MAX_BYTES,
 };
 

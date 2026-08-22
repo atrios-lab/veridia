@@ -43,3 +43,15 @@ test("a hero photo may be up to 4 MB, unlike a logo", () => {
     { kind: "size", limit: 4 * 1024 * 1024 },
   );
 });
+
+test("the seal carries the logotype's 1 MB limit, not the hero's", () => {
+  const size = 2 * 1024 * 1024;
+  assert.deepEqual(
+    checkBrandImage("seal-light", { mimeType: "image/png", size }),
+    { kind: "size", limit: 1024 * 1024 },
+  );
+  assert.equal(
+    checkBrandImage("seal-dark", { mimeType: "image/png", size: 300_000 }),
+    undefined,
+  );
+});

@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { can } from "@/core/auth/roles.ts";
+import type { BrandImageKind } from "@/core/tenant/brand-image.ts";
 import { optionalSections } from "@/core/tenant/gating.ts";
 import { OfficeBrandSchema } from "@/core/tenant/overrides.ts";
 import type { Section, Theme } from "@/core/tenant/schema.ts";
@@ -47,7 +48,7 @@ function fail(
 }
 
 /**
- * Reads one of the three optional image inputs. An absent or empty file
+ * Reads one of the optional image inputs. An absent or empty file
  * input means "keep what is published": the browser encodes an untouched
  * `<input type="file">` as a zero byte part, same signal `storeAttachments`
  * relies on.
@@ -55,7 +56,7 @@ function fail(
 async function resolveImage(
   formData: FormData,
   field: string,
-  kind: "logo-light" | "logo-dark" | "hero",
+  kind: BrandImageKind,
   current: string | undefined,
   tenantSlug: string,
 ): Promise<string | undefined> {
@@ -94,6 +95,8 @@ export async function saveVisualIdentity(
 
   let logoLight: string | undefined;
   let logoDark: string | undefined;
+  let sealLight: string | undefined;
+  let sealDark: string | undefined;
   let heroImage: string | undefined;
   try {
     logoLight = await resolveImage(
@@ -108,6 +111,20 @@ export async function saveVisualIdentity(
       "logoDark",
       "logo-dark",
       tenant.logos.dark,
+      tenant.slug,
+    );
+    sealLight = await resolveImage(
+      formData,
+      "sealLight",
+      "seal-light",
+      tenant.logos.seal.light,
+      tenant.slug,
+    );
+    sealDark = await resolveImage(
+      formData,
+      "sealDark",
+      "seal-dark",
+      tenant.logos.seal.dark,
       tenant.slug,
     );
     heroImage = await resolveImage(
@@ -126,7 +143,11 @@ export async function saveVisualIdentity(
 
   const parsed = OfficeBrandSchema.safeParse({
     theme: values.theme as Theme,
-    logos: { ...tenant.logos, light: logoLight, dark: logoDark },
+    logos: {
+      light: logoLight,
+      dark: logoDark,
+      seal: { light: sealLight, dark: sealDark },
+    },
     heroImage,
     home: { eyebrow: values.eyebrow, title: values.title },
     disabledSections,
