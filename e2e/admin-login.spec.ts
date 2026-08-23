@@ -199,6 +199,12 @@ test.describe("superadmin da Átrios", () => {
 
     await signIn(page, `${auroraURL}/admin/login`);
     await expect(page).toHaveURL(`${auroraURL}/admin`);
+    // Asserted with no reload in between, on purpose: the panel that opens
+    // straight out of the sign-in redirect used to be the DEFAULT_TENANT
+    // office, and reloading was what "fixed" it. Checking only the URL is
+    // what let that ship.
+    await expect(page.getByText("Tabelionato Aurora").first()).toBeVisible();
+    await expect(page.getByText("Cartório Marinho")).toHaveCount(0);
     await page.getByRole("button", { name: "Sair" }).click();
   });
 

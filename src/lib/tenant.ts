@@ -18,6 +18,7 @@ import {
 import type { Tenant } from "@/core/tenant/schema.ts";
 import { db } from "@/db/index.ts";
 import { tenantContent } from "@/db/schema.ts";
+import { requestHost } from "./request-host.ts";
 
 /**
  * The office's time zone. The offices served are all in Brazil, and the
@@ -120,7 +121,7 @@ async function readTenantOverrides(tenantSlug: string): Promise<{
  */
 export const getTenant = cache(async (): Promise<Tenant> => {
   const headerList = await headers();
-  const host = headerList.get("host") ?? undefined;
+  const host = requestHost(headerList);
   // A host that is neither an office's nor the platform's own gets a 404,
   // never the default office's site: serving one office's brand and data on
   // another's (or an unknown) host is the cross-tenant leak this exists to

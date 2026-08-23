@@ -7,6 +7,7 @@
 // same way session-revocation.test.ts and invite.test.ts build their own
 // auth instance rather than reaching for the app's singleton.
 import { randomBytes } from "node:crypto";
+import { requestHost } from "./request-host.ts";
 
 const RESET_TOKEN_PREFIX = "reset-password:";
 
@@ -82,7 +83,7 @@ export async function issueResetTokenWith(
  * person asks for themselves need it, and it is the origin `buildResetPasswordUrl`
  * below consumes. */
 export function resolveOrigin(requestHeaders: Headers): string {
-  const host = requestHeaders.get("host") ?? "localhost:3000";
+  const host = requestHost(requestHeaders) ?? "localhost:3000";
   const proto = process.env.NODE_ENV === "production" ? "https" : "http";
   return `${proto}://${host}`;
 }
