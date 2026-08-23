@@ -69,7 +69,9 @@ export function VisualIdentityPreview({
           <span className="text-[10px] font-bold uppercase tracking-[0.18em] text-brand-on-dark-accent">
             {eyebrow || " "}
           </span>
-          <h1 className="mt-1.5 font-serif text-[25px] font-semibold leading-tight text-brand-on-dark-heading">
+          {/* Same uppercase as the live hero, or the office edits the title
+              here and the site renders it differently. */}
+          <h1 className="mt-1.5 font-serif text-[25px] font-semibold uppercase leading-tight text-brand-on-dark-heading">
             {title || " "}
           </h1>
           <div className="mt-3.5 flex gap-1.5 rounded-xl bg-brand-card p-1.5">

@@ -117,7 +117,10 @@ export default async function Home() {
             <span className="text-[10px] font-bold uppercase tracking-[0.18em] text-brand-on-dark-accent md:text-xs">
               {tenant.home.eyebrow}
             </span>
-            <h1 className="mt-2 font-serif text-[28px] font-semibold leading-tight text-brand-on-dark-heading md:mt-3.5 md:text-5xl">
+            {/* Uppercased here, not in the configured text: every office
+                writes its own title and they would drift apart otherwise,
+                and the office still edits it in ordinary case. */}
+            <h1 className="mt-2 font-serif text-[28px] font-semibold uppercase leading-tight text-brand-on-dark-heading md:mt-3.5 md:text-5xl">
               {tenant.home.title}
             </h1>
             <p className="mt-2 text-sm leading-relaxed text-brand-on-dark-body md:mt-3.5 md:max-w-[44ch] md:text-base">
