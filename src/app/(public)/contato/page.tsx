@@ -156,8 +156,8 @@ export default async function ContactPage() {
               </div>
             </div>
             <p className="mt-2.5 border-t border-brand-border pt-2.5 text-xs leading-relaxed text-brand-muted">
-              Sem fechar para almoço. Fins de semana e feriados: fechado, os
-              canais online desta página funcionam a qualquer hora.
+              Fins de semana e feriados: fechado, os canais online desta página
+              funcionam a qualquer hora.
             </p>
           </div>
 
