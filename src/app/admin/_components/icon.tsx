@@ -56,6 +56,13 @@ const PATHS = {
   // Sidebar navigation and header indicator: support chat (a speech bubble).
   chat: ["M7.9 20A9 9 0 1 0 4 16.1L2 22Z"],
   x: ["M18 6 6 18", "M6 6l12 12"],
+  // Sidebar navigation: the office's Zoho Mail inbox. Its own envelope rather
+  // than `inbox`, which sits one item above it as "Pedidos de serviço": two
+  // adjacent items wearing the same icon read as the same destination.
+  mail: [
+    "M4 5h16a1 1 0 0 1 1 1v12a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V6a1 1 0 0 1 1-1Z",
+    "m3.5 6.5 8.5 6 8.5-6",
+  ],
   // Sidebar navigation: the appointment queue.
   calendar: [
     "M8 2v4M16 2v4M3 10h18M5 4h14a2 2 0 0 1 2 2v13a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2Z",
