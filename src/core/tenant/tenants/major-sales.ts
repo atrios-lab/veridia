@@ -5,7 +5,7 @@ import { parseTenant, type Tenant } from "../schema.ts";
 // owner where those sources disagreed, on 22/08/2026.
 export const cartorioMajorSales: Tenant = parseTenant({
   slug: "cartorio-major-sales",
-  hosts: ["cartoriomajorsales.com.br", "majorsales.localhost"],
+  hosts: ["cartoriomajorsalesrn.com.br", "majorsales.localhost"],
   name: "Cartório de Major Sales",
   emailFrom: "nao-responda@cartoriomajorsales.com.br",
   subtitle: "Ofício Único de Major Sales / RN",

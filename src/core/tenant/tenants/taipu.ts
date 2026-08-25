@@ -5,7 +5,7 @@ import { parseTenant, type Tenant } from "../schema.ts";
 // by the project owner where they didn't, on 22/08/2026.
 export const cartorioTaipu: Tenant = parseTenant({
   slug: "cartorio-taipu",
-  hosts: ["cartoriotaipurn.com", "taipu.localhost"],
+  hosts: ["cartoriotaipurn.com.br", "taipu.localhost"],
   name: "Cartório de Taipu",
   emailFrom: "nao-responda@cartoriotaipurn.com",
   subtitle: "Serviço Único Notarial e Registral de Taipu / RN",
