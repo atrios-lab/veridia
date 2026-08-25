@@ -50,17 +50,19 @@ export const cartorioSantaCruz2: Tenant = parseTenant({
       "2º Tabelionato de Notas, Protestos e Ofício de Registro Civil de Santa Cruz / RN",
   }, // same text as `subtitle`
   // Padrão novo para tenants sem marca própria enviada: a logo do Bom Jesus
-  // (o livro), publicada por ele no painel, em vez do placeholder CM antigo.
-  // A serventia troca pela sua própria em Configurações > Identidade visual
-  // quando quiser.
+  // (o livro, hoje publicada por ele no painel) em vez do placeholder CM
+  // antigo, salva aqui como arquivo local: um logo em Blob externo passa
+  // pelo `next/image`, que só carrega hosts listados em
+  // `images.remotePatterns` (next.config.ts), montada a partir de
+  // `BLOB_PUBLIC_HOST`; sem essa env var (CI, todo ambiente sem o Blob
+  // configurado), a página inteira falha ao renderizar. A serventia troca
+  // pela sua própria em Configurações > Identidade visual quando quiser.
   logos: {
-    light:
-      "https://gyqeabzltqx30d5g.public.blob.vercel-storage.com/marca/cartorio-bom-jesus/099ed576-c2cd-4ed0-aaac-632c7ce144ce.png",
-    dark: "https://gyqeabzltqx30d5g.public.blob.vercel-storage.com/marca/cartorio-bom-jesus/011e11bb-3494-4412-9e85-12833f546bd1.png",
+    light: "/logos/livro-bomjesus-preto.png",
+    dark: "/logos/livro-bomjesus-branco.png",
     seal: {
-      light:
-        "https://gyqeabzltqx30d5g.public.blob.vercel-storage.com/marca/cartorio-bom-jesus/099ed576-c2cd-4ed0-aaac-632c7ce144ce.png",
-      dark: "https://gyqeabzltqx30d5g.public.blob.vercel-storage.com/marca/cartorio-bom-jesus/011e11bb-3494-4412-9e85-12833f546bd1.png",
+      light: "/logos/livro-bomjesus-preto.png",
+      dark: "/logos/livro-bomjesus-branco.png",
     },
   },
   legalFooter:
