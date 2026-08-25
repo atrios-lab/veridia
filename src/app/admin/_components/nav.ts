@@ -9,6 +9,13 @@ export interface AdminNavItem {
   icon: AdminIconName;
   /** Absent means every panel user sees it. */
   permission?: Permission;
+  /**
+   * Marks a destination outside the application: a tool the office already
+   * uses, not a panel route. The sidebar opens these in a named tab and
+   * signals the exit; nothing here ever matches `pathname`, so an external
+   * item is never the current page.
+   */
+  external?: true;
 }
 
 /**
@@ -18,6 +25,14 @@ export interface AdminNavItem {
  * leads to a 404 spends more of the registrar's trust than a short sidebar
  * saves. Each delivery adds its own line here when its screen lands: the
  * approved design's nine items across three groups are all here now.
+ *
+ * An item marked `external` is the one exception to "routes of this
+ * application", never to the rule behind it: it points at a tool the office
+ * works in every day, so it leads somewhere real just the same.
+ *
+ * Order is meaningful beyond appearance: `navGroups` below closes a group the
+ * moment the next item names a different one, so an item separated from its
+ * own group opens a second heading with the same name.
  *
  * The permission field only decides what is *offered*. Hiding a link is a
  * courtesy, never the access check: the route behind it checks for itself.
@@ -35,6 +50,17 @@ export const ADMIN_NAV: readonly AdminNavItem[] = [
     href: "/admin/pedidos",
     icon: "inbox",
     permission: "requests.manage",
+  },
+  {
+    group: "Operação",
+    label: "Email corporativo",
+    // The office's institutional mailbox. One address for every serventia
+    // while they all share it: a tenant field for a value that never varies
+    // is configuration with nothing to configure. Authentication happens
+    // entirely at Zoho; the panel only points the way.
+    href: "https://mail.zoho.com/zm/#mail/folder/inbox",
+    icon: "mail",
+    external: true,
   },
   {
     group: "Canais do cidadão",
