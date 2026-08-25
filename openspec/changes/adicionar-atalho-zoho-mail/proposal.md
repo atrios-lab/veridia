@@ -7,7 +7,7 @@ atrito custa poucas linhas e não cria nenhuma dependência nova.
 
 ## What Changes
 
-- A sidebar do painel passa a ter o item "Zoho Mail", no grupo "Operação", logo após "Pedidos de
+- A sidebar do painel passa a ter o item "Email corporativo", no grupo "Operação", logo após "Pedidos de
   serviço", apontando para `https://mail.zoho.com/zm/#mail/folder/inbox`.
 - `AdminNavItem` ganha o campo opcional `external`, que marca um item cujo destino está fora do
   aplicativo. Item externo abre em aba nomeada e reutilizada (`target="zoho"`), nunca uma aba

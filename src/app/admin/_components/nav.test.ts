@@ -7,12 +7,16 @@ test("every group heading appears once: items of a group stay adjacent", () => {
   assert.deepEqual(headings, [...new Set(headings)]);
 });
 
-test("Zoho Mail sits right below the request queue, inside Operação", () => {
+test("Email corporativo sits right below the request queue, inside Operação", () => {
   const operation = navGroups(ADMIN_NAV).find(
     (entry) => entry.group === "Operação",
   );
   const labels = operation?.items.map((item) => item.label);
-  assert.deepEqual(labels, ["Visão geral", "Pedidos de serviço", "Zoho Mail"]);
+  assert.deepEqual(labels, [
+    "Visão geral",
+    "Pedidos de serviço",
+    "Email corporativo",
+  ]);
 });
 
 // The panel marks the current page by comparing `pathname` to `href`, and

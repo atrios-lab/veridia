@@ -38,7 +38,7 @@ para ferramenta em uso pela serventia, nunca para destino inexistente ou não co
 
 #### Scenario: Item externo abre fora do painel sem multiplicar abas
 
-- **WHEN** o usuário aciona o item "Zoho Mail" e depois volta ao painel e o aciona de novo
+- **WHEN** o usuário aciona o item "Email corporativo" e depois volta ao painel e o aciona de novo
 - **THEN** o destino abre fora do painel nas duas vezes, na mesma aba nomeada, e a aba do painel
   permanece onde estava
 
@@ -57,7 +57,7 @@ para ferramenta em uso pela serventia, nunca para destino inexistente ou não co
 
 ### Requirement: Atalho para a caixa institucional no Zoho Mail
 
-A sidebar SHALL oferecer o item "Zoho Mail", no grupo "Operação", posicionado imediatamente após
+A sidebar SHALL oferecer o item "Email corporativo", no grupo "Operação", posicionado imediatamente após
 "Pedidos de serviço", apontando para o webmail do Zoho. O endereço SHALL ser o mesmo para todas
 as serventias, declarado no código, e NÃO SHALL ser configurável por serventia enquanto não
 houver variação real entre elas.
@@ -71,20 +71,20 @@ Zoho nem tentar estabelecer sessão no webmail em nome do usuário.
 #### Scenario: Atalho presente para quem tem acesso ao painel
 
 - **WHEN** um usuário com papel `staff` abre qualquer tela do painel
-- **THEN** a sidebar mostra "Zoho Mail" no grupo "Operação", logo abaixo de "Pedidos de serviço"
+- **THEN** a sidebar mostra "Email corporativo" no grupo "Operação", logo abaixo de "Pedidos de serviço"
 
 #### Scenario: Mesmo destino em qualquer serventia
 
 - **WHEN** o painel é aberto em duas serventias diferentes
-- **THEN** o item "Zoho Mail" aponta para o mesmo endereço nas duas
+- **THEN** o item "Email corporativo" aponta para o mesmo endereço nas duas
 
 #### Scenario: Ícone não se confunde com o da fila de pedidos
 
-- **WHEN** a sidebar renderiza "Pedidos de serviço" e "Zoho Mail" em sequência
+- **WHEN** a sidebar renderiza "Pedidos de serviço" e "Email corporativo" em sequência
 - **THEN** os dois itens exibem ícones distintos
 
 #### Scenario: Nenhuma credencial do Zoho trafega pelo painel
 
-- **WHEN** o usuário aciona "Zoho Mail"
+- **WHEN** o usuário aciona "Email corporativo"
 - **THEN** o painel apenas o leva ao endereço do webmail, sem enviar identificação, token ou
   senha, e a autenticação acontece inteiramente no Zoho

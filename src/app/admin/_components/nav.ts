@@ -53,7 +53,7 @@ export const ADMIN_NAV: readonly AdminNavItem[] = [
   },
   {
     group: "Operação",
-    label: "Zoho Mail",
+    label: "Email corporativo",
     // The office's institutional mailbox. One address for every serventia
     // while they all share it: a tenant field for a value that never varies
     // is configuration with nothing to configure. Authentication happens

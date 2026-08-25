@@ -9,7 +9,7 @@
       `src/app/admin/_components/nav.ts`, documentando que marca destino fora do aplicativo
 - [x] 2.2 Atualizar o comentário do bloco `ADMIN_NAV`: a regra "só rotas que existem" passa a
       admitir item externo declarado
-- [x] 2.3 Inserir o item "Zoho Mail" (`group: "Operação"`, `icon: "mail"`, `external: true`,
+- [x] 2.3 Inserir o item "Email corporativo" (`group: "Operação"`, `icon: "mail"`, `external: true`,
       href `https://mail.zoho.com/zm/#mail/folder/inbox`) imediatamente após "Pedidos de
       serviço" no array — a posição importa: `navGroups` agrupa por adjacência, e um item de
       "Operação" longe dos seus criaria um segundo cabeçalho "Operação" no rodapé do menu
@@ -26,7 +26,7 @@
 ## 4. Verificação
 
 - [x] 4.1 Teste de unidade de `navGroups` com o array real: "Operação" aparece uma única vez e
-      contém "Zoho Mail" logo após "Pedidos de serviço"
+      contém "Email corporativo" logo após "Pedidos de serviço"
 - [ ] 4.2 No painel rodando, conferir os três comportamentos do item: abre fora, reusa a mesma
       aba em cliques repetidos, e nenhum item aparece como página atual ao voltar
 - [x] 4.3 `pnpm lint`, `pnpm typecheck` e `pnpm test`
