@@ -31,9 +31,14 @@ for (const tenant of Object.values(TENANTS)) {
 
     test("the host serves this office", async ({ page }) => {
       await page.goto(baseURL);
-      // The hero leads with what the office is, which is the subtitle; the
-      // name is in the header and in the tab.
-      await expect(page.locator("h1")).toHaveText(tenant.subtitle);
+      // The hero's h1 renders `home.title`, which an office may publish its
+      // own wording for from the panel (Identidade visual > "Título de
+      // boas-vindas"): it is meant to drift from `tenant.subtitle` here,
+      // the code default, once an office does that. Asserting the exact
+      // code string broke the day the first office edited it; what this
+      // check can still promise is that the hero has real text and the tab
+      // still names the right office, which the panel cannot rewrite.
+      await expect(page.locator("h1")).not.toBeEmpty();
       await expect(page).toHaveTitle(tenant.name);
     });
 
