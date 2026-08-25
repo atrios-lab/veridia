@@ -4,7 +4,7 @@
  * `host` alone is not it. After a Server Action calls `redirect()`, Next
  * re-renders the destination through a request of its own, and that request
  * carries the server's own address in `host` (`localhost:3000`), not the
- * office's domain — the real one moves to `x-forwarded-host`. Reading only
+ * office's domain: the real one moves to `x-forwarded-host`. Reading only
  * `host` there resolved every office to the `DEFAULT_TENANT` one, so the
  * first screen after signing in was another office's, and a plain reload
  * "fixed" it because a reload is an ordinary browser request again. Any
