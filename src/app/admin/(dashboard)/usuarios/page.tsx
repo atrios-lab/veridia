@@ -107,7 +107,12 @@ export default async function UsuariosPage() {
                 </span>
                 <div className="flex justify-end">
                   <AccountRowActions
-                    userId={account.id}
+                    account={{
+                      id: account.id,
+                      name: account.name,
+                      email: account.email,
+                      role: account.role,
+                    }}
                     active={account.active}
                     disabled={account.disabled}
                     isSelf={account.id === session.user.id}

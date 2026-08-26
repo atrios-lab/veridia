@@ -16,3 +16,11 @@ export const CreateAccountSchema = z.object({
   role: z.enum(PANEL_ROLES, "Escolha um papel."),
 });
 export type CreateAccountInput = z.infer<typeof CreateAccountSchema>;
+
+/**
+ * What the registrador may change on an account that already exists: the
+ * name and the role. Not the e-mail, which is also the login and needs a
+ * confirmation round trip to change safely, and never a password.
+ */
+export const UpdateAccountSchema = CreateAccountSchema.omit({ email: true });
+export type UpdateAccountInput = z.infer<typeof UpdateAccountSchema>;

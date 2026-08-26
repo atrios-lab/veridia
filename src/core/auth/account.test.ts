@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { CreateAccountSchema } from "./account.ts";
+import { CreateAccountSchema, UpdateAccountSchema } from "./account.ts";
 
 test("accepts a valid name, e-mail and role", () => {
   const parsed = CreateAccountSchema.safeParse({
@@ -47,4 +47,31 @@ test("has no password field to forge", () => {
   });
   assert.ok(parsed.success);
   assert.equal((parsed.data as Record<string, unknown>).password, undefined);
+});
+
+test("update accepts a name and a role, and ignores an e-mail", () => {
+  const parsed = UpdateAccountSchema.safeParse({
+    name: "  Júlia Santos  ",
+    role: "admin",
+    email: "outro@exemplo.com",
+  });
+  assert.ok(parsed.success);
+  assert.equal(parsed.data.name, "Júlia Santos");
+  assert.equal(
+    (parsed.data as Record<string, unknown>).email,
+    undefined,
+    "e-mail is not editable here: it is also the login",
+  );
+});
+
+test("update rejects a blank name and an unknown role", () => {
+  assert.equal(
+    UpdateAccountSchema.safeParse({ name: "   ", role: "staff" }).success,
+    false,
+  );
+  assert.equal(
+    UpdateAccountSchema.safeParse({ name: "Júlia", role: "superadmin" })
+      .success,
+    false,
+  );
 });

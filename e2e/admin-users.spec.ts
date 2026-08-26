@@ -83,6 +83,49 @@ test.describe("tela de Usuários", () => {
     ).toBeVisible();
   });
 
+  test("renaming an account updates the list", async ({ page }) => {
+    await signIn(page);
+    await page.goto(`${baseURL}/admin/usuarios`);
+    await page.getByLabel("Nome").fill("Júlia E2E");
+    await page.getByLabel("E-mail").fill(CONVIDADA_EMAIL);
+    await page.getByLabel("Papel").selectOption({ label: "Operador" });
+    await page.getByRole("button", { name: "Criar conta" }).click();
+    await expect(page.getByText("Conta criada. E-mail enviado.")).toBeVisible();
+
+    const row = page.getByText(CONVIDADA_EMAIL).locator("..").locator("..");
+    await row.getByRole("button", { name: "Atualizar" }).click();
+
+    // Scoped to the dialog: the "Criar conta" form beside it has a field
+    // labelled "Nome" too.
+    const dialog = page.getByRole("dialog");
+    await dialog.getByLabel("Nome").fill("Júlia Renomeada");
+    await dialog.getByRole("button", { name: "Salvar alterações" }).click();
+
+    await expect(page.getByText("Conta atualizada.")).toBeVisible();
+    await expect(row.getByText("Júlia Renomeada")).toBeVisible();
+  });
+
+  test("the last active registrador cannot demote itself", async ({ page }) => {
+    await signIn(page);
+    await page.goto(`${baseURL}/admin/usuarios`);
+
+    const ownRow = page.getByText(email).locator("..").locator("..");
+    await ownRow.getByRole("button", { name: "Atualizar" }).click();
+
+    const dialog = page.getByRole("dialog");
+    await dialog.getByLabel("Papel").selectOption({ label: "Operador" });
+    await dialog.getByRole("button", { name: "Salvar alterações" }).click();
+
+    // The dialog stays open with the reason, and nothing was written.
+    await expect(
+      dialog.getByText(
+        "É preciso manter ao menos um Registrador com acesso ativo.",
+      ),
+    ).toBeVisible();
+    await dialog.getByRole("button", { name: "Cancelar" }).click();
+    await expect(ownRow.getByText("Registrador")).toBeVisible();
+  });
+
   test("a first-access link opens the locked shell with no navigation", async ({
     page,
   }) => {
