@@ -5,6 +5,7 @@ import {
   buildAccessReceipt,
   buildRequerimento,
 } from "@/core/request/requerimento.ts";
+import { recordAudit } from "@/lib/audit.ts";
 import { brandFor } from "@/lib/document-brand.ts";
 import { renderDocument } from "@/lib/pdf.ts";
 import { findByProtocol } from "@/lib/service-request.ts";
@@ -30,6 +31,7 @@ async function load(request: Request, protocolo: string) {
   return {
     tenant,
     stored,
+    actorId: session.user.id,
     brand: await brandFor(tenant, `${new URL(request.url).origin}/protocolo`),
   };
 }
@@ -57,7 +59,7 @@ export async function GET(
   const { protocolo } = await params;
   const loaded = await load(request, protocolo);
   if (loaded instanceof Response) return loaded;
-  const { tenant, stored, brand } = loaded;
+  const { tenant, stored, brand, actorId } = loaded;
 
   if (!stored.actId || !stored.applicantName || !stored.contact) {
     return new Response("Não encontrado", { status: 404 });
@@ -78,6 +80,13 @@ export async function GET(
     }),
     brand,
   );
+  await recordAudit({
+    tenantSlug: tenant.slug,
+    actorId,
+    action: "service-request.print.requerimento",
+    targetType: "service-request",
+    targetId: stored.id,
+  });
   return pdf(bytes, `requerimento-${stored.protocolNumber}`);
 }
 
@@ -94,7 +103,7 @@ export async function POST(
   const { protocolo } = await params;
   const loaded = await load(request, protocolo);
   if (loaded instanceof Response) return loaded;
-  const { tenant, stored, brand } = loaded;
+  const { tenant, stored, brand, actorId } = loaded;
 
   const form = await request.formData();
   const accessKey = String(form.get("chave") ?? "");
@@ -115,5 +124,12 @@ export async function POST(
     }),
     brand,
   );
+  await recordAudit({
+    tenantSlug: tenant.slug,
+    actorId,
+    action: "service-request.print.comprovante",
+    targetType: "service-request",
+    targetId: stored.id,
+  });
   return pdf(bytes, `comprovante-${stored.protocolNumber}`);
 }

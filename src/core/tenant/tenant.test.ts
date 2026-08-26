@@ -22,6 +22,13 @@ import { cartorioMarinho } from "./tenants/marinho.ts";
 // passing test cannot be the fallback answering by accident.
 const MISSING = "__no-such-office__";
 
+// A NOTAS-only office, built here instead of borrowed from a registered one.
+// The gating tests below need a serventia that holds few attributions to have
+// anything to prove; which attributions a real office holds is its own
+// configuration and may legitimately change, and when it did, it broke tests
+// that were never about that office.
+const notasOnly: Tenant = { ...tabelionatoAurora, attributions: ["NOTAS"] };
+
 test("valid config is accepted and typed", () => {
   const tenant = parseTenant({ ...cartorioMarinho });
   assert.equal(tenant.slug, "cartorio-marinho");
@@ -142,10 +149,10 @@ test("attribution turns the notices section on, with proclamas", () => {
 });
 
 test("an office with NOTAS only has no notices section", () => {
-  assert.equal(tabelionatoAurora.attributions.join(), "NOTAS");
-  assert.equal(isSectionEnabled(tabelionatoAurora, "editais"), false);
-  assert.deepEqual(noticeSectors(tabelionatoAurora), []);
-  assert.ok(!enabledSections(tabelionatoAurora).includes("editais"));
+  assert.equal(notasOnly.attributions.join(), "NOTAS");
+  assert.equal(isSectionEnabled(notasOnly, "editais"), false);
+  assert.deepEqual(noticeSectors(notasOnly), []);
+  assert.ok(!enabledSections(notasOnly).includes("editais"));
 });
 
 test("institutional sections stay on regardless of attributions", () => {
@@ -175,7 +182,7 @@ test("override disables a section the attribution would grant", () => {
 });
 
 test("override never enables a section the attributions do not grant", () => {
-  const forced: Tenant = { ...tabelionatoAurora, disabledSections: [] };
+  const forced: Tenant = { ...notasOnly, disabledSections: [] };
   assert.equal(isSectionEnabled(forced, "editais"), false);
 });
 
@@ -200,6 +207,6 @@ test("optionalSections never includes a mandatory one", () => {
 test("optionalSections only offers what the attribution grants", () => {
   // NOTAS only: no notice board, so editais must not appear even as an off
   // switch.
-  assert.ok(!optionalSections(tabelionatoAurora).includes("editais"));
+  assert.ok(!optionalSections(notasOnly).includes("editais"));
   assert.ok(optionalSections(cartorioMarinho).includes("editais"));
 });

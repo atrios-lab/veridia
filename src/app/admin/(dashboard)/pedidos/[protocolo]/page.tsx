@@ -47,6 +47,8 @@ const HISTORY_LABELS: Record<string, string> = {
   "service-request.edit": "corrigiu os dados do pedido",
   "service-request.question": "enviou uma pergunta",
   "service-request.question.reply": "respondeu uma pergunta do cidadão",
+  "service-request.print.requerimento": "imprimiu o requerimento",
+  "service-request.print.comprovante": "imprimiu o comprovante de acesso",
 };
 
 function formatDayMonthTime(date: Date): string {
@@ -163,6 +165,23 @@ export default async function ServiceRequestDetailPage({
             status={status}
             label={statusLabel("service-request", status)}
           />
+          {/*
+            Only when the same fields the print route itself requires are
+            present: this page already knows `kind === "service-request"`
+            (guarded above), but the route also 404s a request missing
+            actId/applicantName/contact, and a link that always 404s is worse
+            than no link.
+          */}
+          {request.actId && request.applicantName && request.contact && (
+            <a
+              href={`/admin/pedidos/${encodeURIComponent(request.protocolNumber)}/imprimir`}
+              target="_blank"
+              rel="noreferrer"
+              className="ml-auto text-[12.5px] font-semibold text-admin-primary hover:underline"
+            >
+              Imprimir requerimento
+            </a>
+          )}
         </div>
 
         <div className="grid grid-cols-1 gap-5 lg:grid-cols-[1fr_340px] lg:items-start">
@@ -227,6 +246,7 @@ export default async function ServiceRequestDetailPage({
           <div className="flex flex-col gap-4.5">
             <KeySection
               requestId={request.id}
+              protocolNumber={request.protocolNumber}
               issuedLabel={formatDate(
                 toIsoDate(request.createdAt, OFFICE_TIME_ZONE),
               )}

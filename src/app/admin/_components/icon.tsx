@@ -90,6 +90,24 @@ const PATHS = {
     "M12 22a10 10 0 1 0 0-20 10 10 0 0 0 0 20Z",
     "m8.5 12.5 2.5 2.5 5-5",
   ],
+  // Counter work: printing the requerimento and the access receipt.
+  printer: [
+    "M7 8V3h10v5",
+    "M5 8h14a2 2 0 0 1 2 2v6a1 1 0 0 1-1 1h-3",
+    "M7 17H4a1 1 0 0 1-1-1v-6a2 2 0 0 1 2-2",
+    "M7 14h10v7H7z",
+  ],
+  // Copying the protocol or the access key to the clipboard.
+  copy: [
+    "M9.5 3h8A1.5 1.5 0 0 1 19 4.5v10a1.5 1.5 0 0 1-1.5 1.5h-8A1.5 1.5 0 0 1 8 14.5v-10A1.5 1.5 0 0 1 9.5 3Z",
+    "M5 8v11.5A1.5 1.5 0 0 0 6.5 21H15",
+  ],
+  // A warning that needs the operator to act before leaving the screen.
+  alert: [
+    "M12 22a10 10 0 1 0 0-20 10 10 0 0 0 0 20Z",
+    "M12 7v6",
+    "M12 16.5v.5",
+  ],
 } as const;
 
 export type AdminIconName = keyof typeof PATHS;

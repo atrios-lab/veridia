@@ -417,8 +417,10 @@ test.describe("filing a request", () => {
         .first()
         .textContent()) ?? "";
 
-    // `request` carries no admin session: printing is panel work, and the
-    // route is the gate, not the button that links to it.
+    // `request` carries no admin session: printing is panel work, so an
+    // anonymous caller must be refused here regardless of whether a button
+    // in the panel would have led here (it does, see
+    // admin-service-requests.spec.ts).
     const sheet = await request.get(
       `${baseURL}/admin/pedidos/${protocolNumber}/imprimir`,
       { maxRedirects: 0 },

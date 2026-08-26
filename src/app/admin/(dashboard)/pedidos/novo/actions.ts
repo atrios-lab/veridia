@@ -1,11 +1,14 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { getActForTenant } from "@/core/acts/catalog.ts";
+import {
+  ATTRIBUTION_SHORT_NAMES,
+  getActForTenant,
+} from "@/core/acts/catalog.ts";
 import { can } from "@/core/auth/roles.ts";
 import { generateAccessKey, hashAccessKey } from "@/core/request/access-key.ts";
-import { serviceRequestSchema } from "@/core/request/form.ts";
-import { parseCentsInput } from "@/core/request/money.ts";
+import { formatCpf, serviceRequestSchema } from "@/core/request/form.ts";
+import { formatCents, parseCentsInput } from "@/core/request/money.ts";
 import { closeConversation } from "@/lib/chat.ts";
 import { notifyCitizen } from "@/lib/email/service-request.ts";
 import {
@@ -13,12 +16,26 @@ import {
   setRequestAmount,
 } from "@/lib/service-request.ts";
 import { getSession } from "@/lib/session.ts";
-import { getTenant } from "@/lib/tenant.ts";
+import { getTenant, officeNow } from "@/lib/tenant.ts";
 
 export type ManualEntryState =
   | { status: "idle" }
   | { status: "error"; message: string; fieldErrors: Record<string, string> }
-  | { status: "success"; protocolNumber: string; accessKey: string };
+  | {
+      status: "success";
+      protocolNumber: string;
+      accessKey: string;
+      applicantName: string;
+      actName: string;
+      /** Already formatted here: the office's wall clock, not the server's. */
+      filedAtLabel: string;
+      contact: string;
+      /** In full, not masked: the operator typed it seconds ago and the whole
+          point of this block is confirming the right pedido was filed. */
+      cpfLabel?: string;
+      attributionLabel: string;
+      amountLabel?: string;
+    };
 
 const GENERIC_ERROR =
   "Não foi possível registrar o pedido agora. Tente novamente em instantes.";
@@ -110,7 +127,22 @@ export async function createManualServiceRequest(
       revalidatePath("/admin/atendimento");
     }
     revalidatePath("/admin", "layout");
-    return { status: "success", protocolNumber, accessKey };
+    return {
+      status: "success",
+      protocolNumber,
+      accessKey,
+      applicantName: parsed.data.applicantName,
+      actName: act.name,
+      // The office's wall clock: Vercel runs in UTC, and from nine at night a
+      // plain new Date() would stamp this "hoje" with tomorrow's hour, on the
+      // screen of an office that is closed.
+      filedAtLabel: `hoje às ${officeNow().time.replace(":", "h")}`,
+      contact: parsed.data.contact,
+      cpfLabel: parsed.data.cpf ? formatCpf(parsed.data.cpf) : undefined,
+      attributionLabel: ATTRIBUTION_SHORT_NAMES[act.attribution],
+      amountLabel:
+        amountCents !== undefined ? formatCents(amountCents) : undefined,
+    };
   } catch (error) {
     console.error("pedidos.manual-entry", error);
     return fail(GENERIC_ERROR);

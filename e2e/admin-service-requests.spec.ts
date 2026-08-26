@@ -124,4 +124,59 @@ test.describe("fila e detalhe de pedidos", () => {
       page.getByText(/[A-Z2-9]{4}-[A-Z2-9]{4}-[A-Z2-9]{4}/),
     ).toBeVisible();
   });
+
+  test("printing writes to audit_log; a refused key does not", async ({
+    page,
+    request,
+  }) => {
+    await signIn(page);
+    await page.goto(`${baseURL}/admin/pedidos/${encodeURIComponent(PROTOCOL)}`);
+
+    const sql = postgres(process.env.DATABASE_URL as string);
+    const auditCount = async (action: string) => {
+      const [row] = await sql`
+        select count(*)::int as n from audit_log
+        where action = ${action}
+          and target_id = (select id::text from service_requests where protocol_number = ${PROTOCOL})
+      `;
+      return row.n as number;
+    };
+
+    const before = await auditCount("service-request.print.requerimento");
+    const sheet = await request.get(
+      `${baseURL}/admin/pedidos/${encodeURIComponent(PROTOCOL)}/imprimir`,
+    );
+    expect(sheet.status()).toBe(200);
+    expect(await auditCount("service-request.print.requerimento")).toBe(
+      before + 1,
+    );
+
+    // A fresh key, so the receipt below has one that actually verifies.
+    await page.getByRole("button", { name: "Emitir nova chave" }).click();
+    await page.getByRole("button", { name: "Confirmar emissão" }).click();
+    const accessKey =
+      (await page
+        .getByText(/[A-Z2-9]{4}-[A-Z2-9]{4}-[A-Z2-9]{4}/)
+        .first()
+        .textContent()) ?? "";
+
+    const beforeReceipt = await auditCount("service-request.print.comprovante");
+    const refused = await request.post(
+      `${baseURL}/admin/pedidos/${encodeURIComponent(PROTOCOL)}/imprimir`,
+      { form: { chave: "AAAA-BBBB-CCCC" } },
+    );
+    expect(refused.status()).not.toBe(200);
+    expect(await auditCount("service-request.print.comprovante")).toBe(
+      beforeReceipt,
+    );
+
+    const receipt = await request.post(
+      `${baseURL}/admin/pedidos/${encodeURIComponent(PROTOCOL)}/imprimir`,
+      { form: { chave: accessKey } },
+    );
+    expect(receipt.status()).toBe(200);
+    expect(await auditCount("service-request.print.comprovante")).toBe(
+      beforeReceipt + 1,
+    );
+  });
 });
