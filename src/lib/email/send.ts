@@ -1,4 +1,5 @@
 import "server-only";
+import { resolveRecipient } from "@/core/email/recipient.ts";
 
 export interface EmailAttachment {
   filename: string;
@@ -28,6 +29,12 @@ const POSTMARK_ENDPOINT = "https://api.postmarkapp.com/email";
 const FROM_ADDRESS =
   process.env.EMAIL_FROM_ADDRESS ?? "nao-responda@atrioss.com";
 
+// Set only where the deployment is not the real thing: every message goes to
+// this one inbox instead of to the address on the record. See
+// `resolveRecipient` for why a staging environment mailing made-up addresses
+// is a problem for every serventia at once, not just for that message.
+const REDIRECT_TO = process.env.EMAIL_REDIRECT_TO;
+
 /**
  * Sends through Postmark's HTTP API when `POSTMARK_SERVER_TOKEN` is set;
  * otherwise logs what would have been sent instead of failing. Same posture
@@ -44,6 +51,16 @@ export async function sendEmail(email: OutgoingEmail): Promise<void> {
     return;
   }
 
+  const recipient = resolveRecipient(email.to, email.subject, REDIRECT_TO);
+  if (recipient.redirected) {
+    // Loud on purpose, once per message: this variable reaching production
+    // would take every serventia's mail off its way to the citizen without
+    // a single error, and the log is the only place that would show it.
+    console.warn(
+      `[email] EMAIL_REDIRECT_TO ativo: ${email.to} desviado para ${recipient.to}.`,
+    );
+  }
+
   const response = await fetch(POSTMARK_ENDPOINT, {
     method: "POST",
     headers: {
@@ -53,8 +70,8 @@ export async function sendEmail(email: OutgoingEmail): Promise<void> {
     },
     body: JSON.stringify({
       From: `${email.fromName} <${email.fromAddress ?? FROM_ADDRESS}>`,
-      To: email.to,
-      Subject: email.subject,
+      To: recipient.to,
+      Subject: recipient.subject,
       HtmlBody: email.html,
       TextBody: email.text,
       MessageStream: "outbound",
