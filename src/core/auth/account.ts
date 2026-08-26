@@ -18,9 +18,10 @@ export const CreateAccountSchema = z.object({
 export type CreateAccountInput = z.infer<typeof CreateAccountSchema>;
 
 /**
- * What the registrador may change on an account that already exists: the
- * name and the role. Not the e-mail, which is also the login and needs a
- * confirmation round trip to change safely, and never a password.
+ * What the registrador may change on an account that already exists. Same
+ * three fields as creating one, and never a password: the e-mail is
+ * accepted here, but it does not become the login until the link sent to it
+ * is opened (see updateAccount in usuarios/actions.ts).
  */
-export const UpdateAccountSchema = CreateAccountSchema.omit({ email: true });
+export const UpdateAccountSchema = CreateAccountSchema;
 export type UpdateAccountInput = z.infer<typeof UpdateAccountSchema>;

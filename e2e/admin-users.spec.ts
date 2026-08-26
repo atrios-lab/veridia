@@ -8,6 +8,7 @@ import postgres from "postgres";
 const PORT = process.env.PORT ?? "3000";
 const baseURL = `http://marinho.localhost:${PORT}`;
 const CONVIDADA_EMAIL = "julia.e2e@exemplo.com";
+const CONVIDADA_EMAIL_NOVO = "julia.e2e.nova@exemplo.com";
 
 test.describe("tela de Usuários", () => {
   test.describe.configure({ mode: "serial" });
@@ -33,7 +34,7 @@ test.describe("tela de Usuários", () => {
   test.afterEach(async () => {
     // Cascades to the account/session rows via the FKs in auth-schema.ts.
     const sql = postgres(process.env.DATABASE_URL as string);
-    await sql`delete from "user" where email = ${CONVIDADA_EMAIL}`;
+    await sql`delete from "user" where email in (${CONVIDADA_EMAIL}, ${CONVIDADA_EMAIL_NOVO})`;
   });
 
   test("Usuários appears in the sidebar for a registrador", async ({
@@ -157,6 +158,60 @@ test.describe("tela de Usuários", () => {
 
     await expect(page.getByText("Conta excluída.")).toBeVisible();
     await expect(page.getByText(CONVIDADA_EMAIL)).toHaveCount(0);
+  });
+
+  test("changing the e-mail waits for confirmation at the new address", async ({
+    page,
+  }) => {
+    await signIn(page);
+    await page.goto(`${baseURL}/admin/usuarios`);
+    await page.getByLabel("Nome").fill("Júlia E2E");
+    await page.getByLabel("E-mail").fill(CONVIDADA_EMAIL);
+    await page.getByLabel("Papel").selectOption({ label: "Operador" });
+    await page.getByRole("button", { name: "Criar conta" }).click();
+    await expect(page.getByText("Conta criada. E-mail enviado.")).toBeVisible();
+
+    const row = page.getByText(CONVIDADA_EMAIL).locator("..").locator("..");
+    await row.getByRole("button", { name: "Atualizar" }).click();
+
+    const dialog = page.getByRole("dialog");
+    await dialog.getByLabel("E-mail").fill(CONVIDADA_EMAIL_NOVO);
+    await dialog.getByRole("button", { name: "Salvar alterações" }).click();
+
+    // The account still answers to the old address, and the list says a
+    // change is waiting on someone.
+    await expect(row.getByText(CONVIDADA_EMAIL)).toBeVisible();
+    await expect(
+      row.getByText(
+        `Troca para ${CONVIDADA_EMAIL_NOVO} aguardando confirmação`,
+      ),
+    ).toBeVisible();
+
+    const sql = postgres(process.env.DATABASE_URL as string);
+    const [pending] = (await sql`
+      select split_part(identifier, ':', 2) as token from verification
+      where identifier like 'change-email:%'
+        and value like (select id from "user" where email = ${CONVIDADA_EMAIL}) || '|%'
+    `) as { token: string }[];
+    expect(pending?.token).toBeTruthy();
+
+    // Whoever confirms may be the person who cannot get in, so the page
+    // takes no session.
+    await page.context().clearCookies();
+    await page.goto(`${baseURL}/admin/confirmar-email?token=${pending.token}`);
+    await expect(page.getByText(CONVIDADA_EMAIL_NOVO)).toBeVisible();
+    await page.getByRole("button", { name: "Confirmar novo e-mail" }).click();
+
+    await expect(
+      page.getByRole("heading", { name: "E-mail alterado" }),
+    ).toBeVisible();
+
+    await signIn(page);
+    await page.goto(`${baseURL}/admin/usuarios`);
+    await expect(page.getByText(CONVIDADA_EMAIL_NOVO)).toBeVisible();
+    await expect(page.getByText(CONVIDADA_EMAIL, { exact: true })).toHaveCount(
+      0,
+    );
   });
 
   test("a first-access link opens the locked shell with no navigation", async ({

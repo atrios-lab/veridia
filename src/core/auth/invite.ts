@@ -1,4 +1,5 @@
-// The text of the two account e-mails (convite, nova senha), as data: no
+// The text of the account e-mails (convite, nova senha, troca de e-mail e o
+// aviso de que ela aconteceu), as data: no
 // HTML, no I/O. src/lib/email renders this into a message and sends it:
 // this module only decides what it says, in Portuguese, so it can be tested
 // without a network or a database.
@@ -19,7 +20,25 @@ interface PasswordResetEmailInput {
   recipientName: string;
 }
 
-export type AccountEmailInput = InviteEmailInput | PasswordResetEmailInput;
+/** Sent to the address being moved to, never to the one in use. */
+interface EmailChangeEmailInput {
+  kind: "troca-email";
+  recipientName: string;
+  currentEmail: string;
+}
+
+/** Sent to the address being left behind, after the change is done. */
+interface EmailChangedNoticeInput {
+  kind: "email-alterado";
+  recipientName: string;
+  newEmail: string;
+}
+
+export type AccountEmailInput =
+  | InviteEmailInput
+  | PasswordResetEmailInput
+  | EmailChangeEmailInput
+  | EmailChangedNoticeInput;
 
 function firstName(fullName: string): string {
   return fullName.trim().split(/\s+/)[0] || fullName;
@@ -43,6 +62,37 @@ export function buildAccountEmailText(
         "O link vale 48 horas e só funciona uma vez. Se você não esperava " +
         "este e-mail, é só ignorá-lo. Nenhuma conta será usada sem a " +
         "senha que você criar.",
+    };
+  }
+
+  if (input.kind === "troca-email") {
+    return {
+      subject: "Confirme o novo e-mail do painel",
+      paragraphs: [
+        `Olá, ${name}. A serventia pediu para mudar o e-mail da sua conta do ` +
+          `painel administrativo para este endereço.`,
+        `Até você confirmar, sua conta continua entrando com ${input.currentEmail}. ` +
+          "Sua senha não muda.",
+      ],
+      buttonLabel: "Confirmar novo e-mail",
+      footnote:
+        "O link vale 48 horas e só funciona uma vez. Se você não esperava " +
+        "este e-mail, é só ignorá-lo: sem a confirmação, nada muda.",
+    };
+  }
+
+  if (input.kind === "email-alterado") {
+    return {
+      subject: "O e-mail da sua conta do painel mudou",
+      paragraphs: [
+        `Olá, ${name}. O e-mail da sua conta do painel administrativo passou ` +
+          `a ser ${input.newEmail}. É por ele que você entra a partir de agora.`,
+        "Sua senha continua a mesma.",
+      ],
+      buttonLabel: "Entrar no painel",
+      footnote:
+        "Se não foi você quem pediu essa mudança, avise a serventia agora: " +
+        "este endereço não entra mais na conta.",
     };
   }
 

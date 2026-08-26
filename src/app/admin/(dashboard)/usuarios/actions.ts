@@ -18,12 +18,19 @@ import { db } from "@/db/index.ts";
 import { recordAudit } from "@/lib/audit.ts";
 import { auth } from "@/lib/auth.ts";
 import {
+  buildConfirmEmailUrl,
   buildResetPasswordUrl,
+  deleteEmailChangesWith,
   deleteResetTokensWith,
+  issueEmailChangeTokenWith,
   issueResetTokenWith,
   resolveOrigin,
 } from "@/lib/auth-tokens.ts";
-import { sendInviteEmail, sendPasswordResetEmail } from "@/lib/email/index.ts";
+import {
+  sendEmailChangeEmail,
+  sendInviteEmail,
+  sendPasswordResetEmail,
+} from "@/lib/email/index.ts";
 import { getSession } from "@/lib/session.ts";
 import { getTenant } from "@/lib/tenant.ts";
 import { ROLE_LABELS } from "../../_components/role-labels.ts";
@@ -189,6 +196,12 @@ const LAST_ADMIN_MESSAGE =
 // inviting them to click forever. It points at the way out instead.
 const SEND_FAILED_MESSAGE =
   "O provedor de e-mail não aceitou o envio. Copie o link e entregue à pessoa.";
+
+// No "copie o link" here: the confirmation has to reach the address being
+// claimed, and handing that link to whoever asked for the change would skip
+// the only proof this flow exists to collect.
+const SEND_FAILED_MESSAGE_EMAIL_CHANGE =
+  "O nome e o papel foram salvos, mas o provedor de e-mail não aceitou o envio da confirmação. O e-mail da conta segue o mesmo.";
 
 // The two row actions below share this shape so the same client component
 // (AccountRowActions) can drive either one through useActionState and show
@@ -364,11 +377,19 @@ export async function reactivateAccount(
   return { status: "sent" };
 }
 
-export type UpdateAccountValues = { name: string; role: string };
+export type UpdateAccountValues = {
+  name: string;
+  email: string;
+  role: string;
+};
 
 export type UpdateAccountState =
   | { status: "idle" }
   | { status: "saved" }
+  // Saved, and an e-mail change is now waiting on the person at that
+  // address: the screen has to say so, or the registrador walks away
+  // thinking the login already changed.
+  | { status: "saved-pending-email"; email: string }
   | {
       status: "error";
       message: string;
@@ -390,6 +411,9 @@ export async function updateAccount(
   const userId = String(formData.get("userId") ?? "");
   const values: UpdateAccountValues = {
     name: String(formData.get("name") ?? "").trim(),
+    email: String(formData.get("email") ?? "")
+      .trim()
+      .toLowerCase(),
     role: String(formData.get("role") ?? ""),
   };
 
@@ -433,6 +457,26 @@ export async function updateAccount(
     }
   }
 
+  // The e-mail is not written here even when it changes: it is the login,
+  // and a typo would take the account with it. What gets written is a
+  // pending change, confirmed by whoever reaches the new address.
+  const wantsNewEmail = parsed.data.email !== target.email;
+  const ctx = await auth.$context;
+
+  if (wantsNewEmail) {
+    // Unique platform-wide, same check createUser makes: the database's own
+    // index would refuse it anyway, and an explanation beats a crash.
+    const taken = await ctx.internalAdapter.findUserByEmail(parsed.data.email);
+    if (taken) {
+      return {
+        status: "error",
+        message: "Confira os campos destacados.",
+        fieldErrors: { email: "Já existe uma conta com esse e-mail." },
+        values,
+      };
+    }
+  }
+
   await db
     .update(userTable)
     .set({ name: parsed.data.name, role: parsed.data.role })
@@ -446,8 +490,50 @@ export async function updateAccount(
     targetId: target.id,
   });
 
+  if (!wantsNewEmail) {
+    revalidatePath(USERS_PATH);
+    return { status: "saved" };
+  }
+
+  const token = await issueEmailChangeTokenWith(
+    ctx,
+    target.id,
+    parsed.data.email,
+  );
+  const requestHeaders = await headers();
+
+  try {
+    await sendEmailChangeEmail({
+      to: parsed.data.email,
+      recipientName: parsed.data.name,
+      currentEmail: target.email,
+      actionUrl: buildConfirmEmailUrl(resolveOrigin(requestHeaders), token),
+      tenant,
+    });
+  } catch (error) {
+    console.error("usuarios.email-change", error);
+    // Drop the pending change: a request nobody can confirm is worse than
+    // no request, because the list would advertise a change that can never
+    // land. The name and role above stay saved, they did not depend on it.
+    await deleteEmailChangesWith(ctx, target.id);
+    return {
+      status: "error",
+      message: SEND_FAILED_MESSAGE_EMAIL_CHANGE,
+      fieldErrors: {},
+      values,
+    };
+  }
+
+  await recordAudit({
+    tenantSlug: tenant.slug,
+    actorId: session.user.id,
+    action: "user.email-change-requested",
+    targetType: "user",
+    targetId: target.id,
+  });
+
   revalidatePath(USERS_PATH);
-  return { status: "saved" };
+  return { status: "saved-pending-email", email: parsed.data.email };
 }
 
 export type ResetLinkState =
@@ -544,6 +630,7 @@ export async function deleteAccount(
   // way around would leave the orphan token this exists to avoid.
   const ctx = await auth.$context;
   await deleteResetTokensWith(ctx, target.id);
+  await deleteEmailChangesWith(ctx, target.id);
 
   // `session` and `account` follow by cascade (see auth-schema.ts).
   await db.delete(userTable).where(eq(userTable.id, target.id));

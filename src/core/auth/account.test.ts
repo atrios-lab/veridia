@@ -49,7 +49,7 @@ test("has no password field to forge", () => {
   assert.equal((parsed.data as Record<string, unknown>).password, undefined);
 });
 
-test("update accepts a name and a role, and ignores an e-mail", () => {
+test("update accepts a name, a role and an e-mail", () => {
   const parsed = UpdateAccountSchema.safeParse({
     name: "  Júlia Santos  ",
     role: "admin",
@@ -57,21 +57,32 @@ test("update accepts a name and a role, and ignores an e-mail", () => {
   });
   assert.ok(parsed.success);
   assert.equal(parsed.data.name, "Júlia Santos");
-  assert.equal(
-    (parsed.data as Record<string, unknown>).email,
-    undefined,
-    "e-mail is not editable here: it is also the login",
-  );
+  assert.equal(parsed.data.email, "outro@exemplo.com");
 });
 
-test("update rejects a blank name and an unknown role", () => {
+test("update rejects a blank name, an unknown role and a broken e-mail", () => {
   assert.equal(
-    UpdateAccountSchema.safeParse({ name: "   ", role: "staff" }).success,
+    UpdateAccountSchema.safeParse({
+      name: "   ",
+      role: "staff",
+      email: "julia@exemplo.com",
+    }).success,
     false,
   );
   assert.equal(
-    UpdateAccountSchema.safeParse({ name: "Júlia", role: "superadmin" })
-      .success,
+    UpdateAccountSchema.safeParse({
+      name: "Júlia",
+      role: "superadmin",
+      email: "julia@exemplo.com",
+    }).success,
+    false,
+  );
+  assert.equal(
+    UpdateAccountSchema.safeParse({
+      name: "Júlia",
+      role: "staff",
+      email: "não é um e-mail",
+    }).success,
     false,
   );
 });

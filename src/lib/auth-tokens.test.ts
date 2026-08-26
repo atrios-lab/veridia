@@ -6,9 +6,15 @@ import { PGlite } from "@electric-sql/pglite";
 import { betterAuth } from "better-auth";
 import { drizzleAdapter } from "better-auth/adapters/drizzle";
 import type { APIError } from "better-auth/api";
+import { and, like } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/pglite";
 import * as authSchema from "../db/auth-schema.ts";
-import { issueResetTokenWith } from "./auth-tokens.ts";
+import {
+  emailChangeIdentifier,
+  issueEmailChangeTokenWith,
+  issueResetTokenWith,
+  parseEmailChangeValue,
+} from "./auth-tokens.ts";
 
 // Postgres in process, same approach as src/db/invite.test.ts. The claim
 // under test is the one design.md and specs/admin-auth settle on: reissuing
@@ -36,12 +42,13 @@ function buildAuth(database: Db) {
 }
 
 let client: PGlite;
+let db: Db;
 let auth: ReturnType<typeof buildAuth>;
 let userId: string;
 
 before(async () => {
   client = new PGlite();
-  const db = drizzle(client, { schema: authSchema });
+  db = drizzle(client, { schema: authSchema });
 
   for (const file of readdirSync(MIGRATIONS_DIR)
     .filter((f) => f.endsWith(".sql"))
@@ -123,4 +130,64 @@ test("issuing a token for one user never touches another user's token", async ()
   } catch (error) {
     assert.ok((error as APIError).status);
   }
+});
+
+async function verificationRows(prefix: string, userId: string) {
+  return db
+    .select({
+      identifier: authSchema.verification.identifier,
+      value: authSchema.verification.value,
+    })
+    .from(authSchema.verification)
+    .where(
+      and(
+        like(authSchema.verification.identifier, `${prefix}%`),
+        like(authSchema.verification.value, `${userId}%`),
+      ),
+    );
+}
+
+test("asking for a second e-mail change replaces the first", async () => {
+  const ctx = await auth.$context;
+  const first = await issueEmailChangeTokenWith(ctx, userId, "um@exemplo.com");
+  const second = await issueEmailChangeTokenWith(
+    ctx,
+    userId,
+    "dois@exemplo.com",
+  );
+  assert.notEqual(first, second);
+
+  const rows = await verificationRows("change-email:", userId);
+  assert.equal(rows.length, 1);
+  assert.equal(rows[0].identifier, emailChangeIdentifier(second));
+  assert.equal(parseEmailChangeValue(rows[0].value)?.email, "dois@exemplo.com");
+});
+
+test("an e-mail change and a password link coexist: neither cancels the other", async () => {
+  const ctx = await auth.$context;
+  await issueEmailChangeTokenWith(ctx, userId, "coexiste@exemplo.com");
+  await issueResetTokenWith(ctx, userId);
+
+  // Separate prefixes exist exactly so that issuing one leaves the other
+  // alone: an operator waiting on a new password should not lose the
+  // address change they asked for an hour earlier.
+  assert.equal((await verificationRows("change-email:", userId)).length, 1);
+  assert.equal((await verificationRows("reset-password:", userId)).length, 1);
+
+  await issueEmailChangeTokenWith(ctx, userId, "ainda-coexiste@exemplo.com");
+  assert.equal((await verificationRows("reset-password:", userId)).length, 1);
+});
+
+test("the stored value survives an address that has its own punctuation", () => {
+  const parsed = parseEmailChangeValue("user-123|maria+cartorio@exemplo.com");
+  assert.deepEqual(parsed, {
+    userId: "user-123",
+    email: "maria+cartorio@exemplo.com",
+  });
+});
+
+test("a malformed value reads as nothing, never as half an answer", () => {
+  assert.equal(parseEmailChangeValue("sem-separador"), null);
+  assert.equal(parseEmailChangeValue("|so-email@exemplo.com"), null);
+  assert.equal(parseEmailChangeValue("so-user-id|"), null);
 });
