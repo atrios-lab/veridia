@@ -126,6 +126,39 @@ test.describe("tela de Usuários", () => {
     await expect(ownRow.getByText("Registrador")).toBeVisible();
   });
 
+  test("an account that never accessed can be deleted from the row menu", async ({
+    page,
+  }) => {
+    await signIn(page);
+    await page.goto(`${baseURL}/admin/usuarios`);
+    await page.getByLabel("Nome").fill("Júlia E2E");
+    await page.getByLabel("E-mail").fill(CONVIDADA_EMAIL);
+    await page.getByLabel("Papel").selectOption({ label: "Operador" });
+    await page.getByRole("button", { name: "Criar conta" }).click();
+    await expect(page.getByText("Conta criada. E-mail enviado.")).toBeVisible();
+
+    const row = page.getByText(CONVIDADA_EMAIL).locator("..").locator("..");
+    const menu = row.getByRole("button", { name: "Mais ações desta conta" });
+
+    // Opens and closes from the keyboard, and gives focus back to the
+    // button that opened it.
+    await menu.press("Enter");
+    await expect(menu).toHaveAttribute("aria-expanded", "true");
+    await page.keyboard.press("Escape");
+    await expect(menu).toHaveAttribute("aria-expanded", "false");
+    await expect(menu).toBeFocused();
+
+    await menu.click();
+    await row.getByRole("button", { name: "Excluir conta" }).click();
+
+    const dialog = page.getByRole("dialog");
+    await expect(dialog.getByText("Ela nunca foi acessada")).toBeVisible();
+    await dialog.getByRole("button", { name: "Excluir conta" }).click();
+
+    await expect(page.getByText("Conta excluída.")).toBeVisible();
+    await expect(page.getByText(CONVIDADA_EMAIL)).toHaveCount(0);
+  });
+
   test("a first-access link opens the locked shell with no navigation", async ({
     page,
   }) => {

@@ -10,6 +10,7 @@ import {
 } from "@/core/auth/account.ts";
 import { can, isLastActiveAdmin, type Role } from "@/core/auth/roles.ts";
 import {
+  account as accountTable,
   session as sessionTable,
   user as userTable,
 } from "@/db/auth-schema.ts";
@@ -18,6 +19,7 @@ import { recordAudit } from "@/lib/audit.ts";
 import { auth } from "@/lib/auth.ts";
 import {
   buildResetPasswordUrl,
+  deleteResetTokensWith,
   issueResetTokenWith,
   resolveOrigin,
 } from "@/lib/auth-tokens.ts";
@@ -129,8 +131,13 @@ export async function createUser(
 
 /**
  * Looks up an account by id, scoped to the session's own serventia: the
- * shared guard for both actions below, so neither can be pointed at another
+ * shared guard for every action below, so none can be pointed at another
  * office's account by a forged `userId`.
+ *
+ * `credentialId` is the same join `listAccounts` uses for the "Aguardando 1º
+ * acesso" badge: a row exists only once the person has set their own
+ * password, so its absence is "never entered the panel", which is the one
+ * state deleteAccount is allowed to act on.
  */
 async function findOwnAccount(userId: string, tenantSlug: string) {
   const [row] = await db
@@ -139,8 +146,16 @@ async function findOwnAccount(userId: string, tenantSlug: string) {
       name: userTable.name,
       email: userTable.email,
       role: userTable.role,
+      credentialId: accountTable.id,
     })
     .from(userTable)
+    .leftJoin(
+      accountTable,
+      and(
+        eq(accountTable.userId, userTable.id),
+        eq(accountTable.providerId, "credential"),
+      ),
+    )
     .where(and(eq(userTable.id, userId), eq(userTable.tenantSlug, tenantSlug)));
   return row ?? null;
 }
@@ -481,4 +496,66 @@ export async function createPasswordResetLink(
     status: "ready",
     url: buildResetPasswordUrl(resolveOrigin(requestHeaders), token),
   };
+}
+
+/**
+ * Removes an account that never entered the panel, and with it the e-mail
+ * it was holding: `user.email` is unique platform-wide, so an address
+ * invited into the wrong office stays burned until the row goes.
+ *
+ * Only an account with no credential. One that has already worked here
+ * keeps "Desativar acesso" instead: `audit_log.actorId` carries no foreign
+ * key and every `authorUserId` is `on delete set null`, so deleting would
+ * not break the database, it would quietly reattribute that person's acts
+ * to "Sistema" and their messages to "Serventia". Attribution is the one
+ * thing the trail exists to hold.
+ *
+ * No last-Registrador guard here, and none is missing: this only reaches an
+ * account with no credential, one that has never signed in, while whoever
+ * is clicking is signed in and therefore has one. The target is never the
+ * caller, and an office losing a Registrador who never entered still has
+ * the Registrador doing the deleting.
+ */
+export async function deleteAccount(
+  _previous: AccountActionState,
+  formData: FormData,
+): Promise<AccountActionState> {
+  const userId = String(formData.get("userId") ?? "");
+  const session = await getSession();
+  if (!session || !can(session.user.role ?? "", "user.manage")) notFound();
+
+  const tenant = await getTenant();
+  const target = await findOwnAccount(userId, tenant.slug);
+  if (!target) notFound();
+
+  // Read now, not when the screen was painted: the invited person may have
+  // created their password while this dialog sat open.
+  if (target.credentialId !== null) {
+    return {
+      status: "error",
+      message:
+        "Esta conta já acessou o painel. Use “Desativar acesso” para tirar o acesso sem apagar o histórico.",
+    };
+  }
+
+  // Tokens first: `verification` has no foreign key to `user`, so this is
+  // the one row the cascade will not take. Failing here leaves an account
+  // with no invite open, which "Reenviar convite" fixes; failing the other
+  // way around would leave the orphan token this exists to avoid.
+  const ctx = await auth.$context;
+  await deleteResetTokensWith(ctx, target.id);
+
+  // `session` and `account` follow by cascade (see auth-schema.ts).
+  await db.delete(userTable).where(eq(userTable.id, target.id));
+
+  await recordAudit({
+    tenantSlug: tenant.slug,
+    actorId: session.user.id,
+    action: "user.delete",
+    targetType: "user",
+    targetId: target.id,
+  });
+
+  revalidatePath(USERS_PATH);
+  return { status: "sent" };
 }

@@ -1,6 +1,7 @@
 "use client";
 
 import {
+  type ReactNode,
   useActionState,
   useCallback,
   useEffect,
@@ -16,6 +17,7 @@ import {
   type AccountActionState,
   createPasswordResetLink,
   deactivateAccount,
+  deleteAccount,
   reactivateAccount,
   resendInvite,
   triggerPasswordReset,
@@ -178,6 +180,7 @@ function DeactivateAction({ userId }: { userId: string }) {
       action={formAction}
       pending={pending}
       error={state.status === "error" ? state.message : null}
+      className="w-full"
       trigger="Desativar acesso"
       question="Desativar o acesso desta conta?"
       consequence="A pessoa deixa de conseguir entrar no painel agora, mas a conta continua na lista e pode ser reativada depois."
@@ -210,6 +213,106 @@ function ReactivateAction({ userId }: { userId: string }) {
   );
 }
 
+/**
+ * The row's overflow, holding the actions that take something away.
+ *
+ * A disclosure, not `role="menu"`: a menu role promises arrow-key
+ * navigation, roving tabindex and typeahead, and announcing a menu that
+ * implements none of them is worse for a screen reader than a plain
+ * expandable group of buttons, which Tab already handles. Two buttons do
+ * not need a menu.
+ */
+function RowMenu({ children }: { children: ReactNode }) {
+  const [open, setOpen] = useState(false);
+  const trigger = useRef<HTMLButtonElement>(null);
+  const box = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!open) return;
+
+    const onKeyDown = (event: KeyboardEvent) => {
+      // A confirmation opened from in here is a modal in the top layer and
+      // owns Escape: closing this first would unmount the dialog in the
+      // middle of its own question.
+      if (event.key !== "Escape" || document.querySelector("dialog[open]")) {
+        return;
+      }
+      setOpen(false);
+      trigger.current?.focus();
+    };
+
+    const onPointerDown = (event: PointerEvent) => {
+      const target = event.target as Element | null;
+      if (target?.closest("dialog")) return; // same reason as above
+      if (box.current?.contains(target as Node)) return;
+      if (trigger.current?.contains(target as Node)) return;
+      setOpen(false);
+    };
+
+    document.addEventListener("keydown", onKeyDown);
+    document.addEventListener("pointerdown", onPointerDown);
+    return () => {
+      document.removeEventListener("keydown", onKeyDown);
+      document.removeEventListener("pointerdown", onPointerDown);
+    };
+  }, [open]);
+
+  return (
+    <div className="relative">
+      <button
+        ref={trigger}
+        type="button"
+        aria-expanded={open}
+        aria-label="Mais ações desta conta"
+        onClick={() => setOpen((was) => !was)}
+        className={`${BUTTON_CLASS} px-2.5`}
+      >
+        ⋯
+      </button>
+      {open && (
+        <div
+          ref={box}
+          className="absolute right-0 top-full z-10 mt-1.5 flex min-w-[210px] flex-col items-stretch gap-1.5 rounded-xl border border-admin-border bg-admin-card p-1.5 shadow-lg"
+        >
+          {children}
+        </div>
+      )}
+    </div>
+  );
+}
+
+/**
+ * "Excluir conta": offered only for an account that never entered the
+ * panel, so there is no act of theirs left without an author. The server
+ * refuses the rest; this is the courtesy of not offering it.
+ */
+function DeleteAction({ name, userId }: { name: string; userId: string }) {
+  const [state, formAction, pending] = useActionState<
+    AccountActionState,
+    FormData
+  >(deleteAccount, IDLE_ACCOUNT_ACTION_STATE);
+
+  useEffect(() => {
+    if (state.status === "sent") toast.success("Conta excluída.");
+  }, [state]);
+
+  return (
+    <ConfirmAction
+      action={formAction}
+      pending={pending}
+      error={state.status === "error" ? state.message : null}
+      trigger="Excluir conta"
+      question={`Excluir a conta de ${name}?`}
+      consequence="Ela nunca foi acessada, então nada que a serventia registrou depende dela. A conta sai da lista e o e-mail volta a ficar livre para um novo convite. Não dá para desfazer."
+      confirmLabel="Excluir conta"
+      pendingLabel="Excluindo…"
+      className="w-full"
+    >
+      <input type="hidden" name="userId" value={userId} />
+    </ConfirmAction>
+  );
+}
+
 export function AccountRowActions({
   account,
   active,
@@ -230,10 +333,17 @@ export function AccountRowActions({
           out, demoting the last Registrador, is refused by the server. */}
       <UpdateAccountAction account={account} />
       <KeyAction userId={account.id} active={active} />
-      {/* Own row never offers this: see design.md, the server refuses it
-          too, this is only the courtesy of not showing a button that would
-          just come back as an error. */}
-      {!isSelf && <DeactivateAction userId={account.id} />}
+      {/* Own row never offers either of these: see design.md, the server
+          refuses them too, this is only the courtesy of not showing a
+          button that would just come back as an error. */}
+      {!isSelf && (
+        <RowMenu>
+          <DeactivateAction userId={account.id} />
+          {/* An account that has already worked here keeps Desativar and
+              nothing more: deleting it would reattribute its acts. */}
+          {!active && <DeleteAction name={account.name} userId={account.id} />}
+        </RowMenu>
+      )}
     </div>
   );
 }
