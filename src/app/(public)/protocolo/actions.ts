@@ -10,6 +10,7 @@ import { looksLikeBot } from "@/core/request/form.ts";
 import type { DataRight } from "@/core/request/kinds.ts";
 import {
   isOpenServiceRequestStatus,
+  isOpenStatus,
   type ManifestationType,
   parseDetails,
   type RequestKind,
@@ -122,6 +123,10 @@ export interface OmbudsmanDetail extends BaseDetail {
   confidential: boolean;
   reply?: string;
   repliedAt?: string;
+  /** The office closed it. Not the same as having answered: a manifestation
+   * may be concluded or filed away without a reply, and the timeline must not
+   * keep saying it is under investigation while the andamento says otherwise. */
+  closed: boolean;
 }
 
 /** One consult, three shapes: the citizen types the same protocol and key. */
@@ -205,6 +210,7 @@ export async function lookupProtocolDetail(
         confidential: details.confidential,
         reply: record.officeReply ?? undefined,
         repliedAt: record.officeRepliedAt?.toISOString(),
+        closed: !isOpenStatus("ombudsman", record.status),
       };
     }
 

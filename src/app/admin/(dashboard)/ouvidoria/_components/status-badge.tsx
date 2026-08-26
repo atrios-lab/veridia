@@ -3,6 +3,8 @@ const STATUS_STYLES: Record<string, string> = {
   "in-review": "bg-admin-warning-bg text-admin-warning-text",
   answered: "bg-admin-success-bg text-admin-success-text",
   done: "bg-admin-primary text-white",
+  // Terminal like "done", and saying something else: nothing to see to.
+  archived: "bg-admin-readonly-bg text-admin-muted",
 };
 
 export function ManifestationStatusBadge({

@@ -1,10 +1,13 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 import {
+  isAllowedOmbudsmanTransition,
   isAllowedTransition,
+  isOmbudsmanStatus,
   isOpenServiceRequestStatus,
   isOpenStatus,
   isServiceRequestStatus,
+  OMBUDSMAN_STATUSES,
   ombudsmanDetailsSchema,
   parseDetails,
   phaseOfStatus,
@@ -12,6 +15,7 @@ import {
   SERVICE_REQUEST_STATUSES,
   statusLabel,
   suggestedNextStatuses,
+  suggestedOmbudsmanStatuses,
 } from "./kinds.ts";
 
 test("every service request status has a Portuguese label", () => {
@@ -174,4 +178,69 @@ test("a consent that is not a timestamp is refused", () => {
       consents: { lgpd: "sim", truth: "sim" },
     }),
   );
+});
+
+test("every manifestation andamento has a Portuguese label", () => {
+  for (const status of OMBUDSMAN_STATUSES) {
+    assert.notEqual(statusLabel("ombudsman", status), "Em andamento");
+  }
+});
+
+test("an andamento of another channel is not a manifestation andamento", () => {
+  // `status` is one column shared by the four kinds, so a value from the
+  // request's eighteen reaches the ombudsman action without a type error.
+  assert.equal(isOmbudsmanStatus("pre-noted"), false);
+  assert.equal(isOmbudsmanStatus("cancelled"), false);
+  assert.equal(isOmbudsmanStatus("archived"), true);
+});
+
+test("the office is never offered the andamento it is already in", () => {
+  for (const status of OMBUDSMAN_STATUSES) {
+    assert.equal(
+      suggestedOmbudsmanStatuses(status).includes(status),
+      false,
+      status,
+    );
+  }
+});
+
+test("every suggested andamento belongs to the channel", () => {
+  for (const status of OMBUDSMAN_STATUSES) {
+    for (const next of suggestedOmbudsmanStatuses(status)) {
+      assert.ok(isOmbudsmanStatus(next), next);
+    }
+  }
+});
+
+test("answering is never a andamento to pick", () => {
+  // Setting it without sending the reply would leave the consult showing
+  // "Respondida" with nothing to read.
+  for (const status of OMBUDSMAN_STATUSES) {
+    assert.equal(
+      suggestedOmbudsmanStatuses(status).includes("answered"),
+      false,
+      status,
+    );
+    assert.equal(isAllowedOmbudsmanTransition(status, "answered"), false);
+  }
+});
+
+test("a manifestation may be moved back out of a terminal andamento", () => {
+  // Correcting a human error is a use case, not an exception.
+  assert.ok(isAllowedOmbudsmanTransition("archived", "in-review"));
+  assert.ok(isAllowedOmbudsmanTransition("done", "in-review"));
+});
+
+test("moving to the current andamento writes an event carrying nothing", () => {
+  for (const status of OMBUDSMAN_STATUSES) {
+    assert.equal(isAllowedOmbudsmanTransition(status, status), false);
+  }
+});
+
+test("an archived manifestation no longer asks for attention", () => {
+  assert.equal(isOpenStatus("ombudsman", "archived"), false);
+  assert.equal(isOpenStatus("ombudsman", "done"), false);
+  assert.equal(isOpenStatus("ombudsman", "answered"), false);
+  assert.equal(isOpenStatus("ombudsman", "new"), true);
+  assert.equal(isOpenStatus("ombudsman", "in-review"), true);
 });

@@ -15,6 +15,12 @@ const BY_PHONE = "OUV.2098.000003";
 const ACCESS_KEY = "TEST-OUVK-0001";
 const PHONE_ACCESS_KEY = "TEST-OUVK-0003";
 
+/** O andamento atual, no badge. Um `getByText` cru casaria também com a pill
+ * de "Mudar para" e com a `<option>` do corrigir, e a locator viraria estrita. */
+function badge(page: Page, label: string) {
+  return page.locator("span").filter({ hasText: new RegExp(`^${label}$`) });
+}
+
 test("a visitor with no session never reaches the queue", async ({ page }) => {
   await page.goto(`${baseURL}/admin/ouvidoria`);
   await expect(page).toHaveURL(/\/admin\/login\?next=%2Fadmin%2Fouvidoria$/);
@@ -171,5 +177,61 @@ test.describe("fila e detalhe de manifestações", () => {
       .fill("Repassado à TI para avaliar senha eletrônica pelo celular.");
     await page.getByRole("button", { name: "Salvar anotação" }).click();
     await expect(page.getByText("Anotação salva.")).toBeVisible();
+  });
+
+  test("an anonymous manifestation can be closed without a reply", async ({
+    page,
+  }) => {
+    // O relato que originou a tramitação: sem isto a manifestação anônima
+    // nasce aberta e conta como pendente para sempre.
+    await signIn(page);
+    await page.goto(
+      `${baseURL}/admin/ouvidoria/${encodeURIComponent(ANONYMOUS)}`,
+    );
+    await expect(badge(page, "Recebida")).toBeVisible();
+
+    await page.getByRole("button", { name: "Concluída" }).click();
+
+    await expect(badge(page, "Concluída")).toBeVisible();
+    await expect(page.getByText("alterou o andamento")).toBeVisible();
+    // A anotação interna continua editável: concluir não é ter respondido.
+    await expect(
+      page.getByPlaceholder("Não é enviada a ninguém."),
+    ).toBeVisible();
+    await expect(page.getByText("Resposta enviada")).not.toBeVisible();
+  });
+
+  test("a manifestation is filed away and corrected back", async ({ page }) => {
+    await signIn(page);
+    await page.goto(
+      `${baseURL}/admin/ouvidoria/${encodeURIComponent(ANONYMOUS)}`,
+    );
+
+    await page.getByRole("button", { name: "Arquivada" }).click();
+    await expect(badge(page, "Arquivada")).toBeVisible();
+
+    // Voltar atrás é caso de uso, não exceção: ver isAllowedOmbudsmanTransition.
+    await page.getByText("Corrigir para outro andamento").click();
+    await page.getByRole("combobox").selectOption("in-review");
+    await page.getByRole("button", { name: "Aplicar" }).click();
+    await expect(badge(page, "Em apuração")).toBeVisible();
+  });
+
+  test("answering is not an andamento to pick", async ({ page }) => {
+    // Marcar "Respondida" sem enviar texto deixaria a consulta do cidadão
+    // anunciando uma resposta que não existe.
+    await signIn(page);
+    await page.goto(
+      `${baseURL}/admin/ouvidoria/${encodeURIComponent(ANONYMOUS)}`,
+    );
+
+    await expect(
+      page.getByRole("button", { name: "Respondida" }),
+    ).not.toBeVisible();
+
+    await page.getByText("Corrigir para outro andamento").click();
+    await expect(
+      page.getByRole("combobox").getByRole("option", { name: "Respondida" }),
+    ).toHaveCount(0);
   });
 });
