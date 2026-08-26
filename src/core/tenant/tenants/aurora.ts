@@ -13,7 +13,7 @@ export const tabelionatoAurora: Tenant = parseTenant({
     "a escrituras, procurações, autenticações e reconhecimento de firmas, com " +
     "segurança jurídica para o cidadão e para os negócios.",
   cns: "000000",
-  attributions: ["NOTAS"],
+  attributions: ["RCPN", "NOTAS", "RI", "PROTESTO", "RTD", "RCPJ"],
   contacts: {
     phone: "(84) 3000-0000",
     whatsapp: "(84) 3000-0000",

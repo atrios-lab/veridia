@@ -6,9 +6,11 @@ import { type ReissueKeyState, reissueKeyAction } from "../actions.ts";
 
 export function KeySection({
   requestId,
+  protocolNumber,
   issuedLabel,
 }: {
   requestId: string;
+  protocolNumber: string;
   issuedLabel: string;
 }) {
   const [state, action, pending] = useActionState<ReissueKeyState, FormData>(
@@ -29,6 +31,26 @@ export function KeySection({
       <div className="mt-2.5 rounded-[9px] border border-admin-input-border bg-admin-input-bg px-3.5 py-2.5 text-[14px] font-bold tracking-[0.2em] text-admin-primary">
         {state.status === "success" ? state.key : "••••  ••••  ••••"}
       </div>
+      {/*
+        Only while the plaintext key from this response is on screen: the
+        database holds a hash, so this is the one moment the panel can ever
+        produce the receipt for an existing request. Leaving the page (a
+        reload, navigating away) drops `state` back to idle and the form
+        with it.
+      */}
+      {state.status === "success" && (
+        <form
+          method="post"
+          action={`/admin/pedidos/${encodeURIComponent(protocolNumber)}/imprimir`}
+          target="_blank"
+          className="mt-2"
+        >
+          <input type="hidden" name="chave" value={state.key} />
+          <button type="submit" className="btn btn-admin-ghost btn-sm px-0">
+            Imprimir comprovante
+          </button>
+        </form>
+      )}
       <div className="mt-2.5">
         <ConfirmAction
           action={action}
