@@ -22,10 +22,10 @@ export interface AccountSummary {
 }
 
 /**
- * "Atualizar": corrects the name and the role of an account that already
- * exists. The e-mail is the account's identification here, not a field: it
- * is also the login, and changing it needs a confirmation round trip this
- * dialog does not do.
+ * "Atualizar": corrects the name, the e-mail and the role of an account
+ * that already exists. Name and role are written on save; the e-mail is
+ * only *asked for* here, and becomes the login when whoever reaches the new
+ * address opens the link sent to it.
  */
 function UpdateAccountForm({
   account,
@@ -45,6 +45,12 @@ function UpdateAccountForm({
   useEffect(() => {
     if (state.status === "saved") {
       toast.success("Conta atualizada.");
+      onDone();
+    }
+    if (state.status === "saved-pending-email") {
+      toast.success(
+        `Conta atualizada. Falta ${state.email} confirmar o novo e-mail.`,
+      );
       onDone();
     }
   }, [state, onDone]);
@@ -89,6 +95,32 @@ function UpdateAccountForm({
                 {fieldErrors.name}
               </p>
             )}
+          </div>
+
+          <div>
+            <label className={LABEL_CLASS} htmlFor="update-email">
+              E-mail{" "}
+              <span className="font-normal text-admin-muted">
+                (também é o login)
+              </span>
+            </label>
+            <input
+              id="update-email"
+              name="email"
+              type="email"
+              defaultValue={sent?.email ?? account.email}
+              aria-invalid={fieldErrors.email ? true : undefined}
+              className={fieldErrors.email ? ERROR_FIELD_CLASS : FIELD_CLASS}
+            />
+            {fieldErrors.email && (
+              <p className="mt-1.5 text-xs font-semibold text-admin-error-text">
+                {fieldErrors.email}
+              </p>
+            )}
+            <p className="mt-1.5 text-[11.5px] text-admin-muted">
+              Ao mudar, enviamos um link de confirmação ao novo e-mail. O login
+              antigo vale até a pessoa confirmar.
+            </p>
           </div>
 
           <div>

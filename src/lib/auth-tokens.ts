@@ -10,6 +10,15 @@ import { randomBytes } from "node:crypto";
 import { requestHost } from "./request-host.ts";
 
 const RESET_TOKEN_PREFIX = "reset-password:";
+const CHANGE_EMAIL_PREFIX = "change-email:";
+
+// An e-mail change needs two things in `verification.value`, a single text
+// column: whose account, and which address. The user id goes first because
+// the adapter offers only `eq` and `starts_with`, and with that order one
+// `starts_with userId` finds every pending change for an account, which is
+// what "asking again replaces the last one" needs. `|` cannot appear in a
+// valid address, so reading cuts at the first one.
+const VALUE_SEPARATOR = "|";
 
 /**
  * Only the slice of the better-auth context this function touches. Not the
@@ -40,6 +49,72 @@ interface ResetTokenAuthContext {
   options: {
     emailAndPassword?: { resetPasswordTokenExpiresIn?: number };
   };
+}
+
+/**
+ * Records that an account asked to move to `newEmail`, replacing whatever
+ * change it had pending. Nothing is written to `user` here: the address only
+ * becomes the account's own once the link sent to it is opened, which is the
+ * whole point, a mistyped address never gets to be the login.
+ *
+ * Its own prefix, not `reset-password:`: issuing a new password must not
+ * cancel a pending e-mail change, nor the other way round.
+ */
+export async function issueEmailChangeTokenWith(
+  ctx: ResetTokenAuthContext,
+  userId: string,
+  newEmail: string,
+): Promise<string> {
+  await deleteEmailChangesWith(ctx, userId);
+
+  const expiresInSeconds =
+    ctx.options.emailAndPassword?.resetPasswordTokenExpiresIn ?? 3600;
+  const token = randomBytes(24).toString("base64url");
+
+  await ctx.internalAdapter.createVerificationValue({
+    identifier: `${CHANGE_EMAIL_PREFIX}${token}`,
+    value: `${userId}${VALUE_SEPARATOR}${newEmail}`,
+    expiresAt: new Date(Date.now() + expiresInSeconds * 1000),
+  });
+
+  return token;
+}
+
+/**
+ * Drops every pending e-mail change for a user: on a new request, and when
+ * the account is deleted. Same reason as the reset tokens below, and a
+ * separate call because the two prefixes are deliberately independent.
+ */
+export async function deleteEmailChangesWith(
+  ctx: ResetTokenAuthContext,
+  userId: string,
+): Promise<void> {
+  await ctx.adapter.deleteMany({
+    model: "verification",
+    where: [
+      { field: "value", operator: "starts_with", value: userId },
+      {
+        field: "identifier",
+        operator: "starts_with",
+        value: CHANGE_EMAIL_PREFIX,
+      },
+    ],
+  });
+}
+
+/** Reads back what `issueEmailChangeTokenWith` stored, or null if malformed. */
+export function parseEmailChangeValue(
+  value: string,
+): { userId: string; email: string } | null {
+  const cut = value.indexOf(VALUE_SEPARATOR);
+  if (cut <= 0) return null;
+  const email = value.slice(cut + 1);
+  return email ? { userId: value.slice(0, cut), email } : null;
+}
+
+/** The identifier a change-email token is stored under. */
+export function emailChangeIdentifier(token: string): string {
+  return `${CHANGE_EMAIL_PREFIX}${token}`;
 }
 
 /**
@@ -105,4 +180,9 @@ export function resolveOrigin(requestHeaders: Headers): string {
 /** Where the account e-mail's button sends the recipient. */
 export function buildResetPasswordUrl(origin: string, token: string): string {
   return `${origin}/admin/redefinir-senha?token=${token}`;
+}
+
+/** Where the e-mail-change confirmation sends the recipient. */
+export function buildConfirmEmailUrl(origin: string, token: string): string {
+  return `${origin}/admin/confirmar-email?token=${token}`;
 }

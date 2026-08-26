@@ -1,11 +1,13 @@
-import { and, eq } from "drizzle-orm";
+import { and, eq, gt, like, sql } from "drizzle-orm";
 import { notFound } from "next/navigation";
 import { can, type Role } from "@/core/auth/roles.ts";
 import {
   account as accountTable,
   user as userTable,
+  verification as verificationTable,
 } from "@/db/auth-schema.ts";
 import { db } from "@/db/index.ts";
+import { parseEmailChangeValue } from "@/lib/auth-tokens.ts";
 import { getSession } from "@/lib/session.ts";
 import { getTenant } from "@/lib/tenant.ts";
 import { AdminPageHeader } from "../../_components/page-header.tsx";
@@ -31,6 +33,7 @@ async function listAccounts(tenantSlug: string) {
       role: userTable.role,
       credentialId: accountTable.id,
       disabledAt: userTable.disabledAt,
+      pendingEmailValue: verificationTable.value,
     })
     .from(userTable)
     .leftJoin(
@@ -40,6 +43,18 @@ async function listAccounts(tenantSlug: string) {
         eq(accountTable.providerId, "credential"),
       ),
     )
+    // A live e-mail change, if there is one. `verification` has no foreign
+    // key to `user`, so the join is on the id the value is prefixed with
+    // (see issueEmailChangeTokenWith). Expired rows are left out: they are
+    // no longer a change anyone can complete.
+    .leftJoin(
+      verificationTable,
+      and(
+        like(verificationTable.identifier, "change-email:%"),
+        sql`${verificationTable.value} LIKE ${userTable.id} || '|%'`,
+        gt(verificationTable.expiresAt, new Date()),
+      ),
+    )
     .where(eq(userTable.tenantSlug, tenantSlug))
     .orderBy(userTable.createdAt);
 
@@ -47,6 +62,9 @@ async function listAccounts(tenantSlug: string) {
     ...row,
     active: row.credentialId !== null,
     disabled: row.disabledAt !== null,
+    pendingEmail: row.pendingEmailValue
+      ? (parseEmailChangeValue(row.pendingEmailValue)?.email ?? null)
+      : null,
   }));
 }
 
@@ -86,6 +104,14 @@ export default async function UsuariosPage() {
                   <p className="truncate text-[11.5px] text-admin-faint">
                     {account.email}
                   </p>
+                  {/* A change nobody can see is a change nobody remembers
+                      asking for: the registrador saves, the list looks the
+                      same, and the pending confirmation is invisible. */}
+                  {account.pendingEmail && (
+                    <p className="truncate text-[11.5px] text-admin-warning-text">
+                      Troca para {account.pendingEmail} aguardando confirmação
+                    </p>
+                  )}
                 </div>
                 <span className="text-[12.5px] text-admin-muted">
                   {ROLE_LABELS[account.role as Role] ?? account.role}
