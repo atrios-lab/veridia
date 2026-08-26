@@ -2,12 +2,17 @@
 
 import { revalidatePath } from "next/cache";
 import { can } from "@/core/auth/roles.ts";
+import {
+  isAllowedOmbudsmanTransition,
+  isOmbudsmanStatus,
+} from "@/core/request/kinds.ts";
 import { notifyCitizen } from "@/lib/email/service-request.ts";
 import {
   findById,
   respondToRecord,
   saveDraftReply,
   saveInternalNote as saveInternalNoteRecord,
+  updateRecordStatus,
 } from "@/lib/service-request.ts";
 import { getSession } from "@/lib/session.ts";
 import { getTenant } from "@/lib/tenant.ts";
@@ -17,8 +22,7 @@ export type ActionState =
   | { status: "error"; message: string }
   | { status: "success" };
 
-const NO_PERMISSION =
-  "Você não tem permissão para responder esta manifestação.";
+const NO_PERMISSION = "Você não tem permissão para tratar esta manifestação.";
 const GENERIC_ERROR =
   "Não foi possível salvar agora. Tente novamente em instantes.";
 
@@ -106,6 +110,66 @@ export async function saveManifestationDraft(
     );
   } catch (error) {
     console.error("ouvidoria.save-draft", error);
+    return { status: "error", message: GENERIC_ERROR };
+  }
+  revalidateAdmin();
+  return { status: "success" };
+}
+
+/**
+ * Moves a manifestation to another andamento. The one action behind every
+ * button of the tramitação block: which andamento it went to is read off the
+ * record, so a key per destination would only repeat what the row already
+ * says.
+ */
+export async function changeManifestationStatus(
+  _previous: ActionState,
+  formData: FormData,
+): Promise<ActionState> {
+  const session = await authorize();
+  if (!session) return { status: "error", message: NO_PERMISSION };
+
+  const requestId = String(formData.get("requestId") ?? "");
+  const status = String(formData.get("status") ?? "");
+  // `service_requests.status` is one column shared by the four kinds, so an
+  // andamento of the pedido reaches here without a type error.
+  if (!isOmbudsmanStatus(status)) {
+    return { status: "error", message: "Andamento desconhecido." };
+  }
+
+  const tenant = await getTenant();
+  try {
+    const record = await findById(tenant.slug, requestId);
+    if (!record || record.kind !== "ombudsman") {
+      return { status: "error", message: "Manifestação não encontrada." };
+    }
+    if (!isOmbudsmanStatus(record.status)) {
+      return { status: "error", message: GENERIC_ERROR };
+    }
+    if (status === "answered") {
+      return {
+        status: "error",
+        message:
+          "Para marcar como respondida, envie a resposta ao manifestante.",
+      };
+    }
+    if (!isAllowedOmbudsmanTransition(record.status, status)) {
+      return {
+        status: "error",
+        message: "A manifestação já está nesse andamento.",
+      };
+    }
+
+    await updateRecordStatus(
+      tenant.slug,
+      requestId,
+      "ombudsman",
+      status,
+      "ombudsman.status",
+      session.user.id,
+    );
+  } catch (error) {
+    console.error("ouvidoria.status", error);
     return { status: "error", message: GENERIC_ERROR };
   }
   revalidateAdmin();

@@ -2,7 +2,11 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { can } from "@/core/auth/roles.ts";
 import { manifestationLabel } from "@/core/request/channels.ts";
-import { parseDetails, statusLabel } from "@/core/request/kinds.ts";
+import {
+  isOmbudsmanStatus,
+  parseDetails,
+  statusLabel,
+} from "@/core/request/kinds.ts";
 import { findByProtocol, listRecordHistory } from "@/lib/service-request.ts";
 import { getSession } from "@/lib/session.ts";
 import { getTenant } from "@/lib/tenant.ts";
@@ -13,6 +17,7 @@ import {
 } from "../_components/status-badge.tsx";
 import { InternalNoteSection } from "./_components/internal-note-section.tsx";
 import { ReplySection } from "./_components/reply-section.tsx";
+import { ManifestationStatusSection } from "./_components/status-section.tsx";
 
 export const metadata = { title: "Manifestação" };
 
@@ -21,6 +26,7 @@ const HISTORY_LABELS: Record<string, string> = {
   "ombudsman.respond": "respondeu ao cidadão",
   "ombudsman.draft": "salvou um rascunho de resposta",
   "ombudsman.internal-note": "salvou uma anotação interna",
+  "ombudsman.status": "alterou o andamento",
 };
 
 function formatDayMonthTime(date: Date): string {
@@ -120,7 +126,10 @@ export default async function OmbudsmanDetailPage({
                 </div>
               )}
 
-              {record.status === "answered" || record.status === "done" ? (
+              {/* On the reply itself, not on the andamento: "Concluída" is
+                  reachable without one now, and the status check would draw an
+                  empty "Resposta enviada" box over the note editor. */}
+              {record.officeReply ? (
                 <div className="mt-5 border-t border-admin-border pt-4.5">
                   <span className="text-[13px] font-bold text-admin-primary">
                     Resposta enviada
@@ -138,6 +147,16 @@ export default async function OmbudsmanDetailPage({
                 <InternalNoteSection
                   requestId={record.id}
                   initialNote={details.internalNote ?? ""}
+                />
+              )}
+
+              {/* Every manifestation gets a way out, identified or not: an
+                  anonymous one has nobody to answer, and without this it would
+                  count as open forever. */}
+              {isOmbudsmanStatus(record.status) && (
+                <ManifestationStatusSection
+                  requestId={record.id}
+                  status={record.status}
                 />
               )}
             </div>

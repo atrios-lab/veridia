@@ -1547,8 +1547,9 @@ function OmbudsmanCard({ result }: { result: OmbudsmanDetail }) {
                 strokeWidth={1.9}
               />
               <p className="text-[12.5px] leading-relaxed text-brand-text-soft">
-                A manifestação está com o responsável da ouvidoria. A resposta
-                aparece aqui, com o histórico do tratamento.
+                {result.closed
+                  ? "A ouvidoria encerrou o tratamento sem registrar resposta por escrito. Se ainda restar dúvida, envie uma nova manifestação."
+                  : "A manifestação está com o responsável da ouvidoria. A resposta aparece aqui, com o histórico do tratamento."}
               </p>
             </div>
           )}
@@ -1570,6 +1571,10 @@ function OmbudsmanCard({ result }: { result: OmbudsmanDetail }) {
                   result.repliedAt ? formatDate(result.repliedAt) : undefined
                 }
               />
+            ) : result.closed ? (
+              // Closed without a reply: the andamento says so, and the step
+              // must not go on claiming the case is under investigation.
+              <TimelineStep done label={result.statusLabel} />
             ) : (
               <TimelineStep label="Em apuração pelo responsável" />
             )}

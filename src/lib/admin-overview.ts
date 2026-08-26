@@ -213,6 +213,7 @@ export const ACTIVITY_VERBS: Record<string, string> = {
   "ombudsman.respond": "respondeu à manifestação",
   "ombudsman.draft": "salvou um rascunho de resposta",
   "ombudsman.internal-note": "salvou uma anotação interna",
+  "ombudsman.status": "alterou o andamento da manifestação",
 };
 
 /**

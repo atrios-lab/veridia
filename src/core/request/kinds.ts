@@ -190,6 +190,65 @@ export function isAllowedTransition(
 }
 
 /**
+ * The five andamentos a manifestation may be in. Listed here rather than
+ * derived from `STATUS_LABELS.ombudsman` below: that map keeps labels for
+ * values nobody writes any more (see `appointment`), so its keys name what the
+ * consult can spell, not what the office may set.
+ */
+export const OMBUDSMAN_STATUSES = [
+  "new",
+  "in-review",
+  "answered",
+  "done",
+  "archived",
+] as const;
+export type OmbudsmanStatus = (typeof OMBUDSMAN_STATUSES)[number];
+
+export function isOmbudsmanStatus(status: string): status is OmbudsmanStatus {
+  return (OMBUDSMAN_STATUSES as readonly string[]).includes(status);
+}
+
+/**
+ * The andamentos offered as the next step from each one. Same idea as
+ * `SUGGESTED_NEXT_STATUSES`: guidance for the detail screen, not a state
+ * machine.
+ *
+ * `answered` is never suggested and never accepted here. Answering is sending
+ * a text to the citizen; setting the andamento without sending anything would
+ * leave the consult showing "Respondida" with nothing to read. It is reached
+ * only by `respondToRecord`, which writes the reply in the same statement.
+ */
+const SUGGESTED_NEXT_OMBUDSMAN_STATUSES: Record<
+  OmbudsmanStatus,
+  readonly OmbudsmanStatus[]
+> = {
+  new: ["in-review", "done", "archived"],
+  "in-review": ["done", "archived"],
+  answered: ["done", "archived"],
+  done: ["in-review", "archived"],
+  archived: ["in-review", "done"],
+};
+
+export function suggestedOmbudsmanStatuses(
+  status: OmbudsmanStatus,
+): readonly OmbudsmanStatus[] {
+  return SUGGESTED_NEXT_OMBUDSMAN_STATUSES[status];
+}
+
+/**
+ * Whether the office may move a manifestation from one andamento to another.
+ * Free flow like the request's, minus `answered` (see above); the other
+ * refusal is the andamento it is already in, which would write an event
+ * carrying no information.
+ */
+export function isAllowedOmbudsmanTransition(
+  from: OmbudsmanStatus,
+  to: OmbudsmanStatus,
+): boolean {
+  return from !== to && to !== "answered";
+}
+
+/**
  * The statuses that no longer need the operator's attention, per kind: the
  * same idea as `TERMINAL_SERVICE_REQUEST_STATUSES`, generalised so the
  * sidebar badge and the Visão geral counters can ask it of any of the four
@@ -199,7 +258,7 @@ export const TERMINAL_STATUSES: Record<RequestKind, readonly string[]> = {
   "service-request": TERMINAL_SERVICE_REQUEST_STATUSES,
   appointment: ["done", "cancelled"],
   "data-rights": ["answered", "cancelled"],
-  ombudsman: ["answered", "done"],
+  ombudsman: ["answered", "done", "archived"],
 };
 
 export function isOpenStatus(kind: RequestKind, status: string): boolean {
@@ -252,6 +311,7 @@ const STATUS_LABELS: Record<RequestKind, Record<string, string>> = {
     "in-review": "Em apuração",
     answered: "Respondida",
     done: "Concluída",
+    archived: "Arquivada",
   },
 };
 
