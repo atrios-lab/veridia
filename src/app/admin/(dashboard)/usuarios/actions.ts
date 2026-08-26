@@ -4,9 +4,13 @@ import { and, count, eq, isNull, ne } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { headers } from "next/headers";
 import { notFound } from "next/navigation";
-import { CreateAccountSchema } from "@/core/auth/account.ts";
+import {
+  CreateAccountSchema,
+  UpdateAccountSchema,
+} from "@/core/auth/account.ts";
 import { can, isLastActiveAdmin, type Role } from "@/core/auth/roles.ts";
 import {
+  account as accountTable,
   session as sessionTable,
   user as userTable,
 } from "@/db/auth-schema.ts";
@@ -15,6 +19,7 @@ import { recordAudit } from "@/lib/audit.ts";
 import { auth } from "@/lib/auth.ts";
 import {
   buildResetPasswordUrl,
+  deleteResetTokensWith,
   issueResetTokenWith,
   resolveOrigin,
 } from "@/lib/auth-tokens.ts";
@@ -126,8 +131,13 @@ export async function createUser(
 
 /**
  * Looks up an account by id, scoped to the session's own serventia: the
- * shared guard for both actions below, so neither can be pointed at another
+ * shared guard for every action below, so none can be pointed at another
  * office's account by a forged `userId`.
+ *
+ * `credentialId` is the same join `listAccounts` uses for the "Aguardando 1º
+ * acesso" badge: a row exists only once the person has set their own
+ * password, so its absence is "never entered the panel", which is the one
+ * state deleteAccount is allowed to act on.
  */
 async function findOwnAccount(userId: string, tenantSlug: string) {
   const [row] = await db
@@ -136,11 +146,49 @@ async function findOwnAccount(userId: string, tenantSlug: string) {
       name: userTable.name,
       email: userTable.email,
       role: userTable.role,
+      credentialId: accountTable.id,
     })
     .from(userTable)
+    .leftJoin(
+      accountTable,
+      and(
+        eq(accountTable.userId, userTable.id),
+        eq(accountTable.providerId, "credential"),
+      ),
+    )
     .where(and(eq(userTable.id, userId), eq(userTable.tenantSlug, tenantSlug)));
   return row ?? null;
 }
+
+/**
+ * How many *other* Registrador accounts in the office still have access.
+ * The target is excluded because it is the one about to leave that count,
+ * whether it is being deactivated or demoted: both are the same question.
+ */
+async function countOtherActiveAdmins(tenantSlug: string, exceptId: string) {
+  const [{ value }] = await db
+    .select({ value: count() })
+    .from(userTable)
+    .where(
+      and(
+        eq(userTable.tenantSlug, tenantSlug),
+        eq(userTable.role, "admin"),
+        isNull(userTable.disabledAt),
+        ne(userTable.id, exceptId),
+      ),
+    );
+  return value;
+}
+
+const LAST_ADMIN_MESSAGE =
+  "É preciso manter ao menos um Registrador com acesso ativo.";
+
+// Deliberately not "tente de novo em instantes": the two most common
+// refusals (a suppressed recipient, a provider account still pending
+// approval) are permanent, and inviting the operator to click again is
+// inviting them to click forever. It points at the way out instead.
+const SEND_FAILED_MESSAGE =
+  "O provedor de e-mail não aceitou o envio. Copie o link e entregue à pessoa.";
 
 // The two row actions below share this shape so the same client component
 // (AccountRowActions) can drive either one through useActionState and show
@@ -177,12 +225,12 @@ export async function resendInvite(
       actionUrl,
       tenant,
     });
-  } catch {
-    return {
-      status: "error",
-      message:
-        "Não deu para reenviar o convite agora. Tente de novo em instantes.",
-    };
+  } catch (error) {
+    // The provider's answer carries the reason (a suppressed recipient, an
+    // unapproved account) and the recipient's address with it: it goes to
+    // the server log, where support looks, and never to the screen.
+    console.error("usuarios.resend-invite", error);
+    return { status: "error", message: SEND_FAILED_MESSAGE };
   }
 
   await recordAudit({
@@ -221,12 +269,9 @@ export async function triggerPasswordReset(
       actionUrl,
       tenant,
     });
-  } catch {
-    return {
-      status: "error",
-      message:
-        "Não deu para enviar o link de nova senha agora. Tente de novo em instantes.",
-    };
+  } catch (error) {
+    console.error("usuarios.password-reset", error);
+    return { status: "error", message: SEND_FAILED_MESSAGE };
   }
 
   await recordAudit({
@@ -260,25 +305,12 @@ export async function deactivateAccount(
   const target = await findOwnAccount(userId, tenant.slug);
   if (!target) notFound();
 
-  // Counts the *other* active Registrador accounts in the office: the
-  // target is excluded because it is the one about to leave that count.
-  const [{ value: otherActiveAdmins }] = await db
-    .select({ value: count() })
-    .from(userTable)
-    .where(
-      and(
-        eq(userTable.tenantSlug, tenant.slug),
-        eq(userTable.role, "admin"),
-        isNull(userTable.disabledAt),
-        ne(userTable.id, target.id),
-      ),
-    );
-
+  const otherActiveAdmins = await countOtherActiveAdmins(
+    tenant.slug,
+    target.id,
+  );
   if (isLastActiveAdmin(target.role, otherActiveAdmins)) {
-    return {
-      status: "error",
-      message: "É preciso manter ao menos um Registrador com acesso ativo.",
-    };
+    return { status: "error", message: LAST_ADMIN_MESSAGE };
   }
 
   await db
@@ -324,6 +356,202 @@ export async function reactivateAccount(
     tenantSlug: tenant.slug,
     actorId: session.user.id,
     action: "user.reactivate",
+    targetType: "user",
+    targetId: target.id,
+  });
+
+  revalidatePath(USERS_PATH);
+  return { status: "sent" };
+}
+
+export type UpdateAccountValues = { name: string; role: string };
+
+export type UpdateAccountState =
+  | { status: "idle" }
+  | { status: "saved" }
+  | {
+      status: "error";
+      message: string;
+      fieldErrors: Record<string, string>;
+      // Echoed back for the same reason as createUser's: the dialog's form
+      // is uncontrolled, and React resets it once the action resolves.
+      values: UpdateAccountValues;
+    };
+
+/**
+ * Corrects the name and the role of an account that already exists. The
+ * e-mail is not here: it is also the login, so changing it needs a
+ * confirmation round trip that this action deliberately does not attempt.
+ */
+export async function updateAccount(
+  _previous: UpdateAccountState,
+  formData: FormData,
+): Promise<UpdateAccountState> {
+  const userId = String(formData.get("userId") ?? "");
+  const values: UpdateAccountValues = {
+    name: String(formData.get("name") ?? "").trim(),
+    role: String(formData.get("role") ?? ""),
+  };
+
+  const session = await getSession();
+  if (!session || !can(session.user.role ?? "", "user.manage")) notFound();
+
+  const parsed = UpdateAccountSchema.safeParse(values);
+  if (!parsed.success) {
+    const fieldErrors: Record<string, string> = {};
+    for (const issue of parsed.error.issues) {
+      const field = String(issue.path.at(-1) ?? "");
+      fieldErrors[field] ??= issue.message;
+    }
+    return {
+      status: "error",
+      message: "Confira os campos destacados.",
+      fieldErrors,
+      values,
+    };
+  }
+
+  const tenant = await getTenant();
+  const target = await findOwnAccount(userId, tenant.slug);
+  if (!target) notFound();
+
+  // Demoting is the same question deactivating asks: would the office be
+  // left with nobody holding `user.manage`? Only a Registrador losing the
+  // role can trip it, so the count is skipped for every other edit.
+  if (target.role === "admin" && parsed.data.role !== "admin") {
+    const otherActiveAdmins = await countOtherActiveAdmins(
+      tenant.slug,
+      target.id,
+    );
+    if (isLastActiveAdmin(target.role, otherActiveAdmins)) {
+      return {
+        status: "error",
+        message: LAST_ADMIN_MESSAGE,
+        fieldErrors: {},
+        values,
+      };
+    }
+  }
+
+  await db
+    .update(userTable)
+    .set({ name: parsed.data.name, role: parsed.data.role })
+    .where(eq(userTable.id, target.id));
+
+  await recordAudit({
+    tenantSlug: tenant.slug,
+    actorId: session.user.id,
+    action: "user.update",
+    targetType: "user",
+    targetId: target.id,
+  });
+
+  revalidatePath(USERS_PATH);
+  return { status: "saved" };
+}
+
+export type ResetLinkState =
+  | { status: "idle" }
+  | { status: "ready"; url: string }
+  | { status: "error"; message: string };
+
+/**
+ * The same link the e-mail would have carried, handed to the registrador
+ * instead of to a mail server. It exists because the office's only channel
+ * for returning access used to be an e-mail provider nobody here controls:
+ * when it refuses a recipient, the person is locked out with no way back.
+ *
+ * Not an escalation: whoever can call this already holds `user.manage`, so
+ * they could already trigger the reset, deactivate the account and create
+ * another. It gets its own audit verb all the same, because "I sent her a
+ * link" and "I took her link" are exactly what a trail has to tell apart.
+ */
+export async function createPasswordResetLink(
+  _previous: ResetLinkState,
+  formData: FormData,
+): Promise<ResetLinkState> {
+  const userId = String(formData.get("userId") ?? "");
+  const session = await getSession();
+  if (!session || !can(session.user.role ?? "", "user.manage")) notFound();
+
+  const tenant = await getTenant();
+  const target = await findOwnAccount(userId, tenant.slug);
+  if (!target) notFound();
+
+  const ctx = await auth.$context;
+  const token = await issueResetTokenWith(ctx, target.id);
+  const requestHeaders = await headers();
+
+  await recordAudit({
+    tenantSlug: tenant.slug,
+    actorId: session.user.id,
+    // "issued", not "copied": the clipboard is the browser's business and
+    // the server never learns whether the copy happened.
+    action: "user.password-reset-link-issued",
+    targetType: "user",
+    targetId: target.id,
+  });
+
+  return {
+    status: "ready",
+    url: buildResetPasswordUrl(resolveOrigin(requestHeaders), token),
+  };
+}
+
+/**
+ * Removes an account that never entered the panel, and with it the e-mail
+ * it was holding: `user.email` is unique platform-wide, so an address
+ * invited into the wrong office stays burned until the row goes.
+ *
+ * Only an account with no credential. One that has already worked here
+ * keeps "Desativar acesso" instead: `audit_log.actorId` carries no foreign
+ * key and every `authorUserId` is `on delete set null`, so deleting would
+ * not break the database, it would quietly reattribute that person's acts
+ * to "Sistema" and their messages to "Serventia". Attribution is the one
+ * thing the trail exists to hold.
+ *
+ * No last-Registrador guard here, and none is missing: this only reaches an
+ * account with no credential, one that has never signed in, while whoever
+ * is clicking is signed in and therefore has one. The target is never the
+ * caller, and an office losing a Registrador who never entered still has
+ * the Registrador doing the deleting.
+ */
+export async function deleteAccount(
+  _previous: AccountActionState,
+  formData: FormData,
+): Promise<AccountActionState> {
+  const userId = String(formData.get("userId") ?? "");
+  const session = await getSession();
+  if (!session || !can(session.user.role ?? "", "user.manage")) notFound();
+
+  const tenant = await getTenant();
+  const target = await findOwnAccount(userId, tenant.slug);
+  if (!target) notFound();
+
+  // Read now, not when the screen was painted: the invited person may have
+  // created their password while this dialog sat open.
+  if (target.credentialId !== null) {
+    return {
+      status: "error",
+      message:
+        "Esta conta já acessou o painel. Use “Desativar acesso” para tirar o acesso sem apagar o histórico.",
+    };
+  }
+
+  // Tokens first: `verification` has no foreign key to `user`, so this is
+  // the one row the cascade will not take. Failing here leaves an account
+  // with no invite open, which "Reenviar convite" fixes; failing the other
+  // way around would leave the orphan token this exists to avoid.
+  const ctx = await auth.$context;
+  await deleteResetTokensWith(ctx, target.id);
+
+  // `session` and `account` follow by cascade (see auth-schema.ts).
+  await db.delete(userTable).where(eq(userTable.id, target.id));
+
+  await recordAudit({
+    tenantSlug: tenant.slug,
+    actorId: session.user.id,
+    action: "user.delete",
     targetType: "user",
     targetId: target.id,
   });

@@ -43,16 +43,16 @@ interface ResetTokenAuthContext {
 }
 
 /**
- * Mints a fresh 48h reset-password token for a user, first deleting any
- * reset-password token issued earlier for that same user. Convite and nova
- * senha share this primitive (see design.md); only one link may be live for
- * an account at a time (specs/admin-auth: "Reenvio ou nova senha invalida o
- * token anterior").
+ * Drops every reset-password token still live for a user. Called before
+ * minting a new one, so only one link is ever valid at a time, and again
+ * when the account is deleted: `verification` has no foreign key to `user`
+ * (it is indexed by `identifier`, not by owner), so nothing removes those
+ * rows on its own.
  */
-export async function issueResetTokenWith(
+export async function deleteResetTokensWith(
   ctx: ResetTokenAuthContext,
   userId: string,
-): Promise<string> {
+): Promise<void> {
   await ctx.adapter.deleteMany({
     model: "verification",
     where: [
@@ -64,6 +64,20 @@ export async function issueResetTokenWith(
       },
     ],
   });
+}
+
+/**
+ * Mints a fresh 48h reset-password token for a user, first deleting any
+ * reset-password token issued earlier for that same user. Convite and nova
+ * senha share this primitive (see design.md); only one link may be live for
+ * an account at a time (specs/admin-auth: "Reenvio ou nova senha invalida o
+ * token anterior").
+ */
+export async function issueResetTokenWith(
+  ctx: ResetTokenAuthContext,
+  userId: string,
+): Promise<string> {
+  await deleteResetTokensWith(ctx, userId);
 
   const expiresInSeconds =
     ctx.options.emailAndPassword?.resetPasswordTokenExpiresIn ?? 3600;
