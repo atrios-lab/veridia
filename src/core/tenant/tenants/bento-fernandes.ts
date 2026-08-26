@@ -8,7 +8,10 @@ export const cartorioBentoFernandes: Tenant = parseTenant({
   slug: "cartorio-bento-fernandes",
   hosts: ["cartoriobentofernandesrn.com.br", "bentofernandes.localhost"],
   name: "Cartório de Bento Fernandes",
-  emailFrom: "nao-responda@cartoriobentofernandesrn.com.br",
+  // emailFrom: waiting on cartoriobentofernandesrn.com.br being verified in Postmark
+  // (DKIM + Return-Path); until then the platform fallback sends. Pointing
+  // it at a domain Postmark has not verified is worse than leaving it out:
+  // the fallback delivers, an unverified From is refused outright.
   subtitle: "Ofício Único de Bento Fernandes / RN",
   about:
     "O Ofício Único de Bento Fernandes / RN reúne todos os serviços de registro e notas do " +
