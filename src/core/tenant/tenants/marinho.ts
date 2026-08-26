@@ -8,8 +8,11 @@ export const cartorioMarinho: Tenant = parseTenant({
   // The ".localhost" entry is what lets a developer serve this office locally.
   hosts: ["cartorioielmomarinhorn.com", "marinho.localhost"],
   name: "Cartório Marinho",
-  // emailFrom: waiting on cartorioielmomarinhorn.com being verified in
-  // Postmark (DKIM + Return-Path); until then the platform fallback sends.
+  // The domain's DKIM and Return-Path are verified in Postmark, so the
+  // office signs its own mail instead of borrowing the platform fallback
+  // (nao-responda@atrioss.com), which signed the serventia's name over a
+  // domain with nothing to do with it: the shape a filter reads as spoofing.
+  emailFrom: "nao-responda@cartorioielmomarinhorn.com",
   subtitle: "Ofício Único de Ielmo Marinho / RN",
   about:
     "O Cartório Marinho é o Ofício Único de Ielmo Marinho / RN, o cartório que reúne " +
