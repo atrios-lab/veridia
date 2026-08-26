@@ -7,7 +7,10 @@ export const cartorioMajorSales: Tenant = parseTenant({
   slug: "cartorio-major-sales",
   hosts: ["cartoriomajorsalesrn.com.br", "majorsales.localhost"],
   name: "Cartório de Major Sales",
-  emailFrom: "nao-responda@cartoriomajorsales.com.br",
+  // emailFrom: waiting on cartoriomajorsalesrn.com.br being verified in Postmark
+  // (DKIM + Return-Path); until then the platform fallback sends. Pointing
+  // it at a domain Postmark has not verified is worse than leaving it out:
+  // the fallback delivers, an unverified From is refused outright.
   subtitle: "Ofício Único de Major Sales / RN",
   about:
     "O Ofício Único de Major Sales / RN reúne todos os serviços de registro e notas " +

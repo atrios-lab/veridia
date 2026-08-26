@@ -7,7 +7,10 @@ export const cartorioTaipu: Tenant = parseTenant({
   slug: "cartorio-taipu",
   hosts: ["cartoriotaipurn.com.br", "taipu.localhost"],
   name: "Cartório de Taipu",
-  emailFrom: "nao-responda@cartoriotaipurn.com",
+  // emailFrom: waiting on cartoriotaipurn.com.br being verified in Postmark
+  // (DKIM + Return-Path); until then the platform fallback sends. Pointing
+  // it at a domain Postmark has not verified is worse than leaving it out:
+  // the fallback delivers, an unverified From is refused outright.
   subtitle: "Serviço Único Notarial e Registral de Taipu / RN",
   about:
     "O Serviço Único Notarial e Registral de Taipu / RN reúne todos os serviços de registro " +

@@ -11,7 +11,10 @@ export const cartorioSantaCruz2: Tenant = parseTenant({
   slug: "cartorio-santa-cruz-2",
   hosts: ["2cartoriosantacruzrn.com.br", "santacruz.localhost"],
   name: "2º Cartório de Santa Cruz",
-  emailFrom: "nao-responda@2cartoriosantacruzrn.com.br",
+  // emailFrom: waiting on 2cartoriosantacruzrn.com.br being verified in Postmark
+  // (DKIM + Return-Path); until then the platform fallback sends. Pointing
+  // it at a domain Postmark has not verified is worse than leaving it out:
+  // the fallback delivers, an unverified From is refused outright.
   subtitle:
     "2º Tabelionato de Notas, Protestos e Ofício de Registro Civil de Santa Cruz / RN",
   about:
