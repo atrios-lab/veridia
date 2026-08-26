@@ -10,6 +10,17 @@ import { TENANTS } from "../src/core/tenant/resolve.ts";
 const PORT = process.env.PORT ?? "3000";
 const marinho = TENANTS["cartorio-marinho"];
 const aurora = TENANTS["tabelionato-aurora"];
+/**
+ * The office that proves the attribution gate is looked up, never named:
+ * which attributions a serventia holds is its own configuration and does
+ * change. Aurora was hardcoded here until it gained RI, and this test then
+ * failed for a reason that had nothing to do with the gate it guards.
+ */
+const officeWithoutRI = Object.values(TENANTS).find(
+  (tenant) =>
+    !tenant.attributions.includes("RI") &&
+    tenant.hosts.some((host) => host.endsWith(".localhost")),
+);
 const baseURL = `http://marinho.localhost:${PORT}`;
 
 test.use({ viewport: { width: 390, height: 844 } });
@@ -73,9 +84,14 @@ test("a certificate is never asked what it is for", async ({ page }) => {
 test("an act from an attribution the office lacks is not served", async ({
   page,
 }) => {
-  const auroraURL = `http://${aurora.hosts.find((h) => h.endsWith(".localhost"))}:${PORT}`;
+  test.skip(
+    !officeWithoutRI,
+    "nenhuma serventia registrada sem RI: sem ela nao ha o que provar aqui",
+  );
+  if (!officeWithoutRI) return;
+  const devHost = officeWithoutRI.hosts.find((h) => h.endsWith(".localhost"));
   const response = await page.goto(
-    `${auroraURL}/solicitar?atribuicao=RI&ato=ri-retificacao`,
+    `http://${devHost}:${PORT}/solicitar?atribuicao=RI&ato=ri-retificacao`,
   );
   // Not the form: the office does not hold that attribution.
   expect(response?.status()).toBe(200);
