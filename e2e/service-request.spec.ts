@@ -108,7 +108,7 @@ test("the protocol field carries the number to the lookup", async ({
   // Longer than the suite's 15s action timeout because clicking this waits
   // for the navigation it schedules, and what it navigates to asks the
   // database for the protocol before rendering. On CI there is no database by
-  // design, so that attempt fails rather than answers — the page handles it
+  // design, so that attempt fails rather than answers. The page handles it
   // and shows "not found", but the failing round trip is on the critical path
   // of this very click. 45s is the navigationTimeout the config already
   // considers fair for one page load.
