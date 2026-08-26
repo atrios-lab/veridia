@@ -105,7 +105,16 @@ test("the protocol field carries the number to the lookup", async ({
 }) => {
   await page.goto(baseURL);
   await page.getByPlaceholder("Nº do protocolo").fill("REQ.2026.000148");
-  await page.getByRole("button", { name: "Consultar" }).click();
+  // Longer than the suite's 15s action timeout because clicking this waits
+  // for the navigation it schedules, and what it navigates to asks the
+  // database for the protocol before rendering. On CI there is no database by
+  // design, so that attempt fails rather than answers — the page handles it
+  // and shows "not found", but the failing round trip is on the critical path
+  // of this very click. 45s is the navigationTimeout the config already
+  // considers fair for one page load.
+  await page.getByRole("button", { name: "Consultar" }).click({
+    timeout: 45_000,
+  });
   await expect(page).toHaveURL(/\/protocolo\?numero=REQ\.2026\.000148/);
   await expect(page.getByText("REQ.2026.000148")).toBeVisible();
 });

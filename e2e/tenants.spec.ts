@@ -80,6 +80,15 @@ for (const tenant of Object.values(TENANTS)) {
 }
 
 test("two hosts answer with two different offices", async ({ page }) => {
+  // One full navigation per registered office, so the budget has to grow with
+  // the registry rather than sit at the suite's flat 90s: that ceiling was
+  // room to spare at three offices and started firing at six, which is what a
+  // test timeout looks like from the browser's side (net::ERR_ABORTED on a
+  // goto that was cut off). Measured at ~20s for six offices on a developer's
+  // machine; the CI runner is several times slower, and the seventh office is
+  // going to be registered by someone who has never read this file.
+  test.setTimeout(30_000 * Object.keys(TENANTS).length);
+
   const names: string[] = [];
   for (const tenant of Object.values(TENANTS)) {
     await page.goto(`http://${devHost(tenant.hosts)}:${PORT}`);
