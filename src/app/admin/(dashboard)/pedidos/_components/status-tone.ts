@@ -1,7 +1,7 @@
 import type { ServiceRequestStatus } from "@/core/request/kinds.ts";
 
 /**
- * The look of the andamento badge, by what the andamento asks of the office —
+ * The look of the andamento badge, by what the andamento asks of the office,
  * not by which phase it belongs to. The phases still group the queue and the
  * timeline, but they stopped explaining the colour: "Com exigência" and "Em
  * análise" share the analysis phase while meaning opposite things to whoever
