@@ -30,6 +30,10 @@ export type ManualEntryState =
       /** Already formatted here: the office's wall clock, not the server's. */
       filedAtLabel: string;
       contact: string;
+      /** Set when that address is known not to take mail: the operator is
+       * still at the counter with the person, which is the one moment a
+       * wrong e-mail can be fixed by asking. */
+      emailWarning?: string | null;
       /** In full, not masked: the operator typed it seconds ago and the whole
           point of this block is confirming the right pedido was filed. */
       cpfLabel?: string;
@@ -109,7 +113,7 @@ export async function createManualServiceRequest(
     // The counter already handed over the protocol and the key, on paper or
     // on the operator's screen. This is the copy that survives the walk home.
     // The key stays out of it, the same way it does on the public wizard.
-    notifyCitizen({
+    const emailWarning = await notifyCitizen({
       tenant,
       contact: parsed.data.contact,
       protocolNumber,
@@ -129,6 +133,7 @@ export async function createManualServiceRequest(
     revalidatePath("/admin", "layout");
     return {
       status: "success",
+      emailWarning,
       protocolNumber,
       accessKey,
       applicantName: parsed.data.applicantName,

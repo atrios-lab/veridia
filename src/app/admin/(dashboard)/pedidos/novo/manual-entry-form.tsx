@@ -489,6 +489,18 @@ function SuccessScreen({ state }: { state: SuccessState }) {
 
   return (
     <div className="flex flex-col gap-4">
+      {/* Inline and not a toast, only here: the operator is standing with the
+          person, and this is the one moment a wrong address can be fixed by
+          asking. A toast that fades while they read the protocol out loud
+          would take the chance with it. */}
+      {state.emailWarning && (
+        <p
+          role="alert"
+          className="rounded-[14px] bg-admin-warning-bg px-4 py-3 text-[13px] font-semibold text-admin-warning-text"
+        >
+          {state.emailWarning}
+        </p>
+      )}
       <section className="rounded-[14px] border border-admin-border bg-admin-card p-6">
         <div className="flex items-start gap-3.5">
           <span className="mt-0.5 flex h-9 w-9 flex-none items-center justify-center rounded-full bg-admin-success-bg">

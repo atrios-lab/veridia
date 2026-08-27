@@ -20,7 +20,11 @@ import { getTenant } from "@/lib/tenant.ts";
 export type ActionState =
   | { status: "idle" }
   | { status: "error"; message: string }
-  | { status: "success" };
+  // `emailWarning` carries the one thing the operator cannot find out later:
+  // that the citizen's address does not take mail. The record was saved
+  // either way, so this is not an error, and it is not a badge on the page
+  // either: it belongs to the moment someone tried to write.
+  | { status: "success"; emailWarning?: string | null };
 
 const NO_PERMISSION = "Você não tem permissão para tratar esta manifestação.";
 const GENERIC_ERROR =
@@ -54,6 +58,7 @@ export async function respondManifestation(
   }
 
   const tenant = await getTenant();
+  let emailWarning: string | null = null;
   try {
     const request = await findById(tenant.slug, requestId);
     if (!request) {
@@ -74,7 +79,7 @@ export async function respondManifestation(
     // nobody to write to is what the channel promises on its first screen, not
     // a delivery that failed, and logging it would fill the log with noise
     // about people exercising a right.
-    notifyCitizen({
+    emailWarning = await notifyCitizen({
       tenant,
       contact: request.contact,
       protocolNumber: request.protocolNumber,
@@ -86,7 +91,7 @@ export async function respondManifestation(
     return { status: "error", message: GENERIC_ERROR };
   }
   revalidateAdmin();
-  return { status: "success" };
+  return { status: "success", emailWarning };
 }
 
 export async function saveManifestationDraft(

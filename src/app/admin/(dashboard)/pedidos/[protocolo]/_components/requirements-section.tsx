@@ -7,6 +7,7 @@ import { documentHref } from "../../../../_components/attachment-link.ts";
 import { AttachmentRow } from "../../../../_components/attachment-row.tsx";
 import { ConfirmAction } from "../../../../_components/confirm-action.tsx";
 import { AdminIcon } from "../../../../_components/icon.tsx";
+import { useEmailWarning } from "../../../../_components/use-email-warning.ts";
 import {
   type ActionState,
   attachRequirementFormAction,
@@ -171,6 +172,7 @@ function RequirementAction({
     action,
     { status: "idle" },
   );
+  useEmailWarning(state);
   useEffect(() => {
     if (state.status === "success" && successMessage) {
       toast.success(successMessage);

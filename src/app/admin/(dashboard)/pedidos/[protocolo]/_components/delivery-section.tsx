@@ -6,6 +6,7 @@ import {
   type AttachmentItem,
   AttachmentRow,
 } from "../../../../_components/attachment-row.tsx";
+import { useEmailWarning } from "../../../../_components/use-email-warning.ts";
 import {
   type ActionState,
   deleteAttachmentAction,
@@ -23,6 +24,7 @@ export function DeliverySection({
     deliverDocumentAction,
     { status: "idle" },
   );
+  useEmailWarning(state);
   const formRef = useRef<HTMLFormElement>(null);
 
   useEffect(() => {

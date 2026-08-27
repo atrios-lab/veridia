@@ -1,5 +1,6 @@
 import "server-only";
 import { resolveRecipient } from "@/core/email/recipient.ts";
+import { AddressDoesNotReceiveError, findPermanentBounce } from "./bounces.ts";
 
 export interface EmailAttachment {
   filename: string;
@@ -59,6 +60,21 @@ export async function sendEmail(email: OutgoingEmail): Promise<void> {
     console.warn(
       `[email] EMAIL_REDIRECT_TO ativo: ${email.to} desviado para ${recipient.to}.`,
     );
+  }
+
+  // Checked on the resolved recipient, after resolveRecipient: a test
+  // deployment's inbox must not be blocked by a bounce belonging to the
+  // made-up address the message was originally aimed at.
+  //
+  // Refused here rather than left for the provider to refuse. The message
+  // does not go out either way, but this way there is no network call, the
+  // attempt does not count against the account's bounce rate (the number
+  // that, past ten per cent, silences every serventia), and what reaches the
+  // screen is the receiving server's own reason instead of the provider's
+  // generic "não aceitou o envio".
+  const bounced = await findPermanentBounce(recipient.to);
+  if (bounced) {
+    throw new AddressDoesNotReceiveError(recipient.to, bounced.detail);
   }
 
   const response = await fetch(POSTMARK_ENDPOINT, {

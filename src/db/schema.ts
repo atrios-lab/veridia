@@ -627,3 +627,40 @@ export const transparencyBulletins = pgTable(
     ),
   ],
 );
+
+/**
+ * Addresses a message came back from, keyed by the address itself.
+ *
+ * Not a column on the records that hold an e-mail: the same address shows up
+ * in `service_requests`, `appointments`, `chat_conversations` and `user`,
+ * four columns in four tables with nothing in common, and it is the mailbox
+ * that bounces, not the pedido. One row per address answers "does this
+ * address take mail?" for all of them at once, which is exactly the question
+ * the sending path asks.
+ *
+ * No foreign key anywhere, for the same reason: the address outlives every
+ * record that mentioned it, and it has to, or the trail is gone the moment
+ * someone deletes the pedido that produced it.
+ */
+export const emailBounces = pgTable("email_bounces", {
+  /** Lowercased by the endpoint before it lands here. */
+  email: text("email").primaryKey(),
+  /** The provider's own name for what happened ("HardBounce", "SpamComplaint"). */
+  kind: text("kind").notNull(),
+  /** What the receiving server said, as the provider relayed it. Text from
+   * outside: it is shown as text and never interpreted. */
+  detail: text("detail").notNull().default(""),
+  /**
+   * Whether this kind means the address will never take mail. Decided once,
+   * on the way in, so the sending path reads a boolean off a primary key
+   * instead of re-classifying a provider string on every message.
+   */
+  permanent: boolean("permanent").notNull(),
+  /** The office whose message came back, when the provider tells us. Null is
+   * expected: the address is the subject here, not the office. */
+  tenantSlug: text("tenant_slug"),
+  occurredAt: timestamp("occurred_at", { withTimezone: true }).notNull(),
+  createdAt: timestamp("created_at", { withTimezone: true })
+    .notNull()
+    .defaultNow(),
+});

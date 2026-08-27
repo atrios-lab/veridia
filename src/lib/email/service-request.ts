@@ -3,6 +3,7 @@ import { after } from "next/server";
 import { isEmailContact } from "@/core/request/form.ts";
 import { brandImageUrl } from "@/core/tenant/brand-image.ts";
 import type { Tenant } from "@/core/tenant/schema.ts";
+import { findPermanentBounce } from "./bounces.ts";
 import { renderNoticeEmailHtml } from "./render.ts";
 import { sendEmail } from "./send.ts";
 
@@ -50,11 +51,25 @@ function plainText(params: NotifyCitizenParams): string {
  * to wake that instance. `after` is what keeps the invocation alive until
  * the send finishes.
  */
-export function notifyCitizen(params: NotifyCitizenParams): void {
+export async function notifyCitizen(
+  params: NotifyCitizenParams,
+): Promise<string | null> {
   // A phone number is a valid contact for a request and not a mailbox. The
   // office reaches those the way it always did, by calling.
   const contact = params.contact;
-  if (!contact || !isEmailContact(contact)) return;
+  if (!contact || !isEmailContact(contact)) return null;
+
+  // Looked up before the send is scheduled, and awaited: the send itself
+  // stays deferred because a mail provider is slow, but a primary-key read
+  // is not, and this is the one piece of it the operator needs while they
+  // are still on the screen. Learning at the balcão, weeks later, that the
+  // citizen never heard back is the failure this whole change is about.
+  const bounced = await findPermanentBounce(contact.trim());
+  if (bounced) {
+    return `O e-mail ${contact.trim()} não recebe mensagens: ${
+      bounced.detail || "a última mensagem voltou"
+    }. Avise por telefone.`;
+  }
 
   const host = params.tenant.hosts[0];
   after(async () => {
@@ -78,4 +93,6 @@ export function notifyCitizen(params: NotifyCitizenParams): void {
       console.error("email.notify-citizen", error);
     }
   });
+
+  return null;
 }

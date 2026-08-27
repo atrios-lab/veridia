@@ -26,6 +26,7 @@ import {
   issueResetTokenWith,
   resolveOrigin,
 } from "@/lib/auth-tokens.ts";
+import { AddressDoesNotReceiveError } from "@/lib/email/bounces.ts";
 import {
   sendEmailChangeEmail,
   sendInviteEmail,
@@ -194,6 +195,19 @@ const LAST_ADMIN_MESSAGE =
 // refusals (a suppressed recipient, a provider account still pending
 // approval) are permanent, and inviting the operator to click again is
 // inviting them to click forever. It points at the way out instead.
+// The provider is not the only reason a send does not happen. When the
+// address itself already told us it does not take mail, saying "o provedor
+// não aceitou o envio" sends the registrador to check a provider that is
+// working fine, and hides the one fact that would fix it.
+function sendFailureMessage(error: unknown, fallback: string): string {
+  if (error instanceof AddressDoesNotReceiveError) {
+    return `${error.email} não recebe mensagens: ${
+      error.detail || "a última mensagem voltou"
+    }. Atualize o e-mail da conta.`;
+  }
+  return fallback;
+}
+
 const SEND_FAILED_MESSAGE =
   "O provedor de e-mail não aceitou o envio. Copie o link e entregue à pessoa.";
 
@@ -243,7 +257,10 @@ export async function resendInvite(
     // unapproved account) and the recipient's address with it: it goes to
     // the server log, where support looks, and never to the screen.
     console.error("usuarios.resend-invite", error);
-    return { status: "error", message: SEND_FAILED_MESSAGE };
+    return {
+      status: "error",
+      message: sendFailureMessage(error, SEND_FAILED_MESSAGE),
+    };
   }
 
   await recordAudit({
@@ -284,7 +301,10 @@ export async function triggerPasswordReset(
     });
   } catch (error) {
     console.error("usuarios.password-reset", error);
-    return { status: "error", message: SEND_FAILED_MESSAGE };
+    return {
+      status: "error",
+      message: sendFailureMessage(error, SEND_FAILED_MESSAGE),
+    };
   }
 
   await recordAudit({
@@ -518,7 +538,7 @@ export async function updateAccount(
     await deleteEmailChangesWith(ctx, target.id);
     return {
       status: "error",
-      message: SEND_FAILED_MESSAGE_EMAIL_CHANGE,
+      message: sendFailureMessage(error, SEND_FAILED_MESSAGE_EMAIL_CHANGE),
       fieldErrors: {},
       values,
     };

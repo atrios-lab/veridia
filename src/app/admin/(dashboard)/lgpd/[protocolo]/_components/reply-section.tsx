@@ -1,6 +1,7 @@
 "use client";
 
 import { useActionState, useState } from "react";
+import { useEmailWarning } from "../../../../_components/use-email-warning.ts";
 import {
   type ActionState,
   respondDataRights,
@@ -23,6 +24,7 @@ export function ReplySection({
     ActionState,
     FormData
   >(saveDataRightsDraft, { status: "idle" });
+  useEmailWarning(respondState);
 
   const pending = respondPending || draftPending;
 
