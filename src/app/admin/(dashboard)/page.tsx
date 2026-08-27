@@ -221,7 +221,7 @@ export default async function AdminHome() {
 
         <div className="grid grid-cols-1 gap-4 lg:grid-cols-[1fr_348px] lg:items-start">
           <div className="flex min-w-0 flex-col gap-4">
-            <DeskList items={rankedDesk} />
+            <DeskList items={rankedDesk} totalCount={deskItems.length} />
             {canChannels && <TodayAgenda appointments={rankedAgenda} />}
           </div>
 

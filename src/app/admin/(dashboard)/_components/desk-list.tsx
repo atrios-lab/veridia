@@ -16,7 +16,17 @@ const ACTION_STYLES: Record<DeskChipTone, string> = {
   neutral: "border border-admin-input-border bg-admin-card text-admin-primary",
 };
 
-export function DeskList({ items }: { items: RankedDeskItem[] }) {
+export function DeskList({
+  items,
+  totalCount,
+}: {
+  items: RankedDeskItem[];
+  /** Every open item, not just the ones the desk has room for: what the
+   * ranking cut has to stay countable, or an operator reads a full desk as
+   * the whole workload. */
+  totalCount: number;
+}) {
+  const hidden = totalCount - items.length;
   return (
     <div className="rounded-[14px] border border-admin-border bg-admin-card p-5.5">
       <div className="flex items-baseline gap-2.5">
@@ -60,6 +70,14 @@ export function DeskList({ items }: { items: RankedDeskItem[] }) {
             </div>
           ))}
         </div>
+      )}
+      {hidden > 0 && (
+        <Link
+          href="/admin/pedidos"
+          className="mt-3 block text-[12px] font-semibold text-admin-primary"
+        >
+          + {hidden} {hidden === 1 ? "item em aberto" : "itens em aberto"}
+        </Link>
       )}
     </div>
   );

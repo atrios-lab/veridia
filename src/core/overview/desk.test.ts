@@ -62,7 +62,7 @@ test("agendamento não ocupa a mesa: um horário marcado já está resolvido", (
   );
 });
 
-test("demais itens ordenam do mais antigo para o mais novo", () => {
+test("demais itens ordenam do mais novo para o mais antigo", () => {
   const older = item({
     protocolNumber: "REQ.2026.000001",
     createdAt: new Date("2026-08-05T10:00:00Z"),
@@ -72,10 +72,50 @@ test("demais itens ordenam do mais antigo para o mais novo", () => {
     createdAt: new Date("2026-08-06T10:00:00Z"),
   });
 
-  const ranked = rankDeskItems([newer, older], TODAY, NOW);
+  const ranked = rankDeskItems([older, newer], TODAY, NOW);
   assert.deepEqual(
     ranked.map((r) => r.protocolNumber),
-    ["REQ.2026.000001", "REQ.2026.000002"],
+    ["REQ.2026.000002", "REQ.2026.000001"],
+  );
+});
+
+test("pedido recém-chegado aparece na mesa mesmo com a fila cheia de itens antigos", () => {
+  const old = Array.from({ length: 8 }, (_, i) =>
+    item({
+      protocolNumber: `REQ.2026.00001${i}`,
+      createdAt: new Date(NOW.getTime() - (i + 10) * 86_400_000),
+    }),
+  );
+  const fresh = item({
+    protocolNumber: "REQ.2026.000099",
+    createdAt: new Date(NOW.getTime() - 60_000),
+  });
+
+  const ranked = rankDeskItems([...old, fresh], TODAY, NOW);
+  assert.equal(ranked[0].protocolNumber, "REQ.2026.000099");
+});
+
+test("urgências continuam na frente de um item recém-chegado", () => {
+  const dueSoon = item({
+    kind: "data-rights",
+    protocolNumber: "SOL.2026.000001",
+    status: "new",
+    // Filed fourteen days before today: day 15 of the fifteen day term.
+    requestedOn: "2026-07-23",
+    right: "access",
+    createdAt: new Date("2026-07-23T10:00:00Z"),
+  });
+  const stalled = item({
+    protocolNumber: "REQ.2026.000002",
+    hasFulfilledPendingRequirement: true,
+    createdAt: new Date("2026-08-01T10:00:00Z"),
+  });
+  const fresh = item({ protocolNumber: "REQ.2026.000003" });
+
+  const ranked = rankDeskItems([fresh, stalled, dueSoon], TODAY, NOW);
+  assert.deepEqual(
+    ranked.map((r) => r.protocolNumber),
+    ["SOL.2026.000001", "REQ.2026.000002", "REQ.2026.000003"],
   );
 });
 

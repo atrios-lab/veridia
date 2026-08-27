@@ -60,7 +60,10 @@ interface RankedDeskItemInternal extends RankedDeskItem {
   /** Lower sorts first. 1: LGPD perto do prazo/vencido, 2: REQ exigência
    * cumprida, 4: todo o resto. */
   tier: 1 | 2 | 4;
-  /** Lower sorts first, within the same tier. */
+  /** Lower sorts first, within the same tier. Routine items carry
+   * `-createdAt` so the newest sorts first: with more open items than the
+   * desk shows, what just arrived has to be visible, and the queue the
+   * operator already reads is newest-first too. */
   tieBreak: number;
 }
 
@@ -158,7 +161,7 @@ function rankOne(
           ? -urgency.daysLate
           : critical && urgency.kind === "due-soon"
             ? urgency.daysLeft
-            : createdAtMs,
+            : -createdAtMs,
     };
   }
 
@@ -188,14 +191,14 @@ function rankOne(
     actionLabel: defaultActionLabel(item),
     actionHref: href,
     tier: 4,
-    tieBreak: createdAtMs,
+    tieBreak: -createdAtMs,
   };
 }
 
 /**
  * The mesa de trabalho: every open item across the channels, ranked by
  * urgency (LGPD perto do prazo/vencido, then REQ com exigência cumprida,
- * then o resto, mais antigo primeiro) and cut to the most urgent
+ * then o resto, mais recente primeiro) and cut to the most urgent
  * `DESK_LIMIT`. Agendamentos não entram: um horário marcado já está
  * resolvido. The rest stays reachable through
  * "Situação dos canais", never silently dropped from the panel.
