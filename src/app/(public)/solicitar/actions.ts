@@ -135,7 +135,11 @@ export async function submitServiceRequest(
 
     // The key is never in the e-mail: it was shown once, on the screen the
     // citizen is looking at, and putting it in a mailbox would undo that.
-    notifyCitizen({
+    // Awaited, not surfaced: on the public side the address belongs to the
+    // person filling the form, and telling them here is a different screen
+    // and a different decision than warning an atendente mid-atendimento.
+    // Awaiting still matters: the check has to finish inside the request.
+    await notifyCitizen({
       tenant,
       contact: parsed.data.contact,
       protocolNumber,

@@ -7,6 +7,7 @@ import {
   statusLabel,
 } from "@/core/request/kinds.ts";
 import { AdminIcon } from "../../../../_components/icon.tsx";
+import { useEmailWarning } from "../../../../_components/use-email-warning.ts";
 import { type ActionState, changeStatus } from "../actions.ts";
 
 /** The happy path the progress timeline draws. Off-ramps (Indeferido,
@@ -89,6 +90,7 @@ export function StatusSection({
     changeStatus,
     { status: "idle" },
   );
+  useEmailWarning(state);
 
   const happyIndex = HAPPY_PATH.indexOf(status);
 

@@ -22,7 +22,11 @@ import {
 export type ActionState =
   | { status: "idle" }
   | { status: "error"; message: string }
-  | { status: "success" };
+  // `emailWarning` carries the one thing the operator cannot find out later:
+  // that the citizen's address does not take mail. The record was saved
+  // either way, so this is not an error, and it is not a badge on the page
+  // either: it belongs to the moment someone tried to write.
+  | { status: "success"; emailWarning?: string | null };
 
 const NO_PERMISSION =
   "Você não tem permissão para responder este requerimento.";
@@ -57,6 +61,7 @@ export async function respondDataRights(
   }
 
   const tenant = await getTenant();
+  let emailWarning: string | null = null;
   try {
     // Read before writing: the notice below needs the holder's e-mail and the
     // protocol number, and a `requestId` that matches nothing should be
@@ -88,7 +93,7 @@ export async function respondDataRights(
     // The answer itself stays behind the key: a data rights requerimento
     // carries the holder's own personal data, and e-mail is the channel the
     // office does not control. Best effort, like every other notice here.
-    notifyCitizen({
+    emailWarning = await notifyCitizen({
       tenant,
       contact: request.contact,
       protocolNumber: request.protocolNumber,
@@ -103,7 +108,7 @@ export async function respondDataRights(
     return { status: "error", message: GENERIC_ERROR };
   }
   revalidateAdmin();
-  return { status: "success" };
+  return { status: "success", emailWarning };
 }
 
 export async function saveDataRightsDraft(

@@ -41,7 +41,11 @@ import {
 export type ActionState =
   | { status: "idle" }
   | { status: "error"; message: string }
-  | { status: "success" };
+  // `emailWarning` carries the one thing the operator cannot find out later:
+  // that the citizen's address does not take mail. The record was saved
+  // either way, so this is not an error, and it is not a badge on the page
+  // either: it belongs to the moment someone tried to write.
+  | { status: "success"; emailWarning?: string | null };
 
 const NO_PERMISSION = "Você não tem permissão para alterar este pedido.";
 const GENERIC_ERROR =
@@ -78,6 +82,7 @@ export async function changeStatus(
   }
 
   const tenant = await getTenant();
+  let emailWarning: string | null = null;
   try {
     const request = await findById(tenant.slug, requestId);
     if (!request) return { status: "error", message: "Pedido não encontrado." };
@@ -96,7 +101,7 @@ export async function changeStatus(
     // the consult, and a message per andamento would train them to ignore all
     // of them.
     if (status === "done" || status === "cancelled") {
-      notifyCitizen({
+      emailWarning = await notifyCitizen({
         tenant,
         contact: request.contact,
         protocolNumber: request.protocolNumber,
@@ -112,7 +117,7 @@ export async function changeStatus(
     return { status: "error", message: GENERIC_ERROR };
   }
   revalidateAdmin();
-  return { status: "success" };
+  return { status: "success", emailWarning };
 }
 
 export async function registerRequirementAction(
@@ -134,6 +139,7 @@ export async function registerRequirementAction(
   }
 
   const tenant = await getTenant();
+  let emailWarning: string | null = null;
   try {
     await registerRequirement(
       tenant.slug,
@@ -144,7 +150,7 @@ export async function registerRequirementAction(
     const request = await findById(tenant.slug, requestId);
     // Without the text: what the office is asking for is behind the key.
     if (request) {
-      notifyCitizen({
+      emailWarning = await notifyCitizen({
         tenant,
         contact: request.contact,
         protocolNumber: request.protocolNumber,
@@ -157,7 +163,7 @@ export async function registerRequirementAction(
     return { status: "error", message: GENERIC_ERROR };
   }
   revalidateAdmin();
-  return { status: "success" };
+  return { status: "success", emailWarning };
 }
 
 export async function setAmountAction(
@@ -174,6 +180,7 @@ export async function setAmountAction(
   }
 
   const tenant = await getTenant();
+  let emailWarning: string | null = null;
   try {
     // Read before the write: whether the pedido already had a value is the
     // whole difference between informing it and correcting it, and only the
@@ -184,7 +191,7 @@ export async function setAmountAction(
     await setRequestAmount(tenant.slug, requestId, cents, session.user.id);
 
     if (request && request.amountCents === null) {
-      notifyCitizen({
+      emailWarning = await notifyCitizen({
         tenant,
         contact: request.contact,
         protocolNumber: request.protocolNumber,
@@ -197,7 +204,7 @@ export async function setAmountAction(
     return { status: "error", message: GENERIC_ERROR };
   }
   revalidateAdmin();
-  return { status: "success" };
+  return { status: "success", emailWarning };
 }
 
 export async function deliverDocumentAction(
@@ -209,6 +216,7 @@ export async function deliverDocumentAction(
 
   const requestId = String(formData.get("requestId") ?? "");
   const tenant = await getTenant();
+  let emailWarning: string | null = null;
   try {
     const files = formData
       .getAll("documento")
@@ -224,7 +232,7 @@ export async function deliverDocumentAction(
 
     const request = await findById(tenant.slug, requestId);
     if (request) {
-      notifyCitizen({
+      emailWarning = await notifyCitizen({
         tenant,
         contact: request.contact,
         protocolNumber: request.protocolNumber,
@@ -240,7 +248,7 @@ export async function deliverDocumentAction(
     return { status: "error", message: GENERIC_ERROR };
   }
   revalidateAdmin();
-  return { status: "success" };
+  return { status: "success", emailWarning };
 }
 
 /**
@@ -258,6 +266,7 @@ export async function attachRequirementFormAction(
   const requestId = String(formData.get("requestId") ?? "");
   const requirementId = String(formData.get("requirementId") ?? "");
   const tenant = await getTenant();
+  let emailWarning: string | null = null;
   try {
     // The requirement has to be one of this request's: an id from another
     // request would otherwise hang a file off someone else's exigência.
@@ -288,7 +297,7 @@ export async function attachRequirementFormAction(
     // access key is an exigência nobody can meet.
     const request = await findById(tenant.slug, requestId);
     if (request) {
-      notifyCitizen({
+      emailWarning = await notifyCitizen({
         tenant,
         contact: request.contact,
         protocolNumber: request.protocolNumber,
@@ -304,7 +313,7 @@ export async function attachRequirementFormAction(
     return { status: "error", message: GENERIC_ERROR };
   }
   revalidateAdmin();
-  return { status: "success" };
+  return { status: "success", emailWarning };
 }
 
 export async function deleteAttachmentAction(
@@ -546,6 +555,7 @@ export async function replyRequirementAction(
   }
 
   const tenant = await getTenant();
+  let emailWarning: string | null = null;
   try {
     const written = await writeStaffMessage(
       tenant.slug,
@@ -563,7 +573,7 @@ export async function replyRequirementAction(
     const request = await findById(tenant.slug, written.requestId);
     // The answer itself stays behind the key; this only says one arrived.
     if (request) {
-      notifyCitizen({
+      emailWarning = await notifyCitizen({
         tenant,
         contact: request.contact,
         protocolNumber: request.protocolNumber,
@@ -576,7 +586,7 @@ export async function replyRequirementAction(
     return { status: "error", message: GENERIC_ERROR };
   }
   revalidateAdmin();
-  return { status: "success" };
+  return { status: "success", emailWarning };
 }
 
 /**
