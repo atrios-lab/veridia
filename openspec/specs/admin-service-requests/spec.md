@@ -2,9 +2,7 @@
 
 ## Purpose
 A fila e o detalhe do pedido de serviço no painel: o que o balcão vê, muda e entrega desde que o protocolo nasce até a conclusão. Inclui a paridade de balcão trazida do painel legado — imprimir a folha, corrigir os dados protocolados e anexar à exigência o formulário que o cidadão apresenta.
-
 ## Requirements
-
 ### Requirement: Acesso à tela exige a permissão `requests.manage`
 
 Toda rota sob `/admin/pedidos` SHALL exigir sessão válida na serventia do host e a permissão
@@ -97,6 +95,35 @@ aceitar qualquer valor da lista fechada de dezoito, SHALL recusar qualquer outro
 a transição para o mesmo andamento. Toda mudança SHALL gravar entrada no histórico do pedido. Na
 fila, onde dezoito não cabem numa barra de progresso, o andamento SHALL ser apresentado colapsado
 em fases.
+
+O selo colorido do andamento SHALL ter a mesma cor na fila e no detalhe, e a cor SHALL ser
+decidida pelo que o andamento pede do balcão, em cinco tons:
+
+- **bloqueado** (vermelho): Com exigência, Aguardando exigência, Indeferido
+- **esperando** (laranja): Novo, Protocolado, Aguardando pagamento
+- **em curso** (verde): Em análise, Pago, Prenotado, Em qualificação, Em processamento,
+  Registrado, Averbado, Deferido
+- **entregue** (tinta do escritório): Disponível para retirada, Concluído
+- **encerrado** (cinza): Cancelado, Arquivado
+
+Cada um dos dezoito andamentos SHALL ter exatamente um tom declarado; nenhum andamento SHALL
+receber cor por omissão.
+
+#### Scenario: Exigência se destaca na fila
+
+- **WHEN** a fila mostra um pedido em "Com exigência" ao lado de um em "Em análise"
+- **THEN** o selo da exigência sai no tom bloqueado (vermelho) e o de "Em análise" no tom em curso
+  (verde), com destaque equivalente ao laranja de "Aguardando pagamento"
+
+#### Scenario: Fila e detalhe combinam
+
+- **WHEN** o operador abre o detalhe de um pedido que viu na fila
+- **THEN** o selo do andamento tem a mesma cor nas duas telas
+
+#### Scenario: Andamento novo exige tom
+
+- **WHEN** um décimo nono andamento é acrescentado à lista sem tom declarado
+- **THEN** a build falha, em vez de o andamento aparecer com uma cor herdada em silêncio
 
 #### Scenario: Transição sugerida
 
@@ -397,3 +424,4 @@ o protocolo e a instrução de consultar com a chave. O envio SHALL ser fire-and
 #### Scenario: Andamento intermediário não avisa
 - **WHEN** o operador muda o andamento para "Prenotado"
 - **THEN** nenhum e-mail é enviado: o cidadão acompanha pela consulta, e avisar cada passo viraria ruído
+
