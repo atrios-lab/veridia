@@ -24,6 +24,40 @@ test("a visitor with no session never reaches the transparency screen", async ({
   );
 });
 
+// The institutional notices are fixed text, not rows: no login and no seeded
+// account. They still need the database, because the page around them reads
+// documents and bulletins before it renders anything.
+test.describe("avisos institucionais", () => {
+  test.skip(
+    !process.env.DATABASE_URL,
+    "precisa de DATABASE_URL: a página pública lê documentos e boletins",
+  );
+
+  test("the public page carries both notices, named after the office", async ({
+    page,
+  }) => {
+    await page.goto(`${baseURL}/transparencia`);
+
+    const notices = page.getByRole("region", { name: "Avisos institucionais" });
+    await expect(
+      notices.getByRole("heading", { name: "Prevenção à lavagem de dinheiro" }),
+    ).toBeVisible();
+    await expect(
+      notices.getByRole("heading", {
+        name: "Atos que envolvem pessoas idosas",
+      }),
+    ).toBeVisible();
+
+    // The office's own name, not a generic "esta serventia".
+    await expect(notices.getByText(/Cartório/)).toHaveCount(2);
+
+    // The way to the rule itself is on the page, at the CNJ, not a copy here.
+    await expect(
+      notices.getByRole("link", { name: "Provimento CNJ nº 149/2023" }),
+    ).toHaveAttribute("href", /atos\.cnj\.jus\.br/);
+  });
+});
+
 test.describe("transparência", () => {
   test.describe.configure({ mode: "serial" });
 
