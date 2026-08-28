@@ -74,7 +74,7 @@ export default async function TransparencyPage() {
   const bulletins = await listBulletins(tenant.slug);
 
   return (
-    <main className="mx-auto max-w-4xl px-4 py-10 md:px-10">
+    <div className="mx-auto max-w-4xl px-4 py-10 md:px-10">
       <span className="text-xs font-bold uppercase tracking-[0.16em] text-brand-accent">
         {tenant.name}
       </span>
@@ -120,6 +120,6 @@ export default async function TransparencyPage() {
           </div>
         )}
       </section>
-    </main>
+    </div>
   );
 }

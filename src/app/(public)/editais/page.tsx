@@ -80,7 +80,7 @@ export default async function PublicNoticesPage() {
   const general = groups.get(null) ?? [];
 
   return (
-    <main className="mx-auto max-w-6xl px-4 py-10 md:px-10">
+    <div className="mx-auto max-w-6xl px-4 py-10 md:px-10">
       <span className="text-xs font-bold uppercase tracking-[0.16em] text-brand-accent">
         Publicações oficiais
       </span>
@@ -160,6 +160,6 @@ export default async function PublicNoticesPage() {
           </div>
         </>
       )}
-    </main>
+    </div>
   );
 }

@@ -12,6 +12,7 @@ import { SERIF } from "@/lib/fonts.ts";
 import { getTenant } from "@/lib/tenant.ts";
 import { blobUploadEnabled } from "@/lib/uploads.ts";
 import { ChatWidget } from "./_components/chat-widget.tsx";
+import { CloseMenuOnNavigate } from "./_components/close-menu-on-navigate.tsx";
 import { CookieNotice } from "./_components/cookie-notice.tsx";
 import { Icon } from "./_components/icon.tsx";
 import { BlobUploadProvider } from "./_lib/attachments.tsx";
@@ -102,8 +103,10 @@ export default async function PublicLayout({
             )}
           </nav>
 
-          {/* Native disclosure: a menu that opens without a line of JavaScript
-              keeps working while the page is still hydrating. */}
+          {/* Native disclosure: the menu opens with no JavaScript at all, so
+              it works while the page is still hydrating. The only script is
+              the one that closes it again, which the browser cannot do on its
+              own here: see close-menu-on-navigate.tsx. */}
           <details className="relative md:hidden">
             <summary className="flex cursor-pointer list-none items-center rounded-lg p-1.5 text-brand-primary [&::-webkit-details-marker]:hidden">
               <Icon name="menu" className="h-6 w-6" />
@@ -122,6 +125,7 @@ export default async function PublicLayout({
                 )),
               )}
             </nav>
+            <CloseMenuOnNavigate />
           </details>
         </div>
       </header>
