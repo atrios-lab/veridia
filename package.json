@@ -13,6 +13,7 @@
     "test": "node --test \"src/**/*.test.ts\"",
     "check:dashes": "node scripts/check-dashes.mjs",
     "check:tokens": "node scripts/check-tokens.mjs",
+    "check:a11y": "node scripts/check-a11y.mjs",
     "e2e": "playwright test",
     "db:generate": "drizzle-kit generate",
     "db:migrate": "drizzle-kit migrate",
@@ -42,6 +43,7 @@
     "zod": "^4.4.3"
   },
   "devDependencies": {
+    "@axe-core/playwright": "^4.13.0",
     "@biomejs/biome": "2.2.0",
     "@electric-sql/pglite": "^0.5.4",
     "@playwright/test": "^1.62.1",

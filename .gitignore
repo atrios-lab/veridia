@@ -53,3 +53,5 @@ next-env.d.ts
 
 .playwright-mcp
 temp
+# estado do loop de qualidade de front-end
+.claude/loop-state.md
