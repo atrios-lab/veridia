@@ -30,7 +30,7 @@ function NoticeCard({ row }: { row: PublicationRow }) {
         <h3 className="font-serif text-lg font-semibold text-brand-primary">
           {row.title}
         </h3>
-        <span className="rounded-lg bg-brand-accent-soft px-2.5 py-1 text-[11.5px] font-semibold text-brand-accent">
+        <span className="rounded-lg bg-brand-accent-soft px-2.5 py-1 text-[11.5px] font-semibold text-brand-accent-ink">
           {PUBLICATION_KIND_LABELS[row.kind as PublicationKind]}
         </span>
       </div>
@@ -81,7 +81,7 @@ export default async function PublicNoticesPage() {
 
   return (
     <div className="mx-auto max-w-6xl px-4 py-10 md:px-10">
-      <span className="text-xs font-bold uppercase tracking-[0.16em] text-brand-accent">
+      <span className="text-xs font-bold uppercase tracking-[0.16em] text-brand-accent-ink">
         Publicações oficiais
       </span>
       <h1 className="mt-2 font-serif text-3xl font-semibold text-brand-primary">
@@ -124,7 +124,7 @@ export default async function PublicNoticesPage() {
                   {sectors.length <= 1 && (
                     <span data-notice-sector={sector} className="sr-only" />
                   )}
-                  <div className="text-xs font-bold uppercase tracking-[0.12em] text-brand-accent">
+                  <div className="text-xs font-bold uppercase tracking-[0.12em] text-brand-accent-ink">
                     {meta.acronym} · {meta.noticeType}
                   </div>
                   <h2 className="mt-1 font-serif text-xl font-semibold text-brand-primary">

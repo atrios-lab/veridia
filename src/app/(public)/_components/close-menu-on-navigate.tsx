@@ -4,7 +4,9 @@ import { usePathname } from "next/navigation";
 import { useEffect, useRef } from "react";
 
 /**
- * Closes the <details> this sits in whenever the route changes.
+ * Closes the <details> this sits in whenever the route changes, and also on a
+ * tap on any link inside it: a link to the current route does not change the
+ * pathname, so the effect below alone would leave the panel open.
  *
  * The public layout is not re-rendered on a client navigation (the same fact
  * the panel's sidebar-nav.tsx works around), so the native disclosure keeps
@@ -19,6 +21,18 @@ export function CloseMenuOnNavigate() {
   useEffect(() => {
     anchor.current?.closest("details")?.removeAttribute("open");
   }, [pathname]);
+
+  useEffect(() => {
+    const details = anchor.current?.closest("details");
+    if (!details) return;
+    const onClick = (event: MouseEvent) => {
+      if ((event.target as Element).closest("a")) {
+        details.removeAttribute("open");
+      }
+    };
+    details.addEventListener("click", onClick);
+    return () => details.removeEventListener("click", onClick);
+  }, []);
 
   return <span ref={anchor} hidden />;
 }

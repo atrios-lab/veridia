@@ -72,7 +72,10 @@ export default async function PublicLayout({
             </span>
           </Link>
 
-          <nav className="hidden items-center gap-6 md:flex">
+          <nav
+            aria-label="Navegação principal"
+            className="hidden items-center gap-6 md:flex"
+          >
             {/* data-section: no rodapé enxuto "Início" não tem link próprio,
                 então é este aqui que prova ao e2e de gating que a seção rendeu. */}
             <Link
@@ -112,7 +115,10 @@ export default async function PublicLayout({
               <Icon name="menu" className="h-6 w-6" />
               <span className="sr-only">Abrir menu</span>
             </summary>
-            <nav className="absolute right-0 z-20 mt-2 w-60 rounded-2xl border border-brand-border bg-brand-card p-2 shadow-lg">
+            <nav
+              aria-label="Menu do site"
+              className="absolute right-0 z-20 mt-2 w-60 rounded-2xl border border-brand-border bg-brand-card p-2 shadow-lg"
+            >
               {sections.flatMap((section) =>
                 sectionNavLinks(section).map((link) => (
                   <Link
@@ -196,7 +202,11 @@ export default async function PublicLayout({
             ).map(({ title, hrefs }) => (
               // No toque os links ficam mais afastados: apertar a lista é um
               // ganho de altura na tela grande, não no dedo.
-              <nav key={title} className="flex flex-col gap-3 md:gap-2.5">
+              <nav
+                key={title}
+                aria-label={title}
+                className="flex flex-col gap-3 md:gap-2.5"
+              >
                 <span className="text-xs font-semibold uppercase tracking-[0.14em] text-brand-on-dark-accent">
                   {title}
                 </span>

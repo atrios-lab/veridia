@@ -75,7 +75,7 @@ export function SchedulingScreen(props: SchedulingScreenProps) {
       {/* min-w-0, or the scrolling row of days widens the column instead of
           scrolling inside it, and the whole page scrolls sideways. */}
       <div className="min-w-0">
-        <span className="text-[11px] font-bold uppercase tracking-[0.16em] text-brand-accent">
+        <span className="text-[11px] font-bold uppercase tracking-[0.16em] text-brand-accent-ink">
           Atendimento presencial
         </span>
         <h1 className="mt-2 font-serif text-2xl font-semibold text-brand-primary md:text-3xl">
@@ -160,7 +160,7 @@ export function SchedulingScreen(props: SchedulingScreenProps) {
 
       <aside className="mt-6 flex flex-col gap-3.5 md:mt-9">
         <div className="rounded-2xl border border-brand-border bg-brand-card p-5">
-          <span className="text-[11px] font-bold uppercase tracking-[0.16em] text-brand-accent">
+          <span className="text-[11px] font-bold uppercase tracking-[0.16em] text-brand-accent-ink">
             Como funciona
           </span>
           <ol className="mt-3 flex flex-col gap-3">
@@ -195,10 +195,10 @@ export function SchedulingScreen(props: SchedulingScreenProps) {
         <div className="flex items-start gap-2.5 rounded-2xl bg-brand-accent-soft px-3.5 py-3">
           <Icon
             name="info"
-            className="mt-0.5 h-4 w-4 shrink-0 text-brand-accent"
+            className="mt-0.5 h-4 w-4 shrink-0 text-brand-accent-ink"
             strokeWidth={2}
           />
-          <p className="text-[12px] leading-relaxed text-brand-accent">
+          <p className="text-[12px] leading-relaxed text-brand-accent-ink">
             Precisa de um ato específico? Use{" "}
             <Link href="/solicitar" className="font-semibold underline">
               Solicitar serviço
@@ -574,10 +574,10 @@ function AppointmentForm({
         <div className="flex items-start gap-2.5 rounded-xl bg-brand-accent-soft px-3.5 py-3 md:max-w-[44ch] md:bg-transparent md:px-0 md:py-0">
           <Icon
             name="calendar"
-            className="mt-0.5 h-4 w-4 shrink-0 text-brand-accent md:hidden"
+            className="mt-0.5 h-4 w-4 shrink-0 text-brand-accent-ink md:hidden"
             strokeWidth={1.9}
           />
-          <p className="text-[12px] leading-relaxed text-brand-accent">
+          <p className="text-[12px] leading-relaxed text-brand-accent-ink">
             O horário fica <strong>marcado na hora</strong>. A confirmação, com
             o link para cancelar, chega no e-mail informado acima.
           </p>

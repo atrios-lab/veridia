@@ -108,7 +108,7 @@ export function ManifestationScreen() {
   return (
     <div className="md:grid md:grid-cols-[320px_1fr] md:items-start md:gap-9">
       <div className="min-w-0">
-        <span className="text-[11px] font-bold uppercase tracking-[0.16em] text-brand-accent">
+        <span className="text-[11px] font-bold uppercase tracking-[0.16em] text-brand-accent-ink">
           Fale com a serventia
         </span>
         <h1 className="mt-2 font-serif text-2xl font-semibold text-brand-primary md:text-3xl">
@@ -414,7 +414,7 @@ function ConfirmationScreen({ result }: { result: OmbudsmanSuccess }) {
         </div>
 
         <div className="mt-3.5 rounded-2xl border border-brand-border bg-brand-card p-4 md:mt-0">
-          <span className="text-[11px] font-bold uppercase tracking-[0.16em] text-brand-accent">
+          <span className="text-[11px] font-bold uppercase tracking-[0.16em] text-brand-accent-ink">
             O que acontece agora
           </span>
           <ol className="mt-2.5 flex flex-col gap-2.5">

@@ -60,7 +60,7 @@ function SectionBlock({ section }: { section: SealSection }) {
   return (
     <div className="border-t border-brand-border pt-3 first:border-t-0 first:pt-0">
       {section.title && (
-        <span className="text-[11px] font-bold uppercase tracking-[0.16em] text-brand-accent">
+        <span className="text-[11px] font-bold uppercase tracking-[0.16em] text-brand-accent-ink">
           {section.title}
         </span>
       )}
@@ -171,7 +171,7 @@ export function SealLookup({
     <div className="md:grid md:grid-cols-[1fr_460px] md:items-start md:gap-10">
       <div className="flex flex-col gap-4 md:gap-5">
         <div>
-          <span className="text-xs font-bold uppercase tracking-[0.16em] text-brand-accent">
+          <span className="text-xs font-bold uppercase tracking-[0.16em] text-brand-accent-ink">
             {tenantName}
           </span>
           <h1 className="mt-2 font-serif text-3xl font-semibold text-brand-primary">
@@ -299,10 +299,10 @@ export function SealLookup({
             <div className="flex items-start gap-2.5">
               <Icon
                 name="info"
-                className="mt-0.5 h-4.5 w-4.5 shrink-0 text-brand-accent"
+                className="mt-0.5 h-4.5 w-4.5 shrink-0 text-brand-accent-ink"
               />
               <div>
-                <div className="text-[10.5px] font-bold uppercase tracking-[0.14em] text-brand-accent">
+                <div className="text-[10.5px] font-bold uppercase tracking-[0.14em] text-brand-accent-ink">
                   Resposta do TJ
                 </div>
                 {/* The TJ's own words: it knows why it refused, we don't. */}

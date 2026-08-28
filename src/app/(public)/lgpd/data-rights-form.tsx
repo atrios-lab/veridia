@@ -110,7 +110,7 @@ export function DataRightsScreen(props: DataRightsScreenProps) {
   return (
     <div className="md:grid md:grid-cols-[1fr_320px] md:items-start md:gap-9">
       <div className="min-w-0">
-        <span className="text-[11px] font-bold uppercase tracking-[0.16em] text-brand-accent">
+        <span className="text-[11px] font-bold uppercase tracking-[0.16em] text-brand-accent-ink">
           Proteção de dados pessoais
         </span>
         <h1 className="mt-2 font-serif text-2xl font-semibold text-brand-primary md:text-3xl">
@@ -402,10 +402,10 @@ export function DataRightsScreen(props: DataRightsScreenProps) {
         <div className="flex items-start gap-2.5 rounded-2xl bg-brand-accent-soft px-3.5 py-3">
           <Icon
             name="info"
-            className="mt-0.5 h-4 w-4 shrink-0 text-brand-accent"
+            className="mt-0.5 h-4 w-4 shrink-0 text-brand-accent-ink"
             strokeWidth={2}
           />
-          <p className="text-[12px] leading-relaxed text-brand-accent">
+          <p className="text-[12px] leading-relaxed text-brand-accent-ink">
             A resposta do DPO chega pela consulta protegida por chave: ninguém
             mais lê o conteúdo do seu requerimento.
           </p>

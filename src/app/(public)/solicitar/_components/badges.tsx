@@ -16,7 +16,7 @@ export function ProcessingBadge({ mode }: { mode: ProcessingMode }) {
     <span
       className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[11px] font-bold ${
         atCounter
-          ? "bg-brand-accent-soft text-brand-accent"
+          ? "bg-brand-accent-soft text-brand-accent-ink"
           : "bg-brand-tint text-brand-primary-soft"
       }`}
     >
@@ -40,10 +40,10 @@ export function ProcessingLegend() {
     <div className="flex items-start gap-2.5 rounded-xl bg-brand-accent-soft px-3.5 py-3">
       <Icon
         name="info"
-        className="mt-0.5 h-4 w-4 shrink-0 text-brand-accent"
+        className="mt-0.5 h-4 w-4 shrink-0 text-brand-accent-ink"
         strokeWidth={2}
       />
-      <p className="text-[11.5px] leading-relaxed text-brand-accent">
+      <p className="text-[11.5px] leading-relaxed text-brand-accent-ink">
         <strong>Só identificação</strong>: peça na hora, sem requerimento.{" "}
         <strong>100% on-line</strong>: você assina o PDF pelo Gov.br.{" "}
         <strong>On-line + presencial</strong>: o pedido adianta a análise, mas o

@@ -54,7 +54,7 @@ export default async function ContactPage() {
     <div className="mx-auto max-w-5xl px-4 py-10 md:px-10">
       <div className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
         <div>
-          <span className="text-xs font-bold uppercase tracking-[0.16em] text-brand-accent">
+          <span className="text-xs font-bold uppercase tracking-[0.16em] text-brand-accent-ink">
             Onde nos encontrar
           </span>
           <h1 className="mt-2 font-serif text-3xl font-semibold text-brand-primary">
@@ -86,7 +86,7 @@ export default async function ContactPage() {
                 />
               </span>
               <div className="flex-1">
-                <div className="text-[10.5px] font-bold uppercase tracking-[0.12em] text-brand-accent">
+                <div className="text-[10.5px] font-bold uppercase tracking-[0.12em] text-brand-accent-ink">
                   WhatsApp e telefone
                 </div>
                 <div className="mt-0.5 text-base font-bold text-brand-primary">
@@ -128,7 +128,7 @@ export default async function ContactPage() {
               />
             </span>
             <div className="min-w-0 flex-1">
-              <div className="text-[10.5px] font-bold uppercase tracking-[0.12em] text-brand-accent">
+              <div className="text-[10.5px] font-bold uppercase tracking-[0.12em] text-brand-accent-ink">
                 E-mail institucional
               </div>
               <div className="mt-0.5 truncate text-[15px] font-bold text-brand-primary">
@@ -147,7 +147,7 @@ export default async function ContactPage() {
                 />
               </span>
               <div className="flex-1">
-                <div className="text-[10.5px] font-bold uppercase tracking-[0.12em] text-brand-accent">
+                <div className="text-[10.5px] font-bold uppercase tracking-[0.12em] text-brand-accent-ink">
                   Horário de atendimento
                 </div>
                 <div className="mt-0.5 text-[15px] font-bold text-brand-primary">
@@ -164,9 +164,9 @@ export default async function ContactPage() {
           <div className="flex items-start gap-2.5 rounded-2xl bg-brand-accent-soft p-4">
             <Icon
               name="info"
-              className="mt-0.5 h-4 w-4 flex-none text-brand-accent"
+              className="mt-0.5 h-4 w-4 flex-none text-brand-accent-ink"
             />
-            <p className="text-xs leading-relaxed text-brand-accent">
+            <p className="text-xs leading-relaxed text-brand-accent-ink">
               Elogios, reclamações e sugestões têm canal próprio: a{" "}
               <Link href="/ouvidoria" className="font-semibold underline">
                 Ouvidoria

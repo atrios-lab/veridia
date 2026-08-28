@@ -384,10 +384,10 @@ export function RequestForm({
           <div className="flex items-start gap-2.5 rounded-2xl bg-brand-accent-soft px-3.5 py-3">
             <Icon
               name="info"
-              className="mt-0.5 h-4 w-4 shrink-0 text-brand-accent"
+              className="mt-0.5 h-4 w-4 shrink-0 text-brand-accent-ink"
               strokeWidth={2}
             />
-            <p className="text-[12px] leading-relaxed text-brand-accent">
+            <p className="text-[12px] leading-relaxed text-brand-accent-ink">
               {act.guidance} O pedido enviado aqui adianta a análise.
             </p>
           </div>
@@ -463,10 +463,10 @@ export function RequestForm({
         <div className="flex items-start gap-2.5 rounded-2xl bg-brand-accent-soft px-3.5 py-3">
           <Icon
             name="info"
-            className="mt-0.5 h-4 w-4 shrink-0 text-brand-accent"
+            className="mt-0.5 h-4 w-4 shrink-0 text-brand-accent-ink"
             strokeWidth={2}
           />
-          <p className="text-[12px] leading-relaxed text-brand-accent">
+          <p className="text-[12px] leading-relaxed text-brand-accent-ink">
             Ao enviar, você recebe um <strong>protocolo</strong> e uma{" "}
             <strong>chave de acesso</strong>, mostrada uma única vez. É com eles
             que você acompanha o pedido.
@@ -492,7 +492,7 @@ function ActContext({
     >
       <div className="flex items-center gap-2.5">
         <div className="flex-1">
-          <div className="text-[10.5px] font-bold uppercase tracking-[0.12em] text-brand-accent">
+          <div className="text-[10.5px] font-bold uppercase tracking-[0.12em] text-brand-accent-ink">
             {ATTRIBUTION_SHORT_NAMES[attribution]}
           </div>
           <div className="font-serif text-[15px] font-semibold text-brand-primary">
