@@ -1,5 +1,11 @@
 # Propostas de UX
 
+> Status 2026-08-28: propostas 1–3 saíram com o loop (accent-ink, faint,
+> gate multi-tema); 4, 6, 7, 8 e 9 implementadas em feat/ux-proposals.
+> A 5 foi verificada e descartada: os dois vãos da coluna do /admin/login
+> medem exatamente 182px/182px — o bloco de texto JÁ está centrado; o que a
+> proposta sugeria é o estado atual.
+
 Fila de julgamento, não de fatos. O loop de qualidade (`.claude/loop.md`) nunca
 implementa o que está aqui — só acrescenta. Corrigir é decisão de quem lê.
 

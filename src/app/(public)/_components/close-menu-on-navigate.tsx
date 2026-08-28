@@ -4,34 +4,36 @@ import { usePathname } from "next/navigation";
 import { useEffect, useRef } from "react";
 
 /**
- * Closes the <details> this sits in whenever the route changes, and also on a
- * tap on any link inside it: a link to the current route does not change the
- * pathname, so the effect below alone would leave the panel open.
+ * Closes the menu popover this sits in whenever the route changes, and also
+ * on a tap on any link inside it: a link to the current route does not change
+ * the pathname, so the effect below alone would leave the panel open. Escape
+ * and taps outside are the browser's own job (popover="auto").
  *
  * The public layout is not re-rendered on a client navigation (the same fact
- * the panel's sidebar-nav.tsx works around), so the native disclosure keeps
- * the `open` it had when the link was tapped and the menu panel stays on top
- * of the page it just opened.
+ * the panel's sidebar-nav.tsx works around), so without this the panel would
+ * keep showing on top of the page a tapped link just opened.
  */
 export function CloseMenuOnNavigate() {
   const pathname = usePathname();
   const anchor = useRef<HTMLSpanElement>(null);
 
-  // biome-ignore lint/correctness/useExhaustiveDependencies: the path is the trigger, not a value the effect reads.
-  useEffect(() => {
-    anchor.current?.closest("details")?.removeAttribute("open");
-  }, [pathname]);
+  const close = () => {
+    const popover = anchor.current?.closest<HTMLElement>("[popover]");
+    if (popover?.matches(":popover-open")) popover.hidePopover();
+  };
 
+  // biome-ignore lint/correctness/useExhaustiveDependencies: the path is the trigger, not a value the effect reads.
+  useEffect(close, [pathname]);
+
+  // biome-ignore lint/correctness/useExhaustiveDependencies: close reads only refs, it never goes stale.
   useEffect(() => {
-    const details = anchor.current?.closest("details");
-    if (!details) return;
-    const onClick = (event: MouseEvent) => {
-      if ((event.target as Element).closest("a")) {
-        details.removeAttribute("open");
-      }
+    const popover = anchor.current?.closest("[popover]");
+    if (!popover) return;
+    const onClick = (event: Event) => {
+      if ((event.target as Element).closest("a")) close();
     };
-    details.addEventListener("click", onClick);
-    return () => details.removeEventListener("click", onClick);
+    popover.addEventListener("click", onClick);
+    return () => popover.removeEventListener("click", onClick);
   }, []);
 
   return <span ref={anchor} hidden />;
