@@ -44,3 +44,9 @@ Esforço: **P** (uma tela / poucas linhas) · **M** (um padrão repetido) · **G
 - **Tela:** todas as públicas em mobile
 - **Problema:** limitação nativa do `<details>`, não regressão. Fechar ao navegar já foi corrigido na iteração 1; estes dois continuam.
 - **Sugestão:** trocar o painel por `popover` + `popovertarget` — light dismiss e Escape saem de graça, sem JS extra, reaproveitando o componente que já fecha na navegação.
+
+## Iteração 5 — 2026-08-28
+
+### 9. `/contato` em 390px: e-mail truncado com reticências — P
+- **Problema:** o e-mail institucional vira "contato@cartorioiel…"; o botão "Copiar" mantém a função, mas não dá para conferir o endereço antes de copiar.
+- **Sugestão:** `break-all`/`text-wrap` no e-mail, ou fonte um passo menor nesse card (`src/app/(public)/contato/page.tsx`).
