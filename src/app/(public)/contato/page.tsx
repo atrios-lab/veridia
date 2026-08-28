@@ -131,7 +131,7 @@ export default async function ContactPage() {
               <div className="text-[10.5px] font-bold uppercase tracking-[0.12em] text-brand-accent-ink">
                 E-mail institucional
               </div>
-              <div className="mt-0.5 truncate text-[15px] font-bold text-brand-primary">
+              <div className="mt-0.5 break-all text-[15px] font-bold text-brand-primary">
                 {tenant.contacts.email}
               </div>
             </div>

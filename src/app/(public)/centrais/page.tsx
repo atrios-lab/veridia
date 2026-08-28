@@ -119,7 +119,9 @@ export default async function OfficialPortalsPage() {
             </span>
             <span className="h-px flex-1 bg-brand-border" />
           </div>
-          <div className="mt-3 grid grid-cols-1 gap-3.5 md:grid-cols-2">
+          <div
+            className={`mt-3 grid grid-cols-1 gap-3.5${group.portals.length > 1 ? " md:grid-cols-2" : ""}`}
+          >
             {group.portals.map((portal) => (
               <PortalCard key={portal.domain} portal={portal} />
             ))}

@@ -106,18 +106,25 @@ export default async function PublicLayout({
             )}
           </nav>
 
-          {/* Native disclosure: the menu opens with no JavaScript at all, so
-              it works while the page is still hydrating. The only script is
-              the one that closes it again, which the browser cannot do on its
-              own here: see close-menu-on-navigate.tsx. */}
-          <details className="relative md:hidden">
-            <summary className="flex cursor-pointer list-none items-center rounded-lg p-1.5 text-brand-primary [&::-webkit-details-marker]:hidden">
+          {/* Native popover: the menu opens with no JavaScript at all, so
+              it works while the page is still hydrating, and the browser
+              closes it on Escape and on a tap outside for free. The only
+              script is the close after a tap on a link, which the browser
+              cannot do on its own here: see close-menu-on-navigate.tsx. */}
+          <div className="md:hidden">
+            <button
+              type="button"
+              popoverTarget="site-menu"
+              className="flex cursor-pointer items-center rounded-lg p-1.5 text-brand-primary"
+            >
               <Icon name="menu" className="h-6 w-6" />
               <span className="sr-only">Abrir menu</span>
-            </summary>
+            </button>
             <nav
+              id="site-menu"
+              popover="auto"
               aria-label="Menu do site"
-              className="absolute right-0 z-20 mt-2 w-60 rounded-2xl border border-brand-border bg-brand-card p-2 shadow-lg"
+              className="fixed top-[4.25rem] right-4 bottom-auto left-auto z-20 m-0 w-60 rounded-2xl border border-brand-border bg-brand-card p-2 shadow-lg"
             >
               {sections.flatMap((section) =>
                 sectionNavLinks(section).map((link) => (
@@ -130,9 +137,9 @@ export default async function PublicLayout({
                   </Link>
                 )),
               )}
+              <CloseMenuOnNavigate />
             </nav>
-            <CloseMenuOnNavigate />
-          </details>
+          </div>
         </div>
       </header>
 
