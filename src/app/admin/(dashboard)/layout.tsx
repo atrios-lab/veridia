@@ -19,8 +19,8 @@ export default async function DashboardLayout({
   // separate: an admin is an admin of their own office, never of the one
   // whose domain they happened to open.
   const session = await getSession();
-  const pathname = (await headers()).get("x-pathname") ?? "/admin";
   if (!session || !can(session.user.role ?? "", "admin.access")) {
+    const pathname = (await headers()).get("x-pathname") ?? "/admin";
     // The middleware already sent anyone with no session cookie at all to
     // the login page before this ever runs (see src/middleware.ts), so
     // reaching here means a cookie existed and this database check is what
@@ -63,7 +63,6 @@ export default async function DashboardLayout({
             email: session.user.email,
             role,
           }}
-          pathname={pathname}
           counts={counts}
         />
         {/*

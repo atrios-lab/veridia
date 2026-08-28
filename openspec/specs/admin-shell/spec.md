@@ -34,11 +34,22 @@ sob rótulos de seção. Um item cuja rota exija permissão que o papel da sess�
 omitido. A omissão do item NÃO SHALL ser tratada como controle de acesso: a rota correspondente
 SHALL checar a permissão no servidor de qualquer forma.
 
+O destaque de página atual SHALL refletir a rota em que a pessoa está a cada navegação, inclusive
+nas navegações feitas no cliente entre telas que compartilham a mesma casca, sem depender de
+recarregamento da página.
+
 #### Scenario: Item da tela atual em destaque
 
 - **WHEN** o usuário está em `/admin/configuracoes`
 - **THEN** o item "Configurações" aparece marcado como página atual (`aria-current="page"`) e os
   demais não
+
+#### Scenario: Destaque acompanha navegação no cliente
+
+- **WHEN** o usuário está em `/admin/pedidos` e clica no item "Publicações" da sidebar, sem
+  recarregar a página
+- **THEN** "Publicações" passa a ser o único item marcado como página atual, e "Pedidos de
+  serviço" deixa de estar marcado
 
 #### Scenario: Rota inexistente não vira item de menu
 
