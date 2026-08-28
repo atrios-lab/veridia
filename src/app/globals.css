@@ -14,6 +14,7 @@
   --palette-verde-dourado-primary-soft: #1c5638;
   --palette-verde-dourado-shade: #091e14;
   --palette-verde-dourado-accent: #8f7238;
+  --palette-verde-dourado-accent-ink: #7f6532;
   --palette-verde-dourado-accent-soft: #efe8d6;
   --palette-verde-dourado-on-dark-accent: #d9c89a;
   --palette-verde-dourado-on-dark-heading: #e8d9ae;
@@ -26,6 +27,7 @@
   --palette-marinho-bronze-primary-soft: #1f4468;
   --palette-marinho-bronze-shade: #0a1a2a;
   --palette-marinho-bronze-accent: #9c7c46;
+  --palette-marinho-bronze-accent-ink: #7c6338;
   --palette-marinho-bronze-accent-soft: #efe6d2;
   --palette-marinho-bronze-on-dark-accent: #d5bd8a;
   --palette-marinho-bronze-on-dark-heading: #e3d3a8;
@@ -38,6 +40,7 @@
   --palette-vinho-perola-primary-soft: #6e2c3a;
   --palette-vinho-perola-shade: #2b0e14;
   --palette-vinho-perola-accent: #a1734b;
+  --palette-vinho-perola-accent-ink: #855f3e;
   --palette-vinho-perola-accent-soft: #f0e4d8;
   --palette-vinho-perola-on-dark-accent: #dcc296;
   --palette-vinho-perola-on-dark-heading: #ecd9b8;
@@ -50,6 +53,7 @@
   --palette-grafite-cobre-primary-soft: #37443f;
   --palette-grafite-cobre-shade: #141917;
   --palette-grafite-cobre-accent: #b0703c;
+  --palette-grafite-cobre-accent-ink: #8e5a30;
   --palette-grafite-cobre-accent-soft: #f0e3d5;
   --palette-grafite-cobre-on-dark-accent: #dcba88;
   --palette-grafite-cobre-on-dark-heading: #e6c9a6;
@@ -62,6 +66,7 @@
   --palette-oliva-terracota-primary-soft: #55663f;
   --palette-oliva-terracota-shade: #1f2814;
   --palette-oliva-terracota-accent: #b3552e;
+  --palette-oliva-terracota-accent-ink: #a34d2a;
   --palette-oliva-terracota-accent-soft: #f2e3d6;
   --palette-oliva-terracota-on-dark-accent: #dcc59a;
   --palette-oliva-terracota-on-dark-heading: #ead9ac;
@@ -74,7 +79,7 @@
   --palette-card: #ffffff;
   --palette-text: #1c211e;
   --palette-text-soft: #3d453f;
-  --palette-faint: #8b9289;
+  --palette-faint: #61675f;
   --palette-alert: #a4402f;
 }
 
@@ -94,7 +99,7 @@
      purpose: the difference has to survive a screenshot. */
   --palette-admin-readonly-bg: #f0eee7;
   --palette-admin-text: #1c211e;
-  --palette-admin-faint: #8f9a90;
+  --palette-admin-faint: #616c62;
   --palette-admin-on-dark-subtitle: #c8d4ca;
   --palette-admin-on-dark-muted: #8fa896;
   --palette-admin-error-bg: #f3e2dd;
@@ -145,6 +150,7 @@
   --color-brand-primary-soft: var(--brand-primary-soft);
   --color-brand-shade: var(--brand-shade);
   --color-brand-accent: var(--brand-accent);
+  --color-brand-accent-ink: var(--brand-accent-ink);
   --color-brand-accent-soft: var(--brand-accent-soft);
   --color-brand-accent-line: var(--brand-accent-line);
   --color-brand-on-dark-accent: var(--brand-on-dark-accent);
@@ -192,6 +198,7 @@
   --brand-primary-soft: var(--palette-verde-dourado-primary-soft);
   --brand-shade: var(--palette-verde-dourado-shade);
   --brand-accent: var(--palette-verde-dourado-accent);
+  --brand-accent-ink: var(--palette-verde-dourado-accent-ink);
   --brand-accent-soft: var(--palette-verde-dourado-accent-soft);
   --brand-on-dark-accent: var(--palette-verde-dourado-on-dark-accent);
   --brand-on-dark-heading: var(--palette-verde-dourado-on-dark-heading);
@@ -206,6 +213,7 @@
   --brand-primary-soft: var(--palette-marinho-bronze-primary-soft);
   --brand-shade: var(--palette-marinho-bronze-shade);
   --brand-accent: var(--palette-marinho-bronze-accent);
+  --brand-accent-ink: var(--palette-marinho-bronze-accent-ink);
   --brand-accent-soft: var(--palette-marinho-bronze-accent-soft);
   --brand-on-dark-accent: var(--palette-marinho-bronze-on-dark-accent);
   --brand-on-dark-heading: var(--palette-marinho-bronze-on-dark-heading);
@@ -220,6 +228,7 @@
   --brand-primary-soft: var(--palette-vinho-perola-primary-soft);
   --brand-shade: var(--palette-vinho-perola-shade);
   --brand-accent: var(--palette-vinho-perola-accent);
+  --brand-accent-ink: var(--palette-vinho-perola-accent-ink);
   --brand-accent-soft: var(--palette-vinho-perola-accent-soft);
   --brand-on-dark-accent: var(--palette-vinho-perola-on-dark-accent);
   --brand-on-dark-heading: var(--palette-vinho-perola-on-dark-heading);
@@ -234,6 +243,7 @@
   --brand-primary-soft: var(--palette-grafite-cobre-primary-soft);
   --brand-shade: var(--palette-grafite-cobre-shade);
   --brand-accent: var(--palette-grafite-cobre-accent);
+  --brand-accent-ink: var(--palette-grafite-cobre-accent-ink);
   --brand-accent-soft: var(--palette-grafite-cobre-accent-soft);
   --brand-on-dark-accent: var(--palette-grafite-cobre-on-dark-accent);
   --brand-on-dark-heading: var(--palette-grafite-cobre-on-dark-heading);
@@ -248,6 +258,7 @@
   --brand-primary-soft: var(--palette-oliva-terracota-primary-soft);
   --brand-shade: var(--palette-oliva-terracota-shade);
   --brand-accent: var(--palette-oliva-terracota-accent);
+  --brand-accent-ink: var(--palette-oliva-terracota-accent-ink);
   --brand-accent-soft: var(--palette-oliva-terracota-accent-soft);
   --brand-on-dark-accent: var(--palette-oliva-terracota-on-dark-accent);
   --brand-on-dark-heading: var(--palette-oliva-terracota-on-dark-heading);

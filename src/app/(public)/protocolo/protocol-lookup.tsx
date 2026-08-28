@@ -143,7 +143,7 @@ export function ProtocolLookup({
     >
       <div className="flex flex-col gap-4 md:gap-5">
         <div>
-          <span className="text-xs font-bold uppercase tracking-[0.16em] text-brand-accent">
+          <span className="text-xs font-bold uppercase tracking-[0.16em] text-brand-accent-ink">
             {tenantName}
           </span>
           <h1 className="mt-2 font-serif text-3xl font-semibold text-brand-primary">
@@ -212,7 +212,7 @@ export function ProtocolLookup({
               <div className="rounded-2xl border border-brand-border bg-brand-card p-4">
                 <div className="flex items-center gap-2.5">
                   <div className="flex-1">
-                    <div className="text-[10px] font-bold uppercase tracking-[0.14em] text-brand-accent">
+                    <div className="text-[10px] font-bold uppercase tracking-[0.14em] text-brand-accent-ink">
                       {publicStatus.typeLabel}
                     </div>
                     <div className="mt-0.5 text-[17px] font-bold tracking-wide text-brand-primary">
@@ -339,7 +339,7 @@ function PaymentCard({
 }) {
   return (
     <div className="rounded-2xl border-[1.5px] border-brand-accent-line bg-brand-accent-soft p-4">
-      <span className="text-[11px] font-bold uppercase tracking-[0.16em] text-brand-accent">
+      <span className="text-[11px] font-bold uppercase tracking-[0.16em] text-brand-accent-ink">
         Valor do pedido
       </span>
       <div className="mt-1 font-serif text-[22px] font-semibold text-brand-primary">
@@ -411,7 +411,7 @@ function TimelineStep({
               : done
                 ? "text-brand-primary"
                 : current
-                  ? "text-brand-accent"
+                  ? "text-brand-accent-ink"
                   : "text-brand-faint"
           }`}
         >
@@ -593,7 +593,7 @@ function Initials({ name, staff }: { name: string; staff: boolean }) {
       className={`inline-flex h-8 w-8 flex-none items-center justify-center rounded-full text-[11px] font-bold ${
         staff
           ? "bg-brand-primary text-white"
-          : "bg-brand-accent-soft text-brand-accent"
+          : "bg-brand-accent-soft text-brand-accent-ink"
       }`}
       aria-hidden="true"
     >
@@ -835,7 +835,7 @@ function RequirementsCard({ result }: { result: ServiceRequestDetail }) {
 
   return (
     <div className="rounded-2xl border border-brand-border bg-brand-card p-4">
-      <span className="text-[11px] font-bold uppercase tracking-[0.16em] text-brand-accent">
+      <span className="text-[11px] font-bold uppercase tracking-[0.16em] text-brand-accent-ink">
         Exigências
       </span>
       <div className="mt-2.5 flex flex-col gap-2.5">
@@ -920,7 +920,7 @@ function RequestDetail({ result }: { result: ServiceRequestDetail }) {
                   />
                 </span>
                 <div>
-                  <div className="text-[10.5px] font-bold uppercase tracking-[0.14em] text-brand-accent">
+                  <div className="text-[10.5px] font-bold uppercase tracking-[0.14em] text-brand-accent-ink">
                     É a sua vez
                   </div>
                   <div className="font-serif text-[16.5px] font-semibold text-brand-primary">
@@ -1037,7 +1037,7 @@ function RequestDetail({ result }: { result: ServiceRequestDetail }) {
           )}
 
           <div className="rounded-2xl border border-brand-border bg-brand-card p-4">
-            <span className="text-[11px] font-bold uppercase tracking-[0.16em] text-brand-accent">
+            <span className="text-[11px] font-bold uppercase tracking-[0.16em] text-brand-accent-ink">
               Andamento
             </span>
             <ol className="mt-2.5 flex flex-col">
@@ -1054,7 +1054,7 @@ function RequestDetail({ result }: { result: ServiceRequestDetail }) {
 
         <div className="mt-3.5 flex flex-col gap-3.5 md:mt-0">
           <div className="rounded-2xl border border-brand-border bg-brand-card p-4">
-            <span className="text-[11px] font-bold uppercase tracking-[0.16em] text-brand-accent">
+            <span className="text-[11px] font-bold uppercase tracking-[0.16em] text-brand-accent-ink">
               Seus arquivos
             </span>
             <form
@@ -1174,7 +1174,7 @@ function RequestDetail({ result }: { result: ServiceRequestDetail }) {
           </div>
 
           <div className="rounded-2xl border border-brand-border bg-brand-card p-4">
-            <span className="text-[11px] font-bold uppercase tracking-[0.16em] text-brand-accent">
+            <span className="text-[11px] font-bold uppercase tracking-[0.16em] text-brand-accent-ink">
               Documentos da serventia
             </span>
             {result.deliveredDocuments.length > 0 ? (
@@ -1310,7 +1310,7 @@ function Timeline({
 }) {
   return (
     <div className="rounded-2xl border border-brand-border bg-brand-card p-4">
-      <span className="text-[11px] font-bold uppercase tracking-[0.16em] text-brand-accent">
+      <span className="text-[11px] font-bold uppercase tracking-[0.16em] text-brand-accent-ink">
         {title}
       </span>
       <ol className="mt-2.5 flex flex-col">{children}</ol>
@@ -1493,10 +1493,10 @@ function DataRightsCard({ result }: { result: DataRightsDetail }) {
           <div className="flex items-start gap-2.5 rounded-2xl bg-brand-accent-soft px-3.5 py-3">
             <Icon
               name="shield"
-              className="mt-0.5 h-4 w-4 shrink-0 text-brand-accent"
+              className="mt-0.5 h-4 w-4 shrink-0 text-brand-accent-ink"
               strokeWidth={1.9}
             />
-            <p className="text-[12px] leading-relaxed text-brand-accent">
+            <p className="text-[12px] leading-relaxed text-brand-accent-ink">
               Se houver dúvida sobre a titularidade, o Encarregado pede um
               documento pela própria consulta.
             </p>
@@ -1527,7 +1527,7 @@ function OmbudsmanCard({ result }: { result: OmbudsmanDetail }) {
         <div className="flex flex-col gap-3.5">
           {result.reply ? (
             <div className="rounded-2xl border border-brand-border bg-brand-card p-4">
-              <span className="text-[10.5px] font-bold uppercase tracking-[0.14em] text-brand-accent">
+              <span className="text-[10.5px] font-bold uppercase tracking-[0.14em] text-brand-accent-ink">
                 Resposta da ouvidoria
               </span>
               <p className="mt-2 whitespace-pre-line text-[12.5px] leading-relaxed text-brand-text-soft">

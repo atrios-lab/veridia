@@ -401,7 +401,7 @@ export function ChatWidget({ tenant }: { tenant: Tenant }) {
           ? "Atendimento online"
           : "Fora do horário de atendimento"}
         {available.withinHours && unreadCount > 0 && (
-          <span className="absolute -top-1.5 -right-1 flex h-[22px] min-w-[22px] items-center justify-center rounded-full border-2 border-brand-card bg-brand-accent px-1 text-[12px] font-bold text-white">
+          <span className="absolute -top-1.5 -right-1 flex h-[22px] min-w-[22px] items-center justify-center rounded-full border-2 border-brand-card bg-brand-accent-ink px-1 text-[12px] font-bold text-white">
             {unreadCount}
           </span>
         )}
@@ -517,7 +517,7 @@ function HoursClosedView({ tenant }: { tenant: Tenant }) {
         Voltamos {formatFullDate(opening.day).toLowerCase()} às {opening.hour}h
       </div>
       <div className="flex flex-col gap-2">
-        <span className="text-[11px] font-bold uppercase tracking-[0.1em] text-brand-accent">
+        <span className="text-[11px] font-bold uppercase tracking-[0.1em] text-brand-accent-ink">
           Enquanto isso
         </span>
         <a

@@ -25,7 +25,7 @@ export function CopyField({
   return (
     <div className="flex items-center gap-2.5 rounded-xl border border-dashed border-brand-accent-line bg-brand-surface px-3.5 py-2.5">
       <div className="min-w-0 flex-1">
-        <div className="text-[9.5px] font-bold uppercase tracking-[0.14em] text-brand-accent">
+        <div className="text-[9.5px] font-bold uppercase tracking-[0.14em] text-brand-accent-ink">
           {label}
         </div>
         <div

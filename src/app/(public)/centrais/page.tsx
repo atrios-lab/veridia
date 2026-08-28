@@ -51,7 +51,7 @@ export default async function OfficialPortalsPage() {
     <div className="mx-auto max-w-5xl px-4 py-10 md:px-10">
       <div className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
         <div>
-          <span className="text-xs font-bold uppercase tracking-[0.16em] text-brand-accent">
+          <span className="text-xs font-bold uppercase tracking-[0.16em] text-brand-accent-ink">
             Plataformas nacionais
           </span>
           <h1 className="mt-2 font-serif text-3xl font-semibold text-brand-primary">
@@ -92,7 +92,7 @@ export default async function OfficialPortalsPage() {
             <span className="font-serif text-lg font-semibold text-white">
               {SERP_PORTAL.name}
             </span>
-            <span className="rounded-full bg-brand-accent-soft px-2.5 py-0.5 text-[10px] font-bold tracking-[0.1em] text-brand-accent uppercase">
+            <span className="rounded-full bg-brand-accent-soft px-2.5 py-0.5 text-[10px] font-bold tracking-[0.1em] text-brand-accent-ink uppercase">
               Portal único
             </span>
           </div>
@@ -114,7 +114,7 @@ export default async function OfficialPortalsPage() {
       {groups.map((group) => (
         <section key={group.label} className="mt-7">
           <div className="flex items-center gap-2.5">
-            <span className="text-[11px] font-bold uppercase tracking-[0.14em] text-brand-accent">
+            <span className="text-[11px] font-bold uppercase tracking-[0.14em] text-brand-accent-ink">
               {group.label}
             </span>
             <span className="h-px flex-1 bg-brand-border" />
@@ -130,9 +130,9 @@ export default async function OfficialPortalsPage() {
       <div className="mt-8 flex items-start gap-2.5 rounded-2xl bg-brand-accent-soft p-5">
         <Icon
           name="info"
-          className="mt-0.5 h-4 w-4 flex-none text-brand-accent"
+          className="mt-0.5 h-4 w-4 flex-none text-brand-accent-ink"
         />
-        <p className="text-[13px] leading-relaxed text-brand-accent">
+        <p className="text-[13px] leading-relaxed text-brand-accent-ink">
           Não achou o que precisa?{" "}
           <Link href="/solicitar" className="font-semibold underline">
             Peça direto ao cartório

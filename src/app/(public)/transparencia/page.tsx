@@ -56,7 +56,7 @@ function BulletinRow({ row }: { row: TransparencyBulletinRow }) {
         {formatMonthYear(month, year)}
       </span>
       {status === "preliminary" && (
-        <span className="flex-none rounded-full bg-brand-accent-soft px-2.5 py-0.5 text-[11px] font-semibold text-brand-accent">
+        <span className="flex-none rounded-full bg-brand-accent-soft px-2.5 py-0.5 text-[11px] font-semibold text-brand-accent-ink">
           Dados preliminares
         </span>
       )}
@@ -74,8 +74,8 @@ export default async function TransparencyPage() {
   const bulletins = await listBulletins(tenant.slug);
 
   return (
-    <main className="mx-auto max-w-4xl px-4 py-10 md:px-10">
-      <span className="text-xs font-bold uppercase tracking-[0.16em] text-brand-accent">
+    <div className="mx-auto max-w-4xl px-4 py-10 md:px-10">
+      <span className="text-xs font-bold uppercase tracking-[0.16em] text-brand-accent-ink">
         {tenant.name}
       </span>
       <h1 className="mt-2 font-serif text-3xl font-semibold text-brand-primary">
@@ -120,6 +120,6 @@ export default async function TransparencyPage() {
           </div>
         )}
       </section>
-    </main>
+    </div>
   );
 }

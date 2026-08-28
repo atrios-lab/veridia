@@ -23,7 +23,7 @@ export async function ComingSoon({
 
   return (
     <div className="mx-auto max-w-2xl px-4 py-12 md:px-10 md:py-20">
-      <span className="text-xs font-bold uppercase tracking-[0.16em] text-brand-accent">
+      <span className="text-xs font-bold uppercase tracking-[0.16em] text-brand-accent-ink">
         {tenant.name}
       </span>
       <h1 className="mt-2 font-serif text-3xl font-semibold text-brand-primary">

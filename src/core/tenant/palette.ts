@@ -16,6 +16,7 @@ export interface Palette {
   primarySoft: string;
   shade: string;
   accent: string;
+  accentInk: string;
   accentSoft: string;
   onDarkAccent: string;
   onDarkHeading: string;
@@ -31,6 +32,7 @@ export const PALETTES: Record<Theme, Palette> = {
     primarySoft: "#1c5638",
     shade: "#091e14",
     accent: "#8f7238",
+    accentInk: "#7f6532",
     accentSoft: "#efe8d6",
     onDarkAccent: "#d9c89a",
     onDarkHeading: "#e8d9ae",
@@ -44,6 +46,7 @@ export const PALETTES: Record<Theme, Palette> = {
     primarySoft: "#1f4468",
     shade: "#0a1a2a",
     accent: "#9c7c46",
+    accentInk: "#7c6338",
     accentSoft: "#efe6d2",
     onDarkAccent: "#d5bd8a",
     onDarkHeading: "#e3d3a8",
@@ -57,6 +60,7 @@ export const PALETTES: Record<Theme, Palette> = {
     primarySoft: "#6e2c3a",
     shade: "#2b0e14",
     accent: "#a1734b",
+    accentInk: "#855f3e",
     accentSoft: "#f0e4d8",
     onDarkAccent: "#dcc296",
     onDarkHeading: "#ecd9b8",
@@ -70,6 +74,7 @@ export const PALETTES: Record<Theme, Palette> = {
     primarySoft: "#37443f",
     shade: "#141917",
     accent: "#b0703c",
+    accentInk: "#8e5a30",
     accentSoft: "#f0e3d5",
     onDarkAccent: "#dcba88",
     onDarkHeading: "#e6c9a6",
@@ -83,6 +88,7 @@ export const PALETTES: Record<Theme, Palette> = {
     primarySoft: "#55663f",
     shade: "#1f2814",
     accent: "#b3552e",
+    accentInk: "#a34d2a",
     accentSoft: "#f2e3d6",
     onDarkAccent: "#dcc59a",
     onDarkHeading: "#ead9ac",
@@ -98,7 +104,7 @@ export const NEUTRALS = {
   card: "#ffffff",
   text: "#1c211e",
   textSoft: "#3d453f",
-  faint: "#8b9289",
+  faint: "#61675f",
   alert: "#a4402f",
 } as const;
 

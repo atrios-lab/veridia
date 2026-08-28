@@ -47,7 +47,7 @@ export function PublicationPreview({
           Proclamas e avisos
         </div>
         <div className="mt-2.5 rounded-[9px] border border-brand-border bg-brand-card px-3 py-2.5">
-          <div className="text-[10px] font-bold tracking-[0.06em] text-brand-accent uppercase">
+          <div className="text-[10px] font-bold tracking-[0.06em] text-brand-accent-ink uppercase">
             {PUBLICATION_KIND_LABELS[kind]}
             {sector ? ` · ${NOTICE_SECTOR_META[sector].acronym}` : ""}
           </div>

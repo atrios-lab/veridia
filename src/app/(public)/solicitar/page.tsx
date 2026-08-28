@@ -138,7 +138,7 @@ export default async function RequestPage({
                       {ATTRIBUTION_EXAMPLES[option]}
                     </span>
                   </span>
-                  <span className="shrink-0 rounded-lg bg-brand-accent-soft px-2 py-1 text-[11px] font-bold text-brand-accent">
+                  <span className="shrink-0 rounded-lg bg-brand-accent-soft px-2 py-1 text-[11px] font-bold text-brand-accent-ink">
                     {actsOfAttribution(tenant, option).length} atos
                   </span>
                 </Link>
@@ -199,7 +199,7 @@ function StepHeader({
             <Icon name="arrowLeft" className="h-5 w-5" />
           </Link>
         )}
-        <span className="text-[11px] font-bold uppercase tracking-[0.16em] text-brand-accent">
+        <span className="text-[11px] font-bold uppercase tracking-[0.16em] text-brand-accent-ink">
           Serviços on-line
         </span>
       </div>

@@ -242,7 +242,7 @@ export default async function Home() {
             block (compare `citizenLinks.length > 0` below). */}
         {publications.length > 0 && (
           <section className="pb-6 md:pb-10">
-            <span className="text-[11px] font-bold uppercase tracking-[0.16em] text-brand-accent">
+            <span className="text-[11px] font-bold uppercase tracking-[0.16em] text-brand-accent-ink">
               Proclamas e avisos
             </span>
             <div className="mt-2.5 flex flex-col gap-2.5 md:mt-3.5 md:grid md:grid-cols-2">
@@ -251,7 +251,7 @@ export default async function Home() {
                   key={publication.id}
                   className="rounded-2xl border border-brand-border bg-brand-card p-4"
                 >
-                  <span className="text-[10px] font-bold uppercase tracking-[0.06em] text-brand-accent">
+                  <span className="text-[10px] font-bold uppercase tracking-[0.06em] text-brand-accent-ink">
                     {
                       PUBLICATION_KIND_LABELS[
                         publication.kind as PublicationKind
@@ -275,7 +275,7 @@ export default async function Home() {
         {/* On a phone the attributions are their own section; on desktop they
             live inside the "Quem somos" card, the way the redesign draws it. */}
         <section className="pb-6 md:hidden">
-          <span className="text-[11px] font-bold uppercase tracking-[0.16em] text-brand-accent">
+          <span className="text-[11px] font-bold uppercase tracking-[0.16em] text-brand-accent-ink">
             O cartório atende
           </span>
           <ul className="mt-2.5 flex flex-wrap gap-1.5">
@@ -293,7 +293,7 @@ export default async function Home() {
 
         <section className="grid gap-3.5 pb-8 md:grid-cols-2 md:pb-14">
           <div className="order-2 rounded-2xl border border-brand-border bg-brand-card p-5 md:order-1 md:p-6">
-            <span className="text-[11px] font-bold uppercase tracking-[0.16em] text-brand-accent">
+            <span className="text-[11px] font-bold uppercase tracking-[0.16em] text-brand-accent-ink">
               Quem somos
             </span>
             <h2 className="mt-2 font-serif text-xl font-semibold text-brand-primary md:text-2xl">
@@ -316,11 +316,11 @@ export default async function Home() {
 
           {citizenLinks.length > 0 && (
             <div className="order-1 md:order-2">
-              <span className="text-[11px] font-bold uppercase tracking-[0.16em] text-brand-accent md:hidden">
+              <span className="text-[11px] font-bold uppercase tracking-[0.16em] text-brand-accent-ink md:hidden">
                 Cidadão e transparência
               </span>
               <div className="mt-2.5 overflow-hidden rounded-2xl border border-brand-border bg-brand-card md:mt-0 md:h-full md:px-2 md:pt-5">
-                <span className="hidden px-4 text-[11px] font-bold uppercase tracking-[0.16em] text-brand-accent md:block">
+                <span className="hidden px-4 text-[11px] font-bold uppercase tracking-[0.16em] text-brand-accent-ink md:block">
                   Cidadão e transparência
                 </span>
                 {citizenLinks.map((link) => (
