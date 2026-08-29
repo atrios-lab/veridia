@@ -30,4 +30,4 @@
 ## 6. Verificação
 
 - [x] 6.1 Rodar suíte `node --test` completa e Biome
-- [x] 6.2 Verificar no navegador (host do cartório, não localhost puro): emissão mostra prazo ✅ (majorsales.localhost, "previsão de análise é até 27/09/2026"). Consulta, controle de prazo no painel e campo em Configurações ficaram sem verificação no navegador: a migration 0018 (`email_bounces`) não está aplicada no banco Supabase compartilhado e derruba o envio real, e o painel exige login. Cobertos por tsc + 427 testes.
+- [x] 6.2 Verificar no navegador pelo host do cartório (majorsales.localhost): emissão mostra "A previsão de análise é até 27/09/2026" ✅; consulta do protocolo mostra "Dentro do prazo: dia 1 de 30, com previsão até 27/09/2026" ✅. O controle de prazo na troca de andamento e o campo em Configurações não foram vistos no navegador (o painel exige login); cobertos por tsc + 427 testes. Os pedidos de teste usados (REQ.2026.000001 e 000002) foram apagados do banco depois, com auditoria.
