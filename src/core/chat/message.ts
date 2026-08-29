@@ -11,6 +11,15 @@ export type AuthorType = (typeof AUTHOR_TYPES)[number];
 
 export const MAX_MESSAGE_LENGTH = 4000;
 
+/**
+ * Lives next to the ceiling so the two never drift apart. "Texto longo
+ * demais." on its own never said how long is too long, which is useless to
+ * whoever just lost the end of what they wrote.
+ */
+export const TEXT_TOO_LONG = `O texto pode ter até ${MAX_MESSAGE_LENGTH.toLocaleString(
+  "pt-BR",
+)} caracteres.`;
+
 export const messageBodySchema = z
   .string()
   .transform((s) => s.trim())

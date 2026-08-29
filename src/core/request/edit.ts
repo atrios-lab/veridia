@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { MAX_MESSAGE_LENGTH, TEXT_TOO_LONG } from "../chat/message.ts";
 import { fromZonedDateTime } from "../scheduling/calendar.ts";
 import { isValidCpf } from "./form.ts";
 
@@ -30,12 +31,12 @@ export function requestDataEditSchema(now: Date, timeZone: string) {
     purpose: z
       .string()
       .trim()
-      .max(500)
+      .max(MAX_MESSAGE_LENGTH, TEXT_TOO_LONG)
       .transform((value) => value || null),
     description: z
       .string()
       .trim()
-      .max(1000)
+      .max(MAX_MESSAGE_LENGTH, TEXT_TOO_LONG)
       .transform((value) => value || null),
     createdAt: z
       .string()

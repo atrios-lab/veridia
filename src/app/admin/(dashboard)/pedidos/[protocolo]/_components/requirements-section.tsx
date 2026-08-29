@@ -339,7 +339,7 @@ function EditRequirement({ requirement }: { requirement: RequirementItem }) {
       <input type="hidden" name="requirementId" value={requirement.id} />
       <textarea
         name="text"
-        rows={2}
+        rows={4}
         defaultValue={requirement.text}
         className="w-full rounded-[9px] border border-admin-input-border bg-admin-input-bg px-3.5 py-2.5 text-[13px] text-admin-text"
       />
@@ -458,7 +458,7 @@ export function RequirementsSection({
                     : ""}
                 </span>
               </div>
-              <p className="mt-2 text-[13px] text-admin-text">
+              <p className="mt-2 whitespace-pre-line text-[13px] leading-relaxed text-admin-text">
                 {requirement.text}
               </p>
               {/* Kept for requirements resolved before the office took over
@@ -516,7 +516,7 @@ export function RequirementsSection({
           <input type="hidden" name="requestId" value={requestId} />
           <textarea
             name="text"
-            rows={2}
+            rows={4}
             placeholder="O que falta para o pedido seguir?"
             className="w-full rounded-[9px] border border-admin-input-border bg-admin-input-bg px-3.5 py-2.5 text-[13px] text-admin-text placeholder:text-admin-faint"
           />
