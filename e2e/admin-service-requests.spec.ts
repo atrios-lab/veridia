@@ -132,8 +132,12 @@ test.describe("fila e detalhe de pedidos", () => {
 
   test("printing writes to audit_log; a refused key does not", async ({
     page,
-    request,
   }) => {
+    // page.request, never the `request` fixture: that one is a separate
+    // context with its own empty cookie jar, so the middleware sees no
+    // session and redirects to the login, which Playwright follows into a
+    // 200 that never touched the route being tested.
+    const request = page.request;
     await signIn(page);
     await page.goto(`${baseURL}/admin/pedidos/${encodeURIComponent(PROTOCOL)}`);
 
