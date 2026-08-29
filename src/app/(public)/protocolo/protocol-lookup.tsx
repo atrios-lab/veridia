@@ -825,7 +825,9 @@ function RequirementRow({
               : ""}
           </span>
         </div>
-        <p className="mt-2 text-[13px] text-brand-text">{requirement.text}</p>
+        <p className="mt-2 whitespace-pre-line text-[13px] leading-relaxed text-brand-text">
+          {requirement.text}
+        </p>
         {requirement.resolutionFileName && (
           <div className="mt-1.5 flex items-center gap-1.5 text-[12px] text-brand-primary-soft">
             <Icon name="file" className="h-3.5 w-3.5" />
@@ -856,7 +858,7 @@ function RequirementRow({
           registrada em {formatDate(requirement.createdAt)}
         </span>
       </div>
-      <p className="mt-2 text-[13px] font-semibold text-brand-primary">
+      <p className="mt-2 whitespace-pre-line text-[13px] font-semibold leading-relaxed text-brand-primary">
         {requirement.text}
       </p>
       <RequirementForms

@@ -1,5 +1,6 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
+import { MAX_MESSAGE_LENGTH } from "../chat/message.ts";
 import { purposeFor, requestDataEditSchema } from "./edit.ts";
 
 const ZONE = "America/Sao_Paulo";
@@ -60,6 +61,24 @@ test("neither the act nor the protocol can be corrected here", () => {
   } as never);
   assert.equal("actId" in parsed, false);
   assert.equal("protocolNumber" in parsed, false);
+});
+
+test("the operator may write long on purpose and description", () => {
+  const long = "a".repeat(MAX_MESSAGE_LENGTH);
+  const parsed = schema.parse({ ...valid, purpose: long, description: long });
+  assert.equal(parsed.purpose, long);
+  assert.equal(parsed.description, long);
+});
+
+test("past the ceiling, the error says how long is too long", () => {
+  for (const field of ["purpose", "description"]) {
+    const parsed = schema.safeParse({
+      ...valid,
+      [field]: "a".repeat(MAX_MESSAGE_LENGTH + 1),
+    });
+    assert.ok(!parsed.success, field);
+    assert.match(parsed.error.issues[0].message, /4\.000/, field);
+  }
 });
 
 test("only the acts the law allows may carry a purpose", () => {
