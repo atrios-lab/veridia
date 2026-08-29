@@ -183,6 +183,7 @@ export default async function ServiceRequestQueuePage({
                       {...effectiveDeadline(
                         toIsoDate(request.createdAt, OFFICE_TIME_ZONE),
                         readDeadline(request.details),
+                        act?.legalDeadlineDays,
                         tenant.requestDeadlineDays,
                       )}
                       today={todayIso}

@@ -162,6 +162,7 @@ export default async function ServiceRequestDetailPage({
   const deadline = effectiveDeadline(
     toIsoDate(request.createdAt, OFFICE_TIME_ZONE),
     readDeadline(request.details),
+    act?.legalDeadlineDays,
     tenant.requestDeadlineDays,
   );
 

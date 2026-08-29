@@ -437,7 +437,10 @@ function SuccessScreen({ state }: { state: SuccessState }) {
     ...(state.amountLabel
       ? [{ label: "Valor", value: state.amountLabel }]
       : []),
-    { label: "Previsão", value: `até ${state.deadlineLabel}` },
+    {
+      label: "Previsão",
+      value: `até ${state.deadlineLabel} · por ordem de chegada`,
+    },
   ];
 
   /**

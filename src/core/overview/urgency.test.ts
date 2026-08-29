@@ -27,29 +27,40 @@ test("answered and cancelled ignore the term entirely", () => {
   });
 });
 
+// Filed Monday 2026-08-03 with a ten business day term, which lands on
+// 2026-08-17: two weekends sit inside it and neither ages the request.
+const FILED = "2026-08-03";
+
 test("an open record runs quietly while the term is far", () => {
-  assert.deepEqual(deadlineUrgency(true, "2026-08-01", 30, "2026-08-10"), {
+  assert.deepEqual(deadlineUrgency(true, FILED, 10, "2026-08-10"), {
     kind: "running",
   });
 });
 
 test("an open record flags inside the three day horizon", () => {
-  // Start counts as day 1: the 28th is day 28 of 30, two days left.
-  assert.deepEqual(deadlineUrgency(true, "2026-08-01", 30, "2026-08-28"), {
+  assert.deepEqual(deadlineUrgency(true, FILED, 10, "2026-08-12"), {
     kind: "due-soon",
-    daysLeft: 2,
+    daysLeft: 3,
+  });
+});
+
+test("the days left are business days, not calendar ones", () => {
+  // Friday the 14th: only the 17th is left, though the calendar shows three.
+  assert.deepEqual(deadlineUrgency(true, FILED, 10, "2026-08-14"), {
+    kind: "due-soon",
+    daysLeft: 1,
   });
 });
 
 test("an open record past its term reports how late it is", () => {
-  assert.deepEqual(deadlineUrgency(true, "2026-08-01", 30, "2026-09-05"), {
+  assert.deepEqual(deadlineUrgency(true, FILED, 10, "2026-08-20"), {
     kind: "overdue",
-    daysLate: 6,
+    daysLate: 3,
   });
 });
 
 test("a closed record has no urgency, however old", () => {
-  assert.deepEqual(deadlineUrgency(false, "2026-01-01", 30, "2026-08-20"), {
+  assert.deepEqual(deadlineUrgency(false, "2026-01-01", 10, "2026-08-20"), {
     kind: "closed",
   });
 });

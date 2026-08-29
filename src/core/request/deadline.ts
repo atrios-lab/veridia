@@ -1,36 +1,82 @@
 import { z } from "zod";
-import { addDays, type IsoDate } from "../scheduling/calendar.ts";
+import {
+  addDays,
+  type IsoDate,
+  isBusinessDay,
+} from "../scheduling/calendar.ts";
 
 /**
  * The term a record is expected to be answered within: a start day and a
- * number of running days. Two channels count one: the data rights channel,
- * whose fifteen days are the law's and cannot move, and the service request,
- * whose term the office sets and resets as the work demands.
+ * number of days. Two channels count one: the data rights channel, whose
+ * fifteen days are the law's and cannot move, and the service request, whose
+ * term is born from the act's own legal term and which the office resets as
+ * the work demands.
  *
- * Running days, not working days: the office itself says the term "depends on
- * the demand", so a holiday calendar would add precision the number does not
- * have.
+ * Counted in business days, the day of filing excluded and the due day
+ * included, which is how Lei 14.382/2022 has the extrajudicial terms counted
+ * (business days and hours, following the civil procedure rules) and how
+ * Lei 9.492 art. 12 counts the protest.
+ *
+ * One counting for every act, including the ones the business-day rule does
+ * not name (registro civil das pessoas naturais, notas). Two engines would be
+ * two things to get wrong, and counting an act's term in business days when
+ * the law would count it straight only ever puts the expected date later than
+ * the law does: the office promises no earlier than it must, and the screen
+ * never calls a record late while the law still considers it on time.
+ *
+ * Municipal and state holidays are not known here (see `nationalHolidays`),
+ * so a term falling on one reads as a business day.
  */
 
-/** The last day of the term, counting the start day as day 1. */
+// A term never legitimately walks past this; the cap is what keeps a corrupted
+// number from spinning a loop rather than a business rule.
+const MAX_SCAN_DAYS = 3000;
+
+/** The last day of a term of `days` business days, the start day excluded. */
 export function deadlineDate(startedOn: IsoDate, days: number): IsoDate {
-  return addDays(startedOn, days);
+  let cursor = startedOn;
+  let counted = 0;
+  for (let step = 0; step < MAX_SCAN_DAYS && counted < days; step++) {
+    cursor = addDays(cursor, 1);
+    if (isBusinessDay(cursor)) counted++;
+  }
+  return cursor;
 }
 
 /**
- * Which day of the term today is, counting the start day as day 1. Past the
- * term it keeps counting: a count that stopped at the last day would hide
- * exactly the case that matters.
+ * Business days in `(from, to]`: the start day excluded, the end day counted
+ * when it is a business day. Zero when `to` is not after `from`.
  */
-export function dayOfDeadline(startedOn: IsoDate, today: IsoDate): number {
-  const elapsed = Math.round(
-    (Date.parse(`${today}T00:00:00Z`) - Date.parse(`${startedOn}T00:00:00Z`)) /
-      86_400_000,
-  );
-  return Math.max(1, elapsed + 1);
+export function businessDaysBetween(from: IsoDate, to: IsoDate): number {
+  if (to <= from) return 0;
+  let cursor = from;
+  let counted = 0;
+  for (let step = 0; step < MAX_SCAN_DAYS && cursor < to; step++) {
+    cursor = addDays(cursor, 1);
+    if (isBusinessDay(cursor)) counted++;
+  }
+  return counted;
 }
 
-/** Bounds shared by the per-record term and the office's default. */
+/**
+ * Which business day of the term today is, the day of filing being day zero:
+ * on the day a request is filed nothing of the term has run yet. Past the
+ * term it keeps counting, which is exactly the case that matters.
+ */
+export function dayOfDeadline(startedOn: IsoDate, today: IsoDate): number {
+  return businessDaysBetween(startedOn, today);
+}
+
+/**
+ * Said next to every expected date the citizen is shown, on the filing screen
+ * and on the consult alike. The term is what the office works to, not a date
+ * it sells: requests are taken in the order they arrive, and the office asked
+ * for that to be on the screen rather than discovered by telephone.
+ */
+export const DEADLINE_CAVEAT =
+  "A previsão pode mudar: os pedidos são atendidos por ordem de chegada.";
+
+/** Bounds shared by the per-record term and the office's own default. */
 export const MIN_DEADLINE_DAYS = 1;
 export const MAX_DEADLINE_DAYS = 365;
 
@@ -48,9 +94,9 @@ export type Deadline = z.infer<typeof deadlineSchema>;
 
 /**
  * The term stored on a record, read from the raw `details` blob. Anything
- * malformed reads as "no term of its own", which falls back to the office's
- * default: a corrupted blob must not be able to take the screen down over a
- * line that only says how long something takes.
+ * malformed reads as "no term of its own", which falls back to the act's
+ * legal term: a corrupted blob must not be able to take the screen down over
+ * a line that only says how long something takes.
  */
 export function readDeadline(details: unknown): Deadline | undefined {
   const value = (details as { deadline?: unknown } | null)?.deadline;
@@ -59,20 +105,18 @@ export function readDeadline(details: unknown): Deadline | undefined {
 }
 
 /**
- * The term actually in force for a service request. A request only carries a
- * term of its own once the office has moved it; until then the term is the
- * office's default counted from the day the request was filed, which is what
- * gives every request filed before this existed a term for free.
+ * The term actually in force for a service request, in the order the office
+ * asked for: what the office set on this request, else the act's own legal
+ * term, else the office's default for the acts the law fixes no term for.
  *
- * The consequence is deliberate: changing the office's default moves the term
- * of every request nobody has touched. That is the honest reading of "the
- * default changed", and the office pins a particular request by setting its
- * term.
+ * A request only carries a term of its own once the office has moved it,
+ * which is what gives every request filed before any of this a term for free.
  */
 export function effectiveDeadline(
   filedOn: IsoDate,
   stored: Deadline | undefined,
-  defaultDays: number,
+  legalDays: number | undefined,
+  officeDefaultDays: number,
 ): Deadline {
-  return stored ?? { startedOn: filedOn, days: defaultDays };
+  return stored ?? { startedOn: filedOn, days: legalDays ?? officeDefaultDays };
 }

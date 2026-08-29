@@ -1,6 +1,5 @@
 import { z } from "zod";
-import type { IsoDate } from "../scheduling/calendar.ts";
-import { dayOfDeadline, deadlineDate } from "./deadline.ts";
+import { addDays, type IsoDate } from "../scheduling/calendar.ts";
 import {
   isValidContact,
   isValidCpf,
@@ -137,19 +136,34 @@ export function dataRightOption(right: DataRight) {
  * Lei 13.709/2018, art. 19: fifteen days from the request. Fixed, unlike the
  * service request's term: this one is the law's, and the office cannot
  * stretch it from the panel.
+ *
+ * Counted in plain calendar days, deliberately not through the service
+ * request's business-day counting: the business-day rule is Lei 14.382/2022's
+ * and reaches the extrajudicial registries, not the data protection law.
+ * Counting these fifteen in business days would quietly hand the office three
+ * extra weeks it does not have.
  */
 export const DATA_RIGHTS_DEADLINE_DAYS = 15;
 
 export function dataRightsDeadline(requestedOn: IsoDate): IsoDate {
-  return deadlineDate(requestedOn, DATA_RIGHTS_DEADLINE_DAYS);
+  return addDays(requestedOn, DATA_RIGHTS_DEADLINE_DAYS);
 }
 
-/** Which day of the legal term today is, counting the request as day 1. */
+/**
+ * Which day of the legal term today is, counting the day of the request as
+ * day 1. Past the term it keeps counting: a deadline that stops at fifteen
+ * would hide exactly the case that matters.
+ */
 export function dataRightsDayOfDeadline(
   requestedOn: IsoDate,
   today: IsoDate,
 ): number {
-  return dayOfDeadline(requestedOn, today);
+  const elapsed = Math.round(
+    (Date.parse(`${today}T00:00:00Z`) -
+      Date.parse(`${requestedOn}T00:00:00Z`)) /
+      86_400_000,
+  );
+  return Math.max(1, elapsed + 1);
 }
 
 export const dataRightsSchema = z

@@ -1,9 +1,12 @@
-import { DATA_RIGHTS_DEADLINE_DAYS } from "../request/channels.ts";
-import { dayOfDeadline } from "../request/deadline.ts";
+import {
+  DATA_RIGHTS_DEADLINE_DAYS,
+  dataRightsDayOfDeadline,
+} from "../request/channels.ts";
+import { businessDaysBetween, deadlineDate } from "../request/deadline.ts";
 import type { IsoDate } from "../scheduling/calendar.ts";
 
-/** How close to the legal term counts as "close enough to flag": the
- * horizon both the LGPD queue's badge and the Visão geral's mesa use. */
+/** How close to the term counts as "close enough to flag": the horizon the
+ * LGPD queue's badge, the pedidos queue and the Visão geral's mesa use. */
 export const DUE_SOON_DAYS = 3;
 
 export type DeadlineUrgency =
@@ -13,11 +16,13 @@ export type DeadlineUrgency =
   | { kind: "closed" };
 
 /**
- * How a term stands today, for any record that carries one. Only a record
- * still open carries a term that matters: once it is answered, concluded or
- * cancelled, the days stop counting. Within the term, "due-soon" only kicks
- * in inside `DUE_SOON_DAYS` of the deadline; further out, the plain status is
- * all the row needs to say.
+ * How a service request's term stands today. Only a record still open carries
+ * a term that matters: once concluded, refused, cancelled or filed away, the
+ * days stop counting.
+ *
+ * Business days throughout, the same counting that set the expected date (see
+ * core/request/deadline.ts), so "vence em 2 dias" means two days the office
+ * actually opens.
  */
 export function deadlineUrgency(
   open: boolean,
@@ -27,10 +32,14 @@ export function deadlineUrgency(
 ): DeadlineUrgency {
   if (!open) return { kind: "closed" };
 
-  const daysLeft = days - dayOfDeadline(startedOn, today);
-  if (daysLeft < 0) return { kind: "overdue", daysLate: -daysLeft };
-  if (daysLeft <= DUE_SOON_DAYS) return { kind: "due-soon", daysLeft };
-  return { kind: "running" };
+  const due = deadlineDate(startedOn, days);
+  if (today > due) {
+    return { kind: "overdue", daysLate: businessDaysBetween(due, today) };
+  }
+  const daysLeft = businessDaysBetween(today, due);
+  return daysLeft <= DUE_SOON_DAYS
+    ? { kind: "due-soon", daysLeft }
+    : { kind: "running" };
 }
 
 export type DataRightsUrgency =
@@ -41,9 +50,9 @@ export type DataRightsUrgency =
   | { kind: "cancelled" };
 
 /**
- * What the badge says, for the queue row, the detail header and the mesa de
- * trabalho alike. The counting is `deadlineUrgency`'s; what this adds is the
- * channel's own vocabulary, which names the two closed outcomes apart.
+ * What the badge says, for the LGPD queue row, the detail header and the mesa
+ * de trabalho alike. Its own counting, in calendar days: these fifteen are
+ * Lei 13.709's, and the extrajudicial business-day rule does not reach them.
  */
 export function dataRightsUrgency(
   status: string,
@@ -53,16 +62,9 @@ export function dataRightsUrgency(
   if (status === "answered") return { kind: "answered" };
   if (status === "cancelled") return { kind: "cancelled" };
 
-  const urgency = deadlineUrgency(
-    true,
-    requestedOn,
-    DATA_RIGHTS_DEADLINE_DAYS,
-    today,
-  );
-  // "closed" cannot come back from an open record; the two andamentos that
-  // close this channel are named above, in the channel's own words.
-  if (urgency.kind === "closed" || urgency.kind === "running") {
-    return { kind: "received" };
-  }
-  return urgency;
+  const dayOfTerm = dataRightsDayOfDeadline(requestedOn, today);
+  const daysLeft = DATA_RIGHTS_DEADLINE_DAYS - dayOfTerm;
+  if (daysLeft < 0) return { kind: "overdue", daysLate: -daysLeft };
+  if (daysLeft <= DUE_SOON_DAYS) return { kind: "due-soon", daysLeft };
+  return { kind: "received" };
 }

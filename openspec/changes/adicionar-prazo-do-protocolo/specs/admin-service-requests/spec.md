@@ -20,7 +20,7 @@ O formulário de troca de andamento no detalhe do pedido SHALL exibir o prazo vi
 - **THEN** o registro de auditoria da ação inclui a alteração de prazo
 
 ### Requirement: Urgência do prazo na fila e no detalhe do pedido
-A fila de pedidos e o cabeçalho do detalhe SHALL exibir um badge de urgência derivado do prazo vigente: "vence em N dias" quando faltam 3 dias ou menos, e "vencido há N dias" quando a data prevista passou. Pedidos em andamento terminal SHALL NOT exibir urgência. Fora da janela de urgência, nenhum badge de prazo é exibido.
+A fila de pedidos e o cabeçalho do detalhe SHALL exibir um badge de urgência derivado do prazo vigente, contado em dias úteis: "vence em N dias" quando faltam 3 dias úteis ou menos, e "vencido há N dias" quando a data prevista passou. Pedidos em andamento terminal SHALL NOT exibir urgência. Fora da janela de urgência, nenhum badge de prazo é exibido.
 
 #### Scenario: Pedido perto do vencimento
 - **WHEN** o operador abre a fila e um pedido em andamento está a 3 dias ou menos da data prevista

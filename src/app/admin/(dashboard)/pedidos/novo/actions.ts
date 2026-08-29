@@ -151,10 +151,13 @@ export async function createManualServiceRequest(
       attributionLabel: ATTRIBUTION_SHORT_NAMES[act.attribution],
       amountLabel:
         amountCents !== undefined ? formatCents(amountCents) : undefined,
-      // Same as the online filing: counted from today with the office's
-      // default, since a request just filed carries no term of its own.
+      // Same as the online filing: the act's legal term counted from today,
+      // since a request just filed carries no term of its own.
       deadlineLabel: formatDate(
-        deadlineDate(today(), tenant.requestDeadlineDays),
+        deadlineDate(
+          today(),
+          act.legalDeadlineDays ?? tenant.requestDeadlineDays,
+        ),
       ),
     };
   } catch (error) {

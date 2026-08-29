@@ -89,15 +89,19 @@ function revalidateAdmin(): void {
  */
 function readDeadlineChoice(
   formData: FormData,
-  request: { createdAt: Date; details: unknown },
+  request: { createdAt: Date; details: unknown; actId: string | null },
   tenant: Tenant,
 ): Deadline | undefined | "invalid" {
   const choice = String(formData.get("deadlineChoice") ?? "keep");
   if (choice !== "restart" && choice !== "days") return undefined;
 
+  const act = request.actId
+    ? getActForTenant(tenant, request.actId)
+    : undefined;
   const current = effectiveDeadline(
     toIsoDate(request.createdAt, OFFICE_TIME_ZONE),
     readDeadline(request.details),
+    act?.legalDeadlineDays,
     tenant.requestDeadlineDays,
   );
 

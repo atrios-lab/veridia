@@ -82,10 +82,14 @@ export async function submitServiceRequest(
       actName: act.name,
       attributionName: ATTRIBUTION_NAMES[act.attribution],
       processingLabel: PROCESSING_MODE_LABELS[act.processingMode],
-      // Counted from today with the office's default: a request just filed
-      // carries no term of its own yet.
+      // Born from the act's own legal term, counted from today: a request
+      // just filed carries no term of its own yet. Where the law fixes none,
+      // the office's default stands in.
       deadlineLabel: formatDate(
-        deadlineDate(today(), tenant.requestDeadlineDays),
+        deadlineDate(
+          today(),
+          act.legalDeadlineDays ?? tenant.requestDeadlineDays,
+        ),
       ),
     };
   }
@@ -163,10 +167,14 @@ export async function submitServiceRequest(
       actName: act.name,
       attributionName: ATTRIBUTION_NAMES[act.attribution],
       processingLabel: PROCESSING_MODE_LABELS[act.processingMode],
-      // Counted from today with the office's default: a request just filed
-      // carries no term of its own yet.
+      // Born from the act's own legal term, counted from today: a request
+      // just filed carries no term of its own yet. Where the law fixes none,
+      // the office's default stands in.
       deadlineLabel: formatDate(
-        deadlineDate(today(), tenant.requestDeadlineDays),
+        deadlineDate(
+          today(),
+          act.legalDeadlineDays ?? tenant.requestDeadlineDays,
+        ),
       ),
     };
   } catch (error) {

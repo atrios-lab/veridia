@@ -7,6 +7,7 @@ import {
   DATA_RIGHTS_DEADLINE_DAYS,
   manifestationLabel,
 } from "@/core/request/channels.ts";
+import { DEADLINE_CAVEAT } from "@/core/request/deadline.ts";
 import { Icon } from "../_components/icon.tsx";
 import { CopyField } from "../_components/protocol-reveal.tsx";
 import { ProtocolSearchButton } from "../_components/protocol-search-button.tsx";
@@ -456,25 +457,38 @@ function DeadlineNote({
   deadline: NonNullable<ServiceRequestDetail["deadline"]>;
 }) {
   return (
-    <p className="mt-3 border-t border-brand-border pt-3 text-[12px] text-brand-muted">
-      {deadline.overdue ? (
-        <>
-          A previsão era{" "}
-          <strong className="text-brand-primary">
-            {formatDate(`${deadline.date}T00:00:00`)}
-          </strong>
-          . O cartório está revendo o prazo deste pedido.
-        </>
-      ) : (
-        <>
-          Dentro do prazo:{" "}
-          <strong className="text-brand-primary">
-            dia {deadline.dayOfTerm} de {deadline.days}
-          </strong>
-          , com previsão até {formatDate(`${deadline.date}T00:00:00`)}.
-        </>
-      )}
-    </p>
+    <div className="mt-3 border-t border-brand-border pt-3">
+      <p className="text-[12px] text-brand-muted">
+        {deadline.overdue ? (
+          <>
+            A previsão era{" "}
+            <strong className="text-brand-primary">
+              {formatDate(`${deadline.date}T00:00:00`)}
+            </strong>
+            . O cartório está revendo o prazo deste pedido.
+          </>
+        ) : deadline.dayOfTerm === 0 ? (
+          <>
+            Dentro do prazo: a contagem começa no próximo dia útil, com previsão
+            até{" "}
+            <strong className="text-brand-primary">
+              {formatDate(`${deadline.date}T00:00:00`)}
+            </strong>
+            .
+          </>
+        ) : (
+          <>
+            Dentro do prazo:{" "}
+            <strong className="text-brand-primary">
+              dia {deadline.dayOfTerm} de {deadline.days}
+            </strong>
+            , em dias úteis, com previsão até{" "}
+            {formatDate(`${deadline.date}T00:00:00`)}.
+          </>
+        )}
+      </p>
+      <p className="mt-1.5 text-[11.5px] text-brand-faint">{DEADLINE_CAVEAT}</p>
+    </div>
   );
 }
 

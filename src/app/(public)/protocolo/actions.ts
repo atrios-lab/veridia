@@ -256,6 +256,7 @@ export async function lookupProtocolDetail(
     const term = effectiveDeadline(
       toIsoDate(record.createdAt, OFFICE_TIME_ZONE),
       readDeadline(record.details),
+      act.legalDeadlineDays,
       tenant.requestDeadlineDays,
     );
     const dayOfTerm = dayOfDeadline(term.startedOn, today());

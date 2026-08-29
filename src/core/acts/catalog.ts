@@ -86,6 +86,20 @@ export interface Act {
   parameter?: ActParameter;
   /** Without a description there is no way to know what was asked for. */
   requiresDescription?: boolean;
+  /**
+   * The term the law fixes for this act, in business days: what a protocol of
+   * it is born with. Absent where no statute fixes one — every notarial act,
+   * and the registral procedures that run to their own rite — and there the
+   * office's own default stands in (see `effectiveDeadline`).
+   *
+   * Absent is never a guess. Only terms read off the statute are here, each
+   * one named in `legalDeadlineNote`; filling the gaps is the office's call,
+   * not this file's, because an invented legal term is worse than none.
+   */
+  legalDeadlineDays?: number;
+  /** Where the term above comes from. Shown to nobody: it is here so the next
+   * person can check the number instead of trusting it. */
+  legalDeadlineNote?: string;
 }
 
 // Legal basis conferred against the previous system (packages/tenants/src/
@@ -100,6 +114,9 @@ export const ACTS: Act[] = [
     name: "Certidão (nascimento, casamento, óbito)",
     processingMode: "identification",
     legalBasis: "Lei 6.015 art. 17",
+    legalDeadlineDays: 5,
+    legalDeadlineNote:
+      "Lei 6.015 art. 19, red. Lei 14.382/2022: demais certidões",
     requiresPurpose: false, // art. 17: neither motive nor interest may be asked
   },
   {
@@ -191,6 +208,9 @@ export const ACTS: Act[] = [
     name: "Certidão de matrícula, inteiro teor ou ônus",
     processingMode: "identification",
     legalBasis: "Prov. 149 art. 123 caput",
+    legalDeadlineDays: 1,
+    legalDeadlineNote:
+      "Lei 6.015 art. 19, red. Lei 14.382/2022: situação jurídica do imóvel. O inteiro teor tem 4 horas, que não cabe numa contagem em dias",
     // The caput asks who is requesting, never what for. Only the two entries
     // below carry the exception, and mixing them up would put an unlawful
     // question in front of every certificate.
@@ -202,6 +222,9 @@ export const ACTS: Act[] = [
     name: "Certidão de documento arquivado sem previsão legal",
     processingMode: "identification",
     legalBasis: "Prov. 149 art. 123 par. 2 e 4",
+    legalDeadlineDays: 5,
+    legalDeadlineNote:
+      "Lei 6.015 art. 19, red. Lei 14.382/2022: demais certidões",
     requiresPurpose: true,
   },
   {
@@ -210,6 +233,9 @@ export const ACTS: Act[] = [
     name: "Busca por indicador pessoal ou real",
     processingMode: "identification",
     legalBasis: "Prov. 149 art. 126",
+    legalDeadlineDays: 5,
+    legalDeadlineNote:
+      "Lei 6.015 art. 19, red. Lei 14.382/2022: demais certidões",
     requiresPurpose: true,
   },
   {
@@ -231,6 +257,9 @@ export const ACTS: Act[] = [
     name: "Registro ou averbação na matrícula",
     processingMode: "online",
     legalBasis: "Lei 6.015 arts. 167 e 182",
+    legalDeadlineDays: 10,
+    legalDeadlineNote:
+      "Lei 6.015 art. 188, red. Lei 14.382/2022. O § 1º baixa para 5 nos casos simples, que o balcão ajusta no protocolo",
     requiresPurpose: false,
     documents: [
       "Título ou documento a ser registrado",
@@ -257,6 +286,8 @@ export const ACTS: Act[] = [
     name: "Certidão de protesto",
     processingMode: "online",
     legalBasis: "Lei 9.492 arts. 27 e 31",
+    legalDeadlineDays: 5,
+    legalDeadlineNote: "Lei 9.492 art. 27",
     requiresPurpose: false,
     documents: ["Documento de identidade do requerente"],
   },
@@ -290,6 +321,9 @@ export const ACTS: Act[] = [
     name: "Certidão do registro",
     processingMode: "identification",
     legalBasis: "Lei 6.015 art. 17 (norma geral)",
+    legalDeadlineDays: 5,
+    legalDeadlineNote:
+      "Lei 6.015 art. 19, red. Lei 14.382/2022: demais certidões",
     requiresPurpose: false,
   },
 
@@ -321,6 +355,9 @@ export const ACTS: Act[] = [
     name: "Certidão do registro",
     processingMode: "identification",
     legalBasis: "Lei 6.015 art. 17 (norma geral)",
+    legalDeadlineDays: 5,
+    legalDeadlineNote:
+      "Lei 6.015 art. 19, red. Lei 14.382/2022: demais certidões",
     requiresPurpose: false,
     parameter: "registryYears",
   },

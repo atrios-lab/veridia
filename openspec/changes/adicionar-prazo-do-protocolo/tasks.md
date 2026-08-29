@@ -27,7 +27,16 @@
 - [x] 5.1 Consulta do protocolo: bloco de prazo do pedido em `protocol-lookup.tsx` ("dia X de N · previsão até DD/MM"; vencido = "em revisão pelo cartório", sem contagem de atraso; nada em andamento terminal), com o prazo efetivo resolvido no server em `protocolo/actions.ts`
 - [x] 5.2 Confirmação da emissão em `/solicitar` (e recibo do balcão, se exibir data): linha "prazo estimado de análise: até DD/MM" calculada do default do tenant
 
-## 6. Verificação
+## 6. Prazo legal por ato (revisão após conferência jurídica)
 
-- [x] 6.1 Rodar suíte `node --test` completa e Biome
-- [x] 6.2 Verificar no navegador pelo host do cartório (majorsales.localhost): emissão mostra "A previsão de análise é até 27/09/2026" ✅; consulta do protocolo mostra "Dentro do prazo: dia 1 de 30, com previsão até 27/09/2026" ✅. O controle de prazo na troca de andamento e o campo em Configurações não foram vistos no navegador (o painel exige login); cobertos por tsc + 427 testes. Os pedidos de teste usados (REQ.2026.000001 e 000002) foram apagados do banco depois, com auditoria.
+- [x] 6.1 Trocar a contagem para dias úteis reusando `isBusinessDay`/`nationalHolidays` da agenda, com o dia do protocolo excluído (CPC); manter o canal LGPD em dias corridos
+- [x] 6.2 Adicionar `legalDeadlineDays` e `legalDeadlineNote` ao catálogo de atos e preencher os oito prazos da tabela conferida com a serventia
+- [x] 6.3 `effectiveDeadline` passa a resolver na ordem: prazo gravado → prazo legal do ato → padrão do cartório
+- [x] 6.4 Recontextualizar o campo de Configurações como padrão dos atos sem prazo legal, em dias úteis
+- [x] 6.5 Exibir `DEADLINE_CAVEAT` (ordem de chegada) na emissão, na consulta e no recibo do balcão
+- [x] 6.6 Testes de dias úteis, feriado nacional, feriado derivado da Páscoa e ordem de precedência
+
+## 7. Verificação
+
+- [x] 7.1 Rodar suíte `node --test` completa e Biome
+- [x] 7.2 Verificar no navegador pelo host do cartório (majorsales.localhost): certidão (5 dias úteis) prevê 04/09 e registro na matrícula (10 dias úteis) prevê 14/09, pulando o feriado de 07/09 ✅; consulta mostra a contagem e a ressalva da ordem de chegada ✅. O controle de prazo na troca de andamento e o campo em Configurações não foram vistos no navegador (o painel exige login); cobertos por tsc + 433 testes. Os pedidos de teste usados (REQ.2026.000001 e 000002) foram apagados do banco depois, com auditoria.
