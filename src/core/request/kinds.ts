@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { deadlineSchema } from "./deadline.ts";
 import { PROTOCOL_PREFIXES, type ProtocolPrefix } from "./protocol.ts";
 
 /**
@@ -341,6 +342,10 @@ export const serviceRequestDetailsSchema = z.object({
   // recorded, and on counter-filed ones, where the consent is on the paper the
   // citizen signs at the desk.
   consents: z.object({ lgpd: isoInstant, truth: isoInstant }).optional(),
+  // The term in force for this request, once the office has moved it. Absent
+  // means the office never touched it and the term is its default counted
+  // from the filing date: see `effectiveDeadline`.
+  deadline: deadlineSchema.optional(),
 });
 export type ServiceRequestDetails = z.infer<typeof serviceRequestDetailsSchema>;
 

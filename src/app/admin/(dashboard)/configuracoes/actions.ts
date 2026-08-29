@@ -2,12 +2,19 @@
 
 import { revalidatePath } from "next/cache";
 import { can } from "@/core/auth/roles.ts";
-import { OfficeContactSchema } from "@/core/tenant/overrides.ts";
+import {
+  OfficeContactSchema,
+  OfficeDeadlineSchema,
+} from "@/core/tenant/overrides.ts";
 import { db } from "@/db/index.ts";
 import { tenantContent } from "@/db/schema.ts";
 import { recordAudit } from "@/lib/audit.ts";
 import { getSession } from "@/lib/session.ts";
-import { getTenant, OFFICE_CONTACT_KEY } from "@/lib/tenant.ts";
+import {
+  getTenant,
+  OFFICE_CONTACT_KEY,
+  OFFICE_DEADLINE_KEY,
+} from "@/lib/tenant.ts";
 
 /** The four fields as they were typed, unvalidated. */
 export type OfficeContactValues = Record<
@@ -117,5 +124,85 @@ export async function saveOfficeContact(
   // page and on the contact page. A narrower target would be a guess; this is
   // the one that is right until something measures otherwise.
   revalidatePath("/", "layout");
+  return { status: "saved" };
+}
+
+export type OfficeDeadlineState =
+  | { status: "idle" }
+  | { status: "saved" }
+  | { status: "error"; message: string; value: string };
+
+/**
+ * The office's default term for a service request. The same discipline as
+ * `saveOfficeContact`: the schema is the boundary, the check is on the
+ * server, and the write goes straight to `published` because a term is
+ * operational, not editorial.
+ */
+export async function saveOfficeDeadline(
+  _previous: OfficeDeadlineState,
+  formData: FormData,
+): Promise<OfficeDeadlineState> {
+  const value = String(formData.get("requestDeadlineDays") ?? "").trim();
+
+  const session = await getSession();
+  if (!session || !can(session.user.role ?? "", "content.edit")) {
+    return {
+      status: "error",
+      message: "Você não tem permissão para alterar estes dados.",
+      value,
+    };
+  }
+  const tenant = await getTenant();
+
+  const parsed = OfficeDeadlineSchema.safeParse({
+    // An empty field reaches the schema as NaN and is refused there, rather
+    // than silently becoming zero.
+    requestDeadlineDays: Number(value),
+  });
+  if (!parsed.success) {
+    return {
+      status: "error",
+      message:
+        parsed.error.issues[0]?.message ??
+        "Informe um prazo entre 1 e 365 dias.",
+      value,
+    };
+  }
+
+  try {
+    await db
+      .insert(tenantContent)
+      .values({
+        tenantSlug: tenant.slug,
+        key: OFFICE_DEADLINE_KEY,
+        published: parsed.data,
+        publishedAt: new Date(),
+        updatedBy: session.user.id,
+      })
+      .onConflictDoUpdate({
+        target: [tenantContent.tenantSlug, tenantContent.key],
+        set: {
+          published: parsed.data,
+          publishedAt: new Date(),
+          updatedAt: new Date(),
+          updatedBy: session.user.id,
+        },
+      });
+  } catch {
+    return { status: "error", message: GENERIC_ERROR, value };
+  }
+
+  await recordAudit({
+    tenantSlug: tenant.slug,
+    actorId: session.user.id,
+    action: "office-settings.save",
+    targetType: "tenant-content",
+    targetId: OFFICE_DEADLINE_KEY,
+  });
+
+  // The term shows on the request confirmation and on the protocol consult,
+  // and it is read by the queue's badge in the panel.
+  revalidatePath("/", "layout");
+  revalidatePath("/admin/pedidos");
   return { status: "saved" };
 }

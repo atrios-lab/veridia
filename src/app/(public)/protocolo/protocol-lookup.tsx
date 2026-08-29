@@ -7,6 +7,7 @@ import {
   DATA_RIGHTS_DEADLINE_DAYS,
   manifestationLabel,
 } from "@/core/request/channels.ts";
+import { DEADLINE_CAVEAT } from "@/core/request/deadline.ts";
 import { Icon } from "../_components/icon.tsx";
 import { CopyField } from "../_components/protocol-reveal.tsx";
 import { ProtocolSearchButton } from "../_components/protocol-search-button.tsx";
@@ -439,6 +440,56 @@ function markCurrentStep(steps: TimelineStepData[]): TimelineStepData[] {
   const current = steps.find((step) => !step.done && !step.alert);
   if (current) current.current = true;
   return steps;
+}
+
+/**
+ * Where the request stands against the term the office works to. The point of
+ * the line is to answer "is it late yet?" before the citizen telephones to
+ * ask, so a request still inside the term says so plainly.
+ *
+ * Past the date it says the office is reviewing the term, and never how many
+ * days late it is. The office reads that number in the panel and acts on it;
+ * printed here it would only turn one telephone call into two.
+ */
+function DeadlineNote({
+  deadline,
+}: {
+  deadline: NonNullable<ServiceRequestDetail["deadline"]>;
+}) {
+  return (
+    <div className="mt-3 border-t border-brand-border pt-3">
+      <p className="text-[12px] text-brand-muted">
+        {deadline.overdue ? (
+          <>
+            A previsão era{" "}
+            <strong className="text-brand-primary">
+              {formatDate(`${deadline.date}T00:00:00`)}
+            </strong>
+            . O cartório está revendo o prazo deste pedido.
+          </>
+        ) : deadline.dayOfTerm === 0 ? (
+          <>
+            Dentro do prazo: a contagem começa no próximo dia útil, com previsão
+            até{" "}
+            <strong className="text-brand-primary">
+              {formatDate(`${deadline.date}T00:00:00`)}
+            </strong>
+            .
+          </>
+        ) : (
+          <>
+            Dentro do prazo:{" "}
+            <strong className="text-brand-primary">
+              dia {deadline.dayOfTerm} de {deadline.days}
+            </strong>
+            , em dias úteis, com previsão até{" "}
+            {formatDate(`${deadline.date}T00:00:00`)}.
+          </>
+        )}
+      </p>
+      <p className="mt-1.5 text-[11.5px] text-brand-faint">{DEADLINE_CAVEAT}</p>
+    </div>
+  );
 }
 
 /**
@@ -1049,6 +1100,8 @@ function RequestDetail({ result }: { result: ServiceRequestDetail }) {
                 />
               ))}
             </ol>
+
+            {result.deadline && <DeadlineNote deadline={result.deadline} />}
           </div>
         </div>
 

@@ -7,6 +7,7 @@ import { useForm } from "react-hook-form";
 import type { Act } from "@/core/acts/catalog.ts";
 import { ATTRIBUTION_SHORT_NAMES } from "@/core/acts/catalog.ts";
 import { MAX_ATTACHMENTS } from "@/core/request/attachment.ts";
+import { DEADLINE_CAVEAT } from "@/core/request/deadline.ts";
 import {
   formatCpf,
   formatPhone,
@@ -580,7 +581,12 @@ function SuccessScreen({ result }: { result: SubmitSuccess }) {
       <ol className="mt-4 flex flex-col gap-2.5">
         <Step number={1} title="Guarde o protocolo e a chave">
           <p className="text-[12px] leading-relaxed text-brand-muted">
-            Eles servem para consultar o andamento do pedido.
+            Eles servem para consultar o andamento do pedido. A previsão de
+            análise é até{" "}
+            <strong className="text-brand-primary">
+              {result.deadlineLabel}
+            </strong>
+            . {DEADLINE_CAVEAT}
           </p>
           {/* POST, not a link: the key would otherwise sit in the address
               bar, in the browser history and in every access log on the way. */}

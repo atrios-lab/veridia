@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { deadlineDaysSchema } from "../request/deadline.ts";
 import {
   isValidPixCity,
   isValidPixKey,
@@ -104,6 +105,14 @@ export const TenantSchema = z.object({
   }),
   // ISS rate as a decimal (5% = 0.05). Municipal parameter, per office.
   issRate: z.number().min(0).max(1),
+  // The term for the acts no statute fixes one for: escritura, ata notarial,
+  // abertura de firma. Acts the law does fix a term for are born with it, off
+  // the catalogue (see `Act.legalDeadlineDays`), and never read this.
+  //
+  // Ten business days as a starting point, not a legal term: it is the office
+  // saying how long it usually takes, and the office changes it from the
+  // panel. The term a given request actually runs on is set on the request.
+  requestDeadlineDays: deadlineDaysSchema.default(10),
   theme: ThemeSchema,
   logos: z.object({
     light: z.string().min(1), // logo for light backgrounds

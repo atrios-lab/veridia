@@ -132,7 +132,17 @@ export function dataRightOption(right: DataRight) {
   return option;
 }
 
-/** Lei 13.709/2018, art. 19: fifteen days from the request. */
+/**
+ * Lei 13.709/2018, art. 19: fifteen days from the request. Fixed, unlike the
+ * service request's term: this one is the law's, and the office cannot
+ * stretch it from the panel.
+ *
+ * Counted in plain calendar days, deliberately not through the service
+ * request's business-day counting: the business-day rule is Lei 14.382/2022's
+ * and reaches the extrajudicial registries, not the data protection law.
+ * Counting these fifteen in business days would quietly hand the office three
+ * extra weeks it does not have.
+ */
 export const DATA_RIGHTS_DEADLINE_DAYS = 15;
 
 export function dataRightsDeadline(requestedOn: IsoDate): IsoDate {

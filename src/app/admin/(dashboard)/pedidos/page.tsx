@@ -2,7 +2,9 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { getAct } from "@/core/acts/catalog.ts";
 import { can } from "@/core/auth/roles.ts";
+import { effectiveDeadline, readDeadline } from "@/core/request/deadline.ts";
 import {
+  isOpenServiceRequestStatus,
   isServiceRequestStatus,
   SERVICE_REQUEST_STATUSES,
   statusLabel,
@@ -12,9 +14,10 @@ import { formatDate, toIsoDate } from "@/core/scheduling/calendar.ts";
 import { ATTRIBUTIONS, type Attribution } from "@/core/tenant/schema.ts";
 import { listServiceRequests } from "@/lib/service-request.ts";
 import { getSession } from "@/lib/session.ts";
-import { getTenant, OFFICE_TIME_ZONE } from "@/lib/tenant.ts";
+import { getTenant, OFFICE_TIME_ZONE, today } from "@/lib/tenant.ts";
 import { AdminIcon } from "../../_components/icon.tsx";
 import { AdminPageHeader } from "../../_components/page-header.tsx";
+import { DeadlineBadge } from "./_components/deadline-badge.tsx";
 import { StatusBadge } from "./_components/status-badge.tsx";
 
 export const metadata = { title: "Pedidos de serviço" };
@@ -44,6 +47,9 @@ export default async function ServiceRequestQueuePage({
   const session = await getSession();
   if (!session || !can(session.user.role ?? "", "requests.manage")) notFound();
   const tenant = await getTenant();
+  // Read once for the whole queue: every row's term is measured against the
+  // same day, and a clock read per row could straddle midnight.
+  const todayIso = today();
   const { andamento, atribuicao, q } = await searchParams;
 
   const status =
@@ -167,10 +173,22 @@ export default async function ServiceRequestQueuePage({
                   <span className="truncate text-admin-muted">
                     {act?.name ?? "Ato não identificado"}
                   </span>
-                  <StatusBadge
-                    status={requestStatus}
-                    label={statusLabel("service-request", requestStatus)}
-                  />
+                  <span className="flex flex-col items-start gap-1">
+                    <StatusBadge
+                      status={requestStatus}
+                      label={statusLabel("service-request", requestStatus)}
+                    />
+                    <DeadlineBadge
+                      open={isOpenServiceRequestStatus(requestStatus)}
+                      {...effectiveDeadline(
+                        toIsoDate(request.createdAt, OFFICE_TIME_ZONE),
+                        readDeadline(request.details),
+                        act?.legalDeadlineDays,
+                        tenant.requestDeadlineDays,
+                      )}
+                      today={todayIso}
+                    />
+                  </span>
                   <span className="tabular-nums text-admin-text">
                     {request.amountCents != null
                       ? formatCents(request.amountCents)

@@ -7,8 +7,10 @@ import {
 } from "@/core/acts/catalog.ts";
 import { can } from "@/core/auth/roles.ts";
 import { generateAccessKey, hashAccessKey } from "@/core/request/access-key.ts";
+import { deadlineDate } from "@/core/request/deadline.ts";
 import { formatCpf, serviceRequestSchema } from "@/core/request/form.ts";
 import { formatCents, parseCentsInput } from "@/core/request/money.ts";
+import { formatDate } from "@/core/scheduling/calendar.ts";
 import { closeConversation } from "@/lib/chat.ts";
 import { notifyCitizen } from "@/lib/email/service-request.ts";
 import {
@@ -16,7 +18,7 @@ import {
   setRequestAmount,
 } from "@/lib/service-request.ts";
 import { getSession } from "@/lib/session.ts";
-import { getTenant, officeNow } from "@/lib/tenant.ts";
+import { getTenant, officeNow, today } from "@/lib/tenant.ts";
 
 export type ManualEntryState =
   | { status: "idle" }
@@ -39,6 +41,8 @@ export type ManualEntryState =
       cpfLabel?: string;
       attributionLabel: string;
       amountLabel?: string;
+      /** The date the office expects to have analysed it by, "DD/MM/AAAA". */
+      deadlineLabel: string;
     };
 
 const GENERIC_ERROR =
@@ -147,6 +151,14 @@ export async function createManualServiceRequest(
       attributionLabel: ATTRIBUTION_SHORT_NAMES[act.attribution],
       amountLabel:
         amountCents !== undefined ? formatCents(amountCents) : undefined,
+      // Same as the online filing: the act's legal term counted from today,
+      // since a request just filed carries no term of its own.
+      deadlineLabel: formatDate(
+        deadlineDate(
+          today(),
+          act.legalDeadlineDays ?? tenant.requestDeadlineDays,
+        ),
+      ),
     };
   } catch (error) {
     console.error("pedidos.manual-entry", error);

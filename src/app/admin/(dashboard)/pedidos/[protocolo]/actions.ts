@@ -4,6 +4,14 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { getActForTenant } from "@/core/acts/catalog.ts";
 import { can } from "@/core/auth/roles.ts";
+import {
+  type Deadline,
+  deadlineDaysSchema,
+  effectiveDeadline,
+  MAX_DEADLINE_DAYS,
+  MIN_DEADLINE_DAYS,
+  readDeadline,
+} from "@/core/request/deadline.ts";
 import { purposeFor, requestDataEditSchema } from "@/core/request/edit.ts";
 import {
   isAllowedTransition,
@@ -12,6 +20,8 @@ import {
 } from "@/core/request/kinds.ts";
 import { parseCentsInput } from "@/core/request/money.ts";
 import { requirementTextSchema } from "@/core/request/requirement.ts";
+import { toIsoDate } from "@/core/scheduling/calendar.ts";
+import type { Tenant } from "@/core/tenant/schema.ts";
 import { notifyCitizen } from "@/lib/email/service-request.ts";
 import {
   AttachmentInUseError,
@@ -31,7 +41,7 @@ import {
   writeStaffMessage,
 } from "@/lib/service-request.ts";
 import { getSession } from "@/lib/session.ts";
-import { getTenant, OFFICE_TIME_ZONE } from "@/lib/tenant.ts";
+import { getTenant, OFFICE_TIME_ZONE, today } from "@/lib/tenant.ts";
 import {
   AttachmentError,
   deleteStoredFile,
@@ -68,6 +78,42 @@ function revalidateAdmin(): void {
   revalidatePath("/admin", "layout");
 }
 
+/**
+ * What the operator chose to do with the term while moving the andamento.
+ * Absent choice and "manter" both mean "write nothing": a request whose term
+ * nobody touched keeps following the office's default, which is what lets the
+ * default reach the requests filed before any of this existed.
+ *
+ * "invalid" rather than a thrown error: the number came from a form, and a
+ * form's bad number is a message to the operator, not a crash.
+ */
+function readDeadlineChoice(
+  formData: FormData,
+  request: { createdAt: Date; details: unknown; actId: string | null },
+  tenant: Tenant,
+): Deadline | undefined | "invalid" {
+  const choice = String(formData.get("deadlineChoice") ?? "keep");
+  if (choice !== "restart" && choice !== "days") return undefined;
+
+  const act = request.actId
+    ? getActForTenant(tenant, request.actId)
+    : undefined;
+  const current = effectiveDeadline(
+    toIsoDate(request.createdAt, OFFICE_TIME_ZONE),
+    readDeadline(request.details),
+    act?.legalDeadlineDays,
+    tenant.requestDeadlineDays,
+  );
+
+  if (choice === "restart") return { startedOn: today(), days: current.days };
+
+  const parsed = deadlineDaysSchema.safeParse(
+    Number(String(formData.get("deadlineDays") ?? "").trim()),
+  );
+  if (!parsed.success) return "invalid";
+  return { startedOn: current.startedOn, days: parsed.data };
+}
+
 export async function changeStatus(
   _previous: ActionState,
   formData: FormData,
@@ -76,7 +122,11 @@ export async function changeStatus(
   if (!session) return { status: "error", message: NO_PERMISSION };
 
   const requestId = String(formData.get("requestId") ?? "");
-  const status = String(formData.get("status") ?? "");
+  // A suggestion pill submits its own `status`; the correction select always
+  // travels with the form and only decides when no pill was the submitter.
+  const status = String(
+    formData.get("status") ?? formData.get("statusOverride") ?? "",
+  );
   if (!isServiceRequestStatus(status)) {
     return { status: "error", message: "Andamento inválido." };
   }
@@ -95,7 +145,21 @@ export async function changeStatus(
       };
     }
 
-    await updateRequestStatus(tenant.slug, requestId, status, session.user.id);
+    const deadline = readDeadlineChoice(formData, request, tenant);
+    if (deadline === "invalid") {
+      return {
+        status: "error",
+        message: `Informe um prazo entre ${MIN_DEADLINE_DAYS} e ${MAX_DEADLINE_DAYS} dias.`,
+      };
+    }
+
+    await updateRequestStatus(
+      tenant.slug,
+      requestId,
+      status,
+      session.user.id,
+      deadline,
+    );
 
     // Only the two that end the story. The citizen follows the rest through
     // the consult, and a message per andamento would train them to ignore all

@@ -6,6 +6,12 @@ import {
   dataRightsDayOfDeadline,
   dataRightsDeadline,
 } from "@/core/request/channels.ts";
+import {
+  dayOfDeadline,
+  deadlineDate,
+  effectiveDeadline,
+  readDeadline,
+} from "@/core/request/deadline.ts";
 import { looksLikeBot } from "@/core/request/form.ts";
 import type { DataRight } from "@/core/request/kinds.ts";
 import {
@@ -18,7 +24,7 @@ import {
   statusLabel,
 } from "@/core/request/kinds.ts";
 import { formatCents } from "@/core/request/money.ts";
-import { toIsoDate } from "@/core/scheduling/calendar.ts";
+import { type IsoDate, toIsoDate } from "@/core/scheduling/calendar.ts";
 import { isSectionEnabled } from "@/core/tenant/gating.ts";
 import { type PixCharge, pixChargeFor } from "@/lib/pix-qr.ts";
 import { isRateLimited } from "@/lib/rate-limit.ts";
@@ -104,6 +110,18 @@ export interface ServiceRequestDetail extends BaseDetail {
    * citizen to pay again. */
   paymentSettled?: boolean;
   pix?: PixCharge;
+  /**
+   * The term in force, absent once the request is closed. `overdue` says the
+   * expected date has passed without saying by how much: the count of days
+   * late is the office's own reading, and printing it here would invite the
+   * very telephone call the term exists to spare.
+   */
+  deadline?: {
+    date: IsoDate;
+    dayOfTerm: number;
+    days: number;
+    overdue: boolean;
+  };
 }
 
 export interface DataRightsDetail extends BaseDetail {
@@ -234,6 +252,15 @@ export async function lookupProtocolDetail(
     const paymentSettled =
       record.status === "paid" || !isOpenServiceRequestStatus(record.status);
 
+    const open = isOpenServiceRequestStatus(record.status);
+    const term = effectiveDeadline(
+      toIsoDate(record.createdAt, OFFICE_TIME_ZONE),
+      readDeadline(record.details),
+      act.legalDeadlineDays,
+      tenant.requestDeadlineDays,
+    );
+    const dayOfTerm = dayOfDeadline(term.startedOn, today());
+
     return {
       ...base,
       kind: "service-request",
@@ -246,6 +273,14 @@ export async function lookupProtocolDetail(
         record.amountCents != null
           ? formatCents(record.amountCents)
           : undefined,
+      deadline: open
+        ? {
+            date: deadlineDate(term.startedOn, term.days),
+            dayOfTerm,
+            days: term.days,
+            overdue: dayOfTerm > term.days,
+          }
+        : undefined,
       paymentSettled,
       pix:
         record.amountCents != null && !paymentSettled

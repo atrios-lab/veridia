@@ -8,6 +8,7 @@ import { AdminIcon } from "../../_components/icon.tsx";
 import { AdminPageHeader } from "../../_components/page-header.tsx";
 import { ConfiguracoesTabs } from "./_components/tabs.tsx";
 import { OfficeContactForm } from "./office-contact-form.tsx";
+import { OfficeDeadlineForm } from "./office-deadline-form.tsx";
 
 export const metadata = { title: "Configurações" };
 
@@ -133,6 +134,10 @@ export default async function SettingsPage() {
 
         <div className="rounded-[14px] border border-admin-border bg-admin-card p-6">
           <OfficeContactForm tenant={tenant} />
+
+          <section className="mt-6 border-t border-admin-border pt-5.5">
+            <OfficeDeadlineForm tenant={tenant} />
+          </section>
 
           <section className="mt-6 border-t border-admin-border pt-5.5">
             <div className="flex items-center gap-2.5">

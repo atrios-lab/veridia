@@ -82,6 +82,22 @@ export type OfficePix = z.infer<typeof OfficePixSchema>;
 export const OfficePixOverrideSchema = OfficePixSchema.partial();
 
 /**
+ * What an office may change about how long it takes: the term it expects to
+ * answer a service request within. Same pick discipline as the others.
+ *
+ * Only the service request's term is here. The data rights channel's fifteen
+ * days are Lei 13.709 art. 19's, not the office's, and are deliberately not
+ * reachable from the panel.
+ */
+export const OfficeDeadlineSchema = TenantSchema.pick({
+  requestDeadlineDays: true,
+});
+export type OfficeDeadline = z.infer<typeof OfficeDeadlineSchema>;
+
+/** Same partial-for-reading discipline as OfficeContactOverrideSchema. */
+export const OfficeDeadlineOverrideSchema = OfficeDeadlineSchema.partial();
+
+/**
  * Lays the office's own edits over its configuration.
  *
  * Each row that fails to parse is ignored rather than thrown: an override is
@@ -109,6 +125,7 @@ export function applyTenantOverrides(
     brand?: unknown;
     dpo?: unknown;
     pix?: unknown;
+    deadline?: unknown;
   },
 ): Tenant {
   let merged = tenant;
@@ -124,6 +141,9 @@ export function applyTenantOverrides(
 
   const pix = OfficePixOverrideSchema.safeParse(overrides.pix);
   if (pix.success) merged = { ...merged, ...pix.data };
+
+  const deadline = OfficeDeadlineOverrideSchema.safeParse(overrides.deadline);
+  if (deadline.success) merged = { ...merged, ...deadline.data };
 
   return merged;
 }

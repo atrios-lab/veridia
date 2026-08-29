@@ -52,11 +52,12 @@ export const OFFICE_CONTACT_KEY = "office-contact";
 export const OFFICE_BRAND_KEY = "office-brand";
 export const OFFICE_DPO_KEY = "office-dpo";
 export const OFFICE_PIX_KEY = "office-pix";
+export const OFFICE_DEADLINE_KEY = "office-deadline";
 // Not part of Tenant/applyTenantOverrides: whether the office's chat is on,
 // and which days and times it receives by appointment, are operational state,
 // not branding or editorial content. Both are read and written directly:
 // chat by src/lib/chat.ts, the agenda by src/lib/appointments.ts, never
-// merged into the config-as-code shape the other four keys layer onto.
+// merged into the config-as-code shape the other keys layer onto.
 export const OFFICE_CHAT_KEY = "office-chat";
 export const OFFICE_AGENDA_KEY = "office-agenda";
 
@@ -78,6 +79,7 @@ async function readTenantOverrides(tenantSlug: string): Promise<{
   brand: unknown;
   dpo: unknown;
   pix: unknown;
+  deadline: unknown;
 }> {
   try {
     const rows = await db
@@ -91,6 +93,7 @@ async function readTenantOverrides(tenantSlug: string): Promise<{
             OFFICE_BRAND_KEY,
             OFFICE_DPO_KEY,
             OFFICE_PIX_KEY,
+            OFFICE_DEADLINE_KEY,
           ]),
         ),
       );
@@ -100,9 +103,17 @@ async function readTenantOverrides(tenantSlug: string): Promise<{
       brand: rows.find((r) => r.key === OFFICE_BRAND_KEY)?.published ?? null,
       dpo: rows.find((r) => r.key === OFFICE_DPO_KEY)?.published ?? null,
       pix: rows.find((r) => r.key === OFFICE_PIX_KEY)?.published ?? null,
+      deadline:
+        rows.find((r) => r.key === OFFICE_DEADLINE_KEY)?.published ?? null,
     };
   } catch {
-    return { contact: null, brand: null, dpo: null, pix: null };
+    return {
+      contact: null,
+      brand: null,
+      dpo: null,
+      pix: null,
+      deadline: null,
+    };
   }
 }
 

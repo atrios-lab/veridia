@@ -11,8 +11,10 @@ import {
   hashAccessKey,
   verifyAccessKey,
 } from "@/core/request/access-key.ts";
+import { deadlineDate } from "@/core/request/deadline.ts";
 import { looksLikeBot, serviceRequestSchema } from "@/core/request/form.ts";
 import { formatProtocolNumber } from "@/core/request/protocol.ts";
+import { formatDate } from "@/core/scheduling/calendar.ts";
 import { isSectionEnabled } from "@/core/tenant/gating.ts";
 import { notifyCitizen } from "@/lib/email/service-request.ts";
 import { isRateLimited } from "@/lib/rate-limit.ts";
@@ -21,7 +23,7 @@ import {
   createServiceRequest,
   findByProtocol,
 } from "@/lib/service-request.ts";
-import { getTenant } from "@/lib/tenant.ts";
+import { getTenant, today } from "@/lib/tenant.ts";
 import { AttachmentError, collectAttachments } from "@/lib/uploads.ts";
 
 export interface SubmitSuccess {
@@ -32,6 +34,8 @@ export interface SubmitSuccess {
   actName: string;
   attributionName: string;
   processingLabel: string;
+  /** The date the office expects to have analysed it by, in "DD/MM/AAAA". */
+  deadlineLabel: string;
 }
 
 export type SubmitState =
@@ -78,6 +82,15 @@ export async function submitServiceRequest(
       actName: act.name,
       attributionName: ATTRIBUTION_NAMES[act.attribution],
       processingLabel: PROCESSING_MODE_LABELS[act.processingMode],
+      // Born from the act's own legal term, counted from today: a request
+      // just filed carries no term of its own yet. Where the law fixes none,
+      // the office's default stands in.
+      deadlineLabel: formatDate(
+        deadlineDate(
+          today(),
+          act.legalDeadlineDays ?? tenant.requestDeadlineDays,
+        ),
+      ),
     };
   }
 
@@ -154,6 +167,15 @@ export async function submitServiceRequest(
       actName: act.name,
       attributionName: ATTRIBUTION_NAMES[act.attribution],
       processingLabel: PROCESSING_MODE_LABELS[act.processingMode],
+      // Born from the act's own legal term, counted from today: a request
+      // just filed carries no term of its own yet. Where the law fixes none,
+      // the office's default stands in.
+      deadlineLabel: formatDate(
+        deadlineDate(
+          today(),
+          act.legalDeadlineDays ?? tenant.requestDeadlineDays,
+        ),
+      ),
     };
   } catch (error) {
     if (error instanceof AttachmentError) return fail(error.message);

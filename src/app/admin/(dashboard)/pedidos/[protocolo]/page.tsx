@@ -2,8 +2,15 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ATTRIBUTION_NAMES, getActForTenant } from "@/core/acts/catalog.ts";
 import { can } from "@/core/auth/roles.ts";
+import {
+  dayOfDeadline,
+  deadlineDate,
+  effectiveDeadline,
+  readDeadline,
+} from "@/core/request/deadline.ts";
 import { maskCpf } from "@/core/request/form.ts";
 import {
+  isOpenServiceRequestStatus,
   isServiceRequestStatus,
   statusLabel,
   suggestedNextStatuses,
@@ -24,8 +31,9 @@ import {
   requestOwnAttachments,
 } from "@/lib/service-request.ts";
 import { getSession } from "@/lib/session.ts";
-import { getTenant, OFFICE_TIME_ZONE } from "@/lib/tenant.ts";
+import { getTenant, OFFICE_TIME_ZONE, today } from "@/lib/tenant.ts";
 import { AdminPageHeader } from "../../../_components/page-header.tsx";
+import { DeadlineBadge } from "../_components/deadline-badge.tsx";
 import { StatusBadge } from "../_components/status-badge.tsx";
 import { AmountSection } from "./_components/amount-section.tsx";
 import { ApplicantSection } from "./_components/applicant-section.tsx";
@@ -40,6 +48,7 @@ import { StatusSection } from "./_components/status-section.tsx";
 const HISTORY_LABELS: Record<string, string> = {
   "service-request.create": "registrou o pedido",
   "service-request.status": "mudou o andamento",
+  "service-request.deadline": "ajustou o prazo",
   "service-request.requirement.register": "registrou uma exigência",
   "service-request.requirement.fulfill": "cumpriu uma exigência",
   "service-request.amount": "informou o valor do pedido",
@@ -58,6 +67,21 @@ function formatDayMonthTime(date: Date): string {
     hour: "2-digit",
     minute: "2-digit",
   }).format(date);
+}
+
+/**
+ * How far into the term the request is. On the day it was filed nothing has
+ * run yet, and "dia 0 de 20" reads like an off-by-one to the operator rather
+ * than like the counting the law prescribes.
+ */
+function deadlineProgress(
+  deadline: { startedOn: string; days: number },
+  todayIso: string,
+): string {
+  const day = dayOfDeadline(deadline.startedOn, todayIso);
+  return day === 0
+    ? `${deadline.days} dias úteis, a contar do próximo`
+    : `dia ${day} de ${deadline.days}`;
 }
 
 function formatDayMonthYear(date: Date): string {
@@ -149,6 +173,15 @@ export default async function ServiceRequestDetailPage({
     })),
   }));
 
+  // The term in force: the one the office set on this request, or its default
+  // counted from the filing date for a request nobody has touched.
+  const deadline = effectiveDeadline(
+    toIsoDate(request.createdAt, OFFICE_TIME_ZONE),
+    readDeadline(request.details),
+    act?.legalDeadlineDays,
+    tenant.requestDeadlineDays,
+  );
+
   return (
     <>
       <AdminPageHeader title={request.protocolNumber} />
@@ -164,6 +197,12 @@ export default async function ServiceRequestDetailPage({
           <StatusBadge
             status={status}
             label={statusLabel("service-request", status)}
+          />
+          <DeadlineBadge
+            open={isOpenServiceRequestStatus(status)}
+            startedOn={deadline.startedOn}
+            days={deadline.days}
+            today={today()}
           />
           {/*
             Only when the same fields the print route itself requires are
@@ -193,6 +232,14 @@ export default async function ServiceRequestDetailPage({
                 request.applicantName ?? "Solicitante não identificado"
               } · pedido em ${formatDayMonthYear(request.createdAt)}`}
               suggested={suggestedNextStatuses(status)}
+              deadlineSummary={
+                isOpenServiceRequestStatus(status)
+                  ? `até ${formatDate(
+                      deadlineDate(deadline.startedOn, deadline.days),
+                    )} · ${deadlineProgress(deadline, today())}`
+                  : null
+              }
+              deadlineDays={deadline.days}
             />
 
             <ApplicantSection
