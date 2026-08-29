@@ -88,8 +88,8 @@ export interface Act {
   requiresDescription?: boolean;
   /**
    * The term the law fixes for this act, in business days: what a protocol of
-   * it is born with. Absent where no statute fixes one — every notarial act,
-   * and the registral procedures that run to their own rite — and there the
+   * it is born with. Absent where no statute fixes one (every notarial act,
+   * and the registral procedures that run to their own rite), and there the
    * office's own default stands in (see `effectiveDeadline`).
    *
    * Absent is never a guess. Only terms read off the statute are here, each
