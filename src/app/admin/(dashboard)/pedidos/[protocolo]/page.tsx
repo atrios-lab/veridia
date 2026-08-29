@@ -48,6 +48,7 @@ import { StatusSection } from "./_components/status-section.tsx";
 const HISTORY_LABELS: Record<string, string> = {
   "service-request.create": "registrou o pedido",
   "service-request.status": "mudou o andamento",
+  "service-request.deadline": "ajustou o prazo",
   "service-request.requirement.register": "registrou uma exigência",
   "service-request.requirement.fulfill": "cumpriu uma exigência",
   "service-request.amount": "informou o valor do pedido",
@@ -66,6 +67,21 @@ function formatDayMonthTime(date: Date): string {
     hour: "2-digit",
     minute: "2-digit",
   }).format(date);
+}
+
+/**
+ * How far into the term the request is. On the day it was filed nothing has
+ * run yet, and "dia 0 de 20" reads like an off-by-one to the operator rather
+ * than like the counting the law prescribes.
+ */
+function deadlineProgress(
+  deadline: { startedOn: string; days: number },
+  todayIso: string,
+): string {
+  const day = dayOfDeadline(deadline.startedOn, todayIso);
+  return day === 0
+    ? `${deadline.days} dias úteis, a contar do próximo`
+    : `dia ${day} de ${deadline.days}`;
 }
 
 function formatDayMonthYear(date: Date): string {
@@ -220,9 +236,7 @@ export default async function ServiceRequestDetailPage({
                 isOpenServiceRequestStatus(status)
                   ? `até ${formatDate(
                       deadlineDate(deadline.startedOn, deadline.days),
-                    )} · dia ${dayOfDeadline(deadline.startedOn, today())} de ${
-                      deadline.days
-                    }`
+                    )} · ${deadlineProgress(deadline, today())}`
                   : null
               }
               deadlineDays={deadline.days}
