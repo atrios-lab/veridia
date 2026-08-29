@@ -81,9 +81,14 @@ test.describe("fila e detalhe de pedidos", () => {
     await page.goto(`${baseURL}/admin/pedidos/${encodeURIComponent(PROTOCOL)}`);
 
     await page.getByRole("button", { name: "Em análise" }).click();
+    // The trail of the move, on the request's own screen, which is also what
+    // says the click landed: "Andamento atual:" only shows for a status off
+    // the happy path, and this one is on it. The entry used to be keyed by the
+    // andamento instead of by the request, so `listRequestHistory` never
+    // matched it and the panel showed the change nowhere.
     await expect(
-      page.locator("p", { hasText: "Andamento atual:" }),
-    ).toContainText("Em análise");
+      page.locator("li", { hasText: "mudou o andamento" }),
+    ).toBeVisible();
 
     await page.goto(`${baseURL}/admin/pedidos`);
     const row = page.locator("a", { hasText: PROTOCOL });
