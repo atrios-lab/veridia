@@ -569,12 +569,16 @@ export async function updateRequestStatus(
         eq(serviceRequests.id, id),
       ),
     );
+  // Keyed by the request, not by the andamento itself, so the entry shows up
+  // in the request's own history: `listRequestHistory` matches on the id or
+  // the protocol number. Which andamento it became is on the record; what the
+  // trail owes is who moved it, and when.
   await recordAudit({
     tenantSlug,
     actorId,
     action: "service-request.status",
     targetType: "service-request",
-    targetId: status,
+    targetId: id,
   });
   if (deadline) {
     // Keyed by the request, not by the term itself, so the entry shows up in
