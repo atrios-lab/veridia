@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { deadlineDaysSchema } from "../request/deadline.ts";
 import {
   isValidPixCity,
   isValidPixKey,
@@ -104,6 +105,12 @@ export const TenantSchema = z.object({
   }),
   // ISS rate as a decimal (5% = 0.05). Municipal parameter, per office.
   issRate: z.number().min(0).max(1),
+  // How long the office expects to take on a service request, in running
+  // days. Thirty is the general term for registration (Lei 6.015, art. 188);
+  // other acts answer to other terms, and the office that works to one of
+  // them changes this from the panel. It is an expectation, not a promise:
+  // the term a given request actually runs on is set on the request itself.
+  requestDeadlineDays: deadlineDaysSchema.default(30),
   theme: ThemeSchema,
   logos: z.object({
     light: z.string().min(1), // logo for light backgrounds

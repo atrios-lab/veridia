@@ -4,6 +4,7 @@ import {
   applyTenantOverrides,
   OfficeBrandSchema,
   OfficeContactSchema,
+  OfficeDeadlineSchema,
   OfficeDpoSchema,
   OfficePixSchema,
 } from "./overrides.ts";
@@ -267,15 +268,56 @@ test("the Pix write schema validates the key against its own type", () => {
   );
 });
 
-test("all four override rows are independent", () => {
+test("all override rows are independent", () => {
   const merged = applyTenantOverrides(cartorioMarinho, {
     contact: { openingHours: "Segunda a quinta, das 8h às 12h" },
     brand: "not json at all",
     dpo: FULL_DPO,
     pix: "not json at all",
+    deadline: { requestDeadlineDays: 45 },
   });
   assert.equal(merged.openingHours, "Segunda a quinta, das 8h às 12h");
   assert.equal(merged.theme, cartorioMarinho.theme);
   assert.deepEqual(merged.dpo, FULL_DPO.dpo);
   assert.deepEqual(merged.pix, cartorioMarinho.pix);
+  assert.equal(merged.requestDeadlineDays, 45);
+});
+
+test("a deadline override replaces the office's default term", () => {
+  const merged = applyTenantOverrides(cartorioMarinho, {
+    deadline: { requestDeadlineDays: 45 },
+  });
+  assert.equal(merged.requestDeadlineDays, 45);
+  assert.equal(merged.name, cartorioMarinho.name);
+});
+
+test("no deadline override at all means the config, untouched", () => {
+  for (const raw of [null, undefined, {}]) {
+    assert.deepEqual(applyTenantOverrides(cartorioMarinho, { deadline: raw }), {
+      ...cartorioMarinho,
+    });
+  }
+});
+
+test("a corrupted or out-of-range deadline row is ignored instead of thrown", () => {
+  for (const raw of [
+    "not json at all",
+    { requestDeadlineDays: 0 },
+    { requestDeadlineDays: 400 },
+    { requestDeadlineDays: "trinta" },
+  ]) {
+    assert.deepEqual(applyTenantOverrides(cartorioMarinho, { deadline: raw }), {
+      ...cartorioMarinho,
+    });
+  }
+});
+
+test("the deadline write schema cannot reach anything else in the tenant", () => {
+  const parsed = OfficeDeadlineSchema.safeParse({
+    requestDeadlineDays: 20,
+    name: "Cartório Forjado",
+    attributions: ["RI"],
+  });
+  assert.ok(parsed.success);
+  assert.deepEqual(parsed.data, { requestDeadlineDays: 20 });
 });

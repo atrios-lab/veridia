@@ -11,19 +11,20 @@ const ERROR_FIELD_CLASS =
   "w-full rounded-[9px] border border-admin-error-border bg-admin-error-input-bg px-3.5 py-2.5 text-[13.5px] text-admin-text outline-none focus:border-admin-error-text";
 const LABEL_CLASS = "mb-1.5 block text-xs font-bold text-admin-primary";
 
-function Field({
+export function Field({
   label,
   name,
   defaultValue,
   type = "text",
   error,
+  ...input
 }: {
   label: string;
   name: string;
   defaultValue: string;
   type?: string;
   error?: string;
-}) {
+} & Pick<React.ComponentProps<"input">, "min" | "max" | "step" | "inputMode">) {
   const errorId = `${name}-erro`;
   return (
     <div>
@@ -38,6 +39,7 @@ function Field({
         aria-invalid={error ? true : undefined}
         aria-describedby={error ? errorId : undefined}
         className={error ? ERROR_FIELD_CLASS : FIELD_CLASS}
+        {...input}
       />
       {error && (
         <p

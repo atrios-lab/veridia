@@ -1,5 +1,6 @@
 import { z } from "zod";
-import { addDays, type IsoDate } from "../scheduling/calendar.ts";
+import type { IsoDate } from "../scheduling/calendar.ts";
+import { dayOfDeadline, deadlineDate } from "./deadline.ts";
 import {
   isValidContact,
   isValidCpf,
@@ -132,28 +133,23 @@ export function dataRightOption(right: DataRight) {
   return option;
 }
 
-/** Lei 13.709/2018, art. 19: fifteen days from the request. */
+/**
+ * Lei 13.709/2018, art. 19: fifteen days from the request. Fixed, unlike the
+ * service request's term: this one is the law's, and the office cannot
+ * stretch it from the panel.
+ */
 export const DATA_RIGHTS_DEADLINE_DAYS = 15;
 
 export function dataRightsDeadline(requestedOn: IsoDate): IsoDate {
-  return addDays(requestedOn, DATA_RIGHTS_DEADLINE_DAYS);
+  return deadlineDate(requestedOn, DATA_RIGHTS_DEADLINE_DAYS);
 }
 
-/**
- * Which day of the legal term today is, counting the day of the request as
- * day 1. Past the term it keeps counting: a deadline that stops at fifteen
- * would hide exactly the case that matters.
- */
+/** Which day of the legal term today is, counting the request as day 1. */
 export function dataRightsDayOfDeadline(
   requestedOn: IsoDate,
   today: IsoDate,
 ): number {
-  const elapsed = Math.round(
-    (Date.parse(`${today}T00:00:00Z`) -
-      Date.parse(`${requestedOn}T00:00:00Z`)) /
-      86_400_000,
-  );
-  return Math.max(1, elapsed + 1);
+  return dayOfDeadline(requestedOn, today);
 }
 
 export const dataRightsSchema = z

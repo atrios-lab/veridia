@@ -16,6 +16,7 @@ import {
   hashAccessKey,
   verifyAccessKey,
 } from "@/core/request/access-key.ts";
+import type { Deadline } from "@/core/request/deadline.ts";
 import type { RequestDataEdit } from "@/core/request/edit.ts";
 import {
   isServiceRequestStatus,
@@ -535,19 +536,33 @@ export async function openRequestCount(tenantSlug: string): Promise<number> {
  * Moves a request to a new andamento. The server accepts any of the eight
  * valid values, not only the transition the detail screen suggests: the
  * suggestion is UX curation, not a state machine (see design.md).
+ *
+ * The term travels with the andamento because that is when the office knows
+ * what it is worth: the request just picked up for analysis is the one whose
+ * clock should restart. Written in the same statement as the status, so a
+ * request never lands in the new andamento carrying the old term.
  */
 export async function updateRequestStatus(
   tenantSlug: string,
   id: string,
   status: ServiceRequestStatus,
   actorId: string,
+  deadline?: Deadline,
 ): Promise<void> {
   if (!isServiceRequestStatus(status)) {
     throw new Error(`Andamento inválido: ${status}`);
   }
   await db
     .update(serviceRequests)
-    .set({ status, updatedAt: new Date() })
+    .set({
+      status,
+      // Merged into `details`, never assigned over it: the consents recorded
+      // at filing live in the same column.
+      ...(deadline && {
+        details: sql`${serviceRequests.details} || ${JSON.stringify({ deadline })}::jsonb`,
+      }),
+      updatedAt: new Date(),
+    })
     .where(
       and(
         eq(serviceRequests.tenantSlug, tenantSlug),
@@ -561,6 +576,15 @@ export async function updateRequestStatus(
     targetType: "service-request",
     targetId: status,
   });
+  if (deadline) {
+    await recordAudit({
+      tenantSlug,
+      actorId,
+      action: "service-request.deadline",
+      targetType: "service-request",
+      targetId: `${deadline.startedOn}+${deadline.days}`,
+    });
+  }
 }
 
 /** Every requirement (exigência) raised on a request, oldest first. */

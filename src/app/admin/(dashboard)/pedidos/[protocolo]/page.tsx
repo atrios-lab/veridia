@@ -2,8 +2,15 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ATTRIBUTION_NAMES, getActForTenant } from "@/core/acts/catalog.ts";
 import { can } from "@/core/auth/roles.ts";
+import {
+  dayOfDeadline,
+  deadlineDate,
+  effectiveDeadline,
+  readDeadline,
+} from "@/core/request/deadline.ts";
 import { maskCpf } from "@/core/request/form.ts";
 import {
+  isOpenServiceRequestStatus,
   isServiceRequestStatus,
   statusLabel,
   suggestedNextStatuses,
@@ -24,8 +31,9 @@ import {
   requestOwnAttachments,
 } from "@/lib/service-request.ts";
 import { getSession } from "@/lib/session.ts";
-import { getTenant, OFFICE_TIME_ZONE } from "@/lib/tenant.ts";
+import { getTenant, OFFICE_TIME_ZONE, today } from "@/lib/tenant.ts";
 import { AdminPageHeader } from "../../../_components/page-header.tsx";
+import { DeadlineBadge } from "../_components/deadline-badge.tsx";
 import { StatusBadge } from "../_components/status-badge.tsx";
 import { AmountSection } from "./_components/amount-section.tsx";
 import { ApplicantSection } from "./_components/applicant-section.tsx";
@@ -149,6 +157,14 @@ export default async function ServiceRequestDetailPage({
     })),
   }));
 
+  // The term in force: the one the office set on this request, or its default
+  // counted from the filing date for a request nobody has touched.
+  const deadline = effectiveDeadline(
+    toIsoDate(request.createdAt, OFFICE_TIME_ZONE),
+    readDeadline(request.details),
+    tenant.requestDeadlineDays,
+  );
+
   return (
     <>
       <AdminPageHeader title={request.protocolNumber} />
@@ -164,6 +180,12 @@ export default async function ServiceRequestDetailPage({
           <StatusBadge
             status={status}
             label={statusLabel("service-request", status)}
+          />
+          <DeadlineBadge
+            open={isOpenServiceRequestStatus(status)}
+            startedOn={deadline.startedOn}
+            days={deadline.days}
+            today={today()}
           />
           {/*
             Only when the same fields the print route itself requires are
@@ -193,6 +215,16 @@ export default async function ServiceRequestDetailPage({
                 request.applicantName ?? "Solicitante não identificado"
               } · pedido em ${formatDayMonthYear(request.createdAt)}`}
               suggested={suggestedNextStatuses(status)}
+              deadlineSummary={
+                isOpenServiceRequestStatus(status)
+                  ? `até ${formatDate(
+                      deadlineDate(deadline.startedOn, deadline.days),
+                    )} · dia ${dayOfDeadline(deadline.startedOn, today())} de ${
+                      deadline.days
+                    }`
+                  : null
+              }
+              deadlineDays={deadline.days}
             />
 
             <ApplicantSection
