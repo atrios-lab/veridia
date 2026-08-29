@@ -13,7 +13,7 @@ export type RequirementStatus = (typeof REQUIREMENT_STATUSES)[number];
 
 /**
  * The same shape as a conversation message, and on purpose: the office writes
- * both by hand, and an exigência is where the explanation belongs — the office
+ * both by hand, and an exigência is where the explanation belongs. The office
  * should not have to save words here only to spend them answering "qual
  * documento?" in the conversation below. Line breaks survive: a numbered list
  * of what is missing reads as a list, not as one paragraph. The ceiling is
