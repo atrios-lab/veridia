@@ -193,7 +193,6 @@ test.describe("transparência", () => {
       values (${TENANT}, ${TEST_MONTH}, 412, 4823010, 961244, 2148000,
               'preliminary')
     `;
-    await sql.end();
 
     await signIn(page);
     await page.goto(`${baseURL}/admin/transparencia?aba=boletim`);
@@ -215,5 +214,6 @@ test.describe("transparência", () => {
         return rows.map((r) => r.status);
       })
       .toEqual(["consolidated"]);
+    await sql.end();
   });
 });
