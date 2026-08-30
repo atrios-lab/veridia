@@ -17,7 +17,12 @@ export const tabelionatoAurora: Tenant = parseTenant({
     "a escrituras, procurações, autenticações e reconhecimento de firmas, com " +
     "segurança jurídica para o cidadão e para os negócios.",
   cns: "000000",
-  attributions: ["RCPN", "NOTAS", "RI", "PROTESTO", "RTD", "RCPJ"],
+  // Só NOTAS, como o comentário acima sempre disse. Em algum momento ela
+  // recebeu as seis, e com isso o registro inteiro passou a ter serventia
+  // nenhuma com atribuição faltando: nada mais exercitava o estado "não
+  // delegada" da tela de configurações, nem o portão que esconde as seções
+  // que a atribuição não concede. Devolvido ao papel de contraste.
+  attributions: ["NOTAS"],
   contacts: {
     phone: "(84) 3000-0000",
     whatsapp: "(84) 3000-0000",

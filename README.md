@@ -116,6 +116,17 @@ pnpm typecheck && pnpm lint && pnpm test && pnpm check:dashes && pnpm check:toke
 - `pnpm check:dashes` barra travessão e meia-risca em texto visível.
 - `pnpm check:tokens` barra cor hexadecimal literal fora do bloco `@theme`.
 
+Uma vez por clone:
+
+```bash
+pnpm hooks
+```
+
+Isso aponta o `core.hooksPath` para `.githooks/`, e a partir daí todo `git push` roda `pnpm e2e`
+antes de mandar os commits. Falhou um teste, o push não sai. Durante a implementação nada disso
+dispara: roda-se só o teste do que está sendo mexido. Para pular o gate em push de rascunho ou
+emergência, `git push --no-verify`.
+
 ## Convenção de idioma
 
 Código em inglês: identificadores, arquivos, comentários e commits. Texto visível ao usuário em

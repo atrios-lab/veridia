@@ -1,5 +1,7 @@
 import { expect, test } from "@playwright/test";
 import postgres from "postgres";
+import { isWithinChatHours } from "../src/core/chat/hours.ts";
+import { TENANTS } from "../src/core/tenant/resolve.ts";
 
 // Entrega 8c/8d: o widget do cidadão. A janela de horário depende do
 // relógio real no momento do teste (tenant.scheduling é config estática,
@@ -28,6 +30,16 @@ test.describe("widget com o chat ligado", () => {
   test.skip(
     !process.env.DATABASE_URL,
     "precisa de DATABASE_URL: liga o chat da serventia direto no banco",
+  );
+
+  // O bloco inteiro depende do relógio, ao contrário do que o comentário do
+  // topo deste arquivo supunha: fora do horário de atendimento o botão do
+  // widget passa a dizer "Fora do horário de atendimento" e o fluxo de fila
+  // nem existe. A cobertura de "fora do horário" é do hours.test.ts, que
+  // injeta o `Date`; aqui só resta pular.
+  test.skip(
+    !isWithinChatHours(TENANTS["cartorio-marinho"], new Date()),
+    "fora do horário de atendimento da serventia: o widget não abre fila",
   );
 
   test.beforeAll(async () => {

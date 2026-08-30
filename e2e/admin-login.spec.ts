@@ -115,7 +115,9 @@ test.describe("autenticação de verdade", () => {
       .getByLabel("Senha", { exact: true })
       .fill("senha-errada-de-proposito");
     await page.getByRole("button", { name: "Entrar" }).click();
-    await expect(page).toHaveURL(/\/admin\/login\?erro=1$/);
+    // O redirect preserva o e-mail digitado para repreencher o campo, então
+    // a URL continua depois de `erro=1`.
+    await expect(page).toHaveURL(/\/admin\/login\?erro=1(&|$)/);
     await expect(page.locator('[data-admin-banner="erro"]')).toHaveText(
       "E-mail ou senha inválidos.",
     );
@@ -127,7 +129,7 @@ test.describe("autenticação de verdade", () => {
     await signIn(page, `${auroraURL}/admin/login`);
     // Same generic message as a wrong password: it never says the account
     // belongs to a different office.
-    await expect(page).toHaveURL(/\/admin\/login\?erro=1$/);
+    await expect(page).toHaveURL(/\/admin\/login\?erro=1(&|$)/);
     await expect(page.locator('[data-admin-banner="erro"]')).toHaveText(
       "E-mail ou senha inválidos.",
     );

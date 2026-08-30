@@ -287,14 +287,20 @@ function RowMenu({ children }: { children: ReactNode }) {
  * refuses the rest; this is the courtesy of not offering it.
  */
 function DeleteAction({ name, userId }: { name: string; userId: string }) {
+  // O aviso sai daqui, e não de um efeito sobre `state`: dar certo significa
+  // que a linha some da lista, e o efeito morre com o componente antes de
+  // rodar. Excluir ficava sem confirmação nenhuma na tela. `toast` publica
+  // num Toaster que vive acima desta árvore, então a mensagem sobrevive ao
+  // desmonte; as outras ações desta linha não precisam disso porque a conta
+  // continua listada depois delas.
   const [state, formAction, pending] = useActionState<
     AccountActionState,
     FormData
-  >(deleteAccount, IDLE_ACCOUNT_ACTION_STATE);
-
-  useEffect(() => {
-    if (state.status === "sent") toast.success("Conta excluída.");
-  }, [state]);
+  >(async (previous, formData) => {
+    const result = await deleteAccount(previous, formData);
+    if (result.status === "sent") toast.success("Conta excluída.");
+    return result;
+  }, IDLE_ACCOUNT_ACTION_STATE);
 
   return (
     <ConfirmAction

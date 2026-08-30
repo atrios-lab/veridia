@@ -90,13 +90,17 @@ test.describe("publicações", () => {
     await page.getByRole("button", { name: "Aviso" }).click();
     await page.getByLabel("Título").fill(TITLE);
     await page.getByLabel("Texto").fill("Publicação vigente do teste e2e.");
-    await page.getByLabel("Entra no site em").fill("2026-01-01");
+    // Hoje, não uma data fixa: o campo tem `min` no dia corrente, e uma data
+    // passada faz o próprio navegador barrar o envio, sem erro visível.
+    const hoje = new Date().toISOString().slice(0, 10);
+    await page.getByLabel("Entra no site em").fill(hoje);
     await page.getByLabel("Sai do site em").fill("2099-01-01");
     await page.getByRole("button", { name: "Publicar" }).click();
 
     await expect(page.getByText("Salvo.")).toBeVisible();
     await page.getByRole("link", { name: /No site/ }).click();
-    await expect(page.getByText(TITLE)).toBeVisible();
+    // O título aparece na lista e de novo na pré-visualização do lado.
+    await expect(page.getByText(TITLE).first()).toBeVisible();
 
     await page.goto(baseURL);
     await expect(page.getByText("Proclamas e avisos")).toBeVisible();
@@ -106,10 +110,27 @@ test.describe("publicações", () => {
   test("archiving takes it off the panel's No site tab and off the home", async ({
     page,
   }) => {
+    // Fixture própria: o afterEach apaga a publicação depois de cada teste,
+    // então este não herda a que o anterior criou.
+    const sql = postgres(process.env.DATABASE_URL as string);
+    await sql`
+      insert into office_publications
+        (tenant_slug, kind, title, body, publish_at, expire_at)
+      values ('cartorio-marinho', 'aviso', ${TITLE},
+              'Publicação vigente do teste e2e.', current_date, date '2099-01-01')
+    `;
+    await sql.end();
+
     await signIn(page);
     await page.goto(`${baseURL}/admin/publicacoes?aba=no-site`);
 
-    const row = page.locator("div", { hasText: TITLE }).last();
+    // O título também aparece na pré-visualização, que não tem botão: a
+    // linha certa é a que contém o próprio "Arquivar agora".
+    const row = page
+      .locator("div")
+      .filter({ hasText: TITLE })
+      .filter({ has: page.getByRole("button", { name: "Arquivar agora" }) })
+      .last();
     await row.getByRole("button", { name: "Arquivar agora" }).click();
     // Arming only opens the panel: nothing leaves the site until the second
     // button is pressed, which is the whole point of the confirmation.

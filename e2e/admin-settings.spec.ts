@@ -51,8 +51,13 @@ test.describe("configurações: aba Serventia", () => {
     await expect(page).toHaveURL(`${baseURL}/admin/configuracoes`);
 
     const novoTelefone = "(84) 4042-0999";
-    await page.getByLabel("Telefone").fill(novoTelefone);
-    await page.getByRole("button", { name: "Salvar" }).click();
+    // A tela tem mais de um formulário, cada um com seu "Salvar". O clique
+    // precisa ser no que contém o campo alterado.
+    const contato = page
+      .locator("form")
+      .filter({ has: page.getByLabel("Telefone") });
+    await contato.getByLabel("Telefone").fill(novoTelefone);
+    await contato.getByRole("button", { name: "Salvar" }).click();
     await expect(
       page.getByText("Salvo. Já está valendo no site."),
     ).toBeVisible();
@@ -61,8 +66,12 @@ test.describe("configurações: aba Serventia", () => {
     await page.reload();
     await expect(page.getByLabel("Telefone")).toHaveValue(novoTelefone);
 
-    await page.goto(`${baseURL}/`);
-    await expect(page.getByText(novoTelefone).first()).toBeVisible();
+    // O telefone não fica mais na home: o redesign levou o contato para a
+    // página própria, que é onde o site serve o que a serventia salvou.
+    await page.goto(`${baseURL}/contato`);
+    await expect(
+      page.getByText(novoTelefone).filter({ visible: true }).first(),
+    ).toBeVisible();
   });
 
   test("an invalid e-mail is refused and nothing is saved", async ({
@@ -71,13 +80,16 @@ test.describe("configurações: aba Serventia", () => {
     await signIn(page);
     await page.goto(`${baseURL}/admin/configuracoes`);
 
+    const contato = page
+      .locator("form")
+      .filter({ has: page.getByLabel("Telefone") });
     const telefoneOriginal = await page.getByLabel("Telefone").inputValue();
     await page.getByLabel("Telefone").fill("(84) 4042-0111");
     // Deliberately an address the browser's own type="email" check waves
     // through: the point of this test is the server refusing it, and a value
     // the browser blocks would never reach the server to be refused.
     await page.getByLabel("E-mail").fill("contato@exemplo");
-    await page.getByRole("button", { name: "Salvar" }).click();
+    await contato.getByRole("button", { name: "Salvar" }).click();
 
     await expect(page.getByText("Confira os campos destacados.")).toBeVisible();
     // What was typed survives the failed submit.
@@ -177,8 +189,14 @@ test.describe("configurações, aba Encarregado", () => {
     ).toBeVisible();
 
     await page.goto(`${baseURL}/lgpd`);
-    await expect(page.getByText(novoNome)).toBeVisible();
-    await expect(page.getByText(novoEmail)).toBeVisible();
+    // O nome e o e-mail aparecem em mais de um bloco, e um deles fica oculto
+    // no layout atual: a asserção precisa do primeiro que está visível.
+    await expect(
+      page.getByText(novoNome).filter({ visible: true }).first(),
+    ).toBeVisible();
+    await expect(
+      page.getByText(novoEmail).filter({ visible: true }).first(),
+    ).toBeVisible();
   });
 
   test("an invalid e-mail is refused and nothing is saved", async ({
@@ -189,7 +207,9 @@ test.describe("configurações, aba Encarregado", () => {
 
     const nomeOriginal = await page.getByLabel("Nome").inputValue();
     await page.getByLabel("Nome").fill("Outra Pessoa");
-    await page.getByLabel("E-mail de contato").fill("dpo.serventia");
+    // Com @: o campo é type="email", e um valor sem @ o navegador barra
+    // antes de chegar ao servidor, que é quem este teste quer ver recusando.
+    await page.getByLabel("E-mail de contato").fill("dpo@serventia");
     await page.getByRole("button", { name: "Salvar" }).click();
 
     await expect(page.getByText("Confira os campos destacados.")).toBeVisible();
@@ -231,14 +251,17 @@ test.describe("configurações, aba Cobrança", () => {
     await page.goto(`${baseURL}/admin/configuracoes/cobranca`);
 
     await page.getByLabel("Tipo da chave").selectOption("email");
-    await page.getByLabel("Chave").fill("financeiro@serventia.example");
+    // Sem `exact`, "Chave" também casaria com o rótulo "Tipo da chave".
+    await page
+      .getByLabel("Chave", { exact: true })
+      .fill("financeiro@serventia.example");
     await page.getByRole("button", { name: "Salvar chave" }).click();
     await expect(
       page.getByText("Salvo. Já está valendo no site."),
     ).toBeVisible();
 
     await page.reload();
-    await expect(page.getByLabel("Chave")).toHaveValue(
+    await expect(page.getByLabel("Chave", { exact: true })).toHaveValue(
       "financeiro@serventia.example",
     );
 
@@ -247,6 +270,9 @@ test.describe("configurações, aba Cobrança", () => {
       page.getByText("Remover a chave Pix da serventia?"),
     ).toBeVisible();
     await page.getByRole("button", { name: "Confirmar remoção" }).click();
+    // Sem esperar a confirmação, o reload corre contra a ação e a página
+    // volta a ser renderizada com a chave ainda no banco.
+    await expect(page.getByText("Chave Pix removida.")).toBeVisible();
     await page.reload();
     await expect(
       page.getByText("Sem chave, a consulta de protocolo não mostra QR Code"),
@@ -258,7 +284,9 @@ test.describe("configurações, aba Cobrança", () => {
     await page.goto(`${baseURL}/admin/configuracoes/cobranca`);
 
     await page.getByLabel("Tipo da chave").selectOption("email");
-    await page.getByLabel("Chave").fill("financeiro.serventia");
+    await page
+      .getByLabel("Chave", { exact: true })
+      .fill("financeiro.serventia");
     await page.getByRole("button", { name: "Salvar chave" }).click();
 
     await expect(page.getByText("Confira os campos destacados.")).toBeVisible();

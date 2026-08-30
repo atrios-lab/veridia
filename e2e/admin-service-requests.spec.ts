@@ -67,7 +67,13 @@ test.describe("fila e detalhe de pedidos", () => {
     await expect(page).toHaveURL(`${baseURL}/admin/pedidos`);
 
     await expect(page.getByText(PROTOCOL)).toBeVisible();
-    await expect(page.getByText("Rosa Almeida Fontes")).toBeVisible();
+    // O nome do cliente se repete na fila: outros testes protocolam com a
+    // mesma pessoa. O que importa é ele estar na linha deste protocolo.
+    await expect(
+      page
+        .getByRole("link", { name: PROTOCOL })
+        .getByText("Rosa Almeida Fontes"),
+    ).toBeVisible();
 
     await page.getByText(PROTOCOL).click();
     await expect(page).toHaveURL(
