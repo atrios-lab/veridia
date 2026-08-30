@@ -30,7 +30,8 @@
 - [x] 5.1 Testes de núcleo em `src/core/request/`: pedido sem e-mail é recusado, e-mail malformado é recusado, telefone ausente é aceito, telefone com menos de 10 dígitos é recusado, telefone sem pontuação é aceito.
 - [x] 5.2 Atualizar os testes existentes que preenchem `contact` no pedido de serviço (`src/db/service-request.test.ts` e o que mais o `pnpm test` apontar).
 - [x] 5.3 Atualizar `e2e/service-request.spec.ts` para preencher os dois campos e afirmar que o telefone chega à tela do pedido no painel.
-- [ ] 5.4 Rodar `pnpm typecheck`, `pnpm test` e `pnpm e2e` do fluxo de pedido antes de abrir o PR.
+- [x] 5.4 Rodar `pnpm typecheck` e `pnpm test` (447 passam, 0 falham).
+- [ ] 5.5 Rodar o `pnpm e2e` do fluxo de pedido. NÃO rodado localmente: há um só `DATABASE_URL` e o e2e grava no banco de produção. Roda no CI, contra o banco efêmero do verify (ver commit cd911ab).
 
 ## 6. Fechamento
 
