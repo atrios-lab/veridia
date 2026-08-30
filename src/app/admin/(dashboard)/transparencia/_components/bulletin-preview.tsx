@@ -16,7 +16,6 @@ import {
 export function BulletinPreview({
   officeName,
   officeSubtitle,
-  cns,
   legalFooter,
   month,
   year,
@@ -25,7 +24,6 @@ export function BulletinPreview({
 }: {
   officeName: string;
   officeSubtitle: string;
-  cns: string;
   legalFooter: string;
   month: number;
   year: number;
@@ -39,7 +37,7 @@ export function BulletinPreview({
       <div className="bg-admin-primary px-6 py-4 text-white">
         <p className="font-serif text-[15px] font-semibold">{officeName}</p>
         <p className="text-[11.5px] text-admin-on-dark-subtitle">
-          {officeSubtitle} · CNS {cns}
+          {officeSubtitle}
         </p>
       </div>
 

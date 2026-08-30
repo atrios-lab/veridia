@@ -5,7 +5,7 @@ import { getTenant } from "@/lib/tenant.ts";
 export const metadata = { title: "Política de Privacidade" };
 
 // Fixed institutional text, shared by every tenant; only the office's own
-// data (name, CNS, contacts, DPO) is interpolated. See design.md, "Estrutura
+// data (name, contacts, DPO) is interpolated. See design.md, "Estrutura
 // fixa, dados variáveis por tenant".
 export default async function PrivacyPolicyPage() {
   const tenant = await getTenant();

@@ -139,7 +139,6 @@ export function buildRequerimento(
     office: [
       tenant.name,
       tenant.subtitle,
-      `CNS ${tenant.cns}`,
       `${tenant.contacts.phone} · ${tenant.contacts.email}`,
     ],
     sections,
@@ -177,7 +176,6 @@ export function buildAccessReceipt(
     office: [
       tenant.name,
       tenant.subtitle,
-      `CNS ${tenant.cns}`,
       `${tenant.contacts.phone} · ${tenant.contacts.email}`,
     ],
     // No sections and no signee: there is nothing to sign on a receipt.
@@ -240,7 +238,6 @@ export function buildDataRightsReceipt(
     office: [
       tenant.name,
       tenant.subtitle,
-      `CNS ${tenant.cns}`,
       `Encarregado: ${tenant.dpo.name} · ${tenant.dpo.email}`,
     ],
     sections: [
