@@ -9,7 +9,8 @@ const schema = requestDataEditSchema(NOW, ZONE);
 
 const valid = {
   applicantName: "Maria José da Silva",
-  contact: "(84) 99999-0000",
+  contact: "maria@exemplo.com",
+  phone: "(84) 99999-0000",
   cpf: "529.982.247-25",
   purpose: "",
   description: "  Queremos casar em outubro.  ",
@@ -50,6 +51,16 @@ test("name and contact are required, because the office calls these people", () 
     false,
   );
   assert.equal(schema.safeParse({ ...valid, contact: "" }).success, false);
+});
+
+test("the telephone may be corrected, and may be cleared", () => {
+  // Empty is a real answer here, unlike on the contact: it is how a number
+  // typed by mistake gets taken back off the request.
+  assert.equal(schema.parse({ ...valid, phone: "" }).phone, "");
+  assert.equal(
+    schema.safeParse({ ...valid, phone: "9999-0000" }).success,
+    false,
+  );
 });
 
 test("neither the act nor the protocol can be corrected here", () => {

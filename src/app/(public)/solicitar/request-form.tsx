@@ -11,7 +11,7 @@ import { DEADLINE_CAVEAT } from "@/core/request/deadline.ts";
 import {
   formatCpf,
   formatPhone,
-  serviceRequestSchema,
+  publicServiceRequestSchema,
 } from "@/core/request/form.ts";
 import type { Attribution } from "@/core/tenant/schema.ts";
 import { Icon } from "../_components/icon.tsx";
@@ -132,7 +132,7 @@ export function RequestForm({
     handleSubmit,
     formState: { errors: clientErrors },
   } = useForm({
-    resolver: zodResolver(serviceRequestSchema(act)),
+    resolver: zodResolver(publicServiceRequestSchema(act)),
     mode: "onTouched",
   });
 
@@ -200,39 +200,68 @@ export function RequestForm({
 
           <div>
             <label
-              htmlFor="contact"
+              htmlFor="email"
               className="mb-1.5 block text-[13px] font-semibold"
             >
-              E-mail ou WhatsApp{" "}
+              E-mail{" "}
               <span className="font-normal text-brand-muted">
                 · para retorno
               </span>
             </label>
             <input
-              id="contact"
+              id="email"
+              type="email"
+              autoComplete="email"
               className={inputClass}
-              placeholder="voce@exemplo.com ou (84) 90000-0000"
-              {...withMask(register("contact"), formatPhone)}
+              placeholder="voce@exemplo.com"
+              {...register("email")}
             />
-            <FieldError message={errorFor("contact")} />
+            <FieldError message={errorFor("email")} />
+            {/* The way out for whoever has no address, said before the
+                refusal rather than after it. */}
+            <p className="mt-1.5 text-[11px] text-brand-faint">
+              Sem e-mail? A serventia recebe o pedido no balcão.
+            </p>
           </div>
         </div>
 
-        <div className="md:max-w-[280px]">
-          <label
-            htmlFor="cpf"
-            className="mb-1.5 block text-[13px] font-semibold"
-          >
-            CPF <span className="font-normal text-brand-muted">· opcional</span>
-          </label>
-          <input
-            id="cpf"
-            inputMode="numeric"
-            className={inputClass}
-            placeholder="000.000.000-00"
-            {...withMask(register("cpf"), formatCpf)}
-          />
-          <FieldError message={errorFor("cpf")} />
+        <div className="grid gap-3.5 md:grid-cols-2">
+          <div>
+            <label
+              htmlFor="phone"
+              className="mb-1.5 block text-[13px] font-semibold"
+            >
+              Telefone{" "}
+              <span className="font-normal text-brand-muted">· opcional</span>
+            </label>
+            <input
+              id="phone"
+              inputMode="tel"
+              autoComplete="tel"
+              className={inputClass}
+              placeholder="(84) 90000-0000"
+              {...withMask(register("phone"), formatPhone)}
+            />
+            <FieldError message={errorFor("phone")} />
+          </div>
+
+          <div>
+            <label
+              htmlFor="cpf"
+              className="mb-1.5 block text-[13px] font-semibold"
+            >
+              CPF{" "}
+              <span className="font-normal text-brand-muted">· opcional</span>
+            </label>
+            <input
+              id="cpf"
+              inputMode="numeric"
+              className={inputClass}
+              placeholder="000.000.000-00"
+              {...withMask(register("cpf"), formatCpf)}
+            />
+            <FieldError message={errorFor("cpf")} />
+          </div>
         </div>
 
         <div>

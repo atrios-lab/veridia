@@ -346,8 +346,25 @@ export const serviceRequestDetailsSchema = z.object({
   // means the office never touched it and the term is its default counted
   // from the filing date: see `effectiveDeadline`.
   deadline: deadlineSchema.optional(),
+  // The citizen's telephone, when they gave one. Here and not in a column of
+  // its own because `service_requests` is shared by the four kinds and only
+  // this one asks for a telephone apart from the contact: a nullable column
+  // for one kind is a migration the jsonb already covers. Nothing searches by
+  // telephone; the day the panel does, it earns its column.
+  phone: z.string().optional(),
 });
 export type ServiceRequestDetails = z.infer<typeof serviceRequestDetailsSchema>;
+
+/**
+ * The telephone out of a request's `details`, or "" when there is none: the
+ * same shape as `readDeadline`, and the only door to a field the database
+ * does not check. Empty rather than undefined because every reader shows it
+ * in a form or a line of a document, never branches on it.
+ */
+export function readPhone(details: unknown): string {
+  const value = (details as { phone?: unknown } | null)?.phone;
+  return typeof value === "string" ? value : "";
+}
 
 export const appointmentDetailsSchema = z.object({
   date: isoDate,

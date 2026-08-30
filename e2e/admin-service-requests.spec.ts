@@ -42,10 +42,12 @@ test.describe("fila e detalhe de pedidos", () => {
     await sql`
       insert into service_requests
         (tenant_slug, kind, protocol_year, protocol_sequence, protocol_number,
-         act_id, attribution, applicant_name, contact, access_key_hash, status)
+         act_id, attribution, applicant_name, contact, access_key_hash, status,
+         details)
       values
         ('cartorio-marinho', 'service-request', 2098, 1, ${PROTOCOL},
-         'rcpn-certidao', 'RCPN', 'Rosa Almeida Fontes', 'rosa.fontes@email.com', 'hash', 'new')
+         'rcpn-certidao', 'RCPN', 'Rosa Almeida Fontes', 'rosa.fontes@email.com', 'hash', 'new',
+         '{"phone": "(84) 99912-0033"}'::jsonb)
       on conflict do nothing
     `;
     await sql.end();
@@ -82,6 +84,16 @@ test.describe("fila e detalhe de pedidos", () => {
       `${baseURL}/admin/pedidos/${encodeURIComponent(PROTOCOL)}`,
     );
     await expect(page.getByRole("heading", { name: PROTOCOL })).toBeVisible();
+  });
+
+  test("the telephone filed with the request reaches the operator", async ({
+    page,
+  }) => {
+    // It rides in `details`, not in a column of its own: this is the test
+    // that the reader still finds it there.
+    await signIn(page);
+    await page.goto(`${baseURL}/admin/pedidos/${PROTOCOL}`);
+    await expect(page.getByText("(84) 99912-0033")).toBeVisible();
   });
 
   test("changing the andamento is reflected in the queue", async ({ page }) => {
