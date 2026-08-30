@@ -30,7 +30,7 @@ test.describe("Busca global", () => {
   }
 
   // page.goto resolve no "load", antes do useEffect que liga o atalho de
-  // teclado (ver shortcut-listener.tsx) — logo depois de uma navegação, um
+  // teclado (ver shortcut-listener.tsx): logo depois de uma navegação, um
   // único Control+K pode chegar antes de o React anexar o listener e se
   // perder. Repete o atalho até o diálogo abrir.
   async function openSearch(page: Page) {
