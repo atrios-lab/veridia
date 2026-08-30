@@ -13,8 +13,35 @@ concurrency:
 jobs:
   verify:
     runs-on: ubuntu-latest
-    # No secrets, by design. The tests run against an in-process Postgres and
-    # never reach a real database or an external service.
+    # Valores descartáveis, não segredos: apontam para o banco efêmero do job
+    # e para contas que só existem dentro dele. A mesma URL em DATABASE_URL e
+    # DIRECT_URL porque aqui não há pooler no meio, ao contrário da Supabase,
+    # onde o runtime passa pelo Supavisor e as migrations não.
+    env:
+      DATABASE_URL: postgresql://postgres:postgres@localhost:5432/postgres
+      DIRECT_URL: postgresql://postgres:postgres@localhost:5432/postgres
+      ADMIN_SEED_EMAIL: admin@e2e.local
+      ADMIN_SEED_PASSWORD: senha-de-teste-sem-valor-fora-deste-job
+      ADMIN_SEED_TENANT: cartorio-marinho
+      AURORA_ADMIN_EMAIL: aurora-admin@e2e.local
+      AURORA_ADMIN_PASSWORD: senha-de-teste-sem-valor-fora-deste-job
+    # No secrets, by design. Os testes unitários rodam contra um Postgres
+    # in-process (PGlite) e o e2e contra o serviço abaixo, que nasce e morre
+    # com o job: nenhum dos dois alcança banco real nem serviço externo.
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_PASSWORD: postgres
+        ports:
+          - 5432:5432
+        # Sem isto os passos começam antes de o banco aceitar conexão, e a
+        # migration falha por recusa em vez de por defeito.
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
     steps:
       - uses: actions/checkout@v4
 
@@ -54,4 +81,21 @@ jobs:
           DEFAULT_TENANT: cartorio-marinho
 
       - run: pnpm exec playwright install --with-deps chromium
+
+      # Sem banco e sem conta semeada, todo describe do painel se pula por
+      # falta de ADMIN_SEED_EMAIL: cem testes que ficam verdes sem exercitar
+      # uma tela sequer. Foi assim que o e2e do painel passou meses sem rodar.
+      - name: preparar o banco do e2e
+        run: pnpm db:migrate && pnpm db:seed
+
+      # Segunda serventia, com conta própria: é o que prova que um login não
+      # atravessa para o painel de outra, e que uma atribuição não delegada
+      # se apresenta como tal.
+      - name: semear o administrador da segunda serventia
+        run: pnpm db:seed
+        env:
+          ADMIN_SEED_EMAIL: ${{ env.AURORA_ADMIN_EMAIL }}
+          ADMIN_SEED_PASSWORD: ${{ env.AURORA_ADMIN_PASSWORD }}
+          ADMIN_SEED_TENANT: tabelionato-aurora
+
       - run: pnpm e2e
