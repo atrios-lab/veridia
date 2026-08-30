@@ -3,7 +3,7 @@ import { can } from "@/core/auth/roles.ts";
 import {
   activeConversations,
   attendantSummary,
-  isChatEnabled,
+  readChatAvailability,
   waitingConversations,
 } from "@/lib/chat.ts";
 import { getSession } from "@/lib/session.ts";
@@ -31,10 +31,10 @@ export default async function SupportChatQueuePage() {
   if (!session || !can(session.user.role ?? "", "chat.manage")) notFound();
 
   const tenant = await getTenant();
-  const [waiting, active, enabled] = await Promise.all([
+  const [waiting, active, availability] = await Promise.all([
     waitingConversations(tenant.slug),
     activeConversations(tenant.slug),
-    isChatEnabled(tenant.slug),
+    readChatAvailability(tenant.slug),
   ]);
   const activeWithAttendant = await Promise.all(
     active.map(async (conversation) => ({
@@ -62,7 +62,7 @@ export default async function SupportChatQueuePage() {
             currentStatus={session.user.chatStatus ?? "available"}
           />
           <ChatToggle
-            enabled={enabled}
+            availability={availability}
             canToggle={can(session.user.role ?? "", "chat.settings")}
           />
         </div>

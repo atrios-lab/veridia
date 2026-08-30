@@ -1,7 +1,12 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 import { cartorioMarinho } from "../tenant/tenants/marinho.ts";
-import { isWithinChatHours, nextChatOpening } from "./hours.ts";
+import {
+  isChatOpen,
+  isChatVisible,
+  isWithinChatHours,
+  nextChatOpening,
+} from "./hours.ts";
 
 // 2026-08-11 is a Tuesday, a plain business day with no national holiday
 // nearby. São Paulo has no DST since 2019, so it is UTC-3 year round: 13:00Z
@@ -51,4 +56,26 @@ test("a Saturday opens on Monday", () => {
     day: "2026-08-10",
     hour: 8,
   });
+});
+
+test("the switch opens the chat outside the office's own hours", () => {
+  // The bug this replaced: the office turned "Disponível para o chat" on, on
+  // a Saturday, and the site went on saying "fora do horário", because the
+  // schedule answered the question and the switch was never asked.
+  assert.equal(isChatOpen("on", cartorioMarinho, SATURDAY_10AM), true);
+  assert.equal(isChatOpen("on", cartorioMarinho, TUESDAY_2PM), true);
+});
+
+test("on automatic, the office's hours still decide", () => {
+  assert.equal(isChatOpen("auto", cartorioMarinho, TUESDAY_10AM), true);
+  assert.equal(isChatOpen("auto", cartorioMarinho, TUESDAY_7AM), false);
+  assert.equal(isChatOpen("auto", cartorioMarinho, SATURDAY_10AM), false);
+});
+
+test("switched off, no hour of any day opens it", () => {
+  assert.equal(isChatOpen("off", cartorioMarinho, TUESDAY_10AM), false);
+  assert.equal(isChatVisible("off"), false);
+  // The other two keep the button on screen: closed is not the same as gone.
+  assert.equal(isChatVisible("on"), true);
+  assert.equal(isChatVisible("auto"), true);
 });
