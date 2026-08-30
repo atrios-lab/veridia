@@ -180,7 +180,7 @@ test.describe("tela de Usuários", () => {
 
     // The account still answers to the old address, and the list says a
     // change is waiting on someone.
-    await expect(row.getByText(CONVIDADA_EMAIL)).toBeVisible();
+    await expect(row.getByText(CONVIDADA_EMAIL).first()).toBeVisible();
     await expect(
       row.getByText(
         `Troca para ${CONVIDADA_EMAIL_NOVO} aguardando confirmação`,

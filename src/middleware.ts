@@ -13,6 +13,11 @@ const UNAUTHENTICATED_PATHS = new Set([
   LOGIN_PATH,
   "/admin/redefinir-senha",
   "/admin/esqueci-senha",
+  // A confirmação da troca de e-mail cai na mesma regra, e pelo mesmo
+  // motivo: o link vai para o endereço novo, e quem precisa clicar é
+  // justamente quem não consegue mais entrar pelo antigo. A tela decide
+  // válido vs. expirado pelo token, sozinha.
+  "/admin/confirmar-email",
 ]);
 
 const isDev = process.env.NODE_ENV === "development";
