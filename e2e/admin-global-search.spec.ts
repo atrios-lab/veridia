@@ -29,6 +29,19 @@ test.describe("Busca global", () => {
     await expect(page).toHaveURL(`${baseURL}/admin`);
   }
 
+  // page.goto resolve no "load", antes do useEffect que liga o atalho de
+  // teclado (ver shortcut-listener.tsx) — logo depois de uma navegação, um
+  // único Control+K pode chegar antes de o React anexar o listener e se
+  // perder. Repete o atalho até o diálogo abrir.
+  async function openSearch(page: Page) {
+    const dialog = page.getByRole("dialog", { name: "Busca global" });
+    await expect(async () => {
+      await page.keyboard.press("Control+K");
+      await expect(dialog).toBeVisible({ timeout: 1000 });
+    }).toPass({ timeout: 15_000 });
+    return dialog;
+  }
+
   test.beforeEach(async () => {
     const sql = postgres(process.env.DATABASE_URL as string);
     await sql`
@@ -53,9 +66,7 @@ test.describe("Busca global", () => {
     await signIn(page);
     await page.goto(`${baseURL}/admin/agenda`);
 
-    await page.keyboard.press("Control+K");
-    const dialog = page.getByRole("dialog", { name: "Busca global" });
-    await expect(dialog).toBeVisible();
+    const dialog = await openSearch(page);
 
     await page
       .getByPlaceholder(/Buscar protocolo, CPF ou nome/)
@@ -69,18 +80,16 @@ test.describe("Busca global", () => {
 
   test("encontra pelo CPF mascarado", async ({ page }) => {
     await signIn(page);
-    await page.keyboard.press("Control+K");
+    const dialog = await openSearch(page);
     await page
       .getByPlaceholder(/Buscar protocolo, CPF ou nome/)
       .fill("123.456.789-09");
-    await expect(
-      page.getByRole("dialog", { name: "Busca global" }).getByText(PROTOCOL),
-    ).toBeVisible();
+    await expect(dialog.getByText(PROTOCOL)).toBeVisible();
   });
 
   test("termo sem resultado mostra o estado vazio", async ({ page }) => {
     await signIn(page);
-    await page.keyboard.press("Control+K");
+    await openSearch(page);
     await page
       .getByPlaceholder(/Buscar protocolo, CPF ou nome/)
       .fill("ninguém com esse nome");

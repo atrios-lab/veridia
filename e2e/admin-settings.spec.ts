@@ -255,6 +255,7 @@ test.describe("configurações, aba Cobrança", () => {
     await page
       .getByLabel("Chave", { exact: true })
       .fill("financeiro@serventia.example");
+    await page.getByLabel("Cidade").fill("Marinho");
     await page.getByRole("button", { name: "Salvar chave" }).click();
     await expect(
       page.getByText("Salvo. Já está valendo no site."),
