@@ -248,7 +248,7 @@ export function ManualEntryForm({
 
         <div className="mt-3.5">
           <label className={LABEL_CLASS} htmlFor="description">
-            Observações
+            Discrimine sua solicitação
           </label>
           <textarea
             id="description"
