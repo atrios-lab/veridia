@@ -1,8 +1,12 @@
 #!/bin/sh
-# The e2e suite boots a production build, so nobody runs it while implementing.
-# The moment it matters is the push, when the code leaves this machine.
+# Fast checks only. The e2e suite runs twice otherwise: once here, blocking
+# the push, and again in CI right after — same 9+ minutes paid twice for
+# every push. CI is the gate for e2e; this hook is just the quick local net.
 #
 # The refs git feeds on stdin are deliberately ignored: skipping per branch is
 # what --no-verify is for.
-echo "pre-push: running the e2e suite (git push --no-verify skips this)"
-exec pnpm e2e
+set -e
+echo "pre-push: typecheck + lint + test (git push --no-verify skips this)"
+pnpm typecheck
+pnpm lint
+pnpm test

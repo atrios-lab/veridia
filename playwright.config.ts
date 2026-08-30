@@ -8,7 +8,14 @@ import { defineConfig, devices } from "@playwright/test";
 // existe e nada muda.
 if (existsSync(".env.local")) process.loadEnvFile(".env.local");
 
-const PORT = process.env.PORT ?? "3000";
+// Porta própria, diferente da do `pnpm dev` (3000): `reuseExistingServer`
+// abaixo reaproveita o que estiver nessa porta, e se fosse a mesma do dev
+// server ele reaproveitaria um processo de `pnpm dev` carregado com o
+// `.env.local` de verdade — POSTMARK_SERVER_TOKEN e EMAIL_REDIRECT_TO reais
+// em vez das strings vazias definidas mais abaixo. Nessa porta, só um
+// processo que o próprio Playwright subiu (sempre com as chaves zeradas)
+// pode já estar escutando.
+const PORT = process.env.PORT ?? "3100";
 
 export default defineConfig({
   testDir: "./e2e",
