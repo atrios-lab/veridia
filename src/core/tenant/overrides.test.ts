@@ -321,3 +321,38 @@ test("the deadline write schema cannot reach anything else in the tenant", () =>
   assert.ok(parsed.success);
   assert.deepEqual(parsed.data, { requestDeadlineDays: 20 });
 });
+
+test("as horas do balcão são editáveis pelo painel", () => {
+  const merged = applyTenantOverrides(cartorioMarinho, {
+    contact: {
+      openingHours: "Segunda a sexta, das 8h às 17h",
+      counterHours: { startHour: 8, endHour: 17 },
+    },
+  });
+  assert.equal(merged.counterHours.endHour, 17);
+  assert.equal(merged.openingHours, "Segunda a sexta, das 8h às 17h");
+});
+
+test("uma linha antiga não devolve o horário para o padrão", () => {
+  // Rows written before the hours were editable carry no `counterHours`. The
+  // default on `TenantSchema` used to be reached through `.partial()` and
+  // wrote 8h-14h over whatever the office actually keeps; every office whose
+  // hours are not 8h-14h would have been moved without anyone touching it.
+  const office = {
+    ...cartorioMarinho,
+    counterHours: { startHour: 9, endHour: 17 },
+  };
+  const merged = applyTenantOverrides(office, {
+    contact: { openingHours: "Segunda a sexta, das 9h às 17h" },
+  });
+  assert.deepEqual(merged.counterHours, { startHour: 9, endHour: 17 });
+});
+
+test("fechar antes de abrir é recusado", () => {
+  const merged = applyTenantOverrides(cartorioMarinho, {
+    contact: { counterHours: { startHour: 14, endHour: 8 } },
+  });
+  // A malformed row is noise over a base that is always valid: the office
+  // keeps its own hours rather than the site taking an impossible window.
+  assert.deepEqual(merged.counterHours, cartorioMarinho.counterHours);
+});

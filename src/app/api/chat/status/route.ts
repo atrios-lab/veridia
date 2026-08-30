@@ -1,5 +1,5 @@
-import { isWithinChatHours } from "@/core/chat/hours.ts";
-import { isChatEnabled } from "@/lib/chat.ts";
+import { isChatOpen, isChatVisible } from "@/core/chat/hours.ts";
+import { readChatAvailability } from "@/lib/chat.ts";
 import { getTenant } from "@/lib/tenant.ts";
 
 export const runtime = "nodejs";
@@ -13,9 +13,9 @@ export const runtime = "nodejs";
  */
 export async function GET(): Promise<Response> {
   const tenant = await getTenant();
-  const enabled = await isChatEnabled(tenant.slug);
+  const availability = await readChatAvailability(tenant.slug);
   return Response.json({
-    enabled,
-    withinHours: isWithinChatHours(tenant, new Date()),
+    enabled: isChatVisible(availability),
+    withinHours: isChatOpen(availability, tenant, new Date()),
   });
 }

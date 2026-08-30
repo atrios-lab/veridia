@@ -8,6 +8,11 @@ import type {
   ConversationStatus,
   PrechatInput,
 } from "@/core/chat/conversation.ts";
+import {
+  type ChatAvailability,
+  isChatAvailability,
+  isChatVisible,
+} from "@/core/chat/hours.ts";
 import { isStale } from "@/core/chat/inactivity.ts";
 import type { AuthorType } from "@/core/chat/message.ts";
 import {
@@ -61,7 +66,9 @@ function hashCitizenToken(token: string): string {
 /** Whether the office's chat is switched on. Read directly, not through
  * `getTenant()`'s override merge: this is operational state, not part of
  * the Tenant shape (see src/lib/tenant.ts, OFFICE_CHAT_KEY). */
-export async function isChatEnabled(tenantSlug: string): Promise<boolean> {
+export async function readChatAvailability(
+  tenantSlug: string,
+): Promise<ChatAvailability> {
   try {
     const [row] = await db
       .select({ published: tenantContent.published })
@@ -73,27 +80,44 @@ export async function isChatEnabled(tenantSlug: string): Promise<boolean> {
         ),
       )
       .limit(1);
-    const settings = row?.published as { enabled?: boolean } | null | undefined;
-    return settings?.enabled ?? false;
+    const settings = row?.published as
+      | { availability?: unknown; enabled?: unknown }
+      | null
+      | undefined;
+    if (
+      typeof settings?.availability === "string" &&
+      isChatAvailability(settings.availability)
+    ) {
+      return settings.availability;
+    }
+    // Rows written before the switch had three positions. `true` meant
+    // "visible, and the schedule decides", which is exactly `auto`; nothing
+    // an office already set changes meaning under it.
+    if (settings?.enabled === true) return "auto";
+    return "off";
   } catch {
     // A database that is down leaves the chat off rather than taking the
     // whole public page down with it, the same posture `readTenantOverrides`
     // takes in src/lib/tenant.ts. The office loses a channel for as long as
     // the outage lasts; the site keeps serving the address and the telephone,
     // which is what a citizen needs most while nothing else works.
-    return false;
+    return "off";
   }
 }
 
+/** Whether the office's chat shows at all: everything but `off`. */
+export async function isChatEnabled(tenantSlug: string): Promise<boolean> {
+  return isChatVisible(await readChatAvailability(tenantSlug));
+}
+
 /**
- * Switches the office's chat on or off. Turning it off only stops the
+ * Sets how the office is answering the chat. Turning it off only stops the
  * floating button from appearing on the next poll: conversations already
- * `active` are untouched, see admin-support-chat spec, "Interruptor
- * 'Disponível para o chat' some o botão na hora".
+ * `active` are untouched.
  */
-export async function setChatEnabled(
+export async function setChatAvailability(
   tenantSlug: string,
-  enabled: boolean,
+  availability: ChatAvailability,
   actorId: string,
 ): Promise<void> {
   await db
@@ -101,14 +125,14 @@ export async function setChatEnabled(
     .values({
       tenantSlug,
       key: OFFICE_CHAT_KEY,
-      published: { enabled },
+      published: { availability },
       publishedAt: new Date(),
       updatedBy: actorId,
     })
     .onConflictDoUpdate({
       target: [tenantContent.tenantSlug, tenantContent.key],
       set: {
-        published: { enabled },
+        published: { availability },
         publishedAt: new Date(),
         updatedAt: new Date(),
         updatedBy: actorId,
@@ -119,7 +143,7 @@ export async function setChatEnabled(
     actorId,
     action: "chat.settings",
     targetType: "chat-settings",
-    targetId: enabled ? "on" : "off",
+    targetId: availability,
   });
 }
 

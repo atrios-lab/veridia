@@ -46,6 +46,58 @@ export function isWithinChatHours(
 }
 
 /**
+ * How the office says it is answering the chat right now. Three states and
+ * not a boolean because the office asked for two different things from one
+ * switch: "estou aqui agora, abre" and "abre sozinho no meu horário". A
+ * boolean can only carry one of them, and the one it carried was the
+ * schedule, which is why turning the switch on outside business hours left
+ * the citizen looking at "fora do horário".
+ *
+ * - `on`: the office says it is answering. Open, whatever the clock says.
+ * - `auto`: open inside `counterHours` on a business day, closed outside.
+ * - `off`: no chat at all, the button does not appear.
+ */
+export const CHAT_AVAILABILITIES = ["on", "auto", "off"] as const;
+export type ChatAvailability = (typeof CHAT_AVAILABILITIES)[number];
+
+export function isChatAvailability(value: string): value is ChatAvailability {
+  return (CHAT_AVAILABILITIES as readonly string[]).includes(value);
+}
+
+/** Whether the floating button appears at all. */
+export function isChatVisible(availability: ChatAvailability): boolean {
+  return availability !== "off";
+}
+
+/**
+ * Whether the chat takes a message right now. The one place the rule lives:
+ * the widget, the status endpoint and the route that opens a conversation
+ * all read this, or a chat forced open would offer a form the server then
+ * refuses.
+ */
+export function isChatOpen(
+  availability: ChatAvailability,
+  tenant: Tenant,
+  now: Date,
+  timeZone: string = DEFAULT_TIME_ZONE,
+): boolean {
+  if (availability === "off") return false;
+  if (availability === "on") return true;
+  return isWithinChatHours(tenant, now, timeZone);
+}
+
+/**
+ * How the switch reads on the panel, in the operator's words. Kept next to
+ * the states themselves, the way `SECTION_LABELS` sits next to the sections:
+ * the header pill and the switch have to say the same thing.
+ */
+export const CHAT_AVAILABILITY_LABELS: Record<ChatAvailability, string> = {
+  on: "Disponível para o chat",
+  auto: "Segue o horário de atendimento",
+  off: "Indisponível para o chat",
+};
+
+/**
  * When the chat opens next: today, if attendance has not started yet, or
  * the next business day otherwise: for the "Voltamos segunda-feira às 8h"
  * line the closed widget shows.

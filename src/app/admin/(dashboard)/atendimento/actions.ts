@@ -3,10 +3,11 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { can } from "@/core/auth/roles.ts";
+import { isChatAvailability } from "@/core/chat/hours.ts";
 import {
   assignConversation,
   ChatCapacityError,
-  setChatEnabled,
+  setChatAvailability,
   setChatStatus,
 } from "@/lib/chat.ts";
 import { getSession } from "@/lib/session.ts";
@@ -34,9 +35,12 @@ export async function toggleChatEnabledAction(
     return { status: "error", message: NO_PERMISSION };
   }
   const tenant = await getTenant();
-  const enabled = formData.get("enabled") === "on";
+  const availability = String(formData.get("availability") ?? "");
+  if (!isChatAvailability(availability)) {
+    return { status: "error", message: GENERIC_ERROR };
+  }
   try {
-    await setChatEnabled(tenant.slug, enabled, session.user.id);
+    await setChatAvailability(tenant.slug, availability, session.user.id);
   } catch (error) {
     console.error("atendimento.toggle-chat", error);
     return { status: "error", message: GENERIC_ERROR };

@@ -54,6 +54,21 @@ export type Theme = z.infer<typeof ThemeSchema>;
 
 export const OwnerStatusSchema = z.enum(["provido", "interino", "a confirmar"]);
 
+/**
+ * When the counter is open, in numbers. Declared apart from `TenantSchema` so
+ * the panel can reuse the rule without the default: an override that carries
+ * no hours has to leave the office's own alone, and a default reached through
+ * `.partial()` would quietly write 8h-14h over them instead.
+ */
+export const CounterHoursSchema = z
+  .object({
+    startHour: z.number().int().min(0).max(23),
+    endHour: z.number().int().min(1).max(24),
+  })
+  .refine((s) => s.endHour > s.startHour, {
+    message: "A hora de encerramento tem de ser depois da de abertura.",
+  });
+
 export const TenantSchema = z.object({
   slug: z.string().min(1),
   hosts: z.array(z.string()).default([]),
@@ -84,15 +99,7 @@ export const TenantSchema = z.object({
   // and times the office receives by appointment are configured in the panel
   // (see src/core/scheduling/agenda.ts), and an office open every day may well
   // schedule on Tuesdays only.
-  counterHours: z
-    .object({
-      startHour: z.number().int().min(0).max(23).default(8),
-      endHour: z.number().int().min(1).max(24).default(14),
-    })
-    .refine((s) => s.endHour > s.startHour, {
-      message: "A hora de encerramento tem de ser depois da de abertura.",
-    })
-    .default({ startHour: 8, endHour: 14 }),
+  counterHours: CounterHoursSchema.default({ startHour: 8, endHour: 14 }),
   owner: z.object({
     name: z.string().min(1),
     status: OwnerStatusSchema,

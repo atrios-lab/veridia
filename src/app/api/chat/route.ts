@@ -1,11 +1,11 @@
 import { cookies } from "next/headers";
 import { prechatSchema } from "@/core/chat/conversation.ts";
-import { isWithinChatHours } from "@/core/chat/hours.ts";
+import { isChatOpen } from "@/core/chat/hours.ts";
 import { looksLikeBot } from "@/core/request/form.ts";
 import {
   CHAT_TOKEN_COOKIE,
   CHAT_TOKEN_MAX_AGE_SECONDS,
-  isChatEnabled,
+  readChatAvailability,
   startConversation,
 } from "@/lib/chat.ts";
 import { isRateLimited } from "@/lib/rate-limit.ts";
@@ -33,8 +33,8 @@ export async function POST(request: Request): Promise<Response> {
     return Response.json({ error: "rate_limited" }, { status: 429 });
   }
 
-  const enabled = await isChatEnabled(tenant.slug);
-  if (!enabled || !isWithinChatHours(tenant, new Date())) {
+  const availability = await readChatAvailability(tenant.slug);
+  if (!isChatOpen(availability, tenant, new Date())) {
     return Response.json({ error: "closed" }, { status: 409 });
   }
 

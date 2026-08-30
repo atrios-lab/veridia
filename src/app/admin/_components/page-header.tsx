@@ -1,6 +1,7 @@
 import Link from "next/link";
+import { isChatOpen } from "@/core/chat/hours.ts";
 import { formatFullDate } from "@/core/scheduling/calendar.ts";
-import { isChatEnabled } from "@/lib/chat.ts";
+import { readChatAvailability } from "@/lib/chat.ts";
 import { getTenant, today } from "@/lib/tenant.ts";
 import { AdminIcon } from "./icon.tsx";
 
@@ -22,7 +23,11 @@ export async function AdminPageHeader({
   back?: { href: string; label: string };
 }) {
   const tenant = await getTenant();
-  const chatEnabled = await isChatEnabled(tenant.slug);
+  // What the pill answers is not "is the switch on" but "can a citizen write
+  // to me right now", which is the only version of the question an operator
+  // glancing at the header is actually asking.
+  const availability = await readChatAvailability(tenant.slug);
+  const open = isChatOpen(availability, tenant, new Date());
 
   return (
     <header className="flex items-center gap-4 border-b border-admin-border bg-admin-card px-[30px] py-4">
@@ -39,13 +44,17 @@ export async function AdminPageHeader({
       </h1>
       <span
         className={`inline-flex items-center gap-2 rounded-full py-1.5 pr-3 pl-3 text-[12px] font-semibold ${
-          chatEnabled
+          open
             ? "bg-admin-success-bg text-admin-success-text"
             : "bg-admin-readonly-bg text-admin-muted"
         }`}
       >
         <AdminIcon name="chat" className="h-3.5 w-3.5" />
-        {chatEnabled ? "Disponível para o chat" : "Indisponível para o chat"}
+        {open
+          ? "Disponível para o chat"
+          : availability === "auto"
+            ? "Fora do horário de atendimento"
+            : "Indisponível para o chat"}
       </span>
       {/*
         `today()` is the office's wall calendar, not the server's. Vercel runs

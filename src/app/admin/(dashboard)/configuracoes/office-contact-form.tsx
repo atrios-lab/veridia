@@ -82,6 +82,34 @@ export function OfficeContactForm({ tenant }: { tenant: Tenant }) {
           defaultValue={sent?.openingHours ?? tenant.openingHours}
           error={fieldErrors.openingHours}
         />
+        <p className="mt-1.5 text-[11.5px] text-admin-muted">
+          A frase que o cidadão lê. As horas abaixo são as que o site usa para
+          calcular: mantenha as duas dizendo a mesma coisa.
+        </p>
+      </div>
+      <div className="mt-3.5 grid grid-cols-2 gap-3.5 md:max-w-[320px]">
+        <Field
+          label="Abre às"
+          name="startHour"
+          type="number"
+          min={0}
+          max={23}
+          inputMode="numeric"
+          defaultValue={
+            sent?.startHour ?? String(tenant.counterHours.startHour)
+          }
+          error={fieldErrors.startHour}
+        />
+        <Field
+          label="Fecha às"
+          name="endHour"
+          type="number"
+          min={1}
+          max={24}
+          inputMode="numeric"
+          defaultValue={sent?.endHour ?? String(tenant.counterHours.endHour)}
+          error={fieldErrors.endHour}
+        />
       </div>
       <div className="mt-3.5 grid grid-cols-1 gap-3.5 md:grid-cols-3">
         <Field
