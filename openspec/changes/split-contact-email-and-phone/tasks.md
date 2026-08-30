@@ -35,5 +35,5 @@
 
 ## 6. Fechamento
 
-- [ ] 6.1 Abrir PR referenciando SCRUM-10 e registrando que telefone ficou opcional por decisão do cartório, e não obrigatório como o card dizia.
+- [x] 6.1 Abrir PR referenciando SCRUM-10 e registrando que telefone ficou opcional por decisão do cartório, e não obrigatório como o card dizia.
 - [ ] 6.2 Rodar `openspec archive split-contact-email-and-phone` depois do merge.
