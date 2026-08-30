@@ -47,5 +47,5 @@
       contra o banco compartilhado; deixar a execução para quem tiver ambiente isolado.
 - [ ] 4.3 Conferir no painel, com o host de um cartório real e não em localhost puro, que um
       pedido respondido sai da mesa e volta quando o cidadão escreve na exigência.
-- [ ] 4.4 Rodar `openspec validate mesa-so-o-que-aguarda-o-cartorio` e abrir PR a partir do
-      branch `mesa-so-o-que-aguarda-o-cartorio`.
+- [x] 4.4 Rodar `openspec validate mesa-so-o-que-aguarda-o-cartorio` e abrir PR a partir do
+      branch `mesa-so-o-que-aguarda-o-cartorio`. Feito: PR #42, mergeado em d4af12b.
