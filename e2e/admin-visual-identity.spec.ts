@@ -132,9 +132,10 @@ test.describe("configurações, aba Identidade Visual", () => {
     await signIn(page);
     await page.goto(`${baseURL}/admin/configuracoes`);
 
-    // Two links share this text: the tab strip and the footer note under
-    // Atribuições da serventia. The tab strip's is the first on the page.
-    await page.getByRole("link", { name: "Identidade Visual" }).first().click();
+    // O tab strip expõe role="tab", mas cada aba continua sendo um <Link>:
+    // o que este teste garante é que navegar por elas troca de URL de
+    // verdade, em vez de alternar painel no cliente.
+    await page.getByRole("tab", { name: "Identidade Visual" }).click();
     await expect(page).toHaveURL(
       `${baseURL}/admin/configuracoes/identidade-visual`,
     );
@@ -144,7 +145,7 @@ test.describe("configurações, aba Identidade Visual", () => {
         .filter({ hasText: "Identidade Visual" }),
     ).toBeVisible();
 
-    await page.getByRole("link", { name: "Serventia" }).click();
+    await page.getByRole("tab", { name: "Serventia" }).click();
     await expect(page).toHaveURL(`${baseURL}/admin/configuracoes`);
   });
 });

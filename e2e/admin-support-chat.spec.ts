@@ -158,18 +158,28 @@ test.describe("console do atendente", () => {
       has: page.getByText("Devolver à fila geral"),
     });
     await transferForm.getByRole("button", { name: "Transferir" }).click();
-    await expect(
-      page.getByText("A nota interna é obrigatória para transferir."),
-    ).toBeVisible();
+    // A exigência da nota hoje é barrada pelo próprio campo (`required`), e
+    // por isso a mensagem do servidor não chega a ser renderizada: o que se
+    // observa é o envio não acontecer e o campo acusar o vazio.
+    const nota = page.getByLabel(/Nota interna/);
+    await expect(nota).toHaveJSProperty("validity.valueMissing", true);
 
-    await page.getByLabel(/Nota interna/).fill("Motivo do teste e2e.");
+    await nota.fill("Motivo do teste e2e.");
     await page.getByText("Devolver à fila geral").click();
     await transferForm.getByRole("button", { name: "Transferir" }).click();
 
-    const rows =
-      await sql`select status, assigned_user_id from chat_conversations where id = ${id}`;
-    expect(rows[0].status).toBe("waiting");
-    expect(rows[0].assigned_user_id).toBe(null);
+    // Consultado por polling: a leitura direta corria contra a ação, que
+    // ainda estava em voo quando o clique retornava.
+    await expect
+      .poll(async () => {
+        const [row] =
+          await sql`select status from chat_conversations where id = ${id}`;
+        return row.status;
+      })
+      .toBe("waiting");
+    const [row] =
+      await sql`select assigned_user_id from chat_conversations where id = ${id}`;
+    expect(row.assigned_user_id).toBe(null);
   });
 
   test("closing links the transcript to an informed protocol", async ({

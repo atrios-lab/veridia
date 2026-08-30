@@ -302,7 +302,7 @@ test.describe("ouvidoria, gravando", () => {
     await page.getByRole("radio").nth(1).check();
     await page.getByLabel("Sua mensagem").fill("Demora no atendimento.");
     await page.getByLabel(/^Nome/).fill("Maria José da Silva");
-    await page.getByLabel(/^Contato/).fill("maria@email.com");
+    await page.getByLabel(/^E-mail ou WhatsApp/).fill("maria@email.com");
     await page.getByRole("checkbox").check();
     await page.getByRole("button", { name: "Registrar manifestação" }).click();
 

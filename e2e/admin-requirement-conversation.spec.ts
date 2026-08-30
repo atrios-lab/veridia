@@ -108,7 +108,8 @@ test.describe("conversa da exigência", () => {
     await expect(page.getByText("Aguardando o cidadão")).toBeVisible();
 
     await page.getByRole("button", { name: "Marcar como cumprida" }).click();
-    await expect(page.getByText("Cumprida")).toBeVisible();
+    // "Cumprida" aparece no selo da exigência e de novo na linha do tempo.
+    await expect(page.getByText("Cumprida").first()).toBeVisible();
 
     // Closed on both sides: no way left to write into it.
     await expect(page.getByPlaceholder("Responder ao cidadão...")).toHaveCount(
@@ -156,7 +157,7 @@ test.describe("conversa da exigência", () => {
     await page.goto(detailUrl);
 
     await page.getByText("Corrigir para outro andamento").click();
-    const select = page.locator('select[name="status"]');
+    const select = page.locator('select[name="statusOverride"]');
     // The vocabulary the registrar actually works in.
     await expect(select.locator('option[value="pre-noted"]')).toHaveCount(1);
     await expect(
@@ -166,6 +167,10 @@ test.describe("conversa da exigência", () => {
 
     await select.selectOption("pre-noted");
     await page.getByRole("button", { name: "Aplicar" }).click();
-    await expect(page.getByText("Prenotado")).toBeVisible();
+    // "Prenotado" também é o texto da própria opção do select e do resumo:
+    // o que interessa aqui é o selo de andamento do pedido.
+    await expect(
+      page.locator("span").filter({ hasText: /^Prenotado$/ }),
+    ).toBeVisible();
   });
 });

@@ -520,9 +520,25 @@ test.describe("filing a request", () => {
       buffer: Buffer.from("%PDF-1.4\n"),
     };
     await page.locator("input[name=resposta]").setInputFiles([fakePdf]);
+    // Anexar não envia mais sozinho: o cartão ganhou caixa de mensagem e um
+    // "Enviar" próprio.
+    await page.getByRole("button", { name: "Enviar" }).click();
 
-    await expect(page.getByText("Cumprida")).toBeVisible();
-    await expect(page.getByText("Aguardando você")).toHaveCount(0);
+    // E responder não cumpre a exigência: quem a dá por cumprida é a
+    // serventia, no painel ("Marcar como cumprida"). O que se verifica aqui
+    // é a resposta do cidadão ter chegado à exigência, com ela ainda aberta.
+    await expect
+      .poll(async () => {
+        const rows = await sql`
+          select m.id from service_request_requirement_messages m
+          join service_request_requirements r on r.id = m.requirement_id
+          join service_requests s on s.id = r.request_id
+          where s.protocol_number = ${protocolNumber}
+        `;
+        return rows.length;
+      })
+      .toBe(1);
+    await expect(page.getByText("Aguardando você")).toBeVisible();
   });
 
   test("the amount and Pix QR stay behind the access key, never on the locked summary", async ({

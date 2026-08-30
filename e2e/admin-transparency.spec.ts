@@ -157,7 +157,7 @@ test.describe("transparência", () => {
     await signIn(page);
     await page.goto(`${baseURL}/admin/transparencia?aba=boletim`);
 
-    await page.getByLabel("Mês").selectOption("8");
+    await page.getByLabel("Mês", { exact: true }).selectOption("8");
     await page.getByLabel("Ano").fill("2099");
     await page.getByLabel("Atos praticados").fill("412");
     await page.getByLabel("Arrecadação bruta do mês (R$)").fill("48.230,10");
@@ -168,7 +168,12 @@ test.describe("transparência", () => {
     await expect(page.getByText("R$ 17.137,66").first()).toBeVisible();
 
     await page.getByRole("button", { name: "Publicar no site" }).click();
-    await expect(page.getByText("Agosto de 2099")).toBeVisible();
+    // "Agosto de 2099" sozinho já aparece na pré-visualização do formulário,
+    // antes de existir boletim: esperar por ele deixava o teste navegar para
+    // o site com a ação ainda em voo. Esta linha só existe depois de gravar.
+    await expect(
+      page.getByText("Último publicado: Agosto de 2099"),
+    ).toBeVisible();
 
     // It reaches the public page with the preliminary tag.
     await page.goto(`${baseURL}/transparencia`);
@@ -190,7 +195,7 @@ test.describe("transparência", () => {
 
     await signIn(page);
     await page.goto(`${baseURL}/admin/transparencia?aba=boletim`);
-    await page.getByLabel("Mês").selectOption("8");
+    await page.getByLabel("Mês", { exact: true }).selectOption("8");
     await page.getByLabel("Ano").fill("2099");
     await page.getByLabel("Atos praticados").fill("412");
     await page.getByLabel("Arrecadação bruta do mês (R$)").fill("48.230,10");
@@ -200,9 +205,13 @@ test.describe("transparência", () => {
     await page.getByRole("button", { name: "Publicar no site" }).click();
 
     // Exactly one August 2099, now consolidated: the unique index enforced it.
-    const rows =
-      await sql`select status from transparency_bulletins where tenant_slug = ${TENANT} and reference_month = ${TEST_MONTH}`;
-    expect(rows.length).toBe(1);
-    expect(rows[0].status).toBe("consolidated");
+    // Por polling: a consulta direta chegava antes de a ação gravar.
+    await expect
+      .poll(async () => {
+        const rows =
+          await sql`select status from transparency_bulletins where tenant_slug = ${TENANT} and reference_month = ${TEST_MONTH}`;
+        return rows.map((r) => r.status);
+      })
+      .toEqual(["consolidated"]);
   });
 });
