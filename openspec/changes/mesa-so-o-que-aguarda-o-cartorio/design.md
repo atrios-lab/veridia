@@ -61,12 +61,23 @@ cidadão no mesmo registro. Custo alto para economizar uma consulta.
 o pedido lançado no balcão nasce na mesa sem precisar de exceção escrita no código: a exceção
 some porque a data de chegada é sempre do lado do cidadão.
 
-### 3. Rascunho e anotação interna não tiram o item da mesa
+### 3. O lado da serventia é uma lista de inclusão, não de exceções
 
-`data-rights.draft`, `ombudsman.draft` e `ombudsman.internal-note` ficam de fora de
-`lastOfficeAt`. Uma resposta pela metade é o item que mais precisa continuar visível; se salvar
-rascunho limpasse o item da mesa, a mesa passaria a esconder exatamente o trabalho começado e
-não terminado.
+`lastOfficeAt` considera apenas as ações auditadas que devolvem o registro ao cidadão: mudança
+de andamento, exigência registrada, corrigida, respondida ou cumprida, e resposta de LGPD e de
+ouvidoria.
+
+Ficam de fora, e o motivo é o mesmo em todos os casos — não são resposta a ninguém:
+`service-request.amount` e `service-request.key-reissue` são escrituração do balcão;
+`data-rights.draft`, `ombudsman.draft` e `ombudsman.internal-note` são trabalho começado e não
+enviado, o item que mais precisa continuar visível.
+
+**Alternativa descartada:** listar as exceções e aceitar todo o resto. Foi a primeira forma
+escrita, e a implementação mostrou o furo: o balcão grava `service-request.amount` logo depois
+de criar o pedido, então um pedido lançado no balcão com valor informado nasceria fora da mesa
+— justo o caso que a spec exige que apareça. Pior que o erro pontual é o padrão: numa lista de
+exceções, toda ação nova entra valendo "tira da mesa" e some sem ninguém decidir. Na lista de
+inclusão, o que ninguém classificou permanece visível, que é o lado seguro de errar.
 
 ### 4. Prazo legal de LGPD nunca sai da mesa
 

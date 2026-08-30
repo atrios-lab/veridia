@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 import {
+  countDeskItems,
   type DeskItemInput,
   rankDeskItems,
   rankTodayAppointments,
@@ -16,6 +17,7 @@ function item(overrides: Partial<DeskItemInput>): DeskItemInput {
     applicantName: "Fulano",
     status: "new",
     createdAt: NOW,
+    awaitingOffice: true,
     ...overrides,
   };
 }
@@ -202,4 +204,87 @@ test("um atendimento já realizado conta como concluído, mesmo mais tarde no di
   );
   assert.equal(ranked[0].state, "done");
   assert.equal(ranked[1].state, "next");
+});
+
+test("item que aguarda o cidadão não ocupa a mesa", () => {
+  const answered = item({
+    protocolNumber: "REQ.2026.000010",
+    awaitingOffice: false,
+  });
+  const waiting = item({ protocolNumber: "REQ.2026.000011" });
+
+  const ranked = rankDeskItems([answered, waiting], TODAY, NOW);
+
+  assert.deepEqual(
+    ranked.map((r) => r.protocolNumber),
+    ["REQ.2026.000011"],
+  );
+});
+
+test("requerimento LGPD no prazo crítico fica na mesa mesmo aguardando o cidadão", () => {
+  // Filed thirteen days before today: day 14 of the fifteen day term. The
+  // office already acted on it, so the turn is the citizen's: the legal term
+  // keeps it on the desk anyway.
+  const dueSoon = item({
+    kind: "data-rights",
+    protocolNumber: "SOL.2026.000010",
+    requestedOn: "2026-07-24",
+    right: "access",
+    awaitingOffice: false,
+  });
+
+  const ranked = rankDeskItems([dueSoon], TODAY, NOW);
+
+  assert.deepEqual(
+    ranked.map((r) => r.protocolNumber),
+    ["SOL.2026.000010"],
+  );
+  assert.equal(ranked[0].chipTone, "error");
+});
+
+test("LGPD ainda longe do prazo sai da mesa como qualquer outro item respondido", () => {
+  const answered = item({
+    kind: "data-rights",
+    protocolNumber: "SOL.2026.000011",
+    requestedOn: TODAY,
+    right: "access",
+    awaitingOffice: false,
+  });
+
+  assert.deepEqual(rankDeskItems([answered], TODAY, NOW), []);
+});
+
+test("a ordem entre os itens que ficam não muda com o filtro", () => {
+  const dueSoon = item({
+    kind: "data-rights",
+    protocolNumber: "SOL.2026.000012",
+    requestedOn: "2026-07-24",
+    right: "access",
+  });
+  const stalled = item({
+    protocolNumber: "REQ.2026.000012",
+    hasFulfilledPendingRequirement: true,
+  });
+  const fresh = item({ protocolNumber: "REQ.2026.000013" });
+  const answered = item({
+    protocolNumber: "REQ.2026.000014",
+    awaitingOffice: false,
+  });
+
+  const ranked = rankDeskItems([answered, fresh, stalled, dueSoon], TODAY, NOW);
+
+  assert.deepEqual(
+    ranked.map((r) => r.protocolNumber),
+    ["SOL.2026.000012", "REQ.2026.000012", "REQ.2026.000013"],
+  );
+});
+
+test("a contagem da mesa ignora o que aguarda o cidadão", () => {
+  const items = [
+    item({ protocolNumber: "REQ.2026.000015" }),
+    item({ protocolNumber: "REQ.2026.000016", awaitingOffice: false }),
+    item({ protocolNumber: "REQ.2026.000017", awaitingOffice: false }),
+  ];
+
+  assert.equal(countDeskItems(items, TODAY), 1);
 });

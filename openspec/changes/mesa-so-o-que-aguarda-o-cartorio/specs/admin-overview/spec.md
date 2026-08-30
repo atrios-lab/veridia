@@ -12,9 +12,14 @@ que a última ação da serventia, ou quando a serventia ainda não tiver agido 
 
 São ações do cidadão a criação do registro e cada mensagem que ele escreve na conversa de uma
 exigência. A criação SHALL contar como ação do cidadão mesmo quando o registro for lançado no
-balcão por um operador. São ações da serventia as registradas na auditoria com ator
-identificado, exceto salvar rascunho de resposta e salvar anotação interna, que NÃO SHALL
-contar como ação da serventia.
+balcão por um operador.
+
+São ações da serventia apenas as que devolvem o registro ao cidadão: mudar o andamento,
+registrar, corrigir, responder ou dar por cumprida uma exigência, e responder a requerimento
+LGPD ou manifestação de ouvidoria. Escrituração de balcão, como informar o valor ou reemitir a
+chave de acesso, e trabalho não enviado, como rascunho de resposta e anotação interna, NÃO
+SHALL contar como ação da serventia. Uma ação da serventia ainda não classificada NÃO SHALL
+tirar o item da mesa.
 
 Um requerimento LGPD perto do prazo legal ou vencido SHALL permanecer na mesa enquanto não for
 concluído, mesmo depois de o cartório ter agido sobre ele.
@@ -39,6 +44,12 @@ Um item que sai da mesa SHALL continuar acessível em "Situação dos canais" e 
 - **WHEN** um operador salva um rascunho de resposta a uma manifestação de ouvidoria e não a
   responde
 - **THEN** a manifestação continua na mesa
+
+#### Scenario: Valor informado no balcão não tira o pedido da mesa
+
+- **WHEN** um operador cadastra um pedido no balcão e informa o valor no mesmo lançamento
+- **THEN** o pedido aparece na mesa, porque informar valor é escrituração e não resposta ao
+  cidadão
 
 #### Scenario: Pedido lançado no balcão entra na mesa
 

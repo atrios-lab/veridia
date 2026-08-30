@@ -1,6 +1,7 @@
 import { can } from "@/core/auth/roles.ts";
 import {
   countCriticalDeskItems,
+  countDeskItems,
   type DeskItemInput,
   rankDeskItems,
   rankTodayAppointments,
@@ -72,6 +73,7 @@ function toDeskItemInput(record: DeskRecord): DeskItemInput {
     applicantName: record.applicantName,
     status: record.status,
     createdAt: record.createdAt,
+    awaitingOffice: record.awaitingOffice,
   };
   switch (record.kind) {
     case "data-rights": {
@@ -150,6 +152,7 @@ export default async function AdminHome() {
   const deskItems = deskRecords.map(toDeskItemInput);
   const rankedDesk = rankDeskItems(deskItems, todayIso, now);
   const criticalCount = countCriticalDeskItems(deskItems, todayIso);
+  const deskCount = countDeskItems(deskItems, todayIso);
   const rankedAgenda = rankTodayAppointments(
     todayAppointmentRecords.map(toTodayAppointmentInput),
     officeNow().time,
@@ -212,7 +215,7 @@ export default async function AdminHome() {
     <>
       <OverviewHeader
         greeting={`${greeting()}, ${firstName(session.user.name, session.user.email)}`}
-        deskCount={deskItems.length}
+        deskCount={deskCount}
         criticalCount={criticalCount}
         today={todayIso}
       />
@@ -221,7 +224,7 @@ export default async function AdminHome() {
 
         <div className="grid grid-cols-1 gap-4 lg:grid-cols-[1fr_348px] lg:items-start">
           <div className="flex min-w-0 flex-col gap-4">
-            <DeskList items={rankedDesk} totalCount={deskItems.length} />
+            <DeskList items={rankedDesk} totalCount={deskCount} />
             {canChannels && <TodayAgenda appointments={rankedAgenda} />}
           </div>
 
