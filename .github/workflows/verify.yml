@@ -25,6 +25,13 @@ jobs:
       ADMIN_SEED_TENANT: cartorio-marinho
       AURORA_ADMIN_EMAIL: aurora-admin@e2e.local
       AURORA_ADMIN_PASSWORD: senha-de-teste-sem-valor-fora-deste-job
+      # Throwaway values, not secrets: `src/lib/auth.ts` refuses to load
+      # without them. No nível do job porque tanto o build quanto os dois
+      # passos de seed (que também importam auth.ts, via drizzle/better-auth)
+      # precisam deles.
+      BETTER_AUTH_SECRET: build-sem-valor-nenhum-fora-deste-processo
+      BETTER_AUTH_URL: http://localhost:3000
+      DEFAULT_TENANT: cartorio-marinho
     # No secrets, by design. Os testes unitários rodam contra um Postgres
     # in-process (PGlite) e o e2e contra o serviço abaixo, que nasce e morre
     # com o job: nenhum dos dois alcança banco real nem serviço externo.
@@ -70,15 +77,10 @@ jobs:
         # red build on a pull request that touched nothing.
         run: pnpm dlx @fission-ai/openspec@1.5.0 validate --all
 
-      # Throwaway values, not secrets: `src/lib/auth.ts` refuses to load
-      # without them, and a build creates no session and reaches no database.
-      # Same values and same reasoning as the `webServer` block in
-      # playwright.config.ts, which starts the server the e2e run drives.
+      # BETTER_AUTH_SECRET/BETTER_AUTH_URL/DEFAULT_TENANT vêm do env do job.
+      # Mesmos valores e mesmo motivo do `webServer` block em
+      # playwright.config.ts, que sobe o servidor que o e2e roda contra.
       - run: pnpm build
-        env:
-          BETTER_AUTH_SECRET: build-sem-valor-nenhum-fora-deste-processo
-          BETTER_AUTH_URL: http://localhost:3000
-          DEFAULT_TENANT: cartorio-marinho
 
       - run: pnpm exec playwright install --with-deps chromium
 
