@@ -165,14 +165,14 @@ test.describe("client-side validation", () => {
     await cpf.pressSequentially("12345678909");
     await expect(cpf).toHaveValue("123.456.789-09");
 
-    const contact = page.getByLabel(/E-mail ou WhatsApp/);
-    await contact.pressSequentially("84990000000");
-    await expect(contact).toHaveValue("(84) 99000-0000");
+    const phone = page.getByLabel(/Telefone/);
+    await phone.pressSequentially("84990000000");
+    await expect(phone).toHaveValue("(84) 99000-0000");
 
-    // The same field takes an e-mail, so letters pass through untouched.
-    await contact.fill("");
-    await contact.pressSequentially("voce@exemplo.com");
-    await expect(contact).toHaveValue("voce@exemplo.com");
+    // The e-mail has a field of its own now, and nothing shapes it.
+    const email = page.getByLabel(/E-mail/);
+    await email.pressSequentially("voce@exemplo.com");
+    await expect(email).toHaveValue("voce@exemplo.com");
   });
 
   test("submission is blocked next to the missing acceptance", async ({
@@ -180,7 +180,7 @@ test.describe("client-side validation", () => {
   }) => {
     await page.goto(formURL);
     await page.getByLabel("Nome completo").fill("Maria José da Silva");
-    await page.getByLabel(/E-mail ou WhatsApp/).fill("(84) 99999-0000");
+    await page.getByLabel(/E-mail/).fill("maria@exemplo.com");
     await page
       .getByLabel(/Descreva o que você precisa/)
       .fill("Queremos casar em outubro deste ano.");
@@ -231,7 +231,8 @@ test.describe("filing a request", () => {
 
   async function fillForm(page: import("@playwright/test").Page) {
     await page.getByLabel("Nome completo").fill("Maria José da Silva");
-    await page.getByLabel(/E-mail ou WhatsApp/).fill("(84) 99999-0000");
+    await page.getByLabel(/E-mail/).fill("maria@exemplo.com");
+    await page.getByLabel(/Telefone/).fill("(84) 99999-0000");
     await page
       .getByLabel(/Descreva o que você precisa/)
       .fill("Queremos casar em outubro deste ano.");

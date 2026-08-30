@@ -56,6 +56,8 @@ export interface RequerimentoData {
   // the credential never enters it. It rides in `buildAccessReceipt` instead.
   applicantName: string;
   contact: string;
+  /** Asked for apart from the contact on the public form; often absent. */
+  phone?: string | null;
   cpf?: string | null;
   description?: string | null;
   purpose?: string | null;
@@ -84,6 +86,7 @@ export function buildRequerimento(
     { label: "Nome", value: data.applicantName },
     { label: "Contato", value: data.contact },
   ];
+  if (data.phone) applicant.push({ label: "Telefone", value: data.phone });
   if (data.cpf) applicant.push({ label: "CPF", value: formatCpf(data.cpf) });
 
   // Protocol and date live in the subtitle, not here: they identify the

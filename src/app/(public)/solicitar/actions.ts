@@ -12,7 +12,10 @@ import {
   verifyAccessKey,
 } from "@/core/request/access-key.ts";
 import { deadlineDate } from "@/core/request/deadline.ts";
-import { looksLikeBot, serviceRequestSchema } from "@/core/request/form.ts";
+import {
+  looksLikeBot,
+  publicServiceRequestSchema,
+} from "@/core/request/form.ts";
 import { formatProtocolNumber } from "@/core/request/protocol.ts";
 import { formatDate } from "@/core/scheduling/calendar.ts";
 import { isSectionEnabled } from "@/core/tenant/gating.ts";
@@ -100,9 +103,10 @@ export async function submitServiceRequest(
     );
   }
 
-  const parsed = serviceRequestSchema(act).safeParse({
+  const parsed = publicServiceRequestSchema(act).safeParse({
     applicantName: formData.get("applicantName") ?? "",
-    contact: formData.get("contact") ?? "",
+    email: formData.get("email") ?? "",
+    phone: formData.get("phone") ?? "",
     cpf: formData.get("cpf") ?? "",
     description: formData.get("description") ?? "",
     purpose: formData.get("purpose") ?? "",
@@ -135,13 +139,19 @@ export async function submitServiceRequest(
     // art. 8 §2), and the schema above only checks the boxes were ticked.
     const consentedAt = new Date().toISOString();
 
+    // The e-mail is what the `contact` column holds for a request filed here:
+    // the telephone is the office's own way of reaching the citizen and rides
+    // in `details`, next to the rest of what belongs to this kind alone.
+    const { email, phone, ...data } = parsed.data;
+
     const { protocolNumber } = await createServiceRequest(
       tenant,
       act,
       {
-        ...parsed.data,
+        ...data,
+        contact: email,
         accessKeyHash: hashAccessKey(accessKey),
-        details: { consents: { lgpd: consentedAt, truth: consentedAt } },
+        details: { consents: { lgpd: consentedAt, truth: consentedAt }, phone },
       },
       attachments,
     );
@@ -154,7 +164,7 @@ export async function submitServiceRequest(
     // Awaiting still matters: the check has to finish inside the request.
     await notifyCitizen({
       tenant,
-      contact: parsed.data.contact,
+      contact: email,
       protocolNumber,
       subject: "Pedido recebido",
       body: "Recebemos o seu pedido. Guarde o número do protocolo e a chave de acesso mostrados na tela de envio.",

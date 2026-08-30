@@ -2,12 +2,14 @@
 
 import { useActionState, useEffect, useState } from "react";
 import { toast } from "sonner";
-import { formatCpf } from "@/core/request/form.ts";
+import { formatCpf, formatPhone } from "@/core/request/form.ts";
 import { type ActionState, updateRequestDataAction } from "../actions.ts";
 
 export interface ApplicantData {
   applicantName: string;
   contact: string;
+  /** Asked for apart from the contact on the public form; may be empty. */
+  phone: string;
   cpf: string;
   purpose: string;
   description: string;
@@ -79,6 +81,7 @@ export function ApplicantSection({
   // Controlled only because it is masked as it is typed, like the public form:
   // the operator reads a CPF off a document, in the shape the document has.
   const [cpf, setCpf] = useState(() => formatCpf(data.cpf));
+  const [phone, setPhone] = useState(() => formatPhone(data.phone));
   const [state, action, pending] = useActionState<ActionState, FormData>(
     updateRequestDataAction,
     { status: "idle" },
@@ -138,6 +141,18 @@ export function ApplicantSection({
                 id="contact"
                 name="contact"
                 defaultValue={data.contact}
+                className={FIELD}
+              />
+            </div>
+            <div>
+              <Label htmlFor="phone">Telefone</Label>
+              <input
+                id="phone"
+                name="phone"
+                inputMode="tel"
+                value={phone}
+                onChange={(event) => setPhone(formatPhone(event.target.value))}
+                placeholder="(00) 00000-0000"
                 className={FIELD}
               />
             </div>
@@ -220,6 +235,7 @@ export function ApplicantSection({
             <Field label="Nome" value={data.applicantName || "Não informado"} />
             <Field label="CPF" value={cpfMasked} />
             <Field label="Contato" value={data.contact || "Não informado"} />
+            <Field label="Telefone" value={data.phone || "Não informado"} />
             {/* Same order as the edit form: toggling must not move fields
                 around under the operator's eye. */}
             <Field label="Data e hora do atendimento" value={filedLabel} />

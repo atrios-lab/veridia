@@ -961,9 +961,17 @@ export async function updateRequestData(
   data: RequestDataEdit,
   actorId: string,
 ): Promise<void> {
+  // The telephone has no column of its own: it lives in `details` (see
+  // `serviceRequestDetailsSchema`), so it is merged into the jsonb instead of
+  // assigned, the way the internal note is.
+  const { phone, ...columns } = data;
   await db
     .update(serviceRequests)
-    .set({ ...data, updatedAt: new Date() })
+    .set({
+      ...columns,
+      details: sql`${serviceRequests.details} || ${JSON.stringify({ phone })}::jsonb`,
+      updatedAt: new Date(),
+    })
     .where(
       and(
         eq(serviceRequests.tenantSlug, tenantSlug),

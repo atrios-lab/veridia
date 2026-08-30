@@ -427,6 +427,7 @@ export async function updateRequestDataAction(
   const parsed = requestDataEditSchema(new Date(), OFFICE_TIME_ZONE).safeParse({
     applicantName: formData.get("applicantName") ?? "",
     contact: formData.get("contact") ?? "",
+    phone: formData.get("phone") ?? "",
     cpf: formData.get("cpf") ?? "",
     purpose: formData.get("purpose") ?? "",
     description: formData.get("description") ?? "",

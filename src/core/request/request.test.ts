@@ -26,6 +26,7 @@ import {
   isValidCpf,
   looksLikeBot,
   maskCpf,
+  publicServiceRequestSchema,
   serviceRequestSchema,
 } from "./form.ts";
 import { formatProtocolNumber, parseProtocolNumber } from "./protocol.ts";
@@ -188,6 +189,76 @@ test("purpose is demanded only by the acts the law allows to ask", () => {
   const result = serviceRequestSchema(search).safeParse(valid);
   assert.equal(result.success, false);
   assert.equal(result.error?.issues[0].path[0], "purpose");
+});
+
+// What the site sends, as opposed to what the counter sends: the two
+// identification fields instead of the either/or one.
+const validOnline = {
+  ...valid,
+  contact: undefined,
+  email: "maria@exemplo.com",
+  phone: "(84) 99999-0000",
+};
+
+test("a request filed on the site is refused without an e-mail", () => {
+  // The whole point of the split: a request with nowhere to write to is a
+  // request the citizen never hears back about.
+  for (const email of ["", "maria@", "84999990000"]) {
+    const result = publicServiceRequestSchema(certificate).safeParse({
+      ...validOnline,
+      email,
+    });
+    assert.equal(result.success, false, email);
+    assert.equal(result.error?.issues[0].path[0], "email");
+  }
+});
+
+test("the telephone is optional on the site, and checked when given", () => {
+  const absent = publicServiceRequestSchema(certificate).safeParse({
+    ...validOnline,
+    phone: "",
+  });
+  assert.ok(absent.success);
+  assert.equal(absent.data.phone, undefined);
+
+  // Punctuation is presentation: the office types it either way.
+  const bare = publicServiceRequestSchema(certificate).safeParse({
+    ...validOnline,
+    phone: "84999990000",
+  });
+  assert.ok(bare.success);
+  assert.equal(bare.data.phone, "84999990000");
+
+  const tooShort = publicServiceRequestSchema(certificate).safeParse({
+    ...validOnline,
+    phone: "9999-0000",
+  });
+  assert.equal(tooShort.success, false);
+  assert.equal(tooShort.error?.issues[0].path[0], "phone");
+});
+
+test("the act's own rules hold on both filings", () => {
+  // One copy of the rules, two schemas: an act outside the catalogue cannot
+  // be read without a description, whichever counter it came through.
+  const online = publicServiceRequestSchema(other).safeParse({
+    ...validOnline,
+    description: "",
+  });
+  assert.equal(online.success, false);
+  assert.equal(online.error?.issues[0].path[0], "description");
+
+  const counter = serviceRequestSchema(other).safeParse({
+    ...valid,
+    description: "",
+  });
+  assert.equal(counter.success, false);
+  assert.equal(counter.error?.issues[0].path[0], "description");
+});
+
+test("the counter keeps the either/or contact", () => {
+  // The way out for whoever has no e-mail: the operator files it with a
+  // telephone, which the public form no longer accepts.
+  assert.ok(serviceRequestSchema(certificate).safeParse(valid).success);
 });
 
 test("CPF mask grows with the typing and caps at eleven digits", () => {

@@ -1,7 +1,7 @@
 import { z } from "zod";
 import { MAX_MESSAGE_LENGTH, TEXT_TOO_LONG } from "../chat/message.ts";
 import { fromZonedDateTime } from "../scheduling/calendar.ts";
-import { isValidCpf } from "./form.ts";
+import { isValidCpf, isValidPhone } from "./form.ts";
 
 /**
  * What the counter may correct on a request that already exists.
@@ -22,6 +22,16 @@ export function requestDataEditSchema(now: Date, timeZone: string) {
   return z.object({
     applicantName: z.string().trim().min(2, "Informe o nome do solicitante."),
     contact: z.string().trim().min(3, "Informe o contato."),
+    // Its own field since the public form started asking for it apart from
+    // the contact. Empty is a real answer: it clears a number typed by
+    // mistake, which is why this stays a string instead of going undefined.
+    phone: z
+      .string()
+      .trim()
+      .refine(
+        (value) => value === "" || isValidPhone(value),
+        "Informe um telefone com DDD.",
+      ),
     cpf: z
       .string()
       .trim()

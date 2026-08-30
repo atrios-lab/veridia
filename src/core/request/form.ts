@@ -118,49 +118,121 @@ const optionalText = (max: number) =>
     .transform((s) => (s === "" ? undefined : s));
 
 /**
- * The form as the act shapes it. Two acts ask different questions, and the
- * difference is law, not preference: only the acts that may ask for a purpose
- * carry the field, and "outros" cannot be read without a description.
+ * What every filing of a service request asks, whichever counter it comes
+ * through. What differs between them is the identification, and only that:
+ * the site asks for an e-mail it can write to, the balcão has the citizen
+ * standing there and takes whichever contact they have.
+ */
+const commonFields = {
+  applicantName: requiredText(160),
+  cpf: z
+    .string()
+    .transform((s) => normalizeCpf(s))
+    .refine((s) => s === "" || isValidCpf(s), {
+      message: "CPF inválido.",
+    })
+    .transform((s) => (s === "" ? undefined : s))
+    .optional(),
+  description: optionalText(4000),
+  purpose: optionalText(500),
+  // Never a price: it is what the operator needs to find the band in the
+  // court's fee table.
+  parameterValue: optionalText(120),
+  lgpdConsent: z.coerce.boolean(),
+  truthDeclaration: z.coerce.boolean(),
+};
+
+/**
+ * The rules the act imposes on the fields above. Written against the fields
+ * they read rather than against a whole schema, so both filings share one
+ * copy: a rule that exists twice is a rule that will be changed once.
+ *
+ * Two acts ask different questions, and the difference is law, not
+ * preference: only the acts that may ask for a purpose carry the field, and
+ * "outros" cannot be read without a description.
+ */
+function actRules(act: Act) {
+  return (
+    data: {
+      lgpdConsent: boolean;
+      truthDeclaration: boolean;
+      description?: string;
+      purpose?: string;
+    },
+    ctx: z.RefinementCtx,
+  ) => {
+    if (!data.lgpdConsent) {
+      ctx.addIssue({
+        code: "custom",
+        path: ["lgpdConsent"],
+        message: "É necessário autorizar o tratamento dos dados para enviar.",
+      });
+    }
+    if (!data.truthDeclaration) {
+      ctx.addIssue({
+        code: "custom",
+        path: ["truthDeclaration"],
+        message: "É necessário declarar que as informações são verdadeiras.",
+      });
+    }
+    if (act.requiresDescription && !data.description) {
+      ctx.addIssue({
+        code: "custom",
+        path: ["description"],
+        message: "Descreva o que você precisa para a serventia poder avaliar.",
+      });
+    }
+    if (act.requiresPurpose && !data.purpose) {
+      ctx.addIssue({
+        code: "custom",
+        path: ["purpose"],
+        message: "Este ato exige que você informe a finalidade.",
+      });
+    }
+  };
+}
+
+/**
+ * The filing the citizen makes on the site. Two identification fields, not
+ * the either/or the other channels use: a request filed with only a telephone
+ * number never received the protocol e-mail nor any andamento notice, because
+ * there was no address to send them to. The office answers by telephone, so
+ * the number is asked for as well, and it stays optional: nobody is turned
+ * away for not having one.
+ */
+export function publicServiceRequestSchema(act: Act) {
+  return z
+    .object({
+      ...commonFields,
+      email: requiredText(160).refine((value) => EMAIL.test(value), {
+        message: "Informe um e-mail válido.",
+      }),
+      phone: optionalText(40).refine(
+        (value) => value === undefined || isValidPhone(value),
+        { message: "Informe um telefone com DDD." },
+      ),
+    })
+    .superRefine(actRules(act));
+}
+
+export type PublicServiceRequestInput = z.infer<
+  ReturnType<typeof publicServiceRequestSchema>
+>;
+
+/**
+ * The filing the operator makes at the counter. The contact stays the either/
+ * or field on purpose: the balcão is where someone with no e-mail is served,
+ * and it is the operator typing, with the citizen in front of them.
  */
 export function serviceRequestSchema(act: Act) {
   return z
     .object({
-      applicantName: requiredText(160),
+      ...commonFields,
       contact: requiredText(160).refine(isValidContact, {
         message: "Informe um e-mail válido ou um telefone com DDD.",
       }),
-      cpf: z
-        .string()
-        .transform((s) => normalizeCpf(s))
-        .refine((s) => s === "" || isValidCpf(s), {
-          message: "CPF inválido.",
-        })
-        .transform((s) => (s === "" ? undefined : s))
-        .optional(),
-      description: optionalText(4000),
-      purpose: optionalText(500),
-      // Never a price: it is what the operator needs to find the band in the
-      // court's fee table.
-      parameterValue: optionalText(120),
-      lgpdConsent: z.coerce.boolean(),
-      truthDeclaration: z.coerce.boolean(),
     })
-    .refine((data) => data.lgpdConsent, {
-      path: ["lgpdConsent"],
-      message: "É necessário autorizar o tratamento dos dados para enviar.",
-    })
-    .refine((data) => data.truthDeclaration, {
-      path: ["truthDeclaration"],
-      message: "É necessário declarar que as informações são verdadeiras.",
-    })
-    .refine((data) => !act.requiresDescription || Boolean(data.description), {
-      path: ["description"],
-      message: "Descreva o que você precisa para a serventia poder avaliar.",
-    })
-    .refine((data) => !act.requiresPurpose || Boolean(data.purpose), {
-      path: ["purpose"],
-      message: "Este ato exige que você informe a finalidade.",
-    });
+    .superRefine(actRules(act));
 }
 
 export type ServiceRequestInput = z.infer<

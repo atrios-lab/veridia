@@ -12,6 +12,7 @@ import { maskCpf } from "@/core/request/form.ts";
 import {
   isOpenServiceRequestStatus,
   isServiceRequestStatus,
+  readPhone,
   statusLabel,
   suggestedNextStatuses,
 } from "@/core/request/kinds.ts";
@@ -255,6 +256,7 @@ export default async function ServiceRequestDetailPage({
               data={{
                 applicantName: request.applicantName ?? "",
                 contact: request.contact ?? "",
+                phone: readPhone(request.details),
                 cpf: request.cpf ?? "",
                 purpose: request.purpose ?? "",
                 description: request.description ?? "",

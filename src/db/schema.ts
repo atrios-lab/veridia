@@ -116,6 +116,12 @@ export const serviceRequests = pgTable(
     actId: text("act_id"),
     attribution: text("attribution"),
     applicantName: text("applicant_name"),
+    // Whatever the channel asks for: an e-mail or a telephone in the ones
+    // that take either. For a service request filed from the site it is
+    // always an e-mail, which the form now requires; rows filed before that
+    // may hold a telephone here, so a reader that means to send mail still
+    // has to ask (`isEmailContact`). The telephone of a service request is
+    // kept apart, in `details.phone`.
     contact: text("contact"),
     cpf: text("cpf"),
     description: text("description"),
