@@ -16,6 +16,11 @@ if (existsSync(".env.local")) process.loadEnvFile(".env.local");
 // processo que o próprio Playwright subiu (sempre com as chaves zeradas)
 // pode já estar escutando.
 const PORT = process.env.PORT ?? "3100";
+// Cada spec em e2e/*.spec.ts lê process.env.PORT por conta própria (com o
+// próprio fallback para "3000", pré-existente em ~20 arquivos) para montar
+// sua baseURL. Sem isto, servidor e specs resolveriam portas diferentes
+// sempre que PORT não vier do ambiente.
+process.env.PORT = PORT;
 
 export default defineConfig({
   testDir: "./e2e",
