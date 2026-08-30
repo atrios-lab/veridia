@@ -18,7 +18,7 @@ import {
 
 /** The four fields as they were typed, unvalidated. */
 export type OfficeContactValues = Record<
-  "openingHours" | "phone" | "whatsapp" | "email",
+  "openingHours" | "startHour" | "endHour" | "phone" | "whatsapp" | "email",
   string
 >;
 
@@ -50,11 +50,13 @@ export async function saveOfficeContact(
   _previous: OfficeContactState,
   formData: FormData,
 ): Promise<OfficeContactState> {
-  // Only these four names are ever read. Name, CNS and attributions are not
+  // Only these six names are ever read. Name, CNS and attributions are not
   // in the shape, so a forged submission carrying them changes nothing: there
   // is no defensive branch to forget, the schema is the boundary.
   const values: OfficeContactValues = {
     openingHours: String(formData.get("openingHours") ?? "").trim(),
+    startHour: String(formData.get("startHour") ?? "").trim(),
+    endHour: String(formData.get("endHour") ?? "").trim(),
     phone: String(formData.get("phone") ?? "").trim(),
     whatsapp: String(formData.get("whatsapp") ?? "").trim(),
     email: String(formData.get("email") ?? "").trim(),
@@ -70,6 +72,13 @@ export async function saveOfficeContact(
 
   const parsed = OfficeContactSchema.safeParse({
     openingHours: values.openingHours,
+    // Number(""), which is 0, would read as "abre à meia-noite" and pass the
+    // range check; NaN fails it and the field says so.
+    counterHours: {
+      startHour:
+        values.startHour === "" ? Number.NaN : Number(values.startHour),
+      endHour: values.endHour === "" ? Number.NaN : Number(values.endHour),
+    },
     contacts: {
       phone: values.phone,
       whatsapp: values.whatsapp,
@@ -79,8 +88,11 @@ export async function saveOfficeContact(
   if (!parsed.success) {
     const fieldErrors: Record<string, string> = {};
     for (const issue of parsed.error.issues) {
-      // "contacts.phone" -> "phone": the form names its inputs flat.
-      const field = String(issue.path.at(-1) ?? "");
+      // "contacts.phone" -> "phone": the form names its inputs flat. The one
+      // rule that spans two fields, closing after opening, reports on the
+      // object itself, so it is shown on the field the office has to move.
+      const path = String(issue.path.at(-1) ?? "");
+      const field = path === "counterHours" ? "endHour" : path;
       fieldErrors[field] ??= issue.message;
     }
     return fail("Confira os campos destacados.", values, fieldErrors);

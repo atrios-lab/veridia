@@ -1,11 +1,18 @@
 import type { z } from "zod";
 import { MANDATORY_SECTIONS } from "./gating.ts";
-import { type Tenant, TenantSchema } from "./schema.ts";
+import { CounterHoursSchema, type Tenant, TenantSchema } from "./schema.ts";
 
 /**
- * What an office may change about itself from the panel: the counter hours
- * sentence and the three contact channels. Everything else about the office
+ * What an office may change about itself from the panel: the counter hours,
+ * as the sentence the citizen reads and as the numbers the site computes
+ * with, plus the three contact channels. Everything else about the office
  * stays config as code.
+ *
+ * The two halves of the schedule travel together on purpose. While only the
+ * sentence was editable, an office that started closing at 17h could correct
+ * the sentence and nothing else: the site went on saying "fecha às 14h" and
+ * the chat went on closing then, and no one at the counter could reach the
+ * numbers to fix it.
  *
  * Derived from TenantSchema by pick rather than restated, so a change to
  * `contacts` reaches the panel on its own. The pick is also what makes a
@@ -14,6 +21,7 @@ import { type Tenant, TenantSchema } from "./schema.ts";
  */
 export const OfficeContactSchema = TenantSchema.pick({
   openingHours: true,
+  counterHours: true,
   contacts: true,
 });
 export type OfficeContact = z.infer<typeof OfficeContactSchema>;
@@ -23,7 +31,13 @@ export type OfficeContact = z.infer<typeof OfficeContactSchema>;
  * version of the panel may carry only one of the two blocks, and one known
  * block is worth more than discarding both.
  */
-export const OfficeContactOverrideSchema = OfficeContactSchema.partial();
+export const OfficeContactOverrideSchema = OfficeContactSchema.partial().extend(
+  {
+    // Without the default, so a row saved before the hours were editable
+    // leaves the office's own hours standing instead of being handed 8h-14h.
+    counterHours: CounterHoursSchema.optional(),
+  },
+);
 
 /**
  * What an office may change about how it presents itself: theme, logos, the
