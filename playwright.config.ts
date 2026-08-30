@@ -1,4 +1,12 @@
+import { existsSync } from "node:fs";
 import { defineConfig, devices } from "@playwright/test";
+
+// O servidor de teste lê .env.local sozinho (Next faz isso), o processo do
+// Playwright não. Sem isso, todo teste de painel se pula por falta de
+// ADMIN_SEED_EMAIL e a suíte passa verde sem ter exercido o painel. Mesmo
+// recurso que drizzle.config.ts usa, pelo mesmo motivo. Em CI o arquivo não
+// existe e nada muda.
+if (existsSync(".env.local")) process.loadEnvFile(".env.local");
 
 const PORT = process.env.PORT ?? "3000";
 
@@ -50,6 +58,17 @@ export default defineConfig({
       BETTER_AUTH_SECRET: "e2e-sem-valor-nenhum-fora-deste-processo-de-teste",
       BETTER_AUTH_URL: `http://localhost:${PORT}`,
       DEFAULT_TENANT: "cartorio-marinho",
+      // Vazio de propósito: sem token, sendEmail registra em log em vez de
+      // enviar. Com o token do .env.local, a suíte convidava usuário de
+      // teste mandando e-mail de verdade para endereços @exemplo.com, o que
+      // pendura a ação enquanto o Postmark responde e ainda gera bounce.
+      POSTMARK_SERVER_TOKEN: "",
+      // Idem para o rate limit: com as credenciais do .env.local a suíte
+      // consumia o Upstash de verdade e tomava 429 de si mesma, já que os
+      // testes rodam em paralelo contra os mesmos endpoints. Sem elas,
+      // isRateLimited devolve falso e o limite fica desligado.
+      UPSTASH_REDIS_REST_URL: "",
+      UPSTASH_REDIS_REST_TOKEN: "",
     },
     reuseExistingServer: !process.env.CI,
     timeout: 180_000,
