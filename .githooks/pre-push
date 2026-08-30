@@ -1,0 +1,8 @@
+#!/bin/sh
+# The e2e suite boots a production build, so nobody runs it while implementing.
+# The moment it matters is the push, when the code leaves this machine.
+#
+# The refs git feeds on stdin are deliberately ignored: skipping per branch is
+# what --no-verify is for.
+echo "pre-push: running the e2e suite (git push --no-verify skips this)"
+exec pnpm e2e
