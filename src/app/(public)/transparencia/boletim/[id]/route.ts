@@ -39,7 +39,7 @@ export async function GET(
   });
 
   const document: BulletinDocument = {
-    office: [tenant.name, tenant.subtitle, `CNS ${tenant.cns}`],
+    office: [tenant.name, tenant.subtitle],
     title: `Boletim Mensal, ${formatMonthYear(month, year)}`,
     period: bulletinPeriod(month, year),
     preliminary: status === "preliminary",

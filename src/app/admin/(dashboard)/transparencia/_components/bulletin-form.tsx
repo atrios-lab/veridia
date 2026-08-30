@@ -31,7 +31,6 @@ function FieldError({ message }: { message?: string }) {
 export interface BulletinOffice {
   name: string;
   subtitle: string;
-  cns: string;
   legalFooter: string;
 }
 
@@ -252,7 +251,6 @@ export function BulletinForm({
         <BulletinPreview
           officeName={office.name}
           officeSubtitle={office.subtitle}
-          cns={office.cns}
           legalFooter={office.legalFooter}
           month={month}
           year={year}

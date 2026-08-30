@@ -60,7 +60,6 @@ export default async function TransparencyPage({
               office={{
                 name: tenant.name,
                 subtitle: tenant.subtitle,
-                cns: tenant.cns,
                 legalFooter: tenant.legalFooter,
               }}
               currentMonth={Number(today().slice(5, 7))}

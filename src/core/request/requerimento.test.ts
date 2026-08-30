@@ -96,7 +96,11 @@ test("the access receipt is a document nobody signs", () => {
 test("the form identifies the office and the act it is for", () => {
   const document = buildRequerimento(cartorioMarinho, marriage, data);
   assert.ok(document.office.includes(cartorioMarinho.name));
-  assert.match(document.office.join("\n"), /CNS 094615/);
+  // The CNS identifies the serventia to the corregedoria, not to the citizen
+  // signing this: the office asked for it out of everything it hands over.
+  // It stays on the tenant, for the panel to show whoever is logged in.
+  assert.doesNotMatch(document.office.join("\n"), /CNS/);
+  assert.equal(cartorioMarinho.cns, "094615");
   const text = flatten(document.sections);
   assert.match(text, /Habilitação de casamento/);
   assert.match(text, /Lei 6\.015 art\. 67/);
