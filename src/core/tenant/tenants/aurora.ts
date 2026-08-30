@@ -9,11 +9,7 @@ export const tabelionatoAurora: Tenant = parseTenant({
   // a fictional office, so a change can be exercised against production
   // without a citizen's record anywhere near it. `aurora.localhost` stays for
   // the local run.
-  hosts: [
-    "tabelionatoaurora.com.br",
-    "aurora.atrioss.com",
-    "aurora.localhost",
-  ],
+  hosts: ["tabelionatoaurora.com.br", "aurora.atrioss.com", "aurora.localhost"],
   name: "Tabelionato Aurora",
   subtitle: "2º Tabelionato de Notas de Aurora / RN",
   about:
