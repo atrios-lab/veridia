@@ -55,12 +55,14 @@ test.describe("conversa da exigência", () => {
          'hash', 'new')
       on conflict do nothing
     `;
+    await sql.end();
   });
 
   test.afterEach(async () => {
     const sql = postgres(process.env.DATABASE_URL as string);
     // Requirements, their messages and their files go by cascade.
     await sql`delete from service_requests where tenant_slug = ${TENANT} and protocol_number = ${PROTOCOL}`;
+    await sql.end();
   });
 
   test("the office raises a requirement and answers in its conversation", async ({
@@ -121,6 +123,7 @@ test.describe("conversa da exigência", () => {
 
     const rows =
       await sql`select status from service_request_requirements where request_id = ${request.id}`;
+    await sql.end();
     expect(rows[0].status).toBe("fulfilled");
   });
 
@@ -147,6 +150,7 @@ test.describe("conversa da exigência", () => {
     );
     const rows =
       await sql`select id from service_request_requirements where request_id = ${request.id}`;
+    await sql.end();
     expect(rows.length).toBe(0);
   });
 

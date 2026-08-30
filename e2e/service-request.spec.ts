@@ -538,6 +538,7 @@ test.describe("filing a request", () => {
         return rows.length;
       })
       .toBe(1);
+    await sql.end();
     await expect(page.getByText("Aguardando você")).toBeVisible();
   });
 
@@ -606,6 +607,7 @@ test.describe("filing a request", () => {
       on conflict (tenant_slug, key)
       do update set published = excluded.published, published_at = excluded.published_at
     `;
+    await sql.end();
 
     await page.goto(`${baseURL}/protocolo?numero=${protocolNumber}`);
     await page.getByPlaceholder("Ex.: BBM8-6XVB-8PUK").fill(accessKey);
@@ -652,6 +654,7 @@ test.describe("filing a request", () => {
       update service_requests set status = 'paid'
       where tenant_slug = 'cartorio-marinho' and protocol_number = ${protocolNumber}
     `;
+    await sql.end();
 
     await page.goto(`${baseURL}/protocolo?numero=${protocolNumber}`);
     await page.getByPlaceholder("Ex.: BBM8-6XVB-8PUK").fill(accessKey);
@@ -706,6 +709,7 @@ test.describe("filing a request", () => {
       update service_requests set status = 'done'
       where tenant_slug = 'cartorio-marinho' and protocol_number = ${protocolNumber}
     `;
+    await sql.end();
 
     await page.goto(`${baseURL}/protocolo?numero=${protocolNumber}`);
     await page.getByPlaceholder("Ex.: BBM8-6XVB-8PUK").fill(accessKey);
@@ -746,6 +750,7 @@ test.describe("filing a request", () => {
       update service_requests set status = 'rejected'
       where tenant_slug = 'cartorio-marinho' and protocol_number = ${protocolNumber}
     `;
+    await sql.end();
 
     await page.goto(`${baseURL}/protocolo?numero=${protocolNumber}`);
     await page.getByPlaceholder("Ex.: BBM8-6XVB-8PUK").fill(accessKey);

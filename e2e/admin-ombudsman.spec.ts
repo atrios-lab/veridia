@@ -83,11 +83,13 @@ test.describe("fila e detalhe de manifestações", () => {
          '{"manifestationType":"complaint","anonymous":false,"confidential":false}'::jsonb)
       on conflict do nothing
     `;
+    await sql.end();
   });
 
   test.afterEach(async () => {
     const sql = postgres(process.env.DATABASE_URL as string);
     await sql`delete from service_requests where protocol_number like 'OUV.2098.%'`;
+    await sql.end();
   });
 
   test("the queue distinguishes identified from anonymous", async ({

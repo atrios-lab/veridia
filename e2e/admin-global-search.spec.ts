@@ -53,11 +53,13 @@ test.describe("Busca global", () => {
          'Paulo César Andrade', 'paulo@email.com', ${CPF}, 'hash', 'new', '{}'::jsonb)
       on conflict do nothing
     `;
+    await sql.end();
   });
 
   test.afterEach(async () => {
     const sql = postgres(process.env.DATABASE_URL as string);
     await sql`delete from service_requests where protocol_number = ${PROTOCOL}`;
+    await sql.end();
   });
 
   test("Ctrl K abre a busca em qualquer tela e encontra pelo protocolo", async ({

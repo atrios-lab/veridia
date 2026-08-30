@@ -156,6 +156,7 @@ test.describe("autenticação de verdade", () => {
     expect(token, "a sessão precisa existir para ser revogada").toBeTruthy();
     const sql = postgres(process.env.DATABASE_URL as string);
     await sql`delete from session where token = ${token as string}`;
+    await sql.end();
 
     await page.goto(`${baseURL}/admin`);
     await expect(page).toHaveURL(
@@ -223,6 +224,7 @@ test.describe("superadmin da Átrios", () => {
         and action = 'session.sign-in'
       order by created_at desc limit 1
     `;
+    await sql.end();
     expect(rows[0]?.tenant_slug).toBe("tabelionato-aurora");
 
     await page.getByRole("button", { name: "Sair" }).click();

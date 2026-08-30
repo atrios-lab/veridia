@@ -49,6 +49,7 @@ test.describe("publicações", () => {
   test.afterEach(async () => {
     const sql = postgres(process.env.DATABASE_URL as string);
     await sql`delete from office_publications where title = ${TITLE}`;
+    await sql.end();
   });
 
   test("saving without an entry date lands in Rascunhos", async ({ page }) => {

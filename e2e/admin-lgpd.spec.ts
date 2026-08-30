@@ -62,11 +62,13 @@ test.describe("fila e detalhe de requerimentos LGPD", () => {
          now() - interval '17 days')
       on conflict do nothing
     `;
+    await sql.end();
   });
 
   test.afterEach(async () => {
     const sql = postgres(process.env.DATABASE_URL as string);
     await sql`delete from service_requests where protocol_number like 'SOL.2098.%'`;
+    await sql.end();
   });
 
   test("the queue shows the deadline for each requerimento", async ({

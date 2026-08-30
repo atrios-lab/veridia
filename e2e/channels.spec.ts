@@ -389,6 +389,7 @@ test.describe("depois da confirmação", () => {
               set office_reply = 'Seguem os dados que constam do cadastro em seu nome.',
                   office_replied_at = now(), status = 'answered'
               where protocol_number = ${protocolNumber}`;
+    await sql.end();
 
     // Without the key, the public status says the stage and nothing else.
     await page.goto(`${baseURL}/protocolo?numero=${protocolNumber}`);

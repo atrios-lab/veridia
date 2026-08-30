@@ -36,6 +36,7 @@ test.describe("configurações, aba Identidade Visual", () => {
   test.afterEach(async () => {
     const sql = postgres(process.env.DATABASE_URL as string);
     await sql`delete from tenant_content where tenant_slug = 'cartorio-marinho' and key = 'office-brand'`;
+    await sql.end();
   });
 
   test("publishing a style repaints the public site", async ({ page }) => {

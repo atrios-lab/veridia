@@ -83,6 +83,7 @@ test.describe("transparência", () => {
     const sql = postgres(process.env.DATABASE_URL as string);
     await sql`delete from transparency_documents where tenant_slug = ${TENANT} and title = ${DOC_TITLE}`;
     await sql`delete from transparency_bulletins where tenant_slug = ${TENANT} and reference_month = ${TEST_MONTH}`;
+    await sql.end();
   });
 
   test("uploading a document lands it as a draft, off the public page", async ({
@@ -192,6 +193,7 @@ test.describe("transparência", () => {
       values (${TENANT}, ${TEST_MONTH}, 412, 4823010, 961244, 2148000,
               'preliminary')
     `;
+    await sql.end();
 
     await signIn(page);
     await page.goto(`${baseURL}/admin/transparencia?aba=boletim`);

@@ -48,12 +48,14 @@ test.describe("fila e detalhe de pedidos", () => {
          'rcpn-certidao', 'RCPN', 'Rosa Almeida Fontes', 'rosa.fontes@email.com', 'hash', 'new')
       on conflict do nothing
     `;
+    await sql.end();
   });
 
   test.afterEach(async () => {
     const sql = postgres(process.env.DATABASE_URL as string);
     await sql`delete from service_requests where protocol_number = ${PROTOCOL}`;
     await sql`delete from service_requests where protocol_number like 'REQ.2098.%' and protocol_number != ${PROTOCOL}`;
+    await sql.end();
   });
 
   test("the queue lists a filed request and links to its detail", async ({
@@ -193,5 +195,6 @@ test.describe("fila e detalhe de pedidos", () => {
     expect(await auditCount("service-request.print.comprovante")).toBe(
       beforeReceipt + 1,
     );
+    await sql.end();
   });
 });

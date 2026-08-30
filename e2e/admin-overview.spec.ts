@@ -123,6 +123,7 @@ test.describe("Visão geral (mesa de trabalho)", () => {
          ${AGENDA_TOKEN_HASH})
       on conflict do nothing
     `;
+    await sql.end();
   });
 
   test.afterEach(async () => {
@@ -136,6 +137,7 @@ test.describe("Visão geral (mesa de trabalho)", () => {
     )`;
     await sql`delete from service_requests where protocol_number in ${sql(fixtures)}`;
     await sql`delete from appointments where cancel_token_hash = ${AGENDA_TOKEN_HASH}`;
+    await sql.end();
   });
 
   test("a mesa lista o requerimento LGPD perto do prazo antes da exigência cumprida, cada um com o próximo passo", async ({
@@ -192,6 +194,7 @@ test.describe("Visão geral (mesa de trabalho)", () => {
       values ('cartorio-marinho', ${requirement.id}, 'citizen',
               'Segue o comprovante solicitado.')
     `;
+    await sql.end();
 
     await signIn(page);
     const desk = page.getByText("Sua mesa hoje").locator("..").locator("..");

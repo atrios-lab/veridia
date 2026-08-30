@@ -46,6 +46,7 @@ test.describe("console do atendente", () => {
       values (${TENANT}, 'waiting', ${citizenName}, 'cidadao@exemplo.com', ${SUBJECT}, ${`hash-${citizenName}`})
       returning id
     `;
+    await sql.end();
     return rows[0].id as string;
   }
 
@@ -53,6 +54,7 @@ test.describe("console do atendente", () => {
     const sql = postgres(process.env.DATABASE_URL as string);
     const [row] = await sql`select id from "user" where email = ${email}`;
     sessionUserId = row.id as string;
+    await sql.end();
   });
 
   test.afterEach(async () => {
@@ -60,6 +62,7 @@ test.describe("console do atendente", () => {
     await sql`delete from chat_messages where tenant_slug = ${TENANT} and conversation_id in (select id from chat_conversations where subject = ${SUBJECT})`;
     await sql`delete from chat_conversations where tenant_slug = ${TENANT} and subject = ${SUBJECT}`;
     await sql`delete from tenant_content where tenant_slug = ${TENANT} and key = 'office-chat'`;
+    await sql.end();
   });
 
   test("turning the switch on is reflected everywhere immediately", async ({
@@ -138,6 +141,7 @@ test.describe("console do atendente", () => {
 
     const rows =
       await sql`select status from chat_conversations where id = ${fourthId}`;
+    await sql.end();
     expect(rows[0].status).toBe("waiting");
   });
 
@@ -179,6 +183,7 @@ test.describe("console do atendente", () => {
       .toBe("waiting");
     const [row] =
       await sql`select assigned_user_id from chat_conversations where id = ${id}`;
+    await sql.end();
     expect(row.assigned_user_id).toBe(null);
   });
 
@@ -217,5 +222,6 @@ test.describe("console do atendente", () => {
     expect(rows[0].linked_request_id).toBe(request.id);
 
     await sql`delete from service_requests where id = ${request.id}`;
+    await sql.end();
   });
 });

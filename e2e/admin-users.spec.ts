@@ -35,6 +35,7 @@ test.describe("tela de Usuários", () => {
     // Cascades to the account/session rows via the FKs in auth-schema.ts.
     const sql = postgres(process.env.DATABASE_URL as string);
     await sql`delete from "user" where email in (${CONVIDADA_EMAIL}, ${CONVIDADA_EMAIL_NOVO})`;
+    await sql.end();
   });
 
   test("Usuários appears in the sidebar for a registrador", async ({
@@ -193,6 +194,7 @@ test.describe("tela de Usuários", () => {
       where identifier like 'change-email:%'
         and value like (select id from "user" where email = ${CONVIDADA_EMAIL}) || '|%'
     `) as { token: string }[];
+    await sql.end();
     expect(pending?.token).toBeTruthy();
 
     // Whoever confirms may be the person who cannot get in, so the page
@@ -231,6 +233,7 @@ test.describe("tela de Usuários", () => {
       where identifier like 'reset-password:%'
         and value = (select id from "user" where email = ${CONVIDADA_EMAIL})
     `) as { token: string }[];
+    await sql.end();
     expect(row?.token).toBeTruthy();
     const token = row.token;
 

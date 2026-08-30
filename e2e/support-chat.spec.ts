@@ -49,12 +49,14 @@ test.describe("widget com o chat ligado", () => {
       values ('cartorio-marinho', 'office-chat', '{"enabled": true}'::jsonb, now())
       on conflict (tenant_slug, key) do update set published = excluded.published
     `;
+    await sql.end();
   });
 
   test.afterAll(async () => {
     const sql = postgres(process.env.DATABASE_URL as string);
     await sql`delete from tenant_content where tenant_slug = 'cartorio-marinho' and key = 'office-chat'`;
     await sql`delete from chat_conversations where tenant_slug = 'cartorio-marinho' and subject = 'Teste e2e'`;
+    await sql.end();
   });
 
   test("pre-chat, fila e desistência", async ({ page, context }) => {

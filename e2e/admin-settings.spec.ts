@@ -38,6 +38,7 @@ test.describe("configurações: aba Serventia", () => {
   test.afterEach(async () => {
     const sql = postgres(process.env.DATABASE_URL as string);
     await sql`delete from tenant_content where tenant_slug = 'cartorio-marinho' and key = 'office-contact'`;
+    await sql.end();
   });
 
   test("what the office saves is what the public site serves", async ({
@@ -173,6 +174,7 @@ test.describe("configurações, aba Encarregado", () => {
   test.afterEach(async () => {
     const sql = postgres(process.env.DATABASE_URL as string);
     await sql`delete from tenant_content where tenant_slug = 'cartorio-marinho' and key = 'office-dpo'`;
+    await sql.end();
   });
 
   test("what the office saves reaches the LGPD page", async ({ page }) => {
@@ -244,6 +246,7 @@ test.describe("configurações, aba Cobrança", () => {
   test.afterEach(async () => {
     const sql = postgres(process.env.DATABASE_URL as string);
     await sql`delete from tenant_content where tenant_slug = 'cartorio-marinho' and key = 'office-pix'`;
+    await sql.end();
   });
 
   test("a valid key is saved and can be removed", async ({ page }) => {
