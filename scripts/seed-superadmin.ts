@@ -51,3 +51,6 @@ await ctx.internalAdapter.linkAccount({
 });
 
 console.log(`Usuário ${email} criado como superadmin.`);
+// A conexão do postgres() não fecha sozinha (sem idle_timeout, ver
+// src/db/index.ts): sem isto o processo fica pendurado depois do log.
+process.exit(0);

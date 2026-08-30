@@ -42,3 +42,6 @@ const hours = Math.round(expiresInSeconds / 3600);
 console.log(`Convite para ${email} (${tenant?.name ?? user.tenantSlug}):`);
 console.log(`  https://${host}/admin/redefinir-senha?token=${token}`);
 console.log(`  Válido por ${hours}h.`);
+// A conexão do postgres() não fecha sozinha (sem idle_timeout, ver
+// src/db/index.ts): sem isto o processo fica pendurado depois do log.
+process.exit(0);
