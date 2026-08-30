@@ -39,6 +39,15 @@ export interface DeskItemInput {
   right?: DataRight;
   /** service-request only: exigência cumprida, andamento parado desde então. */
   hasFulfilledPendingRequirement?: boolean;
+  /**
+   * Whether the next move is the office's: the citizen acted more recently
+   * than the office did, or the office has not acted at all. Filing counts as
+   * the citizen's move even when an operator typed it in at the counter, so a
+   * manually entered record still opens on the desk. Resolved by
+   * `listDeskItems`, which reads both sides: the office writes an audit entry,
+   * the citizen's reply in a requirement is deliberately not audited.
+   */
+  awaitingOffice: boolean;
   /** ombudsman only. */
   manifestationType?: ManifestationType;
 }
@@ -94,6 +103,25 @@ function dataRightsChipLabel(
     default:
       return "recebido";
   }
+}
+
+/** A data rights record whose legal term is due soon or already overdue. */
+function isCriticalDataRights(item: DeskItemInput, today: IsoDate): boolean {
+  if (item.kind !== "data-rights" || !item.requestedOn) return false;
+  const urgency = dataRightsUrgency(item.status, item.requestedOn, today);
+  return urgency.kind === "due-soon" || urgency.kind === "overdue";
+}
+
+/**
+ * Whether the item takes a slot on the desk. Normally that is "the office's
+ * turn", but a data rights record inside its legal term stays regardless of
+ * whose turn it is: the fifteen day term is an obligation of the office, and
+ * dropping it off the desk because someone once touched it is the expensive
+ * way to fail. Everything filtered out stays reachable through "Situação dos
+ * canais" and the pedidos queue.
+ */
+function belongsOnDesk(item: DeskItemInput, today: IsoDate): boolean {
+  return item.awaitingOffice || isCriticalDataRights(item, today);
 }
 
 function displayName(item: DeskItemInput): string {
@@ -196,11 +224,11 @@ function rankOne(
 }
 
 /**
- * The mesa de trabalho: every open item across the channels, ranked by
- * urgency (LGPD perto do prazo/vencido, then REQ com exigência cumprida,
- * then o resto, mais recente primeiro) and cut to the most urgent
- * `DESK_LIMIT`. Agendamentos não entram: um horário marcado já está
- * resolvido. The rest stays reachable through
+ * The mesa de trabalho: the open items whose next move is the office's (see
+ * `belongsOnDesk`), ranked by urgency (LGPD perto do prazo/vencido, then REQ
+ * com exigência cumprida, then o resto, mais recente primeiro) and cut to the
+ * most urgent `DESK_LIMIT`. Agendamentos não entram: um horário marcado já
+ * está resolvido. What is filtered or cut stays reachable through
  * "Situação dos canais", never silently dropped from the panel.
  */
 export function rankDeskItems(
@@ -209,10 +237,24 @@ export function rankDeskItems(
   now: Date,
 ): RankedDeskItem[] {
   return items
+    .filter((item) => belongsOnDesk(item, today))
     .map((item) => rankOne(item, today, now))
     .sort((a, b) => a.tier - b.tier || a.tieBreak - b.tieBreak)
     .slice(0, DESK_LIMIT)
     .map(({ tier: _tier, tieBreak: _tieBreak, ...rest }) => rest);
+}
+
+/**
+ * How many open items belong on the desk, over every item and not just the
+ * ones the desk has room for: the header's "N itens na sua mesa" and the
+ * "mais N itens" notice both count this, never the open total, so neither
+ * announces work the desk would never show.
+ */
+export function countDeskItems(
+  items: readonly DeskItemInput[],
+  today: IsoDate,
+): number {
+  return items.filter((item) => belongsOnDesk(item, today)).length;
 }
 
 /** How many mesa items are a LGPD deadline due soon or overdue: the
@@ -222,11 +264,7 @@ export function countCriticalDeskItems(
   items: readonly DeskItemInput[],
   today: IsoDate,
 ): number {
-  return items.filter((item) => {
-    if (item.kind !== "data-rights" || !item.requestedOn) return false;
-    const urgency = dataRightsUrgency(item.status, item.requestedOn, today);
-    return urgency.kind === "due-soon" || urgency.kind === "overdue";
-  }).length;
+  return items.filter((item) => isCriticalDataRights(item, today)).length;
 }
 
 export type TodayAppointmentState = "done" | "next" | "upcoming";

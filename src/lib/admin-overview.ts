@@ -5,6 +5,8 @@ import {
   eq,
   exists,
   inArray,
+  isNotNull,
+  max,
   notExists,
   notInArray,
   or,
@@ -23,6 +25,7 @@ import { db } from "@/db/index.ts";
 import {
   appointments,
   auditLog,
+  serviceRequestRequirementMessages,
   serviceRequestRequirements,
   serviceRequests,
 } from "@/db/schema.ts";
@@ -230,6 +233,104 @@ export function activitySentence(entry: RecentActivityEntry): string {
     : `${subject} ${verb}`;
 }
 
+/**
+ * The audited office actions that hand the record back to the citizen. An
+ * allowlist, not a list of exceptions, because the default has to be the safe
+ * one: an action nobody classified leaves the item on the desk, visible, and a
+ * denylist would instead drop it silently the first time a new action was
+ * added.
+ *
+ * Left out on purpose: `amount` and `key-reissue` are bookkeeping the counter
+ * does while taking the request in, not a reply to anybody, and counting them
+ * would push a request entered at the counter off the desk the moment its
+ * value was typed in. `draft` and `internal-note` are work started, not sent:
+ * a half written reply is exactly what must stay in sight. `create` never
+ * carries an actor at all (`createRecord` audits it as the citizen's, whoever
+ * typed it), which is what keeps filing on the citizen's side of the clock.
+ */
+const OFFICE_ANSWER_ACTIONS = [
+  "service-request.status",
+  "service-request.requirement.register",
+  "service-request.requirement.edit",
+  "service-request.requirement.reply",
+  "service-request.requirement.fulfill",
+  "data-rights.respond",
+  "ombudsman.respond",
+  "ombudsman.status",
+];
+
+/**
+ * When the office last acted on each record, keyed by whatever the audit row
+ * pointed at. `target_id` is text and holds the row id for most actions but
+ * the protocol number for the record's own creation, audited before the row
+ * (and so its id) exists: the same ambiguity `listRecentActivity` resolves
+ * with an OR join. Here both keys go into the query and the caller reads the
+ * map under both, which keeps this a plain grouped scan.
+ */
+async function lastOfficeActionAt(
+  tenantSlug: string,
+  targetIds: readonly string[],
+): Promise<Map<string, Date>> {
+  if (targetIds.length === 0) return new Map();
+  const rows = await db
+    .select({ targetId: auditLog.targetId, at: max(auditLog.createdAt) })
+    .from(auditLog)
+    .where(
+      and(
+        eq(auditLog.tenantSlug, tenantSlug),
+        // A null actor is the citizen filing, never the office.
+        isNotNull(auditLog.actorId),
+        inArray(auditLog.action, OFFICE_ANSWER_ACTIONS),
+        inArray(auditLog.targetId, [...targetIds]),
+      ),
+    )
+    .groupBy(auditLog.targetId);
+  return new Map(
+    rows.flatMap((row) =>
+      row.targetId && row.at ? [[row.targetId, row.at]] : [],
+    ),
+  );
+}
+
+/**
+ * When the citizen last wrote in a requirement conversation, per request. This
+ * is a second source on purpose: the citizen's message is deliberately not
+ * audited (see `writeStaffMessage`), so the audit log alone would never show
+ * the record coming back to the office. Read off `author`, which the schema
+ * keeps precisely because a deactivated operator's null id would otherwise
+ * pass for the citizen.
+ */
+async function lastCitizenMessageAt(
+  tenantSlug: string,
+  requestIds: readonly string[],
+): Promise<Map<string, Date>> {
+  if (requestIds.length === 0) return new Map();
+  const rows = await db
+    .select({
+      requestId: serviceRequestRequirements.requestId,
+      at: max(serviceRequestRequirementMessages.createdAt),
+    })
+    .from(serviceRequestRequirementMessages)
+    .innerJoin(
+      serviceRequestRequirements,
+      eq(
+        serviceRequestRequirements.id,
+        serviceRequestRequirementMessages.requirementId,
+      ),
+    )
+    .where(
+      and(
+        eq(serviceRequestRequirementMessages.tenantSlug, tenantSlug),
+        eq(serviceRequestRequirementMessages.author, "citizen"),
+        inArray(serviceRequestRequirements.requestId, [...requestIds]),
+      ),
+    )
+    .groupBy(serviceRequestRequirements.requestId);
+  return new Map(
+    rows.flatMap((row) => (row.at ? [[row.requestId, row.at]] : [])),
+  );
+}
+
 export interface DeskRecord {
   kind: RequestKind;
   id: string;
@@ -241,6 +342,8 @@ export interface DeskRecord {
   /** Only ever true for `service-request`: an exigência was cumprida and
    * none is still pending (see `listStalledFulfilledRequirements`). */
   hasFulfilledPendingRequirement: boolean;
+  /** Whether the next move is the office's: see `DeskItemInput`. */
+  awaitingOffice: boolean;
 }
 
 /**
@@ -288,11 +391,35 @@ export async function listDeskItems(
   ]);
 
   const stalledIds = new Set(stalled.map((row) => row.id));
-  return rows.map((row) => ({
-    ...row,
-    kind: row.kind as RequestKind,
-    hasFulfilledPendingRequirement: stalledIds.has(row.id),
-  }));
+
+  // Both scans are bounded by the open rows just fetched, rather than reading
+  // the tenant's whole history: the desk asks about a handful of records.
+  const [officeAt, citizenAt] = await Promise.all([
+    lastOfficeActionAt(tenantSlug, [
+      ...rows.map((row) => row.id),
+      ...rows.map((row) => row.protocolNumber),
+    ]),
+    lastCitizenMessageAt(
+      tenantSlug,
+      rows.filter((row) => row.kind === "service-request").map((row) => row.id),
+    ),
+  ]);
+
+  return rows.map((row) => {
+    const office = [officeAt.get(row.id), officeAt.get(row.protocolNumber)]
+      .filter((at) => at !== undefined)
+      .sort((a, b) => b.getTime() - a.getTime())[0];
+    // Filing is always the citizen's move, even when an operator typed it in
+    // at the counter: otherwise a record entered by hand would be born off the
+    // desk, with nobody having answered anything.
+    const citizen = citizenAt.get(row.id) ?? row.createdAt;
+    return {
+      ...row,
+      kind: row.kind as RequestKind,
+      hasFulfilledPendingRequirement: stalledIds.has(row.id),
+      awaitingOffice: !office || citizen > office,
+    };
+  });
 }
 
 export interface TodayAppointmentRecord {

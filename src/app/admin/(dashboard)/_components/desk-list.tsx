@@ -21,9 +21,11 @@ export function DeskList({
   totalCount,
 }: {
   items: RankedDeskItem[];
-  /** Every open item, not just the ones the desk has room for: what the
-   * ranking cut has to stay countable, or an operator reads a full desk as
-   * the whole workload. */
+  /** Every item awaiting the office, not just the ones the desk has room
+   * for: what the ranking cut has to stay countable, or an operator reads a
+   * full desk as the whole workload. Items waiting on the citizen are not
+   * counted here, so the notice never points at work the desk would not
+   * show either. */
   totalCount: number;
 }) {
   const hidden = totalCount - items.length;
@@ -38,8 +40,17 @@ export function DeskList({
         </span>
       </div>
       {items.length === 0 ? (
+        // An empty desk is the good outcome, not missing data: it says the
+        // office owes nobody an answer right now, and never that there is
+        // nothing open, since answered records stay open in the queue.
         <p className="mt-3.5 text-[13px] text-admin-muted">
-          Nenhum item em aberto agora.
+          Nada aguarda o cartório agora.{" "}
+          <Link
+            href="/admin/pedidos"
+            className="font-semibold text-admin-primary"
+          >
+            Ver a fila de pedidos
+          </Link>
         </p>
       ) : (
         <div className="mt-3 flex flex-col">
@@ -76,7 +87,7 @@ export function DeskList({
           href="/admin/pedidos"
           className="mt-3 block text-[12px] font-semibold text-admin-primary"
         >
-          + {hidden} {hidden === 1 ? "item em aberto" : "itens em aberto"}
+          + {hidden} {hidden === 1 ? "item aguardando" : "itens aguardando"}
         </Link>
       )}
     </div>

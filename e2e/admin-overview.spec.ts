@@ -8,6 +8,9 @@ const PORT = process.env.PORT ?? "3000";
 const baseURL = `http://marinho.localhost:${PORT}`;
 const SOL_DUE_SOON = "SOL.2097.000001";
 const REQ_STALLED = "REQ.2097.000001";
+// Answered by the office and waiting on the citizen: off the desk until the
+// citizen writes back.
+const REQ_ANSWERED = "REQ.2097.000002";
 // A agenda de hoje vem da própria tabela de agendamentos, sem protocolo.
 const AGENDA_TOKEN_HASH = "hash-overview-2097";
 
@@ -72,6 +75,41 @@ test.describe("Visão geral (mesa de trabalho)", () => {
       insert into service_request_requirements (tenant_slug, request_id, text, status, fulfilled_at)
       values ('cartorio-marinho', ${request.id}, 'Documento de identidade', 'fulfilled', now())
     `;
+    // Em análise com exigência pendente e uma resposta do balcão registrada na
+    // auditoria: a vez é do cidadão, então este pedido não ocupa a mesa.
+    await sql`
+      insert into service_requests
+        (tenant_slug, kind, protocol_year, protocol_sequence, protocol_number,
+         applicant_name, contact, access_key_hash, status, details)
+      values
+        ('cartorio-marinho', 'service-request', 2097, 2, ${REQ_ANSWERED},
+         'Carlos Eduardo Nunes', 'carlos@email.com', 'hash', 'in-review', '{}'::jsonb)
+      on conflict do nothing
+    `;
+    const [answered] = await sql`
+      select id from service_requests where protocol_number = ${REQ_ANSWERED}
+    `;
+    await sql`
+      insert into service_request_requirements (tenant_slug, request_id, text, status)
+      values ('cartorio-marinho', ${answered.id}, 'Comprovante de residência', 'pending')
+    `;
+    const [operator] = await sql`
+      select id from "user" where email = ${email}
+    `;
+    await sql`
+      insert into audit_log (tenant_slug, actor_id, action, target_type, target_id)
+      values ('cartorio-marinho', ${operator.id},
+              'service-request.requirement.reply', 'service-request', ${answered.id})
+    `;
+    // Escrituração de balcão sobre o pedido com exigência cumprida: informar o
+    // valor é ato do operador, mas não é resposta ao cidadão, então este
+    // pedido tem de continuar na mesa. Guarda a lista de inclusão de
+    // `OFFICE_ANSWER_ACTIONS` contra virar lista de exceções de novo.
+    await sql`
+      insert into audit_log (tenant_slug, actor_id, action, target_type, target_id)
+      values ('cartorio-marinho', ${operator.id},
+              'service-request.amount', 'service-request', ${request.id})
+    `;
     // Um agendamento para hoje: alimenta o atalho "Agenda do dia" e o bloco
     // "Agenda de hoje". Já está marcado: nada aqui espera confirmação.
     await sql`
@@ -89,10 +127,14 @@ test.describe("Visão geral (mesa de trabalho)", () => {
 
   test.afterEach(async () => {
     const sql = postgres(process.env.DATABASE_URL as string);
-    await sql`delete from service_request_requirements where request_id in (
-      select id from service_requests where protocol_number = ${REQ_STALLED}
+    const fixtures = [SOL_DUE_SOON, REQ_STALLED, REQ_ANSWERED];
+    await sql`delete from audit_log where target_id in (
+      select id::text from service_requests where protocol_number in ${sql(fixtures)}
     )`;
-    await sql`delete from service_requests where protocol_number in (${SOL_DUE_SOON}, ${REQ_STALLED})`;
+    await sql`delete from service_request_requirements where request_id in (
+      select id from service_requests where protocol_number in ${sql(fixtures)}
+    )`;
+    await sql`delete from service_requests where protocol_number in ${sql(fixtures)}`;
     await sql`delete from appointments where cancel_token_hash = ${AGENDA_TOKEN_HASH}`;
   });
 
@@ -117,6 +159,43 @@ test.describe("Visão geral (mesa de trabalho)", () => {
     await expect(
       reqRow.getByRole("link", { name: "Retomar análise" }),
     ).toHaveAttribute("href", `/admin/pedidos/${REQ_STALLED}`);
+  });
+
+  test("pedido já respondido pelo cartório não ocupa a mesa, e continua na fila", async ({
+    page,
+  }) => {
+    await signIn(page);
+    const desk = page.getByText("Sua mesa hoje").locator("..").locator("..");
+
+    await expect(desk.getByText(REQ_STALLED)).toBeVisible();
+    await expect(desk.getByText(REQ_ANSWERED)).toHaveCount(0);
+
+    // Fora da mesa, nunca fora do painel.
+    await page.goto(`${baseURL}/admin/pedidos`);
+    await expect(page.getByText(REQ_ANSWERED)).toBeVisible();
+  });
+
+  test("o pedido volta à mesa quando o cidadão escreve na exigência", async ({
+    page,
+  }) => {
+    const sql = postgres(process.env.DATABASE_URL as string);
+    const [requirement] = await sql`
+      select r.id from service_request_requirements r
+      join service_requests s on s.id = r.request_id
+      where s.protocol_number = ${REQ_ANSWERED}
+    `;
+    // A mensagem do cidadão não é auditada por decisão de projeto: é ela, e
+    // não a auditoria, que devolve o pedido para a mesa.
+    await sql`
+      insert into service_request_requirement_messages
+        (tenant_slug, requirement_id, author, body)
+      values ('cartorio-marinho', ${requirement.id}, 'citizen',
+              'Segue o comprovante solicitado.')
+    `;
+
+    await signIn(page);
+    const desk = page.getByText("Sua mesa hoje").locator("..").locator("..");
+    await expect(desk.getByText(REQ_ANSWERED)).toBeVisible();
   });
 
   test("o atalho da agenda conta os atendimentos de hoje e leva à agenda", async ({
