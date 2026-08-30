@@ -5,7 +5,15 @@ import { parseTenant, type Tenant } from "../schema.ts";
 // nothing; the contrast is what catches data leaking between offices.
 export const tabelionatoAurora: Tenant = parseTenant({
   slug: "tabelionato-aurora",
-  hosts: ["tabelionatoaurora.com.br", "aurora.localhost"],
+  // `aurora.atrioss.com` is the deployed homologation host: a real domain on
+  // a fictional office, so a change can be exercised against production
+  // without a citizen's record anywhere near it. `aurora.localhost` stays for
+  // the local run.
+  hosts: [
+    "tabelionatoaurora.com.br",
+    "aurora.atrioss.com",
+    "aurora.localhost",
+  ],
   name: "Tabelionato Aurora",
   subtitle: "2º Tabelionato de Notas de Aurora / RN",
   about:
