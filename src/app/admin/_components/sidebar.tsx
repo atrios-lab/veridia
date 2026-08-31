@@ -29,11 +29,17 @@ export function AdminSidebar({
   tenant,
   user,
   counts = {},
+  className = "",
 }: {
   tenant: Tenant;
   user: { name?: string | null; email: string; role: string };
   /** Badge count per item href, e.g. open requests for "/admin/pedidos". */
   counts?: Record<string, number>;
+  /**
+   * How this copy is laid out: the fixed column hides itself on a phone, the
+   * drawer hides itself on a desktop. The bar itself is the same either way.
+   */
+  className?: string;
 }) {
   // Hiding a link is a courtesy, not a gate: each route re-checks on the
   // server, so a person who types the URL still gets refused there.
@@ -42,7 +48,9 @@ export function AdminSidebar({
   );
 
   return (
-    <aside className="flex w-[236px] flex-none flex-col bg-admin-primary">
+    <aside
+      className={`flex w-[236px] flex-none flex-col bg-admin-primary ${className}`}
+    >
       <div className="flex items-center gap-3 border-b border-white/12 px-[18px] py-5">
         <Image
           src={tenant.logos.seal.dark}

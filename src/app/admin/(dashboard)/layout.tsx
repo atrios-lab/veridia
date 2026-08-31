@@ -5,7 +5,9 @@ import { waitingCount } from "@/lib/chat.ts";
 import { openCountByKind, openRequestCount } from "@/lib/service-request.ts";
 import { getSession } from "@/lib/session.ts";
 import { getTenant } from "@/lib/tenant.ts";
+import { MenuPopover } from "../../_components/menu-popover.tsx";
 import { GlobalSearchProvider } from "../_components/global-search.tsx";
+import { ADMIN_MENU_ID } from "../_components/page-header.tsx";
 import { ShortcutListener } from "../_components/shortcut-listener.tsx";
 import { AdminSidebar } from "../_components/sidebar.tsx";
 
@@ -49,6 +51,12 @@ export default async function DashboardLayout({
       : {}),
   };
 
+  const user = {
+    name: session.user.name,
+    email: session.user.email,
+    role,
+  };
+
   return (
     <GlobalSearchProvider>
       <ShortcutListener
@@ -58,13 +66,38 @@ export default async function DashboardLayout({
       <div className="flex h-screen overflow-hidden">
         <AdminSidebar
           tenant={tenant}
-          user={{
-            name: session.user.name,
-            email: session.user.email,
-            role,
-          }}
+          user={user}
           counts={counts}
+          className="hidden md:flex"
         />
+
+        {/*
+          The same bar as a drawer, for a screen with no room to spare: 236px
+          of a 375px phone was the panel's whole navigation sitting on top of
+          the work. Native popover, the way the public site's menu does it, so
+          it opens before hydration and the browser handles Escape, the tap
+          outside and the backdrop. The button that opens it lives in the page
+          header (see ../../_components/page-header.tsx): `popovertarget`
+          matches by id, anywhere in the document.
+        */}
+        <div
+          id={ADMIN_MENU_ID}
+          popover="auto"
+          // `right-auto w-fit` is load bearing: a popover inherits `inset: 0`
+          // from the UA sheet, so without them the box spans the whole width
+          // and the empty space beside the bar counts as inside it. The tap
+          // meant to dismiss would land on the popover and do nothing, which
+          // is the very complaint this fixes.
+          className="inset-y-0 right-auto left-0 m-0 h-full w-fit max-w-none border-0 bg-transparent p-0 backdrop:bg-black/40 md:hidden"
+        >
+          <AdminSidebar
+            tenant={tenant}
+            user={user}
+            counts={counts}
+            className="h-full"
+          />
+          <MenuPopover />
+        </div>
         {/*
           `h-screen overflow-hidden` above bounds the whole shell to the
           viewport so the sidebar never scrolls away; `overflow-y-auto` here is

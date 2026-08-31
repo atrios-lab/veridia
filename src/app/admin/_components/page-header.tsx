@@ -14,6 +14,13 @@ import { AdminIcon } from "./icon.tsx";
  * add-admin-service-requests (see admin-shell spec, "Indicador 'Disponível
  * para o chat'... reflete estado real").
  */
+/**
+ * The drawer the button below opens. Shared with the dashboard layout, which
+ * renders the drawer itself: `popovertarget` pairs them by id, so the two do
+ * not have to sit next to each other in the tree.
+ */
+export const ADMIN_MENU_ID = "admin-menu";
+
 export async function AdminPageHeader({
   title,
   back,
@@ -31,6 +38,16 @@ export async function AdminPageHeader({
 
   return (
     <header className="flex items-center gap-4 border-b border-admin-border bg-admin-card px-[30px] py-4">
+      {/* The only way to the navigation on a phone, where the sidebar is a
+          drawer instead of a column. */}
+      <button
+        type="button"
+        popoverTarget={ADMIN_MENU_ID}
+        className="-ml-1.5 flex cursor-pointer items-center rounded-lg p-1.5 text-admin-primary md:hidden"
+      >
+        <AdminIcon name="menu" className="h-5.5 w-5.5" />
+        <span className="sr-only">Abrir menu do painel</span>
+      </button>
       <h1 className="flex flex-1 items-baseline gap-3 font-serif text-xl font-semibold text-admin-primary">
         {back && (
           <Link
