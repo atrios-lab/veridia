@@ -10,6 +10,8 @@ import {
   ATTRIBUTION_SHORT_NAMES,
   actsOfAttribution,
   actsOfTenant,
+  FEE_EXEMPTION_DECLARATION,
+  FEE_EXEMPTION_DOCUMENTS,
   getAct,
   getActForTenant,
   IDENTIFICATION_ONLY_HINT,
@@ -129,4 +131,41 @@ test("nenhum texto do catálogo promete ato sem requerimento", () => {
   for (const texto of textos) {
     assert.doesNotMatch(texto, /sem requerimento/i, texto);
   }
+});
+
+test("só os atos que a lei isenta trazem a gratuidade, com sua base", () => {
+  const isentaveis = ACTS.filter((act) => act.feeExemption).map((a) => a.id);
+  assert.deepEqual(isentaveis.sort(), [
+    "rcpn-certidao",
+    "rcpn-habilitacao-casamento",
+  ]);
+  // A base é de cada ato porque são leis diferentes, e existe para ser
+  // conferida em vez de acreditada.
+  for (const act of ACTS.filter((a) => a.feeExemption)) {
+    assert.match(act.feeExemption?.legalBasis ?? "", /art\./, act.id);
+  }
+});
+
+test("a declaração da gratuidade nomeia as penas e a conferência", () => {
+  // Ela sai num documento que o cidadão assina: o que promete e o que avisa
+  // não pode se perder numa reescrita distraída.
+  assert.match(FEE_EXEMPTION_DECLARATION, /Código Penal art\. 299/);
+  assert.match(FEE_EXEMPTION_DECLARATION, /Código Civil arts\. 186 e 927/);
+  assert.match(FEE_EXEMPTION_DECLARATION, /benefício social/);
+  assert.match(FEE_EXEMPTION_DECLARATION, /CadÚnico/);
+});
+
+test("a gratuidade diz qual documento anexar, sem fechar a lista", () => {
+  // "Anexe a documentação" não é instrução: quem nunca fez isso não sabe o
+  // que a serventia aceita, chuta, e o chute volta como exigência.
+  assert.ok(FEE_EXEMPTION_DOCUMENTS.some((d) => /CadÚnico/.test(d)));
+  assert.ok(FEE_EXEMPTION_DOCUMENTS.some((d) => /CRAS/.test(d)));
+
+  // E a lista tem de continuar aberta. O cartório pediu: são muitos programas
+  // sociais, e uma lista que se lê como exaustiva barra justamente quem tem o
+  // benefício mas fora dos exemplos, que é a pessoa para quem isto existe.
+  assert.ok(
+    FEE_EXEMPTION_DOCUMENTS.some((d) => /^Outro comprovante/.test(d)),
+    "a lista precisa terminar com uma entrada aberta",
+  );
 });

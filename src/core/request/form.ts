@@ -158,6 +158,8 @@ function actRules(act: Act) {
       truthDeclaration: boolean;
       description?: string;
       purpose?: string;
+      exemptionRequested?: boolean;
+      exemptionDeclaration?: boolean;
     },
     ctx: z.RefinementCtx,
   ) => {
@@ -189,6 +191,25 @@ function actRules(act: Act) {
         message: "Este ato exige que você informe a finalidade.",
       });
     }
+    if (data.exemptionRequested) {
+      // Hiding the checkbox is not what keeps an act without a statute out of
+      // the exemption: this is. A submission that skips the client is refused
+      // here, the same discipline the honeypot and the consents follow.
+      if (!act.feeExemption) {
+        ctx.addIssue({
+          code: "custom",
+          path: ["exemptionRequested"],
+          message: "Este ato não tem previsão legal de gratuidade.",
+        });
+      } else if (!data.exemptionDeclaration) {
+        ctx.addIssue({
+          code: "custom",
+          path: ["exemptionDeclaration"],
+          message:
+            "Para pedir a gratuidade é necessário fazer a declaração acima.",
+        });
+      }
+    }
   };
 }
 
@@ -211,6 +232,16 @@ export function publicServiceRequestSchema(act: Act) {
         (value) => value === undefined || isValidPhone(value),
         { message: "Informe um telefone com DDD." },
       ),
+      // Só o site oferece a gratuidade: no balcão o operador tem o cidadão e
+      // os documentos na frente, e o pedido nasce com a conferência já feita.
+      //
+      // `.default(false)` não é enfeite: os dois campos só são registrados no
+      // formulário dos atos que a lei isenta, então nos demais eles não chegam.
+      // `z.coerce.boolean()` recusa chave ausente ("expected nonoptional"), o
+      // objeto base falhava neles, o superRefine nunca rodava e os erros de
+      // aceite sumiam da tela: o envio travava sem dizer nada, em todo ato.
+      exemptionRequested: z.coerce.boolean().default(false),
+      exemptionDeclaration: z.coerce.boolean().default(false),
     })
     .superRefine(actRules(act));
 }

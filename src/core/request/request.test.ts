@@ -198,6 +198,8 @@ const validOnline = {
   contact: undefined,
   email: "maria@exemplo.com",
   phone: "(84) 99999-0000",
+  exemptionRequested: "",
+  exemptionDeclaration: "",
 };
 
 test("a request filed on the site is refused without an e-mail", () => {
@@ -474,4 +476,62 @@ test("stored and displayed names carry nothing from the sender", () => {
     "cartorio-marinho/abc123.bin",
   );
   assert.equal(displayFileName(0), "anexo-1");
+});
+
+test("a gratuidade exige a declaração que a acompanha", () => {
+  // Marcar a caixa não basta: o que tem valor é a declaração, que autoriza a
+  // conferência no sistema de benefício e nomeia as penas.
+  const semDeclaracao = publicServiceRequestSchema(certificate).safeParse({
+    ...validOnline,
+    exemptionRequested: "on",
+  });
+  assert.equal(semDeclaracao.success, false);
+  assert.equal(semDeclaracao.error?.issues[0].path[0], "exemptionDeclaration");
+
+  const completo = publicServiceRequestSchema(certificate).safeParse({
+    ...validOnline,
+    exemptionRequested: "on",
+    exemptionDeclaration: "on",
+  });
+  assert.ok(completo.success);
+});
+
+test("gratuidade em ato sem previsão legal é recusada no servidor", () => {
+  // Esconder a caixa é cortesia; isto é o controle. `search` (busca por
+  // indicador) não tem `feeExemption`, e nem tudo marcado a faz passar.
+  assert.equal(search.feeExemption, undefined);
+  const result = publicServiceRequestSchema(search).safeParse({
+    ...validOnline,
+    purpose: "Levantamento de bens",
+    exemptionRequested: "on",
+    exemptionDeclaration: "on",
+  });
+  assert.equal(result.success, false);
+  assert.equal(result.error?.issues[0].path[0], "exemptionRequested");
+});
+
+test("um pedido sem gratuidade não ganha exigência nenhuma", () => {
+  const result = publicServiceRequestSchema(certificate).safeParse(validOnline);
+  assert.ok(result.success);
+  assert.equal(result.data.exemptionRequested, false);
+});
+
+test("o aceite faltante é acusado mesmo no ato que não oferece gratuidade", () => {
+  // Regressão cara: os campos de isenção só são registrados no formulário dos
+  // atos isentáveis, então nos demais o react-hook-form não os manda. Com
+  // `z.coerce.boolean()` puro, o objeto base falhava neles ("expected
+  // nonoptional"), o superRefine nunca rodava e os erros de aceite sumiam da
+  // tela. O envio travava sem dizer nada, em qualquer ato.
+  const semIsencao = { ...validOnline };
+  delete (semIsencao as { exemptionRequested?: string }).exemptionRequested;
+  delete (semIsencao as { exemptionDeclaration?: string }).exemptionDeclaration;
+  assert.equal(search.feeExemption, undefined);
+
+  const result = publicServiceRequestSchema(search).safeParse({
+    ...semIsencao,
+    purpose: "Levantamento de bens",
+    lgpdConsent: "",
+  });
+  assert.equal(result.success, false);
+  assert.equal(result.error?.issues[0].path[0], "lgpdConsent");
 });

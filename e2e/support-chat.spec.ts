@@ -1,5 +1,6 @@
 import { expect, test } from "@playwright/test";
 import postgres from "postgres";
+import { COOKIE_NOTICE_COOKIE } from "../src/app/(public)/_lib/cookie-notice.ts";
 import { isWithinChatHours } from "../src/core/chat/hours.ts";
 import { TENANTS } from "../src/core/tenant/resolve.ts";
 
@@ -42,6 +43,20 @@ test.describe("widget com o chat ligado", () => {
     "fora do horário de atendimento da serventia: o widget não abre fila",
   );
 
+  // O widget espera o aviso de cookies: os dois moram no canto inferior
+  // direito e o chat grava cookie próprio, então ele só é renderizado depois
+  // que o cidadão dispensa o aviso (ver (public)/layout.tsx). Sem isto o
+  // botão nunca existe, e o teste falhava desde que a trava entrou, em
+  // 8d6e3d0 (10/08): ninguém viu porque ele se pula fora do expediente da
+  // serventia, que é quando o CI quase sempre roda.
+  test.beforeEach(async ({ context }) => {
+    // Por `url` e não por `domain`: o host de teste carrega porta, e o par
+    // domínio/caminho escrito à mão erra calado, deixando o cookie de fora.
+    await context.addCookies([
+      { name: COOKIE_NOTICE_COOKIE, value: "1", url: baseURL },
+    ]);
+  });
+
   test.beforeAll(async () => {
     const sql = postgres(process.env.DATABASE_URL as string);
     await sql`
@@ -66,7 +81,7 @@ test.describe("widget com o chat ligado", () => {
     await button.click();
 
     await page.getByLabel("Nome completo").fill("Rosa Almeida Fontes");
-    await page.getByLabel("E-mail ou telefone").fill("rosa.fontes@email.com");
+    await page.getByLabel("E-mail ou WhatsApp").fill("rosa.fontes@email.com");
     await page.getByLabel("Assunto").fill("Teste e2e");
     await page
       .getByRole("button", { name: "Entrar na fila de atendimento" })
@@ -92,17 +107,10 @@ test.describe("widget com o chat ligado", () => {
     expect(cookies.some((c) => c.name === "chat_token" && c.httpOnly)).toBe(
       true,
     );
-  });
 
-  test("rating clears the conversation and starts fresh next time", async ({
-    page,
-  }) => {
-    await page.goto(baseURL);
-    await page.getByRole("button", { name: /Atendimento online/ }).click();
-
-    // A conversation from the previous test is already closed and waiting
-    // to be rated.
-    await expect(page.getByText("Como foi o atendimento?")).toBeVisible();
+    // Segue no mesmo teste: a avaliação precisa da conversa encerrada acima, e
+    // cada teste do Playwright nasce com contexto novo: sem o cookie e o
+    // localStorage deste, o widget abriria no pré-chat de novo.
     await page.getByLabel("5 estrelas").click();
     await page.getByRole("button", { name: "Enviar avaliação" }).click();
 

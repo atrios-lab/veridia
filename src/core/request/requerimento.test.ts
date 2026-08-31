@@ -167,3 +167,19 @@ test("the signature block says how to sign it, and who signs", () => {
   assert.match(document.signature.join("\n"), /Gov\.br/);
   assert.equal(document.signee, "Maria José da Silva");
 });
+
+test("a declaração de gratuidade entra no papel que o cidadão assina", () => {
+  // O checkbox é registro; a declaração assinada é prova. É por isso que ela
+  // viaja no requerimento, e não só no banco.
+  const comIsencao = buildRequerimento(cartorioMarinho, marriage, {
+    ...data,
+    exemptionRequested: true,
+  });
+  const texto = flatten(comIsencao.sections);
+  assert.match(texto, /Código Penal art\. 299/);
+  assert.match(texto, /CC art\. 1\.512/);
+
+  // Sem pedir, nada disso aparece: quem paga não assina declaração de pobreza.
+  const semIsencao = buildRequerimento(cartorioMarinho, marriage, data);
+  assert.doesNotMatch(flatten(semIsencao.sections), /Código Penal art\. 299/);
+});

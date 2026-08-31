@@ -352,6 +352,14 @@ export const serviceRequestDetailsSchema = z.object({
   // for one kind is a migration the jsonb already covers. Nothing searches by
   // telephone; the day the panel does, it earns its column.
   phone: z.string().optional(),
+  // Present means the citizen asked for the statutory exemption and signed the
+  // declaration that goes with it; `declaredAt` is when. Same discipline as
+  // `consents` right above: a declaration validated and thrown away is not
+  // proof, and this one authorises a check against a government system.
+  //
+  // Asked for, never granted: whether the exemption applies is the office's
+  // call, after checking, and it stays out of `amountCents` entirely.
+  exemption: z.object({ declaredAt: isoInstant }).optional(),
 });
 export type ServiceRequestDetails = z.infer<typeof serviceRequestDetailsSchema>;
 
@@ -361,6 +369,17 @@ export type ServiceRequestDetails = z.infer<typeof serviceRequestDetailsSchema>;
  * does not check. Empty rather than undefined because every reader shows it
  * in a form or a line of a document, never branches on it.
  */
+/**
+ * When the citizen declared the exemption, or undefined when they did not ask
+ * for it. Same door as `readPhone`: the database does not check jsonb, so
+ * everything that reads it parses it.
+ */
+export function readExemptionDeclaredAt(details: unknown): string | undefined {
+  const value = (details as { exemption?: { declaredAt?: unknown } } | null)
+    ?.exemption?.declaredAt;
+  return typeof value === "string" ? value : undefined;
+}
+
 export function readPhone(details: unknown): string {
   const value = (details as { phone?: unknown } | null)?.phone;
   return typeof value === "string" ? value : "";
