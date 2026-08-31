@@ -1,5 +1,6 @@
 import { expect, test } from "@playwright/test";
 import postgres from "postgres";
+import { COOKIE_NOTICE_COOKIE } from "../src/app/(public)/_lib/cookie-notice.ts";
 import { isWithinChatHours } from "../src/core/chat/hours.ts";
 import { TENANTS } from "../src/core/tenant/resolve.ts";
 
@@ -41,6 +42,20 @@ test.describe("widget com o chat ligado", () => {
     !isWithinChatHours(TENANTS["cartorio-marinho"], new Date()),
     "fora do horário de atendimento da serventia: o widget não abre fila",
   );
+
+  // O widget espera o aviso de cookies: os dois moram no canto inferior
+  // direito e o chat grava cookie próprio, então ele só é renderizado depois
+  // que o cidadão dispensa o aviso (ver (public)/layout.tsx). Sem isto o
+  // botão nunca existe, e o teste falhava desde que a trava entrou, em
+  // 8d6e3d0 (10/08): ninguém viu porque ele se pula fora do expediente da
+  // serventia, que é quando o CI quase sempre roda.
+  test.beforeEach(async ({ context }) => {
+    // Por `url` e não por `domain`: o host de teste carrega porta, e o par
+    // domínio/caminho escrito à mão erra calado, deixando o cookie de fora.
+    await context.addCookies([
+      { name: COOKIE_NOTICE_COOKIE, value: "1", url: baseURL },
+    ]);
+  });
 
   test.beforeAll(async () => {
     const sql = postgres(process.env.DATABASE_URL as string);
