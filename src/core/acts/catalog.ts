@@ -41,24 +41,35 @@ export const ATTRIBUTION_EXAMPLES: Record<Attribution, string> = {
  * filling anything in, so it belongs to the act, not to the screen.
  */
 export const PROCESSING_MODES = [
-  "identification", // asked and answered on identification alone, no form
-  "online", // form signed digitally, start to finish over the internet
+  "online", // signed digitally, start to finish over the internet
   "presential", // started online, finished at the counter in person
 ] as const;
 export type ProcessingMode = (typeof PROCESSING_MODES)[number];
 
 /** The promise each mode makes, phrased for someone outside the trade. */
 export const PROCESSING_MODE_LABELS: Record<ProcessingMode, string> = {
-  identification: "Só identificação",
   online: "100% on-line",
   presential: "On-line + presencial",
 };
 
 export const PROCESSING_MODE_HINTS: Record<ProcessingMode, string> = {
-  identification: "o mais rápido: sem requerimento",
   online: "requerimento assinado pelo Gov.br",
   presential: "adiante aqui, conclua no balcão",
 };
+
+/**
+ * The other half of what used to be one field. `identification` lived in the
+ * enum above and said what the office asks for; `online` and `presential` say
+ * where the request ends. A certificate answers both, and the enum let it say
+ * only one, so it said the wrong one.
+ *
+ * Its old hint promised "sem requerimento", which was never true: the success
+ * screen asks for the signed requerimento on every act the site takes. That
+ * promise is gone and does not come back in gentler words.
+ */
+export const IDENTIFICATION_ONLY_LABEL = "Só identificação";
+export const IDENTIFICATION_ONLY_HINT =
+  "a serventia só pede a sua identificação";
 
 /** Extra fact the office needs to find the right band in the fee table. */
 export type ActParameter = "transactionValue" | "registryYears";
@@ -69,6 +80,12 @@ export interface Act {
   /** User visible label, in Portuguese. */
   name: string;
   processingMode: ProcessingMode;
+  /**
+   * Whether the office needs nothing from the requester beyond identifying
+   * themselves. Optional and never written as `false`: most acts do ask for
+   * papers, and spelling that out in every one of them would be noise.
+   */
+  identificationOnly?: true;
   legalBasis: string;
   /**
    * Only a few acts may ask the citizen why they want the document.
@@ -112,7 +129,8 @@ export const ACTS: Act[] = [
     id: "rcpn-certidao",
     attribution: "RCPN",
     name: "Certidão (nascimento, casamento, óbito)",
-    processingMode: "identification",
+    processingMode: "online",
+    identificationOnly: true,
     legalBasis: "Lei 6.015 art. 17",
     legalDeadlineDays: 5,
     legalDeadlineNote:
@@ -196,7 +214,8 @@ export const ACTS: Act[] = [
     id: "notas-certidao",
     attribution: "NOTAS",
     name: "Certidão de ato notarial",
-    processingMode: "identification",
+    processingMode: "online",
+    identificationOnly: true,
     legalBasis: "Lei 8.935 art. 7 (cópia de ato lavrado)",
     requiresPurpose: false,
   },
@@ -206,7 +225,8 @@ export const ACTS: Act[] = [
     id: "ri-certidao-matricula",
     attribution: "RI",
     name: "Certidão de matrícula, inteiro teor ou ônus",
-    processingMode: "identification",
+    processingMode: "online",
+    identificationOnly: true,
     legalBasis: "Prov. 149 art. 123 caput",
     legalDeadlineDays: 1,
     legalDeadlineNote:
@@ -220,7 +240,8 @@ export const ACTS: Act[] = [
     id: "ri-certidao-arquivado",
     attribution: "RI",
     name: "Certidão de documento arquivado sem previsão legal",
-    processingMode: "identification",
+    processingMode: "online",
+    identificationOnly: true,
     legalBasis: "Prov. 149 art. 123 par. 2 e 4",
     legalDeadlineDays: 5,
     legalDeadlineNote:
@@ -231,7 +252,8 @@ export const ACTS: Act[] = [
     id: "ri-busca-indicador",
     attribution: "RI",
     name: "Busca por indicador pessoal ou real",
-    processingMode: "identification",
+    processingMode: "online",
+    identificationOnly: true,
     legalBasis: "Prov. 149 art. 126",
     legalDeadlineDays: 5,
     legalDeadlineNote:
@@ -319,7 +341,8 @@ export const ACTS: Act[] = [
     id: "rtd-certidao",
     attribution: "RTD",
     name: "Certidão do registro",
-    processingMode: "identification",
+    processingMode: "online",
+    identificationOnly: true,
     legalBasis: "Lei 6.015 art. 17 (norma geral)",
     legalDeadlineDays: 5,
     legalDeadlineNote:
@@ -353,7 +376,8 @@ export const ACTS: Act[] = [
     id: "rcpj-certidao",
     attribution: "RCPJ",
     name: "Certidão do registro",
-    processingMode: "identification",
+    processingMode: "online",
+    identificationOnly: true,
     legalBasis: "Lei 6.015 art. 17 (norma geral)",
     legalDeadlineDays: 5,
     legalDeadlineNote:

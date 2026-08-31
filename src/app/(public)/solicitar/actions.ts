@@ -1,11 +1,7 @@
 "use server";
 
 import { headers } from "next/headers";
-import {
-  ATTRIBUTION_NAMES,
-  getActForTenant,
-  PROCESSING_MODE_LABELS,
-} from "@/core/acts/catalog.ts";
+import { ATTRIBUTION_NAMES, getActForTenant } from "@/core/acts/catalog.ts";
 import {
   generateAccessKey,
   hashAccessKey,
@@ -36,7 +32,6 @@ export interface SubmitSuccess {
   accessKey: string;
   actName: string;
   attributionName: string;
-  processingLabel: string;
   /** The date the office expects to have analysed it by, in "DD/MM/AAAA". */
   deadlineLabel: string;
 }
@@ -84,7 +79,6 @@ export async function submitServiceRequest(
       accessKey: generateAccessKey(),
       actName: act.name,
       attributionName: ATTRIBUTION_NAMES[act.attribution],
-      processingLabel: PROCESSING_MODE_LABELS[act.processingMode],
       // Born from the act's own legal term, counted from today: a request
       // just filed carries no term of its own yet. Where the law fixes none,
       // the office's default stands in.
@@ -176,7 +170,6 @@ export async function submitServiceRequest(
       accessKey,
       actName: act.name,
       attributionName: ATTRIBUTION_NAMES[act.attribution],
-      processingLabel: PROCESSING_MODE_LABELS[act.processingMode],
       // Born from the act's own legal term, counted from today: a request
       // just filed carries no term of its own yet. Where the law fixes none,
       // the office's default stands in.

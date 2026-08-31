@@ -97,8 +97,8 @@ export default async function RequestPage({
                   />
                 </div>
                 <div className="mt-2 flex flex-wrap items-center gap-2">
-                  <ProcessingBadge mode={option.processingMode} />
-                  <ProcessingHint mode={option.processingMode} />
+                  <ProcessingBadge act={option} />
+                  <ProcessingHint act={option} />
                 </div>
               </Link>
             </li>

@@ -1,17 +1,19 @@
 import {
+  IDENTIFICATION_ONLY_HINT,
+  IDENTIFICATION_ONLY_LABEL,
   PROCESSING_MODE_HINTS,
   PROCESSING_MODE_LABELS,
   type ProcessingMode,
 } from "@/core/acts/catalog.ts";
 import { Icon } from "../../_components/icon.tsx";
 
-/**
- * What the citizen needs to know before filling anything in: whether this ends
- * on the phone or at the counter. The counter case is the one that changes
- * someone's afternoon, so it is the one that reads differently.
- */
-export function ProcessingBadge({ mode }: { mode: ProcessingMode }) {
-  const atCounter = mode === "presential";
+/** Just enough of an act to say how it travels. */
+interface ActTravel {
+  processingMode: ProcessingMode;
+  identificationOnly?: true;
+}
+
+function Badge({ label, atCounter }: { label: string; atCounter?: boolean }) {
   return (
     <span
       className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[11px] font-bold ${
@@ -21,20 +23,43 @@ export function ProcessingBadge({ mode }: { mode: ProcessingMode }) {
       }`}
     >
       <span className="h-1.5 w-1.5 rounded-full bg-current" />
-      {PROCESSING_MODE_LABELS[mode]}
+      {label}
     </span>
   );
 }
 
-export function ProcessingHint({ mode }: { mode: ProcessingMode }) {
+/**
+ * What the citizen needs to know before filling anything in: whether this ends
+ * on the phone or at the counter, and whether the office wants papers beyond
+ * their own identification. Two facts, so up to two badges: they used to share
+ * one field, which forced an act that answered both to say only one.
+ *
+ * The counter case is the one that changes someone's afternoon, so it is the
+ * one that reads differently.
+ */
+export function ProcessingBadge({ act }: { act: ActTravel }) {
+  return (
+    <>
+      <Badge
+        label={PROCESSING_MODE_LABELS[act.processingMode]}
+        atCounter={act.processingMode === "presential"}
+      />
+      {act.identificationOnly && <Badge label={IDENTIFICATION_ONLY_LABEL} />}
+    </>
+  );
+}
+
+export function ProcessingHint({ act }: { act: ActTravel }) {
   return (
     <span className="text-[11.5px] text-brand-muted">
-      {PROCESSING_MODE_HINTS[mode]}
+      {act.identificationOnly
+        ? IDENTIFICATION_ONLY_HINT
+        : PROCESSING_MODE_HINTS[act.processingMode]}
     </span>
   );
 }
 
-/** The three modes explained once, under the list that uses them. */
+/** The selos explained once, under the list that uses them. */
 export function ProcessingLegend() {
   return (
     <div className="flex items-start gap-2.5 rounded-xl bg-brand-accent-soft px-3.5 py-3">
@@ -44,10 +69,11 @@ export function ProcessingLegend() {
         strokeWidth={2}
       />
       <p className="text-[11.5px] leading-relaxed text-brand-accent-ink">
-        <strong>Só identificação</strong>: peça na hora, sem requerimento.{" "}
-        <strong>100% on-line</strong>: você assina o PDF pelo Gov.br.{" "}
-        <strong>On-line + presencial</strong>: o pedido adianta a análise, mas o
-        ato termina no balcão.
+        <strong>100% on-line</strong>: você assina o requerimento pelo Gov.br e
+        resolve sem sair de casa. <strong>On-line + presencial</strong>: o
+        pedido adianta a análise, mas o ato termina no balcão.{" "}
+        <strong>Só identificação</strong>: a serventia não pede documento nenhum
+        além da sua identificação.
       </p>
     </div>
   );
