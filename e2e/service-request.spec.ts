@@ -47,6 +47,44 @@ test("uma certidão anuncia as duas coisas que ela é", async ({ page }) => {
   await expect(habilitacao.getByText("Só identificação")).toHaveCount(0);
 });
 
+test.describe("gratuidade (ISENTO)", () => {
+  test("a opção só existe nos atos que a lei isenta", async ({ page }) => {
+    await page.goto(`${baseURL}/solicitar?atribuicao=RCPN&ato=rcpn-certidao`);
+    await expect(page.getByText("Solicitar gratuidade (ISENTO)")).toBeVisible();
+
+    // Retificação de assento não tem previsão de isenção.
+    await page.goto(
+      `${baseURL}/solicitar?atribuicao=RCPN&ato=rcpn-retificacao`,
+    );
+    await expect(page.getByText("Solicitar gratuidade (ISENTO)")).toHaveCount(
+      0,
+    );
+  });
+
+  test("marcar a gratuidade cobra a declaração e a documentação", async ({
+    page,
+  }) => {
+    await page.goto(`${baseURL}/solicitar?atribuicao=RCPN&ato=rcpn-certidao`);
+    await page.getByLabel("Nome completo").fill("Maria José da Silva");
+    await page.getByLabel(/E-mail/).fill("maria@exemplo.com");
+    await page.getByText("Solicitar gratuidade (ISENTO)").click();
+
+    // A declaração aparece só depois de pedir a gratuidade.
+    await expect(page.getByText(/Código Penal art\. 299/)).toBeVisible();
+
+    await page.getByLabel(/Autorizo o tratamento dos meus dados/).check();
+    await page.getByLabel(/Declaro, sob as penas da lei, que as/).check();
+    await page.getByRole("button", { name: "Enviar requerimento" }).click();
+
+    await expect(
+      page.getByText("necessário fazer a declaração", { exact: false }),
+    ).toBeVisible();
+    await expect(
+      page.getByRole("heading", { name: "Pedido registrado" }),
+    ).toHaveCount(0);
+  });
+});
+
 test("the citizen reaches the form in two taps from the home", async ({
   page,
 }) => {
@@ -206,7 +244,9 @@ test.describe("client-side validation", () => {
     await page
       .getByLabel(/Descreva o que você precisa/)
       .fill("Queremos casar em outubro deste ano.");
-    await page.getByRole("checkbox").nth(1).check(); // truth only, no LGPD
+    // Pelo texto do aceite, não pela posição: um bloco novo no formulário
+    // mudava o índice e quebrava este teste sem nada de errado ter acontecido.
+    await page.getByLabel(/Declaro, sob as penas da lei, que as/).check();
     await page.getByRole("button", { name: "Enviar requerimento" }).click();
 
     await expect(
@@ -258,8 +298,10 @@ test.describe("filing a request", () => {
     await page
       .getByLabel(/Descreva o que você precisa/)
       .fill("Queremos casar em outubro deste ano.");
-    await page.getByRole("checkbox").first().check();
-    await page.getByRole("checkbox").nth(1).check();
+    // Pelo texto, não pela posição: o ato tem uma caixa de gratuidade antes
+    // destas, e o índice muda a cada bloco novo no formulário.
+    await page.getByLabel(/Autorizo o tratamento dos meus dados/).check();
+    await page.getByLabel(/Declaro, sob as penas da lei, que as/).check();
   }
 
   test("files travel through the hidden inputs, into and after the request", async ({

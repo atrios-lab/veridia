@@ -117,7 +117,34 @@ export interface Act {
   /** Where the term above comes from. Shown to nobody: it is here so the next
    * person can check the number instead of trusting it. */
   legalDeadlineNote?: string;
+  /**
+   * The statute that makes this act free for someone who declares they cannot
+   * pay. Absent means no exemption is foreseen, which is most acts: writing
+   * `undefined` in twenty declarations would be noise.
+   *
+   * The basis is per act because they are different laws, and it is here for
+   * the same reason `legalDeadlineNote` is: so the next person can check the
+   * citation instead of trusting it.
+   */
+  feeExemption?: { legalBasis: string };
 }
+
+/**
+ * What the requester signs to ask for the exemption. Its own text, not the
+ * general truth declaration: that one covers the facts of the request, this
+ * one authorises a check against a government benefit system and names the
+ * penalties. Different consents, different proofs.
+ *
+ * It rides in the requerimento the citizen signs, so the wording is the
+ * office's to confirm, not this file's to invent quietly.
+ */
+export const FEE_EXEMPTION_DECLARATION =
+  "Declaro, sob as penas da lei, ser beneficiário de programa social do " +
+  "Governo Federal (CadÚnico) e não ter condições de pagar os emolumentos " +
+  "sem prejuízo do sustento próprio ou da família. Autorizo a serventia a " +
+  "conferir esta condição nos sistemas governamentais de benefício social. " +
+  "Estou ciente de que declaração falsa é crime (Código Penal art. 299) e " +
+  "obriga a reparar o dano (Código Civil arts. 186 e 927).";
 
 // Legal basis conferred against the previous system (packages/tenants/src/
 // atos.ts), which cites Lei 6.015, Lei 8.935, Lei 9.492 and Prov. CNJ
@@ -136,6 +163,9 @@ export const ACTS: Act[] = [
     legalDeadlineNote:
       "Lei 6.015 art. 19, red. Lei 14.382/2022: demais certidões",
     requiresPurpose: false, // art. 17: neither motive nor interest may be asked
+    feeExemption: {
+      legalBasis: "CF art. 5º, LXXVI; Lei 6.015 art. 30 §1º (Lei 9.534/97)",
+    },
   },
   {
     id: "rcpn-habilitacao-casamento",
@@ -144,6 +174,7 @@ export const ACTS: Act[] = [
     processingMode: "online",
     legalBasis: "Lei 6.015 art. 67 (CC art. 1.525)",
     requiresPurpose: false,
+    feeExemption: { legalBasis: "CC art. 1.512, parágrafo único" },
     documents: [
       "Documento de identidade dos nubentes",
       "Certidões de nascimento",

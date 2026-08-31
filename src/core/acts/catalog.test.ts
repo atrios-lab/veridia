@@ -10,6 +10,7 @@ import {
   ATTRIBUTION_SHORT_NAMES,
   actsOfAttribution,
   actsOfTenant,
+  FEE_EXEMPTION_DECLARATION,
   getAct,
   getActForTenant,
   IDENTIFICATION_ONLY_HINT,
@@ -129,4 +130,26 @@ test("nenhum texto do catálogo promete ato sem requerimento", () => {
   for (const texto of textos) {
     assert.doesNotMatch(texto, /sem requerimento/i, texto);
   }
+});
+
+test("só os atos que a lei isenta trazem a gratuidade, com sua base", () => {
+  const isentaveis = ACTS.filter((act) => act.feeExemption).map((a) => a.id);
+  assert.deepEqual(isentaveis.sort(), [
+    "rcpn-certidao",
+    "rcpn-habilitacao-casamento",
+  ]);
+  // A base é de cada ato porque são leis diferentes, e existe para ser
+  // conferida em vez de acreditada.
+  for (const act of ACTS.filter((a) => a.feeExemption)) {
+    assert.match(act.feeExemption?.legalBasis ?? "", /art\./, act.id);
+  }
+});
+
+test("a declaração da gratuidade nomeia as penas e a conferência", () => {
+  // Ela sai num documento que o cidadão assina: o que promete e o que avisa
+  // não pode se perder numa reescrita distraída.
+  assert.match(FEE_EXEMPTION_DECLARATION, /Código Penal art\. 299/);
+  assert.match(FEE_EXEMPTION_DECLARATION, /Código Civil arts\. 186 e 927/);
+  assert.match(FEE_EXEMPTION_DECLARATION, /benefício social/);
+  assert.match(FEE_EXEMPTION_DECLARATION, /CadÚnico/);
 });

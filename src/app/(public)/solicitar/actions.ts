@@ -51,6 +51,20 @@ function fail(
   return { status: "error", message, fieldErrors };
 }
 
+/**
+ * Quantos anexos esta submissão carrega, pelos dois caminhos: bytes no corpo
+ * (desenvolvimento) e referências de upload direto ao blob (produção). Um
+ * input de arquivo intocado ainda chega, como parte vazia, então o tamanho é
+ * o único sinal honesto de que o cidadão escolheu alguma coisa.
+ */
+function countAttachments(formData: FormData): number {
+  const files = formData
+    .getAll("anexos")
+    .filter((value): value is File => value instanceof File)
+    .filter((file) => file.size > 0);
+  return files.length + formData.getAll("anexosRef").length;
+}
+
 export async function submitServiceRequest(
   _previous: SubmitState,
   formData: FormData,
@@ -107,6 +121,8 @@ export async function submitServiceRequest(
     parameterValue: formData.get("parameterValue") ?? "",
     lgpdConsent: formData.get("lgpdConsent") ?? "",
     truthDeclaration: formData.get("truthDeclaration") ?? "",
+    exemptionRequested: formData.get("exemptionRequested") ?? "",
+    exemptionDeclaration: formData.get("exemptionDeclaration") ?? "",
   });
 
   if (!parsed.success) {
@@ -119,6 +135,18 @@ export async function submitServiceRequest(
       "Confira os campos destacados para enviar o pedido.",
       fieldErrors,
     );
+  }
+
+  // Antes de armazenar coisa alguma: uma recusa depois de `collectAttachments`
+  // deixaria os arquivos já gravados no blob, órfãos de um pedido que não
+  // existe. Conta os dois caminhos, porque em produção os anexos chegam como
+  // referências de upload direto e em desenvolvimento como bytes no corpo.
+  if (parsed.data.exemptionRequested && countAttachments(formData) === 0) {
+    return fail("Confira os campos destacados para enviar o pedido.", {
+      anexos:
+        "Anexe a documentação do benefício para pedir a gratuidade: sem ela a " +
+        "serventia não tem como conferir.",
+    });
   }
 
   const accessKey = generateAccessKey();
@@ -136,7 +164,7 @@ export async function submitServiceRequest(
     // The e-mail is what the `contact` column holds for a request filed here:
     // the telephone is the office's own way of reaching the citizen and rides
     // in `details`, next to the rest of what belongs to this kind alone.
-    const { email, phone, ...data } = parsed.data;
+    const { email, phone, exemptionRequested, ...data } = parsed.data;
 
     const { protocolNumber } = await createServiceRequest(
       tenant,
@@ -145,7 +173,15 @@ export async function submitServiceRequest(
         ...data,
         contact: email,
         accessKeyHash: hashAccessKey(accessKey),
-        details: { consents: { lgpd: consentedAt, truth: consentedAt }, phone },
+        details: {
+          consents: { lgpd: consentedAt, truth: consentedAt },
+          phone,
+          // Pedida, nunca concedida: quem confere o benefício e decide é a
+          // serventia, e `amountCents` segue sendo do operador.
+          ...(exemptionRequested
+            ? { exemption: { declaredAt: consentedAt } }
+            : {}),
+        },
       },
       attachments,
     );

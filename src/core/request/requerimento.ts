@@ -1,5 +1,8 @@
 import type { Act } from "../acts/catalog.ts";
-import { ATTRIBUTION_NAMES } from "../acts/catalog.ts";
+import {
+  ATTRIBUTION_NAMES,
+  FEE_EXEMPTION_DECLARATION,
+} from "../acts/catalog.ts";
 import type { Tenant } from "../tenant/schema.ts";
 import { dataRightOption } from "./channels.ts";
 import type { DataRight } from "./kinds.ts";
@@ -58,6 +61,13 @@ export interface RequerimentoData {
   contact: string;
   /** Asked for apart from the contact on the public form; often absent. */
   phone?: string | null;
+  /**
+   * Whether the citizen asked for the statutory exemption. The declaration
+   * then rides in this document, which is the one they actually sign: a
+   * checkbox on a screen is a record, a signed declaration of hardship is
+   * evidence, and the difference matters to the office that has to rely on it.
+   */
+  exemptionRequested?: boolean;
   cpf?: string | null;
   description?: string | null;
   purpose?: string | null;
@@ -125,15 +135,18 @@ export function buildRequerimento(
     sections.push({ heading: "Orientação", paragraphs: [act.guidance] });
   }
 
-  sections.push({
-    heading: "Declarações",
-    paragraphs: [
-      "Autorizo o tratamento dos meus dados pessoais para a análise e a " +
-        "prática do ato requerido, nos termos da Lei 13.709/2018 (LGPD).",
-      "Declaro, sob as penas da lei, que as informações prestadas neste " +
-        "requerimento são verdadeiras.",
-    ],
-  });
+  const declarations = [
+    "Autorizo o tratamento dos meus dados pessoais para a análise e a " +
+      "prática do ato requerido, nos termos da Lei 13.709/2018 (LGPD).",
+    "Declaro, sob as penas da lei, que as informações prestadas neste " +
+      "requerimento são verdadeiras.",
+  ];
+  if (data.exemptionRequested && act.feeExemption) {
+    declarations.push(
+      `${FEE_EXEMPTION_DECLARATION} Fundamento: ${act.feeExemption.legalBasis}.`,
+    );
+  }
+  sections.push({ heading: "Declarações", paragraphs: declarations });
 
   return {
     eyebrow: "Serviços on-line",

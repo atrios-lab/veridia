@@ -1,6 +1,6 @@
 import { getActForTenant } from "@/core/acts/catalog.ts";
 import { verifyAccessKey } from "@/core/request/access-key.ts";
-import { readPhone } from "@/core/request/kinds.ts";
+import { readExemptionDeclaredAt, readPhone } from "@/core/request/kinds.ts";
 import {
   buildAccessReceipt,
   buildRequerimento,
@@ -65,6 +65,8 @@ export async function POST(request: Request): Promise<Response> {
         applicantName: stored.applicantName,
         contact: stored.contact,
         phone: readPhone(stored.details),
+        exemptionRequested:
+          readExemptionDeclaredAt(stored.details) !== undefined,
         cpf: stored.cpf,
         description: stored.description,
         purpose: stored.purpose,
