@@ -109,7 +109,7 @@ test.describe("widget com o chat ligado", () => {
     );
 
     // Segue no mesmo teste: a avaliação precisa da conversa encerrada acima, e
-    // cada teste do Playwright nasce com contexto novo — sem o cookie e o
+    // cada teste do Playwright nasce com contexto novo: sem o cookie e o
     // localStorage deste, o widget abriria no pré-chat de novo.
     await page.getByLabel("5 estrelas").click();
     await page.getByRole("button", { name: "Enviar avaliação" }).click();
