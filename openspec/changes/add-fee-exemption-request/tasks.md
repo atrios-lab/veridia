@@ -29,5 +29,5 @@
 ## 5. Fechamento
 
 - [ ] 5.1 Confirmar com a serventia o texto da declaração e as bases legais: o texto sai em documento assinado, a palavra final é do cartório.
-- [ ] 5.2 Abrir PR referenciando SCRUM-11; merge é decisão do Vinícios.
+- [x] 5.2 Abrir PR referenciando SCRUM-11; merge é decisão do Vinícios.
 - [ ] 5.3 Depois do merge, `openspec archive add-fee-exemption-request`.
