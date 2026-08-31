@@ -5,7 +5,7 @@ import { waitingCount } from "@/lib/chat.ts";
 import { openCountByKind, openRequestCount } from "@/lib/service-request.ts";
 import { getSession } from "@/lib/session.ts";
 import { getTenant } from "@/lib/tenant.ts";
-import { CloseMenuOnNavigate } from "../../_components/close-menu-on-navigate.tsx";
+import { MenuPopover } from "../../_components/menu-popover.tsx";
 import { GlobalSearchProvider } from "../_components/global-search.tsx";
 import { ADMIN_MENU_ID } from "../_components/page-header.tsx";
 import { ShortcutListener } from "../_components/shortcut-listener.tsx";
@@ -96,7 +96,7 @@ export default async function DashboardLayout({
             counts={counts}
             className="h-full"
           />
-          <CloseMenuOnNavigate />
+          <MenuPopover />
         </div>
         {/*
           `h-screen overflow-hidden` above bounds the whole shell to the

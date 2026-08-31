@@ -573,6 +573,28 @@
   }
 }
 
+/*
+ * The menus (the public site's and the panel's sidebar drawer) are native
+ * popovers. Where the API is missing, and it is missing on every iPhone still
+ * on iOS 16 and on Safari before 17, Chrome before 114 and Firefox before
+ * 125, the attribute is inert: no rule hides the element, so the menu renders
+ * permanently open on top of the page and the button that should open it does
+ * nothing. This is the floor under that: hidden unless the script that stands
+ * in for the API says otherwise (see app/_components/menu-popover.tsx).
+ *
+ * Inside `@supports not`, so a browser with the API never sees these rules and
+ * the native behaviour stays untouched.
+ */
+@supports not selector(:popover-open) {
+  [popover] {
+    display: none;
+  }
+
+  [popover].popover-fallback-open {
+    display: block;
+  }
+}
+
 @layer base {
   body {
     font-family: var(--font-sans);

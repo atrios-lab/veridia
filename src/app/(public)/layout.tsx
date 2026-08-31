@@ -11,7 +11,7 @@ import { isChatEnabled } from "@/lib/chat.ts";
 import { SERIF } from "@/lib/fonts.ts";
 import { getTenant } from "@/lib/tenant.ts";
 import { blobUploadEnabled } from "@/lib/uploads.ts";
-import { CloseMenuOnNavigate } from "../_components/close-menu-on-navigate.tsx";
+import { MenuPopover } from "../_components/menu-popover.tsx";
 import { ChatWidget } from "./_components/chat-widget.tsx";
 import { CookieNotice } from "./_components/cookie-notice.tsx";
 import { Icon } from "./_components/icon.tsx";
@@ -137,7 +137,7 @@ export default async function PublicLayout({
                   </Link>
                 )),
               )}
-              <CloseMenuOnNavigate />
+              <MenuPopover />
             </nav>
           </div>
         </div>
