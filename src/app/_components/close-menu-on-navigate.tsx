@@ -9,9 +9,10 @@ import { useEffect, useRef } from "react";
  * the pathname, so the effect below alone would leave the panel open. Escape
  * and taps outside are the browser's own job (popover="auto").
  *
- * The public layout is not re-rendered on a client navigation (the same fact
- * the panel's sidebar-nav.tsx works around), so without this the panel would
- * keep showing on top of the page a tapped link just opened.
+ * Neither layout is re-rendered on a client navigation (the same fact the
+ * panel's sidebar-nav.tsx works around), so without this the menu would keep
+ * showing on top of the page a tapped link just opened. Shared by the public
+ * site's menu and the panel's mobile sidebar: same popover, same problem.
  */
 export function CloseMenuOnNavigate() {
   const pathname = usePathname();
