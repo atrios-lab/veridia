@@ -12,6 +12,10 @@ import {
   actsOfTenant,
   getAct,
   getActForTenant,
+  IDENTIFICATION_ONLY_HINT,
+  IDENTIFICATION_ONLY_LABEL,
+  PROCESSING_MODE_HINTS,
+  PROCESSING_MODE_LABELS,
   PROCESSING_MODES,
 } from "./catalog.ts";
 
@@ -99,4 +103,30 @@ test("an act is only reachable through an attribution the office holds", () => {
 test("the generated act resolves back from its id", () => {
   assert.equal(getAct("outros-rcpn")?.attribution, "RCPN");
   assert.equal(getAct("outros-xpto"), undefined);
+});
+
+test("as certidões e a busca pedem só a identificação, e resolvem on-line", () => {
+  // As duas coisas ao mesmo tempo: era o que o campo único não deixava dizer,
+  // e o que fazia a certidão anunciar só metade da verdade.
+  const soIdentificacao = ACTS.filter((act) => act.identificationOnly);
+  assert.equal(soIdentificacao.length, 7);
+  for (const act of soIdentificacao) {
+    assert.equal(act.processingMode, "online", act.id);
+  }
+  assert.ok(soIdentificacao.every((act) => /certid|busca/i.test(act.name)));
+});
+
+test("nenhum texto do catálogo promete ato sem requerimento", () => {
+  // O SCRUM-9 nasceu de "o mais rápido: sem requerimento" num ato cuja tela de
+  // sucesso pede o requerimento assinado como a de todos os outros. Enquanto o
+  // fluxo pedir, nenhum texto daqui pode dizer que não pede.
+  const textos = [
+    ...Object.values(PROCESSING_MODE_LABELS),
+    ...Object.values(PROCESSING_MODE_HINTS),
+    IDENTIFICATION_ONLY_LABEL,
+    IDENTIFICATION_ONLY_HINT,
+  ];
+  for (const texto of textos) {
+    assert.doesNotMatch(texto, /sem requerimento/i, texto);
+  }
 });

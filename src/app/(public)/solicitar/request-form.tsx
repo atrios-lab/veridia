@@ -537,7 +537,7 @@ function ActContext({
         </Link>
       </div>
       <div className="mt-2">
-        <ProcessingBadge mode={act.processingMode} />
+        <ProcessingBadge act={act} />
       </div>
     </div>
   );
