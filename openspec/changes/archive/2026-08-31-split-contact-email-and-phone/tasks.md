@@ -31,9 +31,9 @@
 - [x] 5.2 Atualizar os testes existentes que preenchem `contact` no pedido de serviço (`src/db/service-request.test.ts` e o que mais o `pnpm test` apontar).
 - [x] 5.3 Atualizar `e2e/service-request.spec.ts` para preencher os dois campos e afirmar que o telefone chega à tela do pedido no painel.
 - [x] 5.4 Rodar `pnpm typecheck` e `pnpm test` (447 passam, 0 falham).
-- [ ] 5.5 Rodar o `pnpm e2e` do fluxo de pedido. NÃO rodado localmente: há um só `DATABASE_URL` e o e2e grava no banco de produção. Roda no CI, contra o banco efêmero do verify (ver commit cd911ab).
+- [x] 5.5 O `pnpm e2e` do fluxo de pedido rodou no CI, verde, contra o banco efêmero do verify. Não foi rodado localmente: há um só `DATABASE_URL` e ele aponta para produção.
 
 ## 6. Fechamento
 
 - [x] 6.1 Abrir PR referenciando SCRUM-10 e registrando que telefone ficou opcional por decisão do cartório, e não obrigatório como o card dizia.
-- [ ] 6.2 Rodar `openspec archive split-contact-email-and-phone` depois do merge.
+- [x] 6.2 Rodar `openspec archive split-contact-email-and-phone` depois do merge.
