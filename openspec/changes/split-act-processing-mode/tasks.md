@@ -26,5 +26,5 @@
 ## 5. Fechamento
 
 - [ ] 5.1 Confirmar com a serventia a suposição da decisão 2: alguma dessas sete certidões é entregue só no balcão? Se sim, ela nasce `presential`.
-- [ ] 5.2 Abrir PR referenciando SCRUM-9, deixando escrito no corpo que a dica "sem requerimento" era falsa contra o próprio fluxo.
+- [x] 5.2 Abrir PR referenciando SCRUM-9, deixando escrito no corpo que a dica "sem requerimento" era falsa contra o próprio fluxo.
 - [ ] 5.3 Depois do merge, `openspec archive split-act-processing-mode`.
