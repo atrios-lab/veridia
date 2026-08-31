@@ -15,6 +15,7 @@ import { MenuPopover } from "../_components/menu-popover.tsx";
 import { ChatWidget } from "./_components/chat-widget.tsx";
 import { CookieNotice } from "./_components/cookie-notice.tsx";
 import { Icon } from "./_components/icon.tsx";
+import { NavLinks } from "./_components/nav-links.tsx";
 import { BlobUploadProvider } from "./_lib/attachments.tsx";
 import { COOKIE_NOTICE_COOKIE } from "./_lib/cookie-notice.ts";
 
@@ -76,33 +77,35 @@ export default async function PublicLayout({
             aria-label="Navegação principal"
             className="hidden items-center gap-6 md:flex"
           >
-            {/* data-section: no rodapé enxuto "Início" não tem link próprio,
-                então é este aqui que prova ao e2e de gating que a seção rendeu. */}
-            <Link
-              href="/"
-              data-section="inicio"
+            {/* "Início" entra na mesma lista para ser marcado como as outras
+                na home. O data-section vai junto: no rodapé enxuto ela não tem
+                link próprio, então é este que prova ao e2e de gating que a
+                seção rendeu. */}
+            <NavLinks
+              links={[
+                { label: "Início", href: "/", section: "inicio" },
+                ...headerSections.flatMap((section) =>
+                  sectionNavLinks(section),
+                ),
+              ]}
               className="text-sm font-medium text-brand-primary hover:text-brand-primary-soft"
-            >
-              Início
-            </Link>
-            {headerSections.flatMap((section) =>
-              sectionNavLinks(section).map((link) => (
-                <Link
-                  key={link.href}
-                  href={link.href}
-                  className="text-sm font-medium text-brand-primary hover:text-brand-primary-soft"
-                >
-                  {link.label}
-                </Link>
-              )),
-            )}
+              currentClassName="font-semibold underline decoration-brand-accent decoration-2 underline-offset-4"
+            />
             {isSectionEnabled(tenant, "consulta-protocolo") && (
-              <Link
-                href={SECTION_ROUTES["consulta-protocolo"]}
+              // Pela mesma lista, só para ganhar o aria-current na consulta:
+              // um botão de ação já é o elemento mais visível do cabeçalho e
+              // não precisa de realce, mas quem navega por leitor de tela
+              // precisa saber que está nessa página.
+              <NavLinks
+                links={[
+                  {
+                    label: "Consultar protocolo",
+                    href: SECTION_ROUTES["consulta-protocolo"],
+                  },
+                ]}
                 className="btn btn-primary btn-md"
-              >
-                Consultar protocolo
-              </Link>
+                currentClassName=""
+              />
             )}
           </nav>
 
@@ -126,17 +129,11 @@ export default async function PublicLayout({
               aria-label="Menu do site"
               className="fixed top-[4.25rem] right-4 bottom-auto left-auto z-20 m-0 w-60 rounded-2xl border border-brand-border bg-brand-card p-2 shadow-lg"
             >
-              {sections.flatMap((section) =>
-                sectionNavLinks(section).map((link) => (
-                  <Link
-                    key={link.href}
-                    href={link.href}
-                    className="block rounded-xl px-3 py-2.5 text-sm font-medium text-brand-primary hover:bg-brand-tint"
-                  >
-                    {link.label}
-                  </Link>
-                )),
-              )}
+              <NavLinks
+                links={sections.flatMap((section) => sectionNavLinks(section))}
+                className="block rounded-xl px-3 py-2.5 text-sm font-medium text-brand-primary hover:bg-brand-tint"
+                currentClassName="bg-brand-tint font-semibold"
+              />
               <MenuPopover />
             </nav>
           </div>
