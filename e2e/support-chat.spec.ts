@@ -81,7 +81,7 @@ test.describe("widget com o chat ligado", () => {
     await button.click();
 
     await page.getByLabel("Nome completo").fill("Rosa Almeida Fontes");
-    await page.getByLabel("E-mail ou telefone").fill("rosa.fontes@email.com");
+    await page.getByLabel("E-mail ou WhatsApp").fill("rosa.fontes@email.com");
     await page.getByLabel("Assunto").fill("Teste e2e");
     await page
       .getByRole("button", { name: "Entrar na fila de atendimento" })
@@ -107,17 +107,10 @@ test.describe("widget com o chat ligado", () => {
     expect(cookies.some((c) => c.name === "chat_token" && c.httpOnly)).toBe(
       true,
     );
-  });
 
-  test("rating clears the conversation and starts fresh next time", async ({
-    page,
-  }) => {
-    await page.goto(baseURL);
-    await page.getByRole("button", { name: /Atendimento online/ }).click();
-
-    // A conversation from the previous test is already closed and waiting
-    // to be rated.
-    await expect(page.getByText("Como foi o atendimento?")).toBeVisible();
+    // Segue no mesmo teste: a avaliação precisa da conversa encerrada acima, e
+    // cada teste do Playwright nasce com contexto novo — sem o cookie e o
+    // localStorage deste, o widget abriria no pré-chat de novo.
     await page.getByLabel("5 estrelas").click();
     await page.getByRole("button", { name: "Enviar avaliação" }).click();
 
