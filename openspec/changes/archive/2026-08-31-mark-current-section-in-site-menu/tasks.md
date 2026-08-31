@@ -21,4 +21,4 @@
 ## 4. Fechamento
 
 - [x] 4.1 Abrir PR referenciando SCRUM-20 e deixar a branch pronta; o merge é decisão do Vinícios.
-- [ ] 4.2 Depois do merge, `openspec archive mark-current-section-in-site-menu`.
+- [x] 4.2 Depois do merge, `openspec archive mark-current-section-in-site-menu`.
