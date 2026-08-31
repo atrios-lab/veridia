@@ -155,10 +155,17 @@ test("a declaração da gratuidade nomeia as penas e a conferência", () => {
   assert.match(FEE_EXEMPTION_DECLARATION, /CadÚnico/);
 });
 
-test("a gratuidade diz qual documento anexar", () => {
+test("a gratuidade diz qual documento anexar, sem fechar a lista", () => {
   // "Anexe a documentação" não é instrução: quem nunca fez isso não sabe o
   // que a serventia aceita, chuta, e o chute volta como exigência.
-  assert.ok(FEE_EXEMPTION_DOCUMENTS.length > 0);
   assert.ok(FEE_EXEMPTION_DOCUMENTS.some((d) => /CadÚnico/.test(d)));
   assert.ok(FEE_EXEMPTION_DOCUMENTS.some((d) => /CRAS/.test(d)));
+
+  // E a lista tem de continuar aberta. O cartório pediu: são muitos programas
+  // sociais, e uma lista que se lê como exaustiva barra justamente quem tem o
+  // benefício mas fora dos exemplos, que é a pessoa para quem isto existe.
+  assert.ok(
+    FEE_EXEMPTION_DOCUMENTS.some((d) => /^Outro comprovante/.test(d)),
+    "a lista precisa terminar com uma entrada aberta",
+  );
 });

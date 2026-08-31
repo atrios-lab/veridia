@@ -465,14 +465,15 @@ export function RequestForm({
                 <FieldError message={errorFor("exemptionDeclaration")} />
                 <div className="rounded-xl bg-brand-accent-soft px-3.5 py-3">
                   <p className="text-[12px] font-bold text-brand-accent-ink">
-                    Anexe acima um destes documentos
+                    Anexe acima o comprovante do seu benefício
                   </p>
                   <DocumentsChecklist
                     documents={[...FEE_EXEMPTION_DOCUMENTS]}
                   />
                   <p className="mt-2 text-[11.5px] leading-relaxed text-brand-accent-ink">
-                    Qualquer um deles serve. Sem documento a serventia não tem
-                    como conferir a gratuidade.
+                    Um documento basta, e a lista é de exemplos: se o seu
+                    programa social não estiver aí, anexe o comprovante que você
+                    tem. Sem documento a serventia não consegue conferir.
                   </p>
                 </div>
               </div>

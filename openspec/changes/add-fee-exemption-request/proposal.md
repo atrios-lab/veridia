@@ -23,8 +23,11 @@ social e que declaração falsa responde criminal e civilmente, com a lei e o ar
 - Marcar a opção exige **pelo menos um anexo**: a documentação que comprova o benefício. O card é
   explícito ("precisa apresentar toda documentação"), então aqui o anexo deixa de ser opcional.
 - O bloco **diz quais documentos servem**, em vez de pedir "a documentação" e deixar o cidadão
-  adivinhar: Folha Resumo do CadÚnico, declaração do CRAS ou cartão de programa social, qualquer
-  um deles. Um chute errado aqui volta como exigência uma semana depois.
+  adivinhar: Folha Resumo do CadÚnico, declaração do CRAS, cartão de programa social. Um chute
+  errado aqui volta como exigência uma semana depois. A lista é **de exemplos e termina aberta**,
+  a pedido da serventia: são muitos programas sociais, e uma lista que se lê como exaustiva barra
+  justamente quem tem o benefício mas fora dela. A entrada aberta é genérica, "Outro comprovante
+  de programa social", para cobrir qualquer programa sem apontar um grupo.
 - A declaração é **gravada com data** no registro do pedido, como os aceites já são: a prova é do
   controlador.
 - O operador vê a gratuidade solicitada na tela do pedido, e o requerimento impresso, que o

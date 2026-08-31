@@ -144,14 +144,22 @@ export interface Act {
  * has never done this does not know what the office accepts, guesses, and the
  * guess comes back as an exigência a week later.
  *
- * One list, not one per act: what is being proven is the same social benefit
- * whichever act it exempts. Any of them serves, which is why the wording says
- * so instead of leaving the citizen to send all four.
+ * Examples, never a closed list, and the last entry says so out loud. The
+ * office asked for it: there are many social programmes, and a list that reads
+ * as exhaustive turns away someone whose benefit is real but unlisted, which
+ * is exactly the person this whole flow exists for. The office's own example
+ * was quilombola certification; the open entry stays generic so it covers that
+ * one without singling anybody out.
+ *
+ * One list, not one per act: what is being proven is the same social benefit,
+ * whichever act it exempts. Any single one serves, and the wording says that
+ * too, so nobody gathers all four out of caution.
  */
 export const FEE_EXEMPTION_DOCUMENTS = [
   "Folha Resumo do CadÚnico, ou comprovante de inscrição com o NIS",
   "Declaração ou atestado do CRAS que atende a família",
   "Cartão ou extrato de programa social (Bolsa Família, BPC)",
+  "Outro comprovante de programa social",
 ] as const;
 
 export const FEE_EXEMPTION_DECLARATION =

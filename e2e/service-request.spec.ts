@@ -72,9 +72,14 @@ test.describe("gratuidade (ISENTO)", () => {
     // A declaração e a lista de documentos aparecem só depois de pedir.
     await expect(page.getByText(/Código Penal art\. 299/)).toBeVisible();
     await expect(
-      page.getByText("Anexe acima um destes documentos"),
+      page.getByText("Anexe acima o comprovante do seu benefício"),
     ).toBeVisible();
     await expect(page.getByText(/Folha Resumo do CadÚnico/)).toBeVisible();
+    // A lista é de exemplos: quem tem outro programa social não pode se ver
+    // de fora dela.
+    await expect(
+      page.getByText("Outro comprovante de programa social"),
+    ).toBeVisible();
 
     await page.getByLabel(/Autorizo o tratamento dos meus dados/).check();
     await page.getByLabel(/Declaro, sob as penas da lei, que as/).check();

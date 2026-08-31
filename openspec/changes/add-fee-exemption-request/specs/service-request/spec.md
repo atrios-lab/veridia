@@ -14,7 +14,9 @@ Com a opção marcada, o pedido SÓ SHALL ser aceito com:
   declara ciência de que informação falsa responde criminalmente (Código Penal art. 299) e
   civilmente (Código Civil arts. 186 e 927), com a lei e o artigo visíveis no próprio texto;
 - **pelo menos um anexo**, a documentação que comprova o benefício. O formulário DEVE (SHALL)
-  listar quais documentos servem, em vez de pedir "a documentação" sem dizer qual.
+  listar quais documentos servem, em vez de pedir "a documentação" sem dizer qual, e a lista DEVE
+  (SHALL) se apresentar como exemplos, com uma entrada aberta: são muitos programas sociais, e
+  uma lista lida como exaustiva afasta quem tem direito mas não se vê nela.
 
 A declaração DEVE (SHALL) ser persistida no registro do pedido com a data em que foi feita, como
 os aceites de LGPD e veracidade já são: a prova é do controlador. A gratuidade solicitada DEVE
@@ -32,7 +34,8 @@ depois de conferir.
 
 #### Scenario: O cidadão lê o que precisa anexar antes de anexar
 - **WHEN** o cidadão marca "Solicitar gratuidade"
-- **THEN** a tela lista os documentos que comprovam o benefício e diz que qualquer um deles serve
+- **THEN** a tela lista os documentos que comprovam o benefício, diz que um deles basta e deixa
+  claro que são exemplos, com uma entrada aberta para outros programas sociais
 
 #### Scenario: Gratuidade sem documentação é recusada
 - **WHEN** o cidadão marca "Solicitar gratuidade" e envia sem nenhum anexo
