@@ -28,6 +28,6 @@
 
 ## 5. Fechamento
 
-- [ ] 5.1 Confirmar com a serventia o texto da declaração e as bases legais: o texto sai em documento assinado, a palavra final é do cartório.
+- [ ] 5.1 Confirmar com a serventia o texto da declaração, as bases legais **e a lista de documentos aceitos** (`FEE_EXEMPTION_DOCUMENTS`): a declaração sai em documento assinado e a lista dita o que o cidadão anexa, então a palavra final é do cartório nas três.
 - [x] 5.2 Abrir PR referenciando SCRUM-11; merge é decisão do Vinícios.
 - [ ] 5.3 Depois do merge, `openspec archive add-fee-exemption-request`.

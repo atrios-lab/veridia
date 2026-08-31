@@ -8,6 +8,7 @@ import type { Act } from "@/core/acts/catalog.ts";
 import {
   ATTRIBUTION_SHORT_NAMES,
   FEE_EXEMPTION_DECLARATION,
+  FEE_EXEMPTION_DOCUMENTS,
 } from "@/core/acts/catalog.ts";
 import { MAX_ATTACHMENTS } from "@/core/request/attachment.ts";
 import { DEADLINE_CAVEAT } from "@/core/request/deadline.ts";
@@ -462,10 +463,18 @@ export function RequestForm({
                   </span>
                 </label>
                 <FieldError message={errorFor("exemptionDeclaration")} />
-                <p className="text-[12px] leading-relaxed text-brand-accent-ink">
-                  Anexe acima a documentação que comprova o benefício: sem ela a
-                  serventia não tem como conferir a gratuidade.
-                </p>
+                <div className="rounded-xl bg-brand-accent-soft px-3.5 py-3">
+                  <p className="text-[12px] font-bold text-brand-accent-ink">
+                    Anexe acima um destes documentos
+                  </p>
+                  <DocumentsChecklist
+                    documents={[...FEE_EXEMPTION_DOCUMENTS]}
+                  />
+                  <p className="mt-2 text-[11.5px] leading-relaxed text-brand-accent-ink">
+                    Qualquer um deles serve. Sem documento a serventia não tem
+                    como conferir a gratuidade.
+                  </p>
+                </div>
               </div>
             )}
           </div>

@@ -22,6 +22,9 @@ social e que declaração falsa responde criminal e civilmente, com a lei e o ar
   (CP art. 299) e civilmente (CC arts. 186 e 927). A lei e o artigo aparecem no próprio texto.
 - Marcar a opção exige **pelo menos um anexo**: a documentação que comprova o benefício. O card é
   explícito ("precisa apresentar toda documentação"), então aqui o anexo deixa de ser opcional.
+- O bloco **diz quais documentos servem**, em vez de pedir "a documentação" e deixar o cidadão
+  adivinhar: Folha Resumo do CadÚnico, declaração do CRAS ou cartão de programa social, qualquer
+  um deles. Um chute errado aqui volta como exigência uma semana depois.
 - A declaração é **gravada com data** no registro do pedido, como os aceites já são: a prova é do
   controlador.
 - O operador vê a gratuidade solicitada na tela do pedido, e o requerimento impresso, que o

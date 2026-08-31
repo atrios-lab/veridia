@@ -138,6 +138,22 @@ export interface Act {
  * It rides in the requerimento the citizen signs, so the wording is the
  * office's to confirm, not this file's to invent quietly.
  */
+/**
+ * What proves the benefit, listed for the citizen before they are asked to
+ * attach anything. "Anexe a documentação" is not an instruction: someone who
+ * has never done this does not know what the office accepts, guesses, and the
+ * guess comes back as an exigência a week later.
+ *
+ * One list, not one per act: what is being proven is the same social benefit
+ * whichever act it exempts. Any of them serves, which is why the wording says
+ * so instead of leaving the citizen to send all four.
+ */
+export const FEE_EXEMPTION_DOCUMENTS = [
+  "Folha Resumo do CadÚnico, ou comprovante de inscrição com o NIS",
+  "Declaração ou atestado do CRAS que atende a família",
+  "Cartão ou extrato de programa social (Bolsa Família, BPC)",
+] as const;
+
 export const FEE_EXEMPTION_DECLARATION =
   "Declaro, sob as penas da lei, ser beneficiário de programa social do " +
   "Governo Federal (CadÚnico) e não ter condições de pagar os emolumentos " +

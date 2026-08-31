@@ -69,8 +69,12 @@ test.describe("gratuidade (ISENTO)", () => {
     await page.getByLabel(/E-mail/).fill("maria@exemplo.com");
     await page.getByText("Solicitar gratuidade (ISENTO)").click();
 
-    // A declaração aparece só depois de pedir a gratuidade.
+    // A declaração e a lista de documentos aparecem só depois de pedir.
     await expect(page.getByText(/Código Penal art\. 299/)).toBeVisible();
+    await expect(
+      page.getByText("Anexe acima um destes documentos"),
+    ).toBeVisible();
+    await expect(page.getByText(/Folha Resumo do CadÚnico/)).toBeVisible();
 
     await page.getByLabel(/Autorizo o tratamento dos meus dados/).check();
     await page.getByLabel(/Declaro, sob as penas da lei, que as/).check();

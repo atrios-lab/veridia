@@ -11,6 +11,7 @@ import {
   actsOfAttribution,
   actsOfTenant,
   FEE_EXEMPTION_DECLARATION,
+  FEE_EXEMPTION_DOCUMENTS,
   getAct,
   getActForTenant,
   IDENTIFICATION_ONLY_HINT,
@@ -152,4 +153,12 @@ test("a declaração da gratuidade nomeia as penas e a conferência", () => {
   assert.match(FEE_EXEMPTION_DECLARATION, /Código Civil arts\. 186 e 927/);
   assert.match(FEE_EXEMPTION_DECLARATION, /benefício social/);
   assert.match(FEE_EXEMPTION_DECLARATION, /CadÚnico/);
+});
+
+test("a gratuidade diz qual documento anexar", () => {
+  // "Anexe a documentação" não é instrução: quem nunca fez isso não sabe o
+  // que a serventia aceita, chuta, e o chute volta como exigência.
+  assert.ok(FEE_EXEMPTION_DOCUMENTS.length > 0);
+  assert.ok(FEE_EXEMPTION_DOCUMENTS.some((d) => /CadÚnico/.test(d)));
+  assert.ok(FEE_EXEMPTION_DOCUMENTS.some((d) => /CRAS/.test(d)));
 });
