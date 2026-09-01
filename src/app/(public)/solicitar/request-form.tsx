@@ -134,7 +134,6 @@ export function RequestForm({
   const {
     register,
     handleSubmit,
-    watch,
     formState: { errors: clientErrors },
   } = useForm({
     resolver: zodResolver(publicServiceRequestSchema(act)),
