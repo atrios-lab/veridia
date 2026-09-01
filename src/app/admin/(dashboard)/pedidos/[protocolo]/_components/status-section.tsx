@@ -89,10 +89,12 @@ function TimelineStep({
 function DeadlineControl({
   summary,
   days,
+  pending,
 }: {
   /** "até 27/09/2026 · dia 5 de 30" */
   summary: string;
   days: number;
+  pending: boolean;
 }) {
   return (
     <details className="mt-3.5">
@@ -130,6 +132,15 @@ function DeadlineControl({
           />
           dias
         </label>
+        <button
+          type="submit"
+          name="intent"
+          value="deadline"
+          disabled={pending}
+          className="btn btn-admin-secondary btn-sm"
+        >
+          {pending ? "Salvando…" : "Salvar prazo"}
+        </button>
       </fieldset>
     </details>
   );
@@ -228,7 +239,11 @@ export function StatusSection({
         )}
 
         {deadlineSummary && (
-          <DeadlineControl summary={deadlineSummary} days={deadlineDays} />
+          <DeadlineControl
+            summary={deadlineSummary}
+            days={deadlineDays}
+            pending={pending}
+          />
         )}
 
         <details className="mt-3.5">

@@ -36,6 +36,7 @@ import {
   resolveRequirement,
   setRequestAmount,
   updateRequestData,
+  updateRequestDeadline,
   updateRequestStatus,
   updateRequirementText,
   writeStaffMessage,
@@ -122,34 +123,56 @@ export async function changeStatus(
   if (!session) return { status: "error", message: NO_PERMISSION };
 
   const requestId = String(formData.get("requestId") ?? "");
+  // "Salvar prazo" shares this form with the andamento controls, because a
+  // form cannot nest: it submits the term alone and leaves the andamento
+  // where it is.
+  const onlyDeadline = formData.get("intent") === "deadline";
   // A suggestion pill submits its own `status`; the correction select always
   // travels with the form and only decides when no pill was the submitter.
   const status = String(
     formData.get("status") ?? formData.get("statusOverride") ?? "",
   );
-  if (!isServiceRequestStatus(status)) {
-    return { status: "error", message: "Andamento inválido." };
-  }
-
   const tenant = await getTenant();
   let emailWarning: string | null = null;
   try {
     const request = await findById(tenant.slug, requestId);
     if (!request) return { status: "error", message: "Pedido não encontrado." };
+    const deadline = readDeadlineChoice(formData, request, tenant);
+    if (deadline === "invalid") {
+      return {
+        status: "error",
+        message: `Informe um prazo entre ${MIN_DEADLINE_DAYS} e ${MAX_DEADLINE_DAYS} dias.`,
+      };
+    }
+
+    if (onlyDeadline) {
+      // "Manter" reads the same here as it does beside an andamento change:
+      // nothing to write.
+      if (!deadline) {
+        return {
+          status: "error",
+          message: "Escolha um prazo antes de salvar.",
+        };
+      }
+      await updateRequestDeadline(
+        tenant.slug,
+        requestId,
+        session.user.id,
+        deadline,
+      );
+      revalidateAdmin();
+      return { status: "success", emailWarning: null };
+    }
+
+    if (!isServiceRequestStatus(status)) {
+      return { status: "error", message: "Andamento inválido." };
+    }
     // Moving to the andamento it is already in would only write an event
     // carrying no information.
     if (!isAllowedTransition(request.status as ServiceRequestStatus, status)) {
       return {
         status: "error",
         message: "O pedido já está neste andamento.",
-      };
-    }
-
-    const deadline = readDeadlineChoice(formData, request, tenant);
-    if (deadline === "invalid") {
-      return {
-        status: "error",
-        message: `Informe um prazo entre ${MIN_DEADLINE_DAYS} e ${MAX_DEADLINE_DAYS} dias.`,
       };
     }
 
