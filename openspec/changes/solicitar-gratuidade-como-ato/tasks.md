@@ -39,5 +39,5 @@
 ## 7. Fechamento
 
 - [ ] 7.1 Confirmar com a serventia o rótulo da entrada e o texto de apoio na lista, e a questão aberta do design: se a habilitação isenta continua pedindo os documentos dos nubentes.
-- [ ] 7.2 Abrir PR referenciando o pedido do Joelison e o SCRUM-11; merge é decisão do Vinícios.
+- [x] 7.2 Abrir PR referenciando o pedido do Joelison e o SCRUM-11; merge é decisão do Vinícios.
 - [ ] 7.3 Depois do merge, `openspec archive solicitar-gratuidade-como-ato`.
