@@ -359,7 +359,12 @@ export const serviceRequestDetailsSchema = z.object({
   //
   // Asked for, never granted: whether the exemption applies is the office's
   // call, after checking, and it stays out of `amountCents` entirely.
-  exemption: z.object({ declaredAt: isoInstant }).optional(),
+  // `actId` diz qual ato a isenção pede, e é opcional porque os pedidos
+  // feitos antes de a gratuidade virar ato próprio não o têm: ausente
+  // significa "não sabemos", nunca um ato no lugar do que falta.
+  exemption: z
+    .object({ declaredAt: isoInstant, actId: z.string().optional() })
+    .optional(),
 });
 export type ServiceRequestDetails = z.infer<typeof serviceRequestDetailsSchema>;
 
@@ -370,14 +375,24 @@ export type ServiceRequestDetails = z.infer<typeof serviceRequestDetailsSchema>;
  * in a form or a line of a document, never branches on it.
  */
 /**
- * When the citizen declared the exemption, or undefined when they did not ask
- * for it. Same door as `readPhone`: the database does not check jsonb, so
- * everything that reads it parses it.
+ * The exemption a request carries, or undefined when none was asked for. Same
+ * door as `readPhone`: the database does not check jsonb, so everything that
+ * reads it parses it. `actId` comes back undefined for the requests filed
+ * before the gratuidade became an act of its own.
  */
-export function readExemptionDeclaredAt(details: unknown): string | undefined {
-  const value = (details as { exemption?: { declaredAt?: unknown } } | null)
-    ?.exemption?.declaredAt;
-  return typeof value === "string" ? value : undefined;
+export function readExemption(
+  details: unknown,
+): { declaredAt: string; actId?: string } | undefined {
+  const value = (
+    details as {
+      exemption?: { declaredAt?: unknown; actId?: unknown };
+    } | null
+  )?.exemption;
+  if (typeof value?.declaredAt !== "string") return undefined;
+  return {
+    declaredAt: value.declaredAt,
+    actId: typeof value.actId === "string" ? value.actId : undefined,
+  };
 }
 
 export function readPhone(details: unknown): string {

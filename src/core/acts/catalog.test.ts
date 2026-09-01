@@ -169,3 +169,48 @@ test("a gratuidade diz qual documento anexar, sem fechar a lista", () => {
     "a lista precisa terminar com uma entrada aberta",
   );
 });
+
+test("a gratuidade é uma entrada da lista, só onde algum ato é isentável", () => {
+  const rcpn = actsOfAttribution(cartorioMarinho, "RCPN").map((a) => a.id);
+  assert.ok(rcpn.includes("gratuidade-rcpn"));
+  // Antes do "Outro ato desta área", que fecha a lista.
+  assert.ok(
+    rcpn.indexOf("gratuidade-rcpn") < rcpn.indexOf("outros-rcpn"),
+    "a entrada da gratuidade vem antes da entrada aberta",
+  );
+
+  // Nenhum ato de Notas tem previsão legal de isenção: prometer gratuidade
+  // ali seria oferecer o que a serventia não pode conceder.
+  const notas = actsOfAttribution(tabelionatoAurora, "NOTAS").map((a) => a.id);
+  assert.ok(!notas.some((id) => id.startsWith("gratuidade-")));
+});
+
+test("a entrada da gratuidade oferece exatamente os atos isentáveis", () => {
+  const gratuidade = getAct("gratuidade-rcpn");
+  assert.ok(gratuidade, "o id sintético precisa resolver de volta");
+  assert.deepEqual(gratuidade.exemptionTargets?.map((a) => a.id).sort(), [
+    "rcpn-certidao",
+    "rcpn-habilitacao-casamento",
+  ]);
+  // O ato em si não é isentável: quem carrega a base legal é o ato pedido.
+  assert.equal(gratuidade.feeExemption, undefined);
+});
+
+test("a gratuidade não inventa prazo legal: ele é o do ato pedido", () => {
+  // Sem isto, a certidão isenta nasceria com o prazo padrão da serventia e a
+  // paga com os 5 dias da Lei 6.015 art. 19, pelo mesmo pedido.
+  const gratuidade = getAct("gratuidade-rcpn");
+  assert.equal(gratuidade?.legalDeadlineDays, undefined);
+  assert.equal(getAct("rcpn-certidao")?.legalDeadlineDays, 5);
+});
+
+test("o selo diz onde o ato termina, nunca onde ele pode ser pedido", () => {
+  // A serventia leu "100% on-line" como "só dá para pedir pela internet" e
+  // reclamou que todos os atos são híbridos, porque pedir sempre dá pelos dois
+  // lados. Quem trabalha no cartório leu errado; o cidadão leria também.
+  for (const label of Object.values(PROCESSING_MODE_LABELS)) {
+    assert.match(label, /^Termina /, label);
+  }
+  assert.match(PROCESSING_MODE_HINTS.presential, /comparecer/);
+  assert.match(PROCESSING_MODE_HINTS.online, /não precisa ir/);
+});

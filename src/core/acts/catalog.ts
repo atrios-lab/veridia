@@ -46,15 +46,21 @@ export const PROCESSING_MODES = [
 ] as const;
 export type ProcessingMode = (typeof PROCESSING_MODES)[number];
 
-/** The promise each mode makes, phrased for someone outside the trade. */
+/**
+ * The promise each mode makes, phrased for someone outside the trade. Both
+ * labels say where the act *ends*, because pedir sempre dá pelos dois lados:
+ * qualquer ato pode ser pedido no balcão também, e o selo que só dizia
+ * "on-line" ou "on-line + presencial" foi lido como se dissesse onde se pede.
+ * A serventia leu assim primeiro; o cidadão leria depois.
+ */
 export const PROCESSING_MODE_LABELS: Record<ProcessingMode, string> = {
-  online: "100% on-line",
-  presential: "On-line + presencial",
+  online: "Termina on-line",
+  presential: "Termina no balcão",
 };
 
 export const PROCESSING_MODE_HINTS: Record<ProcessingMode, string> = {
-  online: "requerimento assinado pelo Gov.br",
-  presential: "adiante aqui, conclua no balcão",
+  online: "você assina pelo Gov.br e não precisa ir à serventia",
+  presential: "você adianta aqui, mas precisa comparecer para concluir",
 };
 
 /**
@@ -122,11 +128,22 @@ export interface Act {
    * pay. Absent means no exemption is foreseen, which is most acts: writing
    * `undefined` in twenty declarations would be noise.
    *
+   * Marking it does two things: it puts the act among the ones the gratuidade
+   * entry offers, and it makes the attribution show that entry at all.
+   *
    * The basis is per act because they are different laws, and it is here for
    * the same reason `legalDeadlineNote` is: so the next person can check the
    * citation instead of trusting it.
    */
   feeExemption?: { legalBasis: string };
+  /**
+   * Só a entrada da gratuidade tem: os atos daquela atribuição que a lei
+   * isenta, que é o que ela pergunta ao cidadão. Vive no ato, e não numa
+   * consulta ao catálogo, porque quem valida é `publicServiceRequestSchema`,
+   * e um import de valor dali para cá fecha o ciclo
+   * `pix -> form -> catalog -> tenant/schema -> pix`.
+   */
+  exemptionTargets?: Act[];
 }
 
 /**
@@ -454,6 +471,7 @@ const GENERAL_RULE: Record<Attribution, string> = {
 };
 
 const OTHER_PREFIX = "outros-";
+const EXEMPTION_PREFIX = "gratuidade-";
 
 /**
  * The "anything else" entry, one per attribution. A catalogue that accepts
@@ -474,9 +492,46 @@ export function otherAct(attribution: Attribution): Act {
 }
 
 /**
+ * The acts of an attribution that the law exempts, which is what the
+ * gratuidade entry offers the citizen to choose from. Empty means the
+ * attribution has no exemption foreseen, and then the entry does not exist.
+ */
+export function exemptableActs(
+  tenant: Tenant,
+  attribution: Attribution,
+): Act[] {
+  if (!tenant.attributions.includes(attribution)) return [];
+  return ACTS.filter((a) => a.attribution === attribution && a.feeExemption);
+}
+
+/**
+ * The way in for someone who arrives knowing only that they are exempt. One
+ * per attribution, generated like `otherAct`: the act being asked for is a
+ * question inside the form, not a different door.
+ *
+ * No `legalDeadlineDays` of its own: the term is the one the requested act
+ * carries, so an exempt certidão is not born with a different term than a paid
+ * one (see `deadlineDaysForRequest`).
+ */
+export function exemptionAct(attribution: Attribution): Act {
+  return {
+    id: `${EXEMPTION_PREFIX}${attribution.toLowerCase()}`,
+    attribution,
+    name: "Solicitar gratuidade (isento)",
+    processingMode: "online",
+    legalBasis: "CF art. 5º, LXXVI; conferida pela serventia",
+    requiresPurpose: false,
+    exemptionTargets: ACTS.filter(
+      (a) => a.attribution === attribution && a.feeExemption,
+    ),
+  };
+}
+
+/**
  * Acts of a single attribution, empty when the office does not hold it. The
- * "anything else" entry closes the list, so the citizen sees every way in and
- * not only the named ones.
+ * gratuidade entry comes before the "anything else" one, and only where some
+ * act of the attribution is exemptable; both close the list, so the citizen
+ * sees every way in and not only the named ones.
  */
 export function actsOfAttribution(
   tenant: Tenant,
@@ -485,6 +540,9 @@ export function actsOfAttribution(
   if (!tenant.attributions.includes(attribution)) return [];
   return [
     ...ACTS.filter((a) => a.attribution === attribution),
+    ...(exemptableActs(tenant, attribution).length > 0
+      ? [exemptionAct(attribution)]
+      : []),
     otherAct(attribution),
   ];
 }
@@ -495,10 +553,14 @@ export function actsOfTenant(tenant: Tenant): Act[] {
 }
 
 export function getAct(id: string): Act | undefined {
-  if (id.startsWith(OTHER_PREFIX)) {
-    const attribution = id.slice(OTHER_PREFIX.length).toUpperCase();
+  for (const [prefix, build] of [
+    [OTHER_PREFIX, otherAct],
+    [EXEMPTION_PREFIX, exemptionAct],
+  ] as const) {
+    if (!id.startsWith(prefix)) continue;
+    const attribution = id.slice(prefix.length).toUpperCase();
     return (ATTRIBUTIONS as readonly string[]).includes(attribution)
-      ? otherAct(attribution as Attribution)
+      ? build(attribution as Attribution)
       : undefined;
   }
   return ACTS.find((a) => a.id === id);

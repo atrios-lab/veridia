@@ -134,14 +134,12 @@ export function RequestForm({
   const {
     register,
     handleSubmit,
-    watch,
     formState: { errors: clientErrors },
   } = useForm({
     resolver: zodResolver(publicServiceRequestSchema(act)),
     mode: "onTouched",
   });
-  // Boolean por fora: `watch` devolve unknown, e unknown não renderiza.
-  const exemptionRequested = Boolean(watch("exemptionRequested"));
+  const exemptionTargets = act.exemptionTargets;
 
   if (state.status === "success") {
     return <SuccessScreen result={state} />;
@@ -430,54 +428,57 @@ export function RequestForm({
           </div>
         )}
 
-        {/* Só nos atos que a lei isenta. Esconder não é o controle: o schema
-            recusa a marcação num ato sem previsão, venha de onde vier. */}
-        {act.feeExemption && (
+        {/* Só no ato da gratuidade. Esconder não é o controle: o schema
+            recusa o ato-alvo sem previsão legal, venha de onde vier. */}
+        {exemptionTargets && (
           <div className="rounded-2xl border border-brand-border bg-brand-card p-4">
-            <label className="flex items-start gap-2.5">
-              <input
-                type="checkbox"
-                className="mt-0.5 h-4.5 w-4.5 shrink-0 accent-brand-primary"
-                {...register("exemptionRequested")}
-              />
-              <span className="text-[13px] font-semibold text-brand-primary">
-                Solicitar gratuidade (ISENTO)
-                <span className="block text-[12px] font-normal text-brand-text-soft">
-                  Para quem é beneficiário de programa social (CadÚnico,
-                  atendido no CRAS). {act.feeExemption.legalBasis}.
-                </span>
-              </span>
-            </label>
-            <FieldError message={errorFor("exemptionRequested")} />
-
-            {exemptionRequested && (
-              <div className="mt-3 flex flex-col gap-2.5 border-t border-brand-border pt-3">
-                <label className="flex items-start gap-2.5">
+            <fieldset className="flex flex-col gap-2">
+              <legend className="text-[13px] font-semibold text-brand-primary">
+                Para qual ato você pede a gratuidade?
+              </legend>
+              {exemptionTargets.map((option) => (
+                <label key={option.id} className="flex items-start gap-2.5">
                   <input
-                    type="checkbox"
+                    type="radio"
+                    value={option.id}
                     className="mt-0.5 h-4.5 w-4.5 shrink-0 accent-brand-primary"
-                    {...register("exemptionDeclaration")}
+                    {...register("exemptionActId")}
                   />
-                  <span className="text-[12px] leading-relaxed text-brand-text-soft">
-                    {FEE_EXEMPTION_DECLARATION}
+                  <span className="text-[13px] text-brand-primary">
+                    {option.name}
+                    <span className="block text-[12px] text-brand-text-soft">
+                      {option.feeExemption?.legalBasis}
+                    </span>
                   </span>
                 </label>
-                <FieldError message={errorFor("exemptionDeclaration")} />
-                <div className="rounded-xl bg-brand-accent-soft px-3.5 py-3">
-                  <p className="text-[12px] font-bold text-brand-accent-ink">
-                    Anexe acima o comprovante do seu benefício
-                  </p>
-                  <DocumentsChecklist
-                    documents={[...FEE_EXEMPTION_DOCUMENTS]}
-                  />
-                  <p className="mt-2 text-[11.5px] leading-relaxed text-brand-accent-ink">
-                    Um documento basta, e a lista é de exemplos: se o seu
-                    programa social não estiver aí, anexe o comprovante que você
-                    tem. Sem documento a serventia não consegue conferir.
-                  </p>
-                </div>
+              ))}
+            </fieldset>
+            <FieldError message={errorFor("exemptionActId")} />
+
+            <div className="mt-3 flex flex-col gap-2.5 border-t border-brand-border pt-3">
+              <label className="flex items-start gap-2.5">
+                <input
+                  type="checkbox"
+                  className="mt-0.5 h-4.5 w-4.5 shrink-0 accent-brand-primary"
+                  {...register("exemptionDeclaration")}
+                />
+                <span className="text-[12px] leading-relaxed text-brand-text-soft">
+                  {FEE_EXEMPTION_DECLARATION}
+                </span>
+              </label>
+              <FieldError message={errorFor("exemptionDeclaration")} />
+              <div className="rounded-xl bg-brand-accent-soft px-3.5 py-3">
+                <p className="text-[12px] font-bold text-brand-accent-ink">
+                  Anexe acima o comprovante do seu benefício
+                </p>
+                <DocumentsChecklist documents={[...FEE_EXEMPTION_DOCUMENTS]} />
+                <p className="mt-2 text-[11.5px] leading-relaxed text-brand-accent-ink">
+                  Um documento basta, e a lista é de exemplos: se o seu programa
+                  social não estiver aí, anexe o comprovante que você tem. Sem
+                  documento a serventia não consegue conferir.
+                </p>
               </div>
-            )}
+            </div>
           </div>
         )}
 
