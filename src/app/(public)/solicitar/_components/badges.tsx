@@ -69,9 +69,11 @@ export function ProcessingLegend() {
         strokeWidth={2}
       />
       <p className="text-[11.5px] leading-relaxed text-brand-accent-ink">
-        <strong>100% on-line</strong>: você assina o requerimento pelo Gov.br e
-        resolve sem sair de casa. <strong>On-line + presencial</strong>: o
-        pedido adianta a análise, mas o ato termina no balcão.{" "}
+        Qualquer ato desta lista também pode ser pedido no balcão da serventia.
+        O selo diz onde ele <strong>termina</strong>:{" "}
+        <strong>Termina on-line</strong>, você assina o requerimento pelo Gov.br
+        e resolve sem sair de casa; <strong>Termina no balcão</strong>, o pedido
+        adianta a análise, mas você precisa comparecer para concluir.{" "}
         <strong>Só identificação</strong>: a serventia não pede documento nenhum
         além da sua identificação.
       </p>

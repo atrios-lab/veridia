@@ -203,3 +203,14 @@ test("a gratuidade não inventa prazo legal: ele é o do ato pedido", () => {
   assert.equal(gratuidade?.legalDeadlineDays, undefined);
   assert.equal(getAct("rcpn-certidao")?.legalDeadlineDays, 5);
 });
+
+test("o selo diz onde o ato termina, nunca onde ele pode ser pedido", () => {
+  // A serventia leu "100% on-line" como "só dá para pedir pela internet" e
+  // reclamou que todos os atos são híbridos, porque pedir sempre dá pelos dois
+  // lados. Quem trabalha no cartório leu errado; o cidadão leria também.
+  for (const label of Object.values(PROCESSING_MODE_LABELS)) {
+    assert.match(label, /^Termina /, label);
+  }
+  assert.match(PROCESSING_MODE_HINTS.presential, /comparecer/);
+  assert.match(PROCESSING_MODE_HINTS.online, /não precisa ir/);
+});

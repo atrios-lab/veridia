@@ -46,15 +46,21 @@ export const PROCESSING_MODES = [
 ] as const;
 export type ProcessingMode = (typeof PROCESSING_MODES)[number];
 
-/** The promise each mode makes, phrased for someone outside the trade. */
+/**
+ * The promise each mode makes, phrased for someone outside the trade. Both
+ * labels say where the act *ends*, because pedir sempre dá pelos dois lados:
+ * qualquer ato pode ser pedido no balcão também, e o selo que só dizia
+ * "on-line" ou "on-line + presencial" foi lido como se dissesse onde se pede.
+ * A serventia leu assim primeiro; o cidadão leria depois.
+ */
 export const PROCESSING_MODE_LABELS: Record<ProcessingMode, string> = {
-  online: "100% on-line",
-  presential: "On-line + presencial",
+  online: "Termina on-line",
+  presential: "Termina no balcão",
 };
 
 export const PROCESSING_MODE_HINTS: Record<ProcessingMode, string> = {
-  online: "requerimento assinado pelo Gov.br",
-  presential: "adiante aqui, conclua no balcão",
+  online: "você assina pelo Gov.br e não precisa ir à serventia",
+  presential: "você adianta aqui, mas precisa comparecer para concluir",
 };
 
 /**

@@ -31,19 +31,19 @@ test("uma certidão anuncia as duas coisas que ela é", async ({ page }) => {
   await page.goto(`${baseURL}/solicitar?atribuicao=RCPN`);
 
   const certidao = page.locator("a", { hasText: "Certidão (nascimento" });
-  await expect(certidao.getByText("100% on-line")).toBeVisible();
+  await expect(certidao.getByText("Termina on-line")).toBeVisible();
   await expect(certidao.getByText("Só identificação")).toBeVisible();
 
   // Um ato que termina no balcão continua com um selo só, o dele.
   const presencial = page.locator("a", { hasText: "Alteração imotivada" });
-  await expect(presencial.getByText("On-line + presencial")).toBeVisible();
+  await expect(presencial.getByText("Termina no balcão")).toBeVisible();
   await expect(presencial.getByText("Só identificação")).toHaveCount(0);
 
   // E um que resolve on-line mas pede documentos fica só com o do modo.
   const habilitacao = page.locator("a", {
     hasText: "Habilitação de casamento",
   });
-  await expect(habilitacao.getByText("100% on-line")).toBeVisible();
+  await expect(habilitacao.getByText("Termina on-line")).toBeVisible();
   await expect(habilitacao.getByText("Só identificação")).toHaveCount(0);
 });
 
@@ -122,7 +122,7 @@ test("the citizen reaches the form in two taps from the home", async ({
 
   // The badge is the promise the citizen needs before filling anything in.
   await expect(page.getByText("Só identificação").first()).toBeVisible();
-  await expect(page.getByText("On-line + presencial").first()).toBeVisible();
+  await expect(page.getByText("Termina no balcão").first()).toBeVisible();
 
   await page.getByRole("link", { name: /Habilitação de casamento/ }).click();
   await expect(
