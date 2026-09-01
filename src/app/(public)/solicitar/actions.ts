@@ -121,7 +121,7 @@ export async function submitServiceRequest(
     parameterValue: formData.get("parameterValue") ?? "",
     lgpdConsent: formData.get("lgpdConsent") ?? "",
     truthDeclaration: formData.get("truthDeclaration") ?? "",
-    exemptionRequested: formData.get("exemptionRequested") ?? "",
+    exemptionActId: formData.get("exemptionActId") ?? "",
     exemptionDeclaration: formData.get("exemptionDeclaration") ?? "",
   });
 
@@ -141,7 +141,7 @@ export async function submitServiceRequest(
   // deixaria os arquivos já gravados no blob, órfãos de um pedido que não
   // existe. Conta os dois caminhos, porque em produção os anexos chegam como
   // referências de upload direto e em desenvolvimento como bytes no corpo.
-  if (parsed.data.exemptionRequested && countAttachments(formData) === 0) {
+  if (act.exemptionTargets && countAttachments(formData) === 0) {
     return fail("Confira os campos destacados para enviar o pedido.", {
       anexos:
         "Anexe a documentação do benefício para pedir a gratuidade: sem ela a " +
@@ -164,7 +164,18 @@ export async function submitServiceRequest(
     // The e-mail is what the `contact` column holds for a request filed here:
     // the telephone is the office's own way of reaching the citizen and rides
     // in `details`, next to the rest of what belongs to this kind alone.
-    const { email, phone, exemptionRequested, ...data } = parsed.data;
+    const { email, phone, exemptionActId, ...data } = parsed.data;
+
+    // O ato da gratuidade não tem prazo próprio: o prazo é o do ato que ele
+    // pede, senão a certidão isenta nasceria com prazo diferente da paga. Fica
+    // gravado no pedido porque o ato sintético não tem onde carregá-lo.
+    const requestedAct = act.exemptionTargets?.find(
+      (target) => target.id === exemptionActId,
+    );
+    const deadlineDays =
+      requestedAct?.legalDeadlineDays ??
+      act.legalDeadlineDays ??
+      tenant.requestDeadlineDays;
 
     const { protocolNumber } = await createServiceRequest(
       tenant,
@@ -178,8 +189,11 @@ export async function submitServiceRequest(
           phone,
           // Pedida, nunca concedida: quem confere o benefício e decide é a
           // serventia, e `amountCents` segue sendo do operador.
-          ...(exemptionRequested
-            ? { exemption: { declaredAt: consentedAt } }
+          ...(exemptionActId
+            ? {
+                exemption: { declaredAt: consentedAt, actId: exemptionActId },
+                deadline: { startedOn: today(), days: deadlineDays },
+              }
             : {}),
         },
       },
@@ -209,12 +223,7 @@ export async function submitServiceRequest(
       // Born from the act's own legal term, counted from today: a request
       // just filed carries no term of its own yet. Where the law fixes none,
       // the office's default stands in.
-      deadlineLabel: formatDate(
-        deadlineDate(
-          today(),
-          act.legalDeadlineDays ?? tenant.requestDeadlineDays,
-        ),
-      ),
+      deadlineLabel: formatDate(deadlineDate(today(), deadlineDays)),
     };
   } catch (error) {
     if (error instanceof AttachmentError) return fail(error.message);

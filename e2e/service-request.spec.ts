@@ -48,28 +48,32 @@ test("uma certidão anuncia as duas coisas que ela é", async ({ page }) => {
 });
 
 test.describe("gratuidade (ISENTO)", () => {
-  test("a opção só existe nos atos que a lei isenta", async ({ page }) => {
-    await page.goto(`${baseURL}/solicitar?atribuicao=RCPN&ato=rcpn-certidao`);
-    await expect(page.getByText("Solicitar gratuidade (ISENTO)")).toBeVisible();
-
-    // Retificação de assento não tem previsão de isenção.
-    await page.goto(
-      `${baseURL}/solicitar?atribuicao=RCPN&ato=rcpn-retificacao`,
-    );
-    await expect(page.getByText("Solicitar gratuidade (ISENTO)")).toHaveCount(
-      0,
-    );
-  });
-
-  test("marcar a gratuidade cobra a declaração e a documentação", async ({
+  test("a gratuidade é um ato da lista, e some de dentro dos outros", async ({
     page,
   }) => {
+    await page.goto(`${baseURL}/solicitar?atribuicao=RCPN`);
+    await expect(
+      page.locator("a", { hasText: "Solicitar gratuidade (isento)" }),
+    ).toBeVisible();
+
+    // O caminho é um só: dentro da certidão não se pede mais gratuidade.
     await page.goto(`${baseURL}/solicitar?atribuicao=RCPN&ato=rcpn-certidao`);
+    await expect(page.getByText(/gratuidade/i)).toHaveCount(0);
+  });
+
+  test("o pedido de gratuidade cobra o ato, a declaração e a documentação", async ({
+    page,
+  }) => {
+    await page.goto(`${baseURL}/solicitar?atribuicao=RCPN&ato=gratuidade-rcpn`);
     await page.getByLabel("Nome completo").fill("Maria José da Silva");
     await page.getByLabel(/E-mail/).fill("maria@exemplo.com");
-    await page.getByText("Solicitar gratuidade (ISENTO)").click();
 
-    // A declaração e a lista de documentos aparecem só depois de pedir.
+    // Os dois atos que a lei isenta, cada um com a sua base legal.
+    await expect(
+      page.getByRole("radio", { name: /Certidão \(nascimento/ }),
+    ).toBeVisible();
+    await expect(page.getByText(/CC art\. 1\.512/)).toBeVisible();
+
     await expect(page.getByText(/Código Penal art\. 299/)).toBeVisible();
     await expect(
       page.getByText("Anexe acima o comprovante do seu benefício"),
@@ -85,6 +89,7 @@ test.describe("gratuidade (ISENTO)", () => {
     await page.getByLabel(/Declaro, sob as penas da lei, que as/).check();
     await page.getByRole("button", { name: "Enviar requerimento" }).click();
 
+    await expect(page.getByText("Escolha o ato para o qual")).toBeVisible();
     await expect(
       page.getByText("necessário fazer a declaração", { exact: false }),
     ).toBeVisible();
@@ -135,9 +140,9 @@ test("the act count on each card is the catalog, not a number in the markup", as
 }) => {
   await page.goto(`${baseURL}/solicitar`);
   const civil = page.locator("[data-attribution=RCPN]");
-  await expect(civil).toContainText("5 atos");
+  await expect(civil).toContainText("6 atos");
   await civil.click();
-  await expect(page.locator("main a[href*='ato=']")).toHaveCount(5);
+  await expect(page.locator("main a[href*='ato=']")).toHaveCount(6);
 });
 
 test("a certificate is never asked what it is for", async ({ page }) => {
@@ -307,8 +312,8 @@ test.describe("filing a request", () => {
     await page
       .getByLabel(/Descreva o que você precisa/)
       .fill("Queremos casar em outubro deste ano.");
-    // Pelo texto, não pela posição: o ato tem uma caixa de gratuidade antes
-    // destas, e o índice muda a cada bloco novo no formulário.
+    // Pelo texto, não pela posição: o índice muda a cada bloco novo no
+    // formulário.
     await page.getByLabel(/Autorizo o tratamento dos meus dados/).check();
     await page.getByLabel(/Declaro, sob as penas da lei, que as/).check();
   }

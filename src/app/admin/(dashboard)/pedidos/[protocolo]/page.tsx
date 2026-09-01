@@ -12,7 +12,7 @@ import { maskCpf } from "@/core/request/form.ts";
 import {
   isOpenServiceRequestStatus,
   isServiceRequestStatus,
-  readExemptionDeclaredAt,
+  readExemption,
   readPhone,
   statusLabel,
   suggestedNextStatuses,
@@ -177,7 +177,12 @@ export default async function ServiceRequestDetailPage({
 
   // The term in force: the one the office set on this request, or its default
   // counted from the filing date for a request nobody has touched.
-  const exemptionDeclaredAt = readExemptionDeclaredAt(request.details);
+  const exemption = readExemption(request.details);
+  // O ato pedido só falta nos pedidos anteriores à gratuidade virar ato
+  // próprio: ali o selo diz o que sabe, sem inventar ato nenhum.
+  const exemptionActName = act?.exemptionTargets?.find(
+    (target) => target.id === exemption?.actId,
+  )?.name;
   const deadline = effectiveDeadline(
     toIsoDate(request.createdAt, OFFICE_TIME_ZONE),
     readDeadline(request.details),
@@ -210,10 +215,11 @@ export default async function ServiceRequestDetailPage({
           {/* Pedida, não concedida: quem confere o benefício e decide é o
               operador, e nada aqui mexe no valor. Fica na linha dos selos
               porque muda como o pedido é trabalhado desde o primeiro olhar. */}
-          {exemptionDeclaredAt && (
+          {exemption && (
             <span className="inline-flex items-center gap-1.5 rounded-full bg-admin-warning-bg px-2.5 py-1 text-[11.5px] font-bold text-admin-warning-text">
-              Gratuidade solicitada (ISENTO) · declarada em{" "}
-              {formatDayMonthYear(new Date(exemptionDeclaredAt))}
+              Gratuidade solicitada (ISENTO)
+              {exemptionActName ? ` · ${exemptionActName}` : ""} · declarada em{" "}
+              {formatDayMonthYear(new Date(exemption.declaredAt))}
             </span>
           )}
           {/*

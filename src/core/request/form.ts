@@ -158,7 +158,7 @@ function actRules(act: Act) {
       truthDeclaration: boolean;
       description?: string;
       purpose?: string;
-      exemptionRequested?: boolean;
+      exemptionActId?: string;
       exemptionDeclaration?: boolean;
     },
     ctx: z.RefinementCtx,
@@ -191,17 +191,22 @@ function actRules(act: Act) {
         message: "Este ato exige que você informe a finalidade.",
       });
     }
-    if (data.exemptionRequested) {
-      // Hiding the checkbox is not what keeps an act without a statute out of
-      // the exemption: this is. A submission that skips the client is refused
-      // here, the same discipline the honeypot and the consents follow.
-      if (!act.feeExemption) {
+    if (act.exemptionTargets) {
+      // Which act the exemption is for is the first question the form asks,
+      // and the only place it is answered: a filing that skips the client is
+      // refused here, the same discipline the honeypot and the consents
+      // follow.
+      const requested = act.exemptionTargets.find(
+        (target) => target.id === data.exemptionActId,
+      );
+      if (!requested) {
         ctx.addIssue({
           code: "custom",
-          path: ["exemptionRequested"],
-          message: "Este ato não tem previsão legal de gratuidade.",
+          path: ["exemptionActId"],
+          message: "Escolha o ato para o qual você pede a gratuidade.",
         });
-      } else if (!data.exemptionDeclaration) {
+      }
+      if (!data.exemptionDeclaration) {
         ctx.addIssue({
           code: "custom",
           path: ["exemptionDeclaration"],
@@ -209,6 +214,12 @@ function actRules(act: Act) {
             "Para pedir a gratuidade é necessário fazer a declaração acima.",
         });
       }
+    } else if (data.exemptionActId) {
+      ctx.addIssue({
+        code: "custom",
+        path: ["exemptionActId"],
+        message: "A gratuidade é pedida pelo ato próprio da lista.",
+      });
     }
   };
 }
@@ -235,12 +246,18 @@ export function publicServiceRequestSchema(act: Act) {
       // Só o site oferece a gratuidade: no balcão o operador tem o cidadão e
       // os documentos na frente, e o pedido nasce com a conferência já feita.
       //
-      // `.default(false)` não é enfeite: os dois campos só são registrados no
-      // formulário dos atos que a lei isenta, então nos demais eles não chegam.
-      // `z.coerce.boolean()` recusa chave ausente ("expected nonoptional"), o
-      // objeto base falhava neles, o superRefine nunca rodava e os erros de
-      // aceite sumiam da tela: o envio travava sem dizer nada, em todo ato.
-      exemptionRequested: z.coerce.boolean().default(false),
+      // `.default(false)` não é enfeite: o campo só é registrado no formulário
+      // do ato da gratuidade, então nos demais ele não chega. `z.coerce
+      // .boolean()` recusa chave ausente ("expected nonoptional"), o objeto
+      // base falhava nele, o superRefine nunca rodava e os erros de aceite
+      // sumiam da tela: o envio travava sem dizer nada, em todo ato.
+      // `nullish`, e não `optionalText`: um grupo de radios sem nenhum
+      // marcado chega como null pelo react-hook-form, e o objeto base falharia
+      // nele com "expected string" no lugar da mensagem que diz o que fazer.
+      exemptionActId: z
+        .string()
+        .nullish()
+        .transform((value) => value?.trim() || undefined),
       exemptionDeclaration: z.coerce.boolean().default(false),
     })
     .superRefine(actRules(act));

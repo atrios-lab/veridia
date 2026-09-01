@@ -169,17 +169,32 @@ test("the signature block says how to sign it, and who signs", () => {
 });
 
 test("a declaração de gratuidade entra no papel que o cidadão assina", () => {
-  // O checkbox é registro; a declaração assinada é prova. É por isso que ela
-  // viaja no requerimento, e não só no banco.
-  const comIsencao = buildRequerimento(cartorioMarinho, marriage, {
+  // Escolher o ato é registro; a declaração assinada é prova. É por isso que
+  // ela viaja no requerimento, e não só no banco.
+  const gratuidade = getAct("gratuidade-rcpn");
+  if (!gratuidade) throw new Error("catalogo incompleto");
+  const comIsencao = buildRequerimento(cartorioMarinho, gratuidade, {
     ...data,
-    exemptionRequested: true,
+    exemption: { actId: "rcpn-habilitacao-casamento" },
   });
   const texto = flatten(comIsencao.sections);
   assert.match(texto, /Código Penal art\. 299/);
+  assert.match(texto, /Habilitação de casamento/);
   assert.match(texto, /CC art\. 1\.512/);
 
   // Sem pedir, nada disso aparece: quem paga não assina declaração de pobreza.
   const semIsencao = buildRequerimento(cartorioMarinho, marriage, data);
   assert.doesNotMatch(flatten(semIsencao.sections), /Código Penal art\. 299/);
+});
+
+test("pedido antigo sem ato-alvo ainda imprime a declaração", () => {
+  // Os pedidos anteriores à gratuidade virar ato próprio não têm `actId`: a
+  // declaração sai assim mesmo, sem fundamento que o papel não sabe.
+  const antigo = buildRequerimento(cartorioMarinho, marriage, {
+    ...data,
+    exemption: {},
+  });
+  const texto = flatten(antigo.sections);
+  assert.match(texto, /Código Penal art\. 299/);
+  assert.doesNotMatch(texto, /Fundamento:/);
 });

@@ -34,7 +34,10 @@ import { formatProtocolNumber, parseProtocolNumber } from "./protocol.ts";
 const certificate = getAct("rcpn-certidao");
 const other = getAct("outros-rcpn");
 const search = getAct("ri-busca-indicador");
-if (!certificate || !other || !search) throw new Error("catalogo incompleto");
+const gratuidade = getAct("gratuidade-rcpn");
+if (!certificate || !other || !search || !gratuidade) {
+  throw new Error("catalogo incompleto");
+}
 
 const valid = {
   applicantName: "Maria José da Silva",
@@ -198,7 +201,7 @@ const validOnline = {
   contact: undefined,
   email: "maria@exemplo.com",
   phone: "(84) 99999-0000",
-  exemptionRequested: "",
+  exemptionActId: "",
   exemptionDeclaration: "",
 };
 
@@ -479,51 +482,73 @@ test("stored and displayed names carry nothing from the sender", () => {
 });
 
 test("a gratuidade exige a declaração que a acompanha", () => {
-  // Marcar a caixa não basta: o que tem valor é a declaração, que autoriza a
+  // Escolher o ato não basta: o que tem valor é a declaração, que autoriza a
   // conferência no sistema de benefício e nomeia as penas.
-  const semDeclaracao = publicServiceRequestSchema(certificate).safeParse({
+  const semDeclaracao = publicServiceRequestSchema(gratuidade).safeParse({
     ...validOnline,
-    exemptionRequested: "on",
+    exemptionActId: "rcpn-certidao",
   });
   assert.equal(semDeclaracao.success, false);
   assert.equal(semDeclaracao.error?.issues[0].path[0], "exemptionDeclaration");
 
-  const completo = publicServiceRequestSchema(certificate).safeParse({
+  const completo = publicServiceRequestSchema(gratuidade).safeParse({
     ...validOnline,
-    exemptionRequested: "on",
+    exemptionActId: "rcpn-certidao",
     exemptionDeclaration: "on",
   });
   assert.ok(completo.success);
 });
 
-test("gratuidade em ato sem previsão legal é recusada no servidor", () => {
-  // Esconder a caixa é cortesia; isto é o controle. `search` (busca por
-  // indicador) não tem `feeExemption`, e nem tudo marcado a faz passar.
-  assert.equal(search.feeExemption, undefined);
-  const result = publicServiceRequestSchema(search).safeParse({
+test("a gratuidade exige dizer para qual ato", () => {
+  const result = publicServiceRequestSchema(gratuidade).safeParse({
     ...validOnline,
-    purpose: "Levantamento de bens",
-    exemptionRequested: "on",
     exemptionDeclaration: "on",
   });
   assert.equal(result.success, false);
-  assert.equal(result.error?.issues[0].path[0], "exemptionRequested");
+  assert.equal(result.error?.issues[0].path[0], "exemptionActId");
+});
+
+test("ato-alvo sem previsão legal é recusado no servidor", () => {
+  // Esconder a opção é cortesia; isto é o controle. `rcpn-retificacao` não tem
+  // `feeExemption`, e nem tudo marcado a faz passar. `ri-busca-indicador` é
+  // de outra atribuição, e também não serve.
+  assert.equal(getAct("rcpn-retificacao")?.feeExemption, undefined);
+  for (const alvo of ["rcpn-retificacao", search.id, "nao-existe"]) {
+    const result = publicServiceRequestSchema(gratuidade).safeParse({
+      ...validOnline,
+      exemptionActId: alvo,
+      exemptionDeclaration: "on",
+    });
+    assert.equal(result.success, false, alvo);
+    assert.equal(result.error?.issues[0].path[0], "exemptionActId", alvo);
+  }
+});
+
+test("ato comum não aceita ato-alvo de gratuidade", () => {
+  // O caminho é um só: a gratuidade é pedida pelo ato próprio da lista, e o
+  // formulário da certidão não a oferece mais.
+  const result = publicServiceRequestSchema(certificate).safeParse({
+    ...validOnline,
+    exemptionActId: "rcpn-certidao",
+  });
+  assert.equal(result.success, false);
+  assert.equal(result.error?.issues[0].path[0], "exemptionActId");
 });
 
 test("um pedido sem gratuidade não ganha exigência nenhuma", () => {
   const result = publicServiceRequestSchema(certificate).safeParse(validOnline);
   assert.ok(result.success);
-  assert.equal(result.data.exemptionRequested, false);
+  assert.equal(result.data.exemptionActId, undefined);
 });
 
 test("o aceite faltante é acusado mesmo no ato que não oferece gratuidade", () => {
-  // Regressão cara: os campos de isenção só são registrados no formulário dos
-  // atos isentáveis, então nos demais o react-hook-form não os manda. Com
+  // Regressão cara: os campos de isenção só são registrados no formulário da
+  // gratuidade, então nos demais o react-hook-form não os manda. Com
   // `z.coerce.boolean()` puro, o objeto base falhava neles ("expected
   // nonoptional"), o superRefine nunca rodava e os erros de aceite sumiam da
   // tela. O envio travava sem dizer nada, em qualquer ato.
   const semIsencao = { ...validOnline };
-  delete (semIsencao as { exemptionRequested?: string }).exemptionRequested;
+  delete (semIsencao as { exemptionActId?: string }).exemptionActId;
   delete (semIsencao as { exemptionDeclaration?: string }).exemptionDeclaration;
   assert.equal(search.feeExemption, undefined);
 

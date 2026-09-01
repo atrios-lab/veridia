@@ -62,12 +62,12 @@ export interface RequerimentoData {
   /** Asked for apart from the contact on the public form; often absent. */
   phone?: string | null;
   /**
-   * Whether the citizen asked for the statutory exemption. The declaration
-   * then rides in this document, which is the one they actually sign: a
-   * checkbox on a screen is a record, a signed declaration of hardship is
-   * evidence, and the difference matters to the office that has to rely on it.
+   * The exemption the citizen asked for, absent when they did not. `actId` is
+   * the act the exemption is for, and it is absent in the requests filed
+   * before the gratuidade became an act of its own: the declaration still
+   * prints, without a fundamento it cannot name.
    */
-  exemptionRequested?: boolean;
+  exemption?: { actId?: string };
   cpf?: string | null;
   description?: string | null;
   purpose?: string | null;
@@ -141,9 +141,15 @@ export function buildRequerimento(
     "Declaro, sob as penas da lei, que as informações prestadas neste " +
       "requerimento são verdadeiras.",
   ];
-  if (data.exemptionRequested && act.feeExemption) {
+  if (data.exemption) {
+    const requested = act.exemptionTargets?.find(
+      (target) => target.id === data.exemption?.actId,
+    );
     declarations.push(
-      `${FEE_EXEMPTION_DECLARATION} Fundamento: ${act.feeExemption.legalBasis}.`,
+      requested?.feeExemption
+        ? `${FEE_EXEMPTION_DECLARATION} Ato requerido: ${requested.name}. ` +
+            `Fundamento: ${requested.feeExemption.legalBasis}.`
+        : FEE_EXEMPTION_DECLARATION,
     );
   }
   sections.push({ heading: "Declarações", paragraphs: declarations });
