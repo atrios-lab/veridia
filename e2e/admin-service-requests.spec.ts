@@ -115,6 +115,25 @@ test.describe("fila e detalhe de pedidos", () => {
     await expect(row.getByText("Em análise")).toBeVisible();
   });
 
+  test("o prazo salva sozinho, sem mudar o andamento", async ({ page }) => {
+    await signIn(page);
+    await page.goto(`${baseURL}/admin/pedidos/${encodeURIComponent(PROTOCOL)}`);
+
+    await page.getByText(/^Prazo: /).click();
+    await page.getByRole("radio", { name: "Mudar para" }).check();
+    await page.getByLabel("Dias de prazo").fill("12");
+    await page.getByRole("button", { name: "Salvar prazo" }).click();
+
+    // O prazo novo vale sem que o andamento tenha mudado, e sobrevive ao
+    // recarregar: era isso que a serventia perdia a cada F5.
+    await expect(page.getByText(/^Prazo: .*12/)).toBeVisible();
+    await page.reload();
+    await expect(page.getByText(/^Prazo: .*12/)).toBeVisible();
+    await expect(
+      page.locator("li", { hasText: "ajustou o prazo" }),
+    ).toBeVisible();
+  });
+
   test("a registered requirement appears right away", async ({ page }) => {
     await signIn(page);
     await page.goto(`${baseURL}/admin/pedidos/${encodeURIComponent(PROTOCOL)}`);

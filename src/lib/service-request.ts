@@ -1344,3 +1344,37 @@ export async function listRecordHistory(
     )
     .orderBy(desc(auditLog.createdAt));
 }
+
+/**
+ * Writes only the term, leaving the andamento where it is: the office
+ * re-reads a prazo it got wrong without inventing a step in the request's
+ * life to hang the correction on.
+ */
+export async function updateRequestDeadline(
+  tenantSlug: string,
+  id: string,
+  actorId: string,
+  deadline: Deadline,
+): Promise<void> {
+  await db
+    .update(serviceRequests)
+    .set({
+      // Merged into `details`, never assigned over it: the consents recorded
+      // at filing live in the same column.
+      details: sql`${serviceRequests.details} || ${JSON.stringify({ deadline })}::jsonb`,
+      updatedAt: new Date(),
+    })
+    .where(
+      and(
+        eq(serviceRequests.tenantSlug, tenantSlug),
+        eq(serviceRequests.id, id),
+      ),
+    );
+  await recordAudit({
+    tenantSlug,
+    actorId,
+    action: "service-request.deadline",
+    targetType: "service-request",
+    targetId: id,
+  });
+}
