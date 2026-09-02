@@ -62,20 +62,19 @@ export function deriveTxId(protocolNumber: string): string {
 }
 
 /**
- * Whether a charge can be built at all. Needs the amount, the office's Pix
- * key and its city all at once: missing any one of the three means "no
- * charge available", never a broken or partial payload. Pure and separate
- * from `buildPixCharge` so callers (and tests) can decide whether to render
- * a QR at all without going near the rendering dependency.
+ * Whether a charge can be built at all. Needs the amount and the office's
+ * Pix key together: missing either means "no charge available", never a
+ * broken or partial payload. The office's city is a structural fact of the
+ * tenant (`tenant.municipality`), always present for a validated tenant, so
+ * it is not part of this check. Pure and separate from `buildPixCharge` so
+ * callers (and tests) can decide whether to render a QR at all without
+ * going near the rendering dependency.
  */
 export function canBuildPixCharge(input: {
   amountCents?: number;
   pixKey?: string;
-  city?: string;
 }): boolean {
-  return (
-    input.amountCents != null && Boolean(input.pixKey) && Boolean(input.city)
-  );
+  return input.amountCents != null && Boolean(input.pixKey);
 }
 
 export interface PixChargeInput {

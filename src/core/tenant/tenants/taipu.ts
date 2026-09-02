@@ -25,6 +25,7 @@ export const cartorioTaipu: Tenant = parseTenant({
   },
   openingHours: "Segunda a sexta, das 8h às 12h e das 14h às 17h",
   counterHours: { startHour: 8, endHour: 17 },
+  municipality: "TAIPU",
   address: "Rua Salvina Soares de Miranda, 11-B, Centro, Taipu - RN, 59565-000",
   owner: {
     name: "Selma Teixeira de Menezes",

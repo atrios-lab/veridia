@@ -33,6 +33,7 @@ export const cartorioSantaCruz2: Tenant = parseTenant({
     whatsapp: "(84) 4042-0437",
     email: "cartorio92@gmail.com",
   },
+  municipality: "SANTA CRUZ",
   address: "Travessa Paz União, 47, Centro, Santa Cruz - RN, 59200-000",
   openingHours: "Segunda a sexta, das 8h às 17h",
   counterHours: { startHour: 8, endHour: 17 },
