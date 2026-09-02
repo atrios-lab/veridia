@@ -134,6 +134,22 @@ test.describe("fila e detalhe de pedidos", () => {
     ).toBeVisible();
   });
 
+  test("a value can be informed and then removed", async ({ page }) => {
+    await signIn(page);
+    await page.goto(`${baseURL}/admin/pedidos/${encodeURIComponent(PROTOCOL)}`);
+
+    await page.getByRole("button", { name: "Informar valor" }).click();
+    await page.getByPlaceholder("0,00").fill("62,10");
+    await page.getByRole("button", { name: "Salvar" }).click();
+    await expect(page.getByText("Valor atual: R$ 62,10")).toBeVisible();
+
+    await page.getByRole("button", { name: "Remover valor" }).click();
+    await expect(page.getByText("Ainda não informado")).toBeVisible();
+    await expect(
+      page.getByRole("button", { name: "Remover valor" }),
+    ).toHaveCount(0);
+  });
+
   test("a registered requirement appears right away", async ({ page }) => {
     await signIn(page);
     await page.goto(`${baseURL}/admin/pedidos/${encodeURIComponent(PROTOCOL)}`);

@@ -73,7 +73,7 @@ function ThemeCard({
   const meta = THEME_META[theme];
   return (
     <label
-      className={`flex cursor-pointer items-center gap-3.5 rounded-[11px] border px-4 py-3 ${
+      className={`relative flex cursor-pointer items-center gap-3.5 rounded-[11px] border px-4 py-3 ${
         selected
           ? "border-admin-primary-soft bg-admin-card-surface"
           : "border-admin-border bg-admin-card"
@@ -353,7 +353,7 @@ export function VisualIdentityForm({ tenant }: { tenant: Tenant }) {
               return (
                 <label
                   key={section}
-                  className="flex cursor-pointer items-center gap-3 rounded-[10px] border border-admin-border bg-admin-input-bg px-3.5 py-2.5"
+                  className="relative flex cursor-pointer items-center gap-3 rounded-[10px] border border-admin-border bg-admin-input-bg px-3.5 py-2.5"
                 >
                   <span className="flex-1 text-[13px] font-bold text-admin-primary">
                     {SECTION_LABELS[section]}

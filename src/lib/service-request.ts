@@ -921,11 +921,11 @@ export async function deleteRequirement(
   return files.map((f) => f.path);
 }
 
-/** The office records what the request is worth. Corrects freely once set. */
+/** The office records what the request is worth. Corrects freely once set, or clears it (null). */
 export async function setRequestAmount(
   tenantSlug: string,
   id: string,
-  amountCents: number,
+  amountCents: number | null,
   actorId: string,
 ): Promise<void> {
   await db

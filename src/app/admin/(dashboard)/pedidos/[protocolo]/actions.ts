@@ -261,7 +261,10 @@ export async function setAmountAction(
   if (!session) return { status: "error", message: NO_PERMISSION };
 
   const requestId = String(formData.get("requestId") ?? "");
-  const cents = parseCentsInput(String(formData.get("amount") ?? ""));
+  const clearing = formData.get("intent") === "clear";
+  const cents = clearing
+    ? null
+    : parseCentsInput(String(formData.get("amount") ?? ""));
   if (cents === undefined) {
     return { status: "error", message: "Informe um valor válido." };
   }
@@ -277,7 +280,7 @@ export async function setAmountAction(
 
     await setRequestAmount(tenant.slug, requestId, cents, session.user.id);
 
-    if (request && request.amountCents === null) {
+    if (!clearing && request && request.amountCents === null) {
       emailWarning = await notifyCitizen({
         tenant,
         contact: request.contact,
