@@ -159,6 +159,15 @@ test("a request is filed with no amount, and the office can set one", async () =
     "SELECT amount_cents FROM service_requests WHERE protocol_number = 'REQ.2028.000001'",
   );
   assert.equal(after.rows[0].amount_cents, 6210);
+
+  // The office can also walk it back to unset, e.g. a value entered by mistake.
+  await client.query(
+    "UPDATE service_requests SET amount_cents = NULL WHERE protocol_number = 'REQ.2028.000001'",
+  );
+  const cleared = await client.query<{ amount_cents: number | null }>(
+    "SELECT amount_cents FROM service_requests WHERE protocol_number = 'REQ.2028.000001'",
+  );
+  assert.equal(cleared.rows[0].amount_cents, null);
 });
 
 test("a requirement is removed with the request it belongs to", async () => {

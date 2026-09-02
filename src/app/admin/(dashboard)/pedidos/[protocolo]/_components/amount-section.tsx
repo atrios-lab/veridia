@@ -35,6 +35,19 @@ export function AmountSection({
             {amountLabel ? "Corrigir valor" : "Informar valor"}
           </button>
         )}
+        {!editing && amountLabel && (
+          <form action={action}>
+            <input type="hidden" name="requestId" value={requestId} />
+            <input type="hidden" name="intent" value="clear" />
+            <button
+              type="submit"
+              disabled={pending}
+              className="btn btn-admin-secondary btn-sm"
+            >
+              Remover valor
+            </button>
+          </form>
+        )}
       </div>
       <p className="mt-1 text-[12.5px] text-admin-muted">
         {amountLabel
