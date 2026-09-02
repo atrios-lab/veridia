@@ -103,7 +103,7 @@ export function DocumentForm() {
 
       <div className="mt-3.5">
         <span className={LABEL_CLASS}>Arquivo (PDF)</span>
-        <label className="flex cursor-pointer items-center justify-center gap-2 rounded-[10px] border-[1.5px] border-dashed border-admin-input-border px-4 py-4 text-center text-[13px] font-semibold text-admin-primary focus-within:border-admin-accent focus-within:ring-2 focus-within:ring-admin-accent">
+        <label className="relative flex cursor-pointer items-center justify-center gap-2 rounded-[10px] border-[1.5px] border-dashed border-admin-input-border px-4 py-4 text-center text-[13px] font-semibold text-admin-primary focus-within:border-admin-accent focus-within:ring-2 focus-within:ring-admin-accent">
           Escolher PDF ou arrastar para cá
           <input
             type="file"

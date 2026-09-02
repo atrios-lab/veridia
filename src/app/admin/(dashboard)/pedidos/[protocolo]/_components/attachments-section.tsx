@@ -58,7 +58,7 @@ export function AttachmentsSection({
       <form action={action} className="mt-3.5">
         <input type="hidden" name="requestId" value={requestId} />
         <label
-          className={`flex cursor-pointer items-center justify-center gap-2 rounded-[9px] border-[1.5px] border-dashed border-admin-input-border px-3 py-2.5 text-center text-[12px] font-semibold text-admin-primary focus-within:border-admin-accent focus-within:ring-2 focus-within:ring-admin-accent ${pending ? "cursor-not-allowed opacity-60" : ""}`}
+          className={`relative flex cursor-pointer items-center justify-center gap-2 rounded-[9px] border-[1.5px] border-dashed border-admin-input-border px-3 py-2.5 text-center text-[12px] font-semibold text-admin-primary focus-within:border-admin-accent focus-within:ring-2 focus-within:ring-admin-accent ${pending ? "cursor-not-allowed opacity-60" : ""}`}
         >
           {pending ? "Anexando…" : "Anexar documento do cidadão (balcão)"}
           <input

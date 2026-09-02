@@ -106,7 +106,7 @@ export default async function DashboardLayout({
           atendimento/[id]/page.tsx) fills this exactly instead and this div
           never actually overflows for it.
         */}
-        <div className="flex min-w-0 flex-1 flex-col overflow-y-auto">
+        <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-y-auto">
           {children}
         </div>
       </div>

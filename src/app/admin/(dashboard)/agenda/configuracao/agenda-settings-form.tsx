@@ -464,7 +464,7 @@ function ModesSection({
           return (
             <label
               key={label}
-              className={`flex cursor-pointer items-start gap-2.5 rounded-xl border px-3.5 py-3 text-left ${
+              className={`relative flex cursor-pointer items-start gap-2.5 rounded-xl border px-3.5 py-3 text-left ${
                 checked
                   ? "border-admin-primary bg-admin-input-bg"
                   : "border-admin-border"
