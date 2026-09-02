@@ -57,9 +57,9 @@ function ReadOnlyView({ tenant }: { tenant: Tenant }) {
         <ReadOnlyField label="Chave" value={tenant.pix?.key ?? "Sem chave"} />
       </div>
       <p className="mt-3.5 text-xs leading-relaxed text-admin-muted">
-        Só quem responde pela serventia pode alterar a chave: por isso o
-        botão não aparece aqui. Mesmo sem ele, o servidor recusaria a
-        gravação de qualquer jeito.
+        Só quem responde pela serventia pode alterar a chave: por isso o botão
+        não aparece aqui. Mesmo sem ele, o servidor recusaria a gravação de
+        qualquer jeito.
       </p>
     </div>
   );
@@ -104,11 +104,11 @@ export function PixKeyForm({
         Chave Pix da serventia
       </h2>
       <p className="mt-1 text-[12.5px] text-admin-muted">
-        O dinheiro do cidadão vai direto para esta chave — confira os dados
-        com atenção antes de salvar. O sistema valida só o formato, não se a
-        conta é da serventia: essa checagem é sua. Ele também não avisa
-        quando o Pix cai; confirmar o recebimento continua sendo
-        responsabilidade da serventia, pelo extrato bancário.
+        O dinheiro do cidadão vai direto para esta chave — confira os dados com
+        atenção antes de salvar. O sistema valida só o formato, não se a conta é
+        da serventia: essa checagem é sua. Ele também não avisa quando o Pix
+        cai; confirmar o recebimento continua sendo responsabilidade da
+        serventia, pelo extrato bancário.
       </p>
 
       {!hasKey && (
@@ -195,7 +195,6 @@ export function PixKeyForm({
             {saveState.message}
           </p>
         )}
-
       </form>
 
       <div className="mt-4.5 flex flex-wrap items-center gap-3.5">
