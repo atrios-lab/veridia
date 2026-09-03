@@ -8,8 +8,11 @@ import {
 } from "@/core/request/channels.ts";
 import {
   dayOfDeadline,
+  deadlineClock,
   deadlineDate,
   effectiveDeadline,
+  type PauseReason,
+  pauseReasons,
   readDeadline,
 } from "@/core/request/deadline.ts";
 import { looksLikeBot } from "@/core/request/form.ts";
@@ -121,6 +124,8 @@ export interface ServiceRequestDetail extends BaseDetail {
     dayOfTerm: number;
     days: number;
     overdue: boolean;
+    /** Present while the clock is stopped: what the office waits on. */
+    paused?: PauseReason[];
   };
 }
 
@@ -259,7 +264,10 @@ export async function lookupProtocolDetail(
       act.legalDeadlineDays,
       tenant.requestDeadlineDays,
     );
-    const dayOfTerm = dayOfDeadline(term.startedOn, today());
+    const dayOfTerm = dayOfDeadline(
+      term.startedOn,
+      deadlineClock(term, today()),
+    );
 
     return {
       ...base,
@@ -279,6 +287,15 @@ export async function lookupProtocolDetail(
             dayOfTerm,
             days: term.days,
             overdue: dayOfTerm > term.days,
+            paused: term.pausedOn
+              ? pauseReasons({
+                  status: record.status,
+                  amountCents: record.amountCents,
+                  pendingRequirements: requirements.filter(
+                    (r) => r.status === "pending",
+                  ).length,
+                })
+              : undefined,
           }
         : undefined,
       paymentSettled,

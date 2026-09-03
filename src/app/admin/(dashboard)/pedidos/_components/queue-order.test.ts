@@ -80,3 +80,27 @@ test("bands first, then the latest term, then arrival order", () => {
     ],
   );
 });
+
+test("paused rows sit between the urgent and the quiet, longest wait first", () => {
+  const row = (
+    status: QueueRowOrder["status"],
+    urgency: QueueRowOrder["urgency"],
+    n: number,
+  ): QueueRowOrder => ({
+    group: "blocked",
+    status,
+    urgency,
+    createdAt: day(n),
+  });
+  const rows: QueueRowOrder[] = [
+    row("with-requirement", { kind: "running" }, 1),
+    row("awaiting-compliance", { kind: "paused", waitingDays: 2 }, 2),
+    row("with-requirement", { kind: "overdue", daysLate: 1 }, 3),
+    row("awaiting-compliance", { kind: "paused", waitingDays: 8 }, 4),
+    row("with-requirement", { kind: "due-soon", daysLeft: 2 }, 5),
+  ];
+  assert.deepEqual(
+    [...rows].sort(compareQueueRows).map((r) => r.createdAt.getDate()),
+    [3, 5, 4, 2, 1],
+  );
+});

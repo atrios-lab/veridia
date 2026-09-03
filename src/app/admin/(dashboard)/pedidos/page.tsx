@@ -89,12 +89,7 @@ export default async function ServiceRequestQueuePage({
         act?.legalDeadlineDays,
         tenant.requestDeadlineDays,
       );
-      const urgency = deadlineUrgency(
-        open,
-        deadline.startedOn,
-        deadline.days,
-        todayIso,
-      );
+      const urgency = deadlineUrgency(open, deadline, todayIso);
       return {
         request,
         act,
@@ -235,7 +230,7 @@ export default async function ServiceRequestQueuePage({
                       />
                       <DeadlineBadge
                         open={row.open}
-                        {...row.deadline}
+                        deadline={row.deadline}
                         today={todayIso}
                       />
                     </span>
