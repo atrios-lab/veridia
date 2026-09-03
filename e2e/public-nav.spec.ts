@@ -80,3 +80,65 @@ test("no desktop o cabeçalho marca a página aberta", async ({ page }) => {
   );
   await expect(header.locator("[aria-current=page]")).toHaveCount(1);
 });
+
+test.describe('no desktop, o que a barra não mostra fica em "Mais"', () => {
+  test("o painel abre, leva à página e fecha sozinho", async ({ page }) => {
+    await page.goto(`${baseURL}/`);
+    const header = page.getByRole("navigation", {
+      name: "Navegação principal",
+    });
+    const panel = page.locator("#site-more");
+    await expect(panel).toBeHidden();
+
+    await header.getByRole("button", { name: "Mais" }).click();
+    await expect(panel).toBeVisible();
+    // Agrupado por tarefa, e cada página diz o que é: "Transparência" sozinha
+    // não conta nada a quem nunca a abriu.
+    await expect(panel.getByText("Cidadão", { exact: true })).toBeVisible();
+    await expect(
+      panel.getByText("Documentos públicos e movimento mensal"),
+    ).toBeVisible();
+
+    await panel.getByRole("link", { name: "Ouvidoria" }).click();
+    await expect(page).toHaveURL(`${baseURL}/ouvidoria`);
+    // Fechado pela navegação: o que o visitante quer é a página, não o menu
+    // ainda aberto sobre ela.
+    await expect(panel).toBeHidden();
+  });
+
+  test("a barra não repete o que o painel lista", async ({ page }) => {
+    await page.goto(`${baseURL}/`);
+    const header = page.getByRole("navigation", {
+      name: "Navegação principal",
+    });
+    await expect(
+      header.getByRole("link", { name: "Solicitar serviço" }),
+    ).toBeVisible();
+    await header.getByRole("button", { name: "Mais" }).click();
+    await expect(
+      page
+        .locator("#site-more")
+        .getByRole("link", { name: "Solicitar serviço" }),
+    ).toHaveCount(0);
+  });
+});
+
+test.describe("no tablet", () => {
+  test.use({ viewport: { width: 768, height: 1024 } });
+
+  test("o cabeçalho não estoura a largura da tela", async ({ page }) => {
+    // Antes, a barra completa media 807px de conteúdo numa janela de 768px,
+    // com "Solicitar serviço" quebrado em duas linhas. Aqui vale o menu do
+    // celular.
+    await page.goto(`${baseURL}/`);
+    await expect(
+      page.getByRole("button", { name: "Abrir menu" }),
+    ).toBeVisible();
+    const overflow = await page.evaluate(
+      () =>
+        document.documentElement.scrollWidth -
+        document.documentElement.clientWidth,
+    );
+    expect(overflow).toBe(0);
+  });
+});

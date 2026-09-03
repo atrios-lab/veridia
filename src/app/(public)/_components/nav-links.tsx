@@ -22,12 +22,20 @@ export function NavLinks({
   links,
   className,
   currentClassName,
+  descriptions = false,
 }: {
-  links: readonly { label: string; href: string; section?: string }[];
+  links: readonly {
+    label: string;
+    href: string;
+    section?: string;
+    description?: string;
+  }[];
   /** Applied to every link. */
   className: string;
   /** Added to the one the visitor is on, on top of `className`. */
   currentClassName: string;
+  /** Show each link's description under its label, where there is room. */
+  descriptions?: boolean;
 }) {
   const pathname = usePathname();
 
@@ -47,7 +55,16 @@ export function NavLinks({
             aria-current={current ? "page" : undefined}
             className={current ? `${className} ${currentClassName}` : className}
           >
-            {link.label}
+            {descriptions && link.description ? (
+              <>
+                <span className="block">{link.label}</span>
+                <span className="block text-xs font-normal text-brand-muted">
+                  {link.description}
+                </span>
+              </>
+            ) : (
+              link.label
+            )}
           </Link>
         );
       })}

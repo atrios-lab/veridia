@@ -595,6 +595,33 @@
   }
 }
 
+/*
+ * The header's "Mais" panel is a popover, so it renders in the top layer and
+ * no wrapper can position it under its button. Anchor positioning can, where
+ * the browser has it (Chrome 125, Safari 26). Elsewhere it hangs from the
+ * header's right edge, the corner the button sits in anyway: the header is
+ * centred at 72rem with 2.5rem of padding on each side, 5.25rem tall.
+ * `bottom: auto` undoes the UA sheet's `inset: 0`, which would otherwise
+ * stretch the panel to the bottom of the viewport.
+ */
+.header-menu {
+  position: fixed;
+  top: 5.25rem;
+  right: max(2.5rem, calc((100vw - 72rem) / 2 + 2.5rem));
+  bottom: auto;
+  left: auto;
+}
+@supports (anchor-name: --a) {
+  .header-more {
+    anchor-name: --header-more;
+  }
+  .header-menu {
+    position-anchor: --header-more;
+    top: calc(anchor(bottom) + 0.5rem);
+    right: anchor(right);
+  }
+}
+
 @layer base {
   body {
     font-family: var(--font-sans);
