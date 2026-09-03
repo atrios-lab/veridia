@@ -22,4 +22,4 @@
 ## 4. Fechamento
 
 - [x] 4.1 Abrir PR; o merge é decisão do Vinícios.
-- [ ] 4.2 Depois do merge, `openspec archive reorganizar-o-menu-do-site`.
+- [x] 4.2 Depois do merge, `openspec archive reorganizar-o-menu-do-site`.
