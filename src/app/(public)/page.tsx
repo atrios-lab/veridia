@@ -44,7 +44,7 @@ const ACTION_CARDS: {
     section: "centrais-contato",
     icon: "external",
     desktopOnly: true,
-    label: "Centrais",
+    label: "Centrais oficiais",
   },
 ];
 

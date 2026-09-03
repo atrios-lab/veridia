@@ -98,5 +98,5 @@ Nada a migrar: sem banco, sem configuração, sem conteúdo de tenant. Rollback 
 
 ## Open Questions
 
-- "Centrais" como rótulo continua opaco no celular, onde não há descrição. Renomear a seção é
-  decisão à parte (muda a home e o e2e).
+- Nenhuma. "Centrais" como rótulo era opaco no celular, onde não há descrição; o link passou a
+  "Centrais oficiais", o título da própria página, sem mexer na seção nem na rota.

@@ -56,7 +56,7 @@ test.describe("marcação da página atual", () => {
     const menu = page.locator("#site-menu");
     await expect(menu.locator("[aria-current=page]")).toHaveText("Contato");
     await expect(
-      menu.getByRole("link", { name: "Centrais", exact: true }),
+      menu.getByRole("link", { name: "Centrais oficiais", exact: true }),
     ).not.toHaveAttribute("aria-current", "page");
   });
 

@@ -54,7 +54,7 @@ export const SECTION_LABELS: Record<Section, string> = {
 
 /**
  * One line under each label, for the menus with room for it: what the page
- * does, in the citizen's words. "Transparência" or "Centrais" alone say
+ * does, in the citizen's words. "Transparência" or "Selo digital" alone say
  * nothing to someone who has never opened them. The home's cards read the
  * same lines, so the site describes a page one way only.
  */
@@ -85,7 +85,9 @@ export function sectionNavLinks(
   if (section === "centrais-contato") {
     return [
       {
-        label: "Centrais",
+        // The page's own title: "Centrais" alone read as nothing to a
+        // citizen scanning the phone menu, where no description fits.
+        label: "Centrais oficiais",
         href: "/centrais",
         description: SECTION_DESCRIPTIONS[section],
       },

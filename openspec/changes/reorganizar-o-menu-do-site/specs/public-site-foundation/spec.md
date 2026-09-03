@@ -70,7 +70,7 @@ NÃO precisa (SHALL NOT be required to) marcar nada: ali a navegação é atalho
 #### Scenario: Seção de dois links marca só o endereço aberto
 - **WHEN** o visitante está em `/contato`, que pertence à seção "Centrais e contato" junto de
   `/centrais`
-- **THEN** apenas "Contato" aparece marcada, e "Centrais" não
+- **THEN** apenas "Contato" aparece marcada, e "Centrais oficiais" não
 
 #### Scenario: Fora das seções, nada é marcado
 - **WHEN** o visitante está numa página que o menu não lista (ex.: `/privacidade`)

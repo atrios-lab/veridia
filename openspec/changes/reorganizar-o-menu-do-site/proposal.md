@@ -49,8 +49,8 @@ Nenhuma. A mudança altera requisito de uma capacidade que já existe.
 ## Non-Goals
 
 - **Não se mexe no gating.** Quais seções existem, e para quem, continua exatamente como é.
-- **Não se renomeia seção nenhuma.** "Centrais" continua "Centrais"; a descrição é o que passa a
-  explicar o nome.
+- **Não se renomeia seção nenhuma.** O link "Centrais" passa a "Centrais oficiais", que é o título
+  da própria página; a seção "Centrais e contato" e a rota `/centrais` ficam como estão.
 - **A barra do painel administrativo não muda.** Ela já agrupa e já tem busca global.
 - **Não se acrescenta busca ao site público.** Onze páginas não pedem uma.
 - **O rodapé continua sem marcar a página atual.** Ali é atalho, não localização.
