@@ -11,7 +11,7 @@ import type { ServiceRequestStatus } from "@/core/request/kinds.ts";
  * `Record` with no fallback on purpose: a nineteenth andamento fails the type
  * check instead of quietly inheriting a colour nobody chose for it.
  */
-type Tone = "blocked" | "waiting" | "working" | "delivered" | "closed";
+export type Tone = "blocked" | "waiting" | "working" | "delivered" | "closed";
 
 const TONE_STYLES: Record<Tone, string> = {
   blocked: "bg-admin-error-bg text-admin-error-text",
