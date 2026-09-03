@@ -18,6 +18,7 @@ export const cartorioBentoFernandes: Tenant = parseTenant({
     "município. Sua função é dar segurança jurídica, autenticidade e publicidade aos atos " +
     "da vida do cidadão, do nascimento aos negócios.",
   cns: "095026",
+  municipality: "BENTO FERNANDES",
   attributions: ["RCPN", "NOTAS", "RI", "PROTESTO", "RTD", "RCPJ"],
   contacts: {
     phone: "(84) 4042-0779",

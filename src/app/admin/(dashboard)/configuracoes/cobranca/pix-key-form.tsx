@@ -55,14 +55,11 @@ function ReadOnlyView({ tenant }: { tenant: Tenant }) {
           value={tenant.pix ? TYPE_LABELS[tenant.pix.type] : "Sem chave"}
         />
         <ReadOnlyField label="Chave" value={tenant.pix?.key ?? "Sem chave"} />
-        <ReadOnlyField
-          label="Cidade"
-          value={tenant.pix?.city ?? "Sem cidade"}
-        />
       </div>
       <p className="mt-3.5 text-xs leading-relaxed text-admin-muted">
-        Quem responde pela serventia pode alterar a chave. A ausência do botão
-        aqui é cortesia, a gravação é recusada no servidor de qualquer jeito.
+        Só quem responde pela serventia pode alterar a chave: por isso o botão
+        não aparece aqui. Mesmo sem ele, o servidor recusaria a gravação de
+        qualquer jeito.
       </p>
     </div>
   );
@@ -88,6 +85,11 @@ export function PixKeyForm({
     if (removeState.status === "removed") toast.success("Chave Pix removida.");
   }, [removeState]);
 
+  useEffect(() => {
+    if (saveState.status === "saved")
+      toast.success("Salvo. Já vale na consulta de protocolo.");
+  }, [saveState]);
+
   if (!canEdit) return <ReadOnlyView tenant={tenant} />;
 
   const fieldErrors = saveState.status === "error" ? saveState.fieldErrors : {};
@@ -95,7 +97,6 @@ export function PixKeyForm({
     saveState.status === "error" ? saveState.values : undefined;
   const removed = removeState.status === "removed";
   const hasKey = Boolean(tenant.pix) && !removed;
-  const hasCity = Boolean(tenant.pix?.city) && !removed;
 
   return (
     <div>
@@ -103,10 +104,11 @@ export function PixKeyForm({
         Chave Pix da serventia
       </h2>
       <p className="mt-1 text-[12.5px] text-admin-muted">
-        É para esta chave que vai o dinheiro do cidadão. O sistema confere o
-        formato, mas não tem como saber se a conta é da serventia: confira com
-        atenção. O sistema também não fica sabendo quando o Pix cai: a
-        conferência do recebimento continua sendo da serventia, pelo extrato.
+        O dinheiro do cidadão vai direto para esta chave: confira os dados com
+        atenção antes de salvar. O sistema valida só o formato, não se a conta é
+        da serventia: essa checagem é sua. Ele também não avisa quando o Pix
+        cai; confirmar o recebimento continua sendo responsabilidade da
+        serventia, pelo extrato bancário.
       </p>
 
       {!hasKey && (
@@ -115,14 +117,18 @@ export function PixKeyForm({
           apenas o valor e a instrução de pagar no balcão.
         </p>
       )}
-      {hasKey && !hasCity && (
-        <p className="mt-3.5 rounded-lg bg-admin-warning-bg px-3.5 py-2.5 text-[12.5px] font-semibold text-admin-warning-text">
-          Falta a cidade para o QR Code aparecer: até preencher, a consulta de
-          protocolo mostra só o valor e a instrução de pagar no balcão.
-        </p>
-      )}
-
-      <form action={saveAction}>
+      <form
+        id="pix-key-form"
+        action={saveAction}
+        // React resets the form's own DOM fields once the action settles.
+        // A <select>'s reset falls back to its first <option> (no option
+        // here carries the HTML "selected" attribute), which snapped the
+        // type back to CPF after every submit regardless of what was
+        // chosen. The text fields survive it by coincidence (their
+        // defaultValue is re-derived from what was just submitted); the
+        // select has no equivalent, so the reset itself has to be skipped.
+        onReset={(event) => event.preventDefault()}
+      >
         <div className="mt-4.5 grid grid-cols-1 gap-3.5 md:grid-cols-2">
           <div>
             <label className={LABEL_CLASS} htmlFor="type">
@@ -179,28 +185,6 @@ export function PixKeyForm({
               </p>
             )}
           </div>
-          <div>
-            <label className={LABEL_CLASS} htmlFor="city">
-              Cidade
-            </label>
-            <input
-              id="city"
-              name="city"
-              type="text"
-              defaultValue={sent?.city ?? tenant.pix?.city ?? ""}
-              aria-invalid={fieldErrors.city ? true : undefined}
-              aria-describedby={fieldErrors.city ? "city-erro" : undefined}
-              className={fieldErrors.city ? ERROR_FIELD_CLASS : FIELD_CLASS}
-            />
-            {fieldErrors.city && (
-              <p
-                id="city-erro"
-                className="mt-1.5 text-xs font-semibold text-admin-error-text"
-              >
-                {fieldErrors.city}
-              </p>
-            )}
-          </div>
         </div>
 
         {saveState.status === "error" && (
@@ -211,30 +195,18 @@ export function PixKeyForm({
             {saveState.message}
           </p>
         )}
-
-        <div className="mt-4.5 flex items-center gap-3.5">
-          <button
-            type="submit"
-            disabled={savePending}
-            className="btn btn-admin-primary btn-lg"
-          >
-            {savePending ? "Salvando…" : "Salvar chave"}
-          </button>
-          {saveState.status === "saved" && (
-            <output className="flex items-center gap-1.5 rounded-full bg-admin-success-bg px-3 py-1.5 text-[12.5px] font-semibold text-admin-success-text">
-              <AdminIcon
-                name="check"
-                className="h-3.5 w-3.5"
-                strokeWidth={2.4}
-              />
-              Salvo. Já está valendo no site.
-            </output>
-          )}
-        </div>
       </form>
 
-      {hasKey && (
-        <div className="mt-3">
+      <div className="mt-4.5 flex flex-wrap items-center gap-3.5">
+        <button
+          type="submit"
+          form="pix-key-form"
+          disabled={savePending}
+          className="btn btn-admin-primary btn-md"
+        >
+          {savePending ? "Salvando…" : "Salvar chave"}
+        </button>
+        {hasKey && (
           <ConfirmAction
             action={removeAction}
             pending={removePending}
@@ -244,9 +216,10 @@ export function PixKeyForm({
             consequence="Sem chave, a consulta de protocolo deixa de mostrar QR Code, e o cidadão perde a forma de pagar pelo site. Dá para cadastrar outra depois."
             confirmLabel="Confirmar remoção"
             pendingLabel="Removendo…"
+            className="btn-md"
           />
-        </div>
-      )}
+        )}
+      </div>
     </div>
   );
 }

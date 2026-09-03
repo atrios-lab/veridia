@@ -17,9 +17,11 @@ export interface PixCharge {
 
 /**
  * The charge for one request, or nothing when it can't be built. Needs the
- * amount, the office's Pix key and its city all at once: missing any one
- * of the three means "no QR yet", never a broken or partial one (see
- * `openspec/changes/add-request-payment-qr/design.md`, decision 4).
+ * amount and the office's Pix key together: missing either means "no QR
+ * yet", never a broken or partial one. The office's city
+ * (`tenant.municipality`) is a structural fact, always present, so it is
+ * not part of the availability check (see
+ * `openspec/changes/prefill-pix-city-from-tenant/design.md`).
  */
 export async function pixChargeFor(
   tenant: Tenant,
@@ -27,12 +29,11 @@ export async function pixChargeFor(
   amountCents: number,
 ): Promise<PixCharge | undefined> {
   const pixKey = tenant.pix?.key;
-  const city = tenant.pix?.city;
-  if (!canBuildPixCharge({ amountCents, pixKey, city })) return undefined;
+  if (!canBuildPixCharge({ amountCents, pixKey })) return undefined;
 
   const copyPaste = buildPixCharge({
     pixKey: pixKey as string,
-    city: city as string,
+    city: tenant.municipality,
     merchantName: tenant.name,
     amountCents,
     protocolNumber,

@@ -97,23 +97,16 @@ test("payload: ends with a 4-digit CRC that verifies against everything before i
   assert.equal(crc, crc16Ccitt(withoutCrc));
 });
 
-test("canBuildPixCharge: true only when amount, key and city are all present", () => {
-  assert.equal(
-    canBuildPixCharge({ amountCents: 25000, pixKey: "key", city: "CITY" }),
-    true,
-  );
+test("canBuildPixCharge: true only when amount and key are both present", () => {
+  assert.equal(canBuildPixCharge({ amountCents: 25000, pixKey: "key" }), true);
 });
 
 test("canBuildPixCharge: false with no amount", () => {
-  assert.equal(canBuildPixCharge({ pixKey: "key", city: "CITY" }), false);
+  assert.equal(canBuildPixCharge({ pixKey: "key" }), false);
 });
 
-test("canBuildPixCharge: false with a key but no city", () => {
-  assert.equal(canBuildPixCharge({ amountCents: 25000, pixKey: "key" }), false);
-});
-
-test("canBuildPixCharge: false with a city but no key", () => {
-  assert.equal(canBuildPixCharge({ amountCents: 25000, city: "CITY" }), false);
+test("canBuildPixCharge: false with an amount but no key", () => {
+  assert.equal(canBuildPixCharge({ amountCents: 25000 }), false);
 });
 
 test("canBuildPixCharge: false with nothing at all", () => {

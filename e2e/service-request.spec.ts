@@ -664,8 +664,8 @@ test.describe("filing a request", () => {
     await expect(page.getByText("R$ 250,00")).toHaveCount(0);
     await expect(page.getByText("Valor do pedido")).toHaveCount(0);
 
-    // With the key, but before the office has a Pix key/city: the amount
-    // shows, with the counter-payment instruction, no QR.
+    // With the key, but before the office has a Pix key: the amount shows,
+    // with the counter-payment instruction, no QR.
     await page.getByPlaceholder("Ex.: BBM8-6XVB-8PUK").fill(accessKey);
     await page.getByRole("button", { name: "Ver detalhes" }).click();
     await expect(page.getByText("R$ 250,00")).toBeVisible();
@@ -673,14 +673,16 @@ test.describe("filing a request", () => {
       page.getByText("Pague no balcão da serventia", { exact: false }),
     ).toBeVisible();
 
-    // The office registering a Pix key and city is the Cobrança panel's job;
-    // simulated the same way.
+    // The office registering a Pix key is the Cobrança panel's job; simulated
+    // the same way. The city no longer comes from this override: it is the
+    // tenant's own structural `municipality` (cartorio-marinho already has
+    // "IELMO MARINHO" set in code).
     await sql`
       insert into tenant_content (tenant_slug, key, published, published_at)
       values (
         'cartorio-marinho',
         'office-pix',
-        ${JSON.stringify({ pix: { type: "cpf", key: "52998224725", city: "IELMO MARINHO" } })}::jsonb,
+        ${JSON.stringify({ pix: { type: "cpf", key: "52998224725" } })}::jsonb,
         now()
       )
       on conflict (tenant_slug, key)
