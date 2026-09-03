@@ -32,4 +32,4 @@
 
 - [x] 6.1 e2e em `e2e/admin-service-requests.spec.ts`: registrar exigência troca o selo pelo de espera; cumprir a exigência retoma e, para ato com prazo legal, recomeça a contagem
 - [ ] 6.2 Conferir com a serventia a redação do art. 188 e do Código de Normas da Corregedoria sobre o prazo da reapresentação; registrar o resultado no design
-- [ ] 6.3 Sincronizar ou arquivar `adicionar-prazo-do-protocolo` antes de arquivar esta change, para as specs principais receberem os requisitos em ordem
+- [x] 6.3 Sincronizar ou arquivar `adicionar-prazo-do-protocolo` antes de arquivar esta change, para as specs principais receberem os requisitos em ordem
