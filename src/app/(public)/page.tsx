@@ -8,6 +8,7 @@ import {
 import { formatDate } from "@/core/scheduling/calendar.ts";
 import {
   isSectionEnabled,
+  SECTION_DESCRIPTIONS,
   SECTION_LABELS,
   SECTION_ROUTES,
 } from "@/core/tenant/gating.ts";
@@ -28,7 +29,6 @@ const MAX_HOME_PUBLICATIONS = 6;
 const ACTION_CARDS: {
   section: Section;
   icon: IconName;
-  description: string;
   desktopOnly?: boolean;
   // Overrides SECTION_LABELS for this card only. Needed for
   // "centrais-contato": the shared label is "Centrais e contato", but this
@@ -36,47 +36,24 @@ const ACTION_CARDS: {
   // contact page has its own entry in the site nav.
   label?: string;
 }[] = [
-  {
-    section: "pedidos",
-    icon: "pencil",
-    description: "Certidões e atos, em 3 etapas",
-  },
-  { section: "agendamento", icon: "calendar", description: "" },
-  {
-    section: "selo-tjrn",
-    icon: "seal",
-    description: "Confira a autenticidade de um documento",
-  },
+  { section: "pedidos", icon: "pencil" },
+  { section: "agendamento", icon: "calendar" },
+  { section: "selo-tjrn", icon: "seal" },
   // Desktop only: the phone keeps the three tasks, as the redesign draws.
   {
     section: "centrais-contato",
     icon: "external",
-    description: "Links oficiais de cada serviço, sem sites falsos",
     desktopOnly: true,
-    label: "Centrais",
+    label: "Centrais oficiais",
   },
 ];
 
-const CITIZEN_LINKS: {
-  section: Section;
-  icon: IconName;
-  description: string;
-}[] = [
-  {
-    section: "dpo-lgpd",
-    icon: "shield",
-    description: "Exerça seus direitos sobre seus dados",
-  },
-  {
-    section: "ouvidoria",
-    icon: "chat",
-    description: "Elogio, reclamação, sugestão ou denúncia",
-  },
-  {
-    section: "transparencia",
-    icon: "columns",
-    description: "Documentos públicos e movimento mensal",
-  },
+// Each card's one-line description is SECTION_DESCRIPTIONS, the same line
+// the header's "Mais" panel shows.
+const CITIZEN_LINKS: { section: Section; icon: IconName }[] = [
+  { section: "dpo-lgpd", icon: "shield" },
+  { section: "ouvidoria", icon: "chat" },
+  { section: "transparencia", icon: "columns" },
 ];
 
 export default async function Home() {
@@ -226,7 +203,7 @@ export default async function Home() {
                 <span className="block text-xs text-brand-muted md:mt-1 md:text-[13px]">
                   {card.section === "agendamento"
                     ? tenant.openingHours
-                    : card.description}
+                    : SECTION_DESCRIPTIONS[card.section]}
                 </span>
               </span>
               <Icon
@@ -338,7 +315,7 @@ export default async function Home() {
                         {SECTION_LABELS[link.section]}
                       </span>
                       <span className="block text-xs text-brand-muted">
-                        {link.description}
+                        {SECTION_DESCRIPTIONS[link.section]}
                       </span>
                     </span>
                     <Icon

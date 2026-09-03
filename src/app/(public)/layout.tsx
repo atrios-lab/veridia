@@ -1,9 +1,9 @@
 import { cookies } from "next/headers";
 import Image from "next/image";
 import Link from "next/link";
+import { Fragment } from "react";
 import {
   enabledSections,
-  isSectionEnabled,
   SECTION_ROUTES,
   sectionNavLinks,
 } from "@/core/tenant/gating.ts";
@@ -15,28 +15,88 @@ import { MenuPopover } from "../_components/menu-popover.tsx";
 import { ChatWidget } from "./_components/chat-widget.tsx";
 import { CookieNotice } from "./_components/cookie-notice.tsx";
 import { Icon } from "./_components/icon.tsx";
+import { NavGroupButton } from "./_components/nav-group-button.tsx";
 import { NavLinks } from "./_components/nav-links.tsx";
 import { BlobUploadProvider } from "./_lib/attachments.tsx";
 import { COOKIE_NOTICE_COOKIE } from "./_lib/cookie-notice.ts";
 
-// The redesign's header: home, the two tasks, notices and contact, with the
-// lookup as the highlighted button. The full gated list lives in the footer,
-// which is where a nine item menu belongs.
-const HEADER_SECTIONS = [
-  "pedidos",
-  "agendamento",
-  "editais",
-  "centrais-contato",
-] as const;
+// The bar, in order: an address is a link, a group title opens that group
+// as a submenu, minus whatever the bar already links to on its own. The
+// lookup stays the highlighted button at the end, so no page is reachable
+// only from the footer.
+const HEADER_ITEMS: readonly ({ href: string } | { group: string })[] = [
+  { href: "/" },
+  { group: "Serviços" },
+  { group: "Cidadão" },
+  { href: "/contato" },
+  { href: "/transparencia" },
+];
+
+// Where each page lives, by task rather than by navigation order. One list
+// for the header's submenus, the phone menu and the footer, so the three
+// never disagree. By address, since a section can open two pages (see
+// sectionNavLinks). A new section has to join one of the groups, or the
+// gating e2e (tenants.spec.ts) reports it missing from the footer.
+const NAV_GROUPS = [
+  {
+    title: "Serviços",
+    slug: "servicos",
+    hrefs: [
+      "/solicitar",
+      "/agendar",
+      "/protocolo",
+      "/editais",
+      "/selo",
+      "/centrais",
+    ],
+  },
+  {
+    title: "Cidadão",
+    slug: "cidadao",
+    hrefs: ["/lgpd", "/ouvidoria", "/transparencia", "/contato"],
+  },
+];
+
+// The phone menu and the header's submenus are the same list drawn twice.
+const MENU_GROUP =
+  "block px-3 pt-3 pb-1 text-[11px] font-bold uppercase tracking-[0.16em] text-brand-accent-ink";
+const MENU_LINK =
+  "block rounded-xl px-3 py-2.5 text-sm font-medium text-brand-primary hover:bg-brand-tint";
+const MENU_CURRENT = "bg-brand-tint font-semibold";
+
+// The bar's own links and its submenu buttons, marked the same way.
+const BAR_ITEM =
+  "whitespace-nowrap text-sm font-medium text-brand-primary hover:text-brand-primary-soft";
+const BAR_CURRENT =
+  "font-semibold underline decoration-brand-accent decoration-2 underline-offset-4";
 
 export default async function PublicLayout({
   children,
 }: Readonly<{ children: React.ReactNode }>) {
   const tenant = await getTenant();
-  const sections = enabledSections(tenant);
-  const headerSections = HEADER_SECTIONS.filter((s) =>
-    isSectionEnabled(tenant, s),
+  // Every page the office offers, in gating order, each one knowing its
+  // section: that attribute is what the gating e2e reads off the footer.
+  const links = enabledSections(tenant).flatMap((section) =>
+    sectionNavLinks(section).map((link) => ({ ...link, section })),
   );
+  // By address, in the order given, skipping what the office does not offer.
+  const pick = (hrefs: readonly string[]) =>
+    hrefs.flatMap((href) => links.filter((link) => link.href === href));
+  const groups = NAV_GROUPS.map(({ title, slug, hrefs }) => ({
+    title,
+    slug,
+    links: pick(hrefs),
+  })).filter((group) => group.links.length > 0);
+  const lookup = links.find((link) => link.section === "consulta-protocolo");
+  // A submenu does not repeat what the bar already links to on its own.
+  const shown = new Set([
+    ...HEADER_ITEMS.flatMap((item) => ("href" in item ? [item.href] : [])),
+    SECTION_ROUTES["consulta-protocolo"],
+  ]);
+  const submenu = (title: string) =>
+    groups
+      .find((group) => group.title === title)
+      ?.links.filter((link) => !shown.has(link.href)) ?? [];
   // Server-side gate on the office's switch: an office with chat off never
   // ships the component to the client at all. The client then polls its own
   // state to react within seconds if the switch flips mid-session (see
@@ -73,36 +133,74 @@ export default async function PublicLayout({
             </span>
           </Link>
 
+          {/* From lg, not md: at 768px the full bar measured 807px of content
+              in a 768px window, with "Solicitar serviço" broken over two
+              lines. A tablet gets the phone menu instead. */}
           <nav
             aria-label="Navegação principal"
-            className="hidden items-center gap-6 md:flex"
+            className="hidden items-center gap-6 lg:flex"
           >
             {/* "Início" entra na mesma lista para ser marcado como as outras
                 na home. O data-section vai junto: no rodapé enxuto ela não tem
                 link próprio, então é este que prova ao e2e de gating que a
                 seção rendeu. */}
-            <NavLinks
-              links={[
-                { label: "Início", href: "/", section: "inicio" },
-                ...headerSections.flatMap((section) =>
-                  sectionNavLinks(section),
-                ),
-              ]}
-              className="text-sm font-medium text-brand-primary hover:text-brand-primary-soft"
-              currentClassName="font-semibold underline decoration-brand-accent decoration-2 underline-offset-4"
-            />
-            {isSectionEnabled(tenant, "consulta-protocolo") && (
+            {HEADER_ITEMS.map((item) => {
+              if ("href" in item) {
+                return (
+                  <NavLinks
+                    key={item.href}
+                    links={pick([item.href])}
+                    className={BAR_ITEM}
+                    currentClassName={BAR_CURRENT}
+                  />
+                );
+              }
+              const group = groups.find((g) => g.title === item.group);
+              const groupLinks = submenu(item.group);
+              if (!group || groupLinks.length === 0) return null;
+              const id = `header-menu-${group.slug}`;
+              return (
+                // Native popover, like the phone menu below: Escape and the
+                // click outside are the browser's own. Where it hangs is CSS
+                // (.header-menu in globals.css): a popover renders in the
+                // top layer, so no wrapper here could position it.
+                <Fragment key={item.group}>
+                  <NavGroupButton
+                    hrefs={groupLinks.map((link) => link.href)}
+                    popoverTarget={id}
+                    className={`flex cursor-pointer items-center gap-1 ${BAR_ITEM}`}
+                    currentClassName={BAR_CURRENT}
+                  >
+                    {item.group}
+                    <Icon
+                      name="chevronRight"
+                      className="h-3.5 w-3.5 rotate-90"
+                    />
+                  </NavGroupButton>
+                  <div
+                    id={id}
+                    popover="auto"
+                    style={{ positionAnchor: `--${id}` }}
+                    className="header-menu m-0 w-[21rem] rounded-2xl border border-brand-border bg-brand-card p-2 shadow-lg"
+                  >
+                    <NavLinks
+                      links={groupLinks}
+                      descriptions
+                      className={MENU_LINK}
+                      currentClassName={MENU_CURRENT}
+                    />
+                    <MenuPopover />
+                  </div>
+                </Fragment>
+              );
+            })}
+            {lookup && (
               // Pela mesma lista, só para ganhar o aria-current na consulta:
               // um botão de ação já é o elemento mais visível do cabeçalho e
               // não precisa de realce, mas quem navega por leitor de tela
               // precisa saber que está nessa página.
               <NavLinks
-                links={[
-                  {
-                    label: "Consultar protocolo",
-                    href: SECTION_ROUTES["consulta-protocolo"],
-                  },
-                ]}
+                links={[lookup]}
                 className="btn btn-primary btn-md"
                 currentClassName=""
               />
@@ -114,7 +212,7 @@ export default async function PublicLayout({
               closes it on Escape and on a tap outside for free. The only
               script is the close after a tap on a link, which the browser
               cannot do on its own here: see close-menu-on-navigate.tsx. */}
-          <div className="md:hidden">
+          <div className="lg:hidden">
             <button
               type="button"
               popoverTarget="site-menu"
@@ -127,13 +225,28 @@ export default async function PublicLayout({
               id="site-menu"
               popover="auto"
               aria-label="Menu do site"
-              className="fixed top-[4.25rem] right-4 bottom-auto left-auto z-20 m-0 w-60 rounded-2xl border border-brand-border bg-brand-card p-2 shadow-lg"
+              // max-h and its own scroll: with the groups the list is taller
+              // than a short phone's viewport, and a popover clipped by the
+              // screen edge has no way to reach the last item.
+              className="fixed top-[4.25rem] right-4 bottom-auto left-auto z-20 m-0 max-h-[calc(100dvh-5rem)] w-64 overflow-y-auto rounded-2xl border border-brand-border bg-brand-card p-2 shadow-lg"
             >
+              {/* Grouped by task, the way the footer is, with home on top: a
+                  flat list in gating order put "Canal LGPD" second. */}
               <NavLinks
-                links={sections.flatMap((section) => sectionNavLinks(section))}
-                className="block rounded-xl px-3 py-2.5 text-sm font-medium text-brand-primary hover:bg-brand-tint"
-                currentClassName="bg-brand-tint font-semibold"
+                links={pick(["/"])}
+                className={MENU_LINK}
+                currentClassName={MENU_CURRENT}
               />
+              {groups.map(({ title, links: groupLinks }) => (
+                <div key={title}>
+                  <span className={MENU_GROUP}>{title}</span>
+                  <NavLinks
+                    links={groupLinks}
+                    className={MENU_LINK}
+                    currentClassName={MENU_CURRENT}
+                  />
+                </div>
+              ))}
               <MenuPopover />
             </nav>
           </div>
@@ -180,30 +293,10 @@ export default async function PublicLayout({
               </p>
             </div>
 
-            {/* Colunas por tarefa, não pela ordem de navegação: o e2e de
+            {/* The same groups as the menus (NAV_GROUPS above). The e2e de
                 gating compara os data-section como conjunto (ver
-                tenants.spec.ts), e "Início" fica coberto pelo link do header.
-                Uma seção nova precisa entrar em uma das listas abaixo, senão
-                o e2e acusa a ausência. */}
-            {(
-              [
-                {
-                  title: "Serviços",
-                  hrefs: [
-                    "/solicitar",
-                    "/agendar",
-                    "/protocolo",
-                    "/editais",
-                    "/selo",
-                    "/centrais",
-                  ],
-                },
-                {
-                  title: "Cidadão",
-                  hrefs: ["/lgpd", "/ouvidoria", "/transparencia", "/contato"],
-                },
-              ] as const
-            ).map(({ title, hrefs }) => (
+                tenants.spec.ts), e "Início" fica coberto pelo link do header. */}
+            {groups.map(({ title, links: groupLinks }) => (
               // No toque os links ficam mais afastados: apertar a lista é um
               // ganho de altura na tela grande, não no dedo.
               <nav
@@ -214,26 +307,16 @@ export default async function PublicLayout({
                 <span className="text-xs font-semibold uppercase tracking-[0.14em] text-brand-on-dark-accent">
                   {title}
                 </span>
-                {sections
-                  .flatMap((section) =>
-                    sectionNavLinks(section).map((link) => ({
-                      ...link,
-                      section,
-                    })),
-                  )
-                  .filter((link) =>
-                    (hrefs as readonly string[]).includes(link.href),
-                  )
-                  .map((link) => (
-                    <Link
-                      key={link.href}
-                      data-section={link.section}
-                      href={link.href}
-                      className="text-sm text-brand-on-dark-body hover:text-white"
-                    >
-                      {link.label}
-                    </Link>
-                  ))}
+                {groupLinks.map((link) => (
+                  <Link
+                    key={link.href}
+                    data-section={link.section}
+                    href={link.href}
+                    className="text-sm text-brand-on-dark-body hover:text-white"
+                  >
+                    {link.label}
+                  </Link>
+                ))}
                 {title === "Cidadão" && (
                   <Link
                     href="/privacidade"

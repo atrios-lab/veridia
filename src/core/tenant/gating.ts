@@ -53,6 +53,27 @@ export const SECTION_LABELS: Record<Section, string> = {
 };
 
 /**
+ * One line under each label, for the menus with room for it: what the page
+ * does, in the citizen's words. "Transparência" or "Selo digital" alone say
+ * nothing to someone who has never opened them. The home's cards read the
+ * same lines, so the site describes a page one way only.
+ */
+export const SECTION_DESCRIPTIONS: Record<Section, string> = {
+  inicio: "Página inicial do cartório",
+  "dpo-lgpd": "Exerça seus direitos sobre seus dados",
+  pedidos: "Certidões e atos, em 3 etapas",
+  agendamento: "Marque dia e hora para ser atendido",
+  "consulta-protocolo": "Acompanhe um pedido pelo número do protocolo",
+  editais: "Proclamas de casamento e outros editais",
+  ouvidoria: "Elogio, reclamação, sugestão ou denúncia",
+  transparencia: "Documentos públicos e movimento mensal",
+  "selo-tjrn": "Confira a autenticidade de um documento",
+  // Describes the portals page. The section's other link, the contact page,
+  // has its own line in sectionNavLinks.
+  "centrais-contato": "Links oficiais de cada serviço, sem sites falsos",
+};
+
+/**
  * Navigation entries a section expands to. Almost every section is one link,
  * but "centrais-contato" gates two separate pages (official portals, and the
  * office's own contact details) under a single permission, so its button
@@ -60,14 +81,30 @@ export const SECTION_LABELS: Record<Section, string> = {
  */
 export function sectionNavLinks(
   section: Section,
-): { label: string; href: string }[] {
+): { label: string; href: string; description: string }[] {
   if (section === "centrais-contato") {
     return [
-      { label: "Centrais", href: "/centrais" },
-      { label: "Contato", href: "/contato" },
+      {
+        // The page's own title: "Centrais" alone read as nothing to a
+        // citizen scanning the phone menu, where no description fits.
+        label: "Centrais oficiais",
+        href: "/centrais",
+        description: SECTION_DESCRIPTIONS[section],
+      },
+      {
+        label: "Contato",
+        href: "/contato",
+        description: "Telefone, WhatsApp, e-mail e horário de atendimento",
+      },
     ];
   }
-  return [{ label: SECTION_LABELS[section], href: SECTION_ROUTES[section] }];
+  return [
+    {
+      label: SECTION_LABELS[section],
+      href: SECTION_ROUTES[section],
+      description: SECTION_DESCRIPTIONS[section],
+    },
+  ];
 }
 
 // Sectors inside the "editais" section, each one bound to an attribution.
