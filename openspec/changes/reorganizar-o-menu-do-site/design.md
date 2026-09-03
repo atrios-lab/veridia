@@ -83,7 +83,10 @@ para um rótulo nunca mais quebrar em duas linhas.
 - **Sem a API popover (iOS 16).** Nem se chega aos submenus: eles só existem a partir de 1024px,
   e a API já falta só em celular. Ainda assim, `MenuPopover` cobre cada painel do mesmo jeito que
   cobre o menu.
-- **Os botões "Serviços" e "Cidadão" não indicam a página atual.** Registrado como não-objetivo.
+- **Mais um componente cliente, o botão do grupo.** Sem ele, quem está em "Solicitar serviço"
+  não vê nada marcado na barra, porque o link está dobrado dentro do painel fechado. O botão
+  recebe o mesmo destaque dos links da barra e `aria-current="true"` (nunca "page", que continua
+  sendo só do link), pelo mesmo `usePathname` de `nav-links.tsx`.
 
 ## Migration Plan
 

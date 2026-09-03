@@ -14,7 +14,9 @@ menu lista todas as páginas, agrupadas nos mesmos grupos que o rodapé usa. O c
 (SHALL NOT) provocar rolagem horizontal em nenhum viewport.
 
 A navegação DEVE (SHALL) marcar o link da página em que o visitante está, com `aria-current="page"`
-e com destaque visual, e apenas esse. A marcação DEVE (SHALL) acompanhar navegação feita no
+e com destaque visual, e apenas esse. Quando essa página está dentro de um submenu da barra, o
+botão do grupo DEVE (SHALL) receber o mesmo destaque e `aria-current="true"`, para a barra dizer
+onde o visitante está com o submenu fechado. A marcação DEVE (SHALL) acompanhar navegação feita no
 cliente, sem depender de recarregamento. Uma seção que expande em mais de um link (ver
 `sectionNavLinks`) DEVE (SHALL) ser marcada pelo endereço aberto, não pela seção inteira. O rodapé
 NÃO precisa (SHALL NOT be required to) marcar nada: ali a navegação é atalho, não localização.
@@ -37,6 +39,11 @@ NÃO precisa (SHALL NOT be required to) marcar nada: ali a navegação é atalho
 - **THEN** vê as páginas habilitadas daquele grupo que a barra não mostra sozinha, cada uma com
   a sua descrição, e nenhuma das que a barra já mostra (ex.: "Transparência" não se repete em
   "Cidadão")
+
+#### Scenario: O grupo se marca quando a página aberta está dentro dele
+- **WHEN** o visitante está em `/solicitar` no desktop, com o submenu fechado
+- **THEN** o botão "Serviços" aparece destacado e com `aria-current="true"`, "Cidadão" não, e o
+  único elemento com `aria-current="page"` é o link "Solicitar serviço" dentro do submenu
 
 #### Scenario: O submenu fecha ao navegar
 - **WHEN** o visitante escolhe uma página dentro de um submenu

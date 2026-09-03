@@ -10,6 +10,7 @@
 - [x] 2.3 A barra como `HEADER_ITEMS` (Início, Serviços, Cidadão, Contato, Transparência), com "Serviços" e "Cidadão" abrindo um submenu: popover nativo com `MenuPopover` dentro, ancorado por CSS em `globals.css`.
 - [x] 2.4 O menu do celular agrupado por tarefa, com "Início" no topo e rolagem interna.
 - [x] 2.5 A barra completa só a partir de `lg`, com rótulos sem quebra de linha.
+- [x] 2.6 O botão do grupo se marca (destaque e `aria-current="true"`) quando a página aberta está dentro do submenu.
 
 ## 3. Testes
 

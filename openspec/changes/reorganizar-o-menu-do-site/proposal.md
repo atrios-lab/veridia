@@ -54,6 +54,3 @@ Nenhuma. A mudança altera requisito de uma capacidade que já existe.
 - **A barra do painel administrativo não muda.** Ela já agrupa e já tem busca global.
 - **Não se acrescenta busca ao site público.** Onze páginas não pedem uma.
 - **O rodapé continua sem marcar a página atual.** Ali é atalho, não localização.
-- **"Serviços" e "Cidadão" não se marcam como página atual** quando a página aberta está dentro
-  do submenu. O link dentro do painel é marcado ao abrir; marcar o botão exigiria mais um
-  componente cliente.

@@ -15,6 +15,7 @@ import { MenuPopover } from "../_components/menu-popover.tsx";
 import { ChatWidget } from "./_components/chat-widget.tsx";
 import { CookieNotice } from "./_components/cookie-notice.tsx";
 import { Icon } from "./_components/icon.tsx";
+import { NavGroupButton } from "./_components/nav-group-button.tsx";
 import { NavLinks } from "./_components/nav-links.tsx";
 import { BlobUploadProvider } from "./_lib/attachments.tsx";
 import { COOKIE_NOTICE_COOKIE } from "./_lib/cookie-notice.ts";
@@ -62,6 +63,12 @@ const MENU_GROUP =
 const MENU_LINK =
   "block rounded-xl px-3 py-2.5 text-sm font-medium text-brand-primary hover:bg-brand-tint";
 const MENU_CURRENT = "bg-brand-tint font-semibold";
+
+// The bar's own links and its submenu buttons, marked the same way.
+const BAR_ITEM =
+  "whitespace-nowrap text-sm font-medium text-brand-primary hover:text-brand-primary-soft";
+const BAR_CURRENT =
+  "font-semibold underline decoration-brand-accent decoration-2 underline-offset-4";
 
 export default async function PublicLayout({
   children,
@@ -143,8 +150,8 @@ export default async function PublicLayout({
                   <NavLinks
                     key={item.href}
                     links={pick([item.href])}
-                    className="whitespace-nowrap text-sm font-medium text-brand-primary hover:text-brand-primary-soft"
-                    currentClassName="font-semibold underline decoration-brand-accent decoration-2 underline-offset-4"
+                    className={BAR_ITEM}
+                    currentClassName={BAR_CURRENT}
                   />
                 );
               }
@@ -158,17 +165,18 @@ export default async function PublicLayout({
                 // (.header-menu in globals.css): a popover renders in the
                 // top layer, so no wrapper here could position it.
                 <Fragment key={item.group}>
-                  <button
-                    type="button"
+                  <NavGroupButton
+                    hrefs={groupLinks.map((link) => link.href)}
                     popoverTarget={id}
-                    className="flex cursor-pointer items-center gap-1 whitespace-nowrap text-sm font-medium text-brand-primary hover:text-brand-primary-soft"
+                    className={`flex cursor-pointer items-center gap-1 ${BAR_ITEM}`}
+                    currentClassName={BAR_CURRENT}
                   >
                     {item.group}
                     <Icon
                       name="chevronRight"
                       className="h-3.5 w-3.5 rotate-90"
                     />
-                  </button>
+                  </NavGroupButton>
                   <div
                     id={id}
                     popover="auto"

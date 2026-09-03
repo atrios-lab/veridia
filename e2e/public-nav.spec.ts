@@ -75,10 +75,18 @@ test("no desktop o cabeçalho marca a página aberta", async ({ page }) => {
   const header = page.getByRole("navigation", {
     name: "Navegação principal",
   });
-  await expect(header.locator("[aria-current=page]")).toHaveText(
+  // A página é o link dentro do submenu, com a descrição no mesmo texto.
+  await expect(header.locator("[aria-current=page]")).toContainText(
     "Solicitar serviço",
   );
   await expect(header.locator("[aria-current=page]")).toHaveCount(1);
+  // Com o submenu fechado, é o botão do grupo que diz onde o visitante está.
+  await expect(
+    header.getByRole("button", { name: "Serviços" }),
+  ).toHaveAttribute("aria-current", "true");
+  await expect(
+    header.getByRole("button", { name: "Cidadão" }),
+  ).not.toHaveAttribute("aria-current", /./);
 });
 
 test.describe("no desktop, Serviços e Cidadão abrem um submenu", () => {
