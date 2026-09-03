@@ -174,8 +174,8 @@ export const TenantSchema = z.object({
     .optional(),
   // Merchant City of the Pix EMV payload: a structural fact about the
   // office, set once alongside name/CNS, not a value the panel edits. Never
-  // shown in the panel either — nobody there needs to look it up day to day,
-  // unlike name/CNS.
+  // shown in the panel either, since nobody there needs to look it up day to
+  // day, unlike name/CNS.
   municipality: z
     .string()
     .refine(

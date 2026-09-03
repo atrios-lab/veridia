@@ -104,7 +104,7 @@ export function PixKeyForm({
         Chave Pix da serventia
       </h2>
       <p className="mt-1 text-[12.5px] text-admin-muted">
-        O dinheiro do cidadão vai direto para esta chave — confira os dados com
+        O dinheiro do cidadão vai direto para esta chave: confira os dados com
         atenção antes de salvar. O sistema valida só o formato, não se a conta é
         da serventia: essa checagem é sua. Ele também não avisa quando o Pix
         cai; confirmar o recebimento continua sendo responsabilidade da
