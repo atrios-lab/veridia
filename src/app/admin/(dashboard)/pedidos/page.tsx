@@ -1,7 +1,9 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import { Fragment } from "react";
 import { getAct } from "@/core/acts/catalog.ts";
 import { can } from "@/core/auth/roles.ts";
+import { deadlineUrgency } from "@/core/overview/urgency.ts";
 import { effectiveDeadline, readDeadline } from "@/core/request/deadline.ts";
 import {
   isOpenServiceRequestStatus,
@@ -18,6 +20,11 @@ import { getTenant, OFFICE_TIME_ZONE, today } from "@/lib/tenant.ts";
 import { AdminIcon } from "../../_components/icon.tsx";
 import { AdminPageHeader } from "../../_components/page-header.tsx";
 import { DeadlineBadge } from "./_components/deadline-badge.tsx";
+import {
+  compareQueueRows,
+  QUEUE_GROUPS,
+  queueGroupOf,
+} from "./_components/queue-order.ts";
 import { StatusBadge } from "./_components/status-badge.tsx";
 
 export const metadata = { title: "Pedidos de serviço" };
@@ -66,6 +73,42 @@ export default async function ServiceRequestQueuePage({
     attribution,
     search,
   });
+
+  // Bands before dates: the office reads the queue for what needs a hand,
+  // not for what arrived last. See queue-order.ts for the order inside a band.
+  const rows = requests
+    .map((request) => {
+      const act = request.actId ? getAct(request.actId) : undefined;
+      const status = isServiceRequestStatus(request.status)
+        ? request.status
+        : "new";
+      const open = isOpenServiceRequestStatus(status);
+      const deadline = effectiveDeadline(
+        toIsoDate(request.createdAt, OFFICE_TIME_ZONE),
+        readDeadline(request.details),
+        act?.legalDeadlineDays,
+        tenant.requestDeadlineDays,
+      );
+      const urgency = deadlineUrgency(
+        open,
+        deadline.startedOn,
+        deadline.days,
+        todayIso,
+      );
+      return {
+        request,
+        act,
+        status,
+        open,
+        deadline,
+        urgency,
+        group: queueGroupOf(status),
+        createdAt: request.createdAt,
+      };
+    })
+    .sort(compareQueueRows);
+  // One band alone (a filter by andamento, say) needs no heading over it.
+  const showBands = new Set(rows.map((r) => r.group)).size > 1;
 
   return (
     <>
@@ -148,59 +191,67 @@ export default async function ServiceRequestQueuePage({
                 : "Nenhum pedido registrado ainda."}
             </p>
           ) : (
-            requests.map((request) => {
-              const act = request.actId ? getAct(request.actId) : undefined;
-              const requestStatus = isServiceRequestStatus(request.status)
-                ? request.status
-                : "new";
+            rows.map((row, index) => {
+              const { request, act, status } = row;
+              const band =
+                showBands && rows[index - 1]?.group !== row.group
+                  ? QUEUE_GROUPS.find((g) => g.id === row.group)
+                  : undefined;
+              const count = band
+                ? rows.filter((r) => r.group === row.group).length
+                : 0;
               return (
-                <Link
-                  key={request.id}
-                  href={`/admin/pedidos/${encodeURIComponent(request.protocolNumber)}`}
-                  className="grid grid-cols-[150px_1.6fr_1.4fr_170px_110px_100px_20px] items-center gap-2 border-b border-admin-border px-5 py-3 text-[13px] last:border-b-0 hover:bg-admin-input-bg"
-                >
-                  <span className="font-bold tabular-nums text-admin-primary">
-                    {request.protocolNumber}
-                  </span>
-                  <span className="min-w-0">
-                    <span className="block truncate font-semibold text-admin-text">
-                      {request.applicantName ?? "Não informado"}
+                <Fragment key={request.id}>
+                  {band ? (
+                    <div className="flex items-center gap-2 border-b border-admin-border bg-admin-input-bg px-5 py-2 text-[11px] font-bold tracking-[0.06em] text-admin-faint uppercase">
+                      <span>{band.label}</span>
+                      <span className="rounded-full bg-admin-card px-2 py-0.5 tabular-nums">
+                        {count}
+                      </span>
+                    </div>
+                  ) : null}
+                  <Link
+                    href={`/admin/pedidos/${encodeURIComponent(request.protocolNumber)}`}
+                    className="grid grid-cols-[150px_1.6fr_1.4fr_170px_110px_100px_20px] items-center gap-2 border-b border-admin-border px-5 py-3 text-[13px] last:border-b-0 hover:bg-admin-input-bg"
+                  >
+                    <span className="font-bold tabular-nums text-admin-primary">
+                      {request.protocolNumber}
                     </span>
-                    <span className="block truncate text-[11.5px] text-admin-faint">
-                      {request.contact ?? ""}
+                    <span className="min-w-0">
+                      <span className="block truncate font-semibold text-admin-text">
+                        {request.applicantName ?? "Não informado"}
+                      </span>
+                      <span className="block truncate text-[11.5px] text-admin-faint">
+                        {request.contact ?? ""}
+                      </span>
                     </span>
-                  </span>
-                  <span className="truncate text-admin-muted">
-                    {act?.name ?? "Ato não identificado"}
-                  </span>
-                  <span className="flex flex-col items-start gap-1">
-                    <StatusBadge
-                      status={requestStatus}
-                      label={statusLabel("service-request", requestStatus)}
-                    />
-                    <DeadlineBadge
-                      open={isOpenServiceRequestStatus(requestStatus)}
-                      {...effectiveDeadline(
-                        toIsoDate(request.createdAt, OFFICE_TIME_ZONE),
-                        readDeadline(request.details),
-                        act?.legalDeadlineDays,
-                        tenant.requestDeadlineDays,
-                      )}
-                      today={todayIso}
-                    />
-                  </span>
-                  <span className="tabular-nums text-admin-text">
-                    {request.amountCents != null
-                      ? formatCents(request.amountCents)
-                      : "A definir"}
-                  </span>
-                  <span className="text-admin-faint">
-                    {shortDate(request.createdAt)}
-                  </span>
-                  <span aria-hidden="true" className="text-admin-faint">
-                    ›
-                  </span>
-                </Link>
+                    <span className="truncate text-admin-muted">
+                      {act?.name ?? "Ato não identificado"}
+                    </span>
+                    <span className="flex flex-col items-start gap-1">
+                      <StatusBadge
+                        status={status}
+                        label={statusLabel("service-request", status)}
+                      />
+                      <DeadlineBadge
+                        open={row.open}
+                        {...row.deadline}
+                        today={todayIso}
+                      />
+                    </span>
+                    <span className="tabular-nums text-admin-text">
+                      {request.amountCents != null
+                        ? formatCents(request.amountCents)
+                        : "A definir"}
+                    </span>
+                    <span className="text-admin-faint">
+                      {shortDate(request.createdAt)}
+                    </span>
+                    <span aria-hidden="true" className="text-admin-faint">
+                      ›
+                    </span>
+                  </Link>
+                </Fragment>
               );
             })
           )}
