@@ -1,4 +1,5 @@
 import { deadlineUrgency } from "@/core/overview/urgency.ts";
+import type { Deadline } from "@/core/request/deadline.ts";
 import type { IsoDate } from "@/core/scheduling/calendar.ts";
 
 /**
@@ -6,22 +7,34 @@ import type { IsoDate } from "@/core/scheduling/calendar.ts";
  * three weeks left says nothing here: the andamento is what the row is for,
  * and a badge on every line is a badge nobody reads.
  *
+ * A paused term speaks, in a neutral tone: the office is waiting on the
+ * citizen, and how long for is the one number that tells the operator whom
+ * to telephone. Red would blame the office for a delay that is not its own.
+ *
  * The LGPD queue has its own badge, which always speaks: there the term is
  * the law's and the fifteen days are the point of the screen.
  */
 export function DeadlineBadge({
   open,
-  startedOn,
-  days,
+  deadline,
   today,
 }: {
   open: boolean;
-  startedOn: IsoDate;
-  days: number;
+  deadline: Deadline;
   today: IsoDate;
 }) {
-  const urgency = deadlineUrgency(open, startedOn, days, today);
+  const urgency = deadlineUrgency(open, deadline, today);
   if (urgency.kind === "running" || urgency.kind === "closed") return null;
+
+  if (urgency.kind === "paused") {
+    return (
+      <span className="inline-flex items-center rounded-full bg-admin-readonly-bg px-2.5 py-1 text-[11px] font-bold text-admin-muted">
+        {urgency.waitingDays === 0
+          ? "Aguardando o cidadão desde hoje"
+          : `Aguardando o cidadão há ${urgency.waitingDays} dia${urgency.waitingDays === 1 ? "" : "s"} úte${urgency.waitingDays === 1 ? "l" : "is"}`}
+      </span>
+    );
+  }
 
   const overdue = urgency.kind === "overdue";
   return (

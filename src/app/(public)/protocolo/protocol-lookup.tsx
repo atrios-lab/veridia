@@ -7,7 +7,7 @@ import {
   DATA_RIGHTS_DEADLINE_DAYS,
   manifestationLabel,
 } from "@/core/request/channels.ts";
-import { DEADLINE_CAVEAT } from "@/core/request/deadline.ts";
+import { DEADLINE_CAVEAT, type PauseReason } from "@/core/request/deadline.ts";
 import { Icon } from "../_components/icon.tsx";
 import { CopyField } from "../_components/protocol-reveal.tsx";
 import { ProtocolSearchButton } from "../_components/protocol-search-button.tsx";
@@ -450,7 +450,15 @@ function markCurrentStep(steps: TimelineStepData[]): TimelineStepData[] {
  * Past the date it says the office is reviewing the term, and never how many
  * days late it is. The office reads that number in the panel and acts on it;
  * printed here it would only turn one telephone call into two.
+ *
+ * Paused, it names what the office is waiting on and no date at all: the
+ * date now depends on the citizen, and saying so is the nudge.
  */
+const PAUSE_LABELS: Record<PauseReason, string> = {
+  requirement: "o cumprimento da exigência",
+  payment: "o pagamento",
+};
+
 function DeadlineNote({
   deadline,
 }: {
@@ -459,7 +467,15 @@ function DeadlineNote({
   return (
     <div className="mt-3 border-t border-brand-border pt-3">
       <p className="text-[12px] text-brand-muted">
-        {deadline.overdue ? (
+        {deadline.paused ? (
+          <>
+            <strong className="text-brand-primary">Prazo suspenso</strong>
+            {deadline.paused.length > 0
+              ? `: aguardando ${deadline.paused.map((r) => PAUSE_LABELS[r]).join(" e ")}.`
+              : " pelo cartório."}{" "}
+            A contagem continua quando a pendência for resolvida.
+          </>
+        ) : deadline.overdue ? (
           <>
             A previsão era{" "}
             <strong className="text-brand-primary">

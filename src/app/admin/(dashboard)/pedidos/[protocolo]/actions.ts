@@ -31,6 +31,7 @@ import {
   deleteRequirement,
   findById,
   listRequirements,
+  reconcileDeadlinePause,
   registerRequirement,
   reissueAccessKey,
   resolveRequirement,
@@ -106,13 +107,14 @@ function readDeadlineChoice(
     tenant.requestDeadlineDays,
   );
 
-  if (choice === "restart") return { startedOn: today(), days: current.days };
+  // Spread, not rebuilt: a paused term stays paused, only at another point.
+  if (choice === "restart") return { ...current, startedOn: today() };
 
   const parsed = deadlineDaysSchema.safeParse(
     Number(String(formData.get("deadlineDays") ?? "").trim()),
   );
   if (!parsed.success) return "invalid";
-  return { startedOn: current.startedOn, days: parsed.data };
+  return { ...current, days: parsed.data };
 }
 
 export async function changeStatus(
@@ -160,6 +162,7 @@ export async function changeStatus(
         session.user.id,
         deadline,
       );
+      await reconcileDeadlinePause(tenant, requestId, session.user.id, today());
       revalidateAdmin();
       return { status: "success", emailWarning: null };
     }
@@ -183,6 +186,7 @@ export async function changeStatus(
       session.user.id,
       deadline,
     );
+    await reconcileDeadlinePause(tenant, requestId, session.user.id, today());
 
     // Only the two that end the story. The citizen follows the rest through
     // the consult, and a message per andamento would train them to ignore all
@@ -234,6 +238,7 @@ export async function registerRequirementAction(
       parsed.data,
       session.user.id,
     );
+    await reconcileDeadlinePause(tenant, requestId, session.user.id, today());
     const request = await findById(tenant.slug, requestId);
     // Without the text: what the office is asking for is behind the key.
     if (request) {
@@ -279,6 +284,7 @@ export async function setAmountAction(
     const request = await findById(tenant.slug, requestId);
 
     await setRequestAmount(tenant.slug, requestId, cents, session.user.id);
+    await reconcileDeadlinePause(tenant, requestId, session.user.id, today());
 
     if (!clearing && request && request.amountCents === null) {
       emailWarning = await notifyCitizen({
@@ -544,17 +550,18 @@ export async function resolveRequirementAction(
   const requirementId = String(formData.get("requirementId") ?? "");
   const tenant = await getTenant();
   try {
-    const done = await resolveRequirement(
+    const requestId = await resolveRequirement(
       tenant.slug,
       requirementId,
       session.user.id,
     );
-    if (!done) {
+    if (!requestId) {
       return {
         status: "error",
         message: "Esta exigência não foi encontrada ou já está cumprida.",
       };
     }
+    await reconcileDeadlinePause(tenant, requestId, session.user.id, today());
   } catch (error) {
     console.error("pedidos.resolve-requirement", error);
     return { status: "error", message: GENERIC_ERROR };
@@ -617,12 +624,20 @@ export async function deleteRequirementAction(
   try {
     // The rows go by cascade; the bytes are ours to remove, and only after
     // the rows that pointed at them are gone.
-    const paths = await deleteRequirement(
+    const deleted = await deleteRequirement(
       tenant.slug,
       requirementId,
       session.user.id,
     );
-    for (const path of paths) await deleteStoredFile(path);
+    if (deleted) {
+      for (const path of deleted.paths) await deleteStoredFile(path);
+      await reconcileDeadlinePause(
+        tenant,
+        deleted.requestId,
+        session.user.id,
+        today(),
+      );
+    }
   } catch (error) {
     console.error("pedidos.delete-requirement", error);
     return { status: "error", message: GENERIC_ERROR };

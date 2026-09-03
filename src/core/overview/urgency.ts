@@ -2,7 +2,11 @@ import {
   DATA_RIGHTS_DEADLINE_DAYS,
   dataRightsDayOfDeadline,
 } from "../request/channels.ts";
-import { businessDaysBetween, deadlineDate } from "../request/deadline.ts";
+import {
+  businessDaysBetween,
+  type Deadline,
+  deadlineDate,
+} from "../request/deadline.ts";
 import type { IsoDate } from "../scheduling/calendar.ts";
 
 /** How close to the term counts as "close enough to flag": the horizon the
@@ -13,6 +17,9 @@ export type DeadlineUrgency =
   | { kind: "running" }
   | { kind: "due-soon"; daysLeft: number }
   | { kind: "overdue"; daysLate: number }
+  // The clock stopped while the citizen owes something; `waitingDays` is how
+  // long the office has been waiting on them, in business days.
+  | { kind: "paused"; waitingDays: number }
   | { kind: "closed" };
 
 /**
@@ -26,13 +33,18 @@ export type DeadlineUrgency =
  */
 export function deadlineUrgency(
   open: boolean,
-  startedOn: IsoDate,
-  days: number,
+  deadline: Deadline,
   today: IsoDate,
 ): DeadlineUrgency {
   if (!open) return { kind: "closed" };
+  if (deadline.pausedOn) {
+    return {
+      kind: "paused",
+      waitingDays: businessDaysBetween(deadline.pausedOn, today),
+    };
+  }
 
-  const due = deadlineDate(startedOn, days);
+  const due = deadlineDate(deadline.startedOn, deadline.days);
   if (today > due) {
     return { kind: "overdue", daysLate: businessDaysBetween(due, today) };
   }

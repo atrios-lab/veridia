@@ -3,10 +3,13 @@ import { test } from "node:test";
 import {
   businessDaysBetween,
   dayOfDeadline,
+  deadlineClock,
   deadlineDate,
   deadlineDaysSchema,
   effectiveDeadline,
+  pauseReasons,
   readDeadline,
+  resumeDeadline,
 } from "./deadline.ts";
 
 // 2026-08-28 is a Friday; 29 and 30 are the weekend.
@@ -89,4 +92,108 @@ test("the term is bounded to a sane number of days", () => {
   assert.equal(deadlineDaysSchema.safeParse(0).success, false);
   assert.equal(deadlineDaysSchema.safeParse(366).success, false);
   assert.equal(deadlineDaysSchema.safeParse(15.5).success, false);
+});
+
+test("a stored pause survives the read; a malformed one drops the term", () => {
+  assert.deepEqual(
+    readDeadline({
+      deadline: { startedOn: "2026-08-28", days: 10, pausedOn: "2026-09-01" },
+    }),
+    { startedOn: "2026-08-28", days: 10, pausedOn: "2026-09-01" },
+  );
+  assert.equal(
+    readDeadline({
+      deadline: { startedOn: "2026-08-28", days: 10, pausedOn: "ontem" },
+    }),
+    undefined,
+  );
+});
+
+test("only a written requirement or a priced payment pauses the clock", () => {
+  assert.deepEqual(
+    pauseReasons({
+      status: "in-review",
+      amountCents: null,
+      pendingRequirements: 1,
+    }),
+    ["requirement"],
+  );
+  assert.deepEqual(
+    pauseReasons({
+      status: "awaiting-compliance",
+      amountCents: null,
+      pendingRequirements: 0,
+    }),
+    [],
+  );
+  assert.deepEqual(
+    pauseReasons({
+      status: "awaiting-payment",
+      amountCents: 5790,
+      pendingRequirements: 0,
+    }),
+    ["payment"],
+  );
+  assert.deepEqual(
+    pauseReasons({
+      status: "awaiting-payment",
+      amountCents: null,
+      pendingRequirements: 0,
+    }),
+    [],
+  );
+  assert.deepEqual(
+    pauseReasons({
+      status: "awaiting-payment",
+      amountCents: 100,
+      pendingRequirements: 2,
+    }),
+    ["requirement", "payment"],
+  );
+});
+
+test("the clock reads the day it stopped while paused", () => {
+  const paused = { startedOn: "2026-08-03", days: 10, pausedOn: "2026-08-07" };
+  assert.equal(deadlineClock(paused, "2026-08-20"), "2026-08-07");
+  assert.equal(
+    dayOfDeadline(paused.startedOn, deadlineClock(paused, "2026-08-20")),
+    4,
+  );
+  assert.equal(
+    deadlineClock({ startedOn: "2026-08-03", days: 10 }, "2026-08-20"),
+    "2026-08-20",
+  );
+});
+
+test("an act with a legal term restarts on the day of the retomada", () => {
+  assert.deepEqual(
+    resumeDeadline(
+      { startedOn: "2026-08-03", days: 10, pausedOn: "2026-08-07" },
+      "2026-08-17",
+      true,
+    ),
+    { startedOn: "2026-08-17", days: 10 },
+  );
+});
+
+test("an act on the office default resumes where it stopped", () => {
+  // Paused Friday the 7th, resumed Monday the 17th: the weekend in between
+  // is not a business day, so the pause is worth six days, not ten.
+  assert.deepEqual(
+    resumeDeadline(
+      { startedOn: "2026-08-03", days: 20, pausedOn: "2026-08-07" },
+      "2026-08-17",
+      false,
+    ),
+    { startedOn: "2026-08-11", days: 20 },
+  );
+  // Read on the day it resumed, the counting is back on day 4 of 20.
+  assert.equal(dayOfDeadline("2026-08-11", "2026-08-17"), 4);
+});
+
+test("resuming a running term only strips a pause it does not have", () => {
+  assert.deepEqual(
+    resumeDeadline({ startedOn: "2026-08-03", days: 10 }, "2026-08-17", true),
+    { startedOn: "2026-08-03", days: 10 },
+  );
 });

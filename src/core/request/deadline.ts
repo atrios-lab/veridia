@@ -86,11 +86,74 @@ export const deadlineDaysSchema = z
   .min(MIN_DEADLINE_DAYS, "O prazo deve ser de pelo menos 1 dia.")
   .max(MAX_DEADLINE_DAYS, "O prazo deve ser de no máximo 365 dias.");
 
+const isoDate = z.string().regex(/^\d{4}-\d{2}-\d{2}$/);
+
 export const deadlineSchema = z.object({
-  startedOn: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+  startedOn: isoDate,
   days: deadlineDaysSchema,
+  // The day the clock stopped, while the citizen owes the office something
+  // (see `pauseReasons`). Absent means the term is running.
+  pausedOn: isoDate.optional(),
 });
 export type Deadline = z.infer<typeof deadlineSchema>;
+
+/**
+ * What stops the office's clock: the citizen still owes an answer to a
+ * written exigência (Lei 6.015 art. 198), or a payment the office already
+ * priced. Each reason needs its lastro: the andamento alone ("Aguardando
+ * exigência" with nothing registered, "Aguardando pagamento" with no value)
+ * pauses nothing, because a term paused on a label is a term paused on a
+ * whim.
+ */
+export type PauseReason = "requirement" | "payment";
+
+export function pauseReasons(request: {
+  status: string;
+  amountCents: number | null;
+  pendingRequirements: number;
+}): PauseReason[] {
+  const reasons: PauseReason[] = [];
+  if (request.pendingRequirements > 0) reasons.push("requirement");
+  if (request.status === "awaiting-payment" && request.amountCents != null) {
+    reasons.push("payment");
+  }
+  return reasons;
+}
+
+/**
+ * The day the counting reads as "today": the real one while the term runs,
+ * the day it stopped while paused. Every "dia X de N" the screens print
+ * goes through here so a paused request reads the same tomorrow.
+ */
+export function deadlineClock(deadline: Deadline, today: IsoDate): IsoDate {
+  return deadline.pausedOn ?? today;
+}
+
+/**
+ * The term once the last reason to pause is gone. Where the law fixes the
+ * act's term, the counting restarts on the day of the retomada: that is how
+ * the norms read the reapresentação of a title (prazo contado do reingresso),
+ * and the screen never calls late what the law still considers on time.
+ * Where only the office's default applies, no law gives a new term, so the
+ * counting resumes where it stopped: the expected date moves forward by the
+ * business days the pause lasted.
+ */
+export function resumeDeadline(
+  deadline: Deadline,
+  today: IsoDate,
+  hasLegalTerm: boolean,
+): Deadline {
+  const { pausedOn, ...running } = deadline;
+  if (!pausedOn) return running;
+  if (hasLegalTerm) return { startedOn: today, days: running.days };
+  return {
+    startedOn: deadlineDate(
+      running.startedOn,
+      businessDaysBetween(pausedOn, today),
+    ),
+    days: running.days,
+  };
+}
 
 /**
  * The term stored on a record, read from the raw `details` blob. Anything

@@ -163,7 +163,47 @@ test.describe("fila e detalhe de pedidos", () => {
     await expect(
       page.getByText("Falta cópia legível do documento de identidade."),
     ).toBeVisible();
-    await expect(page.getByText("Aguardando o cidadão")).toBeVisible();
+    // Exact: the deadline badge in the header now says "Aguardando o cidadão
+    // desde hoje" for the same reason, and this line is about the card.
+    await expect(
+      page.getByText("Aguardando o cidadão", { exact: true }),
+    ).toBeVisible();
+  });
+
+  test("uma exigência cadastrada suspende o prazo; cumpri-la recomeça a contagem", async ({
+    page,
+  }) => {
+    await signIn(page);
+    await page.goto(`${baseURL}/admin/pedidos/${encodeURIComponent(PROTOCOL)}`);
+
+    await page.getByRole("button", { name: "Registrar exigência" }).click();
+    await page
+      .getByPlaceholder("O que falta para o pedido seguir?")
+      .fill("Falta a certidão anterior.");
+    await page.getByRole("button", { name: "Registrar", exact: true }).click();
+
+    // O selo troca de tom: não é atraso da serventia, é espera pelo cidadão,
+    // e o resumo do prazo diz desde quando está parado.
+    await expect(
+      page.getByText("Aguardando o cidadão desde hoje"),
+    ).toBeVisible();
+    await expect(page.getByText(/^Prazo: suspenso desde/)).toBeVisible();
+    await expect(
+      page.locator("li", { hasText: "suspendeu o prazo" }),
+    ).toBeVisible();
+
+    // Certidão do RCPN tem prazo legal (5 dias, Lei 6.015 art. 19): cumprida a
+    // exigência, a contagem recomeça hoje em vez de continuar de onde parou.
+    await page.getByRole("button", { name: "Marcar como cumprida" }).click();
+    await expect(
+      page.getByText(/^Prazo: até .* · 5 dias úteis, a contar do próximo/),
+    ).toBeVisible();
+    await expect(page.getByText("Aguardando o cidadão desde hoje")).toHaveCount(
+      0,
+    );
+    await expect(
+      page.locator("li", { hasText: "retomou o prazo" }),
+    ).toBeVisible();
   });
 
   test("launching a manual request generates a protocol and a key", async ({

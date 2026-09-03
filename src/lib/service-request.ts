@@ -10,13 +10,19 @@ import {
   or,
   sql,
 } from "drizzle-orm";
-import type { Act } from "@/core/acts/catalog.ts";
+import { type Act, getActForTenant } from "@/core/acts/catalog.ts";
 import {
   generateAccessKey,
   hashAccessKey,
   verifyAccessKey,
 } from "@/core/request/access-key.ts";
-import type { Deadline } from "@/core/request/deadline.ts";
+import {
+  type Deadline,
+  effectiveDeadline,
+  pauseReasons,
+  readDeadline,
+  resumeDeadline,
+} from "@/core/request/deadline.ts";
 import type { RequestDataEdit } from "@/core/request/edit.ts";
 import {
   isServiceRequestStatus,
@@ -32,6 +38,7 @@ import {
   type ProtocolPrefix,
 } from "@/core/request/protocol.ts";
 import type { SearchTerm } from "@/core/request/search.ts";
+import { type IsoDate, toIsoDate } from "@/core/scheduling/calendar.ts";
 import type { Tenant } from "@/core/tenant/schema.ts";
 import { user } from "@/db/auth-schema.ts";
 import {
@@ -48,6 +55,7 @@ import {
   serviceRequests,
 } from "@/db/schema.ts";
 import { recordAudit } from "./audit.ts";
+import { OFFICE_TIME_ZONE } from "./tenant.ts";
 import type { StoredAttachment } from "./uploads.ts";
 
 export interface NewServiceRequest {
@@ -644,7 +652,7 @@ export async function resolveRequirement(
   tenantSlug: string,
   requirementId: string,
   actorId: string,
-): Promise<boolean> {
+): Promise<string | null> {
   const [requirement] = await db
     .select({ requestId: serviceRequestRequirements.requestId })
     .from(serviceRequestRequirements)
@@ -656,7 +664,7 @@ export async function resolveRequirement(
       ),
     )
     .limit(1);
-  if (!requirement) return false;
+  if (!requirement) return null;
 
   await db
     .update(serviceRequestRequirements)
@@ -670,7 +678,7 @@ export async function resolveRequirement(
     targetType: "service-request",
     targetId: requirement.requestId,
   });
-  return true;
+  return requirement.requestId;
 }
 
 /** One message of a requirement's conversation, with whatever came attached. */
@@ -880,7 +888,7 @@ export async function deleteRequirement(
   tenantSlug: string,
   requirementId: string,
   actorId: string,
-): Promise<string[]> {
+): Promise<{ requestId: string; paths: string[] } | null> {
   const [requirement] = await db
     .select({
       requestId: serviceRequestRequirements.requestId,
@@ -894,7 +902,7 @@ export async function deleteRequirement(
       ),
     )
     .limit(1);
-  if (!requirement || requirement.status !== "pending") return [];
+  if (!requirement || requirement.status !== "pending") return null;
 
   // Read the paths before the cascade takes the rows with it.
   const files = await db
@@ -918,7 +926,7 @@ export async function deleteRequirement(
     targetType: "service-request",
     targetId: requirement.requestId,
   });
-  return files.map((f) => f.path);
+  return { requestId: requirement.requestId, paths: files.map((f) => f.path) };
 }
 
 /** The office records what the request is worth. Corrects freely once set, or clears it (null). */
@@ -1350,17 +1358,17 @@ export async function listRecordHistory(
  * re-reads a prazo it got wrong without inventing a step in the request's
  * life to hang the correction on.
  */
-export async function updateRequestDeadline(
+async function writeDeadline(
   tenantSlug: string,
   id: string,
-  actorId: string,
   deadline: Deadline,
 ): Promise<void> {
   await db
     .update(serviceRequests)
     .set({
       // Merged into `details`, never assigned over it: the consents recorded
-      // at filing live in the same column.
+      // at filing live in the same column. The `deadline` key itself is
+      // replaced whole, which is what lets a resume drop `pausedOn`.
       details: sql`${serviceRequests.details} || ${JSON.stringify({ deadline })}::jsonb`,
       updatedAt: new Date(),
     })
@@ -1370,6 +1378,15 @@ export async function updateRequestDeadline(
         eq(serviceRequests.id, id),
       ),
     );
+}
+
+export async function updateRequestDeadline(
+  tenantSlug: string,
+  id: string,
+  actorId: string,
+  deadline: Deadline,
+): Promise<void> {
+  await writeDeadline(tenantSlug, id, deadline);
   await recordAudit({
     tenantSlug,
     actorId,
@@ -1377,4 +1394,64 @@ export async function updateRequestDeadline(
     targetType: "service-request",
     targetId: id,
   });
+}
+
+/**
+ * Stops or restarts the request's clock to match what the citizen owes (see
+ * `pauseReasons`), and writes nothing when the two already agree. Called
+ * after every write that can change a reason: a requirement registered,
+ * fulfilled or deleted, a value set or cleared, an andamento moved. One
+ * function rather than a rule in each of those five, because five copies of
+ * the same rule is how one of them ends up different.
+ *
+ * `pausedOn` defaults to today; the backfill passes the day the clock should
+ * have stopped. Returns what it did, for the caller that wants to say so.
+ */
+export async function reconcileDeadlinePause(
+  tenant: Tenant,
+  requestId: string,
+  actorId: string | null,
+  today: IsoDate,
+  pausedOn: IsoDate = today,
+): Promise<"paused" | "resumed" | null> {
+  const request = await findById(tenant.slug, requestId);
+  if (!request) return null;
+  const pendingRequirements = (
+    await listRequirements(tenant.slug, requestId)
+  ).filter((r) => r.status === "pending").length;
+
+  const act = request.actId
+    ? getActForTenant(tenant, request.actId)
+    : undefined;
+  const current = effectiveDeadline(
+    toIsoDate(request.createdAt, OFFICE_TIME_ZONE),
+    readDeadline(request.details),
+    act?.legalDeadlineDays,
+    tenant.requestDeadlineDays,
+  );
+  const owed =
+    pauseReasons({
+      status: request.status,
+      amountCents: request.amountCents,
+      pendingRequirements,
+    }).length > 0;
+  if (owed === Boolean(current.pausedOn)) return null;
+
+  await writeDeadline(
+    tenant.slug,
+    requestId,
+    owed
+      ? { ...current, pausedOn }
+      : resumeDeadline(current, today, act?.legalDeadlineDays != null),
+  );
+  await recordAudit({
+    tenantSlug: tenant.slug,
+    actorId,
+    action: owed
+      ? "service-request.deadline.pause"
+      : "service-request.deadline.resume",
+    targetType: "service-request",
+    targetId: requestId,
+  });
+  return owed ? "paused" : "resumed";
 }

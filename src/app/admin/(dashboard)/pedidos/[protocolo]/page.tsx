@@ -51,6 +51,8 @@ const HISTORY_LABELS: Record<string, string> = {
   "service-request.create": "registrou o pedido",
   "service-request.status": "mudou o andamento",
   "service-request.deadline": "ajustou o prazo",
+  "service-request.deadline.pause": "suspendeu o prazo",
+  "service-request.deadline.resume": "retomou o prazo",
   "service-request.requirement.register": "registrou uma exigência",
   "service-request.requirement.fulfill": "cumpriu uma exigência",
   "service-request.amount": "informou o valor do pedido",
@@ -208,8 +210,7 @@ export default async function ServiceRequestDetailPage({
           />
           <DeadlineBadge
             open={isOpenServiceRequestStatus(status)}
-            startedOn={deadline.startedOn}
-            days={deadline.days}
+            deadline={deadline}
             today={today()}
           />
           {/* Pedida, não concedida: quem confere o benefício e decide é o
@@ -251,11 +252,13 @@ export default async function ServiceRequestDetailPage({
               } · pedido em ${formatDayMonthYear(request.createdAt)}`}
               suggested={suggestedNextStatuses(status)}
               deadlineSummary={
-                isOpenServiceRequestStatus(status)
-                  ? `até ${formatDate(
-                      deadlineDate(deadline.startedOn, deadline.days),
-                    )} · ${deadlineProgress(deadline, today())}`
-                  : null
+                !isOpenServiceRequestStatus(status)
+                  ? null
+                  : deadline.pausedOn
+                    ? `suspenso desde ${formatDate(deadline.pausedOn)} · ${deadlineProgress(deadline, deadline.pausedOn)}`
+                    : `até ${formatDate(
+                        deadlineDate(deadline.startedOn, deadline.days),
+                      )} · ${deadlineProgress(deadline, today())}`
               }
               deadlineDays={deadline.days}
             />
