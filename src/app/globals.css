@@ -598,12 +598,19 @@
 /*
  * The header's submenus ("Serviços", "Cidadão") are popovers, so they render
  * in the top layer and no wrapper can position one under its button. Anchor
- * positioning can, where the browser has it (Chrome 125, Safari 26): the
- * button that opens a popover is its implicit anchor, so no name is needed.
+ * positioning can, where the browser has it (Chrome 125, Safari 26): each
+ * button names itself as the anchor of its panel (see nav-group-button.tsx).
  * Elsewhere a panel hangs from the header's right edge: the header is
  * centred at 72rem with 2.5rem of padding on each side, 5.25rem tall.
  * `bottom: auto` undoes the UA sheet's `inset: 0`, which would otherwise
  * stretch the panel to the bottom of the viewport.
+ *
+ * The anchored rules keep the base `right` and give anchor() a fallback on
+ * purpose. A browser that parses anchor() but fails to resolve the anchor
+ * would otherwise compute `top` and `left` to auto, and a fixed box with no
+ * insets in the top layer lands in the top left corner of the screen. With
+ * both `left` and `right` set and an explicit width, `left` wins while the
+ * anchor resolves, and `right` takes over the moment it does not.
  */
 .header-menu {
   position: fixed;
@@ -614,8 +621,7 @@
 }
 @supports (top: anchor(bottom)) {
   .header-menu {
-    top: calc(anchor(bottom) + 0.5rem);
-    right: auto;
+    top: calc(anchor(bottom, 4.75rem) + 0.5rem);
     left: anchor(left);
   }
 }

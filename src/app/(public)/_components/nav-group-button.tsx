@@ -14,6 +14,12 @@ import type { ReactNode } from "react";
  *
  * `aria-current="true"`, never "page": the page is the link inside, which
  * nav-links.tsx marks, and that one stays the only `page` on the screen.
+ *
+ * The anchor name is what the panel hangs from (see .header-menu in
+ * globals.css). Named after the panel's id, explicitly: a popover's invoker
+ * is meant to be its implicit anchor, but not every browser that has
+ * anchor positioning resolves that, and one that does not drops the panel
+ * in the top left corner of the screen.
  */
 export function NavGroupButton({
   hrefs,
@@ -37,6 +43,7 @@ export function NavGroupButton({
     <button
       type="button"
       popoverTarget={popoverTarget}
+      style={{ anchorName: `--${popoverTarget}` }}
       aria-current={current ? "true" : undefined}
       className={current ? `${className} ${currentClassName}` : className}
     >

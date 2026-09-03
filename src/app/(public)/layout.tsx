@@ -180,6 +180,7 @@ export default async function PublicLayout({
                   <div
                     id={id}
                     popover="auto"
+                    style={{ positionAnchor: `--${id}` }}
                     className="header-menu m-0 w-[21rem] rounded-2xl border border-brand-border bg-brand-card p-2 shadow-lg"
                   >
                     <NavLinks

@@ -47,8 +47,12 @@ sozinha, e some se não sobra nada.
 O mesmo padrão do menu do celular: abre sem JavaScript, o navegador fecha com Escape e com o
 clique fora, e `MenuPopover` fecha na navegação. Um popover renderiza na top layer, então nenhum
 wrapper posiciona o painel sob o botão. Onde o navegador tem ancoragem por CSS (Chrome 125,
-Safari 26), `anchor()` pendura o painel sob o botão que o abriu, que é o âncora implícito de um
-popover, sem precisar de nome. Onde não tem, o painel fica na borda direita do cabeçalho.
+Safari 26), `anchor()` pendura o painel sob o botão que o abriu. O botão se nomeia como âncora
+do próprio painel (`anchor-name` / `position-anchor`), explicitamente: o invocador de um popover
+deveria ser seu âncora implícito, mas nem todo navegador com ancoragem resolve isso, e o que não
+resolve joga o painel no canto superior esquerdo da tela. Onde não há ancoragem, o painel fica
+na borda direita do cabeçalho, e as regras ancoradas mantêm esse `right` e dão fallback ao
+`anchor()` para o canto nunca acontecer.
 
 Alternativa descartada: `<details>`, que abre sem JavaScript mas não fecha com Escape nem com o
 clique fora (proposta 8 de `UX_PROPOSALS.md`).
