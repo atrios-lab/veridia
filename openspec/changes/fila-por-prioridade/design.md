@@ -29,8 +29,9 @@ o `DeadlineBadge`, via `deadlineUrgency` (`src/core/overview/urgency.ts`).
   linhas e chama `sort`. O comparador lê banda, `DeadlineUrgency` e `createdAt`; imports
   relativos porque o `node --test` não resolve o alias `@/`.
 - **Dentro da banda: urgência, depois chegada.** Vencido (mais atrasado primeiro), vence em breve
-  (mais próximo primeiro), demais por `createdAt` crescente. Encerrados em `createdAt`
-  decrescente: ali ninguém está na fila, e o último concluído é o que ainda perguntam.
+  (mais próximo primeiro), demais por `createdAt` crescente. Encerrados não têm prazo a ler,
+  então agrupam por andamento na ordem de `SERVICE_REQUEST_STATUSES` e, dentro de cada um,
+  `createdAt` decrescente: ali ninguém está na fila, e o último concluído é o que ainda perguntam.
 - **Cabeçalho de banda só com mais de uma banda visível.** Com filtro por andamento a lista é
   toda de uma banda e o cabeçalho seria ruído.
 - **`DeadlineBadge` fica como está.** Ele também serve o detalhe do pedido; a página calcula a

@@ -9,8 +9,9 @@ registrado, averbado, deferido), Para retirada e Encerrados (concluído, indefer
 arquivado). Cada banda SHALL ter um cabeçalho com o nome e a quantidade de pedidos, omitido
 quando só uma banda aparece. Dentro de uma banda aberta a ordem SHALL ser: prazo vencido primeiro
 (o mais atrasado no topo), depois os que vencem em até três dias úteis (o mais próximo no topo),
-depois os demais por ordem de chegada, do mais antigo ao mais novo. Em Encerrados a ordem SHALL
-ser do mais novo ao mais antigo. Cada linha mostra protocolo, solicitante (nome e contato), ato,
+depois os demais por ordem de chegada, do mais antigo ao mais novo. Em Encerrados os pedidos SHALL
+ficar agrupados por andamento (Concluído, Indeferido, Cancelado, Arquivado) e, dentro de cada
+um, do mais novo ao mais antigo. Cada linha mostra protocolo, solicitante (nome e contato), ato,
 andamento (com selo colorido), valor (ou "—" quando não informado) e data. A fila SHALL oferecer
 filtro por andamento, filtro por atribuição e busca por texto que casa protocolo ou nome do
 solicitante. Clicar numa linha SHALL levar ao detalhe daquele pedido.
@@ -30,6 +31,12 @@ solicitante. Clicar numa linha SHALL levar ao detalhe daquele pedido.
 
 - **WHEN** a fila tem um pedido "Indeferido"
 - **THEN** ele aparece sob "Encerrados", não sob "Com pendência"
+
+#### Scenario: Encerrados agrupados por andamento
+
+- **WHEN** "Encerrados" tem concluídos e indeferidos misturados por data
+- **THEN** todos os concluídos aparecem juntos, do mais novo ao mais antigo, e só depois os
+  indeferidos
 
 #### Scenario: Filtro por andamento
 

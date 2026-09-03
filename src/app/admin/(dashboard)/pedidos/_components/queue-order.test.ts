@@ -9,6 +9,12 @@ import {
 } from "./queue-order.ts";
 
 const day = (n: number) => new Date(2026, 8, n);
+const closed = (status: QueueRowOrder["status"], n: number): QueueRowOrder => ({
+  group: "closed",
+  status,
+  urgency: { kind: "closed" },
+  createdAt: day(n),
+});
 
 test("closed statuses land in the last band whatever their tone", () => {
   assert.equal(queueGroupOf("rejected"), "closed");
@@ -22,37 +28,55 @@ test("closed statuses land in the last band whatever their tone", () => {
 
 test("bands first, then the latest term, then arrival order", () => {
   const rows: QueueRowOrder[] = [
-    { group: "closed", urgency: { kind: "closed" }, createdAt: day(1) },
-    { group: "closed", urgency: { kind: "closed" }, createdAt: day(9) },
-    { group: "working", urgency: { kind: "running" }, createdAt: day(5) },
-    { group: "working", urgency: { kind: "running" }, createdAt: day(2) },
+    closed("rejected", 4),
+    closed("done", 1),
+    closed("rejected", 9),
+    closed("done", 3),
+    {
+      group: "working",
+      status: "in-review",
+      urgency: { kind: "running" },
+      createdAt: day(5),
+    },
+    {
+      group: "working",
+      status: "paid",
+      urgency: { kind: "running" },
+      createdAt: day(2),
+    },
     {
       group: "waiting",
+      status: "new",
       urgency: { kind: "due-soon", daysLeft: 1 },
       createdAt: day(8),
     },
     {
       group: "waiting",
+      status: "new",
       urgency: { kind: "overdue", daysLate: 3 },
       createdAt: day(7),
     },
     {
       group: "blocked",
+      status: "with-requirement",
       urgency: { kind: "overdue", daysLate: 7 },
       createdAt: day(6),
     },
   ];
   const sorted = [...rows].sort(compareQueueRows);
   assert.deepEqual(
-    sorted.map((r) => `${r.group}:${r.createdAt.getDate()}`),
+    sorted.map((r) => `${r.status}:${r.createdAt.getDate()}`),
     [
-      "blocked:6",
-      "waiting:7",
-      "waiting:8",
-      "working:2",
-      "working:5",
-      "closed:9",
-      "closed:1",
+      "with-requirement:6",
+      "new:7",
+      "new:8",
+      "paid:2",
+      "in-review:5",
+      // Closed: concluídos together, then indeferidos, newest first in each.
+      "done:3",
+      "done:1",
+      "rejected:9",
+      "rejected:4",
     ],
   );
 });

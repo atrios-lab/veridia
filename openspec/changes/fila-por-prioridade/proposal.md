@@ -15,7 +15,8 @@ achar o que travou.
 - Dentro de uma banda aberta: prazo vencido primeiro (o mais atrasado no topo), depois os que
   vencem em breve (o mais próximo no topo), depois os demais por ordem de chegada, do mais antigo
   ao mais novo, que é a ordem que a serventia promete ao cidadão.
-- Em Encerrados a ordem é do mais novo ao mais antigo.
+- Em Encerrados os pedidos ficam agrupados por andamento (Concluído, Indeferido, Cancelado,
+  Arquivado) e, dentro de cada um, do mais novo ao mais antigo.
 - Quando só uma banda aparece (filtro por um andamento, por exemplo), o cabeçalho não é mostrado.
 
 ## Capabilities

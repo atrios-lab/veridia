@@ -2,6 +2,7 @@
 import type { DeadlineUrgency } from "../../../../../core/overview/urgency.ts";
 import {
   isOpenServiceRequestStatus,
+  SERVICE_REQUEST_STATUSES,
   type ServiceRequestStatus,
 } from "../../../../../core/request/kinds.ts";
 import { STATUS_TONES, type Tone } from "./status-tone.ts";
@@ -28,6 +29,7 @@ export function queueGroupOf(status: ServiceRequestStatus): Tone {
 
 export interface QueueRowOrder {
   group: Tone;
+  status: ServiceRequestStatus;
   urgency: DeadlineUrgency;
   createdAt: Date;
 }
@@ -43,16 +45,22 @@ const URGENCY_RANK: Record<DeadlineUrgency["kind"], number> = {
 /**
  * Band first; inside a band the latest term first, then the one closest to
  * its term; ties by arrival, oldest first, which is the order the office
- * promises the citizen it works in. The closed band reads newest first: there
- * nobody is queueing, and the last thing finished is the one still being
- * asked about.
+ * promises the citizen it works in. The closed band has no term to read, so
+ * it groups by andamento (concluídos together, indeferidos together) and
+ * inside each reads newest first: there nobody is queueing, and the last
+ * thing finished is the one still being asked about.
  */
 export function compareQueueRows(a: QueueRowOrder, b: QueueRowOrder): number {
   const byGroup =
     (GROUP_RANK.get(a.group) ?? 0) - (GROUP_RANK.get(b.group) ?? 0);
   if (byGroup !== 0) return byGroup;
-  if (a.group === "closed")
+  if (a.group === "closed") {
+    const byStatus =
+      SERVICE_REQUEST_STATUSES.indexOf(a.status) -
+      SERVICE_REQUEST_STATUSES.indexOf(b.status);
+    if (byStatus !== 0) return byStatus;
     return b.createdAt.getTime() - a.createdAt.getTime();
+  }
 
   const byUrgency = URGENCY_RANK[a.urgency.kind] - URGENCY_RANK[b.urgency.kind];
   if (byUrgency !== 0) return byUrgency;
