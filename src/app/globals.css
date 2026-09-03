@@ -596,10 +596,11 @@
 }
 
 /*
- * The header's "Mais" panel is a popover, so it renders in the top layer and
- * no wrapper can position it under its button. Anchor positioning can, where
- * the browser has it (Chrome 125, Safari 26). Elsewhere it hangs from the
- * header's right edge, the corner the button sits in anyway: the header is
+ * The header's submenus ("Serviços", "Cidadão") are popovers, so they render
+ * in the top layer and no wrapper can position one under its button. Anchor
+ * positioning can, where the browser has it (Chrome 125, Safari 26): the
+ * button that opens a popover is its implicit anchor, so no name is needed.
+ * Elsewhere a panel hangs from the header's right edge: the header is
  * centred at 72rem with 2.5rem of padding on each side, 5.25rem tall.
  * `bottom: auto` undoes the UA sheet's `inset: 0`, which would otherwise
  * stretch the panel to the bottom of the viewport.
@@ -611,14 +612,11 @@
   bottom: auto;
   left: auto;
 }
-@supports (anchor-name: --a) {
-  .header-more {
-    anchor-name: --header-more;
-  }
+@supports (top: anchor(bottom)) {
   .header-menu {
-    position-anchor: --header-more;
     top: calc(anchor(bottom) + 0.5rem);
-    right: anchor(right);
+    right: auto;
+    left: anchor(left);
   }
 }
 

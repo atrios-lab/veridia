@@ -14,13 +14,12 @@ linhas.
 
 ## What Changes
 
-- A barra do desktop mantém o desenho aprovado (Início, Solicitar serviço, Agendar atendimento,
-  Editais, Contato e o botão de consulta) e ganha um "Mais", que abre um painel com todas as
-  outras páginas habilitadas, agrupadas por tarefa ("Serviços" e "Cidadão"), cada uma com uma
-  linha dizendo o que é.
-- O menu do celular lista as mesmas páginas agrupadas do mesmo jeito, com "Início" no topo, e
-  passa a rolar por dentro quando a tela é mais baixa que a lista.
-- O rodapé, o menu do celular e o painel "Mais" leem uma única lista de grupos.
+- A barra do desktop passa a ser Início, Serviços, Cidadão, Contato e Transparência, mais o
+  botão de consulta. "Serviços" e "Cidadão" abrem um submenu com as páginas do grupo que a barra
+  não mostra sozinha, cada uma com uma linha dizendo o que é.
+- O menu do celular lista as mesmas páginas nos mesmos grupos, com "Início" no topo, e passa a
+  rolar por dentro quando a tela é mais baixa que a lista.
+- O rodapé, o menu do celular e os submenus da barra leem uma única lista de grupos.
 - A barra completa só aparece a partir de 1024px. Entre 768px e 1023px vale o menu do celular. Os
   rótulos da barra não quebram mais linha.
 - A descrição de cada seção passa a viver em `src/core/tenant/gating.ts`, ao lado do rótulo, e a
@@ -40,12 +39,12 @@ Nenhuma. A mudança altera requisito de uma capacidade que já existe.
 
 ## Impact
 
-- `src/app/(public)/layout.tsx`: a barra, o painel "Mais", o menu do celular e o rodapé.
+- `src/app/(public)/layout.tsx`: a barra, os submenus, o menu do celular e o rodapé.
 - `src/app/(public)/_components/nav-links.tsx`: a descrição opcional sob cada link.
-- `src/app/globals.css`: onde o painel "Mais" se pendura (ancoragem por CSS).
+- `src/app/globals.css`: onde um submenu se pendura (ancoragem por CSS).
 - `src/core/tenant/gating.ts`: `SECTION_DESCRIPTIONS` e a descrição em `sectionNavLinks`.
 - `src/app/(public)/page.tsx`: os cards da home leem a descrição do núcleo.
-- `e2e/public-nav.spec.ts`: o painel "Mais" e o tablet.
+- `e2e/public-nav.spec.ts`: a barra, os submenus e o tablet.
 
 ## Non-Goals
 
@@ -55,5 +54,6 @@ Nenhuma. A mudança altera requisito de uma capacidade que já existe.
 - **A barra do painel administrativo não muda.** Ela já agrupa e já tem busca global.
 - **Não se acrescenta busca ao site público.** Onze páginas não pedem uma.
 - **O rodapé continua sem marcar a página atual.** Ali é atalho, não localização.
-- **O "Mais" não se marca como página atual** quando a página aberta está dentro dele. O link
-  dentro do painel é marcado ao abrir; marcar o botão exigiria mais um componente cliente.
+- **"Serviços" e "Cidadão" não se marcam como página atual** quando a página aberta está dentro
+  do submenu. O link dentro do painel é marcado ao abrir; marcar o botão exigiria mais um
+  componente cliente.

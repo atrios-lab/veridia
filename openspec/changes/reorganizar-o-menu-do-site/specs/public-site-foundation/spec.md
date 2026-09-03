@@ -7,10 +7,10 @@ aparecer somente quando a seção correspondente está habilitada para o tenant
 (`enabledSections`); esconder o item não substitui a checagem de gating no servidor da rota.
 
 Toda seção habilitada DEVE (SHALL) ser alcançável a partir do cabeçalho, em qualquer viewport,
-sem depender do rodapé. No desktop, a barra mostra as tarefas principais e um "Mais" que abre as
-demais páginas; no celular, o menu lista todas. Nos dois casos as páginas que não estão na barra
-DEVEM (SHALL) aparecer agrupadas por tarefa, nos mesmos grupos que o rodapé usa, e o painel do
-desktop DEVE (SHALL) mostrar sob cada página uma linha dizendo o que ela é. O cabeçalho NÃO DEVE
+sem depender do rodapé. No desktop, a barra é Início, Serviços, Cidadão, Contato e Transparência,
+mais o botão de consulta de protocolo; "Serviços" e "Cidadão" abrem um submenu com as páginas do
+grupo que a barra não mostra sozinha, cada uma com uma linha dizendo o que ela é. No celular, o
+menu lista todas as páginas, agrupadas nos mesmos grupos que o rodapé usa. O cabeçalho NÃO DEVE
 (SHALL NOT) provocar rolagem horizontal em nenhum viewport.
 
 A navegação DEVE (SHALL) marcar o link da página em que o visitante está, com `aria-current="page"`
@@ -27,14 +27,20 @@ NÃO precisa (SHALL NOT be required to) marcar nada: ali a navegação é atalho
 - **WHEN** qualquer página pública é aberta em viewport 390px
 - **THEN** o conteúdo renderiza sem overflow horizontal e com as ações principais acessíveis
 
-#### Scenario: O que a barra não mostra fica em "Mais"
-- **WHEN** o visitante, no desktop, abre "Mais" no cabeçalho
-- **THEN** vê as páginas habilitadas que a barra não mostra, agrupadas em "Serviços" e "Cidadão",
-  cada uma com a sua descrição, e nenhuma das que a barra já mostra
+#### Scenario: A barra do desktop
+- **WHEN** qualquer página pública é aberta em viewport de 1024px ou mais
+- **THEN** o cabeçalho mostra, nesta ordem, Início, Serviços, Cidadão, Contato, Transparência e o
+  botão de consulta de protocolo, sem quebrar rótulo em duas linhas
 
-#### Scenario: O painel fecha ao navegar
-- **WHEN** o visitante escolhe uma página dentro de "Mais"
-- **THEN** a página abre e o painel fecha sozinho, sem um segundo toque
+#### Scenario: Um grupo abre um submenu
+- **WHEN** o visitante, no desktop, abre "Serviços" ou "Cidadão"
+- **THEN** vê as páginas habilitadas daquele grupo que a barra não mostra sozinha, cada uma com
+  a sua descrição, e nenhuma das que a barra já mostra (ex.: "Transparência" não se repete em
+  "Cidadão")
+
+#### Scenario: O submenu fecha ao navegar
+- **WHEN** o visitante escolhe uma página dentro de um submenu
+- **THEN** a página abre e o submenu fecha sozinho, sem um segundo toque
 
 #### Scenario: O menu do celular é agrupado por tarefa
 - **WHEN** o visitante abre o menu em 390px

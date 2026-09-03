@@ -81,22 +81,40 @@ test("no desktop o cabeçalho marca a página aberta", async ({ page }) => {
   await expect(header.locator("[aria-current=page]")).toHaveCount(1);
 });
 
-test.describe('no desktop, o que a barra não mostra fica em "Mais"', () => {
-  test("o painel abre, leva à página e fecha sozinho", async ({ page }) => {
+test.describe("no desktop, Serviços e Cidadão abrem um submenu", () => {
+  test("a barra é Início, Serviços, Cidadão, Contato e Transparência", async ({
+    page,
+  }) => {
     await page.goto(`${baseURL}/`);
     const header = page.getByRole("navigation", {
       name: "Navegação principal",
     });
-    const panel = page.locator("#site-more");
+    // Só o que está na barra: os links dos submenus ficam fechados dentro
+    // dos painéis, e o botão de consulta continua sendo o último item.
+    await expect(header.locator(":scope > a, :scope > button")).toHaveText([
+      "Início",
+      "Serviços",
+      "Cidadão",
+      "Contato",
+      "Transparência",
+      "Consultar protocolo",
+    ]);
+  });
+
+  test("o submenu abre, leva à página e fecha sozinho", async ({ page }) => {
+    await page.goto(`${baseURL}/`);
+    const header = page.getByRole("navigation", {
+      name: "Navegação principal",
+    });
+    const panel = page.locator("#header-menu-cidadao");
     await expect(panel).toBeHidden();
 
-    await header.getByRole("button", { name: "Mais" }).click();
+    await header.getByRole("button", { name: "Cidadão" }).click();
     await expect(panel).toBeVisible();
-    // Agrupado por tarefa, e cada página diz o que é: "Transparência" sozinha
-    // não conta nada a quem nunca a abriu.
-    await expect(panel.getByText("Cidadão", { exact: true })).toBeVisible();
+    // Cada página diz o que é: "Ouvidoria" sozinha não conta nada a quem
+    // nunca a abriu.
     await expect(
-      panel.getByText("Documentos públicos e movimento mensal"),
+      panel.getByText("Elogio, reclamação, sugestão ou denúncia"),
     ).toBeVisible();
 
     await panel.getByRole("link", { name: "Ouvidoria" }).click();
@@ -106,19 +124,28 @@ test.describe('no desktop, o que a barra não mostra fica em "Mais"', () => {
     await expect(panel).toBeHidden();
   });
 
-  test("a barra não repete o que o painel lista", async ({ page }) => {
+  test("um submenu não repete o que a barra já mostra sozinha", async ({
+    page,
+  }) => {
     await page.goto(`${baseURL}/`);
     const header = page.getByRole("navigation", {
       name: "Navegação principal",
     });
-    await expect(
-      header.getByRole("link", { name: "Solicitar serviço" }),
-    ).toBeVisible();
-    await header.getByRole("button", { name: "Mais" }).click();
+    // Transparência e Contato pertencem ao grupo "Cidadão" no rodapé e no
+    // celular, mas na barra têm link próprio, então saem do submenu.
+    await header.getByRole("button", { name: "Cidadão" }).click();
+    const panel = page.locator("#header-menu-cidadao");
+    await expect(panel.getByRole("link")).toHaveText([
+      /Canal LGPD/,
+      /Ouvidoria/,
+    ]);
+
+    await page.keyboard.press("Escape");
+    await header.getByRole("button", { name: "Serviços" }).click();
     await expect(
       page
-        .locator("#site-more")
-        .getByRole("link", { name: "Solicitar serviço" }),
+        .locator("#header-menu-servicos")
+        .getByRole("link", { name: "Consultar protocolo" }),
     ).toHaveCount(0);
   });
 });

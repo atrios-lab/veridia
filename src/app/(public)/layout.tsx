@@ -1,6 +1,7 @@
 import { cookies } from "next/headers";
 import Image from "next/image";
 import Link from "next/link";
+import { Fragment } from "react";
 import {
   enabledSections,
   SECTION_ROUTES,
@@ -18,19 +19,27 @@ import { NavLinks } from "./_components/nav-links.tsx";
 import { BlobUploadProvider } from "./_lib/attachments.tsx";
 import { COOKIE_NOTICE_COOKIE } from "./_lib/cookie-notice.ts";
 
-// The redesign's header: home, the two tasks, notices and contact, with the
-// lookup as the highlighted button. Everything else the office offers hangs
-// under "Mais", by task group, so no page is reachable only from the footer.
-const HEADER_HREFS = ["/", "/solicitar", "/agendar", "/editais", "/contato"];
+// The bar, in order: an address is a link, a group title opens that group
+// as a submenu, minus whatever the bar already links to on its own. The
+// lookup stays the highlighted button at the end, so no page is reachable
+// only from the footer.
+const HEADER_ITEMS: readonly ({ href: string } | { group: string })[] = [
+  { href: "/" },
+  { group: "Serviços" },
+  { group: "Cidadão" },
+  { href: "/contato" },
+  { href: "/transparencia" },
+];
 
 // Where each page lives, by task rather than by navigation order. One list
-// for the phone menu, the header's "Mais" panel and the footer, so the three
+// for the header's submenus, the phone menu and the footer, so the three
 // never disagree. By address, since a section can open two pages (see
 // sectionNavLinks). A new section has to join one of the groups, or the
 // gating e2e (tenants.spec.ts) reports it missing from the footer.
 const NAV_GROUPS = [
   {
     title: "Serviços",
+    slug: "servicos",
     hrefs: [
       "/solicitar",
       "/agendar",
@@ -42,11 +51,12 @@ const NAV_GROUPS = [
   },
   {
     title: "Cidadão",
+    slug: "cidadao",
     hrefs: ["/lgpd", "/ouvidoria", "/transparencia", "/contato"],
   },
 ];
 
-// The phone menu and the "Mais" panel are the same list drawn twice.
+// The phone menu and the header's submenus are the same list drawn twice.
 const MENU_GROUP =
   "block px-3 pt-3 pb-1 text-[11px] font-bold uppercase tracking-[0.16em] text-brand-accent-ink";
 const MENU_LINK =
@@ -65,23 +75,21 @@ export default async function PublicLayout({
   // By address, in the order given, skipping what the office does not offer.
   const pick = (hrefs: readonly string[]) =>
     hrefs.flatMap((href) => links.filter((link) => link.href === href));
-  const groups = NAV_GROUPS.map(({ title, hrefs }) => ({
+  const groups = NAV_GROUPS.map(({ title, slug, hrefs }) => ({
     title,
+    slug,
     links: pick(hrefs),
   })).filter((group) => group.links.length > 0);
-  const headerLinks = pick(HEADER_HREFS);
   const lookup = links.find((link) => link.section === "consulta-protocolo");
-  // "Mais" holds what the header does not already show.
+  // A submenu does not repeat what the bar already links to on its own.
   const shown = new Set([
-    ...HEADER_HREFS,
+    ...HEADER_ITEMS.flatMap((item) => ("href" in item ? [item.href] : [])),
     SECTION_ROUTES["consulta-protocolo"],
   ]);
-  const moreGroups = groups
-    .map((group) => ({
-      ...group,
-      links: group.links.filter((link) => !shown.has(link.href)),
-    }))
-    .filter((group) => group.links.length > 0);
+  const submenu = (title: string) =>
+    groups
+      .find((group) => group.title === title)
+      ?.links.filter((link) => !shown.has(link.href)) ?? [];
   // Server-side gate on the office's switch: an office with chat off never
   // ships the component to the client at all. The client then polls its own
   // state to react within seconds if the switch flips mid-session (see
@@ -129,45 +137,54 @@ export default async function PublicLayout({
                 na home. O data-section vai junto: no rodapé enxuto ela não tem
                 link próprio, então é este que prova ao e2e de gating que a
                 seção rendeu. */}
-            <NavLinks
-              links={headerLinks}
-              className="whitespace-nowrap text-sm font-medium text-brand-primary hover:text-brand-primary-soft"
-              currentClassName="font-semibold underline decoration-brand-accent decoration-2 underline-offset-4"
-            />
-            {moreGroups.length > 0 && (
-              <>
-                {/* Native popover, like the phone menu below: Escape and the
-                    click outside are the browser's own. Where it hangs is CSS
-                    (.header-menu in globals.css): a popover renders in the
-                    top layer, so no wrapper here could position it. */}
-                <button
-                  type="button"
-                  popoverTarget="site-more"
-                  className="header-more flex cursor-pointer items-center gap-1 whitespace-nowrap text-sm font-medium text-brand-primary hover:text-brand-primary-soft"
-                >
-                  Mais
-                  <Icon name="chevronRight" className="h-3.5 w-3.5 rotate-90" />
-                </button>
-                <div
-                  id="site-more"
-                  popover="auto"
-                  className="header-menu m-0 w-[21rem] rounded-2xl border border-brand-border bg-brand-card p-2 shadow-lg"
-                >
-                  {moreGroups.map(({ title, links: groupLinks }) => (
-                    <div key={title}>
-                      <span className={MENU_GROUP}>{title}</span>
-                      <NavLinks
-                        links={groupLinks}
-                        descriptions
-                        className={MENU_LINK}
-                        currentClassName={MENU_CURRENT}
-                      />
-                    </div>
-                  ))}
-                  <MenuPopover />
-                </div>
-              </>
-            )}
+            {HEADER_ITEMS.map((item) => {
+              if ("href" in item) {
+                return (
+                  <NavLinks
+                    key={item.href}
+                    links={pick([item.href])}
+                    className="whitespace-nowrap text-sm font-medium text-brand-primary hover:text-brand-primary-soft"
+                    currentClassName="font-semibold underline decoration-brand-accent decoration-2 underline-offset-4"
+                  />
+                );
+              }
+              const group = groups.find((g) => g.title === item.group);
+              const groupLinks = submenu(item.group);
+              if (!group || groupLinks.length === 0) return null;
+              const id = `header-menu-${group.slug}`;
+              return (
+                // Native popover, like the phone menu below: Escape and the
+                // click outside are the browser's own. Where it hangs is CSS
+                // (.header-menu in globals.css): a popover renders in the
+                // top layer, so no wrapper here could position it.
+                <Fragment key={item.group}>
+                  <button
+                    type="button"
+                    popoverTarget={id}
+                    className="flex cursor-pointer items-center gap-1 whitespace-nowrap text-sm font-medium text-brand-primary hover:text-brand-primary-soft"
+                  >
+                    {item.group}
+                    <Icon
+                      name="chevronRight"
+                      className="h-3.5 w-3.5 rotate-90"
+                    />
+                  </button>
+                  <div
+                    id={id}
+                    popover="auto"
+                    className="header-menu m-0 w-[21rem] rounded-2xl border border-brand-border bg-brand-card p-2 shadow-lg"
+                  >
+                    <NavLinks
+                      links={groupLinks}
+                      descriptions
+                      className={MENU_LINK}
+                      currentClassName={MENU_CURRENT}
+                    />
+                    <MenuPopover />
+                  </div>
+                </Fragment>
+              );
+            })}
             {lookup && (
               // Pela mesma lista, só para ganhar o aria-current na consulta:
               // um botão de ação já é o elemento mais visível do cabeçalho e
