@@ -336,7 +336,7 @@ export async function saveInternalNote(
  * The protocol of an open request the citizen already filed for this act, if
  * any. The CPF identifies the person when given, but it is optional on the
  * form; the e-mail is not, so it is what a CPF-less citizen is matched by
- * instead — dropping to nothing here would let exactly the CPF-less case
+ * instead: dropping to nothing here would let exactly the CPF-less case
  * through unchecked. Checked before any attachment is stored, same reasoning
  * as the other pre-filing refusals in `submitServiceRequest`: a duplicate
  * found after upload would leave the files orphaned in the blob store.

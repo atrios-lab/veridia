@@ -231,7 +231,7 @@ test("a requirement is fulfilled by linking its resolving attachment", async () 
 });
 
 // What `findOpenServiceRequestDuplicate` (src/lib/service-request.ts) reads:
-// same office, same act, same citizen (CPF when given, e-mail always —
+// same office, same act, same citizen (CPF when given, e-mail always:
 // e-mail is required on the form, CPF is not), status not terminal. This is
 // the same query shape, run straight against Postgres because that file's
 // `db` is a real driver connection, not swappable to PGlite the way this
