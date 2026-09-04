@@ -1,5 +1,8 @@
 import "server-only";
-import { buildAccountEmailText } from "@/core/auth/invite.ts";
+import {
+  buildAccountEmailText,
+  type InviteEmailKind,
+} from "@/core/auth/invite.ts";
 import type { Tenant } from "@/core/tenant/schema.ts";
 import {
   renderEmailCardHtml,
@@ -15,16 +18,19 @@ export interface SendInviteEmailParams {
   roleLabel: string;
   actionUrl: string;
   tenant: Tenant;
+  /** Same link either way; see inviteEmailKind for who gets which words. */
+  kind?: InviteEmailKind;
 }
 
 export async function sendInviteEmail(
   params: SendInviteEmailParams,
 ): Promise<void> {
   const text = buildAccountEmailText({
-    kind: "convite",
+    kind: params.kind ?? "convite",
     recipientName: params.recipientName,
     inviterName: params.inviterName,
     roleLabel: params.roleLabel,
+    tenantName: params.tenant.name,
   });
   await sendEmail({
     to: params.to,

@@ -248,3 +248,50 @@ test.describe("tela de Usuários", () => {
     ).toBeVisible();
   });
 });
+
+// The platform account inviting an office's administrator: the path that
+// turns the invite into the boas-vindas e-mail (inviteEmailKind). The e-mail
+// itself only reaches the server log here, so what this proves is that the
+// superadmin can reach the screen of an office it does not belong to and
+// create a Registrador account there.
+test.describe("superadmin convida o Registrador de uma serventia", () => {
+  test.skip(
+    !process.env.DATABASE_URL ||
+      !process.env.SUPERADMIN_SEED_EMAIL ||
+      !process.env.SUPERADMIN_SEED_PASSWORD,
+    "precisa de DATABASE_URL, SUPERADMIN_SEED_EMAIL e SUPERADMIN_SEED_PASSWORD (pnpm db:seed-superadmin)",
+  );
+
+  const REGISTRADORA_EMAIL = "helena.e2e@exemplo.com";
+
+  test.afterEach(async () => {
+    const sql = postgres(process.env.DATABASE_URL as string);
+    await sql`delete from "user" where email = ${REGISTRADORA_EMAIL}`;
+    await sql.end();
+  });
+
+  test("creates a Registrador account from the office's Usuários screen", async ({
+    page,
+  }) => {
+    await page.goto(`${baseURL}/admin/login`);
+    await page
+      .getByLabel("E-mail")
+      .fill(process.env.SUPERADMIN_SEED_EMAIL as string);
+    await page
+      .getByLabel("Senha", { exact: true })
+      .fill(process.env.SUPERADMIN_SEED_PASSWORD as string);
+    await page.getByRole("button", { name: "Entrar" }).click();
+    await expect(page).toHaveURL(`${baseURL}/admin`);
+
+    await page.goto(`${baseURL}/admin/usuarios`);
+    await page.getByLabel("Nome").fill("Helena E2E");
+    await page.getByLabel("E-mail").fill(REGISTRADORA_EMAIL);
+    await page.getByLabel("Papel").selectOption({ label: "Registrador" });
+    await page.getByRole("button", { name: "Criar conta" }).click();
+
+    await expect(page.getByText("Conta criada. E-mail enviado.")).toBeVisible();
+    const row = page.getByText(REGISTRADORA_EMAIL).locator("..").locator("..");
+    await expect(row.getByText("Aguardando 1º acesso")).toBeVisible();
+    await expect(row.getByText("Registrador", { exact: true })).toBeVisible();
+  });
+});
