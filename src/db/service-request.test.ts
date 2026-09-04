@@ -438,8 +438,8 @@ test("a requirement's form goes when the requirement goes", async () => {
 // What `deactivateServiceRequests` (src/lib/service-request.ts) does: check
 // every id belongs to the tenant before writing anything, then set each to
 // `inactive`. Run against Postgres for the same reason as
-// `OPEN_DUPLICATE_QUERY` above — that file's `db` is a real driver
-// connection, not swappable to PGlite.
+// `OPEN_DUPLICATE_QUERY` above (that file's `db` is a real driver
+// connection, not swappable to PGlite).
 test("marking protocols inactive in bulk leaves the others untouched", async () => {
   await fileRequest("cartorio-marinho", 2030, 1);
   await fileRequest("cartorio-marinho", 2030, 2);

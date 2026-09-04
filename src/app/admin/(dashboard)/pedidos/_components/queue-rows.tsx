@@ -35,7 +35,7 @@ export interface QueueRow {
  * ("Marcar como inativo"). Client-side because selection is transient,
  * per-viewer state that nothing else needs to know about.
  *
- * The checkbox sits outside the row's `<Link>` on purpose — a checkbox inside
+ * The checkbox sits outside the row's `<Link>` on purpose: a checkbox inside
  * an anchor would toggle and navigate on the same click.
  */
 export function QueueRows({
@@ -79,7 +79,7 @@ export function QueueRows({
             error={state.status === "error" ? state.message : null}
             trigger="Marcar como inativo"
             question={`Marcar ${selected.size} protocolo${selected.size === 1 ? "" : "s"} como inativo${selected.size === 1 ? "" : "s"}?`}
-            consequence="Os protocolos saem do fluxo de atendimento, mas os dados e o histórico de cada um continuam guardados. Nada é apagado — para reativar, mude o andamento pelo detalhe do protocolo."
+            consequence="Os protocolos saem do fluxo de atendimento, mas os dados e o histórico de cada um continuam guardados. Nada é apagado: para reativar, mude o andamento pelo detalhe do protocolo."
             confirmLabel="Marcar como inativo"
             pendingLabel="Marcando…"
           >
