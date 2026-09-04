@@ -7,8 +7,8 @@ import type { ServiceRequestStatus } from "@/core/request/kinds.ts";
  * análise" share the analysis phase while meaning opposite things to whoever
  * is scanning the list for what stalled.
  *
- * Five tones, and every one of the eighteen andamentos names its own. A
- * `Record` with no fallback on purpose: a nineteenth andamento fails the type
+ * Five tones, and every one of the nineteen andamentos names its own. A
+ * `Record` with no fallback on purpose: a twentieth andamento fails the type
  * check instead of quietly inheriting a colour nobody chose for it.
  */
 export type Tone = "blocked" | "waiting" | "working" | "delivered" | "closed";
@@ -48,6 +48,8 @@ export const STATUS_TONES: Record<ServiceRequestStatus, Tone> = {
   // Over without delivery.
   cancelled: "closed",
   archived: "closed",
+  // Off the board on purpose, by the operator's own hand.
+  inactive: "closed",
 };
 
 export function statusBadgeClass(status: ServiceRequestStatus): string {

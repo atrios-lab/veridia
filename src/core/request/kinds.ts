@@ -32,7 +32,7 @@ export const KIND_BY_PREFIX: Record<ProtocolPrefix, RequestKind> = {
 };
 
 /**
- * The eighteen andamentos a service request may be in: the general ones every
+ * The nineteen andamentos a service request may be in: the general ones every
  * request passes through plus the registral steps of a title's life, which is
  * the vocabulary the registrar actually works in (prenotação, qualificação,
  * registro, averbação). A closed list, not a database enum: every other
@@ -66,15 +66,16 @@ export const SERVICE_REQUEST_STATUSES = [
   "rejected",
   "cancelled",
   "archived",
+  "inactive",
 ] as const;
 export type ServiceRequestStatus = (typeof SERVICE_REQUEST_STATUSES)[number];
 
 /** Andamentos that no longer need the operator's attention. */
 export const TERMINAL_SERVICE_REQUEST_STATUSES: readonly ServiceRequestStatus[] =
-  ["done", "rejected", "cancelled", "archived"];
+  ["done", "rejected", "cancelled", "archived", "inactive"];
 
 /**
- * The phases the queue groups the eighteen into. Eighteen steps do not fit a
+ * The phases the queue groups the nineteen into. Eighteen steps do not fit a
  * progress bar, and the citizen does not need "averbado" to know where their
  * request stands. The office does, and the office reads the detail screen.
  */
@@ -105,7 +106,7 @@ export const SERVICE_REQUEST_PHASES = [
   {
     id: "closed",
     label: "Encerrado",
-    statuses: ["done", "rejected", "cancelled", "archived"],
+    statuses: ["done", "rejected", "cancelled", "archived", "inactive"],
   },
 ] as const satisfies readonly {
   id: string;
@@ -144,7 +145,7 @@ export function isServiceRequestStatus(
  * detail screen. This is UX guidance, not a state machine: the andamento of a
  * title does not fit one (a prenotação may go to exigência, an exigência back
  * to qualificação, a concluído may reopen), so the server enforces only that
- * the value is one of the eighteen above and that it is not the current one.
+ * the value is one of the nineteen above and that it is not the current one.
  * A correction outside this table (moving a request back out of "Cancelado",
  * say) is still accepted.
  */
@@ -170,6 +171,7 @@ const SUGGESTED_NEXT_STATUSES: Record<
   rejected: ["archived"],
   cancelled: ["in-review", "archived"],
   archived: [],
+  inactive: [],
 };
 
 export function suggestedNextStatuses(
@@ -291,6 +293,7 @@ const STATUS_LABELS: Record<RequestKind, Record<string, string>> = {
     rejected: "Indeferido",
     cancelled: "Cancelado",
     archived: "Arquivado",
+    inactive: "Inativo",
   },
   // Appointments live in their own table now (see core/scheduling/appointment
   // for the statuses in use). These labels remain only so a dormant AGD row
