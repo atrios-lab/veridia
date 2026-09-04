@@ -25,6 +25,7 @@ import {
 } from "@/core/request/deadline.ts";
 import type { RequestDataEdit } from "@/core/request/edit.ts";
 import {
+  isOpenServiceRequestStatus,
   isServiceRequestStatus,
   KIND_BY_PREFIX,
   KIND_PREFIXES,
@@ -329,6 +330,46 @@ export async function saveInternalNote(
     targetType: "ombudsman",
     targetId: id,
   });
+}
+
+/**
+ * The protocol of an open request the citizen already filed for this act, if
+ * any. The CPF identifies the person when given, but it is optional on the
+ * form; the e-mail is not, so it is what a CPF-less citizen is matched by
+ * instead — dropping to nothing here would let exactly the CPF-less case
+ * through unchecked. Checked before any attachment is stored, same reasoning
+ * as the other pre-filing refusals in `submitServiceRequest`: a duplicate
+ * found after upload would leave the files orphaned in the blob store.
+ */
+export async function findOpenServiceRequestDuplicate(
+  tenantSlug: string,
+  actId: string,
+  identity: { cpf?: string; email: string },
+): Promise<string | undefined> {
+  const sameCitizen = identity.cpf
+    ? or(
+        eq(serviceRequests.cpf, identity.cpf),
+        eq(serviceRequests.contact, identity.email),
+      )
+    : eq(serviceRequests.contact, identity.email);
+  const [request] = await db
+    .select({
+      protocolNumber: serviceRequests.protocolNumber,
+      status: serviceRequests.status,
+    })
+    .from(serviceRequests)
+    .where(
+      and(
+        eq(serviceRequests.tenantSlug, tenantSlug),
+        eq(serviceRequests.kind, "service-request"),
+        eq(serviceRequests.actId, actId),
+        sameCitizen,
+      ),
+    )
+    .orderBy(desc(serviceRequests.createdAt))
+    .limit(1);
+  if (!request || !isOpenServiceRequestStatus(request.status)) return undefined;
+  return request.protocolNumber;
 }
 
 /** Files a service request: the record whose kind carries an act. */
