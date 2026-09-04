@@ -804,6 +804,48 @@ test.describe("filing a request", () => {
     await expect(deliveredStep).toContainText(/\d{2}\/\d{2}\/\d{4}/);
   });
 
+  test("a second request for the same act and CPF shows the duplicate dialog", async ({
+    page,
+  }) => {
+    const formURL = `${baseURL}/solicitar?atribuicao=RCPN&ato=rcpn-habilitacao-casamento`;
+    await page.goto(formURL);
+    await fillForm(page);
+    await page.getByLabel(/CPF/).fill("529.982.247-25");
+    await page.getByRole("button", { name: "Enviar requerimento" }).click();
+    await expect(
+      page.getByRole("heading", { name: "Pedido registrado" }),
+    ).toBeVisible();
+    const protocolNumber =
+      (await page
+        .getByText(/REQ\.\d{4}\.\d{6}/)
+        .first()
+        .textContent()) ?? "";
+
+    // Same act, same CPF, request still open: the second attempt is refused
+    // with a dialog pointing at the first protocol instead of a new one.
+    await page.goto(formURL);
+    await fillForm(page);
+    await page.getByLabel(/CPF/).fill("529.982.247-25");
+    await page.getByRole("button", { name: "Enviar requerimento" }).click();
+
+    const dialog = page.getByRole("dialog", {
+      name: "Você já tem um pedido em andamento",
+    });
+    await expect(dialog).toBeVisible();
+    await expect(dialog.getByText(protocolNumber)).toBeVisible();
+
+    const link = dialog.getByRole("link", { name: "Ver meu protocolo" });
+    await expect(link).toHaveAttribute(
+      "href",
+      `/protocolo?numero=${protocolNumber}`,
+    );
+    await link.click();
+    await expect(page).toHaveURL(
+      new RegExp(`/protocolo\\?numero=${protocolNumber}`),
+    );
+    await expect(page.getByText(protocolNumber)).toBeVisible();
+  });
+
   test("a rejected request ends the timeline in the outcome, not invented next steps", async ({
     page,
   }) => {
