@@ -121,12 +121,19 @@ test.describe("publicações", () => {
   }) => {
     // Fixture própria: o afterEach apaga a publicação depois de cada teste,
     // então este não herda a que o anterior criou.
+    //
+    // O dia da serventia, não `current_date`: o banco calcula essa em UTC, e
+    // `isLive`/o filtro da aba comparam contra o dia de Brasília (ver
+    // `clientToday` em publication-form.tsx para o mesmo cuidado). Das 21h à
+    // meia-noite UTC, `current_date` já é amanhã para a serventia, e a
+    // publicação nasceria "agendada", nunca visível na aba "No site".
+    const hoje = toIsoDate(new Date(), "America/Sao_Paulo");
     const sql = postgres(process.env.DATABASE_URL as string);
     await sql`
       insert into office_publications
         (tenant_slug, kind, title, body, publish_at, expire_at)
       values ('cartorio-marinho', 'aviso', ${TITLE},
-              'Publicação vigente do teste e2e.', current_date, date '2099-01-01')
+              'Publicação vigente do teste e2e.', ${hoje}::date, date '2099-01-01')
     `;
     await sql.end();
 
