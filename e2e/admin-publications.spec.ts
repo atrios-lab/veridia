@@ -65,7 +65,10 @@ test.describe("publicações", () => {
 
     await expect(page.getByText("Salvo.")).toBeVisible();
     await page.getByRole("link", { name: /Rascunhos/ }).click();
-    await expect(page.getByText(TITLE)).toBeVisible();
+    // The title also lingers in the form's own live preview beside the list
+    // (same ambiguity the "publishing" test below already names): the list
+    // row is the one this test is about.
+    await expect(page.getByText(TITLE).first()).toBeVisible();
   });
 
   test("marriage banns pre-fill the exit date 15 days out", async ({
