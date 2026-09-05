@@ -1,14 +1,12 @@
 import { expect, test } from "@playwright/test";
 import postgres from "postgres";
 import { COOKIE_NOTICE_COOKIE } from "../src/app/(public)/_lib/cookie-notice.ts";
-import { isWithinChatHours } from "../src/core/chat/hours.ts";
-import { TENANTS } from "../src/core/tenant/resolve.ts";
 
-// Entrega 8c/8d: o widget do cidadão. A janela de horário depende do
-// relógio real no momento do teste (tenant.scheduling é config estática,
-// sem como injetar "agora" num servidor de verdade): a cobertura de "fora
-// do horário" fica em src/core/chat/hours.test.ts, que injeta o `Date`; aqui
-// só os cenários que não dependem de que horas são agora.
+// Entrega 8c/8d: o widget do cidadão. A cobertura de janela de horário (a
+// diferença entre "auto" e "on") fica em src/core/chat/hours.test.ts, que
+// injeta o `Date`; aqui a serventia de teste fica com o chat em "on", que
+// ignora o relógio, para este arquivo não depender de que horas são agora
+// no momento em que o CI roda (ver SCRUM-23).
 
 const PORT = process.env.PORT ?? "3000";
 const baseURL = `http://marinho.localhost:${PORT}`;
@@ -33,22 +31,10 @@ test.describe("widget com o chat ligado", () => {
     "precisa de DATABASE_URL: liga o chat da serventia direto no banco",
   );
 
-  // O bloco inteiro depende do relógio, ao contrário do que o comentário do
-  // topo deste arquivo supunha: fora do horário de atendimento o botão do
-  // widget passa a dizer "Fora do horário de atendimento" e o fluxo de fila
-  // nem existe. A cobertura de "fora do horário" é do hours.test.ts, que
-  // injeta o `Date`; aqui só resta pular.
-  test.skip(
-    !isWithinChatHours(TENANTS["cartorio-marinho"], new Date()),
-    "fora do horário de atendimento da serventia: o widget não abre fila",
-  );
-
   // O widget espera o aviso de cookies: os dois moram no canto inferior
   // direito e o chat grava cookie próprio, então ele só é renderizado depois
   // que o cidadão dispensa o aviso (ver (public)/layout.tsx). Sem isto o
-  // botão nunca existe, e o teste falhava desde que a trava entrou, em
-  // 8d6e3d0 (10/08): ninguém viu porque ele se pula fora do expediente da
-  // serventia, que é quando o CI quase sempre roda.
+  // botão nunca existe.
   test.beforeEach(async ({ context }) => {
     // Por `url` e não por `domain`: o host de teste carrega porta, e o par
     // domínio/caminho escrito à mão erra calado, deixando o cookie de fora.
@@ -59,9 +45,14 @@ test.describe("widget com o chat ligado", () => {
 
   test.beforeAll(async () => {
     const sql = postgres(process.env.DATABASE_URL as string);
+    // `availability: "on"` forces the chat open regardless of the office's
+    // counterHours, so this suite no longer depends on the wall clock at
+    // the moment the CI run happens (see SCRUM-23: the old "auto" setting
+    // made the whole block skip itself outside business hours, hiding a
+    // real defect for three weeks).
     await sql`
       insert into tenant_content (tenant_slug, key, published, published_at)
-      values ('cartorio-marinho', 'office-chat', '{"enabled": true}'::jsonb, now())
+      values ('cartorio-marinho', 'office-chat', '{"availability": "on"}'::jsonb, now())
       on conflict (tenant_slug, key) do update set published = excluded.published
     `;
     await sql.end();
