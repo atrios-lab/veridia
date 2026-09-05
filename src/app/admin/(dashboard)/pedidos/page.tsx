@@ -1,6 +1,5 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { Fragment } from "react";
 import { getAct } from "@/core/acts/catalog.ts";
 import { can } from "@/core/auth/roles.ts";
 import { deadlineUrgency } from "@/core/overview/urgency.ts";
@@ -19,13 +18,8 @@ import { getSession } from "@/lib/session.ts";
 import { getTenant, OFFICE_TIME_ZONE, today } from "@/lib/tenant.ts";
 import { AdminIcon } from "../../_components/icon.tsx";
 import { AdminPageHeader } from "../../_components/page-header.tsx";
-import { DeadlineBadge } from "./_components/deadline-badge.tsx";
-import {
-  compareQueueRows,
-  QUEUE_GROUPS,
-  queueGroupOf,
-} from "./_components/queue-order.ts";
-import { StatusBadge } from "./_components/status-badge.tsx";
+import { compareQueueRows, queueGroupOf } from "./_components/queue-order.ts";
+import { QueueRows } from "./_components/queue-rows.tsx";
 
 export const metadata = { title: "Pedidos de serviço" };
 
@@ -91,9 +85,18 @@ export default async function ServiceRequestQueuePage({
       );
       const urgency = deadlineUrgency(open, deadline, todayIso);
       return {
-        request,
-        act,
+        id: request.id,
+        protocolNumber: request.protocolNumber,
+        applicantName: request.applicantName ?? "Não informado",
+        contact: request.contact ?? "",
+        actName: act?.name ?? "Ato não identificado",
         status,
+        statusLabel: statusLabel("service-request", status),
+        amountText:
+          request.amountCents != null
+            ? formatCents(request.amountCents)
+            : "A definir",
+        dateText: shortDate(request.createdAt),
         open,
         deadline,
         urgency,
@@ -168,89 +171,16 @@ export default async function ServiceRequestQueuePage({
           </Link>
         </div>
 
-        <div className="overflow-hidden rounded-[14px] border border-admin-border bg-admin-card">
-          <div className="grid grid-cols-[150px_1.6fr_1.4fr_170px_110px_100px_20px] gap-2 border-b border-admin-border px-5 py-2.5 text-[11px] font-bold tracking-[0.06em] text-admin-faint uppercase">
-            <span>Protocolo</span>
-            <span>Solicitante</span>
-            <span>Ato</span>
-            <span>Andamento</span>
-            <span>Valor</span>
-            <span>Data</span>
-            <span />
-          </div>
-
-          {requests.length === 0 ? (
-            <p className="px-5 py-8 text-center text-[13px] text-admin-muted">
-              {hasFilters
-                ? "Nenhum pedido encontrado com esses filtros."
-                : "Nenhum pedido registrado ainda."}
-            </p>
-          ) : (
-            rows.map((row, index) => {
-              const { request, act, status } = row;
-              const band =
-                showBands && rows[index - 1]?.group !== row.group
-                  ? QUEUE_GROUPS.find((g) => g.id === row.group)
-                  : undefined;
-              const count = band
-                ? rows.filter((r) => r.group === row.group).length
-                : 0;
-              return (
-                <Fragment key={request.id}>
-                  {band ? (
-                    <div className="flex items-center gap-2 border-b border-admin-border bg-admin-input-bg px-5 py-2 text-[11px] font-bold tracking-[0.06em] text-admin-faint uppercase">
-                      <span>{band.label}</span>
-                      <span className="rounded-full bg-admin-card px-2 py-0.5 tabular-nums">
-                        {count}
-                      </span>
-                    </div>
-                  ) : null}
-                  <Link
-                    href={`/admin/pedidos/${encodeURIComponent(request.protocolNumber)}`}
-                    className="grid grid-cols-[150px_1.6fr_1.4fr_170px_110px_100px_20px] items-center gap-2 border-b border-admin-border px-5 py-3 text-[13px] last:border-b-0 hover:bg-admin-input-bg"
-                  >
-                    <span className="font-bold tabular-nums text-admin-primary">
-                      {request.protocolNumber}
-                    </span>
-                    <span className="min-w-0">
-                      <span className="block truncate font-semibold text-admin-text">
-                        {request.applicantName ?? "Não informado"}
-                      </span>
-                      <span className="block truncate text-[11.5px] text-admin-faint">
-                        {request.contact ?? ""}
-                      </span>
-                    </span>
-                    <span className="truncate text-admin-muted">
-                      {act?.name ?? "Ato não identificado"}
-                    </span>
-                    <span className="flex flex-col items-start gap-1">
-                      <StatusBadge
-                        status={status}
-                        label={statusLabel("service-request", status)}
-                      />
-                      <DeadlineBadge
-                        open={row.open}
-                        deadline={row.deadline}
-                        today={todayIso}
-                      />
-                    </span>
-                    <span className="tabular-nums text-admin-text">
-                      {request.amountCents != null
-                        ? formatCents(request.amountCents)
-                        : "A definir"}
-                    </span>
-                    <span className="text-admin-faint">
-                      {shortDate(request.createdAt)}
-                    </span>
-                    <span aria-hidden="true" className="text-admin-faint">
-                      ›
-                    </span>
-                  </Link>
-                </Fragment>
-              );
-            })
-          )}
-        </div>
+        <QueueRows
+          rows={rows}
+          showBands={showBands}
+          today={todayIso}
+          emptyMessage={
+            hasFilters
+              ? "Nenhum pedido encontrado com esses filtros."
+              : "Nenhum pedido registrado ainda."
+          }
+        />
       </main>
     </>
   );

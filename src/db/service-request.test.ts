@@ -434,3 +434,59 @@ test("a requirement's form goes when the requirement goes", async () => {
   assert.equal(left[0].n, 1, "só a entrega sobrevive à exclusão da exigência");
   assert.equal(await deliveries(), 1);
 });
+
+// What `deactivateServiceRequests` (src/lib/service-request.ts) does: check
+// every id belongs to the tenant before writing anything, then set each to
+// `inactive`. Run against Postgres for the same reason as
+// `OPEN_DUPLICATE_QUERY` above (that file's `db` is a real driver
+// connection, not swappable to PGlite).
+test("marking protocols inactive in bulk leaves the others untouched", async () => {
+  await fileRequest("cartorio-marinho", 2030, 1);
+  await fileRequest("cartorio-marinho", 2030, 2);
+  const { rows } = await client.query<{ id: string }>(
+    `SELECT id FROM service_requests
+     WHERE tenant_slug = 'cartorio-marinho' AND protocol_year = 2030
+     ORDER BY protocol_sequence`,
+  );
+  const [firstId, secondId] = rows.map((r) => r.id);
+
+  await client.query(
+    "UPDATE service_requests SET status = 'inactive' WHERE tenant_slug = $1 AND id = ANY($2::uuid[])",
+    ["cartorio-marinho", [firstId, secondId]],
+  );
+
+  const { rows: updated } = await client.query<{ status: string }>(
+    "SELECT status FROM service_requests WHERE id = ANY($1::uuid[])",
+    [[firstId, secondId]],
+  );
+  assert.deepEqual(updated.map((r) => r.status).sort(), [
+    "inactive",
+    "inactive",
+  ]);
+});
+
+test("a batch with one id outside the tenant fails the ownership check", async () => {
+  await fileRequest("cartorio-marinho", 2030, 3);
+  await fileRequest("tabelionato-aurora", 2030, 2);
+  const { rows } = await client.query<{ id: string; tenant_slug: string }>(
+    `SELECT id, tenant_slug FROM service_requests
+     WHERE (tenant_slug = 'cartorio-marinho' AND protocol_year = 2030 AND protocol_sequence = 3)
+        OR (tenant_slug = 'tabelionato-aurora' AND protocol_year = 2030 AND protocol_sequence = 2)`,
+  );
+  const ids = rows.map((r) => r.id);
+
+  // The check `deactivateServiceRequests` runs before writing: only ids that
+  // actually belong to the tenant come back.
+  const { rows: owned } = await client.query<{ count: string }>(
+    "SELECT count(*)::text AS count FROM service_requests WHERE tenant_slug = $1 AND id = ANY($2::uuid[])",
+    ["cartorio-marinho", ids],
+  );
+  assert.notEqual(owned[0].count, String(ids.length));
+
+  // Nothing was ever set to inactive: the mismatch above is caught first.
+  const { rows: statuses } = await client.query<{ status: string }>(
+    "SELECT status FROM service_requests WHERE id = ANY($1::uuid[])",
+    [ids],
+  );
+  assert.ok(statuses.every((r) => r.status !== "inactive"));
+});

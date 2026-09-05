@@ -1,3 +1,4 @@
+import { randomUUID } from "node:crypto";
 import { expect, test } from "@playwright/test";
 import postgres from "postgres";
 import { TENANTS } from "../src/core/tenant/resolve.ts";
@@ -305,9 +306,22 @@ test.describe("filing a request", () => {
     "precisa de DATABASE_URL: o envio grava o pedido",
   );
 
-  async function fillForm(page: import("@playwright/test").Page) {
+  // A distinct e-mail per call by default: the same act now refuses a second
+  // open request for the same citizen (see "a second request for the same
+  // act and CPF shows the duplicate dialog" below), and every test here
+  // otherwise submits to that same act. A test after the first would collide
+  // with it, and be shown the duplicate dialog instead of the fresh request
+  // it expects. A random id rather than a counter: workers run as separate
+  // processes, so a per-module counter restarts at zero in each of them and
+  // two tests in different workers can still land on the same default. The
+  // duplicate test still collides on purpose: it fills the same CPF twice,
+  // which the check matches regardless of e-mail.
+  async function fillForm(
+    page: import("@playwright/test").Page,
+    email = `maria.${randomUUID()}@exemplo.com`,
+  ) {
     await page.getByLabel("Nome completo").fill("Maria José da Silva");
-    await page.getByLabel(/E-mail/).fill("maria@exemplo.com");
+    await page.getByLabel(/E-mail/).fill(email);
     await page.getByLabel(/Telefone/).fill("(84) 99999-0000");
     await page
       .getByLabel(/Descreva o que você precisa/)

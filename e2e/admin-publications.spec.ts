@@ -1,5 +1,6 @@
 import { expect, type Page, test } from "@playwright/test";
 import postgres from "postgres";
+import { toIsoDate } from "../src/core/scheduling/calendar.ts";
 
 // Entrega 8b: publicações (proclamas, avisos e editais com vigência)
 // automática. Everything here needs a real session and a real row, so most
@@ -64,7 +65,10 @@ test.describe("publicações", () => {
 
     await expect(page.getByText("Salvo.")).toBeVisible();
     await page.getByRole("link", { name: /Rascunhos/ }).click();
-    await expect(page.getByText(TITLE)).toBeVisible();
+    // The title also lingers in the form's own live preview beside the list
+    // (same ambiguity the "publishing" test below already names): the list
+    // row is the one this test is about.
+    await expect(page.getByText(TITLE).first()).toBeVisible();
   });
 
   test("marriage banns pre-fill the exit date 15 days out", async ({
@@ -91,9 +95,13 @@ test.describe("publicações", () => {
     await page.getByRole("button", { name: "Aviso" }).click();
     await page.getByLabel("Título").fill(TITLE);
     await page.getByLabel("Texto").fill("Publicação vigente do teste e2e.");
-    // Hoje, não uma data fixa: o campo tem `min` no dia corrente, e uma data
-    // passada faz o próprio navegador barrar o envio, sem erro visível.
-    const hoje = new Date().toISOString().slice(0, 10);
+    // Hoje na serventia, não uma data fixa nem o dia UTC: o campo tem `min`
+    // no dia corrente, e uma data passada faz o próprio navegador barrar o
+    // envio, sem erro visível. `isLive` também compara contra o dia da
+    // serventia (America/Sao_Paulo, ver core/publications/state.ts), então o
+    // dia UTC vira amanhã três horas cedo demais e a publicação nasce
+    // "agendada" em vez de "no ar".
+    const hoje = toIsoDate(new Date(), "America/Sao_Paulo");
     await page.getByLabel("Entra no site em").fill(hoje);
     await page.getByLabel("Sai do site em").fill("2099-01-01");
     await page.getByRole("button", { name: "Publicar" }).click();
@@ -113,12 +121,19 @@ test.describe("publicações", () => {
   }) => {
     // Fixture própria: o afterEach apaga a publicação depois de cada teste,
     // então este não herda a que o anterior criou.
+    //
+    // O dia da serventia, não `current_date`: o banco calcula essa em UTC, e
+    // `isLive`/o filtro da aba comparam contra o dia de Brasília (ver
+    // `clientToday` em publication-form.tsx para o mesmo cuidado). Das 21h à
+    // meia-noite UTC, `current_date` já é amanhã para a serventia, e a
+    // publicação nasceria "agendada", nunca visível na aba "No site".
+    const hoje = toIsoDate(new Date(), "America/Sao_Paulo");
     const sql = postgres(process.env.DATABASE_URL as string);
     await sql`
       insert into office_publications
         (tenant_slug, kind, title, body, publish_at, expire_at)
       values ('cartorio-marinho', 'aviso', ${TITLE},
-              'Publicação vigente do teste e2e.', current_date, date '2099-01-01')
+              'Publicação vigente do teste e2e.', ${hoje}::date, date '2099-01-01')
     `;
     await sql.end();
 

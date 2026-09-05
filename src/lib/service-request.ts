@@ -644,6 +644,40 @@ export async function updateRequestStatus(
   }
 }
 
+/**
+ * Marks several requests inactive in one go, for the operator clearing many
+ * at once instead of one by one. Not a deletion: the row and its history stay,
+ * `inactive` just reads as "no longer needs the operator's attention" (see
+ * `TERMINAL_SERVICE_REQUEST_STATUSES`).
+ *
+ * Every id is checked against the tenant before anything is written, so a
+ * stale selection (a protocol moved to another tenant mid-session, say) fails
+ * the whole batch instead of silently inactivating the rest.
+ */
+export async function deactivateServiceRequests(
+  tenantSlug: string,
+  ids: readonly string[],
+  actorId: string,
+): Promise<void> {
+  const owned = await db
+    .select({ id: serviceRequests.id })
+    .from(serviceRequests)
+    .where(
+      and(
+        eq(serviceRequests.tenantSlug, tenantSlug),
+        inArray(serviceRequests.id, ids as string[]),
+      ),
+    );
+  if (owned.length !== ids.length) {
+    throw new Error(
+      "Um ou mais protocolos selecionados não foram encontrados.",
+    );
+  }
+  for (const id of ids) {
+    await updateRequestStatus(tenantSlug, id, "inactive", actorId);
+  }
+}
+
 /** Every requirement (exigência) raised on a request, oldest first. */
 export async function listRequirements(tenantSlug: string, requestId: string) {
   return db
