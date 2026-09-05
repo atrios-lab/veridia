@@ -7,6 +7,7 @@ import {
   PUBLICATION_KINDS,
   type PublicationKind,
 } from "@/core/publications/publication.ts";
+import { toIsoDate } from "@/core/scheduling/calendar.ts";
 import type { NoticeSector } from "@/core/tenant/gating.ts";
 import { NOTICE_SECTOR_META, noticeSectors } from "@/core/tenant/gating.ts";
 import type { Tenant } from "@/core/tenant/schema.ts";
@@ -30,14 +31,16 @@ function FieldError({ message }: { message?: string }) {
 }
 
 /**
- * `today()` on the client reads the visitor's own clock, not the office's.
- * That is fine here: it only pre-fills a suggestion the operator can always
- * change, but it is why this never becomes a validity check: the server,
- * which uses the office's wall calendar, is the one place that could refuse
- * a date, and it does not.
+ * The office's day, read from the operator's own clock: a plain UTC slice
+ * would put this a day ahead of the office between 9pm and midnight UTC
+ * (6pm to 9pm in Rio Grande do Norte), the same trap `toIsoDate`'s own
+ * comment names. That gap used to fall inside this field's `min`, which
+ * refuses a same-day publication with no visible error during those three
+ * hours: the server's own liveness check (`isLive`, in the office's day)
+ * would have called that same publication scheduled, not live.
  */
 function clientToday(): string {
-  return new Date().toISOString().slice(0, 10);
+  return toIsoDate(new Date(), "America/Sao_Paulo");
 }
 
 export function PublicationForm({

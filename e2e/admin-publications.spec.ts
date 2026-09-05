@@ -1,5 +1,6 @@
 import { expect, type Page, test } from "@playwright/test";
 import postgres from "postgres";
+import { toIsoDate } from "../src/core/scheduling/calendar.ts";
 
 // Entrega 8b: publicações (proclamas, avisos e editais com vigência)
 // automática. Everything here needs a real session and a real row, so most
@@ -91,9 +92,13 @@ test.describe("publicações", () => {
     await page.getByRole("button", { name: "Aviso" }).click();
     await page.getByLabel("Título").fill(TITLE);
     await page.getByLabel("Texto").fill("Publicação vigente do teste e2e.");
-    // Hoje, não uma data fixa: o campo tem `min` no dia corrente, e uma data
-    // passada faz o próprio navegador barrar o envio, sem erro visível.
-    const hoje = new Date().toISOString().slice(0, 10);
+    // Hoje na serventia, não uma data fixa nem o dia UTC: o campo tem `min`
+    // no dia corrente, e uma data passada faz o próprio navegador barrar o
+    // envio, sem erro visível. `isLive` também compara contra o dia da
+    // serventia (America/Sao_Paulo, ver core/publications/state.ts), então o
+    // dia UTC vira amanhã três horas cedo demais e a publicação nasce
+    // "agendada" em vez de "no ar".
+    const hoje = toIsoDate(new Date(), "America/Sao_Paulo");
     await page.getByLabel("Entra no site em").fill(hoje);
     await page.getByLabel("Sai do site em").fill("2099-01-01");
     await page.getByRole("button", { name: "Publicar" }).click();
