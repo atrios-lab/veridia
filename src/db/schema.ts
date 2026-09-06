@@ -648,6 +648,43 @@ export const transparencyBulletins = pgTable(
  * record that mentioned it, and it has to, or the trail is gone the moment
  * someone deletes the pedido that produced it.
  */
+/**
+ * The Provimento 243 intake: what the office answers, section by section, so
+ * the Átrios can generate its compliance documents outside the panel. One row
+ * per office. `answers` is keyed by section id then field name, the shape
+ * `src/core/compliance/sections.ts` declares; `sectionUpdatedAt` records when
+ * each section was last saved, which is what tells "não iniciada" from
+ * "concluída" and, after submission, which sections changed after the fact.
+ *
+ * Submission is a stamp, never a lock: the office keeps editing, and the
+ * version counter grows on every submission so a later stage (published
+ * PDFs, the Justiça Aberta protocol, the yearly renewal) can hang off a
+ * specific set of answers without this table changing shape.
+ */
+export const complianceIntakes = pgTable(
+  "compliance_intakes",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    tenantSlug,
+    answers: jsonb("answers").notNull().default(sql`'{}'::jsonb`),
+    sectionUpdatedAt: jsonb("section_updated_at")
+      .notNull()
+      .default(sql`'{}'::jsonb`),
+    // Same shape as a stored attachment elsewhere (stored name, display
+    // name, path, MIME type, size), plus an id and a date, in a list: the
+    // files hang off the intake and go when it goes.
+    attachments: jsonb("attachments").notNull().default(sql`'[]'::jsonb`),
+    submittedAt: timestamp("submitted_at", { withTimezone: true }),
+    submittedVersion: integer("submitted_version").notNull().default(0),
+    submittedBy: text("submitted_by"),
+    updatedAt: timestamp("updated_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    updatedBy: text("updated_by"),
+  },
+  (t) => [uniqueIndex("compliance_intakes_tenant_slug_key").on(t.tenantSlug)],
+);
+
 export const emailBounces = pgTable("email_bounces", {
   /** Lowercased by the endpoint before it lands here. */
   email: text("email").primaryKey(),
