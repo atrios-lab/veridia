@@ -978,19 +978,14 @@ function RequirementCard({
                       </p>
                     )}
                     {m.attachments.map((file) => (
+                      // The whole chip is the download, same as the panel's:
+                      // a POST because the file sits behind the access key.
                       <form
                         key={file.id}
                         action="/protocolo/documento"
                         method="post"
-                        className="flex min-w-0 max-w-full items-center gap-2 rounded-[10px] border border-brand-border bg-brand-card px-3 py-2"
+                        className="min-w-0 max-w-full"
                       >
-                        <Icon
-                          name="file"
-                          className="h-3.5 w-3.5 shrink-0 text-brand-accent"
-                        />
-                        <span className="flex-1 truncate text-[13px]">
-                          {file.displayName}
-                        </span>
                         <input
                           type="hidden"
                           name="protocolNumber"
@@ -1006,8 +1001,13 @@ function RequirementCard({
                           name="attachmentId"
                           value={file.id}
                         />
-                        <button type="submit" className="btn btn-ghost btn-sm">
-                          Baixar
+                        <button
+                          type="submit"
+                          aria-label={`Baixar ${file.displayName}`}
+                          className="flex min-w-0 max-w-full cursor-pointer items-center gap-1.5 rounded-[10px] border border-brand-border bg-brand-card px-3 py-1.5 text-[12px] font-semibold text-brand-primary-soft hover:border-brand-accent"
+                        >
+                          <Icon name="file" className="h-3.5 w-3.5 shrink-0" />
+                          <span className="truncate">{file.displayName}</span>
                         </button>
                       </form>
                     ))}
