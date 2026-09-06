@@ -714,6 +714,92 @@ test.describe("filing a request", () => {
     ).toBeVisible();
   });
 
+  test("the citizen reports a payment with a comprovante, and the office can walk it back", async ({
+    page,
+  }) => {
+    await page.goto(
+      `${baseURL}/solicitar?atribuicao=RCPN&ato=rcpn-habilitacao-casamento`,
+    );
+    await fillForm(page);
+    await page.getByRole("button", { name: "Enviar requerimento" }).click();
+
+    const protocolNumber =
+      (await page
+        .getByText(/REQ\.\d{4}\.\d{6}/)
+        .first()
+        .textContent()) ?? "";
+    const accessKey =
+      (await page
+        .getByText(/[A-Z2-9]{4}-[A-Z2-9]{4}-[A-Z2-9]{4}/)
+        .first()
+        .textContent()) ?? "";
+
+    // Value and Pix key already registered, the same way the QR test above
+    // simulates the office's and the Cobrança panel's writes.
+    const sql = postgres(process.env.DATABASE_URL as string);
+    await sql`
+      update service_requests set amount_cents = 25000
+      where tenant_slug = 'cartorio-marinho' and protocol_number = ${protocolNumber}
+    `;
+    await sql`
+      insert into tenant_content (tenant_slug, key, published, published_at)
+      values (
+        'cartorio-marinho',
+        'office-pix',
+        ${JSON.stringify({ pix: { type: "cpf", key: "52998224725" } })}::jsonb,
+        now()
+      )
+      on conflict (tenant_slug, key)
+      do update set published = excluded.published, published_at = excluded.published_at
+    `;
+
+    await page.goto(`${baseURL}/protocolo?numero=${protocolNumber}`);
+    await page.getByPlaceholder("Ex.: BBM8-6XVB-8PUK").fill(accessKey);
+    await page.getByRole("button", { name: "Ver detalhes" }).click();
+    await expect(page.getByText("PIX COPIA E COLA")).toBeVisible();
+
+    const comprovante = {
+      name: "comprovante.pdf",
+      mimeType: "application/pdf",
+      buffer: Buffer.from("%PDF-1.4\n comprovante"),
+    };
+    await page
+      .locator('input[name="comprovante"]')
+      .setInputFiles([comprovante]);
+
+    await expect(
+      page.getByText("Comprovante recebido, em conferência"),
+    ).toBeVisible();
+    await expect(page.getByText("comprovante.pdf")).toBeVisible();
+    await expect(page.getByText("PIX COPIA E COLA")).toHaveCount(0);
+
+    const [row] = await sql`
+      select status from service_requests
+      where tenant_slug = 'cartorio-marinho' and protocol_number = ${protocolNumber}
+    `;
+    expect(row.status).toBe("payment-reported");
+    const [attachment] = await sql`
+      select kind from service_request_attachments sra
+      join service_requests sr on sr.id = sra.request_id
+      where sr.protocol_number = ${protocolNumber} and sra.kind = 'payment-receipt'
+    `;
+    expect(attachment.kind).toBe("payment-receipt");
+
+    // The office finds the comprovante does not match and sends the citizen
+    // back to pay: the QR comes back, exactly as it did before reporting.
+    await sql`
+      update service_requests set status = 'awaiting-payment'
+      where tenant_slug = 'cartorio-marinho' and protocol_number = ${protocolNumber}
+    `;
+    await sql.end();
+
+    await page.reload();
+    await expect(page.getByText("PIX COPIA E COLA")).toBeVisible();
+    await expect(
+      page.getByText("Comprovante recebido", { exact: false }),
+    ).toHaveCount(0);
+  });
+
   test("a paid request without a delivered document shows preparation as the current step", async ({
     page,
   }) => {
