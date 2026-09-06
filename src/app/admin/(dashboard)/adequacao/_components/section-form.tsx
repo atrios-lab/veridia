@@ -215,19 +215,24 @@ function Field({
 }
 
 /**
- * The "?" beside a label. A native disclosure, not a hover tooltip: there is
- * no hover on the phone this is mostly answered from, and no script needed.
+ * The "?" beside a label: a small floating tip, styled like a tooltip, not
+ * an inline block that pushes the field below it down (the previous shape).
+ * Still a native <details>/<summary>, not a hover-only tooltip: there is no
+ * hover on the phone this is mostly answered from, and tapping a native
+ * disclosure needs no script either way. `position: absolute` is what keeps
+ * it from disturbing the layout: `<details>` itself and its trigger stay
+ * exactly where they were, only the tip overlays what comes after it.
  */
 function Help({ text }: { text: string }) {
   return (
-    <details className="inline">
+    <details className="group relative inline-block">
       <summary
-        className="inline-grid h-[18px] w-[18px] cursor-pointer list-none place-items-center rounded-full border-[1.5px] border-admin-input-border text-[11px] font-bold text-admin-faint [&::-webkit-details-marker]:hidden"
+        className="inline-grid h-[18px] w-[18px] cursor-pointer list-none place-items-center rounded-full border-[1.5px] border-admin-input-border text-[11px] font-bold text-admin-faint transition-colors [&::-webkit-details-marker]:hidden group-open:border-admin-primary-soft group-open:bg-admin-primary-soft group-open:text-white"
         aria-label="Ajuda"
       >
         ?
       </summary>
-      <span className="mt-2 block max-w-[60ch] rounded-lg bg-admin-surface px-3 py-2.5 text-[12px] font-normal leading-relaxed text-admin-text">
+      <span className="absolute left-1/2 top-full z-10 mt-2 w-max max-w-[min(60ch,78vw)] -translate-x-1/2 rounded-lg bg-admin-primary px-3 py-2 text-[12px] font-normal leading-relaxed text-white shadow-lg">
         {text}
       </span>
     </details>
