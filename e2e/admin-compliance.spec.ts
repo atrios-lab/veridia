@@ -51,7 +51,9 @@ test.describe("adequação ao Provimento", () => {
     await page.getByLabel("Windows 10", { exact: true }).check();
     await expect(page.getByText("Salvo", { exact: true })).toBeVisible();
     await expect(
-      page.getByText("O Windows 10 está sem suporte desde 14/10/2025."),
+      page.getByText("O Windows 10 está sem suporte desde 14/10/2025.", {
+        exact: true,
+      }),
     ).toBeVisible();
 
     // Out and back in: the answer is on the server, not in the tab.
