@@ -106,6 +106,13 @@ export const ADMIN_NAV: readonly AdminNavItem[] = [
   },
   {
     group: "Serventia",
+    label: "Adequação ao Provimento",
+    href: "/admin/adequacao",
+    icon: "clipboard",
+    permission: "content.edit",
+  },
+  {
+    group: "Serventia",
     label: "Configurações",
     href: "/admin/configuracoes",
     icon: "settings",

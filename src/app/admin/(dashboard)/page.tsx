@@ -25,6 +25,7 @@ import type { ActionShortcut } from "./_components/action-shortcuts.tsx";
 import { ActionShortcuts } from "./_components/action-shortcuts.tsx";
 import type { ChannelStatusRow } from "./_components/channel-status.tsx";
 import { ChannelStatus } from "./_components/channel-status.tsx";
+import { ComplianceCard } from "./_components/compliance-card.tsx";
 import { DeskList } from "./_components/desk-list.tsx";
 import { KeyboardShortcutsCard } from "./_components/keyboard-shortcuts-card.tsx";
 import { LiveChatCard } from "./_components/live-chat-card.tsx";
@@ -246,6 +247,8 @@ export default async function AdminHome() {
                 href={`${ROUTE_BY_KIND[resumePoint.kind]}/${encodeURIComponent(resumePoint.protocolNumber)}`}
               />
             )}
+
+            {canPublish && <ComplianceCard tenant={tenant} />}
 
             <ChannelStatus rows={channelRows} />
             <KeyboardShortcutsCard />

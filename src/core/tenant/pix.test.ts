@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 import {
+  formatCnpj,
   isValidPixCity,
   isValidPixKey,
   normalizePixCity,
@@ -23,6 +24,19 @@ test("cnpj: valid digits pass, formatted input normalizes to digits", () => {
 
 test("cnpj: bad check digit fails", () => {
   assert.equal(isValidPixKey("cnpj", "11222333000180"), false);
+});
+
+test("formatCnpj: masks as typed, digit by digit, and ignores non-digits already there", () => {
+  assert.equal(formatCnpj("1"), "1");
+  assert.equal(formatCnpj("11"), "11");
+  assert.equal(formatCnpj("112"), "11.2");
+  assert.equal(formatCnpj("11222333"), "11.222.333");
+  assert.equal(formatCnpj("112223330001"), "11.222.333/0001");
+  assert.equal(formatCnpj("11222333000181"), "11.222.333/0001-81");
+  // A pasted, already-formatted value re-formats the same way.
+  assert.equal(formatCnpj("11.222.333/0001-81"), "11.222.333/0001-81");
+  // A fifteenth digit is dropped: a CNPJ has fourteen.
+  assert.equal(formatCnpj("112223330001819"), "11.222.333/0001-81");
 });
 
 test("email: valid address passes, normalizes to lower case", () => {

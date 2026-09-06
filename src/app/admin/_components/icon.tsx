@@ -104,6 +104,12 @@ const PATHS = {
     "M9.5 3h8A1.5 1.5 0 0 1 19 4.5v10a1.5 1.5 0 0 1-1.5 1.5h-8A1.5 1.5 0 0 1 8 14.5v-10A1.5 1.5 0 0 1 9.5 3Z",
     "M5 8v11.5A1.5 1.5 0 0 0 6.5 21H15",
   ],
+  // Sidebar navigation: the Provimento intake (a clipboard with a tick).
+  clipboard: [
+    "M8 4h8a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2Z",
+    "M9 4V3a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v1",
+    "m9 13 2 2 4-4",
+  ],
   // A warning that needs the operator to act before leaving the screen.
   alert: [
     "M12 22a10 10 0 1 0 0-20 10 10 0 0 0 0 20Z",
