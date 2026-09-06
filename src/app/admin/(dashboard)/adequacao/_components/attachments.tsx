@@ -152,16 +152,20 @@ export function Attachments({
         {previous && (
           <Link
             href={`/admin/adequacao/${previous.id}`}
+            // Same size as "Revisar e enviar" on the other end of this row.
             className="btn btn-admin-secondary btn-md"
           >
             ‹ Seção {previous.number} · {previous.title}
           </Link>
         )}
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
-          <Link href="/admin/adequacao" className="btn btn-admin-ghost btn-sm">
+          <Link
+            href="/admin/adequacao"
+            className="btn btn-admin-secondary btn-md"
+          >
             Voltar à lista
           </Link>
-          <button type="submit" className="btn btn-admin-primary btn-lg">
+          <button type="submit" className="btn btn-admin-primary btn-md">
             Revisar e enviar ›
           </button>
         </div>

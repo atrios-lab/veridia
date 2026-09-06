@@ -148,6 +148,9 @@ export function SectionForm({
           {previous ? (
             <Link
               href={`/admin/adequacao/${previous.id}`}
+              // Same size as the primary "next" button on the other end of
+              // this row, same as the confirm/cancel pair in ConfirmAction:
+              // the hierarchy is the fill, not the size.
               className="btn btn-admin-secondary btn-md"
             >
               ‹ Seção {previous.number} · {previous.title}
@@ -158,11 +161,11 @@ export function SectionForm({
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
             <Link
               href="/admin/adequacao"
-              className="btn btn-admin-ghost btn-sm"
+              className="btn btn-admin-secondary btn-md"
             >
               Voltar à lista
             </Link>
-            <button type="submit" className="btn btn-admin-primary btn-lg">
+            <button type="submit" className="btn btn-admin-primary btn-md">
               {next
                 ? `Seção ${next.number} · ${next.title} ›`
                 : "Revisar e enviar ›"}
@@ -215,27 +218,28 @@ function Field({
 }
 
 /**
- * The "?" beside a label: a small floating tip, styled like a tooltip, not
- * an inline block that pushes the field below it down (the previous shape).
- * Still a native <details>/<summary>, not a hover-only tooltip: there is no
- * hover on the phone this is mostly answered from, and tapping a native
- * disclosure needs no script either way. `position: absolute` is what keeps
- * it from disturbing the layout: `<details>` itself and its trigger stay
- * exactly where they were, only the tip overlays what comes after it.
+ * The "?" beside a label: a small floating tip that shows on hover, like a
+ * tooltip, with no click needed. Pure CSS, via `:hover`/`:focus-within` on
+ * the wrapper: no script, and `focus-within` is what a keyboard user (Tab to
+ * the button) and a phone (a tap focuses the button, same as any other
+ * control) get instead of a mouse hover. `pointer-events-none` on the tip
+ * keeps it out of the hit-test: reading it is all it is for, and it must
+ * never eat the click meant for the field below.
  */
 function Help({ text }: { text: string }) {
   return (
-    <details className="group relative inline-block">
-      <summary
-        className="inline-grid h-[18px] w-[18px] cursor-pointer list-none place-items-center rounded-full border-[1.5px] border-admin-input-border text-[11px] font-bold text-admin-faint transition-colors [&::-webkit-details-marker]:hidden group-open:border-admin-primary-soft group-open:bg-admin-primary-soft group-open:text-white"
+    <span className="group relative inline-flex">
+      <button
+        type="button"
+        className="inline-grid h-[18px] w-[18px] cursor-pointer place-items-center rounded-full border-[1.5px] border-admin-input-border text-[11px] font-bold text-admin-faint transition-colors hover:border-admin-primary-soft hover:bg-admin-primary-soft hover:text-white focus-visible:border-admin-primary-soft focus-visible:bg-admin-primary-soft focus-visible:text-white"
         aria-label="Ajuda"
       >
         ?
-      </summary>
-      <span className="absolute left-1/2 top-full z-10 mt-2 w-max max-w-[min(60ch,78vw)] -translate-x-1/2 rounded-lg bg-admin-primary px-3 py-2 text-[12px] font-normal leading-relaxed text-white shadow-lg">
+      </button>
+      <span className="pointer-events-none absolute bottom-full left-1/2 z-10 mb-2 w-max max-w-[min(60ch,78vw)] -translate-x-1/2 rounded-lg bg-admin-primary px-3 py-2 text-[12px] font-normal leading-relaxed text-white opacity-0 shadow-lg transition-opacity group-hover:opacity-100 group-focus-within:opacity-100">
         {text}
       </span>
-    </details>
+    </span>
   );
 }
 
