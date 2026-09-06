@@ -13,6 +13,7 @@ import {
   SECTION_ROUTES,
 } from "@/core/tenant/gating.ts";
 import type { Section } from "@/core/tenant/schema.ts";
+import { trackingHref } from "@/flags.ts";
 import { livePublications } from "@/lib/publications.ts";
 import { getTenant } from "@/lib/tenant.ts";
 import { Icon, type IconName } from "./_components/icon.tsx";
@@ -63,6 +64,7 @@ export default async function Home() {
     isSectionEnabled(tenant, l.section),
   );
   const canLookUp = isSectionEnabled(tenant, "consulta-protocolo");
+  const lookupHref = await trackingHref();
   const publications = (await livePublications(tenant.slug)).slice(
     0,
     MAX_HOME_PUBLICATIONS,
@@ -113,7 +115,7 @@ export default async function Home() {
             {canLookUp && (
               <>
                 <form
-                  action={SECTION_ROUTES["consulta-protocolo"]}
+                  action={lookupHref}
                   method="get"
                   className="mt-4 flex gap-1.5 rounded-[13px] bg-brand-card p-1.5 shadow-lg focus-within:ring-2 focus-within:ring-brand-accent md:mt-5 md:max-w-lg"
                 >

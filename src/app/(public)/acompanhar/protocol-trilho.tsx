@@ -2,6 +2,7 @@
 
 import { Fragment, useActionState, useEffect, useRef, useState } from "react";
 import type { PauseReason } from "@/core/request/deadline.ts";
+import { useLiveVersion } from "../../_components/use-live-version.ts";
 import { Icon } from "../_components/icon.tsx";
 import {
   ATTACHMENT_ACCEPT,
@@ -14,8 +15,12 @@ import {
   type FulfillRequirementState,
   type LookupState,
   lookupProtocolDetail,
+  type ProtocolDetail,
+  protocolVersion,
+  type ReportPaymentState,
   type RequirementMessageView,
   type RequirementView,
+  reportPayment,
   type ServiceRequestDetail,
   writeRequirementMessageAction,
 } from "../protocolo/actions.ts";
@@ -175,7 +180,11 @@ function computeSteps(
     steps.push(
       result.paymentSettled
         ? { label: "Pagamento", done: true }
-        : { label: "Pagamento", citizen: true },
+        : result.requestStatus === "payment-reported"
+          ? // Comprovante já enviado: agora é a serventia quem move,
+            // não mais o cidadão.
+            { label: "Pagamento" }
+          : { label: "Pagamento", citizen: true },
     );
   }
   if (rejected) {
@@ -224,6 +233,9 @@ function computePill(
     };
   }
   if (finished) return { label: "Concluído", tone: "green" };
+  if (result.requestStatus === "payment-reported") {
+    return { label: "Pagamento em conferência", tone: "green" };
+  }
   if (awaitingPay && !anyPendingRequirement) {
     return { label: "Falta pagar", tone: "gold" };
   }
@@ -289,11 +301,19 @@ function computeHeadline(
         "você não precisa fazer nada agora. Vamos conferir o que você enviou e o pedido segue. Se faltar algo, escrevemos aqui.",
     };
   }
+  if (result.requestStatus === "payment-reported") {
+    return {
+      headline: "Recebemos o seu comprovante.",
+      leadDate: `${formatDate(result.updatedAt)}:`,
+      leadText:
+        "estamos conferindo o pagamento. Assim que confirmarmos, começamos a preparar o seu documento.",
+    };
+  }
   if (awaitingPay) {
     return {
       headline: "Falta só o pagamento.",
       leadDate: `${formatDate(result.updatedAt)}:`,
-      leadText: `o valor do seu documento é ${result.amountLabel}. Pague pelo Pix ao lado. Assim que o pagamento cair, começamos a preparar.`,
+      leadText: `o valor do seu documento é ${result.amountLabel}. Pague pelo Pix ao lado, ou envie o comprovante se já pagou.`,
     };
   }
   return {
@@ -975,19 +995,14 @@ function RequirementCard({
                       </p>
                     )}
                     {m.attachments.map((file) => (
+                      // The whole chip is the download, same as the panel's:
+                      // a POST because the file sits behind the access key.
                       <form
                         key={file.id}
                         action="/protocolo/documento"
                         method="post"
-                        className="flex min-w-0 max-w-full items-center gap-2 rounded-[10px] border border-brand-border bg-brand-card px-3 py-2"
+                        className="min-w-0 max-w-full"
                       >
-                        <Icon
-                          name="file"
-                          className="h-3.5 w-3.5 shrink-0 text-brand-accent"
-                        />
-                        <span className="flex-1 truncate text-[13px]">
-                          {file.displayName}
-                        </span>
                         <input
                           type="hidden"
                           name="protocolNumber"
@@ -1003,8 +1018,13 @@ function RequirementCard({
                           name="attachmentId"
                           value={file.id}
                         />
-                        <button type="submit" className="btn btn-ghost btn-sm">
-                          Baixar
+                        <button
+                          type="submit"
+                          aria-label={`Baixar ${file.displayName}`}
+                          className="flex min-w-0 max-w-full cursor-pointer items-center gap-1.5 rounded-[10px] border border-brand-border bg-brand-card px-3 py-1.5 text-[12px] font-semibold text-brand-primary-soft hover:border-brand-accent"
+                        >
+                          <Icon name="file" className="h-3.5 w-3.5 shrink-0" />
+                          <span className="truncate">{file.displayName}</span>
                         </button>
                       </form>
                     ))}
@@ -1112,9 +1132,47 @@ function RequirementCard({
 
 /* -------------------------------------------------------------- payment */
 
-function PayCard({ result }: { result: ServiceRequestDetail }) {
+/**
+ * `reported`/`onReported` are lifted to `ServiceRequestTrilho`, the same way
+ * `SignCard`'s `onSigned` is: this screen polls (`useLiveVersion`), and only
+ * the parent's own resync effect clears a stale optimistic flag once a fresh
+ * poll's `result.requestStatus` disagrees with it (e.g. the office finds the
+ * comprovante does not match and sends the citizen back to "Aguardando
+ * pagamento"). A flag kept here instead would survive that poll forever.
+ */
+function PayCard({
+  result,
+  reported,
+  onReported,
+}: {
+  result: ServiceRequestDetail;
+  reported: boolean;
+  onReported: (receipt: { displayName: string; sentAt: string }) => void;
+}) {
   const [copied, setCopied] = useState(false);
+  // Only for the gap before the next poll confirms it: `result.paymentReceipt`
+  // (the prop, refreshed every poll) is what's shown once that catches up.
+  const [justSubmitted, setJustSubmitted] = useState<{
+    displayName: string;
+    sentAt: string;
+  }>();
+  const receipt = justSubmitted ?? result.paymentReceipt;
+  const [state, action, pending] = useActionState<ReportPaymentState, FormData>(
+    reportPayment,
+    { status: "idle" },
+  );
+  const upload = useAttachmentUpload(action);
+  const sending = pending || upload.uploading;
   const pix = result.pix;
+
+  useEffect(() => {
+    if (state.status === "success") {
+      const sent = { displayName: state.displayName, sentAt: state.sentAt };
+      setJustSubmitted(sent);
+      onReported(sent);
+    }
+  }, [state, onReported]);
+
   return (
     <div className="flex animate-notice-rise flex-col gap-4 rounded-2xl border-[1.5px] border-brand-on-dark-accent bg-brand-accent-soft p-5">
       <div className="flex flex-wrap items-baseline justify-between gap-3">
@@ -1125,48 +1183,101 @@ function PayCard({ result }: { result: ServiceRequestDetail }) {
           {result.amountLabel}
         </span>
       </div>
-      {pix ? (
-        <div className="flex flex-wrap items-center gap-4">
-          <div
-            className="flex h-[132px] w-[132px] shrink-0 items-center justify-center rounded-xl border border-brand-border bg-brand-card p-2.5 [&>svg]:h-full [&>svg]:w-full"
-            // biome-ignore lint/security/noDangerouslySetInnerHtml: pix.qrSvg is deterministic SVG rendered server-side by `qrcode`, never citizen input.
-            dangerouslySetInnerHTML={{ __html: pix.qrSvg }}
+      {reported ? (
+        <div className="flex items-center gap-2.5">
+          <Icon
+            name="check"
+            className="h-4 w-4 shrink-0 text-brand-primary-soft"
+            strokeWidth={2.4}
           />
-          <div className="flex min-w-[180px] flex-1 flex-col gap-2">
-            <span className="text-sm leading-relaxed">
-              Abra o app do seu banco e aponte a câmera, ou copie o código:
-            </span>
-            <div className="flex items-center gap-2 rounded-[10px] border border-brand-border bg-brand-card px-3 py-2.5">
-              <span className="flex-1 truncate text-xs text-brand-muted">
-                {pix.copyPaste}
-              </span>
-              <button
-                type="button"
-                onClick={() => {
-                  navigator.clipboard.writeText(pix.copyPaste).then(
-                    () => {
-                      setCopied(true);
-                      setTimeout(() => setCopied(false), 2000);
-                    },
-                    () => setCopied(false),
-                  );
-                }}
-                className="text-[13px] font-semibold text-brand-primary-soft hover:underline"
-              >
-                {copied ? "Copiado" : "Copiar"}
-              </button>
-            </div>
-            <span className="text-[12.5px] text-brand-muted">
-              O pagamento é confirmado sozinho, em até 1 dia útil. Não precisa
-              mandar comprovante.
-            </span>
+          <div>
+            <p className="text-sm font-semibold text-brand-primary-soft">
+              Comprovante recebido, em conferência
+            </p>
+            {receipt && (
+              <p className="truncate text-[12.5px] text-brand-muted">
+                {receipt.displayName}
+              </p>
+            )}
           </div>
         </div>
       ) : (
-        <p className="text-[13px] leading-relaxed text-brand-text-soft">
-          Pague no balcão da serventia. Assim que a chave Pix estiver
-          cadastrada, o QR aparece aqui.
-        </p>
+        <>
+          {pix ? (
+            <div className="flex flex-wrap items-center gap-4">
+              <div
+                className="flex h-[132px] w-[132px] shrink-0 items-center justify-center rounded-xl border border-brand-border bg-brand-card p-2.5 [&>svg]:h-full [&>svg]:w-full"
+                // biome-ignore lint/security/noDangerouslySetInnerHtml: pix.qrSvg is deterministic SVG rendered server-side by `qrcode`, never citizen input.
+                dangerouslySetInnerHTML={{ __html: pix.qrSvg }}
+              />
+              <div className="flex min-w-[180px] flex-1 flex-col gap-2">
+                <span className="text-sm leading-relaxed">
+                  Abra o app do seu banco e aponte a câmera, ou copie o código:
+                </span>
+                <div className="flex items-center gap-2 rounded-[10px] border border-brand-border bg-brand-card px-3 py-2.5">
+                  <span className="flex-1 truncate text-xs text-brand-muted">
+                    {pix.copyPaste}
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      navigator.clipboard.writeText(pix.copyPaste).then(
+                        () => {
+                          setCopied(true);
+                          setTimeout(() => setCopied(false), 2000);
+                        },
+                        () => setCopied(false),
+                      );
+                    }}
+                    className="text-[13px] font-semibold text-brand-primary-soft hover:underline"
+                  >
+                    {copied ? "Copiado" : "Copiar"}
+                  </button>
+                </div>
+              </div>
+            </div>
+          ) : (
+            <p className="text-[13px] leading-relaxed text-brand-text-soft">
+              Pague no balcão da serventia. Assim que a chave Pix estiver
+              cadastrada, o QR aparece aqui.
+            </p>
+          )}
+          <form
+            onSubmit={(event) => {
+              event.preventDefault();
+              void upload.send(event.currentTarget, "comprovante", 1);
+            }}
+          >
+            <input
+              type="hidden"
+              name="protocolNumber"
+              value={result.protocolNumber}
+            />
+            <input type="hidden" name="accessKey" value={result.accessKey} />
+            <label
+              className={`flex cursor-pointer items-center justify-center gap-2 rounded-xl border-[1.5px] border-dashed border-brand-on-dark-accent bg-brand-card px-3 py-2.5 text-[13px] font-semibold text-brand-primary hover:border-brand-accent ${sending ? "opacity-60" : ""}`}
+            >
+              {sending ? "Enviando…" : "Já paguei · enviar comprovante"}
+              <input
+                type="file"
+                name="comprovante"
+                accept={ATTACHMENT_ACCEPT}
+                className="sr-only"
+                disabled={sending}
+                onChange={(event) => {
+                  if (event.target.files?.length) {
+                    event.target.form?.requestSubmit();
+                  }
+                }}
+              />
+            </label>
+            {(upload.error || state.status === "error") && (
+              <output className="mt-1.5 block text-[12px] font-semibold text-brand-alert">
+                {upload.error ?? (state.status === "error" && state.message)}
+              </output>
+            )}
+          </form>
+        </>
       )}
     </div>
   );
@@ -1499,7 +1610,30 @@ function ServiceRequestTrilho({
   // optimistic state) and disappears the moment this component re-renders.
   const [requirements, setRequirements] = useState(initial.requirements);
   const [detailsOpen, setDetailsOpen] = useState(true);
-  const result: ServiceRequestDetail = { ...initial, requirements };
+  // Same optimistic gap as `hasSignedForm`: true the moment PayCard reports a
+  // send, cleared the moment a fresh poll disagrees (below), so a comprovante
+  // the office sends back does not stay stuck showing "em conferência".
+  const [paymentJustReported, setPaymentJustReported] = useState(false);
+  // A fresher snapshot (see LookupFlow's polling) replaces what the citizen
+  // sees but not what they are typing: the cards below keep their drafts.
+  useEffect(() => {
+    setHasSignedForm(initial.hasSignedForm);
+    setCitizenDocuments(initial.citizenDocuments);
+    setRequirements(initial.requirements);
+    setPaymentJustReported(false);
+  }, [initial]);
+  // The override folds straight into `requestStatus` (not a separate flag
+  // read alongside it), so every reader downstream (computeSteps, computePill,
+  // computeHeadline, PayCard's own `reported`) agrees without each having to
+  // know about `paymentJustReported` itself.
+  const result: ServiceRequestDetail = {
+    ...initial,
+    requirements,
+    requestStatus:
+      paymentJustReported && initial.requestStatus === "awaiting-payment"
+        ? "payment-reported"
+        : initial.requestStatus,
+  };
 
   const rejected =
     result.requestStatus === "rejected" || result.requestStatus === "cancelled";
@@ -1515,10 +1649,12 @@ function ServiceRequestTrilho({
       r.status === "fulfilled" &&
       (r.messages.length > 0 || r.resolutionFileName),
   );
-  const awaitingPay = Boolean(result.amountLabel) && !result.paymentSettled;
+  const paymentReported = result.requestStatus === "payment-reported";
+  const awaitingPay =
+    Boolean(result.amountLabel) && !result.paymentSettled && !paymentReported;
   const showSign = !hasSignedForm && !rejected;
   const showPay =
-    awaitingPay &&
+    (awaitingPay || paymentReported) &&
     hasSignedForm &&
     pendingRequirements.length === 0 &&
     !rejected;
@@ -1527,7 +1663,8 @@ function ServiceRequestTrilho({
     !rejected &&
     !finished &&
     pendingRequirements.length === 0 &&
-    !awaitingPay;
+    !awaitingPay &&
+    !paymentReported;
 
   const steps = computeSteps(result, hasSignedForm, rejected, finished);
   const pill = computePill(
@@ -1620,7 +1757,13 @@ function ServiceRequestTrilho({
               }
             />
           ))}
-          {showPay && <PayCard result={result} />}
+          {showPay && (
+            <PayCard
+              result={result}
+              reported={paymentReported}
+              onReported={() => setPaymentJustReported(true)}
+            />
+          )}
           {showCalm && <CalmCard />}
           {finished && (
             <DoneCard
@@ -1729,15 +1872,37 @@ function LookupFlow({
     lookupProtocolDetail,
     { status: "idle" },
   );
+  // The consult the person made, refreshed in place whenever the office
+  // writes to the record. Kept apart from `state`: a refresh that fails
+  // (network, rate limit) must not throw the citizen back to the gate.
+  const [live, setLive] = useState<ProtocolDetail>();
+  const detail = live ?? (state.status === "success" ? state : undefined);
+
+  useLiveVersion(
+    () =>
+      detail
+        ? protocolVersion(detail.protocolNumber, detail.accessKey)
+        : Promise.resolve(null),
+    detail?.updatedAt,
+    async () => {
+      if (!detail) return;
+      const form = new FormData();
+      form.set("protocolNumber", detail.protocolNumber);
+      form.set("accessKey", detail.accessKey);
+      const next = await lookupProtocolDetail({ status: "idle" }, form);
+      if (next.status === "success") setLive(next);
+    },
+    15_000,
+  );
 
   return (
     <div className="mx-auto flex w-full max-w-[880px] flex-col px-4 py-8 md:px-10 md:py-16">
-      {state.status === "success" && state.kind === "service-request" ? (
-        <ServiceRequestTrilho initial={state} onReset={onReset} />
-      ) : state.status === "success" && state.kind === "data-rights" ? (
-        <DataRightsCard result={state} onNewConsult={onReset} />
-      ) : state.status === "success" ? (
-        <OmbudsmanCard result={state} onNewConsult={onReset} />
+      {detail?.kind === "service-request" ? (
+        <ServiceRequestTrilho initial={detail} onReset={onReset} />
+      ) : detail?.kind === "data-rights" ? (
+        <DataRightsCard result={detail} onNewConsult={onReset} />
+      ) : detail ? (
+        <OmbudsmanCard result={detail} onNewConsult={onReset} />
       ) : (
         <Gate
           initialNumber={initialNumber}

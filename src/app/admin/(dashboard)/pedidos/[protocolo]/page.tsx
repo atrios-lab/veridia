@@ -43,6 +43,7 @@ import { AttachmentsSection } from "./_components/attachments-section.tsx";
 import { DangerSection } from "./_components/danger-section.tsx";
 import { DeliverySection } from "./_components/delivery-section.tsx";
 import { KeySection } from "./_components/key-section.tsx";
+import { LiveRequest } from "./_components/live-request.tsx";
 import type { RequirementItem } from "./_components/requirements-section.tsx";
 import { RequirementsSection } from "./_components/requirements-section.tsx";
 import { StatusSection } from "./_components/status-section.tsx";
@@ -141,6 +142,11 @@ export default async function ServiceRequestDetailPage({
   const deliveredAttachments = ownAttachments
     .filter((a) => a.kind === "office")
     .map(row);
+  // The most recent one: a corrected resend (wrong file the first time) is
+  // what the operator should check, not the first try.
+  const paymentReceipt = ownAttachments
+    .filter((a) => a.kind === "payment-receipt")
+    .at(-1);
 
   // One read per requirement: an office raises a handful on a request, and a
   // join would fan the request's rows out per message.
@@ -194,35 +200,19 @@ export default async function ServiceRequestDetailPage({
 
   return (
     <>
-      <AdminPageHeader title={request.protocolNumber} />
+      <AdminPageHeader title="Pedidos de serviço" />
+      <LiveRequest
+        requestId={request.id}
+        version={request.updatedAt.toISOString()}
+      />
       <main className="flex flex-col gap-4.5 px-[30px] py-7">
-        <div className="flex flex-wrap items-center gap-3">
+        <div className="flex flex-wrap items-center gap-3.5">
           <Link
             href="/admin/pedidos"
-            className="flex items-center gap-1.5 text-[12.5px] text-admin-muted hover:text-admin-primary"
+            className="text-[12.5px] text-admin-muted hover:text-admin-primary"
           >
             ‹ Fila de pedidos
           </Link>
-          <span className="h-[18px] w-px bg-admin-border" />
-          <StatusBadge
-            status={status}
-            label={statusLabel("service-request", status)}
-          />
-          <DeadlineBadge
-            open={isOpenServiceRequestStatus(status)}
-            deadline={deadline}
-            today={today()}
-          />
-          {/* Pedida, não concedida: quem confere o benefício e decide é o
-              operador, e nada aqui mexe no valor. Fica na linha dos selos
-              porque muda como o pedido é trabalhado desde o primeiro olhar. */}
-          {exemption && (
-            <span className="inline-flex items-center gap-1.5 rounded-full bg-admin-warning-bg px-2.5 py-1 text-[11.5px] font-bold text-admin-warning-text">
-              Gratuidade solicitada (ISENTO)
-              {exemptionActName ? ` · ${exemptionActName}` : ""} · declarada em{" "}
-              {formatDayMonthYear(new Date(exemption.declaredAt))}
-            </span>
-          )}
           {/*
             Only when the same fields the print route itself requires are
             present: this page already knows `kind === "service-request"`
@@ -235,7 +225,7 @@ export default async function ServiceRequestDetailPage({
               href={`/admin/pedidos/${encodeURIComponent(request.protocolNumber)}/imprimir`}
               target="_blank"
               rel="noreferrer"
-              className="ml-auto text-[12.5px] font-semibold text-admin-primary hover:underline"
+              className="ml-auto text-[12.5px] font-semibold text-admin-primary-soft hover:underline"
             >
               Imprimir requerimento
             </a>
@@ -246,10 +236,48 @@ export default async function ServiceRequestDetailPage({
           <div className="flex flex-col gap-4.5">
             <StatusSection
               requestId={request.id}
+              protocolNumber={request.protocolNumber}
               status={status}
               subtitle={`${act?.name ?? "Ato não identificado"} · ${
                 request.applicantName ?? "Solicitante não identificado"
               } · pedido em ${formatDayMonthYear(request.createdAt)}`}
+              badges={
+                <>
+                  <StatusBadge
+                    status={status}
+                    label={statusLabel("service-request", status)}
+                    hero
+                  />
+                  {/* The term as a fact, next to the andamento it belongs to.
+                      The urgency badge beside it only speaks when it must. */}
+                  {isOpenServiceRequestStatus(status) && (
+                    <span className="inline-flex items-center rounded-full bg-admin-readonly-bg px-[11px] py-[5px] text-[12px] font-semibold text-admin-muted">
+                      {deadline.pausedOn
+                        ? `Prazo suspenso desde ${formatDate(deadline.pausedOn)}`
+                        : `Prazo até ${formatDate(
+                            deadlineDate(deadline.startedOn, deadline.days),
+                          )} · ${deadline.days} dias úteis`}
+                    </span>
+                  )}
+                  <DeadlineBadge
+                    open={isOpenServiceRequestStatus(status)}
+                    deadline={deadline}
+                    today={today()}
+                  />
+                  {/* Pedida, não concedida: quem confere o benefício e decide é
+                      o operador, e nada aqui mexe no valor. Fica na linha dos
+                      selos porque muda como o pedido é trabalhado desde o
+                      primeiro olhar. */}
+                  {exemption && (
+                    <span className="inline-flex items-center rounded-full bg-admin-warning-bg px-[11px] py-[5px] text-[12px] font-bold text-admin-warning-text">
+                      Gratuidade solicitada (ISENTO)
+                      {exemptionActName ? ` · ${exemptionActName}` : ""} ·
+                      declarada em{" "}
+                      {formatDayMonthYear(new Date(exemption.declaredAt))}
+                    </span>
+                  )}
+                </>
+              }
               suggested={suggestedNextStatuses(status)}
               deadlineSummary={
                 !isOpenServiceRequestStatus(status)
@@ -307,6 +335,15 @@ export default async function ServiceRequestDetailPage({
               amountLabel={
                 request.amountCents != null
                   ? formatCents(request.amountCents)
+                  : undefined
+              }
+              receipt={
+                paymentReceipt
+                  ? {
+                      id: paymentReceipt.id,
+                      displayName: paymentReceipt.displayName,
+                      sentAtLabel: formatDayMonthTime(paymentReceipt.createdAt),
+                    }
                   : undefined
               }
             />

@@ -1,6 +1,6 @@
 "use client";
 
-import { Fragment, useActionState } from "react";
+import { type ReactNode, useActionState, useState } from "react";
 import {
   MAX_DEADLINE_DAYS,
   MIN_DEADLINE_DAYS,
@@ -26,65 +26,28 @@ const HAPPY_PATH: readonly ServiceRequestStatus[] = [
 ];
 
 /** Outline colour for a "mudar para" pill, matching what each destination
- * means: neutral for forward progress, red for a refusal, grey for a stop. */
+ * means: neutral for forward progress, red for a refusal, grey for a stop.
+ * The first suggestion is the next step and gets the filled pill instead. */
 function suggestionPillClass(status: ServiceRequestStatus): string {
   if (status === "rejected") {
-    return "rounded-full border border-admin-error-border bg-admin-error-bg px-3.5 py-1.5 text-[12.5px] font-semibold text-admin-error-text disabled:opacity-60";
+    return "rounded-full border border-admin-error-border bg-admin-error-bg px-[13px] py-1.5 text-[12.5px] font-semibold text-admin-error-text disabled:opacity-60";
   }
   if (status === "cancelled") {
-    return "rounded-full border border-admin-border bg-admin-readonly-bg px-3.5 py-1.5 text-[12.5px] font-semibold text-admin-muted disabled:opacity-60";
+    return "rounded-full border border-admin-border bg-admin-readonly-bg px-[13px] py-1.5 text-[12.5px] font-semibold text-admin-muted disabled:opacity-60";
   }
-  return "rounded-full border border-admin-input-border bg-admin-input-bg px-3.5 py-1.5 text-[12.5px] font-semibold text-admin-primary disabled:opacity-60";
+  return "rounded-full border border-admin-input-border bg-admin-input-bg px-[13px] py-1.5 text-[12.5px] font-semibold text-admin-primary disabled:opacity-60";
 }
 
-function TimelineStep({
-  label,
-  state,
-}: {
-  label: string;
-  state: "done" | "current" | "upcoming";
-}) {
-  return (
-    <div className="flex flex-1 flex-col items-center gap-2">
-      {state === "done" && (
-        <span className="flex h-[26px] w-[26px] items-center justify-center rounded-full bg-admin-success-text">
-          <AdminIcon
-            name="check"
-            className="h-[13px] w-[13px] text-white"
-            strokeWidth={3}
-          />
-        </span>
-      )}
-      {state === "current" && (
-        <span className="flex h-[26px] w-[26px] items-center justify-center rounded-full border-2 border-admin-primary bg-admin-primary">
-          <span className="h-[9px] w-[9px] rounded-full bg-white" />
-        </span>
-      )}
-      {state === "upcoming" && (
-        <span className="h-[26px] w-[26px] rounded-full border-2 border-admin-input-border" />
-      )}
-      <span
-        className={`text-center text-[11.5px] font-bold ${
-          state === "done"
-            ? "text-admin-success-text"
-            : state === "current"
-              ? "text-admin-primary"
-              : "text-admin-faint"
-        }`}
-      >
-        {label}
-      </span>
-    </div>
-  );
-}
+const PANEL_TITLE = "text-[12px] font-bold text-admin-primary";
+const PANEL_HELP = "text-[12.5px] text-admin-muted";
 
 /**
  * The term control, offered on every andamento change because that is when
  * the office knows what the term is worth: the request just picked up for
  * analysis is the one whose clock should restart.
  *
- * Collapsed, and "manter" preselected, so the ordinary change stays one
- * click. Only a deliberate choice writes a term.
+ * "Manter" preselected, so the ordinary change stays one click. Only a
+ * deliberate choice writes a term.
  */
 function DeadlineControl({
   summary,
@@ -97,13 +60,12 @@ function DeadlineControl({
   pending: boolean;
 }) {
   return (
-    <details className="mt-3.5">
-      <summary className="cursor-pointer text-[12px] font-semibold text-admin-muted">
-        Prazo: {summary}
-      </summary>
-      <fieldset className="mt-2.5 flex flex-wrap items-center gap-x-4 gap-y-2.5">
+    <div className="flex flex-col gap-2.5">
+      <span className={PANEL_TITLE}>Prazo</span>
+      <span className={PANEL_HELP}>Hoje: {summary}</span>
+      <fieldset className="flex flex-wrap items-center gap-x-3.5 gap-y-2.5 text-[12.5px] text-admin-text">
         <legend className="sr-only">Prazo do pedido</legend>
-        <label className="flex items-center gap-1.5 text-[12.5px] text-admin-text">
+        <label className="flex items-center gap-1.5">
           <input
             type="radio"
             name="deadlineChoice"
@@ -112,11 +74,11 @@ function DeadlineControl({
           />
           Manter
         </label>
-        <label className="flex items-center gap-1.5 text-[12.5px] text-admin-text">
+        <label className="flex items-center gap-1.5">
           <input type="radio" name="deadlineChoice" value="restart" />
           Recomeçar hoje
         </label>
-        <label className="flex items-center gap-1.5 text-[12.5px] text-admin-text">
+        <label className="flex items-center gap-1.5">
           <input type="radio" name="deadlineChoice" value="days" />
           Mudar para
           <input
@@ -128,36 +90,41 @@ function DeadlineControl({
             step={1}
             inputMode="numeric"
             aria-label="Dias de prazo"
-            className="w-[72px] rounded-[9px] border border-admin-input-border bg-admin-input-bg px-2 py-1 text-[13px] text-admin-text"
+            className="w-[52px] rounded-lg border border-admin-input-border bg-admin-card px-2 py-1 text-center text-[12.5px] text-admin-text"
           />
           dias
         </label>
-        <button
-          type="submit"
-          name="intent"
-          value="deadline"
-          disabled={pending}
-          className="btn btn-admin-secondary btn-sm"
-        >
-          {pending ? "Salvando…" : "Salvar prazo"}
-        </button>
       </fieldset>
-    </details>
+      <button
+        type="submit"
+        name="intent"
+        value="deadline"
+        disabled={pending}
+        className="btn btn-admin-secondary btn-sm self-start"
+      >
+        {pending ? "Salvando…" : "Salvar prazo"}
+      </button>
+    </div>
   );
 }
 
 export function StatusSection({
   requestId,
+  protocolNumber,
   status,
   subtitle,
+  badges,
   suggested,
   deadlineSummary,
   deadlineDays,
 }: {
   requestId: string;
+  protocolNumber: string;
   status: ServiceRequestStatus;
   /** "{ato} · {solicitante} · pedido em {data}" */
   subtitle: string;
+  /** The status, term and exemption pills, rendered by the page. */
+  badges: ReactNode;
   suggested: readonly ServiceRequestStatus[];
   /** "até 27/09/2026 · dia 5 de 30", or null once the request is closed. */
   deadlineSummary: string | null;
@@ -168,42 +135,57 @@ export function StatusSection({
     { status: "idle" },
   );
   useEmailWarning(state);
+  // The term and the correction are the rare moves; the next step is not.
+  const [moreOpen, setMoreOpen] = useState(false);
 
   const happyIndex = HAPPY_PATH.indexOf(status);
 
   return (
-    <div className="rounded-[14px] border border-admin-border bg-admin-card p-6">
-      <h4 className="font-serif text-[17px] font-semibold text-admin-primary">
-        Andamento
-      </h4>
-      <p className="mt-1 text-[12.5px] text-admin-muted">{subtitle}</p>
+    <div className="flex flex-col gap-[26px] rounded-[14px] border border-admin-border bg-admin-card px-7 pt-[30px] pb-6">
+      <div className="flex flex-col items-center gap-2 text-center">
+        <span className="text-[11px] font-bold tracking-[.16em] text-admin-accent uppercase">
+          Andamento do pedido
+        </span>
+        <h2 className="font-serif text-[38px] leading-[1.05] font-semibold text-admin-primary tabular-nums">
+          {protocolNumber}
+        </h2>
+        <p className="text-[14px] leading-normal text-admin-muted">
+          {subtitle}
+        </p>
+        <div className="mt-1 flex flex-wrap justify-center gap-2">{badges}</div>
+      </div>
 
       {happyIndex >= 0 ? (
-        <div className="mt-5.5 flex items-center">
+        <div className="grid grid-cols-5 gap-2.5">
           {HAPPY_PATH.map((step, i) => (
-            <Fragment key={step}>
-              <TimelineStep
-                label={statusLabel("service-request", step)}
-                state={
-                  i < happyIndex
-                    ? "done"
-                    : i === happyIndex
-                      ? "current"
-                      : "upcoming"
-                }
-              />
-              {i < HAPPY_PATH.length - 1 && (
-                <span
-                  className={`mb-5 h-0.5 flex-1 ${
-                    i < happyIndex ? "bg-admin-success-text" : "bg-admin-border"
+            <div key={step} className="flex flex-col items-center gap-2.5">
+              <div className="h-[5px] w-full overflow-hidden rounded-full bg-admin-border">
+                <div
+                  className={`h-full rounded-full bg-admin-primary-soft ${
+                    i < happyIndex
+                      ? "w-full"
+                      : i === happyIndex
+                        ? "w-1/2"
+                        : "w-0"
                   }`}
                 />
-              )}
-            </Fragment>
+              </div>
+              <span
+                className={`text-center text-[12.5px] leading-[1.3] ${
+                  i < happyIndex
+                    ? "font-bold text-admin-text"
+                    : i === happyIndex
+                      ? "font-bold text-admin-primary-soft"
+                      : "font-medium text-admin-faint"
+                }`}
+              >
+                {statusLabel("service-request", step)}
+              </span>
+            </div>
           ))}
         </div>
       ) : (
-        <p className="mt-3 text-[12.5px] text-admin-muted">
+        <p className="text-[12.5px] text-admin-muted">
           Andamento atual:{" "}
           <strong className="text-admin-primary">
             {statusLabel("service-request", status)}
@@ -215,86 +197,120 @@ export function StatusSection({
           below applies to whichever the operator uses. A pill submits its own
           `status`; "Aplicar" submits none, and the action falls back to the
           correction select. */}
-      <form action={action}>
+      <form
+        action={action}
+        className="flex flex-col gap-3.5 border-t border-admin-border pt-[18px]"
+      >
         <input type="hidden" name="requestId" value={requestId} />
 
-        {suggested.length > 0 && (
-          <div className="mt-5.5 flex flex-wrap items-center gap-2 border-t border-admin-border pt-4.5">
-            <span className="text-xs font-bold text-admin-primary">
-              Mudar para:
+        <div className="flex flex-wrap items-center gap-2.5">
+          {suggested.length > 0 && (
+            <span className="text-[12px] font-bold text-admin-primary">
+              Mudar para
             </span>
-            {suggested.map((next) => (
-              <button
-                key={next}
-                type="submit"
-                name="status"
-                value={next}
-                disabled={pending}
-                className={suggestionPillClass(next)}
-              >
-                {statusLabel("service-request", next)}
-              </button>
-            ))}
-          </div>
-        )}
-
-        {deadlineSummary && (
-          <DeadlineControl
-            summary={deadlineSummary}
-            days={deadlineDays}
-            pending={pending}
-          />
-        )}
-
-        <details className="mt-3.5">
-          <summary className="cursor-pointer text-[12px] font-semibold text-admin-muted">
-            Corrigir para outro andamento
-          </summary>
-          <div className="mt-2.5 flex items-center gap-2.5">
-            <div className="relative">
-              <select
-                name="statusOverride"
-                defaultValue={status}
-                className="appearance-none rounded-[9px] border border-admin-input-border bg-admin-input-bg py-2 pr-9 pl-3 text-[13px] text-admin-text"
-              >
-                {/* Grouped by phase: eighteen flat options is a wall, and the
-                    operator is looking for a step of the title's life, which is
-                    exactly what the groups name. */}
-                {SERVICE_REQUEST_PHASES.map((phase) => (
-                  <optgroup key={phase.id} label={phase.label}>
-                    {phase.statuses.map((s) => (
-                      <option key={s} value={s}>
-                        {statusLabel("service-request", s)}
-                      </option>
-                    ))}
-                  </optgroup>
-                ))}
-              </select>
-              <AdminIcon
-                name="chevronDown"
-                className="pointer-events-none absolute top-1/2 right-3 h-3.5 w-3.5 -translate-y-1/2 text-admin-muted"
-                strokeWidth={2}
-              />
-            </div>
+          )}
+          {suggested.map((next, i) => (
             <button
+              key={next}
               type="submit"
+              name="status"
+              value={next}
               disabled={pending}
-              className="btn btn-admin-primary btn-md"
+              className={
+                i === 0
+                  ? "rounded-full bg-admin-primary px-3.5 py-[7px] text-[12.5px] font-semibold text-white disabled:opacity-60"
+                  : suggestionPillClass(next)
+              }
             >
-              {pending ? "Aplicando…" : "Aplicar"}
+              {statusLabel("service-request", next)}
             </button>
-          </div>
-        </details>
-      </form>
+          ))}
+          <span className="flex-1" />
+          <button
+            type="button"
+            onClick={() => setMoreOpen((open) => !open)}
+            aria-expanded={moreOpen}
+            className="inline-flex items-center gap-[5px] text-[12.5px] font-semibold text-admin-muted hover:text-admin-primary"
+          >
+            Prazo e correção
+            <AdminIcon
+              name="chevronDown"
+              strokeWidth={2.2}
+              className={`h-[13px] w-[13px] transition-transform duration-300 ${moreOpen ? "rotate-180" : ""}`}
+            />
+          </button>
+        </div>
 
-      {state.status === "error" && (
-        <p
-          role="alert"
-          className="mt-3 text-[12.5px] font-semibold text-admin-error-text"
-        >
-          {state.message}
-        </p>
-      )}
+        {moreOpen && (
+          <div
+            className={`grid gap-x-7 gap-y-[18px] rounded-[11px] border border-admin-border bg-admin-input-bg px-[18px] py-4 ${
+              deadlineSummary ? "grid-cols-2" : "grid-cols-1"
+            }`}
+          >
+            {deadlineSummary && (
+              <DeadlineControl
+                summary={deadlineSummary}
+                days={deadlineDays}
+                pending={pending}
+              />
+            )}
+            <div
+              className={`flex flex-col gap-2.5 ${
+                deadlineSummary ? "border-l border-admin-border pl-7" : ""
+              }`}
+            >
+              <span className={PANEL_TITLE}>Corrigir para outro andamento</span>
+              <span className={PANEL_HELP}>
+                Para quando o pedido foi lançado na etapa errada.
+              </span>
+              <div className="flex items-center gap-2">
+                <div className="relative flex-1">
+                  <select
+                    name="statusOverride"
+                    defaultValue={status}
+                    aria-label="Corrigir para outro andamento"
+                    className="w-full appearance-none rounded-[9px] border border-admin-input-border bg-admin-card py-2 pr-9 pl-3 text-[13px] text-admin-text"
+                  >
+                    {/* Grouped by phase: eighteen flat options is a wall, and
+                        the operator is looking for a step of the title's life,
+                        which is exactly what the groups name. */}
+                    {SERVICE_REQUEST_PHASES.map((phase) => (
+                      <optgroup key={phase.id} label={phase.label}>
+                        {phase.statuses.map((s) => (
+                          <option key={s} value={s}>
+                            {statusLabel("service-request", s)}
+                          </option>
+                        ))}
+                      </optgroup>
+                    ))}
+                  </select>
+                  <AdminIcon
+                    name="chevronDown"
+                    className="pointer-events-none absolute top-1/2 right-3 h-[13px] w-[13px] -translate-y-1/2 text-admin-muted"
+                    strokeWidth={2}
+                  />
+                </div>
+                <button
+                  type="submit"
+                  disabled={pending}
+                  className="btn btn-admin-secondary btn-sm"
+                >
+                  {pending ? "Aplicando…" : "Aplicar"}
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {state.status === "error" && (
+          <p
+            role="alert"
+            className="text-[12.5px] font-semibold text-admin-error-text"
+          >
+            {state.message}
+          </p>
+        )}
+      </form>
     </div>
   );
 }

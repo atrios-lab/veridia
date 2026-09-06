@@ -26,6 +26,7 @@ export function ConfirmAction({
   pendingLabel,
   children,
   className,
+  triggerClassName = "btn btn-admin-danger btn-sm",
 }: {
   /** The dispatch from the caller's `useActionState`. */
   action: (formData: FormData) => void;
@@ -44,6 +45,8 @@ export function ConfirmAction({
   children?: ReactNode;
   /** Layout classes for the trigger. */
   className?: string;
+  /** The trigger's own look; the outline danger button unless told otherwise. */
+  triggerClassName?: string;
 }) {
   const [open, setOpen] = useState(false);
   // False until this opening of the dialog has actually sent something. The
@@ -80,7 +83,7 @@ export function ConfirmAction({
           setSent(false);
           setOpen(true);
         }}
-        className={`btn btn-admin-danger btn-sm ${className ?? ""}`}
+        className={`${triggerClassName} ${className ?? ""}`}
       >
         {trigger}
       </button>

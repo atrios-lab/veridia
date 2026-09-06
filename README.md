@@ -103,6 +103,29 @@ próprio ou nenhum. Ver [docs/migrations.md](docs/migrations.md).
 O login funciona em qualquer domínio: o do deploy, o de preview e o de cada serventia. Não é
 preciso declarar o domínio do deploy em lugar nenhum.
 
+### Flag do acompanhamento (`/acompanhar`)
+
+A consulta do cidadão pode ser servida pela tela nova em `/acompanhar` ou pela atual em
+`/protocolo`. Quem decide é a flag `citizen-tracking-v2` (`src/flags.ts`), lida de um Edge Config
+do projeto na Vercel pelo Flags SDK: liga e desliga sem deploy. As duas rotas continuam abrindo por
+URL direta em qualquer estado; a flag só decide para onde os links do site apontam.
+
+| Variável | Para quê |
+| --- | --- |
+| `EDGE_CONFIG` | Connection string do Edge Config, em Preview e Production. Sem ela (dev, CI) a flag fica desligada. |
+| `FLAGS_SECRET` | 32 bytes aleatórios em base64, um por ambiente. Sem ela o Vercel Toolbar não lista nem sobrescreve a flag por sessão. |
+
+O store é o `veridia-flags` do time na Vercel. O item se chama `flags`, e a flag é uma chave dentro dele:
+
+```json
+{ "flags": { "citizen-tracking-v2": true } }
+```
+
+Rollback é voltar esse valor para `false`: vale em segundos, sem deploy. Se o Edge Config estiver
+fora do ar ou mal configurado, a flag cai no padrão (desligada) e a página renderiza normalmente.
+Para testar antes de ligar para todo mundo, sobrescreva a flag só na sua sessão pelo Vercel
+Toolbar, que lê `/.well-known/vercel/flags`.
+
 ## Verificação
 
 O mesmo que o CI roda:

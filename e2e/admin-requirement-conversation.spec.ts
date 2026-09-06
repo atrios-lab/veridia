@@ -1,5 +1,6 @@
 import { expect, type Page, test } from "@playwright/test";
 import postgres from "postgres";
+import { hashAccessKey } from "../src/core/request/access-key.ts";
 
 // A conversa dentro da exigência, dos dois lados, e o cumprimento que agora é
 // ato do cartório. Mesma disciplina de e2e/admin-service-requests.spec.ts: a
@@ -11,6 +12,7 @@ const PORT = process.env.PORT ?? "3000";
 const baseURL = `http://marinho.localhost:${PORT}`;
 const TENANT = "cartorio-marinho";
 const PROTOCOL = "REQ.2098.000777";
+const ACCESS_KEY = "TEST-LIVE-0777";
 
 test("a visitor with no session never reaches the request detail", async ({
   page,
@@ -52,7 +54,7 @@ test.describe("conversa da exigência", () => {
       values
         (${TENANT}, 'service-request', 2098, 777, ${PROTOCOL},
          'rcpn-certidao', 'RCPN', 'Rosa Almeida Fontes', '(84) 90000-0000',
-         'hash', 'new')
+         ${hashAccessKey(ACCESS_KEY)}, 'new')
       on conflict do nothing
     `;
     await sql.end();
@@ -92,6 +94,47 @@ test.describe("conversa da exigência", () => {
     ).toBeVisible();
     // The office spoke last, so nothing is waiting on it.
     await expect(page.getByText("Respondida")).toBeVisible();
+  });
+
+  test("both screens pick up the other side's writes without a reload", async ({
+    page,
+    context,
+  }) => {
+    await signIn(page);
+    await page.goto(detailUrl);
+
+    // The citizen's tab, open on the same request, before the office writes.
+    const citizen = await context.newPage();
+    await citizen.goto(`${baseURL}/acompanhar?numero=${PROTOCOL}`);
+    await citizen.getByPlaceholder("Ex.: BBM8-6XVB-8PUK").fill(ACCESS_KEY);
+    await citizen.getByRole("button", { name: "Ver andamento" }).click();
+    // The applicant's name is never sent to this screen, so the protocol
+    // heading is what confirms the lookup succeeded.
+    await expect(
+      citizen.getByRole("heading", { name: PROTOCOL }),
+    ).toBeVisible();
+
+    await page.getByRole("button", { name: "Registrar exigência" }).click();
+    await page
+      .getByPlaceholder("O que falta para o pedido seguir?")
+      .fill("Falta a certidão de nascimento atualizada.");
+    await page.getByRole("button", { name: "Registrar", exact: true }).click();
+
+    // No reload on the citizen's side: the tracking poll brings it in.
+    await expect(
+      citizen.getByText("Falta a certidão de nascimento atualizada."),
+    ).toBeVisible({ timeout: 30_000 });
+
+    await citizen
+      .getByPlaceholder("Escreva sua resposta aqui...")
+      .fill("Segue a certidão, tirada hoje.");
+    await citizen.getByRole("button", { name: "Enviar", exact: true }).click();
+
+    // Nor on the office's: the detail page refreshes itself.
+    await expect(page.getByText("Segue a certidão, tirada hoje.")).toBeVisible({
+      timeout: 30_000,
+    });
+    await citizen.close();
   });
 
   test("only the office closes a requirement, and closing ends the conversation", async ({
@@ -160,7 +203,7 @@ test.describe("conversa da exigência", () => {
     await signIn(page);
     await page.goto(detailUrl);
 
-    await page.getByText("Corrigir para outro andamento").click();
+    await page.getByRole("button", { name: "Prazo e correção" }).click();
     const select = page.locator('select[name="statusOverride"]');
     // The vocabulary the registrar actually works in.
     await expect(select.locator('option[value="pre-noted"]')).toHaveCount(1);

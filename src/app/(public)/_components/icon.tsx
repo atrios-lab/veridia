@@ -34,9 +34,13 @@ const PATHS = {
     "M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z",
   ],
   info: ["M12 3a9 9 0 1 0 0 18 9 9 0 0 0 0-18Z", "M12 8v4M12 16h.01"],
+  // Same glyph as the panel's `file`, so an attachment reads the same on the
+  // two sides of one conversation.
   file: [
-    "M6 2h9l5 5v13a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2Z",
-    "M14 2v5h5",
+    "M4 22V4a2 2 0 0 1 2-2h9l5 5v15a1 1 0 0 1-1 1H6a2 2 0 0 1-2-2Z",
+    "M14 2v6h6",
+    "M8 13h8",
+    "M8 17h5",
   ],
   x: ["M18 6 6 18", "M6 6l12 12"],
   lock: [

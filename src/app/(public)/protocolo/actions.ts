@@ -30,7 +30,7 @@ import { formatCents } from "@/core/request/money.ts";
 import { type IsoDate, toIsoDate } from "@/core/scheduling/calendar.ts";
 import { isSectionEnabled } from "@/core/tenant/gating.ts";
 import { type PixCharge, pixChargeFor } from "@/lib/pix-qr.ts";
-import { isRateLimited } from "@/lib/rate-limit.ts";
+import { isPollRateLimited, isRateLimited } from "@/lib/rate-limit.ts";
 import {
   attachToRequest,
   findByProtocolWithKey,
@@ -38,6 +38,7 @@ import {
   listRequirementMessages,
   listRequirements,
   requestOwnAttachments,
+  updateRequestStatus,
   writeCitizenMessage,
 } from "@/lib/service-request.ts";
 import { getTenant, OFFICE_TIME_ZONE, today } from "@/lib/tenant.ts";
@@ -123,6 +124,10 @@ export interface ServiceRequestDetail extends BaseDetail {
    * citizen to pay again. */
   paymentSettled?: boolean;
   pix?: PixCharge;
+  /** The most recent comprovante the citizen sent via "Já paguei", if any.
+   * Present regardless of the andamento reached afterwards (the screen
+   * itself decides what to show, from `requestStatus`/`paymentSettled`). */
+  paymentReceipt?: { displayName: string; sentAt: string };
   /**
    * The term in force, absent once the request is closed. `overdue` says the
    * expected date has passed without saying by how much: the count of days
@@ -176,6 +181,28 @@ export type LookupState =
   | { status: "idle" }
   | { status: "error"; message: string }
   | ProtocolDetail;
+
+/**
+ * The tracking screen's live check: the record's `updatedAt` now, under the
+ * same protocol and key the consult took. Null for a pair that opens
+ * nothing, which is also what a rate-limited caller gets: the screen stops
+ * asking rather than showing an error for a question the person never
+ * asked.
+ */
+export async function protocolVersion(
+  protocolNumber: string,
+  accessKey: string,
+): Promise<string | null> {
+  const tenant = await getTenant();
+  if (!isSectionEnabled(tenant, "consulta-protocolo")) return null;
+  if (await isPollRateLimited(await headers())) return null;
+  const record = await findByProtocolWithKey(
+    tenant.slug,
+    protocolNumber,
+    accessKey,
+  );
+  return record?.updatedAt.toISOString() ?? null;
+}
 
 export async function lookupProtocolDetail(
   _previous: LookupState,
@@ -259,6 +286,11 @@ export async function lookupProtocolDetail(
 
     const attachments = await listAttachments(tenant.slug, record.id);
     const signedForm = attachments.find((a) => a.kind === "signed-form");
+    // The most recent one: a corrected resend (wrong file the first time)
+    // must be what the office and the citizen both see, not the first try.
+    const paymentReceipt = attachments
+      .filter((a) => a.kind === "payment-receipt")
+      .at(-1);
     const requirements = await listRequirements(tenant.slug, record.id);
     // One read per requirement: an office raises a handful on a request, not
     // hundreds, and the alternative is a join that would still fan the rows
@@ -320,13 +352,21 @@ export async function lookupProtocolDetail(
       },
       paymentSettled,
       pix:
-        record.amountCents != null && !paymentSettled
+        record.amountCents != null &&
+        !paymentSettled &&
+        record.status !== "payment-reported"
           ? await pixChargeFor(
               tenant,
               record.protocolNumber,
               record.amountCents,
             )
           : undefined,
+      paymentReceipt: paymentReceipt
+        ? {
+            displayName: paymentReceipt.displayName,
+            sentAt: paymentReceipt.createdAt.toISOString(),
+          }
+        : undefined,
       // A requirement's form is that requirement's, not a delivery: it belongs
       // in its card and never in "Documentos da serventia".
       deliveredDocuments: requestOwnAttachments(attachments)
@@ -440,6 +480,99 @@ export async function attachExtraDocument(
       return { status: "error", message: error.message };
     }
     console.error("protocolo.attach-extra", error);
+    return { status: "error", message: GENERIC_ERROR };
+  }
+}
+
+export type ReportPaymentState =
+  | { status: "idle" }
+  | { status: "error"; message: string }
+  | { status: "success"; displayName: string; sentAt: string };
+
+/**
+ * The citizen says "já paguei" and hands over the comprovante: one file,
+ * required, gravado as an anexo do pedido (`kind: "payment-receipt"`,
+ * distinct from the documents it sends via `attachExtraDocument`) and, in
+ * the same call, moves the andamento to "Pagamento informado" so the balcão
+ * sees it in the fila. Não confirma o pagamento por conta própria: a
+ * conferência é da serventia (ver `updateRequestStatus`).
+ */
+export async function reportPayment(
+  _previous: ReportPaymentState,
+  formData: FormData,
+): Promise<ReportPaymentState> {
+  const tenant = await getTenant();
+  const protocolNumber = String(formData.get("protocolNumber") ?? "");
+  const accessKey = String(formData.get("accessKey") ?? "");
+
+  const request = await findByProtocolWithKey(
+    tenant.slug,
+    protocolNumber,
+    accessKey,
+  );
+  if (!request) return { status: "error", message: NOT_FOUND };
+
+  if (await isRateLimited(await headers())) {
+    return {
+      status: "error",
+      message: "Muitos envios seguidos. Aguarde um minuto e tente de novo.",
+    };
+  }
+
+  // Only a service request carries a value and a Pix charge to report
+  // against; the other three kinds never reach this action from the UI, but
+  // the server checks anyway since the key alone would otherwise unlock it.
+  const settled =
+    request.status === "paid" || !isOpenServiceRequestStatus(request.status);
+  if (
+    request.kind !== "service-request" ||
+    request.amountCents == null ||
+    settled
+  ) {
+    return { status: "error", message: GENERIC_ERROR };
+  }
+
+  try {
+    const stored = await collectAttachments(formData, "comprovante", {
+      tenantSlug: tenant.slug,
+      // A fixed, friendly name (not the browser-sent one, same discipline as
+      // every other upload here): this is the one displayName the citizen's
+      // own screen echoes back, so it reads as a label, not a slug.
+      kind: "Comprovante de pagamento",
+      limit: 1,
+    });
+    if (stored.length === 0) {
+      return {
+        status: "error",
+        message: "Escolha o comprovante para enviar.",
+      };
+    }
+    const [inserted] = await attachToRequest(
+      tenant.slug,
+      request.id,
+      stored,
+      "payment-receipt",
+    );
+    // Já em "Pagamento informado" (reenvio de comprovante): só o arquivo
+    // muda, o andamento fica onde está.
+    if (request.status !== "payment-reported") {
+      await updateRequestStatus(
+        tenant.slug,
+        request.id,
+        "payment-reported",
+        null,
+      );
+    }
+    return {
+      status: "success",
+      displayName: inserted.displayName,
+      sentAt: inserted.createdAt.toISOString(),
+    };
+  } catch (error) {
+    if (error instanceof AttachmentError) {
+      return { status: "error", message: error.message };
+    }
+    console.error("protocolo.report-payment", error);
     return { status: "error", message: GENERIC_ERROR };
   }
 }

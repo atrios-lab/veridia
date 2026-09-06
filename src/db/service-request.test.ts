@@ -170,6 +170,40 @@ test("a request is filed with no amount, and the office can set one", async () =
   assert.equal(cleared.rows[0].amount_cents, null);
 });
 
+test("a citizen-written andamento change audits with no actor", async () => {
+  // What `updateRequestStatus` does when the citizen reports a payment: the
+  // andamento moves and the audit trail records it with a null actor,
+  // exactly like the request's own citizen-filed creation already does.
+  await fileRequest("cartorio-marinho", 2028, 5);
+  const [request] = (
+    await client.query<{ id: string }>(
+      "SELECT id FROM service_requests WHERE protocol_number = 'REQ.2028.000005'",
+    )
+  ).rows;
+
+  await client.query(
+    "UPDATE service_requests SET status = 'payment-reported' WHERE id = $1",
+    [request.id],
+  );
+  await client.query(
+    `INSERT INTO audit_log (tenant_slug, actor_id, action, target_type, target_id)
+     VALUES ('cartorio-marinho', NULL, 'service-request.status', 'service-request', $1)`,
+    [request.id],
+  );
+
+  const { rows } = await client.query<{
+    status: string;
+    actor_id: string | null;
+  }>(
+    `SELECT sr.status, al.actor_id FROM service_requests sr
+     JOIN audit_log al ON al.target_id = sr.id::text
+     WHERE sr.id = $1`,
+    [request.id],
+  );
+  assert.equal(rows[0].status, "payment-reported");
+  assert.equal(rows[0].actor_id, null);
+});
+
 test("a requirement is removed with the request it belongs to", async () => {
   const { rows } = await client.query<{ id: string }>(
     "SELECT id FROM service_requests WHERE protocol_number = 'REQ.2028.000001'",

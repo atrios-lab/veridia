@@ -150,6 +150,16 @@ test("only a written requirement or a priced payment pauses the clock", () => {
     }),
     ["requirement", "payment"],
   );
+  // Once the citizen reports the payment, the clock is on the office again:
+  // only "awaiting-payment" itself pauses for money owed.
+  assert.deepEqual(
+    pauseReasons({
+      status: "payment-reported",
+      amountCents: 5790,
+      pendingRequirements: 0,
+    }),
+    [],
+  );
 });
 
 test("the clock reads the day it stopped while paused", () => {
