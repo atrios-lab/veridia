@@ -89,10 +89,12 @@ test.describe("fila e detalhe de pedidos", () => {
   test("the telephone filed with the request reaches the operator", async ({
     page,
   }) => {
-    // It rides in `details`, not in a column of its own: this is the test
-    // that the reader still finds it there.
+    // It rides in "Dados do solicitante", not in a column of its own: this is
+    // the test that the reader still finds it there. The section is closed by
+    // default, so opening it is part of what the test proves.
     await signIn(page);
     await page.goto(`${baseURL}/admin/pedidos/${PROTOCOL}`);
+    await page.getByRole("button", { name: "Dados do solicitante" }).click();
     await expect(page.getByText("(84) 99912-0033")).toBeVisible();
   });
 
