@@ -159,7 +159,7 @@ function SearchOverlay({ onClose }: { onClose: () => void }) {
         aria-modal="true"
         aria-label="Busca global"
         onKeyDown={handleKeyDown}
-        className="relative z-10 flex w-full max-w-[560px] flex-col overflow-hidden rounded-[14px] border border-admin-border bg-admin-card shadow-2xl"
+        className="relative z-10 flex w-full max-w-[560px] flex-col overflow-hidden rounded-[14px] border border-admin-border bg-admin-card shadow-2xl focus-within:outline focus-within:outline-[1.5px] focus-within:outline-[var(--brand-accent)]"
       >
         <div className="flex items-center gap-2.5 border-b border-admin-border px-4 py-3.5">
           <AdminIcon
@@ -172,7 +172,7 @@ function SearchOverlay({ onClose }: { onClose: () => void }) {
             value={query}
             onChange={(event) => setQuery(event.target.value)}
             placeholder="Buscar protocolo, CPF ou nome do interessado…"
-            className="flex-1 bg-transparent text-[14px] text-admin-text placeholder:text-admin-faint focus:outline-none"
+            className="flex-1 bg-transparent text-[14px] text-admin-text placeholder:text-admin-faint focus:outline-none focus-visible:shadow-none"
           />
           <button
             type="button"

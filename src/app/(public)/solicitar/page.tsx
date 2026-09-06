@@ -7,6 +7,7 @@ import {
 } from "@/core/acts/catalog.ts";
 import type { Attribution } from "@/core/tenant/schema.ts";
 import { ATTRIBUTIONS } from "@/core/tenant/schema.ts";
+import { trackingHref } from "@/flags.ts";
 import { Icon } from "../_components/icon.tsx";
 import { requireSection } from "../_lib/section.ts";
 import {
@@ -46,6 +47,7 @@ export default async function RequestPage({
 
   // Step three, and only when the act really belongs to the chosen area.
   if (attribution && act && act.attribution === attribution) {
+    const lookupHref = await trackingHref();
     return (
       <div className="mx-auto max-w-6xl px-4 py-6 md:px-10 md:py-10">
         <StepHeader
@@ -53,7 +55,11 @@ export default async function RequestPage({
           title="Preencha o pedido"
           backHref={`/solicitar?atribuicao=${attribution}`}
         />
-        <RequestForm act={act} attribution={attribution} />
+        <RequestForm
+          act={act}
+          attribution={attribution}
+          lookupHref={lookupHref}
+        />
       </div>
     );
   }
