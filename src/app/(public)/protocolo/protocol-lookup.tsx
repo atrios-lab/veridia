@@ -1390,7 +1390,15 @@ function Timeline({
 }
 
 /** The data rights requirement, and the officer's answer when it exists. */
-function DataRightsCard({ result }: { result: DataRightsDetail }) {
+export function DataRightsCard({
+  result,
+  onNewConsult,
+}: {
+  result: DataRightsDetail;
+  /** Reused from /acompanhar, which resets its own form in place instead of
+   * navigating to /protocolo: pass this to swap the link for that behavior. */
+  onNewConsult?: () => void;
+}) {
   const option = DATA_RIGHT_OPTIONS.find((o) => o.id === result.right);
   const initials = result.dpoName
     .split(" ")
@@ -1575,15 +1583,31 @@ function DataRightsCard({ result }: { result: DataRightsDetail }) {
         </div>
       </div>
 
-      <Link href="/protocolo" className="btn btn-ghost btn-sm mt-4">
-        Nova consulta
-      </Link>
+      {onNewConsult ? (
+        <button
+          type="button"
+          onClick={onNewConsult}
+          className="btn btn-ghost btn-sm mt-4"
+        >
+          Nova consulta
+        </button>
+      ) : (
+        <Link href="/protocolo" className="btn btn-ghost btn-sm mt-4">
+          Nova consulta
+        </Link>
+      )}
     </div>
   );
 }
 
 /** The manifestation, its treatment and the ombudsman's answer. */
-function OmbudsmanCard({ result }: { result: OmbudsmanDetail }) {
+export function OmbudsmanCard({
+  result,
+  onNewConsult,
+}: {
+  result: OmbudsmanDetail;
+  onNewConsult?: () => void;
+}) {
   return (
     <div>
       <DetailHeader
@@ -1666,15 +1690,28 @@ function OmbudsmanCard({ result }: { result: OmbudsmanDetail }) {
               </p>
             </div>
           )}
-          <Link href="/ouvidoria" className="btn btn-secondary btn-lg">
+          <Link
+            href="/ouvidoria"
+            className="btn btn-secondary btn-lg self-start"
+          >
             Nova manifestação
           </Link>
         </div>
       </div>
 
-      <Link href="/protocolo" className="btn btn-ghost btn-sm mt-4">
-        Nova consulta
-      </Link>
+      {onNewConsult ? (
+        <button
+          type="button"
+          onClick={onNewConsult}
+          className="btn btn-ghost btn-sm mt-4"
+        >
+          Nova consulta
+        </button>
+      ) : (
+        <Link href="/protocolo" className="btn btn-ghost btn-sm mt-4">
+          Nova consulta
+        </Link>
+      )}
     </div>
   );
 }

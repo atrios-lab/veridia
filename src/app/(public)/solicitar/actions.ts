@@ -21,6 +21,7 @@ import {
   attachToRequest,
   createServiceRequest,
   findByProtocol,
+  findOpenServiceRequestDuplicate,
 } from "@/lib/service-request.ts";
 import { getTenant, today } from "@/lib/tenant.ts";
 import { AttachmentError, collectAttachments } from "@/lib/uploads.ts";
@@ -36,9 +37,15 @@ export interface SubmitSuccess {
   deadlineLabel: string;
 }
 
+export interface SubmitDuplicate {
+  status: "duplicate";
+  protocolNumber: string;
+}
+
 export type SubmitState =
   | { status: "idle" }
   | { status: "error"; message: string; fieldErrors: Record<string, string> }
+  | SubmitDuplicate
   | SubmitSuccess;
 
 const GENERIC_ERROR =
@@ -135,6 +142,15 @@ export async function submitServiceRequest(
       "Confira os campos destacados para enviar o pedido.",
       fieldErrors,
     );
+  }
+
+  const duplicateProtocol = await findOpenServiceRequestDuplicate(
+    tenant.slug,
+    act.id,
+    { cpf: parsed.data.cpf, email: parsed.data.email },
+  );
+  if (duplicateProtocol) {
+    return { status: "duplicate", protocolNumber: duplicateProtocol };
   }
 
   // Antes de armazenar coisa alguma: uma recusa depois de `collectAttachments`

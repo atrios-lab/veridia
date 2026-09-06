@@ -56,6 +56,11 @@ interface BaseDetail {
   accessKey: string;
   statusLabel: string;
   createdAt: string;
+  /** Last write to the record. A single mutable column, not a per-event
+   * log: good enough as a fallback date for a state with no timestamp of
+   * its own (e.g. a rejection), never precise once more than one field has
+   * changed since. */
+  updatedAt: string;
 }
 
 export interface RequirementMessageView {
@@ -84,6 +89,7 @@ export interface RequirementView {
 export interface DeliveredDocumentView {
   id: string;
   createdAt: string;
+  displayName: string;
 }
 
 export interface CitizenDocumentView {
@@ -101,6 +107,10 @@ export interface ServiceRequestDetail extends BaseDetail {
   attributionName: string;
   hasSignedForm: boolean;
   signedFormReceivedAt?: string;
+  /** The signed form's own attachment id, for the citizen to re-download it
+   * from "Seus arquivos": distinct from `hasSignedForm`, which only says
+   * whether it arrived. */
+  signedFormAttachmentId?: string;
   /** What the office is waiting on, cumprida through this same screen. */
   requirements: RequirementView[];
   /** Files the office attached through DeliverySection, downloadable here. */
@@ -127,6 +137,10 @@ export interface ServiceRequestDetail extends BaseDetail {
     /** Present while the clock is stopped: what the office waits on. */
     paused?: PauseReason[];
   };
+  /** The term's own length and date, present even once the request is
+   * closed: unlike `deadline` above, this says nothing about whether the
+   * clock is still running, only what the term was. */
+  deadlineTerm: { date: IsoDate; days: number };
 }
 
 export interface DataRightsDetail extends BaseDetail {
@@ -203,6 +217,7 @@ export async function lookupProtocolDetail(
       accessKey,
       statusLabel: statusLabel(kind, record.status),
       createdAt: record.createdAt.toISOString(),
+      updatedAt: record.updatedAt.toISOString(),
     };
 
     // Appointments are not consulted here any more: they carry no protocol
@@ -277,6 +292,7 @@ export async function lookupProtocolDetail(
       attributionName: ATTRIBUTION_NAMES[act.attribution],
       hasSignedForm: Boolean(signedForm),
       signedFormReceivedAt: signedForm?.createdAt.toISOString(),
+      signedFormAttachmentId: signedForm?.id,
       amountLabel:
         record.amountCents != null
           ? formatCents(record.amountCents)
@@ -298,6 +314,10 @@ export async function lookupProtocolDetail(
               : undefined,
           }
         : undefined,
+      deadlineTerm: {
+        date: deadlineDate(term.startedOn, term.days),
+        days: term.days,
+      },
       paymentSettled,
       pix:
         record.amountCents != null && !paymentSettled
@@ -311,7 +331,11 @@ export async function lookupProtocolDetail(
       // in its card and never in "Documentos da serventia".
       deliveredDocuments: requestOwnAttachments(attachments)
         .filter((a) => a.kind === "office")
-        .map((a) => ({ id: a.id, createdAt: a.createdAt.toISOString() })),
+        .map((a) => ({
+          id: a.id,
+          createdAt: a.createdAt.toISOString(),
+          displayName: a.displayName,
+        })),
       citizenDocuments: requestOwnAttachments(attachments)
         .filter((a) => a.kind === "citizen")
         .map((a) => ({

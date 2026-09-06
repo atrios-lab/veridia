@@ -1,3 +1,4 @@
+import { randomUUID } from "node:crypto";
 import { expect, test } from "@playwright/test";
 import postgres from "postgres";
 import { TENANTS } from "../src/core/tenant/resolve.ts";
@@ -305,9 +306,22 @@ test.describe("filing a request", () => {
     "precisa de DATABASE_URL: o envio grava o pedido",
   );
 
-  async function fillForm(page: import("@playwright/test").Page) {
+  // A distinct e-mail per call by default: the same act now refuses a second
+  // open request for the same citizen (see "a second request for the same
+  // act and CPF shows the duplicate dialog" below), and every test here
+  // otherwise submits to that same act. A test after the first would collide
+  // with it, and be shown the duplicate dialog instead of the fresh request
+  // it expects. A random id rather than a counter: workers run as separate
+  // processes, so a per-module counter restarts at zero in each of them and
+  // two tests in different workers can still land on the same default. The
+  // duplicate test still collides on purpose: it fills the same CPF twice,
+  // which the check matches regardless of e-mail.
+  async function fillForm(
+    page: import("@playwright/test").Page,
+    email = `maria.${randomUUID()}@exemplo.com`,
+  ) {
     await page.getByLabel("Nome completo").fill("Maria José da Silva");
-    await page.getByLabel(/E-mail/).fill("maria@exemplo.com");
+    await page.getByLabel(/E-mail/).fill(email);
     await page.getByLabel(/Telefone/).fill("(84) 99999-0000");
     await page
       .getByLabel(/Descreva o que você precisa/)
@@ -802,6 +816,48 @@ test.describe("filing a request", () => {
     const deliveredStep = page.locator("li", { hasText: "Documento entregue" });
     await expect(deliveredStep).toBeVisible();
     await expect(deliveredStep).toContainText(/\d{2}\/\d{2}\/\d{4}/);
+  });
+
+  test("a second request for the same act and CPF shows the duplicate dialog", async ({
+    page,
+  }) => {
+    const formURL = `${baseURL}/solicitar?atribuicao=RCPN&ato=rcpn-habilitacao-casamento`;
+    await page.goto(formURL);
+    await fillForm(page);
+    await page.getByLabel(/CPF/).fill("529.982.247-25");
+    await page.getByRole("button", { name: "Enviar requerimento" }).click();
+    await expect(
+      page.getByRole("heading", { name: "Pedido registrado" }),
+    ).toBeVisible();
+    const protocolNumber =
+      (await page
+        .getByText(/REQ\.\d{4}\.\d{6}/)
+        .first()
+        .textContent()) ?? "";
+
+    // Same act, same CPF, request still open: the second attempt is refused
+    // with a dialog pointing at the first protocol instead of a new one.
+    await page.goto(formURL);
+    await fillForm(page);
+    await page.getByLabel(/CPF/).fill("529.982.247-25");
+    await page.getByRole("button", { name: "Enviar requerimento" }).click();
+
+    const dialog = page.getByRole("dialog", {
+      name: "Você já tem um pedido em andamento",
+    });
+    await expect(dialog).toBeVisible();
+    await expect(dialog.getByText(protocolNumber)).toBeVisible();
+
+    const link = dialog.getByRole("link", { name: "Ver meu protocolo" });
+    await expect(link).toHaveAttribute(
+      "href",
+      `/protocolo?numero=${protocolNumber}`,
+    );
+    await link.click();
+    await expect(page).toHaveURL(
+      new RegExp(`/protocolo\\?numero=${protocolNumber}`),
+    );
+    await expect(page.getByText(protocolNumber)).toBeVisible();
   });
 
   test("a rejected request ends the timeline in the outcome, not invented next steps", async ({

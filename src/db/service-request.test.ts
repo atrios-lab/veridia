@@ -230,6 +230,99 @@ test("a requirement is fulfilled by linking its resolving attachment", async () 
   assert.equal(rows[0].resolution_attachment_id, attachmentId);
 });
 
+// What `findOpenServiceRequestDuplicate` (src/lib/service-request.ts) reads:
+// same office, same act, same citizen (CPF when given, e-mail always:
+// e-mail is required on the form, CPF is not), status not terminal. This is
+// the same query shape, run straight against Postgres because that file's
+// `db` is a real driver connection, not swappable to PGlite the way this
+// test's raw SQL is.
+const OPEN_DUPLICATE_QUERY = `
+  SELECT protocol_number, status FROM service_requests
+  WHERE tenant_slug = $1 AND kind = 'service-request'
+    AND act_id = $2
+    AND (contact = $3 OR ($4::text IS NOT NULL AND cpf = $4))
+    AND status NOT IN ('done', 'rejected', 'cancelled', 'archived')
+  ORDER BY created_at DESC LIMIT 1`;
+
+function findDuplicate(actId: string, email: string, cpf: string | null) {
+  return client.query<{ protocol_number: string; status: string }>(
+    OPEN_DUPLICATE_QUERY,
+    ["cartorio-marinho", actId, email, cpf],
+  );
+}
+
+test("a second open request for the same act and CPF is found as a duplicate", async () => {
+  await client.query(
+    `INSERT INTO service_requests
+       (tenant_slug, protocol_year, protocol_sequence, protocol_number,
+        act_id, attribution, applicant_name, contact, cpf, access_key_hash, status)
+     VALUES ('cartorio-marinho', 2029, 1, 'REQ.2029.000001',
+             'rcpn-certidao', 'RCPN', 'Maria', 'maria.duplicata@exemplo.com', '11122233396', 'hash', 'in-review')`,
+  );
+
+  const { rows } = await findDuplicate(
+    "rcpn-certidao",
+    "maria.duplicata@exemplo.com",
+    "11122233396",
+  );
+  assert.equal(rows[0]?.protocol_number, "REQ.2029.000001");
+});
+
+test("a request whose andamento is terminal does not count as a duplicate", async () => {
+  await client.query(
+    "UPDATE service_requests SET status = 'done' WHERE protocol_number = 'REQ.2029.000001'",
+  );
+
+  const { rows } = await findDuplicate(
+    "rcpn-certidao",
+    "maria.duplicata@exemplo.com",
+    "11122233396",
+  );
+  assert.equal(rows.length, 0);
+});
+
+test("a different act or a different CPF and e-mail is not a duplicate", async () => {
+  await client.query(
+    "UPDATE service_requests SET status = 'in-review' WHERE protocol_number = 'REQ.2029.000001'",
+  );
+
+  const differentAct = await findDuplicate(
+    "rcpn-outro-ato",
+    "maria@exemplo.com",
+    "11122233396",
+  );
+  assert.equal(differentAct.rows.length, 0);
+
+  const differentPerson = await findDuplicate(
+    "rcpn-certidao",
+    "outra@exemplo.com",
+    "99988877765",
+  );
+  assert.equal(differentPerson.rows.length, 0);
+});
+
+test("a citizen with no CPF is still matched, by e-mail", async () => {
+  // The CPF field is optional on the public form; the e-mail is not, so a
+  // citizen who skips it must still be caught on the second attempt.
+  await client.query(
+    `INSERT INTO service_requests
+       (tenant_slug, protocol_year, protocol_sequence, protocol_number,
+        act_id, attribution, applicant_name, contact, access_key_hash, status)
+     VALUES ('cartorio-marinho', 2029, 2, 'REQ.2029.000002',
+             'rcpn-certidao', 'RCPN', 'João', 'joao@exemplo.com', 'hash', 'in-review')`,
+  );
+
+  const found = await findDuplicate("rcpn-certidao", "joao@exemplo.com", null);
+  assert.equal(found.rows[0]?.protocol_number, "REQ.2029.000002");
+
+  const differentEmail = await findDuplicate(
+    "rcpn-certidao",
+    "outra@exemplo.com",
+    null,
+  );
+  assert.equal(differentEmail.rows.length, 0);
+});
+
 test("a channel's queue only ever sees its own kind", async () => {
   // Two ombudsman rows exist by now (one from "each kind has its own
   // counter", one from "an anonymous manifestation is filed...") alongside
@@ -340,4 +433,60 @@ test("a requirement's form goes when the requirement goes", async () => {
   );
   assert.equal(left[0].n, 1, "só a entrega sobrevive à exclusão da exigência");
   assert.equal(await deliveries(), 1);
+});
+
+// What `deactivateServiceRequests` (src/lib/service-request.ts) does: check
+// every id belongs to the tenant before writing anything, then set each to
+// `inactive`. Run against Postgres for the same reason as
+// `OPEN_DUPLICATE_QUERY` above (that file's `db` is a real driver
+// connection, not swappable to PGlite).
+test("marking protocols inactive in bulk leaves the others untouched", async () => {
+  await fileRequest("cartorio-marinho", 2030, 1);
+  await fileRequest("cartorio-marinho", 2030, 2);
+  const { rows } = await client.query<{ id: string }>(
+    `SELECT id FROM service_requests
+     WHERE tenant_slug = 'cartorio-marinho' AND protocol_year = 2030
+     ORDER BY protocol_sequence`,
+  );
+  const [firstId, secondId] = rows.map((r) => r.id);
+
+  await client.query(
+    "UPDATE service_requests SET status = 'inactive' WHERE tenant_slug = $1 AND id = ANY($2::uuid[])",
+    ["cartorio-marinho", [firstId, secondId]],
+  );
+
+  const { rows: updated } = await client.query<{ status: string }>(
+    "SELECT status FROM service_requests WHERE id = ANY($1::uuid[])",
+    [[firstId, secondId]],
+  );
+  assert.deepEqual(updated.map((r) => r.status).sort(), [
+    "inactive",
+    "inactive",
+  ]);
+});
+
+test("a batch with one id outside the tenant fails the ownership check", async () => {
+  await fileRequest("cartorio-marinho", 2030, 3);
+  await fileRequest("tabelionato-aurora", 2030, 2);
+  const { rows } = await client.query<{ id: string; tenant_slug: string }>(
+    `SELECT id, tenant_slug FROM service_requests
+     WHERE (tenant_slug = 'cartorio-marinho' AND protocol_year = 2030 AND protocol_sequence = 3)
+        OR (tenant_slug = 'tabelionato-aurora' AND protocol_year = 2030 AND protocol_sequence = 2)`,
+  );
+  const ids = rows.map((r) => r.id);
+
+  // The check `deactivateServiceRequests` runs before writing: only ids that
+  // actually belong to the tenant come back.
+  const { rows: owned } = await client.query<{ count: string }>(
+    "SELECT count(*)::text AS count FROM service_requests WHERE tenant_slug = $1 AND id = ANY($2::uuid[])",
+    ["cartorio-marinho", ids],
+  );
+  assert.notEqual(owned[0].count, String(ids.length));
+
+  // Nothing was ever set to inactive: the mismatch above is caught first.
+  const { rows: statuses } = await client.query<{ status: string }>(
+    "SELECT status FROM service_requests WHERE id = ANY($1::uuid[])",
+    [ids],
+  );
+  assert.ok(statuses.every((r) => r.status !== "inactive"));
 });

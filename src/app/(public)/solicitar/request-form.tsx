@@ -27,6 +27,7 @@ import {
 } from "../_lib/attachments.tsx";
 import { withMask } from "../_lib/mask.ts";
 import { ProcessingBadge } from "./_components/badges.tsx";
+import { DuplicateRequestDialog } from "./_components/duplicate-dialog.tsx";
 import {
   type AttachState,
   attachSignedForm,
@@ -97,6 +98,13 @@ export function RequestForm({
   } = useAttachmentUpload(formAction);
   const sending = pending || uploading;
 
+  // Opens on every fresh "duplicate" result, closable without touching the
+  // rest of the form: the citizen may just change the act and resend.
+  const [duplicateOpen, setDuplicateOpen] = useState(false);
+  useEffect(() => {
+    if (state.status === "duplicate") setDuplicateOpen(true);
+  }, [state]);
+
   // The form posts the input's own FileList, so it has to be rebuilt
   // whenever `attachments` changes, not just the state that renders the list.
   function syncAttachments(next: File[]) {
@@ -164,6 +172,13 @@ export function RequestForm({
       className="mt-5 md:grid md:grid-cols-[1fr_340px] md:gap-9"
     >
       <input type="hidden" name="actId" value={act.id} />
+
+      {duplicateOpen && state.status === "duplicate" && (
+        <DuplicateRequestDialog
+          protocolNumber={state.protocolNumber}
+          onClose={() => setDuplicateOpen(false)}
+        />
+      )}
 
       {/* Off screen and out of the tab order: nobody using the site can reach
           it, so anything in it came from a script. */}

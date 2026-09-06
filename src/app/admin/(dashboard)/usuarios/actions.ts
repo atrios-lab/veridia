@@ -8,6 +8,7 @@ import {
   CreateAccountSchema,
   UpdateAccountSchema,
 } from "@/core/auth/account.ts";
+import { inviteEmailKind } from "@/core/auth/invite.ts";
 import { can, isLastActiveAdmin, type Role } from "@/core/auth/roles.ts";
 import {
   account as accountTable,
@@ -123,6 +124,7 @@ export async function createUser(
     roleLabel: ROLE_LABELS[parsed.data.role],
     actionUrl,
     tenant,
+    kind: inviteEmailKind(session.user.role ?? ""),
   });
 
   await recordAudit({
@@ -251,6 +253,7 @@ export async function resendInvite(
       roleLabel: ROLE_LABELS[target.role as Role] ?? target.role,
       actionUrl,
       tenant,
+      kind: inviteEmailKind(session.user.role ?? ""),
     });
   } catch (error) {
     // The provider's answer carries the reason (a suppressed recipient, an

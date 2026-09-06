@@ -207,11 +207,19 @@ function RequirementConversation({
     { status: "idle" },
   );
   const formRef = useRef<HTMLFormElement>(null);
+  const messagesEndRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     if (state.status === "success") formRef.current?.reset();
     if (state.status === "error") toast.error(state.message);
   }, [state]);
+
+  // Same cap as the citizen's own /acompanhar thread: a long back-and-forth
+  // scrolls inside a fixed height instead of pushing the reply box down.
+  // biome-ignore lint/correctness/useExhaustiveDependencies: re-runs on a new message, the ref itself is never a reactive value.
+  useEffect(() => {
+    messagesEndRef.current?.scrollIntoView({ block: "nearest" });
+  }, [requirement.messages.length]);
 
   const closed = requirement.status === "fulfilled";
   const last = requirement.messages.at(-1);
@@ -238,42 +246,56 @@ function RequirementConversation({
       </div>
 
       {requirement.messages.length > 0 && (
-        <div className="mt-2.5 flex flex-col gap-2.5">
-          {requirement.messages.map((message) => (
-            <div key={message.id} className="flex items-start gap-2.5">
-              <Initials
-                name={message.authorName}
-                staff={message.author === "staff"}
-              />
-              <div className="min-w-0 flex-1">
-                <div className="flex flex-wrap items-baseline gap-2">
-                  <span className="text-[12.5px] font-bold text-admin-primary">
-                    {message.authorName}
-                  </span>
-                  <span className="text-[11px] text-admin-faint">
-                    {formatDayMonthTime(message.createdAt)}
-                  </span>
-                </div>
-                {message.body && (
-                  <p className="mt-1 whitespace-pre-line rounded-[10px] bg-admin-input-bg px-3 py-2 text-[12.5px] leading-relaxed text-admin-text">
-                    {message.body}
-                  </p>
-                )}
-                {message.attachments.map((file) => (
-                  <a
-                    key={file.id}
-                    href={documentHref(requestId, file.id)}
-                    target="_blank"
-                    rel="noopener"
-                    className="mt-1.5 inline-flex items-center gap-1.5 text-[12px] font-semibold text-admin-primary-soft underline-offset-2 hover:underline"
+        <div className="mt-2.5 flex max-h-80 flex-col gap-3 overflow-y-auto pr-1">
+          {requirement.messages.map((message) => {
+            const staff = message.author === "staff";
+            return (
+              <div
+                key={message.id}
+                className={`flex min-w-0 items-start gap-2.5 ${staff ? "flex-row-reverse" : ""}`}
+              >
+                <Initials name={message.authorName} staff={staff} />
+                <div
+                  className={`flex max-w-[85%] min-w-0 flex-col gap-1 ${staff ? "items-end" : "items-start"}`}
+                >
+                  <div
+                    className={`flex flex-wrap items-baseline gap-2 ${staff ? "flex-row-reverse" : ""}`}
                   >
-                    <AdminIcon name="file" className="h-3.5 w-3.5" />
-                    {file.displayName}
-                  </a>
-                ))}
+                    <span className="text-[12.5px] font-bold text-admin-primary">
+                      {message.authorName}
+                    </span>
+                    <span className="text-[11px] text-admin-faint">
+                      {formatDayMonthTime(message.createdAt)}
+                    </span>
+                  </div>
+                  {message.body && (
+                    <p
+                      className={`m-0 max-w-full min-w-0 [overflow-wrap:anywhere] rounded-[10px] px-3 py-2 text-[12.5px] leading-relaxed whitespace-pre-line ${
+                        staff
+                          ? "bg-admin-primary text-white"
+                          : "bg-admin-input-bg text-admin-text"
+                      }`}
+                    >
+                      {message.body}
+                    </p>
+                  )}
+                  {message.attachments.map((file) => (
+                    <a
+                      key={file.id}
+                      href={documentHref(requestId, file.id)}
+                      target="_blank"
+                      rel="noopener"
+                      className="flex min-w-0 max-w-full items-center gap-1.5 rounded-[10px] border border-admin-border bg-admin-card px-3 py-1.5 text-[12px] font-semibold text-admin-primary-soft"
+                    >
+                      <AdminIcon name="file" className="h-3.5 w-3.5 shrink-0" />
+                      <span className="truncate">{file.displayName}</span>
+                    </a>
+                  ))}
+                </div>
               </div>
-            </div>
-          ))}
+            );
+          })}
+          <div ref={messagesEndRef} />
         </div>
       )}
 
@@ -295,7 +317,7 @@ function RequirementConversation({
             <button
               type="submit"
               disabled={pending}
-              className="btn btn-admin-primary btn-md"
+              className="btn btn-admin-primary btn-sm"
             >
               {pending ? "Enviando…" : "Enviar resposta"}
             </button>

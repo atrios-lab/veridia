@@ -1,5 +1,5 @@
-// The text of the account e-mails (convite, nova senha, troca de e-mail e o
-// aviso de que ela aconteceu), as data: no
+// The text of the account e-mails (convite, boas-vindas, nova senha, troca
+// de e-mail e o aviso de que ela aconteceu), as data: no
 // HTML, no I/O. src/lib/email renders this into a message and sends it:
 // this module only decides what it says, in Portuguese, so it can be tested
 // without a network or a database.
@@ -13,6 +13,19 @@ interface InviteEmailInput {
   recipientName: string;
   inviterName: string;
   roleLabel: string;
+}
+
+/**
+ * The platform welcoming an office's administrator: same 48h first-access
+ * link as the invite, different words around it. Chosen by who is inviting
+ * (see inviteEmailKind), never by a control on the screen.
+ */
+interface WelcomeEmailInput {
+  kind: "boas-vindas";
+  recipientName: string;
+  inviterName: string;
+  roleLabel: string;
+  tenantName: string;
 }
 
 interface PasswordResetEmailInput {
@@ -36,12 +49,24 @@ interface EmailChangedNoticeInput {
 
 export type AccountEmailInput =
   | InviteEmailInput
+  | WelcomeEmailInput
   | PasswordResetEmailInput
   | EmailChangeEmailInput
   | EmailChangedNoticeInput;
 
 function firstName(fullName: string): string {
   return fullName.trim().split(/\s+/)[0] || fullName;
+}
+
+export type InviteEmailKind = "convite" | "boas-vindas";
+
+/**
+ * Which first-access e-mail goes out, from the role of whoever is creating
+ * the account or resending the invite: the Átrios platform account welcomes
+ * the office, a colleague of the office just hands over access.
+ */
+export function inviteEmailKind(inviterRole: string): InviteEmailKind {
+  return inviterRole === "superadmin" ? "boas-vindas" : "convite";
 }
 
 export function buildAccountEmailText(
@@ -62,6 +87,29 @@ export function buildAccountEmailText(
         "O link vale 48 horas e só funciona uma vez. Se você não esperava " +
         "este e-mail, é só ignorá-lo. Nenhuma conta será usada sem a " +
         "senha que você criar.",
+    };
+  }
+
+  if (input.kind === "boas-vindas") {
+    return {
+      subject: `Boas-vindas ao painel do ${input.tenantName}`,
+      paragraphs: [
+        `Olá, ${name}. ${input.inviterName} preparou o site e o painel ` +
+          `administrativo do ${input.tenantName} e criou a sua conta de ` +
+          `${input.roleLabel}.`,
+        "O painel ajuda a serventia a se enquadrar no Provimento CN-CNJ " +
+          "n. 213/2026 e na LGPD: cada colaborador entra com conta própria, " +
+          "sem senha compartilhada; toda ação fica registrada em auditoria; " +
+          "e o site já traz os canais de ouvidoria e de direitos do titular " +
+          "de dados.",
+        "Clique abaixo para criar a sua senha. Só você vai conhecê-la, e " +
+          "este link é o seu acesso provisório.",
+      ],
+      buttonLabel: "Criar minha senha e entrar",
+      footnote:
+        "O link vale 48 horas e só funciona uma vez. Depois, é só entrar no " +
+        "painel da serventia com o seu e-mail e a senha que você criou. Se " +
+        "você não esperava este e-mail, é só ignorá-lo.",
     };
   }
 
