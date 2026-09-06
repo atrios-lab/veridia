@@ -90,7 +90,14 @@ const CLOSE_ERROR =
 const RATING_ERROR =
   "Não foi possível enviar sua avaliação agora. Tente novamente em instantes.";
 
-export function ChatWidget({ tenant }: { tenant: Tenant }) {
+export function ChatWidget({
+  tenant,
+  lookupHref,
+}: {
+  tenant: Tenant;
+  /** Where "follow a request" goes, decided on the server (src/flags.ts). */
+  lookupHref: string;
+}) {
   const pathname = usePathname();
   const [available, setAvailable] = useState({
     enabled: true,
@@ -361,7 +368,9 @@ export function ChatWidget({ tenant }: { tenant: Tenant }) {
             />
           )}
 
-          {panel.kind === "hours" && <HoursClosedView tenant={tenant} />}
+          {panel.kind === "hours" && (
+            <HoursClosedView tenant={tenant} lookupHref={lookupHref} />
+          )}
 
           {panel.kind === "conversation" && (
             <ConversationView
@@ -497,7 +506,13 @@ function FormField({
   );
 }
 
-function HoursClosedView({ tenant }: { tenant: Tenant }) {
+function HoursClosedView({
+  tenant,
+  lookupHref,
+}: {
+  tenant: Tenant;
+  lookupHref: string;
+}) {
   const opening = nextChatOpening(tenant, new Date());
   return (
     <div className="flex flex-1 flex-col gap-4 overflow-y-auto p-4.5">
@@ -527,10 +542,7 @@ function HoursClosedView({ tenant }: { tenant: Tenant }) {
           <Icon name="phone" className="h-4 w-4" />
           {tenant.contacts.email}
         </a>
-        <a
-          href={SECTION_ROUTES["consulta-protocolo"]}
-          className="btn btn-secondary btn-lg justify-start"
-        >
+        <a href={lookupHref} className="btn btn-secondary btn-lg justify-start">
           <Icon name="search" className="h-4 w-4" />
           Acompanhar um pedido pelo protocolo
         </a>

@@ -7,6 +7,7 @@ import {
   SECTION_ROUTES,
   sectionNavLinks,
 } from "@/core/tenant/gating.ts";
+import { trackingHref } from "@/flags.ts";
 import { isChatEnabled } from "@/lib/chat.ts";
 import { SERIF } from "@/lib/fonts.ts";
 import { getTenant } from "@/lib/tenant.ts";
@@ -74,14 +75,26 @@ export default async function PublicLayout({
   children,
 }: Readonly<{ children: React.ReactNode }>) {
   const tenant = await getTenant();
+  // The lookup's address is the one the rollout flag picks (see
+  // src/flags.ts); gating and NAV_GROUPS keep naming it by its canonical
+  // route, and the swap happens here, once, on the way to every menu.
+  const lookupHref = await trackingHref();
+  const resolve = (href: string) =>
+    href === SECTION_ROUTES["consulta-protocolo"] ? lookupHref : href;
   // Every page the office offers, in gating order, each one knowing its
   // section: that attribute is what the gating e2e reads off the footer.
   const links = enabledSections(tenant).flatMap((section) =>
-    sectionNavLinks(section).map((link) => ({ ...link, section })),
+    sectionNavLinks(section).map((link) => ({
+      ...link,
+      section,
+      href: resolve(link.href),
+    })),
   );
   // By address, in the order given, skipping what the office does not offer.
   const pick = (hrefs: readonly string[]) =>
-    hrefs.flatMap((href) => links.filter((link) => link.href === href));
+    hrefs.flatMap((href) =>
+      links.filter((link) => link.href === resolve(href)),
+    );
   const groups = NAV_GROUPS.map(({ title, slug, hrefs }) => ({
     title,
     slug,
@@ -91,7 +104,7 @@ export default async function PublicLayout({
   // A submenu does not repeat what the bar already links to on its own.
   const shown = new Set([
     ...HEADER_ITEMS.flatMap((item) => ("href" in item ? [item.href] : [])),
-    SECTION_ROUTES["consulta-protocolo"],
+    lookupHref,
   ]);
   const submenu = (title: string) =>
     groups
@@ -357,7 +370,7 @@ export default async function PublicLayout({
           corner, and the chat sets its own cookie: it only shows up once the
           citizen has seen the notice. */}
       {chatEnabled && cookieNoticeAcknowledged && (
-        <ChatWidget tenant={tenant} />
+        <ChatWidget tenant={tenant} lookupHref={lookupHref} />
       )}
       {!cookieNoticeAcknowledged && <CookieNotice />}
     </div>
