@@ -74,3 +74,26 @@ export async function isSealRateLimited(headers: Headers): Promise<boolean> {
   const { success } = await sealLimiter.limit(addressOf(headers));
   return !success;
 }
+
+// The tracking screens ask "did anything change?" every few seconds while
+// open, each answer gated by the same access key as the consult, which makes
+// this endpoint the same key oracle the consult is. A budget of its own, wide
+// enough for a handful of tabs behind one address, keeps that polling from
+// eating the sign-in budget and keeps a guesser at the consult's odds.
+// ponytail: one Redis command per poll; if that bill matters, count only the
+// misses (check the key first, limit the wrong ones).
+const pollLimiter = configured
+  ? new Ratelimit({
+      redis: Redis.fromEnv(),
+      limiter: Ratelimit.slidingWindow(60, "1 m"),
+      prefix: "veridia:poll",
+      analytics: false,
+    })
+  : null;
+
+/** The tracking poll's budget, apart from sign-in and consult. */
+export async function isPollRateLimited(headers: Headers): Promise<boolean> {
+  if (!pollLimiter) return false;
+  const { success } = await pollLimiter.limit(addressOf(headers));
+  return !success;
+}

@@ -2,6 +2,7 @@
 
 import { Fragment, useActionState, useEffect, useRef, useState } from "react";
 import type { PauseReason } from "@/core/request/deadline.ts";
+import { useLiveVersion } from "../../_components/use-live-version.ts";
 import { Icon } from "../_components/icon.tsx";
 import {
   ATTACHMENT_ACCEPT,
@@ -14,6 +15,8 @@ import {
   type FulfillRequirementState,
   type LookupState,
   lookupProtocolDetail,
+  type ProtocolDetail,
+  protocolVersion,
   type RequirementMessageView,
   type RequirementView,
   type ServiceRequestDetail,
@@ -1499,6 +1502,13 @@ function ServiceRequestTrilho({
   // optimistic state) and disappears the moment this component re-renders.
   const [requirements, setRequirements] = useState(initial.requirements);
   const [detailsOpen, setDetailsOpen] = useState(true);
+  // A fresher snapshot (see LookupFlow's polling) replaces what the citizen
+  // sees but not what they are typing: the cards below keep their drafts.
+  useEffect(() => {
+    setHasSignedForm(initial.hasSignedForm);
+    setCitizenDocuments(initial.citizenDocuments);
+    setRequirements(initial.requirements);
+  }, [initial]);
   const result: ServiceRequestDetail = { ...initial, requirements };
 
   const rejected =
@@ -1729,15 +1739,37 @@ function LookupFlow({
     lookupProtocolDetail,
     { status: "idle" },
   );
+  // The consult the person made, refreshed in place whenever the office
+  // writes to the record. Kept apart from `state`: a refresh that fails
+  // (network, rate limit) must not throw the citizen back to the gate.
+  const [live, setLive] = useState<ProtocolDetail>();
+  const detail = live ?? (state.status === "success" ? state : undefined);
+
+  useLiveVersion(
+    () =>
+      detail
+        ? protocolVersion(detail.protocolNumber, detail.accessKey)
+        : Promise.resolve(null),
+    detail?.updatedAt,
+    async () => {
+      if (!detail) return;
+      const form = new FormData();
+      form.set("protocolNumber", detail.protocolNumber);
+      form.set("accessKey", detail.accessKey);
+      const next = await lookupProtocolDetail({ status: "idle" }, form);
+      if (next.status === "success") setLive(next);
+    },
+    15_000,
+  );
 
   return (
     <div className="mx-auto flex w-full max-w-[880px] flex-col px-4 py-8 md:px-10 md:py-16">
-      {state.status === "success" && state.kind === "service-request" ? (
-        <ServiceRequestTrilho initial={state} onReset={onReset} />
-      ) : state.status === "success" && state.kind === "data-rights" ? (
-        <DataRightsCard result={state} onNewConsult={onReset} />
-      ) : state.status === "success" ? (
-        <OmbudsmanCard result={state} onNewConsult={onReset} />
+      {detail?.kind === "service-request" ? (
+        <ServiceRequestTrilho initial={detail} onReset={onReset} />
+      ) : detail?.kind === "data-rights" ? (
+        <DataRightsCard result={detail} onNewConsult={onReset} />
+      ) : detail ? (
+        <OmbudsmanCard result={detail} onNewConsult={onReset} />
       ) : (
         <Gate
           initialNumber={initialNumber}

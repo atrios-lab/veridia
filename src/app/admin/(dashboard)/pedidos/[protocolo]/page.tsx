@@ -43,6 +43,7 @@ import { AttachmentsSection } from "./_components/attachments-section.tsx";
 import { DangerSection } from "./_components/danger-section.tsx";
 import { DeliverySection } from "./_components/delivery-section.tsx";
 import { KeySection } from "./_components/key-section.tsx";
+import { LiveRequest } from "./_components/live-request.tsx";
 import type { RequirementItem } from "./_components/requirements-section.tsx";
 import { RequirementsSection } from "./_components/requirements-section.tsx";
 import { StatusSection } from "./_components/status-section.tsx";
@@ -195,6 +196,10 @@ export default async function ServiceRequestDetailPage({
   return (
     <>
       <AdminPageHeader title={request.protocolNumber} />
+      <LiveRequest
+        requestId={request.id}
+        version={request.updatedAt.toISOString()}
+      />
       <main className="flex flex-col gap-4.5 px-[30px] py-7">
         <div className="flex flex-wrap items-center gap-3">
           <Link
