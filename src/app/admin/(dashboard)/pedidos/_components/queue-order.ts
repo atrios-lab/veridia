@@ -11,9 +11,11 @@ import { STATUS_TONES, type Tone } from "./status-tone.ts";
  * The bands the queue is read in, top to bottom: what stalled, what waits for
  * someone to pick it up, what is being worked, what only waits for the
  * citizen to come, and what is over. The same tone that colours the badge
- * decides the band, so a status can never sit under a heading that argues
- * with its colour; the one correction is that anything terminal goes to the
- * end, whatever its tone ("Indeferido" is red, and still over).
+ * decides the band, with two corrections: anything terminal goes to the end,
+ * whatever its tone ("Indeferido" is red, and still over), and "Pago" sits in
+ * Aguardando, not Em andamento: the money arrived, the counter hasn't
+ * started the work, and its badge stays green (work-tone) on purpose so it
+ * never reads as the amber "Aguardando pagamento".
  */
 export const QUEUE_GROUPS: readonly { id: Tone; label: string }[] = [
   { id: "blocked", label: "Com pendência" },
@@ -24,7 +26,9 @@ export const QUEUE_GROUPS: readonly { id: Tone; label: string }[] = [
 ];
 
 export function queueGroupOf(status: ServiceRequestStatus): Tone {
-  return isOpenServiceRequestStatus(status) ? STATUS_TONES[status] : "closed";
+  if (!isOpenServiceRequestStatus(status)) return "closed";
+  if (status === "paid") return "waiting";
+  return STATUS_TONES[status];
 }
 
 export interface QueueRowOrder {
