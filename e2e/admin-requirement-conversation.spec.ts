@@ -160,7 +160,7 @@ test.describe("conversa da exigência", () => {
     await signIn(page);
     await page.goto(detailUrl);
 
-    await page.getByText("Corrigir para outro andamento").click();
+    await page.getByRole("button", { name: "Prazo e correção" }).click();
     const select = page.locator('select[name="statusOverride"]');
     // The vocabulary the registrar actually works in.
     await expect(select.locator('option[value="pre-noted"]')).toHaveCount(1);

@@ -63,69 +63,88 @@ function formatDayMonth(date: Date): string {
 /**
  * The form the citizen has to print and present. It lives in the requirement's
  * card on both sides, here and in the protocol consult, and nowhere near the
- * request's deliveries.
+ * request's deliveries. The button is the whole control: picking a file sends
+ * it.
  */
-function RequirementForms({
+function AttachFormButton({
   requestId,
   requirementId,
-  forms,
 }: {
   requestId: string;
   requirementId: string;
-  forms: AttachmentItem[];
 }) {
   const [state, action, pending] = useActionState<ActionState, FormData>(
     attachRequirementFormAction,
     { status: "idle" },
   );
+  useEffect(() => {
+    if (state.status === "error") toast.error(state.message);
+  }, [state]);
 
   return (
-    <div className="mt-2.5 border-t border-admin-border pt-2.5">
-      {forms.length > 0 && (
-        <div className="mb-2 flex flex-col gap-2">
-          {forms.map((form) => (
-            <AttachmentRow
-              key={form.id}
-              requestId={requestId}
-              attachment={form}
-              meta="anexado em"
-              onDelete={deleteAttachmentAction}
-            />
-          ))}
-        </div>
-      )}
-      <form action={action}>
-        <input type="hidden" name="requestId" value={requestId} />
-        <input type="hidden" name="requirementId" value={requirementId} />
-        <label
-          className={`relative flex cursor-pointer items-center justify-center gap-2 rounded-[9px] border-[1.5px] border-dashed border-admin-input-border px-3 py-2 text-center text-[12px] font-semibold text-admin-primary focus-within:border-admin-accent focus-within:ring-2 focus-within:ring-admin-accent ${pending ? "cursor-not-allowed opacity-60" : ""}`}
-        >
-          {pending
-            ? "Enviando…"
-            : forms.length
-              ? "Anexar outro formulário"
-              : "Anexar formulário para o cidadão imprimir"}
-          <input
-            type="file"
-            name="formulario"
-            accept="application/pdf,image/jpeg,image/png,image/webp,image/heic"
-            className="sr-only"
-            disabled={pending}
-            onChange={(event) => {
-              if (event.target.files?.length) {
-                event.target.form?.requestSubmit();
-              }
-            }}
-          />
-        </label>
-      </form>
-      {state.status === "error" && (
-        <p
-          role="alert"
-          className="mt-1.5 text-[11.5px] font-semibold text-admin-error-text"
-        >
-          {state.message}
-        </p>
+    <form action={action} className="ml-auto">
+      <input type="hidden" name="requestId" value={requestId} />
+      <input type="hidden" name="requirementId" value={requirementId} />
+      <label
+        className={`btn btn-admin-secondary btn-sm relative cursor-pointer focus-within:border-admin-accent ${pending ? "cursor-not-allowed opacity-60" : ""}`}
+      >
+        {pending ? "Enviando…" : "Anexar formulário"}
+        <input
+          type="file"
+          name="formulario"
+          accept="application/pdf,image/jpeg,image/png,image/webp,image/heic"
+          className="sr-only"
+          disabled={pending}
+          onChange={(event) => {
+            if (event.target.files?.length) {
+              event.target.form?.requestSubmit();
+            }
+          }}
+        />
+      </label>
+    </form>
+  );
+}
+
+/** One file, in a line: icon, name, and when it came. */
+function FileLine({
+  href,
+  name,
+  meta,
+  onShowConversation,
+}: {
+  href: string;
+  name: string;
+  meta: string;
+  /** Opens the conversation the file arrived in, when there is one. */
+  onShowConversation?: () => void;
+}) {
+  return (
+    <div className="flex flex-wrap items-center gap-2 text-[12px] text-admin-muted">
+      <AdminIcon
+        name="file"
+        className="h-[13px] w-[13px] flex-none text-admin-accent"
+      />
+      <a
+        href={href}
+        target="_blank"
+        rel="noopener"
+        className="font-semibold text-admin-primary-soft hover:underline"
+      >
+        {name}
+      </a>
+      {meta}
+      {onShowConversation && (
+        <>
+          {" · "}
+          <button
+            type="button"
+            onClick={onShowConversation}
+            className="font-semibold text-admin-primary-soft hover:underline"
+          >
+            ver conversa
+          </button>
+        </>
       )}
     </div>
   );
@@ -228,7 +247,7 @@ function RequirementConversation({
   if (closed && requirement.messages.length === 0) return null;
 
   return (
-    <div className="mt-3 border-t border-admin-border pt-3">
+    <div className="border-t border-admin-border pt-2.5">
       <div className="flex flex-wrap items-center gap-2">
         <h5 className="flex-1 font-serif text-[14px] font-semibold text-admin-primary">
           Perguntas do cidadão
@@ -406,9 +425,182 @@ function DeleteRequirement({ requirement }: { requirement: RequirementItem }) {
       consequence="A exigência, a conversa com o cidadão e os arquivos enviados nela somem dos dois lados. Não dá para desfazer. Se ela já foi resolvida, marque como cumprida em vez de excluir."
       confirmLabel="Confirmar exclusão"
       pendingLabel="Excluindo…"
+      triggerClassName="text-[12px] font-semibold text-admin-error-text hover:underline"
     >
       <input type="hidden" name="requirementId" value={requirement.id} />
     </ConfirmAction>
+  );
+}
+
+/**
+ * One requirement: what was asked, the files around it, its thread. Folded
+ * once fulfilled: a request with three answered exigências is three lines,
+ * not three threads. A pending one stays open, because it is the work.
+ */
+function RequirementCard({
+  requirement,
+  requestId,
+}: {
+  requirement: RequirementItem;
+  requestId: string;
+}) {
+  const pendingReq = requirement.status === "pending";
+  const last = requirement.messages.at(-1);
+  const awaitingOffice = pendingReq && last?.author === "citizen";
+  const [open, setOpen] = useState(pendingReq);
+  const conversationRef = useRef<HTMLDivElement>(null);
+  const showConversation = () =>
+    conversationRef.current?.scrollIntoView({
+      block: "nearest",
+      behavior: "smooth",
+    });
+  // What the citizen sent inside the thread, pulled up to the card so the
+  // operator sees the files without reading the exchange.
+  const citizenFiles = requirement.messages
+    .filter((m) => m.author === "citizen")
+    .flatMap((m) =>
+      m.attachments.map((a) => ({ ...a, createdAt: m.createdAt })),
+    );
+
+  return (
+    <div
+      className={
+        pendingReq
+          ? "flex flex-col gap-2.5 rounded-[11px] border border-admin-warning-soft-border bg-admin-card px-4 py-3.5"
+          : "flex flex-col gap-2 rounded-[11px] border border-admin-border bg-admin-input-bg px-4 py-3.5"
+      }
+    >
+      <button
+        type="button"
+        onClick={() => setOpen((o) => !o)}
+        aria-expanded={open}
+        className="flex w-full cursor-pointer items-center gap-2.5 text-left"
+      >
+        <span
+          className={`flex-none rounded-full px-[9px] py-[3px] text-[10.5px] font-bold ${
+            pendingReq
+              ? "bg-admin-warning-soft-bg text-admin-accent"
+              : "bg-admin-success-bg text-admin-success-text"
+          }`}
+        >
+          {pendingReq ? "Aguardando o cidadão" : "Cumprida"}
+        </span>
+        <span className="flex-none text-[11.5px] text-admin-faint">
+          registrada em {formatDayMonth(requirement.createdAt)}
+          {requirement.fulfilledAt
+            ? ` · resolvida em ${formatDayMonth(requirement.fulfilledAt)}`
+            : ""}
+        </span>
+        {/* Folded, the first line of the text is the card's name. Not merely
+            hidden when open: the text would then be on the page twice. */}
+        {open ? (
+          <span className="flex-1" />
+        ) : (
+          <span className="min-w-0 flex-1 truncate text-[13px] text-admin-text">
+            {requirement.text}
+          </span>
+        )}
+        {!open && awaitingOffice && (
+          <span className="flex-none rounded-full bg-admin-accent px-2.5 py-0.5 text-[10.5px] font-bold text-white">
+            Novo
+          </span>
+        )}
+        <AdminIcon
+          name="chevronDown"
+          strokeWidth={2}
+          className={`h-4 w-4 flex-none text-admin-text transition-transform duration-300 ${open ? "rotate-180" : ""}`}
+        />
+      </button>
+
+      {open && (
+        <>
+          <p className="whitespace-pre-line text-[13px] leading-normal text-admin-text">
+            {requirement.text}
+          </p>
+          {/* Kept for requirements resolved before the office took over the
+              verdict: the file the citizen sent then closed it by itself. New
+              ones carry their answers in the conversation, listed next. */}
+          {requirement.resolutionFileName &&
+            requirement.resolutionAttachmentId && (
+              <FileLine
+                href={documentHref(
+                  requestId,
+                  requirement.resolutionAttachmentId,
+                )}
+                name={requirement.resolutionFileName}
+                meta={`enviado pelo cidadão${
+                  requirement.fulfilledAt
+                    ? ` em ${formatDayMonthTime(requirement.fulfilledAt)}`
+                    : ""
+                }`}
+              />
+            )}
+          {citizenFiles.map((file) => (
+            <FileLine
+              key={file.id}
+              href={documentHref(requestId, file.id)}
+              name={file.displayName}
+              meta={`enviado pelo cidadão em ${formatDayMonthTime(file.createdAt)}`}
+              onShowConversation={showConversation}
+            />
+          ))}
+          {/* While pending the office may still take a form back, so the full
+              row with its "Excluir" stays; once fulfilled the file is part of
+              the record and reads as a line. */}
+          {requirement.forms.length > 0 &&
+            (pendingReq ? (
+              <div className="flex flex-col gap-2">
+                {requirement.forms.map((form) => (
+                  <AttachmentRow
+                    key={form.id}
+                    requestId={requestId}
+                    attachment={form}
+                    meta="anexado em"
+                    onDelete={deleteAttachmentAction}
+                  />
+                ))}
+              </div>
+            ) : (
+              requirement.forms.map((form) => (
+                <FileLine
+                  key={form.id}
+                  href={documentHref(requestId, form.id)}
+                  name={form.displayName}
+                  meta={`anexado em ${form.createdAtLabel}`}
+                />
+              ))
+            ))}
+
+          <div ref={conversationRef}>
+            <RequirementConversation
+              requirement={requirement}
+              requestId={requestId}
+            />
+          </div>
+
+          {/* Only while pending: a fulfilled requirement is the record of
+              what was asked and met, and records do not get edited. */}
+          {pendingReq && (
+            <div className="flex flex-wrap items-center gap-2.5 border-t border-admin-border pt-2.5">
+              <RequirementAction
+                action={resolveRequirementAction}
+                requirementId={requirement.id}
+                className="btn btn-admin-primary btn-sm"
+                successMessage="Exigência marcada como cumprida."
+              >
+                Marcar como cumprida
+              </RequirementAction>
+              <EditRequirement requirement={requirement} />
+              <DeleteRequirement requirement={requirement} />
+              <AttachFormButton
+                requestId={requestId}
+                requirementId={requirement.id}
+              />
+            </div>
+          )}
+        </>
+      )}
+    </div>
   );
 }
 
@@ -430,134 +622,109 @@ export function RequirementsSection({
   }, [state]);
 
   return (
-    <div className="rounded-[14px] border border-admin-border bg-admin-card p-6">
-      <div className="flex items-center gap-2.5">
-        <h4 className="flex-1 font-serif text-[17px] font-semibold text-admin-primary">
-          Exigências
-        </h4>
-        {!editing && (
+    <div className="flex flex-col gap-3.5 rounded-[14px] border border-admin-border bg-admin-card px-6 py-[22px]">
+      <div className="flex items-start gap-3">
+        <div className="flex min-w-0 flex-1 flex-col gap-1">
+          <h4 className="font-serif text-[17px] font-semibold text-admin-primary">
+            Exigências
+          </h4>
+          <p className="text-[12.5px] leading-normal text-admin-muted">
+            O que você registrar aqui aparece na consulta do cidadão, que
+            responde por lá. Você confere e marca como cumprida.
+          </p>
+        </div>
+        {editing ? (
+          <button
+            type="button"
+            onClick={() => setEditing(false)}
+            className="btn btn-admin-secondary btn-sm flex-none"
+          >
+            Cancelar
+          </button>
+        ) : (
           <button
             type="button"
             onClick={() => setEditing(true)}
-            className="btn btn-admin-secondary btn-sm"
+            className="btn btn-admin-primary btn-sm flex-none gap-[7px] px-3.5 text-[12.5px]"
           >
-            + Registrar exigência
+            <AdminIcon name="plus" className="h-3.5 w-3.5" strokeWidth={2.4} />
+            Registrar exigência
           </button>
         )}
       </div>
-      <p className="mt-1 text-[12.5px] text-admin-muted">
-        O que você registrar aqui aparece na consulta do cidadão, que responde
-        por lá. Você confere e marca como cumprida.
-      </p>
 
-      {requirements.length > 0 && (
-        <div className="mt-4 flex flex-col gap-2.5">
-          {requirements.map((requirement) => (
-            <div
-              key={requirement.id}
-              className={
-                requirement.status === "pending"
-                  ? "rounded-[11px] border border-admin-warning-bg bg-admin-card p-3.5"
-                  : "rounded-[11px] border border-admin-border bg-admin-input-bg p-3.5 opacity-85"
-              }
-            >
-              <div className="flex flex-wrap items-center gap-2">
-                <span
-                  className={
-                    requirement.status === "pending"
-                      ? "rounded-full bg-admin-warning-bg px-2.5 py-0.5 text-[10.5px] font-bold text-admin-warning-text"
-                      : "rounded-full bg-admin-success-bg px-2.5 py-0.5 text-[10.5px] font-bold text-admin-success-text"
-                  }
-                >
-                  {requirement.status === "pending"
-                    ? "Aguardando o cidadão"
-                    : "Cumprida"}
-                </span>
-                <span className="text-[11.5px] text-admin-faint">
-                  registrada em {formatDayMonth(requirement.createdAt)}
-                  {requirement.fulfilledAt
-                    ? ` · resolvida em ${formatDayMonth(requirement.fulfilledAt)}`
-                    : ""}
-                </span>
-              </div>
-              <p className="mt-2 whitespace-pre-line text-[13px] leading-relaxed text-admin-text">
-                {requirement.text}
-              </p>
-              {/* Kept for requirements resolved before the office took over
-                  the verdict: the file the citizen sent then closed it by
-                  itself. New ones carry their answers in the conversation. */}
-              {requirement.resolutionFileName &&
-                requirement.resolutionAttachmentId && (
-                  <a
-                    href={documentHref(
-                      requestId,
-                      requirement.resolutionAttachmentId,
-                    )}
-                    className="mt-1.5 inline-block text-[12px] font-semibold text-admin-success-text underline-offset-2 hover:underline"
-                  >
-                    {requirement.resolutionFileName}
-                  </a>
-                )}
-              <RequirementForms
-                requestId={requestId}
-                requirementId={requirement.id}
-                forms={requirement.forms}
-              />
-
-              <RequirementConversation
-                requirement={requirement}
-                requestId={requestId}
-              />
-
-              {/* Only while pending: a fulfilled requirement is the record of
-                  what was asked and met, and records do not get edited. */}
-              {requirement.status === "pending" && (
-                <div className="mt-3 flex flex-wrap items-center gap-2.5 border-t border-admin-border pt-3">
-                  <RequirementAction
-                    action={resolveRequirementAction}
-                    requirementId={requirement.id}
-                    className="btn btn-admin-primary btn-sm"
-                    successMessage="Exigência marcada como cumprida."
-                  >
-                    Marcar como cumprida
-                  </RequirementAction>
-                  <EditRequirement requirement={requirement} />
-                  <DeleteRequirement requirement={requirement} />
-                </div>
-              )}
-            </div>
-          ))}
-        </div>
-      )}
-
+      {/* Right under the button that opened it, not after every card. */}
       {editing && (
         <form
           action={action}
-          className="mt-4 flex flex-col items-start gap-2.5 border-t border-admin-border pt-4"
+          className="flex flex-col gap-2.5 rounded-[11px] border border-admin-warning-soft-border bg-admin-warning-soft-bg p-4"
         >
           <input type="hidden" name="requestId" value={requestId} />
+          <span className="text-[12px] font-bold text-admin-accent">
+            Nova exigência
+          </span>
           <textarea
             name="text"
             rows={4}
-            placeholder="O que falta para o pedido seguir?"
-            className="w-full rounded-[9px] border border-admin-input-border bg-admin-input-bg px-3.5 py-2.5 text-[13px] text-admin-text placeholder:text-admin-faint"
+            placeholder="O que falta para o pedido seguir? Escreva como falaria no balcão: o cidadão lê isso na consulta."
+            className="min-h-[88px] w-full rounded-[9px] border border-admin-input-border bg-admin-card px-[13px] py-2.5 text-[13px] text-admin-text placeholder:text-admin-faint"
           />
-          <button
-            type="submit"
-            disabled={pending}
-            className="btn btn-admin-primary btn-md"
-          >
-            {pending ? "Registrando…" : "Registrar"}
-          </button>
+          {state.status === "error" && (
+            <p
+              role="alert"
+              className="text-[12.5px] font-semibold text-admin-error-text"
+            >
+              {state.message}
+            </p>
+          )}
+          <div className="flex items-center gap-2.5">
+            <button
+              type="submit"
+              disabled={pending}
+              className="btn btn-admin-primary btn-md"
+            >
+              {pending ? "Registrando…" : "Registrar"}
+            </button>
+            {/* See `pauseReasons` in deadline.ts: the term stops while any
+                requirement is pending, and only "Marcar como cumprida" ends
+                that, not the citizen's answer. */}
+            <span className="text-[11.5px] text-admin-faint">
+              Suspende o prazo até você marcar como cumprida
+            </span>
+          </div>
         </form>
       )}
-      {state.status === "error" && (
-        <p
-          role="alert"
-          className="mt-2 text-[12.5px] font-semibold text-admin-error-text"
-        >
-          {state.message}
-        </p>
+
+      {requirements.length === 0 && !editing && (
+        <div className="flex items-center gap-3 border-t border-admin-border pt-4">
+          <span className="inline-flex h-[34px] w-[34px] flex-none items-center justify-center rounded-full bg-admin-success-bg">
+            <AdminIcon
+              name="check"
+              className="h-4 w-4 text-admin-success-text"
+              strokeWidth={2}
+            />
+          </span>
+          <div className="flex flex-col gap-0.5">
+            <span className="text-[13.5px] font-semibold text-admin-text">
+              Nenhuma exigência neste pedido
+            </span>
+            <span className="text-[12.5px] text-admin-muted">
+              O pedido segue sem pendências com o cidadão.
+            </span>
+          </div>
+        </div>
+      )}
+
+      {requirements.length > 0 && (
+        <div className="flex flex-col gap-2.5">
+          {requirements.map((requirement) => (
+            <RequirementCard
+              key={requirement.id}
+              requirement={requirement}
+              requestId={requestId}
+            />
+          ))}
+        </div>
       )}
     </div>
   );
