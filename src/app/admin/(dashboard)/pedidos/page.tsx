@@ -26,6 +26,7 @@ import {
   queueGroupOf,
 } from "./_components/queue-order.ts";
 import { StatusBadge } from "./_components/status-badge.tsx";
+import { toneClass } from "./_components/status-tone.ts";
 
 export const metadata = { title: "Pedidos de serviço" };
 
@@ -198,9 +199,11 @@ export default async function ServiceRequestQueuePage({
               return (
                 <Fragment key={request.id}>
                   {band ? (
-                    <div className="flex items-center gap-2 border-b border-admin-border bg-admin-input-bg px-5 py-2 text-[11px] font-bold tracking-[0.06em] text-admin-faint uppercase">
+                    <div
+                      className={`flex items-center gap-2 border-b border-admin-border px-5 py-2 text-[11px] font-bold tracking-[0.06em] uppercase ${toneClass(band.id)}`}
+                    >
                       <span>{band.label}</span>
-                      <span className="rounded-full bg-admin-card px-2 py-0.5 tabular-nums">
+                      <span className="rounded-full bg-black/10 px-2 py-0.5 tabular-nums">
                         {count}
                       </span>
                     </div>

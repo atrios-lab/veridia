@@ -50,6 +50,10 @@ export const STATUS_TONES: Record<ServiceRequestStatus, Tone> = {
   archived: "closed",
 };
 
+export function toneClass(tone: Tone): string {
+  return TONE_STYLES[tone];
+}
+
 export function statusBadgeClass(status: ServiceRequestStatus): string {
-  return TONE_STYLES[STATUS_TONES[status]];
+  return toneClass(STATUS_TONES[status]);
 }
