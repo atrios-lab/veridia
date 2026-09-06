@@ -26,6 +26,12 @@ test("closed statuses land in the last band whatever their tone", () => {
   }
 });
 
+test("paid sits in Aguardando, not Em andamento, despite its green badge", () => {
+  assert.equal(queueGroupOf("paid"), "waiting");
+  assert.equal(queueGroupOf("new"), "waiting");
+  assert.equal(queueGroupOf("in-review"), "working");
+});
+
 test("bands first, then the latest term, then arrival order", () => {
   const rows: QueueRowOrder[] = [
     closed("rejected", 4),
@@ -78,6 +84,33 @@ test("bands first, then the latest term, then arrival order", () => {
       "rejected:9",
       "rejected:4",
     ],
+  );
+});
+
+test("paid rows sort inside Aguardando by urgency, same as any other status there", () => {
+  const rows: QueueRowOrder[] = [
+    {
+      group: "waiting",
+      status: "new",
+      urgency: { kind: "running" },
+      createdAt: day(3),
+    },
+    {
+      group: "waiting",
+      status: "paid",
+      urgency: { kind: "overdue", daysLate: 2 },
+      createdAt: day(1),
+    },
+    {
+      group: "working",
+      status: "in-review",
+      urgency: { kind: "running" },
+      createdAt: day(4),
+    },
+  ];
+  assert.deepEqual(
+    [...rows].sort(compareQueueRows).map((r) => `${r.status}:${r.group}`),
+    ["paid:waiting", "new:waiting", "in-review:working"],
   );
 });
 
