@@ -528,7 +528,7 @@ export const SECTIONS: readonly SectionDef[] = [
     title: "Encarregado de dados",
     question: "Quem responde pela proteção de dados?",
     intro:
-      "Para a Classe 1 a nomeação é opcional (Provimento 214). Recomendamos nomear mesmo assim. Pode ser alguém da serventia ou a Átrios. O contato atual veio da aba Encarregado das Configurações.",
+      "Para a Classe 1 a nomeação é opcional (Provimento 214). Recomendamos nomear mesmo assim. Pode ser alguém da serventia ou uma pessoa ou empresa contratada para isso. O contato atual veio da aba Encarregado das Configurações.",
     prefilled: true,
     fields: [
       {
@@ -548,7 +548,6 @@ export const SECTIONS: readonly SectionDef[] = [
         required: true,
         options: [
           { value: "team", label: "Uma pessoa da serventia" },
-          { value: "atrios", label: "A Átrios" },
           { value: "other", label: "Outra pessoa ou empresa" },
         ],
         showWhen: appointsDpo,
@@ -577,9 +576,7 @@ export const SECTIONS: readonly SectionDef[] = [
         label: "CPF ou CNPJ",
         type: "text",
         required: true,
-        showWhen: (ctx) =>
-          appointsDpo(ctx) &&
-          text(ctx.answers, "encarregado", "who") !== "atrios",
+        showWhen: appointsDpo,
       },
       {
         name: "email",

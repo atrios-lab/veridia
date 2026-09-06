@@ -86,11 +86,9 @@ export function toGeneratorJson(input: ExportInput): Record<string, unknown> {
   const dpoWho = text(answers, "encarregado", "who");
   const dpoAppointed = text(answers, "encarregado", "willAppoint") !== "no";
   const dpoName =
-    dpoWho === "atrios"
-      ? "Átrios"
-      : dpoWho === "team"
-        ? text(answers, "encarregado", "teamMember")
-        : text(answers, "encarregado", "name");
+    dpoWho === "team"
+      ? text(answers, "encarregado", "teamMember")
+      : text(answers, "encarregado", "name");
   const signing = text(answers, "formalidades", "signingDate");
   const lastOrdinance = text(answers, "formalidades", "lastOrdinance");
 
@@ -132,7 +130,6 @@ export function toGeneratorJson(input: ExportInput): Record<string, unknown> {
     rt_genero: GENDER_WORD[String(rt?.gender ?? "")] ?? "",
 
     dpo_nomeado: dpoAppointed,
-    dpo_atrios: dpoWho === "atrios",
     dpo_nome: dpoAppointed ? dpoName : "",
     dpo_cpf_cnpj: dpoAppointed ? text(answers, "encarregado", "document") : "",
     dpo_email: dpoAppointed ? text(answers, "encarregado", "email") : "",

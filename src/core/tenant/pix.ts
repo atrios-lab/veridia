@@ -50,6 +50,16 @@ export function isValidCnpj(value: string): boolean {
   return true;
 }
 
+/** Mask as typed: 12.345.678/0001-90. Presentation only, same idea as `formatCpf`. */
+export function formatCnpj(value: string): string {
+  const d = normalizeCnpj(value).slice(0, 14);
+  return d
+    .replace(/^(\d{2})(\d)/, "$1.$2")
+    .replace(/^(\d{2}\.\d{3})(\d)/, "$1.$2")
+    .replace(/^(\d{2}\.\d{3}\.\d{3})(\d)/, "$1/$2")
+    .replace(/^(\d{2}\.\d{3}\.\d{3}\/\d{4})(\d)/, "$1-$2");
+}
+
 const PHONE = /^\+55\d{10,11}$/;
 const RANDOM_KEY =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;

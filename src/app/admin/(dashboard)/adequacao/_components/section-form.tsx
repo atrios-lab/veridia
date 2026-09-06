@@ -21,11 +21,28 @@ import {
   UNKNOWN,
   type Value,
 } from "@/core/compliance/sections.ts";
+import { formatCpf } from "@/core/request/form.ts";
+import { formatCnpj } from "@/core/tenant/pix.ts";
 import { AdminIcon } from "../../../_components/icon.tsx";
 import { completeSectionAction, saveAnswerAction } from "../actions.ts";
 
 const INPUT =
   "w-full rounded-[9px] border border-admin-input-border bg-admin-input-bg px-3.5 py-2.5 text-[13.5px] text-admin-text outline-none focus:border-admin-primary-soft disabled:opacity-60";
+/**
+ * Masks applied while the office types, keyed by field name across every
+ * section: the same identifiers `parseAnswer`'s `validateText` already
+ * special-cases for CPF/CNPJ validation (see core/compliance/answers.ts).
+ * "document" is the encarregado's CPF or CNPJ (Seção 5), formatted as CPF
+ * while it could still be one and as CNPJ once a twelfth digit arrives.
+ */
+const FIELD_MASKS: Record<string, (value: string) => string> = {
+  cpf: formatCpf,
+  cnpj: formatCnpj,
+  document: (value) => {
+    const digits = value.replace(/\D/g, "");
+    return digits.length > 11 ? formatCnpj(digits) : formatCpf(digits);
+  },
+};
 const LABEL = "flex items-center gap-2 text-xs font-bold text-admin-primary";
 // Big enough for a thumb: the office answers this from a phone between
 // customers. Native radio and checkbox inside, so keyboard and screen reader
@@ -395,9 +412,14 @@ function TextControl({
           inputMode={
             field.type === "money" || field.type === "number"
               ? "decimal"
-              : undefined
+              : field.name in FIELD_MASKS
+                ? "numeric"
+                : undefined
           }
-          onChange={(e) => setDraft(e.target.value)}
+          onChange={(e) => {
+            const mask = FIELD_MASKS[field.name];
+            setDraft(mask ? mask(e.target.value) : e.target.value);
+          }}
           onBlur={commit}
           className={INPUT}
         />
