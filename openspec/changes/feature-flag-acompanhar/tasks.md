@@ -29,8 +29,8 @@
 - [x] 4.4 Cobrir: acesso direto a `/protocolo` com a flag ligada continua funcionando
 - [x] 4.5 Cobrir: leitura da flag falhando (Edge Config inacessível, simulado) cai para o padrão sem quebrar a renderização
   - O cliente do Edge Config só aceita hosts `*.vercel.com`, então "loja fora do ar" não se simula sem rede; esse caminho é o `defaultValue` do próprio SDK. O e2e simula a falha que o SDK não cobre: cookie de override cifrado com outro segredo (lança antes do fallback), segurada por `trackingHref()`
-- [ ] 4.6 Rodar `pnpm check:tokens`, `pnpm check:dashes`, `pnpm typecheck`, `pnpm lint` e `pnpm e2e` de ponta a ponta
-  - Feito: tokens, dashes, typecheck, lint, `pnpm test` e os specs `citizen-tracking-flag`, `public-nav` e `tenants`. O `pnpm e2e` completo roda no CI / pre-push
+- [x] 4.6 Rodar `pnpm check:tokens`, `pnpm check:dashes`, `pnpm typecheck`, `pnpm lint` e `pnpm e2e` de ponta a ponta
+  - Local: tokens, dashes, typecheck, lint, `pnpm test` e os specs `citizen-tracking-flag`, `public-nav` e `tenants`. O `pnpm e2e` completo passou no CI do PR #72 (run 34004321168)
 
 ## 5. Rollout
 
