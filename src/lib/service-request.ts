@@ -692,6 +692,25 @@ export async function listRequirements(tenantSlug: string, requestId: string) {
     .orderBy(asc(serviceRequestRequirements.createdAt));
 }
 
+/**
+ * Bumps the request's `updatedAt` for a write that lands on a child row
+ * (requirement, message, attachment). The column is the one version signal
+ * the tracking screens poll, so anything the citizen or the operator can
+ * see change has to pass through here or through a `set({ updatedAt })` of
+ * its own.
+ */
+async function touchRequest(tenantSlug: string, requestId: string) {
+  await db
+    .update(serviceRequests)
+    .set({ updatedAt: new Date() })
+    .where(
+      and(
+        eq(serviceRequests.tenantSlug, tenantSlug),
+        eq(serviceRequests.id, requestId),
+      ),
+    );
+}
+
 /** The office raises a requirement. It starts, and stays, pending until the citizen answers it. */
 export async function registerRequirement(
   tenantSlug: string,
@@ -703,6 +722,7 @@ export async function registerRequirement(
     .insert(serviceRequestRequirements)
     .values({ tenantSlug, requestId, text })
     .returning({ id: serviceRequestRequirements.id });
+  await touchRequest(tenantSlug, requestId);
   await recordAudit({
     tenantSlug,
     actorId,
@@ -745,6 +765,7 @@ export async function resolveRequirement(
     .update(serviceRequestRequirements)
     .set({ status: "fulfilled", fulfilledAt: new Date() })
     .where(eq(serviceRequestRequirements.id, requirementId));
+  await touchRequest(tenantSlug, requirement.requestId);
 
   await recordAudit({
     tenantSlug,
@@ -884,6 +905,7 @@ export async function writeCitizenMessage(
       })),
     );
   }
+  await touchRequest(tenantSlug, requirement.requestId);
   return message;
 }
 
@@ -908,6 +930,7 @@ export async function writeStaffMessage(
     authorUserId: actorId,
     body,
   });
+  await touchRequest(tenantSlug, requirement.requestId);
 
   await recordAudit({
     tenantSlug,
@@ -939,6 +962,7 @@ export async function updateRequirementText(
     )
     .returning({ requestId: serviceRequestRequirements.requestId });
   if (!updated) return false;
+  await touchRequest(tenantSlug, updated.requestId);
 
   await recordAudit({
     tenantSlug,
@@ -993,6 +1017,7 @@ export async function deleteRequirement(
         eq(serviceRequestRequirements.id, requirementId),
       ),
     );
+  await touchRequest(tenantSlug, requirement.requestId);
 
   await recordAudit({
     tenantSlug,
@@ -1307,6 +1332,7 @@ export async function deleteAttachment(
     // gone for good the moment it returns: the citizen's document with it.
     // A caller that forgets the trail is a deletion nobody can account for.
     if (deleted) {
+      await touchRequest(tenantSlug, requestId);
       await recordAudit({
         tenantSlug,
         actorId,
@@ -1336,6 +1362,7 @@ export async function attachToRequest(
   requirementId?: string,
 ) {
   if (attachments.length === 0) return [];
+  await touchRequest(tenantSlug, requestId);
   return db
     .insert(serviceRequestAttachments)
     .values(

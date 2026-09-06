@@ -21,6 +21,14 @@ const PORT = process.env.PORT ?? "3100";
 // sua baseURL. Sem isto, servidor e specs resolveriam portas diferentes
 // sempre que PORT não vier do ambiente.
 process.env.PORT = PORT;
+// O override de flag que o e2e manda por cookie (ver
+// citizen-tracking-flag.spec.ts) e cifrado com este segredo, entao servidor e
+// teste precisam do mesmo valor. Descartavel, como os outros abaixo: nao
+// protege nada fora deste processo. 32 bytes em base64url porque o SDK
+// recusa qualquer outro tamanho de chave.
+const FLAGS_SECRET =
+  process.env.FLAGS_SECRET ?? "bFYACh3M3kODLC3hySGxgS5TJSL_fNME2gXNehI_IOc";
+process.env.FLAGS_SECRET = FLAGS_SECRET;
 
 export default defineConfig({
   testDir: "./e2e",
@@ -81,6 +89,10 @@ export default defineConfig({
       // isRateLimited devolve falso e o limite fica desligado.
       UPSTASH_REDIS_REST_URL: "",
       UPSTASH_REDIS_REST_TOKEN: "",
+      FLAGS_SECRET,
+      // Sem Edge Config de proposito: e o que prova que a flag cai no padrao
+      // (desligada) onde a loja nao existe, como no CI e no `pnpm dev`.
+      EDGE_CONFIG: "",
     },
     reuseExistingServer: !process.env.CI,
     timeout: 180_000,

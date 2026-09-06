@@ -117,6 +117,20 @@ function readDeadlineChoice(
   return { ...current, days: parsed.data };
 }
 
+/**
+ * The detail page's live check: the request's `updatedAt` now, or null when
+ * there is nothing this operator may see under that id. One indexed read,
+ * nothing rendered: see `LiveRequest`.
+ */
+export async function requestVersionAction(
+  requestId: string,
+): Promise<string | null> {
+  if (!(await authorize())) return null;
+  const tenant = await getTenant();
+  const request = await findById(tenant.slug, requestId);
+  return request?.updatedAt.toISOString() ?? null;
+}
+
 export async function changeStatus(
   _previous: ActionState,
   formData: FormData,
