@@ -1,5 +1,5 @@
 import "server-only";
-import { globalConfigAdapter } from "@flags-sdk/global-config";
+import { vercelAdapter } from "@flags-sdk/vercel";
 import { flag } from "flags/next";
 import { SECTION_ROUTES } from "@/core/tenant/gating.ts";
 
@@ -8,10 +8,11 @@ const LOOKUP_ROUTE = SECTION_ROUTES["consulta-protocolo"];
 /**
  * Which route the site recommends for following a protocol: the new
  * /acompanhar (progress rail, chat, Pix) or the current /protocolo. Read
- * from the project's Edge Config on Vercel, so it flips without a deploy,
- * and overridable per session from the Vercel Toolbar. Both pages stay
- * reachable by URL whatever the value: this only decides the links.
- * See openspec/changes/feature-flag-acompanhar.
+ * from Vercel Flags (managed in the project's dashboard), so it flips
+ * without a deploy, and overridable per session from the Vercel Toolbar.
+ * Both pages stay reachable by URL whatever the value: this only decides
+ * the links. See openspec/changes/feature-flag-acompanhar and
+ * migrar-para-vercel-flags.
  */
 export const citizenTrackingV2 = flag<boolean>({
   key: "citizen-tracking-v2",
@@ -19,13 +20,7 @@ export const citizenTrackingV2 = flag<boolean>({
     "Consulta do cidadão pelo /acompanhar (trilho) em vez de /protocolo. " +
     "Ver openspec/changes/feature-flag-acompanhar.",
   defaultValue: false,
-  // Local and CI have no Edge Config, and the adapter factory refuses to
-  // build without one: there the flag decides "off" on its own, no
-  // variable required. With a store configured, any failed read (store
-  // down, item missing) lands on defaultValue: the SDK catches it.
-  ...(process.env.EDGE_CONFIG
-    ? { adapter: globalConfigAdapter }
-    : { decide: () => false }),
+  adapter: vercelAdapter,
 });
 
 /**

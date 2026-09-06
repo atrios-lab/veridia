@@ -25,7 +25,7 @@
     "check:destructive": "node scripts/check-destructive.mjs"
   },
   "dependencies": {
-    "@flags-sdk/global-config": "^0.3.1",
+    "@flags-sdk/vercel": "^1.4.7",
     "@hookform/resolvers": "^5.7.1",
     "@upstash/ratelimit": "^2.0.8",
     "@upstash/redis": "^1.38.1",
