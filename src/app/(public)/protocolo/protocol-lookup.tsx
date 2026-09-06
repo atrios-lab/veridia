@@ -331,9 +331,13 @@ function StatusBadge({ label }: { label: string }) {
 function PaymentCard({ result }: { result: ServiceRequestDetail }) {
   // Optimistic like `hasSignedForm` above: a successful send in this same
   // visit flips the card without asking the server to look everything up
-  // again.
+  // again. `justReported` (not `!!receipt`) is what does that: a receipt
+  // survives a later "devolvido para aguardando", and the andamento, not the
+  // presence of some past comprovante, is what says whether the QR belongs
+  // back on screen.
   const [receipt, setReceipt] = useState(result.paymentReceipt);
-  const reported = result.requestStatus === "payment-reported" || !!receipt;
+  const [justReported, setJustReported] = useState(false);
+  const reported = result.requestStatus === "payment-reported" || justReported;
   const [state, action, pending] = useActionState<ReportPaymentState, FormData>(
     reportPayment,
     { status: "idle" },
@@ -344,6 +348,7 @@ function PaymentCard({ result }: { result: ServiceRequestDetail }) {
   useEffect(() => {
     if (state.status === "success") {
       setReceipt({ displayName: state.displayName, sentAt: state.sentAt });
+      setJustReported(true);
     }
   }, [state]);
 

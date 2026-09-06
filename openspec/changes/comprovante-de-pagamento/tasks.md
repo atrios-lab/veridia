@@ -25,6 +25,6 @@
 ## 5. Testes
 
 - [x] 5.1 `node --test`: `kinds.test.ts` (fase e sugestões do novo andamento), `status-tone.test.ts`, `queue-order.test.ts`, e um caso em `src/db/service-request.test.ts` para `updateRequestStatus` com ator nulo
-- [ ] 5.2 `e2e/service-request.spec.ts`: com valor e QR visíveis, "Já paguei" sem arquivo é recusado; com PDF, a consulta mostra "em conferência" sem QR, o andamento vira `payment-reported` e o comprovante existe com `kind = "payment-receipt"`; devolver para `awaiting-payment` via SQL reexibe o QR
-- [ ] 5.3 `e2e/admin-service-requests.spec.ts`: pedido em `payment-reported` aparece na fila com o selo "Pagamento informado" e, no detalhe, mostra o link do comprovante e "Pago" como primeira sugestão
-- [ ] 5.4 Rodar os checks escopados (`pnpm typecheck`, `pnpm lint`, `pnpm test`, specs e2e tocados); o `pnpm e2e` completo fica para o CI do PR
+- [x] 5.2 `e2e/service-request.spec.ts`: com valor e QR visíveis, "Já paguei" sem arquivo é recusado; com PDF, a consulta mostra "em conferência" sem QR, o andamento vira `payment-reported` e o comprovante existe com `kind = "payment-receipt"`; devolver para `awaiting-payment` via SQL reexibe o QR
+- [x] 5.3 `e2e/admin-service-requests.spec.ts`: pedido em `payment-reported` aparece na fila com o selo "Pagamento informado" e, no detalhe, mostra o link do comprovante e "Pago" como primeira sugestão
+- [x] 5.4 Rodar os checks escopados (`pnpm typecheck`, `pnpm lint`, `pnpm test`, specs e2e tocados); o `pnpm e2e` completo fica para o CI do PR

@@ -770,7 +770,7 @@ test.describe("filing a request", () => {
     await expect(
       page.getByText("Comprovante recebido, em conferência"),
     ).toBeVisible();
-    await expect(page.getByText("comprovante.pdf")).toBeVisible();
+    await expect(page.getByText("Comprovante de pagamento")).toBeVisible();
     await expect(page.getByText("PIX COPIA E COLA")).toHaveCount(0);
 
     const [row] = await sql`
@@ -779,7 +779,7 @@ test.describe("filing a request", () => {
     `;
     expect(row.status).toBe("payment-reported");
     const [attachment] = await sql`
-      select kind from service_request_attachments sra
+      select sra.kind from service_request_attachments sra
       join service_requests sr on sr.id = sra.request_id
       where sr.protocol_number = ${protocolNumber} and sra.kind = 'payment-receipt'
     `;
@@ -793,7 +793,12 @@ test.describe("filing a request", () => {
     `;
     await sql.end();
 
-    await page.reload();
+    // This screen (/protocolo) does not poll: a fresh look, key and all, is
+    // what a real citizen would do, and what proves the andamento alone (not
+    // some memory of a past comprovante) decides whether the QR is back.
+    await page.goto(`${baseURL}/protocolo?numero=${protocolNumber}`);
+    await page.getByPlaceholder("Ex.: BBM8-6XVB-8PUK").fill(accessKey);
+    await page.getByRole("button", { name: "Ver detalhes" }).click();
     await expect(page.getByText("PIX COPIA E COLA")).toBeVisible();
     await expect(
       page.getByText("Comprovante recebido", { exact: false }),

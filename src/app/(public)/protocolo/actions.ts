@@ -535,6 +535,10 @@ export async function reportPayment(
   try {
     const stored = await collectAttachments(formData, "comprovante", {
       tenantSlug: tenant.slug,
+      // A fixed, friendly name (not the browser-sent one, same discipline as
+      // every other upload here): this is the one displayName the citizen's
+      // own screen echoes back, so it reads as a label, not a slug.
+      kind: "Comprovante de pagamento",
       limit: 1,
     });
     if (stored.length === 0) {

@@ -1132,12 +1132,31 @@ function RequirementCard({
 
 /* -------------------------------------------------------------- payment */
 
-function PayCard({ result }: { result: ServiceRequestDetail }) {
+/**
+ * `reported`/`onReported` are lifted to `ServiceRequestTrilho`, the same way
+ * `SignCard`'s `onSigned` is: this screen polls (`useLiveVersion`), and only
+ * the parent's own resync effect clears a stale optimistic flag once a fresh
+ * poll's `result.requestStatus` disagrees with it (e.g. the office finds the
+ * comprovante does not match and sends the citizen back to "Aguardando
+ * pagamento"). A flag kept here instead would survive that poll forever.
+ */
+function PayCard({
+  result,
+  reported,
+  onReported,
+}: {
+  result: ServiceRequestDetail;
+  reported: boolean;
+  onReported: (receipt: { displayName: string; sentAt: string }) => void;
+}) {
   const [copied, setCopied] = useState(false);
-  // Optimistic like `hasSignedForm` elsewhere: a successful send in this same
-  // visit flips the card without a full re-lookup.
-  const [receipt, setReceipt] = useState(result.paymentReceipt);
-  const reported = result.requestStatus === "payment-reported" || !!receipt;
+  // Only for the gap before the next poll confirms it: `result.paymentReceipt`
+  // (the prop, refreshed every poll) is what's shown once that catches up.
+  const [justSubmitted, setJustSubmitted] = useState<{
+    displayName: string;
+    sentAt: string;
+  }>();
+  const receipt = justSubmitted ?? result.paymentReceipt;
   const [state, action, pending] = useActionState<ReportPaymentState, FormData>(
     reportPayment,
     { status: "idle" },
@@ -1148,9 +1167,11 @@ function PayCard({ result }: { result: ServiceRequestDetail }) {
 
   useEffect(() => {
     if (state.status === "success") {
-      setReceipt({ displayName: state.displayName, sentAt: state.sentAt });
+      const sent = { displayName: state.displayName, sentAt: state.sentAt };
+      setJustSubmitted(sent);
+      onReported(sent);
     }
-  }, [state]);
+  }, [state, onReported]);
 
   return (
     <div className="flex animate-notice-rise flex-col gap-4 rounded-2xl border-[1.5px] border-brand-on-dark-accent bg-brand-accent-soft p-5">
@@ -1589,14 +1610,30 @@ function ServiceRequestTrilho({
   // optimistic state) and disappears the moment this component re-renders.
   const [requirements, setRequirements] = useState(initial.requirements);
   const [detailsOpen, setDetailsOpen] = useState(true);
+  // Same optimistic gap as `hasSignedForm`: true the moment PayCard reports a
+  // send, cleared the moment a fresh poll disagrees (below), so a comprovante
+  // the office sends back does not stay stuck showing "em conferência".
+  const [paymentJustReported, setPaymentJustReported] = useState(false);
   // A fresher snapshot (see LookupFlow's polling) replaces what the citizen
   // sees but not what they are typing: the cards below keep their drafts.
   useEffect(() => {
     setHasSignedForm(initial.hasSignedForm);
     setCitizenDocuments(initial.citizenDocuments);
     setRequirements(initial.requirements);
+    setPaymentJustReported(false);
   }, [initial]);
-  const result: ServiceRequestDetail = { ...initial, requirements };
+  // The override folds straight into `requestStatus` (not a separate flag
+  // read alongside it), so every reader downstream (computeSteps, computePill,
+  // computeHeadline, PayCard's own `reported`) agrees without each having to
+  // know about `paymentJustReported` itself.
+  const result: ServiceRequestDetail = {
+    ...initial,
+    requirements,
+    requestStatus:
+      paymentJustReported && initial.requestStatus === "awaiting-payment"
+        ? "payment-reported"
+        : initial.requestStatus,
+  };
 
   const rejected =
     result.requestStatus === "rejected" || result.requestStatus === "cancelled";
@@ -1720,7 +1757,13 @@ function ServiceRequestTrilho({
               }
             />
           ))}
-          {showPay && <PayCard result={result} />}
+          {showPay && (
+            <PayCard
+              result={result}
+              reported={paymentReported}
+              onReported={() => setPaymentJustReported(true)}
+            />
+          )}
           {showCalm && <CalmCard />}
           {finished && (
             <DoneCard

@@ -156,6 +156,41 @@ test.describe("fila e detalhe de pedidos", () => {
     ).toHaveCount(0);
   });
 
+  test("a comprovante the citizen sent shows in the queue and the detail's suggestion", async ({
+    page,
+  }) => {
+    // The citizen reporting a payment is /protocolo's own job (see
+    // service-request.spec.ts); simulated here the same way the exigência
+    // test above simulates the office's writes, with the andamento already at
+    // "Pagamento informado" and its comprovante already attached.
+    const sql = postgres(process.env.DATABASE_URL as string);
+    await sql`
+      update service_requests set status = 'payment-reported', amount_cents = 25000
+      where tenant_slug = 'cartorio-marinho' and protocol_number = ${PROTOCOL}
+    `;
+    await sql`
+      insert into service_request_attachments
+        (tenant_slug, request_id, kind, stored_name, display_name, path, mime_type, size_bytes)
+      select 'cartorio-marinho', id, 'payment-receipt', 'comprovante.pdf', 'Comprovante de pagamento', 'comprovante.pdf', 'application/pdf', 1024
+      from service_requests where protocol_number = ${PROTOCOL}
+    `;
+    await sql.end();
+
+    await signIn(page);
+    await page.goto(`${baseURL}/admin/pedidos`);
+    await expect(
+      page.locator("a", { hasText: PROTOCOL }).getByText("Pagamento informado"),
+    ).toBeVisible();
+
+    await page.goto(`${baseURL}/admin/pedidos/${encodeURIComponent(PROTOCOL)}`);
+    await expect(page.getByText(/Pagamento informado em/)).toBeVisible();
+    await expect(
+      page.getByRole("link", { name: "ver comprovante" }),
+    ).toBeVisible();
+    // "Pago" is the suggested next step from "Pagamento informado".
+    await expect(page.getByRole("button", { name: "Pago" })).toBeVisible();
+  });
+
   test("a registered requirement appears right away", async ({ page }) => {
     await signIn(page);
     await page.goto(`${baseURL}/admin/pedidos/${encodeURIComponent(PROTOCOL)}`);
