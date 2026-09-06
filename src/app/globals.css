@@ -108,6 +108,10 @@
   --palette-admin-error-input-bg: #fdf6f4;
   --palette-admin-warning-bg: #f0e8d4;
   --palette-admin-warning-text: #6e5522;
+  /* The exigência surface: the citizen owes something. Paler than the badge
+     warning so a whole box of it does not shout. */
+  --palette-admin-warning-soft-bg: #fbf3df;
+  --palette-admin-warning-soft-border: #ecdfb8;
   --palette-admin-success-bg: #e9efea;
   --palette-admin-success-text: #1c5638;
 }
@@ -136,6 +140,8 @@
   --color-admin-error-input-bg: var(--palette-admin-error-input-bg);
   --color-admin-warning-bg: var(--palette-admin-warning-bg);
   --color-admin-warning-text: var(--palette-admin-warning-text);
+  --color-admin-warning-soft-bg: var(--palette-admin-warning-soft-bg);
+  --color-admin-warning-soft-border: var(--palette-admin-warning-soft-border);
   --color-admin-success-bg: var(--palette-admin-success-bg);
   --color-admin-success-text: var(--palette-admin-success-text);
 }
@@ -659,17 +665,19 @@
   :where(button:disabled, [aria-disabled="true"]) {
     cursor: not-allowed;
   }
-  :where(
-      button,
-      a[href],
-      [role="button"],
-      input,
-      select,
-      textarea
-    ):focus-visible {
+  :where(button, a[href], [role="button"]):focus-visible {
     outline: none;
     box-shadow:
       0 0 0 2px var(--color-brand-card),
       0 0 0 4px var(--brand-accent);
+  }
+  /*
+   * Inputs/selects/textareas already sit on a visible border, so the ring
+   * goes flush against it instead of repeating the buttons' offset gap
+   * (which read as a floating rectangle around the field).
+   */
+  :where(input, select, textarea):focus-visible {
+    outline: none;
+    box-shadow: 0 0 0 1.5px var(--brand-accent);
   }
 }

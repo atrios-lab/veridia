@@ -1,14 +1,19 @@
 "use client";
 
 import { useActionState, useEffect, useState } from "react";
+import { documentHref } from "../../../../_components/attachment-link.ts";
 import { type ActionState, setAmountAction } from "../actions.ts";
 
 export function AmountSection({
   requestId,
   amountLabel,
+  receipt,
 }: {
   requestId: string;
   amountLabel?: string;
+  /** The comprovante the citizen sent via "Já paguei", if any: the most
+   * recent one, if they sent more than one. */
+  receipt?: { id: string; displayName: string; sentAtLabel: string };
 }) {
   const [editing, setEditing] = useState(false);
   const [state, action, pending] = useActionState<ActionState, FormData>(
@@ -54,6 +59,19 @@ export function AmountSection({
           ? `Valor atual: ${amountLabel}`
           : "Ainda não informado: o cidadão só vê e paga depois que você preencher aqui."}
       </p>
+      {receipt && (
+        <p className="mt-1.5 text-[12.5px] text-admin-text">
+          Pagamento informado em {receipt.sentAtLabel} ·{" "}
+          <a
+            href={documentHref(requestId, receipt.id)}
+            target="_blank"
+            rel="noopener"
+            className="font-semibold text-admin-accent hover:underline"
+          >
+            ver comprovante
+          </a>
+        </p>
+      )}
 
       {editing && (
         <form action={action} className="mt-3.5 flex items-center gap-2.5">

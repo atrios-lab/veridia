@@ -32,7 +32,7 @@ export const KIND_BY_PREFIX: Record<ProtocolPrefix, RequestKind> = {
 };
 
 /**
- * The nineteen andamentos a service request may be in: the general ones every
+ * The twenty andamentos a service request may be in: the general ones every
  * request passes through plus the registral steps of a title's life, which is
  * the vocabulary the registrar actually works in (prenotação, qualificação,
  * registro, averbação). A closed list, not a database enum: every other
@@ -51,6 +51,7 @@ export const SERVICE_REQUEST_STATUSES = [
   "new",
   "in-review",
   "awaiting-payment",
+  "payment-reported",
   "paid",
   "filed",
   "pre-noted",
@@ -75,7 +76,7 @@ export const TERMINAL_SERVICE_REQUEST_STATUSES: readonly ServiceRequestStatus[] 
   ["done", "rejected", "cancelled", "archived", "inactive"];
 
 /**
- * The phases the queue groups the nineteen into. Eighteen steps do not fit a
+ * The phases the queue groups the twenty into. Nineteen steps do not fit a
  * progress bar, and the citizen does not need "averbado" to know where their
  * request stands. The office does, and the office reads the detail screen.
  */
@@ -95,7 +96,7 @@ export const SERVICE_REQUEST_PHASES = [
   {
     id: "payment",
     label: "Pagamento",
-    statuses: ["awaiting-payment", "paid"],
+    statuses: ["awaiting-payment", "payment-reported", "paid"],
   },
   {
     id: "processing",
@@ -145,7 +146,7 @@ export function isServiceRequestStatus(
  * detail screen. This is UX guidance, not a state machine: the andamento of a
  * title does not fit one (a prenotação may go to exigência, an exigência back
  * to qualificação, a concluído may reopen), so the server enforces only that
- * the value is one of the nineteen above and that it is not the current one.
+ * the value is one of the twenty above and that it is not the current one.
  * A correction outside this table (moving a request back out of "Cancelado",
  * say) is still accepted.
  */
@@ -156,6 +157,7 @@ const SUGGESTED_NEXT_STATUSES: Record<
   new: ["in-review", "filed", "cancelled"],
   "in-review": ["awaiting-payment", "pre-noted", "rejected", "cancelled"],
   "awaiting-payment": ["paid", "cancelled"],
+  "payment-reported": ["paid", "awaiting-payment", "cancelled"],
   paid: ["processing", "pre-noted", "done"],
   filed: ["pre-noted", "in-review", "cancelled"],
   "pre-noted": ["in-qualification", "with-requirement", "cancelled"],
@@ -278,6 +280,7 @@ const STATUS_LABELS: Record<RequestKind, Record<string, string>> = {
     new: "Novo",
     "in-review": "Em análise",
     "awaiting-payment": "Aguardando pagamento",
+    "payment-reported": "Pagamento informado",
     paid: "Pago",
     filed: "Protocolado",
     "pre-noted": "Prenotado",

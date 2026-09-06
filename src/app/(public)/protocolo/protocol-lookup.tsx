@@ -24,7 +24,9 @@ import {
   type LookupState,
   lookupProtocolDetail,
   type OmbudsmanDetail,
+  type ReportPaymentState,
   type RequirementView,
+  reportPayment,
   type ServiceRequestDetail,
   writeRequirementMessageAction,
 } from "./actions.ts";
@@ -35,12 +37,6 @@ export interface PublicStatus {
   statusLabel: string;
   createdAt: string;
   updatedAt: string;
-}
-
-/** Same shape `pixChargeFor` (`src/lib/pix-qr.ts`) returns. */
-interface PixCharge {
-  copyPaste: string;
-  qrSvg: string;
 }
 
 interface Contacts {
@@ -328,43 +324,111 @@ function StatusBadge({ label }: { label: string }) {
  * Once the office marks the request "Pago" (or moves it further along),
  * `settled` drops the QR and the counter instruction: the amount stays as a
  * receipt, but nothing keeps inviting a payment that already happened.
+ * Between the two, "Pagamento informado" replaces the QR with the
+ * comprovante the citizen just sent, since nothing is left to pay while the
+ * serventia confers it.
  */
-function PaymentCard({
-  amountLabel,
-  pix,
-  settled,
-}: {
-  amountLabel: string;
-  pix?: PixCharge;
-  settled?: boolean;
-}) {
+function PaymentCard({ result }: { result: ServiceRequestDetail }) {
+  // Optimistic like `hasSignedForm` above: a successful send in this same
+  // visit flips the card without asking the server to look everything up
+  // again.
+  const [receipt, setReceipt] = useState(result.paymentReceipt);
+  const reported = result.requestStatus === "payment-reported" || !!receipt;
+  const [state, action, pending] = useActionState<ReportPaymentState, FormData>(
+    reportPayment,
+    { status: "idle" },
+  );
+  const upload = useAttachmentUpload(action);
+  const sending = pending || upload.uploading;
+
+  useEffect(() => {
+    if (state.status === "success") {
+      setReceipt({ displayName: state.displayName, sentAt: state.sentAt });
+    }
+  }, [state]);
+
   return (
     <div className="rounded-2xl border-[1.5px] border-brand-accent-line bg-brand-accent-soft p-4">
       <span className="text-[11px] font-bold uppercase tracking-[0.16em] text-brand-accent-ink">
         Valor do pedido
       </span>
       <div className="mt-1 font-serif text-[22px] font-semibold text-brand-primary">
-        {amountLabel}
+        {result.amountLabel}
       </div>
-      {settled ? (
+      {result.paymentSettled ? (
         <p className="mt-2 flex items-center gap-1.5 text-[12px] font-semibold text-brand-primary-soft">
           <Icon name="check" className="h-3.5 w-3.5" strokeWidth={2.4} />
           Pagamento confirmado. Nada pendente aqui.
         </p>
-      ) : pix ? (
-        <div className="mt-3 flex flex-col gap-3">
-          <div
-            className="flex justify-center rounded-xl bg-white p-3 [&>svg]:h-40 [&>svg]:w-40"
-            // biome-ignore lint/security/noDangerouslySetInnerHtml: pix.qrSvg is deterministic SVG rendered server-side by `qrcode`, never citizen input.
-            dangerouslySetInnerHTML={{ __html: pix.qrSvg }}
-          />
-          <CopyField label="Pix Copia e Cola" value={pix.copyPaste} small />
-        </div>
+      ) : reported ? (
+        <>
+          <p className="mt-2 flex items-center gap-1.5 text-[12px] font-semibold text-brand-primary-soft">
+            <Icon name="check" className="h-3.5 w-3.5" strokeWidth={2.4} />
+            Comprovante recebido, em conferência
+          </p>
+          {receipt && (
+            <p className="mt-1 truncate text-[11px] text-brand-faint">
+              {receipt.displayName}
+            </p>
+          )}
+        </>
       ) : (
-        <p className="mt-2 text-[12px] leading-relaxed text-brand-text-soft">
-          Pague no balcão da serventia. Assim que a chave Pix estiver
-          cadastrada, o QR aparece aqui.
-        </p>
+        <div className="mt-3 flex flex-col gap-3">
+          {result.pix ? (
+            <>
+              <div
+                className="flex justify-center rounded-xl bg-white p-3 [&>svg]:h-40 [&>svg]:w-40"
+                // biome-ignore lint/security/noDangerouslySetInnerHtml: pix.qrSvg is deterministic SVG rendered server-side by `qrcode`, never citizen input.
+                dangerouslySetInnerHTML={{ __html: result.pix.qrSvg }}
+              />
+              <CopyField
+                label="Pix Copia e Cola"
+                value={result.pix.copyPaste}
+                small
+              />
+            </>
+          ) : (
+            <p className="text-[12px] leading-relaxed text-brand-text-soft">
+              Pague no balcão da serventia. Assim que a chave Pix estiver
+              cadastrada, o QR aparece aqui.
+            </p>
+          )}
+          <form
+            onSubmit={(event) => {
+              event.preventDefault();
+              void upload.send(event.currentTarget, "comprovante", 1);
+            }}
+          >
+            <input
+              type="hidden"
+              name="protocolNumber"
+              value={result.protocolNumber}
+            />
+            <input type="hidden" name="accessKey" value={result.accessKey} />
+            <label
+              className={`flex cursor-pointer items-center justify-center gap-2 rounded-xl border-[1.5px] border-dashed border-brand-accent-line bg-brand-card px-3 py-3 text-[12.5px] font-semibold text-brand-primary hover:border-brand-accent ${sending ? "opacity-60" : ""}`}
+            >
+              {sending ? "Enviando…" : "Já paguei · enviar comprovante"}
+              <input
+                type="file"
+                name="comprovante"
+                accept={ATTACHMENT_ACCEPT}
+                className="sr-only"
+                disabled={sending}
+                onChange={(event) => {
+                  if (event.target.files?.length) {
+                    event.target.form?.requestSubmit();
+                  }
+                }}
+              />
+            </label>
+            {(upload.error || state.status === "error") && (
+              <output className="mt-1.5 block text-[11.5px] font-semibold text-brand-alert">
+                {upload.error ?? (state.status === "error" && state.message)}
+              </output>
+            )}
+          </form>
+        </div>
       )}
     </div>
   );
@@ -549,7 +613,12 @@ function timelineSteps(
     steps.push(
       result.paymentSettled
         ? { label: "Pagamento confirmado", done: true }
-        : { label: "Aguardando pagamento", detail: "valor e QR ao lado" },
+        : result.requestStatus === "payment-reported"
+          ? {
+              label: "Pagamento informado",
+              detail: "comprovante em conferência",
+            }
+          : { label: "Aguardando pagamento", detail: "valor e QR ao lado" },
     );
   }
 
@@ -970,13 +1039,7 @@ function RequestDetail({ result }: { result: ServiceRequestDetail }) {
 
       <div className="mt-3.5 md:grid md:grid-cols-[1.1fr_0.9fr] md:items-start md:gap-4">
         <div className="flex flex-col gap-3.5">
-          {result.amountLabel && (
-            <PaymentCard
-              amountLabel={result.amountLabel}
-              pix={result.pix}
-              settled={result.paymentSettled}
-            />
-          )}
+          {result.amountLabel && <PaymentCard result={result} />}
           <RequirementsCard result={result} />
           {!hasSignedForm && (
             <div className="rounded-2xl border-[1.5px] border-brand-accent-line bg-brand-accent-soft p-4">

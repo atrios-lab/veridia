@@ -89,10 +89,12 @@ test.describe("fila e detalhe de pedidos", () => {
   test("the telephone filed with the request reaches the operator", async ({
     page,
   }) => {
-    // It rides in `details`, not in a column of its own: this is the test
-    // that the reader still finds it there.
+    // It rides in "Dados do solicitante", not in a column of its own: this is
+    // the test that the reader still finds it there. The section is closed by
+    // default, so opening it is part of what the test proves.
     await signIn(page);
     await page.goto(`${baseURL}/admin/pedidos/${PROTOCOL}`);
+    await page.getByRole("button", { name: "Dados do solicitante" }).click();
     await expect(page.getByText("(84) 99912-0033")).toBeVisible();
   });
 
@@ -119,16 +121,20 @@ test.describe("fila e detalhe de pedidos", () => {
     await signIn(page);
     await page.goto(`${baseURL}/admin/pedidos/${encodeURIComponent(PROTOCOL)}`);
 
-    await page.getByText(/^Prazo: /).click();
+    await page.getByRole("button", { name: "Prazo e correção" }).click();
     await page.getByRole("radio", { name: "Mudar para" }).check();
     await page.getByLabel("Dias de prazo").fill("12");
     await page.getByRole("button", { name: "Salvar prazo" }).click();
 
     // O prazo novo vale sem que o andamento tenha mudado, e sobrevive ao
     // recarregar: era isso que a serventia perdia a cada F5.
-    await expect(page.getByText(/^Prazo: .*12/)).toBeVisible();
+    await expect(
+      page.getByText(/^Prazo até .* · 12 dias úteis$/),
+    ).toBeVisible();
     await page.reload();
-    await expect(page.getByText(/^Prazo: .*12/)).toBeVisible();
+    await expect(
+      page.getByText(/^Prazo até .* · 12 dias úteis$/),
+    ).toBeVisible();
     await expect(
       page.locator("li", { hasText: "ajustou o prazo" }),
     ).toBeVisible();
@@ -187,7 +193,7 @@ test.describe("fila e detalhe de pedidos", () => {
     await expect(
       page.getByText("Aguardando o cidadão desde hoje"),
     ).toBeVisible();
-    await expect(page.getByText(/^Prazo: suspenso desde/)).toBeVisible();
+    await expect(page.getByText(/^Prazo suspenso desde/)).toBeVisible();
     await expect(
       page.locator("li", { hasText: "suspendeu o prazo" }),
     ).toBeVisible();
@@ -195,8 +201,10 @@ test.describe("fila e detalhe de pedidos", () => {
     // Certidão do RCPN tem prazo legal (5 dias, Lei 6.015 art. 19): cumprida a
     // exigência, a contagem recomeça hoje em vez de continuar de onde parou.
     await page.getByRole("button", { name: "Marcar como cumprida" }).click();
+    await expect(page.getByText(/^Prazo até .* · 5 dias úteis$/)).toBeVisible();
+    await page.getByRole("button", { name: "Prazo e correção" }).click();
     await expect(
-      page.getByText(/^Prazo: até .* · 5 dias úteis, a contar do próximo/),
+      page.getByText(/^Hoje: até .* · 5 dias úteis, a contar do próximo/),
     ).toBeVisible();
     await expect(page.getByText("Aguardando o cidadão desde hoje")).toHaveCount(
       0,

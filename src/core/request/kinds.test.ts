@@ -24,7 +24,7 @@ test("every service request status has a Portuguese label", () => {
   }
 });
 
-test("a value outside the eighteen is not a service request status", () => {
+test("a value outside the twenty is not a service request status", () => {
   assert.equal(isServiceRequestStatus("in-progress"), false);
   assert.equal(isServiceRequestStatus("new"), true);
   // The registral steps the office actually works in.
@@ -98,6 +98,21 @@ test("suggested transitions match what the detail screen offers", () => {
     "cancelled",
   ]);
   assert.deepEqual(suggestedNextStatuses("archived"), []);
+});
+
+test("payment-reported: the one andamento the citizen writes", () => {
+  assert.ok(isServiceRequestStatus("payment-reported"));
+  assert.equal(phaseOfStatus("payment-reported"), "payment");
+  assert.equal(
+    statusLabel("service-request", "payment-reported"),
+    "Pagamento informado",
+  );
+  assert.deepEqual(suggestedNextStatuses("payment-reported"), [
+    "paid",
+    "awaiting-payment",
+    "cancelled",
+  ]);
+  assert.ok(isOpenServiceRequestStatus("payment-reported"));
 });
 
 test("every suggestion is itself a valid andamento", () => {
