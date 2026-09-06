@@ -108,7 +108,11 @@ test.describe("conversa da exigência", () => {
     await citizen.goto(`${baseURL}/acompanhar?numero=${PROTOCOL}`);
     await citizen.getByPlaceholder("Ex.: BBM8-6XVB-8PUK").fill(ACCESS_KEY);
     await citizen.getByRole("button", { name: "Ver andamento" }).click();
-    await expect(citizen.getByText("Rosa Almeida Fontes")).toBeVisible();
+    // The applicant's name is never sent to this screen, so the protocol
+    // heading is what confirms the lookup succeeded.
+    await expect(
+      citizen.getByRole("heading", { name: PROTOCOL }),
+    ).toBeVisible();
 
     await page.getByRole("button", { name: "Registrar exigência" }).click();
     await page
