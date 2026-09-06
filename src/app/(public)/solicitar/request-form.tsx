@@ -75,9 +75,12 @@ function FieldError({ message }: { message?: string }) {
 export function RequestForm({
   act,
   attribution,
+  lookupHref,
 }: {
   act: Act;
   attribution: Attribution;
+  /** Where "Acompanhar pedido" sends the citizen after success: /acompanhar or /protocolo, per the flag (see @/flags.ts). */
+  lookupHref: string;
 }) {
   const [state, formAction, pending] = useActionState<SubmitState, FormData>(
     submitServiceRequest,
@@ -150,7 +153,7 @@ export function RequestForm({
   const exemptionTargets = act.exemptionTargets;
 
   if (state.status === "success") {
-    return <SuccessScreen result={state} />;
+    return <SuccessScreen result={state} lookupHref={lookupHref} />;
   }
 
   // The client catches what the schema can; the server can still refuse
@@ -631,7 +634,13 @@ function ProtocolFields({ result }: { result: SubmitSuccess }) {
   );
 }
 
-function SuccessScreen({ result }: { result: SubmitSuccess }) {
+function SuccessScreen({
+  result,
+  lookupHref,
+}: {
+  result: SubmitSuccess;
+  lookupHref: string;
+}) {
   const [attachState, attachAction, attaching] = useActionState<
     AttachState,
     FormData
@@ -794,7 +803,7 @@ function SuccessScreen({ result }: { result: SubmitSuccess }) {
 
       <div className="mt-4 flex gap-2.5">
         <Link
-          href={`/protocolo?numero=${encodeURIComponent(result.protocolNumber)}`}
+          href={`${lookupHref}?numero=${encodeURIComponent(result.protocolNumber)}`}
           className="btn btn-primary btn-lg flex-1"
         >
           Acompanhar pedido
