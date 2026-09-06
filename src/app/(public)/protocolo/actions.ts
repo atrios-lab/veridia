@@ -30,7 +30,7 @@ import { formatCents } from "@/core/request/money.ts";
 import { type IsoDate, toIsoDate } from "@/core/scheduling/calendar.ts";
 import { isSectionEnabled } from "@/core/tenant/gating.ts";
 import { type PixCharge, pixChargeFor } from "@/lib/pix-qr.ts";
-import { isRateLimited } from "@/lib/rate-limit.ts";
+import { isPollRateLimited, isRateLimited } from "@/lib/rate-limit.ts";
 import {
   attachToRequest,
   findByProtocolWithKey,
@@ -176,6 +176,28 @@ export type LookupState =
   | { status: "idle" }
   | { status: "error"; message: string }
   | ProtocolDetail;
+
+/**
+ * The tracking screen's live check: the record's `updatedAt` now, under the
+ * same protocol and key the consult took. Null for a pair that opens
+ * nothing, which is also what a rate-limited caller gets: the screen stops
+ * asking rather than showing an error for a question the person never
+ * asked.
+ */
+export async function protocolVersion(
+  protocolNumber: string,
+  accessKey: string,
+): Promise<string | null> {
+  const tenant = await getTenant();
+  if (!isSectionEnabled(tenant, "consulta-protocolo")) return null;
+  if (await isPollRateLimited(await headers())) return null;
+  const record = await findByProtocolWithKey(
+    tenant.slug,
+    protocolNumber,
+    accessKey,
+  );
+  return record?.updatedAt.toISOString() ?? null;
+}
 
 export async function lookupProtocolDetail(
   _previous: LookupState,
