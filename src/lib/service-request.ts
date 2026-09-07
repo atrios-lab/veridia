@@ -31,7 +31,7 @@ import {
   KIND_PREFIXES,
   type RequestKind,
   type ServiceRequestStatus,
-  statusAfterRequirement,
+  statusForRequirements,
   TERMINAL_SERVICE_REQUEST_STATUSES,
   TERMINAL_STATUSES,
 } from "@/core/request/kinds.ts";
@@ -717,6 +717,38 @@ async function touchRequest(tenantSlug: string, requestId: string) {
     );
 }
 
+/**
+ * Põe o andamento de acordo com as exigências abertas do pedido (ver
+ * `statusForRequirements`). Chamada depois de toda escrita que muda esse
+ * número: exigência registrada, cumprida ou excluída. Uma função em vez da
+ * regra repetida nas três, como `reconcileDeadlinePause` faz com o prazo.
+ */
+async function reconcileRequirementStatus(
+  tenantSlug: string,
+  requestId: string,
+  actorId: string,
+): Promise<void> {
+  const [request] = await db
+    .select({ status: serviceRequests.status })
+    .from(serviceRequests)
+    .where(
+      and(
+        eq(serviceRequests.tenantSlug, tenantSlug),
+        eq(serviceRequests.id, requestId),
+      ),
+    )
+    .limit(1);
+  if (!request) return;
+  const pending = (await listRequirements(tenantSlug, requestId)).filter(
+    (r) => r.status === "pending",
+  ).length;
+  const next = statusForRequirements(
+    request.status as ServiceRequestStatus,
+    pending,
+  );
+  if (next) await updateRequestStatus(tenantSlug, requestId, next, actorId);
+}
+
 /** The office raises a requirement. It starts, and stays, pending until the citizen answers it. */
 export async function registerRequirement(
   tenantSlug: string,
@@ -736,22 +768,9 @@ export async function registerRequirement(
     targetType: "service-request",
     targetId: requestId,
   });
-  // O andamento acompanha a exigência (ver `statusAfterRequirement`), aqui e
-  // não na action: quem registrar exigência de outro lugar deve mover o
-  // pedido do mesmo jeito.
-  const [request] = await db
-    .select({ status: serviceRequests.status })
-    .from(serviceRequests)
-    .where(
-      and(
-        eq(serviceRequests.tenantSlug, tenantSlug),
-        eq(serviceRequests.id, requestId),
-      ),
-    )
-    .limit(1);
-  const next =
-    request && statusAfterRequirement(request.status as ServiceRequestStatus);
-  if (next) await updateRequestStatus(tenantSlug, requestId, next, actorId);
+  // O andamento acompanha a exigência aqui, e não na action: quem registrar
+  // exigência de outro lugar move o pedido do mesmo jeito.
+  await reconcileRequirementStatus(tenantSlug, requestId, actorId);
   return created;
 }
 
@@ -796,6 +815,7 @@ export async function resolveRequirement(
     targetType: "service-request",
     targetId: requirement.requestId,
   });
+  await reconcileRequirementStatus(tenantSlug, requirement.requestId, actorId);
   return requirement.requestId;
 }
 
@@ -1048,6 +1068,7 @@ export async function deleteRequirement(
     targetType: "service-request",
     targetId: requirement.requestId,
   });
+  await reconcileRequirementStatus(tenantSlug, requirement.requestId, actorId);
   return { requestId: requirement.requestId, paths: files.map((f) => f.path) };
 }
 

@@ -13,7 +13,7 @@ import {
   phaseOfStatus,
   SERVICE_REQUEST_PHASES,
   SERVICE_REQUEST_STATUSES,
-  statusAfterRequirement,
+  statusForRequirements,
   statusLabel,
   suggestedNextStatuses,
   suggestedOmbudsmanStatuses,
@@ -262,19 +262,43 @@ test("an archived manifestation no longer asks for attention", () => {
 });
 
 test("registering a requirement moves the request to Com exigência", () => {
-  assert.equal(statusAfterRequirement("in-qualification"), "with-requirement");
-  assert.equal(statusAfterRequirement("pre-noted"), "with-requirement");
-  // A new requirement while the last one was awaited still reads as one.
   assert.equal(
-    statusAfterRequirement("awaiting-compliance"),
+    statusForRequirements("in-qualification", 1),
     "with-requirement",
   );
+  assert.equal(statusForRequirements("pre-noted", 1), "with-requirement");
+  // A new requirement while the last one was awaited still reads as one.
+  assert.equal(
+    statusForRequirements("awaiting-compliance", 1),
+    "with-requirement",
+  );
+  assert.equal(statusForRequirements("with-requirement", 2), null);
 });
 
-test("a requirement moves nothing when there is nothing to move", () => {
-  assert.equal(statusAfterRequirement("with-requirement"), null);
-  // Noting an exigência on a closed request does not reopen it by itself.
-  assert.equal(statusAfterRequirement("done"), null);
-  assert.equal(statusAfterRequirement("cancelled"), null);
-  assert.equal(statusAfterRequirement("archived"), null);
+test("closing the last requirement sends the request back to qualification", () => {
+  assert.equal(
+    statusForRequirements("with-requirement", 0),
+    "in-qualification",
+  );
+  assert.equal(
+    statusForRequirements("awaiting-compliance", 0),
+    "in-qualification",
+  );
+  // One still open: it stays where it is.
+  assert.equal(statusForRequirements("with-requirement", 1), null);
+});
+
+test("only the andamentos a requirement imposed come back from it", () => {
+  // The office moved on while an exigência sat open; closing it must not drag
+  // the request back into the analysis it already left.
+  assert.equal(statusForRequirements("registered", 0), null);
+  assert.equal(statusForRequirements("in-qualification", 0), null);
+});
+
+test("a requirement moves nothing on a closed request", () => {
+  // Noting or clearing an exigência does not reopen it by itself.
+  for (const status of ["done", "cancelled", "archived"] as const) {
+    assert.equal(statusForRequirements(status, 1), null);
+    assert.equal(statusForRequirements(status, 0), null);
+  }
 });
