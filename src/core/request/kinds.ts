@@ -205,7 +205,7 @@ export function isAllowedTransition(
  * A volta sai de "Com exigência" e de "Aguardando exigência", os dois
  * andamentos que a exigência impõe, e nunca de outro: um pedido que já seguiu
  * para o registro não volta para a análise porque a exigência foi fechada
- * depois. `null` quando não há o que mover — já está lá, ou o pedido está
+ * depois. `null` quando não há o que mover: já está lá, ou o pedido está
  * encerrado, e uma exigência mexida depois não o reabre sozinha.
  */
 export function statusForRequirements(
