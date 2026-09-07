@@ -13,6 +13,7 @@ import {
   phaseOfStatus,
   SERVICE_REQUEST_PHASES,
   SERVICE_REQUEST_STATUSES,
+  statusAfterRequirement,
   statusLabel,
   suggestedNextStatuses,
   suggestedOmbudsmanStatuses,
@@ -258,4 +259,22 @@ test("an archived manifestation no longer asks for attention", () => {
   assert.equal(isOpenStatus("ombudsman", "answered"), false);
   assert.equal(isOpenStatus("ombudsman", "new"), true);
   assert.equal(isOpenStatus("ombudsman", "in-review"), true);
+});
+
+test("registering a requirement moves the request to Com exigência", () => {
+  assert.equal(statusAfterRequirement("in-qualification"), "with-requirement");
+  assert.equal(statusAfterRequirement("pre-noted"), "with-requirement");
+  // A new requirement while the last one was awaited still reads as one.
+  assert.equal(
+    statusAfterRequirement("awaiting-compliance"),
+    "with-requirement",
+  );
+});
+
+test("a requirement moves nothing when there is nothing to move", () => {
+  assert.equal(statusAfterRequirement("with-requirement"), null);
+  // Noting an exigência on a closed request does not reopen it by itself.
+  assert.equal(statusAfterRequirement("done"), null);
+  assert.equal(statusAfterRequirement("cancelled"), null);
+  assert.equal(statusAfterRequirement("archived"), null);
 });

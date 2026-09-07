@@ -195,6 +195,22 @@ export function isAllowedTransition(
 }
 
 /**
+ * O andamento que uma exigência recém-registrada impõe ao pedido. Registrar a
+ * exigência já é dizer que o pedido está com exigência: deixar isso para um
+ * segundo clique é o que fazia a fila mostrar "Em qualificação" com exigência
+ * aberta, quando o operador esquecia de mover na mão.
+ *
+ * `null` quando não há o que mover: já está lá, ou o pedido está encerrado, e
+ * uma exigência anotada depois não é motivo para reabri-lo sozinha.
+ */
+export function statusAfterRequirement(
+  from: ServiceRequestStatus,
+): ServiceRequestStatus | null {
+  if (from === "with-requirement") return null;
+  return isOpenServiceRequestStatus(from) ? "with-requirement" : null;
+}
+
+/**
  * The five andamentos a manifestation may be in. Listed here rather than
  * derived from `STATUS_LABELS.ombudsman` below: that map keeps labels for
  * values nobody writes any more (see `appointment`), so its keys name what the

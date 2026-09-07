@@ -31,6 +31,7 @@ import {
   KIND_PREFIXES,
   type RequestKind,
   type ServiceRequestStatus,
+  statusAfterRequirement,
   TERMINAL_SERVICE_REQUEST_STATUSES,
   TERMINAL_STATUSES,
 } from "@/core/request/kinds.ts";
@@ -735,6 +736,22 @@ export async function registerRequirement(
     targetType: "service-request",
     targetId: requestId,
   });
+  // O andamento acompanha a exigência (ver `statusAfterRequirement`), aqui e
+  // não na action: quem registrar exigência de outro lugar deve mover o
+  // pedido do mesmo jeito.
+  const [request] = await db
+    .select({ status: serviceRequests.status })
+    .from(serviceRequests)
+    .where(
+      and(
+        eq(serviceRequests.tenantSlug, tenantSlug),
+        eq(serviceRequests.id, requestId),
+      ),
+    )
+    .limit(1);
+  const next =
+    request && statusAfterRequirement(request.status as ServiceRequestStatus);
+  if (next) await updateRequestStatus(tenantSlug, requestId, next, actorId);
   return created;
 }
 
