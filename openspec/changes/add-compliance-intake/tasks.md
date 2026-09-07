@@ -26,6 +26,6 @@
 ## 4. Verificação
 
 - [x] 4.1 `e2e/admin-compliance.spec.ts`: resposta salva e avisa na hora, sobrevive a sair e voltar, lista mostra status e aviso, exportar invisível para a serventia
-- [ ] 4.2 Rodar `pnpm db:migrate` no Homolog e abrir o módulo com o perfil Átrios e com o da serventia
+- [x] 4.2 Rodar `pnpm db:migrate` no Homolog (06/09/2026) e na produção (06/09/2026, depois do merge do #80: o deploy da Vercel só roda `next build`, e a Visão geral caiu até a tabela existir; o cartão passou a engolir a falha em vez de derrubar a tela)
 - [ ] 4.3 Exportar o JSON de uma serventia real e passar pelo gerador; ajustar `export.ts` no que o gerador recusar
 - [ ] 4.4 Confirmar com a Átrios a data de vigência do Provimento 243 (`PROVIMENTO_243_IN_FORCE`, hoje 22/08/2026)
