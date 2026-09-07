@@ -141,7 +141,8 @@ escopado ao tenant, e a criação DEVE (SHALL) ser auditada.
 ### Requirement: Requerimento em PDF e envio do assinado
 A tela de sucesso DEVE (SHALL) oferecer: (1) download do requerimento em PDF pré-preenchido (dados do
 pedido, serventia e protocolo impressos) para assinatura digital via Gov.br ou de
-próprio punho; (2) envio do requerimento assinado ali mesmo, como anexo do pedido — sem que a
+próprio punho — e, onde a assinatura de próprio punho for oferecida (PDF e telas), o aviso de que
+ela exige reconhecimento de firma em cartório, dispensado só na assinatura digital; (2) envio do requerimento assinado ali mesmo, como anexo do pedido — sem que a
 falta do envio trave o registro do pedido; (3) os três próximos passos numerados. O download
 do PDF DEVE (SHALL) exigir a chave de acesso.
 

@@ -17,6 +17,7 @@ import {
   formatPhone,
   publicServiceRequestSchema,
 } from "@/core/request/form.ts";
+import { HANDWRITTEN_SIGNATURE_CAVEAT } from "@/core/request/requerimento.ts";
 import type { Attribution } from "@/core/tenant/schema.ts";
 import { Icon } from "../_components/icon.tsx";
 import { ProtocolReveal } from "../_components/protocol-reveal.tsx";
@@ -720,6 +721,9 @@ function SuccessScreen({
           <p className="text-[12px] leading-relaxed text-brand-muted">
             Digitalmente pelo Gov.br (assinador.iti.br), ou imprima e assine de
             próprio punho.
+          </p>
+          <p className="mt-1 text-[11.5px] leading-relaxed text-brand-faint">
+            {HANDWRITTEN_SIGNATURE_CAVEAT}
           </p>
           <div className="mt-2.5 flex flex-wrap gap-2">
             <form action="/solicitar/requerimento" method="post">

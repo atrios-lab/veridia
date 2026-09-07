@@ -165,6 +165,8 @@ test("the data rights receipt keeps its key in the body", () => {
 test("the signature block says how to sign it, and who signs", () => {
   const document = buildRequerimento(cartorioMarinho, marriage, data);
   assert.match(document.signature.join("\n"), /Gov\.br/);
+  // Assinar em papel não dispensa reconhecer a firma; o PDF precisa dizer.
+  assert.match(document.signature.join("\n"), /reconheça a firma/);
   assert.equal(document.signee, "Maria José da Silva");
 });
 
