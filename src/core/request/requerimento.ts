@@ -12,6 +12,16 @@ import type { DataRight } from "./kinds.ts";
  * is what lets the wording be read and tested: the drawing code downstream
  * only places what this returns.
  */
+/**
+ * Said wherever the citizen is told they may print and sign by hand. Only the
+ * digital signature (Gov.br ou e-Notariado) dispenses with recognizing the
+ * signature: whoever signs on paper still has to take it to a cartório, and
+ * discovering that at the counter is a wasted trip.
+ */
+export const HANDWRITTEN_SIGNATURE_CAVEAT =
+  "Se assinar de próprio punho, reconheça a firma no cartório mais próximo. " +
+  "A dispensa de reconhecimento vale só para a assinatura digital (Gov.br ou e-Notariado).";
+
 export interface RequerimentoRow {
   label: string;
   value: string;
@@ -169,6 +179,7 @@ export function buildRequerimento(
       "Assine este requerimento pelo Gov.br (assinador.iti.br) ou imprima e " +
         "assine de próprio punho. Depois, envie o arquivo assinado pela " +
         "consulta do protocolo ou entregue o papel no balcão da serventia.",
+      HANDWRITTEN_SIGNATURE_CAVEAT,
     ],
     footer: `${tenant.name} · Protocolo ${data.protocolNumber} · ${tenant.legalFooter}`,
   };

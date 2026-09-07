@@ -2,6 +2,7 @@
 
 import { Fragment, useActionState, useEffect, useRef, useState } from "react";
 import type { PauseReason } from "@/core/request/deadline.ts";
+import { HANDWRITTEN_SIGNATURE_CAVEAT } from "@/core/request/requerimento.ts";
 import { useLiveVersion } from "../../_components/use-live-version.ts";
 import { Icon } from "../_components/icon.tsx";
 import {
@@ -742,6 +743,9 @@ function SignCard({
         <span className="text-[15px] leading-relaxed">
           <strong>Assine</strong> pelo Gov.br (em assinador.iti.br) ou imprima e
           assine à mão.
+          <span className="mt-1 block text-[13px] text-brand-muted">
+            {HANDWRITTEN_SIGNATURE_CAVEAT}
+          </span>
         </span>
       </div>
       <div className="h-px bg-brand-border" />

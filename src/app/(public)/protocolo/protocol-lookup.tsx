@@ -8,6 +8,7 @@ import {
   manifestationLabel,
 } from "@/core/request/channels.ts";
 import { DEADLINE_CAVEAT, type PauseReason } from "@/core/request/deadline.ts";
+import { HANDWRITTEN_SIGNATURE_CAVEAT } from "@/core/request/requerimento.ts";
 import { Icon } from "../_components/icon.tsx";
 import { CopyField } from "../_components/protocol-reveal.tsx";
 import { ProtocolSearchButton } from "../_components/protocol-search-button.tsx";
@@ -1096,6 +1097,9 @@ function RequestDetail({ result }: { result: ServiceRequestDetail }) {
                     <strong className="text-brand-primary">Assine</strong> pelo
                     Gov.br em assinador.iti.br, ou imprima e assine de próprio
                     punho.
+                    <span className="mt-1 block text-[11.5px] text-brand-faint">
+                      {HANDWRITTEN_SIGNATURE_CAVEAT}
+                    </span>
                   </div>
                 </div>
 
