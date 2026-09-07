@@ -9,9 +9,23 @@ import { OFFICE_TIME_ZONE } from "@/lib/tenant.ts";
  * The Visão geral card for the Provimento intake. Same mould as "Continuar
  * de onde parou": eyebrow, the figure, a line, a small button. Once the
  * office has sent its answers the count gives way to the date.
+ *
+ * A card that cannot load renders nothing rather than throwing: the Visão
+ * geral is the whole panel's front door, and a secondary card must never be
+ * the reason it fails to open. Same posture as `livePublications` on the
+ * public home. This is exactly what took the panel down on 06/09/2026: the
+ * deploy shipped before the migration reached production, and the missing
+ * table turned every office's home screen into a 500.
  */
 export async function ComplianceCard({ tenant }: { tenant: Tenant }) {
-  const { intake, answers } = await loadIntake(tenant);
+  let loaded: Awaited<ReturnType<typeof loadIntake>>;
+  try {
+    loaded = await loadIntake(tenant);
+  } catch (error) {
+    console.error("compliance-card.load", error);
+    return null;
+  }
+  const { intake, answers } = loaded;
 
   if (intake.submittedAt) {
     return (
