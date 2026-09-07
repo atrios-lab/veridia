@@ -53,6 +53,15 @@ export const cartorioMarinho: Tenant = parseTenant({
       dark: "/logos/CM-Sublogo-branco.png",
     },
   },
+  // Receita bruta semestral levantada na API pública do Justiça Aberta
+  // durante a prospecção. A serventia confirma ou corrige na Seção 1 do
+  // módulo de adequação; é ponto de partida, não resposta.
+  revenue: {
+    semester: 98562.53,
+    previousSemester: 102030.33,
+    source: "justica-aberta",
+    extractedOn: "2026-07-10",
+  },
   legalFooter:
     "Obedecendo à Lei de Acesso à Informação (LAI), Lei nº 12.527/2011, Ato normativo nº " +
     "0007427-48.2018.2.00.0000, Sessão 329ª, Resolução CNJ nº 215/2015, Lei nº 13.709/2018 (LGPD) " +

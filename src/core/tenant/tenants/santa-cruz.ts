@@ -69,6 +69,15 @@ export const cartorioSantaCruz2: Tenant = parseTenant({
       dark: "/logos/livro-bomjesus-branco.png",
     },
   },
+  // Receita bruta semestral levantada na API pública do Justiça Aberta
+  // durante a prospecção. A serventia confirma ou corrige na Seção 1 do
+  // módulo de adequação; é ponto de partida, não resposta.
+  revenue: {
+    semester: 439130.42,
+    previousSemester: 459557.72,
+    source: "justica-aberta",
+    extractedOn: "2026-07-10",
+  },
   legalFooter:
     "Obedecendo à Lei de Acesso à Informação (LAI), Lei nº 12.527/2011, Lei nº 13.709/2018 (LGPD) " +
     "e Resolução CNJ nº 363/2020.",

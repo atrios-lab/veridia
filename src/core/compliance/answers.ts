@@ -1,5 +1,6 @@
 import { isValidCpf } from "../request/form.ts";
 import { isValidCnpj } from "../tenant/pix.ts";
+import type { Tenant } from "../tenant/schema.ts";
 import {
   type Answers,
   type FieldContext,
@@ -30,6 +31,41 @@ export interface PrefillSource {
   ownerName: string;
   dpoName: string;
   dpoEmail: string;
+  /**
+   * Gross semestral revenue as surveyed at the source, when there is one.
+   * A semester the source had no declaration for is left out: see
+   * `revenueAnswers` below for why that is not the same as zero.
+   */
+  revenue?: {
+    semester: number;
+    previousSemester?: number;
+    extractedOn: string;
+  };
+}
+
+/**
+ * The two revenue fields of Seção 1, from what the survey found.
+ *
+ * A figure of zero, or none at all, produces no answer rather than the number
+ * zero. Zero reads as a complete declaration all the way down: it passes
+ * `classify()`, lands the office in Classe 1 subclasse A with the longest
+ * term, and reaches a signed document, out of a declaration nobody filed. An
+ * absent field, by contrast, keeps the section open and shows no class until
+ * somebody types one. The two semesters are judged apart: the office may have
+ * declared one and not the other.
+ */
+function revenueAnswers(
+  revenue: PrefillSource["revenue"],
+): Record<string, Value> {
+  if (!revenue) return {};
+  const answers: Record<string, Value> = {};
+  if (revenue.semester > 0) {
+    answers.revenueLastSemester = String(revenue.semester);
+  }
+  if (revenue.previousSemester && revenue.previousSemester > 0) {
+    answers.revenuePreviousSemester = String(revenue.previousSemester);
+  }
+  return answers;
 }
 
 export function prefillAnswers(source: PrefillSource): Answers {
@@ -43,6 +79,7 @@ export function prefillAnswers(source: PrefillSource): Answers {
       phone: source.phone,
       email: source.email,
       attributions: [...source.attributions],
+      ...revenueAnswers(source.revenue),
     },
     titular: { name: source.ownerName },
     encarregado: {
@@ -336,4 +373,41 @@ function validateText(
     return { error: "O CNS tem seis dígitos (ex.: 09.473-0)." };
   }
   return { value };
+}
+
+/**
+ * What the Seção 1 screen says under each revenue field about where the
+ * figure came from. Absent when the office was never surveyed: there is
+ * nothing to attribute and nothing to date.
+ *
+ * "missing" is the semester the survey looked at and found no declaration
+ * for. It earns a note of its own precisely because the field is empty: an
+ * empty field with no explanation reads as a question nobody answered, and
+ * this one was asked at the source and came back blank.
+ */
+export type RevenueOrigin =
+  | { kind: "value"; value: string; extractedOn: string }
+  | { kind: "missing"; extractedOn: string };
+
+export function revenueOrigins(
+  /** Only the revenue matters here; the rest of the office is not read. */
+  tenant: Pick<Tenant, "revenue">,
+): Record<string, RevenueOrigin> {
+  const revenue = tenant.revenue;
+  if (!revenue) return {};
+  const { extractedOn } = revenue;
+  return {
+    revenueLastSemester:
+      revenue.semester > 0
+        ? { kind: "value", value: String(revenue.semester), extractedOn }
+        : { kind: "missing", extractedOn },
+    revenuePreviousSemester:
+      revenue.previousSemester && revenue.previousSemester > 0
+        ? {
+            kind: "value",
+            value: String(revenue.previousSemester),
+            extractedOn,
+          }
+        : { kind: "missing", extractedOn },
+  };
 }
