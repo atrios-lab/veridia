@@ -29,12 +29,18 @@ test.describe("adequação ao Provimento", () => {
     await expect(page).toHaveURL(`${baseURL}/admin`);
   }
 
-  // The intake is one row per office; every test starts from none.
-  test.afterEach(async () => {
+  // The intake is one row per office. Cleared before the run as well as
+  // after each test: someone poking at the panel by hand leaves a row behind,
+  // and a suite that only cleans up after itself fails on their leftovers
+  // instead of on a defect.
+  async function clearIntake() {
     const sql = postgres(process.env.DATABASE_URL as string);
     await sql`delete from compliance_intakes where tenant_slug = 'cartorio-marinho'`;
     await sql.end();
-  });
+  }
+
+  test.beforeAll(clearIntake);
+  test.afterEach(clearIntake);
 
   test("an answer saves itself, warns at once, and is there when the office comes back", async ({
     page,
@@ -71,5 +77,37 @@ test.describe("adequação ao Provimento", () => {
     await expect(page.getByRole("link", { name: /Exportar JSON/ })).toHaveCount(
       0,
     );
+  });
+
+  test("a receita levantada vem preenchida, e a fronteira avisa quando o valor muda de classe", async ({
+    page,
+  }) => {
+    await signIn(page);
+    await page.goto(`${baseURL}/admin/adequacao/serventia`);
+
+    // O que a prospecção levantou para o Marinho no Justiça Aberta, com a
+    // data da extração à vista: é oferta, não afirmação nossa.
+    const receita = page.getByLabel("Receita bruta do último semestre (R$)");
+    await expect(receita).toHaveValue("98562.53");
+    await expect(
+      page.getByText("Veio do Justiça Aberta, extraído em 10/07/2026.").first(),
+    ).toBeVisible();
+
+    // R$ 3.767,52 acima do teto da Classe 1: a fronteira aparece e diz o que
+    // muda de um lado para o outro.
+    await receita.fill("303767.52");
+    await expect(
+      page.getByText("do limite entre a Classe 1 e a Classe 2"),
+    ).toBeVisible();
+    // E a atribuição ao Justiça Aberta some do campo que a serventia mudou.
+    await expect(
+      page.getByText("Veio do Justiça Aberta, extraído em 10/07/2026."),
+    ).toHaveCount(1);
+
+    // Longe do teto, nenhum aviso.
+    await receita.fill("120000");
+    await expect(
+      page.getByText("do limite entre a Classe 1 e a Classe 2"),
+    ).toHaveCount(0);
   });
 });

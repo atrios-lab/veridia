@@ -210,3 +210,31 @@ test("optionalSections only offers what the attribution grants", () => {
   assert.ok(!optionalSections(notasOnly).includes("editais"));
   assert.ok(optionalSections(cartorioMarinho).includes("editais"));
 });
+
+test("a receita levantada é opcional, e ausência nunca se escreve como zero", () => {
+  // A serventia atendida traz o que a prospecção levantou.
+  const marinho = parseTenant({ ...cartorioMarinho });
+  assert.equal(marinho.revenue?.semester, 98562.53);
+  assert.equal(marinho.revenue?.extractedOn, "2026-07-10");
+
+  // A serventia nunca levantada simplesmente não tem o campo.
+  const semReceita: Record<string, unknown> = { ...cartorioMarinho };
+  delete semReceita.revenue;
+  assert.equal(parseTenant(semReceita).revenue, undefined);
+
+  // Semestre sem declaração fica de fora. Zero é recusado no schema, porque
+  // classificaria a serventia (Classe 1, subclasse A) a partir de declaração
+  // que ninguém enviou.
+  const comZero = {
+    ...cartorioMarinho,
+    revenue: { ...cartorioMarinho.revenue, semester: 0 },
+  };
+  assert.throws(() => parseTenant(comZero));
+
+  // E a data da extração tem de ser uma data.
+  const semData = {
+    ...cartorioMarinho,
+    revenue: { ...cartorioMarinho.revenue, extractedOn: "julho de 2026" },
+  };
+  assert.throws(() => parseTenant(semData));
+});

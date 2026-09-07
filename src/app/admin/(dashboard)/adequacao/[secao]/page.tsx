@@ -1,5 +1,6 @@
 import { notFound } from "next/navigation";
 import { can } from "@/core/auth/roles.ts";
+import { revenueOrigins } from "@/core/compliance/answers.ts";
 import { findSection } from "@/core/compliance/sections.ts";
 import { loadIntake } from "@/lib/compliance.ts";
 import { getSession } from "@/lib/session.ts";
@@ -40,7 +41,13 @@ export default async function SectionPage({
         {section.id === "anexos" ? (
           <Attachments attachments={intake.attachments} />
         ) : (
-          <SectionForm sectionId={section.id} answers={answers} />
+          <SectionForm
+            sectionId={section.id}
+            answers={answers}
+            revenueOrigins={
+              section.id === "serventia" ? revenueOrigins(tenant) : undefined
+            }
+          />
         )}
       </main>
     </>

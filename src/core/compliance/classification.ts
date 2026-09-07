@@ -75,6 +75,65 @@ export function classify(
   };
 }
 
+/** Which class a ceiling separates, and what each side costs in days. */
+export interface ClassBoundary {
+  /** The ceiling itself: the two of art. 16. */
+  limit: number;
+  /** How far the revenue sits from it, always positive. */
+  distance: number;
+  /** Whether the revenue is on the lower side of the ceiling. */
+  below: boolean;
+  lower: { classe: 1 | 2; stage1Days: number };
+  upper: { classe: 2 | 3; stage1Days: number };
+}
+
+/**
+ * Whether a revenue sits close enough to a class ceiling that a correction
+ * to it would move the office across.
+ *
+ * The prospecting survey of the 218 offices in Rio Grande do Norte has eight
+ * within a tenth of a ceiling, two of them within a few thousand reais:
+ * Jucurutu lands in Classe 2 by R$ 3.767 and Santo Antônio stays in Classe 1
+ * by R$ 2.444. On that line the term for Etapa 1 changes by sixty days and the
+ * appointment of a data protection officer stops being optional. The screen
+ * says so; it never refuses the number, which is the office's to declare.
+ *
+ * A tenth is the width the survey suggested, not a rule from the norm: it
+ * catches those eight without crying wolf at the other 210.
+ */
+export function classBoundary(
+  revenue: number,
+  tolerance = 0.1,
+): ClassBoundary | null {
+  if (!Number.isFinite(revenue) || revenue <= 0) return null;
+  const ceilings = [
+    {
+      limit: CLASS_ONE_LIMIT,
+      lower: { classe: 1, stage1Days: STAGE1_DAYS[1] },
+      upper: { classe: 2, stage1Days: STAGE1_DAYS[2] },
+    },
+    {
+      limit: CLASS_TWO_LIMIT,
+      lower: { classe: 2, stage1Days: STAGE1_DAYS[2] },
+      upper: { classe: 3, stage1Days: STAGE1_DAYS[3] },
+    },
+  ] as const;
+
+  for (const ceiling of ceilings) {
+    const distance = Math.abs(revenue - ceiling.limit);
+    if (distance <= ceiling.limit * tolerance) {
+      return {
+        limit: ceiling.limit,
+        distance,
+        below: revenue <= ceiling.limit,
+        lower: { ...ceiling.lower },
+        upper: { ...ceiling.upper },
+      };
+    }
+  }
+  return null;
+}
+
 export function classificationOf(answers: Answers): Classification | null {
   return classify(Number(text(answers, "serventia", "revenueLastSemester")));
 }

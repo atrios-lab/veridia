@@ -1,5 +1,6 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
+import type { PrefillSource } from "./answers.ts";
 import {
   changedAfterSubmit,
   effectiveAnswers,
@@ -7,14 +8,15 @@ import {
   prefillAnswers,
   progress,
   resumeSection,
+  revenueOrigins,
   sectionStatus,
 } from "./answers.ts";
-import { classify } from "./classification.ts";
+import { classBoundary, classificationOf, classify } from "./classification.ts";
 import { toGeneratorJson } from "./export.ts";
 import { detectPendencies, unknownAnswers } from "./pendencies.ts";
 import { type Answers, findSection, SECTIONS } from "./sections.ts";
 
-const PREFILL = prefillAnswers({
+const PREFILL_SOURCE: PrefillSource = {
   officialName: "Ofício Único de Bom Jesus",
   tradeName: "Cartório de Bom Jesus",
   cns: "09.473-0",
@@ -26,7 +28,9 @@ const PREFILL = prefillAnswers({
   ownerName: "Maria Clara Fonseca",
   dpoName: "Liana Andrade",
   dpoEmail: "dpo@exemplo.com",
-});
+};
+
+const PREFILL = prefillAnswers(PREFILL_SOURCE);
 
 function section(id: string) {
   const found = findSection(id);
@@ -260,4 +264,118 @@ test("the export speaks the generator's vocabulary", () => {
   assert.equal(json.data, "5 de outubro de 2026");
   assert.equal(json.data_curta, "05/10/2026");
   assert.equal(json.sem_marca, true);
+});
+
+test("art. 16: a fronteira só aparece quando uma correção atravessaria a classe", () => {
+  // Os dois casos reais da base do RN: Jucurutu passa por R$ 3.767 e Santo
+  // Antônio fica por R$ 2.444.
+  const jucurutu = classBoundary(303_767.52);
+  assert.equal(jucurutu?.limit, 300_000);
+  assert.equal(jucurutu?.below, false);
+  assert.equal(Math.round(jucurutu?.distance ?? 0), 3768);
+  assert.deepEqual(jucurutu?.lower, { classe: 1, stage1Days: 300 });
+  assert.deepEqual(jucurutu?.upper, { classe: 2, stage1Days: 240 });
+
+  const santoAntonio = classBoundary(297_556.06);
+  assert.equal(santoAntonio?.below, true);
+  assert.equal(santoAntonio?.limit, 300_000);
+
+  // O teto de cima separa Classe 2 de Classe 3.
+  const natal = classBoundary(1_536_557.95);
+  assert.equal(natal?.limit, 1_500_000);
+  assert.deepEqual(natal?.lower, { classe: 2, stage1Days: 240 });
+  assert.deepEqual(natal?.upper, { classe: 3, stage1Days: 180 });
+
+  // Longe de qualquer teto, e valores que não classificam ninguém.
+  assert.equal(classBoundary(98_562.53), null);
+  assert.equal(classBoundary(0), null);
+  assert.equal(classBoundary(Number.NaN), null);
+});
+
+test("a receita levantada preenche os dois semestres, e zero não preenche nada", () => {
+  const comReceita = prefillAnswers({
+    ...PREFILL_SOURCE,
+    revenue: {
+      semester: 250_348.82,
+      previousSemester: 156_199.71,
+      extractedOn: "2026-07-10",
+    },
+  });
+  assert.equal(comReceita.serventia.revenueLastSemester, "250348.82");
+  assert.equal(comReceita.serventia.revenuePreviousSemester, "156199.71");
+
+  // Major Sales: declarou o semestre atual, não o anterior. Ausência não é
+  // zero, então o campo simplesmente não nasce.
+  const semAnterior = prefillAnswers({
+    ...PREFILL_SOURCE,
+    revenue: { semester: 633_886.4, extractedOn: "2026-07-10" },
+  });
+  assert.equal(semAnterior.serventia.revenueLastSemester, "633886.4");
+  assert.equal(semAnterior.serventia.revenuePreviousSemester, undefined);
+
+  // Zero na origem é declaração que não foi enviada: nunca vira o número zero,
+  // que classificaria a serventia em Classe 1 subclasse A sem ninguém declarar.
+  const zerado = prefillAnswers({
+    ...PREFILL_SOURCE,
+    revenue: {
+      semester: 0,
+      previousSemester: 51_142.27,
+      extractedOn: "2026-07-10",
+    },
+  });
+  assert.equal(zerado.serventia.revenueLastSemester, undefined);
+  assert.equal(zerado.serventia.revenuePreviousSemester, "51142.27");
+  assert.equal(classificationOf(effectiveAnswers({}, zerado)), null);
+
+  // Serventia nunca levantada continua com os dois campos vazios.
+  assert.equal(PREFILL.serventia.revenueLastSemester, undefined);
+});
+
+test("o que a serventia digita vence a receita levantada", () => {
+  const prefill = prefillAnswers({
+    ...PREFILL_SOURCE,
+    revenue: { semester: 250_348.82, extractedOn: "2026-07-10" },
+  });
+  const answers = effectiveAnswers(
+    { serventia: { revenueLastSemester: "310000" } },
+    prefill,
+  );
+  assert.equal(answers.serventia.revenueLastSemester, "310000");
+  assert.equal(classificationOf(answers)?.classe, 2);
+});
+
+test("a nota de origem sabe o que foi levantado e o que não foi", () => {
+  // Bom Jesus: os dois semestres declarados.
+  const doisSemestres = revenueOrigins({
+    revenue: {
+      semester: 250_348.82,
+      previousSemester: 156_199.71,
+      source: "justica-aberta",
+      extractedOn: "2026-07-10",
+    },
+  });
+  assert.deepEqual(doisSemestres.revenueLastSemester, {
+    kind: "value",
+    value: "250348.82",
+    extractedOn: "2026-07-10",
+  });
+  assert.equal(doisSemestres.revenuePreviousSemester?.kind, "value");
+
+  // Major Sales: declarou o atual, não o anterior. O campo vazio ganha nota
+  // própria, senão parece pergunta que ninguém fez.
+  const semAnterior = revenueOrigins({
+    revenue: {
+      semester: 633_886.4,
+      source: "justica-aberta",
+      extractedOn: "2026-07-10",
+    },
+  });
+  assert.equal(semAnterior.revenueLastSemester?.kind, "value");
+  assert.deepEqual(semAnterior.revenuePreviousSemester, {
+    kind: "missing",
+    extractedOn: "2026-07-10",
+  });
+
+  // Serventia nunca levantada: nada a atribuir, nada a datar.
+  assert.deepEqual(revenueOrigins({ revenue: undefined }), {});
 });

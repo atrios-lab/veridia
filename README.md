@@ -85,6 +85,24 @@ Um host não mapeado cai no `DEFAULT_TENANT`. Toda serventia nova precisa declar
 Uma serventia nova é um arquivo em `src/core/tenant/tenants/` mais uma linha no registro de
 `src/core/tenant/resolve.ts`. O teste de ponta a ponta passa a cobri-la sem nenhum caso novo.
 
+## Receita bruta da serventia, a cada semestre
+
+O campo `revenue` da config carrega a receita bruta semestral levantada na API pública do Justiça
+Aberta, e é dela que o módulo de adequação pré-preenche a Seção 1. O número não se atualiza sozinho:
+a serventia redeclara em janeiro e em julho, até o 10º dia útil.
+
+Quando a Átrios refizer o levantamento, atualize os três valores juntos, no mesmo commit:
+`semester`, `previousSemester` e `extractedOn`. A data é o que a tela mostra à titular, e um valor
+novo com data velha é pior que valor velho: passa por atual sem ser.
+
+Duas regras que o código já sustenta e que valem ao preencher à mão:
+
+- **Semestre sem declaração na origem fica de fora, nunca como `0`.** Zero é um número que
+  classifica a serventia (Classe 1, subclasse A, o prazo mais longo) a partir de uma declaração que
+  ninguém enviou. Ausente, o campo aparece vazio na tela e diz por quê.
+- **O valor é ponto de partida, não resposta.** A serventia confirma ou corrige na Seção 1, e o que
+  vai para os documentos é o que ficar no campo.
+
 ## Deploy
 
 As mesmas variáveis do `.env.local` precisam existir no ambiente do deploy. Sem elas o painel não

@@ -182,6 +182,31 @@ export const TenantSchema = z.object({
       isValidPixCity,
       `O município deve ter até ${PIX_CITY_MAX_LENGTH} caracteres (sem acento).`,
     ),
+  /**
+   * The office's gross semestral revenue, as the Átrios levantou it from the
+   * Justiça Aberta's public API during prospecting. Feeds the Provimento
+   * intake's Seção 1, where the office confirms or corrects it: it is a
+   * starting point, never the answer, and the number that reaches the
+   * documents is whatever the office leaves in the field.
+   *
+   * Optional because an office registered before the survey, or one whose
+   * numbers were never looked up, simply gets the fields blank. `extractedOn`
+   * is not decoration: the figure is redeclared every January and July, and
+   * the panel shows the date so a stale number reads as dated rather than as
+   * an assertion of ours.
+   *
+   * A semester with no declaration at the source is left out entirely, never
+   * written as zero: zero is a number that would classify the office (Classe
+   * 1, subclasse A, the longest term) out of a declaration nobody made.
+   */
+  revenue: z
+    .object({
+      semester: z.number().positive(),
+      previousSemester: z.number().positive().optional(),
+      source: z.literal("justica-aberta"),
+      extractedOn: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+    })
+    .optional(),
   // Street address of the serventia, for the Contato page's map card and
   // "Como chegar" route. Optional: offices registered before this field
   // existed have no value to backfill, and there is no migration for it:

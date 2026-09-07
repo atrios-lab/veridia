@@ -75,6 +75,7 @@ export function prefillFor(tenant: Tenant): Answers {
     ownerName: tenant.owner.name,
     dpoName: tenant.dpo.name,
     dpoEmail: tenant.dpo.email,
+    revenue: tenant.revenue,
   });
 }
 

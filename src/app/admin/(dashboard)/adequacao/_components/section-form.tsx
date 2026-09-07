@@ -3,7 +3,11 @@
 import Link from "next/link";
 import { useId, useRef, useState, useTransition } from "react";
 import { toast } from "sonner";
-import { unknownLabel } from "@/core/compliance/answers.ts";
+import { type RevenueOrigin, unknownLabel } from "@/core/compliance/answers.ts";
+import {
+  type ClassBoundary,
+  classBoundary,
+} from "@/core/compliance/classification.ts";
 import {
   detectPendencies,
   type Pendency,
@@ -62,10 +66,13 @@ type SaveStatus = "idle" | "saving" | "saved";
 export function SectionForm({
   sectionId,
   answers: initial,
+  revenueOrigins = {},
 }: {
   sectionId: string;
   /** Effective answers of every section: conditions read across sections. */
   answers: Answers;
+  /** Where each revenue figure of Seção 1 came from, when it was surveyed. */
+  revenueOrigins?: Record<string, RevenueOrigin>;
 }) {
   const [answers, setAnswers] = useState<Answers>(initial);
   const [status, setStatus] = useState<SaveStatus>("idle");
@@ -152,6 +159,7 @@ export function SectionForm({
                 value={own[field.name]}
                 ctx={ctx}
                 warnings={warnings[field.name] ?? []}
+                origin={revenueOrigins[field.name]}
                 onSave={(value) => save(field.name, value)}
               />
             ))}
@@ -199,12 +207,15 @@ function Field({
   value,
   ctx,
   warnings,
+  origin,
   onSave,
 }: {
   field: FieldDef;
   value: Value | undefined;
   ctx: FieldContext;
   warnings: Pendency[];
+  /** Only the two revenue fields carry one; see revenueOrigins. */
+  origin?: RevenueOrigin;
   onSave: (value: Value) => void;
 }) {
   const id = `${field.name}`;
@@ -226,7 +237,14 @@ function Field({
         </label>
         {field.help && <Help text={field.help} />}
       </span>
-      <Control id={id} field={field} value={value} ctx={ctx} onSave={onSave} />
+      <Control
+        id={id}
+        field={field}
+        value={value}
+        ctx={ctx}
+        origin={origin}
+        onSave={onSave}
+      />
       {warnings.map((w) => (
         <Notice key={w.code} pendency={w} />
       ))}
@@ -260,6 +278,81 @@ function Help({ text }: { text: string }) {
   );
 }
 
+/** "10/07/2026" from the ISO date the survey was stamped with. */
+function shortDate(iso: string): string {
+  const [y, m, d] = iso.split("-");
+  return y && m && d ? `${d}/${m}/${y}` : iso;
+}
+
+const MONEY = new Intl.NumberFormat("pt-BR", {
+  style: "currency",
+  currency: "BRL",
+});
+
+/**
+ * Where a revenue figure came from, under the field it filled.
+ *
+ * It stops as soon as the office types something of their own: from that
+ * moment the number is theirs, and attributing it to the survey would be
+ * false. Comparing against the surveyed value is what detects that, and it
+ * survives a reload, unlike a flag that would only live in this component.
+ */
+function OriginNote({
+  origin,
+  value: current,
+}: {
+  origin: RevenueOrigin;
+  /** What is in the box right now, not what was last saved. */
+  value: string;
+}) {
+  if (origin.kind === "value") {
+    if (current !== origin.value) return null;
+    return (
+      <p className="text-[11.5px] leading-relaxed text-admin-muted">
+        Veio do Justiça Aberta, extraído em {shortDate(origin.extractedOn)}. Se
+        você declarou ou corrigiu depois disso, ajuste aqui.
+      </p>
+    );
+  }
+  if (current !== "") return null;
+  return (
+    <p className="text-[11.5px] leading-relaxed text-admin-muted">
+      O Justiça Aberta não tinha declaração sua para este semestre na extração
+      de {shortDate(origin.extractedOn)}. Informe o valor.
+    </p>
+  );
+}
+
+/**
+ * The office is close enough to a class ceiling that a correction would move
+ * it across. Says which line, how far, and what changes on the other side:
+ * a warning that only said "you are close" would leave the office to guess
+ * whether being close matters.
+ */
+function BoundaryNote({ boundary }: { boundary: ClassBoundary | null }) {
+  if (!boundary) return null;
+  const { lower, upper } = boundary;
+  // Only the first ceiling changes whether the encarregado is optional: the
+  // dispensation of Provimento 214 belongs to Classe 1 alone.
+  const dpoTurns = lower.classe === 1;
+  return (
+    <output className="flex items-start gap-2.5 rounded-[10px] bg-admin-warning-bg px-3.5 py-2.5 text-[12.5px] leading-relaxed text-admin-warning-text">
+      <AdminIcon name="alert" className="mt-0.5 h-4 w-4 flex-none" />
+      <span>
+        <strong className="block font-bold">
+          Este valor está a {MONEY.format(boundary.distance)} do limite entre a
+          Classe {lower.classe} e a Classe {upper.classe}.
+        </strong>
+        {`Na Classe ${lower.classe} o prazo da Etapa 1 é de ${lower.stage1Days} dias`}
+        {dpoTurns ? " e a nomeação do encarregado é opcional. " : ". "}
+        {`Na Classe ${upper.classe} são ${upper.stage1Days} dias`}
+        {dpoTurns ? " e a nomeação é obrigatória. " : ". "}
+        Confira o valor que você declarou antes de assinar.
+      </span>
+    </output>
+  );
+}
+
 function Notice({ pendency }: { pendency: Pendency }) {
   const tone =
     pendency.severity === "critical"
@@ -287,12 +380,14 @@ function Control({
   field,
   value,
   ctx,
+  origin,
   onSave,
 }: {
   id: string;
   field: FieldDef;
   value: Value | undefined;
   ctx: FieldContext;
+  origin?: RevenueOrigin;
   onSave: (value: Value) => void;
 }) {
   switch (field.type) {
@@ -351,7 +446,13 @@ function Control({
       );
     default:
       return (
-        <TextControl id={id} field={field} value={value} onSave={onSave} />
+        <TextControl
+          id={id}
+          field={field}
+          value={value}
+          origin={origin}
+          onSave={onSave}
+        />
       );
   }
 }
@@ -365,11 +466,14 @@ function TextControl({
   id,
   field,
   value,
+  origin,
   onSave,
 }: {
   id: string;
   field: FieldDef;
   value: Value | undefined;
+  /** Only the two revenue fields of Seção 1 carry one. */
+  origin?: RevenueOrigin;
   onSave: (value: Value) => void;
 }) {
   const stored = typeof value === "string" ? value : "";
@@ -423,6 +527,13 @@ function TextControl({
           onBlur={commit}
           className={INPUT}
         />
+      )}
+      {origin && <OriginNote origin={origin} value={draft} />}
+      {/* Só a receita do último semestre decide classe, e é dela que a
+          fronteira fala. Lida do rascunho, então acompanha o que está sendo
+          digitado em vez do último valor salvo. */}
+      {field.name === "revenueLastSemester" && (
+        <BoundaryNote boundary={classBoundary(Number(draft))} />
       )}
       {field.unknown && (
         <label className="flex items-center gap-2 text-[12px] text-admin-muted">
