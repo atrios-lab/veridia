@@ -132,6 +132,16 @@ test("manifestação anônima sem nome usa o rótulo padrão", () => {
   assert.equal(ranked.displayName, "manifestação anônima");
 });
 
+test("pedido em pagamento informado ganha resumo e ação de conferência, na rotina", () => {
+  const reported = item({
+    status: "payment-reported",
+    hasFulfilledPendingRequirement: false,
+  });
+  const [ranked] = rankDeskItems([reported], TODAY, NOW);
+  assert.equal(ranked.summary, "Pagamento informado, comprovante a conferir");
+  assert.equal(ranked.actionLabel, "Conferir pagamento");
+});
+
 test("corta nos seis mais urgentes", () => {
   const items = Array.from({ length: 9 }, (_, i) =>
     item({

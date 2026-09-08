@@ -25,6 +25,7 @@ import { db } from "@/db/index.ts";
 import {
   appointments,
   auditLog,
+  serviceRequestAttachments,
   serviceRequestRequirementMessages,
   serviceRequestRequirements,
   serviceRequests,
@@ -331,6 +332,43 @@ async function lastCitizenMessageAt(
   );
 }
 
+/**
+ * When the citizen last attached a file to the request, per request: the
+ * comprovante sent with "Já paguei" (`payment-receipt`), an extra document
+ * sent through the consult (`citizen`), or the signed form filed with the
+ * request itself (`signed-form`). A third source for the same reason as
+ * `lastCitizenMessageAt`: none of these writes an audited action, so without
+ * this the record never comes back to the office's side of the clock.
+ * `"office"` is deliberately excluded: it is the counter's own attachment.
+ */
+async function lastCitizenAttachmentAt(
+  tenantSlug: string,
+  requestIds: readonly string[],
+): Promise<Map<string, Date>> {
+  if (requestIds.length === 0) return new Map();
+  const rows = await db
+    .select({
+      requestId: serviceRequestAttachments.requestId,
+      at: max(serviceRequestAttachments.createdAt),
+    })
+    .from(serviceRequestAttachments)
+    .where(
+      and(
+        eq(serviceRequestAttachments.tenantSlug, tenantSlug),
+        inArray(serviceRequestAttachments.kind, [
+          "payment-receipt",
+          "citizen",
+          "signed-form",
+        ]),
+        inArray(serviceRequestAttachments.requestId, [...requestIds]),
+      ),
+    )
+    .groupBy(serviceRequestAttachments.requestId);
+  return new Map(
+    rows.flatMap((row) => (row.at ? [[row.requestId, row.at]] : [])),
+  );
+}
+
 export interface DeskRecord {
   kind: RequestKind;
   id: string;
@@ -392,17 +430,19 @@ export async function listDeskItems(
 
   const stalledIds = new Set(stalled.map((row) => row.id));
 
-  // Both scans are bounded by the open rows just fetched, rather than reading
-  // the tenant's whole history: the desk asks about a handful of records.
-  const [officeAt, citizenAt] = await Promise.all([
+  // All three scans are bounded by the open rows just fetched, rather than
+  // reading the tenant's whole history: the desk asks about a handful of
+  // records.
+  const serviceRequestIds = rows
+    .filter((row) => row.kind === "service-request")
+    .map((row) => row.id);
+  const [officeAt, citizenMessageAt, citizenAttachmentAt] = await Promise.all([
     lastOfficeActionAt(tenantSlug, [
       ...rows.map((row) => row.id),
       ...rows.map((row) => row.protocolNumber),
     ]),
-    lastCitizenMessageAt(
-      tenantSlug,
-      rows.filter((row) => row.kind === "service-request").map((row) => row.id),
-    ),
+    lastCitizenMessageAt(tenantSlug, serviceRequestIds),
+    lastCitizenAttachmentAt(tenantSlug, serviceRequestIds),
   ]);
 
   return rows.map((row) => {
@@ -411,8 +451,16 @@ export async function listDeskItems(
       .sort((a, b) => b.getTime() - a.getTime())[0];
     // Filing is always the citizen's move, even when an operator typed it in
     // at the counter: otherwise a record entered by hand would be born off the
-    // desk, with nobody having answered anything.
-    const citizen = citizenAt.get(row.id) ?? row.createdAt;
+    // desk, with nobody having answered anything. A later message or
+    // attachment from the citizen (a comprovante, an extra document) counts
+    // too, whichever is most recent.
+    const citizen = [
+      row.createdAt,
+      citizenMessageAt.get(row.id),
+      citizenAttachmentAt.get(row.id),
+    ]
+      .filter((at): at is Date => at !== undefined)
+      .sort((a, b) => b.getTime() - a.getTime())[0];
     return {
       ...row,
       kind: row.kind as RequestKind,
