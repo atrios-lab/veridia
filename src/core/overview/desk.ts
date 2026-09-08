@@ -44,8 +44,10 @@ export interface DeskItemInput {
    * than the office did, or the office has not acted at all. Filing counts as
    * the citizen's move even when an operator typed it in at the counter, so a
    * manually entered record still opens on the desk. Resolved by
-   * `listDeskItems`, which reads both sides: the office writes an audit entry,
-   * the citizen's reply in a requirement is deliberately not audited.
+   * `listDeskItems`, which reads both sides: the office writes an audit
+   * entry, while the citizen's reply in a requirement and any file the
+   * citizen attaches (comprovante, extra document) are deliberately not
+   * audited.
    */
   awaitingOffice: boolean;
   /** ombudsman only. */
@@ -132,7 +134,9 @@ function displayName(item: DeskItemInput): string {
 function defaultSummary(item: DeskItemInput): string {
   switch (item.kind) {
     case "service-request":
-      return "Novo pedido de serviço";
+      return item.status === "payment-reported"
+        ? "Pagamento informado, comprovante a conferir"
+        : "Novo pedido de serviço";
     case "ombudsman":
       return item.manifestationType
         ? manifestationLabel(item.manifestationType)
@@ -150,6 +154,7 @@ function defaultSummary(item: DeskItemInput): string {
 function defaultActionLabel(item: DeskItemInput): string {
   switch (item.kind) {
     case "service-request":
+      if (item.status === "payment-reported") return "Conferir pagamento";
       return item.status === "new" ? "Iniciar análise" : "Ver pedido";
     case "ombudsman":
       return item.status === "new" ? "Ler manifestação" : "Ver manifestação";
