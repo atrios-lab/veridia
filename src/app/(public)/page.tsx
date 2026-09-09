@@ -79,16 +79,15 @@ export default async function Home() {
           the page background and wash out to grey instead of the deep brand
           tone the redesign shows. */}
       <section className="relative overflow-hidden bg-brand-shade">
-        {tenant.heroImage && (
-          <Image
-            src={tenant.heroImage}
-            alt=""
-            fill
-            priority
-            sizes="100vw"
-            className="object-cover"
-          />
-        )}
+        <Image
+          // ponytail: office with no photo of its own borrows Bom Jesus's
+          src={tenant.heroImage ?? "/hero-home.jpg"}
+          alt=""
+          fill
+          priority
+          sizes="100vw"
+          className="object-cover"
+        />
         <div className="hero-scrim absolute inset-0" />
 
         <div className="relative mx-auto max-w-6xl px-4 py-10 md:px-10 md:py-20">
