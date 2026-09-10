@@ -127,7 +127,10 @@ export function ChatWidget({
   }, []);
 
   // Whether the office's chat is on and inside hours, polled on its own so
-  // switching it off removes the button within a few seconds.
+  // switching it off removes the button within a few seconds. Skipped while
+  // the tab isn't visible, same discipline as the message poll below: a
+  // citizen who leaves the site open in a background tab is not what keeps
+  // the server busy.
   useEffect(() => {
     let cancelled = false;
     async function poll() {
@@ -141,7 +144,9 @@ export function ChatWidget({
       }
     }
     poll();
-    const interval = setInterval(poll, STATUS_POLL_MS);
+    const interval = setInterval(() => {
+      if (document.visibilityState === "visible") poll();
+    }, STATUS_POLL_MS);
     return () => {
       cancelled = true;
       clearInterval(interval);
