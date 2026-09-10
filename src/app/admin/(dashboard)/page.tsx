@@ -18,10 +18,13 @@ import {
   listTodayAppointments,
   type TodayAppointmentRecord,
 } from "@/lib/admin-overview.ts";
-import { isChatEnabled, waitingConversations } from "@/lib/chat.ts";
+import {
+  activeConversations,
+  isChatEnabled,
+  waitingConversations,
+} from "@/lib/chat.ts";
 import { getSession } from "@/lib/session.ts";
 import { getTenant, OFFICE_TIME_ZONE, officeNow, today } from "@/lib/tenant.ts";
-import { QueuePoller } from "../_components/queue-poller.tsx";
 import type { ActionShortcut } from "./_components/action-shortcuts.tsx";
 import { ActionShortcuts } from "./_components/action-shortcuts.tsx";
 import type { ChannelStatusRow } from "./_components/channel-status.tsx";
@@ -33,6 +36,7 @@ import { LiveChatCard } from "./_components/live-chat-card.tsx";
 import { OverviewHeader } from "./_components/overview-header.tsx";
 import { ResumeCard } from "./_components/resume-card.tsx";
 import { TodayAgenda } from "./_components/today-agenda.tsx";
+import { QueuePoller } from "./atendimento/_components/queue-poller.tsx";
 
 export const metadata = { title: "Painel" };
 
@@ -146,8 +150,9 @@ export default async function AdminHome() {
         ? Promise.all([
             isChatEnabled(tenant.slug),
             waitingConversations(tenant.slug),
+            activeConversations(tenant.slug),
           ])
-        : Promise.resolve([false, []] as const),
+        : Promise.resolve([false, [], []] as const),
     ]);
 
   const now = new Date();
@@ -160,8 +165,12 @@ export default async function AdminHome() {
     officeNow().time,
   );
 
-  const [chatEnabled, waiting] = waitingChat;
+  const [chatEnabled, waiting, active] = waitingChat;
   const nextWaiting = waiting[0];
+  // Mesma assinatura que `queueVersionAction` calcula a cada poll: o
+  // componente só pede `router.refresh()` quando quem está esperando ou
+  // sendo atendido de fato muda, nunca num intervalo cego.
+  const queueVersion = `${waiting.map((c) => c.id).join(",")}|${active.map((c) => c.id).join(",")}`;
 
   const shortcuts: ActionShortcut[] = [
     ...(canRequests
@@ -221,7 +230,7 @@ export default async function AdminHome() {
         criticalCount={criticalCount}
         today={todayIso}
       />
-      <QueuePoller />
+      <QueuePoller version={queueVersion} />
       <main className="flex flex-col gap-4.5 px-[30px] py-7">
         <ActionShortcuts shortcuts={shortcuts} />
 
