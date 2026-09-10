@@ -707,7 +707,7 @@ export const SECTIONS: readonly SectionDef[] = [
     title: "Equipamentos",
     question: "Que equipamentos existem na serventia?",
     intro:
-      "Um bloco por equipamento, inclusive um por computador. Se não souber marca ou ano, deixe em branco. Pode mandar foto da etiqueta na Seção 17.",
+      "Um bloco por equipamento, inclusive um por computador. Se não souber marca ou ano, deixe em branco. Pode mandar foto da etiqueta na Seção 16.",
     fields: [
       {
         name: "inventory",
@@ -790,7 +790,7 @@ export const SECTIONS: readonly SectionDef[] = [
           { value: "older", label: "Mais antigo" },
           { value: UNKNOWN, label: "Não sei" },
         ],
-        help: 'Clique com o botão direito em "Este Computador" e depois em "Propriedades", ou mande um print da tela "Sobre" na Seção 17. O Windows 10 está sem suporte desde 14/10/2025.',
+        help: 'Clique com o botão direito em "Este Computador" e depois em "Propriedades", ou mande um print da tela "Sobre" na Seção 16. O Windows 10 está sem suporte desde 14/10/2025.',
       },
       {
         name: "serverOs",
@@ -1304,14 +1304,6 @@ export const SECTIONS: readonly SectionDef[] = [
           },
         ],
       },
-      {
-        name: "sendAddendum",
-        label:
-          "Quer que a Átrios envie aos fornecedores o termo aditivo com as cláusulas que o Provimento exige?",
-        type: "choice",
-        required: true,
-        options: YES_NO,
-      },
     ],
   },
   {
@@ -1352,41 +1344,8 @@ export const SECTIONS: readonly SectionDef[] = [
     ],
   },
   {
-    id: "formalidades",
-    number: 16,
-    title: "Formalidades",
-    question: "Como os documentos devem sair?",
-    fields: [
-      {
-        name: "lastOrdinance",
-        label: "A serventia já numera portarias? Qual foi o último número?",
-        type: "text",
-        help: "Se não numera, os documentos começam em 001 do ano.",
-        placeholder: "Ex.: 007/2026",
-      },
-      {
-        name: "signingDate",
-        label: "Data em que pretende assinar os documentos",
-        type: "date",
-        required: true,
-        help: "Vai em todos os documentos.",
-      },
-      {
-        name: "branding",
-        label: "Quer os documentos com a marca da Átrios ou limpos?",
-        type: "choice",
-        required: true,
-        options: [
-          { value: "clean", label: "Limpos, para assinar" },
-          { value: "atrios", label: "Com a marca da Átrios (modelo)" },
-        ],
-        defaultValue: () => "clean",
-      },
-    ],
-  },
-  {
     id: "anexos",
-    number: 17,
+    number: 16,
     title: "Anexos",
     question: "Quer mandar fotos ou documentos?",
     intro:
