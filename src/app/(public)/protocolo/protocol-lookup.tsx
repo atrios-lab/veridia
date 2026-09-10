@@ -1075,6 +1075,8 @@ function RequestDetail({ result }: { result: ServiceRequestDetail }) {
                 <form
                   action="/solicitar/requerimento"
                   method="post"
+                  target="_blank"
+                  rel="noopener"
                   className="flex items-center gap-2.5 rounded-xl border border-brand-accent-line bg-brand-card px-3.5 py-3"
                 >
                   <StepBadge>1</StepBadge>

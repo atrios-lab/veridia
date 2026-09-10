@@ -706,6 +706,8 @@ function SuccessScreen({
           <form
             action="/solicitar/requerimento"
             method="post"
+            target="_blank"
+            rel="noopener"
             className="mt-2.5"
           >
             <ProtocolFields result={result} />
@@ -726,7 +728,12 @@ function SuccessScreen({
             {HANDWRITTEN_SIGNATURE_CAVEAT}
           </p>
           <div className="mt-2.5 flex flex-wrap gap-2">
-            <form action="/solicitar/requerimento" method="post">
+            <form
+              action="/solicitar/requerimento"
+              method="post"
+              target="_blank"
+              rel="noopener"
+            >
               <ProtocolFields result={result} />
               <button type="submit" className="btn btn-primary btn-md">
                 <Icon name="download" className="h-3.5 w-3.5" strokeWidth={2} />

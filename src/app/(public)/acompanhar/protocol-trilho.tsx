@@ -723,7 +723,12 @@ function SignCard({
         <span className="flex-1 text-[15px] font-semibold">
           Baixe o formulário já preenchido
         </span>
-        <form action="/solicitar/requerimento" method="post">
+        <form
+          action="/solicitar/requerimento"
+          method="post"
+          target="_blank"
+          rel="noopener"
+        >
           <input type="hidden" name="protocolNumber" value={protocolNumber} />
           <input type="hidden" name="accessKey" value={accessKey} />
           <button

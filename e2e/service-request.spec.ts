@@ -416,6 +416,46 @@ test.describe("filing a request", () => {
     ).toHaveCount(0);
   });
 
+  test("downloading the PDFs opens a new tab and leaves the key on screen", async ({
+    page,
+  }) => {
+    // Both downloads used to navigate this very tab away from the screen
+    // that shows the key, which only ever renders once: leaving it behind
+    // means losing the key for good.
+    await page.goto(
+      `${baseURL}/solicitar?atribuicao=RCPN&ato=rcpn-habilitacao-casamento`,
+    );
+    await fillForm(page);
+    await page.getByRole("button", { name: "Enviar requerimento" }).click();
+    await expect(
+      page.getByRole("heading", { name: "Pedido registrado" }),
+    ).toBeVisible();
+
+    const [receiptTab] = await Promise.all([
+      page.context().waitForEvent("page"),
+      page.getByRole("button", { name: "Baixar comprovante (PDF)" }).click(),
+    ]);
+    await receiptTab.close();
+    await expect(
+      page.getByRole("heading", { name: "Pedido registrado" }),
+    ).toBeVisible();
+    await expect(
+      page.getByText(/[A-Z2-9]{4}-[A-Z2-9]{4}-[A-Z2-9]{4}/),
+    ).toBeVisible();
+
+    const [formTab] = await Promise.all([
+      page.context().waitForEvent("page"),
+      page.getByRole("button", { name: "Baixar requerimento (PDF)" }).click(),
+    ]);
+    await formTab.close();
+    await expect(
+      page.getByRole("heading", { name: "Pedido registrado" }),
+    ).toBeVisible();
+    await expect(
+      page.getByText(/[A-Z2-9]{4}-[A-Z2-9]{4}-[A-Z2-9]{4}/),
+    ).toBeVisible();
+  });
+
   // The old "refused without both acceptances" e2e lived here: the client now
   // blocks that submit before any request, so it moved to the client-side
   // suite above; the server-side refusal stays covered by the unit tests.
@@ -552,6 +592,49 @@ test.describe("filing a request", () => {
       { form: { chave: "AAAA-BBBB-CCCC" }, maxRedirects: 0 },
     );
     expect(receipt.status()).not.toBe(200);
+  });
+
+  test("downloading the requerimento from the protocol lookup opens a new tab", async ({
+    page,
+  }) => {
+    await page.goto(
+      `${baseURL}/solicitar?atribuicao=RCPN&ato=rcpn-habilitacao-casamento`,
+    );
+    await fillForm(page);
+    await page.getByRole("button", { name: "Enviar requerimento" }).click();
+
+    const protocolNumber =
+      (await page
+        .getByText(/REQ\.\d{4}\.\d{6}/)
+        .first()
+        .textContent()) ?? "";
+    const accessKey =
+      (await page
+        .getByText(/[A-Z2-9]{4}-[A-Z2-9]{4}-[A-Z2-9]{4}/)
+        .first()
+        .textContent()) ?? "";
+
+    await page.goto(`${baseURL}/protocolo?numero=${protocolNumber}`);
+    await page.getByPlaceholder("Ex.: BBM8-6XVB-8PUK").fill(accessKey);
+    await page.getByRole("button", { name: "Ver detalhes" }).click();
+    await expect(
+      page.getByText("Falta só o requerimento assinado"),
+    ).toBeVisible();
+
+    // The button's own accessible name is just "PDF" (an icon plus that
+    // word); "Baixe o requerimento preenchido" is the label beside it.
+    const downloadForm = page.locator("form", {
+      hasText: "Baixe o requerimento preenchido",
+    });
+    const [popup] = await Promise.all([
+      page.context().waitForEvent("page"),
+      downloadForm.getByRole("button", { name: "PDF" }).click(),
+    ]);
+    await popup.close();
+    // The consult stayed put: still unlocked, still offering the same step.
+    await expect(
+      page.getByText("Falta só o requerimento assinado"),
+    ).toBeVisible();
   });
 
   test("a pending exigência is answered through the same consult", async ({
