@@ -291,13 +291,21 @@ export function publicServiceRequestSchema(act: Act) {
         .nullish()
         .transform((value) => value?.trim() || undefined),
       exemptionDeclaration: z.coerce.boolean().default(false),
-      // Mesma discurssão de `exemptionActId`: um formulário que não é o da
-      // gratuidade nunca registra este campo, e um grupo de radios sem opção
-      // marcada chega como null, não como string vazia.
+      // Mesma discussão de `exemptionActId`, e por isso `z.string()`, não
+      // `z.enum`: o servidor lê o campo ausente como "" (`formData.get(...)
+      // ?? ""`), e um enum só aceita null/undefined além dos três valores,
+      // nunca string vazia. Aceitar só "beneficiario", "representante" ou
+      // "rogo" travava todo ato que não é o da gratuidade, já que nenhum dos
+      // três chega no formData de um ato sem essa entrada.
       exemptionSignedBy: z
-        .enum(EXEMPTION_SIGNERS)
+        .string()
         .nullish()
-        .transform((value) => value ?? "beneficiario"),
+        .transform(
+          (value): ExemptionSigner =>
+            value === "representante" || value === "rogo"
+              ? value
+              : "beneficiario",
+        ),
       exemptionSignerName: optionalText(160),
     })
     .superRefine(actRules(act));

@@ -203,6 +203,11 @@ const validOnline = {
   phone: "(84) 99999-0000",
   exemptionActId: "",
   exemptionDeclaration: "",
+  // O que `actions.ts` de fato manda para um ato sem gratuidade: o campo não
+  // existe no formulário, `formData.get(...)` devolve null, e `?? ""`
+  // converte para string vazia, nunca para undefined.
+  exemptionSignedBy: "",
+  exemptionSignerName: "",
 };
 
 test("a request filed on the site is refused without an e-mail", () => {
@@ -258,6 +263,20 @@ test("the act's own rules hold on both filings", () => {
   });
   assert.equal(counter.success, false);
   assert.equal(counter.error?.issues[0].path[0], "description");
+});
+
+test("um ato sem gratuidade aceita exemptionSignedBy vazio, não só ausente", () => {
+  // Regressão: `formData.get("exemptionSignedBy") ?? ""` manda string vazia
+  // para todo ato que não é o da gratuidade (o campo nunca existe no
+  // formulário dele), e um `z.enum(...).nullish()` recusava "" por não ser
+  // null/undefined nem um dos três valores, travando o envio de qualquer
+  // ato comum, não só o de gratuidade.
+  const result = publicServiceRequestSchema(certificate).safeParse(validOnline);
+  assert.ok(
+    result.success,
+    JSON.stringify(result.success ? null : result.error.issues),
+  );
+  assert.equal(result.data.exemptionSignedBy, "beneficiario");
 });
 
 test("the counter keeps the either/or contact", () => {
