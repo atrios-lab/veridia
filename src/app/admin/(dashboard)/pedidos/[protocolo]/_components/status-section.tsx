@@ -114,7 +114,7 @@ function DeadlineControl({
  * what makes the citizen call the counter to ask, so the andamento never
  * lands there off a bare click. Opened by whichever control (suggestion
  * pill or the correction select) aimed at one of the two, and its "Confirmar"
- * is the actual submitter — it carries `status` itself, so it wins over
+ * is the actual submitter: it carries `status` itself, so it wins over
  * `statusOverride` in the action regardless of which control opened it.
  */
 function ReasonConfirmation({
