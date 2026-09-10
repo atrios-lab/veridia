@@ -14,6 +14,7 @@ import {
   isServiceRequestStatus,
   readExemption,
   readPhone,
+  requiresStatusReason,
   statusLabel,
   suggestedNextStatuses,
 } from "@/core/request/kinds.ts";
@@ -409,21 +410,42 @@ export default async function ServiceRequestDetailPage({
                 </p>
               ) : (
                 <ul className="mt-3 flex flex-col gap-2.5">
-                  {history.map((entry, index) => (
-                    <li
-                      key={`${entry.action}-${entry.createdAt.toISOString()}-${index}`}
-                      className="text-[12.5px] leading-snug text-admin-text"
-                    >
-                      <strong className="text-admin-primary">
-                        {entry.actorName ?? "Sistema"}
-                      </strong>{" "}
-                      {HISTORY_LABELS[entry.action] ?? entry.action}
-                      <br />
-                      <span className="text-[11px] text-admin-faint">
-                        {formatDayMonthTime(entry.createdAt)}
-                      </span>
-                    </li>
-                  ))}
+                  {history.map((entry, index) => {
+                    // The reason only ever reflects the current andamento
+                    // (`status_reason` is overwritten, not appended), so it
+                    // is shown only on the most recent status-change entry,
+                    // and only while the andamento it explains is still the
+                    // one the pedido is in.
+                    const isLatestStatusEntry =
+                      entry.action === "service-request.status" &&
+                      history.findIndex(
+                        (e) => e.action === "service-request.status",
+                      ) === index;
+                    const showReason =
+                      isLatestStatusEntry &&
+                      isServiceRequestStatus(request.status) &&
+                      requiresStatusReason(request.status);
+                    return (
+                      <li
+                        key={`${entry.action}-${entry.createdAt.toISOString()}-${index}`}
+                        className="text-[12.5px] leading-snug text-admin-text"
+                      >
+                        <strong className="text-admin-primary">
+                          {entry.actorName ?? "Sistema"}
+                        </strong>{" "}
+                        {HISTORY_LABELS[entry.action] ?? entry.action}
+                        <br />
+                        <span className="text-[11px] text-admin-faint">
+                          {formatDayMonthTime(entry.createdAt)}
+                        </span>
+                        {showReason && (
+                          <p className="mt-1 text-[12px] text-admin-text">
+                            Motivo: {request.statusReason ?? "não informado"}
+                          </p>
+                        )}
+                      </li>
+                    );
+                  })}
                 </ul>
               )}
             </div>

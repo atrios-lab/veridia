@@ -1,5 +1,6 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
+import { MAX_MESSAGE_LENGTH } from "../chat/message.ts";
 import {
   isAllowedOmbudsmanTransition,
   isAllowedTransition,
@@ -11,10 +12,12 @@ import {
   ombudsmanDetailsSchema,
   parseDetails,
   phaseOfStatus,
+  requiresStatusReason,
   SERVICE_REQUEST_PHASES,
   SERVICE_REQUEST_STATUSES,
   statusForRequirements,
   statusLabel,
+  statusReasonSchema,
   suggestedNextStatuses,
   suggestedOmbudsmanStatuses,
 } from "./kinds.ts";
@@ -301,4 +304,34 @@ test("a requirement moves nothing on a closed request", () => {
     assert.equal(statusForRequirements(status, 1), null);
     assert.equal(statusForRequirements(status, 0), null);
   }
+});
+
+test("only cancelled and rejected require a status reason", () => {
+  for (const status of SERVICE_REQUEST_STATUSES) {
+    assert.equal(
+      requiresStatusReason(status),
+      status === "cancelled" || status === "rejected",
+      status,
+    );
+  }
+});
+
+test("status reason is trimmed", () => {
+  const parsed = statusReasonSchema.parse("  Documentação incompatível  ");
+  assert.equal(parsed, "Documentação incompatível");
+});
+
+test("empty status reason is refused", () => {
+  assert.equal(statusReasonSchema.safeParse("").success, false);
+  assert.equal(statusReasonSchema.safeParse("   ").success, false);
+});
+
+test("status reason has the same length ceiling as free-text messages", () => {
+  assert.ok(
+    statusReasonSchema.safeParse("a".repeat(MAX_MESSAGE_LENGTH)).success,
+  );
+  assert.equal(
+    statusReasonSchema.safeParse("a".repeat(MAX_MESSAGE_LENGTH + 1)).success,
+    false,
+  );
 });

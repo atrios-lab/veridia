@@ -30,6 +30,7 @@ import {
   KIND_BY_PREFIX,
   KIND_PREFIXES,
   type RequestKind,
+  requiresStatusReason,
   type ServiceRequestStatus,
   statusForRequirements,
   TERMINAL_SERVICE_REQUEST_STATUSES,
@@ -596,6 +597,11 @@ export async function openRequestCount(tenantSlug: string): Promise<number> {
  * (`payment-reported`, from the protocol consult): there is no operator
  * account to blame, the same reasoning `AuditEntry.actorId` already carries
  * for an actor "not authenticated yet".
+ *
+ * `reason` is why the office closed the request without delivering it,
+ * required by the caller (`changeStatus`) for `cancelled`/`rejected` and
+ * ignored for every other andamento: it overwrites `status_reason`, it never
+ * appends, so only the closing that actually stuck is what the citizen reads.
  */
 export async function updateRequestStatus(
   tenantSlug: string,
@@ -603,6 +609,7 @@ export async function updateRequestStatus(
   status: ServiceRequestStatus,
   actorId: string | null,
   deadline?: Deadline,
+  reason?: string,
 ): Promise<void> {
   if (!isServiceRequestStatus(status)) {
     throw new Error(`Andamento inválido: ${status}`);
@@ -611,6 +618,7 @@ export async function updateRequestStatus(
     .update(serviceRequests)
     .set({
       status,
+      ...(requiresStatusReason(status) && { statusReason: reason ?? null }),
       // Merged into `details`, never assigned over it: the consents recorded
       // at filing live in the same column.
       ...(deadline && {

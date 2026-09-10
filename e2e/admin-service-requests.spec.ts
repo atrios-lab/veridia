@@ -117,6 +117,33 @@ test.describe("fila e detalhe de pedidos", () => {
     await expect(row.getByText("Em análise")).toBeVisible();
   });
 
+  test("cancelar exige motivo; o motivo aparece no histórico", async ({
+    page,
+  }) => {
+    await signIn(page);
+    await page.goto(`${baseURL}/admin/pedidos/${encodeURIComponent(PROTOCOL)}`);
+
+    // The pill opens the reason step instead of applying right away.
+    await page.getByRole("button", { name: "Cancelado" }).click();
+    const reasonField = page.getByLabel(
+      "Motivo para mudar o andamento para cancelado",
+    );
+    await expect(reasonField).toBeVisible();
+
+    // Only spaces passes the browser's `required`, but not the server's trim.
+    await reasonField.fill("   ");
+    await page.getByRole("button", { name: "Confirmar cancelado" }).click();
+    await expect(page.getByText("Escreva o motivo.")).toBeVisible();
+
+    await reasonField.fill("CPF divergente do requerente.");
+    await page.getByRole("button", { name: "Confirmar cancelado" }).click();
+
+    await expect(page.getByText("Andamento atual:")).toContainText("Cancelado");
+    await expect(
+      page.locator("li", { hasText: "mudou o andamento" }),
+    ).toContainText("CPF divergente do requerente.");
+  });
+
   test("o prazo salva sozinho, sem mudar o andamento", async ({ page }) => {
     await signIn(page);
     await page.goto(`${baseURL}/admin/pedidos/${encodeURIComponent(PROTOCOL)}`);

@@ -1,11 +1,12 @@
 "use client";
 
-import { type ReactNode, useActionState, useState } from "react";
+import { type ReactNode, useActionState, useEffect, useState } from "react";
 import {
   MAX_DEADLINE_DAYS,
   MIN_DEADLINE_DAYS,
 } from "@/core/request/deadline.ts";
 import {
+  requiresStatusReason,
   SERVICE_REQUEST_PHASES,
   type ServiceRequestStatus,
   statusLabel,
@@ -108,6 +109,61 @@ function DeadlineControl({
   );
 }
 
+/**
+ * The reason step for Cancelado/Indeferido: a cancellation with no why is
+ * what makes the citizen call the counter to ask, so the andamento never
+ * lands there off a bare click. Opened by whichever control (suggestion
+ * pill or the correction select) aimed at one of the two, and its "Confirmar"
+ * is the actual submitter: it carries `status` itself, so it wins over
+ * `statusOverride` in the action regardless of which control opened it.
+ */
+function ReasonConfirmation({
+  target,
+  pending,
+  onCancel,
+}: {
+  target: ServiceRequestStatus;
+  pending: boolean;
+  onCancel: () => void;
+}) {
+  const label = statusLabel("service-request", target).toLowerCase();
+  return (
+    <div className="flex flex-col gap-2.5 rounded-[11px] border border-admin-error-border bg-admin-error-bg px-[18px] py-4">
+      <span className={PANEL_TITLE}>Motivo</span>
+      <span className={PANEL_HELP}>
+        O cidadão vê este motivo na consulta de protocolo.
+      </span>
+      <textarea
+        name="reason"
+        required
+        rows={3}
+        aria-label={`Motivo para mudar o andamento para ${label}`}
+        placeholder={`Explique por que o pedido está sendo ${label === "indeferido" ? "indeferido" : "cancelado"}.`}
+        className="w-full rounded-[9px] border border-admin-input-border bg-admin-card px-3 py-2 text-[13px] text-admin-text"
+      />
+      <div className="flex items-center gap-2">
+        <button
+          type="submit"
+          name="status"
+          value={target}
+          disabled={pending}
+          className="btn btn-admin-secondary btn-sm"
+        >
+          {pending ? "Confirmando…" : `Confirmar ${label}`}
+        </button>
+        <button
+          type="button"
+          onClick={onCancel}
+          disabled={pending}
+          className="text-[12.5px] font-semibold text-admin-muted hover:text-admin-primary"
+        >
+          Cancelar
+        </button>
+      </div>
+    </div>
+  );
+}
+
 export function StatusSection({
   requestId,
   protocolNumber,
@@ -137,6 +193,18 @@ export function StatusSection({
   useEmailWarning(state);
   // The term and the correction are the rare moves; the next step is not.
   const [moreOpen, setMoreOpen] = useState(false);
+  // Which andamento (Cancelado/Indeferido) is waiting on a reason before it
+  // can be confirmed, from whichever control aimed at it. `null` the rest of
+  // the time, when every other andamento applies on the first click.
+  const [reasonTarget, setReasonTarget] = useState<ServiceRequestStatus | null>(
+    null,
+  );
+  const [selectedOverride, setSelectedOverride] =
+    useState<ServiceRequestStatus>(status);
+
+  useEffect(() => {
+    if (state.status === "success") setReasonTarget(null);
+  }, [state.status]);
 
   const happyIndex = HAPPY_PATH.indexOf(status);
 
@@ -209,22 +277,26 @@ export function StatusSection({
               Mudar para
             </span>
           )}
-          {suggested.map((next, i) => (
-            <button
-              key={next}
-              type="submit"
-              name="status"
-              value={next}
-              disabled={pending}
-              className={
-                i === 0
-                  ? "rounded-full bg-admin-primary px-3.5 py-[7px] text-[12.5px] font-semibold text-white disabled:opacity-60"
-                  : suggestionPillClass(next)
-              }
-            >
-              {statusLabel("service-request", next)}
-            </button>
-          ))}
+          {suggested.map((next, i) => {
+            const dangerous = requiresStatusReason(next);
+            return (
+              <button
+                key={next}
+                type={dangerous ? "button" : "submit"}
+                name={dangerous ? undefined : "status"}
+                value={dangerous ? undefined : next}
+                onClick={dangerous ? () => setReasonTarget(next) : undefined}
+                disabled={pending}
+                className={
+                  i === 0
+                    ? "rounded-full bg-admin-primary px-3.5 py-[7px] text-[12.5px] font-semibold text-white disabled:opacity-60"
+                    : suggestionPillClass(next)
+                }
+              >
+                {statusLabel("service-request", next)}
+              </button>
+            );
+          })}
           <span className="flex-1" />
           <button
             type="button"
@@ -267,7 +339,12 @@ export function StatusSection({
                 <div className="relative flex-1">
                   <select
                     name="statusOverride"
-                    defaultValue={status}
+                    value={selectedOverride}
+                    onChange={(e) =>
+                      setSelectedOverride(
+                        e.target.value as ServiceRequestStatus,
+                      )
+                    }
                     aria-label="Corrigir para outro andamento"
                     className="w-full appearance-none rounded-[9px] border border-admin-input-border bg-admin-card py-2 pr-9 pl-3 text-[13px] text-admin-text"
                   >
@@ -291,7 +368,14 @@ export function StatusSection({
                   />
                 </div>
                 <button
-                  type="submit"
+                  type={
+                    requiresStatusReason(selectedOverride) ? "button" : "submit"
+                  }
+                  onClick={
+                    requiresStatusReason(selectedOverride)
+                      ? () => setReasonTarget(selectedOverride)
+                      : undefined
+                  }
                   disabled={pending}
                   className="btn btn-admin-secondary btn-sm"
                 >
@@ -300,6 +384,14 @@ export function StatusSection({
               </div>
             </div>
           </div>
+        )}
+
+        {reasonTarget && (
+          <ReasonConfirmation
+            target={reasonTarget}
+            pending={pending}
+            onCancel={() => setReasonTarget(null)}
+          />
         )}
 
         {state.status === "error" && (

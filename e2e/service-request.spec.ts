@@ -1,6 +1,7 @@
 import { randomUUID } from "node:crypto";
 import { expect, test } from "@playwright/test";
 import postgres from "postgres";
+import { hashAccessKey } from "../src/core/request/access-key.ts";
 import { TENANTS } from "../src/core/tenant/resolve.ts";
 
 // The citizen arrives on a phone, so the journey is asserted at 390 wide.
@@ -1094,5 +1095,65 @@ test.describe("filing a request", () => {
     // The outcome step ends the timeline as a completed alert, not a step
     // still in progress: nothing in it should carry the current-step ring.
     await expect(page.locator("ol .border-brand-accent")).toHaveCount(0);
+  });
+});
+
+test.describe("motivo de cancelamento ou indeferimento na consulta", () => {
+  const TENANT = "cartorio-marinho";
+  const REJECTED_PROTOCOL = "REQ.2098.000901";
+  const REJECTED_KEY = "TEST-KEYS-0901";
+  const CANCELLED_PROTOCOL = "REQ.2098.000902";
+  const CANCELLED_KEY = "TEST-KEYS-0902";
+
+  test.skip(
+    !process.env.DATABASE_URL,
+    "precisa de DATABASE_URL: a consulta lê do banco",
+  );
+
+  test.beforeEach(async () => {
+    const sql = postgres(process.env.DATABASE_URL as string);
+    await sql`
+      insert into service_requests
+        (tenant_slug, kind, protocol_year, protocol_sequence, protocol_number,
+         act_id, attribution, applicant_name, contact, access_key_hash, status,
+         status_reason)
+      values
+        (${TENANT}, 'service-request', 2098, 901, ${REJECTED_PROTOCOL},
+         'rcpn-certidao', 'RCPN', 'Rosa Almeida Fontes', 'rosa@exemplo.com',
+         ${hashAccessKey(REJECTED_KEY)}, 'rejected', 'Certidão anexada ilegível.'),
+        (${TENANT}, 'service-request', 2098, 902, ${CANCELLED_PROTOCOL},
+         'rcpn-certidao', 'RCPN', 'Rosa Almeida Fontes', 'rosa@exemplo.com',
+         ${hashAccessKey(CANCELLED_KEY)}, 'cancelled', NULL)
+      on conflict do nothing
+    `;
+    await sql.end();
+  });
+
+  test.afterEach(async () => {
+    const sql = postgres(process.env.DATABASE_URL as string);
+    await sql`
+      delete from service_requests
+      where tenant_slug = ${TENANT}
+        and protocol_number in (${REJECTED_PROTOCOL}, ${CANCELLED_PROTOCOL})
+    `;
+    await sql.end();
+  });
+
+  test("indeferido mostra o motivo gravado na consulta", async ({ page }) => {
+    await page.goto(`${baseURL}/protocolo?numero=${REJECTED_PROTOCOL}`);
+    await page.getByPlaceholder("Ex.: BBM8-6XVB-8PUK").fill(REJECTED_KEY);
+    await page.getByRole("button", { name: "Ver detalhes" }).click();
+
+    await expect(page.getByText("Certidão anexada ilegível.")).toBeVisible();
+  });
+
+  test("cancelado sem motivo gravado (anterior a esta mudança) mostra que não foi informado", async ({
+    page,
+  }) => {
+    await page.goto(`${baseURL}/protocolo?numero=${CANCELLED_PROTOCOL}`);
+    await page.getByPlaceholder("Ex.: BBM8-6XVB-8PUK").fill(CANCELLED_KEY);
+    await page.getByRole("button", { name: "Ver detalhes" }).click();
+
+    await expect(page.getByText("Motivo não informado.")).toBeVisible();
   });
 });

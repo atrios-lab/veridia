@@ -138,6 +138,12 @@ export const serviceRequests = pgTable(
     officeReply: text("office_reply"),
     officeRepliedAt: timestamp("office_replied_at", { withTimezone: true }),
     status: text("status").notNull().default("new"),
+    // Why the office closed the request without delivering it: written when
+    // the andamento moves to "cancelled" or "rejected", overwritten by the
+    // next such move. Read by the citizen on the protocol consult, where a
+    // closed request with no explanation is what makes someone call the
+    // counter to ask why.
+    statusReason: text("status_reason"),
     // Null until the office informs it. A service request is never priced by
     // the citizen's own submission: only the operator, working the request,
     // knows what band or table applies.
