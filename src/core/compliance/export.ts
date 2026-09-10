@@ -66,16 +66,6 @@ const GENDER_WORD: Record<string, string> = {
   masculine: "masculino",
 };
 
-function longDate(iso: string): string {
-  if (!/^\d{4}-\d{2}-\d{2}$/.test(iso)) return iso;
-  return new Intl.DateTimeFormat("pt-BR", {
-    day: "numeric",
-    month: "long",
-    year: "numeric",
-    timeZone: "UTC",
-  }).format(new Date(`${iso}T00:00:00Z`));
-}
-
 export function toGeneratorJson(input: ExportInput): Record<string, unknown> {
   const { answers, classification } = input;
   const team = list(answers, "equipe", "team");
@@ -89,9 +79,6 @@ export function toGeneratorJson(input: ExportInput): Record<string, unknown> {
     dpoWho === "team"
       ? text(answers, "encarregado", "teamMember")
       : text(answers, "encarregado", "name");
-  const signing = text(answers, "formalidades", "signingDate");
-  const lastOrdinance = text(answers, "formalidades", "lastOrdinance");
-
   return {
     nome: text(answers, "serventia", "officialName"),
     nome_fantasia: text(answers, "serventia", "tradeName"),
@@ -251,18 +238,11 @@ export function toGeneratorJson(input: ExportInput): Record<string, unknown> {
       ),
       acesso_dados: itemLabel("fornecedores", "suppliers", s, "dataAccess"),
     })),
-    aditivo_fornecedores: label(answers, "fornecedores", "sendAddendum"),
     canais_cgj: label(answers, "corregedoria", "channels")
       .split(", ")
       .filter(Boolean),
     incidente: label(answers, "corregedoria", "hadIncident"),
     incidente_detalhe: text(answers, "corregedoria", "incidentDetails"),
-
-    num_portaria_ultima: lastOrdinance,
-    num_portaria_inicial: lastOrdinance ? "" : "001",
-    data: longDate(signing),
-    data_curta: /^\d{4}-\d{2}-\d{2}$/.test(signing) ? formatDate(signing) : "",
-    sem_marca: text(answers, "formalidades", "branding") !== "atrios",
 
     pendencias: input.pendencies.map((p) => ({
       codigo: p.code,

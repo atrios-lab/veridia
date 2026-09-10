@@ -23,7 +23,7 @@ function formatFileSize(bytes: number): string {
 }
 
 /**
- * Seção 17. The only section with no field: files go straight to the
+ * Seção 16. The only section with no field: files go straight to the
  * intake, through the same store and the same type and size limits every
  * other attachment in the panel obeys.
  */

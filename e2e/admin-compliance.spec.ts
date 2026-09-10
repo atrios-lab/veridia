@@ -51,7 +51,7 @@ test.describe("adequação ao Provimento", () => {
       .getByRole("link", { name: "Adequação ao Provimento" })
       .click();
     await expect(page).toHaveURL(`${baseURL}/admin/adequacao`);
-    await expect(page.getByText("0 de 17 seções")).toBeVisible();
+    await expect(page.getByText("0 de 16 seções")).toBeVisible();
 
     await page.getByRole("link", { name: /Softwares e licenças/ }).click();
     await page.getByLabel("Windows 10", { exact: true }).check();

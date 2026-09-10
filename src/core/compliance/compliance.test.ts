@@ -199,7 +199,6 @@ test("the export speaks the generator's vocabulary", () => {
         ],
       },
       "responsavel-tecnico": { person: "Ana Beatriz" },
-      formalidades: { signingDate: "2026-10-05" },
     },
     PREFILL,
   );
@@ -246,10 +245,6 @@ test("the export speaks the generator's vocabulary", () => {
     "fornecedores",
     "softwares",
     "inventario",
-    "num_portaria_inicial",
-    "data",
-    "data_curta",
-    "sem_marca",
   ]) {
     assert.ok(key in json, `chave ${key}`);
   }
@@ -261,9 +256,6 @@ test("the export speaks the generator's vocabulary", () => {
   assert.equal(json.rt_genero, "feminino");
   assert.equal(json.substituto_nome, "Ana Beatriz");
   assert.deepEqual(json.ciencia, ["Ana Beatriz"]);
-  assert.equal(json.data, "5 de outubro de 2026");
-  assert.equal(json.data_curta, "05/10/2026");
-  assert.equal(json.sem_marca, true);
 });
 
 test("art. 16: a fronteira só aparece quando uma correção atravessaria a classe", () => {
