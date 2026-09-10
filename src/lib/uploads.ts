@@ -42,6 +42,21 @@ function brandImageDevDir(): string {
 }
 
 /**
+ * Writing an upload to disk is only safe in local dev. On Vercel the
+ * filesystem is ephemeral, so a missing BLOB_READ_WRITE_TOKEN there is a
+ * misconfiguration, not a signal to fall back to disk: doing so writes a file
+ * that the next deploy silently deletes. Failing the upload loudly beats
+ * losing it quietly.
+ */
+export function assertDiskFallbackAllowed(): void {
+  if (process.env.VERCEL) {
+    throw new Error(
+      "BLOB_READ_WRITE_TOKEN não configurado nesta implantação: envio não pode ser salvo em disco efêmero.",
+    );
+  }
+}
+
+/**
  * Blob in the deploy, disk in development. On Vercel the filesystem is
  * ephemeral, so writing a citizen's document to it would lose the document on
  * the next request, which is the kind of failure nobody notices until someone
@@ -62,6 +77,8 @@ async function store(
     });
     return blob.url;
   }
+
+  assertDiskFallbackAllowed();
 
   // `storedName` carries the tenant's own subfolder (see `storedFileName`),
   // so the directory to create is the file's, not just the upload root.
@@ -268,6 +285,8 @@ async function storeBrandBytes(
     });
     return blob.url;
   }
+
+  assertDiskFallbackAllowed();
 
   // `storedName` carries the tenant's own subfolder (see `brandImageFileName`).
   const path = join(brandImageDevDir(), storedName);
