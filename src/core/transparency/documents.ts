@@ -31,6 +31,7 @@ export const DOCUMENT_CATEGORIES = [
   "Tabela de custas",
   "Relatório de gestão",
   "Aviso",
+  "Cartaz de gratuidade e isenção",
   "Outro",
 ] as const;
 export type DocumentCategory = (typeof DOCUMENT_CATEGORIES)[number];

@@ -143,6 +143,21 @@ const commonFields = {
 };
 
 /**
+ * Who formalises the exemption declaration: the beneficiary themselves
+ * (default), a legal representative, or someone signing a rogo (the
+ * beneficiary cannot or does not know how to sign). Provimento CGJ/TJRN n.
+ * 7/2026, arts. 4º and 7º — the beneficiary and whoever signs in their place
+ * are identified separately, and a rogo signature is printed with witness
+ * lines on the requerimento.
+ */
+export const EXEMPTION_SIGNERS = [
+  "beneficiario",
+  "representante",
+  "rogo",
+] as const;
+export type ExemptionSigner = (typeof EXEMPTION_SIGNERS)[number];
+
+/**
  * The rules the act imposes on the fields above. Written against the fields
  * they read rather than against a whole schema, so both filings share one
  * copy: a rule that exists twice is a rule that will be changed once.
@@ -160,6 +175,8 @@ function actRules(act: Act) {
       purpose?: string;
       exemptionActId?: string;
       exemptionDeclaration?: boolean;
+      exemptionSignedBy?: ExemptionSigner;
+      exemptionSignerName?: string;
     },
     ctx: z.RefinementCtx,
   ) => {
@@ -214,6 +231,21 @@ function actRules(act: Act) {
             "Para pedir a gratuidade é necessário fazer a declaração acima.",
         });
       }
+      // A pessoa beneficiária é quem assina por padrão; representante legal
+      // e assinatura a rogo (Provimento CGJ/TJRN n. 7/2026, art. 4º) exigem
+      // o nome de quem assina, porque o requerimento precisa identificá-lo
+      // separado do beneficiário.
+      if (
+        data.exemptionSignedBy &&
+        data.exemptionSignedBy !== "beneficiario" &&
+        !data.exemptionSignerName
+      ) {
+        ctx.addIssue({
+          code: "custom",
+          path: ["exemptionSignerName"],
+          message: "Informe o nome de quem assina em nome do beneficiário.",
+        });
+      }
     } else if (data.exemptionActId) {
       ctx.addIssue({
         code: "custom",
@@ -259,6 +291,14 @@ export function publicServiceRequestSchema(act: Act) {
         .nullish()
         .transform((value) => value?.trim() || undefined),
       exemptionDeclaration: z.coerce.boolean().default(false),
+      // Mesma discurssão de `exemptionActId`: um formulário que não é o da
+      // gratuidade nunca registra este campo, e um grupo de radios sem opção
+      // marcada chega como null, não como string vazia.
+      exemptionSignedBy: z
+        .enum(EXEMPTION_SIGNERS)
+        .nullish()
+        .transform((value) => value ?? "beneficiario"),
+      exemptionSignerName: optionalText(160),
     })
     .superRefine(actRules(act));
 }
