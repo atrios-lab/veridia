@@ -157,7 +157,7 @@ export interface Act {
  */
 /**
  * What proves the benefit, listed for the citizen before they are asked to
- * attach anything — optionally: Provimento CGJ/TJRN n. 7/2026, art. 5º, makes
+ * attach anything, optionally: Provimento CGJ/TJRN n. 7/2026, art. 5º, makes
  * the declaration alone sufficient to file the request, so this list is help
  * for whoever has the document, never a requirement. "Anexe a documentação" is
  * not an instruction either way: someone who has never done this does not

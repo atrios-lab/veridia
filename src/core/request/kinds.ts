@@ -399,7 +399,7 @@ export const serviceRequestDetailsSchema = z.object({
   // `signedBy`/`signerName` identificam quem formalizou a declaração quando
   // não foi a própria pessoa beneficiária (Provimento CGJ/TJRN n. 7/2026,
   // art. 4º): representante legal ou assinatura a rogo. Ambos opcionais e
-  // ausentes juntos — nunca um sem o outro por regra do schema, mas o campo
+  // ausentes juntos, nunca um sem o outro por regra do schema, mas o campo
   // permanece tolerante a um pedido antigo que só tenha um dos dois.
   exemption: z
     .object({

@@ -146,7 +146,7 @@ const commonFields = {
  * Who formalises the exemption declaration: the beneficiary themselves
  * (default), a legal representative, or someone signing a rogo (the
  * beneficiary cannot or does not know how to sign). Provimento CGJ/TJRN n.
- * 7/2026, arts. 4º and 7º — the beneficiary and whoever signs in their place
+ * 7/2026, arts. 4º and 7º: the beneficiary and whoever signs in their place
  * are identified separately, and a rogo signature is printed with witness
  * lines on the requerimento.
  */

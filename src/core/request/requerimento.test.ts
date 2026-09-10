@@ -223,7 +223,7 @@ test("representante legal assina, e o papel identifica os dois separados", () =>
 
 test("assinatura a rogo reserva as duas linhas de testemunha", () => {
   // Provimento CGJ/TJRN n. 7/2026, art. 7º: leitura em voz alta explicada ao
-  // beneficiário e duas testemunhas — nunca coletadas como dado do
+  // beneficiário e duas testemunhas, nunca coletadas como dado do
   // formulário, só o espaço reservado no papel para o balcão preencher.
   const gratuidade = getAct("gratuidade-rcpn");
   if (!gratuidade) throw new Error("catalogo incompleto");

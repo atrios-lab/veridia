@@ -88,7 +88,7 @@ export interface RequerimentoData {
    * beneficiary formalised the declaration (Provimento CGJ/TJRN n. 7/2026,
    * art. 4º): a legal representative, or a rogo when the beneficiary cannot
    * or does not know how to sign. `applicantName` above stays the
-   * beneficiary's name in both cases — the declaration always speaks of
+   * beneficiary's name in both cases: the declaration always speaks of
    * their situation, never the signer's (art. 4º §4º).
    */
   exemption?: {
@@ -171,7 +171,7 @@ export function buildRequerimento(
   ];
   // Set only for a rogo declaration: two blank lines the renderer draws for
   // witnesses to sign by hand at the counter (Provimento CGJ/TJRN n.
-  // 7/2026, art. 7º). Never collected as form data — witnesses are chosen at
+  // 7/2026, art. 7º). Never collected as form data: witnesses are chosen at
   // the moment of the physical signature, not before.
   let witnessLines: string[] | undefined;
   if (data.exemption) {
