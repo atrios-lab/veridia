@@ -53,20 +53,14 @@ export const cartorioSantaCruz2: Tenant = parseTenant({
     title:
       "2º Tabelionato de Notas, Protestos e Ofício de Registro Civil de Santa Cruz / RN",
   }, // same text as `subtitle`
-  // Padrão novo para tenants sem marca própria enviada: a logo do Bom Jesus
-  // (o livro, hoje publicada por ele no painel) em vez do placeholder CM
-  // antigo, salva aqui como arquivo local: um logo em Blob externo passa
-  // pelo `next/image`, que só carrega hosts listados em
-  // `images.remotePatterns` (next.config.ts), montada a partir de
-  // `BLOB_PUBLIC_HOST`; sem essa env var (CI, todo ambiente sem o Blob
-  // configurado), a página inteira falha ao renderizar. A serventia troca
-  // pela sua própria em Configurações > Identidade visual quando quiser.
+  // Marca padrão da plataforma para serventias sem identidade própria.
+  // A serventia troca em Configurações > Identidade visual quando quiser.
   logos: {
-    light: "/logos/livro-bomjesus-preto.png",
-    dark: "/logos/livro-bomjesus-branco.png",
+    light: "/logos/selo-padrao-preto.png",
+    dark: "/logos/selo-padrao-branco.png",
     seal: {
-      light: "/logos/livro-bomjesus-preto.png",
-      dark: "/logos/livro-bomjesus-branco.png",
+      light: "/logos/selo-padrao-preto.png",
+      dark: "/logos/selo-padrao-branco.png",
     },
   },
   // Receita bruta semestral levantada na API pública do Justiça Aberta
