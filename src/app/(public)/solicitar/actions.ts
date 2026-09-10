@@ -58,6 +58,20 @@ function fail(
   return { status: "error", message, fieldErrors };
 }
 
+/**
+ * Quantos anexos esta submissão carrega, pelos dois caminhos: bytes no corpo
+ * (desenvolvimento) e referências de upload direto ao blob (produção). Um
+ * input de arquivo intocado ainda chega, como parte vazia, então o tamanho é
+ * o único sinal honesto de que o cidadão escolheu alguma coisa.
+ */
+function countAttachments(formData: FormData): number {
+  const files = formData
+    .getAll("anexos")
+    .filter((value): value is File => value instanceof File)
+    .filter((file) => file.size > 0);
+  return files.length + formData.getAll("anexosRef").length;
+}
+
 export async function submitServiceRequest(
   _previous: SubmitState,
   formData: FormData,
@@ -116,8 +130,6 @@ export async function submitServiceRequest(
     truthDeclaration: formData.get("truthDeclaration") ?? "",
     exemptionActId: formData.get("exemptionActId") ?? "",
     exemptionDeclaration: formData.get("exemptionDeclaration") ?? "",
-    exemptionSignedBy: formData.get("exemptionSignedBy") ?? "",
-    exemptionSignerName: formData.get("exemptionSignerName") ?? "",
   });
 
   if (!parsed.success) {
@@ -141,6 +153,18 @@ export async function submitServiceRequest(
     return { status: "duplicate", protocolNumber: duplicateProtocol };
   }
 
+  // Antes de armazenar coisa alguma: uma recusa depois de `collectAttachments`
+  // deixaria os arquivos já gravados no blob, órfãos de um pedido que não
+  // existe. Conta os dois caminhos, porque em produção os anexos chegam como
+  // referências de upload direto e em desenvolvimento como bytes no corpo.
+  if (act.exemptionTargets && countAttachments(formData) === 0) {
+    return fail("Confira os campos destacados para enviar o pedido.", {
+      anexos:
+        "Anexe a documentação do benefício para pedir a gratuidade: sem ela a " +
+        "serventia não tem como conferir.",
+    });
+  }
+
   const accessKey = generateAccessKey();
 
   try {
@@ -156,14 +180,7 @@ export async function submitServiceRequest(
     // The e-mail is what the `contact` column holds for a request filed here:
     // the telephone is the office's own way of reaching the citizen and rides
     // in `details`, next to the rest of what belongs to this kind alone.
-    const {
-      email,
-      phone,
-      exemptionActId,
-      exemptionSignedBy,
-      exemptionSignerName,
-      ...data
-    } = parsed.data;
+    const { email, phone, exemptionActId, ...data } = parsed.data;
 
     // O ato da gratuidade não tem prazo próprio: o prazo é o do ato que ele
     // pede, senão a certidão isenta nasceria com prazo diferente da paga. Fica
@@ -190,19 +207,7 @@ export async function submitServiceRequest(
           // serventia, e `amountCents` segue sendo do operador.
           ...(exemptionActId
             ? {
-                exemption: {
-                  declaredAt: consentedAt,
-                  actId: exemptionActId,
-                  // Ausente quando é a própria pessoa beneficiária quem
-                  // assina: nada a identificar além dela mesma (Provimento
-                  // CGJ/TJRN n. 7/2026, art. 4º §3º).
-                  ...(exemptionSignedBy && exemptionSignedBy !== "beneficiario"
-                    ? {
-                        signedBy: exemptionSignedBy,
-                        signerName: exemptionSignerName,
-                      }
-                    : {}),
-                },
+                exemption: { declaredAt: consentedAt, actId: exemptionActId },
                 deadline: { startedOn: today(), days: deadlineDays },
               }
             : {}),

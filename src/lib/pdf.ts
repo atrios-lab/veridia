@@ -326,12 +326,7 @@ export async function renderDocument(
         sum + pdf.heightOfString(line, { width: contentWidth(pdf) - 80 }),
       0,
     );
-    // A rogo declaration reserves a second row for the two witnesses (art.
-    // 7º, III do Provimento CGJ/TJRN n. 7/2026): same rule-and-label shape as
-    // the signee, smaller and side by side, so it needs its own slice of the
-    // block instead of stealing room the signee rule already claims.
-    const witnessHeight = document.witnessLines?.length ? 36 : 0;
-    const blockHeight = 28 + witnessHeight + noteHeight;
+    const blockHeight = 28 + noteHeight;
     if (bottom(pdf) - blockHeight - pdf.y < 48) pdf.addPage();
     pdf.y = bottom(pdf) - blockHeight;
 
@@ -347,25 +342,6 @@ export async function renderDocument(
         align: "center",
       });
     pdf.moveDown(0.6);
-
-    if (document.witnessLines?.length) {
-      pdf.moveDown(1.2);
-      const gap = 24;
-      const witnessWidth = (ruleWidth - gap) / document.witnessLines.length;
-      document.witnessLines.forEach((label, index) => {
-        const left = ruleLeft + index * (witnessWidth + gap);
-        pdf.rect(left, pdf.y, witnessWidth, 0.6).fill(NEUTRALS.text);
-        pdf
-          .font("Helvetica")
-          .fontSize(8.5)
-          .fillColor(NEUTRALS.textSoft)
-          .text(label, left, pdf.y + 5, {
-            width: witnessWidth,
-            align: "center",
-          });
-      });
-      pdf.moveDown(0.6);
-    }
   } else if (document.signature.length) {
     pdf.moveDown(2);
     if (pdf.y > bottom(pdf) - HEADING_ORPHAN_GUARD) pdf.addPage();
