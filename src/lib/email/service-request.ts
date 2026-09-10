@@ -117,7 +117,7 @@ export interface NotifyOfficePaymentReportedParams {
  * `notifyCitizen`, this one carries the payer and the value, because the
  * recipient is the office's own institutional inbox (`tenant.contacts.email`),
  * never a citizen's address behind an access key. It is only the alert that a
- * comprovante is waiting — it never confirms the payment itself, which stays
+ * comprovante is waiting: it never confirms the payment itself, which stays
  * a manual call in the panel.
  *
  * Same fire-and-forget contract as `notifyCitizen`, built entirely inside the
