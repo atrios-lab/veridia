@@ -30,7 +30,7 @@ export function AdminSidebarNav({
   const pathname = usePathname();
 
   return (
-    <nav className="flex flex-1 flex-col gap-0.5 px-3 py-3.5">
+    <nav className="flex min-h-0 flex-1 flex-col gap-0.5 overflow-y-auto px-3 py-3.5">
       {navGroups(items).map(({ group, items: groupItems }) => (
         <div key={group} className="flex flex-col gap-0.5">
           <span className="px-2.5 pt-3.5 pb-1.5 text-[10px] font-bold uppercase tracking-[0.14em] text-admin-on-dark-accent">
