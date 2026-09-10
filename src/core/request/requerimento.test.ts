@@ -200,3 +200,54 @@ test("pedido antigo sem ato-alvo ainda imprime a declaração", () => {
   assert.match(texto, /Código Penal art\. 299/);
   assert.doesNotMatch(texto, /Fundamento:/);
 });
+
+test("representante legal assina, e o papel identifica os dois separados", () => {
+  // Provimento CGJ/TJRN n. 7/2026, art. 4º §3º: beneficiário e quem assina em
+  // seu lugar precisam aparecer identificados à parte, sem testemunha (a
+  // exigência de testemunhas é só do rogo, art. 7º).
+  const gratuidade = getAct("gratuidade-rcpn");
+  if (!gratuidade) throw new Error("catalogo incompleto");
+  const document = buildRequerimento(cartorioMarinho, gratuidade, {
+    ...data,
+    exemption: {
+      actId: "rcpn-habilitacao-casamento",
+      signedBy: "representante",
+      signerName: "João da Silva",
+    },
+  });
+  const texto = flatten(document.sections);
+  assert.match(texto, /Beneficiário\(a\).*Maria José da Silva/);
+  assert.match(texto, /João da Silva.*representante legal/);
+  assert.equal(document.witnessLines, undefined);
+});
+
+test("assinatura a rogo reserva as duas linhas de testemunha", () => {
+  // Provimento CGJ/TJRN n. 7/2026, art. 7º: leitura em voz alta explicada ao
+  // beneficiário e duas testemunhas, nunca coletadas como dado do
+  // formulário, só o espaço reservado no papel para o balcão preencher.
+  const gratuidade = getAct("gratuidade-rcpn");
+  if (!gratuidade) throw new Error("catalogo incompleto");
+  const document = buildRequerimento(cartorioMarinho, gratuidade, {
+    ...data,
+    exemption: {
+      actId: "rcpn-habilitacao-casamento",
+      signedBy: "rogo",
+      signerName: "Ana Paula Souza",
+    },
+  });
+  const texto = flatten(document.sections);
+  assert.match(texto, /Ana Paula Souza.*assinatura a rogo/);
+  assert.match(texto, /lido em voz alta/);
+  assert.deepEqual(document.witnessLines, ["Testemunha 1", "Testemunha 2"]);
+});
+
+test("gratuidade pedida pela própria pessoa não ganha linha de testemunha", () => {
+  const gratuidade = getAct("gratuidade-rcpn");
+  if (!gratuidade) throw new Error("catalogo incompleto");
+  const document = buildRequerimento(cartorioMarinho, gratuidade, {
+    ...data,
+    exemption: { actId: "rcpn-habilitacao-casamento" },
+  });
+  assert.equal(document.witnessLines, undefined);
+  assert.doesNotMatch(flatten(document.sections), /Beneficiário\(a\)/);
+});

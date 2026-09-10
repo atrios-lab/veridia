@@ -274,6 +274,20 @@ export default async function ServiceRequestDetailPage({
                       {exemptionActName ? ` · ${exemptionActName}` : ""} ·
                       declarada em{" "}
                       {formatDayMonthYear(new Date(exemption.declaredAt))}
+                      {/* Provimento CGJ/TJRN n. 7/2026, art. 4º §3º: quem
+                          assina em nome do beneficiário precisa aparecer
+                          identificado, à parte, desde o primeiro olhar do
+                          operador. */}
+                      {exemption.signedBy && exemption.signerName && (
+                        <>
+                          {" "}
+                          ·{" "}
+                          {exemption.signedBy === "representante"
+                            ? "assinada por representante legal"
+                            : "assinada a rogo"}
+                          : {exemption.signerName}
+                        </>
+                      )}
                     </span>
                   )}
                 </>

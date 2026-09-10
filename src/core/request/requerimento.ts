@@ -58,6 +58,13 @@ export interface RequerimentoDocument {
    * receipt), there is no signing and no space is wasted pretending there is.
    */
   signee?: string;
+  /**
+   * Blank signature lines for witnesses, present only for a rogo declaration
+   * (Provimento CGJ/TJRN n. 7/2026, art. 7º, III). Each entry is a label
+   * ("Testemunha 1", "Testemunha 2") the renderer draws a rule and blank
+   * space under, the same way it does for `signee`.
+   */
+  witnessLines?: string[];
   signature: string[];
   footer: string;
   credentials?: RequerimentoCredentials;
@@ -76,8 +83,19 @@ export interface RequerimentoData {
    * the act the exemption is for, and it is absent in the requests filed
    * before the gratuidade became an act of its own: the declaration still
    * prints, without a fundamento it cannot name.
+   *
+   * `signedBy`/`signerName` are present only when someone other than the
+   * beneficiary formalised the declaration (Provimento CGJ/TJRN n. 7/2026,
+   * art. 4º): a legal representative, or a rogo when the beneficiary cannot
+   * or does not know how to sign. `applicantName` above stays the
+   * beneficiary's name in both cases: the declaration always speaks of
+   * their situation, never the signer's (art. 4º §4º).
    */
-  exemption?: { actId?: string };
+  exemption?: {
+    actId?: string;
+    signedBy?: "representante" | "rogo";
+    signerName?: string;
+  };
   cpf?: string | null;
   description?: string | null;
   purpose?: string | null;
@@ -151,6 +169,11 @@ export function buildRequerimento(
     "Declaro, sob as penas da lei, que as informações prestadas neste " +
       "requerimento são verdadeiras.",
   ];
+  // Set only for a rogo declaration: two blank lines the renderer draws for
+  // witnesses to sign by hand at the counter (Provimento CGJ/TJRN n.
+  // 7/2026, art. 7º). Never collected as form data: witnesses are chosen at
+  // the moment of the physical signature, not before.
+  let witnessLines: string[] | undefined;
   if (data.exemption) {
     const requested = act.exemptionTargets?.find(
       (target) => target.id === data.exemption?.actId,
@@ -161,6 +184,24 @@ export function buildRequerimento(
             `Fundamento: ${requested.feeExemption.legalBasis}.`
         : FEE_EXEMPTION_DECLARATION,
     );
+    if (data.exemption.signedBy && data.exemption.signerName) {
+      const qualification =
+        data.exemption.signedBy === "representante"
+          ? "representante legal"
+          : "assinatura a rogo";
+      declarations.push(
+        `Beneficiário(a) desta declaração: ${data.applicantName}. ` +
+          `Assinada por ${data.exemption.signerName}, na qualidade de ` +
+          `${qualification}.`,
+      );
+      if (data.exemption.signedBy === "rogo") {
+        declarations.push(
+          "O conteúdo desta declaração foi lido em voz alta e explicado à " +
+            "pessoa beneficiária antes da assinatura.",
+        );
+        witnessLines = ["Testemunha 1", "Testemunha 2"];
+      }
+    }
   }
   sections.push({ heading: "Declarações", paragraphs: declarations });
 
@@ -175,6 +216,7 @@ export function buildRequerimento(
     ],
     sections,
     signee: data.applicantName,
+    witnessLines,
     signature: [
       "Assine este requerimento pelo Gov.br (assinador.iti.br) ou imprima e " +
         "assine de próprio punho. Depois, envie o arquivo assinado pela " +
