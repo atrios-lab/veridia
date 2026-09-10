@@ -49,7 +49,7 @@ export function AdminSidebar({
 
   return (
     <aside
-      className={`flex w-[236px] flex-none flex-col bg-admin-primary ${className}`}
+      className={`flex min-h-0 w-[236px] flex-none flex-col bg-admin-primary ${className}`}
     >
       <div className="flex items-center gap-3 border-b border-white/12 px-[18px] py-5">
         <Image
