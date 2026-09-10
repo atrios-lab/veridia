@@ -21,6 +21,7 @@ import {
 import { isChatEnabled, waitingConversations } from "@/lib/chat.ts";
 import { getSession } from "@/lib/session.ts";
 import { getTenant, OFFICE_TIME_ZONE, officeNow, today } from "@/lib/tenant.ts";
+import { QueuePoller } from "../_components/queue-poller.tsx";
 import type { ActionShortcut } from "./_components/action-shortcuts.tsx";
 import { ActionShortcuts } from "./_components/action-shortcuts.tsx";
 import type { ChannelStatusRow } from "./_components/channel-status.tsx";
@@ -220,6 +221,7 @@ export default async function AdminHome() {
         criticalCount={criticalCount}
         today={todayIso}
       />
+      <QueuePoller />
       <main className="flex flex-col gap-4.5 px-[30px] py-7">
         <ActionShortcuts shortcuts={shortcuts} />
 
