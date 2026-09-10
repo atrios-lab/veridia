@@ -5,10 +5,12 @@ import { redirect } from "next/navigation";
 import { can } from "@/core/auth/roles.ts";
 import { isChatAvailability } from "@/core/chat/hours.ts";
 import {
+  activeConversations,
   assignConversation,
   ChatCapacityError,
   setChatAvailability,
   setChatStatus,
+  waitingConversations,
 } from "@/lib/chat.ts";
 import { getSession } from "@/lib/session.ts";
 import { getTenant } from "@/lib/tenant.ts";
@@ -70,6 +72,24 @@ export async function assignConversationAction(
   }
   revalidateAdmin();
   redirect(`/admin/atendimento/${conversationId}`);
+}
+
+/**
+ * A cheap stamp of who is in the queue right now: just the ids, none of the
+ * attendant joins the page itself does. `QueuePoller` compares this against
+ * what it last saw and only asks for a real `router.refresh()` when the
+ * composition actually changed, instead of re-rendering the whole page on
+ * a blind interval.
+ */
+export async function queueVersionAction(): Promise<string | null> {
+  const session = await getSession();
+  if (!session || !can(session.user.role ?? "", "chat.manage")) return null;
+  const tenant = await getTenant();
+  const [waiting, active] = await Promise.all([
+    waitingConversations(tenant.slug),
+    activeConversations(tenant.slug),
+  ]);
+  return `${waiting.map((c) => c.id).join(",")}|${active.map((c) => c.id).join(",")}`;
 }
 
 const CHAT_STATUSES = ["available", "busy", "away"] as const;
