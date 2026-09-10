@@ -111,7 +111,7 @@ test("as certidões e a busca pedem só a identificação, e resolvem on-line", 
   // As duas coisas ao mesmo tempo: era o que o campo único não deixava dizer,
   // e o que fazia a certidão anunciar só metade da verdade.
   const soIdentificacao = ACTS.filter((act) => act.identificationOnly);
-  assert.equal(soIdentificacao.length, 8);
+  assert.equal(soIdentificacao.length, 7);
   for (const act of soIdentificacao) {
     assert.equal(act.processingMode, "online", act.id);
   }
@@ -194,30 +194,6 @@ test("a entrada da gratuidade oferece exatamente os atos isentáveis", () => {
   ]);
   // O ato em si não é isentável: quem carrega a base legal é o ato pedido.
   assert.equal(gratuidade.feeExemption, undefined);
-});
-
-test("certidão de nascimento e óbito não passa pela gratuidade: já é grátis por lei", () => {
-  // Lei 6.015 art. 30 §1º (red. Lei 9.534/97); Provimento CGJ/TJRN n.
-  // 7/2026, art. 3º §1º, I e II: nenhuma declaração de hipossuficiência se
-  // aplica a este ato, então ele não pode carregar `feeExemption` nem
-  // aparecer como alvo da entrada "Solicitar gratuidade".
-  const nascimentoObito = getAct("rcpn-certidao-nascimento-obito");
-  assert.ok(nascimentoObito, "o ato de nascimento/óbito precisa existir");
-  assert.equal(nascimentoObito?.feeExemption, undefined);
-
-  const gratuidade = getAct("gratuidade-rcpn");
-  assert.ok(
-    !gratuidade?.exemptionTargets?.some(
-      (a) => a.id === "rcpn-certidao-nascimento-obito",
-    ),
-    "nascimento/óbito não pode ser oferecido como alvo da gratuidade",
-  );
-
-  const rcpn = actsOfAttribution(cartorioMarinho, "RCPN").map((a) => a.id);
-  assert.ok(
-    rcpn.includes("rcpn-certidao-nascimento-obito"),
-    "o ato continua disponível para pedido direto, fora da gratuidade",
-  );
 });
 
 test("a gratuidade não inventa prazo legal: ele é o do ato pedido", () => {

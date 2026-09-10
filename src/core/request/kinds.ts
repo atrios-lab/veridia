@@ -421,19 +421,8 @@ export const serviceRequestDetailsSchema = z.object({
   // `actId` diz qual ato a isenção pede, e é opcional porque os pedidos
   // feitos antes de a gratuidade virar ato próprio não o têm: ausente
   // significa "não sabemos", nunca um ato no lugar do que falta.
-  //
-  // `signedBy`/`signerName` identificam quem formalizou a declaração quando
-  // não foi a própria pessoa beneficiária (Provimento CGJ/TJRN n. 7/2026,
-  // art. 4º): representante legal ou assinatura a rogo. Ambos opcionais e
-  // ausentes juntos, nunca um sem o outro por regra do schema, mas o campo
-  // permanece tolerante a um pedido antigo que só tenha um dos dois.
   exemption: z
-    .object({
-      declaredAt: isoInstant,
-      actId: z.string().optional(),
-      signedBy: z.enum(["representante", "rogo"]).optional(),
-      signerName: z.string().optional(),
-    })
+    .object({ declaredAt: isoInstant, actId: z.string().optional() })
     .optional(),
 });
 export type ServiceRequestDetails = z.infer<typeof serviceRequestDetailsSchema>;
@@ -450,34 +439,18 @@ export type ServiceRequestDetails = z.infer<typeof serviceRequestDetailsSchema>;
  * reads it parses it. `actId` comes back undefined for the requests filed
  * before the gratuidade became an act of its own.
  */
-export function readExemption(details: unknown):
-  | {
-      declaredAt: string;
-      actId?: string;
-      signedBy?: "representante" | "rogo";
-      signerName?: string;
-    }
-  | undefined {
+export function readExemption(
+  details: unknown,
+): { declaredAt: string; actId?: string } | undefined {
   const value = (
     details as {
-      exemption?: {
-        declaredAt?: unknown;
-        actId?: unknown;
-        signedBy?: unknown;
-        signerName?: unknown;
-      };
+      exemption?: { declaredAt?: unknown; actId?: unknown };
     } | null
   )?.exemption;
   if (typeof value?.declaredAt !== "string") return undefined;
   return {
     declaredAt: value.declaredAt,
     actId: typeof value.actId === "string" ? value.actId : undefined,
-    signedBy:
-      value.signedBy === "representante" || value.signedBy === "rogo"
-        ? value.signedBy
-        : undefined,
-    signerName:
-      typeof value.signerName === "string" ? value.signerName : undefined,
   };
 }
 

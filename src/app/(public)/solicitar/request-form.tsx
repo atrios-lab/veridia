@@ -146,16 +146,12 @@ export function RequestForm({
   const {
     register,
     handleSubmit,
-    watch,
     formState: { errors: clientErrors },
   } = useForm({
     resolver: zodResolver(publicServiceRequestSchema(act)),
     mode: "onTouched",
   });
   const exemptionTargets = act.exemptionTargets;
-  // Padrão "beneficiario" quando nada foi tocado ainda: o campo de nome só
-  // aparece depois que o cidadão diz que não é ele quem assina.
-  const exemptionSignedBy = watch("exemptionSignedBy") || "beneficiario";
 
   if (state.status === "success") {
     return <SuccessScreen result={state} lookupHref={lookupHref} />;
@@ -492,72 +488,15 @@ export function RequestForm({
               <FieldError message={errorFor("exemptionDeclaration")} />
               <div className="rounded-xl bg-brand-accent-soft px-3.5 py-3">
                 <p className="text-[12px] font-bold text-brand-accent-ink">
-                  Anexar comprovante é opcional
+                  Anexe acima o comprovante do seu benefício
                 </p>
                 <DocumentsChecklist documents={[...FEE_EXEMPTION_DOCUMENTS]} />
                 <p className="mt-2 text-[11.5px] leading-relaxed text-brand-accent-ink">
-                  A declaração acima já basta para pedir a gratuidade. Se você
-                  tiver algum destes documentos, anexar acima ajuda a serventia
-                  a conferir mais rápido, e a lista é de exemplos: se o seu
-                  programa social não estiver aí, anexe o comprovante que você
-                  tem.
+                  Um documento basta, e a lista é de exemplos: se o seu programa
+                  social não estiver aí, anexe o comprovante que você tem. Sem
+                  documento a serventia não consegue conferir.
                 </p>
               </div>
-            </div>
-
-            <div className="mt-3 flex flex-col gap-2.5 border-t border-brand-border pt-3">
-              <fieldset className="flex flex-col gap-2">
-                <legend className="text-[13px] font-semibold text-brand-primary">
-                  Quem assina esta declaração?
-                </legend>
-                {(
-                  [
-                    ["beneficiario", "A própria pessoa beneficiária"],
-                    ["representante", "Representante legal"],
-                    [
-                      "rogo",
-                      "Assinatura a rogo (a pessoa beneficiária não sabe ou não pode assinar)",
-                    ],
-                  ] as const
-                ).map(([value, label]) => (
-                  <label key={value} className="flex items-start gap-2.5">
-                    <input
-                      type="radio"
-                      value={value}
-                      defaultChecked={value === "beneficiario"}
-                      className="mt-0.5 h-4.5 w-4.5 shrink-0 accent-brand-primary"
-                      {...register("exemptionSignedBy")}
-                    />
-                    <span className="text-[13px] text-brand-primary">
-                      {label}
-                    </span>
-                  </label>
-                ))}
-              </fieldset>
-              {exemptionSignedBy !== "beneficiario" && (
-                <div>
-                  <label
-                    htmlFor="exemptionSignerName"
-                    className="text-[12.5px] font-semibold text-brand-primary"
-                  >
-                    Nome de quem assina em nome do beneficiário
-                  </label>
-                  <input
-                    id="exemptionSignerName"
-                    type="text"
-                    className={`${inputClass} mt-1.5`}
-                    {...register("exemptionSignerName")}
-                  />
-                  <FieldError message={errorFor("exemptionSignerName")} />
-                  {exemptionSignedBy === "rogo" && (
-                    <p className="mt-1.5 text-[11.5px] leading-relaxed text-brand-text-soft">
-                      No balcão, o conteúdo desta declaração será lido em voz
-                      alta e explicado à pessoa beneficiária, e duas testemunhas
-                      assinarão o requerimento junto com ela.
-                    </p>
-                  )}
-                </div>
-              )}
             </div>
           </div>
         )}

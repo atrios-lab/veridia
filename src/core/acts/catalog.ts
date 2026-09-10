@@ -157,12 +157,9 @@ export interface Act {
  */
 /**
  * What proves the benefit, listed for the citizen before they are asked to
- * attach anything, optionally: Provimento CGJ/TJRN n. 7/2026, art. 5º, makes
- * the declaration alone sufficient to file the request, so this list is help
- * for whoever has the document, never a requirement. "Anexe a documentação" is
- * not an instruction either way: someone who has never done this does not
- * know what the office accepts, guesses, and the guess comes back as an
- * exigência a week later.
+ * attach anything. "Anexe a documentação" is not an instruction: someone who
+ * has never done this does not know what the office accepts, guesses, and the
+ * guess comes back as an exigência a week later.
  *
  * Examples, never a closed list, and the last entry says so out loud. The
  * office asked for it: there are many social programmes, and a list that reads
@@ -196,29 +193,10 @@ export const FEE_EXEMPTION_DECLARATION =
 // filtered by attribution, never a list of its own.
 export const ACTS: Act[] = [
   // Registro Civil das Pessoas Naturais
-  //
-  // Nascimento e óbito ficam num item à parte, sem `feeExemption`: a primeira
-  // certidão de cada um é gratuita por lei para qualquer pessoa, rica ou
-  // pobre (Lei 6.015 art. 30 §1º, red. Lei 9.534/97; Provimento CGJ/TJRN n.
-  // 7/2026, art. 3º §1º, I e II), e não passa pela declaração de
-  // hipossuficiência que as demais certidões, condicionadas à pobreza (CF
-  // art. 5º, LXXVI), continuam exigindo.
-  {
-    id: "rcpn-certidao-nascimento-obito",
-    attribution: "RCPN",
-    name: "Certidão de nascimento ou óbito",
-    processingMode: "online",
-    identificationOnly: true,
-    legalBasis: "Lei 6.015 art. 17",
-    legalDeadlineDays: 5,
-    legalDeadlineNote:
-      "Lei 6.015 art. 19, red. Lei 14.382/2022: demais certidões",
-    requiresPurpose: false, // art. 17: neither motive nor interest may be asked
-  },
   {
     id: "rcpn-certidao",
     attribution: "RCPN",
-    name: "Certidão de casamento e demais certidões do RCPN",
+    name: "Certidão (nascimento, casamento, óbito)",
     processingMode: "online",
     identificationOnly: true,
     legalBasis: "Lei 6.015 art. 17",
@@ -227,7 +205,7 @@ export const ACTS: Act[] = [
       "Lei 6.015 art. 19, red. Lei 14.382/2022: demais certidões",
     requiresPurpose: false, // art. 17: neither motive nor interest may be asked
     feeExemption: {
-      legalBasis: "CF art. 5º, LXXVI",
+      legalBasis: "CF art. 5º, LXXVI; Lei 6.015 art. 30 §1º (Lei 9.534/97)",
     },
   },
   {

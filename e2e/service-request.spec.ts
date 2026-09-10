@@ -32,9 +32,7 @@ test("uma certidão anuncia as duas coisas que ela é", async ({ page }) => {
   // morava num campo só, ela dizia uma metade e calava a outra.
   await page.goto(`${baseURL}/solicitar?atribuicao=RCPN`);
 
-  const certidao = page.locator("a", {
-    hasText: "Certidão de nascimento ou óbito",
-  });
+  const certidao = page.locator("a", { hasText: "Certidão (nascimento" });
   await expect(certidao.getByText("Termina on-line")).toBeVisible();
   await expect(certidao.getByText("Só identificação")).toBeVisible();
 
@@ -65,26 +63,23 @@ test.describe("gratuidade (ISENTO)", () => {
     await expect(page.getByText(/gratuidade/i)).toHaveCount(0);
   });
 
-  test("o pedido de gratuidade cobra o ato e a declaração, não a documentação", async ({
+  test("o pedido de gratuidade cobra o ato, a declaração e a documentação", async ({
     page,
   }) => {
     await page.goto(`${baseURL}/solicitar?atribuicao=RCPN&ato=gratuidade-rcpn`);
     await page.getByLabel("Nome completo").fill("Maria José da Silva");
     await page.getByLabel(/E-mail/).fill("maria@exemplo.com");
 
-    // Só os atos que a lei isenta condicionado à hipossuficiência, cada um
-    // com a sua base legal. Nascimento e óbito não entram: são gratuitos por
-    // lei para qualquer pessoa, sem declaração nenhuma.
+    // Os dois atos que a lei isenta, cada um com a sua base legal.
     await expect(
-      page.getByRole("radio", { name: /Certidão de casamento/ }),
+      page.getByRole("radio", { name: /Certidão \(nascimento/ }),
     ).toBeVisible();
     await expect(page.getByText(/CC art\. 1\.512/)).toBeVisible();
-    await expect(
-      page.getByRole("radio", { name: /nascimento ou óbito/i }),
-    ).toHaveCount(0);
 
     await expect(page.getByText(/Código Penal art\. 299/)).toBeVisible();
-    await expect(page.getByText("Anexar comprovante é opcional")).toBeVisible();
+    await expect(
+      page.getByText("Anexe acima o comprovante do seu benefício"),
+    ).toBeVisible();
     await expect(page.getByText(/Folha Resumo do CadÚnico/)).toBeVisible();
     // A lista é de exemplos: quem tem outro programa social não pode se ver
     // de fora dela.
@@ -102,18 +97,6 @@ test.describe("gratuidade (ISENTO)", () => {
     ).toBeVisible();
     await expect(
       page.getByRole("heading", { name: "Pedido registrado" }),
-    ).toHaveCount(0);
-
-    // Escolher o ato e marcar a declaração, sem anexar nada, é suficiente
-    // para o formulário aceitar o envio: a declaração sozinha basta
-    // (Provimento CGJ/TJRN n. 7/2026, art. 5º), o erro acima veio só da
-    // ausência de escolha e da declaração, nunca de falta de anexo.
-    await page.getByRole("radio", { name: /Certidão de casamento/ }).check();
-    await page
-      .getByLabel(/Declaro, sob as penas da lei, ser beneficiário/)
-      .check();
-    await expect(
-      page.getByText("Anexe a documentação", { exact: false }),
     ).toHaveCount(0);
   });
 });
@@ -159,9 +142,9 @@ test("the act count on each card is the catalog, not a number in the markup", as
 }) => {
   await page.goto(`${baseURL}/solicitar`);
   const civil = page.locator("[data-attribution=RCPN]");
-  await expect(civil).toContainText("7 atos");
+  await expect(civil).toContainText("6 atos");
   await civil.click();
-  await expect(page.locator("main a[href*='ato=']")).toHaveCount(7);
+  await expect(page.locator("main a[href*='ato=']")).toHaveCount(6);
 });
 
 test("a certificate is never asked what it is for", async ({ page }) => {
