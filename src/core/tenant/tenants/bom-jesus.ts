@@ -43,13 +43,12 @@ export const cartorioBomJesus: Tenant = parseTenant({
   // ponytail: same photo as Marinho until the office sends its own
   heroImage: "/hero-home.jpg",
   home: { title: "Ofício Único de Bom Jesus / RN" }, // same text as `subtitle`
-  // ponytail: placeholder logos until the office sends its own assets
   logos: {
-    light: "/logos/CM-Logo-preto.png",
-    dark: "/logos/CM-Logo-branco.png",
+    light: "/logos/livro-bomjesus-preto.png",
+    dark: "/logos/livro-bomjesus-branco.png",
     seal: {
-      light: "/logos/CM-Sublogo-preto.png",
-      dark: "/logos/CM-Sublogo-branco.png",
+      light: "/logos/livro-bomjesus-preto.png",
+      dark: "/logos/livro-bomjesus-branco.png",
     },
   },
   // Receita bruta semestral levantada na API pública do Justiça Aberta

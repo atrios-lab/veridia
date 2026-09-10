@@ -43,12 +43,14 @@ export const tabelionatoAurora: Tenant = parseTenant({
   // A different theme from the pilot, on purpose: two offices sharing one
   // palette would never catch the theme being hardcoded somewhere.
   theme: "marinho-bronze",
+  // Marca padrão da plataforma para serventias sem identidade própria.
+  // A serventia troca em Configurações > Identidade visual quando quiser.
   logos: {
-    light: "/logos/CM-Logo-preto.png",
-    dark: "/logos/CM-Logo-branco.png",
+    light: "/logos/selo-padrao-preto.png",
+    dark: "/logos/selo-padrao-branco.png",
     seal: {
-      light: "/logos/CM-Sublogo-preto.png",
-      dark: "/logos/CM-Sublogo-branco.png",
+      light: "/logos/selo-padrao-preto.png",
+      dark: "/logos/selo-padrao-branco.png",
     },
   },
   legalFooter:
