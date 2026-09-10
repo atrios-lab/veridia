@@ -29,6 +29,7 @@ import {
 import { formatCents } from "@/core/request/money.ts";
 import { type IsoDate, toIsoDate } from "@/core/scheduling/calendar.ts";
 import { isSectionEnabled } from "@/core/tenant/gating.ts";
+import { notifyOfficePaymentReported } from "@/lib/email/service-request.ts";
 import { type PixCharge, pixChargeFor } from "@/lib/pix-qr.ts";
 import { isPollRateLimited, isRateLimited } from "@/lib/rate-limit.ts";
 import {
@@ -563,6 +564,15 @@ export async function reportPayment(
         null,
       );
     }
+    // Todo envio avisa a serventia, reenvio incluso: um comprovante ilegível
+    // ou trocado só se descobre com outro no lugar, e é exatamente o reenvio
+    // que traz essa notícia.
+    notifyOfficePaymentReported({
+      tenant,
+      protocolNumber: request.protocolNumber,
+      applicantName: request.applicantName,
+      amountCents: request.amountCents,
+    });
     return {
       status: "success",
       displayName: inserted.displayName,

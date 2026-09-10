@@ -1,10 +1,17 @@
 import "server-only";
 import { after } from "next/server";
+import type { EmailText } from "@/core/email/text.ts";
 import { isEmailContact } from "@/core/request/form.ts";
+import { formatCents } from "@/core/request/money.ts";
 import { brandImageUrl } from "@/core/tenant/brand-image.ts";
 import type { Tenant } from "@/core/tenant/schema.ts";
 import { findPermanentBounce } from "./bounces.ts";
-import { renderNoticeEmailHtml } from "./render.ts";
+import {
+  renderEmailCardHtml,
+  renderEmailCardText,
+  renderNoticeEmailHtml,
+  tenantEmailIdentity,
+} from "./render.ts";
 import { sendEmail } from "./send.ts";
 
 /**
@@ -95,4 +102,61 @@ export async function notifyCitizen(
   });
 
   return null;
+}
+
+export interface NotifyOfficePaymentReportedParams {
+  tenant: Tenant;
+  protocolNumber: string;
+  /** The requester's name, when the request has one. */
+  applicantName: string | null;
+  amountCents: number;
+}
+
+/**
+ * The office's own nudge that a citizen used "Já paguei": unlike
+ * `notifyCitizen`, this one carries the payer and the value, because the
+ * recipient is the office's own institutional inbox (`tenant.contacts.email`),
+ * never a citizen's address behind an access key. It is only the alert that a
+ * comprovante is waiting — it never confirms the payment itself, which stays
+ * a manual call in the panel.
+ *
+ * Same fire-and-forget contract as `notifyCitizen`, built entirely inside the
+ * deferred callback: a mail provider (or a tenant missing a host) having a
+ * bad moment must never be why "Já paguei" fails for the citizen.
+ */
+export function notifyOfficePaymentReported(
+  params: NotifyOfficePaymentReportedParams,
+): void {
+  const { tenant, protocolNumber, applicantName, amountCents } = params;
+
+  after(async () => {
+    try {
+      const host = tenant.hosts[0];
+      const panelUrl = host
+        ? `https://${host}/admin/pedidos/${protocolNumber}`
+        : "";
+      const text: EmailText = {
+        subject: `Pagamento informado · ${protocolNumber}`,
+        paragraphs: [
+          `${applicantName?.trim() || "O requerente"} informou o pagamento do pedido ${protocolNumber}, no valor de ${formatCents(amountCents)}.`,
+          "O comprovante já está anexado ao pedido, no painel. Confira e confirme o pagamento por lá.",
+        ],
+        buttonLabel: "Ver o pedido",
+        footnote:
+          "Este e-mail é só o aviso: a confirmação do pagamento continua manual, pelo painel.",
+      };
+      const identity = tenantEmailIdentity(tenant);
+
+      await sendEmail({
+        to: tenant.contacts.email,
+        fromName: tenant.name,
+        fromAddress: tenant.emailFrom,
+        subject: text.subject,
+        html: renderEmailCardHtml(text, identity, panelUrl),
+        text: renderEmailCardText(text, panelUrl),
+      });
+    } catch (error) {
+      console.error("email.payment-reported", error);
+    }
+  });
 }
