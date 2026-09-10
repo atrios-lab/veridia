@@ -21,4 +21,4 @@
 - [x] 3.1 `pnpm typecheck`, `biome check` e só o `e2e/service-request.spec.ts` passando.
 - [x] 3.2 Pelo host do cartório no Homolog, num navegador de verdade: pedir um serviço, clicar nos
       dois botões, ver o PDF em aba nova e a chave ainda na tela atrás.
-- [ ] 3.3 Abrir o PR a partir da branch; sem push na main.
+- [x] 3.3 Abrir o PR a partir da branch; sem push na main.
