@@ -9,22 +9,13 @@ import {
 import { getSession } from "@/lib/session.ts";
 import { getTenant } from "@/lib/tenant.ts";
 import { AdminPageHeader } from "../../_components/page-header.tsx";
-import { QueuePoller } from "../../_components/queue-poller.tsx";
 import { AssignButton } from "./_components/assign-button.tsx";
 import { ChatToggle } from "./_components/chat-toggle.tsx";
+import { QueuePoller } from "./_components/queue-poller.tsx";
 import { StatusControl } from "./_components/status-control.tsx";
+import { WaitingTime } from "./_components/waiting-time.tsx";
 
 export const metadata = { title: "Atendimento online" };
-
-function waitMinutes(waitingSince: Date, now: Date): number {
-  return Math.floor((now.getTime() - waitingSince.getTime()) / 60_000);
-}
-
-function urgencyClass(minutes: number): string {
-  if (minutes >= 10) return "text-admin-error-text";
-  if (minutes >= 5) return "text-admin-warning-text";
-  return "text-admin-success-text";
-}
 
 export default async function SupportChatQueuePage() {
   const session = await getSession();
@@ -44,12 +35,12 @@ export default async function SupportChatQueuePage() {
         : undefined,
     })),
   );
-  const now = new Date();
+  const queueVersion = `${waiting.map((c) => c.id).join(",")}|${active.map((c) => c.id).join(",")}`;
 
   return (
     <>
       <AdminPageHeader title="Atendimento online" />
-      <QueuePoller />
+      <QueuePoller version={queueVersion} />
       <main className="flex flex-col gap-4.5 px-[30px] py-7">
         <div className="flex flex-wrap items-center gap-3.5 rounded-[14px] border border-admin-border bg-admin-card px-5 py-3.5">
           <h2 className="flex-1 font-serif text-[17px] font-semibold text-admin-primary">
@@ -82,33 +73,28 @@ export default async function SupportChatQueuePage() {
                 Ninguém esperando.
               </p>
             ) : (
-              waiting.map((conversation) => {
-                const minutes = waitMinutes(conversation.waitingSince, now);
-                return (
-                  <div
-                    key={conversation.id}
-                    className="flex items-center gap-3 border-b border-admin-border px-4.5 py-3 last:border-b-0"
-                  >
-                    <span className="min-w-0 flex-1">
-                      <span className="block truncate text-[13px] font-semibold text-admin-text">
-                        {conversation.citizenName}
-                      </span>
-                      <span className="block truncate text-[11.5px] text-admin-faint">
-                        {conversation.subject}
-                        {conversation.informedProtocolNumber
-                          ? ` · ${conversation.informedProtocolNumber}`
-                          : ""}
-                      </span>
+              waiting.map((conversation) => (
+                <div
+                  key={conversation.id}
+                  className="flex items-center gap-3 border-b border-admin-border px-4.5 py-3 last:border-b-0"
+                >
+                  <span className="min-w-0 flex-1">
+                    <span className="block truncate text-[13px] font-semibold text-admin-text">
+                      {conversation.citizenName}
                     </span>
-                    <span
-                      className={`flex-none text-[12px] font-bold ${urgencyClass(minutes)}`}
-                    >
-                      {minutes} min
+                    <span className="block truncate text-[11.5px] text-admin-faint">
+                      {conversation.subject}
+                      {conversation.informedProtocolNumber
+                        ? ` · ${conversation.informedProtocolNumber}`
+                        : ""}
                     </span>
-                    <AssignButton conversationId={conversation.id} />
-                  </div>
-                );
-              })
+                  </span>
+                  <WaitingTime
+                    waitingSince={conversation.waitingSince.toISOString()}
+                  />
+                  <AssignButton conversationId={conversation.id} />
+                </div>
+              ))
             )}
           </section>
 
