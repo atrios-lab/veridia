@@ -1041,6 +1041,12 @@ function RequestDetail({ result }: { result: ServiceRequestDetail }) {
           </div>
           <StatusBadge label={result.statusLabel} />
         </div>
+        {(result.requestStatus === "cancelled" ||
+          result.requestStatus === "rejected") && (
+          <p className="mt-3 whitespace-pre-line border-t border-brand-border pt-3 text-[13px] leading-relaxed text-brand-text">
+            {result.statusReason ?? "Motivo não informado."}
+          </p>
+        )}
       </div>
 
       <div className="mt-3.5 md:grid md:grid-cols-[1.1fr_0.9fr] md:items-start md:gap-4">

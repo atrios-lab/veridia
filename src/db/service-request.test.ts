@@ -204,6 +204,45 @@ test("a citizen-written andamento change audits with no actor", async () => {
   assert.equal(rows[0].actor_id, null);
 });
 
+test("status_reason is written on cancel and overwritten by the next one", async () => {
+  // What `updateRequestStatus` does for "cancelled"/"rejected": the reason
+  // travels with the andamento and the next closing overwrites it, since
+  // there is no per-event history for it (see design.md).
+  await fileRequest("cartorio-marinho", 2028, 6);
+  const [request] = (
+    await client.query<{ id: string }>(
+      "SELECT id FROM service_requests WHERE protocol_number = 'REQ.2028.000006'",
+    )
+  ).rows;
+
+  await client.query(
+    "UPDATE service_requests SET status = 'cancelled', status_reason = $2 WHERE id = $1",
+    [request.id, "CPF divergente do requerente"],
+  );
+  const first = await client.query<{ status_reason: string | null }>(
+    "SELECT status_reason FROM service_requests WHERE id = $1",
+    [request.id],
+  );
+  assert.equal(first.rows[0].status_reason, "CPF divergente do requerente");
+
+  await client.query(
+    "UPDATE service_requests SET status = 'in-review', status_reason = NULL WHERE id = $1",
+    [request.id],
+  );
+  await client.query(
+    "UPDATE service_requests SET status = 'rejected', status_reason = $2 WHERE id = $1",
+    [request.id, "Certidão anexada ilegível"],
+  );
+  const second = await client.query<{
+    status: string;
+    status_reason: string | null;
+  }>("SELECT status, status_reason FROM service_requests WHERE id = $1", [
+    request.id,
+  ]);
+  assert.equal(second.rows[0].status, "rejected");
+  assert.equal(second.rows[0].status_reason, "Certidão anexada ilegível");
+});
+
 test("a requirement is removed with the request it belongs to", async () => {
   const { rows } = await client.query<{ id: string }>(
     "SELECT id FROM service_requests WHERE protocol_number = 'REQ.2028.000001'",

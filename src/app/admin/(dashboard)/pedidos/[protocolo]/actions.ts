@@ -16,7 +16,9 @@ import { purposeFor, requestDataEditSchema } from "@/core/request/edit.ts";
 import {
   isAllowedTransition,
   isServiceRequestStatus,
+  requiresStatusReason,
   type ServiceRequestStatus,
+  statusReasonSchema,
 } from "@/core/request/kinds.ts";
 import { parseCentsInput } from "@/core/request/money.ts";
 import { requirementTextSchema } from "@/core/request/requirement.ts";
@@ -193,28 +195,54 @@ export async function changeStatus(
       };
     }
 
+    // Closing a request without delivering it, with no why, is what makes
+    // the citizen call the counter to ask.
+    let reason: string | undefined;
+    if (requiresStatusReason(status)) {
+      const parsed = statusReasonSchema.safeParse(formData.get("reason"));
+      if (!parsed.success) {
+        return {
+          status: "error",
+          message: parsed.error.issues[0]?.message ?? "Escreva o motivo.",
+        };
+      }
+      reason = parsed.data;
+    }
+
     await updateRequestStatus(
       tenant.slug,
       requestId,
       status,
       session.user.id,
       deadline,
+      reason,
     );
     await reconcileDeadlinePause(tenant, requestId, session.user.id, today());
 
-    // Only the two that end the story. The citizen follows the rest through
-    // the consult, and a message per andamento would train them to ignore all
-    // of them.
-    if (status === "done" || status === "cancelled") {
+    // The three that end the story without the citizen reading it on the
+    // consult first. The citizen follows the rest through the consult, and a
+    // message per andamento would train them to ignore all of them. The
+    // motive itself never rides the e-mail: it stays behind the access key,
+    // like the exigência's own text.
+    if (status === "done" || status === "cancelled" || status === "rejected") {
+      const subject =
+        status === "done"
+          ? "Pedido concluído"
+          : status === "cancelled"
+            ? "Pedido cancelado"
+            : "Pedido indeferido";
+      const body =
+        status === "done"
+          ? "O seu pedido foi concluído."
+          : status === "cancelled"
+            ? "O seu pedido foi cancelado."
+            : "O seu pedido foi indeferido.";
       emailWarning = await notifyCitizen({
         tenant,
         contact: request.contact,
         protocolNumber: request.protocolNumber,
-        subject: status === "done" ? "Pedido concluído" : "Pedido cancelado",
-        body:
-          status === "done"
-            ? "O seu pedido foi concluído."
-            : "O seu pedido foi cancelado.",
+        subject,
+        body,
       });
     }
   } catch (error) {

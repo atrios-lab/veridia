@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { MAX_MESSAGE_LENGTH, TEXT_TOO_LONG } from "../chat/message.ts";
 import { deadlineSchema } from "./deadline.ts";
 import { PROTOCOL_PREFIXES, type ProtocolPrefix } from "./protocol.ts";
 
@@ -193,6 +194,31 @@ export function isAllowedTransition(
 ): boolean {
   return from !== to;
 }
+
+/**
+ * The two andamentos that close a request without delivering it: a
+ * cancellation without a why is what makes the citizen call the counter to
+ * ask, so moving into either one requires a reason.
+ */
+export function requiresStatusReason(status: ServiceRequestStatus): boolean {
+  return status === "cancelled" || status === "rejected";
+}
+
+/**
+ * The justification the office writes when closing a request without
+ * delivering it. Same shape as `requirementTextSchema` (trim, non-empty,
+ * capped at `MAX_MESSAGE_LENGTH`) because it is the same kind of writing: a
+ * free-text explanation the citizen reads on the protocol consult.
+ */
+export const statusReasonSchema = z
+  .string()
+  .transform((s) => s.trim())
+  .pipe(
+    z
+      .string()
+      .min(1, "Escreva o motivo.")
+      .max(MAX_MESSAGE_LENGTH, TEXT_TOO_LONG),
+  );
 
 /**
  * O andamento que as exigências abertas impõem ao pedido, depois de registrar,

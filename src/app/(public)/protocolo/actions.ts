@@ -104,6 +104,10 @@ export interface ServiceRequestDetail extends BaseDetail {
   /** The raw andamento, for the timeline to derive its steps from: distinct
    * from `BaseDetail.status`, the "success"/"error" discriminant. */
   requestStatus: ServiceRequestStatus;
+  /** Why the office closed the request without delivering it, present only
+   * once `requestStatus` is "cancelled" or "rejected"; absent (not empty)
+   * when it was closed before this justification existed. */
+  statusReason?: string;
   actName: string;
   attributionName: string;
   hasSignedForm: boolean;
@@ -320,6 +324,7 @@ export async function lookupProtocolDetail(
       ...base,
       kind: "service-request",
       requestStatus: record.status as ServiceRequestStatus,
+      statusReason: record.statusReason ?? undefined,
       actName: act.name,
       attributionName: ATTRIBUTION_NAMES[act.attribution],
       hasSignedForm: Boolean(signedForm),

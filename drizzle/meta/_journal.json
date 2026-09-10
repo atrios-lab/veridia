@@ -141,6 +141,13 @@
       "when": 1788720057382,
       "tag": "0019_kind_bloodaxe",
       "breakpoints": true
+    },
+    {
+      "idx": 20,
+      "version": "7",
+      "when": 1789033709784,
+      "tag": "0020_overjoyed_warbound",
+      "breakpoints": true
     }
   ]
 }
