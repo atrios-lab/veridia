@@ -241,17 +241,17 @@ test.describe("gratuidade (ISENTO)", () => {
 
   test("o formulário em branco abre sem pedido", async ({ page, request }) => {
     await page.goto(`${baseURL}/solicitar?atribuicao=RCPN&ato=gratuidade-rcpn`);
-    // Sem `waitForLoadState`: um PDF inline não dispara "load" de forma
-    // confiável no Chromium automatizado, e a URL já está disponível assim
-    // que a página abre (é o mesmo padrão de "downloading the PDFs opens a
-    // new tab", mais abaixo neste arquivo).
+    // Só a aba abre, sem checar a URL: um PDF inline é tratado como download
+    // pelo Chromium automatizado (a aba nunca navega, fica em about:blank),
+    // o mesmo motivo pelo qual "downloading the PDFs opens a new tab" mais
+    // abaixo neste arquivo também só fecha a aba sem checar a URL. O
+    // conteúdo da rota é conferido de verdade abaixo, por requisição direta.
     const [popup] = await Promise.all([
       page.context().waitForEvent("page"),
       page
         .getByRole("link", { name: "Baixe o formulário em branco (PDF)" })
         .click(),
     ]);
-    expect(popup.url()).toContain("/solicitar/declaracao-hipossuficiencia");
     await popup.close();
 
     const response = await request.get(
