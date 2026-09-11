@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { getAct } from "../acts/catalog.ts";
+import { CERTIFICATE_TYPES, getAct } from "../acts/catalog.ts";
 import {
   generateAccessKey,
   hashAccessKey,
@@ -35,9 +35,18 @@ const certificate = getAct("rcpn-certidao");
 const other = getAct("outros-rcpn");
 const search = getAct("ri-busca-indicador");
 const gratuidade = getAct("gratuidade-rcpn");
-if (!certificate || !other || !search || !gratuidade) {
+const habilitacao = getAct("rcpn-habilitacao-casamento");
+if (!certificate || !other || !search || !gratuidade || !habilitacao) {
   throw new Error("catalogo incompleto");
 }
+
+/** Um bloco de beneficiário completo, para os testes que só querem conferir
+ * outra coisa (canal, tipo de certidão, quantos beneficiários) sem também
+ * ter que montar um beneficiário do zero. */
+const beneficiary = (overrides: Record<string, unknown> = {}) => ({
+  name: "Maria José da Silva",
+  ...overrides,
+});
 
 const valid = {
   applicantName: "Maria José da Silva",
@@ -482,11 +491,12 @@ test("stored and displayed names carry nothing from the sender", () => {
 });
 
 test("a gratuidade exige a declaração que a acompanha", () => {
-  // Escolher o ato não basta: o que tem valor é a declaração, que autoriza a
-  // conferência no sistema de benefício e nomeia as penas.
+  // Escolher o ato não basta: o que tem valor é a declaração do Anexo I.
   const semDeclaracao = publicServiceRequestSchema(gratuidade).safeParse({
     ...validOnline,
     exemptionActId: "rcpn-certidao",
+    certificateType: "sem-busca",
+    beneficiaries: [beneficiary()],
   });
   assert.equal(semDeclaracao.success, false);
   assert.equal(semDeclaracao.error?.issues[0].path[0], "exemptionDeclaration");
@@ -495,6 +505,8 @@ test("a gratuidade exige a declaração que a acompanha", () => {
     ...validOnline,
     exemptionActId: "rcpn-certidao",
     exemptionDeclaration: "on",
+    certificateType: "sem-busca",
+    beneficiaries: [beneficiary()],
   });
   assert.ok(completo.success);
 });
@@ -503,9 +515,157 @@ test("a gratuidade exige dizer para qual ato", () => {
   const result = publicServiceRequestSchema(gratuidade).safeParse({
     ...validOnline,
     exemptionDeclaration: "on",
+    beneficiaries: [beneficiary()],
   });
   assert.equal(result.success, false);
   assert.equal(result.error?.issues[0].path[0], "exemptionActId");
+});
+
+test("a certidão exige o tipo, e só ela o pede", () => {
+  const semTipo = publicServiceRequestSchema(gratuidade).safeParse({
+    ...validOnline,
+    exemptionActId: "rcpn-certidao",
+    exemptionDeclaration: "on",
+    beneficiaries: [beneficiary()],
+  });
+  assert.equal(semTipo.success, false);
+  assert.equal(semTipo.error?.issues[0].path[0], "certificateType");
+
+  const comTipo = publicServiceRequestSchema(gratuidade).safeParse({
+    ...validOnline,
+    exemptionActId: "rcpn-certidao",
+    exemptionDeclaration: "on",
+    certificateType: "inteiro-teor",
+    beneficiaries: [beneficiary()],
+  });
+  assert.ok(comTipo.success);
+
+  // A alteração de prenome não pergunta o tipo: mandá-lo é recusado.
+  const naoDeveria = publicServiceRequestSchema(gratuidade).safeParse({
+    ...validOnline,
+    exemptionActId: "rcpn-alteracao-prenome",
+    exemptionDeclaration: "on",
+    certificateType: "sem-busca",
+    beneficiaries: [beneficiary()],
+  });
+  assert.equal(naoDeveria.success, false);
+  assert.equal(naoDeveria.error?.issues[0].path[0], "certificateType");
+});
+
+test("o schema aceita todo tipo de certidão que o catálogo declara", () => {
+  // form.ts não pode importar CERTIFICATE_TYPES de catalog.ts (fecharia o
+  // ciclo pix -> form -> catalog -> tenant/schema -> pix), então repete a
+  // lista por conta própria: isto garante que as duas nunca divergem.
+  for (const certificateType of CERTIFICATE_TYPES) {
+    const result = publicServiceRequestSchema(gratuidade).safeParse({
+      ...validOnline,
+      exemptionActId: "rcpn-certidao",
+      exemptionDeclaration: "on",
+      certificateType,
+      beneficiaries: [beneficiary()],
+    });
+    assert.ok(result.success, certificateType);
+  }
+});
+
+test("a habilitação de casamento exige as duas declarações", () => {
+  const umSó = publicServiceRequestSchema(gratuidade).safeParse({
+    ...validOnline,
+    exemptionActId: "rcpn-habilitacao-casamento",
+    exemptionDeclaration: "on",
+    beneficiaries: [beneficiary({ name: "Maria José da Silva" })],
+  });
+  assert.equal(umSó.success, false);
+  assert.deepEqual(umSó.error?.issues[0].path, ["beneficiaries", 1, "name"]);
+
+  const dois = publicServiceRequestSchema(gratuidade).safeParse({
+    ...validOnline,
+    exemptionActId: "rcpn-habilitacao-casamento",
+    exemptionDeclaration: "on",
+    beneficiaries: [
+      beneficiary({ name: "Maria José da Silva" }),
+      beneficiary({ name: "João Paulo Souza" }),
+    ],
+  });
+  assert.ok(dois.success);
+});
+
+test("representante legal e a rogo exigem o nome de quem assina", () => {
+  for (const signedBy of ["legal-representative", "on-behalf"]) {
+    const semAssinante = publicServiceRequestSchema(gratuidade).safeParse({
+      ...validOnline,
+      exemptionActId: "rcpn-certidao",
+      exemptionDeclaration: "on",
+      certificateType: "sem-busca",
+      beneficiaries: [beneficiary({ signedBy })],
+    });
+    assert.equal(semAssinante.success, false, signedBy);
+    assert.deepEqual(
+      semAssinante.error?.issues[0].path,
+      ["beneficiaries", 0, "signer", "name"],
+      signedBy,
+    );
+
+    const comAssinante = publicServiceRequestSchema(gratuidade).safeParse({
+      ...validOnline,
+      exemptionActId: "rcpn-certidao",
+      exemptionDeclaration: "on",
+      certificateType: "sem-busca",
+      beneficiaries: [
+        beneficiary({ signedBy, signer: { name: "João da Silva" } }),
+      ],
+    });
+    assert.ok(comAssinante.success, signedBy);
+  }
+});
+
+test("testemunhas da assinatura a rogo só existem no balcão", () => {
+  const rogo = {
+    ...validOnline,
+    exemptionActId: "rcpn-certidao",
+    exemptionDeclaration: "on",
+    certificateType: "sem-busca",
+    beneficiaries: [
+      beneficiary({
+        signedBy: "on-behalf",
+        signer: { name: "João da Silva" },
+        witnesses: [{ name: "T1" }, { name: "T2" }],
+      }),
+    ],
+  };
+
+  // Pelo site, mandar testemunhas é recusado: elas assinam no balcão.
+  const online = publicServiceRequestSchema(gratuidade).safeParse(rogo);
+  assert.equal(online.success, false);
+  assert.deepEqual(online.error?.issues[0].path, [
+    "beneficiaries",
+    0,
+    "witnesses",
+  ]);
+
+  // No balcão, sem as duas testemunhas também é recusado...
+  const semTestemunhas = serviceRequestSchema(gratuidade).safeParse({
+    ...rogo,
+    contact: "(84) 99999-0000",
+    email: undefined,
+    beneficiaries: [
+      beneficiary({ signedBy: "on-behalf", signer: { name: "João da Silva" } }),
+    ],
+  });
+  assert.equal(semTestemunhas.success, false);
+  assert.deepEqual(semTestemunhas.error?.issues[0].path, [
+    "beneficiaries",
+    0,
+    "witnesses",
+  ]);
+
+  // ...e com as duas, passa.
+  const comTestemunhas = serviceRequestSchema(gratuidade).safeParse({
+    ...rogo,
+    contact: "(84) 99999-0000",
+    email: undefined,
+  });
+  assert.ok(comTestemunhas.success);
 });
 
 test("ato-alvo sem previsão legal é recusado no servidor", () => {

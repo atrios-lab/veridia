@@ -12,6 +12,7 @@ import {
   ombudsmanDetailsSchema,
   parseDetails,
   phaseOfStatus,
+  readExemption,
   requiresStatusReason,
   SERVICE_REQUEST_PHASES,
   SERVICE_REQUEST_STATUSES,
@@ -197,6 +198,72 @@ test("a consent that is not a timestamp is refused", () => {
       consents: { lgpd: "sim", truth: "sim" },
     }),
   );
+});
+
+test("a pedido de gratuidade anterior à declaração continua legível", () => {
+  // Formato v1: só declaredAt e actId. beneficiaries volta [] para dizer
+  // "nada foi coletado", nunca um beneficiário inventado no lugar.
+  const exemption = readExemption({
+    exemption: { declaredAt: "2026-08-04T12:00:00.000Z", actId: "rcpn-certidao" },
+  });
+  assert.equal(exemption?.declaredAt, "2026-08-04T12:00:00.000Z");
+  assert.equal(exemption?.actId, "rcpn-certidao");
+  assert.deepEqual(exemption?.beneficiaries, []);
+  assert.equal(exemption?.decision, undefined);
+});
+
+test("uma declaração completa do Anexo I é lida de volta", () => {
+  const declaredAt = "2026-09-10T12:00:00.000Z";
+  const exemption = readExemption({
+    exemption: {
+      declaredAt,
+      actId: "rcpn-certidao",
+      certificateType: "com-busca",
+      beneficiaries: [
+        {
+          name: "Maria José da Silva",
+          signedBy: "on-behalf",
+          signer: { name: "João da Silva", cpfOrId: "52998224725" },
+          witnesses: [{ name: "T1" }, { name: "T2" }],
+        },
+      ],
+    },
+  });
+  assert.equal(exemption?.certificateType, "com-busca");
+  assert.equal(exemption?.beneficiaries.length, 1);
+  assert.equal(exemption?.beneficiaries[0].signedBy, "on-behalf");
+  assert.equal(exemption?.beneficiaries[0].signer?.name, "João da Silva");
+  assert.equal(exemption?.beneficiaries[0].witnesses?.[1].name, "T2");
+});
+
+test("beneficiário sem signedBy assume a própria pessoa", () => {
+  const exemption = readExemption({
+    exemption: {
+      declaredAt: "2026-09-10T12:00:00.000Z",
+      beneficiaries: [{ name: "Maria" }],
+    },
+  });
+  assert.equal(exemption?.beneficiaries[0].signedBy, "self");
+});
+
+test("um pedido sem gratuidade não tem exemption nenhuma", () => {
+  assert.equal(readExemption({}), undefined);
+  assert.equal(readExemption(null), undefined);
+});
+
+test("o desfecho da gratuidade vem junto quando registrado", () => {
+  const exemption = readExemption({
+    exemption: {
+      declaredAt: "2026-09-10T12:00:00.000Z",
+      decision: {
+        outcome: "granted",
+        decidedAt: "2026-09-12T09:00:00.000Z",
+        decidedBy: "op-1",
+      },
+    },
+  });
+  assert.equal(exemption?.decision?.outcome, "granted");
+  assert.equal(exemption?.decision?.decidedBy, "op-1");
 });
 
 test("every manifestation andamento has a Portuguese label", () => {

@@ -1,40 +1,40 @@
 ## 1. Catálogo e texto da declaração
 
-- [ ] 1.1 Em `src/core/acts/catalog.ts`, trocar `FEE_EXEMPTION_DECLARATION` pelo parágrafo do
+- [x] 1.1 Em `src/core/acts/catalog.ts`, trocar `FEE_EXEMPTION_DECLARATION` pelo parágrafo do
   bloco 4 do Anexo I (insuficiência de recursos sem prejuízo da manutenção própria e da família)
   e adicionar `FEE_EXEMPTION_ACKNOWLEDGEMENTS`, a lista das cinco ciências (a) a (e); remover
   `FEE_EXEMPTION_DOCUMENTS` e o comentário que a justifica.
-- [ ] 1.2 Ampliar `Act.feeExemption` para `{ legalBasis, beneficiaryCount: 1 | 2,
+- [x] 1.2 Ampliar `Act.feeExemption` para `{ legalBasis, beneficiaryCount: 1 | 2,
   askCertificateType?: true }`; `rcpn-certidao` recebe `askCertificateType: true` e
   `beneficiaryCount: 1`, `rcpn-habilitacao-casamento` recebe `beneficiaryCount: 2`. Exportar
   `CERTIFICATE_TYPES` (`sem-busca`, `com-busca`, `inteiro-teor`) com rótulos.
-- [ ] 1.3 Renomear `rcpn-alteracao-prenome` para "Alteração de prenome" (mesmo `id`, mesmo
+- [x] 1.3 Renomear `rcpn-alteracao-prenome` para "Alteração de prenome" (mesmo `id`, mesmo
   `guidance`) e dar-lhe `feeExemption` com base "Lei 6.015 art. 30 §1º; Provimento CGJ/TJRN
   n. 7/2026, Anexo I" e `beneficiaryCount: 1`.
-- [ ] 1.4 Atualizar `src/core/acts/catalog.test.ts`: os três atos-alvo do RCPN, o tipo de
+- [x] 1.4 Atualizar `src/core/acts/catalog.test.ts`: os três atos-alvo do RCPN, o tipo de
   certidão só na certidão, dois beneficiários só na habilitação, e o texto da declaração sem
   "CadÚnico".
 
 ## 2. Dados da declaração no pedido
 
-- [ ] 2.1 Em `src/core/request/kinds.ts`, estender o schema de `exemption` conforme o design
+- [x] 2.1 Em `src/core/request/kinds.ts`, estender o schema de `exemption` conforme o design
   (decisão 1): `certificateType`, `beneficiaries[]` com `signedBy`, `signer`, `witnesses`, e
   `decision`; tudo opcional além de `declaredAt`, para o formato antigo continuar válido.
-- [ ] 2.2 Fazer `readExemption` devolver o formato novo normalizado (`beneficiaries: []` para o
+- [x] 2.2 Fazer `readExemption` devolver o formato novo normalizado (`beneficiaries: []` para o
   antigo) e exportar os tipos `ExemptionDeclaration`, `ExemptionBeneficiary`,
   `ExemptionDecision`; testes em `kinds.test.ts` com um pedido v1 e um v2.
-- [ ] 2.3 Em `src/core/request/form.ts`, criar `readExemptionForm(formData)` que lê os campos
+- [x] 2.3 Em `src/core/request/form.ts`, criar `readExemptionForm(formData)` que lê os campos
   planos indexados (`beneficiary[0].name`, `beneficiary[0].signer.name`,
   `beneficiary[0].witness[1].name`, `certificateType`, `exemptionActId`,
   `exemptionDeclaration`) num objeto, e `buildExemptionDetails(parsed, consentedAt)` que monta
   `details.exemption`; ambos usados por site e balcão.
-- [ ] 2.4 Em `actRules(act, { channel })`, validar: ato-alvo isentável; `certificateType`
+- [x] 2.4 Em `actRules(act, { channel })`, validar: ato-alvo isentável; `certificateType`
   obrigatório se o alvo pede e recusado se não pede; `beneficiaries.length ===
   beneficiaryCount`; nome do beneficiário obrigatório; `signer.name` obrigatório quando
   `signedBy !== "self"`; `witnesses` recusadas no canal `online` e obrigatórias (duas) no
   `counter` quando `signedBy === "on-behalf"`; declaração marcada. Mensagens em português por
   campo, com `path` apontando o campo indexado.
-- [ ] 2.5 Atualizar `src/core/request/request.test.ts`: certidão sem tipo, habilitação com uma
+- [x] 2.5 Atualizar `src/core/request/request.test.ts`: certidão sem tipo, habilitação com uma
   declaração só, representante sem nome, a rogo online com testemunhas, a rogo no balcão sem
   testemunhas, e o caminho feliz de cada canal.
 
