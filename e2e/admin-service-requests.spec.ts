@@ -473,6 +473,16 @@ test.describe("fila e detalhe de pedidos", () => {
       page.getByRole("heading", { name: "Pedido registrado" }),
     ).toHaveCount(0);
 
+    // Uma ação de formulário completada (mesmo com erro) reseta os campos
+    // não controlados para o `defaultValue` (React, não deste formulário em
+    // particular: veja `office-contact-form.tsx`, que ecoa `sent` de volta
+    // para sobreviver ao mesmo reset). Este formulário não ecoa nada, então
+    // tudo que não é rádio controlado precisa ser preenchido de novo.
+    await page.getByLabel("Nome do solicitante").fill("Maria José da Silva");
+    await page.getByLabel("E-mail ou WhatsApp").fill("(84) 99900-1133");
+    await page.getByLabel("Nome completo").first().fill("Maria José da Silva");
+    await page.getByPlaceholder("Nome completo").first().fill("João da Silva");
+    await page.getByLabel(/não disponho de recursos/).check();
     await page.getByLabel("Testemunha 1").fill("T1");
     await page.getByLabel("Testemunha 2").fill("T2");
     await page.getByRole("button", { name: "Registrar pedido" }).click();
