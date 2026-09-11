@@ -415,8 +415,20 @@ test.describe("fila e detalhe de pedidos", () => {
       { form: { chave: accessKey } },
     );
     expect(receipt.status()).toBe(200);
+    // A download, not a page: the receipt exists only in this response, and
+    // a viewer's save button would refetch a POST it cannot repeat.
+    expect(receipt.headers()["content-type"]).toContain("application/pdf");
+    expect(receipt.headers()["content-disposition"]).toBe(
+      `attachment; filename="comprovante-${PROTOCOL}.pdf"`,
+    );
     expect(await auditCount("service-request.print.comprovante")).toBe(
       beforeReceipt + 1,
+    );
+
+    // The sheet the operator opens in a tab stays a GET the viewer can
+    // repeat with the session cookie, so saving from there keeps working.
+    expect(sheet.headers()["content-disposition"]).toBe(
+      `inline; filename="requerimento-${PROTOCOL}.pdf"`,
     );
     await sql.end();
   });

@@ -37,6 +37,12 @@ export function KeySection({
         produce the receipt for an existing request. Leaving the page (a
         reload, navigating away) drops `state` back to idle and the form
         with it.
+
+        The route answers with a download, not a page: a PDF opened in the
+        viewer is saved by fetching the tab's URL again, and this one only
+        exists in the response to the POST carrying the key. `target` stays
+        even so: if the route ever refuses, the error lands in a tab of its
+        own and this screen, with the key on it, is still here.
       */}
       {state.status === "success" && (
         <form
@@ -47,7 +53,7 @@ export function KeySection({
         >
           <input type="hidden" name="chave" value={state.key} />
           <button type="submit" className="btn btn-admin-ghost btn-sm px-0">
-            Imprimir comprovante
+            Baixar comprovante (PDF)
           </button>
         </form>
       )}

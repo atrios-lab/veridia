@@ -1,15 +1,10 @@
-import { getActForTenant } from "@/core/acts/catalog.ts";
 import { can } from "@/core/auth/roles.ts";
 import { verifyAccessKey } from "@/core/request/access-key.ts";
-import { buildDeclaracoes } from "@/core/request/declaracao.ts";
-import { readExemption, readPhone } from "@/core/request/kinds.ts";
-import {
-  buildAccessReceipt,
-  buildRequerimento,
-} from "@/core/request/requerimento.ts";
+import { buildAccessReceipt } from "@/core/request/requerimento.ts";
 import { recordAudit } from "@/lib/audit.ts";
 import { brandFor } from "@/lib/document-brand.ts";
 import { renderDocument, renderDocuments } from "@/lib/pdf.ts";
+import { buildRequestDocuments } from "@/lib/request-documents.ts";
 import { findByProtocol } from "@/lib/service-request.ts";
 import { getSession } from "@/lib/session.ts";
 import { getTenant } from "@/lib/tenant.ts";
@@ -38,12 +33,15 @@ async function load(request: Request, protocolo: string) {
   };
 }
 
-function pdf(bytes: Buffer, name: string): Response {
+function pdf(
+  bytes: Buffer,
+  name: string,
+  disposition: "inline" | "attachment",
+): Response {
   return new Response(new Uint8Array(bytes), {
     headers: {
       "Content-Type": "application/pdf",
-      // Inline: the operator prints from the tab, they are not filing a copy.
-      "Content-Disposition": `inline; filename="${name}.pdf"`,
+      "Content-Disposition": `${disposition}; filename="${name}.pdf"`,
       "Cache-Control": "private, no-store",
     },
   });
@@ -69,66 +67,48 @@ export async function GET(
   if (loaded instanceof Response) return loaded;
   const { tenant, stored, brand, actorId } = loaded;
 
-  if (!stored.actId || !stored.applicantName || !stored.contact) {
-    return new Response("Não encontrado", { status: 404 });
-  }
-  const act = getActForTenant(tenant, stored.actId);
-  if (!act) return new Response("Não encontrado", { status: 404 });
-
   const documento = new URL(request.url).searchParams.get("documento");
-  if (documento === "declaracao" || documento === "declaracao-em-branco") {
-    const exemption = readExemption(stored.details);
-    if (!exemption) return new Response("Não encontrado", { status: 404 });
-
-    const bytes = await renderDocuments(
-      buildDeclaracoes(
-        tenant,
-        act,
-        documento === "declaracao-em-branco" ? undefined : exemption,
-        { protocolNumber: stored.protocolNumber, createdAt: stored.createdAt },
-      ),
-      brand,
-    );
-    await recordAudit({
-      tenantSlug: tenant.slug,
-      actorId,
-      action: "service-request.print.declaracao",
-      targetType: "service-request",
-      targetId: stored.id,
-    });
-    return pdf(bytes, `declaracao-${stored.protocolNumber}`);
-  }
-
-  const bytes = await renderDocument(
-    buildRequerimento(tenant, act, {
-      protocolNumber: stored.protocolNumber,
-      applicantName: stored.applicantName,
-      contact: stored.contact,
-      phone: readPhone(stored.details),
-      exemption: readExemption(stored.details),
-      cpf: stored.cpf,
-      description: stored.description,
-      purpose: stored.purpose,
-      parameterValue: stored.parameterValue,
-      createdAt: stored.createdAt,
-    }),
-    brand,
+  const wantsDeclaracao =
+    documento === "declaracao" || documento === "declaracao-em-branco";
+  const documents = buildRequestDocuments(
+    tenant,
+    stored,
+    wantsDeclaracao ? documento : "requerimento",
   );
+  if (!documents) return new Response("Não encontrado", { status: 404 });
+
+  const bytes = await renderDocuments(documents, brand);
   await recordAudit({
     tenantSlug: tenant.slug,
     actorId,
-    action: "service-request.print.requerimento",
+    action: wantsDeclaracao
+      ? "service-request.print.declaracao"
+      : "service-request.print.requerimento",
     targetType: "service-request",
     targetId: stored.id,
   });
-  return pdf(bytes, `requerimento-${stored.protocolNumber}`);
+  // Inline: the operator prints from the tab. Saving from the viewer works
+  // too, because this is a GET the viewer can repeat with the session cookie.
+  return pdf(
+    bytes,
+    `${wantsDeclaracao ? "declaracao" : "requerimento"}-${stored.protocolNumber}`,
+    "inline",
+  );
 }
 
 /**
- * The access receipt, printable only while the key the panel just reissued is
+ * The access receipt, available only while the key the panel just reissued is
  * still on screen and gets posted back here. The database holds a hash, so the
  * server cannot produce this document on its own: "only right after
  * reissuing" is a property of the design, not a rule the UI is asked to keep.
+ *
+ * A download, not an inline page: the browser's PDF viewer saves a file by
+ * fetching the tab's URL again, by GET, and this document only exists in
+ * the response to a POST carrying the key. Served inline, its download
+ * button failed with "site unavailable"; served as an attachment, the
+ * browser saves it from this very response and never asks again. The
+ * operator opens the saved file to print it, and can keep or send it, which
+ * the tab could not offer.
  */
 export async function POST(
   request: Request,
@@ -165,5 +145,5 @@ export async function POST(
     targetType: "service-request",
     targetId: stored.id,
   });
-  return pdf(bytes, `comprovante-${stored.protocolNumber}`);
+  return pdf(bytes, `comprovante-${stored.protocolNumber}`, "attachment");
 }

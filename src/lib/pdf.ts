@@ -416,6 +416,11 @@ export async function renderDocuments(
     size: "A4",
     margin: MARGIN,
     autoFirstPage: false,
+    // The viewer names the tab after this, and falls back to the last
+    // segment of the URL without it: a declaração used to show up as
+    // "requerimento". The first document's title covers a multi-document
+    // file too, since every document in one is the same kind.
+    info: { Title: documents[0]?.title ?? "" },
   });
   let currentFooter = "";
   const chunks: Buffer[] = [];
@@ -473,6 +478,7 @@ export async function renderBulletin(
     size: "A4",
     margin: MARGIN,
     autoFirstPage: false,
+    info: { Title: document.title },
   });
   const chunks: Buffer[] = [];
   pdf.on("data", (chunk: Buffer) => chunks.push(chunk));
