@@ -40,44 +40,44 @@
 
 ## 3. Site: formulário da gratuidade
 
-- [ ] 3.1 Em `src/app/(public)/solicitar/request-form.tsx`, substituir o bloco atual da
+- [x] 3.1 Em `src/app/(public)/solicitar/request-form.tsx`, substituir o bloco atual da
   gratuidade: radio do ato-alvo (agora três), tipo de certidão quando o alvo pede, aviso da
   primeira via de nascimento/óbito, um componente `BeneficiaryFields` por beneficiário (nome
   obrigatório; CPF/RG, nascimento, profissão, endereço, município/UF, CEP, contato opcionais),
   radio "quem formaliza" (própria pessoa, representante legal, a rogo) abrindo os campos de
   quem assina, e o checkbox com o texto da declaração e as cinco ciências na íntegra. Remover o
   bloco "Anexe o comprovante" e o `DocumentsChecklist` da gratuidade.
-- [ ] 3.2 Na habilitação de casamento, renderizar o segundo `BeneficiaryFields` como bloco
+- [x] 3.2 Na habilitação de casamento, renderizar o segundo `BeneficiaryFields` como bloco
   dobrável "Segundo nubente", com os mesmos campos indexados em `[1]`.
-- [ ] 3.3 Em `src/app/(public)/solicitar/actions.ts`, remover o bloqueio por
+- [x] 3.3 Em `src/app/(public)/solicitar/actions.ts`, remover o bloqueio por
   `countAttachments === 0`, ler a declaração com `readExemptionForm`, validar com
   `publicServiceRequestSchema(act)` (canal `online`) e gravar com `buildExemptionDetails`;
   mapear os erros indexados para os campos da tela.
-- [ ] 3.4 Adicionar o link "Baixar o formulário em branco (PDF)" na tela do ato da gratuidade e
+- [x] 3.4 Adicionar o link "Baixar o formulário em branco (PDF)" na tela do ato da gratuidade e
   na lista de atos do RCPN em `src/app/(public)/solicitar/page.tsx`.
 
 ## 4. A declaração em PDF
 
-- [ ] 4.1 Em `src/core/request/requerimento.ts`, adicionar `fields?: { label: string; value?:
+- [x] 4.1 Em `src/core/request/requerimento.ts`, adicionar `fields?: { label: string; value?:
   string }[]` a `RequerimentoSection` e, em `src/lib/pdf.ts`, ensinar `drawSection` a desenhar
   rótulo + linha em branco (ou valor sobre a linha) para cada campo, e um marcador ☒/☐ como
   texto.
-- [ ] 4.2 Criar `src/core/request/declaracao.ts` com `buildDeclaracao(tenant, act, exemption |
+- [x] 4.2 Criar `src/core/request/declaracao.ts` com `buildDeclaracao(tenant, act, exemption |
   undefined, beneficiaryIndex, { protocolNumber?, createdAt? })` devolvendo um
   `RequerimentoDocument` com os nove blocos do Anexo I (design, decisão 5): bloco 1 do tenant,
   2 do beneficiário, 3 com o ato marcado e tipo de certidão, 4 com declaração e ciências, 5
   assinatura, 6/7 só quando houver, 8 testemunhas ou em branco, 9 sempre em branco, base
   normativa no rodapé; `exemption` ausente gera o formulário em branco.
-- [ ] 4.3 `buildDeclaracoes(...)` que devolve um documento por beneficiário, e `renderDocuments`
+- [x] 4.3 `buildDeclaracoes(...)` que devolve um documento por beneficiário, e `renderDocuments`
   em `pdf.ts` (ou extensão de `renderDocument`) que concatena vários no mesmo PDF.
-- [ ] 4.4 Criar `src/core/request/declaracao.test.ts`: em branco, própria pessoa, representante
+- [x] 4.4 Criar `src/core/request/declaracao.test.ts`: em branco, própria pessoa, representante
   legal, a rogo com e sem testemunhas, habilitação com dois documentos, pedido v1 (tudo em
   branco menos ato e data), e ausência de "CadÚnico" e da chave de acesso no conteúdo.
-- [ ] 4.5 Em `src/app/(public)/solicitar/requerimento/route.ts`, aceitar `documento=declaracao`
+- [x] 4.5 Em `src/app/(public)/solicitar/requerimento/route.ts`, aceitar `documento=declaracao`
   com a mesma exigência de chave, respondendo 404 em pedido sem `exemption`.
-- [ ] 4.6 Criar `src/app/(public)/solicitar/declaracao-hipossuficiencia/route.ts` (GET, sem
+- [x] 4.6 Criar `src/app/(public)/solicitar/declaracao-hipossuficiencia/route.ts` (GET, sem
   estado) que devolve o formulário em branco com a marca do tenant, 404 sem atribuição RCPN.
-- [ ] 4.7 Oferecer o botão "Baixar declaração de hipossuficiência (PDF)" na tela de sucesso
+- [x] 4.7 Oferecer o botão "Baixar declaração de hipossuficiência (PDF)" na tela de sucesso
   (`request-form.tsx`) e na consulta (`acompanhar/protocol-trilho.tsx`) só quando o pedido tem
   gratuidade, com o mesmo padrão de envio da chave dos outros dois botões.
 

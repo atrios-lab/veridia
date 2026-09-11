@@ -697,10 +697,12 @@ function ProgressDots({
 function SignCard({
   protocolNumber,
   accessKey,
+  hasExemption,
   onSigned,
 }: {
   protocolNumber: string;
   accessKey: string;
+  hasExemption: boolean;
   onSigned: () => void;
 }) {
   const [state, action, pending] = useActionState<AttachState, FormData>(
@@ -723,22 +725,55 @@ function SignCard({
         <span className="flex-1 text-[15px] font-semibold">
           Baixe o formulário já preenchido
         </span>
-        <form
-          action="/solicitar/requerimento"
-          method="post"
-          target="_blank"
-          rel="noopener"
-        >
-          <input type="hidden" name="protocolNumber" value={protocolNumber} />
-          <input type="hidden" name="accessKey" value={accessKey} />
-          <button
-            type="submit"
-            className="btn btn-primary min-h-11 px-4 py-2.5 text-sm"
+        <div className="flex flex-wrap justify-end gap-2">
+          <form
+            action="/solicitar/requerimento"
+            method="post"
+            target="_blank"
+            rel="noopener"
           >
-            <Icon name="download" className="h-3.5 w-3.5" strokeWidth={2} />
-            PDF
-          </button>
-        </form>
+            <input
+              type="hidden"
+              name="protocolNumber"
+              value={protocolNumber}
+            />
+            <input type="hidden" name="accessKey" value={accessKey} />
+            <button
+              type="submit"
+              className="btn btn-primary min-h-11 px-4 py-2.5 text-sm"
+            >
+              <Icon name="download" className="h-3.5 w-3.5" strokeWidth={2} />
+              PDF
+            </button>
+          </form>
+          {hasExemption && (
+            <form
+              action="/solicitar/requerimento"
+              method="post"
+              target="_blank"
+              rel="noopener"
+            >
+              <input
+                type="hidden"
+                name="protocolNumber"
+                value={protocolNumber}
+              />
+              <input type="hidden" name="accessKey" value={accessKey} />
+              <input type="hidden" name="documento" value="declaracao" />
+              <button
+                type="submit"
+                className="btn btn-secondary min-h-11 px-4 py-2.5 text-sm"
+              >
+                <Icon
+                  name="download"
+                  className="h-3.5 w-3.5"
+                  strokeWidth={2}
+                />
+                Declaração
+              </button>
+            </form>
+          )}
+        </div>
       </div>
       <div className="h-px bg-brand-border" />
       <div className="flex items-start gap-3">
@@ -1746,6 +1781,7 @@ function ServiceRequestTrilho({
             <SignCard
               protocolNumber={result.protocolNumber}
               accessKey={result.accessKey}
+              hasExemption={result.hasExemption}
               onSigned={() => setHasSignedForm(true)}
             />
           )}

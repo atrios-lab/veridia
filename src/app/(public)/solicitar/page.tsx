@@ -114,6 +114,20 @@ export default async function RequestPage({
         <div className="mt-4">
           <ProcessingLegend />
         </div>
+
+        {acts.some((option) => option.id.startsWith("gratuidade-")) && (
+          <p className="mt-3 text-[11.5px] text-brand-faint">
+            Prefere levar o formulário da gratuidade em branco?{" "}
+            <Link
+              href="/solicitar/declaracao-hipossuficiencia"
+              target="_blank"
+              className="font-semibold text-brand-accent-ink underline"
+            >
+              Baixe a declaração de hipossuficiência (PDF)
+            </Link>
+            .
+          </p>
+        )}
       </div>
     );
   }

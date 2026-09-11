@@ -1,8 +1,5 @@
 import type { Act } from "../acts/catalog.ts";
-import {
-  ATTRIBUTION_NAMES,
-  FEE_EXEMPTION_DECLARATION,
-} from "../acts/catalog.ts";
+import { ATTRIBUTION_NAMES } from "../acts/catalog.ts";
 import type { Tenant } from "../tenant/schema.ts";
 import { dataRightOption } from "./channels.ts";
 import type { DataRight } from "./kinds.ts";
@@ -27,9 +24,25 @@ export interface RequerimentoRow {
   value: string;
 }
 
+/**
+ * A labelled field the person signing fills by hand: a small caption, then
+ * either the value already known (`value` present, printed on the line) or a
+ * blank rule for the paper to carry (`value` absent). This is what a form
+ * needs and a `RequerimentoRow` does not: `declaracao.ts` uses it for every
+ * Anexo I field the pedido may or may not have collected, so the same
+ * drawing code renders both the filled declaração and the blank one.
+ */
+export interface RequerimentoField {
+  label: string;
+  value?: string;
+}
+
 export interface RequerimentoSection {
   heading: string;
   rows?: RequerimentoRow[];
+  /** Rendered as a form, one label-and-line per field, in order — see
+   * `RequerimentoField`. */
+  fields?: RequerimentoField[];
   paragraphs?: string[];
 }
 
@@ -155,11 +168,17 @@ export function buildRequerimento(
     const requested = act.exemptionTargets?.find(
       (target) => target.id === data.exemption?.actId,
     );
+    // O texto do Anexo I e as cinco ciências vivem só na declaração de
+    // hipossuficiência (declaracao.ts), documento próprio que acompanha este
+    // requerimento (Provimento CGJ/TJRN n. 7/2026, art. 13): repeti-los aqui
+    // duplicaria o que a pessoa já assina no outro papel.
     declarations.push(
       requested?.feeExemption
-        ? `${FEE_EXEMPTION_DECLARATION} Ato requerido: ${requested.name}. ` +
-            `Fundamento: ${requested.feeExemption.legalBasis}.`
-        : FEE_EXEMPTION_DECLARATION,
+        ? `Pede a gratuidade de "${requested.name}" (fundamento: ` +
+            `${requested.feeExemption.legalBasis}), conforme declaração de ` +
+            "hipossuficiência que acompanha este requerimento."
+        : "Pede a gratuidade conforme declaração de hipossuficiência que " +
+            "acompanha este requerimento.",
     );
   }
   sections.push({ heading: "Declarações", paragraphs: declarations });

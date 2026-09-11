@@ -4,6 +4,7 @@ import QRCode from "qrcode";
 import type {
   RequerimentoCredentials,
   RequerimentoDocument,
+  RequerimentoField,
   RequerimentoRow,
   RequerimentoSection,
 } from "@/core/request/requerimento.ts";
@@ -162,6 +163,38 @@ function drawRow(
   }
 }
 
+/**
+ * One field of a form the person fills by hand: a small caption, then either
+ * the value the pedido already carries (printed on the line) or nothing
+ * (leaving a blank rule for the paper). Unlike `drawRow`, label and value
+ * stack instead of sitting side by side, because a name or an address does
+ * not fit `LABEL_WIDTH` and does not need to: this is a form, not a summary.
+ */
+function drawField(pdf: Pdf, field: RequerimentoField, brand: DocumentBrand): void {
+  if (pdf.y > bottom(pdf) - 40) pdf.addPage();
+  pdf
+    .font("Helvetica")
+    .fontSize(7.5)
+    .fillColor(brand.palette.muted)
+    .text(field.label.toUpperCase(), MARGIN, pdf.y, {
+      width: contentWidth(pdf),
+      characterSpacing: 0.4,
+    });
+  if (field.value) {
+    pdf
+      .font("Helvetica")
+      .fontSize(10)
+      .fillColor(NEUTRALS.text)
+      .text(field.value, MARGIN, pdf.y + 1, { width: contentWidth(pdf) });
+  } else {
+    // Nothing collected: the line itself is the invitation to fill it in by
+    // hand, the way the printed Anexo I does.
+    pdf.y += 13;
+  }
+  pdf.rect(MARGIN, pdf.y + 3, contentWidth(pdf), 0.6).fill(brand.palette.border);
+  pdf.y += 12;
+}
+
 function drawSection(
   pdf: Pdf,
   section: RequerimentoSection,
@@ -176,6 +209,10 @@ function drawSection(
   rows.forEach((row, index) => {
     drawRow(pdf, row, brand, index === rows.length - 1);
   });
+
+  for (const field of section.fields ?? []) {
+    drawField(pdf, field, brand);
+  }
 
   for (const paragraph of section.paragraphs ?? []) {
     pdf
@@ -255,45 +292,18 @@ function drawCredentials(
 }
 
 /**
- * Draws a document the core assembled. The wording, the order and every value
- * come from `src/core/request/requerimento.ts`; this only places them on the
- * page, which is why the same function serves the service request form and the
- * data rights receipt. The colour comes from the tenant's theme, so two
- * offices' documents differ in palette and seal and in nothing else.
+ * Draws one document's body onto whichever page is current, starting a new
+ * page for its own letterhead first. Split out of `renderDocument` so
+ * `renderDocuments` can lay out several requerimentos (one per beneficiário
+ * da gratuidade, say) in a single PDF, each with its own letterhead, footer
+ * and signature block, without duplicating any of this layout code.
  */
-export async function renderDocument(
+function drawDocumentBody(
+  pdf: Pdf,
   document: RequerimentoDocument,
   brand: DocumentBrand,
-): Promise<Buffer> {
-  // Drawn in the theme's ink on white so it belongs to the letterhead; QR
-  // error correction has margin to spare for that contrast.
-  const qr = brand.lookupUrl
-    ? await QRCode.toBuffer(brand.lookupUrl, {
-        margin: 0,
-        width: QR_SIZE * 4,
-        color: { dark: brand.palette.primary, light: NEUTRALS.card },
-      })
-    : undefined;
-
-  // No first page from the constructor: the footer runs off `pageAdded`, and
-  // it has to be attached before page one exists to land on page one.
-  const pdf = new PDFDocument({
-    size: "A4",
-    margin: MARGIN,
-    autoFirstPage: false,
-  });
-  const chunks: Buffer[] = [];
-  pdf.on("data", (chunk: Buffer) => chunks.push(chunk));
-  const done = new Promise<Buffer>((resolve) => {
-    pdf.on("end", () => resolve(Buffer.concat(chunks)));
-  });
-
-  pdf.on("pageAdded", () => {
-    drawFooter(pdf, document.footer, brand);
-    pdf.x = MARGIN;
-    pdf.y = MARGIN;
-  });
-
+  qr: Buffer | undefined,
+): void {
   pdf.addPage();
   drawLetterhead(pdf, document, brand, qr);
 
@@ -353,6 +363,70 @@ export async function renderDocument(
       width: contentWidth(pdf) - 80,
       align: "center",
     });
+  }
+}
+
+/**
+ * Draws a document the core assembled. The wording, the order and every value
+ * come from `src/core/request/requerimento.ts`; this only places them on the
+ * page, which is why the same function serves the service request form and the
+ * data rights receipt. The colour comes from the tenant's theme, so two
+ * offices' documents differ in palette and seal and in nothing else.
+ */
+export async function renderDocument(
+  document: RequerimentoDocument,
+  brand: DocumentBrand,
+): Promise<Buffer> {
+  return renderDocuments([document], brand);
+}
+
+/**
+ * Several documents, one PDF: each gets its own letterhead, footer and
+ * signature block, on its own page onward — the habilitação de casamento's
+ * declaração de hipossuficiência is one per nubente (Provimento CGJ/TJRN
+ * n. 7/2026, art. 4º), and the couple signs and returns a single file, not
+ * two.
+ */
+export async function renderDocuments(
+  documents: RequerimentoDocument[],
+  brand: DocumentBrand,
+): Promise<Buffer> {
+  // Drawn in the theme's ink on white so it belongs to the letterhead; QR
+  // error correction has margin to spare for that contrast.
+  const qr = brand.lookupUrl
+    ? await QRCode.toBuffer(brand.lookupUrl, {
+        margin: 0,
+        width: QR_SIZE * 4,
+        color: { dark: brand.palette.primary, light: NEUTRALS.card },
+      })
+    : undefined;
+
+  // No first page from the constructor: the footer runs off `pageAdded`, and
+  // it has to be attached before page one exists to land on page one. Each
+  // document's own footer text travels through a closure updated right
+  // before its `addPage`, so a page added mid-document (an overflowing
+  // section) still gets that document's footer, not the next one's.
+  const pdf = new PDFDocument({
+    size: "A4",
+    margin: MARGIN,
+    autoFirstPage: false,
+  });
+  let currentFooter = "";
+  const chunks: Buffer[] = [];
+  pdf.on("data", (chunk: Buffer) => chunks.push(chunk));
+  const done = new Promise<Buffer>((resolve) => {
+    pdf.on("end", () => resolve(Buffer.concat(chunks)));
+  });
+
+  pdf.on("pageAdded", () => {
+    drawFooter(pdf, currentFooter, brand);
+    pdf.x = MARGIN;
+    pdf.y = MARGIN;
+  });
+
+  for (const document of documents) {
+    currentFooter = document.footer;
+    drawDocumentBody(pdf, document, brand, qr);
   }
 
   pdf.end();
