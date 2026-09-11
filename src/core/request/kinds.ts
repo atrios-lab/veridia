@@ -235,8 +235,8 @@ export type StatusReasonResult =
 /**
  * Whether a Cancelado/Indeferido confirmation may proceed, and what to write
  * to `status_reason`. A valid text always satisfies it; a PDF stands in for
- * an empty text only for "rejected" — "cancelled" keeps requiring the text on
- * its own, exactly as before this stood in for it.
+ * an empty text only for "rejected" ("cancelled" keeps requiring the text on
+ * its own, exactly as before this stood in for it).
  */
 export function validateStatusReason({
   status,
