@@ -20,9 +20,27 @@ import {
 import { getSession } from "@/lib/session.ts";
 import { getTenant, officeNow, today } from "@/lib/tenant.ts";
 
+/** The text fields as they were typed, unvalidated. */
+export type ManualEntrySentValues = {
+  applicantName: string;
+  contact: string;
+  cpf: string;
+  description: string;
+  purpose: string;
+  amount: string;
+};
+
 export type ManualEntryState =
   | { status: "idle" }
-  | { status: "error"; message: string; fieldErrors: Record<string, string> }
+  | {
+      status: "error";
+      message: string;
+      fieldErrors: Record<string, string>;
+      // Echoed back because React resets an uncontrolled form once the action
+      // resolves. Without this the operator loses every field that was right
+      // to fix the one that wasn't.
+      sent: ManualEntrySentValues;
+    }
   | {
       status: "success";
       protocolNumber: string;
@@ -50,9 +68,10 @@ const GENERIC_ERROR =
 
 function fail(
   message: string,
+  sent: ManualEntrySentValues,
   fieldErrors: Record<string, string> = {},
 ): ManualEntryState {
-  return { status: "error", message, fieldErrors };
+  return { status: "error", message, fieldErrors, sent };
 }
 
 /**
@@ -65,21 +84,30 @@ export async function createManualServiceRequest(
   _previous: ManualEntryState,
   formData: FormData,
 ): Promise<ManualEntryState> {
+  const sent: ManualEntrySentValues = {
+    applicantName: String(formData.get("applicantName") ?? "").trim(),
+    contact: String(formData.get("contact") ?? "").trim(),
+    cpf: String(formData.get("cpf") ?? "").trim(),
+    description: String(formData.get("description") ?? "").trim(),
+    purpose: String(formData.get("purpose") ?? "").trim(),
+    amount: String(formData.get("amount") ?? "").trim(),
+  };
+
   const session = await getSession();
   if (!session || !can(session.user.role ?? "", "requests.manage")) {
-    return fail("Você não tem permissão para lançar pedidos.");
+    return fail("Você não tem permissão para lançar pedidos.", sent);
   }
 
   const tenant = await getTenant();
   const act = getActForTenant(tenant, String(formData.get("actId") ?? ""));
-  if (!act) return fail("Escolha um ato disponível nesta serventia.");
+  if (!act) return fail("Escolha um ato disponível nesta serventia.", sent);
 
   const parsed = serviceRequestSchema(act).safeParse({
-    applicantName: formData.get("applicantName") ?? "",
-    contact: formData.get("contact") ?? "",
-    cpf: formData.get("cpf") ?? "",
-    description: formData.get("description") ?? "",
-    purpose: formData.get("purpose") ?? "",
+    applicantName: sent.applicantName,
+    contact: sent.contact,
+    cpf: sent.cpf,
+    description: sent.description,
+    purpose: sent.purpose,
     parameterValue: "",
     // Filed in person: the physical process at the counter is the consent,
     // there is no screen here for the citizen to tick these themselves, the
@@ -93,11 +121,11 @@ export async function createManualServiceRequest(
       const field = String(issue.path[0] ?? "form");
       fieldErrors[field] ??= issue.message;
     }
-    return fail("Confira os campos destacados.", fieldErrors);
+    return fail("Confira os campos destacados.", sent, fieldErrors);
   }
 
   const accessKey = generateAccessKey();
-  const amountCents = parseCentsInput(String(formData.get("amount") ?? ""));
+  const amountCents = parseCentsInput(sent.amount);
   // Present only when this form was opened from "Lançar um pedido novo a
   // partir desta conversa" at closing time (see
   // atendimento/[id]/_components/close-dialog.tsx).
@@ -162,6 +190,6 @@ export async function createManualServiceRequest(
     };
   } catch (error) {
     console.error("pedidos.manual-entry", error);
-    return fail(GENERIC_ERROR);
+    return fail(GENERIC_ERROR, sent);
   }
 }
