@@ -74,4 +74,4 @@
       clique novo no site funciona. Baixar o comprovante na tela de sucesso e ver a chave ainda
       na tela. No painel, emitir nova chave, "Baixar comprovante (PDF)", e ver o
       arquivo salvo com a chave certa.
-- [ ] 6.3 Abrir o PR a partir da branch; sem push na main.
+- [x] 6.3 Abrir o PR a partir da branch; sem push na main.
