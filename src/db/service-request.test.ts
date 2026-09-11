@@ -226,7 +226,7 @@ test("status_reason is written on cancel and overwritten by the next one", async
   assert.equal(first.rows[0].status_reason, "CPF divergente do requerente");
 
   await client.query(
-    "UPDATE service_requests SET status = 'in-review', status_reason = NULL WHERE id = $1",
+    "UPDATE service_requests SET status = 'processing', status_reason = NULL WHERE id = $1",
     [request.id],
   );
   await client.query(
@@ -371,7 +371,7 @@ test("a second open request for the same act and CPF is found as a duplicate", a
        (tenant_slug, protocol_year, protocol_sequence, protocol_number,
         act_id, attribution, applicant_name, contact, cpf, access_key_hash, status)
      VALUES ('cartorio-marinho', 2029, 1, 'REQ.2029.000001',
-             'rcpn-certidao', 'RCPN', 'Maria', 'maria.duplicata@exemplo.com', '11122233396', 'hash', 'in-review')`,
+             'rcpn-certidao', 'RCPN', 'Maria', 'maria.duplicata@exemplo.com', '11122233396', 'hash', 'processing')`,
   );
 
   const { rows } = await findDuplicate(
@@ -397,7 +397,7 @@ test("a request whose andamento is terminal does not count as a duplicate", asyn
 
 test("a different act or a different CPF and e-mail is not a duplicate", async () => {
   await client.query(
-    "UPDATE service_requests SET status = 'in-review' WHERE protocol_number = 'REQ.2029.000001'",
+    "UPDATE service_requests SET status = 'processing' WHERE protocol_number = 'REQ.2029.000001'",
   );
 
   const differentAct = await findDuplicate(
@@ -423,7 +423,7 @@ test("a citizen with no CPF is still matched, by e-mail", async () => {
        (tenant_slug, protocol_year, protocol_sequence, protocol_number,
         act_id, attribution, applicant_name, contact, access_key_hash, status)
      VALUES ('cartorio-marinho', 2029, 2, 'REQ.2029.000002',
-             'rcpn-certidao', 'RCPN', 'João', 'joao@exemplo.com', 'hash', 'in-review')`,
+             'rcpn-certidao', 'RCPN', 'João', 'joao@exemplo.com', 'hash', 'processing')`,
   );
 
   const found = await findDuplicate("rcpn-certidao", "joao@exemplo.com", null);
@@ -551,10 +551,10 @@ test("a requirement's form goes when the requirement goes", async () => {
 
 // What `deactivateServiceRequests` (src/lib/service-request.ts) does: check
 // every id belongs to the tenant before writing anything, then set each to
-// `inactive`. Run against Postgres for the same reason as
+// `archived`. Run against Postgres for the same reason as
 // `OPEN_DUPLICATE_QUERY` above (that file's `db` is a real driver
 // connection, not swappable to PGlite).
-test("marking protocols inactive in bulk leaves the others untouched", async () => {
+test("marking protocols archived in bulk leaves the others untouched", async () => {
   await fileRequest("cartorio-marinho", 2030, 1);
   await fileRequest("cartorio-marinho", 2030, 2);
   const { rows } = await client.query<{ id: string }>(
@@ -565,7 +565,7 @@ test("marking protocols inactive in bulk leaves the others untouched", async () 
   const [firstId, secondId] = rows.map((r) => r.id);
 
   await client.query(
-    "UPDATE service_requests SET status = 'inactive' WHERE tenant_slug = $1 AND id = ANY($2::uuid[])",
+    "UPDATE service_requests SET status = 'archived' WHERE tenant_slug = $1 AND id = ANY($2::uuid[])",
     ["cartorio-marinho", [firstId, secondId]],
   );
 
@@ -574,8 +574,8 @@ test("marking protocols inactive in bulk leaves the others untouched", async () 
     [[firstId, secondId]],
   );
   assert.deepEqual(updated.map((r) => r.status).sort(), [
-    "inactive",
-    "inactive",
+    "archived",
+    "archived",
   ]);
 });
 
@@ -597,12 +597,12 @@ test("a batch with one id outside the tenant fails the ownership check", async (
   );
   assert.notEqual(owned[0].count, String(ids.length));
 
-  // Nothing was ever set to inactive: the mismatch above is caught first.
+  // Nothing was ever archived: the mismatch above is caught first.
   const { rows: statuses } = await client.query<{ status: string }>(
     "SELECT status FROM service_requests WHERE id = ANY($1::uuid[])",
     [ids],
   );
-  assert.ok(statuses.every((r) => r.status !== "inactive"));
+  assert.ok(statuses.every((r) => r.status !== "archived"));
 });
 
 test("o desfecho da gratuidade entra e sai de details.exemption.decision", async () => {

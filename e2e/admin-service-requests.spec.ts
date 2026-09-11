@@ -102,19 +102,20 @@ test.describe("fila e detalhe de pedidos", () => {
     await signIn(page);
     await page.goto(`${baseURL}/admin/pedidos/${encodeURIComponent(PROTOCOL)}`);
 
-    await page.getByRole("button", { name: "Em análise" }).click();
+    await page.getByRole("button", { name: "Em processamento" }).click();
     // The trail of the move, on the request's own screen, which is also what
-    // says the click landed: "Andamento atual:" only shows for a status off
-    // the happy path, and this one is on it. The entry used to be keyed by the
-    // andamento instead of by the request, so `listRequestHistory` never
-    // matched it and the panel showed the change nowhere.
+    // says the click landed, regardless of whether the new andamento sits on
+    // the happy path bar or falls back to the plain "Andamento atual:" line.
+    // The entry used to be keyed by the andamento instead of by the request,
+    // so `listRequestHistory` never matched it and the panel showed the
+    // change nowhere.
     await expect(
       page.locator("li", { hasText: "mudou o andamento" }),
     ).toBeVisible();
 
     await page.goto(`${baseURL}/admin/pedidos`);
     const row = page.locator("a", { hasText: PROTOCOL });
-    await expect(row.getByText("Em análise")).toBeVisible();
+    await expect(row.getByText("Em processamento")).toBeVisible();
   });
 
   test("cancelar exige motivo; o motivo aparece no histórico", async ({

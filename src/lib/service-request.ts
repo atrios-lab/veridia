@@ -661,14 +661,16 @@ export async function updateRequestStatus(
 }
 
 /**
- * Marks several requests inactive in one go, for the operator clearing many
- * at once instead of one by one. Not a deletion: the row and its history stay,
- * `inactive` just reads as "no longer needs the operator's attention" (see
- * `TERMINAL_SERVICE_REQUEST_STATUSES`).
+ * Marks several requests archived in one go, for the operator clearing many
+ * at once instead of one by one. Not a deletion: the row and its history
+ * stay, `archived` just reads as "no longer needs the operator's attention"
+ * (see `TERMINAL_SERVICE_REQUEST_STATUSES`). Used to write its own `inactive`
+ * status; folded into `archived` by the change `enxugar-status-pedido`,
+ * which found no rule anywhere that told the two apart.
  *
  * Every id is checked against the tenant before anything is written, so a
  * stale selection (a protocol moved to another tenant mid-session, say) fails
- * the whole batch instead of silently inactivating the rest.
+ * the whole batch instead of silently archiving the rest.
  */
 export async function deactivateServiceRequests(
   tenantSlug: string,
@@ -690,7 +692,7 @@ export async function deactivateServiceRequests(
     );
   }
   for (const id of ids) {
-    await updateRequestStatus(tenantSlug, id, "inactive", actorId);
+    await updateRequestStatus(tenantSlug, id, "archived", actorId);
   }
 }
 

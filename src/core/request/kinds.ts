@@ -33,66 +33,57 @@ export const KIND_BY_PREFIX: Record<ProtocolPrefix, RequestKind> = {
 };
 
 /**
- * The twenty andamentos a service request may be in: the general ones every
- * request passes through plus the registral steps of a title's life, which is
- * the vocabulary the registrar actually works in (prenotação, qualificação,
- * registro, averbação). A closed list, not a database enum: every other
- * kind's vocabulary lives in `STATUS_LABELS` below the same way, so a new
- * value is a code change here, never a migration.
+ * The eleven andamentos a service request may be in. A closed list, not a
+ * database enum: every other kind's vocabulary lives in `STATUS_LABELS`
+ * below the same way, so a new value is a code change here, never a
+ * migration.
+ *
+ * Trimmed from twenty (change `enxugar-status-pedido`, see its design.md):
+ * the nine removed were either never written by anything but the operator's
+ * own hand with no rule distinguishing them from a neighbour (`filed`,
+ * `in-review`, and the registral steps `pre-noted`/`in-qualification`, plus
+ * `registered`/`annotated`/`granted`, all folded into `processing`), or a
+ * second name for a status that already existed (`with-requirement` folded
+ * into `awaiting-compliance`; `inactive` folded into `archived`).
  *
  * The identifiers stay English like the rest of the product, even though the
  * office says them in Portuguese. `service_requests.status` is one column
  * shared by all four kinds, and `new`, `done` and `cancelled` already belong
  * to appointments and the other channels too: adopting the legacy system's
  * Portuguese identifiers for this kind alone would leave `em_qualificacao`
- * and `confirmed` side by side in the same column, forever. The pt→en map for
- * the eventual data migration lives in the change's design.md.
+ * and `confirmed` side by side in the same column, forever.
  */
 export const SERVICE_REQUEST_STATUSES = [
   "new",
-  "in-review",
   "awaiting-payment",
   "payment-reported",
   "paid",
-  "filed",
-  "pre-noted",
-  "in-qualification",
-  "with-requirement",
   "awaiting-compliance",
   "processing",
-  "registered",
-  "annotated",
-  "granted",
   "ready-for-pickup",
   "done",
   "rejected",
   "cancelled",
   "archived",
-  "inactive",
 ] as const;
 export type ServiceRequestStatus = (typeof SERVICE_REQUEST_STATUSES)[number];
 
 /** Andamentos that no longer need the operator's attention. */
 export const TERMINAL_SERVICE_REQUEST_STATUSES: readonly ServiceRequestStatus[] =
-  ["done", "rejected", "cancelled", "archived", "inactive"];
+  ["done", "rejected", "cancelled", "archived"];
 
 /**
- * The phases the queue groups the twenty into. Nineteen steps do not fit a
- * progress bar, and the citizen does not need "averbado" to know where their
- * request stands. The office does, and the office reads the detail screen.
+ * The phases the queue groups the eleven into. Even eleven do not fit a
+ * progress bar, and the citizen does not need "em processamento" to know
+ * where their request stands. The office does, and the office reads the
+ * detail screen.
  */
 export const SERVICE_REQUEST_PHASES = [
-  { id: "intake", label: "Entrada", statuses: ["new", "filed"] },
+  { id: "intake", label: "Entrada", statuses: ["new"] },
   {
     id: "analysis",
     label: "Análise",
-    statuses: [
-      "in-review",
-      "pre-noted",
-      "in-qualification",
-      "with-requirement",
-      "awaiting-compliance",
-    ],
+    statuses: ["awaiting-compliance"],
   },
   {
     id: "payment",
@@ -102,13 +93,13 @@ export const SERVICE_REQUEST_PHASES = [
   {
     id: "processing",
     label: "Processamento",
-    statuses: ["processing", "registered", "annotated", "granted"],
+    statuses: ["processing"],
   },
   { id: "delivery", label: "Entrega", statuses: ["ready-for-pickup"] },
   {
     id: "closed",
     label: "Encerrado",
-    statuses: ["done", "rejected", "cancelled", "archived", "inactive"],
+    statuses: ["done", "rejected", "cancelled", "archived"],
   },
 ] as const satisfies readonly {
   id: string;
@@ -145,36 +136,27 @@ export function isServiceRequestStatus(
 /**
  * The andamentos offered as the next step from each one, curated for the
  * detail screen. This is UX guidance, not a state machine: the andamento of a
- * title does not fit one (a prenotação may go to exigência, an exigência back
- * to qualificação, a concluído may reopen), so the server enforces only that
- * the value is one of the twenty above and that it is not the current one.
- * A correction outside this table (moving a request back out of "Cancelado",
- * say) is still accepted.
+ * title does not fit one (a exigência pode voltar depois de resolvida, um
+ * concluído pode reabrir), so the server enforces only that the value is one
+ * of the eleven above and that it is not the current one. A correction
+ * outside this table (moving a request back out of "Cancelado", say) is
+ * still accepted.
  */
 const SUGGESTED_NEXT_STATUSES: Record<
   ServiceRequestStatus,
   readonly ServiceRequestStatus[]
 > = {
-  new: ["in-review", "filed", "cancelled"],
-  "in-review": ["awaiting-payment", "pre-noted", "rejected", "cancelled"],
+  new: ["processing", "awaiting-payment", "cancelled"],
   "awaiting-payment": ["paid", "cancelled"],
   "payment-reported": ["paid", "awaiting-payment", "cancelled"],
-  paid: ["processing", "pre-noted", "done"],
-  filed: ["pre-noted", "in-review", "cancelled"],
-  "pre-noted": ["in-qualification", "with-requirement", "cancelled"],
-  "in-qualification": ["with-requirement", "registered", "rejected"],
-  "with-requirement": ["awaiting-compliance", "in-qualification", "cancelled"],
-  "awaiting-compliance": ["in-qualification", "with-requirement", "cancelled"],
-  processing: ["registered", "granted", "ready-for-pickup"],
-  registered: ["annotated", "ready-for-pickup", "done"],
-  annotated: ["ready-for-pickup", "done"],
-  granted: ["ready-for-pickup", "done"],
+  paid: ["processing", "done"],
+  "awaiting-compliance": ["processing", "cancelled"],
+  processing: ["ready-for-pickup", "done"],
   "ready-for-pickup": ["done", "archived"],
   done: ["archived"],
   rejected: ["archived"],
-  cancelled: ["in-review", "archived"],
+  cancelled: ["processing", "archived"],
   archived: [],
-  inactive: [],
 };
 
 export function suggestedNextStatuses(
@@ -269,16 +251,17 @@ export function validateStatusReason({
 /**
  * O andamento que as exigências abertas impõem ao pedido, depois de registrar,
  * cumprir ou excluir uma. Registrar a exigência já é dizer que o pedido está
- * com exigência, e cumprir a última é devolvê-lo à qualificação: deixar isso
- * para um segundo clique é o que fazia a fila mostrar "Em qualificação" com
- * exigência aberta, ou "Com exigência" sem nenhuma, quando o operador
- * esquecia de mover na mão.
+ * com exigência, e cumprir a última é devolvê-lo ao processamento: deixar
+ * isso para um segundo clique é o que fazia a fila mostrar "Em processamento"
+ * com exigência aberta, ou "Aguardando exigência" sem nenhuma, quando o
+ * operador esquecia de mover na mão.
  *
- * A volta sai de "Com exigência" e de "Aguardando exigência", os dois
- * andamentos que a exigência impõe, e nunca de outro: um pedido que já seguiu
- * para o registro não volta para a análise porque a exigência foi fechada
- * depois. `null` quando não há o que mover: já está lá, ou o pedido está
- * encerrado, e uma exigência mexida depois não o reabre sozinha.
+ * A volta sai só de "Aguardando exigência", o único andamento que a
+ * exigência impõe (antes do corte de `enxugar-status-pedido` havia dois,
+ * "Com exigência" e "Aguardando exigência"; fundidos num só): um pedido que
+ * já seguiu para o processamento não volta pra lá porque a exigência foi
+ * fechada depois. `null` quando não há o que mover: já está lá, ou o pedido
+ * está encerrado, e uma exigência mexida depois não o reabre sozinha.
  */
 export function statusForRequirements(
   from: ServiceRequestStatus,
@@ -286,11 +269,9 @@ export function statusForRequirements(
 ): ServiceRequestStatus | null {
   if (!isOpenServiceRequestStatus(from)) return null;
   if (pendingRequirements > 0) {
-    return from === "with-requirement" ? null : "with-requirement";
+    return from === "awaiting-compliance" ? null : "awaiting-compliance";
   }
-  return from === "with-requirement" || from === "awaiting-compliance"
-    ? "in-qualification"
-    : null;
+  return from === "awaiting-compliance" ? "processing" : null;
 }
 
 /**
@@ -377,25 +358,16 @@ export function isOpenStatus(kind: RequestKind, status: string): boolean {
 const STATUS_LABELS: Record<RequestKind, Record<string, string>> = {
   "service-request": {
     new: "Novo",
-    "in-review": "Em análise",
     "awaiting-payment": "Aguardando pagamento",
     "payment-reported": "Pagamento informado",
     paid: "Pago",
-    filed: "Protocolado",
-    "pre-noted": "Prenotado",
-    "in-qualification": "Em qualificação",
-    "with-requirement": "Com exigência",
     "awaiting-compliance": "Aguardando exigência",
     processing: "Em processamento",
-    registered: "Registrado",
-    annotated: "Averbado",
-    granted: "Deferido",
     "ready-for-pickup": "Disponível para retirada",
     done: "Concluído",
     rejected: "Indeferido",
     cancelled: "Cancelado",
     archived: "Arquivado",
-    inactive: "Inativo",
   },
   // Appointments live in their own table now (see core/scheduling/appointment
   // for the statuses in use). These labels remain only so a dormant AGD row

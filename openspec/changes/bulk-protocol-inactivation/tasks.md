@@ -1,3 +1,10 @@
+> **Nota (change `enxugar-status-pedido`):** as tasks 1.1–1.3, 3.1 e 3.6 abaixo descrevem o que
+> foi implementado de fato nesta change — um status `inactive` próprio. Essa decisão foi revista:
+> `inactive` saiu do enum (nenhuma regra o distinguia de `archived`) e `deactivateServiceRequests`
+> passou a gravar `archived`. O registro abaixo fica como histórico do que este código já fez;
+> não reescrevo como se `inactive` nunca tivesse existido. A pendência real (task 4.3) já está
+> ajustada para o estado atual.
+
 ## 1. Núcleo (`src/core/request/kinds.ts`)
 
 - [x] 1.1 Adicionar `"inactive"` a `SERVICE_REQUEST_STATUSES` e a `TERMINAL_SERVICE_REQUEST_STATUSES`
@@ -24,4 +31,4 @@
 
 - [x] 4.1 `openspec validate bulk-protocol-inactivation --strict`
 - [x] 4.2 Rodar `node --test` dos arquivos tocados (`kinds.test.ts`, `queue-order.test.ts`, `status-tone.test.ts`, `src/db/service-request.test.ts`) e `tsc --noEmit`
-- [ ] 4.3 Playwright: selecionar dois protocolos, marcar como inativo, confirmar e verificar que ambos aparecem com o andamento "Inativo" na fila — não rodado (precisa de banco de dados; ver nota abaixo)
+- [ ] 4.3 Playwright: selecionar dois protocolos, arquivar, confirmar e verificar que ambos aparecem com o andamento "Arquivado" na fila — não rodado (precisa de banco de dados; ver nota abaixo)

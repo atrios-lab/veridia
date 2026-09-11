@@ -20,7 +20,6 @@ import { type ActionState, changeStatus } from "../actions.ts";
  * those falls back to the plain "andamento atual" line instead of a step. */
 const HAPPY_PATH: readonly ServiceRequestStatus[] = [
   "new",
-  "in-review",
   "awaiting-payment",
   "paid",
   "done",

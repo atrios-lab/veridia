@@ -112,7 +112,7 @@ test("a stored pause survives the read; a malformed one drops the term", () => {
 test("only a written requirement or a priced payment pauses the clock", () => {
   assert.deepEqual(
     pauseReasons({
-      status: "in-review",
+      status: "processing",
       amountCents: null,
       pendingRequirements: 1,
     }),

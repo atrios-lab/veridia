@@ -4,9 +4,8 @@ import { SERVICE_REQUEST_STATUSES } from "../../../../../core/request/kinds.ts";
 import { STATUS_TONES } from "./status-tone.ts";
 
 test("an exigência reads as stalled, not as work in progress", () => {
-  assert.equal(STATUS_TONES["with-requirement"], "blocked");
   assert.equal(STATUS_TONES["awaiting-compliance"], "blocked");
-  assert.notEqual(STATUS_TONES["in-review"], "blocked");
+  assert.notEqual(STATUS_TONES.processing, "blocked");
 });
 
 test("every andamento names its own tone", () => {
