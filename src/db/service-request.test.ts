@@ -243,6 +243,47 @@ test("status_reason is written on cancel and overwritten by the next one", async
   assert.equal(second.rows[0].status_reason, "Certidão anexada ilegível");
 });
 
+test("rejected with a PDF and no text leaves status_reason null", async () => {
+  // What `changeStatus` does when the operator attaches a PDF instead of
+  // writing the text (see design.md): `status_reason` stays null, and the
+  // document is its own row, findable by kind for the same request.
+  await fileRequest("cartorio-marinho", 2028, 7);
+  const [request] = (
+    await client.query<{ id: string }>(
+      "SELECT id FROM service_requests WHERE protocol_number = 'REQ.2028.000007'",
+    )
+  ).rows;
+
+  await client.query(
+    "UPDATE service_requests SET status = 'rejected', status_reason = NULL WHERE id = $1",
+    [request.id],
+  );
+  await client.query(
+    `INSERT INTO service_request_attachments
+       (tenant_slug, request_id, kind, stored_name, display_name, path, mime_type, size_bytes)
+     VALUES ('cartorio-marinho', $1, 'rejection-document', 'cartorio-marinho/doc.pdf',
+             'Documento do indeferimento', '/uploads/cartorio-marinho/doc.pdf',
+             'application/pdf', 12345)`,
+    [request.id],
+  );
+
+  const status = await client.query<{ status_reason: string | null }>(
+    "SELECT status_reason FROM service_requests WHERE id = $1",
+    [request.id],
+  );
+  assert.equal(status.rows[0].status_reason, null);
+
+  const attachment = await client.query<{
+    kind: string;
+    mime_type: string;
+  }>(
+    "SELECT kind, mime_type FROM service_request_attachments WHERE request_id = $1 AND kind = 'rejection-document'",
+    [request.id],
+  );
+  assert.equal(attachment.rows.length, 1);
+  assert.equal(attachment.rows[0].mime_type, "application/pdf");
+});
+
 test("a requirement is removed with the request it belongs to", async () => {
   const { rows } = await client.query<{ id: string }>(
     "SELECT id FROM service_requests WHERE protocol_number = 'REQ.2028.000001'",

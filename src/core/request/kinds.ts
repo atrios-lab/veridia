@@ -220,6 +220,52 @@ export const statusReasonSchema = z
       .max(MAX_MESSAGE_LENGTH, TEXT_TOO_LONG),
   );
 
+export interface StatusReasonCheck {
+  status: ServiceRequestStatus;
+  /** The raw text from the confirmation, untrimmed. */
+  reason: string;
+  /** Whether a PDF was attached alongside it. */
+  hasAttachment: boolean;
+}
+
+export type StatusReasonResult =
+  | { ok: true; reason: string | null }
+  | { ok: false; message: string };
+
+/**
+ * Whether a Cancelado/Indeferido confirmation may proceed, and what to write
+ * to `status_reason`. A valid text always satisfies it; a PDF stands in for
+ * an empty text only for "rejected" — "cancelled" keeps requiring the text on
+ * its own, exactly as before this stood in for it.
+ */
+export function validateStatusReason({
+  status,
+  reason,
+  hasAttachment,
+}: StatusReasonCheck): StatusReasonResult {
+  if (!requiresStatusReason(status)) return { ok: true, reason: null };
+  if (reason.trim().length === 0) {
+    if (status === "rejected" && hasAttachment) {
+      return { ok: true, reason: null };
+    }
+    return {
+      ok: false,
+      message:
+        status === "rejected"
+          ? "Escreva o motivo ou anexe um documento."
+          : "Escreva o motivo.",
+    };
+  }
+  const parsed = statusReasonSchema.safeParse(reason);
+  if (!parsed.success) {
+    return {
+      ok: false,
+      message: parsed.error.issues[0]?.message ?? "Escreva o motivo.",
+    };
+  }
+  return { ok: true, reason: parsed.data };
+}
+
 /**
  * O andamento que as exigências abertas impõem ao pedido, depois de registrar,
  * cumprir ou excluir uma. Registrar a exigência já é dizer que o pedido está

@@ -144,6 +144,72 @@ test.describe("fila e detalhe de pedidos", () => {
     ).toContainText("CPF divergente do requerente.");
   });
 
+  test("indeferir com PDF, sem motivo em texto: sucesso e link no histórico", async ({
+    page,
+  }) => {
+    await signIn(page);
+    await page.goto(`${baseURL}/admin/pedidos/${encodeURIComponent(PROTOCOL)}`);
+
+    // "Indeferido" não é sugestão a partir de "new" (ver kinds.ts): a
+    // correção manual é o caminho até ele nesta tela.
+    await page.getByRole("button", { name: "Prazo e correção" }).click();
+    await page
+      .getByLabel("Corrigir para outro andamento")
+      .selectOption("rejected");
+    await page.getByRole("button", { name: "Aplicar" }).click();
+
+    const reasonField = page.getByLabel(
+      "Motivo para mudar o andamento para indeferido",
+    );
+    await expect(reasonField).toBeVisible();
+
+    const fakePdf = {
+      name: "indeferimento.pdf",
+      mimeType: "application/pdf",
+      buffer: Buffer.concat([
+        Buffer.from("%PDF-1.4\n"),
+        Buffer.alloc(1024, 0x20),
+      ]),
+    };
+    await page.setInputFiles('input[name="rejectionDocument"]', fakePdf);
+    await expect(page.getByText("indeferimento.pdf")).toBeVisible();
+
+    await page.getByRole("button", { name: "Confirmar indeferido" }).click();
+
+    await expect(page.getByText("Andamento atual:")).toContainText(
+      "Indeferido",
+    );
+    await expect(
+      page.locator("li", { hasText: "mudou o andamento" }),
+    ).toContainText("Ver documento do indeferimento");
+  });
+
+  test("indeferir sem motivo em texto e sem PDF é recusado", async ({
+    page,
+  }) => {
+    await signIn(page);
+    await page.goto(`${baseURL}/admin/pedidos/${encodeURIComponent(PROTOCOL)}`);
+
+    await page.getByRole("button", { name: "Prazo e correção" }).click();
+    await page
+      .getByLabel("Corrigir para outro andamento")
+      .selectOption("rejected");
+    await page.getByRole("button", { name: "Aplicar" }).click();
+
+    const reasonField = page.getByLabel(
+      "Motivo para mudar o andamento para indeferido",
+    );
+    await expect(reasonField).toBeVisible();
+    await page.getByRole("button", { name: "Confirmar indeferido" }).click();
+
+    await expect(
+      page.getByText("Escreva o motivo ou anexe um documento."),
+    ).toBeVisible();
+    // The confirmation stays open on error, not the andamento a success
+    // would have shown: proof nothing moved.
+    await expect(reasonField).toBeVisible();
+  });
+
   test("o prazo salva sozinho, sem mudar o andamento", async ({ page }) => {
     await signIn(page);
     await page.goto(`${baseURL}/admin/pedidos/${encodeURIComponent(PROTOCOL)}`);

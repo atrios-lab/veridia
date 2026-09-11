@@ -5,6 +5,7 @@ import { redirect } from "next/navigation";
 import { z } from "zod";
 import { getActForTenant } from "@/core/acts/catalog.ts";
 import { can } from "@/core/auth/roles.ts";
+import { REJECTION_DOCUMENT_MIME_TYPE } from "@/core/request/attachment.ts";
 import {
   type Deadline,
   deadlineDaysSchema,
@@ -20,7 +21,7 @@ import {
   isServiceRequestStatus,
   requiresStatusReason,
   type ServiceRequestStatus,
-  statusReasonSchema,
+  validateStatusReason,
 } from "@/core/request/kinds.ts";
 import { parseCentsInput } from "@/core/request/money.ts";
 import { requirementTextSchema } from "@/core/request/requirement.ts";
@@ -199,17 +200,31 @@ export async function changeStatus(
     }
 
     // Closing a request without delivering it, with no why, is what makes
-    // the citizen call the counter to ask.
+    // the citizen call the counter to ask. Indeferido alone may carry a PDF
+    // instead of the text; every other andamento that requires a reason
+    // (only Cancelado) still needs the text on its own.
+    const rejectionDocument = formData.get("rejectionDocument");
+    const hasRejectionDocument =
+      status === "rejected" &&
+      rejectionDocument instanceof File &&
+      rejectionDocument.size > 0;
+    if (
+      hasRejectionDocument &&
+      (rejectionDocument as File).type !== REJECTION_DOCUMENT_MIME_TYPE
+    ) {
+      return { status: "error", message: "O documento precisa ser um PDF." };
+    }
     let reason: string | undefined;
     if (requiresStatusReason(status)) {
-      const parsed = statusReasonSchema.safeParse(formData.get("reason"));
-      if (!parsed.success) {
-        return {
-          status: "error",
-          message: parsed.error.issues[0]?.message ?? "Escreva o motivo.",
-        };
+      const result = validateStatusReason({
+        status,
+        reason: String(formData.get("reason") ?? ""),
+        hasAttachment: hasRejectionDocument,
+      });
+      if (!result.ok) {
+        return { status: "error", message: result.message };
       }
-      reason = parsed.data;
+      reason = result.reason ?? undefined;
     }
 
     await updateRequestStatus(
@@ -221,6 +236,19 @@ export async function changeStatus(
       reason,
     );
     await reconcileDeadlinePause(tenant, requestId, session.user.id, today());
+
+    if (hasRejectionDocument) {
+      const stored = await storeAttachments([rejectionDocument as File], {
+        tenantSlug: tenant.slug,
+        kind: "Documento do indeferimento",
+      });
+      await attachToRequest(
+        tenant.slug,
+        requestId,
+        stored,
+        "rejection-document",
+      );
+    }
 
     // The three that end the story without the citizen reading it on the
     // consult first. The citizen follows the rest through the consult, and a
@@ -249,6 +277,9 @@ export async function changeStatus(
       });
     }
   } catch (error) {
+    if (error instanceof AttachmentError) {
+      return { status: "error", message: error.message };
+    }
     console.error("pedidos.change-status", error);
     return { status: "error", message: GENERIC_ERROR };
   }

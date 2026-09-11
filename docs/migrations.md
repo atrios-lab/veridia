@@ -8,7 +8,10 @@ arquivo de migração versionado.
 1. `pnpm db:generate` gera o SQL em `drizzle/`.
 2. **Ler o SQL gerado, linha por linha.** É a única etapa que não dá para automatizar.
 3. Commitar o SQL junto com a mudança de schema, no mesmo pull request.
-4. `pnpm db:migrate` aplica no deploy, antes da publicação.
+4. `pnpm db:migrate` aplica no deploy, antes da publicação. Na Vercel isso é automático:
+   `vercel.json` troca o build por `scripts/vercel-build.mjs`, que roda a migration e só então o
+   `next build`, e apenas quando `VERCEL_ENV` é `production`. Exige `DIRECT_URL` configurada no
+   ambiente de produção do projeto na Vercel; sem ela o build falha de propósito.
 
 Mudança de schema sem o arquivo de migração no PR não passa na revisão.
 
