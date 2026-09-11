@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
+import { z } from "zod";
 import { getActForTenant } from "@/core/acts/catalog.ts";
 import { can } from "@/core/auth/roles.ts";
 import {
@@ -14,6 +15,7 @@ import {
 } from "@/core/request/deadline.ts";
 import { purposeFor, requestDataEditSchema } from "@/core/request/edit.ts";
 import {
+  EXEMPTION_DECISION_OUTCOMES,
   isAllowedTransition,
   isServiceRequestStatus,
   requiresStatusReason,
@@ -37,6 +39,7 @@ import {
   registerRequirement,
   reissueAccessKey,
   resolveRequirement,
+  setExemptionDecision,
   setRequestAmount,
   updateRequestData,
   updateRequestDeadline,
@@ -343,6 +346,47 @@ export async function setAmountAction(
   }
   revalidateAdmin();
   return { status: "success", emailWarning };
+}
+
+const exemptionDecisionSchema = z.enum(EXEMPTION_DECISION_OUTCOMES).nullable();
+
+/**
+ * The outcome the office reaches on a gratuidade already asked for
+ * (Provimento CGJ/TJRN n. 7/2026, art. 11). An empty `outcome` ("Sem
+ * decisão" in the select) removes a decision recorded by mistake.
+ * `setExemptionDecision` itself refuses a pedido without `exemption`, so a
+ * request tampered with client-side still lands on a server-side "no".
+ */
+export async function setExemptionDecisionAction(
+  _previous: ActionState,
+  formData: FormData,
+): Promise<ActionState> {
+  const session = await authorize();
+  if (!session) return { status: "error", message: NO_PERMISSION };
+
+  const requestId = String(formData.get("requestId") ?? "");
+  const outcome = formData.get("outcome");
+  const parsed = exemptionDecisionSchema.safeParse(
+    outcome ? outcome : null,
+  );
+  if (!parsed.success) {
+    return { status: "error", message: "Escolha um desfecho válido." };
+  }
+
+  const tenant = await getTenant();
+  try {
+    await setExemptionDecision(
+      tenant.slug,
+      requestId,
+      parsed.data,
+      session.user.id,
+    );
+  } catch (error) {
+    console.error("pedidos.set-exemption-decision", error);
+    return { status: "error", message: GENERIC_ERROR };
+  }
+  revalidateAdmin();
+  return { status: "success" };
 }
 
 export async function deliverDocumentAction(

@@ -10,6 +10,7 @@ import {
 } from "@/core/request/deadline.ts";
 import { maskCpf } from "@/core/request/form.ts";
 import {
+  type ExemptionDecisionOutcome,
   isOpenServiceRequestStatus,
   isServiceRequestStatus,
   readExemption,
@@ -43,11 +44,21 @@ import { ApplicantSection } from "./_components/applicant-section.tsx";
 import { AttachmentsSection } from "./_components/attachments-section.tsx";
 import { DangerSection } from "./_components/danger-section.tsx";
 import { DeliverySection } from "./_components/delivery-section.tsx";
+import { ExemptionDecisionControl } from "./_components/exemption-decision.tsx";
 import { KeySection } from "./_components/key-section.tsx";
 import { LiveRequest } from "./_components/live-request.tsx";
 import type { RequirementItem } from "./_components/requirements-section.tsx";
 import { RequirementsSection } from "./_components/requirements-section.tsx";
 import { StatusSection } from "./_components/status-section.tsx";
+
+/** Como a pill fala o desfecho, em concordância com "Gratuidade ___ em
+ * <data>" — por isso "concedida", não "concessão". */
+const EXEMPTION_DECISION_LABELS: Record<ExemptionDecisionOutcome, string> = {
+  granted: "concedida",
+  referred: "submetida ao Juízo",
+  denied: "indeferida",
+  installments: "substituída por parcelamento",
+};
 
 const HISTORY_LABELS: Record<string, string> = {
   "service-request.create": "registrou o pedido",
@@ -289,16 +300,27 @@ export default async function ServiceRequestDetailPage({
                     deadline={deadline}
                     today={today()}
                   />
-                  {/* Pedida, não concedida: quem confere o benefício e decide é
-                      o operador, e nada aqui mexe no valor. Fica na linha dos
+                  {/* Pedida, não concedida por si só: quem confere o
+                      benefício e decide é o operador, pelo seletor ao lado, e
+                      nada aqui mexe no valor sozinho. Fica na linha dos
                       selos porque muda como o pedido é trabalhado desde o
                       primeiro olhar. */}
                   {exemption && (
-                    <span className="inline-flex items-center rounded-full bg-admin-warning-bg px-[11px] py-[5px] text-[12px] font-bold text-admin-warning-text">
-                      Gratuidade solicitada (ISENTO)
-                      {exemptionActName ? ` · ${exemptionActName}` : ""} ·
-                      declarada em{" "}
-                      {formatDayMonthYear(new Date(exemption.declaredAt))}
+                    <span className="inline-flex items-center gap-2 rounded-full bg-admin-warning-bg px-[11px] py-[5px] text-[12px] font-bold text-admin-warning-text">
+                      {exemption.decision
+                        ? `Gratuidade ${EXEMPTION_DECISION_LABELS[
+                            exemption.decision.outcome
+                          ]} em ${formatDayMonthYear(
+                            new Date(exemption.decision.decidedAt),
+                          )}`
+                        : "Gratuidade solicitada (ISENTO)"}
+                      {exemptionActName ? ` · ${exemptionActName}` : ""}
+                      {!exemption.decision &&
+                        ` · declarada em ${formatDayMonthYear(new Date(exemption.declaredAt))}`}
+                      <ExemptionDecisionControl
+                        requestId={request.id}
+                        outcome={exemption.decision?.outcome}
+                      />
                     </span>
                   )}
                 </>

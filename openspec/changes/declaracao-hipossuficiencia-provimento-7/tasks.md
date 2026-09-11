@@ -102,16 +102,16 @@
 
 ## 6. Desfecho da gratuidade no painel
 
-- [ ] 6.1 Em `src/lib/service-request.ts`, `setExemptionDecision(tenantSlug, id, outcome | null,
+- [x] 6.1 Em `src/lib/service-request.ts`, `setExemptionDecision(tenantSlug, id, outcome | null,
   actorId)`: merge de `exemption.decision` no jsonb (ou remoção quando `null`), recusa em pedido
   sem `exemption`, auditoria `service-request.exemption-decision` com o desfecho nos detalhes.
-- [ ] 6.2 Em `pedidos/[protocolo]/actions.ts`, `setExemptionDecisionAction` exigindo
+- [x] 6.2 Em `pedidos/[protocolo]/actions.ts`, `setExemptionDecisionAction` exigindo
   `requests.manage` e validando o desfecho com Zod (`granted`, `referred`, `denied`,
   `installments`, ou vazio para remover).
-- [ ] 6.3 Componente `ExemptionDecision` ao lado da pill em `status-section.tsx`/`page.tsx`:
+- [x] 6.3 Componente `ExemptionDecision` ao lado da pill em `status-section.tsx`/`page.tsx`:
   seletor com os quatro desfechos e "sem decisão"; a pill passa a dizer o desfecho com a data
   quando há um. Rótulo do evento no histórico ("registrou o desfecho da gratuidade: concedida").
-- [ ] 6.4 Teste do core para a rotulagem do desfecho (`kinds.test.ts`) e e2e em
+- [x] 6.4 Teste do core para a rotulagem do desfecho (`kinds.test.ts`) e e2e em
   `e2e/admin-service-requests.spec.ts`: registrar, ver na pill e no histórico, remover, e
   recusar em pedido sem gratuidade.
 
