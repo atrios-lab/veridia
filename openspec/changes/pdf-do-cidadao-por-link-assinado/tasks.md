@@ -51,22 +51,22 @@
 
 ## 5. Testes que fazem o que o Chrome faz
 
-- [ ] 5.1 Em `e2e/service-request.spec.ts`, no teste da declaração por `request.post`: a
+- [x] 5.1 Em `e2e/service-request.spec.ts`, no teste da declaração por `request.post`: a
       resposta final é `application/pdf` e `response.url()` casa com
       `/solicitar/requerimento/declaracao-<protocolo>.pdf?t=`; `request.get(response.url())`
       devolve 200 `application/pdf` (o refetch do visualizador); com `t` alterado, 404; sem `t`,
       404.
-- [ ] 5.2 O mesmo para o requerimento, no teste que hoje lê `content-disposition` do POST: passa a
+- [x] 5.2 O mesmo para o requerimento, no teste que hoje lê `content-disposition` do POST: passa a
       ler da resposta final e a refazer o GET.
-- [ ] 5.3 Comprovante: `request.post` com `documento: "comprovante"` devolve
+- [x] 5.3 Comprovante: `request.post` com `documento: "comprovante"` devolve
       `attachment; filename="comprovante-<protocolo>.pdf"`.
-- [ ] 5.4 Os testes de clique da #90 (aba abre, tela da chave fica) continuam passando sem
+- [x] 5.4 Os testes de clique da #90 (aba abre, tela da chave fica) continuam passando sem
       mudança; ajustar só se o download direto do comprovante deixar de abrir `page` no Chromium
       automatizado, trocando a espera por `waitForEvent("download")`.
 
 ## 6. Verificação e entrega
 
-- [ ] 6.1 `pnpm typecheck`, `biome check`, `node --test` do `pdf-link.test.ts` e só o
+- [x] 6.1 `pnpm typecheck`, `biome check`, `node --test` do `pdf-link.test.ts` e só o
       `e2e/service-request.spec.ts` e `e2e/admin-service-requests.spec.ts`.
 - [ ] 6.2 Pelo host do cartório no Homolog, num Chrome de verdade: abrir a declaração pela
       consulta de protocolo, clicar no botão de download do visualizador, ver o arquivo salvo

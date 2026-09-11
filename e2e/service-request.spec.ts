@@ -754,6 +754,11 @@ test.describe("filing a request", () => {
     const location = hop.headers().location ?? "";
     expect(location).not.toContain(accessKey);
     expect(location).not.toContain(accessKey.replace(/-/g, ""));
+    // A path, not an absolute URL: the server's idea of its own origin is
+    // not the host in the citizen's address bar, and a form submission
+    // redirected across origins is aborted by the page's `form-action`
+    // CSP, which is how the first draft of this route opened no tab at all.
+    expect(location.startsWith("/solicitar/requerimento/")).toBe(true);
 
     const refused = await request.post(`${baseURL}/solicitar/requerimento`, {
       form: { protocolNumber, accessKey: "AAAA-BBBB-CCCC" },

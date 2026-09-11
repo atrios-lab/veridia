@@ -105,17 +105,20 @@ export async function POST(request: Request): Promise<Response> {
     },
     pdfLinkKey,
   );
-  const location = new URL(
-    `/solicitar/requerimento/${pdfLinkFileName(linkable, stored.protocolNumber)}`,
-    request.url,
-  );
-  location.searchParams.set("t", token);
+  // A relative Location, on purpose. `request.url` is the origin Next was
+  // reached on, not the one in the citizen's address bar (localhost behind
+  // the tenant's host in development, the deployment URL behind the custom
+  // domain on Vercel), and a redirect that changes origin is a redirect the
+  // page's own CSP (`form-action 'self'`) tells the browser to abort. A path
+  // stays on whatever host the form was posted from, and the GET route
+  // checks that host's tenant against the one in the token.
+  const location = `/solicitar/requerimento/${pdfLinkFileName(linkable, stored.protocolNumber)}?t=${encodeURIComponent(token)}`;
 
   // 303, so the browser follows with a GET whatever method brought it here.
   return new Response(null, {
     status: 303,
     headers: {
-      Location: location.toString(),
+      Location: location,
       "Cache-Control": "private, no-store",
     },
   });
