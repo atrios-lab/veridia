@@ -52,7 +52,7 @@ import { RequirementsSection } from "./_components/requirements-section.tsx";
 import { StatusSection } from "./_components/status-section.tsx";
 
 /** Como a pill fala o desfecho, em concordância com "Gratuidade ___ em
- * <data>" — por isso "concedida", não "concessão". */
+ * <data>": por isso "concedida", não "concessão". */
 const EXEMPTION_DECISION_LABELS: Record<ExemptionDecisionOutcome, string> = {
   granted: "concedida",
   referred: "submetida ao Juízo",

@@ -93,7 +93,7 @@ const smallInputClass =
  * One beneficiary's declaration (Provimento CGJ/TJRN n. 7/2026, art. 4º):
  * only the name is required online, the rest of the Anexo I bloco 2 is
  * optional and prints blank for the person to fill by hand. `index` is the
- * position among however many the act's `beneficiaryCount` asks for — 0 for
+ * position among however many the act's `beneficiaryCount` asks for: 0 for
  * every act but the habilitação de casamento, which also renders a 1.
  */
 function BeneficiaryFields({
@@ -126,7 +126,7 @@ function BeneficiaryFields({
           htmlFor={`${prefix}.name`}
           className="mb-1 block text-[12px] font-semibold text-brand-text-soft"
         >
-          Nome completo
+          Nome completo da pessoa beneficiária
         </label>
         <input
           id={`${prefix}.name`}

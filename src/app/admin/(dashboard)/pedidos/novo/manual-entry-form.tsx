@@ -37,7 +37,7 @@ const SIGNED_BY_LABELS: Record<ExemptionSignedBy, string> = {
 
 /**
  * One beneficiary's declaration, the balcão's own layout (plain named
- * inputs, not `react-hook-form`): only the name is required — `actRules` in
+ * inputs, not `react-hook-form`): only the name is required, `actRules` in
  * `form.ts` is what enforces that server-side, this only asks for it. The
  * testemunhas the site never asks for do live here (Provimento CGJ/TJRN
  * n. 7/2026, art. 7º III): the balcão is where a assinatura a rogo actually

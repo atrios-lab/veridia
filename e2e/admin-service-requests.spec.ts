@@ -354,4 +354,152 @@ test.describe("fila e detalhe de pedidos", () => {
     );
     await sql.end();
   });
+
+  test("lançar gratuidade no balcão protocola com a declaração", async ({
+    page,
+  }) => {
+    await signIn(page);
+    await page.goto(`${baseURL}/admin/pedidos/novo`);
+
+    await page.getByRole("button", { name: "RCPN", exact: true }).click();
+    await page
+      .getByLabel("Ato")
+      .selectOption({ label: "Solicitar gratuidade (isento)" });
+    await page.getByLabel("Nome do solicitante").fill("Maria José da Silva");
+    await page.getByLabel("E-mail ou WhatsApp").fill("(84) 99900-1122");
+
+    await page
+      .getByRole("radio", { name: "Alteração de prenome" })
+      .check();
+    await page
+      .getByLabel("Nome completo")
+      .first()
+      .fill("Maria José da Silva");
+    await page
+      .getByLabel(/não disponho de recursos/)
+      .check();
+    await page.getByRole("button", { name: "Registrar pedido" }).click();
+
+    await expect(
+      page.getByRole("heading", { name: "Pedido registrado" }),
+    ).toBeVisible();
+    await expect(
+      page.getByText("Declaração de hipossuficiência"),
+    ).toBeVisible();
+  });
+
+  test("a rogo no balcão exige as duas testemunhas", async ({ page }) => {
+    await signIn(page);
+    await page.goto(`${baseURL}/admin/pedidos/novo`);
+
+    await page.getByRole("button", { name: "RCPN", exact: true }).click();
+    await page
+      .getByLabel("Ato")
+      .selectOption({ label: "Solicitar gratuidade (isento)" });
+    await page.getByLabel("Nome do solicitante").fill("Maria José da Silva");
+    await page.getByLabel("E-mail ou WhatsApp").fill("(84) 99900-1133");
+    await page
+      .getByRole("radio", { name: "Alteração de prenome" })
+      .check();
+    await page
+      .getByLabel("Nome completo")
+      .first()
+      .fill("Maria José da Silva");
+    await page
+      .getByRole("radio", { name: /Assinatura a rogo/ })
+      .check();
+    // .first(): o campo de quem assina vem antes, no DOM, dos dois campos de
+    // testemunha logo abaixo, e os três dividem o mesmo placeholder.
+    await page.getByPlaceholder("Nome completo").first().fill("João da Silva");
+    await page.getByLabel(/não disponho de recursos/).check();
+
+    await page.getByRole("button", { name: "Registrar pedido" }).click();
+    await expect(
+      page.getByText("Informe as duas testemunhas", { exact: false }),
+    ).toBeVisible();
+    await expect(
+      page.getByRole("heading", { name: "Pedido registrado" }),
+    ).toHaveCount(0);
+
+    await page.getByLabel("Testemunha 1").fill("T1");
+    await page.getByLabel("Testemunha 2").fill("T2");
+    await page.getByRole("button", { name: "Registrar pedido" }).click();
+    await expect(
+      page.getByRole("heading", { name: "Pedido registrado" }),
+    ).toBeVisible();
+  });
+
+  test("imprimir a declaração escreve na auditoria, só com gratuidade", async ({
+    page,
+  }) => {
+    const request = page.request;
+    await signIn(page);
+    await page.goto(`${baseURL}/admin/pedidos/novo`);
+
+    await page.getByRole("button", { name: "RCPN", exact: true }).click();
+    await page
+      .getByLabel("Ato")
+      .selectOption({ label: "Solicitar gratuidade (isento)" });
+    await page.getByLabel("Nome do solicitante").fill("Maria José da Silva");
+    await page.getByLabel("E-mail ou WhatsApp").fill("(84) 99900-1144");
+    await page
+      .getByRole("radio", { name: "Alteração de prenome" })
+      .check();
+    await page
+      .getByLabel("Nome completo")
+      .first()
+      .fill("Maria José da Silva");
+    await page.getByLabel(/não disponho de recursos/).check();
+    await page.getByRole("button", { name: "Registrar pedido" }).click();
+    await expect(
+      page.getByRole("heading", { name: "Pedido registrado" }),
+    ).toBeVisible();
+
+    const protocolNumber =
+      (await page
+        .getByText(/REQ\.\d{4}\.\d{6}/)
+        .first()
+        .textContent()) ?? "";
+
+    const sql = postgres(process.env.DATABASE_URL as string);
+    const auditCount = async (action: string) => {
+      const [row] = await sql`
+        select count(*)::int as n from audit_log
+        where action = ${action}
+          and target_id = (select id::text from service_requests where protocol_number = ${protocolNumber})
+      `;
+      return row.n as number;
+    };
+
+    const before = await auditCount("service-request.print.declaracao");
+    const printed = await request.get(
+      `${baseURL}/admin/pedidos/${encodeURIComponent(protocolNumber)}/imprimir?documento=declaracao`,
+    );
+    expect(printed.status()).toBe(200);
+    expect(await auditCount("service-request.print.declaracao")).toBe(
+      before + 1,
+    );
+
+    // O mesmo pedido oferece os dois links no detalhe: requerimento e
+    // declaração, porque tem gratuidade.
+    await page.goto(
+      `${baseURL}/admin/pedidos/${encodeURIComponent(protocolNumber)}`,
+    );
+    await expect(
+      page.getByRole("link", { name: "Imprimir declaração" }),
+    ).toBeVisible();
+
+    // O pedido semeado no beforeEach não tem gratuidade: sem os links, e a
+    // rota 404 mesmo autenticado.
+    await page.goto(`${baseURL}/admin/pedidos/${encodeURIComponent(PROTOCOL)}`);
+    await expect(
+      page.getByRole("link", { name: "Imprimir declaração" }),
+    ).toHaveCount(0);
+    const refused = await request.get(
+      `${baseURL}/admin/pedidos/${encodeURIComponent(PROTOCOL)}/imprimir?documento=declaracao`,
+    );
+    expect(refused.status()).toBe(404);
+
+    await sql.end();
+  });
 });

@@ -382,7 +382,7 @@ export async function renderDocument(
 
 /**
  * Several documents, one PDF: each gets its own letterhead, footer and
- * signature block, on its own page onward — the habilitação de casamento's
+ * signature block, on its own page onward: the habilitação de casamento's
  * declaração de hipossuficiência is one per nubente (Provimento CGJ/TJRN
  * n. 7/2026, art. 4º), and the couple signs and returns a single file, not
  * two.

@@ -174,7 +174,7 @@ test("só a certidão pergunta o tipo", () => {
 test("a declaração da gratuidade é a do Anexo I, sem programa social", () => {
   // Ela sai num documento que o cidadão assina: o Provimento manda a
   // declaração bastar por si (art. 5º) e proíbe presumir pobreza por
-  // critério que não seja ela mesma (art. 6º) — nada aqui pode voltar a
+  // critério que não seja ela mesma (art. 6º): nada aqui pode voltar a
   // condicionar a gratuidade a um benefício federal específico.
   assert.match(FEE_EXEMPTION_DECLARATION, /não disponho de recursos/);
   assert.match(FEE_EXEMPTION_DECLARATION, /minha família/);

@@ -40,7 +40,7 @@ export interface RequerimentoField {
 export interface RequerimentoSection {
   heading: string;
   rows?: RequerimentoRow[];
-  /** Rendered as a form, one label-and-line per field, in order — see
+  /** Rendered as a form, one label-and-line per field, in order: see
    * `RequerimentoField`. */
   fields?: RequerimentoField[];
   paragraphs?: string[];

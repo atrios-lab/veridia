@@ -1113,7 +1113,7 @@ export async function setRequestAmount(
  * indeferida, ou substituída por parcelamento. `outcome: null` removes a
  * decision recorded by mistake. Refuses on a pedido without `exemption`:
  * there is nothing here to decide. Only `details.exemption.decision`
- * changes — never `status` nor `amountCents`, since the act is practised at
+ * changes, never `status` nor `amountCents`, since the act is practised at
  * once regardless of the outcome (art. 11 §3º) and the value stays the
  * operator's own call.
  */

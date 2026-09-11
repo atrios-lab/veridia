@@ -175,7 +175,7 @@ export const CERTIFICATE_TYPE_LABELS: Record<CertificateType, string> = {
 /**
  * What the requester declares to ask for the exemption: the bloco 4 of the
  * Anexo I (Provimento CGJ/TJRN n. 7/2026), not a proof of enrollment in any
- * federal programme. The declaration alone is enough (art. 5º) — nothing here
+ * federal programme. The declaration alone is enough (art. 5º): nothing here
  * names a benefit or a system to check it against, because the Provimento
  * forbids presuming poverty from anything but the declaration itself
  * (art. 6º).

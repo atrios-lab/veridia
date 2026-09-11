@@ -40,7 +40,7 @@ export interface DeclaracaoMeta {
  * The Anexo I do Provimento CGJ/TJRN n. 7/2026, for one beneficiary of a
  * gratuidade act, as content. `exemption` absent, or its `beneficiaries` too
  * short for `beneficiaryIndex`, renders the same nine blocks with every
- * field blank — the same document the office hands anyone who asks for it
+ * field blank: the same document the office hands anyone who asks for it
  * before filing a pedido (`buildDeclaracoes` below calls it that way).
  *
  * `act` is the gratuidade entry (`exemptionTargets` in hand), not the target

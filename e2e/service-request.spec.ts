@@ -37,7 +37,7 @@ test("uma certidão anuncia as duas coisas que ela é", async ({ page }) => {
   await expect(certidao.getByText("Só identificação")).toBeVisible();
 
   // Um ato que termina no balcão continua com um selo só, o dele.
-  const presencial = page.locator("a", { hasText: "Alteração imotivada" });
+  const presencial = page.locator("a", { hasText: "Alteração de prenome" });
   await expect(presencial.getByText("Termina no balcão")).toBeVisible();
   await expect(presencial.getByText("Só identificação")).toHaveCount(0);
 
@@ -63,41 +63,201 @@ test.describe("gratuidade (ISENTO)", () => {
     await expect(page.getByText(/gratuidade/i)).toHaveCount(0);
   });
 
-  test("o pedido de gratuidade cobra o ato, a declaração e a documentação", async ({
+  test("o pedido de gratuidade cobra o ato, o tipo de certidão e a declaração, não anexo", async ({
     page,
   }) => {
     await page.goto(`${baseURL}/solicitar?atribuicao=RCPN&ato=gratuidade-rcpn`);
-    await page.getByLabel("Nome completo").fill("Maria José da Silva");
+    await page.getByLabel("Nome completo", { exact: true }).fill("Maria José da Silva");
     await page.getByLabel(/E-mail/).fill("maria@exemplo.com");
 
-    // Os dois atos que a lei isenta, cada um com a sua base legal.
+    // Os três atos que a lei isenta mediante declaração, cada um com a sua
+    // base legal; nascimento/óbito não entram, são gratuitos sem declaração.
     await expect(
       page.getByRole("radio", { name: /Certidão \(nascimento/ }),
     ).toBeVisible();
     await expect(page.getByText(/CC art\. 1\.512/)).toBeVisible();
+    await expect(
+      page.getByRole("radio", { name: "Alteração de prenome" }),
+    ).toBeVisible();
 
-    await expect(page.getByText(/Código Penal art\. 299/)).toBeVisible();
+    // A declaração é a do Anexo I, sem CadÚnico nem comprovante exigido.
+    await expect(page.getByText(/não disponho de recursos/)).toBeVisible();
+    await expect(page.getByText(/CadÚnico/)).toHaveCount(0);
     await expect(
       page.getByText("Anexe acima o comprovante do seu benefício"),
-    ).toBeVisible();
-    await expect(page.getByText(/Folha Resumo do CadÚnico/)).toBeVisible();
-    // A lista é de exemplos: quem tem outro programa social não pode se ver
-    // de fora dela.
+    ).toHaveCount(0);
+
+    await page.getByRole("radio", { name: /Certidão \(nascimento/ }).check();
+    // A certidão pergunta o tipo; a alteração de prenome não pediria.
     await expect(
-      page.getByText("Outro comprovante de programa social"),
+      page.getByText("O registro de nascimento e o assento de óbito"),
     ).toBeVisible();
+    await page.getByRole("radio", { name: "Com busca" }).check();
+    await page
+      .getByLabel("Nome completo da pessoa beneficiária")
+      .fill("Maria José da Silva");
 
     await page.getByLabel(/Autorizo o tratamento dos meus dados/).check();
+    await page.getByLabel(/não disponho de recursos/).check();
     await page.getByLabel(/Declaro, sob as penas da lei, que as/).check();
     await page.getByRole("button", { name: "Enviar requerimento" }).click();
 
-    await expect(page.getByText("Escolha o ato para o qual")).toBeVisible();
-    await expect(
-      page.getByText("necessário fazer a declaração", { exact: false }),
-    ).toBeVisible();
     await expect(
       page.getByRole("heading", { name: "Pedido registrado" }),
+    ).toBeVisible();
+    // A declaração de hipossuficiência é oferecida ao lado do requerimento,
+    // só porque este pedido tem gratuidade.
+    await expect(
+      page.getByRole("button", {
+        name: "Baixar declaração de hipossuficiência (PDF)",
+      }),
+    ).toBeVisible();
+  });
+
+  test("a declaração só é baixada com a chave certa, e só com gratuidade", async ({
+    page,
+    request,
+  }) => {
+    await page.goto(`${baseURL}/solicitar?atribuicao=RCPN&ato=gratuidade-rcpn`);
+    await page
+      .getByLabel("Nome completo", { exact: true })
+      .fill("Maria José da Silva");
+    await page.getByLabel(/E-mail/).fill(`maria.${randomUUID()}@exemplo.com`);
+    await page.getByRole("radio", { name: "Alteração de prenome" }).check();
+    await page
+      .getByLabel("Nome completo da pessoa beneficiária")
+      .fill("Maria José da Silva");
+    await page.getByLabel(/Autorizo o tratamento dos meus dados/).check();
+    await page.getByLabel(/não disponho de recursos/).check();
+    await page.getByLabel(/Declaro, sob as penas da lei, que as/).check();
+    await page.getByRole("button", { name: "Enviar requerimento" }).click();
+    await expect(
+      page.getByRole("heading", { name: "Pedido registrado" }),
+    ).toBeVisible();
+
+    const protocolNumber =
+      (await page
+        .getByText(/REQ\.\d{4}\.\d{6}/)
+        .first()
+        .textContent()) ?? "";
+    const accessKey =
+      (await page
+        .getByText(/[A-Z2-9]{4}-[A-Z2-9]{4}-[A-Z2-9]{4}/)
+        .first()
+        .textContent()) ?? "";
+
+    const granted = await request.post(`${baseURL}/solicitar/requerimento`, {
+      form: { protocolNumber, accessKey, documento: "declaracao" },
+    });
+    expect(granted.status()).toBe(200);
+    expect(granted.headers()["content-type"]).toContain("application/pdf");
+
+    const refused = await request.post(`${baseURL}/solicitar/requerimento`, {
+      form: {
+        protocolNumber,
+        accessKey: "AAAA-BBBB-CCCC",
+        documento: "declaracao",
+      },
+    });
+    expect(refused.status()).toBe(404);
+  });
+
+  test("a declaração não existe para um pedido sem gratuidade", async ({
+    page,
+    request,
+  }) => {
+    await page.goto(
+      `${baseURL}/solicitar?atribuicao=RCPN&ato=rcpn-alteracao-prenome`,
+    );
+    await page
+      .getByLabel("Nome completo", { exact: true })
+      .fill("João Paulo Souza");
+    await page.getByLabel(/E-mail/).fill(`joao.${randomUUID()}@exemplo.com`);
+    await page.getByLabel(/Autorizo o tratamento dos meus dados/).check();
+    await page.getByLabel(/Declaro, sob as penas da lei, que as/).check();
+    await page.getByRole("button", { name: "Enviar requerimento" }).click();
+    await expect(
+      page.getByRole("heading", { name: "Pedido registrado" }),
+    ).toBeVisible();
+    await expect(
+      page.getByRole("button", {
+        name: "Baixar declaração de hipossuficiência (PDF)",
+      }),
     ).toHaveCount(0);
+
+    const protocolNumber =
+      (await page
+        .getByText(/REQ\.\d{4}\.\d{6}/)
+        .first()
+        .textContent()) ?? "";
+    const accessKey =
+      (await page
+        .getByText(/[A-Z2-9]{4}-[A-Z2-9]{4}-[A-Z2-9]{4}/)
+        .first()
+        .textContent()) ?? "";
+    const refused = await request.post(`${baseURL}/solicitar/requerimento`, {
+      form: { protocolNumber, accessKey, documento: "declaracao" },
+    });
+    expect(refused.status()).toBe(404);
+  });
+
+  test("representante legal e a rogo abrem os campos certos", async ({
+    page,
+  }) => {
+    await page.goto(`${baseURL}/solicitar?atribuicao=RCPN&ato=gratuidade-rcpn`);
+    await page.getByRole("radio", { name: "Alteração de prenome" }).check();
+
+    await page
+      .getByRole("radio", { name: "Representante legal" })
+      .check();
+    await expect(
+      page.getByPlaceholder("Qualidade (ex.: pai, tutor, curador)"),
+    ).toBeVisible();
+
+    await page.getByRole("radio", { name: /Assinatura a rogo/ }).check();
+    await expect(
+      page.getByPlaceholder("Qualidade (ex.: pai, tutor, curador)"),
+    ).toHaveCount(0);
+    await expect(
+      page.getByText("assinam no balcão da serventia", { exact: false }),
+    ).toBeVisible();
+  });
+
+  test("a habilitação de casamento pede um segundo nubente", async ({
+    page,
+  }) => {
+    await page.goto(`${baseURL}/solicitar?atribuicao=RCPN&ato=gratuidade-rcpn`);
+    await expect(
+      page.getByText("Segundo nubente", { exact: false }),
+    ).toHaveCount(0);
+
+    await page
+      .getByRole("radio", { name: "Habilitação de casamento" })
+      .check();
+    await expect(page.getByText("Primeiro nubente")).toBeVisible();
+    await page.getByText("Segundo nubente").click();
+    await expect(
+      page.getByLabel("Nome completo da pessoa beneficiária").nth(1),
+    ).toBeVisible();
+  });
+
+  test("o formulário em branco abre sem pedido", async ({ page, request }) => {
+    await page.goto(`${baseURL}/solicitar?atribuicao=RCPN&ato=gratuidade-rcpn`);
+    const [popup] = await Promise.all([
+      page.context().waitForEvent("page"),
+      page
+        .getByRole("link", { name: "Baixe o formulário em branco (PDF)" })
+        .click(),
+    ]);
+    await popup.waitForLoadState();
+    expect(popup.url()).toContain("/solicitar/declaracao-hipossuficiencia");
+    await popup.close();
+
+    const response = await request.get(
+      `${baseURL}/solicitar/declaracao-hipossuficiencia`,
+    );
+    expect(response.status()).toBe(200);
+    expect(response.headers()["content-type"]).toBe("application/pdf");
   });
 });
 

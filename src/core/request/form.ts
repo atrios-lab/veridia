@@ -4,7 +4,7 @@ import { EXEMPTION_SIGNED_BY, type ExemptionBeneficiary } from "./kinds.ts";
 
 // The three `CertificateType` values, repeated here rather than imported as a
 // value from `catalog.ts`: `tenant/pix.ts` imports this file for `isValidCpf`,
-// and `catalog.ts` imports `tenant/schema.ts`, which imports `pix.ts` — a
+// and `catalog.ts` imports `tenant/schema.ts`, which imports `pix.ts`, a
 // value import back from here to `catalog.ts` closes that cycle and the
 // module that runs last sees the other half-initialised. `CertificateType`
 // itself is a type-only import above, erased before any of this runs, and
@@ -437,7 +437,7 @@ export function readExemptionForm(formData: FormData) {
  * `details.exemption`, built from what `publicServiceRequestSchema` or
  * `serviceRequestSchema` already validated (`actRules` ran first: by the time
  * this is called, every required name and signer is present). `undefined`
- * when the citizen did not ask for the act's own exemption entry — a filing
+ * when the citizen did not ask for the act's own exemption entry: a filing
  * of any other act simply has no `exemptionActId`.
  */
 export function buildExemptionDetails(

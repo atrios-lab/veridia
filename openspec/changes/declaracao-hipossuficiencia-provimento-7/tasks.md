@@ -126,18 +126,18 @@
 
 ## 8. E2E e fechamento
 
-- [ ] 8.1 Atualizar `e2e/service-request.spec.ts`: o bloco da gratuidade cobra ato, tipo de
+- [x] 8.1 Atualizar `e2e/service-request.spec.ts`: o bloco da gratuidade cobra ato, tipo de
   certidão e declaração, não anexo; representante legal e a rogo abrem os campos certos;
   habilitação pede dois nubentes; o botão da declaração aparece na tela de sucesso e o download
   exige a chave; o formulário em branco abre sem pedido.
-- [ ] 8.2 Atualizar `e2e/admin-service-requests.spec.ts`: lançar gratuidade no balcão (com
+- [x] 8.2 Atualizar `e2e/admin-service-requests.spec.ts`: lançar gratuidade no balcão (com
   testemunhas quando a rogo), imprimir a declaração escreve na auditoria, o detalhe oferece os
   links só com gratuidade.
-- [ ] 8.3 Rodar `pnpm typecheck`, `pnpm check:dashes` (sem travessão em `.ts/.tsx`) e os testes
+- [x] 8.3 Rodar `pnpm typecheck`, `pnpm check:dashes` (sem travessão em `.ts/.tsx`) e os testes
   tocados com `node --test`.
-- [ ] 8.4 Conferir no navegador, lado a lado com o Anexo I do DJe: PDF em branco, preenchido pela
+- [x] 8.4 Conferir no navegador, lado a lado com o Anexo I do DJe: PDF em branco, preenchido pela
   própria pessoa, a rogo pelo site (bloco 8 em branco) e a rogo pelo balcão (bloco 8
   preenchido), habilitação com dois documentos; e o cartaz publicado na transparência.
-- [ ] 8.5 Registrar em nota de fechamento o que ficou para a serventia: substituir o formulário
+- [x] 8.5 Registrar em nota de fechamento o que ficou para a serventia: substituir o formulário
   físico antigo pelo em branco do painel e afixar o cartaz (art. 14), e a dúvida sobre
   livro/folha/termo (design, Open Questions).
