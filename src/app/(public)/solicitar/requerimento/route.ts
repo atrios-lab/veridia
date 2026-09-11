@@ -1,12 +1,13 @@
 import { getActForTenant } from "@/core/acts/catalog.ts";
 import { verifyAccessKey } from "@/core/request/access-key.ts";
+import { buildDeclaracoes } from "@/core/request/declaracao.ts";
 import { readExemption, readPhone } from "@/core/request/kinds.ts";
 import {
   buildAccessReceipt,
   buildRequerimento,
 } from "@/core/request/requerimento.ts";
 import { brandFor } from "@/lib/document-brand.ts";
-import { renderDocument } from "@/lib/pdf.ts";
+import { renderDocument, renderDocuments } from "@/lib/pdf.ts";
 import { findByProtocol } from "@/lib/service-request.ts";
 import { getTenant } from "@/lib/tenant.ts";
 
@@ -20,12 +21,14 @@ export const runtime = "nodejs";
  * The PDF holds the applicant's name, contact and what they asked the office
  * for, so the key is what stands between it and anyone with the protocol.
  *
- * Two documents come out of here, picked by the `documento` field: the
- * requerimento, which gets signed and sent back, and the access receipt, which
- * carries the key and never leaves the citizen. Same route because the
- * expensive, delicate half (verifying the key and answering 404 the same way
- * for "wrong key" and "no such protocol") is identical, and a copy of it is
- * how the two drift apart.
+ * Three documents come out of here, picked by the `documento` field: the
+ * requerimento, which gets signed and sent back; the access receipt, which
+ * carries the key and never leaves the citizen; and, when the pedido asked
+ * for the gratuidade, the declaração de hipossuficiência (Provimento
+ * CGJ/TJRN n. 7/2026, Anexo I) that accompanies it, one document per
+ * beneficiary. Same route because the expensive, delicate half (verifying
+ * the key and answering 404 the same way for "wrong key" and "no such
+ * protocol") is identical, and a copy of it is how the three drift apart.
  */
 export async function POST(request: Request): Promise<Response> {
   const tenant = await getTenant();
@@ -34,7 +37,9 @@ export async function POST(request: Request): Promise<Response> {
   const accessKey = String(form.get("accessKey") ?? "");
   // A format choice, not a credential: anything unexpected falls back to the
   // requerimento rather than failing.
-  const wantsReceipt = form.get("documento") === "comprovante";
+  const documento = form.get("documento");
+  const wantsReceipt = documento === "comprovante";
+  const wantsDeclaracao = documento === "declaracao";
 
   const stored = await findByProtocol(tenant.slug, protocolNumber);
   // One answer for "no such protocol" and for "wrong key". Telling them apart
@@ -54,6 +59,29 @@ export async function POST(request: Request): Promise<Response> {
   const act = getActForTenant(tenant, stored.actId);
   if (!act) return new Response("Não encontrado", { status: 404 });
 
+  const exemption = readExemption(stored.details);
+  if (wantsDeclaracao && !exemption) {
+    return new Response("Não encontrado", { status: 404 });
+  }
+
+  const brand = await brandFor(
+    tenant,
+    // The QR on the letterhead points at the protocol lookup of the same host
+    // the citizen is on, which is the tenant's own domain.
+    `${new URL(request.url).origin}/protocolo`,
+  );
+
+  if (wantsDeclaracao) {
+    const bytes = await renderDocuments(
+      buildDeclaracoes(tenant, act, exemption, {
+        protocolNumber: stored.protocolNumber,
+        createdAt: stored.createdAt,
+      }),
+      brand,
+    );
+    return pdfResponse(bytes, `declaracao-${stored.protocolNumber}`);
+  }
+
   const document = wantsReceipt
     ? buildAccessReceipt(tenant, {
         protocolNumber: stored.protocolNumber,
@@ -65,7 +93,7 @@ export async function POST(request: Request): Promise<Response> {
         applicantName: stored.applicantName,
         contact: stored.contact,
         phone: readPhone(stored.details),
-        exemption: readExemption(stored.details),
+        exemption,
         cpf: stored.cpf,
         description: stored.description,
         purpose: stored.purpose,
@@ -73,18 +101,16 @@ export async function POST(request: Request): Promise<Response> {
         createdAt: stored.createdAt,
       });
 
-  const bytes = await renderDocument(
-    document,
-    // The QR on the letterhead points at the protocol lookup of the same host
-    // the citizen is on, which is the tenant's own domain.
-    await brandFor(tenant, `${new URL(request.url).origin}/protocolo`),
-  );
-
+  const bytes = await renderDocument(document, brand);
   const name = wantsReceipt ? "comprovante" : "requerimento";
+  return pdfResponse(bytes, `${name}-${stored.protocolNumber}`);
+}
+
+function pdfResponse(bytes: Buffer, name: string): Response {
   return new Response(new Uint8Array(bytes), {
     headers: {
       "Content-Type": "application/pdf",
-      "Content-Disposition": `inline; filename="${name}-${stored.protocolNumber}.pdf"`,
+      "Content-Disposition": `inline; filename="${name}.pdf"`,
       // Personal data: no shared cache may keep a copy.
       "Cache-Control": "private, no-store",
     },

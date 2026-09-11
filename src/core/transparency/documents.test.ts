@@ -17,6 +17,9 @@ test("unpublish is legal only from published", () => {
 test("category guard accepts the fixed list and rejects free text", () => {
   assert.equal(isDocumentCategory("Tabela de emolumentos"), true);
   assert.equal(isDocumentCategory("Aviso"), true);
+  // Anexo II do Provimento CGJ/TJRN n. 7/2026: o cartaz de gratuidade e
+  // isenção, publicado como qualquer outro documento de transparência.
+  assert.equal(isDocumentCategory("Cartaz de gratuidade e isenção"), true);
   assert.equal(isDocumentCategory("Qualquer coisa"), false);
   assert.equal(isDocumentCategory(""), false);
 });

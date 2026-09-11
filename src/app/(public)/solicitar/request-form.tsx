@@ -3,12 +3,18 @@
 import { zodResolver } from "@hookform/resolvers/zod";
 import Link from "next/link";
 import { useActionState, useEffect, useRef, useState } from "react";
-import { useForm } from "react-hook-form";
+import {
+  type UseFormRegister,
+  type UseFormWatch,
+  useForm,
+} from "react-hook-form";
 import type { Act } from "@/core/acts/catalog.ts";
 import {
   ATTRIBUTION_SHORT_NAMES,
+  CERTIFICATE_TYPE_LABELS,
+  CERTIFICATE_TYPES,
+  FEE_EXEMPTION_ACKNOWLEDGEMENTS,
   FEE_EXEMPTION_DECLARATION,
-  FEE_EXEMPTION_DOCUMENTS,
 } from "@/core/acts/catalog.ts";
 import { MAX_ATTACHMENTS } from "@/core/request/attachment.ts";
 import { DEADLINE_CAVEAT } from "@/core/request/deadline.ts";
@@ -17,6 +23,10 @@ import {
   formatPhone,
   publicServiceRequestSchema,
 } from "@/core/request/form.ts";
+import {
+  EXEMPTION_SIGNED_BY,
+  type ExemptionSignedBy,
+} from "@/core/request/kinds.ts";
 import { HANDWRITTEN_SIGNATURE_CAVEAT } from "@/core/request/requerimento.ts";
 import type { Attribution } from "@/core/tenant/schema.ts";
 import { Icon } from "../_components/icon.tsx";
@@ -70,6 +80,168 @@ function FieldError({ message }: { message?: string }) {
   if (!message) return null;
   return (
     <p className="mt-1.5 text-xs font-semibold text-brand-alert">{message}</p>
+  );
+}
+
+const SIGNED_BY_LABELS: Record<ExemptionSignedBy, string> = {
+  self: "A própria pessoa beneficiária",
+  "legal-representative": "Representante legal",
+  "on-behalf": "Assinatura a rogo (não sabe ou não pode assinar)",
+};
+
+const smallInputClass =
+  "w-full rounded-lg border border-brand-border bg-brand-card px-3 py-2.5 text-[13px] text-brand-text outline-none placeholder:text-brand-faint focus:border-brand-accent";
+
+/**
+ * One beneficiary's declaration (Provimento CGJ/TJRN n. 7/2026, art. 4º):
+ * only the name is required online, the rest of the Anexo I bloco 2 is
+ * optional and prints blank for the person to fill by hand. `index` is the
+ * position among however many the act's `beneficiaryCount` asks for: 0 for
+ * every act but the habilitação de casamento, which also renders a 1.
+ */
+function BeneficiaryFields({
+  index,
+  register,
+  watch,
+  errorFor,
+  heading,
+}: {
+  index: number;
+  /** The form's schema shape varies per act (exemption fields only exist on
+   * the gratuidade entry), so this component takes whatever `useForm`
+   * produced for it rather than re-declaring that union here. */
+  // biome-ignore lint/suspicious/noExplicitAny: see the comment above.
+  register: UseFormRegister<any>;
+  // biome-ignore lint/suspicious/noExplicitAny: see register above.
+  watch: UseFormWatch<any>;
+  errorFor: (path: string) => string | undefined;
+  heading?: string;
+}) {
+  const prefix = `beneficiaries.${index}`;
+  const signedBy =
+    (watch(`${prefix}.signedBy`) as ExemptionSignedBy | undefined) ?? "self";
+  return (
+    <div className="flex flex-col gap-2.5">
+      {heading && (
+        <p className="text-[13px] font-bold text-brand-primary">{heading}</p>
+      )}
+      <div>
+        <label
+          htmlFor={`${prefix}.name`}
+          className="mb-1 block text-[12px] font-semibold text-brand-text-soft"
+        >
+          Nome completo da pessoa beneficiária
+        </label>
+        <input
+          id={`${prefix}.name`}
+          className={smallInputClass}
+          {...register(`${prefix}.name`)}
+        />
+        <FieldError message={errorFor(`${prefix}.name`)} />
+      </div>
+
+      <details className="group rounded-lg border border-brand-border px-3 py-2.5">
+        <summary className="cursor-pointer text-[12px] font-semibold text-brand-muted">
+          Mais dados da pessoa beneficiária (opcional)
+        </summary>
+        <div className="mt-2.5 grid gap-2.5 sm:grid-cols-2">
+          <input
+            placeholder="CPF ou RG"
+            className={smallInputClass}
+            {...register(`${prefix}.cpfOrId`)}
+          />
+          <input
+            placeholder="Data de nascimento"
+            className={smallInputClass}
+            {...register(`${prefix}.birthDate`)}
+          />
+          <input
+            placeholder="Profissão"
+            className={smallInputClass}
+            {...register(`${prefix}.occupation`)}
+          />
+          <input
+            placeholder="Telefone ou e-mail"
+            className={smallInputClass}
+            {...register(`${prefix}.contact`)}
+          />
+          <input
+            placeholder="Endereço"
+            className={`${smallInputClass} sm:col-span-2`}
+            {...register(`${prefix}.address`)}
+          />
+          <input
+            placeholder="Município/UF"
+            className={smallInputClass}
+            {...register(`${prefix}.cityState`)}
+          />
+          <input
+            placeholder="CEP"
+            className={smallInputClass}
+            {...register(`${prefix}.zip`)}
+          />
+        </div>
+      </details>
+
+      <fieldset className="flex flex-col gap-1.5">
+        <legend className="mb-0.5 text-[12px] font-semibold text-brand-text-soft">
+          Quem formaliza esta declaração?
+        </legend>
+        {EXEMPTION_SIGNED_BY.map((value) => (
+          <label key={value} className="flex items-start gap-2">
+            <input
+              type="radio"
+              value={value}
+              className="mt-0.5 h-4 w-4 shrink-0 accent-brand-primary"
+              {...register(`${prefix}.signedBy`)}
+            />
+            <span className="text-[12.5px] text-brand-text">
+              {SIGNED_BY_LABELS[value]}
+            </span>
+          </label>
+        ))}
+      </fieldset>
+
+      {signedBy !== "self" && (
+        <div className="rounded-lg bg-brand-accent-soft px-3 py-2.5">
+          <p className="mb-2 text-[12px] font-semibold text-brand-accent-ink">
+            Dados de quem assina em lugar da pessoa beneficiária
+          </p>
+          <div className="grid gap-2.5 sm:grid-cols-2">
+            <input
+              placeholder="Nome completo"
+              className={smallInputClass}
+              {...register(`${prefix}.signer.name`)}
+            />
+            <input
+              placeholder="CPF ou RG"
+              className={smallInputClass}
+              {...register(`${prefix}.signer.cpfOrId`)}
+            />
+            <input
+              placeholder="Telefone ou e-mail"
+              className={smallInputClass}
+              {...register(`${prefix}.signer.contact`)}
+            />
+            {signedBy === "legal-representative" && (
+              <input
+                placeholder="Qualidade (ex.: pai, tutor, curador)"
+                className={smallInputClass}
+                {...register(`${prefix}.signer.capacity`)}
+              />
+            )}
+          </div>
+          <FieldError message={errorFor(`${prefix}.signer.name`)} />
+          {signedBy === "on-behalf" && (
+            <p className="mt-2 text-[11.5px] leading-relaxed text-brand-accent-ink">
+              As duas testemunhas da assinatura a rogo assinam no balcão da
+              serventia, junto com a pessoa que assina por aqui: não são pedidas
+              neste formulário.
+            </p>
+          )}
+        </div>
+      )}
+    </div>
   );
 }
 
@@ -146,22 +318,37 @@ export function RequestForm({
   const {
     register,
     handleSubmit,
+    watch,
     formState: { errors: clientErrors },
   } = useForm({
     resolver: zodResolver(publicServiceRequestSchema(act)),
     mode: "onTouched",
   });
   const exemptionTargets = act.exemptionTargets;
+  const exemptionActId = watch("exemptionActId") as string | undefined;
+  const exemptionTarget = exemptionTargets?.find(
+    (target) => target.id === exemptionActId,
+  );
 
   if (state.status === "success") {
     return <SuccessScreen result={state} lookupHref={lookupHref} />;
   }
 
   // The client catches what the schema can; the server can still refuse
-  // (attachments, rate limit) and its per-field errors land here too.
+  // (attachments, rate limit) and its per-field errors land here too. `name`
+  // is a dotted path (`beneficiaries.0.signer.name`) for the gratuidade's
+  // nested fields, and a plain key for everything else: `react-hook-form`
+  // nests `clientErrors` the same way it nests `register`, and the server
+  // builds `fieldErrors` with the same dotted keys (see `actions.ts`).
   const serverErrors = state.status === "error" ? state.fieldErrors : {};
-  const errorFor = (name: keyof typeof clientErrors & string) =>
-    (clientErrors[name]?.message as string | undefined) ?? serverErrors[name];
+  const errorFor = (name: string): string | undefined => {
+    // Walking a dynamic path into react-hook-form's own error tree, whose
+    // shape depends on the act.
+    // biome-ignore lint/suspicious/noExplicitAny: see the comment above.
+    let node: any = clientErrors;
+    for (const segment of name.split(".")) node = node?.[segment];
+    return (node?.message as string | undefined) ?? serverErrors[name];
+  };
 
   // Validation gates the send; the untouched FormData (honeypot and
   // attachments included) still goes to the same server action.
@@ -450,7 +637,7 @@ export function RequestForm({
         {/* Só no ato da gratuidade. Esconder não é o controle: o schema
             recusa o ato-alvo sem previsão legal, venha de onde vier. */}
         {exemptionTargets && (
-          <div className="rounded-2xl border border-brand-border bg-brand-card p-4">
+          <div className="flex flex-col gap-4 rounded-2xl border border-brand-border bg-brand-card p-4">
             <fieldset className="flex flex-col gap-2">
               <legend className="text-[13px] font-semibold text-brand-primary">
                 Para qual ato você pede a gratuidade?
@@ -474,7 +661,71 @@ export function RequestForm({
             </fieldset>
             <FieldError message={errorFor("exemptionActId")} />
 
-            <div className="mt-3 flex flex-col gap-2.5 border-t border-brand-border pt-3">
+            {exemptionTarget?.id === "rcpn-certidao" && (
+              <p className="rounded-lg bg-brand-accent-soft px-3 py-2.5 text-[11.5px] leading-relaxed text-brand-accent-ink">
+                O registro de nascimento e o assento de óbito, com a primeira
+                certidão de cada um, já são gratuitos para qualquer pessoa, sem
+                esta declaração (Lei 6.015 art. 30, caput).
+              </p>
+            )}
+
+            {exemptionTarget?.feeExemption?.askCertificateType && (
+              <fieldset className="flex flex-col gap-2 border-t border-brand-border pt-3">
+                <legend className="text-[12px] font-semibold text-brand-text-soft">
+                  Que tipo de certidão você precisa?
+                </legend>
+                <div className="flex flex-wrap gap-3">
+                  {CERTIFICATE_TYPES.map((value) => (
+                    <label key={value} className="flex items-center gap-2">
+                      <input
+                        type="radio"
+                        value={value}
+                        className="h-4 w-4 shrink-0 accent-brand-primary"
+                        {...register("certificateType")}
+                      />
+                      <span className="text-[12.5px] text-brand-text">
+                        {CERTIFICATE_TYPE_LABELS[value]}
+                      </span>
+                    </label>
+                  ))}
+                </div>
+                <FieldError message={errorFor("certificateType")} />
+              </fieldset>
+            )}
+
+            {exemptionTarget && (
+              <div className="border-t border-brand-border pt-3">
+                <BeneficiaryFields
+                  index={0}
+                  register={register}
+                  watch={watch}
+                  errorFor={errorFor}
+                  heading={
+                    exemptionTarget.feeExemption?.beneficiaryCount === 2
+                      ? "Primeiro nubente"
+                      : undefined
+                  }
+                />
+              </div>
+            )}
+
+            {exemptionTarget?.feeExemption?.beneficiaryCount === 2 && (
+              <details className="rounded-lg border border-brand-border px-3 py-2.5">
+                <summary className="cursor-pointer text-[13px] font-bold text-brand-primary">
+                  Segundo nubente
+                </summary>
+                <div className="mt-3">
+                  <BeneficiaryFields
+                    index={1}
+                    register={register}
+                    watch={watch}
+                    errorFor={errorFor}
+                  />
+                </div>
+              </details>
+            )}
+
+            <div className="flex flex-col gap-2.5 border-t border-brand-border pt-3">
               <label className="flex items-start gap-2.5">
                 <input
                   type="checkbox"
@@ -482,22 +733,29 @@ export function RequestForm({
                   {...register("exemptionDeclaration")}
                 />
                 <span className="text-[12px] leading-relaxed text-brand-text-soft">
-                  {FEE_EXEMPTION_DECLARATION}
+                  {FEE_EXEMPTION_DECLARATION} Declaro, ainda, que estou ciente
+                  de que:
                 </span>
               </label>
+              <ul className="ml-7 flex list-disc flex-col gap-1 text-[11.5px] leading-relaxed text-brand-text-soft">
+                {FEE_EXEMPTION_ACKNOWLEDGEMENTS.map((item) => (
+                  <li key={item}>{item}</li>
+                ))}
+              </ul>
               <FieldError message={errorFor("exemptionDeclaration")} />
-              <div className="rounded-xl bg-brand-accent-soft px-3.5 py-3">
-                <p className="text-[12px] font-bold text-brand-accent-ink">
-                  Anexe acima o comprovante do seu benefício
-                </p>
-                <DocumentsChecklist documents={[...FEE_EXEMPTION_DOCUMENTS]} />
-                <p className="mt-2 text-[11.5px] leading-relaxed text-brand-accent-ink">
-                  Um documento basta, e a lista é de exemplos: se o seu programa
-                  social não estiver aí, anexe o comprovante que você tem. Sem
-                  documento a serventia não consegue conferir.
-                </p>
-              </div>
             </div>
+
+            <p className="text-[11.5px] text-brand-faint">
+              Prefere preencher no papel?{" "}
+              <Link
+                href="/solicitar/declaracao-hipossuficiencia"
+                target="_blank"
+                className="font-semibold text-brand-accent-ink underline"
+              >
+                Baixe o formulário em branco (PDF)
+              </Link>
+              .
+            </p>
           </div>
         )}
 
@@ -740,6 +998,25 @@ function SuccessScreen({
                 Baixar requerimento (PDF)
               </button>
             </form>
+            {result.hasExemption && (
+              <form
+                action="/solicitar/requerimento"
+                method="post"
+                target="_blank"
+                rel="noopener"
+              >
+                <ProtocolFields result={result} />
+                <input type="hidden" name="documento" value="declaracao" />
+                <button type="submit" className="btn btn-secondary btn-md">
+                  <Icon
+                    name="download"
+                    className="h-3.5 w-3.5"
+                    strokeWidth={2}
+                  />
+                  Baixar declaração de hipossuficiência (PDF)
+                </button>
+              </form>
+            )}
           </div>
         </Step>
 

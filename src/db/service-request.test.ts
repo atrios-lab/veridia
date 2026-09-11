@@ -604,3 +604,51 @@ test("a batch with one id outside the tenant fails the ownership check", async (
   );
   assert.ok(statuses.every((r) => r.status !== "inactive"));
 });
+
+test("o desfecho da gratuidade entra e sai de details.exemption.decision", async () => {
+  await fileRequest("cartorio-marinho", 2028, 8);
+  await client.query(
+    `UPDATE service_requests
+     SET details = '{"exemption":{"declaredAt":"2028-01-01T12:00:00.000Z","actId":"rcpn-certidao","beneficiaries":[]}}'
+     WHERE protocol_number = 'REQ.2028.000008'`,
+  );
+
+  // O que `setExemptionDecision` faz para gravar: jsonb_set no caminho
+  // {exemption,decision}, sem tocar no resto do que já estava lá.
+  await client.query(
+    `UPDATE service_requests
+     SET details = jsonb_set(
+       details, '{exemption,decision}',
+       '{"outcome":"granted","decidedAt":"2028-01-02T09:00:00.000Z","decidedBy":"op-1"}'::jsonb,
+       true
+     )
+     WHERE protocol_number = 'REQ.2028.000008'`,
+  );
+
+  const { rows: granted } = await client.query<{
+    details: {
+      exemption: { actId: string; decision?: { outcome: string } };
+    };
+  }>(
+    "SELECT details FROM service_requests WHERE protocol_number = 'REQ.2028.000008'",
+  );
+  assert.equal(granted[0].details.exemption.actId, "rcpn-certidao");
+  assert.equal(granted[0].details.exemption.decision?.outcome, "granted");
+
+  // O que faz para remover: o operador `#-` no mesmo caminho, deixando o
+  // resto de `exemption` (actId, beneficiaries) intocado.
+  await client.query(
+    `UPDATE service_requests
+     SET details = details #- '{exemption,decision}'
+     WHERE protocol_number = 'REQ.2028.000008'`,
+  );
+  const { rows: cleared } = await client.query<{
+    details: {
+      exemption: { actId: string; decision?: { outcome: string } };
+    };
+  }>(
+    "SELECT details FROM service_requests WHERE protocol_number = 'REQ.2028.000008'",
+  );
+  assert.equal(cleared[0].details.exemption.actId, "rcpn-certidao");
+  assert.equal(cleared[0].details.exemption.decision, undefined);
+});

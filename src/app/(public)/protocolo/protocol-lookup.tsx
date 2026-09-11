@@ -1123,6 +1123,33 @@ function RequestDetail({ result }: { result: ServiceRequestDetail }) {
                   </button>
                 </form>
 
+                {result.hasExemption && (
+                  <form
+                    action="/solicitar/requerimento"
+                    method="post"
+                    target="_blank"
+                    rel="noopener"
+                    className="flex items-center gap-2.5 rounded-xl border border-brand-accent-line bg-brand-card px-3.5 py-3"
+                  >
+                    <span className="flex-1 text-[12.5px] font-semibold text-brand-primary">
+                      Baixe a declaração de hipossuficiência
+                    </span>
+                    <ProtocolFields result={result} />
+                    <input type="hidden" name="documento" value="declaracao" />
+                    <button
+                      type="submit"
+                      className="btn btn-secondary btn-sm shrink-0"
+                    >
+                      <Icon
+                        name="download"
+                        className="h-3 w-3"
+                        strokeWidth={2}
+                      />
+                      PDF
+                    </button>
+                  </form>
+                )}
+
                 <div className="flex items-start gap-2.5 rounded-xl border border-brand-accent-line bg-brand-card px-3.5 py-3">
                   <StepBadge>2</StepBadge>
                   <div className="flex-1 text-[12.5px] leading-relaxed text-brand-text-soft">
@@ -1256,6 +1283,33 @@ function RequestDetail({ result }: { result: ServiceRequestDetail }) {
                 Ver
               </button>
             </form>
+            {result.hasExemption && (
+              <form
+                action="/solicitar/requerimento"
+                method="post"
+                target="_blank"
+                className="mt-2.5 flex items-center gap-2.5 border-b border-brand-border pb-3"
+                rel="noopener"
+              >
+                <Icon
+                  name="file"
+                  className="h-4.5 w-4.5 shrink-0 text-brand-accent"
+                />
+                <div className="flex-1">
+                  <div className="text-[13px] font-semibold text-brand-primary">
+                    Declaração de hipossuficiência em PDF
+                  </div>
+                  <div className="text-[11px] text-brand-faint">
+                    Anexo I do Provimento CGJ/TJRN n. 7/2026
+                  </div>
+                </div>
+                <ProtocolFields result={result} />
+                <input type="hidden" name="documento" value="declaracao" />
+                <button type="submit" className="btn btn-ghost btn-sm shrink-0">
+                  Ver
+                </button>
+              </form>
+            )}
             {citizenDocuments.length > 0 && (
               <div className="mt-3 flex flex-col gap-2 border-b border-brand-border pb-3">
                 {citizenDocuments.map((doc) => (

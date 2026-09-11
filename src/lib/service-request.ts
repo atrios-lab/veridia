@@ -25,11 +25,13 @@ import {
 } from "@/core/request/deadline.ts";
 import type { RequestDataEdit } from "@/core/request/edit.ts";
 import {
+  type ExemptionDecisionOutcome,
   isOpenServiceRequestStatus,
   isServiceRequestStatus,
   KIND_BY_PREFIX,
   KIND_PREFIXES,
   type RequestKind,
+  readExemption,
   requiresStatusReason,
   type ServiceRequestStatus,
   statusForRequirements,
@@ -1100,6 +1102,59 @@ export async function setRequestAmount(
     tenantSlug,
     actorId,
     action: "service-request.amount",
+    targetType: "service-request",
+    targetId: id,
+  });
+}
+
+/**
+ * The outcome the office reaches on a gratuidade already asked for
+ * (Provimento CGJ/TJRN n. 7/2026, art. 11): concedida, submetida ao Juízo,
+ * indeferida, ou substituída por parcelamento. `outcome: null` removes a
+ * decision recorded by mistake. Refuses on a pedido without `exemption`:
+ * there is nothing here to decide. Only `details.exemption.decision`
+ * changes, never `status` nor `amountCents`, since the act is practised at
+ * once regardless of the outcome (art. 11 §3º) and the value stays the
+ * operator's own call.
+ */
+export async function setExemptionDecision(
+  tenantSlug: string,
+  id: string,
+  outcome: ExemptionDecisionOutcome | null,
+  actorId: string,
+): Promise<void> {
+  const stored = await findById(tenantSlug, id);
+  if (!stored || !readExemption(stored.details)) {
+    throw new Error("Este pedido não pediu gratuidade.");
+  }
+
+  await db
+    .update(serviceRequests)
+    .set({
+      details: outcome
+        ? sql`jsonb_set(
+            ${serviceRequests.details},
+            '{exemption,decision}',
+            ${JSON.stringify({
+              outcome,
+              decidedAt: new Date().toISOString(),
+              decidedBy: actorId,
+            })}::jsonb,
+            true
+          )`
+        : sql`${serviceRequests.details} #- '{exemption,decision}'`,
+      updatedAt: new Date(),
+    })
+    .where(
+      and(
+        eq(serviceRequests.tenantSlug, tenantSlug),
+        eq(serviceRequests.id, id),
+      ),
+    );
+  await recordAudit({
+    tenantSlug,
+    actorId,
+    action: "service-request.exemption-decision",
     targetType: "service-request",
     targetId: id,
   });

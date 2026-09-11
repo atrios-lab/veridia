@@ -1,5 +1,20 @@
 import { z } from "zod";
-import type { Act } from "../acts/catalog.ts";
+import type { Act, CertificateType } from "../acts/catalog.ts";
+import { EXEMPTION_SIGNED_BY, type ExemptionBeneficiary } from "./kinds.ts";
+
+// The three `CertificateType` values, repeated here rather than imported as a
+// value from `catalog.ts`: `tenant/pix.ts` imports this file for `isValidCpf`,
+// and `catalog.ts` imports `tenant/schema.ts`, which imports `pix.ts`, a
+// value import back from here to `catalog.ts` closes that cycle and the
+// module that runs last sees the other half-initialised. `CertificateType`
+// itself is a type-only import above, erased before any of this runs, and
+// `request.test.ts` guards the two lists staying the same by parsing every
+// value `CERTIFICATE_TYPES` (catalog.ts) declares through this schema.
+const CERTIFICATE_TYPE_VALUES = [
+  "sem-busca",
+  "com-busca",
+  "inteiro-teor",
+] as const;
 
 /** Digits only, the way a CPF is stored and compared. */
 export function normalizeCpf(value: string): string {
@@ -142,6 +157,73 @@ const commonFields = {
   truthDeclaration: z.coerce.boolean(),
 };
 
+/** Empty string or absent both mean "not filled", the way `optionalText`
+ * treats them for the fields the act always registers. A person block reads
+ * these the same way, whether it came from the online form or the balcão. */
+const optionalPersonText = (max: number) =>
+  z
+    .string()
+    .nullish()
+    .transform((s) => s?.trim() || undefined)
+    .pipe(z.string().max(max, "Texto longo demais.").optional());
+
+const exemptionPersonSchema = z.object({
+  name: optionalPersonText(160),
+  cpfOrId: optionalPersonText(30),
+  contact: optionalPersonText(160),
+});
+
+const exemptionSignerSchema = exemptionPersonSchema.extend({
+  capacity: optionalPersonText(160),
+  proofDocument: optionalPersonText(160),
+});
+
+/**
+ * One beneficiary's declaration as the form sends it: every field optional at
+ * this layer (`actRules` below is what makes the name and the signer
+ * mandatory), because the raw shape has to parse before business rules can
+ * even look at it. `signedBy` defaults to `"self"`: a block the citizen never
+ * touched is the citizen declaring for themselves, not a missing answer.
+ */
+const exemptionBeneficiarySchema = z.object({
+  name: optionalPersonText(160),
+  cpfOrId: optionalPersonText(30),
+  birthDate: optionalPersonText(20),
+  occupation: optionalPersonText(160),
+  address: optionalPersonText(200),
+  cityState: optionalPersonText(120),
+  zip: optionalPersonText(20),
+  contact: optionalPersonText(160),
+  signedBy: z.preprocess(
+    (v) => (typeof v === "string" && v !== "" ? v : "self"),
+    z.enum(EXEMPTION_SIGNED_BY),
+  ),
+  signer: exemptionSignerSchema.optional(),
+  witnesses: z.array(exemptionPersonSchema).optional(),
+});
+type ExemptionBeneficiaryFormInput = z.infer<typeof exemptionBeneficiarySchema>;
+
+const certificateTypeSchema = z.preprocess(
+  (v) => (typeof v === "string" && v !== "" ? v : undefined),
+  z.enum(CERTIFICATE_TYPE_VALUES).optional(),
+);
+
+const exemptionFields = {
+  // `.default("self")` no beneficiário já cobre o campo ausente; aqui é só a
+  // leitura do ato-alvo e da declaração, iguais nos dois canais.
+  //
+  // `.nullish()` porque um grupo de radios sem nenhum marcado chega como null
+  // pelo react-hook-form, e o objeto base falharia nele com "expected string"
+  // no lugar da mensagem que diz o que fazer.
+  exemptionActId: z
+    .string()
+    .nullish()
+    .transform((value) => value?.trim() || undefined),
+  exemptionDeclaration: z.coerce.boolean().default(false),
+  certificateType: certificateTypeSchema,
+  beneficiaries: z.array(exemptionBeneficiarySchema).optional(),
+};
+
 /**
  * The rules the act imposes on the fields above. Written against the fields
  * they read rather than against a whole schema, so both filings share one
@@ -150,8 +232,16 @@ const commonFields = {
  * Two acts ask different questions, and the difference is law, not
  * preference: only the acts that may ask for a purpose carry the field, and
  * "outros" cannot be read without a description.
+ *
+ * `channel` is the one difference between the site and the balcão in the
+ * gratuidade block (Provimento CGJ/TJRN n. 7/2026, art. 7º): testemunhas da
+ * assinatura a rogo só existem onde alguém está de fato assinando na frente
+ * do operador, então o site as recusa e o balcão as exige.
  */
-function actRules(act: Act) {
+function actRules(
+  act: Act,
+  options: { channel: "online" | "counter" } = { channel: "online" },
+) {
   return (
     data: {
       lgpdConsent: boolean;
@@ -160,6 +250,8 @@ function actRules(act: Act) {
       purpose?: string;
       exemptionActId?: string;
       exemptionDeclaration?: boolean;
+      certificateType?: CertificateType;
+      beneficiaries?: ExemptionBeneficiaryFormInput[];
     },
     ctx: z.RefinementCtx,
   ) => {
@@ -214,6 +306,67 @@ function actRules(act: Act) {
             "Para pedir a gratuidade é necessário fazer a declaração acima.",
         });
       }
+      const asksCertificateType = requested?.feeExemption?.askCertificateType;
+      if (asksCertificateType && !data.certificateType) {
+        ctx.addIssue({
+          code: "custom",
+          path: ["certificateType"],
+          message: "Escolha o tipo da certidão.",
+        });
+      } else if (!asksCertificateType && data.certificateType) {
+        ctx.addIssue({
+          code: "custom",
+          path: ["certificateType"],
+          message: "Este ato não pede o tipo de certidão.",
+        });
+      }
+      const beneficiaryCount = requested?.feeExemption?.beneficiaryCount ?? 1;
+      const beneficiaries = data.beneficiaries ?? [];
+      for (let i = 0; i < beneficiaryCount; i++) {
+        const beneficiary = beneficiaries[i];
+        if (!beneficiary?.name) {
+          ctx.addIssue({
+            code: "custom",
+            path: ["beneficiaries", i, "name"],
+            message: "Informe o nome da pessoa beneficiária.",
+          });
+        }
+        if (
+          beneficiary &&
+          beneficiary.signedBy !== "self" &&
+          !beneficiary.signer?.name
+        ) {
+          ctx.addIssue({
+            code: "custom",
+            path: ["beneficiaries", i, "signer", "name"],
+            message: "Informe o nome de quem assina em lugar do beneficiário.",
+          });
+        }
+        const witnesses = (beneficiary?.witnesses ?? []).filter((w) => w.name);
+        if (beneficiary?.signedBy === "on-behalf") {
+          if (options.channel === "online" && witnesses.length > 0) {
+            ctx.addIssue({
+              code: "custom",
+              path: ["beneficiaries", i, "witnesses"],
+              message:
+                "As testemunhas assinam no balcão, não pelo site: deixe em branco.",
+            });
+          }
+          if (options.channel === "counter" && witnesses.length < 2) {
+            ctx.addIssue({
+              code: "custom",
+              path: ["beneficiaries", i, "witnesses"],
+              message: "Informe as duas testemunhas da assinatura a rogo.",
+            });
+          }
+        } else if (witnesses.length > 0) {
+          ctx.addIssue({
+            code: "custom",
+            path: ["beneficiaries", i, "witnesses"],
+            message: "Testemunhas só se aplicam à assinatura a rogo.",
+          });
+        }
+      }
     } else if (data.exemptionActId) {
       ctx.addIssue({
         code: "custom",
@@ -221,6 +374,145 @@ function actRules(act: Act) {
         message: "A gratuidade é pedida pelo ato próprio da lista.",
       });
     }
+  };
+}
+
+/** How many beneficiary blocks and witness slots the form ever renders: the
+ * ceiling `readExemptionForm` reads up to, so it never scans an unbounded
+ * `FormData` for keys nobody sent. */
+const MAX_EXEMPTION_BENEFICIARIES = 2;
+const MAX_EXEMPTION_WITNESSES = 2;
+
+function stringField(formData: FormData, key: string): string {
+  const value = formData.get(key);
+  return typeof value === "string" ? value : "";
+}
+
+/**
+ * Reads the gratuidade block out of a raw `FormData`, both channels: the
+ * flat, dot-indexed field names `beneficiaries.<i>.<field>` (and
+ * `beneficiaries.<i>.signer.<field>` / `.witnesses.<j>.<field>`) that
+ * `react-hook-form` writes for a fixed-size list without `useFieldArray`. A
+ * beneficiary block that the screen never rendered (habilitação's second
+ * nubente on any other act) leaves no `.name` key at all, so the loop stops
+ * there instead of reading blanks nobody typed.
+ */
+export function readExemptionForm(formData: FormData) {
+  const beneficiaries = [];
+  for (let i = 0; i < MAX_EXEMPTION_BENEFICIARIES; i++) {
+    const prefix = `beneficiaries.${i}`;
+    if (!formData.has(`${prefix}.name`)) break;
+    const witnesses = [];
+    for (let w = 0; w < MAX_EXEMPTION_WITNESSES; w++) {
+      const witnessPrefix = `${prefix}.witnesses.${w}`;
+      if (!formData.has(`${witnessPrefix}.name`)) continue;
+      witnesses.push({
+        name: stringField(formData, `${witnessPrefix}.name`),
+        cpfOrId: stringField(formData, `${witnessPrefix}.cpfOrId`),
+        contact: stringField(formData, `${witnessPrefix}.contact`),
+      });
+    }
+    beneficiaries.push({
+      name: stringField(formData, `${prefix}.name`),
+      cpfOrId: stringField(formData, `${prefix}.cpfOrId`),
+      birthDate: stringField(formData, `${prefix}.birthDate`),
+      occupation: stringField(formData, `${prefix}.occupation`),
+      address: stringField(formData, `${prefix}.address`),
+      cityState: stringField(formData, `${prefix}.cityState`),
+      zip: stringField(formData, `${prefix}.zip`),
+      contact: stringField(formData, `${prefix}.contact`),
+      signedBy: stringField(formData, `${prefix}.signedBy`),
+      signer: {
+        name: stringField(formData, `${prefix}.signer.name`),
+        cpfOrId: stringField(formData, `${prefix}.signer.cpfOrId`),
+        contact: stringField(formData, `${prefix}.signer.contact`),
+        capacity: stringField(formData, `${prefix}.signer.capacity`),
+        proofDocument: stringField(formData, `${prefix}.signer.proofDocument`),
+      },
+      witnesses,
+    });
+  }
+  return {
+    exemptionActId: formData.get("exemptionActId") ?? "",
+    exemptionDeclaration: formData.get("exemptionDeclaration") ?? "",
+    certificateType: formData.get("certificateType") ?? "",
+    beneficiaries,
+  };
+}
+
+/**
+ * `details.exemption`, built from what `publicServiceRequestSchema` or
+ * `serviceRequestSchema` already validated (`actRules` ran first: by the time
+ * this is called, every required name and signer is present). `undefined`
+ * when the citizen did not ask for the act's own exemption entry: a filing
+ * of any other act simply has no `exemptionActId`.
+ */
+export function buildExemptionDetails(
+  parsed: {
+    exemptionActId?: string;
+    certificateType?: CertificateType;
+    beneficiaries?: ExemptionBeneficiaryFormInput[];
+  },
+  declaredAt: string,
+):
+  | {
+      declaredAt: string;
+      actId: string;
+      certificateType?: CertificateType;
+      beneficiaries: ExemptionBeneficiary[];
+    }
+  | undefined {
+  if (!parsed.exemptionActId) return undefined;
+  const beneficiaries: ExemptionBeneficiary[] = (parsed.beneficiaries ?? [])
+    .filter((b): b is ExemptionBeneficiaryFormInput & { name: string } =>
+      Boolean(b.name),
+    )
+    .map((b) => {
+      const witnesses =
+        b.witnesses?.length === 2 &&
+        b.witnesses[0]?.name &&
+        b.witnesses[1]?.name
+          ? ([
+              {
+                name: b.witnesses[0].name,
+                cpfOrId: b.witnesses[0].cpfOrId,
+                contact: b.witnesses[0].contact,
+              },
+              {
+                name: b.witnesses[1].name,
+                cpfOrId: b.witnesses[1].cpfOrId,
+                contact: b.witnesses[1].contact,
+              },
+            ] as const)
+          : undefined;
+      return {
+        name: b.name,
+        cpfOrId: b.cpfOrId,
+        birthDate: b.birthDate,
+        occupation: b.occupation,
+        address: b.address,
+        cityState: b.cityState,
+        zip: b.zip,
+        contact: b.contact,
+        signedBy: b.signedBy,
+        signer:
+          b.signedBy !== "self" && b.signer?.name
+            ? {
+                name: b.signer.name,
+                cpfOrId: b.signer.cpfOrId,
+                contact: b.signer.contact,
+                capacity: b.signer.capacity,
+                proofDocument: b.signer.proofDocument,
+              }
+            : undefined,
+        witnesses: witnesses ? [...witnesses] : undefined,
+      };
+    });
+  return {
+    declaredAt,
+    actId: parsed.exemptionActId,
+    certificateType: parsed.certificateType,
+    beneficiaries,
   };
 }
 
@@ -243,24 +535,9 @@ export function publicServiceRequestSchema(act: Act) {
         (value) => value === undefined || isValidPhone(value),
         { message: "Informe um telefone com DDD." },
       ),
-      // Só o site oferece a gratuidade: no balcão o operador tem o cidadão e
-      // os documentos na frente, e o pedido nasce com a conferência já feita.
-      //
-      // `.default(false)` não é enfeite: o campo só é registrado no formulário
-      // do ato da gratuidade, então nos demais ele não chega. `z.coerce
-      // .boolean()` recusa chave ausente ("expected nonoptional"), o objeto
-      // base falhava nele, o superRefine nunca rodava e os erros de aceite
-      // sumiam da tela: o envio travava sem dizer nada, em todo ato.
-      // `nullish`, e não `optionalText`: um grupo de radios sem nenhum
-      // marcado chega como null pelo react-hook-form, e o objeto base falharia
-      // nele com "expected string" no lugar da mensagem que diz o que fazer.
-      exemptionActId: z
-        .string()
-        .nullish()
-        .transform((value) => value?.trim() || undefined),
-      exemptionDeclaration: z.coerce.boolean().default(false),
+      ...exemptionFields,
     })
-    .superRefine(actRules(act));
+    .superRefine(actRules(act, { channel: "online" }));
 }
 
 export type PublicServiceRequestInput = z.infer<
@@ -270,7 +547,9 @@ export type PublicServiceRequestInput = z.infer<
 /**
  * The filing the operator makes at the counter. The contact stays the either/
  * or field on purpose: the balcão is where someone with no e-mail is served,
- * and it is the operator typing, with the citizen in front of them.
+ * and it is the operator typing, with the citizen in front of them. The
+ * gratuidade block is the same as the site's, plus the testemunhas that only
+ * the balcão ever collects (Provimento CGJ/TJRN n. 7/2026, art. 7º III).
  */
 export function serviceRequestSchema(act: Act) {
   return z
@@ -279,8 +558,9 @@ export function serviceRequestSchema(act: Act) {
       contact: requiredText(160).refine(isValidContact, {
         message: "Informe um e-mail válido ou um telefone com DDD.",
       }),
+      ...exemptionFields,
     })
-    .superRefine(actRules(act));
+    .superRefine(actRules(act, { channel: "counter" }));
 }
 
 export type ServiceRequestInput = z.infer<

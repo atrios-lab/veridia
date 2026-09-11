@@ -235,7 +235,7 @@ export type StatusReasonResult =
 /**
  * Whether a Cancelado/Indeferido confirmation may proceed, and what to write
  * to `status_reason`. A valid text always satisfies it; a PDF stands in for
- * an empty text only for "rejected" — "cancelled" keeps requiring the text on
+ * an empty text only for "rejected": "cancelled" keeps requiring the text on
  * its own, exactly as before this stood in for it.
  */
 export function validateStatusReason({
@@ -437,6 +437,108 @@ const isoInstant = z.iso.datetime();
 export const SERVICE_REQUEST_CHANNELS = ["online", "counter"] as const;
 export type ServiceRequestChannel = (typeof SERVICE_REQUEST_CHANNELS)[number];
 
+/**
+ * Who formalises the declaration of hipossuficiência, Provimento CGJ/TJRN
+ * n. 7/2026 art. 4º §2º: the beneficiary themselves, a legal representative
+ * acting on their behalf, or someone who signs a rogo because the
+ * beneficiary cannot. The wording matches the Anexo I blocos 6 and 7.
+ */
+export const EXEMPTION_SIGNED_BY = [
+  "self",
+  "legal-representative",
+  "on-behalf",
+] as const;
+export type ExemptionSignedBy = (typeof EXEMPTION_SIGNED_BY)[number];
+
+/** A person named in the declaration who is not the beneficiary: a legal
+ * representative, someone who signs a rogo, or a witness to that signature.
+ * Every field but the name is optional because only the name is asked
+ * online; the rest fills in whatever the office collects at the counter. */
+const exemptionPersonSchema = z.object({
+  name: z.string(),
+  cpfOrId: z.string().optional(),
+  contact: z.string().optional(),
+});
+
+const exemptionSignerSchema = exemptionPersonSchema.extend({
+  /** "responsável legal", "tutor", "curador"... free text, art. 4º §2º II. */
+  capacity: z.string().optional(),
+  proofDocument: z.string().optional(),
+});
+
+/**
+ * One person's declaration, Provimento art. 4º: individual per beneficiary.
+ * Only `name` is required; the rest of the Anexo I bloco 2 is optional online
+ * and left blank on the printed declaração for the person to fill by hand.
+ * `witnesses` is exactly two when present (Anexo I bloco 8, art. 7º III) and
+ * only ever comes from the counter: the online form asks who signs a rogo,
+ * never who witnesses it (see `actRules`, `SERVICE_REQUEST_CHANNELS`).
+ */
+const exemptionBeneficiarySchema = z.object({
+  name: z.string(),
+  cpfOrId: z.string().optional(),
+  birthDate: z.string().optional(),
+  occupation: z.string().optional(),
+  address: z.string().optional(),
+  cityState: z.string().optional(),
+  zip: z.string().optional(),
+  contact: z.string().optional(),
+  signedBy: z.enum(EXEMPTION_SIGNED_BY).default("self"),
+  signer: exemptionSignerSchema.optional(),
+  witnesses: z.tuple([exemptionPersonSchema, exemptionPersonSchema]).optional(),
+});
+export type ExemptionBeneficiary = z.infer<typeof exemptionBeneficiarySchema>;
+
+/**
+ * The outcome the office reaches after the gratuidade is asked for
+ * (Provimento art. 11): granted outright, referred to the Juízo Corregedor
+ * over a founded doubt, denied, or replaced by parcelamento (the Juízo's own
+ * substitute for denial, art. 11 caput). Recording one never moves the
+ * andamento nor `amountCents`: the act is practised at once regardless
+ * (art. 11 §3º), and charging for it, if it comes to that, is the office's
+ * own move.
+ */
+export const EXEMPTION_DECISION_OUTCOMES = [
+  "granted",
+  "referred",
+  "denied",
+  "installments",
+] as const;
+export type ExemptionDecisionOutcome =
+  (typeof EXEMPTION_DECISION_OUTCOMES)[number];
+
+const exemptionDecisionSchema = z.object({
+  outcome: z.enum(EXEMPTION_DECISION_OUTCOMES),
+  decidedAt: isoInstant,
+  decidedBy: z.string(),
+});
+export type ExemptionDecision = z.infer<typeof exemptionDecisionSchema>;
+
+/**
+ * `details.exemption`, grown from `{ declaredAt, actId }` (2026-09) to carry
+ * everything the Anexo I do Provimento CGJ/TJRN n. 7/2026 asks. Every field
+ * past `declaredAt` is optional so a request filed before this grew is still
+ * valid: `readExemption` below is what normalises the gap into an empty
+ * `beneficiaries` list, not this schema, which stays the honest shape of
+ * what may or may not be on disk.
+ */
+const exemptionSchema = z.object({
+  declaredAt: isoInstant,
+  // `actId` diz qual ato a isenção pede, e é opcional porque os pedidos
+  // feitos antes de a gratuidade virar ato próprio não o têm: ausente
+  // significa "não sabemos", nunca um ato no lugar do que falta.
+  actId: z.string().optional(),
+  certificateType: z
+    .enum(["sem-busca", "com-busca", "inteiro-teor"])
+    .optional(),
+  beneficiaries: z.array(exemptionBeneficiarySchema).optional(),
+  decision: exemptionDecisionSchema.optional(),
+});
+export type ExemptionDeclaration = Omit<
+  z.infer<typeof exemptionSchema>,
+  "beneficiaries"
+> & { beneficiaries: ExemptionBeneficiary[] };
+
 export const serviceRequestDetailsSchema = z.object({
   // Absent means "online", the default every citizen-filed request already
   // was before the counter could file one directly.
@@ -467,9 +569,7 @@ export const serviceRequestDetailsSchema = z.object({
   // `actId` diz qual ato a isenção pede, e é opcional porque os pedidos
   // feitos antes de a gratuidade virar ato próprio não o têm: ausente
   // significa "não sabemos", nunca um ato no lugar do que falta.
-  exemption: z
-    .object({ declaredAt: isoInstant, actId: z.string().optional() })
-    .optional(),
+  exemption: exemptionSchema.optional(),
 });
 export type ServiceRequestDetails = z.infer<typeof serviceRequestDetailsSchema>;
 
@@ -483,21 +583,18 @@ export type ServiceRequestDetails = z.infer<typeof serviceRequestDetailsSchema>;
  * The exemption a request carries, or undefined when none was asked for. Same
  * door as `readPhone`: the database does not check jsonb, so everything that
  * reads it parses it. `actId` comes back undefined for the requests filed
- * before the gratuidade became an act of its own.
+ * before the gratuidade became an act of its own; `beneficiaries` comes back
+ * `[]` for the same reason, so every reader treats "nothing collected" the
+ * same way, whether the pedido is old or just never asked for a name.
  */
 export function readExemption(
   details: unknown,
-): { declaredAt: string; actId?: string } | undefined {
-  const value = (
-    details as {
-      exemption?: { declaredAt?: unknown; actId?: unknown };
-    } | null
-  )?.exemption;
-  if (typeof value?.declaredAt !== "string") return undefined;
-  return {
-    declaredAt: value.declaredAt,
-    actId: typeof value.actId === "string" ? value.actId : undefined,
-  };
+): ExemptionDeclaration | undefined {
+  const parsed = exemptionSchema.safeParse(
+    (details as { exemption?: unknown } | null)?.exemption,
+  );
+  if (!parsed.success) return undefined;
+  return { beneficiaries: [], ...parsed.data };
 }
 
 export function readPhone(details: unknown): string {

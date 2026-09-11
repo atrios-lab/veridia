@@ -23,6 +23,7 @@ import {
   type ManifestationType,
   parseDetails,
   type RequestKind,
+  readExemption,
   type ServiceRequestStatus,
   statusLabel,
 } from "@/core/request/kinds.ts";
@@ -117,6 +118,10 @@ export interface ServiceRequestDetail extends BaseDetail {
   actName: string;
   attributionName: string;
   hasSignedForm: boolean;
+  /** Whether the pedido asked for the gratuidade: only then does the
+   * download screen offer the declaração de hipossuficiência alongside the
+   * requerimento (Provimento CGJ/TJRN n. 7/2026, Anexo I). */
+  hasExemption: boolean;
   signedFormReceivedAt?: string;
   /** The signed form's own attachment id, for the citizen to re-download it
    * from "Seus arquivos": distinct from `hasSignedForm`, which only says
@@ -338,6 +343,7 @@ export async function lookupProtocolDetail(
       actName: act.name,
       attributionName: ATTRIBUTION_NAMES[act.attribution],
       hasSignedForm: Boolean(signedForm),
+      hasExemption: Boolean(readExemption(record.details)),
       signedFormReceivedAt: signedForm?.createdAt.toISOString(),
       signedFormAttachmentId: signedForm?.id,
       amountLabel:

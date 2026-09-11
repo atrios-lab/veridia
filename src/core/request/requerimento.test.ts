@@ -170,9 +170,10 @@ test("the signature block says how to sign it, and who signs", () => {
   assert.equal(document.signee, "Maria José da Silva");
 });
 
-test("a declaração de gratuidade entra no papel que o cidadão assina", () => {
-  // Escolher o ato é registro; a declaração assinada é prova. É por isso que
-  // ela viaja no requerimento, e não só no banco.
+test("a gratuidade pedida entra no papel que o cidadão assina, sem repetir o Anexo I", () => {
+  // Escolher o ato é registro; a declaração de hipossuficiência assinada,
+  // que prova a hipossuficiência, é um documento à parte (declaracao.ts),
+  // então o requerimento só remete a ela, não repete seu texto.
   const gratuidade = getAct("gratuidade-rcpn");
   if (!gratuidade) throw new Error("catalogo incompleto");
   const comIsencao = buildRequerimento(cartorioMarinho, gratuidade, {
@@ -180,23 +181,29 @@ test("a declaração de gratuidade entra no papel que o cidadão assina", () => 
     exemption: { actId: "rcpn-habilitacao-casamento" },
   });
   const texto = flatten(comIsencao.sections);
-  assert.match(texto, /Código Penal art\. 299/);
   assert.match(texto, /Habilitação de casamento/);
   assert.match(texto, /CC art\. 1\.512/);
+  assert.match(texto, /declaração de hipossuficiência que acompanha/);
+  // O texto do Anexo I mora só na declaração; repeti-lo aqui duplicaria o
+  // que a pessoa já assina no outro papel.
+  assert.doesNotMatch(texto, /não disponho de recursos/);
 
   // Sem pedir, nada disso aparece: quem paga não assina declaração de pobreza.
   const semIsencao = buildRequerimento(cartorioMarinho, marriage, data);
-  assert.doesNotMatch(flatten(semIsencao.sections), /Código Penal art\. 299/);
+  assert.doesNotMatch(
+    flatten(semIsencao.sections),
+    /declaração de hipossuficiência/,
+  );
 });
 
-test("pedido antigo sem ato-alvo ainda imprime a declaração", () => {
+test("pedido antigo sem ato-alvo ainda imprime a remissão à declaração", () => {
   // Os pedidos anteriores à gratuidade virar ato próprio não têm `actId`: a
-  // declaração sai assim mesmo, sem fundamento que o papel não sabe.
+  // remissão sai assim mesmo, sem fundamento que o papel não sabe.
   const antigo = buildRequerimento(cartorioMarinho, marriage, {
     ...data,
     exemption: {},
   });
   const texto = flatten(antigo.sections);
-  assert.match(texto, /Código Penal art\. 299/);
-  assert.doesNotMatch(texto, /Fundamento:/);
+  assert.match(texto, /declaração de hipossuficiência que acompanha/);
+  assert.doesNotMatch(texto, /fundamento:/);
 });

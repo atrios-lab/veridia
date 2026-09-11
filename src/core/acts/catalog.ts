@@ -134,8 +134,19 @@ export interface Act {
    * The basis is per act because they are different laws, and it is here for
    * the same reason `legalDeadlineNote` is: so the next person can check the
    * citation instead of trusting it.
+   *
+   * `beneficiaryCount` is how many separate declarations the act needs
+   * (Provimento CGJ/TJRN n. 7/2026, art. 4º: individual per beneficiary). Two
+   * only for the habilitação de casamento, where each nubente is a
+   * beneficiary of their own. `askCertificateType` marks the one act (the
+   * certidão) whose Anexo I bloco 3 asks which kind of certidão, sem busca,
+   * com busca ou inteiro teor.
    */
-  feeExemption?: { legalBasis: string };
+  feeExemption?: {
+    legalBasis: string;
+    beneficiaryCount: 1 | 2;
+    askCertificateType?: true;
+  };
   /**
    * Só a entrada da gratuidade tem: os atos daquela atribuição que a lei
    * isenta, que é o que ela pergunta ao cidadão. Vive no ato, e não numa
@@ -147,45 +158,59 @@ export interface Act {
 }
 
 /**
- * What the requester signs to ask for the exemption. Its own text, not the
- * general truth declaration: that one covers the facts of the request, this
- * one authorises a check against a government benefit system and names the
- * penalties. Different consents, different proofs.
- *
- * It rides in the requerimento the citizen signs, so the wording is the
- * office's to confirm, not this file's to invent quietly.
+ * The kinds of certidão the Anexo I bloco 3 offers, for the one act whose
+ * `feeExemption.askCertificateType` is set. Same three words the form uses:
+ * sem busca (the register already knows book/folha/termo), com busca (the
+ * office has to find it) and inteiro teor (the full text, not the summary).
  */
-/**
- * What proves the benefit, listed for the citizen before they are asked to
- * attach anything. "Anexe a documentação" is not an instruction: someone who
- * has never done this does not know what the office accepts, guesses, and the
- * guess comes back as an exigência a week later.
- *
- * Examples, never a closed list, and the last entry says so out loud. The
- * office asked for it: there are many social programmes, and a list that reads
- * as exhaustive turns away someone whose benefit is real but unlisted, which
- * is exactly the person this whole flow exists for. The office's own example
- * was quilombola certification; the open entry stays generic so it covers that
- * one without singling anybody out.
- *
- * One list, not one per act: what is being proven is the same social benefit,
- * whichever act it exempts. Any single one serves, and the wording says that
- * too, so nobody gathers all four out of caution.
- */
-export const FEE_EXEMPTION_DOCUMENTS = [
-  "Folha Resumo do CadÚnico, ou comprovante de inscrição com o NIS",
-  "Declaração ou atestado do CRAS que atende a família",
-  "Cartão ou extrato de programa social (Bolsa Família, BPC)",
-  "Outro comprovante de programa social",
+export const CERTIFICATE_TYPES = [
+  "sem-busca",
+  "com-busca",
+  "inteiro-teor",
 ] as const;
+export type CertificateType = (typeof CERTIFICATE_TYPES)[number];
 
+export const CERTIFICATE_TYPE_LABELS: Record<CertificateType, string> = {
+  "sem-busca": "Sem busca",
+  "com-busca": "Com busca",
+  "inteiro-teor": "Inteiro teor",
+};
+
+/**
+ * What the requester declares to ask for the exemption: the bloco 4 of the
+ * Anexo I (Provimento CGJ/TJRN n. 7/2026), not a proof of enrollment in any
+ * federal programme. The declaration alone is enough (art. 5º): nothing here
+ * names a benefit or a system to check it against, because the Provimento
+ * forbids presuming poverty from anything but the declaration itself
+ * (art. 6º).
+ *
+ * It rides in the declaração de hipossuficiência the citizen signs
+ * (`src/core/request/declaracao.ts`), so the wording is the office's to
+ * confirm, not this file's to invent quietly.
+ */
 export const FEE_EXEMPTION_DECLARATION =
-  "Declaro, sob as penas da lei, ser beneficiário de programa social do " +
-  "Governo Federal (CadÚnico) e não ter condições de pagar os emolumentos " +
-  "sem prejuízo do sustento próprio ou da família. Autorizo a serventia a " +
-  "conferir esta condição nos sistemas governamentais de benefício social. " +
-  "Estou ciente de que declaração falsa é crime (Código Penal art. 299) e " +
-  "obriga a reparar o dano (Código Civil arts. 186 e 927).";
+  "Declaro, sob as penas da lei, que não disponho de recursos suficientes " +
+  "para suportar os emolumentos do ato indicado sem prejuízo de minha " +
+  "manutenção e da manutenção de minha família.";
+
+/**
+ * The five things the Anexo I bloco 4 makes the declarant acknowledge,
+ * alongside the declaration above, in the order the form lists them
+ * (Provimento CGJ/TJRN n. 7/2026, arts. 11 e 9º).
+ */
+export const FEE_EXEMPTION_ACKNOWLEDGEMENTS = [
+  "havendo fundadas razões para dúvida quanto à veracidade desta declaração, " +
+    "o registrador poderá suscitar a questão ao juízo competente, inclusive " +
+    "para eventual substituição da gratuidade pelo parcelamento",
+  "mesmo nessa hipótese, o ato será praticado de imediato, " +
+    "independentemente de prévia decisão sobre a gratuidade",
+  "se o benefício for posteriormente indeferido, poderão ser adotadas " +
+    "medidas extrajudiciais para cobrança dos emolumentos devidos",
+  "a prestação de informação falsa poderá gerar responsabilidade civil e " +
+    "criminal",
+  "salvo previsão legal em sentido diverso, a gratuidade não abrange " +
+    "serviços postais, remessas de documentos, diligências ou notificações",
+] as const;
 
 // Legal basis conferred against the previous system (packages/tenants/src/
 // atos.ts), which cites Lei 6.015, Lei 8.935, Lei 9.492 and Prov. CNJ
@@ -205,7 +230,9 @@ export const ACTS: Act[] = [
       "Lei 6.015 art. 19, red. Lei 14.382/2022: demais certidões",
     requiresPurpose: false, // art. 17: neither motive nor interest may be asked
     feeExemption: {
-      legalBasis: "CF art. 5º, LXXVI; Lei 6.015 art. 30 §1º (Lei 9.534/97)",
+      legalBasis: "Lei 6.015 art. 30 §1º e §2º; Provimento CGJ/TJRN n. 7/2026",
+      beneficiaryCount: 1,
+      askCertificateType: true,
     },
   },
   {
@@ -215,7 +242,10 @@ export const ACTS: Act[] = [
     processingMode: "online",
     legalBasis: "Lei 6.015 art. 67 (CC art. 1.525)",
     requiresPurpose: false,
-    feeExemption: { legalBasis: "CC art. 1.512, parágrafo único" },
+    feeExemption: {
+      legalBasis: "CC art. 1.512, parágrafo único",
+      beneficiaryCount: 2,
+    },
     documents: [
       "Documento de identidade dos nubentes",
       "Certidões de nascimento",
@@ -238,13 +268,18 @@ export const ACTS: Act[] = [
   {
     id: "rcpn-alteracao-prenome",
     attribution: "RCPN",
-    name: "Alteração imotivada de prenome na maioridade",
+    name: "Alteração de prenome",
     processingMode: "presential",
     legalBasis: "Lei 6.015 art. 56 (Lei 14.382/2022)",
     requiresPurpose: false,
     guidance:
       "Comparecimento pessoal do interessado com documento de identidade. " +
       "O pedido é imotivado: você não precisa justificar a alteração.",
+    feeExemption: {
+      legalBasis:
+        "Lei 6.015 art. 30 §1º; Provimento CGJ/TJRN n. 7/2026, Anexo I",
+      beneficiaryCount: 1,
+    },
   },
 
   // Tabelionato de Notas

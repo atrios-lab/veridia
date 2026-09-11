@@ -9,8 +9,10 @@ import {
 } from "@/core/request/access-key.ts";
 import { deadlineDate } from "@/core/request/deadline.ts";
 import {
+  buildExemptionDetails,
   looksLikeBot,
   publicServiceRequestSchema,
+  readExemptionForm,
 } from "@/core/request/form.ts";
 import { formatProtocolNumber } from "@/core/request/protocol.ts";
 import { formatDate } from "@/core/scheduling/calendar.ts";
@@ -35,6 +37,10 @@ export interface SubmitSuccess {
   attributionName: string;
   /** The date the office expects to have analysed it by, in "DD/MM/AAAA". */
   deadlineLabel: string;
+  /** Whether the download screen also offers the declaração de
+   * hipossuficiência (Provimento CGJ/TJRN n. 7/2026, Anexo I): only a
+   * gratuidade pedido has one. */
+  hasExemption: boolean;
 }
 
 export interface SubmitDuplicate {
@@ -56,20 +62,6 @@ function fail(
   fieldErrors: Record<string, string> = {},
 ): SubmitState {
   return { status: "error", message, fieldErrors };
-}
-
-/**
- * Quantos anexos esta submissão carrega, pelos dois caminhos: bytes no corpo
- * (desenvolvimento) e referências de upload direto ao blob (produção). Um
- * input de arquivo intocado ainda chega, como parte vazia, então o tamanho é
- * o único sinal honesto de que o cidadão escolheu alguma coisa.
- */
-function countAttachments(formData: FormData): number {
-  const files = formData
-    .getAll("anexos")
-    .filter((value): value is File => value instanceof File)
-    .filter((file) => file.size > 0);
-  return files.length + formData.getAll("anexosRef").length;
 }
 
 export async function submitServiceRequest(
@@ -109,6 +101,7 @@ export async function submitServiceRequest(
           act.legalDeadlineDays ?? tenant.requestDeadlineDays,
         ),
       ),
+      hasExemption: false,
     };
   }
 
@@ -128,14 +121,17 @@ export async function submitServiceRequest(
     parameterValue: formData.get("parameterValue") ?? "",
     lgpdConsent: formData.get("lgpdConsent") ?? "",
     truthDeclaration: formData.get("truthDeclaration") ?? "",
-    exemptionActId: formData.get("exemptionActId") ?? "",
-    exemptionDeclaration: formData.get("exemptionDeclaration") ?? "",
+    ...readExemptionForm(formData),
   });
 
   if (!parsed.success) {
     const fieldErrors: Record<string, string> = {};
     for (const issue of parsed.error.issues) {
-      const field = String(issue.path[0] ?? "form");
+      // Um caminho aninhado ("beneficiaries.0.signer.name") vira a mesma
+      // chave que o formulário usa para registrar o campo: é assim que
+      // `errorFor` em `request-form.tsx` reencontra o erro certo dentro da
+      // árvore de beneficiários da gratuidade.
+      const field = issue.path.length > 0 ? issue.path.join(".") : "form";
       fieldErrors[field] ??= issue.message;
     }
     return fail(
@@ -153,18 +149,6 @@ export async function submitServiceRequest(
     return { status: "duplicate", protocolNumber: duplicateProtocol };
   }
 
-  // Antes de armazenar coisa alguma: uma recusa depois de `collectAttachments`
-  // deixaria os arquivos já gravados no blob, órfãos de um pedido que não
-  // existe. Conta os dois caminhos, porque em produção os anexos chegam como
-  // referências de upload direto e em desenvolvimento como bytes no corpo.
-  if (act.exemptionTargets && countAttachments(formData) === 0) {
-    return fail("Confira os campos destacados para enviar o pedido.", {
-      anexos:
-        "Anexe a documentação do benefício para pedir a gratuidade: sem ela a " +
-        "serventia não tem como conferir.",
-    });
-  }
-
   const accessKey = generateAccessKey();
 
   try {
@@ -180,7 +164,14 @@ export async function submitServiceRequest(
     // The e-mail is what the `contact` column holds for a request filed here:
     // the telephone is the office's own way of reaching the citizen and rides
     // in `details`, next to the rest of what belongs to this kind alone.
-    const { email, phone, exemptionActId, ...data } = parsed.data;
+    const {
+      email,
+      phone,
+      exemptionActId,
+      certificateType,
+      beneficiaries,
+      ...data
+    } = parsed.data;
 
     // O ato da gratuidade não tem prazo próprio: o prazo é o do ato que ele
     // pede, senão a certidão isenta nasceria com prazo diferente da paga. Fica
@@ -192,6 +183,11 @@ export async function submitServiceRequest(
       requestedAct?.legalDeadlineDays ??
       act.legalDeadlineDays ??
       tenant.requestDeadlineDays;
+
+    const exemption = buildExemptionDetails(
+      { exemptionActId, certificateType, beneficiaries },
+      consentedAt,
+    );
 
     const { protocolNumber } = await createServiceRequest(
       tenant,
@@ -205,9 +201,9 @@ export async function submitServiceRequest(
           phone,
           // Pedida, nunca concedida: quem confere o benefício e decide é a
           // serventia, e `amountCents` segue sendo do operador.
-          ...(exemptionActId
+          ...(exemption
             ? {
-                exemption: { declaredAt: consentedAt, actId: exemptionActId },
+                exemption,
                 deadline: { startedOn: today(), days: deadlineDays },
               }
             : {}),
@@ -240,6 +236,7 @@ export async function submitServiceRequest(
       // just filed carries no term of its own yet. Where the law fixes none,
       // the office's default stands in.
       deadlineLabel: formatDate(deadlineDate(today(), deadlineDays)),
+      hasExemption: Boolean(exemption),
     };
   } catch (error) {
     if (error instanceof AttachmentError) return fail(error.message);

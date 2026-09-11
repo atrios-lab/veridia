@@ -10,8 +10,9 @@ import {
   ATTRIBUTION_SHORT_NAMES,
   actsOfAttribution,
   actsOfTenant,
+  CERTIFICATE_TYPES,
+  FEE_EXEMPTION_ACKNOWLEDGEMENTS,
   FEE_EXEMPTION_DECLARATION,
-  FEE_EXEMPTION_DOCUMENTS,
   getAct,
   getActForTenant,
   IDENTIFICATION_ONLY_HINT,
@@ -136,6 +137,7 @@ test("nenhum texto do catálogo promete ato sem requerimento", () => {
 test("só os atos que a lei isenta trazem a gratuidade, com sua base", () => {
   const isentaveis = ACTS.filter((act) => act.feeExemption).map((a) => a.id);
   assert.deepEqual(isentaveis.sort(), [
+    "rcpn-alteracao-prenome",
     "rcpn-certidao",
     "rcpn-habilitacao-casamento",
   ]);
@@ -146,27 +148,60 @@ test("só os atos que a lei isenta trazem a gratuidade, com sua base", () => {
   }
 });
 
-test("a declaração da gratuidade nomeia as penas e a conferência", () => {
-  // Ela sai num documento que o cidadão assina: o que promete e o que avisa
-  // não pode se perder numa reescrita distraída.
-  assert.match(FEE_EXEMPTION_DECLARATION, /Código Penal art\. 299/);
-  assert.match(FEE_EXEMPTION_DECLARATION, /Código Civil arts\. 186 e 927/);
-  assert.match(FEE_EXEMPTION_DECLARATION, /benefício social/);
-  assert.match(FEE_EXEMPTION_DECLARATION, /CadÚnico/);
+test("só a habilitação de casamento pede duas declarações", () => {
+  // Provimento CGJ/TJRN n. 7/2026, art. 4º: individual por pessoa
+  // beneficiária. A habilitação é o único ato daqui com dois nubentes.
+  for (const act of ACTS.filter((a) => a.feeExemption)) {
+    const expected = act.id === "rcpn-habilitacao-casamento" ? 2 : 1;
+    assert.equal(act.feeExemption?.beneficiaryCount, expected, act.id);
+  }
 });
 
-test("a gratuidade diz qual documento anexar, sem fechar a lista", () => {
-  // "Anexe a documentação" não é instrução: quem nunca fez isso não sabe o
-  // que a serventia aceita, chuta, e o chute volta como exigência.
-  assert.ok(FEE_EXEMPTION_DOCUMENTS.some((d) => /CadÚnico/.test(d)));
-  assert.ok(FEE_EXEMPTION_DOCUMENTS.some((d) => /CRAS/.test(d)));
+test("só a certidão pergunta o tipo", () => {
+  // O bloco 3 do Anexo I só pergunta sem busca/com busca/inteiro teor quando
+  // o ato-alvo é a certidão; habilitação e alteração de prenome não têm tipo.
+  for (const act of ACTS.filter((a) => a.feeExemption)) {
+    const expected = act.id === "rcpn-certidao" ? true : undefined;
+    assert.equal(act.feeExemption?.askCertificateType, expected, act.id);
+  }
+  assert.deepEqual([...CERTIFICATE_TYPES].sort(), [
+    "com-busca",
+    "inteiro-teor",
+    "sem-busca",
+  ]);
+});
 
-  // E a lista tem de continuar aberta. O cartório pediu: são muitos programas
-  // sociais, e uma lista que se lê como exaustiva barra justamente quem tem o
-  // benefício mas fora dos exemplos, que é a pessoa para quem isto existe.
+test("a declaração da gratuidade é a do Anexo I, sem programa social", () => {
+  // Ela sai num documento que o cidadão assina: o Provimento manda a
+  // declaração bastar por si (art. 5º) e proíbe presumir pobreza por
+  // critério que não seja ela mesma (art. 6º): nada aqui pode voltar a
+  // condicionar a gratuidade a um benefício federal específico.
+  assert.match(FEE_EXEMPTION_DECLARATION, /não disponho de recursos/);
+  assert.match(FEE_EXEMPTION_DECLARATION, /minha família/);
+  assert.doesNotMatch(FEE_EXEMPTION_DECLARATION, /CadÚnico/);
+  assert.doesNotMatch(FEE_EXEMPTION_DECLARATION, /programa social/);
+});
+
+test("as cinco ciências do bloco 4 estão todas presentes", () => {
+  assert.equal(FEE_EXEMPTION_ACKNOWLEDGEMENTS.length, 5);
   assert.ok(
-    FEE_EXEMPTION_DOCUMENTS.some((d) => /^Outro comprovante/.test(d)),
-    "a lista precisa terminar com uma entrada aberta",
+    FEE_EXEMPTION_ACKNOWLEDGEMENTS.some((a) => /juízo competente/.test(a)),
+  );
+  assert.ok(
+    FEE_EXEMPTION_ACKNOWLEDGEMENTS.some((a) => /praticado de imediato/.test(a)),
+  );
+  assert.ok(
+    FEE_EXEMPTION_ACKNOWLEDGEMENTS.some((a) =>
+      /cobrança dos emolumentos/.test(a),
+    ),
+  );
+  assert.ok(
+    FEE_EXEMPTION_ACKNOWLEDGEMENTS.some((a) =>
+      /responsabilidade civil e criminal/.test(a),
+    ),
+  );
+  assert.ok(
+    FEE_EXEMPTION_ACKNOWLEDGEMENTS.some((a) => /serviços postais/.test(a)),
   );
 });
 
@@ -189,6 +224,7 @@ test("a entrada da gratuidade oferece exatamente os atos isentáveis", () => {
   const gratuidade = getAct("gratuidade-rcpn");
   assert.ok(gratuidade, "o id sintético precisa resolver de volta");
   assert.deepEqual(gratuidade.exemptionTargets?.map((a) => a.id).sort(), [
+    "rcpn-alteracao-prenome",
     "rcpn-certidao",
     "rcpn-habilitacao-casamento",
   ]);
