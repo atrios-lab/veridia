@@ -109,6 +109,11 @@ export interface ServiceRequestDetail extends BaseDetail {
    * once `requestStatus` is "cancelled" or "rejected"; absent (not empty)
    * when it was closed before this justification existed. */
   statusReason?: string;
+  /** The PDF attached instead of (or alongside) `statusReason`, Indeferido
+   * only. Same "most recent wins" reasoning as `statusReason` itself: a
+   * request indeferido again after being reopened only shows the current
+   * document, never a stack of past ones. */
+  rejectionDocumentAttachmentId?: string;
   actName: string;
   attributionName: string;
   hasSignedForm: boolean;
@@ -296,6 +301,9 @@ export async function lookupProtocolDetail(
     const paymentReceipt = attachments
       .filter((a) => a.kind === "payment-receipt")
       .at(-1);
+    const rejectionDocument = attachments
+      .filter((a) => a.kind === "rejection-document")
+      .at(-1);
     const requirements = await listRequirements(tenant.slug, record.id);
     // One read per requirement: an office raises a handful on a request, not
     // hundreds, and the alternative is a join that would still fan the rows
@@ -326,6 +334,7 @@ export async function lookupProtocolDetail(
       kind: "service-request",
       requestStatus: record.status as ServiceRequestStatus,
       statusReason: record.statusReason ?? undefined,
+      rejectionDocumentAttachmentId: rejectionDocument?.id,
       actName: act.name,
       attributionName: ATTRIBUTION_NAMES[act.attribution],
       hasSignedForm: Boolean(signedForm),

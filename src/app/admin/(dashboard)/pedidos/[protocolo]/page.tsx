@@ -35,6 +35,7 @@ import {
 } from "@/lib/service-request.ts";
 import { getSession } from "@/lib/session.ts";
 import { getTenant, OFFICE_TIME_ZONE, today } from "@/lib/tenant.ts";
+import { documentHref } from "../../../_components/attachment-link.ts";
 import { AdminPageHeader } from "../../../_components/page-header.tsx";
 import { DeadlineBadge } from "../_components/deadline-badge.tsx";
 import { StatusBadge } from "../_components/status-badge.tsx";
@@ -147,6 +148,12 @@ export default async function ServiceRequestDetailPage({
   // what the operator should check, not the first try.
   const paymentReceipt = ownAttachments
     .filter((a) => a.kind === "payment-receipt")
+    .at(-1);
+  // Same reasoning as `status_reason`, which this stands beside: only the
+  // most recent indeferimento's document matters, not one from a request
+  // reopened and indeferido again.
+  const rejectionDocument = ownAttachments
+    .filter((a) => a.kind === "rejection-document")
     .at(-1);
 
   // One read per requirement: an office raises a handful on a request, and a
@@ -411,6 +418,12 @@ export default async function ServiceRequestDetailPage({
                       isLatestStatusEntry &&
                       isServiceRequestStatus(request.status) &&
                       requiresStatusReason(request.status);
+                    // The PDF is Indeferido-only (see design.md): a request
+                    // cancelled the usual way never has one.
+                    const showRejectionDocument =
+                      isLatestStatusEntry &&
+                      request.status === "rejected" &&
+                      Boolean(rejectionDocument);
                     return (
                       <li
                         key={`${entry.action}-${entry.createdAt.toISOString()}-${index}`}
@@ -424,9 +437,25 @@ export default async function ServiceRequestDetailPage({
                         <span className="text-[11px] text-admin-faint">
                           {formatDayMonthTime(entry.createdAt)}
                         </span>
-                        {showReason && (
+                        {showReason &&
+                          (request.statusReason || !showRejectionDocument) && (
+                            <p className="mt-1 text-[12px] text-admin-text">
+                              Motivo: {request.statusReason ?? "não informado"}
+                            </p>
+                          )}
+                        {showRejectionDocument && rejectionDocument && (
                           <p className="mt-1 text-[12px] text-admin-text">
-                            Motivo: {request.statusReason ?? "não informado"}
+                            <a
+                              href={documentHref(
+                                request.id,
+                                rejectionDocument.id,
+                              )}
+                              target="_blank"
+                              rel="noopener"
+                              className="font-semibold text-admin-primary-soft hover:underline"
+                            >
+                              Ver documento do indeferimento
+                            </a>
                           </p>
                         )}
                       </li>

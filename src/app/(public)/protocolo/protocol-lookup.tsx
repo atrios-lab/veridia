@@ -1043,9 +1043,33 @@ function RequestDetail({ result }: { result: ServiceRequestDetail }) {
         </div>
         {(result.requestStatus === "cancelled" ||
           result.requestStatus === "rejected") && (
-          <p className="mt-3 whitespace-pre-line border-t border-brand-border pt-3 text-[13px] leading-relaxed text-brand-text">
-            {result.statusReason ?? "Motivo não informado."}
-          </p>
+          <div className="mt-3 border-t border-brand-border pt-3">
+            {/* A PDF stands in for the text (Indeferido only): with no text
+                and a PDF attached, "motivo não informado" would contradict
+                the document sitting right below it. */}
+            {(result.statusReason || !result.rejectionDocumentAttachmentId) && (
+              <p className="whitespace-pre-line text-[13px] leading-relaxed text-brand-text">
+                {result.statusReason ?? "Motivo não informado."}
+              </p>
+            )}
+            {result.rejectionDocumentAttachmentId && (
+              <form
+                action="/protocolo/documento"
+                method="post"
+                className={result.statusReason ? "mt-2" : ""}
+              >
+                <ProtocolFields result={result} />
+                <input
+                  type="hidden"
+                  name="attachmentId"
+                  value={result.rejectionDocumentAttachmentId}
+                />
+                <button type="submit" className="btn btn-ghost btn-sm">
+                  Baixar documento do indeferimento
+                </button>
+              </form>
+            )}
+          </div>
         )}
       </div>
 

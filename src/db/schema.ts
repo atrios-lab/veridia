@@ -187,7 +187,10 @@ export const serviceRequestAttachments = pgTable(
       .notNull()
       .references(() => serviceRequests.id, { onDelete: "cascade" }),
     // "citizen" for what came with the request, "signed-form" for the signed
-    // requerimento, "office" for what the office delivers back.
+    // requerimento, "office" for what the office delivers back, plus a
+    // handful of narrower kinds for one specific moment in the request's life
+    // ("payment-receipt", "rejection-document") that need their own filter
+    // but not their own column.
     kind: text("kind").notNull().default("citizen"),
     storedName: text("stored_name").notNull(),
     displayName: text("display_name").notNull(),

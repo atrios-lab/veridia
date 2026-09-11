@@ -20,6 +20,7 @@ import {
   statusReasonSchema,
   suggestedNextStatuses,
   suggestedOmbudsmanStatuses,
+  validateStatusReason,
 } from "./kinds.ts";
 
 test("every service request status has a Portuguese label", () => {
@@ -334,4 +335,76 @@ test("status reason has the same length ceiling as free-text messages", () => {
     statusReasonSchema.safeParse("a".repeat(MAX_MESSAGE_LENGTH + 1)).success,
     false,
   );
+});
+
+test("rejected accepts a PDF with no text", () => {
+  const result = validateStatusReason({
+    status: "rejected",
+    reason: "",
+    hasAttachment: true,
+  });
+  assert.deepEqual(result, { ok: true, reason: null });
+});
+
+test("rejected accepts text with no PDF", () => {
+  const result = validateStatusReason({
+    status: "rejected",
+    reason: "Certidão anexada ilegível",
+    hasAttachment: false,
+  });
+  assert.deepEqual(result, { ok: true, reason: "Certidão anexada ilegível" });
+});
+
+test("rejected accepts text and a PDF together", () => {
+  const result = validateStatusReason({
+    status: "rejected",
+    reason: "Certidão anexada ilegível",
+    hasAttachment: true,
+  });
+  assert.deepEqual(result, { ok: true, reason: "Certidão anexada ilegível" });
+});
+
+test("rejected refuses neither text nor PDF", () => {
+  const result = validateStatusReason({
+    status: "rejected",
+    reason: "   ",
+    hasAttachment: false,
+  });
+  assert.equal(result.ok, false);
+});
+
+test("rejected with too-long text is refused even with a PDF attached", () => {
+  const result = validateStatusReason({
+    status: "rejected",
+    reason: "a".repeat(MAX_MESSAGE_LENGTH + 1),
+    hasAttachment: true,
+  });
+  assert.equal(result.ok, false);
+});
+
+test("cancelled still requires text on its own, PDF or not", () => {
+  const withoutAttachment = validateStatusReason({
+    status: "cancelled",
+    reason: "",
+    hasAttachment: false,
+  });
+  assert.equal(withoutAttachment.ok, false);
+
+  // No screen offers a PDF for "cancelled" (see status-section.tsx), but the
+  // server is the one that actually enforces it, so it is checked here too.
+  const withAttachment = validateStatusReason({
+    status: "cancelled",
+    reason: "",
+    hasAttachment: true,
+  });
+  assert.equal(withAttachment.ok, false);
+});
+
+test("statuses that need no reason accept anything", () => {
+  const result = validateStatusReason({
+    status: "in-review",
+    reason: "",
+    hasAttachment: false,
+  });
+  assert.deepEqual(result, { ok: true, reason: null });
 });

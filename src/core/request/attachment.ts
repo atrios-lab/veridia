@@ -17,6 +17,13 @@ export const ALLOWED_MIME_TYPES = [
   "application/pdf",
 ] as const;
 
+/**
+ * The one type accepted for the document an operator may attach when
+ * indeferindo a request: unlike the citizen's uploads above, this one has no
+ * use for a photograph, since it stands in for a written justification.
+ */
+export const REJECTION_DOCUMENT_MIME_TYPE = "application/pdf";
+
 const EXTENSIONS: Record<string, string> = {
   "image/jpeg": "jpg",
   "image/png": "png",
