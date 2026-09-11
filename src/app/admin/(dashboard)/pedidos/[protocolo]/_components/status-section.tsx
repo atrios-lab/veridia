@@ -230,7 +230,7 @@ export function StatusSection({
               <div className="h-[5px] w-full overflow-hidden rounded-full bg-admin-border">
                 <div
                   className={`h-full rounded-full bg-admin-primary-soft ${
-                    i < happyIndex
+                    i < happyIndex || (i === happyIndex && step === "done")
                       ? "w-full"
                       : i === happyIndex
                         ? "w-1/2"
