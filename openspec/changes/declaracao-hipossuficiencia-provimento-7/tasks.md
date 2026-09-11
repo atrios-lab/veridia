@@ -117,9 +117,9 @@
 
 ## 7. Transparência e requerimento
 
-- [ ] 7.1 Em `src/core/transparency/documents.ts`, adicionar "Cartaz de gratuidade e isenção" a
+- [x] 7.1 Em `src/core/transparency/documents.ts`, adicionar "Cartaz de gratuidade e isenção" a
   `DOCUMENT_CATEGORIES`; ajustar `documents.test.ts`.
-- [ ] 7.2 Em `requerimento.ts`, a declaração impressa no requerimento passa a citar o novo texto
+- [x] 7.2 Em `requerimento.ts`, a declaração impressa no requerimento passa a citar o novo texto
   e a remeter à declaração de hipossuficiência anexa ("conforme declaração de hipossuficiência
   que acompanha este requerimento"), sem repetir os nove blocos; `requerimento.test.ts`
   atualizado.

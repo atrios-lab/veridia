@@ -31,6 +31,9 @@ export const DOCUMENT_CATEGORIES = [
   "Tabela de custas",
   "Relatório de gestão",
   "Aviso",
+  // Anexo II do Provimento CGJ/TJRN n. 7/2026: o cartaz de hipóteses de
+  // gratuidade e isenção que o art. 8º manda afixar ao lado da tabela.
+  "Cartaz de gratuidade e isenção",
   "Outro",
 ] as const;
 export type DocumentCategory = (typeof DOCUMENT_CATEGORIES)[number];
