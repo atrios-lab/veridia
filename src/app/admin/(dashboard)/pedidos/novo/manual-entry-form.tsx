@@ -1,7 +1,14 @@
 "use client";
 
 import { useActionState, useRef, useState } from "react";
-import { actsOfAttribution } from "@/core/acts/catalog.ts";
+import {
+  actsOfAttribution,
+  CERTIFICATE_TYPE_LABELS,
+  CERTIFICATE_TYPES,
+  FEE_EXEMPTION_ACKNOWLEDGEMENTS,
+  FEE_EXEMPTION_DECLARATION,
+} from "@/core/acts/catalog.ts";
+import { EXEMPTION_SIGNED_BY, type ExemptionSignedBy } from "@/core/request/kinds.ts";
 import type { Attribution, Tenant } from "@/core/tenant/schema.ts";
 import { AdminIcon } from "../../../_components/icon.tsx";
 import {
@@ -19,6 +26,142 @@ function FieldError({ message }: { message?: string }) {
     <p className="mt-1.5 text-xs font-semibold text-admin-error-text">
       {message}
     </p>
+  );
+}
+
+const SIGNED_BY_LABELS: Record<ExemptionSignedBy, string> = {
+  self: "A própria pessoa beneficiária",
+  "legal-representative": "Representante legal",
+  "on-behalf": "Assinatura a rogo (não sabe ou não pode assinar)",
+};
+
+/**
+ * One beneficiary's declaration, the balcão's own layout (plain named
+ * inputs, not `react-hook-form`): only the name is required — `actRules` in
+ * `form.ts` is what enforces that server-side, this only asks for it. The
+ * testemunhas the site never asks for do live here (Provimento CGJ/TJRN
+ * n. 7/2026, art. 7º III): the balcão is where a assinatura a rogo actually
+ * happens, in front of the operator.
+ */
+function ManualBeneficiaryFields({
+  index,
+  fieldErrors,
+  heading,
+}: {
+  index: number;
+  fieldErrors: Record<string, string>;
+  heading?: string;
+}) {
+  const [signedBy, setSignedBy] = useState<ExemptionSignedBy>("self");
+  const prefix = `beneficiaries.${index}`;
+
+  return (
+    <div className="flex flex-col gap-3">
+      {heading && (
+        <p className="text-[12.5px] font-bold text-admin-primary">
+          {heading}
+        </p>
+      )}
+      <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
+        <div>
+          <label className={LABEL_CLASS} htmlFor={`${prefix}.name`}>
+            Nome completo
+          </label>
+          <input
+            id={`${prefix}.name`}
+            name={`${prefix}.name`}
+            className={FIELD_CLASS}
+          />
+          <FieldError message={fieldErrors[`${prefix}.name`]} />
+        </div>
+        <div>
+          <label className={LABEL_CLASS} htmlFor={`${prefix}.cpfOrId`}>
+            CPF ou RG (opcional)
+          </label>
+          <input
+            id={`${prefix}.cpfOrId`}
+            name={`${prefix}.cpfOrId`}
+            className={FIELD_CLASS}
+          />
+        </div>
+      </div>
+
+      <fieldset className="flex flex-col gap-1.5">
+        <legend className="mb-0.5 text-xs font-bold text-admin-primary">
+          Quem formaliza esta declaração?
+        </legend>
+        {EXEMPTION_SIGNED_BY.map((value) => (
+          <label key={value} className="flex items-center gap-2">
+            <input
+              type="radio"
+              name={`${prefix}.signedBy`}
+              value={value}
+              checked={signedBy === value}
+              onChange={() => setSignedBy(value)}
+              className="h-4 w-4 accent-admin-primary-soft"
+            />
+            <span className="text-[12.5px] text-admin-text">
+              {SIGNED_BY_LABELS[value]}
+            </span>
+          </label>
+        ))}
+      </fieldset>
+
+      {signedBy !== "self" && (
+        <div className="rounded-[10px] border border-admin-input-border bg-admin-input-bg p-3">
+          <p className="mb-2 text-xs font-bold text-admin-primary">
+            Dados de quem assina em lugar da pessoa beneficiária
+          </p>
+          <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
+            <input
+              placeholder="Nome completo"
+              name={`${prefix}.signer.name`}
+              className={FIELD_CLASS}
+            />
+            <input
+              placeholder="CPF ou RG"
+              name={`${prefix}.signer.cpfOrId`}
+              className={FIELD_CLASS}
+            />
+            {signedBy === "legal-representative" && (
+              <input
+                placeholder="Qualidade (ex.: pai, tutor, curador)"
+                name={`${prefix}.signer.capacity`}
+                className={FIELD_CLASS}
+              />
+            )}
+          </div>
+          <FieldError message={fieldErrors[`${prefix}.signer.name`]} />
+
+          {signedBy === "on-behalf" && (
+            <div className="mt-3 grid grid-cols-1 gap-3 border-t border-admin-border pt-3 md:grid-cols-2">
+              {[0, 1].map((witness) => (
+                <div key={witness}>
+                  <label
+                    className={LABEL_CLASS}
+                    htmlFor={`${prefix}.witnesses.${witness}.name`}
+                  >
+                    Testemunha {witness + 1}
+                  </label>
+                  <input
+                    id={`${prefix}.witnesses.${witness}.name`}
+                    name={`${prefix}.witnesses.${witness}.name`}
+                    placeholder="Nome completo"
+                    className={FIELD_CLASS}
+                  />
+                  <input
+                    name={`${prefix}.witnesses.${witness}.cpfOrId`}
+                    placeholder="CPF ou RG"
+                    className={`${FIELD_CLASS} mt-2`}
+                  />
+                </div>
+              ))}
+              <FieldError message={fieldErrors[`${prefix}.witnesses`]} />
+            </div>
+          )}
+        </div>
+      )}
+    </div>
   );
 }
 
@@ -99,6 +242,11 @@ export function ManualEntryForm({
   const acts = actsOfAttribution(tenant, attribution);
   const [actId, setActId] = useState(acts[0]?.id ?? "");
   const act = acts.find((a) => a.id === actId) ?? acts[0];
+  const exemptionTargets = act?.exemptionTargets;
+  const [exemptionActId, setExemptionActId] = useState("");
+  const exemptionTarget = exemptionTargets?.find(
+    (target) => target.id === exemptionActId,
+  );
 
   const [state, formAction, pending] = useActionState<
     ManualEntryState,
@@ -260,6 +408,110 @@ export function ManualEntryForm({
           <FieldError message={fieldErrors.description} />
         </div>
 
+        {exemptionTargets && (
+          <div className="mt-4.5 flex flex-col gap-4 rounded-[10px] border border-admin-border bg-admin-input-bg p-4">
+            <fieldset className="flex flex-col gap-2">
+              <legend className="mb-0.5 text-xs font-bold text-admin-primary">
+                Para qual ato é a gratuidade?
+              </legend>
+              {exemptionTargets.map((option) => (
+                <label key={option.id} className="flex items-start gap-2">
+                  <input
+                    type="radio"
+                    name="exemptionActId"
+                    value={option.id}
+                    checked={exemptionActId === option.id}
+                    onChange={() => setExemptionActId(option.id)}
+                    className="mt-0.5 h-4 w-4 shrink-0 accent-admin-primary-soft"
+                  />
+                  <span className="text-[12.5px] text-admin-text">
+                    {option.name}
+                    <span className="block text-[11px] text-admin-faint">
+                      {option.feeExemption?.legalBasis}
+                    </span>
+                  </span>
+                </label>
+              ))}
+            </fieldset>
+            <FieldError message={fieldErrors.exemptionActId} />
+
+            {exemptionTarget?.feeExemption?.askCertificateType && (
+              <fieldset className="flex flex-col gap-2 border-t border-admin-border pt-3">
+                <legend className="mb-0.5 text-xs font-bold text-admin-primary">
+                  Que tipo de certidão?
+                </legend>
+                <div className="flex flex-wrap gap-3">
+                  {CERTIFICATE_TYPES.map((value) => (
+                    <label key={value} className="flex items-center gap-2">
+                      <input
+                        type="radio"
+                        name="certificateType"
+                        value={value}
+                        className="h-4 w-4 accent-admin-primary-soft"
+                      />
+                      <span className="text-[12.5px] text-admin-text">
+                        {CERTIFICATE_TYPE_LABELS[value]}
+                      </span>
+                    </label>
+                  ))}
+                </div>
+                <FieldError message={fieldErrors.certificateType} />
+              </fieldset>
+            )}
+
+            {exemptionTarget && (
+              <div className="border-t border-admin-border pt-3">
+                <ManualBeneficiaryFields
+                  index={0}
+                  fieldErrors={fieldErrors}
+                  heading={
+                    exemptionTarget.feeExemption?.beneficiaryCount === 2
+                      ? "Primeiro nubente"
+                      : undefined
+                  }
+                />
+              </div>
+            )}
+            {exemptionTarget?.feeExemption?.beneficiaryCount === 2 && (
+              <div className="border-t border-admin-border pt-3">
+                <ManualBeneficiaryFields
+                  index={1}
+                  fieldErrors={fieldErrors}
+                  heading="Segundo nubente"
+                />
+              </div>
+            )}
+
+            <div className="border-t border-admin-border pt-3">
+              <label className="flex items-start gap-2.5">
+                <input
+                  type="checkbox"
+                  name="exemptionDeclaration"
+                  className="mt-0.5 h-4.5 w-4.5 shrink-0 accent-admin-primary-soft"
+                />
+                <span className="text-[12px] leading-relaxed text-admin-text">
+                  {FEE_EXEMPTION_DECLARATION} Declaro, ainda, ciência de que:
+                </span>
+              </label>
+              <ul className="ml-7 mt-1.5 flex list-disc flex-col gap-1 text-[11px] leading-relaxed text-admin-faint">
+                {FEE_EXEMPTION_ACKNOWLEDGEMENTS.map((item) => (
+                  <li key={item}>{item}</li>
+                ))}
+              </ul>
+              <FieldError message={fieldErrors.exemptionDeclaration} />
+            </div>
+
+            <a
+              href="/solicitar/declaracao-hipossuficiencia"
+              target="_blank"
+              rel="noreferrer"
+              className="text-[11.5px] font-semibold text-admin-accent underline"
+            >
+              Formulário em branco do Anexo I (PDF), para entregar
+            </a>
+          </div>
+        )}
+
         <label className="mt-4.5 flex items-center gap-2.5 rounded-[10px] border border-admin-border bg-admin-input-bg px-3.5 py-3">
           <input
             type="checkbox"
@@ -301,18 +553,22 @@ export function ManualEntryForm({
 
 type SuccessState = Extract<ManualEntryState, { status: "success" }>;
 
-/** One of the two documents the counter prints, as data. */
+/** One of the documents the counter prints, as data. */
 interface Printable {
-  key: "requerimento" | "comprovante";
+  key: "requerimento" | "comprovante" | "declaracao";
   title: string;
   tag: string;
   /** Tags read as opposites on purpose: one stays, one leaves. */
   tagTone: "stays" | "leaves";
   icon: "file" | "lock";
   description: string;
+  /** Appended to `printHref` as a query string, for a document other than
+   * the requerimento itself: the same GET route answers both, picked by
+   * `documento` (see `pedidos/[protocolo]/imprimir/route.ts`). */
+  query?: string;
 }
 
-const PRINTABLES: Printable[] = [
+const BASE_PRINTABLES: Printable[] = [
   {
     key: "requerimento",
     title: "Requerimento",
@@ -334,6 +590,28 @@ const PRINTABLES: Printable[] = [
       "depois, apenas emitindo uma chave nova, o que invalida esta.",
   },
 ];
+
+/** `BASE_PRINTABLES`, plus a third document only when the pedido has
+ * gratuidade: not every andamento gera este arquivo, então oferecê-lo
+ * incondicionalmente prometeria uma impressão vazia. */
+function printablesFor(hasExemption: boolean): Printable[] {
+  if (!hasExemption) return BASE_PRINTABLES;
+  return [
+    ...BASE_PRINTABLES,
+    {
+      key: "declaracao",
+      title: "Declaração de hipossuficiência",
+      tag: "Fica na serventia",
+      tagTone: "stays",
+      icon: "file",
+      query: "documento=declaracao",
+      description:
+        "O Anexo I do Provimento CGJ/TJRN n. 7/2026, preenchido com o que " +
+        "foi coletado aqui. Vai junto com o requerimento para o requerente " +
+        "assinar.",
+    },
+  ];
+}
 
 /** Protocol or key, as a labelled block with its own copy button. */
 function CredentialBlock({
@@ -428,6 +706,7 @@ function SuccessScreen({ state }: { state: SuccessState }) {
   const [sheetBlocked, setSheetBlocked] = useState(false);
   const receiptFormRef = useRef<HTMLFormElement>(null);
   const printHref = `/admin/pedidos/${encodeURIComponent(state.protocolNumber)}/imprimir`;
+  const docs = printablesFor(state.hasExemption);
 
   const receiptPrinted = printed.includes("comprovante");
   const summary = [
@@ -487,7 +766,7 @@ function SuccessScreen({ state }: { state: SuccessState }) {
   function printBoth() {
     receiptFormRef.current?.requestSubmit();
     const opened = window.open(printHref, "_blank");
-    setPrinted(opened ? PRINTABLES.map((p) => p.key) : ["comprovante"]);
+    setPrinted(opened ? ["comprovante", "requerimento"] : ["comprovante"]);
     setSheetBlocked(!opened);
   }
 
@@ -565,7 +844,7 @@ function SuccessScreen({ state }: { state: SuccessState }) {
             </p>
           </div>
           <span className="rounded-full bg-admin-surface px-2.5 py-1 text-[11px] font-bold text-admin-muted">
-            {printed.length} de {PRINTABLES.length}
+            {printed.length} de {docs.length}
           </span>
           <button
             type="button"
@@ -577,7 +856,7 @@ function SuccessScreen({ state }: { state: SuccessState }) {
           </button>
         </div>
 
-        {PRINTABLES.map((doc) => (
+        {docs.map((doc) => (
           <PrintableRow
             key={doc.key}
             doc={doc}
@@ -667,6 +946,7 @@ function PrintableRow({
 }) {
   const label = printed ? "Imprimir de novo" : "Imprimir";
   const leaves = doc.tagTone === "leaves";
+  const href = doc.query ? `${printHref}?${doc.query}` : printHref;
 
   return (
     <div className="flex items-start gap-3.5 border-t border-admin-border px-5 py-4">
@@ -733,7 +1013,7 @@ function PrintableRow({
         </form>
       ) : (
         <a
-          href={printHref}
+          href={href}
           target="_blank"
           rel="noreferrer"
           onClick={onPrint}

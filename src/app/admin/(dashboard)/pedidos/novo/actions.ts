@@ -8,7 +8,12 @@ import {
 import { can } from "@/core/auth/roles.ts";
 import { generateAccessKey, hashAccessKey } from "@/core/request/access-key.ts";
 import { deadlineDate } from "@/core/request/deadline.ts";
-import { formatCpf, serviceRequestSchema } from "@/core/request/form.ts";
+import {
+  buildExemptionDetails,
+  formatCpf,
+  readExemptionForm,
+  serviceRequestSchema,
+} from "@/core/request/form.ts";
 import { formatCents, parseCentsInput } from "@/core/request/money.ts";
 import { formatDate } from "@/core/scheduling/calendar.ts";
 import { closeConversation } from "@/lib/chat.ts";
@@ -43,6 +48,9 @@ export type ManualEntryState =
       amountLabel?: string;
       /** The date the office expects to have analysed it by, "DD/MM/AAAA". */
       deadlineLabel: string;
+      /** Whether the SuccessScreen also offers printing the declaração de
+       * hipossuficiência (Provimento CGJ/TJRN n. 7/2026, Anexo I). */
+      hasExemption: boolean;
     };
 
 const GENERIC_ERROR =
@@ -86,11 +94,15 @@ export async function createManualServiceRequest(
     // way there is in the public wizard.
     lgpdConsent: "on",
     truthDeclaration: "on",
+    ...readExemptionForm(formData),
   });
   if (!parsed.success) {
     const fieldErrors: Record<string, string> = {};
     for (const issue of parsed.error.issues) {
-      const field = String(issue.path[0] ?? "form");
+      // Mesmo caminho pontuado que `manual-entry-form.tsx` usa para os campos
+      // da gratuidade (ver `errorFor` em `request-form.tsx`, reaproveitado
+      // aqui): "beneficiaries.0.signer.name", não só "beneficiaries".
+      const field = issue.path.length > 0 ? issue.path.join(".") : "form";
       fieldErrors[field] ??= issue.message;
     }
     return fail("Confira os campos destacados.", fieldErrors);
@@ -105,10 +117,30 @@ export async function createManualServiceRequest(
     String(formData.get("fromConversationId") ?? "").trim() || undefined;
 
   try {
+    const { exemptionActId, certificateType, beneficiaries, ...data } =
+      parsed.data;
+    const exemption = buildExemptionDetails(
+      { exemptionActId, certificateType, beneficiaries },
+      new Date().toISOString(),
+    );
+    // O ato da gratuidade não tem prazo próprio: o prazo é o do ato que ele
+    // pede, o mesmo cálculo que o site público faz (ver `solicitar/actions.ts`).
+    const requestedAct = act.exemptionTargets?.find(
+      (target) => target.id === exemptionActId,
+    );
+    const deadlineDays =
+      requestedAct?.legalDeadlineDays ??
+      act.legalDeadlineDays ??
+      tenant.requestDeadlineDays;
     const { id, protocolNumber } = await createServiceRequest(tenant, act, {
-      ...parsed.data,
+      ...data,
       accessKeyHash: hashAccessKey(accessKey),
-      details: { channel: fromConversationId ? "chat" : "counter" },
+      details: {
+        channel: fromConversationId ? "chat" : "counter",
+        ...(exemption
+          ? { exemption, deadline: { startedOn: today(), days: deadlineDays } }
+          : {}),
+      },
     });
     if (amountCents !== undefined) {
       await setRequestAmount(tenant.slug, id, amountCents, session.user.id);
@@ -153,12 +185,8 @@ export async function createManualServiceRequest(
         amountCents !== undefined ? formatCents(amountCents) : undefined,
       // Same as the online filing: the act's legal term counted from today,
       // since a request just filed carries no term of its own.
-      deadlineLabel: formatDate(
-        deadlineDate(
-          today(),
-          act.legalDeadlineDays ?? tenant.requestDeadlineDays,
-        ),
-      ),
+      deadlineLabel: formatDate(deadlineDate(today(), deadlineDays)),
+      hasExemption: Boolean(exemption),
     };
   } catch (error) {
     console.error("pedidos.manual-entry", error);

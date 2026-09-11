@@ -83,21 +83,21 @@
 
 ## 5. Balcão
 
-- [ ] 5.1 Em `src/app/admin/(dashboard)/pedidos/novo/manual-entry-form.tsx`, renderizar o bloco
+- [x] 5.1 Em `src/app/admin/(dashboard)/pedidos/novo/manual-entry-form.tsx`, renderizar o bloco
   da gratuidade quando `act.exemptionTargets` existe, reaproveitando os campos do site
   (ato-alvo, tipo de certidão, `BeneficiaryFields` por beneficiário, quem formaliza) mais os
   campos das duas testemunhas quando a rogo; `FieldError` para cada campo novo; link para o
   formulário em branco.
-- [ ] 5.2 Em `pedidos/novo/actions.ts`, ler com `readExemptionForm`, validar com
+- [x] 5.2 Em `pedidos/novo/actions.ts`, ler com `readExemptionForm`, validar com
   `serviceRequestSchema(act)` (canal `counter`) e gravar com `buildExemptionDetails`; mapear
   erros indexados para a tela.
-- [ ] 5.3 Na `SuccessScreen` do balcão, oferecer "Imprimir declaração" ao lado de "Imprimir
+- [x] 5.3 Na `SuccessScreen` do balcão, oferecer "Imprimir declaração" ao lado de "Imprimir
   requerimento" quando o pedido tem gratuidade.
-- [ ] 5.4 Em `pedidos/[protocolo]/imprimir/route.ts`, aceitar `?documento=declaracao` na GET com
+- [x] 5.4 Em `pedidos/[protocolo]/imprimir/route.ts`, aceitar `?documento=declaracao` na GET com
   a mesma sessão, 404 sem `exemption`, auditoria `service-request.print.declaracao`; e
   `?documento=declaracao-em-branco` para o formulário avulso. Rotular a ação no histórico em
   `pedidos/[protocolo]/page.tsx` ("imprimiu a declaração de hipossuficiência").
-- [ ] 5.5 No detalhe (`pedidos/[protocolo]/page.tsx`), oferecer os dois links de impressão da
+- [x] 5.5 No detalhe (`pedidos/[protocolo]/page.tsx`), oferecer os dois links de impressão da
   declaração ao lado do requerimento, só em pedido com gratuidade.
 
 ## 6. Desfecho da gratuidade no painel

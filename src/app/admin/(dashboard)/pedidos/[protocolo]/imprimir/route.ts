@@ -1,6 +1,7 @@
 import { getActForTenant } from "@/core/acts/catalog.ts";
 import { can } from "@/core/auth/roles.ts";
 import { verifyAccessKey } from "@/core/request/access-key.ts";
+import { buildDeclaracoes } from "@/core/request/declaracao.ts";
 import { readExemption, readPhone } from "@/core/request/kinds.ts";
 import {
   buildAccessReceipt,
@@ -8,7 +9,7 @@ import {
 } from "@/core/request/requerimento.ts";
 import { recordAudit } from "@/lib/audit.ts";
 import { brandFor } from "@/lib/document-brand.ts";
-import { renderDocument } from "@/lib/pdf.ts";
+import { renderDocument, renderDocuments } from "@/lib/pdf.ts";
 import { findByProtocol } from "@/lib/service-request.ts";
 import { getSession } from "@/lib/session.ts";
 import { getTenant } from "@/lib/tenant.ts";
@@ -52,6 +53,12 @@ function pdf(bytes: Buffer, name: string): Response {
  * The sheet the counter prints for the citizen to sign on the spot. GET and no
  * access key: the operator is already authenticated by session cookie, and the
  * requerimento has carried no credential since it was split from the receipt.
+ *
+ * `?documento=declaracao` prints the declaração de hipossuficiência filled
+ * with what the pedido has (Provimento CGJ/TJRN n. 7/2026, Anexo I), and
+ * `?documento=declaracao-em-branco` the same document with nothing filled
+ * in, for the office to hand over blank. Both 404 on a pedido without
+ * gratuidade: there is no declaração to print or hand out for one.
  */
 export async function GET(
   request: Request,
@@ -67,6 +74,30 @@ export async function GET(
   }
   const act = getActForTenant(tenant, stored.actId);
   if (!act) return new Response("Não encontrado", { status: 404 });
+
+  const documento = new URL(request.url).searchParams.get("documento");
+  if (documento === "declaracao" || documento === "declaracao-em-branco") {
+    const exemption = readExemption(stored.details);
+    if (!exemption) return new Response("Não encontrado", { status: 404 });
+
+    const bytes = await renderDocuments(
+      buildDeclaracoes(
+        tenant,
+        act,
+        documento === "declaracao-em-branco" ? undefined : exemption,
+        { protocolNumber: stored.protocolNumber, createdAt: stored.createdAt },
+      ),
+      brand,
+    );
+    await recordAudit({
+      tenantSlug: tenant.slug,
+      actorId,
+      action: "service-request.print.declaracao",
+      targetType: "service-request",
+      targetId: stored.id,
+    });
+    return pdf(bytes, `declaracao-${stored.protocolNumber}`);
+  }
 
   const bytes = await renderDocument(
     buildRequerimento(tenant, act, {

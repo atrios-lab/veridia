@@ -64,6 +64,8 @@ const HISTORY_LABELS: Record<string, string> = {
   "service-request.question.reply": "respondeu uma pergunta do cidadão",
   "service-request.print.requerimento": "imprimiu o requerimento",
   "service-request.print.comprovante": "imprimiu o comprovante de acesso",
+  "service-request.print.declaracao": "imprimiu a declaração de hipossuficiência",
+  "service-request.exemption-decision": "registrou o desfecho da gratuidade",
 };
 
 function formatDayMonthTime(date: Date): string {
@@ -222,14 +224,36 @@ export default async function ServiceRequestDetailPage({
             than no link.
           */}
           {request.actId && request.applicantName && request.contact && (
-            <a
-              href={`/admin/pedidos/${encodeURIComponent(request.protocolNumber)}/imprimir`}
-              target="_blank"
-              rel="noreferrer"
-              className="ml-auto text-[12.5px] font-semibold text-admin-primary-soft hover:underline"
-            >
-              Imprimir requerimento
-            </a>
+            <div className="ml-auto flex flex-wrap items-center gap-3.5">
+              <a
+                href={`/admin/pedidos/${encodeURIComponent(request.protocolNumber)}/imprimir`}
+                target="_blank"
+                rel="noreferrer"
+                className="text-[12.5px] font-semibold text-admin-primary-soft hover:underline"
+              >
+                Imprimir requerimento
+              </a>
+              {exemption && (
+                <>
+                  <a
+                    href={`/admin/pedidos/${encodeURIComponent(request.protocolNumber)}/imprimir?documento=declaracao`}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="text-[12.5px] font-semibold text-admin-primary-soft hover:underline"
+                  >
+                    Imprimir declaração
+                  </a>
+                  <a
+                    href={`/admin/pedidos/${encodeURIComponent(request.protocolNumber)}/imprimir?documento=declaracao-em-branco`}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="text-[12.5px] text-admin-muted hover:underline"
+                  >
+                    Declaração em branco
+                  </a>
+                </>
+              )}
+            </div>
           )}
         </div>
 
