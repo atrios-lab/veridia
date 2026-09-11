@@ -254,6 +254,11 @@ export function ManualEntryForm({
     FormData
   >(createManualServiceRequest, { status: "idle" });
   const fieldErrors = state.status === "error" ? state.fieldErrors : {};
+  // React resets an uncontrolled form once the action resolves, so a failed
+  // submit would otherwise wipe every field that was typed right along with
+  // the one that wasn't. The action echoes back what it received and those
+  // become the defaults.
+  const sent = state.status === "error" ? state.sent : undefined;
 
   if (state.status === "success") {
     return (
@@ -341,7 +346,7 @@ export function ManualEntryForm({
             <input
               id="applicantName"
               name="applicantName"
-              defaultValue={fromConversation?.name}
+              defaultValue={sent?.applicantName ?? fromConversation?.name}
               className={FIELD_CLASS}
             />
             <FieldError message={fieldErrors.applicantName} />
@@ -353,6 +358,7 @@ export function ManualEntryForm({
             <input
               id="cpf"
               name="cpf"
+              defaultValue={sent?.cpf}
               placeholder="000.000.000-00"
               className={FIELD_CLASS}
             />
@@ -365,7 +371,7 @@ export function ManualEntryForm({
             <input
               id="contact"
               name="contact"
-              defaultValue={fromConversation?.contact}
+              defaultValue={sent?.contact ?? fromConversation?.contact}
               placeholder="Para avisar sobre o andamento"
               className={FIELD_CLASS}
             />
@@ -379,6 +385,7 @@ export function ManualEntryForm({
               id="amount"
               name="amount"
               inputMode="decimal"
+              defaultValue={sent?.amount}
               placeholder="Pode informar depois"
               className={FIELD_CLASS}
             />
@@ -390,7 +397,12 @@ export function ManualEntryForm({
             <label className={LABEL_CLASS} htmlFor="purpose">
               Finalidade
             </label>
-            <input id="purpose" name="purpose" className={FIELD_CLASS} />
+            <input
+              id="purpose"
+              name="purpose"
+              defaultValue={sent?.purpose}
+              className={FIELD_CLASS}
+            />
             <FieldError message={fieldErrors.purpose} />
           </div>
         )}
@@ -403,6 +415,7 @@ export function ManualEntryForm({
             id="description"
             name="description"
             rows={3}
+            defaultValue={sent?.description}
             placeholder="Detalhes do pedido, documentos já entregues em mãos…"
             className={FIELD_CLASS}
           />

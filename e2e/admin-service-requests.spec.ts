@@ -361,6 +361,43 @@ test.describe("fila e detalhe de pedidos", () => {
     ).toBeVisible();
   });
 
+  test("a rejected launch keeps what was typed; fixing it and resending succeeds", async ({
+    page,
+  }) => {
+    // React resets an uncontrolled form once the action resolves. Without the
+    // action echoing back what it received, the operator would lose every
+    // field that was right just to fix the one that wasn't.
+    await signIn(page);
+    await page.goto(`${baseURL}/admin/pedidos/novo`);
+
+    await page.getByLabel("Nome do solicitante").fill("Marta Andrade Lopes");
+    await page.getByLabel("E-mail ou WhatsApp").fill("marta.lopes@email.com");
+    // Repeated digits pass no checksum and are never issued: a value the
+    // server always refuses, on purpose.
+    await page.getByLabel("CPF (opcional)").fill("111.111.111-11");
+    await page.getByRole("button", { name: "Registrar pedido" }).click();
+
+    await expect(page.getByText("Confira os campos destacados.")).toBeVisible();
+    // What was typed survives the failed submit, in every field.
+    await expect(page.getByLabel("Nome do solicitante")).toHaveValue(
+      "Marta Andrade Lopes",
+    );
+    await expect(page.getByLabel("E-mail ou WhatsApp")).toHaveValue(
+      "marta.lopes@email.com",
+    );
+    await expect(page.getByLabel("CPF (opcional)")).toHaveValue(
+      "111.111.111-11",
+    );
+
+    await page.getByLabel("CPF (opcional)").fill("529.982.247-25");
+    await page.getByRole("button", { name: "Registrar pedido" }).click();
+
+    await expect(
+      page.getByRole("heading", { name: "Pedido registrado" }),
+    ).toBeVisible();
+    await expect(page.getByText("Marta Andrade Lopes")).toBeVisible();
+  });
+
   test("printing writes to audit_log; a refused key does not", async ({
     page,
   }) => {
