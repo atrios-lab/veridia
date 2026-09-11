@@ -10,7 +10,11 @@ import { EXEMPTION_SIGNED_BY, type ExemptionBeneficiary } from "./kinds.ts";
 // itself is a type-only import above, erased before any of this runs, and
 // `request.test.ts` guards the two lists staying the same by parsing every
 // value `CERTIFICATE_TYPES` (catalog.ts) declares through this schema.
-const CERTIFICATE_TYPE_VALUES = ["sem-busca", "com-busca", "inteiro-teor"] as const;
+const CERTIFICATE_TYPE_VALUES = [
+  "sem-busca",
+  "com-busca",
+  "inteiro-teor",
+] as const;
 
 /** Digits only, the way a CPF is stored and compared. */
 export function normalizeCpf(value: string): string {
@@ -234,7 +238,10 @@ const exemptionFields = {
  * assinatura a rogo só existem onde alguém está de fato assinando na frente
  * do operador, então o site as recusa e o balcão as exige.
  */
-function actRules(act: Act, options: { channel: "online" | "counter" } = { channel: "online" }) {
+function actRules(
+  act: Act,
+  options: { channel: "online" | "counter" } = { channel: "online" },
+) {
   return (
     data: {
       lgpdConsent: boolean;
@@ -462,7 +469,9 @@ export function buildExemptionDetails(
     )
     .map((b) => {
       const witnesses =
-        b.witnesses?.length === 2 && b.witnesses[0]?.name && b.witnesses[1]?.name
+        b.witnesses?.length === 2 &&
+        b.witnesses[0]?.name &&
+        b.witnesses[1]?.name
           ? ([
               {
                 name: b.witnesses[0].name,

@@ -732,11 +732,7 @@ function SignCard({
             target="_blank"
             rel="noopener"
           >
-            <input
-              type="hidden"
-              name="protocolNumber"
-              value={protocolNumber}
-            />
+            <input type="hidden" name="protocolNumber" value={protocolNumber} />
             <input type="hidden" name="accessKey" value={accessKey} />
             <button
               type="submit"
@@ -764,11 +760,7 @@ function SignCard({
                 type="submit"
                 className="btn btn-secondary min-h-11 px-4 py-2.5 text-sm"
               >
-                <Icon
-                  name="download"
-                  className="h-3.5 w-3.5"
-                  strokeWidth={2}
-                />
+                <Icon name="download" className="h-3.5 w-3.5" strokeWidth={2} />
                 Declaração
               </button>
             </form>

@@ -75,7 +75,8 @@ const HISTORY_LABELS: Record<string, string> = {
   "service-request.question.reply": "respondeu uma pergunta do cidadão",
   "service-request.print.requerimento": "imprimiu o requerimento",
   "service-request.print.comprovante": "imprimiu o comprovante de acesso",
-  "service-request.print.declaracao": "imprimiu a declaração de hipossuficiência",
+  "service-request.print.declaracao":
+    "imprimiu a declaração de hipossuficiência",
   "service-request.exemption-decision": "registrou o desfecho da gratuidade",
 };
 
@@ -308,9 +309,11 @@ export default async function ServiceRequestDetailPage({
                   {exemption && (
                     <span className="inline-flex items-center gap-2 rounded-full bg-admin-warning-bg px-[11px] py-[5px] text-[12px] font-bold text-admin-warning-text">
                       {exemption.decision
-                        ? `Gratuidade ${EXEMPTION_DECISION_LABELS[
-                            exemption.decision.outcome
-                          ]} em ${formatDayMonthYear(
+                        ? `Gratuidade ${
+                            EXEMPTION_DECISION_LABELS[
+                              exemption.decision.outcome
+                            ]
+                          } em ${formatDayMonthYear(
                             new Date(exemption.decision.decidedAt),
                           )}`
                         : "Gratuidade solicitada (ISENTO)"}

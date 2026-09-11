@@ -1281,10 +1281,7 @@ function RequestDetail({ result }: { result: ServiceRequestDetail }) {
                 </div>
                 <ProtocolFields result={result} />
                 <input type="hidden" name="documento" value="declaracao" />
-                <button
-                  type="submit"
-                  className="btn btn-ghost btn-sm shrink-0"
-                >
+                <button type="submit" className="btn btn-ghost btn-sm shrink-0">
                   Ver
                 </button>
               </form>

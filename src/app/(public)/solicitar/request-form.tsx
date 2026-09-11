@@ -23,7 +23,10 @@ import {
   formatPhone,
   publicServiceRequestSchema,
 } from "@/core/request/form.ts";
-import { EXEMPTION_SIGNED_BY, type ExemptionSignedBy } from "@/core/request/kinds.ts";
+import {
+  EXEMPTION_SIGNED_BY,
+  type ExemptionSignedBy,
+} from "@/core/request/kinds.ts";
 import { HANDWRITTEN_SIGNATURE_CAVEAT } from "@/core/request/requerimento.ts";
 import type { Attribution } from "@/core/tenant/schema.ts";
 import { Icon } from "../_components/icon.tsx";
@@ -104,10 +107,10 @@ function BeneficiaryFields({
   heading,
 }: {
   index: number;
-  // biome-ignore lint/suspicious/noExplicitAny: the form's schema shape
-  // varies per act (exemption fields only exist on the gratuidade entry), so
-  // this component takes whatever `useForm` produced for it rather than
-  // re-declaring that union here.
+  /** The form's schema shape varies per act (exemption fields only exist on
+   * the gratuidade entry), so this component takes whatever `useForm`
+   * produced for it rather than re-declaring that union here. */
+  // biome-ignore lint/suspicious/noExplicitAny: see the comment above.
   register: UseFormRegister<any>;
   // biome-ignore lint/suspicious/noExplicitAny: see register above.
   watch: UseFormWatch<any>;
@@ -115,7 +118,8 @@ function BeneficiaryFields({
   heading?: string;
 }) {
   const prefix = `beneficiaries.${index}`;
-  const signedBy = (watch(`${prefix}.signedBy`) as ExemptionSignedBy | undefined) ?? "self";
+  const signedBy =
+    (watch(`${prefix}.signedBy`) as ExemptionSignedBy | undefined) ?? "self";
   return (
     <div className="flex flex-col gap-2.5">
       {heading && (
@@ -231,8 +235,8 @@ function BeneficiaryFields({
           {signedBy === "on-behalf" && (
             <p className="mt-2 text-[11.5px] leading-relaxed text-brand-accent-ink">
               As duas testemunhas da assinatura a rogo assinam no balcão da
-              serventia, junto com a pessoa que assina por aqui: não são
-              pedidas neste formulário.
+              serventia, junto com a pessoa que assina por aqui: não são pedidas
+              neste formulário.
             </p>
           )}
         </div>
@@ -338,8 +342,9 @@ export function RequestForm({
   // builds `fieldErrors` with the same dotted keys (see `actions.ts`).
   const serverErrors = state.status === "error" ? state.fieldErrors : {};
   const errorFor = (name: string): string | undefined => {
-    // biome-ignore lint/suspicious/noExplicitAny: walking a dynamic path into
-    // react-hook-form's own error tree, whose shape depends on the act.
+    // Walking a dynamic path into react-hook-form's own error tree, whose
+    // shape depends on the act.
+    // biome-ignore lint/suspicious/noExplicitAny: see the comment above.
     let node: any = clientErrors;
     for (const segment of name.split(".")) node = node?.[segment];
     return (node?.message as string | undefined) ?? serverErrors[name];
@@ -659,8 +664,8 @@ export function RequestForm({
             {exemptionTarget?.id === "rcpn-certidao" && (
               <p className="rounded-lg bg-brand-accent-soft px-3 py-2.5 text-[11.5px] leading-relaxed text-brand-accent-ink">
                 O registro de nascimento e o assento de óbito, com a primeira
-                certidão de cada um, já são gratuitos para qualquer pessoa,
-                sem esta declaração (Lei 6.015 art. 30, caput).
+                certidão de cada um, já são gratuitos para qualquer pessoa, sem
+                esta declaração (Lei 6.015 art. 30, caput).
               </p>
             )}
 

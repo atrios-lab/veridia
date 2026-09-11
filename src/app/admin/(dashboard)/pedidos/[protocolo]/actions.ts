@@ -366,9 +366,7 @@ export async function setExemptionDecisionAction(
 
   const requestId = String(formData.get("requestId") ?? "");
   const outcome = formData.get("outcome");
-  const parsed = exemptionDecisionSchema.safeParse(
-    outcome ? outcome : null,
-  );
+  const parsed = exemptionDecisionSchema.safeParse(outcome ? outcome : null);
   if (!parsed.success) {
     return { status: "error", message: "Escolha um desfecho válido." };
   }

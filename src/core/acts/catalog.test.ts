@@ -191,7 +191,9 @@ test("as cinco ciências do bloco 4 estão todas presentes", () => {
     FEE_EXEMPTION_ACKNOWLEDGEMENTS.some((a) => /praticado de imediato/.test(a)),
   );
   assert.ok(
-    FEE_EXEMPTION_ACKNOWLEDGEMENTS.some((a) => /cobrança dos emolumentos/.test(a)),
+    FEE_EXEMPTION_ACKNOWLEDGEMENTS.some((a) =>
+      /cobrança dos emolumentos/.test(a),
+    ),
   );
   assert.ok(
     FEE_EXEMPTION_ACKNOWLEDGEMENTS.some((a) =>

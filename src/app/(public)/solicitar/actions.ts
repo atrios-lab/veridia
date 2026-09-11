@@ -164,8 +164,14 @@ export async function submitServiceRequest(
     // The e-mail is what the `contact` column holds for a request filed here:
     // the telephone is the office's own way of reaching the citizen and rides
     // in `details`, next to the rest of what belongs to this kind alone.
-    const { email, phone, exemptionActId, certificateType, beneficiaries, ...data } =
-      parsed.data;
+    const {
+      email,
+      phone,
+      exemptionActId,
+      certificateType,
+      beneficiaries,
+      ...data
+    } = parsed.data;
 
     // O ato da gratuidade não tem prazo próprio: o prazo é o do ato que ele
     // pede, senão a certidão isenta nasceria com prazo diferente da paga. Fica

@@ -31,7 +31,8 @@ export async function GET(request: Request): Promise<Response> {
   return new Response(new Uint8Array(bytes), {
     headers: {
       "Content-Type": "application/pdf",
-      "Content-Disposition": 'inline; filename="declaracao-hipossuficiencia.pdf"',
+      "Content-Disposition":
+        'inline; filename="declaracao-hipossuficiencia.pdf"',
       "Cache-Control": "private, no-store",
     },
   });

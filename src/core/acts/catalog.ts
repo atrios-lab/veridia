@@ -163,7 +163,11 @@ export interface Act {
  * sem busca (the register already knows book/folha/termo), com busca (the
  * office has to find it) and inteiro teor (the full text, not the summary).
  */
-export const CERTIFICATE_TYPES = ["sem-busca", "com-busca", "inteiro-teor"] as const;
+export const CERTIFICATE_TYPES = [
+  "sem-busca",
+  "com-busca",
+  "inteiro-teor",
+] as const;
 export type CertificateType = (typeof CERTIFICATE_TYPES)[number];
 
 export const CERTIFICATE_TYPE_LABELS: Record<CertificateType, string> = {
@@ -272,7 +276,8 @@ export const ACTS: Act[] = [
       "Comparecimento pessoal do interessado com documento de identidade. " +
       "O pedido é imotivado: você não precisa justificar a alteração.",
     feeExemption: {
-      legalBasis: "Lei 6.015 art. 30 §1º; Provimento CGJ/TJRN n. 7/2026, Anexo I",
+      legalBasis:
+        "Lei 6.015 art. 30 §1º; Provimento CGJ/TJRN n. 7/2026, Anexo I",
       beneficiaryCount: 1,
     },
   },

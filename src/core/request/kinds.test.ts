@@ -204,7 +204,10 @@ test("a pedido de gratuidade anterior à declaração continua legível", () => 
   // Formato v1: só declaredAt e actId. beneficiaries volta [] para dizer
   // "nada foi coletado", nunca um beneficiário inventado no lugar.
   const exemption = readExemption({
-    exemption: { declaredAt: "2026-08-04T12:00:00.000Z", actId: "rcpn-certidao" },
+    exemption: {
+      declaredAt: "2026-08-04T12:00:00.000Z",
+      actId: "rcpn-certidao",
+    },
   });
   assert.equal(exemption?.declaredAt, "2026-08-04T12:00:00.000Z");
   assert.equal(exemption?.actId, "rcpn-certidao");

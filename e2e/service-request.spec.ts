@@ -67,7 +67,9 @@ test.describe("gratuidade (ISENTO)", () => {
     page,
   }) => {
     await page.goto(`${baseURL}/solicitar?atribuicao=RCPN&ato=gratuidade-rcpn`);
-    await page.getByLabel("Nome completo", { exact: true }).fill("Maria José da Silva");
+    await page
+      .getByLabel("Nome completo", { exact: true })
+      .fill("Maria José da Silva");
     await page.getByLabel(/E-mail/).fill("maria@exemplo.com");
 
     // Os três atos que a lei isenta mediante declaração, cada um com a sua
@@ -207,9 +209,7 @@ test.describe("gratuidade (ISENTO)", () => {
     await page.goto(`${baseURL}/solicitar?atribuicao=RCPN&ato=gratuidade-rcpn`);
     await page.getByRole("radio", { name: "Alteração de prenome" }).check();
 
-    await page
-      .getByRole("radio", { name: "Representante legal" })
-      .check();
+    await page.getByRole("radio", { name: "Representante legal" }).check();
     await expect(
       page.getByPlaceholder("Qualidade (ex.: pai, tutor, curador)"),
     ).toBeVisible();
@@ -231,9 +231,7 @@ test.describe("gratuidade (ISENTO)", () => {
       page.getByText("Segundo nubente", { exact: false }),
     ).toHaveCount(0);
 
-    await page
-      .getByRole("radio", { name: "Habilitação de casamento" })
-      .check();
+    await page.getByRole("radio", { name: "Habilitação de casamento" }).check();
     await expect(page.getByText("Primeiro nubente")).toBeVisible();
     await page.getByText("Segundo nubente").click();
     await expect(

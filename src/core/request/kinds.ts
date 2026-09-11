@@ -482,7 +482,9 @@ const exemptionSchema = z.object({
   // feitos antes de a gratuidade virar ato próprio não o têm: ausente
   // significa "não sabemos", nunca um ato no lugar do que falta.
   actId: z.string().optional(),
-  certificateType: z.enum(["sem-busca", "com-busca", "inteiro-teor"]).optional(),
+  certificateType: z
+    .enum(["sem-busca", "com-busca", "inteiro-teor"])
+    .optional(),
   beneficiaries: z.array(exemptionBeneficiarySchema).optional(),
   decision: exemptionDecisionSchema.optional(),
 });
@@ -539,7 +541,9 @@ export type ServiceRequestDetails = z.infer<typeof serviceRequestDetailsSchema>;
  * `[]` for the same reason, so every reader treats "nothing collected" the
  * same way, whether the pedido is old or just never asked for a name.
  */
-export function readExemption(details: unknown): ExemptionDeclaration | undefined {
+export function readExemption(
+  details: unknown,
+): ExemptionDeclaration | undefined {
   const parsed = exemptionSchema.safeParse(
     (details as { exemption?: unknown } | null)?.exemption,
   );

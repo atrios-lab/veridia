@@ -368,16 +368,9 @@ test.describe("fila e detalhe de pedidos", () => {
     await page.getByLabel("Nome do solicitante").fill("Maria José da Silva");
     await page.getByLabel("E-mail ou WhatsApp").fill("(84) 99900-1122");
 
-    await page
-      .getByRole("radio", { name: "Alteração de prenome" })
-      .check();
-    await page
-      .getByLabel("Nome completo")
-      .first()
-      .fill("Maria José da Silva");
-    await page
-      .getByLabel(/não disponho de recursos/)
-      .check();
+    await page.getByRole("radio", { name: "Alteração de prenome" }).check();
+    await page.getByLabel("Nome completo").first().fill("Maria José da Silva");
+    await page.getByLabel(/não disponho de recursos/).check();
     await page.getByRole("button", { name: "Registrar pedido" }).click();
 
     await expect(
@@ -398,16 +391,9 @@ test.describe("fila e detalhe de pedidos", () => {
       .selectOption({ label: "Solicitar gratuidade (isento)" });
     await page.getByLabel("Nome do solicitante").fill("Maria José da Silva");
     await page.getByLabel("E-mail ou WhatsApp").fill("(84) 99900-1133");
-    await page
-      .getByRole("radio", { name: "Alteração de prenome" })
-      .check();
-    await page
-      .getByLabel("Nome completo")
-      .first()
-      .fill("Maria José da Silva");
-    await page
-      .getByRole("radio", { name: /Assinatura a rogo/ })
-      .check();
+    await page.getByRole("radio", { name: "Alteração de prenome" }).check();
+    await page.getByLabel("Nome completo").first().fill("Maria José da Silva");
+    await page.getByRole("radio", { name: /Assinatura a rogo/ }).check();
     // .first(): o campo de quem assina vem antes, no DOM, dos dois campos de
     // testemunha logo abaixo, e os três dividem o mesmo placeholder.
     await page.getByPlaceholder("Nome completo").first().fill("João da Silva");
@@ -442,13 +428,8 @@ test.describe("fila e detalhe de pedidos", () => {
       .selectOption({ label: "Solicitar gratuidade (isento)" });
     await page.getByLabel("Nome do solicitante").fill("Maria José da Silva");
     await page.getByLabel("E-mail ou WhatsApp").fill("(84) 99900-1144");
-    await page
-      .getByRole("radio", { name: "Alteração de prenome" })
-      .check();
-    await page
-      .getByLabel("Nome completo")
-      .first()
-      .fill("Maria José da Silva");
+    await page.getByRole("radio", { name: "Alteração de prenome" }).check();
+    await page.getByLabel("Nome completo").first().fill("Maria José da Silva");
     await page.getByLabel(/não disponho de recursos/).check();
     await page.getByRole("button", { name: "Registrar pedido" }).click();
     await expect(

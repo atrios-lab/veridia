@@ -8,7 +8,10 @@ import {
   FEE_EXEMPTION_ACKNOWLEDGEMENTS,
   FEE_EXEMPTION_DECLARATION,
 } from "@/core/acts/catalog.ts";
-import { EXEMPTION_SIGNED_BY, type ExemptionSignedBy } from "@/core/request/kinds.ts";
+import {
+  EXEMPTION_SIGNED_BY,
+  type ExemptionSignedBy,
+} from "@/core/request/kinds.ts";
 import type { Attribution, Tenant } from "@/core/tenant/schema.ts";
 import { AdminIcon } from "../../../_components/icon.tsx";
 import {
@@ -58,9 +61,7 @@ function ManualBeneficiaryFields({
   return (
     <div className="flex flex-col gap-3">
       {heading && (
-        <p className="text-[12.5px] font-bold text-admin-primary">
-          {heading}
-        </p>
+        <p className="text-[12.5px] font-bold text-admin-primary">{heading}</p>
       )}
       <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
         <div>

@@ -1,10 +1,10 @@
+import type { Act } from "../acts/catalog.ts";
 import {
   CERTIFICATE_TYPE_LABELS,
   CERTIFICATE_TYPES,
   FEE_EXEMPTION_ACKNOWLEDGEMENTS,
   FEE_EXEMPTION_DECLARATION,
 } from "../acts/catalog.ts";
-import type { Act } from "../acts/catalog.ts";
 import type { Tenant } from "../tenant/schema.ts";
 import type { ExemptionBeneficiary, ExemptionDeclaration } from "./kinds.ts";
 import type {
@@ -93,17 +93,16 @@ export function buildDeclaracao(
   );
   const certificateMarks = requested?.feeExemption?.askCertificateType
     ? CERTIFICATE_TYPES.map((value) =>
-        mark(exemption?.certificateType === value, CERTIFICATE_TYPE_LABELS[value]),
+        mark(
+          exemption?.certificateType === value,
+          CERTIFICATE_TYPE_LABELS[value],
+        ),
       )
     : [];
   sections.push({
     heading: "3. Qual ato precisa ser gratuito?",
     paragraphs: [...actMarks, ...certificateMarks],
-    fields: [
-      { label: "Livro" },
-      { label: "Folha" },
-      { label: "Termo" },
-    ],
+    fields: [{ label: "Livro" }, { label: "Folha" }, { label: "Termo" }],
   });
 
   // Bloco 4: a declaração e as cinco ciências, na letra do Anexo I.
@@ -153,7 +152,10 @@ export function buildDeclaracao(
     sections.push({
       heading: "7. Assinatura a rogo",
       fields: [
-        { label: "Nome de quem assina a rogo", value: beneficiary.signer?.name },
+        {
+          label: "Nome de quem assina a rogo",
+          value: beneficiary.signer?.name,
+        },
         { label: "CPF ou RG", value: beneficiary.signer?.cpfOrId },
         { label: "Telefone ou e-mail", value: beneficiary.signer?.contact },
         { label: "Assinatura a rogo" },

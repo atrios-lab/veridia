@@ -170,7 +170,11 @@ function drawRow(
  * stack instead of sitting side by side, because a name or an address does
  * not fit `LABEL_WIDTH` and does not need to: this is a form, not a summary.
  */
-function drawField(pdf: Pdf, field: RequerimentoField, brand: DocumentBrand): void {
+function drawField(
+  pdf: Pdf,
+  field: RequerimentoField,
+  brand: DocumentBrand,
+): void {
   if (pdf.y > bottom(pdf) - 40) pdf.addPage();
   pdf
     .font("Helvetica")
@@ -191,7 +195,9 @@ function drawField(pdf: Pdf, field: RequerimentoField, brand: DocumentBrand): vo
     // hand, the way the printed Anexo I does.
     pdf.y += 13;
   }
-  pdf.rect(MARGIN, pdf.y + 3, contentWidth(pdf), 0.6).fill(brand.palette.border);
+  pdf
+    .rect(MARGIN, pdf.y + 3, contentWidth(pdf), 0.6)
+    .fill(brand.palette.border);
   pdf.y += 12;
 }
 

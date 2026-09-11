@@ -22,8 +22,8 @@ import {
   isOpenStatus,
   type ManifestationType,
   parseDetails,
-  readExemption,
   type RequestKind,
+  readExemption,
   type ServiceRequestStatus,
   statusLabel,
 } from "@/core/request/kinds.ts";

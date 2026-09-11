@@ -1,8 +1,8 @@
 "use client";
 
 import { useActionState, useRef } from "react";
-import { EXEMPTION_DECISION_OUTCOMES } from "@/core/request/kinds.ts";
 import type { ExemptionDecisionOutcome } from "@/core/request/kinds.ts";
+import { EXEMPTION_DECISION_OUTCOMES } from "@/core/request/kinds.ts";
 import { type ActionState, setExemptionDecisionAction } from "../actions.ts";
 
 const OUTCOME_LABELS: Record<ExemptionDecisionOutcome, string> = {
