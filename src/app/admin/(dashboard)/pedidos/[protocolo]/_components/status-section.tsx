@@ -127,20 +127,49 @@ function ReasonConfirmation({
   onCancel: () => void;
 }) {
   const label = statusLabel("service-request", target).toLowerCase();
+  const [fileName, setFileName] = useState<string | null>(null);
+  // Only Indeferido may stand the reason in with a PDF instead of the text
+  // (see design.md); Cancelado keeps the text as its only option.
+  const allowsDocument = target === "rejected";
   return (
     <div className="flex flex-col gap-2.5 rounded-[11px] border border-admin-error-border bg-admin-error-bg px-[18px] py-4">
       <span className={PANEL_TITLE}>Motivo</span>
       <span className={PANEL_HELP}>
-        O cidadão vê este motivo na consulta de protocolo.
+        {allowsDocument
+          ? "O cidadão vê o motivo, o documento, ou os dois, na consulta de protocolo."
+          : "O cidadão vê este motivo na consulta de protocolo."}
       </span>
       <textarea
         name="reason"
-        required
+        required={!allowsDocument}
         rows={3}
         aria-label={`Motivo para mudar o andamento para ${label}`}
         placeholder={`Explique por que o pedido está sendo ${label === "indeferido" ? "indeferido" : "cancelado"}.`}
         className="w-full rounded-[9px] border border-admin-input-border bg-admin-card px-3 py-2 text-[13px] text-admin-text"
       />
+      {allowsDocument && (
+        <div className="flex flex-col gap-1.5">
+          <span className={PANEL_HELP}>
+            Ou anexe um PDF com a justificativa, em vez do texto (ou junto
+            dele).
+          </span>
+          <label
+            className={`relative flex cursor-pointer items-center justify-center gap-2 rounded-[9px] border-[1.5px] border-dashed border-admin-input-border px-3 py-2 text-center text-[12px] font-semibold text-admin-primary ${pending ? "cursor-not-allowed opacity-60" : ""}`}
+          >
+            {fileName ?? "Anexar PDF do indeferimento"}
+            <input
+              type="file"
+              name="rejectionDocument"
+              accept="application/pdf"
+              className="sr-only"
+              disabled={pending}
+              onChange={(event) =>
+                setFileName(event.target.files?.[0]?.name ?? null)
+              }
+            />
+          </label>
+        </div>
+      )}
       <div className="flex items-center gap-2">
         <button
           type="submit"

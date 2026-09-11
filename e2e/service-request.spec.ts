@@ -1087,6 +1087,8 @@ test.describe("motivo de cancelamento ou indeferimento na consulta", () => {
   const REJECTED_KEY = "TEST-KEYS-0901";
   const CANCELLED_PROTOCOL = "REQ.2098.000902";
   const CANCELLED_KEY = "TEST-KEYS-0902";
+  const REJECTED_WITH_DOCUMENT_PROTOCOL = "REQ.2098.000903";
+  const REJECTED_WITH_DOCUMENT_KEY = "TEST-KEYS-0903";
 
   test.skip(
     !process.env.DATABASE_URL,
@@ -1106,7 +1108,20 @@ test.describe("motivo de cancelamento ou indeferimento na consulta", () => {
          ${hashAccessKey(REJECTED_KEY)}, 'rejected', 'Certidão anexada ilegível.'),
         (${TENANT}, 'service-request', 2098, 902, ${CANCELLED_PROTOCOL},
          'rcpn-certidao', 'RCPN', 'Rosa Almeida Fontes', 'rosa@exemplo.com',
-         ${hashAccessKey(CANCELLED_KEY)}, 'cancelled', NULL)
+         ${hashAccessKey(CANCELLED_KEY)}, 'cancelled', NULL),
+        (${TENANT}, 'service-request', 2098, 903, ${REJECTED_WITH_DOCUMENT_PROTOCOL},
+         'rcpn-certidao', 'RCPN', 'Rosa Almeida Fontes', 'rosa@exemplo.com',
+         ${hashAccessKey(REJECTED_WITH_DOCUMENT_KEY)}, 'rejected', NULL)
+      on conflict do nothing
+    `;
+    await sql`
+      insert into service_request_attachments
+        (tenant_slug, request_id, kind, stored_name, display_name, path, mime_type, size_bytes)
+      select ${TENANT}, id, 'rejection-document', 'cartorio-marinho/indeferimento.pdf',
+             'Documento do indeferimento', '/uploads/cartorio-marinho/indeferimento.pdf',
+             'application/pdf', 2048
+      from service_requests
+      where protocol_number = ${REJECTED_WITH_DOCUMENT_PROTOCOL}
       on conflict do nothing
     `;
     await sql.end();
@@ -1117,7 +1132,10 @@ test.describe("motivo de cancelamento ou indeferimento na consulta", () => {
     await sql`
       delete from service_requests
       where tenant_slug = ${TENANT}
-        and protocol_number in (${REJECTED_PROTOCOL}, ${CANCELLED_PROTOCOL})
+        and protocol_number in (
+          ${REJECTED_PROTOCOL}, ${CANCELLED_PROTOCOL},
+          ${REJECTED_WITH_DOCUMENT_PROTOCOL}
+        )
     `;
     await sql.end();
   });
@@ -1128,6 +1146,10 @@ test.describe("motivo de cancelamento ou indeferimento na consulta", () => {
     await page.getByRole("button", { name: "Ver detalhes" }).click();
 
     await expect(page.getByText("Certidão anexada ilegível.")).toBeVisible();
+    // Only text, no document: the download button has nothing to attach to.
+    await expect(
+      page.getByRole("button", { name: "Baixar documento do indeferimento" }),
+    ).toHaveCount(0);
   });
 
   test("cancelado sem motivo gravado (anterior a esta mudança) mostra que não foi informado", async ({
@@ -1138,5 +1160,24 @@ test.describe("motivo de cancelamento ou indeferimento na consulta", () => {
     await page.getByRole("button", { name: "Ver detalhes" }).click();
 
     await expect(page.getByText("Motivo não informado.")).toBeVisible();
+  });
+
+  test("indeferido com PDF e sem texto mostra o botão de download, sem 'não informado'", async ({
+    page,
+  }) => {
+    await page.goto(
+      `${baseURL}/protocolo?numero=${REJECTED_WITH_DOCUMENT_PROTOCOL}`,
+    );
+    await page
+      .getByPlaceholder("Ex.: BBM8-6XVB-8PUK")
+      .fill(REJECTED_WITH_DOCUMENT_KEY);
+    await page.getByRole("button", { name: "Ver detalhes" }).click();
+
+    await expect(
+      page.getByRole("button", { name: "Baixar documento do indeferimento" }),
+    ).toBeVisible();
+    // No text was written for this one: showing "não informado" next to a
+    // document that answers exactly that would read as a contradiction.
+    await expect(page.getByText("Motivo não informado.")).toHaveCount(0);
   });
 });
