@@ -555,14 +555,14 @@ test.describe("fila e detalhe de pedidos", () => {
       `${baseURL}/admin/pedidos/${encodeURIComponent(protocolNumber)}`,
     );
     await expect(
-      page.getByRole("link", { name: "Imprimir declaração" }),
+      page.getByRole("link", { name: "Baixar declaração" }),
     ).toBeVisible();
 
     // O pedido semeado no beforeEach não tem gratuidade: sem os links, e a
     // rota 404 mesmo autenticado.
     await page.goto(`${baseURL}/admin/pedidos/${encodeURIComponent(PROTOCOL)}`);
     await expect(
-      page.getByRole("link", { name: "Imprimir declaração" }),
+      page.getByRole("link", { name: "Baixar declaração" }),
     ).toHaveCount(0);
     const refused = await request.get(
       `${baseURL}/admin/pedidos/${encodeURIComponent(PROTOCOL)}/imprimir?documento=declaracao`,

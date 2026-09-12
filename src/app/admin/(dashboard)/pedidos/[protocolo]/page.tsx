@@ -260,7 +260,7 @@ export default async function ServiceRequestDetailPage({
                     rel="noreferrer"
                     className="text-[12.5px] font-semibold text-admin-primary-soft hover:underline"
                   >
-                    Imprimir declaração
+                    Baixar declaração
                   </a>
                   <a
                     href={`/admin/pedidos/${encodeURIComponent(request.protocolNumber)}/imprimir?documento=declaracao-em-branco`}
