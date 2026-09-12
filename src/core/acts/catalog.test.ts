@@ -19,6 +19,7 @@ import {
   getActForTenant,
   IDENTIFICATION_ONLY_HINT,
   IDENTIFICATION_ONLY_LABEL,
+  PLATFORM_COUNTER_STATEMENT,
   PLATFORM_RECEIPT_STATEMENT,
   PLATFORM_STATEMENT,
   PROCESSING_MODE_HINTS,
@@ -285,7 +286,11 @@ test("o tipo de certidão do Anexo I usa os rótulos oficiais", () => {
 });
 
 test("o texto da plataforma nunca diz que o Provimento 7 a autoriza", () => {
-  for (const text of [PLATFORM_STATEMENT, PLATFORM_RECEIPT_STATEMENT]) {
+  for (const text of [
+    PLATFORM_STATEMENT,
+    PLATFORM_RECEIPT_STATEMENT,
+    PLATFORM_COUNTER_STATEMENT,
+  ]) {
     assert.doesNotMatch(text, /7\/2026.*(autoriza|permite|admite)/i);
   }
   // O que autoriza o canal é o Provimento 180/2024 (art. 208, II, "b"); o

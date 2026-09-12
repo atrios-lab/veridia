@@ -312,6 +312,8 @@ test("buildStamp: canal, aceite e hash", () => {
   assert.equal(stamp.facts[3].value, "REQ.2026.000295");
   assert.equal(stamp.ip, "203.0.113.7");
   assert.match(stamp.hash ?? "", /^[0-9a-f]{64}$/);
+  assert.match(stamp.heading, /recebimento eletrônico/);
+  assert.match(stamp.paragraphs[0], /recebida eletronicamente/);
 });
 
 test("buildStamp: canal balcão e IP ausente saem em branco, sem inventar", () => {
@@ -336,4 +338,8 @@ test("buildStamp: canal balcão e IP ausente saem em branco, sem inventar", () =
   assert.equal(stamp.facts[0].value, "Balcão");
   assert.equal(stamp.facts[2].value, "A rogo: João da Silva");
   assert.equal(stamp.ip, undefined);
+  // Nada foi recebido eletronicamente: o texto é o do registro presencial.
+  assert.match(stamp.heading, /registro na plataforma/);
+  assert.doesNotMatch(stamp.paragraphs.join("\n"), /recebida eletronicamente/);
+  assert.match(stamp.paragraphs[0], /atendimento presencial/);
 });

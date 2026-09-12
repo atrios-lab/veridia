@@ -333,6 +333,15 @@ export const PLATFORM_RECEIPT_STATEMENT =
   "da Serventia, mediante aceite do texto integral do Anexo I do " +
   "Provimento CGJ/TJRN nº 7/2026 pela pessoa beneficiária.";
 
+/** The counter's version of the line above: nothing was received
+ * electronically from the citizen there. The operator recorded, on the
+ * platform, a declaração made in person, and the paper the person signs
+ * (blocos 5 a 9) is the aceite. */
+export const PLATFORM_COUNTER_STATEMENT =
+  "Declaração registrada pela serventia na Plataforma Eletrônica Oficial " +
+  "a partir do atendimento presencial, com o texto integral do Anexo I do " +
+  "Provimento CGJ/TJRN nº 7/2026 apresentado à pessoa beneficiária.";
+
 export const PLATFORM_STATEMENT =
   "Plataforma própria da serventia para solicitação e acompanhamento de " +
   'serviços eletrônicos, nos termos do art. 208, II, "b", do Código ' +

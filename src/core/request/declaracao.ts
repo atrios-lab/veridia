@@ -12,6 +12,7 @@ import {
   CERTIFICATE_TYPES,
   FEE_EXEMPTION_ACKNOWLEDGEMENTS,
   FEE_EXEMPTION_DECLARATION,
+  PLATFORM_COUNTER_STATEMENT,
   PLATFORM_FOOTER_LINE,
   PLATFORM_MOTTO,
   PLATFORM_RECEIPT_STATEMENT,
@@ -534,6 +535,9 @@ export interface BuildStampInput {
  */
 export function buildStamp(input: BuildStampInput): DeclaracaoStamp {
   const beneficiary = input.exemption.beneficiaries[input.beneficiaryIndex];
+  // Ausente é o site (ver `readChannel`); qualquer outro valor é a serventia
+  // lançando o pedido, e nada chegou eletronicamente do cidadão.
+  const online = input.channel === undefined;
   const hash = acceptanceHash({
     tenantSlug: input.tenantSlug,
     protocolNumber: input.protocolNumber,
@@ -543,7 +547,9 @@ export function buildStamp(input: BuildStampInput): DeclaracaoStamp {
     beneficiaries: input.exemption.beneficiaries,
   });
   return {
-    heading: "Certificação de recebimento eletrônico",
+    heading: online
+      ? "Certificação de recebimento eletrônico"
+      : "Certificação de registro na plataforma",
     badge: "Emitida pela plataforma · Não integra o Anexo I",
     facts: [
       { label: "Canal", value: channelLabel(input.channel) },
@@ -554,7 +560,10 @@ export function buildStamp(input: BuildStampInput): DeclaracaoStamp {
       { label: "Formalizada por", value: formalizedByLabel(beneficiary) },
       { label: "Protocolo", value: input.protocolNumber },
     ],
-    paragraphs: [PLATFORM_RECEIPT_STATEMENT, PLATFORM_STATEMENT],
+    paragraphs: [
+      online ? PLATFORM_RECEIPT_STATEMENT : PLATFORM_COUNTER_STATEMENT,
+      PLATFORM_STATEMENT,
+    ],
     hash,
     ip: input.exemption.acceptance?.ip,
     motto: PLATFORM_MOTTO,
