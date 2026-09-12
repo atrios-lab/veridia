@@ -396,16 +396,21 @@ export async function createServiceRequest(
  * Scoped to `kind = "service-request"`: the other three channels have their
  * own future screens and are never mixed into this one.
  */
-export async function listServiceRequests(
-  tenantSlug: string,
-  filters: { status?: string; attribution?: string; search?: string } = {},
-) {
+export interface QueueFilters {
+  /** The andamentos of one tab of the queue; every andamento when absent. */
+  statuses?: readonly string[];
+  attribution?: string;
+  search?: string;
+}
+
+function queueConditions(tenantSlug: string, filters: QueueFilters) {
   const conditions = [
     eq(serviceRequests.tenantSlug, tenantSlug),
     eq(serviceRequests.kind, "service-request"),
   ];
-  if (filters.status)
-    conditions.push(eq(serviceRequests.status, filters.status));
+  if (filters.statuses) {
+    conditions.push(inArray(serviceRequests.status, [...filters.statuses]));
+  }
   if (filters.attribution) {
     conditions.push(eq(serviceRequests.attribution, filters.attribution));
   }
@@ -417,11 +422,64 @@ export async function listServiceRequests(
     );
     if (match) conditions.push(match);
   }
-  return db
+  return and(...conditions);
+}
+
+export async function listServiceRequests(
+  tenantSlug: string,
+  filters: QueueFilters & { limit?: number; offset?: number } = {},
+) {
+  // Newest first is the order the Finalizados tab reads in and pages by, so
+  // `limit`/`offset` are only meaningful there. An open tab reorders by term
+  // in the page (the term is computed, not stored), so it takes the whole tab.
+  let query = db
     .select()
     .from(serviceRequests)
-    .where(and(...conditions))
-    .orderBy(desc(serviceRequests.createdAt));
+    .where(queueConditions(tenantSlug, filters))
+    .orderBy(desc(serviceRequests.createdAt))
+    .$dynamic();
+  if (filters.limit !== undefined) query = query.limit(filters.limit);
+  if (filters.offset !== undefined) query = query.offset(filters.offset);
+  return query;
+}
+
+/** How many rows `listServiceRequests` would return for the same filters,
+ * for the queue's "Exibindo X a Y de Z" and page count. */
+export async function countServiceRequests(
+  tenantSlug: string,
+  filters: QueueFilters = {},
+): Promise<number> {
+  const [row] = await db
+    .select({ count: sql<number>`count(*)::int` })
+    .from(serviceRequests)
+    .where(queueConditions(tenantSlug, filters));
+  return row?.count ?? 0;
+}
+
+/**
+ * Every andamento with how many requests sit in it: the counters on the
+ * queue's tabs. One GROUP BY rather than one count per tab, and deliberately
+ * blind to attribution and search: the counter says how big the tab is,
+ * which is what tells the operator where to go next; the footer says how
+ * many of those the filter kept.
+ */
+export async function countByStatus(
+  tenantSlug: string,
+): Promise<Record<string, number>> {
+  const rows = await db
+    .select({
+      status: serviceRequests.status,
+      count: sql<number>`count(*)::int`,
+    })
+    .from(serviceRequests)
+    .where(
+      and(
+        eq(serviceRequests.tenantSlug, tenantSlug),
+        eq(serviceRequests.kind, "service-request"),
+      ),
+    )
+    .groupBy(serviceRequests.status);
+  return Object.fromEntries(rows.map((row) => [row.status, row.count]));
 }
 
 /**

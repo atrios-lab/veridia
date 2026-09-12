@@ -57,22 +57,25 @@ export function GlobalSearchProvider({
   );
 }
 
-/** The Visão geral header's search field: a button, not a real input (the
- * overlay owns the actual typing, this only opens it). */
+/** The top bar's search field: a button, not a real input (the overlay owns
+ * the actual typing, this only opens it). Short label on purpose: the bar
+ * is on every screen and the overlay's own placeholder still spells out
+ * what can be searched. */
 export function SearchTriggerButton() {
   const { open } = useGlobalSearch();
   return (
     <button
       type="button"
       onClick={open}
-      className="flex w-full items-center gap-2.5 rounded-[10px] border border-admin-border bg-admin-input-bg px-3.5 py-2.5 text-left"
+      className="flex w-full cursor-pointer items-center gap-2.5 rounded-[10px] border border-admin-border bg-admin-input-bg px-3 py-[9px] text-left transition-colors duration-120 hover:border-admin-input-border"
     >
       <AdminIcon
         name="search"
         className="h-[15px] w-[15px] flex-none text-admin-faint"
+        strokeWidth={2}
       />
       <span className="flex-1 truncate text-[13px] text-admin-faint">
-        Buscar protocolo, CPF ou nome do interessado…
+        Buscar no painel
       </span>
       <span className="flex-none rounded-[5px] border border-admin-input-border bg-admin-card px-1.5 py-0.5 text-[10.5px] font-bold text-admin-muted">
         Ctrl K

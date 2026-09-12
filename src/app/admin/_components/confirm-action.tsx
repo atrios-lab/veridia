@@ -33,8 +33,8 @@ export function ConfirmAction({
   pending: boolean;
   /** The action's error message, or null. Keeps the dialog open when set. */
   error?: string | null;
-  /** The closed button, on the page. */
-  trigger: string;
+  /** The closed button, on the page: a label, or a label with an icon. */
+  trigger: ReactNode;
   /** The dialog's heading, as a question: "Excluir este protocolo?" */
   question: string;
   /** What happens after, in the operator's words. */

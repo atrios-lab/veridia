@@ -103,6 +103,7 @@ test.describe("autenticação de verdade", () => {
     await signIn(page, `${baseURL}/admin/login`);
     await expect(page).toHaveURL(`${baseURL}/admin`);
 
+    await page.getByRole("button", { name: /^Menu de / }).click();
     await page.getByRole("button", { name: "Sair" }).click();
     await expect(page).toHaveURL(/\/admin\/login\?saiu=1$/);
     await expect(page.locator('[data-admin-banner="saiu"]')).toContainText(
@@ -171,6 +172,7 @@ test.describe("autenticação de verdade", () => {
     await page.getByRole("button", { name: "Entrar" }).click();
     await expect(page).toHaveURL(`${baseURL}/admin`);
 
+    await page.getByRole("button", { name: /^Menu de / }).click();
     await page.getByRole("button", { name: "Sair" }).click();
   });
 });
@@ -198,6 +200,7 @@ test.describe("superadmin da Átrios", () => {
   }) => {
     await signIn(page, `${baseURL}/admin/login`);
     await expect(page).toHaveURL(`${baseURL}/admin`);
+    await page.getByRole("button", { name: /^Menu de / }).click();
     await page.getByRole("button", { name: "Sair" }).click();
 
     await signIn(page, `${auroraURL}/admin/login`);
@@ -208,6 +211,7 @@ test.describe("superadmin da Átrios", () => {
     // what let that ship.
     await expect(page.getByText("Tabelionato Aurora").first()).toBeVisible();
     await expect(page.getByText("Cartório Marinho")).toHaveCount(0);
+    await page.getByRole("button", { name: /^Menu de / }).click();
     await page.getByRole("button", { name: "Sair" }).click();
   });
 
@@ -227,6 +231,7 @@ test.describe("superadmin da Átrios", () => {
     await sql.end();
     expect(rows[0]?.tenant_slug).toBe("tabelionato-aurora");
 
+    await page.getByRole("button", { name: /^Menu de / }).click();
     await page.getByRole("button", { name: "Sair" }).click();
   });
 });

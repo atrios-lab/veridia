@@ -23,6 +23,21 @@ export const ATTRIBUTION_SHORT_NAMES: Record<Attribution, string> = {
 };
 
 /**
+ * The attribution as a sigla, for a table cell or a filter chip where even
+ * the short name is too long. The official acronyms stay as they are; the
+ * two that read as words (Notas, Protesto) take title case, the way the
+ * office writes them.
+ */
+export const ATTRIBUTION_ACRONYMS: Record<Attribution, string> = {
+  RCPN: "RCPN",
+  NOTAS: "Notas",
+  RI: "RI",
+  PROTESTO: "Protesto",
+  RTD: "RTD",
+  RCPJ: "RCPJ",
+};
+
+/**
  * What each attribution solves, in the words a citizen would use. Someone who
  * does not know what RCPN stands for cannot pick it from the acronym, and the
  * acronym is all the previous site offered.

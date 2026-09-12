@@ -1,19 +1,15 @@
 import Image from "next/image";
-import { can, type Role } from "@/core/auth/roles.ts";
+import { can } from "@/core/auth/roles.ts";
 
 import type { Tenant } from "@/core/tenant/schema.ts";
-import { signOut } from "../actions.ts";
 import { ADMIN_NAV } from "./nav.ts";
-import { ROLE_LABELS } from "./role-labels.ts";
 import { AdminSidebarNav } from "./sidebar-nav.tsx";
-import { SignOutButton } from "./sign-out-button.tsx";
 
 /**
  * Two letters for the avatar. Accounts born from an invite may have no name
  * yet, so the e-mail answers for them rather than leaving an empty circle.
- * Exported: the locked shell at /admin/redefinir-senha (see
- * locked-sidebar.tsx) shows the same avatar for a person who has no session
- * yet, only the account the invite or reset link names.
+ * Exported: the top bar's user menu (see top-bar.tsx) and the locked shell
+ * at /admin/redefinir-senha (see locked-sidebar.tsx) show the same avatar.
  */
 export function initials(
   name: string | null | undefined,
@@ -25,14 +21,20 @@ export function initials(
   return email.slice(0, 2).toUpperCase();
 }
 
+/**
+ * The navigation column. The person signed in used to have a footer here
+ * (avatar, name, role, "Sair"); that moved to the top bar's user menu, so the
+ * column is the office's seal and the navigation, nothing else.
+ */
 export function AdminSidebar({
   tenant,
-  user,
+  role,
   counts = {},
   className = "",
 }: {
   tenant: Tenant;
-  user: { name?: string | null; email: string; role: string };
+  /** The session's role: decides which items are offered. */
+  role: string;
   /** Badge count per item href, e.g. open requests for "/admin/pedidos". */
   counts?: Record<string, number>;
   /**
@@ -44,7 +46,7 @@ export function AdminSidebar({
   // Hiding a link is a courtesy, not a gate: each route re-checks on the
   // server, so a person who types the URL still gets refused there.
   const items = ADMIN_NAV.filter(
-    (item) => !item.permission || can(user.role, item.permission),
+    (item) => !item.permission || can(role, item.permission),
   );
 
   return (
@@ -70,33 +72,6 @@ export function AdminSidebar({
       </div>
 
       <AdminSidebarNav items={items} counts={counts} />
-
-      {/*
-        The design also shows a "Trocar senha" shortcut here. It is not
-        rendered yet: /admin/redefinir-senha is the invite screen and it
-        redirects a signed in person straight back to /admin, so the shortcut
-        would be a link that bounces. It joins this footer with the screen it
-        belongs to, by the same rule that keeps the nav short above.
-      */}
-      <div className="flex items-center gap-2.5 border-t border-white/12 p-3.5">
-        <span className="flex h-8 w-8 flex-none items-center justify-center rounded-full bg-admin-on-dark-accent text-xs font-bold text-admin-primary">
-          {initials(user.name, user.email)}
-        </span>
-        <div className="min-w-0 flex-1">
-          <p className="truncate text-[12.5px] font-semibold text-white">
-            {user.name?.trim() || user.email}
-          </p>
-          {/* A div, not a p: the sign out form lives here, and HTML does not
-              allow a form inside a paragraph: React hydrates it wrong. */}
-          <div className="flex items-center gap-1.5 text-[11px] text-admin-on-dark-subtitle">
-            <span>{ROLE_LABELS[user.role as Role] ?? "Painel"}</span>
-            <span aria-hidden="true">·</span>
-            <form action={signOut}>
-              <SignOutButton />
-            </form>
-          </div>
-        </div>
-      </div>
     </aside>
   );
 }

@@ -1,7 +1,11 @@
 ## 1. Migração de dado
 
 - [x] 1.1 Escrever migration Drizzle com `UPDATE service_requests SET status = ... WHERE status IN (...)` remapeando os nove valores antigos para os novos, conforme a tabela do design.md (`filed`→`new`, `in-review`/`pre-noted`/`in-qualification`/`registered`/`annotated`/`granted`→`processing`, `with-requirement`→`awaiting-compliance`, `inactive`→`archived`). Feito em `drizzle/0021_calm_gatekeeper.sql`, com `WHERE kind = 'service-request'` em cada UPDATE — sem esse filtro, `in-review` também bateria em registros de `ombudsman`, que usa a mesma string com outro sentido.
-- [ ] 1.2 Confirmar em ambiente de homologação (ou com uma query de contagem por status em produção) que nenhum protocolo permanece nos nove valores antigos depois da migration. **Não executável a partir daqui** — precisa rodar contra um banco real depois do deploy; deixo pendente para quem aplicar o deploy confirmar.
+- [x] 1.2 Confirmado no banco de dev em 2026-09-11: `pnpm db:migrate` aplicou a 0021 (o único
+      protocolo que restava em `in-qualification`, do tenant `cartorio-marinho`, virou
+      `processing`) e a contagem por status não mostra mais nenhum dos nove valores antigos. Em
+      produção a mesma migration roda no pipeline de deploy, antes do build; conferir lá com a
+      mesma query depois do deploy.
 
 ## 2. Núcleo (`src/core/request/kinds.ts`)
 

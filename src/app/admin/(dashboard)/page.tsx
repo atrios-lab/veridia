@@ -228,7 +228,6 @@ export default async function AdminHome() {
         greeting={`${greeting()}, ${firstName(session.user.name, session.user.email)}`}
         deskCount={deskCount}
         criticalCount={criticalCount}
-        today={todayIso}
       />
       <QueuePoller version={queueVersion} />
       <main className="flex flex-col gap-4.5 px-[30px] py-7">

@@ -43,21 +43,10 @@ export const STATUS_TONES: Record<ServiceRequestStatus, Tone> = {
   archived: "closed",
 };
 
-/**
- * The band heading is the badge inverted: solid where the badge is tinted,
- * so it still catches the eye at scrolling speed, when a pale strip between
- * white rows reads as nothing at all.
- */
-const BAND_STYLES: Record<Tone, string> = {
-  blocked: "bg-admin-error-text text-white",
-  waiting: "bg-admin-warning-text text-white",
-  working: "bg-admin-success-text text-white",
-  delivered: "bg-admin-primary text-white",
-  closed: "bg-admin-faint text-white",
-};
-
-export function bandClass(tone: Tone): string {
-  return BAND_STYLES[tone];
+/** The tinted pill of a tone: the andamento badge, and the counter of the
+ * queue's active tab, which wears the tone of the andamento it holds. */
+export function toneClass(tone: Tone): string {
+  return TONE_STYLES[tone];
 }
 
 export function statusBadgeClass(status: ServiceRequestStatus): string {
