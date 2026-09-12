@@ -192,7 +192,7 @@ export function QueueRows({
                 ) : row.status === "ready-for-pickup" ? (
                   // Nothing left for the office to do against a term: only
                   // the citizen's visit is pending.
-                  <span className="text-[12.5px] text-admin-faint">—</span>
+                  <span className="text-[12.5px] text-admin-faint">-</span>
                 ) : (
                   <DeadlineBadge
                     open={row.open}
