@@ -127,11 +127,10 @@ test.describe("fila e detalhe de pedidos", () => {
     await expect(novo).toHaveText(before ?? "");
 
     // "Limpar" drops filter and search and keeps the tab; the request is
-    // back among the two hundred of Novo, on whatever page its term puts it.
-    // Three navigations in a row on a page that runs two queries each: the
-    // last one is the one that has been seen to outrun even the suite's own
-    // 15s default (see playwright.config.ts), so it gets a longer wait of
-    // its own here.
+    // back among however many "Novo" holds, on whatever page its term puts
+    // it. In CI's own freshly seeded database this test's row can be the
+    // only one in the tab, so the footer reads "1 pedido" (singular) rather
+    // than the plural this regex used to require.
     await page.getByRole("link", { name: "Limpar" }).click();
     await expect(page).toHaveURL(`${baseURL}/admin/pedidos`, {
       timeout: 15_000,
@@ -140,8 +139,8 @@ test.describe("fila e detalhe de pedidos", () => {
       page.getByRole("searchbox", { name: "Buscar protocolo ou nome" }),
     ).toHaveValue("");
     await expect(
-      page.getByText(/^Exibindo 1 a \d+ de \d+ pedidos$/),
-    ).toBeVisible({ timeout: 30_000 });
+      page.getByText(/^Exibindo 1 a \d+ de \d+ pedidos?$/),
+    ).toBeVisible();
   });
 
   test("the telephone filed with the request reaches the operator", async ({
