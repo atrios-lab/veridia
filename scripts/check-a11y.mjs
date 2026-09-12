@@ -35,6 +35,7 @@ const routes = [
   "/privacidade",
   "/plataforma",
   "/admin/login",
+  "/admin/esqueci-senha",
 ];
 
 // axe exige um contexto explícito, browser.newPage() direto não serve.

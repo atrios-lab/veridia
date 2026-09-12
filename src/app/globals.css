@@ -101,7 +101,6 @@
   --palette-admin-text: #1c211e;
   --palette-admin-faint: #616c62;
   --palette-admin-on-dark-subtitle: #c8d4ca;
-  --palette-admin-on-dark-muted: #8fa896;
   --palette-admin-error-bg: #f3e2dd;
   --palette-admin-error-text: #8f3b2e;
   --palette-admin-error-border: #c8705e;
@@ -139,7 +138,10 @@
   --color-admin-muted: var(--brand-muted);
   --color-admin-faint: var(--palette-admin-faint);
   --color-admin-on-dark-subtitle: var(--palette-admin-on-dark-subtitle);
-  --color-admin-on-dark-muted: var(--palette-admin-on-dark-muted);
+  /* Derived from the brand like primary and accent above: the panel's dark
+     side is the tenant's primary now, and a fixed green muted (the old
+     #8fa896) fell to 3.5:1 on oliva-terracota. */
+  --color-admin-on-dark-muted: var(--brand-on-dark-muted);
   --color-admin-error-bg: var(--palette-admin-error-bg);
   --color-admin-error-text: var(--palette-admin-error-text);
   --color-admin-error-border: var(--palette-admin-error-border);
@@ -286,11 +288,23 @@
  * Derived from the theme rather than listed per theme: mixing keeps the five
  * blocks above short and guarantees the derived tone always belongs to the
  * palette it came from.
+ *
+ * Declared on `[data-theme]` as well as on `:root`, and that is not
+ * redundancy: a `var()` resolves on the element that declares the property,
+ * and the theme lives on a `div`, not on `<html>`. Declared on `:root` alone,
+ * these three were mixed with the pilot's primary for every tenant, and the
+ * "derived from the theme" above was a promise the CSS did not keep.
+ *
+ * The muted tone is 70% white, not less: at 62% the oliva-terracota primary
+ * (the lightest of the five) landed on the 4.5:1 line for 12px text and the
+ * a11y sweep refused it. At 70% the worst theme sits at 5.3:1 and the muted
+ * tone still reads as muted next to the 86% body.
  */
-:root {
+:root,
+[data-theme] {
   --brand-accent-line: color-mix(in srgb, var(--brand-accent) 55%, white);
   --brand-on-dark-body: color-mix(in srgb, white 86%, var(--brand-primary));
-  --brand-on-dark-muted: color-mix(in srgb, white 62%, var(--brand-primary));
+  --brand-on-dark-muted: color-mix(in srgb, white 70%, var(--brand-primary));
 }
 
 @layer components {
