@@ -573,6 +573,66 @@ test.describe("filing a request", () => {
     ).toBeVisible();
   });
 
+  test("a gratuidade pede o requerimento e a declaração assinados, cada um por si", async ({
+    page,
+  }) => {
+    const fakePdf = {
+      name: "assinado.pdf",
+      mimeType: "application/pdf",
+      buffer: Buffer.from("%PDF-1.4\n%fake\n"),
+    };
+    await page.goto(`${baseURL}/solicitar?atribuicao=RCPN&ato=gratuidade-rcpn`);
+    await page
+      .getByLabel("Nome completo", { exact: true })
+      .fill("Maria José da Silva");
+    await page.getByLabel(/E-mail/).fill(`maria.${randomUUID()}@exemplo.com`);
+    await page.getByRole("radio", { name: "Alteração de prenome" }).check();
+    await page
+      .getByLabel("Nome completo da pessoa beneficiária")
+      .fill("Maria José da Silva");
+    await page.getByLabel(/Autorizo o tratamento dos meus dados/).check();
+    await page.getByLabel(/não disponho de recursos/).check();
+    await page.getByLabel(/Declaro, sob as penas da lei, que as/).check();
+    await page.getByRole("button", { name: "Enviar requerimento" }).click();
+    await expect(
+      page.getByRole("heading", { name: "Pedido registrado" }),
+    ).toBeVisible();
+
+    // Dois campos, um por documento; cada envio responde por si.
+    await expect(
+      page.getByText("Envie o requerimento e a declaração assinados"),
+    ).toBeVisible();
+    await page.locator("input[name=declaracao]").setInputFiles([fakePdf]);
+    await expect(
+      page.getByText("Declaração enviada", { exact: false }),
+    ).toBeVisible();
+    await expect(page.getByText("Anexar requerimento assinado")).toBeVisible();
+    await page.locator("input[name=requerimento]").setInputFiles([fakePdf]);
+    await expect(
+      page.getByText("Requerimento enviado", { exact: false }),
+    ).toBeVisible();
+
+    // A consulta lista as duas vias recebidas.
+    const protocolNumber =
+      (await page
+        .getByText(/REQ\.\d{4}\.\d{6}/)
+        .first()
+        .textContent()) ?? "";
+    const accessKey =
+      (await page
+        .getByText(/[A-Z2-9]{4}-[A-Z2-9]{4}-[A-Z2-9]{4}/)
+        .first()
+        .textContent()) ?? "";
+    await page.goto(`${baseURL}/protocolo?numero=${protocolNumber}`);
+    await page.getByPlaceholder("Ex.: BBM8-6XVB-8PUK").fill(accessKey);
+    await page.getByRole("button", { name: "Ver detalhes" }).click();
+    await expect(
+      page.getByText("Requerimento assinado recebido"),
+    ).toBeVisible();
+    await expect(page.getByText("Declaração assinada recebida")).toBeVisible();
+    await expect(page.getByText("Falta só", { exact: false })).toHaveCount(0);
+  });
+
   test("a HEIC the browser cannot name still goes through", async ({
     page,
   }) => {

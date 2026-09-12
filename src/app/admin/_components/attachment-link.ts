@@ -26,6 +26,7 @@ export function documentHref(requestId: string, attachmentId: string): string {
 const LABELS: Record<string, string> = {
   "documento-final": "Documento final",
   "requerimento-assinado": "Requerimento assinado",
+  "declaracao-assinada": "Declaração assinada",
   office: "Relatório de dados",
   "formulario-exigencia": "Formulário da exigência",
 };

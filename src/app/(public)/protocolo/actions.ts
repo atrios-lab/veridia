@@ -2,6 +2,7 @@
 
 import { headers } from "next/headers";
 import { ATTRIBUTION_NAMES, getActForTenant } from "@/core/acts/catalog.ts";
+import { SIGNED_FORM_NAMES, signedFormFor } from "@/core/request/attachment.ts";
 import {
   dataRightsDayOfDeadline,
   dataRightsDeadline,
@@ -120,16 +121,23 @@ export interface ServiceRequestDetail extends BaseDetail {
   rejectionDocumentAttachmentId?: string;
   actName: string;
   attributionName: string;
+  /** The signed requerimento arrived (the most recent one, on a resend). */
   hasSignedForm: boolean;
   /** Whether the pedido asked for the gratuidade: only then does the
    * download screen offer the declaração de hipossuficiência alongside the
-   * requerimento (Provimento CGJ/TJRN n. 7/2026, Anexo I). */
+   * requerimento (Provimento CGJ/TJRN n. 7/2026, Anexo I), and only then is
+   * a signed declaração awaited. */
   hasExemption: boolean;
   signedFormReceivedAt?: string;
   /** The signed form's own attachment id, for the citizen to re-download it
    * from "Seus arquivos": distinct from `hasSignedForm`, which only says
    * whether it arrived. */
   signedFormAttachmentId?: string;
+  /** The declaração's signed copy, same shape; meaningful only with
+   * `hasExemption`. */
+  hasSignedDeclaration: boolean;
+  signedDeclarationReceivedAt?: string;
+  signedDeclarationAttachmentId?: string;
   /** What the office is waiting on, cumprida through this same screen. */
   requirements: RequirementView[];
   /** Files the office attached through DeliverySection, downloadable here. */
@@ -303,7 +311,9 @@ export async function lookupProtocolDetail(
     if (!act) return { status: "error", message: NOT_FOUND };
 
     const attachments = await listAttachments(tenant.slug, record.id);
-    const signedForm = attachments.find((a) => a.kind === "signed-form");
+    // The most recent of each: a resend has to be what both sides see.
+    const signedForm = signedFormFor(attachments, "requerimento");
+    const signedDeclaration = signedFormFor(attachments, "declaracao");
     // The most recent one: a corrected resend (wrong file the first time)
     // must be what the office and the citizen both see, not the first try.
     const paymentReceipt = attachments
@@ -349,6 +359,9 @@ export async function lookupProtocolDetail(
       hasExemption: Boolean(readExemption(record.details)),
       signedFormReceivedAt: signedForm?.createdAt.toISOString(),
       signedFormAttachmentId: signedForm?.id,
+      hasSignedDeclaration: Boolean(signedDeclaration),
+      signedDeclarationReceivedAt: signedDeclaration?.createdAt.toISOString(),
+      signedDeclarationAttachmentId: signedDeclaration?.id,
       amountLabel:
         record.amountCents != null
           ? formatCents(record.amountCents)
@@ -400,12 +413,20 @@ export async function lookupProtocolDetail(
           createdAt: a.createdAt.toISOString(),
           displayName: a.displayName,
         })),
+      // The signed copies sit in the same list as the other files the
+      // citizen sent, under a readable label: it is where someone looks for
+      // "the file I sent", and the re-download goes through the same route.
       citizenDocuments: requestOwnAttachments(attachments)
-        .filter((a) => a.kind === "citizen")
+        .filter((a) => a.kind === "citizen" || a.kind === "signed-form")
         .map((a) => ({
           id: a.id,
           createdAt: a.createdAt.toISOString(),
-          displayName: a.displayName,
+          displayName:
+            a.kind === "signed-form"
+              ? a.displayName === SIGNED_FORM_NAMES.declaracao
+                ? "Declaração assinada"
+                : "Requerimento assinado"
+              : a.displayName,
         })),
       requirements: requirements.map((r, i) => ({
         id: r.id,

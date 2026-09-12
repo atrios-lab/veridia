@@ -16,6 +16,8 @@ import {
   MAX_ATTACHMENT_BYTES,
   MAX_ATTACHMENTS,
   resolveMimeType,
+  SIGNED_FORM_NAMES,
+  signedFormFor,
   storedFileName,
 } from "./attachment.ts";
 import {
@@ -756,4 +758,25 @@ test("buildExemptionDetails com IP ausente não grava a chave vazia", () => {
     {},
   );
   assert.equal(exemption?.acceptance, undefined);
+});
+
+test("signedFormFor acha a via assinada mais recente de cada documento", () => {
+  const rows = [
+    { id: "a", kind: "citizen", displayName: "anexo-1" },
+    { id: "b", kind: "signed-form", displayName: "requerimento-assinado" },
+    { id: "c", kind: "signed-form", displayName: "declaracao-assinada" },
+    { id: "d", kind: "signed-form", displayName: "requerimento-assinado" },
+  ];
+  assert.equal(signedFormFor(rows, "requerimento")?.id, "d");
+  assert.equal(signedFormFor(rows, "declaracao")?.id, "c");
+  assert.equal(signedFormFor(rows.slice(0, 2), "declaracao"), undefined);
+});
+
+test("um signed-form com nome fora da lista é o requerimento (anexos antigos)", () => {
+  const rows = [
+    { id: "x", kind: "signed-form", displayName: "requerimento.pdf" },
+  ];
+  assert.equal(signedFormFor(rows, "requerimento")?.id, "x");
+  assert.equal(signedFormFor(rows, "declaracao"), undefined);
+  assert.equal(SIGNED_FORM_NAMES.requerimento, "requerimento-assinado");
 });

@@ -226,3 +226,51 @@ export function storedFileName(
 export function displayFileName(index: number): string {
   return `anexo-${index + 1}`;
 }
+
+/**
+ * The two documents a citizen signs and sends back (`signed-form`
+ * attachments), told apart by the `displayName` the upload was stored under:
+ * the requerimento, and, on a gratuidade pedido, the declaração de
+ * hipossuficiência (Provimento CGJ/TJRN n. 7/2026, Anexo I). One `kind` for
+ * both so every reader of `signed-form` (the overview's "last contact from
+ * the citizen", the consult) keeps counting both without learning a second
+ * kind; the name is the label.
+ */
+export const SIGNED_FORM_DOCUMENTS = ["requerimento", "declaracao"] as const;
+export type SignedFormDocument = (typeof SIGNED_FORM_DOCUMENTS)[number];
+
+export const SIGNED_FORM_NAMES: Record<SignedFormDocument, string> = {
+  requerimento: "requerimento-assinado",
+  declaracao: "declaracao-assinada",
+};
+
+export function isSignedFormDocument(
+  value: unknown,
+): value is SignedFormDocument {
+  return (SIGNED_FORM_DOCUMENTS as readonly unknown[]).includes(value);
+}
+
+/**
+ * The signed copy of one document among a request's attachments, or
+ * undefined: the most recent `signed-form` stored under that document's
+ * name, because a resend (wrong file the first time) has to be what the
+ * office and the citizen both see. A `signed-form` under any other name is
+ * the requerimento: every one stored before the declaração could be sent
+ * apart carried `requerimento-assinado`, or a free name from a seed.
+ * `attachments` is expected oldest first, as `listAttachments` returns it.
+ */
+export function signedFormFor<T extends { kind: string; displayName: string }>(
+  attachments: readonly T[],
+  documento: SignedFormDocument,
+): T | undefined {
+  const declared = new Set(Object.values(SIGNED_FORM_NAMES));
+  return attachments
+    .filter((a) => a.kind === "signed-form")
+    .filter((a) =>
+      documento === "requerimento"
+        ? a.displayName === SIGNED_FORM_NAMES.requerimento ||
+          !declared.has(a.displayName)
+        : a.displayName === SIGNED_FORM_NAMES.declaracao,
+    )
+    .at(-1);
+}
