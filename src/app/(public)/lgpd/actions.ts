@@ -11,7 +11,10 @@ import type { DataRight } from "@/core/request/kinds.ts";
 import { parseDetails } from "@/core/request/kinds.ts";
 import { formatProtocolNumber } from "@/core/request/protocol.ts";
 import { isSectionEnabled } from "@/core/tenant/gating.ts";
-import { notifyCitizen } from "@/lib/email/service-request.ts";
+import {
+  notifyCitizen,
+  notifyOfficeDataRightsSubmitted,
+} from "@/lib/email/service-request.ts";
 import { isRateLimited } from "@/lib/rate-limit.ts";
 import { createRecord } from "@/lib/service-request.ts";
 import { getTenant, today } from "@/lib/tenant.ts";
@@ -123,6 +126,7 @@ export async function submitDataRights(
       subject: "Requerimento recebido",
       body: "Recebemos o seu requerimento. Guarde o número do protocolo e a chave de acesso mostrados na tela de envio.",
     });
+    notifyOfficeDataRightsSubmitted({ tenant, protocolNumber, right });
 
     return {
       status: "success",

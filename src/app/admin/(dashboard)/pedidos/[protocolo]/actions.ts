@@ -250,24 +250,45 @@ export async function changeStatus(
       );
     }
 
-    // The three that end the story without the citizen reading it on the
-    // consult first. The citizen follows the rest through the consult, and a
-    // message per andamento would train them to ignore all of them. The
-    // motive itself never rides the e-mail: it stays behind the access key,
-    // like the exigência's own text.
-    if (status === "done" || status === "cancelled" || status === "rejected") {
+    // The andamentos that end the story without the citizen reading it on
+    // the consult first, plus the two that hand the citizen a new action to
+    // take (go pick it up, send another comprovante). The citizen follows
+    // every other step through the consult, and a message per andamento
+    // would train them to ignore all of them. The motive itself never rides
+    // the e-mail: it stays behind the access key, like the exigência's own
+    // text. `request.status` here is still the andamento *before* the
+    // update above, which is what tells a comprovante recusado (coming from
+    // "payment-reported") apart from the value being recorded for the first
+    // time (coming from anything else): both land on "awaiting-payment".
+    const comprovanteRecusado =
+      status === "awaiting-payment" && request.status === "payment-reported";
+    if (
+      status === "done" ||
+      status === "cancelled" ||
+      status === "rejected" ||
+      status === "ready-for-pickup" ||
+      comprovanteRecusado
+    ) {
       const subject =
         status === "done"
           ? "Pedido concluído"
           : status === "cancelled"
             ? "Pedido cancelado"
-            : "Pedido indeferido";
+            : status === "rejected"
+              ? "Pedido indeferido"
+              : status === "ready-for-pickup"
+                ? "Pedido disponível para retirada"
+                : "Comprovante não aceito";
       const body =
         status === "done"
           ? "O seu pedido foi concluído."
           : status === "cancelled"
             ? "O seu pedido foi cancelado."
-            : "O seu pedido foi indeferido.";
+            : status === "rejected"
+              ? "O seu pedido foi indeferido."
+              : status === "ready-for-pickup"
+                ? "O seu pedido está disponível para retirada."
+                : "O comprovante que você enviou não foi aceito. Consulte o protocolo com a sua chave de acesso e envie um novo comprovante.";
       emailWarning = await notifyCitizen({
         tenant,
         contact: request.contact,

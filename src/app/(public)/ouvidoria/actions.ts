@@ -8,7 +8,10 @@ import type { ManifestationType } from "@/core/request/kinds.ts";
 import { parseDetails } from "@/core/request/kinds.ts";
 import { formatProtocolNumber } from "@/core/request/protocol.ts";
 import { isSectionEnabled } from "@/core/tenant/gating.ts";
-import { notifyCitizen } from "@/lib/email/service-request.ts";
+import {
+  notifyCitizen,
+  notifyOfficeManifestationSubmitted,
+} from "@/lib/email/service-request.ts";
 import { isRateLimited } from "@/lib/rate-limit.ts";
 import { createRecord } from "@/lib/service-request.ts";
 import { getTenant } from "@/lib/tenant.ts";
@@ -129,6 +132,11 @@ export async function submitManifestation(
       protocolNumber,
       subject: "Manifestação recebida",
       body: "Recebemos a sua manifestação. Guarde o número do registro e a chave de acesso mostrados na tela de envio.",
+    });
+    notifyOfficeManifestationSubmitted({
+      tenant,
+      protocolNumber,
+      manifestationType,
     });
 
     return {
