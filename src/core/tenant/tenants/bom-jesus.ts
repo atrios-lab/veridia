@@ -40,8 +40,12 @@ export const cartorioBomJesus: Tenant = parseTenant({
   },
   issRate: 0.05, // ponytail: 5% assumed, confirm the Bom Jesus municipal rate
   theme: "verde-dourado",
-  // ponytail: same photo as Marinho until the office sends its own
-  heroImage: "/hero-home.jpg",
+  // The office's own hero photo, published from the panel (Identidade
+  // visual) and already live on cartoriobomjesusrn.com. Saved as a local
+  // file for the same reason the Santa Cruz logo was: next/image only loads
+  // a Blob URL when BLOB_PUBLIC_HOST is set, so every environment without it
+  // (CI included) would render a broken hero instead of this photo.
+  heroImage: "/hero-bom-jesus.jpg",
   home: { title: "Ofício Único de Bom Jesus / RN" }, // same text as `subtitle`
   logos: {
     light: "/logos/livro-bomjesus-preto.png",
