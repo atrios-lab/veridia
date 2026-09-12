@@ -487,6 +487,21 @@ const exemptionDecisionSchema = z.object({
 export type ExemptionDecision = z.infer<typeof exemptionDecisionSchema>;
 
 /**
+ * What the site records about the moment the gratuidade's declaração was
+ * accepted, beyond `declaredAt`: the address of who accepted it, for the
+ * certification stamp the declaração prints (see
+ * `src/core/request/declaracao.ts`, `buildStamp`) and for the office to show
+ * the FCRCPN when it asks how a pedido reached the serventia. Absent on
+ * every counter-filed pedido (the aceite presencial is the signed paper, not
+ * a network address) and on any pedido filed before this was recorded: a
+ * missing `ip` prints as a blank line, never a guess.
+ */
+const exemptionAcceptanceSchema = z.object({
+  ip: z.string().optional(),
+});
+export type ExemptionAcceptance = z.infer<typeof exemptionAcceptanceSchema>;
+
+/**
  * `details.exemption`, grown from `{ declaredAt, actId }` (2026-09) to carry
  * everything the Anexo I do Provimento CGJ/TJRN n. 7/2026 asks. Every field
  * past `declaredAt` is optional so a request filed before this grew is still
@@ -505,6 +520,7 @@ const exemptionSchema = z.object({
     .optional(),
   beneficiaries: z.array(exemptionBeneficiarySchema).optional(),
   decision: exemptionDecisionSchema.optional(),
+  acceptance: exemptionAcceptanceSchema.optional(),
 });
 export type ExemptionDeclaration = Omit<
   z.infer<typeof exemptionSchema>,
@@ -572,6 +588,22 @@ export function readExemption(
 export function readPhone(details: unknown): string {
   const value = (details as { phone?: unknown } | null)?.phone;
   return typeof value === "string" ? value : "";
+}
+
+/**
+ * The raw channel a request's `details` carries, or undefined for one filed
+ * before `channel` existed (which is the site: every online pedido predates
+ * this field). Not typed as `ServiceRequestChannel`: the balcão's manual
+ * entry writes `"chat"` for a pedido lançado a partir de uma conversa
+ * encerrada (`pedidos/novo/actions.ts`), a value `SERVICE_REQUEST_CHANNELS`
+ * does not list and `serviceRequestDetailsSchema` never validated on the way
+ * in, so a reader that trusted the enum would silently drop it. The
+ * certification stamp (`buildStamp`) is this field's one reader today, and
+ * it maps whatever string shows up to a label, unknown values included.
+ */
+export function readChannel(details: unknown): string | undefined {
+  const value = (details as { channel?: unknown } | null)?.channel;
+  return typeof value === "string" ? value : undefined;
 }
 
 export const appointmentDetailsSchema = z.object({

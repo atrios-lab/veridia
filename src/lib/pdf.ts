@@ -1,6 +1,7 @@
 import "server-only";
 import PDFDocument from "pdfkit";
 import QRCode from "qrcode";
+import type { DeclaracaoDocument } from "@/core/request/declaracao.ts";
 import type {
   RequerimentoCredentials,
   RequerimentoDocument,
@@ -10,34 +11,21 @@ import type {
 } from "@/core/request/requerimento.ts";
 import { NEUTRALS } from "@/core/tenant/palette.ts";
 import type { DocumentBrand } from "./document-brand.ts";
+import { drawFormDocumentBody } from "./pdf-form.ts";
+import {
+  bottom,
+  contentWidth,
+  drawEyebrow,
+  HEADER_BOTTOM,
+  MARGIN,
+  type Pdf,
+  QR_SIZE,
+  SEAL_SIZE,
+} from "./pdf-primitives.ts";
 
-const MARGIN = 64;
-const SEAL_SIZE = 62;
-const QR_SIZE = 58;
-/** Where the flow starts, under the letterhead rule. */
-const HEADER_BOTTOM = 148;
 const LABEL_WIDTH = 138;
 /** Below this much room left, a section heading starts on the next page. */
 const HEADING_ORPHAN_GUARD = 90;
-
-type Pdf = InstanceType<typeof PDFDocument>;
-
-function contentWidth(pdf: Pdf): number {
-  return pdf.page.width - MARGIN * 2;
-}
-
-function bottom(pdf: Pdf): number {
-  return pdf.page.height - MARGIN;
-}
-
-/** Letterspaced small caps, the accent voice of the letterhead. */
-function drawEyebrow(pdf: Pdf, text: string, color: string, width: number) {
-  pdf
-    .font("Helvetica-Bold")
-    .fontSize(8.5)
-    .fillColor(color)
-    .text(text.toUpperCase(), MARGIN, pdf.y, { width, characterSpacing: 1.4 });
-}
 
 /**
  * The letterhead: white paper, the office's seal on the left, the QR to the
@@ -380,10 +368,25 @@ function drawDocumentBody(
  * offices' documents differ in palette and seal and in nothing else.
  */
 export async function renderDocument(
-  document: RequerimentoDocument,
+  document: RequerimentoDocument | DeclaracaoDocument,
   brand: DocumentBrand,
 ): Promise<Buffer> {
   return renderDocuments([document], brand);
+}
+
+/** The QR to the protocol lookup, drawn in the theme's ink on white so it
+ * belongs to the letterhead; QR error correction has margin to spare for
+ * that contrast. Undefined when the brand carries no lookup URL. */
+export async function renderQr(
+  brand: DocumentBrand,
+): Promise<Buffer | undefined> {
+  return brand.lookupUrl
+    ? QRCode.toBuffer(brand.lookupUrl, {
+        margin: 0,
+        width: QR_SIZE * 4,
+        color: { dark: brand.palette.primary, light: NEUTRALS.card },
+      })
+    : undefined;
 }
 
 /**
@@ -392,20 +395,22 @@ export async function renderDocument(
  * declaração de hipossuficiência is one per nubente (Provimento CGJ/TJRN
  * n. 7/2026, art. 4º), and the couple signs and returns a single file, not
  * two.
+ *
+ * Two kinds of document arrive here, told apart by `kind`. A
+ * `RequerimentoDocument` (the requerimento, the access receipt, the LGPD
+ * receipt) is drawn by `drawDocumentBody` below with its footer written
+ * as each page is added, exactly as before. A `DeclaracaoDocument` (the
+ * Anexo I form) is drawn by `drawFormDocumentBody` (`pdf-form.ts`), and its
+ * footer says "Página X de Y": Y is only known after the whole document is
+ * drawn, so those pages are buffered and their footers written in a final
+ * pass. A file is one kind or the other; the routes never mix them.
  */
 export async function renderDocuments(
-  documents: RequerimentoDocument[],
+  documents: (RequerimentoDocument | DeclaracaoDocument)[],
   brand: DocumentBrand,
 ): Promise<Buffer> {
-  // Drawn in the theme's ink on white so it belongs to the letterhead; QR
-  // error correction has margin to spare for that contrast.
-  const qr = brand.lookupUrl
-    ? await QRCode.toBuffer(brand.lookupUrl, {
-        margin: 0,
-        width: QR_SIZE * 4,
-        color: { dark: brand.palette.primary, light: NEUTRALS.card },
-      })
-    : undefined;
+  const qr = await renderQr(brand);
+  const forms = documents.every((document) => document.kind === "declaracao");
 
   // No first page from the constructor: the footer runs off `pageAdded`, and
   // it has to be attached before page one exists to land on page one. Each
@@ -416,6 +421,10 @@ export async function renderDocuments(
     size: "A4",
     margin: MARGIN,
     autoFirstPage: false,
+    // Only the form needs to revisit its pages (see above). Off for the
+    // other documents: buffering changes nothing visible for them and
+    // holds every page in memory until `end()`.
+    bufferPages: forms,
     // The viewer names the tab after this, and falls back to the last
     // segment of the URL without it: a declaração used to show up as
     // "requerimento". The first document's title covers a multi-document
@@ -430,14 +439,18 @@ export async function renderDocuments(
   });
 
   pdf.on("pageAdded", () => {
-    drawFooter(pdf, currentFooter, brand);
+    if (!forms) drawFooter(pdf, currentFooter, brand);
     pdf.x = MARGIN;
     pdf.y = MARGIN;
   });
 
   for (const document of documents) {
-    currentFooter = document.footer;
-    drawDocumentBody(pdf, document, brand, qr);
+    if (document.kind === "declaracao") {
+      drawFormDocumentBody(pdf, document, brand, qr);
+    } else {
+      currentFooter = document.footer;
+      drawDocumentBody(pdf, document, brand, qr);
+    }
   }
 
   pdf.end();

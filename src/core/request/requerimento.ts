@@ -58,6 +58,12 @@ export interface RequerimentoCredentials {
 }
 
 export interface RequerimentoDocument {
+  /** Absent means "requerimento": the discriminant `renderDocuments`
+   * (`src/lib/pdf.ts`) uses to tell this document apart from a
+   * `DeclaracaoDocument` (`src/core/request/declaracao.ts`) in the array it
+   * draws. Never set explicitly by the builders below; only the union type
+   * needs it named. */
+  kind?: "requerimento";
   /** Small letterspaced line above the title ("Serviços on-line"). */
   eyebrow: string;
   title: string;

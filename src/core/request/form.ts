@@ -454,12 +454,21 @@ export function buildExemptionDetails(
     beneficiaries?: ExemptionBeneficiaryFormInput[];
   },
   declaredAt: string,
+  /**
+   * Present only for a filing the site itself received: the address of
+   * whoever accepted the declaração, for the certification stamp
+   * (`buildStamp`) and for the office to show the FCRCPN how the pedido
+   * reached it. The balcão never passes this: the aceite presencial is the
+   * signed paper, not a network address (see `pedidos/novo/actions.ts`).
+   */
+  acceptance?: { ip?: string },
 ):
   | {
       declaredAt: string;
       actId: string;
       certificateType?: CertificateType;
       beneficiaries: ExemptionBeneficiary[];
+      acceptance?: { ip?: string };
     }
   | undefined {
   if (!parsed.exemptionActId) return undefined;
@@ -513,6 +522,7 @@ export function buildExemptionDetails(
     actId: parsed.exemptionActId,
     certificateType: parsed.certificateType,
     beneficiaries,
+    ...(acceptance?.ip ? { acceptance: { ip: acceptance.ip } } : {}),
   };
 }
 

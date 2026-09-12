@@ -19,6 +19,7 @@ import {
   storedFileName,
 } from "./attachment.ts";
 import {
+  buildExemptionDetails,
   formatCpf,
   formatPhone,
   isEmailContact,
@@ -719,4 +720,40 @@ test("o aceite faltante é acusado mesmo no ato que não oferece gratuidade", ()
   });
   assert.equal(result.success, false);
   assert.equal(result.error?.issues[0].path[0], "lgpdConsent");
+});
+
+test("buildExemptionDetails grava o IP quando o site o passa", () => {
+  const exemption = buildExemptionDetails(
+    {
+      exemptionActId: "rcpn-certidao",
+      beneficiaries: [{ ...beneficiary(), signedBy: "self" as const }],
+    },
+    "2026-09-11T09:41:00.000Z",
+    { ip: "203.0.113.7" },
+  );
+  assert.equal(exemption?.acceptance?.ip, "203.0.113.7");
+});
+
+test("buildExemptionDetails sem acceptance (balcão) não grava IP", () => {
+  const exemption = buildExemptionDetails(
+    {
+      exemptionActId: "rcpn-certidao",
+      beneficiaries: [{ ...beneficiary(), signedBy: "self" as const }],
+    },
+    "2026-09-11T09:41:00.000Z",
+  );
+  assert.equal(exemption?.acceptance, undefined);
+  assert.ok(!("acceptance" in (exemption ?? {})));
+});
+
+test("buildExemptionDetails com IP ausente não grava a chave vazia", () => {
+  const exemption = buildExemptionDetails(
+    {
+      exemptionActId: "rcpn-certidao",
+      beneficiaries: [{ ...beneficiary(), signedBy: "self" as const }],
+    },
+    "2026-09-11T09:41:00.000Z",
+    {},
+  );
+  assert.equal(exemption?.acceptance, undefined);
 });

@@ -1,6 +1,10 @@
 import { getActForTenant } from "@/core/acts/catalog.ts";
-import { buildDeclaracoes } from "@/core/request/declaracao.ts";
-import { readExemption, readPhone } from "@/core/request/kinds.ts";
+import {
+  buildDeclaracoes,
+  buildStamp,
+  type DeclaracaoDocument,
+} from "@/core/request/declaracao.ts";
+import { readChannel, readExemption, readPhone } from "@/core/request/kinds.ts";
 import {
   buildRequerimento,
   type RequerimentoDocument,
@@ -35,7 +39,7 @@ export function buildRequestDocuments(
   tenant: Tenant,
   stored: StoredRequest,
   documento: RequestDocument,
-): RequerimentoDocument[] | null {
+): (RequerimentoDocument | DeclaracaoDocument)[] | null {
   if (!stored.actId || !stored.applicantName || !stored.contact) return null;
   const act = getActForTenant(tenant, stored.actId);
   if (!act) return null;
@@ -48,12 +52,27 @@ export function buildRequestDocuments(
 
   if (documento === "declaracao" || documento === "declaracao-em-branco") {
     if (!exemption) return null;
-    return buildDeclaracoes(
-      tenant,
-      act,
-      documento === "declaracao-em-branco" ? undefined : exemption,
-      meta,
-    );
+    // A declaração preenchida leva o carimbo, um por beneficiário, todos
+    // certificando o mesmo aceite (`buildStamp`). A versão em branco de um
+    // pedido real (`declaracao-em-branco`) reimprime o Anexo I vazio para a
+    // serventia entregar em papel; não é a plataforma certificando nada, e
+    // não leva carimbo, do mesmo jeito que o formulário avulso não leva.
+    const printFilled = documento === "declaracao";
+    const channel = readChannel(stored.details);
+    return buildDeclaracoes(tenant, act, printFilled ? exemption : undefined, {
+      ...meta,
+      stamps: printFilled
+        ? exemption.beneficiaries.map((_, beneficiaryIndex) =>
+            buildStamp({
+              tenantSlug: tenant.slug,
+              protocolNumber: stored.protocolNumber,
+              channel,
+              exemption,
+              beneficiaryIndex,
+            }),
+          )
+        : undefined,
+    });
   }
 
   return [

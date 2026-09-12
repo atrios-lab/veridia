@@ -17,6 +17,7 @@ import {
 import { formatProtocolNumber } from "@/core/request/protocol.ts";
 import { formatDate } from "@/core/scheduling/calendar.ts";
 import { isSectionEnabled } from "@/core/tenant/gating.ts";
+import { clientIp } from "@/lib/client-ip.ts";
 import { notifyCitizen } from "@/lib/email/service-request.ts";
 import { isRateLimited } from "@/lib/rate-limit.ts";
 import {
@@ -105,7 +106,8 @@ export async function submitServiceRequest(
     };
   }
 
-  if (await isRateLimited(await headers())) {
+  const requestHeaders = await headers();
+  if (await isRateLimited(requestHeaders)) {
     return fail(
       "Muitos envios seguidos deste acesso. Aguarde um minuto e tente de novo.",
     );
@@ -187,6 +189,7 @@ export async function submitServiceRequest(
     const exemption = buildExemptionDetails(
       { exemptionActId, certificateType, beneficiaries },
       consentedAt,
+      { ip: clientIp(requestHeaders) },
     );
 
     const { protocolNumber } = await createServiceRequest(

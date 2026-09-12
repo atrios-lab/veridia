@@ -12,6 +12,7 @@ import {
   ombudsmanDetailsSchema,
   parseDetails,
   phaseOfStatus,
+  readChannel,
   readExemption,
   requiresStatusReason,
   SERVICE_REQUEST_PHASES,
@@ -268,6 +269,37 @@ test("o desfecho da gratuidade vem junto quando registrado", () => {
   });
   assert.equal(exemption?.decision?.outcome, "granted");
   assert.equal(exemption?.decision?.decidedBy, "op-1");
+});
+
+test("o aceite pelo site grava o IP junto da declaração", () => {
+  const exemption = readExemption({
+    exemption: {
+      declaredAt: "2026-09-11T09:41:00.000Z",
+      actId: "rcpn-certidao",
+      beneficiaries: [{ name: "Maria José da Silva" }],
+      acceptance: { ip: "203.0.113.7" },
+    },
+  });
+  assert.equal(exemption?.acceptance?.ip, "203.0.113.7");
+});
+
+test("pedido sem acceptance (balcão, ou anterior ao IP) lê undefined", () => {
+  const exemption = readExemption({
+    exemption: {
+      declaredAt: "2026-09-11T09:41:00.000Z",
+      beneficiaries: [{ name: "Maria" }],
+    },
+  });
+  assert.equal(exemption?.acceptance, undefined);
+});
+
+test("readChannel lê o canal bruto, inclusive valores fora do enum", () => {
+  assert.equal(readChannel({ channel: "counter" }), "counter");
+  // "chat" não está em SERVICE_REQUEST_CHANNELS, mas o balcão grava esse
+  // valor (pedidos/novo/actions.ts) e o carimbo precisa conseguir lê-lo.
+  assert.equal(readChannel({ channel: "chat" }), "chat");
+  assert.equal(readChannel({}), undefined);
+  assert.equal(readChannel(null), undefined);
 });
 
 test("every manifestation andamento has a Portuguese label", () => {

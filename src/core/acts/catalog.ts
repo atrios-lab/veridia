@@ -202,6 +202,14 @@ export const CERTIFICATE_TYPE_LABELS: Record<CertificateType, string> = {
  * It rides in the declaração de hipossuficiência the citizen signs
  * (`src/core/request/declaracao.ts`), so the wording is the office's to
  * confirm, not this file's to invent quietly.
+ *
+ * `acceptanceHash` (`src/core/request/acceptance.ts`) hashes this text
+ * alongside every aceite: changing the wording here changes every hash
+ * computed from this moment on, and a hash printed on a declaração issued
+ * before the change can no longer be recomputed against today's text. That
+ * is intentional (the hash proves *which* text was accepted), but it means
+ * this string is not a place to fix a typo quietly; keep the old wording
+ * reachable if a hash printed before a change ever needs to be checked.
  */
 export const FEE_EXEMPTION_DECLARATION =
   "Declaro, sob as penas da lei, que não disponho de recursos suficientes " +
@@ -226,6 +234,146 @@ export const FEE_EXEMPTION_ACKNOWLEDGEMENTS = [
   "salvo previsão legal em sentido diverso, a gratuidade não abrange " +
     "serviços postais, remessas de documentos, diligências ou notificações",
 ] as const;
+
+/**
+ * The notice at the top of the Anexo I ("Antes de preencher"), word for word
+ * as the DJe published it: who this form is for, and who it is not for.
+ * Shown once, on the printed form; the online wizard says the same thing in
+ * its own voice on the screen (`request-form.tsx`), which is not this
+ * string's job to match.
+ */
+export const ANEXO_I_NOTICE = {
+  heading: "Antes de preencher",
+  text:
+    "Use este formulário somente quando a gratuidade depender da " +
+    "insuficiência de recursos. Não é exigido para atos gratuitos " +
+    "independentemente de renda nem para atos abrangidos por decisão " +
+    "judicial. Preencha um formulário para cada pessoa beneficiária.",
+};
+
+/**
+ * The data-protection notice between blocos 5 and 6 (Provimento CGJ/TJRN
+ * n. 7/2026, art. 13): the declaração is kept apart from the assento and
+ * never travels with a certidão issued to a third party.
+ */
+export const ANEXO_I_DATA_PROTECTION =
+  "As informações serão tratadas apenas para processamento do pedido, " +
+  "cumprimento de obrigação legal e eventual comunicação, com acesso " +
+  "restrito. Este formulário fica arquivado em separado, não integra o " +
+  "assento nem acompanha certidões expedidas a terceiros (Provimento " +
+  "n. 7/2026, art. 13; Lei n. 13.709/2018).";
+
+/**
+ * The four options bloco 3 offers, in the order and the wording the Anexo I
+ * prints them, each paired with the catalogue act it marks. `actId: null` is
+ * "Outro ato com previsão legal": no act in the catalogue ever marks it, the
+ * same restraint `otherAct` already takes for the wizard (see the Non-Goals
+ * of `redesenhar-declaracao-com-carimbo`): the paper form keeps the option
+ * because the printed Anexo I has it, the online pedido does not offer it.
+ */
+export interface AnexoIActOption {
+  actId: string | null;
+  label: string;
+}
+
+export const ANEXO_I_ACT_OPTIONS: AnexoIActOption[] = [
+  {
+    actId: "rcpn-certidao",
+    label: "Certidão de nascimento, casamento, óbito ou outra",
+  },
+  {
+    actId: "rcpn-habilitacao-casamento",
+    label: "Habilitação, registro do casamento e primeira certidão",
+  },
+  {
+    actId: "rcpn-alteracao-prenome",
+    label:
+      "Alteração extrajudicial de prenome e gênero (Retificação e " +
+      "Averbação), inclusive certidões correspondentes",
+  },
+  { actId: null, label: "Outro ato com previsão legal" },
+];
+
+/** Bloco 6, printed above the representative's signature line, word for
+ * word. */
+export const ANEXO_I_REPRESENTATIVE_STATEMENT =
+  "Declaro que atuo em nome ou em assistência da pessoa beneficiária e " +
+  "que as informações econômicas prestadas se referem à situação dessa " +
+  "pessoa.";
+
+/** Bloco 7, printed above who signs a rogo, word for word. */
+export const ANEXO_I_ON_BEHALF_STATEMENT =
+  "A pedido da pessoa beneficiária, assino a presente declaração a rogo.";
+
+/** The note beside the fingerprint box in bloco 7: a missing fingerprint
+ * never blocks the declaração from being accepted. */
+export const ANEXO_I_FINGERPRINT_NOTE =
+  "Impressão digital da pessoa beneficiária, quando possível. A ausência " +
+  "não impede o recebimento da declaração.";
+
+/** Bloco 9, the office's own certification, word for word: it is the
+ * office's oficial who writes this by hand, never the system. */
+export const ANEXO_I_PRESENCE_CERTIFICATION =
+  "Certifico e dou fé que as assinaturas e/ou a impressão digital foram " +
+  "apostas em minha presença, após a identificação das pessoas " +
+  "signatárias, ficando concedida a gratuidade para a prática do ato " +
+  'solicitado. No ato praticado constará apenas a expressão "isento de ' +
+  'emolumentos", sem referência à situação econômica da pessoa ' +
+  "interessada.";
+
+/**
+ * The normative basis at the foot of the Anexo I, exactly as the DJe printed
+ * it, in its order: the veridia rodapé used to cite its own shorter list
+ * (Lei 6.015 art. 30 only) and that was never what the office hands out.
+ */
+export const ANEXO_I_LEGAL_BASIS =
+  "Provimento CNJ n. 221/2026 · Provimento CGJ/RN n. 07/2026 (Anexo I) · " +
+  "Lei Estadual n. 11.038/2021, art. 45, I a VII · Lei Federal " +
+  "n. 6.015/1973, art. 30, §§ 1º, 2º, 3º e 4º · Código de Normas CGJ/RN " +
+  "- Caderno Extrajudicial · Código de Processo Civil, art. 98, IX · " +
+  "Lei n. 13.709/2018 (LGPD)";
+
+/**
+ * The certification stamp's own texts: what the platform, not the Anexo I,
+ * says about how the declaração reached the serventia. None of these cites
+ * Provimento CGJ/TJRN n. 7/2026 as the authorisation for the platform
+ * itself: the 7/2026 disciplines the declaração's content, the Provimento
+ * CNJ n. 180/2024 is what authorises the serventia's own site as a channel
+ * (art. 208, II, "b", do Código Nacional de Normas do CNJ, Foro
+ * Extrajudicial), and no one has pointed at an article of the 7/2026 that
+ * says otherwise. Saying so would be a citation this file cannot back.
+ */
+export const PLATFORM_RECEIPT_STATEMENT =
+  "Declaração recebida eletronicamente pela Plataforma Eletrônica Oficial " +
+  "da Serventia, mediante aceite do texto integral do Anexo I do " +
+  "Provimento CGJ/TJRN nº 7/2026 pela pessoa beneficiária.";
+
+/** The counter's version of the line above: nothing was received
+ * electronically from the citizen there. The operator recorded, on the
+ * platform, a declaração made in person, and the paper the person signs
+ * (blocos 5 a 9) is the aceite. */
+export const PLATFORM_COUNTER_STATEMENT =
+  "Declaração registrada pela serventia na Plataforma Eletrônica Oficial " +
+  "a partir do atendimento presencial, com o texto integral do Anexo I do " +
+  "Provimento CGJ/TJRN nº 7/2026 apresentado à pessoa beneficiária.";
+
+export const PLATFORM_STATEMENT =
+  "Plataforma própria da serventia para solicitação e acompanhamento de " +
+  'serviços eletrônicos, nos termos do art. 208, II, "b", do Código ' +
+  "Nacional de Normas da Corregedoria Nacional de Justiça - Foro " +
+  "Extrajudicial, com redação dada pelo Provimento CNJ nº 180/2024, que " +
+  "admite a utilização de sistema ou plataforma própria da serventia.";
+
+export const PLATFORM_MOTTO =
+  "Autenticidade • Integridade • Segurança • Rastreabilidade";
+
+/** The declaração's own second rodapé line, added only when the document
+ * came from a pedido (never on the blank form: there is nothing to certify
+ * about a form nobody filed). */
+export const PLATFORM_FOOTER_LINE =
+  "Documento expedido pela Plataforma Eletrônica Oficial da Serventia · " +
+  "Provimento CNJ nº 180/2024 · Dados tratados conforme a LGPD " +
+  "(Lei nº 13.709/2018)";
 
 // Legal basis conferred against the previous system (packages/tenants/src/
 // atos.ts), which cites Lei 6.015, Lei 8.935, Lei 9.492 and Prov. CNJ

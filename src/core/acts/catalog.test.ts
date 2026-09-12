@@ -5,11 +5,13 @@ import { tabelionatoAurora } from "../tenant/tenants/aurora.ts";
 import { cartorioMarinho } from "../tenant/tenants/marinho.ts";
 import {
   ACTS,
+  ANEXO_I_ACT_OPTIONS,
   ATTRIBUTION_EXAMPLES,
   ATTRIBUTION_NAMES,
   ATTRIBUTION_SHORT_NAMES,
   actsOfAttribution,
   actsOfTenant,
+  CERTIFICATE_TYPE_LABELS,
   CERTIFICATE_TYPES,
   FEE_EXEMPTION_ACKNOWLEDGEMENTS,
   FEE_EXEMPTION_DECLARATION,
@@ -17,6 +19,9 @@ import {
   getActForTenant,
   IDENTIFICATION_ONLY_HINT,
   IDENTIFICATION_ONLY_LABEL,
+  PLATFORM_COUNTER_STATEMENT,
+  PLATFORM_RECEIPT_STATEMENT,
+  PLATFORM_STATEMENT,
   PROCESSING_MODE_HINTS,
   PROCESSING_MODE_LABELS,
   PROCESSING_MODES,
@@ -249,4 +254,47 @@ test("o selo diz onde o ato termina, nunca onde ele pode ser pedido", () => {
   }
   assert.match(PROCESSING_MODE_HINTS.presential, /comparecer/);
   assert.match(PROCESSING_MODE_HINTS.online, /não precisa ir/);
+});
+
+test("o bloco 3 do Anexo I tem os quatro itens oficiais, na ordem do DJe", () => {
+  assert.deepEqual(
+    ANEXO_I_ACT_OPTIONS.map((option) => option.label),
+    [
+      "Certidão de nascimento, casamento, óbito ou outra",
+      "Habilitação, registro do casamento e primeira certidão",
+      "Alteração extrajudicial de prenome e gênero (Retificação e " +
+        "Averbação), inclusive certidões correspondentes",
+      "Outro ato com previsão legal",
+    ],
+  );
+  // "Outro ato" nunca marca: nenhum ato do catálogo tem esse id.
+  const last = ANEXO_I_ACT_OPTIONS.at(-1);
+  assert.equal(last?.actId, null);
+  // Os três primeiros apontam para atos isentáveis de verdade.
+  for (const option of ANEXO_I_ACT_OPTIONS.slice(0, 3)) {
+    const act = ACTS.find((a) => a.id === option.actId);
+    assert.ok(act?.feeExemption, option.actId ?? undefined);
+  }
+});
+
+test("o tipo de certidão do Anexo I usa os rótulos oficiais", () => {
+  assert.deepEqual(CERTIFICATE_TYPE_LABELS, {
+    "sem-busca": "Sem busca",
+    "com-busca": "Com busca",
+    "inteiro-teor": "Inteiro teor",
+  });
+});
+
+test("o texto da plataforma nunca diz que o Provimento 7 a autoriza", () => {
+  for (const text of [
+    PLATFORM_STATEMENT,
+    PLATFORM_RECEIPT_STATEMENT,
+    PLATFORM_COUNTER_STATEMENT,
+  ]) {
+    assert.doesNotMatch(text, /7\/2026.*(autoriza|permite|admite)/i);
+  }
+  // O que autoriza o canal é o Provimento 180/2024 (art. 208, II, "b"); o
+  // 7/2026 só é citado como o que a declaração aceita.
+  assert.match(PLATFORM_STATEMENT, /180\/2024/);
+  assert.match(PLATFORM_RECEIPT_STATEMENT, /7\/2026/);
 });
