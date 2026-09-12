@@ -169,8 +169,9 @@ test.describe("Visão geral (mesa de trabalho)", () => {
     await expect(desk.getByText(REQ_STALLED)).toBeVisible();
     await expect(desk.getByText(REQ_ANSWERED)).toHaveCount(0);
 
-    // Fora da mesa, nunca fora do painel.
-    await page.goto(`${baseURL}/admin/pedidos`);
+    // Fora da mesa, nunca fora do painel. A fila agora abre na aba "Novo"
+    // por padrão (ver queue-order.ts); REQ_ANSWERED está em "processing".
+    await page.goto(`${baseURL}/admin/pedidos?aba=processing`);
     await expect(page.getByText(REQ_ANSWERED)).toBeVisible();
   });
 

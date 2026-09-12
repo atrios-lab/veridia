@@ -129,7 +129,9 @@ test.describe("fila e detalhe de pedidos", () => {
     // "Limpar" drops filter and search and keeps the tab; the request is
     // back among the two hundred of Novo, on whatever page its term puts it.
     // Three navigations in a row on a page that runs two queries each: the
-    // last one is the one that has been seen to outrun the default 5s.
+    // last one is the one that has been seen to outrun even the suite's own
+    // 15s default (see playwright.config.ts), so it gets a longer wait of
+    // its own here.
     await page.getByRole("link", { name: "Limpar" }).click();
     await expect(page).toHaveURL(`${baseURL}/admin/pedidos`, {
       timeout: 15_000,
@@ -139,7 +141,7 @@ test.describe("fila e detalhe de pedidos", () => {
     ).toHaveValue("");
     await expect(
       page.getByText(/^Exibindo 1 a \d+ de \d+ pedidos$/),
-    ).toBeVisible();
+    ).toBeVisible({ timeout: 30_000 });
   });
 
   test("the telephone filed with the request reaches the operator", async ({
