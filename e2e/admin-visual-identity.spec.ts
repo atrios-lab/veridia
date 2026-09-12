@@ -149,6 +149,48 @@ test.describe("configurações, aba Identidade Visual", () => {
     await page.getByRole("tab", { name: "Serventia" }).click();
     await expect(page).toHaveURL(`${baseURL}/admin/configuracoes`);
   });
+
+  // Only the type and the size are checked on the server, so a PNG
+  // signature followed by padding is all a "logo" needs to be here.
+  function pngOfSize(bytes: number): Buffer {
+    const png = Buffer.alloc(bytes, 0x61);
+    Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]).copy(png);
+    return png;
+  }
+
+  test("a logo over 3 MB is refused with the limit spelled out", async ({
+    page,
+  }) => {
+    await signIn(page);
+    await page.goto(`${baseURL}/admin/configuracoes/identidade-visual`);
+    await expect(page.getByText("até 3 MB")).toBeVisible();
+
+    await page.setInputFiles('input[name="sealLight"]', {
+      name: "logo-grande.png",
+      mimeType: "image/png",
+      buffer: pngOfSize(3 * 1024 * 1024 + 1),
+    });
+    await page.getByRole("button", { name: "Salvar e publicar" }).click();
+
+    await expect(
+      page.getByText("A imagem precisa ter no máximo 3 MB."),
+    ).toBeVisible();
+    await expect(page.getByText("Publicado.")).toHaveCount(0);
+  });
+
+  test("a logo between 1 and 3 MB is accepted", async ({ page }) => {
+    await signIn(page);
+    await page.goto(`${baseURL}/admin/configuracoes/identidade-visual`);
+
+    await page.setInputFiles('input[name="sealLight"]', {
+      name: "logo-2mb.png",
+      mimeType: "image/png",
+      buffer: pngOfSize(2 * 1024 * 1024),
+    });
+    await page.getByRole("button", { name: "Salvar e publicar" }).click();
+
+    await expect(page.getByText("Publicado.")).toBeVisible();
+  });
 });
 
 test("a visitor with no session never reaches the visual identity screen", async ({
