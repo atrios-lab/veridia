@@ -1,36 +1,41 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { getAct } from "@/core/acts/catalog.ts";
+import { ATTRIBUTION_ACRONYMS, getAct } from "@/core/acts/catalog.ts";
 import { can } from "@/core/auth/roles.ts";
 import { deadlineUrgency } from "@/core/overview/urgency.ts";
 import { effectiveDeadline, readDeadline } from "@/core/request/deadline.ts";
 import {
   isOpenServiceRequestStatus,
   isServiceRequestStatus,
-  SERVICE_REQUEST_STATUSES,
   statusLabel,
 } from "@/core/request/kinds.ts";
-import { formatCents } from "@/core/request/money.ts";
 import { formatDate, toIsoDate } from "@/core/scheduling/calendar.ts";
-import { ATTRIBUTIONS, type Attribution } from "@/core/tenant/schema.ts";
-import { listServiceRequests } from "@/lib/service-request.ts";
+import type { Attribution } from "@/core/tenant/schema.ts";
+import {
+  countByStatus,
+  countServiceRequests,
+  listServiceRequests,
+} from "@/lib/service-request.ts";
 import { getSession } from "@/lib/session.ts";
 import { getTenant, OFFICE_TIME_ZONE, today } from "@/lib/tenant.ts";
 import { AdminIcon } from "../../_components/icon.tsx";
 import { AdminPageHeader } from "../../_components/page-header.tsx";
-import { compareQueueRows, queueGroupOf } from "./_components/queue-order.ts";
-import { QueueRows } from "./_components/queue-rows.tsx";
+import {
+  CLOSED_TAB,
+  clampPage,
+  compareQueueRows,
+  pageSlice,
+  QUEUE_TABS,
+  type QueueTabId,
+  queueSearchParams,
+  queueTab,
+} from "./_components/queue-order.ts";
+import { QueuePagination } from "./_components/queue-pagination.tsx";
+import { type QueueRow, QueueRows } from "./_components/queue-rows.tsx";
+import { QueueTabs } from "./_components/queue-tabs.tsx";
+import { QueueToolbar } from "./_components/queue-toolbar.tsx";
 
 export const metadata = { title: "Pedidos de serviço" };
-
-const ATTRIBUTION_SHORT: Record<Attribution, string> = {
-  RCPN: "RCPN",
-  NOTAS: "Notas",
-  RI: "RI",
-  PROTESTO: "Protesto",
-  RTD: "RTD",
-  RCPJ: "RCPJ",
-};
 
 function shortDate(date: Date): string {
   return formatDate(toIsoDate(date, OFFICE_TIME_ZONE)).slice(0, 5);
@@ -40,9 +45,11 @@ export default async function ServiceRequestQueuePage({
   searchParams,
 }: {
   searchParams: Promise<{
-    andamento?: string;
+    aba?: string;
     atribuicao?: string;
     q?: string;
+    pagina?: string;
+    por?: string;
   }>;
 }) {
   const session = await getSession();
@@ -51,136 +58,114 @@ export default async function ServiceRequestQueuePage({
   // Read once for the whole queue: every row's term is measured against the
   // same day, and a clock read per row could straddle midnight.
   const todayIso = today();
-  const { andamento, atribuicao, q } = await searchParams;
+  const query = queueSearchParams(await searchParams, tenant.attributions);
+  const tab = queueTab(query.tab);
+  const closed = query.tab === CLOSED_TAB;
+  const hasFilters = Boolean(query.attribution || query.search);
 
-  const status =
-    andamento && isServiceRequestStatus(andamento) ? andamento : undefined;
-  const attribution =
-    atribuicao && (ATTRIBUTIONS as readonly string[]).includes(atribuicao)
-      ? (atribuicao as Attribution)
-      : undefined;
-  const search = q?.trim() || undefined;
-  const hasFilters = Boolean(status || attribution || search);
+  const byStatus = await countByStatus(tenant.slug);
+  const counts = Object.fromEntries(
+    QUEUE_TABS.map((t) => [
+      t.id,
+      t.statuses.reduce((sum, status) => sum + (byStatus[status] ?? 0), 0),
+    ]),
+  ) as Record<QueueTabId, number>;
 
-  const requests = await listServiceRequests(tenant.slug, {
-    status,
-    attribution,
-    search,
-  });
+  const filters = {
+    statuses: tab.statuses,
+    attribution: query.attribution,
+    search: query.search,
+  };
 
-  // Bands before dates: the office reads the queue for what needs a hand,
-  // not for what arrived last. See queue-order.ts for the order inside a band.
-  const rows = requests
-    .map((request) => {
-      const act = request.actId ? getAct(request.actId) : undefined;
-      const status = isServiceRequestStatus(request.status)
-        ? request.status
-        : "new";
-      const open = isOpenServiceRequestStatus(status);
-      const deadline = effectiveDeadline(
-        toIsoDate(request.createdAt, OFFICE_TIME_ZONE),
-        readDeadline(request.details),
-        act?.legalDeadlineDays,
-        tenant.requestDeadlineDays,
-      );
-      const urgency = deadlineUrgency(open, deadline, todayIso);
-      return {
-        id: request.id,
-        protocolNumber: request.protocolNumber,
-        applicantName: request.applicantName ?? "Não informado",
-        contact: request.contact ?? "",
-        actName: act?.name ?? "Ato não identificado",
-        status,
-        statusLabel: statusLabel("service-request", status),
-        amountText:
-          request.amountCents != null
-            ? formatCents(request.amountCents)
-            : "A definir",
-        dateText: shortDate(request.createdAt),
-        open,
-        deadline,
-        urgency,
-        group: queueGroupOf(status),
-        createdAt: request.createdAt,
-      };
-    })
-    .sort(compareQueueRows);
-  // One band alone (a filter by andamento, say) needs no heading over it.
-  const showBands = new Set(rows.map((r) => r.group)).size > 1;
+  function toRow(
+    request: Awaited<ReturnType<typeof listServiceRequests>>[number],
+  ) {
+    const act = request.actId ? getAct(request.actId) : undefined;
+    const status = isServiceRequestStatus(request.status)
+      ? request.status
+      : "new";
+    const open = isOpenServiceRequestStatus(status);
+    const deadline = effectiveDeadline(
+      toIsoDate(request.createdAt, OFFICE_TIME_ZONE),
+      readDeadline(request.details),
+      act?.legalDeadlineDays,
+      tenant.requestDeadlineDays,
+    );
+    const row: QueueRow = {
+      id: request.id,
+      protocolNumber: request.protocolNumber,
+      applicantName: request.applicantName ?? "Não informado",
+      actName: act?.name ?? "Ato não identificado",
+      attributionLabel: request.attribution
+        ? (ATTRIBUTION_ACRONYMS[request.attribution as Attribution] ??
+          request.attribution)
+        : "",
+      status,
+      statusLabel: statusLabel("service-request", status),
+      open,
+      deadline,
+      dateText: shortDate(request.createdAt),
+    };
+    return {
+      row,
+      urgency: deadlineUrgency(open, deadline, todayIso),
+      createdAt: request.createdAt,
+    };
+  }
+
+  let total: number;
+  let page: number;
+  let rows: QueueRow[];
+  if (closed) {
+    // Finalizados reads newest first, which the database orders and pages
+    // itself; this is the tab that grows without bound.
+    total = await countServiceRequests(tenant.slug, filters);
+    page = clampPage(query.page, total, query.size);
+    const requests = await listServiceRequests(tenant.slug, {
+      ...filters,
+      limit: query.size,
+      offset: (page - 1) * query.size,
+    });
+    rows = requests.map((request) => toRow(request).row);
+  } else {
+    // An open tab is read by term, which is computed from the request, the
+    // act and the office's default rather than stored, so the whole tab
+    // comes in and is sorted here. See queue-order.ts for the order.
+    const requests = await listServiceRequests(tenant.slug, filters);
+    const sorted = requests.map(toRow).sort(compareQueueRows);
+    total = sorted.length;
+    page = clampPage(query.page, total, query.size);
+    rows = pageSlice(sorted, page, query.size).map((r) => r.row);
+  }
+  const current = { ...query, page };
 
   return (
     <>
-      <AdminPageHeader title="Pedidos de serviço" />
-      <main className="flex flex-col gap-4.5 px-[30px] py-7">
-        <div className="flex flex-wrap items-center gap-3">
-          <form className="flex flex-1 flex-wrap gap-2.5" method="get">
-            <div className="relative">
-              <select
-                name="andamento"
-                defaultValue={status ?? ""}
-                className="appearance-none rounded-[9px] border border-admin-input-border bg-admin-card py-2.5 pr-9 pl-3.5 text-[13px] font-semibold text-admin-primary"
-              >
-                <option value="">Andamento: Todos</option>
-                {SERVICE_REQUEST_STATUSES.map((s) => (
-                  <option key={s} value={s}>
-                    {statusLabel("service-request", s)}
-                  </option>
-                ))}
-              </select>
-              <AdminIcon
-                name="chevronDown"
-                className="pointer-events-none absolute top-1/2 right-3 h-3.5 w-3.5 -translate-y-1/2 text-admin-muted"
-                strokeWidth={2}
-              />
-            </div>
-            <div className="relative">
-              <select
-                name="atribuicao"
-                defaultValue={attribution ?? ""}
-                className="appearance-none rounded-[9px] border border-admin-input-border bg-admin-card py-2.5 pr-9 pl-3.5 text-[13px] font-semibold text-admin-primary"
-              >
-                <option value="">Atribuição: Todas</option>
-                {tenant.attributions.map((a) => (
-                  <option key={a} value={a}>
-                    {ATTRIBUTION_SHORT[a]}
-                  </option>
-                ))}
-              </select>
-              <AdminIcon
-                name="chevronDown"
-                className="pointer-events-none absolute top-1/2 right-3 h-3.5 w-3.5 -translate-y-1/2 text-admin-muted"
-                strokeWidth={2}
-              />
-            </div>
-            <input
-              type="search"
-              name="q"
-              defaultValue={search ?? ""}
-              placeholder="Buscar por protocolo ou nome"
-              className="min-w-[220px] flex-1 rounded-[9px] border border-admin-input-border bg-admin-card px-3.5 py-2.5 text-[13px] text-admin-text placeholder:text-admin-faint"
-            />
-            <button type="submit" className="btn btn-admin-secondary btn-md">
-              Filtrar
-            </button>
-          </form>
+      <AdminPageHeader
+        title="Pedidos de serviço"
+        description="Acompanhe e dê andamento aos pedidos feitos pelo site ou no balcão."
+        actions={
           <Link
             href="/admin/pedidos/novo"
-            className="btn btn-admin-primary btn-md"
+            className="inline-flex items-center gap-[9px] rounded-[11px] bg-admin-primary-soft px-[22px] py-[13px] text-[14px] font-bold whitespace-nowrap text-white transition-colors duration-120 hover:bg-admin-primary"
           >
-            + Lançar pedido
+            <AdminIcon name="plus" strokeWidth={2.4} className="h-4 w-4" />
+            Lançar pedido
           </Link>
+        }
+      />
+      <main className="flex flex-col gap-6 px-[30px] pt-6 pb-9">
+        <div className="overflow-hidden rounded-[14px] border border-admin-border bg-admin-card">
+          <QueueTabs query={current} counts={counts} />
+          <QueueToolbar query={current} attributions={tenant.attributions} />
+          <QueueRows
+            rows={rows}
+            closed={closed}
+            today={todayIso}
+            hasFilters={hasFilters}
+          />
+          <QueuePagination query={current} total={total} />
         </div>
-
-        <QueueRows
-          rows={rows}
-          showBands={showBands}
-          today={todayIso}
-          emptyMessage={
-            hasFilters
-              ? "Nenhum pedido encontrado com esses filtros."
-              : "Nenhum pedido registrado ainda."
-          }
-        />
       </main>
     </>
   );

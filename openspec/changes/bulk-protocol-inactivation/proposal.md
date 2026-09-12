@@ -4,12 +4,16 @@ Hoje, remover um protocolo em massa não existe: a única ação de remoção é
 
 ## What Changes
 
-- Adicionar um novo status de protocolo, `inactive` ("Inativo"), que não é exclusão: o registro e seu histórico continuam existindo, apenas saem do fluxo normal de atendimento.
 - Adicionar seleção múltipla na fila de pedidos (`/admin/pedidos`): checkbox por linha + checkbox "selecionar todos" no cabeçalho.
-- Adicionar uma ação em lote "Marcar como inativo" para os protocolos selecionados, com diálogo de confirmação informando a quantidade e que a ação não apaga os dados.
-- `inactive` entra no conjunto de status terminais (`TERMINAL_SERVICE_REQUEST_STATUSES`) e é tratado como não-aberto no contador de pedidos abertos.
-- A fila continua listando protocolos `inactive` por padrão (mesmo comportamento atual: nada é escondido sem filtro explícito), com tom visual próprio e um filtro de andamento para isolá-los ou excluí-los da visão.
+- Adicionar uma ação em lote "Arquivar" para os protocolos selecionados, com diálogo de confirmação informando a quantidade e que a ação não apaga os dados — move os protocolos para o andamento "Arquivado" (`archived`) já existente, não para um status novo.
 - Reativação continua possível pela troca de status já existente na tela de detalhe do protocolo (um a um), sem nova ação dedicada.
+
+**Revisão (change `enxugar-status-pedido`):** a versão original desta proposta criava um status
+`inactive` ("Inativo") próprio. A auditoria dos vinte andamentos feita por aquela change não achou
+nenhuma regra que distinguisse "tirado de circulação pelo operador em lote" de "arquivado" — os
+dois já paravam no mesmo tom visual, na mesma fase e no mesmo grupo de terminais. `inactive` saiu
+do enum; a ação em lote passou a gravar `archived`, que já cobria exatamente o que ela precisava
+(terminal, reversível manualmente pela troca de andamento, sem exclusão).
 
 ## Capabilities
 
@@ -17,19 +21,21 @@ Hoje, remover um protocolo em massa não existe: a única ação de remoção é
 (nenhuma)
 
 ### Modified Capabilities
-- `admin-service-requests`: fila ganha seleção múltipla e ação em lote de inativação; contador de "abertos" passa a considerar o status `inactive` como não-aberto.
+(nenhuma) — a fila ganha seleção múltipla e ação em lote, mas o andamento que ela grava
+(`archived`) já é terminal na spec atual de `admin-service-requests`; nenhum requisito existente
+muda de comportamento.
 
 ## Impact
 
-- `src/core/request/kinds.ts`: novo valor em `SERVICE_REQUEST_STATUSES`, `TERMINAL_SERVICE_REQUEST_STATUSES`, `isOpenServiceRequestStatus`, `statusLabel`, `isAllowedTransition`.
-- `src/app/admin/(dashboard)/pedidos/_components/status-tone.ts`: tom visual para `inactive`.
-- `src/app/admin/(dashboard)/pedidos/page.tsx` e componentes da fila: checkboxes de seleção, barra de ação em lote.
-- `src/lib/service-request.ts`: nova função de atualização de status em lote (reaproveitando a validação de transição existente).
-- Nenhuma migração destrutiva: `status` já é `text` livre, não é necessário alterar schema/enum de banco.
+- `src/app/admin/(dashboard)/pedidos/page.tsx` e componentes da fila (`queue-rows.tsx`): checkboxes de seleção, barra de ação em lote ("Arquivar").
+- `src/lib/service-request.ts`: `deactivateServiceRequests`, a função de atualização em lote (reaproveitando a validação de transição existente), grava `archived`.
+- Nenhuma mudança em `src/core/request/kinds.ts` nem em `status-tone.ts`: `archived` já existe, com tom e regras próprias, desde antes desta change.
+- Nenhuma migração de banco: `status` já é `text` livre, e `archived` já é um valor válido.
 
 ## Não-objetivos
 
-- Não há exclusão em lote (hard delete) — a ação em lote só inativa.
+- Não há exclusão em lote (hard delete) — a ação em lote só arquiva.
 - Não há reativação em lote — reativar continua sendo um a um, pela tela de detalhe já existente.
 - Não há novo endpoint/API pública; a ação em lote é uma Server Action do painel admin.
 - Não há alteração no fluxo do cidadão (site público) nem no acompanhamento de protocolo por ele.
+- Não introduz um andamento novo nem um tom visual novo — usa o `archived` que já existia.

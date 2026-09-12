@@ -110,6 +110,8 @@ const PATHS = {
     "M9 4V3a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v1",
     "m9 13 2 2 4-4",
   ],
+  // The queue's bulk action: archiving the selected protocols.
+  trash: ["M3 6h18M8 6V4h8v2M6 6l1 14h10l1-14M10 11v6M14 11v6"],
   // A warning that needs the operator to act before leaving the screen.
   alert: [
     "M12 22a10 10 0 1 0 0-20 10 10 0 0 0 0 20Z",

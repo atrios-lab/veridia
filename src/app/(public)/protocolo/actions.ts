@@ -30,7 +30,10 @@ import {
 import { formatCents } from "@/core/request/money.ts";
 import { type IsoDate, toIsoDate } from "@/core/scheduling/calendar.ts";
 import { isSectionEnabled } from "@/core/tenant/gating.ts";
-import { notifyOfficePaymentReported } from "@/lib/email/service-request.ts";
+import {
+  notifyOfficePaymentReported,
+  notifyOfficeRequirementReply,
+} from "@/lib/email/service-request.ts";
 import { type PixCharge, pixChargeFor } from "@/lib/pix-qr.ts";
 import { isPollRateLimited, isRateLimited } from "@/lib/rate-limit.ts";
 import {
@@ -692,6 +695,11 @@ export async function writeRequirementMessageAction(
           "Esta exigência não foi encontrada ou já foi cumprida. Atualize a página para ver a situação atual.",
       };
     }
+    notifyOfficeRequirementReply({
+      tenant,
+      protocolNumber: request.protocolNumber,
+      applicantName: request.applicantName,
+    });
     return { status: "success" };
   } catch (error) {
     if (error instanceof AttachmentError) {

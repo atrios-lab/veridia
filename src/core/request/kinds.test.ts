@@ -30,29 +30,30 @@ test("every service request status has a Portuguese label", () => {
   }
 });
 
-test("a value outside the twenty is not a service request status", () => {
+test("a value outside the eleven is not a service request status", () => {
   assert.equal(isServiceRequestStatus("in-progress"), false);
   assert.equal(isServiceRequestStatus("new"), true);
-  // The registral steps the office actually works in.
-  assert.equal(isServiceRequestStatus("pre-noted"), true);
-  assert.equal(isServiceRequestStatus("in-qualification"), true);
-  assert.equal(isServiceRequestStatus("annotated"), true);
+  assert.equal(isServiceRequestStatus("processing"), true);
+  assert.equal(isServiceRequestStatus("awaiting-compliance"), true);
 });
 
-test("the eight andamentos that predate the registral ones still validate", () => {
-  // No row was renamed when the list grew, so every value already in the
-  // database has to stay valid.
+test("the nine andamentos folded away by enxugar-status-pedido no longer validate", () => {
+  // Trimmed from twenty to eleven: filed and in-review had no rule of their
+  // own; the registral steps and with-requirement/inactive folded into a
+  // status that already existed. A row still holding one of these needs the
+  // data migration, not a fallback here.
   for (const status of [
-    "new",
+    "filed",
     "in-review",
-    "awaiting-payment",
-    "paid",
-    "done",
-    "rejected",
-    "cancelled",
-    "archived",
+    "pre-noted",
+    "in-qualification",
+    "registered",
+    "annotated",
+    "granted",
+    "with-requirement",
+    "inactive",
   ]) {
-    assert.ok(isServiceRequestStatus(status), status);
+    assert.equal(isServiceRequestStatus(status), false, status);
   }
 });
 
@@ -72,17 +73,18 @@ test("every andamento belongs to exactly one phase", () => {
 });
 
 test("the flow is free, except standing still", () => {
-  // A title's andamento does not fit a state machine: qualificação may go back
-  // to exigência, a concluído may reopen. The only refusal is a no-op.
-  assert.ok(isAllowedTransition("done", "in-review"));
-  assert.ok(isAllowedTransition("cancelled", "in-qualification"));
+  // A title's andamento does not fit a state machine: uma exigência pode
+  // voltar depois de resolvida, um concluído pode reabrir. The only refusal
+  // is a no-op.
+  assert.ok(isAllowedTransition("done", "processing"));
+  assert.ok(isAllowedTransition("cancelled", "awaiting-compliance"));
   assert.ok(isAllowedTransition("archived", "new"));
-  assert.equal(isAllowedTransition("in-review", "in-review"), false);
+  assert.equal(isAllowedTransition("processing", "processing"), false);
 });
 
 test("open counts everything short of a terminal andamento", () => {
   assert.ok(isOpenServiceRequestStatus("new"));
-  assert.ok(isOpenServiceRequestStatus("in-review"));
+  assert.ok(isOpenServiceRequestStatus("processing"));
   assert.ok(isOpenServiceRequestStatus("awaiting-payment"));
   assert.ok(isOpenServiceRequestStatus("paid"));
   assert.equal(isOpenServiceRequestStatus("done"), false);
@@ -92,15 +94,13 @@ test("open counts everything short of a terminal andamento", () => {
 });
 
 test("suggested transitions match what the detail screen offers", () => {
-  assert.deepEqual(suggestedNextStatuses("in-review"), [
+  assert.deepEqual(suggestedNextStatuses("new"), [
+    "processing",
     "awaiting-payment",
-    "pre-noted",
-    "rejected",
     "cancelled",
   ]);
-  assert.deepEqual(suggestedNextStatuses("pre-noted"), [
-    "in-qualification",
-    "with-requirement",
+  assert.deepEqual(suggestedNextStatuses("awaiting-compliance"), [
+    "processing",
     "cancelled",
   ]);
   assert.deepEqual(suggestedNextStatuses("archived"), []);
@@ -335,38 +335,25 @@ test("an archived manifestation no longer asks for attention", () => {
   assert.equal(isOpenStatus("ombudsman", "in-review"), true);
 });
 
-test("registering a requirement moves the request to Com exigência", () => {
-  assert.equal(
-    statusForRequirements("in-qualification", 1),
-    "with-requirement",
-  );
-  assert.equal(statusForRequirements("pre-noted", 1), "with-requirement");
-  // A new requirement while the last one was awaited still reads as one.
-  assert.equal(
-    statusForRequirements("awaiting-compliance", 1),
-    "with-requirement",
-  );
-  assert.equal(statusForRequirements("with-requirement", 2), null);
+test("registering a requirement moves the request to Aguardando exigência", () => {
+  assert.equal(statusForRequirements("processing", 1), "awaiting-compliance");
+  assert.equal(statusForRequirements("new", 1), "awaiting-compliance");
+  // Already there: a second requirement while one is still open doesn't
+  // rewrite it.
+  assert.equal(statusForRequirements("awaiting-compliance", 2), null);
 });
 
-test("closing the last requirement sends the request back to qualification", () => {
-  assert.equal(
-    statusForRequirements("with-requirement", 0),
-    "in-qualification",
-  );
-  assert.equal(
-    statusForRequirements("awaiting-compliance", 0),
-    "in-qualification",
-  );
+test("closing the last requirement sends the request back to processamento", () => {
+  assert.equal(statusForRequirements("awaiting-compliance", 0), "processing");
   // One still open: it stays where it is.
-  assert.equal(statusForRequirements("with-requirement", 1), null);
+  assert.equal(statusForRequirements("awaiting-compliance", 1), null);
 });
 
-test("only the andamentos a requirement imposed come back from it", () => {
+test("only Aguardando exigência comes back from a closed requirement", () => {
   // The office moved on while an exigência sat open; closing it must not drag
-  // the request back into the analysis it already left.
-  assert.equal(statusForRequirements("registered", 0), null);
-  assert.equal(statusForRequirements("in-qualification", 0), null);
+  // the request back into a status it already left.
+  assert.equal(statusForRequirements("processing", 0), null);
+  assert.equal(statusForRequirements("new", 0), null);
 });
 
 test("a requirement moves nothing on a closed request", () => {
@@ -472,7 +459,7 @@ test("cancelled still requires text on its own, PDF or not", () => {
 
 test("statuses that need no reason accept anything", () => {
   const result = validateStatusReason({
-    status: "in-review",
+    status: "processing",
     reason: "",
     hasAttachment: false,
   });

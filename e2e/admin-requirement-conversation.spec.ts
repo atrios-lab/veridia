@@ -197,27 +197,21 @@ test.describe("conversa da exigência", () => {
     expect(rows.length).toBe(0);
   });
 
-  test("the registral andamentos are offered, grouped by phase", async ({
-    page,
-  }) => {
+  test("the andamentos are offered, grouped by phase", async ({ page }) => {
     await signIn(page);
     await page.goto(detailUrl);
 
     await page.getByRole("button", { name: "Prazo e correção" }).click();
     const select = page.locator('select[name="statusOverride"]');
-    // The vocabulary the registrar actually works in.
-    await expect(select.locator('option[value="pre-noted"]')).toHaveCount(1);
-    await expect(
-      select.locator('option[value="in-qualification"]'),
-    ).toHaveCount(1);
+    await expect(select.locator('option[value="processing"]')).toHaveCount(1);
     await expect(select.locator("optgroup")).not.toHaveCount(0);
 
-    await select.selectOption("pre-noted");
+    await select.selectOption("processing");
     await page.getByRole("button", { name: "Aplicar" }).click();
-    // "Prenotado" também é o texto da própria opção do select e do resumo:
-    // o que interessa aqui é o selo de andamento do pedido.
+    // "Em processamento" também é o texto da própria opção do select e do
+    // resumo: o que interessa aqui é o selo de andamento do pedido.
     await expect(
-      page.locator("span").filter({ hasText: /^Prenotado$/ }),
+      page.locator("span").filter({ hasText: /^Em processamento$/ }),
     ).toBeVisible();
   });
 });

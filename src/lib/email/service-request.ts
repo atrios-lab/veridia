@@ -1,7 +1,12 @@
 import "server-only";
 import { after } from "next/server";
 import type { EmailText } from "@/core/email/text.ts";
+import {
+  DATA_RIGHT_OPTIONS,
+  manifestationLabel,
+} from "@/core/request/channels.ts";
 import { isEmailContact } from "@/core/request/form.ts";
+import type { DataRight, ManifestationType } from "@/core/request/kinds.ts";
 import { formatCents } from "@/core/request/money.ts";
 import { brandImageUrl } from "@/core/tenant/brand-image.ts";
 import type { Tenant } from "@/core/tenant/schema.ts";
@@ -157,6 +162,176 @@ export function notifyOfficePaymentReported(
       });
     } catch (error) {
       console.error("email.payment-reported", error);
+    }
+  });
+}
+
+/**
+ * This file also hosts the office-facing notices below for LGPD and
+ * ombudsman submissions, even though those are different domains from
+ * service requests. Each channel gains exactly one new send here (the
+ * citizen-facing confirmation both already send is `notifyCitizen`, shared
+ * from this same file), so a dedicated email module per channel would be
+ * overhead for a single function. See design.md of
+ * `completar-avisos-por-email` for the trade-off.
+ */
+
+export interface NotifyOfficeRequirementReplyParams {
+  tenant: Tenant;
+  protocolNumber: string;
+  /** The requester's name, when the request has one. */
+  applicantName: string | null;
+}
+
+/**
+ * The office's nudge that a citizen wrote in a requirement's conversation:
+ * the mirror image of the notice the citizen gets when the office replies
+ * (`renderNoticeEmailHtml` via `notifyCitizen`, triggered elsewhere). Like
+ * `notifyOfficePaymentReported`, the recipient is the office's own
+ * institutional inbox, so the message can name the requester: it just never
+ * carries the citizen's own words, the same restraint the office's own
+ * replies observe toward the citizen.
+ */
+export function notifyOfficeRequirementReply(
+  params: NotifyOfficeRequirementReplyParams,
+): void {
+  const { tenant, protocolNumber, applicantName } = params;
+
+  after(async () => {
+    try {
+      const host = tenant.hosts[0];
+      const panelUrl = host
+        ? `https://${host}/admin/pedidos/${protocolNumber}`
+        : "";
+      const text: EmailText = {
+        subject: `Resposta na exigência · ${protocolNumber}`,
+        paragraphs: [
+          `${applicantName?.trim() || "O requerente"} respondeu na exigência do pedido ${protocolNumber}.`,
+          "Consulte a conversa no painel para ver a mensagem e responder.",
+        ],
+        buttonLabel: "Ver o pedido",
+        footnote:
+          "Este e-mail não traz o texto da mensagem: consulte pelo painel.",
+      };
+      const identity = tenantEmailIdentity(tenant);
+
+      await sendEmail({
+        to: tenant.contacts.email,
+        fromName: tenant.name,
+        fromAddress: tenant.emailFrom,
+        subject: text.subject,
+        html: renderEmailCardHtml(text, identity, panelUrl),
+        text: renderEmailCardText(text, panelUrl),
+      });
+    } catch (error) {
+      console.error("email.requirement-reply", error);
+    }
+  });
+}
+
+export interface NotifyOfficeDataRightsSubmittedParams {
+  tenant: Tenant;
+  protocolNumber: string;
+  right: DataRight;
+}
+
+/**
+ * The office's nudge that a new LGPD requerimento landed, so the 15-day
+ * legal clock (Lei 13.709/2018) does not run unwatched behind an
+ * institutional inbox nobody opened. The right's legal name is fine to
+ * name here (unlike the citizen-facing confirmation, there is no access
+ * key standing between the office and its own panel), but the titular's
+ * own description never rides this e-mail.
+ */
+export function notifyOfficeDataRightsSubmitted(
+  params: NotifyOfficeDataRightsSubmittedParams,
+): void {
+  const { tenant, protocolNumber, right } = params;
+
+  after(async () => {
+    try {
+      const host = tenant.hosts[0];
+      const panelUrl = host
+        ? `https://${host}/admin/lgpd/${protocolNumber}`
+        : "";
+      const legalName =
+        DATA_RIGHT_OPTIONS.find((option) => option.id === right)?.legalName ??
+        right;
+      const text: EmailText = {
+        subject: `Requerimento recebido · ${protocolNumber}`,
+        paragraphs: [
+          `Um novo requerimento LGPD foi registrado (${protocolNumber}), pedindo ${legalName.toLowerCase()}.`,
+          "Consulte no painel para ver os detalhes e responder dentro do prazo legal de 15 dias.",
+        ],
+        buttonLabel: "Ver o requerimento",
+        footnote:
+          "Este e-mail não traz a descrição do pedido: consulte pelo painel.",
+      };
+      const identity = tenantEmailIdentity(tenant);
+
+      await sendEmail({
+        to: tenant.contacts.email,
+        fromName: tenant.name,
+        fromAddress: tenant.emailFrom,
+        subject: text.subject,
+        html: renderEmailCardHtml(text, identity, panelUrl),
+        text: renderEmailCardText(text, panelUrl),
+      });
+    } catch (error) {
+      console.error("email.data-rights-submitted", error);
+    }
+  });
+}
+
+export interface NotifyOfficeManifestationSubmittedParams {
+  tenant: Tenant;
+  protocolNumber: string;
+  manifestationType: ManifestationType;
+}
+
+/**
+ * The office's nudge that a new ouvidoria manifestation landed, fired the
+ * same way whether the manifestation is anonymous, identified, or marked
+ * confidential. The office's own contact is the destination either way, so
+ * unlike `notifyCitizen` there is no missing-contact branch to consider.
+ * Name, contact, and the manifestation's own text never ride this e-mail,
+ * on purpose: naming an identified or confidential manifestante in a notice
+ * that lands in a shared institutional inbox would leak exactly what the
+ * sigilo option promises to keep off the record.
+ */
+export function notifyOfficeManifestationSubmitted(
+  params: NotifyOfficeManifestationSubmittedParams,
+): void {
+  const { tenant, protocolNumber, manifestationType } = params;
+
+  after(async () => {
+    try {
+      const host = tenant.hosts[0];
+      const panelUrl = host
+        ? `https://${host}/admin/ouvidoria/${protocolNumber}`
+        : "";
+      const text: EmailText = {
+        subject: `Manifestação recebida · ${protocolNumber}`,
+        paragraphs: [
+          `Uma nova manifestação de ouvidoria foi registrada (${protocolNumber}), do tipo ${manifestationLabel(manifestationType).toLowerCase()}.`,
+          "Consulte no painel para ver os detalhes.",
+        ],
+        buttonLabel: "Ver a manifestação",
+        footnote:
+          "Este e-mail não traz o texto da manifestação: consulte pelo painel.",
+      };
+      const identity = tenantEmailIdentity(tenant);
+
+      await sendEmail({
+        to: tenant.contacts.email,
+        fromName: tenant.name,
+        fromAddress: tenant.emailFrom,
+        subject: text.subject,
+        html: renderEmailCardHtml(text, identity, panelUrl),
+        text: renderEmailCardText(text, panelUrl),
+      });
+    } catch (error) {
+      console.error("email.manifestation-submitted", error);
     }
   });
 }

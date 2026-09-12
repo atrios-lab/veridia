@@ -114,6 +114,12 @@
   --palette-admin-warning-soft-border: #ecdfb8;
   --palette-admin-success-bg: #e9efea;
   --palette-admin-success-text: #1c5638;
+  /* The queue's pagination footer: a shade off the card, so the row of page
+     buttons reads as the table's edge rather than one more row of it. */
+  --palette-admin-footer-bg: #fbfaf7;
+  /* The keyboard focus ring on a checkbox: the pale green the inputs use,
+     visible on the white card and on the warm selection bar alike. */
+  --palette-admin-focus-ring: #b7cdbd;
 }
 
 @theme inline {
@@ -144,6 +150,8 @@
   --color-admin-warning-soft-border: var(--palette-admin-warning-soft-border);
   --color-admin-success-bg: var(--palette-admin-success-bg);
   --color-admin-success-text: var(--palette-admin-success-text);
+  --color-admin-footer-bg: var(--palette-admin-footer-bg);
+  --color-admin-focus-ring: var(--palette-admin-focus-ring);
 }
 
 /*
@@ -444,6 +452,60 @@
   }
   .btn-admin-ghost:hover:not(:disabled) {
     color: var(--brand-primary);
+  }
+
+  /*
+   * The panel's checkbox, drawn by hand so the queue's selection column looks
+   * the same in every browser: 16px, a 4px radius, the office's own green
+   * when checked. `appearance: none` drops the native control; the tick is a
+   * pseudo-element cut with clip-path, so no SVG travels with each use.
+   */
+  .checkbox-admin {
+    appearance: none;
+    width: 16px;
+    height: 16px;
+    margin: 0;
+    flex: none;
+    display: inline-grid;
+    place-content: center;
+    border: 1px solid var(--color-admin-faint);
+    border-radius: 4px;
+    background: var(--color-admin-card);
+    cursor: pointer;
+    transition:
+      background-color 120ms,
+      border-color 120ms;
+  }
+  .checkbox-admin:hover {
+    border-color: var(--color-admin-primary-soft);
+  }
+  .checkbox-admin:checked {
+    background: var(--color-admin-primary);
+    border-color: var(--color-admin-primary);
+  }
+  .checkbox-admin:checked::before {
+    content: "";
+    width: 10px;
+    height: 10px;
+    background: white;
+    clip-path: polygon(14% 44%, 0 65%, 50% 100%, 100% 16%, 80% 0%, 43% 62%);
+  }
+  .checkbox-admin:focus-visible {
+    outline: 2px solid var(--color-admin-focus-ring);
+    outline-offset: 2px;
+  }
+
+  /*
+   * A scroll region without its bar. The panel's content column scrolls
+   * inside the shell, and with a mouse plugged in macOS paints a permanent
+   * bar down the card's right edge, which the office read as a defect. The
+   * wheel, the trackpad and the keyboard still scroll it; only the bar goes.
+   */
+  .scrollbar-hidden {
+    scrollbar-width: none;
+  }
+  .scrollbar-hidden::-webkit-scrollbar {
+    display: none;
   }
 
   /*

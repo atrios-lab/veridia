@@ -57,25 +57,22 @@ test.describe("Visão geral (mesa de trabalho)", () => {
          '{"right":"access"}'::jsonb, now() - interval '13 days')
       on conflict do nothing
     `;
-    // Em análise with a fulfilled requirement and none pending: the mesa's
-    // second tier, "Retomar análise".
+    // Em processamento, só com uma escrituração de balcão que não conta como
+    // resposta ao cidadão (ver comentário abaixo): fica na mesa genericamente,
+    // sem nenhum tratamento especial.
     await sql`
       insert into service_requests
         (tenant_slug, kind, protocol_year, protocol_sequence, protocol_number,
          applicant_name, contact, access_key_hash, status, details)
       values
         ('cartorio-marinho', 'service-request', 2097, 1, ${REQ_STALLED},
-         'Rosa Almeida Fontes', 'rosa@email.com', 'hash', 'in-review', '{}'::jsonb)
+         'Rosa Almeida Fontes', 'rosa@email.com', 'hash', 'processing', '{}'::jsonb)
       on conflict do nothing
     `;
     const [request] = await sql`
       select id from service_requests where protocol_number = ${REQ_STALLED}
     `;
-    await sql`
-      insert into service_request_requirements (tenant_slug, request_id, text, status, fulfilled_at)
-      values ('cartorio-marinho', ${request.id}, 'Documento de identidade', 'fulfilled', now())
-    `;
-    // Em análise com exigência pendente e uma resposta do balcão registrada na
+    // Em processamento com exigência pendente e uma resposta do balcão registrada na
     // auditoria: a vez é do cidadão, então este pedido não ocupa a mesa.
     await sql`
       insert into service_requests
@@ -83,7 +80,7 @@ test.describe("Visão geral (mesa de trabalho)", () => {
          applicant_name, contact, access_key_hash, status, details)
       values
         ('cartorio-marinho', 'service-request', 2097, 2, ${REQ_ANSWERED},
-         'Carlos Eduardo Nunes', 'carlos@email.com', 'hash', 'in-review', '{}'::jsonb)
+         'Carlos Eduardo Nunes', 'carlos@email.com', 'hash', 'processing', '{}'::jsonb)
       on conflict do nothing
     `;
     const [answered] = await sql`
@@ -101,10 +98,10 @@ test.describe("Visão geral (mesa de trabalho)", () => {
       values ('cartorio-marinho', ${operator.id},
               'service-request.requirement.reply', 'service-request', ${answered.id})
     `;
-    // Escrituração de balcão sobre o pedido com exigência cumprida: informar o
-    // valor é ato do operador, mas não é resposta ao cidadão, então este
-    // pedido tem de continuar na mesa. Guarda a lista de inclusão de
-    // `OFFICE_ANSWER_ACTIONS` contra virar lista de exceções de novo.
+    // Escrituração de balcão que não é resposta ao cidadão: informar o valor é
+    // ato do operador, mas não conta como resposta, então este pedido tem de
+    // continuar na mesa. Guarda a lista de inclusão de `OFFICE_ANSWER_ACTIONS`
+    // contra virar lista de exceções de novo.
     await sql`
       insert into audit_log (tenant_slug, actor_id, action, target_type, target_id)
       values ('cartorio-marinho', ${operator.id},
@@ -140,7 +137,7 @@ test.describe("Visão geral (mesa de trabalho)", () => {
     await sql.end();
   });
 
-  test("a mesa lista o requerimento LGPD perto do prazo antes da exigência cumprida, cada um com o próximo passo", async ({
+  test("a mesa lista o requerimento LGPD perto do prazo antes de um pedido comum, cada um com o próximo passo", async ({
     page,
   }) => {
     await signIn(page);
@@ -159,7 +156,7 @@ test.describe("Visão geral (mesa de trabalho)", () => {
       solRow.getByRole("link", { name: "Responder agora" }),
     ).toHaveAttribute("href", `/admin/lgpd/${SOL_DUE_SOON}`);
     await expect(
-      reqRow.getByRole("link", { name: "Retomar análise" }),
+      reqRow.getByRole("link", { name: "Ver pedido" }),
     ).toHaveAttribute("href", `/admin/pedidos/${REQ_STALLED}`);
   });
 
@@ -172,8 +169,9 @@ test.describe("Visão geral (mesa de trabalho)", () => {
     await expect(desk.getByText(REQ_STALLED)).toBeVisible();
     await expect(desk.getByText(REQ_ANSWERED)).toHaveCount(0);
 
-    // Fora da mesa, nunca fora do painel.
-    await page.goto(`${baseURL}/admin/pedidos`);
+    // Fora da mesa, nunca fora do painel. A fila agora abre na aba "Novo"
+    // por padrão (ver queue-order.ts); REQ_ANSWERED está em "processing".
+    await page.goto(`${baseURL}/admin/pedidos?aba=processing`);
     await expect(page.getByText(REQ_ANSWERED)).toBeVisible();
   });
 

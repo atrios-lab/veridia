@@ -3,11 +3,9 @@ import {
   and,
   desc,
   eq,
-  exists,
   inArray,
   isNotNull,
   max,
-  notExists,
   notInArray,
   or,
   sql,
@@ -133,57 +131,6 @@ export async function listUpcomingDataRightsDeadlines(
     })
     .filter((row) => row.daysLeft <= 3)
     .sort((a, b) => a.daysLeft - b.daysLeft);
-}
-
-export interface StalledRequest {
-  id: string;
-  protocolNumber: string;
-  applicantName: string | null;
-}
-
-/**
- * Service requests still "Em análise" whose most recent exigência was
- * cumprida but whose andamento has not moved since: the operator's turn,
- * waiting.
- */
-export async function listStalledFulfilledRequirements(
-  tenantSlug: string,
-): Promise<StalledRequest[]> {
-  const fulfilled = db
-    .select()
-    .from(serviceRequestRequirements)
-    .where(
-      and(
-        eq(serviceRequestRequirements.requestId, serviceRequests.id),
-        eq(serviceRequestRequirements.status, "fulfilled"),
-      ),
-    );
-  const pending = db
-    .select()
-    .from(serviceRequestRequirements)
-    .where(
-      and(
-        eq(serviceRequestRequirements.requestId, serviceRequests.id),
-        eq(serviceRequestRequirements.status, "pending"),
-      ),
-    );
-
-  return db
-    .select({
-      id: serviceRequests.id,
-      protocolNumber: serviceRequests.protocolNumber,
-      applicantName: serviceRequests.applicantName,
-    })
-    .from(serviceRequests)
-    .where(
-      and(
-        eq(serviceRequests.tenantSlug, tenantSlug),
-        eq(serviceRequests.kind, "service-request"),
-        eq(serviceRequests.status, "in-review"),
-        exists(fulfilled),
-        notExists(pending),
-      ),
-    );
 }
 
 /** How the overview's colored chip names each channel. */
@@ -377,8 +324,9 @@ export interface DeskRecord {
   status: string;
   createdAt: Date;
   details: unknown;
-  /** Only ever true for `service-request`: an exigência was cumprida and
-   * none is still pending (see `listStalledFulfilledRequirements`). */
+  /** Sempre `false`: era calculado por `listStalledFulfilledRequirements`,
+   * removida junto do corte de andamentos (change `enxugar-status-pedido`)
+   * por depender de um status que deixou de existir. */
   hasFulfilledPendingRequirement: boolean;
   /** Whether the next move is the office's: see `DeskItemInput`. */
   awaitingOffice: boolean;
@@ -396,39 +344,30 @@ export async function listDeskItems(
 ): Promise<DeskRecord[]> {
   if (kinds.length === 0) return [];
 
-  const [rows, stalled] = await Promise.all([
-    db
-      .select({
-        id: serviceRequests.id,
-        kind: serviceRequests.kind,
-        protocolNumber: serviceRequests.protocolNumber,
-        applicantName: serviceRequests.applicantName,
-        status: serviceRequests.status,
-        createdAt: serviceRequests.createdAt,
-        details: serviceRequests.details,
-      })
-      .from(serviceRequests)
-      .where(
-        and(
-          eq(serviceRequests.tenantSlug, tenantSlug),
-          or(
-            ...kinds.map((kind) =>
-              and(
-                eq(serviceRequests.kind, kind),
-                notInArray(serviceRequests.status, [
-                  ...TERMINAL_STATUSES[kind],
-                ]),
-              ),
+  const rows = await db
+    .select({
+      id: serviceRequests.id,
+      kind: serviceRequests.kind,
+      protocolNumber: serviceRequests.protocolNumber,
+      applicantName: serviceRequests.applicantName,
+      status: serviceRequests.status,
+      createdAt: serviceRequests.createdAt,
+      details: serviceRequests.details,
+    })
+    .from(serviceRequests)
+    .where(
+      and(
+        eq(serviceRequests.tenantSlug, tenantSlug),
+        or(
+          ...kinds.map((kind) =>
+            and(
+              eq(serviceRequests.kind, kind),
+              notInArray(serviceRequests.status, [...TERMINAL_STATUSES[kind]]),
             ),
           ),
         ),
       ),
-    kinds.includes("service-request")
-      ? listStalledFulfilledRequirements(tenantSlug)
-      : Promise.resolve([]),
-  ]);
-
-  const stalledIds = new Set(stalled.map((row) => row.id));
+    );
 
   // All three scans are bounded by the open rows just fetched, rather than
   // reading the tenant's whole history: the desk asks about a handful of
@@ -464,7 +403,7 @@ export async function listDeskItems(
     return {
       ...row,
       kind: row.kind as RequestKind,
-      hasFulfilledPendingRequirement: stalledIds.has(row.id),
+      hasFulfilledPendingRequirement: false,
       awaitingOffice: !office || citizen > office,
     };
   });

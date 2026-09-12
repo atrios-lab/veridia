@@ -70,20 +70,77 @@ test.describe("fila e detalhe de pedidos", () => {
       .click();
     await expect(page).toHaveURL(`${baseURL}/admin/pedidos`);
 
+    // A filed request is "Novo", the tab the queue opens on. The tab is
+    // paged and ordered by term, so a request filed today can sit pages
+    // down; the search is what brings it to the front.
+    await expect(
+      page.locator('a[aria-current="page"]', { hasText: "Novo" }),
+    ).toBeVisible();
+    await page
+      .getByRole("searchbox", { name: "Buscar protocolo ou nome" })
+      .fill(PROTOCOL);
+    await page.keyboard.press("Enter");
     await expect(page.getByText(PROTOCOL)).toBeVisible();
     // O nome do cliente se repete na fila: outros testes protocolam com a
     // mesma pessoa. O que importa é ele estar na linha deste protocolo.
-    await expect(
-      page
-        .getByRole("link", { name: PROTOCOL })
-        .getByText("Rosa Almeida Fontes"),
-    ).toBeVisible();
+    const row = page.getByText(PROTOCOL).locator("..");
+    await expect(row.getByText("Rosa Almeida Fontes")).toBeVisible();
 
-    await page.getByText(PROTOCOL).click();
+    // The row is no longer a link: "Detalhar" is the way in.
+    await row.getByRole("link", { name: "Detalhar" }).click();
     await expect(page).toHaveURL(
       `${baseURL}/admin/pedidos/${encodeURIComponent(PROTOCOL)}`,
     );
     await expect(page.getByRole("heading", { name: PROTOCOL })).toBeVisible();
+  });
+
+  test("the tab counter, the search, the filter and the footer agree", async ({
+    page,
+  }) => {
+    await signIn(page);
+    await page.goto(`${baseURL}/admin/pedidos`);
+    const tabs = page.getByRole("navigation", { name: "Andamentos" });
+    const novo = tabs.getByRole("link", { name: /^Novo/ });
+    await expect(novo).toHaveAttribute("aria-current", "page");
+    // Novo holds at least this test's own request.
+    await expect(novo).not.toHaveText(/^Novo0$/);
+
+    await page
+      .getByRole("searchbox", { name: "Buscar protocolo ou nome" })
+      .fill(PROTOCOL);
+    await page.keyboard.press("Enter");
+    await expect(page).toHaveURL(/q=REQ/);
+    await expect(page.getByText(PROTOCOL)).toBeVisible();
+    await expect(page.getByText("Exibindo 1 a 1 de 1 pedido")).toBeVisible();
+
+    // The request is RCPN: any other attribution empties the tab, and the
+    // tab's own counter does not move with the filter.
+    const before = await novo.textContent();
+    await page.getByRole("button", { name: "Atribuição: todas" }).click();
+    await page
+      .getByRole("menuitemradio")
+      .filter({ hasNotText: /todas|RCPN/ })
+      .first()
+      .click();
+    await expect(page.getByText("Nenhum pedido encontrado")).toBeVisible();
+    await expect(page.getByText("Nenhum registro")).toBeVisible();
+    await expect(novo).toHaveText(before ?? "");
+
+    // "Limpar" drops filter and search and keeps the tab; the request is
+    // back among however many "Novo" holds, on whatever page its term puts
+    // it. In CI's own freshly seeded database this test's row can be the
+    // only one in the tab, so the footer reads "1 pedido" (singular) rather
+    // than the plural this regex used to require.
+    await page.getByRole("link", { name: "Limpar" }).click();
+    await expect(page).toHaveURL(`${baseURL}/admin/pedidos`, {
+      timeout: 15_000,
+    });
+    await expect(
+      page.getByRole("searchbox", { name: "Buscar protocolo ou nome" }),
+    ).toHaveValue("");
+    await expect(
+      page.getByText(/^Exibindo 1 a \d+ de \d+ pedidos?$/),
+    ).toBeVisible();
   });
 
   test("the telephone filed with the request reaches the operator", async ({
@@ -102,19 +159,25 @@ test.describe("fila e detalhe de pedidos", () => {
     await signIn(page);
     await page.goto(`${baseURL}/admin/pedidos/${encodeURIComponent(PROTOCOL)}`);
 
-    await page.getByRole("button", { name: "Em análise" }).click();
+    await page.getByRole("button", { name: "Em processamento" }).click();
     // The trail of the move, on the request's own screen, which is also what
-    // says the click landed: "Andamento atual:" only shows for a status off
-    // the happy path, and this one is on it. The entry used to be keyed by the
-    // andamento instead of by the request, so `listRequestHistory` never
-    // matched it and the panel showed the change nowhere.
+    // says the click landed, regardless of whether the new andamento sits on
+    // the happy path bar or falls back to the plain "Andamento atual:" line.
+    // The entry used to be keyed by the andamento instead of by the request,
+    // so `listRequestHistory` never matched it and the panel showed the
+    // change nowhere.
     await expect(
       page.locator("li", { hasText: "mudou o andamento" }),
     ).toBeVisible();
 
-    await page.goto(`${baseURL}/admin/pedidos`);
-    const row = page.locator("a", { hasText: PROTOCOL });
-    await expect(row.getByText("Em análise")).toBeVisible();
+    // The row no longer names the andamento: the tab does.
+    await page.goto(
+      `${baseURL}/admin/pedidos?aba=processing&q=${encodeURIComponent(PROTOCOL)}`,
+    );
+    await expect(page.getByText(PROTOCOL)).toBeVisible();
+    await expect(
+      page.locator('a[aria-current="page"]', { hasText: "Em andamento" }),
+    ).toBeVisible();
   });
 
   test("cancelar exige motivo; o motivo aparece no histórico", async ({
@@ -270,10 +333,10 @@ test.describe("fila e detalhe de pedidos", () => {
     await sql.end();
 
     await signIn(page);
-    await page.goto(`${baseURL}/admin/pedidos`);
-    await expect(
-      page.locator("a", { hasText: PROTOCOL }).getByText("Pagamento informado"),
-    ).toBeVisible();
+    await page.goto(
+      `${baseURL}/admin/pedidos?aba=payment-reported&q=${encodeURIComponent(PROTOCOL)}`,
+    );
+    await expect(page.getByText(PROTOCOL)).toBeVisible();
 
     await page.goto(`${baseURL}/admin/pedidos/${encodeURIComponent(PROTOCOL)}`);
     await expect(page.getByText(/Pagamento informado em/)).toBeVisible();

@@ -652,8 +652,7 @@ function timelineSteps(
     result.requestStatus === "archived";
   const preparing =
     result.requestStatus === "paid" ||
-    ((result.requestStatus === "new" || result.requestStatus === "in-review") &&
-      !result.amountLabel);
+    (result.requestStatus === "new" && !result.amountLabel);
 
   if (finished || preparing) {
     steps.push({ label: "Em preparo na serventia", done: finished });

@@ -7,9 +7,9 @@ import { getSession } from "@/lib/session.ts";
 import { getTenant } from "@/lib/tenant.ts";
 import { MenuPopover } from "../../_components/menu-popover.tsx";
 import { GlobalSearchProvider } from "../_components/global-search.tsx";
-import { ADMIN_MENU_ID } from "../_components/page-header.tsx";
 import { ShortcutListener } from "../_components/shortcut-listener.tsx";
 import { AdminSidebar } from "../_components/sidebar.tsx";
+import { ADMIN_MENU_ID, AdminTopBar } from "../_components/top-bar.tsx";
 
 // The protected skeleton. The check runs on every request and hits the
 // database, so a session revoked there is gone on the next navigation.
@@ -66,7 +66,7 @@ export default async function DashboardLayout({
       <div className="flex h-screen overflow-hidden">
         <AdminSidebar
           tenant={tenant}
-          user={user}
+          role={role}
           counts={counts}
           className="hidden md:flex"
         />
@@ -92,7 +92,7 @@ export default async function DashboardLayout({
         >
           <AdminSidebar
             tenant={tenant}
-            user={user}
+            role={role}
             counts={counts}
             className="h-full"
           />
@@ -105,8 +105,20 @@ export default async function DashboardLayout({
           its own internal scroll region (the chat conversation, see
           atendimento/[id]/page.tsx) fills this exactly instead and this div
           never actually overflows for it.
+
+          The top bar sits inside this column, above the page: one bar for
+          every screen, rendered here rather than by each page, which is what
+          let the screens' own headers shrink to a title (see page-header.tsx).
+
+          `relative` is load bearing too: a `sr-only` span is absolutely
+          positioned, and without a positioned ancestor its containing block
+          is the document, so one sitting below the fold of a long table (the
+          pagination arrows have them) stretches the page past the shell and
+          the whole panel scrolls away under the wheel. Positioned here, they
+          belong to this column and its overflow clips them.
         */}
-        <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-y-auto">
+        <div className="scrollbar-hidden relative flex min-h-0 min-w-0 flex-1 flex-col overflow-y-auto">
+          <AdminTopBar user={user} />
           {children}
         </div>
       </div>
