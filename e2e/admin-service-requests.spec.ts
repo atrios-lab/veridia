@@ -634,4 +634,62 @@ test.describe("fila e detalhe de pedidos", () => {
 
     await sql.end();
   });
+
+  test("a via assinada, quando existe, é o que o cabeçalho abre; gerar continua possível", async ({
+    page,
+  }) => {
+    const request = page.request;
+    await signIn(page);
+    await page.goto(`${baseURL}/admin/pedidos/${encodeURIComponent(PROTOCOL)}`);
+    await expect(
+      page.getByRole("link", { name: "Imprimir requerimento" }),
+    ).toBeVisible();
+    await expect(
+      page.getByRole("link", { name: "Requerimento assinado" }),
+    ).toHaveCount(0);
+
+    // O balcão digitaliza o papel assinado à mão e o marca como o
+    // requerimento assinado: a partir daí é a via que o cabeçalho abre.
+    await page.getByLabel("Este arquivo é").selectOption("requerimento");
+    await page.getByLabel("Anexar arquivo (balcão)").setInputFiles([
+      {
+        name: "assinado.pdf",
+        mimeType: "application/pdf",
+        buffer: Buffer.from("%PDF-1.4\n%assinado\n"),
+      },
+    ]);
+    await expect(page.getByText("Documento anexado.")).toBeVisible();
+
+    const signed = page.getByRole("link", { name: "Requerimento assinado" });
+    await expect(signed).toBeVisible();
+    const href = await signed.getAttribute("href");
+    expect(href).toMatch(/^\/admin\/documento\?requestId=.+&attachmentId=.+$/);
+    await expect(
+      page.getByRole("link", { name: "Gerar sem assinatura" }),
+    ).toHaveAttribute("href", /\/imprimir$/);
+    await expect(
+      page.getByRole("link", { name: "Imprimir requerimento" }),
+    ).toHaveCount(0);
+
+    // Abrir a via assinada deixa rastro, como a geração deixa.
+    const sql = postgres(process.env.DATABASE_URL as string);
+    const auditCount = async (action: string) => {
+      const [row] = await sql`
+        select count(*)::int as n from audit_log
+        where action = ${action}
+          and target_id = (select id::text from service_requests where protocol_number = ${PROTOCOL})
+      `;
+      return row.n as number;
+    };
+    const before = await auditCount(
+      "service-request.print.requerimento-assinado",
+    );
+    const opened = await request.get(`${baseURL}${href}`);
+    expect(opened.status()).toBe(200);
+    expect(opened.headers()["content-type"]).toContain("application/pdf");
+    expect(
+      await auditCount("service-request.print.requerimento-assinado"),
+    ).toBe(before + 1);
+    await sql.end();
+  });
 });

@@ -7,6 +7,10 @@ import {
   hashAccessKey,
   verifyAccessKey,
 } from "@/core/request/access-key.ts";
+import {
+  isSignedFormDocument,
+  SIGNED_FORM_NAMES,
+} from "@/core/request/attachment.ts";
 import { deadlineDate } from "@/core/request/deadline.ts";
 import {
   buildExemptionDetails,
@@ -14,6 +18,7 @@ import {
   publicServiceRequestSchema,
   readExemptionForm,
 } from "@/core/request/form.ts";
+import { readExemption } from "@/core/request/kinds.ts";
 import { formatProtocolNumber } from "@/core/request/protocol.ts";
 import { formatDate } from "@/core/scheduling/calendar.ts";
 import { isSectionEnabled } from "@/core/tenant/gating.ts";
@@ -254,8 +259,16 @@ export type AttachState =
   | { status: "success"; message: string };
 
 /**
- * The signed form, sent from the success screen. Authorised by the same pair
- * the citizen was just handed: no session to keep, nothing to remember.
+ * The signed form, sent from the success screen or the consult. Authorised
+ * by the same pair the citizen was just handed: no session to keep, nothing
+ * to remember.
+ *
+ * `documento` says which paper was signed: the requerimento (the default,
+ * and what every send before the declaração could be sent apart was), or
+ * the declaração de hipossuficiência, accepted only on a pedido that has
+ * one. The file is stored under the document's own name
+ * (`SIGNED_FORM_NAMES`), which is how the panel and the consult tell the
+ * two signed copies apart; both stay `signed-form` attachments.
  */
 export async function attachSignedForm(
   _previous: AttachState,
@@ -264,6 +277,13 @@ export async function attachSignedForm(
   const tenant = await getTenant();
   const protocolNumber = String(formData.get("protocolNumber") ?? "");
   const accessKey = String(formData.get("accessKey") ?? "");
+  const rawDocumento = formData.get("documento") ?? "requerimento";
+  const documento = isSignedFormDocument(rawDocumento)
+    ? rawDocumento
+    : undefined;
+  if (!documento) {
+    return { status: "error", message: "Documento desconhecido." };
+  }
 
   const request = await findByProtocol(tenant.slug, protocolNumber);
   // The same message for "no such request" and for "wrong key": telling them
@@ -278,6 +298,12 @@ export async function attachSignedForm(
     };
   }
 
+  if (documento === "declaracao" && !readExemption(request.details)) {
+    // No declaração to sign on this pedido: a client that sends one anyway
+    // is not the form this system rendered.
+    return { status: "error", message: "Este pedido não tem declaração." };
+  }
+
   if (await isRateLimited(await headers())) {
     return {
       status: "error",
@@ -286,21 +312,27 @@ export async function attachSignedForm(
   }
 
   try {
-    const stored = await collectAttachments(formData, "requerimento", {
+    const stored = await collectAttachments(formData, documento, {
       tenantSlug: tenant.slug,
-      kind: "requerimento-assinado",
+      kind: SIGNED_FORM_NAMES[documento],
       limit: 1,
     });
     if (stored.length === 0) {
       return {
         status: "error",
-        message: "Escolha o arquivo do requerimento assinado.",
+        message:
+          documento === "declaracao"
+            ? "Escolha o arquivo da declaração assinada."
+            : "Escolha o arquivo do requerimento assinado.",
       };
     }
     await attachToRequest(tenant.slug, request.id, stored, "signed-form");
     return {
       status: "success",
-      message: "Requerimento enviado. A serventia vai analisar em seguida.",
+      message:
+        documento === "declaracao"
+          ? "Declaração enviada. A serventia vai analisar em seguida."
+          : "Requerimento enviado. A serventia vai analisar em seguida.",
     };
   } catch (error) {
     if (error instanceof AttachmentError) {

@@ -18,7 +18,7 @@ arquivo, com a geração como secundária, pela mesma regra do requerimento. O p
 oferecer ainda o formulário em branco, para entregar a quem preenche à mão.
 
 Abrir uma via assinada pelo painel DEVE (SHALL) ser registrado na auditoria como a geração é,
-nomeando o documento e o anexo aberto.
+nomeando o documento (requerimento ou declaração) e o pedido.
 
 A seção de anexos do detalhe DEVE (SHALL) permitir ao operador marcar um arquivo que anexa como
 "requerimento assinado" ou "declaração assinada", para que o papel assinado à mão no balcão e
@@ -44,7 +44,7 @@ digitalizado conte como via assinada.
 
 #### Scenario: Abrir a via assinada deixa rastro
 - **WHEN** o operador abre a via assinada do requerimento ou da declaração
-- **THEN** a auditoria registra a ação com o documento e o id do anexo
+- **THEN** a auditoria registra a ação nomeando o documento, no histórico do pedido
 
 #### Scenario: Papel do balcão vira via assinada
 - **WHEN** o operador anexa um arquivo marcando "requerimento assinado"

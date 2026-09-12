@@ -5,7 +5,11 @@ import { redirect } from "next/navigation";
 import { z } from "zod";
 import { getActForTenant } from "@/core/acts/catalog.ts";
 import { can } from "@/core/auth/roles.ts";
-import { REJECTION_DOCUMENT_MIME_TYPE } from "@/core/request/attachment.ts";
+import {
+  isSignedFormDocument,
+  REJECTION_DOCUMENT_MIME_TYPE,
+  SIGNED_FORM_NAMES,
+} from "@/core/request/attachment.ts";
 import {
   type Deadline,
   deadlineDaysSchema,
@@ -19,6 +23,7 @@ import {
   EXEMPTION_DECISION_OUTCOMES,
   isAllowedTransition,
   isServiceRequestStatus,
+  readExemption,
   requiresStatusReason,
   type ServiceRequestStatus,
   validateStatusReason,
@@ -845,15 +850,35 @@ export async function attachCitizenDocumentAction(
 
   const requestId = String(formData.get("requestId") ?? "");
   const tenant = await getTenant();
+  // What the scanned paper is: a document the citizen brought (the default,
+  // and everything this form ever attached before), or the requerimento or
+  // declaração they signed by hand at the counter, which then counts as the
+  // signed copy the header opens (see `signedFormFor`).
+  const como = formData.get("como") ?? "documento";
+  const signedAs = isSignedFormDocument(como) ? como : undefined;
   try {
+    if (signedAs === "declaracao") {
+      const request = await findById(tenant.slug, requestId);
+      if (!request || !readExemption(request.details)) {
+        return { status: "error", message: "Este pedido não tem declaração." };
+      }
+    }
     const files = formData
       .getAll("documento")
       .filter((f): f is File => f instanceof File);
-    const stored = await storeAttachments(files, { tenantSlug: tenant.slug });
+    const stored = await storeAttachments(files, {
+      tenantSlug: tenant.slug,
+      kind: signedAs ? SIGNED_FORM_NAMES[signedAs] : undefined,
+    });
     if (stored.length === 0) {
       return { status: "error", message: "Escolha um arquivo para anexar." };
     }
-    await attachToRequest(tenant.slug, requestId, stored, "citizen");
+    await attachToRequest(
+      tenant.slug,
+      requestId,
+      stored,
+      signedAs ? "signed-form" : "citizen",
+    );
   } catch (error) {
     if (error instanceof AttachmentError) {
       return { status: "error", message: error.message };

@@ -1,6 +1,8 @@
 import { readFile } from "node:fs/promises";
 import { extname } from "node:path";
 import { can } from "@/core/auth/roles.ts";
+import { SIGNED_FORM_NAMES } from "@/core/request/attachment.ts";
+import { recordAudit } from "@/lib/audit.ts";
 import { getAttachment } from "@/lib/service-request.ts";
 import { getSession } from "@/lib/session.ts";
 import { getTenant } from "@/lib/tenant.ts";
@@ -41,6 +43,24 @@ export async function GET(request: Request): Promise<Response> {
   const tenant = await getTenant();
   const attachment = await getAttachment(tenant.slug, requestId, attachmentId);
   if (!attachment) return new Response("Não encontrado", { status: 404 });
+
+  // A signed copy opened from here is the paper leaving the office's hands
+  // in place of a freshly generated one, so it leaves the same trail the
+  // print route does (`service-request.print.*`). Other attachments (a
+  // citizen's comprovante, an office delivery) are read, not issued, and
+  // stay unlogged as before.
+  if (attachment.kind === "signed-form") {
+    await recordAudit({
+      tenantSlug: tenant.slug,
+      actorId: session.user.id,
+      action:
+        attachment.displayName === SIGNED_FORM_NAMES.declaracao
+          ? "service-request.print.declaracao-assinada"
+          : "service-request.print.requerimento-assinado",
+      targetType: "service-request",
+      targetId: attachment.requestId,
+    });
+  }
 
   const bytes = attachment.path.startsWith("http")
     ? Buffer.from(await (await fetch(attachment.path)).arrayBuffer())

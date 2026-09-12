@@ -2,6 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ATTRIBUTION_NAMES, getActForTenant } from "@/core/acts/catalog.ts";
 import { can } from "@/core/auth/roles.ts";
+import { signedFormFor } from "@/core/request/attachment.ts";
 import {
   dayOfDeadline,
   deadlineDate,
@@ -78,6 +79,9 @@ const HISTORY_LABELS: Record<string, string> = {
   "service-request.print.comprovante": "imprimiu o comprovante de acesso",
   "service-request.print.declaracao":
     "imprimiu a declaração de hipossuficiência",
+  "service-request.print.requerimento-assinado":
+    "abriu o requerimento assinado",
+  "service-request.print.declaracao-assinada": "abriu a declaração assinada",
   "service-request.exemption-decision": "registrou o desfecho da gratuidade",
 };
 
@@ -152,6 +156,11 @@ export default async function ServiceRequestDetailPage({
   });
   // Everything a requirement carries is that requirement's, not the request's.
   const ownAttachments = requestOwnAttachments(attachments);
+  // The signed copies the citizen (or the counter) sent back: when one
+  // exists, it is the paper that counts, and the header opens it instead of
+  // generating a fresh unsigned one (spec: "Via assinada quando ela existe").
+  const signedRequerimento = signedFormFor(ownAttachments, "requerimento");
+  const signedDeclaracao = signedFormFor(ownAttachments, "declaracao");
   const citizenAttachments = ownAttachments
     .filter((a) => a.kind !== "office")
     .map(row);
@@ -244,24 +253,68 @@ export default async function ServiceRequestDetailPage({
           */}
           {request.actId && request.applicantName && request.contact && (
             <div className="ml-auto flex flex-wrap items-center gap-3.5">
-              <a
-                href={`/admin/pedidos/${encodeURIComponent(request.protocolNumber)}/imprimir`}
-                target="_blank"
-                rel="noreferrer"
-                className="text-[12.5px] font-semibold text-admin-primary-soft hover:underline"
-              >
-                Imprimir requerimento
-              </a>
-              {exemption && (
+              {signedRequerimento ? (
                 <>
                   <a
-                    href={`/admin/pedidos/${encodeURIComponent(request.protocolNumber)}/imprimir?documento=declaracao`}
+                    href={documentHref(request.id, signedRequerimento.id)}
                     target="_blank"
                     rel="noreferrer"
                     className="text-[12.5px] font-semibold text-admin-primary-soft hover:underline"
                   >
-                    Baixar declaração
+                    Requerimento assinado
                   </a>
+                  <a
+                    href={`/admin/pedidos/${encodeURIComponent(request.protocolNumber)}/imprimir`}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="text-[12.5px] text-admin-muted hover:underline"
+                    title="Gera o requerimento de novo, sem a assinatura"
+                  >
+                    Gerar sem assinatura
+                  </a>
+                </>
+              ) : (
+                <a
+                  href={`/admin/pedidos/${encodeURIComponent(request.protocolNumber)}/imprimir`}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="text-[12.5px] font-semibold text-admin-primary-soft hover:underline"
+                >
+                  Imprimir requerimento
+                </a>
+              )}
+              {exemption && (
+                <>
+                  {signedDeclaracao ? (
+                    <>
+                      <a
+                        href={documentHref(request.id, signedDeclaracao.id)}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="text-[12.5px] font-semibold text-admin-primary-soft hover:underline"
+                      >
+                        Declaração assinada
+                      </a>
+                      <a
+                        href={`/admin/pedidos/${encodeURIComponent(request.protocolNumber)}/imprimir?documento=declaracao`}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="text-[12.5px] text-admin-muted hover:underline"
+                        title="Gera a declaração de novo, com o carimbo e sem a assinatura"
+                      >
+                        Gerar sem assinatura
+                      </a>
+                    </>
+                  ) : (
+                    <a
+                      href={`/admin/pedidos/${encodeURIComponent(request.protocolNumber)}/imprimir?documento=declaracao`}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="text-[12.5px] font-semibold text-admin-primary-soft hover:underline"
+                    >
+                      Baixar declaração
+                    </a>
+                  )}
                   <a
                     href={`/admin/pedidos/${encodeURIComponent(request.protocolNumber)}/imprimir?documento=declaracao-em-branco`}
                     target="_blank"
@@ -380,6 +433,7 @@ export default async function ServiceRequestDetailPage({
             <AttachmentsSection
               requestId={request.id}
               attachments={citizenAttachments}
+              hasExemption={Boolean(exemption)}
             />
 
             <DeliverySection

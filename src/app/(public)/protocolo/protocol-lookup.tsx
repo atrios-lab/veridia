@@ -12,11 +12,11 @@ import { HANDWRITTEN_SIGNATURE_CAVEAT } from "@/core/request/requerimento.ts";
 import { Icon } from "../_components/icon.tsx";
 import { CopyField } from "../_components/protocol-reveal.tsx";
 import { ProtocolSearchButton } from "../_components/protocol-search-button.tsx";
+import { SignedFormUpload } from "../_components/signed-form-upload.tsx";
 import {
   ATTACHMENT_ACCEPT,
   useAttachmentUpload,
 } from "../_lib/attachments.tsx";
-import { type AttachState, attachSignedForm } from "../solicitar/actions.ts";
 import {
   type AttachDocumentState,
   attachExtraDocument,
@@ -587,6 +587,7 @@ function DeadlineNote({
 function timelineSteps(
   result: ServiceRequestDetail,
   hasSignedForm: boolean,
+  hasSignedDeclaration: boolean,
 ): TimelineStepData[] {
   const steps: TimelineStepData[] = [
     {
@@ -607,6 +608,24 @@ function timelineSteps(
           detail: "o passo acima resolve isto",
         },
   ];
+  // A gratuidade pedido has a second paper to sign; it gets its own line so
+  // the citizen sees which of the two is still missing.
+  if (result.hasExemption) {
+    steps.push(
+      hasSignedDeclaration
+        ? {
+            label: "Declaração assinada recebida",
+            done: true,
+            detail: result.signedDeclarationReceivedAt
+              ? formatDateTime(result.signedDeclarationReceivedAt)
+              : undefined,
+          }
+        : {
+            label: "Aguardando declaração assinada",
+            detail: "o passo acima resolve isto",
+          },
+    );
+  }
 
   if (result.requirements.some((r) => r.status === "pending")) {
     steps.push({
@@ -1000,25 +1019,21 @@ function RequestDetail({ result }: { result: ServiceRequestDetail }) {
   // successful upload in this same visit flips it without asking the server
   // to look everything up again.
   const [hasSignedForm, setHasSignedForm] = useState(result.hasSignedForm);
+  const [hasSignedDeclaration, setHasSignedDeclaration] = useState(
+    result.hasSignedDeclaration,
+  );
   const [citizenDocuments, setCitizenDocuments] = useState(
     result.citizenDocuments,
   );
-  const [signState, signAction, savingSignedForm] = useActionState<
-    AttachState,
-    FormData
-  >(attachSignedForm, { status: "idle" });
   const [docState, docAction, savingDoc] = useActionState<
     AttachDocumentState,
     FormData
   >(attachExtraDocument, { status: "idle" });
-  const signUpload = useAttachmentUpload(signAction);
   const docUpload = useAttachmentUpload(docAction);
-  const signing = savingSignedForm || signUpload.uploading;
   const sendingDoc = savingDoc || docUpload.uploading;
-
-  useEffect(() => {
-    if (signState.status === "success") setHasSignedForm(true);
-  }, [signState]);
+  // What the office is still waiting for from the citizen's pen.
+  const awaitingSignature =
+    !hasSignedForm || (result.hasExemption && !hasSignedDeclaration);
 
   useEffect(() => {
     if (docState.status === "success") {
@@ -1076,7 +1091,7 @@ function RequestDetail({ result }: { result: ServiceRequestDetail }) {
         <div className="flex flex-col gap-3.5">
           {result.amountLabel && <PaymentCard result={result} />}
           <RequirementsCard result={result} />
-          {!hasSignedForm && (
+          {awaitingSignature && (
             <div className="rounded-2xl border-[1.5px] border-brand-accent-line bg-brand-accent-soft p-4">
               <div className="flex items-center gap-2.5">
                 <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-brand-accent">
@@ -1091,7 +1106,13 @@ function RequestDetail({ result }: { result: ServiceRequestDetail }) {
                     É a sua vez
                   </div>
                   <div className="font-serif text-[16.5px] font-semibold text-brand-primary">
-                    Falta só o requerimento assinado
+                    {!hasSignedForm &&
+                    result.hasExemption &&
+                    !hasSignedDeclaration
+                      ? "Faltam o requerimento e a declaração assinados"
+                      : !hasSignedForm
+                        ? "Falta só o requerimento assinado"
+                        : "Falta só a declaração assinada"}
                   </div>
                 </div>
               </div>
@@ -1166,65 +1187,28 @@ function RequestDetail({ result }: { result: ServiceRequestDetail }) {
                     <StepBadge>3</StepBadge>
                     <div className="flex-1">
                       <div className="text-[12.5px] font-semibold text-brand-primary">
-                        Envie o arquivo assinado
+                        {result.hasExemption
+                          ? "Envie os arquivos assinados"
+                          : "Envie o arquivo assinado"}
                       </div>
-                      <form
-                        onSubmit={(event) => {
-                          event.preventDefault();
-                          void signUpload.send(
-                            event.currentTarget,
-                            "requerimento",
-                            1,
-                          );
-                        }}
-                        className="mt-2"
-                      >
-                        <input
-                          type="hidden"
-                          name="protocolNumber"
-                          value={result.protocolNumber}
-                        />
-                        <input
-                          type="hidden"
-                          name="accessKey"
-                          value={result.accessKey}
-                        />
-                        <label
-                          className={`flex cursor-pointer items-center justify-center gap-2 rounded-lg border-[1.5px] border-dashed border-brand-accent-line px-3 py-2.5 text-[12px] font-semibold text-brand-primary hover:border-brand-accent ${signing ? "opacity-60" : ""}`}
-                        >
-                          <Icon
-                            name="plus"
-                            className="h-3.5 w-3.5 text-brand-accent"
+                      <div className="mt-2 flex flex-col gap-2">
+                        {!hasSignedForm && (
+                          <SignedFormUpload
+                            protocolNumber={result.protocolNumber}
+                            accessKey={result.accessKey}
+                            documento="requerimento"
+                            onSent={() => setHasSignedForm(true)}
                           />
-                          {signing
-                            ? "Enviando..."
-                            : "Anexar requerimento assinado"}
-                          <input
-                            type="file"
-                            name="requerimento"
-                            accept={ATTACHMENT_ACCEPT}
-                            className="sr-only"
-                            disabled={signing}
-                            onChange={(event) => {
-                              if (event.target.files?.length) {
-                                event.target.form?.requestSubmit();
-                              }
-                            }}
+                        )}
+                        {result.hasExemption && !hasSignedDeclaration && (
+                          <SignedFormUpload
+                            protocolNumber={result.protocolNumber}
+                            accessKey={result.accessKey}
+                            documento="declaracao"
+                            onSent={() => setHasSignedDeclaration(true)}
                           />
-                        </label>
-                      </form>
-                      {(signUpload.error || signState.status !== "idle") && (
-                        <output
-                          className={`mt-1.5 block text-[11.5px] font-semibold ${
-                            signUpload.error || signState.status === "error"
-                              ? "text-brand-alert"
-                              : "text-brand-primary-soft"
-                          }`}
-                        >
-                          {signUpload.error ??
-                            (signState.status !== "idle" && signState.message)}
-                        </output>
-                      )}
+                        )}
+                      </div>
                       <div className="mt-1.5 text-[11px] text-brand-faint">
                         Ou entregue em papel no balcão: o pedido não trava.
                       </div>
@@ -1240,13 +1224,15 @@ function RequestDetail({ result }: { result: ServiceRequestDetail }) {
               Andamento
             </span>
             <ol className="mt-2.5 flex flex-col">
-              {timelineSteps(result, hasSignedForm).map((step, index, all) => (
-                <TimelineStep
-                  key={step.label}
-                  {...step}
-                  lineBelow={index < all.length - 1}
-                />
-              ))}
+              {timelineSteps(result, hasSignedForm, hasSignedDeclaration).map(
+                (step, index, all) => (
+                  <TimelineStep
+                    key={step.label}
+                    {...step}
+                    lineBelow={index < all.length - 1}
+                  />
+                ),
+              )}
             </ol>
 
             {result.deadline && <DeadlineNote deadline={result.deadline} />}
