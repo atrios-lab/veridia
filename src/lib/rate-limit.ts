@@ -1,5 +1,6 @@
 import { Ratelimit } from "@upstash/ratelimit";
 import { Redis } from "@upstash/redis";
+import { clientIp } from "./client-ip.ts";
 
 // Off when Upstash is not configured, which is the case in local development
 // and in CI. It has to be on in production, so the deploy checklist covers
@@ -32,9 +33,7 @@ const uploadLimiter = configured
   : null;
 
 function addressOf(headers: Headers): string {
-  return (
-    headers.get("x-forwarded-for")?.split(",")[0]?.trim() || "desconhecido"
-  );
+  return clientIp(headers) || "desconhecido";
 }
 
 /**
