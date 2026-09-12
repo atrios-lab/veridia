@@ -231,6 +231,19 @@ function StepHeader({
           <Stepper current={step} />
         </div>
       </div>
+      {/* One line, not a modal: the claim matters to whoever is about to
+          file, and it must never stand between them and the form. */}
+      <p className="mt-2 text-xs leading-relaxed text-brand-muted">
+        Pedido recebido pela Plataforma Eletrônica Oficial da Serventia
+        (Provimento CNJ n. 180/2024).{" "}
+        <Link
+          href="/plataforma"
+          className="font-semibold text-brand-primary-soft hover:underline"
+        >
+          Saiba mais
+        </Link>
+        .
+      </p>
     </>
   );
 }

@@ -33,6 +33,7 @@ const routes = [
   "/transparencia",
   "/lgpd",
   "/privacidade",
+  "/plataforma",
   "/admin/login",
 ];
 
