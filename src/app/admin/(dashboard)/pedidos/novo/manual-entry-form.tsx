@@ -587,8 +587,9 @@ const BASE_PRINTABLES: Printable[] = [
     tagTone: "leaves",
     icon: "lock",
     description:
-      "A única folha com a chave. Só sai enquanto esta tela estiver aberta: " +
-      "depois, apenas emitindo uma chave nova, o que invalida esta.",
+      "A única folha com a chave. Baixa como PDF, para imprimir ou entregar. " +
+      "Só sai enquanto esta tela estiver aberta: depois, apenas emitindo uma " +
+      "chave nova, o que invalida esta.",
   },
 ];
 
@@ -744,6 +745,7 @@ function SuccessScreen({ state }: { state: SuccessState }) {
    * Marks a document as asked for. Nothing on this side can know whether paper
    * came out of a printer, so the label below says "enviado para impressão"
    * and never "impresso": the honest claim is the one the screen can back.
+   * The receipt is a download, and "baixado" is what the screen can say of it.
    */
   function markPrinted(key: Printable["key"]) {
     setPrinted((current) =>
@@ -758,11 +760,13 @@ function SuccessScreen({ state }: { state: SuccessState }) {
    * result is checked.
    *
    * The receipt goes first, by form submit, because it is the irreversible
-   * one: the key it carries stops existing when this screen does. The
-   * requerimento follows through `window.open`, which returns null when it is
-   * refused, and that is the only one of the two whose failure this page can
-   * actually see. Blocked, it says so and leaves its own button to finish the
-   * job, instead of ticking a box over a tab that never opened.
+   * one: the key it carries stops existing when this screen does. It comes
+   * back as a download, so its tab closes on its own and it is never the one
+   * a pop-up blocker holds against this page. The requerimento follows
+   * through `window.open`, which returns null when it is refused, and that is
+   * the only one of the two whose failure this page can actually see.
+   * Blocked, it says so and leaves its own button to finish the job, instead
+   * of ticking a box over a tab that never opened.
    */
   function printBoth() {
     receiptFormRef.current?.requestSubmit();
@@ -837,10 +841,10 @@ function SuccessScreen({ state }: { state: SuccessState }) {
         <div className="flex flex-wrap items-center gap-3 p-5">
           <div className="min-w-0 flex-1">
             <h4 className="font-serif text-[16px] font-semibold text-admin-primary">
-              Imprimir agora
+              Emitir agora
             </h4>
             <p className="mt-0.5 text-[12px] text-admin-muted">
-              Cada impressão fica registrada na auditoria, com quem imprimiu e
+              Cada emissão fica registrada na auditoria, com quem emitiu e
               quando.
             </p>
           </div>
@@ -853,7 +857,7 @@ function SuccessScreen({ state }: { state: SuccessState }) {
             className="btn btn-admin-primary btn-md"
           >
             <AdminIcon name="printer" className="h-4 w-4" strokeWidth={2} />
-            Imprimir os dois
+            Emitir os dois
           </button>
         </div>
 
@@ -945,7 +949,16 @@ function PrintableRow({
   receiptFormRef: React.RefObject<HTMLFormElement | null>;
   onPrint: () => void;
 }) {
-  const label = printed ? "Imprimir de novo" : "Imprimir";
+  // The receipt is saved, the others are printed from a tab: the verb on the
+  // button and the tick beside the title both say which.
+  const downloads = doc.key === "comprovante";
+  const label = downloads
+    ? printed
+      ? "Baixar de novo"
+      : "Baixar"
+    : printed
+      ? "Imprimir de novo"
+      : "Imprimir";
   const leaves = doc.tagTone === "leaves";
   const href = doc.query ? `${printHref}?${doc.query}` : printHref;
 
@@ -980,7 +993,7 @@ function PrintableRow({
           {printed && (
             <span className="flex items-center gap-1 text-[11px] font-semibold text-admin-success-text">
               <AdminIcon name="check" className="h-3 w-3" strokeWidth={3} />
-              Enviado para impressão
+              {downloads ? "Baixado" : "Enviado para impressão"}
             </span>
           )}
         </div>

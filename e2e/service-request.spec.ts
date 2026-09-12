@@ -148,11 +148,54 @@ test.describe("gratuidade (ISENTO)", () => {
         .first()
         .textContent()) ?? "";
 
+    // The POST is answered with a redirect to a signed GET link, and the
+    // request follows it: what lands is the PDF, at an address the browser's
+    // viewer can fetch again when its download button is clicked.
     const granted = await request.post(`${baseURL}/solicitar/requerimento`, {
       form: { protocolNumber, accessKey, documento: "declaracao" },
     });
     expect(granted.status()).toBe(200);
     expect(granted.headers()["content-type"]).toContain("application/pdf");
+    expect(granted.headers()["content-disposition"]).toBe(
+      `inline; filename="declaracao-${protocolNumber}.pdf"`,
+    );
+    const link = new URL(granted.url());
+    expect(link.pathname).toBe(
+      `/solicitar/requerimento/declaracao-${protocolNumber}.pdf`,
+    );
+    expect(link.searchParams.get("t")).toMatch(
+      /^[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+$/,
+    );
+
+    // What Chrome does on the viewer's download button: the same URL, by
+    // GET, with no form body to carry the key.
+    const refetched = await request.get(granted.url());
+    expect(refetched.status()).toBe(200);
+    expect(refetched.headers()["content-type"]).toContain("application/pdf");
+    expect((await refetched.body()).subarray(0, 5).toString()).toBe("%PDF-");
+
+    // A link is for one document of one pedido: change a character of the
+    // token, or drop it, and the answer is the one a wrong key gets.
+    const token = link.searchParams.get("t") ?? "";
+    const tampered = new URL(link);
+    tampered.searchParams.set(
+      "t",
+      token.slice(0, -1) + (token.endsWith("A") ? "B" : "A"),
+    );
+    expect((await request.get(tampered.toString())).status()).toBe(404);
+    const bare = new URL(link);
+    bare.searchParams.delete("t");
+    expect((await request.get(bare.toString())).status()).toBe(404);
+
+    // The token names the declaração; the path segment is decorative, and a
+    // requerimento cannot be had by renaming the file.
+    const renamed = new URL(link);
+    renamed.pathname = `/solicitar/requerimento/requerimento-${protocolNumber}.pdf`;
+    const stillDeclaracao = await request.get(renamed.toString());
+    expect(stillDeclaracao.status()).toBe(200);
+    expect(stillDeclaracao.headers()["content-disposition"]).toBe(
+      `inline; filename="declaracao-${protocolNumber}.pdf"`,
+    );
 
     const refused = await request.post(`${baseURL}/solicitar/requerimento`, {
       form: {
@@ -681,12 +724,41 @@ test.describe("filing a request", () => {
         .first()
         .textContent()) ?? "";
 
+    // The POST redirects to a signed GET link and the request follows it;
+    // the PDF arrives from the link, inline, under the document's own name.
     const granted = await request.post(`${baseURL}/solicitar/requerimento`, {
       form: { protocolNumber, accessKey },
     });
     expect(granted.status()).toBe(200);
     expect(granted.headers()["content-type"]).toContain("application/pdf");
     expect((await granted.body()).subarray(0, 5).toString()).toBe("%PDF-");
+    expect(granted.headers()["content-disposition"]).toBe(
+      `inline; filename="requerimento-${protocolNumber}.pdf"`,
+    );
+    expect(new URL(granted.url()).pathname).toBe(
+      `/solicitar/requerimento/requerimento-${protocolNumber}.pdf`,
+    );
+
+    // The viewer's download button repeats that GET; it must get the file.
+    const refetched = await request.get(granted.url());
+    expect(refetched.status()).toBe(200);
+    expect(refetched.headers()["content-type"]).toContain("application/pdf");
+
+    // And the redirect itself never leaks the key: the POST's own answer is
+    // a 303 whose Location carries a token and nothing the citizen typed.
+    const hop = await request.post(`${baseURL}/solicitar/requerimento`, {
+      form: { protocolNumber, accessKey },
+      maxRedirects: 0,
+    });
+    expect(hop.status()).toBe(303);
+    const location = hop.headers().location ?? "";
+    expect(location).not.toContain(accessKey);
+    expect(location).not.toContain(accessKey.replace(/-/g, ""));
+    // A path, not an absolute URL: the server's idea of its own origin is
+    // not the host in the citizen's address bar, and a form submission
+    // redirected across origins is aborted by the page's `form-action`
+    // CSP, which is how the first draft of this route opened no tab at all.
+    expect(location.startsWith("/solicitar/requerimento/")).toBe(true);
 
     const refused = await request.post(`${baseURL}/solicitar/requerimento`, {
       form: { protocolNumber, accessKey: "AAAA-BBBB-CCCC" },
@@ -694,16 +766,17 @@ test.describe("filing a request", () => {
     expect(refused.status()).toBe(404);
 
     // The credential rides in a second file, so the one that gets signed and
-    // sent back never holds it. Same route, same gate.
+    // sent back never holds it. Same route, same gate. And that file is the
+    // one that cannot become a link, because it prints the key: it is
+    // answered straight from the POST, as a download the browser saves
+    // without a viewer, so there is no refetch to fail.
     const receipt = await request.post(`${baseURL}/solicitar/requerimento`, {
       form: { protocolNumber, accessKey, documento: "comprovante" },
     });
     expect(receipt.status()).toBe(200);
-    expect(receipt.headers()["content-disposition"]).toContain(
-      `comprovante-${protocolNumber}.pdf`,
-    );
-    expect(granted.headers()["content-disposition"]).toContain(
-      `requerimento-${protocolNumber}.pdf`,
+    expect(receipt.headers()["content-type"]).toContain("application/pdf");
+    expect(receipt.headers()["content-disposition"]).toBe(
+      `attachment; filename="comprovante-${protocolNumber}.pdf"`,
     );
 
     const refusedReceipt = await request.post(
