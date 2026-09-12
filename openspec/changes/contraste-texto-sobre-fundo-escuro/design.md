@@ -42,6 +42,19 @@ em várias telas; trocá-lo é mudança de aparência que esta change não pede.
 `check-a11y.mjs` já lista `/admin/login`; `/admin/esqueci-senha` usa o mesmo token sobre o
 mesmo fundo e entra na lista, para o próximo tom fixo esquecido aparecer na varredura.
 
+### 4. Os derivados passam a ser declarados também em `[data-theme]` (achado na implementação)
+
+Ao conferir no navegador, o apagado computado no tenant oliva era 70% de branco misturado com
+`#123c2a`, o primário do verde-dourado, e não com `#3f4f2e`. Causa: os três tons derivados
+(`--brand-on-dark-body`, `--brand-on-dark-muted`, `--brand-accent-line`) eram declarados só em
+`:root`, e um `var()` resolve no elemento que declara a propriedade; o `data-theme` fica num
+`div` (`(public)/layout.tsx`, `admin/layout.tsx`), não no `<html>`. Resultado: em todo tenant
+os derivados vinham do piloto, e a promessa do comentário ("o tom derivado sempre pertence à
+paleta de onde veio") não valia. A correção é declarar o bloco em `:root, [data-theme]`, para
+resolver no elemento do tema. Com isso as contas da tabela acima passam a valer de fato: oliva
+5,3 no apagado (era 4,95 com o verde misturado a 70%, e abaixo de 4,5 a 62%). Efeito
+colateral bem-vindo: `on-dark-body` e `accent-line` também passam a seguir o tema.
+
 ## Risks / Trade-offs
 
 - [O apagado fica mais claro nos temas que já passavam] → É uma diferença de 62% para 70% de
