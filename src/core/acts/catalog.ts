@@ -367,6 +367,31 @@ export const PLATFORM_STATEMENT =
 export const PLATFORM_MOTTO =
   "Autenticidade • Integridade • Segurança • Rastreabilidade";
 
+/**
+ * The three things the site says about the platform that the carimbo does
+ * not: where electronic pedidos may come in (the rule the serventia invokes
+ * to refuse one that arrives by WhatsApp or e-mail), which security
+ * guidelines it follows, and how personal data is treated. Wording is the
+ * serventia's own (`/plataforma`, and the rodapé for the first).
+ */
+export const PLATFORM_CHANNEL_RULE =
+  "Nos termos do Provimento n. 180 do Conselho Nacional de Justiça (CNJ), " +
+  "que disciplina o uso de plataformas eletrônicas de serviços " +
+  "extrajudiciais, os pedidos de registro eletrônico devem ser realizados " +
+  "exclusivamente pelas Centrais Oficiais Nacionais, reconhecidas pelo " +
+  "CNJ, ou, ainda, diretamente pelo site institucional deste Cartório.";
+
+export const PLATFORM_SECURITY_STATEMENT =
+  "A plataforma observa as diretrizes de segurança, integridade, " +
+  "disponibilidade, autenticidade e rastreabilidade estabelecidas pelo " +
+  "Provimento CNJ n. 213/2026, com as alterações promovidas pelo " +
+  "Provimento CNJ n. 243/2026.";
+
+export const PLATFORM_DATA_PROTECTION =
+  "Seus dados pessoais são protegidos e tratados em conformidade com a Lei " +
+  "Geral de Proteção de Dados Pessoais (LGPD, Lei n. 13.709/2018) e com as " +
+  "normas aplicáveis aos serviços extrajudiciais.";
+
 /** The declaração's own second rodapé line, added only when the document
  * came from a pedido (never on the blank form: there is nothing to certify
  * about a form nobody filed). */

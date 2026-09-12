@@ -300,9 +300,15 @@ export default async function PublicLayout({
                 </span>
               </div>
 
+              {/* The short version; the long one is /plataforma. Named here
+                  because it is the same platform the declaração's carimbo
+                  cites, and a citizen (or the fundo) checking the site should
+                  find the same claim under the same norm. */}
               <p className="max-w-sm text-sm leading-relaxed text-brand-on-dark-body">
-                Serventia dotada de fé pública. Presença digital em conformidade
-                com a Lei Geral de Proteção de Dados e o Provimento 213 do CNJ.
+                Serventia dotada de fé pública. Plataforma Eletrônica Oficial da
+                Serventia, nos termos do art. 208, II, "b", do Código Nacional
+                de Normas do CNJ (Provimento CNJ n. 180/2024), em conformidade
+                com a LGPD e o Provimento CNJ n. 213/2026.
               </p>
             </div>
 
@@ -330,13 +336,23 @@ export default async function PublicLayout({
                     {link.label}
                   </Link>
                 ))}
+                {/* Neither carries data-section: they are not gated sections,
+                    and the gating e2e compares the footer's data-section set. */}
                 {title === "Cidadão" && (
-                  <Link
-                    href="/privacidade"
-                    className="text-sm text-brand-on-dark-body hover:text-white"
-                  >
-                    Política de privacidade
-                  </Link>
+                  <>
+                    <Link
+                      href="/plataforma"
+                      className="text-sm text-brand-on-dark-body hover:text-white"
+                    >
+                      Sobre a plataforma
+                    </Link>
+                    <Link
+                      href="/privacidade"
+                      className="text-sm text-brand-on-dark-body hover:text-white"
+                    >
+                      Política de privacidade
+                    </Link>
+                  </>
                 )}
               </nav>
             ))}

@@ -19,8 +19,11 @@ import {
   getActForTenant,
   IDENTIFICATION_ONLY_HINT,
   IDENTIFICATION_ONLY_LABEL,
+  PLATFORM_CHANNEL_RULE,
   PLATFORM_COUNTER_STATEMENT,
+  PLATFORM_DATA_PROTECTION,
   PLATFORM_RECEIPT_STATEMENT,
+  PLATFORM_SECURITY_STATEMENT,
   PLATFORM_STATEMENT,
   PROCESSING_MODE_HINTS,
   PROCESSING_MODE_LABELS,
@@ -290,6 +293,9 @@ test("o texto da plataforma nunca diz que o Provimento 7 a autoriza", () => {
     PLATFORM_STATEMENT,
     PLATFORM_RECEIPT_STATEMENT,
     PLATFORM_COUNTER_STATEMENT,
+    PLATFORM_CHANNEL_RULE,
+    PLATFORM_SECURITY_STATEMENT,
+    PLATFORM_DATA_PROTECTION,
   ]) {
     assert.doesNotMatch(text, /7\/2026.*(autoriza|permite|admite)/i);
   }
@@ -297,4 +303,12 @@ test("o texto da plataforma nunca diz que o Provimento 7 a autoriza", () => {
   // 7/2026 só é citado como o que a declaração aceita.
   assert.match(PLATFORM_STATEMENT, /180\/2024/);
   assert.match(PLATFORM_RECEIPT_STATEMENT, /7\/2026/);
+});
+
+test('a regra de canal do site diz "exclusivamente" e cita o Provimento 180', () => {
+  // É a frase que a serventia invoca para recusar pedido por WhatsApp ou
+  // e-mail; sem o "exclusivamente" ela não recusa nada.
+  assert.match(PLATFORM_CHANNEL_RULE, /exclusivamente/);
+  assert.match(PLATFORM_CHANNEL_RULE, /Provimento n\. 180/);
+  assert.match(PLATFORM_CHANNEL_RULE, /site institucional/);
 });
