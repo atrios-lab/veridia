@@ -262,7 +262,7 @@ function computeHeadline(
       headline: "Não conseguimos atender este pedido.",
       leadDate: `${formatDate(result.updatedAt)}:`,
       leadText:
-        "explicamos o motivo na mensagem que enviamos para você. Se ficou alguma dúvida, fale com a gente. Você pode fazer um novo pedido quando quiser.",
+        "se ficou alguma dúvida, fale com a gente. Você pode fazer um novo pedido quando quiser.",
     };
   }
   if (finished) {
@@ -451,7 +451,7 @@ function buildHistory(
         result.requestStatus === "rejected"
           ? "Pedido não aceito."
           : "Pedido cancelado.",
-      sub: "Enviamos o motivo para você.",
+      sub: "O motivo está detalhado no início desta página.",
       tone: "red",
     });
   }
@@ -1404,7 +1404,8 @@ function DoneCard({
   );
 }
 
-function RejectedCard() {
+function RejectedCard({ result }: { result: ServiceRequestDetail }) {
+  const isRejected = result.requestStatus === "rejected";
   return (
     <div
       className={`flex animate-notice-rise flex-col gap-2.5 rounded-2xl border-[1.5px] ${REJECTED_BORDER} ${REJECTED_BG} p-5`}
@@ -1412,10 +1413,79 @@ function RejectedCard() {
       <div className="text-xs font-bold uppercase tracking-[0.16em] text-brand-alert">
         Pedido não aceito
       </div>
+      {isRejected && (
+        <p className="text-[14.5px] leading-relaxed">
+          Você pode refazer o pedido, cobrindo o que motivou o indeferimento.
+        </p>
+      )}
       <p className="text-[14.5px] leading-relaxed">
-        Enviamos o motivo para você. Se ficou alguma dúvida, fale com a gente
-        pelo atendimento online ou no balcão. Estamos aqui para ajudar.
+        Se ficou alguma dúvida, fale com a gente pelo atendimento online ou no
+        balcão. Estamos aqui para ajudar.
       </p>
+    </div>
+  );
+}
+
+/**
+ * O motivo do indeferimento/cancelamento vive fora do RejectedCard: é texto
+ * livre do cartório e pode ser longo, então precisa do espaço da coluna
+ * principal (o card vermelho ao lado é só para instruções curtas).
+ */
+/** Parágrafos separados por linha em branco, para preservar a formatação
+ * livre que o cartório digitou (o textarea do painel não força uma linha só). */
+function splitParagraphs(text: string): string[] {
+  return text
+    .split(/\n\s*\n/)
+    .map((paragraph) => paragraph.trim())
+    .filter(Boolean);
+}
+
+function RejectionReason({
+  result,
+  protocolNumber,
+  accessKey,
+}: {
+  result: ServiceRequestDetail;
+  protocolNumber: string;
+  accessKey: string;
+}) {
+  const hasDocument = Boolean(result.rejectionDocumentAttachmentId);
+  const paragraphs = result.statusReason
+    ? splitParagraphs(result.statusReason)
+    : [];
+  return (
+    <div className="flex flex-col gap-2">
+      <span className="text-xs font-bold uppercase tracking-[0.16em] text-brand-alert">
+        Motivo
+      </span>
+      {paragraphs.length > 0
+        ? paragraphs.map((paragraph, index) => (
+            <p
+              key={`${index}-${paragraph}`}
+              className="whitespace-pre-line text-justify text-[15.5px] leading-relaxed"
+            >
+              {paragraph}
+            </p>
+          ))
+        : !hasDocument && (
+            <p className="text-[15.5px] leading-relaxed">
+              Motivo não informado.
+            </p>
+          )}
+      {hasDocument && (
+        <form action="/protocolo/documento" method="post">
+          <input type="hidden" name="protocolNumber" value={protocolNumber} />
+          <input type="hidden" name="accessKey" value={accessKey} />
+          <input
+            type="hidden"
+            name="attachmentId"
+            value={result.rejectionDocumentAttachmentId}
+          />
+          <button type="submit" className="btn btn-ghost btn-sm">
+            Baixar documento do indeferimento
+          </button>
+        </form>
+      )}
     </div>
   );
 }
@@ -1725,6 +1795,23 @@ function ServiceRequestTrilho({
   );
   const { prazoStrong, prazoText } = computePrazo(result, rejected, finished);
   const groups = groupHistory(buildHistory(result, hasSignedForm, rejected));
+  const pendingRequirementCards = pendingRequirements.map((r) => (
+    <RequirementCard
+      key={r.id}
+      requirement={r}
+      protocolNumber={result.protocolNumber}
+      accessKey={result.accessKey}
+      onSent={(message) =>
+        setRequirements((prev) =>
+          prev.map((req) =>
+            req.id === r.id
+              ? { ...req, messages: [...req.messages, message] }
+              : req,
+          ),
+        )
+      }
+    />
+  ));
 
   return (
     <div className="flex flex-col gap-8 md:gap-14">
@@ -1755,11 +1842,17 @@ function ServiceRequestTrilho({
       <ProgressRail steps={steps} />
       <ProgressDots steps={steps} rejected={rejected} />
 
-      <div className="grid items-start gap-8 md:grid-cols-2 md:gap-11">
-        <div className="flex min-w-0 flex-col gap-4.5">
+      {rejected ? (
+        <div className="flex flex-col gap-4.5">
           <h2 className="font-serif text-[clamp(23px,3vw,30px)] leading-[1.15] font-semibold text-brand-primary text-balance">
             {headline}
           </h2>
+          <RejectedCard result={result} />
+          <RejectionReason
+            result={result}
+            protocolNumber={result.protocolNumber}
+            accessKey={result.accessKey}
+          />
           <p className="text-[15.5px] leading-relaxed">
             <strong>{leadDate}</strong> {leadText}
           </p>
@@ -1770,52 +1863,54 @@ function ServiceRequestTrilho({
           {resolvedRequirements.map((r) => (
             <ResolvedRequirement key={r.id} requirement={r} />
           ))}
+          {pendingRequirementCards}
         </div>
+      ) : (
+        <div className="grid items-start gap-8 md:grid-cols-2 md:gap-11">
+          <div className="flex min-w-0 flex-col gap-4.5">
+            <h2 className="font-serif text-[clamp(23px,3vw,30px)] leading-[1.15] font-semibold text-brand-primary text-balance">
+              {headline}
+            </h2>
+            <p className="text-[15.5px] leading-relaxed">
+              <strong>{leadDate}</strong> {leadText}
+            </p>
+            <p className="text-sm leading-relaxed text-brand-muted">
+              <strong className="text-brand-text">{prazoStrong}</strong>
+              {prazoText}
+            </p>
+            {resolvedRequirements.map((r) => (
+              <ResolvedRequirement key={r.id} requirement={r} />
+            ))}
+          </div>
 
-        <div className="flex min-w-0 flex-col gap-4">
-          {showSign && (
-            <SignCard
-              protocolNumber={result.protocolNumber}
-              accessKey={result.accessKey}
-              hasExemption={result.hasExemption}
-              onSigned={() => setHasSignedForm(true)}
-            />
-          )}
-          {pendingRequirements.map((r) => (
-            <RequirementCard
-              key={r.id}
-              requirement={r}
-              protocolNumber={result.protocolNumber}
-              accessKey={result.accessKey}
-              onSent={(message) =>
-                setRequirements((prev) =>
-                  prev.map((req) =>
-                    req.id === r.id
-                      ? { ...req, messages: [...req.messages, message] }
-                      : req,
-                  ),
-                )
-              }
-            />
-          ))}
-          {showPay && (
-            <PayCard
-              result={result}
-              reported={paymentReported}
-              onReported={() => setPaymentJustReported(true)}
-            />
-          )}
-          {showCalm && <CalmCard />}
-          {finished && (
-            <DoneCard
-              result={result}
-              protocolNumber={result.protocolNumber}
-              accessKey={result.accessKey}
-            />
-          )}
-          {rejected && <RejectedCard />}
+          <div className="flex min-w-0 flex-col gap-4">
+            {showSign && (
+              <SignCard
+                protocolNumber={result.protocolNumber}
+                accessKey={result.accessKey}
+                hasExemption={result.hasExemption}
+                onSigned={() => setHasSignedForm(true)}
+              />
+            )}
+            {pendingRequirementCards}
+            {showPay && (
+              <PayCard
+                result={result}
+                reported={paymentReported}
+                onReported={() => setPaymentJustReported(true)}
+              />
+            )}
+            {showCalm && <CalmCard />}
+            {finished && (
+              <DoneCard
+                result={result}
+                protocolNumber={result.protocolNumber}
+                accessKey={result.accessKey}
+              />
+            )}
+          </div>
         </div>
-      </div>
+      )}
 
       <div className="flex flex-col">
         <button
