@@ -16,7 +16,7 @@ import {
   pauseReasons,
   readDeadline,
 } from "@/core/request/deadline.ts";
-import { looksLikeBot } from "@/core/request/form.ts";
+import { isEmailContact, looksLikeBot } from "@/core/request/form.ts";
 import type { DataRight } from "@/core/request/kinds.ts";
 import {
   isOpenServiceRequestStatus,
@@ -29,20 +29,28 @@ import {
   statusLabel,
 } from "@/core/request/kinds.ts";
 import { formatCents } from "@/core/request/money.ts";
+import { parseProtocolNumber } from "@/core/request/protocol.ts";
 import { type IsoDate, toIsoDate } from "@/core/scheduling/calendar.ts";
 import { isSectionEnabled } from "@/core/tenant/gating.ts";
+import { db } from "@/db/index.ts";
 import {
   notifyOfficePaymentReported,
   notifyOfficeRequirementReply,
+  sendAccessKey,
 } from "@/lib/email/service-request.ts";
 import { type PixCharge, pixChargeFor } from "@/lib/pix-qr.ts";
-import { isPollRateLimited, isRateLimited } from "@/lib/rate-limit.ts";
+import {
+  isPollRateLimited,
+  isRateLimited,
+  isRecoveryRateLimited,
+} from "@/lib/rate-limit.ts";
 import {
   attachToRequest,
   findByProtocolWithKey,
   listAttachments,
   listRequirementMessages,
   listRequirements,
+  recoverAccessKeyWith,
   requestOwnAttachments,
   updateRequestStatus,
   writeCitizenMessage,
@@ -462,6 +470,104 @@ export async function lookupProtocolDetail(
   } catch (error) {
     console.error("protocolo.lookup", error);
     return { status: "error", message: GENERIC_ERROR };
+  }
+}
+
+export type RecoverKeyState =
+  | { status: "idle" }
+  | { status: "error"; message: string }
+  | { status: "sent"; message: string };
+
+// Word for word the same, whatever actually happened: a protocol that does
+// not exist, an e-mail that does not match, an address the office already
+// knows does not receive, or a real recovery that just fired. Telling those
+// apart on screen would turn this form into a way to test protocol/e-mail
+// pairs one at a time; the only place the difference ever shows is the
+// citizen's own mailbox, which nobody else can read.
+const RECOVERY_SENT_MESSAGE =
+  "Se o protocolo e o e-mail conferem, enviamos uma nova chave de acesso para esse endereço. Pode levar alguns minutos; confira também o spam.";
+
+/**
+ * "Perdi a chave de acesso", on the consult page: the citizen proves they
+ * hold the pedido's own mailbox, and that is what earns a new key, the same
+ * way it already earns everything else a session would (the office is never
+ * asked, unlike the emitir-nova-chave button this replaced). Generating the
+ * key is real work, so it only happens once the pair actually matches; every
+ * other outcome answers with `RECOVERY_SENT_MESSAGE` and does nothing.
+ */
+export async function recoverAccessKeyAction(
+  _previous: RecoverKeyState,
+  formData: FormData,
+): Promise<RecoverKeyState> {
+  const tenant = await getTenant();
+  if (!isSectionEnabled(tenant, "consulta-protocolo")) {
+    return { status: "sent", message: RECOVERY_SENT_MESSAGE };
+  }
+
+  const protocolInput = String(formData.get("protocolNumber") ?? "").trim();
+  const email = String(formData.get("email") ?? "").trim();
+  if (!protocolInput || !email) {
+    return {
+      status: "error",
+      message: "Informe o protocolo e o e-mail do pedido.",
+    };
+  }
+  if (!isEmailContact(email)) {
+    return { status: "error", message: "Informe um e-mail válido." };
+  }
+
+  if (await isRateLimited(await headers())) {
+    return {
+      status: "error",
+      message: "Muitas tentativas seguidas. Aguarde um minuto e tente de novo.",
+    };
+  }
+
+  // The same normalisation `parseProtocolNumber` reads by: the budget below
+  // is keyed by this one string, so "req.2098.000148", "REQ.2098.000148 " and
+  // a pasted copy with a stray space all spend from the same bucket.
+  const normalizedProtocol = protocolInput.toUpperCase().replace(/\s+/g, "");
+  if (await isRecoveryRateLimited(normalizedProtocol)) {
+    return {
+      status: "error",
+      message:
+        "Muitas tentativas para este protocolo. Aguarde e tente de novo mais tarde.",
+    };
+  }
+
+  // Only a pedido de serviço has an access key to recover. Every other
+  // protocol prefix (and anything that does not parse as a protocol at all)
+  // reads exactly like "não confere": which prefixes exist is not
+  // information this form has to give up.
+  const parsed = parseProtocolNumber(normalizedProtocol);
+  if (!parsed || parsed.prefix !== "REQ") {
+    return { status: "sent", message: RECOVERY_SENT_MESSAGE };
+  }
+
+  try {
+    // The matching, the bounce check and the reissue itself all live in
+    // recoverAccessKeyWith, tested against PGlite in
+    // src/lib/service-request.test.ts: the two outcomes ("reissued" or not)
+    // this action still has to answer identically either way.
+    const recovery = await recoverAccessKeyWith(
+      db,
+      tenant.slug,
+      normalizedProtocol,
+      email,
+    );
+    if (recovery.reissued && recovery.contact && recovery.protocolNumber) {
+      await sendAccessKey({
+        tenant,
+        contact: recovery.contact,
+        protocolNumber: recovery.protocolNumber,
+        accessKey: recovery.accessKey as string,
+        reason: "recovered",
+      });
+    }
+    return { status: "sent", message: RECOVERY_SENT_MESSAGE };
+  } catch (error) {
+    console.error("protocolo.recover-key", error);
+    return { status: "sent", message: RECOVERY_SENT_MESSAGE };
   }
 }
 

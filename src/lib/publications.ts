@@ -4,7 +4,7 @@ import type { PublicationFormInput } from "@/core/publications/publication.ts";
 import { isLive } from "@/core/publications/state.ts";
 import { db } from "@/db/index.ts";
 import { officePublications } from "@/db/schema.ts";
-import { today } from "@/lib/tenant.ts";
+import { today } from "@/lib/office-config.ts";
 import { recordAudit } from "./audit.ts";
 
 export type PublicationRow = typeof officePublications.$inferSelect;

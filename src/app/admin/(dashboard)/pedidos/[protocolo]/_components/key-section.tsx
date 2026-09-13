@@ -1,22 +1,23 @@
-"use client";
+import { isEmailContact } from "@/core/request/form.ts";
 
-import { useActionState } from "react";
-import { ConfirmAction } from "../../../../_components/confirm-action.tsx";
-import { type ReissueKeyState, reissueKeyAction } from "../actions.ts";
-
+/**
+ * The chave de acesso is never rendered here, and there is no action on
+ * this section any more: the panel cannot produce the key in the clear for
+ * a request that already exists (the database holds only its hash), and
+ * asking the office to relay a new one by hand is exactly the habit this
+ * section used to invite. Recovering a lost key is the citizen's own path
+ * now, `recoverAccessKeyAction` on the consult page (`/protocolo`), so this
+ * section only says that, and, when the contact on file cannot receive it,
+ * what the operator can still do about it.
+ */
 export function KeySection({
-  requestId,
-  protocolNumber,
+  contact,
   issuedLabel,
 }: {
-  requestId: string;
-  protocolNumber: string;
+  contact: string | null;
   issuedLabel: string;
 }) {
-  const [state, action, pending] = useActionState<ReissueKeyState, FormData>(
-    reissueKeyAction,
-    { status: "idle" },
-  );
+  const hasEmail = Boolean(contact) && isEmailContact(contact as string);
 
   return (
     <div className="rounded-[14px] border border-admin-border bg-admin-card p-4.5">
@@ -24,53 +25,14 @@ export function KeySection({
         Chave de acesso
       </h4>
       <p className="mt-1 text-[12px] text-admin-muted">
-        {state.status === "success"
-          ? "Nova chave, mostrada só agora, guarde-a:"
-          : `Ativa desde ${issuedLabel}. O cidadão usa junto do protocolo para ver o pedido completo.`}
+        Ativa desde {issuedLabel}. O cidadão usa junto do protocolo para ver o
+        pedido completo.
       </p>
-      <div className="mt-2.5 rounded-[9px] border border-admin-input-border bg-admin-input-bg px-3.5 py-2.5 text-[14px] font-bold tracking-[0.2em] text-admin-primary">
-        {state.status === "success" ? state.key : "••••  ••••  ••••"}
-      </div>
-      {/*
-        Only while the plaintext key from this response is on screen: the
-        database holds a hash, so this is the one moment the panel can ever
-        produce the receipt for an existing request. Leaving the page (a
-        reload, navigating away) drops `state` back to idle and the form
-        with it.
-
-        The route answers with a download, not a page: a PDF opened in the
-        viewer is saved by fetching the tab's URL again, and this one only
-        exists in the response to the POST carrying the key. `target` stays
-        even so: if the route ever refuses, the error lands in a tab of its
-        own and this screen, with the key on it, is still here.
-      */}
-      {state.status === "success" && (
-        <form
-          method="post"
-          action={`/admin/pedidos/${encodeURIComponent(protocolNumber)}/imprimir`}
-          target="_blank"
-          className="mt-2"
-        >
-          <input type="hidden" name="chave" value={state.key} />
-          <button type="submit" className="btn btn-admin-ghost btn-sm px-0">
-            Baixar comprovante (PDF)
-          </button>
-        </form>
-      )}
-      <div className="mt-2.5">
-        <ConfirmAction
-          action={action}
-          pending={pending}
-          error={state.status === "error" ? state.message : null}
-          trigger="Emitir nova chave"
-          question="Emitir uma nova chave de acesso?"
-          consequence="A chave atual para de funcionar na hora, e quem já tiver a antiga perde o acesso à consulta até receber a nova. A nova só aparece uma vez, nesta tela."
-          confirmLabel="Confirmar emissão"
-          pendingLabel="Emitindo…"
-        >
-          <input type="hidden" name="requestId" value={requestId} />
-        </ConfirmAction>
-      </div>
+      <p className="mt-2 text-[12px] leading-relaxed text-admin-text">
+        {hasEmail
+          ? "Se o cidadão perder a chave, ele recupera pelo site, na consulta de protocolo, informando o protocolo e o e-mail do pedido."
+          : "Este pedido tem telefone como contato: atualize para um e-mail (seção de dados do solicitante) para o cidadão poder recuperar a chave pelo site, caso a perca."}
+      </p>
     </div>
   );
 }

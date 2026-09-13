@@ -1,17 +1,6 @@
-import { verifyAccessKey } from "@/core/request/access-key.ts";
-import {
-  type LinkableDocument,
-  PDF_LINK_TTL_SECONDS,
-  pdfLinkFileName,
-  signPdfLink,
-} from "@/core/request/pdf-link.ts";
-import { buildAccessReceipt } from "@/core/request/requerimento.ts";
-import { brandFor } from "@/lib/document-brand.ts";
-import { renderDocument } from "@/lib/pdf.ts";
-import { pdfLinkKey } from "@/lib/pdf-link-key.ts";
-import { buildRequestDocuments } from "@/lib/request-documents.ts";
-import { findByProtocol } from "@/lib/service-request.ts";
+import { db } from "@/db/index.ts";
 import { getTenant } from "@/lib/tenant.ts";
+import { handleRequerimentoDownloadWith } from "./handle-download.ts";
 
 export const runtime = "nodejs";
 
@@ -37,89 +26,18 @@ export const runtime = "nodejs";
  * The access receipt prints the key itself, so there is no link that could
  * serve it without being the key. It is answered here, as a download: the
  * browser saves it straight from this response and never opens a viewer.
+ *
+ * The actual work is `handleRequerimentoDownloadWith`, in its own file: this
+ * route only resolves the tenant and hands the request over. See
+ * handle-download.ts and design.md, decision 8.
  */
 export async function POST(request: Request): Promise<Response> {
   const tenant = await getTenant();
   const form = await request.formData();
-  const protocolNumber = String(form.get("protocolNumber") ?? "");
-  const accessKey = String(form.get("accessKey") ?? "");
-  // A format choice, not a credential: anything unexpected falls back to the
-  // requerimento rather than failing.
-  const documento = form.get("documento");
-
-  const stored = await findByProtocol(tenant.slug, protocolNumber);
-  // One answer for "no such protocol" and for "wrong key". Telling them apart
-  // would let someone confirm a protocol exists by guessing numbers.
-  if (
-    !stored?.accessKeyHash ||
-    !verifyAccessKey(accessKey, stored.accessKeyHash)
-  ) {
-    return new Response("Não encontrado", { status: 404 });
-  }
-
-  // Only a service request has these documents; an appointment or a
-  // manifestation carries the same protocol shape and none of the fields.
-  if (!stored.actId || !stored.applicantName || !stored.contact) {
-    return new Response("Não encontrado", { status: 404 });
-  }
-
-  if (documento === "comprovante") {
-    const brand = await brandFor(
-      tenant,
-      // The QR on the letterhead points at the protocol lookup of the same
-      // host the citizen is on, which is the tenant's own domain.
-      `${new URL(request.url).origin}/protocolo`,
-    );
-    const bytes = await renderDocument(
-      buildAccessReceipt(tenant, {
-        protocolNumber: stored.protocolNumber,
-        accessKey,
-        createdAt: stored.createdAt,
-      }),
-      brand,
-    );
-    return new Response(new Uint8Array(bytes), {
-      headers: {
-        "Content-Type": "application/pdf",
-        "Content-Disposition": `attachment; filename="comprovante-${stored.protocolNumber}.pdf"`,
-        // Personal data: no shared cache may keep a copy.
-        "Cache-Control": "private, no-store",
-      },
-    });
-  }
-
-  const linkable: LinkableDocument =
-    documento === "declaracao" ? "declaracao" : "requerimento";
-  // Checked before redirecting, so a pedido without gratuidade gets its 404
-  // here rather than a redirect to one.
-  if (!buildRequestDocuments(tenant, stored, linkable)) {
-    return new Response("Não encontrado", { status: 404 });
-  }
-
-  const token = signPdfLink(
-    {
-      tenantSlug: tenant.slug,
-      protocolNumber: stored.protocolNumber,
-      documento: linkable,
-      expiresAt: Math.floor(Date.now() / 1000) + PDF_LINK_TTL_SECONDS,
-    },
-    pdfLinkKey,
+  return handleRequerimentoDownloadWith(
+    db,
+    tenant,
+    form,
+    new URL(request.url).origin,
   );
-  // A relative Location, on purpose. `request.url` is the origin Next was
-  // reached on, not the one in the citizen's address bar (localhost behind
-  // the tenant's host in development, the deployment URL behind the custom
-  // domain on Vercel), and a redirect that changes origin is a redirect the
-  // page's own CSP (`form-action 'self'`) tells the browser to abort. A path
-  // stays on whatever host the form was posted from, and the GET route
-  // checks that host's tenant against the one in the token.
-  const location = `/solicitar/requerimento/${pdfLinkFileName(linkable, stored.protocolNumber)}?t=${encodeURIComponent(token)}`;
-
-  // 303, so the browser follows with a GET whatever method brought it here.
-  return new Response(null, {
-    status: 303,
-    headers: {
-      Location: location,
-      "Cache-Control": "private, no-store",
-    },
-  });
 }

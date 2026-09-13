@@ -72,7 +72,6 @@ export default async function ProtocolLookupPage({
         initialNumber={protocolNumber}
         publicStatus={publicStatus}
         notFound={Boolean(protocolNumber) && !publicStatus}
-        contacts={tenant.contacts}
       />
     </div>
   );

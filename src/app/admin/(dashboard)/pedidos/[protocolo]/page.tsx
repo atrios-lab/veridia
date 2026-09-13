@@ -71,7 +71,7 @@ const HISTORY_LABELS: Record<string, string> = {
   "service-request.requirement.register": "registrou uma exigência",
   "service-request.requirement.fulfill": "cumpriu uma exigência",
   "service-request.amount": "informou o valor do pedido",
-  "service-request.key-reissue": "emitiu uma nova chave de acesso",
+  "service-request.key-reissue": "recuperou a chave de acesso pelo site",
   "service-request.edit": "corrigiu os dados do pedido",
   "service-request.question": "enviou uma pergunta",
   "service-request.question.reply": "respondeu uma pergunta do cidadão",
@@ -462,8 +462,7 @@ export default async function ServiceRequestDetailPage({
 
           <div className="flex flex-col gap-4.5">
             <KeySection
-              requestId={request.id}
-              protocolNumber={request.protocolNumber}
+              contact={request.contact}
               issuedLabel={formatDate(
                 toIsoDate(request.createdAt, OFFICE_TIME_ZONE),
               )}
@@ -533,7 +532,14 @@ export default async function ServiceRequestDetailPage({
                         className="text-[12.5px] leading-snug text-admin-text"
                       >
                         <strong className="text-admin-primary">
-                          {entry.actorName ?? "Sistema"}
+                          {/* No `actorId` means the citizen did it (creation,
+                              or recovering their own key from the consult
+                              page): the applicant's own name reads better
+                              here than "Sistema", which is what a bare
+                              `?? "Sistema"` would print for either one. */}
+                          {entry.actorName ??
+                            request.applicantName ??
+                            "Cidadão"}
                         </strong>{" "}
                         {HISTORY_LABELS[entry.action] ?? entry.action}
                         <br />

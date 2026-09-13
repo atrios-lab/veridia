@@ -96,3 +96,28 @@ export async function isPollRateLimited(headers: Headers): Promise<boolean> {
   const { success } = await pollLimiter.limit(addressOf(headers));
   return !success;
 }
+
+// Keyed by protocol number, not by address: `isRateLimited` above already
+// caps how often one address can try, but recovering an access key also
+// invalidates the current one, so a second budget bounds how often any one
+// pedido can have its key replaced, regardless of how many addresses ask.
+// Three an hour is enough for a citizen who mistypes their own e-mail a
+// couple of times, and too little for someone using it to pester the owner
+// of a protocol they picked up from a printed comprovante.
+const recoveryLimiter = configured
+  ? new Ratelimit({
+      redis: Redis.fromEnv(),
+      limiter: Ratelimit.slidingWindow(3, "1 h"),
+      prefix: "veridia:recovery",
+      analytics: false,
+    })
+  : null;
+
+/** The access-key recovery's own budget, one bucket per protocol number. */
+export async function isRecoveryRateLimited(
+  protocolNumber: string,
+): Promise<boolean> {
+  if (!recoveryLimiter) return false;
+  const { success } = await recoveryLimiter.limit(protocolNumber);
+  return !success;
+}

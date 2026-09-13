@@ -9,7 +9,8 @@ context: |
 
   Stack: Next 16 (App Router, TypeScript strict), Tailwind v4 CSS-first, PostgreSQL na Neon com
   Drizzle, Route Handlers e Server Actions (sem NestJS), Better Auth com sessao em banco, Zod,
-  node --test e Playwright (sem Vitest), Biome, pnpm, Vercel em projeto unico, OpenSpec.
+  node --test com PGlite em processo (sem Vitest, sem Playwright), Biome, pnpm, Vercel em projeto
+  unico, OpenSpec.
 
   Principios inegociaveis:
   - Customizacao e configuracao, nunca fork. Nada de codigo especifico de um cartorio.
@@ -37,3 +38,7 @@ rules:
   tasks:
     - Cada fluxo e escrito do zero. O sistema anterior (cartorio-marinho) e referencia de
       comportamento para conferir regra de negocio, nunca fonte de copia de codigo.
+    - Cobertura de fluxo e teste em processo (node --test) em src/lib ou src/db contra PGlite,
+      nunca Playwright. Uma server action ou Route Handler com regra propria desce essa regra para
+      uma funcao ...With(db, ...) testavel; a action/rota fica so com o transporte (headers,
+      redirect, resposta).

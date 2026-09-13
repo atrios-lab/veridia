@@ -25,8 +25,10 @@ import {
   type LookupState,
   lookupProtocolDetail,
   type OmbudsmanDetail,
+  type RecoverKeyState,
   type ReportPaymentState,
   type RequirementView,
+  recoverAccessKeyAction,
   reportPayment,
   type ServiceRequestDetail,
   writeRequirementMessageAction,
@@ -40,15 +42,8 @@ export interface PublicStatus {
   updatedAt: string;
 }
 
-interface Contacts {
-  phone: string;
-  whatsapp: string;
-}
-
 const inputClass =
   "w-full rounded-xl border border-brand-border bg-brand-surface px-3.5 py-3 text-sm text-brand-text outline-none placeholder:text-brand-faint focus:border-brand-accent";
-
-const digits = (value: string) => value.replace(/\D/g, "");
 
 function formatDate(iso: string): string {
   return new Intl.DateTimeFormat("pt-BR", {
@@ -68,32 +63,94 @@ function formatDateTime(iso: string): string {
   }).format(new Date(iso));
 }
 
-function LostKeyNotice({ contacts }: { contacts: Contacts }) {
+/**
+ * "Perdi a chave de acesso", closed by default so the search column does not
+ * open with a second form already competing for attention. The office is
+ * never in this loop any more: informing protocol and e-mail is the whole
+ * recovery, answered by `recoverAccessKeyAction` with the one message that
+ * never says whether it actually matched anything (see that action's own
+ * comment for why).
+ *
+ * Exported: `/acompanhar` (`protocol-trilho.tsx`, behind the
+ * `citizen-tracking-v2` flag) has its own gate asking for protocol and key,
+ * separate from this page's, and needs the same recovery path. Two gates,
+ * one `LostKeyForm`, so "perdi a chave" is not a second implementation to
+ * keep in sync with this one. Left-aligned always, `Gate`'s own centered
+ * copy notwithstanding: a short link and a labelled form both read better
+ * anchored left than centered, so this is one look for both pages.
+ */
+export function LostKeyForm({ initialProtocol }: { initialProtocol?: string }) {
+  const [open, setOpen] = useState(false);
+  const [state, formAction, pending] = useActionState<
+    RecoverKeyState,
+    FormData
+  >(recoverAccessKeyAction, { status: "idle" });
+
+  if (state.status === "sent") {
+    return (
+      <div className="flex items-start gap-2 pt-2.5">
+        <Icon
+          name="mail"
+          className="mt-0.5 h-3.5 w-3.5 shrink-0 text-brand-accent"
+          strokeWidth={2}
+        />
+        <span className="text-[12px] leading-relaxed text-brand-text-soft">
+          {state.message}
+        </span>
+      </div>
+    );
+  }
+
+  if (!open) {
+    return (
+      <div className="pt-2.5">
+        <button
+          type="button"
+          onClick={() => setOpen(true)}
+          className="text-[12px] font-semibold text-brand-text-soft underline"
+        >
+          Perdi a chave de acesso
+        </button>
+      </div>
+    );
+  }
+
   return (
-    <div className="flex items-start gap-2 pt-2.5">
-      <Icon
-        name="alert"
-        className="mt-0.5 h-3.5 w-3.5 shrink-0 text-brand-alert"
-        strokeWidth={2}
+    <form
+      action={formAction}
+      className="mt-2.5 flex flex-col gap-2 border-t border-brand-border pt-2.5 text-left"
+    >
+      <p className="text-[12px] leading-relaxed text-brand-text-soft">
+        Informe o protocolo e o e-mail do pedido. Se conferem, enviamos uma
+        chave nova para esse endereço.
+      </p>
+      <input
+        name="protocolNumber"
+        defaultValue={initialProtocol}
+        placeholder="REQ.2026.000148"
+        aria-label="Número do protocolo"
+        className={inputClass}
       />
-      <span className="text-[12px] leading-relaxed text-brand-text-soft">
-        Perdeu a chave? A serventia emite outra pelo{" "}
-        <a
-          href={`https://wa.me/55${digits(contacts.whatsapp)}`}
-          className="font-semibold underline"
-        >
-          WhatsApp
-        </a>{" "}
-        ou{" "}
-        <a
-          href={`tel:+55${digits(contacts.phone)}`}
-          className="font-semibold underline"
-        >
-          telefone
-        </a>
-        .
-      </span>
-    </div>
+      <input
+        name="email"
+        type="email"
+        placeholder="E-mail do pedido"
+        aria-label="E-mail do pedido"
+        className={inputClass}
+      />
+      {state.status === "error" && (
+        <p role="alert" className="text-[12px] font-semibold text-brand-alert">
+          {state.message}
+        </p>
+      )}
+      <button
+        type="submit"
+        disabled={pending}
+        className="btn btn-secondary btn-sm self-start"
+      >
+        {pending ? "Enviando..." : "Enviar nova chave"}
+      </button>
+    </form>
   );
 }
 
@@ -102,13 +159,11 @@ export function ProtocolLookup({
   initialNumber,
   publicStatus,
   notFound,
-  contacts,
 }: {
   tenantName: string;
   initialNumber?: string;
   publicStatus?: PublicStatus;
   notFound: boolean;
-  contacts: Contacts;
 }) {
   const [state, formAction, pending] = useActionState<LookupState, FormData>(
     lookupProtocolDetail,
@@ -188,7 +243,7 @@ export function ProtocolLookup({
         </form>
 
         <div className="hidden md:block">
-          <LostKeyNotice contacts={contacts} />
+          <LostKeyForm initialProtocol={initialNumber} />
         </div>
       </div>
 
@@ -243,61 +298,71 @@ export function ProtocolLookup({
                 </p>
               </div>
 
-              <form
-                action={formAction}
-                className="rounded-2xl border-[1.5px] border-brand-accent bg-brand-card p-4"
-              >
-                <input
-                  type="hidden"
-                  name="protocolNumber"
-                  value={publicStatus.protocolNumber}
-                />
-                <div className="flex items-center gap-2.5">
-                  <span className="flex h-9.5 w-9.5 shrink-0 items-center justify-center rounded-xl bg-brand-accent-soft">
-                    <Icon
-                      name="lock"
-                      className="h-4.5 w-4.5 text-brand-accent"
-                    />
-                  </span>
-                  <div className="flex-1">
-                    <div className="font-serif text-[16px] font-semibold text-brand-primary">
-                      Destrave o detalhe
-                    </div>
-                    <div className="text-xs text-brand-muted">
-                      Com a chave você vê tudo e envia documentos.
+              {/*
+                The card is this outer div, not the form: `LostKeyForm` below
+                renders its own `<form>`, and HTML has no nested forms. Two
+                sibling forms inside one div render identically to one form
+                wrapping everything, but only the sibling version actually
+                works: the browser's own HTML parser drops a nested `<form>`
+                start tag outright (a parse error, not a warning), so its
+                fields end up posted to the outer form's action instead of
+                their own, and that is a bug no test at 1280px catches unless
+                it drives the narrow layout where this section renders at all.
+              */}
+              <div className="rounded-2xl border-[1.5px] border-brand-accent bg-brand-card p-4">
+                <form action={formAction}>
+                  <input
+                    type="hidden"
+                    name="protocolNumber"
+                    value={publicStatus.protocolNumber}
+                  />
+                  <div className="flex items-center gap-2.5">
+                    <span className="flex h-9.5 w-9.5 shrink-0 items-center justify-center rounded-xl bg-brand-accent-soft">
+                      <Icon
+                        name="lock"
+                        className="h-4.5 w-4.5 text-brand-accent"
+                      />
+                    </span>
+                    <div className="flex-1">
+                      <div className="font-serif text-[16px] font-semibold text-brand-primary">
+                        Destrave o detalhe
+                      </div>
+                      <div className="text-xs text-brand-muted">
+                        Com a chave você vê tudo e envia documentos.
+                      </div>
                     </div>
                   </div>
-                </div>
-                <div className="mt-3 flex gap-1.5">
-                  <input
-                    name="accessKey"
-                    placeholder="Ex.: BBM8-6XVB-8PUK"
-                    className={`${inputClass} flex-1`}
-                  />
-                  <button
-                    type="submit"
-                    disabled={pending}
-                    className="btn btn-primary btn-lg shrink-0"
-                  >
-                    {pending ? "Verificando..." : "Ver detalhes"}
-                  </button>
-                </div>
-                <p className="mt-2 text-[11.5px] leading-relaxed text-brand-muted">
-                  A chave foi mostrada quando você enviou o pedido e está
-                  impressa no PDF do requerimento.
-                </p>
-                {state.status === "error" && (
-                  <p
-                    role="alert"
-                    className="mt-2 text-[12px] font-semibold text-brand-alert"
-                  >
-                    {state.message}
+                  <div className="mt-3 flex gap-1.5">
+                    <input
+                      name="accessKey"
+                      placeholder="Ex.: BBM8-6XVB-8PUK"
+                      className={`${inputClass} flex-1`}
+                    />
+                    <button
+                      type="submit"
+                      disabled={pending}
+                      className="btn btn-primary btn-lg shrink-0"
+                    >
+                      {pending ? "Verificando..." : "Ver detalhes"}
+                    </button>
+                  </div>
+                  <p className="mt-2 text-[11.5px] leading-relaxed text-brand-muted">
+                    A chave foi mostrada quando você enviou o pedido e está
+                    impressa no PDF do requerimento.
                   </p>
-                )}
+                  {state.status === "error" && (
+                    <p
+                      role="alert"
+                      className="mt-2 text-[12px] font-semibold text-brand-alert"
+                    >
+                      {state.message}
+                    </p>
+                  )}
+                </form>
                 <div className="border-t border-brand-border md:hidden">
-                  <LostKeyNotice contacts={contacts} />
+                  <LostKeyForm initialProtocol={publicStatus.protocolNumber} />
                 </div>
-              </form>
+              </div>
             </>
           )}
         </div>

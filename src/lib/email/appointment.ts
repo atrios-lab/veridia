@@ -10,7 +10,7 @@ import { buildCalendarEvent } from "@/core/scheduling/ics.ts";
 import { brandImageUrl } from "@/core/tenant/brand-image.ts";
 import type { Tenant } from "@/core/tenant/schema.ts";
 import type { Appointment } from "@/lib/appointments.ts";
-import { OFFICE_TIME_ZONE } from "@/lib/tenant.ts";
+import { OFFICE_TIME_ZONE } from "@/lib/office-config.ts";
 import { renderEmailCardHtml, renderEmailCardText } from "./render.ts";
 import { sendEmail } from "./send.ts";
 

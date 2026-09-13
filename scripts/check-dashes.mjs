@@ -4,7 +4,7 @@
 import { globSync, readFileSync } from "node:fs";
 
 const FORBIDDEN = { "—": "travessão", "–": "meia-risca" };
-const PATTERNS = ["src/**/*.{ts,tsx,css}", "e2e/**/*.ts"];
+const PATTERNS = ["src/**/*.{ts,tsx,css}"];
 
 const failures = [];
 

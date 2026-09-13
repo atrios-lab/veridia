@@ -147,7 +147,7 @@ export const ACTIVITY_VERBS: Record<string, string> = {
   "service-request.requirement.register": "registrou uma exigência no pedido",
   "service-request.requirement.fulfill": "cumpriu uma exigência do pedido",
   "service-request.amount": "informou o valor do pedido",
-  "service-request.key-reissue": "emitiu uma nova chave de acesso",
+  "service-request.key-reissue": "recuperou a chave de acesso pelo site",
   "service-request.delete": "excluiu um pedido",
   "appointment.book": "agendou um atendimento",
   "appointment.give-up": "cancelou o próprio agendamento",
@@ -188,13 +188,16 @@ export function activitySentence(entry: RecentActivityEntry): string {
  * denylist would instead drop it silently the first time a new action was
  * added.
  *
- * Left out on purpose: `amount` and `key-reissue` are bookkeeping the counter
- * does while taking the request in, not a reply to anybody, and counting them
- * would push a request entered at the counter off the desk the moment its
- * value was typed in. `draft` and `internal-note` are work started, not sent:
- * a half written reply is exactly what must stay in sight. `create` never
- * carries an actor at all (`createRecord` audits it as the citizen's, whoever
- * typed it), which is what keeps filing on the citizen's side of the clock.
+ * Left out on purpose: `amount` is bookkeeping the counter does while taking
+ * the request in, not a reply to anybody, and counting it would push a
+ * request entered at the counter off the desk the moment its value was
+ * typed in. `key-reissue` is the citizen's own act now (recovering a key
+ * from the consult page, no operator involved) and was never a reply even
+ * back when the panel could reissue one; either way it stays off the office's
+ * own clock. `draft` and `internal-note` are work started, not sent: a half
+ * written reply is exactly what must stay in sight. `create` never carries
+ * an actor at all (`createRecord` audits it as the citizen's, whoever typed
+ * it), which is what keeps filing on the citizen's side of the clock.
  */
 const OFFICE_ANSWER_ACTIONS = [
   "service-request.status",

@@ -1,7 +1,7 @@
 #!/bin/sh
-# Fast checks only. The e2e suite runs twice otherwise: once here, blocking
-# the push, and again in CI right after — same 9+ minutes paid twice for
-# every push. CI is the gate for e2e; this hook is just the quick local net.
+# The same gate CI runs, and it takes seconds: typecheck, lint, and pnpm test
+# (node --test against PostgreSQL in process, no browser, no external
+# service). Nothing here needs a database of its own.
 #
 # The refs git feeds on stdin are deliberately ignored: skipping per branch is
 # what --no-verify is for.

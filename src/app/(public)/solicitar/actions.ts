@@ -23,7 +23,7 @@ import { formatProtocolNumber } from "@/core/request/protocol.ts";
 import { formatDate } from "@/core/scheduling/calendar.ts";
 import { isSectionEnabled } from "@/core/tenant/gating.ts";
 import { clientIp } from "@/lib/client-ip.ts";
-import { notifyCitizen } from "@/lib/email/service-request.ts";
+import { sendAccessKey } from "@/lib/email/service-request.ts";
 import { isRateLimited } from "@/lib/rate-limit.ts";
 import {
   attachToRequest,
@@ -37,8 +37,11 @@ import { AttachmentError, collectAttachments } from "@/lib/uploads.ts";
 export interface SubmitSuccess {
   status: "success";
   protocolNumber: string;
-  /** In the clear exactly once: never stored, never sent again. */
+  /** In the clear on this screen; also sent once by e-mail, below. */
   accessKey: string;
+  /** The address the key was also sent to: this is the citizen's own
+   * mailbox, so the screen can name it back without asking a second time. */
+  email: string;
   actName: string;
   attributionName: string;
   /** The date the office expects to have analysed it by, in "DD/MM/AAAA". */
@@ -96,6 +99,7 @@ export async function submitServiceRequest(
         999_999,
       ),
       accessKey: generateAccessKey(),
+      email: String(formData.get("email") ?? ""),
       actName: act.name,
       attributionName: ATTRIBUTION_NAMES[act.attribution],
       // Born from the act's own legal term, counted from today: a request
@@ -220,24 +224,27 @@ export async function submitServiceRequest(
       attachments,
     );
 
-    // The key is never in the e-mail: it was shown once, on the screen the
-    // citizen is looking at, and putting it in a mailbox would undo that.
-    // Awaited, not surfaced: on the public side the address belongs to the
-    // person filling the form, and telling them here is a different screen
-    // and a different decision than warning an atendente mid-atendimento.
-    // Awaiting still matters: the check has to finish inside the request.
-    await notifyCitizen({
+    // The key goes to the citizen's own mailbox now: the tela de sucesso is
+    // the first via, this e-mail the second, so losing the tab does not
+    // strand the citizen without a way to reach the pedido again. Awaited,
+    // not surfaced: on the public side the address belongs to the person
+    // filling the form, and a bounce warning here is a different screen and
+    // a different decision than warning an atendente mid-atendimento; the
+    // tela de sucesso keeps showing the key either way. Awaiting still
+    // matters: the check has to finish inside the request.
+    await sendAccessKey({
       tenant,
       contact: email,
       protocolNumber,
-      subject: "Pedido recebido",
-      body: "Recebemos o seu pedido. Guarde o número do protocolo e a chave de acesso mostrados na tela de envio.",
+      accessKey,
+      reason: "received",
     });
 
     return {
       status: "success",
       protocolNumber,
       accessKey,
+      email,
       actName: act.name,
       attributionName: ATTRIBUTION_NAMES[act.attribution],
       // Born from the act's own legal term, counted from today: a request

@@ -1,6 +1,6 @@
 import "server-only";
 import { eq } from "drizzle-orm";
-import { db } from "@/db/index.ts";
+import { type Database, db } from "@/db/index.ts";
 import { emailBounces } from "@/db/schema.ts";
 
 /**
@@ -28,10 +28,18 @@ export class AddressDoesNotReceiveError extends Error {
  * invalidation story, which only pays for itself at a volume this platform
  * does not have.
  */
-export async function findPermanentBounce(email: string) {
-  const [row] = await db
+export async function findPermanentBounceWith(
+  database: Database,
+  email: string,
+) {
+  const [row] = await database
     .select({ detail: emailBounces.detail, permanent: emailBounces.permanent })
     .from(emailBounces)
     .where(eq(emailBounces.email, email.trim().toLowerCase()));
   return row?.permanent ? row : null;
+}
+
+/** The production singleton, for callers that do not test against it. */
+export async function findPermanentBounce(email: string) {
+  return findPermanentBounceWith(db, email);
 }
