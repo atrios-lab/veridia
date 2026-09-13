@@ -27,6 +27,7 @@ import {
 } from "../protocolo/actions.ts";
 import {
   DataRightsCard,
+  LostKeyForm,
   OmbudsmanCard,
 } from "../protocolo/protocol-lookup.tsx";
 import { type AttachState, attachSignedForm } from "../solicitar/actions.ts";
@@ -566,6 +567,9 @@ function Gate({
           {pending ? "Verificando..." : "Ver andamento"}
         </button>
       </form>
+      <div className="w-full text-left">
+        <LostKeyForm initialProtocol={initialNumber} />
+      </div>
     </div>
   );
 }

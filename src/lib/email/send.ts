@@ -41,6 +41,12 @@ const REDIRECT_TO = process.env.EMAIL_REDIRECT_TO;
  * otherwise logs what would have been sent instead of failing. Same posture
  * as `isRateLimited` without Upstash configured: development and CI stay
  * functional with no provider credential.
+ *
+ * That log line prints `email.text` verbatim, access key included when the
+ * message is one of `sendAccessKey`'s: acceptable only because it means
+ * `POSTMARK_SERVER_TOKEN` is unset, which in turn means this is not
+ * production: a real deployment always carries the token, and a real
+ * provider does not log the messages it sends through its API.
  */
 export async function sendEmail(email: OutgoingEmail): Promise<void> {
   const token = process.env.POSTMARK_SERVER_TOKEN;

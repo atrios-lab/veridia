@@ -918,15 +918,19 @@ function SuccessScreen({
       </div>
 
       {/* The key is the loudest thing on the screen because this is the only
-          moment it exists. Nothing here can bring it back. */}
+          moment it exists here. It also went to the citizen's own e-mail, so
+          losing this tab is not losing the pedido: see
+          `recoverAccessKeyAction` on the consult page for what happens if
+          that message never arrives either. */}
       <ProtocolReveal
         protocolNumber={result.protocolNumber}
         accessKey={result.accessKey}
         className="rounded-b-2xl"
       >
         <strong className="text-brand-alert">A chave aparece só agora.</strong>{" "}
-        O site não guarda nem reenvia: o comprovante abaixo é o único lugar onde
-        ela fica registrada.
+        Enviamos o protocolo e a chave também para{" "}
+        <strong className="text-brand-primary">{result.email}</strong>. Se não
+        chegar em alguns minutos, veja o spam ou baixe o comprovante abaixo.
       </ProtocolReveal>
 
       <ol className="mt-4 flex flex-col gap-2.5">

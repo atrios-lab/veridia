@@ -43,7 +43,6 @@ import {
   listRequirements,
   reconcileDeadlinePause,
   registerRequirement,
-  reissueAccessKey,
   resolveRequirement,
   setExemptionDecision,
   setRequestAmount,
@@ -585,11 +584,6 @@ export async function deleteAttachmentAction(
   return { status: "success" };
 }
 
-export type ReissueKeyState =
-  | { status: "idle" }
-  | { status: "error"; message: string }
-  | { status: "success"; key: string };
-
 export async function updateRequestDataAction(
   _previous: ActionState,
   formData: FormData,
@@ -635,25 +629,6 @@ export async function updateRequestDataAction(
   }
   revalidateAdmin();
   return { status: "success" };
-}
-
-export async function reissueKeyAction(
-  _previous: ReissueKeyState,
-  formData: FormData,
-): Promise<ReissueKeyState> {
-  const session = await authorize();
-  if (!session) return { status: "error", message: NO_PERMISSION };
-
-  const requestId = String(formData.get("requestId") ?? "");
-  const tenant = await getTenant();
-  try {
-    const key = await reissueAccessKey(tenant.slug, requestId, session.user.id);
-    revalidateAdmin();
-    return { status: "success", key };
-  } catch (error) {
-    console.error("pedidos.reissue-key", error);
-    return { status: "error", message: GENERIC_ERROR };
-  }
 }
 
 export async function deleteRequestAction(

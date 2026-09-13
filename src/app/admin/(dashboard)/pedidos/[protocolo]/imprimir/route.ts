@@ -58,10 +58,14 @@ export async function GET(
 }
 
 /**
- * The access receipt, available only while the key the panel just reissued is
- * still on screen and gets posted back here. The database holds a hash, so the
- * server cannot produce this document on its own: "only right after
- * reissuing" is a property of the design, not a rule the UI is asked to keep.
+ * The access receipt. The only caller left is `pedidos/novo` (lançamento no
+ * balcão), which has the key in hand from the same response that just
+ * created the pedido and posts it straight back here. The detail page for
+ * an existing pedido has no path to this route any more: the panel cannot
+ * produce a fresh key for a request that already exists (the database holds
+ * only its hash), and reissuing one is the citizen's own job now, from the
+ * consult page's "Perdi a chave de acesso", which never shows the key back
+ * to whoever asked, so it has nothing to post here either.
  *
  * A download, not an inline page: the browser's PDF viewer saves a file by
  * fetching the tab's URL again, by GET, and this document only exists in
@@ -70,10 +74,6 @@ export async function GET(
  * browser saves it from this very response and never asks again. The
  * operator opens the saved file to print it, and can keep or send it, which
  * the tab could not offer.
- *
- * The actual work is `printReceiptWith`, in its own file: this route only
- * resolves the session and the request. See handle-print.ts and design.md,
- * decision 8.
  */
 export async function POST(
   request: Request,

@@ -12,6 +12,8 @@ import { brandImageUrl } from "@/core/tenant/brand-image.ts";
 import type { Tenant } from "@/core/tenant/schema.ts";
 import { findPermanentBounce } from "./bounces.ts";
 import {
+  renderAccessKeyEmailHtml,
+  renderAccessKeyEmailText,
   renderEmailCardHtml,
   renderEmailCardText,
   renderNoticeEmailHtml,
@@ -20,15 +22,18 @@ import {
 import { sendEmail } from "./send.ts";
 
 /**
- * The office nudging a citizen about their own protocol.
+ * The office nudging a citizen about their own protocol, or the platform
+ * handing the citizen their own access key.
  *
  * Two rules hold every one of these together. First, the message never
  * carries the content: not the requirement's text, not the office's reply,
- * not the delivered file. What is behind the access key stays behind it, and
- * an e-mail is the one channel the office cannot vouch for. Second, sending is
- * best effort: the notice is a courtesy on top of a consult that already works,
- * so a mail provider having a bad minute must never be why an exigência failed
- * to register.
+ * not the delivered file, not the access key, with exactly one exception,
+ * `sendAccessKey` below, whose entire job is to carry the key. An e-mail is
+ * the one channel the office cannot vouch for, so what stays out of it stays
+ * out on purpose. Second, sending is best effort: the notice (or the key) is
+ * a courtesy on top of a consult that already works, so a mail provider
+ * having a bad minute must never be why an exigência failed to register or a
+ * pedido failed to file.
  */
 export interface NotifyCitizenParams {
   tenant: Tenant;
@@ -52,9 +57,11 @@ function plainText(params: NotifyCitizenParams): string {
 }
 
 /**
- * Returns before the message is sent, and swallows its own failure into a
- * log: the caller has nothing to await and nothing to catch, per the "best
- * effort" half of the contract above.
+ * The two steps every citizen-facing send shares: check the address is not a
+ * known bounce, then hand the actual send to `after`, swallowing its own
+ * failure into a log. Returns before the message is sent: the caller has
+ * nothing to await and nothing to catch beyond the bounce warning, per the
+ * "best effort" half of the contract above.
  *
  * The send is handed to `after` rather than left as a floating promise. On a
  * platform function the response ends the invocation, and a fetch still in
@@ -63,22 +70,29 @@ function plainText(params: NotifyCitizenParams): string {
  * to wake that instance. `after` is what keeps the invocation alive until
  * the send finishes.
  */
-export async function notifyCitizen(
-  params: NotifyCitizenParams,
-): Promise<string | null> {
+async function deliverCitizenEmail(params: {
+  tenant: Tenant;
+  contact: string | null;
+  logTag: string;
+  build: (
+    contact: string,
+    host: string | undefined,
+  ) => { subject: string; html: string; text: string };
+}): Promise<string | null> {
   // A phone number is a valid contact for a request and not a mailbox. The
   // office reaches those the way it always did, by calling.
   const contact = params.contact;
   if (!contact || !isEmailContact(contact)) return null;
+  const trimmed = contact.trim();
 
   // Looked up before the send is scheduled, and awaited: the send itself
   // stays deferred because a mail provider is slow, but a primary-key read
-  // is not, and this is the one piece of it the operator needs while they
-  // are still on the screen. Learning at the balcão, weeks later, that the
-  // citizen never heard back is the failure this whole change is about.
-  const bounced = await findPermanentBounce(contact.trim());
+  // is not, and this is the one piece of it the caller needs while it is
+  // still building its own response. Learning weeks later that the citizen
+  // never heard back is the failure this whole contract is about.
+  const bounced = await findPermanentBounce(trimmed);
   if (bounced) {
-    return `O e-mail ${contact.trim()} não recebe mensagens: ${
+    return `O e-mail ${trimmed} não recebe mensagens: ${
       bounced.detail || "a última mensagem voltou"
     }. Avise por telefone.`;
   }
@@ -86,27 +100,95 @@ export async function notifyCitizen(
   const host = params.tenant.hosts[0];
   after(async () => {
     try {
+      const { subject, html, text } = params.build(trimmed, host);
       await sendEmail({
-        to: contact.trim(),
+        to: trimmed,
         fromName: params.tenant.name,
         fromAddress: params.tenant.emailFrom,
-        subject: `${params.subject} · ${params.protocolNumber}`,
-        html: renderNoticeEmailHtml({
-          officeName: params.tenant.name,
-          officeSubtitle: params.tenant.subtitle,
-          sealUrl: brandImageUrl(params.tenant.logos.seal.light, host),
-          body: params.body,
-          protocolNumber: params.protocolNumber,
-          consultUrl: host ? `https://${host}/protocolo` : "",
-        }),
-        text: plainText(params),
+        subject,
+        html,
+        text,
       });
     } catch (error) {
-      console.error("email.notify-citizen", error);
+      console.error(params.logTag, error);
     }
   });
 
   return null;
+}
+
+export async function notifyCitizen(
+  params: NotifyCitizenParams,
+): Promise<string | null> {
+  return deliverCitizenEmail({
+    tenant: params.tenant,
+    contact: params.contact,
+    logTag: "email.notify-citizen",
+    build: (_contact, host) => ({
+      subject: `${params.subject} · ${params.protocolNumber}`,
+      html: renderNoticeEmailHtml({
+        officeName: params.tenant.name,
+        officeSubtitle: params.tenant.subtitle,
+        sealUrl: brandImageUrl(params.tenant.logos.seal.light, host),
+        body: params.body,
+        protocolNumber: params.protocolNumber,
+        consultUrl: host ? `https://${host}/protocolo` : "",
+      }),
+      text: plainText(params),
+    }),
+  });
+}
+
+export interface SendAccessKeyParams {
+  tenant: Tenant;
+  /** The contact the citizen filed with: an e-mail, or a phone we skip. */
+  contact: string | null;
+  protocolNumber: string;
+  /** In the clear: this is the one function allowed to put it in a message. */
+  accessKey: string;
+  /** "received": the pedido that just generated this key. "recovered": the
+   * citizen asked the consult page for a new one. */
+  reason: "received" | "recovered";
+}
+
+const ACCESS_KEY_SUBJECTS: Record<SendAccessKeyParams["reason"], string> = {
+  received: "Pedido recebido",
+  recovered: "Nova chave de acesso",
+};
+
+/**
+ * The only two messages that carry the citizen's access key: the receipt a
+ * pedido sends when it is filed, and the reply to a recovery asked for from
+ * the consult page. Everything else in this file, `notifyCitizen` included,
+ * keeps the key out on purpose (see the file's own contract, above); this
+ * function exists so that promise never has to bend for a seventh caller.
+ * Same bounce check, same `after`, same best-effort return as
+ * `notifyCitizen`, through `deliverCitizenEmail`.
+ */
+export async function sendAccessKey(
+  params: SendAccessKeyParams,
+): Promise<string | null> {
+  return deliverCitizenEmail({
+    tenant: params.tenant,
+    contact: params.contact,
+    logTag: "email.send-access-key",
+    build: (_contact, host) => {
+      const shared = {
+        officeName: params.tenant.name,
+        officeSubtitle: params.tenant.subtitle,
+        sealUrl: brandImageUrl(params.tenant.logos.seal.light, host),
+        protocolNumber: params.protocolNumber,
+        accessKey: params.accessKey,
+        consultUrl: host ? `https://${host}/protocolo` : "",
+        reason: params.reason,
+      } as const;
+      return {
+        subject: `${ACCESS_KEY_SUBJECTS[params.reason]} · ${params.protocolNumber}`,
+        html: renderAccessKeyEmailHtml(shared),
+        text: renderAccessKeyEmailText(shared),
+      };
+    },
+  });
 }
 
 export interface NotifyOfficePaymentReportedParams {

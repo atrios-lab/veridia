@@ -133,3 +133,86 @@ export function renderNoticeEmailHtml(notice: NoticeEmail): string {
   </body>
 </html>`;
 }
+
+export interface AccessKeyEmail {
+  officeName: string;
+  officeSubtitle: string;
+  sealUrl: string;
+  protocolNumber: string;
+  /** In the clear, in the one message whose job is to carry it. */
+  accessKey: string;
+  consultUrl: string;
+  /** "received": the pedido just filed. "recovered": the citizen asked the
+   * consult page for a new key, and the previous one just stopped working. */
+  reason: "received" | "recovered";
+}
+
+const ACCESS_KEY_INTRO: Record<AccessKeyEmail["reason"], string> = {
+  received:
+    "Recebemos o seu pedido. Guarde este e-mail: é com ele que você acompanha o andamento.",
+  recovered: "Uma chave de acesso nova foi gerada para o seu pedido.",
+};
+
+/**
+ * Same footnote every notice carries about the consult, plus what only this
+ * e-mail is allowed to add: the credential itself, and (only when a key
+ * that already existed was just replaced) the two sentences that make the
+ * substitution legible to whoever is reading it. A citizen who filed a
+ * pedido gets no such sentence: there was no previous key to lose.
+ */
+function accessKeyFootnote(reason: AccessKeyEmail["reason"]): string {
+  const base =
+    "Guarde este e-mail: é com o protocolo e a chave que você acompanha o pedido. Não compartilhe a chave com ninguém, nem com a serventia.";
+  if (reason === "received") return base;
+  return `${base} A chave anterior deixou de valer. Se você não pediu uma chave nova, alguém informou o seu protocolo e o seu e-mail na consulta; a chave só chega aqui, então o seu pedido continua só seu.`;
+}
+
+/**
+ * The one e-mail (in two moments: filing, and recovery) allowed to carry the
+ * access key in the clear. Same shell as `renderNoticeEmailHtml`, but the
+ * credential itself replaces the one-line body, in its own block, in a
+ * monospaced size that reads off a phone screen without zooming.
+ */
+export function renderAccessKeyEmailHtml(email: AccessKeyEmail): string {
+  return `<!doctype html>
+<html lang="pt-BR">
+  <body style="margin:0;padding:32px 16px;background:${COLORS.background};font-family:Arial,Helvetica,sans-serif;">
+    <table role="presentation" width="100%" style="max-width:560px;margin:0 auto;background:${COLORS.card};border:1px solid ${COLORS.border};border-radius:14px;border-collapse:separate;overflow:hidden;">
+      <tr>
+        <td style="padding:24px 28px;border-bottom:1px solid ${COLORS.border};">
+          <img src="${escapeHtml(email.sealUrl)}" alt="" width="38" height="38" style="display:block;object-fit:contain;">
+        </td>
+      </tr>
+      <tr>
+        <td style="padding:30px 28px 32px;">
+          <p style="font-size:17px;font-weight:700;color:${COLORS.primary};margin:0 0 4px;">${escapeHtml(email.officeName)}</p>
+          <p style="font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:${COLORS.muted};margin:0 0 20px;">${escapeHtml(email.officeSubtitle)}</p>
+          <p style="font-size:14px;color:${COLORS.text};line-height:1.65;margin:0 0 20px;">${escapeHtml(ACCESS_KEY_INTRO[email.reason])}</p>
+          <div style="margin:0 0 20px;padding:16px 18px;border-radius:10px;background:${COLORS.background};border:1px solid ${COLORS.border};">
+            <p style="font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:${COLORS.muted};margin:0 0 4px;">Protocolo</p>
+            <p style="font-size:16px;font-weight:700;font-family:'Courier New',monospace;letter-spacing:.04em;color:${COLORS.primary};margin:0 0 14px;">${escapeHtml(email.protocolNumber)}</p>
+            <p style="font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:${COLORS.muted};margin:0 0 4px;">Chave de acesso</p>
+            <p style="font-size:19px;font-weight:700;font-family:'Courier New',monospace;letter-spacing:.1em;color:${COLORS.primary};margin:0;">${escapeHtml(email.accessKey)}</p>
+          </div>
+          <a href="${escapeHtml(email.consultUrl)}" style="display:inline-block;background:${COLORS.button};color:${COLORS.card};font-size:14px;font-weight:700;border-radius:9px;padding:13px 24px;text-decoration:none;margin:0 0 20px;">Consultar o protocolo</a>
+          <p style="font-size:12px;color:${COLORS.muted};line-height:1.6;border-top:1px solid ${COLORS.border};padding-top:14px;margin:0;">${escapeHtml(accessKeyFootnote(email.reason))}</p>
+        </td>
+      </tr>
+    </table>
+  </body>
+</html>`;
+}
+
+/** Plain-text fallback for `renderAccessKeyEmailHtml`, same content. */
+export function renderAccessKeyEmailText(email: AccessKeyEmail): string {
+  return [
+    ACCESS_KEY_INTRO[email.reason],
+    "",
+    `Protocolo: ${email.protocolNumber}`,
+    `Chave de acesso: ${email.accessKey}`,
+    "",
+    `Consultar o protocolo: ${email.consultUrl}`,
+    "",
+    accessKeyFootnote(email.reason),
+  ].join("\n");
+}

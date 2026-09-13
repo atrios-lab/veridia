@@ -17,7 +17,7 @@ import {
 import { formatCents, parseCentsInput } from "@/core/request/money.ts";
 import { formatDate } from "@/core/scheduling/calendar.ts";
 import { closeConversation } from "@/lib/chat.ts";
-import { notifyCitizen } from "@/lib/email/service-request.ts";
+import { sendAccessKey } from "@/lib/email/service-request.ts";
 import {
   createServiceRequest,
   setRequestAmount,
@@ -147,14 +147,18 @@ export async function createManualServiceRequest(
     }
 
     // The counter already handed over the protocol and the key, on paper or
-    // on the operator's screen. This is the copy that survives the walk home.
-    // The key stays out of it, the same way it does on the public wizard.
-    const emailWarning = await notifyCitizen({
+    // on the operator's screen. This is the copy that survives the walk
+    // home, and it carries the key too, same as the public wizard's own
+    // receipt: a phone number as contact still gets nothing tried (see
+    // `sendAccessKey`), which is the one difference the balcão keeps: a
+    // citizen without an e-mail here still has the screen and the printed
+    // comprovante.
+    const emailWarning = await sendAccessKey({
       tenant,
       contact: parsed.data.contact,
       protocolNumber,
-      subject: "Pedido recebido",
-      body: "Recebemos o seu pedido. Guarde o número do protocolo e a chave de acesso entregues no atendimento.",
+      accessKey,
+      reason: "received",
     });
 
     if (fromConversationId) {
