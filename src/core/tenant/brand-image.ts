@@ -11,7 +11,7 @@ export type BrandImageKind =
   | "seal-dark"
   | "hero";
 
-const LOGO_MAX_BYTES = 1 * 1024 * 1024;
+const LOGO_MAX_BYTES = 3 * 1024 * 1024;
 const HERO_MAX_BYTES = 4 * 1024 * 1024;
 
 const MAX_BYTES: Record<BrandImageKind, number> = {

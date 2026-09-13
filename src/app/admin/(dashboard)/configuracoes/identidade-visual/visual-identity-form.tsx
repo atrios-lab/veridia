@@ -267,7 +267,7 @@ export function VisualIdentityForm({ tenant }: { tenant: Tenant }) {
             Logotipo
           </h2>
           <p className="mt-1 text-[12.5px] text-admin-muted">
-            A marca quadrada, em PNG com fundo transparente, até 1 MB. Aparece
+            A marca quadrada, em PNG com fundo transparente, até 3 MB. Aparece
             no cabeçalho e rodapé do site, no ícone da aba, nos e-mails e nos
             documentos.
           </p>
