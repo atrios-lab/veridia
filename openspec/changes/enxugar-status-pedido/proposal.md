@@ -10,7 +10,7 @@ o painel no dia a dia, separou o que tem comportamento de verdade por trás do q
 
 ## What Changes
 
-- **BREAKING**: reduzir `SERVICE_REQUEST_STATUSES` de vinte para onze valores.
+- **BREAKING**: reduzir `SERVICE_REQUEST_STATUSES` de vinte para dez valores.
 - Remover `filed` ("Protocolado") e `in-review` ("Em análise"): nenhum dos dois é gravado
   automaticamente por nada no sistema, e nenhuma regra depende deles — são escolha manual sem
   efeito colateral.
@@ -30,8 +30,14 @@ o painel no dia a dia, separou o que tem comportamento de verdade por trás do q
   próprio (e-mail disparado, prazo, exigência de motivo, upload de PDF exclusivo do indeferimento,
   agora formalizado em `validateStatusReason` em `kinds.ts`) que os distingue de verdade — decisão
   explícita de não tocar, não omissão.
-- Migrar os protocolos já gravados nos nove valores removidos/fundidos para o valor novo
-  correspondente.
+- **Revisão posterior**: remover também `paid` ("Pago"). Na prática, o fluxo livre já deixava o
+  operador pular direto de "Pagamento informado"/"Aguardando pagamento" para "Em processamento"
+  sem passar por "Pago", e um ato isento nunca tem valor a "pagar" — então `paid` não respondia
+  "o pagamento está confirmado?" de um jeito que os outros andamentos não já respondessem. Essa
+  pergunta passa a ser a função `isPaymentSettled` em `kinds.ts`, calculada a partir do andamento
+  em vez de guardada num valor próprio. `SERVICE_REQUEST_STATUSES` fica em dez.
+- Migrar os protocolos já gravados nos dez valores removidos/fundidos (os nove do corte original,
+  mais `paid`) para o valor novo correspondente.
 
 ## Capabilities
 
@@ -40,7 +46,7 @@ o painel no dia a dia, separou o que tem comportamento de verdade por trás do q
 
 ### Modified Capabilities
 - `admin-service-requests`: a lista de andamentos oferecida no detalhe (sugestão e correção
-  manual), o mapa de cor por andamento e os exemplos de transição livre refletem os onze valores
+  manual), o mapa de cor por andamento e os exemplos de transição livre refletem os dez valores
   em vez dos dezoito hoje descritos na spec (que já estava desatualizada frente ao código, com
   vinte). A ação em lote de inativação (de `bulk-protocol-inactivation`) passa a gravar `archived`
   em vez de `inactive`.
@@ -54,20 +60,31 @@ arquivado) — então essa capability não precisa de delta spec nesta change.
 
 - `src/core/request/kinds.ts`: `SERVICE_REQUEST_STATUSES`, `TERMINAL_SERVICE_REQUEST_STATUSES`,
   `SERVICE_REQUEST_PHASES`, `SUGGESTED_NEXT_STATUSES`, `STATUS_LABELS["service-request"]`,
-  `statusForRequirements`.
+  `statusForRequirements`, e a nova `isPaymentSettled` (substitui o `status === "paid" ||
+  !isOpenServiceRequestStatus(status)` que existia embutido em `protocolo/actions.ts`).
 - `src/app/admin/(dashboard)/pedidos/_components/status-tone.ts`: `STATUS_TONES` perde as
-  entradas dos nove valores removidos.
+  entradas dos dez valores removidos.
+- `src/app/admin/(dashboard)/pedidos/_components/queue-order.ts`: `QueueTabId`/`QUEUE_TABS` perde
+  a aba "Pago" (sete abas em vez de oito).
 - `src/app/admin/(dashboard)/pedidos/[protocolo]/_components/status-section.tsx`: `HAPPY_PATH`
-  perde `in-review` (passa de cinco para quatro passos).
+  perde `in-review` e troca `paid` por `processing` (Novo → Aguardando pagamento → Em
+  processamento → Concluído).
 - `src/lib/admin-overview.ts`: `listStalledFulfilledRequirements` busca por `status = "in-review"`
   com exigência cumprida — cenário que o retorno automático já deveria impedir de existir; revisar
   se a função ainda tem uso ou se é código morto a remover junto.
 - `src/app/(public)/protocolo/protocol-lookup.tsx`: condição que trata `new`/`in-review` como
-  "ainda preparando" (linha ~655) perde o `in-review`.
+  "ainda preparando" (linha ~655) perde o `in-review`, e a que trata `paid` como "em preparo" passa
+  a usar `paymentSettled` (cobre também "awaiting-compliance" alcançado depois do pagamento
+  confirmado, que `=== "paid"` nunca cobriu).
+- `src/app/(public)/protocolo/actions.ts`: as duas checagens embutidas de `status === "paid" ||
+  !isOpenServiceRequestStatus(status)` (uma no `paymentSettled` da consulta, outra no guard de
+  `reportPayment`) passam a chamar `isPaymentSettled`. A troca corrige de caminho um bug
+  preexistente: com `paid` como único andamento "quitado", assim que o operador movia um pedido já
+  pago para `processing` o QR do Pix voltava a aparecer na consulta do cidadão.
 - Migração de dado: `service_requests.status` é coluna texto livre (sem enum de banco); protocolos
   já gravados com `filed`, `in-review`, `pre-noted`, `in-qualification`, `with-requirement`,
-  `registered`, `annotated`, `granted` ou `inactive` precisam de `UPDATE` remapeando para o valor
-  novo antes do deploy que remove esses valores do código, ou ficam com um andamento que
+  `registered`, `annotated`, `granted`, `inactive` ou `paid` precisam de `UPDATE` remapeando para o
+  valor novo antes do deploy que remove esses valores do código, ou ficam com um andamento que
   `statusLabel`/`isServiceRequestStatus` não reconhece mais.
 - **Coordenação com `bulk-protocol-inactivation`** (change aberta, 15/16 tarefas): o código já
   implementa a ação em lote — `deactivateServiceRequests` em `src/lib/service-request.ts:693`
@@ -85,6 +102,6 @@ arquivado) — então essa capability não precisa de delta spec nesta change.
   (`protocol-trilho.tsx` trata como "ainda em preparo"): é um problema identificado na mesma
   exploração, mas de natureza diferente (a consulta do cidadão não conhece o andamento, não é um
   excesso de valores) e fica para uma change própria.
-- Não introduz status novo nem renomeia nenhum dos onze que permanecem.
+- Não introduz status novo nem renomeia nenhum dos dez que permanecem.
 - Não muda a coluna do banco de enum-livre para enum-de-banco; a migração é só de dado (UPDATE),
   não de schema.

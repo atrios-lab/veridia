@@ -1,0 +1,11 @@
+-- Revisado a mao: nao ha mudanca de schema, so backfill de dado, mesmo
+-- padrao da migration 0021. Remove "paid" de SERVICE_REQUEST_STATUSES
+-- (ver design.md de enxugar-status-pedido): confirmar um pagamento agora
+-- move o pedido direto para "processing", entao todo protocolo ja gravado
+-- como "paid" precisa do valor novo antes do deploy do codigo que nao
+-- reconhece mais o antigo.
+--
+-- Mesmo cuidado da 0021: "status" e coluna de texto livre compartilhada
+-- pelas quatro naturezas de pedido (kind), entao o UPDATE filtra
+-- kind = 'service-request'.
+UPDATE "service_requests" SET "status" = 'processing' WHERE "kind" = 'service-request' AND "status" = 'paid';

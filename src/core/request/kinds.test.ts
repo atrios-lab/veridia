@@ -7,6 +7,7 @@ import {
   isOmbudsmanStatus,
   isOpenServiceRequestStatus,
   isOpenStatus,
+  isPaymentSettled,
   isServiceRequestStatus,
   OMBUDSMAN_STATUSES,
   ombudsmanDetailsSchema,
@@ -87,7 +88,7 @@ test("open counts everything short of a terminal andamento", () => {
   assert.ok(isOpenServiceRequestStatus("new"));
   assert.ok(isOpenServiceRequestStatus("processing"));
   assert.ok(isOpenServiceRequestStatus("awaiting-payment"));
-  assert.ok(isOpenServiceRequestStatus("paid"));
+  assert.ok(isOpenServiceRequestStatus("ready-for-pickup"));
   assert.equal(isOpenServiceRequestStatus("done"), false);
   assert.equal(isOpenServiceRequestStatus("rejected"), false);
   assert.equal(isOpenServiceRequestStatus("cancelled"), false);
@@ -115,11 +116,26 @@ test("payment-reported: the one andamento the citizen writes", () => {
     "Pagamento informado",
   );
   assert.deepEqual(suggestedNextStatuses("payment-reported"), [
-    "paid",
+    "processing",
     "awaiting-payment",
     "cancelled",
   ]);
   assert.ok(isOpenServiceRequestStatus("payment-reported"));
+});
+
+test("payment is settled once a request leaves the two andamentos that wait on money", () => {
+  assert.equal(isPaymentSettled("new"), false);
+  assert.equal(isPaymentSettled("awaiting-payment"), false);
+  assert.equal(isPaymentSettled("payment-reported"), false);
+  // Reached from any prior andamento, including one where payment was
+  // already confirmed: an exigência raised afterward does not unsettle it.
+  assert.equal(isPaymentSettled("awaiting-compliance"), true);
+  assert.equal(isPaymentSettled("processing"), true);
+  assert.equal(isPaymentSettled("ready-for-pickup"), true);
+  assert.equal(isPaymentSettled("done"), true);
+  assert.equal(isPaymentSettled("rejected"), true);
+  assert.equal(isPaymentSettled("cancelled"), true);
+  assert.equal(isPaymentSettled("archived"), true);
 });
 
 test("every suggestion is itself a valid andamento", () => {
