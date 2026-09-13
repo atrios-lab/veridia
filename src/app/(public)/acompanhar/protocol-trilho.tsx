@@ -1429,7 +1429,7 @@ function RejectedCard({ result }: { result: ServiceRequestDetail }) {
 /**
  * O motivo do indeferimento/cancelamento vive fora do RejectedCard: é texto
  * livre do cartório e pode ser longo, então precisa do espaço da coluna
- * principal — o card vermelho ao lado é só para instruções curtas.
+ * principal (o card vermelho ao lado é só para instruções curtas).
  */
 /** Parágrafos separados por linha em branco, para preservar a formatação
  * livre que o cartório digitou (o textarea do painel não força uma linha só). */
