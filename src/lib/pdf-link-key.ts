@@ -14,12 +14,14 @@ import { createHmac } from "node:crypto";
  * link-signing key. Rotating the auth secret rotates this one with it, and
  * every outstanding link dies, which for a one-hour link is nothing lost.
  */
-const secret = process.env.BETTER_AUTH_SECRET;
-if (!secret) {
-  throw new Error(
-    "BETTER_AUTH_SECRET nao esta definida. Gere com: openssl rand -base64 32",
-  );
-}
+// The placeholder keeps `pnpm test` working with no `.env` and no secret,
+// same reasoning as the one in src/db/index.ts: a route handler that imports
+// this file (even one this process never calls) must still load under
+// `node --test`. `auth.ts` is what actually refuses to start without a real
+// secret; by the time a request reaches this module in production, that
+// refusal has already happened.
+const secret =
+  process.env.BETTER_AUTH_SECRET || "test-sem-valor-nenhum-fora-deste-processo";
 
 export const pdfLinkKey: Buffer = createHmac("sha256", secret)
   .update("veridia:pdf-link")

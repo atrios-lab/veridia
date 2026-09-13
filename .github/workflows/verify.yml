@@ -13,42 +13,16 @@ concurrency:
 jobs:
   verify:
     runs-on: ubuntu-latest
-    # Valores descartáveis, não segredos: apontam para o banco efêmero do job
-    # e para contas que só existem dentro dele. A mesma URL em DATABASE_URL e
-    # DIRECT_URL porque aqui não há pooler no meio, ao contrário da Supabase,
-    # onde o runtime passa pelo Supavisor e as migrations não.
+    # Throwaway values, not secrets: `src/lib/auth.ts` refuses to load
+    # without them, and `pnpm build` imports it. No nível do job porque é o
+    # único passo que precisa deles.
     env:
-      DATABASE_URL: postgresql://postgres:postgres@localhost:5432/postgres
-      DIRECT_URL: postgresql://postgres:postgres@localhost:5432/postgres
-      ADMIN_SEED_EMAIL: admin@e2e.local
-      ADMIN_SEED_PASSWORD: senha-de-teste-sem-valor-fora-deste-job
-      ADMIN_SEED_TENANT: cartorio-marinho
-      AURORA_ADMIN_EMAIL: aurora-admin@e2e.local
-      AURORA_ADMIN_PASSWORD: senha-de-teste-sem-valor-fora-deste-job
-      # Throwaway values, not secrets: `src/lib/auth.ts` refuses to load
-      # without them. No nível do job porque tanto o build quanto os dois
-      # passos de seed (que também importam auth.ts, via drizzle/better-auth)
-      # precisam deles.
       BETTER_AUTH_SECRET: build-sem-valor-nenhum-fora-deste-processo
       BETTER_AUTH_URL: http://localhost:3000
       DEFAULT_TENANT: cartorio-marinho
-    # No secrets, by design. Os testes unitários rodam contra um Postgres
-    # in-process (PGlite) e o e2e contra o serviço abaixo, que nasce e morre
-    # com o job: nenhum dos dois alcança banco real nem serviço externo.
-    services:
-      postgres:
-        image: postgres:17
-        env:
-          POSTGRES_PASSWORD: postgres
-        ports:
-          - 5432:5432
-        # Sem isto os passos começam antes de o banco aceitar conexão, e a
-        # migration falha por recusa em vez de por defeito.
-        options: >-
-          --health-cmd pg_isready
-          --health-interval 10s
-          --health-timeout 5s
-          --health-retries 5
+    # No secrets, by design, and no serviço de banco: pnpm test roda inteiro
+    # contra PostgreSQL em processo (PGlite, ver src/db/test-db.ts), e não há
+    # mais suíte de browser que precise de um banco de verdade ao lado.
     steps:
       - uses: actions/checkout@v4
 
@@ -77,27 +51,4 @@ jobs:
         # red build on a pull request that touched nothing.
         run: pnpm dlx @fission-ai/openspec@1.5.0 validate --all
 
-      # BETTER_AUTH_SECRET/BETTER_AUTH_URL/DEFAULT_TENANT vêm do env do job.
-      # Mesmos valores e mesmo motivo do `webServer` block em
-      # playwright.config.ts, que sobe o servidor que o e2e roda contra.
       - run: pnpm build
-
-      - run: pnpm exec playwright install --with-deps chromium
-
-      # Sem banco e sem conta semeada, todo describe do painel se pula por
-      # falta de ADMIN_SEED_EMAIL: cem testes que ficam verdes sem exercitar
-      # uma tela sequer. Foi assim que o e2e do painel passou meses sem rodar.
-      - name: preparar o banco do e2e
-        run: pnpm db:migrate && pnpm db:seed
-
-      # Segunda serventia, com conta própria: é o que prova que um login não
-      # atravessa para o painel de outra, e que uma atribuição não delegada
-      # se apresenta como tal.
-      - name: semear o administrador da segunda serventia
-        run: pnpm db:seed
-        env:
-          ADMIN_SEED_EMAIL: ${{ env.AURORA_ADMIN_EMAIL }}
-          ADMIN_SEED_PASSWORD: ${{ env.AURORA_ADMIN_PASSWORD }}
-          ADMIN_SEED_TENANT: tabelionato-aurora
-
-      - run: pnpm e2e

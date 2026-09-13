@@ -1,5 +1,5 @@
 import "server-only";
-import { db } from "../db/index.ts";
+import { type Database, db } from "../db/index.ts";
 import { auditLog } from "../db/schema.ts";
 
 export interface AuditEntry {
@@ -17,12 +17,20 @@ export interface AuditEntry {
  * no token, no document body. A trail that carries payloads is a second copy
  * of the data to leak, and it is the copy nobody remembers to protect.
  */
-export async function recordAudit(entry: AuditEntry): Promise<void> {
-  await db.insert(auditLog).values({
+export async function recordAuditWith(
+  database: Database,
+  entry: AuditEntry,
+): Promise<void> {
+  await database.insert(auditLog).values({
     tenantSlug: entry.tenantSlug,
     actorId: entry.actorId,
     action: entry.action,
     targetType: entry.targetType,
     targetId: entry.targetId ?? null,
   });
+}
+
+/** The production singleton, for callers that do not test against it. */
+export async function recordAudit(entry: AuditEntry): Promise<void> {
+  return recordAuditWith(db, entry);
 }

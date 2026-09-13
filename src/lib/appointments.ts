@@ -18,10 +18,10 @@ import {
   UNIQUE_VIOLATION,
   violatedConstraint,
 } from "@/db/errors.ts";
-import { db } from "@/db/index.ts";
+import { type Database, db } from "@/db/index.ts";
 import { appointments, tenantContent } from "@/db/schema.ts";
-import { OFFICE_AGENDA_KEY } from "@/lib/tenant.ts";
-import { recordAudit } from "./audit.ts";
+import { OFFICE_AGENDA_KEY } from "@/lib/office-config.ts";
+import { recordAudit, recordAuditWith } from "./audit.ts";
 
 export type Appointment = typeof appointments.$inferSelect;
 
@@ -129,11 +129,12 @@ export async function takenTimesByDay(
 }
 
 /** Every appointment of a day, in the order the counter will see them. */
-export async function appointmentsOn(
+export async function appointmentsOnWith(
+  database: Database,
   tenantSlug: string,
   date: IsoDate,
 ): Promise<Appointment[]> {
-  return db
+  return database
     .select()
     .from(appointments)
     .where(
@@ -142,12 +143,21 @@ export async function appointmentsOn(
     .orderBy(asc(appointments.slotTime), asc(appointments.createdAt));
 }
 
+/** The production singleton, for callers that do not test against it. */
+export async function appointmentsOn(
+  tenantSlug: string,
+  date: IsoDate,
+): Promise<Appointment[]> {
+  return appointmentsOnWith(db, tenantSlug, date);
+}
+
 /** The appointment a cancellation link points at, still live. */
-export async function findByCancelToken(
+export async function findByCancelTokenWith(
+  database: Database,
   tenantSlug: string,
   token: string,
 ): Promise<Appointment | undefined> {
-  const [row] = await db
+  const [row] = await database
     .select()
     .from(appointments)
     .where(
@@ -159,6 +169,14 @@ export async function findByCancelToken(
     )
     .limit(1);
   return row;
+}
+
+/** The production singleton, for callers that do not test against it. */
+export async function findByCancelToken(
+  tenantSlug: string,
+  token: string,
+): Promise<Appointment | undefined> {
+  return findByCancelTokenWith(db, tenantSlug, token);
 }
 
 /** How many appointments the office has booked from today on, for the sidebar
@@ -200,10 +218,11 @@ export interface NewAppointment {
 /** The next AGD number of the office's year, same read as service-request:
  * max + 1, and the unique index settles any race. */
 async function nextProtocolSequence(
+  database: Database,
   tenantSlug: string,
   year: number,
 ): Promise<number> {
-  const [last] = await db
+  const [last] = await database
     .select({ sequence: appointments.protocolSequence })
     .from(appointments)
     .where(
@@ -225,7 +244,8 @@ const PROTOCOL_ATTEMPTS = 5;
  * `SlotTakenError` for the page to explain. No lock, no count, no retry:
  * retrying would only book a time the citizen did not choose.
  */
-export async function bookAppointment(
+export async function bookAppointmentWith(
+  database: Database,
   tenantSlug: string,
   input: NewAppointment,
   actorId: string | null = null,
@@ -237,9 +257,9 @@ export async function bookAppointment(
   // the slot index means the time is gone (tell the caller), the protocol
   // index means another booking took this number first (ask for the next).
   for (let attempt = 1; ; attempt++) {
-    const sequence = await nextProtocolSequence(tenantSlug, year);
+    const sequence = await nextProtocolSequence(database, tenantSlug, year);
     try {
-      const [created] = await db
+      const [created] = await database
         .insert(appointments)
         .values({
           tenantSlug,
@@ -260,7 +280,7 @@ export async function bookAppointment(
         })
         .returning();
 
-      await recordAudit({
+      await recordAuditWith(database, {
         tenantSlug,
         // Null when booked by the citizen, who has no account by design.
         actorId,
@@ -285,6 +305,15 @@ export async function bookAppointment(
   }
 }
 
+/** The production singleton, for callers that do not test against it. */
+export async function bookAppointment(
+  tenantSlug: string,
+  input: NewAppointment,
+  actorId: string | null = null,
+): Promise<Appointment> {
+  return bookAppointmentWith(db, tenantSlug, input, actorId);
+}
+
 /**
  * Cancels one appointment. `actorId` is null when the citizen cancelled it
  * from the e-mail link, and a reason only exists when the office did it, because the
@@ -294,12 +323,13 @@ export async function bookAppointment(
  * without reading it back. Undefined when nothing live matched, which is what
  * a double-submitted link looks like.
  */
-export async function cancelAppointment(
+export async function cancelAppointmentWith(
+  database: Database,
   tenantSlug: string,
   id: string,
   options: { reason?: string; actorId?: string } = {},
 ): Promise<Appointment | undefined> {
-  const [cancelled] = await db
+  const [cancelled] = await database
     .update(appointments)
     .set({
       status: "cancelled",
@@ -319,7 +349,7 @@ export async function cancelAppointment(
     .returning();
 
   if (cancelled) {
-    await recordAudit({
+    await recordAuditWith(database, {
       tenantSlug,
       actorId: options.actorId ?? null,
       action: options.actorId ? "appointment.cancel" : "appointment.give-up",
@@ -330,19 +360,29 @@ export async function cancelAppointment(
   return cancelled;
 }
 
+/** The production singleton, for callers that do not test against it. */
+export async function cancelAppointment(
+  tenantSlug: string,
+  id: string,
+  options: { reason?: string; actorId?: string } = {},
+): Promise<Appointment | undefined> {
+  return cancelAppointmentWith(db, tenantSlug, id, options);
+}
+
 /**
  * Closes a whole day: every live appointment on it is cancelled with the same
  * reason, in one statement. The rows come back so the caller can write to each
  * citizen. Sending is the caller's job, and a failed e-mail must not undo a
  * cancellation the office already decided.
  */
-export async function cancelDay(
+export async function cancelDayWith(
+  database: Database,
   tenantSlug: string,
   date: IsoDate,
   reason: string,
   actorId: string,
 ): Promise<Appointment[]> {
-  const cancelled = await db
+  const cancelled = await database
     .update(appointments)
     .set({
       status: "cancelled",
@@ -359,7 +399,7 @@ export async function cancelDay(
     )
     .returning();
 
-  await recordAudit({
+  await recordAuditWith(database, {
     tenantSlug,
     actorId,
     action: "appointment.close-day",
@@ -369,14 +409,25 @@ export async function cancelDay(
   return cancelled;
 }
 
+/** The production singleton, for callers that do not test against it. */
+export async function cancelDay(
+  tenantSlug: string,
+  date: IsoDate,
+  reason: string,
+  actorId: string,
+): Promise<Appointment[]> {
+  return cancelDayWith(db, tenantSlug, date, reason, actorId);
+}
+
 /** Marks the citizen as served. Same live guard: an appointment cancelled
  * this morning is not attended this afternoon. */
-export async function markAttended(
+export async function markAttendedWith(
+  database: Database,
   tenantSlug: string,
   id: string,
   actorId: string,
 ): Promise<void> {
-  await db
+  await database
     .update(appointments)
     .set({ status: "attended", updatedAt: new Date() })
     .where(
@@ -386,7 +437,7 @@ export async function markAttended(
         eq(appointments.status, ACTIONABLE_APPOINTMENT_STATUS),
       ),
     );
-  await recordAudit({
+  await recordAuditWith(database, {
     tenantSlug,
     actorId,
     action: "appointment.attend",
@@ -395,14 +446,24 @@ export async function markAttended(
   });
 }
 
-/** The citizen did not come. Same live guard as `markAttended`; no e-mail:
- * telling someone they missed what they missed serves nobody. */
-export async function markNoShow(
+/** The production singleton, for callers that do not test against it. */
+export async function markAttended(
   tenantSlug: string,
   id: string,
   actorId: string,
 ): Promise<void> {
-  await db
+  return markAttendedWith(db, tenantSlug, id, actorId);
+}
+
+/** The citizen did not come. Same live guard as `markAttended`; no e-mail:
+ * telling someone they missed what they missed serves nobody. */
+export async function markNoShowWith(
+  database: Database,
+  tenantSlug: string,
+  id: string,
+  actorId: string,
+): Promise<void> {
+  await database
     .update(appointments)
     .set({ status: "no_show", updatedAt: new Date() })
     .where(
@@ -412,13 +473,22 @@ export async function markNoShow(
         eq(appointments.status, ACTIONABLE_APPOINTMENT_STATUS),
       ),
     );
-  await recordAudit({
+  await recordAuditWith(database, {
     tenantSlug,
     actorId,
     action: "appointment.no-show",
     targetType: "appointment",
     targetId: id,
   });
+}
+
+/** The production singleton, for callers that do not test against it. */
+export async function markNoShow(
+  tenantSlug: string,
+  id: string,
+  actorId: string,
+): Promise<void> {
+  return markNoShowWith(db, tenantSlug, id, actorId);
 }
 
 /** Non-cancelled appointments per day of a window, for the day strip's

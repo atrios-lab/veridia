@@ -1,13 +1,10 @@
 import { can } from "@/core/auth/roles.ts";
-import { verifyAccessKey } from "@/core/request/access-key.ts";
-import { buildAccessReceipt } from "@/core/request/requerimento.ts";
-import { recordAudit } from "@/lib/audit.ts";
+import { db } from "@/db/index.ts";
 import { brandFor } from "@/lib/document-brand.ts";
-import { renderDocument, renderDocuments } from "@/lib/pdf.ts";
-import { buildRequestDocuments } from "@/lib/request-documents.ts";
 import { findByProtocol } from "@/lib/service-request.ts";
 import { getSession } from "@/lib/session.ts";
 import { getTenant } from "@/lib/tenant.ts";
+import { printReceiptWith, printRequerimentoWith } from "./handle-print.ts";
 
 export const runtime = "nodejs";
 
@@ -33,20 +30,6 @@ async function load(request: Request, protocolo: string) {
   };
 }
 
-function pdf(
-  bytes: Buffer,
-  name: string,
-  disposition: "inline" | "attachment",
-): Response {
-  return new Response(new Uint8Array(bytes), {
-    headers: {
-      "Content-Type": "application/pdf",
-      "Content-Disposition": `${disposition}; filename="${name}.pdf"`,
-      "Cache-Control": "private, no-store",
-    },
-  });
-}
-
 /**
  * The sheet the counter prints for the citizen to sign on the spot. GET and no
  * access key: the operator is already authenticated by session cookie, and the
@@ -57,6 +40,10 @@ function pdf(
  * `?documento=declaracao-em-branco` the same document with nothing filled
  * in, for the office to hand over blank. Both 404 on a pedido without
  * gratuidade: there is no declaração to print or hand out for one.
+ *
+ * The actual work is `printRequerimentoWith`, in its own file: this route
+ * only resolves the session and the request. See handle-print.ts and
+ * design.md, decision 8.
  */
 export async function GET(
   request: Request,
@@ -66,34 +53,8 @@ export async function GET(
   const loaded = await load(request, protocolo);
   if (loaded instanceof Response) return loaded;
   const { tenant, stored, brand, actorId } = loaded;
-
   const documento = new URL(request.url).searchParams.get("documento");
-  const wantsDeclaracao =
-    documento === "declaracao" || documento === "declaracao-em-branco";
-  const documents = buildRequestDocuments(
-    tenant,
-    stored,
-    wantsDeclaracao ? documento : "requerimento",
-  );
-  if (!documents) return new Response("Não encontrado", { status: 404 });
-
-  const bytes = await renderDocuments(documents, brand);
-  await recordAudit({
-    tenantSlug: tenant.slug,
-    actorId,
-    action: wantsDeclaracao
-      ? "service-request.print.declaracao"
-      : "service-request.print.requerimento",
-    targetType: "service-request",
-    targetId: stored.id,
-  });
-  // Inline: the operator prints from the tab. Saving from the viewer works
-  // too, because this is a GET the viewer can repeat with the session cookie.
-  return pdf(
-    bytes,
-    `${wantsDeclaracao ? "declaracao" : "requerimento"}-${stored.protocolNumber}`,
-    "inline",
-  );
+  return printRequerimentoWith(db, tenant, stored, actorId, brand, documento);
 }
 
 /**
@@ -109,6 +70,10 @@ export async function GET(
  * browser saves it from this very response and never asks again. The
  * operator opens the saved file to print it, and can keep or send it, which
  * the tab could not offer.
+ *
+ * The actual work is `printReceiptWith`, in its own file: this route only
+ * resolves the session and the request. See handle-print.ts and design.md,
+ * decision 8.
  */
 export async function POST(
   request: Request,
@@ -118,32 +83,7 @@ export async function POST(
   const loaded = await load(request, protocolo);
   if (loaded instanceof Response) return loaded;
   const { tenant, stored, brand, actorId } = loaded;
-
   const form = await request.formData();
   const accessKey = String(form.get("chave") ?? "");
-  // The key has to be the live one. A stale key from a previous reissue would
-  // print a receipt that no longer opens anything.
-  if (
-    !stored.accessKeyHash ||
-    !verifyAccessKey(accessKey, stored.accessKeyHash)
-  ) {
-    return new Response("Não encontrado", { status: 404 });
-  }
-
-  const bytes = await renderDocument(
-    buildAccessReceipt(tenant, {
-      protocolNumber: stored.protocolNumber,
-      accessKey,
-      createdAt: stored.createdAt,
-    }),
-    brand,
-  );
-  await recordAudit({
-    tenantSlug: tenant.slug,
-    actorId,
-    action: "service-request.print.comprovante",
-    targetType: "service-request",
-    targetId: stored.id,
-  });
-  return pdf(bytes, `comprovante-${stored.protocolNumber}`, "attachment");
+  return printReceiptWith(db, tenant, stored, actorId, brand, accessKey);
 }

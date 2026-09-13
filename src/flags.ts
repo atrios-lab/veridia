@@ -30,10 +30,18 @@ export const citizenTrackingV2 = flag<boolean>({
  * an override cookie it cannot decrypt (a stale one from another
  * environment, say) throws before defaultValue applies, and a broken
  * cookie must not take the page down.
+ *
+ * The optional `request` is never passed by a Server Component (there is no
+ * `Request` object to give it; the SDK reads the override cookie off Next's
+ * own request context instead), only by a test, which builds one carrying a
+ * `Cookie` header the way `flags`' own `flag(req)` form expects.
  */
-export async function trackingHref(): Promise<string> {
+export async function trackingHref(request?: Request): Promise<string> {
   try {
-    return (await citizenTrackingV2()) ? "/acompanhar" : LOOKUP_ROUTE;
+    const on = request
+      ? await citizenTrackingV2(request)
+      : await citizenTrackingV2();
+    return on ? "/acompanhar" : LOOKUP_ROUTE;
   } catch {
     return LOOKUP_ROUTE;
   }

@@ -23,11 +23,11 @@ import {
 } from "@/core/request/protocol.ts";
 import type { Attribution } from "@/core/tenant/schema.ts";
 import { user } from "@/db/auth-schema.ts";
-import { db } from "@/db/index.ts";
+import { type Database, db } from "@/db/index.ts";
 import { chatConversations, chatMessages, tenantContent } from "@/db/schema.ts";
-import { OFFICE_CHAT_KEY } from "@/lib/tenant.ts";
-import { recordAudit } from "./audit.ts";
-import { findByProtocol } from "./service-request.ts";
+import { OFFICE_CHAT_KEY } from "@/lib/office-config.ts";
+import { recordAudit, recordAuditWith } from "./audit.ts";
+import { findByProtocolWith } from "./service-request.ts";
 import type { StoredAttachment } from "./uploads.ts";
 
 export class ChatCapacityError extends Error {}
@@ -153,7 +153,8 @@ export async function setChatAvailability(
  * attached: a value that matches nothing is still accepted (see
  * support-chat spec, "Protocolo não encontrado não bloqueia").
  */
-export async function startConversation(
+export async function startConversationWith(
+  database: Database,
   tenantSlug: string,
   prechat: PrechatInput,
   sourcePath: string | undefined,
@@ -170,7 +171,7 @@ export async function startConversation(
       parsed.year,
       parsed.sequence,
     );
-    const matched = await findByProtocol(tenantSlug, normalized);
+    const matched = await findByProtocolWith(database, tenantSlug, normalized);
     if (matched) {
       matchedRequestId = matched.id;
       matchedProtocolNumber = matched.protocolNumber;
@@ -178,7 +179,7 @@ export async function startConversation(
   }
 
   const token = generateCitizenToken();
-  const [created] = await db
+  const [created] = await database
     .insert(chatConversations)
     .values({
       tenantSlug,
@@ -193,6 +194,15 @@ export async function startConversation(
     .returning({ id: chatConversations.id });
 
   return { id: created.id, token, matchedProtocolNumber };
+}
+
+/** The production singleton, for callers that do not test against it. */
+export async function startConversation(
+  tenantSlug: string,
+  prechat: PrechatInput,
+  sourcePath: string | undefined,
+): Promise<{ id: string; token: string; matchedProtocolNumber?: string }> {
+  return startConversationWith(db, tenantSlug, prechat, sourcePath);
 }
 
 /**
@@ -344,20 +354,30 @@ export async function sendMessage(
  * Where a waiting conversation sits in the queue (1-based), for "Você é o
  * 2º da fila". Undefined once the conversation is no longer `waiting`.
  */
-export async function queuePosition(
+export async function queuePositionWith(
+  database: Database,
   tenantSlug: string,
   conversationId: string,
 ): Promise<number | undefined> {
-  const waiting = await waitingConversations(tenantSlug);
+  const waiting = await waitingConversationsWith(database, tenantSlug);
   const index = waiting.findIndex((c) => c.id === conversationId);
   return index === -1 ? undefined : index + 1;
 }
 
+/** The production singleton, for callers that do not test against it. */
+export async function queuePosition(
+  tenantSlug: string,
+  conversationId: string,
+): Promise<number | undefined> {
+  return queuePositionWith(db, tenantSlug, conversationId);
+}
+
 /** Every conversation waiting for an attendant, oldest first. */
-export async function waitingConversations(
+export async function waitingConversationsWith(
+  database: Database,
   tenantSlug: string,
 ): Promise<ChatConversation[]> {
-  return db
+  return database
     .select()
     .from(chatConversations)
     .where(
@@ -367,6 +387,13 @@ export async function waitingConversations(
       ),
     )
     .orderBy(asc(chatConversations.waitingSince));
+}
+
+/** The production singleton, for callers that do not test against it. */
+export async function waitingConversations(
+  tenantSlug: string,
+): Promise<ChatConversation[]> {
+  return waitingConversationsWith(db, tenantSlug);
 }
 
 /** Every conversation currently being attended, for the queue screen's
@@ -569,7 +596,8 @@ function closedReasonOf(actor: CloseActor): ClosedReason {
  * points at an existing protocol, or at a request just launched from this
  * conversation: never both, but this function does not care which.
  */
-export async function closeConversation(
+export async function closeConversationWith(
+  database: Database,
   tenantSlug: string,
   conversationId: string,
   actor: CloseActor,
@@ -580,7 +608,7 @@ export async function closeConversation(
     wantsTranscriptEmail?: boolean;
   } = {},
 ): Promise<void> {
-  await db
+  await database
     .update(chatConversations)
     .set({
       status: "closed",
@@ -599,7 +627,7 @@ export async function closeConversation(
     );
 
   if (actor.kind === "staff") {
-    await recordAudit({
+    await recordAuditWith(database, {
       tenantSlug,
       actorId: actor.userId,
       action: "chat.close",
@@ -609,20 +637,36 @@ export async function closeConversation(
   }
 }
 
+/** The production singleton, for callers that do not test against it. */
+export async function closeConversation(
+  tenantSlug: string,
+  conversationId: string,
+  actor: CloseActor,
+  options: {
+    linkedRequestId?: string;
+    rating?: number;
+    ratingComment?: string;
+    wantsTranscriptEmail?: boolean;
+  } = {},
+): Promise<void> {
+  return closeConversationWith(db, tenantSlug, conversationId, actor, options);
+}
+
 /**
  * Records the citizen's rating on a conversation that is already closed:
  * separate from `closeConversation` because the conversation may have been
  * closed by staff or by inactivity, and rating it afterwards must not
  * overwrite `closedReason` with something that did not happen.
  */
-export async function submitRating(
+export async function submitRatingWith(
+  database: Database,
   tenantSlug: string,
   conversationId: string,
   rating: number,
   ratingComment: string | undefined,
   wantsTranscriptEmail: boolean,
 ): Promise<void> {
-  await db
+  await database
     .update(chatConversations)
     .set({ rating, ratingComment: ratingComment ?? null, wantsTranscriptEmail })
     .where(
@@ -632,6 +676,24 @@ export async function submitRating(
         eq(chatConversations.status, "closed"),
       ),
     );
+}
+
+/** The production singleton, for callers that do not test against it. */
+export async function submitRating(
+  tenantSlug: string,
+  conversationId: string,
+  rating: number,
+  ratingComment: string | undefined,
+  wantsTranscriptEmail: boolean,
+): Promise<void> {
+  return submitRatingWith(
+    db,
+    tenantSlug,
+    conversationId,
+    rating,
+    ratingComment,
+    wantsTranscriptEmail,
+  );
 }
 
 export interface Colleague {

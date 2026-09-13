@@ -11,6 +11,7 @@ import {
   sql,
 } from "drizzle-orm";
 import { type Act, getActForTenant } from "@/core/acts/catalog.ts";
+import { emailsMatch } from "@/core/email/match.ts";
 import {
   generateAccessKey,
   hashAccessKey,
@@ -51,7 +52,7 @@ import {
   isPostgresError,
   UNIQUE_VIOLATION,
 } from "@/db/errors.ts";
-import { db } from "@/db/index.ts";
+import { type Database, db } from "@/db/index.ts";
 import {
   auditLog,
   serviceRequestAttachments,
@@ -59,8 +60,9 @@ import {
   serviceRequestRequirements,
   serviceRequests,
 } from "@/db/schema.ts";
-import { recordAudit } from "./audit.ts";
-import { OFFICE_TIME_ZONE } from "./tenant.ts";
+import { recordAudit, recordAuditWith } from "./audit.ts";
+import { findPermanentBounceWith } from "./email/bounces.ts";
+import { OFFICE_TIME_ZONE } from "./office-config.ts";
 import type { StoredAttachment } from "./uploads.ts";
 
 export interface NewServiceRequest {
@@ -98,11 +100,12 @@ export interface NewRecord {
 const MAX_ATTEMPTS = 5;
 
 async function nextSequence(
+  database: Database,
   tenantSlug: string,
   kind: RequestKind,
   year: number,
 ): Promise<number> {
-  const [last] = await db
+  const [last] = await database
     .select({ sequence: serviceRequests.protocolSequence })
     .from(serviceRequests)
     .where(
@@ -125,7 +128,8 @@ async function nextSequence(
  * the loser gets a unique violation and asks for the next number, instead of
  * two people walking away with the same protocol.
  */
-export async function createRecord(
+export async function createRecordWith(
+  database: Database,
   tenant: Tenant,
   kind: RequestKind,
   input: NewRecord,
@@ -134,7 +138,7 @@ export async function createRecord(
   const year = new Date().getFullYear();
 
   for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
-    const sequence = await nextSequence(tenant.slug, kind, year);
+    const sequence = await nextSequence(database, tenant.slug, kind, year);
     const protocolNumber = formatProtocolNumber(
       KIND_PREFIXES[kind],
       year,
@@ -142,7 +146,7 @@ export async function createRecord(
     );
 
     try {
-      const [created] = await db
+      const [created] = await database
         .insert(serviceRequests)
         .values({
           tenantSlug: tenant.slug,
@@ -165,7 +169,7 @@ export async function createRecord(
         .returning({ id: serviceRequests.id });
 
       if (attachments.length > 0) {
-        await db.insert(serviceRequestAttachments).values(
+        await database.insert(serviceRequestAttachments).values(
           attachments.map((a) => ({
             tenantSlug: tenant.slug,
             requestId: created.id,
@@ -179,7 +183,7 @@ export async function createRecord(
         );
       }
 
-      await recordAudit({
+      await recordAuditWith(database, {
         tenantSlug: tenant.slug,
         actorId: null, // filed by the citizen, who has no account by design
         action: `${kind}.create`,
@@ -197,6 +201,16 @@ export async function createRecord(
   throw new Error("Nao foi possivel gerar o protocolo do registro.");
 }
 
+/** The production singleton, for callers that do not test against it. */
+export async function createRecord(
+  tenant: Tenant,
+  kind: RequestKind,
+  input: NewRecord,
+  attachments: StoredAttachment[] = [],
+): Promise<{ id: string; protocolNumber: string }> {
+  return createRecordWith(db, tenant, kind, input, attachments);
+}
+
 /**
  * Sends the office's answer to a record's citizen: the same two columns
  * (`officeReply`/`officeRepliedAt`) the protocol consult and the registration
@@ -204,7 +218,8 @@ export async function createRecord(
  * `details.draftReply` is cleared: once the real answer is sent, keeping the
  * draft around would be a second, stale copy of the same text.
  */
-export async function respondToRecord(
+export async function respondToRecordWith(
+  database: Database,
   tenantSlug: string,
   id: string,
   kind: RequestKind,
@@ -212,7 +227,7 @@ export async function respondToRecord(
   status: string,
   actorId: string,
 ): Promise<void> {
-  await db
+  await database
     .update(serviceRequests)
     .set({
       officeReply: reply,
@@ -229,13 +244,25 @@ export async function respondToRecord(
         eq(serviceRequests.id, id),
       ),
     );
-  await recordAudit({
+  await recordAuditWith(database, {
     tenantSlug,
     actorId,
     action: `${kind}.respond`,
     targetType: kind,
     targetId: id,
   });
+}
+
+/** The production singleton, for callers that do not test against it. */
+export async function respondToRecord(
+  tenantSlug: string,
+  id: string,
+  kind: RequestKind,
+  reply: string,
+  status: string,
+  actorId: string,
+): Promise<void> {
+  return respondToRecordWith(db, tenantSlug, id, kind, reply, status, actorId);
 }
 
 /**
@@ -276,14 +303,15 @@ export async function updateRecordStatus(
  * one key into `details` (the jsonb "concatenate" operator), leaving the
  * kind's own fields (the right chosen, the manifestation type) untouched.
  */
-export async function saveDraftReply(
+export async function saveDraftReplyWith(
+  database: Database,
   tenantSlug: string,
   id: string,
   kind: RequestKind,
   draftReply: string,
   actorId: string,
 ): Promise<void> {
-  await db
+  await database
     .update(serviceRequests)
     .set({
       details: sql`${serviceRequests.details} || ${JSON.stringify({ draftReply })}::jsonb`,
@@ -295,13 +323,24 @@ export async function saveDraftReply(
         eq(serviceRequests.id, id),
       ),
     );
-  await recordAudit({
+  await recordAuditWith(database, {
     tenantSlug,
     actorId,
     action: `${kind}.draft`,
     targetType: kind,
     targetId: id,
   });
+}
+
+/** The production singleton, for callers that do not test against it. */
+export async function saveDraftReply(
+  tenantSlug: string,
+  id: string,
+  kind: RequestKind,
+  draftReply: string,
+  actorId: string,
+): Promise<void> {
+  return saveDraftReplyWith(db, tenantSlug, id, kind, draftReply, actorId);
 }
 
 /**
@@ -345,7 +384,8 @@ export async function saveInternalNote(
  * as the other pre-filing refusals in `submitServiceRequest`: a duplicate
  * found after upload would leave the files orphaned in the blob store.
  */
-export async function findOpenServiceRequestDuplicate(
+export async function findOpenServiceRequestDuplicateWith(
+  database: Database,
   tenantSlug: string,
   actId: string,
   identity: { cpf?: string; email: string },
@@ -356,7 +396,7 @@ export async function findOpenServiceRequestDuplicate(
         eq(serviceRequests.contact, identity.email),
       )
     : eq(serviceRequests.contact, identity.email);
-  const [request] = await db
+  const [request] = await database
     .select({
       protocolNumber: serviceRequests.protocolNumber,
       status: serviceRequests.status,
@@ -376,19 +416,40 @@ export async function findOpenServiceRequestDuplicate(
   return request.protocolNumber;
 }
 
+/** The production singleton, for callers that do not test against it. */
+export async function findOpenServiceRequestDuplicate(
+  tenantSlug: string,
+  actId: string,
+  identity: { cpf?: string; email: string },
+): Promise<string | undefined> {
+  return findOpenServiceRequestDuplicateWith(db, tenantSlug, actId, identity);
+}
+
 /** Files a service request: the record whose kind carries an act. */
+export async function createServiceRequestWith(
+  database: Database,
+  tenant: Tenant,
+  act: Act,
+  input: NewServiceRequest,
+  attachments: StoredAttachment[] = [],
+): Promise<{ id: string; protocolNumber: string }> {
+  return createRecordWith(
+    database,
+    tenant,
+    "service-request",
+    { ...input, actId: act.id, attribution: act.attribution },
+    attachments,
+  );
+}
+
+/** The production singleton, for callers that do not test against it. */
 export async function createServiceRequest(
   tenant: Tenant,
   act: Act,
   input: NewServiceRequest,
   attachments: StoredAttachment[] = [],
 ): Promise<{ id: string; protocolNumber: string }> {
-  return createRecord(
-    tenant,
-    "service-request",
-    { ...input, actId: act.id, attribution: act.attribution },
-    attachments,
-  );
+  return createServiceRequestWith(db, tenant, act, input, attachments);
 }
 
 /**
@@ -663,7 +724,8 @@ export async function openRequestCount(tenantSlug: string): Promise<number> {
  * ignored for every other andamento: it overwrites `status_reason`, it never
  * appends, so only the closing that actually stuck is what the citizen reads.
  */
-export async function updateRequestStatus(
+export async function updateRequestStatusWith(
+  database: Database,
   tenantSlug: string,
   id: string,
   status: ServiceRequestStatus,
@@ -674,7 +736,7 @@ export async function updateRequestStatus(
   if (!isServiceRequestStatus(status)) {
     throw new Error(`Andamento inválido: ${status}`);
   }
-  await db
+  await database
     .update(serviceRequests)
     .set({
       status,
@@ -696,7 +758,7 @@ export async function updateRequestStatus(
   // in the request's own history: `listRequestHistory` matches on the id or
   // the protocol number. Which andamento it became is on the record; what the
   // trail owes is who moved it, and when.
-  await recordAudit({
+  await recordAuditWith(database, {
     tenantSlug,
     actorId,
     action: "service-request.status",
@@ -708,7 +770,7 @@ export async function updateRequestStatus(
     // the request's own history: `listRequestHistory` matches on the id or
     // the protocol number. What the term became is on the record, a line
     // above this one; what the trail owes is who moved it, and when.
-    await recordAudit({
+    await recordAuditWith(database, {
       tenantSlug,
       actorId,
       action: "service-request.deadline",
@@ -716,6 +778,26 @@ export async function updateRequestStatus(
       targetId: id,
     });
   }
+}
+
+/** The production singleton, for callers that do not test against it. */
+export async function updateRequestStatus(
+  tenantSlug: string,
+  id: string,
+  status: ServiceRequestStatus,
+  actorId: string | null,
+  deadline?: Deadline,
+  reason?: string,
+): Promise<void> {
+  return updateRequestStatusWith(
+    db,
+    tenantSlug,
+    id,
+    status,
+    actorId,
+    deadline,
+    reason,
+  );
 }
 
 /**
@@ -755,8 +837,12 @@ export async function deactivateServiceRequests(
 }
 
 /** Every requirement (exigência) raised on a request, oldest first. */
-export async function listRequirements(tenantSlug: string, requestId: string) {
-  return db
+export async function listRequirementsWith(
+  database: Database,
+  tenantSlug: string,
+  requestId: string,
+) {
+  return database
     .select()
     .from(serviceRequestRequirements)
     .where(
@@ -768,6 +854,11 @@ export async function listRequirements(tenantSlug: string, requestId: string) {
     .orderBy(asc(serviceRequestRequirements.createdAt));
 }
 
+/** The production singleton, for callers that do not test against it. */
+export async function listRequirements(tenantSlug: string, requestId: string) {
+  return listRequirementsWith(db, tenantSlug, requestId);
+}
+
 /**
  * Bumps the request's `updatedAt` for a write that lands on a child row
  * (requirement, message, attachment). The column is the one version signal
@@ -775,8 +866,12 @@ export async function listRequirements(tenantSlug: string, requestId: string) {
  * see change has to pass through here or through a `set({ updatedAt })` of
  * its own.
  */
-async function touchRequest(tenantSlug: string, requestId: string) {
-  await db
+async function touchRequest(
+  database: Database,
+  tenantSlug: string,
+  requestId: string,
+) {
+  await database
     .update(serviceRequests)
     .set({ updatedAt: new Date() })
     .where(
@@ -794,11 +889,12 @@ async function touchRequest(tenantSlug: string, requestId: string) {
  * regra repetida nas três, como `reconcileDeadlinePause` faz com o prazo.
  */
 async function reconcileRequirementStatus(
+  database: Database,
   tenantSlug: string,
   requestId: string,
   actorId: string,
 ): Promise<void> {
-  const [request] = await db
+  const [request] = await database
     .select({ status: serviceRequests.status })
     .from(serviceRequests)
     .where(
@@ -809,29 +905,38 @@ async function reconcileRequirementStatus(
     )
     .limit(1);
   if (!request) return;
-  const pending = (await listRequirements(tenantSlug, requestId)).filter(
-    (r) => r.status === "pending",
-  ).length;
+  const pending = (
+    await listRequirementsWith(database, tenantSlug, requestId)
+  ).filter((r) => r.status === "pending").length;
   const next = statusForRequirements(
     request.status as ServiceRequestStatus,
     pending,
   );
-  if (next) await updateRequestStatus(tenantSlug, requestId, next, actorId);
+  if (next) {
+    await updateRequestStatusWith(
+      database,
+      tenantSlug,
+      requestId,
+      next,
+      actorId,
+    );
+  }
 }
 
 /** The office raises a requirement. It starts, and stays, pending until the citizen answers it. */
-export async function registerRequirement(
+export async function registerRequirementWith(
+  database: Database,
   tenantSlug: string,
   requestId: string,
   text: string,
   actorId: string,
 ): Promise<{ id: string }> {
-  const [created] = await db
+  const [created] = await database
     .insert(serviceRequestRequirements)
     .values({ tenantSlug, requestId, text })
     .returning({ id: serviceRequestRequirements.id });
-  await touchRequest(tenantSlug, requestId);
-  await recordAudit({
+  await touchRequest(database, tenantSlug, requestId);
+  await recordAuditWith(database, {
     tenantSlug,
     actorId,
     action: "service-request.requirement.register",
@@ -840,8 +945,18 @@ export async function registerRequirement(
   });
   // O andamento acompanha a exigência aqui, e não na action: quem registrar
   // exigência de outro lugar move o pedido do mesmo jeito.
-  await reconcileRequirementStatus(tenantSlug, requestId, actorId);
+  await reconcileRequirementStatus(database, tenantSlug, requestId, actorId);
   return created;
+}
+
+/** The production singleton, for callers that do not test against it. */
+export async function registerRequirement(
+  tenantSlug: string,
+  requestId: string,
+  text: string,
+  actorId: string,
+): Promise<{ id: string }> {
+  return registerRequirementWith(db, tenantSlug, requestId, text, actorId);
 }
 
 /**
@@ -854,12 +969,13 @@ export async function registerRequirement(
  * Closing it also closes the conversation: neither side writes into a
  * requirement that is done.
  */
-export async function resolveRequirement(
+export async function resolveRequirementWith(
+  database: Database,
   tenantSlug: string,
   requirementId: string,
   actorId: string,
 ): Promise<string | null> {
-  const [requirement] = await db
+  const [requirement] = await database
     .select({ requestId: serviceRequestRequirements.requestId })
     .from(serviceRequestRequirements)
     .where(
@@ -872,21 +988,35 @@ export async function resolveRequirement(
     .limit(1);
   if (!requirement) return null;
 
-  await db
+  await database
     .update(serviceRequestRequirements)
     .set({ status: "fulfilled", fulfilledAt: new Date() })
     .where(eq(serviceRequestRequirements.id, requirementId));
-  await touchRequest(tenantSlug, requirement.requestId);
+  await touchRequest(database, tenantSlug, requirement.requestId);
 
-  await recordAudit({
+  await recordAuditWith(database, {
     tenantSlug,
     actorId,
     action: "service-request.requirement.fulfill",
     targetType: "service-request",
     targetId: requirement.requestId,
   });
-  await reconcileRequirementStatus(tenantSlug, requirement.requestId, actorId);
+  await reconcileRequirementStatus(
+    database,
+    tenantSlug,
+    requirement.requestId,
+    actorId,
+  );
   return requirement.requestId;
+}
+
+/** The production singleton, for callers that do not test against it. */
+export async function resolveRequirement(
+  tenantSlug: string,
+  requirementId: string,
+  actorId: string,
+): Promise<string | null> {
+  return resolveRequirementWith(db, tenantSlug, requirementId, actorId);
 }
 
 /** One message of a requirement's conversation, with whatever came attached. */
@@ -1017,7 +1147,7 @@ export async function writeCitizenMessage(
       })),
     );
   }
-  await touchRequest(tenantSlug, requirement.requestId);
+  await touchRequest(db, tenantSlug, requirement.requestId);
   return message;
 }
 
@@ -1042,7 +1172,7 @@ export async function writeStaffMessage(
     authorUserId: actorId,
     body,
   });
-  await touchRequest(tenantSlug, requirement.requestId);
+  await touchRequest(db, tenantSlug, requirement.requestId);
 
   await recordAudit({
     tenantSlug,
@@ -1074,7 +1204,7 @@ export async function updateRequirementText(
     )
     .returning({ requestId: serviceRequestRequirements.requestId });
   if (!updated) return false;
-  await touchRequest(tenantSlug, updated.requestId);
+  await touchRequest(db, tenantSlug, updated.requestId);
 
   await recordAudit({
     tenantSlug,
@@ -1129,7 +1259,7 @@ export async function deleteRequirement(
         eq(serviceRequestRequirements.id, requirementId),
       ),
     );
-  await touchRequest(tenantSlug, requirement.requestId);
+  await touchRequest(db, tenantSlug, requirement.requestId);
 
   await recordAudit({
     tenantSlug,
@@ -1138,18 +1268,24 @@ export async function deleteRequirement(
     targetType: "service-request",
     targetId: requirement.requestId,
   });
-  await reconcileRequirementStatus(tenantSlug, requirement.requestId, actorId);
+  await reconcileRequirementStatus(
+    db,
+    tenantSlug,
+    requirement.requestId,
+    actorId,
+  );
   return { requestId: requirement.requestId, paths: files.map((f) => f.path) };
 }
 
 /** The office records what the request is worth. Corrects freely once set, or clears it (null). */
-export async function setRequestAmount(
+export async function setRequestAmountWith(
+  database: Database,
   tenantSlug: string,
   id: string,
   amountCents: number | null,
   actorId: string,
 ): Promise<void> {
-  await db
+  await database
     .update(serviceRequests)
     .set({ amountCents, updatedAt: new Date() })
     .where(
@@ -1158,13 +1294,23 @@ export async function setRequestAmount(
         eq(serviceRequests.id, id),
       ),
     );
-  await recordAudit({
+  await recordAuditWith(database, {
     tenantSlug,
     actorId,
     action: "service-request.amount",
     targetType: "service-request",
     targetId: id,
   });
+}
+
+/** The production singleton, for callers that do not test against it. */
+export async function setRequestAmount(
+  tenantSlug: string,
+  id: string,
+  amountCents: number | null,
+  actorId: string,
+): Promise<void> {
+  return setRequestAmountWith(db, tenantSlug, id, amountCents, actorId);
 }
 
 /**
@@ -1266,14 +1412,22 @@ export async function updateRequestData(
  * stops matching the moment this returns: there is nothing else to revoke.
  * The plaintext is returned once, for the caller's response only; it is
  * never read back from the database, same discipline as the original key.
+ *
+ * `actorId` is null when the citizen is the one recovering their own key
+ * from the consult page (`recoverAccessKeyAction`): there is no operator
+ * behind that request, the same reasoning `createRecord` already applies to
+ * a pedido's own creation. The panel no longer calls this with a real
+ * operator id: `reissueKeyAction` was removed with the change that made
+ * recovery the citizen's own path.
  */
-export async function reissueAccessKey(
+export async function reissueAccessKeyWith(
+  database: Database,
   tenantSlug: string,
   id: string,
-  actorId: string,
+  actorId: string | null,
 ): Promise<string> {
   const key = generateAccessKey();
-  await db
+  await database
     .update(serviceRequests)
     .set({ accessKeyHash: hashAccessKey(key), updatedAt: new Date() })
     .where(
@@ -1282,7 +1436,7 @@ export async function reissueAccessKey(
         eq(serviceRequests.id, id),
       ),
     );
-  await recordAudit({
+  await recordAuditWith(database, {
     tenantSlug,
     actorId,
     action: "service-request.key-reissue",
@@ -1290,6 +1444,70 @@ export async function reissueAccessKey(
     targetId: id,
   });
   return key;
+}
+
+/** The production singleton, for callers that do not test against it. */
+export async function reissueAccessKey(
+  tenantSlug: string,
+  id: string,
+  actorId: string | null,
+): Promise<string> {
+  return reissueAccessKeyWith(db, tenantSlug, id, actorId);
+}
+
+/**
+ * Decides whether a citizen's "perdi a chave" request earns a new key, and
+ * issues it when it does. The caller (recoverAccessKeyAction) answers with
+ * the same message either way and sends the e-mail only when `reissued` is
+ * true: telling the two outcomes apart on screen would turn the form into a
+ * way to test protocol/e-mail pairs one at a time.
+ */
+export interface AccessKeyRecovery {
+  reissued: boolean;
+  accessKey?: string;
+  contact?: string;
+  protocolNumber?: string;
+}
+
+export async function recoverAccessKeyWith(
+  database: Database,
+  tenantSlug: string,
+  protocolNumber: string,
+  email: string,
+): Promise<AccessKeyRecovery> {
+  const request = await findByProtocolWith(
+    database,
+    tenantSlug,
+    protocolNumber,
+  );
+  if (
+    !request ||
+    request.kind !== "service-request" ||
+    !request.contact ||
+    !emailsMatch(request.contact, email)
+  ) {
+    return { reissued: false };
+  }
+
+  // Checked before anything is generated: swapping the key for one that
+  // cannot be delivered would strand the citizen with neither.
+  const bounced = await findPermanentBounceWith(database, request.contact);
+  if (bounced) return { reissued: false };
+
+  const accessKey = await reissueAccessKeyWith(
+    database,
+    tenantSlug,
+    request.id,
+    // The citizen is the actor here, not an operator: same reasoning
+    // createRecord already applies to the pedido's own filing.
+    null,
+  );
+  return {
+    reissued: true,
+    accessKey,
+    contact: request.contact,
+    protocolNumber: request.protocolNumber,
+  };
 }
 
 /**
@@ -1347,8 +1565,12 @@ export async function deleteRequest(
 
 /** The request by id: for a screen that already knows the id, not the
  * protocol (e.g. a chat conversation's matched or linked request). */
-export async function findById(tenantSlug: string, id: string) {
-  const [request] = await db
+export async function findByIdWith(
+  database: Database,
+  tenantSlug: string,
+  id: string,
+) {
+  const [request] = await database
     .select()
     .from(serviceRequests)
     .where(
@@ -1361,12 +1583,18 @@ export async function findById(tenantSlug: string, id: string) {
   return request;
 }
 
+/** The production singleton, for callers that do not test against it. */
+export async function findById(tenantSlug: string, id: string) {
+  return findByIdWith(db, tenantSlug, id);
+}
+
 /** The request behind a protocol, scoped to the office that served it. */
-export async function findByProtocol(
+export async function findByProtocolWith(
+  database: Database,
   tenantSlug: string,
   protocolNumber: string,
 ) {
-  const [request] = await db
+  const [request] = await database
     .select()
     .from(serviceRequests)
     .where(
@@ -1379,17 +1607,30 @@ export async function findByProtocol(
   return request;
 }
 
+/** The production singleton, for callers that do not test against it. */
+export async function findByProtocol(
+  tenantSlug: string,
+  protocolNumber: string,
+) {
+  return findByProtocolWith(db, tenantSlug, protocolNumber);
+}
+
 /**
  * The request behind a protocol, but only when the key really opens it. One
  * check for every screen that unlocks the citizen's own data: the consult
  * page, the PDF download, the signed form upload.
  */
-export async function findByProtocolWithKey(
+export async function findByProtocolWithKeyWith(
+  database: Database,
   tenantSlug: string,
   protocolNumber: string,
   accessKey: string,
 ) {
-  const request = await findByProtocol(tenantSlug, protocolNumber);
+  const request = await findByProtocolWith(
+    database,
+    tenantSlug,
+    protocolNumber,
+  );
   // A record without a key is a record nobody can open: the anonymous
   // manifestation, which has no owner to prove. It answers like a protocol
   // that does not exist, which is what it is to everyone who asks.
@@ -1400,6 +1641,15 @@ export async function findByProtocolWithKey(
     return undefined;
   }
   return request;
+}
+
+/** The production singleton, for callers that do not test against it. */
+export async function findByProtocolWithKey(
+  tenantSlug: string,
+  protocolNumber: string,
+  accessKey: string,
+) {
+  return findByProtocolWithKeyWith(db, tenantSlug, protocolNumber, accessKey);
 }
 
 /** Every file attached to a request, oldest first. */
@@ -1445,12 +1695,13 @@ export function requestOwnAttachments<
  * both the admin panel and the citizen's own consult use it, each already
  * gated by their own access check before reaching here.
  */
-export async function getAttachment(
+export async function getAttachmentWith(
+  database: Database,
   tenantSlug: string,
   requestId: string,
   attachmentId: string,
 ) {
-  const [attachment] = await db
+  const [attachment] = await database
     .select()
     .from(serviceRequestAttachments)
     .where(
@@ -1462,6 +1713,15 @@ export async function getAttachment(
     )
     .limit(1);
   return attachment;
+}
+
+/** The production singleton, for callers that do not test against it. */
+export async function getAttachment(
+  tenantSlug: string,
+  requestId: string,
+  attachmentId: string,
+) {
+  return getAttachmentWith(db, tenantSlug, requestId, attachmentId);
 }
 
 export class AttachmentInUseError extends Error {}
@@ -1498,7 +1758,7 @@ export async function deleteAttachment(
     // gone for good the moment it returns: the citizen's document with it.
     // A caller that forgets the trail is a deletion nobody can account for.
     if (deleted) {
-      await touchRequest(tenantSlug, requestId);
+      await touchRequest(db, tenantSlug, requestId);
       await recordAudit({
         tenantSlug,
         actorId,
@@ -1519,7 +1779,8 @@ export async function deleteAttachment(
 }
 
 /** Adds the signed form (or any later file) to a request already filed. */
-export async function attachToRequest(
+export async function attachToRequestWith(
+  database: Database,
   tenantSlug: string,
   requestId: string,
   attachments: StoredAttachment[],
@@ -1528,8 +1789,8 @@ export async function attachToRequest(
   requirementId?: string,
 ) {
   if (attachments.length === 0) return [];
-  await touchRequest(tenantSlug, requestId);
-  return db
+  await touchRequest(database, tenantSlug, requestId);
+  return database
     .insert(serviceRequestAttachments)
     .values(
       attachments.map((a) => ({
@@ -1545,6 +1806,24 @@ export async function attachToRequest(
       })),
     )
     .returning();
+}
+
+/** The production singleton, for callers that do not test against it. */
+export async function attachToRequest(
+  tenantSlug: string,
+  requestId: string,
+  attachments: StoredAttachment[],
+  kind: string,
+  requirementId?: string,
+) {
+  return attachToRequestWith(
+    db,
+    tenantSlug,
+    requestId,
+    attachments,
+    kind,
+    requirementId,
+  );
 }
 
 export interface RequestHistoryEntry {
@@ -1627,11 +1906,12 @@ export async function listRecordHistory(
  * life to hang the correction on.
  */
 async function writeDeadline(
+  database: Database,
   tenantSlug: string,
   id: string,
   deadline: Deadline,
 ): Promise<void> {
-  await db
+  await database
     .update(serviceRequests)
     .set({
       // Merged into `details`, never assigned over it: the consents recorded
@@ -1648,20 +1928,31 @@ async function writeDeadline(
     );
 }
 
-export async function updateRequestDeadline(
+export async function updateRequestDeadlineWith(
+  database: Database,
   tenantSlug: string,
   id: string,
   actorId: string,
   deadline: Deadline,
 ): Promise<void> {
-  await writeDeadline(tenantSlug, id, deadline);
-  await recordAudit({
+  await writeDeadline(database, tenantSlug, id, deadline);
+  await recordAuditWith(database, {
     tenantSlug,
     actorId,
     action: "service-request.deadline",
     targetType: "service-request",
     targetId: id,
   });
+}
+
+/** The production singleton, for callers that do not test against it. */
+export async function updateRequestDeadline(
+  tenantSlug: string,
+  id: string,
+  actorId: string,
+  deadline: Deadline,
+): Promise<void> {
+  return updateRequestDeadlineWith(db, tenantSlug, id, actorId, deadline);
 }
 
 /**
@@ -1675,17 +1966,18 @@ export async function updateRequestDeadline(
  * `pausedOn` defaults to today; the backfill passes the day the clock should
  * have stopped. Returns what it did, for the caller that wants to say so.
  */
-export async function reconcileDeadlinePause(
+export async function reconcileDeadlinePauseWith(
+  database: Database,
   tenant: Tenant,
   requestId: string,
   actorId: string | null,
   today: IsoDate,
   pausedOn: IsoDate = today,
 ): Promise<"paused" | "resumed" | null> {
-  const request = await findById(tenant.slug, requestId);
+  const request = await findByIdWith(database, tenant.slug, requestId);
   if (!request) return null;
   const pendingRequirements = (
-    await listRequirements(tenant.slug, requestId)
+    await listRequirementsWith(database, tenant.slug, requestId)
   ).filter((r) => r.status === "pending").length;
 
   const act = request.actId
@@ -1706,13 +1998,14 @@ export async function reconcileDeadlinePause(
   if (owed === Boolean(current.pausedOn)) return null;
 
   await writeDeadline(
+    database,
     tenant.slug,
     requestId,
     owed
       ? { ...current, pausedOn }
       : resumeDeadline(current, today, act?.legalDeadlineDays != null),
   );
-  await recordAudit({
+  await recordAuditWith(database, {
     tenantSlug: tenant.slug,
     actorId,
     action: owed
@@ -1722,4 +2015,22 @@ export async function reconcileDeadlinePause(
     targetId: requestId,
   });
   return owed ? "paused" : "resumed";
+}
+
+/** The production singleton, for callers that do not test against it. */
+export async function reconcileDeadlinePause(
+  tenant: Tenant,
+  requestId: string,
+  actorId: string | null,
+  today: IsoDate,
+  pausedOn: IsoDate = today,
+): Promise<"paused" | "resumed" | null> {
+  return reconcileDeadlinePauseWith(
+    db,
+    tenant,
+    requestId,
+    actorId,
+    today,
+    pausedOn,
+  );
 }

@@ -1,11 +1,8 @@
-import { readFile } from "node:fs/promises";
-import { extname } from "node:path";
 import { can } from "@/core/auth/roles.ts";
-import { SIGNED_FORM_NAMES } from "@/core/request/attachment.ts";
-import { recordAudit } from "@/lib/audit.ts";
-import { getAttachment } from "@/lib/service-request.ts";
+import { db } from "@/db/index.ts";
 import { getSession } from "@/lib/session.ts";
 import { getTenant } from "@/lib/tenant.ts";
+import { handleDocumentWith } from "./handle-document.ts";
 
 export const runtime = "nodejs";
 
@@ -18,10 +15,11 @@ export const runtime = "nodejs";
  * attachment id alone, and the same handler serves every section of the panel
  * that shows a file: a service request, an LGPD requirement, whatever comes
  * next.
+ *
+ * The actual work is `handleDocumentWith`, in its own file: this route only
+ * resolves the session and the tenant. See handle-document.ts and
+ * design.md, decision 8.
  */
-/** Types a registrar reads on screen; anything else is handed over to save. */
-const READABLE = /^(application\/pdf|image\/)/;
-
 export async function GET(request: Request): Promise<Response> {
   const session = await getSession();
   const role = session?.user.role ?? "";
@@ -39,45 +37,12 @@ export async function GET(request: Request): Promise<Response> {
   const { searchParams } = new URL(request.url);
   const requestId = searchParams.get("requestId") ?? "";
   const attachmentId = searchParams.get("attachmentId") ?? "";
-
   const tenant = await getTenant();
-  const attachment = await getAttachment(tenant.slug, requestId, attachmentId);
-  if (!attachment) return new Response("Não encontrado", { status: 404 });
-
-  // A signed copy opened from here is the paper leaving the office's hands
-  // in place of a freshly generated one, so it leaves the same trail the
-  // print route does (`service-request.print.*`). Other attachments (a
-  // citizen's comprovante, an office delivery) are read, not issued, and
-  // stay unlogged as before.
-  if (attachment.kind === "signed-form") {
-    await recordAudit({
-      tenantSlug: tenant.slug,
-      actorId: session.user.id,
-      action:
-        attachment.displayName === SIGNED_FORM_NAMES.declaracao
-          ? "service-request.print.declaracao-assinada"
-          : "service-request.print.requerimento-assinado",
-      targetType: "service-request",
-      targetId: attachment.requestId,
-    });
-  }
-
-  const bytes = attachment.path.startsWith("http")
-    ? Buffer.from(await (await fetch(attachment.path)).arrayBuffer())
-    : await readFile(attachment.path);
-
-  // Inline for what the browser can render: checking four attachments should
-  // not leave four copies in Downloads, and reading the file is how the office
-  // decides whether the requirement was met.
-  const disposition = READABLE.test(attachment.mimeType)
-    ? "inline"
-    : "attachment";
-
-  return new Response(new Uint8Array(bytes), {
-    headers: {
-      "Content-Type": attachment.mimeType,
-      "Content-Disposition": `${disposition}; filename="${attachment.displayName}${extname(attachment.storedName)}"`,
-      "Cache-Control": "private, no-store",
-    },
-  });
+  return handleDocumentWith(
+    db,
+    tenant,
+    session.user.id,
+    requestId,
+    attachmentId,
+  );
 }

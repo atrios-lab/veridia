@@ -10,10 +10,14 @@ domínio, sua marca e seu conteúdo.
 | `src/core/` | Núcleo de domínio puro. Sem framework, sem I/O, sem banco. Testado com `node --test`. |
 | `src/app/` | Rotas do Next. |
 | `src/db/` | Schema Drizzle e validação derivada. |
-| `src/lib/` | Costura entre o núcleo e o framework. |
+| `src/lib/` | Costura entre o núcleo e o framework. Testada com `node --test` contra PostgreSQL em memória (PGlite, ver `src/db/test-db.ts`). |
 | `scripts/` | Checks de convenção e seed. |
-| `e2e/` | Playwright, parametrizado sobre as serventias registradas. |
 | `drizzle/` | Migrações SQL versionadas. Ver [docs/migrations.md](docs/migrations.md). |
+
+Todo teste vive ao lado do que testa, como `arquivo.ts` / `arquivo.test.ts`. Não há suíte de
+navegador: um Route Handler ou uma server action com regra própria a expõe numa função
+`...With(db, ...)` testável, e o transporte (sessão, `redirect`, resposta HTTP) fica fino o
+bastante para não precisar de teste próprio.
 
 Botão novo em qualquer tela sai das classes de [docs/design-system.md](docs/design-system.md),
 declaradas em `src/app/globals.css`. Não se escreve `rounded-*`, `bg-*` nem `hover:*` num botão.
@@ -83,7 +87,8 @@ Um host não mapeado cai no `DEFAULT_TENANT`. Toda serventia nova precisa declar
 `.localhost` em `hosts`, senão não dá para servi-la em desenvolvimento nem testá-la por host.
 
 Uma serventia nova é um arquivo em `src/core/tenant/tenants/` mais uma linha no registro de
-`src/core/tenant/resolve.ts`. O teste de ponta a ponta passa a cobri-la sem nenhum caso novo.
+`src/core/tenant/resolve.ts`. Os testes parametrizados sobre `TENANTS` (`src/core/tenant/tenant.test.ts`)
+passam a cobri-la sem nenhum caso novo.
 
 ## Receita bruta da serventia, a cada semestre
 
@@ -147,11 +152,13 @@ sessão pelo Vercel Toolbar, que lê `/.well-known/vercel/flags`.
 O mesmo que o CI roda:
 
 ```bash
-pnpm typecheck && pnpm lint && pnpm test && pnpm check:dashes && pnpm check:tokens && pnpm build && pnpm e2e
+pnpm typecheck && pnpm lint && pnpm test && pnpm check:dashes && pnpm check:tokens && pnpm build
 ```
 
-- `pnpm test` roda o núcleo e o teste de revogação de sessão, este último contra um PostgreSQL em
-  processo. Nenhum teste toca banco real nem precisa de segredo.
+- `pnpm test` roda o núcleo inteiro e a costura de `src/lib`/`src/db` (revogação de sessão,
+  isolamento por tenant, e qualquer função de banco na forma `...With`), tudo contra PostgreSQL em
+  memória (PGlite). Sem browser, sem serviço externo, sem segredo, e em segundos: nenhum passo
+  precisa de `.env` para rodar.
 - `pnpm check:dashes` barra travessão e meia-risca em texto visível.
 - `pnpm check:tokens` barra cor hexadecimal literal fora do bloco `@theme`.
 
@@ -161,10 +168,10 @@ Uma vez por clone:
 pnpm hooks
 ```
 
-Isso aponta o `core.hooksPath` para `.githooks/`, e a partir daí todo `git push` roda `pnpm e2e`
-antes de mandar os commits. Falhou um teste, o push não sai. Durante a implementação nada disso
-dispara: roda-se só o teste do que está sendo mexido. Para pular o gate em push de rascunho ou
-emergência, `git push --no-verify`.
+Isso aponta o `core.hooksPath` para `.githooks/`, e a partir daí todo `git push` roda `pnpm
+typecheck`, `pnpm lint` e `pnpm test` antes de mandar os commits, o mesmo gate do CI. Falhou um
+teste, o push não sai. Durante a implementação nada disso dispara: roda-se só o teste do que está
+sendo mexido. Para pular o gate em push de rascunho ou emergência, `git push --no-verify`.
 
 ## Convenção de idioma
 
