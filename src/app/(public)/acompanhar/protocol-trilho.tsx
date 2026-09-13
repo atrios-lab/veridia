@@ -1461,7 +1461,7 @@ function RejectionReason({
       {paragraphs.length > 0
         ? paragraphs.map((paragraph, index) => (
             <p
-              key={index}
+              key={`${index}-${paragraph}`}
               className="whitespace-pre-line text-justify text-[15.5px] leading-relaxed"
             >
               {paragraph}
