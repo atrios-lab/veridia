@@ -126,27 +126,6 @@ próprio ou nenhum. Ver [docs/migrations.md](docs/migrations.md).
 O login funciona em qualquer domínio: o do deploy, o de preview e o de cada serventia. Não é
 preciso declarar o domínio do deploy em lugar nenhum.
 
-### Flag do acompanhamento (`/acompanhar`)
-
-A consulta do cidadão pode ser servida pela tela nova em `/acompanhar` ou pela atual em
-`/protocolo`. Quem decide é a flag `citizen-tracking-v2` (`src/flags.ts`), lida do Vercel Flags
-nativo do projeto (dashboard **Flags**) pelo Flags SDK: liga e desliga sem deploy. As duas rotas
-continuam abrindo por URL direta em qualquer estado; a flag só decide para onde os links do site
-apontam.
-
-| Variável | Para quê |
-| --- | --- |
-| `FLAGS` | SDK Key do Vercel Flags. Local: `vercel env pull` (depois de `vercel link`) preenche `.env.local`. Sem ela (dev sem pull, CI) a flag fica desligada. |
-| `FLAGS_SECRET` | 32 bytes aleatórios em base64, um por ambiente. Sem ela o Vercel Toolbar não lista nem sobrescreve a flag por sessão. |
-
-A flag é criada e ligada/desligada pelo dashboard **Flags** do projeto na Vercel (Boolean,
-`citizen-tracking-v2`), não editando arquivo nenhum.
-
-Rollback é voltar o valor para desligado no dashboard: vale em segundos, sem deploy. Se o Vercel
-Flags estiver fora do ar ou a SDK Key ausente, a flag cai no padrão (desligada) e a página
-renderiza normalmente. Para testar antes de ligar para todo mundo, sobrescreva a flag só na sua
-sessão pelo Vercel Toolbar, que lê `/.well-known/vercel/flags`.
-
 ## Verificação
 
 O mesmo que o CI roda:

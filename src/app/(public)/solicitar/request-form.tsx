@@ -251,7 +251,7 @@ export function RequestForm({
 }: {
   act: Act;
   attribution: Attribution;
-  /** Where "Acompanhar pedido" sends the citizen after success: /acompanhar or /protocolo, per the flag (see @/flags.ts). */
+  /** Where "Acompanhar pedido" sends the citizen after success: /acompanhar. */
   lookupHref: string;
 }) {
   const [state, formAction, pending] = useActionState<SubmitState, FormData>(

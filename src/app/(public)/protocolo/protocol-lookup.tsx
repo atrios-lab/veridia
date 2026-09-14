@@ -71,9 +71,9 @@ function formatDateTime(iso: string): string {
  * never says whether it actually matched anything (see that action's own
  * comment for why).
  *
- * Exported: `/acompanhar` (`protocol-trilho.tsx`, behind the
- * `citizen-tracking-v2` flag) has its own gate asking for protocol and key,
- * separate from this page's, and needs the same recovery path. Two gates,
+ * Exported: `/acompanhar` (`protocol-trilho.tsx`) has its own gate asking
+ * for protocol and key, separate from this page's, and needs the same
+ * recovery path. Two gates,
  * one `LostKeyForm`, so "perdi a chave" is not a second implementation to
  * keep in sync with this one. Left-aligned always, `Gate`'s own centered
  * copy notwithstanding: a short link and a labelled form both read better
