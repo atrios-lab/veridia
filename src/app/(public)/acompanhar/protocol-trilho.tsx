@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { Fragment, useActionState, useEffect, useRef, useState } from "react";
 import type { PauseReason } from "@/core/request/deadline.ts";
 import { HANDWRITTEN_SIGNATURE_CAVEAT } from "@/core/request/requerimento.ts";
@@ -1418,10 +1419,9 @@ function RejectedCard({ result }: { result: ServiceRequestDetail }) {
           Você pode refazer o pedido, cobrindo o que motivou o indeferimento.
         </p>
       )}
-      <p className="text-[14.5px] leading-relaxed">
-        Se ficou alguma dúvida, fale com a gente pelo atendimento online ou no
-        balcão. Estamos aqui para ajudar.
-      </p>
+      <Link href="/solicitar" className="btn btn-primary self-start">
+        Refazer pedido
+      </Link>
     </div>
   );
 }
