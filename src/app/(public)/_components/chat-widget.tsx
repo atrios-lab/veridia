@@ -95,7 +95,7 @@ export function ChatWidget({
   lookupHref,
 }: {
   tenant: Tenant;
-  /** Where "follow a request" goes, decided on the server (src/flags.ts). */
+  /** Where "follow a request" goes: SECTION_ROUTES["consulta-protocolo"]. */
   lookupHref: string;
 }) {
   const pathname = usePathname();

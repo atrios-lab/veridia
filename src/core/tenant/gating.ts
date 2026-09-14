@@ -30,7 +30,7 @@ export const SECTION_ROUTES: Record<Section, string> = {
   "dpo-lgpd": "/lgpd",
   pedidos: "/solicitar",
   agendamento: "/agendar",
-  "consulta-protocolo": "/protocolo",
+  "consulta-protocolo": "/acompanhar",
   editais: "/editais",
   ouvidoria: "/ouvidoria",
   transparencia: "/transparencia",
