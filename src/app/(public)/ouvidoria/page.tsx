@@ -1,7 +1,8 @@
+import { publicMetadata } from "../_lib/metadata.ts";
 import { requireSection } from "../_lib/section.ts";
 import { ManifestationScreen } from "./manifestation-form.tsx";
 
-export const metadata = { title: "Ouvidoria" };
+export const generateMetadata = publicMetadata("/ouvidoria");
 
 export default async function OmbudsmanPage() {
   await requireSection("ouvidoria");

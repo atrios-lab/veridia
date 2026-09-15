@@ -7,8 +7,9 @@ import {
   PLATFORM_STATEMENT,
 } from "@/core/acts/catalog.ts";
 import { getTenant } from "@/lib/tenant.ts";
+import { publicMetadata } from "../_lib/metadata.ts";
 
-export const metadata = { title: "Sobre a plataforma" };
+export const generateMetadata = publicMetadata("/plataforma");
 
 // Fixed institutional text, the serventia's own wording, shared by every
 // tenant like the privacy policy is; only the office's name is interpolated.

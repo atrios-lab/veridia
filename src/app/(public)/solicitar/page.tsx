@@ -9,6 +9,7 @@ import { SECTION_ROUTES } from "@/core/tenant/gating.ts";
 import type { Attribution } from "@/core/tenant/schema.ts";
 import { ATTRIBUTIONS } from "@/core/tenant/schema.ts";
 import { Icon } from "../_components/icon.tsx";
+import { publicMetadata } from "../_lib/metadata.ts";
 import { requireSection } from "../_lib/section.ts";
 import {
   ProcessingBadge,
@@ -18,7 +19,7 @@ import {
 } from "./_components/badges.tsx";
 import { RequestForm } from "./request-form.tsx";
 
-export const metadata = { title: "Solicitar serviço" };
+export const generateMetadata = publicMetadata("/solicitar");
 
 function isAttribution(value: string | undefined): value is Attribution {
   return (

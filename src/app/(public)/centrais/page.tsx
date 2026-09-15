@@ -5,9 +5,10 @@ import {
   SERP_PORTAL,
 } from "@/core/portals/catalog.ts";
 import { Icon } from "../_components/icon.tsx";
+import { publicMetadata } from "../_lib/metadata.ts";
 import { requireSection } from "../_lib/section.ts";
 
-export const metadata = { title: "Centrais oficiais" };
+export const generateMetadata = publicMetadata("/centrais");
 
 function DomainChip({ domain }: { domain: string }) {
   return (

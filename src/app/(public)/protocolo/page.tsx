@@ -9,7 +9,13 @@ import { findByProtocol } from "@/lib/service-request.ts";
 import { requireSection } from "../_lib/section.ts";
 import { ProtocolLookup, type PublicStatus } from "./protocol-lookup.tsx";
 
-export const metadata = { title: "Consultar protocolo" };
+// Reached with a protocol number in the query, one URL per request ever
+// made, and blocked in robots.txt; the noindex covers the case of a link
+// to it from outside, which robots.txt alone cannot.
+export const metadata = {
+  title: "Consultar protocolo",
+  robots: { index: false, follow: false },
+};
 
 export default async function ProtocolLookupPage({
   searchParams,

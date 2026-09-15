@@ -7,10 +7,11 @@ import {
 } from "@/core/scheduling/slots.ts";
 import { getAgendaConfig, takenTimesByDay } from "@/lib/appointments.ts";
 import { officeNow } from "@/lib/tenant.ts";
+import { publicMetadata } from "../_lib/metadata.ts";
 import { requireSection } from "../_lib/section.ts";
 import { SchedulingScreen } from "./appointment-form.tsx";
 
-export const metadata = { title: "Agendar atendimento" };
+export const generateMetadata = publicMetadata("/agendar");
 
 /**
  * The chosen day lives in the query string, so the times are rendered on the

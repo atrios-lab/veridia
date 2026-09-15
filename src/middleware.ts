@@ -43,11 +43,12 @@ const isDev = process.env.NODE_ENV === "development";
  * lets an attacker's injected `<script>` execute exactly like the app's own,
  * which is the one thing this CSP exists to stop.
  *
- * There is no explicit `<script>` in this codebase (checked before writing
- * this), so nothing here has to read the nonce back out and stamp its own
- * tag with it. The day one is added (analytics, structured data) it reads
- * the nonce from `headers().get("x-nonce")` and passes it as the `nonce`
- * prop; Next does not stamp author-written tags on its own.
+ * The one author-written `<script>` in this codebase is the JSON-LD block
+ * in the public layout, and it needs no nonce: a data block is never
+ * prepared as a script, so script-src never looks at it. The day an
+ * executable one is added (analytics) it reads the nonce from
+ * `headers().get("x-nonce")` and passes it as the `nonce` prop; Next does
+ * not stamp author-written tags on its own.
  */
 // Exact host only, never a wildcard: it names the one Vercel Blob store this
 // deploy writes brand images to (see next.config.ts and src/lib/uploads.ts).

@@ -7,8 +7,10 @@ import {
   SECTION_ROUTES,
   sectionNavLinks,
 } from "@/core/tenant/gating.ts";
+import { jsonLdScript, organizationJsonLd } from "@/core/tenant/seo.ts";
 import { isChatEnabled } from "@/lib/chat.ts";
 import { SERIF } from "@/lib/fonts.ts";
+import { getSiteOrigin } from "@/lib/site-origin.ts";
 import { getTenant } from "@/lib/tenant.ts";
 import { blobUploadEnabled } from "@/lib/uploads.ts";
 import { MenuPopover } from "../_components/menu-popover.tsx";
@@ -104,12 +106,26 @@ export default async function PublicLayout({
   const chatEnabled = await isChatEnabled(tenant.slug);
   const cookieStore = await cookies();
   const cookieNoticeAcknowledged = cookieStore.has(COOKIE_NOTICE_COOKIE);
+  // The office as structured data, on every public page: name, address,
+  // telephone and hours, which is what ties the site to the office's entry
+  // on the map. No CSP nonce on purpose: a "ld+json" block is data the
+  // browser never prepares as a script, so script-src does not apply to it
+  // (and a nonce attribute here breaks hydration, because browsers hide it
+  // from the DOM and React sees "" against the value it rendered).
+  const jsonLd = jsonLdScript(
+    organizationJsonLd(tenant, await getSiteOrigin()),
+  );
 
   return (
     <div
       data-theme={tenant.theme}
       className={`${SERIF[tenant.theme].variable} flex min-h-screen flex-col bg-brand-surface text-brand-text`}
     >
+      <script
+        type="application/ld+json"
+        // biome-ignore lint/security/noDangerouslySetInnerHtml: JSON.stringify of the office's own config, with "<" escaped by jsonLdScript; never citizen input.
+        dangerouslySetInnerHTML={{ __html: jsonLd }}
+      />
       <header className="border-b border-brand-border">
         <div className="mx-auto flex max-w-6xl items-center justify-between gap-4 px-4 py-3 md:px-10 md:py-4">
           <Link href="/" className="flex items-center gap-3">

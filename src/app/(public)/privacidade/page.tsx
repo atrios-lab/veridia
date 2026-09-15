@@ -1,8 +1,9 @@
 import Link from "next/link";
 import { DATA_RIGHTS_DEADLINE_DAYS } from "@/core/request/channels.ts";
 import { getTenant } from "@/lib/tenant.ts";
+import { publicMetadata } from "../_lib/metadata.ts";
 
-export const metadata = { title: "Política de Privacidade" };
+export const generateMetadata = publicMetadata("/privacidade");
 
 // Fixed institutional text, shared by every tenant; only the office's own
 // data (name, contacts, DPO) is interpolated. See design.md, "Estrutura
