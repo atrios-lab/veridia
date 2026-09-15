@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { can } from "@/core/auth/roles.ts";
 import { publicationFormSchema } from "@/core/publications/publication.ts";
 import { noticeSectors } from "@/core/tenant/gating.ts";
+import { notifyIndexNow } from "@/lib/notify-indexnow.ts";
 import {
   archivePublication,
   createPublication,
@@ -11,6 +12,7 @@ import {
   updatePublication,
 } from "@/lib/publications.ts";
 import { getSession } from "@/lib/session.ts";
+import { getSiteOrigin } from "@/lib/site-origin.ts";
 import { getTenant } from "@/lib/tenant.ts";
 import {
   AttachmentError,
@@ -147,6 +149,10 @@ export async function savePublication(
   }
   revalidatePath("/admin/publicacoes");
   revalidatePath("/");
+  // Bing, Yandex and Naver read IndexNow; Google does not and is unaffected.
+  // Only on the instant this notice actually goes live, matching the
+  // permission check above, not on every edit of an already-published one.
+  if (isFirstPublish) notifyIndexNow(await getSiteOrigin(), ["/editais"]);
   return { status: "success" };
 }
 

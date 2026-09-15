@@ -12,7 +12,9 @@ import {
   type DocumentStatus,
   documentFormSchema,
 } from "@/core/transparency/documents.ts";
+import { notifyIndexNow } from "@/lib/notify-indexnow.ts";
 import { getSession } from "@/lib/session.ts";
+import { getSiteOrigin } from "@/lib/site-origin.ts";
 import { getTenant } from "@/lib/tenant.ts";
 import {
   createDocument,
@@ -151,6 +153,7 @@ export async function publishDocumentAction(
     if (!doc) return { status: "error", message: "Documento não encontrado." };
     if (canPublish(doc.status as DocumentStatus)) {
       await publishDocument(tenant.slug, id, session.user.id);
+      notifyIndexNow(await getSiteOrigin(), ["/transparencia"]);
     }
   } catch (error) {
     console.error("transparencia.publish", error);
@@ -285,5 +288,6 @@ export async function publishBulletinAction(
     return { status: "error", message: GENERIC_ERROR, fieldErrors: {} };
   }
   revalidate();
+  notifyIndexNow(await getSiteOrigin(), ["/transparencia"]);
   return { status: "success" };
 }
