@@ -7,10 +7,14 @@ import {
   PAGE_META,
   postalAddress,
   siteTitle,
+  socialImage,
+  socialMetadata,
   telephone,
 } from "./seo.ts";
 import { sitemapPaths } from "./site.ts";
+import { cartorioBomJesus } from "./tenants/bom-jesus.ts";
 import { cartorioMarinho } from "./tenants/marinho.ts";
+import { cartorioTaipu } from "./tenants/taipu.ts";
 
 test("the home title says what the office is, not only what it is called", () => {
   const title = siteTitle(cartorioMarinho);
@@ -132,4 +136,48 @@ test("the script text cannot close its own tag", () => {
   const text = jsonLdScript({ name: "</script><script>alert(1)" });
   assert.ok(!text.includes("</script>"));
   assert.equal(JSON.parse(text).name, "</script><script>alert(1)");
+});
+
+test("the shared link's image is the hero photo where the office sent one", () => {
+  assert.equal(socialImage(cartorioMarinho).url, cartorioMarinho.heroImage);
+  assert.equal(socialImage(cartorioBomJesus).url, cartorioBomJesus.heroImage);
+});
+
+test("an office with no hero photo falls back to its own seal, never a blank card", () => {
+  const image = socialImage(cartorioTaipu);
+  assert.equal(image.url, cartorioTaipu.logos.light);
+  assert.ok(!cartorioTaipu.heroImage);
+});
+
+test("every office's social image names the office in its alt text", () => {
+  for (const tenant of Object.values(TENANTS)) {
+    const { alt } = socialImage(tenant);
+    assert.ok(alt.includes(tenant.name), tenant.slug);
+  }
+});
+
+test("the shared-link card carries the page's own title, description and image", () => {
+  const { openGraph, twitter } = socialMetadata(
+    cartorioMarinho,
+    "Solicitar serviço | Cartório Ielmo Marinho/RN",
+    "Peça certidões e atos sem sair de casa.",
+  );
+  assert.equal(
+    openGraph?.title,
+    "Solicitar serviço | Cartório Ielmo Marinho/RN",
+  );
+  assert.equal(
+    openGraph?.description,
+    "Peça certidões e atos sem sair de casa.",
+  );
+  assert.equal(openGraph?.siteName, cartorioMarinho.name);
+  assert.equal(openGraph?.locale, "pt_BR");
+  assert.equal(openGraph?.type, "website");
+  assert.deepEqual(openGraph?.images, [socialImage(cartorioMarinho)]);
+  // Twitter falls back to Open Graph tags when its own are absent, but
+  // WhatsApp does not: only Open Graph is required for the audit's own
+  // complaint, so Twitter mirrors it rather than needing its own copy.
+  assert.equal(twitter?.card, "summary_large_image");
+  assert.equal(twitter?.title, openGraph?.title);
+  assert.deepEqual(twitter?.images, openGraph?.images);
 });

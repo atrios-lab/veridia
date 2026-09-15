@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import { Public_Sans } from "next/font/google";
-import { PAGE_META, siteTitle } from "@/core/tenant/seo.ts";
+import { PAGE_META, siteTitle, socialMetadata } from "@/core/tenant/seo.ts";
 import { getSiteOrigin } from "@/lib/site-origin.ts";
 import { getTenant } from "@/lib/tenant.ts";
 import "./globals.css";
@@ -37,6 +37,15 @@ export async function generateMetadata(): Promise<Metadata> {
     // publicMetadata; this is what any route without one falls back to.
     description: PAGE_META["/"].description(tenant),
     icons: { icon: tenant.logos.seal.light },
+    // The card a shared link of the home shows. Every other public page
+    // overrides this through publicMetadata with its own title, description
+    // and image; /admin never needs it, since it is noindex and never
+    // shared, so it is left with whatever this fallback declares.
+    ...socialMetadata(
+      tenant,
+      siteTitle(tenant),
+      PAGE_META["/"].description(tenant),
+    ),
   };
 }
 
