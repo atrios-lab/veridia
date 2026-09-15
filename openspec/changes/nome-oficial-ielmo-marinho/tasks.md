@@ -31,4 +31,4 @@
 - [x] 4.3 Subir o dev server e conferir em `marinho.localhost:3000`: header e rodapé com o nome
       novo e o subtítulo oficial; `<title>` da home; baixar um requerimento e conferir cabeçalho e
       rodapé do PDF (o selo ainda traz o nome antigo até a serventia trocar a arte, esperado).
-- [ ] 4.4 Abrir PR a partir de branch própria; não fazer push na main.
+- [x] 4.4 Abrir PR a partir de branch própria; não fazer push na main.
