@@ -115,13 +115,13 @@ export const PAGE_META: Record<string, PageMeta> = {
  * but every office that has one gets its own crest or a photograph instead.
  *
  * No width/height: the two files in play are 2000x1333 and 1480x1480, and a
- * third office's is 1536x1024. A wrong number is worse than none — a crawler
+ * third office's is 1536x1024. A wrong number is worse than none: a crawler
  * that is not told a size simply measures the file itself.
  */
 export function socialImage(tenant: Tenant): { url: string; alt: string } {
   return {
     url: tenant.heroImage ?? tenant.logos.light,
-    alt: `${tenant.name} — ${tenant.subtitle}`,
+    alt: `${tenant.name} · ${tenant.subtitle}`,
   };
 }
 
@@ -130,7 +130,7 @@ export function socialImage(tenant: Tenant): { url: string; alt: string } {
  * Telegram and the rest read to build the card a shared link shows. Every
  * public page sets its own (through `publicMetadata`, and the root layout
  * for the home), because these two fields replace, rather than merge with,
- * whatever the parent layout declared — a page that set only its title here
+ * whatever the parent layout declared: a page that set only its title here
  * would silently lose the image.
  *
  * `title` is the page's own, already including the office's name (the
