@@ -66,7 +66,7 @@ conta de serventia que abra mais de um painel. Quem precisa operar o painel de u
 usuário nela. A única exceção é a conta da plataforma Átrios (`pnpm db:seed-superadmin`), que
 entra em qualquer serventia registrada — ver `openspec/changes/add-atrios-super-admin`.
 
-Na prática: um usuário do Cartório Marinho não entra em `aurora.localhost:3000/admin`, e a tentativa
+Na prática: um usuário do Cartório Ielmo Marinho/RN não entra em `aurora.localhost:3000/admin`, e a tentativa
 devolve a mesma mensagem de credencial inválida, sem revelar que a conta existe em outra serventia.
 
 Para criar o administrador de outra serventia, é o mesmo seed com outro slug:
@@ -80,7 +80,7 @@ ADMIN_SEED_TENANT=tabelionato-aurora ADMIN_SEED_EMAIL=admin@aurora.com ADMIN_SEE
 A serventia é resolvida pelo host da requisição. O navegador resolve qualquer nome terminado em
 `.localhost` para a máquina local, então basta abrir o host declarado na config:
 
-- <http://marinho.localhost:3000> serve o Cartório Marinho
+- <http://marinho.localhost:3000> serve o Cartório Ielmo Marinho/RN
 - <http://aurora.localhost:3000> serve o Tabelionato Aurora
 
 Um host não mapeado cai no `DEFAULT_TENANT`. Toda serventia nova precisa declarar um host
@@ -117,7 +117,7 @@ sobe, e cada uma falha de um jeito diferente:
 | --- | --- |
 | `BETTER_AUTH_SECRET` | A aplicação não inicia. É proposital: um segredo padrão é o mesmo em toda instalação da biblioteca. |
 | `DATABASE_URL` | As páginas públicas funcionam, mas login e painel falham na primeira consulta. |
-| `DEFAULT_TENANT` | Host não mapeado cai no Cartório Marinho, que é o padrão embutido. |
+| `DEFAULT_TENANT` | Host não mapeado cai no Cartório Ielmo Marinho/RN, que é o padrão embutido. |
 | `BETTER_AUTH_URL` | Opcional. Sem ela a biblioteca deduz a URL base da requisição, que é o que se quer num sistema com vários domínios. Se preencher, use o domínio real, não o do preview. |
 
 O `db:migrate` roda apontando para o banco de produção só no deploy de produção. Preview usa banco

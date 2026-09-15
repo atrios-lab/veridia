@@ -187,7 +187,7 @@ test("the calendar file carries the time on the office's clock", () => {
       date: "2026-08-06",
       startTime: "08:30",
       endTime: "09:30",
-      title: "Atendimento no Cartório Marinho",
+      title: "Atendimento no Cartório Ielmo Marinho/RN",
       description: "Procuração, leve documento com foto",
       location: "Ielmo Marinho, RN",
       stamp: new Date("2026-08-04T12:10:00Z"),
