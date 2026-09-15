@@ -1,4 +1,6 @@
 import type { NextConfig } from "next";
+import { TENANTS } from "./src/core/tenant/resolve.ts";
+import { INDEXNOW_KEY_PATH } from "./src/lib/indexnow.ts";
 
 // Content-Security-Policy is not here: it needs a fresh nonce per request so
 // Next's own hydration payload can carry one, and a static header from this
@@ -49,6 +51,35 @@ const nextConfig: NextConfig = {
   },
   async headers() {
     return [{ source: "/:path*", headers: securityHeaders }];
+  },
+  // IndexNow (see src/lib/indexnow.ts) requires the key served at the
+  // literal "/<key>.txt". A route handler in a folder of that exact name
+  // rendered the app's own 404 in the production build (App Router or
+  // Turbopack apparently do not register a route under a dotted,
+  // extension-like segment the way `next dev` does), so the handler lives
+  // at the ordinary "/api/indexnow-key" and this rewrite keeps the external
+  // URL the one the protocol requires.
+  async rewrites() {
+    return [{ source: INDEXNOW_KEY_PATH, destination: "/api/indexnow-key" }];
+  },
+  // "/favicon.ico" hits the same dotted-segment limitation as the IndexNow
+  // key file above, and is additionally a name App Router reserves for its
+  // own static-icon convention, so a route handler is not an option there
+  // either. One redirect per office's own host, to that office's seal —
+  // the config default only, not a seal repainted from the panel (that
+  // needs a database read, which a redirect here cannot do); the header
+  // metadata `<link rel="icon">` in src/app/layout.tsx, which every actual
+  // browser and Google itself go by, already reads the office's current
+  // seal correctly and is unaffected by this fallback for the legacy path.
+  async redirects() {
+    return Object.values(TENANTS).flatMap((tenant) =>
+      tenant.hosts.map((host) => ({
+        source: "/favicon.ico",
+        has: [{ type: "host" as const, value: host }],
+        destination: tenant.logos.seal.light,
+        permanent: false,
+      })),
+    );
   },
 };
 
