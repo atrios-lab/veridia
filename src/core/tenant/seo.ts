@@ -107,6 +107,66 @@ export const PAGE_META: Record<string, PageMeta> = {
 };
 
 /**
+ * The picture a shared link shows: the hero photograph where the office has
+ * sent one, its own seal otherwise. Six of the eight offices have no hero
+ * yet and fall back to "/logos/selo-padrao-preto.png", the platform's
+ * generic seal already served as their favicon and header mark today, not
+ * an asset invented for this: it is a plain seal icon, not a stock photo,
+ * but every office that has one gets its own crest or a photograph instead.
+ *
+ * No width/height: the two files in play are 2000x1333 and 1480x1480, and a
+ * third office's is 1536x1024. A wrong number is worse than none — a crawler
+ * that is not told a size simply measures the file itself.
+ */
+export function socialImage(tenant: Tenant): { url: string; alt: string } {
+  return {
+    url: tenant.heroImage ?? tenant.logos.light,
+    alt: `${tenant.name} — ${tenant.subtitle}`,
+  };
+}
+
+/**
+ * The `openGraph`/`twitter` block for a page: what WhatsApp, Facebook,
+ * Telegram and the rest read to build the card a shared link shows. Every
+ * public page sets its own (through `publicMetadata`, and the root layout
+ * for the home), because these two fields replace, rather than merge with,
+ * whatever the parent layout declared — a page that set only its title here
+ * would silently lose the image.
+ *
+ * `title` is the page's own, already including the office's name (the
+ * template on `metadata.title` only stamps the `<title>` tag, not this).
+ *
+ * Untyped against Next's `Metadata` on purpose: `src/core` stays framework
+ * free, and the `as const` on `type`/`card` keeps the two literals narrow
+ * enough that spreading this into a `Metadata` object still typechecks at
+ * the call site, in `src/app`.
+ */
+export function socialMetadata(
+  tenant: Tenant,
+  title: string,
+  description: string,
+) {
+  const image = socialImage(tenant);
+  return {
+    openGraph: {
+      title,
+      description,
+      url: "./",
+      siteName: tenant.name,
+      locale: "pt_BR",
+      type: "website" as const,
+      images: [image],
+    },
+    twitter: {
+      card: "summary_large_image" as const,
+      title,
+      description,
+      images: [image],
+    },
+  };
+}
+
+/**
  * The street address split the way schema.org wants it. The config holds
  * one line, written by hand per office, in two spellings so far:
  * "..., Centro, Ielmo Marinho / RN" and "..., Bom Jesus - RN, 59270-000".
