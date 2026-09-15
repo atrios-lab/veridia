@@ -7,7 +7,11 @@ export const cartorioMarinho: Tenant = parseTenant({
   // The bare domain is enough: resolveTenant strips "www" and the port.
   // The ".localhost" entry is what lets a developer serve this office locally.
   hosts: ["cartorioielmomarinhorn.com", "marinho.localhost"],
-  name: "Cartório Marinho",
+  // The municipality, not a trade name: a CGJ/TJRN provimento bars a serventia
+  // from presenting itself under any name but its own, so the old trade
+  // name is gone from everything the citizen reads. The seal images still
+  // carry it until the office uploads new art from the panel.
+  name: "Cartório Ielmo Marinho/RN",
   // The domain's DKIM and Return-Path are verified in Postmark, so the
   // office signs its own mail instead of borrowing the platform fallback
   // (nao-responda@atrioss.com), which signed the serventia's name over a
@@ -15,8 +19,8 @@ export const cartorioMarinho: Tenant = parseTenant({
   emailFrom: "nao-responda@cartorioielmomarinhorn.com",
   subtitle: "Ofício Único de Ielmo Marinho / RN",
   about:
-    "O Cartório Marinho é o Ofício Único de Ielmo Marinho / RN, o cartório que reúne " +
-    "todos os serviços de registro e notas do município. Sua função é dar " +
+    "O Ofício Único de Ielmo Marinho / RN é o cartório que reúne todos os serviços " +
+    "de registro e notas do município. Sua função é dar " +
     "segurança jurídica, autenticidade e publicidade aos atos da vida do cidadão, do " +
     "nascimento aos negócios.",
   cns: "094615",

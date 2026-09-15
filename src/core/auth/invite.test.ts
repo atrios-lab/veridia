@@ -80,14 +80,14 @@ test("boas-vindas names the office, the inviter, the role, the provimento, and n
     recipientName: "Helena Duarte",
     inviterName: "Equipe Átrios",
     roleLabel: "Registrador",
-    tenantName: "Cartório Marinho",
+    tenantName: "Cartório Ielmo Marinho/RN",
   });
 
   assert.match(text.subject, /Boas-vindas/);
-  assert.match(text.subject, /Cartório Marinho/);
+  assert.match(text.subject, /Cartório Ielmo Marinho\/RN/);
   assert.match(text.paragraphs[0], /Olá, Helena\./);
   assert.match(text.paragraphs[0], /Equipe Átrios/);
-  assert.match(text.paragraphs[0], /Cartório Marinho/);
+  assert.match(text.paragraphs[0], /Cartório Ielmo Marinho\/RN/);
   assert.match(text.paragraphs[0], /Registrador/);
   assert.match(text.paragraphs[1], /Provimento CN-CNJ n\. 213\/2026/);
   assert.match(text.paragraphs[1], /LGPD/);

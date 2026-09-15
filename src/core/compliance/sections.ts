@@ -279,7 +279,7 @@ export const SECTIONS: readonly SectionDef[] = [
         name: "tradeName",
         label: "Nome fantasia",
         type: "text",
-        help: "Se usar outro nome no dia a dia (ex.: Cartório Marinho).",
+        help: "Se usar outro nome no dia a dia (ex.: Cartório da Praça).",
       },
       {
         name: "cns",
