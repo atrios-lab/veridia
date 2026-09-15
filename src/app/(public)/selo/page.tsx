@@ -1,8 +1,9 @@
 import { TJ_LOOKUP_URL } from "@/lib/tj-seal.ts";
+import { publicMetadata } from "../_lib/metadata.ts";
 import { requireSection } from "../_lib/section.ts";
 import { SealLookup } from "./seal-lookup.tsx";
 
-export const metadata = { title: "Selo digital" };
+export const generateMetadata = publicMetadata("/selo");
 
 export default async function DigitalSealPage() {
   const tenant = await requireSection("selo-tjrn");

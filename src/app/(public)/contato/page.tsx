@@ -3,11 +3,12 @@ import { isWithinChatHours, nextChatOpening } from "@/core/chat/hours.ts";
 import { longWeekday, toIsoDate } from "@/core/scheduling/calendar.ts";
 import { isChatEnabled } from "@/lib/chat.ts";
 import { Icon } from "../_components/icon.tsx";
+import { publicMetadata } from "../_lib/metadata.ts";
 import { requireSection } from "../_lib/section.ts";
 import { CopyEmailButton } from "./copy-email-button.tsx";
 import { OpenChatButton } from "./open-chat-button.tsx";
 
-export const metadata = { title: "Contato" };
+export const generateMetadata = publicMetadata("/contato");
 
 const TIME_ZONE = "America/Sao_Paulo";
 

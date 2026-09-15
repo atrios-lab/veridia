@@ -1,6 +1,15 @@
+import type { Metadata } from "next";
 import { Toaster } from "sonner";
 import { SERIF } from "@/lib/fonts.ts";
 import { getTenant } from "@/lib/tenant.ts";
+
+// Nothing under /admin is a page for a search engine: the login screen was
+// showing up as "Entrar | <cartório>" in results. Set here so every panel
+// route inherits it, and in the initial HTML, which is the copy the engine
+// honours. robots.txt also blocks the crawl; this covers a link from outside.
+export const metadata: Metadata = {
+  robots: { index: false, follow: false },
+};
 
 // The panel repaints with the tenant's published style, same brand tokens
 // and serif the public site uses for it: see theme-admin-panel.

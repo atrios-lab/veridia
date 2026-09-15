@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { Public_Sans } from "next/font/google";
+import { PAGE_META, siteTitle } from "@/core/tenant/seo.ts";
 import { getSiteOrigin } from "@/lib/site-origin.ts";
 import { getTenant } from "@/lib/tenant.ts";
 import "./globals.css";
@@ -26,11 +27,15 @@ export async function generateMetadata(): Promise<Metadata> {
     // search engine, and it picks which one to show.
     metadataBase: new URL(origin),
     alternates: { canonical: "./" },
+    // The home's title carries the kind of serventia and the town (see
+    // siteTitle); the other pages keep the short name after their own.
     title: {
-      default: tenant.name,
+      default: siteTitle(tenant),
       template: `%s | ${tenant.name}`,
     },
-    description: tenant.subtitle,
+    // The home's own description. Every public page overrides it through
+    // publicMetadata; this is what any route without one falls back to.
+    description: PAGE_META["/"].description(tenant),
     icons: { icon: tenant.logos.seal.light },
   };
 }

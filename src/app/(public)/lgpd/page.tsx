@@ -1,7 +1,8 @@
+import { publicMetadata } from "../_lib/metadata.ts";
 import { requireSection } from "../_lib/section.ts";
 import { DataRightsScreen } from "./data-rights-form.tsx";
 
-export const metadata = { title: "Canal LGPD" };
+export const generateMetadata = publicMetadata("/lgpd");
 
 export default async function DpoPage() {
   // The officer's name and institutional address are published because LGPD

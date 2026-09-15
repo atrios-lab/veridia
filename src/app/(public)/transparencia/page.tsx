@@ -8,9 +8,10 @@ import type {
 } from "@/lib/transparency.ts";
 import { listBulletins, publishedDocuments } from "@/lib/transparency.ts";
 import { Icon } from "../_components/icon.tsx";
+import { publicMetadata } from "../_lib/metadata.ts";
 import { requireSection } from "../_lib/section.ts";
 
-export const metadata = { title: "Transparência" };
+export const generateMetadata = publicMetadata("/transparencia");
 
 /** "259 KB", "1.4 MB": shown before the citizen opens the file. */
 function formatFileSize(bytes: number): string {

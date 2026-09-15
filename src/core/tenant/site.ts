@@ -38,18 +38,16 @@ export function sitemapPaths(tenant: Tenant): string[] {
 
 /**
  * What no search engine should crawl. The panel and the API are not pages;
- * the rest are pages that only make sense with a token or a protocol number
- * in the query, so a crawler would index one empty shell per number it
- * found linked somewhere. "/acompanhar" itself stays crawlable: it is the
- * section's page, and it is in the sitemap. The trailing "?" is literal in
- * robots.txt (only "*" and "$" are special) and matches the query variants
- * alone.
+ * the rest only make sense with a token or a protocol number in the query.
+ * "/acompanhar?numero=..." is deliberately not here: a URL robots.txt hides
+ * can still be indexed from a link to it, title-less, because the crawler
+ * never gets to read its noindex. Those variants carry a noindex in the
+ * page instead (see acompanhar/page.tsx), which needs the crawl to work.
  */
 export const ROBOTS_DISALLOW: readonly string[] = [
   "/admin",
   "/api",
   "/protocolo",
-  "/acompanhar?",
   "/agendar/cancelar",
   "/solicitar/requerimento",
 ];

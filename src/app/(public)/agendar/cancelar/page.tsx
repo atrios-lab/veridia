@@ -6,7 +6,12 @@ import { Icon } from "../../_components/icon.tsx";
 import { requireSection } from "../../_lib/section.ts";
 import { CancelConfirmation } from "./cancel-confirmation.tsx";
 
-export const metadata = { title: "Cancelar agendamento" };
+// The other end of a link that only ever travels by e-mail, with a token
+// in the query: nothing here is a page a search engine should list.
+export const metadata = {
+  title: "Cancelar agendamento",
+  robots: { index: false, follow: false },
+};
 
 /**
  * The other end of the link in the confirmation e-mail. It shows what is

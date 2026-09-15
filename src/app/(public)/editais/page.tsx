@@ -9,9 +9,10 @@ import {
 import type { PublicationRow } from "@/lib/publications.ts";
 import { livePublications } from "@/lib/publications.ts";
 import { Icon } from "../_components/icon.tsx";
+import { publicMetadata } from "../_lib/metadata.ts";
 import { requireSection } from "../_lib/section.ts";
 
-export const metadata = { title: "Editais" };
+export const generateMetadata = publicMetadata("/editais");
 
 /**
  * Which sector a live publication files under. Banns are always proclamas

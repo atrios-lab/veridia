@@ -65,10 +65,9 @@ test("a section switched off by the office leaves the sitemap", () => {
 test("nothing in the sitemap is disallowed to crawlers", () => {
   // A path both listed and blocked would be a contradiction the search
   // engine resolves by ignoring the sitemap entry. Prefix match, like a
-  // crawler does, minus the query-only rules.
-  const prefixes = ROBOTS_DISALLOW.filter((rule) => !rule.includes("?"));
+  // crawler does.
   for (const path of sitemapPaths(cartorioMarinho)) {
-    for (const prefix of prefixes) {
+    for (const prefix of ROBOTS_DISALLOW) {
       assert.ok(!path.startsWith(prefix), `${path} vs ${prefix}`);
     }
   }
