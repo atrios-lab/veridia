@@ -1,7 +1,9 @@
 /**
  * This deployment's IndexNow verification key: one value, shared by every
- * office's domain, each of them serving it at "/<key>.txt" (see the route
- * next to this file's sibling `src/app/<key>.txt/route.ts`). IndexNow
+ * office's domain, each of them serving it at "/<key>.txt" (a rewrite in
+ * next.config.ts sends that literal path to `src/app/api/indexnow-key`,
+ * which reads the constant below; a route handler could not live directly
+ * under a folder named "<key>.txt", see that file's own comment). IndexNow
  * verifies a submission by fetching that file back from the same host the
  * submitted URL belongs to, so the key carries no secret of its own: it
  * only has to be hard to guess and served consistently, which one shared
