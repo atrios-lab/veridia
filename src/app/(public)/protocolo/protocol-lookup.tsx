@@ -735,7 +735,7 @@ function timelineSteps(
     result.requestStatus === "done" ||
     result.requestStatus === "archived";
   const preparing =
-    result.requestStatus === "paid" ||
+    result.paymentSettled ||
     (result.requestStatus === "new" && !result.amountLabel);
 
   if (finished || preparing) {

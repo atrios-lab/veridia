@@ -21,6 +21,7 @@ import type { DataRight } from "@/core/request/kinds.ts";
 import {
   isOpenServiceRequestStatus,
   isOpenStatus,
+  isPaymentSettled,
   type ManifestationType,
   parseDetails,
   type RequestKind,
@@ -337,11 +338,8 @@ export async function lookupProtocolDetail(
     const conversations = await Promise.all(
       requirements.map((r) => listRequirementMessages(tenant.slug, r.id)),
     );
-    // "Paid" itself is not a terminal andamento (the office still moves it
-    // on to "done"), so it needs its own check alongside the terminal ones:
-    // once paid, nothing should invite the citizen to pay again.
-    const paymentSettled =
-      record.status === "paid" || !isOpenServiceRequestStatus(record.status);
+    // Once paid, nothing should invite the citizen to pay again.
+    const paymentSettled = isPaymentSettled(record.status);
 
     const open = isOpenServiceRequestStatus(record.status);
     const term = effectiveDeadline(
@@ -673,8 +671,7 @@ export async function reportPayment(
   // Only a service request carries a value and a Pix charge to report
   // against; the other three kinds never reach this action from the UI, but
   // the server checks anyway since the key alone would otherwise unlock it.
-  const settled =
-    request.status === "paid" || !isOpenServiceRequestStatus(request.status);
+  const settled = isPaymentSettled(request.status);
   if (
     request.kind !== "service-request" ||
     request.amountCents == null ||
