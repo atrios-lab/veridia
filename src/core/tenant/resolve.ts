@@ -6,6 +6,7 @@ import { cartorioMacaiba1 } from "./tenants/macaiba-1.ts";
 import { cartorioMajorSales } from "./tenants/major-sales.ts";
 import { cartorioMarinho } from "./tenants/marinho.ts";
 import { cartorioSantaCruz2 } from "./tenants/santa-cruz.ts";
+import { cartorioSaoJoseDeMipibu2 } from "./tenants/sao-jose-de-mipibu-2.ts";
 import { cartorioTaipu } from "./tenants/taipu.ts";
 import { cartorioTibauDoSul } from "./tenants/tibau-do-sul.ts";
 
@@ -20,6 +21,7 @@ export const TENANTS: Record<string, Tenant> = {
   [cartorioSantaCruz2.slug]: cartorioSantaCruz2,
   [cartorioMacaiba1.slug]: cartorioMacaiba1,
   [cartorioTibauDoSul.slug]: cartorioTibauDoSul,
+  [cartorioSaoJoseDeMipibu2.slug]: cartorioSaoJoseDeMipibu2,
 };
 
 /** Lowercases the host and drops the port and the "www." prefix. */
