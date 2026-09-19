@@ -31,9 +31,9 @@
 
 ## 3. Política de conteúdo
 
-- [ ] 3.1 `src/middleware.ts`: `media-src 'self'` mais os hosts de `mediaHosts(TUTORIALS)`,
+- [x] 3.1 `src/middleware.ts`: `media-src 'self'` mais os hosts de `mediaHosts(TUTORIALS)`,
   cada um como `https://<host>`, sem curinga; comentário no mesmo tom das diretivas vizinhas.
-- [ ] 3.2 Teste da montagem do CSP (extrair `buildCsp` para módulo testável se ainda não for),
+- [x] 3.2 Teste da montagem do CSP (extrair `buildCsp` para módulo testável se ainda não for),
   conferindo que com catálogo vazio a diretiva é só `'self'` e que o host do catálogo aparece
   uma vez.
 
