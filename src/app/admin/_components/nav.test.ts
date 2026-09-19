@@ -37,3 +37,13 @@ test("no two adjacent items wear the same icon", () => {
       assert.notEqual(item.icon, next.icon, `ícone repetido: ${item.label}`);
   }
 });
+
+test("Ajuda is the last group, and its one item asks no permission", () => {
+  const groups = navGroups(ADMIN_NAV);
+  const last = groups.at(-1);
+  assert.equal(last?.group, "Ajuda");
+  assert.deepEqual(
+    last?.items.map((item) => [item.label, item.href, item.permission]),
+    [["Vídeos-aula", "/admin/ajuda", undefined]],
+  );
+});

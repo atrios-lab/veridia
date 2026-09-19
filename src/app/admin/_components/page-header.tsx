@@ -1,5 +1,9 @@
+import { headers } from "next/headers";
 import Link from "next/link";
 import type { ReactNode } from "react";
+import { TUTORIALS } from "@/core/tutorials/catalog.ts";
+import { tutorialForRoute } from "@/core/tutorials/progress.ts";
+import { AdminIcon } from "./icon.tsx";
 
 /**
  * A screen's title, in the screen's own content: the heading, an optional
@@ -12,8 +16,14 @@ import type { ReactNode } from "react";
  * `<AdminPageHeader title="…" />` before their `<main>` went on working
  * without an edit; `description` and `actions` are the two things the queue
  * needed on top.
+ *
+ * "Como usar esta tela" is the one thing here no screen asks for: the
+ * header reads the route the middleware forwarded and looks it up in the
+ * tutorial catalog itself, so a video recorded for a screen reaches that
+ * screen with no edit to it. Async for that one `headers()` call; every
+ * caller is a server component, so nothing changes for them.
  */
-export function AdminPageHeader({
+export async function AdminPageHeader({
   title,
   back,
   description,
@@ -27,6 +37,13 @@ export function AdminPageHeader({
   /** The screen's primary action, e.g. the queue's "Lançar pedido". */
   actions?: ReactNode;
 }) {
+  const pathname = (await headers()).get("x-pathname");
+  const tutorial =
+    // The tutorials screen teaching itself would be one link too many.
+    pathname && pathname !== "/admin/ajuda"
+      ? tutorialForRoute(TUTORIALS, pathname)
+      : undefined;
+
   return (
     <div className="flex flex-none flex-wrap items-center gap-5 px-[30px] pt-[30px]">
       <div className="flex min-w-[280px] flex-1 flex-col gap-[5px]">
@@ -38,9 +55,20 @@ export function AdminPageHeader({
             ‹ {back.label}
           </Link>
         )}
-        <h1 className="font-serif text-[26px] leading-[1.1] font-semibold text-admin-primary">
-          {title}
-        </h1>
+        <div className="flex flex-wrap items-baseline gap-x-4 gap-y-1">
+          <h1 className="font-serif text-[26px] leading-[1.1] font-semibold text-admin-primary">
+            {title}
+          </h1>
+          {tutorial && (
+            <Link
+              href={`/admin/ajuda?video=${encodeURIComponent(tutorial.id)}`}
+              className="inline-flex items-center gap-1.5 text-[13px] font-semibold text-admin-muted hover:text-admin-primary"
+            >
+              <AdminIcon name="play" className="h-4 w-4 flex-none" />
+              Como usar esta tela
+            </Link>
+          )}
+        </div>
         {description && (
           <p className="max-w-[560px] text-[13.5px] leading-normal text-admin-muted">
             {description}

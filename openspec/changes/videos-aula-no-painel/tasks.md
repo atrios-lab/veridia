@@ -57,15 +57,15 @@
 
 ## 5. Sidebar, cabeçalho e visão geral
 
-- [ ] 5.1 `icon.tsx`: ícone `play` no mesmo estilo de traço único dos demais.
-- [ ] 5.2 `nav.ts`: item `{ group: "Ajuda", label: "Vídeos-aula", href: "/admin/ajuda", icon:
+- [x] 5.1 `icon.tsx`: ícone `play` no mesmo estilo de traço único dos demais.
+- [x] 5.2 `nav.ts`: item `{ group: "Ajuda", label: "Vídeos-aula", href: "/admin/ajuda", icon:
   "play" }` por último, sem `permission`; `sidebar.tsx` omite o item quando `TUTORIALS` está
   vazio. `nav.test.ts`: "Ajuda" é o último grupo e o item não tem permissão.
-- [ ] 5.3 `page-header.tsx`: vira `async`, lê `x-pathname` via `headers()`, chama
+- [x] 5.3 `page-header.tsx`: vira `async`, lê `x-pathname` via `headers()`, chama
   `tutorialForRoute` e renderiza o link "Como usar esta tela" (`/admin/ajuda?video=<id>`) ao
   lado do título quando há vídeo; sem header ou sem vídeo, saída idêntica à atual. Rodar
   `pnpm typecheck` para confirmar as 24 chamadas.
-- [ ] 5.4 `(dashboard)/_components/tutorial-trail-card.tsx`: "Primeiros passos", "N de M
+- [x] 5.4 `(dashboard)/_components/tutorial-trail-card.tsx`: "Primeiros passos", "N de M
   assistidos", "Próximo: <título>" com link; `(dashboard)/page.tsx` lê `listWatchedIds` do
   usuário da sessão e renderiza o card acima de `KeyboardShortcutsCard` só quando a trilha tem
   vídeo não assistido.

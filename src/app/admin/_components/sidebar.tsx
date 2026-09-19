@@ -2,6 +2,7 @@ import Image from "next/image";
 import { can } from "@/core/auth/roles.ts";
 
 import type { Tenant } from "@/core/tenant/schema.ts";
+import { TUTORIALS } from "@/core/tutorials/catalog.ts";
 import { ADMIN_NAV } from "./nav.ts";
 import { AdminSidebarNav } from "./sidebar-nav.tsx";
 
@@ -44,9 +45,13 @@ export function AdminSidebar({
   className?: string;
 }) {
   // Hiding a link is a courtesy, not a gate: each route re-checks on the
-  // server, so a person who types the URL still gets refused there.
+  // server, so a person who types the URL still gets refused there. The
+  // tutorials item is hidden for a different reason, an empty catalog:
+  // the route answers either way, it just has nothing to show yet.
   const items = ADMIN_NAV.filter(
-    (item) => !item.permission || can(role, item.permission),
+    (item) =>
+      (!item.permission || can(role, item.permission)) &&
+      !(item.href === "/admin/ajuda" && TUTORIALS.length === 0),
   );
 
   return (

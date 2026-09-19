@@ -10,6 +10,8 @@ import {
 import type { RequestKind } from "@/core/request/kinds.ts";
 import { parseDetails } from "@/core/request/kinds.ts";
 import { toIsoDate } from "@/core/scheduling/calendar.ts";
+import { TUTORIALS } from "@/core/tutorials/catalog.ts";
+import { nextUnwatched, trailProgress } from "@/core/tutorials/progress.ts";
 import {
   ACTIVITY_VERBS,
   type DeskRecord,
@@ -25,6 +27,7 @@ import {
 } from "@/lib/chat.ts";
 import { getSession } from "@/lib/session.ts";
 import { getTenant, OFFICE_TIME_ZONE, officeNow, today } from "@/lib/tenant.ts";
+import { listWatchedIds } from "@/lib/tutorials.ts";
 import type { ActionShortcut } from "./_components/action-shortcuts.tsx";
 import { ActionShortcuts } from "./_components/action-shortcuts.tsx";
 import type { ChannelStatusRow } from "./_components/channel-status.tsx";
@@ -36,6 +39,7 @@ import { LiveChatCard } from "./_components/live-chat-card.tsx";
 import { OverviewHeader } from "./_components/overview-header.tsx";
 import { ResumeCard } from "./_components/resume-card.tsx";
 import { TodayAgenda } from "./_components/today-agenda.tsx";
+import { TutorialTrailCard } from "./_components/tutorial-trail-card.tsx";
 import { QueuePoller } from "./atendimento/_components/queue-poller.tsx";
 
 export const metadata = { title: "Painel" };
@@ -211,6 +215,10 @@ export default async function AdminHome() {
       : []),
   ];
 
+  // The person's own trail, not the office's: read by their own user id.
+  const watchedIds = await listWatchedIds(session.user.id);
+  const nextTutorial = nextUnwatched(TUTORIALS, watchedIds);
+
   const countByKind = new Map<RequestKind, number>();
   for (const record of deskRecords) {
     countByKind.set(record.kind, (countByKind.get(record.kind) ?? 0) + 1);
@@ -261,6 +269,12 @@ export default async function AdminHome() {
             {canPublish && <ComplianceCard tenant={tenant} />}
 
             <ChannelStatus rows={channelRows} />
+            {nextTutorial && (
+              <TutorialTrailCard
+                progress={trailProgress(TUTORIALS, watchedIds)}
+                next={nextTutorial}
+              />
+            )}
             <KeyboardShortcutsCard />
           </div>
         </div>
