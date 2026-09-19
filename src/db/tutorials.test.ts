@@ -26,7 +26,12 @@ before(async () => {
   ({ db, close } = await createTestDb());
   await db.insert(user).values([
     { id: ANA, name: "Ana", email: "ana@exemplo.com", tenantSlug: "marinho" },
-    { id: BETO, name: "Beto", email: "beto@exemplo.com", tenantSlug: "marinho" },
+    {
+      id: BETO,
+      name: "Beto",
+      email: "beto@exemplo.com",
+      tenantSlug: "marinho",
+    },
   ]);
 });
 
@@ -61,9 +66,10 @@ test("marking twice keeps the first watched_at", async () => {
 
 test("one person's progress never shows up for another", async () => {
   await markWatchedWith(db, BETO, "pedidos");
-  assert.deepEqual([...(await listWatchedIdsWith(db, ANA))], [
-    "primeiros-passos",
-  ]);
+  assert.deepEqual(
+    [...(await listWatchedIdsWith(db, ANA))],
+    ["primeiros-passos"],
+  );
   assert.deepEqual([...(await listWatchedIdsWith(db, BETO))], ["pedidos"]);
 });
 

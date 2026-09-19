@@ -35,7 +35,10 @@ export function nextUnwatched(
  * order, then everything else in catalog order. A stable partition, not a
  * sort by any key. */
 export function listOrder(catalog: readonly Tutorial[]): Tutorial[] {
-  return [...catalog.filter((t) => t.trail), ...catalog.filter((t) => !t.trail)];
+  return [
+    ...catalog.filter((t) => t.trail),
+    ...catalog.filter((t) => !t.trail),
+  ];
 }
 
 export function isTutorialId(

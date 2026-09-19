@@ -39,18 +39,18 @@
 
 ## 4. Tela de vídeos-aula
 
-- [ ] 4.1 `src/app/admin/(dashboard)/ajuda/actions.ts`: `markTutorialWatchedAction(videoId)` e
+- [x] 4.1 `src/app/admin/(dashboard)/ajuda/actions.ts`: `markTutorialWatchedAction(videoId)` e
   `unmarkTutorialWatchedAction(videoId)`, ambas exigindo `getSession()`, validando com
   `isTutorialId` e devolvendo erro em português quando o id não existe; `revalidatePath` de
   `/admin/ajuda` e `/admin`.
-- [ ] 4.2 `ajuda/_components/tutorial-player.tsx` (client): `<video controls
+- [x] 4.2 `ajuda/_components/tutorial-player.tsx` (client): `<video controls
   preload="metadata">` com `<track kind="captions" srclang="pt-BR" default>`, chamando a action
   de marcar no evento `ended` uma vez por reprodução; botão "Marcar como assistido" / "Desfazer"
   com estado otimista e toast de erro via `sonner`.
-- [ ] 4.3 `ajuda/_components/tutorial-list.tsx`: lista na ordem de `listOrder`, cada item com
+- [x] 4.3 `ajuda/_components/tutorial-list.tsx`: lista na ordem de `listOrder`, cada item com
   título, duração formatada ("4 min"), a tela ensinada (rótulo de `ADMIN_NAV` pela rota) e a
   marca de assistido; item atual em destaque.
-- [ ] 4.4 `ajuda/page.tsx`: `metadata.title = "Vídeos-aula"`, `AdminPageHeader`, resolve
+- [x] 4.4 `ajuda/page.tsx`: `metadata.title = "Vídeos-aula"`, `AdminPageHeader`, resolve
   `?video=` (id inexistente cai no próximo não assistido ou no primeiro), renderiza player e
   lista; estado vazio "Os vídeos-aula estão sendo preparados" sem player quando o catálogo é
   vazio.
