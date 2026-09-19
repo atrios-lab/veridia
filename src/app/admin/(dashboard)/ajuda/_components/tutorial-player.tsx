@@ -65,6 +65,11 @@ export function TutorialPlayer({
         key={tutorial.id}
         controls
         preload="metadata"
+        // The captions come from another origin (the Blob store), and a
+        // <track> is only read cross-origin under CORS: without this the
+        // browser drops the captions in silence. The store answers with
+        // `access-control-allow-origin: *`, so anonymous is enough.
+        crossOrigin="anonymous"
         className="aspect-video w-full rounded-[10px] bg-black"
         onPlay={() => {
           markedThisPlayback.current = false;

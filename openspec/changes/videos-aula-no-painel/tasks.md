@@ -78,7 +78,9 @@
 - [ ] 6.2 Aplicar a migração no Homolog (Preview) e em produção pela `POSTGRES_URL_NON_POOLING`
   antes do merge, conforme a rotina de migração manual. Homolog aplicado em 19/09/2026 (pelo
   pooler em modo sessão, porta 5432: o host direto do Supabase é só IPv6). Produção pendente.
-- [ ] 6.3 Conferir no navegador, num host de serventia: item na sidebar, vídeo tocando com
+- [x] 6.3 Conferir no navegador, num host de serventia: item na sidebar, vídeo tocando com
   legenda, marca automática ao terminar, "Desfazer", card na visão geral com o andamento e o
-  link contextual numa tela coberta pelo catálogo. Sem erro de CSP no console.
-- [ ] 6.4 `pnpm typecheck`, `pnpm lint`, `pnpm test`; abrir o PR.
+  link contextual numa tela coberta pelo catálogo. Sem erro de CSP no console. Feito em
+  19/09/2026 com duas entradas temporárias no catálogo (vídeo público da MDN), removidas depois.
+  Revelou que a legenda de outra origem exige `crossOrigin="anonymous"` no `<video>`.
+- [x] 6.4 `pnpm typecheck`, `pnpm lint`, `pnpm test`; abrir o PR.
