@@ -8,6 +8,7 @@ import {
   integer,
   jsonb,
   pgTable,
+  primaryKey,
   text,
   timestamp,
   uniqueIndex,
@@ -716,3 +717,35 @@ export const emailBounces = pgTable("email_bounces", {
     .notNull()
     .defaultNow(),
 });
+
+/**
+ * Which video tutorials a person has watched, and when they first finished
+ * each one. The first table in this schema keyed by a person rather than by
+ * an office, and on purpose: the progress belongs to the account, not to
+ * the serventia, so it follows the person to any machine they sign in on
+ * (a counter shares its computer; localStorage would show one clerk the
+ * other's progress, or none). There is no tenant slug because a user
+ * belongs to exactly one office and every read and write here goes through
+ * the session's own user id, which getSession() has already bound to the
+ * office of the host (see src/lib/session.ts).
+ *
+ * `video_id` is the slug of an entry in src/core/tutorials/catalog.ts, not
+ * a foreign key: the catalog is code, not a table. A video dropped from the
+ * catalog leaves harmless rows behind, and no migration ever has to follow a
+ * change of content. Rows go with the account.
+ */
+export const tutorialProgress = pgTable(
+  "tutorial_progress",
+  {
+    userId: text("user_id")
+      .notNull()
+      .references(() => user.id, { onDelete: "cascade" }),
+    videoId: text("video_id").notNull(),
+    /** The first time the video reached its end, or was marked by hand.
+     * Marking again never moves it: "assistido em" is the first time. */
+    watchedAt: timestamp("watched_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (t) => [primaryKey({ columns: [t.userId, t.videoId] })],
+);

@@ -1,31 +1,31 @@
 ## 1. Núcleo: catálogo e trilha
 
-- [ ] 1.1 `src/core/tutorials/catalog.ts`: tipo `Tutorial` (`id`, `title`, `description`,
+- [x] 1.1 `src/core/tutorials/catalog.ts`: tipo `Tutorial` (`id`, `title`, `description`,
   `durationSeconds`, `videoUrl`, `captionsUrl`, `route: string | null`, `trail: boolean`) e o
   array `TUTORIALS` na ordem da trilha, inicialmente vazio, com o comentário que explica por que
   o catálogo é código e como um vídeo novo entra (Blob + entrada + PR).
-- [ ] 1.2 `src/core/tutorials/progress.ts`: `trailProgress(catalog, watchedIds)` (assistidos e
+- [x] 1.2 `src/core/tutorials/progress.ts`: `trailProgress(catalog, watchedIds)` (assistidos e
   total, só `trail`), `nextUnwatched(catalog, watchedIds)`, `tutorialForRoute(catalog,
   pathname)` (prefixo mais longo vence, `/admin` só exato), `mediaHosts(catalog)` (hosts únicos
   das URLs de vídeo e legenda), `isTutorialId(catalog, id)`, e a ordenação da lista
   (`listOrder`: trilha primeiro, depois avulsos).
-- [ ] 1.3 `src/core/tutorials/progress.test.ts` cobrindo os cenários da spec: "2 de 7" com o
+- [x] 1.3 `src/core/tutorials/progress.test.ts` cobrindo os cenários da spec: "2 de 7" com o
   segundo como próximo; avulso não conta; prefixo `/admin/pedidos` cobre `/admin/pedidos/novo`;
   `/admin` não cobre `/admin/usuarios`; hosts sem repetição.
-- [ ] 1.4 `src/core/tutorials/catalog.test.ts`: ids únicos, toda `route` presente em `ADMIN_NAV`
+- [x] 1.4 `src/core/tutorials/catalog.test.ts`: ids únicos, toda `route` presente em `ADMIN_NAV`
   ou igual a `/admin`, toda URL https com host em `mediaHosts`, `durationSeconds` positivo.
   Passa com o catálogo vazio e continua valendo para cada vídeo que entrar.
 
 ## 2. Banco e leitura do progresso
 
-- [ ] 2.1 `src/db/schema.ts`: tabela `tutorialProgress` (`tutorial_progress`): `userId` com
+- [x] 2.1 `src/db/schema.ts`: tabela `tutorialProgress` (`tutorial_progress`): `userId` com
   referência a `user.id` e `onDelete: "cascade"`, `videoId` text, `watchedAt` timestamptz com
   default now, chave primária composta (`user_id`, `video_id`). Comentário: primeira tabela por
   usuário do projeto, sem `tenant_slug`, e por quê (design, decisão 4).
-- [ ] 2.2 `pnpm db:generate` e revisar a migração gerada (só `CREATE TABLE`).
-- [ ] 2.3 `src/lib/tutorials.ts` (`server-only`): `listWatchedIds(userId)`,
+- [x] 2.2 `pnpm db:generate` e revisar a migração gerada (só `CREATE TABLE`).
+- [x] 2.3 `src/lib/tutorials.ts` (`server-only`): `listWatchedIds(userId)`,
   `markWatched(userId, videoId)` com `onConflictDoNothing`, `unmarkWatched(userId, videoId)`.
-- [ ] 2.4 `src/db/tutorials.test.ts` com PGlite: marcar duas vezes mantém o primeiro
+- [x] 2.4 `src/db/tutorials.test.ts` com PGlite: marcar duas vezes mantém o primeiro
   `watched_at`; desmarcar remove; ids de outro usuário não aparecem; apagar o usuário apaga o
   progresso.
 
