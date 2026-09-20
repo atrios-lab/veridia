@@ -8,6 +8,7 @@ import {
   integer,
   jsonb,
   pgTable,
+  primaryKey,
   text,
   timestamp,
   uniqueIndex,
@@ -716,3 +717,84 @@ export const emailBounces = pgTable("email_bounces", {
     .notNull()
     .defaultNow(),
 });
+
+/**
+ * The platform's video tutorials: what the Treinamento screen of every
+ * office lists. No tenant slug, and the first table in this schema whose
+ * rows are written from the panel without one. The rule that makes that
+ * safe, for this table and any global one after it: writing requires a
+ * platform permission (`tutorials.manage`, held by the superadmin role
+ * alone, see src/core/auth/roles.ts), and reading returns the same rows to
+ * every office. A row is a draft until `published_at` is set; only
+ * published rows reach an office.
+ *
+ * The files live in the deploy's Blob store under `treinamento/` (or under
+ * `public/uploads/treinamento/` in development); the row keeps the public
+ * URL, as the brand images do.
+ */
+export const tutorials = pgTable(
+  "tutorials",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    title: text("title").notNull(),
+    description: text("description").notNull().default(""),
+    /** Read from the file in the browser at upload time; never typed. */
+    durationSeconds: integer("duration_seconds").notNull(),
+    videoPath: text("video_path").notNull(),
+    /** Null: uploaded without captions. */
+    captionsPath: text("captions_path"),
+    /** The panel route the video teaches; null for the panel as a whole. */
+    route: text("route"),
+    /** Part of the "Primeiros passos" trail the overview walks through. */
+    trail: boolean("trail").notNull().default(true),
+    /** Trail order and list order. Moving a video swaps this with a
+     * neighbour's; a new one takes the highest value plus one. */
+    position: integer("position").notNull(),
+    publishedAt: timestamp("published_at", { withTimezone: true }),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    /** user.id of the platform account that uploaded it. */
+    createdBy: text("created_by"),
+  },
+  (t) => [
+    index("tutorials_published_at").on(t.publishedAt),
+    index("tutorials_position").on(t.position),
+  ],
+);
+
+/**
+ * Which video tutorials a person has watched, and when they first finished
+ * each one. Keyed by a person rather than by an office, and on purpose:
+ * the progress belongs to the account, not to the serventia, so it follows
+ * the person to any machine they sign in on (a counter shares its
+ * computer; localStorage would show one clerk the other's progress, or
+ * none). There is no tenant slug because a user belongs to exactly one
+ * office and every read and write here goes through the session's own user
+ * id, which getSession() has already bound to the office of the host (see
+ * src/lib/session.ts).
+ *
+ * Deleting the video deletes the progress of everyone in it; unpublishing
+ * it does not, so a video taken down and put back keeps its ticks. Rows go
+ * with the account too.
+ */
+export const tutorialProgress = pgTable(
+  "tutorial_progress",
+  {
+    userId: text("user_id")
+      .notNull()
+      .references(() => user.id, { onDelete: "cascade" }),
+    videoId: uuid("video_id")
+      .notNull()
+      .references(() => tutorials.id, { onDelete: "cascade" }),
+    /** The first time the video reached its end, or was marked by hand.
+     * Marking again never moves it: "assistido em" is the first time. */
+    watchedAt: timestamp("watched_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (t) => [primaryKey({ columns: [t.userId, t.videoId] })],
+);

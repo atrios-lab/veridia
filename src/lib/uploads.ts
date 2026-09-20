@@ -20,6 +20,12 @@ import {
   checkBrandImage,
   describeBrandImageProblem,
 } from "@/core/tenant/brand-image.ts";
+import {
+  TUTORIAL_FOLDER,
+  TUTORIAL_MIME_TYPES,
+  type TutorialFileKind,
+  tutorialFilePath,
+} from "@/core/tutorials/video.ts";
 
 export interface StoredAttachment {
   storedName: string;
@@ -319,4 +325,52 @@ export async function storeBrandImage(
   const storedName = brandImageFileName(file.type, randomUUID(), tenantSlug);
   const bytes = Buffer.from(await file.arrayBuffer());
   return storeBrandBytes(bytes, storedName, file.type);
+}
+
+/**
+ * Stores one tutorial file (the MP4 or its WebVTT captions) the platform
+ * account sent through the server action: development, where no store is
+ * configured and the file goes to disk under `public/`, served by Next
+ * itself, like the brand images. In a deploy the browser uploads straight
+ * to the store (see src/app/api/treinamento/upload/route.ts) and this
+ * function is never the path a video takes: it would not fit in a function's
+ * request body. Kept able to write to the store anyway, so a captions file,
+ * which is tiny, can go either way.
+ *
+ * Returns the public URL the row stores. Validation is the caller's
+ * (`checkTutorialFile`), before the bytes are read.
+ */
+export async function storeTutorialFile(
+  bytes: Buffer,
+  kind: TutorialFileKind,
+  id: string,
+): Promise<string> {
+  const storedPath = tutorialFilePath(kind, id);
+  if (process.env.BLOB_READ_WRITE_TOKEN) {
+    const blob = await put(storedPath, bytes, {
+      access: "public",
+      contentType: TUTORIAL_MIME_TYPES[kind],
+      addRandomSuffix: false,
+    });
+    return blob.url;
+  }
+
+  assertDiskFallbackAllowed();
+
+  const path = join(resolve("./public/uploads"), storedPath);
+  await mkdir(dirname(path), { recursive: true });
+  await writeFile(path, bytes);
+  return `/uploads/${storedPath}`;
+}
+
+/**
+ * Removes a tutorial file by the public URL the row stored: a store URL is
+ * deleted there, a `/uploads/...` path under `public/`. Best-effort, like
+ * `deleteStoredFile`: the row is the source of truth.
+ */
+export async function deleteTutorialFile(url: string): Promise<void> {
+  if (url.startsWith("http")) return deleteStoredFile(url);
+  if (url.startsWith(`/uploads/${TUTORIAL_FOLDER}/`)) {
+    return deleteStoredFile(join(resolve("./public"), url));
+  }
 }

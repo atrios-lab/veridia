@@ -26,7 +26,9 @@ for (const file of PATTERNS.flatMap((p) => globSync(p))) {
 
   for (const block of blocks) {
     if (!block.includes(".delete(")) continue;
-    if (block.includes("recordAudit(")) continue;
+    // recordAuditWith is the same trail, written through the database the
+    // caller passed in (the `...With(db)` shape every testable lib uses).
+    if (/recordAudit(?:With)?\(/.test(block)) continue;
 
     const name = block.match(/function (\w+)/)?.[1] ?? "(anônima)";
     const line =
