@@ -312,7 +312,15 @@ export async function deleteTutorialWith(
   const current = await getTutorialWith(database, id);
   if (!current) return null;
   await database.delete(tutorials).where(eq(tutorials.id, id));
-  await audit(database, "tutorial.delete", id, actorId);
+  // Written out rather than through `audit()` above: the deletion and its
+  // trail stay in one function, where check:destructive can see them.
+  await recordAuditWith(database, {
+    tenantSlug: SUPERADMIN_TENANT_SLUG,
+    actorId,
+    action: "tutorial.delete",
+    targetType: "tutorial",
+    targetId: id,
+  });
   return [current.videoPath, current.captionsPath].filter(
     (path): path is string => path !== null,
   );
@@ -373,8 +381,14 @@ export async function markWatched(
   return markWatchedWith(db, userId, videoId);
 }
 
+/**
+ * "Desfazer" on a tick. The one deletion here that is the person's own,
+ * so its trail goes under their office, like everything else an office
+ * user does: the platform slug is for the platform account only.
+ */
 export async function unmarkWatchedWith(
   database: Database,
+  tenantSlug: string,
   userId: string,
   videoId: string,
 ): Promise<void> {
@@ -386,11 +400,19 @@ export async function unmarkWatchedWith(
         eq(tutorialProgress.videoId, videoId),
       ),
     );
+  await recordAuditWith(database, {
+    tenantSlug,
+    actorId: userId,
+    action: "tutorial-progress.unmark",
+    targetType: "tutorial",
+    targetId: videoId,
+  });
 }
 
 export async function unmarkWatched(
+  tenantSlug: string,
   userId: string,
   videoId: string,
 ): Promise<void> {
-  return unmarkWatchedWith(db, userId, videoId);
+  return unmarkWatchedWith(db, tenantSlug, userId, videoId);
 }

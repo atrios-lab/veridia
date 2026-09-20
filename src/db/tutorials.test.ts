@@ -155,7 +155,7 @@ test("marking twice keeps the first watched_at; unmarking removes the row", asyn
     .where(eq(tutorialProgress.userId, ANA));
   assert.equal(after.watchedAt.getTime(), backdated.watchedAt.getTime());
 
-  await unmarkWatchedWith(db, ANA, um.id);
+  await unmarkWatchedWith(db, "marinho", ANA, um.id);
   assert.equal((await listWatchedIdsWith(db, ANA)).size, 0);
   await markWatchedWith(db, ANA, um.id);
 });

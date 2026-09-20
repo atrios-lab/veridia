@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { getSession } from "@/lib/session.ts";
+import { getTenant } from "@/lib/tenant.ts";
 import { markWatched, unmarkWatched } from "@/lib/tutorials.ts";
 
 export type ProgressState =
@@ -28,7 +29,8 @@ async function setWatched(
       const accepted = await markWatched(session.user.id, videoId);
       if (!accepted) return { status: "error", message: UNKNOWN_VIDEO };
     } else {
-      await unmarkWatched(session.user.id, videoId);
+      const tenant = await getTenant();
+      await unmarkWatched(tenant.slug, session.user.id, videoId);
     }
   } catch (error) {
     console.error("ajuda.progress", error);

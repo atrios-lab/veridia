@@ -167,7 +167,12 @@ o `TUTORIALS.length === 0` de hoje.
 `SUPERADMIN_TENANT_SLUG` ("atrios"), nunca com a serventia em que a conta estava logada: o
 que ela fez não é da serventia, e listar sob a serventia enganaria quem lesse a auditoria dela.
 Ações: `tutorial.create`, `tutorial.update`, `tutorial.publish`, `tutorial.unpublish`,
-`tutorial.delete`, com `targetId` o uuid.
+`tutorial.move`, `tutorial.delete`, com `targetId` o uuid.
+
+A única deleção que não é da plataforma é "Desfazer" numa marca de assistido
+(`unmarkWatched`): o verificador `check:destructive` exige trilha em toda deleção, e ela vai
+sob a serventia da sessão, como tudo que um usuário da serventia faz
+(`tutorial-progress.unmark`). Marcar continua sem auditoria: é um insert idempotente.
 
 ## Risks / Trade-offs
 
