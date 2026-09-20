@@ -87,11 +87,12 @@
 
 ## 7. Fechamento
 
-- [ ] 7.1 Migração 0023 no Homolog (pooler em modo sessão, aplicada em 19/09) e em produção
-  (`POSTGRES_URL_NON_POOLING`), antes do merge.
-- [ ] 7.2 Conferir no navegador como `superadmin`: subir um MP4 com legenda em modo disco, ver o
+- [x] 7.1 Migração 0023 no Homolog (pooler em modo sessão, aplicada em 19/09) e em produção
+  (`POSTGRES_URL_NON_POOLING`, aplicada em 20/09), antes do merge.
+- [x] 7.2 Conferir no navegador como `superadmin`: subir um MP4 com legenda em modo disco, ver o
   rascunho, publicar, ver em `/admin/ajuda` de outra serventia, mover, despublicar, excluir. Como
-  `admin`: 404 em `/admin/ajuda/gerenciar`, sem "Gerenciar vídeos". Sem erro de CSP.
-- [ ] 7.3 `pnpm typecheck`, `pnpm lint`, `pnpm test`; PR em cima de
+  `admin`: 404 em `/admin/ajuda/gerenciar`, sem "Gerenciar vídeos". Sem erro de CSP. Feito em
+  19/09 e 20/09 no Homolog; revelou que o sondador de duração precisa de `blob:` no `media-src`.
+- [x] 7.3 `pnpm typecheck`, `pnpm lint`, `pnpm test`; PR em cima de
   `claude/admin-tutorial-videos-module-1f08f1`, ou na mesma branch se o #129 ainda não tiver sido
   mergeado. Ao arquivar, arquivar `videos-aula-no-painel` antes desta.
