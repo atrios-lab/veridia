@@ -15,8 +15,8 @@ const BASE = {
   blobPublicHost: undefined,
 };
 
-test("without a store, media-src is 'self' and nothing else", () => {
-  assert.equal(directive(buildCsp(BASE), "media-src"), "'self'");
+test("without a store, media-src is 'self' and the local blob: scheme", () => {
+  assert.equal(directive(buildCsp(BASE), "media-src"), "'self' blob:");
 });
 
 test("the store host reaches img-src, media-src and connect-src, exact and once", () => {
@@ -27,7 +27,7 @@ test("the store host reaches img-src, media-src and connect-src, exact and once"
   );
   assert.equal(
     directive(csp, "media-src"),
-    "'self' https://store.example.test",
+    "'self' blob: https://store.example.test",
   );
   assert.equal(
     directive(csp, "connect-src"),

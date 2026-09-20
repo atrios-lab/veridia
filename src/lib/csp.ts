@@ -32,8 +32,10 @@ export function buildCsp({ nonce, isDev, blobPublicHost }: CspInput): string {
     "font-src 'self'",
     // The <video> and <track> of a tutorial, uploaded to the store by the
     // platform account. Without this directive the default falls back to
-    // 'self' and the player shows a broken file.
-    `media-src 'self'${blob}`,
+    // 'self' and the player shows a broken file. `blob:` is for the upload
+    // form, which reads a video's duration by loading the picked file into
+    // an off-screen <video> through an object URL before any byte is sent.
+    `media-src 'self' blob:${blob}`,
     // The citizen's attachments are uploaded by the browser straight to the
     // Blob store, so the page has to be allowed to talk to it: vercel.com is
     // the API the client SDK posts to, and the store's own host is where it

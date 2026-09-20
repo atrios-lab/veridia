@@ -43,8 +43,9 @@ estão sendo preparados, sem erro. Uma sessão com `tutorials.manage` SHALL ver 
 
 A tela SHALL tocar o vídeo em um elemento `<video>` do navegador, com controles, legenda em
 português como faixa de legendas quando o vídeo tem legenda, e sem nenhum script, iframe ou
-recurso de terceiro. A política de conteúdo SHALL permitir mídia apenas de `'self'` e do host
-do store configurado para o deploy, exato, sem curinga. A tela SHALL aceitar `?video=<id>`
+recurso de terceiro. A política de conteúdo SHALL permitir mídia apenas de `'self'`, do
+esquema `blob:` da própria página (usado pelo formulário para ler a duração do arquivo antes
+do envio) e do host do store configurado para o deploy, exato, sem curinga. A tela SHALL aceitar `?video=<id>`
 para abrir um vídeo específico; sem o parâmetro, com id inexistente ou com id de rascunho,
 SHALL abrir o próximo não assistido da trilha ou, na falta, o primeiro publicado.
 
@@ -59,8 +60,8 @@ SHALL abrir o próximo não assistido da trilha ou, na falta, o primeiro publica
 
 #### Scenario: Mídia só do store do deploy
 - **WHEN** a resposta de uma rota do painel é inspecionada num deploy com store configurado
-- **THEN** o cabeçalho `Content-Security-Policy` contém `media-src 'self' https://<host do
-  store>` e nada mais nessa diretiva
+- **THEN** o cabeçalho `Content-Security-Policy` contém `media-src 'self' blob: https://<host
+  do store>` e nada mais nessa diretiva
 
 ### Requirement: Progresso é da pessoa e acompanha a conta
 
