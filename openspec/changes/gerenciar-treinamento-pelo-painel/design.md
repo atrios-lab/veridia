@@ -65,8 +65,9 @@ saem. As funções de `progress.ts` não mudam de assinatura: recebem a lista j�
 `position` que o lib devolve.
 
 `tutorial_progress.video_id` passa de `text` para `uuid` com chave estrangeira para
-`tutorials.id` e `on delete cascade`. A tabela está vazia em todo ambiente (criada em 19/09
-sem nenhum vídeo no catálogo), então o `ALTER COLUMN ... TYPE uuid` não converte linha nenhuma.
+`tutorials.id` e `on delete cascade`. A migração apaga as linhas existentes antes de converter:
+cada uma guardava o slug de uma entrada do catálogo em código, que a tabela nova não tem, e a
+chave estrangeira recusaria todas. Produção não tem nenhuma (nenhum vídeo foi publicado).
 Excluir um vídeo leva o progresso junto, que é o que se espera.
 
 ### 2. Upload direto ao Blob, com fallback em disco só em desenvolvimento
@@ -175,9 +176,11 @@ Ações: `tutorial.create`, `tutorial.update`, `tutorial.publish`, `tutorial.unp
 - [Token de upload emitido e arquivo nunca associado a uma linha] → blob órfão, inofensivo;
   quem pode subir é uma conta só. Sem varredura nesta change.
 - [Superadmin publica por engano num piscar] → rascunho por padrão; publicar é ação separada.
-- [`ALTER COLUMN video_id TYPE uuid` com linha existente] → tabela vazia em Homolog e
-  produção, confirmado em 19/09; a migração ainda assim usa `USING video_id::uuid`, que falha
-  alto se houver linha inválida em vez de corromper.
+- [`ALTER COLUMN video_id TYPE uuid` com linha existente] → a migração apaga toda linha de
+  `tutorial_progress` antes de converter, de propósito: cada uma aponta para um slug do catálogo
+  em código, que não existe na tabela nova, e a chave estrangeira recusaria todas. Produção não
+  tem nenhuma (nenhum vídeo foi publicado); o Homolog tinha marcas de teste, descobertas quando
+  o `USING` falhou alto em 19/09, como previsto.
 - [Um registrador ganhar `tutorials.manage` por engano] → só o papel `superadmin`, que não é
   atribuível pelo painel (`PANEL_ROLES`), e o teste percorre `OFFICE_PERMISSIONS`.
 - [Primeira tabela global cria precedente confuso] → comentário na tabela e esta decisão 1

@@ -87,7 +87,7 @@
 
 ## 7. Fechamento
 
-- [ ] 7.1 Migração 0023 no Homolog (pooler em modo sessão) e em produção
+- [ ] 7.1 Migração 0023 no Homolog (pooler em modo sessão, aplicada em 19/09) e em produção
   (`POSTGRES_URL_NON_POOLING`), antes do merge.
 - [ ] 7.2 Conferir no navegador como `superadmin`: subir um MP4 com legenda em modo disco, ver o
   rascunho, publicar, ver em `/admin/ajuda` de outra serventia, mover, despublicar, excluir. Como

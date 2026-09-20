@@ -14,11 +14,18 @@ CREATE TABLE "tutorials" (
 	"created_by" text
 );
 --> statement-breakpoint
--- Revisado a mao: o drizzle-kit gera o SET DATA TYPE sem USING, e o Postgres
--- nao converte text em uuid sozinho. A tabela esta vazia em todo ambiente
--- (criada na 0022 sem nenhum video no catalogo), entao nenhuma linha e
--- convertida; o USING fica para a conversao falhar alto, nunca em silencio,
--- se algum ambiente tiver uma linha que nao seja um uuid.
+-- Revisado a mao. Ate aqui video_id guardava o slug de uma entrada do
+-- catalogo em codigo (src/core/tutorials/catalog.ts), que deixa de existir
+-- nesta change: toda linha gravada ate agora aponta para um video que a
+-- tabela "tutorials", recem-criada e vazia, nao tem, e a chave estrangeira
+-- abaixo recusaria cada uma delas. Nenhuma foi gravada por serventia em
+-- producao (nenhum video chegou a ser publicado); no Homolog ha marcas de
+-- teste feitas com entradas temporarias. Limpar e o unico resultado
+-- correto, e fica explicito aqui em vez de escondido num USING que falharia.
+DELETE FROM "tutorial_progress";--> statement-breakpoint
+-- O drizzle-kit gera o SET DATA TYPE sem USING, e o Postgres nao converte
+-- text em uuid sozinho. Com a tabela vazia nada e convertido; o USING fica
+-- para a conversao falhar alto se algum dia uma linha escapar do DELETE.
 ALTER TABLE "tutorial_progress" ALTER COLUMN "video_id" SET DATA TYPE uuid USING "video_id"::uuid;--> statement-breakpoint
 CREATE INDEX "tutorials_published_at" ON "tutorials" USING btree ("published_at");--> statement-breakpoint
 CREATE INDEX "tutorials_position" ON "tutorials" USING btree ("position");--> statement-breakpoint
