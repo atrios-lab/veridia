@@ -61,6 +61,7 @@ export function TutorialPlayer({
       aria-labelledby="tutorial-title"
       className="rounded-[14px] border border-admin-border bg-admin-card p-5"
     >
+      {/* biome-ignore lint/a11y/useMediaCaption: the <track> renders whenever the video has captions; a video without them is the platform's own call, flagged "Sem legenda" where it is managed. */}
       <video
         key={tutorial.id}
         controls
@@ -81,13 +82,15 @@ export function TutorialPlayer({
         }}
       >
         <source src={tutorial.videoUrl} type="video/mp4" />
-        <track
-          kind="captions"
-          src={tutorial.captionsUrl}
-          srcLang="pt-BR"
-          label="Português"
-          default
-        />
+        {tutorial.captionsUrl && (
+          <track
+            kind="captions"
+            src={tutorial.captionsUrl}
+            srcLang="pt-BR"
+            label="Português"
+            default
+          />
+        )}
         Seu navegador não toca este vídeo.
       </video>
 

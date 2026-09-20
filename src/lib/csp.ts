@@ -9,30 +9,19 @@ export interface CspInput {
   /** Development needs `unsafe-eval` for the dev bundler; nothing else does. */
   isDev: boolean;
   /**
-   * The one Vercel Blob store this deploy writes brand images and citizen
-   * attachments to (BLOB_PUBLIC_HOST). Undefined without Blob configured,
-   * and img-src and connect-src simply do not grow that source.
+   * The one Vercel Blob store this deploy writes to (BLOB_PUBLIC_HOST):
+   * brand images, citizen attachments and the platform's video tutorials
+   * all live there, each under its own folder. Undefined without Blob
+   * configured (development), and img-src, media-src and connect-src
+   * simply do not grow that source: the files are then under `public/`,
+   * served by Next itself, which is `'self'`.
    */
   blobPublicHost: string | undefined;
-  /**
-   * The hosts the platform's video tutorials and their captions live on,
-   * derived from the catalog (src/core/tutorials/catalog.ts). The catalog is
-   * the same in every environment, so a video plays in development exactly
-   * as in production, whatever the Blob store above is set to. Empty means
-   * `media-src 'self'` and nothing else.
-   */
-  mediaHosts: readonly string[];
 }
 
 // Exact hosts only, never a wildcard, in every directive below.
-export function buildCsp({
-  nonce,
-  isDev,
-  blobPublicHost,
-  mediaHosts,
-}: CspInput): string {
+export function buildCsp({ nonce, isDev, blobPublicHost }: CspInput): string {
   const blob = blobPublicHost ? ` https://${blobPublicHost}` : "";
-  const media = mediaHosts.map((host) => ` https://${host}`).join("");
   return [
     "default-src 'self'",
     `script-src 'self' 'nonce-${nonce}'${isDev ? " 'unsafe-eval'" : ""}`,
@@ -41,9 +30,10 @@ export function buildCsp({
     "style-src 'self' 'unsafe-inline'",
     `img-src 'self' data: blob:${blob}`,
     "font-src 'self'",
-    // The <video> and <track> of a tutorial. Without this directive the
-    // default falls back to 'self' and the player shows a broken file.
-    `media-src 'self'${media}`,
+    // The <video> and <track> of a tutorial, uploaded to the store by the
+    // platform account. Without this directive the default falls back to
+    // 'self' and the player shows a broken file.
+    `media-src 'self'${blob}`,
     // The citizen's attachments are uploaded by the browser straight to the
     // Blob store, so the page has to be allowed to talk to it: vercel.com is
     // the API the client SDK posts to, and the store's own host is where it

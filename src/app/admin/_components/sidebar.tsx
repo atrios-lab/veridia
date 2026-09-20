@@ -2,7 +2,6 @@ import Image from "next/image";
 import { can } from "@/core/auth/roles.ts";
 
 import type { Tenant } from "@/core/tenant/schema.ts";
-import { TUTORIALS } from "@/core/tutorials/catalog.ts";
 import { ADMIN_NAV } from "./nav.ts";
 import { AdminSidebarNav } from "./sidebar-nav.tsx";
 
@@ -31,6 +30,7 @@ export function AdminSidebar({
   tenant,
   role,
   counts = {},
+  showTutorials = true,
   className = "",
 }: {
   tenant: Tenant;
@@ -38,6 +38,9 @@ export function AdminSidebar({
   role: string;
   /** Badge count per item href, e.g. open requests for "/admin/pedidos". */
   counts?: Record<string, number>;
+  /** Whether "Treinamento" has somewhere to lead: a published video, or
+   * the management screen for the account that can reach it. */
+  showTutorials?: boolean;
   /**
    * How this copy is laid out: the fixed column hides itself on a phone, the
    * drawer hides itself on a desktop. The bar itself is the same either way.
@@ -46,12 +49,12 @@ export function AdminSidebar({
 }) {
   // Hiding a link is a courtesy, not a gate: each route re-checks on the
   // server, so a person who types the URL still gets refused there. The
-  // tutorials item is hidden for a different reason, an empty catalog:
-  // the route answers either way, it just has nothing to show yet.
+  // tutorials item is hidden for a different reason, nothing published
+  // yet: the route answers either way, it just has nothing to show.
   const items = ADMIN_NAV.filter(
     (item) =>
       (!item.permission || can(role, item.permission)) &&
-      !(item.href === "/admin/ajuda" && TUTORIALS.length === 0),
+      !(item.href === "/admin/ajuda" && !showTutorials),
   );
 
   return (

@@ -1,8 +1,8 @@
 import { headers } from "next/headers";
 import Link from "next/link";
 import type { ReactNode } from "react";
-import { TUTORIALS } from "@/core/tutorials/catalog.ts";
 import { tutorialForRoute } from "@/core/tutorials/progress.ts";
+import { listPublishedTutorials } from "@/lib/tutorials.ts";
 import { AdminIcon } from "./icon.tsx";
 
 /**
@@ -19,9 +19,9 @@ import { AdminIcon } from "./icon.tsx";
  *
  * "Como usar esta tela" is the one thing here no screen asks for: the
  * header reads the route the middleware forwarded and looks it up in the
- * tutorial catalog itself, so a video recorded for a screen reaches that
- * screen with no edit to it. Async for that one `headers()` call; every
- * caller is a server component, so nothing changes for them.
+ * published tutorials itself, so a video published for a screen reaches
+ * that screen with no edit to it. One indexed read per screen render, for
+ * that; every caller is a server component, so nothing changes for them.
  */
 export async function AdminPageHeader({
   title,
@@ -39,9 +39,9 @@ export async function AdminPageHeader({
 }) {
   const pathname = (await headers()).get("x-pathname");
   const tutorial =
-    // The tutorials screen teaching itself would be one link too many.
-    pathname && pathname !== "/admin/ajuda"
-      ? tutorialForRoute(TUTORIALS, pathname)
+    // The tutorials screens teaching themselves would be one link too many.
+    pathname && !pathname.startsWith("/admin/ajuda")
+      ? tutorialForRoute(await listPublishedTutorials(), pathname)
       : undefined;
 
   return (

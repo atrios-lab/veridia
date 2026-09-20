@@ -1,7 +1,5 @@
 import { getSessionCookie } from "better-auth/cookies";
 import { type NextRequest, NextResponse } from "next/server";
-import { TUTORIALS } from "@/core/tutorials/catalog.ts";
-import { mediaHosts } from "@/core/tutorials/progress.ts";
 import { buildCsp } from "@/lib/csp.ts";
 
 const LOGIN_PATH = "/admin/login";
@@ -53,13 +51,10 @@ const isDev = process.env.NODE_ENV === "development";
  * prop; Next does not stamp author-written tags on its own.
  */
 // Exact host only, never a wildcard: it names the one Vercel Blob store this
-// deploy writes brand images to (see next.config.ts and src/lib/uploads.ts).
-// Undefined in an environment without Blob configured, and img-src simply
-// does not grow that source. The video tutorials' hosts come from the
-// catalog instead, the same in every environment; the directives themselves
-// are assembled in src/lib/csp.ts.
+// deploy writes to (see next.config.ts and src/lib/uploads.ts). Undefined in
+// an environment without Blob configured, and the directives that name it
+// simply do not grow that source; they are assembled in src/lib/csp.ts.
 const blobPublicHost = process.env.BLOB_PUBLIC_HOST;
-const tutorialHosts = mediaHosts(TUTORIALS);
 
 // The pathname is forwarded as a header on every request: the dashboard
 // layout has no other way to read it, and it needs it to send a revoked or
@@ -69,12 +64,7 @@ const tutorialHosts = mediaHosts(TUTORIALS);
 export function middleware(request: NextRequest) {
   const pathname = request.nextUrl.pathname;
   const nonce = Buffer.from(crypto.randomUUID()).toString("base64");
-  const csp = buildCsp({
-    nonce,
-    isDev,
-    blobPublicHost,
-    mediaHosts: tutorialHosts,
-  });
+  const csp = buildCsp({ nonce, isDev, blobPublicHost });
 
   const requestHeaders = new Headers(request.headers);
   requestHeaders.set("x-pathname", pathname);

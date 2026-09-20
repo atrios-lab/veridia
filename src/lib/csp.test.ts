@@ -13,36 +13,27 @@ const BASE = {
   nonce: "abc",
   isDev: false,
   blobPublicHost: undefined,
-  mediaHosts: [],
 };
 
-test("with no tutorial in the catalog, media-src is 'self' and nothing else", () => {
+test("without a store, media-src is 'self' and nothing else", () => {
   assert.equal(directive(buildCsp(BASE), "media-src"), "'self'");
 });
 
-test("each media host is listed once, as an exact https origin", () => {
-  const csp = buildCsp({
-    ...BASE,
-    mediaHosts: ["abc123.public.blob.vercel-storage.com"],
-  });
-  assert.equal(
-    directive(csp, "media-src"),
-    "'self' https://abc123.public.blob.vercel-storage.com",
-  );
-  assert.ok(!csp.includes("*"));
-});
-
-test("the Blob store host reaches img-src and connect-src, not media-src", () => {
+test("the store host reaches img-src, media-src and connect-src, exact and once", () => {
   const csp = buildCsp({ ...BASE, blobPublicHost: "store.example.test" });
   assert.equal(
     directive(csp, "img-src"),
     "'self' data: blob: https://store.example.test",
   );
   assert.equal(
+    directive(csp, "media-src"),
+    "'self' https://store.example.test",
+  );
+  assert.equal(
     directive(csp, "connect-src"),
     "'self' https://vercel.com https://store.example.test",
   );
-  assert.equal(directive(csp, "media-src"), "'self'");
+  assert.ok(!csp.includes("*"));
 });
 
 test("the nonce lands in script-src, and unsafe-eval only in development", () => {

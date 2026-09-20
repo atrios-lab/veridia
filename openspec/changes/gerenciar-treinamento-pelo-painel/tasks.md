@@ -45,43 +45,43 @@
   `treinamento/<id>.<ext>` ou disco em `public/uploads/treinamento/`, devolvendo URL pública ou
   caminho `/uploads/treinamento/...`), reaproveitando `assertDiskFallbackAllowed` e
   `deleteStoredFile`.
-- [ ] 4.2 `src/app/api/treinamento/upload/route.ts`: 404 sem `BLOB_READ_WRITE_TOKEN`; 404 sem
+- [x] 4.2 `src/app/api/treinamento/upload/route.ts`: 404 sem `BLOB_READ_WRITE_TOKEN`; 404 sem
   sessão ou sem `tutorials.manage`; `handleUpload` com `isGeneratedTutorialPath`, tipos e limite
   por extensão do caminho; `addRandomSuffix: false` (o id já é único e a linha guarda a URL).
-- [ ] 4.3 `src/lib/csp.ts`: `media-src 'self'` mais `https://<blobPublicHost>` quando definido;
+- [x] 4.3 `src/lib/csp.ts`: `media-src 'self'` mais `https://<blobPublicHost>` quando definido;
   remover `mediaHosts` do `CspInput`; `csp.test.ts` ajustado. `src/middleware.ts` deixa de
   importar o catálogo.
 
 ## 5. Tela de gerenciamento
 
-- [ ] 5.1 `ajuda/gerenciar/actions.ts`: `createTutorialAction`, `updateTutorialAction`,
+- [x] 5.1 `ajuda/gerenciar/actions.ts`: `createTutorialAction`, `updateTutorialAction`,
   `publishTutorialAction`, `unpublishTutorialAction`, `moveTutorialAction`,
   `deleteTutorialAction`; todas exigem `tutorials.manage`; criação e edição aceitam ou os
   arquivos (server action, modo disco) ou as URLs já enviadas ao store (modo direto), validando
   que a URL está sob a pasta de treinamento do host do store; `revalidatePath` de `/admin/ajuda`,
   `/admin/ajuda/gerenciar` e `/admin`.
-- [ ] 5.2 `ajuda/gerenciar/_components/tutorial-form.tsx` (client): campos do formulário, `<select>`
+- [x] 5.2 `ajuda/gerenciar/_components/tutorial-form.tsx` (client): campos do formulário, `<select>`
   da tela ensinada com os itens internos de `ADMIN_NAV`, leitura da duração por `<video>` fora
   da tela em `loadedmetadata`, upload direto com `upload()` e `multipart: true` quando
   `enabled`, barra de progresso, validação de tipo e tamanho antes de enviar; no modo disco,
   envia os arquivos no `FormData`. Reusado para editar (arquivos opcionais).
-- [ ] 5.3 `ajuda/gerenciar/_components/tutorial-admin-list.tsx`: linha por vídeo com posição,
+- [x] 5.3 `ajuda/gerenciar/_components/tutorial-admin-list.tsx`: linha por vídeo com posição,
   selo "Rascunho", "sem legenda", tela ensinada, duração, botões subir/descer, publicar ou
   despublicar, editar (abre o formulário), excluir via `ConfirmAction` com o aviso do progresso,
   e "Conferir" que expande o player.
-- [ ] 5.4 `ajuda/gerenciar/page.tsx`: `notFound()` sem `tutorials.manage`; aviso fixo de conteúdo
+- [x] 5.4 `ajuda/gerenciar/page.tsx`: `notFound()` sem `tutorials.manage`; aviso fixo de conteúdo
   da plataforma; `AdminPageHeader` com `back` para `/admin/ajuda` e ação "Novo vídeo"; lista e
   formulário; passa `enabled` do Blob ao cliente.
 
 ## 6. Leitura pelo banco
 
-- [ ] 6.1 `ajuda/page.tsx`: `listPublishedTutorials()` no lugar de `TUTORIALS`; id de rascunho cai
+- [x] 6.1 `ajuda/page.tsx`: `listPublishedTutorials()` no lugar de `TUTORIALS`; id de rascunho cai
   no fallback; ação "Gerenciar vídeos" no cabeçalho para quem tem `tutorials.manage`;
   `tutorial-player.tsx` só renderiza `<track>` com legenda; `ajuda/actions.ts` valida contra os
   publicados.
-- [ ] 6.2 `(dashboard)/page.tsx` e `page-header.tsx`: catálogo via `listPublishedTutorials()`
+- [x] 6.2 `(dashboard)/page.tsx` e `page-header.tsx`: catálogo via `listPublishedTutorials()`
   (o cabeçalho faz a consulta só quando há `x-pathname`, e ela é uma leitura leve com índice).
-- [ ] 6.3 `layout.tsx`: `publishedTutorialCount()`; `showTutorials = count > 0 || can(role,
+- [x] 6.3 `layout.tsx`: `publishedTutorialCount()`; `showTutorials = count > 0 || can(role,
   "tutorials.manage")` passado a `AdminSidebar`, que substitui o `TUTORIALS.length === 0`.
   `nav.test.ts` intacto.
 

@@ -1,4 +1,5 @@
-import { TUTORIALS } from "@/core/tutorials/catalog.ts";
+import Link from "next/link";
+import { can } from "@/core/auth/roles.ts";
 import {
   isTutorialId,
   listOrder,
@@ -6,7 +7,7 @@ import {
   trailProgress,
 } from "@/core/tutorials/progress.ts";
 import { getSession } from "@/lib/session.ts";
-import { listWatchedIds } from "@/lib/tutorials.ts";
+import { listPublishedTutorials, listWatchedIds } from "@/lib/tutorials.ts";
 import { ADMIN_NAV } from "../../_components/nav.ts";
 import { AdminPageHeader } from "../../_components/page-header.tsx";
 import { TutorialList } from "./_components/tutorial-list.tsx";
@@ -26,7 +27,9 @@ const SCREEN_LABELS = new Map(
 /**
  * Open to every panel user: the layout has already required a session with
  * `admin.access`, and there is nothing here to protect beyond that. What is
- * the person's own (the ticks) is read by their own id.
+ * the person's own (the ticks) is read by their own id. Only published
+ * videos reach this screen; the platform account manages the rest one
+ * screen deeper.
  */
 export default async function TutorialsPage({
   searchParams,
@@ -37,19 +40,24 @@ export default async function TutorialsPage({
   // The layout redirects before this renders; the check keeps the type.
   if (!session) return null;
   const { video } = await searchParams;
-  const watchedIds = await listWatchedIds(session.user.id);
-  const ordered = listOrder(TUTORIALS);
+  const [tutorials, watchedIds] = await Promise.all([
+    listPublishedTutorials(),
+    listWatchedIds(session.user.id),
+  ]);
+  const ordered = listOrder(tutorials);
+  const canManage = can(session.user.role ?? "", "tutorials.manage");
 
-  // An unknown id is not a 404: the person followed a stale link, and the
-  // screen they wanted is this one. The next trail video is the best guess,
-  // then whatever comes first.
+  // An unknown id (or a draft's, which is the same thing from here) is not
+  // a 404: the person followed a stale link, and the screen they wanted is
+  // this one. The next trail video is the best guess, then whatever comes
+  // first.
   const current =
-    (video && isTutorialId(TUTORIALS, video)
-      ? TUTORIALS.find((t) => t.id === video)
+    (video && isTutorialId(tutorials, video)
+      ? tutorials.find((t) => t.id === video)
       : undefined) ??
-    nextUnwatched(TUTORIALS, watchedIds) ??
+    nextUnwatched(tutorials, watchedIds) ??
     ordered[0];
-  const progress = trailProgress(TUTORIALS, watchedIds);
+  const progress = trailProgress(tutorials, watchedIds);
 
   return (
     <>
@@ -59,6 +67,16 @@ export default async function TutorialsPage({
           progress.total > 0
             ? `Primeiros passos: ${progress.watched} de ${progress.total} assistidos. Cada vídeo mostra uma tela do painel, do jeito que ela é usada no dia a dia.`
             : "Cada vídeo mostra uma tela do painel, do jeito que ela é usada no dia a dia."
+        }
+        actions={
+          canManage ? (
+            <Link
+              href="/admin/ajuda/gerenciar"
+              className="btn btn-admin-secondary btn-md"
+            >
+              Gerenciar vídeos
+            </Link>
+          ) : undefined
         }
       />
       <main className="flex flex-col gap-4.5 px-[30px] py-7">
