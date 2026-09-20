@@ -20,15 +20,15 @@
 
 - [x] 2.1 `pnpm test src/core/tenant/tenant.test.ts` (o teste percorre o registro: schema,
   tema, isolamento por host e receita opcional)
-- [ ] 2.2 Subir o dev server e abrir `http://canguaretama.localhost:3000`: home com o título do
+- [x] 2.2 Subir o dev server e abrir `http://canguaretama.localhost:3000`: home com o título do
   ofício único, navegação com as seções das seis atribuições e contato com o cartão de endereço
   e a rota "Como chegar"
 - [x] 2.3 `pnpm biome check` e `pnpm tsc --noEmit` limpos
 
 ## 3. Pendências fora do código (registrar no PR, não executar aqui)
 
-- [ ] 3.1 Anotar no PR os passos do super admin: DNS e domínio na Vercel, verificação do domínio
+- [x] 3.1 Anotar no PR os passos do super admin: DNS e domínio na Vercel, verificação do domínio
   no Postmark seguida do preenchimento de `emailFrom`, criação das caixas `contato@`, `dpo@` e
   `nao-responda@`, `pnpm db:seed` da primeira conta e envio do convite
-- [ ] 3.2 Anotar no PR o que falta o cartório confirmar: WhatsApp, horário real, ISS, logos e
+- [x] 3.2 Anotar no PR o que falta o cartório confirmar: WhatsApp, horário real, ISS, logos e
   situação da delegação da titular
