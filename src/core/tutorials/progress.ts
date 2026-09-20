@@ -31,7 +31,7 @@ export function nextUnwatched(
   return catalog.find((t) => t.trail && !watchedIds.has(t.id));
 }
 
-/** The order the Vídeos-aula screen lists in: the trail first, in its own
+/** The order the Treinamento screen lists in: the trail first, in its own
  * order, then everything else in catalog order. A stable partition, not a
  * sort by any key. */
 export function listOrder(catalog: readonly Tutorial[]): Tutorial[] {

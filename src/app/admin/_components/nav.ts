@@ -132,7 +132,7 @@ export const ADMIN_NAV: readonly AdminNavItem[] = [
     // not: a screen that only says "estamos preparando" is a link to
     // nowhere until the first video lands.
     group: "Ajuda",
-    label: "Vídeos-aula",
+    label: "Treinamento",
     href: "/admin/ajuda",
     icon: "play",
   },

@@ -1,8 +1,8 @@
 ## ADDED Requirements
 
-### Requirement: Catálogo de vídeos-aula da plataforma
+### Requirement: Catálogo de vídeos de treinamento da plataforma
 
-Os vídeos-aula SHALL vir de um catálogo em código, único para todas as serventias, na ordem em
+Os vídeos de treinamento SHALL vir de um catálogo em código, único para todas as serventias, na ordem em
 que a trilha os apresenta. Cada entrada SHALL ter id estável, título, descrição, duração, a
 URL do vídeo, a URL da legenda em WebVTT, a rota do painel que ensina (ou nenhuma) e se faz
 parte da trilha de primeiros passos. Ids SHALL ser únicos, rotas SHALL existir no painel e as
@@ -15,9 +15,9 @@ URLs de mídia SHALL apontar para host permitido pela política de conteúdo.
 
 #### Scenario: Vídeo novo entra por código
 - **WHEN** a Átrios acrescenta uma entrada ao catálogo e faz deploy
-- **THEN** o vídeo aparece na tela de vídeos-aula de toda serventia, sem cadastro no painel
+- **THEN** o vídeo aparece na tela de vídeos de treinamento de toda serventia, sem cadastro no painel
 
-### Requirement: Tela de vídeos-aula aberta a todo usuário do painel
+### Requirement: Tela de vídeos de treinamento aberta a todo usuário do painel
 
 A rota `/admin/ajuda` SHALL existir para qualquer sessão com `admin.access`, sem permissão
 adicional, e SHALL listar os vídeos do catálogo: primeiro os da trilha, na ordem do catálogo,
@@ -32,7 +32,7 @@ estão sendo preparados, sem erro.
 
 #### Scenario: Catálogo vazio
 - **WHEN** o catálogo não tem nenhuma entrada e a pessoa abre `/admin/ajuda`
-- **THEN** a tela informa "Os vídeos-aula estão sendo preparados" e não mostra player
+- **THEN** a tela informa "Os vídeos de treinamento estão sendo preparados" e não mostra player
 
 ### Requirement: Vídeo toca no painel, em player nativo com legenda
 

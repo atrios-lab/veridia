@@ -21,7 +21,7 @@ export function TutorialList({
   screenLabels: ReadonlyMap<string, string>;
 }) {
   return (
-    <nav aria-label="Vídeos-aula" className="flex flex-col gap-1.5">
+    <nav aria-label="Treinamento" className="flex flex-col gap-1.5">
       {tutorials.map((tutorial, index) => {
         const current = tutorial.id === currentId;
         const watched = watchedIds.has(tutorial.id);

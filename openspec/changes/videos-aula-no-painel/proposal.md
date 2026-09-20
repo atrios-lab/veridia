@@ -13,7 +13,7 @@ painel não oferece isso.
 
 ## What Changes
 
-- **Uma tela de vídeos-aula no painel**, em `/admin/ajuda`, aberta a todo usuário autenticado
+- **Uma tela de vídeos de treinamento no painel**, em `/admin/ajuda`, aberta a todo usuário autenticado
   sem permissão específica. Lista os vídeos na ordem da trilha, com título, duração, a tela que
   cada um ensina e a marca de assistido. Cada vídeo toca ali mesmo, em player nativo do
   navegador, com legenda.
@@ -30,7 +30,7 @@ painel não oferece isso.
   some quando a trilha está completa.
 - **"Como usar esta tela" nas telas com vídeo.** O cabeçalho de página oferece o link para o
   vídeo daquela rota, quando o catálogo tem um.
-- **Item "Vídeos-aula" na sidebar**, num grupo "Ajuda" ao final, visível para todo papel.
+- **Item "Treinamento" na sidebar**, num grupo "Ajuda" ao final, visível para todo papel.
   Enquanto o catálogo estiver vazio, o item não é renderizado, pela regra do painel de que link
   sem destino é pior que link ausente.
 - **CSP** passa a permitir `media-src` do host do Blob, ao lado do `img-src` que já existe. Nenhum
@@ -40,11 +40,11 @@ painel não oferece isso.
 ## Capabilities
 
 ### New Capabilities
-- `admin-tutorials`: o catálogo de vídeos-aula da plataforma, a tela que os exibe e toca, o
+- `admin-tutorials`: o catálogo de vídeos de treinamento da plataforma, a tela que os exibe e toca, o
   progresso por usuário, a trilha de primeiros passos e o link contextual por tela.
 
 ### Modified Capabilities
-- `admin-shell`: a navegação ganha o grupo "Ajuda" com o item "Vídeos-aula", sem permissão,
+- `admin-shell`: a navegação ganha o grupo "Ajuda" com o item "Treinamento", sem permissão,
   omitido enquanto o catálogo está vazio; o cabeçalho de página ganha o link "Como usar esta
   tela" quando a rota tem vídeo.
 - `admin-overview`: a visão geral ganha o card da trilha de primeiros passos, com andamento e

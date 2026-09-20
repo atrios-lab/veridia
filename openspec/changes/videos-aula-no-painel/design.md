@@ -3,7 +3,7 @@
 O painel não tem hoje nenhum conteúdo de ajuda além do card "Atalhos de teclado" da visão
 geral (`keyboard-shortcuts-card.tsx`, uma lista fixa em código). Todo módulo existente é
 conteúdo da serventia: tabela com `tenantSlug`, CRUD pelo cartório, permissão `content.edit`.
-Vídeo-aula é o primeiro conteúdo da plataforma dentro do painel: igual para toda serventia,
+Vídeo de treinamento é o primeiro conteúdo da plataforma dentro do painel: igual para toda serventia,
 produzido pela Átrios, lido pelo cartório.
 
 Peças que a change reaproveita:
@@ -136,7 +136,7 @@ lugar a mais para esquecer quando um vídeo novo entra.
 
 ### 8. Item de menu só com catálogo não vazio
 
-`ADMIN_NAV` ganha `{ group: "Ajuda", label: "Vídeos-aula", href: "/admin/ajuda", icon:
+`ADMIN_NAV` ganha `{ group: "Ajuda", label: "Treinamento", href: "/admin/ajuda", icon:
 "play" }` no fim, sem `permission`. `sidebar.tsx` omite o item quando `TUTORIALS` está vazio,
 pela mesma regra que já omite rota sem permissão. A rota `/admin/ajuda` existe de qualquer
 forma e, vazia, mostra o estado "Os vídeos estão sendo preparados". O ícone `play` é novo em

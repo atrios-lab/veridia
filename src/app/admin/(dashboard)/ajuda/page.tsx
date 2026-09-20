@@ -12,7 +12,7 @@ import { AdminPageHeader } from "../../_components/page-header.tsx";
 import { TutorialList } from "./_components/tutorial-list.tsx";
 import { TutorialPlayer } from "./_components/tutorial-player.tsx";
 
-export const metadata = { title: "Vídeos-aula" };
+export const metadata = { title: "Treinamento" };
 
 // "Pedidos de serviço" next to a video that teaches /admin/pedidos: the
 // sidebar's own words, so the list never names a screen two ways.
@@ -54,7 +54,7 @@ export default async function TutorialsPage({
   return (
     <>
       <AdminPageHeader
-        title="Vídeos-aula"
+        title="Treinamento"
         description={
           progress.total > 0
             ? `Primeiros passos: ${progress.watched} de ${progress.total} assistidos. Cada vídeo mostra uma tela do painel, do jeito que ela é usada no dia a dia.`
@@ -89,7 +89,7 @@ export default async function TutorialsPage({
         ) : (
           <div className="rounded-[14px] border border-admin-border bg-admin-card px-6 py-10 text-center">
             <p className="font-serif text-[18px] font-semibold text-admin-primary">
-              Os vídeos-aula estão sendo preparados
+              Os vídeos de treinamento estão sendo preparados
             </p>
             <p className="mx-auto mt-2 max-w-[440px] text-[13.5px] leading-normal text-admin-muted">
               Assim que o primeiro estiver pronto, ele aparece aqui e na Visão

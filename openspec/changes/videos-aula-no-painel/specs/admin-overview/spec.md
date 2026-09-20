@@ -3,7 +3,7 @@
 ### Requirement: Card da trilha de primeiros passos
 
 A tela `/admin` SHALL mostrar, na coluna de cards ao lado de "Atalhos de teclado", o card
-"Primeiros passos" com o andamento da pessoa na trilha de vídeos-aula ("N de M assistidos") e
+"Primeiros passos" com o andamento da pessoa na trilha de vídeos de treinamento ("N de M assistidos") e
 o link para o próximo vídeo não assistido. O card SHALL ser omitido quando a trilha está
 completa ou quando o catálogo não tem vídeo de trilha. O andamento SHALL ser o da pessoa da
 sessão, não o da serventia.

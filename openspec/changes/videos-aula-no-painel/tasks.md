@@ -37,7 +37,7 @@
   conferindo que com catálogo vazio a diretiva é só `'self'` e que o host do catálogo aparece
   uma vez.
 
-## 4. Tela de vídeos-aula
+## 4. Tela de vídeos de treinamento
 
 - [x] 4.1 `src/app/admin/(dashboard)/ajuda/actions.ts`: `markTutorialWatchedAction(videoId)` e
   `unmarkTutorialWatchedAction(videoId)`, ambas exigindo `getSession()`, validando com
@@ -50,15 +50,15 @@
 - [x] 4.3 `ajuda/_components/tutorial-list.tsx`: lista na ordem de `listOrder`, cada item com
   título, duração formatada ("4 min"), a tela ensinada (rótulo de `ADMIN_NAV` pela rota) e a
   marca de assistido; item atual em destaque.
-- [x] 4.4 `ajuda/page.tsx`: `metadata.title = "Vídeos-aula"`, `AdminPageHeader`, resolve
+- [x] 4.4 `ajuda/page.tsx`: `metadata.title = "Treinamento"`, `AdminPageHeader`, resolve
   `?video=` (id inexistente cai no próximo não assistido ou no primeiro), renderiza player e
-  lista; estado vazio "Os vídeos-aula estão sendo preparados" sem player quando o catálogo é
+  lista; estado vazio "Os vídeos de treinamento estão sendo preparados" sem player quando o catálogo é
   vazio.
 
 ## 5. Sidebar, cabeçalho e visão geral
 
 - [x] 5.1 `icon.tsx`: ícone `play` no mesmo estilo de traço único dos demais.
-- [x] 5.2 `nav.ts`: item `{ group: "Ajuda", label: "Vídeos-aula", href: "/admin/ajuda", icon:
+- [x] 5.2 `nav.ts`: item `{ group: "Ajuda", label: "Treinamento", href: "/admin/ajuda", icon:
   "play" }` por último, sem `permission`; `sidebar.tsx` omite o item quando `TUTORIALS` está
   vazio. `nav.test.ts`: "Ajuda" é o último grupo e o item não tem permissão.
 - [x] 5.3 `page-header.tsx`: vira `async`, lê `x-pathname` via `headers()`, chama

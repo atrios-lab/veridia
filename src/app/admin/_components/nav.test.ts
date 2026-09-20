@@ -44,6 +44,6 @@ test("Ajuda is the last group, and its one item asks no permission", () => {
   assert.equal(last?.group, "Ajuda");
   assert.deepEqual(
     last?.items.map((item) => [item.label, item.href, item.permission]),
-    [["Vídeos-aula", "/admin/ajuda", undefined]],
+    [["Treinamento", "/admin/ajuda", undefined]],
   );
 });
