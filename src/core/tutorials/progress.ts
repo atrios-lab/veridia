@@ -79,26 +79,6 @@ export function tutorialForRoute(
   return best;
 }
 
-/**
- * Every host the catalog's media lives on, once each, in first-seen order:
- * what the middleware appends to `media-src`. Exact hosts, never a
- * wildcard, same rule as the other directives. An unparsable URL is
- * skipped here and rejected by catalog.test.ts.
- */
-export function mediaHosts(catalog: readonly Tutorial[]): string[] {
-  const hosts = new Set<string>();
-  for (const tutorial of catalog) {
-    for (const url of [tutorial.videoUrl, tutorial.captionsUrl]) {
-      try {
-        hosts.add(new URL(url).host);
-      } catch {
-        // Not a URL: the catalog test names the entry.
-      }
-    }
-  }
-  return [...hosts];
-}
-
 /** "4 min", "12 min", "45 s": the duration as the list shows it. */
 export function formatDuration(seconds: number): string {
   if (seconds < 60) return `${seconds} s`;

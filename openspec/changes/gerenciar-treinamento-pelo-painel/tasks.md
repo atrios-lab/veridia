@@ -1,47 +1,47 @@
 ## 1. Permissão de plataforma
 
-- [ ] 1.1 `src/core/auth/roles.ts`: `OFFICE_PERMISSIONS` (as dez de hoje), `PLATFORM_PERMISSIONS
+- [x] 1.1 `src/core/auth/roles.ts`: `OFFICE_PERMISSIONS` (as dez de hoje), `PLATFORM_PERMISSIONS
   = ["tutorials.manage"]`, `PERMISSIONS` como a união; `admin` recebe `OFFICE_PERMISSIONS`,
   `superadmin` recebe `PERMISSIONS`; comentário explicando a divisão.
-- [ ] 1.2 `roles.test.ts`: `admin` não tem nenhuma permissão de plataforma; `admin` tem todas as
+- [x] 1.2 `roles.test.ts`: `admin` não tem nenhuma permissão de plataforma; `admin` tem todas as
   da serventia; `superadmin` tem `tutorials.manage`; `staff` não.
 
 ## 2. Núcleo: tipo, validação e ordem
 
-- [ ] 2.1 `src/core/tutorials/catalog.ts`: remover `TUTORIALS`; `Tutorial.captionsUrl` vira
+- [x] 2.1 `src/core/tutorials/catalog.ts`: remover `TUTORIALS`; `Tutorial.captionsUrl` vira
   `string | null`; refazer o comentário do arquivo (o catálogo é a tabela `tutorials`, escrita
   pela plataforma, lida por todos).
-- [ ] 2.2 `src/core/tutorials/video.ts`: `TUTORIAL_FOLDER = "treinamento"`, tipos aceitos
+- [x] 2.2 `src/core/tutorials/video.ts`: `TUTORIAL_FOLDER = "treinamento"`, tipos aceitos
   (`video/mp4`, `text/vtt`), `MAX_VIDEO_BYTES_DIRECT = 500 MB`, `MAX_VIDEO_BYTES_SERVER_ACTION =
   100 MB`, `MAX_CAPTIONS_BYTES = 1 MB`, `tutorialFilePath(kind, id)` e
   `isGeneratedTutorialPath(pathname)`, `checkTutorialFile(file, kind, limit)`, e o schema Zod
   do formulário (`title` 1..120, `description` 0..500, `durationSeconds` inteiro > 0, `route`
   em `ADMIN_NAV` interno ou vazio, `trail` boolean). Testes em `video.test.ts`.
-- [ ] 2.3 `progress.ts`: remover `mediaHosts`; `progress.test.ts` e `catalog.test.ts` ajustados
+- [x] 2.3 `progress.ts`: remover `mediaHosts`; `progress.test.ts` e `catalog.test.ts` ajustados
   (o teste do catálogo em código sai; o que sobrevive vai para `video.test.ts`).
 
 ## 3. Banco
 
-- [ ] 3.1 `src/db/schema.ts`: tabela `tutorials` conforme o design (decisão 1), índice em
+- [x] 3.1 `src/db/schema.ts`: tabela `tutorials` conforme o design (decisão 1), índice em
   `published_at` e em `position`; `tutorialProgress.videoId` vira `uuid` com `references(() =>
   tutorials.id, { onDelete: "cascade" })`. Comentário registrando o padrão de tabela global.
-- [ ] 3.2 `pnpm db:generate`, revisar: `CREATE TABLE tutorials`, `ALTER TABLE tutorial_progress
+- [x] 3.2 `pnpm db:generate`, revisar: `CREATE TABLE tutorials`, `ALTER TABLE tutorial_progress
   ALTER COLUMN video_id TYPE uuid USING video_id::uuid`, FK. Se o drizzle-kit gerar o ALTER sem
   `USING`, editar à mão.
-- [ ] 3.3 `src/lib/tutorials.ts`: `listPublishedTutorials()` e `listAllTutorials()` (ordenadas por
+- [x] 3.3 `src/lib/tutorials.ts`: `listPublishedTutorials()` e `listAllTutorials()` (ordenadas por
   `position`, mapeadas para `Tutorial`), `publishedTutorialCount()`, `createTutorial(input,
   files, actorId)`, `updateTutorial(id, input, files?, actorId)`, `setTutorialPublished(id,
   published, actorId)`, `moveTutorial(id, direction, actorId)` (troca `position` com o vizinho
   numa transação), `deleteTutorial(id, actorId)` (apaga arquivos do store, depois a linha), todas
   com variante `...With(db)`. `markWatched` passa a exigir vídeo publicado. Auditoria sob
   `SUPERADMIN_TENANT_SLUG`.
-- [ ] 3.4 `src/db/tutorials.test.ts`: criar rascunho fica fora de `listPublishedTutorials`;
+- [x] 3.4 `src/db/tutorials.test.ts`: criar rascunho fica fora de `listPublishedTutorials`;
   publicar entra; mover troca posições; excluir leva o progresso; despublicar preserva; marcar
   progresso em rascunho é recusado.
 
 ## 4. Armazenamento e CSP
 
-- [ ] 4.1 `src/lib/uploads.ts`: `storeTutorialFile(bytes, kind, id, mimeType)` (Blob em
+- [x] 4.1 `src/lib/uploads.ts`: `storeTutorialFile(bytes, kind, id, mimeType)` (Blob em
   `treinamento/<id>.<ext>` ou disco em `public/uploads/treinamento/`, devolvendo URL pública ou
   caminho `/uploads/treinamento/...`), reaproveitando `assertDiskFallbackAllowed` e
   `deleteStoredFile`.

@@ -1,38 +1,28 @@
 /**
- * The platform's video tutorials, as code.
+ * A video tutorial as the panel reads it: the shape the player, the trail
+ * card and the pure functions in progress.ts consume.
  *
- * Every other module of the panel is the office's own content: a table with
- * a tenant slug, edited by the office, gated by `content.edit`. A tutorial
- * is the opposite. Átrios records it once, every office watches the same
- * one, and it changes at the pace of a deploy. So the catalog lives here,
- * typed, reviewed in a pull request like any other text of the panel, and
- * there is no screen to manage it: a table without a tenant slug that only
- * the platform account may edit would be a first for this codebase, and
- * nothing here needs it yet. The day the list is long enough to hurt, the
- * `Tutorial` type is already the row.
- *
- * Publishing a video is three steps, none of them in the application:
- * upload the MP4 (H.264, 1080p, a few minutes at most) and its WebVTT
- * captions to the Blob store through the Vercel dashboard, add an entry
- * below with both URLs, open the pull request. The middleware derives
- * `media-src` from these URLs (see `mediaHosts`), so a new host takes
- * effect with the same deploy. catalog.test.ts keeps every entry honest:
- * unique ids, a route the panel actually has, https URLs.
- *
- * Record over the Homolog seed, never over production: a citizen's name on
- * screen is a data incident for as long as the video exists.
+ * The catalog is the `tutorials` table (src/db/schema.ts), the same rows
+ * for every office: Átrios records a video once, publishes it from the
+ * panel, and every serventia sees it at that moment. It began as a constant
+ * in this file, to be edited by pull request; that lasted until the first
+ * video was about to be recorded by someone who does not open pull
+ * requests. What survived the move is the shape below and the rule that
+ * nothing here reads a database: src/lib/tutorials.ts maps a row to this
+ * and hands the list, already in trail order, to the functions next door.
  */
 export interface Tutorial {
-  /** Stable slug: the key the progress table stores. Never renamed. */
+  /** The row's uuid: the key the progress table stores. */
   id: string;
   title: string;
   /** One sentence under the title, in the operator's words. */
   description: string;
   durationSeconds: number;
-  /** Full https URL of the MP4. */
+  /** Public URL of the MP4: the Blob store's, or `/uploads/...` in dev. */
   videoUrl: string;
-  /** Full https URL of the WebVTT captions, in Portuguese. */
-  captionsUrl: string;
+  /** Public URL of the WebVTT captions, in Portuguese; null when none was
+   * uploaded, in which case the player shows no track at all. */
+  captionsUrl: string | null;
   /**
    * The panel route this video teaches, e.g. "/admin/pedidos": the screen at
    * that route and its subordinates offer "Como usar esta tela". Null for a
@@ -46,6 +36,3 @@ export interface Tutorial {
    */
   trail: boolean;
 }
-
-/** In trail order. Empty until the first video is recorded and uploaded. */
-export const TUTORIALS: readonly Tutorial[] = [];

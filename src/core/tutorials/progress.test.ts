@@ -5,7 +5,6 @@ import {
   formatDuration,
   isTutorialId,
   listOrder,
-  mediaHosts,
   nextUnwatched,
   trailProgress,
   tutorialForRoute,
@@ -109,20 +108,6 @@ test("the most specific route wins", () => {
 test("a video with no route never claims a screen", () => {
   const catalog = [tutorial("primeiros-passos", { route: null })];
   assert.equal(tutorialForRoute(catalog, "/admin"), undefined);
-});
-
-test("media hosts are listed once each, video and captions alike", () => {
-  const catalog = [
-    tutorial("a"),
-    tutorial("b", {
-      captionsUrl: "https://captions.example.test/b.vtt",
-    }),
-  ];
-  assert.deepEqual(mediaHosts(catalog), [
-    "media.example.test",
-    "captions.example.test",
-  ]);
-  assert.deepEqual(mediaHosts([]), []);
 });
 
 test("an id is only known when the catalog has it", () => {
