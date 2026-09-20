@@ -75,9 +75,10 @@
 - [ ] 6.1 Gravar "Primeiros passos" (login, menu, troca de senha) sobre o Homolog com a seed,
   em 1080p e até cinco minutos; produzir a legenda WebVTT; enviar os dois ao Blob pelo painel da
   Vercel; registrar a entrada no catálogo com `trail: true` e `route: null`.
-- [ ] 6.2 Aplicar a migração no Homolog (Preview) e em produção pela `POSTGRES_URL_NON_POOLING`
+- [x] 6.2 Aplicar a migração no Homolog (Preview) e em produção pela `POSTGRES_URL_NON_POOLING`
   antes do merge, conforme a rotina de migração manual. Homolog aplicado em 19/09/2026 (pelo
-  pooler em modo sessão, porta 5432: o host direto do Supabase é só IPv6). Produção pendente.
+  pooler em modo sessão, porta 5432: o host direto do Supabase é só IPv6). Produção aplicada em
+  19/09/2026 pela `POSTGRES_URL_NON_POOLING` obtida com `vercel env pull --environment=production`.
 - [x] 6.3 Conferir no navegador, num host de serventia: item na sidebar, vídeo tocando com
   legenda, marca automática ao terminar, "Desfazer", card na visão geral com o andamento e o
   link contextual numa tela coberta pelo catálogo. Sem erro de CSP no console. Feito em
