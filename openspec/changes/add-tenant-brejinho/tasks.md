@@ -26,8 +26,8 @@
 
 ## 3. Pendências fora do código (registrar no PR, não executar aqui)
 
-- [ ] 3.1 Anotar no PR os passos do super admin: DNS e domínio na Vercel, verificação do domínio
+- [x] 3.1 Anotar no PR os passos do super admin: DNS e domínio na Vercel, verificação do domínio
   no Postmark seguida do preenchimento de `emailFrom`, criação das caixas `contato@`, `dpo@` e
   `nao-responda@`, `pnpm db:seed` da primeira conta e envio do convite
-- [ ] 3.2 Anotar no PR o que falta o cartório confirmar: WhatsApp, horário real, ISS, logos e
+- [x] 3.2 Anotar no PR o que falta o cartório confirmar: WhatsApp, horário real, ISS, logos e
   situação da delegação do titular
