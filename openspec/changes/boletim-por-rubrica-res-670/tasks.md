@@ -39,5 +39,5 @@
 ## 7. Entrega
 
 - [ ] 7.1 Confirmar que `transparency_bulletins` está vazia em produção; aplicar a migração no Homolog (pooler, porta 5432) e em produção (`POSTGRES_URL_NON_POOLING`) antes do merge
-- [ ] 7.2 Abrir o PR
+- [x] 7.2 Abrir o PR
 - [ ] 7.3 Registrar a change de contract (drop de `taxes_paid_cents` e dos defaults) para depois do deploy 1 estar em produção
