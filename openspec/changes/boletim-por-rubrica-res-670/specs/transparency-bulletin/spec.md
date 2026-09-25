@@ -2,17 +2,18 @@
 
 ### Requirement: Valores recolhidos por fundo
 
-O formulário do boletim SHALL receber mês, ano, atos praticados, um valor recolhido no mês para
-cada fundo da UF da serventia e o valor de ISS recolhido no mês. Os campos dos fundos SHALL usar os
-mesmos nomes das colunas da tabela de emolumentos da UF (no RN: FDJ, FRMP, FCRCPN e FUNAF). Todos
-os valores SHALL ser obrigatórios, aceitar zero e ser tratados como inteiros em centavos. O
-formulário NÃO SHALL ter campo de arrecadação bruta, despesas ou saldo.
+O formulário do boletim SHALL receber, além de mês e ano, os atos praticados, um valor recolhido no
+mês para cada fundo da UF da serventia e o valor de ISS recolhido no mês. Os campos dos fundos
+SHALL usar os mesmos nomes das colunas da tabela de emolumentos da UF (no RN: FDJ, FRMP, FCRCPN e
+FUNAF). Esses valores SHALL ser obrigatórios, aceitar zero e ser tratados como inteiros em
+centavos. O formulário NÃO SHALL ter campo de total de tributos: o total SHALL ser a soma dos fundos
+e do ISS, calculada no núcleo.
 
 #### Scenario: Serventia do RN abre o formulário
 
 - **WHEN** a operadora de uma serventia do RN abre a aba Boletim mensal
-- **THEN** vê os campos Atos praticados, FDJ, FRMP, FCRCPN, FUNAF e ISS, e nenhum campo de
-  arrecadação bruta, despesas ou saldo
+- **THEN** vê os campos Atos praticados, FDJ, FRMP, FCRCPN, FUNAF e ISS, e nenhum campo de total de
+  tributos
 
 #### Scenario: Fundo sem recolhimento no mês
 
@@ -27,7 +28,7 @@ formulário NÃO SHALL ter campo de arrecadação bruta, despesas ou saldo.
 #### Scenario: Centavos exatos
 
 - **WHEN** os valores têm centavos
-- **THEN** subtotais e total são exatos em centavos, sem erro de ponto flutuante
+- **THEN** subtotais, totais e saldo são exatos em centavos, sem erro de ponto flutuante
 
 ### Requirement: Classificação dos fundos em rubricas do CNJ
 
@@ -62,6 +63,34 @@ da serventia NÃO SHALL ser usada no boletim.
 - **THEN** o boletim mostra "ISS, tributo municipal (Canguaretama)" com R$ 612,00, separado das
   rubricas, e o total recolhido aos fundos não inclui esse valor
 
+### Requirement: Opção de publicar arrecadação, despesas e saldo
+
+A aba Boletim mensal SHALL oferecer a opção "Publicar também arrecadação, despesas e saldo", que
+vale para todos os boletins da serventia. Quando a serventia nunca salvou a opção, ela SHALL estar
+ligada. Com a opção ligada, o formulário SHALL pedir arrecadação do mês e despesas, ambas
+obrigatórias; a pré-visualização e o PDF SHALL mostrar arrecadação, despesas e o saldo. Com a opção
+desligada, esses campos NÃO SHALL aparecer no formulário, e a pré-visualização e o PDF de todos os
+meses NÃO SHALL mostrar arrecadação, despesas nem saldo, inclusive de boletins publicados antes com
+a opção ligada. A opção SHALL ser gravada no servidor no padrão dos demais ajustes da serventia, com
+auditoria.
+
+#### Scenario: Serventia que nunca mexeu na opção
+
+- **WHEN** a operadora abre a aba Boletim mensal pela primeira vez
+- **THEN** a opção aparece ligada e o formulário pede arrecadação e despesas
+
+#### Scenario: Desligar a opção
+
+- **WHEN** a operadora desliga a opção
+- **THEN** a alteração consta na auditoria, os campos de arrecadação e despesas somem do formulário,
+  e o PDF de qualquer mês já publicado deixa de mostrar arrecadação, despesas e saldo
+
+#### Scenario: Religar a opção sem os valores de um mês
+
+- **WHEN** a opção é religada e um boletim foi publicado enquanto ela estava desligada
+- **THEN** o PDF desse mês mostra só a parte obrigatória, sem arrecadação, despesas nem saldo, até
+  o mês ser publicado de novo com esses valores
+
 ### Requirement: Aviso sobre a parcela privada
 
 A seção do boletim na página pública de transparência SHALL exibir um aviso fixo informando que a
@@ -78,19 +107,42 @@ não houver boletim publicado.
 
 ## MODIFIED Requirements
 
+### Requirement: Saldo calculado, nunca digitado
+
+Com a opção de publicar arrecadação, despesas e saldo ligada, o saldo final SHALL ser calculado
+como `arrecadação − (soma dos fundos + ISS) − despesas` por função pura no core, exibido em tempo
+real no formulário e no preview com o rótulo "Saldo final (emolumentos e outras receitas)". O saldo
+SHALL poder ser negativo e ser exibido como tal. Não SHALL existir campo de saldo editável.
+
+#### Scenario: Valores digitados
+
+- **WHEN** a operadora digita 7.978,12 de arrecadação, fundos e ISS que somam 2.652,59 e 8.069,31 de
+  despesas
+- **THEN** o saldo aparece como R$ -2.743,78 no formulário e no preview, sem ação extra
+
+#### Scenario: Centavos exatos
+
+- **WHEN** os valores têm centavos
+- **THEN** o cálculo é exato em centavos (sem erro de ponto flutuante) — valores tratados como inteiros em centavos
+
 ### Requirement: Pré-visualização fiel ao site
 
 Ao lado do formulário o painel SHALL mostrar a pré-visualização do boletim exatamente como sai no
 site: cabeçalho com a marca do tenant e CNS, título "Boletim Mensal, <Mês> de <Ano>", período, atos
 praticados, as rubricas com o subtotal e o detalhe por fundo, o total recolhido aos fundos, a linha
-do ISS à parte e o rodapé legal. O rodapé SHALL citar o art. 6º, § 3º, da Res. CNJ 215/2015, com a
-redação da Res. CNJ 670/2025. A pré-visualização NÃO SHALL mostrar arrecadação bruta, despesas nem
-saldo.
+do ISS à parte e o rodapé legal; e, com a opção de publicar a parcela privada ligada, a arrecadação,
+as despesas e o saldo final. O rodapé SHALL citar o art. 6º, § 3º, da Res. CNJ 215/2015, com a
+redação da Res. CNJ 670/2025.
 
 #### Scenario: Preview acompanha o formulário
 
 - **WHEN** a operadora altera qualquer valor ou o mês
-- **THEN** a pré-visualização reflete a mudança imediatamente, incluindo subtotais e total
+- **THEN** a pré-visualização reflete a mudança imediatamente, incluindo subtotais, totais e saldo
+
+#### Scenario: Preview com a opção desligada
+
+- **WHEN** a opção de publicar arrecadação, despesas e saldo está desligada
+- **THEN** a pré-visualização não mostra arrecadação, despesas nem saldo
 
 #### Scenario: Rodapé cita a norma
 
@@ -102,28 +154,22 @@ saldo.
 
 Cada boletim publicado SHALL existir como PDF gerado pelo servidor com a identidade do tenant
 (mesma infra dos demais PDFs do produto), acessível ao cidadão pela página /transparencia sem chave
-nem login. O conteúdo do PDF SHALL ser o mesmo da pré-visualização.
+nem login. O conteúdo do PDF SHALL ser o mesmo da pré-visualização e SHALL seguir a opção de
+publicar a parcela privada vigente no momento em que o PDF é gerado.
 
 #### Scenario: Cidadão abre o boletim
 
-- **WHEN** o cidadão clica num boletim em /transparencia
-- **THEN** recebe o PDF com o cabeçalho do cartório, os atos praticados, as rubricas com o detalhe
-  por fundo, o total recolhido aos fundos, a linha do ISS e o rodapé legal, sem arrecadação bruta,
-  despesas nem saldo, e com a etiqueta "Dados preliminares" quando a situação for preliminar
+- **WHEN** o cidadão clica num boletim em /transparencia de uma serventia com a opção ligada
+- **THEN** recebe o PDF com o cabeçalho do cartório, os atos praticados, a arrecadação, as rubricas
+  com o detalhe por fundo, o total recolhido aos fundos, a linha do ISS, as despesas, o saldo final
+  e o rodapé legal, e com a etiqueta "Dados preliminares" quando a situação for preliminar
+
+#### Scenario: Serventia com a opção desligada
+
+- **WHEN** o cidadão abre o PDF de um boletim de uma serventia com a opção desligada
+- **THEN** o PDF não mostra arrecadação, despesas nem saldo
 
 #### Scenario: Isolamento por tenant
 
 - **WHEN** a rota do PDF é chamada com id de boletim de outro tenant
 - **THEN** responde 404
-
-## REMOVED Requirements
-
-### Requirement: Saldo calculado, nunca digitado
-
-**Reason**: O saldo final (arrecadação − tributos − despesas) é, na prática, a remuneração do
-titular, que a Res. CNJ 670/2025 (§ 3º-B) deixa fora do site: só é acessível a terceiro
-interessado por requerimento à Corregedoria. A arrecadação bruta e as despesas de custeio saem com
-ele, porque também são parcela privada e porque, se ficassem, o saldo continuaria calculável.
-
-**Migration**: Substituído por "Valores recolhidos por fundo". Nenhuma serventia publicou boletim,
-então não há registro a converter.
