@@ -1,6 +1,12 @@
 "use client";
 
-import { useActionState, useEffect, useMemo, useState } from "react";
+import {
+  useActionState,
+  useEffect,
+  useMemo,
+  useOptimistic,
+  useState,
+} from "react";
 import { toast } from "sonner";
 import {
   BALANCE_LABEL,
@@ -94,6 +100,11 @@ function BulletinOption({ enabled }: { enabled: boolean }) {
     saveBulletinOptionAction,
     { status: "idle" },
   );
+  // The switch moves on the click, not when the page comes back: the save
+  // re-renders the whole tab, and a switch that sits still for that long
+  // reads as a click that did not take. A failed save drops the optimistic
+  // value and the switch returns to what the server holds.
+  const [shown, setShown] = useOptimistic(enabled);
 
   useEffect(() => {
     if (state.status === "error") toast.error(state.message);
@@ -101,7 +112,10 @@ function BulletinOption({ enabled }: { enabled: boolean }) {
 
   return (
     <form
-      action={formAction}
+      action={(formData) => {
+        setShown(!enabled);
+        formAction(formData);
+      }}
       className="flex items-start justify-between gap-4 rounded-[14px] border border-admin-border bg-admin-card p-5"
     >
       <div>
@@ -126,16 +140,16 @@ function BulletinOption({ enabled }: { enabled: boolean }) {
       <button
         type="submit"
         role="switch"
-        aria-checked={enabled}
+        aria-checked={shown}
         aria-labelledby="bulletin-option-label"
         disabled={pending}
-        className={`relative mt-0.5 h-5.5 w-10 flex-none rounded-full transition-colors disabled:opacity-60 ${
-          enabled ? "bg-admin-primary" : "bg-admin-readonly-bg"
+        className={`relative mt-0.5 h-5.5 w-10 flex-none rounded-full transition-colors ${
+          shown ? "bg-admin-primary" : "bg-admin-readonly-bg"
         }`}
       >
         <span
           className={`absolute top-0.5 h-4.5 w-4.5 rounded-full bg-white transition-all ${
-            enabled ? "left-5" : "left-0.5"
+            shown ? "left-5" : "left-0.5"
           }`}
         />
       </button>

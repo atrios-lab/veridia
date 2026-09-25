@@ -34,7 +34,7 @@
 
 - [x] 6.1 `src/lib/pdf.ts`: o corpo do PDF do boletim segue a pré-visualização do 5.4, lendo a opção vigente na hora de gerar; saldo negativo exibido como tal
 - [x] 6.2 `src/app/(public)/transparencia/page.tsx`: aviso fixo do § 3º-B na seção do boletim, visível também no estado vazio
-- [ ] 6.3 Conferir no navegador, pelo host de uma serventia: formulário e pré-visualização com a opção ligada e desligada, publicação, PDF e o aviso na página pública
+- [x] 6.3 Conferir no navegador, pelo host de uma serventia: formulário e pré-visualização com a opção ligada e desligada, publicação, PDF e o aviso na página pública
 
 ## 7. Entrega
 
