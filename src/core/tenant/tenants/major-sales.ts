@@ -18,6 +18,7 @@ export const cartorioMajorSales: Tenant = parseTenant({
     "aos atos da vida do cidadão, do nascimento aos negócios.",
   cns: "095075",
   municipality: "MAJOR SALES",
+  location: { city: "Major Sales", state: "RN" },
   attributions: ["RCPN", "NOTAS", "RI", "PROTESTO", "RTD", "RCPJ"],
   contacts: {
     phone: "(84) 3190-0980",

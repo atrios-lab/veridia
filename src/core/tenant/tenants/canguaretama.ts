@@ -36,6 +36,7 @@ export const cartorioCanguaretama: Tenant = parseTenant({
     email: "contato@cartoriocanguaretamarn.com.br",
   },
   municipality: "CANGUARETAMA",
+  location: { city: "Canguaretama", state: "RN" },
   address:
     "Rua André de Albuquerque, 155, Centro, Canguaretama - RN, 59190-000",
   // Every registry gives a lunch break; `counterHours` only holds start and

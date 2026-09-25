@@ -41,6 +41,7 @@ export const cartorioSaoJoseDeMipibu2: Tenant = parseTenant({
   // takes 15, so the first name is abbreviated. Only the Pix payload reads
   // this; the citizen never sees it.
   municipality: "SAO J DE MIPIBU",
+  location: { city: "São José de Mipibu", state: "RN" },
   address:
     "Rua Doutor Jerônimo, 76, Centro, São José de Mipibu - RN, 59162-000",
   openingHours: "Segunda a sexta, das 8h às 17h",

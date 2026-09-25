@@ -35,6 +35,7 @@ export const cartorioBrejinho: Tenant = parseTenant({
     email: "contato@cartoriobrejinhorn.com.br",
   },
   municipality: "BREJINHO",
+  location: { city: "Brejinho", state: "RN" },
   address: "Av. Antônio Alves Pessoa, 1008, Centro, Brejinho - RN, 59219-000",
   // The registries disagree (7h30 to 17h, 8h to 17h, 8h to 12h plus 14h to
   // 18h); the split schedule is the one two of them share. `counterHours`

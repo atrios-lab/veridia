@@ -1,26 +1,26 @@
 ## 1. Núcleo
 
-- [ ] 1.1 Criar `src/core/transparency/rubrics.ts`: `RUBRICS` (I a IV com o texto do art. 6º, § 3º), `FUNDS_BY_STATE.RN` na ordem da tabela (FDJ → II, FRMP → IV, FCRCPN → III, FUNAF → IV) e `groupByRubric(state, amounts)`, que devolve só as rubricas com fundos, cada uma com subtotal e detalhe, e o total dos fundos sem o ISS; teste com o exemplo da spec (IV = 419,10; total = 1.864,06) e com a rubrica I ausente no RN
-- [ ] 1.2 Em `src/core/transparency/bulletin.ts`: `BulletinFigures` troca `taxesPaidCents` por `fundAmountsCents` e `issCents`, com `grossRevenueCents` e `expensesCents` opcionais; `bulletinTaxesCents` soma fundos e ISS; `bulletinBalanceCents` devolve `null` sem arrecadação ou despesas
-- [ ] 1.3 `parseBulletinFigures(state, input, { privateFigures })`: exige exatamente os fundos da UF e o ISS (zero aceito); com `privateFigures` exige arrecadação e despesas, sem ele as ignora; atualizar `bulletin.test.ts` (campo vazio, zero aceito, chave desconhecida rejeitada, centavos exatos e o exemplo da spec com saldo R$ -2.743,78)
-- [ ] 1.4 Parser de leitura para o jsonb: linha com chave faltando, sobrando ou valor não inteiro é erro, nunca zero; teste
+- [x] 1.1 Criar `src/core/transparency/rubrics.ts`: `RUBRICS` (I a IV com o texto do art. 6º, § 3º), `FUNDS_BY_STATE.RN` na ordem da tabela (FDJ → II, FRMP → IV, FCRCPN → III, FUNAF → IV) e `groupByRubric(state, amounts)`, que devolve só as rubricas com fundos, cada uma com subtotal e detalhe, e o total dos fundos sem o ISS; teste com o exemplo da spec (IV = 419,10; total = 1.864,06) e com a rubrica I ausente no RN
+- [x] 1.2 Em `src/core/transparency/bulletin.ts`: `BulletinFigures` troca `taxesPaidCents` por `fundAmountsCents` e `issCents`, com `grossRevenueCents` e `expensesCents` opcionais; `bulletinTaxesCents` soma fundos e ISS; `bulletinBalanceCents` devolve `null` sem arrecadação ou despesas
+- [x] 1.3 `parseBulletinFigures(state, input, { privateFigures })`: exige exatamente os fundos da UF e o ISS (zero aceito); com `privateFigures` exige arrecadação e despesas, sem ele as ignora; atualizar `bulletin.test.ts` (campo vazio, zero aceito, chave desconhecida rejeitada, centavos exatos e o exemplo da spec com saldo R$ -2.743,78)
+- [x] 1.4 Parser de leitura para o jsonb: linha com chave faltando, sobrando ou valor não inteiro é erro, nunca zero; teste
 
 ## 2. Tenant
 
-- [ ] 2.1 `TenantSchema`: campo obrigatório `location: { city, state }`, com `state` em enum que hoje só tem `"RN"`; comentário explicando por que não reaproveita `municipality` (Pix, caixa alta, 15 caracteres)
-- [ ] 2.2 `TenantSchema`: `publishBulletinPrivateFigures: z.boolean().default(true)`; `OfficeBulletinSchema` e `OfficeBulletinOverrideSchema` em `overrides.ts`, no padrão de `OfficeDeadlineSchema`, e a aplicação do override junto dos demais
-- [ ] 2.3 Preencher `location` nos 13 arquivos de `src/core/tenant/tenants/` com a cidade acentuada; ajustar `tenant.test.ts` e o teste de overrides (sem override = ligada; override malformado = ligada)
+- [x] 2.1 `TenantSchema`: campo obrigatório `location: { city, state }`, com `state` em enum que hoje só tem `"RN"`; comentário explicando por que não reaproveita `municipality` (Pix, caixa alta, 15 caracteres)
+- [x] 2.2 `TenantSchema`: `publishBulletinPrivateFigures: z.boolean().default(true)`; `OfficeBulletinSchema` e `OfficeBulletinOverrideSchema` em `overrides.ts`, no padrão de `OfficeDeadlineSchema`, e a aplicação do override junto dos demais
+- [x] 2.3 Preencher `location` nos 13 arquivos de `src/core/tenant/tenants/` com a cidade acentuada; ajustar `tenant.test.ts` e o teste de overrides (sem override = ligada; override malformado = ligada)
 
 ## 3. Banco (deploy 1, expand)
 
-- [ ] 3.1 `src/db/schema.ts`: adicionar `fundAmountsCents` (jsonb, NOT NULL, default `{}`) e `issCents` (bigint, NOT NULL, default 0) em `transparency_bulletins`; tornar nuláveis `gross_revenue_cents`, `taxes_paid_cents` e `expenses_cents`, com comentário em `taxes_paid_cents` apontando o contract
-- [ ] 3.2 `pnpm db:generate` e revisar o SQL linha a linha; não rodar `db:migrate`
+- [x] 3.1 `src/db/schema.ts`: adicionar `fundAmountsCents` (jsonb, NOT NULL, default `{}`) e `issCents` (bigint, NOT NULL, default 0) em `transparency_bulletins`; tornar nuláveis `gross_revenue_cents`, `taxes_paid_cents` e `expenses_cents`, com comentário em `taxes_paid_cents` apontando o contract
+- [x] 3.2 `pnpm db:generate` e revisar o SQL linha a linha; não rodar `db:migrate`
 
 ## 4. Camada de dados
 
-- [ ] 4.1 `src/lib/transparency.ts`: `BulletinInput` e `upsertBulletin` gravam atos, `fundAmountsCents`, `issCents` e, quando vierem, arrecadação e despesas; nunca `taxes_paid_cents`. A leitura passa pelo parser do 1.4. A regra fica numa função `...With(db, ...)`
-- [ ] 4.2 Gravar a opção pelo painel no padrão dos overrides, com `recordAudit`, numa função `...With(db, ...)`
-- [ ] 4.3 Testes em processo contra PGlite: publicar, republicar o mesmo mês (substitui, sem duplicar), ler de volta fundos, ISS, arrecadação e despesas; publicar com a opção desligada grava arrecadação e despesas nulas; gravar a opção deixa auditoria
+- [x] 4.1 `src/lib/transparency.ts`: `BulletinInput` e `upsertBulletin` gravam atos, `fundAmountsCents`, `issCents` e, quando vierem, arrecadação e despesas; nunca `taxes_paid_cents`. A leitura passa pelo parser do 1.4. A regra fica numa função `...With(db, ...)`
+- [x] 4.2 Gravar a opção pelo painel no padrão dos overrides, com `recordAudit`, numa função `...With(db, ...)`
+- [x] 4.3 Testes em processo contra PGlite: publicar, republicar o mesmo mês (substitui, sem duplicar), ler de volta fundos, ISS, arrecadação e despesas; publicar com a opção desligada grava arrecadação e despesas nulas; gravar a opção deixa auditoria
 
 ## 5. Painel
 

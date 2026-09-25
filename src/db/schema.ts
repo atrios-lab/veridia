@@ -604,10 +604,13 @@ export const appointments = pgTable(
 );
 
 /**
- * The monthly revenue bulletin. Four figures the office types plus a state;
- * the balance is never stored, it is arithmetic on the four
- * (core/transparency/bulletin). Money is centavos, in bigint: a busy month in
- * centavos passes the 2.1-billion ceiling of a 32-bit integer.
+ * The monthly revenue bulletin. What was paid into each fund of the office's
+ * state, keyed by fund (never by rubric: the rubric is read from the map in
+ * core/transparency/rubrics when shown, so a reclassification needs no
+ * migration), the ISS, and, when the office publishes them, gross revenue and
+ * expenses. The taxes total and the balance are never stored, they are
+ * arithmetic (core/transparency/bulletin). Money is centavos, in bigint: a
+ * busy month in centavos passes the 2.1-billion ceiling of a 32-bit integer.
  *
  * One bulletin per (office, month): the unique index is what makes
  * "publishing again replaces the month's bulletin" an upsert the database
@@ -621,11 +624,20 @@ export const transparencyBulletins = pgTable(
     // The first day of the month it covers; the day is always 01.
     referenceMonth: date("reference_month").notNull(),
     actsCount: integer("acts_count").notNull(),
-    grossRevenueCents: bigint("gross_revenue_cents", {
-      mode: "number",
-    }).notNull(),
-    taxesPaidCents: bigint("taxes_paid_cents", { mode: "number" }).notNull(),
-    expensesCents: bigint("expenses_cents", { mode: "number" }).notNull(),
+    // { fdj: 123456, frmp: 32100, ... }: every fund of the state, centavos.
+    // Read back through parseFundAmounts, never trusted as stored.
+    fundAmountsCents: jsonb("fund_amounts_cents")
+      .$type<Record<string, number>>()
+      .notNull()
+      .default({}),
+    issCents: bigint("iss_cents", { mode: "number" }).notNull().default(0),
+    // Null when the office does not publish its private figures.
+    grossRevenueCents: bigint("gross_revenue_cents", { mode: "number" }),
+    // Superseded by the funds and ISS, whose sum is the taxes total. Nullable
+    // now and never written; dropped by the contract step that follows
+    // boletim-por-rubrica-res-670 once it is in production.
+    taxesPaidCents: bigint("taxes_paid_cents", { mode: "number" }),
+    expensesCents: bigint("expenses_cents", { mode: "number" }),
     // "preliminary" | "consolidated": see core/transparency/bulletin.
     status: text("status").notNull().default("preliminary"),
     createdBy: text("created_by"),

@@ -19,6 +19,7 @@ export const cartorioDemonstracao: Tenant = parseTenant({
     "real.",
   cns: "000002",
   municipality: "SERRA VERDE",
+  location: { city: "Serra Verde", state: "RN" },
   address: "Praça da Matriz, 10, Centro, Serra Verde / RN, 59000-000",
   attributions: ["RCPN", "NOTAS", "RI", "PROTESTO", "RTD", "RCPJ"],
   contacts: {

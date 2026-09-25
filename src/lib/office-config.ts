@@ -38,13 +38,15 @@ export function officeNow(): AgendaNow {
  * The `tenant_content` rows holding what the office edits about itself in the
  * panel: counter hours and the three contact channels (`office-contact`),
  * theme, logos, hero and sections (`office-brand`), the Data Protection
- * Officer's contact (`office-dpo`), and the office's Pix key (`office-pix`).
+ * Officer's contact (`office-dpo`), the office's Pix key (`office-pix`), and
+ * whether its bulletin publishes the private figures (`office-bulletin`).
  */
 export const OFFICE_CONTACT_KEY = "office-contact";
 export const OFFICE_BRAND_KEY = "office-brand";
 export const OFFICE_DPO_KEY = "office-dpo";
 export const OFFICE_PIX_KEY = "office-pix";
 export const OFFICE_DEADLINE_KEY = "office-deadline";
+export const OFFICE_BULLETIN_KEY = "office-bulletin";
 // Not part of Tenant/applyTenantOverrides: whether the office's chat is on,
 // and which days and times it receives by appointment, are operational state,
 // not branding or editorial content. Both are read and written directly:

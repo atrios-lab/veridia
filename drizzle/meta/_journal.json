@@ -169,6 +169,13 @@
       "when": 1789867965929,
       "tag": "0023_grey_lenny_balinger",
       "breakpoints": true
+    },
+    {
+      "idx": 24,
+      "version": "7",
+      "when": 1790306088295,
+      "tag": "0024_odd_retro_girl",
+      "breakpoints": true
     }
   ]
 }

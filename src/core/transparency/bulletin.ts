@@ -9,6 +9,14 @@
  * is a number nobody proofreads. It has to be right by construction.
  */
 
+import {
+  FUNDS_BY_STATE,
+  type FundAmounts,
+  groupByRubric,
+  type RubricGroup,
+  type SupportedState,
+} from "./rubrics.ts";
+
 /** A bulletin is preliminary until the month's figures are closed. */
 export const BULLETIN_STATUSES = ["preliminary", "consolidated"] as const;
 export type BulletinStatus = (typeof BULLETIN_STATUSES)[number];
@@ -33,22 +41,43 @@ export const MONTHS_PT = [
   "Dezembro",
 ] as const;
 
-/** The four figures the office types, in centavos (actsCount is a plain count). */
+/**
+ * What a month's bulletin holds. The funds and ISS are the public share
+ * Res. CNJ 670/2025 requires on the site; gross revenue and expenses are the
+ * office's own figures, which it may publish or not (see
+ * `publishBulletinPrivateFigures`), so they are null when it chose not to.
+ */
 export interface BulletinFigures {
   actsCount: number;
-  grossRevenueCents: number;
-  taxesPaidCents: number;
-  expensesCents: number;
+  fundAmountsCents: FundAmounts;
+  issCents: number;
+  grossRevenueCents: number | null;
+  expensesCents: number | null;
+}
+
+/** What went out as taxes: every fund plus the municipal ISS. */
+export function bulletinTaxesCents(figures: BulletinFigures): number {
+  const funds = Object.values(figures.fundAmountsCents).reduce(
+    (sum, cents) => sum + cents,
+    0,
+  );
+  return funds + figures.issCents;
 }
 
 /**
- * Balance = what came in, minus what was owed, minus what was spent. Can go
+ * Balance = what came in, minus the taxes, minus what was spent. Can go
  * negative (a month that spent more than it took) and that is a real answer,
- * not an error: the strip shows it as-is.
+ * not an error: the strip shows it as-is. Null when either private figure is
+ * missing, because a balance of half the numbers is not a balance.
  */
-export function bulletinBalanceCents(figures: BulletinFigures): number {
+export function bulletinBalanceCents(figures: BulletinFigures): number | null {
+  if (figures.grossRevenueCents === null || figures.expensesCents === null) {
+    return null;
+  }
   return (
-    figures.grossRevenueCents - figures.taxesPaidCents - figures.expensesCents
+    figures.grossRevenueCents -
+    bulletinTaxesCents(figures) -
+    figures.expensesCents
   );
 }
 
@@ -118,39 +147,124 @@ export function bulletinPeriod(month: number, year: number): string {
   return `01/${mm} a ${String(lastDay).padStart(2, "0")}/${mm}/${year}`;
 }
 
+/** The form field that carries a fund's amount. */
+export function fundFieldName(key: string): string {
+  return `fund-${key}`;
+}
+
 /**
  * Parses the bulletin form's raw strings into figures, or returns the field
- * errors that stop it. Money and count parsing live in the pure helpers
- * above; this only assembles them and names which field failed, so the action
- * layer stays thin and the rule is testable without a request.
+ * errors that stop it. Every fund of the office's state and the ISS are
+ * required, zero included: a month with nothing paid into FUNAF is "0,00",
+ * typed, not a blank read as zero. Gross revenue and expenses are required
+ * when the office publishes them and ignored when it does not, so a stale
+ * value left in a hidden field can never reach the site.
  */
-export function parseBulletinFigures(input: {
-  actsCount: string;
-  grossRevenue: string;
-  taxesPaid: string;
-  expenses: string;
-}): { figures: BulletinFigures } | { fieldErrors: Record<string, string> } {
+export function parseBulletinFigures(
+  state: SupportedState,
+  input: {
+    actsCount: string;
+    funds: Record<string, string>;
+    iss: string;
+    grossRevenue: string;
+    expenses: string;
+  },
+  options: { privateFigures: boolean },
+): { figures: BulletinFigures } | { fieldErrors: Record<string, string> } {
   const fieldErrors: Record<string, string> = {};
 
   const actsCount = parseCount(input.actsCount);
   if (actsCount === null) fieldErrors.actsCount = "Informe um número inteiro.";
-  const grossRevenueCents = parseMoneyBRL(input.grossRevenue);
-  if (grossRevenueCents === null) fieldErrors.grossRevenue = "Valor inválido.";
-  const taxesPaidCents = parseMoneyBRL(input.taxesPaid);
-  if (taxesPaidCents === null) fieldErrors.taxesPaid = "Valor inválido.";
-  const expensesCents = parseMoneyBRL(input.expenses);
-  if (expensesCents === null) fieldErrors.expenses = "Valor inválido.";
 
-  if (
-    actsCount === null ||
-    grossRevenueCents === null ||
-    taxesPaidCents === null ||
-    expensesCents === null
-  ) {
+  const fundAmountsCents: FundAmounts = {};
+  for (const fund of FUNDS_BY_STATE[state]) {
+    const cents = parseMoneyBRL(input.funds[fund.key] ?? "");
+    if (cents === null) fieldErrors[fundFieldName(fund.key)] = "Valor inválido.";
+    else fundAmountsCents[fund.key] = cents;
+  }
+
+  const issCents = parseMoneyBRL(input.iss);
+  if (issCents === null) fieldErrors.iss = "Valor inválido.";
+
+  let grossRevenueCents: number | null = null;
+  let expensesCents: number | null = null;
+  if (options.privateFigures) {
+    grossRevenueCents = parseMoneyBRL(input.grossRevenue);
+    if (grossRevenueCents === null) fieldErrors.grossRevenue = "Valor inválido.";
+    expensesCents = parseMoneyBRL(input.expenses);
+    if (expensesCents === null) fieldErrors.expenses = "Valor inválido.";
+  }
+
+  if (actsCount === null || issCents === null || Object.keys(fieldErrors).length) {
     return { fieldErrors };
   }
   return {
-    figures: { actsCount, grossRevenueCents, taxesPaidCents, expensesCents },
+    figures: {
+      actsCount,
+      fundAmountsCents,
+      issCents,
+      grossRevenueCents,
+      expensesCents,
+    },
+  };
+}
+
+/** "ISS, tributo municipal (Canguaretama)": the line outside the rubrics. */
+export function issLabel(city: string): string {
+  return `ISS, tributo municipal (${city})`;
+}
+
+export const BALANCE_LABEL = "Saldo final (emolumentos e outras receitas)";
+
+/** The rule the bulletin answers to, printed at its foot. */
+export const BULLETIN_LEGAL_BASIS =
+  "Receitas públicas discriminadas na forma do art. 6º, § 3º, da Resolução CNJ nº 215/2015, com a redação da Resolução CNJ nº 670/2025.";
+
+/**
+ * Everything the preview and the PDF draw, from the same figures and the
+ * same rule, so the two never disagree. The private block is there only when
+ * the office publishes it now and the month has both figures: switching the
+ * option off takes them off every month at once, and a month published while
+ * it was off stays without them until it is published again.
+ */
+export interface BulletinView {
+  actsCount: number;
+  rubrics: RubricGroup[];
+  fundsTotalCents: number;
+  issCents: number;
+  privateFigures: {
+    grossRevenueCents: number;
+    taxesCents: number;
+    expensesCents: number;
+    balanceCents: number;
+  } | null;
+}
+
+export function bulletinView(
+  state: SupportedState,
+  figures: BulletinFigures,
+  publishPrivateFigures: boolean,
+): BulletinView {
+  const { rubrics, totalCents } = groupByRubric(state, figures.fundAmountsCents);
+  const balanceCents = bulletinBalanceCents(figures);
+  const privateFigures =
+    publishPrivateFigures &&
+    figures.grossRevenueCents !== null &&
+    figures.expensesCents !== null &&
+    balanceCents !== null
+      ? {
+          grossRevenueCents: figures.grossRevenueCents,
+          taxesCents: bulletinTaxesCents(figures),
+          expensesCents: figures.expensesCents,
+          balanceCents,
+        }
+      : null;
+  return {
+    actsCount: figures.actsCount,
+    rubrics,
+    fundsTotalCents: totalCents,
+    issCents: figures.issCents,
+    privateFigures,
   };
 }
 
