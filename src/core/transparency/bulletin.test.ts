@@ -9,6 +9,8 @@ import {
   formatMonthYear,
   fundFieldName,
   issLabel,
+  legacyBulletinView,
+  legacyTaxesLabel,
   parseBulletinFigures,
   parseCount,
   parseMoneyBRL,
@@ -179,4 +181,27 @@ test("formatMonthYear and bulletinPeriod read in pt-BR", () => {
   assert.equal(bulletinPeriod(8, 2026), "01/08 a 31/08/2026");
   // February in a non-leap year ends on the 28th.
   assert.equal(bulletinPeriod(2, 2026), "01/02 a 28/02/2026");
+});
+
+test("an old bulletin keeps its single taxes total and its balance", () => {
+  const figures = {
+    actsCount: 267,
+    grossRevenueCents: 797_812,
+    taxesPaidCents: 265_259,
+    expensesCents: 806_931,
+  };
+  const on = legacyBulletinView(figures, true);
+  assert.equal(on.taxesCents, 265_259);
+  assert.equal(on.privateFigures?.balanceCents, -274_378);
+
+  const off = legacyBulletinView(figures, false);
+  assert.equal(off.taxesCents, 265_259);
+  assert.equal(off.privateFigures, null);
+});
+
+test("the old taxes label lists the state's funds and the ISS", () => {
+  assert.equal(
+    legacyTaxesLabel("RN"),
+    "Tributos pagos (FDJ, FRMP, FCRCPN, FUNAF, ISS)",
+  );
 });

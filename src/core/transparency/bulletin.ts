@@ -277,6 +277,63 @@ export function bulletinView(
   };
 }
 
+/**
+ * A bulletin published before Res. CNJ 670/2025: the taxes as one total,
+ * no funds. Kept as it was published, because only the office's own guides
+ * could split that total into funds; republishing the month in the current
+ * format replaces it.
+ */
+export interface LegacyBulletinFigures {
+  actsCount: number;
+  grossRevenueCents: number;
+  taxesPaidCents: number;
+  expensesCents: number;
+}
+
+export const LEGACY_BULLETIN_NOTE =
+  "Boletim publicado antes da Resolução CNJ nº 670/2025, com os tributos num valor só.";
+
+/** "Tributos pagos (FDJ, FRMP, FCRCPN, FUNAF, ISS)": what the old total held. */
+export function legacyTaxesLabel(state: SupportedState): string {
+  const names = [...FUNDS_BY_STATE[state].map((f) => f.label), "ISS"];
+  return `Tributos pagos (${names.join(", ")})`;
+}
+
+export interface LegacyBulletinView {
+  actsCount: number;
+  taxesCents: number;
+  privateFigures: {
+    grossRevenueCents: number;
+    expensesCents: number;
+    balanceCents: number;
+  } | null;
+}
+
+/**
+ * The old bulletin, drawn the way it was published. The same option governs
+ * its private figures as the current one's: switching it off takes gross
+ * revenue, expenses and balance off the old months too.
+ */
+export function legacyBulletinView(
+  figures: LegacyBulletinFigures,
+  publishPrivateFigures: boolean,
+): LegacyBulletinView {
+  return {
+    actsCount: figures.actsCount,
+    taxesCents: figures.taxesPaidCents,
+    privateFigures: publishPrivateFigures
+      ? {
+          grossRevenueCents: figures.grossRevenueCents,
+          expensesCents: figures.expensesCents,
+          balanceCents:
+            figures.grossRevenueCents -
+            figures.taxesPaidCents -
+            figures.expensesCents,
+        }
+      : null,
+  };
+}
+
 export function isBulletinStatus(value: string): value is BulletinStatus {
   return (BULLETIN_STATUSES as readonly string[]).includes(value);
 }

@@ -3,6 +3,7 @@ import { and, asc, desc, eq, gt, lt, sql } from "drizzle-orm";
 import type {
   BulletinFigures,
   BulletinStatus,
+  LegacyBulletinFigures,
 } from "@/core/transparency/bulletin.ts";
 import type {
   DocumentFormInput,
@@ -308,24 +309,58 @@ export async function getBulletin(
   return getBulletinWith(db, tenantSlug, id);
 }
 
+/** A stored bulletin, in the format it was published in. */
+export type StoredBulletin =
+  | { kind: "current"; figures: BulletinFigures }
+  | { kind: "legacy"; figures: LegacyBulletinFigures };
+
 /**
- * A stored row as figures, or null if its funds are not exactly the state's.
- * A malformed row is an error to surface, never a bulletin of zeros: a zero
- * nobody typed must not reach a public record.
+ * Reads a stored row into one of the two formats, or null if it is neither.
+ *
+ * Current: its funds are exactly the state's. Legacy: no funds at all (`{}`,
+ * which is what the migration gave every row that existed before it) and the
+ * old taxes total, gross revenue and expenses all present. Anything else is
+ * an error to surface, never a bulletin of zeros: a zero nobody typed must
+ * not reach a public record.
  */
-export function bulletinFiguresOf(
+export function storedBulletinOf(
   row: TransparencyBulletinRow,
   state: SupportedState,
-): BulletinFigures | null {
+): StoredBulletin | null {
   const fundAmountsCents = parseFundAmounts(state, row.fundAmountsCents);
-  if (!fundAmountsCents) return null;
-  return {
-    actsCount: row.actsCount,
-    fundAmountsCents,
-    issCents: row.issCents,
-    grossRevenueCents: row.grossRevenueCents,
-    expensesCents: row.expensesCents,
-  };
+  if (fundAmountsCents) {
+    return {
+      kind: "current",
+      figures: {
+        actsCount: row.actsCount,
+        fundAmountsCents,
+        issCents: row.issCents,
+        grossRevenueCents: row.grossRevenueCents,
+        expensesCents: row.expensesCents,
+      },
+    };
+  }
+  const noFunds =
+    typeof row.fundAmountsCents === "object" &&
+    row.fundAmountsCents !== null &&
+    Object.keys(row.fundAmountsCents).length === 0;
+  if (
+    noFunds &&
+    row.taxesPaidCents !== null &&
+    row.grossRevenueCents !== null &&
+    row.expensesCents !== null
+  ) {
+    return {
+      kind: "legacy",
+      figures: {
+        actsCount: row.actsCount,
+        grossRevenueCents: row.grossRevenueCents,
+        taxesPaidCents: row.taxesPaidCents,
+        expensesCents: row.expensesCents,
+      },
+    };
+  }
+  return null;
 }
 
 export interface BulletinInput {
@@ -345,7 +380,9 @@ export interface BulletinInput {
  * Gross revenue and expenses are written as given, null included: publishing
  * a month with the option off clears them, so a figure the office chose not
  * to show is not kept waiting on a month it republished without it.
- * `taxes_paid_cents` is never written: the taxes are the funds plus ISS.
+ * `taxes_paid_cents` is cleared: the taxes are the funds plus ISS, and a
+ * month republished over an old bulletin must not keep the old total beside
+ * the new funds, where the two could disagree.
  */
 export async function upsertBulletinWith(
   database: Database,
@@ -359,6 +396,7 @@ export async function upsertBulletinWith(
     issCents: input.figures.issCents,
     grossRevenueCents: input.figures.grossRevenueCents,
     expensesCents: input.figures.expensesCents,
+    taxesPaidCents: null,
     status: input.status,
   };
   await database

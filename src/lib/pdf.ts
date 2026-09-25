@@ -473,11 +473,15 @@ export interface BulletinDocument {
     subtotal: string;
     funds: { label: string; amount: string }[];
   }[];
-  fundsTotal: string;
-  iss: { label: string; amount: string };
+  /** Null for a bulletin from before the funds, which has `taxes` instead. */
+  fundsTotal: string | null;
+  iss: { label: string; amount: string } | null;
+  /** The old single taxes total; null for a current bulletin. */
+  taxes: { label: string; amount: string } | null;
   expenses: string | null;
   balance: { label: string; amount: string } | null;
-  legalBasis: string;
+  /** The rule it answers to, or, for an old one, that it predates it. */
+  note: string;
   footer: string;
 }
 
@@ -608,21 +612,25 @@ export async function renderBulletin(
     }
   });
 
-  block(() => {
-    for (const rubric of document.rubrics) {
-      line(rubric.title, rubric.subtotal, { strong: true });
-      for (const fund of rubric.funds) {
-        line(fund.label, fund.amount, { indent: true });
+  const { fundsTotal, iss, taxes } = document;
+  if (fundsTotal) {
+    block(() => {
+      for (const rubric of document.rubrics) {
+        line(rubric.title, rubric.subtotal, { strong: true });
+        for (const fund of rubric.funds) {
+          line(fund.label, fund.amount, { indent: true });
+        }
+        y += 4;
       }
-      y += 4;
-    }
-    pdf.rect(MARGIN + inset, y, width - inset * 2, 0.6).fill(palette.border);
-    y += 8;
-    line("Total recolhido aos fundos", document.fundsTotal, { strong: true });
-  }, "Recolhido aos fundos");
+      pdf.rect(MARGIN + inset, y, width - inset * 2, 0.6).fill(palette.border);
+      y += 8;
+      line("Total recolhido aos fundos", fundsTotal, { strong: true });
+    }, "Recolhido aos fundos");
+  }
 
   block(() => {
-    line(document.iss.label, document.iss.amount, { strong: true });
+    if (taxes) line(taxes.label, taxes.amount, { strong: true });
+    if (iss) line(iss.label, iss.amount, { strong: true });
     if (document.expenses) {
       line("Despesas", document.expenses, { strong: true });
     }
@@ -654,7 +662,7 @@ export async function renderBulletin(
     .font("Helvetica")
     .fontSize(8)
     .fillColor(palette.muted)
-    .text(document.legalBasis, MARGIN, y, { width });
+    .text(document.note, MARGIN, y, { width });
 
   pdf.end();
   return done;

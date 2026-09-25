@@ -1,3 +1,4 @@
+import type { Tenant } from "@/core/tenant/schema.ts";
 import {
   BALANCE_LABEL,
   BULLETIN_LEGAL_BASIS,
@@ -7,10 +8,17 @@ import {
   formatMoneyBRL,
   formatMonthYear,
   issLabel,
+  LEGACY_BULLETIN_NOTE,
+  legacyBulletinView,
+  legacyTaxesLabel,
 } from "@/core/transparency/bulletin.ts";
 import { brandFor } from "@/lib/document-brand.ts";
 import { type BulletinDocument, renderBulletin } from "@/lib/pdf.ts";
-import { bulletinFiguresOf, getBulletin } from "@/lib/transparency.ts";
+import {
+  getBulletin,
+  type StoredBulletin,
+  storedBulletinOf,
+} from "@/lib/transparency.ts";
 import { requireSection } from "../../../_lib/section.ts";
 
 export const runtime = "nodejs";
@@ -38,32 +46,77 @@ export async function GET(
   const row = await getBulletin(tenant.slug, id);
   if (!row) return new Response("Não encontrado", { status: 404 });
 
-  const figures = bulletinFiguresOf(row, tenant.location.state);
-  if (!figures) {
-    // A row whose funds are not the state's: an error to see, never a
-    // bulletin of zeros nobody typed.
+  const stored = storedBulletinOf(row, tenant.location.state);
+  if (!stored) {
+    // Neither format: an error to see, never a bulletin of zeros nobody
+    // typed.
     console.error("transparencia.bulletin.malformed", row.id);
     return new Response("Boletim indisponível", { status: 500 });
   }
 
   const [year, month] = row.referenceMonth.split("-").map(Number);
   const status = row.status as BulletinStatus;
-  const view = bulletinView(
-    tenant.location.state,
-    figures,
-    tenant.publishBulletinPrivateFigures,
-  );
-  const privateFigures = view.privateFigures;
-
   const document: BulletinDocument = {
     office: [tenant.name, tenant.subtitle],
     title: `Boletim Mensal, ${formatMonthYear(month, year)}`,
     period: bulletinPeriod(month, year),
     preliminary: status === "preliminary",
+    footer: `${tenant.name} · ${tenant.legalFooter}`,
+    ...bodyOf(stored, tenant),
+  };
+
+  const pdf = await renderBulletin(document, await brandFor(tenant));
+  const name = `boletim-${row.referenceMonth.slice(0, 7)}.pdf`;
+
+  return new Response(new Uint8Array(pdf), {
+    headers: {
+      "Content-Type": "application/pdf",
+      // Inline: a bulletin is read on screen, not filed away.
+      "Content-Disposition": `inline; filename="${name}"`,
+    },
+  });
+}
+
+type BulletinBody = Omit<
+  BulletinDocument,
+  "office" | "title" | "period" | "preliminary" | "footer"
+>;
+
+/**
+ * The figures of a bulletin, in the format it was published in. Either way
+ * the private figures follow the office's option as it stands now: switching
+ * it off takes gross revenue, expenses and balance off every month at once,
+ * old ones included.
+ */
+function bodyOf(stored: StoredBulletin, tenant: Tenant): BulletinBody {
+  const publish = tenant.publishBulletinPrivateFigures;
+
+  if (stored.kind === "legacy") {
+    const view = legacyBulletinView(stored.figures, publish);
+    const priv = view.privateFigures;
+    return {
+      actsCount: view.actsCount.toLocaleString("pt-BR"),
+      grossRevenue: priv ? money(priv.grossRevenueCents) : null,
+      rubrics: [],
+      fundsTotal: null,
+      iss: null,
+      taxes: {
+        label: legacyTaxesLabel(tenant.location.state),
+        amount: money(view.taxesCents),
+      },
+      expenses: priv ? money(priv.expensesCents) : null,
+      balance: priv
+        ? { label: BALANCE_LABEL, amount: money(priv.balanceCents) }
+        : null,
+      note: LEGACY_BULLETIN_NOTE,
+    };
+  }
+
+  const view = bulletinView(tenant.location.state, stored.figures, publish);
+  const priv = view.privateFigures;
+  return {
     actsCount: view.actsCount.toLocaleString("pt-BR"),
-    grossRevenue: privateFigures
-      ? money(privateFigures.grossRevenueCents)
-      : null,
+    grossRevenue: priv ? money(priv.grossRevenueCents) : null,
     rubrics: view.rubrics.map((group) => ({
       title: `${group.rubric}. ${group.title}`,
       subtotal: money(group.subtotalCents),
@@ -77,22 +130,11 @@ export async function GET(
       label: issLabel(tenant.location.city),
       amount: money(view.issCents),
     },
-    expenses: privateFigures ? money(privateFigures.expensesCents) : null,
-    balance: privateFigures
-      ? { label: BALANCE_LABEL, amount: money(privateFigures.balanceCents) }
+    taxes: null,
+    expenses: priv ? money(priv.expensesCents) : null,
+    balance: priv
+      ? { label: BALANCE_LABEL, amount: money(priv.balanceCents) }
       : null,
-    legalBasis: BULLETIN_LEGAL_BASIS,
-    footer: `${tenant.name} · ${tenant.legalFooter}`,
+    note: BULLETIN_LEGAL_BASIS,
   };
-
-  const pdf = await renderBulletin(document, await brandFor(tenant));
-  const name = `boletim-${row.referenceMonth.slice(0, 7)}.pdf`;
-
-  return new Response(new Uint8Array(pdf), {
-    headers: {
-      "Content-Type": "application/pdf",
-      // Inline: a bulletin is read on screen, not filed away.
-      "Content-Disposition": `inline; filename="${name}"`,
-    },
-  });
 }

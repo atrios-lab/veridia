@@ -105,6 +105,34 @@ não houver boletim publicado.
 - **THEN** vê o estado vazio do boletim e, junto dele, o aviso sobre o acesso à parcela privada pela
   Corregedoria
 
+### Requirement: Boletins no formato anterior
+
+O site SHALL continuar mostrando no formato em que foi publicado o boletim gravado antes desta
+mudança, sem valores por fundo e com o total de tributos num valor só: atos praticados, o total de
+tributos pagos com a lista dos fundos e do ISS que ele reúne e, com a opção de publicar arrecadação,
+despesas e saldo ligada, a arrecadação, as despesas e o saldo calculado como
+`arrecadação − tributos − despesas`. O PDF SHALL trazer uma nota dizendo que o boletim foi publicado
+antes da Res. CNJ 670/2025, com os tributos num valor só. Publicar de novo o mesmo mês no formato
+novo SHALL substituir o boletim antigo e apagar o total de tributos antigo da linha.
+
+#### Scenario: Cidadão abre um boletim antigo
+
+- **WHEN** o cidadão abre o PDF de um boletim de janeiro/2025 publicado antes desta mudança, numa
+  serventia com a opção ligada
+- **THEN** recebe o PDF com atos, arrecadação, tributos pagos num valor só, despesas, o saldo e a
+  nota de formato anterior, e não um erro
+
+#### Scenario: Boletim antigo com a opção desligada
+
+- **WHEN** a opção de publicar arrecadação, despesas e saldo está desligada
+- **THEN** o PDF do boletim antigo mostra só atos praticados e o total de tributos pagos
+
+#### Scenario: Republicar um mês antigo no formato novo
+
+- **WHEN** a operadora publica janeiro/2025 no formato novo, com os valores por fundo
+- **THEN** o PDF de janeiro/2025 passa a sair agrupado por rubrica, e a linha não guarda mais o
+  total de tributos antigo
+
 ## MODIFIED Requirements
 
 ### Requirement: Saldo calculado, nunca digitado

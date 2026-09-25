@@ -11,8 +11,9 @@ facultativa: o § 3º-B só garante o acesso por requerimento à Corregedoria, s
 voluntária. A tabela de emolumentos do RN já divide cada ato em colunas: Emolumentos (parcela do
 delegatário), FDJ, FRMP, FCRCPN, ISS e FUNAF. É dessas colunas que saem os campos novos.
 
-Nenhuma serventia publicou boletim em produção. As 13 serventias atendidas são do RN. O tenant não
-tem hoje UF nem nome de cidade para exibição: `municipality` existe, mas é o campo "Merchant City"
+Em produção, só Bom Jesus usa o boletim: 20 meses, de janeiro/2025 a agosto/2026, publicados pela
+própria serventia em 11/09/2026, todos consolidados, com o total de tributos num valor só. As 13
+serventias atendidas são do RN. O tenant não tem hoje UF nem nome de cidade para exibição: `municipality` existe, mas é o campo "Merchant City"
 do Pix, em caixa alta, sem acento e limitado a 15 caracteres ("SAO JOSE DE MIP" não serve para
 exibir).
 
@@ -82,7 +83,8 @@ aparece, o que hoje esconde a I no RN.
 
 ### Total de tributos calculado, arrecadação e despesas opcionais
 
-`taxes_paid_cents` deixa de existir: o total de tributos é a soma dos fundos com o ISS, no núcleo.
+Um boletim novo não grava `taxes_paid_cents`: o total de tributos é a soma dos fundos com o ISS, no
+núcleo. A coluna só guarda o total dos boletins antigos (ver abaixo).
 `gross_revenue_cents` e `expenses_cents` continuam e ficam nuláveis. O saldo é
 `arrecadação − (fundos + ISS) − despesas` e só existe quando os dois estão presentes.
 
@@ -110,6 +112,33 @@ Alternativas descartadas:
 - **Apagar os valores ao desligar:** tornaria o desligamento irreversível, e religar exigiria
   redigitar tudo. Os valores ficam no banco, invisíveis; o § 3º-A garante acesso da Corregedoria a
   eles de qualquer forma.
+
+### Boletins antigos continuam no formato em que foram publicados
+
+Os 20 boletins de Bom Jesus têm arrecadação, total de tributos e despesas, e nenhum valor por fundo.
+O total não se separa por fundo a partir do banco: só a serventia tem as guias. Três saídas foram
+consideradas:
+
+- **Tirar do site até a serventia refazer:** 20 meses publicados somem sem a serventia ter pedido.
+- **Mostrar os antigos como erro ("Boletim indisponível"):** é o que o parser estrito faria, e é
+  pior que tirar.
+- **Mostrar no formato anterior (escolhida):** atos, tributos num valor só (com a lista dos fundos
+  e do ISS que ele reúne) e, com a opção ligada, arrecadação, despesas e saldo, mais uma nota de que
+  o boletim é anterior à Res. 670.
+
+A leitura classifica a linha em três casos: **nova** (fundos válidos para a UF), **antiga** (fundos
+vazios, `{}`, com `taxes_paid_cents`, arrecadação e despesas gravados) e **malformada** (qualquer
+outra coisa, que continua sendo erro, nunca zeros). O caso antigo não depende de data nem de flag: é
+exatamente a forma que a migração dá às linhas que já existiam.
+
+Publicar de novo o mesmo mês no formato novo substitui o antigo e grava `taxes_paid_cents = null`,
+para a linha não carregar dois totais de tributos que podem discordar.
+
+A opção de publicar arrecadação, despesas e saldo vale para os antigos também: o titular que a
+desliga tira esses números de todos os meses, inclusive dos que publicou antes.
+
+Consequência: `taxes_paid_cents` fica no banco. A remoção prevista na versão anterior deste design
+(o "contract") sai dos planos.
 
 ### Localização do tenant: `location: { city, state }`
 
@@ -154,31 +183,28 @@ os totais não publica o detalhe da parcela privada. O PDF leva só a citação 
 - [Opção ligada por padrão expõe o saldo de quem nunca pensou nisso, incluindo mês negativo] → É o
   que as serventias já fazem hoje no quadro próprio. A opção fica visível na aba onde o boletim é
   publicado, não escondida em Configurações.
-- [Remover coluna NOT NULL é migração destrutiva] → Expand e contract em dois deploys (abaixo).
+- [Boletins antigos e novos convivem na mesma lista, com formatos diferentes] → A nota no PDF diz
+  qual é qual. Republicar o mês no formato novo resolve um a um, no ritmo da serventia.
 - [O ISS pode ser lido como tributo do titular, e não como receita pública] → Decisão do produto
   (mostrar). Tirar depois é remover uma linha da exibição; o valor fica no banco.
 
 ## Migration Plan
 
-A tabela está vazia em produção, mas a regra do projeto vale: migração destrutiva em dois deploys.
+Uma migração só, que acrescenta colunas e não apaga nada:
 
-**Deploy 1: expand, nesta change**
+1. Adicionar `fund_amounts_cents jsonb NOT NULL DEFAULT '{}'` e `iss_cents bigint NOT NULL DEFAULT
+   0`; tirar o `NOT NULL` de `gross_revenue_cents`, `taxes_paid_cents` e `expenses_cents`. As 20
+   linhas de Bom Jesus ficam com fundos `{}` e ISS 0, que é justamente a forma que a leitura
+   reconhece como boletim antigo.
+2. Antes do merge, aplicar à mão: no Homolog pelo pooler na porta 5432; em produção pelo
+   `POSTGRES_URL_NON_POOLING` (a Vercel só roda `next build`).
 
-1. Migração: adicionar `fund_amounts_cents jsonb NOT NULL DEFAULT '{}'` e
-   `iss_cents bigint NOT NULL DEFAULT 0`; tirar o `NOT NULL` de `gross_revenue_cents`,
-   `taxes_paid_cents` e `expenses_cents`.
-2. O código novo não lê nem grava `taxes_paid_cents`.
-3. Antes do merge: conferir que `transparency_bulletins` está vazia em produção e aplicar a
-   migração à mão pelo `POSTGRES_URL_NON_POOLING` (a Vercel só roda `next build`). No Homolog,
-   aplicar pelo pooler na porta 5432. Linhas de teste no Homolog, se houver, podem ser apagadas.
+O código que está em produção continua funcionando com o banco migrado: ele grava arrecadação,
+tributos e despesas, que seguem existindo, e as colunas novas têm default.
 
-**Deploy 2: contract, em change própria depois do deploy 1 estar em produção**
-
-4. Migração: `DROP COLUMN taxes_paid_cents`; tirar os `DEFAULT` das colunas novas.
-
-**Rollback:** até o contract, voltar o código anterior funciona com o banco expandido, porque a
-coluna antiga ainda existe. Um boletim publicado no formato novo aparece quebrado no código antigo
-(`taxes_paid_cents` nulo). Isso só acontece se alguma serventia publicar no intervalo.
+**Rollback:** voltar o código anterior funciona. Um boletim publicado no formato novo nesse meio
+tempo aparece quebrado no código antigo (`taxes_paid_cents` nulo); só acontece se alguma serventia
+publicar no intervalo.
 
 ## Open Questions
 

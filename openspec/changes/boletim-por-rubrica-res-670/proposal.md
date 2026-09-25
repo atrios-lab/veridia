@@ -14,8 +14,10 @@ Arrecadação bruta, despesas e saldo são parcela privada. O § 3º-B garante q
 possa pedi-la à Corregedoria, mas não proíbe a serventia de publicá-la por conta própria. Como é
 dado financeiro do titular, publicar ou não é uma escolha dele.
 
-Agora é o momento de corrigir: nenhuma serventia publicou boletim até hoje, e o vídeo de treinamento
-da Transparência ainda não foi gravado.
+Só uma serventia usa o boletim até agora: Bom Jesus publicou em 11/09/2026 os 20 meses de
+janeiro/2025 a agosto/2026, no formato atual. Esses boletins continuam no site no formato em que
+foram publicados, porque o total de tributos deles não dá para separar por fundo sem as guias. O
+vídeo de treinamento da Transparência ainda não foi gravado.
 
 ## What Changes
 
@@ -35,6 +37,10 @@ da Transparência ainda não foi gravado.
 - O saldo continua calculado no núcleo: arrecadação − fundos − ISS − despesas. O rótulo passa a ser
   o que as serventias já usam: "Saldo final (emolumentos e outras receitas)".
 - "Atos praticados" continua no boletim.
+- Os boletins publicados antes desta mudança, sem valores por fundo, continuam no site no **formato
+  anterior**: atos, arrecadação, tributos num valor só, despesas e saldo, com uma nota dizendo que
+  são anteriores à Res. 670. A opção de publicar arrecadação, despesas e saldo vale para eles
+  também. Republicar o mês no formato novo substitui o antigo.
 - A seção do boletim em `/transparencia` ganha um aviso fixo: a parcela privada pode ser solicitada
   à Corregedoria-Geral de Justiça por requerimento fundamentado (§ 3º-B).
 - O rodapé legal do boletim passa a citar o art. 6º, § 3º, da Res. CNJ 215/2015, com a redação da
@@ -53,6 +59,8 @@ da Transparência ainda não foi gravado.
 - **Tela para editar rubricas ou fundos.** O mapa é código, como as atribuições.
 - **Mapas de outros estados.** Todas as serventias atendidas são do RN; outra UF entra quando houver
   cliente fora do RN.
+- **Converter os boletins antigos.** O total de tributos não se separa por fundo a partir do banco;
+  só a serventia, com as guias, pode republicar o mês no formato novo.
 - **Opção por mês.** A opção de publicar a parcela privada vale para a serventia inteira, não para
   cada boletim.
 - **Linha de "despesas públicas" separada.** No RN o dinheiro público sai da serventia como
@@ -68,8 +76,8 @@ da Transparência ainda não foi gravado.
 
 - `transparency-bulletin`: os tributos passam a ser um valor por fundo, classificado em rubricas do
   CNJ por UF, com o ISS numa linha própria; arrecadação, despesas e saldo passam a depender de uma
-  opção da serventia; o boletim ganha o aviso da parcela privada e a citação da Res. 670 no rodapé.
-  A pré-visualização e o PDF mudam de conteúdo.
+  opção da serventia; o boletim ganha o aviso da parcela privada e a citação da Res. 670 no rodapé;
+  boletins antigos continuam no formato anterior. A pré-visualização e o PDF mudam de conteúdo.
 
 ## Impact
 
@@ -80,8 +88,8 @@ da Transparência ainda não foi gravado.
   `src/core/tenant/tenants/`: campo de localização (cidade e UF) e a opção
   `publishBulletinPrivateFigures`, com default `true` e override pelo painel.
 - `src/db/schema.ts` e migração: `transparency_bulletins` ganha os valores por fundo e o ISS;
-  arrecadação e despesas ficam nuláveis; `taxes_paid_cents` sai em dois deploys (expand e
-  contract). Produção é migrada à mão antes do merge.
+  arrecadação, despesas e `taxes_paid_cents` ficam nuláveis. `taxes_paid_cents` continua no banco,
+  porque guarda o total de tributos dos boletins antigos. Produção é migrada à mão antes do merge.
 - `src/lib/transparency.ts`: `BulletinInput` e `upsertBulletin`.
 - `src/app/admin/(dashboard)/transparencia/`: `actions.ts`, `bulletin-form.tsx`,
   `bulletin-preview.tsx`, `bulletin-list.tsx` e a opção na aba Boletim mensal.

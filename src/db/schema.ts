@@ -609,7 +609,8 @@ export const appointments = pgTable(
  * core/transparency/rubrics when shown, so a reclassification needs no
  * migration), the ISS, and, when the office publishes them, gross revenue and
  * expenses. The taxes total and the balance are never stored, they are
- * arithmetic (core/transparency/bulletin). Money is centavos, in bigint: a
+ * arithmetic (core/transparency/bulletin), except for the old bulletins that
+ * predate the funds (see taxes_paid_cents). Money is centavos, in bigint: a
  * busy month in centavos passes the 2.1-billion ceiling of a 32-bit integer.
  *
  * One bulletin per (office, month): the unique index is what makes
@@ -633,9 +634,10 @@ export const transparencyBulletins = pgTable(
     issCents: bigint("iss_cents", { mode: "number" }).notNull().default(0),
     // Null when the office does not publish its private figures.
     grossRevenueCents: bigint("gross_revenue_cents", { mode: "number" }),
-    // Superseded by the funds and ISS, whose sum is the taxes total. Nullable
-    // now and never written; dropped by the contract step that follows
-    // boletim-por-rubrica-res-670 once it is in production.
+    // The single taxes total of a bulletin published before Res. CNJ
+    // 670/2025, which had no funds (fund_amounts_cents = {}). Kept because
+    // that total cannot be split into funds after the fact; null on every
+    // bulletin in the current format, whose taxes are the funds plus ISS.
     taxesPaidCents: bigint("taxes_paid_cents", { mode: "number" }),
     expensesCents: bigint("expenses_cents", { mode: "number" }),
     // "preliminary" | "consolidated": see core/transparency/bulletin.

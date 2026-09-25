@@ -7,9 +7,9 @@ import { auditLog, tenantContent, transparencyBulletins } from "@/db/schema.ts";
 import { createTestDb } from "@/db/test-db.ts";
 import { OFFICE_BULLETIN_KEY } from "./office-config.ts";
 import {
-  bulletinFiguresOf,
   getBulletinWith,
   saveBulletinOptionWith,
+  storedBulletinOf,
   upsertBulletinWith,
 } from "./transparency.ts";
 
@@ -65,7 +65,10 @@ test("a published bulletin reads back fund by fund, with ISS and private figures
   assert.equal(row.taxesPaidCents, null);
   const again = await getBulletinWith(db, TENANT, row.id);
   assert.ok(again);
-  assert.deepEqual(bulletinFiguresOf(again, "RN"), FIGURES);
+  assert.deepEqual(storedBulletinOf(again, "RN"), {
+    kind: "current",
+    figures: FIGURES,
+  });
 });
 
 test("publishing the same month again replaces it, never a second row", async () => {
@@ -122,9 +125,59 @@ test("another office's bulletin id answers nothing", async () => {
 test("a row whose funds are not the state's reads as an error, not as zeros", async () => {
   const [row] = await rowsFor("2026-01-01");
   assert.equal(
-    bulletinFiguresOf({ ...row, fundAmountsCents: { fdj: 100 } }, "RN"),
+    storedBulletinOf({ ...row, fundAmountsCents: { fdj: 100 } }, "RN"),
     null,
   );
+  // No funds and no old total either: not an old bulletin, just broken.
+  assert.equal(
+    storedBulletinOf(
+      { ...row, fundAmountsCents: {}, taxesPaidCents: null },
+      "RN",
+    ),
+    null,
+  );
+});
+
+/** A row as the code before Res. 670 wrote it, then migrated. */
+async function insertLegacy(month: string): Promise<void> {
+  await db.insert(transparencyBulletins).values({
+    tenantSlug: TENANT,
+    referenceMonth: month,
+    actsCount: 267,
+    grossRevenueCents: 797_812,
+    taxesPaidCents: 265_259,
+    expensesCents: 806_931,
+    status: "consolidated",
+  });
+}
+
+test("a bulletin from before the funds reads as the old format, not as an error", async () => {
+  await insertLegacy("2025-01-01");
+  const [row] = await rowsFor("2025-01-01");
+  assert.deepEqual(row.fundAmountsCents, {});
+  assert.deepEqual(storedBulletinOf(row, "RN"), {
+    kind: "legacy",
+    figures: {
+      actsCount: 267,
+      grossRevenueCents: 797_812,
+      taxesPaidCents: 265_259,
+      expensesCents: 806_931,
+    },
+  });
+});
+
+test("republishing an old month in the current format drops the old total", async () => {
+  await insertLegacy("2025-02-01");
+  await upsertBulletinWith(
+    db,
+    TENANT,
+    { referenceMonth: "2025-02-01", figures: FIGURES, status: "consolidated" },
+    ACTOR,
+  );
+  const rows = await rowsFor("2025-02-01");
+  assert.equal(rows.length, 1);
+  assert.equal(rows[0].taxesPaidCents, null);
+  assert.equal(storedBulletinOf(rows[0], "RN")?.kind, "current");
 });
 
 test("saving the option writes the override and leaves a trail", async () => {
