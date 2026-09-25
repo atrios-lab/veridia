@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { deadlineDaysSchema } from "../request/deadline.ts";
+import { SUPPORTED_STATES } from "../transparency/rubrics.ts";
 import {
   isValidPixCity,
   isValidPixKey,
@@ -182,6 +183,23 @@ export const TenantSchema = z.object({
       isValidPixCity,
       `O município deve ter até ${PIX_CITY_MAX_LENGTH} caracteres (sem acento).`,
     ),
+  // Where the office is, for reading: the city as its people write it, with
+  // accents ("São José de Mipibu"), and the state. Not `municipality`, which
+  // is the Pix payload's Merchant City: upper case, no accents, cut at 15
+  // characters ("SAO J DE MIPIBU"), right for a bank and wrong for a page.
+  // The state picks the fund map of the transparency bulletin, so it only
+  // takes a state whose map exists: an office elsewhere fails here, before it
+  // can publish a bulletin with no funds on it.
+  location: z.object({
+    city: z.string().min(1),
+    state: z.enum(SUPPORTED_STATES),
+  }),
+  // Whether the monthly bulletin also shows gross revenue, expenses and the
+  // balance. Only the public share (the funds) is required by Res. CNJ
+  // 670/2025; the rest is the office's own money and publishing it is the
+  // titular's choice, made in the panel. On by default: it is the quadro the
+  // offices already publish on their own.
+  publishBulletinPrivateFigures: z.boolean().default(true),
   /**
    * The office's gross semestral revenue, as the Átrios levantou it from the
    * Justiça Aberta's public API during prospecting. Feeds the Provimento

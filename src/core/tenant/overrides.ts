@@ -1,4 +1,4 @@
-import type { z } from "zod";
+import { z } from "zod";
 import { MANDATORY_SECTIONS } from "./gating.ts";
 import { CounterHoursSchema, type Tenant, TenantSchema } from "./schema.ts";
 
@@ -112,6 +112,24 @@ export type OfficeDeadline = z.infer<typeof OfficeDeadlineSchema>;
 export const OfficeDeadlineOverrideSchema = OfficeDeadlineSchema.partial();
 
 /**
+ * What an office may change about its monthly bulletin: whether it also
+ * publishes gross revenue, expenses and the balance. The public share is not
+ * the office's to switch off; this is only the private one, which is the
+ * titular's own money. Same pick discipline as the others.
+ */
+export const OfficeBulletinSchema = TenantSchema.pick({
+  publishBulletinPrivateFigures: true,
+}).extend({
+  // Required on a save: the default belongs to the config, and a save that
+  // leaves it out has said nothing, which must not quietly turn it back on.
+  publishBulletinPrivateFigures: z.boolean(),
+});
+export type OfficeBulletin = z.infer<typeof OfficeBulletinSchema>;
+
+/** Same partial-for-reading discipline as OfficeContactOverrideSchema. */
+export const OfficeBulletinOverrideSchema = OfficeBulletinSchema.partial();
+
+/**
  * Lays the office's own edits over its configuration.
  *
  * Each row that fails to parse is ignored rather than thrown: an override is
@@ -140,6 +158,7 @@ export function applyTenantOverrides(
     dpo?: unknown;
     pix?: unknown;
     deadline?: unknown;
+    bulletin?: unknown;
   },
 ): Tenant {
   let merged = tenant;
@@ -158,6 +177,9 @@ export function applyTenantOverrides(
 
   const deadline = OfficeDeadlineOverrideSchema.safeParse(overrides.deadline);
   if (deadline.success) merged = { ...merged, ...deadline.data };
+
+  const bulletin = OfficeBulletinOverrideSchema.safeParse(overrides.bulletin);
+  if (bulletin.success) merged = { ...merged, ...bulletin.data };
 
   return merged;
 }

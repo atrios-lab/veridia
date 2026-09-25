@@ -61,6 +61,9 @@ export default async function TransparencyPage({
                 name: tenant.name,
                 subtitle: tenant.subtitle,
                 legalFooter: tenant.legalFooter,
+                city: tenant.location.city,
+                state: tenant.location.state,
+                publishPrivateFigures: tenant.publishBulletinPrivateFigures,
               }}
               currentMonth={Number(today().slice(5, 7))}
               currentYear={Number(today().slice(0, 4))}

@@ -3,6 +3,7 @@ import { test } from "node:test";
 import {
   applyTenantOverrides,
   OfficeBrandSchema,
+  OfficeBulletinSchema,
   OfficeContactSchema,
   OfficeDeadlineSchema,
   OfficeDpoSchema,
@@ -320,6 +321,43 @@ test("the deadline write schema cannot reach anything else in the tenant", () =>
   });
   assert.ok(parsed.success);
   assert.deepEqual(parsed.data, { requestDeadlineDays: 20 });
+});
+
+test("an office that never touched the option publishes the private figures", () => {
+  assert.equal(cartorioMarinho.publishBulletinPrivateFigures, true);
+  for (const raw of [null, undefined, {}]) {
+    assert.equal(
+      applyTenantOverrides(cartorioMarinho, { bulletin: raw })
+        .publishBulletinPrivateFigures,
+      true,
+    );
+  }
+});
+
+test("the office can switch the private figures off, and a corrupted row cannot", () => {
+  assert.equal(
+    applyTenantOverrides(cartorioMarinho, {
+      bulletin: { publishBulletinPrivateFigures: false },
+    }).publishBulletinPrivateFigures,
+    false,
+  );
+  for (const raw of ["false", { publishBulletinPrivateFigures: "não" }]) {
+    assert.equal(
+      applyTenantOverrides(cartorioMarinho, { bulletin: raw })
+        .publishBulletinPrivateFigures,
+      true,
+    );
+  }
+});
+
+test("the bulletin write schema requires the choice and reaches nothing else", () => {
+  assert.equal(OfficeBulletinSchema.safeParse({}).success, false);
+  const parsed = OfficeBulletinSchema.safeParse({
+    publishBulletinPrivateFigures: false,
+    location: { city: "Forjada", state: "RN" },
+  });
+  assert.ok(parsed.success);
+  assert.deepEqual(parsed.data, { publishBulletinPrivateFigures: false });
 });
 
 test("as horas do balcão são editáveis pelo painel", () => {

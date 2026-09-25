@@ -19,6 +19,7 @@ export const cartorioBentoFernandes: Tenant = parseTenant({
     "da vida do cidadão, do nascimento aos negócios.",
   cns: "095026",
   municipality: "BENTO FERNANDES",
+  location: { city: "Bento Fernandes", state: "RN" },
   attributions: ["RCPN", "NOTAS", "RI", "PROTESTO", "RTD", "RCPJ"],
   contacts: {
     phone: "(84) 4042-0779",

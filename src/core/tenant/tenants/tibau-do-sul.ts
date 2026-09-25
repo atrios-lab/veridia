@@ -37,6 +37,7 @@ export const cartorioTibauDoSul: Tenant = parseTenant({
     email: "bartfagundes@uol.com.br",
   },
   municipality: "TIBAU DO SUL",
+  location: { city: "Tibau do Sul", state: "RN" },
   address:
     "Av. Governador Aluízio Alves, 174, Centro, Tibau do Sul - RN, 59178-000",
   // As the Instagram bio states; registries still show 8h-18h straight.
