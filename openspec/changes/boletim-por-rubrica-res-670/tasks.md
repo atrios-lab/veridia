@@ -38,7 +38,7 @@
 
 ## 7. Entrega
 
-- [ ] 7.1 Confirmar que `transparency_bulletins` está vazia em produção; aplicar a migração no Homolog (pooler, porta 5432) e em produção (`POSTGRES_URL_NON_POOLING`) antes do merge
+- [x] 7.1 Contar os boletins em produção (eram 20, de Bom Jesus: ver grupo 8); aplicar a migração no Homolog (pooler, porta 5432) e em produção (`POSTGRES_URL_NON_POOLING`) antes do merge
 - [x] 7.2 Abrir o PR
 
 ## 8. Boletins no formato anterior
@@ -47,4 +47,4 @@
 - [x] 8.2 `bulletinFiguresOf` distingue linha nova (fundos válidos), antiga (fundos vazios e total de tributos gravado) e malformada; `upsertBulletinWith` zera `taxes_paid_cents` ao gravar no formato novo; testes em PGlite com uma linha no formato antigo
 - [x] 8.3 Rota e PDF: desenhar o boletim antigo com a nota de formato anterior; comentário de `taxes_paid_cents` no schema explica que a coluna fica
 - [x] 8.4 Conferir no Homolog com um boletim no formato antigo, com a opção ligada e desligada
-- [ ] 8.5 Migrar a produção
+- [x] 8.5 Migrar a produção
