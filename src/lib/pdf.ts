@@ -528,12 +528,19 @@ export async function renderBulletin(
   // Everything below is placed with explicit Y coordinates, advanced by hand:
   // label and amount are two draws on the same line, and leaning on the
   // shared `pdf.y` between them is what made columns collide before.
+  // The title gives up room to the tag only when there is one, and the
+  // period sits below wherever the title actually ends: "Dezembro de 2025"
+  // beside the tag wraps, and a fixed offset drew the period over its second
+  // line.
   const titleY = HEADER_BOTTOM;
   pdf
     .font("Helvetica-Bold")
     .fontSize(19)
     .fillColor(palette.primary)
-    .text(document.title, MARGIN, titleY, { width: width - 160 });
+    .text(document.title, MARGIN, titleY, {
+      width: document.preliminary ? width - 160 : width,
+    });
+  const titleBottom = pdf.y;
 
   if (document.preliminary) {
     const tag = "Dados preliminares";
@@ -546,7 +553,7 @@ export async function renderBulletin(
       .text(tag, tagX, titleY + 8, { width: tw, align: "center" });
   }
 
-  const periodY = titleY + 30;
+  const periodY = Math.max(titleY + 30, titleBottom + 6);
   pdf
     .font("Helvetica")
     .fontSize(10)
