@@ -29,7 +29,12 @@ after(async () => {
 
 const FIGURES: BulletinFigures = {
   actsCount: 267,
-  fundAmountsCents: { fdj: 123_456, frmp: 32_100, fcrcpn: 21_040, funaf: 9_810 },
+  fundAmountsCents: {
+    fdj: 123_456,
+    frmp: 32_100,
+    fcrcpn: 21_040,
+    funaf: 9_810,
+  },
   issCents: 61_200,
   grossRevenueCents: 797_812,
   expensesCents: 806_931,

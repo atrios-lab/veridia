@@ -5,11 +5,11 @@ import {
   bulletinPeriod,
   bulletinTaxesCents,
   bulletinView,
+  formatMoneyBRL,
+  formatMonthYear,
   fundFieldName,
   issLabel,
   parseBulletinFigures,
-  formatMoneyBRL,
-  formatMonthYear,
   parseCount,
   parseMoneyBRL,
 } from "./bulletin.ts";
@@ -34,7 +34,12 @@ test("the balance is the office's own January, to the centavo", () => {
   // same 2.652,59.
   const figures = {
     actsCount: 267,
-    fundAmountsCents: { fdj: 150_000, frmp: 40_000, fcrcpn: 30_000, funaf: 10_000 },
+    fundAmountsCents: {
+      fdj: 150_000,
+      frmp: 40_000,
+      fcrcpn: 30_000,
+      funaf: 10_000,
+    },
     issCents: 35_259,
     grossRevenueCents: 797_812,
     expensesCents: 806_931,
@@ -122,13 +127,17 @@ test("the view drops the private block when the option is off or a figure is mis
 
   assert.equal(bulletinView("RN", figures, false).privateFigures, null);
   assert.equal(
-    bulletinView("RN", { ...figures, expensesCents: null }, true).privateFigures,
+    bulletinView("RN", { ...figures, expensesCents: null }, true)
+      .privateFigures,
     null,
   );
 });
 
 test("the ISS line names the municipality", () => {
-  assert.equal(issLabel("Canguaretama"), "ISS, tributo municipal (Canguaretama)");
+  assert.equal(
+    issLabel("Canguaretama"),
+    "ISS, tributo municipal (Canguaretama)",
+  );
 });
 
 test("parseMoneyBRL reads the pt-BR the operator types", () => {

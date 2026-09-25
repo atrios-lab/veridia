@@ -1,36 +1,77 @@
 import {
-  type BulletinFigures,
+  BALANCE_LABEL,
+  BULLETIN_LEGAL_BASIS,
   type BulletinStatus,
-  bulletinBalanceCents,
+  type BulletinView,
   bulletinPeriod,
   formatMoneyBRL,
   formatMonthYear,
+  issLabel,
 } from "@/core/transparency/bulletin.ts";
+
+function Line({
+  label,
+  cents,
+  strong = false,
+  indent = false,
+}: {
+  label: string;
+  cents: number;
+  strong?: boolean;
+  indent?: boolean;
+}) {
+  return (
+    <div
+      className={`flex items-baseline justify-between gap-3 ${indent ? "pl-4" : ""}`}
+    >
+      <dt
+        className={
+          strong
+            ? "text-[12.5px] font-semibold text-admin-primary"
+            : "text-[12.5px] text-admin-text"
+        }
+      >
+        {label}
+      </dt>
+      <dd
+        className={`tabular-nums ${
+          strong
+            ? "text-[14px] font-bold text-admin-primary"
+            : "text-[13px] text-admin-text"
+        }`}
+      >
+        R$ {formatMoneyBRL(cents)}
+      </dd>
+    </div>
+  );
+}
 
 /**
  * The bulletin exactly as it prints: the panel shows this beside the form so
  * "como sai no site" is not a promise, it is the same markup. The PDF route
- * draws the same fields from the same core, so preview and file never drift in
- * content, only in medium.
+ * draws the same `BulletinView` from the same core, so preview and file never
+ * drift in content, only in medium.
  */
 export function BulletinPreview({
   officeName,
   officeSubtitle,
   legalFooter,
+  city,
   month,
   year,
-  figures,
+  view,
   status,
 }: {
   officeName: string;
   officeSubtitle: string;
   legalFooter: string;
+  city: string;
   month: number;
   year: number;
-  figures: BulletinFigures;
+  view: BulletinView;
   status: BulletinStatus;
 }) {
-  const balance = bulletinBalanceCents(figures);
+  const privateFigures = view.privateFigures;
 
   return (
     <div className="overflow-hidden rounded-[14px] border border-admin-border bg-admin-card">
@@ -58,64 +99,78 @@ export function BulletinPreview({
           )}
         </div>
 
-        <div className="mt-4 grid gap-3 sm:grid-cols-2">
-          <div className="rounded-[11px] border border-admin-border p-4">
-            <p className="text-[10.5px] font-bold uppercase tracking-[0.08em] text-admin-accent">
-              De onde veio
-            </p>
-            <dl className="mt-2 space-y-1.5">
-              <div className="flex items-baseline justify-between gap-3">
-                <dt className="text-[12.5px] text-admin-text">
-                  Atos praticados
-                </dt>
-                <dd className="text-[14px] font-bold text-admin-primary tabular-nums">
-                  {figures.actsCount.toLocaleString("pt-BR")}
-                </dd>
-              </div>
-              <div className="flex items-baseline justify-between gap-3">
-                <dt className="text-[12.5px] text-admin-text">Arrecadação</dt>
-                <dd className="text-[14px] font-bold text-admin-primary tabular-nums">
-                  R$ {formatMoneyBRL(figures.grossRevenueCents)}
-                </dd>
-              </div>
-            </dl>
+        <dl className="mt-4 space-y-1.5 rounded-[11px] border border-admin-border p-4">
+          <div className="flex items-baseline justify-between gap-3">
+            <dt className="text-[12.5px] font-semibold text-admin-primary">
+              Atos praticados
+            </dt>
+            <dd className="text-[14px] font-bold text-admin-primary tabular-nums">
+              {view.actsCount.toLocaleString("pt-BR")}
+            </dd>
           </div>
+          {privateFigures && (
+            <Line
+              label="Arrecadação"
+              cents={privateFigures.grossRevenueCents}
+              strong
+            />
+          )}
+        </dl>
 
-          <div className="rounded-[11px] border border-admin-border p-4">
-            <p className="text-[10.5px] font-bold uppercase tracking-[0.08em] text-admin-accent">
-              Para onde foi
-            </p>
-            <dl className="mt-2 space-y-1.5">
-              <div className="flex items-baseline justify-between gap-3">
-                <dt className="text-[12.5px] text-admin-text">
-                  Tributos pagos
-                  <span className="block text-[10.5px] text-admin-faint">
-                    FCRCPN, FRMP, FDJ, FUNAF, ISS
-                  </span>
-                </dt>
-                <dd className="text-[14px] font-bold text-admin-primary tabular-nums">
-                  R$ {formatMoneyBRL(figures.taxesPaidCents)}
-                </dd>
+        <div className="mt-3 rounded-[11px] border border-admin-border p-4">
+          <p className="text-[10.5px] font-bold uppercase tracking-[0.08em] text-admin-accent">
+            Recolhido aos fundos
+          </p>
+          <dl className="mt-2 space-y-2">
+            {view.rubrics.map((group) => (
+              <div key={group.rubric} className="space-y-1">
+                <Line
+                  label={`${group.rubric}. ${group.title}`}
+                  cents={group.subtotalCents}
+                  strong
+                />
+                {group.funds.map((fund) => (
+                  <Line
+                    key={fund.key}
+                    label={fund.label}
+                    cents={fund.amountCents}
+                    indent
+                  />
+                ))}
               </div>
-              <div className="flex items-baseline justify-between gap-3 border-t border-admin-border pt-1.5">
-                <dt className="text-[12.5px] text-admin-text">Despesas</dt>
-                <dd className="text-[14px] font-bold text-admin-primary tabular-nums">
-                  R$ {formatMoneyBRL(figures.expensesCents)}
-                </dd>
-              </div>
-            </dl>
-          </div>
+            ))}
+            <div className="border-t border-admin-border pt-2">
+              <Line
+                label="Total recolhido aos fundos"
+                cents={view.fundsTotalCents}
+                strong
+              />
+            </div>
+          </dl>
         </div>
 
-        <div className="mt-3 flex items-center justify-between gap-3 rounded-[11px] bg-admin-primary px-5 py-4 text-white">
-          <span className="text-[14px] font-semibold">Saldo final do mês</span>
-          <span className="font-serif text-[22px] font-bold tabular-nums">
-            R$ {formatMoneyBRL(balance)}
-          </span>
-        </div>
+        <dl className="mt-3 space-y-1.5 rounded-[11px] border border-admin-border p-4">
+          <Line label={issLabel(city)} cents={view.issCents} strong />
+          {privateFigures && (
+            <Line
+              label="Despesas"
+              cents={privateFigures.expensesCents}
+              strong
+            />
+          )}
+        </dl>
+
+        {privateFigures && (
+          <div className="mt-3 flex items-center justify-between gap-3 rounded-[11px] bg-admin-primary px-5 py-4 text-white">
+            <span className="text-[14px] font-semibold">{BALANCE_LABEL}</span>
+            <span className="font-serif text-[22px] font-bold tabular-nums">
+              R$ {formatMoneyBRL(privateFigures.balanceCents)}
+            </span>
+          </div>
+        )}
 
         <p className="mt-4 border-t border-admin-border pt-3 text-[10.5px] leading-relaxed text-admin-faint">
-          {legalFooter}
+          {BULLETIN_LEGAL_BASIS} {legalFooter}
         </p>
       </div>
     </div>

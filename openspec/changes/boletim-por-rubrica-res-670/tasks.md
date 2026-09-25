@@ -24,16 +24,16 @@
 
 ## 5. Painel
 
-- [ ] 5.1 Aba Boletim mensal: a opção "Publicar também arrecadação, despesas e saldo" acima do formulário, gravada no servidor, com a consequência dita na legenda
-- [ ] 5.2 `bulletin-form.tsx`: tirar o campo "Tributos pagos"; um campo por fundo da UF, na ordem do mapa, com o rótulo da tabela (FDJ, FRMP, FCRCPN, FUNAF), mais ISS e atos; arrecadação, despesas e a caixa "Saldo final (emolumentos e outras receitas)" só com a opção ligada
-- [ ] 5.3 `actions.ts`: `publishBulletinAction` e a action da opção só fazem o transporte e chamam núcleo e camada de dados; erros por campo com os nomes novos
-- [ ] 5.4 `bulletin-preview.tsx`: rubricas com subtotal e detalhe, total dos fundos, linha "ISS, tributo municipal (<cidade>)", e arrecadação, despesas e saldo só com a opção ligada; rodapé citando o art. 6º, § 3º, da Res. CNJ 215/2015 com a redação da Res. CNJ 670/2025
-- [ ] 5.5 `bulletin-list.tsx` e o cabeçalho do módulo: conferir que nada lê `taxes_paid_cents`
+- [x] 5.1 Aba Boletim mensal: a opção "Publicar também arrecadação, despesas e saldo" acima do formulário, gravada no servidor, com a consequência dita na legenda
+- [x] 5.2 `bulletin-form.tsx`: tirar o campo "Tributos pagos"; um campo por fundo da UF, na ordem do mapa, com o rótulo da tabela (FDJ, FRMP, FCRCPN, FUNAF), mais ISS e atos; arrecadação, despesas e a caixa "Saldo final (emolumentos e outras receitas)" só com a opção ligada
+- [x] 5.3 `actions.ts`: `publishBulletinAction` e a action da opção só fazem o transporte e chamam núcleo e camada de dados; erros por campo com os nomes novos
+- [x] 5.4 `bulletin-preview.tsx`: rubricas com subtotal e detalhe, total dos fundos, linha "ISS, tributo municipal (<cidade>)", e arrecadação, despesas e saldo só com a opção ligada; rodapé citando o art. 6º, § 3º, da Res. CNJ 215/2015 com a redação da Res. CNJ 670/2025
+- [x] 5.5 `bulletin-list.tsx` e o cabeçalho do módulo: conferir que nada lê `taxes_paid_cents`
 
 ## 6. PDF e site
 
-- [ ] 6.1 `src/lib/pdf.ts`: o corpo do PDF do boletim segue a pré-visualização do 5.4, lendo a opção vigente na hora de gerar; saldo negativo exibido como tal
-- [ ] 6.2 `src/app/(public)/transparencia/page.tsx`: aviso fixo do § 3º-B na seção do boletim, visível também no estado vazio
+- [x] 6.1 `src/lib/pdf.ts`: o corpo do PDF do boletim segue a pré-visualização do 5.4, lendo a opção vigente na hora de gerar; saldo negativo exibido como tal
+- [x] 6.2 `src/app/(public)/transparencia/page.tsx`: aviso fixo do § 3º-B na seção do boletim, visível também no estado vazio
 - [ ] 6.3 Conferir no navegador, pelo host de uma serventia: formulário e pré-visualização com a opção ligada e desligada, publicação, PDF e o aviso na página pública
 
 ## 7. Entrega

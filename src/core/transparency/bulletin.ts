@@ -179,7 +179,8 @@ export function parseBulletinFigures(
   const fundAmountsCents: FundAmounts = {};
   for (const fund of FUNDS_BY_STATE[state]) {
     const cents = parseMoneyBRL(input.funds[fund.key] ?? "");
-    if (cents === null) fieldErrors[fundFieldName(fund.key)] = "Valor inválido.";
+    if (cents === null)
+      fieldErrors[fundFieldName(fund.key)] = "Valor inválido.";
     else fundAmountsCents[fund.key] = cents;
   }
 
@@ -190,12 +191,17 @@ export function parseBulletinFigures(
   let expensesCents: number | null = null;
   if (options.privateFigures) {
     grossRevenueCents = parseMoneyBRL(input.grossRevenue);
-    if (grossRevenueCents === null) fieldErrors.grossRevenue = "Valor inválido.";
+    if (grossRevenueCents === null)
+      fieldErrors.grossRevenue = "Valor inválido.";
     expensesCents = parseMoneyBRL(input.expenses);
     if (expensesCents === null) fieldErrors.expenses = "Valor inválido.";
   }
 
-  if (actsCount === null || issCents === null || Object.keys(fieldErrors).length) {
+  if (
+    actsCount === null ||
+    issCents === null ||
+    Object.keys(fieldErrors).length
+  ) {
     return { fieldErrors };
   }
   return {
@@ -245,7 +251,10 @@ export function bulletinView(
   figures: BulletinFigures,
   publishPrivateFigures: boolean,
 ): BulletinView {
-  const { rubrics, totalCents } = groupByRubric(state, figures.fundAmountsCents);
+  const { rubrics, totalCents } = groupByRubric(
+    state,
+    figures.fundAmountsCents,
+  );
   const balanceCents = bulletinBalanceCents(figures);
   const privateFigures =
     publishPrivateFigures &&

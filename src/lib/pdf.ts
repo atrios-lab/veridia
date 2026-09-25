@@ -457,30 +457,36 @@ export async function renderDocuments(
   return done;
 }
 
-/** What the monthly bulletin PDF draws. Money is centavos, formatted by the
- * caller with the same core the on-screen preview uses, so the file and the
- * preview never disagree on a number. */
+/** What the monthly bulletin PDF draws, already formatted by the caller
+ * from the same `BulletinView` the on-screen preview renders, so the file and
+ * the preview never disagree on a number. The private figures are null when
+ * the office does not publish them: the PDF then simply has no such rows. */
 export interface BulletinDocument {
   office: string[];
   title: string;
   period: string;
   preliminary: boolean;
-  rows: {
-    actsCount: string;
-    grossRevenue: string;
-    taxesPaid: string;
-    expenses: string;
-  };
-  balance: string;
+  actsCount: string;
+  grossRevenue: string | null;
+  rubrics: {
+    title: string;
+    subtotal: string;
+    funds: { label: string; amount: string }[];
+  }[];
+  fundsTotal: string;
+  iss: { label: string; amount: string };
+  expenses: string | null;
+  balance: { label: string; amount: string } | null;
+  legalBasis: string;
   footer: string;
 }
 
 /**
  * The monthly revenue bulletin, as its own drawing. It shares the letterhead
  * and footer machinery with `renderDocument` but not its body: a bulletin is
- * two figure blocks and a balance strip, not a flowing form, so it lays those
- * out directly. Same palette, same seal, same legal footer: one office,
- * whichever document it prints.
+ * a few blocks of label and amount and a balance strip, not a flowing form,
+ * so it lays those out directly. Same palette, same seal, same legal footer:
+ * one office, whichever document it prints.
  */
 export async function renderBulletin(
   document: BulletinDocument,
@@ -515,9 +521,9 @@ export async function renderBulletin(
 
   const width = contentWidth(pdf);
 
-  // Everything below is placed with explicit Y coordinates, never `pdf.y`:
-  // the two side-by-side cards each advance the cursor, so leaning on the
-  // shared `pdf.y` is what made the columns collide. Here nothing reads it.
+  // Everything below is placed with explicit Y coordinates, advanced by hand:
+  // label and amount are two draws on the same line, and leaning on the
+  // shared `pdf.y` between them is what made columns collide before.
   const titleY = HEADER_BOTTOM;
   pdf
     .font("Helvetica-Bold")
@@ -543,88 +549,112 @@ export async function renderBulletin(
     .fillColor(NEUTRALS.textSoft)
     .text(`Período: ${document.period}`, MARGIN, periodY, { width });
 
-  // Two bordered cards, side by side, matching the on-screen preview.
-  const gap = 16;
-  const colW = (width - gap) / 2;
-  const cardsTop = periodY + 24;
-  const cardH = 96;
-  const rightX = MARGIN + colW + gap;
+  let y = periodY + 28;
+  const inset = 14;
 
-  /** A label on the left and its value on the right, inside a card. */
-  const cardRow = (
-    cardLeft: number,
-    y: number,
+  /** A label on the left and its amount on the right, on one line. */
+  const line = (
     label: string,
-    value: string,
-    sublabel?: string,
+    amount: string,
+    options: { strong?: boolean; indent?: boolean } = {},
   ) => {
+    const left = MARGIN + inset + (options.indent ? 14 : 0);
+    const labelWidth = width - inset * 2 - (options.indent ? 14 : 0) - 110;
     pdf
-      .font("Helvetica")
-      .fontSize(9.5)
-      .fillColor(NEUTRALS.textSoft)
-      .text(label, cardLeft + 14, y, { width: colW - 28 });
-    if (sublabel) {
-      pdf
-        .font("Helvetica")
-        .fontSize(7)
-        .fillColor(palette.muted)
-        .text(sublabel, cardLeft + 14, y + 12, { width: colW - 28 });
-    }
+      .font(options.strong ? "Helvetica-Bold" : "Helvetica")
+      .fontSize(options.strong ? 10 : 9.5)
+      .fillColor(options.strong ? palette.primary : NEUTRALS.textSoft)
+      .text(label, left, y, { width: labelWidth });
+    const labelBottom = pdf.y;
     pdf
-      .font("Helvetica-Bold")
-      .fontSize(11.5)
-      .fillColor(palette.primary)
-      .text(value, cardLeft + 14, y, { width: colW - 28, align: "right" });
+      .font(options.strong ? "Helvetica-Bold" : "Helvetica")
+      .fontSize(options.strong ? 11 : 10)
+      .fillColor(options.strong ? palette.primary : NEUTRALS.text)
+      .text(amount, MARGIN + inset, y, {
+        width: width - inset * 2,
+        align: "right",
+      });
+    y = Math.max(labelBottom, y + 14) + 5;
   };
 
-  for (const [cardLeft, eyebrow] of [
-    [MARGIN, "De onde veio"] as const,
-    [rightX, "Para onde foi"] as const,
-  ]) {
+  /** A bordered block around whatever `draw` lays out. */
+  const block = (draw: () => void, eyebrow?: string) => {
+    const top = y;
+    y += 12;
+    if (eyebrow) {
+      pdf
+        .font("Helvetica-Bold")
+        .fontSize(8.5)
+        .fillColor(palette.accent)
+        .text(eyebrow.toUpperCase(), MARGIN + inset, y, {
+          width: width - inset * 2,
+          characterSpacing: 1.2,
+        });
+      y += 18;
+    }
+    draw();
+    y += 6;
     pdf
-      .roundedRect(cardLeft, cardsTop, colW, cardH, 10)
+      .roundedRect(MARGIN, top, width, y - top, 10)
       .lineWidth(0.8)
       .stroke(palette.border);
+    y += 12;
+  };
+
+  block(() => {
+    line("Atos praticados", document.actsCount, { strong: true });
+    if (document.grossRevenue) {
+      line("Arrecadação", document.grossRevenue, { strong: true });
+    }
+  });
+
+  block(() => {
+    for (const rubric of document.rubrics) {
+      line(rubric.title, rubric.subtotal, { strong: true });
+      for (const fund of rubric.funds) {
+        line(fund.label, fund.amount, { indent: true });
+      }
+      y += 4;
+    }
+    pdf.rect(MARGIN + inset, y, width - inset * 2, 0.6).fill(palette.border);
+    y += 8;
+    line("Total recolhido aos fundos", document.fundsTotal, { strong: true });
+  }, "Recolhido aos fundos");
+
+  block(() => {
+    line(document.iss.label, document.iss.amount, { strong: true });
+    if (document.expenses) {
+      line("Despesas", document.expenses, { strong: true });
+    }
+  });
+
+  if (document.balance) {
+    // Balance strip, full width, the office's ink.
+    const stripH = 46;
+    pdf.roundedRect(MARGIN, y, width, stripH, 8).fill(palette.primary);
     pdf
       .font("Helvetica-Bold")
-      .fontSize(8.5)
-      .fillColor(palette.accent)
-      .text(eyebrow.toUpperCase(), cardLeft + 14, cardsTop + 14, {
-        width: colW - 28,
-        characterSpacing: 1.2,
+      .fontSize(11)
+      .fillColor(NEUTRALS.card)
+      .text(document.balance.label, MARGIN + 18, y + 17, {
+        width: width - 200,
       });
+    pdf
+      .font("Helvetica-Bold")
+      .fontSize(16)
+      .fillColor(NEUTRALS.card)
+      .text(document.balance.amount, MARGIN, y + 15, {
+        width: width - 18,
+        align: "right",
+      });
+    y += stripH + 14;
   }
 
-  const rowOneY = cardsTop + 38;
-  const rowTwoY = cardsTop + 64;
-  cardRow(MARGIN, rowOneY, "Atos praticados", document.rows.actsCount);
-  cardRow(MARGIN, rowTwoY, "Arrecadação", document.rows.grossRevenue);
-  cardRow(
-    rightX,
-    rowOneY,
-    "Tributos pagos",
-    document.rows.taxesPaid,
-    "FCRCPN, FRMP, FDJ, FUNAF, ISS",
-  );
-  cardRow(rightX, rowTwoY, "Despesas", document.rows.expenses);
-
-  // Balance strip, full width, the office's ink.
-  const stripY = cardsTop + cardH + 16;
-  const stripH = 46;
-  pdf.roundedRect(MARGIN, stripY, width, stripH, 8).fill(palette.primary);
   pdf
-    .font("Helvetica-Bold")
-    .fontSize(12)
-    .fillColor(NEUTRALS.card)
-    .text("Saldo final do mês", MARGIN + 18, stripY + 16, { width: width / 2 });
-  pdf
-    .font("Helvetica-Bold")
-    .fontSize(16)
-    .fillColor(NEUTRALS.card)
-    .text(document.balance, MARGIN, stripY + 14, {
-      width: width - 18,
-      align: "right",
-    });
+    .font("Helvetica")
+    .fontSize(8)
+    .fillColor(palette.muted)
+    .text(document.legalBasis, MARGIN, y, { width });
 
   pdf.end();
   return done;
