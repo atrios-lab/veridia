@@ -21,5 +21,5 @@
 
 ## 4. Encerramento conforme o resultado
 
-- [ ] 4.1 Hipótese A: após o merge, repetir 3.2 e 3.4 em produção pelo host de um cartório (ex.: `www.cartorioielmomarinhorn.com`)
+- [x] 4.1 Hipótese A: após o merge, repetir 3.2 e 3.4 em produção pelo host de um cartório (ex.: `www.cartorioielmomarinhorn.com`). Em 29/09/2026, após o merge (`5270899`), as funções de produção rodam em `gru1::gru1` (Marinho, Macaíba, Taipu), mas o SIEX estava fora do ar para todos (503 da Akamai também a partir de Natal, `origin; dur=0`). A consulta em produção fica sem confirmação e foi encerrada por decisão do usuário
 - [x] 4.2 (não se aplica: hipótese A confirmada) Hipótese B: manter a região e o log, anotar no PR que o `/selo` segue degradando para o card e o link oficial, e levantar a decisão de produto (proxy brasileiro × página educativa) como item separado
