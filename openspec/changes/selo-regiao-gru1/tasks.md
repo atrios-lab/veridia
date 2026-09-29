@@ -16,7 +16,7 @@
 - [x] 3.1 Abrir o PR e aguardar o deploy de Preview
 - [x] 3.2 Chamar `/selo/captcha` no Preview pelo host de um tenant com `selo-tjrn` ligado; conferir `x-vercel-id` (função em `gru1`) e o corpo (PNG ou 502)
 - [x] 3.3 Se vier 502: ler o log da função na Vercel e anotar `step`, `status`, `reason` e `region`
-- [ ] 3.4 Se vier imagem: fazer uma consulta completa com um selo real e captcha resolvido à mão, e confirmar que o resultado aparece (não "captcha errado"). Envio com captcha errado já verificado em `gru1`; falta a consulta com captcha certo, feita por uma pessoa
+- [x] 3.4 Se vier imagem: fazer uma consulta completa com um selo real e captcha resolvido à mão, e confirmar que o resultado aparece (não "captcha errado"). Envio com captcha errado verificado no Preview em `gru1`; consulta com selo real e captcha certo feita pelo usuário em 29/09/2026 no dev local (sai de Natal, então confirma o fluxo, não a região; a região volta a ser checada na 4.1)
 - [x] 3.5 Registrar em `design.md`, na seção "Resultado do spike", a hipótese confirmada (A ou B) com a evidência e a data
 
 ## 4. Encerramento conforme o resultado
