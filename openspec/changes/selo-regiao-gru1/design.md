@@ -11,7 +11,9 @@ Estado em 29/09/2026:
  GET jcaptcha.jpg        200 PNG 145×45    ✓             ✗ ┘→ 502 "O TJ não respondeu."
 ```
 
-- O TJ fica atrás da Akamai (`edgesuite.net`). A falha em produção é rápida (~0,8s), e isso sugere recusa ativa, não timeout.
+- O TJ fica atrás da Akamai (`edgesuite.net`). Em produção a falha às vezes é rápida (0,8–1,5s, recusa ativa) e às vezes estoura os 10s do timeout (o TJ não responde).
+- O mesmo `fetch` do Node, rodado de Natal, funciona. Não é o cliente HTTP, é a origem da chamada.
+- **A mudança foi externa.** A consulta funcionava em produção. Chamado hoje via `vercel curl`, o `/selo/captcha` dos deploys de 30/08, 04/09, 10/09 e 25/09 dá o mesmo 502, e cada deploy leva o código e as envs da sua época. Nosso cliente do TJ não muda desde 22/08. A migração do banco (Neon → Supabase, ambos `us-east-1`) foi em 14/08, antes do selo. Todos os deploys de produção guardados (desde 30/08) rodaram em `iad1`. Os logs de runtime só cobrem 3 dias (tudo 502 desde 26/09), então não dá para datar a virada.
 - A função roda em `iad1` porque é a região padrão do projeto, escolhida por ficar perto do Supabase (`us-east-1`).
 - `openSession` e `fetchCaptcha` fazem `return undefined` tanto para `!response.ok` quanto no `catch {}`. Nada chega ao log, então não dá para distinguir 403 da Akamai, timeout ou erro de DNS.
 
