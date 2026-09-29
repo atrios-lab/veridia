@@ -14,12 +14,12 @@
 ## 3. Spike no Preview (Homolog)
 
 - [x] 3.1 Abrir o PR e aguardar o deploy de Preview
-- [ ] 3.2 Chamar `/selo/captcha` no Preview pelo host de um tenant com `selo-tjrn` ligado; conferir `x-vercel-id` (função em `gru1`) e o corpo (PNG ou 502)
-- [ ] 3.3 Se vier 502: ler o log da função na Vercel e anotar `step`, `status`, `reason` e `region`
-- [ ] 3.4 Se vier imagem: fazer uma consulta completa com um selo real e captcha resolvido à mão, e confirmar que o resultado aparece (não "captcha errado")
-- [ ] 3.5 Registrar em `design.md`, na seção "Resultado do spike", a hipótese confirmada (A ou B) com a evidência e a data
+- [x] 3.2 Chamar `/selo/captcha` no Preview pelo host de um tenant com `selo-tjrn` ligado; conferir `x-vercel-id` (função em `gru1`) e o corpo (PNG ou 502)
+- [x] 3.3 Se vier 502: ler o log da função na Vercel e anotar `step`, `status`, `reason` e `region`
+- [ ] 3.4 Se vier imagem: fazer uma consulta completa com um selo real e captcha resolvido à mão, e confirmar que o resultado aparece (não "captcha errado"). Envio com captcha errado já verificado em `gru1`; falta a consulta com captcha certo, feita por uma pessoa
+- [x] 3.5 Registrar em `design.md`, na seção "Resultado do spike", a hipótese confirmada (A ou B) com a evidência e a data
 
 ## 4. Encerramento conforme o resultado
 
 - [ ] 4.1 Hipótese A: após o merge, repetir 3.2 e 3.4 em produção pelo host de um cartório (ex.: `www.cartorioielmomarinhorn.com`)
-- [ ] 4.2 Hipótese B: manter a região e o log, anotar no PR que o `/selo` segue degradando para o card e o link oficial, e levantar a decisão de produto (proxy brasileiro × página educativa) como item separado
+- [x] 4.2 (não se aplica: hipótese A confirmada) Hipótese B: manter a região e o log, anotar no PR que o `/selo` segue degradando para o card e o link oficial, e levantar a decisão de produto (proxy brasileiro × página educativa) como item separado

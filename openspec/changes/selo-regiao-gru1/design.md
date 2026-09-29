@@ -91,4 +91,9 @@ Não há migração de banco. Deploy normal por PR. Rollback: reverter o commit.
 
 ## Resultado do spike
 
-_(preencher após a validação no Preview: hipótese confirmada, status e região vistos no log, data)_
+**Hipótese A (geobloqueio), confirmada em 29/09/2026 no Preview.**
+
+- Com `preferredRegion` (ignorado pela Vercel), a função continuou em `iad1`, e o log novo registrou `[tj-seal] {"step":"session","status":403,"reason":"http","region":"iad1"}`. A Akamai do TJ recusa ativamente a abertura da sessão vinda dos EUA.
+- Com `regions: ["gru1"]` no `vercel.json` (deploy `veridia-qewe75i6k`, commit `f02222a`), `/selo/captcha` respondeu `200 image/png` 145×45 em três chamadas seguidas, com `x-vercel-id: gru1::gru1`. Como `gru1` também é AWS, o bloqueio é por país e não por IP de datacenter.
+- A submissão pela server action (POST nativo do formulário, com a sessão do cookie, código fictício e captcha errado de propósito) também rodou em `gru1::gru1` e trouxe a mensagem do próprio TJ, "O valor inserido não corresponde ao da imagem.", no card "Resposta do TJ". A sessão aberta pela rota do captcha é aceita no envio feito pela página.
+- Falta a consulta com captcha correto e selo real, que só uma pessoa pode fazer (tarefa 3.4).
