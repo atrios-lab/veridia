@@ -1,6 +1,11 @@
 import "server-only";
 // Relative import, not the "@/" alias: scripts/capture-seal-fixture.ts runs
 // this module under plain node, which does not read tsconfig paths.
+import {
+  describeTjFailure,
+  type TjFailureCause,
+  type TjStep,
+} from "../core/seal/failure.ts";
 import { parseSealLookup, type SealLookup } from "../core/seal/parse.ts";
 
 /**
@@ -36,6 +41,17 @@ export type SealLookupOutcome =
   /** The TJ did not answer (down, timeout, blocked). Not our data to invent. */
   | { kind: "unavailable" };
 
+/**
+ * One line per failure, so a 502 on our side says why in the function log.
+ * The citizen still sees the same "O TJ não respondeu"; see core/seal/failure.
+ */
+function reportFailure(step: TjStep, cause: TjFailureCause): void {
+  console.warn(
+    "[tj-seal]",
+    JSON.stringify(describeTjFailure(step, cause, process.env.VERCEL_REGION)),
+  );
+}
+
 function sessionOf(response: Response): SealSession | undefined {
   for (const cookie of response.headers.getSetCookie()) {
     const match = cookie.match(/JSESSIONID=([^;]+)/);
@@ -51,8 +67,15 @@ export async function openSession(): Promise<SealSession | undefined> {
       signal: AbortSignal.timeout(TIMEOUT_MS),
       cache: "no-store",
     });
-    return response.ok ? sessionOf(response) : undefined;
-  } catch {
+    if (!response.ok) {
+      reportFailure("session", { status: response.status });
+      return undefined;
+    }
+    const session = sessionOf(response);
+    if (!session) reportFailure("session", { missingSession: true });
+    return session;
+  } catch (error) {
+    reportFailure("session", { error });
     return undefined;
   }
 }
@@ -77,13 +100,17 @@ export async function fetchCaptcha(
         cache: "no-store",
       },
     );
-    if (!response.ok) return undefined;
+    if (!response.ok) {
+      reportFailure("captcha", { status: response.status });
+      return undefined;
+    }
     return {
       body: await response.arrayBuffer(),
       // The file is named .jpg and served as PNG; trust the header.
       contentType: response.headers.get("content-type") ?? "image/png",
     };
-  } catch {
+  } catch (error) {
+    reportFailure("captcha", { error });
     return undefined;
   }
 }
@@ -144,10 +171,14 @@ export async function fetchLookupHtml(
       signal: AbortSignal.timeout(TIMEOUT_MS),
       cache: "no-store",
     });
-    if (!response.ok) return undefined;
+    if (!response.ok) {
+      reportFailure("lookup", { status: response.status });
+      return undefined;
+    }
     // The SIEX predates UTF-8 on the web and says so in its own meta tag.
     return new TextDecoder("iso-8859-1").decode(await response.arrayBuffer());
-  } catch {
+  } catch (error) {
+    reportFailure("lookup", { error });
     return undefined;
   }
 }
