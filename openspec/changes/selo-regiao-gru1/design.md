@@ -36,6 +36,8 @@ A rota `/selo/captcha` e a página `/selo` exportam `preferredRegion = "gru1"`. 
 
 As duas pontas precisam estar na mesma região. Se a Akamai ou o SIEX amarrarem a sessão ao IP ou ao país de origem, abrir a sessão em `gru1` e submeter de `iad1` quebraria o submit de um jeito que parece "captcha errado". Mesmo região não garante mesmo IP (cada invocação pode sair de um IP diferente do pool da AWS), mas a sessão já sobrevive a isso hoje no dev, e o `JSESSIONID` carrega a afinidade de nó (`.jodi-petkoff`).
 
+A doc do Next 16 (`route-segment-config/preferredRegion.md`) diz que, na Vercel, regiões só valem com `runtime = "edge"`. O código do build não faz essa restrição: grava `regions` no `functions-config-manifest.json` para qualquer runtime. Conferido no build local, onde `/selo` e `/selo/captcha` saem com `["gru1"]`. Quem decide é o builder da Vercel, e a prova é o `x-vercel-id` do Preview (tarefa 3.2). Edge não é alternativa, porque `getTenant` fala com o Postgres por TCP.
+
 **Alternativas:**
 - *Região do projeto inteiro em `gru1`*: descartada. Toda página do site passaria a cruzar o continente até o banco em us-east-1.
 - *Só a rota do captcha em `gru1`*: descartada pelo motivo acima (sessão aberta e usada de países diferentes).
@@ -47,7 +49,7 @@ As duas pontas precisam estar na mesma região. Se a Akamai ou o SIEX amarrarem 
 
 - `step`: `"session" | "captcha" | "lookup"`
 - `status` HTTP, quando houve resposta; para `session`, também se faltou o `JSESSIONID` numa resposta 200
-- `reason`: `"timeout"` (`TimeoutError` do `AbortSignal`) ou o `name`/`message` do erro de rede
+- `reason`: `"http"` (com `status`), `"no-session"`, `"timeout"` (`TimeoutError` do `AbortSignal`) ou `Nome:código` do erro de rede (ex.: `TypeError:ECONNRESET`). Nunca a `message`, que é texto livre e poderia carregar o que foi na requisição
 - `region`: `process.env.VERCEL_REGION`, para confirmar no log que a região pegou
 
 Nunca entram no log: `JSESSIONID`, código do selo, texto do captcha, IP do cidadão. A sessão é do cidadão, e o código do selo leva a nome e CPF de terceiros.

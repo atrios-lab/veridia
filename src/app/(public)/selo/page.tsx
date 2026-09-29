@@ -5,6 +5,10 @@ import { SealLookup } from "./seal-lookup.tsx";
 
 export const generateMetadata = publicMetadata("/selo");
 
+// Also where the lookup action runs: it submits on the TJ session that
+// captcha/route.ts opened, and both have to leave from the same region.
+export const preferredRegion = "gru1";
+
 export default async function DigitalSealPage() {
   const tenant = await requireSection("selo-tjrn");
 

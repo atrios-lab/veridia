@@ -1,15 +1,15 @@
 ## 1. Registro da falha com o TJ
 
-- [ ] 1.1 Criar em `src/core/seal/` uma função pura que monta o registro de falha (`step`, `status?`, `reason`, `region?`) a partir do status HTTP, da ausência de `JSESSIONID` ou do erro capturado (`TimeoutError` vira `"timeout"`)
-- [ ] 1.2 Testes `node --test` da função: 403 na sessão, 200 sem `JSESSIONID`, timeout no captcha, erro de rede no lookup; e um teste que garante que sessão, código do selo e captcha nunca aparecem no objeto, mesmo que estejam na mensagem do erro
-- [ ] 1.3 Em `src/lib/tj-seal.ts`, chamar a função e fazer `console.warn("[tj-seal]", ...)` nos caminhos de falha de `openSession`, `fetchCaptcha` e `fetchLookupHtml`, sem mudar o valor devolvido
-- [ ] 1.4 Conferir que `scripts/capture-seal-fixture.ts` continua rodando sob node puro (import relativo, nada de `@/`)
+- [x] 1.1 Criar em `src/core/seal/` uma função pura que monta o registro de falha (`step`, `status?`, `reason`, `region?`) a partir do status HTTP, da ausência de `JSESSIONID` ou do erro capturado (`TimeoutError` vira `"timeout"`)
+- [x] 1.2 Testes `node --test` da função: 403 na sessão, 200 sem `JSESSIONID`, timeout no captcha, erro de rede no lookup; e um teste que garante que sessão, código do selo e captcha nunca aparecem no objeto, mesmo que estejam na mensagem do erro
+- [x] 1.3 Em `src/lib/tj-seal.ts`, chamar a função e fazer `console.warn("[tj-seal]", ...)` nos caminhos de falha de `openSession`, `fetchCaptcha` e `fetchLookupHtml`, sem mudar o valor devolvido
+- [x] 1.4 Conferir que `scripts/capture-seal-fixture.ts` continua rodando sob node puro (import relativo, nada de `@/`)
 
 ## 2. Região das funções do `/selo`
 
-- [ ] 2.1 `export const preferredRegion = "gru1"` em `src/app/(public)/selo/captcha/route.ts`
-- [ ] 2.2 `export const preferredRegion = "gru1"` em `src/app/(public)/selo/page.tsx` (cobre a server action `lookupSeal`)
-- [ ] 2.3 `pnpm build` local sem aviso de configuração de segmento; rodar só os testes tocados (`src/core/seal/*.test.ts`, `src/lib/seal-lookup.test.ts`)
+- [x] 2.1 `export const preferredRegion = "gru1"` em `src/app/(public)/selo/captcha/route.ts`
+- [x] 2.2 `export const preferredRegion = "gru1"` em `src/app/(public)/selo/page.tsx` (cobre a server action `lookupSeal`)
+- [x] 2.3 `pnpm build` local sem aviso de configuração de segmento; rodar só os testes tocados (`src/core/seal/*.test.ts`, `src/lib/seal-lookup.test.ts`)
 
 ## 3. Spike no Preview (Homolog)
 

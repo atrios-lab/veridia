@@ -5,6 +5,11 @@ import { requireSection } from "../../_lib/section.ts";
 import { SEAL_SESSION_COOKIE, SEAL_SESSION_MAX_AGE } from "../session.ts";
 
 export const runtime = "nodejs";
+// The TJ's CDN stopped answering calls from the project's default region
+// (iad1), while the same request from Brazil goes through. The session this
+// route opens is used again by the lookup action, so /selo/page.tsx runs in
+// the same region (change selo-regiao-gru1).
+export const preferredRegion = "gru1";
 
 /**
  * The TJ's captcha, issued to this citizen.
