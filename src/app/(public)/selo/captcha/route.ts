@@ -5,11 +5,10 @@ import { requireSection } from "../../_lib/section.ts";
 import { SEAL_SESSION_COOKIE, SEAL_SESSION_MAX_AGE } from "../session.ts";
 
 export const runtime = "nodejs";
-// The TJ's CDN stopped answering calls from the project's default region
-// (iad1), while the same request from Brazil goes through. The session this
-// route opens is used again by the lookup action, so /selo/page.tsx runs in
-// the same region (change selo-regiao-gru1).
-export const preferredRegion = "gru1";
+// Runs in gru1, set in vercel.json and not with `preferredRegion`, which
+// Vercel drops for Node functions. The TJ's CDN answers 403 to the project's
+// default region (iad1) and serves the same request from Brazil. The lookup
+// action reuses the session opened here, so /selo/page.tsx is pinned too.
 
 /**
  * The TJ's captcha, issued to this citizen.

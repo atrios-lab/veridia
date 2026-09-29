@@ -7,13 +7,13 @@
 
 ## 2. Região das funções do `/selo`
 
-- [x] 2.1 `export const preferredRegion = "gru1"` em `src/app/(public)/selo/captcha/route.ts`
-- [x] 2.2 `export const preferredRegion = "gru1"` em `src/app/(public)/selo/page.tsx` (cobre a server action `lookupSeal`)
+- [x] 2.1 `regions: ["gru1"]` para `src/app/(public)/selo/captcha/route.ts` em `functions` do `vercel.json` (primeira tentativa com `preferredRegion` foi ignorada pela Vercel; ver design, decisão 1)
+- [x] 2.2 `regions: ["gru1"]` para `src/app/(public)/selo/page.tsx` em `functions` do `vercel.json` (cobre a server action `lookupSeal`)
 - [x] 2.3 `pnpm build` local sem aviso de configuração de segmento; rodar só os testes tocados (`src/core/seal/*.test.ts`, `src/lib/seal-lookup.test.ts`)
 
 ## 3. Spike no Preview (Homolog)
 
-- [ ] 3.1 Abrir o PR e aguardar o deploy de Preview
+- [x] 3.1 Abrir o PR e aguardar o deploy de Preview
 - [ ] 3.2 Chamar `/selo/captcha` no Preview pelo host de um tenant com `selo-tjrn` ligado; conferir `x-vercel-id` (função em `gru1`) e o corpo (PNG ou 502)
 - [ ] 3.3 Se vier 502: ler o log da função na Vercel e anotar `step`, `status`, `reason` e `region`
 - [ ] 3.4 Se vier imagem: fazer uma consulta completa com um selo real e captcha resolvido à mão, e confirmar que o resultado aparece (não "captcha errado")

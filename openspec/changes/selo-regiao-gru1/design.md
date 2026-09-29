@@ -30,16 +30,17 @@ Estado em 29/09/2026:
 
 ## Decisions
 
-### 1. `preferredRegion = "gru1"` por rota, nas duas pontas da sessão
+### 1. `gru1` por função no `vercel.json`, nas duas pontas da sessão
 
-A rota `/selo/captcha` e a página `/selo` exportam `preferredRegion = "gru1"`. A server action `lookupSeal` executa na função da página que a invoca, então a configuração da página cobre o submit.
+O `vercel.json` fixa `functions["src/app/(public)/selo/captcha/route.ts"]` e `functions["src/app/(public)/selo/page.tsx"]` em `regions: ["gru1"]`. A server action `lookupSeal` executa na função da página que a invoca, então a configuração da página cobre o submit.
 
 As duas pontas precisam estar na mesma região. Se a Akamai ou o SIEX amarrarem a sessão ao IP ou ao país de origem, abrir a sessão em `gru1` e submeter de `iad1` quebraria o submit de um jeito que parece "captcha errado". Mesmo região não garante mesmo IP (cada invocação pode sair de um IP diferente do pool da AWS), mas a sessão já sobrevive a isso hoje no dev, e o `JSESSIONID` carrega a afinidade de nó (`.jodi-petkoff`).
 
-A doc do Next 16 (`route-segment-config/preferredRegion.md`) diz que, na Vercel, regiões só valem com `runtime = "edge"`. O código do build não faz essa restrição: grava `regions` no `functions-config-manifest.json` para qualquer runtime. Conferido no build local, onde `/selo` e `/selo/captcha` saem com `["gru1"]`. Quem decide é o builder da Vercel, e a prova é o `x-vercel-id` do Preview (tarefa 3.2). Edge não é alternativa, porque `getTenant` fala com o Postgres por TCP.
+**Por que não `preferredRegion`:** foi a primeira tentativa, e o Preview continuou em `iad1`. O Next grava `regions` no `functions-config-manifest.json`, mas o builder da Vercel (`@vercel/next`, `getPageLambdaGroups`) descarta esse campo nas funções Node (`const { regions: _regions, ...manifestOpts }`). Só aceita a região vinda do `functions` do `vercel.json` (`getLambdaOptionsFromFunction`), comparando pelo caminho do arquivo-fonte relativo à raiz (`src/app/...`). Como o agrupamento de rotas em funções compara `regions` (`compareRegions`), as duas rotas ganham uma função própria em vez de entrar no grupo `iad1`. A doc do Next 16 avisa que, na Vercel, `preferredRegion` só vale com `runtime = "edge"`. Edge não é alternativa, porque `getTenant` fala com o Postgres por TCP.
 
 **Alternativas:**
 - *Região do projeto inteiro em `gru1`*: descartada. Toda página do site passaria a cruzar o continente até o banco em us-east-1.
+- *`export const preferredRegion` na rota e na página*: descartado depois do Preview. A Vercel ignora em função Node (ver acima).
 - *Só a rota do captcha em `gru1`*: descartada pelo motivo acima (sessão aberta e usada de países diferentes).
 - *Route Handler dedicado para o submit, em vez da server action*: desnecessário. `preferredRegion` na página já resolve, sem mexer no transporte.
 
