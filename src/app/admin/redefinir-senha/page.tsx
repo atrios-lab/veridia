@@ -75,7 +75,7 @@ export default async function AcceptInvitePage({
 
   if (!invite) {
     return (
-      <main className="flex min-h-screen items-center justify-center bg-admin-surface px-6 py-12">
+      <main className="flex min-h-screen items-center justify-center bg-admin-surface px-4 py-12 md:px-6">
         <div className="w-full max-w-[400px]">
           <div className="flex flex-col gap-3.5 rounded-2xl border border-admin-border bg-admin-card p-6">
             <span className="flex h-10 w-10 items-center justify-center rounded-full bg-admin-warning-bg">
@@ -112,8 +112,11 @@ export default async function AcceptInvitePage({
   const tenant = await getTenant();
   const isFirstAccess = invite.kind === "convite";
 
+  // Bounded to the viewport only beside the sidebar: on a phone the band
+  // sits on top and the page scrolls as a whole, so the keyboard opening over
+  // the form never traps it in a box shorter than the screen.
   return (
-    <div className="flex h-screen overflow-hidden">
+    <div className="flex min-h-screen flex-col md:h-screen md:flex-row md:overflow-hidden">
       <AdminLockedSidebar
         tenant={tenant}
         explanation={
@@ -126,18 +129,18 @@ export default async function AcceptInvitePage({
           roleLabel: ROLE_LABELS[invite.role as Role] ?? invite.role,
         }}
       />
-      <div className="flex min-w-0 flex-1 flex-col overflow-y-auto">
-        <div className="flex items-center gap-4 border-b border-admin-border bg-admin-card px-[30px] py-4">
+      <div className="flex min-w-0 flex-1 flex-col md:overflow-y-auto">
+        <div className="flex items-center gap-4 border-b border-admin-border bg-admin-card px-4 py-3.5 md:px-[30px] md:py-4">
           <h1 className="flex-1 font-serif text-xl font-semibold text-admin-primary">
             {isFirstAccess ? "Criar sua senha" : "Criar nova senha"}
           </h1>
-          <span className="text-[12.5px] text-admin-muted">
+          <span className="hidden text-[12.5px] text-admin-muted sm:inline">
             {formatFullDate(today())}
           </span>
         </div>
 
-        <div className="flex flex-1 items-start justify-center px-6 py-16">
-          <div className="w-full max-w-[400px] rounded-2xl border border-admin-border bg-admin-card p-6">
+        <div className="flex flex-1 items-start justify-center px-4 py-8 md:px-6 md:py-16">
+          <div className="w-full max-w-[400px] rounded-2xl border border-admin-border bg-admin-card p-5 md:p-6">
             {isFirstAccess ? (
               <div>
                 <h2 className="font-serif text-xl font-semibold text-admin-primary">
