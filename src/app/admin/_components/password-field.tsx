@@ -30,7 +30,9 @@ export function PasswordField({
           type={visible ? "text" : "password"}
           autoComplete={autoComplete}
           required
-          className="min-w-0 flex-1 bg-transparent text-sm text-admin-text outline-none focus-visible:shadow-none"
+          // 16px on a phone: below that, Safari on iOS zooms the page in on
+          // focus and leaves it zoomed after the keyboard closes.
+          className="min-w-0 flex-1 bg-transparent text-base text-admin-text outline-none focus-visible:shadow-none md:text-sm"
         />
         <button
           type="button"
