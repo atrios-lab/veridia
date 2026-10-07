@@ -58,16 +58,18 @@ export const cartorioBrejinho: Tenant = parseTenant({
     email: "dpo@cartoriobrejinhorn.com.br",
   },
   issRate: 0.05, // ponytail: 5% assumed, confirm the Brejinho municipal rate
-  theme: "grafite-cobre",
+  // Azul-marinho e dourado, as cores da logo que a serventia enviou.
+  theme: "marinho-bronze",
   home: { title: "Ofício Único de Brejinho / RN" }, // same text as `subtitle`
-  // Marca padrão da plataforma para serventias sem identidade própria.
-  // A serventia troca em Configurações > Identidade visual quando quiser.
+  // Logo própria da serventia (monograma CR com pena e livro), redesenhada
+  // em vetor a partir da arte enviada em 07/10/2026. O selo é só o
+  // monograma; a logo completa leva o nome e "Serviço Notarial e Registral".
   logos: {
-    light: "/logos/selo-padrao-preto.png",
-    dark: "/logos/selo-padrao-branco.png",
+    light: "/logos/brejinho-logo-preto.png",
+    dark: "/logos/brejinho-logo-branco.png",
     seal: {
-      light: "/logos/selo-padrao-preto.png",
-      dark: "/logos/selo-padrao-branco.png",
+      light: "/logos/brejinho-selo-preto.png",
+      dark: "/logos/brejinho-selo-branco.png",
     },
   },
   // Sem `revenue` de propósito: a serventia não entrou no levantamento do
