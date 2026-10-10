@@ -29,9 +29,9 @@
 
 ## 3. Pendências fora do código (registrar no PR, não executar aqui)
 
-- [ ] 3.1 Anotar no PR os passos do super admin: adicionar o domínio ao projeto na Vercel (os
+- [x] 3.1 Anotar no PR os passos do super admin: adicionar o domínio ao projeto na Vercel (os
   nameservers já são os da Vercel), verificação do domínio no Postmark seguida do preenchimento
   de `emailFrom`, criação das caixas `contato@`, `dpo@` e `nao-responda@`, `pnpm db:seed` da
   primeira conta e envio do convite
-- [ ] 3.2 Anotar no PR o que falta o cartório confirmar: WhatsApp, ISS, se mantém o Gmail como
+- [x] 3.2 Anotar no PR o que falta o cartório confirmar: WhatsApp, ISS, se mantém o Gmail como
   contato público, e logos
