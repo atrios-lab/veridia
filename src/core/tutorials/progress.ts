@@ -84,3 +84,13 @@ export function formatDuration(seconds: number): string {
   if (seconds < 60) return `${seconds} s`;
   return `${Math.round(seconds / 60)} min`;
 }
+
+/** "3 min 59 s": the exact duration, as the upload form reads it back from
+ * the file. Whole minutes are floored, not rounded: rounding 239 s gives
+ * "4 min 59 s", a minute more than the file has. */
+export function formatExactDuration(seconds: number): string {
+  if (seconds < 60) return `${seconds} s`;
+  const minutes = Math.floor(seconds / 60);
+  const rest = seconds % 60;
+  return rest === 0 ? `${minutes} min` : `${minutes} min ${rest} s`;
+}

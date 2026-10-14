@@ -8,6 +8,7 @@ import {
   useId,
   useState,
 } from "react";
+import { formatExactDuration } from "@/core/tutorials/progress.ts";
 import {
   checkTutorialFile,
   describeTutorialFileProblem,
@@ -257,7 +258,7 @@ export function TutorialForm({
           </label>
           <p className="mt-1.5 text-[11px] text-admin-faint">
             {duration !== null
-              ? `Duração lida do arquivo: ${Math.round(duration / 60)} min ${duration % 60} s.`
+              ? `Duração lida do arquivo: ${formatExactDuration(duration)}.`
               : `Até ${Math.round(videoLimit / (1024 * 1024))} MB. A duração é lida do arquivo.`}
           </p>
           <FieldError message={fieldErrors.video} />
