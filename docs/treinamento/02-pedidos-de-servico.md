@@ -56,28 +56,31 @@ exceção, vem do mais recente para o mais antigo, porque é a aba que cresce pa
 
 ### 5. Abrir o pedido (1:56 a 2:28)
 
-**Fala.** Clicando na linha você abre o pedido. À esquerda fica o andamento e a história dele; à
-direita, os dados do solicitante, o valor, as exigências, a entrega e a chave de acesso. Mais
-abaixo, os documentos que o cidadão anexou, as perguntas que ele fez e o histórico, que registra
-toda ação com autor e horário. Nada se perde: o que você fizer aqui fica assinado com o seu nome.
+**Fala.** Para abrir um pedido, use Detalhar, no fim da linha. No alto fica o andamento: em
+que etapa o pedido está, o prazo e o caminho até a conclusão. Abaixo vêm os dados do
+solicitante, as exigências, os documentos que o cidadão anexou, a entrega e o valor. À direita,
+a chave de acesso e o histórico, que registra toda ação com autor e horário. Nada se perde: o
+que você fizer aqui fica assinado com o seu nome.
 
-**Tela.** Abrir um pedido da aba Novo e rolar devagar até o Histórico.
+**Tela.** Clicar em Detalhar num pedido da aba Novo; no pedido aberto, percorrer o andamento no
+alto, descer pela coluna de seções e terminar no Histórico, à direita.
 
-**Destaque.** Andamento do pedido, Dados do solicitante, Exigências, Entrega ao cidadão,
-Histórico.
+**Destaque.** O botão Detalhar, a barra de andamento, Dados do solicitante, Exigências, Entrega
+ao cidadão, Histórico.
 
 ### 6. Dar andamento (2:28 a 3:02)
 
 **Fala.** Para mover o pedido, use os botões de Mudar para. O primeiro é sempre o próximo passo
-natural, então o caminho comum é um clique. Junto vem o prazo: Manter deixa como está, e é o que
-você quer quase sempre; Recomeçar hoje reinicia a contagem, útil quando o pedido só agora entrou
-em análise. E se ele foi lançado na etapa errada, Corrigir para outro andamento acerta a etapa
-sem fingir que houve um avanço.
+natural, então o caminho comum é um clique só. O resto fica em Prazo e correção. Ali você
+decide o prazo da próxima mudança: Manter deixa como está, e é o que você quer quase sempre;
+Recomeçar hoje reinicia a contagem, útil quando o pedido só agora entrou em análise. E, se o
+pedido foi lançado na etapa errada, Corrigir para outro andamento acerta a etapa.
 
-**Tela.** Mostrar as opções de Mudar para, abrir o controle de prazo com Manter marcado, apontar
-Recomeçar hoje, e então abrir Corrigir para outro andamento. Confirmar uma mudança simples.
+**Tela.** Apontar os botões de Mudar para, abrir Prazo e correção, apontar Manter e Recomeçar hoje
+e o seletor de Corrigir para outro andamento, fechar o painel e clicar no primeiro botão de
+Mudar para.
 
-**Destaque.** Os botões Mudar para, as opções Manter e Recomeçar hoje, o Corrigir para outro
+**Destaque.** Os botões Mudar para, Prazo e correção, Manter e Recomeçar hoje, Corrigir para outro
 andamento.
 
 ### 7. Exigência (3:02 a 3:24)
@@ -105,15 +108,16 @@ informando o protocolo e o e-mail do pedido.
 
 ### 9. Lançar um pedido no balcão (3:58 a 4:28)
 
-**Fala.** E quando o pedido nasce no balcão, Lançar pedido abre o mesmo formulário do site. Nome,
-contato, atribuição, ato e o que a pessoa quer; ao registrar sai o protocolo com a chave de
-acesso. Na mesma tela você imprime o requerimento para a pessoa assinar e o comprovante de acesso
-para ela levar. Imprima antes de sair da tela: o comprovante com a chave só sai ali.
+**Fala.** E quando o pedido nasce no balcão, Lançar pedido abre o formulário de lançamento. Você
+escolhe a atribuição e o ato, informa o nome e o contato da pessoa e descreve o que ela quer;
+o valor, se já souber. Ao registrar, sai o protocolo com a chave de acesso, como no site. Em
+seguida vem a impressão: o requerimento para a pessoa assinar e o comprovante de acesso para
+ela levar. Imprima antes de sair da tela: o comprovante com a chave só sai ali.
 
-**Tela.** Lançar pedido, preencher o formulário com dados da demonstração, Registrar pedido, e
-mostrar os botões de imprimir o requerimento e o comprovante.
+**Tela.** Lançar pedido, escolher atribuição e ato, preencher nome, contato e descrição com dados da
+demonstração, Registrar pedido, e mostrar a etapa Impressão com o requerimento e o comprovante.
 
-**Destaque.** O botão Lançar pedido, o protocolo recém-criado, Comprovante de acesso.
+**Destaque.** O botão Lançar pedido, Registrar pedido, a etapa Impressão, Comprovante de acesso.
 
 ## Observações para a gravação
 
