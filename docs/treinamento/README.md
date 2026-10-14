@@ -7,18 +7,19 @@ editar um texto e não reagendar uma gravação.
 ## A trilha
 
 Na ordem em que a Visão geral apresenta a quem é novo. Cada vídeo ensina uma tela e leva o
-link "Como usar esta tela" no cabeçalho dela. Curto de propósito: até quatro minutos, uma
-pergunta por vídeo.
+link "Como usar esta tela" no cabeçalho dela. Curto de propósito: perto de três minutos, uma
+pergunta por vídeo. Pedidos de serviço é o único que passa de quatro, porque a fila tem
+oito andamentos e explicar sete deles não ajuda ninguém.
 
-| # | Roteiro                        | Tela ensinada              | Alvo    |
-|---|--------------------------------|----------------------------|---------|
-| 1 | `01-primeiros-passos.md`       | nenhuma, o painel inteiro  | 2,5 min |
-| 2 | `02-pedidos-de-servico.md`     | `/admin/pedidos`           | 4 min   |
-| 3 | `03-agenda.md`                 | `/admin/agenda`            | 3 min   |
-| 4 | `04-lgpd-e-ouvidoria.md`       | `/admin/lgpd`              | 3 min   |
-| 5 | `05-atendimento-online.md`     | `/admin/atendimento`       | 3 min   |
-| 6 | `06-publicacoes.md`            | `/admin/publicacoes`       | 3 min   |
-| 7 | `07-configuracoes-e-usuarios.md` | `/admin/configuracoes`   | 3 min   |
+| # | Roteiro                          | Tela ensinada          | Alvo       |
+|---|----------------------------------|------------------------|------------|
+| 1 | `01-primeiros-passos.md`         | o painel inteiro       | 2 min 40 s |
+| 2 | `02-pedidos-de-servico.md`       | `/admin/pedidos`       | 4 min 28 s |
+| 3 | `03-agenda.md`                   | `/admin/agenda`        | 2 min 54 s |
+| 4 | `04-lgpd-e-ouvidoria.md`         | `/admin/lgpd`          | 2 min 54 s |
+| 5 | `05-atendimento-online.md`       | `/admin/atendimento`   | 2 min 58 s |
+| 6 | `06-publicacoes.md`              | `/admin/publicacoes`   | 2 min 52 s |
+| 7 | `07-configuracoes-e-usuarios.md` | `/admin/configuracoes` | 3 min 48 s |
 
 Aprofundamentos (Transparência, Adequação ao Provimento, cobrança por Pix) entram depois,
 fora da trilha, com "faz parte dos primeiros passos" desmarcado.
