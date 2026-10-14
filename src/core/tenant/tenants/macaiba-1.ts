@@ -40,6 +40,7 @@ export const cartorioMacaiba1: Tenant = parseTenant({
     email: "1cartoriodemacaiba@gmail.com",
   },
   municipality: "MACAIBA",
+  location: { city: "Macaíba", state: "RN" },
   address: "Rua Ivanildo Gama Pacheco, 20, Centro, Macaíba - RN, 59280-000",
   // As published on the site's "Localização" page; aggregators still show
   // older schedules (until 17h or 17h30). ponytail: confirm with the office.

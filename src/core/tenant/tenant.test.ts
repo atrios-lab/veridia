@@ -35,6 +35,22 @@ test("valid config is accepted and typed", () => {
   assert.equal(tenant.issRate, 0.05);
 });
 
+test("every office has a display city and a state with a fund map", () => {
+  for (const tenant of Object.values(TENANTS)) {
+    assert.ok(tenant.location.city.length > 0, tenant.slug);
+    assert.equal(tenant.location.state, "RN", tenant.slug);
+  }
+});
+
+test("an office outside a state with a fund map is rejected", () => {
+  assert.throws(() =>
+    parseTenant({
+      ...cartorioMarinho,
+      location: { city: "Recife", state: "PE" },
+    }),
+  );
+});
+
 test("config missing a required field is rejected", () => {
   const { cns: _cns, ...withoutCns } = cartorioMarinho;
   assert.throws(() => parseTenant(withoutCns));

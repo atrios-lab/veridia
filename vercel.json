@@ -1,4 +1,12 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
-  "buildCommand": "pnpm build:vercel"
+  "buildCommand": "pnpm build:vercel",
+  "functions": {
+    "src/app/(public)/selo/page.tsx": {
+      "regions": ["gru1"]
+    },
+    "src/app/(public)/selo/captcha/route.ts": {
+      "regions": ["gru1"]
+    }
+  }
 }

@@ -5,6 +5,10 @@ import { SealLookup } from "./seal-lookup.tsx";
 
 export const generateMetadata = publicMetadata("/selo");
 
+// Pinned to gru1 in vercel.json, like captcha/route.ts: this function also
+// runs the lookup action, which submits on the TJ session opened there, and
+// both have to leave from the same region.
+
 export default async function DigitalSealPage() {
   const tenant = await requireSection("selo-tjrn");
 

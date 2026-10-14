@@ -1,13 +1,26 @@
 import "server-only";
 import { and, asc, desc, eq, gt, lt, sql } from "drizzle-orm";
-import type { BulletinStatus } from "@/core/transparency/bulletin.ts";
+import type {
+  BulletinFigures,
+  BulletinStatus,
+  LegacyBulletinFigures,
+} from "@/core/transparency/bulletin.ts";
 import type {
   DocumentFormInput,
   DocumentStatus,
 } from "@/core/transparency/documents.ts";
-import { db } from "@/db/index.ts";
-import { transparencyBulletins, transparencyDocuments } from "@/db/schema.ts";
-import { recordAudit } from "./audit.ts";
+import {
+  parseFundAmounts,
+  type SupportedState,
+} from "@/core/transparency/rubrics.ts";
+import { type Database, db } from "@/db/index.ts";
+import {
+  tenantContent,
+  transparencyBulletins,
+  transparencyDocuments,
+} from "@/db/schema.ts";
+import { recordAudit, recordAuditWith } from "./audit.ts";
+import { OFFICE_BULLETIN_KEY } from "./office-config.ts";
 
 export type TransparencyDocumentRow = typeof transparencyDocuments.$inferSelect;
 export type TransparencyBulletinRow = typeof transparencyBulletins.$inferSelect;
@@ -272,11 +285,12 @@ export async function listBulletins(
     .orderBy(desc(transparencyBulletins.referenceMonth));
 }
 
-export async function getBulletin(
+export async function getBulletinWith(
+  database: Database,
   tenantSlug: string,
   id: string,
 ): Promise<TransparencyBulletinRow | undefined> {
-  const [row] = await db
+  const [row] = await database
     .select()
     .from(transparencyBulletins)
     .where(
@@ -288,13 +302,71 @@ export async function getBulletin(
   return row;
 }
 
+export async function getBulletin(
+  tenantSlug: string,
+  id: string,
+): Promise<TransparencyBulletinRow | undefined> {
+  return getBulletinWith(db, tenantSlug, id);
+}
+
+/** A stored bulletin, in the format it was published in. */
+export type StoredBulletin =
+  | { kind: "current"; figures: BulletinFigures }
+  | { kind: "legacy"; figures: LegacyBulletinFigures };
+
+/**
+ * Reads a stored row into one of the two formats, or null if it is neither.
+ *
+ * Current: its funds are exactly the state's. Legacy: no funds at all (`{}`,
+ * which is what the migration gave every row that existed before it) and the
+ * old taxes total, gross revenue and expenses all present. Anything else is
+ * an error to surface, never a bulletin of zeros: a zero nobody typed must
+ * not reach a public record.
+ */
+export function storedBulletinOf(
+  row: TransparencyBulletinRow,
+  state: SupportedState,
+): StoredBulletin | null {
+  const fundAmountsCents = parseFundAmounts(state, row.fundAmountsCents);
+  if (fundAmountsCents) {
+    return {
+      kind: "current",
+      figures: {
+        actsCount: row.actsCount,
+        fundAmountsCents,
+        issCents: row.issCents,
+        grossRevenueCents: row.grossRevenueCents,
+        expensesCents: row.expensesCents,
+      },
+    };
+  }
+  const noFunds =
+    typeof row.fundAmountsCents === "object" &&
+    row.fundAmountsCents !== null &&
+    Object.keys(row.fundAmountsCents).length === 0;
+  if (
+    noFunds &&
+    row.taxesPaidCents !== null &&
+    row.grossRevenueCents !== null &&
+    row.expensesCents !== null
+  ) {
+    return {
+      kind: "legacy",
+      figures: {
+        actsCount: row.actsCount,
+        grossRevenueCents: row.grossRevenueCents,
+        taxesPaidCents: row.taxesPaidCents,
+        expensesCents: row.expensesCents,
+      },
+    };
+  }
+  return null;
+}
+
 export interface BulletinInput {
   /** First day of the covered month, "YYYY-MM-01". */
   referenceMonth: string;
-  actsCount: number;
-  grossRevenueCents: number;
-  taxesPaidCents: number;
-  expensesCents: number;
+  figures: BulletinFigures;
   status: BulletinStatus;
 }
 
@@ -304,22 +376,35 @@ export interface BulletinInput {
  * publishing August again: as a correction, or to consolidate a preliminary
  * one: overwrites the row, so the site never shows two Augusts. The prior
  * figures live on only in the audit trail.
+ *
+ * Gross revenue and expenses are written as given, null included: publishing
+ * a month with the option off clears them, so a figure the office chose not
+ * to show is not kept waiting on a month it republished without it.
+ * `taxes_paid_cents` is cleared: the taxes are the funds plus ISS, and a
+ * month republished over an old bulletin must not keep the old total beside
+ * the new funds, where the two could disagree.
  */
-export async function upsertBulletin(
+export async function upsertBulletinWith(
+  database: Database,
   tenantSlug: string,
   input: BulletinInput,
   actorId: string,
 ): Promise<void> {
-  await db
+  const values = {
+    actsCount: input.figures.actsCount,
+    fundAmountsCents: input.figures.fundAmountsCents,
+    issCents: input.figures.issCents,
+    grossRevenueCents: input.figures.grossRevenueCents,
+    expensesCents: input.figures.expensesCents,
+    taxesPaidCents: null,
+    status: input.status,
+  };
+  await database
     .insert(transparencyBulletins)
     .values({
       tenantSlug,
       referenceMonth: input.referenceMonth,
-      actsCount: input.actsCount,
-      grossRevenueCents: input.grossRevenueCents,
-      taxesPaidCents: input.taxesPaidCents,
-      expensesCents: input.expensesCents,
-      status: input.status,
+      ...values,
       createdBy: actorId,
     })
     .onConflictDoUpdate({
@@ -327,22 +412,75 @@ export async function upsertBulletin(
         transparencyBulletins.tenantSlug,
         transparencyBulletins.referenceMonth,
       ],
-      set: {
-        actsCount: input.actsCount,
-        grossRevenueCents: input.grossRevenueCents,
-        taxesPaidCents: input.taxesPaidCents,
-        expensesCents: input.expensesCents,
-        status: input.status,
-        updatedAt: new Date(),
-      },
+      set: { ...values, updatedAt: new Date() },
     });
-  await recordAudit({
+  await recordAuditWith(database, {
     tenantSlug,
     actorId,
     action: "transparency.bulletin.publish",
     targetType: "transparency-bulletin",
     targetId: input.referenceMonth,
   });
+}
+
+export async function upsertBulletin(
+  tenantSlug: string,
+  input: BulletinInput,
+  actorId: string,
+): Promise<void> {
+  return upsertBulletinWith(db, tenantSlug, input, actorId);
+}
+
+/**
+ * Saves whether the office's bulletins also show gross revenue, expenses and
+ * the balance. Straight to `published`, like the other office settings: it is
+ * operational, and switching it off has to take the figures off the site now.
+ */
+export async function saveBulletinOptionWith(
+  database: Database,
+  tenantSlug: string,
+  publishBulletinPrivateFigures: boolean,
+  actorId: string,
+): Promise<void> {
+  const published = { publishBulletinPrivateFigures };
+  await database
+    .insert(tenantContent)
+    .values({
+      tenantSlug,
+      key: OFFICE_BULLETIN_KEY,
+      published,
+      publishedAt: new Date(),
+      updatedBy: actorId,
+    })
+    .onConflictDoUpdate({
+      target: [tenantContent.tenantSlug, tenantContent.key],
+      set: {
+        published,
+        publishedAt: new Date(),
+        updatedAt: new Date(),
+        updatedBy: actorId,
+      },
+    });
+  await recordAuditWith(database, {
+    tenantSlug,
+    actorId,
+    action: "office-settings.save",
+    targetType: "tenant-content",
+    targetId: OFFICE_BULLETIN_KEY,
+  });
+}
+
+export async function saveBulletinOption(
+  tenantSlug: string,
+  publishBulletinPrivateFigures: boolean,
+  actorId: string,
+): Promise<void> {
+  return saveBulletinOptionWith(
+    db,
+    tenantSlug,
+    publishBulletinPrivateFigures,
+    actorId,
+  );
 }
 
 /** The most recently published bulletin, for the module header line. */
