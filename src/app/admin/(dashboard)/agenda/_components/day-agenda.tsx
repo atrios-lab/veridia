@@ -77,6 +77,7 @@ export function DaySlotList({
             date={date}
             time={row.time}
             offered={row.kind === "free"}
+            closed={closed}
             services={services}
             modes={modes}
           />
@@ -171,18 +172,22 @@ function AppointmentRow({ appointment }: { appointment: DayAppointment }) {
 /**
  * A grid hour nobody holds. Offered means the site still shows it, and the
  * office can take it for a citizen at the counter; past means the hour went
- * by unbooked and there is nothing to act on.
+ * by unbooked and there is nothing to act on. On a closed day no hour is
+ * offered, past or not, and saying "já passou" of an hour next week is false:
+ * the row says the day is closed instead.
  */
 function FreeSlotRow({
   date,
   time,
   offered,
+  closed,
   services,
   modes,
 }: {
   date: string;
   time: string;
   offered: boolean;
+  closed: boolean;
   services: Array<{ id: string; label: string }>;
   modes: string[];
 }) {
@@ -195,7 +200,9 @@ function FreeSlotRow({
         <span className="text-admin-muted">
           {offered
             ? "Livre: aparece no site para agendamento"
-            : "Ficou livre: o horário já passou"}
+            : closed
+              ? "Dia fechado: não aparece no site"
+              : "Ficou livre: o horário já passou"}
         </span>
         {offered ? (
           <button
