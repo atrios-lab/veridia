@@ -8,8 +8,8 @@ editar um texto e não reagendar uma gravação.
 
 Na ordem em que a Visão geral apresenta a quem é novo. Cada vídeo ensina uma tela e leva o
 link "Como usar esta tela" no cabeçalho dela. Curto de propósito: perto de três minutos, uma
-pergunta por vídeo. Pedidos de serviço é o único que passa de quatro, porque a fila tem
-oito andamentos e explicar sete deles não ajuda ninguém.
+pergunta por vídeo. Pedidos de serviço é o mais longo, perto de quatro, porque a fila tem
+sete andamentos e cada um precisa ser dito.
 
 | # | Roteiro                          | Tela ensinada          | Alvo       |
 |---|----------------------------------|------------------------|------------|
