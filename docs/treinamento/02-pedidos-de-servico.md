@@ -22,14 +22,14 @@ fez o quê. É a tela em que você vai passar a maior parte do dia.
 
 **Fala.** No alto do quadro ficam as abas, uma para cada andamento, e o número ao lado diz
 quantos pedidos cada uma guarda. Novo é o que ninguém olhou ainda. Aguardando exigência é quem
-está esperando um documento do cidadão. Aguardando pagamento, Pagamento informado e Pago contam
-a história do dinheiro, e Pagamento informado é justamente quando o cidadão diz que pagou e
-ninguém conferiu. Em andamento é o que está sendo feito. Disponível para retirada é o que já
-está pronto. E Finalizados guarda tudo que terminou, de qualquer maneira. A aba fica no endereço,
-então você pode deixar a sua salva nos favoritos.
+está esperando um documento do cidadão. Aguardando pagamento e Pagamento informado contam a
+história do dinheiro, e Pagamento informado é justamente quando o cidadão diz que pagou e
+ninguém conferiu. Conferido o pagamento, o pedido vai para Em andamento, que é o que está sendo
+feito. Disponível para retirada é o que já está pronto. E Finalizados guarda tudo que terminou,
+de qualquer maneira. A aba fica no endereço, então você pode deixar a sua salva nos favoritos.
 
-**Tela.** Percorrer as oito abas com o cursor, da esquerda para a direita, abrindo duas ou três
-delas (Aguardando pagamento, Em andamento, Finalizados).
+**Tela.** Percorrer as sete abas com o cursor, da esquerda para a direita, abrindo Aguardando
+pagamento, Pagamento informado, Em andamento e Finalizados.
 
 **Destaque.** Cada aba na ordem da fala, e o contador ao lado dela.
 

@@ -33,18 +33,23 @@ export const KIND_BY_PREFIX: Record<ProtocolPrefix, RequestKind> = {
 };
 
 /**
- * The eleven andamentos a service request may be in. A closed list, not a
+ * The ten andamentos a service request may be in. A closed list, not a
  * database enum: every other kind's vocabulary lives in `STATUS_LABELS`
  * below the same way, so a new value is a code change here, never a
  * migration.
  *
- * Trimmed from twenty (change `enxugar-status-pedido`, see its design.md):
- * the nine removed were either never written by anything but the operator's
+ * Trimmed from twenty (change `enxugar-status-pedido`, see its design.md).
+ * The first nine were either never written by anything but the operator's
  * own hand with no rule distinguishing them from a neighbour (`filed`,
  * `in-review`, and the registral steps `pre-noted`/`in-qualification`, plus
  * `registered`/`annotated`/`granted`, all folded into `processing`), or a
  * second name for a status that already existed (`with-requirement` folded
- * into `awaiting-compliance`; `inactive` folded into `archived`).
+ * into `awaiting-compliance`; `inactive` folded into `archived`). `paid`
+ * went the same way afterward: free flow already let the office skip it
+ * (an isento act never has an amount to be "paid" for, and a confirmed
+ * comprovante moves straight into the actual work), so it never meant
+ * "money is in" so much as "the office happened to stop here first" (see
+ * `isPaymentSettled` for the question `paid` used to answer alone).
  *
  * The identifiers stay English like the rest of the product, even though the
  * office says them in Portuguese. `service_requests.status` is one column
@@ -57,7 +62,6 @@ export const SERVICE_REQUEST_STATUSES = [
   "new",
   "awaiting-payment",
   "payment-reported",
-  "paid",
   "awaiting-compliance",
   "processing",
   "ready-for-pickup",
@@ -73,10 +77,35 @@ export const TERMINAL_SERVICE_REQUEST_STATUSES: readonly ServiceRequestStatus[] 
   ["done", "rejected", "cancelled", "archived"];
 
 /**
- * The phases the queue groups the eleven into. Even eleven do not fit a
- * progress bar, and the citizen does not need "em processamento" to know
- * where their request stands. The office does, and the office reads the
- * detail screen.
+ * Whether a charge on this request, if any, is settled. `awaiting-payment`
+ * and `payment-reported` are the only two andamentos that mean money is
+ * still outstanding (asked for, or reported but not yet confirmed); the
+ * office does not move a request past either one while a charge is still
+ * open, so anything else (including `new` before a value is even set, and
+ * `awaiting-compliance` reached from a request that already had its payment
+ * confirmed) reads as settled. Callers still gate on the request actually
+ * carrying an amount (`amountCents`/`amountLabel`) before this matters at
+ * all: an isento act, or one nobody has priced yet, is never "unsettled" in
+ * a way that should show a Pix charge.
+ *
+ * This used to be `status === "paid" || !isOpenServiceRequestStatus(status)`,
+ * back when `paid` existed: the moment the office moved a confirmed payment
+ * on to `processing`, that check flipped back to "not settled" and the
+ * citizen's own consult could offer the Pix charge again on a request
+ * already paid for. Losing the dedicated status is what surfaced it.
+ */
+export function isPaymentSettled(status: string): boolean {
+  return (
+    status !== "new" &&
+    status !== "awaiting-payment" &&
+    status !== "payment-reported"
+  );
+}
+
+/**
+ * The phases the queue groups the ten into. Even ten do not fit a progress
+ * bar, and the citizen does not need "em processamento" to know where their
+ * request stands. The office does, and the office reads the detail screen.
  */
 export const SERVICE_REQUEST_PHASES = [
   { id: "intake", label: "Entrada", statuses: ["new"] },
@@ -88,7 +117,7 @@ export const SERVICE_REQUEST_PHASES = [
   {
     id: "payment",
     label: "Pagamento",
-    statuses: ["awaiting-payment", "payment-reported", "paid"],
+    statuses: ["awaiting-payment", "payment-reported"],
   },
   {
     id: "processing",
@@ -138,7 +167,7 @@ export function isServiceRequestStatus(
  * detail screen. This is UX guidance, not a state machine: the andamento of a
  * title does not fit one (a exigência pode voltar depois de resolvida, um
  * concluído pode reabrir), so the server enforces only that the value is one
- * of the eleven above and that it is not the current one. A correction
+ * of the ten above and that it is not the current one. A correction
  * outside this table (moving a request back out of "Cancelado", say) is
  * still accepted.
  */
@@ -147,9 +176,8 @@ const SUGGESTED_NEXT_STATUSES: Record<
   readonly ServiceRequestStatus[]
 > = {
   new: ["processing", "awaiting-payment", "cancelled"],
-  "awaiting-payment": ["paid", "cancelled"],
-  "payment-reported": ["paid", "awaiting-payment", "cancelled"],
-  paid: ["processing", "done"],
+  "awaiting-payment": ["processing", "cancelled"],
+  "payment-reported": ["processing", "awaiting-payment", "cancelled"],
   "awaiting-compliance": ["processing", "cancelled"],
   processing: ["ready-for-pickup", "done"],
   "ready-for-pickup": ["done", "archived"],
@@ -360,7 +388,6 @@ const STATUS_LABELS: Record<RequestKind, Record<string, string>> = {
     new: "Novo",
     "awaiting-payment": "Aguardando pagamento",
     "payment-reported": "Pagamento informado",
-    paid: "Pago",
     "awaiting-compliance": "Aguardando exigência",
     processing: "Em processamento",
     "ready-for-pickup": "Disponível para retirada",

@@ -21,7 +21,7 @@ import { type ActionState, changeStatus } from "../actions.ts";
 const HAPPY_PATH: readonly ServiceRequestStatus[] = [
   "new",
   "awaiting-payment",
-  "paid",
+  "processing",
   "done",
 ];
 

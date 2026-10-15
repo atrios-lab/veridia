@@ -30,7 +30,7 @@ test("the endings share Finalizados; payment reported has a tab of its own", () 
   assert.equal(queueTabOf("cancelled"), "closed");
   assert.equal(queueTabOf("archived"), "closed");
   assert.equal(queueTabOf("payment-reported"), "payment-reported");
-  assert.notEqual(queueTabOf("payment-reported"), queueTabOf("paid"));
+  assert.notEqual(queueTabOf("payment-reported"), queueTabOf("processing"));
   assert.notEqual(
     queueTabOf("payment-reported"),
     queueTabOf("awaiting-payment"),
@@ -83,27 +83,41 @@ test("pageSlice takes one page of an already sorted list", () => {
 });
 
 test("queueHref leaves defaults out and resets the page on a tab, filter or size change", () => {
-  const current = queueSearchParams({ aba: "paid", pagina: "3", por: "25" });
-  assert.equal(queueHref(current), "/admin/pedidos?aba=paid&por=25&pagina=3");
+  const current = queueSearchParams({
+    aba: "processing",
+    pagina: "3",
+    por: "25",
+  });
+  assert.equal(
+    queueHref(current),
+    "/admin/pedidos?aba=processing&por=25&pagina=3",
+  );
   assert.equal(
     queueHref(current, { page: 2 }),
-    "/admin/pedidos?aba=paid&por=25&pagina=2",
+    "/admin/pedidos?aba=processing&por=25&pagina=2",
   );
   assert.equal(queueHref(current, { tab: "new" }), "/admin/pedidos?por=25");
   assert.equal(
     queueHref(current, { attribution: "RCPN" }),
-    "/admin/pedidos?aba=paid&atribuicao=RCPN&por=25",
+    "/admin/pedidos?aba=processing&atribuicao=RCPN&por=25",
   );
   assert.equal(
     queueHref(current, { search: "Rosa" }),
-    "/admin/pedidos?aba=paid&q=Rosa&por=25",
+    "/admin/pedidos?aba=processing&q=Rosa&por=25",
   );
-  assert.equal(queueHref(current, { size: 10 }), "/admin/pedidos?aba=paid");
+  assert.equal(
+    queueHref(current, { size: 10 }),
+    "/admin/pedidos?aba=processing",
+  );
   // "Limpar" keeps the tab and drops filter and search.
-  const filtered = queueSearchParams({ aba: "paid", atribuicao: "RI", q: "x" });
+  const filtered = queueSearchParams({
+    aba: "processing",
+    atribuicao: "RI",
+    q: "x",
+  });
   assert.equal(
     queueHref(filtered, { attribution: undefined, search: undefined }),
-    "/admin/pedidos?aba=paid",
+    "/admin/pedidos?aba=processing",
   );
 });
 

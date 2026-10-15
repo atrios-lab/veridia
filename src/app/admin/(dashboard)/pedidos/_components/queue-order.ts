@@ -13,19 +13,20 @@ import type { Tone } from "./status-tone.ts";
  * is the andamento, so the row no longer says it; the tone only colours the
  * counter of the active tab, the way the badge used to colour the row.
  *
- * "Pagamento informado" has a tab of its own although the design showed
- * seven: it is the one andamento where the citizen says the money went out
- * and the office has not looked yet, and folding it into "Pago" would hide
- * exactly that from the person scanning the tabs. Eight tabs have to fit on
- * one line, so the long labels carry a short form for a narrow row (see
- * queue-tabs.tsx).
+ * "Pagamento informado" has a tab of its own: it is the one andamento where
+ * the citizen says the money went out and the office has not looked yet, and
+ * folding it into "Aguardando pagamento" would hide exactly that from the
+ * person scanning the tabs. "Pago" never got one: confirming a comprovante
+ * moves the request straight into "Em andamento" (see `isPaymentSettled` in
+ * `core/request/kinds.ts`), so there was never a moment for a tab of its own
+ * to catch. Seven tabs have to fit on one line, so the long labels carry a
+ * short form for a narrow row (see queue-tabs.tsx).
  */
 export type QueueTabId =
   | "new"
   | "awaiting-compliance"
   | "awaiting-payment"
   | "payment-reported"
-  | "paid"
   | "processing"
   | "ready-for-pickup"
   | "closed";
@@ -64,7 +65,6 @@ export const QUEUE_TABS: readonly QueueTab[] = [
     tone: "waiting",
     statuses: ["payment-reported"],
   },
-  { id: "paid", label: "Pago", tone: "working", statuses: ["paid"] },
   {
     id: "processing",
     label: "Em andamento",
@@ -98,7 +98,7 @@ export function queueTab(id: QueueTabId): QueueTab {
 
 export function queueTabOf(status: ServiceRequestStatus): QueueTabId {
   const tab = QUEUE_TABS.find((t) => t.statuses.includes(status));
-  // Every one of the eleven andamentos is listed above; a twelfth would be
+  // Every one of the ten andamentos is listed above; an eleventh would be
   // a type error in QUEUE_TABS long before it got here.
   return tab?.id ?? CLOSED_TAB;
 }

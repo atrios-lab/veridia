@@ -176,6 +176,13 @@
       "when": 1790306088295,
       "tag": "0024_odd_retro_girl",
       "breakpoints": true
+    },
+    {
+      "idx": 25,
+      "version": "7",
+      "when": 1792032343746,
+      "tag": "0025_remover_andamento_pago",
+      "breakpoints": true
     }
   ]
 }

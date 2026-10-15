@@ -39,3 +39,49 @@
 - [x] 6.1 `openspec validate enxugar-status-pedido --strict`. Ok — e `bulk-protocol-inactivation --strict` também, depois da revisão da task 5.
 - [x] 6.2 Buscar no código inteiro (`grep -rn`) pelos nove valores removidos fora de comentários históricos/changelog, confirmando que não sobrou nenhuma referência viva. Único achado fora do já corrigido: `in-review` continua vivo, mas só como valor de `OmbudsmanStatus` ("Em apuração") — tipo diferente, string coincidente, fora do escopo desta change (ver Non-Goals do design.md).
 - [x] 6.3 Testado manualmente no painel (servidor dev já rodando, banco real): filtro da fila lista os onze na ordem certa; barra de progresso do detalhe tem 4 passos (Novo/Aguardando pagamento/Pago/Concluído); REQ.2026.000011 movido de "Novo" para "Em processamento" via sugestão, com selo, tom e sugestões seguintes ("Disponível para retirada"/"Concluído") corretos; select "Corrigir para outro andamento" lista os onze agrupados por fase.
+
+## 7. Revisão: remover `paid`
+
+Decidido em conversa depois que as seções 1-6 já estavam implementadas e em produção: o fluxo
+livre já deixava pular "Pago", então ele nunca era a única fonte da pergunta "o pagamento está
+confirmado" — ver "`paid` sai depois do corte original" no design.md.
+
+- [x] 7.1 `src/core/request/kinds.ts`: remover `paid` de `SERVICE_REQUEST_STATUSES` (dez valores),
+      `SERVICE_REQUEST_PHASES` (fase `payment` fica só com `awaiting-payment`/`payment-reported`),
+      `SUGGESTED_NEXT_STATUSES` (`awaiting-payment` e `payment-reported` passam a sugerir
+      `processing` direto) e `STATUS_LABELS["service-request"]`. Nova função `isPaymentSettled`
+      (quitado é tudo que não for `new`/`awaiting-payment`/`payment-reported`).
+- [x] 7.2 `src/app/admin/(dashboard)/pedidos/_components/status-tone.ts`: remover `paid` de
+      `STATUS_TONES`.
+- [x] 7.3 `src/app/admin/(dashboard)/pedidos/_components/queue-order.ts`: remover a aba "Pago" de
+      `QueueTabId`/`QUEUE_TABS` (sete abas).
+- [x] 7.4 `src/app/admin/(dashboard)/pedidos/[protocolo]/_components/status-section.tsx`: trocar
+      `paid` por `processing` no `HAPPY_PATH` (Novo → Aguardando pagamento → Em processamento →
+      Concluído).
+- [x] 7.5 `src/app/(public)/protocolo/actions.ts`: as duas checagens embutidas de `status ===
+      "paid" || !isOpenServiceRequestStatus(status)` (o `paymentSettled` da consulta e o guard de
+      `reportPayment`) passam a chamar `isPaymentSettled`. **Achado ao implementar**: a checagem
+      antiga já tinha um bug — um pedido pago e movido para `processing` voltava a ler "não
+      quitado", reabrindo o QR do Pix pra um pedido já pago. `isPaymentSettled` corrige isso de
+      caminho.
+- [x] 7.6 `src/app/(public)/protocolo/protocol-lookup.tsx`: a condição "preparing" que checava
+      `status === "paid"` passa a usar `result.paymentSettled` (cobre também
+      `awaiting-compliance` alcançado depois do pagamento confirmado, caso que `=== "paid"` nunca
+      cobriu).
+- [x] 7.7 Migration de dado `drizzle/0022_shy_medusa.sql`: `paid` → `processing`, com
+      `WHERE kind = 'service-request'`.
+- [x] 7.8 Testes: `queue-order.test.ts` (`queueTabOf("paid")` → `queueTabOf("processing")`, e as
+      URLs de exemplo que usavam `aba=paid`), `kinds.test.ts` (sugestão de `payment-reported`,
+      `isOpenServiceRequestStatus("paid")` → outro exemplo, e um teste novo dedicado para
+      `isPaymentSettled` cobrindo os três não-quitados e uma amostra dos quitados, incluindo
+      `awaiting-compliance` para provar a correção do bug do Pix). `pnpm test`: 633/633.
+- [x] 7.9 `pnpm typecheck`, `pnpm check:dashes`, `npx biome check src`: limpos.
+- [x] 7.10 Atualizados os artefatos desta própria change (proposal.md, design.md, tasks.md e a
+      delta spec de `admin-service-requests`) para descrever dez andamentos em vez de onze.
+- [x] 7.11 Testado manualmente no painel (servidor dev, banco real): fila com sete abas, sem
+      "Pago" (Novo, Exigência, Aguard. pagamento, Pgto. informado, Em andamento, P/ retirada,
+      Finalizados). REQ.2026.000235, em "Pagamento informado", sugeria "Em processamento" como
+      primeira opção; confirmado, foi direto pra lá — barra de progresso do detalhe passou a
+      mostrar Novo → Aguardando pagamento → Em processamento → Concluído, sugestões seguintes
+      corretas ("Disponível para retirada"/"Concluído"). Select "Corrigir para outro andamento"
+      lista os dez, sem "Pago".
