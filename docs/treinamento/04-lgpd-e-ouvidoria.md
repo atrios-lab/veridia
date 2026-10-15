@@ -45,7 +45,7 @@ em cada um.
 
 **Fala.** Abrindo o requerimento você lê o direito solicitado, o que a pessoa escreveu e o prazo
 legal. A resposta vai no campo de baixo. Salvar rascunho guarda sem enviar, para você conferir
-com calma ou passar para o encarregado. Enviar resposta e conclui manda a resposta ao titular e
+com calma ou passar para o encarregado. Enviar resposta e concluir manda a resposta ao titular e
 encerra o requerimento, e o histórico registra quem respondeu e quando. Depois de enviado não dá
 para reescrever, então releia antes.
 
@@ -60,8 +60,8 @@ resposta e concluir.
 **Fala.** A Ouvidoria é a outra porta. A lista traz o protocolo, o manifestante, o tipo e a
 situação. O tipo diz o que esperar: elogio, reclamação, sugestão ou denúncia. E repare na coluna
 do manifestante: a manifestação pode ser identificada, pode ser anônima, e pode ser com
-identidade em sigilo, quando a pessoa se identificou mas pediu para o nome não circular. Nesse
-caso o nome não aparece na lista, de propósito.
+identidade em sigilo, quando a pessoa se identifica mas pede que o nome fique só com a
+ouvidoria. A etiqueta ao lado do nome lembra disso a quem atende.
 
 **Tela.** Abrir a Ouvidoria e percorrer as linhas, parando numa identificada, numa anônima e numa
 em sigilo.
@@ -71,12 +71,13 @@ em sigilo.
 ### 6. Responder uma manifestação (2:10 a 2:34)
 
 **Fala.** Abrir a manifestação é a mesma rotina: você lê o que a pessoa escreveu, vê o contato
-para resposta e escreve no mesmo campo, com rascunho e envio. Na manifestação anônima não há
-contato, então a resposta fica registrada no cartório sem sair: é o histórico que prova que a
-serventia apurou.
+para resposta e escreve no mesmo campo, com rascunho e envio. Na manifestação anônima não há a
+quem responder: o campo vira uma anotação interna, só para a equipe, e o andamento, em apuração
+ou concluída, fica no histórico. É o histórico que prova que a serventia apurou.
 
 **Tela.** Abrir uma manifestação identificada, mostrar Contato para resposta e o campo de
-resposta; depois abrir uma anônima e mostrar que não há contato.
+resposta; depois abrir a anônima e mostrar o aviso de que não há a quem responder e a Anotação
+interna.
 
 **Destaque.** Contato para resposta, o campo de resposta, o Histórico.
 
