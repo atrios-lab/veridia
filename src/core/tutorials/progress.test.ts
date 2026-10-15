@@ -3,6 +3,7 @@ import { test } from "node:test";
 import type { Tutorial } from "./catalog.ts";
 import {
   formatDuration,
+  formatExactDuration,
   isTutorialId,
   listOrder,
   nextUnwatched,
@@ -119,4 +120,11 @@ test("duration reads in minutes past the first one", () => {
   assert.equal(formatDuration(45), "45 s");
   assert.equal(formatDuration(60), "1 min");
   assert.equal(formatDuration(250), "4 min");
+});
+
+test("the exact duration floors the minutes", () => {
+  assert.equal(formatExactDuration(45), "45 s");
+  assert.equal(formatExactDuration(60), "1 min");
+  assert.equal(formatExactDuration(239), "3 min 59 s");
+  assert.equal(formatExactDuration(150), "2 min 30 s");
 });
