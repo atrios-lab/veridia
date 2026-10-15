@@ -21,24 +21,24 @@ página do cartório, sem ninguém no meio.
 ### 2. As quatro abas (0:18 a 0:44)
 
 **Fala.** As abas separam as publicações pelo momento de cada uma. No site é o que o cidadão está
-vendo agora. Agendadas é o que vai entrar sozinho na data marcada. Rascunhos é o que você começou
-e ainda não publicou. E Arquivadas guarda o que saiu do site, porque proclama vencido continua
-sendo documento, mesmo fora do ar.
+vendo agora. Agendadas é o que vai entrar sozinho na data marcada. Arquivadas guarda o que saiu do
+site, porque proclama vencido continua sendo documento, mesmo fora do ar. E Rascunhos é o que
+você começou e ainda não publicou.
 
-**Tela.** Abrir as quatro abas na ordem da fala.
+**Tela.** Abrir as quatro abas na ordem da tela, que é a da fala.
 
 **Destaque.** Cada aba, e a linha de data embaixo de uma publicação ("entra no site em", "sai
 automaticamente em").
 
 ### 3. Uma publicação nova (0:44 a 1:16)
 
-**Fala.** O formulário embaixo da lista cria a publicação. O título é o que aparece na listagem,
-então seja específico: número do edital, nomes dos nubentes, o que a pessoa procuraria. Em
-seguida o tipo, que pode ser proclama, edital ou aviso. O edital pede o setor, porque ele vai
-para a página de editais daquele setor; proclama e aviso não precisam. E o texto é o corpo da
-publicação, como o cidadão lê.
+**Fala.** O formulário embaixo da lista cria a publicação. Primeiro o tipo: proclama, aviso ou
+edital. O edital pede o setor, porque ele vai para a página de editais daquele setor; o proclama
+já vai para o registro civil, e o aviso não precisa. Depois o título, que é o que aparece na
+listagem, então seja específico: número do edital, nomes dos nubentes, o que a pessoa
+procuraria. E o texto é o corpo da publicação, como o cidadão lê.
 
-**Tela.** Preencher título, escolher o tipo, escolher o setor, escrever o texto.
+**Tela.** Escolher o tipo, mostrar o setor do edital, preencher título e texto.
 
 **Destaque.** Título, o tipo, Setor, Texto.
 
@@ -55,12 +55,12 @@ atual."
 
 ### 5. As datas (1:36 a 2:04)
 
-**Fala.** Duas datas decidem a vida da publicação. Entra no site em, para programar: você escreve
-hoje e a publicação aparece na data certa, sem você precisar lembrar. E Sai do site em, para a
-publicação que tem prazo, como o proclama, que sai sozinho quando o prazo vence. Deixando as
-duas em branco, a publicação entra agora e fica até você arquivar.
+**Fala.** Duas datas decidem a vida da publicação, e as duas são obrigatórias para publicar.
+Entra no site em: hoje, para aparecer já, ou uma data à frente, para programar sem precisar
+lembrar. E Sai do site em: o dia em que ela sai sozinha. No proclama, a saída já vem preenchida
+com os quinze dias do edital, e você pode ajustar.
 
-**Tela.** Preencher a data de entrada, preencher a data de saída, e mostrar as duas em branco.
+**Tela.** Preencher a data de entrada e mostrar a de saída preenchida sozinha no proclama.
 
 **Destaque.** Entra no site em, Sai do site em.
 
@@ -76,10 +76,10 @@ aqui do que corrigir no ar.
 
 ### 7. Salvar, publicar, editar e arquivar (2:22 a 2:52)
 
-**Fala.** São dois botões: Salvar rascunho guarda sem mostrar a ninguém, e Publicar põe no ar,
-ou agenda, se você marcou a data. Depois de publicada, Editar reabre o mesmo formulário, com o
-texto já dentro. E Arquivar agora tira a publicação do site antes do prazo; ele pede confirmação,
-porque tirar do ar é o tipo de clique que a gente só quer dar de propósito.
+**Fala.** São dois botões: Salvar rascunho guarda sem mostrar a ninguém, e Publicar põe no ar na
+data de entrada, ou agenda, se ela for à frente. Depois de publicada, Editar reabre o mesmo
+formulário, com o texto já dentro. E Arquivar agora tira a publicação do site antes do prazo; ele
+pede confirmação, porque tirar do ar é o tipo de clique que a gente só quer dar de propósito.
 
 **Tela.** Salvar rascunho, reabrir pelo Editar, Publicar, e então Arquivar agora com a
 confirmação, sem concluir.
