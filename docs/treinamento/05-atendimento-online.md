@@ -11,8 +11,9 @@
 ### 1. Abertura (0:00 a 0:18)
 
 **Fala.** Esta é a tela de Atendimento online. É por aqui que a equipe responde o chat do site:
-o cidadão abre o balãozinho numa página do cartório, escreve, e a conversa cai nesta fila. Quem
-está nesta tela está no balcão.
+o cidadão abre o botão de atendimento numa página do cartório, escreve, e a conversa cai nesta
+fila. Ele vem desligado: só vale ligar se a serventia tiver alguém para responder enquanto o chat
+estiver aberto.
 
 **Tela.** A tela aberta com uma ou duas conversas esperando.
 
@@ -32,10 +33,10 @@ Disponível.
 
 ### 3. A fila (0:42 a 1:06)
 
-**Fala.** Abaixo vem a fila, na ordem de chegada, com o tempo que cada pessoa está esperando. O
-tempo é o que importa: quem está há mais tempo na espera é quem desiste. Atender puxa a conversa
-para você, e dali em diante ela é sua. A fila se atualiza sozinha, você não precisa recarregar a
-página.
+**Fala.** Abaixo vem a fila, na ordem de chegada, com o tempo que cada pessoa está esperando.
+O tempo é o que importa: quem está há mais tempo na espera é quem desiste. A fila se atualiza
+sozinha, você não precisa recarregar a página. Atender puxa a conversa para você, e dali em diante
+ela é sua.
 
 **Tela.** Mostrar a fila com os tempos de espera e clicar em Atender na primeira conversa.
 
@@ -45,7 +46,7 @@ página.
 
 **Fala.** Dentro da conversa você escreve no campo de baixo e envia. Ao lado há o campo de nota
 interna: o que você escreve ali só a equipe vê, nunca o cidadão. Use para o que não é resposta e
-é informação: "pediu a segunda via, já paguei conferido", esse tipo de coisa. Em cima fica quem é
+é informação: "Pix conferido no extrato, falta emitir a certidão", esse tipo de coisa. Em cima fica quem é
 a pessoa e o que ela preencheu antes de abrir o chat.
 
 **Tela.** Escrever e enviar uma mensagem, depois escrever uma nota interna e salvar.
@@ -77,19 +78,25 @@ confirmar.
 
 ### 7. Ligar e desligar o chat do site (2:28 a 2:58)
 
-**Fala.** Por último, um controle que é do cartório inteiro, e só o registrador mexe nele.
-Disponível para o chat abre o balãozinho no site agora, em qualquer dia e hora. Segue o horário
-de atendimento é o normal: o chat abre e fecha sozinho junto com o cartório. E Indisponível tira
-o balãozinho do site. A equipe vê qual está valendo; mudar é só do registrador.
+**Fala.** Por último, o controle que liga o chat, e só o registrador mexe nele. O atendimento
+online vem desligado, em Indisponível para o chat: o botão nem aparece no site. Só ligue se a
+serventia tiver gente para responder; um chat aberto sem ninguém do outro lado deixa o cidadão
+esperando à toa. Segue o horário de atendimento abre e fecha o chat sozinho, junto com o
+cartório. E Disponível para o chat abre agora, em qualquer dia e hora, para quando alguém vai
+ficar de plantão.
 
-**Tela.** Mostrar o controle no alto da tela, passando pelas três opções e voltando para "Segue o
-horário de atendimento".
+**Tela.** Clicar em cada opção do controle no alto da tela na hora em que a fala a explica:
+Indisponível para o chat (o padrão), Segue o horário de atendimento e Disponível para o chat. O
+texto de ajuda só aparece com a opção marcada. Depois da gravação, voltar o chat da demonstração
+para Indisponível.
 
-**Destaque.** As três opções e o texto de ajuda que aparece embaixo de cada uma.
+**Destaque.** As três opções, começando pela Indisponível, e o texto de ajuda embaixo de cada uma.
 
 ## Observações para a gravação
 
 - Grave com a conta `admin`, senão a cena 7 mostra só a etiqueta, sem o controle.
+- O chat vem desligado (`off`) em toda serventia que nunca mexeu nele, e o banco fora do ar
+  também o deixa desligado. Para gravar, ligue-o antes e volte para Indisponível no fim.
 - A fila precisa ter conversa esperando. Deixe uma segunda janela do navegador no site da
   demonstração com o chat aberto, e escreva de lá antes de começar a gravar.
 - Não grave uma conversa de verdade do Homolog: use as suas duas janelas, com os textos que você
