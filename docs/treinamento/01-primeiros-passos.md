@@ -4,16 +4,15 @@
 **Descrição:** Como entrar, o que cada parte do painel faz e onde pedir ajuda.
 **Tela ensinada:** nenhuma, é sobre o painel inteiro
 **Primeiros passos:** sim
-**Duração alvo:** 2 min 40 s
+**Duração alvo:** 2 min
 
 ## Cenas
 
 ### 1. Abertura (0:00 a 0:24)
 
-**Fala.** Olá! Eu sou o Paulo, desenvolvedor da Átrios. Este é o meu avatar, criado a partir
-da minha imagem e da minha voz. Vou acompanhar você nesta trilha, para você aprender a usar o
-painel do seu cartório. Neste primeiro vídeo, em dois minutos, você vai saber entrar, entender
-o que cada parte faz e onde encontrar ajuda.
+**Fala.** Olá! Eu sou o Paulo, desenvolvedor da Átrios. Vou acompanhar você nesta trilha, para
+você aprender a usar o painel do seu cartório. Neste primeiro vídeo, em dois minutos, você vai
+saber entrar, entender o que cada parte faz e onde encontrar ajuda.
 
 **Tela.** Tela de login do painel, com o selo e o nome da serventia. Nesta cena o avatar pode
 ficar maior e centralizado: é a apresentação dele.
