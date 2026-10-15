@@ -21,27 +21,29 @@ certas antes do primeiro atendimento.
 
 ### 2. Dados da serventia (0:26 a 1:00)
 
-**Fala.** A primeira aba são os dados da serventia. Nome e CNS identificam o cartório; e-mail,
-telefone, WhatsApp e horário de atendimento aparecem no site e são o que o cidadão usa para
-chegar até vocês. Vale olhar o horário com atenção: é ele que o chat do site segue para abrir e
-fechar sozinho. Abaixo ficam as atribuições, só para leitura: a atribuição é uma delegação do
-tribunal, não uma preferência da serventia, e quem muda é a Átrios.
+**Fala.** A primeira aba é a da serventia. No alto ficam o atendimento e o contato: o horário, o
+telefone, o WhatsApp e o e-mail, que aparecem no site e são o que o cidadão usa para chegar até
+vocês. Vale olhar o horário com atenção: é ele que o chat do site segue quando abre e fecha
+sozinho. Logo abaixo, o prazo padrão, em dias úteis, para os atos que a lei não fixa prazo, como
+escritura e abertura de firma. E no fim, só para leitura, o nome, o CNS e as atribuições: a
+atribuição é uma delegação do tribunal, não uma preferência da serventia, e quem muda é a Átrios.
 
-**Tela.** Mostrar os campos na ordem da fala e rolar até Atribuições da serventia.
+**Tela.** Mostrar Atendimento e contato, o Prazo padrão e rolar até Dados da serventia, com a marca
+Somente leitura e as atribuições.
 
 **Destaque.** Nome, CNS, Horário de atendimento, Atribuições da serventia com a marca Somente
 leitura.
 
 ### 3. Cobrança: a chave Pix (1:00 a 1:30)
 
-**Fala.** A aba Cobrança guarda uma coisa só, e é a mais importante desta tela: a chave Pix da
-serventia. Você escolhe o tipo, CPF, CNPJ, e-mail, telefone ou chave aleatória, e informa a
-chave. É para essa chave que vai o pagamento dos pedidos, na consulta de protocolo. Confira
-caractere por caractere antes de salvar, e salve: sem chave, o cidadão vê o valor e não tem como
-pagar.
+**Fala.** A aba Cobrança guarda a chave Pix da serventia, e é para ela que vai o pagamento dos
+pedidos, na consulta de protocolo. Você escolhe o tipo, CPF, CNPJ, e-mail, telefone ou chave
+aleatória, e informa a chave. O painel confere só o formato, não se a conta é da serventia:
+confira caractere por caractere antes de salvar. E ele não avisa quando o Pix cai; o recebimento
+você confirma no extrato. Sem chave, o cidadão vê o valor e a instrução de pagar no balcão.
 
-**Tela.** Abrir a aba Cobrança, escolher o tipo, preencher a chave da demonstração, Salvar chave,
-e apontar o Remover chave sem clicar.
+**Tela.** Abrir a aba Cobrança, apontar os avisos, escolher o tipo, preencher a chave da demonstração
+e Salvar chave.
 
 **Destaque.** Tipo da chave, Chave, Salvar chave.
 
@@ -58,11 +60,11 @@ exige que o cidadão saiba a quem se dirigir. Mudou o encarregado, muda aqui, e 
 ### 5. Identidade visual (1:54 a 2:36)
 
 **Fala.** A aba Identidade Visual é o rosto do site. Você escolhe um estilo, que já vem com as
-cores e as letras combinadas; sobe o logotipo, em PNG com fundo transparente; escreve os textos
-da página inicial; e liga ou desliga as seções do site, uma por uma. Ao lado, a prévia mostra
-como vai ficar. Ela é uma maquete, não a home de verdade, mas basta para decidir. O que você
-desligar sai do site na hora em que você publicar, então o botão aqui é Salvar e publicar, e não
-só salvar.
+cores e as letras combinadas; sobe o logotipo, em duas versões, para fundo claro e para fundo
+escuro; troca a imagem e os textos da página inicial; e liga ou desliga as seções do site. As que
+têm cadeado são obrigatórias por lei e ficam sempre no ar. Ao lado, a prévia mostra como vai
+ficar. Ela é uma maquete, não a home de verdade, mas basta para decidir. O que você desligar sai
+do site na hora em que publicar, então o botão aqui é Salvar e publicar.
 
 **Tela.** Abrir Identidade Visual, trocar o estilo e deixar a prévia reagir, mostrar o campo do
 logotipo, rolar até Seções do site e desligar uma, e apontar Salvar e publicar sem clicar.
@@ -85,14 +87,15 @@ demonstração, escolher o papel e Criar conta.
 ### 7. Cuidar das contas (3:08 a 3:48)
 
 **Fala.** Cada conta traz o que fazer com ela. Enquanto a pessoa não entrou pela primeira vez, a
-conta fica como aguardando primeiro acesso, e dá para reenviar o convite ou copiar o link e
-passar na mão. Depois, Link de nova senha ajuda quem esqueceu a dela. Desativar acesso é o que
-você usa quando alguém sai da equipe: fecha a porta e guarda o histórico do que a pessoa fez.
-Excluir conta é o caminho sem volta, e quase nunca é o que você quer. Bem-vindo ao painel, e bom
+conta fica como aguardando primeiro acesso, e Reenviar convite manda o link de novo; se o e-mail
+não chegar, o painel oferece copiar o link para você passar na mão. Para quem já entra, Nova
+senha manda um link a quem esqueceu a dela. Desativar acesso é o que você usa quando alguém sai
+da equipe: fecha a porta e guarda o histórico do que a pessoa fez. E Excluir conta só aparece
+para quem nunca entrou: serve para o convite feito por engano. Bem-vindo ao painel, e bom
 trabalho.
 
-**Tela.** Abrir o menu de ações de uma conta aguardando primeiro acesso (Reenviar convite, Copiar
-link), depois o de uma conta ativa (Link de nova senha, Desativar acesso, Excluir conta), sem
+**Tela.** Apontar Reenviar convite numa conta aguardando primeiro acesso, Nova senha numa conta
+ativa, e abrir o menu de mais ações da conta pendente (Desativar acesso, Excluir conta), sem
 confirmar nada.
 
 **Destaque.** Aguardando 1º acesso, Reenviar convite, Link de nova senha, Desativar acesso.
