@@ -23,6 +23,7 @@ export const cartorioBomJesus: Tenant = parseTenant({
     email: "cartoriounicodebomjesus@gmail.com",
   },
   municipality: "BOM JESUS",
+  location: { city: "Bom Jesus", state: "RN" },
   address: "Praça Padre João Maria, 24, Bom Jesus - RN, 59270-000",
   openingHours: "Segunda a sexta, das 8h às 14h",
   counterHours: { startHour: 8, endHour: 14 },

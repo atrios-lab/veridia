@@ -1,5 +1,5 @@
 {
-  "id": "954a1859-f32c-462b-8e02-ddd0b0461afb",
+  "id": "1bc7eddd-55cc-4f25-aa2a-f3c1ebfaba68",
   "prevId": "473e55a8-0119-477b-87ac-db9dd6ec3c13",
   "version": "7",
   "dialect": "postgresql",
@@ -1951,6 +1951,53 @@
       },
       "foreignKeys": {},
       "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.tutorial_progress": {
+      "name": "tutorial_progress",
+      "schema": "",
+      "columns": {
+        "user_id": {
+          "name": "user_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "video_id": {
+          "name": "video_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "watched_at": {
+          "name": "watched_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "tutorial_progress_user_id_user_id_fk": {
+          "name": "tutorial_progress_user_id_user_id_fk",
+          "tableFrom": "tutorial_progress",
+          "tableTo": "user",
+          "columnsFrom": ["user_id"],
+          "columnsTo": ["id"],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {
+        "tutorial_progress_user_id_video_id_pk": {
+          "name": "tutorial_progress_user_id_video_id_pk",
+          "columns": ["user_id", "video_id"]
+        }
+      },
       "uniqueConstraints": {},
       "policies": {},
       "checkConstraints": {},

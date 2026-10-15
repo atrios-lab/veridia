@@ -5,6 +5,7 @@ import { waitingCount } from "@/lib/chat.ts";
 import { openCountByKind, openRequestCount } from "@/lib/service-request.ts";
 import { getSession } from "@/lib/session.ts";
 import { getTenant } from "@/lib/tenant.ts";
+import { publishedTutorialCount } from "@/lib/tutorials.ts";
 import { MenuPopover } from "../../_components/menu-popover.tsx";
 import { GlobalSearchProvider } from "../_components/global-search.tsx";
 import { ShortcutListener } from "../_components/shortcut-listener.tsx";
@@ -51,6 +52,12 @@ export default async function DashboardLayout({
       : {}),
   };
 
+  // "Treinamento" is offered once there is something to watch, and always
+  // to the platform account, for whom it is the way to the management
+  // screen. Hiding it is the courtesy; the route answers either way.
+  const showTutorials =
+    can(role, "tutorials.manage") || (await publishedTutorialCount()) > 0;
+
   const user = {
     name: session.user.name,
     email: session.user.email,
@@ -68,6 +75,7 @@ export default async function DashboardLayout({
           tenant={tenant}
           role={role}
           counts={counts}
+          showTutorials={showTutorials}
           className="hidden md:flex"
         />
 

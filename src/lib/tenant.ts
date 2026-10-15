@@ -14,6 +14,7 @@ import { db } from "@/db/index.ts";
 import { tenantContent } from "@/db/schema.ts";
 import {
   OFFICE_BRAND_KEY,
+  OFFICE_BULLETIN_KEY,
   OFFICE_CONTACT_KEY,
   OFFICE_DEADLINE_KEY,
   OFFICE_DPO_KEY,
@@ -46,6 +47,7 @@ async function readTenantOverrides(tenantSlug: string): Promise<{
   dpo: unknown;
   pix: unknown;
   deadline: unknown;
+  bulletin: unknown;
 }> {
   try {
     const rows = await db
@@ -60,6 +62,7 @@ async function readTenantOverrides(tenantSlug: string): Promise<{
             OFFICE_DPO_KEY,
             OFFICE_PIX_KEY,
             OFFICE_DEADLINE_KEY,
+            OFFICE_BULLETIN_KEY,
           ]),
         ),
       );
@@ -71,6 +74,8 @@ async function readTenantOverrides(tenantSlug: string): Promise<{
       pix: rows.find((r) => r.key === OFFICE_PIX_KEY)?.published ?? null,
       deadline:
         rows.find((r) => r.key === OFFICE_DEADLINE_KEY)?.published ?? null,
+      bulletin:
+        rows.find((r) => r.key === OFFICE_BULLETIN_KEY)?.published ?? null,
     };
   } catch {
     return {
@@ -79,6 +84,7 @@ async function readTenantOverrides(tenantSlug: string): Promise<{
       dpo: null,
       pix: null,
       deadline: null,
+      bulletin: null,
     };
   }
 }

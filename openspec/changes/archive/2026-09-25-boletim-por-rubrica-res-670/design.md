@@ -1,0 +1,217 @@
+## Context
+
+O boletim mensal nasceu na `add-transparency-module` copiando o quadro que as serventias já
+publicam: atos, arrecadação, tributos pagos (FCRCPN, FRMP, FDJ, FUNAF e ISS num valor só),
+despesas e um saldo calculado no núcleo (`bulletinBalanceCents`). A tabela `transparency_bulletins`
+tem uma linha por serventia e mês, garantida por índice único, e publicar de novo o mesmo mês é um
+upsert.
+
+A Res. CNJ 670/2025 exige a parcela pública discriminada por rubrica. A parcela privada é
+facultativa: o § 3º-B só garante o acesso por requerimento à Corregedoria, sem proibir a publicação
+voluntária. A tabela de emolumentos do RN já divide cada ato em colunas: Emolumentos (parcela do
+delegatário), FDJ, FRMP, FCRCPN, ISS e FUNAF. É dessas colunas que saem os campos novos.
+
+Em produção, só Bom Jesus usa o boletim: 20 meses, de janeiro/2025 a agosto/2026, publicados pela
+própria serventia em 11/09/2026, todos consolidados, com o total de tributos num valor só. As 13
+serventias atendidas são do RN. O tenant não tem hoje UF nem nome de cidade para exibição: `municipality` existe, mas é o campo "Merchant City"
+do Pix, em caixa alta, sem acento e limitado a 15 caracteres ("SAO JOSE DE MIP" não serve para
+exibir).
+
+## Goals / Non-Goals
+
+**Goals:**
+
+- Tributos abertos em um valor por fundo, agrupados nas rubricas do CNJ por um mapa por UF no
+  núcleo.
+- ISS numa linha própria, com o nome do município.
+- Arrecadação, despesas e saldo publicados só por escolha da serventia, com a opção ligada por
+  padrão.
+- Uma reclassificação da CGJ (§ 3º-C) resolvida mudando o mapa, sem migração de banco.
+
+**Non-Goals:** ver "Não-objetivos" na proposta.
+
+## Decisions
+
+### Os valores dos fundos numa coluna jsonb, não numa tabela filha nem em colunas fixas
+
+`transparency_bulletins` ganha `fund_amounts_cents jsonb` (por exemplo
+`{"fdj": 123456, "frmp": 32100, "fcrcpn": 21040, "funaf": 9810}`) e `iss_cents bigint`.
+
+- **Colunas fixas** (`fdj_cents`, `frmp_cents`...) prendem o schema ao RN. Uma serventia de outra
+  UF, ou um fundo novo, viraria migração.
+- **Tabela filha** (`bulletin_id`, `fund_key`, `amount_cents`) é o modelo mais "correto", mas
+  transforma o upsert de uma linha em transação com apagar e inserir, e mais um join na leitura,
+  para quatro números que sempre andam juntos.
+- **jsonb** mantém uma linha por mês e o upsert como está. A validação fica no núcleo: um parser
+  puro confere que as chaves são exatamente os fundos da UF e que cada valor é inteiro não
+  negativo, antes de chegar ao banco. Valores em centavos cabem com folga no inteiro seguro do
+  JavaScript (2^53).
+
+### O banco guarda o fundo, não a rubrica
+
+A linha grava `fdj: 123456`, nunca `II: 123456`. A rubrica vem do mapa na hora de exibir. Se a
+CGJ-RN mudar a classificação de um fundo (§ 3º-C), todos os boletins, passados e futuros, passam a
+aparecer com a classificação nova, que é a que vale na data da consulta. O valor recolhido a cada
+fundo nunca muda; o que muda é a leitura.
+
+Alternativa descartada: gravar a rubrica junto. Isso congelaria uma classificação que a própria
+norma diz que a Corregedoria pode alterar, e exigiria migração de dados a cada orientação nova.
+
+### Mapa de rubricas e fundos por UF no núcleo
+
+`src/core/transparency/rubrics.ts`, puro:
+
+```
+RUBRICS     I  Emolumentos (parcela pública)
+            II Fundo de Reaparelhamento da Justiça
+            III Fundo de Compensação
+            IV Outros Fundos Especiais
+
+FUNDS_BY_STATE.RN = [
+  { key: "fdj",    label: "FDJ",    rubric: "II"  },
+  { key: "frmp",   label: "FRMP",   rubric: "IV"  },
+  { key: "fcrcpn", label: "FCRCPN", rubric: "III" },
+  { key: "funaf",  label: "FUNAF",  rubric: "IV"  },
+]
+```
+
+Os nomes das rubricas são texto normativo, iguais para todo tenant, e ficam no núcleo, como
+`MONTHS_PT` e `BULLETIN_STATUS_LABELS`. A ordem do array é a ordem das colunas da tabela do RN, e é
+a ordem dos campos no formulário. Uma função pura `groupByRubric(state, amounts)` devolve as
+rubricas com fundos, cada uma com subtotal e detalhe, mais o total. Rubrica sem fundo na UF não
+aparece, o que hoje esconde a I no RN.
+
+### Total de tributos calculado, arrecadação e despesas opcionais
+
+Um boletim novo não grava `taxes_paid_cents`: o total de tributos é a soma dos fundos com o ISS, no
+núcleo. A coluna só guarda o total dos boletins antigos (ver abaixo).
+`gross_revenue_cents` e `expenses_cents` continuam e ficam nuláveis. O saldo é
+`arrecadação − (fundos + ISS) − despesas` e só existe quando os dois estão presentes.
+
+### A opção vale para a serventia, segue o padrão dos overrides e se aplica na exibição
+
+`publishBulletinPrivateFigures: z.boolean().default(true)` entra no `TenantSchema`, com
+`OfficeBulletinSchema` em `overrides.ts` no mesmo padrão de `OfficeDeadlineSchema`: a config dá o
+default, o painel grava o override, e o override malformado cai no default. A opção fica na
+própria aba Boletim mensal, ao lado de onde tem efeito, e não em Configurações.
+
+A opção é lida em dois momentos:
+
+- **Na gravação:** com ela ligada, arrecadação e despesas são obrigatórias; desligada, nem aparecem
+  no formulário e a linha grava `null`.
+- **Na exibição:** a pré-visualização, a página e o PDF (gerado a cada pedido) mostram arrecadação,
+  despesas e saldo só se a opção estiver ligada **agora** e o boletim tiver os dois valores.
+
+Aplicar na exibição é o que faz o desligamento valer para os meses já publicados: o titular que
+muda de ideia tira os números do site de uma vez, sem republicar mês a mês.
+
+Alternativas descartadas:
+
+- **Opção por boletim:** um mês com saldo e outro sem chama atenção justamente para o mês
+  escondido.
+- **Apagar os valores ao desligar:** tornaria o desligamento irreversível, e religar exigiria
+  redigitar tudo. Os valores ficam no banco, invisíveis; o § 3º-A garante acesso da Corregedoria a
+  eles de qualquer forma.
+
+### Boletins antigos continuam no formato em que foram publicados
+
+Os 20 boletins de Bom Jesus têm arrecadação, total de tributos e despesas, e nenhum valor por fundo.
+O total não se separa por fundo a partir do banco: só a serventia tem as guias. Três saídas foram
+consideradas:
+
+- **Tirar do site até a serventia refazer:** 20 meses publicados somem sem a serventia ter pedido.
+- **Mostrar os antigos como erro ("Boletim indisponível"):** é o que o parser estrito faria, e é
+  pior que tirar.
+- **Mostrar no formato anterior (escolhida):** atos, tributos num valor só (com a lista dos fundos
+  e do ISS que ele reúne) e, com a opção ligada, arrecadação, despesas e saldo, mais uma nota de que
+  o boletim é anterior à Res. 670.
+
+A leitura classifica a linha em três casos: **nova** (fundos válidos para a UF), **antiga** (fundos
+vazios, `{}`, com `taxes_paid_cents`, arrecadação e despesas gravados) e **malformada** (qualquer
+outra coisa, que continua sendo erro, nunca zeros). O caso antigo não depende de data nem de flag: é
+exatamente a forma que a migração dá às linhas que já existiam.
+
+Publicar de novo o mesmo mês no formato novo substitui o antigo e grava `taxes_paid_cents = null`,
+para a linha não carregar dois totais de tributos que podem discordar.
+
+A opção de publicar arrecadação, despesas e saldo vale para os antigos também: o titular que a
+desliga tira esses números de todos os meses, inclusive dos que publicou antes.
+
+Consequência: `taxes_paid_cents` fica no banco. A remoção prevista na versão anterior deste design
+(o "contract") sai dos planos.
+
+### Localização do tenant: `location: { city, state }`
+
+Campo novo e obrigatório no `TenantSchema`: `city` com acento, para exibição ("São José de
+Mipibu"), e `state` num enum de UF que hoje só aceita `"RN"`. O enum faz uma serventia de outro
+estado falhar na validação da config até existir o mapa dela, em vez de publicar um boletim sem
+fundos.
+
+`municipality` continua como está, só para o Pix. Derivar a cidade de `municipality` ou de
+`address` foi descartado: um é truncado e sem acento, o outro é texto livre e opcional.
+
+### ISS digitado, fora das rubricas
+
+`iss_cents` é um valor como os fundos, digitado a partir da guia municipal. Não passa pelo mapa e
+não entra no total dos fundos, mas entra no total de tributos que desconta do saldo. `issRate` não
+é usado: a alíquota serve para calcular custas de um ato, e o boletim registra o que foi
+efetivamente recolhido no mês.
+
+### "Despesas públicas" são os próprios recolhimentos
+
+O § 3º fala em "receitas públicas" e "despesas públicas". No RN o dinheiro público entra na
+serventia junto com o emolumento e sai como recolhimento a cada fundo. O boletim mostra o valor
+recolhido no mês por fundo, que é as duas coisas ao mesmo tempo. As "despesas" do boletim são o
+custeio da serventia, parcela privada, e não se confundem com isso. Fica como pergunta aberta caso a
+CGJ-RN oriente diferente.
+
+### Aviso da parcela privada na página, não no PDF
+
+O aviso do § 3º-B é sobre o site, não sobre um mês. Fica fixo na seção do boletim em
+`/transparencia`, visível mesmo sem boletins e com a opção ligada ou desligada: mesmo quem publica
+os totais não publica o detalhe da parcela privada. O PDF leva só a citação da norma no rodapé.
+
+## Risks / Trade-offs
+
+- [Mapa do RN errado: FUNAF ou FRMP podem não ser "outros fundos especiais" na leitura da CGJ-RN,
+  e pode existir parcela pública dentro dos emolumentos (rubrica I)] → O mapa é uma constante no
+  núcleo e a rubrica não é gravada. Corrigir é mudar uma linha, e todos os boletins passam a
+  aparecer certos.
+- [jsonb aceita qualquer forma] → Toda gravação passa pelo parser do núcleo, que rejeita chave a
+  mais, chave faltando e valor não inteiro. Leitura de linha malformada cai no mesmo parser e é
+  tratada como erro, não como zero.
+- [Opção ligada por padrão expõe o saldo de quem nunca pensou nisso, incluindo mês negativo] → É o
+  que as serventias já fazem hoje no quadro próprio. A opção fica visível na aba onde o boletim é
+  publicado, não escondida em Configurações.
+- [Boletins antigos e novos convivem na mesma lista, com formatos diferentes] → A nota no PDF diz
+  qual é qual. Republicar o mês no formato novo resolve um a um, no ritmo da serventia.
+- [O ISS pode ser lido como tributo do titular, e não como receita pública] → Decisão do produto
+  (mostrar). Tirar depois é remover uma linha da exibição; o valor fica no banco.
+
+## Migration Plan
+
+Uma migração só, que acrescenta colunas e não apaga nada:
+
+1. Adicionar `fund_amounts_cents jsonb NOT NULL DEFAULT '{}'` e `iss_cents bigint NOT NULL DEFAULT
+   0`; tirar o `NOT NULL` de `gross_revenue_cents`, `taxes_paid_cents` e `expenses_cents`. As 20
+   linhas de Bom Jesus ficam com fundos `{}` e ISS 0, que é justamente a forma que a leitura
+   reconhece como boletim antigo.
+2. Antes do merge, aplicar à mão: no Homolog pelo pooler na porta 5432; em produção pelo
+   `POSTGRES_URL_NON_POOLING` (a Vercel só roda `next build`).
+
+O código que está em produção continua funcionando com o banco migrado: ele grava arrecadação,
+tributos e despesas, que seguem existindo, e as colunas novas têm default.
+
+**Rollback:** voltar o código anterior funciona. Um boletim publicado no formato novo nesse meio
+tempo aparece quebrado no código antigo (`taxes_paid_cents` nulo); só acontece se alguma serventia
+publicar no intervalo.
+
+## Open Questions
+
+- **Rubrica I no RN:** existe parcela pública dentro da coluna "Emolumentos" da tabela do RN? Hoje
+  assumimos que não. A confirmar com a CGJ-RN ou com um contador de cartório.
+- **FRMP e FUNAF em IV:** a CGJ-RN ainda não publicou orientação pelo § 3º-C.
+- **Despesas públicas:** ficam cobertas pelos recolhimentos (ver decisão acima)?
+- **FCRCPN nas serventias com registro civil:** o boletim mostra o recolhido ao fundo. O
+  ressarcimento que a serventia recebe do FCRCPN pelos atos gratuitos é receita do delegatário e,
+  com a opção ligada, entra na arrecadação; vale confirmar.

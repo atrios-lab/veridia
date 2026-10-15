@@ -3,9 +3,7 @@
 ## Purpose
 
 TBD
-
 ## Requirements
-
 ### Requirement: Casca do painel com identidade da serventia e estética fixa
 
 Toda tela autenticada do painel SHALL ser renderizada dentro de uma casca composta por sidebar
@@ -82,3 +80,43 @@ nenhum é pior que link ausente.
 
 - **WHEN** o usuário aciona "Sair" no rodapé da sidebar
 - **THEN** a sessão é encerrada no servidor e a pessoa volta ao login com o aviso de saída
+
+### Requirement: Grupo "Ajuda" com o item de vídeos de treinamento
+
+A navegação da sidebar SHALL terminar com o grupo "Ajuda", contendo o item "Treinamento" que
+leva a `/admin/ajuda`, oferecido a todo papel do painel sem permissão adicional. O item SHALL
+ser omitido enquanto não houver vídeo publicado, pela regra de que link sem destino útil é
+pior que link ausente, exceto para uma sessão com `tutorials.manage`, para quem o item é o
+caminho até o gerenciamento; a rota SHALL existir de qualquer forma.
+
+#### Scenario: Item visível para todo papel
+- **WHEN** um usuário com papel `staff` abre o painel e há ao menos um vídeo publicado
+- **THEN** a sidebar mostra "Treinamento" sob o grupo "Ajuda", por último
+
+#### Scenario: Sem vídeo publicado esconde o item
+- **WHEN** não há vídeo publicado e a sessão não tem `tutorials.manage`
+- **THEN** a sidebar não mostra o grupo "Ajuda", e `/admin/ajuda` continua respondendo
+
+#### Scenario: Plataforma sempre vê o item
+- **WHEN** não há vídeo publicado e a sessão é de um `superadmin`
+- **THEN** a sidebar mostra "Treinamento", por onde ele chega a "Gerenciar vídeos"
+
+#### Scenario: Item da tela atual em destaque
+- **WHEN** o usuário está em `/admin/ajuda`
+- **THEN** o item "Treinamento" aparece marcado como página atual (`aria-current="page"`)
+
+### Requirement: Cabeçalho de página oferece o vídeo da tela
+
+O cabeçalho de página de toda tela do painel SHALL mostrar o link "Como usar esta tela" quando
+o catálogo de vídeos de treinamento tem um vídeo cuja rota cobre a rota atual, e nada quando não tem. O
+link SHALL ser resolvido pelo cabeçalho a partir da rota da requisição, sem que cada tela
+precise declará-lo.
+
+#### Scenario: Tela coberta pelo catálogo
+- **WHEN** a pessoa abre `/admin/agenda` e o catálogo tem um vídeo com rota `/admin/agenda`
+- **THEN** o cabeçalho mostra "Como usar esta tela" ao lado do título, apontando para o vídeo
+
+#### Scenario: Tela sem vídeo
+- **WHEN** a pessoa abre uma tela cuja rota nenhum vídeo cobre
+- **THEN** o cabeçalho é o mesmo de hoje, sem o link
+

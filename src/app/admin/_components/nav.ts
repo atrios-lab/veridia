@@ -125,6 +125,17 @@ export const ADMIN_NAV: readonly AdminNavItem[] = [
     icon: "users",
     permission: "user.manage",
   },
+  {
+    // The platform's video tutorials: no permission, every panel user may
+    // watch. The sidebar still omits it while the catalog is empty (see
+    // sidebar.tsx), the one case where the route exists and the item does
+    // not: a screen that only says "estamos preparando" is a link to
+    // nowhere until the first video lands.
+    group: "Ajuda",
+    label: "Treinamento",
+    href: "/admin/ajuda",
+    icon: "play",
+  },
 ];
 
 /** The groups in display order, with the items each one keeps. */

@@ -31,6 +31,7 @@ export const cartorioMarinho: Tenant = parseTenant({
     email: "cartorioim@gmail.com",
   },
   municipality: "IELMO MARINHO",
+  location: { city: "Ielmo Marinho", state: "RN" },
   address: "Rua José Camilo Bezerra, 44, Centro, Ielmo Marinho / RN, 59490-000",
   openingHours: "Segunda a sexta, das 8h às 14h",
   counterHours: { startHour: 8, endHour: 14 },

@@ -7,6 +7,8 @@ import {
   isAccountDisabled,
   isLastActiveAdmin,
   isRole,
+  OFFICE_PERMISSIONS,
+  PLATFORM_PERMISSIONS,
   SUPERADMIN_TENANT_SLUG,
 } from "./roles.ts";
 
@@ -105,15 +107,25 @@ test("the superadmin sentinel office is never a registered one", () => {
   assert.equal(isRegisteredSlug(SUPERADMIN_TENANT_SLUG), false);
 });
 
-test("superadmin has every permission", () => {
-  for (const permission of [
-    "admin.access",
-    "content.publish",
-    "billing.edit",
-    "user.manage",
-    "chat.settings",
-  ] as const) {
-    assert.ok(can("superadmin", permission));
+test("superadmin has every permission, platform ones included", () => {
+  for (const permission of [...OFFICE_PERMISSIONS, ...PLATFORM_PERMISSIONS]) {
+    assert.ok(can("superadmin", permission), permission);
+  }
+});
+
+// What keeps the platform's content out of every registrador's hands: a
+// permission added to PLATFORM_PERMISSIONS reaches superadmin and nobody
+// else, whatever else changes.
+test("no office role holds a platform permission", () => {
+  for (const permission of PLATFORM_PERMISSIONS) {
+    assert.equal(can("admin", permission), false, permission);
+    assert.equal(can("staff", permission), false, permission);
+  }
+});
+
+test("admin holds every office permission", () => {
+  for (const permission of OFFICE_PERMISSIONS) {
+    assert.ok(can("admin", permission), permission);
   }
 });
 

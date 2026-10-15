@@ -173,6 +173,18 @@ export default async function TransparencyPage() {
         <h2 className="font-serif text-xl font-semibold text-brand-primary">
           Boletim mensal de arrecadação
         </h2>
+        {/* Res. CNJ 215/2015, art. 6º, § 3º-B, as rewritten by Res. CNJ
+            670/2025: the private share is reached through the Corregedoria,
+            never through the office. Shown with or without bulletins, and
+            whether or not the office publishes its totals: the totals are not
+            the detail a third party may ask for. */}
+        <p className="mt-2 max-w-[70ch] text-sm leading-relaxed text-brand-muted">
+          A parcela privada dos emolumentos e as demais receitas e despesas da
+          serventia podem ser solicitadas por terceiro legitimamente
+          interessado, mediante requerimento administrativo fundamentado
+          encaminhado à Corregedoria-Geral de Justiça, observada a Lei Geral de
+          Proteção de Dados (Resolução CNJ nº 215/2015, art. 6º, § 3º-B).
+        </p>
         {bulletins.length === 0 ? (
           <p className="mt-3 rounded-2xl border border-brand-border bg-brand-card p-5 text-sm leading-relaxed text-brand-muted">
             Nenhum boletim publicado no momento.

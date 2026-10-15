@@ -17,7 +17,9 @@ export const PANEL_ROLES = ["admin", "staff"] as const;
 // equals a real tenant slug and never appears on any office's user list.
 export const SUPERADMIN_TENANT_SLUG = "atrios";
 
-export const PERMISSIONS = [
+// What a role may do inside its own office. Every permission a registrador
+// can hold is here, and only here.
+export const OFFICE_PERMISSIONS = [
   "admin.access",
   "content.edit",
   "content.publish",
@@ -29,10 +31,23 @@ export const PERMISSIONS = [
   "chat.settings",
   "channels.manage",
 ] as const;
+
+// What acts on the platform itself, the same for every office: content the
+// Átrios account publishes and every serventia reads. Kept in its own list
+// so that adding one can never widen a registrador's powers by accident:
+// `admin` is granted OFFICE_PERMISSIONS, never PERMISSIONS, and the test
+// walks this list to prove it.
+export const PLATFORM_PERMISSIONS = ["tutorials.manage"] as const;
+
+export const PERMISSIONS = [
+  ...OFFICE_PERMISSIONS,
+  ...PLATFORM_PERMISSIONS,
+] as const;
 export type Permission = (typeof PERMISSIONS)[number];
 
 const ROLE_PERMISSIONS: Record<Role, readonly Permission[]> = {
-  admin: PERMISSIONS,
+  // The office owner: everything the office has, nothing the platform has.
+  admin: OFFICE_PERMISSIONS,
   // The Átrios platform account: every permission, everywhere it can log in.
   superadmin: PERMISSIONS,
   // Staff drafts and edits, but publishing, billing and user management stay

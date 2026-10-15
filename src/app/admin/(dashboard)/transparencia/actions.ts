@@ -2,7 +2,9 @@
 
 import { revalidatePath } from "next/cache";
 import { can } from "@/core/auth/roles.ts";
+import { OfficeBulletinSchema } from "@/core/tenant/overrides.ts";
 import {
+  fundFieldName,
   isBulletinStatus,
   parseBulletinFigures,
 } from "@/core/transparency/bulletin.ts";
@@ -12,6 +14,7 @@ import {
   type DocumentStatus,
   documentFormSchema,
 } from "@/core/transparency/documents.ts";
+import { FUNDS_BY_STATE } from "@/core/transparency/rubrics.ts";
 import { notifyIndexNow } from "@/lib/notify-indexnow.ts";
 import { getSession } from "@/lib/session.ts";
 import { getSiteOrigin } from "@/lib/site-origin.ts";
@@ -22,6 +25,7 @@ import {
   getDocument,
   moveDocument,
   publishDocument,
+  saveBulletinOption,
   unpublishDocument,
   upsertBulletin,
 } from "@/lib/transparency.ts";
@@ -254,12 +258,26 @@ export async function publishBulletinAction(
     };
   }
 
-  const parsedFigures = parseBulletinFigures({
-    actsCount: String(formData.get("actsCount") ?? ""),
-    grossRevenue: String(formData.get("grossRevenue") ?? ""),
-    taxesPaid: String(formData.get("taxesPaid") ?? ""),
-    expenses: String(formData.get("expenses") ?? ""),
-  });
+  // The office decides which funds the form carries (its state's) and
+  // whether gross revenue and expenses are read at all: with the option off,
+  // whatever those fields hold is never parsed, so it cannot reach the row.
+  const tenant = await getTenant();
+  const state = tenant.location.state;
+  const funds: Record<string, string> = {};
+  for (const fund of FUNDS_BY_STATE[state]) {
+    funds[fund.key] = String(formData.get(fundFieldName(fund.key)) ?? "");
+  }
+  const parsedFigures = parseBulletinFigures(
+    state,
+    {
+      actsCount: String(formData.get("actsCount") ?? ""),
+      funds,
+      iss: String(formData.get("iss") ?? ""),
+      grossRevenue: String(formData.get("grossRevenue") ?? ""),
+      expenses: String(formData.get("expenses") ?? ""),
+    },
+    { privateFigures: tenant.publishBulletinPrivateFigures },
+  );
   if ("fieldErrors" in parsedFigures) {
     return {
       status: "error",
@@ -271,14 +289,13 @@ export async function publishBulletinAction(
   const statusRaw = String(formData.get("bulletinStatus") ?? "preliminary");
   const status = isBulletinStatus(statusRaw) ? statusRaw : "preliminary";
 
-  const tenant = await getTenant();
   try {
     await upsertBulletin(
       tenant.slug,
       {
         // First day of the month, zero-padded: the column is a date.
         referenceMonth: `${year}-${String(month).padStart(2, "0")}-01`,
-        ...parsedFigures.figures,
+        figures: parsedFigures.figures,
         status,
       },
       session.user.id,
@@ -289,5 +306,38 @@ export async function publishBulletinAction(
   }
   revalidate();
   notifyIndexNow(await getSiteOrigin(), ["/transparencia"]);
+  return { status: "success" };
+}
+
+/**
+ * Whether the office's bulletins also show gross revenue, expenses and the
+ * balance. Applies to every month at once, published ones included, because
+ * the PDF is drawn on each request with the option as it stands.
+ */
+export async function saveBulletinOptionAction(
+  _previous: ActionState,
+  formData: FormData,
+): Promise<ActionState> {
+  const session = await authorize();
+  if (!session) return { status: "error", message: NO_PERMISSION };
+
+  const parsed = OfficeBulletinSchema.safeParse({
+    publishBulletinPrivateFigures:
+      formData.get("publishBulletinPrivateFigures") === "true",
+  });
+  if (!parsed.success) return { status: "error", message: GENERIC_ERROR };
+
+  const tenant = await getTenant();
+  try {
+    await saveBulletinOption(
+      tenant.slug,
+      parsed.data.publishBulletinPrivateFigures,
+      session.user.id,
+    );
+  } catch (error) {
+    console.error("transparencia.bulletin-option", error);
+    return { status: "error", message: GENERIC_ERROR };
+  }
+  revalidate();
   return { status: "success" };
 }
