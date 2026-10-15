@@ -126,35 +126,32 @@ de chave).
 ### Requirement: Mudar o andamento a partir do detalhe
 
 O detalhe SHALL mostrar o andamento atual e oferecer, como sugestão, os andamentos alcançáveis a
-partir dele. O operador SHALL poder, além da sugestão, escolher qualquer um dos dezoito
-andamentos válidos, que cobrem o fluxo registral que a serventia já usa em produção: Novo, Em
-análise, Aguardando pagamento, Pago, Protocolado, Prenotado, Em qualificação, Com exigência,
-Aguardando exigência, Em processamento, Registrado, Averbado, Deferido, Disponível para
-retirada, Concluído, Indeferido, Cancelado, Arquivado. O fluxo é livre de propósito (o andamento
-de um título não cabe numa máquina de estados; quem decide é o registrador): o servidor SHALL
-aceitar qualquer valor da lista fechada de dezoito, SHALL recusar qualquer outro e SHALL recusar
-a transição para o mesmo andamento. Toda mudança SHALL gravar entrada no histórico do pedido. Na
-fila, onde dezoito não cabem numa barra de progresso, o andamento SHALL ser apresentado colapsado
-em fases.
+partir dele. O operador SHALL poder, além da sugestão, escolher qualquer um dos dez andamentos
+válidos: Novo, Aguardando pagamento, Pagamento informado, Aguardando exigência, Em processamento,
+Disponível para retirada, Concluído, Indeferido, Cancelado, Arquivado. O fluxo é livre de
+propósito (o andamento de um título não cabe numa máquina de estados; quem decide é o
+registrador): o servidor SHALL aceitar qualquer valor da lista fechada de dez, SHALL recusar
+qualquer outro e SHALL recusar a transição para o mesmo andamento. Toda mudança SHALL gravar
+entrada no histórico do pedido. Na fila, onde dez não cabem numa barra de progresso, o andamento
+SHALL ser apresentado colapsado em fases.
 
 O selo colorido do andamento SHALL ter a mesma cor na fila e no detalhe, e a cor SHALL ser
 decidida pelo que o andamento pede do balcão, em cinco tons:
 
-- **bloqueado** (vermelho): Com exigência, Aguardando exigência, Indeferido
-- **esperando** (laranja): Novo, Protocolado, Aguardando pagamento
-- **em curso** (verde): Em análise, Pago, Prenotado, Em qualificação, Em processamento,
-  Registrado, Averbado, Deferido
+- **bloqueado** (vermelho): Aguardando exigência, Indeferido
+- **esperando** (laranja): Novo, Aguardando pagamento, Pagamento informado
+- **em curso** (verde): Em processamento
 - **entregue** (tinta do escritório): Disponível para retirada, Concluído
 - **encerrado** (cinza): Cancelado, Arquivado
 
-Cada um dos dezoito andamentos SHALL ter exatamente um tom declarado; nenhum andamento SHALL
-receber cor por omissão.
+Cada um dos dez andamentos SHALL ter exatamente um tom declarado; nenhum andamento SHALL receber
+cor por omissão.
 
 #### Scenario: Exigência se destaca na fila
 
-- **WHEN** a fila mostra um pedido em "Com exigência" ao lado de um em "Em análise"
-- **THEN** o selo da exigência sai no tom bloqueado (vermelho) e o de "Em análise" no tom em curso
-  (verde), com destaque equivalente ao laranja de "Aguardando pagamento"
+- **WHEN** a fila mostra um pedido em "Aguardando exigência" ao lado de um em "Em processamento"
+- **THEN** o selo da exigência sai no tom bloqueado (vermelho) e o de "Em processamento" no tom em
+  curso (verde), com destaque equivalente ao laranja de "Aguardando pagamento"
 
 #### Scenario: Fila e detalhe combinam
 
@@ -163,38 +160,55 @@ receber cor por omissão.
 
 #### Scenario: Andamento novo exige tom
 
-- **WHEN** um décimo nono andamento é acrescentado à lista sem tom declarado
+- **WHEN** um décimo primeiro andamento é acrescentado à lista sem tom declarado
 - **THEN** a build falha, em vez de o andamento aparecer com uma cor herdada em silêncio
 
 #### Scenario: Transição sugerida
 
-- **WHEN** o pedido está em "Em análise"
-- **THEN** a tela oferece os próximos andamentos curados daquele ponto como sugestão direta
+- **WHEN** o pedido está em "Novo"
+- **THEN** a tela oferece "Em processamento", "Aguardando pagamento" e "Cancelado" como sugestão
+  direta
 
-#### Scenario: Andamento registral disponível
+#### Scenario: Registro e averbação usam o mesmo andamento
 
-- **WHEN** o operador precisa marcar um título como "Prenotado"
-- **THEN** a lista completa oferece o andamento e o servidor o aceita
+- **WHEN** o operador está registrando ou averbando um título de Registro de Imóveis
+- **THEN** as duas etapas usam "Em processamento" (não há andamento próprio para "registrado" ou
+  para "averbado", diferente do que a serventia via em produção antes deste corte)
+
+#### Scenario: Confirmar o pagamento já é começar a trabalhar
+
+- **WHEN** o operador confere um comprovante em "Pagamento informado" e confirma o pagamento
+- **THEN** o pedido vai direto para "Em processamento" — não existe mais um andamento "Pago"
+  intermediário para o operador escolher depois
 
 #### Scenario: Correção manual fora da sugestão
 
-- **WHEN** o operador precisa corrigir um pedido de "Cancelado" de volta para "Em análise"
+- **WHEN** o operador precisa corrigir um pedido de "Cancelado" direto para "Disponível para
+  retirada"
 - **THEN** a mudança é aceita, mesmo não sendo uma das sugestões diretas daquele andamento
 
 #### Scenario: Valor inválido é recusado
 
-- **WHEN** uma requisição tenta gravar um andamento fora dos dezoito valores válidos
+- **WHEN** uma requisição tenta gravar um andamento fora dos dez valores válidos
 - **THEN** o servidor recusa e o andamento do pedido não muda
 
 #### Scenario: Dados existentes continuam válidos
 
-- **WHEN** a lista passa de oito para dezoito
-- **THEN** todo pedido já gravado continua com andamento válido, pois os oito anteriores
-  permanecem na lista sem renomeação
+- **WHEN** a lista passa de vinte para dez
+- **THEN** todo pedido já gravado num dos dez valores removidos ou fundidos (os nove do primeiro
+  corte, mais "Pago") é remapeado por uma migração de dado antes de cada deploy que encolhe a
+  lista, e nenhum pedido fica com um andamento que o painel não reconheça
+
+#### Scenario: A consulta do cidadão não convida a pagar de novo
+
+- **WHEN** um pedido já com o pagamento confirmado está em "Em processamento", "Aguardando
+  exigência" ou qualquer andamento além de "Aguardando pagamento"/"Pagamento informado"
+- **THEN** a consulta pública não oferece o QR do Pix nem aceita um novo comprovante para esse
+  pedido
 
 #### Scenario: Outros canais não são afetados
 
-- **WHEN** a lista de andamentos do pedido cresce
+- **WHEN** a lista de andamentos do pedido de serviço muda de tamanho
 - **THEN** agendamento, LGPD e ouvidoria seguem com os seus próprios andamentos, apesar de
   compartilharem a mesma coluna de status
 
@@ -499,3 +513,4 @@ A fila de pedidos e o cabeçalho do detalhe SHALL exibir um badge de urgência d
 #### Scenario: Pedido encerrado não tem urgência
 - **WHEN** um pedido está em andamento terminal, mesmo com a data prevista no passado
 - **THEN** nenhum badge de urgência de prazo é exibido
+
