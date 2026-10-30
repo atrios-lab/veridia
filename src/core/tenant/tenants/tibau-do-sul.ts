@@ -61,14 +61,15 @@ export const cartorioTibauDoSul: Tenant = parseTenant({
   issRate: 0.05, // ponytail: 5% assumed, confirm the Tibau do Sul municipal rate
   theme: "grafite-cobre",
   home: { title: "Ofício Único de Tibau do Sul / RN" }, // same text as `subtitle`
-  // Marca padrão da plataforma para serventias sem identidade própria.
-  // A serventia troca em Configurações > Identidade visual quando quiser.
+  // Logo própria da serventia (anel com folha que termina em pena),
+  // redesenhada em vetor a partir da arte enviada em 30/10/2026. O selo é
+  // só o símbolo; a logo completa leva "Cartório Único de Tibau do Sul-RN".
   logos: {
-    light: "/logos/selo-padrao-preto.png",
-    dark: "/logos/selo-padrao-branco.png",
+    light: "/logos/tibau-logo-preto.png",
+    dark: "/logos/tibau-logo-branco.png",
     seal: {
-      light: "/logos/selo-padrao-preto.png",
-      dark: "/logos/selo-padrao-branco.png",
+      light: "/logos/tibau-selo-preto.png",
+      dark: "/logos/tibau-selo-branco.png",
     },
   },
   // Sem `revenue` de propósito: a serventia não entrou no levantamento do
