@@ -34,3 +34,7 @@
 - [x] 6.3 No navegador, conferir o envio com confirmação e os textos novos em `/acompanhar` e `/protocolo`
 - [x] 6.4 Conferir que a regra `motion-reduce:animate-none` chega compilada ao CSS (o navegador usado não emula movimento reduzido)
 - [x] 6.5 Tentar enviar sem a confirmação (removendo o campo do formulário) e conferir a recusa, sem anexo no pedido
+
+## 7. Selo do catálogo
+
+- [x] 7.1 Ajustar a dica e a legenda do selo "Só identificação" para dizer que o requerimento assinado é pedido além da identificação, com teste em `src/core/acts/catalog.test.ts`
