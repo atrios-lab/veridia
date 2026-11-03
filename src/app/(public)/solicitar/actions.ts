@@ -22,6 +22,7 @@ import { readExemption } from "@/core/request/kinds.ts";
 import { formatProtocolNumber } from "@/core/request/protocol.ts";
 import { formatDate } from "@/core/scheduling/calendar.ts";
 import { isSectionEnabled } from "@/core/tenant/gating.ts";
+import { officeYear } from "@/core/time/office-time.ts";
 import { clientIp } from "@/lib/client-ip.ts";
 import { sendAccessKey } from "@/lib/email/service-request.ts";
 import { isRateLimited } from "@/lib/rate-limit.ts";
@@ -95,7 +96,7 @@ export async function submitServiceRequest(
       status: "success",
       protocolNumber: formatProtocolNumber(
         "REQ",
-        new Date().getFullYear(),
+        officeYear(new Date()),
         999_999,
       ),
       accessKey: generateAccessKey(),

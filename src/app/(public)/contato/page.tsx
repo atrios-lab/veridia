@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { isWithinChatHours, nextChatOpening } from "@/core/chat/hours.ts";
 import { longWeekday, toIsoDate } from "@/core/scheduling/calendar.ts";
+import { OFFICE_TIME_ZONE } from "@/core/time/office-time.ts";
 import { isChatEnabled } from "@/lib/chat.ts";
 import { Icon } from "../_components/icon.tsx";
 import { publicMetadata } from "../_lib/metadata.ts";
@@ -9,8 +10,6 @@ import { CopyEmailButton } from "./copy-email-button.tsx";
 import { OpenChatButton } from "./open-chat-button.tsx";
 
 export const generateMetadata = publicMetadata("/contato");
-
-const TIME_ZONE = "America/Sao_Paulo";
 
 const digits = (value: string) => value.replace(/\D/g, "");
 
@@ -40,7 +39,7 @@ export default async function ContactPage() {
     statusLabel = `Aberto agora · fecha às ${tenant.counterHours.endHour}h`;
   } else {
     const opening = nextChatOpening(tenant, now);
-    const today = toIsoDate(now, TIME_ZONE);
+    const today = toIsoDate(now, OFFICE_TIME_ZONE);
     const dayLabel = opening.day === today ? "hoje" : longWeekday(opening.day);
     statusLabel = `Fechado agora · abre ${dayLabel} às ${opening.hour}h`;
   }

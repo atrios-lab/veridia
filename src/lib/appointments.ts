@@ -13,6 +13,7 @@ import {
 } from "@/core/scheduling/appointment.ts";
 import type { IsoDate } from "@/core/scheduling/calendar.ts";
 import type { SlotTime, TakenTimes } from "@/core/scheduling/slots.ts";
+import { officeYear } from "@/core/time/office-time.ts";
 import {
   isPostgresError,
   UNIQUE_VIOLATION,
@@ -250,7 +251,7 @@ export async function bookAppointmentWith(
   input: NewAppointment,
   actorId: string | null = null,
 ): Promise<Appointment> {
-  const year = new Date().getFullYear();
+  const year = officeYear(new Date());
   const origin = input.origin ?? "site";
 
   // Two unique indexes referee this insert, and they mean different things:

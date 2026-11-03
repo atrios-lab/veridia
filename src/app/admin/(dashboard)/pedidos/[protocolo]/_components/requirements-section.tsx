@@ -2,6 +2,10 @@
 
 import { useActionState, useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
+import {
+  formatOfficeDayMonth,
+  formatOfficeDayMonthTime,
+} from "@/core/time/office-time.ts";
 import type { AttachmentItem } from "../../../../_components/attachment-link.ts";
 import { documentHref } from "../../../../_components/attachment-link.ts";
 import { AttachmentRow } from "../../../../_components/attachment-row.tsx";
@@ -43,21 +47,7 @@ export interface RequirementItem {
 }
 
 function formatDayMonthTime(date: Date): string {
-  return new Intl.DateTimeFormat("pt-BR", {
-    day: "2-digit",
-    month: "2-digit",
-    hour: "2-digit",
-    minute: "2-digit",
-  })
-    .format(date)
-    .replace(", ", " · ");
-}
-
-function formatDayMonth(date: Date): string {
-  return new Intl.DateTimeFormat("pt-BR", {
-    day: "2-digit",
-    month: "2-digit",
-  }).format(date);
+  return formatOfficeDayMonthTime(date).replace(", ", " · ");
 }
 
 /**
@@ -486,9 +476,9 @@ function RequirementCard({
           {pendingReq ? "Aguardando o cidadão" : "Cumprida"}
         </span>
         <span className="flex-none text-[11.5px] text-admin-faint">
-          registrada em {formatDayMonth(requirement.createdAt)}
+          registrada em {formatOfficeDayMonth(requirement.createdAt)}
           {requirement.fulfilledAt
-            ? ` · resolvida em ${formatDayMonth(requirement.fulfilledAt)}`
+            ? ` · resolvida em ${formatOfficeDayMonth(requirement.fulfilledAt)}`
             : ""}
         </span>
         {/* Folded, the first line of the text is the card's name. Not merely

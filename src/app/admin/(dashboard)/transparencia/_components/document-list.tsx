@@ -2,6 +2,7 @@
 
 import { useActionState, useEffect, useState } from "react";
 import { toast } from "sonner";
+import { formatOfficeMonthYear } from "@/core/time/office-time.ts";
 import {
   DOCUMENT_CATEGORIES,
   DOCUMENT_STATUS_LABELS,
@@ -21,13 +22,6 @@ import {
 function formatFileSize(bytes: number): string {
   if (bytes < 1024 * 1024) return `${Math.max(1, Math.round(bytes / 1024))} KB`;
   return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
-}
-
-function monthYear(date: Date): string {
-  return new Intl.DateTimeFormat("pt-BR", {
-    month: "2-digit",
-    year: "numeric",
-  }).format(date);
 }
 
 const STATUS_PILL: Record<DocumentStatus, string> = {
@@ -127,7 +121,7 @@ function DocumentRow({
   const size = formatFileSize(doc.fileSizeBytes);
   const meta =
     status === "unpublished" && doc.unpublishedAt
-      ? `${doc.category} · ${doc.yearLabel} · ${size} · fora do site desde ${monthYear(new Date(doc.unpublishedAt))}`
+      ? `${doc.category} · ${doc.yearLabel} · ${size} · fora do site desde ${formatOfficeMonthYear(new Date(doc.unpublishedAt))}`
       : `${doc.category} · ${doc.yearLabel} · ${size}`;
 
   return (

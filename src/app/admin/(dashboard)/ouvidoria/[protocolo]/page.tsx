@@ -7,6 +7,7 @@ import {
   parseDetails,
   statusLabel,
 } from "@/core/request/kinds.ts";
+import { formatOfficeDayMonthTime } from "@/core/time/office-time.ts";
 import { findByProtocol, listRecordHistory } from "@/lib/service-request.ts";
 import { getSession } from "@/lib/session.ts";
 import { getTenant } from "@/lib/tenant.ts";
@@ -28,15 +29,6 @@ const HISTORY_LABELS: Record<string, string> = {
   "ombudsman.internal-note": "salvou uma anotação interna",
   "ombudsman.status": "alterou o andamento",
 };
-
-function formatDayMonthTime(date: Date): string {
-  return new Intl.DateTimeFormat("pt-BR", {
-    day: "2-digit",
-    month: "2-digit",
-    hour: "2-digit",
-    minute: "2-digit",
-  }).format(date);
-}
 
 export default async function OmbudsmanDetailPage({
   params,
@@ -92,7 +84,7 @@ export default async function OmbudsmanDetailPage({
             <div className="rounded-[14px] border border-admin-border bg-admin-card p-6">
               <p className="text-[12px] text-admin-faint">
                 {manifestationLabel(details.manifestationType)} ·{" "}
-                {formatDayMonthTime(record.createdAt)} · {identified}
+                {formatOfficeDayMonthTime(record.createdAt)} · {identified}
               </p>
 
               <div className="mt-3.5 rounded-[11px] border border-admin-border bg-admin-input-bg px-4 py-3.5">
@@ -184,7 +176,7 @@ export default async function OmbudsmanDetailPage({
                       {HISTORY_LABELS[entry.action] ?? entry.action}
                       <br />
                       <span className="text-[11px] text-admin-faint">
-                        {formatDayMonthTime(entry.createdAt)}
+                        {formatOfficeDayMonthTime(entry.createdAt)}
                       </span>
                     </li>
                   ))}

@@ -17,9 +17,10 @@ import {
   type RequestKind,
   TERMINAL_STATUSES,
 } from "@/core/request/kinds.ts";
-import type { IsoDate } from "@/core/scheduling/calendar.ts";
+import { type IsoDate, toIsoDate } from "@/core/scheduling/calendar.ts";
+import { OFFICE_TIME_ZONE } from "@/core/time/office-time.ts";
 import { user } from "@/db/auth-schema.ts";
-import { db } from "@/db/index.ts";
+import { type Database, db } from "@/db/index.ts";
 import {
   appointments,
   auditLog,
@@ -98,11 +99,12 @@ export interface UpcomingDataRightsDeadline {
 
 /** Open LGPD requerimentos within three days of the legal term, overdue ones
  * included: the same horizon `DeadlineBadge` uses, closest deadline first. */
-export async function listUpcomingDataRightsDeadlines(
+export async function listUpcomingDataRightsDeadlinesWith(
+  database: Database,
   tenantSlug: string,
   today: IsoDate,
 ): Promise<UpcomingDataRightsDeadline[]> {
-  const rows = await db
+  const rows = await database
     .select({
       id: serviceRequests.id,
       protocolNumber: serviceRequests.protocolNumber,
@@ -120,7 +122,7 @@ export async function listUpcomingDataRightsDeadlines(
 
   return rows
     .map((row) => {
-      const requestedOn = row.createdAt.toISOString().slice(0, 10);
+      const requestedOn = toIsoDate(row.createdAt, OFFICE_TIME_ZONE);
       const dayOfTerm = dataRightsDayOfDeadline(requestedOn, today);
       return {
         id: row.id,
@@ -131,6 +133,13 @@ export async function listUpcomingDataRightsDeadlines(
     })
     .filter((row) => row.daysLeft <= 3)
     .sort((a, b) => a.daysLeft - b.daysLeft);
+}
+
+export async function listUpcomingDataRightsDeadlines(
+  tenantSlug: string,
+  today: IsoDate,
+): Promise<UpcomingDataRightsDeadline[]> {
+  return listUpcomingDataRightsDeadlinesWith(db, tenantSlug, today);
 }
 
 /** How the overview's colored chip names each channel. */

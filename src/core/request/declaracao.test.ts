@@ -343,3 +343,33 @@ test("buildStamp: canal balcão e IP ausente saem em branco, sem inventar", () =
   assert.doesNotMatch(stamp.paragraphs.join("\n"), /recebida eletronicamente/);
   assert.match(stamp.paragraphs[0], /atendimento presencial/);
 });
+
+function inUtc(run: () => void): void {
+  const zone = process.env.TZ;
+  process.env.TZ = "UTC";
+  try {
+    run();
+  } finally {
+    if (zone === undefined) delete process.env.TZ;
+    else process.env.TZ = zone;
+  }
+}
+
+test("o carimbo traz a hora do aceite no horário da serventia, com o servidor em UTC", () => {
+  inUtc(() => {
+    const exemption: ExemptionDeclaration = {
+      // 22:30 de 3 de novembro na serventia, já dia 4 em UTC.
+      declaredAt: "2026-11-04T01:30:00.000Z",
+      actId: "rcpn-habilitacao-casamento",
+      beneficiaries: [{ name: "Maria José da Silva", signedBy: "self" }],
+    };
+    const stamp = buildStamp({
+      tenantSlug: cartorioMarinho.slug,
+      protocolNumber: "REQ.2026.000301",
+      channel: undefined,
+      exemption,
+      beneficiaryIndex: 0,
+    });
+    assert.ok(stamp.facts.some((f) => f.value === "03/11/2026 às 22:30"));
+  });
+});

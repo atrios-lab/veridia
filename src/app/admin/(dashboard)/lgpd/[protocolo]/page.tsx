@@ -4,6 +4,7 @@ import { can } from "@/core/auth/roles.ts";
 import { dataRightOption } from "@/core/request/channels.ts";
 import { parseDetails } from "@/core/request/kinds.ts";
 import { toIsoDate } from "@/core/scheduling/calendar.ts";
+import { formatOfficeDayMonthTime } from "@/core/time/office-time.ts";
 import {
   findByProtocol,
   listAttachments,
@@ -36,15 +37,6 @@ function Field({ label, value }: { label: string; value: string }) {
       </p>
     </div>
   );
-}
-
-function formatDayMonthTime(date: Date): string {
-  return new Intl.DateTimeFormat("pt-BR", {
-    day: "2-digit",
-    month: "2-digit",
-    hour: "2-digit",
-    minute: "2-digit",
-  }).format(date);
 }
 
 export default async function DataRightsDetailPage({
@@ -138,7 +130,7 @@ export default async function DataRightsDetailPage({
                     attachment={{
                       id: identityAttachment.id,
                       displayName: identityAttachment.displayName,
-                      createdAtLabel: formatDayMonthTime(
+                      createdAtLabel: formatOfficeDayMonthTime(
                         identityAttachment.createdAt,
                       ),
                       sizeBytes: identityAttachment.sizeBytes,
@@ -170,7 +162,7 @@ export default async function DataRightsDetailPage({
                         attachment={{
                           id: a.id,
                           displayName: a.displayName,
-                          createdAtLabel: formatDayMonthTime(a.createdAt),
+                          createdAtLabel: formatOfficeDayMonthTime(a.createdAt),
                           sizeBytes: a.sizeBytes,
                         }}
                         meta="entregue em"
@@ -189,8 +181,9 @@ export default async function DataRightsDetailPage({
                 Prazo legal
               </h4>
               <p className="mt-2 text-[12.5px] leading-relaxed text-admin-muted">
-                Recebido em {formatDayMonthTime(request.createdAt)}. Resposta em
-                até 15 dias (Lei 13.709/2018), a cargo de {tenant.dpo.name}.
+                Recebido em {formatOfficeDayMonthTime(request.createdAt)}.
+                Resposta em até 15 dias (Lei 13.709/2018), a cargo de{" "}
+                {tenant.dpo.name}.
               </p>
             </div>
 
@@ -215,7 +208,7 @@ export default async function DataRightsDetailPage({
                       {HISTORY_LABELS[entry.action] ?? entry.action}
                       <br />
                       <span className="text-[11px] text-admin-faint">
-                        {formatDayMonthTime(entry.createdAt)}
+                        {formatOfficeDayMonthTime(entry.createdAt)}
                       </span>
                     </li>
                   ))}
