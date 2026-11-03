@@ -10,6 +10,7 @@ O cidadão termina o pedido e acha que acabou: o passo de baixar e assinar o req
 - A confirmação vale nos três pontos de envio: tela de sucesso, `/protocolo` e `/acompanhar`, para o requerimento e para a declaração de hipossuficiência. A ação `attachSignedForm` recusa envio sem a confirmação.
 - O `SignCard` de `/acompanhar` deixa de ter uma cópia própria do envio e passa a usar o `SignedFormUpload`.
 - Saem as frases "o pedido não trava" (`/protocolo`) e "Seu pedido continua valendo" (`/acompanhar`). No lugar, o texto diz que o balcão continua valendo, mas que sem o requerimento assinado o pedido não tramita.
+- A dica e a legenda do selo "Só identificação", na lista de atos, passam a dizer que o requerimento assinado é pedido além da identificação.
 
 ## Capabilities
 
@@ -37,6 +38,7 @@ Nenhuma.
 - `src/app/(public)/protocolo/protocol-lookup.tsx`: aviso e texto do balcão.
 - `src/app/(public)/solicitar/actions.ts`: `attachSignedForm` exige a confirmação.
 - `src/core/request/attachment.ts` e `src/core/request/requerimento.ts`: regra da confirmação e textos.
+- `src/core/acts/catalog.ts` e `src/app/(public)/solicitar/_components/badges.tsx`: textos do selo "Só identificação".
 - `src/app/globals.css`: animação da borda.
 - Banco: nenhuma mudança. Sem migração de produção.
 - Alcance: o aviso vale para todas as serventias, porque o texto é único.

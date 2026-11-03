@@ -1113,7 +1113,7 @@ function Step({
         <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-brand-tint text-xs font-bold text-brand-primary">
           {number}
         </span>
-        <div className="flex-1">
+        <div className="min-w-0 flex-1">
           <div className="text-[13.5px] font-bold text-brand-primary">
             {title}
           </div>

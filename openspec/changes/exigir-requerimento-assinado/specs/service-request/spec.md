@@ -15,6 +15,10 @@ O pedido registrado NÃO DEVE (SHALL NOT) ser apresentado ao cidadão como pront
 - **WHEN** o cidadão lê o texto sobre a entrega em papel em qualquer uma das telas
 - **THEN** nenhum texto diz que o pedido "não trava" ou "continua valendo" sem o requerimento assinado
 
+#### Scenario: O selo "Só identificação" não contradiz o aviso
+- **WHEN** o cidadão lê a dica ou a legenda do selo "Só identificação" na lista de atos
+- **THEN** o texto diz que o requerimento assinado é pedido além da identificação
+
 ### Requirement: Confirmação antes de enviar o documento assinado
 Escolher o arquivo NÃO DEVE (SHALL NOT) enviá-lo. Todo envio de documento assinado pelo cidadão, na tela de sucesso, em `/protocolo` e em `/acompanhar`, DEVE (SHALL) passar por duas etapas: escolher o arquivo e, com o nome dele visível, marcar a confirmação de que aquele arquivo é o documento deste pedido já assinado, com o aviso de que, se for outro documento, o pedido não tramita na serventia. O botão "Enviar" DEVE (SHALL) ficar desativado até a confirmação ser marcada. O servidor DEVE (SHALL) recusar o envio sem a confirmação, sem armazenar o arquivo. Vale para o requerimento e para a declaração de hipossuficiência, cada um com o texto que o nomeia.
 
