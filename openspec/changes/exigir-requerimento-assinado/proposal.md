@@ -26,7 +26,6 @@ Nenhuma.
 - Bloquear o pedido no painel: o operador continua podendo mover um pedido sem o assinado. "Não tramita" é a regra da serventia comunicada ao cidadão, não uma trava do sistema.
 - Verificar se o arquivo está de fato assinado ou se é mesmo o requerimento. A confirmação é uma declaração do cidadão; quem confere é a serventia.
 - Gravar a confirmação no banco. Não há coluna nova nem migração.
-- Oferecer o envio da declaração em `/acompanhar`, que hoje só tem o download dela. A troca pelo `SignedFormUpload` mantém esse escopo.
 - Fazer a borda piscar em `/protocolo` ou `/acompanhar`. Só a tela de sucesso pisca.
 - Mudar o texto do PDF do requerimento ou os e-mails.
 
