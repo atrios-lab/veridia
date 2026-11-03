@@ -3,7 +3,11 @@
 import Link from "next/link";
 import { Fragment, useActionState, useEffect, useRef, useState } from "react";
 import type { PauseReason } from "@/core/request/deadline.ts";
-import { HANDWRITTEN_SIGNATURE_CAVEAT } from "@/core/request/requerimento.ts";
+import {
+  HANDWRITTEN_SIGNATURE_CAVEAT,
+  SIGNED_FORM_COUNTER_OPTION,
+  SIGNED_FORM_REQUIRED_NOTICE,
+} from "@/core/request/requerimento.ts";
 import {
   addDays,
   formatDate as formatCalendarDate,
@@ -804,6 +808,11 @@ function SignCard({
           <span className="mt-1 block text-[13px] text-brand-muted">
             {HANDWRITTEN_SIGNATURE_CAVEAT}
           </span>
+          {awaitingForm && (
+            <span className="mt-1 block text-[13px] font-semibold text-brand-alert">
+              {SIGNED_FORM_REQUIRED_NOTICE}
+            </span>
+          )}
         </span>
       </div>
       <div className="h-px bg-brand-border" />
@@ -811,7 +820,7 @@ function SignCard({
         <span className="flex h-[26px] w-[26px] shrink-0 items-center justify-center rounded-full bg-brand-primary text-xs font-bold text-white">
           3
         </span>
-        <div className="flex flex-1 flex-col gap-2.5">
+        <div className="flex min-w-0 flex-1 flex-col gap-2.5">
           <span className="text-[15px] font-semibold">
             {awaitingForm && awaitingDeclaration
               ? "Envie os arquivos assinados"
@@ -838,8 +847,9 @@ function SignCard({
             )}
           </div>
           <span className="text-[13px] text-brand-muted">
-            Se preferir, entregue em papel no balcão. Seu pedido continua
-            valendo.
+            {awaitingForm
+              ? SIGNED_FORM_COUNTER_OPTION
+              : "Se preferir, entregue em papel no balcão."}
           </span>
         </div>
       </div>

@@ -27,7 +27,10 @@ import {
   EXEMPTION_SIGNED_BY,
   type ExemptionSignedBy,
 } from "@/core/request/kinds.ts";
-import { HANDWRITTEN_SIGNATURE_CAVEAT } from "@/core/request/requerimento.ts";
+import {
+  HANDWRITTEN_SIGNATURE_CAVEAT,
+  SIGNED_FORM_REQUIRED_NOTICE,
+} from "@/core/request/requerimento.ts";
 import type { Attribution } from "@/core/tenant/schema.ts";
 import { Icon } from "../_components/icon.tsx";
 import { ProtocolReveal } from "../_components/protocol-reveal.tsx";
@@ -899,6 +902,12 @@ function SuccessScreen({
   result: SubmitSuccess;
   lookupHref: string;
 }) {
+  // The blink asks for one gesture, the download, and stops once it happens:
+  // blinking forever would get in the way of reading the step (WCAG 2.2.2).
+  // The red stays until the signed requerimento is actually in.
+  const [requerimentoDownloaded, setRequerimentoDownloaded] = useState(false);
+  const [requerimentoSent, setRequerimentoSent] = useState(false);
+
   return (
     <div className="mt-5 md:mx-auto md:max-w-3xl">
       <div className="rounded-t-2xl bg-brand-primary px-5 py-6 text-center">
@@ -961,7 +970,25 @@ function SuccessScreen({
           </form>
         </Step>
 
-        <Step number={2} title="Baixe o requerimento e assine">
+        <Step
+          number={2}
+          title="Baixe o requerimento e assine"
+          emphasis={
+            requerimentoSent
+              ? undefined
+              : requerimentoDownloaded
+                ? "alert"
+                : "blink"
+          }
+          band={
+            requerimentoSent ? undefined : "Obrigatório para o pedido andar"
+          }
+        >
+          {!requerimentoSent && (
+            <p className="mb-1 text-[12px] font-semibold leading-relaxed text-brand-alert">
+              {SIGNED_FORM_REQUIRED_NOTICE}
+            </p>
+          )}
           <p className="text-[12px] leading-relaxed text-brand-muted">
             Digitalmente pelo Gov.br (assinador.iti.br), ou imprima e assine de
             próprio punho.
@@ -975,6 +1002,7 @@ function SuccessScreen({
               method="post"
               target="_blank"
               rel="noopener"
+              onSubmit={() => setRequerimentoDownloaded(true)}
             >
               <ProtocolFields result={result} />
               <button type="submit" className="btn btn-primary btn-md">
@@ -1011,6 +1039,7 @@ function SuccessScreen({
               ? "Envie o requerimento e a declaração assinados"
               : "Envie o requerimento assinado"
           }
+          emphasis={requerimentoSent ? undefined : "alert"}
         >
           <p className="text-[12px] leading-relaxed text-brand-muted">
             Pode ser agora, depois pela consulta do protocolo, ou em papel no
@@ -1023,6 +1052,7 @@ function SuccessScreen({
               protocolNumber={result.protocolNumber}
               accessKey={result.accessKey}
               documento="requerimento"
+              onSent={() => setRequerimentoSent(true)}
             />
             {result.hasExemption && (
               <SignedFormUpload
@@ -1050,25 +1080,45 @@ function SuccessScreen({
   );
 }
 
+const STEP_EMPHASIS = {
+  alert: "border-2 border-brand-alert",
+  blink:
+    "border-2 border-brand-alert animate-signature-blink motion-reduce:animate-none",
+};
+
 function Step({
   number,
   title,
+  emphasis,
+  band,
   children,
 }: {
   number: number;
   title: string;
+  emphasis?: keyof typeof STEP_EMPHASIS;
+  /** Solid strip over the step, saying in words what the red border says. */
+  band?: string;
   children: React.ReactNode;
 }) {
   return (
-    <li className="flex gap-3 rounded-2xl border border-brand-border bg-brand-card p-3.5">
-      <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-brand-tint text-xs font-bold text-brand-primary">
-        {number}
-      </span>
-      <div className="flex-1">
-        <div className="text-[13.5px] font-bold text-brand-primary">
-          {title}
+    <li
+      className={`overflow-hidden rounded-2xl bg-brand-card ${emphasis ? STEP_EMPHASIS[emphasis] : "border border-brand-border"}`}
+    >
+      {band && (
+        <div className="bg-brand-alert px-3.5 py-1.5 text-[11px] font-bold uppercase tracking-[0.12em] text-white">
+          {band}
         </div>
-        {children}
+      )}
+      <div className="flex gap-3 p-3.5">
+        <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-brand-tint text-xs font-bold text-brand-primary">
+          {number}
+        </span>
+        <div className="flex-1">
+          <div className="text-[13.5px] font-bold text-brand-primary">
+            {title}
+          </div>
+          {children}
+        </div>
       </div>
     </li>
   );

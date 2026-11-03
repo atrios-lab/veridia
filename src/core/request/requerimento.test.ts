@@ -6,7 +6,15 @@ import {
   buildAccessReceipt,
   buildDataRightsReceipt,
   buildRequerimento,
+  SIGNED_FORM_CONFIRMATIONS,
 } from "./requerimento.ts";
+
+test("a confirmação do envio nomeia o documento que está sendo enviado", () => {
+  assert.match(SIGNED_FORM_CONFIRMATIONS.requerimento, /requerimento/);
+  assert.doesNotMatch(SIGNED_FORM_CONFIRMATIONS.requerimento, /declaração/);
+  assert.match(SIGNED_FORM_CONFIRMATIONS.declaracao, /declaração/);
+  assert.doesNotMatch(SIGNED_FORM_CONFIRMATIONS.declaracao, /requerimento/);
+});
 
 const marriage = getAct("rcpn-habilitacao-casamento");
 const nameChange = getAct("rcpn-alteracao-prenome");

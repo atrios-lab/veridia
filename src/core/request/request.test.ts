@@ -12,6 +12,7 @@ import {
   checkUploadedAttachments,
   displayFileName,
   isGeneratedAttachmentPath,
+  isSignedFormConfirmed,
   isTenantAttachmentPath,
   MAX_ATTACHMENT_BYTES,
   MAX_ATTACHMENTS,
@@ -770,6 +771,13 @@ test("signedFormFor acha a via assinada mais recente de cada documento", () => {
   assert.equal(signedFormFor(rows, "requerimento")?.id, "d");
   assert.equal(signedFormFor(rows, "declaracao")?.id, "c");
   assert.equal(signedFormFor(rows.slice(0, 2), "declaracao"), undefined);
+});
+
+test("só a caixa marcada conta como confirmação do documento assinado", () => {
+  assert.equal(isSignedFormConfirmed("on"), true);
+  assert.equal(isSignedFormConfirmed(null), false);
+  assert.equal(isSignedFormConfirmed(""), false);
+  assert.equal(isSignedFormConfirmed("off"), false);
 });
 
 test("um signed-form com nome fora da lista é o requerimento (anexos antigos)", () => {
