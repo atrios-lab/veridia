@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { after, before, test } from "node:test";
+import { after, before, mock, test } from "node:test";
 import { eq } from "drizzle-orm";
 import { getAct } from "@/core/acts/catalog.ts";
 import {
@@ -468,4 +468,32 @@ test("an amount can be set and then cleared", async () => {
   await setRequestAmountWith(db, TENANT.slug, id, null, "staff-1");
   stored = await findByProtocolWith(db, TENANT.slug, protocolNumber);
   assert.equal(stored?.amountCents, null);
+});
+
+async function atInstant<T>(iso: string, run: () => Promise<T>): Promise<T> {
+  const zone = process.env.TZ;
+  process.env.TZ = "UTC";
+  mock.timers.enable({ apis: ["Date"], now: new Date(iso) });
+  try {
+    return await run();
+  } finally {
+    mock.timers.reset();
+    if (zone === undefined) delete process.env.TZ;
+    else process.env.TZ = zone;
+  }
+}
+
+test("a protocol carries the office's year, with the server in UTC", async () => {
+  const file = () =>
+    createRecordWith(db, TENANT, "ombudsman", {
+      description: "Virada do ano.",
+    });
+
+  // 22:00 on 31 December at the office, already next year in UTC.
+  const lastNight = await atInstant("2027-01-01T01:00:00Z", file);
+  assert.match(lastNight.protocolNumber, /\.2026\./);
+
+  // 00:10 on 1 January at the office.
+  const firstMorning = await atInstant("2027-01-01T03:10:00Z", file);
+  assert.match(firstMorning.protocolNumber, /\.2027\./);
 });

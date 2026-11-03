@@ -8,6 +8,7 @@ import type { ManifestationType } from "@/core/request/kinds.ts";
 import { parseDetails } from "@/core/request/kinds.ts";
 import { formatProtocolNumber } from "@/core/request/protocol.ts";
 import { isSectionEnabled } from "@/core/tenant/gating.ts";
+import { officeYear } from "@/core/time/office-time.ts";
 import {
   notifyCitizen,
   notifyOfficeManifestationSubmitted,
@@ -54,7 +55,7 @@ export async function submitManifestation(
       status: "success",
       protocolNumber: formatProtocolNumber(
         "OUV",
-        new Date().getFullYear(),
+        officeYear(new Date()),
         999_999,
       ),
       manifestationType: "complaint",

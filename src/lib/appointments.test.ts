@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { after, before, test } from "node:test";
+import { after, before, mock, test } from "node:test";
 import {
   generateCancelToken,
   hashCancelToken,
@@ -195,4 +195,39 @@ test("closing the day cancels every live appointment on it, with one reason", as
   const other = await appointmentsOnWith(db, TENANT.slug, "2098-04-03");
   assert.equal(other[0]?.id, untouched.id);
   assert.equal(other[0]?.status, "booked");
+});
+
+async function atInstant<T>(iso: string, run: () => Promise<T>): Promise<T> {
+  const zone = process.env.TZ;
+  process.env.TZ = "UTC";
+  mock.timers.enable({ apis: ["Date"], now: new Date(iso) });
+  try {
+    return await run();
+  } finally {
+    mock.timers.reset();
+    if (zone === undefined) delete process.env.TZ;
+    else process.env.TZ = zone;
+  }
+}
+
+test("a booking's protocol carries the office's year, with the server in UTC", async () => {
+  // 22:00 on 31 December at the office, already next year in UTC.
+  const lastNight = await atInstant("2027-01-01T01:00:00Z", () =>
+    bookAppointmentWith(
+      db,
+      TENANT.slug,
+      newAppointment({ date: "2098-05-12" }),
+    ),
+  );
+  assert.match(lastNight.protocolNumber ?? "", /^AGD\.2026\./);
+
+  // 00:10 on 1 January at the office.
+  const firstMorning = await atInstant("2027-01-01T03:10:00Z", () =>
+    bookAppointmentWith(
+      db,
+      TENANT.slug,
+      newAppointment({ date: "2098-05-13" }),
+    ),
+  );
+  assert.match(firstMorning.protocolNumber ?? "", /^AGD\.2027\./);
 });

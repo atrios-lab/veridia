@@ -1,6 +1,7 @@
 import type { Act } from "../acts/catalog.ts";
 import { ATTRIBUTION_NAMES } from "../acts/catalog.ts";
 import type { Tenant } from "../tenant/schema.ts";
+import { formatOfficeDate } from "../time/office-time.ts";
 import type { SignedFormDocument } from "./attachment.ts";
 import { dataRightOption } from "./channels.ts";
 import type { DataRight } from "./kinds.ts";
@@ -127,14 +128,6 @@ export interface RequerimentoData {
   createdAt: Date;
 }
 
-function formatDate(date: Date): string {
-  return new Intl.DateTimeFormat("pt-BR", {
-    day: "2-digit",
-    month: "2-digit",
-    year: "numeric",
-  }).format(date);
-}
-
 function formatCpf(digits: string): string {
   return digits.replace(/^(\d{3})(\d{3})(\d{3})(\d{2})$/, "$1.$2.$3-$4");
 }
@@ -215,7 +208,7 @@ export function buildRequerimento(
   return {
     eyebrow: "Serviços on-line",
     title: "Requerimento de serviço",
-    subtitle: `Protocolo ${data.protocolNumber} · ${formatDate(data.createdAt)}`,
+    subtitle: `Protocolo ${data.protocolNumber} · ${formatOfficeDate(data.createdAt)}`,
     office: [
       tenant.name,
       tenant.subtitle,
@@ -253,7 +246,7 @@ export function buildAccessReceipt(
   return {
     eyebrow: "Serviços on-line",
     title: "Comprovante de acesso",
-    subtitle: `Protocolo ${data.protocolNumber} · ${formatDate(data.createdAt)}`,
+    subtitle: `Protocolo ${data.protocolNumber} · ${formatOfficeDate(data.createdAt)}`,
     office: [
       tenant.name,
       tenant.subtitle,
@@ -315,7 +308,7 @@ export function buildDataRightsReceipt(
   return {
     eyebrow: "Encarregado de Dados · LGPD",
     title: "Recibo do requerimento",
-    subtitle: `Protocolo ${data.protocolNumber} · ${formatDate(data.createdAt)}`,
+    subtitle: `Protocolo ${data.protocolNumber} · ${formatOfficeDate(data.createdAt)}`,
     office: [
       tenant.name,
       tenant.subtitle,
