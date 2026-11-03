@@ -8,7 +8,11 @@ import {
   manifestationLabel,
 } from "@/core/request/channels.ts";
 import { DEADLINE_CAVEAT, type PauseReason } from "@/core/request/deadline.ts";
-import { HANDWRITTEN_SIGNATURE_CAVEAT } from "@/core/request/requerimento.ts";
+import {
+  HANDWRITTEN_SIGNATURE_CAVEAT,
+  SIGNED_FORM_COUNTER_OPTION,
+  SIGNED_FORM_REQUIRED_NOTICE,
+} from "@/core/request/requerimento.ts";
 import { Icon } from "../_components/icon.tsx";
 import { CopyField } from "../_components/protocol-reveal.tsx";
 import { ProtocolSearchButton } from "../_components/protocol-search-button.tsx";
@@ -1244,6 +1248,11 @@ function RequestDetail({ result }: { result: ServiceRequestDetail }) {
                     <span className="mt-1 block text-[11.5px] text-brand-faint">
                       {HANDWRITTEN_SIGNATURE_CAVEAT}
                     </span>
+                    {!hasSignedForm && (
+                      <span className="mt-1 block text-[11.5px] font-semibold text-brand-alert">
+                        {SIGNED_FORM_REQUIRED_NOTICE}
+                      </span>
+                    )}
                   </div>
                 </div>
 
@@ -1275,7 +1284,9 @@ function RequestDetail({ result }: { result: ServiceRequestDetail }) {
                         )}
                       </div>
                       <div className="mt-1.5 text-[11px] text-brand-faint">
-                        Ou entregue em papel no balcão: o pedido não trava.
+                        {hasSignedForm
+                          ? "Se preferir, entregue em papel no balcão."
+                          : SIGNED_FORM_COUNTER_OPTION}
                       </div>
                     </div>
                   </div>

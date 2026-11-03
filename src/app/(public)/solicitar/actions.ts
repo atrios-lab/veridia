@@ -8,7 +8,9 @@ import {
   verifyAccessKey,
 } from "@/core/request/access-key.ts";
 import {
+  isSignedFormConfirmed,
   isSignedFormDocument,
+  SIGNED_FORM_CONFIRMATION_FIELD,
   SIGNED_FORM_NAMES,
 } from "@/core/request/attachment.ts";
 import { deadlineDate } from "@/core/request/deadline.ts";
@@ -309,6 +311,13 @@ export async function attachSignedForm(
     // No declaração to sign on this pedido: a client that sends one anyway
     // is not the form this system rendered.
     return { status: "error", message: "Este pedido não tem declaração." };
+  }
+
+  if (!isSignedFormConfirmed(formData.get(SIGNED_FORM_CONFIRMATION_FIELD))) {
+    return {
+      status: "error",
+      message: "Confirme que este é o documento assinado antes de enviar.",
+    };
   }
 
   if (await isRateLimited(await headers())) {
