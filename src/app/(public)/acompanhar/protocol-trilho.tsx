@@ -4,6 +4,19 @@ import Link from "next/link";
 import { Fragment, useActionState, useEffect, useRef, useState } from "react";
 import type { PauseReason } from "@/core/request/deadline.ts";
 import { HANDWRITTEN_SIGNATURE_CAVEAT } from "@/core/request/requerimento.ts";
+import {
+  addDays,
+  formatDate as formatCalendarDate,
+  type IsoDate,
+  toIsoDate,
+} from "@/core/scheduling/calendar.ts";
+import {
+  formatOfficeDate,
+  formatOfficeDateTime,
+  formatOfficeLongDay,
+  formatOfficeTime,
+  OFFICE_TIME_ZONE,
+} from "@/core/time/office-time.ts";
 import { useLiveVersion } from "../../_components/use-live-version.ts";
 import { Icon } from "../_components/icon.tsx";
 import {
@@ -39,45 +52,25 @@ const inputClass =
 /* ---------------------------------------------------------------- dates */
 
 function formatDate(iso: string): string {
-  return new Intl.DateTimeFormat("pt-BR", {
-    day: "2-digit",
-    month: "2-digit",
-    year: "numeric",
-  }).format(new Date(iso));
+  return formatOfficeDate(new Date(iso));
 }
 
 function formatDateTime(iso: string): string {
-  return new Intl.DateTimeFormat("pt-BR", {
-    day: "2-digit",
-    month: "2-digit",
-    year: "numeric",
-    hour: "2-digit",
-    minute: "2-digit",
-  }).format(new Date(iso));
+  return formatOfficeDateTime(new Date(iso));
 }
 
 function formatTime(iso: string): string {
-  return new Intl.DateTimeFormat("pt-BR", {
-    hour: "2-digit",
-    minute: "2-digit",
-  }).format(new Date(iso));
+  return formatOfficeTime(new Date(iso));
 }
 
 function formatDay(iso: string): string {
-  const d = new Date(iso);
-  const weekday = new Intl.DateTimeFormat("pt-BR", { weekday: "long" }).format(
-    d,
-  );
-  const month = new Intl.DateTimeFormat("pt-BR", { month: "long" }).format(d);
-  return `${weekday.charAt(0).toUpperCase()}${weekday.slice(1)}, ${d.getDate()} de ${month}`;
+  return formatOfficeLongDay(new Date(iso));
 }
 
-/** Local, calendar-day math for "available until": the office's PDF stays
+/** Calendar-day math for "available until": the office's PDF stays
  * downloadable for 30 straight days, not 30 business days. */
-function addCalendarDays(iso: string, days: number): string {
-  const d = new Date(iso);
-  d.setDate(d.getDate() + days);
-  return d.toISOString();
+function addCalendarDays(iso: string, days: number): IsoDate {
+  return addDays(toIsoDate(new Date(iso), OFFICE_TIME_ZONE), days);
 }
 
 /** Same wording the rest of the site uses for a paused term (see
@@ -341,7 +334,7 @@ function computePrazo(
   if (finished) {
     return {
       prazoStrong: "Entregue no prazo.",
-      prazoText: ` A previsão era ${formatDate(result.deadlineTerm.date)}.`,
+      prazoText: ` A previsão era ${formatCalendarDate(result.deadlineTerm.date)}.`,
     };
   }
   const d = result.deadline;
@@ -355,12 +348,12 @@ function computePrazo(
   if ((d?.dayOfTerm ?? 0) === 0) {
     return {
       prazoStrong: "Previsão de entrega:",
-      prazoText: ` até ${formatDate(result.deadlineTerm.date)}. A contagem começa no próximo dia útil e pode mudar, porque atendemos por ordem de chegada.`,
+      prazoText: ` até ${formatCalendarDate(result.deadlineTerm.date)}. A contagem começa no próximo dia útil e pode mudar, porque atendemos por ordem de chegada.`,
     };
   }
   return {
     prazoStrong: "Previsão de entrega:",
-    prazoText: ` até ${formatDate(result.deadlineTerm.date)}. Estamos no dia ${d?.dayOfTerm ?? 0} de ${result.deadlineTerm.days} dias úteis. A data pode mudar, porque atendemos por ordem de chegada.`,
+    prazoText: ` até ${formatCalendarDate(result.deadlineTerm.date)}. Estamos no dia ${d?.dayOfTerm ?? 0} de ${result.deadlineTerm.days} dias úteis. A data pode mudar, porque atendemos por ordem de chegada.`,
   };
 }
 
@@ -1387,7 +1380,8 @@ function DoneCard({
               {doc.displayName}
             </div>
             <div className="text-[12.5px] text-brand-muted">
-              disponível até {formatDate(addCalendarDays(doc.createdAt, 30))}
+              disponível até{" "}
+              {formatCalendarDate(addCalendarDays(doc.createdAt, 30))}
             </div>
           </div>
           <input type="hidden" name="protocolNumber" value={protocolNumber} />

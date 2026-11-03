@@ -11,6 +11,7 @@ import { toIsoDate } from "@/core/scheduling/calendar.ts";
 import type { NoticeSector } from "@/core/tenant/gating.ts";
 import { NOTICE_SECTOR_META, noticeSectors } from "@/core/tenant/gating.ts";
 import type { Tenant } from "@/core/tenant/schema.ts";
+import { OFFICE_TIME_ZONE } from "@/core/time/office-time.ts";
 import type { PublicationRow } from "@/lib/publications.ts";
 import { type SaveState, savePublication } from "../actions.ts";
 import { PublicationPreview } from "./preview.tsx";
@@ -40,7 +41,7 @@ function FieldError({ message }: { message?: string }) {
  * would have called that same publication scheduled, not live.
  */
 function clientToday(): string {
-  return toIsoDate(new Date(), "America/Sao_Paulo");
+  return toIsoDate(new Date(), OFFICE_TIME_ZONE);
 }
 
 export function PublicationForm({

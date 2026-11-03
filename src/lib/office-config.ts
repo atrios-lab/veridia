@@ -11,13 +11,9 @@ import {
   toZonedDateTimeInput,
 } from "@/core/scheduling/calendar.ts";
 import type { AgendaNow } from "@/core/scheduling/slots.ts";
+import { OFFICE_TIME_ZONE } from "@/core/time/office-time.ts";
 
-/**
- * The office's time zone. The offices served are all in Brazil, and the
- * server runs in UTC: without this, from nine at night the site would offer
- * tomorrow as if it were today.
- */
-export const OFFICE_TIME_ZONE = "America/Sao_Paulo";
+export { OFFICE_TIME_ZONE };
 
 /** Today on the office's wall calendar. */
 export function today(): IsoDate {

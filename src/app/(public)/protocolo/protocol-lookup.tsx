@@ -9,6 +9,11 @@ import {
 } from "@/core/request/channels.ts";
 import { DEADLINE_CAVEAT, type PauseReason } from "@/core/request/deadline.ts";
 import { HANDWRITTEN_SIGNATURE_CAVEAT } from "@/core/request/requerimento.ts";
+import { formatDate as formatCalendarDate } from "@/core/scheduling/calendar.ts";
+import {
+  formatOfficeDate,
+  formatOfficeDateTime,
+} from "@/core/time/office-time.ts";
 import { Icon } from "../_components/icon.tsx";
 import { CopyField } from "../_components/protocol-reveal.tsx";
 import { ProtocolSearchButton } from "../_components/protocol-search-button.tsx";
@@ -46,21 +51,11 @@ const inputClass =
   "w-full rounded-xl border border-brand-border bg-brand-surface px-3.5 py-3 text-sm text-brand-text outline-none placeholder:text-brand-faint focus:border-brand-accent";
 
 function formatDate(iso: string): string {
-  return new Intl.DateTimeFormat("pt-BR", {
-    day: "2-digit",
-    month: "2-digit",
-    year: "numeric",
-  }).format(new Date(iso));
+  return formatOfficeDate(new Date(iso));
 }
 
 function formatDateTime(iso: string): string {
-  return new Intl.DateTimeFormat("pt-BR", {
-    day: "2-digit",
-    month: "2-digit",
-    year: "numeric",
-    hour: "2-digit",
-    minute: "2-digit",
-  }).format(new Date(iso));
+  return formatOfficeDateTime(new Date(iso));
 }
 
 /**
@@ -614,7 +609,7 @@ function DeadlineNote({
           <>
             A previsão era{" "}
             <strong className="text-brand-primary">
-              {formatDate(`${deadline.date}T00:00:00`)}
+              {formatCalendarDate(deadline.date)}
             </strong>
             . O cartório está revendo o prazo deste pedido.
           </>
@@ -623,7 +618,7 @@ function DeadlineNote({
             Dentro do prazo: a contagem começa no próximo dia útil, com previsão
             até{" "}
             <strong className="text-brand-primary">
-              {formatDate(`${deadline.date}T00:00:00`)}
+              {formatCalendarDate(deadline.date)}
             </strong>
             .
           </>
@@ -634,7 +629,7 @@ function DeadlineNote({
               dia {deadline.dayOfTerm} de {deadline.days}
             </strong>
             , em dias úteis, com previsão até{" "}
-            {formatDate(`${deadline.date}T00:00:00`)}.
+            {formatCalendarDate(deadline.date)}.
           </>
         )}
       </p>
@@ -1670,7 +1665,7 @@ export function DataRightsCard({
               <p className="text-[12.5px] leading-relaxed text-brand-text-soft">
                 O Encarregado tem até{" "}
                 <strong className="text-brand-primary">
-                  {formatDate(`${result.deadline}T00:00:00`)}
+                  {formatCalendarDate(result.deadline)}
                 </strong>{" "}
                 para responder. Quando responder, o texto aparece aqui, e nunca
                 por outro canal.
@@ -1716,7 +1711,7 @@ export function DataRightsCard({
               </span>
               <div>
                 <div className="text-[13.5px] font-bold text-brand-primary">
-                  Resposta até {formatDate(`${result.deadline}T00:00:00`)}
+                  Resposta até {formatCalendarDate(result.deadline)}
                 </div>
                 <div className="text-[11.5px] text-brand-muted">
                   Prazo legal de {DATA_RIGHTS_DEADLINE_DAYS} dias

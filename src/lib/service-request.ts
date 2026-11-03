@@ -46,6 +46,7 @@ import {
 import type { SearchTerm } from "@/core/request/search.ts";
 import { type IsoDate, toIsoDate } from "@/core/scheduling/calendar.ts";
 import type { Tenant } from "@/core/tenant/schema.ts";
+import { officeYear } from "@/core/time/office-time.ts";
 import { user } from "@/db/auth-schema.ts";
 import {
   FOREIGN_KEY_VIOLATION,
@@ -135,7 +136,7 @@ export async function createRecordWith(
   input: NewRecord,
   attachments: StoredAttachment[] = [],
 ): Promise<{ id: string; protocolNumber: string }> {
-  const year = new Date().getFullYear();
+  const year = officeYear(new Date());
 
   for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
     const sequence = await nextSequence(database, tenant.slug, kind, year);

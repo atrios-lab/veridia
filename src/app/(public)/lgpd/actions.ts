@@ -11,6 +11,7 @@ import type { DataRight } from "@/core/request/kinds.ts";
 import { parseDetails } from "@/core/request/kinds.ts";
 import { formatProtocolNumber } from "@/core/request/protocol.ts";
 import { isSectionEnabled } from "@/core/tenant/gating.ts";
+import { officeYear } from "@/core/time/office-time.ts";
 import {
   notifyCitizen,
   notifyOfficeDataRightsSubmitted,
@@ -59,7 +60,7 @@ export async function submitDataRights(
       status: "success",
       protocolNumber: formatProtocolNumber(
         "SOL",
-        new Date().getFullYear(),
+        officeYear(new Date()),
         999_999,
       ),
       accessKey: generateAccessKey(),

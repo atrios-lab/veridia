@@ -207,3 +207,25 @@ test("pedido antigo sem ato-alvo ainda imprime a remissão à declaração", () 
   assert.match(texto, /declaração de hipossuficiência que acompanha/);
   assert.doesNotMatch(texto, /fundamento:/);
 });
+
+function inUtc(run: () => void): void {
+  const zone = process.env.TZ;
+  process.env.TZ = "UTC";
+  try {
+    run();
+  } finally {
+    if (zone === undefined) delete process.env.TZ;
+    else process.env.TZ = zone;
+  }
+}
+
+test("a request filed at night carries that day, with the server in UTC", () => {
+  inUtc(() => {
+    const document = buildRequerimento(cartorioMarinho, marriage, {
+      ...data,
+      // 22:30 on 3 November at the office, already the 4th in UTC.
+      createdAt: new Date("2026-11-04T01:30:00Z"),
+    });
+    assert.match(document.subtitle, /03\/11\/2026$/);
+  });
+});

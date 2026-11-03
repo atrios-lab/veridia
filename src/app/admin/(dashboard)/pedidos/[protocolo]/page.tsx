@@ -26,6 +26,10 @@ import {
   toIsoDate,
   toZonedDateTimeInput,
 } from "@/core/scheduling/calendar.ts";
+import {
+  formatOfficeDate,
+  formatOfficeDayMonthTime,
+} from "@/core/time/office-time.ts";
 import { linkedConversations } from "@/lib/chat.ts";
 import {
   findByProtocol,
@@ -85,15 +89,6 @@ const HISTORY_LABELS: Record<string, string> = {
   "service-request.exemption-decision": "registrou o desfecho da gratuidade",
 };
 
-function formatDayMonthTime(date: Date): string {
-  return new Intl.DateTimeFormat("pt-BR", {
-    day: "2-digit",
-    month: "2-digit",
-    hour: "2-digit",
-    minute: "2-digit",
-  }).format(date);
-}
-
 /**
  * How far into the term the request is. On the day it was filed nothing has
  * run yet, and "dia 0 de 20" reads like an off-by-one to the operator rather
@@ -107,14 +102,6 @@ function deadlineProgress(
   return day === 0
     ? `${deadline.days} dias úteis, a contar do próximo`
     : `dia ${day} de ${deadline.days}`;
-}
-
-function formatDayMonthYear(date: Date): string {
-  return new Intl.DateTimeFormat("pt-BR", {
-    day: "2-digit",
-    month: "2-digit",
-    year: "numeric",
-  }).format(date);
 }
 
 export default async function ServiceRequestDetailPage({
@@ -151,7 +138,7 @@ export default async function ServiceRequestDetailPage({
   const row = (a: (typeof attachments)[number]) => ({
     id: a.id,
     displayName: a.displayName,
-    createdAtLabel: formatDayMonthTime(a.createdAt),
+    createdAtLabel: formatOfficeDayMonthTime(a.createdAt),
     sizeBytes: a.sizeBytes,
   });
   // Everything a requirement carries is that requirement's, not the request's.
@@ -337,7 +324,7 @@ export default async function ServiceRequestDetailPage({
               status={status}
               subtitle={`${act?.name ?? "Ato não identificado"} · ${
                 request.applicantName ?? "Solicitante não identificado"
-              } · pedido em ${formatDayMonthYear(request.createdAt)}`}
+              } · pedido em ${formatOfficeDate(request.createdAt)}`}
               badges={
                 <>
                   <StatusBadge
@@ -373,13 +360,13 @@ export default async function ServiceRequestDetailPage({
                             EXEMPTION_DECISION_LABELS[
                               exemption.decision.outcome
                             ]
-                          } em ${formatDayMonthYear(
+                          } em ${formatOfficeDate(
                             new Date(exemption.decision.decidedAt),
                           )}`
                         : "Gratuidade solicitada (ISENTO)"}
                       {exemptionActName ? ` · ${exemptionActName}` : ""}
                       {!exemption.decision &&
-                        ` · declarada em ${formatDayMonthYear(new Date(exemption.declaredAt))}`}
+                        ` · declarada em ${formatOfficeDate(new Date(exemption.declaredAt))}`}
                       <ExemptionDecisionControl
                         requestId={request.id}
                         outcome={exemption.decision?.outcome}
@@ -409,7 +396,7 @@ export default async function ServiceRequestDetailPage({
                   : "Ato não identificado"
               }
               cpfMasked={request.cpf ? maskCpf(request.cpf) : "Não informado"}
-              filedLabel={formatDayMonthTime(request.createdAt)}
+              filedLabel={formatOfficeDayMonthTime(request.createdAt)}
               allowsPurpose={act?.requiresPurpose ?? false}
               data={{
                 applicantName: request.applicantName ?? "",
@@ -453,7 +440,9 @@ export default async function ServiceRequestDetailPage({
                   ? {
                       id: paymentReceipt.id,
                       displayName: paymentReceipt.displayName,
-                      sentAtLabel: formatDayMonthTime(paymentReceipt.createdAt),
+                      sentAtLabel: formatOfficeDayMonthTime(
+                        paymentReceipt.createdAt,
+                      ),
                     }
                   : undefined
               }
@@ -485,7 +474,7 @@ export default async function ServiceRequestDetailPage({
                         </span>
                         <span className="text-admin-faint">
                           {conversation.closedAt
-                            ? formatDayMonthTime(conversation.closedAt)
+                            ? formatOfficeDayMonthTime(conversation.closedAt)
                             : "Em andamento"}
                         </span>
                       </Link>
@@ -544,7 +533,7 @@ export default async function ServiceRequestDetailPage({
                         {HISTORY_LABELS[entry.action] ?? entry.action}
                         <br />
                         <span className="text-[11px] text-admin-faint">
-                          {formatDayMonthTime(entry.createdAt)}
+                          {formatOfficeDayMonthTime(entry.createdAt)}
                         </span>
                         {showReason &&
                           (request.statusReason || !showRejectionDocument) && (

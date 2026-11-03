@@ -19,6 +19,7 @@ import {
   PLATFORM_STATEMENT,
 } from "../acts/catalog.ts";
 import type { Tenant } from "../tenant/schema.ts";
+import { formatOfficeDate, formatOfficeTime } from "../time/office-time.ts";
 import { acceptanceHash } from "./acceptance.ts";
 import type { ExemptionBeneficiary, ExemptionDeclaration } from "./kinds.ts";
 
@@ -496,19 +497,7 @@ function channelLabel(channel: string | undefined): string {
 
 function formatAcceptedAt(iso: string): string {
   const date = new Date(iso);
-  const day = new Intl.DateTimeFormat("pt-BR", {
-    timeZone: "America/Fortaleza",
-    day: "2-digit",
-    month: "2-digit",
-    year: "numeric",
-  }).format(date);
-  const time = new Intl.DateTimeFormat("pt-BR", {
-    timeZone: "America/Fortaleza",
-    hour: "2-digit",
-    minute: "2-digit",
-    hourCycle: "h23",
-  }).format(date);
-  return `${day} às ${time}`;
+  return `${formatOfficeDate(date)} às ${formatOfficeTime(date)}`;
 }
 
 export interface BuildStampInput {
