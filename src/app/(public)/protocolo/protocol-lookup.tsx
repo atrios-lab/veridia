@@ -1254,7 +1254,7 @@ function RequestDetail({ result }: { result: ServiceRequestDetail }) {
                 <div className="rounded-xl border border-brand-accent-line bg-brand-card px-3.5 py-3">
                   <div className="flex items-start gap-2.5">
                     <StepBadge>3</StepBadge>
-                    <div className="flex-1">
+                    <div className="min-w-0 flex-1">
                       <div className="text-[12.5px] font-semibold text-brand-primary">
                         {result.hasExemption
                           ? "Envie os arquivos assinados"

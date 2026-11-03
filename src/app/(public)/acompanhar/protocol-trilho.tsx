@@ -779,7 +779,7 @@ function SignCard({
         <span className="flex h-[26px] w-[26px] shrink-0 items-center justify-center rounded-full bg-brand-primary text-xs font-bold text-white">
           3
         </span>
-        <div className="flex flex-1 flex-col gap-2.5">
+        <div className="flex min-w-0 flex-1 flex-col gap-2.5">
           <span className="text-[15px] font-semibold">
             Envie o formulário assinado
           </span>
