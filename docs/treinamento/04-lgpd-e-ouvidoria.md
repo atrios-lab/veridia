@@ -22,9 +22,11 @@ diferença é o que a pessoa está pedindo, e a lei que a protege.
 
 **Fala.** Cada linha traz o protocolo, o titular, qual direito ele exerceu e o prazo. A etiqueta
 de prazo é o que você olha primeiro: ela conta os quinze dias de resposta e avisa quando falta
-pouco ou quando já venceu. A lei só fixa esses quinze dias para o pedido de acesso; nos demais
-direitos, responder em quinze dias é regra da serventia. Respondido e Cancelado saem do caminho e
-ficam marcados assim.
+pouco ou quando já venceu. Esses quinze dias vêm da lei só para a declaração completa de acesso.
+Confirmar se o cartório trata dados da pessoa se responde na hora, e os demais pedidos, correção,
+exclusão e os outros direitos, a serventia responde em quinze dias por regra interna. O que tem
+procedimento próprio, como retificar um registro ou emitir certidão, segue os prazos da Lei 6.015.
+Respondido e Cancelado saem do caminho e ficam marcados assim.
 
 **Tela.** Percorrer as linhas com o cursor, parando numa etiqueta de prazo vencendo e numa já
 respondida.
@@ -46,7 +48,7 @@ em cada um.
 ### 4. Responder um requerimento (1:08 a 1:38)
 
 **Fala.** Abrindo o requerimento você lê o direito solicitado, o que a pessoa escreveu e o prazo
-legal. A resposta vai no campo de baixo. Salvar rascunho guarda sem enviar, para você conferir
+de resposta. A resposta vai no campo de baixo. Salvar rascunho guarda sem enviar, para você conferir
 com calma ou passar para o encarregado. Enviar resposta e concluir manda a resposta ao titular e
 encerra o requerimento, e o histórico registra quem respondeu e quando. Depois de enviado não dá
 para reescrever, então releia antes.

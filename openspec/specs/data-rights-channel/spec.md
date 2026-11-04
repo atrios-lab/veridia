@@ -31,12 +31,22 @@ demais direitos SHALL dizer que a serventia responde em até 15 dias, sem citar 
 remete esses prazos a regulamento da Agência Nacional de Proteção de Dados (ANPD) ainda não
 editado. A contagem do prazo é a mesma para todos os direitos.
 
+A página SHALL trazer também, em linguagem de titular, de onde vem cada prazo: a confirmação de
+que a serventia trata dados do titular, ou o acesso em formato simplificado, é atendida na hora;
+a declaração completa de acesso sai em até 15 dias (LGPD, art. 19, II); correção, exclusão e os
+demais pedidos recebem resposta em até 15 dias, prazo que a serventia adota como regra interna; e
+pedidos com procedimento próprio, como retificação de registro ou emissão de certidão, seguem os
+prazos da Lei 6.015/1973.
+
 #### Scenario: Prazo visível no formulário
 
 - **WHEN** a página do canal LGPD é exibida
 - **THEN** a introdução diz que a serventia responde em até 15 dias e que, para o acesso, esse
   prazo é garantido pela Lei 13.709/2018
 - **AND** o subtítulo da opção de acesso diz que a lei garante resposta em até 15 dias
+- **AND** um quadro de prazos separa a confirmação imediata, a declaração completa de acesso em
+  15 dias por lei, os demais pedidos em 15 dias por regra da serventia e os procedimentos da Lei
+  6.015/1973
 
 #### Scenario: Demais direitos não chamam o prazo de legal
 

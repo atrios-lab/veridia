@@ -119,8 +119,8 @@ export function DataRightsScreen(props: DataRightsScreenProps) {
         </h1>
         <p className="mt-1.5 max-w-[60ch] text-[13px] leading-relaxed text-brand-muted md:text-sm">
           Escolha o que você quer pedir. A serventia responde em até{" "}
-          <strong>{DATA_RIGHTS_DEADLINE_DAYS} dias</strong>. Para ver seus
-          dados, esse prazo é garantido pela Lei 13.709/2018.
+          <strong>{DATA_RIGHTS_DEADLINE_DAYS} dias</strong>. Para a declaração
+          completa dos seus dados, esse prazo é garantido pela Lei 13.709/2018.
         </p>
 
         {/* On a phone the officer is one line above the form: present, without
@@ -384,6 +384,45 @@ export function DataRightsScreen(props: DataRightsScreenProps) {
             Atendimento conforme o art. 41, §3º, da LGPD. Você fala diretamente
             com a pessoa responsável pelos seus dados.
           </p>
+        </div>
+
+        {/* Where each term comes from, said once: the law fixes the fifteen
+            days only for the full access statement (art. 19, II); the office
+            adopted the same fifteen for the other rights; a registry
+            correction or a certificate is another procedure, with Lei 6.015's
+            own terms. */}
+        <div className="rounded-2xl border border-brand-border bg-brand-card p-4">
+          <h2 className="text-[13.5px] font-bold text-brand-primary">
+            Prazos de resposta
+          </h2>
+          <ul className="mt-2.5 flex flex-col gap-2 text-[12px] leading-relaxed text-brand-muted">
+            <li>
+              <strong className="font-semibold text-brand-primary">
+                Confirmar se há dados seus
+              </strong>
+              , ou ver um resumo deles: resposta na hora, com o Encarregado.
+            </li>
+            <li>
+              <strong className="font-semibold text-brand-primary">
+                Declaração completa dos seus dados
+              </strong>
+              : em até {DATA_RIGHTS_DEADLINE_DAYS} dias, prazo garantido pela
+              Lei 13.709/2018 (art. 19, II).
+            </li>
+            <li>
+              <strong className="font-semibold text-brand-primary">
+                Correção, exclusão e os demais pedidos
+              </strong>
+              : em até {DATA_RIGHTS_DEADLINE_DAYS} dias, prazo que a serventia
+              adota como regra própria.
+            </li>
+            <li>
+              <strong className="font-semibold text-brand-primary">
+                Retificar um registro ou pedir certidão
+              </strong>
+              : é um procedimento próprio, com os prazos da Lei 6.015/1973.
+            </li>
+          </ul>
         </div>
 
         <Link
