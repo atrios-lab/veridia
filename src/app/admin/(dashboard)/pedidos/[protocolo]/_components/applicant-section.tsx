@@ -68,8 +68,8 @@ function Label({
  * purpose: changing the act changes the attribution and the legal basis of
  * something already protocolled, which is a new request, not an edit.
  *
- * Closed by default, like the citizen's own Histórico: the operator opens it
- * when the summary line is not enough.
+ * Open by default: the operator works from these data, so they start in view.
+ * Closing it down to the summary line is there for whoever wants the room.
  */
 export function ApplicantSection({
   requestId,
@@ -93,7 +93,7 @@ export function ApplicantSection({
    */
   allowsPurpose: boolean;
 }) {
-  const [mode, setMode] = useState<"closed" | "open" | "editing">("closed");
+  const [mode, setMode] = useState<"closed" | "open" | "editing">("open");
   // Controlled only because it is masked as it is typed, like the public form:
   // the operator reads a CPF off a document, in the shape the document has.
   const [cpf, setCpf] = useState(() => formatCpf(data.cpf));
