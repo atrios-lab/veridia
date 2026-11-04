@@ -8,6 +8,7 @@ import {
   DATA_RIGHT_OPTIONS,
   DATA_RIGHTS_DEADLINE_DAYS,
   dataRightOption,
+  dataRightsDeadlineLabel,
   dataRightsSchema,
 } from "@/core/request/channels.ts";
 import { formatCpf } from "@/core/request/form.ts";
@@ -118,8 +119,8 @@ export function DataRightsScreen(props: DataRightsScreenProps) {
         </h1>
         <p className="mt-1.5 max-w-[60ch] text-[13px] leading-relaxed text-brand-muted md:text-sm">
           Escolha o que você quer pedir. A serventia responde em até{" "}
-          <strong>{DATA_RIGHTS_DEADLINE_DAYS} dias</strong>, como manda a Lei
-          13.709/2018.
+          <strong>{DATA_RIGHTS_DEADLINE_DAYS} dias</strong>. Para ver seus
+          dados, esse prazo é garantido pela Lei 13.709/2018.
         </p>
 
         {/* On a phone the officer is one line above the form: present, without
@@ -506,8 +507,8 @@ function ConfirmationScreen({ result }: { result: DataRightsSuccess }) {
                   Resposta até {formatDate(result.deadline)}
                 </div>
                 <div className="text-[11.5px] text-brand-muted">
-                  Prazo legal de {DATA_RIGHTS_DEADLINE_DAYS} dias, contado de
-                  hoje
+                  {dataRightsDeadlineLabel(result.right)} de{" "}
+                  {DATA_RIGHTS_DEADLINE_DAYS} dias, contado de hoje
                 </div>
               </div>
             </div>

@@ -21,8 +21,10 @@ diferença é o que a pessoa está pedindo, e a lei que a protege.
 ### 2. A lista de requerimentos LGPD (0:22 a 0:44)
 
 **Fala.** Cada linha traz o protocolo, o titular, qual direito ele exerceu e o prazo. A etiqueta
-de prazo é o que você olha primeiro: ela conta os quinze dias da lei e avisa quando falta pouco
-ou quando já venceu. Respondido e Cancelado saem do caminho e ficam marcados assim.
+de prazo é o que você olha primeiro: ela conta os quinze dias de resposta e avisa quando falta
+pouco ou quando já venceu. A lei só fixa esses quinze dias para o pedido de acesso; nos demais
+direitos, responder em quinze dias é regra da serventia. Respondido e Cancelado saem do caminho e
+ficam marcados assim.
 
 **Tela.** Percorrer as linhas com o cursor, parando numa etiqueta de prazo vencendo e numa já
 respondida.
@@ -52,7 +54,7 @@ para reescrever, então releia antes.
 **Tela.** Abrir um requerimento, rolar até Resposta ao titular, escrever duas frases, Salvar
 rascunho, e então apontar Enviar resposta e concluir sem clicar.
 
-**Destaque.** Direito solicitado, Prazo legal, o campo de resposta, Salvar rascunho, Enviar
+**Destaque.** Direito solicitado, o cartão do prazo, o campo de resposta, Salvar rascunho, Enviar
 resposta e concluir.
 
 ### 5. A Ouvidoria (1:38 a 2:10)

@@ -6,6 +6,9 @@ import {
   dataRightOption,
   dataRightsDayOfDeadline,
   dataRightsDeadline,
+  dataRightsDeadlineIsLegal,
+  dataRightsDeadlineLabel,
+  dataRightsDeadlineNotice,
   dataRightsSchema,
   isAnonymous,
   manifestationLabel,
@@ -201,4 +204,32 @@ test("the calendar file carries the time on the office's clock", () => {
   // Commas separate fields in this format, so they have to be escaped.
   assert.match(ics, /DESCRIPTION:Procuração\\, leve/);
   assert.ok(ics.endsWith("END:VCALENDAR\r\n"));
+});
+
+test("só o acesso chama os 15 dias de prazo legal (LGPD art. 19, II)", () => {
+  // A lei fixa os 15 dias apenas para a declaração completa de acesso; para
+  // correção, exclusão e os demais direitos ela remete a regulamento da ANPD
+  // que não existe. A serventia responde todos em 15 dias, como regra própria,
+  // e o texto não pode vestir essa regra de lei.
+  assert.equal(dataRightsDeadlineIsLegal("access"), true);
+  assert.match(
+    dataRightOption("access").hint,
+    /a lei garante resposta em até 15 dias/,
+  );
+  assert.equal(dataRightsDeadlineLabel("access"), "Prazo legal");
+  assert.match(
+    dataRightsDeadlineNotice("access"),
+    /^A lei garante resposta em até 15 dias\./,
+  );
+
+  for (const right of ["rectification", "deletion", "other"] as const) {
+    assert.equal(dataRightsDeadlineIsLegal(right), false);
+    // O subtítulo desses direitos fala da consequência, não de prazo.
+    assert.doesNotMatch(dataRightOption(right).hint, /15 dias|prazo/);
+    assert.equal(dataRightsDeadlineLabel(right), "Prazo de resposta");
+    assert.equal(
+      dataRightsDeadlineNotice(right),
+      "A serventia responde em até 15 dias.",
+    );
+  }
 });

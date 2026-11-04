@@ -135,4 +135,5 @@ As Configurações SHALL oferecer a edição do prazo padrão dos atos que a lei
 
 #### Scenario: Prazo do canal LGPD não é afetado
 - **WHEN** o cartório altera o prazo padrão dos pedidos
-- **THEN** o prazo do canal de direitos do titular permanece 15 dias corridos, fixado por lei
+- **THEN** o prazo do canal de direitos do titular permanece 15 dias corridos, regra própria do
+  canal (legal para o acesso, Lei 13.709/2018 art. 19, II; da serventia para os demais direitos)

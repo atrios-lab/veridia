@@ -1,7 +1,11 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { can } from "@/core/auth/roles.ts";
-import { dataRightOption } from "@/core/request/channels.ts";
+import {
+  dataRightOption,
+  dataRightsDeadlineLabel,
+  dataRightsDeadlineNotice,
+} from "@/core/request/channels.ts";
 import { parseDetails } from "@/core/request/kinds.ts";
 import { toIsoDate } from "@/core/scheduling/calendar.ts";
 import { formatOfficeDayMonthTime } from "@/core/time/office-time.ts";
@@ -178,12 +182,12 @@ export default async function DataRightsDetailPage({
           <div className="flex flex-col gap-4.5">
             <div className="rounded-[14px] border border-admin-border bg-admin-card p-4.5">
               <h4 className="font-serif text-[15.5px] font-semibold text-admin-primary">
-                Prazo legal
+                {dataRightsDeadlineLabel(details.right)}
               </h4>
               <p className="mt-2 text-[12.5px] leading-relaxed text-admin-muted">
-                Recebido em {formatOfficeDayMonthTime(request.createdAt)}.
-                Resposta em até 15 dias (Lei 13.709/2018), a cargo de{" "}
-                {tenant.dpo.name}.
+                Recebido em {formatOfficeDayMonthTime(request.createdAt)}.{" "}
+                {dataRightsDeadlineNotice(details.right)} A resposta fica a
+                cargo de {tenant.dpo.name}.
               </p>
             </div>
 
