@@ -156,6 +156,7 @@ function waitingOnCitizen(requirement: RequirementView): boolean {
 function computeSteps(
   result: ServiceRequestDetail,
   hasSignedForm: boolean,
+  awaitingDeclaration: boolean,
   rejected: boolean,
   finished: boolean,
 ): Step[] {
@@ -165,6 +166,13 @@ function computeSteps(
       ? { label: "Formulário assinado", done: true }
       : { label: "Formulário assinado", citizen: true },
   );
+  if (result.hasExemption) {
+    steps.push(
+      awaitingDeclaration
+        ? { label: "Declaração assinada", citizen: true }
+        : { label: "Declaração assinada", done: true },
+    );
+  }
   if (result.requirements.length > 0) {
     const anyPending = result.requirements.some((r) => r.status === "pending");
     steps.push(
@@ -219,7 +227,7 @@ function stepTone(steps: Step[], index: number): Tone {
 
 function computePill(
   result: ServiceRequestDetail,
-  hasSignedForm: boolean,
+  awaitingSignature: boolean,
   rejected: boolean,
   finished: boolean,
   anyPendingRequirement: boolean,
@@ -239,7 +247,7 @@ function computePill(
   if (awaitingPay && !anyPendingRequirement) {
     return { label: "Falta pagar", tone: "gold" };
   }
-  if (!hasSignedForm || anyPendingRequirement || awaitingPay) {
+  if (awaitingSignature || anyPendingRequirement || awaitingPay) {
     return { label: "Sua vez", tone: "gold" };
   }
   return { label: "Em andamento", tone: "green" };
@@ -250,6 +258,7 @@ function computePill(
 function computeHeadline(
   result: ServiceRequestDetail,
   hasSignedForm: boolean,
+  awaitingDeclaration: boolean,
   rejected: boolean,
   finished: boolean,
   pendingRequirement: RequirementView | undefined,
@@ -276,8 +285,7 @@ function computeHeadline(
     return {
       headline: "Falta só a sua assinatura.",
       leadDate: `${formatDateTime(result.createdAt)}:`,
-      leadText:
-        "recebemos o seu pedido. Agora precisamos do formulário assinado por você. Depois disso, o cartório começa a trabalhar no seu pedido. Se precisarmos de algo, avisamos por aqui.",
+      leadText: `recebemos o seu pedido. Agora precisamos ${awaitingDeclaration ? "do formulário e da declaração assinados" : "do formulário assinado"} por você. Depois disso, o cartório começa a trabalhar no seu pedido. Se precisarmos de algo, avisamos por aqui.`,
     };
   }
   if (pendingRequirement) {
@@ -314,6 +322,14 @@ function computeHeadline(
       headline: "Falta só o pagamento.",
       leadDate: `${formatDate(result.updatedAt)}:`,
       leadText: `o valor do seu documento é ${result.amountLabel}. Pague pelo Pix ao lado, ou envie o comprovante se já pagou.`,
+    };
+  }
+  if (awaitingDeclaration) {
+    return {
+      headline: "Falta só a declaração assinada.",
+      leadDate: `${formatDateTime(result.signedFormReceivedAt ?? result.createdAt)}:`,
+      leadText:
+        "recebemos o seu formulário assinado. Agora precisamos da declaração de hipossuficiência assinada por você. Se precisarmos de algo, avisamos por aqui.",
     };
   }
   return {
@@ -379,6 +395,7 @@ interface LogEvent {
 function buildHistory(
   result: ServiceRequestDetail,
   hasSignedForm: boolean,
+  hasSignedDeclaration: boolean,
   rejected: boolean,
 ): LogEvent[] {
   const log: LogEvent[] = [
@@ -394,6 +411,14 @@ function buildHistory(
       at: result.signedFormReceivedAt,
       title: "Formulário assinado recebido.",
       sub: "Enviado por você por aqui.",
+      tone: "ink",
+    });
+  }
+  if (hasSignedDeclaration && result.signedDeclarationReceivedAt) {
+    log.push({
+      at: result.signedDeclarationReceivedAt,
+      title: "Declaração assinada recebida.",
+      sub: "Enviada por você por aqui.",
       tone: "ink",
     });
   }
@@ -699,13 +724,17 @@ function ProgressDots({
 function SignCard({
   protocolNumber,
   accessKey,
-  hasExemption,
+  awaitingForm,
+  awaitingDeclaration,
   onSigned,
+  onDeclarationSigned,
 }: {
   protocolNumber: string;
   accessKey: string;
-  hasExemption: boolean;
+  awaitingForm: boolean;
+  awaitingDeclaration: boolean;
   onSigned: () => void;
+  onDeclarationSigned: () => void;
 }) {
   return (
     <div className="flex animate-notice-rise flex-col gap-3 rounded-2xl border border-brand-border bg-brand-card p-5 shadow-[0_1px_2px_rgba(20,40,25,.05)]">
@@ -714,26 +743,36 @@ function SignCard({
           1
         </span>
         <span className="flex-1 text-[15px] font-semibold">
-          Baixe o formulário já preenchido
+          {awaitingForm && awaitingDeclaration
+            ? "Baixe os arquivos já preenchidos"
+            : awaitingForm
+              ? "Baixe o formulário já preenchido"
+              : "Baixe a declaração já preenchida"}
         </span>
         <div className="flex flex-wrap justify-end gap-2">
-          <form
-            action="/solicitar/requerimento"
-            method="post"
-            target="_blank"
-            rel="noopener"
-          >
-            <input type="hidden" name="protocolNumber" value={protocolNumber} />
-            <input type="hidden" name="accessKey" value={accessKey} />
-            <button
-              type="submit"
-              className="btn btn-primary min-h-11 px-4 py-2.5 text-sm"
+          {awaitingForm && (
+            <form
+              action="/solicitar/requerimento"
+              method="post"
+              target="_blank"
+              rel="noopener"
             >
-              <Icon name="download" className="h-3.5 w-3.5" strokeWidth={2} />
-              PDF
-            </button>
-          </form>
-          {hasExemption && (
+              <input
+                type="hidden"
+                name="protocolNumber"
+                value={protocolNumber}
+              />
+              <input type="hidden" name="accessKey" value={accessKey} />
+              <button
+                type="submit"
+                className="btn btn-primary min-h-11 px-4 py-2.5 text-sm"
+              >
+                <Icon name="download" className="h-3.5 w-3.5" strokeWidth={2} />
+                PDF
+              </button>
+            </form>
+          )}
+          {awaitingDeclaration && (
             <form
               action="/solicitar/requerimento"
               method="post"
@@ -749,7 +788,7 @@ function SignCard({
               <input type="hidden" name="documento" value="declaracao" />
               <button
                 type="submit"
-                className="btn btn-secondary min-h-11 px-4 py-2.5 text-sm"
+                className={`btn ${awaitingForm ? "btn-secondary" : "btn-primary"} min-h-11 px-4 py-2.5 text-sm`}
               >
                 <Icon name="download" className="h-3.5 w-3.5" strokeWidth={2} />
                 Declaração
@@ -769,9 +808,11 @@ function SignCard({
           <span className="mt-1 block text-[13px] text-brand-muted">
             {HANDWRITTEN_SIGNATURE_CAVEAT}
           </span>
-          <span className="mt-1 block text-[13px] font-semibold text-brand-alert">
-            {SIGNED_FORM_REQUIRED_NOTICE}
-          </span>
+          {awaitingForm && (
+            <span className="mt-1 block text-[13px] font-semibold text-brand-alert">
+              {SIGNED_FORM_REQUIRED_NOTICE}
+            </span>
+          )}
         </span>
       </div>
       <div className="h-px bg-brand-border" />
@@ -781,16 +822,34 @@ function SignCard({
         </span>
         <div className="flex min-w-0 flex-1 flex-col gap-2.5">
           <span className="text-[15px] font-semibold">
-            Envie o formulário assinado
+            {awaitingForm && awaitingDeclaration
+              ? "Envie os arquivos assinados"
+              : awaitingForm
+                ? "Envie o formulário assinado"
+                : "Envie a declaração assinada"}
           </span>
-          <SignedFormUpload
-            protocolNumber={protocolNumber}
-            accessKey={accessKey}
-            documento="requerimento"
-            onSent={onSigned}
-          />
+          <div className="flex flex-col gap-2">
+            {awaitingForm && (
+              <SignedFormUpload
+                protocolNumber={protocolNumber}
+                accessKey={accessKey}
+                documento="requerimento"
+                onSent={onSigned}
+              />
+            )}
+            {awaitingDeclaration && (
+              <SignedFormUpload
+                protocolNumber={protocolNumber}
+                accessKey={accessKey}
+                documento="declaracao"
+                onSent={onDeclarationSigned}
+              />
+            )}
+          </div>
           <span className="text-[13px] text-brand-muted">
-            {SIGNED_FORM_COUNTER_OPTION}
+            {awaitingForm
+              ? SIGNED_FORM_COUNTER_OPTION
+              : "Se preferir, entregue em papel no balcão."}
           </span>
         </div>
       </div>
@@ -1674,6 +1733,9 @@ function ServiceRequestTrilho({
   onReset: () => void;
 }) {
   const [hasSignedForm, setHasSignedForm] = useState(initial.hasSignedForm);
+  const [hasSignedDeclaration, setHasSignedDeclaration] = useState(
+    initial.hasSignedDeclaration,
+  );
   const [citizenDocuments, setCitizenDocuments] = useState(
     initial.citizenDocuments,
   );
@@ -1690,6 +1752,7 @@ function ServiceRequestTrilho({
   // sees but not what they are typing: the cards below keep their drafts.
   useEffect(() => {
     setHasSignedForm(initial.hasSignedForm);
+    setHasSignedDeclaration(initial.hasSignedDeclaration);
     setCitizenDocuments(initial.citizenDocuments);
     setRequirements(initial.requirements);
     setPaymentJustReported(false);
@@ -1724,7 +1787,11 @@ function ServiceRequestTrilho({
   const paymentReported = result.requestStatus === "payment-reported";
   const awaitingPay =
     Boolean(result.amountLabel) && !result.paymentSettled && !paymentReported;
-  const showSign = !hasSignedForm && !rejected;
+  // A finished pedido no longer waits on anything: one whose declaração went
+  // by paper must not get the card back asking for it.
+  const awaitingDeclaration =
+    result.hasExemption && !hasSignedDeclaration && !finished;
+  const showSign = (!hasSignedForm || awaitingDeclaration) && !rejected;
   const showPay =
     (awaitingPay || paymentReported) &&
     hasSignedForm &&
@@ -1732,16 +1799,23 @@ function ServiceRequestTrilho({
     !rejected;
   const showCalm =
     hasSignedForm &&
+    !awaitingDeclaration &&
     !rejected &&
     !finished &&
     pendingRequirements.length === 0 &&
     !awaitingPay &&
     !paymentReported;
 
-  const steps = computeSteps(result, hasSignedForm, rejected, finished);
-  const pill = computePill(
+  const steps = computeSteps(
     result,
     hasSignedForm,
+    awaitingDeclaration,
+    rejected,
+    finished,
+  );
+  const pill = computePill(
+    result,
+    !hasSignedForm || awaitingDeclaration,
     rejected,
     finished,
     pendingRequirements.length > 0,
@@ -1750,13 +1824,16 @@ function ServiceRequestTrilho({
   const { headline, leadDate, leadText } = computeHeadline(
     result,
     hasSignedForm,
+    awaitingDeclaration,
     rejected,
     finished,
     pendingRequirements[pendingRequirements.length - 1],
     awaitingPay,
   );
   const { prazoStrong, prazoText } = computePrazo(result, rejected, finished);
-  const groups = groupHistory(buildHistory(result, hasSignedForm, rejected));
+  const groups = groupHistory(
+    buildHistory(result, hasSignedForm, hasSignedDeclaration, rejected),
+  );
   const pendingRequirementCards = pendingRequirements.map((r) => (
     <RequirementCard
       key={r.id}
@@ -1850,8 +1927,10 @@ function ServiceRequestTrilho({
               <SignCard
                 protocolNumber={result.protocolNumber}
                 accessKey={result.accessKey}
-                hasExemption={result.hasExemption}
+                awaitingForm={!hasSignedForm}
+                awaitingDeclaration={awaitingDeclaration}
                 onSigned={() => setHasSignedForm(true)}
+                onDeclarationSigned={() => setHasSignedDeclaration(true)}
               />
             )}
             {pendingRequirementCards}
