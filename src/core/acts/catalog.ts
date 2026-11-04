@@ -90,7 +90,7 @@ export const PROCESSING_MODE_HINTS: Record<ProcessingMode, string> = {
  */
 export const IDENTIFICATION_ONLY_LABEL = "Só identificação";
 export const IDENTIFICATION_ONLY_HINT =
-  "a serventia só pede a sua identificação";
+  "além do requerimento assinado, a serventia só pede a sua identificação";
 
 /** Extra fact the office needs to find the right band in the fee table. */
 export type ActParameter = "transactionValue" | "registryYears";

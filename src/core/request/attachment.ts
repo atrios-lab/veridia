@@ -251,6 +251,17 @@ export function isSignedFormDocument(
 }
 
 /**
+ * The checkbox a citizen marks to say this file is the signed document of this
+ * pedido. A statement, not a check of the file: the office is who reads it. It
+ * is not stored either; it only has to be there for the send to go through.
+ */
+export const SIGNED_FORM_CONFIRMATION_FIELD = "signedFormConfirmed";
+
+export function isSignedFormConfirmed(value: unknown): boolean {
+  return value === "on";
+}
+
+/**
  * The signed copy of one document among a request's attachments, or
  * undefined: the most recent `signed-form` stored under that document's
  * name, because a resend (wrong file the first time) has to be what the

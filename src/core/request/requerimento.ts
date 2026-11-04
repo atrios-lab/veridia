@@ -2,6 +2,7 @@ import type { Act } from "../acts/catalog.ts";
 import { ATTRIBUTION_NAMES } from "../acts/catalog.ts";
 import type { Tenant } from "../tenant/schema.ts";
 import { formatOfficeDate } from "../time/office-time.ts";
+import type { SignedFormDocument } from "./attachment.ts";
 import { dataRightOption } from "./channels.ts";
 import type { DataRight } from "./kinds.ts";
 
@@ -19,6 +20,28 @@ import type { DataRight } from "./kinds.ts";
 export const HANDWRITTEN_SIGNATURE_CAVEAT =
   "Se assinar de próprio punho, reconheça a firma no cartório mais próximo. " +
   "A dispensa de reconhecimento vale só para a assinatura digital (Gov.br ou e-Notariado).";
+
+/**
+ * The pedido is registered without the signed requerimento, but the office
+ * does not move it until the document arrives. Said on every screen that asks
+ * for it, so no screen reads as if the citizen were already done.
+ */
+export const SIGNED_FORM_REQUIRED_NOTICE =
+  "Sem o requerimento assinado, a serventia não dá andamento ao pedido.";
+
+/** The counter is still a way in, with the same condition attached. */
+export const SIGNED_FORM_COUNTER_OPTION =
+  "Se preferir, entregue o requerimento assinado em papel no balcão. Sem ele, o pedido não tramita.";
+
+export const SIGNED_FORM_CONFIRMATIONS: Record<SignedFormDocument, string> = {
+  requerimento:
+    "Confirmo que este arquivo é o requerimento deste pedido, já assinado.",
+  declaracao:
+    "Confirmo que este arquivo é a declaração de hipossuficiência deste pedido, já assinada.",
+};
+
+export const SIGNED_FORM_WRONG_DOCUMENT_WARNING =
+  "Se for outro documento, o pedido não tramita na serventia.";
 
 export interface RequerimentoRow {
   label: string;

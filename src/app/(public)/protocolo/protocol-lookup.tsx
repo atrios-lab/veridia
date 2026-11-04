@@ -8,7 +8,11 @@ import {
   manifestationLabel,
 } from "@/core/request/channels.ts";
 import { DEADLINE_CAVEAT, type PauseReason } from "@/core/request/deadline.ts";
-import { HANDWRITTEN_SIGNATURE_CAVEAT } from "@/core/request/requerimento.ts";
+import {
+  HANDWRITTEN_SIGNATURE_CAVEAT,
+  SIGNED_FORM_COUNTER_OPTION,
+  SIGNED_FORM_REQUIRED_NOTICE,
+} from "@/core/request/requerimento.ts";
 import { formatDate as formatCalendarDate } from "@/core/scheduling/calendar.ts";
 import {
   formatOfficeDate,
@@ -1239,13 +1243,18 @@ function RequestDetail({ result }: { result: ServiceRequestDetail }) {
                     <span className="mt-1 block text-[11.5px] text-brand-faint">
                       {HANDWRITTEN_SIGNATURE_CAVEAT}
                     </span>
+                    {!hasSignedForm && (
+                      <span className="mt-1 block text-[11.5px] font-semibold text-brand-alert">
+                        {SIGNED_FORM_REQUIRED_NOTICE}
+                      </span>
+                    )}
                   </div>
                 </div>
 
                 <div className="rounded-xl border border-brand-accent-line bg-brand-card px-3.5 py-3">
                   <div className="flex items-start gap-2.5">
                     <StepBadge>3</StepBadge>
-                    <div className="flex-1">
+                    <div className="min-w-0 flex-1">
                       <div className="text-[12.5px] font-semibold text-brand-primary">
                         {result.hasExemption
                           ? "Envie os arquivos assinados"
@@ -1270,7 +1279,9 @@ function RequestDetail({ result }: { result: ServiceRequestDetail }) {
                         )}
                       </div>
                       <div className="mt-1.5 text-[11px] text-brand-faint">
-                        Ou entregue em papel no balcão: o pedido não trava.
+                        {hasSignedForm
+                          ? "Se preferir, entregue em papel no balcão."
+                          : SIGNED_FORM_COUNTER_OPTION}
                       </div>
                     </div>
                   </div>

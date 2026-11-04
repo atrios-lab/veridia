@@ -74,8 +74,8 @@ export function ProcessingLegend() {
         <strong>Termina on-line</strong>, você assina o requerimento pelo Gov.br
         e resolve sem sair de casa; <strong>Termina no balcão</strong>, o pedido
         adianta a análise, mas você precisa comparecer para concluir.{" "}
-        <strong>Só identificação</strong>: a serventia não pede documento nenhum
-        além da sua identificação.
+        <strong>Só identificação</strong>: além do requerimento assinado, a
+        serventia não pede outro documento.
       </p>
     </div>
   );

@@ -3,7 +3,11 @@
 import Link from "next/link";
 import { Fragment, useActionState, useEffect, useRef, useState } from "react";
 import type { PauseReason } from "@/core/request/deadline.ts";
-import { HANDWRITTEN_SIGNATURE_CAVEAT } from "@/core/request/requerimento.ts";
+import {
+  HANDWRITTEN_SIGNATURE_CAVEAT,
+  SIGNED_FORM_COUNTER_OPTION,
+  SIGNED_FORM_REQUIRED_NOTICE,
+} from "@/core/request/requerimento.ts";
 import {
   addDays,
   formatDate as formatCalendarDate,
@@ -19,6 +23,7 @@ import {
 } from "@/core/time/office-time.ts";
 import { useLiveVersion } from "../../_components/use-live-version.ts";
 import { Icon } from "../_components/icon.tsx";
+import { SignedFormUpload } from "../_components/signed-form-upload.tsx";
 import {
   ATTACHMENT_ACCEPT,
   useAttachmentUpload,
@@ -44,7 +49,6 @@ import {
   LostKeyForm,
   OmbudsmanCard,
 } from "../protocolo/protocol-lookup.tsx";
-import { type AttachState, attachSignedForm } from "../solicitar/actions.ts";
 
 const inputClass =
   "w-full rounded-xl border border-brand-border bg-brand-surface px-3.5 py-3 text-sm text-brand-text outline-none placeholder:text-brand-faint focus:border-brand-accent";
@@ -703,17 +707,6 @@ function SignCard({
   hasExemption: boolean;
   onSigned: () => void;
 }) {
-  const [state, action, pending] = useActionState<AttachState, FormData>(
-    attachSignedForm,
-    { status: "idle" },
-  );
-  const { send, uploading, error } = useAttachmentUpload(action);
-  const sending = pending || uploading;
-
-  useEffect(() => {
-    if (state.status === "success") onSigned();
-  }, [state, onSigned]);
-
   return (
     <div className="flex animate-notice-rise flex-col gap-3 rounded-2xl border border-brand-border bg-brand-card p-5 shadow-[0_1px_2px_rgba(20,40,25,.05)]">
       <div className="flex items-center gap-3">
@@ -776,6 +769,9 @@ function SignCard({
           <span className="mt-1 block text-[13px] text-brand-muted">
             {HANDWRITTEN_SIGNATURE_CAVEAT}
           </span>
+          <span className="mt-1 block text-[13px] font-semibold text-brand-alert">
+            {SIGNED_FORM_REQUIRED_NOTICE}
+          </span>
         </span>
       </div>
       <div className="h-px bg-brand-border" />
@@ -783,46 +779,18 @@ function SignCard({
         <span className="flex h-[26px] w-[26px] shrink-0 items-center justify-center rounded-full bg-brand-primary text-xs font-bold text-white">
           3
         </span>
-        <div className="flex flex-1 flex-col gap-2.5">
+        <div className="flex min-w-0 flex-1 flex-col gap-2.5">
           <span className="text-[15px] font-semibold">
             Envie o formulário assinado
           </span>
-          <form
-            onSubmit={(event) => {
-              event.preventDefault();
-              void send(event.currentTarget, "requerimento", 1);
-            }}
-          >
-            <input type="hidden" name="protocolNumber" value={protocolNumber} />
-            <input type="hidden" name="accessKey" value={accessKey} />
-            <label
-              className={`flex min-h-[48px] cursor-pointer items-center justify-center gap-2 rounded-[11px] border-[1.5px] border-dashed border-brand-accent-line px-3 py-3 text-center text-[14.5px] font-semibold text-brand-primary ${sending ? "opacity-60" : "hover:bg-brand-tint"}`}
-            >
-              <span className="text-brand-accent">
-                <Icon name="plus" className="h-3.5 w-3.5" strokeWidth={2} />
-              </span>
-              {sending ? "Enviando..." : "Enviar formulário assinado"}
-              <input
-                type="file"
-                name="requerimento"
-                accept={ATTACHMENT_ACCEPT}
-                className="sr-only"
-                disabled={sending}
-                onChange={(event) => {
-                  if (event.target.files?.length)
-                    event.target.form?.requestSubmit();
-                }}
-              />
-            </label>
-          </form>
-          {(error || state.status === "error") && (
-            <output className="text-[12.5px] font-semibold text-brand-alert">
-              {error ?? (state.status === "error" && state.message)}
-            </output>
-          )}
+          <SignedFormUpload
+            protocolNumber={protocolNumber}
+            accessKey={accessKey}
+            documento="requerimento"
+            onSent={onSigned}
+          />
           <span className="text-[13px] text-brand-muted">
-            Se preferir, entregue em papel no balcão. Seu pedido continua
-            valendo.
+            {SIGNED_FORM_COUNTER_OPTION}
           </span>
         </div>
       </div>

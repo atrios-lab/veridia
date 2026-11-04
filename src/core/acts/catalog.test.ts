@@ -140,6 +140,9 @@ test("nenhum texto do catálogo promete ato sem requerimento", () => {
   for (const texto of textos) {
     assert.doesNotMatch(texto, /sem requerimento/i, texto);
   }
+  // A dica precisa dizer que o requerimento é pedido além da identificação:
+  // calar sobre ele faz o aviso obrigatório do fim do pedido parecer novidade.
+  assert.match(IDENTIFICATION_ONLY_HINT, /requerimento assinado/);
 });
 
 test("só os atos que a lei isenta trazem a gratuidade, com sua base", () => {
