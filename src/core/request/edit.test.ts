@@ -5,6 +5,7 @@ import { MAX_MESSAGE_LENGTH } from "../chat/message.ts";
 import {
   purposeFor,
   requestDataEditSchema,
+  resolveIdentityEdit,
   resolveVariantEdit,
 } from "./edit.ts";
 
@@ -21,6 +22,72 @@ const valid = {
   description: "  Queremos casar em outubro.  ",
   createdAt: "2026-08-09T14:30",
 };
+
+const DOCUMENT = { type: "rg", number: "123456" } as const;
+const noInput = {
+  cpf: null,
+  noCpf: false,
+  alternateDocumentType: undefined,
+  alternateDocumentNumber: undefined,
+};
+
+test("a valid CPF replaces whatever was stored", () => {
+  assert.deepEqual(
+    resolveIdentityEdit(
+      { alternateDocument: DOCUMENT },
+      { ...noInput, cpf: "52998224725" },
+    ),
+    { ok: true, cpf: "52998224725", alternateDocument: null },
+  );
+});
+
+test("the way out replaces a stored CPF", () => {
+  assert.deepEqual(
+    resolveIdentityEdit(
+      { cpf: "52998224725" },
+      {
+        ...noInput,
+        noCpf: true,
+        alternateDocumentType: "rg",
+        alternateDocumentNumber: "123456",
+      },
+    ),
+    { ok: true, cpf: null, alternateDocument: DOCUMENT },
+  );
+});
+
+test("the way out without a document, or next to a CPF, is refused", () => {
+  assert.equal(resolveIdentityEdit({}, { ...noInput, noCpf: true }).ok, false);
+  assert.equal(
+    resolveIdentityEdit(
+      {},
+      {
+        ...noInput,
+        cpf: "52998224725",
+        noCpf: true,
+        alternateDocumentType: "rg",
+        alternateDocumentNumber: "123456",
+      },
+    ).ok,
+    false,
+  );
+});
+
+test("what was stored cannot be erased without a replacement", () => {
+  assert.equal(resolveIdentityEdit({ cpf: "52998224725" }, noInput).ok, false);
+  assert.equal(
+    resolveIdentityEdit({ alternateDocument: DOCUMENT }, noInput).ok,
+    false,
+  );
+});
+
+test("an old request with neither stays correctable with neither", () => {
+  assert.deepEqual(resolveIdentityEdit({ cpf: null }, noInput), {
+    ok: true,
+    cpf: null,
+    alternateDocument: null,
+  });
+});
 
 test("a blank kind changes nothing, so an old request stays correctable", () => {
   assert.deepEqual(resolveVariantEdit(getAct("rcpn-certidao"), undefined, ""), {

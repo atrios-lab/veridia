@@ -555,6 +555,33 @@ export type ExemptionDeclaration = Omit<
   "beneficiaries"
 > & { beneficiaries: ExemptionBeneficiary[] };
 
+/**
+ * What the counter records for a citizen who has no CPF. A closed list so the
+ * printed requerimento reads the same at every office; the number stays free
+ * text because each document, and each state's RG, has its own shape.
+ */
+export const ALTERNATE_DOCUMENT_TYPES = [
+  "rg",
+  "rne",
+  "passport",
+  "other",
+] as const;
+export type AlternateDocumentType = (typeof ALTERNATE_DOCUMENT_TYPES)[number];
+
+export const ALTERNATE_DOCUMENT_LABELS: Record<AlternateDocumentType, string> =
+  {
+    rg: "RG",
+    rne: "RNE",
+    passport: "Passaporte",
+    other: "Outro documento",
+  };
+
+const alternateDocumentSchema = z.object({
+  type: z.enum(ALTERNATE_DOCUMENT_TYPES),
+  number: z.string().min(1),
+});
+export type AlternateDocument = z.infer<typeof alternateDocumentSchema>;
+
 export const serviceRequestDetailsSchema = z.object({
   // Absent means "online", the default every citizen-filed request already
   // was before the counter could file one directly.
@@ -580,6 +607,9 @@ export const serviceRequestDetailsSchema = z.object({
   // absent means "not known", never one of the options. Outside `exemption` on
   // purpose, so the acceptance hash of a declaração does not depend on it.
   actVariant: z.string().optional(),
+  // The document of a citizen with no CPF, only the counter records it. Here
+  // and not in a column for the same reason as `phone`: one kind, a rare case.
+  alternateDocument: alternateDocumentSchema.optional(),
   // Present means the citizen asked for the statutory exemption and signed the
   // declaration that goes with it; `declaredAt` is when. Same discipline as
   // `consents` right above: a declaration validated and thrown away is not
@@ -635,6 +665,25 @@ export function variantOwner(
 export function readActVariant(details: unknown): string | undefined {
   const value = (details as { actVariant?: unknown } | null)?.actVariant;
   return typeof value === "string" && value !== "" ? value : undefined;
+}
+
+export function readAlternateDocument(
+  details: unknown,
+): AlternateDocument | undefined {
+  const parsed = alternateDocumentSchema.safeParse(
+    (details as { alternateDocument?: unknown } | null)?.alternateDocument,
+  );
+  return parsed.success ? parsed.data : undefined;
+}
+
+/**
+ * Same reasoning as `maskCpf`: the operator has no reason to see the whole
+ * number. A fixed run of asterisks, so the mask does not give away the length.
+ */
+export function maskAlternateDocument(document: AlternateDocument): string {
+  const { number } = document;
+  const tail = number.length > 2 ? number.slice(-2) : "";
+  return `${ALTERNATE_DOCUMENT_LABELS[document.type]} ***${tail}`;
 }
 
 export function readPhone(details: unknown): string {

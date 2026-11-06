@@ -159,6 +159,19 @@ test("the CPF is printed the way it is written", () => {
   assert.match(text, /529\.982\.247-25/);
 });
 
+test("another document is printed in full where the CPF would be", () => {
+  const text = flatten(
+    buildRequerimento(cartorioMarinho, marriage, {
+      ...data,
+      cpf: null,
+      alternateDocument: { type: "rne", number: "V123456-7" },
+    }).sections,
+  );
+  assert.match(text, /RNE/);
+  assert.match(text, /V123456-7/);
+  assert.equal(text.includes("CPF"), false);
+});
+
 test("what the citizen did not fill in does not become an empty line", () => {
   const document = buildRequerimento(cartorioMarinho, marriage, {
     ...data,

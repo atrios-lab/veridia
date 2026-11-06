@@ -511,8 +511,7 @@ export function RequestForm({
               htmlFor="cpf"
               className="mb-1.5 block text-[13px] font-semibold"
             >
-              CPF{" "}
-              <span className="font-normal text-brand-muted">· opcional</span>
+              CPF
             </label>
             <input
               id="cpf"
@@ -522,6 +521,10 @@ export function RequestForm({
               {...withMask(register("cpf"), formatCpf)}
             />
             <FieldError message={errorFor("cpf")} />
+            {/* Said before the refusal, same as the e-mail just above. */}
+            <p className="mt-1.5 text-[11px] text-brand-faint">
+              Sem CPF? A serventia recebe o pedido no balcão.
+            </p>
           </div>
         </div>
 

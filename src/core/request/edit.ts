@@ -2,8 +2,14 @@ import { z } from "zod";
 import type { Act } from "../acts/catalog.ts";
 import { MAX_MESSAGE_LENGTH, TEXT_TOO_LONG } from "../chat/message.ts";
 import { fromZonedDateTime } from "../scheduling/calendar.ts";
-import { isValidCpf, isValidPhone } from "./form.ts";
-import { variantOwner } from "./kinds.ts";
+import {
+  alternateDocumentFields,
+  buildAlternateDocument,
+  counterIdentityIssues,
+  isValidCpf,
+  isValidPhone,
+} from "./form.ts";
+import { type AlternateDocument, variantOwner } from "./kinds.ts";
 
 /**
  * What the counter may correct on a request that already exists.
@@ -40,6 +46,7 @@ export function requestDataEditSchema(now: Date, timeZone: string) {
       .transform((value) => value.replace(/\D/g, ""))
       .refine((value) => value === "" || isValidCpf(value), "CPF inválido.")
       .transform((value) => value || null),
+    ...alternateDocumentFields,
     purpose: z
       .string()
       .trim()
@@ -67,6 +74,61 @@ export function requestDataEditSchema(now: Date, timeZone: string) {
 }
 
 export type RequestDataEdit = z.infer<ReturnType<typeof requestDataEditSchema>>;
+
+/**
+ * What a correction writes. `alternateDocument`: null removes the stored one,
+ * absent leaves it alone.
+ */
+export type RequestDataUpdate = Omit<
+  RequestDataEdit,
+  "noCpf" | "alternateDocumentType" | "alternateDocumentNumber"
+> & {
+  actVariant?: string;
+  alternateDocument?: AlternateDocument | null;
+};
+
+export type IdentityEdit =
+  | {
+      ok: true;
+      cpf: string | null;
+      alternateDocument: AlternateDocument | null;
+    }
+  | { ok: false; message: string };
+
+/**
+ * The identification a correction may store, given what is stored already.
+ *
+ * What was recorded can be replaced, never just erased. A request filed before
+ * the CPF was required has neither, and stays correctable with neither: the
+ * operator fixing a name must not have to go find a document to do it.
+ */
+export function resolveIdentityEdit(
+  stored: { cpf?: string | null; alternateDocument?: AlternateDocument },
+  input: Pick<
+    RequestDataEdit,
+    "cpf" | "noCpf" | "alternateDocumentType" | "alternateDocumentNumber"
+  >,
+): IdentityEdit {
+  const [issue] = counterIdentityIssues(input);
+  if (issue) return { ok: false, message: issue.message };
+  if (input.noCpf) {
+    return {
+      ok: true,
+      cpf: null,
+      alternateDocument: buildAlternateDocument(input) ?? null,
+    };
+  }
+  if (input.cpf) {
+    return { ok: true, cpf: input.cpf, alternateDocument: null };
+  }
+  if (stored.cpf || stored.alternateDocument) {
+    return {
+      ok: false,
+      message: "Informe o CPF ou marque que o cidadão não possui.",
+    };
+  }
+  return { ok: true, cpf: null, alternateDocument: null };
+}
 
 export type VariantEdit =
   | { ok: true; actVariant?: string }

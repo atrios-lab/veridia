@@ -4,7 +4,11 @@ import type { Tenant } from "../tenant/schema.ts";
 import { formatOfficeDate } from "../time/office-time.ts";
 import type { SignedFormDocument } from "./attachment.ts";
 import { dataRightOption, dataRightsDeadlineIsLegal } from "./channels.ts";
-import type { DataRight } from "./kinds.ts";
+import {
+  ALTERNATE_DOCUMENT_LABELS,
+  type AlternateDocument,
+  type DataRight,
+} from "./kinds.ts";
 
 /**
  * The signed form, as content. Building it here, with no PDF library in sight,
@@ -124,6 +128,8 @@ export interface RequerimentoData {
   /** The kind of act chosen (`details.actVariant`), when the act has kinds. */
   actVariant?: string;
   cpf?: string | null;
+  /** Stands in for the CPF of a citizen who has none (`details`). */
+  alternateDocument?: AlternateDocument;
   description?: string | null;
   purpose?: string | null;
   parameterValue?: string | null;
@@ -145,6 +151,12 @@ export function buildRequerimento(
   ];
   if (data.phone) applicant.push({ label: "Telefone", value: data.phone });
   if (data.cpf) applicant.push({ label: "CPF", value: formatCpf(data.cpf) });
+  if (data.alternateDocument) {
+    applicant.push({
+      label: ALTERNATE_DOCUMENT_LABELS[data.alternateDocument.type],
+      value: data.alternateDocument.number,
+    });
+  }
 
   // Protocol and date live in the subtitle, not here: they identify the
   // document and read best right under the title. The access key is the

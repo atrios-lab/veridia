@@ -1,6 +1,8 @@
 import { z } from "zod";
 import type { Act, CertificateType } from "../acts/catalog.ts";
 import {
+  ALTERNATE_DOCUMENT_TYPES,
+  type AlternateDocument,
   EXEMPTION_SIGNED_BY,
   type ExemptionBeneficiary,
   variantOwner,
@@ -139,19 +141,12 @@ const optionalText = (max: number) =>
 /**
  * What every filing of a service request asks, whichever counter it comes
  * through. What differs between them is the identification, and only that:
- * the site asks for an e-mail it can write to, the balcão has the citizen
- * standing there and takes whichever contact they have.
+ * the site asks for an e-mail it can write to and a CPF, the balcão has the
+ * citizen standing there, takes whichever contact they have, and is the one
+ * place a citizen with no CPF can show another document.
  */
 const commonFields = {
   applicantName: requiredText(160),
-  cpf: z
-    .string()
-    .transform((s) => normalizeCpf(s))
-    .refine((s) => s === "" || isValidCpf(s), {
-      message: "CPF inválido.",
-    })
-    .transform((s) => (s === "" ? undefined : s))
-    .optional(),
   description: optionalText(4000),
   purpose: optionalText(500),
   // Never a price: it is what the operator needs to find the band in the
@@ -561,6 +556,86 @@ export function buildExemptionDetails(
   };
 }
 
+/** Digits only. Empty is left for each filing to judge: see `requiredCpf`. */
+const normalizedCpf = z
+  .string()
+  // A submission that skips the client may leave the field out altogether, and
+  // it must get the same field error as one that left it blank.
+  .default("")
+  .transform((s) => normalizeCpf(s))
+  .refine((s) => s === "" || isValidCpf(s), { message: "CPF inválido." });
+
+const requiredCpf = normalizedCpf.pipe(z.string().min(1, "Informe o CPF."));
+
+/**
+ * The counter's way out for a citizen with no CPF. Not on the site: with no
+ * operator looking at the document, it would be a checkbox for skipping the
+ * field.
+ */
+export const alternateDocumentFields = {
+  noCpf: z.coerce.boolean().default(false),
+  alternateDocumentType: z.preprocess(
+    (v) => (typeof v === "string" && v !== "" ? v : undefined),
+    z.enum(ALTERNATE_DOCUMENT_TYPES).optional(),
+  ),
+  alternateDocumentNumber: optionalPersonText(40),
+};
+
+const counterIdentityFields = {
+  cpf: normalizedCpf.transform((s) => (s === "" ? undefined : s)),
+  ...alternateDocumentFields,
+};
+
+/**
+ * The identification rule of the counter, shared by the filing and by the
+ * correction: a CPF, or the declared absence of one with the document that
+ * stands in for it, never both.
+ */
+export function counterIdentityIssues(data: {
+  cpf?: string | null;
+  noCpf: boolean;
+  alternateDocumentType?: AlternateDocument["type"];
+  alternateDocumentNumber?: string;
+}): { path: string; message: string }[] {
+  if (!data.noCpf) return [];
+  const issues: { path: string; message: string }[] = [];
+  if (data.cpf) {
+    issues.push({
+      path: "cpf",
+      message: "Apague o CPF ou desmarque que o cidadão não possui.",
+    });
+  }
+  if (!data.alternateDocumentType) {
+    issues.push({
+      path: "alternateDocumentType",
+      message: "Escolha o documento apresentado.",
+    });
+  }
+  if (!data.alternateDocumentNumber) {
+    issues.push({
+      path: "alternateDocumentNumber",
+      message: "Informe o número do documento.",
+    });
+  }
+  return issues;
+}
+
+/** The document to store, once the rule above has passed. */
+export function buildAlternateDocument(data: {
+  noCpf: boolean;
+  alternateDocumentType?: AlternateDocument["type"];
+  alternateDocumentNumber?: string;
+}): AlternateDocument | undefined {
+  if (!data.noCpf) return undefined;
+  if (!data.alternateDocumentType || !data.alternateDocumentNumber) {
+    return undefined;
+  }
+  return {
+    type: data.alternateDocumentType,
+    number: data.alternateDocumentNumber,
+  };
+}
+
 /**
  * The filing the citizen makes on the site. Two identification fields, not
  * the either/or the other channels use: a request filed with only a telephone
@@ -573,6 +648,7 @@ export function publicServiceRequestSchema(act: Act) {
   return z
     .object({
       ...commonFields,
+      cpf: requiredCpf,
       email: requiredText(160).refine((value) => EMAIL.test(value), {
         message: "Informe um e-mail válido.",
       }),
@@ -592,7 +668,8 @@ export type PublicServiceRequestInput = z.infer<
 /**
  * The filing the operator makes at the counter. The contact stays the either/
  * or field on purpose: the balcão is where someone with no e-mail is served,
- * and it is the operator typing, with the citizen in front of them. The
+ * and it is the operator typing, with the citizen in front of them. The CPF
+ * is required here too, with the way out `counterIdentityFields` describes. The
  * gratuidade block is the same as the site's, plus the testemunhas that only
  * the balcão ever collects (Provimento CGJ/TJRN n. 7/2026, art. 7º III).
  */
@@ -600,12 +677,29 @@ export function serviceRequestSchema(act: Act) {
   return z
     .object({
       ...commonFields,
+      ...counterIdentityFields,
       contact: requiredText(160).refine(isValidContact, {
         message: "Informe um e-mail válido ou um telefone com DDD.",
       }),
       ...exemptionFields,
     })
-    .superRefine(actRules(act, { channel: "counter" }));
+    .superRefine(actRules(act, { channel: "counter" }))
+    .superRefine((data, ctx) => {
+      if (!data.noCpf && !data.cpf) {
+        ctx.addIssue({
+          code: "custom",
+          path: ["cpf"],
+          message: "Informe o CPF ou marque que o cidadão não possui.",
+        });
+      }
+      for (const issue of counterIdentityIssues(data)) {
+        ctx.addIssue({
+          code: "custom",
+          path: [issue.path],
+          message: issue.message,
+        });
+      }
+    });
 }
 
 export type ServiceRequestInput = z.infer<

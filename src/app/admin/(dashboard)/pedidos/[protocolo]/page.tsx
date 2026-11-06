@@ -18,7 +18,9 @@ import {
   type ExemptionDecisionOutcome,
   isOpenServiceRequestStatus,
   isServiceRequestStatus,
+  maskAlternateDocument,
   readActVariant,
+  readAlternateDocument,
   readExemption,
   readPhone,
   requiresStatusReason,
@@ -216,6 +218,7 @@ export default async function ServiceRequestDetailPage({
     (target) => target.id === exemption?.actId,
   );
   const actVariant = readActVariant(request.details);
+  const alternateDocument = readAlternateDocument(request.details);
   const actName = act
     ? (actVariantName(act, actVariant) ?? act.name)
     : "Ato não identificado";
@@ -409,7 +412,16 @@ export default async function ServiceRequestDetailPage({
                   ? `${actName} · ${ATTRIBUTION_NAMES[act.attribution]}`
                   : actName
               }
-              cpfMasked={request.cpf ? maskCpf(request.cpf) : "Não informado"}
+              cpfMasked={
+                request.cpf
+                  ? maskCpf(request.cpf)
+                  : alternateDocument
+                    ? "Não possui"
+                    : "Não informado"
+              }
+              alternateDocumentMasked={
+                alternateDocument && maskAlternateDocument(alternateDocument)
+              }
               filedLabel={formatOfficeDayMonthTime(request.createdAt)}
               allowsPurpose={act?.requiresPurpose ?? false}
               actVariants={actVariants}
@@ -426,6 +438,8 @@ export default async function ServiceRequestDetailPage({
                   ? (actVariant ?? "")
                   : "",
                 cpf: request.cpf ?? "",
+                alternateDocumentType: alternateDocument?.type,
+                alternateDocumentNumber: alternateDocument?.number,
                 purpose: request.purpose ?? "",
                 description: request.description ?? "",
                 createdAt: toZonedDateTimeInput(

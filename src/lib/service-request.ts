@@ -24,7 +24,7 @@ import {
   readDeadline,
   resumeDeadline,
 } from "@/core/request/deadline.ts";
-import type { RequestDataEdit } from "@/core/request/edit.ts";
+import type { RequestDataUpdate } from "@/core/request/edit.ts";
 import {
   type ExemptionDecisionOutcome,
   isOpenServiceRequestStatus,
@@ -378,10 +378,10 @@ export async function saveInternalNote(
 
 /**
  * The protocol of an open request the citizen already filed for this act, if
- * any. The CPF identifies the person when given, but it is optional on the
- * form; the e-mail is not, so it is what a CPF-less citizen is matched by
- * instead: dropping to nothing here would let exactly the CPF-less case
- * through unchecked. Checked before any attachment is stored, same reasoning
+ * any. The site requires the CPF today, but requests filed before that have
+ * none, and a filing with a mistyped CPF is still the same person: the e-mail,
+ * always there, matches both. Dropping to the CPF alone would let exactly
+ * those cases through unchecked. Checked before any attachment is stored, same reasoning
  * as the other pre-filing refusals in `submitServiceRequest`: a duplicate
  * found after upload would leave the files orphaned in the blob store.
  *
@@ -1398,19 +1398,28 @@ export async function updateRequestDataWith(
   database: Database,
   tenantSlug: string,
   id: string,
-  data: RequestDataEdit & { actVariant?: string },
+  data: RequestDataUpdate,
   actorId: string,
 ): Promise<void> {
   // The telephone and the kind of act have no column of their own: they live
   // in `details` (see `serviceRequestDetailsSchema`), so they are merged into
   // the jsonb instead of assigned, the way the internal note is. An undefined
-  // `actVariant` drops out of the JSON and leaves the stored one alone.
-  const { phone, actVariant, ...columns } = data;
+  // `actVariant` drops out of the JSON and leaves the stored one alone. A null
+  // `alternateDocument` has to take the key out: `||` only adds.
+  const { phone, actVariant, alternateDocument, ...columns } = data;
+  const merged = sql`${serviceRequests.details} || ${JSON.stringify({
+    phone,
+    actVariant,
+    alternateDocument: alternateDocument ?? undefined,
+  })}::jsonb`;
   await database
     .update(serviceRequests)
     .set({
       ...columns,
-      details: sql`${serviceRequests.details} || ${JSON.stringify({ phone, actVariant })}::jsonb`,
+      details:
+        alternateDocument === null
+          ? sql`(${merged}) - 'alternateDocument'`
+          : merged,
       updatedAt: new Date(),
     })
     .where(
@@ -1432,7 +1441,7 @@ export async function updateRequestDataWith(
 export async function updateRequestData(
   tenantSlug: string,
   id: string,
-  data: RequestDataEdit & { actVariant?: string },
+  data: RequestDataUpdate,
   actorId: string,
 ): Promise<void> {
   return updateRequestDataWith(db, tenantSlug, id, data, actorId);
