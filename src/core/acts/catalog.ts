@@ -46,7 +46,7 @@ export const ATTRIBUTION_EXAMPLES: Record<Attribution, string> = {
   RCPN: "Certidão de nascimento, casamento, óbito, retificações",
   NOTAS: "Escrituras, procurações, autenticações e reconhecimento de firma",
   RI: "Matrícula, registro de compra e venda, averbações",
-  PROTESTO: "Certidão de protesto, cancelamento, anuência",
+  PROTESTO: "Protesto de títulos, certidão e cancelamento",
   RTD: "Registro de contratos e documentos, notificações",
   RCPJ: "Atas, estatutos, associações e sociedades simples",
 };
@@ -58,6 +58,7 @@ export const ATTRIBUTION_EXAMPLES: Record<Attribution, string> = {
 export const PROCESSING_MODES = [
   "online", // signed digitally, start to finish over the internet
   "presential", // started online, finished at the counter in person
+  "hybrid", // started online, finished at the counter or online, either way
 ] as const;
 export type ProcessingMode = (typeof PROCESSING_MODES)[number];
 
@@ -71,6 +72,7 @@ export type ProcessingMode = (typeof PROCESSING_MODES)[number];
 export const PROCESSING_MODE_LABELS: Record<ProcessingMode, string> = {
   online: "Termina on-line",
   presential: "Termina no balcão",
+  hybrid: "Termina no balcão ou on-line",
 };
 
 /**
@@ -82,6 +84,7 @@ export const PROCESSING_MODE_LABELS: Record<ProcessingMode, string> = {
 export const PROCESSING_MODE_HINTS: Record<ProcessingMode, string> = {
   online: "você assina o requerimento pelo Gov.br e não precisa ir à serventia",
   presential: "você adianta aqui, mas precisa comparecer para concluir",
+  hybrid: "você adianta aqui e conclui no balcão ou pela internet",
 };
 
 /**
@@ -157,12 +160,21 @@ export interface Act {
   parameter?: ActParameter;
   /** Without a description there is no way to know what was asked for. */
   requiresDescription?: boolean;
+  /** The form's example, where the general one would talk about something else. */
+  descriptionPlaceholder?: string;
   /**
-   * Only where the options exclude each other. "Registro de constituição
-   * (estatuto, ata, contrato)" and "Retificação de registro (área, descrição)"
-   * stay out on purpose: one request may involve more than one of those.
+   * Only where the options exclude each other. "Retificação de registro
+   * (área, descrição)" stays out on purpose: one request may involve both.
+   * Where a request can mix them, as in Pessoas Jurídicas, the mix is an option
+   * of its own and the description says what goes in it.
    */
   variants?: ActVariants;
+  /**
+   * Off the list, but still resolved by `getAct`: a request already filed under
+   * this id keeps its name and legal basis. New requests go to the act that
+   * took its place.
+   */
+  retired?: true;
   /**
    * The term the law fixes for this act, in business days: what a protocol of
    * it is born with. Absent where no statute fixes one (every notarial act,
@@ -532,12 +544,15 @@ export const ACTS: Act[] = [
         { id: "procuracao", name: "Procuração" },
       ],
     },
-    processingMode: "presential",
+    processingMode: "hybrid",
+    processingHint:
+      "você adianta aqui e assina no balcão ou no e-Notariado, por videoconferência",
     legalBasis: "Lei 8.935 art. 7 I",
     requiresPurpose: false,
     guidance:
-      "Partes presentes com documento de identidade e CPF. Traga os " +
-      "documentos do ato pretendido.",
+      "No balcão, as partes comparecem com documento de identidade e CPF e " +
+      "trazem os documentos do ato pretendido. On-line, a assinatura é no " +
+      "e-Notariado, por videoconferência com o tabelião.",
   },
   {
     id: "notas-ata-notarial",
@@ -669,6 +684,22 @@ export const ACTS: Act[] = [
 
   // Tabelionato de Protesto
   {
+    id: "protesto-titulos",
+    attribution: "PROTESTO",
+    name: "Protesto de títulos",
+    processingMode: "online",
+    legalBasis: "Lei 9.492 arts. 1 e 3",
+    legalDeadlineDays: 3,
+    legalDeadlineNote:
+      "Lei 9.492 art. 12: conta da protocolização, em dias com expediente bancário",
+    requiresPurpose: false,
+    documents: [
+      "Título ou documento de dívida",
+      "Documentos que qualifiquem o protestante",
+      "Dados que qualifiquem o devedor: nome, documento de identificação e endereço",
+    ],
+  },
+  {
     id: "protesto-cancelamento",
     attribution: "PROTESTO",
     name: "Cancelamento de protesto",
@@ -739,12 +770,23 @@ export const ACTS: Act[] = [
   {
     id: "rcpj-registro-constituicao",
     attribution: "RCPJ",
-    name: "Registro de constituição (estatuto, ata, contrato)",
+    name: "Registro ou averbação (estatuto, ata, contrato)",
+    variants: {
+      question: "Escolha o serviço",
+      options: [
+        { id: "registro", name: "Registro de estatuto, ata ou contrato" },
+        { id: "averbacao", name: "Averbação de estatuto, ata ou contrato" },
+        { id: "misto", name: "Registro e averbação (misto)" },
+      ],
+    },
     processingMode: "online",
     legalBasis: "Lei 6.015 arts. 114 a 121",
     requiresPurpose: false,
+    requiresDescription: true,
+    descriptionPlaceholder:
+      "Ex.: registrar a ata de eleição da diretoria e averbar a alteração do estatuto.",
     documents: [
-      "Ato constitutivo assinado",
+      "Estatuto, ata ou contrato assinado",
       "Documento de identidade dos representantes",
     ],
   },
@@ -752,6 +794,7 @@ export const ACTS: Act[] = [
     id: "rcpj-averbacao",
     attribution: "RCPJ",
     name: "Averbação de alterações",
+    retired: true,
     processingMode: "online",
     legalBasis: "Lei 6.015 arts. 114 a 121",
     requiresPurpose: false,
@@ -852,7 +895,7 @@ export function actsOfAttribution(
 ): Act[] {
   if (!tenant.attributions.includes(attribution)) return [];
   return [
-    ...ACTS.filter((a) => a.attribution === attribution),
+    ...ACTS.filter((a) => a.attribution === attribution && !a.retired),
     ...(exemptableActs(tenant, attribution).length > 0
       ? [exemptionAct(attribution)]
       : []),

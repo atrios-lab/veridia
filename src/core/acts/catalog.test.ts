@@ -60,6 +60,7 @@ test("the kinds an act groups are a fixed list, since requests store the ids", (
     "ri-busca-indicador": ["pessoal", "real"],
     "ri-registro-titulo": ["registro", "averbacao"],
     "rtd-registro-documento": ["documento", "contrato"],
+    "rcpj-registro-constituicao": ["registro", "averbacao", "misto"],
   });
 });
 
@@ -138,7 +139,7 @@ test("every act declares a known processing mode", () => {
 });
 
 test("an act finished at the counter tells the citizen what to bring", () => {
-  for (const act of ACTS.filter((a) => a.processingMode === "presential")) {
+  for (const act of ACTS.filter((a) => a.processingMode !== "online")) {
     assert.ok(act.guidance, act.id);
   }
 });
@@ -323,6 +324,41 @@ test("o Gov.br assina o requerimento; o ato notarial, só o e-Notariado", () => 
     /e-Notariado/.test(`${act.processingHint} ${act.guidance}`),
   );
   assert.ok(citamPlataforma.every((act) => act.attribution === "NOTAS"));
+});
+
+test("escritura e procuração terminam no balcão ou no e-Notariado", () => {
+  const escritura = getAct("notas-escritura");
+  assert.equal(escritura?.processingMode, "hybrid");
+  assert.match(escritura?.processingHint ?? "", /balcão ou no e-Notariado/);
+  assert.match(escritura?.guidance ?? "", /balcão/);
+  assert.match(escritura?.guidance ?? "", /e-Notariado/);
+});
+
+test("o protesto de títulos termina on-line e pede quem protesta e quem deve", () => {
+  const protesto = getAct("protesto-titulos");
+  assert.equal(protesto?.attribution, "PROTESTO");
+  assert.equal(protesto?.processingMode, "online");
+  assert.equal(protesto?.legalDeadlineDays, 3);
+  const documentos = protesto?.documents?.join(" ") ?? "";
+  assert.match(documentos, /Título ou documento de dívida/);
+  assert.match(documentos, /protestante/);
+  assert.match(documentos, /devedor/);
+});
+
+test("Pessoas Jurídicas pede o serviço e os detalhes do que se quer", () => {
+  const registro = getAct("rcpj-registro-constituicao");
+  assert.equal(registro?.requiresDescription, true);
+  assert.deepEqual(
+    registro?.variants?.options.map((option) => option.id),
+    ["registro", "averbacao", "misto"],
+  );
+});
+
+test("o ato aposentado sai da lista, mas o pedido antigo ainda o encontra", () => {
+  const ids = actsOfTenant(cartorioMarinho).map((act) => act.id);
+  assert.ok(!ids.includes("rcpj-averbacao"));
+  assert.ok(ids.includes("rcpj-registro-constituicao"));
+  assert.equal(getAct("rcpj-averbacao")?.name, "Averbação de alterações");
 });
 
 test("o bloco 3 do Anexo I tem os quatro itens oficiais, na ordem do DJe", () => {

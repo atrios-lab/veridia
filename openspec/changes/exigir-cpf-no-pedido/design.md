@@ -136,13 +136,13 @@ servidor, sem perder o restante do preenchimento. Para reverter, basta reverter 
 
 ## Open Questions
 
-- **Para que a serventia usa o CPF (LGPD art. 6º, III)?** O pedido partiu da serventia, mas a
-  finalidade ainda não foi informada. A decisão anterior do projeto, no agendamento, usou a
-  minimização para deixar o CPF opcional, então a exigência no pedido precisa de uma finalidade
-  registrada aqui. Bloqueia o deploy, não a implementação.
-- **Existe exigência legal ou da corregedoria por trás?** Não foi verificado se alguma norma exige o
-  CPF do requerente. Se existir, entra como base legal; se a norma admitir outros documentos no site,
-  a decisão de "exceção só no balcão" precisa ser revista.
+- **Para que a serventia usa o CPF (LGPD art. 6º, III)?** Respondido em 06/11/2026 por Joelison
+  Marinho, do Cartório Ielmo Marinho: "Para qualificar conforme lei 6.015". `/privacidade` registra
+  essa finalidade. A decisão anterior, no agendamento, segue valendo: lá o CPF continua opcional.
+- **Existe exigência legal ou da corregedoria por trás?** A serventia citou a Lei 6.015 sem indicar
+  o artigo, e o projeto não conferiu qual dispositivo exige o CPF do requerente. Ainda em aberto:
+  essa lei trata dos registros públicos e não alcança, por si, os pedidos de notas e de protesto. As
+  demais serventias também não confirmaram a finalidade.
 - **Pedido de gratuidade pelo site deve exigir CPF de quem declara hipossuficiência?** Hoje a regra
   vale para todo ato, com o balcão como saída. Vale confirmar com a revisão jurídica à luz do
   Provimento CGJ/TJRN n. 7/2026.

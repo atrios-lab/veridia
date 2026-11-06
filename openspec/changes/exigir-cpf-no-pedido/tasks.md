@@ -36,5 +36,5 @@
 - [x] 6.1 Ajustar os testes e fixtures que montam pedido sem CPF, sem afrouxar a regra, e conferir `scripts/seed-demo-data.ts`
 - [x] 6.2 Rodar os testes tocados por esta mudança, `pnpm typecheck` e `pnpm lint`
 - [ ] 6.3 Conferir no navegador, pelo host de um cartório, o site e o balcão com CPF, sem CPF e com a exceção
-- [ ] 6.4 Registrar a finalidade informada pela serventia e a eventual base legal no `design.md` antes do deploy em produção
+- [x] 6.4 Registrar a finalidade informada pela serventia e a eventual base legal no `design.md` antes do deploy em produção
 - [ ] 6.5 Avisar as demais serventias da nova exigência antes do deploy em produção
