@@ -68,6 +68,10 @@ presencial", "Só identificação") e mostrar as duas quando as duas valem.
 Nenhum texto do catálogo SHALL afirmar que um ato dispensa o requerimento: o requerimento
 assinado é pedido ao fim de todo pedido feito pelo site.
 
+O texto de um ato `online` SHALL dizer que o Gov.br assina o requerimento, sem dar a entender que
+essa assinatura conclui o ato. O ato notarial eletrônico SHALL informar que é assinado no
+e-Notariado, e os atos de registro e de protesto SHALL NOT mandar o cidadão para essa plataforma.
+
 #### Scenario: Filtro por atribuição do tenant
 - **WHEN** um tenant não possui uma atribuição
 - **THEN** nenhum ato dela aparece no wizard, e a contagem "N atos" dos cards reflete só os atos disponíveis
@@ -80,6 +84,11 @@ assinado é pedido ao fim de todo pedido feito pelo site.
 - **WHEN** a etapa 2 lista uma certidão, que é `online` e só exige identificação
 - **THEN** o cidadão lê "100% on-line" e "Só identificação", e não é obrigado a escolher entre saber
   uma coisa ou a outra
+
+#### Scenario: Ata notarial separa o requerimento do ato
+- **WHEN** a etapa 2 de Notas lista a ata notarial
+- **THEN** o cidadão lê que o requerimento é pelo Gov.br e que a ata é assinada no e-Notariado, por
+  videoconferência
 
 #### Scenario: Nada promete dispensar o requerimento
 - **WHEN** o cidadão abre qualquer ato do catálogo

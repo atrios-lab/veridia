@@ -73,8 +73,14 @@ export const PROCESSING_MODE_LABELS: Record<ProcessingMode, string> = {
   presential: "Termina no balcão",
 };
 
+/**
+ * O que se assina pelo Gov.br é o requerimento, não o ato. "Você assina pelo
+ * Gov.br", sem dizer o quê, fazia parecer que a assinatura concluía até um ato
+ * público, e o ato notarial eletrônico só se assina no e-Notariado (CNN, art.
+ * 286, III). Um ato assim traz a própria dica em `processingHint`.
+ */
 export const PROCESSING_MODE_HINTS: Record<ProcessingMode, string> = {
-  online: "você assina pelo Gov.br e não precisa ir à serventia",
+  online: "você assina o requerimento pelo Gov.br e não precisa ir à serventia",
   presential: "você adianta aqui, mas precisa comparecer para concluir",
 };
 
@@ -137,7 +143,12 @@ export interface Act {
   requiresPurpose: boolean;
   /** Papers the office expects, shown as a checklist before submitting. */
   documents?: string[];
-  /** What to bring and how it goes, for acts finished at the counter. */
+  /** Where the mode's own hint would mislead, this one is shown instead. */
+  processingHint?: string;
+  /**
+   * What to bring and how it goes, for acts finished at the counter or signed
+   * somewhere other than this site.
+   */
   guidance?: string;
   /**
    * Not a price: the site never quotes one. It is the input the operator needs
@@ -533,8 +544,12 @@ export const ACTS: Act[] = [
     attribution: "NOTAS",
     name: "Ata notarial",
     processingMode: "online",
+    processingHint:
+      "o requerimento é pelo Gov.br; a ata você assina no e-Notariado, por videoconferência",
     legalBasis: "Lei 8.935 art. 7 III",
     requiresPurpose: false,
+    guidance:
+      "A ata é assinada no e-Notariado, por videoconferência com o tabelião.",
     documents: [
       "Documento de identidade do solicitante",
       "Descrição do fato a constatar",
