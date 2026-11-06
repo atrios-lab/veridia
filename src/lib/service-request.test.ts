@@ -7,6 +7,7 @@ import {
   hashAccessKey,
   verifyAccessKey,
 } from "@/core/request/access-key.ts";
+import { readAlternateDocument } from "@/core/request/kinds.ts";
 import { TENANTS } from "@/core/tenant/resolve.ts";
 import type { Database } from "@/db/index.ts";
 import { auditLog, emailBounces, serviceRequests } from "@/db/schema.ts";
@@ -227,6 +228,85 @@ test("correcting the kind keeps the rest of details and enters the history", asy
       ),
     );
   assert.equal(entry?.actorId, "operador-1");
+});
+
+test("a correction stores the other document, and takes it out again", async () => {
+  const { id, protocolNumber } = await fileCertificate(
+    "correcao-documento@exemplo.com",
+    "obito",
+  );
+
+  await updateRequestDataWith(
+    db,
+    TENANT.slug,
+    id,
+    { ...CORRECTION, alternateDocument: { type: "rg", number: "123456" } },
+    "operador-1",
+  );
+  let found = await findByProtocolWith(db, TENANT.slug, protocolNumber);
+  assert.deepEqual(readAlternateDocument(found?.details), {
+    type: "rg",
+    number: "123456",
+  });
+  assert.equal(found?.cpf, null);
+
+  await updateRequestDataWith(
+    db,
+    TENANT.slug,
+    id,
+    { ...CORRECTION, cpf: "52998224725", alternateDocument: null },
+    "operador-1",
+  );
+  found = await findByProtocolWith(db, TENANT.slug, protocolNumber);
+  assert.equal(found?.cpf, "52998224725");
+  assert.equal(
+    "alternateDocument" in (found?.details as Record<string, unknown>),
+    false,
+  );
+  assert.equal(
+    (found?.details as { actVariant?: string }).actVariant,
+    "obito",
+    "o resto de details não pode se perder",
+  );
+});
+
+test("a correction with no document leaves the stored one alone", async () => {
+  const { id, protocolNumber } = await createServiceRequestWith(
+    db,
+    TENANT,
+    ACT,
+    {
+      applicantName: "Sem CPF",
+      contact: "(84) 99999-0000",
+      accessKeyHash: hashAccessKey("chave-documento"),
+      details: { alternateDocument: { type: "passport", number: "AB123456" } },
+    },
+  );
+
+  await updateRequestDataWith(db, TENANT.slug, id, CORRECTION, "operador-1");
+
+  const found = await findByProtocolWith(db, TENANT.slug, protocolNumber);
+  assert.deepEqual(readAlternateDocument(found?.details), {
+    type: "passport",
+    number: "AB123456",
+  });
+});
+
+test("an old request with no CPF is still matched as a duplicate by e-mail", async () => {
+  const email = "antigo-sem-cpf@exemplo.com";
+  const { protocolNumber } = await createServiceRequestWith(db, TENANT, ACT, {
+    applicantName: "Pedido Antigo",
+    contact: email,
+    accessKeyHash: hashAccessKey("chave-antigo"),
+  });
+
+  assert.equal(
+    await findOpenServiceRequestDuplicateWith(db, TENANT.slug, ACT.id, {
+      cpf: "52998224725",
+      email,
+    }),
+    protocolNumber,
+  );
 });
 
 test("a correction with no kind leaves the stored one alone", async () => {

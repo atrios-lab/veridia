@@ -21,12 +21,14 @@ import {
 import {
   purposeFor,
   requestDataEditSchema,
+  resolveIdentityEdit,
   resolveVariantEdit,
 } from "@/core/request/edit.ts";
 import {
   EXEMPTION_DECISION_OUTCOMES,
   isAllowedTransition,
   isServiceRequestStatus,
+  readAlternateDocument,
   readExemption,
   requiresStatusReason,
   type ServiceRequestStatus,
@@ -600,6 +602,9 @@ export async function updateRequestDataAction(
     contact: formData.get("contact") ?? "",
     phone: formData.get("phone") ?? "",
     cpf: formData.get("cpf") ?? "",
+    noCpf: formData.get("noCpf"),
+    alternateDocumentType: formData.get("alternateDocumentType"),
+    alternateDocumentNumber: formData.get("alternateDocumentNumber"),
     purpose: formData.get("purpose") ?? "",
     description: formData.get("description") ?? "",
     createdAt: formData.get("createdAt") ?? "",
@@ -627,12 +632,29 @@ export async function updateRequestDataAction(
       String(formData.get("actVariant") ?? ""),
     );
     if (!variant.ok) return { status: "error", message: variant.message };
+    const { noCpf, alternateDocumentType, alternateDocumentNumber, ...fields } =
+      parsed.data;
+    const identity = resolveIdentityEdit(
+      {
+        cpf: stored.cpf,
+        alternateDocument: readAlternateDocument(stored.details),
+      },
+      {
+        cpf: fields.cpf,
+        noCpf,
+        alternateDocumentType,
+        alternateDocumentNumber,
+      },
+    );
+    if (!identity.ok) return { status: "error", message: identity.message };
     await updateRequestData(
       tenant.slug,
       requestId,
       {
-        ...parsed.data,
-        purpose: purposeFor(act, parsed.data.purpose),
+        ...fields,
+        cpf: identity.cpf,
+        alternateDocument: identity.alternateDocument,
+        purpose: purposeFor(act, fields.purpose),
         actVariant: variant.actVariant,
       },
       session.user.id,

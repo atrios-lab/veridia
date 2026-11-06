@@ -4,6 +4,8 @@ import { useActionState, useEffect, useState } from "react";
 import { toast } from "sonner";
 import type { ActVariants } from "@/core/acts/catalog.ts";
 import { formatCpf, formatPhone } from "@/core/request/form.ts";
+import type { AlternateDocumentType } from "@/core/request/kinds.ts";
+import { AlternateDocumentFields } from "../../_components/alternate-document-fields.tsx";
 import { type ActionState, updateRequestDataAction } from "../actions.ts";
 
 export interface ApplicantData {
@@ -14,6 +16,9 @@ export interface ApplicantData {
   /** The kind of act stored, or "" when there is none the catalogue knows. */
   actVariant: string;
   cpf: string;
+  /** Present on a request of a citizen with no CPF. */
+  alternateDocumentType?: AlternateDocumentType;
+  alternateDocumentNumber?: string;
   purpose: string;
   description: string;
   /** "YYYY-MM-DDTHH:mm" on the office's wall clock, not the browser's. */
@@ -79,6 +84,7 @@ export function ApplicantSection({
   data,
   actLabel,
   cpfMasked,
+  alternateDocumentMasked,
   filedLabel,
   allowsPurpose,
   actVariants,
@@ -88,6 +94,8 @@ export function ApplicantSection({
   actLabel: string;
   /** What the read view shows, masked; editing reveals the digits to fix. */
   cpfMasked: string;
+  /** Same discipline, for the document of a citizen with no CPF. */
+  alternateDocumentMasked?: string;
   /** The attendance, on the office's wall clock, for the read view. */
   filedLabel: string;
   /**
@@ -103,6 +111,7 @@ export function ApplicantSection({
   // Controlled only because it is masked as it is typed, like the public form:
   // the operator reads a CPF off a document, in the shape the document has.
   const [cpf, setCpf] = useState(() => formatCpf(data.cpf));
+  const [noCpf, setNoCpf] = useState(() => Boolean(data.alternateDocumentType));
   const [phone, setPhone] = useState(() => formatPhone(data.phone));
   const [state, action, pending] = useActionState<ActionState, FormData>(
     updateRequestDataAction,
@@ -143,6 +152,7 @@ export function ApplicantSection({
             <span className="w-full truncate text-[12.5px] text-admin-muted">
               {data.applicantName || EMPTY} · {data.contact || EMPTY} · CPF{" "}
               {cpfMasked}
+              {alternateDocumentMasked && ` · ${alternateDocumentMasked}`}
             </span>
           )}
         </button>
@@ -177,7 +187,14 @@ export function ApplicantSection({
       {mode === "open" && (
         <div className="mt-3.5 grid grid-cols-2 gap-x-6 gap-y-3.5 border-t border-admin-border pt-3.5">
           <Field label="Nome" value={data.applicantName || EMPTY} />
-          <Field label="CPF" value={cpfMasked} />
+          <Field
+            label="CPF"
+            value={
+              alternateDocumentMasked
+                ? `${cpfMasked} · ${alternateDocumentMasked}`
+                : cpfMasked
+            }
+          />
           <Field label="Contato" value={data.contact || EMPTY} />
           <Field label="Telefone" value={data.phone || EMPTY} />
           {/* Same order as the edit form: toggling must not move fields
@@ -215,10 +232,17 @@ export function ApplicantSection({
                 id="cpf"
                 name="cpf"
                 inputMode="numeric"
-                value={cpf}
+                value={noCpf ? "" : cpf}
                 onChange={(event) => setCpf(formatCpf(event.target.value))}
                 placeholder="000.000.000-00"
-                className={FIELD}
+                disabled={noCpf}
+                className={`${FIELD} disabled:bg-admin-readonly-bg disabled:text-admin-muted`}
+              />
+              <AlternateDocumentFields
+                checked={noCpf}
+                onCheckedChange={setNoCpf}
+                defaultType={data.alternateDocumentType}
+                defaultNumber={data.alternateDocumentNumber}
               />
             </div>
             <div>

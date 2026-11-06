@@ -15,6 +15,7 @@ import {
 } from "@/core/request/kinds.ts";
 import type { Attribution, Tenant } from "@/core/tenant/schema.ts";
 import { AdminIcon } from "../../../_components/icon.tsx";
+import { AlternateDocumentFields } from "../_components/alternate-document-fields.tsx";
 import {
   createManualServiceRequest,
   type ManualEntryState,
@@ -295,6 +296,7 @@ export function ManualEntryForm({
     FormData
   >(createManualServiceRequest, { status: "idle" });
   const fieldErrors = state.status === "error" ? state.fieldErrors : {};
+  const [noCpf, setNoCpf] = useState(false);
 
   if (state.status === "success") {
     return (
@@ -389,15 +391,25 @@ export function ManualEntryForm({
           </div>
           <div>
             <label className={LABEL_CLASS} htmlFor="cpf">
-              CPF (opcional)
+              CPF
             </label>
+            {/* Remounted on the toggle: a number left behind in the disabled
+                field would read as if it were being filed. */}
             <input
+              key={noCpf ? "no-cpf" : "cpf"}
               id="cpf"
               name="cpf"
               placeholder="000.000.000-00"
-              className={FIELD_CLASS}
+              disabled={noCpf}
+              className={`${FIELD_CLASS} disabled:bg-admin-readonly-bg disabled:text-admin-muted`}
             />
             <FieldError message={fieldErrors.cpf} />
+            <AlternateDocumentFields
+              checked={noCpf}
+              onCheckedChange={setNoCpf}
+              typeError={fieldErrors.alternateDocumentType}
+              numberError={fieldErrors.alternateDocumentNumber}
+            />
           </div>
           <div>
             <label className={LABEL_CLASS} htmlFor="contact">
@@ -776,6 +788,14 @@ function SuccessScreen({ state }: { state: SuccessState }) {
   const summary = [
     { label: "Contato", value: state.contact },
     ...(state.cpfLabel ? [{ label: "CPF", value: state.cpfLabel }] : []),
+    ...(state.alternateDocument
+      ? [
+          {
+            label: state.alternateDocument.label,
+            value: state.alternateDocument.number,
+          },
+        ]
+      : []),
     { label: "Atribuição", value: state.attributionLabel },
     ...(state.amountLabel
       ? [{ label: "Valor", value: state.amountLabel }]

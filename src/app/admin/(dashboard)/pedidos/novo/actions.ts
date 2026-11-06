@@ -10,11 +10,13 @@ import { can } from "@/core/auth/roles.ts";
 import { generateAccessKey, hashAccessKey } from "@/core/request/access-key.ts";
 import { deadlineDate } from "@/core/request/deadline.ts";
 import {
+  buildAlternateDocument,
   buildExemptionDetails,
   formatCpf,
   readExemptionForm,
   serviceRequestSchema,
 } from "@/core/request/form.ts";
+import { ALTERNATE_DOCUMENT_LABELS } from "@/core/request/kinds.ts";
 import { formatCents, parseCentsInput } from "@/core/request/money.ts";
 import { formatDate } from "@/core/scheduling/calendar.ts";
 import { closeConversation } from "@/lib/chat.ts";
@@ -45,6 +47,8 @@ export type ManualEntryState =
       /** In full, not masked: the operator typed it seconds ago and the whole
           point of this block is confirming the right pedido was filed. */
       cpfLabel?: string;
+      /** The document of a citizen with no CPF, in full for the same reason. */
+      alternateDocument?: { label: string; number: string };
       attributionLabel: string;
       amountLabel?: string;
       /** The date the office expects to have analysed it by, "DD/MM/AAAA". */
@@ -87,6 +91,9 @@ export async function createManualServiceRequest(
     applicantName: formData.get("applicantName") ?? "",
     contact: formData.get("contact") ?? "",
     cpf: formData.get("cpf") ?? "",
+    noCpf: formData.get("noCpf"),
+    alternateDocumentType: formData.get("alternateDocumentType"),
+    alternateDocumentNumber: formData.get("alternateDocumentNumber"),
     description: formData.get("description") ?? "",
     purpose: formData.get("purpose") ?? "",
     parameterValue: "",
@@ -124,8 +131,16 @@ export async function createManualServiceRequest(
       exemptionActId,
       certificateType,
       beneficiaries,
+      noCpf,
+      alternateDocumentType,
+      alternateDocumentNumber,
       ...data
     } = parsed.data;
+    const alternateDocument = buildAlternateDocument({
+      noCpf,
+      alternateDocumentType,
+      alternateDocumentNumber,
+    });
     const exemption = buildExemptionDetails(
       { exemptionActId, certificateType, beneficiaries },
       new Date().toISOString(),
@@ -145,6 +160,7 @@ export async function createManualServiceRequest(
       details: {
         channel: fromConversationId ? "chat" : "counter",
         ...(actVariant ? { actVariant } : {}),
+        ...(alternateDocument ? { alternateDocument } : {}),
         ...(exemption
           ? { exemption, deadline: { startedOn: today(), days: deadlineDays } }
           : {}),
@@ -192,6 +208,10 @@ export async function createManualServiceRequest(
       filedAtLabel: `hoje às ${officeNow().time.replace(":", "h")}`,
       contact: parsed.data.contact,
       cpfLabel: parsed.data.cpf ? formatCpf(parsed.data.cpf) : undefined,
+      alternateDocument: alternateDocument && {
+        label: ALTERNATE_DOCUMENT_LABELS[alternateDocument.type],
+        number: alternateDocument.number,
+      },
       attributionLabel: ATTRIBUTION_SHORT_NAMES[act.attribution],
       amountLabel:
         amountCents !== undefined ? formatCents(amountCents) : undefined,

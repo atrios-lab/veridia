@@ -33,8 +33,9 @@ export default async function PrivacyPolicyPage() {
           <ul className="mt-3 flex flex-col gap-2.5">
             <li>
               <strong className="text-brand-text">Pedido de serviço:</strong>{" "}
-              nome, contato e os documentos enviados para instruir o ato
-              solicitado, para dar andamento e resposta ao seu pedido.
+              nome, CPF, contato e os documentos enviados para instruir o ato
+              solicitado, para identificar quem faz o pedido e dar andamento e
+              resposta a ele.
             </li>
             <li>
               <strong className="text-brand-text">Agendamento:</strong> nome e

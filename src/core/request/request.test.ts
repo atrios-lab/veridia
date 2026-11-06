@@ -22,6 +22,7 @@ import {
   storedFileName,
 } from "./attachment.ts";
 import {
+  buildAlternateDocument,
   buildExemptionDetails,
   formatCpf,
   formatPhone,
@@ -33,6 +34,7 @@ import {
   publicServiceRequestSchema,
   serviceRequestSchema,
 } from "./form.ts";
+import { maskAlternateDocument, readAlternateDocument } from "./kinds.ts";
 import { formatProtocolNumber, parseProtocolNumber } from "./protocol.ts";
 
 const certificate = getAct("rcpn-certidao");
@@ -55,7 +57,7 @@ const beneficiary = (overrides: Record<string, unknown> = {}) => ({
 const valid = {
   applicantName: "Maria José da Silva",
   contact: "(84) 99999-0000",
-  cpf: "",
+  cpf: "529.982.247-25",
   description: "Certidão de nascimento em inteiro teor.",
   purpose: "",
   parameterValue: "",
@@ -169,7 +171,7 @@ test("a complete request is accepted and trimmed", () => {
     applicantName: "  Maria   José  ",
   });
   assert.equal(parsed.applicantName, "Maria José");
-  assert.equal(parsed.cpf, undefined);
+  assert.equal(parsed.cpf, "52998224725");
 });
 
 test("fields the act does not render may be absent entirely", () => {
@@ -233,6 +235,118 @@ test("a request filed on the site is refused without an e-mail", () => {
     assert.equal(result.success, false, email);
     assert.equal(result.error?.issues[0].path[0], "email");
   }
+});
+
+test("a request filed on the site is refused without a valid CPF", () => {
+  for (const [cpf, message] of [
+    ["", "Informe o CPF."],
+    ["529.982.247-24", "CPF inválido."],
+  ]) {
+    const result = publicServiceRequestSchema(certificate).safeParse({
+      ...validOnline,
+      actVariant: "nascimento",
+      cpf,
+    });
+    assert.equal(result.success, false, cpf);
+    assert.equal(result.error?.issues[0].path[0], "cpf");
+    assert.equal(result.error?.issues[0].message, message);
+  }
+});
+
+test("skipping the client gets the same CPF error as leaving it blank", () => {
+  const { cpf: _cpf, ...withoutCpf } = validOnline;
+  const result = publicServiceRequestSchema(certificate).safeParse({
+    ...withoutCpf,
+    actVariant: "nascimento",
+  });
+  assert.equal(result.success, false);
+  assert.equal(result.error?.issues[0].path[0], "cpf");
+  assert.equal(result.error?.issues[0].message, "Informe o CPF.");
+});
+
+test("the site offers no way out of the CPF", () => {
+  const result = publicServiceRequestSchema(certificate).safeParse({
+    ...validOnline,
+    actVariant: "nascimento",
+    cpf: "",
+    noCpf: "on",
+    alternateDocumentType: "rg",
+    alternateDocumentNumber: "123456",
+  });
+  assert.equal(result.success, false);
+});
+
+test("the counter refuses a filing with neither CPF nor the way out", () => {
+  const result = serviceRequestSchema(certificate).safeParse({
+    ...validCertificate,
+    cpf: "",
+  });
+  assert.equal(result.success, false);
+  assert.equal(result.error?.issues[0].path[0], "cpf");
+});
+
+test("the counter takes a citizen with no CPF and another document", () => {
+  const parsed = serviceRequestSchema(certificate).parse({
+    ...validCertificate,
+    cpf: "",
+    noCpf: "on",
+    alternateDocumentType: "rg",
+    alternateDocumentNumber: " 001.234.567 ",
+  });
+  assert.equal(parsed.cpf, undefined);
+  assert.deepEqual(buildAlternateDocument(parsed), {
+    type: "rg",
+    number: "001.234.567",
+  });
+});
+
+test("the way out asks for the document, and excludes a CPF", () => {
+  const noDocument = serviceRequestSchema(certificate).safeParse({
+    ...validCertificate,
+    cpf: "",
+    noCpf: "on",
+  });
+  assert.equal(noDocument.success, false);
+  assert.deepEqual(
+    noDocument.error?.issues.map((issue) => issue.path[0]),
+    ["alternateDocumentType", "alternateDocumentNumber"],
+  );
+
+  const both = serviceRequestSchema(certificate).safeParse({
+    ...validCertificate,
+    noCpf: "on",
+    alternateDocumentType: "rg",
+    alternateDocumentNumber: "123456",
+  });
+  assert.equal(both.success, false);
+  assert.equal(both.error?.issues[0].path[0], "cpf");
+});
+
+test("no document is stored unless the way out is marked", () => {
+  const parsed = serviceRequestSchema(certificate).parse({
+    ...validCertificate,
+    alternateDocumentType: "rg",
+    alternateDocumentNumber: "123456",
+  });
+  assert.equal(buildAlternateDocument(parsed), undefined);
+});
+
+test("the other document reads back, masked like the CPF", () => {
+  const document = { type: "passport", number: "AB123456" } as const;
+  assert.deepEqual(
+    readAlternateDocument({ alternateDocument: document }),
+    document,
+  );
+  assert.equal(readAlternateDocument({}), undefined);
+  assert.equal(
+    readAlternateDocument({ alternateDocument: { type: "cnh", number: "1" } }),
+    undefined,
+  );
+  assert.equal(maskAlternateDocument(document), "Passaporte ***56");
+  assert.equal(
+    maskAlternateDocument({ type: "other", number: "12" }),
+    "Outro documento ***",
+  );
 });
 
 test("the telephone is optional on the site, and checked when given", () => {

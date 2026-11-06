@@ -6,6 +6,7 @@ import {
 } from "@/core/request/declaracao.ts";
 import {
   readActVariant,
+  readAlternateDocument,
   readChannel,
   readExemption,
   readPhone,
@@ -89,6 +90,7 @@ export function buildRequestDocuments(
       exemption,
       actVariant: readActVariant(stored.details),
       cpf: stored.cpf,
+      alternateDocument: readAlternateDocument(stored.details),
       description: stored.description,
       purpose: stored.purpose,
       parameterValue: stored.parameterValue,
