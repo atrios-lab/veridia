@@ -12,11 +12,11 @@ O lançamento manual em `/admin/pedidos/novo` DEVE (SHALL) pedir o tipo quando o
 - **THEN** o select some e o pedido é lançado sem tipo
 
 ### Requirement: Nome específico do ato na fila e no detalhe
-Quando o pedido tiver um tipo gravado, o campo "Ato" do detalhe e a linha da fila DEVEM (SHALL) mostrar o nome do tipo no lugar do nome agrupado. No pedido de gratuidade, o selo da gratuidade DEVE (SHALL) mostrar o nome do tipo no lugar do nome do ato pedido. O pedido sem tipo gravado, ou com um tipo que não exista mais no catálogo, DEVE (SHALL) mostrar o nome do ato, sem expor o identificador gravado.
+Quando o pedido tiver um tipo gravado, o cabeçalho do andamento e o campo "Ato" do detalhe e a linha da fila DEVEM (SHALL) mostrar o nome do tipo no lugar do nome agrupado. No pedido de gratuidade, o selo da gratuidade DEVE (SHALL) mostrar o nome do tipo no lugar do nome do ato pedido. O pedido sem tipo gravado, ou com um tipo que não exista mais no catálogo, DEVE (SHALL) mostrar o nome do ato, sem expor o identificador gravado.
 
 #### Scenario: Detalhe mostra o tipo escolhido
 - **WHEN** o operador abre um pedido criado com o tipo "Certidão de casamento"
-- **THEN** o campo "Ato" mostra "Certidão de casamento" seguido da atribuição
+- **THEN** o cabeçalho do andamento mostra "Certidão de casamento" e o campo "Ato" mostra esse nome seguido da atribuição
 
 #### Scenario: Fila mostra o tipo escolhido
 - **WHEN** o operador abre a fila com um pedido do tipo "Procuração"
@@ -28,7 +28,7 @@ Quando o pedido tiver um tipo gravado, o campo "Ato" do detalhe e a linha da fil
 
 #### Scenario: Pedido antigo mantém o nome do ato
 - **WHEN** o operador abre um pedido criado antes da existência do tipo
-- **THEN** o campo "Ato" mostra o nome do ato, sem inferir um tipo
+- **THEN** o cabeçalho e o campo "Ato" mostram o nome do ato, sem inferir um tipo
 
 ## MODIFIED Requirements
 

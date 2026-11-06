@@ -216,6 +216,9 @@ export default async function ServiceRequestDetailPage({
     (target) => target.id === exemption?.actId,
   );
   const actVariant = readActVariant(request.details);
+  const actName = act
+    ? (actVariantName(act, actVariant) ?? act.name)
+    : "Ato não identificado";
   const exemptionActName =
     exemptionTarget &&
     (actVariantName(exemptionTarget, actVariant) ?? exemptionTarget.name);
@@ -333,7 +336,7 @@ export default async function ServiceRequestDetailPage({
               requestId={request.id}
               protocolNumber={request.protocolNumber}
               status={status}
-              subtitle={`${act?.name ?? "Ato não identificado"} · ${
+              subtitle={`${actName} · ${
                 request.applicantName ?? "Solicitante não identificado"
               } · pedido em ${formatOfficeDate(request.createdAt)}`}
               badges={
@@ -403,8 +406,8 @@ export default async function ServiceRequestDetailPage({
               requestId={request.id}
               actLabel={
                 act
-                  ? `${actVariantName(act, actVariant) ?? act.name} · ${ATTRIBUTION_NAMES[act.attribution]}`
-                  : "Ato não identificado"
+                  ? `${actName} · ${ATTRIBUTION_NAMES[act.attribution]}`
+                  : actName
               }
               cpfMasked={request.cpf ? maskCpf(request.cpf) : "Não informado"}
               filedLabel={formatOfficeDayMonthTime(request.createdAt)}

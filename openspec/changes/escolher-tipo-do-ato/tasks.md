@@ -25,7 +25,7 @@
 
 ## 5. Leitores do nome específico
 
-- [x] 5.1 Usar o nome do tipo no campo "Ato" e no selo da gratuidade em `pedidos/[protocolo]/page.tsx`
+- [x] 5.1 Usar o nome do tipo no cabeçalho do andamento, no campo "Ato" e no selo da gratuidade em `pedidos/[protocolo]/page.tsx`
 - [x] 5.2 Usar o nome do tipo na linha da fila em `pedidos/page.tsx`
 - [x] 5.3 Usar o nome do tipo em `src/app/(public)/protocolo/actions.ts`
 - [x] 5.4 Passar `actVariant` a `buildRequerimento` por `src/lib/request-documents.ts` e usar o nome em "Ato requerido" e na linha da gratuidade
@@ -43,5 +43,5 @@
 
 - [x] 7.1 Rodar os testes tocados pela change
 - [x] 7.2 No navegador, pelo host do cartório, pedir certidão de nascimento e depois de casamento com o mesmo e-mail e confirmar que os dois protocolos são criados
-- [ ] 7.3 Conferir no painel o tipo no detalhe, na fila e no requerimento, corrigir o tipo e confirmar o registro no histórico (pendente: exige login no painel)
-- [ ] 7.4 Conferir o select em largura de celular, no site (feito) e no balcão (pendente: exige login no painel)
+- [x] 7.3 Conferir no painel o tipo no detalhe, na fila e no requerimento, corrigir o tipo e confirmar o registro no histórico
+- [x] 7.4 Conferir o select em largura de celular, no site (375 px) e no balcão (500 px, a menor largura da janela do Chrome)
