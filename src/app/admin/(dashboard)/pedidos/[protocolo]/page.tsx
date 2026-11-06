@@ -1,6 +1,10 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { ATTRIBUTION_NAMES, getActForTenant } from "@/core/acts/catalog.ts";
+import {
+  ATTRIBUTION_NAMES,
+  actVariantName,
+  getActForTenant,
+} from "@/core/acts/catalog.ts";
 import { can } from "@/core/auth/roles.ts";
 import { signedFormFor } from "@/core/request/attachment.ts";
 import {
@@ -14,11 +18,13 @@ import {
   type ExemptionDecisionOutcome,
   isOpenServiceRequestStatus,
   isServiceRequestStatus,
+  readActVariant,
   readExemption,
   readPhone,
   requiresStatusReason,
   statusLabel,
   suggestedNextStatuses,
+  variantOwner,
 } from "@/core/request/kinds.ts";
 import { formatCents } from "@/core/request/money.ts";
 import {
@@ -206,9 +212,17 @@ export default async function ServiceRequestDetailPage({
   const exemption = readExemption(request.details);
   // O ato pedido só falta nos pedidos anteriores à gratuidade virar ato
   // próprio: ali o selo diz o que sabe, sem inventar ato nenhum.
-  const exemptionActName = act?.exemptionTargets?.find(
+  const exemptionTarget = act?.exemptionTargets?.find(
     (target) => target.id === exemption?.actId,
-  )?.name;
+  );
+  const actVariant = readActVariant(request.details);
+  const actName = act
+    ? (actVariantName(act, actVariant) ?? act.name)
+    : "Ato não identificado";
+  const exemptionActName =
+    exemptionTarget &&
+    (actVariantName(exemptionTarget, actVariant) ?? exemptionTarget.name);
+  const actVariants = act && variantOwner(act, exemption?.actId)?.variants;
   const deadline = effectiveDeadline(
     toIsoDate(request.createdAt, OFFICE_TIME_ZONE),
     readDeadline(request.details),
@@ -322,7 +336,7 @@ export default async function ServiceRequestDetailPage({
               requestId={request.id}
               protocolNumber={request.protocolNumber}
               status={status}
-              subtitle={`${act?.name ?? "Ato não identificado"} · ${
+              subtitle={`${actName} · ${
                 request.applicantName ?? "Solicitante não identificado"
               } · pedido em ${formatOfficeDate(request.createdAt)}`}
               badges={
@@ -392,16 +406,25 @@ export default async function ServiceRequestDetailPage({
               requestId={request.id}
               actLabel={
                 act
-                  ? `${act.name} · ${ATTRIBUTION_NAMES[act.attribution]}`
-                  : "Ato não identificado"
+                  ? `${actName} · ${ATTRIBUTION_NAMES[act.attribution]}`
+                  : actName
               }
               cpfMasked={request.cpf ? maskCpf(request.cpf) : "Não informado"}
               filedLabel={formatOfficeDayMonthTime(request.createdAt)}
               allowsPurpose={act?.requiresPurpose ?? false}
+              actVariants={actVariants}
               data={{
                 applicantName: request.applicantName ?? "",
                 contact: request.contact ?? "",
                 phone: readPhone(request.details),
+                // Only an id the select can show: a kind gone from the
+                // catalogue would make the browser pick the first option and
+                // change the request on the next save.
+                actVariant: actVariants?.options.some(
+                  (option) => option.id === actVariant,
+                )
+                  ? (actVariant ?? "")
+                  : "",
                 cpf: request.cpf ?? "",
                 purpose: request.purpose ?? "",
                 description: request.description ?? "",

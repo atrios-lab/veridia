@@ -2,6 +2,7 @@
 
 import { useActionState, useRef, useState } from "react";
 import {
+  type ActVariants,
   actsOfAttribution,
   CERTIFICATE_TYPE_LABELS,
   CERTIFICATE_TYPES,
@@ -230,6 +231,46 @@ function Stepper({ current }: { current: 1 | 2 }) {
   );
 }
 
+/** Which of the kinds the act groups, in the same shape as the act's select. */
+function ManualVariantField({
+  variants,
+  error,
+}: {
+  variants: ActVariants;
+  error?: string;
+}) {
+  return (
+    <div>
+      <label className={LABEL_CLASS} htmlFor="actVariant">
+        {variants.question}
+      </label>
+      <div className="relative">
+        <select
+          id="actVariant"
+          name="actVariant"
+          defaultValue=""
+          className={`appearance-none pr-9 ${FIELD_CLASS}`}
+        >
+          <option value="" disabled>
+            Escolha uma opção
+          </option>
+          {variants.options.map((option) => (
+            <option key={option.id} value={option.id}>
+              {option.name}
+            </option>
+          ))}
+        </select>
+        <AdminIcon
+          name="chevronDown"
+          className="pointer-events-none absolute top-1/2 right-3.5 h-3.5 w-3.5 -translate-y-1/2 text-admin-muted"
+          strokeWidth={2}
+        />
+      </div>
+      <FieldError message={error} />
+    </div>
+  );
+}
+
 export function ManualEntryForm({
   tenant,
   fromConversation,
@@ -395,6 +436,17 @@ export function ManualEntryForm({
           </div>
         )}
 
+        {act?.variants && (
+          <div className="mt-3.5">
+            {/* Keyed so that changing the act discards the kind chosen. */}
+            <ManualVariantField
+              key={act.id}
+              variants={act.variants}
+              error={fieldErrors.actVariant}
+            />
+          </div>
+        )}
+
         <div className="mt-3.5">
           <label className={LABEL_CLASS} htmlFor="description">
             Discrimine sua solicitação
@@ -435,6 +487,16 @@ export function ManualEntryForm({
               ))}
             </fieldset>
             <FieldError message={fieldErrors.exemptionActId} />
+
+            {exemptionTarget?.variants && (
+              <div className="border-t border-admin-border pt-3">
+                <ManualVariantField
+                  key={exemptionTarget.id}
+                  variants={exemptionTarget.variants}
+                  error={fieldErrors.actVariant}
+                />
+              </div>
+            )}
 
             {exemptionTarget?.feeExemption?.askCertificateType && (
               <fieldset className="flex flex-col gap-2 border-t border-admin-border pt-3">

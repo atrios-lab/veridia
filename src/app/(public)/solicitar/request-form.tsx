@@ -5,10 +5,11 @@ import Link from "next/link";
 import { useActionState, useEffect, useRef, useState } from "react";
 import {
   type UseFormRegister,
+  type UseFormRegisterReturn,
   type UseFormWatch,
   useForm,
 } from "react-hook-form";
-import type { Act } from "@/core/acts/catalog.ts";
+import type { Act, ActVariants } from "@/core/acts/catalog.ts";
 import {
   ATTRIBUTION_SHORT_NAMES,
   CERTIFICATE_TYPE_LABELS,
@@ -56,6 +57,44 @@ const PARAMETER_LABELS = {
 
 const inputClass =
   "w-full rounded-xl border border-brand-border bg-brand-card px-3.5 py-3 text-sm text-brand-text outline-none placeholder:text-brand-faint focus:border-brand-accent";
+
+/** Which of the kinds the act groups, same shape as the agenda's selects. */
+function ActVariantField({
+  variants,
+  registration,
+  error,
+}: {
+  variants: ActVariants;
+  registration: UseFormRegisterReturn;
+  error?: string;
+}) {
+  return (
+    <div>
+      <label
+        htmlFor="actVariant"
+        className="mb-1.5 block text-[13px] font-semibold"
+      >
+        {variants.question}
+      </label>
+      <select
+        id="actVariant"
+        className={inputClass}
+        defaultValue=""
+        {...registration}
+      >
+        <option value="" disabled>
+          Escolha uma opção
+        </option>
+        {variants.options.map((option) => (
+          <option key={option.id} value={option.id}>
+            {option.name}
+          </option>
+        ))}
+      </select>
+      <FieldError message={error} />
+    </div>
+  );
+}
 
 function DocumentsChecklist({ documents }: { documents: string[] }) {
   return (
@@ -321,6 +360,7 @@ export function RequestForm({
     register,
     handleSubmit,
     watch,
+    setValue,
     formState: { errors: clientErrors },
   } = useForm({
     resolver: zodResolver(publicServiceRequestSchema(act)),
@@ -331,6 +371,14 @@ export function RequestForm({
   const exemptionTarget = exemptionTargets?.find(
     (target) => target.id === exemptionActId,
   );
+  // The gratuidade's act is only chosen below the description, so its kinds
+  // are asked inside that block; every other act asks right above it.
+  const variants = (exemptionTargets ? exemptionTarget : act)?.variants;
+  const selectedVariant = variants?.options.find(
+    (option) => option.id === (watch("actVariant") as string | undefined),
+  );
+  const descriptionRequired =
+    act.requiresDescription || selectedVariant?.requiresDescription;
 
   if (state.status === "success") {
     return <SuccessScreen result={state} lookupHref={lookupHref} />;
@@ -477,13 +525,21 @@ export function RequestForm({
           </div>
         </div>
 
+        {act.variants && (
+          <ActVariantField
+            variants={act.variants}
+            registration={register("actVariant")}
+            error={errorFor("actVariant")}
+          />
+        )}
+
         <div>
           <label
             htmlFor="description"
             className="mb-1.5 block text-[13px] font-semibold"
           >
             Descreva o que você precisa
-            {!act.requiresDescription && (
+            {!descriptionRequired && (
               <span className="font-normal text-brand-muted"> · opcional</span>
             )}
           </label>
@@ -650,7 +706,11 @@ export function RequestForm({
                     type="radio"
                     value={option.id}
                     className="mt-0.5 h-4.5 w-4.5 shrink-0 accent-brand-primary"
-                    {...register("exemptionActId")}
+                    {...register("exemptionActId", {
+                      // Without `shouldUnregister` the value outlives its
+                      // select, and the next act would refuse a stale kind.
+                      onChange: () => setValue("actVariant", ""),
+                    })}
                   />
                   <span className="text-[13px] text-brand-primary">
                     {option.name}
@@ -669,6 +729,17 @@ export function RequestForm({
                 certidão de cada um, já são gratuitos para qualquer pessoa, sem
                 esta declaração (Lei 6.015 art. 30, caput).
               </p>
+            )}
+
+            {exemptionTarget?.variants && (
+              <div className="border-t border-brand-border pt-3">
+                <ActVariantField
+                  key={exemptionTarget.id}
+                  variants={exemptionTarget.variants}
+                  registration={register("actVariant")}
+                  error={errorFor("actVariant")}
+                />
+              </div>
             )}
 
             {exemptionTarget?.feeExemption?.askCertificateType && (

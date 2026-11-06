@@ -1,6 +1,10 @@
 import { z } from "zod";
 import type { Act, CertificateType } from "../acts/catalog.ts";
-import { EXEMPTION_SIGNED_BY, type ExemptionBeneficiary } from "./kinds.ts";
+import {
+  EXEMPTION_SIGNED_BY,
+  type ExemptionBeneficiary,
+  variantOwner,
+} from "./kinds.ts";
 
 // The three `CertificateType` values, repeated here rather than imported as a
 // value from `catalog.ts`: `tenant/pix.ts` imports this file for `isValidCpf`,
@@ -153,6 +157,12 @@ const commonFields = {
   // Never a price: it is what the operator needs to find the band in the
   // court's fee table.
   parameterValue: optionalText(120),
+  // `.nullish()` because a select still on its disabled first option is left
+  // out of the FormData altogether, and null comes back from `formData.get`.
+  actVariant: z
+    .string()
+    .nullish()
+    .transform((value) => value?.trim() || undefined),
   lgpdConsent: z.coerce.boolean(),
   truthDeclaration: z.coerce.boolean(),
 };
@@ -248,6 +258,7 @@ function actRules(
       truthDeclaration: boolean;
       description?: string;
       purpose?: string;
+      actVariant?: string;
       exemptionActId?: string;
       exemptionDeclaration?: boolean;
       certificateType?: CertificateType;
@@ -281,6 +292,30 @@ function actRules(
         code: "custom",
         path: ["purpose"],
         message: "Este ato exige que você informe a finalidade.",
+      });
+    }
+    // The client hides the select on an act without kinds, and hiding is not
+    // what enforces it: same discipline as the honeypot and the consents.
+    const variants = variantOwner(act, data.exemptionActId)?.variants;
+    const variant = variants?.options.find((o) => o.id === data.actVariant);
+    if (variants && !variant) {
+      ctx.addIssue({
+        code: "custom",
+        path: ["actVariant"],
+        message: "Escolha uma das opções.",
+      });
+    } else if (!variants && data.actVariant) {
+      ctx.addIssue({
+        code: "custom",
+        path: ["actVariant"],
+        message: "Este ato não tem tipo para escolher.",
+      });
+    }
+    if (variant?.requiresDescription && !data.description) {
+      ctx.addIssue({
+        code: "custom",
+        path: ["description"],
+        message: "Descreva o que você precisa para a serventia poder avaliar.",
       });
     }
     if (act.exemptionTargets) {

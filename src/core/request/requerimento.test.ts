@@ -20,6 +20,10 @@ const marriage = getAct("rcpn-habilitacao-casamento");
 const nameChange = getAct("rcpn-alteracao-prenome");
 if (!marriage || !nameChange) throw new Error("catalogo incompleto");
 
+const certificate = getAct("rcpn-certidao");
+const gratuidade = getAct("gratuidade-rcpn");
+if (!certificate || !gratuidade) throw new Error("catalogo incompleto");
+
 const ACCESS_KEY = "BBM8-6XVB-8PUK";
 
 const data = {
@@ -42,6 +46,40 @@ function flatten(sections: ReturnType<typeof buildRequerimento>["sections"]) {
     ])
     .join("\n");
 }
+
+test("o ato requerido sai com o nome do tipo escolhido", () => {
+  const { sections } = buildRequerimento(cartorioMarinho, certificate, {
+    ...data,
+    actVariant: "casamento",
+  });
+  const text = flatten(sections);
+  assert.match(text, /Ato requerido: Certidão de casamento/);
+  assert.doesNotMatch(text, /Certidão \(nascimento/);
+});
+
+test("o pedido sem tipo conhecido mantém o nome do ato, sem expor o id", () => {
+  for (const actVariant of [undefined, "retirado"]) {
+    const { sections } = buildRequerimento(cartorioMarinho, certificate, {
+      ...data,
+      actVariant,
+    });
+    const text = flatten(sections);
+    assert.match(
+      text,
+      /Ato requerido: Certidão \(nascimento, casamento, óbito\)/,
+    );
+    assert.doesNotMatch(text, /retirado/);
+  }
+});
+
+test("a gratuidade cita o tipo do ato pedido", () => {
+  const { sections } = buildRequerimento(cartorioMarinho, gratuidade, {
+    ...data,
+    actVariant: "obito",
+    exemption: { actId: "rcpn-certidao" },
+  });
+  assert.match(flatten(sections), /Pede a gratuidade de "Certidão de óbito"/);
+});
 
 const receipt = {
   protocolNumber: data.protocolNumber,

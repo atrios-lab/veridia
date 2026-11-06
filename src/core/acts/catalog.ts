@@ -95,6 +95,28 @@ export const IDENTIFICATION_ONLY_HINT =
 /** Extra fact the office needs to find the right band in the fee table. */
 export type ActParameter = "transactionValue" | "registryYears";
 
+/**
+ * One of the mutually exclusive kinds an act groups under a single name.
+ *
+ * `id` is what a request stores (`details.actVariant`), so it never changes
+ * once shipped: a request whose id is gone falls back to the act's own name.
+ * `name` is complete ("Certidão de casamento"), never a suffix, because the
+ * same text is the select's option and what the panel shows in place of the
+ * grouped name.
+ */
+export interface ActVariant {
+  id: string;
+  name: string;
+  /** The option says too little on its own: "Outra certidão" needs the words. */
+  requiresDescription?: true;
+}
+
+export interface ActVariants {
+  /** The select's label. Neutral voice: the counter reads it too. */
+  question: string;
+  options: ActVariant[];
+}
+
 export interface Act {
   id: string;
   attribution: Attribution;
@@ -124,6 +146,12 @@ export interface Act {
   parameter?: ActParameter;
   /** Without a description there is no way to know what was asked for. */
   requiresDescription?: boolean;
+  /**
+   * Only where the options exclude each other. "Registro de constituição
+   * (estatuto, ata, contrato)" and "Retificação de registro (área, descrição)"
+   * stay out on purpose: one request may involve more than one of those.
+   */
+  variants?: ActVariants;
   /**
    * The term the law fixes for this act, in business days: what a protocol of
    * it is born with. Absent where no statute fixes one (every notarial act,
@@ -410,6 +438,17 @@ export const ACTS: Act[] = [
     id: "rcpn-certidao",
     attribution: "RCPN",
     name: "Certidão (nascimento, casamento, óbito)",
+    variants: {
+      question: "Qual certidão?",
+      options: [
+        { id: "nascimento", name: "Certidão de nascimento" },
+        { id: "casamento", name: "Certidão de casamento" },
+        { id: "obito", name: "Certidão de óbito" },
+        // The Anexo I says "ou outra" too: without this, whoever needs another
+        // certificate of the Registro Civil would have to mark a wrong one.
+        { id: "outra", name: "Outra certidão", requiresDescription: true },
+      ],
+    },
     processingMode: "online",
     identificationOnly: true,
     legalBasis: "Lei 6.015 art. 17",
@@ -475,6 +514,13 @@ export const ACTS: Act[] = [
     id: "notas-escritura",
     attribution: "NOTAS",
     name: "Escritura pública ou procuração",
+    variants: {
+      question: "Escritura ou procuração?",
+      options: [
+        { id: "escritura", name: "Escritura pública" },
+        { id: "procuracao", name: "Procuração" },
+      ],
+    },
     processingMode: "presential",
     legalBasis: "Lei 8.935 art. 7 I",
     requiresPurpose: false,
@@ -520,6 +566,14 @@ export const ACTS: Act[] = [
     id: "ri-certidao-matricula",
     attribution: "RI",
     name: "Certidão de matrícula, inteiro teor ou ônus",
+    variants: {
+      question: "Qual certidão?",
+      options: [
+        { id: "matricula", name: "Certidão de matrícula" },
+        { id: "inteiro-teor", name: "Certidão de inteiro teor" },
+        { id: "onus", name: "Certidão de ônus" },
+      ],
+    },
     processingMode: "online",
     identificationOnly: true,
     legalBasis: "Prov. 149 art. 123 caput",
@@ -547,6 +601,13 @@ export const ACTS: Act[] = [
     id: "ri-busca-indicador",
     attribution: "RI",
     name: "Busca por indicador pessoal ou real",
+    variants: {
+      question: "Qual indicador?",
+      options: [
+        { id: "pessoal", name: "Busca por indicador pessoal" },
+        { id: "real", name: "Busca por indicador real" },
+      ],
+    },
     processingMode: "online",
     identificationOnly: true,
     legalBasis: "Prov. 149 art. 126",
@@ -572,6 +633,13 @@ export const ACTS: Act[] = [
     id: "ri-registro-titulo",
     attribution: "RI",
     name: "Registro ou averbação na matrícula",
+    variants: {
+      question: "Registro ou averbação?",
+      options: [
+        { id: "registro", name: "Registro na matrícula" },
+        { id: "averbacao", name: "Averbação na matrícula" },
+      ],
+    },
     processingMode: "online",
     legalBasis: "Lei 6.015 arts. 167 e 182",
     legalDeadlineDays: 10,
@@ -614,6 +682,13 @@ export const ACTS: Act[] = [
     id: "rtd-registro-documento",
     attribution: "RTD",
     name: "Registro de documento ou contrato",
+    variants: {
+      question: "O que será registrado?",
+      options: [
+        { id: "documento", name: "Registro de documento" },
+        { id: "contrato", name: "Registro de contrato" },
+      ],
+    },
     processingMode: "online",
     legalBasis: "Lei 6.015 arts. 127 a 130",
     requiresPurpose: false,
@@ -773,6 +848,18 @@ export function actsOfAttribution(
 /** Every act available to the office, across all attributions it holds. */
 export function actsOfTenant(tenant: Tenant): Act[] {
   return tenant.attributions.flatMap((a) => actsOfAttribution(tenant, a));
+}
+
+/**
+ * The name of the kind a request chose, or undefined when it chose none or the
+ * id is no longer in the catalogue: every reader falls back to `act.name`, so a
+ * request filed before this existed keeps its name and a raw id never shows.
+ */
+export function actVariantName(
+  act: Pick<Act, "variants">,
+  variantId: string | undefined,
+): string | undefined {
+  return act.variants?.options.find((option) => option.id === variantId)?.name;
 }
 
 export function getAct(id: string): Act | undefined {

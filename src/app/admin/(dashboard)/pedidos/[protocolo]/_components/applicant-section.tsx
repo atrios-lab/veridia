@@ -2,6 +2,7 @@
 
 import { useActionState, useEffect, useState } from "react";
 import { toast } from "sonner";
+import type { ActVariants } from "@/core/acts/catalog.ts";
 import { formatCpf, formatPhone } from "@/core/request/form.ts";
 import { type ActionState, updateRequestDataAction } from "../actions.ts";
 
@@ -10,6 +11,8 @@ export interface ApplicantData {
   contact: string;
   /** Asked for apart from the contact on the public form; may be empty. */
   phone: string;
+  /** The kind of act stored, or "" when there is none the catalogue knows. */
+  actVariant: string;
   cpf: string;
   purpose: string;
   description: string;
@@ -78,6 +81,7 @@ export function ApplicantSection({
   cpfMasked,
   filedLabel,
   allowsPurpose,
+  actVariants,
 }: {
   requestId: string;
   data: ApplicantData;
@@ -92,6 +96,8 @@ export function ApplicantSection({
    * the public form: the server drops it either way.
    */
   allowsPurpose: boolean;
+  /** The kinds the act groups, when it groups any. */
+  actVariants?: ActVariants;
 }) {
   const [mode, setMode] = useState<"closed" | "open" | "editing">("open");
   // Controlled only because it is masked as it is typed, like the public form:
@@ -262,6 +268,26 @@ export function ApplicantSection({
               que já foi protocolado. Nesse caso, cancele e abra outro pedido.
             </p>
           </div>
+          {actVariants && (
+            <div>
+              <Label htmlFor="actVariant">{actVariants.question}</Label>
+              <select
+                id="actVariant"
+                name="actVariant"
+                defaultValue={data.actVariant}
+                className={FIELD}
+              >
+                {/* Only while nothing is stored: an old request stays
+                    correctable without anyone having to guess its kind. */}
+                {!data.actVariant && <option value="">{EMPTY}</option>}
+                {actVariants.options.map((option) => (
+                  <option key={option.id} value={option.id}>
+                    {option.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
           {allowsPurpose && (
             <div>
               <Label htmlFor="purpose">Finalidade</Label>

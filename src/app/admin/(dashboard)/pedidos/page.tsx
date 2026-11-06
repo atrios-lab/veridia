@@ -1,12 +1,17 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { ATTRIBUTION_ACRONYMS, getAct } from "@/core/acts/catalog.ts";
+import {
+  ATTRIBUTION_ACRONYMS,
+  actVariantName,
+  getAct,
+} from "@/core/acts/catalog.ts";
 import { can } from "@/core/auth/roles.ts";
 import { deadlineUrgency } from "@/core/overview/urgency.ts";
 import { effectiveDeadline, readDeadline } from "@/core/request/deadline.ts";
 import {
   isOpenServiceRequestStatus,
   isServiceRequestStatus,
+  readActVariant,
   statusLabel,
 } from "@/core/request/kinds.ts";
 import { formatDate, toIsoDate } from "@/core/scheduling/calendar.ts";
@@ -95,7 +100,9 @@ export default async function ServiceRequestQueuePage({
       id: request.id,
       protocolNumber: request.protocolNumber,
       applicantName: request.applicantName ?? "Não informado",
-      actName: act?.name ?? "Ato não identificado",
+      actName: act
+        ? (actVariantName(act, readActVariant(request.details)) ?? act.name)
+        : "Ato não identificado",
       attributionLabel: request.attribution
         ? (ATTRIBUTION_ACRONYMS[request.attribution as Attribution] ??
           request.attribution)

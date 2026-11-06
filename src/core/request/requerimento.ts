@@ -1,5 +1,5 @@
 import type { Act } from "../acts/catalog.ts";
-import { ATTRIBUTION_NAMES } from "../acts/catalog.ts";
+import { ATTRIBUTION_NAMES, actVariantName } from "../acts/catalog.ts";
 import type { Tenant } from "../tenant/schema.ts";
 import { formatOfficeDate } from "../time/office-time.ts";
 import type { SignedFormDocument } from "./attachment.ts";
@@ -121,6 +121,8 @@ export interface RequerimentoData {
    * prints, without a fundamento it cannot name.
    */
   exemption?: { actId?: string };
+  /** The kind of act chosen (`details.actVariant`), when the act has kinds. */
+  actVariant?: string;
   cpf?: string | null;
   description?: string | null;
   purpose?: string | null;
@@ -149,7 +151,10 @@ export function buildRequerimento(
   // credential and goes on its own page below, never in the body.
   const request: RequerimentoRow[] = [
     { label: "Atribuição", value: ATTRIBUTION_NAMES[act.attribution] },
-    { label: "Ato requerido", value: act.name },
+    {
+      label: "Ato requerido",
+      value: actVariantName(act, data.actVariant) ?? act.name,
+    },
     { label: "Base legal", value: act.legalBasis },
   ];
   if (data.purpose) request.push({ label: "Finalidade", value: data.purpose });
@@ -196,7 +201,7 @@ export function buildRequerimento(
     // duplicaria o que a pessoa já assina no outro papel.
     declarations.push(
       requested?.feeExemption
-        ? `Pede a gratuidade de "${requested.name}" (fundamento: ` +
+        ? `Pede a gratuidade de "${actVariantName(requested, data.actVariant) ?? requested.name}" (fundamento: ` +
             `${requested.feeExemption.legalBasis}), conforme declaração de ` +
             "hipossuficiência que acompanha este requerimento."
         : "Pede a gratuidade conforme declaração de hipossuficiência que " +
