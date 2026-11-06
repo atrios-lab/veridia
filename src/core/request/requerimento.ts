@@ -3,7 +3,7 @@ import { ATTRIBUTION_NAMES } from "../acts/catalog.ts";
 import type { Tenant } from "../tenant/schema.ts";
 import { formatOfficeDate } from "../time/office-time.ts";
 import type { SignedFormDocument } from "./attachment.ts";
-import { dataRightOption } from "./channels.ts";
+import { dataRightOption, dataRightsDeadlineIsLegal } from "./channels.ts";
 import type { DataRight } from "./kinds.ts";
 
 /**
@@ -324,10 +324,18 @@ export function buildDataRightsReceipt(
           { label: "Chave de acesso", value: data.accessKey },
           { label: "Direito exercido", value: option.legalName },
           { label: "Pedido do titular", value: option.label },
-          {
-            label: "Prazo legal para resposta",
-            value: `${data.deadline} (15 dias, Lei 13.709/2018)`,
-          },
+          // The statute fixes the fifteen days only for access (art. 19, II);
+          // for the other rights they are the office's own rule, and the
+          // receipt must not dress them up as law.
+          dataRightsDeadlineIsLegal(data.right)
+            ? {
+                label: "Prazo legal para resposta",
+                value: `${data.deadline} (15 dias, Lei 13.709/2018, art. 19, II)`,
+              }
+            : {
+                label: "Prazo de resposta",
+                value: `${data.deadline} (15 dias, prazo da serventia)`,
+              },
         ],
       },
       { heading: "Descrição do pedido", paragraphs: [data.description] },

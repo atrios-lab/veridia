@@ -5,6 +5,7 @@ import { useActionState, useEffect, useState } from "react";
 import {
   DATA_RIGHT_OPTIONS,
   DATA_RIGHTS_DEADLINE_DAYS,
+  dataRightsDeadlineLabel,
   manifestationLabel,
 } from "@/core/request/channels.ts";
 import { DEADLINE_CAVEAT, type PauseReason } from "@/core/request/deadline.ts";
@@ -1697,14 +1698,14 @@ export function DataRightsCard({
                 label="Respondido pelo Encarregado"
                 detail={
                   result.repliedAt
-                    ? `${formatDate(result.repliedAt)} · dentro do prazo legal`
+                    ? `${formatDate(result.repliedAt)} · dentro do prazo`
                     : undefined
                 }
               />
             ) : (
               <TimelineStep
                 label="Aguardando resposta do Encarregado"
-                detail={`dia ${result.dayOfDeadline} de ${DATA_RIGHTS_DEADLINE_DAYS} do prazo legal`}
+                detail={`dia ${result.dayOfDeadline} de ${DATA_RIGHTS_DEADLINE_DAYS} do prazo`}
               />
             )}
           </Timeline>
@@ -1725,7 +1726,8 @@ export function DataRightsCard({
                   Resposta até {formatCalendarDate(result.deadline)}
                 </div>
                 <div className="text-[11.5px] text-brand-muted">
-                  Prazo legal de {DATA_RIGHTS_DEADLINE_DAYS} dias
+                  {dataRightsDeadlineLabel(result.right)} de{" "}
+                  {DATA_RIGHTS_DEADLINE_DAYS} dias
                 </div>
               </div>
             </div>

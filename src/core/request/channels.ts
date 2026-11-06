@@ -100,7 +100,7 @@ export const DATA_RIGHT_OPTIONS: {
     id: "access",
     label: "Ver quais dados vocês têm sobre mim",
     legalName: "Acesso aos dados",
-    hint: "resposta em até 15 dias",
+    hint: "a lei garante resposta em até 15 dias",
     summary: "Acesso aos meus dados",
   },
   {
@@ -133,9 +133,10 @@ export function dataRightOption(right: DataRight) {
 }
 
 /**
- * Lei 13.709/2018, art. 19: fifteen days from the request. Fixed, unlike the
- * service request's term: this one is the law's, and the office cannot
- * stretch it from the panel.
+ * Fifteen days from the request, for every right. Fixed, unlike the service
+ * request's term: for access it is the law's (Lei 13.709/2018, art. 19, II),
+ * and the office keeps the same fifteen for the other rights as its own rule,
+ * so none of it is stretched from the panel.
  *
  * Counted in plain calendar days, deliberately not through the service
  * request's business-day counting: the business-day rule is Lei 14.382/2022's
@@ -145,12 +146,37 @@ export function dataRightOption(right: DataRight) {
  */
 export const DATA_RIGHTS_DEADLINE_DAYS = 15;
 
+/**
+ * The fifteen days are the law's only for the full access statement (Lei
+ * 13.709/2018, art. 19, II): simplified access is immediate, and for
+ * rectification, deletion and the other rights of art. 18 the statute defers
+ * to an ANPD regulation that does not exist. The office answers all of them in
+ * fifteen days anyway, as its own rule, so the counting is the same for every
+ * right and only the wording changes: calling the term "legal" on a
+ * rectification would be the product writing law the legislature did not.
+ */
+export function dataRightsDeadlineIsLegal(right: DataRight): boolean {
+  return right === "access";
+}
+
+/** One sentence, said to the holder, on where the fifteen days come from. */
+export function dataRightsDeadlineNotice(right: DataRight): string {
+  return dataRightsDeadlineIsLegal(right)
+    ? `A lei garante resposta em até ${DATA_RIGHTS_DEADLINE_DAYS} dias.`
+    : `A serventia responde em até ${DATA_RIGHTS_DEADLINE_DAYS} dias.`;
+}
+
+/** The term's short name for a heading or a label next to the date. */
+export function dataRightsDeadlineLabel(right: DataRight): string {
+  return dataRightsDeadlineIsLegal(right) ? "Prazo legal" : "Prazo de resposta";
+}
+
 export function dataRightsDeadline(requestedOn: IsoDate): IsoDate {
   return addDays(requestedOn, DATA_RIGHTS_DEADLINE_DAYS);
 }
 
 /**
- * Which day of the legal term today is, counting the day of the request as
+ * Which day of the term today is, counting the day of the request as
  * day 1. Past the term it keeps counting: a deadline that stops at fifteen
  * would hide exactly the case that matters.
  */

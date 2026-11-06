@@ -170,6 +170,39 @@ test("the data rights receipt keeps its key in the body", () => {
   assert.match(flatten(document.sections), /K4TP-2W9C-QJ7M/);
 });
 
+test("o recibo só cita a lei no prazo quando o direito é o acesso", () => {
+  // LGPD art. 19, II fixa os 15 dias para a declaração completa de acesso;
+  // para os demais direitos o prazo é regra da serventia, e o recibo diz isso.
+  const base = {
+    protocolNumber: "SOL.2026.000021",
+    accessKey: "K4TP-2W9C-QJ7M",
+    applicantName: "João Batista",
+    email: "joao@exemplo.com",
+    cpf: null,
+    description: "Pedido do titular.",
+    createdAt: new Date("2026-08-04T12:00:00Z"),
+    deadline: "19/08/2026",
+  };
+  const acesso = flatten(
+    buildDataRightsReceipt(cartorioMarinho, { ...base, right: "access" })
+      .sections,
+  );
+  assert.match(acesso, /Prazo legal para resposta/);
+  assert.match(
+    acesso,
+    /19\/08\/2026 \(15 dias, Lei 13\.709\/2018, art\. 19, II\)/,
+  );
+
+  const correcao = flatten(
+    buildDataRightsReceipt(cartorioMarinho, { ...base, right: "rectification" })
+      .sections,
+  );
+  assert.match(correcao, /Prazo de resposta/);
+  assert.match(correcao, /19\/08\/2026 \(15 dias, prazo da serventia\)/);
+  assert.doesNotMatch(correcao, /13\.709/);
+  assert.doesNotMatch(correcao, /Prazo legal/);
+});
+
 test("the signature block says how to sign it, and who signs", () => {
   const document = buildRequerimento(cartorioMarinho, marriage, data);
   assert.match(document.signature.join("\n"), /Gov\.br/);

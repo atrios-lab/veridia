@@ -3,6 +3,7 @@ import { after } from "next/server";
 import type { EmailText } from "@/core/email/text.ts";
 import {
   DATA_RIGHT_OPTIONS,
+  dataRightsDeadlineIsLegal,
   manifestationLabel,
 } from "@/core/request/channels.ts";
 import { isEmailContact } from "@/core/request/form.ts";
@@ -319,7 +320,8 @@ export interface NotifyOfficeDataRightsSubmittedParams {
 
 /**
  * The office's nudge that a new LGPD requerimento landed, so the 15-day
- * legal clock (Lei 13.709/2018) does not run unwatched behind an
+ * clock (the law's for access, Lei 13.709/2018 art. 19, II; the office's own
+ * rule for the other rights) does not run unwatched behind an
  * institutional inbox nobody opened. The right's legal name is fine to
  * name here (unlike the citizen-facing confirmation, there is no access
  * key standing between the office and its own panel), but the titular's
@@ -343,7 +345,9 @@ export function notifyOfficeDataRightsSubmitted(
         subject: `Requerimento recebido · ${protocolNumber}`,
         paragraphs: [
           `Um novo requerimento LGPD foi registrado (${protocolNumber}), pedindo ${legalName.toLowerCase()}.`,
-          "Consulte no painel para ver os detalhes e responder dentro do prazo legal de 15 dias.",
+          dataRightsDeadlineIsLegal(right)
+            ? "Consulte no painel para ver os detalhes e responder dentro do prazo legal de 15 dias (Lei 13.709/2018, art. 19, II)."
+            : "Consulte no painel para ver os detalhes e responder dentro do prazo de 15 dias da serventia.",
         ],
         buttonLabel: "Ver o requerimento",
         footnote:

@@ -22,15 +22,37 @@ correção, exclusão e uma opção aberta para os demais direitos e dúvidas.
 - **WHEN** o formulário é enviado sem direito escolhido
 - **THEN** o pedido não é gravado e o campo é apontado como obrigatório
 
-### Requirement: Prazo legal declarado antes do envio
+### Requirement: Prazo de resposta declarado antes do envio
 
-O prazo legal de 15 dias da Lei 13.709/2018 SHALL aparecer na página do formulário, junto do
-direito escolhido, antes de qualquer envio — e não apenas na confirmação.
+O prazo de 15 dias para resposta SHALL aparecer na página do formulário, junto do direito
+escolhido, antes de qualquer envio, e não apenas na confirmação. O texto SHALL apresentar os 15
+dias como garantia da Lei 13.709/2018 (art. 19, II) apenas para o direito de acesso; para os
+demais direitos SHALL dizer que a serventia responde em até 15 dias, sem citar lei, porque a LGPD
+remete esses prazos a regulamento da Agência Nacional de Proteção de Dados (ANPD) ainda não
+editado. A contagem do prazo é a mesma para todos os direitos.
+
+A página SHALL trazer também, em linguagem de titular, de onde vem cada prazo: a confirmação de
+que a serventia trata dados do titular, ou o acesso em formato simplificado, é atendida na hora;
+a declaração completa de acesso sai em até 15 dias (LGPD, art. 19, II); correção, exclusão e os
+demais pedidos recebem resposta em até 15 dias, prazo que a serventia adota como regra interna; e
+pedidos com procedimento próprio, como retificação de registro ou emissão de certidão, seguem os
+prazos da Lei 6.015/1973.
 
 #### Scenario: Prazo visível no formulário
 
 - **WHEN** a página do canal LGPD é exibida
-- **THEN** o prazo de 15 dias aparece na introdução e no subtítulo do direito escolhido
+- **THEN** a introdução diz que a serventia responde em até 15 dias e que, para o acesso, esse
+  prazo é garantido pela Lei 13.709/2018
+- **AND** o subtítulo da opção de acesso diz que a lei garante resposta em até 15 dias
+- **AND** um quadro de prazos separa a confirmação imediata, a declaração completa de acesso em
+  15 dias por lei, os demais pedidos em 15 dias por regra da serventia e os procedimentos da Lei
+  6.015/1973
+
+#### Scenario: Demais direitos não chamam o prazo de legal
+
+- **WHEN** o titular pede correção, exclusão ou outro direito
+- **THEN** a confirmação, a consulta do protocolo, o recibo, o painel e o e-mail à serventia
+  falam em prazo de resposta de 15 dias da serventia, sem citar a Lei 13.709/2018
 
 ### Requirement: Encarregado de dados publicado sem roubar a dobra
 
@@ -74,6 +96,8 @@ requerimento em PDF.
 - **WHEN** o requerimento é registrado
 - **THEN** a confirmação exibe a data limite correspondente a 15 dias contados da data do
   pedido, com o dia corrente identificado como dia 1 de 15
+- **AND** o prazo é chamado de "Prazo legal" só no pedido de acesso; nos demais direitos, de
+  "Prazo de resposta"
 
 #### Scenario: Recibo protegido
 
