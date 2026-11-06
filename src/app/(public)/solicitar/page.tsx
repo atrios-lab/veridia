@@ -220,8 +220,8 @@ function StepHeader({
             <Icon name="arrowLeft" className="h-5 w-5" />
           </Link>
         )}
-        <span className="text-[11px] font-bold uppercase tracking-[0.16em] text-brand-accent-ink">
-          Serviços on-line
+        <span className="font-serif text-sm font-medium text-brand-accent-ink">
+          Solicitação de atos
         </span>
       </div>
       <div className="mt-3 md:flex md:items-center md:gap-6">

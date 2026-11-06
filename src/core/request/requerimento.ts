@@ -92,7 +92,7 @@ export interface RequerimentoDocument {
    * draws. Never set explicitly by the builders below; only the union type
    * needs it named. */
   kind?: "requerimento";
-  /** Small letterspaced line above the title ("Serviços on-line"). */
+  /** Small letterspaced line above the title ("Solicitação de atos"). */
   eyebrow: string;
   title: string;
   /** Protocol and date, right under the title, where the eye lands first. */
@@ -223,7 +223,7 @@ export function buildRequerimento(
   sections.push({ heading: "Declarações", paragraphs: declarations });
 
   return {
-    eyebrow: "Serviços on-line",
+    eyebrow: "Solicitação de atos",
     title: "Requerimento de serviço",
     subtitle: `Protocolo ${data.protocolNumber} · ${formatOfficeDate(data.createdAt)}`,
     office: [
@@ -261,7 +261,7 @@ export function buildAccessReceipt(
   data: AccessReceiptData,
 ): RequerimentoDocument {
   return {
-    eyebrow: "Serviços on-line",
+    eyebrow: "Solicitação de atos",
     title: "Comprovante de acesso",
     subtitle: `Protocolo ${data.protocolNumber} · ${formatOfficeDate(data.createdAt)}`,
     office: [

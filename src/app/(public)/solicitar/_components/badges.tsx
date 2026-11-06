@@ -74,9 +74,10 @@ export function ProcessingLegend() {
         O selo diz onde ele <strong>termina</strong>:{" "}
         <strong>Termina on-line</strong>, você assina o requerimento pelo Gov.br
         e resolve sem sair de casa; <strong>Termina no balcão</strong>, o pedido
-        adianta a análise, mas você precisa comparecer para concluir.{" "}
-        <strong>Só identificação</strong>: além do requerimento assinado, a
-        serventia não pede outro documento.
+        adianta a análise, mas você precisa comparecer para concluir;{" "}
+        <strong>Termina no balcão ou on-line</strong>, você conclui de uma das
+        duas formas. <strong>Só identificação</strong>: além do requerimento
+        assinado, a serventia não pede outro documento.
       </p>
     </div>
   );

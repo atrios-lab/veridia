@@ -35,7 +35,8 @@ export default async function PrivacyPolicyPage() {
               <strong className="text-brand-text">Pedido de serviço:</strong>{" "}
               nome, CPF, contato e os documentos enviados para instruir o ato
               solicitado, para identificar quem faz o pedido e dar andamento e
-              resposta a ele.
+              resposta a ele. O CPF é pedido para qualificar o requerente,
+              conforme a Lei 6.015/1973.
             </li>
             <li>
               <strong className="text-brand-text">Agendamento:</strong> nome,

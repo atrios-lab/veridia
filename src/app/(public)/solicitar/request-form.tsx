@@ -550,7 +550,10 @@ export function RequestForm({
             id="description"
             rows={4}
             className={inputClass}
-            placeholder="Ex.: queremos casar em outubro deste ano."
+            placeholder={
+              act.descriptionPlaceholder ??
+              "Ex.: queremos casar em outubro deste ano."
+            }
             {...register("description")}
           />
           <FieldError message={errorFor("description")} />
