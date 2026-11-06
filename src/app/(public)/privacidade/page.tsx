@@ -38,8 +38,9 @@ export default async function PrivacyPolicyPage() {
               resposta a ele.
             </li>
             <li>
-              <strong className="text-brand-text">Agendamento:</strong> nome e
-              contato, para reservar seu horário no balcão.
+              <strong className="text-brand-text">Agendamento:</strong> nome,
+              contato e a descrição do que você precisa, para reservar seu
+              horário no balcão e preparar o atendimento.
             </li>
             <li>
               <strong className="text-brand-text">Ouvidoria:</strong> nome,

@@ -183,6 +183,13 @@
       "when": 1792032343746,
       "tag": "0025_remover_andamento_pago",
       "breakpoints": true
+    },
+    {
+      "idx": 26,
+      "version": "7",
+      "when": 1793934478713,
+      "tag": "0026_adicionar_detalhe_do_servico_no_agendamento",
+      "breakpoints": true
     }
   ]
 }
