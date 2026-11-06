@@ -64,8 +64,12 @@ export function DaySlotList({
     );
   }
 
+  // A container, not a viewport breakpoint: the list's width depends on the
+  // panel's sidebar and the day's side column, so at a 1024px window it is
+  // narrower than on a large phone held sideways. Each row reads this width to
+  // decide whether its actions fit beside the text or go under it.
   return (
-    <div className="border-t border-admin-border">
+    <div className="@container border-t border-admin-border">
       {rows.map((row) =>
         row.kind === "appointment" ? (
           <AppointmentRow
@@ -95,7 +99,7 @@ function AppointmentRow({ appointment }: { appointment: DayAppointment }) {
 
   return (
     <div className="border-b border-admin-border px-5 py-3.5 text-[13px] last:border-b-0">
-      <div className="grid grid-cols-[76px_1fr_auto] items-center gap-3">
+      <div className="grid grid-cols-[76px_1fr] items-center gap-3 @2xl:grid-cols-[76px_1fr_auto]">
         <span className="font-bold tabular-nums text-admin-primary">
           {appointment.slotTime}
           <span className="block text-[10.5px] font-normal text-admin-faint">
@@ -103,8 +107,8 @@ function AppointmentRow({ appointment }: { appointment: DayAppointment }) {
           </span>
         </span>
         <span className="min-w-0" title={appointment.email}>
-          <span className="flex items-center gap-2">
-            <span className="truncate font-semibold text-admin-text">
+          <span className="flex flex-wrap items-center gap-x-2 gap-y-1 @2xl:flex-nowrap">
+            <span className="min-w-0 font-semibold text-admin-text @2xl:truncate">
               {appointment.citizenName}
             </span>
             {deskBooked ? (
@@ -120,7 +124,7 @@ function AppointmentRow({ appointment }: { appointment: DayAppointment }) {
               />
             )}
           </span>
-          <span className="mt-0.5 block truncate text-[11.5px] text-admin-faint">
+          <span className="mt-0.5 block text-[11.5px] text-admin-faint @2xl:truncate">
             {appointment.serviceLabel} · {appointment.mode} ·{" "}
             {appointment.phone}
             {appointment.protocolNumber && (
@@ -134,7 +138,7 @@ function AppointmentRow({ appointment }: { appointment: DayAppointment }) {
           </span>
         </span>
         {live ? (
-          <span className="flex justify-end gap-1.5">
+          <span className="col-span-2 flex flex-wrap gap-1.5 @2xl:col-span-1 @2xl:justify-end">
             <AttendButton id={appointment.id} />
             <NoShowButton id={appointment.id} />
             <button
@@ -146,7 +150,7 @@ function AppointmentRow({ appointment }: { appointment: DayAppointment }) {
             </button>
           </span>
         ) : (
-          <span />
+          <span className="hidden @2xl:block" />
         )}
       </div>
 
@@ -203,7 +207,7 @@ function FreeSlotRow({
 
   return (
     <div className="border-b border-admin-border bg-admin-input-bg/40 px-5 py-3.5 text-[13px] last:border-b-0">
-      <div className="grid grid-cols-[76px_1fr_auto] items-center gap-3">
+      <div className="grid grid-cols-[76px_1fr] items-center gap-3 @2xl:grid-cols-[76px_1fr_auto]">
         <span className="font-bold tabular-nums text-admin-faint">{time}</span>
         <span className="text-admin-muted">
           {offered
@@ -216,12 +220,12 @@ function FreeSlotRow({
           <button
             type="button"
             onClick={() => setReserving((open) => !open)}
-            className="justify-self-end rounded-lg border border-dashed border-admin-border px-2.5 py-1.5 text-[11.5px] font-semibold text-admin-muted hover:bg-admin-input-bg"
+            className="col-span-2 justify-self-start rounded-lg border border-dashed border-admin-border px-2.5 py-1.5 text-[11.5px] font-semibold text-admin-muted hover:bg-admin-input-bg @2xl:col-span-1 @2xl:justify-self-end"
           >
             Reservar para um cidadão
           </button>
         ) : (
-          <span />
+          <span className="hidden @2xl:block" />
         )}
       </div>
       {reserving && offered && (
