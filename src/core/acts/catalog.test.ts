@@ -307,6 +307,24 @@ test("o selo diz onde o ato termina, nunca onde ele pode ser pedido", () => {
   assert.match(PROCESSING_MODE_HINTS.online, /não precisa ir/);
 });
 
+test("o Gov.br assina o requerimento; o ato notarial, só o e-Notariado", () => {
+  // CNN, art. 286, III: as partes assinam o ato notarial eletrônico
+  // exclusivamente no e-Notariado. Dizer só "você assina pelo Gov.br" fazia
+  // parecer que aquela assinatura concluía a ata.
+  assert.match(PROCESSING_MODE_HINTS.online, /requerimento pelo Gov\.br/);
+
+  const ata = getAct("notas-ata-notarial");
+  assert.match(ata?.processingHint ?? "", /e-Notariado/);
+  assert.match(ata?.guidance ?? "", /e-Notariado/);
+
+  // A regra é dos tabeliães de notas: registros e protesto não usam a
+  // plataforma, e nenhum texto de lá pode mandar o cidadão para ela.
+  const citamPlataforma = ACTS.filter((act) =>
+    /e-Notariado/.test(`${act.processingHint} ${act.guidance}`),
+  );
+  assert.ok(citamPlataforma.every((act) => act.attribution === "NOTAS"));
+});
+
 test("o bloco 3 do Anexo I tem os quatro itens oficiais, na ordem do DJe", () => {
   assert.deepEqual(
     ANEXO_I_ACT_OPTIONS.map((option) => option.label),

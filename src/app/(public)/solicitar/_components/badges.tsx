@@ -11,6 +11,7 @@ import { Icon } from "../../_components/icon.tsx";
 interface ActTravel {
   processingMode: ProcessingMode;
   identificationOnly?: true;
+  processingHint?: string;
 }
 
 function Badge({ label, atCounter }: { label: string; atCounter?: boolean }) {
@@ -54,7 +55,7 @@ export function ProcessingHint({ act }: { act: ActTravel }) {
     <span className="text-[11.5px] text-brand-muted">
       {act.identificationOnly
         ? IDENTIFICATION_ONLY_HINT
-        : PROCESSING_MODE_HINTS[act.processingMode]}
+        : (act.processingHint ?? PROCESSING_MODE_HINTS[act.processingMode])}
     </span>
   );
 }
