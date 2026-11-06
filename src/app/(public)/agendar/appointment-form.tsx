@@ -486,6 +486,23 @@ function AppointmentForm({
 
         <div>
           <label
+            htmlFor="serviceDetails"
+            className="mb-1.5 block text-[13px] font-semibold"
+          >
+            Descreva o que você precisa
+          </label>
+          <textarea
+            id="serviceDetails"
+            rows={3}
+            className={inputClass}
+            placeholder="Ex.: qual documento você precisa e para que ele vai servir."
+            {...register("serviceDetails")}
+          />
+          <FieldError message={errorFor("serviceDetails")} />
+        </div>
+
+        <div>
+          <label
             htmlFor="citizenName"
             className="mb-1.5 block text-[13px] font-semibold"
           >

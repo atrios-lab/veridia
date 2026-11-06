@@ -39,6 +39,8 @@ const optionalText = (max: number) =>
  * citizen call it off all travel through it. The telephone is the office's way
  * of reaching a person the same day. The CPF is optional on purpose: most
  * counter visits do not need it before the citizen shows up with the document.
+ * The service details are required: the list of services says which counter,
+ * and only the citizen's own words say what the office should have ready.
  *
  * The service and the mode are checked against what the office actually
  * offers, not against a list this module knows: both are the serventia's to
@@ -75,6 +77,7 @@ export function appointmentSchema(options: {
         (mode) => options.modes.includes(mode),
         "Escolha o modo de atendimento.",
       ),
+    serviceDetails: requiredText(4000),
   });
 }
 

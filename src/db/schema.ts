@@ -557,6 +557,10 @@ export const appointments = pgTable(
     serviceId: text("service_id").notNull(),
     serviceLabel: text("service_label").notNull(),
     mode: text("mode").notNull(),
+    // What the citizen needs within the chosen service, in their own words.
+    // Required on the site, but nullable here: appointments from before the
+    // field existed and the ones the office reserves at the counter have none.
+    serviceDetails: text("service_details"),
     // "booked" | "attended" | "no_show" | "cancelled", see
     // core/scheduling/appointment.
     status: text("status").notNull().default("booked"),

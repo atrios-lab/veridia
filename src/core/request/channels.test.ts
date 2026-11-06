@@ -30,6 +30,7 @@ const validBooking = {
   cpf: "",
   serviceId: "procuracao",
   mode: "Presencial",
+  serviceDetails: "  Procuração   para vender um terreno. ",
 };
 
 test("an appointment needs a day, a time, an e-mail and a phone", () => {
@@ -51,6 +52,31 @@ test("the e-mail is required: it is the appointment's only channel", () => {
   );
   assert.equal(
     appointment.safeParse({ ...validBooking, phone: "123" }).success,
+    false,
+  );
+});
+
+test("the service details are required, tidied and capped like other descriptions", () => {
+  assert.equal(
+    appointment.parse(validBooking).serviceDetails,
+    "Procuração para vender um terreno.",
+  );
+  for (const serviceDetails of ["", "   "]) {
+    assert.equal(
+      appointment.safeParse({ ...validBooking, serviceDetails }).success,
+      false,
+    );
+  }
+  const { serviceDetails: _omitted, ...withoutDetails } = validBooking;
+  assert.equal(appointment.safeParse(withoutDetails).success, false);
+  assert.equal(
+    appointment.safeParse({ ...validBooking, serviceDetails: "a".repeat(4000) })
+      .success,
+    true,
+  );
+  assert.equal(
+    appointment.safeParse({ ...validBooking, serviceDetails: "a".repeat(4001) })
+      .success,
     false,
   );
 });

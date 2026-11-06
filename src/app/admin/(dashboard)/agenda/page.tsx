@@ -84,6 +84,7 @@ export default async function AgendaPage({
         cpf: appointment.cpf,
         serviceLabel: appointment.serviceLabel,
         mode: appointment.mode,
+        serviceDetails: appointment.serviceDetails,
         status: appointment.status,
         origin: appointment.origin,
         protocolNumber: appointment.protocolNumber,

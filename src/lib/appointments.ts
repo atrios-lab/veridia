@@ -211,6 +211,8 @@ export interface NewAppointment {
   serviceId: string;
   serviceLabel: string;
   mode: string;
+  /** The citizen's own words on what they need. Absent on a desk booking. */
+  serviceDetails?: string;
   cancelTokenHash: string;
   /** Defaults to "site": the citizen booked it themselves. */
   origin?: AppointmentOrigin;
@@ -273,6 +275,7 @@ export async function bookAppointmentWith(
           serviceId: input.serviceId,
           serviceLabel: input.serviceLabel,
           mode: input.mode,
+          serviceDetails: input.serviceDetails ?? null,
           cancelTokenHash: input.cancelTokenHash,
           origin,
           protocolYear: year,

@@ -66,8 +66,9 @@ gravado SHALL preservar o rótulo do serviço da época, mesmo que a lista mude 
 
 ### Requirement: Agenda do dia
 
-O painel SHALL mostrar os agendamentos por dia, com horário, nome, contato, serviço, modo e
-protocolo (quando houver) de cada um, e os estados agendado, reservado no balcão, atendido,
+O painel SHALL mostrar os agendamentos por dia, com horário, nome, contato, serviço, modo,
+protocolo (quando houver) e o que o cidadão escreveu sobre o que precisa (quando houver) de cada
+um, e os estados agendado, reservado no balcão, atendido,
 faltou e cancelado. As ações disponíveis sobre um agendamento vivo SHALL ser marcar atendido,
 marcar falta e cancelar; confirmar e propor outro horário MUST NOT existir.
 
@@ -75,6 +76,16 @@ marcar falta e cancelar; confirmar e propor outro horário MUST NOT existir.
 
 - **WHEN** o operador abre a agenda de um dia com agendamentos
 - **THEN** vê a lista ordenada por horário com nome, serviço, modo, contato e estado de cada um
+
+#### Scenario: Agendamento com a descrição do cidadão
+
+- **WHEN** o agendamento foi feito pelo site com a descrição do que o cidadão precisa
+- **THEN** a linha mostra esse texto por inteiro, abaixo dos dados do agendamento
+
+#### Scenario: Agendamento sem descrição
+
+- **WHEN** o agendamento é anterior ao campo ou foi reservado no balcão
+- **THEN** a linha aparece como sempre, sem espaço vazio nem aviso de texto ausente
 
 ### Requirement: Cancelamento individual com motivo por e-mail
 

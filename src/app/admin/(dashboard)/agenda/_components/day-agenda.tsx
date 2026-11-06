@@ -21,6 +21,7 @@ export interface DayAppointment {
   cpf: string | null;
   serviceLabel: string;
   mode: string;
+  serviceDetails: string | null;
   status: string;
   origin: string;
   protocolNumber: string | null;
@@ -148,6 +149,13 @@ function AppointmentRow({ appointment }: { appointment: DayAppointment }) {
           <span />
         )}
       </div>
+
+      {appointment.serviceDetails && (
+        <p className="mt-1.5 break-words text-[12px] leading-relaxed text-admin-text">
+          <span className="font-semibold">O que precisa:</span>{" "}
+          {appointment.serviceDetails}
+        </p>
+      )}
 
       {appointment.cancelReason && (
         <p className="mt-1.5 text-[11.5px] text-admin-muted">

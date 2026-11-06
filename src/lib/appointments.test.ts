@@ -54,6 +54,27 @@ function newAppointment(
   };
 }
 
+test("what the citizen wrote is stored, and a booking without it stays null", async () => {
+  const written = await bookAppointmentWith(
+    db,
+    TENANT.slug,
+    newAppointment({
+      slotTime: "10:00",
+      date: "2098-03-11",
+      serviceDetails: "Segunda via da certidão de casamento.",
+    }),
+  );
+  assert.equal(written.serviceDetails, "Segunda via da certidão de casamento.");
+
+  // The shape of a desk reservation and of every appointment before the field.
+  const without = await bookAppointmentWith(
+    db,
+    TENANT.slug,
+    newAppointment({ slotTime: "11:00", date: "2098-03-11" }),
+  );
+  assert.equal(without.serviceDetails, null);
+});
+
 test("a booked time gets a protocol and is found back by its own cancel token", async () => {
   const token = generateCancelToken();
   const booked = await bookAppointmentWith(

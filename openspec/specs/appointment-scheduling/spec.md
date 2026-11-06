@@ -95,14 +95,16 @@ relógio da serventia MUST NOT ser oferecidos.
 
 O formulário SHALL exigir dia, horário, nome completo, e-mail e telefone; CPF SHALL ser
 opcional. O cidadão SHALL escolher o serviço desejado na lista configurada pela serventia e o
-modo de atendimento na lista configurada. O envio válido SHALL gravar o agendamento
+modo de atendimento na lista configurada, e SHALL descrever em texto livre, de até 4000
+caracteres, o que precisa dentro do serviço escolhido. O e-mail de confirmação MUST NOT repetir
+esse texto. O envio válido SHALL gravar o agendamento
 imediatamente, sem confirmação posterior da serventia. O formulário SHALL usar campo-armadilha
 invisível contra robô e MUST NOT usar CAPTCHA nem gerar protocolo ou chave.
 
 #### Scenario: Envio válido agenda na hora
 
 - **WHEN** o cidadão envia dia, horário livre, nome, e-mail e telefone válidos, com serviço e
-  modo escolhidos
+  modo escolhidos e a descrição do que precisa
 - **THEN** o agendamento é gravado como confirmado, a tela de confirmação é exibida e o e-mail
   de confirmação é enviado
 
@@ -110,6 +112,11 @@ invisível contra robô e MUST NOT usar CAPTCHA nem gerar protocolo ou chave.
 
 - **WHEN** o campo invisível chega preenchido
 - **THEN** a tela de sucesso é exibida e nada é gravado
+
+#### Scenario: Descrição do que precisa ausente
+
+- **WHEN** o envio chega sem a descrição, só com espaços, ou com mais de 4000 caracteres
+- **THEN** o agendamento não é gravado e o formulário aponta o erro no campo
 
 #### Scenario: E-mail ausente
 

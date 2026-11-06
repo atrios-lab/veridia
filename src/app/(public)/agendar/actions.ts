@@ -89,6 +89,7 @@ export async function submitAppointment(
     cpf: formData.get("cpf") ?? "",
     serviceId: formData.get("serviceId") ?? "",
     mode: formData.get("mode") ?? "",
+    serviceDetails: formData.get("serviceDetails") ?? "",
   });
   if (!parsed.success) {
     const fieldErrors: Record<string, string> = {};
