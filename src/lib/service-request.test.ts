@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { after, before, mock, test } from "node:test";
-import { eq } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
 import { getAct } from "@/core/acts/catalog.ts";
 import {
   generateAccessKey,
@@ -9,7 +9,7 @@ import {
 } from "@/core/request/access-key.ts";
 import { TENANTS } from "@/core/tenant/resolve.ts";
 import type { Database } from "@/db/index.ts";
-import { emailBounces, serviceRequests } from "@/db/schema.ts";
+import { auditLog, emailBounces, serviceRequests } from "@/db/schema.ts";
 import { createTestDb } from "@/db/test-db.ts";
 import {
   createRecordWith,
@@ -25,6 +25,7 @@ import {
   respondToRecordWith,
   saveDraftReplyWith,
   setRequestAmountWith,
+  updateRequestDataWith,
   updateRequestStatusWith,
 } from "./service-request.ts";
 
@@ -119,6 +120,125 @@ test("a second request for the same act and CPF is a duplicate, even with a diff
     { cpf, email: "rosa.dois@exemplo.com" },
   );
   assert.equal(duplicate, first.protocolNumber);
+});
+
+const fileCertificate = (contact: string, actVariant?: string) =>
+  createServiceRequestWith(db, TENANT, ACT, {
+    applicantName: "Lia",
+    contact,
+    accessKeyHash: hashAccessKey(`chave-${contact}`),
+    details: actVariant ? { actVariant } : {},
+  });
+
+test("another kind of the same act is not a duplicate", async () => {
+  const email = "tipos-diferentes@exemplo.com";
+  await fileCertificate(email, "nascimento");
+
+  const duplicate = await findOpenServiceRequestDuplicateWith(
+    db,
+    TENANT.slug,
+    ACT.id,
+    { email },
+    "casamento",
+  );
+  assert.equal(duplicate, undefined);
+});
+
+test("the same kind of the same act is a duplicate, even behind a newer one", async () => {
+  const email = "mesmo-tipo@exemplo.com";
+  const first = await fileCertificate(email, "casamento");
+  await fileCertificate(email, "nascimento");
+
+  const duplicate = await findOpenServiceRequestDuplicateWith(
+    db,
+    TENANT.slug,
+    ACT.id,
+    { email },
+    "casamento",
+  );
+  assert.equal(duplicate, first.protocolNumber);
+});
+
+test("an open request with no kind stored does not block one with a kind", async () => {
+  const email = "sem-tipo@exemplo.com";
+  await fileCertificate(email);
+
+  const duplicate = await findOpenServiceRequestDuplicateWith(
+    db,
+    TENANT.slug,
+    ACT.id,
+    { email },
+    "casamento",
+  );
+  assert.equal(duplicate, undefined);
+});
+
+const CORRECTION = {
+  applicantName: "Lia Corrigida",
+  contact: "correcao@exemplo.com",
+  phone: "(84) 98888-0000",
+  cpf: null,
+  purpose: null,
+  description: null,
+  createdAt: new Date("2026-08-09T12:00:00Z"),
+};
+
+test("correcting the kind keeps the rest of details and enters the history", async () => {
+  const { id, protocolNumber } = await createServiceRequestWith(
+    db,
+    TENANT,
+    ACT,
+    {
+      applicantName: "Lia",
+      contact: "correcao@exemplo.com",
+      accessKeyHash: hashAccessKey("chave-correcao"),
+      details: {
+        actVariant: "nascimento",
+        consents: {
+          lgpd: "2026-08-09T12:00:00.000Z",
+          truth: "2026-08-09T12:00:00.000Z",
+        },
+      },
+    },
+  );
+
+  await updateRequestDataWith(
+    db,
+    TENANT.slug,
+    id,
+    { ...CORRECTION, actVariant: "casamento" },
+    "operador-1",
+  );
+
+  const found = await findByProtocolWith(db, TENANT.slug, protocolNumber);
+  assert.ok(found);
+  const details = found.details as Record<string, unknown>;
+  assert.equal(details.actVariant, "casamento");
+  assert.equal(details.phone, "(84) 98888-0000");
+  assert.ok(details.consents, "os aceites gravados não podem se perder");
+
+  const [entry] = await db
+    .select({ actorId: auditLog.actorId })
+    .from(auditLog)
+    .where(
+      and(
+        eq(auditLog.action, "service-request.edit"),
+        eq(auditLog.targetId, id),
+      ),
+    );
+  assert.equal(entry?.actorId, "operador-1");
+});
+
+test("a correction with no kind leaves the stored one alone", async () => {
+  const { id, protocolNumber } = await fileCertificate(
+    "correcao-vazia@exemplo.com",
+    "obito",
+  );
+
+  await updateRequestDataWith(db, TENANT.slug, id, CORRECTION, "operador-1");
+
+  const found = await findByProtocolWith(db, TENANT.slug, protocolNumber);
+  assert.equal((found?.details as { actVariant?: string }).actVariant, "obito");
 });
 
 test("a matching protocol and e-mail reissues the key, invalidating the old one", async () => {

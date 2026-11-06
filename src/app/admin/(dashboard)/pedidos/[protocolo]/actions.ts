@@ -18,7 +18,11 @@ import {
   MIN_DEADLINE_DAYS,
   readDeadline,
 } from "@/core/request/deadline.ts";
-import { purposeFor, requestDataEditSchema } from "@/core/request/edit.ts";
+import {
+  purposeFor,
+  requestDataEditSchema,
+  resolveVariantEdit,
+} from "@/core/request/edit.ts";
 import {
   EXEMPTION_DECISION_OUTCOMES,
   isAllowedTransition,
@@ -617,10 +621,20 @@ export async function updateRequestDataAction(
     const act = stored.actId
       ? getActForTenant(tenant, stored.actId)
       : undefined;
+    const variant = resolveVariantEdit(
+      act,
+      readExemption(stored.details)?.actId,
+      String(formData.get("actVariant") ?? ""),
+    );
+    if (!variant.ok) return { status: "error", message: variant.message };
     await updateRequestData(
       tenant.slug,
       requestId,
-      { ...parsed.data, purpose: purposeFor(act, parsed.data.purpose) },
+      {
+        ...parsed.data,
+        purpose: purposeFor(act, parsed.data.purpose),
+        actVariant: variant.actVariant,
+      },
       session.user.id,
     );
   } catch (error) {

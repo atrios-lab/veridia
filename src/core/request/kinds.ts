@@ -1,4 +1,5 @@
 import { z } from "zod";
+import type { Act } from "../acts/catalog.ts";
 import { MAX_MESSAGE_LENGTH, TEXT_TOO_LONG } from "../chat/message.ts";
 import { deadlineSchema } from "./deadline.ts";
 import { PROTOCOL_PREFIXES, type ProtocolPrefix } from "./protocol.ts";
@@ -574,6 +575,11 @@ export const serviceRequestDetailsSchema = z.object({
   // for one kind is a migration the jsonb already covers. Nothing searches by
   // telephone; the day the panel does, it earns its column.
   phone: z.string().optional(),
+  // Which of the kinds the act groups was asked for (`Act.variants`), by id.
+  // Absent on an act without kinds and on anything filed before this existed:
+  // absent means "not known", never one of the options. Outside `exemption` on
+  // purpose, so the acceptance hash of a declaração does not depend on it.
+  actVariant: z.string().optional(),
   // Present means the citizen asked for the statutory exemption and signed the
   // declaration that goes with it; `declaredAt` is when. Same discipline as
   // `consents` right above: a declaration validated and thrown away is not
@@ -610,6 +616,25 @@ export function readExemption(
   );
   if (!parsed.success) return undefined;
   return { beneficiaries: [], ...parsed.data };
+}
+
+/**
+ * The act whose kinds a request answers. On the gratuidade entry that is the
+ * act the exemption asks for, since the entry itself groups nothing; undefined
+ * while that act is unknown (not chosen yet, or a request older than it).
+ */
+export function variantOwner(
+  act: Act,
+  exemptionActId: string | undefined,
+): Act | undefined {
+  return act.exemptionTargets
+    ? act.exemptionTargets.find((target) => target.id === exemptionActId)
+    : act;
+}
+
+export function readActVariant(details: unknown): string | undefined {
+  const value = (details as { actVariant?: unknown } | null)?.actVariant;
+  return typeof value === "string" && value !== "" ? value : undefined;
 }
 
 export function readPhone(details: unknown): string {

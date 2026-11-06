@@ -384,12 +384,19 @@ export async function saveInternalNote(
  * through unchecked. Checked before any attachment is stored, same reasoning
  * as the other pre-filing refusals in `submitServiceRequest`: a duplicate
  * found after upload would leave the files orphaned in the blob store.
+ *
+ * `actVariant` narrows it to the same kind of the act: a birth certificate is
+ * no duplicate of a marriage one. In the `WHERE` and not checked afterwards,
+ * because the query looks only at the most recent match. An open request with
+ * no kind stored does not match: nobody knows what it asked for, and refusing
+ * on a guess is what this narrowing exists to stop.
  */
 export async function findOpenServiceRequestDuplicateWith(
   database: Database,
   tenantSlug: string,
   actId: string,
   identity: { cpf?: string; email: string },
+  actVariant?: string,
 ): Promise<string | undefined> {
   const sameCitizen = identity.cpf
     ? or(
@@ -409,6 +416,9 @@ export async function findOpenServiceRequestDuplicateWith(
         eq(serviceRequests.kind, "service-request"),
         eq(serviceRequests.actId, actId),
         sameCitizen,
+        actVariant
+          ? sql`${serviceRequests.details}->>'actVariant' = ${actVariant}`
+          : undefined,
       ),
     )
     .orderBy(desc(serviceRequests.createdAt))
@@ -422,8 +432,15 @@ export async function findOpenServiceRequestDuplicate(
   tenantSlug: string,
   actId: string,
   identity: { cpf?: string; email: string },
+  actVariant?: string,
 ): Promise<string | undefined> {
-  return findOpenServiceRequestDuplicateWith(db, tenantSlug, actId, identity);
+  return findOpenServiceRequestDuplicateWith(
+    db,
+    tenantSlug,
+    actId,
+    identity,
+    actVariant,
+  );
 }
 
 /** Files a service request: the record whose kind carries an act. */
@@ -1374,23 +1391,26 @@ export async function setExemptionDecision(
  *
  * The act and the protocol number are not here and must never be: changing the
  * act changes the attribution and the legal basis of something already
- * protocolled, which is a new request, not an edit.
+ * protocolled, which is a new request, not an edit. The kind of act is: see
+ * `resolveVariantEdit`, which decides what reaches here.
  */
-export async function updateRequestData(
+export async function updateRequestDataWith(
+  database: Database,
   tenantSlug: string,
   id: string,
-  data: RequestDataEdit,
+  data: RequestDataEdit & { actVariant?: string },
   actorId: string,
 ): Promise<void> {
-  // The telephone has no column of its own: it lives in `details` (see
-  // `serviceRequestDetailsSchema`), so it is merged into the jsonb instead of
-  // assigned, the way the internal note is.
-  const { phone, ...columns } = data;
-  await db
+  // The telephone and the kind of act have no column of their own: they live
+  // in `details` (see `serviceRequestDetailsSchema`), so they are merged into
+  // the jsonb instead of assigned, the way the internal note is. An undefined
+  // `actVariant` drops out of the JSON and leaves the stored one alone.
+  const { phone, actVariant, ...columns } = data;
+  await database
     .update(serviceRequests)
     .set({
       ...columns,
-      details: sql`${serviceRequests.details} || ${JSON.stringify({ phone })}::jsonb`,
+      details: sql`${serviceRequests.details} || ${JSON.stringify({ phone, actVariant })}::jsonb`,
       updatedAt: new Date(),
     })
     .where(
@@ -1399,13 +1419,23 @@ export async function updateRequestData(
         eq(serviceRequests.id, id),
       ),
     );
-  await recordAudit({
+  await recordAuditWith(database, {
     tenantSlug,
     actorId,
     action: "service-request.edit",
     targetType: "service-request",
     targetId: id,
   });
+}
+
+/** The production singleton, for callers that do not test against it. */
+export async function updateRequestData(
+  tenantSlug: string,
+  id: string,
+  data: RequestDataEdit & { actVariant?: string },
+  actorId: string,
+): Promise<void> {
+  return updateRequestDataWith(db, tenantSlug, id, data, actorId);
 }
 
 /**

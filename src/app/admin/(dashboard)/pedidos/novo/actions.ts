@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import {
   ATTRIBUTION_SHORT_NAMES,
+  actVariantName,
   getActForTenant,
 } from "@/core/acts/catalog.ts";
 import { can } from "@/core/auth/roles.ts";
@@ -89,6 +90,7 @@ export async function createManualServiceRequest(
     description: formData.get("description") ?? "",
     purpose: formData.get("purpose") ?? "",
     parameterValue: "",
+    actVariant: formData.get("actVariant"),
     // Filed in person: the physical process at the counter is the consent,
     // there is no screen here for the citizen to tick these themselves, the
     // way there is in the public wizard.
@@ -117,8 +119,13 @@ export async function createManualServiceRequest(
     String(formData.get("fromConversationId") ?? "").trim() || undefined;
 
   try {
-    const { exemptionActId, certificateType, beneficiaries, ...data } =
-      parsed.data;
+    const {
+      actVariant,
+      exemptionActId,
+      certificateType,
+      beneficiaries,
+      ...data
+    } = parsed.data;
     const exemption = buildExemptionDetails(
       { exemptionActId, certificateType, beneficiaries },
       new Date().toISOString(),
@@ -137,6 +144,7 @@ export async function createManualServiceRequest(
       accessKeyHash: hashAccessKey(accessKey),
       details: {
         channel: fromConversationId ? "chat" : "counter",
+        ...(actVariant ? { actVariant } : {}),
         ...(exemption
           ? { exemption, deadline: { startedOn: today(), days: deadlineDays } }
           : {}),
@@ -177,7 +185,7 @@ export async function createManualServiceRequest(
       protocolNumber,
       accessKey,
       applicantName: parsed.data.applicantName,
-      actName: act.name,
+      actName: actVariantName(act, actVariant) ?? act.name,
       // The office's wall clock: Vercel runs in UTC, and from nine at night a
       // plain new Date() would stamp this "hoje" with tomorrow's hour, on the
       // screen of an office that is closed.

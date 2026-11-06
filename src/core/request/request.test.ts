@@ -63,6 +63,8 @@ const valid = {
   truthDeclaration: "on",
 };
 
+const validCertificate = { ...valid, actVariant: "nascimento" };
+
 test("protocol number is formatted for a human to dictate", () => {
   assert.equal(formatProtocolNumber("REQ", 2026, 148), "REQ.2026.000148");
   assert.equal(formatProtocolNumber("AGD", 2026, 1), "AGD.2026.000001");
@@ -163,7 +165,7 @@ test("only an e-mail contact can be written to", () => {
 
 test("a complete request is accepted and trimmed", () => {
   const parsed = serviceRequestSchema(certificate).parse({
-    ...valid,
+    ...validCertificate,
     applicantName: "  Maria   José  ",
   });
   assert.equal(parsed.applicantName, "Maria José");
@@ -173,7 +175,7 @@ test("a complete request is accepted and trimmed", () => {
 test("fields the act does not render may be absent entirely", () => {
   // react-hook-form only registers what is on the screen: purpose and
   // parameterValue arrive as undefined for the acts that do not ask them.
-  const { purpose: _p, parameterValue: _v, ...rest } = valid;
+  const { purpose: _p, parameterValue: _v, ...rest } = validCertificate;
   const parsed = serviceRequestSchema(certificate).safeParse(rest);
   assert.ok(parsed.success);
 });
@@ -201,7 +203,9 @@ test("an act outside the catalog cannot be sent without a description", () => {
 
 test("purpose is demanded only by the acts the law allows to ask", () => {
   // A certificate may never require it (Lei 6.015 art. 17).
-  assert.ok(serviceRequestSchema(certificate).safeParse(valid).success);
+  assert.ok(
+    serviceRequestSchema(certificate).safeParse(validCertificate).success,
+  );
   const result = serviceRequestSchema(search).safeParse(valid);
   assert.equal(result.success, false);
   assert.equal(result.error?.issues[0].path[0], "purpose");
@@ -234,6 +238,7 @@ test("a request filed on the site is refused without an e-mail", () => {
 test("the telephone is optional on the site, and checked when given", () => {
   const absent = publicServiceRequestSchema(certificate).safeParse({
     ...validOnline,
+    actVariant: "nascimento",
     phone: "",
   });
   assert.ok(absent.success);
@@ -242,6 +247,7 @@ test("the telephone is optional on the site, and checked when given", () => {
   // Punctuation is presentation: the office types it either way.
   const bare = publicServiceRequestSchema(certificate).safeParse({
     ...validOnline,
+    actVariant: "nascimento",
     phone: "84999990000",
   });
   assert.ok(bare.success);
@@ -249,6 +255,7 @@ test("the telephone is optional on the site, and checked when given", () => {
 
   const tooShort = publicServiceRequestSchema(certificate).safeParse({
     ...validOnline,
+    actVariant: "nascimento",
     phone: "9999-0000",
   });
   assert.equal(tooShort.success, false);
@@ -276,7 +283,9 @@ test("the act's own rules hold on both filings", () => {
 test("the counter keeps the either/or contact", () => {
   // The way out for whoever has no e-mail: the operator files it with a
   // telephone, which the public form no longer accepts.
-  assert.ok(serviceRequestSchema(certificate).safeParse(valid).success);
+  assert.ok(
+    serviceRequestSchema(certificate).safeParse(validCertificate).success,
+  );
 });
 
 test("CPF mask grows with the typing and caps at eleven digits", () => {
@@ -499,6 +508,7 @@ test("a gratuidade exige a declaração que a acompanha", () => {
   const semDeclaracao = publicServiceRequestSchema(gratuidade).safeParse({
     ...validOnline,
     exemptionActId: "rcpn-certidao",
+    actVariant: "nascimento",
     certificateType: "sem-busca",
     beneficiaries: [beneficiary()],
   });
@@ -508,6 +518,7 @@ test("a gratuidade exige a declaração que a acompanha", () => {
   const completo = publicServiceRequestSchema(gratuidade).safeParse({
     ...validOnline,
     exemptionActId: "rcpn-certidao",
+    actVariant: "nascimento",
     exemptionDeclaration: "on",
     certificateType: "sem-busca",
     beneficiaries: [beneficiary()],
@@ -529,6 +540,7 @@ test("a certidão exige o tipo, e só ela o pede", () => {
   const semTipo = publicServiceRequestSchema(gratuidade).safeParse({
     ...validOnline,
     exemptionActId: "rcpn-certidao",
+    actVariant: "nascimento",
     exemptionDeclaration: "on",
     beneficiaries: [beneficiary()],
   });
@@ -538,6 +550,7 @@ test("a certidão exige o tipo, e só ela o pede", () => {
   const comTipo = publicServiceRequestSchema(gratuidade).safeParse({
     ...validOnline,
     exemptionActId: "rcpn-certidao",
+    actVariant: "nascimento",
     exemptionDeclaration: "on",
     certificateType: "inteiro-teor",
     beneficiaries: [beneficiary()],
@@ -564,6 +577,7 @@ test("o schema aceita todo tipo de certidão que o catálogo declara", () => {
     const result = publicServiceRequestSchema(gratuidade).safeParse({
       ...validOnline,
       exemptionActId: "rcpn-certidao",
+      actVariant: "nascimento",
       exemptionDeclaration: "on",
       certificateType,
       beneficiaries: [beneficiary()],
@@ -599,6 +613,7 @@ test("representante legal e a rogo exigem o nome de quem assina", () => {
     const semAssinante = publicServiceRequestSchema(gratuidade).safeParse({
       ...validOnline,
       exemptionActId: "rcpn-certidao",
+      actVariant: "nascimento",
       exemptionDeclaration: "on",
       certificateType: "sem-busca",
       beneficiaries: [beneficiary({ signedBy })],
@@ -613,6 +628,7 @@ test("representante legal e a rogo exigem o nome de quem assina", () => {
     const comAssinante = publicServiceRequestSchema(gratuidade).safeParse({
       ...validOnline,
       exemptionActId: "rcpn-certidao",
+      actVariant: "nascimento",
       exemptionDeclaration: "on",
       certificateType: "sem-busca",
       beneficiaries: [
@@ -627,6 +643,7 @@ test("testemunhas da assinatura a rogo só existem no balcão", () => {
   const rogo = {
     ...validOnline,
     exemptionActId: "rcpn-certidao",
+    actVariant: "nascimento",
     exemptionDeclaration: "on",
     certificateType: "sem-busca",
     beneficiaries: [
@@ -694,13 +711,17 @@ test("ato comum não aceita ato-alvo de gratuidade", () => {
   const result = publicServiceRequestSchema(certificate).safeParse({
     ...validOnline,
     exemptionActId: "rcpn-certidao",
+    actVariant: "nascimento",
   });
   assert.equal(result.success, false);
   assert.equal(result.error?.issues[0].path[0], "exemptionActId");
 });
 
 test("um pedido sem gratuidade não ganha exigência nenhuma", () => {
-  const result = publicServiceRequestSchema(certificate).safeParse(validOnline);
+  const result = publicServiceRequestSchema(certificate).safeParse({
+    ...validOnline,
+    actVariant: "nascimento",
+  });
   assert.ok(result.success);
   assert.equal(result.data.exemptionActId, undefined);
 });
@@ -723,6 +744,114 @@ test("o aceite faltante é acusado mesmo no ato que não oferece gratuidade", ()
   });
   assert.equal(result.success, false);
   assert.equal(result.error?.issues[0].path[0], "lgpdConsent");
+});
+
+test("o ato com tipos exige o tipo, nos dois canais", () => {
+  for (const actVariant of [undefined, null, ""]) {
+    const online = publicServiceRequestSchema(certificate).safeParse({
+      ...validOnline,
+      actVariant,
+    });
+    assert.equal(online.success, false);
+    assert.equal(online.error?.issues[0].path[0], "actVariant");
+
+    const counter = serviceRequestSchema(certificate).safeParse({
+      ...valid,
+      actVariant,
+    });
+    assert.equal(counter.success, false);
+    assert.equal(counter.error?.issues[0].path[0], "actVariant");
+  }
+});
+
+test("o tipo escolhido passa pelo schema", () => {
+  for (const option of certificate.variants?.options ?? []) {
+    const parsed = serviceRequestSchema(certificate).parse({
+      ...valid,
+      actVariant: option.id,
+    });
+    assert.equal(parsed.actVariant, option.id);
+  }
+});
+
+test("o tipo de outro ato é recusado", () => {
+  const result = publicServiceRequestSchema(certificate).safeParse({
+    ...validOnline,
+    actVariant: "procuracao",
+  });
+  assert.equal(result.success, false);
+  assert.equal(result.error?.issues[0].path[0], "actVariant");
+});
+
+test("o ato sem tipos recusa um tipo enviado e não exige nenhum", () => {
+  const refused = publicServiceRequestSchema(habilitacao).safeParse({
+    ...validOnline,
+    actVariant: "nascimento",
+  });
+  assert.equal(refused.success, false);
+  assert.equal(refused.error?.issues[0].path[0], "actVariant");
+
+  assert.ok(
+    publicServiceRequestSchema(habilitacao).safeParse(validOnline).success,
+  );
+});
+
+test("só a opção Outra certidão torna a descrição obrigatória", () => {
+  const withoutDescription = { ...validOnline, description: "" };
+  const outra = publicServiceRequestSchema(certificate).safeParse({
+    ...withoutDescription,
+    actVariant: "outra",
+  });
+  assert.equal(outra.success, false);
+  assert.equal(outra.error?.issues[0].path[0], "description");
+
+  assert.ok(
+    publicServiceRequestSchema(certificate).safeParse({
+      ...withoutDescription,
+      actVariant: "casamento",
+    }).success,
+  );
+});
+
+test("a gratuidade pede o tipo do ato pedido, e só quando ele tem tipos", () => {
+  const filing = {
+    ...validOnline,
+    exemptionDeclaration: "on",
+    certificateType: "sem-busca",
+    beneficiaries: [beneficiary()],
+  };
+  const withoutKind = publicServiceRequestSchema(gratuidade).safeParse({
+    ...filing,
+    exemptionActId: certificate.id,
+  });
+  assert.equal(withoutKind.success, false);
+  assert.equal(withoutKind.error?.issues[0].path[0], "actVariant");
+
+  assert.ok(
+    publicServiceRequestSchema(gratuidade).safeParse({
+      ...filing,
+      exemptionActId: certificate.id,
+      actVariant: "obito",
+    }).success,
+  );
+
+  const { certificateType: _unused, ...withoutCertificateType } = filing;
+  const couple = [beneficiary(), beneficiary({ name: "João da Silva" })];
+  assert.ok(
+    publicServiceRequestSchema(gratuidade).safeParse({
+      ...withoutCertificateType,
+      exemptionActId: habilitacao.id,
+      beneficiaries: couple,
+    }).success,
+  );
+  const staleKind = publicServiceRequestSchema(gratuidade).safeParse({
+    ...withoutCertificateType,
+    exemptionActId: habilitacao.id,
+    beneficiaries: couple,
+    actVariant: "obito",
+  });
+  assert.equal(staleKind.success, false);
+  assert.equal(staleKind.error?.issues[0].path[0], "actVariant");
 });
 
 test("buildExemptionDetails grava o IP quando o site o passa", () => {

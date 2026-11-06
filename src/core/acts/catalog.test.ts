@@ -11,6 +11,7 @@ import {
   ATTRIBUTION_SHORT_NAMES,
   actsOfAttribution,
   actsOfTenant,
+  actVariantName,
   CERTIFICATE_TYPE_LABELS,
   CERTIFICATE_TYPES,
   FEE_EXEMPTION_ACKNOWLEDGEMENTS,
@@ -43,6 +44,50 @@ test("the catalog is filtered by the attributions the office holds", () => {
   assert.ok(acts.every((a) => a.attribution === "NOTAS"));
   assert.deepEqual(actsOfAttribution(notasOnly, "RI"), []);
   assert.ok(actsOfTenant(cartorioMarinho).length > acts.length);
+});
+
+test("the kinds an act groups are a fixed list, since requests store the ids", () => {
+  const declared = Object.fromEntries(
+    ACTS.filter((act) => act.variants).map((act) => [
+      act.id,
+      act.variants?.options.map((option) => option.id),
+    ]),
+  );
+  assert.deepEqual(declared, {
+    "rcpn-certidao": ["nascimento", "casamento", "obito", "outra"],
+    "notas-escritura": ["escritura", "procuracao"],
+    "ri-certidao-matricula": ["matricula", "inteiro-teor", "onus"],
+    "ri-busca-indicador": ["pessoal", "real"],
+    "ri-registro-titulo": ["registro", "averbacao"],
+    "rtd-registro-documento": ["documento", "contrato"],
+  });
+});
+
+test("only the catch-all option of the certificate demands a description", () => {
+  const demanding = ACTS.flatMap((act) => act.variants?.options ?? []).filter(
+    (option) => option.requiresDescription,
+  );
+  assert.deepEqual(
+    demanding.map((option) => option.id),
+    ["outra"],
+  );
+});
+
+test("the generated entries group no kinds of their own", () => {
+  for (const id of ["outros-rcpn", "gratuidade-rcpn"]) {
+    assert.equal(getAct(id)?.variants, undefined, id);
+  }
+});
+
+test("the kind's name stands in for the act's, and an unknown id for nothing", () => {
+  const certificate = getAct("rcpn-certidao");
+  assert.ok(certificate);
+  assert.equal(
+    actVariantName(certificate, "casamento"),
+    "Certidão de casamento",
+  );
+  assert.equal(actVariantName(certificate, undefined), undefined);
+  assert.equal(actVariantName(certificate, "retirado"), undefined);
 });
 
 test("attribution codes stay as the official acronyms", () => {

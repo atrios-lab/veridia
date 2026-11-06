@@ -1,7 +1,11 @@
 "use server";
 
 import { headers } from "next/headers";
-import { ATTRIBUTION_NAMES, getActForTenant } from "@/core/acts/catalog.ts";
+import {
+  ATTRIBUTION_NAMES,
+  actVariantName,
+  getActForTenant,
+} from "@/core/acts/catalog.ts";
 import {
   generateAccessKey,
   hashAccessKey,
@@ -133,6 +137,7 @@ export async function submitServiceRequest(
     description: formData.get("description") ?? "",
     purpose: formData.get("purpose") ?? "",
     parameterValue: formData.get("parameterValue") ?? "",
+    actVariant: formData.get("actVariant"),
     lgpdConsent: formData.get("lgpdConsent") ?? "",
     truthDeclaration: formData.get("truthDeclaration") ?? "",
     ...readExemptionForm(formData),
@@ -158,6 +163,7 @@ export async function submitServiceRequest(
     tenant.slug,
     act.id,
     { cpf: parsed.data.cpf, email: parsed.data.email },
+    parsed.data.actVariant,
   );
   if (duplicateProtocol) {
     return { status: "duplicate", protocolNumber: duplicateProtocol };
@@ -181,6 +187,7 @@ export async function submitServiceRequest(
     const {
       email,
       phone,
+      actVariant,
       exemptionActId,
       certificateType,
       beneficiaries,
@@ -214,6 +221,7 @@ export async function submitServiceRequest(
         details: {
           consents: { lgpd: consentedAt, truth: consentedAt },
           phone,
+          ...(actVariant ? { actVariant } : {}),
           // Pedida, nunca concedida: quem confere o benefício e decide é a
           // serventia, e `amountCents` segue sendo do operador.
           ...(exemption
@@ -248,7 +256,7 @@ export async function submitServiceRequest(
       protocolNumber,
       accessKey,
       email,
-      actName: act.name,
+      actName: actVariantName(act, actVariant) ?? act.name,
       attributionName: ATTRIBUTION_NAMES[act.attribution],
       // Born from the act's own legal term, counted from today: a request
       // just filed carries no term of its own yet. Where the law fixes none,

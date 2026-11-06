@@ -1,7 +1,9 @@
 import { z } from "zod";
+import type { Act } from "../acts/catalog.ts";
 import { MAX_MESSAGE_LENGTH, TEXT_TOO_LONG } from "../chat/message.ts";
 import { fromZonedDateTime } from "../scheduling/calendar.ts";
 import { isValidCpf, isValidPhone } from "./form.ts";
+import { variantOwner } from "./kinds.ts";
 
 /**
  * What the counter may correct on a request that already exists.
@@ -65,6 +67,31 @@ export function requestDataEditSchema(now: Date, timeZone: string) {
 }
 
 export type RequestDataEdit = z.infer<ReturnType<typeof requestDataEditSchema>>;
+
+export type VariantEdit =
+  | { ok: true; actVariant?: string }
+  | { ok: false; message: string };
+
+/**
+ * The kind of act an operator may store on a correction. Unlike the act itself
+ * it is correctable: it changes neither the attribution nor the legal basis.
+ *
+ * Empty changes nothing rather than clearing: an old request with no kind must
+ * stay correctable without anyone having to guess one, and a kind once known
+ * is not lost by a blank field.
+ */
+export function resolveVariantEdit(
+  act: Act | undefined,
+  exemptionActId: string | undefined,
+  raw: string,
+): VariantEdit {
+  const value = raw.trim();
+  if (!value) return { ok: true };
+  const owner = act && variantOwner(act, exemptionActId);
+  return owner?.variants?.options.some((option) => option.id === value)
+    ? { ok: true, actVariant: value }
+    : { ok: false, message: "Escolha um tipo válido para este ato." };
+}
 
 /**
  * What may be stored as the purpose of a request, given the act.

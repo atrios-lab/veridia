@@ -1,7 +1,12 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
+import { getAct } from "../acts/catalog.ts";
 import { MAX_MESSAGE_LENGTH } from "../chat/message.ts";
-import { purposeFor, requestDataEditSchema } from "./edit.ts";
+import {
+  purposeFor,
+  requestDataEditSchema,
+  resolveVariantEdit,
+} from "./edit.ts";
 
 const ZONE = "America/Sao_Paulo";
 const NOW = new Date("2026-08-10T12:00:00Z");
@@ -16,6 +21,49 @@ const valid = {
   description: "  Queremos casar em outubro.  ",
   createdAt: "2026-08-09T14:30",
 };
+
+test("a blank kind changes nothing, so an old request stays correctable", () => {
+  assert.deepEqual(resolveVariantEdit(getAct("rcpn-certidao"), undefined, ""), {
+    ok: true,
+  });
+  assert.deepEqual(
+    resolveVariantEdit(getAct("rcpn-certidao"), undefined, " "),
+    {
+      ok: true,
+    },
+  );
+});
+
+test("the operator may store a kind of the request's own act", () => {
+  assert.deepEqual(
+    resolveVariantEdit(getAct("rcpn-certidao"), undefined, "casamento"),
+    { ok: true, actVariant: "casamento" },
+  );
+});
+
+test("a kind of another act, or of an act without kinds, is refused", () => {
+  for (const [actId, value] of [
+    ["rcpn-certidao", "procuracao"],
+    ["rcpn-habilitacao-casamento", "casamento"],
+  ] as const) {
+    assert.equal(resolveVariantEdit(getAct(actId), undefined, value).ok, false);
+  }
+  assert.equal(resolveVariantEdit(undefined, undefined, "casamento").ok, false);
+});
+
+test("on a gratuidade the kinds are the requested act's", () => {
+  const gratuidade = getAct("gratuidade-rcpn");
+  assert.deepEqual(resolveVariantEdit(gratuidade, "rcpn-certidao", "obito"), {
+    ok: true,
+    actVariant: "obito",
+  });
+  assert.equal(
+    resolveVariantEdit(gratuidade, "rcpn-habilitacao-casamento", "obito").ok,
+    false,
+  );
+  // Filed before the gratuidade named its act: nothing to check against.
+  assert.equal(resolveVariantEdit(gratuidade, undefined, "obito").ok, false);
+});
 
 test("the counter's correction is read on the office's wall clock", () => {
   const parsed = schema.parse(valid);

@@ -1,7 +1,11 @@
 "use server";
 
 import { headers } from "next/headers";
-import { ATTRIBUTION_NAMES, getActForTenant } from "@/core/acts/catalog.ts";
+import {
+  ATTRIBUTION_NAMES,
+  actVariantName,
+  getActForTenant,
+} from "@/core/acts/catalog.ts";
 import { SIGNED_FORM_NAMES, signedFormFor } from "@/core/request/attachment.ts";
 import {
   dataRightsDayOfDeadline,
@@ -25,6 +29,7 @@ import {
   type ManifestationType,
   parseDetails,
   type RequestKind,
+  readActVariant,
   readExemption,
   type ServiceRequestStatus,
   statusLabel,
@@ -359,7 +364,7 @@ export async function lookupProtocolDetail(
       requestStatus: record.status as ServiceRequestStatus,
       statusReason: record.statusReason ?? undefined,
       rejectionDocumentAttachmentId: rejectionDocument?.id,
-      actName: act.name,
+      actName: actVariantName(act, readActVariant(record.details)) ?? act.name,
       attributionName: ATTRIBUTION_NAMES[act.attribution],
       hasSignedForm: Boolean(signedForm),
       hasExemption: Boolean(readExemption(record.details)),

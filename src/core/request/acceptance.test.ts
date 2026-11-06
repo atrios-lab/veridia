@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 import { acceptanceHash } from "./acceptance.ts";
-import type { ExemptionBeneficiary } from "./kinds.ts";
+import { type ExemptionBeneficiary, readExemption } from "./kinds.ts";
 
 const beneficiary: ExemptionBeneficiary = {
   name: "Maria José da Silva",
@@ -16,6 +16,18 @@ const base = {
   certificateType: "sem-busca" as const,
   beneficiaries: [beneficiary],
 };
+
+test("o tipo do ato não entra na declaração nem no hash do aceite", () => {
+  const { tenantSlug: _t, protocolNumber: _p, ...exemption } = base;
+  const withKind = readExemption({ actVariant: "casamento", exemption });
+  const withOtherKind = readExemption({ actVariant: "obito", exemption });
+  assert.ok(withKind && withOtherKind);
+  assert.deepEqual(withKind, withOtherKind);
+  assert.equal(
+    acceptanceHash({ ...base, ...withKind }),
+    acceptanceHash({ ...base, ...withOtherKind }),
+  );
+});
 
 test("o hash é determinístico: o mesmo pedido dá sempre o mesmo hash", () => {
   assert.equal(acceptanceHash(base), acceptanceHash(base));

@@ -4,7 +4,12 @@ import {
   buildStamp,
   type DeclaracaoDocument,
 } from "@/core/request/declaracao.ts";
-import { readChannel, readExemption, readPhone } from "@/core/request/kinds.ts";
+import {
+  readActVariant,
+  readChannel,
+  readExemption,
+  readPhone,
+} from "@/core/request/kinds.ts";
 import {
   buildRequerimento,
   type RequerimentoDocument,
@@ -82,6 +87,7 @@ export function buildRequestDocuments(
       contact: stored.contact,
       phone: readPhone(stored.details),
       exemption,
+      actVariant: readActVariant(stored.details),
       cpf: stored.cpf,
       description: stored.description,
       purpose: stored.purpose,
