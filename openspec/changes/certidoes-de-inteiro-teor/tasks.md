@@ -34,5 +34,5 @@
 
 - [x] 5.1 Conferir os arts. 114 a 119 do CNN no site do CNJ
 - [x] 5.2 Ler o Provimento 004/2025-CGJ/RN e confirmar o prazo e o nome do papel
-- [ ] 5.3 Confirmar com a serventia a entrega da certidão digital, o pagamento do papel e o selo do verbum ad verbum (entrega pelo site e verbum ad verbum no balcão ou on-line confirmados em 07/11/2026; falta o pagamento do papel)
+- [x] 5.3 Confirmar com a serventia a entrega da certidão digital, o pagamento do papel e o selo do verbum ad verbum (confirmados em 07/11/2026: entrega pelo site, verbum ad verbum no balcão ou on-line, e digital e papel pagos pelo fluxo comum, com o valor lançado pela serventia)
 - [ ] 5.4 Avisar as demais serventias dos atos novos
