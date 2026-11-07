@@ -120,25 +120,33 @@ export function processingHintFor(
 /**
  * O aviso do inteiro teor do RCPN, igual no site e no balcão. Avisa e não
  * decide: quem diz se a autorização judicial é necessária é a serventia, depois
- * de receber o pedido. Não cita artigo para continuar valendo se a conferência
- * do Código Nacional no site do CNJ mudar a numeração.
+ * de receber o pedido. Conferido no texto compilado do CNN no site do CNJ em
+ * 07/11/2026: art. 114 (mandatário com poderes especiais; terceiro com dado
+ * sensível só com autorização), art. 116 §§ 2º e 3º (dados restritos e
+ * sigilosos) e art. 529 § 1º (pessoa trans). Não cita artigo para o texto do
+ * site não envelhecer com uma renumeração.
  */
 export const REQUESTER_QUALIFICATION_NOTICE =
   "Alguns registros têm dados sensíveis, restritos ou sigilosos, como adoção, " +
-  "filiação, mudança de nome ou proteção a testemunha. Se você não for o " +
-  "interessado, o representante legal ou o procurador dele, a serventia pode " +
-  "exigir autorização judicial. O pedido é analisado depois do recebimento e " +
-  "pode ser recusado se faltar o mandato ou outro documento necessário.";
+  "reconhecimento de filho, mudança de nome ou sexo de pessoa trans e mudança " +
+  "de nome de testemunha protegida. A certidão desses registros só sai com " +
+  "autorização judicial quando quem pede não é o interessado, o representante " +
+  "legal ou um procurador com poderes especiais. Na mudança de nome ou sexo de " +
+  "pessoa trans, só a própria pessoa pede sem ordem judicial. O pedido é " +
+  "analisado depois do recebimento e pode ser recusado se faltar o mandato ou " +
+  "outro documento necessário.";
 
 /**
  * Por que o e-Notariado não está aqui: o CNN, art. 117, lista firma reconhecida,
- * ICP-Brasil, Gov.br e assinatura conferida com o documento original, e não o
- * cita para este requerimento.
+ * ICP-Brasil, Gov.br e assinatura conferida com o documento de identidade
+ * original, e não o cita para este requerimento. O § 1º dispensa a firma do
+ * requerimento assinado na frente do oficial ou do preposto, por isso o balcão
+ * aparece como alternativa ao reconhecimento.
  */
 export const INTEIRO_TEOR_SIGNATURE_CAVEAT =
-  "Também vale o certificado digital ICP-Brasil. Se assinar de próprio punho, " +
-  "reconheça a firma em um cartório de notas. A dispensa de reconhecimento vale " +
-  "só para a assinatura digital (Gov.br ou ICP-Brasil).";
+  "Além do Gov.br, vale o certificado digital ICP-Brasil. Se assinar de próprio " +
+  "punho, reconheça a firma em um cartório de notas ou assine no balcão da " +
+  "serventia, com o documento de identidade original.";
 
 /** Extra fact the office needs to find the right band in the fee table. */
 export type ActParameter = "transactionValue" | "registryYears";

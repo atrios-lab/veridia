@@ -17,12 +17,14 @@ Normas lidas:
 | Lei 6.015, art. 17 | Certidão pode ser pedida sem informar motivo | Planalto |
 | Lei 6.015, art. 18 | Certidão sai sem despacho judicial, salvo arts. 45, 57 § 7º e 95, parágrafo único | Planalto |
 | Lei 6.015, art. 19, §§ 1º, 5º, 10 e 11 | Inteiro teor eletrônico, dispensa de materialização e prazos de imóveis | Planalto |
-| CNN, art. 114 | Interessado, representante legal e mandatário com poderes especiais não dependem de autorização; terceiro com dado sensível depende | Compilação de terceiros |
-| CNN, art. 116 | Define dados sensíveis, restritos e sigilosos | Compilação de terceiros |
-| CNN, art. 117 | Assinaturas admitidas; o requerimento traz motivo, parentesco e se o registrado é falecido | Compilação de terceiros |
-| CNN, arts. 118 e 119 | Óbito sem requerimento nem autorização; restrição a dado sensível não alcança pessoa falecida | Compilação de terceiros |
+| CNN, art. 114 | Interessado, representante legal e mandatário com poderes especiais não dependem de autorização; terceiro com dado sensível depende | Texto compilado no site do CNJ, conferido em 07/11/2026 |
+| CNN, art. 116 | Define dados sensíveis, restritos e sigilosos | Texto compilado no site do CNJ, conferido em 07/11/2026 |
+| CNN, art. 117 | Assinaturas admitidas; o requerimento traz motivo, parentesco e se o registrado é falecido | Texto compilado no site do CNJ, conferido em 07/11/2026 |
+| CNN, arts. 118 e 119 | Óbito sem requerimento nem autorização; restrição a dado sensível não alcança pessoa falecida | Texto compilado no site do CNJ, conferido em 07/11/2026 |
 | Provimento 156/2016-CGJ/RN, arts. 52 e 53 | Papel de segurança obrigatório, com o nome oficial | Site de atos da CGJ/RN |
 | Provimento 156/2016-CGJ/RN, arts. 496 e 497 | Certidão eletrônica com ICP-Brasil e cobrança própria da materialização | Site de atos da CGJ/RN |
+| Provimento 156/2016-CGJ/RN, arts. 486 a 490 | Serventia de imóveis integra a Central Eletrônica da ANOREG/RN e atende os pedidos de certidão que chegam por ela | Site de atos da CGJ/RN |
+| Provimento 004/2025-CGJ/RN | Desbloqueio de matrículas de enfiteuse registradas depois do Código Civil de 2002; não trata de certidão | Site de atos da CGJ/RN |
 
 ## Goals / Non-Goals
 
@@ -79,23 +81,24 @@ Alternativa: colunas novas. Descartada: é dado de um ato só, como `phone` e `a
 
 O site não trava a falta do mandato. O responsável pelo produto definiu que a serventia barra depois do recebimento, e o fluxo já tem indeferimento e exigência. O mandato segue pelos anexos do pedido, e o operador confere o arquivo.
 
-Na tela, o pedido fala em "mandato", sem exigir "poderes especiais". O art. 114 não pede forma pública, então a procuração particular serve. A suficiência dos poderes é analisada pelo operador.
+O formulário pede o mandato sem validar os poderes, e a observação diz que o procurador precisa de poderes especiais, como no art. 114. O art. 114 não pede forma pública, então a procuração particular serve. A suficiência dos poderes é analisada pelo operador.
 
 ### Observação em texto único
 
 Uma constante no catálogo guarda o aviso, para o site e o balcão dizerem o mesmo:
 
-> Alguns registros têm dados sensíveis, restritos ou sigilosos, como adoção, filiação, mudança de nome ou proteção a testemunha. Se você não for o interessado, o representante legal ou o procurador dele, a serventia pode exigir autorização judicial. O pedido é analisado depois do recebimento e pode ser recusado se faltar o mandato ou outro documento necessário.
+> Alguns registros têm dados sensíveis, restritos ou sigilosos, como adoção, reconhecimento de filho, mudança de nome ou sexo de pessoa trans e mudança de nome de testemunha protegida. A certidão desses registros só sai com autorização judicial quando quem pede não é o interessado, o representante legal ou um procurador com poderes especiais. Na mudança de nome ou sexo de pessoa trans, só a própria pessoa pede sem ordem judicial. O pedido é analisado depois do recebimento e pode ser recusado se faltar o mandato ou outro documento necessário.
+
+O texto foi corrigido depois da conferência no site do CNJ. O art. 114, § 1º, torna a autorização obrigatória para terceiro, e não uma possibilidade. Só a mudança de nome de pessoa trans (art. 116, § 2º, e art. 529, § 1º) e a de testemunha protegida (art. 116, § 3º) são restritas ou sigilosas, e não toda mudança de nome.
 
 ### Assinatura por ato
 
-O art. 117 lista firma reconhecida, ICP-Brasil, Gov.br e assinatura conferida com o documento original, e não cita o e-Notariado. O ato ganha um texto próprio de assinatura, usado na tela de sucesso, nas telas de consulta do protocolo e no PDF no lugar do aviso geral.
+O art. 117 lista firma reconhecida, ICP-Brasil, Gov.br e assinatura conferida com o documento original, e não cita o e-Notariado. O § 1º dispensa a firma quando o requerimento é assinado na frente do oficial ou do preposto. O ato ganha um texto próprio de assinatura, com o balcão como alternativa ao reconhecimento, usado na tela de sucesso, nas telas de consulta do protocolo e no PDF no lugar do aviso geral.
 
 Alternativa: manter o e-Notariado, como foi pedido no início. Descartada até haver fundamento para este ato.
 
 ## Risks / Trade-offs
 
-- **CNN lido em compilação** → conferir os arts. 114 a 119 no site do CNJ antes de publicar.
 - **Dois itens a mais na lista** → os nomes dizem a diferença, e o selo reforça onde termina.
 - **Mandato sem poderes especiais** → o art. 114 fala nesses poderes, e sem eles o advogado pode ser tratado como terceiro. O operador decide, e a observação avisa que o pedido pode ser recusado.
 - **Gratuidade sem as perguntas** → um pedido isento de inteiro teor não traz motivo nem parentesco, e o operador os pede por exigência.
@@ -105,8 +108,7 @@ Alternativa: manter o e-Notariado, como foi pedido no início. Descartada até h
 
 ## Open Questions
 
-- **Certidão digital de imóveis:** o cartório entrega pelo site ou pela Central citada no art. 496? Se for pela Central, o selo e o texto do digital precisam mudar. Bloqueia o deploy, não a implementação.
-- **Provimento 004/2025-CGJ/RN:** o capítulo de imóveis manda observá-lo, e ele ainda não foi lido. Bloqueia o deploy.
+- **Certidão digital de imóveis:** o cartório entrega pelo site ou pela Central dos arts. 486 a 490? Esses artigos obrigam a serventia a atender pela Central, mas não a tornam o canal exclusivo. O Provimento CNJ 180/2024 (SERP/ONR), citado no art. 486, não foi lido. Se a entrega for pela Central, o selo e o texto do digital precisam mudar. Bloqueia o deploy.
 - **Pagamento do papel:** antes, pelo Pix, ou na retirada? O prazo do § 10 conta do pagamento.
 - **Verbum ad verbum on-line:** o selo "Termina on-line" foi assumido e precisa de confirmação da serventia.
 - **Lei 8.560 e norma de pessoa trans:** o art. 116, § 2º, cita as duas como restritas, e elas não foram lidas. A observação não cita artigos, então não depende disso.

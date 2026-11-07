@@ -244,11 +244,16 @@ test("o inteiro teor do RCPN avisa sem citar e-Notariado nem decidir", () => {
   assert.match(INTEIRO_TEOR_SIGNATURE_CAVEAT, /Gov\.br/);
   assert.match(INTEIRO_TEOR_SIGNATURE_CAVEAT, /ICP-Brasil/);
   assert.match(INTEIRO_TEOR_SIGNATURE_CAVEAT, /reconheça a firma/);
+  // CNN art. 117 § 1º: assinado na frente do preposto, dispensa a firma.
+  assert.match(INTEIRO_TEOR_SIGNATURE_CAVEAT, /balcão/);
+  assert.doesNotMatch(INTEIRO_TEOR_SIGNATURE_CAVEAT, /vale só/);
   assert.match(
     REQUESTER_QUALIFICATION_NOTICE,
-    /pode exigir autorização judicial/,
+    /só sai com autorização judicial/,
   );
   assert.match(REQUESTER_QUALIFICATION_NOTICE, /depois do recebimento/);
+  // CNN art. 114: o mandatário precisa de poderes especiais.
+  assert.match(REQUESTER_QUALIFICATION_NOTICE, /poderes especiais/);
 });
 
 test("nenhum texto do catálogo promete ato sem requerimento", () => {

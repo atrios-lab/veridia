@@ -93,15 +93,15 @@ O servidor SHALL NOT recusar o pedido por falta do mandato: qualquer pessoa pode
 - **THEN** o formulário não mostra as perguntas nem a observação, e o servidor não as exige
 
 ### Requirement: Observação sobre autorização judicial
-O formulário do inteiro teor do RCPN DEVE (SHALL) avisar, antes do envio e salvo no óbito, que registros com dados sensíveis, restritos ou sigilosos podem exigir autorização judicial quando quem pede não for o interessado, o representante legal ou o procurador dele, e que o pedido é analisado depois do recebimento. O site SHALL NOT decidir se a autorização é necessária.
+O formulário do inteiro teor do RCPN DEVE (SHALL) avisar, antes do envio e salvo no óbito, que registros com dados sensíveis, restritos ou sigilosos só têm certidão com autorização judicial quando quem pede não for o interessado, o representante legal ou um procurador com poderes especiais, e que o pedido é analisado depois do recebimento. O site SHALL NOT decidir se a autorização é necessária.
 
 #### Scenario: Terceiro lê o aviso antes de enviar
 - **WHEN** alguém escolhe nascimento e marca "outra pessoa"
 - **THEN** o aviso aparece no formulário, e o pedido pode ser enviado
 
 ### Requirement: Assinatura do requerimento de inteiro teor do RCPN
-A tela de sucesso, as telas de consulta do protocolo e o PDF desse ato DEVEM (SHALL) orientar a assinatura por Gov.br, ICP-Brasil ou firma reconhecida em cartório de notas, e SHALL NOT citar o e-Notariado. Os demais atos mantêm a orientação atual.
+A tela de sucesso, as telas de consulta do protocolo e o PDF desse ato DEVEM (SHALL) orientar a assinatura por Gov.br, ICP-Brasil, firma reconhecida em cartório de notas ou assinatura no balcão com o documento de identidade original, e SHALL NOT citar o e-Notariado. Os demais atos mantêm a orientação atual.
 
 #### Scenario: Orientação própria do ato
 - **WHEN** o protocolo de inteiro teor do RCPN é emitido
-- **THEN** a tela de sucesso, a consulta do protocolo e o PDF citam Gov.br, ICP-Brasil e firma reconhecida
+- **THEN** a tela de sucesso, a consulta do protocolo e o PDF citam Gov.br, ICP-Brasil, firma reconhecida e assinatura no balcão
