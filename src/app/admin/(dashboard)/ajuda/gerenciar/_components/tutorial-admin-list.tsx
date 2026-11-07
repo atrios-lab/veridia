@@ -5,6 +5,7 @@ import { toast } from "sonner";
 import { formatDuration } from "@/core/tutorials/progress.ts";
 import { ConfirmAction } from "../../../../_components/confirm-action.tsx";
 import { AdminIcon } from "../../../../_components/icon.tsx";
+import { TutorialCover } from "../../_components/tutorial-cover.tsx";
 import {
   deleteTutorialAction,
   moveTutorialAction,
@@ -33,7 +34,7 @@ function DeleteButton({ item }: { item: AdminTutorialItem }) {
       error={state.status === "error" ? state.message : null}
       trigger="Excluir"
       question="Excluir este vídeo?"
-      consequence={`"${item.title}" some de todas as serventias, e a marca de assistido de quem já o viu some junto. O arquivo é apagado do armazenamento.`}
+      consequence={`"${item.title}" some de todas as serventias, e a marca de assistido de quem já o viu some junto. Os arquivos são apagados do armazenamento.`}
       confirmLabel="Excluir o vídeo"
       pendingLabel="Excluindo…"
       className="flex-none"
@@ -72,6 +73,13 @@ function Row({
       <div className="flex flex-wrap items-center gap-3 px-4 py-3">
         <span className="inline-flex h-7 w-7 flex-none items-center justify-center rounded-full border border-admin-input-border text-[11.5px] font-bold text-admin-muted">
           {index + 1}
+        </span>
+        <span className="block w-[96px] flex-none overflow-hidden rounded-[6px] border border-admin-border">
+          <TutorialCover
+            title={item.title}
+            posterUrl={item.posterUrl}
+            size="thumb"
+          />
         </span>
         <div className="min-w-[200px] flex-1">
           <div className="flex flex-wrap items-center gap-2">

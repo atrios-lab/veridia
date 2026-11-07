@@ -328,7 +328,7 @@ export async function storeBrandImage(
 }
 
 /**
- * Stores one tutorial file (the MP4 or its WebVTT captions) the platform
+ * Stores one tutorial file (the MP4, its WebVTT captions or its cover) the platform
  * account sent through the server action: development, where no store is
  * configured and the file goes to disk under `public/`, served by Next
  * itself, like the brand images. In a deploy the browser uploads straight
@@ -344,12 +344,13 @@ export async function storeTutorialFile(
   bytes: Buffer,
   kind: TutorialFileKind,
   id: string,
+  mimeType: string = TUTORIAL_MIME_TYPES[kind][0],
 ): Promise<string> {
-  const storedPath = tutorialFilePath(kind, id);
+  const storedPath = tutorialFilePath(kind, id, mimeType);
   if (process.env.BLOB_READ_WRITE_TOKEN) {
     const blob = await put(storedPath, bytes, {
       access: "public",
-      contentType: TUTORIAL_MIME_TYPES[kind],
+      contentType: mimeType,
       addRandomSuffix: false,
     });
     return blob.url;

@@ -8,6 +8,7 @@ import {
   listOrder,
   nextUnwatched,
   trailProgress,
+  trailStatus,
   tutorialForRoute,
 } from "./progress.ts";
 
@@ -22,6 +23,7 @@ function tutorial(
     durationSeconds: 120,
     videoUrl: `https://media.example.test/${id}.mp4`,
     captionsUrl: `https://media.example.test/${id}.vtt`,
+    posterUrl: null,
     route: null,
     trail: true,
     ...overrides,
@@ -127,4 +129,43 @@ test("the exact duration floors the minutes", () => {
   assert.equal(formatExactDuration(60), "1 min");
   assert.equal(formatExactDuration(239), "3 min 59 s");
   assert.equal(formatExactDuration(150), "2 min 30 s");
+});
+
+test("trail status: nothing watched is the start", () => {
+  const catalog = ["a", "b", "c", "d", "e"].map((id) => tutorial(id));
+  assert.deepEqual(trailStatus(catalog, new Set()), { kind: "start" });
+});
+
+test("trail status: part of it watched counts it", () => {
+  const catalog = ["a", "b", "c", "d", "e"].map((id) => tutorial(id));
+  assert.deepEqual(trailStatus(catalog, new Set(["a", "c"])), {
+    kind: "progress",
+    watched: 2,
+    total: 5,
+  });
+});
+
+test("trail status: all of the trail is done, deep dives aside", () => {
+  const catalog = [
+    tutorial("a"),
+    tutorial("b"),
+    tutorial("extra", { trail: false }),
+  ];
+  assert.deepEqual(trailStatus(catalog, new Set(["a", "b"])), {
+    kind: "done",
+  });
+});
+
+test("trail status: a watched deep dive does not start the trail", () => {
+  const catalog = [tutorial("a"), tutorial("extra", { trail: false })];
+  assert.deepEqual(trailStatus(catalog, new Set(["extra"])), {
+    kind: "start",
+  });
+});
+
+test("trail status: an empty trail is the start, never done", () => {
+  const catalog = [tutorial("extra", { trail: false })];
+  assert.deepEqual(trailStatus(catalog, new Set(["extra"])), {
+    kind: "start",
+  });
 });
