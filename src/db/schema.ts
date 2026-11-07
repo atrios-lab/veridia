@@ -761,6 +761,8 @@ export const tutorials = pgTable(
     videoPath: text("video_path").notNull(),
     /** Null: uploaded without captions. */
     captionsPath: text("captions_path"),
+    /** The cover image; null shows a cover drawn from the title. */
+    posterPath: text("poster_path"),
     /** The panel route the video teaches; null for the panel as a whole. */
     route: text("route"),
     /** Part of the "Primeiros passos" trail the overview walks through. */

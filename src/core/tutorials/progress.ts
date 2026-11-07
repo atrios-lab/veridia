@@ -22,6 +22,27 @@ export function trailProgress(
   };
 }
 
+/**
+ * Where a person stands on the trail, for the badge over the featured
+ * video: nothing watched yet ("start"), part of it ("progress"), all of it
+ * ("done"). An empty trail is "start", since that is what a person who has
+ * watched nothing sees; "done" needs a trail to have been finished.
+ */
+export type TrailStatus =
+  | { kind: "start" }
+  | { kind: "progress"; watched: number; total: number }
+  | { kind: "done" };
+
+export function trailStatus(
+  catalog: readonly Tutorial[],
+  watchedIds: ReadonlySet<string>,
+): TrailStatus {
+  const { watched, total } = trailProgress(catalog, watchedIds);
+  if (total === 0 || watched === 0) return { kind: "start" };
+  if (watched === total) return { kind: "done" };
+  return { kind: "progress", watched, total };
+}
+
 /** The first trail video not yet watched, in catalog order; undefined once
  * the trail is complete (or empty). */
 export function nextUnwatched(

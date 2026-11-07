@@ -45,6 +45,7 @@ function files(id: string) {
   return {
     videoUrl: `https://store.example.test/treinamento/${id}.mp4`,
     captionsUrl: `https://store.example.test/treinamento/${id}.vtt`,
+    posterUrl: null,
   };
 }
 
@@ -216,4 +217,61 @@ test("deleting the account takes its progress along", async () => {
   await markWatchedWith(db, BETO, dois.id);
   await db.delete(user).where(eq(user.id, BETO));
   assert.equal((await listWatchedIdsWith(db, BETO)).size, 0);
+});
+
+test("the cover is optional, swaps and removes like the captions, and goes on delete", async () => {
+  const id = randomUUID();
+  const firstPoster = `https://store.example.test/treinamento/${randomUUID()}.jpg`;
+  const row = await createTutorialWith(
+    db,
+    id,
+    { ...INPUT, title: "Com capa" },
+    { ...files(id), posterUrl: firstPoster },
+    ATRIOS,
+  );
+  assert.equal(row.posterPath, firstPoster);
+
+  await setTutorialPublishedWith(db, id, true, ATRIOS);
+  const published = await listPublishedTutorialsWith(db);
+  assert.equal(published.find((t) => t.id === id)?.posterUrl, firstPoster);
+
+  // Left out: the cover stays.
+  const kept = await updateTutorialWith(db, id, INPUT, {}, ATRIOS);
+  assert.equal(kept?.row.posterPath, firstPoster);
+  assert.deepEqual(kept?.orphaned, []);
+
+  // Swapped: the old one is orphaned.
+  const secondPoster = `https://store.example.test/treinamento/${randomUUID()}.png`;
+  const swapped = await updateTutorialWith(
+    db,
+    id,
+    INPUT,
+    { posterUrl: secondPoster },
+    ATRIOS,
+  );
+  assert.equal(swapped?.row.posterPath, secondPoster);
+  assert.deepEqual(swapped?.orphaned, [firstPoster]);
+
+  // Removed: null in the row, the file orphaned.
+  const removed = await updateTutorialWith(
+    db,
+    id,
+    INPUT,
+    { posterUrl: null },
+    ATRIOS,
+  );
+  assert.equal(removed?.row.posterPath, null);
+  assert.deepEqual(removed?.orphaned, [secondPoster]);
+  const withoutCover = await listPublishedTutorialsWith(db);
+  assert.equal(withoutCover.find((t) => t.id === id)?.posterUrl, null);
+
+  // Deleted with a cover: the cover comes back with the other files.
+  const thirdPoster = `https://store.example.test/treinamento/${randomUUID()}.webp`;
+  await updateTutorialWith(db, id, INPUT, { posterUrl: thirdPoster }, ATRIOS);
+  const orphaned = await deleteTutorialWith(db, id, ATRIOS);
+  assert.deepEqual(orphaned, [
+    files(id).videoUrl,
+    files(id).captionsUrl,
+    thirdPoster,
+  ]);
 });

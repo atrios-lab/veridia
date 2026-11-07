@@ -8,17 +8,36 @@ import { z } from "zod";
  * (citizen attachments) and `marca/` (brand images). */
 export const TUTORIAL_FOLDER = "treinamento";
 
-export type TutorialFileKind = "video" | "captions";
+export type TutorialFileKind = "video" | "captions" | "poster";
 
-export const TUTORIAL_MIME_TYPES: Record<TutorialFileKind, string> = {
-  video: "video/mp4",
-  captions: "text/vtt",
+/** What each kind accepts. The poster is the only one with a choice: the
+ * cover is whatever image format the platform had at hand. */
+export const TUTORIAL_MIME_TYPES: Record<TutorialFileKind, readonly string[]> =
+  {
+    video: ["video/mp4"],
+    captions: ["text/vtt"],
+    poster: ["image/jpeg", "image/png", "image/webp"],
+  };
+
+/** The stored name's extension, by the file's type: one per type, so the
+ * name alone says what the store must serve it as. */
+const EXTENSION_BY_MIME_TYPE: Record<string, string> = {
+  "video/mp4": "mp4",
+  "text/vtt": "vtt",
+  "image/jpeg": "jpg",
+  "image/png": "png",
+  "image/webp": "webp",
 };
 
-const EXTENSIONS: Record<TutorialFileKind, string> = {
-  video: "mp4",
-  captions: "vtt",
+const KIND_BY_EXTENSION: Record<string, TutorialFileKind> = {
+  mp4: "video",
+  vtt: "captions",
+  jpg: "poster",
+  png: "poster",
+  webp: "poster",
 };
+
+const EXTENSIONS_PATTERN = Object.keys(KIND_BY_EXTENSION).join("|");
 
 /**
  * Straight from the browser to the store, the file never touches a Vercel
@@ -34,18 +53,43 @@ export const MAX_VIDEO_BYTES_DIRECT = 500 * 1024 * 1024;
 export const MAX_VIDEO_BYTES_SERVER_ACTION = 100 * 1024 * 1024;
 /** A WebVTT file is text; a megabyte is an hour of dense captions. */
 export const MAX_CAPTIONS_BYTES = 1024 * 1024;
+/** A 1280×720 cover is a few hundred kilobytes in any of the three
+ * formats; two megabytes leaves room for a PNG with a screenshot in it. */
+export const MAX_POSTER_BYTES = 2 * 1024 * 1024;
+
+/** The ceiling the token route sets per kind, for the direct upload. */
+export const MAX_DIRECT_BYTES: Record<TutorialFileKind, number> = {
+  video: MAX_VIDEO_BYTES_DIRECT,
+  captions: MAX_CAPTIONS_BYTES,
+  poster: MAX_POSTER_BYTES,
+};
+
+/** The same, through the server action (development). */
+export const MAX_SERVER_ACTION_BYTES: Record<TutorialFileKind, number> = {
+  video: MAX_VIDEO_BYTES_SERVER_ACTION,
+  captions: MAX_CAPTIONS_BYTES,
+  poster: MAX_POSTER_BYTES,
+};
 
 const GENERATED_ID =
   "[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}";
 const GENERATED_PATH = new RegExp(
-  `^${TUTORIAL_FOLDER}/${GENERATED_ID}\\.(mp4|vtt)$`,
+  `^${TUTORIAL_FOLDER}/${GENERATED_ID}\\.(${EXTENSIONS_PATTERN})$`,
 );
 
-/** Where a tutorial's file is stored: the folder, the row's id, the kind's
- * extension. The browser proposes this exact name and the token route
- * accepts nothing else. */
-export function tutorialFilePath(kind: TutorialFileKind, id: string): string {
-  return `${TUTORIAL_FOLDER}/${id}.${EXTENSIONS[kind]}`;
+/** Where a tutorial's file is stored: the folder, a fresh id, the
+ * extension of the file's type. The browser proposes this exact name and
+ * the token route accepts nothing else. The type defaults to the kind's
+ * first, which is the only one for a video or captions. */
+export function tutorialFilePath(
+  kind: TutorialFileKind,
+  id: string,
+  mimeType: string = TUTORIAL_MIME_TYPES[kind][0],
+): string {
+  const extension = TUTORIAL_MIME_TYPES[kind].includes(mimeType)
+    ? EXTENSION_BY_MIME_TYPE[mimeType]
+    : EXTENSION_BY_MIME_TYPE[TUTORIAL_MIME_TYPES[kind][0]];
+  return `${TUTORIAL_FOLDER}/${id}.${extension}`;
 }
 
 /** Whether a pathname is one `tutorialFilePath` would have produced. */
@@ -53,10 +97,26 @@ export function isGeneratedTutorialPath(pathname: string): boolean {
   return GENERATED_PATH.test(pathname);
 }
 
+function extensionOf(pathname: string): string {
+  return pathname.slice(pathname.lastIndexOf(".") + 1);
+}
+
 /** The kind a generated path stores, read back from its extension. */
 export function tutorialPathKind(pathname: string): TutorialFileKind | null {
   if (!isGeneratedTutorialPath(pathname)) return null;
-  return pathname.endsWith(".mp4") ? "video" : "captions";
+  return KIND_BY_EXTENSION[extensionOf(pathname)] ?? null;
+}
+
+/** The one type a generated path may hold: the token route allows that
+ * type alone, so a `.jpg` name never carries a PNG. */
+export function tutorialPathMimeType(pathname: string): string | null {
+  if (!isGeneratedTutorialPath(pathname)) return null;
+  const extension = extensionOf(pathname);
+  return (
+    Object.entries(EXTENSION_BY_MIME_TYPE).find(
+      ([, value]) => value === extension,
+    )?.[0] ?? null
+  );
 }
 
 /**
@@ -83,7 +143,7 @@ export function isStoredTutorialUrl(
     }
   }
   return new RegExp(
-    `^/uploads/${TUTORIAL_FOLDER}/${GENERATED_ID}\\.(mp4|vtt)$`,
+    `^/uploads/${TUTORIAL_FOLDER}/${GENERATED_ID}\\.(${EXTENSIONS_PATTERN})$`,
   ).test(url);
 }
 
@@ -96,7 +156,7 @@ export function checkTutorialFile(
   kind: TutorialFileKind,
   limit: number,
 ): TutorialFileProblem | null {
-  if (file.mimeType !== TUTORIAL_MIME_TYPES[kind]) {
+  if (!TUTORIAL_MIME_TYPES[kind].includes(file.mimeType)) {
     return { kind: "type", mimeType: file.mimeType };
   }
   if (file.size > limit) return { kind: "size", limit };
@@ -107,16 +167,24 @@ function megabytes(bytes: number): string {
   return `${Math.round(bytes / (1024 * 1024))} MB`;
 }
 
+const TYPE_MESSAGES: Record<TutorialFileKind, string> = {
+  video: "O vídeo precisa ser um arquivo MP4.",
+  captions: "A legenda precisa ser um arquivo WebVTT (.vtt).",
+  poster: "A capa precisa ser uma imagem JPEG, PNG ou WebP.",
+};
+
+const SUBJECTS: Record<TutorialFileKind, string> = {
+  video: "O vídeo",
+  captions: "A legenda",
+  poster: "A capa",
+};
+
 export function describeTutorialFileProblem(
   problem: TutorialFileProblem,
   kind: TutorialFileKind,
 ): string {
-  if (problem.kind === "type") {
-    return kind === "video"
-      ? "O vídeo precisa ser um arquivo MP4."
-      : "A legenda precisa ser um arquivo WebVTT (.vtt).";
-  }
-  return `${kind === "video" ? "O vídeo" : "A legenda"} passa do limite de ${megabytes(problem.limit)}.`;
+  if (problem.kind === "type") return TYPE_MESSAGES[kind];
+  return `${SUBJECTS[kind]} passa do limite de ${megabytes(problem.limit)}.`;
 }
 
 /**

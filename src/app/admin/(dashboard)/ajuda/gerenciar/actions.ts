@@ -7,8 +7,7 @@ import {
   checkTutorialFile,
   describeTutorialFileProblem,
   isStoredTutorialUrl,
-  MAX_CAPTIONS_BYTES,
-  MAX_VIDEO_BYTES_SERVER_ACTION,
+  MAX_SERVER_ACTION_BYTES,
   type TutorialFileKind,
   type TutorialFormInput,
   tutorialFormSchema,
@@ -104,11 +103,13 @@ async function resolveFile(
   const problem = checkTutorialFile(
     { mimeType: file.type, size: file.size },
     kind,
-    kind === "video" ? MAX_VIDEO_BYTES_SERVER_ACTION : MAX_CAPTIONS_BYTES,
+    MAX_SERVER_ACTION_BYTES[kind],
   );
   if (problem) return { error: describeTutorialFileProblem(problem, kind) };
   const bytes = Buffer.from(await file.arrayBuffer());
-  return { url: await storeTutorialFile(bytes, kind, randomUUID()) };
+  return {
+    url: await storeTutorialFile(bytes, kind, randomUUID(), file.type),
+  };
 }
 
 function parseForm(
@@ -151,6 +152,9 @@ export async function saveTutorialAction(
     return fail(captions.error, { captions: captions.error });
   }
   const removeCaptions = formData.get("removeCaptions") === "on";
+  const poster = await resolveFile(formData, "poster");
+  if ("error" in poster) return fail(poster.error, { poster: poster.error });
+  const removePoster = formData.get("removePoster") === "on";
 
   try {
     if (!id) {
@@ -162,7 +166,11 @@ export async function saveTutorialAction(
       const row = await createTutorial(
         randomUUID(),
         form.input,
-        { videoUrl: video.url, captionsUrl: captions.url },
+        {
+          videoUrl: video.url,
+          captionsUrl: captions.url,
+          posterUrl: poster.url,
+        },
         actorId,
       );
       revalidate();
@@ -178,6 +186,11 @@ export async function saveTutorialAction(
           ? { captionsUrl: captions.url }
           : removeCaptions
             ? { captionsUrl: null }
+            : {}),
+        ...(poster.url
+          ? { posterUrl: poster.url }
+          : removePoster
+            ? { posterUrl: null }
             : {}),
       },
       actorId,

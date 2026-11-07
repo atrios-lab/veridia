@@ -1,11 +1,9 @@
 import { type HandleUploadBody, handleUpload } from "@vercel/blob/client";
 import { can } from "@/core/auth/roles.ts";
 import {
-  isGeneratedTutorialPath,
-  MAX_CAPTIONS_BYTES,
-  MAX_VIDEO_BYTES_DIRECT,
-  TUTORIAL_MIME_TYPES,
+  MAX_DIRECT_BYTES,
   tutorialPathKind,
+  tutorialPathMimeType,
 } from "@/core/tutorials/video.ts";
 import { getSession } from "@/lib/session.ts";
 
@@ -44,14 +42,15 @@ export async function POST(request: Request): Promise<Response> {
       body,
       request,
       onBeforeGenerateToken: async (pathname) => {
+        // Both are null for a name `tutorialFilePath` would not produce.
         const kind = tutorialPathKind(pathname);
-        if (!kind || !isGeneratedTutorialPath(pathname)) {
-          throw new Error("pathname recusado");
-        }
+        const mimeType = tutorialPathMimeType(pathname);
+        if (!kind || !mimeType) throw new Error("pathname recusado");
         return {
-          allowedContentTypes: [TUTORIAL_MIME_TYPES[kind]],
-          maximumSizeInBytes:
-            kind === "video" ? MAX_VIDEO_BYTES_DIRECT : MAX_CAPTIONS_BYTES,
+          // The extension's own type, alone: a `.jpg` name never carries
+          // a PNG, so the store serves every file as what it is called.
+          allowedContentTypes: [mimeType],
+          maximumSizeInBytes: MAX_DIRECT_BYTES[kind],
           // The name carries the row's own uuid, minted by the form for
           // this upload, so it is unique already; a suffix would only stop
           // the row from knowing its file's URL before the upload ends.

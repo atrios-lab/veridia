@@ -23,6 +23,9 @@ export interface Tutorial {
   /** Public URL of the WebVTT captions, in Portuguese; null when none was
    * uploaded, in which case the player shows no track at all. */
   captionsUrl: string | null;
+  /** Public URL of the cover image (JPEG, PNG or WebP); null when none was
+   * uploaded, in which case the card draws a cover from the title. */
+  posterUrl: string | null;
   /**
    * The panel route this video teaches, e.g. "/admin/pedidos": the screen at
    * that route and its subordinates offer "Como usar esta tela". Null for a

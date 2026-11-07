@@ -1,28 +1,50 @@
 import Link from "next/link";
 import { can } from "@/core/auth/roles.ts";
+import type { Tutorial } from "@/core/tutorials/catalog.ts";
 import {
   isTutorialId,
   listOrder,
   nextUnwatched,
+  type TrailStatus,
   trailProgress,
+  trailStatus,
 } from "@/core/tutorials/progress.ts";
 import { getSession } from "@/lib/session.ts";
 import { listPublishedTutorials, listWatchedIds } from "@/lib/tutorials.ts";
 import { ADMIN_NAV } from "../../_components/nav.ts";
 import { AdminPageHeader } from "../../_components/page-header.tsx";
-import { TutorialList } from "./_components/tutorial-list.tsx";
+import { TutorialCard } from "./_components/tutorial-card.tsx";
 import { TutorialPlayer } from "./_components/tutorial-player.tsx";
+import { TutorialShelf } from "./_components/tutorial-shelf.tsx";
 
 export const metadata = { title: "Treinamento" };
 
+const PANEL_SCREENS = ADMIN_NAV.filter((item) => !item.external);
+
 // "Pedidos de serviço" next to a video that teaches /admin/pedidos: the
-// sidebar's own words, so the list never names a screen two ways.
+// sidebar's own words, so the screen never has two names.
 const SCREEN_LABELS = new Map(
-  ADMIN_NAV.filter((item) => !item.external).map((item) => [
-    item.href,
-    item.label,
-  ]),
+  PANEL_SCREENS.map((item) => [item.href, item.label]),
 );
+
+// "Operação" over the card of that same video: the sidebar group the
+// screen sits in. A video about the panel as a whole has no screen, and
+// so no group; it reads "Painel".
+const SCREEN_GROUPS = new Map(
+  PANEL_SCREENS.map((item) => [item.href, item.group]),
+);
+const NO_SCREEN_CATEGORY = "Painel";
+
+function badgeText(status: TrailStatus): string {
+  switch (status.kind) {
+    case "start":
+      return "Comece por aqui";
+    case "progress":
+      return `Continue de onde parou · ${status.watched} de ${status.total}`;
+    case "done":
+      return "Trilha concluída";
+  }
+}
 
 /**
  * Open to every panel user: the layout has already required a session with
@@ -45,6 +67,8 @@ export default async function TutorialsPage({
     listWatchedIds(session.user.id),
   ]);
   const ordered = listOrder(tutorials);
+  const trail = ordered.filter((t) => t.trail);
+  const deepDives = ordered.filter((t) => !t.trail);
   const canManage = can(session.user.role ?? "", "tutorials.manage");
 
   // An unknown id (or a draft's, which is the same thing from here) is not
@@ -59,15 +83,27 @@ export default async function TutorialsPage({
     ordered[0];
   const progress = trailProgress(tutorials, watchedIds);
 
+  function card(tutorial: Tutorial) {
+    return (
+      <TutorialCard
+        key={tutorial.id}
+        tutorial={tutorial}
+        watched={watchedIds.has(tutorial.id)}
+        current={tutorial.id === current?.id}
+        category={
+          (tutorial.route && SCREEN_GROUPS.get(tutorial.route)) ||
+          NO_SCREEN_CATEGORY
+        }
+        screen={tutorial.route ? SCREEN_LABELS.get(tutorial.route) : undefined}
+      />
+    );
+  }
+
   return (
     <>
       <AdminPageHeader
         title="Treinamento"
-        description={
-          progress.total > 0
-            ? `Primeiros passos: ${progress.watched} de ${progress.total} assistidos. Cada vídeo mostra uma tela do painel, do jeito que ela é usada no dia a dia.`
-            : "Cada vídeo mostra uma tela do painel, do jeito que ela é usada no dia a dia."
-        }
+        description="Vídeos curtos mostrando cada tela do painel, do jeito que ela é usada no dia a dia."
         actions={
           canManage ? (
             <Link
@@ -79,9 +115,9 @@ export default async function TutorialsPage({
           ) : undefined
         }
       />
-      <main className="flex flex-col gap-4.5 px-[30px] py-7">
+      <main className="flex min-w-0 flex-col gap-9 px-[30px] py-7">
         {current ? (
-          <div className="grid grid-cols-1 gap-4 lg:grid-cols-[1fr_348px] lg:items-start">
+          <>
             <TutorialPlayer
               key={current.id}
               tutorial={current}
@@ -91,19 +127,29 @@ export default async function TutorialsPage({
                   ? (SCREEN_LABELS.get(current.route) ?? null)
                   : null
               }
+              badge={badgeText(trailStatus(tutorials, watchedIds))}
             />
-            <div className="rounded-[14px] border border-admin-border bg-admin-card p-3">
-              <span className="block px-3.5 pt-2 pb-2.5 text-[11px] font-bold uppercase tracking-[0.08em] text-admin-faint">
-                Todos os vídeos
-              </span>
-              <TutorialList
-                tutorials={ordered}
-                watchedIds={watchedIds}
+            {trail.length > 0 && (
+              <TutorialShelf
+                title="Primeiros passos"
+                count={`${progress.watched} de ${progress.total}`}
+                subtitle="O essencial para usar o painel, na ordem"
                 currentId={current.id}
-                screenLabels={SCREEN_LABELS}
-              />
-            </div>
-          </div>
+              >
+                {trail.map(card)}
+              </TutorialShelf>
+            )}
+            {deepDives.length > 0 && (
+              <TutorialShelf
+                title="Aprofundamento"
+                count={String(deepDives.length)}
+                subtitle="Cada tela em detalhe, para quando precisar"
+                currentId={current.id}
+              >
+                {deepDives.map(card)}
+              </TutorialShelf>
+            )}
+          </>
         ) : (
           <div className="rounded-[14px] border border-admin-border bg-admin-card px-6 py-10 text-center">
             <p className="font-serif text-[18px] font-semibold text-admin-primary">

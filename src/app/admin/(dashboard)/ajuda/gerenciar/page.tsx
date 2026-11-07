@@ -42,6 +42,7 @@ export default async function ManageTutorialsPage() {
     hasCaptions: row.captionsPath !== null,
     videoUrl: row.videoPath,
     captionsUrl: row.captionsPath,
+    posterUrl: row.posterPath,
     published: row.publishedAt !== null,
   }));
 

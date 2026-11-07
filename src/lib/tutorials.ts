@@ -37,6 +37,7 @@ export function toTutorial(row: TutorialRow): Tutorial {
     durationSeconds: row.durationSeconds,
     videoUrl: row.videoPath,
     captionsUrl: row.captionsPath,
+    posterUrl: row.posterPath,
     route: row.route,
     trail: row.trail,
   };
@@ -98,6 +99,7 @@ export async function publishedTutorialCount(): Promise<number> {
 export interface TutorialFiles {
   videoUrl: string;
   captionsUrl: string | null;
+  posterUrl: string | null;
 }
 
 async function audit(
@@ -142,6 +144,7 @@ export async function createTutorialWith(
       durationSeconds: input.durationSeconds,
       videoPath: files.videoUrl,
       captionsPath: files.captionsUrl,
+      posterPath: files.posterUrl,
       route: input.route,
       trail: input.trail,
       position: (last?.position ?? 0) + 1,
@@ -170,7 +173,7 @@ export interface UpdateResult {
 /**
  * Edits the description of a video and, when a new file came along, swaps
  * it in. `files` fields left undefined keep what is stored; `captionsUrl:
- * null` removes the captions. The replaced files come back as `orphaned`.
+ * null` removes the captions and `posterUrl: null` the cover. The replaced files come back as `orphaned`.
  */
 export async function updateTutorialWith(
   database: Database,
@@ -193,6 +196,7 @@ export async function updateTutorialWith(
       ...(files.captionsUrl !== undefined
         ? { captionsPath: files.captionsUrl }
         : {}),
+      ...(files.posterUrl !== undefined ? { posterPath: files.posterUrl } : {}),
       updatedAt: new Date(),
     })
     .where(eq(tutorials.id, id))
@@ -208,6 +212,13 @@ export async function updateTutorialWith(
     files.captionsUrl !== current.captionsPath
   ) {
     orphaned.push(current.captionsPath);
+  }
+  if (
+    files.posterUrl !== undefined &&
+    current.posterPath &&
+    files.posterUrl !== current.posterPath
+  ) {
+    orphaned.push(current.posterPath);
   }
   return { row, orphaned };
 }
@@ -321,7 +332,7 @@ export async function deleteTutorialWith(
     targetType: "tutorial",
     targetId: id,
   });
-  return [current.videoPath, current.captionsPath].filter(
+  return [current.videoPath, current.captionsPath, current.posterPath].filter(
     (path): path is string => path !== null,
   );
 }

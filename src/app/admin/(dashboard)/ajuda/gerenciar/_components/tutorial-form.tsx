@@ -13,11 +13,13 @@ import {
   checkTutorialFile,
   describeTutorialFileProblem,
   MAX_CAPTIONS_BYTES,
+  MAX_POSTER_BYTES,
   MAX_VIDEO_BYTES_DIRECT,
   MAX_VIDEO_BYTES_SERVER_ACTION,
   type TutorialFileKind,
   tutorialFilePath,
 } from "@/core/tutorials/video.ts";
+import { TutorialCover } from "../../_components/tutorial-cover.tsx";
 import { type SaveTutorialState, saveTutorialAction } from "../actions.ts";
 
 const FIELD_CLASS =
@@ -44,6 +46,7 @@ export interface EditingTutorial {
   route: string | null;
   trail: boolean;
   hasCaptions: boolean;
+  posterUrl: string | null;
 }
 
 /**
@@ -68,6 +71,12 @@ function readDuration(file: File): Promise<number> {
     probe.src = url;
   });
 }
+
+const UPLOADING_LABELS: Record<TutorialFileKind, string> = {
+  video: "Enviando o vídeo…",
+  captions: "Enviando a legenda…",
+  poster: "Enviando a capa…",
+};
 
 function pickedFile(data: FormData, field: string): File | null {
   const value = data.get(field);
@@ -103,6 +112,10 @@ export function TutorialForm({
   >(saveTutorialAction, { status: "idle" });
   const [videoName, setVideoName] = useState<string | null>(null);
   const [captionsName, setCaptionsName] = useState<string | null>(null);
+  // The picked cover, previewed from an object URL before it is sent; the
+  // URL is revoked when another file replaces it or the form goes away.
+  const [posterPreview, setPosterPreview] = useState<string | null>(null);
+  const [removePoster, setRemovePoster] = useState(false);
   const [duration, setDuration] = useState<number | null>(
     editing?.durationSeconds ?? null,
   );
@@ -113,6 +126,31 @@ export function TutorialForm({
   useEffect(() => {
     if (state.status === "saved") onDone();
   }, [state, onDone]);
+
+  useEffect(() => {
+    if (!posterPreview) return;
+    return () => URL.revokeObjectURL(posterPreview);
+  }, [posterPreview]);
+
+  function handlePosterChange(file: File | null) {
+    setLocalError(undefined);
+    setRemovePoster(false);
+    if (!file) {
+      setPosterPreview(null);
+      return;
+    }
+    const problem = checkTutorialFile(
+      { mimeType: file.type, size: file.size },
+      "poster",
+      MAX_POSTER_BYTES,
+    );
+    if (problem) {
+      setLocalError(describeTutorialFileProblem(problem, "poster"));
+      setPosterPreview(null);
+      return;
+    }
+    setPosterPreview(URL.createObjectURL(file));
+  }
 
   const videoLimit = directUpload
     ? MAX_VIDEO_BYTES_DIRECT
@@ -149,11 +187,9 @@ export function TutorialForm({
     file: File,
     kind: TutorialFileKind,
   ): Promise<string> {
-    setUploading(
-      kind === "video" ? "Enviando o vídeo…" : "Enviando a legenda…",
-    );
+    setUploading(UPLOADING_LABELS[kind]);
     const blob = await upload(
-      tutorialFilePath(kind, crypto.randomUUID()),
+      tutorialFilePath(kind, crypto.randomUUID(), file.type),
       file,
       {
         access: "public",
@@ -171,6 +207,7 @@ export function TutorialForm({
     const data = new FormData(form);
     const video = pickedFile(data, "video");
     const captions = pickedFile(data, "captions");
+    const poster = pickedFile(data, "poster");
 
     if (!editing && !video) {
       setLocalError("Escolha o arquivo do vídeo.");
@@ -198,6 +235,17 @@ export function TutorialForm({
         return;
       }
     }
+    if (poster) {
+      const problem = checkTutorialFile(
+        { mimeType: poster.type, size: poster.size },
+        "poster",
+        MAX_POSTER_BYTES,
+      );
+      if (problem) {
+        setLocalError(describeTutorialFileProblem(problem, "poster"));
+        return;
+      }
+    }
     if (duration === null) {
       setLocalError("Não foi possível ler a duração do vídeo.");
       return;
@@ -211,6 +259,9 @@ export function TutorialForm({
         if (captions) {
           data.set("captionsUrl", await uploadDirect(captions, "captions"));
         }
+        if (poster) {
+          data.set("posterUrl", await uploadDirect(poster, "poster"));
+        }
       } catch (error) {
         console.error("treinamento.upload", error);
         setLocalError("Não foi possível enviar o arquivo. Tente de novo.");
@@ -221,6 +272,7 @@ export function TutorialForm({
       }
       data.delete("video");
       data.delete("captions");
+      data.delete("poster");
     }
     startTransition(() => formAction(data));
   }
@@ -288,6 +340,64 @@ export function TutorialForm({
             </label>
           )}
           <FieldError message={fieldErrors.captions} />
+        </div>
+      </div>
+
+      <div className="mt-4">
+        <span className={LABEL_CLASS}>Capa (JPEG, PNG ou WebP, opcional)</span>
+        <div className="flex flex-wrap items-start gap-4">
+          <span className="block w-[176px] flex-none overflow-hidden rounded-[8px] border border-admin-border">
+            {posterPreview ? (
+              // biome-ignore lint/performance/noImgElement: local unpublished file previewed via a blob: object URL, which next/image cannot optimize.
+              <img
+                src={posterPreview}
+                alt="Prévia da capa escolhida"
+                className="block aspect-video w-full object-cover"
+              />
+            ) : (
+              <TutorialCover
+                title={editing?.title || "Título do vídeo"}
+                posterUrl={removePoster ? null : (editing?.posterUrl ?? null)}
+                size="thumb"
+              />
+            )}
+          </span>
+          <div className="min-w-[200px] flex-1">
+            <label className={pickerClass}>
+              {posterPreview
+                ? "Trocar a capa escolhida"
+                : editing?.posterUrl && !removePoster
+                  ? "Trocar a capa"
+                  : "Escolher a capa"}
+              <input
+                type="file"
+                name="poster"
+                accept="image/jpeg,image/png,image/webp,.jpg,.jpeg,.png,.webp"
+                className="sr-only"
+                disabled={busy}
+                onChange={(event) =>
+                  handlePosterChange(event.target.files?.[0] ?? null)
+                }
+              />
+            </label>
+            <p className="mt-1.5 text-[11px] text-admin-faint">
+              Até 2 MB, de preferência 1280×720. Sem capa, o card mostra o
+              título sobre a cor da serventia.
+            </p>
+            {editing?.posterUrl && !posterPreview && (
+              <label className="mt-1.5 flex items-center gap-2 text-[12px] text-admin-muted">
+                <input
+                  type="checkbox"
+                  name="removePoster"
+                  checked={removePoster}
+                  onChange={(event) => setRemovePoster(event.target.checked)}
+                  disabled={busy}
+                />
+                Remover a capa atual
+              </label>
+            )}
+            <FieldError message={fieldErrors.poster} />
+          </div>
         </div>
       </div>
 

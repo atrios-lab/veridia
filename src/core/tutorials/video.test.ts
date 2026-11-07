@@ -5,10 +5,13 @@ import {
   isGeneratedTutorialPath,
   isStoredTutorialUrl,
   MAX_CAPTIONS_BYTES,
+  MAX_DIRECT_BYTES,
+  MAX_POSTER_BYTES,
   MAX_VIDEO_BYTES_DIRECT,
   tutorialFilePath,
   tutorialFormSchema,
   tutorialPathKind,
+  tutorialPathMimeType,
 } from "./video.ts";
 
 const ID = "0f1e2d3c-4b5a-4968-8776-655443322110";
@@ -131,4 +134,72 @@ test("a duration that could not be read is refused", () => {
     });
     assert.equal(result.success, false, String(durationSeconds));
   }
+});
+
+test("a poster's path takes the extension of its own image type", () => {
+  assert.equal(
+    tutorialFilePath("poster", ID, "image/jpeg"),
+    `treinamento/${ID}.jpg`,
+  );
+  assert.equal(
+    tutorialFilePath("poster", ID, "image/png"),
+    `treinamento/${ID}.png`,
+  );
+  assert.equal(
+    tutorialFilePath("poster", ID, "image/webp"),
+    `treinamento/${ID}.webp`,
+  );
+  // A type the kind does not take falls back to the kind's first.
+  assert.equal(
+    tutorialFilePath("poster", ID, "image/gif"),
+    `treinamento/${ID}.jpg`,
+  );
+  assert.equal(
+    tutorialFilePath("video", ID, "image/png"),
+    `treinamento/${ID}.mp4`,
+  );
+});
+
+test("a poster path reads back as a poster, with its one type", () => {
+  assert.equal(tutorialPathKind(`treinamento/${ID}.webp`), "poster");
+  assert.equal(tutorialPathMimeType(`treinamento/${ID}.jpg`), "image/jpeg");
+  assert.equal(tutorialPathMimeType(`treinamento/${ID}.png`), "image/png");
+  assert.equal(tutorialPathMimeType(`treinamento/${ID}.mp4`), "video/mp4");
+  assert.equal(tutorialPathMimeType(`treinamento/${ID}.gif`), null);
+  assert.equal(isGeneratedTutorialPath(`treinamento/${ID}.gif`), false);
+  assert.equal(isGeneratedTutorialPath(`treinamento/${ID}.jpeg`), false);
+});
+
+test("a stored poster URL is trusted like the video's", () => {
+  assert.ok(isStoredTutorialUrl(`https://${HOST}/treinamento/${ID}.png`, HOST));
+  assert.ok(isStoredTutorialUrl(`/uploads/treinamento/${ID}.webp`, undefined));
+  assert.equal(
+    isStoredTutorialUrl(`/uploads/treinamento/${ID}.gif`, undefined),
+    false,
+  );
+});
+
+test("the poster takes three image types, up to its own limit", () => {
+  for (const mimeType of ["image/jpeg", "image/png", "image/webp"]) {
+    assert.equal(
+      checkTutorialFile({ mimeType, size: 10 }, "poster", MAX_POSTER_BYTES),
+      null,
+    );
+  }
+  assert.deepEqual(
+    checkTutorialFile(
+      { mimeType: "image/gif", size: 10 },
+      "poster",
+      MAX_POSTER_BYTES,
+    ),
+    { kind: "type", mimeType: "image/gif" },
+  );
+  assert.deepEqual(
+    checkTutorialFile(
+      { mimeType: "image/png", size: 5 * 1024 * 1024 },
+      "poster",
+      MAX_DIRECT_BYTES.poster,
+    ),
+    { kind: "size", limit: MAX_POSTER_BYTES },
+  );
 });
