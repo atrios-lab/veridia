@@ -109,6 +109,6 @@ Alternativa: manter o e-Notariado, como foi pedido no início. Descartada até h
 ## Open Questions
 
 - **Certidão digital de imóveis:** resolvida. O responsável pelo produto confirmou que a serventia entrega pelo site, onde o pedido é feito. O selo "Termina on-line" fica.
-- **Pagamento do papel:** antes, pelo Pix, ou na retirada? O prazo do § 10 conta do pagamento.
+- **Pagamento do papel:** resolvida. Digital e papel são pagos no fluxo comum do pedido. Quem pede escolhe a forma, e a serventia lança o valor de cada uma. O sistema não mostra nem calcula preço.
 - **Verbum ad verbum:** resolvida. O ato termina no balcão ou on-line, e o formulário pergunta qual dos dois.
 - **Lei 8.560 e norma de pessoa trans:** o art. 116, § 2º, cita as duas como restritas, e elas não foram lidas. A observação não cita artigos, então não depende disso.
