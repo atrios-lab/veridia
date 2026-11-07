@@ -12,8 +12,10 @@ import { deadlineDate } from "@/core/request/deadline.ts";
 import {
   buildAlternateDocument,
   buildExemptionDetails,
+  buildRequesterQualification,
   formatCpf,
   readExemptionForm,
+  readRequesterQualificationForm,
   serviceRequestSchema,
 } from "@/core/request/form.ts";
 import { ALTERNATE_DOCUMENT_LABELS } from "@/core/request/kinds.ts";
@@ -98,6 +100,8 @@ export async function createManualServiceRequest(
     purpose: formData.get("purpose") ?? "",
     parameterValue: "",
     actVariant: formData.get("actVariant"),
+    ...readRequesterQualificationForm(formData),
+    deliveryFormat: formData.get("deliveryFormat"),
     // Filed in person: the physical process at the counter is the consent,
     // there is no screen here for the citizen to tick these themselves, the
     // way there is in the public wizard.
@@ -128,6 +132,11 @@ export async function createManualServiceRequest(
   try {
     const {
       actVariant,
+      requesterRole,
+      representedName,
+      kinship,
+      registrantDeceased,
+      deliveryFormat,
       exemptionActId,
       certificateType,
       beneficiaries,
@@ -136,6 +145,12 @@ export async function createManualServiceRequest(
       alternateDocumentNumber,
       ...data
     } = parsed.data;
+    const requesterQualification = buildRequesterQualification({
+      requesterRole,
+      representedName,
+      kinship,
+      registrantDeceased,
+    });
     const alternateDocument = buildAlternateDocument({
       noCpf,
       alternateDocumentType,
@@ -161,6 +176,8 @@ export async function createManualServiceRequest(
         channel: fromConversationId ? "chat" : "counter",
         ...(actVariant ? { actVariant } : {}),
         ...(alternateDocument ? { alternateDocument } : {}),
+        ...(requesterQualification ? { requesterQualification } : {}),
+        ...(deliveryFormat ? { deliveryFormat } : {}),
         ...(exemption
           ? { exemption, deadline: { startedOn: today(), days: deadlineDays } }
           : {}),

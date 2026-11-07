@@ -582,6 +582,35 @@ const alternateDocumentSchema = z.object({
 });
 export type AlternateDocument = z.infer<typeof alternateDocumentSchema>;
 
+/** Quem faz o pedido de inteiro teor do RCPN. */
+export const REQUESTER_ROLES = ["self", "attorney", "other"] as const;
+export type RequesterRole = (typeof REQUESTER_ROLES)[number];
+
+export const REQUESTER_ROLE_LABELS: Record<RequesterRole, string> = {
+  self: "O próprio interessado",
+  attorney: "Advogado ou procurador",
+  other: "Outra pessoa",
+};
+
+/** Como quem pede quer receber a certidão, nos atos com `deliveryChoice`. */
+export const DELIVERY_FORMATS = ["digital", "paper"] as const;
+export type DeliveryFormat = (typeof DELIVERY_FORMATS)[number];
+
+export const DELIVERY_FORMAT_LABELS: Record<DeliveryFormat, string> = {
+  digital: "Digital, entregue pelo site",
+  paper: "Impressa em papel, retirada no balcão",
+};
+
+const requesterQualificationSchema = z.object({
+  role: z.enum(REQUESTER_ROLES),
+  representedName: z.string().optional(),
+  kinship: z.string().optional(),
+  registrantDeceased: z.boolean(),
+});
+export type RequesterQualification = z.infer<
+  typeof requesterQualificationSchema
+>;
+
 export const serviceRequestDetailsSchema = z.object({
   // Absent means "online", the default every citizen-filed request already
   // was before the counter could file one directly.
@@ -610,6 +639,12 @@ export const serviceRequestDetailsSchema = z.object({
   // The document of a citizen with no CPF, only the counter records it. Here
   // and not in a column for the same reason as `phone`: one kind, a rare case.
   alternateDocument: alternateDocumentSchema.optional(),
+  // As respostas do inteiro teor do RCPN (CNN, art. 117, § 3º). A finalidade não
+  // está aqui porque tem coluna própria, já lida pelo painel e pelo PDF.
+  requesterQualification: requesterQualificationSchema.optional(),
+  // Digital ou papel, nos atos que deixam escolher. Ausente nos demais e nos
+  // pedidos anteriores à pergunta: ausente é "não sabemos".
+  deliveryFormat: z.enum(DELIVERY_FORMATS).optional(),
   // Present means the citizen asked for the statutory exemption and signed the
   // declaration that goes with it; `declaredAt` is when. Same discipline as
   // `consents` right above: a declaration validated and thrown away is not
@@ -665,6 +700,82 @@ export function variantOwner(
 export function readActVariant(details: unknown): string | undefined {
   const value = (details as { actVariant?: unknown } | null)?.actVariant;
   return typeof value === "string" && value !== "" ? value : undefined;
+}
+
+type QualificationAct = Pick<Act, "requesterQualification" | "variants">;
+
+/**
+ * Se este pedido leva as perguntas de quem pede. Só com uma opção escolhida: sem
+ * ela não se sabe se é óbito, e a própria falta da opção já é um erro do pedido.
+ * O site, o balcão, o painel e o PDF perguntam aqui, para dizerem o mesmo.
+ */
+export function asksRequesterQualification(
+  act: QualificationAct,
+  variantId: string | undefined,
+): boolean {
+  if (!act.requesterQualification) return false;
+  const variant = act.variants?.options.find((o) => o.id === variantId);
+  return Boolean(variant && !variant.waivesRequesterQualification);
+}
+
+/** Se este pedido pode dizer a finalidade, dado o ato e a opção escolhida. */
+export function asksPurpose(
+  act: QualificationAct & Pick<Act, "requiresPurpose">,
+  variantId: string | undefined,
+): boolean {
+  if (!act.requiresPurpose) return false;
+  return (
+    !act.requesterQualification || asksRequesterQualification(act, variantId)
+  );
+}
+
+export function readRequesterQualification(
+  details: unknown,
+): RequesterQualification | undefined {
+  const parsed = requesterQualificationSchema.safeParse(
+    (details as { requesterQualification?: unknown } | null)
+      ?.requesterQualification,
+  );
+  return parsed.success ? parsed.data : undefined;
+}
+
+/** As respostas em linhas, na mesma ordem e nas mesmas palavras do painel e do PDF. */
+export function requesterQualificationRows(
+  qualification: RequesterQualification,
+): { label: string; value: string }[] {
+  return [
+    { label: "Quem pede", value: REQUESTER_ROLE_LABELS[qualification.role] },
+    ...(qualification.representedName
+      ? [{ label: "Representado", value: qualification.representedName }]
+      : []),
+    ...(qualification.kinship
+      ? [{ label: "Parentesco", value: qualification.kinship }]
+      : []),
+    {
+      label: "Registrado falecido",
+      value: qualification.registrantDeceased ? "Sim" : "Não",
+    },
+  ];
+}
+
+export function readDeliveryFormat(
+  details: unknown,
+): DeliveryFormat | undefined {
+  const parsed = z
+    .enum(DELIVERY_FORMATS)
+    .safeParse(
+      (details as { deliveryFormat?: unknown } | null)?.deliveryFormat,
+    );
+  return parsed.success ? parsed.data : undefined;
+}
+
+/** A escolha numa linha, igual no painel e no PDF. Vazia quando não há. */
+export function deliveryFormatRows(
+  format: DeliveryFormat | undefined,
+): { label: string; value: string }[] {
+  return format
+    ? [{ label: "Entrega", value: DELIVERY_FORMAT_LABELS[format] }]
+    : [];
 }
 
 export function readAlternateDocument(

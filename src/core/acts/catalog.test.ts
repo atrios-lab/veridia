@@ -20,6 +20,7 @@ import {
   getActForTenant,
   IDENTIFICATION_ONLY_HINT,
   IDENTIFICATION_ONLY_LABEL,
+  INTEIRO_TEOR_SIGNATURE_CAVEAT,
   PLATFORM_CHANNEL_RULE,
   PLATFORM_COUNTER_STATEMENT,
   PLATFORM_DATA_PROTECTION,
@@ -29,6 +30,8 @@ import {
   PROCESSING_MODE_HINTS,
   PROCESSING_MODE_LABELS,
   PROCESSING_MODES,
+  processingHintFor,
+  REQUESTER_QUALIFICATION_NOTICE,
 } from "./catalog.ts";
 
 // A NOTAS-only office, built here instead of borrowed from a registered one.
@@ -55,6 +58,7 @@ test("the kinds an act groups are a fixed list, since requests store the ids", (
   );
   assert.deepEqual(declared, {
     "rcpn-certidao": ["nascimento", "casamento", "obito", "outra"],
+    "rcpn-certidao-inteiro-teor": ["nascimento", "casamento", "obito", "outra"],
     "notas-escritura": ["escritura", "procuracao"],
     "ri-certidao-matricula": ["matricula", "inteiro-teor", "onus"],
     "ri-busca-indicador": ["pessoal", "real"],
@@ -70,7 +74,7 @@ test("only the catch-all option of the certificate demands a description", () =>
   );
   assert.deepEqual(
     demanding.map((option) => option.id),
-    ["outra"],
+    ["outra", "outra"],
   );
 });
 
@@ -124,9 +128,11 @@ test("each attribution ends with the way out for an unlisted act", () => {
 
 test("a certificate never asks the citizen what it is for", () => {
   // Lei 6.015 art. 17 and Prov. 149 art. 123 caput. The exception exists only
-  // for the archived document and for the indicator search, both in RI.
+  // for the archived document and for the indicator search, both in RI, and for
+  // the inteiro teor of the Registro Civil (Prov. 149 art. 117 § 3º).
   const asking = ACTS.filter((a) => a.requiresPurpose).map((a) => a.id);
   assert.deepEqual(asking.sort(), [
+    "rcpn-certidao-inteiro-teor",
     "ri-busca-indicador",
     "ri-certidao-arquivado",
   ]);
@@ -164,13 +170,98 @@ test("the generated act resolves back from its id", () => {
 
 test("as certidões e a busca pedem só a identificação, e resolvem on-line", () => {
   // As duas coisas ao mesmo tempo: era o que o campo único não deixava dizer,
-  // e o que fazia a certidão anunciar só metade da verdade.
+  // e o que fazia a certidão anunciar só metade da verdade. A exceção é o
+  // inteiro teor em papel, que só identifica, mas se retira no balcão.
   const soIdentificacao = ACTS.filter((act) => act.identificationOnly);
-  assert.equal(soIdentificacao.length, 7);
-  for (const act of soIdentificacao) {
-    assert.equal(act.processingMode, "online", act.id);
-  }
+  assert.equal(soIdentificacao.length, 8);
+  assert.deepEqual(
+    soIdentificacao
+      .filter((act) => act.processingMode !== "online")
+      .map((act) => act.id),
+    ["ri-certidao-inteiro-teor-papel"],
+  );
   assert.ok(soIdentificacao.every((act) => /certid|busca/i.test(act.name)));
+});
+
+test("o inteiro teor de imóveis separa o digital do papel, sem valor na tela", () => {
+  const digital = getAct("ri-certidao-matricula");
+  // O id não muda: os pedidos antigos passam a aparecer como digital.
+  assert.equal(
+    actVariantName(digital as NonNullable<typeof digital>, "inteiro-teor"),
+    "Certidão de inteiro teor digital",
+  );
+  assert.equal(digital?.processingMode, "online");
+
+  const papel = getAct("ri-certidao-inteiro-teor-papel");
+  assert.equal(papel?.processingMode, "presential");
+  assert.equal(papel?.identificationOnly, true);
+  assert.equal(papel?.legalDeadlineDays, 5);
+  assert.match(papel?.legalDeadlineNote ?? "", /§ 10 III/);
+  assert.match(papel?.guidance ?? "", /balcão/);
+  assert.doesNotMatch(
+    `${papel?.name} ${papel?.guidance} ${papel?.processingHint}`,
+    /R\$|valor/i,
+  );
+});
+
+test("a dica do próprio ato vem antes da de só identificação", () => {
+  const papel = getAct("ri-certidao-inteiro-teor-papel");
+  assert.match(
+    processingHintFor(papel as NonNullable<typeof papel>),
+    /balcão.*identificação/,
+  );
+  // Os atos de antes não mudam: nenhum outro tem as duas coisas ao mesmo tempo.
+  const comAsDuas = ACTS.filter(
+    (a) => a.identificationOnly && a.processingHint,
+  );
+  assert.deepEqual(
+    comAsDuas.map((a) => a.id),
+    ["ri-certidao-inteiro-teor-papel"],
+  );
+  assert.equal(
+    processingHintFor({ processingMode: "online", identificationOnly: true }),
+    IDENTIFICATION_ONLY_HINT,
+  );
+  assert.equal(
+    processingHintFor({ processingMode: "presential" }),
+    PROCESSING_MODE_HINTS.presential,
+  );
+});
+
+test("o inteiro teor do RCPN avisa sem citar e-Notariado nem decidir", () => {
+  const act = getAct("rcpn-certidao-inteiro-teor");
+  assert.ok(act);
+  // Pelo site ou no balcão, quem pede escolhe.
+  assert.equal(act.processingMode, "hybrid");
+  assert.equal(act.deliveryChoice, true);
+  assert.deepEqual(
+    ACTS.filter((a) => a.deliveryChoice).map((a) => a.id),
+    ["rcpn-certidao-inteiro-teor"],
+  );
+  assert.match(processingHintFor(act), /site/);
+  assert.match(processingHintFor(act), /balcão/);
+  assert.equal(act.identificationOnly, undefined);
+  assert.equal(act.legalDeadlineDays, 5);
+  // Fora da gratuidade: a marcação "Inteiro teor" de lá não ganha estas perguntas.
+  assert.equal(act.feeExemption, undefined);
+  assert.ok(act.documents?.some((document) => /mandato/i.test(document)));
+
+  const textos = JSON.stringify(act) + INTEIRO_TEOR_SIGNATURE_CAVEAT;
+  assert.doesNotMatch(textos, /e-Notariado/i);
+  assert.equal(act.signatureCaveat, INTEIRO_TEOR_SIGNATURE_CAVEAT);
+  assert.match(INTEIRO_TEOR_SIGNATURE_CAVEAT, /Gov\.br/);
+  assert.match(INTEIRO_TEOR_SIGNATURE_CAVEAT, /ICP-Brasil/);
+  assert.match(INTEIRO_TEOR_SIGNATURE_CAVEAT, /reconheça a firma/);
+  // CNN art. 117 § 1º: assinado na frente do preposto, dispensa a firma.
+  assert.match(INTEIRO_TEOR_SIGNATURE_CAVEAT, /balcão/);
+  assert.doesNotMatch(INTEIRO_TEOR_SIGNATURE_CAVEAT, /vale só/);
+  assert.match(
+    REQUESTER_QUALIFICATION_NOTICE,
+    /só sai com autorização judicial/,
+  );
+  assert.match(REQUESTER_QUALIFICATION_NOTICE, /depois do recebimento/);
+  // CNN art. 114: o mandatário precisa de poderes especiais.
+  assert.match(REQUESTER_QUALIFICATION_NOTICE, /poderes especiais/);
 });
 
 test("nenhum texto do catálogo promete ato sem requerimento", () => {

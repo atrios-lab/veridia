@@ -218,3 +218,10 @@ test("only the acts the law allows may carry a purpose", () => {
   // An act that could not be resolved is not a licence to ask.
   assert.equal(purposeFor(undefined, "para inventário"), null);
 });
+
+test("no inteiro teor do RCPN a finalidade depende da opção", () => {
+  const act = getAct("rcpn-certidao-inteiro-teor");
+  assert.equal(purposeFor(act, "aposentadoria", "nascimento"), "aposentadoria");
+  assert.equal(purposeFor(act, "aposentadoria", "obito"), null);
+  assert.equal(purposeFor(act, "aposentadoria"), null);
+});

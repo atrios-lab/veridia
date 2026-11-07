@@ -20,12 +20,15 @@ import {
 import { deadlineDate } from "@/core/request/deadline.ts";
 import {
   buildExemptionDetails,
+  buildRequesterQualification,
   looksLikeBot,
   publicServiceRequestSchema,
   readExemptionForm,
+  readRequesterQualificationForm,
 } from "@/core/request/form.ts";
 import { readExemption } from "@/core/request/kinds.ts";
 import { formatProtocolNumber } from "@/core/request/protocol.ts";
+import { signatureCaveatFor } from "@/core/request/requerimento.ts";
 import { formatDate } from "@/core/scheduling/calendar.ts";
 import { isSectionEnabled } from "@/core/tenant/gating.ts";
 import { officeYear } from "@/core/time/office-time.ts";
@@ -57,6 +60,8 @@ export interface SubmitSuccess {
    * hipossuficiência (Provimento CGJ/TJRN n. 7/2026, Anexo I): only a
    * gratuidade pedido has one. */
   hasExemption: boolean;
+  /** O aviso de assinatura do ato: nem todo ato cita as mesmas assinaturas. */
+  signatureCaveat: string;
 }
 
 export interface SubmitDuplicate {
@@ -119,6 +124,7 @@ export async function submitServiceRequest(
         ),
       ),
       hasExemption: false,
+      signatureCaveat: signatureCaveatFor(act),
     };
   }
 
@@ -138,6 +144,8 @@ export async function submitServiceRequest(
     purpose: formData.get("purpose") ?? "",
     parameterValue: formData.get("parameterValue") ?? "",
     actVariant: formData.get("actVariant"),
+    ...readRequesterQualificationForm(formData),
+    deliveryFormat: formData.get("deliveryFormat"),
     lgpdConsent: formData.get("lgpdConsent") ?? "",
     truthDeclaration: formData.get("truthDeclaration") ?? "",
     ...readExemptionForm(formData),
@@ -188,11 +196,22 @@ export async function submitServiceRequest(
       email,
       phone,
       actVariant,
+      requesterRole,
+      representedName,
+      kinship,
+      registrantDeceased,
+      deliveryFormat,
       exemptionActId,
       certificateType,
       beneficiaries,
       ...data
     } = parsed.data;
+    const requesterQualification = buildRequesterQualification({
+      requesterRole,
+      representedName,
+      kinship,
+      registrantDeceased,
+    });
 
     // O ato da gratuidade não tem prazo próprio: o prazo é o do ato que ele
     // pede, senão a certidão isenta nasceria com prazo diferente da paga. Fica
@@ -222,6 +241,8 @@ export async function submitServiceRequest(
           consents: { lgpd: consentedAt, truth: consentedAt },
           phone,
           ...(actVariant ? { actVariant } : {}),
+          ...(requesterQualification ? { requesterQualification } : {}),
+          ...(deliveryFormat ? { deliveryFormat } : {}),
           // Pedida, nunca concedida: quem confere o benefício e decide é a
           // serventia, e `amountCents` segue sendo do operador.
           ...(exemption
@@ -263,6 +284,7 @@ export async function submitServiceRequest(
       // the office's default stands in.
       deadlineLabel: formatDate(deadlineDate(today(), deadlineDays)),
       hasExemption: Boolean(exemption),
+      signatureCaveat: signatureCaveatFor(act),
     };
   } catch (error) {
     if (error instanceof AttachmentError) return fail(error.message);

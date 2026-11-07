@@ -1,9 +1,8 @@
 import {
-  IDENTIFICATION_ONLY_HINT,
   IDENTIFICATION_ONLY_LABEL,
-  PROCESSING_MODE_HINTS,
   PROCESSING_MODE_LABELS,
   type ProcessingMode,
+  processingHintFor,
 } from "@/core/acts/catalog.ts";
 import { Icon } from "../../_components/icon.tsx";
 
@@ -53,9 +52,7 @@ export function ProcessingBadge({ act }: { act: ActTravel }) {
 export function ProcessingHint({ act }: { act: ActTravel }) {
   return (
     <span className="text-[11.5px] text-brand-muted">
-      {act.identificationOnly
-        ? IDENTIFICATION_ONLY_HINT
-        : (act.processingHint ?? PROCESSING_MODE_HINTS[act.processingMode])}
+      {processingHintFor(act)}
     </span>
   );
 }

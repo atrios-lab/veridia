@@ -6,6 +6,7 @@ import {
   buildAccessReceipt,
   buildDataRightsReceipt,
   buildRequerimento,
+  HANDWRITTEN_SIGNATURE_CAVEAT,
   SIGNED_FORM_CONFIRMATIONS,
 } from "./requerimento.ts";
 
@@ -320,4 +321,68 @@ test("a request filed at night carries that day, with the server in UTC", () => 
     });
     assert.match(document.subtitle, /03\/11\/2026$/);
   });
+});
+
+const inteiroTeor = getAct("rcpn-certidao-inteiro-teor");
+if (!inteiroTeor) throw new Error("catalogo incompleto");
+
+const byAttorney = {
+  role: "attorney",
+  representedName: "João da Silva",
+  kinship: "Filho",
+  registrantDeceased: true,
+} as const;
+
+test("o inteiro teor do RCPN traz as respostas e a própria assinatura", () => {
+  const { sections, signature } = buildRequerimento(
+    cartorioMarinho,
+    inteiroTeor,
+    {
+      ...data,
+      actVariant: "nascimento",
+      purpose: "Aposentadoria rural",
+      requesterQualification: byAttorney,
+      deliveryFormat: "paper",
+    },
+  );
+  const text = flatten(sections);
+  assert.match(text, /Entrega: Impressa em papel, retirada no balcão/);
+  assert.match(text, /Ato requerido: Certidão de nascimento em inteiro teor/);
+  assert.match(text, /Finalidade: Aposentadoria rural/);
+  assert.match(text, /Quem pede: Advogado ou procurador/);
+  assert.match(text, /Representado: João da Silva/);
+  assert.match(text, /Parentesco: Filho/);
+  assert.match(text, /Registrado falecido: Sim/);
+
+  const assinatura = signature.join(" ");
+  assert.match(assinatura, /Gov\.br/);
+  assert.match(assinatura, /ICP-Brasil/);
+  assert.match(assinatura, /reconheça a firma/);
+  assert.doesNotMatch(`${assinatura} ${text}`, /e-Notariado/);
+});
+
+test("o óbito do inteiro teor não imprime respostas, mesmo se sobrarem", () => {
+  const { sections } = buildRequerimento(cartorioMarinho, inteiroTeor, {
+    ...data,
+    actVariant: "obito",
+    requesterQualification: byAttorney,
+  });
+  assert.doesNotMatch(flatten(sections), /Quem pede|Representado/);
+});
+
+test("um ato sem a escolha não imprime a entrega, mesmo se sobrar", () => {
+  const { sections } = buildRequerimento(cartorioMarinho, certificate, {
+    ...data,
+    actVariant: "casamento",
+    deliveryFormat: "digital",
+  });
+  assert.doesNotMatch(flatten(sections), /Entrega/);
+});
+
+test("os demais atos mantêm o aviso geral de assinatura", () => {
+  const { signature } = buildRequerimento(cartorioMarinho, certificate, {
+    ...data,
+    actVariant: "casamento",
+  });
+  assert.ok(signature.includes(HANDWRITTEN_SIGNATURE_CAVEAT));
 });

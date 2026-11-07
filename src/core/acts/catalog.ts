@@ -101,6 +101,53 @@ export const IDENTIFICATION_ONLY_LABEL = "Só identificação";
 export const IDENTIFICATION_ONLY_HINT =
   "além do requerimento assinado, a serventia só pede a sua identificação";
 
+/**
+ * A dica que acompanha o selo de um ato. A própria do ato vem primeiro: no
+ * inteiro teor em papel, a de "Só identificação" esconderia que é preciso ir
+ * ao balcão. Quem tem as duas coisas a dizer diz as duas em `processingHint`.
+ */
+export function processingHintFor(
+  act: Pick<Act, "processingMode" | "identificationOnly" | "processingHint">,
+): string {
+  return (
+    act.processingHint ??
+    (act.identificationOnly
+      ? IDENTIFICATION_ONLY_HINT
+      : PROCESSING_MODE_HINTS[act.processingMode])
+  );
+}
+
+/**
+ * O aviso do inteiro teor do RCPN, igual no site e no balcão. Avisa e não
+ * decide: quem diz se a autorização judicial é necessária é a serventia, depois
+ * de receber o pedido. Conferido no texto compilado do CNN no site do CNJ em
+ * 07/11/2026: art. 114 (mandatário com poderes especiais; terceiro com dado
+ * sensível só com autorização), art. 116 §§ 2º e 3º (dados restritos e
+ * sigilosos) e art. 529 § 1º (pessoa trans). Não cita artigo para o texto do
+ * site não envelhecer com uma renumeração.
+ */
+export const REQUESTER_QUALIFICATION_NOTICE =
+  "Alguns registros têm dados sensíveis, restritos ou sigilosos, como adoção, " +
+  "reconhecimento de filho, mudança de nome ou sexo de pessoa trans e mudança " +
+  "de nome de testemunha protegida. A certidão desses registros só sai com " +
+  "autorização judicial quando quem pede não é o interessado, o representante " +
+  "legal ou um procurador com poderes especiais. Na mudança de nome ou sexo de " +
+  "pessoa trans, só a própria pessoa pede sem ordem judicial. O pedido é " +
+  "analisado depois do recebimento e pode ser recusado se faltar o mandato ou " +
+  "outro documento necessário.";
+
+/**
+ * Por que o e-Notariado não está aqui: o CNN, art. 117, lista firma reconhecida,
+ * ICP-Brasil, Gov.br e assinatura conferida com o documento de identidade
+ * original, e não o cita para este requerimento. O § 1º dispensa a firma do
+ * requerimento assinado na frente do oficial ou do preposto, por isso o balcão
+ * aparece como alternativa ao reconhecimento.
+ */
+export const INTEIRO_TEOR_SIGNATURE_CAVEAT =
+  "Além do Gov.br, vale o certificado digital ICP-Brasil. Se assinar de próprio " +
+  "punho, reconheça a firma em um cartório de notas ou assine no balcão da " +
+  "serventia, com o documento de identidade original.";
+
 /** Extra fact the office needs to find the right band in the fee table. */
 export type ActParameter = "transactionValue" | "registryYears";
 
@@ -118,6 +165,11 @@ export interface ActVariant {
   name: string;
   /** The option says too little on its own: "Outra certidão" needs the words. */
   requiresDescription?: true;
+  /**
+   * Dispensa as perguntas de `Act.requesterQualification`: no óbito, a restrição
+   * a dado sensível não alcança a pessoa falecida (CNN, arts. 118 e 119).
+   */
+  waivesRequesterQualification?: true;
 }
 
 export interface ActVariants {
@@ -141,13 +193,28 @@ export interface Act {
   legalBasis: string;
   /**
    * Only a few acts may ask the citizen why they want the document.
-   * Certificates may not: Lei 6.015 art. 17 forbids requiring a motive.
+   * Certificates may not: Lei 6.015 art. 17 forbids requiring a motive. The one
+   * exception is the inteiro teor of the Registro Civil (CNN, art. 117, § 3º),
+   * and `asksPurpose` is what says whether a given request of it does.
    */
   requiresPurpose: boolean;
   /** Papers the office expects, shown as a checklist before submitting. */
   documents?: string[];
   /** Where the mode's own hint would mislead, this one is shown instead. */
   processingHint?: string;
+  /**
+   * O requerimento precisa dizer quem pede e por quê (CNN, art. 117, § 3º). Vale
+   * só com uma opção escolhida e que não o dispense: quem responde é
+   * `asksRequesterQualification`, nunca este campo sozinho.
+   */
+  requesterQualification?: true;
+  /**
+   * Quem pede escolhe receber a certidão digital, pelo site, ou impressa em
+   * papel, no balcão. Pergunta de todo pedido do ato, inclusive do óbito.
+   */
+  deliveryChoice?: true;
+  /** No lugar do aviso geral de assinatura, onde ele citaria o que não vale. */
+  signatureCaveat?: string;
   /**
    * What to bring and how it goes, for acts finished at the counter or signed
    * somewhere other than this site.
@@ -486,6 +553,51 @@ export const ACTS: Act[] = [
     },
   },
   {
+    id: "rcpn-certidao-inteiro-teor",
+    attribution: "RCPN",
+    name: "Certidão de inteiro teor (verbum ad verbum)",
+    variants: {
+      question: "De qual registro?",
+      options: [
+        { id: "nascimento", name: "Certidão de nascimento em inteiro teor" },
+        { id: "casamento", name: "Certidão de casamento em inteiro teor" },
+        {
+          id: "obito",
+          name: "Certidão de óbito em inteiro teor",
+          waivesRequesterQualification: true,
+        },
+        {
+          id: "outra",
+          name: "Outra certidão em inteiro teor",
+          requiresDescription: true,
+        },
+      ],
+    },
+    // A serventia entrega pelo site ou imprime no balcão, e a escolha é de
+    // quem pede (confirmado pelo responsável pelo produto em 07/11/2026).
+    processingMode: "hybrid",
+    deliveryChoice: true,
+    processingHint:
+      "você escolhe receber a certidão pelo site ou retirá-la impressa no balcão",
+    guidance:
+      "No pedido, você escolhe a certidão digital, entregue pelo site, ou " +
+      "impressa em papel, retirada no balcão da serventia. Para retirar no " +
+      "balcão, traga um documento de identidade.",
+    legalBasis: "Lei 6.015 arts. 17 a 19; Prov. 149 arts. 114 a 119",
+    legalDeadlineDays: 5,
+    legalDeadlineNote:
+      "Lei 6.015 art. 19, red. Lei 14.382/2022: demais certidões",
+    requiresPurpose: true, // Prov. 149 art. 117 § 3º, salvo no óbito
+    requesterQualification: true,
+    descriptionPlaceholder:
+      "Ex.: nome da pessoa registrada e, se souber, livro, folha e termo.",
+    signatureCaveat: INTEIRO_TEOR_SIGNATURE_CAVEAT,
+    documents: [
+      "Documento de identidade do solicitante",
+      "Mandato (procuração), se o pedido for por advogado ou procurador",
+    ],
+  },
+  {
     id: "rcpn-habilitacao-casamento",
     attribution: "RCPN",
     name: "Habilitação de casamento",
@@ -595,12 +707,14 @@ export const ACTS: Act[] = [
   {
     id: "ri-certidao-matricula",
     attribution: "RI",
-    name: "Certidão de matrícula, inteiro teor ou ônus",
+    name: "Certidão de matrícula, inteiro teor digital ou ônus",
     variants: {
       question: "Qual certidão?",
       options: [
         { id: "matricula", name: "Certidão de matrícula" },
-        { id: "inteiro-teor", name: "Certidão de inteiro teor" },
+        // O id ficou: os pedidos antigos passam a aparecer como digital, que é
+        // o que o selo "Termina on-line" já prometia a eles.
+        { id: "inteiro-teor", name: "Certidão de inteiro teor digital" },
         { id: "onus", name: "Certidão de ônus" },
       ],
     },
@@ -614,6 +728,26 @@ export const ACTS: Act[] = [
     // below carry the exception, and mixing them up would put an unlawful
     // question in front of every certificate.
     requiresPurpose: false,
+  },
+  {
+    // Um ato, e não mais uma opção acima: o selo e o prazo são do ato e aparecem
+    // antes de escolher a opção, e como opção o papel leria "não precisa ir à
+    // serventia".
+    id: "ri-certidao-inteiro-teor-papel",
+    attribution: "RI",
+    name: "Certidão de inteiro teor em papel de segurança",
+    processingMode: "presential",
+    identificationOnly: true,
+    processingHint:
+      "você retira a certidão impressa no balcão, e além do requerimento assinado a serventia só pede a sua identificação",
+    legalBasis: "Prov. 149 art. 123 caput; Prov. CGJ/RN 156/2016 arts. 52 e 53",
+    legalDeadlineDays: 5,
+    legalDeadlineNote:
+      "Lei 6.015 art. 19 § 10 III, red. Lei 14.382/2022: as 4 horas do inciso I são só do meio eletrônico",
+    requiresPurpose: false,
+    guidance:
+      "A certidão é impressa em papel de segurança e retirada no balcão da " +
+      "serventia. Traga um documento de identidade.",
   },
   {
     id: "ri-certidao-arquivado",

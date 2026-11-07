@@ -4,7 +4,6 @@ import Link from "next/link";
 import { Fragment, useActionState, useEffect, useRef, useState } from "react";
 import type { PauseReason } from "@/core/request/deadline.ts";
 import {
-  HANDWRITTEN_SIGNATURE_CAVEAT,
   SIGNED_FORM_COUNTER_OPTION,
   SIGNED_FORM_REQUIRED_NOTICE,
 } from "@/core/request/requerimento.ts";
@@ -725,6 +724,7 @@ function SignCard({
   protocolNumber,
   accessKey,
   awaitingForm,
+  signatureCaveat,
   awaitingDeclaration,
   onSigned,
   onDeclarationSigned,
@@ -732,6 +732,7 @@ function SignCard({
   protocolNumber: string;
   accessKey: string;
   awaitingForm: boolean;
+  signatureCaveat: string;
   awaitingDeclaration: boolean;
   onSigned: () => void;
   onDeclarationSigned: () => void;
@@ -806,7 +807,7 @@ function SignCard({
           <strong>Assine</strong> pelo Gov.br (em assinador.iti.br) ou imprima e
           assine à mão.
           <span className="mt-1 block text-[13px] text-brand-muted">
-            {HANDWRITTEN_SIGNATURE_CAVEAT}
+            {signatureCaveat}
           </span>
           {awaitingForm && (
             <span className="mt-1 block text-[13px] font-semibold text-brand-alert">
@@ -1928,6 +1929,7 @@ function ServiceRequestTrilho({
                 protocolNumber={result.protocolNumber}
                 accessKey={result.accessKey}
                 awaitingForm={!hasSignedForm}
+                signatureCaveat={result.signatureCaveat}
                 awaitingDeclaration={awaitingDeclaration}
                 onSigned={() => setHasSignedForm(true)}
                 onDeclarationSigned={() => setHasSignedDeclaration(true)}

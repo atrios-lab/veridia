@@ -10,7 +10,6 @@ import {
 } from "@/core/request/channels.ts";
 import { DEADLINE_CAVEAT, type PauseReason } from "@/core/request/deadline.ts";
 import {
-  HANDWRITTEN_SIGNATURE_CAVEAT,
   SIGNED_FORM_COUNTER_OPTION,
   SIGNED_FORM_REQUIRED_NOTICE,
 } from "@/core/request/requerimento.ts";
@@ -1242,7 +1241,7 @@ function RequestDetail({ result }: { result: ServiceRequestDetail }) {
                     Gov.br em assinador.iti.br, ou imprima e assine de próprio
                     punho.
                     <span className="mt-1 block text-[11.5px] text-brand-faint">
-                      {HANDWRITTEN_SIGNATURE_CAVEAT}
+                      {result.signatureCaveat}
                     </span>
                     {!hasSignedForm && (
                       <span className="mt-1 block text-[11.5px] font-semibold text-brand-alert">

@@ -7,7 +7,12 @@ import {
   hashAccessKey,
   verifyAccessKey,
 } from "@/core/request/access-key.ts";
-import { readAlternateDocument } from "@/core/request/kinds.ts";
+import { buildRequesterQualification } from "@/core/request/form.ts";
+import {
+  readAlternateDocument,
+  readRequesterQualification,
+  serviceRequestDetailsSchema,
+} from "@/core/request/kinds.ts";
 import { TENANTS } from "@/core/tenant/resolve.ts";
 import type { Database } from "@/db/index.ts";
 import { auditLog, emailBounces, serviceRequests } from "@/db/schema.ts";
@@ -696,4 +701,55 @@ test("a protocol carries the office's year, with the server in UTC", async () =>
   // 00:10 on 1 January at the office.
   const firstMorning = await atInstant("2027-01-01T03:10:00Z", file);
   assert.match(firstMorning.protocolNumber, /\.2027\./);
+});
+
+test("a qualificação do inteiro teor é gravada em details e sobrevive à correção", async () => {
+  const act = getAct("rcpn-certidao-inteiro-teor");
+  assert.ok(act);
+  const qualification = buildRequesterQualification({
+    requesterRole: "attorney",
+    representedName: "João da Silva",
+    kinship: "Filho",
+    registrantDeceased: "yes",
+  });
+  // Sem nenhum anexo: o mandato não trava o protocolo, a análise é da serventia.
+  const { id, protocolNumber } = await createServiceRequestWith(
+    db,
+    TENANT,
+    act,
+    {
+      applicantName: "Dra. Lia",
+      contact: "inteiro-teor@exemplo.com",
+      purpose: "Aposentadoria rural",
+      accessKeyHash: hashAccessKey("chave-inteiro-teor"),
+      details: {
+        actVariant: "nascimento",
+        requesterQualification: qualification,
+      },
+    },
+  );
+
+  await updateRequestDataWith(
+    db,
+    TENANT.slug,
+    id,
+    { ...CORRECTION, purpose: "Pensão por morte" },
+    "operador-1",
+  );
+
+  const found = await findByProtocolWith(db, TENANT.slug, protocolNumber);
+  assert.ok(found);
+  assert.equal(found.status, "new");
+  assert.equal(found.purpose, "Pensão por morte");
+  assert.deepEqual(readRequesterQualification(found.details), qualification);
+  assert.ok(serviceRequestDetailsSchema.safeParse(found.details).success);
+});
+
+test("um pedido sem qualificação não inventa respostas", async () => {
+  const { protocolNumber } = await fileCertificate(
+    "sem-qualificacao@exemplo.com",
+    "obito",
+  );
+  const found = await findByProtocolWith(db, TENANT.slug, protocolNumber);
+  assert.equal(readRequesterQualification(found?.details), undefined);
 });
