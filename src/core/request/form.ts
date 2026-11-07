@@ -5,6 +5,7 @@ import {
   type AlternateDocument,
   asksPurpose,
   asksRequesterQualification,
+  DELIVERY_FORMATS,
   EXEMPTION_SIGNED_BY,
   type ExemptionBeneficiary,
   REQUESTER_ROLES,
@@ -196,6 +197,11 @@ const requesterQualificationFields = {
   registrantDeceased: optionalChoice(REGISTRANT_DECEASED_ANSWERS),
 };
 
+/** Opcional aqui pelo mesmo motivo: quem exige é `actRules`, no ato que pergunta. */
+const deliveryFields = {
+  deliveryFormat: optionalChoice(DELIVERY_FORMATS),
+};
+
 /** Os campos do bloco, para quem precisa limpá-los ou lê-los do `FormData`. */
 export const REQUESTER_QUALIFICATION_FIELDS = Object.keys(
   requesterQualificationFields,
@@ -320,6 +326,7 @@ function actRules(
       representedName?: string;
       kinship?: string;
       registrantDeceased?: string;
+      deliveryFormat?: string;
       exemptionActId?: string;
       exemptionDeclaration?: boolean;
       certificateType?: CertificateType;
@@ -391,6 +398,19 @@ function actRules(
         code: "custom",
         path: ["requesterRole"],
         message: "Este pedido não leva essas perguntas.",
+      });
+    }
+    if (act.deliveryChoice && !data.deliveryFormat) {
+      ctx.addIssue({
+        code: "custom",
+        path: ["deliveryFormat"],
+        message: "Escolha como quer receber a certidão.",
+      });
+    } else if (!act.deliveryChoice && data.deliveryFormat) {
+      ctx.addIssue({
+        code: "custom",
+        path: ["deliveryFormat"],
+        message: "Este ato não deixa escolher a entrega.",
       });
     }
     // The client hides the select on an act without kinds, and hiding is not
@@ -753,6 +773,7 @@ export function publicServiceRequestSchema(act: Act) {
     .object({
       ...commonFields,
       ...requesterQualificationFields,
+      ...deliveryFields,
       cpf: requiredCpf,
       email: requiredText(160).refine((value) => EMAIL.test(value), {
         message: "Informe um e-mail válido.",
@@ -783,6 +804,7 @@ export function serviceRequestSchema(act: Act) {
     .object({
       ...commonFields,
       ...requesterQualificationFields,
+      ...deliveryFields,
       ...counterIdentityFields,
       contact: requiredText(160).refine(isValidContact, {
         message: "Informe um e-mail válido ou um telefone com DDD.",

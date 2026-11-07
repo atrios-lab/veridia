@@ -17,12 +17,14 @@ import { maskCpf } from "@/core/request/form.ts";
 import {
   asksPurpose,
   asksRequesterQualification,
+  deliveryFormatRows,
   type ExemptionDecisionOutcome,
   isOpenServiceRequestStatus,
   isServiceRequestStatus,
   maskAlternateDocument,
   readActVariant,
   readAlternateDocument,
+  readDeliveryFormat,
   readExemption,
   readPhone,
   readRequesterQualification,
@@ -224,6 +226,7 @@ export default async function ServiceRequestDetailPage({
   const actVariant = readActVariant(request.details);
   const alternateDocument = readAlternateDocument(request.details);
   const requesterQualification = readRequesterQualification(request.details);
+  const deliveryFormat = readDeliveryFormat(request.details);
   const actName = act
     ? (actVariantName(act, actVariant) ?? act.name)
     : "Ato não identificado";
@@ -429,13 +432,16 @@ export default async function ServiceRequestDetailPage({
               }
               filedLabel={formatOfficeDayMonthTime(request.createdAt)}
               allowsPurpose={act ? asksPurpose(act, actVariant) : false}
-              qualificationRows={
-                act &&
+              qualificationRows={[
+                ...(act?.deliveryChoice
+                  ? deliveryFormatRows(deliveryFormat)
+                  : []),
+                ...(act &&
                 requesterQualification &&
                 asksRequesterQualification(act, actVariant)
                   ? requesterQualificationRows(requesterQualification)
-                  : []
-              }
+                  : []),
+              ]}
               actVariants={actVariants}
               data={{
                 applicantName: request.applicantName ?? "",

@@ -71,7 +71,7 @@ e-Notariado, e os atos de registro e de protesto SHALL NOT mandar o cidadão par
 
 #### Scenario: Inteiro teor do RCPN termina no balcão ou on-line
 - **WHEN** a etapa 2 do RCPN lista a certidão de inteiro teor (verbum ad verbum)
-- **THEN** o selo mostra "Termina no balcão ou on-line", e o cidadão lê que recebe a certidão pelo site ou a retira no balcão
+- **THEN** o selo mostra "Termina no balcão ou on-line", e o cidadão lê que escolhe receber a certidão pelo site ou retirá-la impressa no balcão
 
 ## ADDED Requirements
 
@@ -95,6 +95,21 @@ O servidor SHALL NOT recusar o pedido por falta do mandato: qualquer pessoa pode
 #### Scenario: Óbito não pede qualificação
 - **WHEN** o cidadão escolhe óbito
 - **THEN** o formulário não mostra as perguntas nem a observação, e o servidor não as exige
+
+### Requirement: Escolha entre digital e papel no inteiro teor do RCPN
+O ato "Certidão de inteiro teor (verbum ad verbum)" DEVE (SHALL) perguntar, no site e no balcão, em todas as opções, inclusive no óbito, se a certidão é digital, entregue pelo site, ou impressa em papel, retirada no balcão. O servidor DEVE (SHALL) exigir a resposta nesse ato e recusá-la nos demais. A escolha DEVE (SHALL) sair no detalhe do pedido e no requerimento em PDF.
+
+#### Scenario: Cidadão escolhe papel
+- **WHEN** o cidadão pede a certidão de nascimento em inteiro teor e escolhe papel
+- **THEN** o detalhe do pedido e o PDF mostram "Entrega: Impressa em papel, retirada no balcão"
+
+#### Scenario: Pedido sem a escolha
+- **WHEN** o formulário é enviado sem dizer digital ou papel
+- **THEN** o pedido é recusado com erro junto à pergunta
+
+#### Scenario: Óbito também escolhe
+- **WHEN** o cidadão escolhe óbito
+- **THEN** as perguntas de quem pede somem, e a escolha entre digital e papel continua
 
 ### Requirement: Observação sobre autorização judicial
 O formulário do inteiro teor do RCPN DEVE (SHALL) avisar, antes do envio e salvo no óbito, que registros com dados sensíveis, restritos ou sigilosos só têm certidão com autorização judicial quando quem pede não for o interessado, o representante legal ou um procurador com poderes especiais, e que o pedido é analisado depois do recebimento. O site SHALL NOT decidir se a autorização é necessária.

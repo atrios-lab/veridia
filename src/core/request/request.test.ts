@@ -1044,6 +1044,7 @@ const qualified = {
   purpose: "Comprovar atividade rural para a aposentadoria.",
   requesterRole: "self",
   registrantDeceased: "no",
+  deliveryFormat: "digital",
 };
 
 const issuePaths = (result: {
@@ -1112,11 +1113,51 @@ test("a outra certidão pede o bloco e também a descrição", () => {
 
 test("no óbito o bloco não é pedido nem aceito", () => {
   const schema = serviceRequestSchema(inteiroTeor);
-  const obito = { ...valid, actVariant: "obito" };
+  const obito = { ...valid, actVariant: "obito", deliveryFormat: "paper" };
   assert.ok(schema.safeParse(obito).success);
   assert.deepEqual(
     issuePaths(schema.safeParse({ ...obito, requesterRole: "self" })),
     ["requesterRole"],
+  );
+});
+
+test("o inteiro teor do RCPN pergunta digital ou papel, inclusive no óbito", () => {
+  for (const schema of [
+    serviceRequestSchema(inteiroTeor),
+    publicServiceRequestSchema(inteiroTeor),
+  ]) {
+    const paths = issuePaths(
+      schema.safeParse({
+        ...qualified,
+        email: "maria@exemplo.com",
+        deliveryFormat: "",
+      }),
+    );
+    assert.ok(paths.includes("deliveryFormat"), "sem escolha");
+  }
+  const schema = serviceRequestSchema(inteiroTeor);
+  assert.ok(
+    schema.safeParse({ ...qualified, deliveryFormat: "paper" }).success,
+  );
+  assert.deepEqual(
+    issuePaths(schema.safeParse({ ...valid, actVariant: "obito" })),
+    ["deliveryFormat"],
+  );
+  assert.ok(
+    !schema.safeParse({ ...qualified, deliveryFormat: "fax" }).success,
+    "forma fora da lista",
+  );
+});
+
+test("um ato sem a escolha de entrega recusa a resposta", () => {
+  assert.deepEqual(
+    issuePaths(
+      serviceRequestSchema(certificate).safeParse({
+        ...validCertificate,
+        deliveryFormat: "paper",
+      }),
+    ),
+    ["deliveryFormat"],
   );
 });
 

@@ -101,6 +101,7 @@ export async function createManualServiceRequest(
     parameterValue: "",
     actVariant: formData.get("actVariant"),
     ...readRequesterQualificationForm(formData),
+    deliveryFormat: formData.get("deliveryFormat"),
     // Filed in person: the physical process at the counter is the consent,
     // there is no screen here for the citizen to tick these themselves, the
     // way there is in the public wizard.
@@ -135,6 +136,7 @@ export async function createManualServiceRequest(
       representedName,
       kinship,
       registrantDeceased,
+      deliveryFormat,
       exemptionActId,
       certificateType,
       beneficiaries,
@@ -175,6 +177,7 @@ export async function createManualServiceRequest(
         ...(actVariant ? { actVariant } : {}),
         ...(alternateDocument ? { alternateDocument } : {}),
         ...(requesterQualification ? { requesterQualification } : {}),
+        ...(deliveryFormat ? { deliveryFormat } : {}),
         ...(exemption
           ? { exemption, deadline: { startedOn: today(), days: deadlineDays } }
           : {}),

@@ -13,6 +13,8 @@ import {
 import {
   asksPurpose,
   asksRequesterQualification,
+  DELIVERY_FORMAT_LABELS,
+  DELIVERY_FORMATS,
   EXEMPTION_SIGNED_BY,
   type ExemptionSignedBy,
   REQUESTER_ROLE_LABELS,
@@ -238,6 +240,31 @@ function Stepper({ current }: { current: 1 | 2 }) {
 }
 
 /** Quem pede o inteiro teor do RCPN: as mesmas perguntas do site. */
+/** Digital pelo site ou papel no balcão, nos atos que deixam escolher. */
+function ManualDeliveryFormatField({ error }: { error?: string }) {
+  return (
+    <fieldset className="mt-3.5 flex flex-col gap-1.5">
+      <legend className="mb-0.5 text-xs font-bold text-admin-primary">
+        Como quer receber a certidão?
+      </legend>
+      {DELIVERY_FORMATS.map((value) => (
+        <label key={value} className="flex items-center gap-2">
+          <input
+            type="radio"
+            name="deliveryFormat"
+            value={value}
+            className="h-4 w-4 accent-admin-primary-soft"
+          />
+          <span className="text-[12.5px] text-admin-text">
+            {DELIVERY_FORMAT_LABELS[value]}
+          </span>
+        </label>
+      ))}
+      <FieldError message={error} />
+    </fieldset>
+  );
+}
+
 function ManualRequesterQualificationFields({
   fieldErrors,
 }: {
@@ -566,6 +593,13 @@ export function ManualEntryForm({
               onChange={(id) => setChosenVariant({ actId: act.id, id })}
             />
           </div>
+        )}
+
+        {act?.deliveryChoice && (
+          <ManualDeliveryFormatField
+            key={act.id}
+            error={fieldErrors.deliveryFormat}
+          />
         )}
 
         {act && asksPurpose(act, variantId) && (

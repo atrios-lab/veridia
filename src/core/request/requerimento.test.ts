@@ -342,9 +342,11 @@ test("o inteiro teor do RCPN traz as respostas e a própria assinatura", () => {
       actVariant: "nascimento",
       purpose: "Aposentadoria rural",
       requesterQualification: byAttorney,
+      deliveryFormat: "paper",
     },
   );
   const text = flatten(sections);
+  assert.match(text, /Entrega: Impressa em papel, retirada no balcão/);
   assert.match(text, /Ato requerido: Certidão de nascimento em inteiro teor/);
   assert.match(text, /Finalidade: Aposentadoria rural/);
   assert.match(text, /Quem pede: Advogado ou procurador/);
@@ -366,6 +368,15 @@ test("o óbito do inteiro teor não imprime respostas, mesmo se sobrarem", () =>
     requesterQualification: byAttorney,
   });
   assert.doesNotMatch(flatten(sections), /Quem pede|Representado/);
+});
+
+test("um ato sem a escolha não imprime a entrega, mesmo se sobrar", () => {
+  const { sections } = buildRequerimento(cartorioMarinho, certificate, {
+    ...data,
+    actVariant: "casamento",
+    deliveryFormat: "digital",
+  });
+  assert.doesNotMatch(flatten(sections), /Entrega/);
 });
 
 test("os demais atos mantêm o aviso geral de assinatura", () => {

@@ -592,6 +592,15 @@ export const REQUESTER_ROLE_LABELS: Record<RequesterRole, string> = {
   other: "Outra pessoa",
 };
 
+/** Como quem pede quer receber a certidão, nos atos com `deliveryChoice`. */
+export const DELIVERY_FORMATS = ["digital", "paper"] as const;
+export type DeliveryFormat = (typeof DELIVERY_FORMATS)[number];
+
+export const DELIVERY_FORMAT_LABELS: Record<DeliveryFormat, string> = {
+  digital: "Digital, entregue pelo site",
+  paper: "Impressa em papel, retirada no balcão",
+};
+
 const requesterQualificationSchema = z.object({
   role: z.enum(REQUESTER_ROLES),
   representedName: z.string().optional(),
@@ -633,6 +642,9 @@ export const serviceRequestDetailsSchema = z.object({
   // As respostas do inteiro teor do RCPN (CNN, art. 117, § 3º). A finalidade não
   // está aqui porque tem coluna própria, já lida pelo painel e pelo PDF.
   requesterQualification: requesterQualificationSchema.optional(),
+  // Digital ou papel, nos atos que deixam escolher. Ausente nos demais e nos
+  // pedidos anteriores à pergunta: ausente é "não sabemos".
+  deliveryFormat: z.enum(DELIVERY_FORMATS).optional(),
   // Present means the citizen asked for the statutory exemption and signed the
   // declaration that goes with it; `declaredAt` is when. Same discipline as
   // `consents` right above: a declaration validated and thrown away is not
@@ -744,6 +756,26 @@ export function requesterQualificationRows(
       value: qualification.registrantDeceased ? "Sim" : "Não",
     },
   ];
+}
+
+export function readDeliveryFormat(
+  details: unknown,
+): DeliveryFormat | undefined {
+  const parsed = z
+    .enum(DELIVERY_FORMATS)
+    .safeParse(
+      (details as { deliveryFormat?: unknown } | null)?.deliveryFormat,
+    );
+  return parsed.success ? parsed.data : undefined;
+}
+
+/** A escolha numa linha, igual no painel e no PDF. Vazia quando não há. */
+export function deliveryFormatRows(
+  format: DeliveryFormat | undefined,
+): { label: string; value: string }[] {
+  return format
+    ? [{ label: "Entrega", value: DELIVERY_FORMAT_LABELS[format] }]
+    : [];
 }
 
 export function readAlternateDocument(

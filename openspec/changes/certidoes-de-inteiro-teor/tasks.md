@@ -28,6 +28,7 @@
 - [x] 4.2 Mostrar as respostas no detalhe do pedido, inclusive na impressão do balcão
 - [x] 4.3 Em `buildRequerimento`, adicionar as linhas novas e o texto de assinatura do ato, com teste
 - [x] 4.4 Liberar a edição da finalidade no detalhe para o ato novo e testar `purposeFor`
+- [x] 4.5 Perguntar digital ou papel no verbum ad verbum, no site e no balcão, e mostrar a escolha no detalhe e no PDF
 
 ## 5. Antes do deploy
 

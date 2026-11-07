@@ -233,6 +233,11 @@ test("o inteiro teor do RCPN avisa sem citar e-Notariado nem decidir", () => {
   assert.ok(act);
   // Pelo site ou no balcão, quem pede escolhe.
   assert.equal(act.processingMode, "hybrid");
+  assert.equal(act.deliveryChoice, true);
+  assert.deepEqual(
+    ACTS.filter((a) => a.deliveryChoice).map((a) => a.id),
+    ["rcpn-certidao-inteiro-teor"],
+  );
   assert.match(processingHintFor(act), /site/);
   assert.match(processingHintFor(act), /balcão/);
   assert.equal(act.identificationOnly, undefined);

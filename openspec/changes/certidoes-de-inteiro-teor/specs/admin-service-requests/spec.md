@@ -11,6 +11,10 @@ O detalhe do pedido DEVE (SHALL) mostrar, quando o pedido tiver a qualificação
 - **WHEN** o pedido por procuração chega sem nenhum anexo
 - **THEN** o pedido fica na fila normalmente, e o operador pode abrir exigência ou indeferir
 
+#### Scenario: Entrega escolhida
+- **WHEN** o operador abre um pedido de inteiro teor do RCPN
+- **THEN** o detalhe mostra se a certidão é digital, pelo site, ou em papel, no balcão
+
 #### Scenario: Pedido sem qualificação
 - **WHEN** o operador abre um pedido sem essas respostas, como um de óbito ou anterior à mudança
 - **THEN** o detalhe não mostra esse bloco

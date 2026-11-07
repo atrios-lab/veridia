@@ -9,6 +9,8 @@ import {
   type AlternateDocument,
   asksRequesterQualification,
   type DataRight,
+  type DeliveryFormat,
+  deliveryFormatRows,
   type RequesterQualification,
   requesterQualificationRows,
 } from "./kinds.ts";
@@ -137,6 +139,8 @@ export interface RequerimentoData {
   actVariant?: string;
   /** Quem pede o inteiro teor do RCPN (`details.requesterQualification`). */
   requesterQualification?: RequesterQualification;
+  /** Digital ou papel (`details.deliveryFormat`), nos atos que deixam escolher. */
+  deliveryFormat?: DeliveryFormat;
   cpf?: string | null;
   /** Stands in for the CPF of a citizen who has none (`details`). */
   alternateDocument?: AlternateDocument;
@@ -179,6 +183,9 @@ export function buildRequerimento(
     },
     { label: "Base legal", value: act.legalBasis },
   ];
+  if (act.deliveryChoice) {
+    request.push(...deliveryFormatRows(data.deliveryFormat));
+  }
   if (data.purpose) request.push({ label: "Finalidade", value: data.purpose });
   if (
     data.requesterQualification &&

@@ -208,6 +208,11 @@ export interface Act {
    * `asksRequesterQualification`, nunca este campo sozinho.
    */
   requesterQualification?: true;
+  /**
+   * Quem pede escolhe receber a certidão digital, pelo site, ou impressa em
+   * papel, no balcão. Pergunta de todo pedido do ato, inclusive do óbito.
+   */
+  deliveryChoice?: true;
   /** No lugar do aviso geral de assinatura, onde ele citaria o que não vale. */
   signatureCaveat?: string;
   /**
@@ -568,15 +573,16 @@ export const ACTS: Act[] = [
         },
       ],
     },
-    // A serventia entrega pelo site ou imprime no balcão, a escolha é de quem
-    // pede (confirmado pelo responsável pelo produto em 07/11/2026).
+    // A serventia entrega pelo site ou imprime no balcão, e a escolha é de
+    // quem pede (confirmado pelo responsável pelo produto em 07/11/2026).
     processingMode: "hybrid",
+    deliveryChoice: true,
     processingHint:
-      "você adianta aqui e recebe a certidão pelo site ou a retira no balcão",
+      "você escolhe receber a certidão pelo site ou retirá-la impressa no balcão",
     guidance:
-      "A certidão pode ser entregue pelo site, em formato digital, ou " +
-      "retirada impressa no balcão da serventia. Para retirar no balcão, " +
-      "traga um documento de identidade.",
+      "No pedido, você escolhe a certidão digital, entregue pelo site, ou " +
+      "impressa em papel, retirada no balcão da serventia. Para retirar no " +
+      "balcão, traga um documento de identidade.",
     legalBasis: "Lei 6.015 arts. 17 a 19; Prov. 149 arts. 114 a 119",
     legalDeadlineDays: 5,
     legalDeadlineNote:

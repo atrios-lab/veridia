@@ -29,6 +29,8 @@ import {
 import {
   asksPurpose,
   asksRequesterQualification,
+  DELIVERY_FORMAT_LABELS,
+  DELIVERY_FORMATS,
   EXEMPTION_SIGNED_BY,
   type ExemptionSignedBy,
   REQUESTER_ROLE_LABELS,
@@ -208,6 +210,39 @@ function RequesterQualificationFields({
         </p>
       </div>
     </div>
+  );
+}
+
+/** Digital pelo site ou papel no balcão, nos atos que deixam escolher. */
+function DeliveryFormatField({
+  registration,
+  error,
+}: {
+  registration: UseFormRegisterReturn;
+  error?: string;
+}) {
+  return (
+    <fieldset>
+      <legend className="mb-1.5 text-[13px] font-semibold">
+        Como quer receber a certidão?
+      </legend>
+      <div className="flex flex-col gap-1.5">
+        {DELIVERY_FORMATS.map((value) => (
+          <label key={value} className="flex items-center gap-2">
+            <input
+              type="radio"
+              value={value}
+              className="h-4 w-4 accent-brand-accent"
+              {...registration}
+            />
+            <span className="text-[13px] text-brand-text-soft">
+              {DELIVERY_FORMAT_LABELS[value]}
+            </span>
+          </label>
+        ))}
+      </div>
+      <FieldError message={error} />
+    </fieldset>
   );
 }
 
@@ -664,6 +699,13 @@ export function RequestForm({
             variants={act.variants}
             registration={register("actVariant")}
             error={errorFor("actVariant")}
+          />
+        )}
+
+        {act.deliveryChoice && (
+          <DeliveryFormatField
+            registration={register("deliveryFormat")}
+            error={errorFor("deliveryFormat")}
           />
         )}
 

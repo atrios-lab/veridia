@@ -145,6 +145,7 @@ export async function submitServiceRequest(
     parameterValue: formData.get("parameterValue") ?? "",
     actVariant: formData.get("actVariant"),
     ...readRequesterQualificationForm(formData),
+    deliveryFormat: formData.get("deliveryFormat"),
     lgpdConsent: formData.get("lgpdConsent") ?? "",
     truthDeclaration: formData.get("truthDeclaration") ?? "",
     ...readExemptionForm(formData),
@@ -199,6 +200,7 @@ export async function submitServiceRequest(
       representedName,
       kinship,
       registrantDeceased,
+      deliveryFormat,
       exemptionActId,
       certificateType,
       beneficiaries,
@@ -240,6 +242,7 @@ export async function submitServiceRequest(
           phone,
           ...(actVariant ? { actVariant } : {}),
           ...(requesterQualification ? { requesterQualification } : {}),
+          ...(deliveryFormat ? { deliveryFormat } : {}),
           // Pedida, nunca concedida: quem confere o benefício e decide é a
           // serventia, e `amountCents` segue sendo do operador.
           ...(exemption
