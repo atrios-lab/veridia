@@ -431,7 +431,15 @@ export default async function ServiceRequestDetailPage({
                 alternateDocument && maskAlternateDocument(alternateDocument)
               }
               filedLabel={formatOfficeDayMonthTime(request.createdAt)}
-              allowsPurpose={act ? asksPurpose(act, actVariant) : false}
+              allowsPurpose={
+                act
+                  ? asksPurpose(act, {
+                      variantId: actVariant,
+                      exemptionActId: exemption?.actId,
+                      certificateType: exemption?.certificateType,
+                    })
+                  : false
+              }
               qualificationRows={[
                 ...(act?.deliveryChoice
                   ? deliveryFormatRows(deliveryFormat)

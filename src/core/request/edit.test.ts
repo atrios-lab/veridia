@@ -221,7 +221,58 @@ test("only the acts the law allows may carry a purpose", () => {
 
 test("no inteiro teor do RCPN a finalidade depende da opção", () => {
   const act = getAct("rcpn-certidao-inteiro-teor");
-  assert.equal(purposeFor(act, "aposentadoria", "nascimento"), "aposentadoria");
-  assert.equal(purposeFor(act, "aposentadoria", "obito"), null);
+  assert.equal(
+    purposeFor(act, "aposentadoria", { variantId: "nascimento" }),
+    "aposentadoria",
+  );
+  assert.equal(purposeFor(act, "aposentadoria", { variantId: "obito" }), null);
   assert.equal(purposeFor(act, "aposentadoria"), null);
+});
+
+test("nas demais certidões, só a opção de inteiro teor guarda o motivo", () => {
+  const matricula = getAct("ri-certidao-matricula");
+  assert.equal(
+    purposeFor(matricula, "inventário", { variantId: "inteiro-teor" }),
+    "inventário",
+  );
+  assert.equal(
+    purposeFor(matricula, "inventário", { variantId: "onus" }),
+    null,
+  );
+  const notas = getAct("notas-certidao");
+  assert.equal(
+    purposeFor(notas, "inventário", { variantId: "testamento" }),
+    "inventário",
+  );
+  assert.equal(
+    purposeFor(notas, "inventário", { variantId: "ato-notarial" }),
+    null,
+  );
+});
+
+test("na gratuidade, o motivo vale só com inteiro teor e fora do óbito", () => {
+  const gratuidade = getAct("gratuidade-rcpn");
+  const inteiroTeor = {
+    exemptionActId: "rcpn-certidao",
+    certificateType: "inteiro-teor",
+  };
+  assert.equal(
+    purposeFor(gratuidade, "pensão", {
+      ...inteiroTeor,
+      variantId: "nascimento",
+    }),
+    "pensão",
+  );
+  assert.equal(
+    purposeFor(gratuidade, "pensão", { ...inteiroTeor, variantId: "obito" }),
+    null,
+  );
+  assert.equal(
+    purposeFor(gratuidade, "pensão", {
+      ...inteiroTeor,
+      certificateType: "sem-busca",
+      variantId: "nascimento",
+    }),
+    null,
+  );
 });

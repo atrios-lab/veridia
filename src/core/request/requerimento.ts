@@ -1,5 +1,9 @@
 import type { Act } from "../acts/catalog.ts";
-import { ATTRIBUTION_NAMES, actVariantName } from "../acts/catalog.ts";
+import {
+  ATTRIBUTION_NAMES,
+  actVariantName,
+  PURPOSE_LABEL,
+} from "../acts/catalog.ts";
 import type { Tenant } from "../tenant/schema.ts";
 import { formatOfficeDate } from "../time/office-time.ts";
 import type { SignedFormDocument } from "./attachment.ts";
@@ -186,7 +190,7 @@ export function buildRequerimento(
   if (act.deliveryChoice) {
     request.push(...deliveryFormatRows(data.deliveryFormat));
   }
-  if (data.purpose) request.push({ label: "Finalidade", value: data.purpose });
+  if (data.purpose) request.push({ label: PURPOSE_LABEL, value: data.purpose });
   if (
     data.requesterQualification &&
     asksRequesterQualification(act, data.actVariant)

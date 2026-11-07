@@ -30,6 +30,8 @@ import {
   PROCESSING_MODE_HINTS,
   PROCESSING_MODE_LABELS,
   PROCESSING_MODES,
+  PURPOSE_HINT,
+  PURPOSE_LABEL,
   processingHintFor,
   REQUESTER_QUALIFICATION_NOTICE,
 } from "./catalog.ts";
@@ -60,11 +62,14 @@ test("the kinds an act groups are a fixed list, since requests store the ids", (
     "rcpn-certidao": ["nascimento", "casamento", "obito", "outra"],
     "rcpn-certidao-inteiro-teor": ["nascimento", "casamento", "obito", "outra"],
     "notas-escritura": ["escritura", "procuracao"],
+    "notas-certidao": ["ato-notarial", "testamento"],
     "ri-certidao-matricula": ["matricula", "inteiro-teor", "onus"],
     "ri-busca-indicador": ["pessoal", "real"],
     "ri-registro-titulo": ["registro", "averbacao"],
     "rtd-registro-documento": ["documento", "contrato"],
+    "rtd-certidao": ["breve-relato", "inteiro-teor"],
     "rcpj-registro-constituicao": ["registro", "averbacao", "misto"],
+    "rcpj-certidao": ["breve-relato", "inteiro-teor"],
   });
 });
 
@@ -126,16 +131,35 @@ test("each attribution ends with the way out for an unlisted act", () => {
   }
 });
 
-test("a certificate never asks the citizen what it is for", () => {
-  // Lei 6.015 art. 17 and Prov. 149 art. 123 caput. The exception exists only
-  // for the archived document and for the indicator search, both in RI, and for
-  // the inteiro teor of the Registro Civil (Prov. 149 art. 117 § 3º).
+test("a summary certificate never asks the citizen what it is for", () => {
+  // Lei 6.015 art. 17 and Prov. 149 art. 123 caput. The exception exists for
+  // the archived document and for the indicator search, both in RI, and for
+  // every inteiro teor (LGPD; in the Registro Civil, Prov. 149 art. 117 § 3º).
   const asking = ACTS.filter((a) => a.requiresPurpose).map((a) => a.id);
   assert.deepEqual(asking.sort(), [
     "rcpn-certidao-inteiro-teor",
     "ri-busca-indicador",
     "ri-certidao-arquivado",
+    "ri-certidao-inteiro-teor-papel",
   ]);
+  // Where the inteiro teor sits among summaries, only its option asks.
+  const askingOptions = ACTS.flatMap((act) =>
+    (act.variants?.options ?? [])
+      .filter((option) => option.requiresPurpose)
+      .map((option) => `${act.id}/${option.id}`),
+  );
+  assert.deepEqual(askingOptions.sort(), [
+    "notas-certidao/testamento",
+    "rcpj-certidao/inteiro-teor",
+    "ri-certidao-matricula/inteiro-teor",
+    "rtd-certidao/inteiro-teor",
+  ]);
+});
+
+test("o campo do motivo fala de LGPD, sem prometer emissão", () => {
+  assert.equal(PURPOSE_LABEL, "Motivo do pedido");
+  assert.match(PURPOSE_HINT, /LGPD/);
+  assert.match(PURPOSE_HINT, /analisa/);
 });
 
 test("every act declares a known processing mode", () => {
