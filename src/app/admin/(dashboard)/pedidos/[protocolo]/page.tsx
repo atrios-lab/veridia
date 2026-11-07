@@ -15,6 +15,8 @@ import {
 } from "@/core/request/deadline.ts";
 import { maskCpf } from "@/core/request/form.ts";
 import {
+  asksPurpose,
+  asksRequesterQualification,
   type ExemptionDecisionOutcome,
   isOpenServiceRequestStatus,
   isServiceRequestStatus,
@@ -23,6 +25,8 @@ import {
   readAlternateDocument,
   readExemption,
   readPhone,
+  readRequesterQualification,
+  requesterQualificationRows,
   requiresStatusReason,
   statusLabel,
   suggestedNextStatuses,
@@ -219,6 +223,7 @@ export default async function ServiceRequestDetailPage({
   );
   const actVariant = readActVariant(request.details);
   const alternateDocument = readAlternateDocument(request.details);
+  const requesterQualification = readRequesterQualification(request.details);
   const actName = act
     ? (actVariantName(act, actVariant) ?? act.name)
     : "Ato não identificado";
@@ -423,7 +428,14 @@ export default async function ServiceRequestDetailPage({
                 alternateDocument && maskAlternateDocument(alternateDocument)
               }
               filedLabel={formatOfficeDayMonthTime(request.createdAt)}
-              allowsPurpose={act?.requiresPurpose ?? false}
+              allowsPurpose={act ? asksPurpose(act, actVariant) : false}
+              qualificationRows={
+                act &&
+                requesterQualification &&
+                asksRequesterQualification(act, actVariant)
+                  ? requesterQualificationRows(requesterQualification)
+                  : []
+              }
               actVariants={actVariants}
               data={{
                 applicantName: request.applicantName ?? "",

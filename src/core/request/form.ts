@@ -3,8 +3,13 @@ import type { Act, CertificateType } from "../acts/catalog.ts";
 import {
   ALTERNATE_DOCUMENT_TYPES,
   type AlternateDocument,
+  asksPurpose,
+  asksRequesterQualification,
   EXEMPTION_SIGNED_BY,
   type ExemptionBeneficiary,
+  REQUESTER_ROLES,
+  type RequesterQualification,
+  type RequesterRole,
   variantOwner,
 } from "./kinds.ts";
 
@@ -172,6 +177,63 @@ const optionalPersonText = (max: number) =>
     .transform((s) => s?.trim() || undefined)
     .pipe(z.string().max(max, "Texto longo demais.").optional());
 
+/** Um radio sem marcar chega como null, e o rascunho do formulário como "". */
+const optionalChoice = <const T extends readonly [string, ...string[]]>(
+  values: T,
+) =>
+  z.preprocess(
+    (v) => (typeof v === "string" && v !== "" ? v : undefined),
+    z.enum(values, { error: "Escolha uma das opções." }).optional(),
+  );
+
+const REGISTRANT_DECEASED_ANSWERS = ["yes", "no"] as const;
+
+/** Tudo opcional aqui: quem torna obrigatório é `actRules`, se o pedido perguntar. */
+const requesterQualificationFields = {
+  requesterRole: optionalChoice(REQUESTER_ROLES),
+  representedName: optionalPersonText(160),
+  kinship: optionalPersonText(80),
+  registrantDeceased: optionalChoice(REGISTRANT_DECEASED_ANSWERS),
+};
+
+/** Os campos do bloco, para quem precisa limpá-los ou lê-los do `FormData`. */
+export const REQUESTER_QUALIFICATION_FIELDS = Object.keys(
+  requesterQualificationFields,
+) as (keyof typeof requesterQualificationFields)[];
+
+/** O bloco de um `FormData`, dos dois canais. */
+export function readRequesterQualificationForm(formData: FormData) {
+  return {
+    requesterRole: formData.get("requesterRole"),
+    representedName: formData.get("representedName"),
+    kinship: formData.get("kinship"),
+    registrantDeceased: formData.get("registrantDeceased"),
+  };
+}
+
+/**
+ * `details.requesterQualification`, a partir do que `actRules` já validou. O que
+ * a resposta final tornou sem sentido não fica: quem marca "advogado", digita o
+ * representado e volta para "próprio interessado" não deixa um nome solto.
+ */
+export function buildRequesterQualification(parsed: {
+  requesterRole?: RequesterRole;
+  representedName?: string;
+  kinship?: string;
+  registrantDeceased?: (typeof REGISTRANT_DECEASED_ANSWERS)[number];
+}): RequesterQualification | undefined {
+  const { requesterRole: role, registrantDeceased } = parsed;
+  if (!role || !registrantDeceased) return undefined;
+  return {
+    role,
+    ...(role === "attorney" && parsed.representedName
+      ? { representedName: parsed.representedName }
+      : {}),
+    ...(role !== "self" && parsed.kinship ? { kinship: parsed.kinship } : {}),
+    registrantDeceased: registrantDeceased === "yes",
+  };
+}
+
 const exemptionPersonSchema = z.object({
   name: optionalPersonText(160),
   cpfOrId: optionalPersonText(30),
@@ -254,6 +316,10 @@ function actRules(
       description?: string;
       purpose?: string;
       actVariant?: string;
+      requesterRole?: RequesterRole;
+      representedName?: string;
+      kinship?: string;
+      registrantDeceased?: string;
       exemptionActId?: string;
       exemptionDeclaration?: boolean;
       certificateType?: CertificateType;
@@ -282,11 +348,49 @@ function actRules(
         message: "Descreva o que você precisa para a serventia poder avaliar.",
       });
     }
-    if (act.requiresPurpose && !data.purpose) {
+    if (asksPurpose(act, data.actVariant) && !data.purpose) {
       ctx.addIssue({
         code: "custom",
         path: ["purpose"],
         message: "Este ato exige que você informe a finalidade.",
+      });
+    }
+    // O mandato não entra aqui, de propósito: qualquer pessoa envia, e quem
+    // confere o anexo é a serventia, depois de receber o pedido.
+    if (asksRequesterQualification(act, data.actVariant)) {
+      if (!data.requesterRole) {
+        ctx.addIssue({
+          code: "custom",
+          path: ["requesterRole"],
+          message: "Informe quem está pedindo.",
+        });
+      }
+      if (data.requesterRole === "attorney" && !data.representedName) {
+        ctx.addIssue({
+          code: "custom",
+          path: ["representedName"],
+          message: "Informe o nome de quem você representa.",
+        });
+      }
+      if (!data.registrantDeceased) {
+        ctx.addIssue({
+          code: "custom",
+          path: ["registrantDeceased"],
+          message: "Informe se a pessoa registrada é falecida.",
+        });
+      }
+    } else if (
+      data.requesterRole ||
+      data.representedName ||
+      data.kinship ||
+      data.registrantDeceased
+    ) {
+      // A pergunta que não pode ser feita não vira resposta guardada: mesma
+      // disciplina da finalidade, valendo também para quem pula a tela.
+      ctx.addIssue({
+        code: "custom",
+        path: ["requesterRole"],
+        message: "Este pedido não leva essas perguntas.",
       });
     }
     // The client hides the select on an act without kinds, and hiding is not
@@ -648,6 +752,7 @@ export function publicServiceRequestSchema(act: Act) {
   return z
     .object({
       ...commonFields,
+      ...requesterQualificationFields,
       cpf: requiredCpf,
       email: requiredText(160).refine((value) => EMAIL.test(value), {
         message: "Informe um e-mail válido.",
@@ -677,6 +782,7 @@ export function serviceRequestSchema(act: Act) {
   return z
     .object({
       ...commonFields,
+      ...requesterQualificationFields,
       ...counterIdentityFields,
       contact: requiredText(160).refine(isValidContact, {
         message: "Informe um e-mail válido ou um telefone com DDD.",

@@ -87,6 +87,7 @@ export function ApplicantSection({
   alternateDocumentMasked,
   filedLabel,
   allowsPurpose,
+  qualificationRows,
   actVariants,
 }: {
   requestId: string;
@@ -104,6 +105,8 @@ export function ApplicantSection({
    * the public form: the server drops it either way.
    */
   allowsPurpose: boolean;
+  /** As respostas de quem pede o inteiro teor do RCPN. Só leitura. */
+  qualificationRows: { label: string; value: string }[];
   /** The kinds the act groups, when it groups any. */
   actVariants?: ActVariants;
 }) {
@@ -204,6 +207,9 @@ export function ApplicantSection({
           {data.purpose && (
             <Field label="Finalidade" value={data.purpose} wide />
           )}
+          {qualificationRows.map((row) => (
+            <Field key={row.label} label={row.label} value={row.value} />
+          ))}
           {data.description && (
             <Field label="Descrição" value={data.description} wide />
           )}

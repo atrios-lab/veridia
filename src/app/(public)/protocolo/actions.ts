@@ -36,6 +36,7 @@ import {
 } from "@/core/request/kinds.ts";
 import { formatCents } from "@/core/request/money.ts";
 import { parseProtocolNumber } from "@/core/request/protocol.ts";
+import { signatureCaveatFor } from "@/core/request/requerimento.ts";
 import { type IsoDate, toIsoDate } from "@/core/scheduling/calendar.ts";
 import { isSectionEnabled } from "@/core/tenant/gating.ts";
 import { db } from "@/db/index.ts";
@@ -134,6 +135,8 @@ export interface ServiceRequestDetail extends BaseDetail {
    * document, never a stack of past ones. */
   rejectionDocumentAttachmentId?: string;
   actName: string;
+  /** O aviso de assinatura do ato: nem todo ato cita as mesmas assinaturas. */
+  signatureCaveat: string;
   attributionName: string;
   /** The signed requerimento arrived (the most recent one, on a resend). */
   hasSignedForm: boolean;
@@ -365,6 +368,7 @@ export async function lookupProtocolDetail(
       statusReason: record.statusReason ?? undefined,
       rejectionDocumentAttachmentId: rejectionDocument?.id,
       actName: actVariantName(act, readActVariant(record.details)) ?? act.name,
+      signatureCaveat: signatureCaveatFor(act),
       attributionName: ATTRIBUTION_NAMES[act.attribution],
       hasSignedForm: Boolean(signedForm),
       hasExemption: Boolean(readExemption(record.details)),

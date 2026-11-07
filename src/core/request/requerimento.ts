@@ -7,7 +7,10 @@ import { dataRightOption, dataRightsDeadlineIsLegal } from "./channels.ts";
 import {
   ALTERNATE_DOCUMENT_LABELS,
   type AlternateDocument,
+  asksRequesterQualification,
   type DataRight,
+  type RequesterQualification,
+  requesterQualificationRows,
 } from "./kinds.ts";
 
 /**
@@ -24,6 +27,11 @@ import {
 export const HANDWRITTEN_SIGNATURE_CAVEAT =
   "Se assinar de próprio punho, reconheça a firma no cartório mais próximo. " +
   "A dispensa de reconhecimento vale só para a assinatura digital (Gov.br ou e-Notariado).";
+
+/** O aviso de assinatura que vale para este ato. */
+export function signatureCaveatFor(act: Pick<Act, "signatureCaveat">): string {
+  return act.signatureCaveat ?? HANDWRITTEN_SIGNATURE_CAVEAT;
+}
 
 /**
  * The pedido is registered without the signed requerimento, but the office
@@ -127,6 +135,8 @@ export interface RequerimentoData {
   exemption?: { actId?: string };
   /** The kind of act chosen (`details.actVariant`), when the act has kinds. */
   actVariant?: string;
+  /** Quem pede o inteiro teor do RCPN (`details.requesterQualification`). */
+  requesterQualification?: RequesterQualification;
   cpf?: string | null;
   /** Stands in for the CPF of a citizen who has none (`details`). */
   alternateDocument?: AlternateDocument;
@@ -170,6 +180,12 @@ export function buildRequerimento(
     { label: "Base legal", value: act.legalBasis },
   ];
   if (data.purpose) request.push({ label: "Finalidade", value: data.purpose });
+  if (
+    data.requesterQualification &&
+    asksRequesterQualification(act, data.actVariant)
+  ) {
+    request.push(...requesterQualificationRows(data.requesterQualification));
+  }
   if (data.parameterValue) {
     request.push({ label: "Informação adicional", value: data.parameterValue });
   }
@@ -237,7 +253,7 @@ export function buildRequerimento(
       "Assine este requerimento pelo Gov.br (assinador.iti.br) ou imprima e " +
         "assine de próprio punho. Depois, envie o arquivo assinado pela " +
         "consulta do protocolo ou entregue o papel no balcão da serventia.",
-      HANDWRITTEN_SIGNATURE_CAVEAT,
+      signatureCaveatFor(act),
     ],
     footer: `${tenant.name} · Protocolo ${data.protocolNumber} · ${tenant.legalFooter}`,
   };

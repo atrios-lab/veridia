@@ -16,6 +16,7 @@ import {
   CERTIFICATE_TYPES,
   FEE_EXEMPTION_ACKNOWLEDGEMENTS,
   FEE_EXEMPTION_DECLARATION,
+  REQUESTER_QUALIFICATION_NOTICE,
 } from "@/core/acts/catalog.ts";
 import { MAX_ATTACHMENTS } from "@/core/request/attachment.ts";
 import { DEADLINE_CAVEAT } from "@/core/request/deadline.ts";
@@ -23,15 +24,17 @@ import {
   formatCpf,
   formatPhone,
   publicServiceRequestSchema,
+  REQUESTER_QUALIFICATION_FIELDS,
 } from "@/core/request/form.ts";
 import {
+  asksPurpose,
+  asksRequesterQualification,
   EXEMPTION_SIGNED_BY,
   type ExemptionSignedBy,
+  REQUESTER_ROLE_LABELS,
+  REQUESTER_ROLES,
 } from "@/core/request/kinds.ts";
-import {
-  HANDWRITTEN_SIGNATURE_CAVEAT,
-  SIGNED_FORM_REQUIRED_NOTICE,
-} from "@/core/request/requerimento.ts";
+import { SIGNED_FORM_REQUIRED_NOTICE } from "@/core/request/requerimento.ts";
 import type { Attribution } from "@/core/tenant/schema.ts";
 import { Icon } from "../_components/icon.tsx";
 import { ProtocolReveal } from "../_components/protocol-reveal.tsx";
@@ -92,6 +95,118 @@ function ActVariantField({
         ))}
       </select>
       <FieldError message={error} />
+    </div>
+  );
+}
+
+/**
+ * Quem pede o inteiro teor do RCPN. Só aparece com um registro escolhido, e nunca
+ * no óbito. A finalidade fica de fora porque o campo já existe logo abaixo.
+ */
+function RequesterQualificationFields({
+  register,
+  role,
+  errorFor,
+}: {
+  // The form's values depend on the act, like the block further down.
+  // biome-ignore lint/suspicious/noExplicitAny: see the comment above.
+  register: UseFormRegister<any>;
+  role?: string;
+  errorFor: (name: string) => string | undefined;
+}) {
+  return (
+    <div className="flex flex-col gap-3.5 rounded-2xl border border-brand-border bg-brand-card p-4">
+      <fieldset>
+        <legend className="mb-1.5 text-[13px] font-semibold">
+          Quem está pedindo?
+        </legend>
+        <div className="flex flex-col gap-1.5">
+          {REQUESTER_ROLES.map((value) => (
+            <label key={value} className="flex items-center gap-2">
+              <input
+                type="radio"
+                value={value}
+                className="h-4 w-4 accent-brand-accent"
+                {...register("requesterRole")}
+              />
+              <span className="text-[13px] text-brand-text-soft">
+                {REQUESTER_ROLE_LABELS[value]}
+              </span>
+            </label>
+          ))}
+        </div>
+        <FieldError message={errorFor("requesterRole")} />
+      </fieldset>
+
+      {role === "attorney" && (
+        <div>
+          <label
+            htmlFor="representedName"
+            className="mb-1.5 block text-[13px] font-semibold"
+          >
+            Nome de quem você representa
+          </label>
+          <input
+            id="representedName"
+            className={inputClass}
+            {...register("representedName")}
+          />
+          <FieldError message={errorFor("representedName")} />
+          <p className="mt-1.5 text-[11px] text-brand-faint">
+            Anexe o mandato (procuração) nos arquivos deste pedido.
+          </p>
+        </div>
+      )}
+
+      {role && role !== "self" && (
+        <div>
+          <label
+            htmlFor="kinship"
+            className="mb-1.5 block text-[13px] font-semibold"
+          >
+            Grau de parentesco com a pessoa registrada
+            <span className="font-normal text-brand-muted"> · se houver</span>
+          </label>
+          <input id="kinship" className={inputClass} {...register("kinship")} />
+          <FieldError message={errorFor("kinship")} />
+        </div>
+      )}
+
+      <fieldset>
+        <legend className="mb-1.5 text-[13px] font-semibold">
+          A pessoa registrada é falecida?
+        </legend>
+        <div className="flex gap-4">
+          {(
+            [
+              ["yes", "Sim"],
+              ["no", "Não"],
+            ] as const
+          ).map(([value, label]) => (
+            <label key={value} className="flex items-center gap-2">
+              <input
+                type="radio"
+                value={value}
+                className="h-4 w-4 accent-brand-accent"
+                {...register("registrantDeceased")}
+              />
+              <span className="text-[13px] text-brand-text-soft">{label}</span>
+            </label>
+          ))}
+        </div>
+        <FieldError message={errorFor("registrantDeceased")} />
+      </fieldset>
+
+      <div className="flex items-start gap-2.5 rounded-xl bg-brand-accent-soft px-3.5 py-3">
+        <Icon
+          name="info"
+          className="mt-0.5 h-4 w-4 shrink-0 text-brand-accent-ink"
+          strokeWidth={2}
+        />
+        <p className="text-[11.5px] leading-relaxed text-brand-accent-ink">
+          {REQUESTER_QUALIFICATION_NOTICE}
+        </p>
+      </div>
     </div>
   );
 }
@@ -379,6 +494,22 @@ export function RequestForm({
   );
   const descriptionRequired =
     act.requiresDescription || selectedVariant?.requiresDescription;
+  const asksQualification = asksRequesterQualification(
+    act,
+    selectedVariant?.id,
+  );
+  const purposeAsked = asksPurpose(act, selectedVariant?.id);
+
+  // Esconder um campo não apaga o valor: quem preenche o bloco e troca para
+  // óbito ficaria preso num erro de um campo que não vê mais, porque a validação
+  // daqui ainda lê o valor antigo.
+  useEffect(() => {
+    if (!act.requesterQualification || asksQualification) return;
+    setValue("purpose", "");
+    for (const field of REQUESTER_QUALIFICATION_FIELDS) {
+      setValue(field, undefined);
+    }
+  }, [act.requesterQualification, asksQualification, setValue]);
 
   if (state.status === "success") {
     return <SuccessScreen result={state} lookupHref={lookupHref} />;
@@ -559,9 +690,18 @@ export function RequestForm({
           <FieldError message={errorFor("description")} />
         </div>
 
+        {asksQualification && (
+          <RequesterQualificationFields
+            register={register}
+            role={watch("requesterRole") as string | undefined}
+            errorFor={errorFor}
+          />
+        )}
+
         {/* Only the acts the law lets ask. A certificate may never require it
-            (Lei 6.015 art. 17), so the field is not even rendered. */}
-        {act.requiresPurpose && (
+            (Lei 6.015 art. 17), so the field is not even rendered, except in
+            the inteiro teor of the Registro Civil (CNN, art. 117, § 3º). */}
+        {purposeAsked && (
           <div>
             <label
               htmlFor="purpose"
@@ -1071,7 +1211,7 @@ function SuccessScreen({
             próprio punho.
           </p>
           <p className="mt-1 text-[11.5px] leading-relaxed text-brand-faint">
-            {HANDWRITTEN_SIGNATURE_CAVEAT}
+            {result.signatureCaveat}
           </p>
           <div className="mt-2.5 flex flex-wrap gap-2">
             <form

@@ -8,10 +8,15 @@ import {
   CERTIFICATE_TYPES,
   FEE_EXEMPTION_ACKNOWLEDGEMENTS,
   FEE_EXEMPTION_DECLARATION,
+  REQUESTER_QUALIFICATION_NOTICE,
 } from "@/core/acts/catalog.ts";
 import {
+  asksPurpose,
+  asksRequesterQualification,
   EXEMPTION_SIGNED_BY,
   type ExemptionSignedBy,
+  REQUESTER_ROLE_LABELS,
+  REQUESTER_ROLES,
 } from "@/core/request/kinds.ts";
 import type { Attribution, Tenant } from "@/core/tenant/schema.ts";
 import { AdminIcon } from "../../../_components/icon.tsx";
@@ -232,13 +237,106 @@ function Stepper({ current }: { current: 1 | 2 }) {
   );
 }
 
+/** Quem pede o inteiro teor do RCPN: as mesmas perguntas do site. */
+function ManualRequesterQualificationFields({
+  fieldErrors,
+}: {
+  fieldErrors: Record<string, string>;
+}) {
+  const [role, setRole] = useState("");
+  return (
+    <div className="mt-3.5 flex flex-col gap-3 rounded-[10px] border border-admin-border bg-admin-input-bg p-4">
+      <fieldset className="flex flex-col gap-1.5">
+        <legend className="mb-0.5 text-xs font-bold text-admin-primary">
+          Quem está pedindo?
+        </legend>
+        {REQUESTER_ROLES.map((value) => (
+          <label key={value} className="flex items-center gap-2">
+            <input
+              type="radio"
+              name="requesterRole"
+              value={value}
+              checked={role === value}
+              onChange={() => setRole(value)}
+              className="h-4 w-4 accent-admin-primary-soft"
+            />
+            <span className="text-[12.5px] text-admin-text">
+              {REQUESTER_ROLE_LABELS[value]}
+            </span>
+          </label>
+        ))}
+        <FieldError message={fieldErrors.requesterRole} />
+      </fieldset>
+
+      {role === "attorney" && (
+        <div>
+          <label className={LABEL_CLASS} htmlFor="representedName">
+            Nome do representado
+          </label>
+          <input
+            id="representedName"
+            name="representedName"
+            className={FIELD_CLASS}
+          />
+          <FieldError message={fieldErrors.representedName} />
+          <p className="mt-1 text-[11px] text-admin-faint">
+            Confira o mandato (procuração) e anexe-o depois de registrar o
+            pedido.
+          </p>
+        </div>
+      )}
+
+      {role && role !== "self" && (
+        <div>
+          <label className={LABEL_CLASS} htmlFor="kinship">
+            Grau de parentesco com a pessoa registrada (se houver)
+          </label>
+          <input id="kinship" name="kinship" className={FIELD_CLASS} />
+          <FieldError message={fieldErrors.kinship} />
+        </div>
+      )}
+
+      <fieldset className="flex flex-col gap-1.5">
+        <legend className="mb-0.5 text-xs font-bold text-admin-primary">
+          A pessoa registrada é falecida?
+        </legend>
+        <div className="flex gap-4">
+          {(
+            [
+              ["yes", "Sim"],
+              ["no", "Não"],
+            ] as const
+          ).map(([value, label]) => (
+            <label key={value} className="flex items-center gap-2">
+              <input
+                type="radio"
+                name="registrantDeceased"
+                value={value}
+                className="h-4 w-4 accent-admin-primary-soft"
+              />
+              <span className="text-[12.5px] text-admin-text">{label}</span>
+            </label>
+          ))}
+        </div>
+        <FieldError message={fieldErrors.registrantDeceased} />
+      </fieldset>
+
+      <p className="text-[11.5px] leading-relaxed text-admin-muted">
+        {REQUESTER_QUALIFICATION_NOTICE}
+      </p>
+    </div>
+  );
+}
+
 /** Which of the kinds the act groups, in the same shape as the act's select. */
 function ManualVariantField({
   variants,
   error,
+  onChange,
 }: {
   variants: ActVariants;
   error?: string;
+  onChange?: (variantId: string) => void;
 }) {
   return (
     <div>
@@ -250,6 +348,7 @@ function ManualVariantField({
           id="actVariant"
           name="actVariant"
           defaultValue=""
+          onChange={(event) => onChange?.(event.target.value)}
           className={`appearance-none pr-9 ${FIELD_CLASS}`}
         >
           <option value="" disabled>
@@ -285,6 +384,14 @@ export function ManualEntryForm({
   const acts = actsOfAttribution(tenant, attribution);
   const [actId, setActId] = useState(acts[0]?.id ?? "");
   const act = acts.find((a) => a.id === actId) ?? acts[0];
+  // Guardado com o ato: uma opção de outro ato não diz nada sobre este, e o
+  // select abaixo volta para o vazio quando o ato muda.
+  const [chosenVariant, setChosenVariant] = useState<{
+    actId: string;
+    id: string;
+  }>();
+  const variantId =
+    chosenVariant?.actId === act?.id ? chosenVariant?.id : undefined;
   const exemptionTargets = act?.exemptionTargets;
   const [exemptionActId, setExemptionActId] = useState("");
   const exemptionTarget = exemptionTargets?.find(
@@ -438,7 +545,19 @@ export function ManualEntryForm({
           </div>
         </div>
 
-        {act?.requiresPurpose && (
+        {act?.variants && (
+          <div className="mt-3.5">
+            {/* Keyed so that changing the act discards the kind chosen. */}
+            <ManualVariantField
+              key={act.id}
+              variants={act.variants}
+              error={fieldErrors.actVariant}
+              onChange={(id) => setChosenVariant({ actId: act.id, id })}
+            />
+          </div>
+        )}
+
+        {act && asksPurpose(act, variantId) && (
           <div className="mt-3.5">
             <label className={LABEL_CLASS} htmlFor="purpose">
               Finalidade
@@ -448,15 +567,11 @@ export function ManualEntryForm({
           </div>
         )}
 
-        {act?.variants && (
-          <div className="mt-3.5">
-            {/* Keyed so that changing the act discards the kind chosen. */}
-            <ManualVariantField
-              key={act.id}
-              variants={act.variants}
-              error={fieldErrors.actVariant}
-            />
-          </div>
+        {act && asksRequesterQualification(act, variantId) && (
+          <ManualRequesterQualificationFields
+            key={act.id}
+            fieldErrors={fieldErrors}
+          />
         )}
 
         <div className="mt-3.5">

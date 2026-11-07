@@ -9,7 +9,7 @@ import {
   isValidCpf,
   isValidPhone,
 } from "./form.ts";
-import { type AlternateDocument, variantOwner } from "./kinds.ts";
+import { type AlternateDocument, asksPurpose, variantOwner } from "./kinds.ts";
 
 /**
  * What the counter may correct on a request that already exists.
@@ -163,10 +163,14 @@ export function resolveVariantEdit(
  * same office asking the same question: a panel that lets an operator type it
  * in is the same violation with a different door, so the rule lives here,
  * where both callers pass through, instead of in either screen.
+ *
+ * `actVariant` matters only on the inteiro teor of the Registro Civil, whose
+ * óbito is not asked for a purpose (CNN, arts. 118 e 119).
  */
 export function purposeFor(
-  act: { requiresPurpose: boolean } | undefined,
+  act: Parameters<typeof asksPurpose>[0] | undefined,
   value: string | null,
+  actVariant?: string,
 ): string | null {
-  return act?.requiresPurpose ? value : null;
+  return act && asksPurpose(act, actVariant) ? value : null;
 }

@@ -10,6 +10,7 @@ import {
   readChannel,
   readExemption,
   readPhone,
+  readRequesterQualification,
 } from "@/core/request/kinds.ts";
 import {
   buildRequerimento,
@@ -89,6 +90,7 @@ export function buildRequestDocuments(
       phone: readPhone(stored.details),
       exemption,
       actVariant: readActVariant(stored.details),
+      requesterQualification: readRequesterQualification(stored.details),
       cpf: stored.cpf,
       alternateDocument: readAlternateDocument(stored.details),
       description: stored.description,

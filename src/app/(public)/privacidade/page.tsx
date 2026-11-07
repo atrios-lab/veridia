@@ -36,7 +36,11 @@ export default async function PrivacyPolicyPage() {
               nome, CPF, contato e os documentos enviados para instruir o ato
               solicitado, para identificar quem faz o pedido e dar andamento e
               resposta a ele. O CPF é pedido para qualificar o requerente,
-              conforme a Lei 6.015/1973.
+              conforme a Lei 6.015/1973. Na certidão de inteiro teor do Registro
+              Civil, pedimos também quem faz o pedido, a finalidade, o nome do
+              representado, o grau de parentesco e se a pessoa registrada é
+              falecida, porque o requerimento desse ato precisa trazer esses
+              dados.
             </li>
             <li>
               <strong className="text-brand-text">Agendamento:</strong> nome,
