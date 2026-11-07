@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState, useRef, useState } from "react";
+import { startTransition, useActionState, useRef, useState } from "react";
 import {
   type ActVariants,
   actsOfAttribution,
@@ -331,10 +331,13 @@ function ManualRequesterQualificationFields({
 /** Which of the kinds the act groups, in the same shape as the act's select. */
 function ManualVariantField({
   variants,
+  value,
   error,
   onChange,
 }: {
   variants: ActVariants;
+  /** Controlado quando a opção muda o resto do formulário. */
+  value?: string;
   error?: string;
   onChange?: (variantId: string) => void;
 }) {
@@ -347,7 +350,7 @@ function ManualVariantField({
         <select
           id="actVariant"
           name="actVariant"
-          defaultValue=""
+          {...(value === undefined ? { defaultValue: "" } : { value })}
           onChange={(event) => onChange?.(event.target.value)}
           className={`appearance-none pr-9 ${FIELD_CLASS}`}
         >
@@ -419,6 +422,13 @@ export function ManualEntryForm({
       <Stepper current={1} />
       <form
         action={formAction}
+        // Sem isto o React limpa o formulário depois de cada envio, e um erro
+        // num campo apagava tudo o que o operador já tinha digitado.
+        onSubmit={(event) => {
+          event.preventDefault();
+          const data = new FormData(event.currentTarget);
+          startTransition(() => formAction(data));
+        }}
         className="rounded-[14px] border border-admin-border bg-admin-card p-6.5"
       >
         {fromConversation && (
@@ -551,6 +561,7 @@ export function ManualEntryForm({
             <ManualVariantField
               key={act.id}
               variants={act.variants}
+              value={variantId ?? ""}
               error={fieldErrors.actVariant}
               onChange={(id) => setChosenVariant({ actId: act.id, id })}
             />
