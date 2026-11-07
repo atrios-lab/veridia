@@ -69,6 +69,10 @@ e-Notariado, e os atos de registro e de protesto SHALL NOT mandar o cidadão par
 - **WHEN** o cidadão abre a certidão de matrícula, inteiro teor digital ou ônus
 - **THEN** a opção se chama "Certidão de inteiro teor digital", e um pedido antigo de inteiro teor passa a aparecer com esse nome
 
+#### Scenario: Inteiro teor do RCPN termina no balcão ou on-line
+- **WHEN** a etapa 2 do RCPN lista a certidão de inteiro teor (verbum ad verbum)
+- **THEN** o selo mostra "Termina no balcão ou on-line", e o cidadão lê que recebe a certidão pelo site ou a retira no balcão
+
 ## ADDED Requirements
 
 ### Requirement: Qualificação no inteiro teor do RCPN

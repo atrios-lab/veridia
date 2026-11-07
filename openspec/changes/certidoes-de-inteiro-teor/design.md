@@ -103,12 +103,12 @@ Alternativa: manter o e-Notariado, como foi pedido no início. Descartada até h
 - **Mandato sem poderes especiais** → o art. 114 fala nesses poderes, e sem eles o advogado pode ser tratado como terceiro. O operador decide, e a observação avisa que o pedido pode ser recusado.
 - **Gratuidade sem as perguntas** → um pedido isento de inteiro teor não traz motivo nem parentesco, e o operador os pede por exigência.
 - **Requerimento no óbito** → o site pede o que o art. 118 dispensa, como já acontece hoje na certidão de óbito.
-- **Papel do RCPN** → o art. 53, I, de 2020, exige papel unificado, e a Lei 6.015, art. 19, § 5º, de 2022, prevê certidão eletrônica. O ato novo segue o selo das certidões atuais do RCPN.
+- **Papel do RCPN** → o art. 53, I, de 2020, exige papel unificado, e a Lei 6.015, art. 19, § 5º, de 2022, prevê certidão eletrônica. O verbum ad verbum é `hybrid`: quem pede recebe pelo site ou retira no balcão, por decisão do responsável pelo produto. O site não pergunta qual dos dois, e a escolha é combinada com a serventia.
 - **Outras serventias** → o catálogo vale para todas, e alguma pode não oferecer o papel ou o verbum ad verbum.
 
 ## Open Questions
 
-- **Certidão digital de imóveis:** o cartório entrega pelo site ou pela Central dos arts. 486 a 490? Esses artigos obrigam a serventia a atender pela Central, mas não a tornam o canal exclusivo. O Provimento CNJ 180/2024 (SERP/ONR), citado no art. 486, não foi lido. Se a entrega for pela Central, o selo e o texto do digital precisam mudar. Bloqueia o deploy.
+- **Certidão digital de imóveis:** resolvida. O responsável pelo produto confirmou que a serventia entrega pelo site, onde o pedido é feito. O selo "Termina on-line" fica.
 - **Pagamento do papel:** antes, pelo Pix, ou na retirada? O prazo do § 10 conta do pagamento.
-- **Verbum ad verbum on-line:** o selo "Termina on-line" foi assumido e precisa de confirmação da serventia.
+- **Verbum ad verbum:** resolvida. O ato termina no balcão ou on-line, à escolha de quem pede.
 - **Lei 8.560 e norma de pessoa trans:** o art. 116, § 2º, cita as duas como restritas, e elas não foram lidas. A observação não cita artigos, então não depende disso.

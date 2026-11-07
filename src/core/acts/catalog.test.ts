@@ -231,7 +231,10 @@ test("a dica do próprio ato vem antes da de só identificação", () => {
 test("o inteiro teor do RCPN avisa sem citar e-Notariado nem decidir", () => {
   const act = getAct("rcpn-certidao-inteiro-teor");
   assert.ok(act);
-  assert.equal(act.processingMode, "online");
+  // Pelo site ou no balcão, quem pede escolhe.
+  assert.equal(act.processingMode, "hybrid");
+  assert.match(processingHintFor(act), /site/);
+  assert.match(processingHintFor(act), /balcão/);
   assert.equal(act.identificationOnly, undefined);
   assert.equal(act.legalDeadlineDays, 5);
   // Fora da gratuidade: a marcação "Inteiro teor" de lá não ganha estas perguntas.

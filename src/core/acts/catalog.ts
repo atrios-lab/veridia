@@ -568,7 +568,15 @@ export const ACTS: Act[] = [
         },
       ],
     },
-    processingMode: "online",
+    // A serventia entrega pelo site ou imprime no balcão, a escolha é de quem
+    // pede (confirmado pelo responsável pelo produto em 07/11/2026).
+    processingMode: "hybrid",
+    processingHint:
+      "você adianta aqui e recebe a certidão pelo site ou a retira no balcão",
+    guidance:
+      "A certidão pode ser entregue pelo site, em formato digital, ou " +
+      "retirada impressa no balcão da serventia. Para retirar no balcão, " +
+      "traga um documento de identidade.",
     legalBasis: "Lei 6.015 arts. 17 a 19; Prov. 149 arts. 114 a 119",
     legalDeadlineDays: 5,
     legalDeadlineNote:
