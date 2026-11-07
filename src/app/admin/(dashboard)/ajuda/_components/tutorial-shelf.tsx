@@ -18,18 +18,23 @@ import { AdminIcon } from "../../../_components/icon.tsx";
  * page by the visible width and grey out at either end, and hide when
  * everything already fits.
  *
- * The cards come in as children, rendered on the server.
+ * The cards come in as children, rendered on the server. The one playing
+ * above (`aria-current`) is scrolled into view when it changes, so the
+ * shelf never opens with the current video hidden past the edge.
  */
 export function TutorialShelf({
   title,
   count,
   subtitle,
+  currentId,
   children,
 }: {
   title: string;
   /** "3" or "2 de 5", next to the title. */
   count: string;
   subtitle: string;
+  /** The featured video's id, to bring its card into view. */
+  currentId?: string;
   children: ReactNode;
 }) {
   const headingId = useId();
@@ -59,6 +64,19 @@ export function TutorialShelf({
       observer.disconnect();
     };
   }, [measure]);
+
+  // Sideways only: scrollIntoView would also scroll the page down to the
+  // shelf, away from the player the person just chose.
+  useEffect(() => {
+    if (!currentId) return;
+    const list = listRef.current;
+    const card = list?.querySelector('[aria-current="true"]');
+    if (!list || !card) return;
+    const listBox = list.getBoundingClientRect();
+    const cardBox = card.getBoundingClientRect();
+    if (cardBox.left >= listBox.left && cardBox.right <= listBox.right) return;
+    list.scrollLeft += cardBox.left - listBox.left - 4;
+  }, [currentId]);
 
   function page(direction: 1 | -1) {
     const list = listRef.current;
@@ -114,7 +132,11 @@ export function TutorialShelf({
         className="-mx-1 flex snap-x snap-mandatory scroll-px-1 gap-4 overflow-x-auto px-1 pt-1 pb-3 [scrollbar-width:thin]"
       >
         {Children.map(children, (child) => (
-          <li className="w-[260px] flex-none snap-start sm:w-[284px]">
+          // The last card snaps by its end: the farthest the list scrolls
+          // is short of where its start would snap, and without an end
+          // position mandatory snapping pulls a focused last card back
+          // out of view.
+          <li className="w-[260px] flex-none snap-start last:snap-end sm:w-[284px]">
             {child}
           </li>
         ))}

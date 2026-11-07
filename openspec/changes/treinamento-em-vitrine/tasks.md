@@ -26,7 +26,7 @@
 ## 4. Conferência
 
 - [x] 4.1 Rodar os testes tocados (`progress.test.ts`, `video.test.ts`, `src/db/tutorials.test.ts`) e `pnpm` de tipos e lint
-- [ ] 4.2 Conferir no navegador pelo host do cartório: destaque com os três selos, prateleiras com e sem rolagem, card sem capa, card atual, teclado percorrendo os cards, tela estreita e tema escuro
+- [x] 4.2 Conferir no navegador pelo host do cartório: destaque, prateleiras com rolagem, card sem capa, card atual, teclado percorrendo os cards e tela estreita (o painel não tem tema escuro; o selo "Trilha concluída" e a prateleira de aprofundamento só têm cobertura de teste, porque o Homolog não tem esses casos)
 - [ ] 4.3 Aplicar a migração no Homolog pelo pooler e conferir no Preview com uma capa enviada de verdade
 
 ## 5. Produção

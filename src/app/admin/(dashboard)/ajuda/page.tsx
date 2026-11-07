@@ -134,6 +134,7 @@ export default async function TutorialsPage({
                 title="Primeiros passos"
                 count={`${progress.watched} de ${progress.total}`}
                 subtitle="O essencial para usar o painel, na ordem"
+                currentId={current.id}
               >
                 {trail.map(card)}
               </TutorialShelf>
@@ -143,6 +144,7 @@ export default async function TutorialsPage({
                 title="Aprofundamento"
                 count={String(deepDives.length)}
                 subtitle="Cada tela em detalhe, para quando precisar"
+                currentId={current.id}
               >
                 {deepDives.map(card)}
               </TutorialShelf>

@@ -40,13 +40,13 @@ export function TutorialCard({
         {watched && (
           <span
             aria-hidden="true"
-            className="absolute top-2.5 right-2.5 inline-flex h-6 w-6 items-center justify-center rounded-full bg-admin-success-text text-white shadow-sm"
+            className="absolute top-2.5 right-2.5 inline-flex h-6 w-6 items-center justify-center rounded-full bg-white text-admin-success-text shadow-sm"
           >
             <AdminIcon name="check" className="h-3.5 w-3.5" strokeWidth={2.4} />
           </span>
         )}
         {current && (
-          <span className="absolute top-2.5 left-2.5 rounded-full bg-admin-primary px-2 py-0.5 text-[10.5px] font-bold text-white shadow-sm">
+          <span className="absolute top-2.5 left-2.5 rounded-full bg-white px-2 py-0.5 text-[10.5px] font-bold text-admin-primary shadow-sm">
             Assistindo
           </span>
         )}
