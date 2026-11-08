@@ -15,6 +15,7 @@ import {
   describeTutorialFileProblem,
   MAX_CAPTIONS_BYTES,
   MAX_POSTER_BYTES,
+  MAX_TUTORIAL_DESCRIPTION,
   MAX_VIDEO_BYTES_DIRECT,
   MAX_VIDEO_BYTES_SERVER_ACTION,
   type TutorialFileKind,
@@ -456,8 +457,8 @@ export function TutorialForm({
           id={`${formId}-description`}
           name="description"
           defaultValue={editing?.description ?? ""}
-          maxLength={500}
-          rows={2}
+          maxLength={MAX_TUTORIAL_DESCRIPTION}
+          rows={4}
           disabled={busy}
           className={fieldErrors.description ? ERROR_FIELD_CLASS : FIELD_CLASS}
         />

@@ -198,6 +198,10 @@ export function describeTutorialFileProblem(
   return `${SUBJECTS[kind]} passa do limite de ${megabytes(problem.limit)}.`;
 }
 
+/** A video's description: room for a paragraph or two on what the lesson
+ * covers, shown under the player. */
+export const MAX_TUTORIAL_DESCRIPTION = 2000;
+
 /**
  * The form's fields, validated. Which routes exist is the panel's to say
  * (ADMIN_NAV lives in the app, not here), so the caller hands the allowed
@@ -214,7 +218,10 @@ export function tutorialFormSchema(allowedRoutes: readonly string[]) {
     description: z
       .string()
       .trim()
-      .max(500, "A descrição passa de 500 caracteres.")
+      .max(
+        MAX_TUTORIAL_DESCRIPTION,
+        `A descrição passa de ${MAX_TUTORIAL_DESCRIPTION.toLocaleString("pt-BR")} caracteres.`,
+      )
       .default(""),
     durationSeconds: z
       .number()
