@@ -456,12 +456,20 @@ export function TutorialForm({
         <textarea
           id={`${formId}-description`}
           name="description"
+          aria-describedby={`${formId}-description-help`}
           defaultValue={editing?.description ?? ""}
           maxLength={MAX_TUTORIAL_DESCRIPTION}
           rows={4}
           disabled={busy}
           className={fieldErrors.description ? ERROR_FIELD_CLASS : FIELD_CLASS}
         />
+        <p
+          id={`${formId}-description-help`}
+          className="mt-1 text-[12px] text-admin-muted"
+        >
+          Separe os parágrafos com uma linha em branco. Use *texto* ou **texto**
+          para destacar títulos e trechos em negrito.
+        </p>
         <FieldError message={fieldErrors.description} />
       </div>
 

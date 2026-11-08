@@ -10,6 +10,7 @@ import {
   markTutorialWatchedAction,
   unmarkTutorialWatchedAction,
 } from "../actions.ts";
+import { TutorialDescription } from "./tutorial-description.tsx";
 
 /**
  * The video being watched on a course page.
@@ -163,9 +164,7 @@ export function TutorialPlayer({
             {tutorial.title}
           </h2>
           {tutorial.description && (
-            <p className="text-[13.5px] leading-normal text-admin-muted">
-              {tutorial.description}
-            </p>
+            <TutorialDescription text={tutorial.description} />
           )}
           <div className="flex flex-wrap items-center gap-3 pt-1">
             <span className="text-[12px] text-admin-faint">
@@ -205,9 +204,7 @@ export function TutorialPlayer({
           {tutorial.title}
         </h2>
         {tutorial.description && (
-          <p className="text-[13.5px] leading-normal text-admin-muted">
-            {tutorial.description}
-          </p>
+          <TutorialDescription text={tutorial.description} />
         )}
         <p className="text-[12px] text-admin-faint">
           {formatDuration(tutorial.durationSeconds)}
