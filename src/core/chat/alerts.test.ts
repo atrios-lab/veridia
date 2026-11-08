@@ -4,6 +4,7 @@ import {
   type AlertSnapshot,
   DEFAULT_ALERT_PREFS,
   diffAlerts,
+  newStaffReplies,
   parseAlertPrefs,
   queueNeedsAttention,
   REPEAT_OPTIONS,
@@ -162,4 +163,16 @@ test("every note can be played: audible pitch, positive length", () => {
       }
     }
   }
+});
+
+test("the citizen hears the office's replies, not their own or the system's", () => {
+  const fresh = [
+    { authorType: "citizen" },
+    { authorType: "staff" },
+    { authorType: "system" },
+    { authorType: "staff" },
+  ];
+  assert.equal(newStaffReplies(fresh, false), 2);
+  assert.equal(newStaffReplies(fresh, true), 0);
+  assert.equal(newStaffReplies([{ authorType: "citizen" }], false), 0);
 });

@@ -7,11 +7,11 @@ import {
   SOUNDS,
   soundGroups,
 } from "@/core/chat/alerts.ts";
+import { playSound, unlockAudio } from "../../../../_components/chat-sound.ts";
 import {
   readAlertPrefs,
   saveAlertPrefs,
 } from "../../../_components/chat-alert-prefs.ts";
-import { playSound, unlockAudio } from "../../../_components/chat-sound.ts";
 
 const SELECT_CLASS =
   "rounded-[9px] border border-admin-input-border bg-admin-input-bg px-3 py-2 text-[13px] text-admin-text outline-none focus:border-admin-primary-soft";

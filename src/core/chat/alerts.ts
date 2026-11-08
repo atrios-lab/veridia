@@ -372,7 +372,7 @@ export function parseAlertPrefs(raw: unknown): AlertPrefs {
 
 /**
  * The gain a volume (0 to 100) plays at, before the player's own boost and
- * limiter (see chat-sound.ts). A gentle curve, not a straight line, because
+ * limiter (see app/_components/chat-sound.ts). A gentle curve, not a straight line, because
  * hearing is logarithmic; gentler than squaring, so the top of the slider
  * is loud and the middle still carries across a counter.
  */
@@ -380,3 +380,22 @@ export function volumeGain(volume: number): number {
   const v = Math.min(100, Math.max(0, volume)) / 100;
   return v ** 1.5;
 }
+
+/**
+ * How many of the messages a citizen's chat just received are replies from
+ * the office, the ones worth a sound. None on the first load (the
+ * conversation reappearing after a reload is not news), and never the
+ * citizen's own or a system line ("atendimento encerrado").
+ */
+export function newStaffReplies(
+  fresh: readonly { authorType: string }[],
+  firstLoad: boolean,
+): number {
+  if (firstLoad) return 0;
+  return fresh.filter((message) => message.authorType === "staff").length;
+}
+
+/** The tone the citizen's chat plays for a reply, at this volume: soft
+ * enough for a public page, loud enough to be heard from another tab. */
+export const CITIZEN_REPLY_SOUND: SoundId = "bolha";
+export const CITIZEN_REPLY_VOLUME = 80;

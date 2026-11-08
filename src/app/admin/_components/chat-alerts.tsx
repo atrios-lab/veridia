@@ -10,9 +10,13 @@ import {
   queueNeedsAttention,
   waitingLabel,
 } from "@/core/chat/alerts.ts";
+import {
+  isAudioLocked,
+  playSound,
+  unlockAudio,
+} from "../../_components/chat-sound.ts";
 import { alertSnapshotAction } from "../(dashboard)/atendimento/actions.ts";
 import { useAlertPrefs } from "./chat-alert-prefs.ts";
-import { isAudioLocked, playSound, unlockAudio } from "./chat-sound.ts";
 import { AdminIcon } from "./icon.tsx";
 
 /**
