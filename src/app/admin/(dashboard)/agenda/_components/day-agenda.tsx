@@ -28,6 +28,8 @@ export interface DayAppointment {
   cancelReason: string | null;
   /** Its hour is over and nobody said whether the citizen came. */
   awaitingConfirmation?: boolean;
+  /** Attended in person: the attendance declaration can be printed. */
+  canDeclare?: boolean;
 }
 
 export type DayRow =
@@ -160,8 +162,9 @@ function AppointmentRow({ appointment }: { appointment: DayAppointment }) {
             </button>
           </span>
         ) : appointment.status === "attended" ? (
-          <span className="col-span-2 flex @2xl:col-span-1 @2xl:justify-end">
+          <span className="col-span-2 flex flex-wrap gap-1.5 @2xl:col-span-1 @2xl:justify-end">
             <ReceiptLink id={appointment.id} />
+            {appointment.canDeclare && <DeclarationLink id={appointment.id} />}
           </span>
         ) : (
           <span className="hidden @2xl:block" />
@@ -409,6 +412,20 @@ function ReceiptLink({ id }: { id: string }) {
       className="rounded-lg border border-admin-border px-2.5 py-1.5 text-[11.5px] font-semibold text-admin-muted hover:bg-admin-input-bg"
     >
       Comprovante
+    </a>
+  );
+}
+
+/** The attendance declaration, to sign and stamp at the counter. */
+function DeclarationLink({ id }: { id: string }) {
+  return (
+    <a
+      href={`/admin/agenda/comparecimento/${id}`}
+      target="_blank"
+      rel="noopener"
+      className="rounded-lg bg-admin-primary px-2.5 py-1.5 text-[11.5px] font-semibold text-white"
+    >
+      Declaração de comparecimento
     </a>
   );
 }
