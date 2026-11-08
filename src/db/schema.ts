@@ -608,6 +608,9 @@ export const appointments = pgTable(
     // citizen cancelled it themselves.
     cancelReason: text("cancel_reason"),
     cancelledAt: timestamp("cancelled_at", { withTimezone: true }),
+    // When the day-before reminder went to the citizen. Set by the same
+    // statement that claims it, so two runs of the job never send it twice.
+    reminderSentAt: timestamp("reminder_sent_at", { withTimezone: true }),
     // The citizen's only credential, hashed like every other one here. The
     // token itself lives in exactly one place: the e-mail that was sent.
     cancelTokenHash: text("cancel_token_hash").notNull(),

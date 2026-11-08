@@ -31,6 +31,11 @@ import {
   servicesOfAgenda,
 } from "@/core/scheduling/services.ts";
 import { isSlotFree } from "@/core/scheduling/slots.ts";
+import { db } from "@/db/index.ts";
+import {
+  type AgendaAlertSnapshot,
+  agendaAlertSnapshotWith,
+} from "@/lib/appointment-reminders.ts";
 import {
   bookAppointment,
   cancelAppointment,
@@ -701,4 +706,21 @@ export async function saveServiceChecklist(
       ? "A lista voltou ao padrão e já vale no site."
       : "Lista salva e já valendo no site e no comprovante.",
   };
+}
+
+/**
+ * What the panel's agenda reminders show, polled from every screen: today's
+ * appointments and the bookings just made on the site. Null without the
+ * permission, which the component reads as "nothing to show".
+ */
+export async function agendaAlertSnapshotAction(): Promise<AgendaAlertSnapshot | null> {
+  const session = await authorize();
+  if (!session) return null;
+  try {
+    const tenant = await getTenant();
+    return await agendaAlertSnapshotWith(db, tenant.slug, officeNow());
+  } catch (error) {
+    console.error("agenda.alert-snapshot", error);
+    return null;
+  }
 }
