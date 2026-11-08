@@ -1,7 +1,11 @@
 import type { EmailText } from "../email/text.ts";
 import { isRemoteMode, type SlotTime, slotEndTime } from "./agenda.ts";
 import { formatLongDate, type IsoDate } from "./calendar.ts";
-import { attendanceNotice, CHECKLIST_CAVEAT } from "./services.ts";
+import {
+  attendanceNotice,
+  CHECKLIST_CAVEAT,
+  documentsByEmailNotice,
+} from "./services.ts";
 
 /**
  * What the office writes to a citizen about their appointment.
@@ -28,6 +32,8 @@ export interface AppointmentEmailFacts {
   checklist?: string[];
   /** The office's own sheet for the service, as a full address. */
   checklistUrl?: string;
+  /** The office's e-mail, for documents sent ahead with a doubt. */
+  officeEmail?: string;
 }
 
 /** "quinta, 06/08/2026, das 08:30 às 09:30" */
@@ -65,6 +71,9 @@ export function buildAppointmentBookedEmail(
               ? [`Lista do cartório para este serviço: ${facts.checklistUrl}`]
               : []),
             CHECKLIST_CAVEAT,
+            ...(facts.officeEmail
+              ? [documentsByEmailNotice(facts.officeEmail)]
+              : []),
           ]
         : [
             "Leve um documento com foto. Se for tratar de assunto de outra pessoa, leve procuração.",

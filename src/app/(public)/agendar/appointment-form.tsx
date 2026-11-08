@@ -23,6 +23,7 @@ import {
   CHECKLIST_CAVEAT,
   checklistFileHref,
   checklistFor,
+  documentsByEmailNotice,
   type OfferedService,
 } from "@/core/scheduling/services.ts";
 import { Icon } from "../_components/icon.tsx";
@@ -63,6 +64,8 @@ export interface SchedulingScreenProps {
   openingHours: string;
   phone: string;
   whatsapp: string;
+  /** The office's e-mail, for documents sent ahead with a doubt. */
+  email: string;
   /** Set when there is nothing to offer, and why: the two cases read very
    * differently to the citizen and must not share a screen. */
   unavailable?: "unconfigured" | "full";
@@ -185,6 +188,7 @@ export function SchedulingScreen(props: SchedulingScreenProps) {
                 services={services ?? []}
                 modes={modes ?? []}
                 modeHints={props.modeHints}
+                officeEmail={props.email}
                 state={state}
                 formAction={formAction}
                 pending={pending}
@@ -369,6 +373,7 @@ function AppointmentForm({
   services,
   modes,
   modeHints,
+  officeEmail,
   state,
   formAction,
   pending,
@@ -380,6 +385,7 @@ function AppointmentForm({
   services: OfferedService[];
   modes: string[];
   modeHints?: Record<string, string>;
+  officeEmail: string;
   state: AppointmentState;
   formAction: (payload: FormData) => void;
   pending: boolean;
@@ -535,6 +541,7 @@ function AppointmentForm({
         <BringPreview
           service={services.find((item) => item.id === watch("serviceId"))}
         />
+        <DocumentsByEmail email={officeEmail} />
 
         <div>
           <label
@@ -834,6 +841,27 @@ function BringPreview({ service }: { service?: OfferedService }) {
   );
 }
 
+/**
+ * Documents can be sent ahead, by e-mail, when the citizen is unsure about
+ * one: said next to the list, with the address as a link.
+ */
+function DocumentsByEmail({ email }: { email: string }) {
+  if (!email) return null;
+  const [before, after] = documentsByEmailNotice(email).split(email);
+  return (
+    <p className="flex items-start gap-2 rounded-xl bg-brand-accent-soft px-3.5 py-3 text-[12.5px] leading-relaxed text-brand-accent-ink">
+      <Icon name="mail" className="mt-0.5 h-4 w-4 shrink-0" strokeWidth={1.9} />
+      <span>
+        {before}
+        <a href={`mailto:${email}`} className="font-bold underline">
+          {email}
+        </a>
+        {after}
+      </span>
+    </p>
+  );
+}
+
 /** The office's own sheet for the service, opened in a new tab. */
 function OwnListLink({ href }: { href: string }) {
   return (
@@ -954,6 +982,11 @@ function ConfirmationScreen({ result }: { result: AppointmentSuccess }) {
         <p className="mt-2.5 text-[12px] leading-relaxed text-brand-muted">
           {result.caveat || CHECKLIST_CAVEAT}
         </p>
+        {result.officeEmail && (
+          <div className="mt-3">
+            <DocumentsByEmail email={result.officeEmail} />
+          </div>
+        )}
       </div>
 
       <div className="mt-4 flex gap-2.5 rounded-2xl border border-brand-border bg-brand-card p-4">
