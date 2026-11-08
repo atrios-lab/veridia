@@ -5,11 +5,19 @@ import { SignPdf } from "@signpdf/signpdf";
 import forge from "node-forge";
 import PDFDocument from "pdfkit";
 import QRCode from "qrcode";
+import type { CertificateFacts } from "@/core/courses/certificate.ts";
+import { formatCpf } from "@/core/request/form.ts";
+import { ATRIOS_BRAND } from "@/core/tenant/palette.ts";
 import {
-  type CertificateFacts,
-  certificateSentence,
-} from "@/core/courses/certificate.ts";
-import { EMAIL_PALETTE, NEUTRALS, PALETTES } from "@/core/tenant/palette.ts";
+  ATRIOS_MARK_PATHS,
+  ATRIOS_MARK_VIEWBOX,
+} from "./assets/atrios-mark.ts";
+import {
+  GROTESK_BOLD_TTF_BASE64,
+  PLEX_MONO_MEDIUM_TTF_BASE64,
+  PLEX_SANS_SEMIBOLD_TTF_BASE64,
+  PLEX_SANS_TTF_BASE64,
+} from "./assets/fonts.ts";
 import {
   SIGNATURE_BASELINE,
   SIGNATURE_PNG_BASE64,
@@ -83,11 +91,12 @@ export function signingCertificateFromEnv(
   return readSigningCertificate(Buffer.from(base64, "base64"), passphrase);
 }
 
-function formatCnpj(cnpj: string): string {
-  return cnpj.replace(
-    /^(\d{2})(\d{3})(\d{3})(\d{4})(\d{2})$/,
-    "$1.$2.$3/$4-$5",
-  );
+/** One line of the syllabus on the back page, in course order. */
+export interface SyllabusItem {
+  /** "Apresentação", "Aula 1"…, "Encerramento" (see itemLabels). */
+  label: string;
+  title: string;
+  description: string;
 }
 
 export interface CertificateDocument extends CertificateFacts {
@@ -95,19 +104,33 @@ export interface CertificateDocument extends CertificateFacts {
   /** The public check's full address, also in the QR. */
   validationUrl: string;
   instructorName: string;
+  /** The course's videos, for the back page; none, and there is no back. */
+  syllabus?: readonly SyllabusItem[];
+  /** The assessment's minimum share of right answers, for the back page. */
+  passingScore?: number;
 }
 
-// The certificate goes to every office the same, so it wears the platform's
-// neutrals and the bronze every palette shares, not one office's colours.
-// PDFKit cannot read CSS: the colours come from the palette's TypeScript
-// mirror, which palette.test.ts keeps in step with the stylesheet.
-const INK = NEUTRALS.text;
-const MUTED = NEUTRALS.faint;
-const ACCENT = PALETTES["marinho-bronze"].accent;
-const LINE = EMAIL_PALETTE.border;
-const ALERT = NEUTRALS.alert;
+// The look of the Átrios site (site-atrios): a dark band with a blue glow
+// and a fine grid on top, the brand blues for emphasis, Space Grotesk for
+// titles, IBM Plex for text. The same for every office, so no office's
+// palette. Measures are in PDF points on A4 landscape (841.89 × 595.28).
+const INK = ATRIOS_BRAND.ink;
+const GREY = ATRIOS_BRAND.grey;
+const RULE = ATRIOS_BRAND.rule;
+const BLUE = ATRIOS_BRAND.blue;
+const BLUE_DEEP = ATRIOS_BRAND.blueDeep;
+const BLUE_LIGHT = ATRIOS_BRAND.blueLight;
+const BLUE_GLOW = ATRIOS_BRAND.blueGlow;
+const BAND = ATRIOS_BRAND.band;
+const WHITE = ATRIOS_BRAND.white;
+const ALERT = ATRIOS_BRAND.alert;
 
-function collect(pdf: InstanceType<typeof PDFDocument>): Promise<Buffer> {
+const MARGIN_LEFT = 63;
+const MARGIN_RIGHT = 57;
+
+type Pdf = InstanceType<typeof PDFDocument>;
+
+function collect(pdf: Pdf): Promise<Buffer> {
   return new Promise((resolve, reject) => {
     const chunks: Buffer[] = [];
     pdf.on("data", (chunk: Buffer) => chunks.push(chunk));
@@ -116,7 +139,515 @@ function collect(pdf: InstanceType<typeof PDFDocument>): Promise<Buffer> {
   });
 }
 
-/** The page, unsigned. `signer` only feeds the visible block. */
+function registerFonts(pdf: Pdf): void {
+  pdf.registerFont("grotesk", Buffer.from(GROTESK_BOLD_TTF_BASE64, "base64"));
+  pdf.registerFont("sans", Buffer.from(PLEX_SANS_TTF_BASE64, "base64"));
+  pdf.registerFont(
+    "sans-semibold",
+    Buffer.from(PLEX_SANS_SEMIBOLD_TTF_BASE64, "base64"),
+  );
+  pdf.registerFont("mono", Buffer.from(PLEX_MONO_MEDIUM_TTF_BASE64, "base64"));
+}
+
+/** The Átrios mark, `width` wide, its box's top left at (x, y). */
+function drawMark(
+  pdf: Pdf,
+  x: number,
+  y: number,
+  width: number,
+  color: string,
+  opacity = 1,
+): void {
+  const scale = width / ATRIOS_MARK_VIEWBOX.width;
+  pdf.save();
+  pdf.translate(x, y).scale(scale);
+  pdf.translate(-ATRIOS_MARK_VIEWBOX.x, -ATRIOS_MARK_VIEWBOX.y);
+  pdf.fillColor(color).fillOpacity(opacity);
+  for (const d of ATRIOS_MARK_PATHS) pdf.path(d).fill("even-odd");
+  pdf.restore();
+}
+
+function markHeight(width: number): number {
+  return (width * ATRIOS_MARK_VIEWBOX.height) / ATRIOS_MARK_VIEWBOX.width;
+}
+
+/**
+ * The faint seal behind the text: two pairs of rings, the training's name
+ * running round between them and the mark in the middle. `size` is its
+ * diameter; drawn on a 600-unit box like the design it came from.
+ */
+function drawSeal(pdf: Pdf, x: number, y: number, size: number): void {
+  const k = size / 600;
+  const cx = x + 300 * k;
+  const cy = y + 300 * k;
+  pdf.save();
+  pdf.strokeColor(BLUE).fillColor(BLUE).opacity(0.05);
+  for (const [r, w] of [
+    [290, 10],
+    [262, 2],
+    [204, 2],
+    [190, 8],
+  ] as const) {
+    pdf
+      .circle(cx, cy, r * k)
+      .lineWidth(w * k)
+      .stroke();
+  }
+  // The name round the ring, clockwise from the left, baseline on the
+  // circle, each letter turned to the tangent.
+  const text =
+    "TREINAMENTO · PROTEÇÃO DE DADOS · TREINAMENTO · PROTEÇÃO DE DADOS ·";
+  const radius = 232 * k;
+  const fontSize = 34 * k;
+  const spacing = 14 * k;
+  pdf.font("grotesk").fontSize(fontSize);
+  // The text is longer than the ring: like SVG's textPath, it stops where
+  // the circle closes instead of running over its own start.
+  const circumference = 2 * Math.PI * radius;
+  let arc = 0;
+  for (const ch of text) {
+    const w = pdf.widthOfString(ch);
+    if (arc + w > circumference) break;
+    const angle = Math.PI + (arc + w / 2) / radius;
+    pdf.save();
+    pdf.translate(cx + radius * Math.cos(angle), cy + radius * Math.sin(angle));
+    pdf.rotate(((angle + Math.PI / 2) * 180) / Math.PI);
+    pdf.text(ch, -w / 2, 0, { lineBreak: false, baseline: "alphabetic" });
+    pdf.restore();
+    arc += w + spacing;
+  }
+  pdf.restore();
+  const markW = 0.7 * 400 * k * (ATRIOS_MARK_VIEWBOX.width / 400);
+  drawMark(pdf, cx - markW / 2, cy - markHeight(markW) / 2, markW, BLUE, 0.05);
+}
+
+/**
+ * The dark band on top of a page, as the site's hero: near black, a blue
+ * glow, a fine grid, the mark large and faint, and a blue rule underneath.
+ * Returns nothing; the caller writes its own title over it.
+ */
+function drawBand(pdf: Pdf, height: number, logoWidth: number): void {
+  const W = pdf.page.width;
+  pdf.save();
+  pdf.rect(0, 0, W, height).clip();
+  pdf.rect(0, 0, W, height).fill(BAND);
+  const glow = pdf.radialGradient(
+    W * 0.28,
+    height * 0.2,
+    0,
+    W * 0.28,
+    height * 0.2,
+    W * 0.42,
+  );
+  glow.stop(0, BLUE_GLOW, 0.26).stop(1, BLUE_GLOW, 0);
+  pdf.rect(0, 0, W, height).fill(glow);
+  const glow2 = pdf.radialGradient(
+    W * 0.92,
+    height * 1.1,
+    0,
+    W * 0.92,
+    height * 1.1,
+    W * 0.3,
+  );
+  glow2.stop(0, BLUE_GLOW, 0.18).stop(1, BLUE_GLOW, 0);
+  pdf.rect(0, 0, W, height).fill(glow2);
+  pdf.strokeColor(WHITE).strokeOpacity(0.035).lineWidth(0.75);
+  for (let gx = 33; gx < W; gx += 33)
+    pdf.moveTo(gx, 0).lineTo(gx, height).stroke();
+  for (let gy = 33; gy < height; gy += 33)
+    pdf.moveTo(0, gy).lineTo(W, gy).stroke();
+  pdf.restore();
+  drawMark(pdf, W - 112 - height * 1.12, -30, height * 1.12, WHITE, 0.07);
+  const rule = pdf.linearGradient(0, 0, W, 0);
+  rule.stop(0, BLUE).stop(0.45, BLUE_LIGHT).stop(0.85, BLUE_LIGHT, 0);
+  pdf.rect(0, height - 2.25, W, 2.25).fill(rule);
+  drawMark(
+    pdf,
+    W - MARGIN_RIGHT - logoWidth,
+    (height - markHeight(logoWidth)) / 2,
+    logoWidth,
+    WHITE,
+  );
+}
+
+/** The small mono line above a band's title, with a short rule before it. */
+function drawEyebrow(pdf: Pdf, text: string, x: number, y: number): void {
+  pdf
+    .moveTo(x, y + 3.5)
+    .lineTo(x + 21, y + 3.5)
+    .lineWidth(0.75)
+    .strokeColor(BLUE_LIGHT)
+    .stroke();
+  pdf
+    .font("mono")
+    .fontSize(8.25)
+    .fillColor(BLUE_LIGHT)
+    .text(text.toLocaleUpperCase("pt-BR"), x + 30, y, {
+      characterSpacing: 2,
+      lineBreak: false,
+    });
+}
+
+/** 7 de novembro de 2026, in the RN clock every office keeps. */
+function longDate(date: Date): string {
+  return new Intl.DateTimeFormat("pt-BR", {
+    timeZone: "America/Fortaleza",
+    day: "numeric",
+    month: "long",
+    year: "numeric",
+  }).format(date);
+}
+
+function formatCnpj(cnpj: string): string {
+  return cnpj.replace(
+    /^(\d{2})(\d{3})(\d{3})(\d{4})(\d{2})$/,
+    "$1.$2.$3/$4-$5",
+  );
+}
+
+/** A pill: "2 horas", "100% de aproveitamento". Returns its width. */
+function drawChip(pdf: Pdf, text: string, x: number, y: number): number {
+  pdf.font("sans-semibold").fontSize(9.4);
+  const w = pdf.widthOfString(text) + 9 + 4.5 + 5 + 9;
+  pdf.roundedRect(x, y, w, 21, 10.5).fill(ATRIOS_BRAND.blueTint);
+  pdf.circle(x + 9 + 2.25, y + 10.5, 2.25).fill(BLUE);
+  pdf.fillColor(BLUE_DEEP).text(text, x + 9 + 4.5 + 5, y + 5.6, {
+    lineBreak: false,
+  });
+  return w;
+}
+
+async function drawFront(
+  pdf: Pdf,
+  doc: CertificateDocument,
+  signer: SigningCertificate | null,
+): Promise<void> {
+  const W = pdf.page.width;
+  const H = pdf.page.height;
+
+  drawSeal(pdf, -142.5, 187.5, 450);
+  const backW = 300;
+  drawMark(
+    pdf,
+    W + 52.5 - backW,
+    H + 187.5 - markHeight(backW),
+    backW,
+    BLUE,
+    0.045,
+  );
+
+  const bandH = 159;
+  drawBand(pdf, bandH, 69);
+  drawEyebrow(
+    pdf,
+    "Treinamento · Átrios Tecnologia e Consultoria",
+    MARGIN_LEFT,
+    51,
+  );
+  pdf
+    .font("grotesk")
+    .fontSize(37.5)
+    .fillColor(WHITE)
+    .text("Certificado de ", MARGIN_LEFT, 70, {
+      continued: true,
+      characterSpacing: -0.6,
+      lineBreak: false,
+    })
+    .fillColor(BLUE_LIGHT)
+    .text("conclusão", { characterSpacing: -0.6, lineBreak: false });
+
+  // Who, and what they finished.
+  const x = MARGIN_LEFT;
+  const width = 480;
+  pdf
+    .font("sans")
+    .fontSize(11.25)
+    .fillColor(GREY)
+    .text("Certificamos que", x, 196.5, { width });
+  pdf
+    .font("grotesk")
+    .fontSize(27)
+    .fillColor(INK)
+    .text(doc.fullName, x, pdf.y + 4, { width, lineGap: 1 });
+  pdf
+    .font("sans")
+    .fontSize(10.1)
+    .fillColor(GREY)
+    .text(`CPF ${formatCpf(doc.cpf)} · ${doc.roleTitle}`, x, pdf.y + 6, {
+      width,
+      lineGap: 4,
+    })
+    .text(doc.tenantName, x, pdf.y, { width, lineGap: 4 });
+  pdf
+    .font("sans")
+    .fontSize(11.25)
+    .fillColor(GREY)
+    .text("concluiu o curso", x, pdf.y + 14, { width });
+  pdf
+    .font("grotesk")
+    .fontSize(19.5)
+    .fillColor(INK)
+    .text(doc.courseTitle, x, pdf.y + 2, { width });
+  const chipsY = pdf.y + 9;
+  const hours =
+    doc.workloadHours === 1 ? "1 hora" : `${doc.workloadHours} horas`;
+  const first = drawChip(pdf, hours, x, chipsY);
+  drawChip(pdf, `${doc.score}% de aproveitamento`, x + first + 6, chipsY);
+
+  // The instructor: the name under the line, the handwritten signature on
+  // the line with its loop running over the name, as one signs by hand.
+  const colW = 187.5;
+  const colX = W - MARGIN_RIGHT - colW;
+  const lineY = 259.5;
+  pdf
+    .moveTo(colX, lineY)
+    .lineTo(colX + colW, lineY)
+    .lineWidth(0.75)
+    .strokeColor(ATRIOS_BRAND.signatureLine)
+    .stroke();
+  pdf
+    .font("grotesk")
+    .fontSize(11.25)
+    .fillColor(INK)
+    .text(doc.instructorName, colX, lineY + 10.5, {
+      width: colW,
+      align: "center",
+    });
+  pdf
+    .font("sans")
+    .fontSize(9.4)
+    .fillColor(GREY)
+    .text("Instrutor", colX, pdf.y + 1, { width: colW, align: "center" });
+  const imageH = 87;
+  const imageW = (SIGNATURE_SIZE.width / SIGNATURE_SIZE.height) * imageH;
+  pdf.image(
+    Buffer.from(SIGNATURE_PNG_BASE64, "base64"),
+    colX + (colW - imageW) / 2,
+    lineY - imageH * SIGNATURE_BASELINE,
+    { width: imageW, height: imageH },
+  );
+
+  // The platform: the visible mark of the digital signature.
+  const digY = 352.5;
+  if (signer) {
+    pdf
+      .font("sans")
+      .fontSize(8.6)
+      .fillColor(GREY)
+      .text("Documento assinado digitalmente por", colX, digY, {
+        width: colW,
+        align: "center",
+        lineGap: 4,
+      });
+    pdf
+      .font("sans-semibold")
+      .fillColor(INK)
+      .text(signer.holder.name, colX, pdf.y, {
+        width: colW,
+        align: "center",
+        lineGap: 4,
+      });
+    pdf.font("sans").fillColor(GREY);
+    if (signer.holder.cnpj) {
+      pdf.text(`CNPJ ${formatCnpj(signer.holder.cnpj)}`, colX, pdf.y, {
+        width: colW,
+        align: "center",
+        lineGap: 4,
+      });
+    }
+    pdf.text("Certificado digital ICP-Brasil", colX, pdf.y, {
+      width: colW,
+      align: "center",
+    });
+  } else {
+    pdf
+      .font("sans-semibold")
+      .fontSize(10)
+      .fillColor(ALERT)
+      .text("Documento de teste", colX, digY, { width: colW, align: "center" });
+    pdf
+      .font("sans")
+      .fontSize(8.6)
+      .fillColor(GREY)
+      .text(
+        "Sem assinatura digital: não vale como certificado.",
+        colX,
+        pdf.y + 4,
+        { width: colW, align: "center" },
+      );
+  }
+
+  // Validation: QR, date and code.
+  const qrSize = 58.5;
+  const qrY = H - 36 - qrSize;
+  pdf
+    .moveTo(MARGIN_LEFT, qrY - 15)
+    .lineTo(W - MARGIN_RIGHT, qrY - 15)
+    .lineWidth(0.75)
+    .strokeColor(RULE)
+    .stroke();
+  const qr = await QRCode.toBuffer(doc.validationUrl, {
+    margin: 0,
+    width: 240,
+    color: { dark: INK, light: WHITE },
+  });
+  pdf.image(qr, MARGIN_LEFT, qrY, { width: qrSize, height: qrSize });
+  const textX = MARGIN_LEFT + qrSize + 15;
+  pdf
+    .font("sans")
+    .fontSize(9)
+    .fillColor(GREY)
+    .text(
+      `Emitido em ${longDate(doc.issuedAt)} · Código de validação `,
+      textX,
+      qrY + 14,
+      { continued: true, lineBreak: false },
+    )
+    .font("mono")
+    .fillColor(BLUE_DEEP)
+    .text(doc.code, { characterSpacing: 0.4, lineBreak: false });
+  pdf
+    .font("sans")
+    .fontSize(9)
+    .fillColor(GREY)
+    .text(
+      `Para conferir, aponte a câmera para o QR ou acesse ${doc.validationUrl.replace(/^https?:\/\//, "")}`,
+      textX,
+      qrY + 30,
+      { lineBreak: false },
+    );
+}
+
+/** A description as one plain line of prose: the first paragraph, no
+ * Markdown emphasis (the panel's descriptions may carry some). */
+function plainDescription(text: string): string {
+  const first = text.split(/\n\s*\n/)[0] ?? "";
+  return first
+    .replace(/[*_`#>]/g, "")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+function drawBack(pdf: Pdf, doc: CertificateDocument): void {
+  const W = pdf.page.width;
+  const H = pdf.page.height;
+  const syllabus = doc.syllabus ?? [];
+
+  const bandH = 111;
+  drawBand(pdf, bandH, 42);
+  const hours =
+    doc.workloadHours === 1 ? "1 hora" : `${doc.workloadHours} horas`;
+  drawEyebrow(
+    pdf,
+    `${doc.courseTitle} · ${hours} · instrutor ${doc.instructorName}`,
+    MARGIN_LEFT,
+    34,
+  );
+  pdf
+    .font("grotesk")
+    .fontSize(25.5)
+    .fillColor(WHITE)
+    .text("Conteúdo programático", MARGIN_LEFT, 52, {
+      characterSpacing: -0.4,
+      lineBreak: false,
+    });
+
+  let lesson = 0;
+  const items = syllabus.map((item) => ({
+    key: item.label.startsWith("Aula")
+      ? String(++lesson).padStart(2, "0")
+      : "·",
+    title: item.title,
+    description: plainDescription(item.description),
+  }));
+  items.push({
+    key: "·",
+    title: "Avaliação final",
+    description:
+      doc.passingScore !== undefined
+        ? `Questões de múltipla escolha; aprovação com ${doc.passingScore}% de acertos.`
+        : "Questões de múltipla escolha sobre as aulas.",
+  });
+
+  // Two columns, the first holding the larger half, as a printed programme.
+  const gap = 42;
+  const colW = (W - MARGIN_LEFT - MARGIN_RIGHT - gap) / 2;
+  const keyW = 22.5 + 10.5;
+  const textW = colW - keyW;
+  const top = 147;
+  const perColumn = Math.ceil(items.length / 2);
+  items.forEach((item, i) => {
+    const col = i < perColumn ? 0 : 1;
+    if (i === 0 || i === perColumn) pdf.y = top;
+    const x = MARGIN_LEFT + col * (colW + gap);
+    const y = pdf.y;
+    pdf
+      .moveTo(x, y)
+      .lineTo(x + colW, y)
+      .lineWidth(0.75)
+      .strokeColor(ATRIOS_BRAND.ruleSoft)
+      .stroke();
+    pdf
+      .font("mono")
+      .fontSize(9.75)
+      .fillColor(BLUE)
+      .text(item.key, x, y + 7.5, { lineBreak: false });
+    pdf
+      .font("grotesk")
+      .fontSize(10.9)
+      .fillColor(INK)
+      .text(item.title, x + keyW, y + 6.75, { width: textW });
+    if (item.description) {
+      pdf
+        .font("sans")
+        .fontSize(9)
+        .fillColor(GREY)
+        .text(item.description, x + keyW, pdf.y + 1.5, {
+          width: textW,
+          height: 26,
+          ellipsis: true,
+          lineGap: 1.5,
+        });
+    }
+    pdf.y += 6.75;
+  });
+
+  const footY = H - 36 - 12;
+  pdf
+    .moveTo(MARGIN_LEFT, footY - 12)
+    .lineTo(W - MARGIN_RIGHT, footY - 12)
+    .lineWidth(0.75)
+    .strokeColor(RULE)
+    .stroke();
+  pdf
+    .font("sans")
+    .fontSize(9)
+    .fillColor(GREY)
+    .text("Certificado ", MARGIN_LEFT, footY, {
+      continued: true,
+      lineBreak: false,
+    })
+    .font("mono")
+    .fillColor(BLUE_DEEP)
+    .text(doc.code, { continued: true, lineBreak: false })
+    .font("sans")
+    .fillColor(GREY)
+    .text(` · ${doc.fullName}`, { lineBreak: false });
+  const host = doc.validationUrl
+    .replace(/^https?:\/\//, "")
+    .replace(/\/[^/]*$/, "");
+  pdf
+    .font("sans")
+    .fontSize(9)
+    .fillColor(GREY)
+    .text(host, MARGIN_LEFT, footY, {
+      width: W - MARGIN_LEFT - MARGIN_RIGHT,
+      align: "right",
+      lineBreak: false,
+    });
+}
+
+/** The pages, unsigned. `signer` only feeds the visible block. */
 async function drawCertificate(
   doc: CertificateDocument,
   signer: SigningCertificate | null,
@@ -125,6 +656,7 @@ async function drawCertificate(
     size: "A4",
     layout: "landscape",
     margin: 0,
+    autoFirstPage: true,
     info: {
       Title: `Certificado: ${doc.courseTitle}`,
       Author: signer?.holder.name ?? "Átrios",
@@ -132,163 +664,12 @@ async function drawCertificate(
     },
   });
   const done = collect(pdf);
-  const W = pdf.page.width;
-  const H = pdf.page.height;
-
-  // Frame.
-  pdf
-    .rect(24, 24, W - 48, H - 48)
-    .lineWidth(1)
-    .strokeColor(LINE)
-    .stroke();
-  pdf
-    .rect(32, 32, W - 64, H - 64)
-    .lineWidth(0.5)
-    .strokeColor(LINE)
-    .stroke();
-
-  // Heading.
-  pdf
-    .font("Helvetica-Bold")
-    .fontSize(10)
-    .fillColor(ACCENT)
-    .text("TREINAMENTO", 0, 78, {
-      width: W,
-      align: "center",
-      characterSpacing: 3,
-    });
-  pdf
-    .font("Times-Bold")
-    .fontSize(40)
-    .fillColor(INK)
-    .text("Certificado", 0, 100, { width: W, align: "center" });
-  pdf
-    .font("Times-Italic")
-    .fontSize(14)
-    .fillColor(MUTED)
-    .text("de conclusão de curso", 0, 146, { width: W, align: "center" });
-
-  // The sentence.
-  pdf
-    .font("Times-Roman")
-    .fontSize(16)
-    .fillColor(INK)
-    .text(certificateSentence(doc, "full"), 110, 205, {
-      width: W - 220,
-      align: "center",
-      lineGap: 6,
-    });
-
-  // Instructor: the handwritten signature on the line, name and role
-  // below the loop (the image's stroke at SIGNATURE_BASELINE of its
-  // height sits exactly on the line).
-  const lineY = 384;
-  const lineX = 120;
-  const lineW = 230;
-  const imageH = 80;
-  const imageW = (SIGNATURE_SIZE.width / SIGNATURE_SIZE.height) * imageH;
-  pdf.image(
-    Buffer.from(SIGNATURE_PNG_BASE64, "base64"),
-    lineX + (lineW - imageW) / 2,
-    lineY - imageH * SIGNATURE_BASELINE,
-    { width: imageW, height: imageH },
-  );
-  pdf
-    .moveTo(lineX, lineY)
-    .lineTo(lineX + lineW, lineY)
-    .lineWidth(0.8)
-    .strokeColor(INK)
-    .stroke();
-  const nameY = lineY + imageH * (1 - SIGNATURE_BASELINE) + 4;
-  pdf
-    .font("Times-Bold")
-    .fontSize(12)
-    .fillColor(INK)
-    .text(doc.instructorName, lineX, nameY, { width: lineW, align: "center" });
-  pdf
-    .font("Times-Roman")
-    .fontSize(10.5)
-    .fillColor(MUTED)
-    .text("Instrutor", lineX, nameY + 15, { width: lineW, align: "center" });
-
-  // The platform: the visible mark of the digital signature.
-  const boxX = W - 120 - 250;
-  const boxY = lineY - 34;
-  pdf
-    .roundedRect(boxX, boxY, 250, 76, 6)
-    .lineWidth(0.8)
-    .strokeColor(LINE)
-    .stroke();
-  if (signer) {
-    pdf
-      .font("Helvetica")
-      .fontSize(8.5)
-      .fillColor(MUTED)
-      .text("Assinado digitalmente por", boxX, boxY + 12, {
-        width: 250,
-        align: "center",
-      });
-    pdf
-      .font("Helvetica-Bold")
-      .fontSize(10.5)
-      .fillColor(INK)
-      .text(signer.holder.name, boxX + 10, boxY + 25, {
-        width: 230,
-        align: "center",
-      });
-    pdf
-      .font("Helvetica")
-      .fontSize(8.5)
-      .fillColor(MUTED)
-      .text(
-        `${signer.holder.cnpj ? `CNPJ ${formatCnpj(signer.holder.cnpj)} · ` : ""}Certificado ICP-Brasil`,
-        boxX,
-        boxY + 52,
-        { width: 250, align: "center" },
-      );
-  } else {
-    pdf
-      .font("Helvetica-Bold")
-      .fontSize(10)
-      .fillColor(ALERT)
-      .text("Documento de teste", boxX, boxY + 20, {
-        width: 250,
-        align: "center",
-      });
-    pdf
-      .font("Helvetica")
-      .fontSize(8.5)
-      .fillColor(MUTED)
-      .text(
-        "Sem assinatura digital: não vale como certificado.",
-        boxX + 10,
-        boxY + 38,
-        {
-          width: 230,
-          align: "center",
-        },
-      );
+  registerFonts(pdf);
+  await drawFront(pdf, doc, signer);
+  if (doc.syllabus && doc.syllabus.length > 0) {
+    pdf.addPage({ size: "A4", layout: "landscape", margin: 0 });
+    drawBack(pdf, doc);
   }
-
-  // Validation: QR and code.
-  const qr = await QRCode.toBuffer(doc.validationUrl, {
-    margin: 0,
-    width: 240,
-    color: { dark: INK, light: NEUTRALS.card },
-  });
-  const footY = H - 100;
-  pdf.image(qr, 56, footY, { width: 56, height: 56 });
-  pdf
-    .font("Helvetica-Bold")
-    .fontSize(9)
-    .fillColor(INK)
-    .text(`Código de validação: ${doc.code}`, 124, footY + 12);
-  pdf
-    .font("Helvetica")
-    .fontSize(8.5)
-    .fillColor(MUTED)
-    .text(`Confira em ${doc.validationUrl}`, 124, footY + 27);
-
   pdf.end();
   return done;
 }

@@ -38,4 +38,5 @@
 - [ ] 6.3 Antes do merge, aplicar a migração em produção via `POSTGRES_URL_NON_POOLING` e configurar o A1 em Production
 - [ ] 6.3.1 Configurar `CERTIFICATE_API_TOKEN` em Production e passar o mesmo valor ao site da Átrios
 - [ ] 6.3.2 No site da Átrios: página `/certificado/[codigo]` consultando `https://<host do Veridia>/api/certificados/<código>`
-- [ ] 6.4 Em produção: configurar o curso de LGPD (70%, 2 h, 5 h), cadastrar as 10 questões, publicar o Encerramento, emitir um certificado de teste e conferir a assinatura em validar.iti.gov.br
+- [ ] 6.4 Em produção: configurar o curso de LGPD (70%, 2 h, 5 h), cadastrar as 10 questões, publicar o Encerramento, emitir um certificado de teste e conferir a assinatura em validar.iti.gov.br (feito em 08/11/2026: curso, questões e Encerramento; falta o certificado de teste, que depende do A1)
+- [x] 6.5 Redesenhar o PDF com a identidade do site da Átrios (faixa escura, azuis, Space Grotesk e IBM Plex embutidas como subconjunto), assinatura pousada na linha sobre o nome e verso com o conteúdo programático lido das aulas publicadas do curso
