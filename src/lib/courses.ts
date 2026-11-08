@@ -365,3 +365,7 @@ export async function deleteCourse(
 ): Promise<DeleteCourseResult> {
   return deleteCourseWith(db, id, actorId);
 }
+
+export async function getCourse(id: string): Promise<CourseRow | undefined> {
+  return getCourseWith(db, id);
+}

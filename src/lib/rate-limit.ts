@@ -121,3 +121,24 @@ export async function isRecoveryRateLimited(
   const { success } = await recoveryLimiter.limit(protocolNumber);
   return !success;
 }
+
+// The public certificate check answers anyone with a code. Codes are 60
+// random bits, so guessing is hopeless; the budget keeps it that way and
+// keeps a scraper from walking the space anyway.
+const certificateLimiter = configured
+  ? new Ratelimit({
+      redis: Redis.fromEnv(),
+      limiter: Ratelimit.slidingWindow(30, "10 m"),
+      prefix: "veridia:certificate",
+      analytics: false,
+    })
+  : null;
+
+/** The certificate check's budget: 30 lookups per address in 10 minutes. */
+export async function isCertificateRateLimited(
+  headers: Headers,
+): Promise<boolean> {
+  if (!certificateLimiter) return false;
+  const { success } = await certificateLimiter.limit(addressOf(headers));
+  return !success;
+}

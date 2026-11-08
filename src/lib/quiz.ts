@@ -516,3 +516,19 @@ export async function updateAssessmentSettingsWith(
   });
   return true;
 }
+
+/** Every course's questions at once, for the management screen. */
+export async function listAllQuestionsWith(
+  database: Database,
+): Promise<Map<string, AdminQuestion[]>> {
+  const ids = await database.select({ id: courses.id }).from(courses);
+  const out = new Map<string, AdminQuestion[]>();
+  for (const { id } of ids) out.set(id, await listQuestionsWith(database, id));
+  return out;
+}
+
+export async function listAllQuestions(): Promise<
+  Map<string, AdminQuestion[]>
+> {
+  return listAllQuestionsWith(db);
+}

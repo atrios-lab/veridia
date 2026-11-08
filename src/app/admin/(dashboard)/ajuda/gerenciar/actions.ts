@@ -4,6 +4,10 @@ import { randomUUID } from "node:crypto";
 import { revalidatePath } from "next/cache";
 import { can } from "@/core/auth/roles.ts";
 import {
+  assessmentSettingsSchema,
+  questionFormSchema,
+} from "@/core/courses/questions.ts";
+import {
   type CourseFormInput,
   checkTutorialFile,
   courseFormSchema,
@@ -14,6 +18,7 @@ import {
   type TutorialFormInput,
   tutorialFormSchema,
 } from "@/core/tutorials/video.ts";
+import { db } from "@/db/index.ts";
 import {
   createCourse,
   deleteCourse,
@@ -23,6 +28,13 @@ import {
   setCoursePublished,
   updateCourse,
 } from "@/lib/courses.ts";
+import {
+  createQuestionWith,
+  deleteQuestionWith,
+  setQuestionActiveWith,
+  updateAssessmentSettingsWith,
+  updateQuestionWith,
+} from "@/lib/quiz.ts";
 import { getSession } from "@/lib/session.ts";
 import {
   createTutorial,
@@ -437,6 +449,124 @@ export async function deleteCourseAction(
     for (const path of result.orphaned) await deleteTutorialFile(path);
   } catch (error) {
     console.error("treinamento.course.delete", error);
+    return { status: "error", message: GENERIC_ERROR };
+  }
+  revalidate();
+  return { status: "done" };
+}
+
+// The assessment: settings and questions. Same gate, audited under the
+// platform.
+
+export async function saveAssessmentSettingsAction(
+  courseId: string,
+  _previous: SaveTutorialState,
+  formData: FormData,
+): Promise<SaveTutorialState> {
+  const actorId = await requireManager();
+  if (!actorId) return fail(NOT_ALLOWED);
+  const hours = String(formData.get("workloadHours") ?? "").trim();
+  const parsed = assessmentSettingsSchema.safeParse({
+    passingScore: Number(formData.get("passingScore")),
+    workloadHours: hours === "" ? null : Number(hours),
+    retryHours: Number(formData.get("retryHours")),
+  });
+  if (!parsed.success) {
+    const fieldErrors: Record<string, string> = {};
+    for (const issue of parsed.error.issues) {
+      const field = String(issue.path[0] ?? "");
+      if (field && !fieldErrors[field]) fieldErrors[field] = issue.message;
+    }
+    return fail("Confira os campos destacados.", fieldErrors);
+  }
+  try {
+    const saved = await updateAssessmentSettingsWith(
+      db,
+      courseId,
+      parsed.data,
+      actorId,
+    );
+    if (!saved) return fail("Este curso não existe mais.");
+  } catch (error) {
+    console.error("treinamento.assessment.settings", error);
+    return fail(GENERIC_ERROR);
+  }
+  revalidate();
+  return { status: "saved", id: courseId };
+}
+
+export async function saveQuestionAction(
+  courseId: string,
+  _previous: SaveTutorialState,
+  formData: FormData,
+): Promise<SaveTutorialState> {
+  const actorId = await requireManager();
+  if (!actorId) return fail(NOT_ALLOWED);
+  const correct = formData.get("correctIndex");
+  const parsed = questionFormSchema.safeParse({
+    prompt: String(formData.get("prompt") ?? ""),
+    options: [0, 1, 2, 3].map((i) => String(formData.get(`option${i}`) ?? "")),
+    correctIndex: correct === null ? -1 : Number(correct),
+  });
+  if (!parsed.success) {
+    const fieldErrors: Record<string, string> = {};
+    for (const issue of parsed.error.issues) {
+      const field = String(issue.path[0] ?? "");
+      if (field && !fieldErrors[field]) fieldErrors[field] = issue.message;
+    }
+    return fail(
+      parsed.error.issues[0]?.message ?? "Confira os campos destacados.",
+      fieldErrors,
+    );
+  }
+  const id = String(formData.get("id") ?? "");
+  try {
+    if (id) {
+      const saved = await updateQuestionWith(db, id, parsed.data, actorId);
+      if (!saved) return fail("Esta questão não existe mais.");
+    } else {
+      await createQuestionWith(db, courseId, parsed.data, actorId);
+    }
+  } catch (error) {
+    console.error("treinamento.question.save", error);
+    return fail(GENERIC_ERROR);
+  }
+  revalidate();
+  return { status: "saved", id: id || courseId };
+}
+
+export async function setQuestionActiveAction(
+  id: string,
+  active: boolean,
+): Promise<TutorialActionState> {
+  return simple(
+    (actorId) => setQuestionActiveWith(db, id, active, actorId),
+    "treinamento.question.active",
+  );
+}
+
+/** Form-shaped, for `ConfirmAction`: the id rides in a hidden field. */
+export async function deleteQuestionAction(
+  _previous: TutorialActionState,
+  formData: FormData,
+): Promise<TutorialActionState> {
+  const actorId = await requireManager();
+  if (!actorId) return { status: "error", message: NOT_ALLOWED };
+  const id = String(formData.get("id") ?? "");
+  try {
+    const result = await deleteQuestionWith(db, id, actorId);
+    if (result === "used") {
+      return {
+        status: "error",
+        message:
+          "Esta questão já apareceu numa tentativa e não pode ser excluída. Desative-a.",
+      };
+    }
+    if (result === "not-found") {
+      return { status: "error", message: "Esta questão não existe mais." };
+    }
+  } catch (error) {
+    console.error("treinamento.question.delete", error);
     return { status: "error", message: GENERIC_ERROR };
   }
   revalidate();
