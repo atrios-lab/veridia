@@ -131,6 +131,14 @@ signpdf.sign(pdf, new P12Signer(pfx, { passphrase }))   → PAdES (adbe.pkcs7.de
 
 O PDF é gerado e assinado a cada download, a partir da fotografia gravada em `certificates`. Assim, nenhum arquivo com CPF completo fica guardado no store. A data da assinatura é a do download; a data de conclusão impressa é a de emissão.
 
+A assinatura manuscrita de Joelison Alves Marinho entra como imagem acima do nome e do cargo. O PNG transparente foi recortado da foto enviada pelo usuário em 07/11/2026, com a tinta em azul-escuro uniforme. Ele fica em `src/lib/assets/assinatura-joelison.png`, lido só pelo servidor ao montar o PDF, e nunca em `public/`, onde seria servido a qualquer um. A imagem é ilustrativa: quem garante a autenticidade do documento é a assinatura digital da Átrios.
+
+Posição da assinatura (pedido do usuário, 07/11/2026: "alinhada na linha"):
+- o PNG já vem nivelado (girado 5,3° para o traço horizontal ficar reto);
+- o traço horizontal fica a 51,5% da altura da imagem, e o PDF posiciona a imagem para que esse ponto caia exatamente sobre a linha da assinatura;
+- o laço e a perna de baixo passam da linha, como numa assinatura de verdade;
+- o nome e o cargo ficam abaixo do laço (cerca de 48% da altura da imagem), sem sobreposição.
+
 O certificado A1 vem das variáveis `CERT_A1_PFX_BASE64` e `CERT_A1_PASSWORD`:
 - Sem elas em desenvolvimento, o PDF sai com uma tarja "Documento de teste, sem assinatura digital".
 - Sem elas em produção, o download falha com mensagem genérica e log, em vez de entregar um PDF sem assinatura.

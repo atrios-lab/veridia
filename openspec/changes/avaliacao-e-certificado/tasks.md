@@ -18,7 +18,8 @@
 ## 4. PDF assinado
 
 - [ ] 4.1 Adicionar `@signpdf/signpdf`, `@signpdf/signer-p12` e `@signpdf/placeholder-pdfkit`
-- [ ] 4.2 `renderCertificate` em pdfkit (A4 paisagem): textos, QR de validação, bloco visível da assinatura com razão social e CNPJ lidos do A1, nome de Joelison Alves Marinho como instrutor
+- [ ] 4.2 Copiar `materiais-curso/assinatura-joelison.png` (recortada em 07/11/2026) para `src/lib/assets/`, fora de `public/`
+- [ ] 4.2.1 `renderCertificate` em pdfkit (A4 paisagem): textos, QR de validação, bloco visível da assinatura com razão social e CNPJ lidos do A1, nome de Joelison Alves Marinho como instrutor
 - [ ] 4.3 Assinatura PAdES com `CERT_A1_PFX_BASE64` e `CERT_A1_PASSWORD`: tarja de teste fora de produção sem certificado; falha com log em produção sem certificado; teste que confere a presença e a integridade da assinatura com o certificado de teste
 
 ## 5. Telas e rotas

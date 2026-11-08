@@ -114,10 +114,12 @@ O certificado SHALL ser um PDF com:
 - nome, CPF completo, função e serventia;
 - título do curso, carga horária, aproveitamento e data de conclusão;
 - código de validação e QR com o endereço de validação;
-- o nome "Joelison Alves Marinho" como instrutor;
+- o nome "Joelison Alves Marinho" como instrutor, com a imagem da assinatura dele acima do nome;
 - a assinatura digital da Átrios com certificado ICP-Brasil, em formato PAdES, e um bloco visível indicando essa assinatura.
 
 O endereço de validação SHALL usar o host da serventia em que o certificado foi emitido.
+
+A imagem da assinatura NÃO SHALL ser servida por nenhuma rota pública: ela existe só dentro do PDF.
 
 Sem o certificado de assinatura configurado:
 - em produção, o download SHALL falhar com mensagem genérica, e NÃO SHALL entregar PDF sem assinatura;

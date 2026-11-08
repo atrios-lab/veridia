@@ -1,8 +1,9 @@
 import { headers } from "next/headers";
 import Link from "next/link";
 import type { ReactNode } from "react";
+import { courseHref, PANEL_COURSE_SLUG } from "@/core/tutorials/catalog.ts";
 import { tutorialForRoute } from "@/core/tutorials/progress.ts";
-import { listPublishedTutorials } from "@/lib/tutorials.ts";
+import { listPanelTutorials } from "@/lib/tutorials.ts";
 import { AdminIcon } from "./icon.tsx";
 
 /**
@@ -41,7 +42,7 @@ export async function AdminPageHeader({
   const tutorial =
     // The tutorials screens teaching themselves would be one link too many.
     pathname && !pathname.startsWith("/admin/ajuda")
-      ? tutorialForRoute(await listPublishedTutorials(), pathname)
+      ? tutorialForRoute(await listPanelTutorials(), pathname)
       : undefined;
 
   return (
@@ -61,7 +62,7 @@ export async function AdminPageHeader({
           </h1>
           {tutorial && (
             <Link
-              href={`/admin/ajuda?video=${encodeURIComponent(tutorial.id)}`}
+              href={courseHref(PANEL_COURSE_SLUG, tutorial.id)}
               className="inline-flex items-center gap-1.5 text-[13px] font-semibold text-admin-muted hover:text-admin-primary"
             >
               <AdminIcon name="play" className="h-4 w-4 flex-none" />

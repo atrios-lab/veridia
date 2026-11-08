@@ -4,7 +4,9 @@ import { randomUUID } from "node:crypto";
 import { revalidatePath } from "next/cache";
 import { can } from "@/core/auth/roles.ts";
 import {
+  type CourseFormInput,
   checkTutorialFile,
+  courseFormSchema,
   describeTutorialFileProblem,
   isStoredTutorialUrl,
   MAX_SERVER_ACTION_BYTES,
@@ -12,10 +14,20 @@ import {
   type TutorialFormInput,
   tutorialFormSchema,
 } from "@/core/tutorials/video.ts";
+import {
+  createCourse,
+  deleteCourse,
+  moveCourse,
+  PanelCourseError,
+  SlugTakenError,
+  setCoursePublished,
+  updateCourse,
+} from "@/lib/courses.ts";
 import { getSession } from "@/lib/session.ts";
 import {
   createTutorial,
   deleteTutorial,
+  FrameTakenError,
   moveTutorial,
   setTutorialPublished,
   updateTutorial,
@@ -54,8 +66,7 @@ const ROUTES = ADMIN_NAV.filter((item) => !item.external).map(
 const FormSchema = tutorialFormSchema(ROUTES);
 
 function revalidate(): void {
-  revalidatePath("/admin/ajuda/gerenciar");
-  revalidatePath("/admin/ajuda");
+  revalidatePath("/admin/ajuda", "layout");
   revalidatePath("/admin");
 }
 
@@ -122,6 +133,8 @@ function parseForm(
     durationSeconds: Number.isFinite(duration) ? duration : Number.NaN,
     route: String(formData.get("route") ?? ""),
     trail: formData.get("trail") === "on",
+    courseId: String(formData.get("courseId") ?? ""),
+    kind: String(formData.get("kind") ?? ""),
   });
   if (!parsed.success) {
     const fieldErrors: Record<string, string> = {};
@@ -201,6 +214,9 @@ export async function saveTutorialAction(
     revalidate();
     return { status: "saved", id: result.row.id };
   } catch (error) {
+    if (error instanceof FrameTakenError) {
+      return fail(error.message, { kind: error.message });
+    }
     console.error("treinamento.save", error);
     return fail(GENERIC_ERROR);
   }
@@ -270,4 +286,159 @@ export async function deleteTutorialAction(
     for (const path of orphaned) await deleteTutorialFile(path);
     return true;
   }, "treinamento.delete");
+}
+
+// Courses. Same gate, same audit slug, same rule for files: the row is
+// written first and the store cleaned after.
+
+function parseCourseForm(
+  formData: FormData,
+): { input: CourseFormInput } | { state: SaveTutorialState } {
+  const parsed = courseFormSchema.safeParse({
+    title: String(formData.get("title") ?? ""),
+    slug: String(formData.get("slug") ?? ""),
+    description: String(formData.get("description") ?? ""),
+    sequential: formData.get("sequential") === "on",
+  });
+  if (!parsed.success) {
+    const fieldErrors: Record<string, string> = {};
+    for (const issue of parsed.error.issues) {
+      const field = String(issue.path[0] ?? "");
+      if (field && !fieldErrors[field]) fieldErrors[field] = issue.message;
+    }
+    return { state: fail("Confira os campos destacados.", fieldErrors) };
+  }
+  return { input: parsed.data };
+}
+
+export async function saveCourseAction(
+  _previous: SaveTutorialState,
+  formData: FormData,
+): Promise<SaveTutorialState> {
+  const actorId = await requireManager();
+  if (!actorId) return fail(NOT_ALLOWED);
+
+  const form = parseCourseForm(formData);
+  if ("state" in form) return form.state;
+  const id = String(formData.get("id") ?? "");
+
+  const poster = await resolveFile(formData, "poster");
+  if ("error" in poster) return fail(poster.error, { poster: poster.error });
+  const material = await resolveFile(formData, "material");
+  if ("error" in material) {
+    return fail(material.error, { material: material.error });
+  }
+  const removePoster = formData.get("removePoster") === "on";
+  const removeMaterial = formData.get("removeMaterial") === "on";
+
+  try {
+    if (!id) {
+      const row = await createCourse(
+        form.input,
+        { posterUrl: poster.url, materialUrl: material.url },
+        actorId,
+      );
+      revalidate();
+      return { status: "saved", id: row.id };
+    }
+    const result = await updateCourse(
+      id,
+      form.input,
+      {
+        ...(poster.url
+          ? { posterUrl: poster.url }
+          : removePoster
+            ? { posterUrl: null }
+            : {}),
+        ...(material.url
+          ? { materialUrl: material.url }
+          : removeMaterial
+            ? { materialUrl: null }
+            : {}),
+      },
+      actorId,
+    );
+    if (!result) return fail("Este curso não existe mais.");
+    for (const path of result.orphaned) await deleteTutorialFile(path);
+    revalidate();
+    return { status: "saved", id: result.row.id };
+  } catch (error) {
+    if (error instanceof SlugTakenError) {
+      return fail(error.message, { slug: error.message });
+    }
+    if (error instanceof PanelCourseError) {
+      return fail(error.message, { slug: error.message });
+    }
+    console.error("treinamento.course.save", error);
+    return fail(GENERIC_ERROR);
+  }
+}
+
+export async function publishCourseAction(
+  id: string,
+): Promise<TutorialActionState> {
+  return simple(
+    (actorId) => setCoursePublished(id, true, actorId),
+    "treinamento.course.publish",
+  );
+}
+
+export async function unpublishCourseAction(
+  id: string,
+): Promise<TutorialActionState> {
+  return simple(
+    (actorId) => setCoursePublished(id, false, actorId),
+    "treinamento.course.unpublish",
+  );
+}
+
+export async function moveCourseAction(
+  id: string,
+  direction: "up" | "down",
+): Promise<TutorialActionState> {
+  const actorId = await requireManager();
+  if (!actorId) return { status: "error", message: NOT_ALLOWED };
+  try {
+    await moveCourse(id, direction, actorId);
+  } catch (error) {
+    console.error("treinamento.course.move", error);
+    return { status: "error", message: GENERIC_ERROR };
+  }
+  revalidate();
+  return { status: "done" };
+}
+
+/** Form-shaped, for `ConfirmAction`: the id rides in a hidden field. */
+export async function deleteCourseAction(
+  _previous: TutorialActionState,
+  formData: FormData,
+): Promise<TutorialActionState> {
+  const actorId = await requireManager();
+  if (!actorId) return { status: "error", message: NOT_ALLOWED };
+  const id = String(formData.get("id") ?? "");
+  try {
+    const result = await deleteCourse(id, actorId);
+    if (result.status === "has-videos") {
+      return {
+        status: "error",
+        message:
+          "O curso ainda tem vídeos. Mova-os para outro curso ou exclua antes.",
+      };
+    }
+    if (result.status === "panel") {
+      return {
+        status: "error",
+        message: "O curso do painel não pode ser excluído.",
+      };
+    }
+    if (result.status === "not-found") {
+      return { status: "error", message: "Este curso não existe mais." };
+    }
+    for (const path of result.orphaned) await deleteTutorialFile(path);
+  } catch (error) {
+    console.error("treinamento.course.delete", error);
+    return { status: "error", message: GENERIC_ERROR };
+  }
+  revalidate();
+  return { status: "done" };
 }

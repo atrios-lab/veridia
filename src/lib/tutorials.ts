@@ -1,10 +1,15 @@
 import "server-only";
 import { and, asc, count, desc, eq, isNotNull, sql } from "drizzle-orm";
 import { SUPERADMIN_TENANT_SLUG } from "@/core/auth/roles.ts";
-import type { Tutorial } from "@/core/tutorials/catalog.ts";
+import {
+  isTutorialKind,
+  PANEL_COURSE_SLUG,
+  type Tutorial,
+} from "@/core/tutorials/catalog.ts";
+import { courseOrder, unlockedIds } from "@/core/tutorials/course.ts";
 import type { TutorialFormInput } from "@/core/tutorials/video.ts";
 import { type Database, db } from "@/db/index.ts";
-import { tutorialProgress, tutorials } from "@/db/schema.ts";
+import { courses, tutorialProgress, tutorials } from "@/db/schema.ts";
 import { recordAuditWith } from "./audit.ts";
 
 // The platform's video tutorials and each person's progress through them.
@@ -40,30 +45,69 @@ export function toTutorial(row: TutorialRow): Tutorial {
     posterUrl: row.posterPath,
     route: row.route,
     trail: row.trail,
+    courseId: row.courseId,
+    // The column is free text with a default; anything else reads as a
+    // lesson rather than breaking the page.
+    kind: isTutorialKind(row.kind) ? row.kind : "lesson",
   };
 }
 
-/** What every office sees: published rows, in trail order. */
+/** Published videos of published courses: the only ones an office sees. */
+const visible = and(
+  isNotNull(tutorials.publishedAt),
+  isNotNull(courses.publishedAt),
+);
+
+/** What every office sees: published videos of published courses, course
+ * by course in course order, each course's videos by position. */
 export async function listPublishedTutorialsWith(
   database: Database,
 ): Promise<Tutorial[]> {
   const rows = await database
-    .select()
+    .select({ tutorial: tutorials })
     .from(tutorials)
-    .where(isNotNull(tutorials.publishedAt))
+    .innerJoin(courses, eq(courses.id, tutorials.courseId))
+    .where(visible)
+    .orderBy(asc(courses.position), asc(tutorials.position));
+  return rows.map((r) => toTutorial(r.tutorial));
+}
+
+/**
+ * The "Uso do painel" course alone, in the order it is watched: what the
+ * trail, the overview card and "Como usar esta tela" read. A deep dive in
+ * another course never claims a screen or counts on the trail.
+ */
+export async function listPanelTutorialsWith(
+  database: Database,
+): Promise<Tutorial[]> {
+  const rows = await database
+    .select({ tutorial: tutorials })
+    .from(tutorials)
+    .innerJoin(courses, eq(courses.id, tutorials.courseId))
+    .where(and(visible, eq(courses.slug, PANEL_COURSE_SLUG)))
     .orderBy(asc(tutorials.position));
-  return rows.map(toTutorial);
+  return courseOrder(rows.map((r) => toTutorial(r.tutorial)));
+}
+
+export async function listPanelTutorials(): Promise<Tutorial[]> {
+  return listPanelTutorialsWith(db);
 }
 
 export async function listPublishedTutorials(): Promise<Tutorial[]> {
   return listPublishedTutorialsWith(db);
 }
 
-/** Every row, drafts included, for the management screen only. */
+/** Every row, drafts included, for the management screen only: course by
+ * course, each by position. */
 export async function listAllTutorialsWith(
   database: Database,
 ): Promise<TutorialRow[]> {
-  return database.select().from(tutorials).orderBy(asc(tutorials.position));
+  const rows = await database
+    .select({ tutorial: tutorials })
+    .from(tutorials)
+    .innerJoin(courses, eq(courses.id, tutorials.courseId))
+    .orderBy(asc(courses.position), asc(tutorials.position));
+  return rows.map((r) => r.tutorial);
 }
 
 export async function listAllTutorials(): Promise<TutorialRow[]> {
@@ -88,7 +132,8 @@ export async function publishedTutorialCountWith(
   const [row] = await database
     .select({ n: count() })
     .from(tutorials)
-    .where(isNotNull(tutorials.publishedAt));
+    .innerJoin(courses, eq(courses.id, tutorials.courseId))
+    .where(visible);
   return row?.n ?? 0;
 }
 
@@ -123,6 +168,76 @@ async function audit(
  * the file (see `tutorialFilePath`), so the action mints it and this
  * function only stores it.
  */
+/**
+ * A course's second Apresentação or Encerramento. The partial unique index
+ * refuses it too; checking first gives the form a sentence instead of a
+ * constraint name.
+ */
+export class FrameTakenError extends Error {
+  readonly kind: "intro" | "outro";
+  constructor(kind: "intro" | "outro") {
+    super(
+      kind === "intro"
+        ? "O curso já tem uma Apresentação."
+        : "O curso já tem um Encerramento.",
+    );
+    this.kind = kind;
+  }
+}
+
+async function assertFrameFree(
+  database: Database,
+  courseId: string,
+  kind: string,
+  exceptId: string | null,
+): Promise<void> {
+  if (kind !== "intro" && kind !== "outro") return;
+  const [taken] = await database
+    .select({ id: tutorials.id })
+    .from(tutorials)
+    .where(
+      and(
+        eq(tutorials.courseId, courseId),
+        eq(tutorials.kind, kind),
+        exceptId ? sql`${tutorials.id} <> ${exceptId}` : undefined,
+      ),
+    )
+    .limit(1);
+  if (taken) throw new FrameTakenError(kind);
+}
+
+/**
+ * What a video of this course may carry. A sequential course is watched in
+ * order, from its own page: a screen to teach ("Como usar esta tela") and
+ * the panel's trail make no sense there, so they are dropped whatever the
+ * form sent.
+ */
+async function framedInput(
+  database: Database,
+  input: TutorialFormInput,
+): Promise<TutorialFormInput> {
+  const [course] = await database
+    .select({ sequential: courses.sequential })
+    .from(courses)
+    .where(eq(courses.id, input.courseId));
+  return course?.sequential ? { ...input, route: null, trail: false } : input;
+}
+
+/** The course's highest position plus one: a new video, or one moved in
+ * from another course, goes to the end. */
+async function nextPosition(
+  database: Database,
+  courseId: string,
+): Promise<number> {
+  const [last] = await database
+    .select({ position: tutorials.position })
+    .from(tutorials)
+    .where(eq(tutorials.courseId, courseId))
+    .orderBy(desc(tutorials.position))
+    .limit(1);
+  return (last?.position ?? 0) + 1;
+}
+
 export async function createTutorialWith(
   database: Database,
   id: string,
@@ -130,11 +245,9 @@ export async function createTutorialWith(
   files: TutorialFiles,
   actorId: string,
 ): Promise<TutorialRow> {
-  const [last] = await database
-    .select({ position: tutorials.position })
-    .from(tutorials)
-    .orderBy(desc(tutorials.position))
-    .limit(1);
+  input = await framedInput(database, input);
+  await assertFrameFree(database, input.courseId, input.kind, null);
+  const position = await nextPosition(database, input.courseId);
   const [row] = await database
     .insert(tutorials)
     .values({
@@ -147,7 +260,9 @@ export async function createTutorialWith(
       posterPath: files.posterUrl,
       route: input.route,
       trail: input.trail,
-      position: (last?.position ?? 0) + 1,
+      courseId: input.courseId,
+      kind: input.kind,
+      position,
       createdBy: actorId,
     })
     .returning();
@@ -184,6 +299,10 @@ export async function updateTutorialWith(
 ): Promise<UpdateResult | undefined> {
   const current = await getTutorialWith(database, id);
   if (!current) return undefined;
+  input = await framedInput(database, input);
+  await assertFrameFree(database, input.courseId, input.kind, id);
+  // Moved to another course: to the end of that one.
+  const moved = input.courseId !== current.courseId;
   const [row] = await database
     .update(tutorials)
     .set({
@@ -192,6 +311,11 @@ export async function updateTutorialWith(
       durationSeconds: input.durationSeconds,
       route: input.route,
       trail: input.trail,
+      courseId: input.courseId,
+      kind: input.kind,
+      ...(moved
+        ? { position: await nextPosition(database, input.courseId) }
+        : {}),
       ...(files.videoUrl !== undefined ? { videoPath: files.videoUrl } : {}),
       ...(files.captionsUrl !== undefined
         ? { captionsPath: files.captionsUrl }
@@ -279,13 +403,17 @@ export async function moveTutorialWith(
 ): Promise<boolean> {
   const current = await getTutorialWith(database, id);
   if (!current) return false;
+  // The neighbour in the same course: other courses keep their order.
   const [neighbour] = await database
     .select({ id: tutorials.id, position: tutorials.position })
     .from(tutorials)
     .where(
-      direction === "up"
-        ? sql`${tutorials.position} < ${current.position}`
-        : sql`${tutorials.position} > ${current.position}`,
+      and(
+        eq(tutorials.courseId, current.courseId),
+        direction === "up"
+          ? sql`${tutorials.position} < ${current.position}`
+          : sql`${tutorials.position} > ${current.position}`,
+      ),
     )
     .orderBy(
       direction === "up" ? desc(tutorials.position) : asc(tutorials.position),
@@ -361,6 +489,42 @@ export async function listWatchedIds(userId: string): Promise<Set<string>> {
   return listWatchedIdsWith(db, userId);
 }
 
+/** The same, with when each was first finished: "Continue de onde parou"
+ * picks up in the course the person last finished something in. */
+export async function listWatchedAtWith(
+  database: Database,
+  userId: string,
+): Promise<Map<string, Date>> {
+  const rows = await database
+    .select({
+      videoId: tutorialProgress.videoId,
+      watchedAt: tutorialProgress.watchedAt,
+    })
+    .from(tutorialProgress)
+    .where(eq(tutorialProgress.userId, userId));
+  return new Map(rows.map((r) => [r.videoId, r.watchedAt]));
+}
+
+export async function listWatchedAt(
+  userId: string,
+): Promise<Map<string, Date>> {
+  return listWatchedAtWith(db, userId);
+}
+
+/** A video's course, when the video is in front of offices (published, in
+ * a published course): what the mark and unmark rules need. */
+async function visibleCourseOf(
+  database: Database,
+  videoId: string,
+): Promise<{ courseId: string; sequential: boolean } | undefined> {
+  const [row] = await database
+    .select({ courseId: courses.id, sequential: courses.sequential })
+    .from(tutorials)
+    .innerJoin(courses, eq(courses.id, tutorials.courseId))
+    .where(and(eq(tutorials.id, videoId), visible));
+  return row;
+}
+
 /**
  * Records that the video reached its end (or was marked by hand). Marking a
  * video already watched does nothing: `watched_at` is the first time, and
@@ -373,11 +537,21 @@ export async function markWatchedWith(
   userId: string,
   videoId: string,
 ): Promise<boolean> {
-  const [video] = await database
-    .select({ id: tutorials.id })
-    .from(tutorials)
-    .where(and(eq(tutorials.id, videoId), isNotNull(tutorials.publishedAt)));
-  if (!video) return false;
+  const course = await visibleCourseOf(database, videoId);
+  if (!course) return false;
+  // In a sequential course, only what is open counts: the same rule the
+  // page draws the locks with, so a forged id cannot skip ahead.
+  if (course.sequential) {
+    const rows = await database
+      .select({ tutorial: tutorials })
+      .from(tutorials)
+      .innerJoin(courses, eq(courses.id, tutorials.courseId))
+      .where(and(visible, eq(tutorials.courseId, course.courseId)))
+      .orderBy(asc(tutorials.position));
+    const ordered = courseOrder(rows.map((r) => toTutorial(r.tutorial)));
+    const watched = await listWatchedIdsWith(database, userId);
+    if (!unlockedIds(ordered, watched).has(videoId)) return false;
+  }
   await database
     .insert(tutorialProgress)
     .values({ userId, videoId })
@@ -402,7 +576,15 @@ export async function unmarkWatchedWith(
   tenantSlug: string,
   userId: string,
   videoId: string,
-): Promise<void> {
+): Promise<boolean> {
+  // A lesson of a sequential course counts only by being watched to the
+  // end, and undoing it would lock everything after it: no "Desfazer".
+  const [course] = await database
+    .select({ sequential: courses.sequential })
+    .from(tutorials)
+    .innerJoin(courses, eq(courses.id, tutorials.courseId))
+    .where(eq(tutorials.id, videoId));
+  if (course?.sequential) return false;
   await database
     .delete(tutorialProgress)
     .where(
@@ -418,12 +600,13 @@ export async function unmarkWatchedWith(
     targetType: "tutorial",
     targetId: videoId,
   });
+  return true;
 }
 
 export async function unmarkWatched(
   tenantSlug: string,
   userId: string,
   videoId: string,
-): Promise<void> {
+): Promise<boolean> {
   return unmarkWatchedWith(db, tenantSlug, userId, videoId);
 }

@@ -1,5 +1,9 @@
 import Link from "next/link";
-import type { Tutorial } from "@/core/tutorials/catalog.ts";
+import {
+  courseHref,
+  PANEL_COURSE_SLUG,
+  type Tutorial,
+} from "@/core/tutorials/catalog.ts";
 import type { TrailProgress } from "@/core/tutorials/progress.ts";
 
 /**
@@ -27,7 +31,7 @@ export function TutorialTrailCard({
         Próximo: {next.title}
       </p>
       <Link
-        href={`/admin/ajuda?video=${encodeURIComponent(next.id)}`}
+        href={courseHref(PANEL_COURSE_SLUG, next.id)}
         className="btn btn-admin-secondary btn-sm mt-3"
       >
         Assistir

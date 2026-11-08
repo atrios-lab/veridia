@@ -26,7 +26,7 @@ import {
 } from "@/lib/chat.ts";
 import { getSession } from "@/lib/session.ts";
 import { getTenant, OFFICE_TIME_ZONE, officeNow, today } from "@/lib/tenant.ts";
-import { listPublishedTutorials, listWatchedIds } from "@/lib/tutorials.ts";
+import { listPanelTutorials, listWatchedIds } from "@/lib/tutorials.ts";
 import type { ActionShortcut } from "./_components/action-shortcuts.tsx";
 import { ActionShortcuts } from "./_components/action-shortcuts.tsx";
 import type { ChannelStatusRow } from "./_components/channel-status.tsx";
@@ -216,7 +216,7 @@ export default async function AdminHome() {
 
   // The person's own trail, not the office's: read by their own user id.
   const [tutorials, watchedIds] = await Promise.all([
-    listPublishedTutorials(),
+    listPanelTutorials(),
     listWatchedIds(session.user.id),
   ]);
   const nextTutorial = nextUnwatched(tutorials, watchedIds);

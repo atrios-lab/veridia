@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import { test } from "node:test";
 import {
   checkTutorialFile,
+  courseFormSchema,
   isGeneratedTutorialPath,
   isStoredTutorialUrl,
   MAX_CAPTIONS_BYTES,
@@ -102,6 +103,8 @@ test("a valid form comes out trimmed, with the empty route as null", () => {
     durationSeconds: 245,
     route: "",
     trail: true,
+    courseId: "9b0e3f4a-1c2d-4e5f-8a7b-6c5d4e3f2a1b",
+    kind: "lesson",
   });
   assert.deepEqual(parsed, {
     title: "Primeiros passos",
@@ -109,6 +112,8 @@ test("a valid form comes out trimmed, with the empty route as null", () => {
     durationSeconds: 245,
     route: null,
     trail: true,
+    courseId: "9b0e3f4a-1c2d-4e5f-8a7b-6c5d4e3f2a1b",
+    kind: "lesson",
   });
 });
 
@@ -119,6 +124,8 @@ test("a route the panel does not have is refused", () => {
     durationSeconds: 60,
     route: "/admin/inexistente",
     trail: false,
+    courseId: "9b0e3f4a-1c2d-4e5f-8a7b-6c5d4e3f2a1b",
+    kind: "lesson",
   });
   assert.equal(result.success, false);
 });
@@ -202,4 +209,40 @@ test("the poster takes three image types, up to its own limit", () => {
     ),
     { kind: "size", limit: MAX_POSTER_BYTES },
   );
+});
+
+test("the course's support PDF is its own kind, up to 20 MB", () => {
+  assert.equal(
+    tutorialFilePath("material", ID, "application/pdf"),
+    `treinamento/${ID}.pdf`,
+  );
+  assert.equal(tutorialPathKind(`treinamento/${ID}.pdf`), "material");
+  assert.equal(
+    tutorialPathMimeType(`treinamento/${ID}.pdf`),
+    "application/pdf",
+  );
+  assert.equal(MAX_DIRECT_BYTES.material, 20 * 1024 * 1024);
+  assert.deepEqual(
+    checkTutorialFile(
+      { mimeType: "application/msword", size: 10 },
+      "material",
+      MAX_DIRECT_BYTES.material,
+    ),
+    { kind: "type", mimeType: "application/msword" },
+  );
+});
+
+test("a course address is lower case, digits and hyphens, never 'gerenciar'", () => {
+  const ok = { title: "LGPD no cartório", description: "", sequential: true };
+  assert.equal(
+    courseFormSchema.safeParse({ ...ok, slug: "lgpd-no-cartorio" }).success,
+    true,
+  );
+  for (const slug of ["gerenciar", "LGPD", "lgpd no cartorio", "-lgpd", "a"]) {
+    assert.equal(
+      courseFormSchema.safeParse({ ...ok, slug }).success,
+      false,
+      slug,
+    );
+  }
 });
