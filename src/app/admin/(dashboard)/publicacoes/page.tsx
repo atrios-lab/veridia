@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import { BlobUploadProvider } from "@/app/(public)/_lib/attachments.tsx";
 import { can } from "@/core/auth/roles.ts";
 import { publicationHeadline } from "@/core/publications/notice-types.ts";
 import {
@@ -10,8 +11,10 @@ import { formatDate } from "@/core/scheduling/calendar.ts";
 import { listPublications, type PublicationRow } from "@/lib/publications.ts";
 import { getSession } from "@/lib/session.ts";
 import { getTenant, today } from "@/lib/tenant.ts";
+import { blobUploadEnabled } from "@/lib/uploads.ts";
 import { AdminPageHeader } from "../../_components/page-header.tsx";
 import { ArchiveButton } from "./_components/archive-button.tsx";
+import { DeleteButton } from "./_components/delete-button.tsx";
 import { PublicationForm } from "./_components/publication-form.tsx";
 
 export const metadata = { title: "Publicações" };
@@ -127,12 +130,24 @@ export default async function PublicationsPage({
                     <ArchiveButton id={row.id} title={row.title} />
                   </>
                 )}
+                <DeleteButton id={row.id} title={row.title} />
               </div>
             ))
           )}
         </div>
 
-        <PublicationForm tenant={tenant} editing={editing} />
+        {/* Same switch the public site reads: in the deploy the attachment
+            goes from the browser straight to the Blob store. */}
+        <BlobUploadProvider
+          enabled={blobUploadEnabled()}
+          tenantSlug={tenant.slug}
+        >
+          <PublicationForm
+            key={editing?.id ?? "nova"}
+            tenant={tenant}
+            editing={editing}
+          />
+        </BlobUploadProvider>
       </main>
     </>
   );

@@ -137,6 +137,38 @@ export async function updatePublication(
   });
 }
 
+/**
+ * "Excluir": removes a publication made by mistake, row and all. Returns the
+ * row as it was, so the caller can remove its file from storage after the
+ * row is gone (a missing file is a leftover; a row pointing at a deleted
+ * file would be a broken link). The audit entry is the trail: the row
+ * itself leaves nothing behind.
+ */
+export async function deletePublication(
+  tenantSlug: string,
+  id: string,
+  actorId: string,
+): Promise<PublicationRow | undefined> {
+  const [deleted] = await db
+    .delete(officePublications)
+    .where(
+      and(
+        eq(officePublications.tenantSlug, tenantSlug),
+        eq(officePublications.id, id),
+      ),
+    )
+    .returning();
+  if (!deleted) return undefined;
+  await recordAudit({
+    tenantSlug,
+    actorId,
+    action: "publication.delete",
+    targetType: "publication",
+    targetId: id,
+  });
+  return deleted;
+}
+
 /** "Arquivar agora": takes it off the site before its exit date, by hand. */
 export async function archivePublication(
   tenantSlug: string,

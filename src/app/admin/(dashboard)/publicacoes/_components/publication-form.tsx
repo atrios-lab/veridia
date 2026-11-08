@@ -1,6 +1,17 @@
 "use client";
 
-import { useActionState, useState } from "react";
+import {
+  type FormEvent,
+  startTransition,
+  useActionState,
+  useEffect,
+  useRef,
+  useState,
+} from "react";
+import {
+  ATTACHMENT_ACCEPT,
+  useAttachmentPrepare,
+} from "@/app/(public)/_lib/attachments.tsx";
 import { defaultExpiry } from "@/core/publications/expiry.ts";
 import { noticeSchedule } from "@/core/publications/notice-schedule.ts";
 import {
@@ -64,6 +75,12 @@ export function PublicationForm({
     { status: "idle" },
   );
   const fieldErrors = state.status === "error" ? state.fieldErrors : {};
+  // In the deploy the file goes from the browser to the Blob store before
+  // the save, and the save carries only a reference to it: see
+  // `useAttachmentPrepare`. In development it stays in the body.
+  const { prepare, uploading, error: uploadError } = useAttachmentPrepare();
+  const busy = pending || uploading;
+  const formRef = useRef<HTMLFormElement>(null);
 
   const [kind, setKind] = useState<PublicationKind>(
     (editing?.kind as PublicationKind) ?? "marriageBanns",
@@ -149,10 +166,41 @@ export function PublicationForm({
   const schedule = rule && publishAt ? noticeSchedule(rule, publishAt) : null;
   const todayIso = clientToday();
 
+  function handleSubmit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    const form = event.currentTarget;
+    // The submitter carries `intent` (publish or draft): FormData only
+    // includes the clicked button when told which one it was.
+    const submitter = (event.nativeEvent as SubmitEvent).submitter;
+    void prepare(new FormData(form, submitter), "arquivo", 1).then((data) => {
+      if (data) startTransition(() => formAction(data));
+    });
+  }
+
+  // After a save, the file input is empty again: forget the picked name so
+  // the screen never claims a file that a second click would not send. A
+  // new publication also clears the whole form, so a second click on
+  // "Publicar" cannot create the same publication twice.
+  useEffect(() => {
+    if (state.status !== "success") return;
+    setFile(null);
+    formRef.current?.reset();
+    if (editing) return;
+    setKind("marriageBanns");
+    setSector("");
+    setNoticeType("");
+    setTitle("");
+    setBody("");
+    setPublishAt("");
+    setExpireAt("");
+    setExpirySuggested(false);
+  }, [state, editing]);
+
   return (
     <div className="grid grid-cols-1 items-start gap-5 xl:grid-cols-[1fr_360px]">
       <form
-        action={formAction}
+        ref={formRef}
+        onSubmit={handleSubmit}
         className="rounded-[14px] border border-admin-border bg-admin-card p-6.5"
       >
         {editing && <input type="hidden" name="id" value={editing.id} />}
@@ -359,7 +407,7 @@ export function PublicationForm({
             </p>
           )}
           <label
-            className={`relative flex cursor-pointer items-center justify-center gap-2 rounded-[10px] border-[1.5px] border-dashed border-admin-input-border px-4 py-3 text-center text-[12.5px] font-semibold text-admin-primary focus-within:border-admin-accent focus-within:ring-2 focus-within:ring-admin-accent ${pending ? "cursor-not-allowed opacity-60" : ""}`}
+            className={`relative flex cursor-pointer items-center justify-center gap-2 rounded-[10px] border-[1.5px] border-dashed border-admin-input-border px-4 py-3 text-center text-[12.5px] font-semibold text-admin-primary focus-within:border-admin-accent focus-within:ring-2 focus-within:ring-admin-accent ${busy ? "cursor-not-allowed opacity-60" : ""}`}
           >
             {file ??
               (editing?.attachmentPath
@@ -368,9 +416,9 @@ export function PublicationForm({
             <input
               type="file"
               name="arquivo"
-              accept="application/pdf,image/jpeg,image/png,image/webp,image/heic"
+              accept={ATTACHMENT_ACCEPT}
               className="sr-only"
-              disabled={pending}
+              disabled={busy}
               onChange={(event) =>
                 setFile(event.target.files?.[0]?.name ?? null)
               }
@@ -382,7 +430,16 @@ export function PublicationForm({
           </p>
         </div>
 
-        {state.status === "error" && (
+        {uploadError && (
+          <p
+            role="alert"
+            className="mt-4 rounded-lg bg-admin-error-bg px-3.5 py-2.5 text-sm font-semibold text-admin-error-text"
+          >
+            {uploadError}
+          </p>
+        )}
+
+        {!uploadError && state.status === "error" && (
           <p
             role="alert"
             className="mt-4 rounded-lg bg-admin-error-bg px-3.5 py-2.5 text-sm font-semibold text-admin-error-text"
@@ -396,19 +453,27 @@ export function PublicationForm({
             type="submit"
             name="intent"
             value="publish"
-            disabled={pending}
+            disabled={busy}
             className="btn btn-admin-primary btn-lg"
           >
-            {pending ? "Salvando…" : "Publicar"}
+            {uploading
+              ? "Enviando arquivo…"
+              : pending
+                ? "Salvando…"
+                : "Publicar"}
           </button>
           <button
             type="submit"
             name="intent"
             value="draft"
-            disabled={pending}
+            disabled={busy}
             className="btn btn-admin-secondary btn-lg"
           >
-            {pending ? "Salvando…" : "Salvar rascunho"}
+            {uploading
+              ? "Enviando arquivo…"
+              : pending
+                ? "Salvando…"
+                : "Salvar rascunho"}
           </button>
           {state.status === "success" && (
             <span className="text-[12.5px] font-semibold text-admin-success-text">

@@ -8,6 +8,7 @@ import { notifyIndexNow } from "@/lib/notify-indexnow.ts";
 import {
   archivePublication,
   createPublication,
+  deletePublication,
   getPublication,
   updatePublication,
 } from "@/lib/publications.ts";
@@ -16,8 +17,8 @@ import { getSiteOrigin } from "@/lib/site-origin.ts";
 import { getTenant } from "@/lib/tenant.ts";
 import {
   AttachmentError,
+  collectAttachments,
   deleteStoredFile,
-  storeAttachments,
 } from "@/lib/uploads.ts";
 
 export type SaveState =
@@ -108,15 +109,16 @@ export async function savePublication(
   }
 
   try {
-    // One document per publication: the edital itself. `storeAttachments`
-    // brings the shared type and size limits with it, so this screen does not
-    // grow its own idea of what a valid file is.
-    const chosen = formData
-      .getAll("arquivo")
-      .filter((f): f is File => f instanceof File);
-    const [stored] = await storeAttachments(chosen, {
+    // One document per publication. In the deploy the browser has already
+    // sent it straight to the Blob store and this receives a reference: a
+    // function's request body is capped around 4.5 MB, below a phone photo
+    // or a scanned PDF, which is why attachments used to vanish on publish.
+    // In development the file itself comes in the body. Either way the
+    // shared type and size limits apply.
+    const [stored] = await collectAttachments(formData, "arquivo", {
       tenantSlug: tenant.slug,
       kind: "edital",
+      limit: 1,
     });
 
     if (existing) {
@@ -154,6 +156,50 @@ export async function savePublication(
   // Only on the instant this notice actually goes live, matching the
   // permission check above, not on every edit of an already-published one.
   if (isFirstPublish) notifyIndexNow(await getSiteOrigin(), ["/editais"]);
+  return { status: "success" };
+}
+
+export type DeleteState =
+  | { status: "idle" }
+  | { status: "error"; message: string }
+  | { status: "success" };
+
+const NO_DELETE_PERMISSION =
+  "Só quem tem permissão de publicar pode excluir uma publicação que já foi ao ar.";
+
+/**
+ * Deletes a publication for good, for the one made by mistake. A draft
+ * needs only `content.edit`, like writing it did; anything that has been
+ * published (an entry date was set) needs `content.publish`, the same
+ * permission that put it on the site.
+ */
+export async function deletePublicationAction(
+  _previous: DeleteState,
+  formData: FormData,
+): Promise<DeleteState> {
+  const session = await getSession();
+  const role = session?.user.role ?? "";
+  if (!session || !can(role, "content.edit")) {
+    return { status: "error", message: NO_EDIT_PERMISSION };
+  }
+
+  const id = String(formData.get("id") ?? "");
+  const tenant = await getTenant();
+  try {
+    const existing = await getPublication(tenant.slug, id);
+    if (!existing) return { status: "success" };
+    if (existing.publishAt && !can(role, "content.publish")) {
+      return { status: "error", message: NO_DELETE_PERMISSION };
+    }
+    const deleted = await deletePublication(tenant.slug, id, session.user.id);
+    if (deleted?.attachmentPath) await deleteStoredFile(deleted.attachmentPath);
+  } catch (error) {
+    console.error("publicacoes.delete", error);
+    return { status: "error", message: GENERIC_ERROR };
+  }
+  revalidatePath("/admin/publicacoes");
+  revalidatePath("/");
+  revalidatePath("/editais");
   return { status: "success" };
 }
 
