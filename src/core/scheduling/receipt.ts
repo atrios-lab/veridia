@@ -135,7 +135,7 @@ export function buildAppointmentReceipt(
       tenant.name,
       tenant.subtitle,
       ...(tenant.address ? [tenant.address] : []),
-      [tenant.contacts.phone, tenant.contacts.email]
+      [`CNS nº ${tenant.cns}`, tenant.contacts.phone, tenant.contacts.email]
         .filter(Boolean)
         .join(" · "),
     ],

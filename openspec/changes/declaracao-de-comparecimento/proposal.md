@@ -6,7 +6,7 @@ cartório emitia isso à mão, sem padrão e sem como conferir.
 ## What Changes
 
 - **Declaração de comparecimento** em PDF, com "República Federativa do Brasil", o timbre
-  da serventia, o nome, o CPF (quando houver), o dia, o horário e o protocolo, a cidade e a
+  e o CNS da serventia (no timbre, abaixo do título e no texto), o nome, o CPF (quando houver), o dia, o horário e o protocolo, a cidade e a
   data de emissão, a linha "Tabelião / Substituto / Escrevente Autorizado" com "(assinatura e
   carimbo)" e o QR Code de validação no site da própria serventia, com o código impresso.
 - **Fundamento:** fé pública do tabelião e dos prepostos (Lei 8.935/1994, arts. 3º e 20) e o

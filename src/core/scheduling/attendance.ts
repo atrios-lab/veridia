@@ -76,18 +76,18 @@ export function buildAttendanceDeclaration(
   return {
     eyebrow: "República Federativa do Brasil",
     title: "Declaração de Comparecimento",
-    subtitle: `${tenant.name} · Código de validação ${data.validationCode}`,
+    subtitle: `${tenant.name} · CNS nº ${tenant.cns} · Código de validação ${data.validationCode}`,
     office: [
       tenant.name,
       tenant.subtitle,
       ...(tenant.address ? [tenant.address] : []),
-      `CNS ${tenant.cns}`,
+      `CNS nº ${tenant.cns}`,
     ],
     sections: [
       {
         heading: "Declaração",
         paragraphs: [
-          `DECLARO, para os devidos fins, que ${who}, compareceu a esta serventia, ${tenant.name}${where}, no dia ${formatDate(data.date)}, no horário das ${data.slotTime} às ${slotEndTime(data.slotTime)}, para atendimento${protocol}.`,
+          `DECLARO, para os devidos fins, que ${who}, compareceu a esta serventia, ${tenant.name}, CNS nº ${tenant.cns}${where}, no dia ${formatDate(data.date)}, no horário das ${data.slotTime} às ${slotEndTime(data.slotTime)}, para atendimento${protocol}.`,
           "Por ser verdade, firmo a presente declaração.",
         ],
       },

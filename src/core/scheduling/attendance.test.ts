@@ -29,13 +29,13 @@ test("the declaration states who came, when, free, and who signs", () => {
   });
   assert.equal(declaration.eyebrow, "República Federativa do Brasil");
   assert.equal(declaration.title, "Declaração de Comparecimento");
-  assert.match(declaration.subtitle, /Código de validação XYZ/);
+  assert.match(declaration.subtitle, /CNS nº 123456 · Código de validação XYZ/);
   const text = declaration.sections
     .flatMap((section) => section.paragraphs ?? [])
     .join("\n");
   assert.match(
     text,
-    /Maria Souza, inscrito\(a\) no CPF sob o nº 123\.456\.789-09, compareceu a esta serventia, Cartório Exemplo, situada em Rua das Flores, 10, Centro, no dia 06\/11\/2026, no horário das 09:00 às 10:00/,
+    /Maria Souza, inscrito\(a\) no CPF sob o nº 123\.456\.789-09, compareceu a esta serventia, Cartório Exemplo, CNS nº 123456, situada em Rua das Flores, 10, Centro, no dia 06\/11\/2026, no horário das 09:00 às 10:00/,
   );
   assert.match(text, /Lei nº 8\.935\/1994, arts\. 3º e 20/);
   assert.match(text, /sem cobrança de emolumentos/);

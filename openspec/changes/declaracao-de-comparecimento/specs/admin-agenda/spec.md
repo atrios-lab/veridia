@@ -3,7 +3,7 @@
 ### Requirement: Declaração de comparecimento para atendimento presencial
 
 Para um agendamento presencial marcado como atendido, o painel SHALL emitir a declaração de
-comparecimento em PDF com "República Federativa do Brasil", o timbre e o nome da serventia, o
+comparecimento em PDF com "República Federativa do Brasil", o timbre, o nome e o CNS da serventia, o
 nome e o CPF do cidadão, o dia e o horário, o fundamento (Lei 8.935/1994, arts. 3º, 20 e 30,
 II), a gratuidade, a cidade e a data, a linha de assinatura "Tabelião / Substituto /
 Escrevente Autorizado" com espaço para carimbo, e o QR Code e o código de validação. A
