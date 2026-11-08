@@ -197,6 +197,13 @@
       "when": 1794080322964,
       "tag": "0027_adicionar_capa_do_tutorial",
       "breakpoints": true
+    },
+    {
+      "idx": 28,
+      "version": "7",
+      "when": 1794098949866,
+      "tag": "0028_adicionar_cursos",
+      "breakpoints": true
     }
   ]
 }

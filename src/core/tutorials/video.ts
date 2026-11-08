@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { PANEL_COURSE_SLUG } from "./catalog.ts";
 
 // What the platform may upload as a tutorial, and what the form that
 // describes it must say. Pure: the same checks run in the browser before
@@ -8,7 +9,7 @@ import { z } from "zod";
  * (citizen attachments) and `marca/` (brand images). */
 export const TUTORIAL_FOLDER = "treinamento";
 
-export type TutorialFileKind = "video" | "captions" | "poster";
+export type TutorialFileKind = "video" | "captions" | "poster" | "material";
 
 /** What each kind accepts. The poster is the only one with a choice: the
  * cover is whatever image format the platform had at hand. */
@@ -17,6 +18,7 @@ export const TUTORIAL_MIME_TYPES: Record<TutorialFileKind, readonly string[]> =
     video: ["video/mp4"],
     captions: ["text/vtt"],
     poster: ["image/jpeg", "image/png", "image/webp"],
+    material: ["application/pdf"],
   };
 
 /** The stored name's extension, by the file's type: one per type, so the
@@ -27,6 +29,7 @@ const EXTENSION_BY_MIME_TYPE: Record<string, string> = {
   "image/jpeg": "jpg",
   "image/png": "png",
   "image/webp": "webp",
+  "application/pdf": "pdf",
 };
 
 const KIND_BY_EXTENSION: Record<string, TutorialFileKind> = {
@@ -35,6 +38,7 @@ const KIND_BY_EXTENSION: Record<string, TutorialFileKind> = {
   jpg: "poster",
   png: "poster",
   webp: "poster",
+  pdf: "material",
 };
 
 const EXTENSIONS_PATTERN = Object.keys(KIND_BY_EXTENSION).join("|");
@@ -56,12 +60,16 @@ export const MAX_CAPTIONS_BYTES = 1024 * 1024;
 /** A 1280×720 cover is a few hundred kilobytes in any of the three
  * formats; two megabytes leaves room for a PNG with a screenshot in it. */
 export const MAX_POSTER_BYTES = 2 * 1024 * 1024;
+/** A course's support PDF ("apostila"): text and a few figures. The LGPD
+ * one is under half a megabyte; twenty leaves room for scanned pages. */
+export const MAX_MATERIAL_BYTES = 20 * 1024 * 1024;
 
 /** The ceiling the token route sets per kind, for the direct upload. */
 export const MAX_DIRECT_BYTES: Record<TutorialFileKind, number> = {
   video: MAX_VIDEO_BYTES_DIRECT,
   captions: MAX_CAPTIONS_BYTES,
   poster: MAX_POSTER_BYTES,
+  material: MAX_MATERIAL_BYTES,
 };
 
 /** The same, through the server action (development). */
@@ -69,6 +77,7 @@ export const MAX_SERVER_ACTION_BYTES: Record<TutorialFileKind, number> = {
   video: MAX_VIDEO_BYTES_SERVER_ACTION,
   captions: MAX_CAPTIONS_BYTES,
   poster: MAX_POSTER_BYTES,
+  material: MAX_MATERIAL_BYTES,
 };
 
 const GENERATED_ID =
@@ -171,12 +180,14 @@ const TYPE_MESSAGES: Record<TutorialFileKind, string> = {
   video: "O vídeo precisa ser um arquivo MP4.",
   captions: "A legenda precisa ser um arquivo WebVTT (.vtt).",
   poster: "A capa precisa ser uma imagem JPEG, PNG ou WebP.",
+  material: "A apostila precisa ser um arquivo PDF.",
 };
 
 const SUBJECTS: Record<TutorialFileKind, string> = {
   video: "O vídeo",
   captions: "A legenda",
   poster: "A capa",
+  material: "A apostila",
 };
 
 export function describeTutorialFileProblem(
@@ -215,7 +226,49 @@ export function tutorialFormSchema(allowedRoutes: readonly string[]) {
       .refine((value) => value === "" || routes.has(value), "Tela inválida.")
       .transform((value) => (value === "" ? null : value)),
     trail: z.boolean(),
+    courseId: z.string().uuid("Escolha o curso."),
+    kind: z.enum(["intro", "lesson", "outro"], {
+      message: "Escolha o tipo do vídeo.",
+    }),
   });
 }
 
 export type TutorialFormInput = z.output<ReturnType<typeof tutorialFormSchema>>;
+
+/** The address of a course, `/admin/ajuda/<slug>`: lower case, digits and
+ * hyphens. "gerenciar" is the management screen's segment, which a static
+ * route wins over a dynamic one, so a course there could never be opened. */
+const SLUG = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
+const RESERVED_SLUGS = new Set(["gerenciar"]);
+
+export const courseFormSchema = z.object({
+  title: z
+    .string()
+    .trim()
+    .min(1, "Informe o título.")
+    .max(80, "O título passa de 80 caracteres."),
+  slug: z
+    .string()
+    .trim()
+    .min(2, "Informe o endereço do curso.")
+    .max(60, "O endereço passa de 60 caracteres.")
+    .regex(SLUG, "Use só letras minúsculas, números e hífen.")
+    .refine(
+      (value) => !RESERVED_SLUGS.has(value),
+      "Esse endereço é reservado.",
+    ),
+  description: z
+    .string()
+    .trim()
+    .max(400, "A descrição passa de 400 caracteres.")
+    .default(""),
+  sequential: z.boolean(),
+});
+
+export type CourseFormInput = z.output<typeof courseFormSchema>;
+
+/** The panel course's address never changes: the trail, the overview card
+ * and "Como usar esta tela" find it by this slug. */
+export function isPanelCourseSlug(slug: string): boolean {
+  return slug === PANEL_COURSE_SLUG;
+}

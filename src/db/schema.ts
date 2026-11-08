@@ -737,6 +737,40 @@ export const emailBounces = pgTable("email_bounces", {
 });
 
 /**
+ * The platform's courses: the shelf a tutorial sits on. Global like the
+ * tutorials (no tenant slug, written only with `tutorials.manage`). A
+ * reference course ("Uso do painel") is watched in any order; a sequential
+ * one (LGPD) opens each video only after the one before it. A course is a
+ * draft until `published_at` is set, and its videos stay hidden with it.
+ *
+ * `slug` is the course's address, `/admin/ajuda/<slug>`; "gerenciar" is
+ * taken by the management screen, which the form refuses.
+ */
+export const courses = pgTable(
+  "courses",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    slug: text("slug").notNull(),
+    title: text("title").notNull(),
+    description: text("description").notNull().default(""),
+    /** Cover image and the support PDF, public URLs like the videos'. */
+    posterPath: text("poster_path"),
+    materialPath: text("material_path"),
+    sequential: boolean("sequential").notNull().default(false),
+    position: integer("position").notNull(),
+    publishedAt: timestamp("published_at", { withTimezone: true }),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    createdBy: text("created_by"),
+  },
+  (t) => [uniqueIndex("courses_slug").on(t.slug)],
+);
+
+/**
  * The platform's video tutorials: what the Treinamento screen of every
  * office lists. No tenant slug, and the first table in this schema whose
  * rows are written from the panel without one. The rule that makes that
@@ -767,8 +801,17 @@ export const tutorials = pgTable(
     route: text("route"),
     /** Part of the "Primeiros passos" trail the overview walks through. */
     trail: boolean("trail").notNull().default(true),
-    /** Trail order and list order. Moving a video swaps this with a
-     * neighbour's; a new one takes the highest value plus one. */
+    /** The course this video belongs to. Deleting a course that still has
+     * videos is refused, so nobody's progress goes by accident. */
+    courseId: uuid("course_id")
+      .notNull()
+      .references(() => courses.id, { onDelete: "restrict" }),
+    /** "intro" (Apresentação) and "outro" (Encerramento) frame a course,
+     * one of each at most; every "lesson" in between is numbered. */
+    kind: text("kind").notNull().default("lesson"),
+    /** Order inside the course. Moving a video swaps this with the
+     * neighbour's in the same course; a new one takes the course's highest
+     * value plus one. */
     position: integer("position").notNull(),
     publishedAt: timestamp("published_at", { withTimezone: true }),
     createdAt: timestamp("created_at", { withTimezone: true })
@@ -783,6 +826,11 @@ export const tutorials = pgTable(
   (t) => [
     index("tutorials_published_at").on(t.publishedAt),
     index("tutorials_position").on(t.position),
+    index("tutorials_course").on(t.courseId),
+    // At most one Apresentação and one Encerramento per course.
+    uniqueIndex("tutorials_course_frame")
+      .on(t.courseId, t.kind)
+      .where(sql`${t.kind} in ('intro', 'outro')`),
   ],
 );
 

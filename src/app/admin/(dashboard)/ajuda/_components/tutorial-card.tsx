@@ -17,6 +17,7 @@ export function TutorialCard({
   current,
   category,
   screen,
+  href,
 }: {
   tutorial: Tutorial;
   watched: boolean;
@@ -25,10 +26,12 @@ export function TutorialCard({
   category: string;
   /** The sidebar label of the taught screen, if any. */
   screen: string | undefined;
+  /** The course page opened at this video. */
+  href: string;
 }) {
   return (
     <Link
-      href={`/admin/ajuda?video=${encodeURIComponent(tutorial.id)}`}
+      href={href}
       aria-current={current ? "true" : undefined}
       className={`group flex h-full flex-col overflow-hidden rounded-[14px] border bg-admin-card transition-colors duration-120 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-admin-focus-ring ${
         current

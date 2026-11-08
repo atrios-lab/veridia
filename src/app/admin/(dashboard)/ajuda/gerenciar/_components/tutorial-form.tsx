@@ -8,6 +8,7 @@ import {
   useId,
   useState,
 } from "react";
+import type { TutorialKind } from "@/core/tutorials/catalog.ts";
 import { formatExactDuration } from "@/core/tutorials/progress.ts";
 import {
   checkTutorialFile,
@@ -47,7 +48,22 @@ export interface EditingTutorial {
   trail: boolean;
   hasCaptions: boolean;
   posterUrl: string | null;
+  courseId: string;
+  kind: TutorialKind;
 }
+
+/** A course as the video form offers it. */
+export interface CourseOption {
+  id: string;
+  title: string;
+  sequential: boolean;
+}
+
+const KIND_OPTIONS: { value: TutorialKind; label: string }[] = [
+  { value: "lesson", label: "Aula" },
+  { value: "intro", label: "Apresentação (abre o curso)" },
+  { value: "outro", label: "Encerramento (fecha o curso)" },
+];
 
 /**
  * The duration, read from the file by the browser itself: a <video>
@@ -76,6 +92,7 @@ const UPLOADING_LABELS: Record<TutorialFileKind, string> = {
   video: "Enviando o vídeo…",
   captions: "Enviando a legenda…",
   poster: "Enviando a capa…",
+  material: "Enviando a apostila…",
 };
 
 function pickedFile(data: FormData, field: string): File | null {
@@ -97,12 +114,18 @@ function pickedFile(data: FormData, field: string): File | null {
 export function TutorialForm({
   directUpload,
   routes,
+  courses,
+  defaultCourseId,
   editing,
   onDone,
 }: {
   directUpload: boolean;
   /** The panel's own screens, as the "tela ensinada" options. */
   routes: readonly { href: string; label: string }[];
+  courses: readonly CourseOption[];
+  /** The course a new video starts in (the one whose "Novo vídeo" was
+   * pressed). */
+  defaultCourseId?: string;
   editing?: EditingTutorial;
   onDone: () => void;
 }) {
@@ -122,6 +145,14 @@ export function TutorialForm({
   const [localError, setLocalError] = useState<string>();
   const [uploading, setUploading] = useState<string>();
   const formId = useId();
+  const [courseId, setCourseId] = useState(
+    editing?.courseId ?? defaultCourseId ?? courses[0]?.id ?? "",
+  );
+  // A screen to teach and the trail belong to the panel's reference
+  // course; a sequential course has neither (the lib drops them too, so a
+  // hidden field ticked before the switch never reaches the row).
+  const sequential =
+    courses.find((course) => course.id === courseId)?.sequential ?? false;
 
   useEffect(() => {
     if (state.status === "saved") onDone();
@@ -434,6 +465,55 @@ export function TutorialForm({
       </div>
 
       <div className="mt-4 grid grid-cols-1 gap-4 md:grid-cols-2">
+        <div>
+          <label className={LABEL_CLASS} htmlFor={`${formId}-course`}>
+            Curso
+          </label>
+          <select
+            id={`${formId}-course`}
+            name="courseId"
+            value={courseId}
+            onChange={(event) => setCourseId(event.target.value)}
+            disabled={busy}
+            className={fieldErrors.courseId ? ERROR_FIELD_CLASS : FIELD_CLASS}
+          >
+            {courses.map((course) => (
+              <option key={course.id} value={course.id}>
+                {course.title}
+              </option>
+            ))}
+          </select>
+          <FieldError message={fieldErrors.courseId} />
+        </div>
+        <div>
+          <label className={LABEL_CLASS} htmlFor={`${formId}-kind`}>
+            Tipo
+          </label>
+          <select
+            id={`${formId}-kind`}
+            name="kind"
+            defaultValue={editing?.kind ?? "lesson"}
+            disabled={busy}
+            className={fieldErrors.kind ? ERROR_FIELD_CLASS : FIELD_CLASS}
+          >
+            {KIND_OPTIONS.map((option) => (
+              <option key={option.value} value={option.value}>
+                {option.label}
+              </option>
+            ))}
+          </select>
+          <p className="mt-1.5 text-[11px] text-admin-faint">
+            As aulas são numeradas pela ordem do curso.
+          </p>
+          <FieldError message={fieldErrors.kind} />
+        </div>
+      </div>
+
+      <div
+        className={
+          sequential ? "hidden" : "mt-4 grid grid-cols-1 gap-4 md:grid-cols-2"
+        }
+      >
         <div>
           <label className={LABEL_CLASS} htmlFor={`${formId}-route`}>
             Tela que o vídeo ensina

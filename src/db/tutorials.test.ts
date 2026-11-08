@@ -5,7 +5,7 @@ import { eq } from "drizzle-orm";
 import type { TutorialFormInput } from "@/core/tutorials/video.ts";
 import { user } from "@/db/auth-schema.ts";
 import type { Database } from "@/db/index.ts";
-import { auditLog, tutorialProgress } from "@/db/schema.ts";
+import { auditLog, courses, tutorialProgress } from "@/db/schema.ts";
 import { createTestDb } from "@/db/test-db.ts";
 import {
   createTutorialWith,
@@ -33,13 +33,8 @@ const ATRIOS = "user-atrios";
 const ANA = "user-ana";
 const BETO = "user-beto";
 
-const INPUT: TutorialFormInput = {
-  title: "Primeiros passos",
-  description: "Login, menu e troca de senha.",
-  durationSeconds: 245,
-  route: null,
-  trail: true,
-};
+// The migration creates the panel course; every video here belongs to it.
+let INPUT: TutorialFormInput;
 
 function files(id: string) {
   return {
@@ -62,6 +57,19 @@ async function create(overrides: Partial<TutorialFormInput> = {}) {
 
 before(async () => {
   ({ db, close } = await createTestDb());
+  const [panel] = await db
+    .select({ id: courses.id })
+    .from(courses)
+    .where(eq(courses.slug, "uso-do-painel"));
+  INPUT = {
+    title: "Primeiros passos",
+    description: "Login, menu e troca de senha.",
+    durationSeconds: 245,
+    route: null,
+    trail: true,
+    courseId: panel.id,
+    kind: "lesson",
+  };
   await db.insert(user).values([
     {
       id: ATRIOS,

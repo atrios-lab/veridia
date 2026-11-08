@@ -26,6 +26,8 @@ function tutorial(
     posterUrl: null,
     route: null,
     trail: true,
+    courseId: "painel",
+    kind: "lesson",
     ...overrides,
   };
 }
