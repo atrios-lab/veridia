@@ -12,6 +12,11 @@ import {
 } from "@/core/scheduling/emails.ts";
 import { buildCalendarEvent } from "@/core/scheduling/ics.ts";
 import {
+  buildAppointmentReminderEmail,
+  buildOfficeDaySummaryEmail,
+  buildOfficeNewAppointmentEmail,
+} from "@/core/scheduling/reminders.ts";
+import {
   ARRIVAL_ADVANCE_MINUTES,
   checklistFileHref,
   checklistFor,
@@ -214,5 +219,114 @@ export async function sendAgendaDayClosedEmails(
 ): Promise<void> {
   for (const appointment of cancelled) {
     await sendAppointmentCancelledEmail(tenant, appointment, reason, "day");
+  }
+}
+
+function officeLine(appointment: Appointment) {
+  return {
+    slotTime: appointment.slotTime,
+    citizenName: appointment.citizenName,
+    serviceLabel: appointment.serviceLabel,
+    mode: appointment.mode,
+    agendaName: AGENDA_NAMES[agendaIdOf(appointment.agenda)].short,
+    phone: appointment.phone,
+    protocolNumber: appointment.protocolNumber,
+  };
+}
+
+/** The day of the agenda in the panel, for the office's buttons. */
+function agendaUrl(
+  tenant: Tenant,
+  appointment: Pick<Appointment, "agenda" | "date">,
+): string {
+  return `${baseUrl(tenant)}/admin/agenda?agenda=${agendaIdOf(appointment.agenda)}&dia=${appointment.date}`;
+}
+
+/**
+ * The citizen's reminder, the day before: when, where, what to bring, how
+ * to send a document ahead. The button leads to the protocol lookup.
+ */
+export async function sendAppointmentReminderEmail(
+  tenant: Tenant,
+  appointment: Appointment,
+): Promise<void> {
+  try {
+    const config = await getAgendaConfig(tenant.slug);
+    const service = resolveService(config, appointment.serviceId);
+    const text = buildAppointmentReminderEmail({
+      officeName: tenant.name,
+      officeEmail: tenant.contacts.email,
+      citizenName: appointment.citizenName,
+      date: appointment.date,
+      slotTime: appointment.slotTime,
+      serviceLabel: appointment.serviceLabel,
+      mode: appointment.mode,
+      agendaName: AGENDA_NAMES[agendaIdOf(appointment.agenda)].name,
+      address: tenant.address ?? tenant.name,
+      checklist: checklistFor(service ?? { bring: [] }),
+      protocolNumber: appointment.protocolNumber,
+    });
+    const url = `${baseUrl(tenant)}/protocolo`;
+    await sendEmail({
+      to: appointment.email,
+      fromName: tenant.name,
+      fromAddress: tenant.emailFrom,
+      subject: text.subject,
+      html: renderEmailCardHtml(text, identity(tenant), url),
+      text: renderEmailCardText(text, url),
+    });
+  } catch (error) {
+    console.error("appointment.email.reminder", appointment.id, error);
+  }
+}
+
+/** The office's reminder of tomorrow, one e-mail with every appointment. */
+export async function sendOfficeDaySummaryEmail(
+  tenant: Tenant,
+  day: string,
+  booked: Appointment[],
+): Promise<void> {
+  try {
+    const text = buildOfficeDaySummaryEmail(
+      tenant.name,
+      day,
+      booked.map(officeLine),
+    );
+    const url = `${baseUrl(tenant)}/admin/agenda?dia=${day}`;
+    await sendEmail({
+      to: tenant.contacts.email,
+      fromName: tenant.name,
+      fromAddress: tenant.emailFrom,
+      subject: text.subject,
+      html: renderEmailCardHtml(text, identity(tenant), url),
+      text: renderEmailCardText(text, url),
+    });
+  } catch (error) {
+    console.error("appointment.email.office-summary", day, error);
+  }
+}
+
+/** The office told of a booking made on the site, as it happens. */
+export async function sendOfficeNewAppointmentEmail(
+  tenant: Tenant,
+  appointment: Appointment,
+): Promise<void> {
+  if (!tenant.contacts.email) return;
+  try {
+    const text = buildOfficeNewAppointmentEmail(tenant.name, appointment.date, {
+      ...officeLine(appointment),
+      details: appointment.serviceDetails,
+    });
+    const url = agendaUrl(tenant, appointment);
+    await sendEmail({
+      to: tenant.contacts.email,
+      fromName: tenant.name,
+      fromAddress: tenant.emailFrom,
+      subject: text.subject,
+      html: renderEmailCardHtml(text, identity(tenant), url),
+      text: renderEmailCardText(text, url),
+    });
+  } catch (error) {
+    console.error("appointment.email.office-new", appointment.id, error);
   }
 }

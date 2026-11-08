@@ -1,6 +1,7 @@
 "use server";
 
 import { headers } from "next/headers";
+import { after } from "next/server";
 import { appointmentSchema } from "@/core/request/channels.ts";
 import { looksLikeBot } from "@/core/request/form.ts";
 import {
@@ -32,7 +33,10 @@ import {
   SlotTakenError,
   takenTimesByDay,
 } from "@/lib/appointments.ts";
-import { sendAppointmentBookedEmail } from "@/lib/email/appointment.ts";
+import {
+  sendAppointmentBookedEmail,
+  sendOfficeNewAppointmentEmail,
+} from "@/lib/email/appointment.ts";
 import { isRateLimited } from "@/lib/rate-limit.ts";
 import { getTenant, officeNow } from "@/lib/tenant.ts";
 
@@ -202,6 +206,8 @@ export async function submitAppointment(
     });
 
     await sendAppointmentBookedEmail(tenant, appointment, cancelToken);
+    // The office hears of it too, after the citizen's screen is answered.
+    after(() => sendOfficeNewAppointmentEmail(tenant, appointment));
 
     return {
       status: "success",

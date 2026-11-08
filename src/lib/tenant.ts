@@ -8,6 +8,7 @@ import {
   isPlatformHost,
   isRegisteredHost,
   resolveTenant,
+  TENANTS,
 } from "@/core/tenant/resolve.ts";
 import type { Tenant } from "@/core/tenant/schema.ts";
 import { db } from "@/db/index.ts";
@@ -123,3 +124,16 @@ export const getTenant = cache(async (): Promise<Tenant> => {
   const overrides = await readTenantOverrides(tenant.slug);
   return applyTenantOverrides(tenant, overrides);
 });
+
+/**
+ * Every office with its own edits laid over, for work that runs outside a
+ * request, such as the daily reminders job: there is no host to resolve, so
+ * it walks the registry. Same overrides as `getTenant`, read the same way.
+ */
+export async function allTenantsWithOverrides(): Promise<Tenant[]> {
+  return Promise.all(
+    Object.values(TENANTS).map(async (tenant) =>
+      applyTenantOverrides(tenant, await readTenantOverrides(tenant.slug)),
+    ),
+  );
+}

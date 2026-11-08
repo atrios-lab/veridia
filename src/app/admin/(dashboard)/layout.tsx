@@ -1,12 +1,16 @@
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
+import { after } from "next/server";
 import { can } from "@/core/auth/roles.ts";
+import { sendDueRemindersInBackground } from "@/lib/appointment-reminders.ts";
+import { bookedCountFrom } from "@/lib/appointments.ts";
 import { waitingCount } from "@/lib/chat.ts";
 import { openCountByKind, openRequestCount } from "@/lib/service-request.ts";
 import { getSession } from "@/lib/session.ts";
-import { getTenant } from "@/lib/tenant.ts";
+import { getTenant, officeNow } from "@/lib/tenant.ts";
 import { publishedTutorialCount } from "@/lib/tutorials.ts";
 import { MenuPopover } from "../../_components/menu-popover.tsx";
+import { AgendaAlerts } from "../_components/agenda-alerts.tsx";
 import {
   CHAT_SHAKE_TARGET_ID,
   ChatAlerts,
@@ -48,13 +52,21 @@ export default async function DashboardLayout({
       ? {
           "/admin/lgpd": await openCountByKind(tenant.slug, "data-rights"),
           "/admin/ouvidoria": await openCountByKind(tenant.slug, "ombudsman"),
-          "/admin/agenda": await openCountByKind(tenant.slug, "appointment"),
+          // Appointments still ahead, from today on: the agenda moved to
+          // its own table, and the old count read the retired kind.
+          "/admin/agenda": await bookedCountFrom(tenant.slug, officeNow().date),
         }
       : {}),
     ...(can(role, "chat.manage")
       ? { "/admin/atendimento": await waitingCount(tenant.slug) }
       : {}),
   };
+
+  // Backup for the daily reminders job (api/agenda/lembretes): opening the
+  // panel sends whatever is due, after the response, once each.
+  if (can(role, "channels.manage")) {
+    after(() => sendDueRemindersInBackground(tenant, officeNow()));
+  }
 
   // "Treinamento" is offered once there is something to watch, and always
   // to the platform account, for whom it is the way to the management
@@ -136,6 +148,8 @@ export default async function DashboardLayout({
           {/* Every screen, not only the queue: the attendant hears and sees
               the chat wherever they are working in the panel. */}
           {can(role, "chat.manage") && <ChatAlerts />}
+          {/* Same for the agenda: who is coming today, who just booked. */}
+          {can(role, "channels.manage") && <AgendaAlerts />}
         </div>
       </div>
     </GlobalSearchProvider>
