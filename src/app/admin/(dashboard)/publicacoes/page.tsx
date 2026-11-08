@@ -1,17 +1,12 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { can } from "@/core/auth/roles.ts";
-import {
-  PUBLICATION_KIND_LABELS,
-  type PublicationKind,
-} from "@/core/publications/publication.ts";
+import { publicationHeadline } from "@/core/publications/notice-types.ts";
 import {
   type PublicationState,
   publicationState,
 } from "@/core/publications/state.ts";
 import { formatDate } from "@/core/scheduling/calendar.ts";
-import type { NoticeSector } from "@/core/tenant/gating.ts";
-import { NOTICE_SECTOR_META } from "@/core/tenant/gating.ts";
 import { listPublications, type PublicationRow } from "@/lib/publications.ts";
 import { getSession } from "@/lib/session.ts";
 import { getTenant, today } from "@/lib/tenant.ts";
@@ -32,9 +27,17 @@ function stateOfSlug(slug: string | undefined): PublicationState {
   return TABS.find((t) => t.slug === slug)?.state ?? "live";
 }
 
-function exitLabel(row: PublicationRow, state: PublicationState): string {
+function exitLabel(
+  row: PublicationRow,
+  state: PublicationState,
+  day: string,
+): string {
   if (state === "live" && row.expireAt) {
-    return `sai automaticamente em ${formatDate(row.expireAt)}`;
+    const { termLabel, termEndsOn } = publicationHeadline(row, day);
+    const term = termEndsOn
+      ? `${termLabel?.toLowerCase()} até ${formatDate(termEndsOn)}; `
+      : "";
+    return `${term}sai automaticamente em ${formatDate(row.expireAt)}`;
   }
   if (state === "scheduled" && row.publishAt) {
     return `entra no site em ${formatDate(row.publishAt)}`;
@@ -103,17 +106,14 @@ export default async function PublicationsPage({
                 className="flex items-start gap-3.5 border-b border-admin-border px-5 py-4 last:border-b-0"
               >
                 <span className="mt-0.5 flex-none rounded-full bg-admin-warning-bg px-2.5 py-1 text-[10.5px] font-bold text-admin-warning-text">
-                  {PUBLICATION_KIND_LABELS[row.kind as PublicationKind]}
-                  {row.sector
-                    ? ` · ${NOTICE_SECTOR_META[row.sector as NoticeSector].acronym}`
-                    : ""}
+                  {publicationHeadline(row, day).label}
                 </span>
                 <span className="min-w-0 flex-1">
                   <span className="block truncate text-[13.5px] font-bold text-admin-text">
                     {row.title}
                   </span>
                   <span className="block text-xs text-admin-faint">
-                    {exitLabel(row, state)}
+                    {exitLabel(row, state, day)}
                   </span>
                 </span>
                 {state !== "archived" && (

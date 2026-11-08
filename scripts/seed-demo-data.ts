@@ -206,6 +206,7 @@ await createPublication(
   {
     kind: "marriageBanns",
     sector: "proclamas",
+    noticeType: "proclamas-casamento",
     title:
       "Proclamas de casamento: Luana Ribeiro Tavares e Diego Martins Rocha",
     body:
@@ -222,6 +223,7 @@ await createPublication(
   {
     kind: "notice",
     sector: null,
+    noticeType: null,
     title: "Horário especial na sexta-feira",
     body: "Na próxima sexta-feira o atendimento ao balcão encerra às 12h.",
     publishAt: addDays(day, 2),

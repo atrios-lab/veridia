@@ -83,6 +83,7 @@ export async function savePublication(
   const parsed = publicationFormSchema(noticeSectors(tenant)).safeParse({
     kind: formData.get("kind"),
     sector: String(formData.get("sector") ?? "").trim() || undefined,
+    noticeType: String(formData.get("noticeType") ?? "").trim() || undefined,
     title: formData.get("title"),
     body: formData.get("body"),
     publishAt: publishAt || undefined,

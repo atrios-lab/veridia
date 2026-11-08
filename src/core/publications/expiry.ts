@@ -1,19 +1,19 @@
-import { addDays, type IsoDate } from "../scheduling/calendar.ts";
-import type { PublicationKind } from "./publication.ts";
-
-// Legal notice period for marriage banns (proclamas de casamento).
-const MARRIAGE_BANNS_NOTICE_DAYS = 15;
+import type { IsoDate } from "../scheduling/calendar.ts";
+import { noticeSchedule } from "./notice-schedule.ts";
+import { noticeTypeOf } from "./notice-types.ts";
 
 /**
- * The exit date the form pre-fills, given the entry date: 15 days later for
- * marriage banns (the edital's legal notice period), nothing for the other
- * two kinds, which have no statutory default. The operator can always
- * override before saving; the server never rejects a different date.
+ * The exit date the form pre-fills, given the edital's type and its first
+ * publication: the last day of the legal term, after every run the law asks
+ * for (see NOTICE_TYPES). Nothing for a notice or an edital with no rule in
+ * the catalog: there is no statutory default to suggest. The operator can
+ * always override before saving; the server never rejects a different date.
  */
 export function defaultExpiry(
-  kind: PublicationKind,
+  noticeType: string | null | undefined,
   publishAt: IsoDate,
 ): IsoDate | undefined {
-  if (kind !== "marriageBanns") return undefined;
-  return addDays(publishAt, MARRIAGE_BANNS_NOTICE_DAYS);
+  const type = noticeTypeOf(noticeType);
+  if (!type) return undefined;
+  return noticeSchedule(type, publishAt).termEndsOn;
 }

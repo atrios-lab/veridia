@@ -1,6 +1,11 @@
 import { z } from "zod";
 import type { NoticeSector } from "../tenant/gating.ts";
 import { NOTICE_SECTOR_ATTRIBUTION } from "../tenant/gating.ts";
+import {
+  MARRIAGE_BANNS_NOTICE_TYPE,
+  NOTICE_TYPES,
+  noticeTypeOf,
+} from "./notice-types.ts";
 
 /**
  * What a serventia publishes: marriage banns (proclamas), a general notice
@@ -21,6 +26,33 @@ export const PUBLICATION_KIND_LABELS: Record<PublicationKind, string> = {
   notice: "Aviso",
   publicNotice: "Edital",
 };
+
+// The plural each kind takes in the home section's heading.
+const PUBLICATION_KIND_PLURALS: Record<PublicationKind, string> = {
+  marriageBanns: "Proclamas",
+  notice: "Avisos",
+  publicNotice: "Editais",
+};
+
+/**
+ * The home section's heading, named after what is actually live: only
+ * banns reads "Proclamas", only notices "Avisos", an edital alongside a
+ * notice "Avisos e editais". A fixed "Proclamas e avisos" over an edital
+ * told the citizen something the office never published.
+ */
+export function publicationSectionTitle(
+  kinds: readonly PublicationKind[],
+): string {
+  const present = PUBLICATION_KINDS.filter((k) => kinds.includes(k)).map(
+    (k, i) =>
+      i === 0
+        ? PUBLICATION_KIND_PLURALS[k]
+        : PUBLICATION_KIND_PLURALS[k].toLowerCase(),
+  );
+  if (present.length === 0) return PUBLICATION_KIND_PLURALS.notice;
+  if (present.length === 1) return present[0];
+  return `${present.slice(0, -1).join(", ")} e ${present.at(-1)}`;
+}
 
 // "YYYY-MM-DD", same discipline as IsoDate in src/core/scheduling/calendar.ts:
 // a publication enters and leaves the site on a day on the wall calendar, not
@@ -49,6 +81,15 @@ export function publicationFormSchema(allowedSectors: readonly NoticeSector[]) {
     .object({
       kind: PublicationKindSchema,
       sector: NoticeSectorSchema.optional(),
+      // Which edital, inside the sector: the key of its legal rule in
+      // NOTICE_TYPES. Optional: an edital the catalog has no rule for is
+      // still published, only without computed dates.
+      noticeType: z
+        .string()
+        .refine((key) => Object.hasOwn(NOTICE_TYPES, key), {
+          message: "Tipo de edital desconhecido.",
+        })
+        .optional(),
       title: z
         .string()
         .trim()
@@ -72,6 +113,15 @@ export function publicationFormSchema(allowedSectors: readonly NoticeSector[]) {
             path: ["sector"],
             message: "Esta serventia não publica editais desse setor.",
           });
+        } else if (
+          v.noticeType &&
+          noticeTypeOf(v.noticeType)?.sector !== v.sector
+        ) {
+          ctx.addIssue({
+            code: "custom",
+            path: ["noticeType"],
+            message: "Esse tipo de edital não pertence ao setor escolhido.",
+          });
         }
       }
     })
@@ -85,6 +135,14 @@ export function publicationFormSchema(allowedSectors: readonly NoticeSector[]) {
           : v.kind === "notice"
             ? null
             : (v.sector ?? null),
+      // Same posture for the edital's type: banns have exactly one rule,
+      // a notice has none.
+      noticeType:
+        v.kind === "marriageBanns"
+          ? MARRIAGE_BANNS_NOTICE_TYPE
+          : v.kind === "notice"
+            ? null
+            : (v.noticeType ?? null),
     }))
     .refine((v) => !v.publishAt || v.expireAt, {
       message: "Informe a data de saída para publicar.",
@@ -106,6 +164,8 @@ export interface Publication {
   kind: PublicationKind;
   /** Null on notices and on rows older than the sector column. */
   sector: NoticeSector | null;
+  /** Key of NOTICE_TYPES; null on notices and editais with no rule. */
+  noticeType: string | null;
   title: string;
   body: string;
   /** Null while a draft: see publicationFormSchema. */

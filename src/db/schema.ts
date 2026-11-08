@@ -324,6 +324,13 @@ export const officePublications = pgTable(
     // notices (home-only) and on rows older than the column; banns are
     // always "proclamas", written by the form schema, not trusted from UI.
     sector: text("sector"),
+    // Which edital, inside the sector: "usucapiao-terceiros",
+    // "loteamento"... A key of NOTICE_TYPES in
+    // src/core/publications/notice-types.ts, which holds the legal rule
+    // (how many runs, the term) the dates are computed from. Null on
+    // notices, on an edital the catalog has no rule for, and on rows older
+    // than the column.
+    noticeType: text("notice_type"),
     title: text("title").notNull(),
     body: text("body").notNull(),
     // The signed edital itself, optional. Same column shape as the chat

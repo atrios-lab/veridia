@@ -76,6 +76,7 @@ export async function createPublication(
       tenantSlug,
       kind: data.kind,
       sector: data.sector,
+      noticeType: data.noticeType,
       title: data.title,
       body: data.body,
       publishAt: data.publishAt ?? null,
@@ -113,6 +114,7 @@ export async function updatePublication(
     .set({
       kind: data.kind,
       sector: data.sector,
+      noticeType: data.noticeType,
       title: data.title,
       body: data.body,
       publishAt: data.publishAt ?? null,
