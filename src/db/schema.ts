@@ -757,6 +757,12 @@ export const courses = pgTable(
     posterPath: text("poster_path"),
     materialPath: text("material_path"),
     sequential: boolean("sequential").notNull().default(false),
+    /** Assessment: the minimum share of right answers, in percent. */
+    passingScore: integer("passing_score").notNull().default(70),
+    /** Hours on the certificate; null means the course has none. */
+    workloadHours: integer("workload_hours"),
+    /** How long after a failed attempt the next one opens. */
+    retryHours: integer("retry_hours").notNull().default(5),
     position: integer("position").notNull(),
     publishedAt: timestamp("published_at", { withTimezone: true }),
     createdAt: timestamp("created_at", { withTimezone: true })
@@ -831,6 +837,118 @@ export const tutorials = pgTable(
     uniqueIndex("tutorials_course_frame")
       .on(t.courseId, t.kind)
       .where(sql`${t.kind} in ('intro', 'outro')`),
+  ],
+);
+
+/**
+ * A course's assessment questions: four alternatives, one right. Global like
+ * the course. The right one (`correct_index`) never leaves the server: the
+ * attempt hands the browser the prompts and the alternatives in a shuffled
+ * order, and grades on the server. A question that has appeared in an
+ * attempt is deactivated, never deleted, so the attempt can still be read.
+ */
+export const courseQuestions = pgTable(
+  "course_questions",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    courseId: uuid("course_id")
+      .notNull()
+      .references(() => courses.id, { onDelete: "cascade" }),
+    prompt: text("prompt").notNull(),
+    /** Exactly four, in the order they were written. */
+    options: jsonb("options").$type<string[]>().notNull(),
+    /** 0..3, into `options`. */
+    correctIndex: integer("correct_index").notNull(),
+    active: boolean("active").notNull().default(true),
+    position: integer("position").notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (t) => [index("course_questions_course").on(t.courseId)],
+);
+
+/**
+ * One go at a course's assessment by one person. The draw (question order
+ * and each question's alternative order) is written when the attempt
+ * starts, so a reload shows the same thing; the answers are stored as the
+ * ORIGINAL alternative index, so grading never depends on the draw. Open
+ * while `submitted_at` is null; at most one open attempt per person and
+ * course.
+ */
+export const quizAttempts = pgTable(
+  "quiz_attempts",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    userId: text("user_id")
+      .notNull()
+      .references(() => user.id, { onDelete: "cascade" }),
+    courseId: uuid("course_id")
+      .notNull()
+      .references(() => courses.id, { onDelete: "cascade" }),
+    questionIds: jsonb("question_ids").$type<string[]>().notNull(),
+    /** Per question, the original indexes in the order shown. */
+    optionOrders: jsonb("option_orders").$type<number[][]>().notNull(),
+    startedAt: timestamp("started_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    submittedAt: timestamp("submitted_at", { withTimezone: true }),
+    answers: jsonb("answers").$type<number[]>(),
+    correct: integer("correct"),
+    total: integer("total"),
+    passed: boolean("passed"),
+  },
+  (t) => [
+    index("quiz_attempts_user_course").on(t.userId, t.courseId),
+    uniqueIndex("quiz_attempts_one_open")
+      .on(t.userId, t.courseId)
+      .where(sql`${t.submittedAt} is null`),
+  ],
+);
+
+/**
+ * A course certificate. What it says is a snapshot taken at issue (name,
+ * CPF, role, office, course title, hours, score), so renaming the course or
+ * the office later never changes one already issued. One per person and
+ * course. The CPF is here only to be printed on the person's own PDF; the
+ * public check shows it masked. The account going away keeps the
+ * certificate (`set null`): checking it is the point.
+ */
+export const certificates = pgTable(
+  "certificates",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    /** XXXX-XXXX-XXXX, Crockford base32, random. */
+    code: text("code").notNull(),
+    userId: text("user_id").references(() => user.id, {
+      onDelete: "set null",
+    }),
+    courseId: uuid("course_id")
+      .notNull()
+      .references(() => courses.id, { onDelete: "restrict" }),
+    attemptId: uuid("attempt_id").references(() => quizAttempts.id, {
+      onDelete: "set null",
+    }),
+    fullName: text("full_name").notNull(),
+    cpf: text("cpf").notNull(),
+    roleTitle: text("role_title").notNull(),
+    tenantSlug: text("tenant_slug").notNull(),
+    tenantName: text("tenant_name").notNull(),
+    /** The host the certificate was issued from: the check's address. */
+    issuedHost: text("issued_host").notNull(),
+    courseTitle: text("course_title").notNull(),
+    workloadHours: integer("workload_hours").notNull(),
+    score: integer("score").notNull(),
+    issuedAt: timestamp("issued_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (t) => [
+    uniqueIndex("certificates_code").on(t.code),
+    uniqueIndex("certificates_user_course").on(t.userId, t.courseId),
   ],
 );
 

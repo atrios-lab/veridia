@@ -204,6 +204,13 @@
       "when": 1794098949866,
       "tag": "0028_adicionar_cursos",
       "breakpoints": true
+    },
+    {
+      "idx": 29,
+      "version": "7",
+      "when": 1794101600302,
+      "tag": "0029_adicionar_avaliacao_e_certificado",
+      "breakpoints": true
     }
   ]
 }
