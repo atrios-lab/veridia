@@ -190,8 +190,14 @@ export default async function Home() {
               contact page shows, worded in core/chat/hours. */}
           <Link
             href="/contato"
-            className="mt-5 flex items-center gap-3 rounded-2xl bg-brand-card/95 px-4.5 py-3.5 shadow-xl hover:bg-brand-card md:absolute md:right-10 md:bottom-8 md:mt-0 md:max-w-sm"
+            className="relative mt-5 flex items-center gap-3 rounded-2xl bg-brand-card/95 px-4.5 py-3.5 shadow-xl hover:bg-brand-card md:absolute md:right-10 md:bottom-8 md:mt-0 md:max-w-sm"
           >
+            {/* The halo is its own layer: animating the card's own
+                box-shadow would replace its drop shadow on every frame. */}
+            <span
+              aria-hidden="true"
+              className="pointer-events-none absolute inset-0 rounded-2xl motion-safe:animate-hours-halo"
+            />
             <Icon
               name="clock"
               className="h-5 w-5 flex-none text-brand-accent"
@@ -200,8 +206,8 @@ export default async function Home() {
               <div className="flex items-center gap-1.5 text-sm font-bold text-brand-primary">
                 <span
                   aria-hidden="true"
-                  className={`h-2 w-2 flex-none rounded-full ${
-                    counter.open ? "bg-brand-accent" : "bg-brand-faint"
+                  className={`h-2 w-2 flex-none rounded-full bg-current ${
+                    counter.open ? "text-brand-accent" : "text-brand-faint"
                   }`}
                 />
                 {counterLabel}

@@ -21,7 +21,14 @@
 - [x] 4.1 Campos "Intervalo, das / às" no bloco Atendimento e contato
 - [x] 4.2 Action: parse do intervalo (vazio → `null`, metade → erro no campo), gravação explícita
 
-## 5. Verificação
+## 5. Atenção e feriados
 
-- [x] 5.1 Bateria do CI (typecheck, lint, test, check:dashes, check:tokens, check:destructive, openspec validate, build)
-- [x] 5.2 Conferência visual da home em 390px e desktop no estado fechado (os textos de aberto e intervalo ficam cobertos pelos testes do núcleo)
+- [x] 5.1 Halo pulsando no cartão, no estilo do item Treinamento e na cor do texto, atrás de `motion-safe:`
+- [x] 5.2 `closedDays` com a lista do Código de Normas do RN e o feriado estadual, com nome; quarta de Cinzas fechada
+- [x] 5.3 Texto "Fechado hoje, feriado de …" em feriado de dia de semana
+- [x] 5.4 Testes: dias do §6º, feriado estadual, nomes, trava de estado único, texto do feriado
+
+## 6. Verificação
+
+- [x] 6.1 Bateria do CI (typecheck, lint, test, check:dashes, check:tokens, check:destructive, openspec validate, build)
+- [x] 6.2 Conferência visual da home em 390px e desktop no estado fechado (os textos de aberto e intervalo ficam cobertos pelos testes do núcleo)

@@ -24,8 +24,9 @@ import {
  * the law does: the office promises no earlier than it must, and the screen
  * never calls a record late while the law still considers it on time.
  *
- * Municipal and state holidays are not known here (see `nationalHolidays`),
- * so a term falling on one reads as a business day.
+ * The days off are the national holidays plus the ones the state's Código de
+ * Normas adds (see `closedDays`). Municipal holidays are not known here, so
+ * a term falling on one reads as a business day.
  */
 
 // A term never legitimately walks past this; the cap is what keeps a corrupted

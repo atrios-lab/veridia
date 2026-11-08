@@ -8,6 +8,7 @@
  * Nothing in this file reads the clock; the caller says what today is.
  */
 
+import type { SupportedState } from "../transparency/rubrics.ts";
 export type IsoDate = string;
 
 const DAY_MS = 86_400_000;
@@ -125,40 +126,112 @@ export function easterSunday(year: number): IsoDate {
   return fromUtc(Date.UTC(year, month - 1, day));
 }
 
-// Fixed national holidays, month and day. Municipal and state holidays are
-// not here: there is nowhere for an office to declare them yet, and guessing
-// them would close a counter that is open.
-const FIXED_HOLIDAYS = [
-  "01-01", // Confraternização Universal
-  "04-21", // Tiradentes
-  "05-01", // Dia do Trabalho
-  "09-07", // Independência
-  "10-12", // Nossa Senhora Aparecida
-  "11-02", // Finados
-  "11-15", // Proclamação da República
-  "11-20", // Consciência Negra
-  "12-25", // Natal
+// Fixed national holidays by federal law: month-day and the name the
+// office's status line shows on the day.
+const FIXED_HOLIDAYS: [suffix: string, name: string][] = [
+  ["01-01", "Confraternização Universal"],
+  ["04-21", "Tiradentes"],
+  ["05-01", "Dia do Trabalho"],
+  ["09-07", "Independência do Brasil"],
+  ["10-12", "Nossa Senhora Aparecida"],
+  ["11-02", "Finados"],
+  ["11-15", "Proclamação da República"],
+  ["11-20", "Consciência Negra"], // Lei 14.759/2023
+  ["12-25", "Natal"],
 ];
 
 /** Every national holiday of the year, fixed and Easter derived. */
-export function nationalHolidays(year: number): Set<IsoDate> {
+export function nationalHolidays(year: number): Map<IsoDate, string> {
   const easter = easterSunday(year);
-  return new Set([
-    ...FIXED_HOLIDAYS.map((suffix) => `${year}-${suffix}`),
+  return new Map([
+    ...FIXED_HOLIDAYS.map(
+      ([suffix, name]) => [`${year}-${suffix}`, name] as const,
+    ),
     // Carnival Tuesday is not a statutory holiday, but no notary office in the
-    // country opens on it. Ash Wednesday (Easter minus 46), when they open at
-    // noon, is left in: half a day of appointments beats none.
-    addDays(easter, -47),
-    addDays(easter, -2), // Sexta-feira Santa
-    addDays(easter, 60), // Corpus Christi
+    // country opens on it.
+    [addDays(easter, -47), "Carnaval"],
+    [addDays(easter, -2), "Sexta-feira da Paixão"],
+    [addDays(easter, 60), "Corpus Christi"],
   ]);
 }
 
-export function isHoliday(date: IsoDate): boolean {
-  return nationalHolidays(Number(date.slice(0, 4))).has(date);
+/**
+ * The days the extrajudicial services of a state do not open, beyond the
+ * weekend and the national holidays: what that state's Código de Normas
+ * says, plus the holidays its own laws declare.
+ *
+ * Keyed by every supported state, so a second state in SUPPORTED_STATES does
+ * not compile until someone writes its list here.
+ *
+ * RN: Código de Normas da CGJ/RN (Provimento 156/2016), §6º of the article
+ * on opening hours: the services do not open, save the civil registry's
+ * on-call duty, on the national holidays and on Carnival Monday, Ash
+ * Wednesday, São João (24/06), São Pedro (29/06), Christmas Eve (24/12) and
+ * New Year's Eve (31/12); and, by its item III, on the holidays of state
+ * law, which today is the Mártires de Cunhaú e Uruaçu (03/10, Lei estadual
+ * 8.913/2006). Municipal holidays (also item III) are per town and not
+ * known here.
+ */
+const STATE_CLOSED_DAYS: Record<
+  SupportedState,
+  {
+    fixed: [suffix: string, name: string][];
+    fromEaster: [offset: number, name: string][];
+  }
+> = {
+  RN: {
+    fixed: [
+      ["06-24", "São João"],
+      ["06-29", "São Pedro"],
+      ["10-03", "Mártires de Cunhaú e Uruaçu"],
+      ["12-24", "Véspera de Natal"],
+      ["12-31", "Véspera de Ano Novo"],
+    ],
+    fromEaster: [
+      [-48, "Carnaval"],
+      [-46, "Quarta-feira de Cinzas"],
+    ],
+  },
+};
+
+/**
+ * The state whose calendar the platform counts by. Only one is supported
+ * today (SUPPORTED_STATES); a test fails the day a second one arrives, which
+ * is when `isBusinessDay` has to start taking the office's state.
+ */
+export const CALENDAR_STATE: SupportedState = "RN";
+
+/** Every day of the year the office does not open, weekends aside, by name. */
+export function closedDays(
+  year: number,
+  state: SupportedState = CALENDAR_STATE,
+): Map<IsoDate, string> {
+  const rules = STATE_CLOSED_DAYS[state];
+  const easter = easterSunday(year);
+  return new Map([
+    ...nationalHolidays(year),
+    ...rules.fixed.map(
+      ([suffix, name]) => [`${year}-${suffix}`, name] as const,
+    ),
+    ...rules.fromEaster.map(
+      ([offset, name]) => [addDays(easter, offset), name] as const,
+    ),
+  ]);
 }
 
-/** A day the office opens: weekday, not a national holiday. */
+/** The holiday's name when the office is closed for one that day. */
+export function holidayName(date: IsoDate): string | undefined {
+  return closedDays(Number(date.slice(0, 4))).get(date);
+}
+
+export function isHoliday(date: IsoDate): boolean {
+  return holidayName(date) !== undefined;
+}
+
+/**
+ * A day the office opens: a weekday that is neither a national holiday nor a
+ * day the state's Código de Normas closes the extrajudicial services.
+ */
 export function isBusinessDay(date: IsoDate): boolean {
   return !isWeekend(date) && !isHoliday(date);
 }

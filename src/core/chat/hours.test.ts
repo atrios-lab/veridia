@@ -204,3 +204,24 @@ test("after the afternoon span, a split day also opens the next morning", () => 
     onBreak: false,
   });
 });
+
+test("on a weekday holiday the line says why it is closed", () => {
+  // 2026-06-24, São João, is a Wednesday: closed by the RN Código de Normas.
+  const now = new Date("2026-06-24T13:00:00Z");
+  const status = counterStatus(cartorioMarinho, now);
+  assert.equal(status.open, false);
+  assert.equal(
+    counterStatusLabel(status, now),
+    "Fechado hoje, feriado de São João · abre quinta às 8h",
+  );
+  assert.equal(isChatOpen("auto", cartorioMarinho, now), false);
+});
+
+test("a weekend is plain closed, even when it is also a holiday", () => {
+  // 2026-10-03, Mártires de Cunhaú e Uruaçu, is a Saturday.
+  const now = new Date("2026-10-03T13:00:00Z");
+  assert.equal(
+    counterStatusLabel(counterStatus(cartorioMarinho, now), now),
+    "Fechado agora · abre segunda às 8h",
+  );
+});

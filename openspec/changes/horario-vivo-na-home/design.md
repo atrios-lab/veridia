@@ -52,7 +52,26 @@ do selo da página de contato), frase do horário na segunda; fechado, uma terce
 que o site faz sozinho. Texto pequeno vai de 11px para 13px. A home já é renderizada por
 requisição (tenant pelo host), então o status é o do momento do acesso.
 
+**7. Dias sem expediente por estado, com nome.** `closedDays(year, state)` junta os feriados
+nacionais e a lista do Código de Normas do estado, numa tabela `Record<SupportedState, …>`: um
+estado novo em `SUPPORTED_STATES` não compila sem a sua lista. `isBusinessDay` segue sem receber
+estado e conta pelo RN (`CALENDAR_STATE`), o único suportado; um teste falha no dia em que
+entrar um segundo, que é quando a função tem de passar a receber o estado da serventia. A quarta
+de Cinzas, antes deixada aberta ("abre ao meio-dia"), fecha o dia inteiro, como diz o §6º.
+Prazos de pedidos e editais são calculados na leitura, então os feriados novos corrigem prazos em
+andamento sem tocar no banco.
+
+**8. Piscar sem atrapalhar.** Mesmo efeito do item Treinamento do painel (`attention-pulse`: halo
+que cresce e some a cada 1,6s), mais discreto: na cor do texto do cartão (`brand-primary`) a 45%,
+em vez da cor de destaque cheia, e voltado para dentro da borda. Por dentro porque o cartão fica
+sobre a foto da serventia, e um halo escuro do lado de fora some contra uma foto escura. O halo é uma camada própria (`span` absoluto) para não substituir
+a sombra do cartão a cada quadro; só o halo se move, nunca o texto. Longe dos três clarões por
+segundo do WCAG 2.3.1, sempre atrás de `motion-safe:`.
+
 ## Risks / Trade-offs
+
+- [Um prazo em andamento passa a vencer um dia depois, por cair em São João, por exemplo] → é o
+  efeito pretendido: a serventia não funciona nesse dia, e o prazo em dias úteis não pode contá-lo.
 
 - [Linha antiga do painel com horas novas onde o intervalo da config não cabe] → a herança
   testa o intervalo contra as horas salvas e, se não couber, segue sem intervalo (decisão 2).

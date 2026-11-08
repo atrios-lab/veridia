@@ -59,7 +59,38 @@ painel e home SHALL usar o mesmo cálculo, e a home e a página de contato SHALL
 - **WHEN** é sábado
 - **THEN** o texto é "Fechado agora · abre segunda às 8h"
 
+#### Scenario: Feriado em dia de semana
+
+- **WHEN** é quarta-feira, 24 de junho (São João)
+- **THEN** o status é fechado, o chat não aceita conversa e o texto é "Fechado hoje, feriado de
+  São João · abre quinta às 8h", dizendo que é feriado e qual
+
 #### Scenario: Dados estruturados com dia partido
 
 - **WHEN** o balcão tem intervalo
 - **THEN** o JSON-LD da serventia declara duas `OpeningHoursSpecification`, manhã e tarde
+
+### Requirement: Dias sem expediente seguem o Código de Normas do estado
+
+Um dia útil SHALL ser um dia de semana que não é feriado nacional nem dia em que o Código de
+Normas do estado da serventia fecha os serviços extrajudiciais. Para o RN (Provimento 156/2016,
+§6º), SHALL fechar também: segunda e terça de Carnaval, quarta-feira de Cinzas, 24/06 (São
+João), 29/06 (São Pedro), 24/12, 31/12 e o feriado estadual de 03/10 (Lei 8.913/2006). A regra
+SHALL valer para todo cálculo de dia útil: status do balcão, chat, agenda, prazos de pedidos e
+editais.
+
+#### Scenario: São João não é dia útil
+
+- **WHEN** um prazo de 1 dia útil começa em 23/06/2026
+- **THEN** ele vence em 25/06/2026, pulando o São João
+
+#### Scenario: Quarta de Cinzas fecha o dia inteiro
+
+- **WHEN** a data é a quarta-feira de Cinzas
+- **THEN** ela não é dia útil
+
+#### Scenario: Estado sem calendário não passa despercebido
+
+- **WHEN** um segundo estado entra em `SUPPORTED_STATES`
+- **THEN** o código não compila sem a lista desse estado e um teste avisa que `isBusinessDay`
+  tem de passar a receber o estado

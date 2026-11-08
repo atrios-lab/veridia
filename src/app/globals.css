@@ -245,6 +245,33 @@
 }
 
 /*
+ * The home's opening hours card: the panel's "click here" halo (see
+ * attention-pulse, the Treinamento item), toned down for the public site and
+ * turned inward. It starts at the card's edge and fades as it grows inside,
+ * in the card's own text colour at a low strength: inside, because the card
+ * floats over the office's photograph, and a halo outside in that colour
+ * would vanish against a dark picture. Only the halo moves: fill and text
+ * keep their contrast at every frame. One cycle every 1.6s, far below the
+ * three flashes per second WCAG 2.3.1 allows, and always behind
+ * `motion-safe:`, so whoever turned animations off sees the card still.
+ */
+@theme {
+  --animate-hours-halo: hours-halo 1.6s linear infinite;
+
+  @keyframes hours-halo {
+    0% {
+      box-shadow: inset 0 0 0 1.5px
+        color-mix(in srgb, var(--color-brand-primary) 45%, transparent);
+    }
+    70%,
+    100% {
+      box-shadow: inset 0 0 0 8px
+        color-mix(in srgb, var(--color-brand-primary) 0%, transparent);
+    }
+  }
+}
+
+/*
  * One block per theme. The default on :root is what an unthemed page inherits;
  * it shares the pilot's block rather than repeating it.
  */

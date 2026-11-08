@@ -53,9 +53,9 @@ export interface NoticeSchedule {
  * days): the start day excluded, the due day included, and a due day that
  * is not a business day moves to the next one.
  *
- * National holidays only (see `nationalHolidays`): a term ending on a
- * municipal or state holiday reads one day early, which the operator can
- * correct on the exit date before saving.
+ * National holidays and the state's Código de Normas days off (see
+ * `closedDays`): a term ending on a municipal holiday reads one day early,
+ * which the operator can correct on the exit date before saving.
  */
 export function noticeSchedule(
   rule: NoticeRunRule,

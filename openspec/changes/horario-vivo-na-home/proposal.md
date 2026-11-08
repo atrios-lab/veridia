@@ -20,14 +20,25 @@ chat aceita conversa sem ninguém no balcão.
   primeira dobra), mostra o status ao vivo com a frase do horário embaixo, fora do horário lembra
   que pedidos e agendamentos pelo site funcionam a qualquer hora, leva à página de contato ao
   toque e sobe o texto pequeno para 13px.
+- O cartão pisca de leve para não passar despercebido: o mesmo halo do item Treinamento do
+  painel, mais discreto e na cor do próprio texto do cartão. Quem desligou animações no aparelho vê o cartão parado.
+- Dias sem expediente seguem o Código de Normas do RN (Provimento 156/2016, §6º): além dos
+  feriados nacionais, segunda e terça de Carnaval, quarta de Cinzas, São João (24/06), São Pedro
+  (29/06), véspera de Natal (24/12), véspera de Ano Novo (31/12) e o feriado estadual de 03/10
+  (Mártires de Cunhaú e Uruaçu, Lei estadual 8.913/2006). Vale para tudo que conta dia útil:
+  status, chat, agenda, prazos dos pedidos e editais.
+- Num feriado em dia de semana, o status diz que é feriado e qual: "Fechado hoje, feriado de São
+  João · abre quinta às 8h".
 - Painel (Configurações › Atendimento e contato): campos "Intervalo, das / às", opcionais.
 - As cinco serventias com almoço ganham o intervalo na própria configuração em código.
 
 ## Não-objetivos
 
 - Horário diferente por dia da semana (sábado, sexta reduzida). Continua segunda a sexta.
-- Datas fechadas próprias da serventia (ponto facultativo local) no "aberto agora". Hoje só
-  feriado nacional fecha; a agenda tem datas fechadas próprias, mas ligar as duas é outra change.
+- Feriados municipais (item III do §6º). Cada município tem os seus, e não estão levantados;
+  ficam para outra change, junto com as datas fechadas próprias que a agenda já tem.
+- Feriado estadual remarcado por decreto (a Lei 8.913/2006 permite antecipar). O calendário
+  segue a data da lei.
 - Abertura e fechamento em meia hora. Só o intervalo aceita minutos, porque é o único caso real.
 - Mexer na grade de agendamento: o intervalo é do balcão, não das faixas da agenda.
 - Qualquer alteração de banco que apague ou renomeie coluna, tabela ou dado.
@@ -49,6 +60,9 @@ chat aceita conversa sem ninguém no balcão.
 - `src/core/tenant/schema.ts`, `src/core/tenant/overrides.ts`: schema do intervalo e herança do
   intervalo da config quando a linha salva no painel é anterior a ele.
 - `src/core/chat/hours.ts`: cálculo em minutos, `counterStatus` e `counterStatusLabel`.
+- `src/core/scheduling/calendar.ts`: dias sem expediente do RN, com nome; muda a contagem de dia
+  útil de prazos, agenda e editais (calculados na leitura, nada gravado muda).
+- `src/app/globals.css`: animação `hours-halo`.
 - `src/core/tenant/seo.ts`: duas `OpeningHoursSpecification` quando há intervalo.
 - `src/app/(public)/page.tsx`, `src/app/(public)/contato/page.tsx`,
   `src/app/(public)/_components/chat-widget.tsx`: leitura do novo status.

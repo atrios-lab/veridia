@@ -1,7 +1,9 @@
 import {
   addDays,
+  holidayName,
   type IsoDate,
   isBusinessDay,
+  isWeekend,
   longWeekday,
   nextBusinessDays,
   toIsoDate,
@@ -57,7 +59,8 @@ export function counterIntervals(
 
 /**
  * Whether the chat is inside the office's attendance window right now: a
- * business day (see `isBusinessDay`, weekday and not a national holiday) and
+ * business day (see `isBusinessDay`: a weekday that is neither a national
+ * holiday nor a day the state's Código de Normas closes the services) and
  * the wall clock inside `tenant.counterHours`, the hours the counter itself
  * keeps, lunch break excluded. Chat hours are not a separate setting, see
  * support-chat spec, "Horário do chat segue o horário de atendimento
@@ -86,6 +89,9 @@ export type CounterStatus =
       open: false;
       opensAt: ClockTime & { day: IsoDate };
       onBreak: boolean;
+      // Set when today is a weekday the office keeps closed for a holiday,
+      // so the line can say why instead of only "fechado".
+      holiday?: string;
     };
 
 export function counterStatus(
@@ -117,10 +123,12 @@ export function counterStatus(
   }
 
   const [nextDay] = nextBusinessDays(addDays(today, 1), 1);
+  const holiday = isWeekend(today) ? undefined : holidayName(today);
   return {
     open: false,
     opensAt: { day: nextDay, ...toClock(spans[0][0]) },
     onBreak: false,
+    ...(holiday ? { holiday } : {}),
   };
 }
 
@@ -145,7 +153,10 @@ export function counterStatusLabel(
     status.opensAt.day === toIsoDate(now, timeZone)
       ? "hoje"
       : longWeekday(status.opensAt.day);
-  return `Fechado agora · abre ${day} às ${formatClock(status.opensAt)}`;
+  const reason = status.holiday
+    ? `Fechado hoje, feriado de ${status.holiday}`
+    : "Fechado agora";
+  return `${reason} · abre ${day} às ${formatClock(status.opensAt)}`;
 }
 
 /**

@@ -207,3 +207,9 @@ test("resuming a running term only strips a pause it does not have", () => {
     { startedOn: "2026-08-03", days: 10 },
   );
 });
+
+test("a day the RN Código de Normas closes is skipped too", () => {
+  // 2026-06-24 is São João, a Wednesday: a one-day term from Tuesday ends
+  // on Thursday.
+  assert.equal(deadlineDate("2026-06-23", 1), "2026-06-25");
+});

@@ -25,6 +25,17 @@ ficar depois do campo de consulta de protocolo, sem tirar o campo da primeira do
 - **THEN** o cartão de horário aparece abaixo da busca de protocolo, e a busca continua visível
   sem rolar
 
+#### Scenario: Cartão chama atenção sem atrapalhar
+
+- **WHEN** a home é aberta num aparelho com animações ligadas
+- **THEN** o cartão pulsa de leve, com um halo por dentro da borda na cor do próprio texto, sem
+  mexer no texto e abaixo de três ciclos por segundo
+
+#### Scenario: Animações desligadas
+
+- **WHEN** o aparelho pede movimento reduzido (`prefers-reduced-motion`)
+- **THEN** o cartão aparece parado
+
 #### Scenario: Toque leva ao contato
 
 - **WHEN** o visitante toca no cartão
