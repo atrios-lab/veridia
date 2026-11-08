@@ -483,19 +483,6 @@ export async function saveBulletinOption(
   );
 }
 
-/** The most recently published bulletin, for the module header line. */
-export async function latestBulletin(
-  tenantSlug: string,
-): Promise<TransparencyBulletinRow | undefined> {
-  const [row] = await db
-    .select()
-    .from(transparencyBulletins)
-    .where(eq(transparencyBulletins.tenantSlug, tenantSlug))
-    .orderBy(desc(transparencyBulletins.referenceMonth))
-    .limit(1);
-  return row;
-}
-
 /** A document's status is stored, so callers can narrow without a core call. */
 export function documentStatusOf(row: TransparencyDocumentRow): DocumentStatus {
   return row.status as DocumentStatus;

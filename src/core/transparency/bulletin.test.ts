@@ -2,13 +2,16 @@ import assert from "node:assert/strict";
 import { test } from "node:test";
 import {
   bulletinBalanceCents,
+  bulletinDraftOf,
   bulletinPeriod,
+  bulletinPeriodKey,
   bulletinTaxesCents,
   bulletinView,
   formatMoneyBRL,
   formatMonthYear,
   fundFieldName,
   issLabel,
+  legacyBulletinDraftOf,
   legacyBulletinView,
   legacyTaxesLabel,
   parseBulletinFigures,
@@ -204,4 +207,53 @@ test("the old taxes label lists the state's funds and the ISS", () => {
     legacyTaxesLabel("RN"),
     "Tributos pagos (FDJ, FRMP, FCRCPN, FUNAF, ISS)",
   );
+});
+
+test("a published month comes back to the form as the strings it was typed from", () => {
+  const parsed = parseBulletinFigures("RN", TYPED, { privateFigures: true });
+  assert.ok("figures" in parsed);
+  const draft = bulletinDraftOf(parsed.figures, "consolidated");
+  assert.deepEqual(draft, {
+    ...TYPED,
+    status: "consolidated",
+    legacy: false,
+  });
+  // And publishing it again unchanged gives back the very same figures.
+  assert.deepEqual(
+    parseBulletinFigures("RN", draft, { privateFigures: true }),
+    parsed,
+  );
+});
+
+test("a month published without the private figures leaves them blank", () => {
+  const parsed = parseBulletinFigures("RN", TYPED, { privateFigures: false });
+  assert.ok("figures" in parsed);
+  const draft = bulletinDraftOf(parsed.figures, "preliminary");
+  assert.equal(draft.grossRevenue, "");
+  assert.equal(draft.expenses, "");
+  assert.equal(draft.funds.fdj, "1.234,56");
+});
+
+test("an old-format month keeps what it has and leaves funds and ISS to type", () => {
+  const draft = legacyBulletinDraftOf(
+    {
+      actsCount: 267,
+      grossRevenueCents: 797_812,
+      taxesPaidCents: 265_259,
+      expensesCents: 806_931,
+    },
+    "consolidated",
+  );
+  assert.equal(draft.legacy, true);
+  assert.equal(draft.actsCount, "267");
+  assert.equal(draft.grossRevenue, "7.978,12");
+  assert.equal(draft.expenses, "8.069,31");
+  assert.deepEqual(draft.funds, {});
+  assert.equal(draft.iss, "");
+});
+
+test("each month has its own key, zero-padded like the stored date", () => {
+  assert.equal(bulletinPeriodKey(2026, 1), "2026-01");
+  assert.equal(bulletinPeriodKey(2026, 12), "2026-12");
+  assert.notEqual(bulletinPeriodKey(2026, 1), bulletinPeriodKey(2026, 2));
 });

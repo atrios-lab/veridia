@@ -1,17 +1,23 @@
 "use client";
 
 import {
+  startTransition,
   useActionState,
   useEffect,
   useMemo,
   useOptimistic,
+  useRef,
   useState,
 } from "react";
 import { toast } from "sonner";
 import {
   BALANCE_LABEL,
+  type BulletinDraft,
+  bulletinPeriodKey,
   bulletinView,
+  EMPTY_BULLETIN_DRAFT,
   formatMoneyBRL,
+  formatMonthYear,
   fundFieldName,
   MONTHS_PT,
   parseCount,
@@ -161,10 +167,13 @@ export function BulletinForm({
   office,
   currentMonth,
   currentYear,
+  saved,
 }: {
   office: BulletinOffice;
   currentMonth: number;
   currentYear: number;
+  /** Every published month, as the form shows it, keyed "YYYY-MM". */
+  saved: Record<string, BulletinDraft>;
 }) {
   const [state, formAction, pending] = useActionState<SaveState, FormData>(
     publishBulletinAction,
@@ -175,17 +184,41 @@ export function BulletinForm({
 
   const [month, setMonth] = useState(currentMonth);
   const [year, setYear] = useState(currentYear);
-  const [acts, setActs] = useState("");
-  const [fundValues, setFundValues] = useState<Record<string, string>>({});
-  const [iss, setIss] = useState("");
-  const [gross, setGross] = useState("");
-  const [expenses, setExpenses] = useState("");
-  const [status, setStatus] = useState<"preliminary" | "consolidated">(
-    "preliminary",
-  );
+  const period = bulletinPeriodKey(year, month);
 
+  // Each month keeps its own figures. What the operator has typed for a
+  // month and not yet published lives in `edits`, so switching to another
+  // month and back loses nothing; a month with no edits shows what is
+  // published for it, ready to correct; a month with neither opens blank,
+  // never with the figures of the month picked before it.
+  const [edits, setEdits] = useState<Record<string, BulletinDraft>>({});
+  const published = saved[period];
+  const draft = edits[period] ?? published ?? EMPTY_BULLETIN_DRAFT;
+  const {
+    actsCount: acts,
+    funds: fundValues,
+    iss,
+    grossRevenue: gross,
+    expenses,
+    status,
+  } = draft;
+
+  function edit(change: Partial<BulletinDraft>) {
+    setEdits((current) => ({
+      ...current,
+      [period]: { ...(current[period] ?? draft), ...change },
+    }));
+  }
+
+  // The period the last submit published, so its edits can be dropped once
+  // the page comes back with the month as stored. A ref, not state: the
+  // effect has to run once per finished publish, not again on the next click.
+  const submitted = useRef<string | null>(null);
   useEffect(() => {
-    if (state.status === "success") toast.success("Boletim publicado no site.");
+    if (state.status !== "success") return;
+    toast.success("Boletim publicado no site.");
+    const done = submitted.current;
+    if (done) setEdits(({ [done]: _published, ...rest }) => rest);
   }, [state]);
 
   // The preview never shows a blank: anything unparseable reads as zero, so
@@ -226,19 +259,38 @@ export function BulletinForm({
       <BulletinOption enabled={office.publishPrivateFigures} />
 
       <div className="grid gap-5 lg:grid-cols-2">
+        {/* Submitted by hand, not through `action`: a form action resets
+            the form once it settles, and the operator has to keep seeing the
+            month they just published, still editable. */}
         <form
-          action={formAction}
+          onSubmit={(event) => {
+            event.preventDefault();
+            const formData = new FormData(event.currentTarget);
+            submitted.current = period;
+            startTransition(() => formAction(formData));
+          }}
           className="rounded-[14px] border border-admin-border bg-admin-card p-5"
         >
           <h3 className="font-serif text-[16px] font-semibold text-admin-primary">
-            Novo boletim
+            {published
+              ? `Boletim de ${formatMonthYear(month, year)}`
+              : "Novo boletim"}
           </h3>
           <p className="mt-1 text-[12.5px] text-admin-muted">
-            Digite os valores do mês como aparecem nas guias de recolhimento.{" "}
+            {published
+              ? "Este mês já está no site. Corrija o que precisar e publique de novo: o boletim publicado é substituído."
+              : "Digite os valores do mês como aparecem nas guias de recolhimento."}{" "}
             {office.publishPrivateFigures
               ? "Os totais e o saldo são calculados automaticamente."
               : "Os totais são calculados automaticamente."}
           </p>
+          {published?.legacy && (
+            <p className="mt-2.5 rounded-[10px] bg-admin-warning-bg px-3.5 py-2.5 text-[12.5px] font-semibold text-admin-warning-text">
+              Este mês foi publicado no formato antigo, com os tributos num
+              valor só. Informe cada fundo e o ISS conforme as guias para
+              publicar de novo.
+            </p>
+          )}
 
           <div className="mt-4 grid grid-cols-2 gap-3">
             <div>
@@ -286,7 +338,7 @@ export function BulletinForm({
                 name="actsCount"
                 inputMode="numeric"
                 value={acts}
-                onChange={(e) => setActs(e.target.value)}
+                onChange={(e) => edit({ actsCount: e.target.value })}
                 className={
                   fieldErrors.actsCount ? ERROR_FIELD_CLASS : FIELD_CLASS
                 }
@@ -299,7 +351,7 @@ export function BulletinForm({
                 name="grossRevenue"
                 label="Arrecadação do mês"
                 value={gross}
-                onChange={setGross}
+                onChange={(value) => edit({ grossRevenue: value })}
                 error={fieldErrors.grossRevenue}
               />
             )}
@@ -318,10 +370,7 @@ export function BulletinForm({
                   label={fund.label}
                   value={fundValues[fund.key] ?? ""}
                   onChange={(value) =>
-                    setFundValues((current) => ({
-                      ...current,
-                      [fund.key]: value,
-                    }))
+                    edit({ funds: { ...fundValues, [fund.key]: value } })
                   }
                   error={fieldErrors[fundFieldName(fund.key)]}
                 />
@@ -336,7 +385,7 @@ export function BulletinForm({
               label="ISS"
               hint={`tributo municipal (${office.city})`}
               value={iss}
-              onChange={setIss}
+              onChange={(value) => edit({ iss: value })}
               error={fieldErrors.iss}
             />
             {office.publishPrivateFigures && (
@@ -345,7 +394,7 @@ export function BulletinForm({
                 name="expenses"
                 label="Despesas"
                 value={expenses}
-                onChange={setExpenses}
+                onChange={(value) => edit({ expenses: value })}
                 error={fieldErrors.expenses}
               />
             )}
@@ -371,7 +420,7 @@ export function BulletinForm({
                 <button
                   key={s}
                   type="button"
-                  onClick={() => setStatus(s)}
+                  onClick={() => edit({ status: s })}
                   aria-pressed={status === s}
                   className={
                     status === s
@@ -403,7 +452,11 @@ export function BulletinForm({
             disabled={pending}
             className="btn btn-admin-primary btn-lg mt-4 w-full"
           >
-            {pending ? "Publicando…" : "Publicar no site"}
+            {pending
+              ? "Publicando…"
+              : published
+                ? "Publicar correção no site"
+                : "Publicar no site"}
           </button>
         </form>
 
