@@ -2,6 +2,10 @@ import assert from "node:assert/strict";
 import { after, before, test } from "node:test";
 import { eq } from "drizzle-orm";
 import { getAct } from "@/core/acts/catalog.ts";
+import {
+  CITIZEN_NUDGE_MESSAGE,
+  OFFICE_NUDGE_MESSAGE,
+} from "@/core/chat/nudge.ts";
 import { hashAccessKey } from "@/core/request/access-key.ts";
 import { TENANTS } from "@/core/tenant/resolve.ts";
 import { user } from "@/db/auth-schema.ts";
@@ -11,6 +15,7 @@ import { createTestDb } from "@/db/test-db.ts";
 import {
   alertSnapshotWith,
   closeConversationWith,
+  nudgeConversationWith,
   queuePositionWith,
   startConversationWith,
   submitRatingWith,
@@ -188,7 +193,12 @@ test("the alert snapshot lists the queue and, per conversation of mine, the citi
   assert.ok(before.waiting.some((c) => c.id === waiting.id));
   assert.ok(!before.waiting.some((c) => c.id === mine.id));
   assert.deepEqual(before.mine, [
-    { id: mine.id, citizenName: "Davi Souza", lastCitizenMessageAt: null },
+    {
+      id: mine.id,
+      citizenName: "Davi Souza",
+      lastCitizenMessageAt: null,
+      lastNudgeAt: null,
+    },
   ]);
 
   // A staff message does not count; the citizen's does.
@@ -215,4 +225,84 @@ test("the alert snapshot lists the queue and, per conversation of mine, the citi
   const other = await alertSnapshotWith(db, TENANT.slug, "outra-pessoa");
   assert.deepEqual(other.mine, []);
   assert.equal(other.status, "available");
+});
+
+test("the citizen calls only after ten quiet minutes; the office, any time", async () => {
+  const started = await startConversationWith(
+    db,
+    TENANT.slug,
+    {
+      name: "Nina Chamado",
+      contact: "nina@email.com",
+      subject: "Demora",
+      informedProtocolNumber: undefined,
+    },
+    "/",
+  );
+  const [conversation] = await db
+    .select()
+    .from(chatConversations)
+    .where(eq(chatConversations.id, started.id));
+  const at = (minutes: number) =>
+    new Date(conversation.createdAt.getTime() + minutes * 60_000);
+
+  const early = await nudgeConversationWith(
+    db,
+    TENANT.slug,
+    conversation,
+    "citizen",
+    at(5),
+  );
+  assert.equal(early.ok, false);
+  assert.equal(early.ok === false && early.reason, "too-soon");
+
+  const first = await nudgeConversationWith(
+    db,
+    TENANT.slug,
+    conversation,
+    "citizen",
+    at(10),
+  );
+  assert.equal(first.ok, true);
+  assert.deepEqual(first.ok && first.availableAt, at(20));
+
+  const again = await nudgeConversationWith(
+    db,
+    TENANT.slug,
+    conversation,
+    "citizen",
+    at(15),
+  );
+  assert.equal(again.ok, false);
+
+  // The office has no limit.
+  for (const minute of [15, 15.1, 15.2]) {
+    const office = await nudgeConversationWith(
+      db,
+      TENANT.slug,
+      conversation,
+      "office",
+      at(minute),
+    );
+    assert.equal(office.ok, true);
+  }
+
+  const lines = await db
+    .select({ body: chatMessages.body })
+    .from(chatMessages)
+    .where(eq(chatMessages.conversationId, conversation.id));
+  assert.equal(lines.filter((l) => l.body === CITIZEN_NUDGE_MESSAGE).length, 1);
+  assert.equal(lines.filter((l) => l.body === OFFICE_NUDGE_MESSAGE).length, 3);
+
+  // The citizen's call keeps the conversation from closing for inactivity.
+  const [after] = await db
+    .select({ lastActivityAt: chatConversations.lastActivityAt })
+    .from(chatConversations)
+    .where(eq(chatConversations.id, conversation.id));
+  assert.deepEqual(after.lastActivityAt, at(10));
+
+  // And the panel sees the citizen's call on the waiting conversation.
+  const snapshot = await alertSnapshotWith(db, TENANT.slug, "ninguem");
+  const waiting = snapshot.waiting.find((c) => c.id === conversation.id);
+  assert.equal(waiting?.lastNudgeAt, at(10).toISOString());
 });

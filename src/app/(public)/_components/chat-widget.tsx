@@ -5,6 +5,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import {
   CITIZEN_REPLY_SOUND,
   CITIZEN_REPLY_VOLUME,
+  NUDGE_SOUND,
   newStaffReplies,
 } from "@/core/chat/alerts.ts";
 import {
@@ -12,10 +13,12 @@ import {
   isWithinChatHours,
   nextChatOpening,
 } from "@/core/chat/hours.ts";
+import { isOfficeNudge, nudgeWaitLabel } from "@/core/chat/nudge.ts";
 import { formatFullDate } from "@/core/scheduling/calendar.ts";
 import { SECTION_ROUTES } from "@/core/tenant/gating.ts";
 import type { Tenant } from "@/core/tenant/schema.ts";
 import { playSound, unlockAudio } from "../../_components/chat-sound.ts";
+import { shakeElement, vibrate } from "../../_components/shake.ts";
 import {
   ATTACHMENT_ACCEPT,
   useAttachmentPrepare,
@@ -32,6 +35,8 @@ const MESSAGE_POLL_MS = 4000;
 // reply can call the citizen back, but every third tick: about 12s.
 const HIDDEN_POLL_EVERY = 3;
 const TITLE_BLINK_MS = 1000;
+// The chat window, which shakes for a "Chamar atenção" either way.
+const PANEL_ID = "chat-atendimento";
 const STATUS_POLL_MS = 15000;
 
 interface MessageView {
@@ -50,6 +55,8 @@ interface ConversationView {
   attendantSector?: string;
   queuePosition?: number;
   needsInactivityWarning: boolean;
+  /** When the citizen's "Chamar atenção" frees up (ISO). */
+  nudgeAvailableAt?: string;
 }
 
 type PanelView =
@@ -282,6 +289,22 @@ export function ChatWidget({
     if (panel.kind !== "closed") setUnreadCount(0);
   }, [panel.kind]);
 
+  /**
+   * The office pressed "Chamar atenção": the chat opens if it was closed,
+   * the window shakes, the phone vibrates and the call's own tone rings,
+   * whatever the "Som de aviso" says about ordinary replies.
+   */
+  const announceNudge = useCallback(() => {
+    setPanel({ kind: "conversation" });
+    playSound(NUDGE_SOUND, CITIZEN_REPLY_VOLUME);
+    vibrate();
+    window.setTimeout(
+      () => shakeElement(document.getElementById(PANEL_ID)),
+      60,
+    );
+    if (document.visibilityState !== "visible") setReplyPending(true);
+  }, []);
+
   const refreshConversation = useCallback(
     async (id: string) => {
       const after = lastMessageAt.current;
@@ -302,7 +325,9 @@ export function ChatWidget({
         (m: MessageView) => !seenIds.current.has(m.id),
       );
       for (const m of fresh) seenIds.current.add(m.id);
-      if (newStaffReplies(fresh, !loadedOnce.current) > 0) {
+      if (loadedOnce.current && fresh.some(isOfficeNudge)) {
+        announceNudge();
+      } else if (newStaffReplies(fresh, !loadedOnce.current) > 0) {
         announceReply();
       }
       loadedOnce.current = true;
@@ -336,7 +361,7 @@ export function ChatWidget({
         setPanel({ kind: "rating" });
       }
     },
-    [announceReply],
+    [announceReply, announceNudge],
   );
 
   useEffect(() => {
@@ -355,6 +380,46 @@ export function ChatWidget({
     }, MESSAGE_POLL_MS);
     return () => clearInterval(interval);
   }, [conversationId, refreshConversation]);
+
+  const [nudgePending, setNudgePending] = useState(false);
+  const [nudgeError, setNudgeError] = useState<string | null>(null);
+
+  /** The citizen calls the office; the server holds it to ten minutes. */
+  async function sendNudge() {
+    if (!conversationId) return;
+    setNudgePending(true);
+    setNudgeError(null);
+    try {
+      const form = new FormData();
+      form.set("intent", "nudge");
+      const response = await fetch(`/api/chat/${conversationId}`, {
+        method: "POST",
+        body: form,
+      });
+      const data = await response.json().catch(() => ({}));
+      if (data.nudgeAvailableAt) {
+        setConversation((current) =>
+          current
+            ? { ...current, nudgeAvailableAt: data.nudgeAvailableAt }
+            : current,
+        );
+      }
+      if (!response.ok) {
+        setNudgeError(
+          response.status === 429
+            ? "Ainda não dá: espere o tempo indicado no botão."
+            : "Não foi possível chamar agora. Tente de novo.",
+        );
+        return;
+      }
+      shakeElement(document.getElementById(PANEL_ID));
+      void refreshConversation(conversationId);
+    } catch {
+      setNudgeError("Não foi possível chamar agora. Tente de novo.");
+    } finally {
+      setNudgePending(false);
+    }
+  }
 
   // Seeing the conversation is reading the reply.
   useEffect(() => {
@@ -505,7 +570,10 @@ export function ChatWidget({
   return (
     <div className="fixed right-4 bottom-4 z-40 flex flex-col items-end gap-3 md:right-8 md:bottom-8">
       {panel.kind !== "closed" && (
-        <div className="flex h-[min(70vh,560px)] w-[calc(100vw-2rem)] max-w-[390px] flex-col overflow-hidden rounded-2xl border border-brand-border bg-brand-card shadow-2xl">
+        <div
+          id={PANEL_ID}
+          className="flex h-[min(70vh,560px)] w-[calc(100vw-2rem)] max-w-[390px] flex-col overflow-hidden rounded-2xl border border-brand-border bg-brand-card shadow-2xl"
+        >
           <div className="flex items-center gap-2.5 bg-brand-primary px-4.5 py-3.5 text-white">
             <span className="flex h-9 w-9 flex-none items-center justify-center rounded-full bg-white/15">
               <Icon name="chat" className="h-4.5 w-4.5" />
@@ -584,6 +652,14 @@ export function ChatWidget({
               onSend={sendMessage}
               onGiveUp={closeConversation}
               onClose={closeConversation}
+              nudge={
+                <NudgeButton
+                  availableAt={conversation?.nudgeAvailableAt}
+                  pending={nudgePending}
+                  error={nudgeError}
+                  onNudge={() => void sendNudge()}
+                />
+              }
             />
           )}
 
@@ -777,6 +853,7 @@ function ConversationView({
   onSend,
   onGiveUp,
   onClose,
+  nudge,
 }: {
   conversation: ConversationView | null;
   messages: MessageView[];
@@ -787,6 +864,8 @@ function ConversationView({
   onSend: (formData: FormData) => void;
   onGiveUp: () => void;
   onClose: () => void;
+  /** The "Chamar atenção" button, waiting and attended alike. */
+  nudge: React.ReactNode;
 }) {
   const { prepare, uploading, error: uploadError } = useAttachmentPrepare();
   const sending = pending || uploading;
@@ -836,6 +915,7 @@ function ConversationView({
         >
           {actionPending ? "Saindo..." : "Desistir da espera"}
         </button>
+        {nudge}
         {error && (
           <p className="text-[12px] font-semibold text-red-700">{error}</p>
         )}
@@ -905,7 +985,8 @@ function ConversationView({
           {uploadError ?? error}
         </p>
       )}
-      <div className="border-t border-brand-border bg-brand-card px-3.5 py-2.5 text-center">
+      <div className="flex flex-wrap items-center justify-center gap-2 border-t border-brand-border bg-brand-card px-3.5 py-2.5 text-center">
+        {nudge}
         <button
           type="button"
           onClick={onClose}
@@ -1033,5 +1114,57 @@ function RatingView({
         {pending ? "Enviando..." : "Enviar avaliação"}
       </button>
     </form>
+  );
+}
+
+/**
+ * "Chamar atenção", the citizen's side: free after ten minutes without an
+ * answer, then every ten minutes. While it waits the button says how long
+ * is left; the server is what actually holds the line (see
+ * core/chat/nudge.ts), this only shows it.
+ */
+function NudgeButton({
+  availableAt,
+  pending,
+  error,
+  onNudge,
+}: {
+  availableAt?: string;
+  pending: boolean;
+  error: string | null;
+  onNudge: () => void;
+}) {
+  const [now, setNow] = useState(() => new Date());
+  // Ticks every 15s, and right away when the server hands a new time (just
+  // after a call): otherwise "em 10 min" would read "em 11 min" for a beat.
+  // biome-ignore lint/correctness/useExhaustiveDependencies: availableAt is the trigger, not a value read inside
+  useEffect(() => {
+    setNow(new Date());
+    const timer = setInterval(() => setNow(new Date()), 15_000);
+    return () => clearInterval(timer);
+  }, [availableAt]);
+  const at = availableAt ? new Date(availableAt) : null;
+  const waiting = at !== null && now < at;
+  return (
+    <span className="flex flex-col items-center gap-1">
+      <button
+        type="button"
+        onClick={onNudge}
+        disabled={pending || waiting || !at}
+        className="btn btn-secondary btn-sm"
+        title="Faz a tela do atendimento tremer e tocar"
+      >
+        {pending
+          ? "Chamando..."
+          : waiting && at
+            ? `Chamar atenção (${nudgeWaitLabel(at, now)})`
+            : "Chamar atenção"}
+      </button>
+      {error && (
+        <span className="text-[11.5px] font-semibold text-red-700">
+          {error}
+        </span>
+      )}
+    </span>
   );
 }

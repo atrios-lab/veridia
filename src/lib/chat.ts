@@ -17,6 +17,14 @@ import {
 import { isStale } from "@/core/chat/inactivity.ts";
 import type { AuthorType } from "@/core/chat/message.ts";
 import {
+  CITIZEN_NUDGE_MESSAGE,
+  canNudge,
+  type NudgeBy,
+  type NudgeState,
+  nudgeAvailableAt,
+  nudgeMessage,
+} from "@/core/chat/nudge.ts";
+import {
   formatProtocolNumber,
   PROTOCOL_PREFIXES,
   type ProtocolPrefix,
@@ -471,19 +479,153 @@ export async function alertSnapshotWith(
     latest.map((row) => [row.conversationId, new Date(row.at).toISOString()]),
   );
 
+  // The citizen's "Chamar atenção" calls, waiting or mine.
+  const watched = [...waiting.map((c) => c.id), ...mine.map((c) => c.id)];
+  const nudges = watched.length
+    ? await database
+        .select({
+          conversationId: chatMessages.conversationId,
+          at: sql<Date>`max(${chatMessages.createdAt})`,
+        })
+        .from(chatMessages)
+        .where(
+          and(
+            eq(chatMessages.tenantSlug, tenantSlug),
+            eq(chatMessages.authorType, "system"),
+            eq(chatMessages.body, CITIZEN_NUDGE_MESSAGE),
+            inArray(chatMessages.conversationId, watched),
+          ),
+        )
+        .groupBy(chatMessages.conversationId)
+    : [];
+  const nudgeById = new Map(
+    nudges.map((row) => [row.conversationId, new Date(row.at).toISOString()]),
+  );
+
   return {
     status: me?.chatStatus ?? "available",
     waiting: waiting.map((c) => ({
       id: c.id,
       citizenName: c.citizenName,
       subject: c.subject,
+      lastNudgeAt: nudgeById.get(c.id) ?? null,
     })),
     mine: mine.map((c) => ({
       id: c.id,
       citizenName: c.citizenName,
       lastCitizenMessageAt: latestById.get(c.id) ?? null,
+      lastNudgeAt: nudgeById.get(c.id) ?? null,
     })),
   };
+}
+
+/**
+ * Where a conversation stands for the citizen's "Chamar atenção": when it
+ * opened, the office's last reply and the citizen's last call.
+ */
+export async function nudgeStateWith(
+  database: Database,
+  tenantSlug: string,
+  conversation: Pick<ChatConversation, "id" | "createdAt">,
+): Promise<NudgeState> {
+  const [row] = await database
+    .select({
+      lastStaff: sql<Date | null>`max(${chatMessages.createdAt}) filter (where ${chatMessages.authorType} = 'staff')`,
+      lastNudge: sql<Date | null>`max(${chatMessages.createdAt}) filter (where ${chatMessages.authorType} = 'system' and ${chatMessages.body} = ${CITIZEN_NUDGE_MESSAGE})`,
+    })
+    .from(chatMessages)
+    .where(
+      and(
+        eq(chatMessages.tenantSlug, tenantSlug),
+        eq(chatMessages.conversationId, conversation.id),
+      ),
+    );
+  return {
+    startedAt: conversation.createdAt,
+    lastStaffMessageAt: row?.lastStaff ? new Date(row.lastStaff) : null,
+    lastNudgeAt: row?.lastNudge ? new Date(row.lastNudge) : null,
+  };
+}
+
+export type NudgeOutcome =
+  | { ok: true; availableAt?: Date }
+  | { ok: false; reason: "closed" | "too-soon"; availableAt?: Date };
+
+/**
+ * "Chamar atenção". The office calls whenever it wants; the citizen only
+ * after ten minutes without an answer, and then every ten minutes (see
+ * core/chat/nudge.ts). Either way the call is a system line both sides
+ * read, and the other side's screen shakes when it sees it.
+ *
+ * The citizen's call counts as the citizen being there: it moves the
+ * inactivity clock, or a citizen waiting on a silent office would be
+ * closed out for "inactivity" while calling for help.
+ */
+export async function nudgeConversationWith(
+  database: Database,
+  tenantSlug: string,
+  conversation: Pick<ChatConversation, "id" | "createdAt" | "status">,
+  by: NudgeBy,
+  now: Date,
+): Promise<NudgeOutcome> {
+  if (conversation.status === "closed") return { ok: false, reason: "closed" };
+
+  if (by === "citizen") {
+    const state = await nudgeStateWith(database, tenantSlug, conversation);
+    if (!canNudge(state, now)) {
+      return {
+        ok: false,
+        reason: "too-soon",
+        availableAt: nudgeAvailableAt(state),
+      };
+    }
+  }
+
+  await database.insert(chatMessages).values({
+    conversationId: conversation.id,
+    tenantSlug,
+    authorType: "system",
+    body: nudgeMessage(by),
+    createdAt: now,
+  });
+
+  if (by === "citizen") {
+    await database
+      .update(chatConversations)
+      .set({ lastActivityAt: now })
+      .where(
+        and(
+          eq(chatConversations.tenantSlug, tenantSlug),
+          eq(chatConversations.id, conversation.id),
+        ),
+      );
+    return {
+      ok: true,
+      availableAt: nudgeAvailableAt({
+        startedAt: conversation.createdAt,
+        lastStaffMessageAt: null,
+        lastNudgeAt: now,
+      }),
+    };
+  }
+  return { ok: true };
+}
+
+/** The production singleton, for callers that do not test against it. */
+export async function nudgeConversation(
+  tenantSlug: string,
+  conversation: Pick<ChatConversation, "id" | "createdAt" | "status">,
+  by: NudgeBy,
+): Promise<NudgeOutcome> {
+  return nudgeConversationWith(db, tenantSlug, conversation, by, new Date());
+}
+
+/** When the citizen may call next, for the widget's button. */
+export async function citizenNudgeAvailableAt(
+  tenantSlug: string,
+  conversation: Pick<ChatConversation, "id" | "createdAt">,
+): Promise<Date> {
+  return nudgeAvailableAt(await nudgeStateWith(db, tenantSlug, conversation));
 }
 
 /** The production singleton, for callers that do not test against it. */

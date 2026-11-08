@@ -5,6 +5,7 @@ import {
   type AlertPrefs,
   REPEAT_OPTIONS,
   SOUNDS,
+  type SoundChoice,
   soundGroups,
 } from "@/core/chat/alerts.ts";
 import { playSound, unlockAudio } from "../../../../_components/chat-sound.ts";
@@ -86,31 +87,25 @@ export function AlertSettings() {
       </p>
 
       <div className="mt-4 grid grid-cols-1 gap-4 md:grid-cols-[auto_1fr_auto]">
-        <div>
-          <label htmlFor="aviso-som" className={LABEL_CLASS}>
-            Som
-          </label>
-          <select
+        <div className="flex flex-col gap-3">
+          <SoundSelect
             id="aviso-som"
+            label="Som da fila e de transferência"
             value={prefs.sound}
-            onChange={(event) => {
-              const sound = event.target.value as AlertPrefs["sound"];
+            onChange={(sound) => {
               update({ sound });
               void test(sound, prefs.volume);
             }}
-            className={SELECT_CLASS}
-          >
-            {soundGroups().map(({ group, ids }) => (
-              <optgroup key={group} label={group}>
-                {ids.map((id) => (
-                  <option key={id} value={id}>
-                    {SOUNDS[id].label}
-                  </option>
-                ))}
-              </optgroup>
-            ))}
-            <option value="none">Sem som</option>
-          </select>
+          />
+          <SoundSelect
+            id="aviso-som-mensagem"
+            label="Som de nova mensagem"
+            value={prefs.messageSound}
+            onChange={(messageSound) => {
+              update({ messageSound });
+              void test(messageSound, prefs.volume);
+            }}
+          />
         </div>
 
         <div>
@@ -124,7 +119,7 @@ export function AlertSettings() {
             max={100}
             step={5}
             value={prefs.volume}
-            disabled={prefs.sound === "none"}
+            disabled={prefs.sound === "none" && prefs.messageSound === "none"}
             onChange={(event) => update({ volume: Number(event.target.value) })}
             onPointerUp={() => void test()}
             onKeyUp={() => void test()}
@@ -136,7 +131,7 @@ export function AlertSettings() {
           <button
             type="button"
             onClick={() => void test()}
-            disabled={prefs.sound === "none"}
+            disabled={prefs.sound === "none" && prefs.messageSound === "none"}
             className="btn btn-admin-secondary btn-md"
           >
             Testar
@@ -236,5 +231,46 @@ export function AlertSettings() {
         )}
       </div>
     </section>
+  );
+}
+
+/**
+ * One tone picker, grouped as the catalogue groups them. Picking plays the
+ * tone at once, so choosing is hearing.
+ */
+function SoundSelect({
+  id,
+  label,
+  value,
+  onChange,
+}: {
+  id: string;
+  label: string;
+  value: SoundChoice;
+  onChange: (sound: SoundChoice) => void;
+}) {
+  return (
+    <div>
+      <label htmlFor={id} className={LABEL_CLASS}>
+        {label}
+      </label>
+      <select
+        id={id}
+        value={value}
+        onChange={(event) => onChange(event.target.value as SoundChoice)}
+        className={SELECT_CLASS}
+      >
+        {soundGroups().map(({ group, ids }) => (
+          <optgroup key={group} label={group}>
+            {ids.map((soundId) => (
+              <option key={soundId} value={soundId}>
+                {SOUNDS[soundId].label}
+              </option>
+            ))}
+          </optgroup>
+        ))}
+        <option value="none">Sem som</option>
+      </select>
+    </div>
   );
 }

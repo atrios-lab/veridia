@@ -8,6 +8,8 @@ import {
   type ChatAlert,
   diffAlerts,
   queueNeedsAttention,
+  type SoundChoice,
+  soundForAlerts,
   waitingLabel,
 } from "@/core/chat/alerts.ts";
 import {
@@ -15,6 +17,7 @@ import {
   playSound,
   unlockAudio,
 } from "../../_components/chat-sound.ts";
+import { shakeElement, vibrate } from "../../_components/shake.ts";
 import { alertSnapshotAction } from "../(dashboard)/atendimento/actions.ts";
 import { useAlertPrefs } from "./chat-alert-prefs.ts";
 import { AdminIcon } from "./icon.tsx";
@@ -32,8 +35,6 @@ const TITLE_BLINK_MS = 1000;
 
 /** The element the dashboard layout gives this id is what shakes. */
 export const CHAT_SHAKE_TARGET_ID = "painel";
-// Written out whole so Tailwind sees the class in source.
-const SHAKE_CLASS = "motion-safe:animate-chat-shake";
 // Three flashes of 0.5s (see chat-flash in globals.css), then gone.
 const BURST_MS = 1600;
 
@@ -60,8 +61,8 @@ export function ChatAlerts() {
   const pathRef = useRef(pathname);
   pathRef.current = pathname;
 
-  const ring = useCallback(() => {
-    const { sound, volume } = prefsRef.current;
+  const ring = useCallback((sound: SoundChoice = prefsRef.current.sound) => {
+    const { volume } = prefsRef.current;
     if (sound === "none" || volume === 0) return;
     if (!playSound(sound, volume)) setLocked(isAudioLocked());
   }, []);
@@ -71,21 +72,12 @@ export function ChatAlerts() {
    * screen. Only for news, never for the repeat ring: a screen that shakes
    * every ten seconds is a screen nobody can work on.
    */
-  const callAttention = useCallback((alert: ChatAlert) => {
-    if (!prefsRef.current.shake) return;
+  const callAttention = useCallback((alert: ChatAlert, force = false) => {
+    if (!force && !prefsRef.current.shake) return;
     setBurst(alert);
     window.setTimeout(() => setBurst(null), BURST_MS);
-    const target = document.getElementById(CHAT_SHAKE_TARGET_ID);
-    if (!target) return;
-    target.classList.remove(SHAKE_CLASS);
-    // Reading layout restarts the animation when two alerts land close.
-    void target.offsetWidth;
-    target.classList.add(SHAKE_CLASS);
-    target.addEventListener(
-      "animationend",
-      () => target.classList.remove(SHAKE_CLASS),
-      { once: true },
-    );
+    shakeElement(document.getElementById(CHAT_SHAKE_TARGET_ID));
+    vibrate();
   }, []);
 
   // The browser holds sound back until a first click or key on the page.
@@ -106,14 +98,15 @@ export function ChatAlerts() {
   const handle = useCallback(
     (next: AlertSnapshot) => {
       // A message in the conversation already open in front of the
-      // attendant is not news: the screen itself shows it.
+      // attendant still rings, the way the citizen hears the office's
+      // replies with the chat open; but the screen itself shows it, so no
+      // card, no shake and no notification for that one.
       const watching = (alert: ChatAlert) =>
         alert.kind !== "new-waiting" &&
         alert.href === pathRef.current &&
         document.visibilityState === "visible";
-      const alerts = diffAlerts(previous.current, next).filter(
-        (alert) => !watching(alert),
-      );
+      const all = diffAlerts(previous.current, next);
+      const alerts = all.filter((alert) => !watching(alert));
       previous.current = next;
       setSnapshot(next);
 
@@ -122,10 +115,13 @@ export function ChatAlerts() {
       setPending((current) =>
         current.filter((alert) => mine.has(alert.conversationId)),
       );
-      if (alerts.length === 0) return;
+      if (all.length === 0) return;
 
-      ring();
-      callAttention(alerts[0]);
+      ring(soundForAlerts(all, prefsRef.current));
+      if (alerts.length === 0) return;
+      // The citizen's "Chamar atenção" always shakes: it is the whole call.
+      const nudge = alerts.find((alert) => alert.kind === "nudge");
+      callAttention(nudge ?? alerts[0], Boolean(nudge));
       if (alerts.some((alert) => alert.kind === "new-waiting")) {
         setQueueDismissed(false);
       }
