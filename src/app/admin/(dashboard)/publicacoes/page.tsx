@@ -12,7 +12,7 @@ import {
   type PublicationState,
   publicationState,
 } from "@/core/publications/state.ts";
-import { formatDate } from "@/core/scheduling/calendar.ts";
+import { formatDate, type OfficeHolidays } from "@/core/scheduling/calendar.ts";
 import {
   listPublications,
   type PublicationRow,
@@ -60,9 +60,10 @@ function exitLabel(
   row: PublicationRow,
   state: PublicationState,
   day: string,
+  holidays: OfficeHolidays,
 ): string {
   if (state === "live" && row.expireAt) {
-    const { termLabel, termEndsOn } = publicationHeadline(row, day);
+    const { termLabel, termEndsOn } = publicationHeadline(row, day, holidays);
     const term = termEndsOn
       ? `${termLabel?.toLowerCase()} até ${formatDate(termEndsOn)}; `
       : "";
@@ -179,7 +180,7 @@ export default async function PublicationsPage({
                 className="flex items-start gap-3.5 border-b border-admin-border px-5 py-4 last:border-b-0"
               >
                 <span className="mt-0.5 flex-none rounded-full bg-admin-warning-bg px-2.5 py-1 text-[10.5px] font-bold text-admin-warning-text">
-                  {publicationHeadline(row, day).label}
+                  {publicationHeadline(row, day, tenant.customHolidays).label}
                 </span>
                 <span className="min-w-0 flex-1">
                   {/* The title opens the publication: text, dates, legal
@@ -191,7 +192,7 @@ export default async function PublicationsPage({
                     {row.title}
                   </Link>
                   <span className="block text-xs text-admin-faint">
-                    {exitLabel(row, state, day)}
+                    {exitLabel(row, state, day, tenant.customHolidays)}
                     {fileLabel(file) && ` · ${fileLabel(file)}`}
                   </span>
                 </span>

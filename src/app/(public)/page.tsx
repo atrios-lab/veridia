@@ -1,6 +1,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import { ATTRIBUTION_SHORT_NAMES } from "@/core/acts/catalog.ts";
+import { counterStatus, counterStatusLabel } from "@/core/chat/hours.ts";
 import { publicationHeadline } from "@/core/publications/notice-types.ts";
 import {
   type PublicationKind,
@@ -66,12 +67,20 @@ export default async function Home() {
     isSectionEnabled(tenant, l.section),
   );
   const canLookUp = isSectionEnabled(tenant, "consulta-protocolo");
+  // At request time: the page is rendered per request (the office comes from
+  // the host), so the card says what is true when the citizen looks.
+  const now = new Date();
+  const counter = counterStatus(tenant, now);
+  const counterLabel = counterStatusLabel(counter, now);
   const lookupHref = SECTION_ROUTES["consulta-protocolo"];
   // Dated by the run on the site today: an edital in its second run is a
   // republication and goes back to the top, as a new publication would.
   const day = today();
   const publications = (await livePublications(tenant.slug))
-    .map((row) => ({ row, headline: publicationHeadline(row, day) }))
+    .map((row) => ({
+      row,
+      headline: publicationHeadline(row, day, tenant.customHolidays),
+    }))
     .sort((a, b) =>
       (b.headline.date ?? "").localeCompare(a.headline.date ?? ""),
     )
@@ -177,17 +186,51 @@ export default async function Home() {
             </div>
           </div>
 
-          <div className="mt-6 hidden items-center gap-3 rounded-2xl bg-brand-card/95 px-4.5 py-3.5 shadow-xl md:absolute md:right-10 md:bottom-8 md:mt-0 md:inline-flex">
-            <Icon name="clock" className="h-5 w-5 text-brand-accent" />
-            <div>
-              <div className="text-[13px] font-bold text-brand-primary">
+          {/* "Posso ir agora?" is the question this card answers, on a
+              phone as much as on a desktop: in the flow under the protocol
+              search on a phone (the search stays in the first screen), and
+              floating over the photo from md up. The status is the one the
+              contact page shows, worded in core/chat/hours. */}
+          <Link
+            href="/contato"
+            className="relative mt-5 flex items-center gap-3 rounded-2xl bg-brand-card/95 px-4.5 py-3.5 shadow-xl hover:bg-brand-card md:absolute md:right-10 md:bottom-8 md:mt-0 md:max-w-sm"
+          >
+            {/* The halo is its own layer: animating the card's own
+                box-shadow would replace its drop shadow on every frame. */}
+            <span
+              aria-hidden="true"
+              className="pointer-events-none absolute inset-0 rounded-2xl motion-safe:animate-hours-halo"
+            />
+            <Icon
+              name="clock"
+              className="h-5 w-5 flex-none text-brand-accent"
+            />
+            <div className="min-w-0 flex-1">
+              <div className="flex items-center gap-1.5 text-sm font-bold text-brand-primary">
+                <span
+                  aria-hidden="true"
+                  className={`h-2 w-2 flex-none rounded-full bg-current ${
+                    counter.open ? "text-brand-accent" : "text-brand-faint"
+                  }`}
+                />
+                {counterLabel}
+              </div>
+              <div className="mt-0.5 text-[13px] text-brand-muted">
                 {tenant.openingHours}
               </div>
-              <div className="text-[11px] text-brand-muted">
-                Atendimento presencial e por telefone
-              </div>
+              {!counter.open && (
+                <div className="mt-0.5 text-[13px] text-brand-muted">
+                  {isSectionEnabled(tenant, "pedidos")
+                    ? "Pedidos e agendamentos pelo site funcionam a qualquer hora."
+                    : "Agendamentos pelo site funcionam a qualquer hora."}
+                </div>
+              )}
             </div>
-          </div>
+            <Icon
+              name="arrowRight"
+              className="h-4 w-4 flex-none text-brand-accent"
+            />
+          </Link>
         </div>
       </section>
 

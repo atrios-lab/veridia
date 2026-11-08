@@ -38,12 +38,15 @@ export const cartorioBrejinho: Tenant = parseTenant({
   location: { city: "Brejinho", state: "RN" },
   address: "Av. Antônio Alves Pessoa, 1008, Centro, Brejinho - RN, 59219-000",
   // The registries disagree (7h30 to 17h, 8h to 17h, 8h to 12h plus 14h to
-  // 18h); the split schedule is the one two of them share. `counterHours`
-  // only holds start and end, so the sentence carries the break and the
-  // numbers span the day.
+  // 18h); the split schedule is the one two of them share, break included
+  // in `counterHours`.
   // ponytail: confirm the hours with the office.
   openingHours: "Segunda a sexta, das 8h às 12h e das 14h às 18h",
-  counterHours: { startHour: 8, endHour: 18 },
+  counterHours: {
+    startHour: 8,
+    endHour: 18,
+    lunchBreak: { start: "12:00", end: "14:00" },
+  },
   owner: {
     // Named titular on every registry (in office since 06/04/2023 per
     // ecartorios); not yet checked against Justiça Aberta the way the pilot

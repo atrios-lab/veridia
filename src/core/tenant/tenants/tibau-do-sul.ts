@@ -43,7 +43,11 @@ export const cartorioTibauDoSul: Tenant = parseTenant({
   // As the Instagram bio states; registries still show 8h-18h straight.
   // ponytail: confirm with the office.
   openingHours: "Segunda a sexta, das 8h às 12h e das 13h às 17h",
-  counterHours: { startHour: 8, endHour: 17 },
+  counterHours: {
+    startHour: 8,
+    endHour: 17,
+    lunchBreak: { start: "12:00", end: "13:00" },
+  },
   owner: {
     // Titular since installation (05/10/1995) per the CNJ record mirrored by
     // the registries (last CNJ update 15/07/2024); the substitute listed is

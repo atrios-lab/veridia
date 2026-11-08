@@ -123,6 +123,7 @@ export async function submitServiceRequest(
         deadlineDate(
           today(),
           act.legalDeadlineDays ?? tenant.requestDeadlineDays,
+          tenant.customHolidays,
         ),
       ),
       hasExemption: false,
@@ -285,7 +286,9 @@ export async function submitServiceRequest(
       // Born from the act's own legal term, counted from today: a request
       // just filed carries no term of its own yet. Where the law fixes none,
       // the office's default stands in.
-      deadlineLabel: formatDate(deadlineDate(today(), deadlineDays)),
+      deadlineLabel: formatDate(
+        deadlineDate(today(), deadlineDays, tenant.customHolidays),
+      ),
       hasExemption: Boolean(exemption),
       signatureCaveat: signatureCaveatFor(act),
       consultation: Boolean(act.consultation),

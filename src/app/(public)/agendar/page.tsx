@@ -27,7 +27,10 @@ export default async function SchedulingPage({
   const tenant = await requireSection("agendamento");
   const { dia } = await searchParams;
 
-  const config = await getAgendaConfig(tenant.slug);
+  const config = {
+    ...(await getAgendaConfig(tenant.slug)),
+    holidays: tenant.customHolidays,
+  };
   const now = officeNow();
   const days = offeredDays(config, now.date);
 

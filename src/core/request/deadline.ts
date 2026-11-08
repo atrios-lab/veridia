@@ -3,6 +3,7 @@ import {
   addDays,
   type IsoDate,
   isBusinessDay,
+  type OfficeHolidays,
 } from "../scheduling/calendar.ts";
 
 /**
@@ -24,8 +25,9 @@ import {
  * the law does: the office promises no earlier than it must, and the screen
  * never calls a record late while the law still considers it on time.
  *
- * Municipal and state holidays are not known here (see `nationalHolidays`),
- * so a term falling on one reads as a business day.
+ * The days off are the national holidays plus the ones the state's Código de
+ * Normas adds (see `closedDays`), plus the office's own days off when the
+ * caller passes them (`holidays`, from the panel).
  */
 
 // A term never legitimately walks past this; the cap is what keeps a corrupted
@@ -33,12 +35,16 @@ import {
 const MAX_SCAN_DAYS = 3000;
 
 /** The last day of a term of `days` business days, the start day excluded. */
-export function deadlineDate(startedOn: IsoDate, days: number): IsoDate {
+export function deadlineDate(
+  startedOn: IsoDate,
+  days: number,
+  holidays: OfficeHolidays = [],
+): IsoDate {
   let cursor = startedOn;
   let counted = 0;
   for (let step = 0; step < MAX_SCAN_DAYS && counted < days; step++) {
     cursor = addDays(cursor, 1);
-    if (isBusinessDay(cursor)) counted++;
+    if (isBusinessDay(cursor, holidays)) counted++;
   }
   return cursor;
 }
@@ -47,13 +53,17 @@ export function deadlineDate(startedOn: IsoDate, days: number): IsoDate {
  * Business days in `(from, to]`: the start day excluded, the end day counted
  * when it is a business day. Zero when `to` is not after `from`.
  */
-export function businessDaysBetween(from: IsoDate, to: IsoDate): number {
+export function businessDaysBetween(
+  from: IsoDate,
+  to: IsoDate,
+  holidays: OfficeHolidays = [],
+): number {
   if (to <= from) return 0;
   let cursor = from;
   let counted = 0;
   for (let step = 0; step < MAX_SCAN_DAYS && cursor < to; step++) {
     cursor = addDays(cursor, 1);
-    if (isBusinessDay(cursor)) counted++;
+    if (isBusinessDay(cursor, holidays)) counted++;
   }
   return counted;
 }
@@ -63,8 +73,12 @@ export function businessDaysBetween(from: IsoDate, to: IsoDate): number {
  * on the day a request is filed nothing of the term has run yet. Past the
  * term it keeps counting, which is exactly the case that matters.
  */
-export function dayOfDeadline(startedOn: IsoDate, today: IsoDate): number {
-  return businessDaysBetween(startedOn, today);
+export function dayOfDeadline(
+  startedOn: IsoDate,
+  today: IsoDate,
+  holidays: OfficeHolidays = [],
+): number {
+  return businessDaysBetween(startedOn, today, holidays);
 }
 
 /**
@@ -142,6 +156,7 @@ export function resumeDeadline(
   deadline: Deadline,
   today: IsoDate,
   hasLegalTerm: boolean,
+  holidays: OfficeHolidays = [],
 ): Deadline {
   const { pausedOn, ...running } = deadline;
   if (!pausedOn) return running;
@@ -149,7 +164,8 @@ export function resumeDeadline(
   return {
     startedOn: deadlineDate(
       running.startedOn,
-      businessDaysBetween(pausedOn, today),
+      businessDaysBetween(pausedOn, today, holidays),
+      holidays,
     ),
     days: running.days,
   };

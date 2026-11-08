@@ -1,4 +1,4 @@
-import type { IsoDate } from "../scheduling/calendar.ts";
+import type { IsoDate, OfficeHolidays } from "../scheduling/calendar.ts";
 import { noticeSchedule } from "./notice-schedule.ts";
 import { noticeTypeOf } from "./notice-types.ts";
 
@@ -12,8 +12,9 @@ import { noticeTypeOf } from "./notice-types.ts";
 export function defaultExpiry(
   noticeType: string | null | undefined,
   publishAt: IsoDate,
+  holidays: OfficeHolidays = [],
 ): IsoDate | undefined {
   const type = noticeTypeOf(noticeType);
   if (!type) return undefined;
-  return noticeSchedule(type, publishAt).termEndsOn;
+  return noticeSchedule(type, publishAt, holidays).termEndsOn;
 }

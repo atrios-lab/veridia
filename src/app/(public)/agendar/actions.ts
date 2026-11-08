@@ -76,7 +76,10 @@ export async function submitAppointment(
     );
   }
 
-  const config = await getAgendaConfig(tenant.slug);
+  const config = {
+    ...(await getAgendaConfig(tenant.slug)),
+    holidays: tenant.customHolidays,
+  };
   const parsed = appointmentSchema({
     serviceIds: config.services.map((service) => service.id),
     modes: config.modes,

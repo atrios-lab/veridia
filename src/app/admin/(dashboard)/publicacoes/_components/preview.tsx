@@ -3,7 +3,11 @@ import {
   type PublicationKind,
   publicationSectionTitle,
 } from "@/core/publications/publication.ts";
-import { formatDate, type IsoDate } from "@/core/scheduling/calendar.ts";
+import {
+  formatDate,
+  type IsoDate,
+  type OfficeHolidays,
+} from "@/core/scheduling/calendar.ts";
 import type { Theme } from "@/core/tenant/schema.ts";
 import { SERIF } from "@/lib/fonts.ts";
 
@@ -22,6 +26,7 @@ export function PublicationPreview({
   noticeType,
   publishAt,
   today,
+  holidays,
   title,
   body,
 }: {
@@ -32,12 +37,17 @@ export function PublicationPreview({
   noticeType: string | null;
   publishAt: IsoDate | null;
   today: IsoDate;
+  holidays: OfficeHolidays;
   title: string;
   body: string;
 }) {
   // The same headline the home computes, so the preview cannot drift from
   // what the citizen reads.
-  const headline = publicationHeadline({ kind, noticeType, publishAt }, today);
+  const headline = publicationHeadline(
+    { kind, noticeType, publishAt },
+    today,
+    holidays,
+  );
   return (
     <div
       data-theme={theme}

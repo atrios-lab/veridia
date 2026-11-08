@@ -1,7 +1,5 @@
 import Link from "next/link";
-import { isWithinChatHours, nextChatOpening } from "@/core/chat/hours.ts";
-import { longWeekday, toIsoDate } from "@/core/scheduling/calendar.ts";
-import { OFFICE_TIME_ZONE } from "@/core/time/office-time.ts";
+import { counterStatus, counterStatusLabel } from "@/core/chat/hours.ts";
 import { isChatEnabled } from "@/lib/chat.ts";
 import { Icon } from "../_components/icon.tsx";
 import { publicMetadata } from "../_lib/metadata.ts";
@@ -33,16 +31,9 @@ export default async function ContactPage() {
   const chatEnabled = await isChatEnabled(tenant.slug);
 
   const now = new Date();
-  const open = isWithinChatHours(tenant, now);
-  let statusLabel: string;
-  if (open) {
-    statusLabel = `Aberto agora · fecha às ${tenant.counterHours.endHour}h`;
-  } else {
-    const opening = nextChatOpening(tenant, now);
-    const today = toIsoDate(now, OFFICE_TIME_ZONE);
-    const dayLabel = opening.day === today ? "hoje" : longWeekday(opening.day);
-    statusLabel = `Fechado agora · abre ${dayLabel} às ${opening.hour}h`;
-  }
+  const status = counterStatus(tenant, now);
+  const open = status.open;
+  const statusLabel = counterStatusLabel(status, now);
 
   const whatsappUrl = `https://wa.me/55${digits(tenant.contacts.whatsapp)}`;
   const phoneUrl = `tel:+55${digits(tenant.contacts.phone)}`;

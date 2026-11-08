@@ -123,6 +123,18 @@ test("the office's JSON-LD carries what a search engine matches on", () => {
   assert.ok((data.logo as string).startsWith(`${origin}/`));
 });
 
+test("a split day is declared as a morning and an afternoon", () => {
+  const data = organizationJsonLd(cartorioTaipu, "https://exemplo.com");
+  const spans = data.openingHoursSpecification as Record<string, unknown>[];
+  assert.deepEqual(
+    spans.map((s) => [s.opens, s.closes]),
+    [
+      ["08:00", "12:00"],
+      ["14:00", "17:00"],
+    ],
+  );
+});
+
 test("an office without an address or hero image omits them", () => {
   const data = organizationJsonLd(
     { ...cartorioMarinho, address: undefined, heroImage: undefined },

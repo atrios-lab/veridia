@@ -119,7 +119,7 @@ export default async function ServiceRequestQueuePage({
     };
     return {
       row,
-      urgency: deadlineUrgency(open, deadline, todayIso),
+      urgency: deadlineUrgency(open, deadline, todayIso, tenant.customHolidays),
       createdAt: request.createdAt,
     };
   }
@@ -173,6 +173,7 @@ export default async function ServiceRequestQueuePage({
             rows={rows}
             closed={closed}
             today={todayIso}
+            holidays={tenant.customHolidays}
             hasFilters={hasFilters}
           />
           <QueuePagination query={current} total={total} />

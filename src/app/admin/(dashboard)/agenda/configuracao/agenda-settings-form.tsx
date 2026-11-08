@@ -7,6 +7,7 @@ import {
   dayOfMonth,
   isBusinessDay,
   longWeekday,
+  type OfficeHolidays,
   weekday,
 } from "@/core/scheduling/calendar.ts";
 import { AdminIcon } from "../../../_components/icon.tsx";
@@ -61,6 +62,7 @@ export function AgendaSettingsForm({
   takenByDate,
   futureLive,
   today,
+  holidays,
 }: {
   initialGrid: Grid;
   weekdays: Array<{ day: string; label: string }>;
@@ -72,6 +74,9 @@ export function AgendaSettingsForm({
   /** `${weekday}|${time}` -> live future appointments on that grid slot. */
   futureLive: Record<string, number>;
   today: string;
+  /** The office's own days off, so the preview skips them as the public
+   * page does. */
+  holidays: OfficeHolidays;
 }) {
   const [grid, setGrid] = useState<Grid>(initialGrid);
   const [services, setServices] = useState<ServiceDraft[]>(initialServices);
@@ -192,6 +197,7 @@ export function AgendaSettingsForm({
         closedDates={closedDates}
         takenByDate={takenByDate}
         today={today}
+        holidays={holidays}
       />
     </form>
   );
@@ -523,6 +529,7 @@ function Preview({
   closedDates,
   takenByDate,
   today,
+  holidays,
 }: {
   grid: Grid;
   services: ServiceDraft[];
@@ -530,8 +537,9 @@ function Preview({
   closedDates: string[];
   takenByDate: Record<string, string[]>;
   today: string;
+  holidays: OfficeHolidays;
 }) {
-  const days = previewDays(grid, closedDates, today);
+  const days = previewDays(grid, closedDates, today, holidays);
   const [picked, setPicked] = useState(0);
   const selected = days[Math.min(picked, Math.max(days.length - 1, 0))];
   const times = selected ? (grid[String(weekday(selected))] ?? []) : [];
@@ -663,6 +671,7 @@ function previewDays(
   grid: Grid,
   closedDates: string[],
   today: string,
+  holidays: OfficeHolidays,
 ): string[] {
   const days: string[] = [];
   const closed = new Set(closedDates);
@@ -670,7 +679,7 @@ function previewDays(
   for (let step = 0; step < 28 && days.length < 3; step++) {
     const date = cursor.toISOString().slice(0, 10);
     if (
-      isBusinessDay(date) &&
+      isBusinessDay(date, holidays) &&
       !closed.has(date) &&
       (grid[String(weekday(date))] ?? []).length > 0
     ) {

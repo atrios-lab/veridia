@@ -7,7 +7,7 @@ import {
   type Deadline,
   deadlineDate,
 } from "../request/deadline.ts";
-import type { IsoDate } from "../scheduling/calendar.ts";
+import type { IsoDate, OfficeHolidays } from "../scheduling/calendar.ts";
 
 /** How close to the term counts as "close enough to flag": the horizon the
  * LGPD queue's badge, the pedidos queue and the Visão geral's mesa use. */
@@ -35,20 +35,24 @@ export function deadlineUrgency(
   open: boolean,
   deadline: Deadline,
   today: IsoDate,
+  holidays: OfficeHolidays = [],
 ): DeadlineUrgency {
   if (!open) return { kind: "closed" };
   if (deadline.pausedOn) {
     return {
       kind: "paused",
-      waitingDays: businessDaysBetween(deadline.pausedOn, today),
+      waitingDays: businessDaysBetween(deadline.pausedOn, today, holidays),
     };
   }
 
-  const due = deadlineDate(deadline.startedOn, deadline.days);
+  const due = deadlineDate(deadline.startedOn, deadline.days, holidays);
   if (today > due) {
-    return { kind: "overdue", daysLate: businessDaysBetween(due, today) };
+    return {
+      kind: "overdue",
+      daysLate: businessDaysBetween(due, today, holidays),
+    };
   }
-  const daysLeft = businessDaysBetween(today, due);
+  const daysLeft = businessDaysBetween(today, due, holidays);
   return daysLeft <= DUE_SOON_DAYS
     ? { kind: "due-soon", daysLeft }
     : { kind: "running" };

@@ -1,5 +1,6 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
+import { SUPPORTED_STATES } from "../transparency/rubrics.ts";
 import {
   type AgendaConfig,
   DEFAULT_AGENDA_CONFIG,
@@ -13,14 +14,17 @@ import {
 } from "./appointment.ts";
 import {
   addDays,
+  CALENDAR_STATE,
   easterSunday,
   formatFullDate,
   formatLongDate,
+  holidayName,
   isBusinessDay,
   nextBusinessDays,
   shortMonth,
   shortWeekday,
   toIsoDate,
+  upcomingClosedDays,
 } from "./calendar.ts";
 import {
   firstFreeSlot,
@@ -218,4 +222,77 @@ test("a config saved before notaryOnly existed parses with the flag off", () => 
     closedDates: [],
   });
   assert.equal(config.services[0].notaryOnly, false);
+});
+
+test("the RN Código de Normas closes the services beyond the national holidays", () => {
+  // Provimento 156/2016 (CGJ/RN), §6º; Easter 2026 is April 5th.
+  assert.equal(isBusinessDay("2026-02-16"), false); // segunda de Carnaval
+  assert.equal(isBusinessDay("2026-02-17"), false); // terça de Carnaval
+  assert.equal(isBusinessDay("2026-02-18"), false); // quarta de Cinzas
+  assert.equal(isBusinessDay("2026-06-24"), false); // São João
+  assert.equal(isBusinessDay("2026-06-29"), false); // São Pedro
+  assert.equal(isBusinessDay("2026-10-05"), true); // segunda comum
+  assert.equal(isBusinessDay("2026-12-24"), false); // véspera de Natal
+  assert.equal(isBusinessDay("2026-12-31"), false); // véspera de Ano Novo
+  assert.equal(isBusinessDay("2026-11-20"), false); // Consciência Negra
+  assert.equal(isBusinessDay("2026-02-19"), true); // quinta depois das Cinzas
+});
+
+test("the RN state holiday closes the services too", () => {
+  // 03/10, Mártires de Cunhaú e Uruaçu (Lei estadual 8.913/2006); in 2025 it
+  // falls on a Friday.
+  assert.equal(isBusinessDay("2025-10-03"), false);
+});
+
+test("a closed day carries the name the status line shows", () => {
+  assert.equal(holidayName("2026-06-24"), "São João");
+  assert.equal(holidayName("2026-02-18"), "Quarta-feira de Cinzas");
+  assert.equal(holidayName("2026-04-03"), "Sexta-feira da Paixão");
+  assert.equal(holidayName("2026-08-06"), undefined);
+});
+
+test("the calendar has a list for every supported state", () => {
+  // `isBusinessDay` counts by CALENDAR_STATE alone. The day a second state
+  // is supported, it has to start taking the office's state: this fails
+  // first, so that day cannot pass unnoticed.
+  assert.deepEqual([...SUPPORTED_STATES], [CALENDAR_STATE]);
+});
+
+// Ielmo Marinho-like: a patron saint every year and a one-off decree.
+const OWN = [
+  { name: "São Sebastião", date: "2020-01-20", yearly: true },
+  { name: "Ponto facultativo", date: "2026-08-14", yearly: false },
+];
+
+test("an office's yearly holiday closes the same day every year", () => {
+  assert.equal(isBusinessDay("2026-01-20", OWN), false);
+  assert.equal(isBusinessDay("2027-01-20", OWN), false);
+  assert.equal(holidayName("2026-01-20", OWN), "São Sebastião");
+  assert.equal(isBusinessDay("2026-01-20"), true); // without the office's list
+});
+
+test("a one-off holiday closes that date only", () => {
+  assert.equal(isBusinessDay("2026-08-14", OWN), false);
+  assert.equal(holidayName("2027-08-14", OWN), undefined);
+});
+
+test("the office's holidays close the agenda too", () => {
+  const config = {
+    ...DEFAULT_AGENDA_CONFIG,
+    grid: { 5: ["09:00"] }, // sextas
+    holidays: OWN,
+  };
+  // 2026-08-14 is a Friday, the office's ponto facultativo.
+  assert.deepEqual(offeredDays(config, "2026-08-14", 1), ["2026-08-21"]);
+});
+
+test("the panel lists the days off ahead, law and office apart", () => {
+  const days = upcomingClosedDays("2026-06-20", 10, OWN);
+  assert.deepEqual(days, [
+    { date: "2026-06-24", name: "São João", own: false },
+    { date: "2026-06-29", name: "São Pedro", own: false },
+  ]);
+  assert.deepEqual(upcomingClosedDays("2026-08-14", 0, OWN), [
+    { date: "2026-08-14", name: "Ponto facultativo", own: true },
+  ]);
 });

@@ -399,6 +399,7 @@ export async function lookupProtocolDetail(
     const dayOfTerm = dayOfDeadline(
       term.startedOn,
       deadlineClock(term, today()),
+      tenant.customHolidays,
     );
 
     return {
@@ -427,7 +428,11 @@ export async function lookupProtocolDetail(
           : undefined,
       deadline: open
         ? {
-            date: deadlineDate(term.startedOn, term.days),
+            date: deadlineDate(
+              term.startedOn,
+              term.days,
+              tenant.customHolidays,
+            ),
             dayOfTerm,
             days: term.days,
             overdue: dayOfTerm > term.days,
@@ -443,7 +448,7 @@ export async function lookupProtocolDetail(
           }
         : undefined,
       deadlineTerm: {
-        date: deadlineDate(term.startedOn, term.days),
+        date: deadlineDate(term.startedOn, term.days, tenant.customHolidays),
         days: term.days,
       },
       paymentSettled,

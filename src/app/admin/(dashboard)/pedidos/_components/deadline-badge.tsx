@@ -1,6 +1,10 @@
 import { deadlineUrgency } from "@/core/overview/urgency.ts";
 import { type Deadline, deadlineDate } from "@/core/request/deadline.ts";
-import { formatDate, type IsoDate } from "@/core/scheduling/calendar.ts";
+import {
+  formatDate,
+  type IsoDate,
+  type OfficeHolidays,
+} from "@/core/scheduling/calendar.ts";
 
 /**
  * How the term stands, said only when it is worth saying. A request with
@@ -23,19 +27,23 @@ export function DeadlineBadge({
   open,
   deadline,
   today,
+  holidays,
   showRunning = false,
 }: {
   open: boolean;
   deadline: Deadline;
   today: IsoDate;
+  /** The office's own days off (`tenant.customHolidays`): they are not
+   * business days, so they count toward no term. */
+  holidays: OfficeHolidays;
   /** Say "Vence em dd/mm" when there is nothing to flag, instead of nothing. */
   showRunning?: boolean;
 }) {
-  const urgency = deadlineUrgency(open, deadline, today);
+  const urgency = deadlineUrgency(open, deadline, today, holidays);
   if (urgency.kind === "closed") return null;
   if (urgency.kind === "running") {
     if (!showRunning) return null;
-    const due = deadlineDate(deadline.startedOn, deadline.days);
+    const due = deadlineDate(deadline.startedOn, deadline.days, holidays);
     return (
       <span className="text-[12.5px] whitespace-nowrap text-admin-faint">
         Vence em {formatDate(due).slice(0, 5)}

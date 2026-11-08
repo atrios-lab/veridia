@@ -207,3 +207,15 @@ test("resuming a running term only strips a pause it does not have", () => {
     { startedOn: "2026-08-03", days: 10 },
   );
 });
+
+test("a day the RN Código de Normas closes is skipped too", () => {
+  // 2026-06-24 is São João, a Wednesday: a one-day term from Tuesday ends
+  // on Thursday.
+  assert.equal(deadlineDate("2026-06-23", 1), "2026-06-25");
+});
+
+test("the office's own holiday stops the term as well", () => {
+  const own = [{ name: "Emancipação", date: "2026-09-08", yearly: false }];
+  // 07/09 is Independência and 08/09 the office's own: Friday to Wednesday.
+  assert.equal(deadlineDate("2026-09-04", 1, own), "2026-09-09");
+});

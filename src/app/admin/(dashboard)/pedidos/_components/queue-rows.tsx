@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useActionState, useEffect, useState } from "react";
 import type { Deadline } from "@/core/request/deadline.ts";
 import type { ServiceRequestStatus } from "@/core/request/kinds.ts";
-import type { IsoDate } from "@/core/scheduling/calendar.ts";
+import type { IsoDate, OfficeHolidays } from "@/core/scheduling/calendar.ts";
 import { Checkbox } from "../../../_components/checkbox.tsx";
 import { ConfirmAction } from "../../../_components/confirm-action.tsx";
 import { AdminIcon } from "../../../_components/icon.tsx";
@@ -49,12 +49,14 @@ export function QueueRows({
   rows,
   closed,
   today,
+  holidays,
   hasFilters,
 }: {
   rows: readonly QueueRow[];
   /** The Finalizados tab: Situação instead of Prazo, and a quieter row. */
   closed: boolean;
   today: IsoDate;
+  holidays: OfficeHolidays;
   hasFilters: boolean;
 }) {
   const [selected, setSelected] = useState<ReadonlySet<string>>(new Set());
@@ -198,6 +200,7 @@ export function QueueRows({
                     open={row.open}
                     deadline={row.deadline}
                     today={today}
+                    holidays={holidays}
                     showRunning
                   />
                 )}

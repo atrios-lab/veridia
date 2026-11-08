@@ -234,7 +234,9 @@ export async function createManualServiceRequest(
         amountCents !== undefined ? formatCents(amountCents) : undefined,
       // Same as the online filing: the act's legal term counted from today,
       // since a request just filed carries no term of its own.
-      deadlineLabel: formatDate(deadlineDate(today(), deadlineDays)),
+      deadlineLabel: formatDate(
+        deadlineDate(today(), deadlineDays, tenant.customHolidays),
+      ),
       hasExemption: Boolean(exemption),
     };
   } catch (error) {

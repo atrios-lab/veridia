@@ -47,10 +47,11 @@ export function OfficeDeadlineForm({ tenant }: { tenant: Tenant }) {
 
       <p className="mt-3.5 text-xs leading-relaxed text-admin-muted">
         Todo prazo daqui conta em dias úteis, sem contar o dia do protocolo,
-        como manda a Lei 14.382/2022. Feriados municipais não entram na conta.
-        No pedido, dá para zerar ou esticar o prazo caso a caso, na hora de
-        mudar o andamento. O prazo dos pedidos de direitos do titular (LGPD) é
-        de 15 dias corridos por lei e não muda por aqui.
+        como manda a Lei 14.382/2022. Feriados (nacionais, do Código de Normas e
+        os da serventia, cadastrados abaixo) ficam fora da conta. No pedido, dá
+        para zerar ou esticar o prazo caso a caso, na hora de mudar o andamento.
+        O prazo dos pedidos de direitos do titular (LGPD) é de 15 dias corridos
+        por lei e não muda por aqui.
       </p>
 
       <div className="mt-4.5 flex items-center gap-3.5">

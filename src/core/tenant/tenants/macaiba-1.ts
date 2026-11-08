@@ -45,7 +45,11 @@ export const cartorioMacaiba1: Tenant = parseTenant({
   // As published on the site's "Localização" page; aggregators still show
   // older schedules (until 17h or 17h30). ponytail: confirm with the office.
   openingHours: "Segunda a sexta, das 8h às 12h e das 13h30 às 16h",
-  counterHours: { startHour: 8, endHour: 16 },
+  counterHours: {
+    startHour: 8,
+    endHour: 16,
+    lunchBreak: { start: "12:00", end: "13:30" },
+  },
   owner: {
     // Titular desde 23/10/1989 no Justiça Aberta, que hoje marca a serventia
     // como "conversão em diligência"; fica "a confirmar" até a serventia

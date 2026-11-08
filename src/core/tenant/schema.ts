@@ -61,14 +61,94 @@ export const OwnerStatusSchema = z.enum(["provido", "interino", "a confirmar"]);
  * no hours has to leave the office's own alone, and a default reached through
  * `.partial()` would quietly write 8h-14h over them instead.
  */
+const CLOCK_PATTERN = /^([01]\d|2[0-3]):[0-5]\d$/;
+
+/** Minutes since midnight of an "HH:MM" already checked by CLOCK_PATTERN. */
+export function clockToMinutes(clock: string): number {
+  const [hour, minute] = clock.split(":").map(Number);
+  return hour * 60 + minute;
+}
+
+/**
+ * The pause in the middle of the day (lunch, in every office that has one).
+ * "HH:MM" and not whole hours like the opening and closing, because the one
+ * real case that is not on the hour is a return at 13h30. Only the break
+ * takes minutes: no office opens or closes on the half hour.
+ */
+export const LunchBreakSchema = z
+  .object({
+    start: z.string().regex(CLOCK_PATTERN, "Use o formato 12:00."),
+    end: z.string().regex(CLOCK_PATTERN, "Use o formato 13:30."),
+  })
+  .refine((b) => clockToMinutes(b.end) > clockToMinutes(b.start), {
+    message: "O fim do intervalo tem de ser depois do início.",
+  });
+export type LunchBreak = z.infer<typeof LunchBreakSchema>;
+
+/**
+ * Whether a break leaves a morning and an afternoon inside the hours. Strict
+ * on both ends: a break that starts at the opening is a later opening, not a
+ * break, and saying so is clearer than computing an empty morning.
+ */
+export function breakFitsHours(
+  lunchBreak: LunchBreak,
+  hours: { startHour: number; endHour: number },
+): boolean {
+  return (
+    clockToMinutes(lunchBreak.start) > hours.startHour * 60 &&
+    clockToMinutes(lunchBreak.end) < hours.endHour * 60
+  );
+}
+
 export const CounterHoursSchema = z
   .object({
     startHour: z.number().int().min(0).max(23),
     endHour: z.number().int().min(1).max(24),
+    // Optional and nullable on purpose, and the two mean different things
+    // when an override is read (see applyTenantOverrides): absent is a row
+    // saved before breaks existed, null is "no break", said on purpose.
+    lunchBreak: LunchBreakSchema.nullable().optional(),
   })
   .refine((s) => s.endHour > s.startHour, {
     message: "A hora de encerramento tem de ser depois da de abertura.",
+  })
+  .refine((s) => !s.lunchBreak || breakFitsHours(s.lunchBreak, s), {
+    message: "O intervalo tem de ficar dentro do horário de atendimento.",
+    path: ["lunchBreak"],
   });
+export type CounterHours = z.infer<typeof CounterHoursSchema>;
+
+/** A real calendar day, "YYYY-MM-DD": 2026-02-30 is refused. */
+function isRealDate(value: string): boolean {
+  const [year, month, day] = value.split("-").map(Number);
+  const date = new Date(Date.UTC(year, month - 1, day));
+  return (
+    date.getUTCFullYear() === year &&
+    date.getUTCMonth() === month - 1 &&
+    date.getUTCDate() === day
+  );
+}
+
+/**
+ * A day off the office declares in the panel (see `CustomHoliday` in
+ * core/scheduling/calendar.ts): a name the status line shows, the date, and
+ * whether it repeats every year on that day and month.
+ */
+export const CustomHolidaySchema = z.object({
+  name: z
+    .string()
+    .trim()
+    .min(1, "Dê um nome ao feriado.")
+    .max(80, "Use no máximo 80 caracteres."),
+  date: z
+    .string()
+    .regex(/^\d{4}-\d{2}-\d{2}$/, "Informe a data.")
+    .refine(isRealDate, "Informe uma data que exista."),
+  yearly: z.boolean(),
+});
+
+/** Room for every municipal and local day an office could plausibly keep. */
+export const MAX_CUSTOM_HOLIDAYS = 60;
 
 export const TenantSchema = z.object({
   slug: z.string().min(1),
@@ -121,6 +201,13 @@ export const TenantSchema = z.object({
   // saying how long it usually takes, and the office changes it from the
   // panel. The term a given request actually runs on is set on the request.
   requestDeadlineDays: deadlineDaysSchema.default(10),
+  // The office's own days off (municipal holidays, local commemorations),
+  // on top of the national and state ones the calendar already knows. Edited
+  // in the panel; a config file may seed them too.
+  customHolidays: z
+    .array(CustomHolidaySchema)
+    .max(MAX_CUSTOM_HOLIDAYS, "São no máximo 60 feriados próprios.")
+    .default([]),
   theme: ThemeSchema,
   logos: z.object({
     light: z.string().min(1), // logo for light backgrounds

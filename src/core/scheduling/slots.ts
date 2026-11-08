@@ -4,7 +4,13 @@ import {
   type SlotTime,
   timesForWeekday,
 } from "./agenda.ts";
-import { addDays, type IsoDate, isBusinessDay, weekday } from "./calendar.ts";
+import {
+  addDays,
+  type IsoDate,
+  isBusinessDay,
+  type OfficeHolidays,
+  weekday,
+} from "./calendar.ts";
 
 export type { SlotTime };
 
@@ -29,8 +35,16 @@ const SEARCH_HORIZON_DAYS = 70;
 /** Times already booked on a day, as taken from the office's records. */
 export type TakenTimes = ReadonlySet<SlotTime>;
 
+/**
+ * The agenda as the slot rules read it: the office's stored configuration
+ * plus its own days off from the panel (`Tenant.customHolidays`), which live
+ * in the office's settings and not in the agenda's row. Callers that know the
+ * office pass them; without them only national and state days off close.
+ */
+export type OfficeAgenda = AgendaConfig & { holidays?: OfficeHolidays };
+
 /** The times the office declared for the weekday this date falls on. */
-export function gridTimes(config: AgendaConfig, date: IsoDate): SlotTime[] {
+export function gridTimes(config: OfficeAgenda, date: IsoDate): SlotTime[] {
   return timesForWeekday(config, weekday(date));
 }
 
@@ -38,9 +52,9 @@ export function gridTimes(config: AgendaConfig, date: IsoDate): SlotTime[] {
  * Whether the office receives on this date at all: a day it opens, a weekday
  * it declared times for, and not a date it has closed.
  */
-export function isOfferedDay(config: AgendaConfig, date: IsoDate): boolean {
+export function isOfferedDay(config: OfficeAgenda, date: IsoDate): boolean {
   return (
-    isBusinessDay(date) &&
+    isBusinessDay(date, config.holidays) &&
     gridTimes(config, date).length > 0 &&
     !closedDate(config, date)
   );
@@ -52,7 +66,7 @@ export function isOfferedDay(config: AgendaConfig, date: IsoDate): boolean {
  * shows as the "agende pelo telefone" state rather than as a full agenda.
  */
 export function offeredDays(
-  config: AgendaConfig,
+  config: OfficeAgenda,
   from: IsoDate,
   count: number = OFFERED_DAYS,
 ): IsoDate[] {
@@ -89,7 +103,7 @@ function isAhead(date: IsoDate, time: SlotTime, now?: AgendaNow): boolean {
 
 /** What is still bookable on a date: declared, not taken, not already past. */
 export function freeSlots(
-  config: AgendaConfig,
+  config: OfficeAgenda,
   date: IsoDate,
   taken: TakenTimes,
   now?: AgendaNow,
@@ -103,7 +117,7 @@ export function freeSlots(
 /** Whether one specific time may still be booked, the server's own check
  * before writing, not a courtesy repeated from the page. */
 export function isSlotFree(
-  config: AgendaConfig,
+  config: OfficeAgenda,
   date: IsoDate,
   time: SlotTime,
   taken: TakenTimes,
@@ -113,7 +127,7 @@ export function isSlotFree(
 }
 
 export function hasFreeSlot(
-  config: AgendaConfig,
+  config: OfficeAgenda,
   date: IsoDate,
   taken: TakenTimes,
   now?: AgendaNow,
@@ -123,7 +137,7 @@ export function hasFreeSlot(
 
 /** The first time still open on a date, for the "a partir das" line. */
 export function firstFreeSlot(
-  config: AgendaConfig,
+  config: OfficeAgenda,
   date: IsoDate,
   taken: TakenTimes,
   now?: AgendaNow,
@@ -138,7 +152,7 @@ const NO_TAKEN: TakenTimes = new Set<SlotTime>();
  * its way out instead of telling the citizen to try again tomorrow.
  */
 export function nextDayWithSlot(
-  config: AgendaConfig,
+  config: OfficeAgenda,
   days: readonly IsoDate[],
   takenByDay: ReadonlyMap<IsoDate, TakenTimes>,
   after: IsoDate,
