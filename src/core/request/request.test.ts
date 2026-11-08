@@ -1320,3 +1320,25 @@ test("a certidão resumida não pede nem guarda o motivo", () => {
     );
   }
 });
+
+test("a busca do RCPN pede o que procurar e o motivo, nos dois canais", () => {
+  const busca = getAct("rcpn-busca");
+  if (!busca) throw new Error("rcpn-busca");
+  for (const [schema, fields] of [
+    [serviceRequestSchema(busca), valid],
+    [publicServiceRequestSchema(busca), validOnline],
+  ] as const) {
+    const base = { ...fields, actVariant: "nascimento" };
+    assert.deepEqual(
+      issuePaths(schema.safeParse({ ...base, description: "" })).sort(),
+      ["description", "purpose"],
+    );
+    assert.ok(
+      schema.safeParse({
+        ...base,
+        description: "Paulo Neto, nascido em 1958. Consta como agricultor?",
+        purpose: "Aposentadoria rural no INSS.",
+      }).success,
+    );
+  }
+});
