@@ -157,9 +157,25 @@ function RequesterQualificationFields({
             {...register("representedName")}
           />
           <FieldError message={errorFor("representedName")} />
-          <p className="mt-1.5 text-[11px] text-brand-faint">
-            Anexe o mandato (procuração) nos arquivos deste pedido.
-          </p>
+          {/* Cor cheia, não nota de rodapé: sem o mandato o pedido costuma
+              voltar em exigência, e a nota miúda passava despercebida. */}
+          <div
+            role="note"
+            className="mt-2.5 flex items-start gap-2.5 rounded-xl bg-brand-primary px-3.5 py-3 text-white"
+          >
+            <Icon
+              name="alert"
+              className="mt-0.5 h-4.5 w-4.5 shrink-0"
+              strokeWidth={2}
+            />
+            <p className="text-[13px] leading-snug">
+              <strong className="font-bold">
+                Anexe o mandato (procuração).
+              </strong>{" "}
+              Junte o arquivo em "Anexar arquivos", mais abaixo. Sem ele, a
+              serventia pode recusar o pedido ou pedir o documento depois.
+            </p>
+          </div>
         </div>
       )}
 
