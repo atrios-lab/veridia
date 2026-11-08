@@ -32,6 +32,14 @@ export const CONSULTATION_PATH: readonly ServiceRequestStatus[] = [
   "done",
 ];
 
+/** A consulta que a serventia cobra, pela tabela de emolumentos: o
+ * pagamento entra entre a chegada e a resposta. */
+export const PAID_CONSULTATION_PATH: readonly ServiceRequestStatus[] = [
+  "new",
+  "awaiting-payment",
+  "done",
+];
+
 /** Outline colour for a "mudar para" pill, matching what each destination
  * means: neutral for forward progress, red for a refusal, grey for a stop.
  * The first suggestion is the next step and gets the filled pill instead. */
@@ -264,7 +272,11 @@ export function StatusSection({
       {happyIndex >= 0 ? (
         <div
           className={`grid gap-2.5 ${
-            happyPath === CONSULTATION_PATH ? "grid-cols-2" : "grid-cols-5"
+            happyPath === CONSULTATION_PATH
+              ? "grid-cols-2"
+              : happyPath === PAID_CONSULTATION_PATH
+                ? "grid-cols-3"
+                : "grid-cols-5"
           }`}
         >
           {happyPath.map((step, i) => (

@@ -20,6 +20,7 @@ import {
   deliveryFormatRows,
   type ExemptionDecisionOutcome,
   isOpenServiceRequestStatus,
+  isPaymentSettled,
   isServiceRequestStatus,
   maskAlternateDocument,
   readActVariant,
@@ -73,6 +74,7 @@ import { RequirementsSection } from "./_components/requirements-section.tsx";
 import { SearchAnswerSection } from "./_components/search-answer-section.tsx";
 import {
   CONSULTATION_PATH,
+  PAID_CONSULTATION_PATH,
   StatusSection,
 } from "./_components/status-section.tsx";
 
@@ -420,12 +422,21 @@ export default async function ServiceRequestDetailPage({
                       )} · ${deadlineProgress(deadline, today())}`
               }
               deadlineDays={deadline.days}
-              happyPath={act?.consultation ? CONSULTATION_PATH : undefined}
+              happyPath={
+                act?.consultation
+                  ? request.amountCents != null
+                    ? PAID_CONSULTATION_PATH
+                    : CONSULTATION_PATH
+                  : undefined
+              }
             />
 
             {act?.consultation && (
               <SearchAnswerSection
                 requestId={request.id}
+                unpaid={
+                  request.amountCents != null && !isPaymentSettled(status)
+                }
                 answer={
                   searchAnswer && {
                     found: searchAnswer.found,
@@ -511,8 +522,9 @@ export default async function ServiceRequestDetailPage({
               hasExemption={Boolean(exemption)}
             />
 
-            {/* A consulta não tem entrega nem valor: a resposta, acima, é o
-                ato inteiro. */}
+            {/* A consulta não tem entrega: a resposta, acima, é o que ela
+                devolve. O valor fica: há serventias que cobram a busca pela
+                tabela de emolumentos, e outras não. */}
             {!act?.consultation && (
               <DeliverySection
                 requestId={request.id}
@@ -520,27 +532,25 @@ export default async function ServiceRequestDetailPage({
               />
             )}
 
-            {!act?.consultation && (
-              <AmountSection
-                requestId={request.id}
-                amountLabel={
-                  request.amountCents != null
-                    ? formatCents(request.amountCents)
-                    : undefined
-                }
-                receipt={
-                  paymentReceipt
-                    ? {
-                        id: paymentReceipt.id,
-                        displayName: paymentReceipt.displayName,
-                        sentAtLabel: formatOfficeDayMonthTime(
-                          paymentReceipt.createdAt,
-                        ),
-                      }
-                    : undefined
-                }
-              />
-            )}
+            <AmountSection
+              requestId={request.id}
+              amountLabel={
+                request.amountCents != null
+                  ? formatCents(request.amountCents)
+                  : undefined
+              }
+              receipt={
+                paymentReceipt
+                  ? {
+                      id: paymentReceipt.id,
+                      displayName: paymentReceipt.displayName,
+                      sentAtLabel: formatOfficeDayMonthTime(
+                        paymentReceipt.createdAt,
+                      ),
+                    }
+                  : undefined
+              }
+            />
           </div>
 
           <div className="flex flex-col gap-4.5">

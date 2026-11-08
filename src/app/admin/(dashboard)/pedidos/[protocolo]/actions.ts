@@ -392,18 +392,6 @@ export async function setAmountAction(
     // first is news to the citizen. Correcting cents on a value already sent
     // would put an e-mail in a mailbox saying nothing new.
     const request = await findById(tenant.slug, requestId);
-    // A consulta não tem valor: o painel nem mostra o campo, e esconder não é
-    // o que impede.
-    const act = request?.actId
-      ? getActForTenant(tenant, request.actId)
-      : undefined;
-    if (act?.consultation) {
-      return {
-        status: "error",
-        message: "A busca não tem valor: responda pela resposta da busca.",
-      };
-    }
-
     await setRequestAmount(tenant.slug, requestId, cents, session.user.id);
     await reconcileDeadlinePause(tenant, requestId, session.user.id, today());
 
