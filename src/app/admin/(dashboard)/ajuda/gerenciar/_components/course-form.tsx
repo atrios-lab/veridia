@@ -16,6 +16,7 @@ import {
   type TutorialFileKind,
   tutorialFilePath,
 } from "@/core/tutorials/video.ts";
+import { TutorialCover } from "../../_components/tutorial-cover.tsx";
 import { type SaveTutorialState, saveCourseAction } from "../actions.ts";
 
 const FIELD_CLASS =
@@ -75,6 +76,9 @@ export function CourseForm({
     {},
   );
   const [localError, setLocalError] = useState<string>();
+  // The picked cover, previewed from an object URL before it is sent; the
+  // URL is revoked when another file replaces it or the form goes away.
+  const [posterPreview, setPosterPreview] = useState<string | null>(null);
   const [uploading, setUploading] = useState(false);
   const formId = useId();
   const limits = directUpload ? MAX_DIRECT_BYTES : MAX_SERVER_ACTION_BYTES;
@@ -82,6 +86,11 @@ export function CourseForm({
   useEffect(() => {
     if (state.status === "saved") onDone();
   }, [state, onDone]);
+
+  useEffect(() => {
+    if (!posterPreview) return;
+    return () => URL.revokeObjectURL(posterPreview);
+  }, [posterPreview]);
 
   function check(file: File, kind: CourseFileKind): string | null {
     const problem = checkTutorialFile(
@@ -210,6 +219,22 @@ export function CourseForm({
           <span className={LABEL_CLASS}>
             Capa (JPEG, PNG ou WebP, opcional)
           </span>
+          <span className="mb-2 block w-[176px] overflow-hidden rounded-[8px] border border-admin-border">
+            {posterPreview ? (
+              // biome-ignore lint/performance/noImgElement: local unpublished file previewed via a blob: object URL, which next/image cannot optimize.
+              <img
+                src={posterPreview}
+                alt="Prévia da capa escolhida"
+                className="block aspect-video w-full object-cover"
+              />
+            ) : (
+              <TutorialCover
+                title={editing?.title || "Título do curso"}
+                posterUrl={editing?.posterUrl ?? null}
+                size="thumb"
+              />
+            )}
+          </span>
           <label className={pickerClass}>
             {names.poster ??
               (editing?.posterUrl ? "Trocar a capa" : "Escolher a capa")}
@@ -219,14 +244,17 @@ export function CourseForm({
               accept="image/jpeg,image/png,image/webp,.jpg,.jpeg,.png,.webp"
               className="sr-only"
               disabled={busy}
-              onChange={(event) =>
-                setNames((n) => ({
-                  ...n,
-                  poster: event.target.files?.[0]?.name,
-                }))
-              }
+              onChange={(event) => {
+                const file = event.target.files?.[0];
+                setNames((n) => ({ ...n, poster: file?.name }));
+                setPosterPreview(file ? URL.createObjectURL(file) : null);
+              }}
             />
           </label>
+          <p className="mt-1.5 text-[11px] text-admin-faint">
+            Aparece no card do curso no Treinamento. Até 2 MB, de preferência
+            1280×720.
+          </p>
           {editing?.posterUrl && !names.poster && (
             <label className="mt-1.5 flex items-center gap-2 text-[12px] text-admin-muted">
               <input type="checkbox" name="removePoster" disabled={busy} />

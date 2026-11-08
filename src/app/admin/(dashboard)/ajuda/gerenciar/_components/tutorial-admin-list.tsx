@@ -315,6 +315,27 @@ export function TutorialAdminList({
               />
             ) : (
               <div className="flex flex-wrap items-center gap-3 rounded-[12px] bg-admin-surface px-4 py-3">
+                {/* The course's own cover, apart from its videos': the way
+                    in to change it is "Editar curso", right of the title. */}
+                <button
+                  type="button"
+                  onClick={() =>
+                    setOpen({ kind: "edit-course", id: course.id })
+                  }
+                  disabled={pending}
+                  aria-label={`Trocar a capa do curso ${course.title}`}
+                  title="Trocar a capa do curso"
+                  className="group relative block w-[120px] flex-none overflow-hidden rounded-[8px] border border-admin-border"
+                >
+                  <TutorialCover
+                    title={course.title}
+                    posterUrl={course.posterUrl}
+                    size="thumb"
+                  />
+                  <span className="absolute inset-x-0 bottom-0 bg-black/60 py-0.5 text-center text-[10px] font-semibold text-white opacity-0 transition-opacity group-hover:opacity-100 group-focus-visible:opacity-100">
+                    {course.posterUrl ? "Trocar capa" : "Pôr capa"}
+                  </span>
+                </button>
                 <div className="min-w-[200px] flex-1">
                   <div className="flex flex-wrap items-center gap-2">
                     <h2 className="font-serif text-[17px] font-semibold text-admin-primary">
@@ -333,6 +354,7 @@ export function TutorialAdminList({
                     /admin/ajuda/{course.slug} · {videos.length}{" "}
                     {videos.length === 1 ? "vídeo" : "vídeos"}
                     {course.materialUrl && " · com apostila"}
+                    {course.posterUrl ? " · com capa" : " · sem capa"}
                   </p>
                 </div>
                 <div className="flex flex-wrap items-center gap-1.5">
@@ -369,7 +391,7 @@ export function TutorialAdminList({
                     disabled={pending}
                     className="btn btn-admin-secondary btn-sm"
                   >
-                    Editar
+                    Editar curso
                   </button>
                   {course.published ? (
                     <button
