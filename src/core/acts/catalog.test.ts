@@ -61,6 +61,7 @@ test("the kinds an act groups are a fixed list, since requests store the ids", (
   assert.deepEqual(declared, {
     "rcpn-certidao": ["nascimento", "casamento", "obito", "outra"],
     "rcpn-certidao-inteiro-teor": ["nascimento", "casamento", "obito", "outra"],
+    "rcpn-busca": ["nascimento", "casamento", "obito", "outro"],
     "notas-escritura": ["escritura", "procuracao"],
     "notas-certidao": ["ato-notarial", "testamento"],
     "ri-certidao-matricula": ["matricula", "inteiro-teor", "onus"],
@@ -137,6 +138,7 @@ test("a summary certificate never asks the citizen what it is for", () => {
   // every inteiro teor (LGPD; in the Registro Civil, Prov. 149 art. 117 § 3º).
   const asking = ACTS.filter((a) => a.requiresPurpose).map((a) => a.id);
   assert.deepEqual(asking.sort(), [
+    "rcpn-busca",
     "rcpn-certidao-inteiro-teor",
     "ri-busca-indicador",
     "ri-certidao-arquivado",
@@ -197,7 +199,7 @@ test("as certidões e a busca pedem só a identificação, e resolvem on-line", 
   // e o que fazia a certidão anunciar só metade da verdade. A exceção é o
   // inteiro teor em papel, que só identifica, mas se retira no balcão.
   const soIdentificacao = ACTS.filter((act) => act.identificationOnly);
-  assert.equal(soIdentificacao.length, 8);
+  assert.equal(soIdentificacao.length, 9);
   assert.deepEqual(
     soIdentificacao
       .filter((act) => act.processingMode !== "online")
@@ -240,7 +242,7 @@ test("a dica do próprio ato vem antes da de só identificação", () => {
   );
   assert.deepEqual(
     comAsDuas.map((a) => a.id),
-    ["ri-certidao-inteiro-teor-papel"],
+    ["rcpn-busca", "ri-certidao-inteiro-teor-papel"],
   );
   assert.equal(
     processingHintFor({ processingMode: "online", identificationOnly: true }),
@@ -528,4 +530,19 @@ test('a regra de canal do site diz "exclusivamente" e cita o Provimento 180', ()
   assert.match(PLATFORM_CHANNEL_RULE, /exclusivamente/);
   assert.match(PLATFORM_CHANNEL_RULE, /Provimento n\. 180/);
   assert.match(PLATFORM_CHANNEL_RULE, /site institucional/);
+});
+
+test("a busca do RCPN é consulta, não certidão, e manda pedir no ato certo", () => {
+  const busca = getAct("rcpn-busca");
+  assert.ok(busca);
+  assert.equal(busca.attribution, "RCPN");
+  assert.equal(busca.processingMode, "online");
+  // Não é certidão: nenhum prazo legal inventado.
+  assert.equal(busca.legalDeadlineDays, undefined);
+  assert.equal(busca.requiresDescription, true);
+  assert.equal(busca.requiresPurpose, true);
+  assert.match(busca.guidance ?? "", /não é a certidão/);
+  assert.match(busca.guidance ?? "", /inteiro teor/);
+  assert.match(busca.descriptionPlaceholder ?? "", /profissão/);
+  assert.match(processingHintFor(busca), /consta aqui.*identificação/);
 });

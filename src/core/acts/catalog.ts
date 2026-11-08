@@ -630,6 +630,45 @@ export const ACTS: Act[] = [
     ],
   },
   {
+    // Uma consulta, não a certidão: quem pede quer saber se o registro está
+    // nesta serventia, e às vezes o que ele diz (a profissão do registrado,
+    // por exemplo), antes de decidir qual certidão pedir. Não é busca em banco
+    // de dados: a serventia procura nos livros e responde pelo protocolo. Se
+    // constar, a resposta manda pedir a certidão no ato certo.
+    id: "rcpn-busca",
+    attribution: "RCPN",
+    name: "Busca de registro (consulta antes da certidão)",
+    variants: {
+      question: "De qual registro?",
+      options: [
+        { id: "nascimento", name: "Busca de registro de nascimento" },
+        { id: "casamento", name: "Busca de registro de casamento" },
+        { id: "obito", name: "Busca de registro de óbito" },
+        { id: "outro", name: "Busca de outro registro" },
+      ],
+    },
+    processingMode: "online",
+    identificationOnly: true,
+    processingHint:
+      "a serventia responde se o registro consta aqui, e além do requerimento assinado só pede a sua identificação",
+    legalBasis:
+      "Lei 6.015 art. 17 (norma geral); cabimento e custas da busca avaliados pela serventia",
+    // O que se pergunta sobre o registro pode ser dado do inteiro teor, como a
+    // profissão: o motivo é pedido, como no inteiro teor (decisão do produto
+    // de 07/11/2026). Sem prazo legal: não é certidão, vale o da serventia.
+    requiresPurpose: true,
+    requiresDescription: true,
+    descriptionPlaceholder:
+      "Ex.: Paulo Neto, nascido em 1958, filho de João e Maria. Quero saber " +
+      "se o registro de nascimento é desta serventia e qual profissão consta " +
+      "nele: agricultor, pedreiro ou outra.",
+    guidance:
+      "A busca não é a certidão. A serventia procura o registro nos livros e " +
+      "responde, pelo protocolo, se ele consta aqui e, quando puder, o que você " +
+      "perguntou. Se constar, faça um novo pedido no ato certo: a certidão " +
+      "comum ou a de inteiro teor.",
+  },
+  {
     id: "rcpn-habilitacao-casamento",
     attribution: "RCPN",
     name: "Habilitação de casamento",
