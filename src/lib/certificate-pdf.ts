@@ -7,6 +7,7 @@ import PDFDocument from "pdfkit";
 import QRCode from "qrcode";
 import type { CertificateFacts } from "@/core/courses/certificate.ts";
 import { formatCpf } from "@/core/request/form.ts";
+import { ATRIOS_BRAND } from "@/core/tenant/palette.ts";
 import {
   ATRIOS_MARK_PATHS,
   ATRIOS_MARK_VIEWBOX,
@@ -113,15 +114,16 @@ export interface CertificateDocument extends CertificateFacts {
 // and a fine grid on top, the brand blues for emphasis, Space Grotesk for
 // titles, IBM Plex for text. The same for every office, so no office's
 // palette. Measures are in PDF points on A4 landscape (841.89 × 595.28).
-const INK = "#0b0f17";
-const GREY = "#4b5563";
-const RULE = "#d6dce8";
-const BLUE = "#2563eb";
-const BLUE_DEEP = "#1d4ed8";
-const BLUE_LIGHT = "#60a5fa";
-const BLUE_GLOW = "#3b82f6";
-const BAND = "#07080b";
-const ALERT = "#b42318";
+const INK = ATRIOS_BRAND.ink;
+const GREY = ATRIOS_BRAND.grey;
+const RULE = ATRIOS_BRAND.rule;
+const BLUE = ATRIOS_BRAND.blue;
+const BLUE_DEEP = ATRIOS_BRAND.blueDeep;
+const BLUE_LIGHT = ATRIOS_BRAND.blueLight;
+const BLUE_GLOW = ATRIOS_BRAND.blueGlow;
+const BAND = ATRIOS_BRAND.band;
+const WHITE = ATRIOS_BRAND.white;
+const ALERT = ATRIOS_BRAND.alert;
 
 const MARGIN_LEFT = 63;
 const MARGIN_RIGHT = 57;
@@ -249,13 +251,13 @@ function drawBand(pdf: Pdf, height: number, logoWidth: number): void {
   );
   glow2.stop(0, BLUE_GLOW, 0.18).stop(1, BLUE_GLOW, 0);
   pdf.rect(0, 0, W, height).fill(glow2);
-  pdf.strokeColor("#ffffff").strokeOpacity(0.035).lineWidth(0.75);
+  pdf.strokeColor(WHITE).strokeOpacity(0.035).lineWidth(0.75);
   for (let gx = 33; gx < W; gx += 33)
     pdf.moveTo(gx, 0).lineTo(gx, height).stroke();
   for (let gy = 33; gy < height; gy += 33)
     pdf.moveTo(0, gy).lineTo(W, gy).stroke();
   pdf.restore();
-  drawMark(pdf, W - 112 - height * 1.12, -30, height * 1.12, "#ffffff", 0.07);
+  drawMark(pdf, W - 112 - height * 1.12, -30, height * 1.12, WHITE, 0.07);
   const rule = pdf.linearGradient(0, 0, W, 0);
   rule.stop(0, BLUE).stop(0.45, BLUE_LIGHT).stop(0.85, BLUE_LIGHT, 0);
   pdf.rect(0, height - 2.25, W, 2.25).fill(rule);
@@ -264,7 +266,7 @@ function drawBand(pdf: Pdf, height: number, logoWidth: number): void {
     W - MARGIN_RIGHT - logoWidth,
     (height - markHeight(logoWidth)) / 2,
     logoWidth,
-    "#ffffff",
+    WHITE,
   );
 }
 
@@ -307,7 +309,7 @@ function formatCnpj(cnpj: string): string {
 function drawChip(pdf: Pdf, text: string, x: number, y: number): number {
   pdf.font("sans-semibold").fontSize(9.4);
   const w = pdf.widthOfString(text) + 9 + 4.5 + 5 + 9;
-  pdf.roundedRect(x, y, w, 21, 10.5).fill("#eaf1ff");
+  pdf.roundedRect(x, y, w, 21, 10.5).fill(ATRIOS_BRAND.blueTint);
   pdf.circle(x + 9 + 2.25, y + 10.5, 2.25).fill(BLUE);
   pdf.fillColor(BLUE_DEEP).text(text, x + 9 + 4.5 + 5, y + 5.6, {
     lineBreak: false,
@@ -345,7 +347,7 @@ async function drawFront(
   pdf
     .font("grotesk")
     .fontSize(37.5)
-    .fillColor("#ffffff")
+    .fillColor(WHITE)
     .text("Certificado de ", MARGIN_LEFT, 70, {
       continued: true,
       characterSpacing: -0.6,
@@ -401,7 +403,7 @@ async function drawFront(
     .moveTo(colX, lineY)
     .lineTo(colX + colW, lineY)
     .lineWidth(0.75)
-    .strokeColor("#9aa3b2")
+    .strokeColor(ATRIOS_BRAND.signatureLine)
     .stroke();
   pdf
     .font("grotesk")
@@ -487,7 +489,7 @@ async function drawFront(
   const qr = await QRCode.toBuffer(doc.validationUrl, {
     margin: 0,
     width: 240,
-    color: { dark: INK, light: "#ffffff" },
+    color: { dark: INK, light: WHITE },
   });
   pdf.image(qr, MARGIN_LEFT, qrY, { width: qrSize, height: qrSize });
   const textX = MARGIN_LEFT + qrSize + 15;
@@ -544,7 +546,7 @@ function drawBack(pdf: Pdf, doc: CertificateDocument): void {
   pdf
     .font("grotesk")
     .fontSize(25.5)
-    .fillColor("#ffffff")
+    .fillColor(WHITE)
     .text("Conteúdo programático", MARGIN_LEFT, 52, {
       characterSpacing: -0.4,
       lineBreak: false,
@@ -554,12 +556,12 @@ function drawBack(pdf: Pdf, doc: CertificateDocument): void {
   const items = syllabus.map((item) => ({
     key: item.label.startsWith("Aula")
       ? String(++lesson).padStart(2, "0")
-      : "—",
+      : "·",
     title: item.title,
     description: plainDescription(item.description),
   }));
   items.push({
-    key: "—",
+    key: "·",
     title: "Avaliação final",
     description:
       doc.passingScore !== undefined
@@ -583,7 +585,7 @@ function drawBack(pdf: Pdf, doc: CertificateDocument): void {
       .moveTo(x, y)
       .lineTo(x + colW, y)
       .lineWidth(0.75)
-      .strokeColor("#e6eaf1")
+      .strokeColor(ATRIOS_BRAND.ruleSoft)
       .stroke();
     pdf
       .font("mono")

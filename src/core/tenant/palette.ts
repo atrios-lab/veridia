@@ -131,3 +131,26 @@ export const EMAIL_PALETTE = {
   text: "#1c211e",
   button: "#1c5638",
 } as const;
+
+/**
+ * The Átrios brand as its own site wears it (site-atrios): near black, the
+ * two blues of its buttons and highlights, and the greys of its light pages.
+ * The course certificate is issued by Átrios to every office alike, so it
+ * wears this and no office's palette. Kept here for the same reason as the
+ * e-mail palette: this module is where a colour may be written down.
+ */
+export const ATRIOS_BRAND = {
+  ink: "#0b0f17",
+  grey: "#4b5563",
+  rule: "#d6dce8",
+  ruleSoft: "#e6eaf1",
+  signatureLine: "#9aa3b2",
+  blue: "#2563eb",
+  blueDeep: "#1d4ed8",
+  blueLight: "#60a5fa",
+  blueGlow: "#3b82f6",
+  blueTint: "#eaf1ff",
+  band: "#07080b",
+  white: "#ffffff",
+  alert: "#b42318",
+} as const;
