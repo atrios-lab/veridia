@@ -119,6 +119,44 @@ test("a signed certificate's digest is the digest of every other byte", async ()
   );
 });
 
+/** How many pages the document says it has. */
+function pageCount(pdf: Buffer): number {
+  const counts = [...pdf.toString("latin1").matchAll(/\/Count\s+(\d+)/g)];
+  assert.ok(counts.length > 0, "a /Count");
+  return Math.max(...counts.map((m) => Number(m[1])));
+}
+
+test("the syllabus becomes a back page; without it, the front alone", async () => {
+  const front = await renderCertificatePdf(DOC, null, { production: false });
+  assert.equal(pageCount(front), 1);
+  const both = await renderCertificatePdf(
+    {
+      ...DOC,
+      syllabus: [
+        {
+          label: "Apresentação",
+          title: "Apresentação do curso",
+          description: "",
+        },
+        {
+          label: "Aula 1",
+          title: "O que é a LGPD",
+          description: "A lei e os **quatro papéis**.\n\nSegundo parágrafo.",
+        },
+        {
+          label: "Encerramento",
+          title: "Conclusão e certificado",
+          description: "",
+        },
+      ],
+      passingScore: 70,
+    },
+    signer,
+    { production: true },
+  );
+  assert.equal(pageCount(both), 2);
+});
+
 test("without a signing certificate: a test document outside production, nothing in it", async () => {
   const draft = await renderCertificatePdf(DOC, null, { production: false });
   assert.equal(draft.subarray(0, 5).toString(), "%PDF-");

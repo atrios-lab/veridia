@@ -1,12 +1,14 @@
 import { certificateCheckUrl } from "@/core/courses/certificate.ts";
+import { courseOrder, itemLabels } from "@/core/tutorials/course.ts";
 import {
   renderCertificatePdf,
   SigningUnavailableError,
   signingCertificateFromEnv,
 } from "@/lib/certificate-pdf.ts";
 import { certificateForUser } from "@/lib/certificates.ts";
-import { getPublishedCourseBySlug } from "@/lib/courses.ts";
+import { getCourse, getPublishedCourseBySlug } from "@/lib/courses.ts";
 import { getSession } from "@/lib/session.ts";
+import { listPublishedTutorials } from "@/lib/tutorials.ts";
 
 const INSTRUCTOR = "Joelison Alves Marinho";
 
@@ -27,7 +29,24 @@ export async function GET(
   const certificate = course
     ? await certificateForUser(session.user.id, course.id)
     : undefined;
-  if (!certificate) return new Response("Não encontrado.", { status: 404 });
+  if (!certificate || !course) {
+    return new Response("Não encontrado.", { status: 404 });
+  }
+
+  // The back page: the course's published videos as the course page lists
+  // them, read now rather than kept with the certificate, and the
+  // assessment's pass mark.
+  const [all, settings] = await Promise.all([
+    listPublishedTutorials(),
+    getCourse(course.id),
+  ]);
+  const videos = courseOrder(all.filter((t) => t.courseId === course.id));
+  const labels = itemLabels(videos);
+  const syllabus = videos.map((video) => ({
+    label: labels.get(video.id) ?? "",
+    title: video.title,
+    description: video.description,
+  }));
 
   try {
     const pdf = await renderCertificatePdf(
@@ -46,6 +65,8 @@ export async function GET(
           process.env.CERTIFICATE_CHECK_BASE_URL || undefined,
         ),
         instructorName: INSTRUCTOR,
+        syllabus,
+        passingScore: settings?.passingScore,
       },
       signingCertificateFromEnv(),
       { production: process.env.VERCEL_ENV === "production" },

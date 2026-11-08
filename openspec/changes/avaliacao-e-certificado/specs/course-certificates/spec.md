@@ -114,8 +114,11 @@ O certificado SHALL ser um PDF com:
 - nome, CPF completo, função e serventia;
 - título do curso, carga horária, aproveitamento e data de conclusão;
 - código de validação e QR com o endereço de validação;
-- o nome "Joelison Alves Marinho" como instrutor, com a imagem da assinatura dele acima do nome;
-- a assinatura digital da Átrios com certificado ICP-Brasil, em formato PAdES, e um bloco visível indicando essa assinatura.
+- o nome "Joelison Alves Marinho" como instrutor, sob a linha de assinatura, com a imagem da assinatura dele pousada na linha e podendo passar por cima do nome, como numa assinatura feita à mão;
+- a assinatura digital da Átrios com certificado ICP-Brasil, em formato PAdES, e um bloco visível indicando essa assinatura;
+- um verso com o conteúdo programático: os vídeos publicados do curso, na ordem da página do curso, com título e descrição, e a avaliação final com a nota mínima.
+
+O certificado SHALL usar a identidade visual do site da Átrios (faixa escura no topo, azuis da marca, Space Grotesk e IBM Plex), a mesma para toda serventia, sem a paleta de nenhuma delas.
 
 O endereço de validação impresso e no QR SHALL ser `https://atrioss.com/certificado/<código>`, no site da Átrios. Fora de produção, uma variável de ambiente SHALL poder trocar esse endereço.
 
@@ -128,6 +131,10 @@ Sem o certificado de assinatura configurado:
 #### Scenario: PDF assinado
 - **WHEN** a pessoa baixa o certificado em produção
 - **THEN** o PDF abre com a assinatura digital da Átrios reconhecida como ICP-Brasil e com o nome de Joelison Alves Marinho como instrutor
+
+#### Scenario: Verso com o conteúdo do curso
+- **WHEN** a pessoa baixa o certificado de um curso com vídeos publicados
+- **THEN** o PDF tem duas páginas, e a segunda lista a Apresentação, as aulas numeradas, o Encerramento e a avaliação final com a nota mínima
 
 #### Scenario: Alteração quebra a assinatura
 - **WHEN** o PDF baixado é alterado e aberto num leitor de PDF
