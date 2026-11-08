@@ -118,7 +118,7 @@ export default async function TrainingCatalogPage({
                     {resume.item.title}
                   </h2>
                   {resume.item.description && (
-                    <p className="text-[13.5px] leading-normal text-admin-muted">
+                    <p className="line-clamp-3 text-[13.5px] leading-normal text-admin-muted">
                       {resume.item.description}
                     </p>
                   )}

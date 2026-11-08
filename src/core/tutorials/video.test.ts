@@ -8,6 +8,7 @@ import {
   MAX_CAPTIONS_BYTES,
   MAX_DIRECT_BYTES,
   MAX_POSTER_BYTES,
+  MAX_TUTORIAL_DESCRIPTION,
   MAX_VIDEO_BYTES_DIRECT,
   tutorialFilePath,
   tutorialFormSchema,
@@ -245,4 +246,24 @@ test("a course address is lower case, digits and hyphens, never 'gerenciar'", ()
       slug,
     );
   }
+});
+
+test("a description takes up to 2000 characters", () => {
+  const base = {
+    title: "Aula",
+    durationSeconds: 60,
+    route: "",
+    trail: false,
+    courseId: "9b0e3f4a-1c2d-4e5f-8a7b-6c5d4e3f2a1b",
+    kind: "lesson",
+  };
+  assert.equal(MAX_TUTORIAL_DESCRIPTION, 2000);
+  assert.equal(
+    schema.safeParse({ ...base, description: "a".repeat(2000) }).success,
+    true,
+  );
+  assert.equal(
+    schema.safeParse({ ...base, description: "a".repeat(2001) }).success,
+    false,
+  );
 });
