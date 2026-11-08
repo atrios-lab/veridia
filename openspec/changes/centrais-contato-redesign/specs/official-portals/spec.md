@@ -27,7 +27,7 @@ Cada cartão de central SHALL exibir o domínio oficial de destino em um chip co
 
 ### Requirement: Faixa de confiança e SERP em destaque
 
-A página SHALL exibir, antes dos grupos: uma faixa de confiança afirmando que todos os links levam a sites oficiais e que o cartório nunca pede senha nem pagamento fora deles; e o SERP destacado em cartão escuro como "Portal único", com seu domínio (`serp.onr.org.br`) visível. Ambos SHALL aparecer para qualquer tenant com a seção habilitada.
+A página SHALL exibir, antes dos grupos: uma faixa de confiança afirmando que todos os links levam a sites oficiais e que o cartório nunca pede senha nem pagamento fora deles; e o SERP destacado em cartão escuro como "Portal único", com seu domínio (`serp.registros.org.br`) visível. Ambos SHALL aparecer para qualquer tenant com a seção habilitada.
 
 #### Scenario: Faixa e destaque presentes
 

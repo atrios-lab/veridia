@@ -41,7 +41,7 @@ Dados nacionais da plataforma (nunca por tenant), como `ATTRIBUTION_NAMES`: cons
 
 | Grupo (rótulo do design) | Atribuições | Cartões | Domínio |
 | --- | --- | --- | --- |
-| — (destaque) | sempre | SERP · Sistema Eletrônico dos Registros Públicos ("Portal único") | `serp.onr.org.br` |
+| — (destaque) | sempre | SERP · Sistema Eletrônico dos Registros Públicos ("Portal único") | `serp.registros.org.br` |
 | Registro Civil | RCPN | CRC Nacional / Meu Registro Civil | `registrocivil.org.br` |
 | Tabelionato de Notas | NOTAS | e-Notariado; CENSEC | `e-notariado.org.br`; `censec.org.br` |
 | Protesto de Títulos | PROTESTO | CENPROT | `site.cenprot.org.br` |
