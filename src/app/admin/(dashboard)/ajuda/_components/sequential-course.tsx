@@ -13,6 +13,7 @@ import {
 } from "@/core/tutorials/course.ts";
 import { formatDuration } from "@/core/tutorials/progress.ts";
 import { AdminIcon } from "../../../_components/icon.tsx";
+import { CourseMaterial } from "./course-material.tsx";
 import { TutorialPlayer } from "./tutorial-player.tsx";
 
 /**
@@ -48,27 +49,30 @@ export function SequentialCourse({
 
   return (
     <div className="grid grid-cols-1 gap-5 lg:grid-cols-[minmax(0,1fr)_340px] lg:items-start">
-      <TutorialPlayer
-        key={current.id}
-        tutorial={current}
-        watched={watchedIds.has(current.id)}
-        screenLabel={null}
-        sequential
-        label={
-          current.kind === "lesson"
-            ? `${currentLabel} de ${lessons}`
-            : currentLabel
-        }
-        next={
-          following
-            ? {
-                href: courseHref(course.slug, following.id),
-                label:
-                  following.kind === "lesson" ? "Próxima aula" : "Continuar",
-              }
-            : null
-        }
-      />
+      <div className="flex min-w-0 flex-col gap-4">
+        <TutorialPlayer
+          key={current.id}
+          tutorial={current}
+          watched={watchedIds.has(current.id)}
+          screenLabel={null}
+          sequential
+          label={
+            current.kind === "lesson"
+              ? `${currentLabel} de ${lessons}`
+              : currentLabel
+          }
+          next={
+            following
+              ? {
+                  href: courseHref(course.slug, following.id),
+                  label:
+                    following.kind === "lesson" ? "Próxima aula" : "Continuar",
+                }
+              : null
+          }
+        />
+        {course.materialUrl && <CourseMaterial courseSlug={course.slug} />}
+      </div>
 
       <nav
         aria-label={`Conteúdo de ${course.title}`}
