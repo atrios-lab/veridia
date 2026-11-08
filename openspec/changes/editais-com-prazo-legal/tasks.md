@@ -46,4 +46,4 @@
 - [x] 7.2 Expurgo ao abrir a lista, com auditoria; rota do painel recusa arquivo vencido (410) e oferece `?baixar=1`
 - [x] 7.3 Aviso no formulário e na mensagem de salvo; lembrete de 7 dias na lista; detalhe com situação do arquivo, "Baixar o arquivo", "Cadastrada por" e histórico
 - [x] 7.4 Migração aplicada e conferida no navegador contra o Homolog; linhas de teste apagadas
-- [ ] 7.5 Aplicar a migração 0031 em produção antes do merge
+- [x] 7.5 Migração 0031 aplicada em produção em 08/11/2026 (nenhuma publicação tinha arquivo, o UPDATE não alterou linhas)
