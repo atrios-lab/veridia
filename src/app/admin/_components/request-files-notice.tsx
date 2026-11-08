@@ -67,6 +67,17 @@ export function RequestFilesNotice({
       </p>
     );
   }
+  // Past the 30 days, not yet deleted: the routes already refuse them, and
+  // the next queue opening removes them from storage.
+  if (files.some((f) => f.status.kind === "expired")) {
+    return (
+      <p className="rounded-[10px] border border-admin-border bg-admin-readonly-bg px-4 py-3 text-[12.5px] leading-relaxed text-admin-muted">
+        Os arquivos deste protocolo passaram dos {REQUEST_FILE_RETENTION_DAYS}{" "}
+        dias após o encerramento e não abrem mais. O registro de cada um (nome,
+        data e tamanho) continua.
+      </p>
+    );
+  }
   return null;
 }
 
