@@ -4,10 +4,22 @@ import { headers } from "next/headers";
 import { appointmentSchema } from "@/core/request/channels.ts";
 import { looksLikeBot } from "@/core/request/form.ts";
 import {
+  AGENDA_NAMES,
+  agendaRules,
+  isAgendaId,
+} from "@/core/scheduling/agenda.ts";
+import {
   generateCancelToken,
   hashCancelToken,
 } from "@/core/scheduling/appointment.ts";
 import { formatShortDate, officeHolidays } from "@/core/scheduling/calendar.ts";
+import {
+  arrivalNotice,
+  CHECKLIST_CAVEAT,
+  checklistFor,
+  offeredAgendas,
+  servicesOfAgenda,
+} from "@/core/scheduling/services.ts";
 import { isSlotFree, offeredDays } from "@/core/scheduling/slots.ts";
 import { isSectionEnabled } from "@/core/tenant/gating.ts";
 import {
@@ -25,6 +37,16 @@ export interface AppointmentSuccess {
   date: string;
   slotTime: string;
   serviceLabel: string;
+  /** "Atendimento com o tabelião", as the receipt names it. */
+  agendaName: string;
+  protocolNumber: string;
+  /** What to bring, base items first, then the service's own. */
+  checklist: string[];
+  /** The service's own guidance, when it has one. */
+  serviceNote?: string;
+  /** "Chegue com 15 minutos de antecedência, às 08:45, ..." */
+  arrival: string;
+  caveat: string;
   /** Where the confirmation went, echoed back so a typo is visible at once. */
   email: string;
   /** Carries the calendar download on the confirmation screen, by POST. */
@@ -65,6 +87,11 @@ export async function submitAppointment(
       date: String(formData.get("date") ?? ""),
       slotTime: String(formData.get("slotTime") ?? ""),
       serviceLabel: "",
+      agendaName: "",
+      protocolNumber: "",
+      checklist: [],
+      arrival: "",
+      caveat: "",
       email: String(formData.get("email") ?? ""),
       cancelToken: "",
     };
@@ -76,13 +103,19 @@ export async function submitAppointment(
     );
   }
 
+  const office = await getAgendaConfig(tenant.slug);
+  const agenda = formData.get("agenda");
+  if (!isAgendaId(agenda) || !offeredAgendas(office).includes(agenda)) {
+    return fail("Escolha a agenda do atendimento e tente de novo.");
+  }
   const config = {
-    ...(await getAgendaConfig(tenant.slug)),
+    ...agendaRules(office, agenda),
     holidays: officeHolidays(tenant),
   };
+  const services = servicesOfAgenda(office, agenda);
   const parsed = appointmentSchema({
-    serviceIds: config.services.map((service) => service.id),
-    modes: config.modes,
+    serviceIds: services.map((service) => service.id),
+    modes: office.modes,
   }).safeParse({
     date: formData.get("date") ?? "",
     slotTime: formData.get("slotTime") ?? "",
@@ -115,8 +148,8 @@ export async function submitAppointment(
     });
   }
 
-  const serviceLabel =
-    config.services.find((service) => service.id === serviceId)?.label ?? "";
+  const service = services.find((item) => item.id === serviceId);
+  const serviceLabel = service?.label ?? "";
 
   try {
     // Checked here as well as on the page: between rendering the times and
@@ -127,6 +160,7 @@ export async function submitAppointment(
       tenant.slug,
       days[0],
       days[days.length - 1],
+      agenda,
     );
     if (
       !isSlotFree(
@@ -143,6 +177,7 @@ export async function submitAppointment(
     const cancelToken = generateCancelToken();
     const appointment = await bookAppointment(tenant.slug, {
       ...parsed.data,
+      agenda,
       serviceLabel,
       cancelTokenHash: hashCancelToken(cancelToken),
     });
@@ -154,6 +189,12 @@ export async function submitAppointment(
       date,
       slotTime,
       serviceLabel,
+      agendaName: AGENDA_NAMES[agenda].name,
+      protocolNumber: appointment.protocolNumber ?? "",
+      checklist: checklistFor(service ?? { bring: [] }),
+      serviceNote: service?.note,
+      arrival: arrivalNotice(slotTime),
+      caveat: CHECKLIST_CAVEAT,
       email: appointment.email,
       cancelToken,
     };

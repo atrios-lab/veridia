@@ -1,0 +1,1 @@
+ALTER TABLE "appointments" ADD COLUMN "agenda" text DEFAULT 'geral' NOT NULL;

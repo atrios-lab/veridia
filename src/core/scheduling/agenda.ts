@@ -48,17 +48,21 @@ const dayTimes = z
 const weekdayKey = z.enum(["1", "2", "3", "4", "5"]);
 
 /**
- * A service the citizen can pick. The id is what the record keeps a pointer
- * to; the label is what everyone reads, and it is copied onto the appointment
- * at booking time so a rename never rewrites history.
+ * A service the office created itself, beyond the catalogue in
+ * `services.ts`. The id is what the record keeps a pointer to; the label is
+ * what everyone reads, and it is copied onto the appointment at booking time
+ * so a rename never rewrites history.
  */
 export const agendaServiceSchema = z.object({
   id: z.string().min(1),
   label: z.string().min(1, "Dê um nome ao serviço."),
-  // "Só com o tabelião": the public form announces it before the citizen
-  // picks a time. Default false, so configs saved before the flag existed
-  // parse unchanged.
+  // From before the two agendas: a service "só com o tabelião" was flagged
+  // here. Kept so old configs parse; the agenda a service is ticked in is
+  // what says it now.
   notaryOnly: z.boolean().default(false),
+  // What the citizen brings for it, one item per entry, shown with the
+  // catalogue's base list. Empty for services saved before the field.
+  bring: z.array(z.string().min(1)).default([]),
 });
 export type AgendaService = z.infer<typeof agendaServiceSchema>;
 
@@ -68,14 +72,104 @@ export const closedDateSchema = z.object({
 });
 export type ClosedDate = z.infer<typeof closedDateSchema>;
 
-export const agendaConfigSchema = z.object({
-  grid: z.partialRecord(weekdayKey, dayTimes).default({}),
+/**
+ * The two agendas of a serventia: the counter's, for everything the clerks
+ * attend, and the notary's own, for the acts the tabelião signs in person.
+ * Fixed, not a list the office grows: what changes from one office to the
+ * next is which days each one receives and which services each one takes.
+ */
+export const AGENDA_IDS = ["geral", "tabeliao"] as const;
+export type AgendaId = (typeof AGENDA_IDS)[number];
+
+export const AGENDA_NAMES: Record<
+  AgendaId,
+  { name: string; short: string; description: string }
+> = {
+  geral: {
+    name: "Atendimento do cartório",
+    short: "Cartório",
+    description:
+      "Registro civil, certidões, firma, autenticação, imóveis, protesto e os demais serviços do balcão.",
+  },
+  tabeliao: {
+    name: "Atendimento com o tabelião",
+    short: "Tabelião",
+    description:
+      "Escrituras, procurações, testamentos, inventários e divórcios, atendidos pelo tabelião da serventia.",
+  },
+};
+
+export function isAgendaId(value: unknown): value is AgendaId {
+  return (AGENDA_IDS as readonly unknown[]).includes(value);
+}
+
+/** The agenda an appointment row names, defaulting to the counter's: every
+ * appointment from before the split was the counter's. */
+export function agendaIdOf(value: unknown): AgendaId {
+  return isAgendaId(value) ? value : "geral";
+}
+
+const gridSchema = z.partialRecord(weekdayKey, dayTimes).default({});
+export type AgendaGrid = z.infer<typeof gridSchema>;
+
+/** One agenda: the weekdays and times it receives, and the services it
+ * takes, as ids from the catalogue or from the office's own services. */
+export const agendaBookSchema = z.object({
+  grid: gridSchema,
+  serviceIds: z.array(z.string().min(1)).default([]),
+});
+export type AgendaBook = z.infer<typeof agendaBookSchema>;
+
+const storedConfigSchema = z.object({
+  agendas: z
+    .object({
+      geral: agendaBookSchema.optional(),
+      tabeliao: agendaBookSchema.optional(),
+    })
+    .optional(),
+  // Before the two agendas, the single grid lived here. Read as the
+  // counter's agenda when `agendas` is absent, and still written next to it
+  // (`serializeAgendaConfig`) so a deploy rolled back reads the same hours.
+  grid: gridSchema,
   services: z.array(agendaServiceSchema).default([]),
   modes: z.array(z.string().min(1)).default([]),
   closedDates: z.array(closedDateSchema).default([]),
 });
 
-export type AgendaConfig = z.infer<typeof agendaConfigSchema>;
+export interface AgendaConfig {
+  agendas: Record<AgendaId, AgendaBook>;
+  /** The office's own services; the catalogue ones are not stored. */
+  services: AgendaService[];
+  modes: string[];
+  /** Single dates the office closed: they close both agendas. */
+  closedDates: ClosedDate[];
+}
+
+/**
+ * The stored shape, normalised. A config saved before the split becomes the
+ * counter's agenda with the same grid and the same services, and an empty
+ * notary agenda, so nothing changes on the site until the office sets the
+ * second one up.
+ */
+export const agendaConfigSchema = storedConfigSchema.transform(
+  (stored): AgendaConfig => ({
+    agendas: {
+      geral: stored.agendas?.geral ?? {
+        grid: stored.grid,
+        serviceIds: stored.services.map((service) => service.id),
+      },
+      tabeliao: stored.agendas?.tabeliao ?? { grid: {}, serviceIds: [] },
+    },
+    services: stored.services,
+    modes: stored.modes,
+    closedDates: stored.closedDates,
+  }),
+);
+
+/** What goes into the row: the config plus the legacy grid, see above. */
+export function serializeAgendaConfig(config: AgendaConfig) {
+  return { ...config, grid: config.agendas.geral.grid };
+}
 
 /**
  * What an office starts with before anyone configures it: no grid, so the
@@ -85,7 +179,10 @@ export type AgendaConfig = z.infer<typeof agendaConfigSchema>;
  * one.
  */
 export const DEFAULT_AGENDA_CONFIG: AgendaConfig = {
-  grid: {},
+  agendas: {
+    geral: { grid: {}, serviceIds: [] },
+    tabeliao: { grid: {}, serviceIds: [] },
+  },
   services: [],
   modes: ["Presencial", "On-line"],
   closedDates: [],
@@ -106,6 +203,19 @@ export function parseAgendaConfig(value: unknown): AgendaConfig {
 }
 
 /**
+ * What the slot rules read for one agenda: its own weekly grid and the
+ * office's closed dates, which close both agendas.
+ */
+export interface AgendaRules {
+  grid: AgendaGrid;
+  closedDates: ClosedDate[];
+}
+
+export function agendaRules(config: AgendaConfig, id: AgendaId): AgendaRules {
+  return { grid: config.agendas[id].grid, closedDates: config.closedDates };
+}
+
+/**
  * How long one appointment lasts, for the calendar file and the e-mail. One
  * fixed size for every service, which is what the office's own Calendly did.
  *
@@ -115,13 +225,14 @@ export function parseAgendaConfig(value: unknown): AgendaConfig {
  */
 export const SLOT_DURATION_MINUTES = 60;
 
-/** "08:30" plus minutes, as "HH:mm". Wraps nothing: an appointment that would
- * end past midnight is not a thing a counter does. */
+/** "08:30" plus (or minus) minutes, as "HH:mm". */
 export function addMinutes(time: SlotTime, minutes: number): SlotTime {
   const [hour, minute] = time.split(":").map(Number);
-  const total = hour * 60 + minute + minutes;
+  // Wrapped into the day both ways, so "15 minutes before 00:05" is a
+  // clock time and not a negative one.
+  const total = (((hour * 60 + minute + minutes) % 1440) + 1440) % 1440;
   const pad = (value: number) => String(value).padStart(2, "0");
-  return `${pad(Math.floor(total / 60) % 24)}:${pad(total % 60)}`;
+  return `${pad(Math.floor(total / 60))}:${pad(total % 60)}`;
 }
 
 /** The end of the appointment that starts here. */
@@ -129,33 +240,54 @@ export function slotEndTime(time: SlotTime): SlotTime {
   return addMinutes(time, SLOT_DURATION_MINUTES);
 }
 
-/** The label of a service by id, for a record that kept only the pointer. */
-export function serviceLabel(
-  config: AgendaConfig,
-  serviceId: string,
-): string | undefined {
-  return config.services.find((service) => service.id === serviceId)?.label;
-}
-
 /** Whether the office declared this single date closed, and why. */
 export function closedDate(
-  config: AgendaConfig,
+  rules: Pick<AgendaRules, "closedDates">,
   date: IsoDate,
 ): ClosedDate | undefined {
-  return config.closedDates.find((closed) => closed.date === date);
+  return rules.closedDates.find((closed) => closed.date === date);
 }
 
 /**
  * The times declared for a weekday, by its `weekday()` number. Days outside
  * Monday to Friday simply have none, which is what the calendar already says.
  */
-export function timesForWeekday(config: AgendaConfig, day: number): SlotTime[] {
+export function timesForWeekday(
+  rules: Pick<AgendaRules, "grid">,
+  day: number,
+): SlotTime[] {
   const key = String(day) as `${AgendaWeekday}`;
-  return config.grid[key] ?? [];
+  return rules.grid[key] ?? [];
 }
 
 /** Whether any weekday carries a time at all. An office that configured
  * nothing must be told apart from one whose days are merely full. */
-export function hasGrid(config: AgendaConfig): boolean {
-  return AGENDA_WEEKDAYS.some((day) => timesForWeekday(config, day).length > 0);
+export function hasGrid(rules: Pick<AgendaRules, "grid">): boolean {
+  return AGENDA_WEEKDAYS.some((day) => timesForWeekday(rules, day).length > 0);
 }
+
+/**
+ * The id of a service the office creates, derived from its label so the
+ * citizen's choice survives a reorder of the list. A rename still produces a
+ * new id, which is exactly why the appointment keeps its own copy of the
+ * label. Never a dot: that is how the catalogue's ids are told apart.
+ *
+ * Two labels that reduce to the same slug ("Certidão" and "Certidao") get a
+ * suffix: an id shared by two services would hand the second one's citizens
+ * the first one's name.
+ */
+export function ownServiceId(label: string, used: ReadonlySet<string>): string {
+  const base =
+    label
+      .normalize("NFD")
+      .replace(/[̀-ͯ]/g, "")
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, "-")
+      .replace(/^-|-$/g, "") || "servico";
+  let id = base;
+  for (let n = 2; used.has(id); n++) id = `${base}-${n}`;
+  return id;
+}
+
+/** An own service's id as the form may send it: slug characters only. */
+export const OWN_SERVICE_ID = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;

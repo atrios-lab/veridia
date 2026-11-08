@@ -1,5 +1,9 @@
 import "server-only";
-import { slotEndTime } from "@/core/scheduling/agenda.ts";
+import {
+  AGENDA_NAMES,
+  agendaIdOf,
+  slotEndTime,
+} from "@/core/scheduling/agenda.ts";
 import {
   buildAgendaDayClosedEmail,
   buildAppointmentBookedEmail,
@@ -7,9 +11,18 @@ import {
   buildAppointmentSelfCancelledEmail,
 } from "@/core/scheduling/emails.ts";
 import { buildCalendarEvent } from "@/core/scheduling/ics.ts";
+import {
+  ARRIVAL_ADVANCE_MINUTES,
+  checklistFor,
+  resolveService,
+} from "@/core/scheduling/services.ts";
 import { brandImageUrl } from "@/core/tenant/brand-image.ts";
 import type { Tenant } from "@/core/tenant/schema.ts";
-import type { Appointment } from "@/lib/appointments.ts";
+import {
+  receiptFileName,
+  renderAppointmentReceipt,
+} from "@/lib/appointment-receipt.ts";
+import { type Appointment, getAgendaConfig } from "@/lib/appointments.ts";
 import { OFFICE_TIME_ZONE } from "@/lib/office-config.ts";
 import { renderEmailCardHtml, renderEmailCardText } from "./render.ts";
 import { sendEmail } from "./send.ts";
@@ -65,7 +78,7 @@ function calendarFile(tenant: Tenant, appointment: Appointment): string {
       startTime: appointment.slotTime,
       endTime: slotEndTime(appointment.slotTime),
       title: `Atendimento · ${tenant.name}`,
-      description: `${appointment.serviceLabel} · ${appointment.mode}`,
+      description: `${appointment.serviceLabel} · ${appointment.mode}. Chegue ${ARRIVAL_ADVANCE_MINUTES} minutos antes e leve o comprovante.`,
       location: tenant.address ?? tenant.name,
       stamp: new Date(),
     },
@@ -83,9 +96,27 @@ export async function sendAppointmentBookedEmail(
   appointment: Appointment,
   cancelToken: string,
 ): Promise<void> {
-  const text = buildAppointmentBookedEmail(facts(tenant, appointment));
   const cancelUrl = `${baseUrl(tenant)}/agendar/cancelar?token=${encodeURIComponent(cancelToken)}`;
   try {
+    const config = await getAgendaConfig(tenant.slug);
+    const service = resolveService(config, appointment.serviceId);
+    const agenda = agendaIdOf(appointment.agenda);
+    const text = buildAppointmentBookedEmail({
+      ...facts(tenant, appointment),
+      agendaName: AGENDA_NAMES[agenda].name,
+      checklist: checklistFor(service ?? { bring: [] }),
+    });
+    // A receipt that fails to render must not cost the citizen the
+    // confirmation itself: it goes out without the PDF, which the
+    // confirmation screen still offers.
+    const receipt = await renderAppointmentReceipt(
+      tenant,
+      appointment,
+      baseUrl(tenant),
+    ).catch((error) => {
+      console.error("appointment.email.receipt", appointment.id, error);
+      return undefined;
+    });
     await sendEmail({
       to: appointment.email,
       fromName: tenant.name,
@@ -98,6 +129,9 @@ export async function sendAppointmentBookedEmail(
           filename: "agendamento.ics",
           content: calendarFile(tenant, appointment),
         },
+        ...(receipt
+          ? [{ filename: receiptFileName(appointment), content: receipt }]
+          : []),
       ],
     });
   } catch (error) {

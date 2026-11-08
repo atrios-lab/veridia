@@ -31,7 +31,10 @@ export interface DayAppointment {
 export type DayRow =
   | { kind: "appointment"; time: string; appointment: DayAppointment }
   | { kind: "free"; time: string }
-  | { kind: "idle"; time: string };
+  | { kind: "idle"; time: string }
+  /** A time of this agenda held by an appointment of the other one, while
+   * the two agendas still share their times. */
+  | { kind: "held"; time: string; heldBy: string };
 
 const inputClass =
   "w-full rounded-lg border border-admin-border bg-admin-card px-3 py-2 text-[13px] text-admin-text outline-none focus:border-admin-accent";
@@ -42,12 +45,14 @@ const inputClass =
  * hand to whoever is on the phone ("Reservar para um cidadão").
  */
 export function DaySlotList({
+  agenda,
   date,
   rows,
   services,
   modes,
   closed,
 }: {
+  agenda: string;
   date: string;
   rows: DayRow[];
   services: Array<{ id: string; label: string }>;
@@ -79,9 +84,11 @@ export function DaySlotList({
         ) : (
           <FreeSlotRow
             key={`slot-${row.time}`}
+            agenda={agenda}
             date={date}
             time={row.time}
             offered={row.kind === "free"}
+            heldBy={row.kind === "held" ? row.heldBy : undefined}
             closed={closed}
             services={services}
             modes={modes}
@@ -139,6 +146,7 @@ function AppointmentRow({ appointment }: { appointment: DayAppointment }) {
         </span>
         {live ? (
           <span className="col-span-2 flex flex-wrap gap-1.5 @2xl:col-span-1 @2xl:justify-end">
+            <ReceiptLink id={appointment.id} />
             <AttendButton id={appointment.id} />
             <NoShowButton id={appointment.id} />
             <button
@@ -148,6 +156,10 @@ function AppointmentRow({ appointment }: { appointment: DayAppointment }) {
             >
               Cancelar
             </button>
+          </span>
+        ) : appointment.status === "attended" ? (
+          <span className="col-span-2 flex @2xl:col-span-1 @2xl:justify-end">
+            <ReceiptLink id={appointment.id} />
           </span>
         ) : (
           <span className="hidden @2xl:block" />
@@ -189,16 +201,20 @@ function AppointmentRow({ appointment }: { appointment: DayAppointment }) {
  * the row says the day is closed instead.
  */
 function FreeSlotRow({
+  agenda,
   date,
   time,
   offered,
+  heldBy,
   closed,
   services,
   modes,
 }: {
+  agenda: string;
   date: string;
   time: string;
   offered: boolean;
+  heldBy?: string;
   closed: boolean;
   services: Array<{ id: string; label: string }>;
   modes: string[];
@@ -212,9 +228,11 @@ function FreeSlotRow({
         <span className="text-admin-muted">
           {offered
             ? "Livre: aparece no site para agendamento"
-            : closed
-              ? "Dia fechado: não aparece no site"
-              : "Ficou livre: o horário já passou"}
+            : heldBy
+              ? `Ocupado por um agendamento da agenda ${heldBy}`
+              : closed
+                ? "Dia fechado: não aparece no site"
+                : "Ficou livre: o horário já passou"}
         </span>
         {offered ? (
           <button
@@ -230,6 +248,7 @@ function FreeSlotRow({
       </div>
       {reserving && offered && (
         <DeskReserveForm
+          agenda={agenda}
           date={date}
           time={time}
           services={services}
@@ -245,12 +264,14 @@ function FreeSlotRow({
  * is optional here; with one, the citizen gets the same confirmation the site
  * sends, cancellation link included. */
 function DeskReserveForm({
+  agenda,
   date,
   time,
   services,
   modes,
   onDone,
 }: {
+  agenda: string;
   date: string;
   time: string;
   services: Array<{ id: string; label: string }>;
@@ -272,6 +293,7 @@ function DeskReserveForm({
 
   return (
     <form action={formAction} className="mt-2.5 rounded-lg bg-admin-card p-3">
+      <input type="hidden" name="agenda" value={agenda} />
       <input type="hidden" name="date" value={date} />
       <input type="hidden" name="slotTime" value={time} />
       <div className="grid gap-2.5 sm:grid-cols-2">
@@ -365,6 +387,21 @@ function DeskReserveForm({
         </button>
       </div>
     </form>
+  );
+}
+
+/** The citizen's receipt, with the list of what to bring, printed at the
+ * counter: for a visit reserved by phone, or a citizen without theirs. */
+function ReceiptLink({ id }: { id: string }) {
+  return (
+    <a
+      href={`/admin/agenda/comprovante/${id}`}
+      target="_blank"
+      rel="noopener"
+      className="rounded-lg border border-admin-border px-2.5 py-1.5 text-[11.5px] font-semibold text-admin-muted hover:bg-admin-input-bg"
+    >
+      Comprovante
+    </a>
   );
 }
 

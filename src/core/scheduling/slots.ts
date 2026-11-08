@@ -1,5 +1,5 @@
 import {
-  type AgendaConfig,
+  type AgendaRules,
   closedDate,
   type SlotTime,
   timesForWeekday,
@@ -36,12 +36,13 @@ const SEARCH_HORIZON_DAYS = 70;
 export type TakenTimes = ReadonlySet<SlotTime>;
 
 /**
- * The agenda as the slot rules read it: the office's stored configuration
- * plus its own days off from the panel (`Tenant.customHolidays` and `disabledHolidays`), which live
- * in the office's settings and not in the agenda's row. Callers that know the
- * office pass them; without them only national and state days off close.
+ * One agenda as the slot rules read it: its weekly grid and the office's
+ * closed dates (`agendaRules`), plus the office's own days off from the panel
+ * (`Tenant.customHolidays` and `disabledHolidays`), which live in the office's
+ * settings and not in the agenda's row. Callers that know the office pass
+ * them; without them only national and state days off close.
  */
-export type OfficeAgenda = AgendaConfig & { holidays?: OfficeHolidays };
+export type OfficeAgenda = AgendaRules & { holidays?: OfficeHolidays };
 
 /** The times the office declared for the weekday this date falls on. */
 export function gridTimes(config: OfficeAgenda, date: IsoDate): SlotTime[] {

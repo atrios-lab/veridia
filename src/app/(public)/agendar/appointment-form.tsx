@@ -7,7 +7,7 @@ import { useForm } from "react-hook-form";
 import { appointmentSchema } from "@/core/request/channels.ts";
 import { formatPhone, maskCpf } from "@/core/request/form.ts";
 import {
-  type AgendaService,
+  type AgendaId,
   type SlotTime,
   slotEndTime,
 } from "@/core/scheduling/agenda.ts";
@@ -19,6 +19,11 @@ import {
   shortMonth,
   shortWeekday,
 } from "@/core/scheduling/calendar.ts";
+import {
+  CHECKLIST_CAVEAT,
+  checklistFor,
+  type OfferedService,
+} from "@/core/scheduling/services.ts";
 import { Icon } from "../_components/icon.tsx";
 import { withMask } from "../_lib/mask.ts";
 import {
@@ -39,6 +44,20 @@ function FieldError({ message }: { message?: string }) {
   );
 }
 
+export interface AgendaChoice {
+  id: AgendaId;
+  name: string;
+  short: string;
+  description: string;
+}
+
+/** The address of a day in an agenda, the one link every chip builds. */
+function dayHref(agenda: AgendaId | undefined, day: IsoDate): string {
+  return agenda
+    ? `/agendar?agenda=${agenda}&dia=${day}`
+    : `/agendar?dia=${day}`;
+}
+
 export interface SchedulingScreenProps {
   openingHours: string;
   phone: string;
@@ -46,10 +65,14 @@ export interface SchedulingScreenProps {
   /** Set when there is nothing to offer, and why: the two cases read very
    * differently to the citizen and must not share a screen. */
   unavailable?: "unconfigured" | "full";
+  /** The agendas the site offers; with two and none chosen, the page asks
+   * which one first. */
+  agendas?: AgendaChoice[];
+  agenda?: AgendaId;
   days?: IsoDate[];
   selected?: IsoDate;
   times?: SlotTime[];
-  services?: AgendaService[];
+  services?: OfferedService[];
   modes?: string[];
   nextFreeDay?: IsoDate;
   nextFreeTime?: SlotTime;
@@ -68,7 +91,8 @@ export function SchedulingScreen(props: SchedulingScreenProps) {
 
   if (state.status === "success") return <ConfirmationScreen result={state} />;
 
-  const { days, selected, times, services, modes } = props;
+  const { days, selected, times, services, modes, agenda } = props;
+  const agendas = props.agendas ?? [];
 
   return (
     <div className="md:grid md:grid-cols-[1fr_320px] md:items-start md:gap-9">
@@ -92,8 +116,13 @@ export function SchedulingScreen(props: SchedulingScreenProps) {
             phone={props.phone}
             whatsapp={props.whatsapp}
           />
+        ) : !agenda ? (
+          <AgendaChooser agendas={agendas} />
         ) : (
           <>
+            {agendas.length > 1 && (
+              <AgendaSwitch agendas={agendas} current={agenda} />
+            )}
             <div className="mt-6">
               <span className="mb-2 block text-[13px] font-bold text-brand-primary">
                 Dia
@@ -107,7 +136,7 @@ export function SchedulingScreen(props: SchedulingScreenProps) {
                   return (
                     <li key={day} className="shrink-0">
                       <Link
-                        href={`/agendar?dia=${day}`}
+                        href={dayHref(agenda, day)}
                         scroll={false}
                         aria-current={chosen ? "date" : undefined}
                         className={`block w-[62px] rounded-xl border py-2 text-center md:w-[78px] ${
@@ -137,6 +166,7 @@ export function SchedulingScreen(props: SchedulingScreenProps) {
 
             {times && times.length === 0 ? (
               <DayIsFull
+                agenda={agenda}
                 selected={selected ?? ""}
                 nextFreeDay={props.nextFreeDay}
                 nextFreeTime={props.nextFreeTime}
@@ -144,6 +174,7 @@ export function SchedulingScreen(props: SchedulingScreenProps) {
               />
             ) : (
               <AppointmentForm
+                agenda={agenda}
                 date={selected ?? ""}
                 dateLabel={formatShortDate(selected ?? "")}
                 times={times ?? []}
@@ -165,14 +196,14 @@ export function SchedulingScreen(props: SchedulingScreenProps) {
           </span>
           <ol className="mt-3 flex flex-col gap-3">
             {[
-              ["Você escolhe", "Um dia e um horário livre, e o serviço."],
+              ["Você escolhe", "A agenda, o dia, o horário livre e o serviço."],
               [
                 "Confirmação na hora",
-                "O horário fica no seu nome e a confirmação chega no seu e-mail.",
+                "O horário fica no seu nome. Você recebe o comprovante em PDF e a lista do que trazer.",
               ],
               [
                 "Você comparece",
-                "No dia e hora marcados, com documento com foto.",
+                "15 minutos antes do horário, com os documentos da lista e o comprovante.",
               ],
             ].map(([title, detail], index) => (
               <li key={title} className="flex gap-2.5">
@@ -263,11 +294,13 @@ function NoTimes({
 }
 
 function DayIsFull({
+  agenda,
   selected,
   nextFreeDay,
   nextFreeTime,
   whatsapp,
 }: {
+  agenda?: AgendaId;
   selected: IsoDate;
   nextFreeDay?: IsoDate;
   nextFreeTime?: SlotTime;
@@ -302,7 +335,7 @@ function DayIsFull({
       <div className="mt-3 flex gap-2">
         {nextFreeDay && (
           <Link
-            href={`/agendar?dia=${nextFreeDay}`}
+            href={dayHref(agenda, nextFreeDay)}
             scroll={false}
             className="btn btn-primary btn-lg flex-1"
           >
@@ -324,6 +357,7 @@ function DayIsFull({
 }
 
 function AppointmentForm({
+  agenda,
   date,
   dateLabel,
   times,
@@ -333,10 +367,11 @@ function AppointmentForm({
   formAction,
   pending,
 }: {
+  agenda: AgendaId;
   date: string;
   dateLabel: string;
   times: SlotTime[];
-  services: AgendaService[];
+  services: OfferedService[];
   modes: string[];
   state: AppointmentState;
   formAction: (payload: FormData) => void;
@@ -369,6 +404,7 @@ function AppointmentForm({
   return (
     <form onSubmit={onSubmit} noValidate className="mt-5">
       <input type="hidden" value={date} {...register("date")} />
+      <input type="hidden" name="agenda" value={agenda} />
 
       {/* Off screen and out of the tab order: nobody using the site can reach
           it, so anything in it came from a script. */}
@@ -439,22 +475,16 @@ function AppointmentForm({
               <option value="" disabled>
                 Escolha o serviço
               </option>
-              {services.map((service) => (
-                <option key={service.id} value={service.id}>
-                  {service.label}
-                  {service.notaryOnly ? " · só com o tabelião" : ""}
-                </option>
+              {groupServices(services).map(({ group, items }) => (
+                <optgroup key={group} label={group}>
+                  {items.map((service) => (
+                    <option key={service.id} value={service.id}>
+                      {service.label}
+                    </option>
+                  ))}
+                </optgroup>
               ))}
             </select>
-            {/* Said before the citizen commits to an hour: an appointment
-                that depends on the notary being in is worth knowing about
-                while there is still time to pick another service or day. */}
-            {services.find((service) => service.id === watch("serviceId"))
-              ?.notaryOnly && (
-              <p className="mt-1.5 text-[12px] leading-relaxed text-brand-muted">
-                Este serviço é atendido só com o tabelião presente.
-              </p>
-            )}
             <FieldError message={errorFor("serviceId")} />
           </div>
 
@@ -483,6 +513,12 @@ function AppointmentForm({
             <FieldError message={errorFor("mode")} />
           </div>
         </div>
+
+        {/* Said while the citizen is still choosing: a service whose papers
+            they do not have is worth knowing about before taking the hour. */}
+        <BringPreview
+          service={services.find((item) => item.id === watch("serviceId"))}
+        />
 
         <div>
           <label
@@ -612,6 +648,129 @@ function AppointmentForm({
   );
 }
 
+/**
+ * The first question when the office keeps two agendas: with whom. Links,
+ * like the day chips, so the choice lives in the address and the back
+ * button undoes it.
+ */
+function AgendaChooser({ agendas }: { agendas: AgendaChoice[] }) {
+  return (
+    <div className="mt-6">
+      <span className="mb-2 block text-[13px] font-bold text-brand-primary">
+        Com quem é o seu atendimento?
+      </span>
+      <ul className="grid gap-3 md:grid-cols-2">
+        {agendas.map((choice) => (
+          <li key={choice.id}>
+            <Link
+              href={`/agendar?agenda=${choice.id}`}
+              className="flex h-full flex-col rounded-2xl border border-brand-border bg-brand-card p-4 hover:border-brand-accent"
+            >
+              <span className="flex items-center gap-2 text-[15px] font-bold text-brand-primary">
+                <Icon
+                  name="calendar"
+                  className="h-4.5 w-4.5 shrink-0 text-brand-accent"
+                  strokeWidth={2}
+                />
+                {choice.name}
+              </span>
+              <span className="mt-1.5 text-[12.5px] leading-relaxed text-brand-muted">
+                {choice.description}
+              </span>
+              <span className="mt-3 text-[12.5px] font-bold text-brand-accent-ink">
+                Ver dias e horários →
+              </span>
+            </Link>
+          </li>
+        ))}
+      </ul>
+    </div>
+  );
+}
+
+/** Which agenda is open, and the other one a tap away. */
+function AgendaSwitch({
+  agendas,
+  current,
+}: {
+  agendas: AgendaChoice[];
+  current: AgendaId;
+}) {
+  return (
+    <nav aria-label="Agenda" className="mt-5 flex flex-wrap gap-2">
+      {agendas.map((choice) => {
+        const chosen = choice.id === current;
+        return (
+          <Link
+            key={choice.id}
+            href={`/agendar?agenda=${choice.id}`}
+            scroll={false}
+            aria-current={chosen ? "page" : undefined}
+            className={`rounded-full border px-4 py-2 text-[13px] font-semibold ${
+              chosen
+                ? "border-brand-primary bg-brand-primary text-white"
+                : "border-brand-border bg-brand-card text-brand-primary hover:border-brand-accent"
+            }`}
+          >
+            {choice.name}
+          </Link>
+        );
+      })}
+    </nav>
+  );
+}
+
+/** The services under their headings, in the order they came. */
+function groupServices(
+  services: OfferedService[],
+): Array<{ group: string; items: OfferedService[] }> {
+  const groups: Array<{ group: string; items: OfferedService[] }> = [];
+  for (const service of services) {
+    const entry = groups.find((item) => item.group === service.group);
+    if (entry) entry.items.push(service);
+    else groups.push({ group: service.group, items: [service] });
+  }
+  return groups;
+}
+
+/** What the chosen service asks the citizen to bring. */
+function BringPreview({ service }: { service?: OfferedService }) {
+  if (!service) return null;
+  return (
+    <div className="rounded-xl border border-brand-border bg-brand-card px-4 py-3">
+      <div className="text-[13px] font-bold text-brand-primary">
+        O que trazer para {service.label.toLowerCase()}
+      </div>
+      <ChecklistItems items={checklistFor(service)} />
+      {service.note && (
+        <p className="mt-2 text-[12px] leading-relaxed text-brand-muted">
+          {service.note}
+        </p>
+      )}
+    </div>
+  );
+}
+
+function ChecklistItems({ items }: { items: string[] }) {
+  return (
+    <ul className="mt-2 flex flex-col gap-1.5">
+      {items.map((item) => (
+        <li
+          key={item}
+          className="flex gap-2 text-[12.5px] leading-relaxed text-brand-text"
+        >
+          <Icon
+            name="check"
+            className="mt-0.5 h-3.5 w-3.5 shrink-0 text-brand-accent"
+            strokeWidth={2.4}
+          />
+          {item}
+        </li>
+      ))}
+    </ul>
+  );
+}
+
 function ConfirmationScreen({ result }: { result: AppointmentSuccess }) {
   const when = `${result.slotTime} às ${slotEndTime(result.slotTime)}`;
 
@@ -634,6 +793,11 @@ function ConfirmationScreen({ result }: { result: AppointmentSuccess }) {
         <p className="mt-1 text-[13px] text-brand-on-dark-body">
           {formatLongDate(result.date)} · {when}
         </p>
+        {result.protocolNumber && (
+          <p className="mt-1 text-[12px] text-brand-on-dark-body">
+            Protocolo {result.protocolNumber}
+          </p>
+        )}
       </div>
 
       <div className="hidden items-center gap-4 md:flex">
@@ -652,76 +816,88 @@ function ConfirmationScreen({ result }: { result: AppointmentSuccess }) {
             {formatLongDate(result.date)} · {when}
             {result.serviceLabel && ` · ${result.serviceLabel}`}
           </p>
+          <p className="text-[12.5px] text-brand-muted">
+            {[
+              result.agendaName,
+              result.protocolNumber && `Protocolo ${result.protocolNumber}`,
+            ]
+              .filter(Boolean)
+              .join(" · ")}
+          </p>
         </div>
       </div>
 
-      <div className="rounded-b-2xl border border-brand-border bg-brand-card p-5 md:mt-5 md:rounded-2xl">
-        <div className="flex gap-2.5">
-          <Icon
-            name="mail"
-            className="mt-0.5 h-4.5 w-4.5 shrink-0 text-brand-accent"
-            strokeWidth={1.9}
-          />
-          <div>
-            <div className="text-[14px] font-bold text-brand-primary">
-              A confirmação foi para {result.email}
-            </div>
-            <p className="mt-1 text-[12.5px] leading-relaxed text-brand-muted">
-              Nela vão o dia, o horário e o link para cancelar, caso você não
-              possa vir. Não achou? Confira a caixa de spam.
-            </p>
-          </div>
-        </div>
-      </div>
-
-      <div className="mt-4 flex flex-col gap-2.5 md:grid md:grid-cols-2">
-        <div className="flex gap-2.5 rounded-2xl border border-brand-border bg-brand-card p-3.5">
-          <Icon
-            name="shield"
-            className="mt-0.5 h-4 w-4 shrink-0 text-brand-accent"
-            strokeWidth={1.9}
-          />
-          <div>
-            <div className="text-[13.5px] font-bold text-brand-primary">
-              Leve um documento com foto
-            </div>
-            <p className="mt-0.5 text-[12px] leading-relaxed text-brand-muted">
-              O agendamento vale para você; se for por outra pessoa, leve
-              procuração.
-            </p>
-          </div>
-        </div>
-        <div className="flex gap-2.5 rounded-2xl border border-brand-border bg-brand-card p-3.5">
+      {/* The one instruction that decides whether the visit works: said
+          first and loudest, before the papers. */}
+      {result.arrival && (
+        <div className="mt-0 flex items-start gap-2.5 border-x border-brand-border bg-brand-accent-soft px-5 py-3.5 md:mt-5 md:rounded-2xl md:border-0">
           <Icon
             name="clock"
-            className="mt-0.5 h-4 w-4 shrink-0 text-brand-accent"
-            strokeWidth={1.9}
+            className="mt-0.5 h-4.5 w-4.5 shrink-0 text-brand-accent-ink"
+            strokeWidth={2}
           />
-          <div>
-            <div className="text-[13.5px] font-bold text-brand-primary">
-              Chegue alguns minutos antes
-            </div>
-            <p className="mt-0.5 text-[12px] leading-relaxed text-brand-muted">
-              O horário é seu, mas a conferência de documentos começa na
-              recepção.
-            </p>
+          <p className="text-[13.5px] font-semibold leading-relaxed text-brand-accent-ink">
+            {result.arrival}
+          </p>
+        </div>
+      )}
+
+      <div className="rounded-b-2xl border border-brand-border bg-brand-card p-5 md:mt-4 md:rounded-2xl">
+        <div className="text-[14px] font-bold text-brand-primary">
+          O que trazer
+        </div>
+        <ChecklistItems items={result.checklist} />
+        {result.serviceNote && (
+          <p className="mt-2.5 text-[12.5px] leading-relaxed text-brand-muted">
+            {result.serviceNote}
+          </p>
+        )}
+        <p className="mt-2.5 text-[12px] leading-relaxed text-brand-muted">
+          {result.caveat || CHECKLIST_CAVEAT}
+        </p>
+      </div>
+
+      <div className="mt-4 flex gap-2.5 rounded-2xl border border-brand-border bg-brand-card p-4">
+        <Icon
+          name="mail"
+          className="mt-0.5 h-4.5 w-4.5 shrink-0 text-brand-accent"
+          strokeWidth={1.9}
+        />
+        <div>
+          <div className="text-[13.5px] font-bold text-brand-primary">
+            A confirmação foi para {result.email}
           </div>
+          <p className="mt-1 text-[12.5px] leading-relaxed text-brand-muted">
+            Com o comprovante em PDF, a lista do que trazer e o link para
+            cancelar, caso você não possa vir. Não achou? Confira a caixa de
+            spam.
+          </p>
         </div>
       </div>
 
-      <div className="mt-4 flex gap-2.5">
+      <div className="mt-4 flex flex-col gap-2.5 md:flex-row">
         {/* POST, not a link: the token would otherwise sit in the address bar,
             in the browser history and in every access log on the way. */}
-        <form action="/agendar/agenda" method="post" className="flex-1">
+        <form action="/agendar/comprovante" method="post" className="flex-1">
           <input type="hidden" name="token" value={result.cancelToken} />
           <button type="submit" className="btn btn-primary btn-lg w-full">
+            Baixar comprovante (PDF)
+          </button>
+        </form>
+        <form action="/agendar/agenda" method="post" className="flex-1">
+          <input type="hidden" name="token" value={result.cancelToken} />
+          <button type="submit" className="btn btn-secondary btn-lg w-full">
             Adicionar à agenda
           </button>
         </form>
-        <Link href="/" className="btn btn-secondary btn-lg shrink-0">
+        <Link href="/" className="btn btn-secondary btn-lg md:shrink-0">
           Voltar ao início
         </Link>
       </div>
+      <p className="mt-2 text-[12px] leading-relaxed text-brand-faint">
+        O comprovante sai com o timbre da serventia e a lista do que trazer.
+        Apresente-o na recepção, impresso ou no celular.
+      </p>
     </div>
   );
 }
