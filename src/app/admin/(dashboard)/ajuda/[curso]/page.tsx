@@ -75,9 +75,11 @@ export default async function CoursePage({
         back={{ href: "/admin/ajuda", label: "Treinamento" }}
         description={course.description || undefined}
         actions={
-          course.materialUrl ? (
+          // A reference course has no player column of its own to sit
+          // under; a sequential one shows the support PDF under the video.
+          course.materialUrl && !course.sequential ? (
             <a
-              href={course.materialUrl}
+              href={`/admin/ajuda/${encodeURIComponent(course.slug)}/apostila`}
               target="_blank"
               rel="noopener"
               className="btn btn-admin-secondary btn-md"
