@@ -2,12 +2,20 @@
 
 import { useActionState, useState } from "react";
 import { defaultExpiry } from "@/core/publications/expiry.ts";
+import { noticeSchedule } from "@/core/publications/notice-schedule.ts";
+import {
+  MARRIAGE_BANNS_NOTICE_TYPE,
+  NOTICE_TYPES,
+  type NoticeTypeKey,
+  noticeTypeOf,
+  noticeTypesOf,
+} from "@/core/publications/notice-types.ts";
 import {
   PUBLICATION_KIND_LABELS,
   PUBLICATION_KINDS,
   type PublicationKind,
 } from "@/core/publications/publication.ts";
-import { toIsoDate } from "@/core/scheduling/calendar.ts";
+import { formatDate, toIsoDate } from "@/core/scheduling/calendar.ts";
 import type { NoticeSector } from "@/core/tenant/gating.ts";
 import { NOTICE_SECTOR_META, noticeSectors } from "@/core/tenant/gating.ts";
 import type { Tenant } from "@/core/tenant/schema.ts";
@@ -66,6 +74,19 @@ export function PublicationForm({
   // Only an edital asks: banns are always proclamas and a notice never has
   // one: the schema writes both regardless of what the form posts.
   const sectorOptions = noticeSectors(tenant);
+  const [noticeType, setNoticeType] = useState<NoticeTypeKey | "">(
+    (noticeTypeOf(editing?.noticeType) &&
+      (editing?.noticeType as NoticeTypeKey)) ||
+      "",
+  );
+  // The rule the dates follow: banns have exactly one, a notice none, an
+  // edital whichever type the operator picked (the schema writes the same).
+  const effectiveType: NoticeTypeKey | undefined =
+    kind === "marriageBanns"
+      ? MARRIAGE_BANNS_NOTICE_TYPE
+      : kind === "publicNotice" && noticeType
+        ? noticeType
+        : undefined;
   const [title, setTitle] = useState(editing?.title ?? "");
   const [body, setBody] = useState(editing?.body ?? "");
   const [publishAt, setPublishAt] = useState(editing?.publishAt ?? "");
@@ -78,29 +99,55 @@ export function PublicationForm({
   // this the operator has no sign that the pick registered.
   const [file, setFile] = useState<string | null>(null);
 
+  // Re-suggests the exit date whenever the rule or the first publication
+  // changes, unless the operator already typed one of their own.
+  function suggestExpiry(type: NoticeTypeKey | undefined, from: string) {
+    if (!from) return;
+    const suggestion = defaultExpiry(type, from);
+    if (suggestion && (!expireAt || expirySuggested)) {
+      setExpireAt(suggestion);
+      setExpirySuggested(true);
+    } else if (!suggestion && expirySuggested) {
+      setExpireAt("");
+      setExpirySuggested(false);
+    }
+  }
+
+  function typeFor(nextKind: PublicationKind, nextType: NoticeTypeKey | "") {
+    if (nextKind === "marriageBanns") return MARRIAGE_BANNS_NOTICE_TYPE;
+    if (nextKind === "publicNotice" && nextType) return nextType;
+    return undefined;
+  }
+
   function handleKindChange(next: PublicationKind) {
     setKind(next);
-    if (publishAt) {
-      const suggestion = defaultExpiry(next, publishAt);
-      if (suggestion) {
-        setExpireAt(suggestion);
-        setExpirySuggested(true);
-      } else if (expirySuggested) {
-        setExpireAt("");
-        setExpirySuggested(false);
-      }
-    }
+    suggestExpiry(typeFor(next, noticeType), publishAt);
+  }
+
+  function handleSectorChange(next: NoticeSector | "") {
+    setSector(next);
+    // A type belongs to one sector: keep it only if it still fits.
+    const keep =
+      next && noticeType && NOTICE_TYPES[noticeType].sector === next
+        ? noticeType
+        : "";
+    setNoticeType(keep);
+    suggestExpiry(typeFor(kind, keep), publishAt);
+  }
+
+  function handleNoticeTypeChange(next: NoticeTypeKey | "") {
+    setNoticeType(next);
+    suggestExpiry(typeFor(kind, next), publishAt);
   }
 
   function handlePublishAtChange(value: string) {
     setPublishAt(value);
-    if (!value) return;
-    const suggestion = defaultExpiry(kind, value);
-    if (suggestion && (!expireAt || expirySuggested)) {
-      setExpireAt(suggestion);
-      setExpirySuggested(true);
-    }
+    suggestExpiry(effectiveType, value);
   }
+
+  const rule = effectiveType ? NOTICE_TYPES[effectiveType] : undefined;
+  const schedule = rule && publishAt ? noticeSchedule(rule, publishAt) : null;
+  const todayIso = clientToday();
 
   return (
     <div className="grid grid-cols-1 items-start gap-5 xl:grid-cols-[1fr_360px]">
@@ -142,7 +189,7 @@ export function PublicationForm({
               name="sector"
               value={sector}
               onChange={(event) =>
-                setSector(event.target.value as NoticeSector | "")
+                handleSectorChange(event.target.value as NoticeSector | "")
               }
               className={fieldErrors.sector ? ERROR_FIELD_CLASS : FIELD_CLASS}
             >
@@ -159,6 +206,65 @@ export function PublicationForm({
               O edital aparece em /editais dentro do setor escolhido. Proclamas
               não perguntam: têm setor próprio.
             </p>
+          </div>
+        )}
+
+        {kind === "publicNotice" && sector && (
+          <div className="mt-3.5">
+            <label className={LABEL_CLASS} htmlFor="noticeType">
+              Tipo de edital
+            </label>
+            <select
+              id="noticeType"
+              name="noticeType"
+              value={noticeType}
+              onChange={(event) =>
+                handleNoticeTypeChange(event.target.value as NoticeTypeKey | "")
+              }
+              className={
+                fieldErrors.noticeType ? ERROR_FIELD_CLASS : FIELD_CLASS
+              }
+            >
+              <option value="">Outro (sem prazo calculado)</option>
+              {noticeTypesOf(sector).map((key) => (
+                <option key={key} value={key}>
+                  {NOTICE_TYPES[key].label}
+                </option>
+              ))}
+            </select>
+            <FieldError message={fieldErrors.noticeType} />
+          </div>
+        )}
+
+        {rule && (
+          <div className="mt-3.5 rounded-[10px] border border-admin-border bg-admin-input-bg px-3.5 py-3 text-[12px] leading-relaxed text-admin-text">
+            <p>
+              <strong className="text-admin-primary">{rule.legalBasis}.</strong>{" "}
+              {rule.summary}
+            </p>
+            {schedule && (
+              <ul className="mt-2 flex flex-col gap-0.5">
+                {schedule.runs.map((run) => (
+                  <li key={run.number}>
+                    {rule.runs > 1 ? `${run.number}ª publicação` : "Publicação"}
+                    : {formatDate(run.date)}
+                    {run.number > 1 && run.date <= todayIso
+                      ? " (já republicada no site)"
+                      : ""}
+                  </li>
+                ))}
+                <li className="font-bold">
+                  {rule.termLabel} até {formatDate(schedule.termEndsOn)}
+                  {rule.counting === "business" ? " (dias úteis)" : ""}
+                </li>
+              </ul>
+            )}
+            {schedule && schedule.termEndsOn < todayIso && (
+              <p className="mt-2 font-semibold text-admin-warning-text">
+                Esse prazo já terminou. Ao publicar com essas datas, a
+                publicação fica registrada direto em Arquivadas.
+              </p>
+            )}
           </div>
         )}
 
@@ -196,13 +302,16 @@ export function PublicationForm({
         <div className="mt-3.5 grid grid-cols-1 gap-3.5 sm:grid-cols-2">
           <div>
             <label className={LABEL_CLASS} htmlFor="publishAt">
-              Entra no site em
+              {rule && rule.runs > 1
+                ? "Data da 1ª publicação"
+                : "Data da publicação"}
             </label>
+            {/* No `min`: an edital published on paper a month ago is entered
+                with that date, and its runs and term are counted from it. */}
             <input
               id="publishAt"
               name="publishAt"
               type="date"
-              min={clientToday()}
               value={publishAt}
               onChange={(event) => handlePublishAtChange(event.target.value)}
               className={
@@ -219,7 +328,7 @@ export function PublicationForm({
               id="expireAt"
               name="expireAt"
               type="date"
-              min={publishAt || clientToday()}
+              min={publishAt || undefined}
               value={expireAt}
               onChange={(event) => {
                 setExpireAt(event.target.value);
@@ -228,20 +337,22 @@ export function PublicationForm({
               className={fieldErrors.expireAt ? ERROR_FIELD_CLASS : FIELD_CLASS}
             />
             <FieldError message={fieldErrors.expireAt} />
-            {expirySuggested && (
+            {expirySuggested && rule && (
               <p className="mt-1.5 text-[11px] text-admin-faint">
-                Preenchido: 15 dias (prazo do edital)
+                Preenchido: fim do prazo legal, depois de todas as publicações
               </p>
             )}
           </div>
         </div>
         <p className="mt-2 text-[11.5px] text-admin-muted">
-          Para proclamas, a saída é preenchida com 15 dias (prazo do edital).
-          Você pode ajustar.
+          A data da publicação pode ser passada, para registrar um edital já
+          publicado: o site o mostra na etapa em que estiver hoje e republica
+          sozinho quando a lei pede uma nova publicação. A saída é preenchida
+          com o fim do prazo legal; você pode ajustar.
         </p>
 
         <div className="mt-3.5">
-          <span className={LABEL_CLASS}>Documento do edital (opcional)</span>
+          <span className={LABEL_CLASS}>Documento ou imagem (opcional)</span>
           {editing?.attachmentPath && !file && (
             <p className="mb-1.5 text-[11.5px] text-admin-muted">
               Já anexado. Escolher outro substitui o atual.
@@ -253,7 +364,7 @@ export function PublicationForm({
             {file ??
               (editing?.attachmentPath
                 ? "Trocar o documento"
-                : "Anexar o documento (PDF ou imagem)")}
+                : "Anexar documento (PDF) ou imagem")}
             <input
               type="file"
               name="arquivo"
@@ -266,8 +377,8 @@ export function PublicationForm({
             />
           </label>
           <p className="mt-1.5 text-[11px] text-admin-faint">
-            O texto acima continua sendo o que o cidadão lê na página. O arquivo
-            é o documento assinado, oferecido para download ao lado dele.
+            Aparece junto da publicação na página inicial e em /editais: a
+            imagem é mostrada no próprio cartão, o PDF abre em nova aba.
           </p>
         </div>
 
@@ -316,13 +427,15 @@ export function PublicationForm({
           sealLight={tenant.logos.seal.light}
           officeName={tenant.name}
           kind={kind}
-          sector={kind === "publicNotice" ? sector : undefined}
+          noticeType={effectiveType ?? null}
+          publishAt={publishAt || null}
+          today={todayIso}
           title={title}
           body={body}
         />
         <p className="text-xs leading-relaxed text-admin-faint">
-          A seção "Proclamas e avisos" só aparece no site quando há publicação
-          vigente. Sem nenhuma, ela some da home.
+          A seção de publicações da página inicial leva o nome do que está no ar
+          (proclamas, avisos, editais) e some quando não há nenhuma vigente.
         </p>
       </div>
     </div>

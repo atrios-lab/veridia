@@ -1,14 +1,17 @@
-import type { PublicationKind } from "@/core/publications/publication.ts";
-import { PUBLICATION_KIND_LABELS } from "@/core/publications/publication.ts";
-import { formatDate } from "@/core/scheduling/calendar.ts";
+import {
+  noticeTypeOf,
+  publicationHeadline,
+} from "@/core/publications/notice-types.ts";
+import { formatDate, type IsoDate } from "@/core/scheduling/calendar.ts";
 import type { NoticeSector } from "@/core/tenant/gating.ts";
 import {
   NOTICE_SECTOR_ATTRIBUTION,
   NOTICE_SECTOR_META,
 } from "@/core/tenant/gating.ts";
+import { today } from "@/lib/office-config.ts";
 import type { PublicationRow } from "@/lib/publications.ts";
 import { livePublications } from "@/lib/publications.ts";
-import { Icon } from "../_components/icon.tsx";
+import { PublicationAttachment } from "../_components/publication-attachment.tsx";
 import { publicMetadata } from "../_lib/metadata.ts";
 import { requireSection } from "../_lib/section.ts";
 
@@ -24,7 +27,9 @@ function sectorOf(row: PublicationRow): NoticeSector | null {
   return (row.sector as NoticeSector | null) ?? null;
 }
 
-function NoticeCard({ row }: { row: PublicationRow }) {
+function NoticeCard({ row, day }: { row: PublicationRow; day: IsoDate }) {
+  const headline = publicationHeadline(row, day);
+  const type = noticeTypeOf(row.noticeType);
   return (
     <article className="rounded-2xl border border-brand-border bg-brand-card p-5">
       <div className="flex flex-wrap items-center gap-2.5">
@@ -32,28 +37,35 @@ function NoticeCard({ row }: { row: PublicationRow }) {
           {row.title}
         </h3>
         <span className="rounded-lg bg-brand-accent-soft px-2.5 py-1 text-[11.5px] font-semibold text-brand-accent-ink">
-          {PUBLICATION_KIND_LABELS[row.kind as PublicationKind]}
+          {headline.label}
         </span>
       </div>
-      {row.publishAt && (
+      {headline.date && (
         <p className="mt-1 text-xs text-brand-faint">
-          Publicado em {formatDate(row.publishAt)}
+          {headline.run && headline.run.number > 1
+            ? `Republicado em ${formatDate(headline.date)} (1ª publicação em ${formatDate(row.publishAt ?? headline.date)})`
+            : `Publicado em ${formatDate(headline.date)}`}
         </p>
       )}
       {/* The operator writes plain text with line breaks; keep them. */}
       <p className="mt-3 whitespace-pre-line text-sm leading-relaxed text-brand-text-soft">
         {row.body}
       </p>
+      {headline.termEndsOn && type && (
+        <p className="mt-3 text-[13px] font-semibold text-brand-primary">
+          {headline.termLabel} até {formatDate(headline.termEndsOn)}
+          <span className="font-normal text-brand-faint">
+            {" "}
+            ({type.legalBasis})
+          </span>
+        </p>
+      )}
       {row.attachmentPath && (
-        <a
-          href={`/editais/${row.id}/arquivo`}
-          target="_blank"
-          rel="noopener"
-          className="btn btn-ghost btn-sm mt-3.5 px-0"
-        >
-          <Icon name="file" className="h-4 w-4 text-brand-accent" />
-          Ver o edital assinado
-        </a>
+        <PublicationAttachment
+          id={row.id}
+          title={row.title}
+          mimeType={row.attachmentMimeType}
+        />
       )}
     </article>
   );
@@ -61,6 +73,7 @@ function NoticeCard({ row }: { row: PublicationRow }) {
 
 export default async function PublicNoticesPage() {
   const tenant = await requireSection("editais");
+  const day = today();
 
   // Same read the home pays; avisos are home content and stay out of here.
   const live = (await livePublications(tenant.slug)).filter(
@@ -136,7 +149,7 @@ export default async function PublicNoticesPage() {
                   </p>
                   <div className="mt-4 flex flex-col gap-3.5">
                     {(groups.get(sector) ?? []).map((row) => (
-                      <NoticeCard key={row.id} row={row} />
+                      <NoticeCard key={row.id} row={row} day={day} />
                     ))}
                   </div>
                 </section>
@@ -153,7 +166,7 @@ export default async function PublicNoticesPage() {
                 </p>
                 <div className="mt-4 flex flex-col gap-3.5">
                   {general.map((row) => (
-                    <NoticeCard key={row.id} row={row} />
+                    <NoticeCard key={row.id} row={row} day={day} />
                   ))}
                 </div>
               </section>

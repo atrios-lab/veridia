@@ -1,9 +1,10 @@
 import Image from "next/image";
 import Link from "next/link";
 import { ATTRIBUTION_SHORT_NAMES } from "@/core/acts/catalog.ts";
+import { publicationHeadline } from "@/core/publications/notice-types.ts";
 import {
-  PUBLICATION_KIND_LABELS,
   type PublicationKind,
+  publicationSectionTitle,
 } from "@/core/publications/publication.ts";
 import { formatDate } from "@/core/scheduling/calendar.ts";
 import {
@@ -13,10 +14,12 @@ import {
   SECTION_ROUTES,
 } from "@/core/tenant/gating.ts";
 import type { Section } from "@/core/tenant/schema.ts";
+import { today } from "@/lib/office-config.ts";
 import { livePublications } from "@/lib/publications.ts";
 import { getTenant } from "@/lib/tenant.ts";
 import { Icon, type IconName } from "./_components/icon.tsx";
 import { ProtocolSearchButton } from "./_components/protocol-search-button.tsx";
+import { PublicationAttachment } from "./_components/publication-attachment.tsx";
 
 // The home's own section shows only the most recent ones; there is no
 // listing page to send the rest to yet, so an unbounded list would just grow
@@ -64,10 +67,15 @@ export default async function Home() {
   );
   const canLookUp = isSectionEnabled(tenant, "consulta-protocolo");
   const lookupHref = SECTION_ROUTES["consulta-protocolo"];
-  const publications = (await livePublications(tenant.slug)).slice(
-    0,
-    MAX_HOME_PUBLICATIONS,
-  );
+  // Dated by the run on the site today: an edital in its second run is a
+  // republication and goes back to the top, as a new publication would.
+  const day = today();
+  const publications = (await livePublications(tenant.slug))
+    .map((row) => ({ row, headline: publicationHeadline(row, day) }))
+    .sort((a, b) =>
+      (b.headline.date ?? "").localeCompare(a.headline.date ?? ""),
+    )
+    .slice(0, MAX_HOME_PUBLICATIONS);
 
   return (
     <>
@@ -219,31 +227,43 @@ export default async function Home() {
             block (compare `citizenLinks.length > 0` below). */}
         {publications.length > 0 && (
           <section className="pb-6 md:pb-10">
+            {/* Named after what is live: a fixed "Proclamas e avisos" over
+                an edital said something the office never published. */}
             <span className="text-[11px] font-bold uppercase tracking-[0.16em] text-brand-accent-ink">
-              Proclamas e avisos
+              {publicationSectionTitle(
+                publications.map(({ row }) => row.kind as PublicationKind),
+              )}
             </span>
-            <div className="mt-2.5 flex flex-col gap-2.5 md:mt-3.5 md:grid md:grid-cols-2">
-              {publications.map((publication) => (
-                <div
-                  key={publication.id}
+            <div className="mt-2.5 flex flex-col gap-2.5 md:mt-3.5 md:grid md:grid-cols-2 md:items-start">
+              {publications.map(({ row, headline }) => (
+                <article
+                  key={row.id}
                   className="rounded-2xl border border-brand-border bg-brand-card p-4"
                 >
                   <span className="text-[10px] font-bold uppercase tracking-[0.06em] text-brand-accent-ink">
-                    {
-                      PUBLICATION_KIND_LABELS[
-                        publication.kind as PublicationKind
-                      ]
-                    }
-                    {publication.publishAt &&
-                      ` · ${formatDate(publication.publishAt)}`}
+                    {headline.label}
+                    {headline.date && ` · ${formatDate(headline.date)}`}
                   </span>
                   <p className="mt-1 text-sm font-semibold text-brand-primary">
-                    {publication.title}
+                    {row.title}
                   </p>
-                  <p className="mt-1 line-clamp-2 text-xs text-brand-muted">
-                    {publication.body}
+                  <p className="mt-1 line-clamp-3 whitespace-pre-line text-xs text-brand-muted">
+                    {row.body}
                   </p>
-                </div>
+                  {headline.termEndsOn && (
+                    <p className="mt-1.5 text-[11px] font-semibold text-brand-text-soft">
+                      {headline.termLabel} até {formatDate(headline.termEndsOn)}
+                    </p>
+                  )}
+                  {row.attachmentPath && (
+                    <PublicationAttachment
+                      id={row.id}
+                      title={row.title}
+                      mimeType={row.attachmentMimeType}
+                      compact
+                    />
+                  )}
+                </article>
               ))}
             </div>
           </section>

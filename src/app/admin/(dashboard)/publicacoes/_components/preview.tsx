@@ -1,7 +1,9 @@
-import type { PublicationKind } from "@/core/publications/publication.ts";
-import { PUBLICATION_KIND_LABELS } from "@/core/publications/publication.ts";
-import type { NoticeSector } from "@/core/tenant/gating.ts";
-import { NOTICE_SECTOR_META } from "@/core/tenant/gating.ts";
+import { publicationHeadline } from "@/core/publications/notice-types.ts";
+import {
+  type PublicationKind,
+  publicationSectionTitle,
+} from "@/core/publications/publication.ts";
+import { formatDate, type IsoDate } from "@/core/scheduling/calendar.ts";
 import type { Theme } from "@/core/tenant/schema.ts";
 import { SERIF } from "@/lib/fonts.ts";
 
@@ -17,7 +19,9 @@ export function PublicationPreview({
   sealLight,
   officeName,
   kind,
-  sector,
+  noticeType,
+  publishAt,
+  today,
   title,
   body,
 }: {
@@ -25,10 +29,15 @@ export function PublicationPreview({
   sealLight: string;
   officeName: string;
   kind: PublicationKind;
-  sector?: NoticeSector | "";
+  noticeType: string | null;
+  publishAt: IsoDate | null;
+  today: IsoDate;
   title: string;
   body: string;
 }) {
+  // The same headline the home computes, so the preview cannot drift from
+  // what the citizen reads.
+  const headline = publicationHeadline({ kind, noticeType, publishAt }, today);
   return (
     <div
       data-theme={theme}
@@ -44,12 +53,12 @@ export function PublicationPreview({
       </div>
       <div className="bg-brand-tint/40 px-3.5 py-4">
         <div className="font-serif text-sm font-semibold text-brand-primary">
-          Proclamas e avisos
+          {publicationSectionTitle([kind])}
         </div>
         <div className="mt-2.5 rounded-[9px] border border-brand-border bg-brand-card px-3 py-2.5">
           <div className="text-[10px] font-bold tracking-[0.06em] text-brand-accent-ink uppercase">
-            {PUBLICATION_KIND_LABELS[kind]}
-            {sector ? ` · ${NOTICE_SECTOR_META[sector].acronym}` : ""}
+            {headline.label}
+            {headline.date && ` · ${formatDate(headline.date)}`}
           </div>
           <div className="mt-1 line-clamp-2 text-xs font-bold text-brand-text">
             {title || "Título da publicação"}
@@ -57,6 +66,11 @@ export function PublicationPreview({
           <div className="mt-1 line-clamp-2 text-[11px] text-brand-muted">
             {body || "O texto da publicação aparece aqui, como o cidadão lê."}
           </div>
+          {headline.termEndsOn && (
+            <div className="mt-1 text-[10.5px] font-semibold text-brand-text-soft">
+              {headline.termLabel} até {formatDate(headline.termEndsOn)}
+            </div>
+          )}
         </div>
       </div>
     </div>
