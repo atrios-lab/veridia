@@ -112,7 +112,8 @@ function Row({
             )}
           </div>
           <p className="mt-0.5 text-[12px] text-admin-muted">
-            {item.label} · {formatDuration(item.durationSeconds)}
+            {item.label && `${item.label} · `}
+            {formatDuration(item.durationSeconds)}
             {!sequential &&
               (routeLabel
                 ? ` · ensina ${routeLabel}`

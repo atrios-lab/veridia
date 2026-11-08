@@ -57,7 +57,8 @@ export default async function TrainingCatalogPage({
   const shown = courses.filter((c) => itemsByCourse.has(c.id));
   const watchedIds = new Set(watchedAt.keys());
   const resume = continueWatching(shown, itemsByCourse, watchedAt);
-  const resumeLabel = resume
+  // "Aula 3" only means something in a course watched in order.
+  const resumeLabel = resume?.course.sequential
     ? itemLabels(itemsByCourse.get(resume.course.id) ?? []).get(resume.item.id)
     : undefined;
   const canManage = can(session.user.role ?? "", "tutorials.manage");

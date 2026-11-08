@@ -58,6 +58,9 @@ export default async function ManageTutorialsPage() {
   // the platform sees where a draft will land once published.
   const labels = new Map<string, string>();
   for (const course of courses) {
+    // A reference course is not numbered: its videos are watched in any
+    // order.
+    if (!course.sequential) continue;
     const inCourse = rows
       .filter((row) => row.courseId === course.id)
       .map(
@@ -85,7 +88,7 @@ export default async function ManageTutorialsPage() {
     published: row.publishedAt !== null,
     courseId: row.courseId,
     kind: isTutorialKind(row.kind) ? row.kind : "lesson",
-    label: labels.get(row.id) ?? "Aula",
+    label: labels.get(row.id) ?? "",
   }));
 
   return (
