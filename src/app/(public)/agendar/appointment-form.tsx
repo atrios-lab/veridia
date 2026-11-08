@@ -3,7 +3,7 @@
 import { zodResolver } from "@hookform/resolvers/zod";
 import Link from "next/link";
 import { startTransition, useActionState } from "react";
-import { useForm } from "react-hook-form";
+import { type UseFormRegisterReturn, useForm } from "react-hook-form";
 import { appointmentSchema } from "@/core/request/channels.ts";
 import { formatPhone, maskCpf } from "@/core/request/form.ts";
 import {
@@ -74,6 +74,9 @@ export interface SchedulingScreenProps {
   times?: SlotTime[];
   services?: OfferedService[];
   modes?: string[];
+  /** The notary's channels for the day, label to explanation: present, the
+   * form asks how to be attended with cards instead of a select. */
+  modeHints?: Record<string, string>;
   nextFreeDay?: IsoDate;
   nextFreeTime?: SlotTime;
 }
@@ -180,6 +183,7 @@ export function SchedulingScreen(props: SchedulingScreenProps) {
                 times={times ?? []}
                 services={services ?? []}
                 modes={modes ?? []}
+                modeHints={props.modeHints}
                 state={state}
                 formAction={formAction}
                 pending={pending}
@@ -363,6 +367,7 @@ function AppointmentForm({
   times,
   services,
   modes,
+  modeHints,
   state,
   formAction,
   pending,
@@ -373,6 +378,7 @@ function AppointmentForm({
   times: SlotTime[];
   services: OfferedService[];
   modes: string[];
+  modeHints?: Record<string, string>;
   state: AppointmentState;
   formAction: (payload: FormData) => void;
   pending: boolean;
@@ -488,30 +494,39 @@ function AppointmentForm({
             <FieldError message={errorFor("serviceId")} />
           </div>
 
-          <div>
-            <label
-              htmlFor="mode"
-              className="mb-1.5 block text-[13px] font-semibold"
-            >
-              Modo de atendimento
-            </label>
-            <select
-              id="mode"
-              className={inputClass}
-              defaultValue=""
-              {...register("mode")}
-            >
-              <option value="" disabled>
-                Escolha como quer ser atendido
-              </option>
-              {modes.map((mode) => (
-                <option key={mode} value={mode}>
-                  {mode}
+          {modeHints ? (
+            <ChannelChoice
+              modes={modes}
+              hints={modeHints}
+              register={register("mode")}
+              error={errorFor("mode")}
+            />
+          ) : (
+            <div>
+              <label
+                htmlFor="mode"
+                className="mb-1.5 block text-[13px] font-semibold"
+              >
+                Modo de atendimento
+              </label>
+              <select
+                id="mode"
+                className={inputClass}
+                defaultValue=""
+                {...register("mode")}
+              >
+                <option value="" disabled>
+                  Escolha como quer ser atendido
                 </option>
-              ))}
-            </select>
-            <FieldError message={errorFor("mode")} />
-          </div>
+                {modes.map((mode) => (
+                  <option key={mode} value={mode}>
+                    {mode}
+                  </option>
+                ))}
+              </select>
+              <FieldError message={errorFor("mode")} />
+            </div>
+          )}
         </div>
 
         {/* Said while the citizen is still choosing: a service whose papers
@@ -645,6 +660,70 @@ function AppointmentForm({
         </button>
       </div>
     </form>
+  );
+}
+
+/**
+ * How the notary attends on the chosen day: the channels he picked for it,
+ * as cards with what each one means. A day with a single channel says so
+ * instead of asking, and still sends it with the form.
+ */
+function ChannelChoice({
+  modes,
+  hints,
+  register,
+  error,
+}: {
+  modes: string[];
+  hints: Record<string, string>;
+  register: UseFormRegisterReturn;
+  error?: string;
+}) {
+  if (modes.length === 1) {
+    return (
+      <div>
+        <span className="mb-1.5 block text-[13px] font-semibold">
+          Como você será atendido
+        </span>
+        <input type="hidden" value={modes[0]} {...register} />
+        <p className="rounded-xl border border-brand-border bg-brand-card px-3.5 py-3 text-[13px] text-brand-text">
+          <strong>{modes[0]}</strong>
+          <span className="block text-[12px] text-brand-muted">
+            Neste dia o tabelião atende só assim. {hints[modes[0]]}
+          </span>
+        </p>
+        <FieldError message={error} />
+      </div>
+    );
+  }
+  return (
+    <fieldset>
+      <legend className="mb-1.5 text-[13px] font-semibold">
+        Como você quer ser atendido
+      </legend>
+      <div className="flex flex-col gap-2">
+        {modes.map((mode) => (
+          <label
+            key={mode}
+            className="relative flex cursor-pointer flex-col rounded-xl border border-brand-border bg-brand-card px-3.5 py-2.5 hover:border-brand-accent has-[:checked]:border-brand-primary has-[:checked]:bg-brand-tint has-[:focus-visible]:border-brand-accent"
+          >
+            <input
+              type="radio"
+              value={mode}
+              className="absolute inset-0 h-full w-full cursor-pointer appearance-none opacity-0"
+              {...register}
+            />
+            <span className="text-[13px] font-bold text-brand-primary">
+              {mode}
+            </span>
+            <span className="text-[12px] leading-snug text-brand-muted">
+              {hints[mode]}
+            </span>
+          </label>
+        ))}
+      </div>
+      <FieldError message={error} />
+    </fieldset>
   );
 }
 
@@ -844,7 +923,7 @@ function ConfirmationScreen({ result }: { result: AppointmentSuccess }) {
 
       <div className="rounded-b-2xl border border-brand-border bg-brand-card p-5 md:mt-4 md:rounded-2xl">
         <div className="text-[14px] font-bold text-brand-primary">
-          O que trazer
+          {result.remote ? "O que ter em mãos" : "O que trazer"}
         </div>
         <ChecklistItems items={result.checklist} />
         {result.serviceNote && (
@@ -895,8 +974,9 @@ function ConfirmationScreen({ result }: { result: AppointmentSuccess }) {
         </Link>
       </div>
       <p className="mt-2 text-[12px] leading-relaxed text-brand-faint">
-        O comprovante sai com o timbre da serventia e a lista do que trazer.
-        Apresente-o na recepção, impresso ou no celular.
+        {result.remote
+          ? "O comprovante sai com o timbre da serventia, o horário e a lista do que ter em mãos."
+          : "O comprovante sai com o timbre da serventia e a lista do que trazer. Apresente-o na recepção, impresso ou no celular."}
       </p>
     </div>
   );

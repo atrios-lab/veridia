@@ -7,7 +7,12 @@ import {
   AGENDA_IDS,
   AGENDA_NAMES,
   type AgendaId,
+  ATTENDANCE_CHANNELS,
+  type AttendanceChannel,
+  CHANNEL_NAMES,
+  DEFAULT_CHANNELS,
   ownServiceId,
+  usesChannels,
 } from "@/core/scheduling/agenda.ts";
 import {
   dayOfMonth,
@@ -29,6 +34,8 @@ type Grid = Record<string, string[]>;
 interface BookDraft {
   grid: Grid;
   serviceIds: string[];
+  /** The notary's channels per weekday; empty for the counter's agenda. */
+  channels: Record<string, AttendanceChannel[]>;
 }
 
 type Books = Record<AgendaId, BookDraft>;
@@ -182,6 +189,8 @@ export function AgendaSettingsForm({
           weekdays={weekdays}
           futureLive={futureLive[tab]}
           onChange={(grid) => setBook({ ...book, grid })}
+          channels={usesChannels(tab) ? book.channels : undefined}
+          onChannelsChange={(channels) => setBook({ ...book, channels })}
         />
         <ServicePicker
           key={`services-${tab}`}
@@ -279,6 +288,7 @@ export function AgendaSettingsForm({
         grid={book.grid}
         serviceLabels={serviceLabels(book.serviceIds, draft.services)}
         modes={draft.modes}
+        channels={usesChannels(tab) ? book.channels : undefined}
         closedDates={closedDates}
         takenByDate={takenByDate}
         today={today}
@@ -307,13 +317,32 @@ function GridSection({
   weekdays,
   futureLive,
   onChange,
+  channels,
+  onChannelsChange,
 }: {
   title: string;
   grid: Grid;
   weekdays: Array<{ day: string; label: string }>;
   futureLive: Record<string, number>;
   onChange: (grid: Grid) => void;
+  /** Present for the notary's agenda: how he attends each weekday. */
+  channels?: Record<string, AttendanceChannel[]>;
+  onChannelsChange?: (channels: Record<string, AttendanceChannel[]>) => void;
 }) {
+  function toggleChannel(day: string, channel: AttendanceChannel) {
+    if (!channels || !onChannelsChange) return;
+    const current = channels[day] ?? DEFAULT_CHANNELS;
+    const next = current.includes(channel)
+      ? current.filter((item) => item !== channel)
+      : [...current, channel];
+    // A day always attends somehow: the last channel cannot be unticked.
+    if (next.length === 0) return;
+    onChannelsChange({
+      ...channels,
+      [day]: ATTENDANCE_CHANNELS.filter((item) => next.includes(item)),
+    });
+  }
+
   const [adding, setAdding] = useState<string | null>(null);
   const monday = grid["1"] ?? [];
 
@@ -410,6 +439,34 @@ function GridSection({
                     Copiar de segunda
                   </button>
                 )}
+                {channels && times.length > 0 && (
+                  <span className="flex basis-full flex-wrap items-center gap-1.5 pt-1">
+                    <span className="text-[11.5px] text-admin-faint">
+                      Atende:
+                    </span>
+                    {ATTENDANCE_CHANNELS.map((channel) => {
+                      const on = (channels[day] ?? DEFAULT_CHANNELS).includes(
+                        channel,
+                      );
+                      return (
+                        <button
+                          key={channel}
+                          type="button"
+                          aria-pressed={on}
+                          aria-label={`${label}: ${CHANNEL_NAMES[channel].label}`}
+                          onClick={() => toggleChannel(day, channel)}
+                          className={`rounded-full border px-2.5 py-1 text-[11.5px] font-semibold ${
+                            on
+                              ? "border-admin-primary bg-admin-primary text-white"
+                              : "border-admin-border text-admin-muted hover:bg-admin-input-bg"
+                          }`}
+                        >
+                          {CHANNEL_NAMES[channel].label}
+                        </button>
+                      );
+                    })}
+                  </span>
+                )}
               </span>
               <span
                 className={`justify-self-end text-[12px] ${
@@ -429,6 +486,8 @@ function GridSection({
       <p className="mt-3 text-[11.5px] leading-relaxed text-admin-faint">
         Remover um horário nunca apaga agendamentos já feitos: eles continuam na
         agenda, e só as novas datas deixam de oferecer o horário.
+        {channels &&
+          " Os canais de cada dia valem para todas as semanas; para mudar uma data só, abra o dia na agenda."}
       </p>
     </section>
   );
@@ -739,8 +798,12 @@ function ModesSection({
   return (
     <section className={cardClass}>
       <h2 className="font-serif text-[16px] font-semibold text-admin-primary">
-        Modos de atendimento
+        Modos de atendimento do cartório
       </h2>
+      <p className="mt-1 text-[12.5px] leading-relaxed text-admin-muted">
+        Valem para a agenda do cartório. O tabelião escolhe os canais dele
+        (presencial, vídeo ou ligação) em cada dia, na aba dele.
+      </p>
       <div className="mt-3 grid gap-2.5 sm:grid-cols-2">
         {cards.map(({ label, description }) => {
           const checked = modes.includes(label);
@@ -803,7 +866,8 @@ function Preview({
   agenda,
   grid,
   serviceLabels,
-  modes,
+  modes: officeModes,
+  channels,
   closedDates,
   takenByDate,
   today,
@@ -813,6 +877,8 @@ function Preview({
   grid: Grid;
   serviceLabels: string[];
   modes: string[];
+  /** The notary's channels per weekday: the preview shows the day's. */
+  channels?: Record<string, AttendanceChannel[]>;
   closedDates: string[];
   takenByDate: Record<string, string[]>;
   today: string;
@@ -823,6 +889,12 @@ function Preview({
   const selected = days[Math.min(picked, Math.max(days.length - 1, 0))];
   const times = selected ? (grid[String(weekday(selected))] ?? []) : [];
   const taken = new Set(selected ? (takenByDate[selected] ?? []) : []);
+  const modes =
+    channels && selected
+      ? (channels[String(weekday(selected))] ?? DEFAULT_CHANNELS).map(
+          (channel) => CHANNEL_NAMES[channel].label,
+        )
+      : officeModes;
 
   return (
     <aside className="rounded-[14px] border border-admin-border bg-admin-card px-5 py-4 lg:sticky lg:top-4">
@@ -918,7 +990,7 @@ function Preview({
             {modes.length > 0 && (
               <>
                 <p className="mt-3 text-[12px] font-bold text-admin-text">
-                  Modo
+                  {channels ? "Como o tabelião atende" : "Modo"}
                 </p>
                 <div className="mt-1.5 flex flex-wrap gap-3">
                   {modes.map((mode, index) => (

@@ -1,5 +1,5 @@
 import { z } from "zod";
-import type { IsoDate } from "./calendar.ts";
+import { type IsoDate, weekday } from "./calendar.ts";
 
 /**
  * The office's agenda as the serventia itself declares it: which weekdays it
@@ -112,13 +112,70 @@ export function agendaIdOf(value: unknown): AgendaId {
 const gridSchema = z.partialRecord(weekdayKey, dayTimes).default({});
 export type AgendaGrid = z.infer<typeof gridSchema>;
 
+/**
+ * How the notary receives a citizen: in person, on a video call or on the
+ * phone. The notary's agenda chooses them per weekday, and per single date
+ * when one day is different ("na quinta só presencial"); the counter's
+ * agenda keeps the office's modes instead.
+ */
+export const ATTENDANCE_CHANNELS = ["presencial", "video", "ligacao"] as const;
+export type AttendanceChannel = (typeof ATTENDANCE_CHANNELS)[number];
+
+export const CHANNEL_NAMES: Record<
+  AttendanceChannel,
+  { label: string; description: string }
+> = {
+  presencial: {
+    label: "Presencial",
+    description: "No cartório, no dia e hora marcados.",
+  },
+  video: {
+    label: "Por vídeo",
+    description: "Videochamada com o tabelião; o link chega por e-mail.",
+  },
+  ligacao: {
+    label: "Por ligação",
+    description: "O tabelião liga no telefone informado.",
+  },
+};
+
+/** What a weekday or a date offers when nobody said otherwise. */
+export const DEFAULT_CHANNELS: AttendanceChannel[] = ["presencial"];
+
+const channelList = z
+  .array(z.enum(ATTENDANCE_CHANNELS))
+  .min(1, "Escolha ao menos um canal de atendimento.")
+  // In the catalogue's order, once each: two "Por vídeo" options would be
+  // one choice offered twice.
+  .transform((channels) =>
+    ATTENDANCE_CHANNELS.filter((channel) => channels.includes(channel)),
+  );
+
+export const dayChannelsSchema = z.object({
+  date: isoDate,
+  channels: channelList,
+});
+export type DayChannels = z.infer<typeof dayChannelsSchema>;
+
 /** One agenda: the weekdays and times it receives, and the services it
  * takes, as ids from the catalogue or from the office's own services. */
 export const agendaBookSchema = z.object({
   grid: gridSchema,
   serviceIds: z.array(z.string().min(1)).default([]),
+  // The notary's channels per weekday, and the dates that differ. Empty for
+  // the counter's agenda, and for configs saved before channels existed:
+  // those offer the default, in person.
+  channels: z.partialRecord(weekdayKey, channelList).default({}),
+  dayChannels: z.array(dayChannelsSchema).default([]),
 });
 export type AgendaBook = z.infer<typeof agendaBookSchema>;
+
+const EMPTY_BOOK: AgendaBook = {
+  grid: {},
+  serviceIds: [],
+  channels: {},
+  dayChannels: [],
+};
 
 const storedConfigSchema = z.object({
   agendas: z
@@ -155,10 +212,11 @@ export const agendaConfigSchema = storedConfigSchema.transform(
   (stored): AgendaConfig => ({
     agendas: {
       geral: stored.agendas?.geral ?? {
+        ...EMPTY_BOOK,
         grid: stored.grid,
         serviceIds: stored.services.map((service) => service.id),
       },
-      tabeliao: stored.agendas?.tabeliao ?? { grid: {}, serviceIds: [] },
+      tabeliao: stored.agendas?.tabeliao ?? EMPTY_BOOK,
     },
     services: stored.services,
     modes: stored.modes,
@@ -179,10 +237,7 @@ export function serializeAgendaConfig(config: AgendaConfig) {
  * one.
  */
 export const DEFAULT_AGENDA_CONFIG: AgendaConfig = {
-  agendas: {
-    geral: { grid: {}, serviceIds: [] },
-    tabeliao: { grid: {}, serviceIds: [] },
-  },
+  agendas: { geral: EMPTY_BOOK, tabeliao: EMPTY_BOOK },
   services: [],
   modes: ["Presencial", "On-line"],
   closedDates: [],
@@ -291,3 +346,47 @@ export function ownServiceId(label: string, used: ReadonlySet<string>): string {
 
 /** An own service's id as the form may send it: slug characters only. */
 export const OWN_SERVICE_ID = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
+
+/**
+ * Whether an agenda books by channel (the notary's) or by the office's modes
+ * (the counter's). One rule, read by the site, the panel and the action.
+ */
+export function usesChannels(agenda: AgendaId): boolean {
+  return agenda === "tabeliao";
+}
+
+/**
+ * The channels a date offers in an agenda: the date's own choice when the
+ * notary made one, else the weekday's, else in person.
+ */
+export function channelsOn(
+  book: Pick<AgendaBook, "channels" | "dayChannels">,
+  date: IsoDate,
+): AttendanceChannel[] {
+  const own = book.dayChannels.find((day) => day.date === date);
+  if (own) return own.channels;
+  const key = String(weekday(date)) as `${AgendaWeekday}`;
+  return book.channels[key] ?? DEFAULT_CHANNELS;
+}
+
+/** The labels a date offers, which is what the appointment's `mode` stores. */
+export function channelLabelsOn(
+  book: Pick<AgendaBook, "channels" | "dayChannels">,
+  date: IsoDate,
+): string[] {
+  return channelsOn(book, date).map((channel) => CHANNEL_NAMES[channel].label);
+}
+
+/** The channel an appointment's stored mode names, if it names one. */
+export function channelOfMode(mode: string): AttendanceChannel | undefined {
+  return ATTENDANCE_CHANNELS.find(
+    (channel) => CHANNEL_NAMES[channel].label === mode,
+  );
+}
+
+/** Whether the citizen comes to the counter for this mode: everything but a
+ * notary's video or phone call. */
+export function isRemoteMode(mode: string): boolean {
+  const channel = channelOfMode(mode);
+  return channel === "video" || channel === "ligacao";
+}

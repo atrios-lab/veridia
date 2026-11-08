@@ -1,7 +1,7 @@
 import type { EmailText } from "../email/text.ts";
-import { type SlotTime, slotEndTime } from "./agenda.ts";
+import { isRemoteMode, type SlotTime, slotEndTime } from "./agenda.ts";
 import { formatLongDate, type IsoDate } from "./calendar.ts";
-import { arrivalNotice, CHECKLIST_CAVEAT } from "./services.ts";
+import { attendanceNotice, CHECKLIST_CAVEAT } from "./services.ts";
 
 /**
  * What the office writes to a citizen about their appointment.
@@ -53,18 +53,20 @@ export function buildAppointmentBookedEmail(
       `Quando: ${when(facts.date, facts.slotTime)}.`,
       `Serviço: ${facts.serviceLabel}. Atendimento: ${facts.mode}.`,
       ...(facts.agendaName ? [`Agenda: ${facts.agendaName}.`] : []),
-      `Onde: ${facts.address}.`,
-      arrivalNotice(facts.slotTime),
+      ...(isRemoteMode(facts.mode) ? [] : [`Onde: ${facts.address}.`]),
+      attendanceNotice(facts.slotTime, facts.mode),
       ...(facts.checklist?.length
         ? [
-            "O que trazer:",
+            isRemoteMode(facts.mode) ? "O que ter em mãos:" : "O que trazer:",
             ...facts.checklist.map((item) => `• ${item}`),
             CHECKLIST_CAVEAT,
           ]
         : [
             "Leve um documento com foto. Se for tratar de assunto de outra pessoa, leve procuração.",
           ]),
-      "O comprovante de agendamento em PDF vai anexo: apresente-o na recepção, impresso ou no celular.",
+      isRemoteMode(facts.mode)
+        ? "O comprovante de agendamento em PDF vai anexo."
+        : "O comprovante de agendamento em PDF vai anexo: apresente-o na recepção, impresso ou no celular.",
       "Não vai poder vir? Cancele pelo botão abaixo para liberar o horário para outra pessoa.",
     ],
     buttonLabel: "Cancelar este agendamento",

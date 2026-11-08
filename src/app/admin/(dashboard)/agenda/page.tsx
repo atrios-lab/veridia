@@ -7,9 +7,13 @@ import {
   type AgendaId,
   agendaIdOf,
   agendaRules,
+  channelLabelsOn,
+  channelsOn,
   closedDate,
+  DEFAULT_CHANNELS,
   hasGrid,
   isAgendaId,
+  usesChannels,
 } from "@/core/scheduling/agenda.ts";
 import {
   addDays,
@@ -19,6 +23,7 @@ import {
   nextBusinessDays,
   officeHolidays,
   shortWeekday,
+  weekday,
 } from "@/core/scheduling/calendar.ts";
 import { servicesOfAgenda } from "@/core/scheduling/services.ts";
 import { freeSlots, gridTimes } from "@/core/scheduling/slots.ts";
@@ -38,6 +43,7 @@ import {
   ReopenDateButton,
 } from "./_components/close-day.tsx";
 import { type DayRow, DaySlotList } from "./_components/day-agenda.tsx";
+import { DayChannelsCard } from "./_components/day-channels.tsx";
 
 export const metadata = { title: "Agenda de atendimentos" };
 
@@ -224,7 +230,11 @@ export default async function AgendaPage({
               services={servicesOfAgenda(agendaConfig, agenda).map(
                 ({ id, label }) => ({ id, label }),
               )}
-              modes={agendaConfig.modes}
+              modes={
+                usesChannels(agenda)
+                  ? channelLabelsOn(agendaConfig.agendas[agenda], date)
+                  : agendaConfig.modes
+              }
               closed={Boolean(closed)}
             />
           </section>
@@ -246,6 +256,22 @@ export default async function AgendaPage({
                 </span>
               </span>
             </Link>
+
+            {usesChannels(agenda) && !closed && grid.length > 0 && (
+              <DayChannelsCard
+                date={date}
+                dateLabel={formatShortDate(date)}
+                channels={channelsOn(agendaConfig.agendas[agenda], date)}
+                own={agendaConfig.agendas[agenda].dayChannels.some(
+                  (day) => day.date === date,
+                )}
+                weekdayChannels={
+                  agendaConfig.agendas[agenda].channels[
+                    String(weekday(date)) as "1" | "2" | "3" | "4" | "5"
+                  ] ?? DEFAULT_CHANNELS
+                }
+              />
+            )}
 
             {closed ? (
               <ClosedDayCard date={date} reason={closed.reason} />

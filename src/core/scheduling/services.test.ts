@@ -1,9 +1,17 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { DEFAULT_AGENDA_CONFIG, parseAgendaConfig } from "./agenda.ts";
+import {
+  channelLabelsOn,
+  channelsOn,
+  DEFAULT_AGENDA_CONFIG,
+  DEFAULT_CHANNELS,
+  isRemoteMode,
+  parseAgendaConfig,
+} from "./agenda.ts";
 import {
   arrivalNotice,
   arrivalTime,
+  attendanceNotice,
   BASE_CHECKLIST,
   COUNTER_SERVICES,
   checklistFor,
@@ -76,4 +84,46 @@ test("the citizen is asked to arrive fifteen minutes early", () => {
   assert.equal(arrivalTime("13:10"), "12:55");
   assert.equal(arrivalTime("00:05"), "23:50");
   assert.match(arrivalNotice("09:00"), /15 minutos de antecedência, às 08:45/);
+});
+
+test("the notary chooses his channels per weekday and per date", () => {
+  const config = parseAgendaConfig({
+    agendas: {
+      tabeliao: {
+        grid: { "1": ["09:00"], "3": ["14:00"], "4": ["10:00"] },
+        serviceIds: ["notas.testamento"],
+        // Monday hybrid, Wednesday by phone and video, Thursday unset.
+        channels: { "1": ["video", "presencial"], "3": ["ligacao", "video"] },
+        dayChannels: [{ date: "2026-11-11", channels: ["presencial"] }],
+      },
+    },
+  });
+  const book = config.agendas.tabeliao;
+  // In the catalogue's order, whatever order they were ticked in.
+  assert.deepEqual(channelsOn(book, "2026-11-09"), ["presencial", "video"]);
+  // A Wednesday the notary changed to in person only.
+  assert.deepEqual(channelsOn(book, "2026-11-11"), ["presencial"]);
+  // The next Wednesday follows the weekday again.
+  assert.deepEqual(channelsOn(book, "2026-11-18"), ["video", "ligacao"]);
+  // A weekday nobody set attends in person.
+  assert.deepEqual(channelsOn(book, "2026-11-12"), DEFAULT_CHANNELS);
+  assert.deepEqual(channelLabelsOn(book, "2026-11-18"), [
+    "Por vídeo",
+    "Por ligação",
+  ]);
+  // A config from before channels parses with none set.
+  assert.deepEqual(
+    parseAgendaConfig({ grid: { "1": ["09:00"] } }).agendas.tabeliao.channels,
+    {},
+  );
+});
+
+test("a call or a video asks the citizen to be ready, not to arrive", () => {
+  assert.equal(isRemoteMode("Por vídeo"), true);
+  assert.equal(isRemoteMode("Por ligação"), true);
+  assert.equal(isRemoteMode("Presencial"), false);
+  assert.equal(isRemoteMode("Drive-thru"), false);
+  assert.match(attendanceNotice("14:00", "Por ligação"), /liga no telefone/);
+  assert.match(attendanceNotice("14:00", "Por vídeo"), /link da videochamada/);
+  assert.match(attendanceNotice("14:00", "Presencial"), /às 13:45/);
 });

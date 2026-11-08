@@ -2,6 +2,7 @@ import {
   type AgendaConfig,
   type AgendaId,
   addMinutes,
+  channelOfMode,
   hasGrid,
   type SlotTime,
 } from "./agenda.ts";
@@ -611,4 +612,20 @@ export function arrivalTime(slotTime: SlotTime): SlotTime {
 /** The sentence that goes everywhere the appointment is confirmed. */
 export function arrivalNotice(slotTime: SlotTime): string {
   return `Chegue com ${ARRIVAL_ADVANCE_MINUTES} minutos de antecedência, às ${arrivalTime(slotTime)}, para a conferência dos documentos.`;
+}
+
+/**
+ * What to do before the time, by how the citizen is attended: come early
+ * for the counter, be ready for the notary's call or video otherwise. A mode
+ * that names no channel (the counter's modes) is in person.
+ */
+export function attendanceNotice(slotTime: SlotTime, mode: string): string {
+  switch (channelOfMode(mode)) {
+    case "video":
+      return `Atendimento por vídeo: às ${slotTime}, esteja num lugar tranquilo e com internet. O link da videochamada chega no seu e-mail. Tenha os documentos da lista em mãos.`;
+    case "ligacao":
+      return `Atendimento por ligação: às ${slotTime}, o tabelião liga no telefone que você informou. Deixe-o por perto e tenha os documentos da lista em mãos.`;
+    default:
+      return arrivalNotice(slotTime);
+  }
 }

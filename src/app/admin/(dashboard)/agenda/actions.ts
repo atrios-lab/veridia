@@ -9,10 +9,13 @@ import {
   agendaBookSchema,
   agendaRules,
   agendaServiceSchema,
+  channelLabelsOn,
+  dayChannelsSchema,
   hasGrid,
   isAgendaId,
   OWN_SERVICE_ID,
   ownServiceId,
+  usesChannels,
 } from "@/core/scheduling/agenda.ts";
 import {
   generateCancelToken,
@@ -154,7 +157,10 @@ export async function reserveDeskAppointment(
     const service = servicesOfAgenda(office, agenda).find(
       (item) => item.id === serviceId,
     );
-    if (!service || !office.modes.includes(mode)) {
+    const modes = usesChannels(agenda)
+      ? channelLabelsOn(office.agendas[agenda], date)
+      : office.modes;
+    if (!service || !modes.includes(mode)) {
       return {
         status: "error",
         message: "Escolha um serviço e um modo das listas configuradas.",
@@ -422,6 +428,10 @@ export async function saveAgenda(
       }
       agendas[id] = {
         grid: parsed.data.grid,
+        channels: parsed.data.channels,
+        // A single date's channels are set from the day itself, like the
+        // closed dates: this form does not own them.
+        dayChannels: current.agendas[id].dayChannels,
         // Only ids that exist: a ticked own service deleted in the same
         // save goes with it.
         serviceIds: [...new Set(parsed.data.serviceIds)].filter(known),
@@ -505,4 +515,72 @@ function ownServices(
     list.push(parsed.data);
   }
   return { list };
+}
+
+/**
+ * How the notary attends on one date, when it differs from the weekday:
+ * "nesta quinta só presencial". `reset` drops the date's own choice and the
+ * weekday's applies again. Appointments already booked keep the channel they
+ * were booked with; only new bookings see the change.
+ */
+export async function saveDayChannels(
+  _previous: ActionState,
+  formData: FormData,
+): Promise<ActionState> {
+  const session = await authorize();
+  if (!session) return { status: "error", message: NO_PERMISSION };
+
+  const date = String(formData.get("date") ?? "");
+  const reset = formData.get("restore") === "1";
+  const parsed = dayChannelsSchema.safeParse({
+    date,
+    channels: formData.getAll("channels").map(String),
+  });
+  if (!reset && !parsed.success) {
+    return {
+      status: "error",
+      message:
+        parsed.error.issues[0]?.message ??
+        "Escolha ao menos um canal de atendimento.",
+    };
+  }
+
+  const tenant = await getTenant();
+  try {
+    const config = await getAgendaConfig(tenant.slug);
+    const book = config.agendas.tabeliao;
+    // Dates gone by drop out on the way: they decide nothing any more.
+    const today = officeNow().date;
+    const others = book.dayChannels.filter(
+      (day) => day.date !== date && day.date >= today,
+    );
+    await saveAgendaConfig(
+      tenant.slug,
+      {
+        ...config,
+        agendas: {
+          ...config.agendas,
+          tabeliao: {
+            ...book,
+            dayChannels:
+              reset || !parsed.success ? others : [...others, parsed.data],
+          },
+        },
+      },
+      session.user.id,
+    );
+  } catch (error) {
+    console.error("agenda.day-channels", error);
+    return {
+      status: "error",
+      message: "Não foi possível salvar agora. Tente novamente.",
+    };
+  }
+  revalidateAdmin();
+  return {
+    status: "success",
+    message: reset
+      ? "Este dia volta a seguir o padrão da semana."
+      : "Canais deste dia salvos e já valendo no site.",
+  };
 }

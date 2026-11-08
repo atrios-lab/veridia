@@ -80,3 +80,31 @@ test("a receipt for the notary's agenda says so", () => {
   const bring = receipt.sections.find((s) => s.heading === "O que trazer");
   assert.equal(bring?.paragraphs?.length, BASE_CHECKLIST.length + 1);
 });
+
+test("a receipt for a phone call has no arrival and says to be ready", () => {
+  const receipt = buildAppointmentReceipt(tenant, {
+    protocolNumber: "AGD.2026.000009",
+    agenda: "tabeliao",
+    date: "2026-11-11",
+    slotTime: "14:00",
+    citizenName: "Ana",
+    cpf: null,
+    phone: "(84) 99999-0000",
+    email: "",
+    mode: "Por ligação",
+    serviceDetails: null,
+    service: { label: "Procuração pública", bring: [] },
+    createdAt: new Date("2026-11-08T12:00:00Z"),
+  });
+  const when = receipt.sections[0].rows ?? [];
+  assert.equal(
+    when.find((row) => row.label === "Chegada"),
+    undefined,
+  );
+  assert.equal(
+    when.find((row) => row.label === "Atendimento")?.value,
+    "Por ligação",
+  );
+  assert.match(receipt.sections[1].paragraphs?.[0] ?? "", /liga no telefone/);
+  assert.ok(receipt.sections.some((s) => s.heading === "O que ter em mãos"));
+});
