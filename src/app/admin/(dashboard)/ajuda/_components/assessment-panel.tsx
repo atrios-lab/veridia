@@ -67,6 +67,7 @@ export function AssessmentPanel({
   workloadHours,
   tenantName,
   accountName,
+  checkUrl,
   state,
 }: {
   courseId: string;
@@ -77,6 +78,8 @@ export function AssessmentPanel({
   workloadHours: number;
   tenantName: string;
   accountName: string;
+  /** The Átrios site's check address for a code, minus the code. */
+  checkUrl: string;
   state: PanelState;
 }) {
   return (
@@ -163,7 +166,7 @@ export function AssessmentPanel({
                 Baixar certificado (PDF)
               </a>
               <a
-                href={`/certificado/${state.code}`}
+                href={`${checkUrl.replace(/\/+$/, "")}/${state.code}`}
                 target="_blank"
                 rel="noopener"
                 className="btn btn-admin-secondary btn-sm"

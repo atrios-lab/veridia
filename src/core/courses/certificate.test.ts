@@ -1,10 +1,12 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 import {
+  certificateCheckUrl,
   certificateCode,
   certificateRequestSchema,
   certificateSentence,
   normalizeCertificateCode,
+  publicCertificate,
   publicCpf,
 } from "./certificate.ts";
 
@@ -77,4 +79,47 @@ test("the sentence carries the facts, with the CPF full or masked", () => {
     certificateSentence(facts, "public"),
     /CPF \*\*\*\.982\.247-\*\*/,
   );
+});
+
+test("the check address is the Átrios site, overridable", () => {
+  assert.equal(
+    certificateCheckUrl("AB12-CD34-EF56"),
+    "https://atrioss.com/certificado/AB12-CD34-EF56",
+  );
+  assert.equal(
+    certificateCheckUrl("AB12-CD34-EF56", "https://teste.example/certificado/"),
+    "https://teste.example/certificado/AB12-CD34-EF56",
+  );
+});
+
+test("the public view masks the CPF and carries nothing else of the row", () => {
+  const view = publicCertificate({
+    code: "AB12-CD34-EF56",
+    fullName: "Maria da Silva",
+    cpf: CPF,
+    roleTitle: "Escrevente",
+    tenantName: "Cartório de Serra Verde/RN",
+    courseTitle: "LGPD no cartório",
+    workloadHours: 2,
+    score: 80,
+    // 23h in Natal on 07/11 is already 08/11 in UTC: the date is Natal's.
+    issuedAt: new Date("2026-11-08T02:00:00Z"),
+  });
+  assert.equal(view.cpf, "***.982.247-**");
+  assert.equal(view.issuedOn, "2026-11-07");
+  assert.equal(view.issuedOnText, "07/11/2026");
+  assert.deepEqual(Object.keys(view).sort(), [
+    "code",
+    "courseTitle",
+    "cpf",
+    "fullName",
+    "issuedOn",
+    "issuedOnText",
+    "roleTitle",
+    "score",
+    "signedBy",
+    "tenantName",
+    "valid",
+    "workloadHours",
+  ]);
 });

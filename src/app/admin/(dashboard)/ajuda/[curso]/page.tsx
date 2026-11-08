@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
+import { DEFAULT_CERTIFICATE_CHECK_BASE } from "@/core/courses/certificate.ts";
 import { courseProgress } from "@/core/tutorials/course.ts";
 import { formatDuration } from "@/core/tutorials/progress.ts";
 import { getCourse, getPublishedCourseBySlug } from "@/lib/courses.ts";
@@ -133,6 +134,10 @@ export default async function CoursePage({
             workloadHours={settings.workloadHours}
             tenantName={tenant.name}
             accountName={session.user.name ?? ""}
+            checkUrl={
+              process.env.CERTIFICATE_CHECK_BASE_URL ||
+              DEFAULT_CERTIFICATE_CHECK_BASE
+            }
             state={panelState}
           />
         )}

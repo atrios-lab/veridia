@@ -1,3 +1,4 @@
+import { certificateCheckUrl } from "@/core/courses/certificate.ts";
 import {
   renderCertificatePdf,
   SigningUnavailableError,
@@ -8,13 +9,6 @@ import { getPublishedCourseBySlug } from "@/lib/courses.ts";
 import { getSession } from "@/lib/session.ts";
 
 const INSTRUCTOR = "Joelison Alves Marinho";
-
-/** The public check's address on the host the certificate was issued from:
- * plain http only for a development host. */
-function validationUrl(host: string, code: string): string {
-  const local = /(^|\.)localhost(:\d+)?$/.test(host);
-  return `${local ? "http" : "https"}://${host}/certificado/${code}`;
-}
 
 /**
  * The person's own certificate for the course, as a signed PDF, generated
@@ -47,7 +41,10 @@ export async function GET(
         score: certificate.score,
         issuedAt: certificate.issuedAt,
         code: certificate.code,
-        validationUrl: validationUrl(certificate.issuedHost, certificate.code),
+        validationUrl: certificateCheckUrl(
+          certificate.code,
+          process.env.CERTIFICATE_CHECK_BASE_URL || undefined,
+        ),
         instructorName: INSTRUCTOR,
       },
       signingCertificateFromEnv(),

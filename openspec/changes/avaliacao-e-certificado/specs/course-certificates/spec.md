@@ -117,7 +117,7 @@ O certificado SHALL ser um PDF com:
 - o nome "Joelison Alves Marinho" como instrutor, com a imagem da assinatura dele acima do nome;
 - a assinatura digital da Átrios com certificado ICP-Brasil, em formato PAdES, e um bloco visível indicando essa assinatura.
 
-O endereço de validação SHALL usar o host da serventia em que o certificado foi emitido.
+O endereço de validação impresso e no QR SHALL ser `https://atrioss.com/certificado/<código>`, no site da Átrios. Fora de produção, uma variável de ambiente SHALL poder trocar esse endereço.
 
 A imagem da assinatura NÃO SHALL ser servida por nenhuma rota pública: ela existe só dentro do PDF.
 
@@ -147,25 +147,29 @@ O PDF do certificado SHALL ser entregue só a uma sessão autenticada que seja a
 
 ### Requirement: Validação pública do certificado
 
-A rota `/certificado/<código>` SHALL ser pública, funcionar em qualquer host de serventia e mostrar, para um código existente:
+A validação SHALL ficar no site da Átrios (`atrioss.com/certificado/<código>`), que monta a página a partir de uma consulta pública da plataforma, `GET /api/certificados/<código>`. Para um código existente, a consulta SHALL responder JSON só com:
 - o nome;
 - o CPF mascarado, com os 3 primeiros e os 2 últimos dígitos ocultos;
 - a função e a serventia;
 - o curso, a carga horária, o aproveitamento e a data;
 - a indicação de assinatura digital da Átrios.
 
-Para um código inexistente ou malformado, SHALL responder 404 com a mesma aparência, sem distinguir os dois casos. A página NÃO SHALL ser indexada e SHALL limitar consultas por IP.
+A consulta NÃO SHALL devolver nenhum outro dado do certificado. Para um código inexistente ou malformado, SHALL responder 404 sem distinguir os dois casos. A consulta SHALL permitir leitura pelo navegador apenas a partir de `https://atrioss.com` e `https://www.atrioss.com`, SHALL limitar consultas por IP e SHALL dispensar esse limite para o servidor da Átrios autenticado por token. A resposta NÃO SHALL ser guardada em cache nem indexada.
 
 #### Scenario: Código válido
-- **WHEN** alguém abre `/certificado/<código emitido>`
-- **THEN** vê o certificado válido, com o CPF no formato `***.456.789-**`
+- **WHEN** o site da Átrios consulta `/api/certificados/<código emitido>`
+- **THEN** recebe o certificado válido, com o CPF no formato `***.456.789-**`
 
 #### Scenario: Código inexistente
-- **WHEN** alguém abre `/certificado/AAAA-BBBB-CCCC` e esse código não existe
-- **THEN** vê "Certificado não encontrado", com status 404
+- **WHEN** a consulta recebe `AAAA-BBBB-CCCC` e esse código não existe
+- **THEN** responde 404 com `{"valid": false}`
+
+#### Scenario: Outra origem
+- **WHEN** um navegador em outro domínio chama a consulta
+- **THEN** a resposta não traz permissão de CORS para ele
 
 #### Scenario: Muitas consultas
-- **WHEN** um mesmo IP faz mais de 30 consultas em 10 minutos
+- **WHEN** um mesmo IP, sem o token do servidor da Átrios, faz mais de 30 consultas em 10 minutos
 - **THEN** as seguintes são recusadas até a janela passar
 
 ### Requirement: Gerenciamento da avaliação

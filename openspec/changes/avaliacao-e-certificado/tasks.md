@@ -17,7 +17,7 @@
 
 ## 4. PDF assinado
 
-- [x] 4.1 Adicionar `@signpdf/signpdf`, `@signpdf/signer-p12` e `@signpdf/placeholder-pdfkit`
+- [x] 4.1 Adicionar `@signpdf/signpdf`, `@signpdf/signer-p12` e `@signpdf/placeholder-plain` (o `placeholder-pdfkit` não aceita o pdfkit 0.19)
 - [x] 4.2 Copiar `materiais-curso/assinatura-joelison.png` (recortada em 07/11/2026) para `src/lib/assets/`, fora de `public/`
 - [x] 4.2.1 `renderCertificate` em pdfkit (A4 paisagem): textos, QR de validação, bloco visível da assinatura com razão social e CNPJ lidos do A1, nome de Joelison Alves Marinho como instrutor
 - [x] 4.3 Assinatura PAdES com `CERT_A1_PFX_BASE64` e `CERT_A1_PASSWORD`: tarja de teste fora de produção sem certificado; falha com log em produção sem certificado; teste que confere a presença e a integridade da assinatura com o certificado de teste
@@ -28,7 +28,7 @@
 - [x] 5.2 Tela da tentativa: questões na ordem sorteada, envio, resultado só com acertos e situação
 - [x] 5.3 Formulário de emissão com aviso de finalidade, prévia do texto e confirmação
 - [x] 5.4 Rota `GET /admin/ajuda/[curso]/certificado`: só o dono, `attachment`, `private, no-store`
-- [x] 5.5 Rota pública `/certificado/[codigo]`: dados com CPF mascarado, 404 igual para inexistente e malformado, `noindex`, limite de 30 consultas por IP a cada 10 minutos
+- [x] 5.5 Consulta pública `GET /api/certificados/[codigo]` para o site da Átrios: visão com CPF mascarado, 404 igual para inexistente e malformado, `noindex`, CORS só para atrioss.com, limite de 30 consultas por IP a cada 10 minutos, token para o servidor da Átrios; endereço impresso `https://atrioss.com/certificado/<código>`
 - [x] 5.6 Gerenciamento: seção "Avaliação" por curso (nota, carga horária, intervalo, questões)
 
 ## 6. Conferência e produção
@@ -36,4 +36,6 @@
 - [x] 6.1 Rodar os testes tocados, `pnpm typecheck` e `pnpm lint`
 - [x] 6.2 Aplicar a migração no Homolog pelo pooler; conferir no navegador (local, contra o Homolog, curso de teste já apagado) uma tentativa reprovada, uma aprovada, CPF inválido recusado, emissão, download e validação pública (as 10 questões do design entram na 6.4; o gerenciamento não foi conferido no navegador porque o seed local é `staff`)
 - [ ] 6.3 Antes do merge, aplicar a migração em produção via `POSTGRES_URL_NON_POOLING` e configurar o A1 em Production
+- [ ] 6.3.1 Configurar `CERTIFICATE_API_TOKEN` em Production e passar o mesmo valor ao site da Átrios
+- [ ] 6.3.2 No site da Átrios: página `/certificado/[codigo]` consultando `https://<host do Veridia>/api/certificados/<código>`
 - [ ] 6.4 Em produção: configurar o curso de LGPD (70%, 2 h, 5 h), cadastrar as 10 questões, publicar o Encerramento, emitir um certificado de teste e conferir a assinatura em validar.iti.gov.br

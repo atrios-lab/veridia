@@ -104,3 +104,69 @@ export function certificateSentence(
     `${formatCertificateDate(facts.issuedAt)}.`
   );
 }
+
+/**
+ * Where a certificate is checked: the Átrios site, which reads it from this
+ * platform's API (`/api/certificados/<código>`). Printed on the PDF and in
+ * its QR. `CERTIFICATE_CHECK_BASE_URL` overrides it outside production, so
+ * a test certificate never points people at the real site.
+ */
+export const DEFAULT_CERTIFICATE_CHECK_BASE = "https://atrioss.com/certificado";
+
+export function certificateCheckUrl(
+  code: string,
+  base: string = DEFAULT_CERTIFICATE_CHECK_BASE,
+): string {
+  return `${base.replace(/\/+$/, "")}/${code}`;
+}
+
+/** The origins allowed to read the check API from a browser: the Átrios
+ * site, with and without www. */
+export const CERTIFICATE_CHECK_ORIGINS: readonly string[] = [
+  "https://atrioss.com",
+  "https://www.atrioss.com",
+];
+
+/** What the check API answers: the public view, CPF masked, never the
+ * attempt, the user id or anything else the row holds. */
+export interface PublicCertificate {
+  valid: true;
+  code: string;
+  fullName: string;
+  cpf: string;
+  roleTitle: string;
+  tenantName: string;
+  courseTitle: string;
+  workloadHours: number;
+  score: number;
+  /** YYYY-MM-DD, in the RN clock. */
+  issuedOn: string;
+  /** dd/mm/aaaa, ready to print. */
+  issuedOnText: string;
+  signedBy: string;
+}
+
+export function publicCertificate(
+  facts: CertificateFacts & { code: string },
+): PublicCertificate {
+  const parts = new Intl.DateTimeFormat("en-CA", {
+    timeZone: "America/Fortaleza",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).format(facts.issuedAt);
+  return {
+    valid: true,
+    code: facts.code,
+    fullName: facts.fullName,
+    cpf: publicCpf(facts.cpf),
+    roleTitle: facts.roleTitle,
+    tenantName: facts.tenantName,
+    courseTitle: facts.courseTitle,
+    workloadHours: facts.workloadHours,
+    score: facts.score,
+    issuedOn: parts,
+    issuedOnText: formatCertificateDate(facts.issuedAt),
+    signedBy: "Átrios, com certificado digital ICP-Brasil",
+  };
+}
