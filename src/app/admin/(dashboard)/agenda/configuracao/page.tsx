@@ -1,7 +1,9 @@
 import { notFound } from "next/navigation";
 import { can } from "@/core/auth/roles.ts";
 import {
+  AGENDA_IDS,
   AGENDA_WEEKDAYS,
+  type AgendaId,
   timesForWeekday,
   WEEKDAY_LABELS,
 } from "@/core/scheduling/agenda.ts";
@@ -16,7 +18,7 @@ import { getTenant, today } from "@/lib/tenant.ts";
 import { AdminPageHeader } from "../../../_components/page-header.tsx";
 import { AgendaSettingsForm } from "./agenda-settings-form.tsx";
 
-export const metadata = { title: "Configuração da agenda" };
+export const metadata = { title: "Configuração das agendas" };
 
 /** How far ahead the live preview can strike taken times through: four weeks
  * covers the three example dates it shows for any weekday. */
@@ -28,41 +30,58 @@ export default async function AgendaSettingsPage() {
   const tenant = await getTenant();
 
   const from = today();
-  const [config, taken, futureLive] = await Promise.all([
+  const [config, taken, futureGeral, futureTabeliao] = await Promise.all([
     getAgendaConfig(tenant.slug),
     takenTimesByDay(tenant.slug, from, addDays(from, PREVIEW_WINDOW_DAYS)),
-    futureLiveByWeekdayTime(tenant.slug, from),
+    futureLiveByWeekdayTime(tenant.slug, from, "geral"),
+    futureLiveByWeekdayTime(tenant.slug, from, "tabeliao"),
   ]);
+
+  const agendas = Object.fromEntries(
+    AGENDA_IDS.map((id) => [
+      id,
+      {
+        grid: Object.fromEntries(
+          AGENDA_WEEKDAYS.map((day) => [
+            String(day),
+            timesForWeekday(config.agendas[id], day),
+          ]),
+        ),
+        serviceIds: config.agendas[id].serviceIds,
+      },
+    ]),
+  ) as Record<
+    AgendaId,
+    { grid: Record<string, string[]>; serviceIds: string[] }
+  >;
 
   return (
     <>
       <AdminPageHeader
-        title="Configuração da agenda"
+        title="Configuração das agendas"
         back={{ href: "/admin/agenda", label: "Agenda" }}
       />
       <main className="px-[30px] py-7">
         <AgendaSettingsForm
-          initialGrid={Object.fromEntries(
-            AGENDA_WEEKDAYS.map((day) => [
-              String(day),
-              timesForWeekday(config, day),
-            ]),
-          )}
+          initial={{
+            agendas,
+            services: config.services.map(({ id, label, bring }) => ({
+              id,
+              label,
+              bring,
+            })),
+            modes: config.modes,
+          }}
           weekdays={AGENDA_WEEKDAYS.map((day) => ({
             day: String(day),
             label: WEEKDAY_LABELS[day],
           }))}
-          initialServices={config.services.map((service) => ({
-            label: service.label,
-            notaryOnly: service.notaryOnly,
-          }))}
-          initialModes={config.modes}
           closedDates={config.closedDates.map((closed) => closed.date)}
           holidays={officeHolidays(tenant)}
           takenByDate={Object.fromEntries(
             [...taken.entries()].map(([date, times]) => [date, [...times]]),
           )}
-          futureLive={futureLive}
+          futureLive={{ geral: futureGeral, tabeliao: futureTabeliao }}
           today={from}
         />
       </main>

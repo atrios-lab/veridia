@@ -32,7 +32,7 @@ export async function POST(request: Request): Promise<Response> {
       title: `Atendimento no ${tenant.name}`,
       description:
         `${appointment.serviceLabel} · ${appointment.mode}. ` +
-        "Leve um documento com foto.",
+        "Chegue 15 minutos antes, com documento com foto e o comprovante do agendamento.",
       location: tenant.address ?? `${tenant.name}, ${tenant.subtitle}`,
       stamp: new Date(),
     },

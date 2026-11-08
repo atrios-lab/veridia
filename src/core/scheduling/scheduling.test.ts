@@ -2,10 +2,12 @@ import assert from "node:assert/strict";
 import { test } from "node:test";
 import { SUPPORTED_STATES } from "../transparency/rubrics.ts";
 import {
-  type AgendaConfig,
+  type AgendaRules,
+  agendaRules,
   DEFAULT_AGENDA_CONFIG,
   hasGrid,
   parseAgendaConfig,
+  serializeAgendaConfig,
   slotEndTime,
 } from "./agenda.ts";
 import {
@@ -40,14 +42,14 @@ import {
 
 // Tuesdays and Thursdays only, the way the office's own Calendly was set up.
 // 2026-08-04 is a Tuesday, 2026-08-06 a Thursday.
-const config: AgendaConfig = {
-  ...DEFAULT_AGENDA_CONFIG,
+const config: AgendaRules = {
   grid: {
     "2": ["08:30", "09:00", "09:30"],
     "4": ["08:30", "13:30"],
   },
-  services: [{ id: "tabeliao", label: "Tabelião", notaryOnly: false }],
+  closedDates: [],
 };
+const EMPTY = agendaRules(DEFAULT_AGENDA_CONFIG, "geral");
 
 const taken = (...times: string[]): TakenTimes => new Set(times);
 
@@ -110,13 +112,13 @@ test("only the weekdays the office declared are offered", () => {
 });
 
 test("an office with no grid offers nothing instead of a default", () => {
-  assert.equal(hasGrid(DEFAULT_AGENDA_CONFIG), false);
+  assert.equal(hasGrid(EMPTY), false);
   assert.equal(hasGrid(config), true);
-  assert.deepEqual(offeredDays(DEFAULT_AGENDA_CONFIG, "2026-08-03", 5), []);
+  assert.deepEqual(offeredDays(EMPTY, "2026-08-03", 5), []);
 });
 
 test("a date the office closed is not offered", () => {
-  const closed: AgendaConfig = {
+  const closed: AgendaRules = {
     ...config,
     closedDates: [{ date: "2026-08-06", reason: "Manutenção elétrica." }],
   };
@@ -188,7 +190,7 @@ test("agenda config survives a malformed row and sorts the day's times", () => {
   const parsed = parseAgendaConfig({
     grid: { "2": ["09:30", "08:30", "09:30"] },
   });
-  assert.deepEqual(parsed.grid["2"], ["08:30", "09:30"]);
+  assert.deepEqual(parsed.agendas.geral.grid["2"], ["08:30", "09:30"]);
   assert.equal(slotEndTime("08:30"), "09:30");
   assert.equal(slotEndTime("13:30"), "14:30");
 });
@@ -224,6 +226,36 @@ test("a config saved before notaryOnly existed parses with the flag off", () => 
     closedDates: [],
   });
   assert.equal(config.services[0].notaryOnly, false);
+});
+
+test("a config saved before the two agendas becomes the counter's agenda", () => {
+  const config = parseAgendaConfig({
+    grid: { "2": ["09:00"] },
+    services: [{ id: "procuracao", label: "Procuração", notaryOnly: true }],
+    modes: ["Presencial"],
+    closedDates: [],
+  });
+  // Same hours and same services as before, so the site does not change
+  // until the office sets the notary's agenda up.
+  assert.deepEqual(config.agendas.geral.grid, { "2": ["09:00"] });
+  assert.deepEqual(config.agendas.geral.serviceIds, ["procuracao"]);
+  assert.deepEqual(config.agendas.tabeliao, { grid: {}, serviceIds: [] });
+  assert.deepEqual(config.services[0].bring, []);
+});
+
+test("a saved config reads back the same, and keeps the legacy grid", () => {
+  const config = parseAgendaConfig({
+    agendas: {
+      geral: { grid: { "1": ["08:00"] }, serviceIds: ["rcpn.segunda-via"] },
+      tabeliao: { grid: { "3": ["10:00"] }, serviceIds: ["notas.testamento"] },
+    },
+    modes: ["Presencial"],
+  });
+  const stored = serializeAgendaConfig(config);
+  // A deploy rolled back reads the counter's hours from the old field.
+  assert.deepEqual(stored.grid, { "1": ["08:00"] });
+  assert.deepEqual(parseAgendaConfig(stored), config);
+  assert.deepEqual(agendaRules(config, "tabeliao").grid, { "3": ["10:00"] });
 });
 
 test("the RN Código de Normas closes the services beyond the national holidays", () => {
@@ -282,7 +314,7 @@ test("a one-off holiday closes that date only", () => {
 
 test("the office's holidays close the agenda too", () => {
   const config = {
-    ...DEFAULT_AGENDA_CONFIG,
+    ...EMPTY,
     grid: { 5: ["09:00"] }, // sextas
     holidays: OWN,
   };

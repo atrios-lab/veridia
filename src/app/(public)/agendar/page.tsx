@@ -1,5 +1,16 @@
-import { hasGrid } from "@/core/scheduling/agenda.ts";
+import {
+  AGENDA_IDS,
+  AGENDA_NAMES,
+  type AgendaId,
+  agendaRules,
+  hasGrid,
+  isAgendaId,
+} from "@/core/scheduling/agenda.ts";
 import { officeHolidays } from "@/core/scheduling/calendar.ts";
+import {
+  offeredAgendas,
+  servicesOfAgenda,
+} from "@/core/scheduling/services.ts";
 import {
   firstFreeSlot,
   freeSlots,
@@ -15,67 +26,96 @@ import { SchedulingScreen } from "./appointment-form.tsx";
 export const generateMetadata = publicMetadata("/agendar");
 
 /**
- * The chosen day lives in the query string, so the times are rendered on the
- * server against the office's real bookings. Back button, bookmark and a
- * shared link all behave the way the citizen expects, and availability is
- * never guessed in the browser.
+ * The chosen agenda and day live in the query string, so the times are
+ * rendered on the server against the office's real bookings. Back button,
+ * bookmark and a shared link all behave the way the citizen expects, and
+ * availability is never guessed in the browser.
  */
 export default async function SchedulingPage({
   searchParams,
 }: {
-  searchParams: Promise<{ dia?: string }>;
+  searchParams: Promise<{ dia?: string; agenda?: string }>;
 }) {
   const tenant = await requireSection("agendamento");
-  const { dia } = await searchParams;
+  const { dia, agenda: agendaParam } = await searchParams;
 
-  const config = {
-    ...(await getAgendaConfig(tenant.slug)),
-    holidays: officeHolidays(tenant),
-  };
+  const config = await getAgendaConfig(tenant.slug);
+  const holidays = officeHolidays(tenant);
   const now = officeNow();
-  const days = offeredDays(config, now.date);
+  const base = {
+    openingHours: tenant.openingHours,
+    phone: tenant.contacts.phone,
+    whatsapp: tenant.contacts.whatsapp,
+  };
+
+  // Only the agendas with hours, services and a day ahead are offered.
+  const agendas = offeredAgendas(config).filter(
+    (id) =>
+      offeredDays({ ...agendaRules(config, id), holidays }, now.date).length >
+      0,
+  );
+  const choices = agendas.map((id) => ({ id, ...AGENDA_NAMES[id] }));
 
   // An office that has not configured its agenda is told apart from one whose
   // days are merely full: the first sends the citizen to the telephone, the
   // second to another day.
-  if (days.length === 0) {
+  if (agendas.length === 0) {
+    const configured = AGENDA_IDS.some((id) =>
+      hasGrid(agendaRules(config, id)),
+    );
     return (
-      <div className="mx-auto max-w-6xl px-4 py-6 md:px-10 md:py-10">
+      <Page>
         <SchedulingScreen
-          openingHours={tenant.openingHours}
-          phone={tenant.contacts.phone}
-          whatsapp={tenant.contacts.whatsapp}
-          unavailable={hasGrid(config) ? "full" : "unconfigured"}
+          {...base}
+          unavailable={configured ? "full" : "unconfigured"}
         />
-      </div>
+      </Page>
     );
   }
 
+  // Two agendas and none chosen yet: the first question is with whom.
+  const agenda: AgendaId | undefined =
+    isAgendaId(agendaParam) && agendas.includes(agendaParam)
+      ? agendaParam
+      : agendas.length === 1
+        ? agendas[0]
+        : undefined;
+  if (!agenda) {
+    return (
+      <Page>
+        <SchedulingScreen {...base} agendas={choices} />
+      </Page>
+    );
+  }
+
+  const rules = { ...agendaRules(config, agenda), holidays };
+  const days = offeredDays(rules, now.date);
   const selected = dia && days.includes(dia) ? dia : days[0];
   const taken = await takenTimesByDay(
     tenant.slug,
     days[0],
     days[days.length - 1],
+    agenda,
   );
   const dayTaken = taken.get(selected) ?? new Set<string>();
-  const nextFreeDay = nextDayWithSlot(config, days, taken, selected, now);
+  const nextFreeDay = nextDayWithSlot(rules, days, taken, selected, now);
 
   return (
-    <div className="mx-auto max-w-6xl px-4 py-6 md:px-10 md:py-10">
+    <Page>
       <SchedulingScreen
-        openingHours={tenant.openingHours}
-        phone={tenant.contacts.phone}
-        whatsapp={tenant.contacts.whatsapp}
+        {...base}
+        agendas={choices}
+        agenda={agenda}
         days={days}
         selected={selected}
-        times={freeSlots(config, selected, dayTaken, now)}
-        services={config.services}
+        times={freeSlots(rules, selected, dayTaken, now)}
+        services={servicesOfAgenda(config, agenda)}
         modes={config.modes}
         nextFreeDay={nextFreeDay}
         nextFreeTime={
           nextFreeDay
             ? firstFreeSlot(
-                config,
+                rules,
                 nextFreeDay,
                 taken.get(nextFreeDay) ?? new Set<string>(),
                 now,
@@ -83,6 +123,14 @@ export default async function SchedulingPage({
             : undefined
         }
       />
+    </Page>
+  );
+}
+
+function Page({ children }: { children: React.ReactNode }) {
+  return (
+    <div className="mx-auto max-w-6xl px-4 py-6 md:px-10 md:py-10">
+      {children}
     </div>
   );
 }

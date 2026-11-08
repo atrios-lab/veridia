@@ -106,3 +106,11 @@ test("two cancellations of the same slot can coexist", async () => {
   await book("2026-08-24", "09:00", "Carla");
   await expectRefused(book("2026-08-24", "09:00", "Diego"));
 });
+
+test("an appointment from before the two agendas reads as the counter's", async () => {
+  await book("2026-08-25", "09:00", "Dora");
+  const { rows } = await client.query<{ agenda: string }>(
+    "SELECT agenda FROM appointments WHERE citizen_name = 'Dora'",
+  );
+  assert.equal(rows[0]?.agenda, "geral");
+});

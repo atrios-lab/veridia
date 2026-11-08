@@ -1,6 +1,7 @@
 import type { EmailText } from "../email/text.ts";
 import { type SlotTime, slotEndTime } from "./agenda.ts";
 import { formatLongDate, type IsoDate } from "./calendar.ts";
+import { arrivalNotice, CHECKLIST_CAVEAT } from "./services.ts";
 
 /**
  * What the office writes to a citizen about their appointment.
@@ -20,6 +21,11 @@ export interface AppointmentEmailFacts {
   serviceLabel: string;
   mode: string;
   address: string;
+  /** "Atendimento com o tabelião", when the office has more than the
+   * counter's agenda; absent, the e-mail does not name one. */
+  agendaName?: string;
+  /** What to bring, base items first. Absent on the cancellation notices. */
+  checklist?: string[];
 }
 
 /** "quinta, 06/08/2026, das 08:30 às 09:30" */
@@ -46,12 +52,23 @@ export function buildAppointmentBookedEmail(
       `${firstName(facts.citizenName)}, seu atendimento está agendado.`,
       `Quando: ${when(facts.date, facts.slotTime)}.`,
       `Serviço: ${facts.serviceLabel}. Atendimento: ${facts.mode}.`,
+      ...(facts.agendaName ? [`Agenda: ${facts.agendaName}.`] : []),
       `Onde: ${facts.address}.`,
-      "Leve um documento com foto. Se for tratar de assunto de outra pessoa, leve procuração.",
+      arrivalNotice(facts.slotTime),
+      ...(facts.checklist?.length
+        ? [
+            "O que trazer:",
+            ...facts.checklist.map((item) => `• ${item}`),
+            CHECKLIST_CAVEAT,
+          ]
+        : [
+            "Leve um documento com foto. Se for tratar de assunto de outra pessoa, leve procuração.",
+          ]),
+      "O comprovante de agendamento em PDF vai anexo: apresente-o na recepção, impresso ou no celular.",
       "Não vai poder vir? Cancele pelo botão abaixo para liberar o horário para outra pessoa.",
     ],
     buttonLabel: "Cancelar este agendamento",
-    footnote: `${facts.officeName} · Este e-mail é o comprovante do seu agendamento. Guarde-o: o link acima é a única forma de cancelar pela internet.`,
+    footnote: `${facts.officeName} · Guarde este e-mail: o link acima é a única forma de cancelar pela internet.`,
   };
 }
 

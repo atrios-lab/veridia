@@ -2,12 +2,27 @@
 
 import { revalidatePath } from "next/cache";
 import { can } from "@/core/auth/roles.ts";
-import { agendaConfigSchema } from "@/core/scheduling/agenda.ts";
+import {
+  AGENDA_IDS,
+  AGENDA_NAMES,
+  type AgendaConfig,
+  agendaBookSchema,
+  agendaRules,
+  agendaServiceSchema,
+  hasGrid,
+  isAgendaId,
+  OWN_SERVICE_ID,
+  ownServiceId,
+} from "@/core/scheduling/agenda.ts";
 import {
   generateCancelToken,
   hashCancelToken,
 } from "@/core/scheduling/appointment.ts";
 import { officeHolidays } from "@/core/scheduling/calendar.ts";
+import {
+  getCounterService,
+  servicesOfAgenda,
+} from "@/core/scheduling/services.ts";
 import { isSlotFree } from "@/core/scheduling/slots.ts";
 import {
   bookAppointment,
@@ -119,6 +134,8 @@ export async function reserveDeskAppointment(
   const email = String(formData.get("email") ?? "").trim();
   const serviceId = String(formData.get("serviceId") ?? "");
   const mode = String(formData.get("mode") ?? "");
+  const agendaValue = formData.get("agenda");
+  const agenda = isAgendaId(agendaValue) ? agendaValue : "geral";
 
   if (!citizenName || !phone) {
     return {
@@ -129,19 +146,22 @@ export async function reserveDeskAppointment(
 
   const tenant = await getTenant();
   try {
+    const office = await getAgendaConfig(tenant.slug);
     const config = {
-      ...(await getAgendaConfig(tenant.slug)),
+      ...agendaRules(office, agenda),
       holidays: officeHolidays(tenant),
     };
-    const service = config.services.find((item) => item.id === serviceId);
-    if (!service || !config.modes.includes(mode)) {
+    const service = servicesOfAgenda(office, agenda).find(
+      (item) => item.id === serviceId,
+    );
+    if (!service || !office.modes.includes(mode)) {
       return {
         status: "error",
         message: "Escolha um serviço e um modo das listas configuradas.",
       };
     }
 
-    const taken = await takenTimesByDay(tenant.slug, date, date);
+    const taken = await takenTimesByDay(tenant.slug, date, date, agenda);
     if (
       !isSlotFree(
         config,
@@ -161,6 +181,7 @@ export async function reserveDeskAppointment(
     const appointment = await bookAppointment(
       tenant.slug,
       {
+        agenda,
         date,
         slotTime,
         citizenName,
@@ -349,9 +370,9 @@ export async function reopenAgendaDay(
 }
 
 /**
- * Saves the weekly grid and the two lists. The whole config is written at
- * once, parsed by the core's schema on the way in: a grid half-saved is a
- * counter half-open.
+ * Saves both agendas, the office's own services and the modes. The whole
+ * config is written at once, parsed by the core's schemas on the way in: a
+ * grid half-saved is a counter half-open.
  */
 export async function saveAgenda(
   _previous: ActionState,
@@ -364,11 +385,11 @@ export async function saveAgenda(
   try {
     const current = await getAgendaConfig(tenant.slug);
     // The form sends the whole config as one JSON field: the grid chips,
-    // services and modes are structured client state, and one field parsed by
-    // one schema keeps "a grid half-saved" impossible.
+    // ticked services and modes are structured client state, and one field
+    // parsed by one schema keeps "a grid half-saved" impossible.
     let submitted: {
-      grid?: unknown;
-      services?: Array<{ label?: unknown; notaryOnly?: unknown }>;
+      agendas?: Record<string, unknown>;
+      services?: Array<{ id?: unknown; label?: unknown; bring?: unknown }>;
       modes?: unknown;
     };
     try {
@@ -379,43 +400,66 @@ export async function saveAgenda(
         message: "Não foi possível ler o formulário. Recarregue a página.",
       };
     }
-    const parsed = agendaConfigSchema.safeParse({
-      grid: submitted.grid ?? {},
-      services: withUniqueIds(
-        (submitted.services ?? []).map((service) => ({
-          label: String(service.label ?? "").trim(),
-          notaryOnly: service.notaryOnly === true,
-        })),
-      ),
-      modes: Array.isArray(submitted.modes)
-        ? submitted.modes.map((item) => String(item).trim()).filter(Boolean)
-        : [],
-      // Closed dates are owned by the day-closing action, not by this form.
-      closedDates: current.closedDates,
-    });
 
-    if (!parsed.success) {
-      return {
-        status: "error",
-        message:
-          parsed.error.issues[0]?.message ??
-          "Confira os horários: use o formato HH:mm, separados por vírgula.",
+    const services = ownServices(submitted.services ?? []);
+    if ("error" in services) {
+      return { status: "error", message: services.error };
+    }
+    const known = (id: string) =>
+      Boolean(getCounterService(id)) ||
+      services.list.some((service) => service.id === id);
+
+    const agendas = {} as AgendaConfig["agendas"];
+    for (const id of AGENDA_IDS) {
+      const parsed = agendaBookSchema.safeParse(submitted.agendas?.[id] ?? {});
+      if (!parsed.success) {
+        return {
+          status: "error",
+          message:
+            parsed.error.issues[0]?.message ??
+            "Confira os horários: use o formato HH:mm.",
+        };
+      }
+      agendas[id] = {
+        grid: parsed.data.grid,
+        // Only ids that exist: a ticked own service deleted in the same
+        // save goes with it.
+        serviceIds: [...new Set(parsed.data.serviceIds)].filter(known),
       };
     }
-    if (parsed.data.services.length === 0) {
-      return {
-        status: "error",
-        message: "Cadastre ao menos um serviço para o cidadão escolher.",
-      };
-    }
-    if (parsed.data.modes.length === 0) {
+
+    const modes = Array.isArray(submitted.modes)
+      ? submitted.modes.map((item) => String(item).trim()).filter(Boolean)
+      : [];
+    if (modes.length === 0) {
       return {
         status: "error",
         message: "Cadastre ao menos um modo de atendimento.",
       };
     }
 
-    await saveAgendaConfig(tenant.slug, parsed.data, session.user.id);
+    const config: AgendaConfig = {
+      agendas,
+      services: services.list,
+      modes,
+      // Closed dates are owned by the day-closing action, not by this form.
+      closedDates: current.closedDates,
+    };
+    // An agenda with hours and nothing to book would show the citizen days
+    // and an empty list of services.
+    for (const id of AGENDA_IDS) {
+      if (
+        hasGrid(config.agendas[id]) &&
+        servicesOfAgenda(config, id).length === 0
+      ) {
+        return {
+          status: "error",
+          message: `${AGENDA_NAMES[id].name}: marque ao menos um serviço, ou tire os horários para ela não aparecer no site.`,
+        };
+      }
+    }
+
+    await saveAgendaConfig(tenant.slug, config, session.user.id);
   } catch (error) {
     console.error("agenda.save", error);
     return {
@@ -428,31 +472,37 @@ export async function saveAgenda(
 }
 
 /**
- * Ids derived from the labels, so the citizen's choice survives a reorder of
- * the list. A rename still produces a new id, which is exactly why the
- * appointment keeps its own copy of the label.
- *
- * Two labels that reduce to the same slug ("Certidão" and "Certidao") get a
- * suffix: an id shared by two services would hand the second one's citizens
- * the first one's name.
+ * The office's own services as the form sent them. An id the form already
+ * had is kept, so the agendas that tick it still find it; a new one gets an
+ * id from its label. Empty labels drop out.
  */
-function withUniqueIds(
-  services: Array<{ label: string; notaryOnly: boolean }>,
-): Array<{ id: string; label: string; notaryOnly: boolean }> {
+function ownServices(
+  submitted: Array<{ id?: unknown; label?: unknown; bring?: unknown }>,
+): { list: AgendaConfig["services"] } | { error: string } {
   const used = new Set<string>();
-  return services
-    .filter((service) => service.label)
-    .map(({ label, notaryOnly }) => {
-      const base =
-        label
-          .normalize("NFD")
-          .replace(/[\u0300-\u036f]/g, "")
-          .toLowerCase()
-          .replace(/[^a-z0-9]+/g, "-")
-          .replace(/^-|-$/g, "") || "servico";
-      let id = base;
-      for (let n = 2; used.has(id); n++) id = `${base}-${n}`;
-      used.add(id);
-      return { id, label, notaryOnly };
+  const list: AgendaConfig["services"] = [];
+  for (const item of submitted) {
+    const label = String(item.label ?? "").trim();
+    if (!label) continue;
+    const given = typeof item.id === "string" ? item.id : "";
+    const id =
+      OWN_SERVICE_ID.test(given) && !used.has(given)
+        ? given
+        : ownServiceId(label, used);
+    used.add(id);
+    const parsed = agendaServiceSchema.safeParse({
+      id,
+      label,
+      bring: Array.isArray(item.bring)
+        ? item.bring.map((line) => String(line).trim()).filter(Boolean)
+        : [],
     });
+    if (!parsed.success) {
+      return {
+        error: parsed.error.issues[0]?.message ?? "Confira os serviços.",
+      };
+    }
+    list.push(parsed.data);
+  }
+  return { list };
 }

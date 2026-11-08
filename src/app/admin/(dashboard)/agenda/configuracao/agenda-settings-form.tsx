@@ -4,21 +4,46 @@ import Link from "next/link";
 import { useActionState, useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 import {
+  AGENDA_IDS,
+  AGENDA_NAMES,
+  type AgendaId,
+  ownServiceId,
+} from "@/core/scheduling/agenda.ts";
+import {
   dayOfMonth,
   isBusinessDay,
   longWeekday,
   type OfficeHolidays,
   weekday,
 } from "@/core/scheduling/calendar.ts";
+import {
+  BASE_CHECKLIST,
+  COUNTER_SERVICES,
+  counterServicesByGroup,
+} from "@/core/scheduling/services.ts";
 import { AdminIcon } from "../../../_components/icon.tsx";
 import { type ActionState, saveAgenda } from "../actions.ts";
 
-interface ServiceDraft {
-  label: string;
-  notaryOnly: boolean;
+type Grid = Record<string, string[]>;
+
+interface BookDraft {
+  grid: Grid;
+  serviceIds: string[];
 }
 
-type Grid = Record<string, string[]>;
+type Books = Record<AgendaId, BookDraft>;
+
+export interface OwnServiceDraft {
+  id: string;
+  label: string;
+  bring: string[];
+}
+
+interface Draft {
+  agendas: Books;
+  services: OwnServiceDraft[];
+  modes: string[];
+}
 
 /** The modes a serventia actually offers in practice, with the panel's own
  * explanation of each. A mode already saved outside this list still renders
@@ -48,44 +73,35 @@ const inputClass =
   "rounded-lg border border-admin-border bg-admin-input-bg px-3 py-2 text-[13px] text-admin-text outline-none focus:border-admin-accent";
 
 /**
- * The whole agenda as structured state: chips for times, toggles for
- * services, cards for modes, and a live preview computed from what is on the
- * screen, not from what was last saved. One JSON field carries it all to the
- * action, where the core's schema remains the referee.
+ * Both agendas as structured state: chips for times, ticks for services,
+ * cards for modes, and a live preview computed from what is on the screen,
+ * not from what was last saved. One JSON field carries it all to the action,
+ * where the core's schemas remain the referee.
  */
 export function AgendaSettingsForm({
-  initialGrid,
+  initial,
   weekdays,
-  initialServices,
-  initialModes,
   closedDates,
   takenByDate,
   futureLive,
   today,
   holidays,
 }: {
-  initialGrid: Grid;
+  initial: Draft;
   weekdays: Array<{ day: string; label: string }>;
-  initialServices: ServiceDraft[];
-  initialModes: string[];
   closedDates: string[];
   /** date -> times already held, for the preview's strikethroughs. */
   takenByDate: Record<string, string[]>;
-  /** `${weekday}|${time}` -> live future appointments on that grid slot. */
-  futureLive: Record<string, number>;
+  /** agenda -> `${weekday}|${time}` -> live future appointments there. */
+  futureLive: Record<AgendaId, Record<string, number>>;
   today: string;
   /** The office's own days off, so the preview skips them as the public
    * page does. */
   holidays: OfficeHolidays;
 }) {
-  const [grid, setGrid] = useState<Grid>(initialGrid);
-  const [services, setServices] = useState<ServiceDraft[]>(initialServices);
-  const [modes, setModes] = useState<string[]>(initialModes);
-  const [baseline, setBaseline] = useState({
-    grid: initialGrid,
-    services: initialServices,
-    modes: initialModes,
-  });
+  const [draft, setDraft] = useState<Draft>(initial);
+  const [baseline, setBaseline] = useState<Draft>(initial);
+  const [tab, setTab] = useState<AgendaId>("geral");
 
   const [state, formAction, pending] = useActionState<ActionState, FormData>(
     saveAgenda,
@@ -99,33 +115,106 @@ export function AgendaSettingsForm({
     lastState.current = state;
     if (state.status === "success") {
       toast.success(state.message ?? "Agenda salva.");
-      setBaseline({ grid, services, modes });
+      setBaseline(draft);
     }
-  }, [state, grid, services, modes]);
+  }, [state, draft]);
 
-  const dirty =
-    JSON.stringify({ grid, services, modes }) !== JSON.stringify(baseline);
+  const dirty = JSON.stringify(draft) !== JSON.stringify(baseline);
+  const book = draft.agendas[tab];
+  const setBook = (next: BookDraft) =>
+    setDraft({ ...draft, agendas: { ...draft.agendas, [tab]: next } });
+  const other: AgendaId = tab === "geral" ? "tabeliao" : "geral";
 
   return (
     <form
       action={formAction}
       className="grid items-start gap-4.5 lg:grid-cols-[1fr_360px]"
     >
-      <input
-        type="hidden"
-        name="config"
-        value={JSON.stringify({ grid, services, modes })}
-      />
+      <input type="hidden" name="config" value={JSON.stringify(draft)} />
 
       <div className="flex flex-col gap-4.5">
+        <section className={cardClass}>
+          <h2 className="font-serif text-[16px] font-semibold text-admin-primary">
+            Agendas
+          </h2>
+          <p className="mt-1 text-[12.5px] leading-relaxed text-admin-muted">
+            O cartório tem duas agendas, cada uma com os seus dias, horários e
+            serviços. Uma agenda sem horários não aparece no site.
+          </p>
+          <div role="tablist" className="mt-3 grid gap-2 sm:grid-cols-2">
+            {AGENDA_IDS.map((id) => {
+              const chosen = id === tab;
+              const entry = draft.agendas[id];
+              const times = Object.values(entry.grid).flat().length;
+              return (
+                <button
+                  key={id}
+                  type="button"
+                  role="tab"
+                  aria-selected={chosen}
+                  onClick={() => setTab(id)}
+                  className={`rounded-xl border px-3.5 py-3 text-left ${
+                    chosen
+                      ? "border-admin-primary bg-admin-primary text-white"
+                      : "border-admin-border bg-admin-card text-admin-text hover:bg-admin-input-bg"
+                  }`}
+                >
+                  <span className="block text-[13.5px] font-bold">
+                    {AGENDA_NAMES[id].name}
+                  </span>
+                  <span
+                    className={`block text-[12px] ${chosen ? "text-white/80" : "text-admin-muted"}`}
+                  >
+                    {times === 0
+                      ? "Sem horários: não aparece no site"
+                      : `${times} ${times === 1 ? "horário" : "horários"} por semana · ${entry.serviceIds.length} ${entry.serviceIds.length === 1 ? "serviço" : "serviços"}`}
+                  </span>
+                </button>
+              );
+            })}
+          </div>
+        </section>
+
         <GridSection
-          grid={grid}
+          key={`grid-${tab}`}
+          title={`Dias e horários · ${AGENDA_NAMES[tab].short}`}
+          grid={book.grid}
           weekdays={weekdays}
-          futureLive={futureLive}
-          onChange={setGrid}
+          futureLive={futureLive[tab]}
+          onChange={(grid) => setBook({ ...book, grid })}
         />
-        <ServicesSection services={services} onChange={setServices} />
-        <ModesSection modes={modes} onChange={setModes} />
+        <ServicePicker
+          key={`services-${tab}`}
+          agenda={tab}
+          selected={book.serviceIds}
+          otherSelected={draft.agendas[other].serviceIds}
+          own={draft.services}
+          onChange={(serviceIds) => setBook({ ...book, serviceIds })}
+        />
+        <OwnServicesSection
+          services={draft.services}
+          onChange={(services, added) =>
+            setDraft({
+              ...draft,
+              services,
+              // A service the office just created goes straight into the
+              // agenda on screen: creating it is wanting to offer it.
+              agendas: added
+                ? {
+                    ...draft.agendas,
+                    [tab]: {
+                      ...book,
+                      serviceIds: [...book.serviceIds, added],
+                    },
+                  }
+                : draft.agendas,
+            })
+          }
+        />
+        <ModesSection
+          modes={draft.modes}
+          onChange={(modes) => setDraft({ ...draft, modes })}
+        />
 
         <section
           className={`${cardClass} flex items-center justify-between gap-3`}
@@ -163,17 +252,12 @@ export function AgendaSettingsForm({
                 aria-hidden
                 className="h-2 w-2 shrink-0 rounded-full bg-admin-warning-bg"
               />
-              Alterações não salvas
-              {summarize(baseline, { grid, services, modes })}
+              Alterações não salvas{summarize(baseline, draft)}
             </p>
             <span className="flex shrink-0 gap-2">
               <button
                 type="button"
-                onClick={() => {
-                  setGrid(baseline.grid);
-                  setServices(baseline.services);
-                  setModes(baseline.modes);
-                }}
+                onClick={() => setDraft(baseline)}
                 className="px-3 py-2 text-[13px] font-semibold text-white/85 hover:text-white"
               >
                 Descartar
@@ -183,7 +267,7 @@ export function AgendaSettingsForm({
                 disabled={pending}
                 className="rounded-lg bg-white px-4 py-2 text-[13px] font-semibold text-admin-primary disabled:opacity-60"
               >
-                {pending ? "Salvando..." : "Salvar agenda"}
+                {pending ? "Salvando..." : "Salvar agendas"}
               </button>
             </span>
           </div>
@@ -191,9 +275,10 @@ export function AgendaSettingsForm({
       </div>
 
       <Preview
-        grid={grid}
-        services={services}
-        modes={modes}
+        agenda={tab}
+        grid={book.grid}
+        serviceLabels={serviceLabels(book.serviceIds, draft.services)}
+        modes={draft.modes}
         closedDates={closedDates}
         takenByDate={takenByDate}
         today={today}
@@ -203,14 +288,27 @@ export function AgendaSettingsForm({
   );
 }
 
+/** The labels of the ticked services, in the catalogue's order. */
+function serviceLabels(ids: string[], own: OwnServiceDraft[]): string[] {
+  const ticked = new Set(ids);
+  return [
+    ...COUNTER_SERVICES.filter((service) => ticked.has(service.id)).map(
+      (service) => service.label,
+    ),
+    ...own.filter((service) => ticked.has(service.id)).map((s) => s.label),
+  ];
+}
+
 /* ---------------------------------------------------------------- weekdays */
 
 function GridSection({
+  title,
   grid,
   weekdays,
   futureLive,
   onChange,
 }: {
+  title: string;
   grid: Grid;
   weekdays: Array<{ day: string; label: string }>;
   futureLive: Record<string, number>;
@@ -246,7 +344,7 @@ function GridSection({
   return (
     <section className={cardClass}>
       <h2 className="font-serif text-[16px] font-semibold text-admin-primary">
-        Horários por dia da semana
+        {title}
       </h2>
       <p className="mt-1 text-[12.5px] leading-relaxed text-admin-muted">
         Cada horário atende <strong>um cidadão</strong>. Um dia sem horários não
@@ -338,70 +436,235 @@ function GridSection({
 
 /* ---------------------------------------------------------------- services */
 
-function ServicesSection({
+/**
+ * Every service of a cartório de ofício único, grouped as the catalogue
+ * groups them, to tick for this agenda. The list is the platform's, with
+ * what each one asks the citizen to bring; the office only chooses.
+ */
+function ServicePicker({
+  agenda,
+  selected,
+  otherSelected,
+  own,
+  onChange,
+}: {
+  agenda: AgendaId;
+  selected: string[];
+  otherSelected: string[];
+  own: OwnServiceDraft[];
+  onChange: (ids: string[]) => void;
+}) {
+  const [query, setQuery] = useState("");
+  const [open, setOpen] = useState<string | null>(null);
+  const ticked = new Set(selected);
+  const elsewhere = new Set(otherSelected);
+  const otherName =
+    AGENDA_NAMES[agenda === "geral" ? "tabeliao" : "geral"].short;
+  const needle = normalize(query);
+
+  const groups = [
+    ...counterServicesByGroup().map(({ group, services }) => ({
+      group,
+      services: services.map((service) => ({
+        id: service.id,
+        label: service.label,
+        bring: service.bring,
+      })),
+    })),
+    ...(own.length > 0
+      ? [{ group: "Outros serviços da serventia", services: own }]
+      : []),
+  ]
+    .map((entry) => ({
+      ...entry,
+      services: entry.services.filter(
+        (service) =>
+          !needle ||
+          normalize(service.label).includes(needle) ||
+          normalize(entry.group).includes(needle),
+      ),
+    }))
+    .filter((entry) => entry.services.length > 0);
+
+  function toggle(id: string) {
+    onChange(
+      ticked.has(id)
+        ? selected.filter((item) => item !== id)
+        : [...selected, id],
+    );
+  }
+
+  function setGroup(ids: string[], on: boolean) {
+    const rest = selected.filter((item) => !ids.includes(item));
+    onChange(on ? [...rest, ...ids] : rest);
+  }
+
+  return (
+    <section className={cardClass}>
+      <div className="flex flex-wrap items-baseline justify-between gap-2">
+        <h2 className="font-serif text-[16px] font-semibold text-admin-primary">
+          Serviços que esta agenda atende
+        </h2>
+        <span className="text-[12px] text-admin-muted">
+          {selected.length} marcados
+        </span>
+      </div>
+      <p className="mt-1 text-[12.5px] leading-relaxed text-admin-muted">
+        Todos os serviços de um cartório de ofício único. Marque os que o
+        cidadão pode agendar em{" "}
+        <strong>{AGENDA_NAMES[agenda].name.toLowerCase()}</strong>. Cada um já
+        traz a lista do que levar, que vai no comprovante.
+      </p>
+      <input
+        type="search"
+        value={query}
+        onChange={(event) => setQuery(event.target.value)}
+        placeholder="Procurar serviço..."
+        aria-label="Procurar serviço"
+        className={`${inputClass} mt-3 w-full`}
+      />
+
+      <div className="mt-2 flex flex-col">
+        {groups.map(({ group, services }) => {
+          const ids = services.map((service) => service.id);
+          const all = ids.every((id) => ticked.has(id));
+          return (
+            <div
+              key={group}
+              className="border-b border-admin-border py-2.5 last:border-b-0"
+            >
+              <div className="flex items-center justify-between gap-2">
+                <h3 className="text-[12px] font-bold tracking-[0.06em] text-admin-faint uppercase">
+                  {group}
+                </h3>
+                <button
+                  type="button"
+                  onClick={() => setGroup(ids, !all)}
+                  className="text-[12px] font-semibold text-admin-accent underline"
+                >
+                  {all ? "Desmarcar todos" : "Marcar todos"}
+                </button>
+              </div>
+              <ul className="mt-1.5 grid gap-1 sm:grid-cols-2">
+                {services.map((service) => {
+                  const checked = ticked.has(service.id);
+                  const expanded = open === service.id;
+                  return (
+                    <li key={service.id} className="min-w-0">
+                      <span className="flex items-start gap-2 rounded-lg px-1.5 py-1 hover:bg-admin-input-bg">
+                        <input
+                          id={`svc-${agenda}-${service.id}`}
+                          type="checkbox"
+                          className="checkbox-admin mt-0.5"
+                          checked={checked}
+                          onChange={() => toggle(service.id)}
+                        />
+                        <span className="min-w-0 flex-1">
+                          <label
+                            htmlFor={`svc-${agenda}-${service.id}`}
+                            className="block cursor-pointer text-[13px] text-admin-text"
+                          >
+                            {service.label}
+                          </label>
+                          <span className="flex flex-wrap items-center gap-x-2 text-[11.5px]">
+                            {elsewhere.has(service.id) && (
+                              <span className="text-admin-faint">
+                                também na agenda {otherName}
+                              </span>
+                            )}
+                            <button
+                              type="button"
+                              onClick={() =>
+                                setOpen(expanded ? null : service.id)
+                              }
+                              aria-expanded={expanded}
+                              className="font-semibold text-admin-muted underline"
+                            >
+                              {expanded ? "Fechar" : "O que levar"}
+                            </button>
+                          </span>
+                          {expanded && (
+                            <ul className="mt-1 list-disc pl-4 text-[11.5px] leading-relaxed text-admin-muted">
+                              {[...BASE_CHECKLIST, ...service.bring].map(
+                                (item) => (
+                                  <li key={item}>{item}</li>
+                                ),
+                              )}
+                            </ul>
+                          )}
+                        </span>
+                      </span>
+                    </li>
+                  );
+                })}
+              </ul>
+            </div>
+          );
+        })}
+        {groups.length === 0 && (
+          <p className="py-4 text-center text-[12.5px] text-admin-muted">
+            Nenhum serviço com esse nome.
+          </p>
+        )}
+      </div>
+    </section>
+  );
+}
+
+function normalize(text: string): string {
+  return text
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .trim();
+}
+
+/**
+ * Services the catalogue does not have, created by the office, each with its
+ * own list of what to bring. Ticked in each agenda like any other.
+ */
+function OwnServicesSection({
   services,
   onChange,
 }: {
-  services: ServiceDraft[];
-  onChange: (services: ServiceDraft[]) => void;
+  services: OwnServiceDraft[];
+  onChange: (services: OwnServiceDraft[], added?: string) => void;
 }) {
-  const [draft, setDraft] = useState("");
+  const [label, setLabel] = useState("");
 
   function add() {
-    const label = draft.trim();
-    if (!label) return;
-    if (!services.some((service) => service.label === label)) {
-      onChange([...services, { label, notaryOnly: false }]);
+    const name = label.trim();
+    if (!name) return;
+    if (services.some((service) => service.label === name)) {
+      setLabel("");
+      return;
     }
-    setDraft("");
+    const used = new Set(services.map((service) => service.id));
+    const id = ownServiceId(name, used);
+    onChange([...services, { id, label: name, bring: [] }], id);
+    setLabel("");
   }
 
   return (
     <section className={cardClass}>
       <h2 className="font-serif text-[16px] font-semibold text-admin-primary">
-        Serviços que o cidadão pode escolher
+        Serviços próprios da serventia
       </h2>
+      <p className="mt-1 text-[12.5px] leading-relaxed text-admin-muted">
+        Para o que não está na lista acima. Escreva o que o cidadão precisa
+        levar, um item por linha: vai no comprovante, depois do documento com
+        foto.
+      </p>
       <div className="mt-2 flex flex-col">
         {services.map((service, index) => (
           <div
-            key={service.label}
-            className="flex items-center justify-between gap-3 border-b border-admin-border py-2.5"
+            key={service.id}
+            className="border-b border-admin-border py-2.5 last:border-b-0"
           >
-            <span className="min-w-0 truncate text-[13.5px] text-admin-text">
-              {service.label}
-            </span>
-            <span className="flex shrink-0 items-center gap-3">
-              <label className="flex cursor-pointer items-center gap-2 text-[12.5px] text-admin-muted">
-                <span className={service.notaryOnly ? "font-semibold" : ""}>
-                  Só com o tabelião
-                </span>
-                <button
-                  type="button"
-                  role="switch"
-                  aria-checked={service.notaryOnly}
-                  aria-label={`Só com o tabelião: ${service.label}`}
-                  onClick={() =>
-                    onChange(
-                      services.map((item, i) =>
-                        i === index
-                          ? { ...item, notaryOnly: !item.notaryOnly }
-                          : item,
-                      ),
-                    )
-                  }
-                  className={`relative h-5.5 w-10 rounded-full transition-colors ${
-                    service.notaryOnly
-                      ? "bg-admin-primary"
-                      : "bg-admin-readonly-bg"
-                  }`}
-                >
-                  <span
-                    className={`absolute top-0.5 h-4.5 w-4.5 rounded-full bg-white transition-all ${
-                      service.notaryOnly ? "left-5" : "left-0.5"
-                    }`}
-                  />
-                </button>
-              </label>
+            <div className="flex items-center justify-between gap-3">
+              <span className="min-w-0 truncate text-[13.5px] font-semibold text-admin-text">
+                {service.label}
+              </span>
               <button
                 type="button"
                 aria-label={`Remover ${service.label}`}
@@ -410,14 +673,32 @@ function ServicesSection({
               >
                 <AdminIcon name="x" className="h-3.5 w-3.5" />
               </button>
-            </span>
+            </div>
+            <label className="mt-1.5 block text-[11.5px] font-semibold text-admin-muted">
+              O que levar
+              <textarea
+                rows={2}
+                value={service.bring.join("\n")}
+                onChange={(event) =>
+                  onChange(
+                    services.map((item, i) =>
+                      i === index
+                        ? { ...item, bring: event.target.value.split("\n") }
+                        : item,
+                    ),
+                  )
+                }
+                placeholder={"Ex.: Guia paga\nDocumento do veículo"}
+                className={`${inputClass} mt-1 w-full font-normal`}
+              />
+            </label>
           </div>
         ))}
       </div>
       <div className="mt-3 flex gap-2">
         <input
-          value={draft}
-          onChange={(event) => setDraft(event.target.value)}
+          value={label}
+          onChange={(event) => setLabel(event.target.value)}
           onKeyDown={(event) => {
             if (event.key === "Enter") {
               event.preventDefault();
@@ -435,10 +716,6 @@ function ServicesSection({
           Adicionar
         </button>
       </div>
-      <p className="mt-2.5 text-[11.5px] leading-relaxed text-admin-faint">
-        "Só com o tabelião" marca o serviço na agenda e na prévia: o cidadão
-        fica sabendo antes de escolher o horário.
-      </p>
     </section>
   );
 }
@@ -518,21 +795,23 @@ function ModesSection({
 /* ----------------------------------------------------------------- preview */
 
 /**
- * What /agendar will show once this is saved, computed from the unsaved
- * state, which is the whole point: the office sees the consequence before
- * committing to it.
+ * What /agendar will show for the agenda on screen once this is saved,
+ * computed from the unsaved state, which is the whole point: the office sees
+ * the consequence before committing to it.
  */
 function Preview({
+  agenda,
   grid,
-  services,
+  serviceLabels,
   modes,
   closedDates,
   takenByDate,
   today,
   holidays,
 }: {
+  agenda: AgendaId;
   grid: Grid;
-  services: ServiceDraft[];
+  serviceLabels: string[];
   modes: string[];
   closedDates: string[];
   takenByDate: Record<string, string[]>;
@@ -544,8 +823,6 @@ function Preview({
   const selected = days[Math.min(picked, Math.max(days.length - 1, 0))];
   const times = selected ? (grid[String(weekday(selected))] ?? []) : [];
   const taken = new Set(selected ? (takenByDate[selected] ?? []) : []);
-  const flagged = services.find((service) => service.notaryOnly);
-  const shownService = flagged ?? services[0];
 
   return (
     <aside className="rounded-[14px] border border-admin-border bg-admin-card px-5 py-4 lg:sticky lg:top-4">
@@ -557,12 +834,14 @@ function Preview({
           prévia ao vivo
         </span>
       </div>
+      <p className="mt-1 text-[12px] font-semibold text-admin-muted">
+        {AGENDA_NAMES[agenda].name}
+      </p>
 
       <div className="mt-3 rounded-xl border border-admin-border bg-admin-input-bg/50 p-4">
         {days.length === 0 ? (
           <p className="text-[12.5px] leading-relaxed text-admin-muted">
-            Sem nenhum horário na grade, o site pede que o cidadão ligue para a
-            serventia.
+            Sem nenhum horário, esta agenda não aparece no site.
           </p>
         ) : (
           <>
@@ -611,21 +890,29 @@ function Preview({
               })}
             </div>
 
-            {shownService && (
-              <>
-                <p className="mt-3 text-[12px] font-bold text-admin-text">
-                  Serviço
-                </p>
-                <p className="mt-1.5 rounded-lg border border-admin-border bg-admin-card px-3 py-2.5 text-[12.5px] text-admin-text">
-                  {shownService.label}
-                  {shownService.notaryOnly && (
-                    <span className="font-semibold text-admin-warning-text">
-                      {" "}
-                      · só com o tabelião
-                    </span>
-                  )}
-                </p>
-              </>
+            <p className="mt-3 text-[12px] font-bold text-admin-text">
+              Serviços ({serviceLabels.length})
+            </p>
+            {serviceLabels.length === 0 ? (
+              <p className="mt-1.5 text-[12px] font-semibold text-admin-alert">
+                Nenhum serviço marcado: marque ao menos um.
+              </p>
+            ) : (
+              <ul className="mt-1.5 flex flex-col gap-1 text-[12.5px] text-admin-text">
+                {serviceLabels.slice(0, 5).map((label) => (
+                  <li
+                    key={label}
+                    className="rounded-lg border border-admin-border bg-admin-card px-3 py-1.5"
+                  >
+                    {label}
+                  </li>
+                ))}
+                {serviceLabels.length > 5 && (
+                  <li className="text-[12px] text-admin-muted">
+                    e mais {serviceLabels.length - 5}
+                  </li>
+                )}
+              </ul>
             )}
 
             {modes.length > 0 && (
@@ -657,9 +944,9 @@ function Preview({
       </div>
 
       <p className="mt-3 text-[11.5px] leading-relaxed text-admin-faint">
-        A prévia usa os dados desta tela: horários já ocupados aparecem
-        riscados, e o serviço marcado "só com o tabelião" avisa o cidadão antes
-        de ele escolher.
+        A prévia usa os dados desta tela. Horários já ocupados aparecem
+        riscados. Ao final, o cidadão recebe o comprovante em PDF com a lista do
+        que levar e o aviso de chegar 15 minutos antes.
       </p>
     </aside>
   );
@@ -695,23 +982,30 @@ function previewDayLabel(date: string): string {
   return `${longWeekday(date).slice(0, 3)}, ${dayOfMonth(date)}/${date.slice(5, 7)}`;
 }
 
-/** ": 2 horários novos · 1 serviço removido", for the unsaved-changes bar. */
-function summarize(
-  saved: { grid: Grid; services: ServiceDraft[]; modes: string[] },
-  current: { grid: Grid; services: ServiceDraft[]; modes: string[] },
-): string {
+/** ": 2 horários novos · 3 serviços marcados", for the unsaved-changes bar. */
+function summarize(saved: Draft, current: Draft): string {
   const phrases: string[] = [];
-
-  const flat = (grid: Grid) =>
-    Object.entries(grid).flatMap(([day, times]) =>
-      times.map((time) => `${day}|${time}`),
+  const flat = (books: Books) =>
+    AGENDA_IDS.flatMap((id) =>
+      Object.entries(books[id].grid).flatMap(([day, times]) =>
+        times.map((time) => `${id}|${day}|${time}`),
+      ),
     );
-  const savedTimes = new Set(flat(saved.grid));
-  const currentTimes = new Set(flat(current.grid));
-  const addedTimes = [...currentTimes].filter((t) => !savedTimes.has(t)).length;
-  const removedTimes = [...savedTimes].filter(
-    (t) => !currentTimes.has(t),
-  ).length;
+  const ticks = (books: Books) =>
+    AGENDA_IDS.flatMap((id) => books[id].serviceIds.map((s) => `${id}|${s}`));
+  const diff = (a: string[], b: string[]) => {
+    const before = new Set(a);
+    const after = new Set(b);
+    return [
+      [...after].filter((x) => !before.has(x)).length,
+      [...before].filter((x) => !after.has(x)).length,
+    ];
+  };
+
+  const [addedTimes, removedTimes] = diff(
+    flat(saved.agendas),
+    flat(current.agendas),
+  );
   if (addedTimes > 0) {
     phrases.push(
       `${addedTimes} ${addedTimes === 1 ? "horário novo" : "horários novos"}`,
@@ -722,36 +1016,23 @@ function summarize(
       `${removedTimes} ${removedTimes === 1 ? "horário removido" : "horários removidos"}`,
     );
   }
-
-  const savedLabels = new Set(saved.services.map((s) => s.label));
-  const currentLabels = new Set(current.services.map((s) => s.label));
-  const addedServices = current.services.filter(
-    (s) => !savedLabels.has(s.label),
-  ).length;
-  const removedServices = saved.services.filter(
-    (s) => !currentLabels.has(s.label),
-  ).length;
-  const toggled = current.services.filter((s) =>
-    saved.services.some(
-      (item) => item.label === s.label && item.notaryOnly !== s.notaryOnly,
-    ),
-  ).length;
-  if (addedServices > 0) {
+  const [ticked, unticked] = diff(ticks(saved.agendas), ticks(current.agendas));
+  if (ticked > 0) {
     phrases.push(
-      `${addedServices} ${addedServices === 1 ? "serviço novo" : "serviços novos"}`,
+      `${ticked} ${ticked === 1 ? "serviço marcado" : "serviços marcados"}`,
     );
   }
-  if (removedServices > 0) {
+  if (unticked > 0) {
     phrases.push(
-      `${removedServices} ${removedServices === 1 ? "serviço removido" : "serviços removidos"}`,
+      `${unticked} ${unticked === 1 ? "serviço desmarcado" : "serviços desmarcados"}`,
     );
   }
-  if (toggled > 0) {
-    phrases.push(
-      `${toggled} ${toggled === 1 ? "serviço marcado" : "serviços marcados"} "só com o tabelião"`,
-    );
+  if (
+    JSON.stringify(saved.services) !== JSON.stringify(current.services) &&
+    phrases.length < 2
+  ) {
+    phrases.push("serviços próprios alterados");
   }
-
   if (
     JSON.stringify([...saved.modes].sort()) !==
     JSON.stringify([...current.modes].sort())

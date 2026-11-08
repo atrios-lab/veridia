@@ -3,7 +3,9 @@ import { and, asc, eq, inArray, sql } from "drizzle-orm";
 import { formatProtocolNumber } from "@/core/request/protocol.ts";
 import {
   type AgendaConfig,
+  type AgendaId,
   parseAgendaConfig,
+  serializeAgendaConfig,
 } from "@/core/scheduling/agenda.ts";
 import {
   ACTIONABLE_APPOINTMENT_STATUS,
@@ -71,19 +73,20 @@ export async function saveAgendaConfig(
   actorId: string,
 ): Promise<void> {
   const now = new Date();
+  const published = serializeAgendaConfig(config);
   await db
     .insert(tenantContent)
     .values({
       tenantSlug,
       key: OFFICE_AGENDA_KEY,
-      published: config,
+      published,
       publishedAt: now,
       updatedBy: actorId,
     })
     .onConflictDoUpdate({
       target: [tenantContent.tenantSlug, tenantContent.key],
       set: {
-        published: config,
+        published,
         publishedAt: now,
         updatedAt: now,
         updatedBy: actorId,
@@ -100,14 +103,28 @@ export async function saveAgendaConfig(
 /* ------------------------------------------------------------------ reading */
 
 /**
- * Which times are already taken, per day, over a range. Only a cancellation
- * gives a time back, the same rule the partial unique index enforces on the
- * way in, so the page never offers what the insert would refuse.
+ * Whether the two agendas still share one set of times. They do while the
+ * database's slot index (`appointments_tenant_date_slot_live`) holds one live
+ * appointment per office, day and time, whatever the agenda: a time taken at
+ * the counter is then taken at the notary's too, and the page must not offer
+ * what the insert would refuse. The index that lets each agenda keep its own
+ * times drops the old one, and dropping it is left to a reviewed change of
+ * its own (no structure leaves the database without a person reading it);
+ * that change flips this to false.
+ */
+export const AGENDAS_SHARE_TIMES = true;
+
+/**
+ * Which times are already taken, per day, over a range, in one agenda. Only
+ * a cancellation gives a time back, the same rule the partial unique index
+ * enforces on the way in, so the page never offers what the insert would
+ * refuse.
  */
 export async function takenTimesByDay(
   tenantSlug: string,
   from: IsoDate,
   to: IsoDate,
+  agenda: AgendaId = "geral",
 ): Promise<Map<IsoDate, TakenTimes>> {
   const rows = await db
     .select({ date: appointments.date, slotTime: appointments.slotTime })
@@ -115,6 +132,7 @@ export async function takenTimesByDay(
     .where(
       and(
         eq(appointments.tenantSlug, tenantSlug),
+        AGENDAS_SHARE_TIMES ? undefined : eq(appointments.agenda, agenda),
         inArray(appointments.status, [...SLOT_HOLDING_STATUSES]),
         sql`${appointments.date} between ${from} and ${to}`,
       ),
@@ -202,6 +220,8 @@ export async function bookedCountFrom(
 /* ------------------------------------------------------------------ writing */
 
 export interface NewAppointment {
+  /** Defaults to the counter's agenda. */
+  agenda?: AgendaId;
   date: IsoDate;
   slotTime: SlotTime;
   citizenName: string;
@@ -266,6 +286,7 @@ export async function bookAppointmentWith(
         .insert(appointments)
         .values({
           tenantSlug,
+          agenda: input.agenda ?? "geral",
           date: input.date,
           slotTime: input.slotTime,
           citizenName: input.citizenName,
@@ -501,6 +522,7 @@ export async function liveCountsByDay(
   tenantSlug: string,
   from: IsoDate,
   to: IsoDate,
+  agenda: AgendaId = "geral",
 ): Promise<Map<IsoDate, number>> {
   const rows = await db
     .select({ date: appointments.date, count: sql<number>`count(*)::int` })
@@ -508,6 +530,7 @@ export async function liveCountsByDay(
     .where(
       and(
         eq(appointments.tenantSlug, tenantSlug),
+        eq(appointments.agenda, agenda),
         sql`${appointments.status} <> 'cancelled'`,
         sql`${appointments.date} between ${from} and ${to}`,
       ),
@@ -523,6 +546,7 @@ export async function liveCountsByDay(
 export async function futureLiveByWeekdayTime(
   tenantSlug: string,
   from: IsoDate,
+  agenda: AgendaId = "geral",
 ): Promise<Record<string, number>> {
   const rows = await db
     .select({
@@ -535,6 +559,7 @@ export async function futureLiveByWeekdayTime(
     .where(
       and(
         eq(appointments.tenantSlug, tenantSlug),
+        eq(appointments.agenda, agenda),
         eq(appointments.status, ACTIONABLE_APPOINTMENT_STATUS),
         sql`${appointments.date} >= ${from}`,
       ),
@@ -584,4 +609,21 @@ export async function liveAppointmentsOn(
       ),
     )
     .orderBy(asc(appointments.date), asc(appointments.slotTime));
+}
+
+/** One appointment by id, any status, for the panel's printed receipt. */
+export async function findAppointmentById(
+  tenantSlug: string,
+  id: string,
+): Promise<Appointment | undefined> {
+  // A malformed id is "not found", not a database error on a uuid cast.
+  if (!/^[0-9a-f-]{36}$/i.test(id)) return undefined;
+  const [row] = await db
+    .select()
+    .from(appointments)
+    .where(
+      and(eq(appointments.tenantSlug, tenantSlug), eq(appointments.id, id)),
+    )
+    .limit(1);
+  return row;
 }

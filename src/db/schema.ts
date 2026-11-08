@@ -581,6 +581,10 @@ export const appointments = pgTable(
     // Minimised on purpose: most counter visits do not need it before the
     // citizen shows up with the document in hand.
     cpf: text("cpf"),
+    // Which of the office's two agendas: "geral" (the counter) or
+    // "tabeliao" (the notary in person), see core/scheduling/agenda. Every
+    // appointment from before the split was the counter's, hence the default.
+    agenda: text("agenda").notNull().default("geral"),
     serviceId: text("service_id").notNull(),
     serviceLabel: text("service_label").notNull(),
     mode: text("mode").notNull(),

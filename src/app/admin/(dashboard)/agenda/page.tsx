@@ -1,7 +1,16 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { can } from "@/core/auth/roles.ts";
-import { closedDate } from "@/core/scheduling/agenda.ts";
+import {
+  AGENDA_IDS,
+  AGENDA_NAMES,
+  type AgendaId,
+  agendaIdOf,
+  agendaRules,
+  closedDate,
+  hasGrid,
+  isAgendaId,
+} from "@/core/scheduling/agenda.ts";
 import {
   addDays,
   dayOfMonth,
@@ -11,8 +20,10 @@ import {
   officeHolidays,
   shortWeekday,
 } from "@/core/scheduling/calendar.ts";
+import { servicesOfAgenda } from "@/core/scheduling/services.ts";
 import { freeSlots, gridTimes } from "@/core/scheduling/slots.ts";
 import {
+  AGENDAS_SHARE_TIMES,
   appointmentsOn,
   getAgendaConfig,
   liveCountsByDay,
@@ -43,7 +54,7 @@ const STRIP_DAYS = 7;
 export default async function AgendaPage({
   searchParams,
 }: {
-  searchParams: Promise<{ dia?: string; de?: string }>;
+  searchParams: Promise<{ dia?: string; de?: string; agenda?: string }>;
 }) {
   const session = await getSession();
   if (!session || !can(session.user.role ?? "", "channels.manage")) notFound();
@@ -52,6 +63,7 @@ export default async function AgendaPage({
   const params = await searchParams;
   const date = ISO.test(params.dia ?? "") ? (params.dia as string) : today();
   const anchor = ISO.test(params.de ?? "") ? (params.de as string) : today();
+  const agenda: AgendaId = isAgendaId(params.agenda) ? params.agenda : "geral";
 
   const stripDates = nextBusinessDays(
     anchor,
@@ -61,21 +73,53 @@ export default async function AgendaPage({
   const stripFrom = stripDates[0] ?? anchor;
   const stripTo = stripDates.at(-1) ?? anchor;
 
-  const [agendaConfig, appointments, counts] = await Promise.all([
+  const [agendaConfig, dayAppointments, counts] = await Promise.all([
     getAgendaConfig(tenant.slug),
     appointmentsOn(tenant.slug, date),
-    liveCountsByDay(tenant.slug, stripFrom, stripTo),
+    liveCountsByDay(tenant.slug, stripFrom, stripTo, agenda),
   ]);
 
   // The office's own days off ride along, so its holidays close the day
   // here as they do on the public page.
-  const config = { ...agendaConfig, holidays: officeHolidays(tenant) };
+  const config = {
+    ...agendaRules(agendaConfig, agenda),
+    holidays: officeHolidays(tenant),
+  };
   const now = officeNow();
   const closed = closedDate(config, date);
   const grid = gridTimes(config, date);
+  const appointments = dayAppointments.filter(
+    (a) => agendaIdOf(a.agenda) === agenda,
+  );
   const live = appointments.filter((a) => a.status !== "cancelled");
   const takenTimes = new Set(live.map((a) => a.slotTime));
-  const free = closed ? [] : freeSlots(config, date, takenTimes, now);
+  // While the two agendas share their times, an hour the other one holds is
+  // not free here either: the database would refuse it.
+  const heldElsewhere = new Map(
+    AGENDAS_SHARE_TIMES
+      ? dayAppointments
+          .filter(
+            (a) => a.status !== "cancelled" && agendaIdOf(a.agenda) !== agenda,
+          )
+          .map((a) => [a.slotTime, AGENDA_NAMES[agendaIdOf(a.agenda)].short])
+      : [],
+  );
+  const free = closed
+    ? []
+    : freeSlots(
+        config,
+        date,
+        new Set([...takenTimes, ...heldElsewhere.keys()]),
+        now,
+      );
+  const otherAgendaCounts = AGENDA_IDS.filter((id) => id !== agenda).map(
+    (id) => ({
+      id,
+      count: dayAppointments.filter(
+        (a) => a.status !== "cancelled" && agendaIdOf(a.agenda) === id,
+      ).length,
+    }),
+  );
 
   // Every hour the day has: the appointments (any status), plus the grid
   // times nobody holds: offered ones as bookable, spent ones as idle.
@@ -101,10 +145,11 @@ export default async function AgendaPage({
     })),
     ...grid
       .filter((time) => !takenTimes.has(time))
-      .map((time) => ({
-        kind: free.includes(time) ? ("free" as const) : ("idle" as const),
-        time,
-      })),
+      .map((time): DayRow => {
+        if (free.includes(time)) return { kind: "free", time };
+        const heldBy = heldElsewhere.get(time);
+        return heldBy ? { kind: "held", time, heldBy } : { kind: "idle", time };
+      }),
   ].sort((a, b) => a.time.localeCompare(b.time));
 
   const futureClosed = [...config.closedDates]
@@ -115,7 +160,40 @@ export default async function AgendaPage({
     <>
       <AdminPageHeader title="Agenda de atendimentos" />
       <main className="flex flex-col gap-3 px-[30px] py-7">
+        <nav aria-label="Agendas" className="flex flex-wrap gap-2">
+          {AGENDA_IDS.map((id) => {
+            const chosen = id === agenda;
+            const other = otherAgendaCounts.find((item) => item.id === id);
+            return (
+              <Link
+                key={id}
+                href={`/admin/agenda?agenda=${id}&dia=${date}&de=${anchor}`}
+                aria-current={chosen ? "page" : undefined}
+                className={`rounded-full border px-4 py-2 text-[13px] font-semibold ${
+                  chosen
+                    ? "border-admin-primary bg-admin-primary text-white"
+                    : "border-admin-border bg-admin-card text-admin-text hover:bg-admin-input-bg"
+                }`}
+              >
+                {AGENDA_NAMES[id].name}
+                {!chosen && other && other.count > 0 && (
+                  <span className="ml-1.5 rounded-full bg-admin-input-bg px-1.5 py-0.5 text-[11px] text-admin-muted">
+                    {other.count} no dia
+                  </span>
+                )}
+                {!hasGrid(agendaRules(agendaConfig, id)) && (
+                  <span
+                    className={`ml-1.5 text-[11px] font-normal ${chosen ? "text-white/80" : "text-admin-faint"}`}
+                  >
+                    · sem horários
+                  </span>
+                )}
+              </Link>
+            );
+          })}
+        </nav>
         <DayStrip
+          agenda={agenda}
           dates={stripDates}
           selected={date}
           anchor={anchor}
@@ -140,10 +218,13 @@ export default async function AgendaPage({
               </span>
             </div>
             <DaySlotList
+              agenda={agenda}
               date={date}
               rows={rows}
-              services={config.services.map(({ id, label }) => ({ id, label }))}
-              modes={config.modes}
+              services={servicesOfAgenda(agendaConfig, agenda).map(
+                ({ id, label }) => ({ id, label }),
+              )}
+              modes={agendaConfig.modes}
               closed={Boolean(closed)}
             />
           </section>
@@ -158,10 +239,10 @@ export default async function AgendaPage({
               </span>
               <span>
                 <span className="block text-[13px] font-bold text-admin-primary">
-                  Configurar horários, serviços e modos
+                  Configurar as agendas
                 </span>
                 <span className="block text-[12px] text-admin-muted">
-                  vale para todas as semanas
+                  dias, horários e serviços do cartório e do tabelião
                 </span>
               </span>
             </Link>
@@ -172,8 +253,9 @@ export default async function AgendaPage({
               <CloseDayCard
                 date={date}
                 dateLabel={formatShortDate(date)}
+                // Closing a date closes both agendas, so it counts both.
                 liveCount={
-                  appointments.filter((a) => a.status === "booked").length
+                  dayAppointments.filter((a) => a.status === "booked").length
                 }
               />
             )}
@@ -220,12 +302,14 @@ export default async function AgendaPage({
  * selection, so "which Tuesday was that" is a click, not a date to retype.
  */
 function DayStrip({
+  agenda,
   dates,
   selected,
   anchor,
   config,
   counts,
 }: {
+  agenda: AgendaId;
   dates: string[];
   selected: string;
   anchor: string;
@@ -237,7 +321,7 @@ function DayStrip({
   return (
     <nav className="flex items-stretch gap-2">
       <Link
-        href={`/admin/agenda?dia=${selected}&de=${addDays(anchor, -7)}`}
+        href={`/admin/agenda?agenda=${agenda}&dia=${selected}&de=${addDays(anchor, -7)}`}
         aria-label="Dias anteriores"
         className={arrowClass}
       >
@@ -252,7 +336,7 @@ function DayStrip({
           return (
             <Link
               key={date}
-              href={`/admin/agenda?dia=${date}&de=${anchor}`}
+              href={`/admin/agenda?agenda=${agenda}&dia=${date}&de=${anchor}`}
               aria-current={isSelected ? "date" : undefined}
               className={`rounded-xl border px-3 py-2.5 ${
                 isSelected
@@ -310,7 +394,7 @@ function DayStrip({
         })}
       </div>
       <Link
-        href={`/admin/agenda?dia=${selected}&de=${addDays(anchor, 7)}`}
+        href={`/admin/agenda?agenda=${agenda}&dia=${selected}&de=${addDays(anchor, 7)}`}
         aria-label="Próximos dias"
         className={arrowClass}
       >

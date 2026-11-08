@@ -4,8 +4,16 @@ import { AddressDoesNotReceiveError, findPermanentBounce } from "./bounces.ts";
 
 export interface EmailAttachment {
   filename: string;
-  /** The file's bytes as text. Only text formats are attached today (.ics). */
-  content: string;
+  /** The file itself: text for the calendar file, bytes for a PDF. */
+  content: string | Buffer;
+}
+
+/** The media type Postmark is told, by extension: the two formats the
+ * platform attaches are the calendar file and the appointment receipt. */
+function attachmentType(filename: string): string {
+  return filename.toLowerCase().endsWith(".pdf")
+    ? "application/pdf"
+    : "text/calendar";
 }
 
 export interface OutgoingEmail {
@@ -102,10 +110,11 @@ export async function sendEmail(email: OutgoingEmail): Promise<void> {
         ? {
             Attachments: email.attachments.map((file) => ({
               Name: file.filename,
-              Content: Buffer.from(file.content, "utf8").toString("base64"),
-              // ponytail: only .ics is attached today; branch on extension
-              // if another format ever shows up.
-              ContentType: "text/calendar",
+              Content: (typeof file.content === "string"
+                ? Buffer.from(file.content, "utf8")
+                : file.content
+              ).toString("base64"),
+              ContentType: attachmentType(file.filename),
             })),
           }
         : {}),
