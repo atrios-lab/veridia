@@ -1,7 +1,8 @@
 import "server-only";
 import { createHash, randomBytes } from "node:crypto";
-import { and, asc, desc, eq, gt, sql } from "drizzle-orm";
+import { and, asc, desc, eq, gt, inArray, sql } from "drizzle-orm";
 import { ATTRIBUTION_SHORT_NAMES } from "@/core/acts/catalog.ts";
+import type { AlertSnapshot } from "@/core/chat/alerts.ts";
 import { canAssign } from "@/core/chat/capacity.ts";
 import type {
   ClosedReason,
@@ -412,6 +413,85 @@ export async function activeConversations(
       ),
     )
     .orderBy(asc(chatConversations.lastActivityAt));
+}
+
+/**
+ * What the attendant's alert watcher compares on each poll (see
+ * core/chat/alerts.ts): the queue, the conversations this attendant is
+ * attending with the time of the citizen's latest message in each, and the
+ * attendant's own status. Three small queries; names and subjects only, the
+ * messages themselves never leave the conversation screen.
+ */
+export async function alertSnapshotWith(
+  database: Database,
+  tenantSlug: string,
+  userId: string,
+): Promise<AlertSnapshot> {
+  const [waiting, mine, [me]] = await Promise.all([
+    waitingConversationsWith(database, tenantSlug),
+    database
+      .select({
+        id: chatConversations.id,
+        citizenName: chatConversations.citizenName,
+      })
+      .from(chatConversations)
+      .where(
+        and(
+          eq(chatConversations.tenantSlug, tenantSlug),
+          eq(chatConversations.assignedUserId, userId),
+          eq(chatConversations.status, "active"),
+        ),
+      ),
+    database
+      .select({ chatStatus: user.chatStatus })
+      .from(user)
+      .where(eq(user.id, userId)),
+  ]);
+
+  const latest = mine.length
+    ? await database
+        .select({
+          conversationId: chatMessages.conversationId,
+          at: sql<Date>`max(${chatMessages.createdAt})`,
+        })
+        .from(chatMessages)
+        .where(
+          and(
+            eq(chatMessages.tenantSlug, tenantSlug),
+            eq(chatMessages.authorType, "citizen"),
+            inArray(
+              chatMessages.conversationId,
+              mine.map((c) => c.id),
+            ),
+          ),
+        )
+        .groupBy(chatMessages.conversationId)
+    : [];
+  const latestById = new Map(
+    latest.map((row) => [row.conversationId, new Date(row.at).toISOString()]),
+  );
+
+  return {
+    status: me?.chatStatus ?? "available",
+    waiting: waiting.map((c) => ({
+      id: c.id,
+      citizenName: c.citizenName,
+      subject: c.subject,
+    })),
+    mine: mine.map((c) => ({
+      id: c.id,
+      citizenName: c.citizenName,
+      lastCitizenMessageAt: latestById.get(c.id) ?? null,
+    })),
+  };
+}
+
+/** The production singleton, for callers that do not test against it. */
+export async function alertSnapshot(
+  tenantSlug: string,
+  userId: string,
+): Promise<AlertSnapshot> {
+  return alertSnapshotWith(db, tenantSlug, userId);
 }
 
 /** How many conversations are waiting: the sidebar badge. */

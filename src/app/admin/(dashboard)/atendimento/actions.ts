@@ -3,9 +3,11 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { can } from "@/core/auth/roles.ts";
+import type { AlertSnapshot } from "@/core/chat/alerts.ts";
 import { isChatAvailability } from "@/core/chat/hours.ts";
 import {
   activeConversations,
+  alertSnapshot,
   assignConversation,
   ChatCapacityError,
   setChatAvailability,
@@ -90,6 +92,25 @@ export async function queueVersionAction(): Promise<string | null> {
     activeConversations(tenant.slug),
   ]);
   return `${waiting.map((c) => c.id).join(",")}|${active.map((c) => c.id).join(",")}`;
+}
+
+/**
+ * What the attendant's alert watcher polls from every panel screen (see
+ * app/admin/_components/chat-alerts.tsx). Null for someone who does not
+ * attend (the layout only mounts the watcher for those who do), and null on
+ * an error too: the watcher skips that round, and a missed poll is a late
+ * ring, never a broken screen.
+ */
+export async function alertSnapshotAction(): Promise<AlertSnapshot | null> {
+  const session = await getSession();
+  if (!session || !can(session.user.role ?? "", "chat.manage")) return null;
+  try {
+    const tenant = await getTenant();
+    return await alertSnapshot(tenant.slug, session.user.id);
+  } catch (error) {
+    console.error("atendimento.alert-snapshot", error);
+    return null;
+  }
 }
 
 const CHAT_STATUSES = ["available", "busy", "away"] as const;

@@ -7,6 +7,7 @@ import { getSession } from "@/lib/session.ts";
 import { getTenant } from "@/lib/tenant.ts";
 import { publishedTutorialCount } from "@/lib/tutorials.ts";
 import { MenuPopover } from "../../_components/menu-popover.tsx";
+import { ChatAlerts } from "../_components/chat-alerts.tsx";
 import { GlobalSearchProvider } from "../_components/global-search.tsx";
 import { ShortcutListener } from "../_components/shortcut-listener.tsx";
 import { AdminSidebar } from "../_components/sidebar.tsx";
@@ -128,6 +129,9 @@ export default async function DashboardLayout({
         <div className="scrollbar-hidden relative flex min-h-0 min-w-0 flex-1 flex-col overflow-y-auto">
           <AdminTopBar user={user} />
           {children}
+          {/* Every screen, not only the queue: the attendant hears and sees
+              the chat wherever they are working in the panel. */}
+          {can(role, "chat.manage") && <ChatAlerts />}
         </div>
       </div>
     </GlobalSearchProvider>
