@@ -26,6 +26,13 @@ const POLL_MS = 5000;
 const QUEUE_HREF = "/admin/atendimento";
 const TITLE_BLINK_MS = 1000;
 
+/** The element the dashboard layout gives this id is what shakes. */
+export const CHAT_SHAKE_TARGET_ID = "painel";
+// Written out whole so Tailwind sees the class in source.
+const SHAKE_CLASS = "motion-safe:animate-chat-shake";
+// Three flashes of 0.5s (see chat-flash in globals.css), then gone.
+const BURST_MS = 1600;
+
 /**
  * The attendant's alerts, mounted once by the dashboard layout for whoever
  * attends the chat, so they work from any panel screen: a tone at the
@@ -43,6 +50,7 @@ export function ChatAlerts() {
   const [pending, setPending] = useState<ChatAlert[]>([]);
   const [queueDismissed, setQueueDismissed] = useState(false);
   const [locked, setLocked] = useState(false);
+  const [burst, setBurst] = useState<ChatAlert | null>(null);
   const prefsRef = useRef(prefs);
   prefsRef.current = prefs;
   const pathRef = useRef(pathname);
@@ -52,6 +60,28 @@ export function ChatAlerts() {
     const { sound, volume } = prefsRef.current;
     if (sound === "none" || volume === 0) return;
     if (!playSound(sound, volume)) setLocked(isAudioLocked());
+  }, []);
+
+  /**
+   * "Chamar atenção": the panel shakes once and "Chat" flashes over the
+   * screen. Only for news, never for the repeat ring: a screen that shakes
+   * every ten seconds is a screen nobody can work on.
+   */
+  const callAttention = useCallback((alert: ChatAlert) => {
+    if (!prefsRef.current.shake) return;
+    setBurst(alert);
+    window.setTimeout(() => setBurst(null), BURST_MS);
+    const target = document.getElementById(CHAT_SHAKE_TARGET_ID);
+    if (!target) return;
+    target.classList.remove(SHAKE_CLASS);
+    // Reading layout restarts the animation when two alerts land close.
+    void target.offsetWidth;
+    target.classList.add(SHAKE_CLASS);
+    target.addEventListener(
+      "animationend",
+      () => target.classList.remove(SHAKE_CLASS),
+      { once: true },
+    );
   }, []);
 
   // The browser holds sound back until a first click or key on the page.
@@ -91,6 +121,7 @@ export function ChatAlerts() {
       if (alerts.length === 0) return;
 
       ring();
+      callAttention(alerts[0]);
       if (alerts.some((alert) => alert.kind === "new-waiting")) {
         setQueueDismissed(false);
       }
@@ -130,7 +161,7 @@ export function ChatAlerts() {
         }
       }
     },
-    [ring, router],
+    [ring, callAttention, router],
   );
 
   useEffect(() => {
@@ -196,54 +227,71 @@ export function ChatAlerts() {
     queueWaiting && !queueDismissed && pathname !== QUEUE_HREF && snapshot;
   const showLocked =
     locked && prefs.sound !== "none" && prefs.volume > 0 && attention;
-  if (!prefs.flash && !showLocked) return null;
-  if (!showQueue && pending.length === 0 && !showLocked) return null;
+  const flash = burst && (
+    <div
+      aria-hidden="true"
+      className="pointer-events-none fixed inset-0 z-50 flex items-center justify-center bg-admin-primary/85 opacity-0 motion-safe:animate-chat-flash"
+    >
+      <div className="px-6 text-center text-white">
+        <p className="font-serif text-5xl font-semibold md:text-7xl">Chat</p>
+        <p className="mt-3 text-lg font-bold md:text-2xl">{burst.title}</p>
+        <p className="mt-1 text-base opacity-90 md:text-xl">{burst.body}</p>
+      </div>
+    </div>
+  );
+
+  const cards =
+    (prefs.flash && (showQueue || pending.length > 0)) || showLocked;
+  if (!cards) return flash || null;
 
   return (
-    <section
-      aria-label="Avisos do atendimento"
-      className="fixed right-4 bottom-4 z-40 flex w-[min(360px,calc(100vw-2rem))] flex-col gap-2.5"
-    >
-      {showLocked && (
-        <button
-          type="button"
-          onClick={() => void unlockAudio().then((ok) => setLocked(!ok))}
-          className="flex items-center gap-2 rounded-xl bg-admin-warning-bg px-3.5 py-2.5 text-left text-[12.5px] font-semibold text-admin-warning-text shadow-lg"
-        >
-          <AdminIcon name="alert" className="h-4 w-4 flex-none" />O navegador
-          bloqueou o som. Clique aqui para ativar.
-        </button>
-      )}
-      {prefs.flash && showQueue && (
-        <AlertCard
-          title={waitingLabel(snapshot.waiting.length)}
-          body={snapshot.waiting
-            .slice(0, 2)
-            .map((c) => c.citizenName)
-            .join(", ")}
-          href={QUEUE_HREF}
-          action="Ver fila"
-          onDismiss={() => setQueueDismissed(true)}
-        />
-      )}
-      {prefs.flash &&
-        pending.map((alert) => (
+    <>
+      {flash}
+      <section
+        aria-label="Avisos do atendimento"
+        className="fixed right-4 bottom-4 z-40 flex w-[min(360px,calc(100vw-2rem))] flex-col gap-2.5"
+      >
+        {showLocked && (
+          <button
+            type="button"
+            onClick={() => void unlockAudio().then((ok) => setLocked(!ok))}
+            className="flex items-center gap-2 rounded-xl bg-admin-warning-bg px-3.5 py-2.5 text-left text-[12.5px] font-semibold text-admin-warning-text shadow-lg"
+          >
+            <AdminIcon name="alert" className="h-4 w-4 flex-none" />O navegador
+            bloqueou o som. Clique aqui para ativar.
+          </button>
+        )}
+        {prefs.flash && showQueue && (
           <AlertCard
-            key={`${alert.kind}:${alert.conversationId}`}
-            title={alert.title}
-            body={alert.body}
-            href={alert.href}
-            action="Abrir"
-            onDismiss={() =>
-              setPending((current) =>
-                current.filter(
-                  (old) => old.conversationId !== alert.conversationId,
-                ),
-              )
-            }
+            title={waitingLabel(snapshot.waiting.length)}
+            body={snapshot.waiting
+              .slice(0, 2)
+              .map((c) => c.citizenName)
+              .join(", ")}
+            href={QUEUE_HREF}
+            action="Ver fila"
+            onDismiss={() => setQueueDismissed(true)}
           />
-        ))}
-    </section>
+        )}
+        {prefs.flash &&
+          pending.map((alert) => (
+            <AlertCard
+              key={`${alert.kind}:${alert.conversationId}`}
+              title={alert.title}
+              body={alert.body}
+              href={alert.href}
+              action="Abrir"
+              onDismiss={() =>
+                setPending((current) =>
+                  current.filter(
+                    (old) => old.conversationId !== alert.conversationId,
+                  ),
+                )
+              }
+            />
+          ))}
+      </section>
+    </>
   );
 }
 

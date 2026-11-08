@@ -7,7 +7,10 @@ import { getSession } from "@/lib/session.ts";
 import { getTenant } from "@/lib/tenant.ts";
 import { publishedTutorialCount } from "@/lib/tutorials.ts";
 import { MenuPopover } from "../../_components/menu-popover.tsx";
-import { ChatAlerts } from "../_components/chat-alerts.tsx";
+import {
+  CHAT_SHAKE_TARGET_ID,
+  ChatAlerts,
+} from "../_components/chat-alerts.tsx";
 import { GlobalSearchProvider } from "../_components/global-search.tsx";
 import { ShortcutListener } from "../_components/shortcut-listener.tsx";
 import { AdminSidebar } from "../_components/sidebar.tsx";
@@ -71,7 +74,8 @@ export default async function DashboardLayout({
         canRequests={can(role, "requests.manage")}
         canChannels={can(role, "channels.manage")}
       />
-      <div className="flex h-screen overflow-hidden">
+      {/* `id` is what the chat alert shakes (see chat-alerts.tsx). */}
+      <div id={CHAT_SHAKE_TARGET_ID} className="flex h-screen overflow-hidden">
         <AdminSidebar
           tenant={tenant}
           role={role}
