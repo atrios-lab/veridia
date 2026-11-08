@@ -9,12 +9,15 @@ import type { Database } from "@/db/index.ts";
 import { createTestDb } from "@/db/test-db.ts";
 import {
   agendaAlertSnapshotWith,
+  awaitingConfirmationWith,
   claimDaySummaryWith,
   claimDueRemindersWith,
 } from "./appointment-reminders.ts";
 import {
   bookAppointmentWith,
   cancelAppointmentWith,
+  markAttendedWith,
+  markNoShowWith,
   type NewAppointment,
 } from "./appointments.ts";
 
@@ -101,4 +104,54 @@ test("the panel's snapshot has today's appointments and the site's new bookings"
   const names = snapshot.recent.map((item) => item.citizenName);
   assert.ok(names.includes("Davi"));
   assert.ok(!names.includes("Caio"));
+});
+
+test("an hour that is over and still booked waits for the office to confirm", async () => {
+  const day = "2099-09-10";
+  const done = await bookAppointmentWith(
+    db,
+    TENANT.slug,
+    booking({ date: day, slotTime: "08:00", citizenName: "Passou" }),
+  );
+  await bookAppointmentWith(
+    db,
+    TENANT.slug,
+    booking({ date: day, slotTime: "10:00", citizenName: "Em curso" }),
+  );
+  await bookAppointmentWith(
+    db,
+    TENANT.slug,
+    booking({ date: "2099-09-09", slotTime: "14:00", citizenName: "Ontem" }),
+  );
+  const marked = await bookAppointmentWith(
+    db,
+    TENANT.slug,
+    booking({
+      date: "2099-09-09",
+      slotTime: "15:00",
+      citizenName: "Já marcado",
+    }),
+  );
+  await markAttendedWith(db, TENANT.slug, marked.id, "staff");
+
+  // 10:30: the 08:00 is over (it ended at 09:00), the 10:00 is still on.
+  const now = { date: day, time: "10:30" };
+  const pending = await awaitingConfirmationWith(db, TENANT.slug, now);
+  assert.deepEqual(
+    pending.map((a) => a.citizenName),
+    ["Ontem", "Passou"],
+  );
+  const snapshot = await agendaAlertSnapshotWith(db, TENANT.slug, now);
+  assert.deepEqual(
+    snapshot.pending.map((item) => item.id).includes(done.id),
+    true,
+  );
+  // Once marked, it is no longer asked about.
+  await markNoShowWith(db, TENANT.slug, done.id, "staff");
+  assert.deepEqual(
+    (await awaitingConfirmationWith(db, TENANT.slug, now)).map(
+      (a) => a.citizenName,
+    ),
+    ["Ontem"],
+  );
 });

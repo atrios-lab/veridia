@@ -26,6 +26,8 @@ export interface DayAppointment {
   origin: string;
   protocolNumber: string | null;
   cancelReason: string | null;
+  /** Its hour is over and nobody said whether the citizen came. */
+  awaitingConfirmation?: boolean;
 }
 
 export type DayRow =
@@ -165,6 +167,12 @@ function AppointmentRow({ appointment }: { appointment: DayAppointment }) {
           <span className="hidden @2xl:block" />
         )}
       </div>
+
+      {appointment.awaitingConfirmation && (
+        <p className="mt-1.5 inline-flex rounded-md bg-admin-warning-bg px-2.5 py-1 text-[11.5px] font-semibold text-admin-warning-text">
+          O horário passou: marque se foi atendido ou não compareceu.
+        </p>
+      )}
 
       {appointment.serviceDetails && (
         <p className="mt-1.5 break-words text-[12px] leading-relaxed text-admin-text">
@@ -439,7 +447,7 @@ function NoShowButton({ id }: { id: string }) {
         title={state.status === "error" ? state.message : undefined}
         className="rounded-lg border border-admin-border px-2.5 py-1.5 text-[11.5px] font-semibold text-admin-muted hover:bg-admin-input-bg disabled:opacity-60"
       >
-        {pending ? "..." : "Faltou"}
+        {pending ? "..." : "Não compareceu"}
       </button>
     </form>
   );

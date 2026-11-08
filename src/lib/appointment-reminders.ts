@@ -1,8 +1,13 @@
 import "server-only";
 import { and, asc, desc, eq, gt, isNull, sql } from "drizzle-orm";
-import { AGENDA_NAMES, agendaIdOf } from "@/core/scheduling/agenda.ts";
+import {
+  AGENDA_NAMES,
+  agendaIdOf,
+  slotEndTime,
+} from "@/core/scheduling/agenda.ts";
 import { ACTIONABLE_APPOINTMENT_STATUS } from "@/core/scheduling/appointment.ts";
 import type { IsoDate } from "@/core/scheduling/calendar.ts";
+import { addDays } from "@/core/scheduling/calendar.ts";
 import { reminderDay } from "@/core/scheduling/reminders.ts";
 import type { AgendaNow } from "@/core/scheduling/slots.ts";
 import type { Tenant } from "@/core/tenant/schema.ts";
@@ -164,6 +169,8 @@ export interface AgendaAlertSnapshot {
   today: AgendaAlertItem[];
   /** Bookings made on the site in the last two days, newest first. */
   recent: AgendaAlertItem[];
+  /** Appointments whose time is over and nobody marked attended or not. */
+  pending: AgendaAlertItem[];
 }
 
 function alertItem(appointment: Appointment): AgendaAlertItem {
@@ -186,7 +193,7 @@ export async function agendaAlertSnapshotWith(
   tenantSlug: string,
   now: AgendaNow,
 ): Promise<AgendaAlertSnapshot> {
-  const [today, recent] = await Promise.all([
+  const [today, recent, pending] = await Promise.all([
     bookedOnWith(database, tenantSlug, now.date),
     database
       .select()
@@ -201,10 +208,50 @@ export async function agendaAlertSnapshotWith(
       )
       .orderBy(desc(appointments.createdAt))
       .limit(10),
+    awaitingConfirmationWith(database, tenantSlug, now),
   ]);
   return {
     now,
     today: today.map(alertItem),
     recent: recent.map(alertItem),
+    pending: pending.map(alertItem),
   };
+}
+
+/** How far back an unconfirmed appointment is still asked about. */
+export const CONFIRMATION_WINDOW_DAYS = 30;
+
+/**
+ * Appointments whose hour is over and that are still "booked": the office
+ * has not said whether the citizen came. Today's count once their end time
+ * has passed; earlier days, all of them, up to a month back (older ones
+ * are history, not a task).
+ */
+export async function awaitingConfirmationWith(
+  database: Database,
+  tenantSlug: string,
+  now: AgendaNow,
+): Promise<Appointment[]> {
+  const rows = await database
+    .select()
+    .from(appointments)
+    .where(
+      and(
+        eq(appointments.tenantSlug, tenantSlug),
+        eq(appointments.status, ACTIONABLE_APPOINTMENT_STATUS),
+        sql`${appointments.date} between ${addDays(now.date, -CONFIRMATION_WINDOW_DAYS)} and ${now.date}`,
+      ),
+    )
+    .orderBy(asc(appointments.date), asc(appointments.slotTime));
+  return rows.filter(
+    (row) => row.date < now.date || slotEndTime(row.slotTime) <= now.time,
+  );
+}
+
+/** The production singleton, for the agenda page. */
+export async function awaitingConfirmation(
+  tenantSlug: string,
+  now: AgendaNow,
+): Promise<Appointment[]> {
+  return awaitingConfirmationWith(db, tenantSlug, now);
 }
