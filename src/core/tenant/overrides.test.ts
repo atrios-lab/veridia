@@ -534,3 +534,25 @@ test("uma linha de feriados corrompida não derruba o site", () => {
   });
   assert.deepEqual(merged.customHolidays, []);
 });
+
+test("a serventia pode desligar um feriado da lei pelo painel", () => {
+  const merged = applyTenantOverrides(cartorioMarinho, {
+    holidays: { customHolidays: [], disabledHolidays: ["sao-pedro"] },
+  });
+  assert.deepEqual(merged.disabledHolidays, ["sao-pedro"]);
+});
+
+test("uma linha salva antes de poder desligar mantém todos os da lei", () => {
+  const merged = applyTenantOverrides(cartorioMarinho, {
+    holidays: { customHolidays: [] },
+  });
+  assert.deepEqual(merged.disabledHolidays, []);
+});
+
+test("um feriado da lei que não existe é recusado", () => {
+  const parsed = OfficeHolidaysSchema.safeParse({
+    customHolidays: [],
+    disabledHolidays: ["carnaval-quinta"],
+  });
+  assert.equal(parsed.success, false);
+});

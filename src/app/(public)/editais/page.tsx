@@ -6,6 +6,7 @@ import {
   formatDate,
   type IsoDate,
   type OfficeHolidays,
+  officeHolidays,
 } from "@/core/scheduling/calendar.ts";
 import type { NoticeSector } from "@/core/tenant/gating.ts";
 import {
@@ -165,7 +166,7 @@ export default async function PublicNoticesPage() {
                         key={row.id}
                         row={row}
                         day={day}
-                        holidays={tenant.customHolidays}
+                        holidays={officeHolidays(tenant)}
                       />
                     ))}
                   </div>
@@ -187,7 +188,7 @@ export default async function PublicNoticesPage() {
                       key={row.id}
                       row={row}
                       day={day}
-                      holidays={tenant.customHolidays}
+                      holidays={officeHolidays(tenant)}
                     />
                   ))}
                 </div>

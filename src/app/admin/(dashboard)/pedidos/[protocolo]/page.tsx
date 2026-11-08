@@ -44,6 +44,7 @@ import { formatCents } from "@/core/request/money.ts";
 import {
   formatDate,
   type OfficeHolidays,
+  officeHolidays,
   toIsoDate,
   toZonedDateTimeInput,
 } from "@/core/scheduling/calendar.ts";
@@ -398,7 +399,7 @@ export default async function ServiceRequestDetailPage({
                             deadlineDate(
                               deadline.startedOn,
                               deadline.days,
-                              tenant.customHolidays,
+                              officeHolidays(tenant),
                             ),
                           )} · ${deadline.days} dias úteis`}
                     </span>
@@ -407,7 +408,7 @@ export default async function ServiceRequestDetailPage({
                     open={isOpenServiceRequestStatus(status)}
                     deadline={deadline}
                     today={today()}
-                    holidays={tenant.customHolidays}
+                    holidays={officeHolidays(tenant)}
                   />
                   {/* Pedida, não concedida por si só: quem confere o
                       benefício e decide é o operador, pelo seletor ao lado, e
@@ -443,14 +444,14 @@ export default async function ServiceRequestDetailPage({
                 !isOpenServiceRequestStatus(status)
                   ? null
                   : deadline.pausedOn
-                    ? `suspenso desde ${formatDate(deadline.pausedOn)} · ${deadlineProgress(deadline, deadline.pausedOn, tenant.customHolidays)}`
+                    ? `suspenso desde ${formatDate(deadline.pausedOn)} · ${deadlineProgress(deadline, deadline.pausedOn, officeHolidays(tenant))}`
                     : `até ${formatDate(
                         deadlineDate(
                           deadline.startedOn,
                           deadline.days,
-                          tenant.customHolidays,
+                          officeHolidays(tenant),
                         ),
-                      )} · ${deadlineProgress(deadline, today(), tenant.customHolidays)}`
+                      )} · ${deadlineProgress(deadline, today(), officeHolidays(tenant))}`
               }
               deadlineDays={deadline.days}
               happyPath={

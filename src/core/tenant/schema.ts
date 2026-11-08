@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { deadlineDaysSchema } from "../request/deadline.ts";
+import { LAW_HOLIDAY_IDS } from "../scheduling/calendar.ts";
 import { SUPPORTED_STATES } from "../transparency/rubrics.ts";
 import {
   isValidPixCity,
@@ -207,6 +208,16 @@ export const TenantSchema = z.object({
   customHolidays: z
     .array(CustomHolidaySchema)
     .max(MAX_CUSTOM_HOLIDAYS, "São no máximo 60 feriados próprios.")
+    .default([]),
+  // The law days off (national and the state's Código de Normas) this office
+  // does not keep, by rule id: some only apply in some places, and an office
+  // that keeps one on another date switches it off and adds its own above.
+  disabledHolidays: z
+    .array(
+      z
+        .string()
+        .refine((id) => LAW_HOLIDAY_IDS.includes(id), "Feriado desconhecido."),
+    )
     .default([]),
   theme: ThemeSchema,
   logos: z.object({

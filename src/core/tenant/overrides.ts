@@ -159,11 +159,14 @@ export const OfficeBulletinOverrideSchema = OfficeBulletinSchema.partial();
 
 /**
  * What an office may change about its calendar: its own days off, on top of
- * the national and state ones. Same pick discipline as the others. Saved
- * whole: the list the panel submits replaces the stored one.
+ * the national and state ones, and the law days it does not keep. Same pick
+ * discipline as the others. Saved whole: what the panel submits replaces
+ * what is stored. A row saved before law days could be switched off has no
+ * `disabledHolidays` and, read partially, keeps every law day.
  */
 export const OfficeHolidaysSchema = TenantSchema.pick({
   customHolidays: true,
+  disabledHolidays: true,
 });
 export type OfficeHolidaysSettings = z.infer<typeof OfficeHolidaysSchema>;
 

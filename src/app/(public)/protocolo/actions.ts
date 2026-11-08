@@ -39,7 +39,11 @@ import {
 import { formatCents } from "@/core/request/money.ts";
 import { parseProtocolNumber } from "@/core/request/protocol.ts";
 import { signatureCaveatFor } from "@/core/request/requerimento.ts";
-import { type IsoDate, toIsoDate } from "@/core/scheduling/calendar.ts";
+import {
+  type IsoDate,
+  officeHolidays,
+  toIsoDate,
+} from "@/core/scheduling/calendar.ts";
 import { isSectionEnabled } from "@/core/tenant/gating.ts";
 import { db } from "@/db/index.ts";
 import {
@@ -399,7 +403,7 @@ export async function lookupProtocolDetail(
     const dayOfTerm = dayOfDeadline(
       term.startedOn,
       deadlineClock(term, today()),
-      tenant.customHolidays,
+      officeHolidays(tenant),
     );
 
     return {
@@ -431,7 +435,7 @@ export async function lookupProtocolDetail(
             date: deadlineDate(
               term.startedOn,
               term.days,
-              tenant.customHolidays,
+              officeHolidays(tenant),
             ),
             dayOfTerm,
             days: term.days,
@@ -448,7 +452,7 @@ export async function lookupProtocolDetail(
           }
         : undefined,
       deadlineTerm: {
-        date: deadlineDate(term.startedOn, term.days, tenant.customHolidays),
+        date: deadlineDate(term.startedOn, term.days, officeHolidays(tenant)),
         days: term.days,
       },
       paymentSettled,

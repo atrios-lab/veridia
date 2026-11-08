@@ -12,7 +12,11 @@ import {
   type PublicationState,
   publicationState,
 } from "@/core/publications/state.ts";
-import { formatDate, type OfficeHolidays } from "@/core/scheduling/calendar.ts";
+import {
+  formatDate,
+  type OfficeHolidays,
+  officeHolidays,
+} from "@/core/scheduling/calendar.ts";
 import {
   listPublications,
   type PublicationRow,
@@ -180,7 +184,7 @@ export default async function PublicationsPage({
                 className="flex items-start gap-3.5 border-b border-admin-border px-5 py-4 last:border-b-0"
               >
                 <span className="mt-0.5 flex-none rounded-full bg-admin-warning-bg px-2.5 py-1 text-[10.5px] font-bold text-admin-warning-text">
-                  {publicationHeadline(row, day, tenant.customHolidays).label}
+                  {publicationHeadline(row, day, officeHolidays(tenant)).label}
                 </span>
                 <span className="min-w-0 flex-1">
                   {/* The title opens the publication: text, dates, legal
@@ -192,7 +196,7 @@ export default async function PublicationsPage({
                     {row.title}
                   </Link>
                   <span className="block text-xs text-admin-faint">
-                    {exitLabel(row, state, day, tenant.customHolidays)}
+                    {exitLabel(row, state, day, officeHolidays(tenant))}
                     {fileLabel(file) && ` · ${fileLabel(file)}`}
                   </span>
                 </span>

@@ -12,7 +12,7 @@ import { noticeTypeOf } from "./notice-types.ts";
 export function defaultExpiry(
   noticeType: string | null | undefined,
   publishAt: IsoDate,
-  holidays: OfficeHolidays = [],
+  holidays: OfficeHolidays = {},
 ): IsoDate | undefined {
   const type = noticeTypeOf(noticeType);
   if (!type) return undefined;

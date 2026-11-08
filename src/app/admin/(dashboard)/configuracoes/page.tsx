@@ -1,7 +1,10 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { can } from "@/core/auth/roles.ts";
-import { upcomingClosedDays } from "@/core/scheduling/calendar.ts";
+import {
+  officeHolidays,
+  upcomingLawHolidays,
+} from "@/core/scheduling/calendar.ts";
 import { ATTRIBUTIONS, type Attribution } from "@/core/tenant/schema.ts";
 import { getSession } from "@/lib/session.ts";
 import { getTenant, today } from "@/lib/tenant.ts";
@@ -143,8 +146,8 @@ export default async function SettingsPage() {
 
           <section className="mt-6 border-t border-admin-border pt-5.5">
             <OfficeHolidaysForm
-              initial={tenant.customHolidays}
-              upcoming={upcomingClosedDays(today(), 365)}
+              initial={officeHolidays(tenant)}
+              law={upcomingLawHolidays(today(), 365)}
             />
           </section>
 

@@ -8,6 +8,7 @@ import {
   formatFullDate,
   formatShortDate,
   nextBusinessDays,
+  officeHolidays,
   shortWeekday,
 } from "@/core/scheduling/calendar.ts";
 import { freeSlots, gridTimes } from "@/core/scheduling/slots.ts";
@@ -55,7 +56,7 @@ export default async function AgendaPage({
   const stripDates = nextBusinessDays(
     anchor,
     STRIP_DAYS,
-    tenant.customHolidays,
+    officeHolidays(tenant),
   );
   const stripFrom = stripDates[0] ?? anchor;
   const stripTo = stripDates.at(-1) ?? anchor;
@@ -68,7 +69,7 @@ export default async function AgendaPage({
 
   // The office's own days off ride along, so its holidays close the day
   // here as they do on the public page.
-  const config = { ...agendaConfig, holidays: tenant.customHolidays };
+  const config = { ...agendaConfig, holidays: officeHolidays(tenant) };
   const now = officeNow();
   const closed = closedDate(config, date);
   const grid = gridTimes(config, date);

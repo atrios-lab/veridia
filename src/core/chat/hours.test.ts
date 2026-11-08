@@ -240,3 +240,10 @@ test("on the office's own holiday the line names it too", () => {
     "Fechado hoje, feriado de Dia do Evangélico · abre terça às 8h",
   );
 });
+
+test("a law day the office switched off leaves the counter open", () => {
+  const office: Tenant = { ...cartorioMarinho, disabledHolidays: ["sao-joao"] };
+  // 2026-06-24, São João, a Wednesday, 10h.
+  const now = new Date("2026-06-24T13:00:00Z");
+  assert.equal(counterStatus(office, now).open, true);
+});

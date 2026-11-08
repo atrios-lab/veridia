@@ -18,7 +18,7 @@ import {
   type PublicationState,
   publicationState,
 } from "@/core/publications/state.ts";
-import { formatDate } from "@/core/scheduling/calendar.ts";
+import { formatDate, officeHolidays } from "@/core/scheduling/calendar.ts";
 import { NOTICE_SECTOR_META, type NoticeSector } from "@/core/tenant/gating.ts";
 import { formatOfficeDateTime } from "@/core/time/office-time.ts";
 import {
@@ -107,9 +107,9 @@ export default async function PublicationDetailPage({
     (entry) => entry.action === "publication.create",
   )?.actorName;
   const state = publicationState(row, day);
-  const headline = publicationHeadline(row, day, tenant.customHolidays);
+  const headline = publicationHeadline(row, day, officeHolidays(tenant));
   const type = noticeTypeOf(row.noticeType);
-  const schedule = publicationSchedule(row, tenant.customHolidays);
+  const schedule = publicationSchedule(row, officeHolidays(tenant));
   const tab = TAB_SLUGS[state];
   const fileHref = `/admin/publicacoes/${row.id}/arquivo`;
   const isImage =

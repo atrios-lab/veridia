@@ -126,34 +126,38 @@ export function easterSunday(year: number): IsoDate {
   return fromUtc(Date.UTC(year, month - 1, day));
 }
 
-// Fixed national holidays by federal law: month-day and the name the
-// office's status line shows on the day.
-const FIXED_HOLIDAYS: [suffix: string, name: string][] = [
-  ["01-01", "Confraternização Universal"],
-  ["04-21", "Tiradentes"],
-  ["05-01", "Dia do Trabalho"],
-  ["09-07", "Independência do Brasil"],
-  ["10-12", "Nossa Senhora Aparecida"],
-  ["11-02", "Finados"],
-  ["11-15", "Proclamação da República"],
-  ["11-20", "Consciência Negra"], // Lei 14.759/2023
-  ["12-25", "Natal"],
-];
+/**
+ * A day off a law or a norm declares: an id that stays the same every year
+ * (what an office switches off by), the name the status line shows, and
+ * either a fixed month-day or an offset from Easter Sunday.
+ */
+type HolidayRule = {
+  id: string;
+  name: string;
+} & ({ fixed: string } | { fromEaster: number });
 
-/** Every national holiday of the year, fixed and Easter derived. */
-export function nationalHolidays(year: number): Map<IsoDate, string> {
-  const easter = easterSunday(year);
-  return new Map([
-    ...FIXED_HOLIDAYS.map(
-      ([suffix, name]) => [`${year}-${suffix}`, name] as const,
-    ),
-    // Carnival Tuesday is not a statutory holiday, but no notary office in the
-    // country opens on it.
-    [addDays(easter, -47), "Carnaval"],
-    [addDays(easter, -2), "Sexta-feira da Paixão"],
-    [addDays(easter, 60), "Corpus Christi"],
-  ]);
-}
+// National holidays by federal law.
+const NATIONAL_RULES: HolidayRule[] = [
+  {
+    id: "confraternizacao",
+    name: "Confraternização Universal",
+    fixed: "01-01",
+  },
+  { id: "tiradentes", name: "Tiradentes", fixed: "04-21" },
+  { id: "trabalho", name: "Dia do Trabalho", fixed: "05-01" },
+  { id: "independencia", name: "Independência do Brasil", fixed: "09-07" },
+  { id: "aparecida", name: "Nossa Senhora Aparecida", fixed: "10-12" },
+  { id: "finados", name: "Finados", fixed: "11-02" },
+  { id: "republica", name: "Proclamação da República", fixed: "11-15" },
+  // Lei 14.759/2023.
+  { id: "consciencia-negra", name: "Consciência Negra", fixed: "11-20" },
+  { id: "natal", name: "Natal", fixed: "12-25" },
+  // Carnival Tuesday is not a statutory holiday, but no notary office in the
+  // country opens on it.
+  { id: "carnaval-terca", name: "Carnaval", fromEaster: -47 },
+  { id: "paixao", name: "Sexta-feira da Paixão", fromEaster: -2 },
+  { id: "corpus-christi", name: "Corpus Christi", fromEaster: 60 },
+];
 
 /**
  * The days the extrajudicial services of a state do not open, beyond the
@@ -172,26 +176,16 @@ export function nationalHolidays(year: number): Map<IsoDate, string> {
  * 8.913/2006). Municipal holidays (also item III) are per town: each office
  * declares its own in the panel (`CustomHoliday`, below).
  */
-const STATE_CLOSED_DAYS: Record<
-  SupportedState,
-  {
-    fixed: [suffix: string, name: string][];
-    fromEaster: [offset: number, name: string][];
-  }
-> = {
-  RN: {
-    fixed: [
-      ["06-24", "São João"],
-      ["06-29", "São Pedro"],
-      ["10-03", "Mártires de Cunhaú e Uruaçu"],
-      ["12-24", "Véspera de Natal"],
-      ["12-31", "Véspera de Ano Novo"],
-    ],
-    fromEaster: [
-      [-48, "Carnaval"],
-      [-46, "Quarta-feira de Cinzas"],
-    ],
-  },
+const STATE_RULES: Record<SupportedState, HolidayRule[]> = {
+  RN: [
+    { id: "carnaval-segunda", name: "Carnaval", fromEaster: -48 },
+    { id: "cinzas", name: "Quarta-feira de Cinzas", fromEaster: -46 },
+    { id: "sao-joao", name: "São João", fixed: "06-24" },
+    { id: "sao-pedro", name: "São Pedro", fixed: "06-29" },
+    { id: "martires", name: "Mártires de Cunhaú e Uruaçu", fixed: "10-03" },
+    { id: "vespera-natal", name: "Véspera de Natal", fixed: "12-24" },
+    { id: "vespera-ano-novo", name: "Véspera de Ano Novo", fixed: "12-31" },
+  ],
 };
 
 /**
@@ -201,22 +195,67 @@ const STATE_CLOSED_DAYS: Record<
  */
 export const CALENDAR_STATE: SupportedState = "RN";
 
-/** Every day of the year the office does not open, weekends aside, by name. */
-export function closedDays(
+/** Every id an office may switch off (see `OfficeHolidays.disabledHolidays`). */
+export const LAW_HOLIDAY_IDS: readonly string[] = [
+  ...NATIONAL_RULES,
+  ...STATE_RULES[CALENDAR_STATE],
+].map((rule) => rule.id);
+
+/** One law or norm day off on a given year. `movable` follows Easter. */
+export type LawHoliday = {
+  id: string;
+  name: string;
+  date: IsoDate;
+  movable: boolean;
+};
+
+/** The national and state days off of a year, in rule order. */
+export function lawHolidays(
   year: number,
   state: SupportedState = CALENDAR_STATE,
-): Map<IsoDate, string> {
-  const rules = STATE_CLOSED_DAYS[state];
+): LawHoliday[] {
   const easter = easterSunday(year);
-  return new Map([
-    ...nationalHolidays(year),
-    ...rules.fixed.map(
-      ([suffix, name]) => [`${year}-${suffix}`, name] as const,
-    ),
-    ...rules.fromEaster.map(
-      ([offset, name]) => [addDays(easter, offset), name] as const,
-    ),
-  ]);
+  return [...NATIONAL_RULES, ...STATE_RULES[state]].map((rule) =>
+    "fixed" in rule
+      ? {
+          id: rule.id,
+          name: rule.name,
+          date: `${year}-${rule.fixed}`,
+          movable: false,
+        }
+      : {
+          id: rule.id,
+          name: rule.name,
+          date: addDays(easter, rule.fromEaster),
+          movable: true,
+        },
+  );
+}
+
+/** Every national holiday of the year, fixed and Easter derived. */
+export function nationalHolidays(year: number): Map<IsoDate, string> {
+  const national = new Set(NATIONAL_RULES.map((rule) => rule.id));
+  return new Map(
+    lawHolidays(year)
+      .filter((h) => national.has(h.id))
+      .map((h) => [h.date, h.name]),
+  );
+}
+
+/**
+ * Every day of the year the office does not open, weekends aside, by name:
+ * the national and state ones, less the ones the office switched off.
+ */
+export function closedDays(
+  year: number,
+  disabled: readonly string[] = [],
+  state: SupportedState = CALENDAR_STATE,
+): Map<IsoDate, string> {
+  return new Map(
+    lawHolidays(year, state)
+      .filter((h) => !disabled.includes(h.id))
+      .map((h) => [h.date, h.name]),
+  );
 }
 
 /**
@@ -227,64 +266,107 @@ export function closedDays(
  */
 export type CustomHoliday = { name: string; date: IsoDate; yearly: boolean };
 
-/** The office's own days off, as `Tenant.customHolidays` carries them. */
-export type OfficeHolidays = readonly CustomHoliday[];
+/**
+ * The office's own calendar on top of the law's, as `Tenant` carries it:
+ * the days it adds (`customHolidays`) and the law days it does not keep
+ * (`disabledHolidays`, by rule id: some only apply in some places, and an
+ * office that keeps one on another date switches it off and adds its own).
+ * A `Tenant` is one of these as it stands, so callers that know the office
+ * pass `officeHolidays(tenant)`.
+ */
+export type OfficeHolidays = {
+  readonly customHolidays?: readonly CustomHoliday[];
+  readonly disabledHolidays?: readonly string[];
+};
+
+/**
+ * Just the two calendar fields of an office: small enough to hand to a
+ * client component, where the whole tenant would be far more than it needs.
+ */
+export function officeHolidays(source: OfficeHolidays): OfficeHolidays {
+  return {
+    customHolidays: source.customHolidays ?? [],
+    disabledHolidays: source.disabledHolidays ?? [],
+  };
+}
 
 function customHolidayName(
   date: IsoDate,
-  holidays: OfficeHolidays,
+  custom: readonly CustomHoliday[],
 ): string | undefined {
-  return holidays.find((h) =>
+  return custom.find((h) =>
     h.yearly ? h.date.slice(5) === date.slice(5) : h.date === date,
   )?.name;
 }
 
 /**
  * The holiday's name when the office is closed for one that day: the
- * national and state ones first, then the office's own.
+ * national and state ones it keeps first, then its own.
  */
 export function holidayName(
   date: IsoDate,
-  holidays: OfficeHolidays = [],
+  holidays: OfficeHolidays = {},
 ): string | undefined {
   return (
-    closedDays(Number(date.slice(0, 4))).get(date) ??
-    customHolidayName(date, holidays)
+    closedDays(Number(date.slice(0, 4)), holidays.disabledHolidays).get(date) ??
+    customHolidayName(date, holidays.customHolidays ?? [])
   );
 }
 
 export function isHoliday(
   date: IsoDate,
-  holidays: OfficeHolidays = [],
+  holidays: OfficeHolidays = {},
 ): boolean {
   return holidayName(date, holidays) !== undefined;
 }
 
-/** One day off as the panel lists it: when, what, and whose rule it is. */
+/** One day off as a list shows it: when, what, and whose rule it is. */
 export type ClosedDay = { date: IsoDate; name: string; own: boolean };
 
 /**
- * Every day off from `from` (included) through `days` calendar days after:
- * the national and state ones (`own: false`) and the office's own
- * (`own: true`), in date order, weekends included so the list says when a
- * holiday falls on one. The panel shows it so the office sees what is
- * already counted before adding its own.
+ * Every day the office keeps closed from `from` (included) through `days`
+ * calendar days after: the law ones it keeps (`own: false`) and its own
+ * (`own: true`), in date order, weekends included so a list can say when a
+ * holiday falls on one.
  */
 export function upcomingClosedDays(
   from: IsoDate,
   days: number,
-  holidays: OfficeHolidays = [],
+  holidays: OfficeHolidays = {},
 ): ClosedDay[] {
   const result: ClosedDay[] = [];
   let cursor = from;
   for (let step = 0; step <= days; step++) {
-    const law = closedDays(Number(cursor.slice(0, 4))).get(cursor);
-    const own = customHolidayName(cursor, holidays);
+    const year = Number(cursor.slice(0, 4));
+    const law = closedDays(year, holidays.disabledHolidays).get(cursor);
+    const own = customHolidayName(cursor, holidays.customHolidays ?? []);
     if (law) result.push({ date: cursor, name: law, own: false });
     if (own) result.push({ date: cursor, name: own, own: true });
     cursor = addDays(cursor, 1);
   }
   return result;
+}
+
+/**
+ * The law days off from `from` through `days` after, switched off or not,
+ * with their ids: what the panel lists for the office to keep, switch off or
+ * take over with its own date.
+ */
+export function upcomingLawHolidays(from: IsoDate, days: number): LawHoliday[] {
+  const to = addDays(from, days);
+  const years = [Number(from.slice(0, 4)), Number(to.slice(0, 4))];
+  const seen = new Set<string>();
+  return years
+    .filter((year, index) => years.indexOf(year) === index)
+    .flatMap((year) => lawHolidays(year))
+    .filter((h) => h.date >= from && h.date <= to)
+    .filter((h) => {
+      const key = `${h.id}|${h.date}`;
+      if (seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    })
+    .sort((a, b) => a.date.localeCompare(b.date));
 }
 
 /**
@@ -294,11 +376,11 @@ export function upcomingClosedDays(
  *
  * `holidays` defaults to none so the pure helpers stay easy to call, which
  * makes forgetting it silent: every caller that knows the office passes
- * `tenant.customHolidays`.
+ * `officeHolidays(tenant)`.
  */
 export function isBusinessDay(
   date: IsoDate,
-  holidays: OfficeHolidays = [],
+  holidays: OfficeHolidays = {},
 ): boolean {
   return !isWeekend(date) && !isHoliday(date, holidays);
 }
@@ -311,7 +393,7 @@ export function isBusinessDay(
 export function nextBusinessDays(
   from: IsoDate,
   count: number,
-  holidays: OfficeHolidays = [],
+  holidays: OfficeHolidays = {},
 ): IsoDate[] {
   const days: IsoDate[] = [];
   let cursor = from;

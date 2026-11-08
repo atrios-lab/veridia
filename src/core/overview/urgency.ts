@@ -35,7 +35,7 @@ export function deadlineUrgency(
   open: boolean,
   deadline: Deadline,
   today: IsoDate,
-  holidays: OfficeHolidays = [],
+  holidays: OfficeHolidays = {},
 ): DeadlineUrgency {
   if (!open) return { kind: "closed" };
   if (deadline.pausedOn) {

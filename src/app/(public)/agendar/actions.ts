@@ -7,7 +7,7 @@ import {
   generateCancelToken,
   hashCancelToken,
 } from "@/core/scheduling/appointment.ts";
-import { formatShortDate } from "@/core/scheduling/calendar.ts";
+import { formatShortDate, officeHolidays } from "@/core/scheduling/calendar.ts";
 import { isSlotFree, offeredDays } from "@/core/scheduling/slots.ts";
 import { isSectionEnabled } from "@/core/tenant/gating.ts";
 import {
@@ -78,7 +78,7 @@ export async function submitAppointment(
 
   const config = {
     ...(await getAgendaConfig(tenant.slug)),
-    holidays: tenant.customHolidays,
+    holidays: officeHolidays(tenant),
   };
   const parsed = appointmentSchema({
     serviceIds: config.services.map((service) => service.id),

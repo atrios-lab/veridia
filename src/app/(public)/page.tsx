@@ -7,7 +7,7 @@ import {
   type PublicationKind,
   publicationSectionTitle,
 } from "@/core/publications/publication.ts";
-import { formatDate } from "@/core/scheduling/calendar.ts";
+import { formatDate, officeHolidays } from "@/core/scheduling/calendar.ts";
 import {
   isSectionEnabled,
   SECTION_DESCRIPTIONS,
@@ -79,7 +79,7 @@ export default async function Home() {
   const publications = (await livePublications(tenant.slug))
     .map((row) => ({
       row,
-      headline: publicationHeadline(row, day, tenant.customHolidays),
+      headline: publicationHeadline(row, day, officeHolidays(tenant)),
     }))
     .sort((a, b) =>
       (b.headline.date ?? "").localeCompare(a.headline.date ?? ""),

@@ -215,7 +215,11 @@ test("a day the RN Código de Normas closes is skipped too", () => {
 });
 
 test("the office's own holiday stops the term as well", () => {
-  const own = [{ name: "Emancipação", date: "2026-09-08", yearly: false }];
+  const own = {
+    customHolidays: [
+      { name: "Emancipação", date: "2026-09-08", yearly: false },
+    ],
+  };
   // 07/09 is Independência and 08/09 the office's own: Friday to Wednesday.
   assert.equal(deadlineDate("2026-09-04", 1, own), "2026-09-09");
 });

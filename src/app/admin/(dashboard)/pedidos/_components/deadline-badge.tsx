@@ -33,7 +33,7 @@ export function DeadlineBadge({
   open: boolean;
   deadline: Deadline;
   today: IsoDate;
-  /** The office's own days off (`tenant.customHolidays`): they are not
+  /** The office's own days off (`officeHolidays(tenant)`): they are not
    * business days, so they count toward no term. */
   holidays: OfficeHolidays;
   /** Say "Vence em dd/mm" when there is nothing to flag, instead of nothing. */

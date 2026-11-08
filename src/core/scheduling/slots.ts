@@ -37,7 +37,7 @@ export type TakenTimes = ReadonlySet<SlotTime>;
 
 /**
  * The agenda as the slot rules read it: the office's stored configuration
- * plus its own days off from the panel (`Tenant.customHolidays`), which live
+ * plus its own days off from the panel (`Tenant.customHolidays` and `disabledHolidays`), which live
  * in the office's settings and not in the agenda's row. Callers that know the
  * office pass them; without them only national and state days off close.
  */

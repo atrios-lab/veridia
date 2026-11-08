@@ -2,10 +2,11 @@
 
 import { useActionState, useRef, useState } from "react";
 import {
-  type ClosedDay,
   type CustomHoliday,
   formatDate,
+  type LawHoliday,
   longWeekday,
+  type OfficeHolidays,
 } from "@/core/scheduling/calendar.ts";
 import { MAX_CUSTOM_HOLIDAYS } from "@/core/tenant/schema.ts";
 import { AdminIcon } from "../../_components/icon.tsx";
@@ -31,20 +32,25 @@ type Row = CustomHoliday & { key: number };
 
 export function OfficeHolidaysForm({
   initial,
-  upcoming,
+  law,
 }: {
-  initial: readonly CustomHoliday[];
-  /** The national and state days off ahead, already counted on their own. */
-  upcoming: readonly ClosedDay[];
+  initial: OfficeHolidays;
+  /** The national and state days off ahead, kept or switched off. */
+  law: readonly LawHoliday[];
 }) {
   const [state, formAction, pending] = useActionState<
     OfficeHolidaysState,
     FormData
   >(saveOfficeHolidays, { status: "idle" });
-  const nextKey = useRef(initial.length);
+  const own = initial.customHolidays ?? [];
+  const nextKey = useRef(own.length);
   const [rows, setRows] = useState<Row[]>(() =>
-    initial.map((holiday, key) => ({ ...holiday, key })),
+    own.map((holiday, key) => ({ ...holiday, key })),
   );
+  const [disabled, setDisabled] = useState<ReadonlySet<string>>(
+    () => new Set(initial.disabledHolidays ?? []),
+  );
+  const keptCount = law.filter((day) => !disabled.has(day.id)).length;
   const fieldErrors = state.status === "error" ? state.fieldErrors : {};
   const full = rows.length >= MAX_CUSTOM_HOLIDAYS;
 
@@ -66,9 +72,43 @@ export function OfficeHolidaysForm({
     setRows((current) => current.filter((row) => row.key !== key));
   }
 
-  const payload = JSON.stringify(
-    rows.map(({ name, date, yearly }) => ({ name, date, yearly })),
-  );
+  function setKept(id: string, kept: boolean) {
+    setDisabled((current) => {
+      const next = new Set(current);
+      if (kept) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  }
+
+  /**
+   * "Alterar" a law day: it stops counting by the law's date and comes down
+   * to the office's own list with its name and date, ready to edit. Yearly
+   * for a fixed date; a day that follows Easter moves every year, so it
+   * comes down as that year's date alone.
+   */
+  function takeOver(day: LawHoliday) {
+    if (full) return;
+    setKept(day.id, false);
+    setRows((current) => [
+      ...current,
+      {
+        key: nextKey.current++,
+        name: day.name,
+        date: day.date,
+        yearly: !day.movable,
+      },
+    ]);
+  }
+
+  const payload = JSON.stringify({
+    customHolidays: rows.map(({ name, date, yearly }) => ({
+      name,
+      date,
+      yearly,
+    })),
+    disabledHolidays: [...disabled],
+  });
 
   return (
     <form action={formAction}>
@@ -77,25 +117,78 @@ export function OfficeHolidaysForm({
       </h2>
       <p className="mt-1 text-[12.5px] leading-relaxed text-admin-muted">
         Os feriados nacionais e os dias do Código de Normas do RN já entram
-        sozinhos. Cadastre aqui os do município e outros dias em que a serventia
-        fecha. Nesses dias o site avisa que é feriado, o chat não abre, a agenda
-        não oferece horário e os prazos não correm.
+        sozinhos, e você pode desligar ou alterar algum que não valha aqui.
+        Cadastre aqui os do município e outros dias em que a serventia fecha.
+        Nesses dias o site avisa que é feriado, o chat não abre, a agenda não
+        oferece horário e os prazos não correm.
       </p>
 
       <details className="mt-3.5 rounded-[10px] border border-admin-border bg-admin-input-bg px-3.5 py-2.5">
         <summary className="cursor-pointer text-[12.5px] font-semibold text-admin-primary">
-          Ver os {upcoming.length} dias já considerados nos próximos 12 meses
+          Ver e ajustar os {keptCount} dias já considerados nos próximos 12
+          meses
         </summary>
-        <ul className="mt-2.5 grid gap-1 text-[12.5px] text-admin-text sm:grid-cols-2">
-          {upcoming.map((day) => (
-            <li key={`${day.date}-${day.name}`}>
-              <span className="font-semibold">{formatDate(day.date)}</span>{" "}
-              <span className="text-admin-muted">
-                ({longWeekday(day.date)})
-              </span>{" "}
-              {day.name}
-            </li>
-          ))}
+        <p className="mt-2 text-[11.5px] leading-relaxed text-admin-muted">
+          Algum não vale na sua localidade, ou cai em outra data? Use "Não fecha
+          aqui" para desligar, ou "Alterar" para trazer para a lista da
+          serventia e mudar nome e data. Vale para todos os anos, e "Voltar a
+          considerar" desfaz.
+        </p>
+        <ul className="mt-2.5 flex flex-col divide-y divide-admin-border text-[12.5px] text-admin-text">
+          {law.map((day) => {
+            const kept = !disabled.has(day.id);
+            return (
+              <li
+                key={`${day.id}-${day.date}`}
+                className="flex flex-wrap items-center gap-x-3 gap-y-1 py-1.5"
+              >
+                <span
+                  className={`flex-1 ${kept ? "" : "line-through opacity-60"}`}
+                >
+                  <span className="font-semibold">{formatDate(day.date)}</span>{" "}
+                  <span className="text-admin-muted">
+                    ({longWeekday(day.date)})
+                  </span>{" "}
+                  {day.name}
+                </span>
+                {kept ? (
+                  <span className="flex gap-1.5">
+                    <button
+                      type="button"
+                      onClick={() => takeOver(day)}
+                      disabled={full}
+                      className="btn btn-admin-ghost btn-sm"
+                      aria-label={`Alterar ${day.name}`}
+                    >
+                      Alterar
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setKept(day.id, false)}
+                      className="btn btn-admin-ghost btn-sm"
+                      aria-label={`${day.name}: não fecha aqui`}
+                    >
+                      Não fecha aqui
+                    </button>
+                  </span>
+                ) : (
+                  <span className="flex items-center gap-1.5">
+                    <span className="rounded-full bg-admin-warning-bg px-2.5 py-0.5 text-[11px] font-bold text-admin-warning-text">
+                      Não fecha aqui
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => setKept(day.id, true)}
+                      className="btn btn-admin-ghost btn-sm"
+                      aria-label={`Voltar a considerar ${day.name}`}
+                    >
+                      Voltar a considerar
+                    </button>
+                  </span>
+                )}
+              </li>
+            );
+          })}
         </ul>
       </details>
 

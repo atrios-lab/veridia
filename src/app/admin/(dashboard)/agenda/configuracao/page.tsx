@@ -5,7 +5,7 @@ import {
   timesForWeekday,
   WEEKDAY_LABELS,
 } from "@/core/scheduling/agenda.ts";
-import { addDays } from "@/core/scheduling/calendar.ts";
+import { addDays, officeHolidays } from "@/core/scheduling/calendar.ts";
 import {
   futureLiveByWeekdayTime,
   getAgendaConfig,
@@ -58,7 +58,7 @@ export default async function AgendaSettingsPage() {
           }))}
           initialModes={config.modes}
           closedDates={config.closedDates.map((closed) => closed.date)}
-          holidays={tenant.customHolidays}
+          holidays={officeHolidays(tenant)}
           takenByDate={Object.fromEntries(
             [...taken.entries()].map(([date, times]) => [date, [...times]]),
           )}

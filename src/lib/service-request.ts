@@ -53,7 +53,11 @@ import {
   type ProtocolPrefix,
 } from "@/core/request/protocol.ts";
 import type { SearchTerm } from "@/core/request/search.ts";
-import { type IsoDate, toIsoDate } from "@/core/scheduling/calendar.ts";
+import {
+  type IsoDate,
+  officeHolidays,
+  toIsoDate,
+} from "@/core/scheduling/calendar.ts";
 import type { Tenant } from "@/core/tenant/schema.ts";
 import { officeYear } from "@/core/time/office-time.ts";
 import { user } from "@/db/auth-schema.ts";
@@ -2272,7 +2276,7 @@ export async function reconcileDeadlinePauseWith(
           current,
           today,
           act?.legalDeadlineDays != null,
-          tenant.customHolidays,
+          officeHolidays(tenant),
         ),
   );
   await recordAuditWith(database, {

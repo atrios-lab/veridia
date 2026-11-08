@@ -20,11 +20,13 @@ import {
   formatLongDate,
   holidayName,
   isBusinessDay,
+  LAW_HOLIDAY_IDS,
   nextBusinessDays,
   shortMonth,
   shortWeekday,
   toIsoDate,
   upcomingClosedDays,
+  upcomingLawHolidays,
 } from "./calendar.ts";
 import {
   firstFreeSlot,
@@ -259,10 +261,12 @@ test("the calendar has a list for every supported state", () => {
 });
 
 // Ielmo Marinho-like: a patron saint every year and a one-off decree.
-const OWN = [
-  { name: "São Sebastião", date: "2020-01-20", yearly: true },
-  { name: "Ponto facultativo", date: "2026-08-14", yearly: false },
-];
+const OWN = {
+  customHolidays: [
+    { name: "São Sebastião", date: "2020-01-20", yearly: true },
+    { name: "Ponto facultativo", date: "2026-08-14", yearly: false },
+  ],
+};
 
 test("an office's yearly holiday closes the same day every year", () => {
   assert.equal(isBusinessDay("2026-01-20", OWN), false);
@@ -295,4 +299,45 @@ test("the panel lists the days off ahead, law and office apart", () => {
   assert.deepEqual(upcomingClosedDays("2026-08-14", 0, OWN), [
     { date: "2026-08-14", name: "Ponto facultativo", own: true },
   ]);
+});
+
+test("an office can switch a law day off where it does not apply", () => {
+  const office = { disabledHolidays: ["sao-pedro"] };
+  assert.equal(isBusinessDay("2026-06-29", office), true); // São Pedro, segunda
+  assert.equal(isBusinessDay("2026-06-24", office), false); // São João segue
+});
+
+test("altering a law day moves it: off on the law's date, on the office's", () => {
+  // The town keeps São João on the 25th: the law day is switched off and
+  // the office's own one takes its place.
+  const office = {
+    disabledHolidays: ["sao-joao"],
+    customHolidays: [{ name: "São João", date: "2026-06-25", yearly: true }],
+  };
+  assert.equal(isBusinessDay("2026-06-24", office), true);
+  assert.equal(isBusinessDay("2026-06-25", office), false);
+  assert.equal(holidayName("2026-06-25", office), "São João");
+});
+
+test("switching off a day that follows Easter works every year", () => {
+  const office = { disabledHolidays: ["cinzas"] };
+  assert.equal(isBusinessDay("2026-02-18", office), true);
+  assert.equal(isBusinessDay("2027-02-10", office), true);
+});
+
+test("the panel lists the law days ahead with their ids, in date order", () => {
+  const days = upcomingLawHolidays("2026-06-20", 20);
+  assert.deepEqual(
+    days.map((d) => [d.date, d.id, d.movable]),
+    [
+      ["2026-06-24", "sao-joao", false],
+      ["2026-06-29", "sao-pedro", false],
+    ],
+  );
+  const carnival = upcomingLawHolidays("2027-02-01", 15).map((d) => d.id);
+  assert.deepEqual(carnival, ["carnaval-segunda", "carnaval-terca", "cinzas"]);
+});
+
+test("every law day has its own id", () => {
+  assert.equal(new Set(LAW_HOLIDAY_IDS).size, LAW_HOLIDAY_IDS.length);
 });

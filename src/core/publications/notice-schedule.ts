@@ -60,7 +60,7 @@ export interface NoticeSchedule {
 export function noticeSchedule(
   rule: NoticeRunRule,
   firstRun: IsoDate,
-  holidays: OfficeHolidays = [],
+  holidays: OfficeHolidays = {},
 ): NoticeSchedule {
   const runs: NoticeRun[] = [{ number: 1, date: firstRun }];
   for (let n = 2; n <= rule.runs; n++) {
