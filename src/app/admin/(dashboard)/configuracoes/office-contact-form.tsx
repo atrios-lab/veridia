@@ -111,6 +111,31 @@ export function OfficeContactForm({ tenant }: { tenant: Tenant }) {
           error={fieldErrors.endHour}
         />
       </div>
+      <div className="mt-3.5 grid grid-cols-2 gap-3.5 md:max-w-[320px]">
+        <Field
+          label="Intervalo, das"
+          name="breakStart"
+          type="time"
+          defaultValue={
+            sent?.breakStart ?? tenant.counterHours.lunchBreak?.start ?? ""
+          }
+          error={fieldErrors.breakStart}
+        />
+        <Field
+          label="às"
+          name="breakEnd"
+          type="time"
+          defaultValue={
+            sent?.breakEnd ?? tenant.counterHours.lunchBreak?.end ?? ""
+          }
+          error={fieldErrors.breakEnd}
+        />
+      </div>
+      <p className="mt-1.5 text-[11.5px] text-admin-muted">
+        Opcional. Preencha se o balcão fecha para o almoço: nesse horário o site
+        mostra "Em intervalo" e o chat não abre. Deixe os dois em branco se o
+        atendimento é corrido.
+      </p>
       <div className="mt-3.5 grid grid-cols-1 gap-3.5 md:grid-cols-3">
         <Field
           label="Telefone"

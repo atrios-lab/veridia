@@ -1,6 +1,34 @@
 import { z } from "zod";
 import { MANDATORY_SECTIONS } from "./gating.ts";
-import { CounterHoursSchema, type Tenant, TenantSchema } from "./schema.ts";
+import {
+  breakFitsHours,
+  type CounterHours,
+  CounterHoursSchema,
+  type Tenant,
+  TenantSchema,
+} from "./schema.ts";
+
+/**
+ * The hours an override puts in force, break included.
+ *
+ * A row the panel saved before breaks existed has no `lunchBreak` key at
+ * all. Taken literally, it would wipe on reading a break the office's config
+ * declares now, and an office that once corrected its phone number would go
+ * back to "Aberto agora" over lunch. So an absent key keeps the config's
+ * break, as long as it still fits the hours the row saved. `null` is the
+ * panel saying "no break" on purpose, and every save from now on writes the
+ * key one way or the other.
+ */
+function withInheritedBreak(
+  saved: CounterHours,
+  config: CounterHours,
+): CounterHours {
+  if (saved.lunchBreak !== undefined) return saved;
+  const inherited = config.lunchBreak;
+  return inherited && breakFitsHours(inherited, saved)
+    ? { ...saved, lunchBreak: inherited }
+    : saved;
+}
 
 /**
  * What an office may change about itself from the panel: the counter hours,
@@ -164,7 +192,20 @@ export function applyTenantOverrides(
   let merged = tenant;
 
   const contact = OfficeContactOverrideSchema.safeParse(overrides.contact);
-  if (contact.success) merged = { ...merged, ...contact.data };
+  if (contact.success) {
+    merged = {
+      ...merged,
+      ...contact.data,
+      ...(contact.data.counterHours
+        ? {
+            counterHours: withInheritedBreak(
+              contact.data.counterHours,
+              tenant.counterHours,
+            ),
+          }
+        : {}),
+    };
+  }
 
   const brand = OfficeBrandOverrideSchema.safeParse(overrides.brand);
   if (brand.success) merged = { ...merged, ...brand.data };

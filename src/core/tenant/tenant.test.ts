@@ -42,6 +42,19 @@ test("every office has a display city and a state with a fund map", () => {
   }
 });
 
+test("an office whose sentence has a break declares it in the numbers", () => {
+  // "das 8h às 12h e das 14h às 18h": a sentence with two spans and numbers
+  // with one is how the site came to say "Aberto agora" over lunch.
+  for (const tenant of Object.values(TENANTS)) {
+    const splitSentence = / e das /.test(tenant.openingHours);
+    assert.equal(
+      Boolean(tenant.counterHours.lunchBreak),
+      splitSentence,
+      tenant.slug,
+    );
+  }
+});
+
 test("an office outside a state with a fund map is rejected", () => {
   assert.throws(() =>
     parseTenant({

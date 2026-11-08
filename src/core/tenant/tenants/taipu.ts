@@ -24,7 +24,11 @@ export const cartorioTaipu: Tenant = parseTenant({
     email: "contato@cartoriotaipurn.com",
   },
   openingHours: "Segunda a sexta, das 8h às 12h e das 14h às 17h",
-  counterHours: { startHour: 8, endHour: 17 },
+  counterHours: {
+    startHour: 8,
+    endHour: 17,
+    lunchBreak: { start: "12:00", end: "14:00" },
+  },
   municipality: "TAIPU",
   location: { city: "Taipu", state: "RN" },
   address: "Rua Salvina Soares de Miranda, 11-B, Centro, Taipu - RN, 59565-000",

@@ -1,7 +1,11 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
+import type { Tenant } from "../tenant/schema.ts";
 import { cartorioMarinho } from "../tenant/tenants/marinho.ts";
 import {
+  counterStatus,
+  counterStatusLabel,
+  formatClock,
   isChatOpen,
   isChatVisible,
   isWithinChatHours,
@@ -41,6 +45,7 @@ test("opens later today when it is still before the opening hour", () => {
   assert.deepEqual(nextChatOpening(cartorioMarinho, TUESDAY_7AM), {
     day: "2026-08-11",
     hour: 8,
+    minute: 0,
   });
 });
 
@@ -48,6 +53,7 @@ test("opens the next business day once today's window has passed", () => {
   assert.deepEqual(nextChatOpening(cartorioMarinho, TUESDAY_2PM), {
     day: "2026-08-12",
     hour: 8,
+    minute: 0,
   });
 });
 
@@ -55,6 +61,7 @@ test("a Saturday opens on Monday", () => {
   assert.deepEqual(nextChatOpening(cartorioMarinho, SATURDAY_10AM), {
     day: "2026-08-10",
     hour: 8,
+    minute: 0,
   });
 });
 
@@ -78,4 +85,122 @@ test("switched off, no hour of any day opens it", () => {
   // The other two keep the button on screen: closed is not the same as gone.
   assert.equal(isChatVisible("on"), true);
   assert.equal(isChatVisible("auto"), true);
+});
+
+// Tuesday 2026-08-11 at a given wall-clock time in the office (UTC-3).
+const tuesdayAt = (clock: string) => new Date(`2026-08-11T${clock}:00-03:00`);
+
+// Macaíba's shape: 8h to 16h, lunch from 12h to 13h30.
+const SPLIT: Tenant = {
+  ...cartorioMarinho,
+  counterHours: {
+    startHour: 8,
+    endHour: 16,
+    lunchBreak: { start: "12:00", end: "13:30" },
+  },
+};
+
+test("formatClock writes times the way the office's sentence does", () => {
+  assert.equal(formatClock({ hour: 8, minute: 0 }), "8h");
+  assert.equal(formatClock({ hour: 13, minute: 30 }), "13h30");
+  assert.equal(formatClock({ hour: 9, minute: 5 }), "9h05");
+});
+
+test("the lunch break closes the counter and the chat", () => {
+  assert.equal(isWithinChatHours(SPLIT, tuesdayAt("11:59")), true);
+  assert.equal(isWithinChatHours(SPLIT, tuesdayAt("12:00")), false);
+  assert.equal(isWithinChatHours(SPLIT, tuesdayAt("13:29")), false);
+  assert.equal(isWithinChatHours(SPLIT, tuesdayAt("13:30")), true);
+  assert.equal(isChatOpen("auto", SPLIT, tuesdayAt("13:00")), false);
+});
+
+test("during the break the chat reopens today, on the half hour", () => {
+  assert.deepEqual(nextChatOpening(SPLIT, tuesdayAt("13:00")), {
+    day: "2026-08-11",
+    hour: 13,
+    minute: 30,
+  });
+});
+
+test("an office without a break stays open straight through lunch", () => {
+  assert.equal(isWithinChatHours(cartorioMarinho, tuesdayAt("12:30")), true);
+});
+
+test("open before the break: the next stop is the break", () => {
+  const now = tuesdayAt("10:00");
+  const status = counterStatus(SPLIT, now);
+  assert.deepEqual(status, {
+    open: true,
+    closesAt: { hour: 12, minute: 0 },
+    forBreak: true,
+  });
+  assert.equal(
+    counterStatusLabel(status, now),
+    "Aberto agora · intervalo às 12h",
+  );
+});
+
+test("open after the break: the next stop is the end of the day", () => {
+  const now = tuesdayAt("14:00");
+  assert.equal(
+    counterStatusLabel(counterStatus(SPLIT, now), now),
+    "Aberto agora · fecha às 16h",
+  );
+});
+
+test("on the break, the label says when it comes back", () => {
+  const now = tuesdayAt("12:15");
+  assert.equal(
+    counterStatusLabel(counterStatus(SPLIT, now), now),
+    "Em intervalo · volta às 13h30",
+  );
+});
+
+test("open on a straight day: closes at the end of it", () => {
+  assert.equal(
+    counterStatusLabel(
+      counterStatus(cartorioMarinho, TUESDAY_10AM),
+      TUESDAY_10AM,
+    ),
+    "Aberto agora · fecha às 14h",
+  );
+});
+
+test("before opening, it opens today", () => {
+  assert.equal(
+    counterStatusLabel(
+      counterStatus(cartorioMarinho, TUESDAY_7AM),
+      TUESDAY_7AM,
+    ),
+    "Fechado agora · abre hoje às 8h",
+  );
+});
+
+test("after closing, it opens the next business day", () => {
+  assert.equal(
+    counterStatusLabel(
+      counterStatus(cartorioMarinho, TUESDAY_2PM),
+      TUESDAY_2PM,
+    ),
+    "Fechado agora · abre quarta às 8h",
+  );
+});
+
+test("on a Saturday, it opens on Monday", () => {
+  assert.equal(
+    counterStatusLabel(
+      counterStatus(cartorioMarinho, SATURDAY_10AM),
+      SATURDAY_10AM,
+    ),
+    "Fechado agora · abre segunda às 8h",
+  );
+});
+
+test("after the afternoon span, a split day also opens the next morning", () => {
+  const now = tuesdayAt("16:30");
+  assert.deepEqual(counterStatus(SPLIT, now), {
+    open: false,
+    opensAt: { day: "2026-08-12", hour: 8, minute: 0 },
+    onBreak: false,
+  });
 });

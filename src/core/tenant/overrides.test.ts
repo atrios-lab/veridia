@@ -394,3 +394,98 @@ test("fechar antes de abrir é recusado", () => {
   // keeps its own hours rather than the site taking an impossible window.
   assert.deepEqual(merged.counterHours, cartorioMarinho.counterHours);
 });
+
+// Canguaretama's shape: a config that declares a lunch break.
+const WITH_BREAK = {
+  ...cartorioMarinho,
+  counterHours: {
+    startHour: 8,
+    endHour: 18,
+    lunchBreak: { start: "12:00", end: "14:00" },
+  },
+};
+
+test("uma linha salva antes do intervalo herda o intervalo da config", () => {
+  // The row has no `lunchBreak` key at all: it was written by the panel
+  // before breaks existed, and must not wipe the one the config declares.
+  const merged = applyTenantOverrides(WITH_BREAK, {
+    contact: { counterHours: { startHour: 8, endHour: 18 } },
+  });
+  assert.deepEqual(merged.counterHours.lunchBreak, {
+    start: "12:00",
+    end: "14:00",
+  });
+});
+
+test("intervalo nulo salvo no painel vale como sem intervalo", () => {
+  const merged = applyTenantOverrides(WITH_BREAK, {
+    contact: {
+      counterHours: { startHour: 8, endHour: 18, lunchBreak: null },
+    },
+  });
+  assert.equal(merged.counterHours.lunchBreak, null);
+});
+
+test("intervalo herdado que não cabe nas horas salvas fica de fora", () => {
+  // Saved as 8h to 12h: the config's 12h-14h break no longer fits.
+  const merged = applyTenantOverrides(WITH_BREAK, {
+    contact: { counterHours: { startHour: 8, endHour: 12 } },
+  });
+  assert.equal(merged.counterHours.lunchBreak, undefined);
+});
+
+test("o intervalo salvo no painel substitui o da config", () => {
+  const merged = applyTenantOverrides(WITH_BREAK, {
+    contact: {
+      counterHours: {
+        startHour: 8,
+        endHour: 18,
+        lunchBreak: { start: "12:30", end: "13:30" },
+      },
+    },
+  });
+  assert.deepEqual(merged.counterHours.lunchBreak, {
+    start: "12:30",
+    end: "13:30",
+  });
+});
+
+test("intervalo fora do expediente é recusado", () => {
+  const parsed = OfficeContactSchema.safeParse({
+    ...FULL,
+    counterHours: {
+      startHour: 8,
+      endHour: 14,
+      lunchBreak: { start: "13:00", end: "15:00" },
+    },
+  });
+  assert.equal(parsed.success, false);
+  assert.equal(
+    parsed.error?.issues[0].message,
+    "O intervalo tem de ficar dentro do horário de atendimento.",
+  );
+});
+
+test("intervalo que termina antes de começar é recusado", () => {
+  const parsed = OfficeContactSchema.safeParse({
+    ...FULL,
+    counterHours: {
+      startHour: 8,
+      endHour: 18,
+      lunchBreak: { start: "14:00", end: "12:00" },
+    },
+  });
+  assert.equal(parsed.success, false);
+});
+
+test("hora do intervalo fora do formato é recusada", () => {
+  const parsed = OfficeContactSchema.safeParse({
+    ...FULL,
+    counterHours: {
+      startHour: 8,
+      endHour: 18,
+      lunchBreak: { start: "12h", end: "14:00" },
+    },
+  });
+  assert.equal(parsed.success, false);
+});

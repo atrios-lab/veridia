@@ -2,7 +2,11 @@
 
 import { usePathname } from "next/navigation";
 import { useCallback, useEffect, useRef, useState } from "react";
-import { isWithinChatHours, nextChatOpening } from "@/core/chat/hours.ts";
+import {
+  formatClock,
+  isWithinChatHours,
+  nextChatOpening,
+} from "@/core/chat/hours.ts";
 import { formatFullDate } from "@/core/scheduling/calendar.ts";
 import { SECTION_ROUTES } from "@/core/tenant/gating.ts";
 import type { Tenant } from "@/core/tenant/schema.ts";
@@ -534,7 +538,8 @@ function HoursClosedView({
       </div>
       <div className="flex items-center gap-2.5 rounded-xl border border-brand-border bg-brand-tint px-3.5 py-3 text-[13px] font-semibold text-brand-primary">
         <Icon name="clock" className="h-4 w-4" />
-        Voltamos {formatFullDate(opening.day).toLowerCase()} às {opening.hour}h
+        Voltamos {formatFullDate(opening.day).toLowerCase()} às{" "}
+        {formatClock(opening)}
       </div>
       <div className="flex flex-col gap-2">
         <span className="text-[11px] font-bold uppercase tracking-[0.1em] text-brand-accent-ink">

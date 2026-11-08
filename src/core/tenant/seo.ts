@@ -1,3 +1,4 @@
+import { counterIntervals } from "../chat/hours.ts";
 import type { Tenant } from "./schema.ts";
 
 /**
@@ -204,8 +205,10 @@ export function telephone(phone: string): string {
 
 const WEEKDAYS = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday"];
 
-function clock(hour: number): string {
-  return `${String(hour).padStart(2, "0")}:00`;
+function clock(minutes: number): string {
+  const hour = String(Math.floor(minutes / 60)).padStart(2, "0");
+  const minute = String(minutes % 60).padStart(2, "0");
+  return `${hour}:${minute}`;
 }
 
 /**
@@ -215,9 +218,9 @@ function clock(hour: number): string {
  * the same address, telephone and hours.
  *
  * The hours are the counter's (`counterHours`), Monday to Friday, the same
- * numbers the "Aberto agora" line reads: an office with a lunch break shows
- * the whole span, as the site itself does. The CNS is the one identifier a
- * serventia has that no other shares.
+ * spans the "Aberto agora" line reads, so an office with a lunch break
+ * declares its morning and its afternoon apart. The CNS is the one
+ * identifier a serventia has that no other shares.
  */
 export function organizationJsonLd(
   tenant: Tenant,
@@ -236,14 +239,16 @@ export function organizationJsonLd(
     telephone: telephone(tenant.contacts.phone),
     email: tenant.contacts.email,
     ...(tenant.address ? { address: postalAddress(tenant.address) } : {}),
-    openingHoursSpecification: [
-      {
+    // One entry per open span: a split day is two, morning and afternoon,
+    // which is how schema.org describes a lunch break.
+    openingHoursSpecification: counterIntervals(tenant.counterHours).map(
+      ([opens, closes]) => ({
         "@type": "OpeningHoursSpecification",
         dayOfWeek: WEEKDAYS,
-        opens: clock(tenant.counterHours.startHour),
-        closes: clock(tenant.counterHours.endHour),
-      },
-    ],
+        opens: clock(opens),
+        closes: clock(closes),
+      }),
+    ),
     identifier: {
       "@type": "PropertyValue",
       propertyID: "CNS",

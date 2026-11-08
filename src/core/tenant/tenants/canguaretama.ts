@@ -39,11 +39,15 @@ export const cartorioCanguaretama: Tenant = parseTenant({
   location: { city: "Canguaretama", state: "RN" },
   address:
     "Rua André de Albuquerque, 155, Centro, Canguaretama - RN, 59190-000",
-  // Every registry gives a lunch break; `counterHours` only holds start and
-  // end, so the sentence carries the break and the numbers span the day.
+  // Every registry gives a lunch break, declared in `counterHours` so the
+  // "Aberto agora" line and the chat close for it.
   // ponytail: confirm the hours with the office.
   openingHours: "Segunda a sexta, das 8h às 12h e das 14h às 18h",
-  counterHours: { startHour: 8, endHour: 18 },
+  counterHours: {
+    startHour: 8,
+    endHour: 18,
+    lunchBreak: { start: "12:00", end: "14:00" },
+  },
   owner: {
     // Named titular on every registry; not yet checked against Justiça
     // Aberta the way the pilot was, so it stays "a confirmar".
