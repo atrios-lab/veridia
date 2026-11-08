@@ -16,7 +16,9 @@ export interface BulletinYear<T> {
 }
 
 /**
- * Bulletins grouped by reference year, newest year first. The grid is always
+ * Bulletins grouped by reference year, newest year first. `referenceMonth`
+ * is the date column as Drizzle reads it ("2026-08-01"); only its year and
+ * month matter here. The grid is always
  * twelve slots long, so a month keeps its place whether or not its neighbours
  * were published: a gap shows as a gap instead of closing up.
  */

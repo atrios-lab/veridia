@@ -2,8 +2,10 @@ import assert from "node:assert/strict";
 import { test } from "node:test";
 import { groupBulletinsByYear, groupDocumentsByCategory } from "./listing.ts";
 
-function bulletin(referenceMonth: string, status = "consolidated") {
-  return { id: referenceMonth, referenceMonth, status };
+// The column is a date, read back as "YYYY-MM-01"; the id keeps "YYYY-MM"
+// so the assertions below stay short.
+function bulletin(month: string, status = "consolidated") {
+  return { id: month, referenceMonth: `${month}-01`, status };
 }
 
 test("bulletins group by year, newest year first, twelve slots each", () => {
@@ -46,7 +48,10 @@ test("no bulletins, no years", () => {
 });
 
 test("a malformed reference month is skipped, not placed", () => {
-  const years = groupBulletinsByYear([bulletin("2026-13"), bulletin("x")]);
+  const years = groupBulletinsByYear([
+    bulletin("2026-13"),
+    { id: "x", referenceMonth: "x", status: "consolidated" },
+  ]);
   assert.deepEqual(years, []);
 });
 
