@@ -642,6 +642,16 @@ export const serviceRequestDetailsSchema = z.object({
   // As respostas do inteiro teor do RCPN (CNN, art. 117, § 3º). A finalidade não
   // está aqui porque tem coluna própria, já lida pelo painel e pelo PDF.
   requesterQualification: requesterQualificationSchema.optional(),
+  // A resposta da serventia a uma consulta (`Act.consultation`), como a busca
+  // de registro do RCPN. Presente só depois de respondida.
+  searchAnswer: z
+    .object({
+      found: z.boolean(),
+      text: z.string(),
+      answeredAt: isoInstant,
+      answeredBy: z.string().optional(),
+    })
+    .optional(),
   // Digital ou papel, nos atos que deixam escolher. Ausente nos demais e nos
   // pedidos anteriores à pergunta: ausente é "não sabemos".
   deliveryFormat: z.enum(DELIVERY_FORMATS).optional(),
@@ -926,3 +936,42 @@ export function parseDetails<K extends RequestKind>(
     (typeof DETAILS_SCHEMAS)[K]
   >;
 }
+
+export interface SearchAnswer {
+  found: boolean;
+  text: string;
+  answeredAt: string;
+}
+
+/**
+ * A resposta de uma consulta, ou undefined enquanto a serventia não respondeu.
+ * Mesma porta de `readExemption`: o banco não confere o jsonb.
+ */
+export function readSearchAnswer(details: unknown): SearchAnswer | undefined {
+  const parsed = serviceRequestDetailsSchema.shape.searchAnswer.safeParse(
+    (details as { searchAnswer?: unknown } | null)?.searchAnswer,
+  );
+  if (!parsed.success || !parsed.data) return undefined;
+  const { found, text, answeredAt } = parsed.data;
+  return { found, text, answeredAt };
+}
+
+/**
+ * O que o operador manda como resposta: se o registro foi localizado e o
+ * texto que o cidadão lê. O texto é obrigatório também no "não localizado",
+ * porque é ali que a serventia diz o que procurou.
+ */
+export const searchAnswerInputSchema = z.object({
+  found: z.enum(["yes", "no"], {
+    error: "Diga se o registro foi localizado.",
+  }),
+  text: z
+    .string()
+    .transform((value) => value.trim())
+    .pipe(
+      z
+        .string()
+        .min(1, "Escreva a resposta ao cidadão.")
+        .max(MAX_MESSAGE_LENGTH, TEXT_TOO_LONG),
+    ),
+});

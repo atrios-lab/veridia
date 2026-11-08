@@ -242,6 +242,14 @@ export interface Act {
   /** No lugar do aviso geral de assinatura, onde ele citaria o que não vale. */
   signatureCaveat?: string;
   /**
+   * Uma consulta, não um ato a praticar: a serventia só responde. O CPF é
+   * opcional, o requerimento assinado não é pedido, e no painel o valor, a
+   * entrega e o andamento comum dão lugar à resposta, que conclui o pedido
+   * (decisões do responsável pelo produto em 07/11/2026). Quem quiser o ato
+   * depois faz um pedido novo, no ato certo.
+   */
+  consultation?: true;
+  /**
    * What to bring and how it goes, for acts finished at the counter or signed
    * somewhere other than this site.
    */
@@ -638,6 +646,7 @@ export const ACTS: Act[] = [
     id: "rcpn-busca",
     attribution: "RCPN",
     name: "Busca de registro (consulta antes da certidão)",
+    consultation: true,
     variants: {
       question: "De qual registro?",
       options: [
@@ -650,7 +659,7 @@ export const ACTS: Act[] = [
     processingMode: "online",
     identificationOnly: true,
     processingHint:
-      "a serventia responde se o registro consta aqui, e além do requerimento assinado só pede a sua identificação",
+      "a serventia responde se o registro consta aqui, e não exige requerimento assinado nem CPF",
     legalBasis:
       "Lei 6.015 art. 17 (norma geral); cabimento e custas da busca avaliados pela serventia",
     // O que se pergunta sobre o registro pode ser dado do inteiro teor, como a

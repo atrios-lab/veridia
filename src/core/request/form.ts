@@ -787,7 +787,10 @@ export function publicServiceRequestSchema(act: Act) {
       ...commonFields,
       ...requesterQualificationFields,
       ...deliveryFields,
-      cpf: requiredCpf,
+      // A consulta não pede CPF: quem não o tem também pode perguntar.
+      cpf: act.consultation
+        ? normalizedCpf.transform((s) => (s === "" ? undefined : s))
+        : requiredCpf,
       email: requiredText(160).refine((value) => EMAIL.test(value), {
         message: "Informe um e-mail válido.",
       }),
@@ -826,7 +829,7 @@ export function serviceRequestSchema(act: Act) {
     })
     .superRefine(actRules(act, { channel: "counter" }))
     .superRefine((data, ctx) => {
-      if (!data.noCpf && !data.cpf) {
+      if (!act.consultation && !data.noCpf && !data.cpf) {
         ctx.addIssue({
           code: "custom",
           path: ["cpf"],

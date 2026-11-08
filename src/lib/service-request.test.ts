@@ -11,6 +11,7 @@ import { buildRequesterQualification } from "@/core/request/form.ts";
 import {
   readAlternateDocument,
   readRequesterQualification,
+  readSearchAnswer,
   serviceRequestDetailsSchema,
 } from "@/core/request/kinds.ts";
 import { TENANTS } from "@/core/tenant/resolve.ts";
@@ -18,6 +19,7 @@ import type { Database } from "@/db/index.ts";
 import { auditLog, emailBounces, serviceRequests } from "@/db/schema.ts";
 import { createTestDb } from "@/db/test-db.ts";
 import {
+  answerSearchWith,
   createRecordWith,
   createServiceRequestWith,
   findByProtocolWith,
@@ -752,4 +754,58 @@ test("um pedido sem qualificação não inventa respostas", async () => {
   );
   const found = await findByProtocolWith(db, TENANT.slug, protocolNumber);
   assert.equal(readRequesterQualification(found?.details), undefined);
+});
+
+test("responder a busca conclui o pedido e guarda a resposta sem perder o resto", async () => {
+  const busca = getAct("rcpn-busca");
+  assert.ok(busca);
+  const { id, protocolNumber } = await createServiceRequestWith(
+    db,
+    TENANT,
+    busca,
+    {
+      applicantName: "Paulo",
+      contact: "busca@exemplo.com",
+      accessKeyHash: hashAccessKey("chave-busca"),
+      description: "Paulo Neto, nascido em 1958. Consta agricultor?",
+      purpose: "Aposentadoria rural",
+      details: {
+        actVariant: "nascimento",
+        consents: {
+          lgpd: "2026-11-07T12:00:00.000Z",
+          truth: "2026-11-07T12:00:00.000Z",
+        },
+      },
+    },
+  );
+
+  await answerSearchWith(
+    db,
+    TENANT.slug,
+    id,
+    { found: true, text: "Consta a profissão de agricultor." },
+    "operador-1",
+  );
+
+  const found = await findByProtocolWith(db, TENANT.slug, protocolNumber);
+  assert.ok(found);
+  assert.equal(found.status, "done");
+  assert.equal(found.amountCents, null, "a consulta não ganha valor");
+  const answer = readSearchAnswer(found.details);
+  assert.equal(answer?.found, true);
+  assert.equal(answer?.text, "Consta a profissão de agricultor.");
+  const details = found.details as Record<string, unknown>;
+  assert.equal(details.actVariant, "nascimento");
+  assert.ok(details.consents, "os aceites gravados não podem se perder");
+
+  const [entry] = await db
+    .select({ actorId: auditLog.actorId })
+    .from(auditLog)
+    .where(
+      and(
+        eq(auditLog.action, "service-request.search-answer"),
+        eq(auditLog.targetId, id),
+      ),
+    );
+  assert.equal(entry?.actorId, "operador-1");
 });

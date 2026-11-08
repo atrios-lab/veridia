@@ -28,6 +28,7 @@ import {
   readExemption,
   readPhone,
   readRequesterQualification,
+  readSearchAnswer,
   requesterQualificationRows,
   requiresStatusReason,
   statusLabel,
@@ -69,7 +70,11 @@ import { KeySection } from "./_components/key-section.tsx";
 import { LiveRequest } from "./_components/live-request.tsx";
 import type { RequirementItem } from "./_components/requirements-section.tsx";
 import { RequirementsSection } from "./_components/requirements-section.tsx";
-import { StatusSection } from "./_components/status-section.tsx";
+import { SearchAnswerSection } from "./_components/search-answer-section.tsx";
+import {
+  CONSULTATION_PATH,
+  StatusSection,
+} from "./_components/status-section.tsx";
 
 /** Como a pill fala o desfecho, em concordância com "Gratuidade ___ em
  * <data>": por isso "concedida", não "concessão". */
@@ -101,6 +106,7 @@ const HISTORY_LABELS: Record<string, string> = {
     "abriu o requerimento assinado",
   "service-request.print.declaracao-assinada": "abriu a declaração assinada",
   "service-request.exemption-decision": "registrou o desfecho da gratuidade",
+  "service-request.search-answer": "respondeu a busca",
 };
 
 /**
@@ -227,6 +233,7 @@ export default async function ServiceRequestDetailPage({
   const alternateDocument = readAlternateDocument(request.details);
   const requesterQualification = readRequesterQualification(request.details);
   const deliveryFormat = readDeliveryFormat(request.details);
+  const searchAnswer = readSearchAnswer(request.details);
   const actName = act
     ? (actVariantName(act, actVariant) ?? act.name)
     : "Ato não identificado";
@@ -400,7 +407,9 @@ export default async function ServiceRequestDetailPage({
                   )}
                 </>
               }
-              suggested={suggestedNextStatuses(status)}
+              // A busca não segue o caminho do pagamento: quem a conclui é a
+              // resposta, e a correção do andamento continua no seletor.
+              suggested={act?.consultation ? [] : suggestedNextStatuses(status)}
               deadlineSummary={
                 !isOpenServiceRequestStatus(status)
                   ? null
@@ -411,7 +420,23 @@ export default async function ServiceRequestDetailPage({
                       )} · ${deadlineProgress(deadline, today())}`
               }
               deadlineDays={deadline.days}
+              happyPath={act?.consultation ? CONSULTATION_PATH : undefined}
             />
+
+            {act?.consultation && (
+              <SearchAnswerSection
+                requestId={request.id}
+                answer={
+                  searchAnswer && {
+                    found: searchAnswer.found,
+                    text: searchAnswer.text,
+                    answeredAtLabel: formatOfficeDayMonthTime(
+                      new Date(searchAnswer.answeredAt),
+                    ),
+                  }
+                }
+              />
+            )}
 
             <ApplicantSection
               requestId={request.id}
@@ -486,30 +511,36 @@ export default async function ServiceRequestDetailPage({
               hasExemption={Boolean(exemption)}
             />
 
-            <DeliverySection
-              requestId={request.id}
-              delivered={deliveredAttachments}
-            />
+            {/* A consulta não tem entrega nem valor: a resposta, acima, é o
+                ato inteiro. */}
+            {!act?.consultation && (
+              <DeliverySection
+                requestId={request.id}
+                delivered={deliveredAttachments}
+              />
+            )}
 
-            <AmountSection
-              requestId={request.id}
-              amountLabel={
-                request.amountCents != null
-                  ? formatCents(request.amountCents)
-                  : undefined
-              }
-              receipt={
-                paymentReceipt
-                  ? {
-                      id: paymentReceipt.id,
-                      displayName: paymentReceipt.displayName,
-                      sentAtLabel: formatOfficeDayMonthTime(
-                        paymentReceipt.createdAt,
-                      ),
-                    }
-                  : undefined
-              }
-            />
+            {!act?.consultation && (
+              <AmountSection
+                requestId={request.id}
+                amountLabel={
+                  request.amountCents != null
+                    ? formatCents(request.amountCents)
+                    : undefined
+                }
+                receipt={
+                  paymentReceipt
+                    ? {
+                        id: paymentReceipt.id,
+                        displayName: paymentReceipt.displayName,
+                        sentAtLabel: formatOfficeDayMonthTime(
+                          paymentReceipt.createdAt,
+                        ),
+                      }
+                    : undefined
+                }
+              />
+            )}
           </div>
 
           <div className="flex flex-col gap-4.5">

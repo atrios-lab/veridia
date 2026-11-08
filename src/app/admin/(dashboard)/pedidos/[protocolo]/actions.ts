@@ -33,6 +33,7 @@ import {
   readExemption,
   requiresStatusReason,
   type ServiceRequestStatus,
+  searchAnswerInputSchema,
   validateStatusReason,
 } from "@/core/request/kinds.ts";
 import { parseCentsInput } from "@/core/request/money.ts";
@@ -42,6 +43,7 @@ import type { Tenant } from "@/core/tenant/schema.ts";
 import { notifyCitizen } from "@/lib/email/service-request.ts";
 import {
   AttachmentInUseError,
+  answerSearch,
   attachToRequest,
   deleteAttachment,
   deleteRequest,
@@ -390,6 +392,17 @@ export async function setAmountAction(
     // first is news to the citizen. Correcting cents on a value already sent
     // would put an e-mail in a mailbox saying nothing new.
     const request = await findById(tenant.slug, requestId);
+    // A consulta não tem valor: o painel nem mostra o campo, e esconder não é
+    // o que impede.
+    const act = request?.actId
+      ? getActForTenant(tenant, request.actId)
+      : undefined;
+    if (act?.consultation) {
+      return {
+        status: "error",
+        message: "A busca não tem valor: responda pela resposta da busca.",
+      };
+    }
 
     await setRequestAmount(tenant.slug, requestId, cents, session.user.id);
     await reconcileDeadlinePause(tenant, requestId, session.user.id, today());
@@ -405,6 +418,67 @@ export async function setAmountAction(
     }
   } catch (error) {
     console.error("pedidos.set-amount", error);
+    return { status: "error", message: GENERIC_ERROR };
+  }
+  revalidateAdmin();
+  return { status: "success", emailWarning };
+}
+
+/**
+ * A resposta a uma consulta (`Act.consultation`): localizado ou não e o texto
+ * que o cidadão lê. Conclui o pedido e avisa o cidadão por e-mail, sem o
+ * conteúdo: como o motivo do indeferimento, a resposta fica atrás da chave de
+ * acesso, porque fala de dados do registro.
+ */
+export async function answerSearchAction(
+  _previous: ActionState,
+  formData: FormData,
+): Promise<ActionState> {
+  const session = await authorize();
+  if (!session) return { status: "error", message: NO_PERMISSION };
+
+  const parsed = searchAnswerInputSchema.safeParse({
+    found: formData.get("found") ?? undefined,
+    text: formData.get("text") ?? "",
+  });
+  if (!parsed.success) {
+    return {
+      status: "error",
+      message: parsed.error.issues[0]?.message ?? "Confira a resposta.",
+    };
+  }
+
+  const requestId = String(formData.get("requestId") ?? "");
+  const tenant = await getTenant();
+  let emailWarning: string | null = null;
+  try {
+    const request = await findById(tenant.slug, requestId);
+    if (!request) return { status: "error", message: "Pedido não encontrado." };
+    const act = request.actId
+      ? getActForTenant(tenant, request.actId)
+      : undefined;
+    if (!act?.consultation) {
+      return {
+        status: "error",
+        message: "Só a busca de registro é respondida assim.",
+      };
+    }
+    await answerSearch(
+      tenant.slug,
+      requestId,
+      { found: parsed.data.found === "yes", text: parsed.data.text },
+      session.user.id,
+    );
+    await reconcileDeadlinePause(tenant, requestId, session.user.id, today());
+    emailWarning = await notifyCitizen({
+      tenant,
+      contact: request.contact,
+      protocolNumber: request.protocolNumber,
+      subject: "Resposta da sua busca",
+      body: "A serventia respondeu a sua busca de registro. Consulte o protocolo com a sua chave de acesso para ler a resposta.",
+    });
+  } catch (error) {
+    console.error("pedidos.answer-search", error);
     return { status: "error", message: GENERIC_ERROR };
   }
   revalidateAdmin();

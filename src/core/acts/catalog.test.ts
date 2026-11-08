@@ -544,5 +544,17 @@ test("a busca do RCPN é consulta, não certidão, e manda pedir no ato certo", 
   assert.match(busca.guidance ?? "", /não é a certidão/);
   assert.match(busca.guidance ?? "", /inteiro teor/);
   assert.match(busca.descriptionPlaceholder ?? "", /profissão/);
-  assert.match(processingHintFor(busca), /consta aqui.*identificação/);
+  assert.match(processingHintFor(busca), /consta aqui/);
+});
+
+test("só a busca do RCPN é consulta, sem requerimento nem CPF obrigatório", () => {
+  assert.deepEqual(
+    ACTS.filter((act) => act.consultation).map((act) => act.id),
+    ["rcpn-busca"],
+  );
+  const busca = getAct("rcpn-busca");
+  assert.match(
+    processingHintFor(busca as NonNullable<typeof busca>),
+    /não exige requerimento assinado nem CPF/,
+  );
 });

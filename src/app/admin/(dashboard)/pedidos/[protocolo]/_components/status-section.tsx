@@ -25,6 +25,13 @@ const HAPPY_PATH: readonly ServiceRequestStatus[] = [
   "done",
 ];
 
+/** A consulta (busca de registro) não passa por pagamento nem preparo: chega e
+ * é respondida. */
+export const CONSULTATION_PATH: readonly ServiceRequestStatus[] = [
+  "new",
+  "done",
+];
+
 /** Outline colour for a "mudar para" pill, matching what each destination
  * means: neutral for forward progress, red for a refusal, grey for a stop.
  * The first suggestion is the next step and gets the filled pill instead. */
@@ -201,6 +208,7 @@ export function StatusSection({
   suggested,
   deadlineSummary,
   deadlineDays,
+  happyPath = HAPPY_PATH,
 }: {
   requestId: string;
   protocolNumber: string;
@@ -213,6 +221,8 @@ export function StatusSection({
   /** "até 27/09/2026 · dia 5 de 30", or null once the request is closed. */
   deadlineSummary: string | null;
   deadlineDays: number;
+  /** A trilha desenhada no topo: a comum, ou a da consulta. */
+  happyPath?: readonly ServiceRequestStatus[];
 }) {
   const [state, action, pending] = useActionState<ActionState, FormData>(
     changeStatus,
@@ -234,7 +244,7 @@ export function StatusSection({
     if (state.status === "success") setReasonTarget(null);
   }, [state.status]);
 
-  const happyIndex = HAPPY_PATH.indexOf(status);
+  const happyIndex = happyPath.indexOf(status);
 
   return (
     <div className="flex flex-col gap-[26px] rounded-[14px] border border-admin-border bg-admin-card px-7 pt-[30px] pb-6">
@@ -252,8 +262,12 @@ export function StatusSection({
       </div>
 
       {happyIndex >= 0 ? (
-        <div className="grid grid-cols-5 gap-2.5">
-          {HAPPY_PATH.map((step, i) => (
+        <div
+          className={`grid gap-2.5 ${
+            happyPath === CONSULTATION_PATH ? "grid-cols-2" : "grid-cols-5"
+          }`}
+        >
+          {happyPath.map((step, i) => (
             <div key={step} className="flex flex-col items-center gap-2.5">
               <div className="h-[5px] w-full overflow-hidden rounded-full bg-admin-border">
                 <div

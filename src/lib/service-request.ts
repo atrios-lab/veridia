@@ -819,6 +819,58 @@ export async function updateRequestStatus(
 }
 
 /**
+ * Responde uma consulta (`Act.consultation`): grava a resposta em
+ * `details.searchAnswer` e conclui o pedido, no mesmo update. A consulta não
+ * passa por valor nem entrega: responder é o ato inteiro. Responder de novo
+ * substitui a resposta, para o operador corrigir o que escreveu.
+ */
+export async function answerSearchWith(
+  database: Database,
+  tenantSlug: string,
+  id: string,
+  answer: { found: boolean; text: string },
+  actorId: string,
+): Promise<void> {
+  const searchAnswer = {
+    found: answer.found,
+    text: answer.text,
+    answeredAt: new Date().toISOString(),
+    answeredBy: actorId,
+  };
+  await database
+    .update(serviceRequests)
+    .set({
+      status: "done",
+      // Merged into `details`, never assigned over it, like the deadline.
+      details: sql`${serviceRequests.details} || ${JSON.stringify({ searchAnswer })}::jsonb`,
+      updatedAt: new Date(),
+    })
+    .where(
+      and(
+        eq(serviceRequests.tenantSlug, tenantSlug),
+        eq(serviceRequests.id, id),
+      ),
+    );
+  await recordAuditWith(database, {
+    tenantSlug,
+    actorId,
+    action: "service-request.search-answer",
+    targetType: "service-request",
+    targetId: id,
+  });
+}
+
+/** The production singleton, for callers that do not test against it. */
+export async function answerSearch(
+  tenantSlug: string,
+  id: string,
+  answer: { found: boolean; text: string },
+  actorId: string,
+): Promise<void> {
+  return answerSearchWith(db, tenantSlug, id, answer, actorId);
+}
+
+/**
  * Marks several requests archived in one go, for the operator clearing many
  * at once instead of one by one. Not a deletion: the row and its history
  * stay, `archived` just reads as "no longer needs the operator's attention"
