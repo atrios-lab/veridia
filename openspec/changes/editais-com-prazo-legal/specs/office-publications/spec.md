@@ -53,3 +53,21 @@ Quando a regra pede mais de uma publicação, o site DEVE (SHALL) identificar a 
 #### Scenario: Segunda publicação começa
 - **WHEN** chega a data da 2ª publicação de um edital vigente
 - **THEN** a página inicial passa a mostrar "Edital · <tipo> · 2ª publicação · <data da 2ª>", no topo da seção
+
+### Requirement: Publicação feita por engano pode ser excluída
+Toda publicação, em qualquer aba, DEVE (SHALL) oferecer "Excluir", com confirmação que diferencia de "Arquivar agora". Excluir remove a linha e o arquivo anexado e DEVE (SHALL) deixar registro na auditoria. Rascunho exige `content.edit`; publicação que já teve data de entrada exige também `content.publish`.
+
+#### Scenario: Publicação errada excluída
+- **WHEN** o operador com `content.publish` confirma "Excluir" num aviso publicado por engano
+- **THEN** o aviso some do site e do painel, o anexo é apagado e a auditoria registra `publication.delete`
+
+#### Scenario: Staff não exclui o que está no ar
+- **WHEN** um usuário sem `content.publish` tenta excluir uma publicação que já foi ao ar
+- **THEN** o servidor recusa, mesmo que o botão apareça
+
+### Requirement: Anexo não passa pelo corpo da função no deploy
+No deploy com Blob configurado, o anexo da publicação DEVE (SHALL) ir do navegador direto ao armazenamento, como os anexos do cidadão, e a rota do anexo DEVE (SHALL) redirecionar para o arquivo depois de conferir a vigência, sem repassar os bytes. A requisição e a resposta de uma função da Vercel têm teto de cerca de 4,5 MB, abaixo de uma foto de celular ou de um PDF escaneado.
+
+#### Scenario: Foto grande publicada direto
+- **WHEN** o operador publica um aviso com uma foto de 8 MB, sem passar por rascunho
+- **THEN** a publicação é salva com o anexo, e a imagem aparece no cartão da página inicial

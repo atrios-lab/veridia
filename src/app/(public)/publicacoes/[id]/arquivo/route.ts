@@ -32,9 +32,24 @@ export async function GET(
     return new Response("Não encontrado", { status: 404 });
   }
 
-  const bytes = publication.attachmentPath.startsWith("http")
-    ? Buffer.from(await (await fetch(publication.attachmentPath)).arrayBuffer())
-    : await readFile(publication.attachmentPath);
+  // In the deploy the file is a public blob: send the browser there instead
+  // of piping the bytes through this function, whose response is capped
+  // around 4.5 MB (a scanned PDF or a phone photo is often more, and the
+  // image or PDF simply did not show). The liveness check above still runs
+  // on every request; `no-store` keeps any cache from answering it after
+  // the exit date.
+  if (publication.attachmentPath.startsWith("http")) {
+    return new Response(null, {
+      status: 307,
+      headers: {
+        Location: publication.attachmentPath,
+        "Cache-Control": "no-store",
+      },
+    });
+  }
+
+  // Development: the file is on disk, and small enough to send ourselves.
+  const bytes = await readFile(publication.attachmentPath);
 
   // The title is the published act's own wording, so it is what the citizen
   // should find in their downloads folder. It is also operator-typed prose:

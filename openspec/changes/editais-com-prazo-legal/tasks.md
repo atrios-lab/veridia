@@ -24,3 +24,11 @@
 - [x] 4.2 Conferido no navegador contra o Homolog (tenant de demonstração): aviso com imagem, edital retroativo de usucapião, formulário com o cronograma; linhas de teste apagadas
 - [x] 4.3 Migração 0030 aplicada em produção via `POSTGRES_URL_NON_POOLING` em 08/11/2026 (31 migrações; as 3 publicações existentes ficaram sem tipo)
 - [ ] 4.4 Conferir com a serventia as decisões ambíguas do design (proclamas 15 dias ou 5; contagem em dias úteis) e o Código de Normas da CGJ-RN
+
+## 5. Anexo que sumia e exclusão (pedido de 08/11/2026)
+
+- [x] 5.1 Formulário envia o anexo direto ao Blob (`useAttachmentPrepare`, limite de 1) e a ação usa `collectAttachments`; mostra "Enviando arquivo…" e o erro do envio
+- [x] 5.2 Rota do anexo redireciona (307, `no-store`) para o blob em vez de repassar os bytes
+- [x] 5.3 Depois de salvar, o formulário esquece o arquivo escolhido e, numa publicação nova, limpa os campos (um segundo clique em "Publicar" duplicava a publicação)
+- [x] 5.4 "Excluir" com confirmação em todas as abas; apaga a linha, o arquivo e registra auditoria; conferido no navegador contra o Homolog
+- [ ] 5.5 Conferir no Preview (com Blob) uma foto acima de 4,5 MB publicada direto
