@@ -649,9 +649,11 @@ export function ManualEntryForm({
           </div>
         )}
 
+        {/* Chaves com sufixo: este campo e o bloco de quem pede são irmãos, e a
+            mesma chave nos dois fazia o React confundir um com o outro. */}
         {act?.deliveryChoice && (
           <ManualDeliveryFormatField
-            key={act.id}
+            key={`${act.id}-delivery`}
             error={fieldErrors.deliveryFormat}
           />
         )}
@@ -666,7 +668,7 @@ export function ManualEntryForm({
 
         {act && asksRequesterQualification(act, variantId) && (
           <ManualRequesterQualificationFields
-            key={act.id}
+            key={`${act.id}-qualification`}
             fieldErrors={fieldErrors}
           />
         )}
