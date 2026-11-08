@@ -66,6 +66,7 @@ export function AttachmentRow({
           </span>
           <span className="block text-[11px] text-admin-muted">
             {meta} {attachment.createdAtLabel}
+            {attachment.goneLabel && ` · ${attachment.goneLabel}`}
           </span>
         </span>
         {attachment.sizeBytes != null && (
@@ -73,15 +74,19 @@ export function AttachmentRow({
             {formatFileSize(attachment.sizeBytes)}
           </span>
         )}
-        <a
-          href={documentHref(requestId, attachment.id)}
-          target="_blank"
-          rel="noopener"
-          className={BUTTON}
-        >
-          Ver
-        </a>
-        {onDelete && (
+        {/* A file the 30-day rule removed has nothing left to open or
+            delete: the row is only the record of it. */}
+        {!attachment.goneLabel && (
+          <a
+            href={documentHref(requestId, attachment.id)}
+            target="_blank"
+            rel="noopener"
+            className={BUTTON}
+          >
+            Ver
+          </a>
+        )}
+        {onDelete && !attachment.goneLabel && (
           <DeleteButton
             requestId={requestId}
             attachmentId={attachment.id}

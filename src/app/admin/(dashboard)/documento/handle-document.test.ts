@@ -9,7 +9,11 @@ import { hashAccessKey } from "@/core/request/access-key.ts";
 import { SIGNED_FORM_NAMES } from "@/core/request/attachment.ts";
 import { TENANTS } from "@/core/tenant/resolve.ts";
 import type { Database } from "@/db/index.ts";
-import { auditLog } from "@/db/schema.ts";
+import {
+  auditLog,
+  serviceRequestAttachments,
+  serviceRequests,
+} from "@/db/schema.ts";
 import { createTestDb } from "@/db/test-db.ts";
 import {
   attachToRequestWith,
@@ -151,4 +155,58 @@ test("opening a payment receipt attachment writes no audit entry", async () => {
     entries.some((e) => e.action.startsWith("service-request.print.")),
     false,
   );
+});
+
+test("a file past its 30 days after the closing answers 410, before the purge reaches it", async () => {
+  const { id } = await createServiceRequestWith(db, TENANT, ACT, {
+    applicantName: "Helena",
+    contact: "helena@exemplo.com",
+    accessKeyHash: hashAccessKey("chave-vencida"),
+  });
+  const path = join(dir, "entregue.pdf");
+  writeFileSync(path, "%PDF-1.4\n%entregue\n");
+  const [attachment] = await attachToRequestWith(
+    db,
+    TENANT.slug,
+    id,
+    [
+      {
+        storedName: "entregue.pdf",
+        displayName: "documento-final",
+        path,
+        mimeType: "application/pdf",
+        sizeBytes: 20,
+      },
+    ],
+    "office",
+  );
+
+  // Open: served, however old.
+  const open = await handleDocumentWith(
+    db,
+    TENANT,
+    "staff-1",
+    id,
+    attachment.id,
+  );
+  assert.equal(open.status, 200);
+
+  // Delivered and closed long ago, and the purge has not run: refused.
+  await db
+    .update(serviceRequests)
+    .set({ status: "done", closedAt: new Date("2020-01-10T15:00:00Z") })
+    .where(eq(serviceRequests.id, id));
+  await db
+    .update(serviceRequestAttachments)
+    .set({ createdAt: new Date("2020-01-10T14:00:00Z") })
+    .where(eq(serviceRequestAttachments.id, attachment.id));
+  const expired = await handleDocumentWith(
+    db,
+    TENANT,
+    "staff-1",
+    id,
+    attachment.id,
+  );
+  assert.equal(expired.status, 410);
+  assert.match(await expired.text(), /apagado 30 dias depois/);
 });

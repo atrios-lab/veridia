@@ -1,10 +1,18 @@
 import { readFile } from "node:fs/promises";
 import { extname } from "node:path";
 import { SIGNED_FORM_NAMES } from "@/core/request/attachment.ts";
+import {
+  REQUEST_FILE_GONE,
+  requestFileServable,
+} from "@/core/request/attachment-retention.ts";
 import type { Tenant } from "@/core/tenant/schema.ts";
 import type { Database } from "@/db/index.ts";
 import { recordAuditWith } from "@/lib/audit.ts";
-import { getAttachmentWith } from "@/lib/service-request.ts";
+import { today } from "@/lib/office-config.ts";
+import {
+  getAttachmentWith,
+  requestFileStatusOf,
+} from "@/lib/service-request.ts";
 
 type Attachment = NonNullable<Awaited<ReturnType<typeof getAttachmentWith>>>;
 
@@ -47,6 +55,21 @@ export async function handleDocumentWith(
     attachmentId,
   );
   if (!attachment) return new Response("Não encontrado", { status: 404 });
+  // Past its 30 days after the protocol closed: gone, even if the cleanup
+  // (run when the queues open, see purgeExpiredRequestFiles) has not
+  // reached it yet. 410, not 404: the file existed and left by rule.
+  const status = requestFileStatusOf(
+    attachment,
+    { closedAt: attachment.requestClosedAt },
+    today(),
+  );
+  if (!attachment.path || !requestFileServable(status)) {
+    return new Response(REQUEST_FILE_GONE, {
+      status: 410,
+      headers: { "Content-Type": "text/plain; charset=utf-8" },
+    });
+  }
+  const path = attachment.path;
 
   const auditAction = signedDocumentPrintAction(attachment);
   if (auditAction) {
@@ -59,9 +82,9 @@ export async function handleDocumentWith(
     });
   }
 
-  const bytes = attachment.path.startsWith("http")
-    ? Buffer.from(await (await fetch(attachment.path)).arrayBuffer())
-    : await readFile(attachment.path);
+  const bytes = path.startsWith("http")
+    ? Buffer.from(await (await fetch(path)).arrayBuffer())
+    : await readFile(path);
 
   // Inline for what the browser can render: checking four attachments should
   // not leave four copies in Downloads, and reading the file is how the office

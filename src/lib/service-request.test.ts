@@ -1,4 +1,7 @@
 import assert from "node:assert/strict";
+import { access, mkdtemp, writeFile } from "node:fs/promises";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import { after, before, mock, test } from "node:test";
 import { and, eq } from "drizzle-orm";
 import { getAct } from "@/core/acts/catalog.ts";
@@ -16,16 +19,24 @@ import {
 } from "@/core/request/kinds.ts";
 import { TENANTS } from "@/core/tenant/resolve.ts";
 import type { Database } from "@/db/index.ts";
-import { auditLog, emailBounces, serviceRequests } from "@/db/schema.ts";
+import {
+  auditLog,
+  emailBounces,
+  serviceRequestAttachments,
+  serviceRequests,
+} from "@/db/schema.ts";
 import { createTestDb } from "@/db/test-db.ts";
 import {
   answerSearchWith,
+  attachToRequestWith,
   createRecordWith,
   createServiceRequestWith,
   findByProtocolWith,
   findByProtocolWithKeyWith,
   findOpenServiceRequestDuplicateWith,
+  getAttachmentWith,
   listRequirementsWith,
+  purgeExpiredRequestFilesWith,
   reconcileDeadlinePauseWith,
   recoverAccessKeyWith,
   registerRequirementWith,
@@ -808,4 +819,189 @@ test("responder a busca conclui o pedido e guarda a resposta sem perder o resto"
       ),
     );
   assert.equal(entry?.actorId, "operador-1");
+});
+
+// The 30-day rule for a protocol's files (change
+// `expurgar-arquivos-dos-pedidos`): `closed_at` follows every status write,
+// and the purge deletes only what is past its 30 days after the closing.
+
+test("closed_at is set on closing, kept between closed statuses, cleared on reopening", async () => {
+  const { id } = await createServiceRequestWith(db, TENANT, ACT, {
+    applicantName: "Clara",
+    contact: "clara@exemplo.com",
+    accessKeyHash: hashAccessKey("chave-encerramento"),
+  });
+  const closedAt = async () =>
+    (
+      await db
+        .select({ closedAt: serviceRequests.closedAt })
+        .from(serviceRequests)
+        .where(eq(serviceRequests.id, id))
+    )[0].closedAt;
+
+  assert.equal(await closedAt(), null);
+  await updateRequestStatusWith(db, TENANT.slug, id, "done", "staff-1");
+  const first = await closedAt();
+  assert.ok(first, "concluir grava o encerramento");
+
+  await updateRequestStatusWith(db, TENANT.slug, id, "archived", "staff-1");
+  assert.deepEqual(await closedAt(), first, "arquivar não reinicia os 30 dias");
+
+  await updateRequestStatusWith(db, TENANT.slug, id, "processing", "staff-1");
+  assert.equal(await closedAt(), null, "reabrir suspende a contagem");
+});
+
+test("answering a data-rights request closes it; a search answer closes a request", async () => {
+  const sol = await createRecordWith(db, TENANT, "data-rights", {
+    description: "Quero saber quais dados meus o cartório guarda.",
+  });
+  await respondToRecordWith(
+    db,
+    TENANT.slug,
+    sol.id,
+    "data-rights",
+    "Segue o relatório.",
+    "answered",
+    "staff-1",
+  );
+  const [answered] = await db
+    .select({ closedAt: serviceRequests.closedAt })
+    .from(serviceRequests)
+    .where(eq(serviceRequests.id, sol.id));
+  assert.ok(answered.closedAt);
+
+  const req = await createServiceRequestWith(db, TENANT, ACT, {
+    applicantName: "Davi",
+    contact: "davi@exemplo.com",
+    accessKeyHash: hashAccessKey("chave-busca"),
+  });
+  await answerSearchWith(
+    db,
+    TENANT.slug,
+    req.id,
+    { found: true, text: "Livro 3, folha 12." },
+    "staff-1",
+  );
+  const [searched] = await db
+    .select({ closedAt: serviceRequests.closedAt })
+    .from(serviceRequests)
+    .where(eq(serviceRequests.id, req.id));
+  assert.ok(searched.closedAt);
+});
+
+test("the purge deletes files 30 days after the closing, keeps the record and logs it with no actor", async () => {
+  const dir = await mkdtemp(join(tmpdir(), "veridia-purge-"));
+  const stored = async (name: string) => {
+    const path = join(dir, name);
+    await writeFile(path, "%PDF-1.4");
+    return {
+      storedName: name,
+      displayName: name,
+      path,
+      mimeType: "application/pdf",
+      sizeBytes: 8,
+    };
+  };
+
+  // Closed 40 days before "today": its file goes.
+  const old = await createServiceRequestWith(db, TENANT, ACT, {
+    applicantName: "Edite",
+    contact: "edite@exemplo.com",
+    accessKeyHash: hashAccessKey("chave-velha"),
+  });
+  const [oldFile] = await attachToRequestWith(
+    db,
+    TENANT.slug,
+    old.id,
+    [await stored("velho.pdf")],
+    "office",
+  );
+  await updateRequestStatusWith(db, TENANT.slug, old.id, "done", "staff-1");
+  await db
+    .update(serviceRequests)
+    .set({ closedAt: new Date("2026-09-29T15:00:00Z") })
+    .where(eq(serviceRequests.id, old.id));
+  await db
+    .update(serviceRequestAttachments)
+    .set({ createdAt: new Date("2026-09-20T15:00:00Z") })
+    .where(eq(serviceRequestAttachments.id, oldFile.id));
+
+  // Closed 10 days before: kept. Open for months: kept.
+  const recent = await createServiceRequestWith(db, TENANT, ACT, {
+    applicantName: "Fábio",
+    contact: "fabio@exemplo.com",
+    accessKeyHash: hashAccessKey("chave-recente"),
+  });
+  const [recentFile] = await attachToRequestWith(
+    db,
+    TENANT.slug,
+    recent.id,
+    [await stored("recente.pdf")],
+    "office",
+  );
+  await db
+    .update(serviceRequests)
+    .set({ status: "done", closedAt: new Date("2026-10-29T15:00:00Z") })
+    .where(eq(serviceRequests.id, recent.id));
+
+  const open = await createServiceRequestWith(db, TENANT, ACT, {
+    applicantName: "Gilda",
+    contact: "gilda@exemplo.com",
+    accessKeyHash: hashAccessKey("chave-aberta"),
+  });
+  const [openFile] = await attachToRequestWith(
+    db,
+    TENANT.slug,
+    open.id,
+    [await stored("aberto.pdf")],
+    "citizen",
+  );
+  await db
+    .update(serviceRequestAttachments)
+    .set({ createdAt: new Date("2026-05-01T15:00:00Z") })
+    .where(eq(serviceRequestAttachments.id, openFile.id));
+
+  const purged = await purgeExpiredRequestFilesWith(
+    db,
+    TENANT.slug,
+    "2026-11-08",
+  );
+  assert.equal(purged, 1);
+
+  const gone = await getAttachmentWith(db, TENANT.slug, old.id, oldFile.id);
+  assert.ok(gone, "o registro do anexo continua");
+  assert.equal(gone.path, null);
+  assert.ok(gone.purgedAt);
+  assert.equal(gone.displayName, "velho.pdf");
+  await assert.rejects(access(oldFile.path ?? ""), "o arquivo saiu do disco");
+
+  const kept = await getAttachmentWith(
+    db,
+    TENANT.slug,
+    recent.id,
+    recentFile.id,
+  );
+  assert.equal(kept?.path, recentFile.path);
+  await access(recentFile.path ?? "");
+  const held = await getAttachmentWith(db, TENANT.slug, open.id, openFile.id);
+  assert.equal(held?.path, openFile.path);
+
+  const trail = await db
+    .select()
+    .from(auditLog)
+    .where(
+      and(
+        eq(auditLog.action, "service-request.attachment-purge"),
+        eq(auditLog.targetId, old.id),
+      ),
+    );
+  assert.equal(trail.length, 1);
+  assert.equal(trail[0].actorId, null);
+  assert.equal(trail[0].targetType, "service-request");
+
+  // A second pass finds nothing left to delete, and logs nothing more.
+  assert.equal(
+    await purgeExpiredRequestFilesWith(db, TENANT.slug, "2026-11-08"),
+    0,
+  );
 });

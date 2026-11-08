@@ -1,3 +1,6 @@
+import type { RequestFileStatus } from "@/core/request/attachment-retention.ts";
+import { formatOfficeDate } from "@/core/time/office-time.ts";
+
 /**
  * No "use client" here on purpose: the detail page is a server component and
  * builds these hrefs while rendering, and a function exported from a client
@@ -10,6 +13,11 @@ export interface AttachmentItem {
   createdAtLabel: string;
   /** Shown so a blank 14 KB scan or a 40 MB PDF is caught before opening. */
   sizeBytes?: number;
+  /**
+   * Set once the 30-day rule deleted the file (or it is past its 30 days and
+   * the routes refuse it): the row stays as the record, with nothing to open.
+   */
+  goneLabel?: string;
 }
 
 /** Where the panel serves any attachment, whatever section it belongs to. */
@@ -33,4 +41,18 @@ const LABELS: Record<string, string> = {
 
 export function attachmentLabel(displayName: string): string {
   return LABELS[displayName] ?? displayName;
+}
+
+/**
+ * What a row says in place of "Ver" once a file is out under the 30-day rule:
+ * deleted (with the day), or past its 30 days and only waiting for the next
+ * purge, which the routes already refuse to serve.
+ */
+export function requestFileGoneLabel(
+  purgedAt: Date | null,
+  status: RequestFileStatus,
+): string | undefined {
+  if (purgedAt) return `apagado em ${formatOfficeDate(purgedAt)}`;
+  if (status.kind === "expired") return "apagado pela regra de 30 dias";
+  return undefined;
 }

@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { can } from "@/core/auth/roles.ts";
+import { REQUEST_FILE_RETENTION_DAYS } from "@/core/request/attachment-retention.ts";
 import {
   dataRightOption,
   dataRightsDeadlineLabel,
@@ -13,11 +14,14 @@ import {
   findByProtocol,
   listAttachments,
   listRecordHistory,
+  requestFileStatusOf,
 } from "@/lib/service-request.ts";
 import { getSession } from "@/lib/session.ts";
 import { getTenant, OFFICE_TIME_ZONE, today } from "@/lib/tenant.ts";
+import { requestFileGoneLabel } from "../../../_components/attachment-link.ts";
 import { AttachmentRow } from "../../../_components/attachment-row.tsx";
 import { AdminPageHeader } from "../../../_components/page-header.tsx";
+import { RequestFilesNotice } from "../../../_components/request-files-notice.tsx";
 import { DeadlineBadge } from "../_components/deadline-badge.tsx";
 import { ReplySection } from "./_components/reply-section.tsx";
 import { deleteAttachmentAction } from "./actions.ts";
@@ -28,6 +32,7 @@ const HISTORY_LABELS: Record<string, string> = {
   "data-rights.create": "registrou o requerimento",
   "data-rights.respond": "respondeu ao titular",
   "data-rights.draft": "salvou um rascunho de resposta",
+  "data-rights.attachment-purge": `apagou um arquivo, ${REQUEST_FILE_RETENTION_DAYS} dias após o encerramento`,
 };
 
 function Field({ label, value }: { label: string; value: string }) {
@@ -74,6 +79,7 @@ export default async function DataRightsDetailPage({
   ]);
   const identityAttachment = attachments.find((a) => a.kind !== "office");
   const reportAttachments = attachments.filter((a) => a.kind === "office");
+  const todayIso = today();
 
   return (
     <>
@@ -96,6 +102,12 @@ export default async function DataRightsDetailPage({
 
         <div className="grid grid-cols-1 gap-5 lg:grid-cols-[1fr_340px] lg:items-start">
           <div className="flex flex-col gap-4.5">
+            <RequestFilesNotice
+              files={attachments.map((a) => ({
+                status: requestFileStatusOf(a, request, todayIso),
+                purgedAt: a.purgedAt,
+              }))}
+            />
             <div className="rounded-[14px] border border-admin-border bg-admin-card p-6">
               <div className="rounded-[11px] border border-admin-border bg-admin-input-bg px-4 py-3.5">
                 <span className="text-[11.5px] font-bold tracking-[0.06em] text-admin-accent uppercase">
@@ -138,6 +150,14 @@ export default async function DataRightsDetailPage({
                         identityAttachment.createdAt,
                       ),
                       sizeBytes: identityAttachment.sizeBytes,
+                      goneLabel: requestFileGoneLabel(
+                        identityAttachment.purgedAt,
+                        requestFileStatusOf(
+                          identityAttachment,
+                          request,
+                          todayIso,
+                        ),
+                      ),
                     }}
                     meta="enviado em"
                     onDelete={deleteAttachmentAction}
@@ -168,6 +188,10 @@ export default async function DataRightsDetailPage({
                           displayName: a.displayName,
                           createdAtLabel: formatOfficeDayMonthTime(a.createdAt),
                           sizeBytes: a.sizeBytes,
+                          goneLabel: requestFileGoneLabel(
+                            a.purgedAt,
+                            requestFileStatusOf(a, request, todayIso),
+                          ),
                         }}
                         meta="entregue em"
                         onDelete={deleteAttachmentAction}
@@ -207,7 +231,9 @@ export default async function DataRightsDetailPage({
                       className="text-[12.5px] leading-snug text-admin-text"
                     >
                       <strong className="text-admin-primary">
-                        {entry.actorName ?? "Sistema"}
+                        {entry.action.endsWith(".attachment-purge")
+                          ? "Plataforma"
+                          : (entry.actorName ?? "Sistema")}
                       </strong>{" "}
                       {HISTORY_LABELS[entry.action] ?? entry.action}
                       <br />

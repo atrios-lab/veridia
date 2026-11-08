@@ -4,7 +4,10 @@ import { can } from "@/core/auth/roles.ts";
 import { dataRightOption } from "@/core/request/channels.ts";
 import { parseDetails } from "@/core/request/kinds.ts";
 import { toIsoDate } from "@/core/scheduling/calendar.ts";
-import { listRecordsByKind } from "@/lib/service-request.ts";
+import {
+  listRecordsByKind,
+  purgeExpiredRequestFiles,
+} from "@/lib/service-request.ts";
 import { getSession } from "@/lib/session.ts";
 import { getTenant, OFFICE_TIME_ZONE, today } from "@/lib/tenant.ts";
 import { AdminPageHeader } from "../../_components/page-header.tsx";
@@ -17,8 +20,10 @@ export default async function DataRightsQueuePage() {
   if (!session || !can(session.user.role ?? "", "channels.manage")) notFound();
   const tenant = await getTenant();
 
-  const requests = await listRecordsByKind(tenant.slug, "data-rights");
   const now = today();
+  // Files 30 days past the closing leave storage as the queue opens.
+  await purgeExpiredRequestFiles(tenant.slug, now);
+  const requests = await listRecordsByKind(tenant.slug, "data-rights");
 
   return (
     <>
