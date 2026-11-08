@@ -152,21 +152,19 @@ Os dados da Átrios impressos no bloco visível (razão social e CNPJ) são lido
 
 A rota `GET /admin/ajuda/<slug>/certificado` exige sessão e só entrega o certificado de `session.user.id` naquele curso. Responde com `Content-Disposition: attachment` e `Cache-Control: private, no-store`.
 
-### 7. Validação pública
+### 7. Validação no site da Átrios
 
-A rota `/certificado/[codigo]` fica fora do `/admin`, funciona em qualquer host de serventia e tem `noindex`. O limite é de 30 consultas por IP a cada 10 minutos, pelo `rate-limit.ts`.
+Decisão do usuário (08/11/2026): a consulta fica no site da Átrios (`atrioss.com`, um projeto Next.js separado na Vercel), não no site da serventia. O Veridia entrega os dados e o site da Átrios monta a página.
 
-```
-Certificado válido
-Maria da Silva Santos · CPF ***.456.789-**
-Escrevente · Cartório de Serra Verde/RN
-concluiu "LGPD no cartório", 2 horas, aproveitamento de 80%, em 07/11/2026
-Assinado digitalmente pela Átrios.
-```
-
-Um código inexistente mostra "Certificado não encontrado", com status 404 e a mesma aparência, sem distinguir formato inválido de código ausente.
-
-A URL impressa no PDF e no QR usa o host da serventia em que o certificado foi emitido (o host da requisição, guardado na emissão), seguido de `/certificado/<código>`.
+- **Endereço impresso:** `https://atrioss.com/certificado/<código>`, no PDF e no QR (`certificateCheckUrl`). `CERTIFICATE_CHECK_BASE_URL` troca o endereço fora de produção. Como o PDF é gerado a cada download, trocar o endereço vale também para os certificados já emitidos.
+- **Consulta:** `GET /api/certificados/<código>` responde a visão pública (`publicCertificate`): nome, CPF mascarado, função, serventia, curso, carga horária, aproveitamento, data e quem assinou. Nada mais da linha.
+  - Inexistente e malformado dão o mesmo 404 (`{"valid": false}`).
+  - Resposta com `no-store` e `x-robots-tag: noindex`.
+- **Dois jeitos de chamar:**
+  - **Pelo navegador** em atrioss.com: o CORS libera só `https://atrioss.com` e `https://www.atrioss.com`, e o limite é de 30 consultas por IP a cada 10 minutos.
+  - **Pelo servidor** da Átrios: todas as chamadas sairiam do mesmo IP e esgotariam o limite. Por isso o servidor manda `Authorization: Bearer <CERTIFICATE_API_TOKEN>` e não entra no limite. A comparação do token é feita em tempo constante.
+- A página `/certificado/<código>` no site da serventia, que existiu numa versão anterior desta change, foi retirada.
+- A coluna `issued_host` continua gravada (o host em que o certificado foi emitido). Ela não é mais usada no endereço, mas fica como registro de origem.
 
 ### 8. Gerenciamento de questões
 

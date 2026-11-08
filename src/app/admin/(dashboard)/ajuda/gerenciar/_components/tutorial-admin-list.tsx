@@ -17,6 +17,11 @@ import {
   unpublishCourseAction,
   unpublishTutorialAction,
 } from "../actions.ts";
+import {
+  type AdminQuestionItem,
+  AssessmentAdmin,
+  type AssessmentSettingsItem,
+} from "./assessment-admin.tsx";
 import { CourseForm, type EditingCourse } from "./course-form.tsx";
 import { type EditingTutorial, TutorialForm } from "./tutorial-form.tsx";
 
@@ -32,6 +37,8 @@ export interface AdminTutorialItem extends EditingTutorial {
 /** One course, as the page serialises it. */
 export interface AdminCourseItem extends EditingCourse {
   published: boolean;
+  assessment: AssessmentSettingsItem;
+  questions: AdminQuestionItem[];
 }
 
 function DeleteButton({ item }: { item: AdminTutorialItem }) {
@@ -415,6 +422,14 @@ export function TutorialAdminList({
                 ),
               )}
             </ol>
+
+            {!course.isPanel && (
+              <AssessmentAdmin
+                courseId={course.id}
+                settings={course.assessment}
+                questions={course.questions}
+              />
+            )}
 
             {open.kind === "new-video" && open.courseId === course.id ? (
               <TutorialForm

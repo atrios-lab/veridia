@@ -1,12 +1,19 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
+import { DEFAULT_CERTIFICATE_CHECK_BASE } from "@/core/courses/certificate.ts";
 import { courseProgress } from "@/core/tutorials/course.ts";
 import { formatDuration } from "@/core/tutorials/progress.ts";
-import { getPublishedCourseBySlug } from "@/lib/courses.ts";
+import { getCourse, getPublishedCourseBySlug } from "@/lib/courses.ts";
+import { assessmentState } from "@/lib/quiz.ts";
 import { getSession } from "@/lib/session.ts";
+import { getTenant } from "@/lib/tenant.ts";
 import { listPublishedTutorials, listWatchedIds } from "@/lib/tutorials.ts";
 import { AdminIcon } from "../../../_components/icon.tsx";
 import { AdminPageHeader } from "../../../_components/page-header.tsx";
+import {
+  AssessmentPanel,
+  type PanelState,
+} from "../_components/assessment-panel.tsx";
 import { ReferenceCourse } from "../_components/reference-course.tsx";
 import { SequentialCourse } from "../_components/sequential-course.tsx";
 
@@ -48,6 +55,17 @@ export default async function CoursePage({
   const tutorials = all.filter((t) => t.courseId === course.id);
   if (tutorials.length === 0) notFound();
   const progress = courseProgress(tutorials, watchedIds);
+  const [assessment, settings, tenant] = await Promise.all([
+    assessmentState(session.user.id, course.id),
+    getCourse(course.id),
+    getTenant(),
+  ]);
+  const panelState: PanelState | null =
+    assessment.kind === "none"
+      ? null
+      : assessment.kind === "certified"
+        ? { ...assessment, issuedAt: assessment.issuedAt.toISOString() }
+        : assessment;
   const percent = Math.round((progress.watched / progress.total) * 100);
 
   return (
@@ -104,6 +122,23 @@ export default async function CoursePage({
             tutorials={tutorials}
             watchedIds={watchedIds}
             requestedId={video}
+          />
+        )}
+        {panelState && settings?.workloadHours && (
+          <AssessmentPanel
+            courseId={course.id}
+            courseSlug={course.slug}
+            courseTitle={course.title}
+            passingScore={settings.passingScore}
+            retryHours={settings.retryHours}
+            workloadHours={settings.workloadHours}
+            tenantName={tenant.name}
+            accountName={session.user.name ?? ""}
+            checkUrl={
+              process.env.CERTIFICATE_CHECK_BASE_URL ||
+              DEFAULT_CERTIFICATE_CHECK_BASE
+            }
+            state={panelState}
           />
         )}
       </main>

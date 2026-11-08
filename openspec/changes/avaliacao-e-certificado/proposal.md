@@ -12,7 +12,7 @@ O curso de LGPD termina prometendo um certificado com aproveitamento mínimo de 
   - nome, CPF, função, serventia, curso, carga horária (2 h), aproveitamento, data, código e QR de validação;
   - a assinatura digital da Átrios com certificado A1 ICP-Brasil (PAdES);
   - o nome de Joelison Alves Marinho como instrutor.
-- **Validação pública.** `/certificado/<código>` confirma o certificado em qualquer host, mostrando o CPF mascarado. Não é indexada e tem limite de consultas.
+- **Validação pública no site da Átrios.** O PDF e o QR apontam para `https://atrioss.com/certificado/<código>`. O site da Átrios monta a página a partir de `GET /api/certificados/<código>`, uma consulta pública que devolve só a visão do certificado, com o CPF mascarado. Ela libera chamadas vindas do navegador em atrioss.com, tem limite de consultas por IP e um token para o servidor da Átrios.
 - **Gerenciamento.** Em `/admin/ajuda/gerenciar`, o superadmin cadastra, edita, ativa e desativa as questões de cada curso e define a nota mínima, a carga horária e o intervalo entre tentativas.
 - **Curso de LGPD completo.** As 10 questões aprovadas são cadastradas (ver design), e o Encerramento do LGPD passa a ser publicado.
 
@@ -42,10 +42,13 @@ Nenhuma. A avaliação aparece na página do curso definida em `admin-courses` (
   - tabelas `course_questions`, `quiz_attempts` e `certificates`.
 
   A migração de produção é manual e precisa rodar antes do merge.
-- **Dependências novas**: `@signpdf/signpdf`, `@signpdf/signer-p12` e `@signpdf/placeholder-pdfkit`, para assinar o PDF que o `pdfkit` já gera.
-- **Segredos**: `CERT_A1_PFX_BASE64` e `CERT_A1_PASSWORD` nas variáveis da Vercel (Production; Preview com certificado de teste). Nunca no repositório.
+- **Dependências novas**: `@signpdf/signpdf`, `@signpdf/signer-p12` e `@signpdf/placeholder-plain` (o `placeholder-pdfkit` só aceita pdfkit abaixo da 0.16), mais `node-forge` para ler o titular do A1.
+- **Segredos**:
+  - `CERT_A1_PFX_BASE64` e `CERT_A1_PASSWORD` nas variáveis da Vercel (Production; Preview com certificado de teste). Nunca no repositório.
+  - `CERTIFICATE_API_TOKEN`, compartilhado com o servidor do site da Átrios.
+  - `CERTIFICATE_CHECK_BASE_URL`, opcional, para trocar o endereço impresso fora de produção.
 - **Dado pessoal**: o CPF é coletado só para o certificado e mostrado mascarado na validação pública. A finalidade aparece na tela de emissão.
 - **Rotas novas**:
   - avaliação e emissão na página do curso;
   - download do certificado, só para a própria pessoa;
-  - `/certificado/[codigo]`, pública, fora do `/admin`.
+  - `/api/certificados/[codigo]`, pública, lida pelo site da Átrios.

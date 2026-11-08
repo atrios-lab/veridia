@@ -7,6 +7,7 @@ import {
 } from "@/core/tutorials/catalog.ts";
 import { courseOrder, itemLabels } from "@/core/tutorials/course.ts";
 import { listAllCourses } from "@/lib/courses.ts";
+import { listAllQuestions } from "@/lib/quiz.ts";
 import { getSession } from "@/lib/session.ts";
 import { listAllTutorials } from "@/lib/tutorials.ts";
 import { blobUploadEnabled } from "@/lib/uploads.ts";
@@ -39,9 +40,10 @@ export default async function ManageTutorialsPage() {
     notFound();
   }
 
-  const [courseRows, rows] = await Promise.all([
+  const [courseRows, rows, questions] = await Promise.all([
     listAllCourses(),
     listAllTutorials(),
+    listAllQuestions(),
   ]);
   const courses: AdminCourseItem[] = courseRows.map((row) => ({
     id: row.id,
@@ -53,6 +55,19 @@ export default async function ManageTutorialsPage() {
     materialUrl: row.materialPath,
     isPanel: row.slug === PANEL_COURSE_SLUG,
     published: row.publishedAt !== null,
+    assessment: {
+      passingScore: row.passingScore,
+      workloadHours: row.workloadHours,
+      retryHours: row.retryHours,
+    },
+    questions: (questions.get(row.id) ?? []).map((q) => ({
+      id: q.id,
+      prompt: q.prompt,
+      options: q.options,
+      correctIndex: q.correctIndex,
+      active: q.active,
+      used: q.used,
+    })),
   }));
   // "Aula 3" counted among every video of the course, drafts included:
   // the platform sees where a draft will land once published.
