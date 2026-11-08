@@ -674,6 +674,22 @@ function timelineSteps(
             },
           ]
         : []),
+      // Só quando a serventia cobra a busca.
+      ...(result.amountLabel
+        ? [
+            result.paymentSettled
+              ? { label: "Pagamento confirmado", done: true }
+              : result.requestStatus === "payment-reported"
+                ? {
+                    label: "Pagamento informado",
+                    detail: "comprovante em conferência",
+                  }
+                : {
+                    label: "Aguardando pagamento",
+                    detail: "valor e QR ao lado",
+                  },
+          ]
+        : []),
       closed
         ? {
             label:

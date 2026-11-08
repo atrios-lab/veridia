@@ -14,7 +14,8 @@
 - [x] 3.1 `Act.consultation` na busca: CPF opcional no site e no balcão
 - [x] 3.2 Tela de sucesso e consulta do protocolo sem o requerimento assinado
 - [x] 3.3 `details.searchAnswer` e `answerSearchWith`, com teste contra o PGlite
-- [x] 3.4 Cartão "Resposta da busca" no painel, sem valor nem entrega, e valor recusado no servidor
+- [x] 3.4 Cartão "Resposta da busca" no painel, sem entrega
+- [x] 3.7 Valor facultativo na busca: o cartão de valor volta, a trilha ganha o pagamento quando há valor, e a consulta do protocolo mostra a cobrança
 - [x] 3.5 Resposta e botões para a certidão em `/protocolo` e `/acompanhar`
 - [x] 3.6 Conferir no navegador o envio sem CPF, a resposta no painel e a leitura na consulta, só no Homolog
 

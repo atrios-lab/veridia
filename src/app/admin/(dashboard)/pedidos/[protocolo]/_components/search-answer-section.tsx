@@ -8,16 +8,20 @@ const FIELD =
   "w-full rounded-[9px] border border-admin-input-border bg-admin-input-bg px-3.5 py-2.5 text-[13px] text-admin-text";
 
 /**
- * A resposta da busca de registro, no lugar do valor e da entrega: a busca é
- * uma consulta, e responder é o ato inteiro. O pedido é concluído e o cidadão
+ * A resposta da busca de registro, no lugar da entrega: a busca é uma
+ * consulta, e responder é o que ela devolve. O valor é facultativo e fica no
+ * cartão de sempre, porque há serventias que cobram a busca pela tabela. O pedido é concluído e o cidadão
  * lê a resposta na consulta do protocolo, com o caminho para pedir a certidão
  * no ato certo.
  */
 export function SearchAnswerSection({
   requestId,
   answer,
+  unpaid,
 }: {
   requestId: string;
+  /** Há valor informado e o pagamento ainda não foi confirmado. */
+  unpaid?: boolean;
   answer?: { found: boolean; text: string; answeredAtLabel: string };
 }) {
   const [editing, setEditing] = useState(!answer);
@@ -48,11 +52,21 @@ export function SearchAnswerSection({
         )}
       </div>
       <p className="mt-1 text-[12.5px] leading-relaxed text-admin-muted">
-        A busca é só uma consulta: não tem valor nem entrega. Responda aqui se o
-        registro consta nesta serventia e o que foi perguntado. O pedido é
-        concluído, e o cidadão recebe um e-mail para ler a resposta na consulta
-        do protocolo. Se quiser a certidão, ele faz um novo pedido no ato certo.
+        A busca é só uma consulta: não tem entrega. Responda aqui se o registro
+        consta nesta serventia e o que foi perguntado. O pedido é concluído, e o
+        cidadão recebe um e-mail para ler a resposta na consulta do protocolo.
+        Se quiser a certidão, ele faz um novo pedido no ato certo. Se a
+        serventia cobra a busca, informe o valor no cartão "Valor do pedido".
       </p>
+      {unpaid && editing && (
+        <p className="mt-2.5 rounded-lg bg-admin-warning-text px-3 py-2.5 text-[12.5px] leading-snug text-white">
+          <strong className="font-bold">
+            O valor da busca ainda não foi pago.
+          </strong>{" "}
+          Responder agora conclui o pedido e tira a cobrança da consulta do
+          protocolo.
+        </p>
+      )}
 
       {answer && !editing && (
         <div className="mt-3.5 flex flex-col gap-2">
