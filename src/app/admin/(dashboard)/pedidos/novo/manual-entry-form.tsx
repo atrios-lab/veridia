@@ -333,10 +333,23 @@ function ManualRequesterQualificationFields({
             className={FIELD_CLASS}
           />
           <FieldError message={fieldErrors.representedName} />
-          <p className="mt-1 text-[11px] text-admin-faint">
-            Confira o mandato (procuração) e anexe-o depois de registrar o
-            pedido.
-          </p>
+          {/* Cor cheia, como as faixas da fila: a nota miúda passava. */}
+          <div
+            role="note"
+            className="mt-2 flex items-start gap-2 rounded-lg bg-admin-warning-text px-3 py-2.5 text-white"
+          >
+            <AdminIcon
+              name="alert"
+              className="mt-0.5 h-4 w-4 shrink-0"
+              strokeWidth={2}
+            />
+            <p className="text-[12.5px] leading-snug">
+              <strong className="font-bold">
+                Confira o mandato (procuração).
+              </strong>{" "}
+              Anexe-o ao pedido depois de registrar.
+            </p>
+          </div>
         </div>
       )}
 
@@ -636,9 +649,11 @@ export function ManualEntryForm({
           </div>
         )}
 
+        {/* Chaves com sufixo: este campo e o bloco de quem pede são irmãos, e a
+            mesma chave nos dois fazia o React confundir um com o outro. */}
         {act?.deliveryChoice && (
           <ManualDeliveryFormatField
-            key={act.id}
+            key={`${act.id}-delivery`}
             error={fieldErrors.deliveryFormat}
           />
         )}
@@ -653,7 +668,7 @@ export function ManualEntryForm({
 
         {act && asksRequesterQualification(act, variantId) && (
           <ManualRequesterQualificationFields
-            key={act.id}
+            key={`${act.id}-qualification`}
             fieldErrors={fieldErrors}
           />
         )}
