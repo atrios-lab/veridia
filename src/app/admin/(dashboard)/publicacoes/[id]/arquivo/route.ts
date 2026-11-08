@@ -1,6 +1,11 @@
 import { readFile } from "node:fs/promises";
 import { can } from "@/core/auth/roles.ts";
-import { getPublication } from "@/lib/publications.ts";
+import { attachmentServable } from "@/core/publications/attachment-retention.ts";
+import { today } from "@/lib/office-config.ts";
+import {
+  getPublication,
+  publicationAttachmentStatus,
+} from "@/lib/publications.ts";
 import { getSession } from "@/lib/session.ts";
 import { getTenant } from "@/lib/tenant.ts";
 
@@ -13,7 +18,7 @@ export const runtime = "nodejs";
  * The session is the credential, and the row must belong to this office.
  */
 export async function GET(
-  _request: Request,
+  request: Request,
   { params }: { params: Promise<{ id: string }> },
 ): Promise<Response> {
   const session = await getSession();
@@ -27,6 +32,15 @@ export async function GET(
   if (!publication?.attachmentPath) {
     return new Response("Não encontrado", { status: 404 });
   }
+  // Past its 30 days and off the site: gone, even if the cleanup
+  // (run when the list opens, see purgeExpiredAttachments) has not reached it yet.
+  if (!attachmentServable(publicationAttachmentStatus(publication, today()))) {
+    return new Response("Arquivo apagado pela regra de 30 dias", {
+      status: 410,
+    });
+  }
+  // "Baixar o arquivo": the office saving its own copy to its own cloud.
+  const download = new URL(request.url).searchParams.has("baixar");
 
   // In the deploy the file is a blob: send the browser there, since a
   // function's response is capped around 4.5 MB (see the public route).
@@ -34,7 +48,10 @@ export async function GET(
     return new Response(null, {
       status: 307,
       headers: {
-        Location: publication.attachmentPath,
+        // Vercel Blob answers `?download=1` with an attachment disposition.
+        Location: download
+          ? `${publication.attachmentPath}?download=1`
+          : publication.attachmentPath,
         "Cache-Control": "private, no-store",
       },
     });
@@ -44,7 +61,7 @@ export async function GET(
   return new Response(new Uint8Array(bytes), {
     headers: {
       "Content-Type": publication.attachmentMimeType ?? "application/pdf",
-      "Content-Disposition": "inline",
+      "Content-Disposition": download ? "attachment" : "inline",
       "Cache-Control": "private, no-store",
     },
   });

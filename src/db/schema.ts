@@ -341,6 +341,16 @@ export const officePublications = pgTable(
     attachmentPath: text("attachment_path"),
     attachmentMimeType: text("attachment_mime_type"),
     attachmentSizeBytes: integer("attachment_size_bytes"),
+    // When the current file was sent: it is kept 30 days from then (see
+    // src/core/publications/attachment-retention.ts), then deleted.
+    attachmentUploadedAt: timestamp("attachment_uploaded_at", {
+      withTimezone: true,
+    }),
+    // When that deletion happened. The path is cleared then, and the name,
+    // type and size stay as the record of which file the publication had.
+    attachmentPurgedAt: timestamp("attachment_purged_at", {
+      withTimezone: true,
+    }),
     publishAt: date("publish_at"),
     expireAt: date("expire_at"),
     // Set only by manual archiving ("Arquivar agora"); automatic expiry is a

@@ -82,3 +82,18 @@ Em qualquer aba (No site, Agendadas, Arquivadas, Rascunhos), o título da public
 #### Scenario: Excluir pelo detalhe
 - **WHEN** o operador confirma "Excluir" na tela de detalhe
 - **THEN** volta para a lista da aba de onde veio, sem a publicação
+
+### Requirement: Arquivo da publicação fica 30 dias e depois é apagado
+O arquivo de uma publicação (PDF ou imagem) DEVE (SHALL) ficar disponível por 30 dias contados do envio, em qualquer estado, e depois DEVE (SHALL) ser apagado do armazenamento, ficando só as informações escritas (tipo, título, texto, datas, nome, tipo e tamanho do arquivo, histórico). Se a publicação estiver no site no fim dos 30 dias, o arquivo fica até ela sair. A regra é da plataforma, a mesma prometida para os documentos dos pedidos; a justificativa é a LGPD (art. 6º, III, e arts. 15 e 16), que não fixa o número de dias.
+
+O formulário DEVE (SHALL) avisar a regra antes de salvar e dizer, ao salvar, até quando o arquivo fica. A lista DEVE (SHALL) lembrar os arquivos que vencem em até 7 dias, e o detalhe DEVE (SHALL) oferecer "Baixar o arquivo" e mostrar o histórico com quem fez cada ação.
+
+O expurgo roda quando a lista do painel abre; as rotas recusam o arquivo vencido mesmo antes disso. Cada arquivo apagado DEVE (SHALL) deixar `publication.attachment-purge` na auditoria.
+
+#### Scenario: Rascunho com arquivo de 40 dias
+- **WHEN** a lista do painel abre e há um rascunho cujo arquivo foi enviado há 40 dias
+- **THEN** o arquivo é apagado, o rascunho continua com o texto, e o detalhe diz quando e por quê
+
+#### Scenario: Edital no ar com o prazo legal correndo
+- **WHEN** passam 30 dias do envio e o edital ainda está no site
+- **THEN** o arquivo continua no site até a publicação sair, e é apagado depois

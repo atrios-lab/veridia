@@ -218,6 +218,13 @@
       "when": 1794106283190,
       "tag": "0030_adicionar_tipo_do_edital",
       "breakpoints": true
+    },
+    {
+      "idx": 31,
+      "version": "7",
+      "when": 1794109906981,
+      "tag": "0031_prazo_do_anexo_da_publicacao",
+      "breakpoints": true
     }
   ]
 }

@@ -2,13 +2,23 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { BlobUploadProvider } from "@/app/(public)/_lib/attachments.tsx";
 import { can } from "@/core/auth/roles.ts";
+import {
+  ATTACHMENT_RETENTION_DAYS,
+  ATTACHMENT_WARNING_DAYS,
+  type AttachmentStatus,
+} from "@/core/publications/attachment-retention.ts";
 import { publicationHeadline } from "@/core/publications/notice-types.ts";
 import {
   type PublicationState,
   publicationState,
 } from "@/core/publications/state.ts";
 import { formatDate } from "@/core/scheduling/calendar.ts";
-import { listPublications, type PublicationRow } from "@/lib/publications.ts";
+import {
+  listPublications,
+  type PublicationRow,
+  publicationAttachmentStatus,
+  purgeExpiredAttachments,
+} from "@/lib/publications.ts";
 import { getSession } from "@/lib/session.ts";
 import { getTenant, today } from "@/lib/tenant.ts";
 import { blobUploadEnabled } from "@/lib/uploads.ts";
@@ -25,6 +35,22 @@ const TABS: { state: PublicationState; label: string; slug: string }[] = [
   { state: "archived", label: "Arquivadas", slug: "arquivadas" },
   { state: "draft", label: "Rascunhos", slug: "rascunhos" },
 ];
+
+/** One line about the file, for the list: when it goes, or that it went. */
+function fileLabel(status: AttachmentStatus): string | null {
+  switch (status.kind) {
+    case "available":
+      return status.daysLeft === 0
+        ? "arquivo disponível só até hoje"
+        : `arquivo disponível até ${formatDate(status.until)}`;
+    case "held":
+      return "arquivo mantido até a publicação sair do site";
+    case "purged":
+      return `arquivo apagado (regra de ${ATTACHMENT_RETENTION_DAYS} dias)`;
+    default:
+      return null;
+  }
+}
 
 function stateOfSlug(slug: string | undefined): PublicationState {
   return TABS.find((t) => t.slug === slug)?.state ?? "live";
@@ -62,11 +88,27 @@ export default async function PublicationsPage({
   const activeState = stateOfSlug(aba);
   const day = today();
 
+  // The 30-day rule is applied here, when the office opens its list: the
+  // files past their time are deleted before the list is read. A failure
+  // only leaves them for the next visit (the routes refuse to serve them
+  // either way), never takes the screen down.
+  try {
+    await purgeExpiredAttachments(tenant.slug, day);
+  } catch (error) {
+    console.error("publicacoes.purge", error);
+  }
   const all = await listPublications(tenant.slug);
   const withState = all.map((row) => ({
     row,
     state: publicationState(row, day),
+    file: publicationAttachmentStatus(row, day),
   }));
+  // Files about to go, in every tab: the reminder to save them to the
+  // office's own cloud before the rule deletes them.
+  const expiringSoon = withState.filter(
+    ({ file }) =>
+      file.kind === "available" && file.daysLeft <= ATTACHMENT_WARNING_DAYS,
+  );
   const counts = Object.fromEntries(
     TABS.map((tab) => [
       tab.state,
@@ -96,6 +138,34 @@ export default async function PublicationsPage({
           ))}
         </div>
 
+        {expiringSoon.length > 0 && (
+          <div className="rounded-[12px] border border-admin-warning-soft-border bg-admin-warning-soft-bg px-4.5 py-3.5 text-[12.5px] leading-relaxed text-admin-warning-text">
+            <strong>
+              {expiringSoon.length === 1
+                ? "1 arquivo será apagado"
+                : `${expiringSoon.length} arquivos serão apagados`}{" "}
+              nos próximos {ATTACHMENT_WARNING_DAYS} dias
+            </strong>{" "}
+            pela regra de {ATTACHMENT_RETENTION_DAYS} dias. Baixe e guarde na
+            nuvem do cartório antes disso; as informações escritas continuam
+            aqui.
+            <ul className="mt-1.5 flex flex-col gap-0.5">
+              {expiringSoon.map(({ row, file }) => (
+                <li key={row.id}>
+                  <Link
+                    href={`/admin/publicacoes/${row.id}`}
+                    className="font-semibold underline underline-offset-2"
+                  >
+                    {row.title}
+                  </Link>
+                  {file.kind === "available" &&
+                    `: até ${formatDate(file.until)}`}
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
+
         <div className="overflow-hidden rounded-[14px] border border-admin-border bg-admin-card">
           {visible.length === 0 ? (
             <p className="px-5 py-8 text-center text-[13px] text-admin-muted">
@@ -103,7 +173,7 @@ export default async function PublicationsPage({
               publicação.
             </p>
           ) : (
-            visible.map(({ row, state }) => (
+            visible.map(({ row, state, file }) => (
               <div
                 key={row.id}
                 className="flex items-start gap-3.5 border-b border-admin-border px-5 py-4 last:border-b-0"
@@ -122,6 +192,7 @@ export default async function PublicationsPage({
                   </Link>
                   <span className="block text-xs text-admin-faint">
                     {exitLabel(row, state, day)}
+                    {fileLabel(file) && ` · ${fileLabel(file)}`}
                   </span>
                 </span>
                 <Link

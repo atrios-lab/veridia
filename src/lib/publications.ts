@@ -1,11 +1,20 @@
 import "server-only";
-import { and, desc, eq, isNull } from "drizzle-orm";
+import { and, asc, desc, eq, isNotNull, isNull } from "drizzle-orm";
+import {
+  type AttachmentStatus,
+  attachmentStatus,
+} from "@/core/publications/attachment-retention.ts";
 import type { PublicationFormInput } from "@/core/publications/publication.ts";
-import { isLive } from "@/core/publications/state.ts";
+import { isLive, publicationState } from "@/core/publications/state.ts";
+import type { IsoDate } from "@/core/scheduling/calendar.ts";
+import { toIsoDate } from "@/core/scheduling/calendar.ts";
+import { OFFICE_TIME_ZONE } from "@/core/time/office-time.ts";
+import { user } from "@/db/auth-schema.ts";
 import { db } from "@/db/index.ts";
-import { officePublications } from "@/db/schema.ts";
+import { auditLog, officePublications } from "@/db/schema.ts";
 import { today } from "@/lib/office-config.ts";
 import { recordAudit } from "./audit.ts";
+import { deleteStoredFile } from "./uploads.ts";
 
 export type PublicationRow = typeof officePublications.$inferSelect;
 
@@ -61,7 +70,111 @@ function attachmentColumns(file: PublicationAttachment | undefined) {
     attachmentPath: file.path,
     attachmentMimeType: file.mimeType,
     attachmentSizeBytes: file.sizeBytes,
+    // A new file starts its own 30 days (see attachment-retention.ts).
+    attachmentUploadedAt: new Date(),
+    attachmentPurgedAt: null,
   };
+}
+
+/** Where a row's file stands today under the 30-day rule. */
+export function publicationAttachmentStatus(
+  row: PublicationRow,
+  today: IsoDate,
+): AttachmentStatus {
+  return attachmentStatus(
+    {
+      hasFile: Boolean(row.attachmentPath),
+      uploadedOn: row.attachmentUploadedAt
+        ? toIsoDate(row.attachmentUploadedAt, OFFICE_TIME_ZONE)
+        : null,
+      purged: Boolean(row.attachmentPurgedAt),
+      state: publicationState(row, today),
+    },
+    today,
+  );
+}
+
+/**
+ * Deletes, from storage, every file of this office past its 30 days and
+ * off the site, and clears its path on the row: the text, the dates and the
+ * file's name, type and size stay as the record. Run when the panel's list
+ * opens, the same "computed when read" stance the publication states take:
+ * no scheduled job to forget about, and the routes already refuse to serve
+ * an expired file before it is physically gone (see `attachmentServable`).
+ *
+ * Returns how many files it removed.
+ */
+export async function purgeExpiredAttachments(
+  tenantSlug: string,
+  today: IsoDate,
+): Promise<number> {
+  const rows = await db
+    .select()
+    .from(officePublications)
+    .where(
+      and(
+        eq(officePublications.tenantSlug, tenantSlug),
+        isNotNull(officePublications.attachmentPath),
+      ),
+    );
+  let purged = 0;
+  for (const row of rows) {
+    if (publicationAttachmentStatus(row, today).kind !== "expired") continue;
+    const path = row.attachmentPath;
+    // Row first: a row pointing at a deleted file would be a broken link;
+    // a file nobody points at is only a leftover.
+    await db
+      .update(officePublications)
+      .set({ attachmentPath: null, attachmentPurgedAt: new Date() })
+      .where(
+        and(
+          eq(officePublications.tenantSlug, tenantSlug),
+          eq(officePublications.id, row.id),
+        ),
+      );
+    if (path) await deleteStoredFile(path);
+    await recordAudit({
+      tenantSlug,
+      // The platform did it, by the 30-day rule: no person to name.
+      actorId: null,
+      action: "publication.attachment-purge",
+      targetType: "publication",
+      targetId: row.id,
+    });
+    purged++;
+  }
+  return purged;
+}
+
+export interface PublicationHistoryEntry {
+  action: string;
+  at: Date;
+  /** The operator's name; null when the platform acted (the 30-day rule). */
+  actorName: string | null;
+}
+
+/** Who did what to a publication, oldest first, from the audit trail. */
+export async function publicationHistory(
+  tenantSlug: string,
+  id: string,
+): Promise<PublicationHistoryEntry[]> {
+  const rows = await db
+    .select({
+      action: auditLog.action,
+      at: auditLog.createdAt,
+      actorName: user.name,
+    })
+    .from(auditLog)
+    .leftJoin(user, eq(user.id, auditLog.actorId))
+    .where(
+      and(
+        eq(auditLog.tenantSlug, tenantSlug),
+        eq(auditLog.targetType, "publication"),
+        eq(auditLog.targetId, id),
+      ),
+    )
+    .orderBy(asc(auditLog.createdAt));
+  return rows;
 }
 
 export async function createPublication(

@@ -2,6 +2,10 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { can } from "@/core/auth/roles.ts";
 import {
+  ATTACHMENT_RETENTION_DAYS,
+  attachmentServable,
+} from "@/core/publications/attachment-retention.ts";
+import {
   noticeTypeOf,
   publicationHeadline,
   publicationSchedule,
@@ -17,7 +21,11 @@ import {
 import { formatDate } from "@/core/scheduling/calendar.ts";
 import { NOTICE_SECTOR_META, type NoticeSector } from "@/core/tenant/gating.ts";
 import { formatOfficeDateTime } from "@/core/time/office-time.ts";
-import { getPublication } from "@/lib/publications.ts";
+import {
+  getPublication,
+  publicationAttachmentStatus,
+  publicationHistory,
+} from "@/lib/publications.ts";
 import { getSession } from "@/lib/session.ts";
 import { getTenant, today } from "@/lib/tenant.ts";
 import { AdminPageHeader } from "../../../_components/page-header.tsx";
@@ -42,6 +50,14 @@ const TAB_SLUGS: Record<PublicationState, string> = {
 
 // Formats every browser draws; HEIC and PDF open from a link instead.
 const INLINE_IMAGE_TYPES = ["image/jpeg", "image/png", "image/webp"];
+
+// The audit trail's verbs, as the office reads them.
+const HISTORY_LABELS: Record<string, string> = {
+  "publication.create": "Cadastrada",
+  "publication.update": "Alterada",
+  "publication.archive": "Arquivada manualmente",
+  "publication.attachment-purge": `Arquivo apagado pela regra de ${ATTACHMENT_RETENTION_DAYS} dias`,
+};
 
 function formatBytes(bytes: number): string {
   if (bytes < 1024 * 1024) return `${Math.max(1, Math.round(bytes / 1024))} KB`;
@@ -85,6 +101,11 @@ export default async function PublicationDetailPage({
   if (!row) notFound();
 
   const day = today();
+  const file = publicationAttachmentStatus(row, day);
+  const history = await publicationHistory(tenant.slug, row.id);
+  const createdBy = history.find(
+    (entry) => entry.action === "publication.create",
+  )?.actorName;
   const state = publicationState(row, day);
   const headline = publicationHeadline(row, day);
   const type = noticeTypeOf(row.noticeType);
@@ -177,6 +198,11 @@ export default async function PublicationDetailPage({
             </Field>
             <Field label="Cadastrada em">
               {formatOfficeDateTime(row.createdAt)}
+              {createdBy && (
+                <span className="block text-xs text-admin-muted">
+                  por {createdBy}
+                </span>
+              )}
             </Field>
             <Field label="Última alteração">
               {formatOfficeDateTime(row.updatedAt)}
@@ -198,9 +224,28 @@ export default async function PublicationDetailPage({
           <h2 className="font-serif text-[16px] font-semibold text-admin-primary">
             Arquivo anexado
           </h2>
-          {row.attachmentPath ? (
+          {file.kind === "available" && (
+            <p className="mt-2 rounded-[9px] border border-admin-warning-soft-border bg-admin-warning-soft-bg px-3 py-2 text-[12px] leading-relaxed text-admin-warning-text">
+              Disponível até <strong>{formatDate(file.until)}</strong>
+              {file.daysLeft > 0
+                ? ` (faltam ${file.daysLeft} ${file.daysLeft === 1 ? "dia" : "dias"})`
+                : " (último dia)"}
+              . Depois disso o arquivo é apagado pela regra de{" "}
+              {ATTACHMENT_RETENTION_DAYS} dias e ficam só as informações
+              escritas. Baixe e guarde uma cópia na nuvem do cartório.
+            </p>
+          )}
+          {file.kind === "held" && (
+            <p className="mt-2 rounded-[9px] border border-admin-warning-soft-border bg-admin-warning-soft-bg px-3 py-2 text-[12px] leading-relaxed text-admin-warning-text">
+              Os {ATTACHMENT_RETENTION_DAYS} dias terminaram em{" "}
+              {formatDate(file.until)}, mas a publicação ainda está no site: o
+              arquivo fica até ela sair e é apagado em seguida. Baixe e guarde
+              uma cópia na nuvem do cartório.
+            </p>
+          )}
+          {row.attachmentPath && attachmentServable(file) ? (
             <>
-              <p className="mt-1 text-xs text-admin-muted">
+              <p className="mt-2 text-xs text-admin-muted">
                 {isImage ? "Imagem" : "Documento"}
                 {row.attachmentSizeBytes
                   ? `, ${formatBytes(row.attachmentSizeBytes)}`
@@ -223,19 +268,73 @@ export default async function PublicationDetailPage({
                   />
                 </a>
               )}
-              <a
-                href={fileHref}
-                target="_blank"
-                rel="noopener"
-                className="btn btn-admin-secondary btn-sm mt-3"
-              >
-                {isImage ? "Abrir a imagem em nova aba" : "Abrir o arquivo"}
-              </a>
+              <div className="mt-3 flex flex-wrap gap-2.5">
+                <a
+                  href={`${fileHref}?baixar=1`}
+                  className="btn btn-admin-primary btn-sm"
+                >
+                  Baixar o arquivo
+                </a>
+                <a
+                  href={fileHref}
+                  target="_blank"
+                  rel="noopener"
+                  className="btn btn-admin-secondary btn-sm"
+                >
+                  {isImage ? "Abrir a imagem em nova aba" : "Abrir o arquivo"}
+                </a>
+              </div>
             </>
+          ) : row.attachmentPurgedAt || file.kind === "expired" ? (
+            <p className="mt-2 text-[13px] leading-relaxed text-admin-muted">
+              O arquivo foi apagado
+              {row.attachmentPurgedAt
+                ? ` em ${formatOfficeDateTime(row.attachmentPurgedAt)}`
+                : ""}{" "}
+              pela regra de {ATTACHMENT_RETENTION_DAYS} dias
+              {row.attachmentMimeType
+                ? ` (era ${row.attachmentMimeType === "application/pdf" ? "um PDF" : "uma imagem"}${
+                    row.attachmentSizeBytes
+                      ? ` de ${formatBytes(row.attachmentSizeBytes)}`
+                      : ""
+                  })`
+                : ""}
+              . As informações escritas desta publicação continuam registradas.
+            </p>
           ) : (
             <p className="mt-2 text-[13px] text-admin-muted">
               Esta publicação não tem arquivo anexado.
             </p>
+          )}
+        </section>
+
+        <section className="rounded-[14px] border border-admin-border bg-admin-card p-6">
+          <h2 className="font-serif text-[16px] font-semibold text-admin-primary">
+            Histórico
+          </h2>
+          {history.length === 0 ? (
+            <p className="mt-2 text-[13px] text-admin-muted">
+              Sem registros de alteração.
+            </p>
+          ) : (
+            <ol className="mt-3 flex flex-col gap-1.5">
+              {history.map((entry) => (
+                <li
+                  key={`${entry.action}-${entry.at.toISOString()}`}
+                  className="text-[13px] text-admin-text"
+                >
+                  <span className="text-admin-muted">
+                    {formatOfficeDateTime(entry.at)}
+                  </span>{" "}
+                  · {HISTORY_LABELS[entry.action] ?? entry.action}
+                  {entry.actorName
+                    ? ` por ${entry.actorName}`
+                    : entry.action === "publication.attachment-purge"
+                      ? ", automaticamente"
+                      : ""}
+                </li>
+              ))}
+            </ol>
           )}
         </section>
       </main>
