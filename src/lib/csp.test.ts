@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { buildCsp } from "./csp.ts";
+import { buildCsp, isFramablePdfPath } from "./csp.ts";
 
 function directive(csp: string, name: string): string | undefined {
   return csp
@@ -42,4 +42,28 @@ test("the nonce lands in script-src, and unsafe-eval only in development", () =>
     directive(buildCsp({ ...BASE, isDev: true }), "script-src"),
     "'self' 'nonce-abc' 'unsafe-eval'",
   );
+});
+
+test("frames are refused by default and object-src stays closed", () => {
+  const csp = buildCsp(BASE);
+  assert.equal(directive(csp, "frame-ancestors"), "'none'");
+  assert.equal(directive(csp, "object-src"), "'none'");
+});
+
+test("a framable response accepts its own origin only, object-src unchanged", () => {
+  const csp = buildCsp({ ...BASE, frameAncestors: "self" });
+  assert.equal(directive(csp, "frame-ancestors"), "'self'");
+  assert.equal(directive(csp, "object-src"), "'none'");
+});
+
+test("only the two public transparency PDFs are framable", () => {
+  assert.equal(isFramablePdfPath("/transparencia/documento/abc-123"), true);
+  assert.equal(isFramablePdfPath("/transparencia/boletim/abc-123"), true);
+
+  assert.equal(isFramablePdfPath("/transparencia"), false);
+  assert.equal(isFramablePdfPath("/transparencia/documentos"), false);
+  assert.equal(isFramablePdfPath("/transparencia/documento/"), false);
+  assert.equal(isFramablePdfPath("/transparencia/boletim/abc/extra"), false);
+  assert.equal(isFramablePdfPath("/admin/transparencia/documento"), false);
+  assert.equal(isFramablePdfPath("/solicitar"), false);
 });

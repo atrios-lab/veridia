@@ -50,7 +50,18 @@ const nextConfig: NextConfig = {
       : [],
   },
   async headers() {
-    return [{ source: "/:path*", headers: securityHeaders }];
+    return [
+      { source: "/:path*", headers: securityHeaders },
+      // The two public transparency PDFs open in a dialog on the
+      // transparency page itself, inside an <iframe> of the same origin.
+      // Listed after the global entry so its X-Frame-Options replaces DENY
+      // for these paths only; the middleware relaxes frame-ancestors for the
+      // same two (see isFramablePdfPath in src/lib/csp.ts).
+      {
+        source: "/transparencia/:kind(documento|boletim)/:id",
+        headers: [{ key: "X-Frame-Options", value: "SAMEORIGIN" }],
+      },
+    ];
   },
   // IndexNow (see src/lib/indexnow.ts) requires the key served at the
   // literal "/<key>.txt". A route handler in a folder of that exact name

@@ -1,17 +1,17 @@
 ## 1. Núcleo: agrupamentos
 
-- [ ] 1.1 Criar `groupBulletinsByYear` em `src/core/transparency/` (anos em ordem decrescente, 12 posições por ano, `null` no mês sem boletim, `count` por ano)
-- [ ] 1.2 Testes `node --test` de `groupBulletinsByYear`: dois anos, ano incompleto, lista vazia, preliminar preservado na célula
-- [ ] 1.3 Criar a constante `VERSIONED_DOCUMENT_CATEGORIES` (emolumentos e custas) ao lado de `DOCUMENT_CATEGORIES`
-- [ ] 1.4 Criar `groupDocumentsByCategory` (ordem dos grupos pela primeira aparição na ordem do painel; `current`/`previous` só nas categorias versionadas; categoria fora da lista vira grupo próprio)
-- [ ] 1.5 Testes `node --test` de `groupDocumentsByCategory`: tabela com versão anterior, dois avisos sem recolhimento, ordem dos grupos seguindo o painel, categoria desconhecida
+- [x] 1.1 Criar `groupBulletinsByYear` em `src/core/transparency/` (anos em ordem decrescente, 12 posições por ano, `null` no mês sem boletim, `count` por ano)
+- [x] 1.2 Testes `node --test` de `groupBulletinsByYear`: dois anos, ano incompleto, lista vazia, preliminar preservado na célula
+- [x] 1.3 Criar a constante `VERSIONED_DOCUMENT_CATEGORIES` (emolumentos e custas), tipada por `DocumentCategory`, em `listing.ts`
+- [x] 1.4 Criar `groupDocumentsByCategory` (ordem dos grupos pela primeira aparição na ordem do painel; `current`/`previous` só nas categorias versionadas; categoria fora da lista vira grupo próprio)
+- [x] 1.5 Testes `node --test` de `groupDocumentsByCategory`: tabela com versão anterior, dois avisos sem recolhimento, ordem dos grupos seguindo o painel, categoria desconhecida
 
 ## 2. Moldura só nas rotas de PDF
 
-- [ ] 2.1 Criar o predicado puro `isFramablePdfPath(pathname)`, que casa só `/transparencia/(documento|boletim)/<um segmento>`
-- [ ] 2.2 `buildCsp` recebe `frameAncestors: "none" | "self"`, e o middleware passa `"self"` só quando `isFramablePdfPath` é verdadeiro
-- [ ] 2.3 Casos em `src/lib/csp.test.ts`: as duas variantes de `frame-ancestors`, `object-src 'none'` intacto e o predicado recusando `/transparencia/documentos` e `/transparencia/boletim/<id>/extra`
-- [ ] 2.4 Em `next.config.ts`, uma entrada depois da global com `source: "/transparencia/:kind(documento|boletim)/:id"` e `X-Frame-Options: SAMEORIGIN`
+- [x] 2.1 Criar o predicado puro `isFramablePdfPath(pathname)`, que casa só `/transparencia/(documento|boletim)/<um segmento>`
+- [x] 2.2 `buildCsp` recebe `frameAncestors: "none" | "self"`, e o middleware passa `"self"` só quando `isFramablePdfPath` é verdadeiro
+- [x] 2.3 Casos em `src/lib/csp.test.ts`: as duas variantes de `frame-ancestors`, `object-src 'none'` intacto e o predicado recusando `/transparencia/documentos` e `/transparencia/boletim/<id>/extra`
+- [x] 2.4 Em `next.config.ts`, uma entrada depois da global com `source: "/transparencia/:kind(documento|boletim)/:id"` e `X-Frame-Options: SAMEORIGIN`
 - [ ] 2.5 Conferir com `next build && next start` + `curl -I` que a rota de PDF manda um único `X-Frame-Options: SAMEORIGIN` e que `/transparencia` segue com `DENY`. Se vier em dobro, trocar a entrada global por `source` com lookahead negativo
 
 ## 3. Página pública
