@@ -28,13 +28,22 @@ const SUGGESTIONS = [
   "Dia do Evangélico",
 ];
 
-type Row = CustomHoliday & { key: number };
+/** A row as edited: `byLaw` is the "Feriado por lei" box, `legalBasis` its
+ * text, kept while the box is off so unticking by mistake loses nothing. */
+type Row = Omit<CustomHoliday, "legalBasis"> & {
+  key: number;
+  byLaw: boolean;
+  legalBasis: string;
+};
 
 export function OfficeHolidaysForm({
   initial,
+  initialHidden,
   law,
 }: {
   initial: OfficeHolidays;
+  /** Law days excluded from the list (`Tenant.hiddenHolidays`). */
+  initialHidden: readonly string[];
   /** The national and state days off ahead, kept or switched off. */
   law: readonly LawHoliday[];
 }) {
@@ -45,11 +54,24 @@ export function OfficeHolidaysForm({
   const own = initial.customHolidays ?? [];
   const nextKey = useRef(own.length);
   const [rows, setRows] = useState<Row[]>(() =>
-    own.map((holiday, key) => ({ ...holiday, key })),
+    own.map((holiday, key) => ({
+      key,
+      name: holiday.name,
+      date: holiday.date,
+      yearly: holiday.yearly,
+      byLaw: Boolean(holiday.legalBasis),
+      legalBasis: holiday.legalBasis ?? "",
+    })),
   );
   const [disabled, setDisabled] = useState<ReadonlySet<string>>(
     () => new Set(initial.disabledHolidays ?? []),
   );
+  const [hidden, setHidden] = useState<ReadonlySet<string>>(
+    () => new Set(initialHidden),
+  );
+  // The list shows what counts and what was switched off ("Não fecha aqui",
+  // struck through); what was excluded leaves it.
+  const listed = law.filter((day) => !hidden.has(day.id));
   const keptCount = law.filter((day) => !disabled.has(day.id)).length;
   const fieldErrors = state.status === "error" ? state.fieldErrors : {};
   const full = rows.length >= MAX_CUSTOM_HOLIDAYS;
@@ -58,11 +80,18 @@ export function OfficeHolidaysForm({
     if (full) return;
     setRows((current) => [
       ...current,
-      { key: nextKey.current++, name, date: "", yearly: true },
+      {
+        key: nextKey.current++,
+        name,
+        date: "",
+        yearly: true,
+        byLaw: false,
+        legalBasis: "",
+      },
     ]);
   }
 
-  function update(key: number, patch: Partial<CustomHoliday>) {
+  function update(key: number, patch: Partial<Omit<Row, "key">>) {
     setRows((current) =>
       current.map((row) => (row.key === key ? { ...row, ...patch } : row)),
     );
@@ -82,6 +111,18 @@ export function OfficeHolidaysForm({
   }
 
   /**
+   * "Excluir" takes a law day out of the count and out of the list, for
+   * good: the panel does not keep it on show, since an exclusion may have
+   * been a test or a mistake nobody wants to see again. To have it back,
+   * the office adds it as its own and marks "Feriado por lei". Nothing is
+   * deleted anywhere: both are ids on the office's own settings.
+   */
+  function exclude(id: string) {
+    setKept(id, false);
+    setHidden((current) => new Set(current).add(id));
+  }
+
+  /**
    * "Alterar" a law day: it stops counting by the law's date and comes down
    * to the office's own list with its name and date, ready to edit. Yearly
    * for a fixed date; a day that follows Easter moves every year, so it
@@ -97,17 +138,23 @@ export function OfficeHolidaysForm({
         name: day.name,
         date: day.date,
         yearly: !day.movable,
+        byLaw: false,
+        legalBasis: "",
       },
     ]);
   }
 
   const payload = JSON.stringify({
-    customHolidays: rows.map(({ name, date, yearly }) => ({
+    // The law goes only with its box ticked; ticked and empty, it goes
+    // empty and the schema asks for it.
+    customHolidays: rows.map(({ name, date, yearly, byLaw, legalBasis }) => ({
       name,
       date,
       yearly,
+      ...(byLaw ? { legalBasis } : {}),
     })),
     disabledHolidays: [...disabled],
+    hiddenHolidays: [...hidden],
   });
 
   return (
@@ -117,10 +164,10 @@ export function OfficeHolidaysForm({
       </h2>
       <p className="mt-1 text-[12.5px] leading-relaxed text-admin-muted">
         Os feriados nacionais e os dias do Código de Normas do RN já entram
-        sozinhos, e você pode desligar ou alterar algum que não valha aqui.
-        Cadastre aqui os do município e outros dias em que a serventia fecha.
-        Nesses dias o site avisa que é feriado, o chat não abre, a agenda não
-        oferece horário e os prazos não correm.
+        sozinhos, e você pode alterar, desligar ou excluir algum que não valha
+        aqui. Cadastre aqui os do município e outros dias em que a serventia
+        fecha. Nesses dias o site avisa que é feriado, o chat não abre, a agenda
+        não oferece horário e os prazos não correm.
       </p>
 
       <details className="mt-3.5 rounded-[10px] border border-admin-border bg-admin-input-bg px-3.5 py-2.5">
@@ -129,21 +176,23 @@ export function OfficeHolidaysForm({
           meses
         </summary>
         <p className="mt-2 text-[11.5px] leading-relaxed text-admin-muted">
-          Algum não vale na sua localidade, ou cai em outra data? Use "Não fecha
-          aqui" para desligar, ou "Alterar" para trazer para a lista da
-          serventia e mudar nome e data. Vale para todos os anos, e "Voltar a
-          considerar" desfaz.
+          Algum não vale na sua localidade, ou cai em outra data? "Não fecha
+          aqui" deixa o feriado na lista, riscado; "Excluir" tira da lista;
+          "Alterar" traz para a lista da serventia para mudar nome e data. Nos
+          três casos ele deixa de fechar a serventia, em todos os anos. Se
+          excluiu por engano, ou se uma lei nova criar o feriado, cadastre-o
+          abaixo e marque "Feriado por lei".
         </p>
         <ul className="mt-2.5 flex flex-col divide-y divide-admin-border text-[12.5px] text-admin-text">
-          {law.map((day) => {
-            const kept = !disabled.has(day.id);
+          {listed.map((day) => {
+            const counts = !disabled.has(day.id);
             return (
               <li
                 key={`${day.id}-${day.date}`}
                 className="flex flex-wrap items-center gap-x-3 gap-y-1 py-1.5"
               >
                 <span
-                  className={`flex-1 ${kept ? "" : "line-through opacity-60"}`}
+                  className={`flex-1 ${counts ? "" : "line-through opacity-60"}`}
                 >
                   <span className="font-semibold">{formatDate(day.date)}</span>{" "}
                   <span className="text-admin-muted">
@@ -151,8 +200,8 @@ export function OfficeHolidaysForm({
                   </span>{" "}
                   {day.name}
                 </span>
-                {kept ? (
-                  <span className="flex gap-1.5">
+                {counts ? (
+                  <span className="flex flex-wrap gap-1.5">
                     <button
                       type="button"
                       onClick={() => takeOver(day)}
@@ -169,6 +218,14 @@ export function OfficeHolidaysForm({
                       aria-label={`${day.name}: não fecha aqui`}
                     >
                       Não fecha aqui
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => exclude(day.id)}
+                      className="btn btn-admin-ghost btn-sm"
+                      aria-label={`Excluir ${day.name}`}
+                    >
+                      Excluir
                     </button>
                   </span>
                 ) : (
@@ -205,6 +262,8 @@ export function OfficeHolidaysForm({
       <ul className="flex flex-col gap-3">
         {rows.map((row, index) => {
           const nameError = fieldErrors[`${index}.name`];
+          const lawError = fieldErrors[`${index}.legalBasis`];
+          const lawId = `feriado-${row.key}-lei`;
           const dateError = fieldErrors[`${index}.date`];
           const nameId = `feriado-${row.key}-nome`;
           const dateId = `feriado-${row.key}-data`;
@@ -283,10 +342,50 @@ export function OfficeHolidaysForm({
                 type="button"
                 onClick={() => remove(row.key)}
                 className="btn btn-admin-ghost btn-sm md:mt-6"
-                aria-label={`Remover ${row.name || "este feriado"}`}
+                aria-label={`Excluir ${row.name || "este feriado"}`}
               >
-                Remover
+                Excluir
               </button>
+              <div className="flex flex-col gap-2 md:col-span-4 md:flex-row md:items-start">
+                <label className="flex items-center gap-2 text-[12.5px] text-admin-text md:mt-2.5">
+                  <input
+                    type="checkbox"
+                    className="checkbox-admin"
+                    checked={row.byLaw}
+                    onChange={(event) =>
+                      update(row.key, { byLaw: event.target.checked })
+                    }
+                  />
+                  Feriado por lei
+                </label>
+                {row.byLaw && (
+                  <div className="flex-1">
+                    <label htmlFor={lawId} className="sr-only">
+                      Qual lei cria {row.name || "este feriado"}
+                    </label>
+                    <input
+                      id={lawId}
+                      value={row.legalBasis}
+                      onChange={(event) =>
+                        update(row.key, { legalBasis: event.target.value })
+                      }
+                      placeholder="Qual lei? Ex.: Lei municipal nº 1.234/2010"
+                      maxLength={120}
+                      aria-invalid={lawError ? true : undefined}
+                      aria-describedby={lawError ? `${lawId}-erro` : undefined}
+                      className={lawError ? ERROR_FIELD_CLASS : FIELD_CLASS}
+                    />
+                    {lawError && (
+                      <p
+                        id={`${lawId}-erro`}
+                        className="mt-1 text-xs font-semibold text-admin-error-text"
+                      >
+                        {lawError}
+                      </p>
+                    )}
+                  </div>
+                )}
+              </div>
             </li>
           );
         })}

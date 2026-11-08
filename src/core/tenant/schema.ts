@@ -146,6 +146,15 @@ export const CustomHolidaySchema = z.object({
     .regex(/^\d{4}-\d{2}-\d{2}$/, "Informe a data.")
     .refine(isRealDate, "Informe uma data que exista."),
   yearly: z.boolean(),
+  // The law that creates the holiday, when there is one ("Lei municipal nº
+  // 1.234/2010"): how an office records a day a new law creates, or puts
+  // back one it excluded by mistake, with its basis on file.
+  legalBasis: z
+    .string()
+    .trim()
+    .min(1, "Informe a lei que cria o feriado.")
+    .max(120, "Use no máximo 120 caracteres.")
+    .optional(),
 });
 
 /** Room for every municipal and local day an office could plausibly keep. */
@@ -213,6 +222,19 @@ export const TenantSchema = z.object({
   // does not keep, by rule id: some only apply in some places, and an office
   // that keeps one on another date switches it off and adds its own above.
   disabledHolidays: z
+    .array(
+      z
+        .string()
+        .refine((id) => LAW_HOLIDAY_IDS.includes(id), "Feriado desconhecido."),
+    )
+    .default([]),
+  // Law days the office excluded from its list altogether, on top of
+  // switching them off: the panel no longer lists them. One excluded by
+  // mistake, or brought back by a new law, is added as the office's own,
+  // with its law in `legalBasis`. The calendar reads only
+  // `disabledHolidays`, so an id here without its pair there closes nothing
+  // either way; the panel always writes both.
+  hiddenHolidays: z
     .array(
       z
         .string()

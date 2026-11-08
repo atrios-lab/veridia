@@ -264,7 +264,13 @@ export function closedDays(
  * local commemoration the office closes for. `yearly` repeats it on the same
  * day and month every year; otherwise it is that date alone.
  */
-export type CustomHoliday = { name: string; date: IsoDate; yearly: boolean };
+export type CustomHoliday = {
+  name: string;
+  date: IsoDate;
+  yearly: boolean;
+  /** The law that creates it, when the office records one. */
+  legalBasis?: string;
+};
 
 /**
  * The office's own calendar on top of the law's, as `Tenant` carries it:
