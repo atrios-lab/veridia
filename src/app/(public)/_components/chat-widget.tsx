@@ -3,6 +3,11 @@
 import { usePathname } from "next/navigation";
 import { useCallback, useEffect, useRef, useState } from "react";
 import {
+  CITIZEN_REPLY_SOUND,
+  CITIZEN_REPLY_VOLUME,
+  newStaffReplies,
+} from "@/core/chat/alerts.ts";
+import {
   formatClock,
   isWithinChatHours,
   nextChatOpening,
@@ -10,6 +15,7 @@ import {
 import { formatFullDate } from "@/core/scheduling/calendar.ts";
 import { SECTION_ROUTES } from "@/core/tenant/gating.ts";
 import type { Tenant } from "@/core/tenant/schema.ts";
+import { playSound, unlockAudio } from "../../_components/chat-sound.ts";
 import {
   ATTACHMENT_ACCEPT,
   useAttachmentPrepare,
@@ -17,7 +23,15 @@ import {
 import { Icon } from "./icon.tsx";
 
 const CONVERSATION_ID_STORAGE_KEY = "chat:conversationId";
+// Whether the reply sound is on, per browser. Off only when the citizen
+// turned it off: a conversation waiting on the office is exactly when the
+// sound is wanted.
+const REPLY_SOUND_STORAGE_KEY = "chat:replySound";
 const MESSAGE_POLL_MS = 4000;
+// With the tab in the background the conversation is still checked, so a
+// reply can call the citizen back, but every third tick: about 12s.
+const HIDDEN_POLL_EVERY = 3;
+const TITLE_BLINK_MS = 1000;
 const STATUS_POLL_MS = 15000;
 
 interface MessageView {
@@ -121,6 +135,106 @@ export function ChatWidget({
   const [sending, setSending] = useState(false);
   const [actionPending, setActionPending] = useState(false);
   const lastMessageAt = useRef<string | undefined>(undefined);
+  // Every message id already received. The `after` cursor can hand the last
+  // one back again (see refreshConversation), so what is new is decided by
+  // id here: the unread count and the reply sound count a message once.
+  const seenIds = useRef<Set<string>>(new Set());
+  // Whether this conversation was loaded once already. Not `after` being
+  // empty: a conversation with no message yet keeps an empty cursor, and
+  // the office's very first reply, the one most worth a sound, would then
+  // read as the first load.
+  const loadedOnce = useRef(false);
+  // A reply from the office that the citizen has not seen yet: blinks the
+  // tab title while the page is in the background, pulses the button while
+  // the panel is closed.
+  const [replyPending, setReplyPending] = useState(false);
+  const [replySound, setReplySound] = useState(true);
+  const replySoundRef = useRef(true);
+  replySoundRef.current = replySound;
+  const [notifyPermission, setNotifyPermission] = useState<
+    NotificationPermission | "unsupported"
+  >("unsupported");
+
+  useEffect(() => {
+    try {
+      setReplySound(
+        window.localStorage.getItem(REPLY_SOUND_STORAGE_KEY) !== "off",
+      );
+    } catch {
+      // Storage off: the sound stays on.
+    }
+    setNotifyPermission(
+      typeof Notification === "undefined"
+        ? "unsupported"
+        : Notification.permission,
+    );
+    // The browser lets a page play sound only after a click or a key; the
+    // citizen typing their first message is that, so the reply can ring.
+    const unlock = () => void unlockAudio();
+    document.addEventListener("pointerdown", unlock);
+    document.addEventListener("keydown", unlock);
+    return () => {
+      document.removeEventListener("pointerdown", unlock);
+      document.removeEventListener("keydown", unlock);
+    };
+  }, []);
+
+  function toggleReplySound() {
+    const next = !replySound;
+    setReplySound(next);
+    try {
+      window.localStorage.setItem(REPLY_SOUND_STORAGE_KEY, next ? "on" : "off");
+    } catch {
+      // Applied to this visit only.
+    }
+    if (next) {
+      void unlockAudio().then(() =>
+        playSound(CITIZEN_REPLY_SOUND, CITIZEN_REPLY_VOLUME),
+      );
+    }
+  }
+
+  async function askNotifyPermission() {
+    if (typeof Notification === "undefined") return;
+    setNotifyPermission(await Notification.requestPermission());
+  }
+
+  /**
+   * The office answered: a soft tone, the tab title, the button, and the
+   * browser's notification when the citizen asked for it and is looking
+   * elsewhere. The notification never carries the message itself: it shows
+   * on a screen that may not be the citizen's alone.
+   */
+  const announceReply = useCallback(() => {
+    if (replySoundRef.current) {
+      playSound(CITIZEN_REPLY_SOUND, CITIZEN_REPLY_VOLUME);
+    }
+    const lookingAtIt =
+      document.visibilityState === "visible" &&
+      panelKindRef.current === "conversation";
+    if (lookingAtIt) return;
+    setReplyPending(true);
+    if (
+      document.visibilityState !== "visible" &&
+      typeof Notification !== "undefined" &&
+      Notification.permission === "granted"
+    ) {
+      try {
+        const notification = new Notification("Nova resposta do cartório", {
+          body: "Você recebeu uma resposta no atendimento online.",
+          tag: "chat-reply",
+        });
+        notification.onclick = () => {
+          window.focus();
+          setPanel({ kind: "conversation" });
+          notification.close();
+        };
+      } catch {
+        // Not allowed outside a service worker here: the sound and the
+        // title still carry it.
+      }
+    }
+  }, []);
 
   // Restores a conversation the citizen already had, from a non-sensitive id
   // kept in localStorage: the actual proof of ownership is the httpOnly
@@ -168,63 +282,113 @@ export function ChatWidget({
     if (panel.kind !== "closed") setUnreadCount(0);
   }, [panel.kind]);
 
-  const refreshConversation = useCallback(async (id: string) => {
-    const after = lastMessageAt.current;
-    const url = after
-      ? `/api/chat/${id}?after=${encodeURIComponent(after)}`
-      : `/api/chat/${id}`;
-    const response = await fetch(url);
-    if (response.status === 404) {
-      window.localStorage.removeItem(CONVERSATION_ID_STORAGE_KEY);
-      setConversationId(null);
-      setConversation(null);
-      return;
-    }
-    if (!response.ok) return;
-    const data = await response.json();
-    setConversation(data.conversation);
-    if (data.messages.length > 0) {
-      lastMessageAt.current = data.messages.at(-1).createdAt;
-      // The `after` cursor is a millisecond ISO string round-tripped from a
-      // microsecond-precision Postgres timestamp, so it can fail to exclude
-      // the very row it came from: the same message would then come back
-      // on every poll. De-duping by id here is what actually guarantees no
-      // repeats, regardless of that precision loss.
-      setMessages((prev) => {
-        const seen = new Set(prev.map((m) => m.id));
-        return [
-          ...prev,
-          ...data.messages.filter((m: MessageView) => !seen.has(m.id)),
-        ];
-      });
-      setUnreadCount((prevCount) =>
-        panelKindRef.current === "closed"
-          ? prevCount + data.messages.length
-          : 0,
+  const refreshConversation = useCallback(
+    async (id: string) => {
+      const after = lastMessageAt.current;
+      const url = after
+        ? `/api/chat/${id}?after=${encodeURIComponent(after)}`
+        : `/api/chat/${id}`;
+      const response = await fetch(url);
+      if (response.status === 404) {
+        window.localStorage.removeItem(CONVERSATION_ID_STORAGE_KEY);
+        setConversationId(null);
+        setConversation(null);
+        return;
+      }
+      if (!response.ok) return;
+      const data = await response.json();
+      setConversation(data.conversation);
+      const fresh: MessageView[] = data.messages.filter(
+        (m: MessageView) => !seenIds.current.has(m.id),
       );
-    }
-    // Only jumps to the rating screen when the citizen already has the
-    // conversation open: a conversation closed in the background (staff, or
-    // inactivity) while the panel itself is closed should raise the unread
-    // badge above, not pop the panel open uninvited.
-    if (
-      data.conversation.status === "closed" &&
-      panelKindRef.current !== "closed" &&
-      panelKindRef.current !== "rating"
-    ) {
-      setPanel({ kind: "rating" });
-    }
-  }, []);
+      for (const m of fresh) seenIds.current.add(m.id);
+      if (newStaffReplies(fresh, !loadedOnce.current) > 0) {
+        announceReply();
+      }
+      loadedOnce.current = true;
+      if (data.messages.length > 0) {
+        lastMessageAt.current = data.messages.at(-1).createdAt;
+        // The `after` cursor is a millisecond ISO string round-tripped from a
+        // microsecond-precision Postgres timestamp, so it can fail to exclude
+        // the very row it came from: the same message would then come back
+        // on every poll. De-duping by id here is what actually guarantees no
+        // repeats, regardless of that precision loss.
+        setMessages((prev) => {
+          const seen = new Set(prev.map((m) => m.id));
+          return [
+            ...prev,
+            ...data.messages.filter((m: MessageView) => !seen.has(m.id)),
+          ];
+        });
+        setUnreadCount((prevCount) =>
+          panelKindRef.current === "closed" ? prevCount + fresh.length : 0,
+        );
+      }
+      // Only jumps to the rating screen when the citizen already has the
+      // conversation open: a conversation closed in the background (staff, or
+      // inactivity) while the panel itself is closed should raise the unread
+      // badge above, not pop the panel open uninvited.
+      if (
+        data.conversation.status === "closed" &&
+        panelKindRef.current !== "closed" &&
+        panelKindRef.current !== "rating"
+      ) {
+        setPanel({ kind: "rating" });
+      }
+    },
+    [announceReply],
+  );
 
   useEffect(() => {
     if (!conversationId) return;
     refreshConversation(conversationId);
+    let tick = 0;
     const interval = setInterval(() => {
-      if (document.visibilityState !== "visible") return;
+      tick++;
+      if (
+        document.visibilityState !== "visible" &&
+        tick % HIDDEN_POLL_EVERY !== 0
+      ) {
+        return;
+      }
       refreshConversation(conversationId);
     }, MESSAGE_POLL_MS);
     return () => clearInterval(interval);
   }, [conversationId, refreshConversation]);
+
+  // Seeing the conversation is reading the reply.
+  useEffect(() => {
+    if (panel.kind !== "conversation") return;
+    const seen = () => {
+      if (document.visibilityState === "visible") setReplyPending(false);
+    };
+    seen();
+    document.addEventListener("visibilitychange", seen);
+    return () => document.removeEventListener("visibilitychange", seen);
+  }, [panel.kind]);
+
+  // The tab title blinks while a reply waits and the page is in the
+  // background, and goes back the moment the citizen returns.
+  useEffect(() => {
+    if (!replyPending) return;
+    const original = document.title;
+    let on = false;
+    const timer = setInterval(() => {
+      if (document.visibilityState === "visible") {
+        if (on) {
+          document.title = original;
+          on = false;
+        }
+        return;
+      }
+      on = !on;
+      document.title = on ? "(1) Nova resposta do cartório" : original;
+    }, TITLE_BLINK_MS);
+    return () => {
+      clearInterval(timer);
+      document.title = original;
+    };
+  }, [replyPending]);
 
   function openWidget() {
     if (!available.withinHours) {
@@ -328,6 +492,8 @@ export function ChatWidget({
       setConversation(null);
       setMessages([]);
       lastMessageAt.current = undefined;
+      seenIds.current = new Set();
+      loadedOnce.current = false;
       setPanel({ kind: "closed" });
     } finally {
       setActionPending(false);
@@ -356,6 +522,32 @@ export function ChatWidget({
                     : conversation.attendantName
                       ? `${conversation.attendantName}${conversation.attendantSector ? ` · ${conversation.attendantSector}` : ""}`
                       : "Em atendimento"}
+                </span>
+              )}
+              {panel.kind === "conversation" && (
+                <span className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-[11.5px]">
+                  <button
+                    type="button"
+                    onClick={toggleReplySound}
+                    aria-pressed={replySound}
+                    className="underline opacity-90 hover:opacity-100"
+                  >
+                    {replySound
+                      ? "Som de aviso: ligado"
+                      : "Som de aviso: desligado"}
+                  </button>
+                  {notifyPermission === "default" && (
+                    <button
+                      type="button"
+                      onClick={() => void askNotifyPermission()}
+                      className="underline opacity-90 hover:opacity-100"
+                    >
+                      Avisar no navegador
+                    </button>
+                  )}
+                  {notifyPermission === "granted" && (
+                    <span className="opacity-90">Aviso no navegador ativo</span>
+                  )}
                 </span>
               )}
             </span>
@@ -409,7 +601,11 @@ export function ChatWidget({
       <button
         type="button"
         onClick={openWidget}
-        className="relative inline-flex items-center gap-2 rounded-full bg-brand-primary px-5 py-3.5 font-semibold text-[13.5px] text-white shadow-lg hover:bg-brand-primary-soft"
+        className={`relative inline-flex items-center gap-2 rounded-full bg-brand-primary px-5 py-3.5 font-semibold text-[13.5px] text-white shadow-lg hover:bg-brand-primary-soft ${
+          replyPending && panel.kind === "closed"
+            ? "motion-safe:animate-attention-pulse"
+            : ""
+        }`}
       >
         <Icon
           name={available.withinHours ? "chat" : "clock"}

@@ -4,14 +4,14 @@ import { useEffect, useState } from "react";
 import {
   type AlertPrefs,
   REPEAT_OPTIONS,
-  SOUND_IDS,
   SOUNDS,
+  soundGroups,
 } from "@/core/chat/alerts.ts";
+import { playSound, unlockAudio } from "../../../../_components/chat-sound.ts";
 import {
   readAlertPrefs,
   saveAlertPrefs,
 } from "../../../_components/chat-alert-prefs.ts";
-import { playSound, unlockAudio } from "../../../_components/chat-sound.ts";
 
 const SELECT_CLASS =
   "rounded-[9px] border border-admin-input-border bg-admin-input-bg px-3 py-2 text-[13px] text-admin-text outline-none focus:border-admin-primary-soft";
@@ -48,12 +48,12 @@ export function AlertSettings() {
   if (!prefs) return null;
 
   function update(patch: Partial<AlertPrefs>) {
-    setPrefs((current) => {
-      if (!current) return current;
-      const next = { ...current, ...patch };
-      saveAlertPrefs(next);
-      return next;
-    });
+    if (!prefs) return;
+    const next = { ...prefs, ...patch };
+    setPrefs(next);
+    // Outside the state update: saving notifies the watcher, and a
+    // component must not set another's state while this one renders.
+    saveAlertPrefs(next);
   }
 
   async function test(sound = prefs?.sound, volume = prefs?.volume) {
@@ -100,10 +100,14 @@ export function AlertSettings() {
             }}
             className={SELECT_CLASS}
           >
-            {SOUND_IDS.map((id) => (
-              <option key={id} value={id}>
-                {SOUNDS[id].label}
-              </option>
+            {soundGroups().map(({ group, ids }) => (
+              <optgroup key={group} label={group}>
+                {ids.map((id) => (
+                  <option key={id} value={id}>
+                    {SOUNDS[id].label}
+                  </option>
+                ))}
+              </optgroup>
             ))}
             <option value="none">Sem som</option>
           </select>
@@ -174,6 +178,16 @@ export function AlertSettings() {
             onChange={(event) => update({ flash: event.target.checked })}
           />
           Aviso piscando na tela
+        </label>
+
+        <label className="flex items-center gap-2">
+          <input
+            type="checkbox"
+            className="checkbox-admin"
+            checked={prefs.shake}
+            onChange={(event) => update({ shake: event.target.checked })}
+          />
+          Tremer a tela e piscar "Chat" a cada aviso novo
         </label>
       </div>
 

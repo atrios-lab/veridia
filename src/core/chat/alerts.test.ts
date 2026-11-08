@@ -4,10 +4,13 @@ import {
   type AlertSnapshot,
   DEFAULT_ALERT_PREFS,
   diffAlerts,
+  newStaffReplies,
   parseAlertPrefs,
   queueNeedsAttention,
+  REPEAT_OPTIONS,
   SOUND_IDS,
   SOUNDS,
+  soundGroups,
   volumeGain,
   waitingLabel,
 } from "./alerts.ts";
@@ -115,7 +118,7 @@ test("saved preferences that are old or broken read as defaults", () => {
   });
   assert.equal(prefs.sound, "sino");
   assert.equal(prefs.volume, 100);
-  assert.equal(prefs.repeatSeconds, 30);
+  assert.equal(prefs.repeatSeconds, 10);
   assert.equal(prefs.flash, false);
 });
 
@@ -130,4 +133,46 @@ test("volume follows the ear: zero is silent, the top is full", () => {
   assert.equal(volumeGain(0), 0);
   assert.equal(volumeGain(100), 1);
   assert.ok(volumeGain(50) < 0.5);
+});
+
+test("the defaults call loud and often: 90%, every 10 seconds, shaking", () => {
+  assert.equal(DEFAULT_ALERT_PREFS.volume, 90);
+  assert.equal(DEFAULT_ALERT_PREFS.repeatSeconds, 10);
+  assert.equal(DEFAULT_ALERT_PREFS.shake, true);
+  assert.equal(REPEAT_OPTIONS[0], 10);
+});
+
+test("the tones come grouped, every one in exactly one group", () => {
+  const groups = soundGroups();
+  assert.deepEqual(
+    groups.map((g) => g.group),
+    ["Clássicos", "Retrô", "Chat e celular", "Urgentes"],
+  );
+  const listed = groups.flatMap((g) => g.ids);
+  assert.deepEqual([...listed].sort(), [...SOUND_IDS].sort());
+  assert.ok(SOUND_IDS.length >= 15);
+});
+
+test("every note can be played: audible pitch, positive length", () => {
+  for (const id of SOUND_IDS) {
+    for (const note of SOUNDS[id].notes) {
+      assert.ok(note.frequency >= 100 && note.frequency <= 4000, id);
+      assert.ok(note.duration > 0 && note.start >= 0, id);
+      if ("slideTo" in note && note.slideTo !== undefined) {
+        assert.ok(note.slideTo >= 100 && note.slideTo <= 4000, id);
+      }
+    }
+  }
+});
+
+test("the citizen hears the office's replies, not their own or the system's", () => {
+  const fresh = [
+    { authorType: "citizen" },
+    { authorType: "staff" },
+    { authorType: "system" },
+    { authorType: "staff" },
+  ];
+  assert.equal(newStaffReplies(fresh, false), 2);
+  assert.equal(newStaffReplies(fresh, true), 0);
+  assert.equal(newStaffReplies([{ authorType: "citizen" }], false), 0);
 });
