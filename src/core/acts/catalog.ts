@@ -148,9 +148,9 @@ export const PURPOSE_LABEL = "Motivo do pedido";
 export const PURPOSE_PLACEHOLDER =
   "Ex.: comprovar atividade rural para a aposentadoria no INSS.";
 export const PURPOSE_HINT =
-  "Esta certidão pode trazer dados pessoais sensíveis. Pela LGPD, a serventia " +
-  "só os entrega para uma finalidade informada, e analisa o motivo antes de " +
-  "emitir.";
+  "O registro pode trazer dados pessoais sensíveis. Pela LGPD, a serventia só " +
+  "os entrega para uma finalidade informada, e analisa o motivo antes de " +
+  "responder.";
 
 /**
  * Por que o e-Notariado não está aqui: o CNN, art. 117, lista firma reconhecida,

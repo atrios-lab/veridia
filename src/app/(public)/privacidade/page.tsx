@@ -44,7 +44,9 @@ export default async function PrivacyPolicyPage() {
               de testamento e a pedida com gratuidade, pedimos o motivo do
               pedido, porque o inteiro teor pode trazer dados sensíveis, e a
               serventia só os entrega para uma finalidade informada. A certidão
-              de óbito não pede o motivo.
+              de óbito não pede o motivo. Na busca de registro do Registro
+              Civil, pedimos o que você quer saber sobre o registro e o motivo,
+              pelo mesmo cuidado.
             </li>
             <li>
               <strong className="text-brand-text">Agendamento:</strong> nome,
