@@ -51,6 +51,8 @@ test("the receipt carries the time to arrive and what to bring", () => {
   assert.equal(lines[0], `[  ] ${BASE_CHECKLIST[0]}`);
   assert.ok(lines.some((line) => line.includes("Duas testemunhas")));
   assert.ok(lines.includes(service.note ?? ""));
+  // Doubts about a document go to the office's e-mail before the visit.
+  assert.match(lines.at(-1) ?? "", /enviá-lo para cartorio@exemplo\.com/);
   // Right under the time, so it never lands on a second page.
   assert.equal(receipt.sections[1].heading, "Antes de vir");
   assert.match(
@@ -78,7 +80,8 @@ test("a receipt for the notary's agenda says so", () => {
   assert.ok(receipt.sections.some((s) => s.heading === "O que você informou"));
   // A service no longer configured still prints the base list.
   const bring = receipt.sections.find((s) => s.heading === "O que trazer");
-  assert.equal(bring?.paragraphs?.length, BASE_CHECKLIST.length + 1);
+  // Base items, the caveat and the e-mail for doubts.
+  assert.equal(bring?.paragraphs?.length, BASE_CHECKLIST.length + 2);
 });
 
 test("a receipt for a phone call has no arrival and says to be ready", () => {

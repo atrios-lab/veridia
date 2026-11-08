@@ -17,6 +17,7 @@ import {
   attendanceNotice,
   CHECKLIST_CAVEAT,
   checklistFor,
+  documentsByEmailNotice,
   type OfferedService,
 } from "./services.ts";
 
@@ -115,6 +116,9 @@ export function buildAppointmentReceipt(
           ]
         : []),
       CHECKLIST_CAVEAT,
+      ...(tenant.contacts?.email
+        ? [documentsByEmailNotice(tenant.contacts.email)]
+        : []),
     ],
   });
 

@@ -106,6 +106,7 @@ export async function sendAppointmentBookedEmail(
       ...facts(tenant, appointment),
       agendaName: AGENDA_NAMES[agenda].name,
       checklist: checklistFor(service ?? { bring: [] }),
+      officeEmail: tenant.contacts.email,
       checklistUrl: service?.hasOwnFile
         ? `${baseUrl(tenant)}${checklistFileHref(service.id)}`
         : undefined,

@@ -50,6 +50,8 @@ export interface AppointmentSuccess {
   serviceNote?: string;
   /** The office's own sheet for the service, when it attached one. */
   checklistUrl?: string;
+  /** Where to send a document ahead, with a doubt about it. */
+  officeEmail?: string;
   /** "Chegue com 15 minutos de antecedência, às 08:45, ..." or, for the
    * notary's video and phone, how to be ready. */
   arrival: string;
@@ -210,6 +212,7 @@ export async function submitAppointment(
       protocolNumber: appointment.protocolNumber ?? "",
       checklist: checklistFor(service ?? { bring: [] }),
       serviceNote: service?.note,
+      officeEmail: tenant.contacts.email,
       checklistUrl: service?.hasOwnFile
         ? checklistFileHref(service.id)
         : undefined,

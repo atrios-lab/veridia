@@ -28,7 +28,7 @@ export const cartorioMarinho: Tenant = parseTenant({
   contacts: {
     phone: "(84) 4042-0940",
     whatsapp: "(84) 4042-0940",
-    email: "cartorioim@gmail.com",
+    email: "contato@cartorioielmomarinhorn.com",
   },
   municipality: "IELMO MARINHO",
   location: { city: "Ielmo Marinho", state: "RN" },

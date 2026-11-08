@@ -654,3 +654,12 @@ export function attendanceNotice(slotTime: SlotTime, mode: string): string {
       return arrivalNotice(slotTime);
   }
 }
+
+/**
+ * The way to settle a doubt about the papers before the visit: send them to
+ * the office by e-mail. Said wherever the list is, so nobody finds out at the
+ * counter that a document would not do.
+ */
+export function documentsByEmailNotice(email: string): string {
+  return `Ficou com dúvida sobre algum documento? Antes do atendimento, você pode enviá-lo para ${email}, e a serventia responde por e-mail.`;
+}

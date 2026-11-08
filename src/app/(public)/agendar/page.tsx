@@ -50,6 +50,7 @@ export default async function SchedulingPage({
     openingHours: tenant.openingHours,
     phone: tenant.contacts.phone,
     whatsapp: tenant.contacts.whatsapp,
+    email: tenant.contacts.email,
   };
 
   // Only the agendas with hours, services and a day ahead are offered.
