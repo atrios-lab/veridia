@@ -12,6 +12,10 @@ import {
   ATTACHMENT_ACCEPT,
   useAttachmentPrepare,
 } from "@/app/(public)/_lib/attachments.tsx";
+import {
+  ATTACHMENT_RETENTION_DAYS,
+  attachmentAvailableUntil,
+} from "@/core/publications/attachment-retention.ts";
 import { defaultExpiry } from "@/core/publications/expiry.ts";
 import { noticeSchedule } from "@/core/publications/notice-schedule.ts";
 import {
@@ -403,7 +407,24 @@ export function PublicationForm({
           <span className={LABEL_CLASS}>Documento ou imagem (opcional)</span>
           {editing?.attachmentPath && !file && (
             <p className="mb-1.5 text-[11.5px] text-admin-muted">
-              Já anexado. Escolher outro substitui o atual.
+              Já anexado
+              {editing.attachmentUploadedAt
+                ? `, disponível até ${formatDate(
+                    attachmentAvailableUntil(
+                      toIsoDate(
+                        new Date(editing.attachmentUploadedAt),
+                        OFFICE_TIME_ZONE,
+                      ),
+                    ),
+                  )}`
+                : ""}
+              . Escolher outro substitui o atual e começa um novo prazo.
+            </p>
+          )}
+          {editing?.attachmentPurgedAt && !editing.attachmentPath && !file && (
+            <p className="mb-1.5 text-[11.5px] text-admin-muted">
+              O arquivo desta publicação já foi apagado pela regra de{" "}
+              {ATTACHMENT_RETENTION_DAYS} dias. Você pode anexar outro.
             </p>
           )}
           <label
@@ -427,6 +448,20 @@ export function PublicationForm({
           <p className="mt-1.5 text-[11px] text-admin-faint">
             Aparece junto da publicação na página inicial e em /editais: a
             imagem é mostrada no próprio cartão, o PDF abre em nova aba.
+          </p>
+          {/* The 30-day rule, said before the save, in every state (draft,
+              scheduled, live): the office must know to keep its own copy. */}
+          <p className="mt-2 rounded-[9px] border border-admin-warning-soft-border bg-admin-warning-soft-bg px-3 py-2 text-[11.5px] leading-relaxed text-admin-warning-text">
+            <strong>
+              O arquivo fica disponível por {ATTACHMENT_RETENTION_DAYS} dias
+            </strong>
+            , contados do envio, no site e no painel. Depois disso ele é apagado
+            automaticamente e ficam só as informações escritas (tipo, título,
+            texto, datas e quem fez o quê). Se a publicação ainda estiver no
+            site nesse dia, o arquivo fica até ela sair. Baixe e guarde uma
+            cópia na nuvem do cartório. É a mesma regra dos documentos dos
+            pedidos, em respeito à LGPD, que pede eliminar dados pessoais
+            cumprida a finalidade.
           </p>
         </div>
 
@@ -477,7 +512,9 @@ export function PublicationForm({
           </button>
           {state.status === "success" && (
             <span className="text-[12.5px] font-semibold text-admin-success-text">
-              Salvo.
+              {state.fileUntil
+                ? `Salvo. O arquivo fica disponível até ${formatDate(state.fileUntil)}: baixe e guarde uma cópia na nuvem do cartório.`
+                : "Salvo."}
             </span>
           )}
         </div>

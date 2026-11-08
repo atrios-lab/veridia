@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { can } from "@/core/auth/roles.ts";
+import { attachmentAvailableUntil } from "@/core/publications/attachment-retention.ts";
 import { publicationFormSchema } from "@/core/publications/publication.ts";
 import { noticeSectors } from "@/core/tenant/gating.ts";
 import { notifyIndexNow } from "@/lib/notify-indexnow.ts";
@@ -15,7 +16,7 @@ import {
 } from "@/lib/publications.ts";
 import { getSession } from "@/lib/session.ts";
 import { getSiteOrigin } from "@/lib/site-origin.ts";
-import { getTenant } from "@/lib/tenant.ts";
+import { getTenant, today } from "@/lib/tenant.ts";
 import {
   AttachmentError,
   collectAttachments,
@@ -25,7 +26,11 @@ import {
 export type SaveState =
   | { status: "idle" }
   | { status: "error"; message: string; fieldErrors: Record<string, string> }
-  | { status: "success" };
+  | {
+      status: "success";
+      /** The last day the file just sent is kept (30-day rule), if one was. */
+      fileUntil?: string;
+    };
 
 export type ArchiveState =
   | { status: "idle" }
@@ -109,6 +114,7 @@ export async function savePublication(
     };
   }
 
+  let fileUntil: string | undefined;
   try {
     // One document per publication. In the deploy the browser has already
     // sent it straight to the Blob store and this receives a reference: a
@@ -121,6 +127,7 @@ export async function savePublication(
       kind: "edital",
       limit: 1,
     });
+    if (stored) fileUntil = attachmentAvailableUntil(today());
 
     if (existing) {
       await updatePublication(
@@ -157,7 +164,7 @@ export async function savePublication(
   // Only on the instant this notice actually goes live, matching the
   // permission check above, not on every edit of an already-published one.
   if (isFirstPublish) notifyIndexNow(await getSiteOrigin(), ["/editais"]);
-  return { status: "success" };
+  return { status: "success", fileUntil };
 }
 
 export type DeleteState =

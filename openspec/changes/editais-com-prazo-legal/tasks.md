@@ -39,3 +39,11 @@
 - [x] 6.2 Rota `/admin/publicacoes/[id]/arquivo` para qualquer estado (sessão com `content.edit`)
 - [x] 6.3 Editar liberado nas arquivadas; Excluir pelo detalhe volta para a lista (redirect no servidor)
 - [x] 6.4 Conferido no navegador contra o Homolog; linhas de teste apagadas
+
+## 7. Arquivo por 30 dias (pedido de 08/11/2026)
+
+- [x] 7.1 `attachment-retention.ts` com testes; colunas `attachment_uploaded_at` e `attachment_purged_at` (migração 0031, que dá aos arquivos existentes 30 dias a partir da aplicação)
+- [x] 7.2 Expurgo ao abrir a lista, com auditoria; rota do painel recusa arquivo vencido (410) e oferece `?baixar=1`
+- [x] 7.3 Aviso no formulário e na mensagem de salvo; lembrete de 7 dias na lista; detalhe com situação do arquivo, "Baixar o arquivo", "Cadastrada por" e histórico
+- [x] 7.4 Migração aplicada e conferida no navegador contra o Homolog; linhas de teste apagadas
+- [ ] 7.5 Aplicar a migração 0031 em produção antes do merge
