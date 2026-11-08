@@ -1,11 +1,15 @@
 import assert from "node:assert/strict";
 import { after, before, test } from "node:test";
+import { eq } from "drizzle-orm";
 import { getAct } from "@/core/acts/catalog.ts";
 import { hashAccessKey } from "@/core/request/access-key.ts";
 import { TENANTS } from "@/core/tenant/resolve.ts";
+import { user } from "@/db/auth-schema.ts";
 import type { Database } from "@/db/index.ts";
+import { chatConversations, chatMessages } from "@/db/schema.ts";
 import { createTestDb } from "@/db/test-db.ts";
 import {
+  alertSnapshotWith,
   closeConversationWith,
   queuePositionWith,
   startConversationWith,
@@ -142,4 +146,73 @@ test("a conversation naming a real protocol is matched to it; a bogus one is not
     "/",
   );
   assert.equal(notMatched.matchedProtocolNumber, undefined);
+});
+
+test("the alert snapshot lists the queue and, per conversation of mine, the citizen's last message", async () => {
+  await db.insert(user).values({
+    id: "atendente-alertas",
+    name: "Ana Atendente",
+    email: "ana.alertas@exemplo.com",
+    tenantSlug: TENANT.slug,
+    chatStatus: "busy",
+  });
+  const waiting = await startConversationWith(
+    db,
+    TENANT.slug,
+    {
+      name: "Clara Nunes",
+      contact: "clara@email.com",
+      subject: "Agendamento",
+      informedProtocolNumber: undefined,
+    },
+    "/",
+  );
+  const mine = await startConversationWith(
+    db,
+    TENANT.slug,
+    {
+      name: "Davi Souza",
+      contact: "davi@email.com",
+      subject: "Certidão",
+      informedProtocolNumber: undefined,
+    },
+    "/",
+  );
+  await db
+    .update(chatConversations)
+    .set({ status: "active", assignedUserId: "atendente-alertas" })
+    .where(eq(chatConversations.id, mine.id));
+
+  const before = await alertSnapshotWith(db, TENANT.slug, "atendente-alertas");
+  assert.equal(before.status, "busy");
+  assert.ok(before.waiting.some((c) => c.id === waiting.id));
+  assert.ok(!before.waiting.some((c) => c.id === mine.id));
+  assert.deepEqual(before.mine, [
+    { id: mine.id, citizenName: "Davi Souza", lastCitizenMessageAt: null },
+  ]);
+
+  // A staff message does not count; the citizen's does.
+  await db.insert(chatMessages).values([
+    {
+      conversationId: mine.id,
+      tenantSlug: TENANT.slug,
+      authorType: "staff",
+      body: "Bom dia",
+      createdAt: new Date("2026-11-08T12:00:00Z"),
+    },
+    {
+      conversationId: mine.id,
+      tenantSlug: TENANT.slug,
+      authorType: "citizen",
+      body: "Oi",
+      createdAt: new Date("2026-11-08T12:01:00Z"),
+    },
+  ]);
+  const after = await alertSnapshotWith(db, TENANT.slug, "atendente-alertas");
+  assert.equal(after.mine[0].lastCitizenMessageAt, "2026-11-08T12:01:00.000Z");
+
+  // Someone else's view of the same office has none of it as "mine".
+  const other = await alertSnapshotWith(db, TENANT.slug, "outra-pessoa");
+  assert.deepEqual(other.mine, []);
+  assert.equal(other.status, "available");
 });

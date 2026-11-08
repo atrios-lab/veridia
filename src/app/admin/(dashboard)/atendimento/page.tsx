@@ -9,6 +9,7 @@ import {
 import { getSession } from "@/lib/session.ts";
 import { getTenant } from "@/lib/tenant.ts";
 import { AdminPageHeader } from "../../_components/page-header.tsx";
+import { AlertSettings } from "./_components/alert-settings.tsx";
 import { AssignButton } from "./_components/assign-button.tsx";
 import { ChatToggle } from "./_components/chat-toggle.tsx";
 import { QueuePoller } from "./_components/queue-poller.tsx";
@@ -57,6 +58,8 @@ export default async function SupportChatQueuePage() {
             canToggle={can(session.user.role ?? "", "chat.settings")}
           />
         </div>
+
+        <AlertSettings />
 
         <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
           <section className="overflow-hidden rounded-[14px] border border-admin-border bg-admin-card">
