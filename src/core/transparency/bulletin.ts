@@ -334,6 +334,83 @@ export function legacyBulletinView(
   };
 }
 
+/** "2026-01": the key a month's bulletin goes by in the panel form. */
+export function bulletinPeriodKey(year: number, month: number): string {
+  return `${year}-${String(month).padStart(2, "0")}`;
+}
+
+/**
+ * A month's bulletin as the form holds it: the strings the operator types,
+ * in the same shape `parseBulletinFigures` reads. A month already published
+ * comes back as one of these, so correcting it means changing only the field
+ * that was wrong and publishing again, not retyping the whole month.
+ */
+export interface BulletinDraft {
+  actsCount: string;
+  funds: Record<string, string>;
+  iss: string;
+  grossRevenue: string;
+  expenses: string;
+  status: BulletinStatus;
+  /**
+   * Published before Res. CNJ 670/2025, with one taxes total and no funds.
+   * The funds and the ISS stay blank: only the office's guides can split
+   * the old total, so they are typed before the month goes out again.
+   */
+  legacy: boolean;
+}
+
+export const EMPTY_BULLETIN_DRAFT: BulletinDraft = {
+  actsCount: "",
+  funds: {},
+  iss: "",
+  grossRevenue: "",
+  expenses: "",
+  status: "preliminary",
+  legacy: false,
+};
+
+/** A published month, back into the strings the form shows. */
+export function bulletinDraftOf(
+  figures: BulletinFigures,
+  status: BulletinStatus,
+): BulletinDraft {
+  const funds: Record<string, string> = {};
+  for (const [key, cents] of Object.entries(figures.fundAmountsCents)) {
+    funds[key] = formatMoneyBRL(cents);
+  }
+  return {
+    actsCount: String(figures.actsCount),
+    funds,
+    iss: formatMoneyBRL(figures.issCents),
+    grossRevenue:
+      figures.grossRevenueCents === null
+        ? ""
+        : formatMoneyBRL(figures.grossRevenueCents),
+    expenses:
+      figures.expensesCents === null
+        ? ""
+        : formatMoneyBRL(figures.expensesCents),
+    status,
+    legacy: false,
+  };
+}
+
+/** An old-format month: what it has carries over, the funds stay blank. */
+export function legacyBulletinDraftOf(
+  figures: LegacyBulletinFigures,
+  status: BulletinStatus,
+): BulletinDraft {
+  return {
+    ...EMPTY_BULLETIN_DRAFT,
+    actsCount: String(figures.actsCount),
+    grossRevenue: formatMoneyBRL(figures.grossRevenueCents),
+    expenses: formatMoneyBRL(figures.expensesCents),
+    status,
+    legacy: true,
+  };
+}
+
 export function isBulletinStatus(value: string): value is BulletinStatus {
   return (BULLETIN_STATUSES as readonly string[]).includes(value);
 }
