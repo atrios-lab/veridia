@@ -147,6 +147,7 @@ export default async function SettingsPage() {
           <section className="mt-6 border-t border-admin-border pt-5.5">
             <OfficeHolidaysForm
               initial={officeHolidays(tenant)}
+              initialHidden={tenant.hiddenHolidays}
               law={upcomingLawHolidays(today(), 365)}
             />
           </section>

@@ -167,6 +167,7 @@ export const OfficeBulletinOverrideSchema = OfficeBulletinSchema.partial();
 export const OfficeHolidaysSchema = TenantSchema.pick({
   customHolidays: true,
   disabledHolidays: true,
+  hiddenHolidays: true,
 });
 export type OfficeHolidaysSettings = z.infer<typeof OfficeHolidaysSchema>;
 

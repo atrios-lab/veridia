@@ -556,3 +556,66 @@ test("um feriado da lei que não existe é recusado", () => {
   });
   assert.equal(parsed.success, false);
 });
+
+test("feriado da lei excluído fica salvo à parte e não fecha a serventia", () => {
+  const merged = applyTenantOverrides(cartorioMarinho, {
+    holidays: {
+      customHolidays: [],
+      disabledHolidays: ["sao-pedro"],
+      hiddenHolidays: ["sao-pedro"],
+    },
+  });
+  assert.deepEqual(merged.hiddenHolidays, ["sao-pedro"]);
+  assert.deepEqual(merged.disabledHolidays, ["sao-pedro"]);
+});
+
+test("linha salva antes do excluir não esconde nenhum feriado", () => {
+  const merged = applyTenantOverrides(cartorioMarinho, {
+    holidays: { customHolidays: [], disabledHolidays: ["sao-pedro"] },
+  });
+  assert.deepEqual(merged.hiddenHolidays, []);
+});
+
+test("excluir um feriado da lei que não existe é recusado", () => {
+  assert.equal(
+    OfficeHolidaysSchema.safeParse({
+      customHolidays: [],
+      disabledHolidays: [],
+      hiddenHolidays: ["feriado-inventado"],
+    }).success,
+    false,
+  );
+});
+
+test("feriado da serventia pode registrar a lei que o cria", () => {
+  const parsed = OfficeHolidaysSchema.safeParse({
+    customHolidays: [
+      {
+        name: "Emancipação política",
+        date: "2026-05-14",
+        yearly: true,
+        legalBasis: "Lei municipal nº 1.234/2010",
+      },
+    ],
+    disabledHolidays: [],
+    hiddenHolidays: [],
+  });
+  assert.ok(parsed.success);
+  assert.equal(
+    parsed.data.customHolidays[0].legalBasis,
+    "Lei municipal nº 1.234/2010",
+  );
+});
+
+test("marcar feriado por lei sem dizer qual é recusado", () => {
+  const parsed = OfficeHolidaysSchema.safeParse({
+    customHolidays: [
+      { name: "X", date: "2026-05-14", yearly: true, legalBasis: " " },
+    ],
+  });
+  assert.equal(parsed.success, false);
+  assert.equal(
+    parsed.error?.issues[0].message,
+    "Informe a lei que cria o feriado.",
+  );
+});
