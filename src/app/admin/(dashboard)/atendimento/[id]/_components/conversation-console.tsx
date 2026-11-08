@@ -136,63 +136,63 @@ export function ConversationConsole({
 
   return (
     <div className="flex min-h-0 flex-1 flex-col">
-      <div className="flex flex-wrap items-center gap-2.5 border-b border-admin-border bg-admin-card px-5.5 py-3">
-        <button
-          type="button"
-          onClick={() => void nudge()}
-          disabled={closed || nudging}
-          className="btn btn-admin-primary btn-sm"
-          title="Faz a tela do cidadão tremer e tocar"
-        >
-          {nudging ? "Chamando…" : "Chamar atenção"}
-        </button>
-        {nudgeError && (
-          <span className="text-[12px] font-semibold text-admin-error-text">
-            {nudgeError}
-          </span>
-        )}
-        <button
-          type="button"
-          onClick={() => setShowTransfer((v) => !v)}
-          disabled={closed}
-          className="btn btn-admin-secondary btn-sm"
-        >
-          Transferir
-        </button>
-        <button
-          type="button"
-          onClick={() => setShowClose((v) => !v)}
-          disabled={closed}
-          className="btn btn-admin-danger btn-sm"
-        >
-          {closed ? "Conversa encerrada" : "Encerrar conversa"}
-        </button>
-      </div>
-
-      {/* Who ended it, and the way out: a finished conversation never
-          leaves the attendant on a screen where every button is grey. */}
-      {closed && (
-        <div className="flex flex-wrap items-center gap-3 border-b border-admin-border bg-admin-warning-soft-bg px-5.5 py-2.5 text-[13px] text-admin-text">
+      {/* A finished conversation shows who ended it and the way out, in
+          place of the toolbar and the composer: a screen of grey buttons
+          reads as frozen, and the attendant has nothing left to do here. */}
+      {closed ? (
+        <div className="flex flex-wrap items-center gap-3 border-b border-admin-border bg-admin-warning-soft-bg px-5.5 py-3 text-[13px] text-admin-text">
+          <AdminIcon name="chat" className="h-4.5 w-4.5 flex-none" />
           <span className="flex-1 font-semibold">
             {closedByForStaff(closedReason)}
           </span>
           <Link
             href="/admin/atendimento"
-            className="btn btn-admin-secondary btn-sm"
+            className="btn btn-admin-primary btn-sm"
           >
             Voltar para a fila
           </Link>
         </div>
+      ) : (
+        <div className="flex flex-wrap items-center gap-2.5 border-b border-admin-border bg-admin-card px-5.5 py-3">
+          <button
+            type="button"
+            onClick={() => void nudge()}
+            disabled={nudging}
+            className="btn btn-admin-primary btn-sm"
+            title="Faz a tela do cidadão tremer e tocar"
+          >
+            {nudging ? "Chamando…" : "Chamar atenção"}
+          </button>
+          {nudgeError && (
+            <span className="text-[12px] font-semibold text-admin-error-text">
+              {nudgeError}
+            </span>
+          )}
+          <button
+            type="button"
+            onClick={() => setShowTransfer((v) => !v)}
+            className="btn btn-admin-secondary btn-sm"
+          >
+            Transferir
+          </button>
+          <button
+            type="button"
+            onClick={() => setShowClose((v) => !v)}
+            className="btn btn-admin-danger btn-sm"
+          >
+            Encerrar conversa
+          </button>
+        </div>
       )}
 
-      {showTransfer && (
+      {showTransfer && !closed && (
         <TransferDialog
           conversationId={conversationId}
           colleagues={colleagues.filter((c) => c.id !== currentUserId)}
           onDone={() => setShowTransfer(false)}
         />
       )}
-      {showClose && (
+      {showClose && !closed && (
         <CloseDialog
           conversationId={conversationId}
           matchedRequestId={matchedRequestId}
@@ -212,69 +212,81 @@ export function ConversationConsole({
         )}
       </div>
 
-      <div className="border-t border-admin-border bg-admin-card p-3.5">
-        <div className="mb-2.5 flex flex-wrap gap-1.5">
-          {CANNED_RESPONSES.map((canned) => (
-            <button
-              key={canned.key}
-              type="button"
-              onClick={() => setDraft(canned.text)}
-              className="rounded-full border border-admin-input-border bg-admin-input-bg px-3 py-1 text-[11.5px] font-semibold text-admin-muted hover:text-admin-primary"
-            >
-              {canned.label}
-            </button>
-          ))}
+      {closed ? (
+        <div className="flex flex-wrap items-center justify-between gap-3 border-t border-admin-border bg-admin-card px-5.5 py-3.5 text-[12.5px] text-admin-muted">
+          <span>
+            Conversa finalizada. A transcrição fica guardada por 6 meses.
+          </span>
+          <Link
+            href="/admin/atendimento"
+            className="btn btn-admin-secondary btn-sm"
+          >
+            Fechar
+          </Link>
         </div>
-        <form
-          ref={formRef}
-          action={messageAction}
-          className="flex items-center gap-2"
-        >
-          <input type="hidden" name="conversationId" value={conversationId} />
-          <input
-            name="body"
-            value={draft}
-            onChange={(event) => setDraft(event.target.value)}
-            disabled={closed}
-            placeholder="Escreva sua mensagem…"
-            className="min-w-0 flex-1 rounded-[10px] border border-admin-input-border bg-admin-input-bg px-3.5 py-2.5 text-[13.5px] outline-none focus:border-admin-primary-soft disabled:opacity-60"
-          />
-          <button
-            type="submit"
-            disabled={closed || messagePending}
-            className="btn btn-admin-primary btn-md"
+      ) : (
+        <div className="border-t border-admin-border bg-admin-card p-3.5">
+          <div className="mb-2.5 flex flex-wrap gap-1.5">
+            {CANNED_RESPONSES.map((canned) => (
+              <button
+                key={canned.key}
+                type="button"
+                onClick={() => setDraft(canned.text)}
+                className="rounded-full border border-admin-input-border bg-admin-input-bg px-3 py-1 text-[11.5px] font-semibold text-admin-muted hover:text-admin-primary"
+              >
+                {canned.label}
+              </button>
+            ))}
+          </div>
+          <form
+            ref={formRef}
+            action={messageAction}
+            className="flex items-center gap-2"
           >
-            {messagePending ? "Enviando…" : "Enviar"}
-          </button>
-        </form>
-        {messageState.status === "error" && (
-          <p className="mt-1.5 text-[11.5px] font-semibold text-admin-error-text">
-            {messageState.message}
-          </p>
-        )}
+            <input type="hidden" name="conversationId" value={conversationId} />
+            <input
+              name="body"
+              value={draft}
+              onChange={(event) => setDraft(event.target.value)}
+              placeholder="Escreva sua mensagem…"
+              className="min-w-0 flex-1 rounded-[10px] border border-admin-input-border bg-admin-input-bg px-3.5 py-2.5 text-[13.5px] outline-none focus:border-admin-primary-soft disabled:opacity-60"
+            />
+            <button
+              type="submit"
+              disabled={messagePending}
+              className="btn btn-admin-primary btn-md"
+            >
+              {messagePending ? "Enviando…" : "Enviar"}
+            </button>
+          </form>
+          {messageState.status === "error" && (
+            <p className="mt-1.5 text-[11.5px] font-semibold text-admin-error-text">
+              {messageState.message}
+            </p>
+          )}
 
-        <form action={noteAction} className="mt-2.5 flex items-center gap-2">
-          <input type="hidden" name="conversationId" value={conversationId} />
-          <input
-            name="note"
-            disabled={closed}
-            placeholder="Nota interna · só a equipe vê"
-            className="min-w-0 flex-1 rounded-[10px] border border-admin-warning-bg bg-admin-warning-bg px-3.5 py-2 text-[12.5px] outline-none disabled:opacity-60"
-          />
-          <button
-            type="submit"
-            disabled={closed || notePending}
-            className="rounded-[10px] border border-admin-warning-bg bg-admin-warning-bg px-3.5 py-2 text-[12px] font-bold text-admin-warning-text disabled:opacity-60"
-          >
-            {notePending ? "Salvando…" : "+ Nota"}
-          </button>
-        </form>
-        {noteState.status === "error" && (
-          <p className="mt-1.5 text-[11.5px] font-semibold text-admin-error-text">
-            {noteState.message}
-          </p>
-        )}
-      </div>
+          <form action={noteAction} className="mt-2.5 flex items-center gap-2">
+            <input type="hidden" name="conversationId" value={conversationId} />
+            <input
+              name="note"
+              placeholder="Nota interna · só a equipe vê"
+              className="min-w-0 flex-1 rounded-[10px] border border-admin-warning-bg bg-admin-warning-bg px-3.5 py-2 text-[12.5px] outline-none disabled:opacity-60"
+            />
+            <button
+              type="submit"
+              disabled={notePending}
+              className="rounded-[10px] border border-admin-warning-bg bg-admin-warning-bg px-3.5 py-2 text-[12px] font-bold text-admin-warning-text disabled:opacity-60"
+            >
+              {notePending ? "Salvando…" : "+ Nota"}
+            </button>
+          </form>
+          {noteState.status === "error" && (
+            <p className="mt-1.5 text-[11.5px] font-semibold text-admin-error-text">
+              {noteState.message}
+            </p>
+          )}
+        </div>
+      )}
     </div>
   );
 }

@@ -11,6 +11,7 @@
 ## 3. Painel
 
 - [x] 3.1 Conversa encerrada diz por quem, com "Voltar para a fila"
+- [x] 3.2 Botões e caixa de mensagem saem quando a conversa termina, com "Fechar"
 
 ## 4. Verificação
 

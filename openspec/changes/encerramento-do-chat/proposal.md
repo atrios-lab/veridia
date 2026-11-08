@@ -10,7 +10,8 @@ um caminho de volta. E quando o cidadão desistia antes de concluir, o cartório
 - **Quem encerrou.** O site diz "Você encerrou este atendimento.", "<nome do atendente> encerrou
   este atendimento." ou "O atendimento foi encerrado por falta de resposta."; o painel diz
   "Conversa encerrada pelo cidadão / pelo atendimento / por inatividade do cidadão.", com
-  "Voltar para a fila".
+  "Voltar para a fila" e "Fechar" no lugar dos botões e da caixa de mensagem, que ficavam cinzas
+  e davam a impressão de tela travada.
 - **Fechar sempre.** A tela final do site ganha "Fechar", que sai sem avaliar e deixa o chat
   pronto para uma conversa nova. O X do cabeçalho faz o mesmo nessa tela. A avaliação vira
   opcional.

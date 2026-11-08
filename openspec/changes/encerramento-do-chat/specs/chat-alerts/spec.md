@@ -6,12 +6,18 @@ Quando a conversa é encerrada, o chat do site SHALL dizer quem encerrou (o pró
 atendente pelo nome, ou a falta de resposta) e SHALL oferecer "Fechar", que sai sem avaliar e
 deixa o chat pronto para uma conversa nova; a avaliação SHALL ser opcional. O X do cabeçalho
 nessa tela SHALL fazer o mesmo que "Fechar". O painel SHALL dizer, na conversa encerrada, se foi
-o cidadão, o atendimento ou a inatividade, e SHALL oferecer "Voltar para a fila".
+o cidadão, o atendimento ou a inatividade, e SHALL oferecer "Voltar para a fila" e "Fechar",
+no lugar dos botões da conversa e da caixa de mensagem, que não servem mais.
 
 #### Scenario: Cartório encerra
 
 - **WHEN** o atendente encerra a conversa
 - **THEN** o cidadão vê "<nome> encerrou este atendimento." e o botão "Fechar"
+
+#### Scenario: Cidadão encerra com o atendente na conversa
+
+- **WHEN** o cidadão encerra enquanto o atendente está com a conversa aberta
+- **THEN** em segundos o painel troca os botões e a caixa de mensagem por "Conversa encerrada pelo cidadão." com "Voltar para a fila" e "Fechar"
 
 #### Scenario: Cidadão fecha sem avaliar
 
