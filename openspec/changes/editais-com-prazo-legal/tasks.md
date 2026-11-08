@@ -32,3 +32,10 @@
 - [x] 5.3 Depois de salvar, o formulário esquece o arquivo escolhido e, numa publicação nova, limpa os campos (um segundo clique em "Publicar" duplicava a publicação)
 - [x] 5.4 "Excluir" com confirmação em todas as abas; apaga a linha, o arquivo e registra auditoria; conferido no navegador contra o Homolog
 - [ ] 5.5 Conferir no Preview (com Blob) uma foto acima de 4,5 MB publicada direto
+
+## 6. Detalhe da publicação (pedido de 08/11/2026)
+
+- [x] 6.1 Tela `/admin/publicacoes/[id]` com dados, prazos, texto e anexo; título e botão "Ver" na lista
+- [x] 6.2 Rota `/admin/publicacoes/[id]/arquivo` para qualquer estado (sessão com `content.edit`)
+- [x] 6.3 Editar liberado nas arquivadas; Excluir pelo detalhe volta para a lista (redirect no servidor)
+- [x] 6.4 Conferido no navegador contra o Homolog; linhas de teste apagadas

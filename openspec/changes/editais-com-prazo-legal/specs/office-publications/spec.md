@@ -71,3 +71,14 @@ No deploy com Blob configurado, o anexo da publicação DEVE (SHALL) ir do naveg
 #### Scenario: Foto grande publicada direto
 - **WHEN** o operador publica um aviso com uma foto de 8 MB, sem passar por rascunho
 - **THEN** a publicação é salva com o anexo, e a imagem aparece no cartão da página inicial
+
+### Requirement: Toda publicação abre num detalhe com texto, datas e arquivo
+Em qualquer aba (No site, Agendadas, Arquivadas, Rascunhos), o título da publicação DEVE (SHALL) abrir uma tela de detalhe com tipo, setor, tipo de edital e dispositivo legal, cada publicação e o fim do prazo, data de saída, datas de cadastro, de última alteração e de arquivamento, o texto completo e o arquivo anexado (imagem na tela, PDF por link). A tela DEVE (SHALL) oferecer Editar e Excluir, e Arquivar quando ainda não arquivada. O arquivo DEVE (SHALL) ser servido ao painel em qualquer estado, mediante sessão com `content.edit` e da mesma serventia. Publicação arquivada DEVE (SHALL) poder ser editada, sem sair do arquivo por isso.
+
+#### Scenario: Conferir um edital arquivado
+- **WHEN** o operador clica no título de um edital em Arquivadas
+- **THEN** vê o texto publicado, as datas, a regra legal e abre o PDF que foi publicado
+
+#### Scenario: Excluir pelo detalhe
+- **WHEN** o operador confirma "Excluir" na tela de detalhe
+- **THEN** volta para a lista da aba de onde veio, sem a publicação

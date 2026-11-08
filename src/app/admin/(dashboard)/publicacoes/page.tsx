@@ -112,23 +112,34 @@ export default async function PublicationsPage({
                   {publicationHeadline(row, day).label}
                 </span>
                 <span className="min-w-0 flex-1">
-                  <span className="block truncate text-[13.5px] font-bold text-admin-text">
+                  {/* The title opens the publication: text, dates, legal
+                      rule and file, in any tab, archived included. */}
+                  <Link
+                    href={`/admin/publicacoes/${row.id}`}
+                    className="block truncate text-[13.5px] font-bold text-admin-text underline-offset-2 hover:text-admin-primary hover:underline"
+                  >
                     {row.title}
-                  </span>
+                  </Link>
                   <span className="block text-xs text-admin-faint">
                     {exitLabel(row, state, day)}
                   </span>
                 </span>
+                <Link
+                  href={`/admin/publicacoes/${row.id}`}
+                  className="btn btn-admin-secondary btn-sm flex-none"
+                >
+                  Ver
+                </Link>
+                {/* Archived ones can be corrected too: editing never takes a
+                    publication out of the archive by itself (see the spec). */}
+                <Link
+                  href={`/admin/publicacoes?aba=${aba ?? "no-site"}&editar=${row.id}`}
+                  className="btn btn-admin-secondary btn-sm flex-none"
+                >
+                  Editar
+                </Link>
                 {state !== "archived" && (
-                  <>
-                    <Link
-                      href={`/admin/publicacoes?aba=${aba ?? "no-site"}&editar=${row.id}`}
-                      className="btn btn-admin-secondary btn-sm flex-none"
-                    >
-                      Editar
-                    </Link>
-                    <ArchiveButton id={row.id} title={row.title} />
-                  </>
+                  <ArchiveButton id={row.id} title={row.title} />
                 )}
                 <DeleteButton id={row.id} title={row.title} />
               </div>

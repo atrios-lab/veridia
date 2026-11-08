@@ -1,6 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { redirect } from "next/navigation";
 import { can } from "@/core/auth/roles.ts";
 import { publicationFormSchema } from "@/core/publications/publication.ts";
 import { noticeSectors } from "@/core/tenant/gating.ts";
@@ -200,6 +201,13 @@ export async function deletePublicationAction(
   revalidatePath("/admin/publicacoes");
   revalidatePath("/");
   revalidatePath("/editais");
+  // From the detail page there is nothing left to show: go back to the
+  // list in the same response, before that page re-renders as a 404. Only
+  // the panel's own publications list is accepted as a destination.
+  const redirectTo = String(formData.get("redirectTo") ?? "");
+  if (/^\/admin\/publicacoes(\?aba=[a-z-]+)?$/.test(redirectTo)) {
+    redirect(redirectTo);
+  }
   return { status: "success" };
 }
 
