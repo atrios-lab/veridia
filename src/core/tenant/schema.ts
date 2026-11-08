@@ -118,6 +118,38 @@ export const CounterHoursSchema = z
   });
 export type CounterHours = z.infer<typeof CounterHoursSchema>;
 
+/** A real calendar day, "YYYY-MM-DD": 2026-02-30 is refused. */
+function isRealDate(value: string): boolean {
+  const [year, month, day] = value.split("-").map(Number);
+  const date = new Date(Date.UTC(year, month - 1, day));
+  return (
+    date.getUTCFullYear() === year &&
+    date.getUTCMonth() === month - 1 &&
+    date.getUTCDate() === day
+  );
+}
+
+/**
+ * A day off the office declares in the panel (see `CustomHoliday` in
+ * core/scheduling/calendar.ts): a name the status line shows, the date, and
+ * whether it repeats every year on that day and month.
+ */
+export const CustomHolidaySchema = z.object({
+  name: z
+    .string()
+    .trim()
+    .min(1, "Dê um nome ao feriado.")
+    .max(80, "Use no máximo 80 caracteres."),
+  date: z
+    .string()
+    .regex(/^\d{4}-\d{2}-\d{2}$/, "Informe a data.")
+    .refine(isRealDate, "Informe uma data que exista."),
+  yearly: z.boolean(),
+});
+
+/** Room for every municipal and local day an office could plausibly keep. */
+export const MAX_CUSTOM_HOLIDAYS = 60;
+
 export const TenantSchema = z.object({
   slug: z.string().min(1),
   hosts: z.array(z.string()).default([]),
@@ -169,6 +201,13 @@ export const TenantSchema = z.object({
   // saying how long it usually takes, and the office changes it from the
   // panel. The term a given request actually runs on is set on the request.
   requestDeadlineDays: deadlineDaysSchema.default(10),
+  // The office's own days off (municipal holidays, local commemorations),
+  // on top of the national and state ones the calendar already knows. Edited
+  // in the panel; a config file may seed them too.
+  customHolidays: z
+    .array(CustomHolidaySchema)
+    .max(MAX_CUSTOM_HOLIDAYS, "São no máximo 60 feriados próprios.")
+    .default([]),
   theme: ThemeSchema,
   logos: z.object({
     light: z.string().min(1), // logo for light backgrounds

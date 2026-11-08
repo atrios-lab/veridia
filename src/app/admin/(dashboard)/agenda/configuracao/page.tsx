@@ -58,6 +58,7 @@ export default async function AgendaSettingsPage() {
           }))}
           initialModes={config.modes}
           closedDates={config.closedDates.map((closed) => closed.date)}
+          holidays={tenant.customHolidays}
           takenByDate={Object.fromEntries(
             [...taken.entries()].map(([date, times]) => [date, [...times]]),
           )}

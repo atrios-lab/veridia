@@ -158,6 +158,19 @@ export type OfficeBulletin = z.infer<typeof OfficeBulletinSchema>;
 export const OfficeBulletinOverrideSchema = OfficeBulletinSchema.partial();
 
 /**
+ * What an office may change about its calendar: its own days off, on top of
+ * the national and state ones. Same pick discipline as the others. Saved
+ * whole: the list the panel submits replaces the stored one.
+ */
+export const OfficeHolidaysSchema = TenantSchema.pick({
+  customHolidays: true,
+});
+export type OfficeHolidaysSettings = z.infer<typeof OfficeHolidaysSchema>;
+
+/** Same partial-for-reading discipline as OfficeContactOverrideSchema. */
+export const OfficeHolidaysOverrideSchema = OfficeHolidaysSchema.partial();
+
+/**
  * Lays the office's own edits over its configuration.
  *
  * Each row that fails to parse is ignored rather than thrown: an override is
@@ -187,6 +200,7 @@ export function applyTenantOverrides(
     pix?: unknown;
     deadline?: unknown;
     bulletin?: unknown;
+    holidays?: unknown;
   },
 ): Tenant {
   let merged = tenant;
@@ -221,6 +235,9 @@ export function applyTenantOverrides(
 
   const bulletin = OfficeBulletinOverrideSchema.safeParse(overrides.bulletin);
   if (bulletin.success) merged = { ...merged, ...bulletin.data };
+
+  const holidays = OfficeHolidaysOverrideSchema.safeParse(overrides.holidays);
+  if (holidays.success) merged = { ...merged, ...holidays.data };
 
   return merged;
 }

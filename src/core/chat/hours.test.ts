@@ -225,3 +225,18 @@ test("a weekend is plain closed, even when it is also a holiday", () => {
     "Fechado agora · abre segunda às 8h",
   );
 });
+
+test("on the office's own holiday the line names it too", () => {
+  const office: Tenant = {
+    ...cartorioMarinho,
+    customHolidays: [
+      { name: "Dia do Evangélico", date: "2026-11-30", yearly: true },
+    ],
+  };
+  // 2026-11-30 is a Monday.
+  const now = new Date("2026-11-30T13:00:00Z");
+  assert.equal(
+    counterStatusLabel(counterStatus(office, now), now),
+    "Fechado hoje, feriado de Dia do Evangélico · abre terça às 8h",
+  );
+});

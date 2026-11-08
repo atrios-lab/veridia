@@ -107,9 +107,9 @@ export default async function PublicationDetailPage({
     (entry) => entry.action === "publication.create",
   )?.actorName;
   const state = publicationState(row, day);
-  const headline = publicationHeadline(row, day);
+  const headline = publicationHeadline(row, day, tenant.customHolidays);
   const type = noticeTypeOf(row.noticeType);
-  const schedule = publicationSchedule(row);
+  const schedule = publicationSchedule(row, tenant.customHolidays);
   const tab = TAB_SLUGS[state];
   const fileHref = `/admin/publicacoes/${row.id}/arquivo`;
   const isImage =

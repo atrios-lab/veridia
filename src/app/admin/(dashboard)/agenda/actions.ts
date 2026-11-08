@@ -128,7 +128,10 @@ export async function reserveDeskAppointment(
 
   const tenant = await getTenant();
   try {
-    const config = await getAgendaConfig(tenant.slug);
+    const config = {
+      ...(await getAgendaConfig(tenant.slug)),
+      holidays: tenant.customHolidays,
+    };
     const service = config.services.find((item) => item.id === serviceId);
     if (!service || !config.modes.includes(mode)) {
       return {

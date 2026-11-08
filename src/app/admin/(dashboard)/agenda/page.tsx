@@ -52,16 +52,23 @@ export default async function AgendaPage({
   const date = ISO.test(params.dia ?? "") ? (params.dia as string) : today();
   const anchor = ISO.test(params.de ?? "") ? (params.de as string) : today();
 
-  const stripDates = nextBusinessDays(anchor, STRIP_DAYS);
+  const stripDates = nextBusinessDays(
+    anchor,
+    STRIP_DAYS,
+    tenant.customHolidays,
+  );
   const stripFrom = stripDates[0] ?? anchor;
   const stripTo = stripDates.at(-1) ?? anchor;
 
-  const [config, appointments, counts] = await Promise.all([
+  const [agendaConfig, appointments, counts] = await Promise.all([
     getAgendaConfig(tenant.slug),
     appointmentsOn(tenant.slug, date),
     liveCountsByDay(tenant.slug, stripFrom, stripTo),
   ]);
 
+  // The office's own days off ride along, so its holidays close the day
+  // here as they do on the public page.
+  const config = { ...agendaConfig, holidays: tenant.customHolidays };
   const now = officeNow();
   const closed = closedDate(config, date);
   const grid = gridTimes(config, date);

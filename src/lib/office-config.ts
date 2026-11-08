@@ -43,6 +43,7 @@ export const OFFICE_DPO_KEY = "office-dpo";
 export const OFFICE_PIX_KEY = "office-pix";
 export const OFFICE_DEADLINE_KEY = "office-deadline";
 export const OFFICE_BULLETIN_KEY = "office-bulletin";
+export const OFFICE_HOLIDAYS_KEY = "office-holidays";
 // Not part of Tenant/applyTenantOverrides: whether the office's chat is on,
 // and which days and times it receives by appointment, are operational state,
 // not branding or editorial content. Both are read and written directly:

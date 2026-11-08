@@ -124,7 +124,7 @@ export function PublicationForm({
   // changes, unless the operator already typed one of their own.
   function suggestExpiry(type: NoticeTypeKey | undefined, from: string) {
     if (!from) return;
-    const suggestion = defaultExpiry(type, from);
+    const suggestion = defaultExpiry(type, from, tenant.customHolidays);
     if (suggestion && (!expireAt || expirySuggested)) {
       setExpireAt(suggestion);
       setExpirySuggested(true);
@@ -167,7 +167,10 @@ export function PublicationForm({
   }
 
   const rule = effectiveType ? NOTICE_TYPES[effectiveType] : undefined;
-  const schedule = rule && publishAt ? noticeSchedule(rule, publishAt) : null;
+  const schedule =
+    rule && publishAt
+      ? noticeSchedule(rule, publishAt, tenant.customHolidays)
+      : null;
   const todayIso = clientToday();
 
   function handleSubmit(event: FormEvent<HTMLFormElement>) {
@@ -532,6 +535,7 @@ export function PublicationForm({
           noticeType={effectiveType ?? null}
           publishAt={publishAt || null}
           today={todayIso}
+          holidays={tenant.customHolidays}
           title={title}
           body={body}
         />

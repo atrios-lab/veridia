@@ -7,6 +7,7 @@ import {
   OfficeContactSchema,
   OfficeDeadlineSchema,
   OfficeDpoSchema,
+  OfficeHolidaysSchema,
   OfficePixSchema,
 } from "./overrides.ts";
 import { cartorioMarinho } from "./tenants/marinho.ts";
@@ -488,4 +489,48 @@ test("hora do intervalo fora do formato é recusada", () => {
     },
   });
   assert.equal(parsed.success, false);
+});
+
+test("os feriados salvos no painel valem no site", () => {
+  const merged = applyTenantOverrides(cartorioMarinho, {
+    holidays: {
+      customHolidays: [
+        { name: "São Sebastião", date: "2026-01-20", yearly: true },
+      ],
+    },
+  });
+  assert.deepEqual(merged.customHolidays, [
+    { name: "São Sebastião", date: "2026-01-20", yearly: true },
+  ]);
+});
+
+test("sem linha salva, a serventia não tem feriado próprio", () => {
+  assert.deepEqual(
+    applyTenantOverrides(cartorioMarinho, {}).customHolidays,
+    [],
+  );
+});
+
+test("feriado sem nome ou com data impossível é recusado", () => {
+  assert.equal(
+    OfficeHolidaysSchema.safeParse({
+      customHolidays: [{ name: " ", date: "2026-01-20", yearly: true }],
+    }).success,
+    false,
+  );
+  const impossible = OfficeHolidaysSchema.safeParse({
+    customHolidays: [{ name: "X", date: "2026-02-30", yearly: false }],
+  });
+  assert.equal(impossible.success, false);
+  assert.equal(
+    impossible.error?.issues[0].message,
+    "Informe uma data que exista.",
+  );
+});
+
+test("uma linha de feriados corrompida não derruba o site", () => {
+  const merged = applyTenantOverrides(cartorioMarinho, {
+    holidays: { customHolidays: "lixo" },
+  });
+  assert.deepEqual(merged.customHolidays, []);
 });

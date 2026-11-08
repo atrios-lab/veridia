@@ -3,6 +3,7 @@ import {
   addDays,
   type IsoDate,
   isBusinessDay,
+  type OfficeHolidays,
 } from "../scheduling/calendar.ts";
 
 /**
@@ -53,13 +54,13 @@ export interface NoticeSchedule {
  * days): the start day excluded, the due day included, and a due day that
  * is not a business day moves to the next one.
  *
- * National holidays and the state's Código de Normas days off (see
- * `closedDays`): a term ending on a municipal holiday reads one day early,
- * which the operator can correct on the exit date before saving.
+ * National holidays, the state's Código de Normas days off (see
+ * `closedDays`) and the office's own days off from the panel (`holidays`).
  */
 export function noticeSchedule(
   rule: NoticeRunRule,
   firstRun: IsoDate,
+  holidays: OfficeHolidays = [],
 ): NoticeSchedule {
   const runs: NoticeRun[] = [{ number: 1, date: firstRun }];
   for (let n = 2; n <= rule.runs; n++) {
@@ -69,12 +70,17 @@ export function noticeSchedule(
       date:
         rule.runIntervalDays <= 1
           ? addDays(previous, rule.runIntervalDays)
-          : endOfTerm(previous, rule.runIntervalDays, rule.counting),
+          : endOfTerm(previous, rule.runIntervalDays, rule.counting, holidays),
     });
   }
   const lastRun = runs[runs.length - 1].date;
   const termStartsAfter = addDays(lastRun, rule.graceDays);
-  const termEndsOn = endOfTerm(termStartsAfter, rule.termDays, rule.counting);
+  const termEndsOn = endOfTerm(
+    termStartsAfter,
+    rule.termDays,
+    rule.counting,
+    holidays,
+  );
   return { runs, termStartsAfter, termEndsOn };
 }
 
@@ -95,18 +101,23 @@ function endOfTerm(
   from: IsoDate,
   days: number,
   counting: NoticeRunRule["counting"],
+  holidays: OfficeHolidays,
 ): IsoDate {
   return counting === "business"
-    ? nextBusinessDayFrom(deadlineDate(from, days))
-    : nextBusinessDayFrom(addDays(from, days));
+    ? nextBusinessDayFrom(deadlineDate(from, days, holidays), holidays)
+    : nextBusinessDayFrom(addDays(from, days), holidays);
 }
 
 // A run of holidays never reaches a fortnight; the cap only guards the loop.
 const MAX_SCAN_DAYS = 15;
 
-function nextBusinessDayFrom(date: IsoDate): IsoDate {
+function nextBusinessDayFrom(date: IsoDate, holidays: OfficeHolidays): IsoDate {
   let cursor = date;
-  for (let step = 0; step < MAX_SCAN_DAYS && !isBusinessDay(cursor); step++) {
+  for (
+    let step = 0;
+    step < MAX_SCAN_DAYS && !isBusinessDay(cursor, holidays);
+    step++
+  ) {
     cursor = addDays(cursor, 1);
   }
   return cursor;

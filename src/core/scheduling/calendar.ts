@@ -169,8 +169,8 @@ export function nationalHolidays(year: number): Map<IsoDate, string> {
  * Wednesday, São João (24/06), São Pedro (29/06), Christmas Eve (24/12) and
  * New Year's Eve (31/12); and, by its item III, on the holidays of state
  * law, which today is the Mártires de Cunhaú e Uruaçu (03/10, Lei estadual
- * 8.913/2006). Municipal holidays (also item III) are per town and not
- * known here.
+ * 8.913/2006). Municipal holidays (also item III) are per town: each office
+ * declares its own in the panel (`CustomHoliday`, below).
  */
 const STATE_CLOSED_DAYS: Record<
   SupportedState,
@@ -219,21 +219,88 @@ export function closedDays(
   ]);
 }
 
-/** The holiday's name when the office is closed for one that day. */
-export function holidayName(date: IsoDate): string | undefined {
-  return closedDays(Number(date.slice(0, 4))).get(date);
-}
+/**
+ * A day off the office declares itself, from the panel: a municipal holiday
+ * (the town's patron saint, its anniversary), a state one the law moved, a
+ * local commemoration the office closes for. `yearly` repeats it on the same
+ * day and month every year; otherwise it is that date alone.
+ */
+export type CustomHoliday = { name: string; date: IsoDate; yearly: boolean };
 
-export function isHoliday(date: IsoDate): boolean {
-  return holidayName(date) !== undefined;
+/** The office's own days off, as `Tenant.customHolidays` carries them. */
+export type OfficeHolidays = readonly CustomHoliday[];
+
+function customHolidayName(
+  date: IsoDate,
+  holidays: OfficeHolidays,
+): string | undefined {
+  return holidays.find((h) =>
+    h.yearly ? h.date.slice(5) === date.slice(5) : h.date === date,
+  )?.name;
 }
 
 /**
- * A day the office opens: a weekday that is neither a national holiday nor a
- * day the state's Código de Normas closes the extrajudicial services.
+ * The holiday's name when the office is closed for one that day: the
+ * national and state ones first, then the office's own.
  */
-export function isBusinessDay(date: IsoDate): boolean {
-  return !isWeekend(date) && !isHoliday(date);
+export function holidayName(
+  date: IsoDate,
+  holidays: OfficeHolidays = [],
+): string | undefined {
+  return (
+    closedDays(Number(date.slice(0, 4))).get(date) ??
+    customHolidayName(date, holidays)
+  );
+}
+
+export function isHoliday(
+  date: IsoDate,
+  holidays: OfficeHolidays = [],
+): boolean {
+  return holidayName(date, holidays) !== undefined;
+}
+
+/** One day off as the panel lists it: when, what, and whose rule it is. */
+export type ClosedDay = { date: IsoDate; name: string; own: boolean };
+
+/**
+ * Every day off from `from` (included) through `days` calendar days after:
+ * the national and state ones (`own: false`) and the office's own
+ * (`own: true`), in date order, weekends included so the list says when a
+ * holiday falls on one. The panel shows it so the office sees what is
+ * already counted before adding its own.
+ */
+export function upcomingClosedDays(
+  from: IsoDate,
+  days: number,
+  holidays: OfficeHolidays = [],
+): ClosedDay[] {
+  const result: ClosedDay[] = [];
+  let cursor = from;
+  for (let step = 0; step <= days; step++) {
+    const law = closedDays(Number(cursor.slice(0, 4))).get(cursor);
+    const own = customHolidayName(cursor, holidays);
+    if (law) result.push({ date: cursor, name: law, own: false });
+    if (own) result.push({ date: cursor, name: own, own: true });
+    cursor = addDays(cursor, 1);
+  }
+  return result;
+}
+
+/**
+ * A day the office opens: a weekday that is neither a national holiday, nor
+ * a day the state's Código de Normas closes the extrajudicial services, nor
+ * one of the office's own days off (`holidays`, from the panel).
+ *
+ * `holidays` defaults to none so the pure helpers stay easy to call, which
+ * makes forgetting it silent: every caller that knows the office passes
+ * `tenant.customHolidays`.
+ */
+export function isBusinessDay(
+  date: IsoDate,
+  holidays: OfficeHolidays = [],
+): boolean {
+  return !isWeekend(date) && !isHoliday(date, holidays);
 }
 
 /**
@@ -241,11 +308,15 @@ export function isBusinessDay(date: IsoDate): boolean {
  * is itself a business day). The search stops after a month of calendar days,
  * which no run of holidays in Brazil comes close to.
  */
-export function nextBusinessDays(from: IsoDate, count: number): IsoDate[] {
+export function nextBusinessDays(
+  from: IsoDate,
+  count: number,
+  holidays: OfficeHolidays = [],
+): IsoDate[] {
   const days: IsoDate[] = [];
   let cursor = from;
   for (let step = 0; step < 31 && days.length < count; step++) {
-    if (isBusinessDay(cursor)) days.push(cursor);
+    if (isBusinessDay(cursor, holidays)) days.push(cursor);
     cursor = addDays(cursor, 1);
   }
   return days;

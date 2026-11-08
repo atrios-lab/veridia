@@ -1,4 +1,4 @@
-import type { IsoDate } from "../scheduling/calendar.ts";
+import type { IsoDate, OfficeHolidays } from "../scheduling/calendar.ts";
 import type { NoticeSector } from "../tenant/gating.ts";
 import {
   currentRun,
@@ -216,13 +216,16 @@ export function noticeTypesOf(sector: NoticeSector): NoticeTypeKey[] {
 export const MARRIAGE_BANNS_NOTICE_TYPE: NoticeTypeKey = "proclamas-casamento";
 
 /** The full schedule of a publication with a rule and an entry date. */
-export function publicationSchedule(pub: {
-  noticeType: string | null;
-  publishAt: IsoDate | null;
-}): NoticeSchedule | undefined {
+export function publicationSchedule(
+  pub: {
+    noticeType: string | null;
+    publishAt: IsoDate | null;
+  },
+  holidays: OfficeHolidays = [],
+): NoticeSchedule | undefined {
   const type = noticeTypeOf(pub.noticeType);
   if (!type || !pub.publishAt) return undefined;
-  return noticeSchedule(type, pub.publishAt);
+  return noticeSchedule(type, pub.publishAt, holidays);
 }
 
 export interface PublicationHeadline {
@@ -248,11 +251,12 @@ export function publicationHeadline(
     publishAt: IsoDate | null;
   },
   today: IsoDate,
+  holidays: OfficeHolidays = [],
 ): PublicationHeadline {
   const kindLabel =
     PUBLICATION_KIND_LABELS[pub.kind as PublicationKind] ?? "Publicação";
   const type = noticeTypeOf(pub.noticeType);
-  const schedule = publicationSchedule(pub);
+  const schedule = publicationSchedule(pub, holidays);
   if (!type || !schedule) {
     return { label: kindLabel, date: pub.publishAt };
   }

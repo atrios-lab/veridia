@@ -2,7 +2,11 @@ import {
   noticeTypeOf,
   publicationHeadline,
 } from "@/core/publications/notice-types.ts";
-import { formatDate, type IsoDate } from "@/core/scheduling/calendar.ts";
+import {
+  formatDate,
+  type IsoDate,
+  type OfficeHolidays,
+} from "@/core/scheduling/calendar.ts";
 import type { NoticeSector } from "@/core/tenant/gating.ts";
 import {
   NOTICE_SECTOR_ATTRIBUTION,
@@ -27,8 +31,16 @@ function sectorOf(row: PublicationRow): NoticeSector | null {
   return (row.sector as NoticeSector | null) ?? null;
 }
 
-function NoticeCard({ row, day }: { row: PublicationRow; day: IsoDate }) {
-  const headline = publicationHeadline(row, day);
+function NoticeCard({
+  row,
+  day,
+  holidays,
+}: {
+  row: PublicationRow;
+  day: IsoDate;
+  holidays: OfficeHolidays;
+}) {
+  const headline = publicationHeadline(row, day, holidays);
   const type = noticeTypeOf(row.noticeType);
   return (
     <article className="rounded-2xl border border-brand-border bg-brand-card p-5">
@@ -149,7 +161,12 @@ export default async function PublicNoticesPage() {
                   </p>
                   <div className="mt-4 flex flex-col gap-3.5">
                     {(groups.get(sector) ?? []).map((row) => (
-                      <NoticeCard key={row.id} row={row} day={day} />
+                      <NoticeCard
+                        key={row.id}
+                        row={row}
+                        day={day}
+                        holidays={tenant.customHolidays}
+                      />
                     ))}
                   </div>
                 </section>
@@ -166,7 +183,12 @@ export default async function PublicNoticesPage() {
                 </p>
                 <div className="mt-4 flex flex-col gap-3.5">
                   {general.map((row) => (
-                    <NoticeCard key={row.id} row={row} day={day} />
+                    <NoticeCard
+                      key={row.id}
+                      row={row}
+                      day={day}
+                      holidays={tenant.customHolidays}
+                    />
                   ))}
                 </div>
               </section>

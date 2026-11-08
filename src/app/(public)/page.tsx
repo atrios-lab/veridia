@@ -77,7 +77,10 @@ export default async function Home() {
   // republication and goes back to the top, as a new publication would.
   const day = today();
   const publications = (await livePublications(tenant.slug))
-    .map((row) => ({ row, headline: publicationHeadline(row, day) }))
+    .map((row) => ({
+      row,
+      headline: publicationHeadline(row, day, tenant.customHolidays),
+    }))
     .sort((a, b) =>
       (b.headline.date ?? "").localeCompare(a.headline.date ?? ""),
     )

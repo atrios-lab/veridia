@@ -1,14 +1,16 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { can } from "@/core/auth/roles.ts";
+import { upcomingClosedDays } from "@/core/scheduling/calendar.ts";
 import { ATTRIBUTIONS, type Attribution } from "@/core/tenant/schema.ts";
 import { getSession } from "@/lib/session.ts";
-import { getTenant } from "@/lib/tenant.ts";
+import { getTenant, today } from "@/lib/tenant.ts";
 import { AdminIcon } from "../../_components/icon.tsx";
 import { AdminPageHeader } from "../../_components/page-header.tsx";
 import { ConfiguracoesTabs } from "./_components/tabs.tsx";
 import { OfficeContactForm } from "./office-contact-form.tsx";
 import { OfficeDeadlineForm } from "./office-deadline-form.tsx";
+import { OfficeHolidaysForm } from "./office-holidays-form.tsx";
 
 export const metadata = { title: "Configurações" };
 
@@ -137,6 +139,13 @@ export default async function SettingsPage() {
 
           <section className="mt-6 border-t border-admin-border pt-5.5">
             <OfficeDeadlineForm tenant={tenant} />
+          </section>
+
+          <section className="mt-6 border-t border-admin-border pt-5.5">
+            <OfficeHolidaysForm
+              initial={tenant.customHolidays}
+              upcoming={upcomingClosedDays(today(), 365)}
+            />
           </section>
 
           <section className="mt-6 border-t border-admin-border pt-5.5">

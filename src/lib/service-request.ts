@@ -2268,7 +2268,12 @@ export async function reconcileDeadlinePauseWith(
     requestId,
     owed
       ? { ...current, pausedOn }
-      : resumeDeadline(current, today, act?.legalDeadlineDays != null),
+      : resumeDeadline(
+          current,
+          today,
+          act?.legalDeadlineDays != null,
+          tenant.customHolidays,
+        ),
   );
   await recordAuditWith(database, {
     tenantSlug: tenant.slug,

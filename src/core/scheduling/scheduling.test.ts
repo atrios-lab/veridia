@@ -24,6 +24,7 @@ import {
   shortMonth,
   shortWeekday,
   toIsoDate,
+  upcomingClosedDays,
 } from "./calendar.ts";
 import {
   firstFreeSlot,
@@ -255,4 +256,43 @@ test("the calendar has a list for every supported state", () => {
   // is supported, it has to start taking the office's state: this fails
   // first, so that day cannot pass unnoticed.
   assert.deepEqual([...SUPPORTED_STATES], [CALENDAR_STATE]);
+});
+
+// Ielmo Marinho-like: a patron saint every year and a one-off decree.
+const OWN = [
+  { name: "São Sebastião", date: "2020-01-20", yearly: true },
+  { name: "Ponto facultativo", date: "2026-08-14", yearly: false },
+];
+
+test("an office's yearly holiday closes the same day every year", () => {
+  assert.equal(isBusinessDay("2026-01-20", OWN), false);
+  assert.equal(isBusinessDay("2027-01-20", OWN), false);
+  assert.equal(holidayName("2026-01-20", OWN), "São Sebastião");
+  assert.equal(isBusinessDay("2026-01-20"), true); // without the office's list
+});
+
+test("a one-off holiday closes that date only", () => {
+  assert.equal(isBusinessDay("2026-08-14", OWN), false);
+  assert.equal(holidayName("2027-08-14", OWN), undefined);
+});
+
+test("the office's holidays close the agenda too", () => {
+  const config = {
+    ...DEFAULT_AGENDA_CONFIG,
+    grid: { 5: ["09:00"] }, // sextas
+    holidays: OWN,
+  };
+  // 2026-08-14 is a Friday, the office's ponto facultativo.
+  assert.deepEqual(offeredDays(config, "2026-08-14", 1), ["2026-08-21"]);
+});
+
+test("the panel lists the days off ahead, law and office apart", () => {
+  const days = upcomingClosedDays("2026-06-20", 10, OWN);
+  assert.deepEqual(days, [
+    { date: "2026-06-24", name: "São João", own: false },
+    { date: "2026-06-29", name: "São Pedro", own: false },
+  ]);
+  assert.deepEqual(upcomingClosedDays("2026-08-14", 0, OWN), [
+    { date: "2026-08-14", name: "Ponto facultativo", own: true },
+  ]);
 });

@@ -5,6 +5,7 @@ import { can } from "@/core/auth/roles.ts";
 import {
   OfficeContactSchema,
   OfficeDeadlineSchema,
+  OfficeHolidaysSchema,
 } from "@/core/tenant/overrides.ts";
 import { db } from "@/db/index.ts";
 import { tenantContent } from "@/db/schema.ts";
@@ -14,6 +15,7 @@ import {
   getTenant,
   OFFICE_CONTACT_KEY,
   OFFICE_DEADLINE_KEY,
+  OFFICE_HOLIDAYS_KEY,
 } from "@/lib/tenant.ts";
 
 /** The fields as they were typed, unvalidated. */
@@ -254,5 +256,105 @@ export async function saveOfficeDeadline(
   // and it is read by the queue's badge in the panel.
   revalidatePath("/", "layout");
   revalidatePath("/admin/pedidos");
+  return { status: "saved" };
+}
+
+/** One row of the holidays form, as typed. */
+export type HolidayDraft = { name: string; date: string; yearly: boolean };
+
+export type OfficeHolidaysState =
+  | { status: "idle" }
+  | { status: "saved" }
+  | {
+      status: "error";
+      message: string;
+      // "3.name" -> message: the row and the field the office has to fix.
+      fieldErrors: Record<string, string>;
+    };
+
+/**
+ * The office's own days off, saved whole: the list the form submits replaces
+ * the stored one. Same discipline as the other settings: permission checked
+ * here, the schema is the boundary, written straight to `published` because
+ * a day off is operational (it closes the chat and stops the terms), and
+ * every save leaves an audit line.
+ *
+ * The list travels as one JSON field: rows are added and removed on the
+ * client, and a variable number of rows in flat form names is a parser to
+ * get wrong. Anything that is not the expected shape fails the schema.
+ */
+export async function saveOfficeHolidays(
+  _previous: OfficeHolidaysState,
+  formData: FormData,
+): Promise<OfficeHolidaysState> {
+  const session = await getSession();
+  if (!session || !can(session.user.role ?? "", "content.edit")) {
+    return {
+      status: "error",
+      message: "Você não tem permissão para alterar estes dados.",
+      fieldErrors: {},
+    };
+  }
+  const tenant = await getTenant();
+
+  let submitted: unknown;
+  try {
+    submitted = JSON.parse(String(formData.get("holidays") ?? "[]"));
+  } catch {
+    submitted = null;
+  }
+  const parsed = OfficeHolidaysSchema.safeParse({ customHolidays: submitted });
+  if (!parsed.success) {
+    const fieldErrors: Record<string, string> = {};
+    let general: string | undefined;
+    for (const issue of parsed.error.issues) {
+      const [, row, field] = issue.path;
+      if (typeof row === "number" && typeof field === "string") {
+        fieldErrors[`${row}.${field}`] ??= issue.message;
+      } else {
+        general ??= issue.message;
+      }
+    }
+    return {
+      status: "error",
+      message: general ?? "Confira os feriados destacados.",
+      fieldErrors,
+    };
+  }
+
+  try {
+    await db
+      .insert(tenantContent)
+      .values({
+        tenantSlug: tenant.slug,
+        key: OFFICE_HOLIDAYS_KEY,
+        published: parsed.data,
+        publishedAt: new Date(),
+        updatedBy: session.user.id,
+      })
+      .onConflictDoUpdate({
+        target: [tenantContent.tenantSlug, tenantContent.key],
+        set: {
+          published: parsed.data,
+          publishedAt: new Date(),
+          updatedAt: new Date(),
+          updatedBy: session.user.id,
+        },
+      });
+  } catch {
+    return { status: "error", message: GENERIC_ERROR, fieldErrors: {} };
+  }
+
+  await recordAudit({
+    tenantSlug: tenant.slug,
+    actorId: session.user.id,
+    action: "office-settings.save",
+    targetType: "tenant-content",
+    targetId: OFFICE_HOLIDAYS_KEY,
+  });
+
+  // A day off reaches the whole site (the hours card, the chat, the agenda,
+  // every term) and the panel's queues.
+  revalidatePath("/", "layout");
   return { status: "saved" };
 }

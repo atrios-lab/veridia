@@ -43,6 +43,7 @@ import {
 import { formatCents } from "@/core/request/money.ts";
 import {
   formatDate,
+  type OfficeHolidays,
   toIsoDate,
   toZonedDateTimeInput,
 } from "@/core/scheduling/calendar.ts";
@@ -129,8 +130,9 @@ const HISTORY_LABELS: Record<string, string> = {
 function deadlineProgress(
   deadline: { startedOn: string; days: number },
   todayIso: string,
+  holidays: OfficeHolidays,
 ): string {
-  const day = dayOfDeadline(deadline.startedOn, todayIso);
+  const day = dayOfDeadline(deadline.startedOn, todayIso, holidays);
   return day === 0
     ? `${deadline.days} dias úteis, a contar do próximo`
     : `dia ${day} de ${deadline.days}`;
@@ -393,7 +395,11 @@ export default async function ServiceRequestDetailPage({
                       {deadline.pausedOn
                         ? `Prazo suspenso desde ${formatDate(deadline.pausedOn)}`
                         : `Prazo até ${formatDate(
-                            deadlineDate(deadline.startedOn, deadline.days),
+                            deadlineDate(
+                              deadline.startedOn,
+                              deadline.days,
+                              tenant.customHolidays,
+                            ),
                           )} · ${deadline.days} dias úteis`}
                     </span>
                   )}
@@ -401,6 +407,7 @@ export default async function ServiceRequestDetailPage({
                     open={isOpenServiceRequestStatus(status)}
                     deadline={deadline}
                     today={today()}
+                    holidays={tenant.customHolidays}
                   />
                   {/* Pedida, não concedida por si só: quem confere o
                       benefício e decide é o operador, pelo seletor ao lado, e
@@ -436,10 +443,14 @@ export default async function ServiceRequestDetailPage({
                 !isOpenServiceRequestStatus(status)
                   ? null
                   : deadline.pausedOn
-                    ? `suspenso desde ${formatDate(deadline.pausedOn)} · ${deadlineProgress(deadline, deadline.pausedOn)}`
+                    ? `suspenso desde ${formatDate(deadline.pausedOn)} · ${deadlineProgress(deadline, deadline.pausedOn, tenant.customHolidays)}`
                     : `até ${formatDate(
-                        deadlineDate(deadline.startedOn, deadline.days),
-                      )} · ${deadlineProgress(deadline, today())}`
+                        deadlineDate(
+                          deadline.startedOn,
+                          deadline.days,
+                          tenant.customHolidays,
+                        ),
+                      )} · ${deadlineProgress(deadline, today(), tenant.customHolidays)}`
               }
               deadlineDays={deadline.days}
               happyPath={
