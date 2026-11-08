@@ -1972,12 +1972,21 @@ export async function purgeExpiredRequestFilesWith(
   return purged;
 }
 
-/** The production singleton, for callers that do not test against it. */
+/**
+ * The production singleton, called by the panel's queues as they open. A
+ * failure here only leaves the files for the next visit (the routes refuse
+ * them either way), so it is logged and never takes the screen down.
+ */
 export async function purgeExpiredRequestFiles(
   tenantSlug: string,
   today: IsoDate,
 ): Promise<number> {
-  return purgeExpiredRequestFilesWith(db, tenantSlug, today);
+  try {
+    return await purgeExpiredRequestFilesWith(db, tenantSlug, today);
+  } catch (error) {
+    console.error("service-request.purge", error);
+    return 0;
+  }
 }
 
 export class AttachmentInUseError extends Error {}

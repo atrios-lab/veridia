@@ -4,9 +4,12 @@ import { can } from "@/core/auth/roles.ts";
 import { manifestationLabel } from "@/core/request/channels.ts";
 import { parseDetails, statusLabel } from "@/core/request/kinds.ts";
 import { formatDate, toIsoDate } from "@/core/scheduling/calendar.ts";
-import { listRecordsByKind } from "@/lib/service-request.ts";
+import {
+  listRecordsByKind,
+  purgeExpiredRequestFiles,
+} from "@/lib/service-request.ts";
 import { getSession } from "@/lib/session.ts";
-import { getTenant, OFFICE_TIME_ZONE } from "@/lib/tenant.ts";
+import { getTenant, OFFICE_TIME_ZONE, today } from "@/lib/tenant.ts";
 import { AdminPageHeader } from "../../_components/page-header.tsx";
 import {
   identificationLabel,
@@ -20,6 +23,8 @@ export default async function OmbudsmanQueuePage() {
   if (!session || !can(session.user.role ?? "", "channels.manage")) notFound();
   const tenant = await getTenant();
 
+  // Files 30 days past the closing leave storage as the queue opens.
+  await purgeExpiredRequestFiles(tenant.slug, today());
   const manifestations = await listRecordsByKind(tenant.slug, "ombudsman");
 
   return (

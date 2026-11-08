@@ -7,6 +7,7 @@ import {
   getActForTenant,
 } from "@/core/acts/catalog.ts";
 import { SIGNED_FORM_NAMES, signedFormFor } from "@/core/request/attachment.ts";
+import { requestFileServable } from "@/core/request/attachment-retention.ts";
 import {
   dataRightsDayOfDeadline,
   dataRightsDeadline,
@@ -59,6 +60,7 @@ import {
   listRequirementMessages,
   listRequirements,
   recoverAccessKeyWith,
+  requestFileStatusOf,
   requestOwnAttachments,
   updateRequestStatus,
   writeCitizenMessage,
@@ -113,6 +115,11 @@ export interface DeliveredDocumentView {
   id: string;
   createdAt: string;
   displayName: string;
+  /**
+   * Deleted by the 30-day rule (or past it, which the route already
+   * refuses): listed so the citizen knows it was there, with no download.
+   */
+  gone: boolean;
 }
 
 export interface CitizenDocumentView {
@@ -165,6 +172,12 @@ export interface ServiceRequestDetail extends BaseDetail {
   requirements: RequirementView[];
   /** Files the office attached through DeliverySection, downloadable here. */
   deliveredDocuments: DeliveredDocumentView[];
+  /**
+   * Once the request is closed: the last day its files are kept (30 days
+   * after the closing), the earliest among those still stored. Absent while
+   * open, and once nothing is left.
+   */
+  filesUntil?: IsoDate;
   /** Files the citizen sent, at filing time and later, downloadable here. */
   citizenDocuments: CitizenDocumentView[];
   amountLabel?: string;
@@ -333,16 +346,37 @@ export async function lookupProtocolDetail(
       : undefined;
     if (!act) return { status: "error", message: NOT_FOUND };
 
-    const attachments = await listAttachments(tenant.slug, record.id);
+    const allAttachments = await listAttachments(tenant.slug, record.id);
+    const todayIso = today();
+    const fileStatuses = new Map(
+      allAttachments.map((a) => [
+        a.id,
+        requestFileStatusOf(a, record, todayIso),
+      ]),
+    );
+    const isGone = (a: { id: string }) => {
+      const status = fileStatuses.get(a.id);
+      return !status || !requestFileServable(status);
+    };
+    const filesUntil = [...fileStatuses.values()]
+      .flatMap((s) => (s.kind === "available" ? [s.until] : []))
+      .sort()[0];
+    // What the consult offers to download: a file the 30-day rule removed
+    // is not one of them. What happened (a form signed, a receipt sent, a
+    // document delivered) is still read off every file, so a closed request
+    // never goes back to asking for a signature it already got.
+    const attachments = allAttachments.filter((a) => !isGone(a));
+    const servableId = (a: { id: string } | undefined) =>
+      a && !isGone(a) ? a.id : undefined;
     // The most recent of each: a resend has to be what both sides see.
-    const signedForm = signedFormFor(attachments, "requerimento");
-    const signedDeclaration = signedFormFor(attachments, "declaracao");
+    const signedForm = signedFormFor(allAttachments, "requerimento");
+    const signedDeclaration = signedFormFor(allAttachments, "declaracao");
     // The most recent one: a corrected resend (wrong file the first time)
     // must be what the office and the citizen both see, not the first try.
-    const paymentReceipt = attachments
+    const paymentReceipt = allAttachments
       .filter((a) => a.kind === "payment-receipt")
       .at(-1);
-    const rejectionDocument = attachments
+    const rejectionDocument = allAttachments
       .filter((a) => a.kind === "rejection-document")
       .at(-1);
     const requirements = await listRequirements(tenant.slug, record.id);
@@ -372,7 +406,7 @@ export async function lookupProtocolDetail(
       kind: "service-request",
       requestStatus: record.status as ServiceRequestStatus,
       statusReason: record.statusReason ?? undefined,
-      rejectionDocumentAttachmentId: rejectionDocument?.id,
+      rejectionDocumentAttachmentId: servableId(rejectionDocument),
       actName: actVariantName(act, readActVariant(record.details)) ?? act.name,
       signatureCaveat: signatureCaveatFor(act),
       attributionName: ATTRIBUTION_NAMES[act.attribution],
@@ -383,10 +417,10 @@ export async function lookupProtocolDetail(
       hasSignedForm: Boolean(signedForm),
       hasExemption: Boolean(readExemption(record.details)),
       signedFormReceivedAt: signedForm?.createdAt.toISOString(),
-      signedFormAttachmentId: signedForm?.id,
+      signedFormAttachmentId: servableId(signedForm),
       hasSignedDeclaration: Boolean(signedDeclaration),
       signedDeclarationReceivedAt: signedDeclaration?.createdAt.toISOString(),
-      signedDeclarationAttachmentId: signedDeclaration?.id,
+      signedDeclarationAttachmentId: servableId(signedDeclaration),
       amountLabel:
         record.amountCents != null
           ? formatCents(record.amountCents)
@@ -431,13 +465,15 @@ export async function lookupProtocolDetail(
         : undefined,
       // A requirement's form is that requirement's, not a delivery: it belongs
       // in its card and never in "Documentos da serventia".
-      deliveredDocuments: requestOwnAttachments(attachments)
+      deliveredDocuments: requestOwnAttachments(allAttachments)
         .filter((a) => a.kind === "office")
         .map((a) => ({
           id: a.id,
           createdAt: a.createdAt.toISOString(),
           displayName: a.displayName,
+          gone: isGone(a),
         })),
+      filesUntil,
       // The signed copies sit in the same list as the other files the
       // citizen sent, under a readable label: it is where someone looks for
       // "the file I sent", and the re-download goes through the same route.
@@ -460,7 +496,7 @@ export async function lookupProtocolDetail(
         createdAt: r.createdAt.toISOString(),
         fulfilledAt: r.fulfilledAt?.toISOString(),
         resolutionFileName: r.resolutionAttachmentId
-          ? attachments.find((a) => a.id === r.resolutionAttachmentId)
+          ? allAttachments.find((a) => a.id === r.resolutionAttachmentId)
               ?.displayName
           : undefined,
         forms: attachments

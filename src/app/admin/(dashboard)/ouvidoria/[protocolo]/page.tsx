@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { can } from "@/core/auth/roles.ts";
+import { REQUEST_FILE_RETENTION_DAYS } from "@/core/request/attachment-retention.ts";
 import { manifestationLabel } from "@/core/request/channels.ts";
 import {
   isOmbudsmanStatus,
@@ -23,6 +24,7 @@ import { ManifestationStatusSection } from "./_components/status-section.tsx";
 export const metadata = { title: "Manifestação" };
 
 const HISTORY_LABELS: Record<string, string> = {
+  "ombudsman.attachment-purge": `apagou um arquivo, ${REQUEST_FILE_RETENTION_DAYS} dias após o encerramento`,
   "ombudsman.create": "registrou a manifestação",
   "ombudsman.respond": "respondeu ao cidadão",
   "ombudsman.draft": "salvou um rascunho de resposta",
@@ -171,7 +173,9 @@ export default async function OmbudsmanDetailPage({
                       className="text-[12.5px] leading-snug text-admin-text"
                     >
                       <strong className="text-admin-primary">
-                        {entry.actorName ?? "Sistema"}
+                        {entry.action.endsWith(".attachment-purge")
+                          ? "Plataforma"
+                          : (entry.actorName ?? "Sistema")}
                       </strong>{" "}
                       {HISTORY_LABELS[entry.action] ?? entry.action}
                       <br />

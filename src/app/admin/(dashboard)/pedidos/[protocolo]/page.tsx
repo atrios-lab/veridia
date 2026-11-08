@@ -8,6 +8,10 @@ import {
 import { can } from "@/core/auth/roles.ts";
 import { signedFormFor } from "@/core/request/attachment.ts";
 import {
+  REQUEST_FILE_RETENTION_DAYS,
+  requestFileServable,
+} from "@/core/request/attachment-retention.ts";
+import {
   dayOfDeadline,
   deadlineDate,
   effectiveDeadline,
@@ -53,12 +57,17 @@ import {
   listRequestHistory,
   listRequirementMessages,
   listRequirements,
+  requestFileStatusOf,
   requestOwnAttachments,
 } from "@/lib/service-request.ts";
 import { getSession } from "@/lib/session.ts";
 import { getTenant, OFFICE_TIME_ZONE, today } from "@/lib/tenant.ts";
-import { documentHref } from "../../../_components/attachment-link.ts";
+import {
+  documentHref,
+  requestFileGoneLabel,
+} from "../../../_components/attachment-link.ts";
 import { AdminPageHeader } from "../../../_components/page-header.tsx";
+import { RequestFilesNotice } from "../../../_components/request-files-notice.tsx";
 import { DeadlineBadge } from "../_components/deadline-badge.tsx";
 import { StatusBadge } from "../_components/status-badge.tsx";
 import { AmountSection } from "./_components/amount-section.tsx";
@@ -93,6 +102,7 @@ const HISTORY_LABELS: Record<string, string> = {
   "service-request.deadline": "ajustou o prazo",
   "service-request.deadline.pause": "suspendeu o prazo",
   "service-request.deadline.resume": "retomou o prazo",
+  "service-request.attachment-purge": `apagou um arquivo, ${REQUEST_FILE_RETENTION_DAYS} dias após o encerramento`,
   "service-request.requirement.register": "registrou uma exigência",
   "service-request.requirement.fulfill": "cumpriu uma exigência",
   "service-request.amount": "informou o valor do pedido",
@@ -157,19 +167,29 @@ export default async function ServiceRequestDetailPage({
       linkedConversations(tenant.slug, request.id),
     ]);
 
+  // Read once, like the queue: every file measured against the same day.
+  const todayIso = today();
+  const fileStatus = (a: (typeof attachments)[number]) =>
+    requestFileStatusOf(a, request, todayIso);
   const row = (a: (typeof attachments)[number]) => ({
     id: a.id,
     displayName: a.displayName,
     createdAtLabel: formatOfficeDayMonthTime(a.createdAt),
     sizeBytes: a.sizeBytes,
+    goneLabel: requestFileGoneLabel(a.purgedAt, fileStatus(a)),
   });
   // Everything a requirement carries is that requirement's, not the request's.
   const ownAttachments = requestOwnAttachments(attachments);
+  // The header opens the signed copy instead of generating a fresh one only
+  // while that copy can still be served (the 30-day rule).
+  const servableOwn = ownAttachments.filter((a) =>
+    requestFileServable(fileStatus(a)),
+  );
   // The signed copies the citizen (or the counter) sent back: when one
   // exists, it is the paper that counts, and the header opens it instead of
   // generating a fresh unsigned one (spec: "Via assinada quando ela existe").
-  const signedRequerimento = signedFormFor(ownAttachments, "requerimento");
-  const signedDeclaracao = signedFormFor(ownAttachments, "declaracao");
+  const signedRequerimento = signedFormFor(servableOwn, "requerimento");
+  const signedDeclaracao = signedFormFor(servableOwn, "declaracao");
   const citizenAttachments = ownAttachments
     .filter((a) => a.kind !== "office")
     .map(row);
@@ -511,6 +531,13 @@ export default async function ServiceRequestDetailPage({
               }}
             />
 
+            <RequestFilesNotice
+              files={attachments.map((a) => ({
+                status: fileStatus(a),
+                purgedAt: a.purgedAt,
+              }))}
+            />
+
             <RequirementsSection
               requestId={request.id}
               requirements={requirements}
@@ -630,9 +657,11 @@ export default async function ServiceRequestDetailPage({
                               page): the applicant's own name reads better
                               here than "Sistema", which is what a bare
                               `?? "Sistema"` would print for either one. */}
-                          {entry.actorName ??
-                            request.applicantName ??
-                            "Cidadão"}
+                          {entry.action.endsWith(".attachment-purge")
+                            ? "Plataforma"
+                            : (entry.actorName ??
+                              request.applicantName ??
+                              "Cidadão")}
                         </strong>{" "}
                         {HISTORY_LABELS[entry.action] ?? entry.action}
                         <br />

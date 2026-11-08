@@ -278,7 +278,10 @@ function computeHeadline(
       headline: "Pronto! Seu documento está aqui.",
       leadDate: `${formatDateTime(at)}:`,
       leadText:
-        "terminamos o seu pedido. É só baixar ao lado. O arquivo fica disponível por 30 dias.",
+        result.deliveredDocuments.length > 0 &&
+        result.deliveredDocuments.every((d) => d.gone)
+          ? "terminamos o seu pedido. O arquivo ficou disponível por 30 dias e já foi apagado."
+          : "terminamos o seu pedido. É só baixar ao lado. O arquivo fica disponível por 30 dias.",
     };
   }
   if (!hasSignedForm) {
@@ -463,7 +466,9 @@ function buildHistory(
     log.push({
       at: doc.createdAt,
       title: "Documento entregue.",
-      sub: "Fica disponível por 30 dias nesta página.",
+      sub: doc.gone
+        ? "Apagado 30 dias depois da conclusão do pedido."
+        : "Fica disponível por 30 dias nesta página.",
       tone: "green",
     });
   }
@@ -1369,8 +1374,8 @@ function CalmCard() {
       <div className="h-px bg-brand-border" />
       <p className="text-sm leading-relaxed text-brand-muted">
         Quando terminarmos, o documento aparece aqui e fica disponível por{" "}
-        <strong className="text-brand-text">30 dias</strong>. Se precisarmos de
-        algo, avisamos nesta mesma página.
+        <strong className="text-brand-text">30 dias</strong> depois da
+        conclusão. Se precisarmos de algo, avisamos nesta mesma página.
       </p>
     </div>
   );
@@ -1409,19 +1414,26 @@ function DoneCard({
               {doc.displayName}
             </div>
             <div className="text-[12.5px] text-brand-muted">
-              disponível até{" "}
-              {formatCalendarDate(addCalendarDays(doc.createdAt, 30))}
+              {doc.gone
+                ? "apagado 30 dias depois da conclusão do pedido"
+                : `disponível até ${formatCalendarDate(
+                    // The server's date (30 days after the closing) once the
+                    // request is closed; before that, the earliest it can be.
+                    result.filesUntil ?? addCalendarDays(doc.createdAt, 30),
+                  )}`}
             </div>
           </div>
           <input type="hidden" name="protocolNumber" value={protocolNumber} />
           <input type="hidden" name="accessKey" value={accessKey} />
           <input type="hidden" name="attachmentId" value={doc.id} />
-          <button
-            type="submit"
-            className="btn btn-primary min-h-11 px-4 py-2.5 text-sm"
-          >
-            Baixar
-          </button>
+          {!doc.gone && (
+            <button
+              type="submit"
+              className="btn btn-primary min-h-11 px-4 py-2.5 text-sm"
+            >
+              Baixar
+            </button>
+          )}
         </form>
       ))}
     </div>

@@ -1552,6 +1552,8 @@ function RequestDetail({ result }: { result: ServiceRequestDetail }) {
                         </div>
                         <div className="text-[11px] text-brand-faint">
                           recebido em {formatDate(doc.createdAt)}
+                          {doc.gone &&
+                            " · apagado 30 dias depois da conclusão do pedido"}
                         </div>
                       </div>
                       <input
@@ -1565,17 +1567,30 @@ function RequestDetail({ result }: { result: ServiceRequestDetail }) {
                         value={result.accessKey}
                       />
                       <input type="hidden" name="attachmentId" value={doc.id} />
-                      <button
-                        type="submit"
-                        className="btn btn-ghost btn-sm shrink-0"
-                      >
-                        Baixar
-                      </button>
+                      {!doc.gone && (
+                        <button
+                          type="submit"
+                          className="btn btn-ghost btn-sm shrink-0"
+                        >
+                          Baixar
+                        </button>
+                      )}
                     </form>
                   ))}
-                  <p className="text-[11px] text-brand-faint">
-                    Disponível por <strong>30 dias</strong>.
-                  </p>
+                  {result.filesUntil ? (
+                    <p className="text-[11px] text-brand-faint">
+                      Disponível até{" "}
+                      <strong>{formatCalendarDate(result.filesUntil)}</strong>.
+                      Baixe e guarde uma cópia.
+                    </p>
+                  ) : (
+                    !result.deliveredDocuments.every((d) => d.gone) && (
+                      <p className="text-[11px] text-brand-faint">
+                        Disponível por <strong>30 dias</strong> depois da
+                        conclusão do pedido.
+                      </p>
+                    )
+                  )}
                 </div>
               ) : (
                 <div className="mt-2.5 flex items-start gap-2.5">
@@ -1586,7 +1601,7 @@ function RequestDetail({ result }: { result: ServiceRequestDetail }) {
                   <p className="text-[12px] leading-relaxed text-brand-muted">
                     Nada por enquanto. Quando a serventia concluir, o arquivo
                     aparece aqui e avisamos pelo seu contato. Fica disponível
-                    por <strong>30 dias</strong>.
+                    por <strong>30 dias</strong> depois da conclusão do pedido.
                   </p>
                 </div>
               )}

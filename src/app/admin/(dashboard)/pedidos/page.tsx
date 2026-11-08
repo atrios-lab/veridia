@@ -20,6 +20,7 @@ import {
   countByStatus,
   countServiceRequests,
   listServiceRequests,
+  purgeExpiredRequestFiles,
 } from "@/lib/service-request.ts";
 import { getSession } from "@/lib/session.ts";
 import { getTenant, OFFICE_TIME_ZONE, today } from "@/lib/tenant.ts";
@@ -63,6 +64,9 @@ export default async function ServiceRequestQueuePage({
   // Read once for the whole queue: every row's term is measured against the
   // same day, and a clock read per row could straddle midnight.
   const todayIso = today();
+  // Files 30 days past the closing leave storage as the queue opens (see
+  // purgeExpiredRequestFiles): before the list is read, for every kind.
+  await purgeExpiredRequestFiles(tenant.slug, todayIso);
   const query = queueSearchParams(await searchParams, tenant.attributions);
   const tab = queueTab(query.tab);
   const closed = query.tab === CLOSED_TAB;
