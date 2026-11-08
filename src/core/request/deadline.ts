@@ -38,7 +38,7 @@ const MAX_SCAN_DAYS = 3000;
 export function deadlineDate(
   startedOn: IsoDate,
   days: number,
-  holidays: OfficeHolidays = [],
+  holidays: OfficeHolidays = {},
 ): IsoDate {
   let cursor = startedOn;
   let counted = 0;
@@ -56,7 +56,7 @@ export function deadlineDate(
 export function businessDaysBetween(
   from: IsoDate,
   to: IsoDate,
-  holidays: OfficeHolidays = [],
+  holidays: OfficeHolidays = {},
 ): number {
   if (to <= from) return 0;
   let cursor = from;
@@ -76,7 +76,7 @@ export function businessDaysBetween(
 export function dayOfDeadline(
   startedOn: IsoDate,
   today: IsoDate,
-  holidays: OfficeHolidays = [],
+  holidays: OfficeHolidays = {},
 ): number {
   return businessDaysBetween(startedOn, today, holidays);
 }
@@ -156,7 +156,7 @@ export function resumeDeadline(
   deadline: Deadline,
   today: IsoDate,
   hasLegalTerm: boolean,
-  holidays: OfficeHolidays = [],
+  holidays: OfficeHolidays = {},
 ): Deadline {
   const { pausedOn, ...running } = deadline;
   if (!pausedOn) return running;

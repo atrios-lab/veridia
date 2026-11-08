@@ -7,6 +7,7 @@ import {
   generateCancelToken,
   hashCancelToken,
 } from "@/core/scheduling/appointment.ts";
+import { officeHolidays } from "@/core/scheduling/calendar.ts";
 import { isSlotFree } from "@/core/scheduling/slots.ts";
 import {
   bookAppointment,
@@ -130,7 +131,7 @@ export async function reserveDeskAppointment(
   try {
     const config = {
       ...(await getAgendaConfig(tenant.slug)),
-      holidays: tenant.customHolidays,
+      holidays: officeHolidays(tenant),
     };
     const service = config.services.find((item) => item.id === serviceId);
     if (!service || !config.modes.includes(mode)) {

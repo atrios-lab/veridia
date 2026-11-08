@@ -20,7 +20,7 @@ import {
 } from "@/core/request/form.ts";
 import { ALTERNATE_DOCUMENT_LABELS } from "@/core/request/kinds.ts";
 import { formatCents, parseCentsInput } from "@/core/request/money.ts";
-import { formatDate } from "@/core/scheduling/calendar.ts";
+import { formatDate, officeHolidays } from "@/core/scheduling/calendar.ts";
 import { closeConversation } from "@/lib/chat.ts";
 import { sendAccessKey } from "@/lib/email/service-request.ts";
 import {
@@ -235,7 +235,7 @@ export async function createManualServiceRequest(
       // Same as the online filing: the act's legal term counted from today,
       // since a request just filed carries no term of its own.
       deadlineLabel: formatDate(
-        deadlineDate(today(), deadlineDays, tenant.customHolidays),
+        deadlineDate(today(), deadlineDays, officeHolidays(tenant)),
       ),
       hasExemption: Boolean(exemption),
     };

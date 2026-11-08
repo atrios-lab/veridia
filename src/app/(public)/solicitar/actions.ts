@@ -29,7 +29,7 @@ import {
 import { readExemption } from "@/core/request/kinds.ts";
 import { formatProtocolNumber } from "@/core/request/protocol.ts";
 import { signatureCaveatFor } from "@/core/request/requerimento.ts";
-import { formatDate } from "@/core/scheduling/calendar.ts";
+import { formatDate, officeHolidays } from "@/core/scheduling/calendar.ts";
 import { isSectionEnabled } from "@/core/tenant/gating.ts";
 import { officeYear } from "@/core/time/office-time.ts";
 import { clientIp } from "@/lib/client-ip.ts";
@@ -123,7 +123,7 @@ export async function submitServiceRequest(
         deadlineDate(
           today(),
           act.legalDeadlineDays ?? tenant.requestDeadlineDays,
-          tenant.customHolidays,
+          officeHolidays(tenant),
         ),
       ),
       hasExemption: false,
@@ -287,7 +287,7 @@ export async function submitServiceRequest(
       // just filed carries no term of its own yet. Where the law fixes none,
       // the office's default stands in.
       deadlineLabel: formatDate(
-        deadlineDate(today(), deadlineDays, tenant.customHolidays),
+        deadlineDate(today(), deadlineDays, officeHolidays(tenant)),
       ),
       hasExemption: Boolean(exemption),
       signatureCaveat: signatureCaveatFor(act),

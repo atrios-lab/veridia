@@ -14,7 +14,11 @@ import {
   readActVariant,
   statusLabel,
 } from "@/core/request/kinds.ts";
-import { formatDate, toIsoDate } from "@/core/scheduling/calendar.ts";
+import {
+  formatDate,
+  officeHolidays,
+  toIsoDate,
+} from "@/core/scheduling/calendar.ts";
 import type { Attribution } from "@/core/tenant/schema.ts";
 import {
   countByStatus,
@@ -119,7 +123,12 @@ export default async function ServiceRequestQueuePage({
     };
     return {
       row,
-      urgency: deadlineUrgency(open, deadline, todayIso, tenant.customHolidays),
+      urgency: deadlineUrgency(
+        open,
+        deadline,
+        todayIso,
+        officeHolidays(tenant),
+      ),
       createdAt: request.createdAt,
     };
   }
@@ -173,7 +182,7 @@ export default async function ServiceRequestQueuePage({
             rows={rows}
             closed={closed}
             today={todayIso}
-            holidays={tenant.customHolidays}
+            holidays={officeHolidays(tenant)}
             hasFilters={hasFilters}
           />
           <QueuePagination query={current} total={total} />

@@ -103,7 +103,7 @@ export function counterStatus(
   const minutes = minutesInZone(now, timeZone);
   const spans = counterIntervals(tenant.counterHours);
 
-  if (isBusinessDay(today, tenant.customHolidays)) {
+  if (isBusinessDay(today, tenant)) {
     const current = spans.findIndex(([s, e]) => minutes >= s && minutes < e);
     if (current >= 0) {
       return {
@@ -122,14 +122,8 @@ export function counterStatus(
     }
   }
 
-  const [nextDay] = nextBusinessDays(
-    addDays(today, 1),
-    1,
-    tenant.customHolidays,
-  );
-  const holiday = isWeekend(today)
-    ? undefined
-    : holidayName(today, tenant.customHolidays);
+  const [nextDay] = nextBusinessDays(addDays(today, 1), 1, tenant);
+  const holiday = isWeekend(today) ? undefined : holidayName(today, tenant);
   return {
     open: false,
     opensAt: { day: nextDay, ...toClock(spans[0][0]) },
@@ -231,10 +225,6 @@ export function nextChatOpening(
   const status = counterStatus(tenant, now, timeZone);
   if (!status.open) return status.opensAt;
   const today = toIsoDate(now, timeZone);
-  const [nextDay] = nextBusinessDays(
-    addDays(today, 1),
-    1,
-    tenant.customHolidays,
-  );
+  const [nextDay] = nextBusinessDays(addDays(today, 1), 1, tenant);
   return { day: nextDay, ...toClock(tenant.counterHours.startHour * 60) };
 }

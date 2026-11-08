@@ -273,15 +273,20 @@ export type OfficeHolidaysState =
     };
 
 /**
- * The office's own days off, saved whole: the list the form submits replaces
+ * The office's calendar, saved whole: its own days off and the law days it
+ * does not keep. Switching a law day off removes nothing from anywhere: it
+ * is one id on this list, and switching it back on takes it off the list.
+ * Saved whole: the list the form submits replaces
  * the stored one. Same discipline as the other settings: permission checked
  * here, the schema is the boundary, written straight to `published` because
  * a day off is operational (it closes the chat and stops the terms), and
  * every save leaves an audit line.
  *
- * The list travels as one JSON field: rows are added and removed on the
- * client, and a variable number of rows in flat form names is a parser to
- * get wrong. Anything that is not the expected shape fails the schema.
+ * Both lists (the office's own days and the law days it switched off)
+ * travel as one JSON field: rows are added and removed on the client, and a
+ * variable number of rows in flat form names is a parser to get wrong.
+ * Anything that is not the expected shape fails the schema, including a law
+ * day id the calendar does not know.
  */
 export async function saveOfficeHolidays(
   _previous: OfficeHolidaysState,
@@ -303,7 +308,7 @@ export async function saveOfficeHolidays(
   } catch {
     submitted = null;
   }
-  const parsed = OfficeHolidaysSchema.safeParse({ customHolidays: submitted });
+  const parsed = OfficeHolidaysSchema.safeParse(submitted);
   if (!parsed.success) {
     const fieldErrors: Record<string, string> = {};
     let general: string | undefined;

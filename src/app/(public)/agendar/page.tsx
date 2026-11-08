@@ -1,4 +1,5 @@
 import { hasGrid } from "@/core/scheduling/agenda.ts";
+import { officeHolidays } from "@/core/scheduling/calendar.ts";
 import {
   firstFreeSlot,
   freeSlots,
@@ -29,7 +30,7 @@ export default async function SchedulingPage({
 
   const config = {
     ...(await getAgendaConfig(tenant.slug)),
-    holidays: tenant.customHolidays,
+    holidays: officeHolidays(tenant),
   };
   const now = officeNow();
   const days = offeredDays(config, now.date);

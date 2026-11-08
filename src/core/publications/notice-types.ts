@@ -221,7 +221,7 @@ export function publicationSchedule(
     noticeType: string | null;
     publishAt: IsoDate | null;
   },
-  holidays: OfficeHolidays = [],
+  holidays: OfficeHolidays = {},
 ): NoticeSchedule | undefined {
   const type = noticeTypeOf(pub.noticeType);
   if (!type || !pub.publishAt) return undefined;
@@ -251,7 +251,7 @@ export function publicationHeadline(
     publishAt: IsoDate | null;
   },
   today: IsoDate,
-  holidays: OfficeHolidays = [],
+  holidays: OfficeHolidays = {},
 ): PublicationHeadline {
   const kindLabel =
     PUBLICATION_KIND_LABELS[pub.kind as PublicationKind] ?? "Publicação";

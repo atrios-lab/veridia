@@ -30,7 +30,11 @@ import {
   PUBLICATION_KINDS,
   type PublicationKind,
 } from "@/core/publications/publication.ts";
-import { formatDate, toIsoDate } from "@/core/scheduling/calendar.ts";
+import {
+  formatDate,
+  officeHolidays,
+  toIsoDate,
+} from "@/core/scheduling/calendar.ts";
 import type { NoticeSector } from "@/core/tenant/gating.ts";
 import { NOTICE_SECTOR_META, noticeSectors } from "@/core/tenant/gating.ts";
 import type { Tenant } from "@/core/tenant/schema.ts";
@@ -124,7 +128,7 @@ export function PublicationForm({
   // changes, unless the operator already typed one of their own.
   function suggestExpiry(type: NoticeTypeKey | undefined, from: string) {
     if (!from) return;
-    const suggestion = defaultExpiry(type, from, tenant.customHolidays);
+    const suggestion = defaultExpiry(type, from, officeHolidays(tenant));
     if (suggestion && (!expireAt || expirySuggested)) {
       setExpireAt(suggestion);
       setExpirySuggested(true);
@@ -169,7 +173,7 @@ export function PublicationForm({
   const rule = effectiveType ? NOTICE_TYPES[effectiveType] : undefined;
   const schedule =
     rule && publishAt
-      ? noticeSchedule(rule, publishAt, tenant.customHolidays)
+      ? noticeSchedule(rule, publishAt, officeHolidays(tenant))
       : null;
   const todayIso = clientToday();
 
@@ -535,7 +539,7 @@ export function PublicationForm({
           noticeType={effectiveType ?? null}
           publishAt={publishAt || null}
           today={todayIso}
-          holidays={tenant.customHolidays}
+          holidays={officeHolidays(tenant)}
           title={title}
           body={body}
         />
