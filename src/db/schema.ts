@@ -149,6 +149,11 @@ export const serviceRequests = pgTable(
     // the citizen's own submission: only the operator, working the request,
     // knows what band or table applies.
     amountCents: integer("amount_cents"),
+    // When the protocol last moved into a closed andamento of its kind (see
+    // `TERMINAL_STATUSES`): null while open, cleared when reopened, kept when
+    // it moves between two closed ones. The protocol's files are kept 30
+    // days from here (`src/core/request/attachment-retention.ts`).
+    closedAt: timestamp("closed_at", { withTimezone: true }),
     createdAt: timestamp("created_at", { withTimezone: true })
       .notNull()
       .defaultNow(),
@@ -195,9 +200,14 @@ export const serviceRequestAttachments = pgTable(
     kind: text("kind").notNull().default("citizen"),
     storedName: text("stored_name").notNull(),
     displayName: text("display_name").notNull(),
-    path: text("path").notNull(),
+    // Null once the file is deleted by the 30-day rule; the row stays as
+    // the record (name, kind, size, when it came, `purgedAt`).
+    path: text("path"),
     mimeType: text("mime_type").notNull(),
     sizeBytes: integer("size_bytes").notNull(),
+    // When the platform deleted the file, 30 days after the protocol closed
+    // (see `src/core/request/attachment-retention.ts`).
+    purgedAt: timestamp("purged_at", { withTimezone: true }),
     // Set only on the form the office attaches to a requirement, for the
     // citizen to print and present. Such a file belongs to the requirement,
     // not to the request's delivery list: it never shows up in "Entrega ao
@@ -209,9 +219,9 @@ export const serviceRequestAttachments = pgTable(
     ),
     // Set on a file sent inside a message of the requirement's conversation.
     // `requestId` stays filled alongside it: the owner is still the request,
-    // which is how a future purge finds the file to delete by walking the
-    // request. Without that, deleting the request would leave the bytes in
-    // storage with nobody pointing at them.
+    // which is how the 30-day purge (`purgeExpiredRequestFiles`) finds the
+    // file to delete by walking the request. Without that, deleting the
+    // request would leave the bytes in storage with nobody pointing at them.
     requirementMessageId: uuid("requirement_message_id").references(
       (): AnyPgColumn => serviceRequestRequirementMessages.id,
       { onDelete: "cascade" },

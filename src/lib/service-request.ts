@@ -4,8 +4,11 @@ import {
   asc,
   desc,
   eq,
+  getTableColumns,
   ilike,
   inArray,
+  isNotNull,
+  lt,
   notInArray,
   or,
   sql,
@@ -18,6 +21,11 @@ import {
   verifyAccessKey,
 } from "@/core/request/access-key.ts";
 import {
+  REQUEST_FILE_RETENTION_DAYS,
+  type RequestFileStatus,
+  requestFileStatus,
+} from "@/core/request/attachment-retention.ts";
+import {
   type Deadline,
   effectiveDeadline,
   pauseReasons,
@@ -28,6 +36,7 @@ import type { RequestDataUpdate } from "@/core/request/edit.ts";
 import {
   type ExemptionDecisionOutcome,
   isOpenServiceRequestStatus,
+  isOpenStatus,
   isServiceRequestStatus,
   KIND_BY_PREFIX,
   KIND_PREFIXES,
@@ -64,7 +73,7 @@ import {
 import { recordAudit, recordAuditWith } from "./audit.ts";
 import { findPermanentBounceWith } from "./email/bounces.ts";
 import { OFFICE_TIME_ZONE } from "./office-config.ts";
-import type { StoredAttachment } from "./uploads.ts";
+import { deleteStoredFile, type StoredAttachment } from "./uploads.ts";
 
 export interface NewServiceRequest {
   applicantName: string;
@@ -165,7 +174,12 @@ export async function createRecordWith(
           parameterValue: input.parameterValue ?? null,
           accessKeyHash: input.accessKeyHash ?? null,
           details: input.details ?? {},
-          ...(input.status ? { status: input.status } : {}),
+          ...(input.status
+            ? {
+                status: input.status,
+                closedAt: isOpenStatus(kind, input.status) ? null : new Date(),
+              }
+            : {}),
         })
         .returning({ id: serviceRequests.id });
 
@@ -234,6 +248,7 @@ export async function respondToRecordWith(
       officeReply: reply,
       officeRepliedAt: new Date(),
       status,
+      closedAt: closedAtOnMove(kind, status),
       // The Postgres jsonb "remove key" operator: no need to read the row
       // back first just to drop one field and write the rest unchanged.
       details: sql`${serviceRequests.details} - 'draftReply'`,
@@ -283,7 +298,11 @@ export async function updateRecordStatus(
 ): Promise<void> {
   await db
     .update(serviceRequests)
-    .set({ status, updatedAt: new Date() })
+    .set({
+      status,
+      closedAt: closedAtOnMove(kind, status),
+      updatedAt: new Date(),
+    })
     .where(
       and(
         eq(serviceRequests.tenantSlug, tenantSlug),
@@ -758,6 +777,7 @@ export async function updateRequestStatusWith(
     .update(serviceRequests)
     .set({
       status,
+      closedAt: closedAtOnMove("service-request", status),
       ...(requiresStatusReason(status) && { statusReason: reason ?? null }),
       // Merged into `details`, never assigned over it: the consents recorded
       // at filing live in the same column.
@@ -841,6 +861,7 @@ export async function answerSearchWith(
     .update(serviceRequests)
     .set({
       status: "done",
+      closedAt: closedAtOnMove("service-request", "done"),
       // Merged into `details`, never assigned over it, like the deadline.
       details: sql`${serviceRequests.details} || ${JSON.stringify({ searchAnswer })}::jsonb`,
       updatedAt: new Date(),
@@ -1183,7 +1204,7 @@ async function pendingRequirement(tenantSlug: string, requirementId: string) {
 /**
  * The citizen writes into a requirement, through the protocol consult. The
  * files ride along on the message but belong to the request as well
- * (`requestId` filled), so a future purge finds them by walking the request.
+ * (`requestId` filled), so the 30-day purge finds them by walking the request.
  *
  * Returns null when the requirement is not open, which the caller answers the
  * same way it answers a wrong key: without saying which it was.
@@ -1344,7 +1365,11 @@ export async function deleteRequirement(
     requirement.requestId,
     actorId,
   );
-  return { requestId: requirement.requestId, paths: files.map((f) => f.path) };
+  return {
+    requestId: requirement.requestId,
+    // A file already purged by the 30-day rule has nothing left to delete.
+    paths: files.flatMap((f) => (f.path ? [f.path] : [])),
+  };
 }
 
 /** The office records what the request is worth. Corrects freely once set, or clears it (null). */
@@ -1794,8 +1819,17 @@ export async function getAttachmentWith(
   attachmentId: string,
 ) {
   const [attachment] = await database
-    .select()
+    .select({
+      ...getTableColumns(serviceRequestAttachments),
+      // What the 30-day rule reads (`requestFileStatusOf`): every route that
+      // serves the file has to know whether it is still servable.
+      requestClosedAt: serviceRequests.closedAt,
+    })
     .from(serviceRequestAttachments)
+    .innerJoin(
+      serviceRequests,
+      eq(serviceRequests.id, serviceRequestAttachments.requestId),
+    )
     .where(
       and(
         eq(serviceRequestAttachments.tenantSlug, tenantSlug),
@@ -1814,6 +1848,136 @@ export async function getAttachment(
   attachmentId: string,
 ) {
   return getAttachmentWith(db, tenantSlug, requestId, attachmentId);
+}
+
+/**
+ * What `closed_at` becomes when a protocol moves to `status`: cleared when the
+ * andamento is open for its kind, kept when it was already closed (going from
+ * "Concluído" to "Arquivado" must not restart the 30 days its files have),
+ * set now otherwise. In SQL, so the "kept" reads the row being written and
+ * not a copy read earlier.
+ */
+function closedAtOnMove(kind: RequestKind, status: string) {
+  return isOpenStatus(kind, status)
+    ? null
+    : sql`coalesce(${serviceRequests.closedAt}, now())`;
+}
+
+/**
+ * Where one of a protocol's files stands today under the 30-day rule (see
+ * `src/core/request/attachment-retention.ts`). Every reader that serves or
+ * shows a file goes through here, so the routes refuse an expired file even
+ * before `purgeExpiredRequestFiles` has reached it.
+ */
+export function requestFileStatusOf(
+  attachment: {
+    path: string | null;
+    purgedAt: Date | null;
+    createdAt: Date;
+  },
+  request: { closedAt: Date | null },
+  today: IsoDate,
+): RequestFileStatus {
+  return requestFileStatus(
+    {
+      hasFile: Boolean(attachment.path),
+      purged: Boolean(attachment.purgedAt),
+      uploadedOn: toIsoDate(attachment.createdAt, OFFICE_TIME_ZONE),
+      closedOn: request.closedAt
+        ? toIsoDate(request.closedAt, OFFICE_TIME_ZONE)
+        : null,
+    },
+    today,
+  );
+}
+
+/**
+ * Deletes, from storage, every file of this office's protocols past its 30
+ * days after the closing, and clears its path on the row: name, kind, size
+ * and dates stay as the record. Run when the panel's queues open, the same
+ * "computed when read" stance the publications' files take (see
+ * `purgeExpiredAttachments` in publications.ts): no scheduled job to forget
+ * about, and the document routes already refuse an expired file before it
+ * is physically gone.
+ *
+ * Returns how many files it removed.
+ */
+export async function purgeExpiredRequestFilesWith(
+  database: Database,
+  tenantSlug: string,
+  today: IsoDate,
+): Promise<number> {
+  // A wide net in SQL, the rule decides: a file can only be expired if its
+  // protocol closed more than 30 days ago, and one extra day of margin keeps
+  // the office's time zone out of this comparison.
+  const cutoff = new Date(
+    Date.parse(`${today}T00:00:00Z`) -
+      (REQUEST_FILE_RETENTION_DAYS - 1) * 86_400_000,
+  );
+  const rows = await database
+    .select({
+      id: serviceRequestAttachments.id,
+      path: serviceRequestAttachments.path,
+      purgedAt: serviceRequestAttachments.purgedAt,
+      createdAt: serviceRequestAttachments.createdAt,
+      requestId: serviceRequests.id,
+      kind: serviceRequests.kind,
+      closedAt: serviceRequests.closedAt,
+    })
+    .from(serviceRequestAttachments)
+    .innerJoin(
+      serviceRequests,
+      eq(serviceRequests.id, serviceRequestAttachments.requestId),
+    )
+    .where(
+      and(
+        eq(serviceRequestAttachments.tenantSlug, tenantSlug),
+        isNotNull(serviceRequestAttachments.path),
+        isNotNull(serviceRequests.closedAt),
+        lt(serviceRequests.closedAt, cutoff),
+      ),
+    );
+
+  let purged = 0;
+  for (const row of rows) {
+    if (requestFileStatusOf(row, row, today).kind !== "expired") continue;
+    // Row first: a row pointing at a deleted file would be a broken link; a
+    // file nobody points at is only a leftover. The `path IS NOT NULL` guard
+    // makes two panels opening at once delete and log it only once.
+    const [cleared] = await database
+      .update(serviceRequestAttachments)
+      .set({ path: null, purgedAt: new Date() })
+      .where(
+        and(
+          eq(serviceRequestAttachments.tenantSlug, tenantSlug),
+          eq(serviceRequestAttachments.id, row.id),
+          isNotNull(serviceRequestAttachments.path),
+        ),
+      )
+      .returning({ id: serviceRequestAttachments.id });
+    if (!cleared) continue;
+    if (row.path) await deleteStoredFile(row.path);
+    await recordAuditWith(database, {
+      tenantSlug,
+      // The platform did it, by the 30-day rule: no person to name.
+      actorId: null,
+      action: `${row.kind}.attachment-purge`,
+      // Keyed by the protocol, not by the file, so the entry shows up in the
+      // protocol's own history.
+      targetType: row.kind,
+      targetId: row.requestId,
+    });
+    purged++;
+  }
+  return purged;
+}
+
+/** The production singleton, for callers that do not test against it. */
+export async function purgeExpiredRequestFiles(
+  tenantSlug: string,
+  today: IsoDate,
+): Promise<number> {
+  return purgeExpiredRequestFilesWith(db, tenantSlug, today);
 }
 
 export class AttachmentInUseError extends Error {}

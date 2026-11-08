@@ -225,6 +225,13 @@
       "when": 1794109906981,
       "tag": "0031_prazo_do_anexo_da_publicacao",
       "breakpoints": true
+    },
+    {
+      "idx": 32,
+      "version": "7",
+      "when": 1794111288357,
+      "tag": "0032_prazo_dos_arquivos_do_protocolo",
+      "breakpoints": true
     }
   ]
 }

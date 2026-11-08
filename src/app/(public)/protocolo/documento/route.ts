@@ -1,5 +1,14 @@
 import { readFile } from "node:fs/promises";
-import { findByProtocolWithKey, getAttachment } from "@/lib/service-request.ts";
+import {
+  REQUEST_FILE_GONE,
+  requestFileServable,
+} from "@/core/request/attachment-retention.ts";
+import { today } from "@/lib/office-config.ts";
+import {
+  findByProtocolWithKey,
+  getAttachment,
+  requestFileStatusOf,
+} from "@/lib/service-request.ts";
 import { getTenant } from "@/lib/tenant.ts";
 
 export const runtime = "nodejs";
@@ -30,10 +39,24 @@ export async function POST(request: Request): Promise<Response> {
   // isn't a security boundary for this route.
   const attachment = await getAttachment(tenant.slug, stored.id, attachmentId);
   if (!attachment) return new Response("Não encontrado", { status: 404 });
+  // The 30 days after the closing are over: refused even before the purge
+  // (run when the panel's queues open) has deleted the bytes.
+  const status = requestFileStatusOf(
+    attachment,
+    { closedAt: attachment.requestClosedAt },
+    today(),
+  );
+  if (!attachment.path || !requestFileServable(status)) {
+    return new Response(REQUEST_FILE_GONE, {
+      status: 410,
+      headers: { "Content-Type": "text/plain; charset=utf-8" },
+    });
+  }
+  const path = attachment.path;
 
-  const bytes = attachment.path.startsWith("http")
-    ? Buffer.from(await (await fetch(attachment.path)).arrayBuffer())
-    : await readFile(attachment.path);
+  const bytes = path.startsWith("http")
+    ? Buffer.from(await (await fetch(path)).arrayBuffer())
+    : await readFile(path);
 
   return new Response(new Uint8Array(bytes), {
     headers: {
