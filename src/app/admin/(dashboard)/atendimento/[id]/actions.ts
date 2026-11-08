@@ -7,6 +7,8 @@ import { messageBodySchema } from "@/core/chat/message.ts";
 import {
   ChatTransferError,
   closeConversation,
+  getConversation,
+  nudgeConversation,
   sendMessage,
   transferConversation,
 } from "@/lib/chat.ts";
@@ -56,6 +58,35 @@ export async function sendStaffMessageAction(
     });
   } catch (error) {
     console.error("atendimento.send-message", error);
+    return { status: "error", message: GENERIC_ERROR };
+  }
+  revalidateConversation(conversationId);
+  return { status: "success" };
+}
+
+/**
+ * "Chamar atenção" from the office: no limit, the office's own conversation
+ * to keep moving. The citizen's screen shakes and rings when it sees it.
+ */
+export async function nudgeCitizenAction(
+  conversationId: string,
+): Promise<ActionState> {
+  const session = await authorize();
+  if (!session) return { status: "error", message: NO_PERMISSION };
+  const tenant = await getTenant();
+  try {
+    const conversation = await getConversation(tenant.slug, conversationId);
+    if (!conversation) return { status: "error", message: GENERIC_ERROR };
+    const outcome = await nudgeConversation(
+      tenant.slug,
+      conversation,
+      "office",
+    );
+    if (!outcome.ok) {
+      return { status: "error", message: "Esta conversa já foi encerrada." };
+    }
+  } catch (error) {
+    console.error("atendimento.nudge", error);
     return { status: "error", message: GENERIC_ERROR };
   }
   revalidateConversation(conversationId);

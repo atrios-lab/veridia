@@ -7,10 +7,12 @@ import {
   CHAT_TOKEN_COOKIE,
   type ChatConversation,
   type ChatMessage,
+  citizenNudgeAvailableAt,
   closeConversation,
   getConversation,
   getConversationForCitizen,
   listMessages,
+  nudgeConversation,
   queuePosition,
   sendMessage,
   submitRating,
@@ -127,6 +129,14 @@ export async function GET(
         auth.conversation.status === "waiting"
           ? await queuePosition(tenant.slug, conversationId)
           : undefined,
+      // When the citizen's "Chamar atenção" frees up; the widget greys the
+      // button out until then. The server checks again on the press.
+      nudgeAvailableAt:
+        auth.forCitizen && auth.conversation.status !== "closed"
+          ? (
+              await citizenNudgeAvailableAt(tenant.slug, auth.conversation)
+            ).toISOString()
+          : undefined,
       needsInactivityWarning: needsInactivityWarning(
         {
           status: auth.conversation.status as "waiting" | "active" | "closed",
@@ -187,6 +197,29 @@ export async function POST(
   // conversation ends with no one assigned, or with whoever was already
   // handling it: closeConversation does not care which, it only needs to
   // know it was the citizen who ended it.
+  // "Chamar atenção": the citizen's is held to its ten minutes on the
+  // server, whatever the button showed; the office's is not limited.
+  if (intent === "nudge") {
+    const outcome = await nudgeConversation(
+      tenant.slug,
+      auth.conversation,
+      auth.forCitizen ? "citizen" : "office",
+    );
+    if (!outcome.ok) {
+      return Response.json(
+        {
+          error: outcome.reason,
+          nudgeAvailableAt: outcome.availableAt?.toISOString(),
+        },
+        { status: outcome.reason === "too-soon" ? 429 : 409 },
+      );
+    }
+    return Response.json({
+      ok: true,
+      nudgeAvailableAt: outcome.availableAt?.toISOString(),
+    });
+  }
+
   if (intent === "close") {
     if (!auth.forCitizen) {
       return Response.json({ error: "invalid" }, { status: 400 });

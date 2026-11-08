@@ -10,6 +10,7 @@ import {
   REPEAT_OPTIONS,
   SOUND_IDS,
   SOUNDS,
+  soundForAlerts,
   soundGroups,
   volumeGain,
   waitingLabel,
@@ -175,4 +176,56 @@ test("the citizen hears the office's replies, not their own or the system's", ()
   assert.equal(newStaffReplies(fresh, false), 2);
   assert.equal(newStaffReplies(fresh, true), 0);
   assert.equal(newStaffReplies([{ authorType: "citizen" }], false), 0);
+});
+
+test("a citizen's call rings as a nudge, in my conversation or in the queue", () => {
+  const mine = (nudge: string | null): AlertSnapshot => ({
+    ...EMPTY,
+    waiting: [{ ...ROSA, id: "w1", lastNudgeAt: nudge }],
+    mine: [
+      {
+        id: "c1",
+        citizenName: "Rosa",
+        lastCitizenMessageAt: null,
+        lastNudgeAt: nudge,
+      },
+    ],
+  });
+  const alerts = diffAlerts(mine(null), mine("2026-11-08T12:00:00.000Z"));
+  assert.deepEqual(
+    alerts.map((a) => [a.kind, a.href]),
+    [
+      ["nudge", "/admin/atendimento"],
+      ["nudge", "/admin/atendimento/c1"],
+    ],
+  );
+  assert.deepEqual(
+    diffAlerts(
+      mine("2026-11-08T12:00:00.000Z"),
+      mine("2026-11-08T12:00:00.000Z"),
+    ),
+    [],
+  );
+});
+
+test("each alert rings its own tone", () => {
+  const prefs = { sound: "sino", messageSound: "bolha" } as const;
+  assert.equal(soundForAlerts([{ kind: "new-message" }], prefs), "bolha");
+  assert.equal(soundForAlerts([{ kind: "new-waiting" }], prefs), "sino");
+  assert.equal(
+    soundForAlerts([{ kind: "new-message" }, { kind: "assigned" }], prefs),
+    "sino",
+  );
+  assert.equal(soundForAlerts([{ kind: "nudge" }], prefs), "chamar-atencao");
+  assert.equal(
+    soundForAlerts([{ kind: "nudge" }], {
+      sound: "none",
+      messageSound: "none",
+    }),
+    "none",
+  );
+});
+
+test("the attendant's new-message tone defaults to the citizen's", () => {
+  assert.equal(DEFAULT_ALERT_PREFS.messageSound, "bolha");
 });

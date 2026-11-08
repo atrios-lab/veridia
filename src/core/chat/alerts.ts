@@ -10,15 +10,23 @@
  */
 import { z } from "zod";
 
-/** One conversation waiting in the queue, as the alert names it. */
-export type WaitingItem = { id: string; citizenName: string; subject: string };
+/** One conversation waiting in the queue, as the alert names it, with the
+ * citizen's latest "Chamar atenção" (ISO), if any. */
+export type WaitingItem = {
+  id: string;
+  citizenName: string;
+  subject: string;
+  lastNudgeAt?: string | null;
+};
 
 /** One conversation the attendant is attending, with the citizen's latest
- * message time (ISO), or null before the citizen has written. */
+ * message time (ISO), or null before the citizen has written, and their
+ * latest "Chamar atenção". */
 export type MineItem = {
   id: string;
   citizenName: string;
   lastCitizenMessageAt: string | null;
+  lastNudgeAt?: string | null;
 };
 
 /** What the watcher sees on each poll. `status` is the attendant's own
@@ -30,7 +38,7 @@ export type AlertSnapshot = {
 };
 
 export type ChatAlert = {
-  kind: "new-waiting" | "assigned" | "new-message";
+  kind: "new-waiting" | "assigned" | "new-message" | "nudge";
   conversationId: string;
   title: string;
   body: string;
@@ -61,6 +69,8 @@ export function listensToQueue(status: string): boolean {
  *   not need to be told.
  * - new-message: the citizen wrote again in a conversation that was already
  *   mine.
+ * - nudge: the citizen pressed "Chamar atenção", in a conversation of mine,
+ *   or in one still waiting in the queue (for whoever listens to it).
  */
 export function diffAlerts(
   previous: AlertSnapshot | undefined,
@@ -69,10 +79,25 @@ export function diffAlerts(
   if (!previous) return [];
   const alerts: ChatAlert[] = [];
 
+  const nudged = (now?: string | null, before?: string | null) =>
+    Boolean(now && (!before || now > before));
+
   if (listensToQueue(next.status)) {
-    const before = new Set(previous.waiting.map((c) => c.id));
+    const before = new Map(previous.waiting.map((c) => [c.id, c]));
     for (const c of next.waiting) {
-      if (before.has(c.id)) continue;
+      const old = before.get(c.id);
+      if (old) {
+        if (nudged(c.lastNudgeAt, old.lastNudgeAt)) {
+          alerts.push({
+            kind: "nudge",
+            conversationId: c.id,
+            title: "Chamou a atenção na fila!",
+            body: `${c.citizenName} · ${c.subject}`,
+            href: QUEUE_HREF,
+          });
+        }
+        continue;
+      }
       alerts.push({
         kind: "new-waiting",
         conversationId: c.id,
@@ -97,6 +122,15 @@ export function diffAlerts(
         href: conversationHref(c.id),
       });
       continue;
+    }
+    if (nudged(c.lastNudgeAt, old.lastNudgeAt)) {
+      alerts.push({
+        kind: "nudge",
+        conversationId: c.id,
+        title: "Chamou sua atenção!",
+        body: c.citizenName,
+        href: conversationHref(c.id),
+      });
     }
     if (
       c.lastCitizenMessageAt &&
@@ -301,6 +335,22 @@ export const SOUNDS = {
       wave: "square" as const,
     })),
   },
+  "chamar-atencao": {
+    label: "Chamar atenção",
+    group: URGENT,
+    notes: [
+      ...Array.from(
+        { length: 6 },
+        (_, i): Note => ({
+          frequency: i % 2 === 0 ? 220 : 330,
+          start: i * 0.07,
+          duration: 0.07,
+          wave: "sawtooth",
+        }),
+      ),
+      { frequency: 880, start: 0.45, duration: 0.25, wave: "square" },
+    ],
+  },
   sonar: {
     label: "Sonar",
     group: URGENT,
@@ -359,6 +409,12 @@ export const AlertPrefsSchema = z.object({
   // way the messengers of the 2000s called for attention. Behind
   // prefers-reduced-motion like every movement in the panel.
   shake: z.boolean().catch(true),
+  // The tone for a new message from the citizen in a conversation of mine,
+  // apart from the queue's: by default the same "Bolha de chat" the citizen
+  // hears for the office's replies, so both sides of the chat sound alike.
+  messageSound: z
+    .custom<SoundChoice>(isSoundChoice)
+    .catch("bolha" as SoundChoice),
 });
 export type AlertPrefs = z.infer<typeof AlertPrefsSchema>;
 
@@ -399,3 +455,29 @@ export function newStaffReplies(
  * enough for a public page, loud enough to be heard from another tab. */
 export const CITIZEN_REPLY_SOUND: SoundId = "bolha";
 export const CITIZEN_REPLY_VOLUME = 80;
+
+/**
+ * Which tone an alert rings: a new message from the citizen has its own
+ * (`messageSound`); the queue and a transfer ring the main one (`sound`).
+ * When one poll brings both, the main one wins: someone waiting in the
+ * queue is the more urgent call.
+ */
+export function soundForAlerts(
+  alerts: readonly Pick<ChatAlert, "kind">[],
+  prefs: Pick<AlertPrefs, "sound" | "messageSound">,
+): SoundChoice {
+  // A citizen's "Chamar atenção" has its own tone, so it is told apart from
+  // everything else at once; silenced only when both of the attendant's
+  // sounds are off.
+  if (alerts.some((alert) => alert.kind === "nudge")) {
+    return prefs.sound === "none" && prefs.messageSound === "none"
+      ? "none"
+      : NUDGE_SOUND;
+  }
+  return alerts.every((alert) => alert.kind === "new-message")
+    ? prefs.messageSound
+    : prefs.sound;
+}
+
+/** The tone of a citizen's "Chamar atenção". */
+export const NUDGE_SOUND: SoundId = "chamar-atencao";

@@ -9,9 +9,12 @@ import {
 } from "react";
 import { CANNED_RESPONSES } from "@/core/chat/canned-responses.ts";
 import type { Colleague } from "@/lib/chat.ts";
+import { shakeElement } from "../../../../../_components/shake.ts";
+import { CHAT_SHAKE_TARGET_ID } from "../../../../_components/chat-alerts.tsx";
 import { AdminIcon } from "../../../../_components/icon.tsx";
 import {
   type ActionState,
+  nudgeCitizenAction,
   registerNoteAction,
   sendStaffMessageAction,
 } from "../actions.ts";
@@ -107,9 +110,41 @@ export function ConversationConsole({
 
   const closed = status === "closed";
 
+  // "Chamar atenção" for the citizen, as many times as the office wants.
+  // The attendant's own screen shakes too, the way the messenger did for
+  // whoever sent it: the press is felt, not just clicked.
+  const [nudging, setNudging] = useState(false);
+  const [nudgeError, setNudgeError] = useState<string | null>(null);
+  async function nudge() {
+    setNudging(true);
+    setNudgeError(null);
+    const result = await nudgeCitizenAction(conversationId);
+    setNudging(false);
+    if (result.status === "error") {
+      setNudgeError(result.message);
+      return;
+    }
+    shakeElement(document.getElementById(CHAT_SHAKE_TARGET_ID));
+    poll();
+  }
+
   return (
     <div className="flex min-h-0 flex-1 flex-col">
-      <div className="flex items-center gap-2.5 border-b border-admin-border bg-admin-card px-5.5 py-3">
+      <div className="flex flex-wrap items-center gap-2.5 border-b border-admin-border bg-admin-card px-5.5 py-3">
+        <button
+          type="button"
+          onClick={() => void nudge()}
+          disabled={closed || nudging}
+          className="btn btn-admin-primary btn-sm"
+          title="Faz a tela do cidadão tremer e tocar"
+        >
+          {nudging ? "Chamando…" : "Chamar atenção"}
+        </button>
+        {nudgeError && (
+          <span className="text-[12px] font-semibold text-admin-error-text">
+            {nudgeError}
+          </span>
+        )}
         <button
           type="button"
           onClick={() => setShowTransfer((v) => !v)}
