@@ -1,6 +1,6 @@
 import { getSessionCookie } from "better-auth/cookies";
 import { type NextRequest, NextResponse } from "next/server";
-import { buildCsp } from "@/lib/csp.ts";
+import { buildCsp, isFramablePdfPath } from "@/lib/csp.ts";
 
 const LOGIN_PATH = "/admin/login";
 
@@ -65,7 +65,15 @@ const blobPublicHost = process.env.BLOB_PUBLIC_HOST;
 export function middleware(request: NextRequest) {
   const pathname = request.nextUrl.pathname;
   const nonce = Buffer.from(crypto.randomUUID()).toString("base64");
-  const csp = buildCsp({ nonce, isDev, blobPublicHost });
+  // The two public transparency PDFs open in a dialog on the transparency
+  // page itself, so they accept a frame from their own origin; next.config.ts
+  // relaxes X-Frame-Options for the same two paths. Nothing else does.
+  const csp = buildCsp({
+    nonce,
+    isDev,
+    blobPublicHost,
+    frameAncestors: isFramablePdfPath(pathname) ? "self" : "none",
+  });
 
   const requestHeaders = new Headers(request.headers);
   requestHeaders.set("x-pathname", pathname);

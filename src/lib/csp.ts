@@ -17,10 +17,36 @@ export interface CspInput {
    * served by Next itself, which is `'self'`.
    */
   blobPublicHost: string | undefined;
+  /**
+   * Who may show this response inside a frame. `'none'` everywhere except
+   * the two public transparency PDFs, which the transparency page shows in a
+   * dialog of its own (see `isFramablePdfPath`). Defaults to `'none'`, so a
+   * caller that forgets it gets the closed door, not the open one.
+   */
+  frameAncestors?: "none" | "self";
+}
+
+// Exactly one id segment after the prefix: "/transparencia/boletim/<id>" is
+// a PDF, "/transparencia/boletim/<id>/extra" or "/transparencia/documentos"
+// is not, and keeps the site-wide refusal.
+const FRAMABLE_PDF_PATH = /^\/transparencia\/(documento|boletim)\/[^/]+$/;
+
+/**
+ * Whether a path is one of the public transparency PDFs the transparency
+ * page may show in a frame of its own origin. Every other route stays
+ * unframable, the panel included.
+ */
+export function isFramablePdfPath(pathname: string): boolean {
+  return FRAMABLE_PDF_PATH.test(pathname);
 }
 
 // Exact hosts only, never a wildcard, in every directive below.
-export function buildCsp({ nonce, isDev, blobPublicHost }: CspInput): string {
+export function buildCsp({
+  nonce,
+  isDev,
+  blobPublicHost,
+  frameAncestors = "none",
+}: CspInput): string {
   const blob = blobPublicHost ? ` https://${blobPublicHost}` : "";
   return [
     "default-src 'self'",
@@ -42,7 +68,7 @@ export function buildCsp({ nonce, isDev, blobPublicHost }: CspInput): string {
     // is redirected. Without these two the upload is blocked by this very
     // policy and the citizen is back to not being able to attach anything.
     `connect-src 'self' https://vercel.com${blob}`,
-    "frame-ancestors 'none'",
+    `frame-ancestors '${frameAncestors}'`,
     "base-uri 'self'",
     "form-action 'self'",
     "object-src 'none'",
