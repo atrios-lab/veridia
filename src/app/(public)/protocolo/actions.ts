@@ -31,6 +31,7 @@ import {
   type RequestKind,
   readActVariant,
   readExemption,
+  readSearchAnswer,
   type ServiceRequestStatus,
   statusLabel,
 } from "@/core/request/kinds.ts";
@@ -138,6 +139,11 @@ export interface ServiceRequestDetail extends BaseDetail {
   /** O aviso de assinatura do ato: nem todo ato cita as mesmas assinaturas. */
   signatureCaveat: string;
   attributionName: string;
+  /** A busca de registro e as demais consultas: sem requerimento assinado, e
+   * a resposta da serventia no lugar do documento. */
+  consultation: boolean;
+  /** A resposta da consulta, presente depois que a serventia respondeu. */
+  searchAnswer?: { found: boolean; text: string; answeredAt: string };
   /** The signed requerimento arrived (the most recent one, on a resend). */
   hasSignedForm: boolean;
   /** Whether the pedido asked for the gratuidade: only then does the
@@ -370,6 +376,10 @@ export async function lookupProtocolDetail(
       actName: actVariantName(act, readActVariant(record.details)) ?? act.name,
       signatureCaveat: signatureCaveatFor(act),
       attributionName: ATTRIBUTION_NAMES[act.attribution],
+      consultation: Boolean(act.consultation),
+      searchAnswer: act.consultation
+        ? readSearchAnswer(record.details)
+        : undefined,
       hasSignedForm: Boolean(signedForm),
       hasExemption: Boolean(readExemption(record.details)),
       signedFormReceivedAt: signedForm?.createdAt.toISOString(),

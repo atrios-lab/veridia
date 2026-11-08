@@ -21,6 +21,7 @@ import {
 import { Icon } from "../_components/icon.tsx";
 import { CopyField } from "../_components/protocol-reveal.tsx";
 import { ProtocolSearchButton } from "../_components/protocol-search-button.tsx";
+import { SearchAnswerCard } from "../_components/search-answer-card.tsx";
 import { SignedFormUpload } from "../_components/signed-form-upload.tsx";
 import {
   ATTACHMENT_ACCEPT,
@@ -653,6 +654,44 @@ function timelineSteps(
   hasSignedForm: boolean,
   hasSignedDeclaration: boolean,
 ): TimelineStepData[] {
+  // A busca não tem requerimento, valor nem entrega: chega, é procurada e é
+  // respondida.
+  if (result.consultation) {
+    const closed =
+      result.requestStatus === "rejected" ||
+      result.requestStatus === "cancelled";
+    return markCurrentStep([
+      {
+        label: "Busca recebida",
+        done: true,
+        detail: formatDateTime(result.createdAt),
+      },
+      ...(result.requirements.some((r) => r.status === "pending")
+        ? [
+            {
+              label: "Exigência aguardando sua resposta",
+              detail: "responda no cartão de exigências",
+            },
+          ]
+        : []),
+      closed
+        ? {
+            label:
+              result.requestStatus === "rejected"
+                ? "Busca indeferida"
+                : "Busca cancelada",
+            done: true,
+            alert: true,
+          }
+        : result.searchAnswer
+          ? {
+              label: "Resposta enviada",
+              done: true,
+              detail: formatDateTime(result.searchAnswer.answeredAt),
+            }
+          : { label: "Aguardando a resposta da serventia" },
+    ]);
+  }
   const steps: TimelineStepData[] = [
     {
       label: "Pedido recebido",
@@ -1096,8 +1135,10 @@ function RequestDetail({ result }: { result: ServiceRequestDetail }) {
   const docUpload = useAttachmentUpload(docAction);
   const sendingDoc = savingDoc || docUpload.uploading;
   // What the office is still waiting for from the citizen's pen.
+  // A busca não pede requerimento assinado.
   const awaitingSignature =
-    !hasSignedForm || (result.hasExemption && !hasSignedDeclaration);
+    !result.consultation &&
+    (!hasSignedForm || (result.hasExemption && !hasSignedDeclaration));
 
   useEffect(() => {
     if (docState.status === "success") {
@@ -1153,6 +1194,15 @@ function RequestDetail({ result }: { result: ServiceRequestDetail }) {
 
       <div className="mt-3.5 md:grid md:grid-cols-[1.1fr_0.9fr] md:items-start md:gap-4">
         <div className="flex flex-col gap-3.5">
+          {result.consultation && (
+            <SearchAnswerCard
+              answer={result.searchAnswer}
+              closed={
+                result.requestStatus === "rejected" ||
+                result.requestStatus === "cancelled"
+              }
+            />
+          )}
           {result.amountLabel && <PaymentCard result={result} />}
           <RequirementsCard result={result} />
           {awaitingSignature && (
@@ -1458,70 +1508,74 @@ function RequestDetail({ result }: { result: ServiceRequestDetail }) {
             </p>
           </div>
 
-          <div className="rounded-2xl border border-brand-border bg-brand-card p-4">
-            <span className="text-[11px] font-bold uppercase tracking-[0.16em] text-brand-accent-ink">
-              Documentos da serventia
-            </span>
-            {result.deliveredDocuments.length > 0 ? (
-              <div className="mt-2.5 flex flex-col gap-2">
-                {result.deliveredDocuments.map((doc, index) => (
-                  <form
-                    key={doc.id}
-                    action="/protocolo/documento"
-                    method="post"
-                    className="flex items-center gap-2.5 border-b border-brand-border pb-2 last:border-b-0 last:pb-0"
-                  >
-                    <Icon
-                      name="file"
-                      className="h-4.5 w-4.5 shrink-0 text-brand-accent"
-                    />
-                    <div className="flex-1">
-                      <div className="text-[13px] font-semibold text-brand-primary">
-                        {result.deliveredDocuments.length > 1
-                          ? `Documento ${index + 1}`
-                          : "Documento entregue"}
-                      </div>
-                      <div className="text-[11px] text-brand-faint">
-                        recebido em {formatDate(doc.createdAt)}
-                      </div>
-                    </div>
-                    <input
-                      type="hidden"
-                      name="protocolNumber"
-                      value={result.protocolNumber}
-                    />
-                    <input
-                      type="hidden"
-                      name="accessKey"
-                      value={result.accessKey}
-                    />
-                    <input type="hidden" name="attachmentId" value={doc.id} />
-                    <button
-                      type="submit"
-                      className="btn btn-ghost btn-sm shrink-0"
+          {/* A busca não entrega documento: a resposta, acima, é o que ela
+              devolve. */}
+          {!result.consultation && (
+            <div className="rounded-2xl border border-brand-border bg-brand-card p-4">
+              <span className="text-[11px] font-bold uppercase tracking-[0.16em] text-brand-accent-ink">
+                Documentos da serventia
+              </span>
+              {result.deliveredDocuments.length > 0 ? (
+                <div className="mt-2.5 flex flex-col gap-2">
+                  {result.deliveredDocuments.map((doc, index) => (
+                    <form
+                      key={doc.id}
+                      action="/protocolo/documento"
+                      method="post"
+                      className="flex items-center gap-2.5 border-b border-brand-border pb-2 last:border-b-0 last:pb-0"
                     >
-                      Baixar
-                    </button>
-                  </form>
-                ))}
-                <p className="text-[11px] text-brand-faint">
-                  Disponível por <strong>30 dias</strong>.
-                </p>
-              </div>
-            ) : (
-              <div className="mt-2.5 flex items-start gap-2.5">
-                <Icon
-                  name="clock"
-                  className="mt-0.5 h-4 w-4 shrink-0 text-brand-faint"
-                />
-                <p className="text-[12px] leading-relaxed text-brand-muted">
-                  Nada por enquanto. Quando a serventia concluir, o arquivo
-                  aparece aqui e avisamos pelo seu contato. Fica disponível por{" "}
-                  <strong>30 dias</strong>.
-                </p>
-              </div>
-            )}
-          </div>
+                      <Icon
+                        name="file"
+                        className="h-4.5 w-4.5 shrink-0 text-brand-accent"
+                      />
+                      <div className="flex-1">
+                        <div className="text-[13px] font-semibold text-brand-primary">
+                          {result.deliveredDocuments.length > 1
+                            ? `Documento ${index + 1}`
+                            : "Documento entregue"}
+                        </div>
+                        <div className="text-[11px] text-brand-faint">
+                          recebido em {formatDate(doc.createdAt)}
+                        </div>
+                      </div>
+                      <input
+                        type="hidden"
+                        name="protocolNumber"
+                        value={result.protocolNumber}
+                      />
+                      <input
+                        type="hidden"
+                        name="accessKey"
+                        value={result.accessKey}
+                      />
+                      <input type="hidden" name="attachmentId" value={doc.id} />
+                      <button
+                        type="submit"
+                        className="btn btn-ghost btn-sm shrink-0"
+                      >
+                        Baixar
+                      </button>
+                    </form>
+                  ))}
+                  <p className="text-[11px] text-brand-faint">
+                    Disponível por <strong>30 dias</strong>.
+                  </p>
+                </div>
+              ) : (
+                <div className="mt-2.5 flex items-start gap-2.5">
+                  <Icon
+                    name="clock"
+                    className="mt-0.5 h-4 w-4 shrink-0 text-brand-faint"
+                  />
+                  <p className="text-[12px] leading-relaxed text-brand-muted">
+                    Nada por enquanto. Quando a serventia concluir, o arquivo
+                    aparece aqui e avisamos pelo seu contato. Fica disponível
+                    por <strong>30 dias</strong>.
+                  </p>
+                </div>
+              )}
+            </div>
+          )}
         </div>
       </div>
 

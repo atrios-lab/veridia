@@ -9,6 +9,15 @@
 - [x] 2.1 Política de privacidade
 - [x] 2.2 Conferir o formulário no navegador, sem gravar pedido
 
-## 3. Depois do deploy
+## 3. Busca como consulta
 
-- [ ] 3.1 Avisar as serventias do ato novo, junto com os avisos pendentes do inteiro teor
+- [x] 3.1 `Act.consultation` na busca: CPF opcional no site e no balcão
+- [x] 3.2 Tela de sucesso e consulta do protocolo sem o requerimento assinado
+- [x] 3.3 `details.searchAnswer` e `answerSearchWith`, com teste contra o PGlite
+- [x] 3.4 Cartão "Resposta da busca" no painel, sem valor nem entrega, e valor recusado no servidor
+- [x] 3.5 Resposta e botões para a certidão em `/protocolo` e `/acompanhar`
+- [x] 3.6 Conferir no navegador o envio sem CPF, a resposta no painel e a leitura na consulta, só no Homolog
+
+## 4. Depois do deploy
+
+- [ ] 4.1 Avisar as serventias do ato novo, junto com os avisos pendentes do inteiro teor

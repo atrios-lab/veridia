@@ -62,6 +62,8 @@ export interface SubmitSuccess {
   hasExemption: boolean;
   /** O aviso de assinatura do ato: nem todo ato cita as mesmas assinaturas. */
   signatureCaveat: string;
+  /** A busca de registro: sem requerimento assinado, só a resposta. */
+  consultation: boolean;
 }
 
 export interface SubmitDuplicate {
@@ -125,6 +127,7 @@ export async function submitServiceRequest(
       ),
       hasExemption: false,
       signatureCaveat: signatureCaveatFor(act),
+      consultation: Boolean(act.consultation),
     };
   }
 
@@ -285,6 +288,7 @@ export async function submitServiceRequest(
       deadlineLabel: formatDate(deadlineDate(today(), deadlineDays)),
       hasExemption: Boolean(exemption),
       signatureCaveat: signatureCaveatFor(act),
+      consultation: Boolean(act.consultation),
     };
   } catch (error) {
     if (error instanceof AttachmentError) return fail(error.message);

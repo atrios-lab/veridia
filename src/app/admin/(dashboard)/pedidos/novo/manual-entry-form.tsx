@@ -590,6 +590,12 @@ export function ManualEntryForm({
           <div>
             <label className={LABEL_CLASS} htmlFor="cpf">
               CPF
+              {act?.consultation && (
+                <span className="font-normal text-admin-muted">
+                  {" "}
+                  · opcional na busca
+                </span>
+              )}
             </label>
             {/* Remounted on the toggle: a number left behind in the disabled
                 field would read as if it were being filed. */}

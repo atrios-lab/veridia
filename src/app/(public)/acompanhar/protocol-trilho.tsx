@@ -22,6 +22,7 @@ import {
 } from "@/core/time/office-time.ts";
 import { useLiveVersion } from "../../_components/use-live-version.ts";
 import { Icon } from "../_components/icon.tsx";
+import { SearchAnswerCard } from "../_components/search-answer-card.tsx";
 import { SignedFormUpload } from "../_components/signed-form-upload.tsx";
 import {
   ATTACHMENT_ACCEPT,
@@ -2038,6 +2039,126 @@ function ServiceRequestTrilho({
   );
 }
 
+/**
+ * A busca de registro, enxuta: não há requerimento a assinar, valor a pagar
+ * nem documento a baixar, só a resposta da serventia e, se ela pedir, uma
+ * exigência. O trilho do pedido comum mostraria passos que a busca não tem.
+ */
+function ConsultationTrilho({
+  initial,
+  onReset,
+}: {
+  initial: ServiceRequestDetail;
+  onReset: () => void;
+}) {
+  const [requirements, setRequirements] = useState(initial.requirements);
+  const [citizenDocuments, setCitizenDocuments] = useState(
+    initial.citizenDocuments,
+  );
+  useEffect(() => {
+    setRequirements(initial.requirements);
+    setCitizenDocuments(initial.citizenDocuments);
+  }, [initial]);
+  const result: ServiceRequestDetail = { ...initial, requirements };
+  const closed =
+    result.requestStatus === "rejected" || result.requestStatus === "cancelled";
+  const pill = closed
+    ? {
+        label:
+          result.requestStatus === "rejected"
+            ? "Busca indeferida"
+            : "Busca cancelada",
+        className: `${REJECTED_BG} ${toneText("red")}`,
+      }
+    : result.searchAnswer
+      ? {
+          label: "Respondida",
+          className: `bg-brand-tint ${toneText("green")}`,
+        }
+      : {
+          label: "Aguardando a resposta",
+          className: `bg-brand-accent-soft ${toneText("gold")}`,
+        };
+
+  return (
+    <div className="flex flex-col gap-8 md:gap-12">
+      <div className="flex flex-col items-center gap-2.5 text-center">
+        <span className="text-xs font-bold uppercase tracking-[0.16em] text-brand-accent-ink">
+          Busca de registro
+        </span>
+        <h1 className="font-serif text-[clamp(30px,6vw,48px)] leading-[1.04] font-semibold tracking-[-0.01em] text-brand-primary">
+          {result.protocolNumber}
+        </h1>
+        <p className="max-w-prose text-[clamp(13px,1.6vw,16px)] leading-relaxed text-brand-muted text-balance">
+          {result.actName} · {result.attributionName}
+        </p>
+        <span
+          className={`mt-1.5 inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-[13px] font-bold ${pill.className}`}
+        >
+          <span className="h-[7px] w-[7px] rounded-full bg-current" />
+          {pill.label}
+        </span>
+      </div>
+
+      <div className="mx-auto flex w-full max-w-[620px] flex-col gap-4">
+        <SearchAnswerCard answer={result.searchAnswer} closed={closed} />
+        {closed && (
+          <RejectionReason
+            result={result}
+            protocolNumber={result.protocolNumber}
+            accessKey={result.accessKey}
+          />
+        )}
+        {result.requirements
+          .filter((r) => r.status === "pending")
+          .map((r) => (
+            <RequirementCard
+              key={r.id}
+              requirement={r}
+              protocolNumber={result.protocolNumber}
+              accessKey={result.accessKey}
+              onSent={(message) =>
+                setRequirements((prev) =>
+                  prev.map((req) =>
+                    req.id === r.id
+                      ? { ...req, messages: [...req.messages, message] }
+                      : req,
+                  ),
+                )
+              }
+            />
+          ))}
+      </div>
+
+      <FilesSection
+        result={result}
+        hasSignedForm={result.hasSignedForm}
+        citizenDocuments={citizenDocuments}
+        onDocument={(docs) => setCitizenDocuments((prev) => [...prev, ...docs])}
+      />
+
+      <div className="flex flex-wrap items-center justify-between gap-x-6 gap-y-4 border-t border-brand-border pt-[clamp(28px,4vw,40px)]">
+        <div className="flex flex-1 basis-64 flex-col gap-1">
+          <div className="text-[15px] font-semibold">
+            Tem outro pedido para acompanhar?
+          </div>
+          <div className="text-[13.5px] leading-relaxed text-brand-muted">
+            Digite o número do protocolo e veja o andamento.
+          </div>
+        </div>
+        <button
+          type="button"
+          onClick={onReset}
+          className="btn btn-primary min-h-12 px-5 py-3 text-[14.5px]"
+        >
+          <Icon name="search" className="h-4 w-4" strokeWidth={2} />
+          Consultar outro pedido
+        </button>
+      </div>
+    </div>
+  );
+}
+
 /* ---------------------------------------------------------------- flow */
 
 function LookupFlow({
@@ -2077,7 +2198,11 @@ function LookupFlow({
   return (
     <div className="mx-auto flex w-full max-w-[880px] flex-col px-4 py-8 md:px-10 md:py-16">
       {detail?.kind === "service-request" ? (
-        <ServiceRequestTrilho initial={detail} onReset={onReset} />
+        detail.consultation ? (
+          <ConsultationTrilho initial={detail} onReset={onReset} />
+        ) : (
+          <ServiceRequestTrilho initial={detail} onReset={onReset} />
+        )
       ) : detail?.kind === "data-rights" ? (
         <DataRightsCard result={detail} onNewConsult={onReset} />
       ) : detail ? (

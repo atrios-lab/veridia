@@ -741,6 +741,12 @@ export function RequestForm({
               className="mb-1.5 block text-[13px] font-semibold"
             >
               CPF
+              {act.consultation && (
+                <span className="font-normal text-brand-muted">
+                  {" "}
+                  · opcional
+                </span>
+              )}
             </label>
             <input
               id="cpf"
@@ -750,10 +756,13 @@ export function RequestForm({
               {...withMask(register("cpf"), formatCpf)}
             />
             <FieldError message={errorFor("cpf")} />
-            {/* Said before the refusal, same as the e-mail just above. */}
-            <p className="mt-1.5 text-[11px] text-brand-faint">
-              Sem CPF? A serventia recebe o pedido no balcão.
-            </p>
+            {/* Said before the refusal, same as the e-mail just above. The
+                busca takes no CPF at all, so it has nothing to say there. */}
+            {!act.consultation && (
+              <p className="mt-1.5 text-[11px] text-brand-faint">
+                Sem CPF? A serventia recebe o pedido no balcão.
+              </p>
+            )}
           </div>
         </div>
 
@@ -1290,99 +1299,120 @@ function SuccessScreen({
           </form>
         </Step>
 
-        <Step
-          number={2}
-          title="Baixe o requerimento e assine"
-          emphasis={
-            requerimentoSent
-              ? undefined
-              : requerimentoDownloaded
-                ? "alert"
-                : "blink"
-          }
-          band={
-            requerimentoSent ? undefined : "Obrigatório para o pedido andar"
-          }
-        >
-          {!requerimentoSent && (
-            <p className="mb-1 text-[12px] font-semibold leading-relaxed text-brand-alert">
-              {SIGNED_FORM_REQUIRED_NOTICE}
+        {/* A busca é só consulta: não há requerimento a assinar, e a resposta
+            aparece na consulta do protocolo. */}
+        {result.consultation && (
+          <Step number={2} title="Aguarde a resposta da serventia">
+            <p className="text-[12px] leading-relaxed text-brand-muted">
+              A busca não pede requerimento assinado. A serventia procura o
+              registro e responde na consulta do protocolo, e avisamos por
+              e-mail. Se o registro constar e você quiser a certidão, faça um
+              novo pedido no ato certo.
             </p>
-          )}
-          <p className="text-[12px] leading-relaxed text-brand-muted">
-            Digitalmente pelo Gov.br (assinador.iti.br), ou imprima e assine de
-            próprio punho.
-          </p>
-          <p className="mt-1 text-[11.5px] leading-relaxed text-brand-faint">
-            {result.signatureCaveat}
-          </p>
-          <div className="mt-2.5 flex flex-wrap gap-2">
-            <form
-              action="/solicitar/requerimento"
-              method="post"
-              target="_blank"
-              rel="noopener"
-              onSubmit={() => setRequerimentoDownloaded(true)}
-            >
-              <ProtocolFields result={result} />
-              <button type="submit" className="btn btn-primary btn-md">
-                <Icon name="download" className="h-3.5 w-3.5" strokeWidth={2} />
-                Baixar requerimento (PDF)
-              </button>
-            </form>
-            {result.hasExemption && (
+          </Step>
+        )}
+
+        {!result.consultation && (
+          <Step
+            number={2}
+            title="Baixe o requerimento e assine"
+            emphasis={
+              requerimentoSent
+                ? undefined
+                : requerimentoDownloaded
+                  ? "alert"
+                  : "blink"
+            }
+            band={
+              requerimentoSent ? undefined : "Obrigatório para o pedido andar"
+            }
+          >
+            {!requerimentoSent && (
+              <p className="mb-1 text-[12px] font-semibold leading-relaxed text-brand-alert">
+                {SIGNED_FORM_REQUIRED_NOTICE}
+              </p>
+            )}
+            <p className="text-[12px] leading-relaxed text-brand-muted">
+              Digitalmente pelo Gov.br (assinador.iti.br), ou imprima e assine
+              de próprio punho.
+            </p>
+            <p className="mt-1 text-[11.5px] leading-relaxed text-brand-faint">
+              {result.signatureCaveat}
+            </p>
+            <div className="mt-2.5 flex flex-wrap gap-2">
               <form
                 action="/solicitar/requerimento"
                 method="post"
                 target="_blank"
                 rel="noopener"
+                onSubmit={() => setRequerimentoDownloaded(true)}
               >
                 <ProtocolFields result={result} />
-                <input type="hidden" name="documento" value="declaracao" />
-                <button type="submit" className="btn btn-secondary btn-md">
+                <button type="submit" className="btn btn-primary btn-md">
                   <Icon
                     name="download"
                     className="h-3.5 w-3.5"
                     strokeWidth={2}
                   />
-                  Baixar declaração de hipossuficiência (PDF)
+                  Baixar requerimento (PDF)
                 </button>
               </form>
-            )}
-          </div>
-        </Step>
+              {result.hasExemption && (
+                <form
+                  action="/solicitar/requerimento"
+                  method="post"
+                  target="_blank"
+                  rel="noopener"
+                >
+                  <ProtocolFields result={result} />
+                  <input type="hidden" name="documento" value="declaracao" />
+                  <button type="submit" className="btn btn-secondary btn-md">
+                    <Icon
+                      name="download"
+                      className="h-3.5 w-3.5"
+                      strokeWidth={2}
+                    />
+                    Baixar declaração de hipossuficiência (PDF)
+                  </button>
+                </form>
+              )}
+            </div>
+          </Step>
+        )}
 
-        <Step
-          number={3}
-          title={
-            result.hasExemption
-              ? "Envie o requerimento e a declaração assinados"
-              : "Envie o requerimento assinado"
-          }
-          emphasis={requerimentoSent ? undefined : "alert"}
-        >
-          <p className="text-[12px] leading-relaxed text-brand-muted">
-            Pode ser agora, depois pela consulta do protocolo, ou em papel no
-            balcão.
-            {result.hasExemption &&
-              " Se assinou os dois num arquivo só, envie como requerimento."}
-          </p>
-          <div className="mt-2.5 flex flex-col gap-2">
-            <SignedFormUpload
-              protocolNumber={result.protocolNumber}
-              accessKey={result.accessKey}
-              documento="requerimento"
-              onSent={() => setRequerimentoSent(true)}
-            />
-            {result.hasExemption && (
+        {!result.consultation && (
+          <Step
+            number={3}
+            title={
+              result.hasExemption
+                ? "Envie o requerimento e a declaração assinados"
+                : "Envie o requerimento assinado"
+            }
+            emphasis={requerimentoSent ? undefined : "alert"}
+          >
+            <p className="text-[12px] leading-relaxed text-brand-muted">
+              Pode ser agora, depois pela consulta do protocolo, ou em papel no
+              balcão.
+              {result.hasExemption &&
+                " Se assinou os dois num arquivo só, envie como requerimento."}
+            </p>
+            <div className="mt-2.5 flex flex-col gap-2">
               <SignedFormUpload
                 protocolNumber={result.protocolNumber}
                 accessKey={result.accessKey}
-                documento="declaracao"
+                documento="requerimento"
+                onSent={() => setRequerimentoSent(true)}
               />
-            )}
-          </div>
-        </Step>
+              {result.hasExemption && (
+                <SignedFormUpload
+                  protocolNumber={result.protocolNumber}
+                  accessKey={result.accessKey}
+                  documento="declaracao"
+                />
+              )}
+            </div>
+          </Step>
+        )}
       </ol>
 
       <div className="mt-4 flex gap-2.5">

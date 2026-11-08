@@ -37,7 +37,11 @@ import {
   readRequesterQualificationForm,
   serviceRequestSchema,
 } from "./form.ts";
-import { maskAlternateDocument, readAlternateDocument } from "./kinds.ts";
+import {
+  maskAlternateDocument,
+  readAlternateDocument,
+  searchAnswerInputSchema,
+} from "./kinds.ts";
 import { formatProtocolNumber, parseProtocolNumber } from "./protocol.ts";
 
 const certificate = getAct("rcpn-certidao");
@@ -1341,4 +1345,59 @@ test("a busca do RCPN pede o que procurar e o motivo, nos dois canais", () => {
       }).success,
     );
   }
+});
+
+test("a busca aceita pedido sem CPF, no site e no balcão", () => {
+  const busca = getAct("rcpn-busca");
+  if (!busca) throw new Error("rcpn-busca");
+  const fields = {
+    actVariant: "nascimento",
+    description: "Paulo Neto, nascido em 1958. Consta agricultor?",
+    purpose: "Aposentadoria rural no INSS.",
+    cpf: "",
+  };
+  assert.ok(
+    publicServiceRequestSchema(busca).safeParse({ ...validOnline, ...fields })
+      .success,
+    "site",
+  );
+  assert.ok(
+    serviceRequestSchema(busca).safeParse({ ...valid, ...fields }).success,
+    "balcão",
+  );
+  // Um CPF informado ainda é conferido.
+  assert.deepEqual(
+    issuePaths(
+      publicServiceRequestSchema(busca).safeParse({
+        ...validOnline,
+        ...fields,
+        cpf: "111.111.111-11",
+      }),
+    ),
+    ["cpf"],
+  );
+  // Os demais atos seguem exigindo o CPF.
+  const certidao = getAct("rcpn-certidao");
+  if (!certidao) throw new Error("rcpn-certidao");
+  assert.deepEqual(
+    issuePaths(
+      publicServiceRequestSchema(certidao).safeParse({
+        ...validOnline,
+        actVariant: "nascimento",
+        cpf: "",
+      }),
+    ),
+    ["cpf"],
+  );
+});
+
+test("a resposta da busca exige se foi localizado e o texto", () => {
+  assert.ok(
+    searchAnswerInputSchema.safeParse({ found: "yes", text: "Consta." })
+      .success,
+  );
+  assert.ok(!searchAnswerInputSchema.safeParse({ text: "Consta." }).success);
+  assert.ok(
+    !searchAnswerInputSchema.safeParse({ found: "no", text: "   " }).success,
+  );
 });
