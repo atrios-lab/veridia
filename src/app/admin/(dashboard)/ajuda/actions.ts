@@ -126,7 +126,9 @@ export async function submitAttemptAction(
     if (result.status === "refused") {
       return { status: "error", message: ATTEMPT_REFUSED[result.reason] };
     }
-    revalidatePath("/admin/ajuda", "layout");
+    // No revalidation here: it would redraw the panel into its next state
+    // before the person saw the result. The panel shows the score and
+    // refreshes when they move on.
     return {
       status: "graded",
       correct: result.grade.correct,
