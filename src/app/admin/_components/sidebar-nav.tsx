@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { ATTENTION_CLASS } from "./attention.ts";
 import { AdminIcon } from "./icon.tsx";
 import { type AdminNavItem, navGroups } from "./nav.ts";
 
@@ -49,10 +50,14 @@ export function AdminSidebarNav({
                 // by lunchtime.
                 target={item.external ? "zoho" : undefined}
                 rel={item.external ? "noreferrer" : undefined}
+                // An `attention` item calls until the person answers it: on
+                // its own screen it is just the current item again.
                 className={
                   current
                     ? "flex items-center gap-3 rounded-lg bg-white/13 px-2.5 py-2 text-[13px] font-semibold text-white"
-                    : "flex items-center gap-3 rounded-lg px-2.5 py-2 text-[13px] font-medium text-admin-on-dark-subtitle hover:bg-white/8 hover:text-white"
+                    : item.attention
+                      ? `flex items-center gap-3 rounded-lg px-2.5 py-2 text-[13px] ${ATTENTION_CLASS}`
+                      : "flex items-center gap-3 rounded-lg px-2.5 py-2 text-[13px] font-medium text-admin-on-dark-subtitle hover:bg-white/8 hover:text-white"
                 }
               >
                 <AdminIcon name={item.icon} className="h-4 w-4 flex-none" />

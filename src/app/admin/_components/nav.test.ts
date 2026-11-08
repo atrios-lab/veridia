@@ -47,3 +47,10 @@ test("Ajuda is the last group, and its one item asks no permission", () => {
     [["Treinamento", "/admin/ajuda", undefined]],
   );
 });
+
+test("Treinamento is the one item that calls for attention", () => {
+  assert.deepEqual(
+    ADMIN_NAV.filter((item) => item.attention).map((item) => item.href),
+    ["/admin/ajuda"],
+  );
+});

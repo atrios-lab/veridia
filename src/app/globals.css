@@ -125,6 +125,9 @@
   --color-admin-primary: var(--brand-primary);
   --color-admin-primary-soft: var(--brand-primary-soft);
   --color-admin-accent: var(--brand-accent);
+  /* The accent dark enough to carry white text in every theme (5.5:1 and
+     up; the plain accent drops to 3.9:1 in marinho-bronze). */
+  --color-admin-accent-ink: var(--brand-accent-ink);
   --color-admin-on-dark-accent: var(--brand-on-dark-accent);
   --color-admin-surface: var(--brand-tint);
   --color-admin-card: var(--palette-admin-card);
@@ -215,6 +218,28 @@
   @keyframes signature-blink {
     50% {
       border-color: var(--color-brand-border);
+    }
+  }
+}
+
+/*
+ * "Look here": a halo that grows out of the element and fades, around a fill
+ * that never changes (so the text keeps its contrast at every frame). One
+ * cycle every 1.6s, far below the three flashes per second WCAG 2.3.1 allows.
+ * Always used behind `motion-safe:`, so whoever turned animations off gets
+ * the solid fill alone. See app/admin/_components/attention.ts.
+ */
+@theme {
+  --animate-attention-pulse: attention-pulse 1.6s linear infinite;
+
+  @keyframes attention-pulse {
+    0% {
+      box-shadow: 0 0 0 0 var(--color-admin-on-dark-accent);
+    }
+    70%,
+    100% {
+      box-shadow: 0 0 0 8px
+        color-mix(in srgb, var(--color-admin-on-dark-accent) 0%, transparent);
     }
   }
 }
