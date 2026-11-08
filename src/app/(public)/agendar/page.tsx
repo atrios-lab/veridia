@@ -3,8 +3,12 @@ import {
   AGENDA_NAMES,
   type AgendaId,
   agendaRules,
+  CHANNEL_NAMES,
+  channelLabelsOn,
+  channelsOn,
   hasGrid,
   isAgendaId,
+  usesChannels,
 } from "@/core/scheduling/agenda.ts";
 import { officeHolidays } from "@/core/scheduling/calendar.ts";
 import {
@@ -110,7 +114,23 @@ export default async function SchedulingPage({
         selected={selected}
         times={freeSlots(rules, selected, dayTaken, now)}
         services={servicesOfAgenda(config, agenda)}
-        modes={config.modes}
+        // The notary's agenda offers the channels he chose for this day;
+        // the counter's, the office's modes.
+        modes={
+          usesChannels(agenda)
+            ? channelLabelsOn(config.agendas[agenda], selected)
+            : config.modes
+        }
+        modeHints={
+          usesChannels(agenda)
+            ? Object.fromEntries(
+                channelsOn(config.agendas[agenda], selected).map((channel) => [
+                  CHANNEL_NAMES[channel].label,
+                  CHANNEL_NAMES[channel].description,
+                ]),
+              )
+            : undefined
+        }
         nextFreeDay={nextFreeDay}
         nextFreeTime={
           nextFreeDay

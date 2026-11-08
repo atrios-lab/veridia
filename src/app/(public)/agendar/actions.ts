@@ -6,7 +6,10 @@ import { looksLikeBot } from "@/core/request/form.ts";
 import {
   AGENDA_NAMES,
   agendaRules,
+  channelLabelsOn,
   isAgendaId,
+  isRemoteMode,
+  usesChannels,
 } from "@/core/scheduling/agenda.ts";
 import {
   generateCancelToken,
@@ -14,7 +17,7 @@ import {
 } from "@/core/scheduling/appointment.ts";
 import { formatShortDate, officeHolidays } from "@/core/scheduling/calendar.ts";
 import {
-  arrivalNotice,
+  attendanceNotice,
   CHECKLIST_CAVEAT,
   checklistFor,
   offeredAgendas,
@@ -44,8 +47,11 @@ export interface AppointmentSuccess {
   checklist: string[];
   /** The service's own guidance, when it has one. */
   serviceNote?: string;
-  /** "Chegue com 15 minutos de antecedência, às 08:45, ..." */
+  /** "Chegue com 15 minutos de antecedência, às 08:45, ..." or, for the
+   * notary's video and phone, how to be ready. */
   arrival: string;
+  /** A video or phone appointment: nothing to bring to a counter. */
+  remote?: boolean;
   caveat: string;
   /** Where the confirmation went, echoed back so a typo is visible at once. */
   email: string;
@@ -113,9 +119,17 @@ export async function submitAppointment(
     holidays: officeHolidays(tenant),
   };
   const services = servicesOfAgenda(office, agenda);
+  // The notary's channels depend on the day; the day is checked below, so
+  // here only the shape of the answer is.
+  const requestedDate = String(formData.get("date") ?? "");
+  const modes = usesChannels(agenda)
+    ? /^\d{4}-\d{2}-\d{2}$/.test(requestedDate)
+      ? channelLabelsOn(office.agendas[agenda], requestedDate)
+      : []
+    : office.modes;
   const parsed = appointmentSchema({
     serviceIds: services.map((service) => service.id),
-    modes: office.modes,
+    modes,
   }).safeParse({
     date: formData.get("date") ?? "",
     slotTime: formData.get("slotTime") ?? "",
@@ -193,7 +207,8 @@ export async function submitAppointment(
       protocolNumber: appointment.protocolNumber ?? "",
       checklist: checklistFor(service ?? { bring: [] }),
       serviceNote: service?.note,
-      arrival: arrivalNotice(slotTime),
+      arrival: attendanceNotice(slotTime, parsed.data.mode),
+      remote: isRemoteMode(parsed.data.mode),
       caveat: CHECKLIST_CAVEAT,
       email: appointment.email,
       cancelToken,

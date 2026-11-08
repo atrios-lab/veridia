@@ -4,12 +4,17 @@ import type {
 } from "../request/requerimento.ts";
 import type { Tenant } from "../tenant/schema.ts";
 import { formatOfficeDateTime } from "../time/office-time.ts";
-import { AGENDA_NAMES, type AgendaId, slotEndTime } from "./agenda.ts";
+import {
+  AGENDA_NAMES,
+  type AgendaId,
+  isRemoteMode,
+  slotEndTime,
+} from "./agenda.ts";
 import { formatLongDate, type IsoDate } from "./calendar.ts";
 import {
   ARRIVAL_ADVANCE_MINUTES,
-  arrivalNotice,
   arrivalTime,
+  attendanceNotice,
   CHECKLIST_CAVEAT,
   checklistFor,
   type OfferedService,
@@ -52,10 +57,16 @@ export function buildAppointmentReceipt(
       label: "Horário",
       value: `${data.slotTime} às ${slotEndTime(data.slotTime)}`,
     },
-    {
-      label: "Chegada",
-      value: `Até ${arrivalTime(data.slotTime)} (${ARRIVAL_ADVANCE_MINUTES} minutos antes)`,
-    },
+    // Nobody arrives anywhere for a call: the row only means something at
+    // the counter.
+    ...(isRemoteMode(data.mode)
+      ? []
+      : [
+          {
+            label: "Chegada",
+            value: `Até ${arrivalTime(data.slotTime)} (${ARRIVAL_ADVANCE_MINUTES} minutos antes)`,
+          },
+        ]),
     { label: "Agenda", value: AGENDA_NAMES[data.agenda].name },
     { label: "Serviço", value: data.service.label },
     { label: "Atendimento", value: data.mode },
@@ -76,7 +87,9 @@ export function buildAppointmentReceipt(
     {
       heading: "Antes de vir",
       paragraphs: [
-        `${arrivalNotice(data.slotTime)} Apresente este comprovante na recepção, impresso ou no celular. Não vai poder vir? Cancele pelo link do e-mail de confirmação, para liberar o horário para outra pessoa.`,
+        isRemoteMode(data.mode)
+          ? `${attendanceNotice(data.slotTime, data.mode)} Não vai poder atender? Cancele pelo link do e-mail de confirmação, para liberar o horário para outra pessoa.`
+          : `${attendanceNotice(data.slotTime, data.mode)} Apresente este comprovante na recepção, impresso ou no celular. Não vai poder vir? Cancele pelo link do e-mail de confirmação, para liberar o horário para outra pessoa.`,
       ],
     },
     { heading: "Quem vai ser atendido", rows: person },
@@ -88,7 +101,7 @@ export function buildAppointmentReceipt(
     });
   }
   sections.push({
-    heading: "O que trazer",
+    heading: isRemoteMode(data.mode) ? "O que ter em mãos" : "O que trazer",
     paragraphs: [
       ...checklistFor(data.service).map((item) => `[  ] ${item}`),
       ...(data.service.note ? [data.service.note] : []),

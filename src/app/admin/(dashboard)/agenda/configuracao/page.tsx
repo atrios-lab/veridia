@@ -4,6 +4,7 @@ import {
   AGENDA_IDS,
   AGENDA_WEEKDAYS,
   type AgendaId,
+  type AttendanceChannel,
   timesForWeekday,
   WEEKDAY_LABELS,
 } from "@/core/scheduling/agenda.ts";
@@ -48,11 +49,16 @@ export default async function AgendaSettingsPage() {
           ]),
         ),
         serviceIds: config.agendas[id].serviceIds,
+        channels: config.agendas[id].channels,
       },
     ]),
   ) as Record<
     AgendaId,
-    { grid: Record<string, string[]>; serviceIds: string[] }
+    {
+      grid: Record<string, string[]>;
+      serviceIds: string[];
+      channels: Record<string, AttendanceChannel[]>;
+    }
   >;
 
   return (
