@@ -243,10 +243,11 @@ export interface Act {
   signatureCaveat?: string;
   /**
    * Uma consulta, não um ato a praticar: a serventia só responde. O CPF é
-   * opcional, o requerimento assinado não é pedido, e no painel o valor, a
-   * entrega e o andamento comum dão lugar à resposta, que conclui o pedido
-   * (decisões do responsável pelo produto em 07/11/2026). Quem quiser o ato
-   * depois faz um pedido novo, no ato certo.
+   * opcional, o requerimento assinado não é pedido, e no painel a entrega e o
+   * andamento comum dão lugar à resposta, que conclui o pedido (decisões do
+   * responsável pelo produto em 07/11/2026). O valor é facultativo: há
+   * serventias que cobram a busca pela tabela de emolumentos e outras que
+   * não. Quem quiser o ato depois faz um pedido novo, no ato certo.
    */
   consultation?: true;
   /**

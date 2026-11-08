@@ -24,7 +24,8 @@ O responsável pelo produto definiu, em 07/11/2026, que a busca não é um pedid
 
 - **CPF opcional**, no site e no balcão. Quem não tem CPF também pergunta. Um CPF informado ainda é conferido.
 - **Sem requerimento assinado.** Sem CPF não há Gov.br, e a busca não pratica ato. A tela de sucesso troca os passos de assinar e enviar por "Aguarde a resposta", e a consulta do protocolo não cobra o requerimento. É a exceção à regra de que todo pedido do site termina pedindo o requerimento assinado.
-- **Sem valor nem entrega.** O painel esconde os dois cartões, e o servidor recusa valor num pedido de busca.
+- **Sem entrega.** O painel esconde o cartão de entrega.
+- **Valor facultativo.** A tabela de emolumentos do RN prevê a busca, e há serventias que a cobram, como as de capital, e outras que só procuram e respondem. O cartão "Valor do pedido" continua na busca, e informar valor é escolha da serventia (decisão do responsável pelo produto em 08/11/2026, revendo a primeira versão, que recusava valor). Com valor, a trilha do painel fica "Novo → Aguardando pagamento → Concluído", e a consulta do protocolo mostra a cobrança como nos demais pedidos. Responder antes do pagamento conclui o pedido e tira a cobrança da consulta, e o cartão da resposta avisa disso.
 
 ### A resposta conclui o pedido
 
@@ -42,6 +43,6 @@ A consulta do protocolo mostra a resposta. Se o registro foi localizado, dois bo
 
 ## Risks / Trade-offs
 
-- **Custo da busca** → a tabela de emolumentos pode cobrar a busca. O site não mostra preço, e a serventia lança o valor como nos demais atos.
+- **Custo da busca** → a serventia que cobra lança o valor no painel, como nos demais atos. O site não mostra preço antes do pedido.
 - **Resposta com dado do registro** → a serventia decide o que informa. A orientação diz "quando puder".
 - **Busca sem requerimento** → a serventia responde sem papel assinado. Quem quer o ato faz o pedido comum, que exige o requerimento.

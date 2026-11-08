@@ -2040,9 +2040,10 @@ function ServiceRequestTrilho({
 }
 
 /**
- * A busca de registro, enxuta: não há requerimento a assinar, valor a pagar
- * nem documento a baixar, só a resposta da serventia e, se ela pedir, uma
- * exigência. O trilho do pedido comum mostraria passos que a busca não tem.
+ * A busca de registro, enxuta: não há requerimento a assinar nem documento a
+ * baixar, só a resposta da serventia, a cobrança quando a serventia cobra a
+ * busca e, se ela pedir, uma exigência. O trilho do pedido comum mostraria
+ * passos que a busca não tem.
  */
 function ConsultationTrilho({
   initial,
@@ -2055,13 +2056,30 @@ function ConsultationTrilho({
   const [citizenDocuments, setCitizenDocuments] = useState(
     initial.citizenDocuments,
   );
+  // Mesmo atalho do pedido comum: o comprovante enviado agora vira "em
+  // conferência" antes de a próxima consulta confirmar.
+  const [paymentJustReported, setPaymentJustReported] = useState(false);
   useEffect(() => {
     setRequirements(initial.requirements);
     setCitizenDocuments(initial.citizenDocuments);
+    setPaymentJustReported(false);
   }, [initial]);
-  const result: ServiceRequestDetail = { ...initial, requirements };
+  const result: ServiceRequestDetail = {
+    ...initial,
+    requirements,
+    requestStatus:
+      paymentJustReported && initial.requestStatus === "awaiting-payment"
+        ? "payment-reported"
+        : initial.requestStatus,
+  };
   const closed =
     result.requestStatus === "rejected" || result.requestStatus === "cancelled";
+  const paymentReported = result.requestStatus === "payment-reported";
+  // O valor é facultativo: só a serventia que cobra a busca o informa.
+  const showPay =
+    Boolean(result.amountLabel) &&
+    !closed &&
+    (paymentReported || !result.paymentSettled);
   const pill = closed
     ? {
         label:
@@ -2101,6 +2119,13 @@ function ConsultationTrilho({
       </div>
 
       <div className="mx-auto flex w-full max-w-[620px] flex-col gap-4">
+        {showPay && (
+          <PayCard
+            result={result}
+            reported={paymentReported}
+            onReported={() => setPaymentJustReported(true)}
+          />
+        )}
         <SearchAnswerCard answer={result.searchAnswer} closed={closed} />
         {closed && (
           <RejectionReason

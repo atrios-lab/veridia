@@ -1306,8 +1306,9 @@ function SuccessScreen({
             <p className="text-[12px] leading-relaxed text-brand-muted">
               A busca não pede requerimento assinado. A serventia procura o
               registro e responde na consulta do protocolo, e avisamos por
-              e-mail. Se o registro constar e você quiser a certidão, faça um
-              novo pedido no ato certo.
+              e-mail. Se a serventia cobrar a busca, o valor aparece ali também.
+              Se o registro constar e você quiser a certidão, faça um novo
+              pedido no ato certo.
             </p>
           </Step>
         )}
