@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import {
   useActionState,
   useCallback,
@@ -8,6 +9,7 @@ import {
   useState,
 } from "react";
 import { CANNED_RESPONSES } from "@/core/chat/canned-responses.ts";
+import { closedByForStaff } from "@/core/chat/closing.ts";
 import type { Colleague } from "@/lib/chat.ts";
 import { shakeElement } from "../../../../../_components/shake.ts";
 import { CHAT_SHAKE_TARGET_ID } from "../../../../_components/chat-alerts.tsx";
@@ -36,6 +38,7 @@ export function ConversationConsole({
   conversationId,
   initialMessages,
   initialStatus,
+  initialClosedReason,
   colleagues,
   currentUserId,
   matchedRequestId,
@@ -43,12 +46,14 @@ export function ConversationConsole({
   conversationId: string;
   initialMessages: MessageView[];
   initialStatus: string;
+  initialClosedReason: string | null;
   colleagues: Colleague[];
   currentUserId: string;
   matchedRequestId: string | null;
 }) {
   const [messages, setMessages] = useState(initialMessages);
   const [status, setStatus] = useState(initialStatus);
+  const [closedReason, setClosedReason] = useState(initialClosedReason);
   const [showTransfer, setShowTransfer] = useState(false);
   const [showClose, setShowClose] = useState(false);
   const lastAt = useRef(initialMessages.at(-1)?.createdAt);
@@ -62,6 +67,7 @@ export function ConversationConsole({
     if (!response.ok) return;
     const data = await response.json();
     setStatus(data.conversation.status);
+    setClosedReason(data.conversation.closedReason ?? null);
     if (data.messages.length > 0) {
       lastAt.current = data.messages.at(-1).createdAt;
       // The `after` cursor is a millisecond ISO string round-tripped from a
@@ -162,6 +168,22 @@ export function ConversationConsole({
           {closed ? "Conversa encerrada" : "Encerrar conversa"}
         </button>
       </div>
+
+      {/* Who ended it, and the way out: a finished conversation never
+          leaves the attendant on a screen where every button is grey. */}
+      {closed && (
+        <div className="flex flex-wrap items-center gap-3 border-b border-admin-border bg-admin-warning-soft-bg px-5.5 py-2.5 text-[13px] text-admin-text">
+          <span className="flex-1 font-semibold">
+            {closedByForStaff(closedReason)}
+          </span>
+          <Link
+            href="/admin/atendimento"
+            className="btn btn-admin-secondary btn-sm"
+          >
+            Voltar para a fila
+          </Link>
+        </div>
+      )}
 
       {showTransfer && (
         <TransferDialog

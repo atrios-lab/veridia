@@ -75,6 +75,7 @@ export default async function ConversationPage({
             createdAt: message.createdAt.toISOString(),
           }))}
           initialStatus={conversation.status}
+          initialClosedReason={conversation.closedReason}
           colleagues={colleagueList}
           currentUserId={session.user.id}
           matchedRequestId={conversation.matchedRequestId}

@@ -9,6 +9,12 @@ import {
   newStaffReplies,
 } from "@/core/chat/alerts.ts";
 import {
+  closedByForCitizen,
+  emailHelpLine,
+  GIVE_UP_DETAIL_MAX,
+  GIVE_UP_REASONS,
+} from "@/core/chat/closing.ts";
+import {
   formatClock,
   isWithinChatHours,
   nextChatOpening,
@@ -64,6 +70,8 @@ type PanelView =
   | { kind: "prechat" }
   | { kind: "hours" }
   | { kind: "conversation" }
+  // "Por que está encerrando?", asked before the citizen ends or gives up.
+  | { kind: "give-up" }
   | { kind: "rating" };
 
 // Network failures and non-JSON responses both come back the same way, as
@@ -523,12 +531,12 @@ export function ChatWidget({
     }
   }
 
-  async function closeConversation() {
+  async function closeConversation(reasonForm?: FormData) {
     if (!conversationId) return;
     setActionPending(true);
     setError(null);
     try {
-      const formData = new FormData();
+      const formData = reasonForm ?? new FormData();
       formData.set("intent", "close");
       const data = await postForm(`/api/chat/${conversationId}`, formData);
       if (data.error) {
@@ -552,17 +560,27 @@ export function ChatWidget({
         setError(RATING_ERROR);
         return;
       }
-      window.localStorage.removeItem(CONVERSATION_ID_STORAGE_KEY);
-      setConversationId(null);
-      setConversation(null);
-      setMessages([]);
-      lastMessageAt.current = undefined;
-      seenIds.current = new Set();
-      loadedOnce.current = false;
-      setPanel({ kind: "closed" });
+      forgetConversation();
     } finally {
       setActionPending(false);
     }
+  }
+
+  /**
+   * Leaves a finished conversation behind, rated or not: the next time the
+   * button opens, it starts a new one. "Fechar" on the closed screen does
+   * this without a rating, so no ending ever leaves the citizen stuck.
+   */
+  function forgetConversation() {
+    window.localStorage.removeItem(CONVERSATION_ID_STORAGE_KEY);
+    setConversationId(null);
+    setConversation(null);
+    setMessages([]);
+    lastMessageAt.current = undefined;
+    seenIds.current = new Set();
+    loadedOnce.current = false;
+    setReplyPending(false);
+    setPanel({ kind: "closed" });
   }
 
   if (!available.enabled) return null;
@@ -621,7 +639,14 @@ export function ChatWidget({
             </span>
             <button
               type="button"
-              onClick={() => setPanel({ kind: "closed" })}
+              // On a finished conversation the X ends it too, the same as
+              // the "Fechar" button: no way out may leave the citizen stuck
+              // on a closed chat the next time they open the bubble.
+              onClick={() =>
+                panel.kind === "rating"
+                  ? forgetConversation()
+                  : setPanel({ kind: "closed" })
+              }
               aria-label="Fechar"
               className="rounded-lg p-1 opacity-80 hover:opacity-100"
             >
@@ -650,8 +675,8 @@ export function ChatWidget({
               error={error}
               actionPending={actionPending}
               onSend={sendMessage}
-              onGiveUp={closeConversation}
-              onClose={closeConversation}
+              onGiveUp={() => setPanel({ kind: "give-up" })}
+              onClose={() => setPanel({ kind: "give-up" })}
               nudge={
                 <NudgeButton
                   availableAt={conversation?.nudgeAvailableAt}
@@ -663,10 +688,22 @@ export function ChatWidget({
             />
           )}
 
+          {panel.kind === "give-up" && (
+            <GiveUpView
+              email={tenant.contacts.email}
+              pending={actionPending}
+              error={error}
+              onConfirm={(form) => void closeConversation(form)}
+              onBack={() => setPanel({ kind: "conversation" })}
+            />
+          )}
+
           {panel.kind === "rating" && (
             <RatingView
               conversation={conversation}
+              email={tenant.contacts.email}
               onSubmit={submitRating}
+              onDismiss={forgetConversation}
               pending={actionPending}
               error={error}
             />
@@ -1033,12 +1070,17 @@ function MessageBubble({ message }: { message: MessageView }) {
 
 function RatingView({
   conversation,
+  email,
   onSubmit,
+  onDismiss,
   pending,
   error,
 }: {
   conversation: ConversationView | null;
+  email: string;
   onSubmit: (formData: FormData) => void;
+  /** "Fechar": leaves without rating. */
+  onDismiss: () => void;
   pending: boolean;
   error: string | null;
 }) {
@@ -1051,13 +1093,17 @@ function RatingView({
     >
       <input type="hidden" name="rating" value={rating} />
       <div className="text-center">
-        {conversation?.attendantName && (
-          <p className="text-[11.5px] text-brand-faint">
-            Atendimento encerrado com {conversation.attendantName}
-          </p>
-        )}
-        <p className="mt-1 text-[14px] text-brand-muted">
-          Como foi o atendimento?
+        <p className="text-[13.5px] font-semibold text-brand-primary">
+          {closedByForCitizen(
+            conversation?.closedReason ?? null,
+            conversation?.attendantName,
+          )}
+        </p>
+        <p className="mt-1 text-[12.5px] text-brand-muted">
+          {emailHelpLine(email)}
+        </p>
+        <p className="mt-3 text-[14px] text-brand-muted">
+          Como foi o atendimento? (opcional)
         </p>
         <div className="mt-2.5 flex justify-center gap-1.5">
           {[1, 2, 3, 4, 5].map((value) => (
@@ -1112,6 +1158,95 @@ function RatingView({
         className="btn btn-primary btn-lg"
       >
         {pending ? "Enviando..." : "Enviar avaliação"}
+      </button>
+      <button
+        type="button"
+        onClick={onDismiss}
+        disabled={pending}
+        className="btn btn-ghost btn-md"
+      >
+        Fechar
+      </button>
+    </form>
+  );
+}
+
+/**
+ * Asked before the citizen ends or gives up: why. One of a short list,
+ * plus their own words if they want; it reaches the office as a line in
+ * the conversation. "Voltar" keeps the conversation going.
+ */
+function GiveUpView({
+  email,
+  pending,
+  error,
+  onConfirm,
+  onBack,
+}: {
+  email: string;
+  pending: boolean;
+  error: string | null;
+  onConfirm: (form: FormData) => void;
+  onBack: () => void;
+}) {
+  const [reason, setReason] = useState<string>("");
+  return (
+    <form
+      onSubmit={(event) => {
+        event.preventDefault();
+        onConfirm(new FormData(event.currentTarget));
+      }}
+      className="flex flex-1 flex-col gap-3 overflow-y-auto p-4.5"
+    >
+      <p className="font-serif text-[16px] font-semibold text-brand-primary">
+        Por que você está encerrando?
+      </p>
+      <fieldset className="flex flex-col gap-2">
+        <legend className="sr-only">Motivo do encerramento</legend>
+        {GIVE_UP_REASONS.map((option) => (
+          <label
+            key={option}
+            className="flex items-center gap-2.5 text-[13.5px] text-brand-text"
+          >
+            <input
+              type="radio"
+              name="reason"
+              value={option}
+              checked={reason === option}
+              onChange={() => setReason(option)}
+              className="h-4 w-4"
+            />
+            {option}
+          </label>
+        ))}
+      </fieldset>
+      <textarea
+        name="detail"
+        rows={2}
+        maxLength={GIVE_UP_DETAIL_MAX}
+        placeholder="Quer contar mais? (opcional)"
+        className="w-full rounded-[10px] border border-brand-border bg-brand-surface px-3.5 py-2.5 text-[13.5px] outline-none focus:border-brand-accent"
+      />
+      <p className="text-[12.5px] text-brand-muted">{emailHelpLine(email)}</p>
+      {error && (
+        <p className="text-center text-[12.5px] font-semibold text-red-700">
+          {error}
+        </p>
+      )}
+      <button
+        type="submit"
+        disabled={!reason || pending}
+        className="btn btn-primary btn-lg"
+      >
+        {pending ? "Encerrando..." : "Encerrar atendimento"}
+      </button>
+      <button
+        type="button"
+        onClick={onBack}
+        disabled={pending}
+        className="btn btn-ghost btn-md"
+      >
+        Voltar para a conversa
       </button>
     </form>
   );

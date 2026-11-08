@@ -1,5 +1,6 @@
 import { cookies } from "next/headers";
 import { can } from "@/core/auth/roles.ts";
+import { giveUpMessage, isGiveUpReason } from "@/core/chat/closing.ts";
 import { needsInactivityWarning } from "@/core/chat/inactivity.ts";
 import { messageBodySchema } from "@/core/chat/message.ts";
 import {
@@ -223,6 +224,19 @@ export async function POST(
   if (intent === "close") {
     if (!auth.forCitizen) {
       return Response.json({ error: "invalid" }, { status: 400 });
+    }
+    // Why the citizen gave up, asked by the widget before closing: left in
+    // the conversation as a system line, so the office reads it in the
+    // transcript. Optional here, so an older widget still closes.
+    const reason = form.get("reason");
+    if (isGiveUpReason(reason)) {
+      const detail = form.get("detail");
+      await sendMessage(
+        tenant.slug,
+        conversationId,
+        "system",
+        giveUpMessage(reason, typeof detail === "string" ? detail : undefined),
+      );
     }
     await closeConversation(tenant.slug, conversationId, { kind: "citizen" });
     return Response.json({ ok: true });
