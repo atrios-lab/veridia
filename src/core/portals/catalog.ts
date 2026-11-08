@@ -30,8 +30,8 @@ export const SERP_PORTAL: OfficialPortal = {
   description:
     "Não sabe por onde começar? O SERP reúne num só lugar os pedidos e " +
     "consultas de todos os cartórios de registro do Brasil.",
-  domain: "serp.onr.org.br",
-  url: "https://serp.onr.org.br",
+  domain: "serp.registros.org.br",
+  url: "https://serp.registros.org.br",
 };
 
 /**
