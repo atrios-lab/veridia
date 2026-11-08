@@ -15,6 +15,8 @@ import {
   isAgendaId,
   OWN_SERVICE_ID,
   ownServiceId,
+  type ServiceChecklist,
+  serviceChecklistSchema,
   usesChannels,
 } from "@/core/scheduling/agenda.ts";
 import {
@@ -23,7 +25,9 @@ import {
 } from "@/core/scheduling/appointment.ts";
 import { officeHolidays } from "@/core/scheduling/calendar.ts";
 import {
+  defaultChecklist,
   getCounterService,
+  resolveService,
   servicesOfAgenda,
 } from "@/core/scheduling/services.ts";
 import { isSlotFree } from "@/core/scheduling/slots.ts";
@@ -45,6 +49,7 @@ import {
 } from "@/lib/email/appointment.ts";
 import { getSession } from "@/lib/session.ts";
 import { getTenant, officeNow } from "@/lib/tenant.ts";
+import { AttachmentError, collectAttachments } from "@/lib/uploads.ts";
 
 export type ActionState =
   | { status: "idle" }
@@ -452,8 +457,10 @@ export async function saveAgenda(
       agendas,
       services: services.list,
       modes,
-      // Closed dates are owned by the day-closing action, not by this form.
+      // Closed dates are owned by the day-closing action, and lists by the
+      // list editor: this form owns neither.
       closedDates: current.closedDates,
+      checklists: current.checklists,
     };
     // An agenda with hours and nothing to book would show the citizen days
     // and an empty list of services.
@@ -582,5 +589,116 @@ export async function saveDayChannels(
     message: reset
       ? "Este dia volta a seguir o padrão da semana."
       : "Canais deste dia salvos e já valendo no site.",
+  };
+}
+
+/**
+ * The office's own list for one service: items edited, added or removed
+ * (the base ones included), and its own sheet as a PDF or image. "Voltar à
+ * lista padrão" drops the edited items; "Tirar o arquivo" stops offering the
+ * sheet. A replaced or removed file stays in the store, unreferenced: nothing
+ * the office uploaded is deleted from here.
+ */
+export async function saveServiceChecklist(
+  _previous: ActionState,
+  formData: FormData,
+): Promise<ActionState> {
+  const session = await authorize();
+  if (!session) return { status: "error", message: NO_PERMISSION };
+
+  const serviceId = String(formData.get("serviceId") ?? "");
+  const restore = formData.get("restoreItems") === "1";
+  const dropFile = formData.get("dropFile") === "1";
+
+  let items: string[] | undefined;
+  if (!restore) {
+    try {
+      const parsed = JSON.parse(String(formData.get("items") ?? "[]"));
+      items = Array.isArray(parsed)
+        ? parsed.map((item) => String(item).trim()).filter(Boolean)
+        : [];
+    } catch {
+      return {
+        status: "error",
+        message: "Não foi possível ler a lista. Recarregue a página.",
+      };
+    }
+  }
+
+  const tenant = await getTenant();
+  try {
+    const config = await getAgendaConfig(tenant.slug);
+    if (!resolveService(config, serviceId)) {
+      return { status: "error", message: "Este serviço não existe mais." };
+    }
+
+    const [stored] = await collectAttachments(formData, "arquivo", {
+      tenantSlug: tenant.slug,
+      kind: "lista-de-documentos",
+      limit: 1,
+    });
+    const current = config.checklists[serviceId] ?? {};
+    // A list identical to the default is no change: saving it keeps the
+    // service following the catalogue, so a later fix there reaches it.
+    const sameAsDefault =
+      items !== undefined &&
+      JSON.stringify(items) ===
+        JSON.stringify(defaultChecklist(config, serviceId));
+    const next: ServiceChecklist = {
+      items: restore || sameAsDefault ? undefined : items,
+      file: stored
+        ? {
+            path: stored.path,
+            storedName: stored.storedName,
+            mimeType: stored.mimeType,
+            sizeBytes: stored.sizeBytes,
+          }
+        : dropFile
+          ? undefined
+          : current.file,
+    };
+    const parsed = serviceChecklistSchema.safeParse(next);
+    if (!parsed.success) {
+      return {
+        status: "error",
+        message:
+          parsed.error.issues[0]?.message ?? "Confira os itens da lista.",
+      };
+    }
+    if (parsed.data.items?.length === 0 && !parsed.data.file) {
+      return {
+        status: "error",
+        message:
+          "A lista ficou vazia. Deixe ao menos um item ou anexe a lista do cartório.",
+      };
+    }
+
+    const checklists = { ...config.checklists };
+    if (parsed.data.items === undefined && !parsed.data.file) {
+      delete checklists[serviceId];
+    } else {
+      checklists[serviceId] = parsed.data;
+    }
+    await saveAgendaConfig(
+      tenant.slug,
+      { ...config, checklists },
+      session.user.id,
+    );
+  } catch (error) {
+    if (error instanceof AttachmentError) {
+      return { status: "error", message: error.message };
+    }
+    console.error("agenda.checklist", error);
+    return {
+      status: "error",
+      message: "Não foi possível salvar agora. Tente novamente.",
+    };
+  }
+  revalidateAdmin();
+  return {
+    status: "success",
+    message: restore
+      ? "A lista voltou ao padrão e já vale no site."
+      : "Lista salva e já valendo no site e no comprovante.",
   };
 }

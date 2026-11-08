@@ -26,6 +26,8 @@ export interface AppointmentEmailFacts {
   agendaName?: string;
   /** What to bring, base items first. Absent on the cancellation notices. */
   checklist?: string[];
+  /** The office's own sheet for the service, as a full address. */
+  checklistUrl?: string;
 }
 
 /** "quinta, 06/08/2026, das 08:30 às 09:30" */
@@ -59,6 +61,9 @@ export function buildAppointmentBookedEmail(
         ? [
             isRemoteMode(facts.mode) ? "O que ter em mãos:" : "O que trazer:",
             ...facts.checklist.map((item) => `• ${item}`),
+            ...(facts.checklistUrl
+              ? [`Lista do cartório para este serviço: ${facts.checklistUrl}`]
+              : []),
             CHECKLIST_CAVEAT,
           ]
         : [

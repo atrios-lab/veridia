@@ -46,6 +46,20 @@ export interface OwnServiceDraft {
   bring: string[];
 }
 
+/** A service's list as saved: what the citizen gets for it. */
+export interface ListSummary {
+  items: string[];
+  /** Changed by the office, not the catalogue's. */
+  edited: boolean;
+  /** The office attached its own sheet. */
+  hasFile: boolean;
+}
+
+/** The editor of one service's list. */
+function listHref(id: string): string {
+  return `/admin/agenda/configuracao/lista/${encodeURIComponent(id)}`;
+}
+
 interface Draft {
   agendas: Books;
   services: OwnServiceDraft[];
@@ -87,6 +101,7 @@ const inputClass =
  */
 export function AgendaSettingsForm({
   initial,
+  lists,
   weekdays,
   closedDates,
   takenByDate,
@@ -95,6 +110,8 @@ export function AgendaSettingsForm({
   holidays,
 }: {
   initial: Draft;
+  /** Per service id (catalogue and saved own services), its list now. */
+  lists: Record<string, ListSummary>;
   weekdays: Array<{ day: string; label: string }>;
   closedDates: string[];
   /** date -> times already held, for the preview's strikethroughs. */
@@ -198,10 +215,12 @@ export function AgendaSettingsForm({
           selected={book.serviceIds}
           otherSelected={draft.agendas[other].serviceIds}
           own={draft.services}
+          lists={lists}
           onChange={(serviceIds) => setBook({ ...book, serviceIds })}
         />
         <OwnServicesSection
           services={draft.services}
+          lists={lists}
           onChange={(services, added) =>
             setDraft({
               ...draft,
@@ -505,12 +524,14 @@ function ServicePicker({
   selected,
   otherSelected,
   own,
+  lists,
   onChange,
 }: {
   agenda: AgendaId;
   selected: string[];
   otherSelected: string[];
   own: OwnServiceDraft[];
+  lists: Record<string, ListSummary>;
   onChange: (ids: string[]) => void;
 }) {
   const [query, setQuery] = useState("");
@@ -641,15 +662,43 @@ function ServicePicker({
                             >
                               {expanded ? "Fechar" : "O que levar"}
                             </button>
+                            {lists[service.id]?.edited && (
+                              <span className="font-semibold text-admin-accent">
+                                lista do cartório
+                              </span>
+                            )}
+                            {lists[service.id]?.hasFile && (
+                              <span className="font-semibold text-admin-accent">
+                                com arquivo
+                              </span>
+                            )}
                           </span>
                           {expanded && (
-                            <ul className="mt-1 list-disc pl-4 text-[11.5px] leading-relaxed text-admin-muted">
-                              {[...BASE_CHECKLIST, ...service.bring].map(
-                                (item) => (
+                            <>
+                              <ul className="mt-1 list-disc pl-4 text-[11.5px] leading-relaxed text-admin-muted">
+                                {(
+                                  lists[service.id]?.items ?? [
+                                    ...BASE_CHECKLIST,
+                                    ...service.bring,
+                                  ]
+                                ).map((item) => (
                                   <li key={item}>{item}</li>
-                                ),
+                                ))}
+                              </ul>
+                              {lists[service.id] ? (
+                                <Link
+                                  href={listHref(service.id)}
+                                  className="mt-1 inline-block text-[11.5px] font-semibold text-admin-accent underline"
+                                >
+                                  Editar a lista ou anexar a do cartório
+                                </Link>
+                              ) : (
+                                <span className="mt-1 block text-[11.5px] text-admin-faint">
+                                  Salve as agendas para editar a lista deste
+                                  serviço.
+                                </span>
                               )}
-                            </ul>
+                            </>
                           )}
                         </span>
                       </span>
@@ -684,9 +733,11 @@ function normalize(text: string): string {
  */
 function OwnServicesSection({
   services,
+  lists,
   onChange,
 }: {
   services: OwnServiceDraft[];
+  lists: Record<string, ListSummary>;
   onChange: (services: OwnServiceDraft[], added?: string) => void;
 }) {
   const [label, setLabel] = useState("");
@@ -710,9 +761,8 @@ function OwnServicesSection({
         Serviços próprios da serventia
       </h2>
       <p className="mt-1 text-[12.5px] leading-relaxed text-admin-muted">
-        Para o que não está na lista acima. Escreva o que o cidadão precisa
-        levar, um item por linha: vai no comprovante, depois do documento com
-        foto.
+        Para o que não está na lista acima. Depois de salvar, escreva o que o
+        cidadão precisa levar ou anexe a lista do cartório.
       </p>
       <div className="mt-2 flex flex-col">
         {services.map((service, index) => (
@@ -733,24 +783,20 @@ function OwnServicesSection({
                 <AdminIcon name="x" className="h-3.5 w-3.5" />
               </button>
             </div>
-            <label className="mt-1.5 block text-[11.5px] font-semibold text-admin-muted">
-              O que levar
-              <textarea
-                rows={2}
-                value={service.bring.join("\n")}
-                onChange={(event) =>
-                  onChange(
-                    services.map((item, i) =>
-                      i === index
-                        ? { ...item, bring: event.target.value.split("\n") }
-                        : item,
-                    ),
-                  )
-                }
-                placeholder={"Ex.: Guia paga\nDocumento do veículo"}
-                className={`${inputClass} mt-1 w-full font-normal`}
-              />
-            </label>
+            {lists[service.id] ? (
+              <Link
+                href={listHref(service.id)}
+                className="mt-1 inline-block text-[12px] font-semibold text-admin-accent underline"
+              >
+                Editar o que levar ({lists[service.id].items.length}{" "}
+                {lists[service.id].items.length === 1 ? "item" : "itens"}
+                {lists[service.id].hasFile ? " e arquivo" : ""})
+              </Link>
+            ) : (
+              <span className="mt-1 block text-[12px] text-admin-faint">
+                Salve as agendas para escrever o que levar.
+              </span>
+            )}
           </div>
         ))}
       </div>

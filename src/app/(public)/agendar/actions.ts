@@ -19,6 +19,7 @@ import { formatShortDate, officeHolidays } from "@/core/scheduling/calendar.ts";
 import {
   attendanceNotice,
   CHECKLIST_CAVEAT,
+  checklistFileHref,
   checklistFor,
   offeredAgendas,
   servicesOfAgenda,
@@ -47,6 +48,8 @@ export interface AppointmentSuccess {
   checklist: string[];
   /** The service's own guidance, when it has one. */
   serviceNote?: string;
+  /** The office's own sheet for the service, when it attached one. */
+  checklistUrl?: string;
   /** "Chegue com 15 minutos de antecedência, às 08:45, ..." or, for the
    * notary's video and phone, how to be ready. */
   arrival: string;
@@ -207,6 +210,9 @@ export async function submitAppointment(
       protocolNumber: appointment.protocolNumber ?? "",
       checklist: checklistFor(service ?? { bring: [] }),
       serviceNote: service?.note,
+      checklistUrl: service?.hasOwnFile
+        ? checklistFileHref(service.id)
+        : undefined,
       arrival: attendanceNotice(slotTime, parsed.data.mode),
       remote: isRemoteMode(parsed.data.mode),
       caveat: CHECKLIST_CAVEAT,

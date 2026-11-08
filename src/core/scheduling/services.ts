@@ -540,36 +540,58 @@ export interface OfferedService {
   id: string;
   label: string;
   group: string;
+  /** The service's own items, before the office's changes. */
   bring: string[];
   note?: string;
+  /** The whole list the citizen gets: base items and the service's, or
+   * the list as the office edited it. */
+  checklist: string[];
+  /** Whether the office attached its own sheet for this service. */
+  hasOwnFile: boolean;
 }
 
 const OWN_SERVICES_GROUP = "Outros serviços da serventia";
 
-/** The service an id names, from the catalogue or the office's own list. */
+/** The service an id names, from the catalogue or the office's own list,
+ * with the office's changes to its list applied. */
 export function resolveService(
-  config: Pick<AgendaConfig, "services">,
+  config: Pick<AgendaConfig, "services" | "checklists">,
   id: string,
 ): OfferedService | undefined {
   const known = getCounterService(id);
-  if (known) {
-    return {
-      id: known.id,
-      label: known.label,
-      group: known.group,
-      bring: known.bring,
-      note: known.note,
-    };
-  }
-  const own = config.services.find((service) => service.id === id);
-  return own
-    ? {
-        id: own.id,
-        label: own.label,
-        group: OWN_SERVICES_GROUP,
-        bring: own.bring,
-      }
-    : undefined;
+  const own = known
+    ? undefined
+    : config.services.find((service) => service.id === id);
+  if (!known && !own) return undefined;
+
+  const bring = known ? known.bring : (own?.bring ?? []);
+  const custom = config.checklists[id];
+  return {
+    id,
+    label: known ? known.label : (own?.label ?? id),
+    group: known ? known.group : OWN_SERVICES_GROUP,
+    bring,
+    note: known?.note,
+    checklist: custom?.items ?? [...BASE_CHECKLIST, ...bring],
+    hasOwnFile: Boolean(custom?.file),
+  };
+}
+
+/** The list a service starts from, before any change by the office. */
+export function defaultChecklist(
+  config: Pick<AgendaConfig, "services">,
+  id: string,
+): string[] {
+  const bring =
+    getCounterService(id)?.bring ??
+    config.services.find((service) => service.id === id)?.bring ??
+    [];
+  return [...BASE_CHECKLIST, ...bring];
+}
+
+/** Where the citizen downloads the office's own sheet for a service. */
+export function checklistFileHref(serviceId: string): string {
+  return `/agendar/lista/${encodeURIComponent(serviceId)}`;
 }
 
 /**
@@ -599,9 +621,12 @@ export function offeredAgendas(config: AgendaConfig): AgendaId[] {
   );
 }
 
-/** Everything to bring for a service: the base items first, then its own. */
-export function checklistFor(service: Pick<OfferedService, "bring">): string[] {
-  return [...BASE_CHECKLIST, ...service.bring];
+/** Everything to bring for a service: the list as the office left it, or
+ * the base items first and then the service's own. */
+export function checklistFor(
+  service: Pick<OfferedService, "bring"> & { checklist?: string[] },
+): string[] {
+  return service.checklist ?? [...BASE_CHECKLIST, ...service.bring];
 }
 
 /** "08:45" for an "09:00" appointment: when to be at the door. */
