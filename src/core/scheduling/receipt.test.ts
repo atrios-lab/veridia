@@ -108,3 +108,35 @@ test("a receipt for a phone call has no arrival and says to be ready", () => {
   assert.match(receipt.sections[1].paragraphs?.[0] ?? "", /liga no telefone/);
   assert.ok(receipt.sections.some((s) => s.heading === "O que ter em mãos"));
 });
+
+test("the receipt points to the office's own list when there is one", () => {
+  const receipt = buildAppointmentReceipt(tenant, {
+    protocolNumber: "AGD.2026.000010",
+    agenda: "geral",
+    date: "2026-11-10",
+    slotTime: "09:00",
+    citizenName: "Ana",
+    cpf: null,
+    phone: "",
+    email: "",
+    mode: "Presencial",
+    serviceDetails: null,
+    service: {
+      label: "Autenticação de cópias",
+      bring: ["Os documentos originais"],
+      checklist: ["Documentos originais", "Taxa paga no caixa"],
+    },
+    checklistUrl: "https://cartorio.exemplo/agendar/lista/notas.autenticacao",
+    createdAt: new Date("2026-11-08T12:00:00Z"),
+  });
+  const lines =
+    receipt.sections.find((s) => s.heading === "O que trazer")?.paragraphs ??
+    [];
+  assert.deepEqual(lines.slice(0, 2), [
+    "[  ] Documentos originais",
+    "[  ] Taxa paga no caixa",
+  ]);
+  assert.ok(
+    lines.some((line) => line.endsWith("/agendar/lista/notas.autenticacao")),
+  );
+});

@@ -177,6 +177,31 @@ const EMPTY_BOOK: AgendaBook = {
   dayChannels: [],
 };
 
+/**
+ * The office's own file for a service's list, a PDF or a photo of the sheet
+ * it hands out at the counter. `path` is a store URL or a disk path and
+ * never leaves the server: the citizen gets it through `/agendar/lista`.
+ */
+export const checklistFileSchema = z.object({
+  path: z.string().min(1),
+  storedName: z.string().min(1),
+  mimeType: z.string().min(1),
+  sizeBytes: z.number().int().nonnegative(),
+});
+export type ChecklistFile = z.infer<typeof checklistFileSchema>;
+
+/**
+ * How the office changed what a service asks the citizen to bring. `items`,
+ * when present, is the whole list as the office left it (base items
+ * included, any of them removable); absent, the catalogue's list applies.
+ * `file` is the office's own sheet, offered next to the list.
+ */
+export const serviceChecklistSchema = z.object({
+  items: z.array(z.string().trim().min(1)).max(40).optional(),
+  file: checklistFileSchema.optional(),
+});
+export type ServiceChecklist = z.infer<typeof serviceChecklistSchema>;
+
 const storedConfigSchema = z.object({
   agendas: z
     .object({
@@ -191,6 +216,7 @@ const storedConfigSchema = z.object({
   services: z.array(agendaServiceSchema).default([]),
   modes: z.array(z.string().min(1)).default([]),
   closedDates: z.array(closedDateSchema).default([]),
+  checklists: z.record(z.string(), serviceChecklistSchema).default({}),
 });
 
 export interface AgendaConfig {
@@ -200,6 +226,8 @@ export interface AgendaConfig {
   modes: string[];
   /** Single dates the office closed: they close both agendas. */
   closedDates: ClosedDate[];
+  /** Per service id, the office's changes to what to bring. */
+  checklists: Record<string, ServiceChecklist>;
 }
 
 /**
@@ -221,6 +249,7 @@ export const agendaConfigSchema = storedConfigSchema.transform(
     services: stored.services,
     modes: stored.modes,
     closedDates: stored.closedDates,
+    checklists: stored.checklists,
   }),
 );
 
@@ -241,6 +270,7 @@ export const DEFAULT_AGENDA_CONFIG: AgendaConfig = {
   services: [],
   modes: ["Presencial", "On-line"],
   closedDates: [],
+  checklists: {},
 };
 
 /**

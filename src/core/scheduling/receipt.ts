@@ -39,7 +39,11 @@ export interface AppointmentReceiptData {
   serviceDetails: string | null;
   /** The service as booked: the label from the record, the list from the
    * catalogue or the office's own services (empty when it is gone). */
-  service: Pick<OfferedService, "label" | "bring" | "note">;
+  service: Pick<OfferedService, "label" | "bring" | "note"> & {
+    checklist?: string[];
+  };
+  /** The office's own sheet for the service, as a full address. */
+  checklistUrl?: string;
   createdAt: Date;
 }
 
@@ -105,6 +109,11 @@ export function buildAppointmentReceipt(
     paragraphs: [
       ...checklistFor(data.service).map((item) => `[  ] ${item}`),
       ...(data.service.note ? [data.service.note] : []),
+      ...(data.checklistUrl
+        ? [
+            `O cartório tem uma lista própria para este serviço: ${data.checklistUrl}`,
+          ]
+        : []),
       CHECKLIST_CAVEAT,
     ],
   });

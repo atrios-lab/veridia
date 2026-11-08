@@ -1,7 +1,10 @@
 import "server-only";
 import { agendaIdOf } from "@/core/scheduling/agenda.ts";
 import { buildAppointmentReceipt } from "@/core/scheduling/receipt.ts";
-import { resolveService } from "@/core/scheduling/services.ts";
+import {
+  checklistFileHref,
+  resolveService,
+} from "@/core/scheduling/services.ts";
 import type { Tenant } from "@/core/tenant/schema.ts";
 import { type Appointment, getAgendaConfig } from "./appointments.ts";
 import { brandFor } from "./document-brand.ts";
@@ -38,7 +41,11 @@ export async function renderAppointmentReceipt(
         label: appointment.serviceLabel,
         bring: known?.bring ?? [],
         note: known?.note,
+        checklist: known?.checklist,
       },
+      checklistUrl: known?.hasOwnFile
+        ? `${origin}${checklistFileHref(known.id)}`
+        : undefined,
       createdAt: appointment.createdAt,
     }),
     await brandFor(tenant, `${origin}/protocolo`),

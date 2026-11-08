@@ -21,6 +21,7 @@ import {
 } from "@/core/scheduling/calendar.ts";
 import {
   CHECKLIST_CAVEAT,
+  checklistFileHref,
   checklistFor,
   type OfferedService,
 } from "@/core/scheduling/services.ts";
@@ -826,7 +827,25 @@ function BringPreview({ service }: { service?: OfferedService }) {
           {service.note}
         </p>
       )}
+      {service.hasOwnFile && (
+        <OwnListLink href={checklistFileHref(service.id)} />
+      )}
     </div>
+  );
+}
+
+/** The office's own sheet for the service, opened in a new tab. */
+function OwnListLink({ href }: { href: string }) {
+  return (
+    <a
+      href={href}
+      target="_blank"
+      rel="noopener"
+      className="mt-2.5 inline-flex items-center gap-1.5 text-[12.5px] font-bold text-brand-accent-ink underline"
+    >
+      <Icon name="file" className="h-3.5 w-3.5" strokeWidth={2} />
+      Baixar a lista do cartório para este serviço
+    </a>
   );
 }
 
@@ -931,6 +950,7 @@ function ConfirmationScreen({ result }: { result: AppointmentSuccess }) {
             {result.serviceNote}
           </p>
         )}
+        {result.checklistUrl && <OwnListLink href={result.checklistUrl} />}
         <p className="mt-2.5 text-[12px] leading-relaxed text-brand-muted">
           {result.caveat || CHECKLIST_CAVEAT}
         </p>

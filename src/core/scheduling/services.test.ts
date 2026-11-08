@@ -14,8 +14,11 @@ import {
   attendanceNotice,
   BASE_CHECKLIST,
   COUNTER_SERVICES,
+  checklistFileHref,
   checklistFor,
   counterServicesByGroup,
+  defaultChecklist,
+  getCounterService,
   offeredAgendas,
   resolveService,
   servicesOfAgenda,
@@ -126,4 +129,43 @@ test("a call or a video asks the citizen to be ready, not to arrive", () => {
   assert.match(attendanceNotice("14:00", "Por ligação"), /liga no telefone/);
   assert.match(attendanceNotice("14:00", "Por vídeo"), /link da videochamada/);
   assert.match(attendanceNotice("14:00", "Presencial"), /às 13:45/);
+});
+
+test("the office's list replaces the catalogue's, base items included", () => {
+  const config = parseAgendaConfig({
+    agendas: {
+      geral: { grid: { "1": ["08:00"] }, serviceIds: ["notas.autenticacao"] },
+    },
+    checklists: {
+      "notas.autenticacao": {
+        items: ["Documentos originais", "Taxa paga no caixa"],
+        file: {
+          path: "/tmp/lista.pdf",
+          storedName: "x.pdf",
+          mimeType: "application/pdf",
+          sizeBytes: 10,
+        },
+      },
+    },
+  });
+  const service = resolveService(config, "notas.autenticacao");
+  // Even the base items go when the office took them out.
+  assert.deepEqual(checklistFor(service ?? { bring: [] }), [
+    "Documentos originais",
+    "Taxa paga no caixa",
+  ]);
+  assert.equal(service?.hasOwnFile, true);
+  // The default is still known, for "Voltar à lista padrão".
+  assert.deepEqual(defaultChecklist(config, "notas.autenticacao"), [
+    ...BASE_CHECKLIST,
+    ...(getCounterService("notas.autenticacao")?.bring ?? []),
+  ]);
+  assert.equal(
+    checklistFileHref("notas.autenticacao"),
+    "/agendar/lista/notas.autenticacao",
+  );
+  // A service the office did not touch keeps the catalogue's list.
+  const untouched = resolveService(config, "rcpn.segunda-via");
+  assert.equal(untouched?.hasOwnFile, false);
+  assert.equal(untouched?.checklist[0], BASE_CHECKLIST[0]);
 });

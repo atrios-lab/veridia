@@ -10,6 +10,10 @@ import {
 } from "@/core/scheduling/agenda.ts";
 import { addDays, officeHolidays } from "@/core/scheduling/calendar.ts";
 import {
+  COUNTER_SERVICES,
+  resolveService,
+} from "@/core/scheduling/services.ts";
+import {
   futureLiveByWeekdayTime,
   getAgendaConfig,
   takenTimesByDay,
@@ -61,6 +65,29 @@ export default async function AgendaSettingsPage() {
     }
   >;
 
+  // Every service's list as saved, catalogue and own alike, for the
+  // picker's "O que levar" and the link to its editor.
+  const lists = Object.fromEntries(
+    [
+      ...COUNTER_SERVICES.map((service) => service.id),
+      ...config.services.map((service) => service.id),
+    ].flatMap((id) => {
+      const service = resolveService(config, id);
+      return service
+        ? [
+            [
+              id,
+              {
+                items: service.checklist,
+                edited: Boolean(config.checklists[id]?.items),
+                hasFile: service.hasOwnFile,
+              },
+            ],
+          ]
+        : [];
+    }),
+  );
+
   return (
     <>
       <AdminPageHeader
@@ -69,6 +96,7 @@ export default async function AgendaSettingsPage() {
       />
       <main className="px-[30px] py-7">
         <AgendaSettingsForm
+          lists={lists}
           initial={{
             agendas,
             services: config.services.map(({ id, label, bring }) => ({

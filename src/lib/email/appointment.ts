@@ -13,6 +13,7 @@ import {
 import { buildCalendarEvent } from "@/core/scheduling/ics.ts";
 import {
   ARRIVAL_ADVANCE_MINUTES,
+  checklistFileHref,
   checklistFor,
   resolveService,
 } from "@/core/scheduling/services.ts";
@@ -105,6 +106,9 @@ export async function sendAppointmentBookedEmail(
       ...facts(tenant, appointment),
       agendaName: AGENDA_NAMES[agenda].name,
       checklist: checklistFor(service ?? { bring: [] }),
+      checklistUrl: service?.hasOwnFile
+        ? `${baseUrl(tenant)}${checklistFileHref(service.id)}`
+        : undefined,
     });
     // A receipt that fails to render must not cost the citizen the
     // confirmation itself: it goes out without the PDF, which the
