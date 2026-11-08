@@ -22,5 +22,5 @@
 
 - [x] 4.1 Testes tocados, `pnpm typecheck`, `pnpm lint`
 - [x] 4.2 Conferido no navegador contra o Homolog (tenant de demonstração): aviso com imagem, edital retroativo de usucapião, formulário com o cronograma; linhas de teste apagadas
-- [ ] 4.3 Antes do merge, aplicar a migração 0030 em produção via `POSTGRES_URL_NON_POOLING`
+- [x] 4.3 Migração 0030 aplicada em produção via `POSTGRES_URL_NON_POOLING` em 08/11/2026 (31 migrações; as 3 publicações existentes ficaram sem tipo)
 - [ ] 4.4 Conferir com a serventia as decisões ambíguas do design (proclamas 15 dias ou 5; contagem em dias úteis) e o Código de Normas da CGJ-RN
