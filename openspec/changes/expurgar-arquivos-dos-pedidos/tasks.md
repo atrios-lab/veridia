@@ -21,7 +21,8 @@
 
 - [x] 4.1 Migração aplicada no Homolog pelo pooler (porta 5432) em 08/11/2026: 72 protocolos encerrados receberam `closed_at`
 - [ ] 4.2 Avisar as serventias antes de aplicar em produção (fora do código)
-- [ ] 4.3 Migração de produção, só com autorização nominal do usuário, antes do merge
+- [x] 4.3 Migração de produção, autorizada pelo usuário e aplicada em 08/11/2026 antes do merge: 351 protocolos encerrados (350 REQ, 1 OUV) com 306 arquivos ganharam `closed_at`, prazo até 08/12/2026
+- [ ] 4.4 Depois do merge, rodar de novo o backfill (`UPDATE ... SET closed_at = now() WHERE closed_at IS NULL AND <encerrado>`) para os protocolos encerrados entre a migração e o deploy, que o código antigo não marca
 
 ## 5. Fora deste PR (conhecido)
 
