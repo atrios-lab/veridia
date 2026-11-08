@@ -2,7 +2,7 @@
 
 import { useActionState, useEffect, useState } from "react";
 import { toast } from "sonner";
-import type { ActVariants } from "@/core/acts/catalog.ts";
+import { type ActVariants, PURPOSE_LABEL } from "@/core/acts/catalog.ts";
 import { formatCpf, formatPhone } from "@/core/request/form.ts";
 import type { AlternateDocumentType } from "@/core/request/kinds.ts";
 import { AlternateDocumentFields } from "../../_components/alternate-document-fields.tsx";
@@ -205,7 +205,7 @@ export function ApplicantSection({
           <Field label="Data e hora do atendimento" value={filedLabel} />
           <Field label="Ato" value={actLabel} />
           {data.purpose && (
-            <Field label="Finalidade" value={data.purpose} wide />
+            <Field label={PURPOSE_LABEL} value={data.purpose} wide />
           )}
           {qualificationRows.map((row) => (
             <Field key={row.label} label={row.label} value={row.value} />
@@ -320,7 +320,7 @@ export function ApplicantSection({
           )}
           {allowsPurpose && (
             <div>
-              <Label htmlFor="purpose">Finalidade</Label>
+              <Label htmlFor="purpose">{PURPOSE_LABEL}</Label>
               <input
                 id="purpose"
                 name="purpose"

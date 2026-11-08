@@ -16,6 +16,9 @@ import {
   CERTIFICATE_TYPES,
   FEE_EXEMPTION_ACKNOWLEDGEMENTS,
   FEE_EXEMPTION_DECLARATION,
+  PURPOSE_HINT,
+  PURPOSE_LABEL,
+  PURPOSE_PLACEHOLDER,
   REQUESTER_QUALIFICATION_NOTICE,
 } from "@/core/acts/catalog.ts";
 import { MAX_ATTACHMENTS } from "@/core/request/attachment.ts";
@@ -209,6 +212,43 @@ function RequesterQualificationFields({
           {REQUESTER_QUALIFICATION_NOTICE}
         </p>
       </div>
+    </div>
+  );
+}
+
+/**
+ * O motivo do pedido, no inteiro teor e nos poucos atos que a lei deixa
+ * perguntar. Quem decide se aparece é `asksPurpose`: a certidão resumida nunca
+ * renderiza o campo (Lei 6.015 art. 17).
+ */
+function PurposeField({
+  registration,
+  error,
+}: {
+  registration: UseFormRegisterReturn;
+  error?: string;
+}) {
+  return (
+    <div>
+      <label
+        htmlFor="purpose"
+        className="mb-1.5 block text-[13px] font-semibold"
+      >
+        {PURPOSE_LABEL}
+      </label>
+      <textarea
+        id="purpose"
+        rows={2}
+        maxLength={500}
+        className={inputClass}
+        placeholder={PURPOSE_PLACEHOLDER}
+        aria-describedby="purpose-hint"
+        {...registration}
+      />
+      <p id="purpose-hint" className="mt-1.5 text-[11px] text-brand-faint">
+        {PURPOSE_HINT}
+      </p>
+      <FieldError message={error} />
     </div>
   );
 }
@@ -533,14 +573,21 @@ export function RequestForm({
     act,
     selectedVariant?.id,
   );
-  const purposeAsked = asksPurpose(act, selectedVariant?.id);
+  const purposeAsked = asksPurpose(act, {
+    variantId: selectedVariant?.id,
+    exemptionActId,
+    certificateType: watch("certificateType") as string | undefined,
+  });
 
   // Esconder um campo não apaga o valor: quem preenche o bloco e troca para
-  // óbito ficaria preso num erro de um campo que não vê mais, porque a validação
-  // daqui ainda lê o valor antigo.
+  // óbito, ou do inteiro teor para a matrícula, ficaria preso num erro de um
+  // campo que não vê mais, porque a validação daqui ainda lê o valor antigo.
+  useEffect(() => {
+    if (purposeAsked) return;
+    setValue("purpose", "");
+  }, [purposeAsked, setValue]);
   useEffect(() => {
     if (!act.requesterQualification || asksQualification) return;
-    setValue("purpose", "");
     for (const field of REQUESTER_QUALIFICATION_FIELDS) {
       setValue(field, undefined);
     }
@@ -740,25 +787,14 @@ export function RequestForm({
           />
         )}
 
-        {/* Only the acts the law lets ask. A certificate may never require it
-            (Lei 6.015 art. 17), so the field is not even rendered, except in
-            the inteiro teor of the Registro Civil (CNN, art. 117, § 3º). */}
-        {purposeAsked && (
-          <div>
-            <label
-              htmlFor="purpose"
-              className="mb-1.5 block text-[13px] font-semibold"
-            >
-              Finalidade
-            </label>
-            <input
-              id="purpose"
-              className={inputClass}
-              placeholder="Para que a certidão será usada"
-              {...register("purpose")}
-            />
-            <FieldError message={errorFor("purpose")} />
-          </div>
+        {/* A certidão resumida nunca pergunta (Lei 6.015 art. 17). Na
+            gratuidade, o campo vem dentro do bloco, depois do tipo de
+            certidão que o decide. */}
+        {purposeAsked && !exemptionTargets && (
+          <PurposeField
+            registration={register("purpose")}
+            error={errorFor("purpose")}
+          />
         )}
 
         {act.parameter && (
@@ -952,6 +988,15 @@ export function RequestForm({
                 </div>
                 <FieldError message={errorFor("certificateType")} />
               </fieldset>
+            )}
+
+            {purposeAsked && (
+              <div className="border-t border-brand-border pt-3">
+                <PurposeField
+                  registration={register("purpose")}
+                  error={errorFor("purpose")}
+                />
+              </div>
             )}
 
             {exemptionTarget && (

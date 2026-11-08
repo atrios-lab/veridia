@@ -8,6 +8,9 @@ import {
   CERTIFICATE_TYPES,
   FEE_EXEMPTION_ACKNOWLEDGEMENTS,
   FEE_EXEMPTION_DECLARATION,
+  PURPOSE_HINT,
+  PURPOSE_LABEL,
+  PURPOSE_PLACEHOLDER,
   REQUESTER_QUALIFICATION_NOTICE,
 } from "@/core/acts/catalog.ts";
 import {
@@ -241,6 +244,30 @@ function Stepper({ current }: { current: 1 | 2 }) {
 
 /** Quem pede o inteiro teor do RCPN: as mesmas perguntas do site. */
 /** Digital pelo site ou papel no balcão, nos atos que deixam escolher. */
+/** O motivo do pedido, nas mesmas palavras do site. Quem decide é `asksPurpose`. */
+function ManualPurposeField({ error }: { error?: string }) {
+  return (
+    <div>
+      <label className={LABEL_CLASS} htmlFor="purpose">
+        {PURPOSE_LABEL}
+      </label>
+      <textarea
+        id="purpose"
+        name="purpose"
+        rows={2}
+        maxLength={500}
+        placeholder={PURPOSE_PLACEHOLDER}
+        aria-describedby="purpose-hint"
+        className={FIELD_CLASS}
+      />
+      <p id="purpose-hint" className="mt-1 text-[11px] text-admin-faint">
+        {PURPOSE_HINT}
+      </p>
+      <FieldError message={error} />
+    </div>
+  );
+}
+
 function ManualDeliveryFormatField({ error }: { error?: string }) {
   return (
     <fieldset className="mt-3.5 flex flex-col gap-1.5">
@@ -427,6 +454,20 @@ export function ManualEntryForm({
   const exemptionTarget = exemptionTargets?.find(
     (target) => target.id === exemptionActId,
   );
+  // Guardado com o ato e o ato da gratuidade, pelo mesmo motivo da opção: o
+  // tipo de certidão de outro pedido não diz nada sobre este.
+  const [chosenCertificateType, setChosenCertificateType] = useState<{
+    key: string;
+    value: string;
+  }>();
+  const certificateKey = `${act?.id}/${exemptionActId}`;
+  const certificateType =
+    chosenCertificateType?.key === certificateKey
+      ? chosenCertificateType.value
+      : undefined;
+  const purposeAsked = act
+    ? asksPurpose(act, { variantId, exemptionActId, certificateType })
+    : false;
 
   const [state, formAction, pending] = useActionState<
     ManualEntryState,
@@ -602,13 +643,11 @@ export function ManualEntryForm({
           />
         )}
 
-        {act && asksPurpose(act, variantId) && (
+        {/* Na gratuidade, o campo vem dentro do bloco, depois do tipo de
+            certidão que o decide. */}
+        {purposeAsked && !exemptionTargets && (
           <div className="mt-3.5">
-            <label className={LABEL_CLASS} htmlFor="purpose">
-              Finalidade
-            </label>
-            <input id="purpose" name="purpose" className={FIELD_CLASS} />
-            <FieldError message={fieldErrors.purpose} />
+            <ManualPurposeField error={fieldErrors.purpose} />
           </div>
         )}
 
@@ -646,7 +685,10 @@ export function ManualEntryForm({
                     name="exemptionActId"
                     value={option.id}
                     checked={exemptionActId === option.id}
-                    onChange={() => setExemptionActId(option.id)}
+                    onChange={() => {
+                      setExemptionActId(option.id);
+                      setChosenVariant(undefined);
+                    }}
                     className="mt-0.5 h-4 w-4 shrink-0 accent-admin-primary-soft"
                   />
                   <span className="text-[12.5px] text-admin-text">
@@ -662,10 +704,15 @@ export function ManualEntryForm({
 
             {exemptionTarget?.variants && (
               <div className="border-t border-admin-border pt-3">
+                {/* Controlado: no inteiro teor, o óbito não pede o motivo. */}
                 <ManualVariantField
                   key={exemptionTarget.id}
                   variants={exemptionTarget.variants}
+                  value={variantId ?? ""}
                   error={fieldErrors.actVariant}
+                  onChange={(id) =>
+                    act && setChosenVariant({ actId: act.id, id })
+                  }
                 />
               </div>
             )}
@@ -682,6 +729,13 @@ export function ManualEntryForm({
                         type="radio"
                         name="certificateType"
                         value={value}
+                        checked={certificateType === value}
+                        onChange={() =>
+                          setChosenCertificateType({
+                            key: certificateKey,
+                            value,
+                          })
+                        }
                         className="h-4 w-4 accent-admin-primary-soft"
                       />
                       <span className="text-[12.5px] text-admin-text">
@@ -692,6 +746,12 @@ export function ManualEntryForm({
                 </div>
                 <FieldError message={fieldErrors.certificateType} />
               </fieldset>
+            )}
+
+            {purposeAsked && (
+              <div className="border-t border-admin-border pt-3">
+                <ManualPurposeField error={fieldErrors.purpose} />
+              </div>
             )}
 
             {exemptionTarget && (

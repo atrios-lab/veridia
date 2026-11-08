@@ -669,7 +669,7 @@ test("a certidão exige o tipo, e só ela o pede", () => {
     exemptionActId: "rcpn-certidao",
     actVariant: "nascimento",
     exemptionDeclaration: "on",
-    certificateType: "inteiro-teor",
+    certificateType: "com-busca",
     beneficiaries: [beneficiary()],
   });
   assert.ok(comTipo.success);
@@ -697,6 +697,8 @@ test("o schema aceita todo tipo de certidão que o catálogo declara", () => {
       actVariant: "nascimento",
       exemptionDeclaration: "on",
       certificateType,
+      // O inteiro teor pede o motivo, como no ato pago.
+      purpose: certificateType === "inteiro-teor" ? "Pensão por morte" : "",
       beneficiaries: [beneficiary()],
     });
     assert.ok(result.success, certificateType);
@@ -1228,4 +1230,93 @@ test("o bloco é lido do FormData com os mesmos nomes do formulário", () => {
     [...REQUESTER_QUALIFICATION_FIELDS].sort(),
     Object.keys(read).sort(),
   );
+});
+
+const exemptInteiroTeor = {
+  ...validOnline,
+  exemptionActId: "rcpn-certidao",
+  actVariant: "nascimento",
+  exemptionDeclaration: "on",
+  certificateType: "inteiro-teor",
+  beneficiaries: [beneficiary()],
+};
+
+test("a gratuidade com inteiro teor pede o motivo, salvo no óbito", () => {
+  const schema = publicServiceRequestSchema(gratuidade);
+  assert.deepEqual(issuePaths(schema.safeParse(exemptInteiroTeor)), [
+    "purpose",
+  ]);
+  assert.ok(
+    schema.safeParse({ ...exemptInteiroTeor, purpose: "Pensão por morte" })
+      .success,
+  );
+  assert.ok(
+    schema.safeParse({ ...exemptInteiroTeor, actVariant: "obito" }).success,
+    "óbito",
+  );
+  assert.deepEqual(
+    issuePaths(
+      schema.safeParse({
+        ...exemptInteiroTeor,
+        certificateType: "sem-busca",
+        purpose: "Pensão por morte",
+      }),
+    ),
+    ["purpose"],
+    "a certidão resumida não guarda motivo",
+  );
+});
+
+test("todo inteiro teor pede o motivo, nos dois canais", () => {
+  const cases = [
+    ["ri-certidao-matricula", "inteiro-teor"],
+    ["ri-certidao-inteiro-teor-papel", undefined],
+    ["rtd-certidao", "inteiro-teor"],
+    ["rcpj-certidao", "inteiro-teor"],
+    ["notas-certidao", "testamento"],
+  ] as const;
+  for (const [actId, actVariant] of cases) {
+    const act = getAct(actId);
+    if (!act) throw new Error(actId);
+    for (const [schema, fields] of [
+      [serviceRequestSchema(act), valid],
+      [publicServiceRequestSchema(act), validOnline],
+    ] as const) {
+      const base = { ...fields, actVariant };
+      assert.deepEqual(
+        issuePaths(schema.safeParse(base)),
+        ["purpose"],
+        `${actId} sem motivo`,
+      );
+      assert.ok(
+        schema.safeParse({ ...base, purpose: "Inventário do meu pai." })
+          .success,
+        `${actId} com motivo`,
+      );
+    }
+  }
+});
+
+test("a certidão resumida não pede nem guarda o motivo", () => {
+  const cases = [
+    ["ri-certidao-matricula", "matricula"],
+    ["ri-certidao-matricula", "onus"],
+    ["rtd-certidao", "breve-relato"],
+    ["rcpj-certidao", "breve-relato"],
+    ["notas-certidao", "ato-notarial"],
+    ["rcpn-certidao", "nascimento"],
+  ] as const;
+  for (const [actId, actVariant] of cases) {
+    const act = getAct(actId);
+    if (!act) throw new Error(actId);
+    const schema = serviceRequestSchema(act);
+    assert.ok(schema.safeParse({ ...valid, actVariant }).success, actId);
+    assert.deepEqual(
+      issuePaths(
+        schema.safeParse({ ...valid, actVariant, purpose: "Inventário" }),
+      ),
+      ["purpose"],
+      `${actId}/${actVariant}`,
+    );
+  }
 });

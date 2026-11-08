@@ -718,14 +718,54 @@ export function asksRequesterQualification(
   return Boolean(variant && !variant.waivesRequesterQualification);
 }
 
-/** Se este pedido pode dizer a finalidade, dado o ato e a opção escolhida. */
+/**
+ * O que, no pedido, decide se o motivo é perguntado: a opção do ato e, na
+ * entrada da gratuidade, o ato pedido e o tipo de certidão.
+ */
+export interface PurposeChoice {
+  variantId?: string;
+  exemptionActId?: string;
+  certificateType?: string;
+}
+
+/**
+ * Se este pedido pede o motivo. O site, o balcão e o painel perguntam aqui,
+ * para dizerem o mesmo:
+ *
+ * - no inteiro teor do RCPN, junto com as perguntas de quem pede, salvo no óbito;
+ * - na opção que pede, como o inteiro teor de imóveis, RTD e RCPJ e o testamento;
+ * - na gratuidade, quando o tipo de certidão é inteiro teor, salvo no óbito
+ *   (CNN, arts. 118 e 119), igual ao verbum ad verbum pago;
+ * - no ato que pede sempre, como a busca e o documento arquivado de imóveis.
+ */
 export function asksPurpose(
-  act: QualificationAct & Pick<Act, "requiresPurpose">,
-  variantId: string | undefined,
+  act: QualificationAct & Pick<Act, "requiresPurpose" | "exemptionTargets">,
+  choice: PurposeChoice = {},
 ): boolean {
-  if (!act.requiresPurpose) return false;
-  return (
-    !act.requesterQualification || asksRequesterQualification(act, variantId)
+  if (act.exemptionTargets) {
+    const target = act.exemptionTargets.find(
+      (candidate) => candidate.id === choice.exemptionActId,
+    );
+    if (
+      !target?.feeExemption?.askCertificateType ||
+      choice.certificateType !== "inteiro-teor"
+    ) {
+      return false;
+    }
+    const variant = target.variants?.options.find(
+      (option) => option.id === choice.variantId,
+    );
+    return !variant?.waivesRequesterQualification;
+  }
+  if (act.requesterQualification) {
+    return (
+      act.requiresPurpose && asksRequesterQualification(act, choice.variantId)
+    );
+  }
+  if (act.requiresPurpose) return true;
+  return Boolean(
+    act.variants?.options.find((option) => option.id === choice.variantId)
+      ?.requiresPurpose,
   );
 }
 

@@ -40,7 +40,11 @@ export default async function PrivacyPolicyPage() {
               Civil, pedimos também quem faz o pedido, a finalidade, o nome do
               representado, o grau de parentesco e se a pessoa registrada é
               falecida, porque o requerimento desse ato precisa trazer esses
-              dados.
+              dados. Em toda certidão de inteiro teor, inclusive a de imóveis, a
+              de testamento e a pedida com gratuidade, pedimos o motivo do
+              pedido, porque o inteiro teor pode trazer dados sensíveis, e a
+              serventia só os entrega para uma finalidade informada. A certidão
+              de óbito não pede o motivo.
             </li>
             <li>
               <strong className="text-brand-text">Agendamento:</strong> nome,

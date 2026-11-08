@@ -348,7 +348,7 @@ test("o inteiro teor do RCPN traz as respostas e a própria assinatura", () => {
   const text = flatten(sections);
   assert.match(text, /Entrega: Impressa em papel, retirada no balcão/);
   assert.match(text, /Ato requerido: Certidão de nascimento em inteiro teor/);
-  assert.match(text, /Finalidade: Aposentadoria rural/);
+  assert.match(text, /Motivo do pedido: Aposentadoria rural/);
   assert.match(text, /Quem pede: Advogado ou procurador/);
   assert.match(text, /Representado: João da Silva/);
   assert.match(text, /Parentesco: Filho/);

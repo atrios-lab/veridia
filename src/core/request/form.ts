@@ -355,11 +355,24 @@ function actRules(
         message: "Descreva o que você precisa para a serventia poder avaliar.",
       });
     }
-    if (asksPurpose(act, data.actVariant) && !data.purpose) {
+    const purposeAsked = asksPurpose(act, {
+      variantId: data.actVariant,
+      exemptionActId: data.exemptionActId,
+      certificateType: data.certificateType,
+    });
+    if (purposeAsked && !data.purpose) {
       ctx.addIssue({
         code: "custom",
         path: ["purpose"],
-        message: "Este ato exige que você informe a finalidade.",
+        message: "Informe o motivo do pedido.",
+      });
+    } else if (!purposeAsked && data.purpose) {
+      // Lei 6.015 art. 17: a certidão resumida não pergunta o motivo, e a
+      // resposta a uma pergunta que não foi feita não vira dado guardado.
+      ctx.addIssue({
+        code: "custom",
+        path: ["purpose"],
+        message: "Este pedido não leva o motivo.",
       });
     }
     // O mandato não entra aqui, de propósito: qualquer pessoa envia, e quem

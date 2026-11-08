@@ -9,7 +9,12 @@ import {
   isValidCpf,
   isValidPhone,
 } from "./form.ts";
-import { type AlternateDocument, asksPurpose, variantOwner } from "./kinds.ts";
+import {
+  type AlternateDocument,
+  asksPurpose,
+  type PurposeChoice,
+  variantOwner,
+} from "./kinds.ts";
 
 /**
  * What the counter may correct on a request that already exists.
@@ -164,13 +169,14 @@ export function resolveVariantEdit(
  * in is the same violation with a different door, so the rule lives here,
  * where both callers pass through, instead of in either screen.
  *
- * `actVariant` matters only on the inteiro teor of the Registro Civil, whose
- * óbito is not asked for a purpose (CNN, arts. 118 e 119).
+ * `choice` is what the request chose: the option (the inteiro teor among
+ * summaries, the óbito that waives it) and, on the gratuidade entry, the act
+ * and the kind of certidão. See `asksPurpose`.
  */
 export function purposeFor(
   act: Parameters<typeof asksPurpose>[0] | undefined,
   value: string | null,
-  actVariant?: string,
+  choice?: PurposeChoice,
 ): string | null {
-  return act && asksPurpose(act, actVariant) ? value : null;
+  return act && asksPurpose(act, choice) ? value : null;
 }

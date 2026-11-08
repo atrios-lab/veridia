@@ -627,9 +627,10 @@ export async function updateRequestDataAction(
     const act = stored.actId
       ? getActForTenant(tenant, stored.actId)
       : undefined;
+    const exemption = readExemption(stored.details);
     const variant = resolveVariantEdit(
       act,
-      readExemption(stored.details)?.actId,
+      exemption?.actId,
       String(formData.get("actVariant") ?? ""),
     );
     if (!variant.ok) return { status: "error", message: variant.message };
@@ -655,11 +656,11 @@ export async function updateRequestDataAction(
         ...fields,
         cpf: identity.cpf,
         alternateDocument: identity.alternateDocument,
-        purpose: purposeFor(
-          act,
-          fields.purpose,
-          variant.actVariant ?? readActVariant(stored.details),
-        ),
+        purpose: purposeFor(act, fields.purpose, {
+          variantId: variant.actVariant ?? readActVariant(stored.details),
+          exemptionActId: exemption?.actId,
+          certificateType: exemption?.certificateType,
+        }),
         actVariant: variant.actVariant,
       },
       session.user.id,

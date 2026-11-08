@@ -137,6 +137,22 @@ export const REQUESTER_QUALIFICATION_NOTICE =
   "outro documento necessário.";
 
 /**
+ * O campo do motivo, igual no site e no balcão. O inteiro teor reproduz o
+ * registro por completo, com o que ele tiver de adoção, reconhecimento de
+ * filho, mudança de nome ou de sexo e disposições de testamento: a serventia só
+ * trata esses dados para uma finalidade informada (LGPD, art. 6º, I), e o
+ * motivo é o que ela confere antes de emitir. Nos dois atos de imóveis que já
+ * pediam finalidade (documento arquivado e busca) o texto serve igual.
+ */
+export const PURPOSE_LABEL = "Motivo do pedido";
+export const PURPOSE_PLACEHOLDER =
+  "Ex.: comprovar atividade rural para a aposentadoria no INSS.";
+export const PURPOSE_HINT =
+  "Esta certidão pode trazer dados pessoais sensíveis. Pela LGPD, a serventia " +
+  "só os entrega para uma finalidade informada, e analisa o motivo antes de " +
+  "emitir.";
+
+/**
  * Por que o e-Notariado não está aqui: o CNN, art. 117, lista firma reconhecida,
  * ICP-Brasil, Gov.br e assinatura conferida com o documento de identidade
  * original, e não o cita para este requerimento. O § 1º dispensa a firma do
@@ -170,6 +186,12 @@ export interface ActVariant {
    * a dado sensível não alcança a pessoa falecida (CNN, arts. 118 e 119).
    */
   waivesRequesterQualification?: true;
+  /**
+   * A opção pede o motivo mesmo que o ato não peça: é o inteiro teor dentro de
+   * um ato que também emite certidões resumidas (imóveis, RTD, RCPJ) e o
+   * testamento dentro das certidões de Notas. Quem responde é `asksPurpose`.
+   */
+  requiresPurpose?: true;
 }
 
 export interface ActVariants {
@@ -192,10 +214,14 @@ export interface Act {
   identificationOnly?: true;
   legalBasis: string;
   /**
-   * Only a few acts may ask the citizen why they want the document.
-   * Certificates may not: Lei 6.015 art. 17 forbids requiring a motive. The one
-   * exception is the inteiro teor of the Registro Civil (CNN, art. 117, § 3º),
-   * and `asksPurpose` is what says whether a given request of it does.
+   * Whether the act asks the citizen why they want the document. A summary
+   * certificate does not: Lei 6.015 art. 17 says it may be asked for without a
+   * motive. Every inteiro teor does, because the full text carries sensitive
+   * data (LGPD, art. 6º, I): in the Registro Civil the CNN, art. 117, § 3º, says
+   * so; in the other attributions it is the product's decision of 07/11/2026.
+   * Where the inteiro teor is one option among summaries, the option carries
+   * it (`ActVariant.requiresPurpose`). `asksPurpose` is what says whether a
+   * given request does.
    */
   requiresPurpose: boolean;
   /** Papers the office expects, shown as a checklist before submitting. */
@@ -533,7 +559,13 @@ export const ACTS: Act[] = [
       options: [
         { id: "nascimento", name: "Certidão de nascimento" },
         { id: "casamento", name: "Certidão de casamento" },
-        { id: "obito", name: "Certidão de óbito" },
+        // Na gratuidade com inteiro teor, o óbito também não pede o motivo
+        // (CNN, arts. 118 e 119), igual ao verbum ad verbum pago.
+        {
+          id: "obito",
+          name: "Certidão de óbito",
+          waivesRequesterQualification: true,
+        },
         // The Anexo I says "ou outra" too: without this, whoever needs another
         // certificate of the Registro Civil would have to mark a wrong one.
         { id: "outra", name: "Outra certidão", requiresDescription: true },
@@ -696,7 +728,23 @@ export const ACTS: Act[] = [
   {
     id: "notas-certidao",
     attribution: "NOTAS",
-    name: "Certidão de ato notarial",
+    name: "Certidão de ato notarial ou de testamento",
+    variants: {
+      question: "De qual ato?",
+      options: [
+        {
+          id: "ato-notarial",
+          name: "Certidão de escritura, procuração ou ata notarial",
+        },
+        // O testamento traz disposições de família e de patrimônio que o
+        // testador quis guardar: o motivo é pedido, e a serventia analisa.
+        {
+          id: "testamento",
+          name: "Certidão de testamento",
+          requiresPurpose: true,
+        },
+      ],
+    },
     processingMode: "online",
     identificationOnly: true,
     legalBasis: "Lei 8.935 art. 7 (cópia de ato lavrado)",
@@ -714,7 +762,11 @@ export const ACTS: Act[] = [
         { id: "matricula", name: "Certidão de matrícula" },
         // O id ficou: os pedidos antigos passam a aparecer como digital, que é
         // o que o selo "Termina on-line" já prometia a eles.
-        { id: "inteiro-teor", name: "Certidão de inteiro teor digital" },
+        {
+          id: "inteiro-teor",
+          name: "Certidão de inteiro teor digital",
+          requiresPurpose: true,
+        },
         { id: "onus", name: "Certidão de ônus" },
       ],
     },
@@ -724,9 +776,11 @@ export const ACTS: Act[] = [
     legalDeadlineDays: 1,
     legalDeadlineNote:
       "Lei 6.015 art. 19, red. Lei 14.382/2022: situação jurídica do imóvel. O inteiro teor tem 4 horas, que não cabe numa contagem em dias",
-    // The caput asks who is requesting, never what for. Only the two entries
-    // below carry the exception, and mixing them up would put an unlawful
-    // question in front of every certificate.
+    // The caput asks who is requesting, never what for, and the matrícula and
+    // the ônus stay that way. The inteiro teor asks the motive on its option,
+    // by the product's decision of 07/11/2026, aware of Lei 6.015 art. 17: the
+    // full text is where sensitive data lives. Never move it to the act, or
+    // every summary certificate would be asked too.
     requiresPurpose: false,
   },
   {
@@ -744,7 +798,8 @@ export const ACTS: Act[] = [
     legalDeadlineDays: 5,
     legalDeadlineNote:
       "Lei 6.015 art. 19 § 10 III, red. Lei 14.382/2022: as 4 horas do inciso I são só do meio eletrônico",
-    requiresPurpose: false,
+    // Inteiro teor: o motivo é pedido, como no digital acima.
+    requiresPurpose: true,
     guidance:
       "A certidão é impressa em papel de segurança e retirada no balcão da " +
       "serventia. Traga um documento de identidade.",
@@ -890,7 +945,18 @@ export const ACTS: Act[] = [
   {
     id: "rtd-certidao",
     attribution: "RTD",
-    name: "Certidão do registro",
+    name: "Certidão do registro (breve relato ou inteiro teor)",
+    variants: {
+      question: "Qual certidão?",
+      options: [
+        { id: "breve-relato", name: "Certidão em breve relato" },
+        {
+          id: "inteiro-teor",
+          name: "Certidão de inteiro teor",
+          requiresPurpose: true,
+        },
+      ],
+    },
     processingMode: "online",
     identificationOnly: true,
     legalBasis: "Lei 6.015 art. 17 (norma geral)",
@@ -937,7 +1003,18 @@ export const ACTS: Act[] = [
   {
     id: "rcpj-certidao",
     attribution: "RCPJ",
-    name: "Certidão do registro",
+    name: "Certidão do registro (breve relato ou inteiro teor)",
+    variants: {
+      question: "Qual certidão?",
+      options: [
+        { id: "breve-relato", name: "Certidão em breve relato" },
+        {
+          id: "inteiro-teor",
+          name: "Certidão de inteiro teor",
+          requiresPurpose: true,
+        },
+      ],
+    },
     processingMode: "online",
     identificationOnly: true,
     legalBasis: "Lei 6.015 art. 17 (norma geral)",
