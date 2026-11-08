@@ -16,6 +16,13 @@ export interface AdminNavItem {
    * item is never the current page.
    */
   external?: true;
+  /**
+   * An entry point the office should not miss: the sidebar draws it in the
+   * solid, pulsing "click here" treatment (see attention.ts) until the person
+   * is on that screen. Kept for what the office is being asked to go and
+   * do, like the training; spent on everything, it stops meaning anything.
+   */
+  attention?: true;
 }
 
 /**
@@ -130,11 +137,14 @@ export const ADMIN_NAV: readonly AdminNavItem[] = [
     // watch. The sidebar still omits it while the catalog is empty (see
     // sidebar.tsx), the one case where the route exists and the item does
     // not: a screen that only says "estamos preparando" is a link to
-    // nowhere until the first video lands.
+    // nowhere until the first video lands. It pulses: the office was
+    // asked to watch the videos, and an item at the foot of the column went
+    // unnoticed.
     group: "Ajuda",
     label: "Treinamento",
     href: "/admin/ajuda",
     icon: "play",
+    attention: true,
   },
 ];
 
