@@ -4,7 +4,16 @@ import { useActionState } from "react";
 import { ConfirmAction } from "../../../_components/confirm-action.tsx";
 import { type DeleteState, deletePublicationAction } from "../actions.ts";
 
-export function DeleteButton({ id, title }: { id: string; title: string }) {
+export function DeleteButton({
+  id,
+  title,
+  redirectTo,
+}: {
+  id: string;
+  title: string;
+  /** Where to go once it is gone: the detail page has nothing left to show. */
+  redirectTo?: string;
+}) {
   const [state, formAction, pending] = useActionState<DeleteState, FormData>(
     deletePublicationAction,
     { status: "idle" },
@@ -25,6 +34,9 @@ export function DeleteButton({ id, title }: { id: string; title: string }) {
       className="flex-none"
     >
       <input type="hidden" name="id" value={id} />
+      {redirectTo && (
+        <input type="hidden" name="redirectTo" value={redirectTo} />
+      )}
     </ConfirmAction>
   );
 }
