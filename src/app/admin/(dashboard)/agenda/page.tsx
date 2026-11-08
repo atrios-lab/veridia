@@ -13,6 +13,7 @@ import {
   DEFAULT_CHANNELS,
   hasGrid,
   isAgendaId,
+  slotEndTime,
   usesChannels,
 } from "@/core/scheduling/agenda.ts";
 import {
@@ -27,6 +28,7 @@ import {
 } from "@/core/scheduling/calendar.ts";
 import { servicesOfAgenda } from "@/core/scheduling/services.ts";
 import { freeSlots, gridTimes } from "@/core/scheduling/slots.ts";
+import { awaitingConfirmation } from "@/lib/appointment-reminders.ts";
 import {
   AGENDAS_SHARE_TIMES,
   appointmentsOn,
@@ -79,11 +81,13 @@ export default async function AgendaPage({
   const stripFrom = stripDates[0] ?? anchor;
   const stripTo = stripDates.at(-1) ?? anchor;
 
-  const [agendaConfig, dayAppointments, counts] = await Promise.all([
-    getAgendaConfig(tenant.slug),
-    appointmentsOn(tenant.slug, date),
-    liveCountsByDay(tenant.slug, stripFrom, stripTo, agenda),
-  ]);
+  const [agendaConfig, dayAppointments, counts, unconfirmed] =
+    await Promise.all([
+      getAgendaConfig(tenant.slug),
+      appointmentsOn(tenant.slug, date),
+      liveCountsByDay(tenant.slug, stripFrom, stripTo, agenda),
+      awaitingConfirmation(tenant.slug, officeNow()),
+    ]);
 
   // The office's own days off ride along, so its holidays close the day
   // here as they do on the public page.
@@ -147,6 +151,11 @@ export default async function AgendaPage({
         origin: appointment.origin,
         protocolNumber: appointment.protocolNumber,
         cancelReason: appointment.cancelReason,
+        awaitingConfirmation:
+          appointment.status === "booked" &&
+          (appointment.date < now.date ||
+            (appointment.date === now.date &&
+              slotEndTime(appointment.slotTime) <= now.time)),
       },
     })),
     ...grid
@@ -256,6 +265,43 @@ export default async function AgendaPage({
                 </span>
               </span>
             </Link>
+
+            {unconfirmed.length > 0 && (
+              <section className="rounded-[14px] border-2 border-admin-warning-bg bg-admin-card px-5 py-4">
+                <h3 className="text-[13px] font-bold text-admin-primary">
+                  Aguardando confirmação ({unconfirmed.length})
+                </h3>
+                <p className="mt-1 text-[12px] leading-relaxed text-admin-muted">
+                  O horário passou e ninguém marcou se a pessoa foi atendida ou
+                  não compareceu.
+                </p>
+                <ul className="mt-2.5 flex flex-col gap-1.5">
+                  {unconfirmed.slice(0, 6).map((item) => (
+                    <li key={item.id}>
+                      <Link
+                        href={`/admin/agenda?agenda=${agendaIdOf(item.agenda)}&dia=${item.date}`}
+                        className="flex justify-between gap-2 text-[12.5px] text-admin-text hover:underline"
+                      >
+                        <span className="min-w-0 truncate">
+                          {item.citizenName}
+                        </span>
+                        <span className="shrink-0 tabular-nums text-admin-muted">
+                          {item.date === today()
+                            ? "hoje"
+                            : formatShortDate(item.date)}{" "}
+                          {item.slotTime}
+                        </span>
+                      </Link>
+                    </li>
+                  ))}
+                </ul>
+                {unconfirmed.length > 6 && (
+                  <p className="mt-1.5 text-[11.5px] text-admin-faint">
+                    e mais {unconfirmed.length - 6}.
+                  </p>
+                )}
+              </section>
+            )}
 
             {usesChannels(agenda) && !closed && grid.length > 0 && (
               <DayChannelsCard

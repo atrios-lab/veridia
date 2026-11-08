@@ -1,7 +1,14 @@
 "use client";
 
 import Link from "next/link";
-import { useCallback, useEffect, useRef, useState } from "react";
+import {
+  useActionState,
+  useCallback,
+  useEffect,
+  useRef,
+  useState,
+} from "react";
+import { toast } from "sonner";
 import { addMinutes } from "@/core/scheduling/agenda.ts";
 import { formatShortDate } from "@/core/scheduling/calendar.ts";
 import { ARRIVING_SOON_MINUTES } from "@/core/scheduling/reminders.ts";
@@ -10,7 +17,12 @@ import type {
   AgendaAlertSnapshot,
 } from "@/lib/appointment-reminders.ts";
 import { playSound } from "../../_components/chat-sound.ts";
-import { agendaAlertSnapshotAction } from "../(dashboard)/agenda/actions.ts";
+import {
+  type ActionState,
+  agendaAlertSnapshotAction,
+  attendAppointment,
+  markAppointmentNoShow,
+} from "../(dashboard)/agenda/actions.ts";
 import { readAlertPrefs } from "./chat-alert-prefs.ts";
 import { AdminIcon } from "./icon.tsx";
 
@@ -63,6 +75,10 @@ export function AgendaAlerts() {
   const [snapshot, setSnapshot] = useState<AgendaAlertSnapshot | null>(null);
   const [seen, setSeen] = useState<Seen | null>(null);
   const announced = useRef(new Set<string>());
+  // "Depois" hides a confirmation until the next page load, not for good:
+  // the office still has to say whether the citizen came.
+  const [later, setLater] = useState<Set<string>>(new Set());
+  const pollRef = useRef<() => Promise<void>>(async () => {});
 
   const dismiss = useCallback((key: string) => {
     setSeen((current) => {
@@ -94,6 +110,7 @@ export function AgendaAlerts() {
         // A missed poll is a late card; the next one catches up.
       }
     };
+    pollRef.current = poll;
     void poll();
     const timer = setInterval(poll, POLL_MS);
     return () => {
@@ -150,13 +167,40 @@ export function AgendaAlerts() {
   const dayKey = `day:${now.date}`;
   const showDay = ahead.length > 0 && !seen.dismissed.includes(dayKey);
 
-  if (fresh.length === 0 && soon.length === 0 && !showDay) return null;
+  const pending = snapshot.pending.filter((item) => !later.has(item.id));
+  const shownPending = pending.slice(0, 2);
+
+  if (
+    fresh.length === 0 &&
+    soon.length === 0 &&
+    !showDay &&
+    pending.length === 0
+  ) {
+    return null;
+  }
 
   return (
     <section
       aria-label="Avisos da agenda"
       className="fixed bottom-4 left-4 z-40 flex w-[min(340px,calc(100vw-2rem))] flex-col gap-2.5 md:left-[252px]"
     >
+      {shownPending.map((item) => (
+        <ConfirmCard
+          key={`confirm-${item.id}`}
+          item={item}
+          isToday={item.date === now.date}
+          onDone={() => void pollRef.current()}
+          onLater={() => setLater(new Set([...later, item.id]))}
+        />
+      ))}
+      {pending.length > shownPending.length && (
+        <Link
+          href={agendaHref(pending[shownPending.length])}
+          className="rounded-xl border border-admin-border bg-admin-card px-4 py-2.5 text-[12.5px] font-semibold text-admin-text shadow-xl hover:bg-admin-input-bg"
+        >
+          Mais {pending.length - shownPending.length} aguardando confirmação
+        </Link>
+      )}
       {soon.map((item) => (
         <Card
           key={`soon-${item.id}`}
@@ -193,6 +237,121 @@ export function AgendaAlerts() {
         />
       )}
     </section>
+  );
+}
+
+/**
+ * "Fulano veio?": an appointment whose hour is over, still booked. The two
+ * answers are the agenda's own actions, right here; the card goes once the
+ * office answers, and comes back on the next load if it chose "Depois".
+ */
+function ConfirmCard({
+  item,
+  isToday,
+  onDone,
+  onLater,
+}: {
+  item: AgendaAlertItem;
+  isToday: boolean;
+  onDone: () => void;
+  onLater: () => void;
+}) {
+  const [attended, attend, attending] = useActionState<ActionState, FormData>(
+    attendAppointment,
+    { status: "idle" },
+  );
+  const [missed, miss, missing] = useActionState<ActionState, FormData>(
+    markAppointmentNoShow,
+    { status: "idle" },
+  );
+  const done = attended.status === "success" || missed.status === "success";
+  const error =
+    attended.status === "error"
+      ? attended.message
+      : missed.status === "error"
+        ? missed.message
+        : undefined;
+
+  // Once: the parent's callback is a new function on every render.
+  const reported = useRef(false);
+  useEffect(() => {
+    if (!done || reported.current) return;
+    reported.current = true;
+    // A toast, because the card itself leaves with the next refresh.
+    toast.success(
+      attended.status === "success"
+        ? `${item.citizenName}: atendido.`
+        : `${item.citizenName}: não compareceu.`,
+    );
+    onDone();
+  }, [done, onDone, attended.status, item.citizenName]);
+
+  if (done) {
+    return (
+      <output className="rounded-xl bg-admin-success-bg px-4 py-3 text-[13px] font-semibold text-admin-success-text shadow-xl">
+        {attended.status === "success"
+          ? `${item.citizenName}: atendido.`
+          : `${item.citizenName}: não compareceu.`}
+      </output>
+    );
+  }
+
+  const busy = attending || missing;
+  return (
+    <output className="flex flex-col gap-2 rounded-xl border-2 border-admin-warning-bg bg-admin-card px-4 py-3 text-admin-text shadow-xl">
+      <span className="flex items-start gap-3">
+        <AdminIcon
+          name="alert"
+          className="mt-0.5 h-4.5 w-4.5 flex-none text-admin-warning-text"
+        />
+        <span className="min-w-0 flex-1">
+          <span className="block text-[13.5px] font-bold">
+            {item.citizenName} foi atendido?
+          </span>
+          <span className="block text-[12.5px] text-admin-muted">
+            {isToday ? "Hoje" : formatShortDate(item.date)} às {item.slotTime} ·{" "}
+            {item.serviceLabel} · {item.agendaName}
+          </span>
+        </span>
+      </span>
+      <span className="flex flex-wrap items-center gap-2 pl-7.5">
+        <form action={attend}>
+          <input type="hidden" name="id" value={item.id} />
+          <button
+            type="submit"
+            disabled={busy}
+            className="rounded-lg bg-admin-primary px-3 py-1.5 text-[12px] font-semibold text-white disabled:opacity-60"
+          >
+            {attending ? "..." : "Atendido"}
+          </button>
+        </form>
+        <form action={miss}>
+          <input type="hidden" name="id" value={item.id} />
+          <button
+            type="submit"
+            disabled={busy}
+            className="rounded-lg border border-admin-border px-3 py-1.5 text-[12px] font-semibold text-admin-alert hover:bg-admin-input-bg disabled:opacity-60"
+          >
+            {missing ? "..." : "Não compareceu"}
+          </button>
+        </form>
+        <button
+          type="button"
+          onClick={onLater}
+          className="text-[12px] font-semibold text-admin-muted underline"
+        >
+          Depois
+        </button>
+      </span>
+      {error && (
+        <span
+          role="alert"
+          className="pl-7.5 text-[12px] font-semibold text-admin-alert"
+        >
+          {error}
+        </span>
+      )}
+    </output>
   );
 }
 
