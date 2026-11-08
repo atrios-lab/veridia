@@ -2088,15 +2088,22 @@ function ConsultationTrilho({
             : "Busca cancelada",
         className: `${REJECTED_BG} ${toneText("red")}`,
       }
-    : result.searchAnswer
+    : showPay
       ? {
-          label: "Respondida",
-          className: `bg-brand-tint ${toneText("green")}`,
-        }
-      : {
-          label: "Aguardando a resposta",
+          label: paymentReported
+            ? "Pagamento em conferência"
+            : "Aguardando pagamento",
           className: `bg-brand-accent-soft ${toneText("gold")}`,
-        };
+        }
+      : result.searchAnswer
+        ? {
+            label: "Respondida",
+            className: `bg-brand-tint ${toneText("green")}`,
+          }
+        : {
+            label: "Aguardando a resposta",
+            className: `bg-brand-accent-soft ${toneText("gold")}`,
+          };
 
   return (
     <div className="flex flex-col gap-8 md:gap-12">
