@@ -4,7 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { can, type Permission } from "@/core/auth/roles.ts";
 
-// The four tabs of the approved design, now all with a screen.
+// The four tabs of the approved design, plus the office's notifications.
 //
 // `permission` only decides what is *offered*, same courtesy-not-gate rule
 // as the sidebar (see admin/_components/nav.ts): the route behind each link
@@ -34,6 +34,11 @@ const TABS: {
     href: "/admin/configuracoes/cobranca",
     permission: "content.edit",
   },
+  {
+    label: "Notificações",
+    href: "/admin/configuracoes/notificacoes",
+    permission: "content.edit",
+  },
 ];
 
 export function ConfiguracoesTabs({ role }: { role: string }) {
@@ -42,7 +47,7 @@ export function ConfiguracoesTabs({ role }: { role: string }) {
   return (
     <div
       role="tablist"
-      className="flex w-fit gap-1.5 rounded-[11px] border border-admin-border bg-admin-card p-1.5"
+      className="flex w-fit max-w-full flex-wrap gap-1.5 rounded-[11px] border border-admin-border bg-admin-card p-1.5"
     >
       {TABS.map((tab) => {
         const offered = can(role, tab.permission);

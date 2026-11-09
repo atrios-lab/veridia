@@ -8,6 +8,9 @@ import { db } from "@/db/index.ts";
 import {
   type GuideAlertItem,
   guideAlertSnapshotWith,
+  type RecordAlertChannel,
+  type RecordAlertItem,
+  recordAlertSnapshotWith,
 } from "@/lib/guide-requests.ts";
 import { getSession } from "@/lib/session.ts";
 import {
@@ -236,6 +239,30 @@ export async function guideAlertSnapshotAction(): Promise<
     return await guideAlertSnapshotWith(db, tenant.slug);
   } catch (error) {
     console.error("guias.alert-snapshot", error);
+    return null;
+  }
+}
+
+/**
+ * The other channels' news (new requests, LGPD, ouvidoria), for the panel's
+ * alert: each channel only for whoever works it.
+ */
+export async function recordAlertSnapshotAction(): Promise<
+  RecordAlertItem[] | null
+> {
+  const session = await getSession();
+  if (!session) return null;
+  const role = session.user.role ?? "";
+  const channels: RecordAlertChannel[] = [
+    ...(can(role, "requests.manage") ? (["pedidos"] as const) : []),
+    ...(can(role, "channels.manage") ? (["lgpd", "ouvidoria"] as const) : []),
+  ];
+  if (channels.length === 0) return null;
+  try {
+    const tenant = await getTenant();
+    return await recordAlertSnapshotWith(db, tenant.slug, channels);
+  } catch (error) {
+    console.error("alerts.record-snapshot", error);
     return null;
   }
 }

@@ -9,6 +9,7 @@ import {
   useState,
 } from "react";
 import { toast } from "sonner";
+import type { ChannelAlert } from "@/core/alerts/office.ts";
 import { addMinutes } from "@/core/scheduling/agenda.ts";
 import { formatShortDate } from "@/core/scheduling/calendar.ts";
 import { ARRIVING_SOON_MINUTES } from "@/core/scheduling/reminders.ts";
@@ -16,15 +17,14 @@ import type {
   AgendaAlertItem,
   AgendaAlertSnapshot,
 } from "@/lib/appointment-reminders.ts";
-import { playSound } from "../../_components/chat-sound.ts";
 import {
   type ActionState,
   agendaAlertSnapshotAction,
   attendAppointment,
   markAppointmentNoShow,
 } from "../(dashboard)/agenda/actions.ts";
-import { readAlertPrefs } from "./chat-alert-prefs.ts";
 import { AdminIcon } from "./icon.tsx";
+import { announce } from "./office-alert.ts";
 
 /** Once a minute, with the tab in the background too: a citizen arriving in
  * fifteen minutes is worth knowing about whatever screen is open. */
@@ -71,7 +71,7 @@ function agendaHref(item: Pick<AgendaAlertItem, "agenda" | "date">): string {
  * about to arrive, fifteen minutes ahead. Each card closes by hand and stays
  * closed on this computer.
  */
-export function AgendaAlerts() {
+export function AgendaAlerts({ setting }: { setting: ChannelAlert }) {
   const [snapshot, setSnapshot] = useState<AgendaAlertSnapshot | null>(null);
   const [seen, setSeen] = useState<Seen | null>(null);
   const announced = useRef(new Set<string>());
@@ -133,28 +133,19 @@ export function AgendaAlerts() {
     const news = fresh.filter((item) => !announced.current.has(item.id));
     if (news.length === 0) return;
     for (const item of news) announced.current.add(item.id);
-    const prefs = readAlertPrefs();
-    if (prefs.sound !== "none" && prefs.volume > 0) {
-      playSound(prefs.sound, prefs.volume);
-    }
-    if (
-      typeof Notification !== "undefined" &&
-      Notification.permission === "granted"
-    ) {
-      for (const item of news) {
-        try {
-          new Notification("Novo agendamento pelo site", {
-            body: `${item.citizenName} · ${formatShortDate(item.date)} às ${item.slotTime}`,
-            tag: `agenda:${item.id}`,
-          });
-        } catch {
-          // Some browsers only notify from a service worker; the card stays.
-        }
-      }
-    }
-  }, [fresh]);
+    // As the office chose for the agenda (Configurações › Notificações).
+    announce(
+      setting,
+      news.map((item) => ({
+        title: "Novo agendamento pelo site",
+        body: `${item.citizenName} · ${formatShortDate(item.date)} às ${item.slotTime}`,
+        tag: `agenda:${item.id}`,
+      })),
+    );
+  }, [fresh, setting]);
 
-  if (!snapshot || !seen) return null;
+  // Silenced, or without the card on screen: no cards at all.
+  if (!snapshot || !seen || !setting.enabled || !setting.popup) return null;
   const { now } = snapshot;
   const soonLimit = addMinutes(now.time, ARRIVING_SOON_MINUTES);
   const soon = snapshot.today.filter(

@@ -2,11 +2,11 @@
 
 import Link from "next/link";
 import { useCallback, useEffect, useRef, useState } from "react";
+import type { ChannelAlert } from "@/core/alerts/office.ts";
 import type { GuideAlertItem } from "@/lib/guide-requests.ts";
-import { playSound } from "../../_components/chat-sound.ts";
 import { guideAlertSnapshotAction } from "../(dashboard)/utilitarios/guias/actions.ts";
-import { readAlertPrefs } from "./chat-alert-prefs.ts";
 import { AdminIcon } from "./icon.tsx";
+import { announce } from "./office-alert.ts";
 
 /** Once a minute, like the agenda's alert. */
 const POLL_MS = 60_000;
@@ -45,7 +45,7 @@ function writeSeen(seen: Seen): void {
  * notification, as the agenda and the chat do. Each card closes by hand and
  * stays closed on this computer.
  */
-export function GuideAlerts() {
+export function GuideAlerts({ setting }: { setting: ChannelAlert }) {
   const [items, setItems] = useState<GuideAlertItem[] | null>(null);
   const [seen, setSeen] = useState<Seen | null>(null);
   const announced = useRef(new Set<string>());
@@ -96,32 +96,21 @@ export function GuideAlerts() {
     const news = fresh.filter((item) => !announced.current.has(item.key));
     if (news.length === 0) return;
     for (const item of news) announced.current.add(item.key);
-    const prefs = readAlertPrefs();
-    if (prefs.sound !== "none" && prefs.volume > 0)
-      playSound(prefs.sound, prefs.volume);
-    if (
-      typeof Notification !== "undefined" &&
-      Notification.permission === "granted"
-    ) {
-      for (const item of news) {
-        try {
-          new Notification(
-            item.kind === "new"
-              ? "Nova guia de recolhimento"
-              : "Guia de recolhimento atualizada",
-            {
-              body: `${item.applicantName ?? "Cidadão"} · ${item.protocolNumber}`,
-              tag: `guia:${item.key}`,
-            },
-          );
-        } catch {
-          // Some browsers only notify from a service worker; the card stays.
-        }
-      }
-    }
-  }, [fresh]);
+    // As the office chose for the guias (Configurações › Notificações).
+    announce(
+      setting,
+      news.map((item) => ({
+        title:
+          item.kind === "new"
+            ? "Nova guia de recolhimento"
+            : "Guia de recolhimento atualizada",
+        body: `${item.applicantName ?? "Cidadão"} · ${item.protocolNumber}`,
+        tag: `guia:${item.key}`,
+      })),
+    );
+  }, [fresh, setting]);
 
-  if (fresh.length === 0) return null;
+  if (fresh.length === 0 || !setting.enabled || !setting.popup) return null;
   return (
     // Top right: the agenda's cards take the bottom left and the chat's the
     // bottom right.

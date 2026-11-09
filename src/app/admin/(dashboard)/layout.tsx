@@ -6,6 +6,7 @@ import { sendDueRemindersInBackground } from "@/lib/appointment-reminders.ts";
 import { bookedCountFrom } from "@/lib/appointments.ts";
 import { waitingCount } from "@/lib/chat.ts";
 import { openGuideRequestCount } from "@/lib/guide-requests.ts";
+import { getOfficeAlerts } from "@/lib/office-alerts.ts";
 import { openCountByKind, openRequestCount } from "@/lib/service-request.ts";
 import { getSession } from "@/lib/session.ts";
 import { getTenant, officeNow } from "@/lib/tenant.ts";
@@ -18,6 +19,7 @@ import {
 } from "../_components/chat-alerts.tsx";
 import { GlobalSearchProvider } from "../_components/global-search.tsx";
 import { GuideAlerts } from "../_components/guide-alerts.tsx";
+import { RecordAlerts } from "../_components/record-alerts.tsx";
 import { ShortcutListener } from "../_components/shortcut-listener.tsx";
 import { AdminSidebar } from "../_components/sidebar.tsx";
 import { ADMIN_MENU_ID, AdminTopBar } from "../_components/top-bar.tsx";
@@ -44,6 +46,8 @@ export default async function DashboardLayout({
 
   const tenant = await getTenant();
   const role = session.user.role ?? "";
+  // How the office wants each channel to call (Configurações › Notificações).
+  const alerts = await getOfficeAlerts(tenant.slug);
   // Only queried when the item is actually offered: the badge is a courtesy
   // on top of a link that is itself hidden without the permission.
   const counts: Record<string, number> = {
@@ -153,11 +157,25 @@ export default async function DashboardLayout({
           {children}
           {/* Every screen, not only the queue: the attendant hears and sees
               the chat wherever they are working in the panel. */}
-          {can(role, "chat.manage") && <ChatAlerts />}
+          {can(role, "chat.manage") && <ChatAlerts setting={alerts.chat} />}
           {/* Same for the agenda: who is coming today, who just booked. */}
-          {can(role, "channels.manage") && <AgendaAlerts />}
+          {can(role, "channels.manage") && (
+            <AgendaAlerts setting={alerts.agenda} />
+          )}
           {/* And the guias de recolhimento: a new one, or one the citizen moved. */}
-          {can(role, "requests.manage") && <GuideAlerts />}
+          {can(role, "requests.manage") && (
+            <GuideAlerts setting={alerts.guias} />
+          )}
+          {/* New requests, LGPD and ouvidoria, each as the office chose. */}
+          {(can(role, "requests.manage") || can(role, "channels.manage")) && (
+            <RecordAlerts
+              settings={{
+                pedidos: alerts.pedidos,
+                lgpd: alerts.lgpd,
+                ouvidoria: alerts.ouvidoria,
+              }}
+            />
+          )}
         </div>
       </div>
     </GlobalSearchProvider>

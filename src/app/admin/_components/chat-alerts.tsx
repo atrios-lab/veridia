@@ -2,7 +2,9 @@
 
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import type { ChannelAlert } from "@/core/alerts/office.ts";
+import type { AlertPrefs } from "@/core/chat/alerts.ts";
 import {
   type AlertSnapshot,
   type ChatAlert,
@@ -46,8 +48,33 @@ const BURST_MS = 1600;
  * screen until someone looks. What changed between two polls is decided in
  * core/chat/alerts.ts; this only plays it.
  */
-export function ChatAlerts() {
-  const prefs = useAlertPrefs();
+export function ChatAlerts({ setting }: { setting: ChannelAlert }) {
+  const machine = useAlertPrefs();
+  // The office's choice for the chat (Configurações › Notificações) bounds
+  // this computer's own: silenced, nothing calls; otherwise each of the
+  // card, the notification, the shake and the tone needs both to agree.
+  const prefs = useMemo<AlertPrefs>(() => {
+    if (!setting.enabled) {
+      return {
+        ...machine,
+        sound: "none",
+        messageSound: "none",
+        repeat: false,
+        notify: false,
+        flash: false,
+        shake: false,
+      };
+    }
+    const muted = setting.sound === "none";
+    return {
+      ...machine,
+      sound: muted ? "none" : machine.sound,
+      messageSound: muted ? "none" : machine.messageSound,
+      notify: machine.notify && setting.notify,
+      flash: machine.flash && setting.popup,
+      shake: machine.shake && setting.shake,
+    };
+  }, [machine, setting]);
   const pathname = usePathname();
   const router = useRouter();
   const previous = useRef<AlertSnapshot | undefined>(undefined);
@@ -72,7 +99,11 @@ export function ChatAlerts() {
    * screen. Only for news, never for the repeat ring: a screen that shakes
    * every ten seconds is a screen nobody can work on.
    */
+  // Silenced by the office, not even the citizen's "Chamar atenção" shakes.
+  const enabledRef = useRef(setting.enabled);
+  enabledRef.current = setting.enabled;
   const callAttention = useCallback((alert: ChatAlert, force = false) => {
+    if (!enabledRef.current) return;
     if (!force && !prefsRef.current.shake) return;
     setBurst(alert);
     window.setTimeout(() => setBurst(null), BURST_MS);

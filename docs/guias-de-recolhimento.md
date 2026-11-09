@@ -77,6 +77,10 @@ O painel avisa, em qualquer tela, com cartão, som e notificação do navegador:
 - quando chega um pedido novo de guia;
 - quando o cliente atualiza um pedido (envia documento, responde exigência ou informa pagamento).
 
+Em Configurações › Notificações a serventia escolhe, para este e para os outros canais (chat, agenda,
+pedidos, LGPD e ouvidoria), se avisa ou silencia, se aparece o aviso na tela, a notificação do navegador, o
+som e se a tela treme e o celular vibra.
+
 ## Qualificação: união estável
 
 Para quem não é casado (solteiro, viúvo, separado ou divorciado), a qualificação traz a declaração "que declara,
