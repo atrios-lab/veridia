@@ -77,6 +77,9 @@ export interface SchedulingScreenProps {
   selected?: IsoDate;
   times?: SlotTime[];
   services?: OfferedService[];
+  /** Per time of the chosen day, the only services it takes, when the
+   * office narrowed it; a time missing here takes them all. */
+  slotServices?: Record<SlotTime, string[]>;
   modes?: string[];
   /** The notary's channels for the day, label to explanation: present, the
    * form asks how to be attended with cards instead of a select. */
@@ -186,6 +189,7 @@ export function SchedulingScreen(props: SchedulingScreenProps) {
                 dateLabel={formatShortDate(selected ?? "")}
                 times={times ?? []}
                 services={services ?? []}
+                slotServices={props.slotServices ?? {}}
                 modes={modes ?? []}
                 modeHints={props.modeHints}
                 officeEmail={props.email}
@@ -371,6 +375,7 @@ function AppointmentForm({
   dateLabel,
   times,
   services,
+  slotServices,
   modes,
   modeHints,
   officeEmail,
@@ -383,6 +388,7 @@ function AppointmentForm({
   dateLabel: string;
   times: SlotTime[];
   services: OfferedService[];
+  slotServices: Record<SlotTime, string[]>;
   modes: string[];
   modeHints?: Record<string, string>;
   officeEmail: string;
@@ -394,6 +400,7 @@ function AppointmentForm({
     register,
     handleSubmit,
     watch,
+    setValue,
     formState: { errors: clientErrors },
   } = useForm({
     resolver: zodResolver(
@@ -404,6 +411,14 @@ function AppointmentForm({
     ),
     mode: "onTouched",
   });
+
+  // The services the chosen time takes: all of the agenda's, unless the
+  // office narrowed that time ("às 08:30 só reconhecimento de firma").
+  const chosenTime = watch("slotTime") as SlotTime | undefined;
+  const narrowed = chosenTime ? slotServices[chosenTime] : undefined;
+  const available = narrowed
+    ? services.filter((service) => narrowed.includes(service.id))
+    : services;
 
   const serverErrors = state.status === "error" ? state.fieldErrors : {};
   const errorFor = (name: keyof typeof clientErrors & string) =>
@@ -452,7 +467,20 @@ function AppointmentForm({
                 type="radio"
                 value={time}
                 className="absolute inset-0 h-full w-full cursor-pointer appearance-none opacity-0"
-                {...register("slotTime")}
+                {...register("slotTime", {
+                  // A service the new time does not take is let go, so the
+                  // select never shows a choice that cannot be booked.
+                  // Moving between a narrowed time and another lists other
+                  // services: the choice starts over, as the select does.
+                  onChange: () => {
+                    if (
+                      selectKey(slotServices, time) !==
+                      selectKey(slotServices, chosenTime)
+                    ) {
+                      setValue("serviceId", "");
+                    }
+                  },
+                })}
               />
               <span className="block text-[13px] font-bold md:text-sm">
                 {time}
@@ -460,6 +488,11 @@ function AppointmentForm({
               <span className="mt-0.5 block text-[10px] opacity-70">
                 até {slotEndTime(time)}
               </span>
+              {slotServices[time] && (
+                <span className="mt-0.5 block px-1 text-[10px] font-semibold leading-tight">
+                  {slotOnlyLabel(services, slotServices[time])}
+                </span>
+              )}
             </label>
           ))}
         </div>
@@ -467,6 +500,8 @@ function AppointmentForm({
         <p className="mt-1.5 text-[11px] text-brand-faint">
           Só aparecem os horários ainda livres. O que você escolher fica no seu
           nome.
+          {Object.keys(slotServices).length > 0 &&
+            " Alguns horários são só para os serviços indicados neles."}
         </p>
       </fieldset>
 
@@ -480,6 +515,10 @@ function AppointmentForm({
               Do que você precisa
             </label>
             <select
+              // A narrowed time lists other options: the select starts over
+              // on "Escolha o serviço" instead of the browser picking the
+              // first one left for the citizen.
+              key={selectKey(slotServices, chosenTime)}
               id="serviceId"
               className={inputClass}
               defaultValue=""
@@ -488,7 +527,7 @@ function AppointmentForm({
               <option value="" disabled>
                 Escolha o serviço
               </option>
-              {groupServices(services).map(({ group, items }) => (
+              {groupServices(available).map(({ group, items }) => (
                 <optgroup key={group} label={group}>
                   {items.map((service) => (
                     <option key={service.id} value={service.id}>
@@ -805,6 +844,25 @@ function AgendaSwitch({
       })}
     </nav>
   );
+}
+
+/** Which list of services the select shows for a time: its own when the
+ * office narrowed it, the agenda's otherwise. */
+function selectKey(
+  slotServices: Record<SlotTime, string[]>,
+  time: SlotTime | undefined,
+): string {
+  return time && slotServices[time] ? `so-${time}` : "todos";
+}
+
+/** "Só Reconhecimento de firma", or "Só 3 serviços" when the names would
+ * not fit under a time. */
+function slotOnlyLabel(services: OfferedService[], ids: string[]): string {
+  const names = services
+    .filter((service) => ids.includes(service.id))
+    .map((service) => service.label);
+  if (names.length === 1) return `Só ${names[0]}`;
+  return `Só ${names.length} serviços`;
 }
 
 /** The services under their headings, in the order they came. */

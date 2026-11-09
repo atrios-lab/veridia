@@ -2,6 +2,7 @@ import {
   AGENDA_IDS,
   AGENDA_NAMES,
   type AgendaId,
+  type AgendaWeekday,
   agendaRules,
   CHANNEL_NAMES,
   channelLabelsOn,
@@ -10,7 +11,7 @@ import {
   isAgendaId,
   usesChannels,
 } from "@/core/scheduling/agenda.ts";
-import { officeHolidays } from "@/core/scheduling/calendar.ts";
+import { officeHolidays, weekday } from "@/core/scheduling/calendar.ts";
 import {
   offeredAgendas,
   servicesOfAgenda,
@@ -115,6 +116,12 @@ export default async function SchedulingPage({
         selected={selected}
         times={freeSlots(rules, selected, dayTaken, now)}
         services={servicesOfAgenda(config, agenda)}
+        // The times the office narrowed to some services, on this weekday.
+        slotServices={
+          config.agendas[agenda].slotServices[
+            String(weekday(selected)) as `${AgendaWeekday}`
+          ] ?? {}
+        }
         // The notary's agenda offers the channels he chose for this day;
         // the counter's, the office's modes.
         modes={

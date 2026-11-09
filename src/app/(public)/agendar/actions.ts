@@ -10,13 +10,18 @@ import {
   channelLabelsOn,
   isAgendaId,
   isRemoteMode,
+  servicesAtSlot,
   usesChannels,
 } from "@/core/scheduling/agenda.ts";
 import {
   generateCancelToken,
   hashCancelToken,
 } from "@/core/scheduling/appointment.ts";
-import { formatShortDate, officeHolidays } from "@/core/scheduling/calendar.ts";
+import {
+  formatShortDate,
+  officeHolidays,
+  weekday,
+} from "@/core/scheduling/calendar.ts";
 import {
   attendanceNotice,
   CHECKLIST_CAVEAT,
@@ -168,6 +173,23 @@ export async function submitAppointment(
   if (!days.includes(date)) {
     return fail("Escolha um dos dias oferecidos para atendimento.", {
       date: "Este dia não está disponível para atendimento.",
+    });
+  }
+
+  // A time the office narrowed takes only those services ("às 08:30 só
+  // reconhecimento de firma"): the page lists only them for it, and this is
+  // what holds when the page is bypassed or was left open.
+  const allowed = servicesAtSlot(
+    office.agendas[agenda],
+    weekday(date),
+    slotTime,
+  );
+  if (allowed && !allowed.includes(serviceId)) {
+    const names = services
+      .filter((item) => allowed.includes(item.id))
+      .map((item) => item.label);
+    return fail("Este horário não atende o serviço escolhido.", {
+      serviceId: `Às ${slotTime}, a serventia atende só: ${names.join(", ")}. Escolha outro horário ou outro serviço.`,
     });
   }
 

@@ -12,6 +12,8 @@ import {
   CHANNEL_NAMES,
   DEFAULT_CHANNELS,
   ownServiceId,
+  previousDayWithTimes,
+  pruneSlotServices,
   usesChannels,
 } from "@/core/scheduling/agenda.ts";
 import {
@@ -30,9 +32,12 @@ import { AdminIcon } from "../../../_components/icon.tsx";
 import { type ActionState, saveAgenda } from "../actions.ts";
 
 type Grid = Record<string, string[]>;
+/** weekday -> time -> the only services that time takes. */
+type SlotServicesDraft = Record<string, Record<string, string[]>>;
 
 interface BookDraft {
   grid: Grid;
+  slotServices: SlotServicesDraft;
   serviceIds: string[];
   /** The notary's channels per weekday; empty for the counter's agenda. */
   channels: Record<string, AttendanceChannel[]>;
@@ -203,9 +208,13 @@ export function AgendaSettingsForm({
           key={`grid-${tab}`}
           title={`Dias e horários · ${AGENDA_NAMES[tab].short}`}
           grid={book.grid}
+          slotServices={book.slotServices}
+          services={tickedServices(book.serviceIds, draft.services)}
           weekdays={weekdays}
           futureLive={futureLive[tab]}
-          onChange={(grid) => setBook({ ...book, grid })}
+          onChange={(grid, slotServices) =>
+            setBook({ ...book, grid, slotServices })
+          }
           channels={usesChannels(tab) ? book.channels : undefined}
           onChannelsChange={(channels) => setBook({ ...book, channels })}
         />
@@ -216,7 +225,19 @@ export function AgendaSettingsForm({
           otherSelected={draft.agendas[other].serviceIds}
           own={draft.services}
           lists={lists}
-          onChange={(serviceIds) => setBook({ ...book, serviceIds })}
+          onChange={(serviceIds) =>
+            setBook({
+              ...book,
+              serviceIds,
+              // A time narrowed to a service the agenda no longer takes
+              // lets it go; left with none, it takes every service again.
+              slotServices: pruneSlotServices({
+                grid: book.grid,
+                serviceIds,
+                slotServices: book.slotServices,
+              }) as SlotServicesDraft,
+            })
+          }
         />
         <OwnServicesSection
           services={draft.services}
@@ -317,15 +338,21 @@ export function AgendaSettingsForm({
   );
 }
 
-/** The labels of the ticked services, in the catalogue's order. */
-function serviceLabels(ids: string[], own: OwnServiceDraft[]): string[] {
+/** The ticked services, in the catalogue's order, own ones last. */
+function tickedServices(
+  ids: string[],
+  own: OwnServiceDraft[],
+): Array<{ id: string; label: string }> {
   const ticked = new Set(ids);
   return [
-    ...COUNTER_SERVICES.filter((service) => ticked.has(service.id)).map(
-      (service) => service.label,
-    ),
-    ...own.filter((service) => ticked.has(service.id)).map((s) => s.label),
-  ];
+    ...COUNTER_SERVICES.filter((service) => ticked.has(service.id)),
+    ...own.filter((service) => ticked.has(service.id)),
+  ].map(({ id, label }) => ({ id, label }));
+}
+
+/** The labels of the ticked services, in the catalogue's order. */
+function serviceLabels(ids: string[], own: OwnServiceDraft[]): string[] {
+  return tickedServices(ids, own).map((service) => service.label);
 }
 
 /* ---------------------------------------------------------------- weekdays */
@@ -333,6 +360,8 @@ function serviceLabels(ids: string[], own: OwnServiceDraft[]): string[] {
 function GridSection({
   title,
   grid,
+  slotServices,
+  services,
   weekdays,
   futureLive,
   onChange,
@@ -341,9 +370,13 @@ function GridSection({
 }: {
   title: string;
   grid: Grid;
+  /** Per weekday and time, the services the office narrowed it to. */
+  slotServices: SlotServicesDraft;
+  /** The services this agenda takes, the ones a time can be narrowed to. */
+  services: Array<{ id: string; label: string }>;
   weekdays: Array<{ day: string; label: string }>;
   futureLive: Record<string, number>;
-  onChange: (grid: Grid) => void;
+  onChange: (grid: Grid, slotServices: SlotServicesDraft) => void;
   /** Present for the notary's agenda: how he attends each weekday. */
   channels?: Record<string, AttendanceChannel[]>;
   onChannelsChange?: (channels: Record<string, AttendanceChannel[]>) => void;
@@ -363,14 +396,18 @@ function GridSection({
   }
 
   const [adding, setAdding] = useState<string | null>(null);
-  const monday = grid["1"] ?? [];
+  /** The time whose services are open for editing, as `${day}|${time}`. */
+  const [editing, setEditing] = useState<string | null>(null);
+  const labelOf = new Map(
+    services.map((service) => [service.id, service.label]),
+  );
 
   function addTime(day: string, time: string) {
     if (!time) return;
-    onChange({
-      ...grid,
-      [day]: [...new Set([...(grid[day] ?? []), time])].sort(),
-    });
+    onChange(
+      { ...grid, [day]: [...new Set([...(grid[day] ?? []), time])].sort() },
+      slotServices,
+    );
     setAdding(null);
   }
 
@@ -386,7 +423,31 @@ function GridSection({
     ) {
       return;
     }
-    onChange({ ...grid, [day]: (grid[day] ?? []).filter((t) => t !== time) });
+    const { [time]: _gone, ...rest } = slotServices[day] ?? {};
+    onChange(
+      { ...grid, [day]: (grid[day] ?? []).filter((t) => t !== time) },
+      { ...slotServices, [day]: rest },
+    );
+    if (editing === `${day}|${time}`) setEditing(null);
+  }
+
+  /** Copies a day's times, and what each one takes, onto another day. */
+  function copyDay(from: string, to: string) {
+    onChange(
+      { ...grid, [to]: [...(grid[from] ?? [])] },
+      { ...slotServices, [to]: { ...(slotServices[from] ?? {}) } },
+    );
+  }
+
+  function setServicesAt(day: string, time: string, ids: string[]) {
+    const byTime = { ...(slotServices[day] ?? {}) };
+    // None ticked, or all of them, is "every service": no narrowing kept.
+    if (ids.length === 0 || ids.length === services.length) {
+      delete byTime[time];
+    } else {
+      byTime[time] = ids;
+    }
+    onChange(grid, { ...slotServices, [day]: byTime });
   }
 
   return (
@@ -396,12 +457,24 @@ function GridSection({
       </h2>
       <p className="mt-1 text-[12.5px] leading-relaxed text-admin-muted">
         Cada horário atende <strong>um cidadão</strong>. Um dia sem horários não
-        aparece no site.
+        aparece no site. Clique num horário para escolher os serviços que ele
+        atende (por exemplo, 08:30 só para reconhecimento de firma); sem
+        escolha, ele atende todos os serviços desta agenda.
       </p>
 
       <div className="mt-3.5 flex flex-col">
         {weekdays.map(({ day, label }) => {
           const times = grid[day] ?? [];
+          const source =
+            times.length === 0
+              ? previousDayWithTimes(grid, Number(day))
+              : undefined;
+          const sourceLabel = source
+            ? weekdays.find((item) => item.day === String(source))?.label
+            : undefined;
+          const editingTime = editing?.startsWith(`${day}|`)
+            ? editing.slice(day.length + 1)
+            : undefined;
           return (
             <div
               key={day}
@@ -411,22 +484,54 @@ function GridSection({
                 {label}
               </span>
               <span className="flex flex-wrap items-center gap-2">
-                {times.map((time) => (
-                  <span
-                    key={time}
-                    className="inline-flex items-center gap-1.5 rounded-lg bg-admin-input-bg px-2.5 py-1.5 text-[12.5px] font-semibold tabular-nums text-admin-text"
-                  >
-                    {time}
-                    <button
-                      type="button"
-                      aria-label={`Remover ${time} de ${label.toLowerCase()}`}
-                      onClick={() => removeTime(day, time)}
-                      className="text-admin-faint hover:text-admin-alert"
+                {times.map((time) => {
+                  const only = slotServices[day]?.[time];
+                  const open = editingTime === time;
+                  return (
+                    <span
+                      key={time}
+                      className={`inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-[12.5px] font-semibold tabular-nums ${
+                        open
+                          ? "bg-admin-primary text-white"
+                          : only
+                            ? "border border-admin-accent bg-admin-input-bg text-admin-text"
+                            : "bg-admin-input-bg text-admin-text"
+                      }`}
                     >
-                      <AdminIcon name="x" className="h-3 w-3" />
-                    </button>
-                  </span>
-                ))}
+                      <button
+                        type="button"
+                        aria-expanded={open}
+                        aria-label={`Serviços de ${label.toLowerCase()} às ${time}`}
+                        onClick={() =>
+                          setEditing(open ? null : `${day}|${time}`)
+                        }
+                        className="inline-flex items-center gap-1.5"
+                      >
+                        {time}
+                        {only && (
+                          <span className="max-w-[140px] truncate text-[11px] font-normal">
+                            ·{" "}
+                            {only.length === 1
+                              ? (labelOf.get(only[0]) ?? "1 serviço")
+                              : `${only.length} serviços`}
+                          </span>
+                        )}
+                      </button>
+                      <button
+                        type="button"
+                        aria-label={`Remover ${time} de ${label.toLowerCase()}`}
+                        onClick={() => removeTime(day, time)}
+                        className={
+                          open
+                            ? "text-white/70 hover:text-white"
+                            : "text-admin-faint hover:text-admin-alert"
+                        }
+                      >
+                        <AdminIcon name="x" className="h-3 w-3" />
+                      </button>
+                    </span>
+                  );
+                })}
                 {adding === day ? (
                   <input
                     type="time"
@@ -449,14 +554,39 @@ function GridSection({
                     + horário
                   </button>
                 )}
-                {times.length === 0 && day !== "1" && monday.length > 0 && (
-                  <button
-                    type="button"
-                    onClick={() => onChange({ ...grid, [day]: [...monday] })}
-                    className="text-[12.5px] font-semibold text-admin-accent underline"
-                  >
-                    Copiar de segunda
-                  </button>
+                {source && sourceLabel && (
+                  // The day before already has its times: they are suggested
+                  // here, so a week is set up once, not five times.
+                  <span className="flex basis-full flex-wrap items-center gap-1.5 rounded-lg border border-dashed border-admin-accent px-2.5 py-2">
+                    <span className="text-[11.5px] text-admin-muted">
+                      Sugestão, os mesmos de {sourceLabel.toLowerCase()}:
+                    </span>
+                    {(grid[String(source)] ?? []).map((time) => (
+                      <span
+                        key={time}
+                        className="rounded-md bg-admin-input-bg px-2 py-0.5 text-[11.5px] tabular-nums text-admin-muted"
+                      >
+                        {time}
+                      </span>
+                    ))}
+                    <button
+                      type="button"
+                      onClick={() => copyDay(String(source), day)}
+                      className="ml-auto rounded-lg bg-admin-primary px-2.5 py-1 text-[12px] font-semibold text-white"
+                    >
+                      Usar os mesmos de {sourceLabel.toLowerCase()}
+                    </button>
+                  </span>
+                )}
+                {editingTime && (
+                  <SlotServicesEditor
+                    dayLabel={label}
+                    time={editingTime}
+                    services={services}
+                    selected={slotServices[day]?.[editingTime] ?? []}
+                    onChange={(ids) => setServicesAt(day, editingTime, ids)}
+                    onClose={() => setEditing(null)}
+                  />
                 )}
                 {channels && times.length > 0 && (
                   <span className="flex basis-full flex-wrap items-center gap-1.5 pt-1">
@@ -509,6 +639,111 @@ function GridSection({
           " Os canais de cada dia valem para todas as semanas; para mudar uma data só, abra o dia na agenda."}
       </p>
     </section>
+  );
+}
+
+/**
+ * The services one time takes, ticked from the agenda's own. Nothing ticked
+ * means every service, which is how a time starts; ticking narrows it, and
+ * the site then offers that time only to whoever picks one of these.
+ */
+function SlotServicesEditor({
+  dayLabel,
+  time,
+  services,
+  selected,
+  onChange,
+  onClose,
+}: {
+  dayLabel: string;
+  time: string;
+  services: Array<{ id: string; label: string }>;
+  selected: string[];
+  onChange: (ids: string[]) => void;
+  onClose: () => void;
+}) {
+  const [filter, setFilter] = useState("");
+  const visible = services.filter((service) =>
+    normalize(service.label).includes(normalize(filter)),
+  );
+  const all = selected.length === 0;
+
+  function toggle(id: string) {
+    onChange(
+      selected.includes(id)
+        ? selected.filter((item) => item !== id)
+        : [...selected, id],
+    );
+  }
+
+  return (
+    <span className="flex basis-full flex-col gap-2 rounded-lg border border-admin-primary bg-admin-card px-3 py-2.5">
+      <span className="flex flex-wrap items-center justify-between gap-2">
+        <span className="text-[12.5px] font-semibold text-admin-primary">
+          {dayLabel}, {time}: o que este horário atende
+        </span>
+        <span className="flex items-center gap-2">
+          <button
+            type="button"
+            aria-pressed={all}
+            onClick={() => onChange([])}
+            className={`rounded-full border px-2.5 py-1 text-[11.5px] font-semibold ${
+              all
+                ? "border-admin-primary bg-admin-primary text-white"
+                : "border-admin-border text-admin-muted hover:bg-admin-input-bg"
+            }`}
+          >
+            Todos os serviços
+          </button>
+          <button
+            type="button"
+            onClick={onClose}
+            className="text-[12px] font-semibold text-admin-accent underline"
+          >
+            Pronto
+          </button>
+        </span>
+      </span>
+      {services.length === 0 ? (
+        <span className="text-[12px] text-admin-muted">
+          Marque os serviços desta agenda (mais abaixo) para escolher quais este
+          horário atende.
+        </span>
+      ) : (
+        <>
+          {services.length > 8 && (
+            <input
+              value={filter}
+              onChange={(event) => setFilter(event.target.value)}
+              placeholder="Procurar serviço, ex.: firma"
+              aria-label="Procurar serviço"
+              className={`${inputClass} py-1.5`}
+            />
+          )}
+          <span className="grid max-h-56 gap-1 overflow-y-auto sm:grid-cols-2">
+            {visible.map((service) => (
+              <label
+                key={service.id}
+                className="flex cursor-pointer items-center gap-2 rounded-md px-1.5 py-1 text-[12.5px] text-admin-text hover:bg-admin-input-bg"
+              >
+                <input
+                  type="checkbox"
+                  checked={selected.includes(service.id)}
+                  onChange={() => toggle(service.id)}
+                  className="h-3.5 w-3.5 accent-admin-primary"
+                />
+                {service.label}
+              </label>
+            ))}
+          </span>
+          <span className="text-[11.5px] text-admin-faint">
+            {all
+              ? "Sem escolha, este horário atende todos os serviços desta agenda."
+              : `Este horário atende só ${selected.length === 1 ? "o serviço marcado" : `os ${selected.length} serviços marcados`}.`}
+          </span>
+        </>
+      )}
+    </span>
   );
 }
 

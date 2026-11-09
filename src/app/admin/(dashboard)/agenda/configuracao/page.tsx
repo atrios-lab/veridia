@@ -52,6 +52,7 @@ export default async function AgendaSettingsPage() {
             timesForWeekday(config.agendas[id], day),
           ]),
         ),
+        slotServices: config.agendas[id].slotServices,
         serviceIds: config.agendas[id].serviceIds,
         channels: config.agendas[id].channels,
       },
@@ -60,6 +61,7 @@ export default async function AgendaSettingsPage() {
     AgendaId,
     {
       grid: Record<string, string[]>;
+      slotServices: Record<string, Record<string, string[]>>;
       serviceIds: string[];
       channels: Record<string, AttendanceChannel[]>;
     }

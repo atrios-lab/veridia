@@ -15,6 +15,7 @@ import {
   isAgendaId,
   OWN_SERVICE_ID,
   ownServiceId,
+  pruneSlotServices,
   type ServiceChecklist,
   serviceChecklistSchema,
   usesChannels,
@@ -436,15 +437,23 @@ export async function saveAgenda(
             "Confira os horários: use o formato HH:mm.",
         };
       }
+      // Only ids that exist: a ticked own service deleted in the same
+      // save goes with it.
+      const serviceIds = [...new Set(parsed.data.serviceIds)].filter(known);
       agendas[id] = {
         grid: parsed.data.grid,
         channels: parsed.data.channels,
         // A single date's channels are set from the day itself, like the
         // closed dates: this form does not own them.
         dayChannels: current.agendas[id].dayChannels,
-        // Only ids that exist: a ticked own service deleted in the same
-        // save goes with it.
-        serviceIds: [...new Set(parsed.data.serviceIds)].filter(known),
+        serviceIds,
+        // A time narrowed to services the agenda no longer takes, or a time
+        // taken off the grid, loses its narrowing here.
+        slotServices: pruneSlotServices({
+          grid: parsed.data.grid,
+          serviceIds,
+          slotServices: parsed.data.slotServices,
+        }),
       };
     }
 
