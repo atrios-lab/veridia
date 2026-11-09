@@ -355,7 +355,10 @@ async function appointmentDetail(
   if (!appointment?.protocolNumber) return undefined;
   const [config, documents] = await Promise.all([
     getAgendaConfig(tenant.slug),
-    listAppointmentAttachments(tenant.slug, [appointment.id]),
+    // The citizen's own files only: the office's attachments stay internal.
+    listAppointmentAttachments(tenant.slug, [appointment.id], {
+      citizenOnly: true,
+    }),
   ]);
   const service = resolveService(config, appointment.serviceId);
   return {
@@ -926,9 +929,11 @@ export async function attachAppointmentDocument(
       return { status: "error", message: PDF_ONLY };
     }
     await addAppointmentAttachments(tenant.slug, appointment.id, stored);
-    const documents = await listAppointmentAttachments(tenant.slug, [
-      appointment.id,
-    ]);
+    const documents = await listAppointmentAttachments(
+      tenant.slug,
+      [appointment.id],
+      { citizenOnly: true },
+    );
     return {
       status: "success",
       message:

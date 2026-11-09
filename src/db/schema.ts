@@ -675,11 +675,40 @@ export const appointmentAttachments = pgTable(
     path: text("path"),
     mimeType: text("mime_type").notNull(),
     sizeBytes: integer("size_bytes").notNull(),
+    // The panel user who attached it, for a file the office keeps with the
+    // appointment; null for what the citizen sent from the consult. Only
+    // the citizen's own files go back to the consult.
+    uploadedBy: text("uploaded_by"),
     createdAt: timestamp("created_at", { withTimezone: true })
       .notNull()
       .defaultNow(),
   },
   (t) => [index("appointment_attachments_appointment").on(t.appointmentId)],
+);
+
+/**
+ * The office's own notes on an appointment, from the panel's detail screen:
+ * what the citizen said on the phone, what to check at the counter. Internal:
+ * never shown to the citizen. One row per note, with who wrote it and when,
+ * so the trail reads like the request's history.
+ */
+export const appointmentNotes = pgTable(
+  "appointment_notes",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    tenantSlug,
+    appointmentId: uuid("appointment_id")
+      .notNull()
+      .references(() => appointments.id, { onDelete: "cascade" }),
+    authorId: text("author_id"),
+    /** The author's name as it was when they wrote it. */
+    authorName: text("author_name").notNull(),
+    body: text("body").notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (t) => [index("appointment_notes_appointment").on(t.appointmentId)],
 );
 
 /**
