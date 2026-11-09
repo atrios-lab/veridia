@@ -66,9 +66,30 @@ test("the kinds an act groups are a fixed list, since requests store the ids", (
     "notas-certidao": ["ato-notarial", "testamento"],
     "ri-certidao-matricula": ["matricula", "inteiro-teor", "onus"],
     "ri-busca-indicador": ["pessoal", "real"],
+    "ri-prenotacao": [
+      "anotacao",
+      "averbacao",
+      "registro",
+      "retificacao",
+      "ratificacao",
+    ],
     "ri-registro-titulo": ["registro", "averbacao"],
+    "rtd-prenotacao": [
+      "anotacao",
+      "averbacao",
+      "registro",
+      "retificacao",
+      "ratificacao",
+    ],
     "rtd-registro-documento": ["documento", "contrato"],
     "rtd-certidao": ["breve-relato", "inteiro-teor"],
+    "rcpj-prenotacao": [
+      "anotacao",
+      "averbacao",
+      "registro",
+      "retificacao",
+      "ratificacao",
+    ],
     "rcpj-registro-constituicao": ["registro", "averbacao", "misto"],
     "rcpj-certidao": ["breve-relato", "inteiro-teor"],
   });
@@ -557,4 +578,16 @@ test("só a busca do RCPN é consulta, sem requerimento nem CPF obrigatório", (
     processingHintFor(busca as NonNullable<typeof busca>),
     /não exige requerimento assinado nem CPF/,
   );
+});
+
+test("the prenotação of each registry is an act that charges the table's item", () => {
+  const charging = ACTS.filter((act) => act.chargesPrenotation).map((act) => [
+    act.id,
+    act.attribution,
+  ]);
+  assert.deepEqual(charging, [
+    ["ri-prenotacao", "RI"],
+    ["rtd-prenotacao", "RTD"],
+    ["rcpj-prenotacao", "RCPJ"],
+  ]);
 });

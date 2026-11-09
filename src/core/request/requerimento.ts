@@ -4,6 +4,7 @@ import {
   actVariantName,
   PURPOSE_LABEL,
 } from "../acts/catalog.ts";
+import { formatMoney } from "../fees/prenotation.ts";
 import type { Tenant } from "../tenant/schema.ts";
 import { formatOfficeDate } from "../time/office-time.ts";
 import type { SignedFormDocument } from "./attachment.ts";
@@ -15,6 +16,7 @@ import {
   type DataRight,
   type DeliveryFormat,
   deliveryFormatRows,
+  type PrenotationCharge,
   type RequesterQualification,
   requesterQualificationRows,
 } from "./kinds.ts";
@@ -145,6 +147,8 @@ export interface RequerimentoData {
   requesterQualification?: RequesterQualification;
   /** Digital ou papel (`details.deliveryFormat`), nos atos que deixam escolher. */
   deliveryFormat?: DeliveryFormat;
+  /** A prenotação cobrada no pedido, com o código e a tabela de onde veio. */
+  prenotation?: PrenotationCharge;
   cpf?: string | null;
   /** Stands in for the CPF of a citizen who has none (`details`). */
   alternateDocument?: AlternateDocument;
@@ -199,6 +203,14 @@ export function buildRequerimento(
   }
   if (data.parameterValue) {
     request.push({ label: "Informação adicional", value: data.parameterValue });
+  }
+  // The value charged and where it comes from, so the signed paper says it is
+  // the prenotação (not the registration) and which table priced it.
+  if (data.prenotation) {
+    request.push({
+      label: "Prenotação",
+      value: `${formatMoney(data.prenotation.totalCents)} · código ${data.prenotation.code} (${data.prenotation.description}) da ${data.prenotation.tableTitle}`,
+    });
   }
 
   const sections: RequerimentoSection[] = [

@@ -1,7 +1,14 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { after } from "next/server";
 import { can } from "@/core/auth/roles.ts";
+import {
+  PRENOTATION_ATTRIBUTIONS,
+  parseMoney,
+  prenotationItemsSchema,
+  type ReadPrenotation,
+} from "@/core/fees/prenotation.ts";
 import { OfficeBulletinSchema } from "@/core/tenant/overrides.ts";
 import {
   fundFieldName,
@@ -15,6 +22,13 @@ import {
   documentFormSchema,
 } from "@/core/transparency/documents.ts";
 import { FUNDS_BY_STATE } from "@/core/transparency/rubrics.ts";
+import {
+  FEE_TABLE_CATEGORY,
+  getFeeTableDocument,
+  readNewFeeTable,
+  readPrenotationFromPdf,
+  saveFeeTableItems,
+} from "@/lib/fee-tables.ts";
 import { notifyIndexNow } from "@/lib/notify-indexnow.ts";
 import { getSession } from "@/lib/session.ts";
 import { getSiteOrigin } from "@/lib/site-origin.ts";
@@ -131,7 +145,17 @@ export async function uploadDocumentAction(
         fieldErrors: { arquivo: "Escolha um arquivo." },
       };
     }
-    await createDocument(tenant.slug, parsed.data, stored, session.user.id);
+    const created = await createDocument(
+      tenant.slug,
+      parsed.data,
+      stored,
+      session.user.id,
+    );
+    // A new fee table: its prenotações are read from the PDF right after
+    // the answer, for the office to confirm on the table's own screen.
+    if (parsed.data.category === FEE_TABLE_CATEGORY) {
+      after(() => readNewFeeTable(tenant, created.id));
+    }
   } catch (error) {
     if (error instanceof AttachmentError) {
       return { status: "error", message: error.message, fieldErrors: {} };
@@ -339,5 +363,116 @@ export async function saveBulletinOptionAction(
     return { status: "error", message: GENERIC_ERROR };
   }
   revalidate();
+  return { status: "success" };
+}
+
+export type FeeTableReadState =
+  | { status: "idle" }
+  | { status: "error"; message: string }
+  | { status: "success"; items: ReadPrenotation; found: number };
+
+/**
+ * "Ler do PDF": the prenotações the table's file holds, back to the screen
+ * to fill the fields. Nothing is saved: the office reads, corrects and saves.
+ */
+export async function readFeeTablePdfAction(
+  _previous: FeeTableReadState,
+  formData: FormData,
+): Promise<FeeTableReadState> {
+  const session = await getSession();
+  if (!session || !can(session.user.role ?? "", "content.edit")) {
+    return { status: "error", message: NO_PERMISSION };
+  }
+  const tenant = await getTenant();
+  const id = String(formData.get("id") ?? "");
+  let items: ReadPrenotation;
+  try {
+    items = await readPrenotationFromPdf(tenant, id);
+  } catch (error) {
+    console.error("transparencia.fee-table-read", error);
+    return { status: "error", message: GENERIC_ERROR };
+  }
+  const found = Object.keys(items).length;
+  if (found === 0) {
+    return {
+      status: "error",
+      message:
+        "Não encontramos a prenotação no texto deste PDF (pode ser uma imagem escaneada). Digite os valores abaixo.",
+    };
+  }
+  return { status: "success", items, found };
+}
+
+/** Saves the three prenotações of one table, as the office confirmed them. */
+export async function saveFeeTableAction(
+  _previous: SaveState,
+  formData: FormData,
+): Promise<SaveState> {
+  const session = await getSession();
+  if (!session || !can(session.user.role ?? "", "content.edit")) {
+    return { status: "error", message: NO_PERMISSION, fieldErrors: {} };
+  }
+  const tenant = await getTenant();
+  const id = String(formData.get("id") ?? "");
+  if (!(await getFeeTableDocument(tenant.slug, id))) {
+    return {
+      status: "error",
+      message: "Esta não é uma tabela de emolumentos.",
+      fieldErrors: {},
+    };
+  }
+
+  const items: Record<string, unknown> = {};
+  const fieldErrors: Record<string, string> = {};
+  for (const attribution of PRENOTATION_ATTRIBUTIONS) {
+    const code = String(formData.get(`${attribution}.code`) ?? "").trim();
+    const description = String(
+      formData.get(`${attribution}.description`) ?? "",
+    ).trim();
+    const total = String(formData.get(`${attribution}.total`) ?? "").trim();
+    // A registry left blank is "not in this table", not an error.
+    if (!code && !total) continue;
+    const totalCents = parseMoney(total);
+    if (totalCents === undefined) {
+      fieldErrors[`${attribution}.total`] = "Use o formato 57,90.";
+      continue;
+    }
+    items[attribution] = {
+      code,
+      description: description || "Prenotação",
+      totalCents,
+    };
+  }
+  const parsed = prenotationItemsSchema.safeParse(items);
+  if (!parsed.success) {
+    for (const issue of parsed.error.issues) {
+      // The field is "total"; the schema calls it totalCents.
+      const field = issue.path.join(".").replace(/\.totalCents$/, ".total");
+      fieldErrors[field] ??= issue.message;
+    }
+  }
+  if (!parsed.success || Object.keys(fieldErrors).length > 0) {
+    return {
+      status: "error",
+      message: "Confira os campos destacados.",
+      fieldErrors,
+    };
+  }
+
+  try {
+    await saveFeeTableItems(
+      tenant.slug,
+      id,
+      parsed.data,
+      "manual",
+      session.user.id,
+    );
+  } catch (error) {
+    console.error("transparencia.fee-table", error);
+    return { status: "error", message: GENERIC_ERROR, fieldErrors: {} };
+  }
+  revalidatePath("/admin/transparencia");
+  revalidatePath(`/admin/transparencia/tabela/${id}`);
+  revalidatePath("/solicitar");
   return { status: "success" };
 }

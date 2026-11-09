@@ -197,6 +197,8 @@ export interface ActVariant {
 export interface ActVariants {
   /** The select's label. Neutral voice: the counter reads it too. */
   question: string;
+  /** Shown as a list to pick from, every option in sight, not a select. */
+  listed?: true;
   options: ActVariant[];
 }
 
@@ -271,6 +273,14 @@ export interface Act {
    * of its own and the description says what goes in it.
    */
   variants?: ActVariants;
+  /**
+   * The act is the prenotação of a title for analysis: the request is
+   * priced on filing with the prenotação item of the fee table in force for
+   * this attribution (see `src/core/fees/prenotation.ts`), never with a
+   * value typed in this file. A table without the item leaves the price to
+   * the operator, as for every other act.
+   */
+  chargesPrenotation?: true;
   /**
    * Off the list, but still resolved by `getAct`: a request already filed under
    * this id keeps its name and legal basis. New requests go to the act that
@@ -557,6 +567,30 @@ export const PLATFORM_FOOTER_LINE =
 // atos.ts), which cites Lei 6.015, Lei 8.935, Lei 9.492 and Prov. CNJ
 // 149/2023. The catalogue is national: what an office offers is this list
 // filtered by attribution, never a list of its own.
+/**
+ * The prenotação (análise) of Imóveis, Títulos e Documentos and Pessoas
+ * Jurídicas: the same five ends in the three registries, listed for the
+ * citizen to pick, and the same words about what is charged now and what
+ * comes after the analysis.
+ */
+const PRENOTATION_VARIANTS: ActVariants = {
+  question: "A análise é para qual ato?",
+  listed: true,
+  options: [
+    { id: "anotacao", name: "Prenotação para anotação" },
+    { id: "averbacao", name: "Prenotação para averbação" },
+    { id: "registro", name: "Prenotação para registro" },
+    { id: "retificacao", name: "Prenotação para retificação" },
+    { id: "ratificacao", name: "Prenotação para ratificação" },
+  ],
+};
+const PRENOTATION_HINT =
+  "você envia o título para análise e paga a prenotação agora; o ato é concluído depois da análise";
+const PRENOTATION_GUIDANCE =
+  "A prenotação é a entrada do título no protocolo para a análise: ela garante a ordem de apresentação. " +
+  "O valor da prenotação é cobrado no pedido, junto com o requerimento assinado. " +
+  "Os emolumentos da anotação, averbação, registro, retificação ou ratificação são calculados depois da análise e informados no protocolo.";
+
 export const ACTS: Act[] = [
   // Registro Civil das Pessoas Naturais
   {
@@ -898,6 +932,22 @@ export const ACTS: Act[] = [
     ],
   },
   {
+    id: "ri-prenotacao",
+    attribution: "RI",
+    name: "Prenotação (análise): anotação, averbação, registro, retificação ou ratificação",
+    variants: PRENOTATION_VARIANTS,
+    processingMode: "hybrid",
+    processingHint: PRENOTATION_HINT,
+    guidance: PRENOTATION_GUIDANCE,
+    legalBasis: "Lei 6.015 arts. 12, 182 e 186",
+    requiresPurpose: false,
+    chargesPrenotation: true,
+    documents: [
+      "Título ou documento a ser analisado, completo e legível",
+      "Documento de identidade do apresentante",
+    ],
+  },
+  {
     id: "ri-registro-titulo",
     attribution: "RI",
     name: "Registro ou averbação na matrícula",
@@ -963,6 +1013,22 @@ export const ACTS: Act[] = [
 
   // Registro de Títulos e Documentos
   {
+    id: "rtd-prenotacao",
+    attribution: "RTD",
+    name: "Prenotação (análise): anotação, averbação, registro, retificação ou ratificação",
+    variants: PRENOTATION_VARIANTS,
+    processingMode: "hybrid",
+    processingHint: PRENOTATION_HINT,
+    guidance: PRENOTATION_GUIDANCE,
+    legalBasis: "Lei 6.015 arts. 127 e 146",
+    requiresPurpose: false,
+    chargesPrenotation: true,
+    documents: [
+      "Título ou documento a ser analisado, completo e legível",
+      "Documento de identidade do apresentante",
+    ],
+  },
+  {
     id: "rtd-registro-documento",
     attribution: "RTD",
     name: "Registro de documento ou contrato",
@@ -1016,6 +1082,22 @@ export const ACTS: Act[] = [
   },
 
   // Registro Civil das Pessoas Jurídicas
+  {
+    id: "rcpj-prenotacao",
+    attribution: "RCPJ",
+    name: "Prenotação (análise): anotação, averbação, registro, retificação ou ratificação",
+    variants: PRENOTATION_VARIANTS,
+    processingMode: "hybrid",
+    processingHint: PRENOTATION_HINT,
+    guidance: PRENOTATION_GUIDANCE,
+    legalBasis: "Lei 6.015 arts. 114 a 121",
+    requiresPurpose: false,
+    chargesPrenotation: true,
+    documents: [
+      "Título ou documento a ser analisado, completo e legível",
+      "Documento de identidade do apresentante",
+    ],
+  },
   {
     id: "rcpj-registro-constituicao",
     attribution: "RCPJ",

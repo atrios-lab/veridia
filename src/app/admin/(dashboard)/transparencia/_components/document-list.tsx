@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useActionState, useEffect, useState } from "react";
 import { toast } from "sonner";
 import { formatOfficeMonthYear } from "@/core/time/office-time.ts";
@@ -103,6 +104,21 @@ function DeleteButton({ id, title }: { id: string; title: string }) {
   );
 }
 
+/** What a fee table holds for the prenotação, for its row. */
+export interface FeeTableInfo {
+  /** The table the site charges from: the first published one. */
+  inForce: boolean;
+  /** How many of the three prenotações it has values for. */
+  items: number;
+  source?: "pdf" | "manual";
+}
+
+function feeTableNote(info: FeeTableInfo): string {
+  if (info.items === 0) return "Prenotação: informar os valores";
+  const read = info.source === "pdf" ? " (lidos do PDF, confira)" : "";
+  return `Prenotação: ${info.items} de 3 valores${read}`;
+}
+
 /** Where the panel serves a transparency document, any state. */
 function documentHref(id: string): string {
   return `/admin/transparencia/documento?id=${id}`;
@@ -112,10 +128,12 @@ function DocumentRow({
   doc,
   isFirst,
   isLast,
+  feeTable,
 }: {
   doc: TransparencyDocumentRow;
   isFirst: boolean;
   isLast: boolean;
+  feeTable?: FeeTableInfo;
 }) {
   const status = doc.status as DocumentStatus;
   const size = formatFileSize(doc.fileSizeBytes);
@@ -165,10 +183,23 @@ function DocumentRow({
           >
             {DOCUMENT_STATUS_LABELS[status]}
           </span>
+          {feeTable?.inForce && (
+            <span className="rounded-full border border-admin-accent px-2.5 py-0.5 text-[10.5px] font-bold text-admin-primary">
+              Vigente
+            </span>
+          )}
         </span>
         <span className="mt-0.5 block text-[11.5px] text-admin-muted">
           {meta}
         </span>
+        {feeTable && (
+          <Link
+            href={`/admin/transparencia/tabela/${doc.id}`}
+            className="mt-1 inline-block text-[12px] font-semibold text-admin-primary underline underline-offset-2 hover:text-admin-accent"
+          >
+            {feeTableNote(feeTable)} ›
+          </Link>
+        )}
       </span>
 
       <a
@@ -210,8 +241,11 @@ function DocumentRow({
  */
 export function DocumentList({
   documents,
+  feeTables = {},
 }: {
   documents: TransparencyDocumentRow[];
+  /** Fee tables only, keyed by document id. */
+  feeTables?: Record<string, FeeTableInfo>;
 }) {
   const [category, setCategory] = useState<string>("all");
   const [expanded, setExpanded] = useState(false);
@@ -263,6 +297,7 @@ export function DocumentList({
                 doc={doc}
                 isFirst={index === 0}
                 isLast={index === filtered.length - 1}
+                feeTable={feeTables[doc.id]}
               />
             );
           })}

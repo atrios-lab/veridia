@@ -7,6 +7,10 @@ import {
   getActForTenant,
 } from "@/core/acts/catalog.ts";
 import {
+  isPrenotationAttribution,
+  prenotationNotice,
+} from "@/core/fees/prenotation.ts";
+import {
   generateAccessKey,
   hashAccessKey,
   verifyAccessKey,
@@ -34,6 +38,7 @@ import { isSectionEnabled } from "@/core/tenant/gating.ts";
 import { officeYear } from "@/core/time/office-time.ts";
 import { clientIp } from "@/lib/client-ip.ts";
 import { sendAccessKey } from "@/lib/email/service-request.ts";
+import { currentPrenotation } from "@/lib/fee-tables.ts";
 import { isRateLimited } from "@/lib/rate-limit.ts";
 import {
   attachToRequest,
@@ -64,6 +69,9 @@ export interface SubmitSuccess {
   signatureCaveat: string;
   /** A busca de registro: sem requerimento assinado, só a resposta. */
   consultation: boolean;
+  /** The prenotação charged, as the success screen says it: value, code and
+   * table, and that it is the prenotação and not the registration. */
+  prenotation?: { headline: string; detail: string };
 }
 
 export interface SubmitDuplicate {
@@ -234,11 +242,19 @@ export async function submitServiceRequest(
       { ip: clientIp(requestHeaders) },
     );
 
+    // The prenotação is priced on filing by the table in force; without the
+    // item there, the request goes in unpriced, for the operator, as before.
+    const prenotation =
+      act.chargesPrenotation && isPrenotationAttribution(act.attribution)
+        ? await currentPrenotation(tenant, act.attribution)
+        : undefined;
+
     const { protocolNumber } = await createServiceRequest(
       tenant,
       act,
       {
         ...data,
+        ...(prenotation ? { amountCents: prenotation.item.totalCents } : {}),
         contact: email,
         accessKeyHash: hashAccessKey(accessKey),
         details: {
@@ -247,6 +263,15 @@ export async function submitServiceRequest(
           ...(actVariant ? { actVariant } : {}),
           ...(requesterQualification ? { requesterQualification } : {}),
           ...(deliveryFormat ? { deliveryFormat } : {}),
+          ...(prenotation
+            ? {
+                prenotation: {
+                  ...prenotation.item,
+                  tableTitle: prenotation.tableTitle,
+                  tableId: prenotation.documentId,
+                },
+              }
+            : {}),
           // Pedida, nunca concedida: quem confere o benefício e decide é a
           // serventia, e `amountCents` segue sendo do operador.
           ...(exemption
@@ -292,6 +317,14 @@ export async function submitServiceRequest(
       hasExemption: Boolean(exemption),
       signatureCaveat: signatureCaveatFor(act),
       consultation: Boolean(act.consultation),
+      ...(prenotation
+        ? {
+            prenotation: prenotationNotice(
+              prenotation.item,
+              prenotation.tableTitle,
+            ),
+          }
+        : {}),
     };
   } catch (error) {
     if (error instanceof AttachmentError) return fail(error.message);

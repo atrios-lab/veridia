@@ -76,6 +76,32 @@ function ActVariantField({
   registration: UseFormRegisterReturn;
   error?: string;
 }) {
+  if (variants.listed) {
+    return (
+      <fieldset>
+        <legend className="mb-1.5 block text-[13px] font-semibold">
+          {variants.question}
+        </legend>
+        <div className="flex flex-col gap-2">
+          {variants.options.map((option) => (
+            <label
+              key={option.id}
+              className="flex cursor-pointer items-center gap-2.5 rounded-xl border border-brand-border bg-brand-card px-3.5 py-3 text-sm has-[:checked]:border-brand-accent"
+            >
+              <input
+                type="radio"
+                value={option.id}
+                className="h-4 w-4 accent-brand-accent"
+                {...registration}
+              />
+              {option.name}
+            </label>
+          ))}
+        </div>
+        <FieldError message={error} />
+      </fieldset>
+    );
+  }
   return (
     <div>
       <label
@@ -496,11 +522,15 @@ export function RequestForm({
   act,
   attribution,
   lookupHref,
+  prenotation,
 }: {
   act: Act;
   attribution: Attribution;
   /** Where "Acompanhar pedido" sends the citizen after success: /acompanhar. */
   lookupHref: string;
+  /** For a prenotação act: what it costs by the table in force, said before
+   * the citizen sends; null when the table has no such item yet. */
+  prenotation?: { headline: string; detail: string } | null;
 }) {
   const [state, formAction, pending] = useActionState<SubmitState, FormData>(
     submitServiceRequest,
@@ -928,6 +958,8 @@ export function RequestForm({
           </p>
         </div>
 
+        {act.chargesPrenotation && <PrenotationCard notice={prenotation} />}
+
         {act.guidance && (
           <div className="flex items-start gap-2.5 rounded-2xl bg-brand-accent-soft px-3.5 py-3">
             <Icon
@@ -1134,8 +1166,10 @@ export function RequestForm({
             {sending ? "Enviando..." : "Enviar requerimento"}
           </button>
           <p className="mt-2 text-[11px] text-brand-faint md:mt-0 md:max-w-[40ch]">
-            Pagamentos e emissão do ato acontecem na serventia. Sem CAPTCHA: a
-            proteção anti-robô é invisível.
+            {act.chargesPrenotation
+              ? "A prenotação é paga pela consulta do protocolo; os emolumentos do ato, na serventia, depois da análise."
+              : "Pagamentos e emissão do ato acontecem na serventia."}{" "}
+            Sem CAPTCHA: a proteção anti-robô é invisível.
           </p>
         </div>
       </div>
@@ -1224,6 +1258,46 @@ function ProtocolFields({ result }: { result: SubmitSuccess }) {
   );
 }
 
+/**
+ * The prenotação's price, before sending and after: the value with the
+ * table's code and name, and the sentence that keeps anyone from reading it
+ * as the price of the registration.
+ */
+function PrenotationCard({
+  notice,
+  paid,
+}: {
+  notice?: { headline: string; detail: string } | null;
+  paid?: boolean;
+}) {
+  return (
+    <div className="rounded-2xl border-[1.5px] border-brand-accent-line bg-brand-card px-4 py-3.5">
+      <div className="flex items-start gap-2.5">
+        <Icon
+          name="info"
+          className="mt-0.5 h-4 w-4 shrink-0 text-brand-accent"
+          strokeWidth={2}
+        />
+        <div>
+          <p className="text-[13.5px] font-bold text-brand-primary">
+            {notice?.headline ??
+              "Prenotação: o valor é informado pela serventia no protocolo"}
+          </p>
+          <p className="mt-1 text-[12px] leading-relaxed text-brand-muted">
+            {notice?.detail ??
+              "A prenotação é a entrada do título no protocolo para a análise. O valor sai da tabela de emolumentos vigente e aparece na consulta do protocolo."}
+          </p>
+          <p className="mt-1.5 text-[12px] font-semibold leading-relaxed text-brand-accent-ink">
+            {paid
+              ? "Pague pela consulta do protocolo e envie o requerimento assinado: a análise começa com os dois."
+              : "Ao enviar, o valor da prenotação já fica no protocolo para pagamento, junto com o requerimento assinado."}
+          </p>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function SuccessScreen({
   result,
   lookupHref,
@@ -1298,6 +1372,10 @@ function SuccessScreen({
             </button>
           </form>
         </Step>
+
+        {result.prenotation && (
+          <PrenotationCard notice={result.prenotation} paid />
+        )}
 
         {/* A busca é só consulta: não há requerimento a assinar, e a resposta
             aparece na consulta do protocolo. */}

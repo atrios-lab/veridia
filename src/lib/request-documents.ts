@@ -11,6 +11,7 @@ import {
   readDeliveryFormat,
   readExemption,
   readPhone,
+  readPrenotation,
   readRequesterQualification,
 } from "@/core/request/kinds.ts";
 import {
@@ -93,6 +94,7 @@ export function buildRequestDocuments(
       actVariant: readActVariant(stored.details),
       requesterQualification: readRequesterQualification(stored.details),
       deliveryFormat: readDeliveryFormat(stored.details),
+      prenotation: readPrenotation(stored.details),
       cpf: stored.cpf,
       alternateDocument: readAlternateDocument(stored.details),
       description: stored.description,
