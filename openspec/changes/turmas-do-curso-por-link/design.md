@@ -58,7 +58,7 @@ curso.atrioss.com/admin       painel do aluno (só Treinamento)
 
 **Aviso de demonstração.** Toda página pública do tenant de cursos mostra uma faixa fixa no topo: "Site de demonstração. Este cartório não existe. Não envie dados reais." Acima de cada formulário público, o mesmo aviso aparece de novo, perto do botão de enviar. A faixa é ligada por um campo novo e opcional na configuração do tenant, `demo: true`, e não pelo slug, para o Serra Verde poder usar o mesmo aviso no futuro se o usuário quiser. Nesta change, só o tenant de cursos liga o campo; o Serra Verde fica como está, porque as gravações do curso já usam o site dele sem a faixa.
 
-**Formulários funcionam.** Pedido, agendamento, LGPD e ouvidoria gravam e mostram o protocolo, para o aluno ver o fluxo inteiro, inclusive o acompanhamento. Os registros caem na fila do tenant de cursos, que ninguém atende. O expurgo dos arquivos dos protocolos, que já existe, vale para eles também.
+**Formulários funcionam** (decisão do usuário em 09/11/2026: "Sim, com o aviso"). Pedido, agendamento, LGPD e ouvidoria gravam e mostram o protocolo, para o aluno ver o fluxo inteiro, inclusive o acompanhamento. Os registros caem na fila do tenant de cursos, que ninguém atende. O expurgo dos arquivos dos protocolos, que já existe, vale para eles também.
 
 *Alternativa considerada*: bloquear o envio dos formulários. Descartada: o protocolo e o acompanhamento são a parte que mais convence, e o aviso cobre o risco de dado real.
 
