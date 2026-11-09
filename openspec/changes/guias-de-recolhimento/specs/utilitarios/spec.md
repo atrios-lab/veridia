@@ -2,7 +2,7 @@
 
 ### Requirement: Guias de recolhimento
 
-O painel SHALL gerar a guia de recolhimento (ITIV/ITBI, ITCD, laudêmio municipal, certidão imobiliária) com as
+O painel SHALL gerar a guia de recolhimento (ITIV/ITBI, ITCD, laudêmio municipal) com as
 partes qualificadas, o imóvel, o valor declarado, a alíquota e o fundamento, numerada por ano, em PDF e em Word,
 com a identificação da serventia. Todo dado da guia SHALL ser editável no painel, inclusive alíquota, imposto e
 número. Excluir uma guia SHALL tirá-la da lista sem apagar o registro.

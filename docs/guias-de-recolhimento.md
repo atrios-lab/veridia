@@ -62,3 +62,8 @@ Não há leitura automática dos anexos: é decisão do produto, de 09/11/2026.
 A guia é gerada sozinha, numerada e ligada ao pedido. Ela aparece só no painel, em Utilitários e no próprio
 pedido. A serventia confere, corrige e gera de novo se precisar. Depois assina e entrega a guia com o boleto
 em "Entrega ao cidadão", mudando o andamento para "Aguardando pagamento da guia", ou envia aos órgãos.
+
+## Certidão de débitos do IPTU
+
+Não é oferecida como guia, por decisão do produto de 09/11/2026: o débito do imóvel aparece quando a Prefeitura
+gera o ITIV. O tipo continua no código só para que uma guia já emitida assim seja lida e impressa.
