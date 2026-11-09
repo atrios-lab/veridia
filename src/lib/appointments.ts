@@ -38,6 +38,7 @@ import {
 } from "@/db/schema.ts";
 import { OFFICE_AGENDA_KEY } from "@/lib/office-config.ts";
 import { recordAudit, recordAuditWith } from "./audit.ts";
+import { nextNumberWith } from "./document-numbering.ts";
 import { findPermanentBounceWith } from "./email/bounces.ts";
 import type { StoredAttachment } from "./uploads.ts";
 
@@ -270,24 +271,13 @@ export interface NewAppointment {
 }
 
 /** The next AGD number of the office's year, same read as service-request:
- * max + 1, and the unique index settles any race. */
-async function nextProtocolSequence(
+ * max + 1 or the office's floor, and the unique index settles any race. */
+function nextProtocolSequence(
   database: Database,
   tenantSlug: string,
   year: number,
 ): Promise<number> {
-  const [last] = await database
-    .select({ sequence: appointments.protocolSequence })
-    .from(appointments)
-    .where(
-      and(
-        eq(appointments.tenantSlug, tenantSlug),
-        eq(appointments.protocolYear, year),
-      ),
-    )
-    .orderBy(sql`${appointments.protocolSequence} desc nulls last`)
-    .limit(1);
-  return (last?.sequence ?? 0) + 1;
+  return nextNumberWith(database, tenantSlug, "AGD", year);
 }
 
 const PROTOCOL_ATTEMPTS = 5;
