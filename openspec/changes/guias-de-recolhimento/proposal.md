@@ -1,13 +1,14 @@
 ## Why
 
 O balcão de notas digita à mão, em Word, o requerimento de guia que a parte leva à Prefeitura (ITIV/ITBI,
-laudêmio, certidão imobiliária) ou à SET/RN (ITCD) antes da escritura. Numeração, qualificação das partes,
+laudêmio) ou à SET/RN (ITCD) antes da escritura. Numeração, qualificação das partes,
 alíquotas e fundamentos variavam de guia para guia.
 
 ## What Changes
 
 - Novo grupo **Utilitários** no painel, com **Guias de recolhimento**:
-  - tipos: ITIV/ITBI, ITCD por doação, ITCD causa mortis, laudêmio municipal e certidão imobiliária;
+  - tipos: ITIV/ITBI, ITCD por doação, ITCD causa mortis e laudêmio municipal (a certidão de débitos do IPTU
+    não é oferecida: o débito aparece quando o fisco gera o ITIV);
   - qualificação estruturada das partes (Lei 6.015, art. 176; CPC, art. 319, II), com a frase pronta;
   - ITCD do RN pela tabela da Lei 5.887/1989, art. 7º (Lei 9.993/2015);
   - tudo editável à mão: alíquota, imposto, destinatário, lei e número;

@@ -19,6 +19,16 @@ export const GUIDE_KINDS = [
 ] as const;
 export type GuideKind = (typeof GUIDE_KINDS)[number];
 
+/**
+ * The kinds offered for a new guia. The certidão de débitos imobiliários
+ * (IPTU) is no longer one (product decision of 09/11/2026: the debt shows
+ * when the fisco issues the ITIV), but stays in `GUIDE_KINDS` so a guia
+ * already issued as one still reads and prints.
+ */
+export const OFFERED_GUIDE_KINDS: readonly GuideKind[] = GUIDE_KINDS.filter(
+  (kind) => kind !== "certidao-imobiliaria",
+);
+
 const text = (max: number, required?: string) =>
   required
     ? z.string().trim().min(1, required).max(max, `Use até ${max} caracteres.`)

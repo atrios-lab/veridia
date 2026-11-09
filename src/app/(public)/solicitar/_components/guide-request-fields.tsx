@@ -9,8 +9,8 @@ import type {
 } from "@/core/guides/request.ts";
 import {
   CIVIL_STATUSES,
-  GUIDE_KINDS,
   type GuideKind,
+  OFFERED_GUIDE_KINDS,
 } from "@/core/guides/schema.ts";
 
 const input =
@@ -98,7 +98,7 @@ export function GuideRequestFields({
             value={kind}
             onChange={(event) => setKind(event.target.value as GuideKind)}
           >
-            {GUIDE_KINDS.map((option) => (
+            {OFFERED_GUIDE_KINDS.map((option) => (
               <option key={option} value={option}>
                 {GUIDE_KIND_INFO[option].label}
               </option>

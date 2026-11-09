@@ -8,6 +8,7 @@ import {
   type GuideKind,
   GuidePartySchema,
   type GuideSettings,
+  OFFERED_GUIDE_KINDS,
   rateFor,
 } from "./schema.ts";
 
@@ -40,7 +41,12 @@ export type PublicGuideParty = z.infer<typeof PublicGuidePartySchema>;
 
 export const PublicGuideRequestSchema = z
   .object({
-    kind: z.enum(GUIDE_KINDS),
+    // Only what is offered: a new request never asks for the certidão.
+    kind: z
+      .enum(GUIDE_KINDS)
+      .refine((kind) => OFFERED_GUIDE_KINDS.includes(kind), {
+        message: "Escolha uma das guias oferecidas.",
+      }),
     nature: text(120),
     parties: z.array(PublicGuidePartySchema).max(20, "Use até 20 pessoas."),
     property: z.object({

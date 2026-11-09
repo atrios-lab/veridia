@@ -12,12 +12,12 @@ import {
 import {
   CIVIL_STATUSES,
   emptyParty,
-  GUIDE_KINDS,
   type Guide,
   type GuideKind,
   type GuideParty,
   type GuideSettings,
   MARRIAGE_REGIMES,
+  OFFERED_GUIDE_KINDS,
   rateFor,
 } from "@/core/guides/schema.ts";
 import { formatMoneyBRL } from "@/core/transparency/bulletin.ts";
@@ -365,7 +365,12 @@ export function GuideForm({
           label="Guia"
           value={guide.kind}
           onChange={(kind) => setKind(kind ?? "itiv")}
-          options={GUIDE_KINDS.map((kind) => ({
+          // A guia already issued as a certidão keeps its kind on the list;
+          // a new one is never offered it.
+          options={(OFFERED_GUIDE_KINDS.includes(guide.kind)
+            ? OFFERED_GUIDE_KINDS
+            : [...OFFERED_GUIDE_KINDS, guide.kind]
+          ).map((kind) => ({
             value: kind,
             label: GUIDE_KIND_INFO[kind].label,
           }))}

@@ -65,14 +65,12 @@ test("pede quem transmite, quem adquire, CPF válido e o valor", () => {
     ],
   });
   assert.equal(badCpf.success, false);
-  // A certidão do IPTU needs neither a buyer nor a value.
+  // The certidão do IPTU is no longer offered: the debt shows with the ITIV.
   assert.equal(
     PublicGuideRequestSchema.safeParse({
       ...request,
       kind: "certidao-imobiliaria",
-      parties: [request.parties[0]],
-      declaredValueCents: 0,
     }).success,
-    true,
+    false,
   );
 });
