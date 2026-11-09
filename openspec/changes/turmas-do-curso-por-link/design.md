@@ -38,7 +38,7 @@ TENANTS
        hosts: curso.atrioss.com, curso.localhost
 ```
 
-`atrios-cursos` entra no registro como qualquer serventia, porque a sessão, o tema, o painel e o site dependem disso. É um cartório fictício, como o Serra Verde, mas outro: nome, cidade, titular, encarregado, telefones e e-mails inventados, e todas as atribuições, para o site mostrar todas as seções. O nome de trabalho é "Cartório de Vale Claro/RN", a confirmar com o usuário; não pode coincidir com município ou cartório real.
+`atrios-cursos` entra no registro como qualquer serventia, porque a sessão, o tema, o painel e o site dependem disso. É um cartório fictício, como o Serra Verde, mas outro: nome, cidade, titular, encarregado, telefones e e-mails inventados, e todas as atribuições, para o site mostrar todas as seções. O nome é "Cartório Vale do Silício", na cidade fictícia de Vale do Silício/RN (decisão do usuário em 09/11/2026). Nenhum município do RN tem esse nome, e a referência deixa claro que o cartório é inventado.
 
 Um módulo puro (`src/core/tenant/courses-tenant.ts`) exporta `COURSES_TENANT_SLUG` e `isCoursesTenant(tenant)`. É o único lugar que conhece o slug; rotas e páginas perguntam a ele.
 
@@ -51,7 +51,7 @@ Um módulo puro (`src/core/tenant/courses-tenant.ts`) exporta `COURSES_TENANT_SL
 O tenant de cursos serve o site público inteiro, como qualquer serventia. O aluno vê o que o cidadão veria no site do próprio cartório: início, solicitar, agendar, acompanhar, editais, LGPD, ouvidoria, transparência, selo e contato.
 
 ```
-curso.atrioss.com/            site público de Vale Claro (fictício)
+curso.atrioss.com/            site público do Vale do Silício (fictício)
 curso.atrioss.com/turma/XXXX  cadastro do aluno
 curso.atrioss.com/admin       painel do aluno (só Treinamento)
 ```
@@ -220,6 +220,5 @@ Rollback: reverter o código. As duas tabelas novas podem ficar no banco sem efe
 
 - Texto do aviso de privacidade e da caixa de contato: o rascunho entra na implementação e o usuário aprova antes do deploy.
 - Validade padrão do link: 30 dias, ou outro prazo.
-- Nome e cidade do cartório fictício (nome de trabalho: "Cartório de Vale Claro/RN").
 - Remetente dos e-mails do tenant de cursos (senha esquecida, protocolo do site de demonstração): o endereço da Átrios ou um endereço fictício que não recebe resposta.
 - Quanto tempo guardar contas de alunos que nunca concluíram.

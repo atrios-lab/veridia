@@ -1,6 +1,7 @@
 ## 1. Antes de começar
 
-- [ ] 1.1 Confirmar com o usuário o nome e a cidade do cartório fictício (nome de trabalho: "Cartório de Vale Claro/RN") e o remetente dos e-mails
+- [x] 1.1 Nome do cartório fictício: "Cartório Vale do Silício", em Vale do Silício/RN (usuário, 09/11/2026)
+- [ ] 1.1.1 Confirmar com o usuário o remetente dos e-mails do tenant de cursos
 - [ ] 1.2 Confirmar com o usuário a validade padrão do link (proposta: 30 dias)
 
 ## 2. Tenant de cursos e site de demonstração
