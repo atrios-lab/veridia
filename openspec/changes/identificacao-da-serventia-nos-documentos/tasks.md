@@ -5,7 +5,7 @@
 
 ## 2. Documentos
 
-- [x] 2.1 Brasão vetorial e cabeçalho centralizado sem logomarca; rodapé com endereço e contatos
+- [x] 2.1 Brasão (imagem clara de referência da serventia) e cabeçalho centralizado sem logomarca; rodapé com endereço e contatos
 - [x] 2.2 Anexo I com o mesmo cabeçalho, compacto
 - [x] 2.3 Requerimento, comparecimento e Anexo I com denominação oficial e comarca
 

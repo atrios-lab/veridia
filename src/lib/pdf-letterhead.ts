@@ -1,7 +1,10 @@
 import "server-only";
 import type { OfficeIdentification } from "@/core/tenant/identification.ts";
 import { NEUTRALS } from "@/core/tenant/palette.ts";
-import { BRASAO_SHAPES, BRASAO_VIEWBOX } from "./assets/brasao-da-republica.ts";
+import {
+  BRASAO_PNG_BASE64,
+  BRASAO_SIZE,
+} from "./assets/brasao-da-republica-png.ts";
 import type { DocumentBrand } from "./document-brand.ts";
 import { contentWidth, MARGIN, type Pdf } from "./pdf-primitives.ts";
 
@@ -34,33 +37,22 @@ export function identificationOf(
   };
 }
 
-/** The coat of arms of the Republic, as vector, `height` points tall. */
+/** Decoded once per server instance: every document draws the same arms. */
+let brasao: Buffer | undefined;
+
+/** The coat of arms of the Republic, `height` points tall. */
 export function drawBrasao(
   pdf: Pdf,
   x: number,
   y: number,
   height: number,
 ): void {
-  const scale = height / BRASAO_VIEWBOX.height;
-  pdf.save();
-  pdf.translate(x, y).scale(scale);
-  for (const shape of BRASAO_SHAPES) {
-    const [d, fill, stroke] = shape;
-    pdf.path(d);
-    if (stroke !== null) {
-      const [, , , width, cap, join, miter] = shape;
-      pdf.lineWidth(width).lineCap(cap).lineJoin(join).miterLimit(miter);
-      if (fill) pdf.fillAndStroke(fill, stroke);
-      else pdf.stroke(stroke);
-    } else if (fill) {
-      pdf.fill(fill);
-    }
-  }
-  pdf.restore();
+  brasao ??= Buffer.from(BRASAO_PNG_BASE64, "base64");
+  pdf.image(brasao, x, y, { height, width: brasaoWidth(height) });
 }
 
 export function brasaoWidth(height: number): number {
-  return (height * BRASAO_VIEWBOX.width) / BRASAO_VIEWBOX.height;
+  return (height * BRASAO_SIZE.width) / BRASAO_SIZE.height;
 }
 
 export interface LetterheadSizes {
