@@ -110,6 +110,13 @@ const PATHS = {
     "M9 4V3a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v1",
     "m9 13 2 2 4-4",
   ],
+  // Utilitários: the guias de recolhimento (taxes and fees on a deed).
+  calculator: [
+    "M6 2h12a2 2 0 0 1 2 2v16a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2Z",
+    "M8 6h8",
+    "M16 14v4",
+    "M8 10h.01M12 10h.01M16 10h.01M8 14h.01M12 14h.01M8 18h.01M12 18h.01",
+  ],
   // The queue's bulk action: archiving the selected protocols.
   trash: ["M3 6h18M8 6V4h8v2M6 6l1 14h10l1-14M10 11v6M14 11v6"],
   // Sidebar navigation: the video tutorials (a play triangle in a circle).

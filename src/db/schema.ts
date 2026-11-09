@@ -1123,3 +1123,55 @@ export const cohortMembers = pgTable(
   },
   (t) => [index("cohort_members_cohort").on(t.cohortId)],
 );
+
+/**
+ * A guia de recolhimento the office issued from the panel's Utilitários: the
+ * requerimento the notary signs and the party takes to the fisco (the
+ * prefeitura for the ITIV/ITBI and the municipal laudêmio, the state's
+ * tax office for the ITCD), which then issues the payment slip. Kept so the
+ * office can reprint it and so its number ("Nº 03/2025") follows the
+ * office's own yearly count, as on the papers it issued by hand.
+ *
+ * What was filled in travels as one JSON document (`payload`, the shape of
+ * core/guides): the parties, the property and the values differ by kind of
+ * guia, and the paper is drawn from it whole, never queried field by field.
+ */
+export const taxGuides = pgTable(
+  "tax_guides",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    tenantSlug,
+    // "itiv", "itcd-doacao", "itcd-causa-mortis", "laudemio-municipal",
+    // "certidao-imobiliaria": see core/guides/catalog.
+    kind: text("kind").notNull(),
+    year: integer("year").notNull(),
+    sequence: integer("sequence").notNull(),
+    payload: jsonb("payload").notNull(),
+    // The citizen's request the guia answers, when it came from the site's
+    // Notas services; null for one the clerk issued at the counter.
+    serviceRequestId: uuid("service_request_id").references(
+      () => serviceRequests.id,
+      { onDelete: "set null" },
+    ),
+    createdBy: text("created_by"),
+    // When the office deleted it ("Excluir", for a guia issued by mistake):
+    // the row stays, out of every list, with its audit trail, and its
+    // number is free for the next guia.
+    deletedAt: timestamp("deleted_at", { withTimezone: true }),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (t) => [
+    // One live guia per number in the office's year. Two issued at once
+    // race for it and the loser takes the next one; a deleted guia leaves
+    // its number free.
+    uniqueIndex("tax_guides_tenant_year_sequence_live")
+      .on(t.tenantSlug, t.year, t.sequence)
+      .where(sql`${t.deletedAt} is null`),
+    index("tax_guides_tenant_created").on(t.tenantSlug, t.createdAt),
+  ],
+);
