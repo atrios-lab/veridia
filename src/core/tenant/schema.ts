@@ -440,6 +440,22 @@ export const TenantSchema = z.object({
   // Optional per § 1º ("podendo-se constar"), and off by default, as on the
   // office's own certidões: the holder's name, and the legal attributions,
   // under the identification only when the office ticks them.
+  // What the office's own papers already said, to start the Utilitários'
+  // guias from (see core/guides/settings.ts): the municipal law and rate of
+  // the ITIV, the prefeitura's CNPJ, who signs. The office corrects them on
+  // the Utilitários screen; these are never claimed to be verified.
+  guideDefaults: z
+    .object({
+      prefeituraCnpj: z.string().optional(),
+      itivLaw: z.string().optional(),
+      itivRateBasisPoints: z.number().int().min(0).max(10_000).optional(),
+      signers: z
+        .array(
+          z.object({ name: z.string(), title: z.string(), note: z.string() }),
+        )
+        .optional(),
+    })
+    .optional(),
   showHolder: z.boolean().default(false),
   showAttributions: z.boolean().default(false),
 });

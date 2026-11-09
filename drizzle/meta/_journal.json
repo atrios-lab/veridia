@@ -267,6 +267,13 @@
       "when": 1794203151935,
       "tag": "0037_vagas_por_horario",
       "breakpoints": true
+    },
+    {
+      "idx": 38,
+      "version": "7",
+      "when": 1794239201999,
+      "tag": "0038_guias_de_recolhimento",
+      "breakpoints": true
     }
   ]
 }

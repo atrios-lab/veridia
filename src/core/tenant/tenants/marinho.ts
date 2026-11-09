@@ -37,6 +37,22 @@ export const cartorioMarinho: Tenant = parseTenant({
   // the Comarca de Macaíba.
   officialName: "Cartório do Ofício Único de Ielmo Marinho/RN",
   jurisdiction: { kind: "comarca-termo", seat: "Macaíba" },
+  // From the office's own ITIV guia (2026): the municipal law, the rate and
+  // the prefeitura's CNPJ as it prints them, and who signs. Not verified
+  // against the municipal law's text, which is not published online.
+  guideDefaults: {
+    prefeituraCnpj: "08.004.525/0001-07",
+    itivLaw:
+      "Lei Complementar Municipal nº 44, de 30 de dezembro de 2021, art. 91",
+    itivRateBasisPoints: 300,
+    signers: [
+      {
+        name: "Bel. Joelison Alves Marinho",
+        title: "Sub. Tabelião e Registrador",
+        note: "Portaria/Matrícula: 001/2010/256574 (TJRN)",
+      },
+    ],
+  },
   openingHours: "Segunda a sexta, das 8h às 14h",
   counterHours: { startHour: 8, endHour: 14 },
   owner: {
