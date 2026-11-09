@@ -203,7 +203,7 @@ export type JoinResult =
   | { status: "joined"; userId: string; courseSlug: string }
   | {
       status: "refused";
-      reason: "not-found" | CohortState | "email-taken";
+      reason: "not-found" | Exclude<CohortState, "open"> | "email-taken";
     };
 
 export interface JoinDeps {
