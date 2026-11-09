@@ -2,6 +2,7 @@
 
 import { zodResolver } from "@hookform/resolvers/zod";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useActionState, useEffect, useRef, useState } from "react";
 import {
   type UseFormRegister,
@@ -44,6 +45,7 @@ import type { Attribution } from "@/core/tenant/schema.ts";
 import { Icon } from "../_components/icon.tsx";
 import { ProtocolReveal } from "../_components/protocol-reveal.tsx";
 import { SignedFormUpload } from "../_components/signed-form-upload.tsx";
+import { handOffAccess } from "../_lib/access-handoff.ts";
 import {
   ATTACHMENT_ACCEPT,
   useAttachmentUpload,
@@ -1314,6 +1316,14 @@ function SuccessScreen({
   // The red stays until the signed requerimento is actually in.
   const [requerimentoDownloaded, setRequerimentoDownloaded] = useState(false);
   const [requerimentoSent, setRequerimentoSent] = useState(false);
+  const router = useRouter();
+  const requestHref = `${lookupHref}?numero=${encodeURIComponent(result.protocolNumber)}`;
+  // The request's page opens already consulted: the key goes with the
+  // citizen through this tab's memory, never through the address.
+  function openRequest() {
+    handOffAccess(result.protocolNumber, result.accessKey);
+    router.push(requestHref);
+  }
 
   return (
     <div className="mt-5 md:mx-auto md:max-w-3xl">
@@ -1484,7 +1494,15 @@ function SuccessScreen({
                 protocolNumber={result.protocolNumber}
                 accessKey={result.accessKey}
                 documento="requerimento"
-                onSent={() => setRequerimentoSent(true)}
+                onSent={() => {
+                  setRequerimentoSent(true);
+                  // With the prenotação charged, the next step is the
+                  // payment, and it lives on the request's page: go there,
+                  // already open, instead of leaving the citizen here.
+                  if (result.prenotation && !result.hasExemption) {
+                    openRequest();
+                  }
+                }}
               />
               {result.hasExemption && (
                 <SignedFormUpload
@@ -1500,7 +1518,8 @@ function SuccessScreen({
 
       <div className="mt-4 flex gap-2.5">
         <Link
-          href={`${lookupHref}?numero=${encodeURIComponent(result.protocolNumber)}`}
+          href={requestHref}
+          onClick={() => handOffAccess(result.protocolNumber, result.accessKey)}
           className="btn btn-primary btn-lg flex-1"
         >
           Acompanhar pedido

@@ -792,7 +792,15 @@ function timelineSteps(
     result.paymentSettled ||
     (result.requestStatus === "new" && !result.amountLabel);
 
-  if (finished || preparing) {
+  // A prenotação is analysed, not prepared.
+  if ((finished || preparing) && result.analysis) {
+    steps.push({ label: "Título em análise", done: finished });
+    steps.push(
+      finished
+        ? { label: "Análise concluída", done: true }
+        : { label: "Resultado da análise" },
+    );
+  } else if (finished || preparing) {
     steps.push({ label: "Em preparo na serventia", done: finished });
     steps.push(
       delivered
