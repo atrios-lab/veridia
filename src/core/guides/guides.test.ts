@@ -16,7 +16,7 @@ import { defaultGuideSettings } from "./settings.ts";
 const party = (over: Partial<GuideParty>): GuideParty => ({
   role: "adquirente",
   personType: "fisica",
-  name: "Anna Leticia Damasceno de Lira",
+  name: "Maria Exemplo da Silva",
   gender: "feminino",
   nationality: "brasileira",
   civilStatus: "solteiro",
@@ -24,11 +24,11 @@ const party = (over: Partial<GuideParty>): GuideParty => ({
   marriageRecord: "",
   stableUnion: "nao",
   profession: "autônoma",
-  taxId: "094.265.724-14",
+  taxId: "529.982.247-25",
   identity: "",
   filiation: "",
   email: "",
-  address: "Rua Caio Galvão de Lima, 53, Pajuçara, Natal/RN, CEP 59.123-020",
+  address: "Rua das Flores, 100, Centro, Natal/RN, CEP 59.000-000",
   representation: "",
   ...over,
 });
@@ -39,23 +39,23 @@ const itiv: Guide = {
     party({}),
     party({
       role: "transmitente",
-      name: "Olavo de Oliveira Xavier",
+      name: "João Fictício de Souza",
       gender: "masculino",
       nationality: "brasileiro",
       civilStatus: "casado",
       marriageRegime: "comunhao-universal",
       stableUnion: "nao-informado",
       profession: "funcionário público",
-      taxId: "074.951.614-34",
-      identity: "nº 112.583, ITEP/RN",
-      address: "Rua Jornalista Francisco Sinedino, 1140, Natal/RN",
+      taxId: "123.456.789-09",
+      identity: "nº 1.234.567, SSP/RN",
+      address: "Avenida Exemplo, 200, Natal/RN",
     }),
   ],
   property: {
     type: "urbano",
-    description: "Povoado Canto de Moça, 32, Ielmo Marinho/RN, com 73,14 m².",
-    fiscalRegistration: "03.01.0001.0200.0001.0001",
-    registration: "matrícula nº 1.747, livro 2-I, fls. 001/003",
+    description: "Rua Projetada, 10, Centro, Ielmo Marinho/RN, com 80,00 m².",
+    fiscalRegistration: "01.02.0003.0004.0005.0006",
+    registration: "matrícula nº 9.999, livro 2-A, fls. 010/012",
   },
   nature: "compra e venda",
   declaredValueCents: 2_700_000,
@@ -71,12 +71,12 @@ const itiv: Guide = {
 test("a qualificação segue a Lei 6.015, art. 176, e o CPC, art. 319, II", () => {
   assert.equal(
     qualify(party({})),
-    "ANNA LETICIA DAMASCENO DE LIRA, brasileira, solteira, declarante não convivente em união estável, autônoma, inscrita no CPF sob o nº 094.265.724-14, residente e domiciliada na Rua Caio Galvão de Lima, 53, Pajuçara, Natal/RN, CEP 59.123-020",
+    "MARIA EXEMPLO DA SILVA, brasileira, solteira, declarante não convivente em união estável, autônoma, inscrita no CPF sob o nº 529.982.247-25, residente e domiciliada na Rua das Flores, 100, Centro, Natal/RN, CEP 59.000-000",
   );
   const married = qualify(itiv.parties[1] as GuideParty);
   assert.match(
     married,
-    /^OLAVO DE OLIVEIRA XAVIER, brasileiro, casado sob o regime da comunhão universal de bens, funcionário público, portador da Carteira de Identidade nº 112\.583, ITEP\/RN, inscrito no CPF/,
+    /^JOÃO FICTÍCIO DE SOUZA, brasileiro, casado sob o regime da comunhão universal de bens, funcionário público, portador da Carteira de Identidade nº 1\.234\.567, SSP\/RN, inscrito no CPF/,
   );
   assert.deepEqual(missingQualification(party({ profession: "" })), [
     "profissão",
@@ -90,7 +90,7 @@ test("a qualificação segue a Lei 6.015, art. 176, e o CPC, art. 319, II", () =
 test("CPF com dígito errado é recusado", () => {
   const parsed = GuideSchema.safeParse({
     ...itiv,
-    parties: [party({ taxId: "094.265.724-15" })],
+    parties: [party({ taxId: "529.982.247-26" })],
   });
   assert.equal(parsed.success, false);
   assert.equal(GuideSchema.safeParse(itiv).success, true);
@@ -129,13 +129,13 @@ test("a guia de ITIV sai como o modelo da serventia", () => {
     text,
     /à alíquota de 3% sobre o valor declarado, conforme Lei Complementar Municipal nº 44/,
   );
-  assert.match(text, /por compra e venda, de OLAVO DE OLIVEIRA XAVIER/);
+  assert.match(text, /por compra e venda, de JOÃO FICTÍCIO DE SOUZA/);
   assert.match(
     text,
     /Valor declarado: R\$ 27\.000,00 \(vinte e sete mil reais\)/,
   );
   assert.match(text, /Imposto estimado: R\$ 810,00 \(oitocentos e dez reais\)/);
-  assert.match(text, /Inscrição imobiliária: 03\.01\.0001\.0200\.0001\.0001/);
+  assert.match(text, /Inscrição imobiliária: 01\.02\.0003\.0004\.0005\.0006/);
   assert.match(text, /Ielmo Marinho\/RN, 15 de julho de 2026\./);
   assert.equal(doc.signee, "Bel. Joelison Alves Marinho");
 });

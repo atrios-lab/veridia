@@ -205,7 +205,7 @@ function PartyCard({
                     label="Registro do casamento"
                     value={party.marriageRecord}
                     onChange={(value) => set("marriageRecord", value)}
-                    placeholder="Ex.: conforme certidão do 5º Ofício de Natal/RN, livro 10-B, fls. 196v, nº 678"
+                    placeholder="Ex.: conforme certidão do 1º Ofício de Exemplo/RN, livro B-1, fls. 10, nº 100"
                   />
                 </div>
               </>
@@ -229,7 +229,7 @@ function PartyCard({
               label="Identidade (RG)"
               value={party.identity}
               onChange={(value) => set("identity", value)}
-              placeholder="Ex.: nº 112.583, ITEP/RN, expedida em 29/06/2022"
+              placeholder="Ex.: nº 1.234.567, SSP/RN, expedida em 01/01/2020"
             />
           </div>
         )}
@@ -239,7 +239,7 @@ function PartyCard({
               label="Filiação (obrigatória sem CPF e sem RG)"
               value={party.filiation}
               onChange={(value) => set("filiation", value)}
-              placeholder="Ex.: Pedro Soares de Oliveira e Roselia de Lima Oliveira"
+              placeholder="Ex.: José Exemplo da Silva e Ana Exemplo da Silva"
             />
           </div>
         )}
@@ -468,7 +468,7 @@ export function GuideForm({
             onChange={(registration) =>
               update({ property: { ...guide.property, registration } })
             }
-            placeholder="Ex.: matrícula nº 1.747, livro 2-I, fls. 001/003"
+            placeholder="Ex.: matrícula nº 9.999, livro 2-A, fls. 010/012"
           />
         </div>
         <label className="block">

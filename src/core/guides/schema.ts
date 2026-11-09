@@ -78,7 +78,7 @@ export const GuidePartySchema = z.object({
   stableUnion: z.enum(["sim", "nao", "nao-informado"]),
   profession: text(80),
   taxId,
-  /** "RG nº 112.583, ITEP/RN, expedido em 29/06/2022" */
+  /** "RG nº 1.234.567, SSP/RN, expedido em 01/01/2020" */
   identity: text(200),
   /** Lei 6.015, art. 176: required when there is neither CPF nor RG. */
   filiation: text(300),

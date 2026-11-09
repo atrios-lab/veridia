@@ -31,9 +31,9 @@ const guide = {
   ...blank,
   parties: blank.parties.map((party, index) => ({
     ...party,
-    name: index ? "Anna Leticia Damasceno de Lira" : "Olavo de Oliveira Xavier",
+    name: index ? "Maria Exemplo da Silva" : "João Fictício de Souza",
   })),
-  property: { ...blank.property, description: "Povoado Canto de Moça, 32." },
+  property: { ...blank.property, description: "Rua Projetada, 10." },
   declaredValueCents: 2_700_000,
 };
 

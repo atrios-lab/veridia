@@ -279,7 +279,7 @@ export function GuideRequestFields({
             onChange={(e) =>
               setProperty({ ...property, description: e.target.value })
             }
-            placeholder="Ex.: casa na Rua Tiradentes, 65, Centro, com 200 m²"
+            placeholder="Ex.: casa na Rua das Flores, 100, Centro, com 200 m²"
           />
           <FieldError message={err("property.description")} />
         </label>
@@ -294,7 +294,7 @@ export function GuideRequestFields({
             onChange={(e) =>
               setProperty({ ...property, registration: e.target.value })
             }
-            placeholder="Ex.: matrícula nº 1.516"
+            placeholder="Ex.: matrícula nº 9.999"
           />
         </label>
         {info.rate !== "none" && (

@@ -53,7 +53,7 @@ function formatTaxId(value: string): string {
   return value.trim();
 }
 
-/** "ANNA LETICIA DAMASCENO DE LIRA, brasileira, solteira, ..." */
+/** "MARIA EXEMPLO DA SILVA, brasileira, solteira, ..." */
 export function qualify(party: GuideParty): string {
   const f = party.gender === "feminino";
   const g = (feminine: string, masculine: string) => (f ? feminine : masculine);
