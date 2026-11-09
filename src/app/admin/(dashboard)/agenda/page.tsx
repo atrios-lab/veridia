@@ -146,6 +146,8 @@ export default async function AgendaPage({
   for (const file of await listAppointmentAttachments(
     tenant.slug,
     appointments.map((a) => a.id),
+    // "Enviou antes": what the citizen sent, not the office's own files.
+    { citizenOnly: true },
   ).catch(() => [])) {
     const list = filesByAppointment.get(file.appointmentId) ?? [];
     // Numbered, not named: the stored name is positional on purpose, and

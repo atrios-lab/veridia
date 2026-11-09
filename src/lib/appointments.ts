@@ -32,6 +32,7 @@ import {
 import { type Database, db } from "@/db/index.ts";
 import {
   appointmentAttachments,
+  appointmentNotes,
   appointments,
   tenantContent,
 } from "@/db/schema.ts";
@@ -819,10 +820,15 @@ export function recoverAppointmentKey(
 export type AppointmentAttachment = typeof appointmentAttachments.$inferSelect;
 
 /** What the citizen sent ahead of an appointment, oldest first. */
+/**
+ * The files kept on appointments. `citizenOnly` is the consult's view: what
+ * the citizen sent, never the office's own attachments (`uploadedBy` set).
+ */
 export async function listAppointmentAttachmentsWith(
   database: Database,
   tenantSlug: string,
   appointmentIds: string[],
+  { citizenOnly = false }: { citizenOnly?: boolean } = {},
 ): Promise<AppointmentAttachment[]> {
   if (appointmentIds.length === 0) return [];
   return database
@@ -832,6 +838,7 @@ export async function listAppointmentAttachmentsWith(
       and(
         eq(appointmentAttachments.tenantSlug, tenantSlug),
         inArray(appointmentAttachments.appointmentId, appointmentIds),
+        citizenOnly ? isNull(appointmentAttachments.uploadedBy) : undefined,
       ),
     )
     .orderBy(asc(appointmentAttachments.createdAt));
@@ -840,8 +847,14 @@ export async function listAppointmentAttachmentsWith(
 export function listAppointmentAttachments(
   tenantSlug: string,
   appointmentIds: string[],
+  options?: { citizenOnly?: boolean },
 ): Promise<AppointmentAttachment[]> {
-  return listAppointmentAttachmentsWith(db, tenantSlug, appointmentIds);
+  return listAppointmentAttachmentsWith(
+    db,
+    tenantSlug,
+    appointmentIds,
+    options,
+  );
 }
 
 /** Files the citizen sent from the consult, kept on the appointment. */
@@ -1001,4 +1014,176 @@ export function removeAppointment(
   actorId: string,
 ): Promise<boolean> {
   return removeAppointmentWith(db, tenantSlug, id, actorId);
+}
+
+/* ----------------------------------------------------- detail and notes */
+
+export type AppointmentNote = typeof appointmentNotes.$inferSelect;
+
+/** The office's notes on an appointment, oldest first. */
+export async function listAppointmentNotesWith(
+  database: Database,
+  tenantSlug: string,
+  appointmentId: string,
+): Promise<AppointmentNote[]> {
+  return database
+    .select()
+    .from(appointmentNotes)
+    .where(
+      and(
+        eq(appointmentNotes.tenantSlug, tenantSlug),
+        eq(appointmentNotes.appointmentId, appointmentId),
+      ),
+    )
+    .orderBy(asc(appointmentNotes.createdAt));
+}
+
+export function listAppointmentNotes(
+  tenantSlug: string,
+  appointmentId: string,
+): Promise<AppointmentNote[]> {
+  return listAppointmentNotesWith(db, tenantSlug, appointmentId);
+}
+
+/** A note from the panel. Internal: the citizen never reads it. */
+export async function addAppointmentNoteWith(
+  database: Database,
+  tenantSlug: string,
+  appointmentId: string,
+  author: { id: string; name: string },
+  body: string,
+): Promise<boolean> {
+  const [appointment] = await database
+    .select({ id: appointments.id })
+    .from(appointments)
+    .where(
+      and(
+        eq(appointments.tenantSlug, tenantSlug),
+        eq(appointments.id, appointmentId),
+      ),
+    )
+    .limit(1);
+  if (!appointment) return false;
+  await database.insert(appointmentNotes).values({
+    tenantSlug,
+    appointmentId,
+    authorId: author.id,
+    authorName: author.name,
+    body,
+  });
+  await recordAuditWith(database, {
+    tenantSlug,
+    actorId: author.id,
+    action: "appointment.note",
+    targetType: "appointment",
+    targetId: appointmentId,
+  });
+  return true;
+}
+
+export function addAppointmentNote(
+  tenantSlug: string,
+  appointmentId: string,
+  author: { id: string; name: string },
+  body: string,
+): Promise<boolean> {
+  return addAppointmentNoteWith(db, tenantSlug, appointmentId, author, body);
+}
+
+/** Files the office keeps with the appointment; the consult never shows them. */
+export async function addOfficeAppointmentAttachmentsWith(
+  database: Database,
+  tenantSlug: string,
+  appointmentId: string,
+  files: StoredAttachment[],
+  actorId: string,
+): Promise<void> {
+  if (files.length === 0) return;
+  await database.insert(appointmentAttachments).values(
+    files.map((file) => ({
+      tenantSlug,
+      appointmentId,
+      storedName: file.storedName,
+      displayName: file.displayName,
+      path: file.path,
+      mimeType: file.mimeType,
+      sizeBytes: file.sizeBytes,
+      uploadedBy: actorId,
+    })),
+  );
+  await recordAuditWith(database, {
+    tenantSlug,
+    actorId,
+    action: "appointment.office-attach",
+    targetType: "appointment",
+    targetId: appointmentId,
+  });
+}
+
+export function addOfficeAppointmentAttachments(
+  tenantSlug: string,
+  appointmentId: string,
+  files: StoredAttachment[],
+  actorId: string,
+): Promise<void> {
+  return addOfficeAppointmentAttachmentsWith(
+    db,
+    tenantSlug,
+    appointmentId,
+    files,
+    actorId,
+  );
+}
+
+/** What the office may correct of what the citizen typed. */
+export interface AppointmentCorrection {
+  citizenName: string;
+  email: string;
+  phone: string;
+  cpf: string | null;
+  serviceId: string;
+  serviceLabel: string;
+  mode: string;
+  serviceDetails: string | null;
+}
+
+/**
+ * The office corrects the citizen's data (a misspelt name, a wrong CPF, the
+ * service picked by mistake). Day, time and agenda are not here: moving an
+ * appointment is cancelling and booking again, which frees and takes a
+ * vacancy. Audited, like every other change the office makes.
+ */
+export async function correctAppointmentWith(
+  database: Database,
+  tenantSlug: string,
+  id: string,
+  correction: AppointmentCorrection,
+  actorId: string,
+): Promise<Appointment | undefined> {
+  if (!/^[0-9a-f-]{36}$/i.test(id)) return undefined;
+  const [row] = await database
+    .update(appointments)
+    .set({ ...correction, updatedAt: new Date() })
+    .where(
+      and(eq(appointments.tenantSlug, tenantSlug), eq(appointments.id, id)),
+    )
+    .returning();
+  if (!row) return undefined;
+  await recordAuditWith(database, {
+    tenantSlug,
+    actorId,
+    action: "appointment.correct",
+    targetType: "appointment",
+    targetId: id,
+  });
+  return row;
+}
+
+export function correctAppointment(
+  tenantSlug: string,
+  id: string,
+  correction: AppointmentCorrection,
+  actorId: string,
+): Promise<Appointment | undefined> {
+  return correctAppointmentWith(db, tenantSlug, id, correction, actorId);
 }

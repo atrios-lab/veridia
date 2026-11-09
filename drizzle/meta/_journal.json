@@ -274,6 +274,13 @@
       "when": 1794239201999,
       "tag": "0038_guias_de_recolhimento",
       "breakpoints": true
+    },
+    {
+      "idx": 39,
+      "version": "7",
+      "when": 1794255678604,
+      "tag": "0039_detalhes_do_agendamento",
+      "breakpoints": true
     }
   ]
 }

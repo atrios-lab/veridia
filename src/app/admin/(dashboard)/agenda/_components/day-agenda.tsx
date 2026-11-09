@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useActionState, useEffect, useState } from "react";
 import { toast } from "sonner";
 import { slotEndTime } from "@/core/scheduling/agenda.ts";
@@ -141,6 +142,14 @@ function AppointmentRow({ appointment }: { appointment: DayAppointment }) {
                 label={appointmentStatusLabel(appointment.status)}
               />
             )}
+            {/* What the citizen wrote and sent, the office's notes and files,
+                and the citizen's data to correct. */}
+            <Link
+              href={`/admin/agenda/agendamento/${appointment.id}`}
+              className="shrink-0 rounded-lg border border-admin-border px-2 py-0.5 text-[11px] font-semibold text-admin-primary hover:bg-admin-input-bg"
+            >
+              Detalhes
+            </Link>
           </span>
           <span className="mt-0.5 block text-[11.5px] text-admin-faint @2xl:truncate">
             {appointment.serviceLabel} · {appointment.mode} ·{" "}
