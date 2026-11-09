@@ -136,7 +136,7 @@ test("a guia de ITIV sai como o modelo da serventia", () => {
   );
   assert.match(text, /Imposto estimado: R\$ 810,00 \(oitocentos e dez reais\)/);
   assert.match(text, /Inscrição imobiliária: 01\.02\.0003\.0004\.0005\.0006/);
-  assert.match(text, /Ielmo Marinho\/RN, 15 de julho de 2026\./);
+  assert.equal(doc.dateLine, "Ielmo Marinho/RN, 15 de julho de 2026.");
   assert.equal(doc.signee, "Bel. Joelison Alves Marinho");
 });
 

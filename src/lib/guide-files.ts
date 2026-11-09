@@ -206,6 +206,15 @@ export async function renderGuideDocx(
       );
     }
   }
+  if (document.dateLine) {
+    body.push(
+      new Paragraph({
+        alignment: AlignmentType.CENTER,
+        spacing: { before: 240 },
+        children: [run(document.dateLine)],
+      }),
+    );
+  }
   if (document.signee) {
     body.push(
       new Paragraph({ spacing: { before: 720 }, children: [] }),

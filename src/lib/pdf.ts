@@ -309,17 +309,47 @@ function drawDocumentBody(
     drawCredentials(pdf, document.credentials, brand);
   }
 
+  // The signature block's height, measured before anything is drawn: the
+  // date travels with it, so a page break never leaves the signature alone.
+  pdf.font("Times-Roman").fontSize(9);
+  const noteHeight = document.signature.reduce(
+    (sum, line) =>
+      sum + pdf.heightOfString(line, { width: contentWidth(pdf) - 80 }),
+    0,
+  );
+  const blockHeight = 28 + noteHeight;
+
+  if (document.dateLine) {
+    // Centred, as the office dates its papers, between the text and the
+    // signature.
+    pdf.font("Times-Roman").fontSize(11);
+    const dateHeight = pdf.heightOfString(document.dateLine, {
+      width: contentWidth(pdf),
+    });
+    pdf.moveDown(1.2);
+    const room = bottom(pdf) - pdf.y - dateHeight;
+    if (
+      document.signee
+        ? room - blockHeight < 48
+        : room < HEADING_ORPHAN_GUARD - dateHeight
+    ) {
+      pdf.addPage();
+    }
+    // Set again: a new page draws its footer and leaves another font behind.
+    pdf
+      .font("Times-Roman")
+      .fontSize(11)
+      .fillColor(NEUTRALS.text)
+      .text(document.dateLine, MARGIN, pdf.y, {
+        width: contentWidth(pdf),
+        align: "center",
+      });
+  }
+
   if (document.signee) {
     // The signature is anchored at the foot of the page: everything between
     // the last section and the rule is room to sign by hand, which is the
     // point. Too little of it, and the block gets a page (mostly) to itself.
-    pdf.font("Times-Roman").fontSize(9);
-    const noteHeight = document.signature.reduce(
-      (sum, line) =>
-        sum + pdf.heightOfString(line, { width: contentWidth(pdf) - 80 }),
-      0,
-    );
-    const blockHeight = 28 + noteHeight;
     if (bottom(pdf) - blockHeight - pdf.y < 48) pdf.addPage();
     pdf.y = bottom(pdf) - blockHeight;
 

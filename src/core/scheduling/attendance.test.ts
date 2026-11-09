@@ -49,7 +49,10 @@ test("the declaration states who came, when, free, and who signs", () => {
     /leia o QR Code no alto desta folha, acesse o site da serventia \(cartorio\.exemplo\) ou ligue para \(84\) 3000-0000, informando o código de validação XYZ/,
   );
   assert.doesNotMatch(text, /localhost/);
-  assert.match(text, /Ielmo Marinho\/RN, 9 de novembro de 2026\./);
+  assert.equal(
+    declaration.dateLine,
+    "Ielmo Marinho/RN, 9 de novembro de 2026.",
+  );
   assert.equal(declaration.signee, ATTENDANCE_SIGNEE);
   assert.deepEqual(declaration.signature, ["(assinatura e carimbo)"]);
 });

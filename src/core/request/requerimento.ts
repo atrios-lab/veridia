@@ -125,6 +125,11 @@ export interface RequerimentoDocument {
    * sign by hand, draws the rule and prints this name under it. Absent (the
    * receipt), there is no signing and no space is wasted pretending there is.
    */
+  /**
+   * "Ielmo Marinho/RN, 9 de novembro de 2026.": the place and date the paper
+   * is dated, drawn centred after the last section, above the signature.
+   */
+  dateLine?: string;
   signee?: string;
   signature: string[];
   footer: string;
@@ -339,9 +344,9 @@ export function buildRequerimento(
         "Havendo exigência a cumprir, requer seja formulada por escrito, de uma só vez, para " +
         "que o requerente possa atendê-la.",
       "Termos em que pede deferimento.",
-      `${tenant.location.city}/${tenant.location.state}, ${formatOfficeDate(data.createdAt)}.`,
     ],
   });
+  const dateLine = `${tenant.location.city}/${tenant.location.state}, ${formatOfficeDate(data.createdAt)}.`;
 
   return {
     eyebrow: specialty.name,
@@ -353,6 +358,7 @@ export function buildRequerimento(
       `${tenant.contacts.phone} · ${tenant.contacts.email}`,
     ],
     sections,
+    dateLine,
     signee: data.applicantName,
     signature: [
       "Assine este requerimento pelo Gov.br (assinador.iti.br) ou imprima e " +

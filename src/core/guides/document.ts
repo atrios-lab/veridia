@@ -214,7 +214,6 @@ export function buildGuideDocument(
     paragraphs: [
       `${[...info.legalBasis, ...(law ? [law] : [])].join("; ")}.`,
       "Lei nº 8.935/1994, art. 30, XI: dever do tabelião de fiscalizar o recolhimento dos impostos incidentes sobre os atos que deve praticar.",
-      `${tenant.location.city}/${tenant.location.state}, ${writtenDate(input.issuedOn)}.`,
     ],
   });
 
@@ -226,6 +225,7 @@ export function buildGuideDocument(
     subtitle: info.subject,
     office: [officialName(tenant), tenant.subtitle],
     sections,
+    dateLine: `${tenant.location.city}/${tenant.location.state}, ${writtenDate(input.issuedOn)}.`,
     signee: signer?.name,
     signature: [signer?.title ?? "", signer?.note ?? ""].filter(Boolean),
     footer: `${officialName(tenant)} · Guia de recolhimento nº ${number} · ${tenant.legalFooter}`,
