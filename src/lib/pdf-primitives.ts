@@ -9,7 +9,6 @@ import type PDFDocument from "pdfkit";
  * module that imports it back.
  */
 export const MARGIN = 64;
-export const SEAL_SIZE = 62;
 export const QR_SIZE = 58;
 /** Where the flow starts, under the letterhead rule. */
 export const HEADER_BOTTOM = 148;

@@ -13,6 +13,11 @@ import { NEUTRALS } from "@/core/tenant/palette.ts";
 import type { DocumentBrand } from "./document-brand.ts";
 import { drawFormDocumentBody } from "./pdf-form.ts";
 import {
+  drawCenteredIdentification,
+  drawIdentificationFooter,
+  identificationOf,
+} from "./pdf-letterhead.ts";
+import {
   bottom,
   contentWidth,
   drawEyebrow,
@@ -20,7 +25,6 @@ import {
   MARGIN,
   type Pdf,
   QR_SIZE,
-  SEAL_SIZE,
 } from "./pdf-primitives.ts";
 
 const LABEL_WIDTH = 138;
@@ -28,56 +32,30 @@ const LABEL_WIDTH = 138;
 const HEADING_ORPHAN_GUARD = 90;
 
 /**
- * The letterhead: white paper, the office's seal on the left, the QR to the
- * protocol lookup on the right, a hairline rule underneath. The colour comes
- * in through type, not through a band of ink.
+ * The letterhead, as the office's own certidões draw it and the Código de
+ * Normas asks (Provimento CGJ/TJRN 156/2016, art. 2º): the national arms,
+ * the centred identification and, in smaller type, the holder and the
+ * attributions when the office prints them. No logotype (§ 1º). The QR to
+ * the protocol lookup keeps the top right corner. Returns where the flow
+ * starts, under the rule.
  */
 function drawLetterhead(
   pdf: Pdf,
-  document: RequerimentoDocument,
+  document: Pick<RequerimentoDocument, "office">,
   brand: DocumentBrand,
   qr: Buffer | undefined,
-): void {
+): number {
   const { palette } = brand;
-  const top = 44;
+  const top = 34;
 
-  let textLeft = MARGIN;
-  if (brand.seal) {
-    try {
-      pdf.image(brand.seal, MARGIN, top, {
-        fit: [SEAL_SIZE, SEAL_SIZE],
-      });
-      textLeft = MARGIN + SEAL_SIZE + 18;
-    } catch {
-      // An unreadable image is a letterhead without a seal, never a failed
-      // download. The office name beside it identifies the serventia.
-    }
-  }
-
-  const [name, subtitle, ...rest] = document.office;
-  const qrLeft = pdf.page.width - MARGIN - QR_SIZE;
-  const width = qrLeft - 16 - textLeft;
-  pdf
-    .font("Helvetica-Bold")
-    .fontSize(15.5)
-    .fillColor(palette.primary)
-    .text(name ?? "", textLeft, top + 4, { width });
-  if (subtitle) {
-    pdf
-      .font("Helvetica")
-      .fontSize(7.5)
-      .fillColor(palette.muted)
-      .text(subtitle.toUpperCase(), textLeft, pdf.y + 3, {
-        width,
-        characterSpacing: 0.6,
-      });
-  }
-  pdf.font("Helvetica").fontSize(8).fillColor(palette.muted);
-  for (const line of rest) {
-    pdf.text(line, textLeft, pdf.y + 2.5, { width });
-  }
+  const ruleY = drawCenteredIdentification(
+    pdf,
+    identificationOf(brand, document.office),
+    { top, arms: 46, heading: 10.5, small: 8, sideRoom: QR_SIZE + 14 },
+  );
 
   if (qr) {
+    const qrLeft = pdf.page.width - MARGIN - QR_SIZE;
     pdf.image(qr, qrLeft, top, { width: QR_SIZE });
     pdf
       .font("Helvetica")
@@ -91,26 +69,23 @@ function drawLetterhead(
       );
   }
 
-  pdf
-    .rect(MARGIN, HEADER_BOTTOM - 24, contentWidth(pdf), 0.8)
-    .fill(palette.border);
+  const y = Math.max(ruleY, HEADER_BOTTOM - 28);
+  pdf.rect(MARGIN, y, contentWidth(pdf), 0.8).fill(palette.border);
+  return y + 18;
 }
 
-/** Repeated on every page, in the bottom margin so no flow text collides. */
-function drawFooter(pdf: Pdf, footer: string, brand: DocumentBrand): void {
-  const y = pdf.page.height - MARGIN + 22;
-  // PDFKit refuses to place flow text past the bottom margin and would add a
-  // page instead. Lifting the margin for the two draws below is the way in.
-  const margin = pdf.page.margins.bottom;
-  pdf.page.margins.bottom = 0;
-  pdf
-    .rect(MARGIN, y - 10, contentWidth(pdf), 0.6)
-    .fill(brand.palette.border)
-    .font("Helvetica")
-    .fontSize(7)
-    .fillColor(brand.palette.muted)
-    .text(footer, MARGIN, y, { width: contentWidth(pdf) });
-  pdf.page.margins.bottom = margin;
+/** Repeated on every page, in the bottom margin so no flow text collides:
+ * the office's address and contacts, then the document's own line. */
+function drawFooter(
+  pdf: Pdf,
+  footer: string,
+  brand: DocumentBrand,
+  office: readonly string[] = [],
+): void {
+  drawIdentificationFooter(pdf, identificationOf(brand, office), footer, {
+    rule: brand.palette.border,
+    text: brand.palette.muted,
+  });
 }
 
 /** Label and value in two aligned columns, not "Label: value" in prose. */
@@ -299,20 +274,34 @@ function drawDocumentBody(
   qr: Buffer | undefined,
 ): void {
   pdf.addPage();
-  drawLetterhead(pdf, document, brand, qr);
+  pdf.y = drawLetterhead(pdf, document, brand, qr);
 
-  pdf.y = HEADER_BOTTOM;
-  drawEyebrow(pdf, document.eyebrow, brand.palette.accent, contentWidth(pdf));
+  // The title centred under the letterhead, as the office's papers set it
+  // ("CERTIDÃO DE REGISTRO/ÔNUS"); the kind of act above it, the protocol
+  // and date below.
+  const width = contentWidth(pdf);
   pdf
     .font("Helvetica-Bold")
-    .fontSize(21)
+    .fontSize(8.5)
+    .fillColor(brand.palette.accent)
+    .text(document.eyebrow.toLocaleUpperCase("pt-BR"), MARGIN, pdf.y, {
+      width,
+      align: "center",
+      characterSpacing: 1.4,
+    });
+  pdf
+    .font("Times-Bold")
+    .fontSize(17)
     .fillColor(NEUTRALS.text)
-    .text(document.title, MARGIN, pdf.y + 4, { width: contentWidth(pdf) });
+    .text(document.title.toLocaleUpperCase("pt-BR"), MARGIN, pdf.y + 4, {
+      width,
+      align: "center",
+    });
   pdf
     .font("Helvetica")
-    .fontSize(10.5)
+    .fontSize(10)
     .fillColor(NEUTRALS.textSoft)
-    .text(document.subtitle, MARGIN, pdf.y + 5, { width: contentWidth(pdf) });
+    .text(document.subtitle, MARGIN, pdf.y + 4, { width, align: "center" });
 
   for (const section of document.sections) drawSection(pdf, section, brand);
 
@@ -365,7 +354,7 @@ function drawDocumentBody(
  * come from `src/core/request/requerimento.ts`; this only places them on the
  * page, which is why the same function serves the service request form and the
  * data rights receipt. The colour comes from the tenant's theme, so two
- * offices' documents differ in palette and seal and in nothing else.
+ * offices' documents differ in palette and identification and in nothing else.
  */
 export async function renderDocument(
   document: RequerimentoDocument | DeclaracaoDocument,
@@ -438,8 +427,9 @@ export async function renderDocuments(
     pdf.on("end", () => resolve(Buffer.concat(chunks)));
   });
 
+  let currentOffice: readonly string[] = [];
   pdf.on("pageAdded", () => {
-    if (!forms) drawFooter(pdf, currentFooter, brand);
+    if (!forms) drawFooter(pdf, currentFooter, brand, currentOffice);
     pdf.x = MARGIN;
     pdf.y = MARGIN;
   });
@@ -449,6 +439,7 @@ export async function renderDocuments(
       drawFormDocumentBody(pdf, document, brand, qr);
     } else {
       currentFooter = document.footer;
+      currentOffice = document.office;
       drawDocumentBody(pdf, document, brand, qr);
     }
   }
@@ -489,7 +480,7 @@ export interface BulletinDocument {
  * The monthly revenue bulletin, as its own drawing. It shares the letterhead
  * and footer machinery with `renderDocument` but not its body: a bulletin is
  * a few blocks of label and amount and a balance strip, not a flowing form,
- * so it lays those out directly. Same palette, same seal, same legal footer:
+ * so it lays those out directly. Same palette, same letterhead, same footer:
  * one office, whichever document it prints.
  */
 export async function renderBulletin(
@@ -509,19 +500,13 @@ export async function renderBulletin(
     pdf.on("end", () => resolve(Buffer.concat(chunks)));
   });
   pdf.on("pageAdded", () => {
-    drawFooter(pdf, document.footer, brand);
+    drawFooter(pdf, document.footer, brand, document.office);
     pdf.x = MARGIN;
     pdf.y = MARGIN;
   });
 
   pdf.addPage();
-  drawLetterhead(
-    pdf,
-    // The letterhead only reads `office`; the rest is unused for a bulletin.
-    { office: document.office } as RequerimentoDocument,
-    brand,
-    undefined,
-  );
+  const flowTop = drawLetterhead(pdf, document, brand, undefined);
 
   const width = contentWidth(pdf);
 
@@ -532,7 +517,7 @@ export async function renderBulletin(
   // period sits below wherever the title actually ends: "Dezembro de 2025"
   // beside the tag wraps, and a fixed offset drew the period over its second
   // line.
-  const titleY = HEADER_BOTTOM;
+  const titleY = flowTop;
   pdf
     .font("Helvetica-Bold")
     .fontSize(19)

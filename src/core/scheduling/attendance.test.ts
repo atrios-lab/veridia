@@ -28,7 +28,9 @@ test("the declaration states who came, when, free, and who signs", () => {
     siteDomain: "cartorio.exemplo",
     validationCode: "XYZ",
   });
-  assert.equal(declaration.eyebrow, "República Federativa do Brasil");
+  // The letterhead carries "República Federativa do Brasil"; the eyebrow
+  // does not repeat it.
+  assert.equal(declaration.eyebrow, "Atendimento na serventia");
   assert.equal(declaration.title, "Declaração de Comparecimento");
   assert.match(declaration.subtitle, /Código de validação XYZ/);
   // The CNS is published nowhere.

@@ -18,6 +18,7 @@ import {
   PLATFORM_RECEIPT_STATEMENT,
   PLATFORM_STATEMENT,
 } from "../acts/catalog.ts";
+import { jurisdictionLine, officialName } from "../tenant/identification.ts";
 import type { Tenant } from "../tenant/schema.ts";
 import { formatOfficeDate, formatOfficeTime } from "../time/office-time.ts";
 import { acceptanceHash } from "./acceptance.ts";
@@ -165,8 +166,19 @@ export function buildDeclaracao(
       {
         type: "fields",
         columns: [
-          { label: "Serventia", value: tenant.name, width: 2 },
-          { label: "Município/Comarca", value: tenant.municipality, width: 1 },
+          { label: "Serventia", value: officialName(tenant), width: 1 },
+          // The town as its people write it (not the Pix city, upper case
+          // and cut at 15), with the comarca or termo when the office set it.
+          {
+            label: "Município/Comarca",
+            value: [
+              `${tenant.location.city}/${tenant.location.state}`,
+              jurisdictionLine(tenant),
+            ]
+              .filter(Boolean)
+              .join(", "),
+            width: 1,
+          },
         ],
       },
     ],
@@ -428,7 +440,7 @@ export function buildDeclaracao(
   return {
     kind: "declaracao",
     office: [
-      tenant.name,
+      officialName(tenant),
       tenant.subtitle,
       `${tenant.contacts.phone} · ${tenant.contacts.email}`,
     ],

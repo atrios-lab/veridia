@@ -175,6 +175,27 @@ export type OfficeHolidaysSettings = z.infer<typeof OfficeHolidaysSchema>;
 export const OfficeHolidaysOverrideSchema = OfficeHolidaysSchema.partial();
 
 /**
+ * How the office identifies itself on its papers (Provimento CGJ/TJRN
+ * 156/2016, art. 2º): the denomination, the comarca or termo, and the
+ * holder's title. The holder's name and the attributions are not here: one
+ * is a delegation the court records, the other decides what the site offers.
+ */
+export const OfficeIdentificationSchema = TenantSchema.pick({
+  officialName: true,
+  jurisdiction: true,
+  holderTitle: true,
+  showHolder: true,
+  showAttributions: true,
+});
+export type OfficeIdentificationSettings = z.infer<
+  typeof OfficeIdentificationSchema
+>;
+
+/** Same partial-for-reading discipline as OfficeContactOverrideSchema. */
+export const OfficeIdentificationOverrideSchema =
+  OfficeIdentificationSchema.partial();
+
+/**
  * Lays the office's own edits over its configuration.
  *
  * Each row that fails to parse is ignored rather than thrown: an override is
@@ -205,6 +226,7 @@ export function applyTenantOverrides(
     deadline?: unknown;
     bulletin?: unknown;
     holidays?: unknown;
+    identification?: unknown;
   },
 ): Tenant {
   let merged = tenant;
@@ -242,6 +264,13 @@ export function applyTenantOverrides(
 
   const holidays = OfficeHolidaysOverrideSchema.safeParse(overrides.holidays);
   if (holidays.success) merged = { ...merged, ...holidays.data };
+
+  const identification = OfficeIdentificationOverrideSchema.safeParse(
+    overrides.identification,
+  );
+  if (identification.success) {
+    merged = { ...merged, ...identification.data };
+  }
 
   return merged;
 }

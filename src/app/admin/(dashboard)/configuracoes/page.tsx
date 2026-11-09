@@ -14,6 +14,7 @@ import { ConfiguracoesTabs } from "./_components/tabs.tsx";
 import { OfficeContactForm } from "./office-contact-form.tsx";
 import { OfficeDeadlineForm } from "./office-deadline-form.tsx";
 import { OfficeHolidaysForm } from "./office-holidays-form.tsx";
+import { OfficeIdentificationForm } from "./office-identification-form.tsx";
 
 export const metadata = { title: "Configurações" };
 
@@ -139,6 +140,10 @@ export default async function SettingsPage() {
 
         <div className="rounded-[14px] border border-admin-border bg-admin-card p-6">
           <OfficeContactForm tenant={tenant} />
+
+          <section className="mt-6 border-t border-admin-border pt-5.5">
+            <OfficeIdentificationForm tenant={tenant} />
+          </section>
 
           <section className="mt-6 border-t border-admin-border pt-5.5">
             <OfficeDeadlineForm tenant={tenant} />

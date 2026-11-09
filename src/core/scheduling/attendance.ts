@@ -1,4 +1,8 @@
 import type { RequerimentoDocument } from "../request/requerimento.ts";
+import {
+  officeWithJurisdiction,
+  officialName,
+} from "../tenant/identification.ts";
 import type { Tenant } from "../tenant/schema.ts";
 import { type SlotTime, slotEndTime } from "./agenda.ts";
 import { formatDate, type IsoDate } from "./calendar.ts";
@@ -75,11 +79,12 @@ export function buildAttendanceDeclaration(
     : "";
 
   return {
-    eyebrow: "República Federativa do Brasil",
+    // The letterhead already reads "República Federativa do Brasil".
+    eyebrow: "Atendimento na serventia",
     title: "Declaração de Comparecimento",
-    subtitle: `${tenant.name} · Código de validação ${data.validationCode}`,
+    subtitle: `${officialName(tenant)} · Código de validação ${data.validationCode}`,
     office: [
-      tenant.name,
+      officialName(tenant),
       tenant.subtitle,
       ...(tenant.address ? [tenant.address] : []),
     ],
@@ -87,7 +92,7 @@ export function buildAttendanceDeclaration(
       {
         heading: "Declaração",
         paragraphs: [
-          `DECLARO, para os devidos fins, que ${who}, compareceu a esta serventia, ${tenant.name}${where}, no dia ${formatDate(data.date)}, no horário das ${data.slotTime} às ${slotEndTime(data.slotTime)}, para atendimento${protocol}.`,
+          `DECLARO, para os devidos fins, que ${who}, compareceu a esta serventia, ${officeWithJurisdiction(tenant)}${where}, no dia ${formatDate(data.date)}, no horário das ${data.slotTime} às ${slotEndTime(data.slotTime)}, para atendimento${protocol}.`,
           "Por ser verdade, firmo a presente declaração.",
         ],
       },
@@ -110,7 +115,7 @@ export function buildAttendanceDeclaration(
     signee: ATTENDANCE_SIGNEE,
     signature: ["(assinatura e carimbo)"],
     footer: [
-      tenant.name,
+      officialName(tenant),
       "Declaração de comparecimento",
       data.protocolNumber,
       tenant.legalFooter,

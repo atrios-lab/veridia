@@ -79,7 +79,14 @@ test("o formulário em branco tem os nove blocos, os blocos 6 e 7 inclusive, sem
     [1, 2, 3, 4, 5, 6, 7, 8, 9],
   );
   const texto = flatten(doc);
-  assert.match(texto, /Serventia: Cartório Ielmo Marinho\/RN/);
+  assert.match(
+    texto,
+    /Serventia: Cartório do Ofício Único de Ielmo Marinho\/RN/,
+  );
+  assert.match(
+    texto,
+    /Município\/Comarca: Ielmo Marinho\/RN, Comarca\/Termo de Macaíba\/RN/,
+  );
   assert.match(texto, /9\. Certificação da presença/);
   // Nenhum ato aparece marcado.
   assert.doesNotMatch(texto, /\[X\]/);

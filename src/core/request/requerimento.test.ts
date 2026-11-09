@@ -1,6 +1,10 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 import { ACTS, getAct } from "../acts/catalog.ts";
+import {
+  officeWithJurisdiction,
+  officialName,
+} from "../tenant/identification.ts";
 import { TENANTS } from "../tenant/resolve.ts";
 import { cartorioMarinho } from "../tenant/tenants/marinho.ts";
 import { SPECIALTIES } from "./legal-grounds.ts";
@@ -174,7 +178,7 @@ test("the access receipt is a document nobody signs", () => {
 
 test("the form identifies the office and the act it is for", () => {
   const document = buildRequerimento(cartorioMarinho, marriage, data);
-  assert.ok(document.office.includes(cartorioMarinho.name));
+  assert.ok(document.office.includes(officialName(cartorioMarinho)));
   // The CNS identifies the serventia to the corregedoria, not to the citizen
   // signing this: the office asked for it out of everything it hands over.
   // It stays on the tenant, for the panel to show whoever is logged in.
@@ -493,7 +497,7 @@ test("o requerimento de imóveis cita o registro como modo de aquisição", () =
   assert.match(text, /arts\. 13 e 217 da Lei n\. 6\.015\/1973/);
 });
 
-test("cada site imprime o nome, a cidade e a corregedoria do próprio cartório", () => {
+test("cada site imprime a denominação, a comarca, a cidade e a corregedoria do próprio cartório", () => {
   const act = getAct("ri-registro-titulo");
   if (!act) throw new Error("catalogo incompleto");
   const tenants = Object.values(TENANTS);
@@ -507,11 +511,11 @@ test("cada site imprime o nome, a cidade e a corregedoria do próprio cartório"
     assert.match(
       text,
       new RegExp(
-        `Oficial de Registro de Imóveis do ${escapeRegExp(tenant.name)}\\.`,
+        `Oficial de Registro de Imóveis do ${escapeRegExp(officeWithJurisdiction(tenant))}\\.`,
       ),
       tenant.slug,
     );
-    assert.ok(document.office.includes(tenant.name), tenant.slug);
+    assert.ok(document.office.includes(officialName(tenant)), tenant.slug);
     assert.match(
       text,
       new RegExp(
