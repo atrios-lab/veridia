@@ -250,21 +250,21 @@
     {
       "idx": 35,
       "version": "7",
-      "when": 1794200062634,
-      "tag": "0035_chave_e_arquivos_do_agendamento",
+      "when": 1794198352056,
+      "tag": "0035_turmas_do_curso",
       "breakpoints": true
     },
     {
       "idx": 36,
       "version": "7",
-      "when": 1794201573783,
-      "tag": "0036_exclusao_do_agendamento",
+      "when": 1794202906604,
+      "tag": "0036_chave_arquivos_e_exclusao_do_agendamento",
       "breakpoints": true
     },
     {
       "idx": 37,
       "version": "7",
-      "when": 1794202060865,
+      "when": 1794203151935,
       "tag": "0037_vagas_por_horario",
       "breakpoints": true
     }

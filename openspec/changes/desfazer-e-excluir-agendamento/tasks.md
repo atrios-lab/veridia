@@ -1,6 +1,6 @@
 ## 1. Banco
 
-- [x] 1.1 Migração 0036: `appointments.removed_at` (só acrescenta)
+- [x] 1.1 Migração 0036 (junto com a chave do agendamento): `appointments.removed_at` (só acrescenta)
 
 ## 2. Dados
 

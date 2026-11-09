@@ -50,6 +50,7 @@ export const ADMIN_NAV: readonly AdminNavItem[] = [
     label: "Visão geral",
     href: "/admin",
     icon: "grid",
+    permission: "desk.access",
   },
   {
     group: "Operação",
@@ -68,6 +69,7 @@ export const ADMIN_NAV: readonly AdminNavItem[] = [
     href: "https://mail.zoho.com/zm/#mail/folder/inbox",
     icon: "mail",
     external: true,
+    permission: "desk.access",
   },
   {
     group: "Canais do cidadão",

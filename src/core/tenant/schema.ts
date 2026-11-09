@@ -273,6 +273,12 @@ export const TenantSchema = z.object({
   // Override: turns sections off even when the attribution grants them.
   // It never turns a section on beyond the gate.
   disabledSections: z.array(SectionSchema).default([]),
+  // A fictional office shown to people who are not its citizens: the public
+  // site carries a "this office does not exist" banner on every page and a
+  // warning next to every submit button, and the chat never shows (nobody
+  // answers it). Config as code only, never a panel switch, and false unless
+  // declared: a real office can never be marked by accident.
+  demo: z.boolean().default(false),
   // The office's Pix key, where the citizen's payment lands. Optional: most
   // offices have not registered one yet, and "no key" is a permanent, valid
   // state, not a transition. The key is validated against its own type

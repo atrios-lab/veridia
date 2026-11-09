@@ -1,4 +1,5 @@
-import { can } from "@/core/auth/roles.ts";
+import { redirect } from "next/navigation";
+import { can, homeFor } from "@/core/auth/roles.ts";
 import {
   countCriticalDeskItems,
   countDeskItems,
@@ -124,8 +125,11 @@ function toTodayAppointmentInput(
 export default async function AdminHome() {
   const session = await getSession();
   if (!session) return null;
-  const tenant = await getTenant();
   const role = session.user.role ?? "";
+  // A role with no desk of its own (a course learner) starts somewhere else.
+  const home = homeFor(role);
+  if (home) redirect(home);
+  const tenant = await getTenant();
 
   const canRequests = can(role, "requests.manage");
   const canChannels = can(role, "channels.manage");

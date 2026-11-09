@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import { DEFAULT_CERTIFICATE_CHECK_BASE } from "@/core/courses/certificate.ts";
 import { courseProgress } from "@/core/tutorials/course.ts";
 import { formatDuration } from "@/core/tutorials/progress.ts";
+import { cohortOfficeName } from "@/lib/cohorts.ts";
 import { getCourse, getPublishedCourseBySlug } from "@/lib/courses.ts";
 import { assessmentState } from "@/lib/quiz.ts";
 import { getSession } from "@/lib/session.ts";
@@ -55,10 +56,11 @@ export default async function CoursePage({
   const tutorials = all.filter((t) => t.courseId === course.id);
   if (tutorials.length === 0) notFound();
   const progress = courseProgress(tutorials, watchedIds);
-  const [assessment, settings, tenant] = await Promise.all([
+  const [assessment, settings, tenant, cohortOffice] = await Promise.all([
     assessmentState(session.user.id, course.id),
     getCourse(course.id),
     getTenant(),
+    cohortOfficeName(session.user.id),
   ]);
   const panelState: PanelState | null =
     assessment.kind === "none"
@@ -134,7 +136,9 @@ export default async function CoursePage({
             passingScore={settings.passingScore}
             retryHours={settings.retryHours}
             workloadHours={settings.workloadHours}
-            tenantName={tenant.name}
+            // A course learner's certificate names their cohort's office
+            // (see issueCertificateWith); the preview says the same.
+            tenantName={cohortOffice ?? tenant.name}
             accountName={session.user.name ?? ""}
             checkUrl={
               process.env.CERTIFICATE_CHECK_BASE_URL ||

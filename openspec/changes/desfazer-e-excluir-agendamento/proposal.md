@@ -11,4 +11,4 @@ atrás, e um agendamento lançado errado não saía da agenda, mesmo depois de m
   horário. Nada é apagado: o registro fica cancelado e marcado como excluído (`removed_at`),
   fora de todas as listas, com a trilha de auditoria. O cidadão não recebe e-mail (para avisar,
   continua o Cancelar).
-- **Banco (só acrescenta)**: coluna `appointments.removed_at` (migração 0036).
+- **Banco (só acrescenta)**: coluna `appointments.removed_at` (migração 0036, junto com a chave do agendamento).
