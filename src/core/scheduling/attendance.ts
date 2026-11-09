@@ -108,10 +108,10 @@ export function buildAttendanceDeclaration(
         heading: "Validação",
         paragraphs: [
           `Para conferir a autenticidade, leia o QR Code no alto desta folha, acesse o site da serventia (${data.siteDomain}) ou ligue para ${tenant.contacts.phone}, informando o código de validação ${data.validationCode}.`,
-          `${tenant.location.city}/${tenant.location.state}, ${writtenDate(data.issuedOn)}.`,
         ],
       },
     ],
+    dateLine: `${tenant.location.city}/${tenant.location.state}, ${writtenDate(data.issuedOn)}.`,
     signee: ATTENDANCE_SIGNEE,
     signature: ["(assinatura e carimbo)"],
     footer: [

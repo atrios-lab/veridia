@@ -447,7 +447,7 @@ test("todo ato do catálogo vira um requerimento com especialidade, instância e
     assert.match(text, /Fundamento do ato requerido: /, act.id);
     assert.match(text, /Constituição Federal, art\. 236/, act.id);
     assert.match(text, /Termos em que pede deferimento\./, act.id);
-    assert.match(text, /Ielmo Marinho\/RN, 04\/08\/2026\./, act.id);
+    assert.equal(document.dateLine, "Ielmo Marinho/RN, 04/08/2026.", act.id);
   }
 });
 
@@ -516,11 +516,9 @@ test("cada site imprime a denominação, a comarca, a cidade e a corregedoria do
       tenant.slug,
     );
     assert.ok(document.office.includes(officialName(tenant)), tenant.slug);
-    assert.match(
-      text,
-      new RegExp(
-        `${escapeRegExp(tenant.location.city)}/${tenant.location.state}, 04/08/2026\\.`,
-      ),
+    assert.equal(
+      document.dateLine,
+      `${tenant.location.city}/${tenant.location.state}, 04/08/2026.`,
       tenant.slug,
     );
     assert.match(text, new RegExp(`CGJ/${tenant.location.state}`), tenant.slug);
