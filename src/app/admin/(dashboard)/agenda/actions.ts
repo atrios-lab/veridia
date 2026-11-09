@@ -44,6 +44,8 @@ import {
   getAgendaConfig,
   markAttended,
   markNoShow,
+  removeAppointment,
+  revertAppointment,
   SlotTakenError,
   saveAgendaConfig,
   takenTimesByDay,
@@ -126,6 +128,66 @@ export async function markAppointmentNoShow(
   }
   revalidateAdmin();
   return { status: "success" };
+}
+
+/**
+ * "Desfazer": an appointment marked attended or no-show by mistake goes back
+ * to booked, so the office can mark it right.
+ */
+export async function revertAppointmentStatus(
+  _previous: ActionState,
+  formData: FormData,
+): Promise<ActionState> {
+  const session = await authorize();
+  if (!session) return { status: "error", message: NO_PERMISSION };
+
+  const id = String(formData.get("id") ?? "");
+  const tenant = await getTenant();
+  try {
+    const reverted = await revertAppointment(tenant.slug, id, session.user.id);
+    if (!reverted) {
+      return {
+        status: "error",
+        message:
+          "Este agendamento não está como atendido nem como não compareceu.",
+      };
+    }
+  } catch (error) {
+    console.error("agenda.revert", error);
+    return {
+      status: "error",
+      message: "Não foi possível desfazer agora. Tente novamente em instantes.",
+    };
+  }
+  revalidateAdmin();
+  return { status: "success", message: "Voltou para agendado." };
+}
+
+/**
+ * "Excluir": the appointment leaves the agenda, whatever its status, and the
+ * hour is free again. Nothing is deleted from the database: the record is
+ * kept, cancelled and marked removed, with the audit trail. No e-mail.
+ */
+export async function removeAppointmentAction(
+  _previous: ActionState,
+  formData: FormData,
+): Promise<ActionState> {
+  const session = await authorize();
+  if (!session) return { status: "error", message: NO_PERMISSION };
+
+  const id = String(formData.get("id") ?? "");
+  const tenant = await getTenant();
+  try {
+    await removeAppointment(tenant.slug, id, session.user.id);
+  } catch (error) {
+    console.error("agenda.remove", error);
+    return {
+      status: "error",
+      message: "Não foi possível excluir agora. Tente novamente em instantes.",
+    };
+  }
+  revalidateAdmin();
+  return { status: "success", message: "Agendamento excluído da agenda." };
 }
 
 /**

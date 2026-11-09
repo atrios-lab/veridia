@@ -1,5 +1,6 @@
 import assert from "node:assert/strict";
 import { after, before, mock, test } from "node:test";
+import { eq } from "drizzle-orm";
 import { generateAccessKey, hashAccessKey } from "@/core/request/access-key.ts";
 import {
   generateCancelToken,
@@ -7,6 +8,7 @@ import {
 } from "@/core/scheduling/appointment.ts";
 import { TENANTS } from "@/core/tenant/resolve.ts";
 import type { Database } from "@/db/index.ts";
+import { appointments } from "@/db/schema.ts";
 import { createTestDb } from "@/db/test-db.ts";
 import {
   addAppointmentAttachmentsWith,
@@ -21,6 +23,8 @@ import {
   markNoShowWith,
   type NewAppointment,
   recoverAppointmentKeyWith,
+  removeAppointmentWith,
+  revertAppointmentWith,
   SlotTakenError,
 } from "./appointments.ts";
 
@@ -350,4 +354,52 @@ test("documents sent ahead stay with the appointment", async () => {
     await listAppointmentAttachmentsWith(db, "outro-cartorio", [booked.id]),
     [],
   );
+});
+
+test("marcou atendido sem querer: desfazer volta para agendado", async () => {
+  const booked = await bookAppointmentWith(
+    db,
+    TENANT.slug,
+    newAppointment({ date: "2098-06-01", slotTime: "08:00" }),
+  );
+  await markAttendedWith(db, TENANT.slug, booked.id, "operadora");
+  assert.equal(
+    await revertAppointmentWith(db, TENANT.slug, booked.id, "operadora"),
+    true,
+  );
+  const [row] = await appointmentsOnWith(db, TENANT.slug, "2098-06-01");
+  assert.equal(row.status, "booked");
+  // Agendado não tem o que desfazer.
+  assert.equal(
+    await revertAppointmentWith(db, TENANT.slug, booked.id, "operadora"),
+    false,
+  );
+});
+
+test("excluir tira da agenda e libera o horário, sem apagar o registro", async () => {
+  const booked = await bookAppointmentWith(
+    db,
+    TENANT.slug,
+    newAppointment({ date: "2098-06-02", slotTime: "08:00" }),
+  );
+  await markAttendedWith(db, TENANT.slug, booked.id, "operadora");
+  assert.equal(
+    await removeAppointmentWith(db, TENANT.slug, booked.id, "operadora"),
+    true,
+  );
+  assert.deepEqual(await appointmentsOnWith(db, TENANT.slug, "2098-06-02"), []);
+  // O horário volta a ser marcável.
+  const again = await bookAppointmentWith(
+    db,
+    TENANT.slug,
+    newAppointment({ date: "2098-06-02", slotTime: "08:00" }),
+  );
+  assert.ok(again.id);
+  // O registro continua no banco, cancelado e marcado como excluído.
+  const [kept] = await db
+    .select()
+    .from(appointments)
+    .where(eq(appointments.id, booked.id));
+  assert.equal(kept.status, "cancelled");
+  assert.ok(kept.removedAt);
 });

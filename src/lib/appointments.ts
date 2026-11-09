@@ -1,5 +1,5 @@
 import "server-only";
-import { and, asc, eq, inArray, sql } from "drizzle-orm";
+import { and, asc, eq, inArray, isNull, sql } from "drizzle-orm";
 import { emailsMatch } from "@/core/email/match.ts";
 import {
   generateAccessKey,
@@ -169,7 +169,12 @@ export async function appointmentsOnWith(
     .select()
     .from(appointments)
     .where(
-      and(eq(appointments.tenantSlug, tenantSlug), eq(appointments.date, date)),
+      and(
+        eq(appointments.tenantSlug, tenantSlug),
+        eq(appointments.date, date),
+        // Taken off the agenda by the office: kept, never listed.
+        isNull(appointments.removedAt),
+      ),
     )
     .orderBy(asc(appointments.slotTime), asc(appointments.createdAt));
 }
@@ -829,4 +834,98 @@ export async function findAppointmentAttachment(
     )
     .limit(1);
   return row;
+}
+
+/* ------------------------------------------------------ undo and remove */
+
+/**
+ * "Desfazer": an appointment marked attended or no-show by mistake goes back
+ * to booked, for the office to mark it right. False when it was neither.
+ */
+export async function revertAppointmentWith(
+  database: Database,
+  tenantSlug: string,
+  id: string,
+  actorId: string,
+): Promise<boolean> {
+  const reverted = await database
+    .update(appointments)
+    .set({ status: "booked", updatedAt: new Date() })
+    .where(
+      and(
+        eq(appointments.tenantSlug, tenantSlug),
+        eq(appointments.id, id),
+        inArray(appointments.status, ["attended", "no_show"]),
+        isNull(appointments.removedAt),
+      ),
+    )
+    .returning({ id: appointments.id });
+  if (reverted.length === 0) return false;
+  await recordAuditWith(database, {
+    tenantSlug,
+    actorId,
+    action: "appointment.revert",
+    targetType: "appointment",
+    targetId: id,
+  });
+  return true;
+}
+
+export function revertAppointment(
+  tenantSlug: string,
+  id: string,
+  actorId: string,
+): Promise<boolean> {
+  return revertAppointmentWith(db, tenantSlug, id, actorId);
+}
+
+/**
+ * "Excluir": takes the appointment off the agenda, whatever its status.
+ * Nothing is deleted: the row is cancelled (the hour is free again) and
+ * marked removed, so it leaves every list but the record and the audit
+ * trail stay. The citizen is not e-mailed: cancelling is the way to tell
+ * them.
+ */
+export async function removeAppointmentWith(
+  database: Database,
+  tenantSlug: string,
+  id: string,
+  actorId: string,
+): Promise<boolean> {
+  const now = new Date();
+  const removed = await database
+    .update(appointments)
+    .set({
+      status: "cancelled",
+      removedAt: now,
+      // The database's own clock: a Date inside raw SQL is a parameter
+      // the production driver will not serialise.
+      cancelledAt: sql`coalesce(${appointments.cancelledAt}, now())`,
+      updatedAt: now,
+    })
+    .where(
+      and(
+        eq(appointments.tenantSlug, tenantSlug),
+        eq(appointments.id, id),
+        isNull(appointments.removedAt),
+      ),
+    )
+    .returning({ id: appointments.id });
+  if (removed.length === 0) return false;
+  await recordAuditWith(database, {
+    tenantSlug,
+    actorId,
+    action: "appointment.remove",
+    targetType: "appointment",
+    targetId: id,
+  });
+  return true;
+}
+
+export function removeAppointment(
+  tenantSlug: string,
+  id: string,
+  actorId: string,
+): Promise<boolean> {
+  return removeAppointmentWith(db, tenantSlug, id, actorId);
 }

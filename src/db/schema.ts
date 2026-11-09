@@ -620,6 +620,10 @@ export const appointments = pgTable(
     // on the ones the office reserves at the counter: the citizen gets one
     // through "perdi a chave", with the e-mail on the booking.
     accessKeyHash: text("access_key_hash"),
+    // When the office took the appointment off the agenda ("Excluir"): the
+    // row stays, cancelled and out of every list, so the record and its
+    // audit trail survive and the hour is free again.
+    removedAt: timestamp("removed_at", { withTimezone: true }),
     createdAt: timestamp("created_at", { withTimezone: true })
       .notNull()
       .defaultNow(),

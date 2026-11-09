@@ -253,6 +253,13 @@
       "when": 1794200062634,
       "tag": "0035_chave_e_arquivos_do_agendamento",
       "breakpoints": true
+    },
+    {
+      "idx": 36,
+      "version": "7",
+      "when": 1794201573783,
+      "tag": "0036_exclusao_do_agendamento",
+      "breakpoints": true
     }
   ]
 }

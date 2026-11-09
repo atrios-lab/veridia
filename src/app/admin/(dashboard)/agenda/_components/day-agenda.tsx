@@ -1,14 +1,18 @@
 "use client";
 
-import { useActionState, useState } from "react";
+import { useActionState, useEffect, useState } from "react";
+import { toast } from "sonner";
 import { slotEndTime } from "@/core/scheduling/agenda.ts";
 import { appointmentStatusLabel } from "@/core/scheduling/appointment.ts";
+import { ConfirmAction } from "../../../_components/confirm-action.tsx";
 import {
   type ActionState,
   attendAppointment,
   cancelOneAppointment,
   markAppointmentNoShow,
+  removeAppointmentAction,
   reserveDeskAppointment,
+  revertAppointmentStatus,
 } from "../actions.ts";
 import { AppointmentStatusBadge, DESK_BADGE_STYLE } from "./status-badge.tsx";
 
@@ -167,9 +171,22 @@ function AppointmentRow({ appointment }: { appointment: DayAppointment }) {
           <span className="col-span-2 flex flex-wrap gap-1.5 @2xl:col-span-1 @2xl:justify-end">
             <ReceiptLink id={appointment.id} />
             {appointment.canDeclare && <DeclarationLink id={appointment.id} />}
+            <RevertButton id={appointment.id} />
+            <RemoveButton
+              id={appointment.id}
+              citizenName={appointment.citizenName}
+            />
           </span>
         ) : (
-          <span className="hidden @2xl:block" />
+          <span className="col-span-2 flex flex-wrap gap-1.5 @2xl:col-span-1 @2xl:justify-end">
+            {appointment.status === "no_show" && (
+              <RevertButton id={appointment.id} />
+            )}
+            <RemoveButton
+              id={appointment.id}
+              citizenName={appointment.citizenName}
+            />
+          </span>
         )}
       </div>
 
@@ -466,6 +483,64 @@ function AttendButton({ id }: { id: string }) {
         {pending ? "..." : "Marcar atendido"}
       </button>
     </form>
+  );
+}
+
+/** Back to "Agendado", for a status marked by mistake. */
+function RevertButton({ id }: { id: string }) {
+  const [state, formAction, pending] = useActionState<ActionState, FormData>(
+    revertAppointmentStatus,
+    { status: "idle" },
+  );
+  useEffect(() => {
+    if (state.status === "success") toast.success(state.message ?? "Desfeito.");
+    if (state.status === "error") toast.error(state.message);
+  }, [state]);
+  return (
+    <form action={formAction}>
+      <input type="hidden" name="id" value={id} />
+      <button
+        type="submit"
+        disabled={pending}
+        title="Marcou errado? Volta para agendado, para marcar de novo."
+        className="rounded-lg border border-admin-border px-2.5 py-1.5 text-[11.5px] font-semibold text-admin-primary hover:bg-admin-input-bg disabled:opacity-60"
+      >
+        {pending ? "..." : "Desfazer"}
+      </button>
+    </form>
+  );
+}
+
+/** Off the agenda, with a confirmation: the record stays in the database. */
+function RemoveButton({
+  id,
+  citizenName,
+}: {
+  id: string;
+  citizenName: string;
+}) {
+  const [state, formAction, pending] = useActionState<ActionState, FormData>(
+    removeAppointmentAction,
+    { status: "idle" },
+  );
+  useEffect(() => {
+    if (state.status === "success") {
+      toast.success(state.message ?? "Agendamento excluído.");
+    }
+  }, [state]);
+  return (
+    <ConfirmAction
+      action={formAction}
+      pending={pending}
+      error={state.status === "error" ? state.message : null}
+      trigger="Excluir"
+      question={`Excluir o agendamento de ${citizenName.split(/\s+/)[0]}?`}
+      consequence="Ele sai da agenda e o horário fica livre de novo. O registro fica guardado no sistema, com quem excluiu e quando. O cidadão não recebe e-mail: para avisá-lo, use Cancelar."
+      confirmLabel="Excluir da agenda"
+      pendingLabel="Excluindo..."
+    >
+      <input type="hidden" name="id" value={id} />
+    </ConfirmAction>
   );
 }
 
