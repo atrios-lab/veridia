@@ -35,6 +35,11 @@ const TABS: {
     permission: "content.edit",
   },
   {
+    label: "Numeração",
+    href: "/admin/configuracoes/numeracao",
+    permission: "content.edit",
+  },
+  {
     label: "Notificações",
     href: "/admin/configuracoes/notificacoes",
     permission: "content.edit",

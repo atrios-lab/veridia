@@ -14,6 +14,7 @@ import { type Database, db } from "@/db/index.ts";
 import { serviceRequests, taxGuides, tenantContent } from "@/db/schema.ts";
 import { OFFICE_GUIDES_KEY } from "@/lib/office-config.ts";
 import { recordAuditWith } from "./audit.ts";
+import { nextNumberWith } from "./document-numbering.ts";
 
 export type TaxGuideRow = typeof taxGuides.$inferSelect;
 
@@ -105,24 +106,13 @@ export async function saveGuideSettingsWith(
 
 /* ------------------------------------------------------------------- guias */
 
-async function nextSequence(
+/** Max + 1, or where the office said to go on (Configurações › Numeração). */
+function nextSequence(
   database: Database,
   tenantSlug: string,
   year: number,
 ): Promise<number> {
-  const [last] = await database
-    .select({ sequence: taxGuides.sequence })
-    .from(taxGuides)
-    .where(
-      and(
-        eq(taxGuides.tenantSlug, tenantSlug),
-        eq(taxGuides.year, year),
-        isNull(taxGuides.deletedAt),
-      ),
-    )
-    .orderBy(desc(taxGuides.sequence))
-    .limit(1);
-  return (last?.sequence ?? 0) + 1;
+  return nextNumberWith(database, tenantSlug, "guia", year);
 }
 
 const ATTEMPTS = 5;

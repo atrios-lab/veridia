@@ -80,6 +80,7 @@ import {
   serviceRequests,
 } from "@/db/schema.ts";
 import { recordAudit, recordAuditWith } from "./audit.ts";
+import { nextNumberWith } from "./document-numbering.ts";
 import { findPermanentBounceWith } from "./email/bounces.ts";
 import { OFFICE_TIME_ZONE } from "./office-config.ts";
 import { deleteStoredFile, type StoredAttachment } from "./uploads.ts";
@@ -122,25 +123,14 @@ export interface NewRecord {
 
 const MAX_ATTEMPTS = 5;
 
-async function nextSequence(
+/** Max + 1, or where the office said to go on (Configurações › Numeração). */
+function nextSequence(
   database: Database,
   tenantSlug: string,
   kind: RequestKind,
   year: number,
 ): Promise<number> {
-  const [last] = await database
-    .select({ sequence: serviceRequests.protocolSequence })
-    .from(serviceRequests)
-    .where(
-      and(
-        eq(serviceRequests.tenantSlug, tenantSlug),
-        eq(serviceRequests.kind, kind),
-        eq(serviceRequests.protocolYear, year),
-      ),
-    )
-    .orderBy(desc(serviceRequests.protocolSequence))
-    .limit(1);
-  return (last?.sequence ?? 0) + 1;
+  return nextNumberWith(database, tenantSlug, KIND_PREFIXES[kind], year);
 }
 
 /**
