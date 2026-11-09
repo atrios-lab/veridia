@@ -59,4 +59,4 @@
 - [x] 8.4 Aplicar a migração `0035` no Homolog e rodar o seed do tenant de cursos lá (09/11/2026; no Homolog também ficaram o curso `lgpd-teste-turmas`, a turma de teste e a aluna `aluna.teste.turmas@exemplo.com`)
 - [ ] 8.4.1 Testar no Preview, com a conta da Átrios, a tela de turmas
 - [ ] 8.5 Usuário liga `curso.atrioss.com` na Vercel e no DNS e preenche o conteúdo público em produção, pelo seed ou pela tela
-- [ ] 8.6 Aplicar a migração em produção à mão antes do merge; abrir a PR
+- [x] 8.6 Aplicar a migração em produção à mão antes do merge (feito pelo usuário em 09/11/2026); abrir a PR (#207)
