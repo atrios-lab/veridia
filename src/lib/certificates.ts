@@ -7,6 +7,7 @@ import {
 import { type Database, db } from "@/db/index.ts";
 import { certificates, courses } from "@/db/schema.ts";
 import { recordAuditWith } from "./audit.ts";
+import { cohortOfficeNameWith } from "./cohorts.ts";
 import { passedAttemptWith } from "./quiz.ts";
 
 // Course certificates: issued once per person and course from a passed
@@ -62,6 +63,12 @@ export async function issueCertificateWith(
     context.courseId,
   );
   if (!passed) return { status: "refused", reason: "not-passed" };
+  // A course learner works at their cohort's office, not at the courses
+  // office their account lives in: the certificate names the cohort's,
+  // typed by the platform account, never by the learner.
+  const officeName =
+    (await cohortOfficeNameWith(database, context.userId)) ??
+    context.tenantName;
 
   for (let tries = 0; tries < 3; tries++) {
     const code = certificateCode(randomBytes(8));
@@ -81,7 +88,7 @@ export async function issueCertificateWith(
         cpf: request.cpf,
         roleTitle: request.roleTitle,
         tenantSlug: context.tenantSlug,
-        tenantName: context.tenantName,
+        tenantName: officeName,
         issuedHost: context.host,
         courseTitle: course.title,
         workloadHours: course.workloadHours,

@@ -1,6 +1,6 @@
 ## 1. Banco
 
-- [x] 1.1 Migração 0035: `appointments.access_key_hash` e `appointment_attachments` (só acrescenta)
+- [x] 1.1 Migração 0036: `appointments.access_key_hash` e `appointment_attachments` (só acrescenta)
 
 ## 2. Regras e dados
 

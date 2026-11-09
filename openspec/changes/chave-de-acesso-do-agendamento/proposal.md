@@ -21,7 +21,7 @@ documento antes de vir.
   e os reservados no balcão, que não têm chave, conseguem uma por esse caminho.
 - **Texto da consulta**: para AGD, diz que a chave veio na confirmação e no e-mail.
 - **Banco (só acrescenta)**: coluna `appointments.access_key_hash` e tabela
-  `appointment_attachments` (migração 0035). Nada é apagado.
+  `appointment_attachments` (migração 0036). Nada é apagado.
 
 ## Não-objetivos
 

@@ -4,10 +4,12 @@ import { isRegisteredSlug } from "../tenant/resolve.ts";
 import {
   can,
   canAccessTenant,
+  homeFor,
   isAccountDisabled,
   isLastActiveAdmin,
   isRole,
   OFFICE_PERMISSIONS,
+  PANEL_ROLES,
   PLATFORM_PERMISSIONS,
   SUPERADMIN_TENANT_SLUG,
 } from "./roles.ts";
@@ -148,4 +150,37 @@ test("an account with disabledAt set is disabled", () => {
 test("an account with no disabledAt is not disabled", () => {
   assert.equal(isAccountDisabled(null), false);
   assert.equal(isAccountDisabled(undefined), false);
+});
+
+test("a learner gets into the panel and nothing else", () => {
+  assert.ok(can("learner", "admin.access"));
+  for (const permission of [...OFFICE_PERMISSIONS, ...PLATFORM_PERMISSIONS]) {
+    if (permission === "admin.access") continue;
+    assert.equal(can("learner", permission), false, permission);
+  }
+});
+
+test("only the platform account manages cohorts", () => {
+  assert.ok(can("superadmin", "cohorts.manage"));
+  for (const role of ["admin", "staff", "learner"]) {
+    assert.equal(can(role, "cohorts.manage"), false, role);
+  }
+});
+
+test("a registrador can never create a learner", () => {
+  assert.equal((PANEL_ROLES as readonly string[]).includes("learner"), false);
+});
+
+test("a learner's home is the training", () => {
+  assert.equal(homeFor("learner"), "/admin/ajuda");
+  assert.equal(homeFor("admin"), null);
+  assert.equal(homeFor("staff"), null);
+  assert.equal(homeFor("superadmin"), null);
+});
+
+test("everyone who works for an office has the desk; a learner does not", () => {
+  for (const role of ["admin", "staff", "superadmin"]) {
+    assert.ok(can(role, "desk.access"), role);
+  }
+  assert.equal(can("learner", "desk.access"), false);
 });

@@ -11,5 +11,6 @@ CREATE TABLE "appointment_attachments" (
 );
 --> statement-breakpoint
 ALTER TABLE "appointments" ADD COLUMN "access_key_hash" text;--> statement-breakpoint
+ALTER TABLE "appointments" ADD COLUMN "removed_at" timestamp with time zone;--> statement-breakpoint
 ALTER TABLE "appointment_attachments" ADD CONSTRAINT "appointment_attachments_appointment_id_appointments_id_fk" FOREIGN KEY ("appointment_id") REFERENCES "public"."appointments"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 CREATE INDEX "appointment_attachments_appointment" ON "appointment_attachments" USING btree ("appointment_id");

@@ -27,6 +27,7 @@ import {
   documentsByEmailNotice,
   type OfferedService,
 } from "@/core/scheduling/services.ts";
+import { DemoFormNotice } from "../_components/demo-notice.tsx";
 import { Icon } from "../_components/icon.tsx";
 import { ProtocolReveal } from "../_components/protocol-reveal.tsx";
 import { handOffAccess } from "../_lib/access-handoff.ts";
@@ -685,6 +686,8 @@ function AppointmentForm({
           {state.message}
         </p>
       )}
+
+      <DemoFormNotice className="mt-5" />
 
       {/* The expectation sits with the button, where it is being made, and not
           above the form where it is read before there is anything to promise. */}

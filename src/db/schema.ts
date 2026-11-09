@@ -1054,3 +1054,67 @@ export const tutorialProgress = pgTable(
   },
   (t) => [primaryKey({ columns: [t.userId, t.videoId] })],
 );
+
+/**
+ * A course cohort: one office that is not a client yet, invited to take a
+ * course through a link. The link carries only the random `code`; the
+ * office's name printed on its learners' certificates lives here, typed by
+ * the platform account, never by the learner and never read from the URL.
+ * Not tenant-scoped: every learner lands in the courses office
+ * (src/core/tenant/courses-tenant.ts), and the cohort is what tells their
+ * offices apart. A cohort with learners is never deleted (`restrict` from
+ * cohort_members): closing it is `closed_at`.
+ */
+export const courseCohorts = pgTable(
+  "course_cohorts",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    /** XXXX-XXXX, Crockford base32, random. */
+    code: text("code").notNull(),
+    /** The course the link opens and whose progress the cohort screen shows. */
+    courseId: uuid("course_id")
+      .notNull()
+      .references(() => courses.id, { onDelete: "restrict" }),
+    officeName: text("office_name").notNull(),
+    officeCity: text("office_city").notNull(),
+    contactName: text("contact_name").notNull(),
+    contactPhone: text("contact_phone").notNull(),
+    seats: integer("seats").notNull(),
+    expiresAt: timestamp("expires_at", { withTimezone: true }).notNull(),
+    closedAt: timestamp("closed_at", { withTimezone: true }),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    createdBy: text("created_by"),
+  },
+  (t) => [uniqueIndex("course_cohorts_code").on(t.code)],
+);
+
+/**
+ * A learner in a cohort. Its own table rather than a column on `user`: the
+ * user table is the auth library's, the primary key on `user_id` is what
+ * keeps an account in one cohort at most, and the consent to be contacted
+ * belongs to the cohort sign-up, not to the account. The account going away
+ * takes the row with it.
+ */
+export const cohortMembers = pgTable(
+  "cohort_members",
+  {
+    userId: text("user_id")
+      .primaryKey()
+      .references(() => user.id, { onDelete: "cascade" }),
+    cohortId: uuid("cohort_id")
+      .notNull()
+      .references(() => courseCohorts.id, { onDelete: "restrict" }),
+    joinedAt: timestamp("joined_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    /** When the learner agreed to hear from the Átrios about the platform;
+     * null when they did not tick the box. */
+    contactConsentAt: timestamp("contact_consent_at", { withTimezone: true }),
+  },
+  (t) => [index("cohort_members_cohort").on(t.cohortId)],
+);
