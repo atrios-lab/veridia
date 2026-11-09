@@ -30,14 +30,18 @@ import {
 } from "@/core/scheduling/services.ts";
 import { AdminIcon } from "../../../_components/icon.tsx";
 import { type ActionState, saveAgenda } from "../actions.ts";
+import { SuggestCard } from "./suggest-card.tsx";
 
 type Grid = Record<string, string[]>;
 /** weekday -> time -> the only services that time takes. */
 type SlotServicesDraft = Record<string, Record<string, string[]>>;
+/** weekday -> time -> how many citizens it takes at once (absent: one). */
+type SlotCapacityDraft = Record<string, Record<string, number>>;
 
 interface BookDraft {
   grid: Grid;
   slotServices: SlotServicesDraft;
+  slotCapacity: SlotCapacityDraft;
   serviceIds: string[];
   /** The notary's channels per weekday; empty for the counter's agenda. */
   channels: Record<string, AttendanceChannel[]>;
@@ -204,16 +208,35 @@ export function AgendaSettingsForm({
           </div>
         </section>
 
+        <SuggestCard
+          key={`suggest-${tab}-${book.serviceIds.join(",")}`}
+          services={tickedServices(book.serviceIds, draft.services)}
+          weekdays={weekdays}
+          onApply={(days, suggestion) => {
+            const grid = { ...book.grid };
+            const slotServices = { ...book.slotServices };
+            const slotCapacity = { ...book.slotCapacity };
+            for (const day of days) {
+              grid[day] = [...suggestion.times];
+              slotServices[day] = { ...suggestion.services };
+              slotCapacity[day] = Object.fromEntries(
+                Object.entries(suggestion.capacity).filter(([, n]) => n > 1),
+              );
+            }
+            setBook({ ...book, grid, slotServices, slotCapacity });
+          }}
+        />
         <GridSection
           key={`grid-${tab}`}
           title={`Dias e horários · ${AGENDA_NAMES[tab].short}`}
           grid={book.grid}
           slotServices={book.slotServices}
+          slotCapacity={book.slotCapacity}
           services={tickedServices(book.serviceIds, draft.services)}
           weekdays={weekdays}
           futureLive={futureLive[tab]}
-          onChange={(grid, slotServices) =>
-            setBook({ ...book, grid, slotServices })
+          onChange={(grid, slotServices, slotCapacity) =>
+            setBook({ ...book, grid, slotServices, slotCapacity })
           }
           channels={usesChannels(tab) ? book.channels : undefined}
           onChannelsChange={(channels) => setBook({ ...book, channels })}
@@ -355,12 +378,21 @@ function serviceLabels(ids: string[], own: OwnServiceDraft[]): string[] {
   return tickedServices(ids, own).map((service) => service.label);
 }
 
+/** Citizens a day takes: one per time, or the time's vacancies. */
+function dayCitizens(
+  times: string[],
+  capacity: Record<string, number> | undefined,
+): number {
+  return times.reduce((sum, time) => sum + (capacity?.[time] ?? 1), 0);
+}
+
 /* ---------------------------------------------------------------- weekdays */
 
 function GridSection({
   title,
   grid,
   slotServices,
+  slotCapacity,
   services,
   weekdays,
   futureLive,
@@ -372,11 +404,17 @@ function GridSection({
   grid: Grid;
   /** Per weekday and time, the services the office narrowed it to. */
   slotServices: SlotServicesDraft;
+  /** Per weekday and time, how many citizens it takes at once. */
+  slotCapacity: SlotCapacityDraft;
   /** The services this agenda takes, the ones a time can be narrowed to. */
   services: Array<{ id: string; label: string }>;
   weekdays: Array<{ day: string; label: string }>;
   futureLive: Record<string, number>;
-  onChange: (grid: Grid, slotServices: SlotServicesDraft) => void;
+  onChange: (
+    grid: Grid,
+    slotServices: SlotServicesDraft,
+    slotCapacity: SlotCapacityDraft,
+  ) => void;
   /** Present for the notary's agenda: how he attends each weekday. */
   channels?: Record<string, AttendanceChannel[]>;
   onChannelsChange?: (channels: Record<string, AttendanceChannel[]>) => void;
@@ -407,6 +445,7 @@ function GridSection({
     onChange(
       { ...grid, [day]: [...new Set([...(grid[day] ?? []), time])].sort() },
       slotServices,
+      slotCapacity,
     );
     setAdding(null);
   }
@@ -424,19 +463,30 @@ function GridSection({
       return;
     }
     const { [time]: _gone, ...rest } = slotServices[day] ?? {};
+    const { [time]: _seats, ...restCapacity } = slotCapacity[day] ?? {};
     onChange(
       { ...grid, [day]: (grid[day] ?? []).filter((t) => t !== time) },
       { ...slotServices, [day]: rest },
+      { ...slotCapacity, [day]: restCapacity },
     );
     if (editing === `${day}|${time}`) setEditing(null);
   }
 
-  /** Copies a day's times, and what each one takes, onto another day. */
+  /** Copies a day's times, what each one takes and its vacancies, onto
+   * another day. */
   function copyDay(from: string, to: string) {
     onChange(
       { ...grid, [to]: [...(grid[from] ?? [])] },
       { ...slotServices, [to]: { ...(slotServices[from] ?? {}) } },
+      { ...slotCapacity, [to]: { ...(slotCapacity[from] ?? {}) } },
     );
+  }
+
+  function setCapacityAt(day: string, time: string, count: number) {
+    const byTime = { ...(slotCapacity[day] ?? {}) };
+    if (!Number.isFinite(count) || count <= 1) delete byTime[time];
+    else byTime[time] = Math.min(99, Math.floor(count));
+    onChange(grid, slotServices, { ...slotCapacity, [day]: byTime });
   }
 
   function setServicesAt(day: string, time: string, ids: string[]) {
@@ -447,7 +497,7 @@ function GridSection({
     } else {
       byTime[time] = ids;
     }
-    onChange(grid, { ...slotServices, [day]: byTime });
+    onChange(grid, { ...slotServices, [day]: byTime }, slotCapacity);
   }
 
   return (
@@ -486,6 +536,7 @@ function GridSection({
               <span className="flex flex-wrap items-center gap-2">
                 {times.map((time) => {
                   const only = slotServices[day]?.[time];
+                  const seats = slotCapacity[day]?.[time] ?? 1;
                   const open = editingTime === time;
                   return (
                     <span
@@ -508,6 +559,11 @@ function GridSection({
                         className="inline-flex items-center gap-1.5"
                       >
                         {time}
+                        {seats > 1 && (
+                          <span className="rounded bg-admin-accent px-1 text-[10.5px] font-bold text-admin-accent-ink">
+                            ×{seats}
+                          </span>
+                        )}
                         {only && (
                           <span className="max-w-[140px] truncate text-[11px] font-normal">
                             ·{" "}
@@ -585,6 +641,10 @@ function GridSection({
                     services={services}
                     selected={slotServices[day]?.[editingTime] ?? []}
                     onChange={(ids) => setServicesAt(day, editingTime, ids)}
+                    capacity={slotCapacity[day]?.[editingTime] ?? 1}
+                    onCapacity={(count) =>
+                      setCapacityAt(day, editingTime, count)
+                    }
                     onClose={() => setEditing(null)}
                   />
                 )}
@@ -626,7 +686,7 @@ function GridSection({
               >
                 {times.length === 0
                   ? "Não aparece no site"
-                  : `${times.length} ${times.length === 1 ? "cidadão" : "cidadãos"}/dia`}
+                  : `${dayCitizens(times, slotCapacity[day])} ${dayCitizens(times, slotCapacity[day]) === 1 ? "cidadão" : "cidadãos"}/dia`}
               </span>
             </div>
           );
@@ -653,6 +713,8 @@ function SlotServicesEditor({
   services,
   selected,
   onChange,
+  capacity,
+  onCapacity,
   onClose,
 }: {
   dayLabel: string;
@@ -660,6 +722,9 @@ function SlotServicesEditor({
   services: Array<{ id: string; label: string }>;
   selected: string[];
   onChange: (ids: string[]) => void;
+  /** How many citizens the time takes at once: one per attendant. */
+  capacity: number;
+  onCapacity: (count: number) => void;
   onClose: () => void;
 }) {
   const [filter, setFilter] = useState("");
@@ -682,6 +747,19 @@ function SlotServicesEditor({
         <span className="text-[12.5px] font-semibold text-admin-primary">
           {dayLabel}, {time}: o que este horário atende
         </span>
+        <label className="flex items-center gap-1.5 text-[12px] text-admin-muted">
+          Vagas
+          <input
+            type="number"
+            min={1}
+            max={99}
+            value={capacity}
+            onChange={(event) => onCapacity(Number(event.target.value))}
+            aria-label={`Vagas às ${time}: quantas pessoas atendem ao mesmo tempo`}
+            className={`${inputClass} w-16 py-1 text-center tabular-nums`}
+          />
+          <span className="text-[11px]">pessoas atendendo ao mesmo tempo</span>
+        </label>
         <span className="flex items-center gap-2">
           <button
             type="button"

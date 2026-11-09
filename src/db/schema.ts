@@ -573,6 +573,11 @@ export const appointments = pgTable(
     // whatever zone the server or the citizen's phone is in.
     date: date("date").notNull(),
     slotTime: text("slot_time").notNull(),
+    // Which of the time's vacancies this appointment holds (1, 2, ... up to
+    // the time's capacity): the unique index below is per vacancy, so as
+    // many citizens as the office has attendants can share 08:00, and two
+    // bookings racing for the same vacancy still meet the database.
+    seat: integer("seat").notNull().default(1),
     citizenName: text("citizen_name").notNull(),
     // The channel for everything: confirmation, cancellation, the link that
     // lets the citizen call it off. Required, unlike every other channel here.
@@ -632,8 +637,8 @@ export const appointments = pgTable(
       .defaultNow(),
   },
   (t) => [
-    uniqueIndex("appointments_tenant_date_slot_live")
-      .on(t.tenantSlug, t.date, t.slotTime)
+    uniqueIndex("appointments_tenant_date_slot_seat_live")
+      .on(t.tenantSlug, t.date, t.slotTime, t.seat)
       .where(sql`${t.status} <> 'cancelled'`),
     // Two bookings racing for the same number lose here, and the loser asks
     // for the next sequence. NULLs are distinct, so legacy rows coexist.

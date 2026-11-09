@@ -9,12 +9,14 @@ import {
   agendaBookSchema,
   agendaRules,
   agendaServiceSchema,
+  capacityAt,
   channelLabelsOn,
   dayChannelsSchema,
   hasGrid,
   isAgendaId,
   OWN_SERVICE_ID,
   ownServiceId,
+  pruneSlotCapacity,
   pruneSlotServices,
   type ServiceChecklist,
   serviceChecklistSchema,
@@ -24,7 +26,7 @@ import {
   generateCancelToken,
   hashCancelToken,
 } from "@/core/scheduling/appointment.ts";
-import { officeHolidays } from "@/core/scheduling/calendar.ts";
+import { officeHolidays, weekday } from "@/core/scheduling/calendar.ts";
 import {
   defaultChecklist,
   getCounterService,
@@ -240,7 +242,13 @@ export async function reserveDeskAppointment(
       };
     }
 
-    const taken = await takenTimesByDay(tenant.slug, date, date, agenda);
+    const taken = await takenTimesByDay(
+      tenant.slug,
+      date,
+      date,
+      agenda,
+      office.agendas[agenda],
+    );
     if (
       !isSlotFree(
         config,
@@ -273,6 +281,7 @@ export async function reserveDeskAppointment(
         origin: "desk",
       },
       session.user.id,
+      capacityAt(office.agendas[agenda], weekday(date), slotTime),
     );
     if (email) {
       await sendAppointmentBookedEmail(tenant, appointment, cancelToken);
@@ -515,6 +524,10 @@ export async function saveAgenda(
           grid: parsed.data.grid,
           serviceIds,
           slotServices: parsed.data.slotServices,
+        }),
+        slotCapacity: pruneSlotCapacity({
+          grid: parsed.data.grid,
+          slotCapacity: parsed.data.slotCapacity,
         }),
       };
     }

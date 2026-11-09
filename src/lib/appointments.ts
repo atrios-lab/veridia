@@ -8,8 +8,10 @@ import {
 } from "@/core/request/access-key.ts";
 import { formatProtocolNumber } from "@/core/request/protocol.ts";
 import {
+  type AgendaBook,
   type AgendaConfig,
   type AgendaId,
+  capacityAt,
   parseAgendaConfig,
   serializeAgendaConfig,
 } from "@/core/scheduling/agenda.ts";
@@ -19,7 +21,7 @@ import {
   hashCancelToken,
   SLOT_HOLDING_STATUSES,
 } from "@/core/scheduling/appointment.ts";
-import type { IsoDate } from "@/core/scheduling/calendar.ts";
+import { type IsoDate, weekday } from "@/core/scheduling/calendar.ts";
 import type { SlotTime, TakenTimes } from "@/core/scheduling/slots.ts";
 import { officeYear } from "@/core/time/office-time.ts";
 import {
@@ -115,16 +117,13 @@ export async function saveAgendaConfig(
 /* ------------------------------------------------------------------ reading */
 
 /**
- * Whether the two agendas still share one set of times. They do while the
- * database's slot index (`appointments_tenant_date_slot_live`) holds one live
- * appointment per office, day and time, whatever the agenda: a time taken at
- * the counter is then taken at the notary's too, and the page must not offer
- * what the insert would refuse. The index that lets each agenda keep its own
- * times drops the old one, and dropping it is left to a reviewed change of
- * its own (no structure leaves the database without a person reading it);
- * that change flips this to false.
+ * Whether the two agendas share one set of times. They did while the slot
+ * index held one live appointment per office, day and time; the index is
+ * per vacancy now (`appointments_tenant_date_slot_seat_live`), each agenda
+ * counts its own appointments against its own vacancies, and a vacancy
+ * number is only ever taken once at a time across both.
  */
-export const AGENDAS_SHARE_TIMES = true;
+export const AGENDAS_SHARE_TIMES = false;
 
 /**
  * Which times are already taken, per day, over a range, in one agenda. Only
@@ -137,6 +136,8 @@ export async function takenTimesByDay(
   from: IsoDate,
   to: IsoDate,
   agenda: AgendaId = "geral",
+  /** The agenda's vacancies per time; absent, every time takes one. */
+  book?: Pick<AgendaBook, "slotCapacity">,
 ): Promise<Map<IsoDate, TakenTimes>> {
   const rows = await db
     .select({ date: appointments.date, slotTime: appointments.slotTime })
@@ -150,11 +151,21 @@ export async function takenTimesByDay(
       ),
     );
 
-  const taken = new Map<IsoDate, Set<SlotTime>>();
+  // A time is taken once every vacancy of it is: counted per day and time,
+  // against the agenda's capacity for that weekday.
+  const counts = new Map<string, number>();
   for (const row of rows) {
-    const times = taken.get(row.date) ?? new Set<SlotTime>();
-    times.add(row.slotTime);
-    taken.set(row.date, times);
+    const key = `${row.date}|${row.slotTime}`;
+    counts.set(key, (counts.get(key) ?? 0) + 1);
+  }
+  const taken = new Map<IsoDate, Set<SlotTime>>();
+  for (const [key, count] of counts) {
+    const [date, slotTime] = key.split("|") as [IsoDate, SlotTime];
+    const capacity = book ? capacityAt(book, weekday(date), slotTime) : 1;
+    if (count < capacity) continue;
+    const times = taken.get(date) ?? new Set<SlotTime>();
+    times.add(slotTime);
+    taken.set(date, times);
   }
   return taken;
 }
@@ -291,61 +302,98 @@ export async function bookAppointmentWith(
   tenantSlug: string,
   input: NewAppointment,
   actorId: string | null = null,
+  /** How many citizens this time takes in this agenda; one by default. */
+  capacity = 1,
 ): Promise<Appointment> {
   const year = officeYear(new Date());
   const origin = input.origin ?? "site";
+  const agenda = input.agenda ?? "geral";
 
-  // Two unique indexes referee this insert, and they mean different things:
-  // the slot index means the time is gone (tell the caller), the protocol
-  // index means another booking took this number first (ask for the next).
+  // Two unique indexes referee this insert: the vacancy index (another
+  // booking took this vacancy first: look again) and the protocol index
+  // (another booking took this number first: ask for the next). The count
+  // of the agenda's live appointments at this time, read inside the lock,
+  // is what says the time is full.
   for (let attempt = 1; ; attempt++) {
-    const sequence = await nextProtocolSequence(database, tenantSlug, year);
     try {
-      const [created] = await database
-        .insert(appointments)
-        .values({
-          tenantSlug,
-          agenda: input.agenda ?? "geral",
-          date: input.date,
-          slotTime: input.slotTime,
-          citizenName: input.citizenName,
-          email: input.email,
-          phone: input.phone,
-          cpf: input.cpf ?? null,
-          serviceId: input.serviceId,
-          serviceLabel: input.serviceLabel,
-          mode: input.mode,
-          serviceDetails: input.serviceDetails ?? null,
-          cancelTokenHash: input.cancelTokenHash,
-          accessKeyHash: input.accessKeyHash ?? null,
-          origin,
-          protocolYear: year,
-          protocolSequence: sequence,
-          protocolNumber: formatProtocolNumber("AGD", year, sequence),
-        })
-        .returning();
+      return await database.transaction(async (tx) => {
+        // Bookings for the same office, day and time wait for each other
+        // here, so two citizens never both read "one vacancy left".
+        await tx.execute(
+          sql`select pg_advisory_xact_lock(hashtext(${`${tenantSlug}|${input.date}|${input.slotTime}`}))`,
+        );
+        const live = await tx
+          .select({ agenda: appointments.agenda, seat: appointments.seat })
+          .from(appointments)
+          .where(
+            and(
+              eq(appointments.tenantSlug, tenantSlug),
+              eq(appointments.date, input.date),
+              eq(appointments.slotTime, input.slotTime),
+              inArray(appointments.status, [...SLOT_HOLDING_STATUSES]),
+            ),
+          );
+        const inAgenda = live.filter((row) => row.agenda === agenda).length;
+        if (inAgenda >= capacity) {
+          throw new SlotTakenError("Este horário acabou de ser preenchido.");
+        }
+        // The first vacancy number nobody at this time holds, in either
+        // agenda: the index is per office, day, time and vacancy.
+        const used = new Set(live.map((row) => row.seat));
+        let seat = 1;
+        while (used.has(seat)) seat++;
 
-      await recordAuditWith(database, {
-        tenantSlug,
-        // Null when booked by the citizen, who has no account by design.
-        actorId,
-        action:
-          origin === "desk" ? "appointment.desk-book" : "appointment.book",
-        targetType: "appointment",
-        targetId: created.id,
+        const sequence = await nextProtocolSequence(tx, tenantSlug, year);
+        const [created] = await tx
+          .insert(appointments)
+          .values({
+            tenantSlug,
+            agenda,
+            date: input.date,
+            slotTime: input.slotTime,
+            seat,
+            citizenName: input.citizenName,
+            email: input.email,
+            phone: input.phone,
+            cpf: input.cpf ?? null,
+            serviceId: input.serviceId,
+            serviceLabel: input.serviceLabel,
+            mode: input.mode,
+            serviceDetails: input.serviceDetails ?? null,
+            cancelTokenHash: input.cancelTokenHash,
+            accessKeyHash: input.accessKeyHash ?? null,
+            origin,
+            protocolYear: year,
+            protocolSequence: sequence,
+            protocolNumber: formatProtocolNumber("AGD", year, sequence),
+          })
+          .returning();
+
+        await recordAuditWith(tx, {
+          tenantSlug,
+          // Null when booked by the citizen, who has no account by design.
+          actorId,
+          action:
+            origin === "desk" ? "appointment.desk-book" : "appointment.book",
+          targetType: "appointment",
+          targetId: created.id,
+        });
+        return created;
       });
-      return created;
     } catch (error) {
+      if (error instanceof SlotTakenError) throw error;
       if (!isPostgresError(error, UNIQUE_VIOLATION)) throw error;
-      const constraint = violatedConstraint(error);
-      if (
-        constraint === "appointments_tenant_year_sequence" ||
-        constraint === "appointments_tenant_protocol"
-      ) {
-        if (attempt >= PROTOCOL_ATTEMPTS) throw error;
-        continue;
+      if (attempt >= PROTOCOL_ATTEMPTS) {
+        const constraint = violatedConstraint(error);
+        if (
+          constraint === "appointments_tenant_year_sequence" ||
+          constraint === "appointments_tenant_protocol"
+        ) {
+          throw error;
+        }
+        throw new SlotTakenError("Este horário acabou de ser preenchido.");
       }
-      throw new SlotTakenError("Este horário acabou de ser preenchido.");
+      // A vacancy or a protocol number taken in the meantime: look again.
     }
   }
 }
@@ -355,8 +403,9 @@ export async function bookAppointment(
   tenantSlug: string,
   input: NewAppointment,
   actorId: string | null = null,
+  capacity = 1,
 ): Promise<Appointment> {
-  return bookAppointmentWith(db, tenantSlug, input, actorId);
+  return bookAppointmentWith(db, tenantSlug, input, actorId, capacity);
 }
 
 /**

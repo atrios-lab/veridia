@@ -4,9 +4,11 @@ import { can } from "@/core/auth/roles.ts";
 import {
   AGENDA_IDS,
   AGENDA_NAMES,
+  type AgendaBook,
   type AgendaId,
   agendaIdOf,
   agendaRules,
+  capacityAt,
   channelLabelsOn,
   channelsOn,
   closedDate,
@@ -116,7 +118,17 @@ export default async function AgendaPage({
     list.push({ id: file.id, name: `Documento ${list.length + 1}` });
     filesByAppointment.set(file.appointmentId, list);
   }
-  const takenTimes = new Set(live.map((a) => a.slotTime));
+  // Live appointments per time, against the time's vacancies: a time is
+  // full only once every attendant who starts at it has a citizen.
+  const liveAt = new Map<string, number>();
+  for (const a of live)
+    liveAt.set(a.slotTime, (liveAt.get(a.slotTime) ?? 0) + 1);
+  const book = agendaConfig.agendas[agenda];
+  const vacanciesAt = (time: string) =>
+    capacityAt(book, weekday(date), time) - (liveAt.get(time) ?? 0);
+  const takenTimes = new Set(
+    [...liveAt.keys()].filter((time) => vacanciesAt(time) <= 0),
+  );
   // While the two agendas share their times, an hour the other one holds is
   // not free here either: the database would refuse it.
   const heldElsewhere = new Map(
@@ -136,6 +148,12 @@ export default async function AgendaPage({
         new Set([...takenTimes, ...heldElsewhere.keys()]),
         now,
       );
+  // What the site still offers today, in citizens: every vacancy of every
+  // offered time.
+  const freeVacancies = free.reduce(
+    (sum, time) => sum + Math.max(0, vacanciesAt(time)),
+    0,
+  );
   const otherAgendaCounts = AGENDA_IDS.filter((id) => id !== agenda).map(
     (id) => ({
       id,
@@ -177,8 +195,12 @@ export default async function AgendaPage({
     })),
     ...grid
       .filter((time) => !takenTimes.has(time))
+      // A past time that someone held needs no "ficou livre" row as well.
+      .filter((time) => free.includes(time) || !liveAt.has(time))
       .map((time): DayRow => {
-        if (free.includes(time)) return { kind: "free", time };
+        if (free.includes(time)) {
+          return { kind: "free", time, vacancies: vacanciesAt(time) };
+        }
         const heldBy = heldElsewhere.get(time);
         return heldBy ? { kind: "held", time, heldBy } : { kind: "idle", time };
       }),
@@ -225,6 +247,7 @@ export default async function AgendaPage({
           })}
         </nav>
         <DayStrip
+          book={agendaConfig.agendas[agenda]}
           agenda={agenda}
           dates={stripDates}
           selected={date}
@@ -246,7 +269,8 @@ export default async function AgendaPage({
               <span className="text-[12.5px] text-admin-muted">
                 {grid.length} {grid.length === 1 ? "horário" : "horários"} ·{" "}
                 {live.length} {live.length === 1 ? "agendado" : "agendados"} ·{" "}
-                {free.length} {free.length === 1 ? "livre" : "livres"} no site
+                {freeVacancies}{" "}
+                {freeVacancies === 1 ? "vaga livre" : "vagas livres"} no site
               </span>
             </div>
             <DaySlotList
@@ -397,6 +421,7 @@ function DayStrip({
   anchor,
   config,
   counts,
+  book,
 }: {
   agenda: AgendaId;
   dates: string[];
@@ -404,6 +429,8 @@ function DayStrip({
   anchor: string;
   config: Parameters<typeof gridTimes>[0];
   counts: Map<string, number>;
+  /** The agenda's vacancies per time, so a day counts citizens, not hours. */
+  book: Pick<AgendaBook, "slotCapacity">;
 }) {
   const arrowClass =
     "flex h-9 w-9 shrink-0 items-center justify-center self-center rounded-full border border-admin-border bg-admin-card text-admin-muted hover:bg-admin-input-bg";
@@ -420,7 +447,10 @@ function DayStrip({
         {dates.map((date) => {
           const isSelected = date === selected;
           const closed = closedDate(config, date);
-          const total = gridTimes(config, date).length;
+          const total = gridTimes(config, date).reduce(
+            (sum, time) => sum + capacityAt(book, weekday(date), time),
+            0,
+          );
           const occupied = counts.get(date) ?? 0;
           return (
             <Link
