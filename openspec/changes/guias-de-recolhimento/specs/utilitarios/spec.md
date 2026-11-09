@@ -22,3 +22,14 @@ número. Excluir uma guia SHALL tirá-la da lista sem apagar o registro.
 
 - **WHEN** faltam 30 dias para uma guia completar 12 meses no sistema
 - **THEN** o painel pede que a serventia baixe as guias do ano e as guarde no próprio arquivo
+
+### Requirement: Pedido de guia pelo site
+
+O cidadão SHALL poder pedir a guia nos serviços de Notas, com formulário simplificado e anexos. A guia
+SHALL ser gerada sozinha e SHALL ficar visível só no painel até a serventia entregá-la.
+
+#### Scenario: Pedido de ITIV pelo site
+
+- **WHEN** o cidadão envia o pedido de guia de ITIV com as partes, o imóvel e o valor
+- **THEN** o pedido recebe protocolo, a guia sai numerada em Utilitários ligada a ele, e o pedido mostra a
+  guia para conferir e o andamento "Aguardando pagamento da guia"

@@ -32,6 +32,8 @@ export const STATUS_TONES: Record<ServiceRequestStatus, Tone> = {
   new: "waiting",
   "awaiting-payment": "waiting",
   "payment-reported": "waiting",
+  // The guia goes to the fisco with its boleto: the party pays it there.
+  "awaiting-guide-payment": "waiting",
   // Work running inside the office.
   processing: "working",
   // Done, in the office's own ink.

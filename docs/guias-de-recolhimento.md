@@ -48,3 +48,17 @@ O Word baixado também é editável.
 Cada guia fica 12 meses no sistema. Nos últimos 30 dias, o painel pede que a serventia baixe as guias, com o
 botão "Baixar todas do ano", e guarde no próprio arquivo na nuvem. Depois disso a guia vai para "Prazo de
 guarda vencido", mas não é apagada: apagar dados do banco exige uma PR revisada (CLAUDE.md).
+
+## Pedido pelo site
+
+Em Notas, o ato "Guia de recolhimento" pede:
+- as partes: nome, CPF ou CNPJ, tratamento, estado civil, profissão e endereço;
+- o imóvel;
+- o valor declarado;
+- os documentos anexados.
+
+Não há leitura automática dos anexos: é decisão do produto, de 09/11/2026.
+
+A guia é gerada sozinha, numerada e ligada ao pedido. Ela aparece só no painel, em Utilitários e no próprio
+pedido. A serventia confere, corrige e gera de novo se precisar. Depois assina e entrega a guia com o boleto
+em "Entrega ao cidadão", mudando o andamento para "Aguardando pagamento da guia", ou envia aos órgãos.

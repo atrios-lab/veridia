@@ -6,6 +6,8 @@ import {
   getActForTenant,
 } from "@/core/acts/catalog.ts";
 import { can } from "@/core/auth/roles.ts";
+import { GUIDE_KIND_INFO } from "@/core/guides/catalog.ts";
+import { formatGuideNumber } from "@/core/guides/schema.ts";
 import { signedFormFor } from "@/core/request/attachment.ts";
 import {
   REQUEST_FILE_RETENTION_DAYS,
@@ -63,6 +65,7 @@ import {
   requestOwnAttachments,
 } from "@/lib/service-request.ts";
 import { getSession } from "@/lib/session.ts";
+import { guidesOfRequest } from "@/lib/tax-guides.ts";
 import { getTenant, OFFICE_TIME_ZONE, today } from "@/lib/tenant.ts";
 import {
   documentHref,
@@ -162,12 +165,16 @@ export default async function ServiceRequestDetailPage({
     ? request.status
     : "new";
 
-  const [attachments, requirementRows, history, conversations] =
+  const [attachments, requirementRows, history, conversations, guides] =
     await Promise.all([
       listAttachments(tenant.slug, request.id),
       listRequirements(tenant.slug, request.id),
       listRequestHistory(tenant.slug, request.id, request.protocolNumber),
       linkedConversations(tenant.slug, request.id),
+      // The guia the request drew by itself, for the office alone.
+      act?.taxGuide
+        ? guidesOfRequest(tenant.slug, request.id).catch(() => [])
+        : Promise.resolve([]),
     ]);
 
   // Read once, like the queue: every file measured against the same day.
@@ -560,6 +567,69 @@ export default async function ServiceRequestDetailPage({
               attachments={citizenAttachments}
               hasExemption={Boolean(exemption)}
             />
+
+            {act?.taxGuide && (
+              <section className="rounded-[14px] border border-admin-border bg-admin-card p-6">
+                <h4 className="font-serif text-[17px] font-semibold text-admin-primary">
+                  Guia de recolhimento
+                </h4>
+                <p className="mt-1 text-[12.5px] text-admin-muted">
+                  Gerada sozinha com os dados do pedido e visível só para a
+                  serventia. Confira com os documentos, corrija o que precisar e
+                  baixe de novo. Depois, assine e anexe a guia com o boleto em
+                  “Entrega ao cidadão” e mude o andamento para “Aguardando
+                  pagamento da guia”, ou envie você mesmo aos órgãos.
+                </p>
+                {guides.length === 0 ? (
+                  <p className="mt-3 text-[12.5px] text-admin-warning-text">
+                    Nenhuma guia ligada a este pedido.{" "}
+                    <Link
+                      href="/admin/utilitarios/guias/nova"
+                      className="font-semibold underline"
+                    >
+                      Emitir em Utilitários
+                    </Link>
+                  </p>
+                ) : (
+                  <ul className="mt-3 flex flex-col gap-2">
+                    {guides.map((guide) => {
+                      const base = `/admin/utilitarios/guias/${guide.id}`;
+                      return (
+                        <li
+                          key={guide.id}
+                          className="flex flex-wrap items-center gap-3 rounded-lg bg-admin-input-bg px-3.5 py-2.5 text-[13px]"
+                        >
+                          <span className="mr-auto font-semibold text-admin-text">
+                            Nº {formatGuideNumber(guide.year, guide.sequence)} ·{" "}
+                            {GUIDE_KIND_INFO[guide.guide.kind].label}
+                          </span>
+                          <Link
+                            href={base}
+                            className="font-semibold text-admin-primary underline"
+                          >
+                            Conferir e corrigir
+                          </Link>
+                          <a
+                            href={`${base}/arquivo?formato=pdf`}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="font-semibold text-admin-primary underline"
+                          >
+                            PDF
+                          </a>
+                          <a
+                            href={`${base}/arquivo?formato=docx`}
+                            className="font-semibold text-admin-primary underline"
+                          >
+                            Word
+                          </a>
+                        </li>
+                      );
+                    })}
+                  </ul>
+                )}
+              </section>
+            )}
 
             {/* A consulta não tem entrega: a resposta, acima, é o que ela
                 devolve. O valor fica: há serventias que cobram a busca pela

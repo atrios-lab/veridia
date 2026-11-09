@@ -55,6 +55,7 @@ import {
 import { withMask } from "../_lib/mask.ts";
 import { ProcessingBadge } from "./_components/badges.tsx";
 import { DuplicateRequestDialog } from "./_components/duplicate-dialog.tsx";
+import { GuideRequestFields } from "./_components/guide-request-fields.tsx";
 import {
   type SubmitState,
   type SubmitSuccess,
@@ -813,6 +814,8 @@ export function RequestForm({
             error={errorFor("deliveryFormat")}
           />
         )}
+
+        {act.taxGuide && <GuideRequestFields errorFor={errorFor} />}
 
         <div>
           <label

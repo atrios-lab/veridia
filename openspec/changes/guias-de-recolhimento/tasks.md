@@ -9,7 +9,8 @@
 - [x] 2.2 Configuração: leis, alíquotas, destinatários e quem assina
 - [x] 2.3 Quadro da SPU com os links do gov.br
 
-## 3. Próximas etapas
+## 3. Pedido pelo site
 
-- [ ] 3.1 Pedido de guia nos serviços de Notas, com anexos, até o PDF assinado devolvido ao cliente
-- [ ] 3.2 Leitura automática dos dados dos PDFs anexados
+- [x] 3.1 Ato "Guia de recolhimento" em Notas, com formulário simplificado e anexos
+- [x] 3.2 Guia gerada sozinha, ligada ao pedido, visível só no painel até a serventia entregar
+- [x] 3.3 Cartão da guia no pedido; andamento "Aguardando pagamento da guia"
