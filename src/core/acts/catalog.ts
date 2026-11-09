@@ -940,6 +940,9 @@ export const ACTS: Act[] = [
     processingHint: PRENOTATION_HINT,
     guidance: PRENOTATION_GUIDANCE,
     legalBasis: "Lei 6.015 arts. 12, 182 e 186",
+    // O registro ou a nota devolutiva: o resultado da análise do título.
+    legalDeadlineDays: 10,
+    legalDeadlineNote: "Lei 6.015 art. 188 (redação da Lei 14.382/2022)",
     requiresPurpose: false,
     chargesPrenotation: true,
     documents: [

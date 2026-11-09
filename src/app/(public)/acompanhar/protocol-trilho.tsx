@@ -1,7 +1,14 @@
 "use client";
 
 import Link from "next/link";
-import { Fragment, useActionState, useEffect, useRef, useState } from "react";
+import {
+  Fragment,
+  startTransition,
+  useActionState,
+  useEffect,
+  useRef,
+  useState,
+} from "react";
 import type { PauseReason } from "@/core/request/deadline.ts";
 import {
   SIGNED_FORM_COUNTER_OPTION,
@@ -24,6 +31,7 @@ import { useLiveVersion } from "../../_components/use-live-version.ts";
 import { Icon } from "../_components/icon.tsx";
 import { SearchAnswerCard } from "../_components/search-answer-card.tsx";
 import { SignedFormUpload } from "../_components/signed-form-upload.tsx";
+import { takeHandedOffAccess } from "../_lib/access-handoff.ts";
 import {
   ATTACHMENT_ACCEPT,
   useAttachmentUpload,
@@ -208,6 +216,16 @@ function computeSteps(
         },
       ]);
   }
+  // A prenotação is analysed, not prepared: what comes out is the
+  // registration or the note of what is missing.
+  if (result.analysis) {
+    steps.push({ label: "Análise do título", done: finished });
+    steps.push({
+      label: finished ? "Análise concluída" : "Resultado da análise",
+      done: finished,
+    });
+    return steps;
+  }
   steps.push({ label: "Preparando o documento", done: finished });
   steps.push({
     label: finished ? "Documento entregue" : "Conclusão e entrega",
@@ -275,7 +293,9 @@ function computeHeadline(
   if (finished) {
     const at = result.deliveredDocuments[0]?.createdAt ?? result.updatedAt;
     return {
-      headline: "Pronto! Seu documento está aqui.",
+      headline: result.analysis
+        ? "A análise do seu título terminou."
+        : "Pronto! Seu documento está aqui.",
       leadDate: `${formatDateTime(at)}:`,
       leadText:
         result.deliveredDocuments.length > 0 &&
@@ -316,15 +336,18 @@ function computeHeadline(
     return {
       headline: "Recebemos o seu comprovante.",
       leadDate: `${formatDate(result.updatedAt)}:`,
-      leadText:
-        "estamos conferindo o pagamento. Assim que confirmarmos, começamos a preparar o seu documento.",
+      leadText: result.analysis
+        ? "estamos conferindo o pagamento da prenotação. Assim que confirmarmos, o seu título entra em análise."
+        : "estamos conferindo o pagamento. Assim que confirmarmos, começamos a preparar o seu documento.",
     };
   }
   if (awaitingPay) {
     return {
       headline: "Falta só o pagamento.",
       leadDate: `${formatDate(result.updatedAt)}:`,
-      leadText: `o valor do seu documento é ${result.amountLabel}. Pague pelo Pix ao lado, ou envie o comprovante se já pagou.`,
+      leadText: result.analysis
+        ? `o valor da prenotação é ${result.amountLabel}. Pague pelo Pix ao lado, ou envie o comprovante se já pagou. Com o pagamento, o seu título entra em análise.`
+        : `o valor do seu documento é ${result.amountLabel}. Pague pelo Pix ao lado, ou envie o comprovante se já pagou.`,
     };
   }
   if (awaitingDeclaration) {
@@ -333,6 +356,14 @@ function computeHeadline(
       leadDate: `${formatDateTime(result.signedFormReceivedAt ?? result.createdAt)}:`,
       leadText:
         "recebemos o seu formulário assinado. Agora precisamos da declaração de hipossuficiência assinada por você. Se precisarmos de algo, avisamos por aqui.",
+    };
+  }
+  if (result.analysis) {
+    return {
+      headline: "Seu título está em análise.",
+      leadDate: `${formatDateTime(result.signedFormReceivedAt ?? result.createdAt)}:`,
+      leadText:
+        "sua parte está feita. Em breve sai o resultado da análise: o registro, ou a nota com o que falta para registrar. Avisamos você por aqui e por e-mail.",
     };
   }
   return {
@@ -356,11 +387,29 @@ function computePrazo(
   }
   if (finished) {
     return {
-      prazoStrong: "Entregue no prazo.",
+      prazoStrong: result.analysis
+        ? "Análise concluída."
+        : "Entregue no prazo.",
       prazoText: ` A previsão era ${formatCalendarDate(result.deadlineTerm.date)}.`,
     };
   }
   const d = result.deadline;
+  // The prenotação's term is the analysis's, and where the law fixes it,
+  // it says so with the statute.
+  if (result.analysis) {
+    const legal = result.analysis.termBasis
+      ? ` Prazo legal: ${result.deadlineTerm.days} dias úteis para o registro ou a nota devolutiva. Fundamento: ${result.analysis.termBasis}.`
+      : ` Prazo de ${result.deadlineTerm.days} dias úteis informado pela serventia.`;
+    const clock = d?.paused?.length
+      ? ` A contagem está em pausa até ${d.paused.map((r) => PAUSE_LABELS[r]).join(" e ")}.`
+      : (d?.dayOfTerm ?? 0) > 0
+        ? ` Estamos no dia ${d?.dayOfTerm} de ${result.deadlineTerm.days}.`
+        : "";
+    return {
+      prazoStrong: "Resultado da análise:",
+      prazoText: ` até ${formatCalendarDate(result.deadlineTerm.date)}.${legal}${clock}`,
+    };
+  }
   if (d?.paused?.length) {
     const words = d.paused.map((r) => PAUSE_LABELS[r]).join(" e ");
     return {
@@ -1353,7 +1402,7 @@ function PayCard({
 
 /* -------------------------------------------------------------- others */
 
-function CalmCard() {
+function CalmCard({ analysis }: { analysis?: boolean }) {
   return (
     <div className="flex animate-notice-rise flex-col gap-3.5 rounded-2xl border border-brand-border bg-brand-card p-5 shadow-[0_1px_2px_rgba(20,40,25,.05)]">
       <div className="flex items-center gap-3">
@@ -1373,7 +1422,9 @@ function CalmCard() {
       </div>
       <div className="h-px bg-brand-border" />
       <p className="text-sm leading-relaxed text-brand-muted">
-        Quando terminarmos, o documento aparece aqui e fica disponível por{" "}
+        {analysis
+          ? "Quando a análise terminar, o resultado aparece aqui: o registro, ou a nota com o que falta para registrar, e fica disponível por "
+          : "Quando terminarmos, o documento aparece aqui e fica disponível por "}
         <strong className="text-brand-text">30 dias</strong> depois da
         conclusão. Se precisarmos de algo, avisamos nesta mesma página.
       </p>
@@ -1956,7 +2007,7 @@ function ServiceRequestTrilho({
                 onReported={() => setPaymentJustReported(true)}
               />
             )}
-            {showCalm && <CalmCard />}
+            {showCalm && <CalmCard analysis={Boolean(result.analysis)} />}
             {finished && (
               <DoneCard
                 result={result}
@@ -2221,6 +2272,21 @@ function LookupFlow({
   // (network, rate limit) must not throw the citizen back to the gate.
   const [live, setLive] = useState<ProtocolDetail>();
   const detail = live ?? (state.status === "success" ? state : undefined);
+
+  // Arriving from the success screen, the key came along in this tab's
+  // memory (see access-handoff.ts): consult at once instead of asking for
+  // what the citizen was just shown.
+  const handedOff = useRef(false);
+  useEffect(() => {
+    if (handedOff.current || !initialNumber) return;
+    handedOff.current = true;
+    const accessKey = takeHandedOffAccess(initialNumber);
+    if (!accessKey) return;
+    const form = new FormData();
+    form.set("protocolNumber", initialNumber);
+    form.set("accessKey", accessKey);
+    startTransition(() => formAction(form));
+  }, [initialNumber, formAction]);
 
   useLiveVersion(
     () =>

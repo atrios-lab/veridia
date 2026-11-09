@@ -36,6 +36,7 @@ import {
   type ServiceRequestStatus,
   statusLabel,
 } from "@/core/request/kinds.ts";
+import { citeLegalBasis } from "@/core/request/legal-grounds.ts";
 import { formatCents } from "@/core/request/money.ts";
 import { parseProtocolNumber } from "@/core/request/protocol.ts";
 import { signatureCaveatFor } from "@/core/request/requerimento.ts";
@@ -212,6 +213,13 @@ export interface ServiceRequestDetail extends BaseDetail {
    * closed: unlike `deadline` above, this says nothing about whether the
    * clock is still running, only what the term was. */
   deadlineTerm: { date: IsoDate; days: number };
+  /**
+   * Present for a prenotação (análise do título): what the office does after
+   * the payment is analysing the title, not preparing a document, and the
+   * result is the registration or the note of what is missing. `termBasis`
+   * is the statute of the term, when the law fixes one for the registry.
+   */
+  analysis?: { termBasis?: string };
 }
 
 export interface DataRightsDetail extends BaseDetail {
@@ -455,6 +463,14 @@ export async function lookupProtocolDetail(
         date: deadlineDate(term.startedOn, term.days, officeHolidays(tenant)),
         days: term.days,
       },
+      analysis: act.chargesPrenotation
+        ? {
+            termBasis:
+              act.legalDeadlineDays && act.legalDeadlineNote
+                ? citeLegalBasis(act.legalDeadlineNote)
+                : undefined,
+          }
+        : undefined,
       paymentSettled,
       pix:
         record.amountCents != null &&
