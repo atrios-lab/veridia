@@ -73,6 +73,36 @@ test("o pedido sem tipo conhecido mantém o nome do ato, sem expor o id", () => 
   }
 });
 
+test("a prenotação sai no requerimento com o valor, o código e a tabela", () => {
+  const prenotation = getAct("ri-prenotacao");
+  if (!prenotation) throw new Error("catalogo incompleto");
+  const text = flatten(
+    buildRequerimento(cartorioMarinho, prenotation, {
+      ...data,
+      actVariant: "averbacao",
+      prenotation: {
+        code: "2600103",
+        description: "Prenotação",
+        totalCents: 5790,
+        tableTitle: "Tabela de emolumentos 2026",
+        tableId: "00000000-0000-0000-0000-000000000000",
+      },
+    }).sections,
+  );
+  assert.match(text, /Ato requerido: Prenotação para averbação/);
+  assert.match(
+    text,
+    /Prenotação: R\$ 57,90 · código 2600103 \(Prenotação\) da Tabela de emolumentos 2026/,
+  );
+});
+
+test("sem prenotação cobrada, o requerimento não fala em valor", () => {
+  assert.doesNotMatch(
+    flatten(buildRequerimento(cartorioMarinho, marriage, data).sections),
+    /R\$/,
+  );
+});
+
 test("a gratuidade cita o tipo do ato pedido", () => {
   const { sections } = buildRequerimento(cartorioMarinho, gratuidade, {
     ...data,

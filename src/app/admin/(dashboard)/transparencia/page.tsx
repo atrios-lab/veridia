@@ -10,6 +10,7 @@ import {
   legacyBulletinDraftOf,
 } from "@/core/transparency/bulletin.ts";
 import type { SupportedState } from "@/core/transparency/rubrics.ts";
+import { FEE_TABLE_CATEGORY, readFeeTables } from "@/lib/fee-tables.ts";
 import { getSession } from "@/lib/session.ts";
 import { getTenant, today } from "@/lib/tenant.ts";
 import {
@@ -22,7 +23,10 @@ import { AdminPageHeader } from "../../_components/page-header.tsx";
 import { BulletinForm } from "./_components/bulletin-form.tsx";
 import { BulletinList } from "./_components/bulletin-list.tsx";
 import { DocumentForm } from "./_components/document-form.tsx";
-import { DocumentList } from "./_components/document-list.tsx";
+import {
+  DocumentList,
+  type FeeTableInfo,
+} from "./_components/document-list.tsx";
 import { TransparencyTabs } from "./_components/tabs.tsx";
 
 export const metadata = { title: "Transparência" };
@@ -77,7 +81,7 @@ export default async function TransparencyPage({
 
         {tab === "documentos" ? (
           <div className="mt-6 grid gap-5 lg:grid-cols-[1fr_360px]">
-            <DocumentList documents={await listDocuments(tenant.slug)} />
+            <DocumentsTab tenantSlug={tenant.slug} />
             <DocumentForm />
           </div>
         ) : (
@@ -86,6 +90,32 @@ export default async function TransparencyPage({
       </div>
     </>
   );
+}
+
+/**
+ * The list, with what each fee table holds for the prenotação: which one is
+ * in force (the first published, as on the public page) and whether its
+ * values were read from the PDF or confirmed by the office.
+ */
+async function DocumentsTab({ tenantSlug }: { tenantSlug: string }) {
+  const [documents, tables] = await Promise.all([
+    listDocuments(tenantSlug),
+    readFeeTables(tenantSlug),
+  ]);
+  const inForceId = documents.find(
+    (doc) => doc.category === FEE_TABLE_CATEGORY && doc.status === "published",
+  )?.id;
+  const feeTables: Record<string, FeeTableInfo> = {};
+  for (const doc of documents) {
+    if (doc.category !== FEE_TABLE_CATEGORY) continue;
+    const saved = tables[doc.id];
+    feeTables[doc.id] = {
+      inForce: doc.id === inForceId,
+      items: saved ? Object.keys(saved.items).length : 0,
+      source: saved?.source,
+    };
+  }
+  return <DocumentList documents={documents} feeTables={feeTables} />;
 }
 
 async function BulletinTab({

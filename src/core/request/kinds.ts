@@ -611,6 +611,15 @@ export type RequesterQualification = z.infer<
   typeof requesterQualificationSchema
 >;
 
+export const prenotationChargeSchema = z.object({
+  code: z.string(),
+  description: z.string(),
+  totalCents: z.number().int().nonnegative(),
+  tableTitle: z.string(),
+  tableId: z.string(),
+});
+export type PrenotationCharge = z.infer<typeof prenotationChargeSchema>;
+
 export const serviceRequestDetailsSchema = z.object({
   // Absent means "online", the default every citizen-filed request already
   // was before the counter could file one directly.
@@ -666,8 +675,24 @@ export const serviceRequestDetailsSchema = z.object({
   // feitos antes de a gratuidade virar ato próprio não o têm: ausente
   // significa "não sabemos", nunca um ato no lugar do que falta.
   exemption: exemptionSchema.optional(),
+  // The prenotação charged on filing, as the fee table in force priced it:
+  // the item's code, description and total, and the table it came from. A
+  // copy, not a pointer, so a new table never rewrites what this citizen was
+  // told and paid. The amount itself is `amountCents`, set from this total.
+  prenotation: prenotationChargeSchema.optional(),
 });
 export type ServiceRequestDetails = z.infer<typeof serviceRequestDetailsSchema>;
+
+/** The prenotação a request carries, or undefined. Same door as the others:
+ * jsonb is parsed on the way out. */
+export function readPrenotation(
+  details: unknown,
+): PrenotationCharge | undefined {
+  const parsed = prenotationChargeSchema.safeParse(
+    (details as { prenotation?: unknown } | null)?.prenotation,
+  );
+  return parsed.success ? parsed.data : undefined;
+}
 
 /**
  * The telephone out of a request's `details`, or "" when there is none: the

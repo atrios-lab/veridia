@@ -272,6 +272,14 @@ export interface Act {
    */
   variants?: ActVariants;
   /**
+   * The act is the prenotação of a title for analysis: the request is
+   * priced on filing with the prenotação item of the fee table in force for
+   * this attribution (see `src/core/fees/prenotation.ts`), never with a
+   * value typed in this file. A table without the item leaves the price to
+   * the operator, as for every other act.
+   */
+  chargesPrenotation?: true;
+  /**
    * Off the list, but still resolved by `getAct`: a request already filed under
    * this id keeps its name and legal basis. New requests go to the act that
    * took its place.
@@ -898,6 +906,32 @@ export const ACTS: Act[] = [
     ],
   },
   {
+    id: "ri-prenotacao",
+    attribution: "RI",
+    name: "Prenotação: análise do título para registro ou averbação",
+    variants: {
+      question: "Para registro ou averbação?",
+      options: [
+        { id: "registro", name: "Prenotação para registro" },
+        { id: "averbacao", name: "Prenotação para averbação" },
+      ],
+    },
+    processingMode: "hybrid",
+    processingHint:
+      "você envia o título para análise e paga a prenotação agora; o registro é concluído depois da análise",
+    guidance:
+      "A prenotação é a entrada do título no protocolo: ela garante a ordem de apresentação e dá início à análise. " +
+      "O valor da prenotação é cobrado no pedido, junto com o requerimento assinado. " +
+      "Os emolumentos do registro ou da averbação são calculados depois da análise e informados no protocolo.",
+    legalBasis: "Lei 6.015 arts. 12, 182 e 186",
+    requiresPurpose: false,
+    chargesPrenotation: true,
+    documents: [
+      "Título ou documento a ser analisado, completo e legível",
+      "Documento de identidade do apresentante",
+    ],
+  },
+  {
     id: "ri-registro-titulo",
     attribution: "RI",
     name: "Registro ou averbação na matrícula",
@@ -963,6 +997,32 @@ export const ACTS: Act[] = [
 
   // Registro de Títulos e Documentos
   {
+    id: "rtd-prenotacao",
+    attribution: "RTD",
+    name: "Prenotação: análise de título ou documento para registro ou averbação",
+    variants: {
+      question: "Para registro ou averbação?",
+      options: [
+        { id: "registro", name: "Prenotação para registro" },
+        { id: "averbacao", name: "Prenotação para averbação" },
+      ],
+    },
+    processingMode: "hybrid",
+    processingHint:
+      "você envia o título para análise e paga a prenotação agora; o registro é concluído depois da análise",
+    guidance:
+      "A prenotação é a entrada do título no protocolo: ela garante a ordem de apresentação e dá início à análise. " +
+      "O valor da prenotação é cobrado no pedido, junto com o requerimento assinado. " +
+      "Os emolumentos do registro ou da averbação são calculados depois da análise e informados no protocolo.",
+    legalBasis: "Lei 6.015 arts. 127 e 146",
+    requiresPurpose: false,
+    chargesPrenotation: true,
+    documents: [
+      "Título ou documento a ser analisado, completo e legível",
+      "Documento de identidade do apresentante",
+    ],
+  },
+  {
     id: "rtd-registro-documento",
     attribution: "RTD",
     name: "Registro de documento ou contrato",
@@ -1016,6 +1076,32 @@ export const ACTS: Act[] = [
   },
 
   // Registro Civil das Pessoas Jurídicas
+  {
+    id: "rcpj-prenotacao",
+    attribution: "RCPJ",
+    name: "Prenotação: análise de documento para registro ou averbação",
+    variants: {
+      question: "Para registro ou averbação?",
+      options: [
+        { id: "registro", name: "Prenotação para registro" },
+        { id: "averbacao", name: "Prenotação para averbação" },
+      ],
+    },
+    processingMode: "hybrid",
+    processingHint:
+      "você envia o título para análise e paga a prenotação agora; o registro é concluído depois da análise",
+    guidance:
+      "A prenotação é a entrada do título no protocolo: ela garante a ordem de apresentação e dá início à análise. " +
+      "O valor da prenotação é cobrado no pedido, junto com o requerimento assinado. " +
+      "Os emolumentos do registro ou da averbação são calculados depois da análise e informados no protocolo.",
+    legalBasis: "Lei 6.015 arts. 114 a 121",
+    requiresPurpose: false,
+    chargesPrenotation: true,
+    documents: [
+      "Título ou documento a ser analisado, completo e legível",
+      "Documento de identidade do apresentante",
+    ],
+  },
   {
     id: "rcpj-registro-constituicao",
     attribution: "RCPJ",

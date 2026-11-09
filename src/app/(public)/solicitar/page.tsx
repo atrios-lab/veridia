@@ -1,13 +1,19 @@
 import Link from "next/link";
 import {
+  type Act,
   ATTRIBUTION_EXAMPLES,
   ATTRIBUTION_SHORT_NAMES,
   actsOfAttribution,
   getActForTenant,
 } from "@/core/acts/catalog.ts";
+import {
+  isPrenotationAttribution,
+  prenotationNotice,
+} from "@/core/fees/prenotation.ts";
 import { SECTION_ROUTES } from "@/core/tenant/gating.ts";
 import type { Attribution } from "@/core/tenant/schema.ts";
 import { ATTRIBUTIONS } from "@/core/tenant/schema.ts";
+import { currentPrenotation } from "@/lib/fee-tables.ts";
 import { Icon } from "../_components/icon.tsx";
 import { publicMetadata } from "../_lib/metadata.ts";
 import { requireSection } from "../_lib/section.ts";
@@ -20,6 +26,19 @@ import {
 import { RequestForm } from "./request-form.tsx";
 
 export const generateMetadata = publicMetadata("/solicitar");
+
+/** What a prenotação act costs by the table in force, as the form says it;
+ * undefined for every other act, null when the table lacks the item. */
+async function prenotationFor(
+  tenantSlug: string,
+  act: Act,
+): Promise<{ headline: string; detail: string } | null | undefined> {
+  if (!act.chargesPrenotation || !isPrenotationAttribution(act.attribution)) {
+    return undefined;
+  }
+  const found = await currentPrenotation(tenantSlug, act.attribution);
+  return found ? prenotationNotice(found.item, found.tableTitle) : null;
+}
 
 function isAttribution(value: string | undefined): value is Attribution {
   return (
@@ -60,6 +79,7 @@ export default async function RequestPage({
           act={act}
           attribution={attribution}
           lookupHref={lookupHref}
+          prenotation={await prenotationFor(tenant.slug, act)}
         />
       </div>
     );

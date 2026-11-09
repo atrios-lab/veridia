@@ -89,6 +89,9 @@ export interface NewServiceRequest {
   accessKeyHash: string;
   /** Parsed by `serviceRequestDetailsSchema`. Absent files as `{}` (online). */
   details?: unknown;
+  /** Set on filing only for an act whose price the table fixes (the
+   * prenotação); every other request is priced by the operator. */
+  amountCents?: number;
 }
 
 /**
@@ -109,6 +112,7 @@ export interface NewRecord {
   /** Already parsed by the core's schema for the kind. */
   details?: unknown;
   status?: string;
+  amountCents?: number;
 }
 
 const MAX_ATTEMPTS = 5;
@@ -178,6 +182,9 @@ export async function createRecordWith(
           parameterValue: input.parameterValue ?? null,
           accessKeyHash: input.accessKeyHash ?? null,
           details: input.details ?? {},
+          ...(input.amountCents != null
+            ? { amountCents: input.amountCents }
+            : {}),
           ...(input.status
             ? {
                 status: input.status,
