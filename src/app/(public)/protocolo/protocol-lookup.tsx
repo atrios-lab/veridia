@@ -17,6 +17,7 @@ import {
   formatDate as formatCalendarDate,
   formatLongDate,
 } from "@/core/scheduling/calendar.ts";
+import { DIGITAL_DOCUMENTS_NOTICE } from "@/core/scheduling/services.ts";
 import {
   formatOfficeDate,
   formatOfficeDateTime,
@@ -1855,11 +1856,11 @@ export function AppointmentCard({
               className={`flex cursor-pointer items-center justify-center gap-2 rounded-xl border-[1.5px] border-dashed border-brand-border px-3 py-3 text-[12.5px] font-semibold text-brand-primary hover:border-brand-accent ${sendingDoc ? "opacity-60" : ""}`}
             >
               <Icon name="plus" className="h-3.5 w-3.5 text-brand-accent" />
-              {sendingDoc ? "Enviando..." : "Anexar documento"}
+              {sendingDoc ? "Enviando..." : "Anexar documento em PDF"}
               <input
                 type="file"
                 name="documento"
-                accept={ATTACHMENT_ACCEPT}
+                accept="application/pdf"
                 className="sr-only"
                 disabled={sendingDoc}
                 onChange={(event) => {
@@ -1881,9 +1882,8 @@ export function AppointmentCard({
                   (docState.status !== "idle" && docState.message)}
               </output>
             )}
-            <p className="mt-2 text-[11px] text-brand-faint">
-              Envie antes de vir o documento que quer que a serventia veja: ele
-              fica junto do seu agendamento. Foto ou PDF, um arquivo por vez.
+            <p className="mt-2 text-[11.5px] leading-relaxed text-brand-muted">
+              {DIGITAL_DOCUMENTS_NOTICE} Um arquivo por vez.
             </p>
           </form>
         ) : (

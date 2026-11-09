@@ -4,6 +4,7 @@ import { formatLongDate, type IsoDate } from "./calendar.ts";
 import {
   attendanceNotice,
   CHECKLIST_CAVEAT,
+  DIGITAL_DOCUMENTS_NOTICE,
   documentsByEmailNotice,
 } from "./services.ts";
 
@@ -89,6 +90,7 @@ export function buildAppointmentBookedEmail(
         ? [
             `Protocolo: ${facts.access.protocolNumber}. Chave de acesso: ${facts.access.accessKey}.`,
             `Com o protocolo e a chave você consulta o agendamento e envia documentos antes de vir, em ${facts.access.consultUrl}. Guarde a chave só para você.`,
+            DIGITAL_DOCUMENTS_NOTICE,
           ]
         : []),
       "Não vai poder vir? Cancele pelo botão abaixo para liberar o horário para outra pessoa.",

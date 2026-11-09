@@ -23,6 +23,7 @@ import {
   CHECKLIST_CAVEAT,
   checklistFileHref,
   checklistFor,
+  DIGITAL_DOCUMENTS_NOTICE,
   documentsByEmailNotice,
   type OfferedService,
 } from "@/core/scheduling/services.ts";
@@ -1036,6 +1037,7 @@ function ConfirmationScreen({ result }: { result: AppointmentSuccess }) {
           >
             Abrir o agendamento
           </Link>
+          <span className="mt-2 block">{DIGITAL_DOCUMENTS_NOTICE}</span>
         </ProtocolReveal>
       )}
 

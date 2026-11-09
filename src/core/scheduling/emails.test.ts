@@ -29,6 +29,8 @@ test("a confirmação traz o protocolo e a chave para consultar e enviar documen
     text,
     /envia documentos antes de vir, em https:\/\/exemplo\.com\.br\/protocolo/,
   );
+  assert.match(text, /documentos digitais em PDF no agendamento/);
+  assert.match(text, /legível e em PDF pesquisável/);
 });
 
 test("sem chave, a confirmação não fala em chave", () => {

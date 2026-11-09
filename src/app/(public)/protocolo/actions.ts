@@ -90,7 +90,11 @@ import {
   writeCitizenMessage,
 } from "@/lib/service-request.ts";
 import { getTenant, OFFICE_TIME_ZONE, today } from "@/lib/tenant.ts";
-import { AttachmentError, collectAttachments } from "@/lib/uploads.ts";
+import {
+  AttachmentError,
+  collectAttachments,
+  deleteStoredFile,
+} from "@/lib/uploads.ts";
 
 const NOT_FOUND =
   "Protocolo ou chave de acesso inválidos. Confira os dados e tente de novo.";
@@ -850,9 +854,14 @@ export async function attachExtraDocument(
   }
 }
 
+const PDF = "application/pdf";
+const PDF_ONLY =
+  "Envie o documento em PDF, legível e pesquisável (com texto que dá para selecionar). Foto não é aceita aqui.";
+
 /**
  * A document the citizen sends ahead of an appointment, from the consult
- * opened with its key: only while it is booked and not past.
+ * opened with its key: only while it is booked and not past, and only as a
+ * PDF, for the office to start the analysis before the visit.
  */
 export async function attachAppointmentDocument(
   _previous: AttachDocumentState,
@@ -883,6 +892,26 @@ export async function attachAppointmentDocument(
     };
   }
 
+  // Digital documents for the analysis ahead of the visit: PDF only, said
+  // before anything is stored. A photo of a page is what the counter can
+  // already see in person.
+  const declared = [
+    ...formData.getAll("documentoRef").map((value) => {
+      try {
+        return String(JSON.parse(String(value))?.mimeType ?? "");
+      } catch {
+        return "";
+      }
+    }),
+    ...formData
+      .getAll("documento")
+      .filter((value): value is File => value instanceof File && value.size > 0)
+      .map((file) => file.type),
+  ];
+  if (declared.some((type) => type !== PDF)) {
+    return { status: "error", message: PDF_ONLY };
+  }
+
   try {
     const stored = await collectAttachments(formData, "documento", {
       tenantSlug: tenant.slug,
@@ -891,6 +920,11 @@ export async function attachAppointmentDocument(
     if (stored.length === 0) {
       return { status: "error", message: "Escolha um arquivo para enviar." };
     }
+    // What the store recognised, not what the browser claimed.
+    if (stored.some((file) => file.mimeType !== PDF)) {
+      await Promise.all(stored.map((file) => deleteStoredFile(file.path)));
+      return { status: "error", message: PDF_ONLY };
+    }
     await addAppointmentAttachments(tenant.slug, appointment.id, stored);
     const documents = await listAppointmentAttachments(tenant.slug, [
       appointment.id,
@@ -898,7 +932,7 @@ export async function attachAppointmentDocument(
     return {
       status: "success",
       message:
-        "Documento recebido. A serventia vê o arquivo antes do atendimento.",
+        "Documento recebido. A serventia já pode adiantar a análise antes do atendimento.",
       documents: documents.map((a) => ({
         id: a.id,
         createdAt: a.createdAt.toISOString(),
