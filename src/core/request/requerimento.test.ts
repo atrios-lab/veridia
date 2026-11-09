@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 import { ACTS, getAct } from "../acts/catalog.ts";
+import { TENANTS } from "../tenant/resolve.ts";
 import { cartorioMarinho } from "../tenant/tenants/marinho.ts";
 import { SPECIALTIES } from "./legal-grounds.ts";
 import {
@@ -490,4 +491,44 @@ test("o requerimento de imóveis cita o registro como modo de aquisição", () =
   );
   assert.match(text, /Código Civil, arts\. 1\.227 e 1\.245/);
   assert.match(text, /arts\. 13 e 217 da Lei n\. 6\.015\/1973/);
+});
+
+test("cada site imprime o nome, a cidade e a corregedoria do próprio cartório", () => {
+  const act = getAct("ri-registro-titulo");
+  if (!act) throw new Error("catalogo incompleto");
+  const tenants = Object.values(TENANTS);
+  for (const tenant of tenants) {
+    const document = buildRequerimento(tenant, act, data);
+    const text = [
+      ...document.office,
+      flatten(document.sections),
+      document.footer,
+    ].join("\n");
+    assert.match(
+      text,
+      new RegExp(
+        `Oficial de Registro de Imóveis do ${escapeRegExp(tenant.name)}\\.`,
+      ),
+      tenant.slug,
+    );
+    assert.ok(document.office.includes(tenant.name), tenant.slug);
+    assert.match(
+      text,
+      new RegExp(
+        `${escapeRegExp(tenant.location.city)}/${tenant.location.state}, 04/08/2026\\.`,
+      ),
+      tenant.slug,
+    );
+    assert.match(text, new RegExp(`CGJ/${tenant.location.state}`), tenant.slug);
+    // Nenhum outro cartório aparece no papel deste.
+    for (const other of tenants) {
+      if (other.slug === tenant.slug || tenant.name.includes(other.name)) {
+        continue;
+      }
+      assert.ok(
+        !text.includes(other.name),
+        `${tenant.slug} cita ${other.name}`,
+      );
+    }
+  }
 });
