@@ -10,7 +10,7 @@ A plataforma SHALL ter um tenant próprio para alunos de turmas, `atrios-cursos`
 
 #### Scenario: Conteúdo de exemplo
 - **WHEN** alguém abre os editais e a transparência do tenant de cursos depois do seed
-- **THEN** encontra publicações e documentos fictícios, nenhum de cartório real
+- **THEN** encontra editais e boletins fictícios, nenhum de cartório real
 
 #### Scenario: Formulário gera protocolo
 - **WHEN** alguém envia um pedido de certidão pelo site do tenant de cursos
@@ -58,7 +58,7 @@ O script de dados fictícios SHALL aceitar só tenants fictícios de uma lista f
 
 #### Scenario: Tenant de cursos
 - **WHEN** alguém roda o seed para o tenant de cursos
-- **THEN** o script grava publicações, editais e documentos de transparência fictícios, sem pedidos de cidadão
+- **THEN** o script grava proclamas, editais, um aviso e boletins fictícios, sem pedidos de cidadão
 
 ### Requirement: Turma com link próprio
 
@@ -142,6 +142,10 @@ O papel de aluno SHALL ter apenas a permissão de acesso ao painel. O aluno SHAL
 #### Scenario: Início leva ao Treinamento
 - **WHEN** um aluno abre `/admin`
 - **THEN** é levado para `/admin/ajuda`
+
+#### Scenario: Menu só com o Treinamento
+- **WHEN** um aluno abre o painel
+- **THEN** o menu não mostra a Visão geral nem o e-mail corporativo, e a barra de cima não mostra a disponibilidade do chat
 
 #### Scenario: Tela de pedidos fechada
 - **WHEN** um aluno abre `/admin/pedidos`

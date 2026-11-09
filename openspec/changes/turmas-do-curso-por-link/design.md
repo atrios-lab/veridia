@@ -70,7 +70,7 @@ curso.atrioss.com/admin       painel do aluno (só Treinamento)
 
 **Conteúdo.** O que vem da configuração (seções, contatos, horários, tema) está no arquivo do tenant. O que vem do banco (publicações, editais, documentos de transparência, boletim) é preenchido por seed:
 - `scripts/seed-demo-data.ts` passa a aceitar uma lista fechada de tenants fictícios (`cartorio-demonstracao` e `atrios-cursos`), escolhida por argumento, e recusa qualquer outro, como já faz hoje;
-- ganha o conteúdo público que hoje falta: editais de cada setor, documentos de transparência e um boletim;
+- ganha o conteúdo público que hoje falta: proclamas, um edital de cada outro setor, um aviso e os boletins dos três últimos meses. Documentos de transparência ficam de fora, porque cada um é um PDF enviado ao store; quem quiser mostrá-los sobe pela tela;
 - não cria pedidos de cidadão no tenant de cursos, porque ninguém vai ver a fila do painel ali.
 
 O seed roda no banco local e no Homolog pelo agente. Em produção, o usuário roda o seed ou cadastra o conteúdo pela tela com a conta da Átrios.
@@ -81,6 +81,7 @@ O seed roda no banco local e no Homolog pelo agente. Em produção, o usuário r
 course_cohorts                                   -- a turma
   id uuid pk
   code text unique                               -- XXXX-XXXX, Crockford base32
+  course_id uuid → courses (restrict)            -- o curso que o link abre
   office_name text                               -- como sai no certificado
   office_city text                               -- "Cidade/UF"
   contact_name text, contact_phone text          -- responsável que recebeu o link
@@ -104,6 +105,8 @@ A ligação aluno ↔ turma fica numa tabela própria, e não numa coluna da tab
 
 `restrict` na turma: uma turma com alunos não some. Apagar turma não faz parte desta change.
 
+A turma guarda o curso a que se refere (decidido na implementação): o cadastro leva o aluno a esse curso e a tela da turma mostra o progresso nele, sem o código conhecer o endereço do curso de LGPD. Só cursos com carga horária, que emitem certificado, podem ter turma.
+
 O código da turma tem 8 caracteres (40 bits), no mesmo alfabeto do código do certificado (`certificateCode` em `src/core/courses/certificate.ts`), exibido como `XXXX-XXXX`. Na entrada, aceita minúsculas, sem hífen e as trocas comuns (O por 0, I e L por 1), como o certificado já faz.
 
 ### 4. Papel de aluno e permissão de turmas
@@ -117,7 +120,8 @@ PLATFORM_PERMISSIONS ["tutorials.manage", "cohorts.manage"] ← novo
 - `learner` não entra em `PANEL_ROLES`: o registrador nunca oferece esse papel em Usuários, e um envio forjado é recusado como hoje.
 - `canAccessTenant` não muda: o aluno tem `tenantSlug = atrios-cursos` e só entra lá.
 - O rótulo em português é "Aluno", em `ROLE_LABELS`.
-- Com só `admin.access`, o menu já mostra apenas o Treinamento. O início do painel, para o aluno, redireciona para `/admin/ajuda`; a regra fica numa função pura (`homeFor(role)`) chamada pela página inicial.
+- A Visão geral e o atalho do e-mail corporativo não pediam permissão e apareciam para o aluno. Eles passam a pedir `desk.access`, uma permissão de escritório nova que admin, staff e superadmin têm e o aluno não. A pílula do chat na barra de cima só aparece para quem tem `chat.manage`. Para os papéis que já existem, nada muda.
+- Com só `admin.access`, o menu mostra apenas o Treinamento. O início do painel, para o aluno, redireciona para `/admin/ajuda`; a regra fica numa função pura (`homeFor(role)`) chamada pela página inicial.
 - Todas as telas que o aluno não vê já respondem 404 por permissão. Um teste percorre as permissões de escritório e prova que `learner` não tem nenhuma além de `admin.access`.
 
 ### 5. Cadastro pelo link

@@ -43,7 +43,7 @@ Nenhuma. As regras de avaliação e certificado (`course-certificates`) ainda es
   Nenhuma coluna nova na tabela de usuários. A migração de produção é manual e roda antes do merge.
 - **Papéis e permissões**: papel `learner` com `admin.access` apenas; permissão de plataforma `cohorts.manage`, só do superadmin.
 - **Tenant**: registro de `atrios-cursos` em `src/core/tenant/tenants/`, com nome, cidade e pessoas fictícios.
-- **Seed**: `scripts/seed-demo-data.ts` passa a aceitar o tenant de cursos, além do Serra Verde, e ganha o conteúdo público (publicações, editais, documentos de transparência). Em produção, quem roda o seed ou cadastra o conteúdo pela tela é o usuário.
+- **Seed**: `scripts/seed-demo-data.ts` passa a aceitar o tenant de cursos, além do Serra Verde, e ganha o conteúdo público (proclamas, editais, aviso e boletins mensais). Em produção, quem roda o seed ou cadastra o conteúdo pela tela é o usuário.
 - **Site público**: um aviso de demonstração em todas as páginas do tenant de cursos, e só dele.
 - **Rotas novas**:
   - `/turma/[codigo]`, pública, que só responde no host do tenant de cursos;
