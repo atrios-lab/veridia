@@ -1,9 +1,5 @@
 import type { Act } from "../acts/catalog.ts";
-import {
-  ATTRIBUTION_NAMES,
-  actVariantName,
-  PURPOSE_LABEL,
-} from "../acts/catalog.ts";
+import { actVariantName, PURPOSE_LABEL } from "../acts/catalog.ts";
 import { formatMoney } from "../fees/prenotation.ts";
 import type { Tenant } from "../tenant/schema.ts";
 import { formatOfficeDate } from "../time/office-time.ts";
@@ -20,6 +16,11 @@ import {
   type RequesterQualification,
   requesterQualificationRows,
 } from "./kinds.ts";
+import {
+  citeLegalBasis,
+  generalGrounds,
+  SPECIALTIES,
+} from "./legal-grounds.ts";
 
 /**
  * The signed form, as content. Building it here, with no PDF library in sight,
@@ -162,16 +163,46 @@ function formatCpf(digits: string): string {
   return digits.replace(/^(\d{3})(\d{3})(\d{3})(\d{2})$/, "$1.$2.$3-$4");
 }
 
+/** "Lido o requerimento como um todo": quem pede, com o documento que tiver. */
+function qualificationOf(data: RequerimentoData): string {
+  const document = data.cpf
+    ? `, inscrito(a) no CPF sob o n. ${formatCpf(data.cpf)}`
+    : data.alternateDocument
+      ? `, portador(a) do documento ${ALTERNATE_DOCUMENT_LABELS[data.alternateDocument.type]} n. ${data.alternateDocument.number}`
+      : "";
+  return `${data.applicantName}${document}, com contato por ${data.contact}`;
+}
+
+/**
+ * O requerimento do ato, como peça: dirigido ao oficial ou tabelião da
+ * especialidade, com a qualificação do requerente, o pedido formal, o que a
+ * especialidade faz e com que fundamento, o princípio da instância (a
+ * serventia é inerte e só age provocada), os fatos nas palavras do próprio
+ * requerente, a fundamentação legal do ato, os documentos, as declarações e
+ * o fecho. Vale para qualquer ato do catálogo, em qualquer especialidade.
+ */
 export function buildRequerimento(
   tenant: Tenant,
   act: Act,
   data: RequerimentoData,
 ): RequerimentoDocument {
+  const specialty = SPECIALTIES[act.attribution];
+  const actName = actVariantName(act, data.actVariant) ?? act.name;
+  // A gratuidade é um pedido sobre outro ato: é esse ato que se requer, com
+  // o seu fundamento, e a gratuidade vai junto.
+  const target = data.exemption?.actId
+    ? act.exemptionTargets?.find((t) => t.id === data.exemption?.actId)
+    : undefined;
+  const requested = target
+    ? {
+        name: actVariantName(target, data.actVariant) ?? target.name,
+        basis: citeLegalBasis(target.legalBasis),
+      }
+    : { name: actName, basis: citeLegalBasis(act.legalBasis) };
+
   const applicant: RequerimentoRow[] = [
     { label: "Nome", value: data.applicantName },
-    { label: "Contato", value: data.contact },
   ];
-  if (data.phone) applicant.push({ label: "Telefone", value: data.phone });
   if (data.cpf) applicant.push({ label: "CPF", value: formatCpf(data.cpf) });
   if (data.alternateDocument) {
     applicant.push({
@@ -179,17 +210,16 @@ export function buildRequerimento(
       value: data.alternateDocument.number,
     });
   }
+  applicant.push({ label: "Contato", value: data.contact });
+  if (data.phone) applicant.push({ label: "Telefone", value: data.phone });
 
   // Protocol and date live in the subtitle, not here: they identify the
   // document and read best right under the title. The access key is the
   // credential and goes on its own page below, never in the body.
   const request: RequerimentoRow[] = [
-    { label: "Atribuição", value: ATTRIBUTION_NAMES[act.attribution] },
-    {
-      label: "Ato requerido",
-      value: actVariantName(act, data.actVariant) ?? act.name,
-    },
-    { label: "Base legal", value: act.legalBasis },
+    { label: "Especialidade", value: specialty.name },
+    { label: "Ato requerido", value: actName },
+    { label: "Fundamento do ato", value: requested.basis },
   ];
   if (act.deliveryChoice) {
     request.push(...deliveryFormatRows(data.deliveryFormat));
@@ -214,20 +244,52 @@ export function buildRequerimento(
   }
 
   const sections: RequerimentoSection[] = [
-    { heading: "Requerente", rows: applicant },
-    { heading: "Pedido", rows: request },
+    {
+      heading: "Destinatário",
+      paragraphs: [
+        `Ilustríssimo(a) Senhor(a) ${specialty.officer} do ${tenant.name}.`,
+      ],
+    },
+    { heading: "Qualificação do requerente", rows: applicant },
+    {
+      heading: "Do requerimento",
+      paragraphs: [
+        `${qualificationOf(data)}, vem, respeitosamente, à presença de Vossa Senhoria, com ` +
+          `fundamento no ${specialty.instanceBasis}, REQUERER a prática do ato de ` +
+          `"${requested.name}"${target ? ", com gratuidade" : ""}, da especialidade de ` +
+          `${specialty.name}, pelos fatos e fundamentos a seguir expostos.`,
+      ],
+    },
+    { heading: "Do ato requerido", rows: request },
+    { heading: "Da especialidade", paragraphs: [specialty.scope] },
+    {
+      heading: "Do princípio da instância",
+      paragraphs: [specialty.instance],
+    },
   ];
 
+  // What the citizen wrote is theirs: quoted as written, never rephrased.
   if (data.description) {
     sections.push({
-      heading: "Descrição do pedido",
-      paragraphs: [data.description],
+      heading: "Dos fatos, nas palavras do requerente",
+      paragraphs: [`“${data.description.trim()}”`],
     });
   }
 
+  sections.push({
+    heading: "Da fundamentação legal",
+    paragraphs: [
+      `Fundamento do ato requerido: ${requested.basis}. Observam-se, ainda, as normas ` +
+        "da especialidade e as gerais dos serviços notariais e de registro:",
+      ...[...specialty.grounds, ...generalGrounds(tenant.location.state)].map(
+        (ground) => `- ${ground}`,
+      ),
+    ],
+  });
+
   if (act.documents?.length) {
     sections.push({
-      heading: "Documentos esperados para este ato",
+      heading: "Documentos que instruem o pedido",
       paragraphs: act.documents.map((document) => `- ${document}`),
     });
   }
@@ -253,7 +315,7 @@ export function buildRequerimento(
     declarations.push(
       requested?.feeExemption
         ? `Pede a gratuidade de "${actVariantName(requested, data.actVariant) ?? requested.name}" (fundamento: ` +
-            `${requested.feeExemption.legalBasis}), conforme declaração de ` +
+            `${citeLegalBasis(requested.feeExemption.legalBasis)}), conforme declaração de ` +
             "hipossuficiência que acompanha este requerimento."
         : "Pede a gratuidade conforme declaração de hipossuficiência que " +
             "acompanha este requerimento.",
@@ -261,9 +323,25 @@ export function buildRequerimento(
   }
   sections.push({ heading: "Declarações", paragraphs: declarations });
 
+  sections.push({
+    heading: "Do pedido",
+    paragraphs: [
+      "Diante do exposto, requer a Vossa Senhoria o recebimento e o processamento deste " +
+        `requerimento, com a prática do ato de "${requested.name}" após a ${specialty.qualification}, ` +
+        (data.exemption
+          ? "apreciado o pedido de gratuidade; não reconhecida a gratuidade, mediante o " +
+            "recolhimento dos emolumentos devidos pela tabela vigente. "
+          : "mediante o recolhimento dos emolumentos devidos pela tabela vigente. ") +
+        "Havendo exigência a cumprir, requer seja formulada por escrito, de uma só vez, para " +
+        "que o requerente possa atendê-la.",
+      "Termos em que pede deferimento.",
+      `${tenant.location.city}/${tenant.location.state}, ${formatOfficeDate(data.createdAt)}.`,
+    ],
+  });
+
   return {
-    eyebrow: "Solicitação de atos",
-    title: "Requerimento de serviço",
+    eyebrow: specialty.name,
+    title: "Requerimento",
     subtitle: `Protocolo ${data.protocolNumber} · ${formatOfficeDate(data.createdAt)}`,
     office: [
       tenant.name,
