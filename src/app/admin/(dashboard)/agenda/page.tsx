@@ -34,6 +34,7 @@ import {
   AGENDAS_SHARE_TIMES,
   appointmentsOn,
   getAgendaConfig,
+  listAppointmentAttachments,
   liveCountsByDay,
 } from "@/lib/appointments.ts";
 import { getSession } from "@/lib/session.ts";
@@ -103,6 +104,18 @@ export default async function AgendaPage({
     (a) => agendaIdOf(a.agenda) === agenda,
   );
   const live = appointments.filter((a) => a.status !== "cancelled");
+  // What citizens sent ahead from the consult, by appointment.
+  const filesByAppointment = new Map<string, { id: string; name: string }[]>();
+  for (const file of await listAppointmentAttachments(
+    tenant.slug,
+    appointments.map((a) => a.id),
+  ).catch(() => [])) {
+    const list = filesByAppointment.get(file.appointmentId) ?? [];
+    // Numbered, not named: the stored name is positional on purpose, and
+    // "Documento 2" reads better at the counter than "anexo-2".
+    list.push({ id: file.id, name: `Documento ${list.length + 1}` });
+    filesByAppointment.set(file.appointmentId, list);
+  }
   const takenTimes = new Set(live.map((a) => a.slotTime));
   // While the two agendas share their times, an hour the other one holds is
   // not free here either: the database would refuse it.
@@ -152,6 +165,7 @@ export default async function AgendaPage({
         origin: appointment.origin,
         protocolNumber: appointment.protocolNumber,
         cancelReason: appointment.cancelReason,
+        files: filesByAppointment.get(appointment.id) ?? [],
         canDeclare:
           appointment.status === "attended" && !isRemoteMode(appointment.mode),
         awaitingConfirmation:

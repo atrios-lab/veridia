@@ -34,6 +34,10 @@ export interface AppointmentEmailFacts {
   checklistUrl?: string;
   /** The office's e-mail, for documents sent ahead with a doubt. */
   officeEmail?: string;
+  /** The AGD protocol and the access key that opens it on the consult, for
+   * the citizen to follow the appointment and send documents ahead. Only
+   * the booking confirmation carries the key. */
+  access?: { protocolNumber: string; accessKey: string; consultUrl: string };
 }
 
 /** "quinta, 06/08/2026, das 08:30 às 09:30" */
@@ -81,6 +85,12 @@ export function buildAppointmentBookedEmail(
       isRemoteMode(facts.mode)
         ? "O comprovante de agendamento em PDF vai anexo."
         : "O comprovante de agendamento em PDF vai anexo: apresente-o na recepção, impresso ou no celular.",
+      ...(facts.access
+        ? [
+            `Protocolo: ${facts.access.protocolNumber}. Chave de acesso: ${facts.access.accessKey}.`,
+            `Com o protocolo e a chave você consulta o agendamento e envia documentos antes de vir, em ${facts.access.consultUrl}. Guarde a chave só para você.`,
+          ]
+        : []),
       "Não vai poder vir? Cancele pelo botão abaixo para liberar o horário para outra pessoa.",
     ],
     buttonLabel: "Cancelar este agendamento",

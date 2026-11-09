@@ -101,6 +101,8 @@ export async function sendAppointmentBookedEmail(
   tenant: Tenant,
   appointment: Appointment,
   cancelToken: string,
+  /** The access key just issued, said once in this e-mail. */
+  accessKey?: string,
 ): Promise<void> {
   const cancelUrl = `${baseUrl(tenant)}/agendar/cancelar?token=${encodeURIComponent(cancelToken)}`;
   try {
@@ -115,6 +117,14 @@ export async function sendAppointmentBookedEmail(
       checklistUrl: service?.hasOwnFile
         ? `${baseUrl(tenant)}${checklistFileHref(service.id)}`
         : undefined,
+      access:
+        accessKey && appointment.protocolNumber
+          ? {
+              protocolNumber: appointment.protocolNumber,
+              accessKey,
+              consultUrl: `${baseUrl(tenant)}/protocolo`,
+            }
+          : undefined,
     });
     // A receipt that fails to render must not cost the citizen the
     // confirmation itself: it goes out without the PDF, which the

@@ -26,6 +26,8 @@ export interface DayAppointment {
   origin: string;
   protocolNumber: string | null;
   cancelReason: string | null;
+  /** Documents the citizen sent ahead from the protocol consult. */
+  files?: { id: string; name: string }[];
   /** Its hour is over and nobody said whether the citizen came. */
   awaitingConfirmation?: boolean;
   /** Attended in person: the attendance declaration can be printed. */
@@ -181,6 +183,23 @@ function AppointmentRow({ appointment }: { appointment: DayAppointment }) {
         <p className="mt-1.5 break-words text-[12px] leading-relaxed text-admin-text">
           <span className="font-semibold">O que precisa:</span>{" "}
           {appointment.serviceDetails}
+        </p>
+      )}
+
+      {appointment.files && appointment.files.length > 0 && (
+        <p className="mt-1.5 flex flex-wrap items-center gap-x-2 gap-y-1 text-[12px] text-admin-text">
+          <span className="font-semibold">Enviou antes:</span>
+          {appointment.files.map((file) => (
+            <a
+              key={file.id}
+              href={`/admin/agenda/arquivo?id=${file.id}`}
+              target="_blank"
+              rel="noopener"
+              className="inline-flex max-w-[220px] items-center gap-1 truncate rounded-md bg-admin-input-bg px-2 py-0.5 font-semibold text-admin-primary underline-offset-2 hover:underline"
+            >
+              {file.name}
+            </a>
+          ))}
         </p>
       )}
 
