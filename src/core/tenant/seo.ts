@@ -219,8 +219,9 @@ function clock(minutes: number): string {
  *
  * The hours are the counter's (`counterHours`), Monday to Friday, the same
  * spans the "Aberto agora" line reads, so an office with a lunch break
- * declares its morning and its afternoon apart. The CNS is the one
- * identifier a serventia has that no other shares.
+ * declares its morning and its afternoon apart. The CNS stays out: the
+ * office decided its number is not published anywhere on the site or in
+ * its documents (09/11/2026).
  */
 export function organizationJsonLd(
   tenant: Tenant,
@@ -249,11 +250,6 @@ export function organizationJsonLd(
         closes: clock(closes),
       }),
     ),
-    identifier: {
-      "@type": "PropertyValue",
-      propertyID: "CNS",
-      value: tenant.cns,
-    },
   };
 }
 

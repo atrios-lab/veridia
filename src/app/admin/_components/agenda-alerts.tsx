@@ -277,14 +277,30 @@ function ConfirmCard({
   useEffect(() => {
     if (!done || reported.current) return;
     reported.current = true;
-    // A toast, because the card itself leaves with the next refresh.
-    toast.success(
-      attended.status === "success"
-        ? `${item.citizenName}: atendido.`
-        : `${item.citizenName}: não compareceu.`,
-    );
+    // A toast, because the card itself leaves with the next refresh. An
+    // in-person visit marked attended offers its declaration right there.
+    if (attended.status === "success") {
+      toast.success(`${item.citizenName}: atendido.`, {
+        duration: 10_000,
+        ...(item.remote
+          ? {}
+          : {
+              action: {
+                label: "Declaração de comparecimento",
+                onClick: () =>
+                  window.open(
+                    `/admin/agenda/comparecimento/${item.id}`,
+                    "_blank",
+                    "noopener",
+                  ),
+              },
+            }),
+      });
+    } else {
+      toast.success(`${item.citizenName}: não compareceu.`);
+    }
     onDone();
-  }, [done, onDone, attended.status, item.citizenName]);
+  }, [done, onDone, attended.status, item.citizenName, item.id, item.remote]);
 
   if (done) {
     return (

@@ -13,6 +13,7 @@ import {
   DEFAULT_CHANNELS,
   hasGrid,
   isAgendaId,
+  isRemoteMode,
   slotEndTime,
   usesChannels,
 } from "@/core/scheduling/agenda.ts";
@@ -151,6 +152,8 @@ export default async function AgendaPage({
         origin: appointment.origin,
         protocolNumber: appointment.protocolNumber,
         cancelReason: appointment.cancelReason,
+        canDeclare:
+          appointment.status === "attended" && !isRemoteMode(appointment.mode),
         awaitingConfirmation:
           appointment.status === "booked" &&
           (appointment.date < now.date ||

@@ -3,6 +3,7 @@ import { and, asc, desc, eq, gt, isNull, sql } from "drizzle-orm";
 import {
   AGENDA_NAMES,
   agendaIdOf,
+  isRemoteMode,
   slotEndTime,
 } from "@/core/scheduling/agenda.ts";
 import { ACTIONABLE_APPOINTMENT_STATUS } from "@/core/scheduling/appointment.ts";
@@ -160,6 +161,8 @@ export interface AgendaAlertItem {
   serviceLabel: string;
   /** ISO instant the booking was made. */
   createdAt: string;
+  /** By video or phone: no attendance declaration for it. */
+  remote: boolean;
 }
 
 export interface AgendaAlertSnapshot {
@@ -184,6 +187,7 @@ function alertItem(appointment: Appointment): AgendaAlertItem {
     citizenName: appointment.citizenName,
     serviceLabel: appointment.serviceLabel,
     createdAt: appointment.createdAt.toISOString(),
+    remote: isRemoteMode(appointment.mode),
   };
 }
 

@@ -7,8 +7,12 @@ import {
 } from "@/core/scheduling/services.ts";
 import type { Tenant } from "@/core/tenant/schema.ts";
 import { type Appointment, getAgendaConfig } from "./appointments.ts";
+import {
+  attendanceDeclarationFor,
+  canDeclareAttendance,
+} from "./attendance-declaration.ts";
 import { brandFor } from "./document-brand.ts";
-import { renderDocument } from "./pdf.ts";
+import { renderDocument, renderDocuments } from "./pdf.ts";
 
 /**
  * The receipt of one appointment as a PDF on the office's letterhead, the
@@ -21,35 +25,69 @@ export async function renderAppointmentReceipt(
   appointment: Appointment,
   origin: string,
 ): Promise<Buffer> {
+  const receipt = await appointmentReceiptDocument(tenant, appointment, origin);
+  // Once the office marked the citizen attended, the receipt printed at the
+  // counter carries the attendance declaration as its second page, and the
+  // QR on both leads to the declaration's validation.
+  if (canDeclareAttendance(appointment)) {
+    const declaration = attendanceDeclarationFor(tenant, appointment, origin);
+    return renderDocuments(
+      [receipt, declaration.document],
+      await brandFor(tenant, declaration.url),
+    );
+  }
+  return renderDocument(receipt, await brandFor(tenant, `${origin}/protocolo`));
+}
+
+/** The declaration alone, for the panel's own button. */
+export async function renderAttendanceDeclaration(
+  tenant: Tenant,
+  appointment: Appointment,
+  origin: string,
+): Promise<Buffer> {
+  const declaration = attendanceDeclarationFor(tenant, appointment, origin);
+  return renderDocument(
+    declaration.document,
+    await brandFor(tenant, declaration.url),
+  );
+}
+
+async function appointmentReceiptDocument(
+  tenant: Tenant,
+  appointment: Appointment,
+  origin: string,
+) {
   const config = await getAgendaConfig(tenant.slug);
   const known = resolveService(config, appointment.serviceId);
-  return renderDocument(
-    buildAppointmentReceipt(tenant, {
-      protocolNumber: appointment.protocolNumber,
-      agenda: agendaIdOf(appointment.agenda),
-      date: appointment.date,
-      slotTime: appointment.slotTime,
-      citizenName: appointment.citizenName,
-      cpf: appointment.cpf,
-      phone: appointment.phone,
-      email: appointment.email,
-      mode: appointment.mode,
-      serviceDetails: appointment.serviceDetails,
-      // The label the citizen booked, even if the office renamed it since;
-      // the list from wherever the service still lives.
-      service: {
-        label: appointment.serviceLabel,
-        bring: known?.bring ?? [],
-        note: known?.note,
-        checklist: known?.checklist,
-      },
-      checklistUrl: known?.hasOwnFile
-        ? `${origin}${checklistFileHref(known.id)}`
-        : undefined,
-      createdAt: appointment.createdAt,
-    }),
-    await brandFor(tenant, `${origin}/protocolo`),
-  );
+  return buildAppointmentReceipt(tenant, {
+    protocolNumber: appointment.protocolNumber,
+    agenda: agendaIdOf(appointment.agenda),
+    date: appointment.date,
+    slotTime: appointment.slotTime,
+    citizenName: appointment.citizenName,
+    cpf: appointment.cpf,
+    phone: appointment.phone,
+    email: appointment.email,
+    mode: appointment.mode,
+    serviceDetails: appointment.serviceDetails,
+    // The label the citizen booked, even if the office renamed it since;
+    // the list from wherever the service still lives.
+    service: {
+      label: appointment.serviceLabel,
+      bring: known?.bring ?? [],
+      note: known?.note,
+      checklist: known?.checklist,
+    },
+    checklistUrl: known?.hasOwnFile
+      ? `${origin}${checklistFileHref(known.id)}`
+      : undefined,
+    createdAt: appointment.createdAt,
+  });
+}
+
+/** The declaration's file name. */
+export function declarationFileName(appointment: Appointment): string {
+  return `declaracao-comparecimento-${appointment.protocolNumber ?? appointment.date}.pdf`;
 }
 
 /** The file name the browser saves it under. */

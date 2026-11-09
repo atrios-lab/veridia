@@ -119,7 +119,9 @@ test("the office's JSON-LD carries what a search engine matches on", () => {
   const [hours] = data.openingHoursSpecification as Record<string, unknown>[];
   assert.equal(hours.opens, "08:00");
   assert.equal(hours.closes, "14:00");
-  assert.equal((data.identifier as Record<string, string>).value, "094615");
+  // The office does not publish its CNS, not even in the page's metadata.
+  assert.equal(data.identifier, undefined);
+  assert.doesNotMatch(JSON.stringify(data), /094615/);
   assert.ok((data.logo as string).startsWith(`${origin}/`));
 });
 

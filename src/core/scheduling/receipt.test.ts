@@ -9,6 +9,7 @@ const tenant = {
   subtitle: "Ofício Único",
   address: "Rua das Flores, 10, Centro",
   contacts: { phone: "(84) 3000-0000", email: "cartorio@exemplo.com" },
+  cns: "123456",
   legalFooter: "Serventia extrajudicial",
 } as unknown as Tenant;
 
@@ -31,6 +32,8 @@ test("the receipt carries the time to arrive and what to bring", () => {
   });
 
   assert.equal(receipt.title, "Comprovante de agendamento");
+  // The office does not publish its CNS on any document.
+  assert.doesNotMatch(JSON.stringify(receipt), /CNS|123456/);
   assert.match(receipt.subtitle, /AGD\.2026\.000007/);
   assert.equal(receipt.eyebrow, "Atendimento do cartório");
   const when = receipt.sections[0];
