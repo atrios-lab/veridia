@@ -22,17 +22,26 @@ import {
   dayOfMonth,
   formatFullDate,
   formatShortDate,
-  nextBusinessDays,
+  holidayName,
+  type IsoDate,
+  isBusinessDay,
+  isWeekend,
   officeHolidays,
   shortWeekday,
   weekday,
 } from "@/core/scheduling/calendar.ts";
 import { servicesOfAgenda } from "@/core/scheduling/services.ts";
-import { freeSlots, gridTimes } from "@/core/scheduling/slots.ts";
+import {
+  freeSlots,
+  gridTimes,
+  type OfficeAgenda,
+  whyNotOffered,
+} from "@/core/scheduling/slots.ts";
 import { awaitingConfirmation } from "@/lib/appointment-reminders.ts";
 import {
   AGENDAS_SHARE_TIMES,
   appointmentsOn,
+  bookedFrom,
   getAgendaConfig,
   listAppointmentAttachments,
   liveCountsByDay,
@@ -53,7 +62,16 @@ export const metadata = { title: "Agenda de atendimentos" };
 
 const ISO = /^\d{4}-\d{2}-\d{2}$/;
 
-/** How many business days one page of the strip shows. */
+/** The next `count` weekdays from `from` (included), holidays among them. */
+function weekdaysFrom(from: IsoDate, count: number): IsoDate[] {
+  const days: IsoDate[] = [];
+  for (let cursor = from; days.length < count; cursor = addDays(cursor, 1)) {
+    if (!isWeekend(cursor)) days.push(cursor);
+  }
+  return days;
+}
+
+/** How many weekdays one page of the strip shows. */
 const STRIP_DAYS = 7;
 
 /**
@@ -75,30 +93,47 @@ export default async function AgendaPage({
   const anchor = ISO.test(params.de ?? "") ? (params.de as string) : today();
   const agenda: AgendaId = isAgendaId(params.agenda) ? params.agenda : "geral";
 
-  const stripDates = nextBusinessDays(
-    anchor,
-    STRIP_DAYS,
-    officeHolidays(tenant),
-  );
+  const holidays = officeHolidays(tenant);
+  // Weekdays, holidays included: a holiday shows in the strip as closed and
+  // named, rather than the week silently skipping it.
+  const stripDates = weekdaysFrom(anchor, STRIP_DAYS);
   const stripFrom = stripDates[0] ?? anchor;
   const stripTo = stripDates.at(-1) ?? anchor;
 
-  const [agendaConfig, dayAppointments, counts, unconfirmed] =
+  const [agendaConfig, dayAppointments, counts, unconfirmed, upcoming] =
     await Promise.all([
       getAgendaConfig(tenant.slug),
       appointmentsOn(tenant.slug, date),
       liveCountsByDay(tenant.slug, stripFrom, stripTo, agenda),
       awaitingConfirmation(tenant.slug, officeNow()),
+      bookedFrom(tenant.slug, today()),
     ]);
 
   // The office's own days off ride along, so its holidays close the day
   // here as they do on the public page.
-  const config = {
-    ...agendaRules(agendaConfig, agenda),
-    holidays: officeHolidays(tenant),
-  };
+  const config = { ...agendaRules(agendaConfig, agenda), holidays };
   const now = officeNow();
   const closed = closedDate(config, date);
+  // A holiday or a weekend: the agenda is shut that day on the site and at
+  // the counter, whatever the grid says, and the panel says which one.
+  const dayOff =
+    !closed && !isBusinessDay(date, holidays)
+      ? whyNotOffered(config, date)
+      : undefined;
+  // Still booked on a day the office no longer receives on: a holiday added
+  // after the booking, a law day switched back on, a weekday that lost its
+  // times. Nothing is cancelled for the office; it is told, so the citizen
+  // is not.
+  const stranded = upcoming.flatMap((appointment) => {
+    const reason = whyNotOffered(
+      {
+        ...agendaRules(agendaConfig, agendaIdOf(appointment.agenda)),
+        holidays,
+      },
+      appointment.date,
+    );
+    return reason ? [{ appointment, reason }] : [];
+  });
   const grid = gridTimes(config, date);
   const appointments = dayAppointments.filter(
     (a) => agendaIdOf(a.agenda) === agenda,
@@ -234,7 +269,8 @@ export default async function AgendaPage({
         />
         <p className="text-[12px] text-admin-faint">
           Sábado e domingo não têm horários configurados e não aparecem: nem
-          aqui, nem no site.
+          aqui, nem no site. Feriado aparece como fechado e não é oferecido no
+          site.
         </p>
 
         <div className="mt-1.5 grid items-start gap-4.5 lg:grid-cols-[1fr_320px]">
@@ -261,7 +297,7 @@ export default async function AgendaPage({
                   ? channelLabelsOn(agendaConfig.agendas[agenda], date)
                   : agendaConfig.modes
               }
-              closed={Boolean(closed)}
+              closed={Boolean(closed) || Boolean(dayOff)}
             />
           </section>
 
@@ -282,6 +318,48 @@ export default async function AgendaPage({
                 </span>
               </span>
             </Link>
+
+            {stranded.length > 0 && (
+              <section className="rounded-[14px] border-2 border-admin-warning-bg bg-admin-card px-5 py-4">
+                <h3 className="text-[13px] font-bold text-admin-primary">
+                  Agendados em dia sem atendimento ({stranded.length})
+                </h3>
+                <p className="mt-1 text-[12px] leading-relaxed text-admin-muted">
+                  Foram marcados antes de o dia virar feriado ou ficar sem
+                  atendimento. O site já não oferece esses dias. Abra o dia para
+                  remarcar com o cidadão ou cancelar (o Cancelar avisa por
+                  e-mail).
+                </p>
+                <ul className="mt-2.5 flex flex-col gap-2">
+                  {stranded.slice(0, 8).map(({ appointment, reason }) => (
+                    <li key={appointment.id}>
+                      <Link
+                        href={`/admin/agenda?agenda=${agendaIdOf(appointment.agenda)}&dia=${appointment.date}`}
+                        className="block text-[12.5px] text-admin-text hover:underline"
+                      >
+                        <span className="flex justify-between gap-2">
+                          <span className="min-w-0 truncate font-semibold">
+                            {appointment.citizenName}
+                          </span>
+                          <span className="shrink-0 tabular-nums text-admin-muted">
+                            {formatShortDate(appointment.date)}{" "}
+                            {appointment.slotTime}
+                          </span>
+                        </span>
+                        <span className="block text-[11.5px] text-admin-warning-text">
+                          {reason}
+                        </span>
+                      </Link>
+                    </li>
+                  ))}
+                </ul>
+                {stranded.length > 8 && (
+                  <p className="mt-1.5 text-[11.5px] text-admin-faint">
+                    e mais {stranded.length - 8}.
+                  </p>
+                )}
+              </section>
+            )}
 
             {unconfirmed.length > 0 && (
               <section className="rounded-[14px] border-2 border-admin-warning-bg bg-admin-card px-5 py-4">
@@ -338,6 +416,26 @@ export default async function AgendaPage({
 
             {closed ? (
               <ClosedDayCard date={date} reason={closed.reason} />
+            ) : dayOff ? (
+              <section className="rounded-[14px] border border-admin-warning-soft-border bg-admin-warning-bg px-5 py-4">
+                <h3 className="text-[13px] font-bold text-admin-warning-text">
+                  Sem atendimento neste dia
+                </h3>
+                <p className="mt-1 text-[12.5px] text-admin-warning-text">
+                  {dayOff}
+                </p>
+                <p className="mt-1 text-[12.5px] leading-relaxed text-admin-warning-text">
+                  As duas agendas ficam fechadas: o site não oferece esta data e
+                  o balcão não reserva. Os feriados do cartório ficam em{" "}
+                  <Link
+                    href="/admin/configuracoes"
+                    className="font-semibold underline"
+                  >
+                    Configurações
+                  </Link>
+                  .
+                </p>
+              </section>
             ) : (
               <CloseDayCard
                 date={date}
@@ -402,7 +500,7 @@ function DayStrip({
   dates: string[];
   selected: string;
   anchor: string;
-  config: Parameters<typeof gridTimes>[0];
+  config: OfficeAgenda;
   counts: Map<string, number>;
 }) {
   const arrowClass =
@@ -419,7 +517,12 @@ function DayStrip({
       <div className="grid flex-1 grid-cols-7 gap-2">
         {dates.map((date) => {
           const isSelected = date === selected;
-          const closed = closedDate(config, date);
+          // A holiday reads as closed too, by its own word: it is not a date
+          // the office closed by hand, so there is nothing to reopen here.
+          const holiday = closedDate(config, date)
+            ? undefined
+            : holidayName(date, config.holidays);
+          const closed = closedDate(config, date) ?? holiday;
           const total = gridTimes(config, date).length;
           const occupied = counts.get(date) ?? 0;
           return (
@@ -472,7 +575,7 @@ function DayStrip({
                 {closed ? (
                   <>
                     <AdminIcon name="lock" className="h-3 w-3" />
-                    Fechado
+                    {holiday ? "Feriado" : "Fechado"}
                   </>
                 ) : (
                   `${occupied} de ${total}${isSelected ? " ocupados" : ""}`

@@ -2,6 +2,8 @@
 
 import { revalidatePath } from "next/cache";
 import { can } from "@/core/auth/roles.ts";
+import { agendaIdOf, agendaRules } from "@/core/scheduling/agenda.ts";
+import { whyNotOffered } from "@/core/scheduling/slots.ts";
 import {
   OfficeContactSchema,
   OfficeDeadlineSchema,
@@ -9,6 +11,7 @@ import {
 } from "@/core/tenant/overrides.ts";
 import { db } from "@/db/index.ts";
 import { tenantContent } from "@/db/schema.ts";
+import { bookedFrom, getAgendaConfig } from "@/lib/appointments.ts";
 import { recordAudit } from "@/lib/audit.ts";
 import { getSession } from "@/lib/session.ts";
 import {
@@ -16,6 +19,7 @@ import {
   OFFICE_CONTACT_KEY,
   OFFICE_DEADLINE_KEY,
   OFFICE_HOLIDAYS_KEY,
+  today,
 } from "@/lib/tenant.ts";
 
 /** The fields as they were typed, unvalidated. */
@@ -264,7 +268,9 @@ export type HolidayDraft = { name: string; date: string; yearly: boolean };
 
 export type OfficeHolidaysState =
   | { status: "idle" }
-  | { status: "saved" }
+  // `stranded`: appointments still booked on a day the office, with the
+  // calendar just saved, no longer receives on.
+  | { status: "saved"; stranded: number }
   | {
       status: "error";
       message: string;
@@ -361,5 +367,34 @@ export async function saveOfficeHolidays(
   // A day off reaches the whole site (the hours card, the chat, the agenda,
   // every term) and the panel's queues.
   revalidatePath("/", "layout");
-  return { status: "saved" };
+  return {
+    status: "saved",
+    stranded: await strandedBy(tenant.slug, parsed.data),
+  };
+}
+
+/**
+ * How many appointments still booked fall on a day the office no longer
+ * receives on, with the calendar just saved: a new holiday on a day people
+ * had already booked. The agenda lists them; this only says to look. A read
+ * that fails counts none rather than turning a saved calendar into an error.
+ */
+async function strandedBy(
+  tenantSlug: string,
+  holidays: Parameters<typeof whyNotOffered>[0]["holidays"],
+): Promise<number> {
+  try {
+    const [office, upcoming] = await Promise.all([
+      getAgendaConfig(tenantSlug),
+      bookedFrom(tenantSlug, today()),
+    ]);
+    return upcoming.filter((appointment) =>
+      whyNotOffered(
+        { ...agendaRules(office, agendaIdOf(appointment.agenda)), holidays },
+        appointment.date,
+      ),
+    ).length;
+  } catch {
+    return 0;
+  }
 }
