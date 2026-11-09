@@ -53,6 +53,7 @@ export default async function AgendaSettingsPage() {
           ]),
         ),
         slotServices: config.agendas[id].slotServices,
+        slotCapacity: config.agendas[id].slotCapacity,
         serviceIds: config.agendas[id].serviceIds,
         channels: config.agendas[id].channels,
       },
@@ -62,6 +63,7 @@ export default async function AgendaSettingsPage() {
     {
       grid: Record<string, string[]>;
       slotServices: Record<string, Record<string, string[]>>;
+      slotCapacity: Record<string, Record<string, number>>;
       serviceIds: string[];
       channels: Record<string, AttendanceChannel[]>;
     }

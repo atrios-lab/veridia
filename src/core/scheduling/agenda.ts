@@ -110,6 +110,9 @@ export function agendaIdOf(value: unknown): AgendaId {
 }
 
 const gridSchema = z.partialRecord(weekdayKey, dayTimes).default({});
+
+/** The most citizens one time can take: an office's whole counter. */
+export const MAX_SLOT_CAPACITY = 99;
 export type AgendaGrid = z.infer<typeof gridSchema>;
 
 /**
@@ -176,8 +179,18 @@ export const agendaBookSchema = z.object({
       z.record(slotTime, z.array(z.string().min(1)).min(1)),
     )
     .default({}),
+  // How many citizens one time of one weekday takes at once: one per
+  // attendant who starts at that hour ("às 08:00, 20 vagas"). A time with no
+  // entry takes one, which is what every config before this said.
+  slotCapacity: z
+    .partialRecord(
+      weekdayKey,
+      z.record(slotTime, z.number().int().min(1).max(MAX_SLOT_CAPACITY)),
+    )
+    .default({}),
 });
 export type AgendaBook = z.infer<typeof agendaBookSchema>;
+export type SlotCapacity = AgendaBook["slotCapacity"];
 export type SlotServices = AgendaBook["slotServices"];
 
 const EMPTY_BOOK: AgendaBook = {
@@ -186,7 +199,36 @@ const EMPTY_BOOK: AgendaBook = {
   channels: {},
   dayChannels: [],
   slotServices: {},
+  slotCapacity: {},
 };
+
+/** How many citizens a time of a weekday takes at once; one by default. */
+export function capacityAt(
+  book: Pick<AgendaBook, "slotCapacity">,
+  day: number,
+  time: SlotTime,
+): number {
+  const key = String(day) as `${AgendaWeekday}`;
+  return book.slotCapacity[key]?.[time] ?? 1;
+}
+
+/** The vacancies still meaningful after the grid changed: only times in the
+ * grid, and only more than one (one is the default, said by no entry). */
+export function pruneSlotCapacity(
+  book: Pick<AgendaBook, "grid" | "slotCapacity">,
+): SlotCapacity {
+  const pruned: SlotCapacity = {};
+  for (const [day, byTime] of Object.entries(book.slotCapacity)) {
+    const key = day as `${AgendaWeekday}`;
+    const times = new Set(book.grid[key] ?? []);
+    const kept: Record<SlotTime, number> = {};
+    for (const [time, count] of Object.entries(byTime ?? {})) {
+      if (times.has(time) && count > 1) kept[time] = count;
+    }
+    if (Object.keys(kept).length > 0) pruned[key] = kept;
+  }
+  return pruned;
+}
 
 /**
  * The services a time of a weekday takes, when the office narrowed it;

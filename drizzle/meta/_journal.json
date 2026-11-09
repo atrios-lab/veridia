@@ -260,6 +260,13 @@
       "when": 1794202906604,
       "tag": "0036_chave_arquivos_e_exclusao_do_agendamento",
       "breakpoints": true
+    },
+    {
+      "idx": 37,
+      "version": "7",
+      "when": 1794203151935,
+      "tag": "0037_vagas_por_horario",
+      "breakpoints": true
     }
   ]
 }

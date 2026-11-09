@@ -40,7 +40,7 @@ export interface DayAppointment {
 
 export type DayRow =
   | { kind: "appointment"; time: string; appointment: DayAppointment }
-  | { kind: "free"; time: string }
+  | { kind: "free"; time: string; vacancies?: number }
   | { kind: "idle"; time: string }
   /** A time of this agenda held by an appointment of the other one, while
    * the two agendas still share their times. */
@@ -98,6 +98,7 @@ export function DaySlotList({
             date={date}
             time={row.time}
             offered={row.kind === "free"}
+            vacancies={row.kind === "free" ? row.vacancies : undefined}
             heldBy={row.kind === "held" ? row.heldBy : undefined}
             closed={closed}
             services={services}
@@ -252,6 +253,7 @@ function FreeSlotRow({
   date,
   time,
   offered,
+  vacancies,
   heldBy,
   closed,
   services,
@@ -261,6 +263,8 @@ function FreeSlotRow({
   date: string;
   time: string;
   offered: boolean;
+  /** How many citizens the time still takes, when more than one. */
+  vacancies?: number;
   heldBy?: string;
   closed: boolean;
   services: Array<{ id: string; label: string }>;
@@ -274,7 +278,9 @@ function FreeSlotRow({
         <span className="font-bold tabular-nums text-admin-faint">{time}</span>
         <span className="text-admin-muted">
           {offered
-            ? "Livre: aparece no site para agendamento"
+            ? vacancies && vacancies > 1
+              ? `Livre: ${vacancies} vagas aparecem no site para agendamento`
+              : "Livre: aparece no site para agendamento"
             : heldBy
               ? `Ocupado por um agendamento da agenda ${heldBy}`
               : closed

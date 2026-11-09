@@ -249,6 +249,7 @@ test("a config saved before the two agendas becomes the counter's agenda", () =>
     channels: {},
     dayChannels: [],
     slotServices: {},
+    slotCapacity: {},
   });
   assert.deepEqual(config.services[0].bring, []);
 });

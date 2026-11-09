@@ -102,6 +102,7 @@ export default async function SchedulingPage({
     days[0],
     days[days.length - 1],
     agenda,
+    config.agendas[agenda],
   );
   const dayTaken = taken.get(selected) ?? new Set<string>();
   const nextFreeDay = nextDayWithSlot(rules, days, taken, selected, now);

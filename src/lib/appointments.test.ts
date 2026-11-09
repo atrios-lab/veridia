@@ -403,3 +403,62 @@ test("excluir tira da agenda e libera o horário, sem apagar o registro", async 
   assert.equal(kept.status, "cancelled");
   assert.ok(kept.removedAt);
 });
+
+test("um horário com 3 vagas recebe 3 cidadãos, e o quarto encontra o horário cheio", async () => {
+  const at = { date: "2098-07-01", slotTime: "08:00" };
+  const seats: number[] = [];
+  for (let i = 0; i < 3; i++) {
+    const booked = await bookAppointmentWith(
+      db,
+      TENANT.slug,
+      newAppointment(at),
+      null,
+      3,
+    );
+    seats.push(booked.seat);
+  }
+  assert.deepEqual(seats.sort(), [1, 2, 3]);
+  await assert.rejects(
+    bookAppointmentWith(db, TENANT.slug, newAppointment(at), null, 3),
+    SlotTakenError,
+  );
+});
+
+test("as duas agendas têm vagas próprias no mesmo horário", async () => {
+  const at = { date: "2098-07-02", slotTime: "09:00" };
+  await bookAppointmentWith(db, TENANT.slug, newAppointment(at), null, 1);
+  // O cartório lotou o seu 09:00; o tabelião ainda recebe no dele.
+  await assert.rejects(
+    bookAppointmentWith(db, TENANT.slug, newAppointment(at), null, 1),
+    SlotTakenError,
+  );
+  const notary = await bookAppointmentWith(
+    db,
+    TENANT.slug,
+    newAppointment({ ...at, agenda: "tabeliao" }),
+    null,
+    1,
+  );
+  assert.equal(notary.seat, 2);
+});
+
+test("cancelar devolve a vaga", async () => {
+  const at = { date: "2098-07-03", slotTime: "10:00" };
+  const first = await bookAppointmentWith(
+    db,
+    TENANT.slug,
+    newAppointment(at),
+    null,
+    2,
+  );
+  await bookAppointmentWith(db, TENANT.slug, newAppointment(at), null, 2);
+  await removeAppointmentWith(db, TENANT.slug, first.id, "operadora");
+  const again = await bookAppointmentWith(
+    db,
+    TENANT.slug,
+    newAppointment(at),
+    null,
+    2,
+  );
+  assert.equal(again.seat, 1);
+});

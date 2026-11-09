@@ -8,6 +8,7 @@ import { looksLikeBot } from "@/core/request/form.ts";
 import {
   AGENDA_NAMES,
   agendaRules,
+  capacityAt,
   channelLabelsOn,
   isAgendaId,
   isRemoteMode,
@@ -210,6 +211,7 @@ export async function submitAppointment(
       days[0],
       days[days.length - 1],
       agenda,
+      office.agendas[agenda],
     );
     if (
       !isSlotFree(
@@ -227,13 +229,18 @@ export async function submitAppointment(
     // The key that opens the appointment on the consult, shown once on the
     // confirmation and said once in the e-mail; only its hash is kept.
     const accessKey = generateAccessKey();
-    const appointment = await bookAppointment(tenant.slug, {
-      ...parsed.data,
-      agenda,
-      serviceLabel,
-      cancelTokenHash: hashCancelToken(cancelToken),
-      accessKeyHash: hashAccessKey(accessKey),
-    });
+    const appointment = await bookAppointment(
+      tenant.slug,
+      {
+        ...parsed.data,
+        agenda,
+        serviceLabel,
+        cancelTokenHash: hashCancelToken(cancelToken),
+        accessKeyHash: hashAccessKey(accessKey),
+      },
+      null,
+      capacityAt(office.agendas[agenda], weekday(date), slotTime),
+    );
 
     await sendAppointmentBookedEmail(
       tenant,
