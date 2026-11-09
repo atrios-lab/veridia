@@ -41,10 +41,10 @@ function Field({
   wide?: boolean;
 }) {
   return (
-    <div className={wide ? "col-span-2" : ""}>
+    <div className={wide ? "col-span-2 min-w-0" : "min-w-0"}>
       <div className="text-[11px] text-admin-faint">{label}</div>
       <div
-        className={`mt-0.5 text-[13.5px] leading-[1.4] whitespace-pre-line ${
+        className={`mt-0.5 text-[13.5px] leading-[1.4] whitespace-pre-line [overflow-wrap:anywhere] ${
           value === EMPTY ? "text-admin-muted" : "text-admin-text"
         }`}
       >

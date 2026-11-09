@@ -942,7 +942,7 @@ function RequirementConversation({
                   </span>
                 </div>
                 {message.body && (
-                  <p className="mt-1 whitespace-pre-line rounded-xl bg-brand-card px-3 py-2 text-[13px] leading-relaxed text-brand-text">
+                  <p className="mt-1 whitespace-pre-line [overflow-wrap:anywhere] rounded-xl bg-brand-card px-3 py-2 text-[13px] leading-relaxed text-brand-text">
                     {message.body}
                   </p>
                 )}
@@ -1070,7 +1070,7 @@ function RequirementRow({
               : ""}
           </span>
         </div>
-        <p className="mt-2 whitespace-pre-line text-[13px] leading-relaxed text-brand-text">
+        <p className="mt-2 whitespace-pre-line [overflow-wrap:anywhere] text-[13px] leading-relaxed text-brand-text">
           {requirement.text}
         </p>
         {requirement.resolutionFileName && (
@@ -1103,7 +1103,7 @@ function RequirementRow({
           registrada em {formatDate(requirement.createdAt)}
         </span>
       </div>
-      <p className="mt-2 whitespace-pre-line text-[13px] font-semibold leading-relaxed text-brand-primary">
+      <p className="mt-2 whitespace-pre-line [overflow-wrap:anywhere] text-[13px] font-semibold leading-relaxed text-brand-primary">
         {requirement.text}
       </p>
       <RequirementForms
@@ -1200,7 +1200,7 @@ function RequestDetail({ result }: { result: ServiceRequestDetail }) {
                 and a PDF attached, "motivo não informado" would contradict
                 the document sitting right below it. */}
             {(result.statusReason || !result.rejectionDocumentAttachmentId) && (
-              <p className="whitespace-pre-line text-[13px] leading-relaxed text-brand-text">
+              <p className="whitespace-pre-line [overflow-wrap:anywhere] text-[13px] leading-relaxed text-brand-text">
                 {result.statusReason ?? "Motivo não informado."}
               </p>
             )}
@@ -1958,7 +1958,7 @@ export function DataRightsCard({
                     </div>
                   </div>
                 </div>
-                <p className="mt-3 whitespace-pre-line text-[12.5px] leading-relaxed text-brand-text-soft">
+                <p className="mt-3 whitespace-pre-line [overflow-wrap:anywhere] text-[12.5px] leading-relaxed text-brand-text-soft">
                   {result.reply}
                 </p>
               </div>
@@ -2148,7 +2148,7 @@ export function OmbudsmanCard({
               <span className="text-[10.5px] font-bold uppercase tracking-[0.14em] text-brand-accent-ink">
                 Resposta da ouvidoria
               </span>
-              <p className="mt-2 whitespace-pre-line text-[12.5px] leading-relaxed text-brand-text-soft">
+              <p className="mt-2 whitespace-pre-line [overflow-wrap:anywhere] text-[12.5px] leading-relaxed text-brand-text-soft">
                 {result.reply}
               </p>
               {result.repliedAt && (

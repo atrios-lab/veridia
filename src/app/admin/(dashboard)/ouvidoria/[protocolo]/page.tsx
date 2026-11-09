@@ -90,7 +90,7 @@ export default async function OmbudsmanDetailPage({
               </p>
 
               <div className="mt-3.5 rounded-[11px] border border-admin-border bg-admin-input-bg px-4 py-3.5">
-                <p className="text-[13.5px] leading-relaxed text-admin-text">
+                <p className="text-[13.5px] leading-relaxed whitespace-pre-line text-admin-text [overflow-wrap:anywhere]">
                   {record.description}
                 </p>
               </div>

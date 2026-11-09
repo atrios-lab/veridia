@@ -111,7 +111,7 @@ export default async function AppointmentDetailPage({
           <h3 className="text-[13px] font-bold text-admin-primary">
             O que o cliente informou
           </h3>
-          <p className="mt-1.5 whitespace-pre-line text-[13px] text-admin-text">
+          <p className="mt-1.5 whitespace-pre-line [overflow-wrap:anywhere] text-[13px] text-admin-text">
             {appointment.serviceDetails?.trim() || "Nenhuma observação."}
           </p>
           <h4 className="mt-3 text-[12px] font-bold text-admin-muted">
@@ -153,7 +153,7 @@ export default async function AppointmentDetailPage({
                   key={note.id}
                   className="rounded-lg bg-admin-input-bg px-3.5 py-2.5"
                 >
-                  <p className="whitespace-pre-line text-[13px] text-admin-text">
+                  <p className="whitespace-pre-line [overflow-wrap:anywhere] text-[13px] text-admin-text">
                     {note.body}
                   </p>
                   <p className="mt-1 text-[11.5px] text-admin-faint">

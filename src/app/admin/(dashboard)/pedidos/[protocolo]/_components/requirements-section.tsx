@@ -504,7 +504,7 @@ function RequirementCard({
 
       {open && (
         <>
-          <p className="whitespace-pre-line text-[13px] leading-normal text-admin-text">
+          <p className="whitespace-pre-line [overflow-wrap:anywhere] text-[13px] leading-normal text-admin-text">
             {requirement.text}
           </p>
           {/* Kept for requirements resolved before the office took over the

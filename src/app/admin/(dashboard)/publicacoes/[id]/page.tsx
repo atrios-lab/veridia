@@ -215,7 +215,7 @@ export default async function PublicationDetailPage({
           <h2 className="font-serif text-[16px] font-semibold text-admin-primary">
             Texto publicado
           </h2>
-          <p className="mt-3 whitespace-pre-line text-[13.5px] leading-relaxed text-admin-text">
+          <p className="mt-3 whitespace-pre-line [overflow-wrap:anywhere] text-[13.5px] leading-relaxed text-admin-text">
             {row.body}
           </p>
         </section>

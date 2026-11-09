@@ -61,7 +61,7 @@ function NoticeCard({
         </p>
       )}
       {/* The operator writes plain text with line breaks; keep them. */}
-      <p className="mt-3 whitespace-pre-line text-sm leading-relaxed text-brand-text-soft">
+      <p className="mt-3 whitespace-pre-line [overflow-wrap:anywhere] text-sm leading-relaxed text-brand-text-soft">
         {row.body}
       </p>
       {headline.termEndsOn && type && (
