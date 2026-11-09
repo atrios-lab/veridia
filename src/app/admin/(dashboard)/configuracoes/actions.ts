@@ -441,9 +441,23 @@ export async function saveOfficeIdentification(
   const parsed = OfficeIdentificationSchema.safeParse({
     officialName: optionalText(formData.get("officialName")),
     jurisdiction: kind
-      ? { kind, seat: optionalText(formData.get("jurisdictionSeat")) }
+      ? {
+          kind,
+          seat: optionalText(formData.get("jurisdictionSeat")),
+          uf: optionalText(formData.get("jurisdictionUf")),
+        }
       : undefined,
+    holderName: optionalText(formData.get("holderName")),
     holderTitle: optionalText(formData.get("holderTitle")),
+    // One line per line typed; blank lines dropped. None at all means the
+    // automatic foot (address and contacts) stands.
+    footerLines: (() => {
+      const lines = String(formData.get("footerLines") ?? "")
+        .split(/\r?\n/)
+        .map((line) => line.trim())
+        .filter(Boolean);
+      return lines.length ? lines : undefined;
+    })(),
     showHolder: formData.get("showHolder") === "on",
     showAttributions: formData.get("showAttributions") === "on",
   });
@@ -454,7 +468,9 @@ export async function saveOfficeIdentification(
         issue.path[0] === "jurisdiction"
           ? issue.path[1] === "seat"
             ? "jurisdictionSeat"
-            : "jurisdictionKind"
+            : issue.path[1] === "uf"
+              ? "jurisdictionUf"
+              : "jurisdictionKind"
           : String(issue.path[0] ?? "");
       fieldErrors[field] ??= issue.message;
     }

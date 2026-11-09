@@ -12,3 +12,7 @@
 ## 3. Painel
 
 - [x] 3.1 Formulário "Identificação nos documentos" com prévia
+
+## 4. Ajustes
+
+- [x] 4.1 Nome do(a) titular editável (troca de tabelião), rodapé editável (até 3 linhas) e UF da comarca editável

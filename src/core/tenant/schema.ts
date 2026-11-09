@@ -173,10 +173,45 @@ export const JURISDICTION_KINDS = [
   "comarca-termo",
   "none",
 ] as const;
+/** Every Brazilian UF, for the comarca line: not `SUPPORTED_STATES`, which
+ * only lists the states whose fund maps exist. */
+export const BRAZILIAN_UFS = [
+  "AC",
+  "AL",
+  "AP",
+  "AM",
+  "BA",
+  "CE",
+  "DF",
+  "ES",
+  "GO",
+  "MA",
+  "MT",
+  "MS",
+  "MG",
+  "PA",
+  "PB",
+  "PR",
+  "PE",
+  "PI",
+  "RJ",
+  "RN",
+  "RS",
+  "RO",
+  "RR",
+  "SC",
+  "SP",
+  "SE",
+  "TO",
+] as const;
+
 export const JurisdictionSchema = z
   .object({
     kind: z.enum(JURISDICTION_KINDS),
     seat: z.string().trim().max(60, "Use até 60 caracteres.").optional(),
+    // The comarca's UF as the office prints it; the office's own state
+    // (`location.state`) until it says otherwise.
+    uf: z.enum(BRAZILIAN_UFS).optional(),
   })
   .refine((value) => value.kind === "none" || Boolean(value.seat), {
     message: "Informe a cidade sede da comarca.",
@@ -390,6 +425,18 @@ export const TenantSchema = z.object({
   officialName: z.string().trim().min(1).max(120).optional(),
   jurisdiction: JurisdictionSchema.optional(),
   holderTitle: z.string().trim().min(1).max(80).optional(),
+  // The holder's name as the papers print it. Not `owner`, which is the
+  // court's record the platform keeps: when the office changes hands, the
+  // office types the new name here and the papers follow at once.
+  holderName: z.string().trim().min(1).max(120).optional(),
+  // The foot of the page, as the office writes it, one line each. Absent,
+  // the address and contacts are printed from the contact settings.
+  footerLines: z
+    .array(
+      z.string().trim().min(1).max(200, "Use até 200 caracteres por linha."),
+    )
+    .max(3, "Use até 3 linhas no rodapé.")
+    .optional(),
   // Optional per § 1º ("podendo-se constar"), and off by default, as on the
   // office's own certidões: the holder's name, and the legal attributions,
   // under the identification only when the office ticks them.
