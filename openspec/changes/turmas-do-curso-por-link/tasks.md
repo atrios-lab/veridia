@@ -1,13 +1,17 @@
 ## 1. Antes de começar
 
-- [ ] 1.1 Confirmar com o usuário os dados da Átrios para a configuração do tenant de cursos (nome, CNPJ, telefone, e-mail, encarregado)
+- [ ] 1.1 Confirmar com o usuário o nome e a cidade do cartório fictício (nome de trabalho: "Cartório de Vale Claro/RN") e o remetente dos e-mails
 - [ ] 1.2 Confirmar com o usuário a validade padrão do link (proposta: 30 dias)
 
-## 2. Tenant de cursos
+## 2. Tenant de cursos e site de demonstração
 
-- [ ] 2.1 `src/core/tenant/courses-tenant.ts`: `COURSES_TENANT_SLUG` e `isCoursesTenant`; registrar `atrios-cursos` em `src/core/tenant/tenants/` e em `TENANTS`, com hosts `curso.atrioss.com` e `curso.localhost`; testes de resolução por host
-- [ ] 2.2 Função pura `coursesTenantRedirect(host, pathname)` (deixa passar `/admin`, `/turma`, `/api` e estáticos; o resto vai para `/admin/login`); testes, incluindo que hosts de cartórios clientes nunca são redirecionados
-- [ ] 2.3 Chamar `coursesTenantRedirect` no `src/middleware.ts`
+- [ ] 2.1 `src/core/tenant/courses-tenant.ts`: `COURSES_TENANT_SLUG` e `isCoursesTenant`; registrar `atrios-cursos` em `src/core/tenant/tenants/` e em `TENANTS`, cartório fictício com todas as atribuições, hosts `curso.atrioss.com` e `curso.localhost`; testes de resolução por host
+- [ ] 2.2 Campo opcional `demo` no schema do tenant, falso por padrão, ligado só no tenant de cursos; teste que prova que nenhum outro tenant o liga
+- [ ] 2.3 Faixa de demonstração no layout público quando `demo` está ligado, e aviso perto do botão de enviar nos formulários de pedido, agendamento, LGPD e ouvidoria
+- [ ] 2.4 Atendimento online desligado no tenant de cursos
+- [ ] 2.5 Atalho "Ver o site do cartório de demonstração" na tela de Treinamento do aluno
+- [ ] 2.6 `scripts/seed-demo-data.ts` recebe o slug por argumento, aceita só a lista fechada de tenants fictícios e grava, para o tenant de cursos, publicações, editais de cada setor, documentos de transparência e um boletim, sem pedidos de cidadão
+- [ ] 2.7 Conferir no navegador, em `curso.localhost:3000`, cada seção do site com o conteúdo do seed e a faixa visível, no celular e no computador
 
 ## 3. Papel e permissão
 
@@ -48,8 +52,8 @@
 ## 8. Verificação e entrega
 
 - [ ] 8.1 Seed local: tenant de cursos com uma turma de teste; fluxo inteiro em `curso.localhost:3000` (cadastro, aulas, avaliação, certificado com o nome da turma, validação pública)
-- [ ] 8.2 Conferir que a raiz de `demo.localhost` e de um cartório cliente continua com o site público
+- [ ] 8.2 Conferir que `demo.localhost` e um cartório cliente continuam sem a faixa de demonstração
 - [ ] 8.3 Bateria do CI: typecheck, lint, test, check:dashes, check:tokens, check:destructive, `openspec validate --all` e build
-- [ ] 8.4 Aplicar a migração `0035` no Homolog e testar no Preview
-- [ ] 8.5 Usuário liga `curso.atrioss.com` na Vercel e no DNS
+- [ ] 8.4 Aplicar a migração `0035` no Homolog, rodar o seed do tenant de cursos lá e testar no Preview
+- [ ] 8.5 Usuário liga `curso.atrioss.com` na Vercel e no DNS e preenche o conteúdo público em produção, pelo seed ou pela tela
 - [ ] 8.6 Aplicar a migração em produção à mão antes do merge; abrir a PR

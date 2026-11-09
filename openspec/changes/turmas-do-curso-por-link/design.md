@@ -20,6 +20,7 @@ O objetivo comercial: muitos funcionários de cartórios que ainda não são cli
 - O certificado com o nome do cartório do aluno, vindo do cadastro da turma, nunca do que o aluno digitou ou do endereço.
 - Um link vazado não vira porta aberta: validade, vagas e encerramento.
 - A Átrios vê, por turma, quem entrou e até onde foi.
+- O aluno conhece o site público de um cartório na plataforma, com dados fictícios, sem risco de confundir com um cartório real.
 
 **Non-Goals:**
 - Ver as telas do painel em modo de leitura, confirmação de e-mail, limpeza de contas, relatório para o cartório, CRM e marca por turma (ver proposal).
@@ -37,7 +38,7 @@ TENANTS
        hosts: curso.atrioss.com, curso.localhost
 ```
 
-`atrios-cursos` entra no registro como qualquer serventia, porque a sessão, o tema e o painel dependem disso. A configuração usa os dados da Átrios (nome, contato, encarregado) e uma atribuição qualquer, só para satisfazer o schema; nenhuma seção do site é servida.
+`atrios-cursos` entra no registro como qualquer serventia, porque a sessão, o tema, o painel e o site dependem disso. É um cartório fictício, como o Serra Verde, mas outro: nome, cidade, titular, encarregado, telefones e e-mails inventados, e todas as atribuições, para o site mostrar todas as seções. O nome de trabalho é "Cartório de Vale Claro/RN", a confirmar com o usuário; não pode coincidir com município ou cartório real.
 
 Um módulo puro (`src/core/tenant/courses-tenant.ts`) exporta `COURSES_TENANT_SLUG` e `isCoursesTenant(tenant)`. É o único lugar que conhece o slug; rotas e páginas perguntam a ele.
 
@@ -45,9 +46,32 @@ Um módulo puro (`src/core/tenant/courses-tenant.ts`) exporta `COURSES_TENANT_SL
 
 *Alternativa considerada*: um tenant por cartório interessado. Descartada: é config em código, PR e deploy para cada lead, o problema que esta change resolve.
 
-### 2. Site público do tenant de cursos
+### 2. Site público de demonstração
 
-No host do tenant de cursos, o middleware deixa passar só `/admin/*`, `/turma/*`, `/api/*` e os arquivos estáticos; qualquer outro caminho público redireciona para `/admin/login`. A regra fica em uma função pura testada (`coursesTenantRedirect(host, pathname)`), e o middleware só a chama, porque ele não lê o banco.
+O tenant de cursos serve o site público inteiro, como qualquer serventia. O aluno vê o que o cidadão veria no site do próprio cartório: início, solicitar, agendar, acompanhar, editais, LGPD, ouvidoria, transparência, selo e contato.
+
+```
+curso.atrioss.com/            site público de Vale Claro (fictício)
+curso.atrioss.com/turma/XXXX  cadastro do aluno
+curso.atrioss.com/admin       painel do aluno (só Treinamento)
+```
+
+**Aviso de demonstração.** Toda página pública do tenant de cursos mostra uma faixa fixa no topo: "Site de demonstração. Este cartório não existe. Não envie dados reais." Acima de cada formulário público, o mesmo aviso aparece de novo, perto do botão de enviar. A faixa é ligada por um campo novo e opcional na configuração do tenant, `demo: true`, e não pelo slug, para o Serra Verde poder usar o mesmo aviso no futuro se o usuário quiser. Nesta change, só o tenant de cursos liga o campo; o Serra Verde fica como está, porque as gravações do curso já usam o site dele sem a faixa.
+
+**Formulários funcionam.** Pedido, agendamento, LGPD e ouvidoria gravam e mostram o protocolo, para o aluno ver o fluxo inteiro, inclusive o acompanhamento. Os registros caem na fila do tenant de cursos, que ninguém atende. O expurgo dos arquivos dos protocolos, que já existe, vale para eles também.
+
+*Alternativa considerada*: bloquear o envio dos formulários. Descartada: o protocolo e o acompanhamento são a parte que mais convence, e o aviso cobre o risco de dado real.
+
+*Alternativa considerada*: o atendimento online (chat) ligado. Descartado: ninguém responde, e um chat sem resposta passa a imagem errada. O chat do tenant de cursos fica desligado na configuração.
+
+**Atalho no painel.** A tela de Treinamento do aluno mostra um botão "Ver o site do cartório de demonstração", que abre a raiz do mesmo host em nova aba.
+
+**Conteúdo.** O que vem da configuração (seções, contatos, horários, tema) está no arquivo do tenant. O que vem do banco (publicações, editais, documentos de transparência, boletim) é preenchido por seed:
+- `scripts/seed-demo-data.ts` passa a aceitar uma lista fechada de tenants fictícios (`cartorio-demonstracao` e `atrios-cursos`), escolhida por argumento, e recusa qualquer outro, como já faz hoje;
+- ganha o conteúdo público que hoje falta: editais de cada setor, documentos de transparência e um boletim;
+- não cria pedidos de cidadão no tenant de cursos, porque ninguém vai ver a fila do painel ali.
+
+O seed roda no banco local e no Homolog pelo agente. Em produção, o usuário roda o seed ou cadastra o conteúdo pela tela com a conta da Átrios.
 
 ### 3. Dados
 
@@ -161,6 +185,7 @@ Encerrar só grava `closed_at`. Reabrir é limpar `closed_at` e, se vencida, pro
 
 ### 8. Onde mora cada regra
 
+- `src/core/tenant/`: tenant de cursos, campo `demo` e o texto do aviso.
 - `src/core/cohorts/`: código da turma, estado do link (`open`, `expired`, `closed`, `full`), validação do cadastro, situação do aluno a partir do progresso.
 - `src/lib/cohorts.ts`: leitura e escrita no banco, com `...With(database)` para os testes em PGlite, como `src/lib/certificates.ts`.
 - `src/app/turma/[codigo]/`: página e action do cadastro.
@@ -173,6 +198,9 @@ Encerrar só grava `closed_at`. Reabrir é limpar `closed_at` e, se vencida, pro
 - [Conta de aluno ganha mais poder no futuro por engano] → `learner` recebe uma lista fixa; um teste falha se ela passar de `admin.access`.
 - [Abuso do cadastro, criação de contas em massa] → limite por IP, código de 40 bits e vagas por turma.
 - [Uso do contato sem base legal] → caixa opcional e desmarcada, data do aceite gravada, aviso revisado pelo usuário antes do deploy.
+- [Aluno digita dado real num formulário do site de demonstração] → faixa em todas as páginas, aviso perto de cada botão de enviar e expurgo dos arquivos que já existe; a política de guarda das contas, em aberto, vale também para esses registros.
+- [Aluno confunde o cartório fictício com um real] → nome e cidade inventados, faixa fixa e o texto "Este cartório não existe".
+- [Faixa de demonstração aparece num cartório cliente] → o campo `demo` só existe na configuração em código e nasce falso; um teste prova que nenhum tenant real o liga.
 - [Aluno esquece a senha] → "Esqueci a senha" já existe e funciona por e-mail, no host do tenant de cursos.
 - [Contas de alunos acumulam para sempre] → sem limpeza nesta change; a política de guarda fica em aberto.
 - [Inserção direta em `user` e `account` diverge do Better Auth numa atualização] → teste de login com conta criada pelo cadastro.
@@ -180,10 +208,11 @@ Encerrar só grava `closed_at`. Reabrir é limpar `closed_at` e, se vencida, pro
 ## Migration Plan
 
 1. Migração `0035`, só com `CREATE TABLE` e índices. Nada é apagado nem alterado; `pnpm check:destructive` deve passar sem exceção.
-2. Aplicar no Homolog e testar o fluxo inteiro em `curso.localhost`.
+2. Aplicar no Homolog, rodar o seed do tenant de cursos e testar o fluxo inteiro em `curso.localhost`, incluindo o site público.
 3. Antes do merge, aplicar a migração em produção à mão, pela `POSTGRES_URL_NON_POOLING`, como nas changes anteriores.
 4. O usuário liga `curso.atrioss.com` no projeto da Vercel e no DNS.
-5. Merge. Criar a primeira turma de teste, cadastrar uma conta, assistir, fazer a prova e emitir o certificado.
+5. O usuário preenche o conteúdo público do tenant de cursos em produção, pelo seed ou pela tela.
+6. Merge. Criar a primeira turma de teste, cadastrar uma conta, assistir, fazer a prova e emitir o certificado.
 
 Rollback: reverter o código. As duas tabelas novas podem ficar no banco sem efeito; removê-las seria mudança destrutiva, com a revisão que isso exige.
 
@@ -191,5 +220,6 @@ Rollback: reverter o código. As duas tabelas novas podem ficar no banco sem efe
 
 - Texto do aviso de privacidade e da caixa de contato: o rascunho entra na implementação e o usuário aprova antes do deploy.
 - Validade padrão do link: 30 dias, ou outro prazo.
-- Dados da Átrios na configuração do tenant (CNPJ, telefone, encarregado) para os rodapés e e-mails de senha.
+- Nome e cidade do cartório fictício (nome de trabalho: "Cartório de Vale Claro/RN").
+- Remetente dos e-mails do tenant de cursos (senha esquecida, protocolo do site de demonstração): o endereço da Átrios ou um endereço fictício que não recebe resposta.
 - Quanto tempo guardar contas de alunos que nunca concluíram.

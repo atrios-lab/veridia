@@ -1,20 +1,64 @@
 ## ADDED Requirements
 
-### Requirement: Tenant de cursos sem site público
+### Requirement: Tenant de cursos com site público de demonstração
 
-A plataforma SHALL ter um tenant próprio para alunos de turmas, `atrios-cursos`, que responde em `curso.atrioss.com`. Nesse host, só o painel, o cadastro por turma, as rotas de API e os arquivos estáticos SHALL responder; qualquer outra página pública SHALL redirecionar para o login do painel.
+A plataforma SHALL ter um tenant próprio para alunos de turmas, `atrios-cursos`, que responde em `curso.atrioss.com`. Ele SHALL ser um cartório fictício, diferente do Serra Verde, com nome, cidade e pessoas inventados e todas as atribuições. O site público dele SHALL funcionar como o de qualquer serventia, com conteúdo fictício nas seções que vêm do banco.
 
-#### Scenario: Raiz manda para o login
+#### Scenario: Site público completo
 - **WHEN** alguém abre `curso.atrioss.com/`
-- **THEN** é redirecionado para `/admin/login`
+- **THEN** vê o início do cartório fictício, com o menu de todas as seções
 
-#### Scenario: Página pública de serventia não existe ali
-- **WHEN** alguém abre `curso.atrioss.com/solicitar`
-- **THEN** é redirecionado para `/admin/login`, sem formulário de pedido
+#### Scenario: Conteúdo de exemplo
+- **WHEN** alguém abre os editais e a transparência do tenant de cursos depois do seed
+- **THEN** encontra publicações e documentos fictícios, nenhum de cartório real
 
-#### Scenario: Cartórios clientes não mudam
-- **WHEN** alguém abre a raiz do site de um cartório cliente
-- **THEN** o site público do cartório aparece como antes
+#### Scenario: Formulário gera protocolo
+- **WHEN** alguém envia um pedido de certidão pelo site do tenant de cursos
+- **THEN** recebe um protocolo e consegue acompanhá-lo, como num cartório cliente
+
+#### Scenario: Sem atendimento online
+- **WHEN** alguém navega pelo site do tenant de cursos
+- **THEN** o chat de atendimento não aparece
+
+### Requirement: Aviso de demonstração
+
+Toda página pública de um tenant marcado como demonstração SHALL mostrar uma faixa fixa dizendo que o site é de demonstração, que o cartório não existe e que não se deve enviar dado real. Cada formulário público desse tenant SHALL repetir o aviso perto do botão de enviar. Só o tenant de cursos SHALL ser marcado como demonstração nesta change; nenhum cartório cliente SHALL mostrar o aviso.
+
+#### Scenario: Faixa no tenant de cursos
+- **WHEN** alguém abre qualquer página pública de `curso.atrioss.com`
+- **THEN** a faixa de demonstração aparece no topo
+
+#### Scenario: Aviso no formulário
+- **WHEN** alguém abre o formulário da ouvidoria do tenant de cursos
+- **THEN** o aviso de não enviar dado real aparece perto do botão de enviar
+
+#### Scenario: Cartório cliente sem faixa
+- **WHEN** alguém abre o site de um cartório cliente
+- **THEN** nenhuma faixa de demonstração aparece
+
+#### Scenario: Serra Verde sem faixa
+- **WHEN** alguém abre o site do Serra Verde
+- **THEN** ele aparece como antes, sem a faixa
+
+### Requirement: Atalho do aluno para o site
+
+A tela de Treinamento do aluno SHALL ter um atalho que abre o site público do tenant de cursos em nova aba.
+
+#### Scenario: Aluno abre o site
+- **WHEN** o aluno clica em "Ver o site do cartório de demonstração"
+- **THEN** a raiz de `curso.atrioss.com` abre em nova aba
+
+### Requirement: Seed só em tenant fictício
+
+O script de dados fictícios SHALL aceitar só tenants fictícios de uma lista fechada (o Serra Verde e o tenant de cursos) e SHALL recusar qualquer outro slug.
+
+#### Scenario: Slug de cartório real
+- **WHEN** alguém roda o seed apontando para um cartório cliente
+- **THEN** o script para com erro e não grava nada
+
+#### Scenario: Tenant de cursos
+- **WHEN** alguém roda o seed para o tenant de cursos
+- **THEN** o script grava publicações, editais e documentos de transparência fictícios, sem pedidos de cidadão
 
 ### Requirement: Turma com link próprio
 
