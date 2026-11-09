@@ -1,6 +1,10 @@
 import type { Act } from "../acts/catalog.ts";
 import { actVariantName, PURPOSE_LABEL } from "../acts/catalog.ts";
 import { formatMoney } from "../fees/prenotation.ts";
+import {
+  officeWithJurisdiction,
+  officialName,
+} from "../tenant/identification.ts";
 import type { Tenant } from "../tenant/schema.ts";
 import { formatOfficeDate } from "../time/office-time.ts";
 import type { SignedFormDocument } from "./attachment.ts";
@@ -247,7 +251,7 @@ export function buildRequerimento(
     {
       heading: "Destinatário",
       paragraphs: [
-        `Ilustríssimo(a) Senhor(a) ${specialty.officer} do ${tenant.name}.`,
+        `Ilustríssimo(a) Senhor(a) ${specialty.officer} do ${officeWithJurisdiction(tenant)}.`,
       ],
     },
     { heading: "Qualificação do requerente", rows: applicant },
@@ -344,7 +348,7 @@ export function buildRequerimento(
     title: "Requerimento",
     subtitle: `Protocolo ${data.protocolNumber} · ${formatOfficeDate(data.createdAt)}`,
     office: [
-      tenant.name,
+      officialName(tenant),
       tenant.subtitle,
       `${tenant.contacts.phone} · ${tenant.contacts.email}`,
     ],
@@ -356,7 +360,7 @@ export function buildRequerimento(
         "consulta do protocolo ou entregue o papel no balcão da serventia.",
       signatureCaveatFor(act),
     ],
-    footer: `${tenant.name} · Protocolo ${data.protocolNumber} · ${tenant.legalFooter}`,
+    footer: `${officialName(tenant)} · Protocolo ${data.protocolNumber} · ${tenant.legalFooter}`,
   };
 }
 
@@ -382,14 +386,14 @@ export function buildAccessReceipt(
     title: "Comprovante de acesso",
     subtitle: `Protocolo ${data.protocolNumber} · ${formatOfficeDate(data.createdAt)}`,
     office: [
-      tenant.name,
+      officialName(tenant),
       tenant.subtitle,
       `${tenant.contacts.phone} · ${tenant.contacts.email}`,
     ],
     // No sections and no signee: there is nothing to sign on a receipt.
     sections: [],
     signature: [],
-    footer: `${tenant.name} · Protocolo ${data.protocolNumber} · ${tenant.legalFooter}`,
+    footer: `${officialName(tenant)} · Protocolo ${data.protocolNumber} · ${tenant.legalFooter}`,
     credentials: {
       heading: "Guarde estes dados",
       rows: [
@@ -444,7 +448,7 @@ export function buildDataRightsReceipt(
     title: "Recibo do requerimento",
     subtitle: `Protocolo ${data.protocolNumber} · ${formatOfficeDate(data.createdAt)}`,
     office: [
-      tenant.name,
+      officialName(tenant),
       tenant.subtitle,
       `Encarregado: ${tenant.dpo.name} · ${tenant.dpo.email}`,
     ],
@@ -489,6 +493,6 @@ export function buildDataRightsReceipt(
       "Este recibo comprova o registro do requerimento. Guarde a chave de " +
         "acesso: é com ela que você lê a resposta na consulta do protocolo.",
     ],
-    footer: `${tenant.name} · Protocolo ${data.protocolNumber} · ${tenant.legalFooter}`,
+    footer: `${officialName(tenant)} · Protocolo ${data.protocolNumber} · ${tenant.legalFooter}`,
   };
 }

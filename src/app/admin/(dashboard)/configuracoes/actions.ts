@@ -8,6 +8,7 @@ import {
   OfficeContactSchema,
   OfficeDeadlineSchema,
   OfficeHolidaysSchema,
+  OfficeIdentificationSchema,
 } from "@/core/tenant/overrides.ts";
 import { db } from "@/db/index.ts";
 import { tenantContent } from "@/db/schema.ts";
@@ -19,6 +20,7 @@ import {
   OFFICE_CONTACT_KEY,
   OFFICE_DEADLINE_KEY,
   OFFICE_HOLIDAYS_KEY,
+  OFFICE_IDENTIFICATION_KEY,
   today,
 } from "@/lib/tenant.ts";
 
@@ -397,4 +399,104 @@ async function strandedBy(
   } catch {
     return 0;
   }
+}
+
+export type OfficeIdentificationState =
+  | { status: "idle" }
+  | { status: "saved" }
+  | {
+      status: "error";
+      message: string;
+      fieldErrors: Record<string, string>;
+    };
+
+/** An empty text field is "not set", so the office's default stands. */
+function optionalText(value: FormDataEntryValue | null): string | undefined {
+  const text = String(value ?? "").trim();
+  return text === "" ? undefined : text;
+}
+
+/**
+ * How the office identifies itself on its papers (Provimento CGJ/TJRN
+ * 156/2016, art. 2º): the denomination, the comarca or termo, and whether the
+ * holder's name and the attributions go under it. Same discipline as the
+ * other settings: the schema is the boundary, the write goes straight to
+ * `published`, and it is saved whole.
+ */
+export async function saveOfficeIdentification(
+  _previous: OfficeIdentificationState,
+  formData: FormData,
+): Promise<OfficeIdentificationState> {
+  const session = await getSession();
+  if (!session || !can(session.user.role ?? "", "content.edit")) {
+    return {
+      status: "error",
+      message: "Você não tem permissão para alterar estes dados.",
+      fieldErrors: {},
+    };
+  }
+  const tenant = await getTenant();
+
+  const kind = String(formData.get("jurisdictionKind") ?? "");
+  const parsed = OfficeIdentificationSchema.safeParse({
+    officialName: optionalText(formData.get("officialName")),
+    jurisdiction: kind
+      ? { kind, seat: optionalText(formData.get("jurisdictionSeat")) }
+      : undefined,
+    holderTitle: optionalText(formData.get("holderTitle")),
+    showHolder: formData.get("showHolder") === "on",
+    showAttributions: formData.get("showAttributions") === "on",
+  });
+  if (!parsed.success) {
+    const fieldErrors: Record<string, string> = {};
+    for (const issue of parsed.error.issues) {
+      const field =
+        issue.path[0] === "jurisdiction"
+          ? issue.path[1] === "seat"
+            ? "jurisdictionSeat"
+            : "jurisdictionKind"
+          : String(issue.path[0] ?? "");
+      fieldErrors[field] ??= issue.message;
+    }
+    return {
+      status: "error",
+      message: "Confira os campos destacados.",
+      fieldErrors,
+    };
+  }
+
+  try {
+    await db
+      .insert(tenantContent)
+      .values({
+        tenantSlug: tenant.slug,
+        key: OFFICE_IDENTIFICATION_KEY,
+        published: parsed.data,
+        publishedAt: new Date(),
+        updatedBy: session.user.id,
+      })
+      .onConflictDoUpdate({
+        target: [tenantContent.tenantSlug, tenantContent.key],
+        set: {
+          published: parsed.data,
+          publishedAt: new Date(),
+          updatedAt: new Date(),
+          updatedBy: session.user.id,
+        },
+      });
+  } catch {
+    return { status: "error", message: GENERIC_ERROR, fieldErrors: {} };
+  }
+
+  await recordAudit({
+    tenantSlug: tenant.slug,
+    actorId: session.user.id,
+    action: "office-settings.save",
+    targetType: "tenant-content",
+    targetId: OFFICE_IDENTIFICATION_KEY,
+  });
+
+  // Every document the site prints from now on reads it.
+  revalidatePath("/", "layout");
+  return { status: "saved" };
 }

@@ -33,6 +33,10 @@ export const cartorioMarinho: Tenant = parseTenant({
   municipality: "IELMO MARINHO",
   location: { city: "Ielmo Marinho", state: "RN" },
   address: "Rua José Camilo Bezerra, 44, Centro, Ielmo Marinho / RN, 59490-000",
+  // As on the office's own papers (certidões): Ielmo Marinho is a termo of
+  // the Comarca de Macaíba.
+  officialName: "Cartório do Ofício Único de Ielmo Marinho/RN",
+  jurisdiction: { kind: "comarca-termo", seat: "Macaíba" },
   openingHours: "Segunda a sexta, das 8h às 14h",
   counterHours: { startHour: 8, endHour: 14 },
   owner: {

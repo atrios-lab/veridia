@@ -160,6 +160,30 @@ export const CustomHolidaySchema = z.object({
 /** Room for every municipal and local day an office could plausibly keep. */
 export const MAX_CUSTOM_HOLIDAYS = 60;
 
+/**
+ * Where the serventia sits in the court's map: "Comarca de Macaíba", or the
+ * termo of a comarca whose seat is elsewhere, or both at once, written as
+ * the office writes it on its papers ("Comarca/Termo de Macaíba/RN"). The
+ * seat is the comarca's city, which is not always the office's own. "none"
+ * is the office's choice to print no such line: then there is no seat.
+ */
+export const JURISDICTION_KINDS = [
+  "comarca",
+  "termo",
+  "comarca-termo",
+  "none",
+] as const;
+export const JurisdictionSchema = z
+  .object({
+    kind: z.enum(JURISDICTION_KINDS),
+    seat: z.string().trim().max(60, "Use até 60 caracteres.").optional(),
+  })
+  .refine((value) => value.kind === "none" || Boolean(value.seat), {
+    message: "Informe a cidade sede da comarca.",
+    path: ["seat"],
+  });
+export type Jurisdiction = z.infer<typeof JurisdictionSchema>;
+
 export const TenantSchema = z.object({
   slug: z.string().min(1),
   hosts: z.array(z.string()).default([]),
@@ -357,6 +381,20 @@ export const TenantSchema = z.object({
   // without it, the page just omits the address/map card instead of showing
   // a broken state.
   address: z.string().min(1).optional(),
+  // How the serventia identifies itself on every paper and page it issues,
+  // per the Código de Normas da CGJ/TJRN (Provimento 156/2016, art. 2º):
+  // the denomination, the comarca or termo, and, in smaller type below,
+  // the holder and the legal attributions. Optional: an office that has not
+  // filled them prints its name without the comarca line, and the panel
+  // asks for them. See core/tenant/identification.ts.
+  officialName: z.string().trim().min(1).max(120).optional(),
+  jurisdiction: JurisdictionSchema.optional(),
+  holderTitle: z.string().trim().min(1).max(80).optional(),
+  // Optional per § 1º ("podendo-se constar"), and off by default, as on the
+  // office's own certidões: the holder's name, and the legal attributions,
+  // under the identification only when the office ticks them.
+  showHolder: z.boolean().default(false),
+  showAttributions: z.boolean().default(false),
 });
 
 export type Tenant = z.infer<typeof TenantSchema>;

@@ -2,6 +2,7 @@ import type {
   RequerimentoDocument,
   RequerimentoRow,
 } from "../request/requerimento.ts";
+import { officialName } from "../tenant/identification.ts";
 import type { Tenant } from "../tenant/schema.ts";
 import { formatOfficeDateTime } from "../time/office-time.ts";
 import {
@@ -132,7 +133,7 @@ export function buildAppointmentReceipt(
       .filter(Boolean)
       .join(" · "),
     office: [
-      tenant.name,
+      officialName(tenant),
       tenant.subtitle,
       ...(tenant.address ? [tenant.address] : []),
       [tenant.contacts.phone, tenant.contacts.email]
@@ -141,6 +142,6 @@ export function buildAppointmentReceipt(
     ],
     sections,
     signature: [],
-    footer: `${tenant.name} · ${protocol || "Agendamento"} · ${tenant.legalFooter}`,
+    footer: `${officialName(tenant)} · ${protocol || "Agendamento"} · ${tenant.legalFooter}`,
   };
 }

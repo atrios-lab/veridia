@@ -20,6 +20,7 @@ import {
   OFFICE_DEADLINE_KEY,
   OFFICE_DPO_KEY,
   OFFICE_HOLIDAYS_KEY,
+  OFFICE_IDENTIFICATION_KEY,
   OFFICE_PIX_KEY,
 } from "./office-config.ts";
 import { requestHost } from "./request-host.ts";
@@ -51,6 +52,7 @@ async function readTenantOverrides(tenantSlug: string): Promise<{
   deadline: unknown;
   bulletin: unknown;
   holidays: unknown;
+  identification: unknown;
 }> {
   try {
     const rows = await db
@@ -67,6 +69,7 @@ async function readTenantOverrides(tenantSlug: string): Promise<{
             OFFICE_DEADLINE_KEY,
             OFFICE_BULLETIN_KEY,
             OFFICE_HOLIDAYS_KEY,
+            OFFICE_IDENTIFICATION_KEY,
           ]),
         ),
       );
@@ -82,6 +85,9 @@ async function readTenantOverrides(tenantSlug: string): Promise<{
         rows.find((r) => r.key === OFFICE_BULLETIN_KEY)?.published ?? null,
       holidays:
         rows.find((r) => r.key === OFFICE_HOLIDAYS_KEY)?.published ?? null,
+      identification:
+        rows.find((r) => r.key === OFFICE_IDENTIFICATION_KEY)?.published ??
+        null,
     };
   } catch {
     return {
@@ -92,6 +98,7 @@ async function readTenantOverrides(tenantSlug: string): Promise<{
       deadline: null,
       bulletin: null,
       holidays: null,
+      identification: null,
     };
   }
 }

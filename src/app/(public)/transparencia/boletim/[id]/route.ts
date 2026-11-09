@@ -1,3 +1,4 @@
+import { officialName } from "@/core/tenant/identification.ts";
 import type { Tenant } from "@/core/tenant/schema.ts";
 import {
   BALANCE_LABEL,
@@ -57,11 +58,11 @@ export async function GET(
   const [year, month] = row.referenceMonth.split("-").map(Number);
   const status = row.status as BulletinStatus;
   const document: BulletinDocument = {
-    office: [tenant.name, tenant.subtitle],
+    office: [officialName(tenant), tenant.subtitle],
     title: `Boletim Mensal, ${formatMonthYear(month, year)}`,
     period: bulletinPeriod(month, year),
     preliminary: status === "preliminary",
-    footer: `${tenant.name} · ${tenant.legalFooter}`,
+    footer: `${officialName(tenant)} · ${tenant.legalFooter}`,
     ...bodyOf(stored, tenant),
   };
 

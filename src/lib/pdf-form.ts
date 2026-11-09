@@ -8,12 +8,12 @@ import type {
 } from "@/core/request/declaracao.ts";
 import { NEUTRALS } from "@/core/tenant/palette.ts";
 import type { DocumentBrand } from "./document-brand.ts";
+import { brasaoWidth, drawBrasao, identificationOf } from "./pdf-letterhead.ts";
 import {
   contentWidth,
   drawEyebrow,
   MARGIN,
   type Pdf,
-  SEAL_SIZE,
 } from "./pdf-primitives.ts";
 
 /*
@@ -108,56 +108,44 @@ function contentBottom(pdf: Pdf): number {
 /* ------------------------------------------------------------------------ */
 
 /**
- * The first page's letterhead: the office's seal and name on the left as in
- * every other document; on the right, where the requerimento puts the QR,
- * the Anexo I label and the "Nº do pedido" line (blank on the blank form).
- * No QR on this document: the approved layout does not carry one, and the
- * protocol lookup is not where the FCRCPN or the oficial takes this paper.
+ * The first page's letterhead: the national arms and the office's
+ * identification on the left (Provimento CGJ/TJRN 156/2016, art. 2º: no
+ * logotype), set tighter than the other documents' centred letterhead
+ * because this form has nine cards to fit; on the right, where the
+ * requerimento puts the QR, the Anexo I label and the "Nº do pedido" line
+ * (blank on the blank form). No QR on this document: the approved layout
+ * does not carry one, and the protocol lookup is not where the FCRCPN or
+ * the oficial takes this paper. Returns where the flow starts.
  */
 function drawLetterhead(
   ctx: Ctx,
   document: DeclaracaoDocument,
   _qr: Buffer | undefined,
-): void {
+): number {
   const { pdf, brand } = ctx;
   const { palette } = brand;
-  const top = 44;
+  const top = 40;
 
-  // A touch smaller than the requerimento's seal: this letterhead ends
-  // sooner (`FORM_HEADER_BOTTOM`), and the seal has to sit above its rule.
-  const sealSize = SEAL_SIZE - 10;
-  let textLeft = MARGIN;
-  if (brand.seal) {
-    try {
-      pdf.image(brand.seal, MARGIN, top, { fit: [sealSize, sealSize] });
-      textLeft = MARGIN + sealSize + 16;
-    } catch {
-      // An unreadable image is a letterhead without a seal, never a failed
-      // download. The office name beside it identifies the serventia.
-    }
-  }
+  const armsHeight = 44;
+  drawBrasao(pdf, MARGIN, top, armsHeight);
+  const textLeft = MARGIN + brasaoWidth(armsHeight) + 12;
 
+  // Wide enough for the annex label on one line.
   const rightWidth = 190;
   const rightLeft = pdf.page.width - MARGIN - rightWidth;
-  const width = rightLeft - 16 - textLeft;
+  const width = rightLeft - 12 - textLeft;
 
-  const [name, subtitle, ...rest] = document.office;
-  pdf
-    .font("Times-Bold")
-    .fontSize(15.5)
-    .fillColor(palette.primary)
-    .text(name ?? "", textLeft, top + 4, { width });
-  if (subtitle) {
-    pdf
-      .font("Helvetica")
-      .fontSize(7.5)
-      .fillColor(palette.muted)
-      .text(subtitle, textLeft, pdf.y + 3, { width });
+  const identification = identificationOf(brand, document.office);
+  pdf.y = top + 1;
+  pdf.font("Times-Bold").fontSize(7.6).fillColor(NEUTRALS.text);
+  for (const line of identification.header) {
+    pdf.text(line, textLeft, pdf.y, { width, lineGap: 0.3 });
   }
-  pdf.font("Helvetica").fontSize(8).fillColor(palette.muted);
-  for (const line of rest) {
-    pdf.text(line, textLeft, pdf.y + 2.5, { width });
+  pdf.font("Times-Roman").fontSize(6.5).fillColor(NEUTRALS.textSoft);
+  for (const line of [identification.holder, identification.attributions]) {
+    if (line) pdf.text(line, textLeft, pdf.y + 1, { width });
   }
+  const leftBottom = Math.max(pdf.y, top + armsHeight);
 
   // Right column: the annex label in accent small caps, then "Nº do pedido"
   // with either the protocol or a rule to write it on.
@@ -196,9 +184,11 @@ function drawLetterhead(
     .rect(valueLeft, lineY + 12, valueWidth, 0.7)
     .fill(document.protocolNumber ? NEUTRALS.text : palette.border);
 
-  pdf
-    .rect(MARGIN, FORM_HEADER_BOTTOM - 10, contentWidth(pdf), 0.8)
-    .fill(palette.border);
+  // The rule sits where the approved layout put it unless the office's
+  // identification (holder, attributions) runs longer.
+  const ruleY = Math.max(FORM_HEADER_BOTTOM - 10, leftBottom + 6);
+  pdf.rect(MARGIN, ruleY, contentWidth(pdf), 0.8).fill(palette.border);
+  return ruleY + 10;
 }
 
 /** Pages two onward: a one-line reminder of what this paper is, the "Nº do
@@ -208,15 +198,9 @@ function drawContinuationHeader(ctx: Ctx, document: DeclaracaoDocument): void {
   const { palette } = brand;
   const top = 40;
 
-  let textLeft = MARGIN;
-  if (brand.seal) {
-    try {
-      pdf.image(brand.seal, MARGIN, top, { fit: [28, 28] });
-      textLeft = MARGIN + 28 + 12;
-    } catch {
-      // Same as the letterhead: no seal, no drama.
-    }
-  }
+  // The arms, small: the first page carries the full identification.
+  drawBrasao(pdf, MARGIN, top - 2, 30);
+  const textLeft = MARGIN + brasaoWidth(30) + 12;
 
   const rightWidth = 170;
   const rightLeft = pdf.page.width - MARGIN - rightWidth;
@@ -987,6 +971,16 @@ function drawFormFooter(
     { width: 90, align: "right", lineBreak: false },
   );
 
+  // Where the office is and how to reach it, as at the foot of its papers.
+  const reach = identificationOf(brand, document.office).footer.join(" · ");
+  if (reach) {
+    pdf
+      .font("Helvetica")
+      .fontSize(6.3)
+      .fillColor(palette.muted)
+      .text(reach, x, cursor + 9, { width, lineGap: 1.2 });
+  }
+
   pdf.page.margins.bottom = margin;
 }
 
@@ -1027,8 +1021,7 @@ export function drawFormDocumentBody(
     pdf.page.margins.bottom = 0;
     pageCount += 1;
     if (first) {
-      drawLetterhead(ctx, document, qr);
-      y = FORM_HEADER_BOTTOM;
+      y = drawLetterhead(ctx, document, qr);
     } else {
       drawContinuationHeader(ctx, document);
       y = CONTINUATION_BOTTOM;
