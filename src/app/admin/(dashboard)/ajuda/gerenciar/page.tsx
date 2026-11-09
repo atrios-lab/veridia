@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { notFound } from "next/navigation";
 import { can } from "@/core/auth/roles.ts";
 import {
@@ -112,6 +113,16 @@ export default async function ManageTutorialsPage() {
         title="Gerenciar vídeos"
         back={{ href: "/admin/ajuda", label: "Treinamento" }}
         description="Os cursos do Treinamento e os vídeos de cada um, na ordem em que são assistidos."
+        actions={
+          can(session.user.role ?? "", "cohorts.manage") ? (
+            <Link
+              href="/admin/ajuda/gerenciar/turmas"
+              className="btn btn-admin-secondary btn-md"
+            >
+              Turmas
+            </Link>
+          ) : undefined
+        }
       />
       <main className="flex flex-col gap-4.5 px-[30px] py-7">
         <p

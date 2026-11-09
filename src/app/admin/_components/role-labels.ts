@@ -9,4 +9,5 @@ export const ROLE_LABELS: Record<Role, string> = {
   admin: "Registrador",
   staff: "Operador",
   superadmin: "Átrios",
+  learner: "Aluno",
 };

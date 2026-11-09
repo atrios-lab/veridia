@@ -10,6 +10,7 @@ import {
 } from "@/core/tutorials/course.ts";
 import { listPublishedCourses } from "@/lib/courses.ts";
 import { getSession } from "@/lib/session.ts";
+import { getTenant } from "@/lib/tenant.ts";
 import { listPublishedTutorials, listWatchedAt } from "@/lib/tutorials.ts";
 import { AdminPageHeader } from "../../_components/page-header.tsx";
 import { CourseCard } from "./_components/course-card.tsx";
@@ -35,10 +36,11 @@ export default async function TrainingCatalogPage({
   // The layout redirects before this renders; the check keeps the type.
   if (!session) return null;
   const { video } = await searchParams;
-  const [courses, tutorials, watchedAt] = await Promise.all([
+  const [courses, tutorials, watchedAt, tenant] = await Promise.all([
     listPublishedCourses(),
     listPublishedTutorials(),
     listWatchedAt(session.user.id),
+    getTenant(),
   ]);
 
   if (video) {
@@ -69,13 +71,29 @@ export default async function TrainingCatalogPage({
         title="Treinamento"
         description="Cursos em vídeo: como usar cada tela do painel e o que a equipe precisa saber no dia a dia."
         actions={
-          canManage ? (
-            <Link
-              href="/admin/ajuda/gerenciar"
-              className="btn btn-admin-secondary btn-md"
-            >
-              Gerenciar vídeos
-            </Link>
+          canManage || tenant.demo ? (
+            <>
+              {/* The demonstration office's own site: what a course learner
+                  came to see besides the course. */}
+              {tenant.demo && (
+                <a
+                  href="/"
+                  target="_blank"
+                  rel="noopener"
+                  className="btn btn-admin-secondary btn-md"
+                >
+                  Ver o site do cartório de demonstração
+                </a>
+              )}
+              {canManage && (
+                <Link
+                  href="/admin/ajuda/gerenciar"
+                  className="btn btn-admin-secondary btn-md"
+                >
+                  Gerenciar vídeos
+                </Link>
+              )}
+            </>
           ) : undefined
         }
       />
