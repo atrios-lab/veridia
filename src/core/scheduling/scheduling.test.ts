@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { test } from "node:test";
+import { describe, test } from "node:test";
 import { SUPPORTED_STATES } from "../transparency/rubrics.ts";
 import {
   type AgendaRules,
@@ -7,7 +7,10 @@ import {
   DEFAULT_AGENDA_CONFIG,
   hasGrid,
   parseAgendaConfig,
+  previousDayWithTimes,
+  pruneSlotServices,
   serializeAgendaConfig,
+  servicesAtSlot,
   slotEndTime,
 } from "./agenda.ts";
 import {
@@ -244,6 +247,7 @@ test("a config saved before the two agendas becomes the counter's agenda", () =>
     serviceIds: [],
     channels: {},
     dayChannels: [],
+    slotServices: {},
   });
   assert.deepEqual(config.services[0].bring, []);
 });
@@ -377,4 +381,47 @@ test("the panel lists the law days ahead with their ids, in date order", () => {
 
 test("every law day has its own id", () => {
   assert.equal(new Set(LAW_HOLIDAY_IDS).size, LAW_HOLIDAY_IDS.length);
+});
+
+describe("serviços por horário", () => {
+  const book = {
+    grid: { "1": ["08:00", "08:30", "09:00"], "2": ["08:00"] },
+    serviceIds: ["firma", "autenticacao", "certidao"],
+    slotServices: {
+      "1": {
+        "08:30": ["firma"],
+        // Todos os serviços da agenda: não restringe nada.
+        "09:00": ["firma", "autenticacao", "certidao"],
+        // Um horário que saiu da grade.
+        "10:00": ["firma"],
+      },
+      // Um serviço que a agenda não oferece mais.
+      "2": { "08:00": ["procuracao"] },
+    },
+  };
+
+  test("um horário restrito diz quais serviços atende; os outros atendem todos", () => {
+    assert.deepEqual(servicesAtSlot(book, 1, "08:30"), ["firma"]);
+    assert.equal(servicesAtSlot(book, 1, "08:00"), undefined);
+    assert.equal(servicesAtSlot(book, 3, "08:30"), undefined);
+  });
+
+  test("a limpeza tira horário fora da grade, serviço fora da agenda e lista completa", () => {
+    assert.deepEqual(pruneSlotServices(book), { "1": { "08:30": ["firma"] } });
+  });
+
+  test("a configuração antiga, sem serviços por horário, continua valendo", () => {
+    const config = parseAgendaConfig({
+      agendas: { geral: { grid: { "1": ["08:00"] }, serviceIds: ["firma"] } },
+    });
+    assert.deepEqual(config.agendas.geral.slotServices, {});
+  });
+
+  test("o dia vazio sugere os horários do dia anterior que tem horários", () => {
+    const grid = { "1": ["08:00", "09:00"], "2": [], "3": ["10:00"] };
+    assert.equal(previousDayWithTimes(grid, 2), 1);
+    assert.equal(previousDayWithTimes(grid, 4), 3);
+    assert.equal(previousDayWithTimes(grid, 1), undefined);
+    assert.equal(previousDayWithTimes({}, 5), undefined);
+  });
 });

@@ -167,15 +167,82 @@ export const agendaBookSchema = z.object({
   // those offer the default, in person.
   channels: z.partialRecord(weekdayKey, channelList).default({}),
   dayChannels: z.array(dayChannelsSchema).default([]),
+  // The services one time of one weekday takes, when the office narrowed it
+  // ("às 08:30 só reconhecimento de firma"). A time with no entry takes every
+  // service of the agenda, which is what every config before this said.
+  slotServices: z
+    .partialRecord(
+      weekdayKey,
+      z.record(slotTime, z.array(z.string().min(1)).min(1)),
+    )
+    .default({}),
 });
 export type AgendaBook = z.infer<typeof agendaBookSchema>;
+export type SlotServices = AgendaBook["slotServices"];
 
 const EMPTY_BOOK: AgendaBook = {
   grid: {},
   serviceIds: [],
   channels: {},
   dayChannels: [],
+  slotServices: {},
 };
+
+/**
+ * The services a time of a weekday takes, when the office narrowed it;
+ * undefined when it takes every service of the agenda.
+ */
+export function servicesAtSlot(
+  book: Pick<AgendaBook, "slotServices">,
+  day: number,
+  time: SlotTime,
+): string[] | undefined {
+  const key = String(day) as `${AgendaWeekday}`;
+  return book.slotServices[key]?.[time];
+}
+
+/**
+ * What the narrowing still means after the grid and the agenda's services
+ * changed: entries for a time no longer in the grid go, ids the agenda no
+ * longer takes go, and a time left with none of them, or with all of them,
+ * takes every service again (an empty or a full list says nothing).
+ */
+export function pruneSlotServices(
+  book: Pick<AgendaBook, "grid" | "serviceIds" | "slotServices">,
+): SlotServices {
+  const offered = new Set(book.serviceIds);
+  const pruned: SlotServices = {};
+  for (const [day, byTime] of Object.entries(book.slotServices)) {
+    const key = day as `${AgendaWeekday}`;
+    const times = new Set(book.grid[key] ?? []);
+    const kept: Record<SlotTime, string[]> = {};
+    for (const [time, ids] of Object.entries(byTime ?? {})) {
+      if (!times.has(time)) continue;
+      const valid = [...new Set(ids)].filter((id) => offered.has(id));
+      if (valid.length === 0 || valid.length === offered.size) continue;
+      kept[time] = valid;
+    }
+    if (Object.keys(kept).length > 0) pruned[key] = kept;
+  }
+  return pruned;
+}
+
+/**
+ * The weekday before `day` (Monday for Tuesday, Tuesday for Wednesday, and
+ * so on back to Monday) that has times, for the panel to suggest them for a
+ * day still empty. Undefined when no earlier day has any.
+ */
+export function previousDayWithTimes(
+  grid: Partial<Record<string, SlotTime[]>>,
+  day: number,
+): AgendaWeekday | undefined {
+  for (let earlier = day - 1; earlier >= 1; earlier--) {
+    if ((grid[String(earlier)] ?? []).length > 0) {
+      return earlier as AgendaWeekday;
+    }
+  }
+  return undefined;
+}
 
 /**
  * The office's own file for a service's list, a PDF or a photo of the sheet
