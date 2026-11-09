@@ -68,8 +68,6 @@ export default async function AttendanceValidationPage({
           <dl className="mt-4 grid grid-cols-[120px_1fr] gap-y-2 text-[13.5px]">
             <dt className="text-brand-muted">Serventia</dt>
             <dd className="text-brand-text">{tenant.name}</dd>
-            <dt className="text-brand-muted">CNS</dt>
-            <dd className="text-brand-text">{tenant.cns}</dd>
             <dt className="text-brand-muted">Pessoa</dt>
             <dd className="text-brand-text">
               {shortName(appointment.citizenName)}

@@ -6,9 +6,14 @@ cartório emitia isso à mão, sem padrão e sem como conferir.
 ## What Changes
 
 - **Declaração de comparecimento** em PDF, com "República Federativa do Brasil", o timbre
-  e o CNS da serventia (no timbre, abaixo do título e no texto), o nome, o CPF (quando houver), o dia, o horário e o protocolo, a cidade e a
+  da serventia, o nome, o CPF (quando houver), o dia, o horário e o protocolo, a cidade e a
   data de emissão, a linha "Tabelião / Substituto / Escrevente Autorizado" com "(assinatura e
   carimbo)" e o QR Code de validação no site da própria serventia, com o código impresso.
+- **Validação no papel:** "leia o QR Code, acesse o site da serventia (<domínio>) ou ligue para
+  <telefone>, informando o código". O QR e o texto usam sempre o domínio da serventia, nunca o
+  endereço por onde o painel foi aberto.
+- **CNS fora de tudo:** a serventia não publica o CNS em documento nem no site; ele sai também
+  dos dados para buscadores (JSON-LD) e não entra no comprovante.
 - **Fundamento:** fé pública do tabelião e dos prepostos (Lei 8.935/1994, arts. 3º e 20) e o
   dever de atender com eficiência (art. 30, II). **Gratuita**: não é ato notarial nem de
   registro previsto em tabela (Lei 10.169/2000). Diz que o aproveitamento para justificar

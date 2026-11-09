@@ -32,8 +32,8 @@ test("the receipt carries the time to arrive and what to bring", () => {
   });
 
   assert.equal(receipt.title, "Comprovante de agendamento");
-  // The office's CNS goes on the letterhead, next to its contacts.
-  assert.ok(receipt.office.some((line) => line.startsWith("CNS nº 123456")));
+  // The office does not publish its CNS on any document.
+  assert.doesNotMatch(JSON.stringify(receipt), /CNS|123456/);
   assert.match(receipt.subtitle, /AGD\.2026\.000007/);
   assert.equal(receipt.eyebrow, "Atendimento do cartório");
   const when = receipt.sections[0];

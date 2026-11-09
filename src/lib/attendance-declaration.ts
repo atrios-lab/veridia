@@ -17,13 +17,32 @@ export function canDeclareAttendance(
   return appointment.status === "attended" && !isRemoteMode(appointment.mode);
 }
 
+/**
+ * The office's site by its own domain. The declaration's QR and text point
+ * there, never at the address the panel happened to be opened through (a
+ * preview, an IP, localhost): the paper outlives the session that printed it.
+ */
+export function officeSite(
+  tenant: Tenant,
+  fallbackOrigin: string,
+): {
+  origin: string;
+  domain: string;
+} {
+  const host = tenant.hosts[0];
+  return host
+    ? { origin: `https://${host}`, domain: host }
+    : { origin: fallbackOrigin, domain: new URL(fallbackOrigin).host };
+}
+
 /** The declaration of one appointment, as content, with its QR address. */
 export function attendanceDeclarationFor(
   tenant: Tenant,
   appointment: Appointment,
-  origin: string,
+  requestOrigin: string,
 ) {
-  const url = attendanceUrl(origin, tenant.slug, appointment.id);
+  const site = officeSite(tenant, requestOrigin);
+  const url = attendanceUrl(site.origin, tenant.slug, appointment.id);
   return {
     url,
     document: buildAttendanceDeclaration(tenant, {
@@ -33,7 +52,7 @@ export function attendanceDeclarationFor(
       slotTime: appointment.slotTime,
       protocolNumber: appointment.protocolNumber,
       issuedOn: officeNow().date,
-      validationUrl: url,
+      siteDomain: site.domain,
       validationCode: attendanceCode(tenant.slug, appointment.id),
     }),
   };

@@ -55,8 +55,9 @@ export interface AttendanceData {
   protocolNumber: string | null;
   /** The day the declaration is issued, by the office's calendar. */
   issuedOn: IsoDate;
-  /** Where the QR on the letterhead leads, written out for typing too. */
-  validationUrl: string;
+  /** The office's own site, by its domain ("cartorioielmomarinhorn.com"),
+   * never the address the request happened to come through. */
+  siteDomain: string;
   /** The code printed under the title, the last part of the address. */
   validationCode: string;
 }
@@ -76,18 +77,17 @@ export function buildAttendanceDeclaration(
   return {
     eyebrow: "República Federativa do Brasil",
     title: "Declaração de Comparecimento",
-    subtitle: `${tenant.name} · CNS nº ${tenant.cns} · Código de validação ${data.validationCode}`,
+    subtitle: `${tenant.name} · Código de validação ${data.validationCode}`,
     office: [
       tenant.name,
       tenant.subtitle,
       ...(tenant.address ? [tenant.address] : []),
-      `CNS nº ${tenant.cns}`,
     ],
     sections: [
       {
         heading: "Declaração",
         paragraphs: [
-          `DECLARO, para os devidos fins, que ${who}, compareceu a esta serventia, ${tenant.name}, CNS nº ${tenant.cns}${where}, no dia ${formatDate(data.date)}, no horário das ${data.slotTime} às ${slotEndTime(data.slotTime)}, para atendimento${protocol}.`,
+          `DECLARO, para os devidos fins, que ${who}, compareceu a esta serventia, ${tenant.name}${where}, no dia ${formatDate(data.date)}, no horário das ${data.slotTime} às ${slotEndTime(data.slotTime)}, para atendimento${protocol}.`,
           "Por ser verdade, firmo a presente declaração.",
         ],
       },
@@ -102,7 +102,7 @@ export function buildAttendanceDeclaration(
       {
         heading: "Validação",
         paragraphs: [
-          `A autenticidade pode ser conferida pelo QR Code no alto desta folha ou no endereço ${data.validationUrl}, no site da própria serventia.`,
+          `Para conferir a autenticidade, leia o QR Code no alto desta folha, acesse o site da serventia (${data.siteDomain}) ou ligue para ${tenant.contacts.phone}, informando o código de validação ${data.validationCode}.`,
           `${tenant.location.city}/${tenant.location.state}, ${writtenDate(data.issuedOn)}.`,
         ],
       },
