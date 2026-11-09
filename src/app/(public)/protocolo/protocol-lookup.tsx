@@ -13,7 +13,11 @@ import {
   SIGNED_FORM_COUNTER_OPTION,
   SIGNED_FORM_REQUIRED_NOTICE,
 } from "@/core/request/requerimento.ts";
-import { formatDate as formatCalendarDate } from "@/core/scheduling/calendar.ts";
+import {
+  formatDate as formatCalendarDate,
+  formatLongDate,
+} from "@/core/scheduling/calendar.ts";
+import { DIGITAL_DOCUMENTS_NOTICE } from "@/core/scheduling/services.ts";
 import {
   formatOfficeDate,
   formatOfficeDateTime,
@@ -28,7 +32,9 @@ import {
   useAttachmentUpload,
 } from "../_lib/attachments.tsx";
 import {
+  type AppointmentDetail,
   type AttachDocumentState,
+  attachAppointmentDocument,
   attachExtraDocument,
   type DataRightsDetail,
   type FulfillRequirementState,
@@ -176,6 +182,8 @@ export function ProtocolLookup({
         return <DataRightsCard result={state} />;
       case "ombudsman":
         return <OmbudsmanCard result={state} />;
+      case "appointment":
+        return <AppointmentCard result={state} />;
       default:
         return <RequestDetail result={state} />;
     }
@@ -347,8 +355,9 @@ export function ProtocolLookup({
                     </button>
                   </div>
                   <p className="mt-2 text-[11.5px] leading-relaxed text-brand-muted">
-                    A chave foi mostrada quando você enviou o pedido e está
-                    impressa no PDF do requerimento.
+                    {publicStatus.protocolNumber.startsWith("AGD.")
+                      ? "A chave foi mostrada na confirmação do agendamento e enviada no e-mail de confirmação. Agendamento antigo, sem chave? Peça uma abaixo, com o e-mail do agendamento."
+                      : "A chave foi mostrada quando você enviou o pedido e está no comprovante de acesso e no e-mail do pedido."}
                   </p>
                   {state.status === "error" && (
                     <p
@@ -1692,6 +1701,212 @@ function Timeline({
         {title}
       </span>
       <ol className="mt-2.5 flex flex-col">{children}</ol>
+    </div>
+  );
+}
+
+/**
+ * An appointment opened with its key: when, what, what to bring, and the
+ * documents the citizen sends ahead for the office to see before the visit.
+ */
+export function AppointmentCard({
+  result,
+  onNewConsult,
+}: {
+  result: AppointmentDetail;
+  /** Reused from /acompanhar, which resets its own form in place. */
+  onNewConsult?: () => void;
+}) {
+  const [documents, setDocuments] = useState(result.documents);
+  const [docState, docAction, savingDoc] = useActionState<
+    AttachDocumentState,
+    FormData
+  >(attachAppointmentDocument, { status: "idle" });
+  const docUpload = useAttachmentUpload(docAction);
+  const sendingDoc = savingDoc || docUpload.uploading;
+
+  useEffect(() => {
+    if (docState.status === "success") setDocuments(docState.documents);
+  }, [docState]);
+
+  const rows: Array<[string, string]> = [
+    ["Data", formatLongDate(result.date)],
+    ["Horário", `${result.slotTime} às ${result.endTime}`],
+    ["Agenda", result.agendaName],
+    ["Serviço", result.serviceLabel],
+    ["Atendimento", result.mode],
+  ];
+
+  return (
+    <div className="flex flex-col gap-4">
+      <DetailHeader
+        protocolNumber={result.protocolNumber}
+        subtitle={`Agendamento · ${result.serviceLabel}`}
+        statusLabel={result.statusLabel}
+      />
+
+      <div className="rounded-2xl border border-brand-border bg-brand-card p-4">
+        <span className="text-[11px] font-bold uppercase tracking-[0.16em] text-brand-accent-ink">
+          Seu atendimento
+        </span>
+        <dl className="mt-2.5 flex flex-col gap-1.5">
+          {rows.map(([label, value]) => (
+            <div key={label} className="flex gap-3 text-[13px]">
+              <dt className="w-24 shrink-0 text-brand-muted">{label}</dt>
+              <dd className="font-semibold text-brand-text">{value}</dd>
+            </div>
+          ))}
+        </dl>
+        {result.appointmentStatus === "booked" && (
+          <p className="mt-3 rounded-xl bg-brand-accent-soft px-3 py-2.5 text-[12.5px] leading-relaxed text-brand-accent-ink">
+            {result.arrival}
+          </p>
+        )}
+        {result.appointmentStatus === "cancelled" && (
+          <p className="mt-3 text-[12.5px] leading-relaxed text-brand-text">
+            {result.cancelReason
+              ? `Cancelado pela serventia: ${result.cancelReason}`
+              : "Este agendamento foi cancelado."}{" "}
+            <Link href="/agendar" className="font-semibold underline">
+              Escolher outro horário
+            </Link>
+          </p>
+        )}
+      </div>
+
+      {result.checklist.length > 0 && (
+        <div className="rounded-2xl border border-brand-border bg-brand-card p-4">
+          <span className="text-[11px] font-bold uppercase tracking-[0.16em] text-brand-accent-ink">
+            O que levar
+          </span>
+          <ul className="mt-2.5 flex flex-col gap-1.5">
+            {result.checklist.map((item) => (
+              <li
+                key={item}
+                className="flex items-start gap-2 text-[13px] text-brand-text"
+              >
+                <Icon
+                  name="check"
+                  className="mt-0.5 h-3.5 w-3.5 shrink-0 text-brand-accent"
+                  strokeWidth={2.2}
+                />
+                {item}
+              </li>
+            ))}
+          </ul>
+          {result.serviceNote && (
+            <p className="mt-2 text-[12px] text-brand-muted">
+              {result.serviceNote}
+            </p>
+          )}
+          {result.checklistUrl && (
+            <a
+              href={result.checklistUrl}
+              target="_blank"
+              rel="noopener"
+              className="mt-2 inline-block text-[12.5px] font-semibold text-brand-primary underline"
+            >
+              Lista do cartório para este serviço
+            </a>
+          )}
+        </div>
+      )}
+
+      <div className="rounded-2xl border border-brand-border bg-brand-card p-4">
+        <span className="text-[11px] font-bold uppercase tracking-[0.16em] text-brand-accent-ink">
+          Documentos enviados por você
+        </span>
+        {documents.length > 0 ? (
+          <ul className="mt-2.5 flex flex-col gap-2">
+            {documents.map((doc, index) => (
+              <li
+                key={doc.id}
+                className="flex items-center gap-2.5 border-b border-brand-border pb-2 last:border-b-0 last:pb-0"
+              >
+                <Icon
+                  name="file"
+                  className="h-4.5 w-4.5 shrink-0 text-brand-accent"
+                />
+                <div className="min-w-0 flex-1">
+                  <div className="truncate text-[13px] font-semibold text-brand-primary">
+                    Documento {index + 1}
+                  </div>
+                  <div className="text-[11px] text-brand-faint">
+                    enviado em {formatDateTime(doc.createdAt)}
+                  </div>
+                </div>
+              </li>
+            ))}
+          </ul>
+        ) : (
+          <p className="mt-2 text-[12.5px] text-brand-muted">
+            Nenhum documento enviado ainda.
+          </p>
+        )}
+        {result.open ? (
+          <form
+            onSubmit={(event) => {
+              event.preventDefault();
+              void docUpload.send(event.currentTarget, "documento", 1);
+            }}
+            className="mt-3"
+          >
+            <ProtocolFields result={result} />
+            <label
+              className={`flex cursor-pointer items-center justify-center gap-2 rounded-xl border-[1.5px] border-dashed border-brand-border px-3 py-3 text-[12.5px] font-semibold text-brand-primary hover:border-brand-accent ${sendingDoc ? "opacity-60" : ""}`}
+            >
+              <Icon name="plus" className="h-3.5 w-3.5 text-brand-accent" />
+              {sendingDoc ? "Enviando..." : "Anexar documento em PDF"}
+              <input
+                type="file"
+                name="documento"
+                accept="application/pdf"
+                className="sr-only"
+                disabled={sendingDoc}
+                onChange={(event) => {
+                  if (event.target.files?.length) {
+                    event.target.form?.requestSubmit();
+                  }
+                }}
+              />
+            </label>
+            {(docUpload.error || docState.status !== "idle") && (
+              <output
+                className={`mt-1.5 block text-[11.5px] font-semibold ${
+                  docUpload.error || docState.status === "error"
+                    ? "text-brand-alert"
+                    : "text-brand-primary-soft"
+                }`}
+              >
+                {docUpload.error ??
+                  (docState.status !== "idle" && docState.message)}
+              </output>
+            )}
+            <p className="mt-2 text-[11.5px] leading-relaxed text-brand-muted">
+              {DIGITAL_DOCUMENTS_NOTICE} Um arquivo por vez.
+            </p>
+          </form>
+        ) : (
+          <p className="mt-2 text-[11.5px] text-brand-faint">
+            Este agendamento já passou ou foi cancelado: não recebe mais
+            documentos.
+          </p>
+        )}
+      </div>
+
+      {onNewConsult ? (
+        <button
+          type="button"
+          onClick={onNewConsult}
+          className="btn btn-ghost btn-sm self-start"
+        >
+          Nova consulta
+        </button>
+      ) : (
+        <Link href="/protocolo" className="btn btn-ghost btn-sm self-start">
+          Nova consulta
+        </Link>
+      )}
     </div>
   );
 }

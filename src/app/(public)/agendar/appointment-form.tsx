@@ -23,11 +23,14 @@ import {
   CHECKLIST_CAVEAT,
   checklistFileHref,
   checklistFor,
+  DIGITAL_DOCUMENTS_NOTICE,
   documentsByEmailNotice,
   type OfferedService,
 } from "@/core/scheduling/services.ts";
 import { DemoFormNotice } from "../_components/demo-notice.tsx";
 import { Icon } from "../_components/icon.tsx";
+import { ProtocolReveal } from "../_components/protocol-reveal.tsx";
+import { handOffAccess } from "../_lib/access-handoff.ts";
 import { withMask } from "../_lib/mask.ts";
 import {
   type AppointmentState,
@@ -1013,6 +1016,33 @@ function ConfirmationScreen({ result }: { result: AppointmentSuccess }) {
           </p>
         </div>
       </div>
+
+      {/* The key exists only now: the office keeps its hash. With it the
+          citizen follows the appointment and sends documents ahead. */}
+      {result.protocolNumber && result.accessKey && (
+        <ProtocolReveal
+          protocolNumber={result.protocolNumber}
+          accessKey={result.accessKey}
+          className="mt-0 border-x md:mt-5 md:rounded-2xl"
+        >
+          <strong className="text-brand-alert">
+            A chave aparece só agora.
+          </strong>{" "}
+          Com o protocolo e a chave você consulta o agendamento e envia
+          documentos antes de vir. Enviamos os dois também para{" "}
+          <strong>{result.email}</strong>.{" "}
+          <Link
+            href={`/acompanhar?numero=${encodeURIComponent(result.protocolNumber)}`}
+            onClick={() =>
+              handOffAccess(result.protocolNumber, result.accessKey)
+            }
+            className="font-semibold text-brand-primary underline"
+          >
+            Abrir o agendamento
+          </Link>
+          <span className="mt-2 block">{DIGITAL_DOCUMENTS_NOTICE}</span>
+        </ProtocolReveal>
+      )}
 
       {/* The one instruction that decides whether the visit works: said
           first and loudest, before the papers. */}

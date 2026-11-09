@@ -2,6 +2,7 @@
 
 import { headers } from "next/headers";
 import { after } from "next/server";
+import { generateAccessKey, hashAccessKey } from "@/core/request/access-key.ts";
 import { appointmentSchema } from "@/core/request/channels.ts";
 import { looksLikeBot } from "@/core/request/form.ts";
 import {
@@ -53,6 +54,8 @@ export interface AppointmentSuccess {
   /** "Atendimento com o tabelião", as the receipt names it. */
   agendaName: string;
   protocolNumber: string;
+  /** Opens the appointment on the protocol consult, shown once here. */
+  accessKey: string;
   /** What to bring, base items first, then the service's own. */
   checklist: string[];
   /** The service's own guidance, when it has one. */
@@ -109,6 +112,7 @@ export async function submitAppointment(
       serviceLabel: "",
       agendaName: "",
       protocolNumber: "",
+      accessKey: "",
       checklist: [],
       arrival: "",
       caveat: "",
@@ -220,14 +224,23 @@ export async function submitAppointment(
     }
 
     const cancelToken = generateCancelToken();
+    // The key that opens the appointment on the consult, shown once on the
+    // confirmation and said once in the e-mail; only its hash is kept.
+    const accessKey = generateAccessKey();
     const appointment = await bookAppointment(tenant.slug, {
       ...parsed.data,
       agenda,
       serviceLabel,
       cancelTokenHash: hashCancelToken(cancelToken),
+      accessKeyHash: hashAccessKey(accessKey),
     });
 
-    await sendAppointmentBookedEmail(tenant, appointment, cancelToken);
+    await sendAppointmentBookedEmail(
+      tenant,
+      appointment,
+      cancelToken,
+      accessKey,
+    );
     // The office hears of it too, after the citizen's screen is answered.
     after(() => sendOfficeNewAppointmentEmail(tenant, appointment));
 
@@ -238,6 +251,7 @@ export async function submitAppointment(
       serviceLabel,
       agendaName: AGENDA_NAMES[agenda].name,
       protocolNumber: appointment.protocolNumber ?? "",
+      accessKey,
       checklist: checklistFor(service ?? { bring: [] }),
       serviceNote: service?.note,
       officeEmail: tenant.contacts.email,

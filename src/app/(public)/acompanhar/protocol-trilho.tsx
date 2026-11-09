@@ -53,6 +53,7 @@ import {
   writeRequirementMessageAction,
 } from "../protocolo/actions.ts";
 import {
+  AppointmentCard,
   DataRightsCard,
   LostKeyForm,
   OmbudsmanCard,
@@ -2313,6 +2314,8 @@ function LookupFlow({
         ) : (
           <ServiceRequestTrilho initial={detail} onReset={onReset} />
         )
+      ) : detail?.kind === "appointment" ? (
+        <AppointmentCard result={detail} onNewConsult={onReset} />
       ) : detail?.kind === "data-rights" ? (
         <DataRightsCard result={detail} onNewConsult={onReset} />
       ) : detail ? (

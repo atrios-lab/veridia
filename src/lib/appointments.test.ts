@@ -1,21 +1,30 @@
 import assert from "node:assert/strict";
 import { after, before, mock, test } from "node:test";
+import { eq } from "drizzle-orm";
+import { generateAccessKey, hashAccessKey } from "@/core/request/access-key.ts";
 import {
   generateCancelToken,
   hashCancelToken,
 } from "@/core/scheduling/appointment.ts";
 import { TENANTS } from "@/core/tenant/resolve.ts";
 import type { Database } from "@/db/index.ts";
+import { appointments } from "@/db/schema.ts";
 import { createTestDb } from "@/db/test-db.ts";
 import {
+  addAppointmentAttachmentsWith,
   appointmentsOnWith,
   bookAppointmentWith,
   cancelAppointmentWith,
   cancelDayWith,
+  findAppointmentByProtocolWithKeyWith,
   findByCancelTokenWith,
+  listAppointmentAttachmentsWith,
   markAttendedWith,
   markNoShowWith,
   type NewAppointment,
+  recoverAppointmentKeyWith,
+  removeAppointmentWith,
+  revertAppointmentWith,
   SlotTakenError,
 } from "./appointments.ts";
 
@@ -251,4 +260,146 @@ test("a booking's protocol carries the office's year, with the server in UTC", a
     ),
   );
   assert.match(firstMorning.protocolNumber ?? "", /^AGD\.2027\./);
+});
+
+test("the access key opens the appointment, and only the right key does", async () => {
+  const key = generateAccessKey();
+  const booked = await bookAppointmentWith(
+    db,
+    TENANT.slug,
+    newAppointment({
+      date: "2098-05-04",
+      slotTime: "08:00",
+      accessKeyHash: hashAccessKey(key),
+    }),
+  );
+  const protocol = booked.protocolNumber ?? "";
+  // Only the hash is kept.
+  assert.notEqual(booked.accessKeyHash, key);
+  const opened = await findAppointmentByProtocolWithKeyWith(
+    db,
+    TENANT.slug,
+    protocol,
+    key,
+  );
+  assert.equal(opened?.id, booked.id);
+  assert.equal(
+    await findAppointmentByProtocolWithKeyWith(
+      db,
+      TENANT.slug,
+      protocol,
+      generateAccessKey(),
+    ),
+    undefined,
+  );
+});
+
+test("an appointment without a key opens to nobody until one is recovered by e-mail", async () => {
+  const booked = await bookAppointmentWith(
+    db,
+    TENANT.slug,
+    newAppointment({ date: "2098-05-04", slotTime: "08:15" }),
+  );
+  const protocol = booked.protocolNumber ?? "";
+  assert.equal(booked.accessKeyHash, null);
+
+  const wrong = await recoverAppointmentKeyWith(
+    db,
+    TENANT.slug,
+    protocol,
+    "outra@exemplo.com",
+  );
+  assert.equal(wrong.reissued, false);
+
+  const recovered = await recoverAppointmentKeyWith(
+    db,
+    TENANT.slug,
+    protocol,
+    "MARIA@exemplo.com",
+  );
+  assert.equal(recovered.reissued, true);
+  assert.equal(recovered.email, "maria@exemplo.com");
+  const opened = await findAppointmentByProtocolWithKeyWith(
+    db,
+    TENANT.slug,
+    protocol,
+    recovered.accessKey ?? "",
+  );
+  assert.equal(opened?.id, booked.id);
+});
+
+test("documents sent ahead stay with the appointment", async () => {
+  const booked = await bookAppointmentWith(
+    db,
+    TENANT.slug,
+    newAppointment({ date: "2098-05-04", slotTime: "08:30" }),
+  );
+  await addAppointmentAttachmentsWith(db, TENANT.slug, booked.id, [
+    {
+      storedName: "a.pdf",
+      displayName: "RG.pdf",
+      path: "/tmp/a.pdf",
+      mimeType: "application/pdf",
+      sizeBytes: 1200,
+    },
+  ]);
+  const files = await listAppointmentAttachmentsWith(db, TENANT.slug, [
+    booked.id,
+  ]);
+  assert.deepEqual(
+    files.map((file) => file.displayName),
+    ["RG.pdf"],
+  );
+  assert.deepEqual(
+    await listAppointmentAttachmentsWith(db, "outro-cartorio", [booked.id]),
+    [],
+  );
+});
+
+test("marcou atendido sem querer: desfazer volta para agendado", async () => {
+  const booked = await bookAppointmentWith(
+    db,
+    TENANT.slug,
+    newAppointment({ date: "2098-06-01", slotTime: "08:00" }),
+  );
+  await markAttendedWith(db, TENANT.slug, booked.id, "operadora");
+  assert.equal(
+    await revertAppointmentWith(db, TENANT.slug, booked.id, "operadora"),
+    true,
+  );
+  const [row] = await appointmentsOnWith(db, TENANT.slug, "2098-06-01");
+  assert.equal(row.status, "booked");
+  // Agendado não tem o que desfazer.
+  assert.equal(
+    await revertAppointmentWith(db, TENANT.slug, booked.id, "operadora"),
+    false,
+  );
+});
+
+test("excluir tira da agenda e libera o horário, sem apagar o registro", async () => {
+  const booked = await bookAppointmentWith(
+    db,
+    TENANT.slug,
+    newAppointment({ date: "2098-06-02", slotTime: "08:00" }),
+  );
+  await markAttendedWith(db, TENANT.slug, booked.id, "operadora");
+  assert.equal(
+    await removeAppointmentWith(db, TENANT.slug, booked.id, "operadora"),
+    true,
+  );
+  assert.deepEqual(await appointmentsOnWith(db, TENANT.slug, "2098-06-02"), []);
+  // O horário volta a ser marcável.
+  const again = await bookAppointmentWith(
+    db,
+    TENANT.slug,
+    newAppointment({ date: "2098-06-02", slotTime: "08:00" }),
+  );
+  assert.ok(again.id);
+  // O registro continua no banco, cancelado e marcado como excluído.
+  const [kept] = await db
+    .select()
+    .from(appointments)
+    .where(eq(appointments.id, booked.id));
+  assert.equal(kept.status, "cancelled");
+  assert.ok(kept.removedAt);
 });

@@ -614,6 +614,16 @@ export const appointments = pgTable(
     // The citizen's only credential, hashed like every other one here. The
     // token itself lives in exactly one place: the e-mail that was sent.
     cancelTokenHash: text("cancel_token_hash").notNull(),
+    // The access key that opens the appointment on the protocol consult
+    // (details, and documents the citizen sends ahead), hashed like the
+    // service request's. Null on appointments booked before it existed and
+    // on the ones the office reserves at the counter: the citizen gets one
+    // through "perdi a chave", with the e-mail on the booking.
+    accessKeyHash: text("access_key_hash"),
+    // When the office took the appointment off the agenda ("Excluir"): the
+    // row stays, cancelled and out of every list, so the record and its
+    // audit trail survive and the hour is free again.
+    removedAt: timestamp("removed_at", { withTimezone: true }),
     createdAt: timestamp("created_at", { withTimezone: true })
       .notNull()
       .defaultNow(),
@@ -639,6 +649,32 @@ export const appointments = pgTable(
     index("appointments_tenant_date").on(t.tenantSlug, t.date),
     index("appointments_cancel_token").on(t.cancelTokenHash),
   ],
+);
+
+/**
+ * A file the citizen sent ahead of an appointment, from the protocol consult
+ * opened with the appointment's key: a document they want the office to see
+ * before coming. Same columns as a service request's attachment, kept apart
+ * because an appointment is not a service request.
+ */
+export const appointmentAttachments = pgTable(
+  "appointment_attachments",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    tenantSlug,
+    appointmentId: uuid("appointment_id")
+      .notNull()
+      .references(() => appointments.id, { onDelete: "cascade" }),
+    storedName: text("stored_name").notNull(),
+    displayName: text("display_name").notNull(),
+    path: text("path"),
+    mimeType: text("mime_type").notNull(),
+    sizeBytes: integer("size_bytes").notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (t) => [index("appointment_attachments_appointment").on(t.appointmentId)],
 );
 
 /**

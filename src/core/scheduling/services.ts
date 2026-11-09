@@ -656,6 +656,14 @@ export function attendanceNotice(slotTime: SlotTime, mode: string): string {
 }
 
 /**
+ * Said wherever the appointment's key is: documents sent ahead in PDF let
+ * the office start the analysis before the visit, and only a legible,
+ * searchable PDF serves for that.
+ */
+export const DIGITAL_DOCUMENTS_NOTICE =
+  "Você pode anexar os seus documentos digitais em PDF no agendamento, pela consulta do protocolo, para adiantar a análise. O documento tem que estar legível e em PDF pesquisável (com texto que dá para selecionar, não só a imagem escaneada).";
+
+/**
  * The way to settle a doubt about the papers before the visit: send them to
  * the office by e-mail. Said wherever the list is, so nobody finds out at the
  * counter that a document would not do.

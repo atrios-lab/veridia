@@ -253,6 +253,13 @@
       "when": 1794198352056,
       "tag": "0035_turmas_do_curso",
       "breakpoints": true
+    },
+    {
+      "idx": 36,
+      "version": "7",
+      "when": 1794202906604,
+      "tag": "0036_chave_arquivos_e_exclusao_do_agendamento",
+      "breakpoints": true
     }
   ]
 }

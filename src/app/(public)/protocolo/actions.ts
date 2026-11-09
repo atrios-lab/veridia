@@ -41,12 +41,31 @@ import { formatCents } from "@/core/request/money.ts";
 import { parseProtocolNumber } from "@/core/request/protocol.ts";
 import { signatureCaveatFor } from "@/core/request/requerimento.ts";
 import {
+  AGENDA_NAMES,
+  agendaIdOf,
+  slotEndTime,
+} from "@/core/scheduling/agenda.ts";
+import { appointmentStatusLabel } from "@/core/scheduling/appointment.ts";
+import {
   type IsoDate,
   officeHolidays,
   toIsoDate,
 } from "@/core/scheduling/calendar.ts";
+import {
+  attendanceNotice,
+  checklistFileHref,
+  checklistFor,
+  resolveService,
+} from "@/core/scheduling/services.ts";
 import { isSectionEnabled } from "@/core/tenant/gating.ts";
 import { db } from "@/db/index.ts";
+import {
+  addAppointmentAttachments,
+  findAppointmentByProtocolWithKey,
+  getAgendaConfig,
+  listAppointmentAttachments,
+  recoverAppointmentKey,
+} from "@/lib/appointments.ts";
 import {
   notifyOfficePaymentReported,
   notifyOfficeRequirementReply,
@@ -71,7 +90,11 @@ import {
   writeCitizenMessage,
 } from "@/lib/service-request.ts";
 import { getTenant, OFFICE_TIME_ZONE, today } from "@/lib/tenant.ts";
-import { AttachmentError, collectAttachments } from "@/lib/uploads.ts";
+import {
+  AttachmentError,
+  collectAttachments,
+  deleteStoredFile,
+} from "@/lib/uploads.ts";
 
 const NOT_FOUND =
   "Protocolo ou chave de acesso inválidos. Confira os dados e tente de novo.";
@@ -246,10 +269,37 @@ export interface OmbudsmanDetail extends BaseDetail {
 }
 
 /** One consult, three shapes: the citizen types the same protocol and key. */
+/**
+ * An appointment (AGD), opened with the key it was booked with: when and
+ * what it is, what to bring, and the documents the citizen sent ahead.
+ */
+export interface AppointmentDetail extends BaseDetail {
+  kind: "appointment";
+  /** "booked" | "attended" | "no_show" | "cancelled". */
+  appointmentStatus: string;
+  date: IsoDate;
+  slotTime: string;
+  endTime: string;
+  agendaName: string;
+  serviceLabel: string;
+  mode: string;
+  /** When to arrive, or how to be ready for a call. */
+  arrival: string;
+  checklist: string[];
+  serviceNote?: string;
+  checklistUrl?: string;
+  /** The office's reason, when the office called it off. */
+  cancelReason?: string;
+  documents: CitizenDocumentView[];
+  /** Still ahead and booked: documents can be sent. */
+  open: boolean;
+}
+
 export type ProtocolDetail =
   | ServiceRequestDetail
   | DataRightsDetail
-  | OmbudsmanDetail;
+  | OmbudsmanDetail
+  | AppointmentDetail;
 
 export type LookupState =
   | { status: "idle" }
@@ -275,7 +325,68 @@ export async function protocolVersion(
     protocolNumber,
     accessKey,
   );
+  if (!record && isAppointmentProtocol(protocolNumber)) {
+    const appointment = await findAppointmentByProtocolWithKey(
+      tenant.slug,
+      protocolNumber,
+      accessKey,
+    );
+    return appointment?.updatedAt.toISOString() ?? null;
+  }
   return record?.updatedAt.toISOString() ?? null;
+}
+
+/** AGD numbers live in the appointments table, not with the requests. */
+function isAppointmentProtocol(protocolNumber: string): boolean {
+  return parseProtocolNumber(protocolNumber)?.prefix === "AGD";
+}
+
+/** The appointment the key opens, as the consult shows it. */
+async function appointmentDetail(
+  tenant: Awaited<ReturnType<typeof getTenant>>,
+  protocolNumber: string,
+  accessKey: string,
+): Promise<AppointmentDetail | undefined> {
+  const appointment = await findAppointmentByProtocolWithKey(
+    tenant.slug,
+    protocolNumber,
+    accessKey,
+  );
+  if (!appointment?.protocolNumber) return undefined;
+  const [config, documents] = await Promise.all([
+    getAgendaConfig(tenant.slug),
+    listAppointmentAttachments(tenant.slug, [appointment.id]),
+  ]);
+  const service = resolveService(config, appointment.serviceId);
+  return {
+    status: "success",
+    kind: "appointment",
+    protocolNumber: appointment.protocolNumber,
+    accessKey,
+    statusLabel: appointmentStatusLabel(appointment.status),
+    createdAt: appointment.createdAt.toISOString(),
+    updatedAt: appointment.updatedAt.toISOString(),
+    appointmentStatus: appointment.status,
+    date: appointment.date,
+    slotTime: appointment.slotTime,
+    endTime: slotEndTime(appointment.slotTime),
+    agendaName: AGENDA_NAMES[agendaIdOf(appointment.agenda)].name,
+    serviceLabel: appointment.serviceLabel,
+    mode: appointment.mode,
+    arrival: attendanceNotice(appointment.slotTime, appointment.mode),
+    checklist: checklistFor(service ?? { bring: [] }),
+    serviceNote: service?.note,
+    checklistUrl: service?.hasOwnFile
+      ? checklistFileHref(service.id)
+      : undefined,
+    cancelReason: appointment.cancelReason ?? undefined,
+    documents: documents.map((document) => ({
+      id: document.id,
+      createdAt: document.createdAt.toISOString(),
+      displayName: document.displayName,
+    })),
+    open: appointment.status === "booked" && appointment.date >= today(),
+  };
 }
 
 export async function lookupProtocolDetail(
@@ -309,7 +420,14 @@ export async function lookupProtocolDetail(
       protocolNumber,
       accessKey,
     );
-    if (!record) return { status: "error", message: NOT_FOUND };
+    if (!record) {
+      // An AGD number is an appointment, opened by the key it was booked
+      // with; anything else that does not open is simply not found.
+      const appointment = isAppointmentProtocol(protocolNumber)
+        ? await appointmentDetail(tenant, protocolNumber, accessKey)
+        : undefined;
+      return appointment ?? { status: "error", message: NOT_FOUND };
+    }
 
     const kind = record.kind as RequestKind;
     const base: BaseDetail = {
@@ -618,6 +736,29 @@ export async function recoverAccessKeyAction(
   // reads exactly like "não confere": which prefixes exist is not
   // information this form has to give up.
   const parsed = parseProtocolNumber(normalizedProtocol);
+  // An appointment's key is recovered with the booking's e-mail, the same
+  // way and with the same answer either way.
+  if (parsed?.prefix === "AGD") {
+    try {
+      const recovery = await recoverAppointmentKey(
+        tenant.slug,
+        normalizedProtocol,
+        email,
+      );
+      if (recovery.reissued && recovery.accessKey && recovery.email) {
+        await sendAccessKey({
+          tenant,
+          contact: recovery.email,
+          protocolNumber: normalizedProtocol,
+          accessKey: recovery.accessKey,
+          reason: "recovered",
+        });
+      }
+    } catch (error) {
+      console.error("protocolo.recover-appointment-key", error);
+    }
+    return { status: "sent", message: RECOVERY_SENT_MESSAGE };
+  }
   if (!parsed || parsed.prefix !== "REQ") {
     return { status: "sent", message: RECOVERY_SENT_MESSAGE };
   }
@@ -709,6 +850,100 @@ export async function attachExtraDocument(
       return { status: "error", message: error.message };
     }
     console.error("protocolo.attach-extra", error);
+    return { status: "error", message: GENERIC_ERROR };
+  }
+}
+
+const PDF = "application/pdf";
+const PDF_ONLY =
+  "Envie o documento em PDF, legível e pesquisável (com texto que dá para selecionar). Foto não é aceita aqui.";
+
+/**
+ * A document the citizen sends ahead of an appointment, from the consult
+ * opened with its key: only while it is booked and not past, and only as a
+ * PDF, for the office to start the analysis before the visit.
+ */
+export async function attachAppointmentDocument(
+  _previous: AttachDocumentState,
+  formData: FormData,
+): Promise<AttachDocumentState> {
+  const tenant = await getTenant();
+  const protocolNumber = String(formData.get("protocolNumber") ?? "");
+  const accessKey = String(formData.get("accessKey") ?? "");
+
+  const appointment = await findAppointmentByProtocolWithKey(
+    tenant.slug,
+    protocolNumber,
+    accessKey,
+  );
+  if (!appointment) return { status: "error", message: NOT_FOUND };
+  if (appointment.status !== "booked" || appointment.date < today()) {
+    return {
+      status: "error",
+      message:
+        "Este agendamento já passou ou foi cancelado: não recebe mais documentos.",
+    };
+  }
+
+  if (await isRateLimited(await headers())) {
+    return {
+      status: "error",
+      message: "Muitos envios seguidos. Aguarde um minuto e tente de novo.",
+    };
+  }
+
+  // Digital documents for the analysis ahead of the visit: PDF only, said
+  // before anything is stored. A photo of a page is what the counter can
+  // already see in person.
+  const declared = [
+    ...formData.getAll("documentoRef").map((value) => {
+      try {
+        return String(JSON.parse(String(value))?.mimeType ?? "");
+      } catch {
+        return "";
+      }
+    }),
+    ...formData
+      .getAll("documento")
+      .filter((value): value is File => value instanceof File && value.size > 0)
+      .map((file) => file.type),
+  ];
+  if (declared.some((type) => type !== PDF)) {
+    return { status: "error", message: PDF_ONLY };
+  }
+
+  try {
+    const stored = await collectAttachments(formData, "documento", {
+      tenantSlug: tenant.slug,
+      limit: 1,
+    });
+    if (stored.length === 0) {
+      return { status: "error", message: "Escolha um arquivo para enviar." };
+    }
+    // What the store recognised, not what the browser claimed.
+    if (stored.some((file) => file.mimeType !== PDF)) {
+      await Promise.all(stored.map((file) => deleteStoredFile(file.path)));
+      return { status: "error", message: PDF_ONLY };
+    }
+    await addAppointmentAttachments(tenant.slug, appointment.id, stored);
+    const documents = await listAppointmentAttachments(tenant.slug, [
+      appointment.id,
+    ]);
+    return {
+      status: "success",
+      message:
+        "Documento recebido. A serventia já pode adiantar a análise antes do atendimento.",
+      documents: documents.map((a) => ({
+        id: a.id,
+        createdAt: a.createdAt.toISOString(),
+        displayName: a.displayName,
+      })),
+    };
+  } catch (error) {
+    if (error instanceof AttachmentError) {
+      return { status: "error", message: error.message };
+    }
+    console.error("protocolo.attach-appointment", error);
     return { status: "error", message: GENERIC_ERROR };
   }
 }

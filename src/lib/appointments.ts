@@ -1,5 +1,11 @@
 import "server-only";
-import { and, asc, eq, inArray, sql } from "drizzle-orm";
+import { and, asc, eq, inArray, isNull, sql } from "drizzle-orm";
+import { emailsMatch } from "@/core/email/match.ts";
+import {
+  generateAccessKey,
+  hashAccessKey,
+  verifyAccessKey,
+} from "@/core/request/access-key.ts";
 import { formatProtocolNumber } from "@/core/request/protocol.ts";
 import {
   type AgendaConfig,
@@ -22,9 +28,15 @@ import {
   violatedConstraint,
 } from "@/db/errors.ts";
 import { type Database, db } from "@/db/index.ts";
-import { appointments, tenantContent } from "@/db/schema.ts";
+import {
+  appointmentAttachments,
+  appointments,
+  tenantContent,
+} from "@/db/schema.ts";
 import { OFFICE_AGENDA_KEY } from "@/lib/office-config.ts";
 import { recordAudit, recordAuditWith } from "./audit.ts";
+import { findPermanentBounceWith } from "./email/bounces.ts";
+import type { StoredAttachment } from "./uploads.ts";
 
 export type Appointment = typeof appointments.$inferSelect;
 
@@ -157,7 +169,12 @@ export async function appointmentsOnWith(
     .select()
     .from(appointments)
     .where(
-      and(eq(appointments.tenantSlug, tenantSlug), eq(appointments.date, date)),
+      and(
+        eq(appointments.tenantSlug, tenantSlug),
+        eq(appointments.date, date),
+        // Taken off the agenda by the office: kept, never listed.
+        isNull(appointments.removedAt),
+      ),
     )
     .orderBy(asc(appointments.slotTime), asc(appointments.createdAt));
 }
@@ -234,6 +251,8 @@ export interface NewAppointment {
   /** The citizen's own words on what they need. Absent on a desk booking. */
   serviceDetails?: string;
   cancelTokenHash: string;
+  /** The access key's hash, for the consult; absent on a desk booking. */
+  accessKeyHash?: string;
   /** Defaults to "site": the citizen booked it themselves. */
   origin?: AppointmentOrigin;
 }
@@ -298,6 +317,7 @@ export async function bookAppointmentWith(
           mode: input.mode,
           serviceDetails: input.serviceDetails ?? null,
           cancelTokenHash: input.cancelTokenHash,
+          accessKeyHash: input.accessKeyHash ?? null,
           origin,
           protocolYear: year,
           protocolSequence: sequence,
@@ -626,4 +646,286 @@ export async function findAppointmentById(
     )
     .limit(1);
   return row;
+}
+
+/* ------------------------------------------------------------- access key */
+
+/**
+ * The appointment behind an AGD protocol, but only when the key opens it:
+ * the consult page's details and the documents sent ahead. An appointment
+ * without a key (booked before keys, or reserved at the counter) opens to
+ * nobody until the citizen recovers one with the booking's e-mail.
+ */
+export async function findAppointmentByProtocolWithKeyWith(
+  database: Database,
+  tenantSlug: string,
+  protocolNumber: string,
+  accessKey: string,
+): Promise<Appointment | undefined> {
+  const [row] = await database
+    .select()
+    .from(appointments)
+    .where(
+      and(
+        eq(appointments.tenantSlug, tenantSlug),
+        eq(appointments.protocolNumber, protocolNumber),
+      ),
+    )
+    .limit(1);
+  if (!row?.accessKeyHash || !verifyAccessKey(accessKey, row.accessKeyHash)) {
+    return undefined;
+  }
+  return row;
+}
+
+export function findAppointmentByProtocolWithKey(
+  tenantSlug: string,
+  protocolNumber: string,
+  accessKey: string,
+): Promise<Appointment | undefined> {
+  return findAppointmentByProtocolWithKeyWith(
+    db,
+    tenantSlug,
+    protocolNumber,
+    accessKey,
+  );
+}
+
+/**
+ * "Perdi a chave" for an appointment: a new key when the protocol and the
+ * booking's e-mail match and the address takes mail, same rules as the
+ * service request's. The old key stops opening it the moment this returns.
+ */
+export async function recoverAppointmentKeyWith(
+  database: Database,
+  tenantSlug: string,
+  protocolNumber: string,
+  email: string,
+): Promise<{ reissued: boolean; accessKey?: string; email?: string }> {
+  const [row] = await database
+    .select()
+    .from(appointments)
+    .where(
+      and(
+        eq(appointments.tenantSlug, tenantSlug),
+        eq(appointments.protocolNumber, protocolNumber),
+      ),
+    )
+    .limit(1);
+  if (!row || !emailsMatch(row.email, email)) return { reissued: false };
+  if (await findPermanentBounceWith(database, row.email)) {
+    return { reissued: false };
+  }
+  const accessKey = generateAccessKey();
+  await database
+    .update(appointments)
+    .set({ accessKeyHash: hashAccessKey(accessKey), updatedAt: new Date() })
+    .where(
+      and(eq(appointments.tenantSlug, tenantSlug), eq(appointments.id, row.id)),
+    );
+  await recordAuditWith(database, {
+    tenantSlug,
+    actorId: null,
+    action: "appointment.key-reissue",
+    targetType: "appointment",
+    targetId: row.id,
+  });
+  return { reissued: true, accessKey, email: row.email };
+}
+
+export function recoverAppointmentKey(
+  tenantSlug: string,
+  protocolNumber: string,
+  email: string,
+) {
+  return recoverAppointmentKeyWith(db, tenantSlug, protocolNumber, email);
+}
+
+/* -------------------------------------------------------------- documents */
+
+export type AppointmentAttachment = typeof appointmentAttachments.$inferSelect;
+
+/** What the citizen sent ahead of an appointment, oldest first. */
+export async function listAppointmentAttachmentsWith(
+  database: Database,
+  tenantSlug: string,
+  appointmentIds: string[],
+): Promise<AppointmentAttachment[]> {
+  if (appointmentIds.length === 0) return [];
+  return database
+    .select()
+    .from(appointmentAttachments)
+    .where(
+      and(
+        eq(appointmentAttachments.tenantSlug, tenantSlug),
+        inArray(appointmentAttachments.appointmentId, appointmentIds),
+      ),
+    )
+    .orderBy(asc(appointmentAttachments.createdAt));
+}
+
+export function listAppointmentAttachments(
+  tenantSlug: string,
+  appointmentIds: string[],
+): Promise<AppointmentAttachment[]> {
+  return listAppointmentAttachmentsWith(db, tenantSlug, appointmentIds);
+}
+
+/** Files the citizen sent from the consult, kept on the appointment. */
+export async function addAppointmentAttachmentsWith(
+  database: Database,
+  tenantSlug: string,
+  appointmentId: string,
+  files: StoredAttachment[],
+): Promise<void> {
+  if (files.length === 0) return;
+  await database.insert(appointmentAttachments).values(
+    files.map((file) => ({
+      tenantSlug,
+      appointmentId,
+      storedName: file.storedName,
+      displayName: file.displayName,
+      path: file.path,
+      mimeType: file.mimeType,
+      sizeBytes: file.sizeBytes,
+    })),
+  );
+  // The consult refreshes on `updatedAt`: a new file is news.
+  await database
+    .update(appointments)
+    .set({ updatedAt: new Date() })
+    .where(
+      and(
+        eq(appointments.tenantSlug, tenantSlug),
+        eq(appointments.id, appointmentId),
+      ),
+    );
+  await recordAuditWith(database, {
+    tenantSlug,
+    actorId: null,
+    action: "appointment.attach",
+    targetType: "appointment",
+    targetId: appointmentId,
+  });
+}
+
+export function addAppointmentAttachments(
+  tenantSlug: string,
+  appointmentId: string,
+  files: StoredAttachment[],
+): Promise<void> {
+  return addAppointmentAttachmentsWith(db, tenantSlug, appointmentId, files);
+}
+
+/** One file, for the panel to serve. */
+export async function findAppointmentAttachment(
+  tenantSlug: string,
+  id: string,
+): Promise<AppointmentAttachment | undefined> {
+  if (!/^[0-9a-f-]{36}$/i.test(id)) return undefined;
+  const [row] = await db
+    .select()
+    .from(appointmentAttachments)
+    .where(
+      and(
+        eq(appointmentAttachments.tenantSlug, tenantSlug),
+        eq(appointmentAttachments.id, id),
+      ),
+    )
+    .limit(1);
+  return row;
+}
+
+/* ------------------------------------------------------ undo and remove */
+
+/**
+ * "Desfazer": an appointment marked attended or no-show by mistake goes back
+ * to booked, for the office to mark it right. False when it was neither.
+ */
+export async function revertAppointmentWith(
+  database: Database,
+  tenantSlug: string,
+  id: string,
+  actorId: string,
+): Promise<boolean> {
+  const reverted = await database
+    .update(appointments)
+    .set({ status: "booked", updatedAt: new Date() })
+    .where(
+      and(
+        eq(appointments.tenantSlug, tenantSlug),
+        eq(appointments.id, id),
+        inArray(appointments.status, ["attended", "no_show"]),
+        isNull(appointments.removedAt),
+      ),
+    )
+    .returning({ id: appointments.id });
+  if (reverted.length === 0) return false;
+  await recordAuditWith(database, {
+    tenantSlug,
+    actorId,
+    action: "appointment.revert",
+    targetType: "appointment",
+    targetId: id,
+  });
+  return true;
+}
+
+export function revertAppointment(
+  tenantSlug: string,
+  id: string,
+  actorId: string,
+): Promise<boolean> {
+  return revertAppointmentWith(db, tenantSlug, id, actorId);
+}
+
+/**
+ * "Excluir": takes the appointment off the agenda, whatever its status.
+ * Nothing is deleted: the row is cancelled (the hour is free again) and
+ * marked removed, so it leaves every list but the record and the audit
+ * trail stay. The citizen is not e-mailed: cancelling is the way to tell
+ * them.
+ */
+export async function removeAppointmentWith(
+  database: Database,
+  tenantSlug: string,
+  id: string,
+  actorId: string,
+): Promise<boolean> {
+  const now = new Date();
+  const removed = await database
+    .update(appointments)
+    .set({
+      status: "cancelled",
+      removedAt: now,
+      // The database's own clock: a Date inside raw SQL is a parameter
+      // the production driver will not serialise.
+      cancelledAt: sql`coalesce(${appointments.cancelledAt}, now())`,
+      updatedAt: now,
+    })
+    .where(
+      and(
+        eq(appointments.tenantSlug, tenantSlug),
+        eq(appointments.id, id),
+        isNull(appointments.removedAt),
+      ),
+    )
+    .returning({ id: appointments.id });
+  if (removed.length === 0) return false;
+  await recordAuditWith(database, {
+    tenantSlug,
+    actorId,
+    action: "appointment.remove",
+    targetType: "appointment",
+    targetId: id,
+  });
+  return true;
+}
+
+export function removeAppointment(
+  tenantSlug: string,
+  id: string,
+  actorId: string,
+): Promise<boolean> {
+  return removeAppointmentWith(db, tenantSlug, id, actorId);
 }
