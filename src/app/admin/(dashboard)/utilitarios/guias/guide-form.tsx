@@ -8,6 +8,7 @@ import {
   MARRIAGE_REGIME_LABELS,
   missingQualification,
   qualify,
+  STABLE_UNION_LABELS,
 } from "@/core/guides/qualification.ts";
 import {
   CIVIL_STATUSES,
@@ -19,6 +20,7 @@ import {
   MARRIAGE_REGIMES,
   OFFERED_GUIDE_KINDS,
   rateFor,
+  STABLE_UNION_OPTIONS,
 } from "@/core/guides/schema.ts";
 import { formatMoneyBRL } from "@/core/transparency/bulletin.ts";
 import { AdminIcon } from "../../../_components/icon.tsx";
@@ -182,11 +184,10 @@ function PartyCard({
               label="União estável (CPC, art. 319, II)"
               value={party.stableUnion}
               onChange={(value) => set("stableUnion", value ?? "nao-informado")}
-              options={[
-                { value: "nao", label: "Declara que não convive" },
-                { value: "sim", label: "Convive em união estável" },
-                { value: "nao-informado", label: "Não informar" },
-              ]}
+              options={STABLE_UNION_OPTIONS.map((value) => ({
+                value,
+                label: STABLE_UNION_LABELS[value],
+              }))}
             />
             {party.civilStatus === "casado" && (
               <>

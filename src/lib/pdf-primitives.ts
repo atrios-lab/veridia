@@ -23,7 +23,9 @@ export function bottom(pdf: Pdf): number {
   return pdf.page.height - MARGIN;
 }
 
-/** Letterspaced small caps, the accent voice of the letterhead. */
+/** A section heading: bold capitals in black, a size above the body, in
+ * the letterhead's own face, so a heading reads as one (the office asked
+ * for black, not the theme's gold, and for more weight). */
 export function drawEyebrow(
   pdf: Pdf,
   text: string,
@@ -32,8 +34,8 @@ export function drawEyebrow(
   x: number = MARGIN,
 ): void {
   pdf
-    .font("Helvetica-Bold")
-    .fontSize(8.5)
+    .font("Times-Bold")
+    .fontSize(11)
     .fillColor(color)
-    .text(text.toUpperCase(), x, pdf.y, { width, characterSpacing: 1.4 });
+    .text(text.toUpperCase(), x, pdf.y, { width, characterSpacing: 0.4 });
 }

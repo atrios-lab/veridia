@@ -209,3 +209,30 @@ test("guarda de 12 meses: aviso nos últimos 30 dias, depois vencida", () => {
     "past",
   );
 });
+
+test("união estável declarada sob as penas da lei, para quem não é casado", () => {
+  for (const civilStatus of [
+    "solteiro",
+    "viuvo",
+    "separado",
+    "divorciado",
+  ] as const) {
+    assert.match(
+      qualify(party({ civilStatus, stableUnion: "declara-nao-mantem" })),
+      /, que declara, sob as penas da lei, que não mantém união estável, /,
+    );
+    assert.match(
+      qualify(party({ civilStatus, stableUnion: "declara-mantem" })),
+      /, que declara, sob as penas da lei, que mantém união estável, /,
+    );
+  }
+  // The wording already in use stays.
+  assert.match(
+    qualify(party({ stableUnion: "nao" })),
+    /declarante não convivente em união estável/,
+  );
+  assert.doesNotMatch(
+    qualify(party({ stableUnion: "nao-informado" })),
+    /união estável/,
+  );
+});

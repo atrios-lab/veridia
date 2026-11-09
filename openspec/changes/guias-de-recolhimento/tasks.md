@@ -14,3 +14,11 @@
 - [x] 3.1 Ato "Guia de recolhimento" em Notas, com formulário simplificado e anexos
 - [x] 3.2 Guia gerada sozinha, ligada ao pedido, visível só no painel até a serventia entregar
 - [x] 3.3 Cartão da guia no pedido; andamento "Aguardando pagamento da guia"
+
+## 4. Ajustes de 09/11/2026
+
+- [x] 4.1 Pedidos de guia fora da fila de Pedidos de serviço: seção "Pedidos do site" em Guias de recolhimento,
+  com contador no menu
+- [x] 4.2 Aviso no painel (cartão, som e notificação) para guia nova e para guia atualizada pelo cliente
+- [x] 4.3 PDFs em Times, com os destaques em preto, negrito e maiores
+- [x] 4.4 União estável declarada sob as penas da lei (mantém / não mantém), no painel e no site

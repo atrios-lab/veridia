@@ -58,7 +58,7 @@ function drawLetterhead(
     const qrLeft = pdf.page.width - MARGIN - QR_SIZE;
     pdf.image(qr, qrLeft, top, { width: QR_SIZE });
     pdf
-      .font("Helvetica")
+      .font("Times-Roman")
       .fontSize(6.5)
       .fillColor(palette.muted)
       .text(
@@ -97,16 +97,16 @@ function drawRow(
 ): void {
   const top = pdf.y;
   pdf
-    .font("Helvetica")
-    .fontSize(9.5)
+    .font("Times-Roman")
+    .fontSize(10.5)
     .fillColor(brand.palette.muted)
     .text(row.label, MARGIN, top + 1, { width: LABEL_WIDTH - 14 });
   const afterLabel = pdf.y;
 
   pdf.y = top;
   pdf
-    .font("Helvetica")
-    .fontSize(10.5)
+    .font("Times-Roman")
+    .fontSize(11.5)
     .fillColor(NEUTRALS.text)
     .text(row.value, MARGIN + LABEL_WIDTH, top, {
       width: contentWidth(pdf) - LABEL_WIDTH,
@@ -140,7 +140,7 @@ function drawField(
 ): void {
   if (pdf.y > bottom(pdf) - 40) pdf.addPage();
   pdf
-    .font("Helvetica")
+    .font("Times-Roman")
     .fontSize(7.5)
     .fillColor(brand.palette.muted)
     .text(field.label.toUpperCase(), MARGIN, pdf.y, {
@@ -149,7 +149,7 @@ function drawField(
     });
   if (field.value) {
     pdf
-      .font("Helvetica")
+      .font("Times-Roman")
       .fontSize(10)
       .fillColor(NEUTRALS.text)
       .text(field.value, MARGIN, pdf.y + 1, { width: contentWidth(pdf) });
@@ -171,7 +171,7 @@ function drawSection(
 ): void {
   pdf.moveDown(1.5);
   if (pdf.y > bottom(pdf) - HEADING_ORPHAN_GUARD) pdf.addPage();
-  drawEyebrow(pdf, section.heading, brand.palette.accent, contentWidth(pdf));
+  drawEyebrow(pdf, section.heading, NEUTRALS.text, contentWidth(pdf));
   pdf.moveDown(0.7);
 
   const rows = section.rows ?? [];
@@ -185,9 +185,9 @@ function drawSection(
 
   for (const paragraph of section.paragraphs ?? []) {
     pdf
-      .font("Helvetica")
-      .fontSize(9.5)
-      .fillColor(NEUTRALS.textSoft)
+      .font("Times-Roman")
+      .fontSize(11)
+      .fillColor(NEUTRALS.text)
       .text(paragraph, MARGIN, pdf.y, {
         width: contentWidth(pdf),
         align: "justify",
@@ -218,7 +218,7 @@ function drawCredentials(
     .fillAndStroke(palette.accentSoft, palette.accent);
 
   pdf
-    .font("Helvetica-Bold")
+    .font("Times-Bold")
     .fontSize(12)
     .fillColor(palette.primary)
     .text(credentials.heading.toUpperCase(), MARGIN, top + 30, {
@@ -230,7 +230,7 @@ function drawCredentials(
   pdf.y = top + 66;
   for (const row of credentials.rows) {
     pdf
-      .font("Helvetica")
+      .font("Times-Roman")
       .fontSize(8)
       .fillColor(palette.muted)
       .text(row.label.toUpperCase(), MARGIN, pdf.y, {
@@ -250,8 +250,8 @@ function drawCredentials(
 
   pdf.y = top + height + 26;
   pdf
-    .font("Helvetica")
-    .fontSize(9.5)
+    .font("Times-Roman")
+    .fontSize(10.5)
     .fillColor(NEUTRALS.textSoft)
     .text(credentials.note, MARGIN + 24, pdf.y, {
       width: width - 48,
@@ -281,13 +281,13 @@ function drawDocumentBody(
   // and date below.
   const width = contentWidth(pdf);
   pdf
-    .font("Helvetica-Bold")
-    .fontSize(8.5)
-    .fillColor(brand.palette.accent)
+    .font("Times-Bold")
+    .fontSize(10.5)
+    .fillColor(NEUTRALS.text)
     .text(document.eyebrow.toLocaleUpperCase("pt-BR"), MARGIN, pdf.y, {
       width,
       align: "center",
-      characterSpacing: 1.4,
+      characterSpacing: 0.6,
     });
   pdf
     .font("Times-Bold")
@@ -298,8 +298,8 @@ function drawDocumentBody(
       align: "center",
     });
   pdf
-    .font("Helvetica")
-    .fontSize(10)
+    .font("Times-Roman")
+    .fontSize(11)
     .fillColor(NEUTRALS.textSoft)
     .text(document.subtitle, MARGIN, pdf.y + 4, { width, align: "center" });
 
@@ -313,7 +313,7 @@ function drawDocumentBody(
     // The signature is anchored at the foot of the page: everything between
     // the last section and the rule is room to sign by hand, which is the
     // point. Too little of it, and the block gets a page (mostly) to itself.
-    pdf.font("Helvetica").fontSize(9);
+    pdf.font("Times-Roman").fontSize(9);
     const noteHeight = document.signature.reduce(
       (sum, line) =>
         sum + pdf.heightOfString(line, { width: contentWidth(pdf) - 80 }),
@@ -327,7 +327,7 @@ function drawDocumentBody(
     const ruleLeft = MARGIN + (contentWidth(pdf) - ruleWidth) / 2;
     pdf.rect(ruleLeft, pdf.y, ruleWidth, 0.8).fill(NEUTRALS.text);
     pdf
-      .font("Helvetica")
+      .font("Times-Roman")
       .fontSize(10)
       .fillColor(NEUTRALS.text)
       .text(document.signee, MARGIN, pdf.y + 6, {
@@ -340,7 +340,7 @@ function drawDocumentBody(
     if (pdf.y > bottom(pdf) - HEADING_ORPHAN_GUARD) pdf.addPage();
   }
 
-  pdf.font("Helvetica").fontSize(9).fillColor(brand.palette.muted);
+  pdf.font("Times-Roman").fontSize(9).fillColor(brand.palette.muted);
   for (const line of document.signature) {
     pdf.text(line, MARGIN + 40, pdf.y, {
       width: contentWidth(pdf) - 80,
@@ -519,7 +519,7 @@ export async function renderBulletin(
   // line.
   const titleY = flowTop;
   pdf
-    .font("Helvetica-Bold")
+    .font("Times-Bold")
     .fontSize(19)
     .fillColor(palette.primary)
     .text(document.title, MARGIN, titleY, {
@@ -529,7 +529,7 @@ export async function renderBulletin(
 
   if (document.preliminary) {
     const tag = "Dados preliminares";
-    pdf.font("Helvetica-Bold").fontSize(8.5);
+    pdf.font("Times-Bold").fontSize(8.5);
     const tw = pdf.widthOfString(tag) + 20;
     const tagX = pdf.page.width - MARGIN - tw;
     pdf.roundedRect(tagX, titleY + 2, tw, 20, 10).fill(palette.accentSoft);
@@ -540,7 +540,7 @@ export async function renderBulletin(
 
   const periodY = Math.max(titleY + 30, titleBottom + 6);
   pdf
-    .font("Helvetica")
+    .font("Times-Roman")
     .fontSize(10)
     .fillColor(NEUTRALS.textSoft)
     .text(`Período: ${document.period}`, MARGIN, periodY, { width });
@@ -557,13 +557,13 @@ export async function renderBulletin(
     const left = MARGIN + inset + (options.indent ? 14 : 0);
     const labelWidth = width - inset * 2 - (options.indent ? 14 : 0) - 110;
     pdf
-      .font(options.strong ? "Helvetica-Bold" : "Helvetica")
+      .font(options.strong ? "Times-Bold" : "Times-Roman")
       .fontSize(options.strong ? 10 : 9.5)
       .fillColor(options.strong ? palette.primary : NEUTRALS.textSoft)
       .text(label, left, y, { width: labelWidth });
     const labelBottom = pdf.y;
     pdf
-      .font(options.strong ? "Helvetica-Bold" : "Helvetica")
+      .font(options.strong ? "Times-Bold" : "Times-Roman")
       .fontSize(options.strong ? 11 : 10)
       .fillColor(options.strong ? palette.primary : NEUTRALS.text)
       .text(amount, MARGIN + inset, y, {
@@ -579,12 +579,12 @@ export async function renderBulletin(
     y += 12;
     if (eyebrow) {
       pdf
-        .font("Helvetica-Bold")
-        .fontSize(8.5)
-        .fillColor(palette.accent)
+        .font("Times-Bold")
+        .fontSize(10.5)
+        .fillColor(NEUTRALS.text)
         .text(eyebrow.toUpperCase(), MARGIN + inset, y, {
           width: width - inset * 2,
-          characterSpacing: 1.2,
+          characterSpacing: 0.6,
         });
       y += 18;
     }
@@ -633,14 +633,14 @@ export async function renderBulletin(
     const stripH = 46;
     pdf.roundedRect(MARGIN, y, width, stripH, 8).fill(palette.primary);
     pdf
-      .font("Helvetica-Bold")
+      .font("Times-Bold")
       .fontSize(11)
       .fillColor(NEUTRALS.card)
       .text(document.balance.label, MARGIN + 18, y + 17, {
         width: width - 200,
       });
     pdf
-      .font("Helvetica-Bold")
+      .font("Times-Bold")
       .fontSize(16)
       .fillColor(NEUTRALS.card)
       .text(document.balance.amount, MARGIN, y + 15, {
@@ -651,7 +651,7 @@ export async function renderBulletin(
   }
 
   pdf
-    .font("Helvetica")
+    .font("Times-Roman")
     .fontSize(8)
     .fillColor(palette.muted)
     .text(document.note, MARGIN, y, { width });

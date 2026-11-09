@@ -5,6 +5,7 @@ import { can } from "@/core/auth/roles.ts";
 import { sendDueRemindersInBackground } from "@/lib/appointment-reminders.ts";
 import { bookedCountFrom } from "@/lib/appointments.ts";
 import { waitingCount } from "@/lib/chat.ts";
+import { openGuideRequestCount } from "@/lib/guide-requests.ts";
 import { openCountByKind, openRequestCount } from "@/lib/service-request.ts";
 import { getSession } from "@/lib/session.ts";
 import { getTenant, officeNow } from "@/lib/tenant.ts";
@@ -16,6 +17,7 @@ import {
   ChatAlerts,
 } from "../_components/chat-alerts.tsx";
 import { GlobalSearchProvider } from "../_components/global-search.tsx";
+import { GuideAlerts } from "../_components/guide-alerts.tsx";
 import { ShortcutListener } from "../_components/shortcut-listener.tsx";
 import { AdminSidebar } from "../_components/sidebar.tsx";
 import { ADMIN_MENU_ID, AdminTopBar } from "../_components/top-bar.tsx";
@@ -46,7 +48,11 @@ export default async function DashboardLayout({
   // on top of a link that is itself hidden without the permission.
   const counts: Record<string, number> = {
     ...(can(role, "requests.manage")
-      ? { "/admin/pedidos": await openRequestCount(tenant.slug) }
+      ? {
+          "/admin/pedidos": await openRequestCount(tenant.slug),
+          // The guias de recolhimento the site asked for, still open.
+          "/admin/utilitarios/guias": await openGuideRequestCount(tenant.slug),
+        }
       : {}),
     ...(can(role, "channels.manage")
       ? {
@@ -150,6 +156,8 @@ export default async function DashboardLayout({
           {can(role, "chat.manage") && <ChatAlerts />}
           {/* Same for the agenda: who is coming today, who just booked. */}
           {can(role, "channels.manage") && <AgendaAlerts />}
+          {/* And the guias de recolhimento: a new one, or one the citizen moved. */}
+          {can(role, "requests.manage") && <GuideAlerts />}
         </div>
       </div>
     </GlobalSearchProvider>

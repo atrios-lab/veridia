@@ -30,6 +30,7 @@ const blankParty = (role: PublicGuideParty["role"]): PublicGuideParty => ({
   gender: "feminino",
   taxId: "",
   civilStatus: undefined,
+  stableUnion: "nao-informado",
   profession: "",
   address: "",
 });
@@ -191,6 +192,30 @@ export function GuideRequestFields({
                     ))}
                   </select>
                 </label>
+                {party.civilStatus && party.civilStatus !== "casado" && (
+                  <label className="block md:col-span-2">
+                    <span className={label}>União estável</span>
+                    <select
+                      className={input}
+                      value={party.stableUnion}
+                      onChange={(e) =>
+                        setParty(index, {
+                          stableUnion: e.target
+                            .value as PublicGuideParty["stableUnion"],
+                        })
+                      }
+                    >
+                      <option value="nao-informado">Escolher…</option>
+                      <option value="declara-nao-mantem">
+                        Declara, sob as penas da lei, que não mantém união
+                        estável
+                      </option>
+                      <option value="declara-mantem">
+                        Declara, sob as penas da lei, que mantém união estável
+                      </option>
+                    </select>
+                  </label>
+                )}
                 <label className="block">
                   <span className={label}>Profissão</span>
                   <input

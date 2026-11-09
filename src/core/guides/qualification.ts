@@ -31,6 +31,32 @@ export const MARRIAGE_REGIME_LABELS: Record<
   "participacao-final": "participação final nos aquestos",
 };
 
+/**
+ * How the union is written in the qualification. The two declarations are
+ * what the registry asks of a party who is not married (solteiro, viúvo,
+ * separado, divorciado): stated "sob as penas da lei". The shorter two stay
+ * for the guias issued before; "nao-informado" writes nothing.
+ */
+const STABLE_UNION_TEXT: Record<GuideParty["stableUnion"], string> = {
+  "declara-nao-mantem":
+    "que declara, sob as penas da lei, que não mantém união estável",
+  "declara-mantem":
+    "que declara, sob as penas da lei, que mantém união estável",
+  nao: "declarante não convivente em união estável",
+  sim: "convivente em união estável",
+  "nao-informado": "",
+};
+
+/** The union options as the forms offer them. */
+export const STABLE_UNION_LABELS: Record<GuideParty["stableUnion"], string> = {
+  "declara-nao-mantem":
+    "Declara, sob as penas da lei, que não mantém união estável",
+  "declara-mantem": "Declara, sob as penas da lei, que mantém união estável",
+  nao: "Declarante não convivente em união estável",
+  sim: "Convivente em união estável",
+  "nao-informado": "Não informar",
+};
+
 export const CIVIL_STATUS_LABELS: Record<
   NonNullable<GuideParty["civilStatus"]>,
   string
@@ -85,16 +111,8 @@ export function qualify(party: GuideParty): string {
       : "";
     parts.push(`${status}${regime}${record}`);
   }
-  if (party.stableUnion === "sim") {
-    parts.push(g("convivente em união estável", "convivente em união estável"));
-  } else if (party.stableUnion === "nao") {
-    parts.push(
-      g(
-        "declarante não convivente em união estável",
-        "declarante não convivente em união estável",
-      ),
-    );
-  }
+  const union = STABLE_UNION_TEXT[party.stableUnion];
+  if (union) parts.push(union);
   if (party.profession.trim()) parts.push(party.profession.trim());
   if (party.identity.trim()) {
     parts.push(

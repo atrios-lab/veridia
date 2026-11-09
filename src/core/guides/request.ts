@@ -10,6 +10,7 @@ import {
   type GuideSettings,
   OFFERED_GUIDE_KINDS,
   rateFor,
+  STABLE_UNION_OPTIONS,
 } from "./schema.ts";
 
 /**
@@ -34,6 +35,7 @@ export const PublicGuidePartySchema = z.object({
     { message: "Informe o CPF ou o CNPJ." },
   ),
   civilStatus: z.enum(CIVIL_STATUSES).optional(),
+  stableUnion: z.enum(STABLE_UNION_OPTIONS).default("nao-informado"),
   profession: text(80),
   address: text(300, "Informe o endereço."),
 });
@@ -99,6 +101,7 @@ export function guideFromRequest(
       gender: party.gender,
       nationality: party.gender === "feminino" ? "brasileira" : "brasileiro",
       civilStatus: party.civilStatus,
+      stableUnion: party.stableUnion,
       profession: party.profession,
       taxId: party.taxId,
       address: party.address,

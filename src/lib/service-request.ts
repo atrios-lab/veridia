@@ -8,12 +8,17 @@ import {
   ilike,
   inArray,
   isNotNull,
+  isNull,
   lt,
   notInArray,
   or,
   sql,
 } from "drizzle-orm";
-import { type Act, getActForTenant } from "@/core/acts/catalog.ts";
+import {
+  type Act,
+  getActForTenant,
+  TAX_GUIDE_ACT_IDS,
+} from "@/core/acts/catalog.ts";
 import { emailsMatch } from "@/core/email/match.ts";
 import {
   generateAccessKey,
@@ -512,10 +517,23 @@ export interface QueueFilters {
   search?: string;
 }
 
+/**
+ * Requests for a guia de recolhimento are worked in Utilitários (see
+ * lib/guide-requests.ts), not in the Pedidos queue. A request with no act
+ * (the counter's own) stays in the queue: `not in` alone would drop it.
+ */
+function notTaxGuide() {
+  return or(
+    isNull(serviceRequests.actId),
+    notInArray(serviceRequests.actId, [...TAX_GUIDE_ACT_IDS]),
+  );
+}
+
 function queueConditions(tenantSlug: string, filters: QueueFilters) {
   const conditions = [
     eq(serviceRequests.tenantSlug, tenantSlug),
     eq(serviceRequests.kind, "service-request"),
+    notTaxGuide(),
   ];
   if (filters.statuses) {
     conditions.push(inArray(serviceRequests.status, [...filters.statuses]));
@@ -744,6 +762,7 @@ export async function openRequestCount(tenantSlug: string): Promise<number> {
       and(
         eq(serviceRequests.tenantSlug, tenantSlug),
         eq(serviceRequests.kind, "service-request"),
+        notTaxGuide(),
         notInArray(serviceRequests.status, [
           ...TERMINAL_SERVICE_REQUEST_STATUSES,
         ]),

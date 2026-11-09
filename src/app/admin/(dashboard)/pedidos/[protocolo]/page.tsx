@@ -290,10 +290,10 @@ export default async function ServiceRequestDetailPage({
       <main className="flex flex-col gap-4.5 px-[30px] py-7">
         <div className="flex flex-wrap items-center gap-3.5">
           <Link
-            href="/admin/pedidos"
+            href={act?.taxGuide ? "/admin/utilitarios/guias" : "/admin/pedidos"}
             className="text-[12.5px] text-admin-muted hover:text-admin-primary"
           >
-            ‹ Fila de pedidos
+            {act?.taxGuide ? "‹ Guias de recolhimento" : "‹ Fila de pedidos"}
           </Link>
           {/*
             Only when the same fields the print route itself requires are
