@@ -16,6 +16,7 @@ import { blobUploadEnabled } from "@/lib/uploads.ts";
 import { MenuPopover } from "../_components/menu-popover.tsx";
 import { ChatWidget } from "./_components/chat-widget.tsx";
 import { CookieNotice } from "./_components/cookie-notice.tsx";
+import { DemoBanner, DemoProvider } from "./_components/demo-notice.tsx";
 import { Icon } from "./_components/icon.tsx";
 import { NavGroupButton } from "./_components/nav-group-button.tsx";
 import { NavLinks } from "./_components/nav-links.tsx";
@@ -103,7 +104,8 @@ export default async function PublicLayout({
   // ships the component to the client at all. The client then polls its own
   // state to react within seconds if the switch flips mid-session (see
   // chat-widget.tsx): this only covers page load.
-  const chatEnabled = await isChatEnabled(tenant.slug);
+  // A demonstration office never shows it: nobody is there to answer.
+  const chatEnabled = !tenant.demo && (await isChatEnabled(tenant.slug));
   const cookieStore = await cookies();
   const cookieNoticeAcknowledged = cookieStore.has(COOKIE_NOTICE_COOKIE);
   // The office as structured data, on every public page: name, address,
@@ -126,6 +128,7 @@ export default async function PublicLayout({
         // biome-ignore lint/security/noDangerouslySetInnerHtml: JSON.stringify of the office's own config, with "<" escaped by jsonLdScript; never citizen input.
         dangerouslySetInnerHTML={{ __html: jsonLd }}
       />
+      {tenant.demo && <DemoBanner officeName={tenant.name} />}
       <header className="border-b border-brand-border">
         <div className="mx-auto flex max-w-6xl items-center justify-between gap-4 px-4 py-3 md:px-10 md:py-4">
           <Link href="/" className="flex items-center gap-3">
@@ -277,7 +280,7 @@ export default async function PublicLayout({
           enabled={blobUploadEnabled()}
           tenantSlug={tenant.slug}
         >
-          {children}
+          <DemoProvider demo={tenant.demo}>{children}</DemoProvider>
         </BlobUploadProvider>
       </main>
 

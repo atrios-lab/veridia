@@ -4,7 +4,7 @@ import { isRegisteredSlug } from "../tenant/resolve.ts";
 // office they may do it in, is decided here, as pure functions, so replacing
 // the library never means rewriting authorization.
 
-export const ROLES = ["admin", "staff", "superadmin"] as const;
+export const ROLES = ["admin", "staff", "superadmin", "learner"] as const;
 export type Role = (typeof ROLES)[number];
 
 // The subset a registrador may assign from the panel. Superadmin is an
@@ -37,7 +37,12 @@ export const OFFICE_PERMISSIONS = [
 // so that adding one can never widen a registrador's powers by accident:
 // `admin` is granted OFFICE_PERMISSIONS, never PERMISSIONS, and the test
 // walks this list to prove it.
-export const PLATFORM_PERMISSIONS = ["tutorials.manage"] as const;
+export const PLATFORM_PERMISSIONS = [
+  "tutorials.manage",
+  // The course cohorts: offices that are not clients, their links and the
+  // learners who joined through them.
+  "cohorts.manage",
+] as const;
 
 export const PERMISSIONS = [
   ...OFFICE_PERMISSIONS,
@@ -57,6 +62,12 @@ const ROLE_PERMISSIONS: Record<Role, readonly Permission[]> = {
   // opposite: it is staff's actual day job, so it is granted here too.
   // Turning the office's chat on or off for the whole public site is not
   // (chat.settings), same split as billing.
+  // A clerk of an office that is not a client yet, who joined through a
+  // course cohort's link (see src/lib/cohorts.ts). The panel lets them in
+  // and nothing more: every screen but the training answers 404 for want
+  // of its own permission, which is what keeps the role this small. Never
+  // in PANEL_ROLES: only the cohort sign-up creates one.
+  learner: ["admin.access"],
   staff: [
     "admin.access",
     "content.edit",
@@ -111,4 +122,13 @@ export function canAccessTenant(
   if (role === "superadmin") return isRegisteredSlug(tenantSlug);
   if (!userTenantSlug || !isRegisteredSlug(userTenantSlug)) return false;
   return userTenantSlug === tenantSlug;
+}
+
+/**
+ * Where the panel's home sends a role that has no desk of its own. A
+ * learner's panel is the training and nothing else, so the overview, all
+ * empty cards for them, is skipped. Null: the overview is the home.
+ */
+export function homeFor(role: string): string | null {
+  return role === "learner" ? "/admin/ajuda" : null;
 }

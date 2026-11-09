@@ -41,6 +41,7 @@ import {
 } from "@/core/request/kinds.ts";
 import { SIGNED_FORM_REQUIRED_NOTICE } from "@/core/request/requerimento.ts";
 import type { Attribution } from "@/core/tenant/schema.ts";
+import { DemoFormNotice } from "../_components/demo-notice.tsx";
 import { Icon } from "../_components/icon.tsx";
 import { ProtocolReveal } from "../_components/protocol-reveal.tsx";
 import { SignedFormUpload } from "../_components/signed-form-upload.tsx";
@@ -1160,6 +1161,8 @@ export function RequestForm({
             {state.message}
           </p>
         )}
+
+        <DemoFormNotice />
 
         <div className="md:flex md:items-center md:gap-4">
           <button

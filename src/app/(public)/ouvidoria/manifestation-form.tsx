@@ -10,6 +10,7 @@ import {
   ombudsmanSchema,
 } from "@/core/request/channels.ts";
 import type { ManifestationType } from "@/core/request/kinds.ts";
+import { DemoFormNotice } from "../_components/demo-notice.tsx";
 import { Icon, type IconName } from "../_components/icon.tsx";
 import { ProtocolReveal } from "../_components/protocol-reveal.tsx";
 import {
@@ -302,6 +303,8 @@ export function ManifestationScreen() {
             {state.message}
           </p>
         )}
+
+        <DemoFormNotice className="mt-5" />
 
         <button
           type="submit"
