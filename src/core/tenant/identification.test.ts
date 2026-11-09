@@ -144,3 +144,43 @@ test("cada serventia sai com os próprios dados, sem nada de outra", () => {
     }
   }
 });
+
+test("o nome do titular é o que a serventia digitou, quando muda de tabelião", () => {
+  const id = officeIdentification({
+    ...cartorioMarinho,
+    showHolder: true,
+    holderName: "José Novo Tabelião",
+    holderTitle: "Tabelião e Registrador",
+  });
+  assert.equal(id.holder, "José Novo Tabelião, Tabelião e Registrador");
+  // Typed by the office, it prints even when the court's record is pending.
+  const pending = officeIdentification({
+    ...cartorioMarinho,
+    showHolder: true,
+    holderName: "José Novo Tabelião",
+    owner: { name: "Fulano", status: "a confirmar" },
+  });
+  assert.equal(pending.holder, "José Novo Tabelião, Titular");
+});
+
+test("o rodapé escrito pela serventia substitui o automático", () => {
+  const id = officeIdentification({
+    ...cartorioMarinho,
+    footerLines: ["Rua Nova, 1, Centro", "Fone (84) 0000-0000"],
+  });
+  assert.deepEqual(id.footer, ["Rua Nova, 1, Centro", "Fone (84) 0000-0000"]);
+  assert.equal(
+    officeIdentification({ ...cartorioMarinho, footerLines: [] }).footer.length,
+    2,
+  );
+});
+
+test("a UF da comarca pode ser outra que a do cadastro", () => {
+  assert.equal(
+    jurisdictionLine({
+      location: cartorioMarinho.location,
+      jurisdiction: { kind: "comarca", seat: "Juazeiro", uf: "BA" },
+    }),
+    "Comarca de Juazeiro/BA",
+  );
+});

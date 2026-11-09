@@ -76,7 +76,8 @@ export function jurisdictionLine(
   if (!jurisdiction || jurisdiction.kind === "none" || !jurisdiction.seat) {
     return undefined;
   }
-  return `${JURISDICTION_LABELS[jurisdiction.kind]} de ${jurisdiction.seat}/${tenant.location.state}`;
+  const uf = jurisdiction.uf ?? tenant.location.state;
+  return `${JURISDICTION_LABELS[jurisdiction.kind]} de ${jurisdiction.seat}/${uf}`;
 }
 
 /**
@@ -90,19 +91,45 @@ export function officeWithJurisdiction(
   return line ? `${officialName(tenant)}, ${line}` : officialName(tenant);
 }
 
-function holderLine(
-  tenant: Pick<Tenant, "owner" | "holderTitle" | "showHolder">,
+/**
+ * The holder's name as the papers print it: the one the office typed in the
+ * panel (it changes hands, and the papers must follow at once), or the
+ * court's record of the holder while it has typed none.
+ */
+export function holderName(
+  tenant: Pick<Tenant, "owner" | "holderName">,
 ): string | undefined {
-  if (!tenant.showHolder) return undefined;
+  if (tenant.holderName) return tenant.holderName;
   // A holder the platform has not confirmed is not printed under the
   // office's name: a wrong name on a public paper is worse than none.
-  if (tenant.owner.status === "a confirmar") return undefined;
+  return tenant.owner.status === "a confirmar" ? undefined : tenant.owner.name;
+}
+
+function holderLine(
+  tenant: Pick<Tenant, "owner" | "holderName" | "holderTitle" | "showHolder">,
+): string | undefined {
+  if (!tenant.showHolder) return undefined;
+  const name = holderName(tenant);
+  if (!name) return undefined;
   const title =
     tenant.holderTitle ??
-    (tenant.owner.status === "interino"
+    (tenant.owner.status === "interino" && !tenant.holderName
       ? "Responsável interino(a)"
       : "Titular");
-  return `${tenant.owner.name}, ${title}`;
+  return `${name}, ${title}`;
+}
+
+/** The foot of the page the platform writes when the office wrote none. */
+export function defaultFooter(tenant: Tenant): string[] {
+  const contact = [
+    tenant.contacts.phone ? `Fone ${tenant.contacts.phone}` : undefined,
+    tenant.contacts.email ? `E-mail: ${tenant.contacts.email}` : undefined,
+    siteDomain(tenant.hosts),
+  ].filter(Boolean);
+  return [
+    tenant.address ?? `${tenant.location.city}/${tenant.location.state}`,
+    contact.join(" · "),
+  ].filter(Boolean);
 }
 
 /** The site's bare domain, for the foot of the page. */
@@ -114,11 +141,6 @@ const upper = (text: string) => text.toLocaleUpperCase("pt-BR");
 
 export function officeIdentification(tenant: Tenant): OfficeIdentification {
   const jurisdiction = jurisdictionLine(tenant);
-  const contact = [
-    tenant.contacts.phone ? `Fone ${tenant.contacts.phone}` : undefined,
-    tenant.contacts.email ? `E-mail: ${tenant.contacts.email}` : undefined,
-    siteDomain(tenant.hosts),
-  ].filter(Boolean);
   return {
     header: [
       "República Federativa do Brasil",
@@ -132,10 +154,9 @@ export function officeIdentification(tenant: Tenant): OfficeIdentification {
           .map((attribution) => ATTRIBUTION_NAMES[attribution])
           .join(" · ")
       : undefined,
-    footer: [
-      tenant.address ?? `${tenant.location.city}/${tenant.location.state}`,
-      contact.join(" · "),
-    ].filter(Boolean),
+    footer: tenant.footerLines?.length
+      ? tenant.footerLines
+      : defaultFooter(tenant),
     missingJurisdiction: tenant.jurisdiction === undefined,
   };
 }

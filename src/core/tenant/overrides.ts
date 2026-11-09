@@ -184,6 +184,8 @@ export const OfficeIdentificationSchema = TenantSchema.pick({
   officialName: true,
   jurisdiction: true,
   holderTitle: true,
+  holderName: true,
+  footerLines: true,
   showHolder: true,
   showAttributions: true,
 });
