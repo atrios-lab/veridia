@@ -21,6 +21,10 @@ export const SUPERADMIN_TENANT_SLUG = "atrios";
 // can hold is here, and only here.
 export const OFFICE_PERMISSIONS = [
   "admin.access",
+  // The office's own desk: the overview and the shortcut to the office's
+  // mailbox. Every role that works for an office has it; a course learner,
+  // who only came for the training, does not.
+  "desk.access",
   "content.edit",
   "content.publish",
   "branding.edit",
@@ -70,6 +74,7 @@ const ROLE_PERMISSIONS: Record<Role, readonly Permission[]> = {
   learner: ["admin.access"],
   staff: [
     "admin.access",
+    "desk.access",
     "content.edit",
     "requests.manage",
     "channels.manage",

@@ -1,4 +1,4 @@
-import type { Role } from "@/core/auth/roles.ts";
+import { can, type Role } from "@/core/auth/roles.ts";
 import { isChatOpen } from "@/core/chat/hours.ts";
 import { readChatAvailability } from "@/lib/chat.ts";
 import { getTenant } from "@/lib/tenant.ts";
@@ -50,20 +50,28 @@ export async function AdminTopBar({
         <SearchTriggerButton />
       </div>
       <span className="hidden flex-1 md:block" />
-      <span
-        className={`hidden items-center gap-[7px] rounded-full px-3 py-1.5 text-[12px] font-semibold whitespace-nowrap sm:inline-flex ${
-          open
-            ? "bg-admin-success-bg text-admin-success-text"
-            : "bg-admin-readonly-bg text-admin-muted"
-        }`}
-      >
-        <AdminIcon name="chat" className="h-[13px] w-[13px]" strokeWidth={2} />
-        {open
-          ? "Disponível para o chat"
-          : availability === "auto"
-            ? "Fora do horário de atendimento"
-            : "Indisponível para o chat"}
-      </span>
+      {/* Only for someone who answers the chat: a course learner has no
+          citizen writing to them. */}
+      {can(user.role, "chat.manage") && (
+        <span
+          className={`hidden items-center gap-[7px] rounded-full px-3 py-1.5 text-[12px] font-semibold whitespace-nowrap sm:inline-flex ${
+            open
+              ? "bg-admin-success-bg text-admin-success-text"
+              : "bg-admin-readonly-bg text-admin-muted"
+          }`}
+        >
+          <AdminIcon
+            name="chat"
+            className="h-[13px] w-[13px]"
+            strokeWidth={2}
+          />
+          {open
+            ? "Disponível para o chat"
+            : availability === "auto"
+              ? "Fora do horário de atendimento"
+              : "Indisponível para o chat"}
+        </span>
+      )}
       <UserMenu
         name={user.name?.trim() || user.email}
         initials={initials(user.name, user.email)}

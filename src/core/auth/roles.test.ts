@@ -177,3 +177,10 @@ test("a learner's home is the training", () => {
   assert.equal(homeFor("staff"), null);
   assert.equal(homeFor("superadmin"), null);
 });
+
+test("everyone who works for an office has the desk; a learner does not", () => {
+  for (const role of ["admin", "staff", "superadmin"]) {
+    assert.ok(can(role, "desk.access"), role);
+  }
+  assert.equal(can("learner", "desk.access"), false);
+});
