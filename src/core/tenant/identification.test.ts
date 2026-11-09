@@ -4,9 +4,11 @@ import {
   jurisdictionLine,
   officeIdentification,
   officeWithJurisdiction,
+  officialName,
   serviceLine,
 } from "./identification.ts";
 import { applyTenantOverrides } from "./overrides.ts";
+import { TENANTS } from "./resolve.ts";
 import { cartorioMarinho } from "./tenants/marinho.ts";
 
 test("cabeçalho de Ielmo Marinho como nas certidões da serventia", () => {
@@ -105,4 +107,40 @@ test("a serventia pode escolher não mostrar a comarca", () => {
   });
   assert.equal(id.header.length, 3);
   assert.equal(id.missingJurisdiction, false);
+});
+
+test("cada serventia sai com os próprios dados, sem nada de outra", () => {
+  const tenants = Object.values(TENANTS);
+  for (const tenant of tenants) {
+    const id = officeIdentification(tenant);
+    const printed = [...id.header, id.holder, id.attributions, ...id.footer]
+      .filter(Boolean)
+      .join("\n");
+    assert.ok(
+      id.header.includes(officialName(tenant).toLocaleUpperCase("pt-BR")),
+      tenant.slug,
+    );
+    if (tenant.address)
+      assert.ok(id.footer.includes(tenant.address), tenant.slug);
+    assert.match(
+      printed,
+      new RegExp(tenant.contacts.phone.replace(/[()]/g, "\\$&")),
+      tenant.slug,
+    );
+    for (const other of tenants) {
+      if (other.slug === tenant.slug) continue;
+      // Another office's address, e-mail or site never reaches this paper.
+      for (const value of [
+        other.address,
+        other.contacts.email,
+        ...other.hosts,
+      ]) {
+        if (!value || value.endsWith(".localhost")) continue;
+        if (tenant.address === value || tenant.contacts.email === value)
+          continue;
+        if (tenant.hosts.includes(value)) continue;
+        assert.ok(!printed.includes(value), `${tenant.slug} imprime ${value}`);
+      }
+    }
+  }
 });
