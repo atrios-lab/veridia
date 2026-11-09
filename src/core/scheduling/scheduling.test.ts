@@ -41,6 +41,7 @@ import {
   nextDayWithSlot,
   offeredDays,
   type TakenTimes,
+  whyNotOffered,
 } from "./slots.ts";
 
 // Tuesdays and Thursdays only, the way the office's own Calendly was set up.
@@ -423,5 +424,70 @@ describe("serviços por horário", () => {
     assert.equal(previousDayWithTimes(grid, 4), 3);
     assert.equal(previousDayWithTimes(grid, 1), undefined);
     assert.equal(previousDayWithTimes({}, 5), undefined);
+  });
+});
+
+describe("agenda só nos dias de atendimento de fato", () => {
+  // 2026-08-11 is a Tuesday with times in the grid above.
+  const padroeira = {
+    customHolidays: [
+      { name: "Padroeira do município", date: "2026-08-11", yearly: false },
+    ],
+    disabledHolidays: [],
+  };
+
+  test("um feriado cadastrado depois fecha o dia no site e no balcão", () => {
+    assert.ok(offeredDays(config, "2026-08-10", 2).includes("2026-08-11"));
+    const withHoliday = { ...config, holidays: padroeira };
+    assert.deepEqual(offeredDays(withHoliday, "2026-08-10", 2), [
+      "2026-08-13",
+      "2026-08-18",
+    ]);
+    assert.deepEqual(freeSlots(withHoliday, "2026-08-11", taken()), []);
+    assert.equal(
+      isSlotFree(withHoliday, "2026-08-11", "08:30", taken()),
+      false,
+    );
+  });
+
+  test("diz por que o dia não tem atendimento", () => {
+    const withHoliday = {
+      ...config,
+      closedDates: [{ date: "2026-08-13", reason: "Correição" }],
+      holidays: padroeira,
+    };
+    assert.equal(whyNotOffered(withHoliday, "2026-08-04"), undefined);
+    assert.equal(
+      whyNotOffered(withHoliday, "2026-08-11"),
+      "Feriado: Padroeira do município",
+    );
+    assert.equal(
+      whyNotOffered(withHoliday, "2026-08-13"),
+      "Dia fechado: Correição",
+    );
+    assert.equal(whyNotOffered(withHoliday, "2026-08-08"), "Fim de semana");
+    assert.equal(
+      whyNotOffered(withHoliday, "2026-08-10"),
+      "Sem horários de atendimento neste dia da semana",
+    );
+    // A national holiday on a weekday the office receives.
+    const mondays = { grid: { "1": ["08:00"] }, closedDates: [] };
+    assert.match(whyNotOffered(mondays, "2026-09-07") ?? "", /^Feriado: /);
+  });
+
+  test("um feriado da lei desligado pelo cartório volta a ter atendimento", () => {
+    const mondays = { grid: { "1": ["08:00"] }, closedDates: [] };
+    const id = LAW_HOLIDAY_IDS.find(
+      (key) =>
+        holidayName("2026-09-07", { disabledHolidays: [key] }) === undefined,
+    );
+    assert.ok(id);
+    assert.equal(
+      whyNotOffered(
+        { ...mondays, holidays: { disabledHolidays: [id as string] } },
+        "2026-09-07",
+      ),
+      undefined,
+    );
   });
 });

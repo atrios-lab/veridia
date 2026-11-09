@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useActionState, useRef, useState } from "react";
 import {
   type CustomHoliday,
@@ -441,10 +442,27 @@ export function OfficeHolidaysForm({
         {state.status === "saved" && (
           <output className="flex items-center gap-1.5 rounded-full bg-admin-success-bg px-3 py-1.5 text-[12.5px] font-semibold text-admin-success-text">
             <AdminIcon name="check" className="h-3.5 w-3.5" strokeWidth={2.4} />
-            Salvo. Já está valendo no site.
+            Salvo. Já está valendo no site e na agenda.
           </output>
         )}
       </div>
+
+      {/* A holiday closes the agenda that day from now on; whoever had
+          already booked it is the office's to reschedule or cancel. */}
+      {state.status === "saved" && state.stranded > 0 && (
+        <p
+          role="alert"
+          className="mt-3 rounded-lg bg-admin-warning-bg px-3.5 py-2.5 text-[13px] leading-relaxed text-admin-warning-text"
+        >
+          {state.stranded === 1
+            ? "Há 1 agendamento marcado em dia que agora não tem atendimento."
+            : `Há ${state.stranded} agendamentos marcados em dias que agora não têm atendimento.`}{" "}
+          <Link href="/admin/agenda" className="font-semibold underline">
+            Veja na Agenda
+          </Link>{" "}
+          para remarcar com o cidadão ou cancelar.
+        </p>
+      )}
     </form>
   );
 }

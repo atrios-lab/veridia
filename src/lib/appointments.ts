@@ -631,6 +631,30 @@ export async function liveAppointmentsOn(
     .orderBy(asc(appointments.date), asc(appointments.slotTime));
 }
 
+/**
+ * Every appointment still booked from `from` on, both agendas, in date order.
+ * The panel filters it through the office's calendar to find the ones that
+ * fall on a day it no longer receives on: a holiday added after they were
+ * booked, a law day switched back on, a weekday that lost its times.
+ */
+export async function bookedFrom(
+  tenantSlug: string,
+  from: IsoDate,
+): Promise<Appointment[]> {
+  return db
+    .select()
+    .from(appointments)
+    .where(
+      and(
+        eq(appointments.tenantSlug, tenantSlug),
+        eq(appointments.status, ACTIONABLE_APPOINTMENT_STATUS),
+        isNull(appointments.removedAt),
+        sql`${appointments.date} >= ${from}`,
+      ),
+    )
+    .orderBy(asc(appointments.date), asc(appointments.slotTime));
+}
+
 /** One appointment by id, any status, for the panel's printed receipt. */
 export async function findAppointmentById(
   tenantSlug: string,
