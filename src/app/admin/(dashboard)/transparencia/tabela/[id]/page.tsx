@@ -3,6 +3,7 @@ import { can } from "@/core/auth/roles.ts";
 import {
   PRENOTATION_ATTRIBUTIONS,
   PRENOTATION_LABELS,
+  prenotationCodesFor,
 } from "@/core/fees/prenotation.ts";
 import { formatOfficeDateTime } from "@/core/time/office-time.ts";
 import {
@@ -39,6 +40,7 @@ export default async function FeeTablePage({
     currentFeeTable(tenant.slug),
   ]);
   const inForce = current?.document.id === id;
+  const codes = prenotationCodesFor(tenant.location.state);
 
   return (
     <>
@@ -61,6 +63,7 @@ export default async function FeeTablePage({
           registries={PRENOTATION_ATTRIBUTIONS.map((attribution) => ({
             attribution,
             label: PRENOTATION_LABELS[attribution],
+            expectedCode: codes?.[attribution],
             item: saved?.items[attribution],
           }))}
         />

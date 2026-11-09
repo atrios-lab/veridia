@@ -160,6 +160,167 @@ export function findPrenotationItems(text: string): PrenotationItems {
 }
 
 /**
+ * The codes each state's table gives the three prenotações, as the offices
+ * confirmed them. Reading by the code is what keeps a neighbouring item (a
+ * prenotação of another registry, a testamento's) from being taken for it;
+ * the headings are only the fallback for a table whose codes changed.
+ */
+export const PRENOTATION_CODES: Partial<
+  Record<string, Record<PrenotationAttribution, string>>
+> = {
+  RN: { RI: "2600103", RTD: "2500140", RCPJ: "2400105" },
+};
+
+export function prenotationCodesFor(
+  state: string,
+): Record<PrenotationAttribution, string> | undefined {
+  return PRENOTATION_CODES[state];
+}
+
+/**
+ * How sure the total is: "sum" when the amounts before it add up to it (the
+ * table's emolumento plus funds), "single" when the row has one amount only,
+ * "unchecked" when the parts and the last amount disagree, which means the
+ * last amount may not be the total at all.
+ */
+export type AmountCheck = "sum" | "single" | "unchecked";
+
+export interface ReadFeeItem extends FeeItem {
+  /** "code": the row of the code the state's table uses for it; "section":
+   * guessed from a heading, for a table whose code is not the known one. */
+  foundBy: "code" | "section";
+  check: AmountCheck;
+}
+export type ReadPrenotation = Partial<
+  Record<PrenotationAttribution, ReadFeeItem>
+>;
+
+/** Read well enough to charge without anyone looking first. Anything else
+ * waits for the office on the table's screen. */
+export function isTrustedRead(item: ReadFeeItem): boolean {
+  return item.foundBy === "code" && item.check !== "unchecked";
+}
+
+function amountsOf(text: string): number[] {
+  return (text.match(MONEY) ?? [])
+    .map(parseMoney)
+    .filter((value): value is number => value !== undefined);
+}
+
+function checkOf(amounts: number[]): AmountCheck {
+  if (amounts.length === 1) return "single";
+  const total = amounts.at(-1) ?? 0;
+  const parts = amounts.slice(0, -1).reduce((sum, value) => sum + value, 0);
+  // Each part is rounded on its own: a cent per part is rounding, more is a
+  // different column.
+  return Math.abs(parts - total) <= amounts.length - 1 ? "sum" : "unchecked";
+}
+
+/** A 7-digit code standing alone, not part of a longer number or amount. */
+const ANY_CODE = /(?<![\d.,/])\d{7}(?![\d.,/])/;
+
+/**
+ * The item a code names, read from the rows of the table: from the code to
+ * the next code on the same row (two items side by side), and, when the
+ * amounts are not on that row (a tall cell), the rows right below or above
+ * it, never past another item's code.
+ */
+function itemByCode(
+  rows: string[],
+  code: string,
+  foundBy: ReadFeeItem["foundBy"],
+): ReadFeeItem | undefined {
+  const own = new RegExp(`(?<![\\d.,/])${code}(?![\\d.,/])`);
+  const candidates: { text: string; amounts: number[]; score: number }[] = [];
+  rows.forEach((row, index) => {
+    const at = row.search(own);
+    if (at < 0) return;
+    let rest = row.slice(at + code.length);
+    const next = rest.search(ANY_CODE);
+    if (next >= 0) rest = rest.slice(0, next);
+    let text = rest;
+    let amounts = amountsOf(rest);
+    for (const step of [1, -1]) {
+      for (let k = 1; amounts.length === 0 && k <= 3; k++) {
+        const near = rows[index + step * k];
+        if (near === undefined || ANY_CODE.test(near)) break;
+        const found = amountsOf(near);
+        if (found.length > 0) {
+          amounts = found;
+          text = step > 0 ? `${rest} ${near}` : `${near} ${rest}`;
+        } else if (step > 0) {
+          rest = `${rest} ${near}`;
+        }
+      }
+    }
+    if (amounts.length === 0) return;
+    // The code can also be cited in a note. The item itself is the one a
+    // row (or a cell, after another item) starts with, that says
+    // "prenotação" and whose parts add up to its total.
+    const before = row.slice(0, at);
+    const opensCell = before.trim() === "" || /\d,\d{2}\s*$/.test(before);
+    const score =
+      (opensCell ? 4 : 0) +
+      (/prenota/.test(fold(text)) ? 2 : 0) +
+      (checkOf(amounts) === "sum" ? 1 : 0);
+    candidates.push({ text, amounts, score });
+  });
+  const chosen = candidates.reduce<(typeof candidates)[number] | undefined>(
+    (best, candidate) =>
+      !best || candidate.score > best.score ? candidate : best,
+    undefined,
+  );
+  if (!chosen) return undefined;
+  const description = chosen.text
+    .replace(MONEY, "")
+    .replace(/\s+/g, " ")
+    .replace(/^[\s\-\u2013:.|]+|[\s\-\u2013:.|]+$/g, "")
+    .trim()
+    .slice(0, 200);
+  return {
+    code,
+    description: description || "Prenotação",
+    totalCents: chosen.amounts.at(-1) ?? 0,
+    foundBy,
+    check: checkOf(chosen.amounts),
+  };
+}
+
+/**
+ * The prenotações of a fee table, read by the codes the state's table uses
+ * (`codes`) and, for a registry whose code is not in the table, by the
+ * section headings. Each item says how it was found and whether its total
+ * adds up, so nothing doubtful is charged before the office confirms it.
+ */
+export function readPrenotationTable(
+  text: string,
+  codes?: Record<PrenotationAttribution, string>,
+): ReadPrenotation {
+  const rows = text
+    .split(/\r?\n/)
+    .map((line) => line.replace(/\s+/g, " ").trim())
+    .filter(Boolean);
+  const guessed = findPrenotationItems(text);
+  const read: ReadPrenotation = {};
+  for (const attribution of PRENOTATION_ATTRIBUTIONS) {
+    const code = codes?.[attribution];
+    const byCode = code ? itemByCode(rows, code, "code") : undefined;
+    if (byCode) {
+      read[attribution] = byCode;
+      continue;
+    }
+    const guess = guessed[attribution];
+    if (!guess) continue;
+    read[attribution] = itemByCode(rows, guess.code, "section") ?? {
+      ...guess,
+      foundBy: "section",
+      check: "unchecked",
+    };
+  }
+  return read;
+}
+
+/**
  * What the request form and the success screen say about the price, so
  * nobody reads the prenotação as the price of the registration itself.
  */
@@ -171,6 +332,6 @@ export function prenotationNotice(
     headline: `Prenotação: ${formatMoney(item.totalCents)} (código ${item.code} da ${tableTitle})`,
     detail:
       "Este valor é a prenotação: a entrada do título no protocolo para a análise, cobrada agora. " +
-      "Os emolumentos do registro ou da averbação são calculados depois da análise, pela tabela vigente, e informados no protocolo.",
+      "Os emolumentos do ato (anotação, averbação, registro, retificação ou ratificação) são calculados depois da análise, pela tabela vigente, e informados no protocolo.",
   };
 }

@@ -13,6 +13,7 @@ import type {
   FeeItem,
   PrenotationAttribution,
   PrenotationItems,
+  ReadFeeItem,
 } from "@/core/fees/prenotation.ts";
 import {
   type FeeTableReadState,
@@ -26,8 +27,42 @@ const inputClass =
 const cardClass =
   "rounded-[14px] border border-admin-border bg-admin-card px-5 py-4";
 
+/** What the reading says about one registry, under its fields. */
+function readNote(item: ReadFeeItem | undefined): {
+  text: string;
+  warn: boolean;
+} {
+  if (!item) {
+    return {
+      text: "Não encontrada no PDF. Digite o código e o total como estão na tabela.",
+      warn: true,
+    };
+  }
+  if (item.foundBy === "section") {
+    return {
+      text: `Achamos o código ${item.code} pelo título da seção, não pelo código esperado. Confira na tabela antes de salvar.`,
+      warn: true,
+    };
+  }
+  if (item.check === "unchecked") {
+    return {
+      text: "Lida pelo código, mas as parcelas não somam o último valor da linha. Confira o total na tabela antes de salvar.",
+      warn: true,
+    };
+  }
+  return {
+    text:
+      item.check === "sum"
+        ? `Lida na linha do código ${item.code}: as parcelas somam o total.`
+        : `Lida na linha do código ${item.code}, que tem um só valor. Confira se é o total.`,
+    warn: item.check !== "sum",
+  };
+}
+
 interface Registry {
   attribution: PrenotationAttribution;
+  /** The code the state's table uses for it, when known. */
+  expectedCode?: string;
   label: string;
   item?: FeeItem;
 }
@@ -127,11 +162,15 @@ export function FeeTableEditor({
       return next;
     });
     toast.success(
-      `Encontramos ${readState.found} de 3 prenotações no PDF. Confira e salve.`,
+      `Encontramos ${readState.found} de 3 prenotações no PDF. Confira cada uma e salve.`,
     );
   }, [readState, registries]);
 
   const errors = saveState.status === "error" ? saveState.fieldErrors : {};
+  const expectedCodes = registries
+    .map((registry) => registry.expectedCode)
+    .filter(Boolean)
+    .join(", ");
 
   function update(
     attribution: PrenotationAttribution,
@@ -165,14 +204,23 @@ export function FeeTableEditor({
           <p className="mt-1 text-[12.5px] leading-relaxed text-admin-muted">
             Informe o código e o <strong>total</strong> de cada prenotação, como
             estão na tabela (por exemplo, Imóveis: código 2600103, total 57,90).
-            É o valor cobrado quando o cidadão pede a análise de um título para
-            registro ou averbação, com o código e o nome desta tabela no pedido.
-            Deixe em branco o registro que a tabela não traz.
+            É o valor cobrado quando o cidadão pede a prenotação (análise) para
+            anotação, averbação, registro, retificação ou ratificação, com o
+            código e o nome desta tabela no pedido. Deixe em branco o registro
+            que a tabela não traz.
           </p>
         </section>
 
-        {registries.map(({ attribution, label }) => {
+        {registries.map(({ attribution, label, expectedCode }) => {
           const value = fields[attribution];
+          const note =
+            readState.status === "success"
+              ? readNote(readState.items[attribution])
+              : undefined;
+          const otherCode =
+            expectedCode &&
+            value.code.trim() !== "" &&
+            value.code.trim() !== expectedCode;
           const error = (key: keyof Fields) => errors[`${attribution}.${key}`];
           return (
             <fieldset key={attribution} className={cardClass}>
@@ -237,6 +285,20 @@ export function FeeTableEditor({
                   )}
                 </label>
               </div>
+              {note && (
+                <p
+                  className={`mt-2 text-[12px] ${note.warn ? "font-semibold text-admin-alert" : "text-admin-muted"}`}
+                >
+                  {note.text}
+                </p>
+              )}
+              {otherCode && (
+                <p className="mt-2 text-[12px] font-semibold text-admin-alert">
+                  Atenção: na tabela do estado, a prenotação de {label} tem o
+                  código {expectedCode}. Confira se {value.code.trim()} é mesmo
+                  o item certo.
+                </p>
+              )}
             </fieldset>
           );
         })}
@@ -269,8 +331,10 @@ export function FeeTableEditor({
             Ler do PDF
           </h2>
           <p className="mt-1 text-[12.5px] leading-relaxed text-admin-muted">
-            Procura as linhas de prenotação no texto da tabela e preenche os
-            campos. Nada é salvo antes de você conferir.
+            Lê a tabela linha a linha pelo código de cada prenotação
+            {expectedCodes ? ` (${expectedCodes})` : ""}, pega o total e confere
+            se as parcelas somam esse total. Nada é salvo antes de você
+            conferir.
           </p>
           <div className="mt-3 flex flex-wrap gap-2">
             <button

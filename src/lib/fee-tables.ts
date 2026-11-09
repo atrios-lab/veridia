@@ -2,12 +2,17 @@ import "server-only";
 import { readFile } from "node:fs/promises";
 import { and, asc, eq } from "drizzle-orm";
 import { z } from "zod";
+import { type PdfTextPiece, rowsOfPage } from "@/core/fees/pdf-rows.ts";
 import {
   type FeeItem,
-  findPrenotationItems,
+  isTrustedRead,
+  PRENOTATION_ATTRIBUTIONS,
   type PrenotationAttribution,
   type PrenotationItems,
+  prenotationCodesFor,
   prenotationItemsSchema,
+  type ReadPrenotation,
+  readPrenotationTable,
 } from "@/core/fees/prenotation.ts";
 import { type Database, db } from "@/db/index.ts";
 import { tenantContent, transparencyDocuments } from "@/db/schema.ts";
@@ -163,14 +168,23 @@ export function currentFeeTable(tenantSlug: string) {
 
 /** The prenotação of a registry in the table in force, with the table's
  * name to cite next to the code. Undefined when the table has no such item:
- * the operator prices that request by hand, as before. */
+ * the operator prices that request by hand, as before.
+ *
+ * A table in force that nobody read yet (one published before this
+ * existed) is read here, once, and what was read with certainty is kept. */
 export async function currentPrenotation(
-  tenantSlug: string,
+  tenant: { slug: string; location: { state: string } },
   attribution: PrenotationAttribution,
 ): Promise<
   { item: FeeItem; tableTitle: string; documentId: string } | undefined
 > {
-  const table = await currentFeeTable(tenantSlug);
+  let table = await currentFeeTable(tenant.slug);
+  if (table && !(await readFeeTables(tenant.slug))[table.document.id]) {
+    await readNewFeeTable(tenant, table.document.id).catch((error) =>
+      console.error("fee-table.first-read", error),
+    );
+    table = await currentFeeTable(tenant.slug);
+  }
   const item = table?.items[attribution];
   if (!table || !item) return undefined;
   return {
@@ -193,50 +207,90 @@ export async function getFeeTableDocument(
   return document?.category === FEE_TABLE_CATEGORY ? document : undefined;
 }
 
-/** The text of a table's PDF, from the store or from disk. */
-async function documentText(
-  document: TransparencyDocumentRow,
-): Promise<string> {
-  const bytes = document.filePath.startsWith("http")
-    ? new Uint8Array(await (await fetch(document.filePath)).arrayBuffer())
-    : new Uint8Array(await readFile(document.filePath));
-  // Loaded on demand: the reader is heavy, and only this screen needs it.
-  const { extractText, getDocumentProxy } = await import("unpdf");
+/**
+ * The text of a table's PDF, one table row per line: each page's pieces of
+ * text put back in rows by their position (`rowsOfPage`), which is what
+ * keeps a code, its description and its total together however the file
+ * drew the cells.
+ */
+export async function pdfTableText(bytes: Uint8Array): Promise<string> {
+  // Loaded on demand: the reader is heavy, and only the fee tables need it.
+  const { getDocumentProxy } = await import("unpdf");
   const pdf = await getDocumentProxy(bytes);
-  const { text } = await extractText(pdf, { mergePages: true });
-  return text;
+  const lines: string[] = [];
+  for (let number = 1; number <= pdf.numPages; number++) {
+    const page = await pdf.getPage(number);
+    const content = await page.getTextContent();
+    lines.push(
+      ...rowsOfPage(
+        content.items.filter(
+          (item): item is PdfTextPiece & typeof item => "str" in item,
+        ),
+      ),
+    );
+  }
+  return lines.join("\n");
 }
 
-/** What the table's PDF says about the prenotações, for the office to
- * confirm. Empty when the file is not a PDF or holds no readable text (a
- * scan): the office types the values instead. */
+async function documentBytes(
+  document: TransparencyDocumentRow,
+): Promise<Uint8Array> {
+  return document.filePath.startsWith("http")
+    ? new Uint8Array(await (await fetch(document.filePath)).arrayBuffer())
+    : new Uint8Array(await readFile(document.filePath));
+}
+
+/** What the table's PDF says about the prenotações, each item with how it
+ * was found and whether its total adds up. Empty when the file is not a PDF
+ * or holds no readable text (a scan): the office types the values instead. */
 export async function readPrenotationFromPdf(
-  tenantSlug: string,
+  tenant: { slug: string; location: { state: string } },
   documentId: string,
-): Promise<PrenotationItems> {
-  const document = await getFeeTableDocument(tenantSlug, documentId);
+): Promise<ReadPrenotation> {
+  const document = await getFeeTableDocument(tenant.slug, documentId);
   if (!document || document.fileMimeType !== "application/pdf") return {};
   try {
-    return findPrenotationItems(await documentText(document));
+    return readPrenotationTable(
+      await pdfTableText(await documentBytes(document)),
+      prenotationCodesFor(tenant.location.state),
+    );
   } catch (error) {
     console.error("fee-table.read-pdf", documentId, error);
     return {};
   }
 }
 
+/** Only what was read with certainty: found on the row of its known code,
+ * with a total that adds up. */
+export function trustedItems(read: ReadPrenotation): PrenotationItems {
+  const items: PrenotationItems = {};
+  for (const attribution of PRENOTATION_ATTRIBUTIONS) {
+    const item = read[attribution];
+    if (item && isTrustedRead(item)) {
+      items[attribution] = {
+        code: item.code,
+        description: item.description,
+        totalCents: item.totalCents,
+      };
+    }
+  }
+  return items;
+}
+
 /**
- * Right after a fee table is uploaded: read its prenotações from the PDF and
- * keep them, unless the office already entered values for this table. The
- * office confirms them on the table's screen; until then they are marked as
- * read from the file.
+ * Right after a fee table is uploaded (or the first time the site needs a
+ * table in force that nobody read): read its prenotações from the PDF and
+ * keep what was read with certainty, unless the office already entered
+ * values for this table. A doubtful item is left for the office to type on
+ * the table's screen; the read is kept even when empty, so the file is read
+ * once, not on every request.
  */
 export async function readNewFeeTable(
-  tenantSlug: string,
+  tenant: { slug: string; location: { state: string } },
   documentId: string,
 ): Promise<void> {
-  if (!(await getFeeTableDocument(tenantSlug, documentId))) return;
-  if ((await readFeeTables(tenantSlug))[documentId]) return;
-  const items = await readPrenotationFromPdf(tenantSlug, documentId);
-  if (Object.keys(items).length === 0) return;
-  await saveFeeTableItems(tenantSlug, documentId, items, "pdf", null);
+  if (!(await getFeeTableDocument(tenant.slug, documentId))) return;
+  if ((await readFeeTables(tenant.slug))[documentId]) return;
+  const items = trustedItems(await readPrenotationFromPdf(tenant, documentId));
+  await saveFeeTableItems(tenant.slug, documentId, items, "pdf", null);
 }

@@ -246,7 +246,7 @@ export async function submitServiceRequest(
     // item there, the request goes in unpriced, for the operator, as before.
     const prenotation =
       act.chargesPrenotation && isPrenotationAttribution(act.attribution)
-        ? await currentPrenotation(tenant.slug, act.attribution)
+        ? await currentPrenotation(tenant, act.attribution)
         : undefined;
 
     const { protocolNumber } = await createServiceRequest(

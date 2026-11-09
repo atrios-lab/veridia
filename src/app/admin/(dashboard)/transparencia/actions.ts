@@ -5,9 +5,9 @@ import { after } from "next/server";
 import { can } from "@/core/auth/roles.ts";
 import {
   PRENOTATION_ATTRIBUTIONS,
-  type PrenotationItems,
   parseMoney,
   prenotationItemsSchema,
+  type ReadPrenotation,
 } from "@/core/fees/prenotation.ts";
 import { OfficeBulletinSchema } from "@/core/tenant/overrides.ts";
 import {
@@ -154,7 +154,7 @@ export async function uploadDocumentAction(
     // A new fee table: its prenotações are read from the PDF right after
     // the answer, for the office to confirm on the table's own screen.
     if (parsed.data.category === FEE_TABLE_CATEGORY) {
-      after(() => readNewFeeTable(tenant.slug, created.id));
+      after(() => readNewFeeTable(tenant, created.id));
     }
   } catch (error) {
     if (error instanceof AttachmentError) {
@@ -369,7 +369,7 @@ export async function saveBulletinOptionAction(
 export type FeeTableReadState =
   | { status: "idle" }
   | { status: "error"; message: string }
-  | { status: "success"; items: PrenotationItems; found: number };
+  | { status: "success"; items: ReadPrenotation; found: number };
 
 /**
  * "Ler do PDF": the prenotações the table's file holds, back to the screen
@@ -385,9 +385,9 @@ export async function readFeeTablePdfAction(
   }
   const tenant = await getTenant();
   const id = String(formData.get("id") ?? "");
-  let items: PrenotationItems;
+  let items: ReadPrenotation;
   try {
-    items = await readPrenotationFromPdf(tenant.slug, id);
+    items = await readPrenotationFromPdf(tenant, id);
   } catch (error) {
     console.error("transparencia.fee-table-read", error);
     return { status: "error", message: GENERIC_ERROR };

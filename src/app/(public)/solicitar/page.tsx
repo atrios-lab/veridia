@@ -11,7 +11,7 @@ import {
   prenotationNotice,
 } from "@/core/fees/prenotation.ts";
 import { SECTION_ROUTES } from "@/core/tenant/gating.ts";
-import type { Attribution } from "@/core/tenant/schema.ts";
+import type { Attribution, Tenant } from "@/core/tenant/schema.ts";
 import { ATTRIBUTIONS } from "@/core/tenant/schema.ts";
 import { currentPrenotation } from "@/lib/fee-tables.ts";
 import { Icon } from "../_components/icon.tsx";
@@ -30,13 +30,13 @@ export const generateMetadata = publicMetadata("/solicitar");
 /** What a prenotação act costs by the table in force, as the form says it;
  * undefined for every other act, null when the table lacks the item. */
 async function prenotationFor(
-  tenantSlug: string,
+  tenant: Tenant,
   act: Act,
 ): Promise<{ headline: string; detail: string } | null | undefined> {
   if (!act.chargesPrenotation || !isPrenotationAttribution(act.attribution)) {
     return undefined;
   }
-  const found = await currentPrenotation(tenantSlug, act.attribution);
+  const found = await currentPrenotation(tenant, act.attribution);
   return found ? prenotationNotice(found.item, found.tableTitle) : null;
 }
 
@@ -79,7 +79,7 @@ export default async function RequestPage({
           act={act}
           attribution={attribution}
           lookupHref={lookupHref}
-          prenotation={await prenotationFor(tenant.slug, act)}
+          prenotation={await prenotationFor(tenant, act)}
         />
       </div>
     );

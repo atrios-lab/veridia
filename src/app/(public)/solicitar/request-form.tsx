@@ -76,6 +76,32 @@ function ActVariantField({
   registration: UseFormRegisterReturn;
   error?: string;
 }) {
+  if (variants.listed) {
+    return (
+      <fieldset>
+        <legend className="mb-1.5 block text-[13px] font-semibold">
+          {variants.question}
+        </legend>
+        <div className="flex flex-col gap-2">
+          {variants.options.map((option) => (
+            <label
+              key={option.id}
+              className="flex cursor-pointer items-center gap-2.5 rounded-xl border border-brand-border bg-brand-card px-3.5 py-3 text-sm has-[:checked]:border-brand-accent"
+            >
+              <input
+                type="radio"
+                value={option.id}
+                className="h-4 w-4 accent-brand-accent"
+                {...registration}
+              />
+              {option.name}
+            </label>
+          ))}
+        </div>
+        <FieldError message={error} />
+      </fieldset>
+    );
+  }
   return (
     <div>
       <label
