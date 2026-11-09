@@ -831,6 +831,10 @@ export function RequestForm({
             }
             {...register("description")}
           />
+          <p className="mt-1 text-[11.5px] text-brand-faint">
+            O que você escrever entra no requerimento, com as suas palavras, na
+            parte "Dos fatos".
+          </p>
           <FieldError message={errorFor("description")} />
         </div>
 

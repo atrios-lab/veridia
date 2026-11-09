@@ -1,7 +1,8 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { getAct } from "../acts/catalog.ts";
+import { ACTS, getAct } from "../acts/catalog.ts";
 import { cartorioMarinho } from "../tenant/tenants/marinho.ts";
+import { SPECIALTIES } from "./legal-grounds.ts";
 import {
   buildAccessReceipt,
   buildDataRightsReceipt,
@@ -180,7 +181,7 @@ test("the form identifies the office and the act it is for", () => {
   assert.equal(cartorioMarinho.cns, "094615");
   const text = flatten(document.sections);
   assert.match(text, /Habilitação de casamento/);
-  assert.match(text, /Lei 6\.015 art\. 67/);
+  assert.match(text, /Fundamento do ato: Lei n\. 6\.015\/1973, art\. 67/);
 });
 
 test("the CPF is printed the way it is written", () => {
@@ -305,7 +306,7 @@ test("a gratuidade pedida entra no papel que o cidadão assina, sem repetir o An
   });
   const texto = flatten(comIsencao.sections);
   assert.match(texto, /Habilitação de casamento/);
-  assert.match(texto, /CC art\. 1\.512/);
+  assert.match(texto, /Código Civil, art\. 1\.512/);
   assert.match(texto, /declaração de hipossuficiência que acompanha/);
   // O texto do Anexo I mora só na declaração; repeti-lo aqui duplicaria o
   // que a pessoa já assina no outro papel.
@@ -415,4 +416,78 @@ test("os demais atos mantêm o aviso geral de assinatura", () => {
     actVariant: "casamento",
   });
   assert.ok(signature.includes(HANDWRITTEN_SIGNATURE_CAVEAT));
+});
+
+test("todo ato do catálogo vira um requerimento com especialidade, instância e fundamento", () => {
+  for (const act of ACTS) {
+    const document = buildRequerimento(cartorioMarinho, act, data);
+    const text = flatten(document.sections);
+    const specialty = SPECIALTIES[act.attribution];
+    assert.equal(document.eyebrow, specialty.name, act.id);
+    assert.equal(document.title, "Requerimento", act.id);
+    assert.match(
+      text,
+      new RegExp(`Senhor\\(a\\) ${escapeRegExp(specialty.officer)}`),
+      act.id,
+    );
+    assert.match(
+      text,
+      /vem, respeitosamente, à presença de Vossa Senhoria/,
+      act.id,
+    );
+    assert.match(text, /REQUERER a prática do ato de "/, act.id);
+    assert.ok(text.includes(specialty.scope), act.id);
+    assert.ok(text.includes(specialty.instance), act.id);
+    assert.match(text, /inerte/, act.id);
+    assert.match(text, /Fundamento do ato requerido: /, act.id);
+    assert.match(text, /Constituição Federal, art\. 236/, act.id);
+    assert.match(text, /Termos em que pede deferimento\./, act.id);
+    assert.match(text, /Ielmo Marinho\/RN, 04\/08\/2026\./, act.id);
+  }
+});
+
+function escapeRegExp(text: string): string {
+  return text.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
+test("o que o requerente escreveu entra entre aspas, como escreveu", () => {
+  const text = flatten(
+    buildRequerimento(cartorioMarinho, marriage, {
+      ...data,
+      description: "  Queremos casar em outubro, no regime de separação.  ",
+    }).sections,
+  );
+  assert.match(
+    text,
+    /Dos fatos, nas palavras do requerente\n“Queremos casar em outubro, no regime de separação\.”/,
+  );
+});
+
+test("a gratuidade requer o próprio ato, com gratuidade, e o fecho pede a apreciação", () => {
+  const prenotation = getAct("gratuidade-rcpn");
+  if (!prenotation) throw new Error("catalogo incompleto");
+  const text = flatten(
+    buildRequerimento(cartorioMarinho, prenotation, {
+      ...data,
+      exemption: { actId: "rcpn-habilitacao-casamento" },
+    }).sections,
+  );
+  assert.match(
+    text,
+    /REQUERER a prática do ato de "Habilitação de casamento", com gratuidade/,
+  );
+  assert.match(text, /Fundamento do ato: Lei n\. 6\.015\/1973, art\. 67/);
+  assert.match(text, /apreciado o pedido de gratuidade/);
+});
+
+test("o requerimento de imóveis cita o registro como modo de aquisição", () => {
+  const act = getAct("ri-registro-titulo");
+  if (!act) throw new Error("catalogo incompleto");
+  const text = flatten(buildRequerimento(cartorioMarinho, act, data).sections);
+  assert.match(
+    text,
+    /Ilustríssimo\(a\) Senhor\(a\) Oficial de Registro de Imóveis/,
+  );
+  assert.match(text, /Código Civil, arts\. 1\.227 e 1\.245/);
+  assert.match(text, /arts\. 13 e 217 da Lei n\. 6\.015\/1973/);
 });
