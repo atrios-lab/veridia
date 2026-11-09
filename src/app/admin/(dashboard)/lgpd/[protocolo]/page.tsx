@@ -113,7 +113,7 @@ export default async function DataRightsDetailPage({
                 <span className="text-[11.5px] font-bold tracking-[0.06em] text-admin-accent uppercase">
                   Direito solicitado
                 </span>
-                <p className="mt-1 text-[13.5px] text-admin-text">
+                <p className="mt-1 text-[13.5px] whitespace-pre-line text-admin-text [overflow-wrap:anywhere]">
                   {option.label} ({option.legalName})
                 </p>
               </div>
@@ -122,7 +122,7 @@ export default async function DataRightsDetailPage({
                   <span className="text-[11.5px] font-bold tracking-[0.06em] text-admin-accent uppercase">
                     Pedido descrito pela titular
                   </span>
-                  <p className="mt-1 text-[13.5px] text-admin-text">
+                  <p className="mt-1 text-[13.5px] whitespace-pre-line text-admin-text [overflow-wrap:anywhere]">
                     {request.description}
                   </p>
                 </div>

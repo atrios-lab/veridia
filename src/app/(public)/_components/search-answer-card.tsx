@@ -50,7 +50,7 @@ export function SearchAnswerCard({
           {answer.found ? "Registro localizado" : "Registro não localizado"}
         </span>
       </div>
-      <p className="whitespace-pre-line text-[14px] leading-relaxed text-brand-text">
+      <p className="whitespace-pre-line [overflow-wrap:anywhere] text-[14px] leading-relaxed text-brand-text">
         {answer.text}
       </p>
       <p className="text-[11.5px] text-brand-faint">

@@ -77,7 +77,7 @@ export function SearchAnswerSection({
           >
             {answer.found ? "Registro localizado" : "Registro não localizado"}
           </span>
-          <p className="whitespace-pre-line text-[13px] leading-relaxed text-admin-text">
+          <p className="whitespace-pre-line [overflow-wrap:anywhere] text-[13px] leading-relaxed text-admin-text">
             {answer.text}
           </p>
           <p className="text-[11px] text-admin-faint">

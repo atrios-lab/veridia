@@ -305,7 +305,7 @@ export default async function Home() {
                   <p className="mt-1 text-sm font-semibold text-brand-primary">
                     {row.title}
                   </p>
-                  <p className="mt-1 line-clamp-3 whitespace-pre-line text-xs text-brand-muted">
+                  <p className="mt-1 line-clamp-3 whitespace-pre-line [overflow-wrap:anywhere] text-xs text-brand-muted">
                     {row.body}
                   </p>
                   {headline.termEndsOn && (
