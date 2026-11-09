@@ -13,14 +13,23 @@ import {
   RETENTION_WARNING_DAYS,
   retentionState,
 } from "@/core/guides/schema.ts";
+import {
+  statusLabel,
+  TERMINAL_SERVICE_REQUEST_STATUSES,
+} from "@/core/request/kinds.ts";
+import { formatShortDate, toIsoDate } from "@/core/scheduling/calendar.ts";
 import { formatMoneyBRL } from "@/core/transparency/bulletin.ts";
+import {
+  type GuideRequestRow,
+  listGuideRequests,
+} from "@/lib/guide-requests.ts";
 import { getSession } from "@/lib/session.ts";
 import {
   getGuideSettings,
   listGuides,
   type StoredGuide,
 } from "@/lib/tax-guides.ts";
-import { getTenant } from "@/lib/tenant.ts";
+import { getTenant, OFFICE_TIME_ZONE } from "@/lib/tenant.ts";
 import { AdminIcon } from "../../../_components/icon.tsx";
 import { AdminPageHeader } from "../../../_components/page-header.tsx";
 
@@ -41,9 +50,10 @@ export default async function GuidesPage({
   const role = session?.user.role ?? "";
   if (!session || !can(role, "requests.manage")) notFound();
   const tenant = await getTenant();
-  const [guides, settings] = await Promise.all([
+  const [guides, settings, requests] = await Promise.all([
     listGuides(tenant.slug).catch(() => [] as StoredGuide[]),
     getGuideSettings(tenant),
+    listGuideRequests(tenant.slug).catch(() => [] as GuideRequestRow[]),
   ]);
   const now = new Date();
   const kept = guides.filter(
@@ -90,6 +100,8 @@ export default async function GuidesPage({
             antes de emitir guias de ITIV.
           </p>
         )}
+
+        <GuideRequests requests={requests} />
 
         {deleted && (
           <p className="rounded-[12px] bg-admin-success-bg px-4 py-3 text-[13px] font-semibold text-admin-success-text">
@@ -278,6 +290,84 @@ function GuideYear({
           })}
         </tbody>
       </table>
+    </section>
+  );
+}
+
+const CLOSED = new Set<string>(TERMINAL_SERVICE_REQUEST_STATUSES);
+
+/**
+ * The guias the citizens asked for on the site: worked here, not in the
+ * Pedidos queue. Each opens its request, where the guia is checked, the
+ * documents read, the exigência made and the signed guia delivered.
+ */
+function GuideRequests({ requests }: { requests: GuideRequestRow[] }) {
+  const open = requests.filter((row) => !CLOSED.has(row.status));
+  const closed = requests.filter((row) => CLOSED.has(row.status)).slice(0, 20);
+  return (
+    <section className="overflow-hidden rounded-[14px] border border-admin-border bg-admin-card">
+      <header className="border-b border-admin-border px-4 py-3">
+        <h2 className="font-serif text-[17px] font-semibold text-admin-primary">
+          Pedidos do site{" "}
+          <span className="text-[13px] font-normal text-admin-muted">
+            ({open.length} em aberto)
+          </span>
+        </h2>
+        <p className="mt-0.5 text-[12px] text-admin-muted">
+          A guia de cada pedido é gerada sozinha e só a serventia vê. Abra o
+          pedido para conferir os documentos, corrigir a guia, fazer exigência e
+          entregar a guia assinada com o boleto.
+        </p>
+      </header>
+      {requests.length === 0 ? (
+        <p className="px-5 py-6 text-center text-[13px] text-admin-muted">
+          Nenhum pedido de guia pelo site ainda.
+        </p>
+      ) : (
+        <table className="w-full text-left text-[13px]">
+          <thead className="border-b border-admin-border text-[11px] font-bold uppercase tracking-[0.06em] text-admin-faint">
+            <tr>
+              <th className="px-4 py-2.5">Protocolo</th>
+              <th className="px-4 py-2.5">Cliente</th>
+              <th className="px-4 py-2.5">Andamento</th>
+              <th className="px-4 py-2.5">Guia</th>
+              <th className="px-4 py-2.5">Recebido</th>
+            </tr>
+          </thead>
+          <tbody>
+            {[...open, ...closed].map((row) => (
+              <tr
+                key={row.id}
+                className="border-b border-admin-border last:border-b-0"
+              >
+                <td className="px-4 py-2.5 font-bold tabular-nums">
+                  <Link
+                    href={`/admin/pedidos/${encodeURIComponent(row.protocolNumber)}`}
+                    className="hover:underline"
+                  >
+                    {row.protocolNumber}
+                  </Link>
+                  {row.citizenUpdatedAt && !CLOSED.has(row.status) && (
+                    <span className="ml-2 rounded-full bg-admin-warning-bg px-2 py-0.5 text-[10.5px] font-semibold text-admin-warning-text">
+                      cliente atualizou
+                    </span>
+                  )}
+                </td>
+                <td className="px-4 py-2.5">{row.applicantName ?? ""}</td>
+                <td className="px-4 py-2.5">
+                  {statusLabel("service-request", row.status)}
+                </td>
+                <td className="px-4 py-2.5 tabular-nums">
+                  {row.guideNumber ?? "sem guia"}
+                </td>
+                <td className="px-4 py-2.5 tabular-nums">
+                  {formatShortDate(toIsoDate(row.createdAt, OFFICE_TIME_ZONE))}
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      )}
     </section>
   );
 }

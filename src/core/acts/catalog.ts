@@ -1194,6 +1194,14 @@ export const ACTS: Act[] = [
   },
 ];
 
+/**
+ * The acts that ask for a guia de recolhimento (`taxGuide`): their requests
+ * live in the panel's Utilitários, not in the Pedidos de serviço queue.
+ */
+export const TAX_GUIDE_ACT_IDS: readonly string[] = ACTS.filter(
+  (act) => act.taxGuide,
+).map((act) => act.id);
+
 // An act outside the catalogue still has a legal basis: the general rule of
 // its own attribution, not "none".
 const GENERAL_RULE: Record<Attribution, string> = {

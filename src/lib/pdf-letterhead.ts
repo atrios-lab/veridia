@@ -117,7 +117,7 @@ export function drawIdentificationFooter(
   }
   if (documentLine) {
     pdf
-      .font("Helvetica")
+      .font("Times-Roman")
       .fontSize(6)
       .fillColor(color.text)
       .text(documentLine, MARGIN, pdf.y + 2, { width, align: "center" });

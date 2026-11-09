@@ -55,6 +55,15 @@ export const CIVIL_STATUSES = [
   "separado",
 ] as const;
 
+export const STABLE_UNION_OPTIONS = [
+  "declara-nao-mantem",
+  "declara-mantem",
+  "nao",
+  "sim",
+  "nao-informado",
+] as const;
+export type StableUnion = (typeof STABLE_UNION_OPTIONS)[number];
+
 export const MARRIAGE_REGIMES = [
   "comunhao-parcial",
   "comunhao-universal",
@@ -85,7 +94,11 @@ export const GuidePartySchema = z.object({
   /** Where and when the marriage was registered, as the deed cites it. */
   marriageRecord: text(400),
   /** CPC, art. 319, II: whether the party lives in união estável. */
-  stableUnion: z.enum(["sim", "nao", "nao-informado"]),
+  // "declara-*": the declaration made under the penalties of the law, as the
+  // registry asks of anyone not married (solteiro, viúvo, separado,
+  // divorciado); "sim" and "nao" are the shorter wording kept for the
+  // guias already issued with it.
+  stableUnion: z.enum(STABLE_UNION_OPTIONS),
   profession: text(80),
   taxId,
   /** "RG nº 1.234.567, SSP/RN, expedido em 01/01/2020" */

@@ -67,3 +67,18 @@ em "Entrega ao cidadão", mudando o andamento para "Aguardando pagamento da guia
 
 Não é oferecida como guia, por decisão do produto de 09/11/2026: o débito do imóvel aparece quando a Prefeitura
 gera o ITIV. O tipo continua no código só para que uma guia já emitida assim seja lida e impressa.
+
+## Onde a serventia trabalha os pedidos
+
+Os pedidos de guia não entram na fila de Pedidos de serviço. Eles aparecem em Guias de recolhimento, na seção
+"Pedidos do site", e o item do menu mostra quantos estão em aberto.
+
+O painel avisa, em qualquer tela, com cartão, som e notificação do navegador:
+- quando chega um pedido novo de guia;
+- quando o cliente atualiza um pedido (envia documento, responde exigência ou informa pagamento).
+
+## Qualificação: união estável
+
+Para quem não é casado (solteiro, viúvo, separado ou divorciado), a qualificação traz a declaração "que declara,
+sob as penas da lei, que (não) mantém união estável". As opções mais curtas que já existiam continuam
+disponíveis.

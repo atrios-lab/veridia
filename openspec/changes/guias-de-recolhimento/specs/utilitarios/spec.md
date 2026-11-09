@@ -33,3 +33,15 @@ SHALL ser gerada sozinha e SHALL ficar visível só no painel até a serventia e
 - **WHEN** o cidadão envia o pedido de guia de ITIV com as partes, o imóvel e o valor
 - **THEN** o pedido recebe protocolo, a guia sai numerada em Utilitários ligada a ele, e o pedido mostra a
   guia para conferir e o andamento "Aguardando pagamento da guia"
+
+### Requirement: Guias pedidas pelo site em Utilitários, com aviso
+
+Os pedidos de guia SHALL ficar fora da fila de Pedidos de serviço e SHALL aparecer em Guias de recolhimento,
+com contador no menu. O painel SHALL avisar (cartão, som e notificação do navegador) quando chega um pedido
+de guia e quando o cliente o atualiza.
+
+#### Scenario: Nova guia pelo site
+
+- **WHEN** o cidadão envia um pedido de guia
+- **THEN** o pedido não aparece na fila de Pedidos de serviço, aparece em "Pedidos do site" com a guia gerada, e
+  o painel mostra o aviso "Nova guia de recolhimento"

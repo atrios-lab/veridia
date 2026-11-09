@@ -5,6 +5,10 @@ import { redirect } from "next/navigation";
 import { can } from "@/core/auth/roles.ts";
 import { GuideSchema, GuideSettingsSchema } from "@/core/guides/schema.ts";
 import { db } from "@/db/index.ts";
+import {
+  type GuideAlertItem,
+  guideAlertSnapshotWith,
+} from "@/lib/guide-requests.ts";
 import { getSession } from "@/lib/session.ts";
 import {
   deleteGuide,
@@ -219,4 +223,19 @@ export async function deleteGuideAction(
     return { status: "error", message: "Não foi possível excluir agora." };
   revalidatePath("/admin/utilitarios/guias");
   redirect("/admin/utilitarios/guias?excluida=1");
+}
+
+/** The guia requests' news, polled by the panel's alert on every screen. */
+export async function guideAlertSnapshotAction(): Promise<
+  GuideAlertItem[] | null
+> {
+  const session = await getSession();
+  if (!session || !can(session.user.role ?? "", "requests.manage")) return null;
+  try {
+    const tenant = await getTenant();
+    return await guideAlertSnapshotWith(db, tenant.slug);
+  } catch (error) {
+    console.error("guias.alert-snapshot", error);
+    return null;
+  }
 }

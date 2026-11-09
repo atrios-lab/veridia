@@ -85,7 +85,7 @@ function text(
   options: TextOptions,
 ): number {
   const { pdf } = ctx;
-  pdf.font(options.font ?? "Helvetica").fontSize(options.size);
+  pdf.font(options.font ?? "Times-Roman").fontSize(options.size);
   const layout = {
     width: options.width,
     lineGap: options.lineGap ?? 1,
@@ -150,9 +150,9 @@ function drawLetterhead(
   // Right column: the annex label in accent small caps, then "Nº do pedido"
   // with either the protocol or a rule to write it on.
   pdf
-    .font("Helvetica-Bold")
+    .font("Times-Bold")
     .fontSize(7)
-    .fillColor(palette.accent)
+    .fillColor(NEUTRALS.text)
     .text(document.annex.toUpperCase(), rightLeft, top + 6, {
       width: rightWidth,
       align: "right",
@@ -160,7 +160,7 @@ function drawLetterhead(
     });
   const lineY = top + 30;
   const label = "Nº DO PEDIDO";
-  pdf.font("Helvetica").fontSize(6.5).fillColor(palette.muted);
+  pdf.font("Times-Roman").fontSize(6.5).fillColor(palette.muted);
   const labelWidth = pdf.widthOfString(label, { characterSpacing: 0.6 });
   const valueLeft = rightLeft + labelWidth + 8;
   const valueWidth = rightLeft + rightWidth - valueLeft;
@@ -171,7 +171,7 @@ function drawLetterhead(
   });
   if (document.protocolNumber) {
     pdf
-      .font("Helvetica-Bold")
+      .font("Times-Bold")
       .fontSize(9)
       .fillColor(NEUTRALS.text)
       .text(document.protocolNumber, valueLeft, lineY, {
@@ -212,13 +212,13 @@ function drawContinuationHeader(ctx: Ctx, document: DeclaracaoDocument): void {
     .fillColor(palette.primary)
     .text(document.continuationTitle, textLeft, top, { width });
   pdf
-    .font("Helvetica")
+    .font("Times-Roman")
     .fontSize(7.5)
     .fillColor(palette.muted)
     .text(document.continuationSubtitle, textLeft, pdf.y + 2, { width });
 
   const label = "Nº DO PEDIDO";
-  pdf.font("Helvetica").fontSize(6.5).fillColor(palette.muted);
+  pdf.font("Times-Roman").fontSize(6.5).fillColor(palette.muted);
   const labelWidth = pdf.widthOfString(label, { characterSpacing: 0.6 });
   const valueLeft = rightLeft + labelWidth + 8;
   const valueWidth = rightLeft + rightWidth - valueLeft;
@@ -229,7 +229,7 @@ function drawContinuationHeader(ctx: Ctx, document: DeclaracaoDocument): void {
   });
   if (document.protocolNumber) {
     pdf
-      .font("Helvetica-Bold")
+      .font("Times-Bold")
       .fontSize(9)
       .fillColor(NEUTRALS.text)
       .text(document.protocolNumber, valueLeft, top + 2, {
@@ -262,7 +262,7 @@ function drawCheckbox(ctx: Ctx, x: number, y: number, checked: boolean): void {
     .stroke(NEUTRALS.text);
   if (checked) {
     pdf
-      .font("Helvetica-Bold")
+      .font("Times-Bold")
       .fontSize(7.5)
       .fillColor(NEUTRALS.text)
       .text("X", x, y + 1, {
@@ -367,7 +367,7 @@ function drawChecklist(
       left += 26;
       for (const sub of item.sub) {
         drawCheckbox(ctx, left, cursor, sub.checked);
-        ctx.pdf.font("Helvetica").fontSize(BODY_SIZE - 0.5);
+        ctx.pdf.font("Times-Roman").fontSize(BODY_SIZE - 0.5);
         const labelWidth = ctx.pdf.widthOfString(sub.label) + 2;
         text(ctx, sub.label, left + CHECK_SIZE + 4, cursor, {
           size: BODY_SIZE - 0.5,
@@ -413,9 +413,9 @@ function drawAside(
   cursor += text(ctx, aside.heading.toUpperCase(), x + PAD, cursor, {
     size: LABEL_SIZE + 0.3,
     width: inner,
-    color: brand.palette.accent,
+    color: NEUTRALS.text,
     characterSpacing: 0.6,
-    font: "Helvetica-Bold",
+    font: "Times-Bold",
   });
   cursor += 4;
   for (const field of aside.fields) {
@@ -496,7 +496,7 @@ function drawParagraph(
   return text(ctx, paragraph.text, x, y, {
     size: BODY_SIZE,
     width,
-    font: paragraph.emphasis ? "Helvetica-Bold" : "Helvetica",
+    font: paragraph.emphasis ? "Times-Bold" : "Times-Roman",
     color: paragraph.emphasis ? NEUTRALS.text : NEUTRALS.textSoft,
     align: "justify",
     lineGap: 1,
@@ -635,7 +635,7 @@ function drawBlock(ctx: Ctx, block: FormBlock, y: number): number {
     const badgeY = y + BAND_HEIGHT / 2;
     pdf.circle(badgeX, badgeY, BADGE_RADIUS).fill(palette.primary);
     pdf
-      .font("Helvetica-Bold")
+      .font("Times-Bold")
       .fontSize(7.5)
       .fillColor(NEUTRALS.card)
       .text(String(block.number), badgeX - BADGE_RADIUS, badgeY - 3.8, {
@@ -656,9 +656,9 @@ function drawBlock(ctx: Ctx, block: FormBlock, y: number): number {
       });
     if (block.hint) {
       pdf
-        .font("Helvetica-Bold")
-        .fontSize(6.2)
-        .fillColor(palette.accent)
+        .font("Times-Bold")
+        .fontSize(6.6)
+        .fillColor(NEUTRALS.text)
         .text(block.hint.toUpperCase(), x + width - PAD - hintWidth, y + 7.5, {
           width: hintWidth,
           align: "right",
@@ -692,7 +692,7 @@ function drawNotice(
     size: LABEL_SIZE + 0.8,
     width: inner,
     characterSpacing: 1,
-    font: "Helvetica-Bold",
+    font: "Times-Bold",
   });
   const bodyHeight = text(measure, notice.text, 0, 0, {
     size: BODY_SIZE - 0.3,
@@ -712,7 +712,7 @@ function drawNotice(
     width: inner,
     color: tone === "accent" ? palette.accentInk : palette.primary,
     characterSpacing: 1,
-    font: "Helvetica-Bold",
+    font: "Times-Bold",
   });
   cursor += 2;
   text(ctx, notice.text, x + PAD, cursor, {
@@ -748,7 +748,7 @@ function drawStamp(ctx: Ctx, stamp: DeclaracaoStamp, y: number): number {
           text(measure, fact.value, 0, 0, {
             size: BODY_SIZE,
             width: factWidth,
-            font: "Helvetica-Bold",
+            font: "Times-Bold",
           }),
       ),
     ) + 2;
@@ -800,7 +800,7 @@ function drawStamp(ctx: Ctx, stamp: DeclaracaoStamp, y: number): number {
   text(ctx, stamp.heading.toUpperCase(), x + PAD + 14, cursor, {
     size: 7.8,
     width: inner - 14 - badgeWidth,
-    font: "Helvetica-Bold",
+    font: "Times-Bold",
     color: palette.primary,
     characterSpacing: 1,
   });
@@ -830,7 +830,7 @@ function drawStamp(ctx: Ctx, stamp: DeclaracaoStamp, y: number): number {
     text(ctx, fact.value, left, cursor + labelHeight + 2, {
       size: BODY_SIZE,
       width: factWidth,
-      font: "Helvetica-Bold",
+      font: "Times-Bold",
       color: palette.primary,
     });
   });
@@ -897,7 +897,7 @@ function drawStamp(ctx: Ctx, stamp: DeclaracaoStamp, y: number): number {
       size: 6,
       width: mottoWidth,
       align: "right",
-      font: "Helvetica-Bold",
+      font: "Times-Bold",
       color: palette.primary,
       characterSpacing: 0.7,
     },
@@ -934,21 +934,21 @@ function drawFormFooter(
   let cursor = top + 6;
 
   const [legal, ...others] = document.footer;
-  pdf.font("Helvetica-Bold").fontSize(6.3).fillColor(NEUTRALS.textSoft);
+  pdf.font("Times-Bold").fontSize(6.3).fillColor(NEUTRALS.textSoft);
   pdf.text("Base normativa: ", x, cursor, {
     width,
     continued: true,
     lineGap: 1.2,
   });
   pdf
-    .font("Helvetica")
+    .font("Times-Roman")
     .fillColor(palette.muted)
     .text(legal ?? "", { width, lineGap: 1.2 });
   cursor = pdf.y + 2;
 
   for (const line of others) {
     pdf
-      .font("Helvetica-Bold")
+      .font("Times-Bold")
       .fontSize(6.3)
       .fillColor(palette.primary)
       .text(line, x, cursor, { width, lineGap: 1.2 });
@@ -957,7 +957,7 @@ function drawFormFooter(
 
   const [office] = document.office;
   pdf
-    .font("Helvetica")
+    .font("Times-Roman")
     .fontSize(6.3)
     .fillColor(palette.muted)
     .text(`${office ?? ""} · ${document.title}`, x, cursor, {
@@ -975,7 +975,7 @@ function drawFormFooter(
   const reach = identificationOf(brand, document.office).footer.join(" · ");
   if (reach) {
     pdf
-      .font("Helvetica")
+      .font("Times-Roman")
       .fontSize(6.3)
       .fillColor(palette.muted)
       .text(reach, x, cursor + 9, { width, lineGap: 1.2 });
@@ -1037,7 +1037,7 @@ export function drawFormDocumentBody(
 
   // Title block.
   pdf.y = y;
-  drawEyebrow(pdf, document.eyebrow, brand.palette.accent, contentWidth(pdf));
+  drawEyebrow(pdf, document.eyebrow, NEUTRALS.text, contentWidth(pdf));
   pdf
     .font("Times-Bold")
     .fontSize(18)
