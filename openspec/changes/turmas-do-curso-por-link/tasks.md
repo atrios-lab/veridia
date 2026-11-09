@@ -1,8 +1,8 @@
 ## 1. Antes de começar
 
 - [x] 1.1 Nome do cartório fictício: "Cartório Vale do Silício", em Vale do Silício/RN (usuário, 09/11/2026)
-- [ ] 1.1.1 Confirmar com o usuário o remetente dos e-mails do tenant de cursos
-- [ ] 1.2 Confirmar com o usuário a validade padrão do link (proposta: 30 dias)
+- [x] 1.1.1 Remetente dos e-mails: o endereço padrão da plataforma, da Átrios; o tenant de cursos não define `emailFrom` (usuário, 09/11/2026)
+- [x] 1.2 Validade padrão do link: 30 dias (usuário, 09/11/2026)
 
 ## 2. Tenant de cursos e site de demonstração
 

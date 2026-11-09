@@ -40,6 +40,8 @@ TENANTS
 
 `atrios-cursos` entra no registro como qualquer serventia, porque a sessão, o tema, o painel e o site dependem disso. É um cartório fictício, como o Serra Verde, mas outro: nome, cidade, titular, encarregado, telefones e e-mails inventados, e todas as atribuições, para o site mostrar todas as seções. O nome é "Cartório Vale do Silício", na cidade fictícia de Vale do Silício/RN (decisão do usuário em 09/11/2026). Nenhum município do RN tem esse nome, e a referência deixa claro que o cartório é inventado.
 
+A configuração não define `emailFrom`, então os e-mails do tenant de cursos (senha esquecida, protocolo do site de demonstração) saem pelo remetente padrão da plataforma, o da Átrios (decisão do usuário em 09/11/2026). Não há domínio novo para verificar no Postmark.
+
 Um módulo puro (`src/core/tenant/courses-tenant.ts`) exporta `COURSES_TENANT_SLUG` e `isCoursesTenant(tenant)`. É o único lugar que conhece o slug; rotas e páginas perguntam a ele.
 
 *Alternativa considerada*: pôr os alunos no Serra Verde. Descartada: Serra Verde é onde os vídeos são gravados, e lista de contas, auditoria e dados de alunos apareceriam nas gravações.
@@ -171,7 +173,8 @@ Editar o nome do cartório de uma turma depois não muda certificados já emitid
   lista: cartório, cidade, código com botão copiar link,
          vagas usadas/total, concluíram, validade, situação
   [+ Nova turma] → formulário (nome do cartório, cidade, responsável,
-                   telefone, vagas, validade em dias, padrão 30)
+                   telefone, vagas, validade em dias, padrão 30,
+                   decisão do usuário em 09/11/2026)
 
 /admin/ajuda/gerenciar/turmas/[id]
   dados da turma, link, [Aumentar vagas] [Prorrogar] [Encerrar]
@@ -219,6 +222,4 @@ Rollback: reverter o código. As duas tabelas novas podem ficar no banco sem efe
 ## Open Questions
 
 - Texto do aviso de privacidade e da caixa de contato: o rascunho entra na implementação e o usuário aprova antes do deploy.
-- Validade padrão do link: 30 dias, ou outro prazo.
-- Remetente dos e-mails do tenant de cursos (senha esquecida, protocolo do site de demonstração): o endereço da Átrios ou um endereço fictício que não recebe resposta.
 - Quanto tempo guardar contas de alunos que nunca concluíram.
