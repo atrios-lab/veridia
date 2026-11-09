@@ -9,6 +9,7 @@ import { createTestDb } from "@/db/test-db.ts";
 import {
   guideAlertSnapshotWith,
   listGuideRequestsWith,
+  recordAlertSnapshotWith,
 } from "./guide-requests.ts";
 import {
   attachToRequestWith,
@@ -83,4 +84,45 @@ test("as guias pedidas pelo site ficam em Utilitários, com o aviso de novo e de
   assert.ok(
     (await listGuideRequestsWith(db, TENANT.slug))[0]?.citizenUpdatedAt,
   );
+});
+
+test("o aviso de pedido novo deixa de fora as guias e o que o balcão registrou", async () => {
+  if (!GUIDE || !OTHER) throw new Error("catálogo incompleto");
+  const online = await createServiceRequestWith(db, TENANT, OTHER, {
+    applicantName: "Ana Exemplo Pereira",
+    contact: "ana@exemplo.com",
+    accessKeyHash: hashAccessKey("CHAVE-EXEMPLO-3"),
+  });
+  const counter = await createServiceRequestWith(db, TENANT, OTHER, {
+    applicantName: "Carlos Fictício Lima",
+    contact: "carlos@exemplo.com",
+    accessKeyHash: hashAccessKey("CHAVE-EXEMPLO-4"),
+  });
+  await db.execute(
+    sql`update service_requests set details = coalesce(details, '{}'::jsonb) || '{"channel":"counter"}'::jsonb where id = ${counter.id}`,
+  );
+  const guide = await createServiceRequestWith(db, TENANT, GUIDE, {
+    applicantName: "Beatriz Exemplo Costa",
+    contact: "beatriz@exemplo.com",
+    accessKeyHash: hashAccessKey("CHAVE-EXEMPLO-5"),
+  });
+
+  const items = await recordAlertSnapshotWith(db, TENANT.slug, ["pedidos"]);
+  const protocols = items.map((item) => item.protocolNumber);
+  assert.ok(protocols.includes(online.protocolNumber));
+  assert.ok(!protocols.includes(counter.protocolNumber));
+  assert.ok(!protocols.includes(guide.protocolNumber));
+  const mine = items.find((i) => i.protocolNumber === online.protocolNumber);
+  assert.equal(mine?.channel, "pedidos");
+  assert.equal(
+    mine?.href,
+    `/admin/pedidos/${encodeURIComponent(online.protocolNumber)}`,
+  );
+
+  // Who only works LGPD does not hear of the requests.
+  assert.deepEqual(
+    await recordAlertSnapshotWith(db, TENANT.slug, ["lgpd"]),
+    [],
+  );
+  assert.deepEqual(await recordAlertSnapshotWith(db, TENANT.slug, []), []);
 });

@@ -238,3 +238,87 @@ export async function guideAlertSnapshotWith(
     return items;
   });
 }
+
+/* ------------------------------------------------- the other channels */
+
+export type RecordAlertChannel = "pedidos" | "lgpd" | "ouvidoria";
+
+export interface RecordAlertItem {
+  key: string;
+  channel: RecordAlertChannel;
+  protocolNumber: string;
+  applicantName: string | null;
+  /** ISO instant the record came in. */
+  at: string;
+  href: string;
+}
+
+const KIND_OF: Record<RecordAlertChannel, string> = {
+  pedidos: "service-request",
+  lgpd: "data-rights",
+  ouvidoria: "ombudsman",
+};
+const BASE_OF: Record<RecordAlertChannel, string> = {
+  pedidos: "/admin/pedidos",
+  lgpd: "/admin/lgpd",
+  ouvidoria: "/admin/ouvidoria",
+};
+
+/**
+ * What came in through the site in the last two days, per channel, for the
+ * panel's alert to compare with what it saw: a new request (not a guia,
+ * which has its own), a new LGPD request, a new manifestation.
+ */
+export async function recordAlertSnapshotWith(
+  database: Database,
+  tenantSlug: string,
+  channels: readonly RecordAlertChannel[],
+): Promise<RecordAlertItem[]> {
+  if (channels.length === 0) return [];
+  const rows = await database
+    .select({
+      id: serviceRequests.id,
+      kind: serviceRequests.kind,
+      actId: serviceRequests.actId,
+      protocolNumber: serviceRequests.protocolNumber,
+      applicantName: serviceRequests.applicantName,
+      createdAt: serviceRequests.createdAt,
+    })
+    .from(serviceRequests)
+    .where(
+      and(
+        eq(serviceRequests.tenantSlug, tenantSlug),
+        inArray(
+          serviceRequests.kind,
+          channels.map((channel) => KIND_OF[channel]),
+        ),
+        sql`${serviceRequests.createdAt} > now() - interval '2 days'`,
+        // What the counter filed itself is not news to the counter.
+        sql`coalesce(${serviceRequests.details}->>'channel', 'online') <> 'counter'`,
+      ),
+    )
+    .orderBy(desc(serviceRequests.createdAt))
+    .limit(100);
+  return rows.flatMap((row): RecordAlertItem[] => {
+    const channel = channels.find((c) => KIND_OF[c] === row.kind);
+    if (!channel) return [];
+    // The guias have their own alert.
+    if (
+      channel === "pedidos" &&
+      row.actId &&
+      TAX_GUIDE_ACT_IDS.includes(row.actId)
+    ) {
+      return [];
+    }
+    return [
+      {
+        key: `${channel}:${row.id}`,
+        channel,
+        protocolNumber: row.protocolNumber,
+        applicantName: row.applicantName,
+        at: row.createdAt.toISOString(),
+        href: `${BASE_OF[channel]}/${encodeURIComponent(row.protocolNumber)}`,
+      },
+    ];
+  });
+}

@@ -46,6 +46,7 @@ export const OFFICE_BULLETIN_KEY = "office-bulletin";
 export const OFFICE_HOLIDAYS_KEY = "office-holidays";
 export const OFFICE_IDENTIFICATION_KEY = "office-identification";
 export const OFFICE_GUIDES_KEY = "office-tax-guides";
+export const OFFICE_ALERTS_KEY = "office-alerts";
 // Not part of Tenant/applyTenantOverrides: whether the office's chat is on,
 // and which days and times it receives by appointment, are operational state,
 // not branding or editorial content. Both are read and written directly:
