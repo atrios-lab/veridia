@@ -6,8 +6,10 @@ import {
 } from "./agenda.ts";
 import {
   addDays,
+  holidayName,
   type IsoDate,
   isBusinessDay,
+  isWeekend,
   type OfficeHolidays,
   weekday,
 } from "./calendar.ts";
@@ -59,6 +61,29 @@ export function isOfferedDay(config: OfficeAgenda, date: IsoDate): boolean {
     gridTimes(config, date).length > 0 &&
     !closedDate(config, date)
   );
+}
+
+/**
+ * Why the office does not receive on this date, in the panel's words, or
+ * undefined when it does. Same order the citizen meets them: a date the
+ * office closed (with its reason), a holiday (national, state or its own,
+ * by name), a weekend, a weekday with no times. The panel uses it to say
+ * why a day is shut and to find appointments that were booked before the
+ * day stopped being one the office receives on.
+ */
+export function whyNotOffered(
+  config: OfficeAgenda,
+  date: IsoDate,
+): string | undefined {
+  const closed = closedDate(config, date);
+  if (closed) return `Dia fechado: ${closed.reason}`;
+  const holiday = holidayName(date, config.holidays);
+  if (holiday) return `Feriado: ${holiday}`;
+  if (isWeekend(date)) return "Fim de semana";
+  if (gridTimes(config, date).length === 0) {
+    return "Sem horários de atendimento neste dia da semana";
+  }
+  return undefined;
 }
 
 /**

@@ -52,6 +52,16 @@ const ACTION_CARDS: {
   },
 ];
 
+// On a phone the hero's two buttons give way to these cards, so the two main
+// tasks pulse here instead, taking turns (see cta-halo in globals.css). From
+// md up the hero's buttons pulse and the cards stay still.
+const CARD_HALO: Partial<Record<Section, string>> = {
+  pedidos:
+    "[--cta-halo-color:var(--color-brand-accent)] max-md:motion-safe:animate-cta-halo",
+  agendamento:
+    "[--cta-halo-color:var(--color-brand-accent)] max-md:motion-safe:animate-cta-halo-late",
+};
+
 // Each card's one-line description is SECTION_DESCRIPTIONS, the same line
 // the header's "Mais" panel shows.
 const CITIZEN_LINKS: { section: Section; icon: IconName }[] = [
@@ -172,14 +182,15 @@ export default async function Home() {
               {isSectionEnabled(tenant, "pedidos") && (
                 <Link
                   href={SECTION_ROUTES.pedidos}
-                  className="rounded-xl bg-brand-accent-soft px-5 py-3 text-sm font-semibold text-brand-primary hover:bg-brand-card"
+                  className="rounded-xl bg-brand-accent-soft px-5 py-3 text-sm font-semibold text-brand-primary hover:bg-brand-card motion-safe:animate-cta-halo"
                 >
                   Solicitar serviço
                 </Link>
               )}
+              {/* Half a cycle after "Solicitar serviço", so they take turns. */}
               <Link
                 href={SECTION_ROUTES.agendamento}
-                className="rounded-xl border border-white/50 bg-white/10 px-5 py-3 text-sm font-semibold text-white hover:bg-white/20"
+                className="rounded-xl border border-white/50 bg-white/10 px-5 py-3 text-sm font-semibold text-white [--cta-halo-color:white] hover:bg-white/20 motion-safe:animate-cta-halo-late"
               >
                 Agendar atendimento
               </Link>
@@ -246,7 +257,7 @@ export default async function Home() {
             <Link
               key={card.section}
               href={SECTION_ROUTES[card.section]}
-              className={`${card.desktopOnly ? "hidden md:flex" : "flex"} items-center gap-3 rounded-2xl border border-brand-border bg-brand-card p-4 hover:border-brand-accent md:flex-col md:items-start md:gap-0 md:p-5`}
+              className={`${card.desktopOnly ? "hidden md:flex" : "flex"} items-center gap-3 rounded-2xl border border-brand-border bg-brand-card p-4 hover:border-brand-accent md:flex-col md:items-start md:gap-0 md:p-5 ${CARD_HALO[card.section] ?? ""}`}
             >
               <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-brand-tint text-brand-accent md:mb-3 md:h-11 md:w-11">
                 <Icon name={card.icon} className="h-5 w-5" />

@@ -290,6 +290,43 @@
 }
 
 /*
+ * The home's two main tasks, "Solicitar serviço" and "Agendar atendimento":
+ * the panel's "look here" halo (attention-pulse), grown out of each button
+ * over the dark hero. The colour comes from `--cta-halo-color`, so the light
+ * button and the outlined one each pulse in their own colour, and
+ * `animate-cta-halo-late` starts the second half a cycle later, so the two
+ * take turns. On a phone the same halo marks the two action cards that take
+ * the buttons' place. Only the halo moves: fill and text keep their contrast
+ * at every frame. One cycle every 1.6s, far
+ * below the three flashes per second WCAG 2.3.1 allows, and always behind
+ * `motion-safe:`, so whoever turned animations off sees the buttons still.
+ */
+@theme {
+  --animate-cta-halo: cta-halo 1.6s linear infinite;
+  --animate-cta-halo-late: cta-halo 1.6s linear 0.8s infinite;
+
+  @keyframes cta-halo {
+    0% {
+      box-shadow: 0 0 0 0
+        color-mix(
+          in srgb,
+          var(--cta-halo-color, var(--color-brand-accent-soft)) 85%,
+          transparent
+        );
+    }
+    70%,
+    100% {
+      box-shadow: 0 0 0 12px
+        color-mix(
+          in srgb,
+          var(--cta-halo-color, var(--color-brand-accent-soft)) 0%,
+          transparent
+        );
+    }
+  }
+}
+
+/*
  * The attendant's "chamar atenção" (see app/admin/_components/chat-alerts):
  * the panel shakes once and a full screen "Chat" flashes three times when a
  * chat alert lands, the way the messengers of the 2000s called for
