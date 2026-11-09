@@ -239,7 +239,17 @@ function GuideYear({
                 <td className="px-4 py-2.5">
                   {GUIDE_KIND_INFO[stored.guide.kind].label}
                 </td>
-                <td className="px-4 py-2.5">{acquirer?.name ?? ""}</td>
+                <td className="px-4 py-2.5">
+                  {acquirer?.name ?? ""}
+                  {stored.requestProtocol && (
+                    <Link
+                      href={`/admin/pedidos/${encodeURIComponent(stored.requestProtocol)}`}
+                      className="ml-2 rounded-full bg-admin-input-bg px-2 py-0.5 text-[10.5px] font-semibold text-admin-primary hover:underline"
+                    >
+                      pedido {stored.requestProtocol}
+                    </Link>
+                  )}
+                </td>
                 <td className="px-4 py-2.5 text-right tabular-nums">
                   R$ {formatMoneyBRL(stored.guide.declaredValueCents)}
                 </td>

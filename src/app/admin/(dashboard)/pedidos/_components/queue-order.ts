@@ -56,7 +56,9 @@ export const QUEUE_TABS: readonly QueueTab[] = [
     label: "Aguardando pagamento",
     shortLabel: "Aguard. pagamento",
     tone: "waiting",
-    statuses: ["awaiting-payment"],
+    // The office's own fees and the fisco's guia alike: money the party
+    // still has to pay before the act goes on.
+    statuses: ["awaiting-payment", "awaiting-guide-payment"],
   },
   {
     id: "payment-reported",

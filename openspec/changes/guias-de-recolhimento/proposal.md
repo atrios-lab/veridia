@@ -16,6 +16,10 @@ alíquotas e fundamentos variavam de guia para guia.
   - PDF com a identificação da serventia e Word editável; PDF com todas as guias do ano;
   - guarda de 12 meses, com lembrete para baixar e arquivar na nuvem da serventia;
   - quadro da SPU (terreno de marinha): laudêmio, CAT, prazo e multa, DOITU, com os links do gov.br.
+- **Pedido pelo site** (Notas): o cliente informa as partes, o imóvel e o valor num formulário simples e
+  anexa os documentos. A guia é gerada sozinha e fica só no painel. A serventia confere, corrige,
+  assina e entrega a guia com o boleto pela consulta do protocolo, ou envia aos órgãos. Novo andamento:
+  "Aguardando pagamento da guia".
 - Configuração por serventia: lei e alíquota do ITIV, laudêmio, destinatários e quem assina.
 - Fontes conferidas: `docs/guias-de-recolhimento.md`.
 - **Banco: só acrescenta.** Migração `0038_guias_de_recolhimento`: tabela `tax_guides`.

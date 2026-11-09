@@ -99,6 +99,7 @@ test("suggested transitions match what the detail screen offers", () => {
   assert.deepEqual(suggestedNextStatuses("new"), [
     "processing",
     "awaiting-payment",
+    "awaiting-guide-payment",
     "cancelled",
   ]);
   assert.deepEqual(suggestedNextStatuses("awaiting-compliance"), [
@@ -512,4 +513,19 @@ test("statuses that need no reason accept anything", () => {
     hasAttachment: false,
   });
   assert.deepEqual(result, { ok: true, reason: null });
+});
+
+test("aguardando pagamento da guia: o imposto vai ao fisco, não à serventia", () => {
+  assert.ok(isServiceRequestStatus("awaiting-guide-payment"));
+  assert.equal(phaseOfStatus("awaiting-guide-payment"), "payment");
+  assert.equal(
+    statusLabel("service-request", "awaiting-guide-payment"),
+    "Aguardando pagamento da guia",
+  );
+  // The office's Pix charge is not what is pending here.
+  assert.equal(isPaymentSettled("awaiting-guide-payment"), true);
+  assert.ok(isOpenServiceRequestStatus("awaiting-guide-payment"));
+  assert.ok(
+    suggestedNextStatuses("processing").includes("awaiting-guide-payment"),
+  );
 });

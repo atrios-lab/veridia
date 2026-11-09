@@ -11,7 +11,7 @@ import type { Tenant } from "@/core/tenant/schema.ts";
 import { officeYear } from "@/core/time/office-time.ts";
 import { isPostgresError, UNIQUE_VIOLATION } from "@/db/errors.ts";
 import { type Database, db } from "@/db/index.ts";
-import { taxGuides, tenantContent } from "@/db/schema.ts";
+import { serviceRequests, taxGuides, tenantContent } from "@/db/schema.ts";
 import { OFFICE_GUIDES_KEY } from "@/lib/office-config.ts";
 import { recordAuditWith } from "./audit.ts";
 
@@ -24,6 +24,10 @@ export interface StoredGuide {
   sequence: number;
   guide: Guide;
   createdAt: Date;
+  /** The citizen's request it came from, when it came from the site. */
+  serviceRequestId: string | null;
+  /** That request's protocol, where the query read it. */
+  requestProtocol?: string | null;
 }
 
 function storedOf(row: TaxGuideRow): StoredGuide | undefined {
@@ -35,6 +39,7 @@ function storedOf(row: TaxGuideRow): StoredGuide | undefined {
     sequence: row.sequence,
     guide: parsed.data,
     createdAt: row.createdAt,
+    serviceRequestId: row.serviceRequestId,
   };
 }
 
@@ -130,8 +135,9 @@ export async function issueGuideWith(
   database: Database,
   tenantSlug: string,
   guide: Guide,
-  actorId: string,
+  actorId: string | null,
   now: Date = new Date(),
+  serviceRequestId?: string,
 ): Promise<StoredGuide> {
   const year = officeYear(now);
   for (let attempt = 1; ; attempt++) {
@@ -145,6 +151,7 @@ export async function issueGuideWith(
           year,
           sequence,
           payload: guide,
+          serviceRequestId: serviceRequestId ?? null,
           createdBy: actorId,
         })
         .returning();
@@ -171,6 +178,53 @@ export function issueGuide(
   actorId: string,
 ): Promise<StoredGuide> {
   return issueGuideWith(db, tenantSlug, guide, actorId);
+}
+
+/**
+ * The guia a citizen's request asked for, drawn by itself when the request
+ * came in: in the panel only, for the office to check before anything
+ * reaches the citizen. No actor: the site issued it.
+ */
+export function issueGuideForRequest(
+  tenantSlug: string,
+  guide: Guide,
+  serviceRequestId: string,
+): Promise<StoredGuide> {
+  return issueGuideWith(
+    db,
+    tenantSlug,
+    guide,
+    null,
+    new Date(),
+    serviceRequestId,
+  );
+}
+
+/** The live guias of a request, oldest first. */
+export async function guidesOfRequestWith(
+  database: Database,
+  tenantSlug: string,
+  serviceRequestId: string,
+): Promise<StoredGuide[]> {
+  const rows = await database
+    .select()
+    .from(taxGuides)
+    .where(
+      and(
+        eq(taxGuides.tenantSlug, tenantSlug),
+        eq(taxGuides.serviceRequestId, serviceRequestId),
+        isNull(taxGuides.deletedAt),
+      ),
+    )
+    .orderBy(taxGuides.createdAt);
+  return rows.flatMap((row) => storedOf(row) ?? []);
+}
+
+export function guidesOfRequest(
+  tenantSlug: string,
+  serviceRequestId: string,
+): Promise<StoredGuide[]> {
+  return guidesOfRequestWith(db, tenantSlug, serviceRequestId);
 }
 
 /** Corrects a guia already issued: same number, new content. */
@@ -247,8 +301,12 @@ export async function listGuidesWith(
   year?: number,
 ): Promise<StoredGuide[]> {
   const rows = await database
-    .select()
+    .select({ guide: taxGuides, protocol: serviceRequests.protocolNumber })
     .from(taxGuides)
+    .leftJoin(
+      serviceRequests,
+      eq(serviceRequests.id, taxGuides.serviceRequestId),
+    )
     .where(
       and(
         eq(taxGuides.tenantSlug, tenantSlug),
@@ -257,7 +315,10 @@ export async function listGuidesWith(
       ),
     )
     .orderBy(desc(taxGuides.year), desc(taxGuides.sequence));
-  return rows.flatMap((row) => storedOf(row) ?? []);
+  return rows.flatMap((row) => {
+    const stored = storedOf(row.guide);
+    return stored ? [{ ...stored, requestProtocol: row.protocol }] : [];
+  });
 }
 
 export function listGuides(

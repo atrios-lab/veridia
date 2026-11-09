@@ -262,6 +262,14 @@ export interface Act {
    * to find the band in the court's fee table when the act is charged by band.
    */
   parameter?: ActParameter;
+  /**
+   * The citizen asks for a guia de recolhimento (ITIV/ITBI, ITCD...): the
+   * form takes the parties, the property and the value in a short form, and
+   * the guia is drawn by itself into the panel's Utilitários, for the office
+   * alone to check, correct, sign and deliver with the boleto (product
+   * decision of 09/11/2026). See core/guides.
+   */
+  taxGuide?: true;
   /** Without a description there is no way to know what was asked for. */
   requiresDescription?: boolean;
   /** The form's example, where the general one would talk about something else. */
@@ -796,6 +804,32 @@ export const ACTS: Act[] = [
       "Documento de identidade do solicitante",
       "Descrição do fato a constatar",
     ],
+  },
+  {
+    id: "notas-guia-recolhimento",
+    attribution: "NOTAS",
+    name: "Guia de recolhimento de imposto (ITIV/ITBI, ITCD, laudêmio)",
+    processingMode: "online",
+    processingHint:
+      "você informa os dados e anexa os documentos; a serventia confere, prepara a guia e devolve com o boleto",
+    // O tabelião fiscaliza o recolhimento dos impostos dos atos que pratica
+    // (Lei 8.935/1994, art. 30, XI) e consigna o comprovante do ITBI na
+    // escritura (Lei 7.433/1985, art. 1º, § 2º).
+    legalBasis: "Lei 8.935 art. 30 XI",
+    requiresPurpose: false,
+    taxGuide: true,
+    descriptionPlaceholder:
+      "Ex.: compra de uma casa no centro; a escritura será feita nesta serventia.",
+    documents: [
+      "Documento de identidade e CPF de cada parte",
+      "Certidão de nascimento ou de casamento de cada parte",
+      "Comprovante de residência",
+      "Certidão de inteiro teor ou de ônus da matrícula do imóvel",
+      "Carnê do IPTU (imóvel urbano) ou CCIR e ITR (imóvel rural)",
+      "Planta e memorial descritivo ou levantamento topográfico, se houver",
+    ],
+    guidance:
+      "A serventia confere os dados e os documentos, prepara a guia e a devolve assinada, com o boleto, na consulta do protocolo. O imposto é pago ao fisco (Prefeitura ou Estado), não à serventia.",
   },
   {
     id: "notas-abertura-firma",

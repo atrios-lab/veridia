@@ -11,6 +11,11 @@ import {
   prenotationNotice,
 } from "@/core/fees/prenotation.ts";
 import {
+  guideFromRequest,
+  type PublicGuideRequest,
+  PublicGuideRequestSchema,
+} from "@/core/guides/request.ts";
+import {
   generateAccessKey,
   hashAccessKey,
   verifyAccessKey,
@@ -46,6 +51,7 @@ import {
   findByProtocol,
   findOpenServiceRequestDuplicate,
 } from "@/lib/service-request.ts";
+import { getGuideSettings, issueGuideForRequest } from "@/lib/tax-guides.ts";
 import { getTenant, today } from "@/lib/tenant.ts";
 import { AttachmentError, collectAttachments } from "@/lib/uploads.ts";
 
@@ -179,6 +185,28 @@ export async function submitServiceRequest(
     );
   }
 
+  // A guia de recolhimento's own short form (core/guides/request.ts): checked
+  // here with the rest, so the citizen sees every field to fix at once.
+  let guideRequest: PublicGuideRequest | undefined;
+  if (act.taxGuide) {
+    let submitted: unknown;
+    try {
+      submitted = JSON.parse(String(formData.get("guia") ?? "null"));
+    } catch {
+      submitted = null;
+    }
+    const guide = PublicGuideRequestSchema.safeParse(submitted);
+    if (!guide.success) {
+      const fieldErrors: Record<string, string> = {};
+      for (const issue of guide.error.issues) {
+        fieldErrors[["guia", ...issue.path.map(String)].join(".")] ??=
+          issue.message;
+      }
+      return fail("Confira os dados da guia.", fieldErrors);
+    }
+    guideRequest = guide.data;
+  }
+
   const duplicateProtocol = await findOpenServiceRequestDuplicate(
     tenant.slug,
     act.id,
@@ -249,7 +277,7 @@ export async function submitServiceRequest(
         ? await currentPrenotation(tenant, act.attribution)
         : undefined;
 
-    const { protocolNumber } = await createServiceRequest(
+    const { id: requestId, protocolNumber } = await createServiceRequest(
       tenant,
       act,
       {
@@ -284,6 +312,22 @@ export async function submitServiceRequest(
       },
       attachments,
     );
+
+    // The guia is drawn by itself, numbered, into the panel only: the office
+    // checks it against the documents, corrects it, signs it and delivers it
+    // with the boleto. A failure here leaves the request standing; the office
+    // issues the guia from Utilitários instead.
+    if (guideRequest) {
+      try {
+        await issueGuideForRequest(
+          tenant.slug,
+          guideFromRequest(guideRequest, await getGuideSettings(tenant)),
+          requestId,
+        );
+      } catch (error) {
+        console.error("solicitar.guia", error);
+      }
+    }
 
     // The key goes to the citizen's own mailbox now: the tela de sucesso is
     // the first via, this e-mail the second, so losing the tab does not

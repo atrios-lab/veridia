@@ -64,6 +64,9 @@ export const SERVICE_REQUEST_STATUSES = [
   "awaiting-payment",
   "payment-reported",
   "awaiting-compliance",
+  // A guia de recolhimento (ITIV/ITBI, ITCD) delivered with its boleto: the
+  // party pays it to the fisco, not to the office, before the escritura.
+  "awaiting-guide-payment",
   "processing",
   "ready-for-pickup",
   "done",
@@ -118,7 +121,11 @@ export const SERVICE_REQUEST_PHASES = [
   {
     id: "payment",
     label: "Pagamento",
-    statuses: ["awaiting-payment", "payment-reported"],
+    statuses: [
+      "awaiting-payment",
+      "payment-reported",
+      "awaiting-guide-payment",
+    ],
   },
   {
     id: "processing",
@@ -176,11 +183,17 @@ const SUGGESTED_NEXT_STATUSES: Record<
   ServiceRequestStatus,
   readonly ServiceRequestStatus[]
 > = {
-  new: ["processing", "awaiting-payment", "cancelled"],
+  new: [
+    "processing",
+    "awaiting-payment",
+    "awaiting-guide-payment",
+    "cancelled",
+  ],
   "awaiting-payment": ["processing", "cancelled"],
   "payment-reported": ["processing", "awaiting-payment", "cancelled"],
   "awaiting-compliance": ["processing", "cancelled"],
-  processing: ["ready-for-pickup", "done"],
+  "awaiting-guide-payment": ["processing", "done", "cancelled"],
+  processing: ["ready-for-pickup", "awaiting-guide-payment", "done"],
   "ready-for-pickup": ["done", "archived"],
   done: ["archived"],
   rejected: ["archived"],
@@ -390,6 +403,7 @@ const STATUS_LABELS: Record<RequestKind, Record<string, string>> = {
     "awaiting-payment": "Aguardando pagamento",
     "payment-reported": "Pagamento informado",
     "awaiting-compliance": "Aguardando exigência",
+    "awaiting-guide-payment": "Aguardando pagamento da guia",
     processing: "Em processamento",
     "ready-for-pickup": "Disponível para retirada",
     done: "Concluído",
