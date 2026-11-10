@@ -8,7 +8,7 @@ import { waitingCount } from "@/lib/chat.ts";
 import { openGuideRequestCount } from "@/lib/guide-requests.ts";
 import { getOfficeAlerts } from "@/lib/office-alerts.ts";
 import { openCountByKind, openRequestCount } from "@/lib/service-request.ts";
-import { getSession } from "@/lib/session.ts";
+import { getPendingSession, getSession } from "@/lib/session.ts";
 import { getTenant, officeNow } from "@/lib/tenant.ts";
 import { publishedTutorialCount } from "@/lib/tutorials.ts";
 import { MenuPopover } from "../../_components/menu-popover.tsx";
@@ -36,6 +36,11 @@ export default async function DashboardLayout({
   const session = await getSession();
   if (!session || !can(session.user.role ?? "", "admin.access")) {
     const pathname = (await headers()).get("x-pathname") ?? "/admin";
+    // Password right, e-mail code still missing: the second step, not the
+    // login again (lib/access-code.ts).
+    if (!session && (await getPendingSession())) {
+      redirect(`/admin/acesso?${new URLSearchParams({ next: pathname })}`);
+    }
     // The middleware already sent anyone with no session cookie at all to
     // the login page before this ever runs (see src/middleware.ts), so
     // reaching here means a cookie existed and this database check is what

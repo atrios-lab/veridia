@@ -162,27 +162,27 @@ export async function isVerifyRateLimited(headers: Headers): Promise<boolean> {
   return !success;
 }
 
-// The signing code: six digits, so the wrong guesses of one person are
-// what is counted, five per ten minutes. Right codes cost nothing, so a
-// clerk signing a pile of documents in a sitting never hits it.
-const signingCodeLimiter = configured
+// The access code (second step of the panel's sign-in): six digits, so the
+// wrong guesses of one person are what is counted, five per ten minutes.
+// A right code costs nothing.
+const accessCodeLimiter = configured
   ? new Ratelimit({
       redis: Redis.fromEnv(),
       limiter: Ratelimit.slidingWindow(5, "10 m"),
-      prefix: "veridia:signing-code",
+      prefix: "veridia:access-code",
       analytics: false,
     })
   : null;
 
 /** Whether this person already spent the wrong guesses of the window. */
-export async function isSigningCodeLocked(userId: string): Promise<boolean> {
-  if (!signingCodeLimiter) return false;
-  const { remaining } = await signingCodeLimiter.getRemaining(userId);
+export async function isAccessCodeLocked(userId: string): Promise<boolean> {
+  if (!accessCodeLimiter) return false;
+  const { remaining } = await accessCodeLimiter.getRemaining(userId);
   return remaining <= 0;
 }
 
 /** Counts one wrong code for this person. */
-export async function countWrongSigningCode(userId: string): Promise<void> {
-  if (!signingCodeLimiter) return;
-  await signingCodeLimiter.limit(userId);
+export async function countWrongAccessCode(userId: string): Promise<void> {
+  if (!accessCodeLimiter) return;
+  await accessCodeLimiter.limit(userId);
 }

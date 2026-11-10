@@ -5,6 +5,8 @@ import {
   deliveryLabel,
   deliveryName,
   deliveryNameSuggestions,
+  namesForFiles,
+  numberedNames,
   sanitizeDeliveryName,
 } from "./delivery-name.ts";
 
@@ -43,4 +45,15 @@ test("as sugestões partem do ato e do protocolo, sem repetir", () => {
 test("as entregas antigas aparecem como Documento final", () => {
   assert.equal(deliveryLabel("documento-final"), "Documento final");
   assert.equal(deliveryLabel("Traslado"), "Traslado");
+});
+
+test("um nome para vários arquivos é numerado; um nome por arquivo vale para cada um", () => {
+  assert.deepEqual(numberedNames("RG", 3), ["RG", "RG (2)", "RG (3)"]);
+  assert.deepEqual(namesForFiles(["RG"], 2), ["RG", "RG (2)"]);
+  assert.deepEqual(namesForFiles(["RG", "", "CPF"], 3), [
+    "RG",
+    undefined,
+    "CPF",
+  ]);
+  assert.deepEqual(namesForFiles([], 2), [undefined, undefined]);
 });

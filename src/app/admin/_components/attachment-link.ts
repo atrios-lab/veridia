@@ -40,6 +40,9 @@ const LABELS: Record<string, string> = {
 };
 
 export function attachmentLabel(displayName: string): string {
+  // The citizen's files named nothing: "anexo-2" reads "Anexo 2".
+  const numbered = /^anexo-(\d+)$/.exec(displayName);
+  if (numbered) return `Anexo ${numbered[1]}`;
   return LABELS[displayName] ?? displayName;
 }
 

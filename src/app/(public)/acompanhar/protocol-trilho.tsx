@@ -9,7 +9,9 @@ import {
   useRef,
   useState,
 } from "react";
+import { DocumentNameField } from "@/app/_components/document-name-field.tsx";
 import type { PauseReason } from "@/core/request/deadline.ts";
+import { CITIZEN_DOCUMENT_NAMES } from "@/core/request/delivery-name.ts";
 import {
   SIGNED_FORM_COUNTER_OPTION,
   SIGNED_FORM_REQUIRED_NOTICE,
@@ -615,6 +617,14 @@ function Gate({
           />
         </div>
         <div>
+          <div className="mb-2 basis-full">
+            <DocumentNameField
+              field="resposta"
+              tone="public"
+              suggestions={CITIZEN_DOCUMENT_NAMES}
+              placeholder="Ex.: Resposta à exigência"
+            />
+          </div>
           <label
             htmlFor="accessKey"
             className="mb-1.5 block text-[13px] font-semibold text-brand-primary"
@@ -1754,6 +1764,13 @@ function FilesSection({
               value={result.protocolNumber}
             />
             <input type="hidden" name="accessKey" value={result.accessKey} />
+            <div className="mb-2.5">
+              <DocumentNameField
+                field="documento"
+                tone="public"
+                suggestions={CITIZEN_DOCUMENT_NAMES}
+              />
+            </div>
             <label
               className={`flex min-h-[48px] cursor-pointer items-center justify-center gap-2 rounded-[11px] border-[1.5px] border-dashed border-brand-border px-3 py-3 text-center text-[14.5px] font-semibold text-brand-primary ${sending ? "opacity-60" : "hover:bg-brand-card"}`}
             >

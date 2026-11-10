@@ -9,7 +9,6 @@ import { brandFor } from "@/lib/document-brand.ts";
 import { renderDocument } from "@/lib/pdf.ts";
 import { getSession } from "@/lib/session.ts";
 import { CertificatePasswordError } from "@/lib/signature/certificate.ts";
-import { checkSigningCode, sendSigningCode } from "@/lib/signature/confirm.ts";
 import { requestOrigin, verifyUrlFor } from "@/lib/signature/documents.ts";
 import { PdfNotSignableError } from "@/lib/signature/pades.ts";
 import {
@@ -50,12 +49,6 @@ export async function signDocument(
     return { status: "error", message: "Escolha o PDF a assinar." };
   }
   const tenant = await getTenant();
-  const codeProblem = await checkSigningCode(
-    tenant,
-    session.user.id,
-    String(formData.get("code") ?? ""),
-  );
-  if (codeProblem) return { status: "error", message: codeProblem };
   const origin = await requestOrigin();
   const withManifest = formData.get("manifest") === "on";
   const location = `${tenant.location.city}/${tenant.location.state}`;
@@ -108,12 +101,6 @@ export async function coSignDocument(
     return { status: "error", message: "Sem permissão." };
   }
   const tenant = await getTenant();
-  const codeProblem = await checkSigningCode(
-    tenant,
-    session.user.id,
-    String(formData.get("code") ?? ""),
-  );
-  if (codeProblem) return { status: "error", message: codeProblem };
   const id = String(formData.get("documentId") ?? "");
   try {
     await coSignDocumentWith(
@@ -132,35 +119,4 @@ export async function coSignDocument(
   }
   revalidatePath(`/admin/utilitarios/assinador/${id}`);
   redirect(`/admin/utilitarios/assinador/${id}?assinado=1`);
-}
-
-export type CodeState =
-  | { status: "idle" }
-  | { status: "sent"; to: string }
-  | { status: "error"; message: string };
-
-/** Sends the six-digit confirmation code to the signer's own e-mail. */
-export async function requestSigningCodeAction(
-  _previous: CodeState,
-  _formData: FormData,
-): Promise<CodeState> {
-  const session = await getSession();
-  if (!session || !can(session.user.role ?? "", "desk.access")) {
-    return { status: "error", message: "Sem permissão." };
-  }
-  const tenant = await getTenant();
-  try {
-    const to = await sendSigningCode(tenant, {
-      id: session.user.id,
-      email: session.user.email,
-      name: session.user.name,
-    });
-    return { status: "sent", to };
-  } catch (error) {
-    console.error("assinador.code", error);
-    return {
-      status: "error",
-      message: "Não foi possível enviar o código agora. Tente de novo.",
-    };
-  }
 }

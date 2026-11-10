@@ -2,6 +2,11 @@
 
 import { useActionState, useEffect, useRef } from "react";
 import {
+  CITIZEN_DOCUMENT_NAMES,
+  OFFICE_DOCUMENT_NAMES,
+} from "@/core/request/delivery-name.ts";
+import { DocumentNameField } from "../../../../../_components/document-name-field.tsx";
+import {
   addNoteAction,
   attachOfficeFilesAction,
   correctAppointmentAction,
@@ -83,6 +88,13 @@ export function OfficeFilesForm({ id }: { id: string }) {
       className="mt-3 flex flex-wrap items-center gap-3"
     >
       <input type="hidden" name="id" value={id} />
+      <div className="basis-full">
+        <DocumentNameField
+          field="arquivo"
+          tone="admin"
+          suggestions={[...OFFICE_DOCUMENT_NAMES, ...CITIZEN_DOCUMENT_NAMES]}
+        />
+      </div>
       <label className="sr-only" htmlFor="arquivo">
         Arquivo
       </label>

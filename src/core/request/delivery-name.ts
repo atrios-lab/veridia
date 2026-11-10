@@ -73,3 +73,63 @@ export function deliveryNameSuggestions(
 export function deliveryLabel(displayName: string): string {
   return displayName === LEGACY_DELIVERY_NAME ? "Documento final" : displayName;
 }
+
+/**
+ * The name typed for a batch of files, one per file: the first as typed,
+ * then "(2)", "(3)". Empty when nothing usable was typed.
+ */
+export function numberedNames(typed: string, count: number): string[] {
+  const name = sanitizeDeliveryName(typed);
+  if (!name) return [];
+  return Array.from({ length: count }, (_, index) =>
+    index === 0 ? name : sanitizeDeliveryName(`${name} (${index + 1})`),
+  );
+}
+
+/**
+ * The names for a batch: one typed per file (the request form names each
+ * file it lists), or a single one for all, numbered. A file left blank gets
+ * no name here and keeps the default.
+ */
+export function namesForFiles(
+  typed: readonly string[],
+  count: number,
+): (string | undefined)[] {
+  if (typed.length > 1 && typed.length === count) {
+    return typed.map((name) => sanitizeDeliveryName(name) || undefined);
+  }
+  const numbered = numberedNames(typed[0] ?? "", count);
+  return Array.from({ length: count }, (_, index) => numbered[index]);
+}
+
+/** What a citizen usually sends, offered under the name field. */
+export const CITIZEN_DOCUMENT_NAMES = [
+  "Documento de identidade (RG ou CNH)",
+  "CPF",
+  "Comprovante de residência",
+  "Certidão de nascimento",
+  "Certidão de casamento",
+  "Certidão de óbito",
+  "Procuração",
+  "Matrícula do imóvel",
+  "Contrato",
+  "Comprovante de pagamento",
+  "Declaração",
+  "Resposta à exigência",
+] as const;
+
+/** What the office attaches, offered under the name field in the panel. */
+export const OFFICE_DOCUMENT_NAMES = [
+  "Certidão",
+  "Traslado",
+  "Escritura",
+  "Guia de recolhimento",
+  "Boleto",
+  "Recibo de emolumentos",
+  "Nota de exigência",
+  "Requerimento",
+  "Ofício",
+  "Documento de identidade",
+  "Comprovante",
+  "Relatório",
+] as const;

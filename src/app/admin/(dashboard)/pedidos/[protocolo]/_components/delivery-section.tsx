@@ -9,11 +9,11 @@ import {
   useState,
 } from "react";
 import { toast } from "sonner";
+import { DocumentNameField } from "../../../../../_components/document-name-field.tsx";
 import {
   type AttachmentItem,
   AttachmentRow,
 } from "../../../../_components/attachment-row.tsx";
-import { SigningCodeField } from "../../../../_components/signing-code-field.tsx";
 import { useEmailWarning } from "../../../../_components/use-email-warning.ts";
 import {
   type ActionState,
@@ -56,7 +56,6 @@ export function DeliverySection({
   );
   useEmailWarning(state);
   const formRef = useRef<HTMLFormElement>(null);
-  const nameRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     if (state.status !== "success") return;
@@ -113,39 +112,14 @@ export function DeliverySection({
 
       <form action={action} ref={formRef} className="mt-3.5">
         <input type="hidden" name="requestId" value={requestId} />
-        <label
-          htmlFor="entrega-nome"
-          className="mb-1.5 block text-xs font-bold text-admin-primary"
-        >
-          Nome do documento (opcional)
-        </label>
-        <input
-          id="entrega-nome"
-          ref={nameRef}
-          name="nome"
-          list="entrega-nomes"
-          maxLength={100}
-          placeholder={defaultName}
-          className="w-full rounded-[9px] border border-admin-input-border bg-admin-input-bg px-3.5 py-2.5 text-[13.5px] text-admin-text outline-none focus:border-admin-primary-soft"
-        />
-        <datalist id="entrega-nomes">
-          {nameSuggestions.map((suggestion) => (
-            <option key={suggestion} value={suggestion} />
-          ))}
-        </datalist>
-        <div className="mt-2 mb-3 flex flex-wrap gap-1.5">
-          {nameSuggestions.slice(0, 5).map((suggestion) => (
-            <button
-              key={suggestion}
-              type="button"
-              onClick={() => {
-                if (nameRef.current) nameRef.current.value = suggestion;
-              }}
-              className="rounded-full border border-admin-border bg-admin-card px-2.5 py-1 text-[11.5px] text-admin-muted hover:border-admin-primary-soft hover:text-admin-primary"
-            >
-              {suggestion.split(" · ")[0]}
-            </button>
-          ))}
+        <div className="mb-3">
+          <DocumentNameField
+            field="documento"
+            tone="admin"
+            suggestions={nameSuggestions}
+            placeholder={defaultName}
+            hint={`Sem nome, o documento sai como "${defaultName}".`}
+          />
         </div>
         {/* The file input is visually hidden but still in the tab order, so
             the ring is the only thing telling a keyboard user they are on it. */}
@@ -278,9 +252,6 @@ function UnsignedNotice({
               className={FIELD}
             />
           </label>
-          <div className="md:col-span-3">
-            <SigningCodeField id={`entrega-${attachmentId}-code`} />
-          </div>
           <button
             type="submit"
             disabled={pending}
@@ -324,7 +295,6 @@ function RenameDelivered({
     },
     { status: "idle" },
   );
-  const listId = `renomear-${attachmentId}`;
   if (!open) {
     return (
       <button
@@ -343,23 +313,17 @@ function RenameDelivered({
         const data = new FormData(event.currentTarget);
         startTransition(() => action(data));
       }}
-      className="mt-1.5 flex flex-wrap items-center gap-2"
+      className="mt-1.5 flex flex-wrap items-end gap-2"
     >
       <input type="hidden" name="requestId" value={requestId} />
       <input type="hidden" name="attachmentId" value={attachmentId} />
-      <input
-        name="nome"
-        list={listId}
-        maxLength={100}
-        required
-        aria-label="Novo nome do documento"
-        className="min-w-0 flex-1 rounded-[9px] border border-admin-input-border bg-admin-input-bg px-3 py-2 text-[13px] text-admin-text outline-none focus:border-admin-primary-soft"
-      />
-      <datalist id={listId}>
-        {suggestions.map((suggestion) => (
-          <option key={suggestion} value={suggestion} />
-        ))}
-      </datalist>
+      <div className="min-w-0 flex-1">
+        <DocumentNameField
+          field="novo"
+          tone="admin"
+          suggestions={suggestions}
+        />
+      </div>
       <button
         type="submit"
         disabled={pending}

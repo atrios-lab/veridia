@@ -77,6 +77,7 @@ export async function respondDataRights(
     const stored = await storeAttachments(files, {
       tenantSlug: tenant.slug,
       kind: "office",
+      name: String(formData.get("relatorioName") ?? ""),
     });
     if (stored.length > 0) {
       await attachToRequest(tenant.slug, requestId, stored, "office");

@@ -70,7 +70,6 @@ import {
 } from "@/lib/service-request.ts";
 import { getSession } from "@/lib/session.ts";
 import { CertificatePasswordError } from "@/lib/signature/certificate.ts";
-import { checkSigningCode } from "@/lib/signature/confirm.ts";
 import { requestOrigin, verifyUrlFor } from "@/lib/signature/documents.ts";
 import { PdfNotSignableError } from "@/lib/signature/pades.ts";
 import { SigningError, signDeliveredDocumentWith } from "@/lib/signing.ts";
@@ -547,7 +546,7 @@ export async function deliverDocumentAction(
       tenantSlug: tenant.slug,
       // The name the clerk typed, or "Documento final N · protocolo".
       kind: deliveryName(
-        String(formData.get("nome") ?? ""),
+        String(formData.get("documentoName") ?? ""),
         owner.protocolNumber,
         alreadyDelivered,
       ),
@@ -971,6 +970,8 @@ export async function attachCitizenDocumentAction(
     const stored = await storeAttachments(files, {
       tenantSlug: tenant.slug,
       kind: signedAs ? SIGNED_FORM_NAMES[signedAs] : undefined,
+      // A signed form keeps its fixed name; any other file, the one typed.
+      name: signedAs ? undefined : String(formData.get("documentoName") ?? ""),
     });
     if (stored.length === 0) {
       return { status: "error", message: "Escolha um arquivo para anexar." };
@@ -1003,12 +1004,6 @@ export async function signDeliveredAction(
   const session = await authorize();
   if (!session) return { status: "error", message: NO_PERMISSION };
   const tenant = await getTenant();
-  const codeProblem = await checkSigningCode(
-    tenant,
-    session.user.id,
-    String(formData.get("code") ?? ""),
-  );
-  if (codeProblem) return { status: "error", message: codeProblem };
   const requestId = String(formData.get("requestId") ?? "");
   const request = await findById(tenant.slug, requestId);
   if (!request) return { status: "error", message: "Pedido não encontrado." };
@@ -1053,7 +1048,7 @@ export async function renameDeliveredAction(
 ): Promise<ActionState> {
   const session = await authorize();
   if (!session) return { status: "error", message: NO_PERMISSION };
-  const name = sanitizeDeliveryName(String(formData.get("nome") ?? ""));
+  const name = sanitizeDeliveryName(String(formData.get("novoName") ?? ""));
   if (!name)
     return { status: "error", message: "Informe o nome do documento." };
   const tenant = await getTenant();

@@ -1,7 +1,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { getSession } from "@/lib/session.ts";
+import { getPendingSession, getSession } from "@/lib/session.ts";
 import { getTenant } from "@/lib/tenant.ts";
 import { AdminIcon } from "../_components/icon.tsx";
 import { PasswordField } from "../_components/password-field.tsx";
@@ -40,6 +40,8 @@ export default async function LoginPage({
   }>;
 }) {
   if (await getSession()) redirect("/admin");
+  // Password already right: the e-mail code is what is missing.
+  if (await getPendingSession()) redirect("/admin/acesso");
   const { erro, next, motivo, saiu, email } = await searchParams;
   const tenant = await getTenant();
   const destination = next ?? "/admin";

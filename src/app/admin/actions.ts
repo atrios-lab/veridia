@@ -7,7 +7,7 @@ import { canAccessTenant } from "@/core/auth/roles.ts";
 import { recordAudit } from "@/lib/audit.ts";
 import { auth } from "@/lib/auth.ts";
 import { isRateLimited } from "@/lib/rate-limit.ts";
-import { getSession } from "@/lib/session.ts";
+import { getPendingSession } from "@/lib/session.ts";
 import { getTenant } from "@/lib/tenant.ts";
 
 export async function signIn(formData: FormData) {
@@ -68,11 +68,15 @@ export async function signIn(formData: FormData) {
 
   // Only internal paths: an open redirect here would hand the login flow to
   // whoever crafts the link.
-  redirect(next.startsWith("/admin/") || next === "/admin" ? next : "/admin");
+  const destination =
+    next.startsWith("/admin/") || next === "/admin" ? next : "/admin";
+  // The second step: the e-mail code (lib/access-code.ts).
+  redirect(`/admin/acesso?${new URLSearchParams({ next: destination })}`);
 }
 
 export async function signOut() {
-  const session = await getSession();
+  // Also from the code screen, before the second step.
+  const session = await getPendingSession();
   if (session) {
     const tenant = await getTenant();
     await recordAudit({

@@ -1,20 +1,17 @@
 import "server-only";
 import { headers } from "next/headers";
 import { canAccessTenant, isAccountDisabled } from "@/core/auth/roles.ts";
+import { isAccessConfirmed } from "./access-code.ts";
 import { auth } from "./auth.ts";
 import { getTenant } from "./tenant.ts";
 
 /**
- * Authoritative session check, and the single place the office is enforced.
- *
- * It hits the database, so a session revoked there is gone on the very next
- * request. It also refuses a session whose user belongs to another office,
- * which is what makes a cookie issued on the wrong domain inert: the sign in
- * form is not the only way to get one, the auth route can mint one too, and
- * guarding only the form would leave every future route to remember the
- * check on its own.
+ * The session after the password alone: the right person of the right
+ * office, but not yet through the e-mail code. Only the access-code screen
+ * (admin/acesso) and the panel's redirect use it; everything else asks
+ * `getSession`.
  */
-export async function getSession() {
+export async function getPendingSession() {
   const session = await auth.api.getSession({ headers: await headers() });
   if (!session) return null;
   if (isAccountDisabled(session.user.disabledAt)) return null;
@@ -29,5 +26,23 @@ export async function getSession() {
   )
     return null;
 
+  return session;
+}
+
+/**
+ * Authoritative session check, and the single place the office and the
+ * second step are enforced.
+ *
+ * It hits the database, so a session revoked there is gone on the very next
+ * request. It refuses a session whose user belongs to another office, which
+ * is what makes a cookie issued on the wrong domain inert. And it refuses a
+ * session that has not confirmed the e-mail code yet (lib/access-code.ts):
+ * being here, not in the menu, is what makes every screen, action and route
+ * ask for it.
+ */
+export async function getSession() {
+  const session = await getPendingSession();
+  if (!session) return null;
+  if (!(await isAccessConfirmed(session))) return null;
   return session;
 }
