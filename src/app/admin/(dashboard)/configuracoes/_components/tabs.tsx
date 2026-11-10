@@ -35,6 +35,11 @@ const TABS: {
     permission: "content.edit",
   },
   {
+    label: "Certificados",
+    href: "/admin/configuracoes/certificados",
+    permission: "user.manage",
+  },
+  {
     label: "Numeração",
     href: "/admin/configuracoes/numeracao",
     permission: "content.edit",

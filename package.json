@@ -38,6 +38,7 @@
     "drizzle-zod": "^0.8.3",
     "next": "16.2.12",
     "node-forge": "1.4.3",
+    "pdf-lib": "1.17.1",
     "pdfkit": "^0.19.1",
     "postgres": "^3.4.9",
     "qrcode": "^1.5.4",

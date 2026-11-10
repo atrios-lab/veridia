@@ -63,6 +63,12 @@ export const PAGE_META: Record<string, PageMeta> = {
       "Confira no sistema do Tribunal de Justiça se um documento emitido " +
       `pelo ${t.name} é autêntico, pelo código do selo digital impresso nele.`,
   },
+  "/verificar": {
+    title: "Verificar documento assinado",
+    description: (t) =>
+      "Confira se um documento assinado digitalmente pelo " +
+      `${t.name} é autêntico, pelo código, pelo QR Code ou enviando o PDF.`,
+  },
   "/centrais": {
     title: "Centrais oficiais",
     description: (t) =>

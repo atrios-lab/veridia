@@ -1,6 +1,6 @@
 import "server-only";
 import { randomUUID } from "node:crypto";
-import { mkdir, unlink, writeFile } from "node:fs/promises";
+import { mkdir, readFile, unlink, writeFile } from "node:fs/promises";
 import { dirname, join, resolve } from "node:path";
 import { del, head, put } from "@vercel/blob";
 import {
@@ -374,4 +374,31 @@ export async function deleteTutorialFile(url: string): Promise<void> {
   if (url.startsWith(`/uploads/${TUTORIAL_FOLDER}/`)) {
     return deleteStoredFile(join(resolve("./public"), url));
   }
+}
+
+/**
+ * A PDF signed in the assinador digital: kept six months (decision of
+ * 10/11/2026), under the office's own folder. Blob in the deploy, disk in
+ * development, like every other upload.
+ */
+export async function storeSignedPdf(
+  tenantSlug: string,
+  bytes: Buffer,
+): Promise<string> {
+  return store(
+    bytes,
+    `${tenantSlug}/assinados/${randomUUID()}.pdf`,
+    "application/pdf",
+  );
+}
+
+/** Reads back a file written by `store`, wherever it went. */
+export async function readStoredFile(path: string): Promise<Buffer> {
+  if (path.startsWith("http")) {
+    const response = await fetch(path);
+    if (!response.ok)
+      throw new Error(`arquivo indisponível (${response.status})`);
+    return Buffer.from(await response.arrayBuffer());
+  }
+  return readFile(path);
 }

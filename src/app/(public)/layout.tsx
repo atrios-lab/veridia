@@ -342,8 +342,16 @@ export default async function PublicLayout({
                     {link.label}
                   </Link>
                 ))}
-                {/* Neither carries data-section: they are not gated sections,
+                {/* None of these carries data-section: they are not gated sections,
                     and the gating e2e compares the footer's data-section set. */}
+                {title === "Serviços" && (
+                  <Link
+                    href="/verificar"
+                    className="text-sm text-brand-on-dark-body hover:text-white"
+                  >
+                    Verificar documento assinado
+                  </Link>
+                )}
                 {title === "Cidadão" && (
                   <>
                     <Link
