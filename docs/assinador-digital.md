@@ -21,6 +21,7 @@
 | Validade da política | até 02/03/2029 | `LPA_PAdES.der` |
 | Atributos assinados | contentType, messageDigest, signingCertificateV2, sigPolicyId | `PA_PAdES_AD_RB_v1_1.der` |
 | Base legal | MP 2.200-2/2001, art. 10, § 1º; Lei 14.063/2020, art. 4º, III | legislação federal |
+| Uso da plataforma | Plataforma Eletrônica Oficial da Serventia, art. 208, II, "b", do Código Nacional de Normas (Provimento CNJ 180/2024) | o mesmo texto do rodapé do site |
 
 A data e a hora da assinatura ficam em `/M` do dicionário da assinatura. A política AD-RB não usa carimbo do
 tempo.

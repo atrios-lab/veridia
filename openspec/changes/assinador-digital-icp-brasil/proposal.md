@@ -2,7 +2,8 @@
 
 A serventia precisa assinar documentos 100% digitais, sem imprimir, com certificado A1 da ICP-Brasil, e o
 cidadão precisa conferir a autenticidade do documento no site da própria serventia, além do validador do ITI,
-com segurança e de acordo com a LGPD e o Provimento CNJ nº 213/2026.
+com segurança, na Plataforma Eletrônica Oficial da Serventia (art. 208, II, "b", do Código Nacional de Normas do
+CNJ, Provimento CNJ nº 180/2024) e de acordo com a LGPD.
 
 ## What Changes
 

@@ -20,8 +20,12 @@ export const ICP_POLICY = {
 export const SIGNATURE_LEGAL_BASIS =
   "MP nº 2.200-2/2001, art. 10, § 1º, e Lei nº 14.063/2020, art. 4º, III";
 
+/**
+ * What authorizes the office to use the platform, as the site's footer
+ * states it, and the data protection law.
+ */
 export const SIGNATURE_COMPLIANCE_NOTE =
-  "Dados tratados conforme a LGPD (Lei nº 13.709/2018) e os controles de segurança do Provimento CNJ nº 213/2026.";
+  'Assinado na Plataforma Eletrônica Oficial da Serventia, nos termos do art. 208, II, "b", do Código Nacional de Normas do CNJ (Provimento CNJ nº 180/2024). Dados tratados conforme a LGPD (Lei nº 13.709/2018).';
 
 /** "AB12-CD34-EF56": what the QR and the verification page carry. */
 export function formatVerificationCode(raw: string): string {
