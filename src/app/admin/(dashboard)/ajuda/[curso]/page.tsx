@@ -1,6 +1,9 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
-import { DEFAULT_CERTIFICATE_CHECK_BASE } from "@/core/courses/certificate.ts";
+import {
+  certificateOfficeName,
+  DEFAULT_CERTIFICATE_CHECK_BASE,
+} from "@/core/courses/certificate.ts";
 import { courseProgress } from "@/core/tutorials/course.ts";
 import { formatDuration } from "@/core/tutorials/progress.ts";
 import { cohortOfficeName } from "@/lib/cohorts.ts";
@@ -138,7 +141,7 @@ export default async function CoursePage({
             workloadHours={settings.workloadHours}
             // A course learner's certificate names their cohort's office
             // (see issueCertificateWith); the preview says the same.
-            tenantName={cohortOffice ?? tenant.name}
+            tenantName={cohortOffice ?? certificateOfficeName(tenant)}
             accountName={session.user.name ?? ""}
             checkUrl={
               process.env.CERTIFICATE_CHECK_BASE_URL ||

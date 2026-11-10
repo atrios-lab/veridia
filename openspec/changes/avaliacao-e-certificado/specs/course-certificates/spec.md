@@ -94,6 +94,8 @@ A emissão SHALL gravar:
 - um código de validação único, aleatório, de 12 caracteres;
 - a serventia da pessoa, o título do curso, a carga horária, o aproveitamento e a data, como estavam no momento da emissão.
 
+A serventia SHALL sair pelo nome oficial do tenant (o subtítulo do site, como "Ofício Único de Ielmo Marinho / RN"), e não pelo nome curto do cabeçalho e dos e-mails. Quem entrou por uma turma SHALL ter a serventia da turma. A prévia antes de emitir SHALL mostrar o mesmo nome que a emissão grava.
+
 A emissão SHALL criar um único certificado por pessoa e por curso. Emitido, ele NÃO SHALL ser alterado pela pessoa.
 
 #### Scenario: CPF inválido
@@ -107,6 +109,10 @@ A emissão SHALL criar um único certificado por pessoa e por curso. Emitido, el
 #### Scenario: Segunda emissão
 - **WHEN** a pessoa que já tem certificado do curso tenta emitir de novo
 - **THEN** o servidor recusa e mantém o certificado existente
+
+#### Scenario: Serventia pelo nome oficial
+- **WHEN** uma pessoa do painel do Cartório de Taipu, fora de turma, emite o certificado
+- **THEN** o certificado diz "Serviço Único Notarial e Registral de Taipu / RN", não "Cartório de Taipu"
 
 ### Requirement: Certificado em PDF assinado digitalmente
 

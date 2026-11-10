@@ -3,7 +3,10 @@
 import { randomBytes, randomInt } from "node:crypto";
 import { revalidatePath } from "next/cache";
 import { headers } from "next/headers";
-import { certificateRequestSchema } from "@/core/courses/certificate.ts";
+import {
+  certificateOfficeName,
+  certificateRequestSchema,
+} from "@/core/courses/certificate.ts";
 import { db } from "@/db/index.ts";
 import { issueCertificate } from "@/lib/certificates.ts";
 import { startAttemptWith, submitAttemptWith } from "@/lib/quiz.ts";
@@ -186,7 +189,7 @@ export async function issueCertificateAction(
         userId: session.user.id,
         courseId,
         tenantSlug: tenant.slug,
-        tenantName: tenant.name,
+        tenantName: certificateOfficeName(tenant),
         host,
       },
       parsed.data,
