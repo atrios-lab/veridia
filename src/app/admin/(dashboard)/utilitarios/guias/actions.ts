@@ -3,7 +3,11 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { can } from "@/core/auth/roles.ts";
-import { GuideSchema, GuideSettingsSchema } from "@/core/guides/schema.ts";
+import {
+  formatGuideNumber,
+  GuideSchema,
+  GuideSettingsSchema,
+} from "@/core/guides/schema.ts";
 import { db } from "@/db/index.ts";
 import {
   type GuideAlertItem,
@@ -12,9 +16,11 @@ import {
   type RecordAlertItem,
   recordAlertSnapshotWith,
 } from "@/lib/guide-requests.ts";
+import { findById } from "@/lib/service-request.ts";
 import { getSession } from "@/lib/session.ts";
 import {
   deleteGuide,
+  findGuide,
   GuideNumberTakenError,
   issueGuide,
   renumberGuide,
@@ -217,14 +223,25 @@ export async function deleteGuideAction(
     return { status: "error", message: NO_PERMISSION };
   }
   const tenant = await getTenant();
-  const deleted = await deleteGuide(
-    tenant.slug,
-    String(formData.get("id") ?? ""),
-    session.user.id,
-  ).catch(() => false);
-  if (!deleted)
+  const id = String(formData.get("id") ?? "");
+  // Read before: the guia's number and the citizen's request it came from.
+  const guide = await findGuide(tenant.slug, id).catch(() => undefined);
+  const deleted = await deleteGuide(tenant.slug, id, session.user.id).catch(
+    () => false,
+  );
+  if (!deleted || !guide)
     return { status: "error", message: "Não foi possível excluir agora." };
-  revalidatePath("/admin/utilitarios/guias");
+  revalidatePath("/admin", "layout");
+  const request = guide.serviceRequestId
+    ? await findById(tenant.slug, guide.serviceRequestId).catch(() => undefined)
+    : undefined;
+  if (request) {
+    // The request stays open without its guia: the office decides there
+    // whether it was a test (Excluir protocolo) or a real one (another guia).
+    redirect(
+      `/admin/pedidos/${encodeURIComponent(request.protocolNumber)}?guia-excluida=${encodeURIComponent(formatGuideNumber(guide.year, guide.sequence))}`,
+    );
+  }
   redirect("/admin/utilitarios/guias?excluida=1");
 }
 

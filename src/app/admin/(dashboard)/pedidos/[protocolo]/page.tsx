@@ -144,14 +144,17 @@ function deadlineProgress(
 
 export default async function ServiceRequestDetailPage({
   params,
+  searchParams,
 }: {
   params: Promise<{ protocolo: string }>;
+  searchParams: Promise<{ "guia-excluida"?: string }>;
 }) {
   const session = await getSession();
   if (!session || !can(session.user.role ?? "", "requests.manage")) notFound();
 
   const tenant = await getTenant();
   const { protocolo } = await params;
+  const deletedGuide = (await searchParams)["guia-excluida"];
   const request = await findByProtocol(
     tenant.slug,
     decodeURIComponent(protocolo),
@@ -288,6 +291,15 @@ export default async function ServiceRequestDetailPage({
         version={request.updatedAt.toISOString()}
       />
       <main className="flex flex-col gap-4.5 px-[30px] py-7">
+        {deletedGuide && act?.taxGuide && (
+          <p className="rounded-[12px] bg-admin-success-bg px-4 py-3 text-[13px] text-admin-success-text">
+            <strong>Guia {deletedGuide} excluída.</strong> O número ficou livre
+            para a próxima. Este pedido do site continua aberto: se ele também
+            foi teste ou aberto por engano, use o botão "Excluir protocolo",
+            abaixo do Histórico, e ele sai da mesa e dos pedidos. Se é um pedido
+            real, emita outra guia.
+          </p>
+        )}
         <div className="flex flex-wrap items-center gap-3.5">
           <Link
             href={act?.taxGuide ? "/admin/utilitarios/guias" : "/admin/pedidos"}

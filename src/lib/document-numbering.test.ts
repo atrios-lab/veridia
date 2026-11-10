@@ -15,7 +15,7 @@ import {
   saveNumberingFloorWith,
 } from "./document-numbering.ts";
 import { createServiceRequestWith } from "./service-request.ts";
-import { issueGuideWith } from "./tax-guides.ts";
+import { deleteGuideWith, issueGuideWith } from "./tax-guides.ts";
 
 let db: Database;
 let close: () => Promise<void>;
@@ -93,4 +93,18 @@ test("o protocolo do pedido segue do número informado para o ano", async () => 
     accessKeyHash: hashAccessKey("CHAVE-EXEMPLO"),
   });
   assert.equal(created.protocolNumber, `REQ.${year}.000300`);
+});
+
+test("excluir uma guia libera o número, mesmo no meio do ano", async () => {
+  const at = (day: number) => new Date(Date.UTC(2030, 2, day, 12));
+  const one = await issueGuideWith(db, TENANT.slug, guide, "u1", at(1));
+  const two = await issueGuideWith(db, TENANT.slug, guide, "u1", at(2));
+  const three = await issueGuideWith(db, TENANT.slug, guide, "u1", at(3));
+  assert.deepEqual([one.sequence, two.sequence, three.sequence], [1, 2, 3]);
+  assert.equal(await deleteGuideWith(db, TENANT.slug, two.id, "u1"), true);
+  const again = await issueGuideWith(db, TENANT.slug, guide, "u1", at(4));
+  assert.equal(again.sequence, 2);
+  assert.equal(await deleteGuideWith(db, TENANT.slug, three.id, "u1"), true);
+  const last = await issueGuideWith(db, TENANT.slug, guide, "u1", at(5));
+  assert.equal(last.sequence, 3);
 });
