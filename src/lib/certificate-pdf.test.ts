@@ -4,6 +4,7 @@ import { before, test } from "node:test";
 import forge from "node-forge";
 import {
   type CertificateDocument,
+  plainDescription,
   readSigningCertificate,
   renderCertificatePdf,
   type SigningCertificate,
@@ -155,6 +156,21 @@ test("the syllabus becomes a back page; without it, the front alone", async () =
     { production: true },
   );
   assert.equal(pageCount(both), 2);
+});
+
+test("the back page line skips a label paragraph and drops the emphasis", () => {
+  assert.equal(
+    plainDescription(
+      "**Quem conduz:**\n\nJOELISON ALVES MARINHO é **bacharel** em Direito.\n\nO que você vai aprender:",
+    ),
+    "JOELISON ALVES MARINHO é bacharel em Direito.",
+  );
+  assert.equal(
+    plainDescription("A lei e os **quatro papéis**.\n\nSegundo parágrafo."),
+    "A lei e os quatro papéis.",
+  );
+  assert.equal(plainDescription("Só um rótulo:"), "");
+  assert.equal(plainDescription(""), "");
 });
 
 test("without a signing certificate: a test document outside production, nothing in it", async () => {

@@ -518,14 +518,21 @@ async function drawFront(
     );
 }
 
-/** A description as one plain line of prose: the first paragraph, no
- * Markdown emphasis (the panel's descriptions may carry some). */
-function plainDescription(text: string): string {
-  const first = text.split(/\n\s*\n/)[0] ?? "";
-  return first
-    .replace(/[*_`#>]/g, "")
-    .replace(/\s+/g, " ")
-    .trim();
+/** A description as one plain line of prose: the first paragraph that says
+ * something, no Markdown emphasis (the panel's descriptions may carry
+ * some). A paragraph that only labels the next one ("Quem conduz:") is
+ * skipped: alone on the back page it says nothing. */
+export function plainDescription(text: string): string {
+  const paragraphs = text
+    .split(/\n\s*\n/)
+    .map((paragraph) =>
+      paragraph
+        .replace(/[*_`#>]/g, "")
+        .replace(/\s+/g, " ")
+        .trim(),
+    )
+    .filter(Boolean);
+  return paragraphs.find((paragraph) => !paragraph.endsWith(":")) ?? "";
 }
 
 function drawBack(pdf: Pdf, doc: CertificateDocument): void {
