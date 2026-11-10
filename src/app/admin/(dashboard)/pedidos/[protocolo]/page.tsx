@@ -54,6 +54,7 @@ import {
   formatOfficeDate,
   formatOfficeDayMonthTime,
 } from "@/core/time/office-time.ts";
+import { db } from "@/db/index.ts";
 import { linkedConversations } from "@/lib/chat.ts";
 import {
   findByProtocol,
@@ -65,6 +66,10 @@ import {
   requestOwnAttachments,
 } from "@/lib/service-request.ts";
 import { getSession } from "@/lib/session.ts";
+import {
+  certificatesForSignerWith,
+  unsignedDeliveries,
+} from "@/lib/signing.ts";
 import { guidesOfRequest } from "@/lib/tax-guides.ts";
 import { getTenant, OFFICE_TIME_ZONE, today } from "@/lib/tenant.ts";
 import {
@@ -209,6 +214,12 @@ export default async function ServiceRequestDetailPage({
   const deliveredAttachments = ownAttachments
     .filter((a) => a.kind === "office")
     .map(row);
+  // Which delivered PDFs carry no digital signature, and what this clerk
+  // may sign them with: the delivery section reminds and offers to sign.
+  const [unsignedDelivered, signingCertificates] = await Promise.all([
+    unsignedDeliveries(ownAttachments).catch(() => new Set<string>()),
+    certificatesForSignerWith(db, tenant.slug, session.user.id).catch(() => []),
+  ]);
   // The most recent one: a corrected resend (wrong file the first time) is
   // what the operator should check, not the first try.
   const paymentReceipt = ownAttachments
@@ -650,6 +661,14 @@ export default async function ServiceRequestDetailPage({
               <DeliverySection
                 requestId={request.id}
                 delivered={deliveredAttachments}
+                unsigned={[...unsignedDelivered]}
+                certificates={signingCertificates.map(
+                  ({ id, label, holderName }) => ({ id, label, holderName }),
+                )}
+                canManageCertificates={can(
+                  session.user.role ?? "",
+                  "user.manage",
+                )}
               />
             )}
 

@@ -40,6 +40,7 @@ import { parseCentsInput } from "@/core/request/money.ts";
 import { requirementTextSchema } from "@/core/request/requirement.ts";
 import { toIsoDate } from "@/core/scheduling/calendar.ts";
 import type { Tenant } from "@/core/tenant/schema.ts";
+import { db } from "@/db/index.ts";
 import { notifyCitizen } from "@/lib/email/service-request.ts";
 import {
   AttachmentInUseError,
@@ -62,6 +63,10 @@ import {
   writeStaffMessage,
 } from "@/lib/service-request.ts";
 import { getSession } from "@/lib/session.ts";
+import { CertificatePasswordError } from "@/lib/signature/certificate.ts";
+import { requestOrigin, verifyUrlFor } from "@/lib/signature/documents.ts";
+import { PdfNotSignableError } from "@/lib/signature/pades.ts";
+import { SigningError, signDeliveredDocumentWith } from "@/lib/signing.ts";
 import { getTenant, OFFICE_TIME_ZONE, today } from "@/lib/tenant.ts";
 import {
   AttachmentError,
@@ -965,6 +970,54 @@ export async function attachCitizenDocumentAction(
     }
     console.error("pedidos.attach-citizen-document", error);
     return { status: "error", message: GENERIC_ERROR };
+  }
+  revalidateAdmin();
+  return { status: "success" };
+}
+
+/**
+ * Signs a delivered document with the office's certificate: the citizen then
+ * downloads the signed version, with the band and the verification QR.
+ */
+export async function signDeliveredAction(
+  _previous: ActionState,
+  formData: FormData,
+): Promise<ActionState> {
+  const session = await authorize();
+  if (!session) return { status: "error", message: NO_PERMISSION };
+  const tenant = await getTenant();
+  const requestId = String(formData.get("requestId") ?? "");
+  const request = await findById(tenant.slug, requestId);
+  if (!request) return { status: "error", message: "Pedido não encontrado." };
+  const origin = await requestOrigin();
+  try {
+    await signDeliveredDocumentWith(
+      db,
+      tenant.slug,
+      {
+        requestId,
+        attachmentId: String(formData.get("attachmentId") ?? ""),
+        protocolNumber: request.protocolNumber,
+        certificateId: String(formData.get("certificateId") ?? ""),
+        password: String(formData.get("password") ?? ""),
+        verifyUrl: (code) => verifyUrlFor(tenant, origin, code),
+        location: `${tenant.location.city}/${tenant.location.state}`,
+      },
+      session.user.id,
+    );
+  } catch (error) {
+    if (
+      error instanceof SigningError ||
+      error instanceof CertificatePasswordError ||
+      error instanceof PdfNotSignableError
+    ) {
+      return { status: "error", message: error.message };
+    }
+    console.error("pedidos.sign-delivered", error);
+    return {
+      status: "error",
+      message: "Não foi possível assinar este PDF agora. Tente de novo.",
+    };
   }
   revalidateAdmin();
   return { status: "success" };
