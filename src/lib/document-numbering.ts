@@ -4,6 +4,7 @@ import {
   checkFloor,
   type DocumentNumbering,
   floorOf,
+  lowestFree,
   type NumberSeries,
   nextSequence,
   parseDocumentNumbering,
@@ -93,6 +94,25 @@ export async function nextNumberWith(
   series: NumberSeries,
   year: number,
 ): Promise<number> {
+  if (series === "guia") {
+    const [used, numbering] = await Promise.all([
+      database
+        .select({ sequence: taxGuides.sequence })
+        .from(taxGuides)
+        .where(
+          and(
+            eq(taxGuides.tenantSlug, tenantSlug),
+            eq(taxGuides.year, year),
+            isNull(taxGuides.deletedAt),
+          ),
+        ),
+      getDocumentNumberingWith(database, tenantSlug),
+    ]);
+    return lowestFree(
+      used.map((row) => row.sequence),
+      floorOf(numbering, series, year),
+    );
+  }
   const [lastUsed, numbering] = await Promise.all([
     lastUsedWith(database, tenantSlug, series, year),
     getDocumentNumberingWith(database, tenantSlug),

@@ -11,7 +11,8 @@ import { formatProtocolNumber } from "../request/protocol.ts";
  *
  * Each number restarts every year, per office. What the office sets is the
  * floor of the next number: the next one is the larger of that floor and
- * the last one used plus one, so a number never repeats.
+ * the last one used plus one, so a number never repeats. The guias go
+ * further: a deleted guia's number is free again (`lowestFree`).
  */
 export const NUMBER_SERIES = ["guia", "REQ", "AGD", "SOL", "OUV"] as const;
 export type NumberSeries = (typeof NUMBER_SERIES)[number];
@@ -94,6 +95,21 @@ export function nextSequence(
   officeFloor: number | undefined,
 ): number {
   return Math.max(lastUsed + 1, officeFloor ?? 1);
+}
+
+/**
+ * The guias' next number: the lowest one free from the floor on, so a guia
+ * deleted (a test, a mistake) leaves its number to the next one, even in the
+ * middle of the year's run.
+ */
+export function lowestFree(
+  used: readonly number[],
+  officeFloor: number | undefined,
+): number {
+  const taken = new Set(used);
+  let candidate = Math.max(officeFloor ?? 1, 1);
+  while (taken.has(candidate)) candidate += 1;
+  return candidate;
 }
 
 export function floorOf(

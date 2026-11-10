@@ -3,6 +3,7 @@ import { test } from "node:test";
 import {
   checkFloor,
   floorOf,
+  lowestFree,
   NUMBER_SERIES,
   nextSequence,
   parseDocumentNumbering,
@@ -46,4 +47,14 @@ test("toda numeração do catálogo tem nome e formato", () => {
   }
   assert.equal(SERIES_INFO.guia.format(2026, 20), "020/2026");
   assert.equal(SERIES_INFO.OUV.format(2026, 7), "OUV.2026.000007");
+});
+
+test("a guia excluída deixa o número dela para a próxima", () => {
+  assert.equal(lowestFree([], undefined), 1);
+  assert.equal(lowestFree([1, 2, 3], undefined), 4);
+  assert.equal(lowestFree([1, 3], undefined), 2);
+  assert.equal(lowestFree([20, 21], 20), 22);
+  assert.equal(lowestFree([20, 22], 20), 21);
+  // Below the office's floor is not a vacancy.
+  assert.equal(lowestFree([5], 20), 20);
 });

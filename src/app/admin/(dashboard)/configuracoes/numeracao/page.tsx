@@ -4,7 +4,6 @@ import { can } from "@/core/auth/roles.ts";
 import {
   floorOf,
   NUMBER_SERIES,
-  nextSequence,
   SERIES_INFO,
 } from "@/core/numbering/series.ts";
 import { officeYear } from "@/core/time/office-time.ts";
@@ -12,6 +11,7 @@ import { db } from "@/db/index.ts";
 import {
   getDocumentNumberingWith,
   lastUsedWith,
+  nextNumberWith,
 } from "@/lib/document-numbering.ts";
 import { getSession } from "@/lib/session.ts";
 import { getTenant } from "@/lib/tenant.ts";
@@ -34,14 +34,17 @@ export default async function NumberingSettingsPage() {
       const info = SERIES_INFO[series];
       const perYear = await Promise.all(
         years.map(async (y) => {
-          const lastUsed = await lastUsedWith(db, tenant.slug, series, y);
+          const [lastUsed, next] = await Promise.all([
+            lastUsedWith(db, tenant.slug, series, y),
+            nextNumberWith(db, tenant.slug, series, y),
+          ]);
           const floor = floorOf(numbering, series, y);
           return {
             year: y,
             lastUsed,
             lastLabel: lastUsed ? info.format(y, lastUsed) : null,
-            nextLabel: info.format(y, nextSequence(lastUsed, floor)),
-            next: nextSequence(lastUsed, floor),
+            nextLabel: info.format(y, next),
+            next,
             floor,
           };
         }),
@@ -91,11 +94,9 @@ export default async function NumberingSettingsPage() {
                     {row.year}
                   </span>
                   {": "}
-                  {row.lastLabel ? (
-                    <>último usado {row.lastLabel}, </>
-                  ) : (
-                    <>nenhum emitido, </>
-                  )}
+                  {row.lastLabel
+                    ? `último usado ${row.lastLabel}, `
+                    : "nenhum emitido, "}
                   próximo <strong>{row.nextLabel}</strong>
                   {row.floor && row.floor === row.next ? (
                     <span className="text-admin-muted"> (definido aqui)</span>
