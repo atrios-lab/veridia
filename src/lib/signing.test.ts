@@ -4,10 +4,19 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { after, before, test } from "node:test";
 import PDFDocument from "pdfkit";
+import { getAct } from "@/core/acts/catalog.ts";
+import { hashAccessKey } from "@/core/request/access-key.ts";
+import { TENANTS } from "@/core/tenant/resolve.ts";
 import { user } from "@/db/auth-schema.ts";
 import type { Database } from "@/db/index.ts";
+import { serviceRequestAttachments } from "@/db/schema.ts";
 import { createTestDb } from "@/db/test-db.ts";
+import {
+  attachToRequestWith,
+  createServiceRequestWith,
+} from "./service-request.ts";
 import { CertificatePasswordError } from "./signature/certificate.ts";
+import { hasSignature } from "./signature/pades.ts";
 import { createTestPki } from "./signature/test-pki.ts";
 import {
   addCertificateWith,
@@ -18,9 +27,11 @@ import {
   listCertificatesWith,
   SigningError,
   setCertificateSignersWith,
+  signDeliveredDocumentWith,
   signNewDocumentWith,
+  unsignedDeliveries,
 } from "./signing.ts";
-import { readStoredFile } from "./uploads.ts";
+import { readStoredFile, storeOfficePdf } from "./uploads.ts";
 
 // Files go to a scratch folder; the vault needs a key.
 process.env.UPLOAD_DIR = mkdtempSync(join(tmpdir(), "assinador-"));
@@ -246,6 +257,84 @@ test("assina, coassina, verifica por código e por arquivo, e guarda o arquivo 6
       later,
     ),
     /6 meses/,
+  );
+});
+
+test("o documento entregue sem assinatura é lembrado e assinado pela plataforma", async () => {
+  const { titular } = await byLabel();
+  const act = getAct("notas-ata-notarial");
+  if (!act) throw new Error("catálogo incompleto");
+  const request = await createServiceRequestWith(db, TENANTS[TENANT], act, {
+    applicantName: "Ana Exemplo Pereira",
+    contact: "ana@exemplo.com",
+    accessKeyHash: hashAccessKey("CHAVE-EXEMPLO-ENTREGA"),
+  });
+  const stored = await storeOfficePdf(TENANT, await samplePdf());
+  await attachToRequestWith(
+    db,
+    TENANT,
+    request.id,
+    [
+      {
+        storedName: stored.storedName,
+        displayName: "documento-final",
+        path: stored.path,
+        mimeType: "application/pdf",
+        sizeBytes: 1000,
+      },
+    ],
+    "office",
+  );
+  const [delivered] = (await db.select().from(serviceRequestAttachments)) as {
+    id: string;
+    kind: string;
+    mimeType: string;
+    path: string | null;
+    sizeBytes: number;
+    requestId: string;
+  }[];
+  const mine = [delivered].filter((a) => a.requestId === request.id);
+  assert.deepEqual([...(await unsignedDeliveries(mine))], [delivered.id]);
+
+  const { code } = await signDeliveredDocumentWith(
+    db,
+    TENANT,
+    {
+      requestId: request.id,
+      attachmentId: delivered.id,
+      protocolNumber: request.protocolNumber,
+      certificateId: titular.id,
+      password: "senha-a1",
+      verifyUrl: (c) => `https://cartorio.exemplo/verificar/${c}`,
+      location: "Ielmo Marinho/RN",
+    },
+    "titular",
+    new Date("2026-11-10T15:00:00Z"),
+  );
+  assert.match(code, /^[2-9A-HJ-NP-Z]{12}$/);
+  const [after] = (await db.select().from(serviceRequestAttachments)) as {
+    id: string;
+    path: string | null;
+  }[];
+  assert.notEqual(after.path, delivered.path);
+  assert.ok(hasSignature(await readStoredFile(after.path ?? "")));
+  // Signing twice is refused.
+  await assert.rejects(
+    signDeliveredDocumentWith(
+      db,
+      TENANT,
+      {
+        requestId: request.id,
+        attachmentId: delivered.id,
+        protocolNumber: request.protocolNumber,
+        certificateId: titular.id,
+        password: "senha-a1",
+        verifyUrl: (c) => c,
+        location: "x",
+      },
+      "titular",
+    ),
+    /já está assinado/,
   );
 });
 

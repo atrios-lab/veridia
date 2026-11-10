@@ -6,6 +6,7 @@ import { ICP_POLICY } from "@/core/signature/policy.ts";
 import { user } from "@/db/auth-schema.ts";
 import type { Database } from "@/db/index.ts";
 import {
+  serviceRequestAttachments,
   signedDocumentSignatures,
   signedDocuments,
   signingCertificateSigners,
@@ -20,7 +21,12 @@ import {
 import { hasSignature, signPdf } from "./signature/pades.ts";
 import { stampForSignature } from "./signature/stamp.ts";
 import { openSealedCertificate, sealCertificate } from "./signature/vault.ts";
-import { deleteStoredFile, readStoredFile, storeSignedPdf } from "./uploads.ts";
+import {
+  deleteStoredFile,
+  readStoredFile,
+  storeOfficePdf,
+  storeSignedPdf,
+} from "./uploads.ts";
 
 /** Six months for the signed file; the record stays for good. */
 export const SIGNED_FILE_MONTHS = 6;
@@ -686,4 +692,126 @@ export async function purgeExpiredSignedFilesWith(
     });
   }
   return expired.length;
+}
+
+/* ------------------------------------------------- delivery to the citizen */
+
+/** Biggest delivered file read to tell whether it is signed. */
+const CHECK_LIMIT = 15 * 1024 * 1024;
+
+/** Whether a stored PDF already carries a digital signature. */
+export async function storedPdfIsSigned(path: string): Promise<boolean> {
+  return hasSignature(await readStoredFile(path));
+}
+
+/**
+ * Which of the office's delivered PDFs carry no digital signature: the ones
+ * the panel reminds the clerk to sign before the citizen downloads them.
+ */
+export async function unsignedDeliveries(
+  attachments: {
+    id: string;
+    kind: string;
+    mimeType: string;
+    path: string | null;
+    sizeBytes: number;
+  }[],
+): Promise<Set<string>> {
+  const pdfs = attachments.filter(
+    (a) =>
+      a.kind === "office" &&
+      a.mimeType === "application/pdf" &&
+      a.path &&
+      a.sizeBytes <= CHECK_LIMIT,
+  );
+  const checked = await Promise.all(
+    pdfs.map(async (a) => ({
+      id: a.id,
+      signed: await storedPdfIsSigned(a.path ?? "").catch(() => true),
+    })),
+  );
+  return new Set(checked.filter((c) => !c.signed).map((c) => c.id));
+}
+
+/**
+ * Signs a document already delivered to the citizen: the assinador signs it
+ * (band, QR, record, six months), and the delivered file becomes the signed
+ * version, so the citizen downloads the paper with legal value. The row is
+ * updated, not replaced; the unsigned file it pointed to goes.
+ */
+export async function signDeliveredDocumentWith(
+  database: Database,
+  tenantSlug: string,
+  input: {
+    requestId: string;
+    attachmentId: string;
+    protocolNumber: string;
+    certificateId: string;
+    password: string;
+    verifyUrl: (code: string) => string;
+    location: string;
+  },
+  userId: string,
+  now = new Date(),
+): Promise<{ id: string; code: string }> {
+  const [attachment] = await database
+    .select()
+    .from(serviceRequestAttachments)
+    .where(
+      and(
+        eq(serviceRequestAttachments.tenantSlug, tenantSlug),
+        eq(serviceRequestAttachments.requestId, input.requestId),
+        eq(serviceRequestAttachments.id, input.attachmentId),
+        eq(serviceRequestAttachments.kind, "office"),
+      ),
+    )
+    .limit(1);
+  if (!attachment?.path || attachment.mimeType !== "application/pdf") {
+    throw new SigningError("Documento entregue não encontrado.");
+  }
+  const original = await readStoredFile(attachment.path);
+  if (hasSignature(original)) {
+    throw new SigningError("Este documento já está assinado digitalmente.");
+  }
+  const signedDocument = await signNewDocumentWith(
+    database,
+    tenantSlug,
+    {
+      certificateId: input.certificateId,
+      password: input.password,
+      pdf: original,
+      title: `Documento do pedido ${input.protocolNumber}`,
+      originalName: `${attachment.displayName}.pdf`,
+      verifyUrl: input.verifyUrl,
+      location: input.location,
+    },
+    userId,
+    now,
+  );
+  const view = await findSignedDocumentWith(
+    database,
+    tenantSlug,
+    { id: signedDocument.id },
+    now,
+  );
+  if (!view?.filePath) throw new SigningError("Assinatura sem arquivo.");
+  const signed = await readStoredFile(view.filePath);
+  const stored = await storeOfficePdf(tenantSlug, signed);
+  await database
+    .update(serviceRequestAttachments)
+    .set({
+      path: stored.path,
+      storedName: stored.storedName,
+      sizeBytes: signed.length,
+    })
+    .where(eq(serviceRequestAttachments.id, attachment.id));
+  await deleteStoredFile(attachment.path);
+  await recordAuditWith(database, {
+    tenantSlug,
+    actorId: userId,
+    action: "service-request.delivery-signed",
+    targetType: "service-request",
+    targetId: `${input.requestId} · ${signedDocument.code}`,
+  });
+  return signedDocument;
 }

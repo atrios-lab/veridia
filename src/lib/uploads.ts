@@ -402,3 +402,22 @@ export async function readStoredFile(path: string): Promise<Buffer> {
   }
   return readFile(path);
 }
+
+/**
+ * A PDF the office itself produced for a request (the signed version of a
+ * delivered document): stored like any attachment of the office.
+ */
+export async function storeOfficePdf(
+  tenantSlug: string,
+  bytes: Buffer,
+): Promise<{ storedName: string; path: string }> {
+  const storedName = storedFileName(
+    "application/pdf",
+    randomUUID(),
+    tenantSlug,
+  );
+  return {
+    storedName,
+    path: await store(bytes, storedName, "application/pdf"),
+  };
+}
