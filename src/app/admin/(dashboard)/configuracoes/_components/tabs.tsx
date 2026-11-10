@@ -40,6 +40,11 @@ const TABS: {
     permission: "user.manage",
   },
   {
+    label: "Duas etapas",
+    href: "/admin/configuracoes/duas-etapas",
+    permission: "user.manage",
+  },
+  {
     label: "Numeração",
     href: "/admin/configuracoes/numeracao",
     permission: "content.edit",

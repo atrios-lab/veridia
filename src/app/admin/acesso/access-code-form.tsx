@@ -65,6 +65,19 @@ export function AccessCodeForm({ next }: { next: string }) {
           autoFocus
           className="rounded-[10px] border border-admin-input-border bg-admin-input-bg px-4 py-3 text-center text-[20px] tracking-[0.35em] text-admin-text outline-none focus:border-admin-primary-soft"
         />
+        <label className="flex items-start gap-2 text-[12.5px] text-admin-text">
+          <input
+            type="checkbox"
+            name="salvar"
+            className="checkbox-admin mt-0.5"
+          />
+          <span>
+            Salvar este computador: não pedir o código de novo aqui.
+            <span className="block text-[11.5px] text-admin-muted">
+              Só em computador seu ou da serventia, nunca em computador público.
+            </span>
+          </span>
+        </label>
         {checked.status === "error" && (
           <p
             role="alert"

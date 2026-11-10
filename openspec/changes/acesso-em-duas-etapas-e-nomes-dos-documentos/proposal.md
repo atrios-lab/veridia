@@ -9,14 +9,21 @@
 
 ## What Changes
 
-- **Acesso ao painel em duas etapas.** Depois da senha, o painel envia um código de 6 dígitos ao e-mail da
-  conta, e só libera o acesso com ele.
-  - O código vale 10 minutos.
-  - A confirmação vale até a sessão terminar. Um novo login pede de novo.
-  - `getSession` recusa sessão sem a confirmação, então toda tela, ação e rota do painel exige o código.
-  - Cinco códigos errados bloqueiam por 10 minutos.
-  - Nada vai para o banco: a prova fica em cookies assinados (HMAC), ligados à sessão.
-  - `PANEL_ACCESS_CODE=off` desliga a etapa no deploy inteiro, para o caso de o provedor de e-mail cair.
+- **Acesso ao painel em duas etapas.** Depois da senha, o painel envia um código de 6 dígitos **ao e-mail
+  de quem está entrando, e só dessa pessoa**. O código vale 10 minutos.
+  - **Primeiro acesso:** o convite, em que a pessoa cria a senha, não pede código, e a redefinição de senha
+    também não, porque o link já veio por e-mail. O código começa no acesso seguinte.
+  - **Salvar este computador:** marcando a opção, aquele navegador não pede mais o código (por até um ano).
+  - **Configurações › Duas etapas:** o administrador escolhe, troca ou apaga o **e-mail de verificação** de
+    cada pessoa (apagado, o código volta para o e-mail da conta). Ali também faz os computadores salvos de
+    alguém **pedirem o código de novo**, a partir do próximo login dessa pessoa.
+  - **Átrios:** a conta mestre da Átrios (superadmin) não passa pelo código.
+  - **Garantia:** `getSession` recusa sessão sem a confirmação, então toda tela, ação e rota do painel
+    exige o código.
+  - **Tentativas:** cinco códigos errados bloqueiam por 10 minutos.
+  - **Onde fica:** a prova fica em cookies assinados (HMAC). As escolhas do administrador ficam em
+    `tenant_content` (`office-access-codes`).
+  - **Emergência:** `PANEL_ACCESS_CODE=off` desliga a etapa no deploy inteiro, para o caso de o e-mail cair.
 - **Assinatura sem código extra.** Assinar pede o login (já em duas etapas) e a senha do certificado.
 - **Limite em /verificar.** São 30 consultas ou downloads por endereço a cada 10 minutos. Abrir a página não
   conta.

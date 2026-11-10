@@ -46,6 +46,7 @@ export async function confirmAccessCodeAction(
   const problem = await confirmAccessCode(
     { session: pending.session, user: pending.user },
     String(formData.get("code") ?? ""),
+    formData.get("salvar") === "on",
   );
   if (problem) return { status: "error", message: problem };
   const tenant = await getTenant();

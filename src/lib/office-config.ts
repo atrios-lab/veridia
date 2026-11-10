@@ -47,6 +47,8 @@ export const OFFICE_HOLIDAYS_KEY = "office-holidays";
 export const OFFICE_IDENTIFICATION_KEY = "office-identification";
 export const OFFICE_GUIDES_KEY = "office-tax-guides";
 export const OFFICE_ALERTS_KEY = "office-alerts";
+/** Per user: where the access code goes, and saved computers (lib/access-settings.ts). */
+export const OFFICE_ACCESS_KEY = "office-access-codes";
 /** Where each numbered document goes on, per year (Configurações › Numeração). */
 export const OFFICE_NUMBERING_KEY = "office-numbering";
 // Not part of Tenant/applyTenantOverrides: whether the office's chat is on,

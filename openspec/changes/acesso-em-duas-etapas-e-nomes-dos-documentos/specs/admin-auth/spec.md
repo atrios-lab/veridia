@@ -15,3 +15,23 @@ códigos errados repetidos SHALL bloquear novas tentativas por um tempo.
 
 - **WHEN** a pessoa informa o código recebido por e-mail
 - **THEN** o painel abre a tela que ela pediu
+
+#### Scenario: Primeiro acesso
+
+- **WHEN** a pessoa cria a senha pelo link do convite
+- **THEN** o painel abre sem pedir código, e o código passa a ser pedido no acesso seguinte
+
+#### Scenario: Computador salvo
+
+- **WHEN** a pessoa marca "Salvar este computador" ao informar o código e depois entra de novo nele
+- **THEN** o painel abre sem pedir código, até o administrador pedir o código de novo para essa pessoa
+
+#### Scenario: E-mail de verificação escolhido pelo administrador
+
+- **WHEN** o administrador define outro e-mail de verificação para uma pessoa
+- **THEN** o código dessa pessoa passa a ir para esse e-mail, e só para ele
+
+#### Scenario: Conta da Átrios
+
+- **WHEN** a conta mestre da Átrios entra com a senha
+- **THEN** o painel abre sem pedir código
