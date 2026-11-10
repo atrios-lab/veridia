@@ -21,6 +21,7 @@ import {
   pauseReasons,
   readDeadline,
 } from "@/core/request/deadline.ts";
+import { deliveryLabel } from "@/core/request/delivery-name.ts";
 import { isEmailContact, looksLikeBot } from "@/core/request/form.ts";
 import type { DataRight } from "@/core/request/kinds.ts";
 import {
@@ -616,7 +617,7 @@ export async function lookupProtocolDetail(
         .map((a) => ({
           id: a.id,
           createdAt: a.createdAt.toISOString(),
-          displayName: a.displayName,
+          displayName: deliveryLabel(a.displayName),
           gone: isGone(a),
         })),
       filesUntil,

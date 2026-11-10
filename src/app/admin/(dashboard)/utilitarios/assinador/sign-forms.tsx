@@ -1,6 +1,7 @@
 "use client";
 
 import { startTransition, useActionState } from "react";
+import { SigningCodeField } from "../../../_components/signing-code-field.tsx";
 import { coSignDocument, type SignState, signDocument } from "./actions.ts";
 
 const FIELD =
@@ -64,6 +65,9 @@ function CertificateAndPassword({
           required
           className={FIELD}
         />
+      </div>
+      <div className="md:col-span-2">
+        <SigningCodeField id={`${prefix}-code`} />
       </div>
     </>
   );

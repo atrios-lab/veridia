@@ -1,3 +1,4 @@
+import { headers } from "next/headers";
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import {
@@ -12,9 +13,11 @@ import {
   formatOfficeDateTime,
 } from "@/core/time/office-time.ts";
 import { db } from "@/db/index.ts";
+import { isVerifyRateLimited } from "@/lib/rate-limit.ts";
 import { findSignedDocumentWith } from "@/lib/signing.ts";
 import { getTenant } from "@/lib/tenant.ts";
 import { Icon } from "../../_components/icon.tsx";
+import { TooManyLookups } from "../limited.tsx";
 
 export const metadata = {
   title: "Documento assinado",
@@ -29,6 +32,7 @@ export default async function SignedDocumentPage({
   params: Promise<{ codigo: string }>;
   searchParams: Promise<{ arquivo?: string }>;
 }) {
+  if (await isVerifyRateLimited(await headers())) return <TooManyLookups />;
   const tenant = await getTenant();
   const { codigo } = await params;
   const { arquivo } = await searchParams;

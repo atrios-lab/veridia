@@ -1,9 +1,12 @@
+import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { db } from "@/db/index.ts";
+import { isVerifyRateLimited } from "@/lib/rate-limit.ts";
 import { findSignedDocumentWith } from "@/lib/signing.ts";
 import { getTenant } from "@/lib/tenant.ts";
 import { Icon } from "../_components/icon.tsx";
 import { publicMetadata } from "../_lib/metadata.ts";
+import { TooManyLookups } from "./limited.tsx";
 import { VerifyForm } from "./verify-form.tsx";
 
 export const generateMetadata = publicMetadata("/verificar");
@@ -20,6 +23,10 @@ export default async function VerifyPage({
 }) {
   const tenant = await getTenant();
   const { arquivo, codigo } = await searchParams;
+  // Only a lookup counts: opening the page is free.
+  if ((arquivo || codigo) && (await isVerifyRateLimited(await headers()))) {
+    return <TooManyLookups />;
+  }
   let notFound: "code" | "file" | null = codigo ? "code" : null;
   if (arquivo && /^[0-9a-f]{64}$/i.test(arquivo)) {
     const found = await findSignedDocumentWith(db, tenant.slug, {

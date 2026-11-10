@@ -19,6 +19,10 @@ import {
   readDeadline,
 } from "@/core/request/deadline.ts";
 import {
+  deliveryName,
+  sanitizeDeliveryName,
+} from "@/core/request/delivery-name.ts";
+import {
   purposeFor,
   requestDataEditSchema,
   resolveIdentityEdit,
@@ -50,9 +54,11 @@ import {
   deleteRequest,
   deleteRequirement,
   findById,
+  listAttachments,
   listRequirements,
   reconcileDeadlinePause,
   registerRequirement,
+  renameDeliveredAttachment,
   resolveRequirement,
   setExemptionDecision,
   setRequestAmount,
@@ -64,6 +70,7 @@ import {
 } from "@/lib/service-request.ts";
 import { getSession } from "@/lib/session.ts";
 import { CertificatePasswordError } from "@/lib/signature/certificate.ts";
+import { checkSigningCode } from "@/lib/signature/confirm.ts";
 import { requestOrigin, verifyUrlFor } from "@/lib/signature/documents.ts";
 import { PdfNotSignableError } from "@/lib/signature/pades.ts";
 import { SigningError, signDeliveredDocumentWith } from "@/lib/signing.ts";
@@ -531,9 +538,19 @@ export async function deliverDocumentAction(
     const files = formData
       .getAll("documento")
       .filter((f): f is File => f instanceof File);
+    const owner = await findById(tenant.slug, requestId);
+    if (!owner) return { status: "error", message: "Pedido não encontrado." };
+    const alreadyDelivered = (
+      await listAttachments(tenant.slug, requestId)
+    ).filter((a) => a.kind === "office" && !a.requirementId).length;
     const stored = await storeAttachments(files, {
       tenantSlug: tenant.slug,
-      kind: "documento-final",
+      // The name the clerk typed, or "Documento final N · protocolo".
+      kind: deliveryName(
+        String(formData.get("nome") ?? ""),
+        owner.protocolNumber,
+        alreadyDelivered,
+      ),
     });
     if (stored.length === 0) {
       return { status: "error", message: "Escolha um arquivo para anexar." };
@@ -986,6 +1003,12 @@ export async function signDeliveredAction(
   const session = await authorize();
   if (!session) return { status: "error", message: NO_PERMISSION };
   const tenant = await getTenant();
+  const codeProblem = await checkSigningCode(
+    tenant,
+    session.user.id,
+    String(formData.get("code") ?? ""),
+  );
+  if (codeProblem) return { status: "error", message: codeProblem };
   const requestId = String(formData.get("requestId") ?? "");
   const request = await findById(tenant.slug, requestId);
   if (!request) return { status: "error", message: "Pedido não encontrado." };
@@ -1019,6 +1042,30 @@ export async function signDeliveredAction(
       message: "Não foi possível assinar este PDF agora. Tente de novo.",
     };
   }
+  revalidateAdmin();
+  return { status: "success" };
+}
+
+/** Gives a delivered document the name the citizen will see. */
+export async function renameDeliveredAction(
+  _previous: ActionState,
+  formData: FormData,
+): Promise<ActionState> {
+  const session = await authorize();
+  if (!session) return { status: "error", message: NO_PERMISSION };
+  const name = sanitizeDeliveryName(String(formData.get("nome") ?? ""));
+  if (!name)
+    return { status: "error", message: "Informe o nome do documento." };
+  const tenant = await getTenant();
+  const renamed = await renameDeliveredAttachment(
+    tenant.slug,
+    String(formData.get("requestId") ?? ""),
+    String(formData.get("attachmentId") ?? ""),
+    name,
+    session.user.id,
+  ).catch(() => false);
+  if (!renamed)
+    return { status: "error", message: "Não foi possível renomear." };
   revalidateAdmin();
   return { status: "success" };
 }

@@ -142,3 +142,47 @@ export async function isCertificateRateLimited(
   const { success } = await certificateLimiter.limit(addressOf(headers));
   return !success;
 }
+
+// The signature verification page answers anyone with a code or a file's
+// hash. Same reasoning as the certificate check: 60 random bits, and a
+// budget so a scraper cannot walk the space anyway.
+const verifyLimiter = configured
+  ? new Ratelimit({
+      redis: Redis.fromEnv(),
+      limiter: Ratelimit.slidingWindow(30, "10 m"),
+      prefix: "veridia:verify",
+      analytics: false,
+    })
+  : null;
+
+/** /verificar's budget: 30 lookups or downloads per address in 10 minutes. */
+export async function isVerifyRateLimited(headers: Headers): Promise<boolean> {
+  if (!verifyLimiter) return false;
+  const { success } = await verifyLimiter.limit(addressOf(headers));
+  return !success;
+}
+
+// The signing code: six digits, so the wrong guesses of one person are
+// what is counted, five per ten minutes. Right codes cost nothing, so a
+// clerk signing a pile of documents in a sitting never hits it.
+const signingCodeLimiter = configured
+  ? new Ratelimit({
+      redis: Redis.fromEnv(),
+      limiter: Ratelimit.slidingWindow(5, "10 m"),
+      prefix: "veridia:signing-code",
+      analytics: false,
+    })
+  : null;
+
+/** Whether this person already spent the wrong guesses of the window. */
+export async function isSigningCodeLocked(userId: string): Promise<boolean> {
+  if (!signingCodeLimiter) return false;
+  const { remaining } = await signingCodeLimiter.getRemaining(userId);
+  return remaining <= 0;
+}
+
+/** Counts one wrong code for this person. */
+export async function countWrongSigningCode(userId: string): Promise<void> {
+  if (!signingCodeLimiter) return;
+  await signingCodeLimiter.limit(userId);
+}

@@ -2324,3 +2324,55 @@ export async function reconcileDeadlinePause(
     pausedOn,
   );
 }
+
+/**
+ * Renames a document the office delivered: the name the citizen sees and
+ * downloads. Only the office's own deliveries, never a citizen's file.
+ */
+export async function renameDeliveredAttachmentWith(
+  database: Database,
+  tenantSlug: string,
+  requestId: string,
+  attachmentId: string,
+  name: string,
+  actorId: string,
+): Promise<boolean> {
+  const [row] = await database
+    .update(serviceRequestAttachments)
+    .set({ displayName: name })
+    .where(
+      and(
+        eq(serviceRequestAttachments.tenantSlug, tenantSlug),
+        eq(serviceRequestAttachments.requestId, requestId),
+        eq(serviceRequestAttachments.id, attachmentId),
+        eq(serviceRequestAttachments.kind, "office"),
+      ),
+    )
+    .returning({ id: serviceRequestAttachments.id });
+  if (!row) return false;
+  await recordAuditWith(database, {
+    tenantSlug,
+    actorId,
+    action: "service-request.delivery-rename",
+    targetType: "service-request",
+    targetId: requestId,
+  });
+  return true;
+}
+
+export function renameDeliveredAttachment(
+  tenantSlug: string,
+  requestId: string,
+  attachmentId: string,
+  name: string,
+  actorId: string,
+): Promise<boolean> {
+  return renameDeliveredAttachmentWith(
+    db,
+    tenantSlug,
+    requestId,
+    attachmentId,
+    name,
+    actorId,
+  );
+}

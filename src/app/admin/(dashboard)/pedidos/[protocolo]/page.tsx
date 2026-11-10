@@ -19,6 +19,10 @@ import {
   effectiveDeadline,
   readDeadline,
 } from "@/core/request/deadline.ts";
+import {
+  defaultDeliveryName,
+  deliveryNameSuggestions,
+} from "@/core/request/delivery-name.ts";
 import { maskCpf } from "@/core/request/form.ts";
 import {
   asksPurpose,
@@ -664,6 +668,14 @@ export default async function ServiceRequestDetailPage({
                 unsigned={[...unsignedDelivered]}
                 certificates={signingCertificates.map(
                   ({ id, label, holderName }) => ({ id, label, holderName }),
+                )}
+                nameSuggestions={deliveryNameSuggestions(
+                  request.protocolNumber,
+                  act ? actName : undefined,
+                )}
+                defaultName={defaultDeliveryName(
+                  request.protocolNumber,
+                  deliveredAttachments.length,
                 )}
                 canManageCertificates={can(
                   session.user.role ?? "",

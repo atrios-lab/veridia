@@ -1,4 +1,5 @@
 import { db } from "@/db/index.ts";
+import { isVerifyRateLimited } from "@/lib/rate-limit.ts";
 import {
   downloadName,
   pdfResponse,
@@ -12,9 +13,14 @@ export const runtime = "nodejs";
 
 /** The manifest, drawn now from the record: always there, always current. */
 export async function GET(
-  _request: Request,
+  request: Request,
   { params }: { params: Promise<{ codigo: string }> },
 ): Promise<Response> {
+  if (await isVerifyRateLimited(request.headers)) {
+    return new Response("Muitas consultas seguidas. Espere alguns minutos.", {
+      status: 429,
+    });
+  }
   const tenant = await getTenant();
   const { codigo } = await params;
   const view = await findSignedDocumentWith(db, tenant.slug, { code: codigo });

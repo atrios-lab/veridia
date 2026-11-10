@@ -96,8 +96,28 @@ export async function handleDocumentWith(
   return new Response(new Uint8Array(bytes), {
     headers: {
       "Content-Type": attachment.mimeType,
-      "Content-Disposition": `${disposition}; filename="${attachment.displayName}${extname(attachment.storedName)}"`,
+      "Content-Disposition": contentDisposition(
+        disposition,
+        `${attachment.displayName}${extname(attachment.storedName)}`,
+      ),
       "Cache-Control": "private, no-store",
     },
   });
+}
+
+/**
+ * A header can only carry plain bytes, and a delivered document's name is
+ * typed by the clerk ("Certidão · REQ..."): a plain ASCII name goes as it
+ * is; anything else gets an ASCII fallback plus the UTF-8 form (RFC 6266).
+ */
+export function contentDisposition(disposition: string, name: string): string {
+  const clean = name.replace(/["\\\r\n]/g, "");
+  if (/^[\x20-\x7e]*$/.test(clean))
+    return `${disposition}; filename="${clean}"`;
+  const ascii =
+    clean
+      .normalize("NFKD")
+      .replace(/[^\x20-\x7e]/g, "")
+      .trim() || "documento";
+  return `${disposition}; filename="${ascii}"; filename*=UTF-8''${encodeURIComponent(clean)}`;
 }

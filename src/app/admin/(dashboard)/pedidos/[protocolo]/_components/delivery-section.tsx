@@ -13,11 +13,13 @@ import {
   type AttachmentItem,
   AttachmentRow,
 } from "../../../../_components/attachment-row.tsx";
+import { SigningCodeField } from "../../../../_components/signing-code-field.tsx";
 import { useEmailWarning } from "../../../../_components/use-email-warning.ts";
 import {
   type ActionState,
   deleteAttachmentAction,
   deliverDocumentAction,
+  renameDeliveredAction,
   signDeliveredAction,
 } from "../actions.ts";
 
@@ -33,9 +35,15 @@ export function DeliverySection({
   unsigned,
   certificates,
   canManageCertificates,
+  nameSuggestions,
+  defaultName,
 }: {
   requestId: string;
   delivered: AttachmentItem[];
+  /** Names built from the act and the protocol (core/request/delivery-name). */
+  nameSuggestions: string[];
+  /** What a delivery with no name typed is called. */
+  defaultName: string;
   /** Delivered PDFs with no digital signature (see lib/signing.ts). */
   unsigned: string[];
   /** The certificates this clerk may sign with. */
@@ -48,6 +56,7 @@ export function DeliverySection({
   );
   useEmailWarning(state);
   const formRef = useRef<HTMLFormElement>(null);
+  const nameRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     if (state.status !== "success") return;
@@ -82,6 +91,13 @@ export function DeliverySection({
                 meta="entregue em"
                 onDelete={deleteAttachmentAction}
               />
+              {!attachment.goneLabel && (
+                <RenameDelivered
+                  requestId={requestId}
+                  attachmentId={attachment.id}
+                  suggestions={nameSuggestions}
+                />
+              )}
               {unsigned.includes(attachment.id) && (
                 <UnsignedNotice
                   requestId={requestId}
@@ -97,6 +113,40 @@ export function DeliverySection({
 
       <form action={action} ref={formRef} className="mt-3.5">
         <input type="hidden" name="requestId" value={requestId} />
+        <label
+          htmlFor="entrega-nome"
+          className="mb-1.5 block text-xs font-bold text-admin-primary"
+        >
+          Nome do documento (opcional)
+        </label>
+        <input
+          id="entrega-nome"
+          ref={nameRef}
+          name="nome"
+          list="entrega-nomes"
+          maxLength={100}
+          placeholder={defaultName}
+          className="w-full rounded-[9px] border border-admin-input-border bg-admin-input-bg px-3.5 py-2.5 text-[13.5px] text-admin-text outline-none focus:border-admin-primary-soft"
+        />
+        <datalist id="entrega-nomes">
+          {nameSuggestions.map((suggestion) => (
+            <option key={suggestion} value={suggestion} />
+          ))}
+        </datalist>
+        <div className="mt-2 mb-3 flex flex-wrap gap-1.5">
+          {nameSuggestions.slice(0, 5).map((suggestion) => (
+            <button
+              key={suggestion}
+              type="button"
+              onClick={() => {
+                if (nameRef.current) nameRef.current.value = suggestion;
+              }}
+              className="rounded-full border border-admin-border bg-admin-card px-2.5 py-1 text-[11.5px] text-admin-muted hover:border-admin-primary-soft hover:text-admin-primary"
+            >
+              {suggestion.split(" · ")[0]}
+            </button>
+          ))}
+        </div>
         {/* The file input is visually hidden but still in the tab order, so
             the ring is the only thing telling a keyboard user they are on it. */}
         <label
@@ -228,6 +278,9 @@ function UnsignedNotice({
               className={FIELD}
             />
           </label>
+          <div className="md:col-span-3">
+            <SigningCodeField id={`entrega-${attachmentId}-code`} />
+          </div>
           <button
             type="submit"
             disabled={pending}
@@ -246,5 +299,89 @@ function UnsignedNotice({
         </form>
       )}
     </div>
+  );
+}
+
+/** Gives a delivered document the name the citizen sees, after the fact. */
+function RenameDelivered({
+  requestId,
+  attachmentId,
+  suggestions,
+}: {
+  requestId: string;
+  attachmentId: string;
+  suggestions: string[];
+}) {
+  const [open, setOpen] = useState(false);
+  const [state, action, pending] = useActionState<ActionState, FormData>(
+    async (previous, formData) => {
+      const result = await renameDeliveredAction(previous, formData);
+      if (result.status === "success") {
+        toast.success("Nome alterado. O cidadão já vê o novo nome.");
+        setOpen(false);
+      }
+      return result;
+    },
+    { status: "idle" },
+  );
+  const listId = `renomear-${attachmentId}`;
+  if (!open) {
+    return (
+      <button
+        type="button"
+        onClick={() => setOpen(true)}
+        className="mt-1 ml-1 text-[11.5px] font-semibold text-admin-muted underline hover:text-admin-primary"
+      >
+        Renomear
+      </button>
+    );
+  }
+  return (
+    <form
+      onSubmit={(event) => {
+        event.preventDefault();
+        const data = new FormData(event.currentTarget);
+        startTransition(() => action(data));
+      }}
+      className="mt-1.5 flex flex-wrap items-center gap-2"
+    >
+      <input type="hidden" name="requestId" value={requestId} />
+      <input type="hidden" name="attachmentId" value={attachmentId} />
+      <input
+        name="nome"
+        list={listId}
+        maxLength={100}
+        required
+        aria-label="Novo nome do documento"
+        className="min-w-0 flex-1 rounded-[9px] border border-admin-input-border bg-admin-input-bg px-3 py-2 text-[13px] text-admin-text outline-none focus:border-admin-primary-soft"
+      />
+      <datalist id={listId}>
+        {suggestions.map((suggestion) => (
+          <option key={suggestion} value={suggestion} />
+        ))}
+      </datalist>
+      <button
+        type="submit"
+        disabled={pending}
+        className="btn btn-admin-primary btn-sm"
+      >
+        {pending ? "Salvando..." : "Salvar nome"}
+      </button>
+      <button
+        type="button"
+        onClick={() => setOpen(false)}
+        className="btn btn-admin-secondary btn-sm"
+      >
+        Cancelar
+      </button>
+      {state.status === "error" && (
+        <p
+          role="alert"
+          className="basis-full text-[12px] font-semibold text-admin-error-text"
+        >
+          {state.message}
+        </p>
+      )}
+    </form>
   );
 }
