@@ -78,6 +78,17 @@ export interface CertificateFacts {
   issuedAt: Date;
 }
 
+/**
+ * The office a certificate names, outside a cohort: its official name, the
+ * one the site shows under the trade name ("Ofício Único de Ielmo Marinho /
+ * RN"), not the short `name` of the header and e-mails, which varies from
+ * office to office ("Cartório de Taipu", "Tabelionato Aurora"). A cohort
+ * learner gets the cohort's office instead (see issueCertificateWith).
+ */
+export function certificateOfficeName(tenant: { subtitle: string }): string {
+  return tenant.subtitle;
+}
+
 /** 07/11/2026, in the RN clock every office keeps. */
 export function formatCertificateDate(date: Date): string {
   return new Intl.DateTimeFormat("pt-BR", {

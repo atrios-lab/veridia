@@ -3,6 +3,7 @@ import { test } from "node:test";
 import {
   certificateCheckUrl,
   certificateCode,
+  certificateOfficeName,
   certificateRequestSchema,
   certificateSentence,
   normalizeCertificateCode,
@@ -122,4 +123,11 @@ test("the public view masks the CPF and carries nothing else of the row", () => 
     "valid",
     "workloadHours",
   ]);
+});
+
+test("outside a cohort, the certificate names the office by its official name", () => {
+  assert.equal(
+    certificateOfficeName({ subtitle: "Ofício Único de Ielmo Marinho / RN" }),
+    "Ofício Único de Ielmo Marinho / RN",
+  );
 });
