@@ -110,6 +110,15 @@ export const ADMIN_NAV: readonly AdminNavItem[] = [
     permission: "requests.manage",
   },
   {
+    // PAdES signatures with the office's A1 certificates (ICP-Brasil), each
+    // with its verification code and QR (see lib/signing.ts).
+    group: "Utilitários",
+    label: "Assinador digital",
+    href: "/admin/utilitarios/assinador",
+    icon: "lock",
+    permission: "desk.access",
+  },
+  {
     group: "Serventia",
     label: "Publicações",
     href: "/admin/publicacoes",

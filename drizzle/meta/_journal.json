@@ -281,6 +281,13 @@
       "when": 1794255678604,
       "tag": "0039_detalhes_do_agendamento",
       "breakpoints": true
+    },
+    {
+      "idx": 40,
+      "version": "7",
+      "when": 1794350317192,
+      "tag": "0040_assinador_digital",
+      "breakpoints": true
     }
   ]
 }

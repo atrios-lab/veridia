@@ -1204,3 +1204,131 @@ export const taxGuides = pgTable(
     index("tax_guides_tenant_created").on(t.tenantSlug, t.createdAt),
   ],
 );
+
+/**
+ * The office's A1 certificates (assinador digital, product decision of
+ * 10/11/2026): any number of them, e-CPF or e-CNPJ. The .pfx is kept
+ * encrypted with the platform's key (lib/signature/vault.ts) on top of its
+ * own password, which is never stored: the signer types it every time. The
+ * holder's data is read from the certificate on upload, for the lists.
+ */
+export const signingCertificates = pgTable(
+  "signing_certificates",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    tenantSlug,
+    /** What the office calls it: "Titular", "e-CNPJ da serventia". */
+    label: text("label").notNull(),
+    holderName: text("holder_name").notNull(),
+    /** CPF or CNPJ digits, as the certificate states them. */
+    holderDocument: text("holder_document").notNull(),
+    /** "cpf", "cnpj" or "outro". */
+    kind: text("kind").notNull(),
+    issuerName: text("issuer_name").notNull(),
+    serialHex: text("serial_hex").notNull(),
+    fingerprint: text("fingerprint").notNull(),
+    notBefore: timestamp("not_before", { withTimezone: true }).notNull(),
+    notAfter: timestamp("not_after", { withTimezone: true }).notNull(),
+    /** base64 of iv, tag and ciphertext (AES-256-GCM). */
+    encryptedPfx: text("encrypted_pfx").notNull(),
+    createdBy: text("created_by"),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    /** Taken out of use ("Desativar"): kept for the record, never signs. */
+    disabledAt: timestamp("disabled_at", { withTimezone: true }),
+  },
+  (t) => [
+    index("signing_certificates_tenant").on(t.tenantSlug),
+    uniqueIndex("signing_certificates_tenant_fingerprint_live")
+      .on(t.tenantSlug, t.fingerprint)
+      .where(sql`${t.disabledAt} is null`),
+  ],
+);
+
+/** Who the administrator allowed to sign with each certificate. */
+export const signingCertificateSigners = pgTable(
+  "signing_certificate_signers",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    certificateId: uuid("certificate_id")
+      .notNull()
+      .references(() => signingCertificates.id),
+    tenantSlug,
+    userId: text("user_id").notNull(),
+    grantedBy: text("granted_by"),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    /** Authorization withdrawn: the row stays as the history. */
+    revokedAt: timestamp("revoked_at", { withTimezone: true }),
+  },
+  (t) => [
+    index("signing_certificate_signers_cert").on(t.certificateId),
+    uniqueIndex("signing_certificate_signers_live")
+      .on(t.certificateId, t.userId)
+      .where(sql`${t.revokedAt} is null`),
+  ],
+);
+
+/**
+ * A document signed in the platform. The record is kept for good (anyone
+ * may verify years later); the signed PDF only for six months (decision of
+ * 10/11/2026), then its file goes and `filePurgedAt` says when.
+ */
+export const signedDocuments = pgTable(
+  "signed_documents",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    tenantSlug,
+    /** "AB12CD34EF56": the verification code, upper case, no dashes. */
+    code: text("code").notNull(),
+    title: text("title").notNull(),
+    originalName: text("original_name").notNull(),
+    originalSha256: text("original_sha256").notNull(),
+    pageCount: integer("page_count").notNull(),
+    /** The latest signed file; null once purged. */
+    filePath: text("file_path"),
+    fileExpiresAt: timestamp("file_expires_at", {
+      withTimezone: true,
+    }).notNull(),
+    filePurgedAt: timestamp("file_purged_at", { withTimezone: true }),
+    createdBy: text("created_by"),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (t) => [
+    uniqueIndex("signed_documents_code").on(t.code),
+    index("signed_documents_tenant_created").on(t.tenantSlug, t.createdAt),
+  ],
+);
+
+/** Each signature on a signed document, in order, with what it produced. */
+export const signedDocumentSignatures = pgTable(
+  "signed_document_signatures",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    documentId: uuid("document_id")
+      .notNull()
+      .references(() => signedDocuments.id),
+    tenantSlug,
+    certificateId: uuid("certificate_id").references(
+      () => signingCertificates.id,
+    ),
+    // The certificate as it was, so the record outlives a removed one.
+    holderName: text("holder_name").notNull(),
+    holderDocument: text("holder_document").notNull(),
+    issuerName: text("issuer_name").notNull(),
+    serialHex: text("serial_hex").notNull(),
+    policyOid: text("policy_oid").notNull(),
+    /** SHA-256 of the whole file after this signature. */
+    resultSha256: text("result_sha256").notNull(),
+    signedBy: text("signed_by"),
+    signedAt: timestamp("signed_at", { withTimezone: true }).notNull(),
+  },
+  (t) => [
+    index("signed_document_signatures_document").on(t.documentId),
+    index("signed_document_signatures_result").on(t.resultSha256),
+  ],
+);
