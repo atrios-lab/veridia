@@ -80,12 +80,13 @@ Tabelião/Registrador e vai para a auditoria.
   e um arquivo apagado deixa de abrir no chat. Na supervisão, a mensagem
   continua visível com a marca "Apagada pelo autor" (colunas `deleted_at` e
   `deleted_by`). O ato fica na faixa "Análise" da auditoria.
-- Os usuários não recebem aviso de que a auditoria e a supervisão guardam
-  essas mensagens (decisão de 11/11/2026). O aviso geral de que o
-  Tabelião/Registrador pode ler as conversas continua na tela.
-- **Limpar conversa**: some só para quem limpou (coluna `cleared_at` em
-  `messenger_members`). A outra pessoa e o Tabelião/Registrador continuam
-  com todo o histórico. Mensagens novas aparecem normalmente.
+- As telas do chat não mostram aviso de que o Tabelião/Registrador lê as
+  conversas, nem de que a auditoria e a supervisão guardam as mensagens
+  (decisão de 11/11/2026).
+- **Limpar conversa**: some para as duas pessoas, inclusive na tela que a
+  outra pessoa já está com aberta (coluna `cleared_at` em
+  `messenger_members`). O Tabelião/Registrador continua com todo o
+  histórico na supervisão. Mensagens novas aparecem normalmente.
 
 A tela aberta acompanha edições e mensagens apagadas sem recarregar: cada
 consulta devolve o horário do servidor, e a próxima traz o que foi enviado,

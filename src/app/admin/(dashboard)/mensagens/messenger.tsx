@@ -14,7 +14,6 @@ import {
   type Lunch,
   lunchLabel,
   type MessengerColor,
-  OVERSIGHT_NOTICE,
   type Presence,
   STATUS_LABELS,
   STATUSES,
@@ -350,7 +349,12 @@ export function Messenger({
   const partner = contacts.find((c) => c.userId === active?.withUserId);
   // A deleted message leaves the conversation for both people; the record
   // stays for the holder's oversight, without telling anyone.
-  const shown = messages.filter((m) => !m.deleted);
+  const [cleared, setCleared] = useState<string | null>(null);
+  // Cleared by either person: what came before it leaves this screen too.
+  const shown = messages.filter(
+    (m) =>
+      !m.deleted && (!cleared || new Date(m.createdAt) > new Date(cleared)),
+  );
 
   const ring = useCallback((nudge: boolean) => {
     if (nudge) {
@@ -364,7 +368,8 @@ export function Messenger({
   const poll = useCallback(async () => {
     const result = await pollMessenger(active?.id ?? null, lastIso.current);
     if (!result.ok) return;
-    const { contacts: next, messages: fresh, now } = result.data;
+    const { contacts: next, messages: fresh, now, clearedAt } = result.data;
+    setCleared(clearedAt);
     setContacts(next);
     // Another conversation's news rings through the panel's watcher
     // (messenger-watch.tsx), insisting until it is read; here only the
@@ -502,7 +507,7 @@ export function Messenger({
     setMessages([]);
     setEditing(null);
     lastIso.current = null;
-    toast.success("Conversa limpa para você.");
+    toast.success("Conversa limpa.");
     void poll();
   };
 
@@ -802,9 +807,6 @@ export function Messenger({
               </p>
             )}
           </div>
-          <p className="border-t border-admin-border bg-white/60 px-3 py-2 text-[11px] leading-snug text-admin-muted">
-            {OVERSIGHT_NOTICE}
-          </p>
         </aside>
 
         {/* The conversation. */}
@@ -852,7 +854,7 @@ export function Messenger({
                   onClick={() => setClearing((v) => !v)}
                   aria-expanded={clearing}
                   className="inline-flex min-h-9 flex-none items-center gap-1.5 rounded-full border border-admin-border bg-white px-3 text-[12px] font-semibold text-admin-primary hover:border-admin-primary"
-                  title="Limpar toda a conversa para você"
+                  title="Limpar toda a conversa"
                 >
                   <AdminIcon name="trash" className="h-3.5 w-3.5" />
                   <span className="hidden sm:inline">Limpar conversa</span>
@@ -865,8 +867,8 @@ export function Messenger({
                     Limpar toda a conversa com {partner.name}?
                   </p>
                   <p className="mt-0.5">
-                    As mensagens somem só da sua tela. {partner.name} continua
-                    com o histórico.
+                    As mensagens somem da conversa para você e para{" "}
+                    {partner.name}.
                   </p>
                   <div className="mt-1.5 flex gap-2">
                     <button
@@ -875,7 +877,7 @@ export function Messenger({
                       onClick={() => void clearAll()}
                       className="btn btn-admin-primary btn-sm"
                     >
-                      {busy ? "Limpando..." : "Sim, limpar para mim"}
+                      {busy ? "Limpando..." : "Sim, limpar a conversa"}
                     </button>
                     <button
                       type="button"
@@ -887,10 +889,6 @@ export function Messenger({
                   </div>
                 </div>
               )}
-              <p className="flex items-center gap-1.5 border-b border-admin-border bg-admin-warning-bg px-3 py-1.5 text-[11.5px] font-semibold text-admin-warning-text">
-                <AdminIcon name="eye" className="h-3.5 w-3.5 shrink-0" />
-                {OVERSIGHT_NOTICE}
-              </p>
 
               <div
                 ref={listRef}
@@ -1170,7 +1168,6 @@ export function Messenger({
                 className="h-10 w-10 text-admin-primary-soft"
               />
               <p>Escolha alguém na lista para conversar.</p>
-              <p className="max-w-sm text-[11.5px]">{OVERSIGHT_NOTICE}</p>
             </div>
           )}
         </section>

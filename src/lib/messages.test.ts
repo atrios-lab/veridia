@@ -381,20 +381,20 @@ test("editar, apagar e limpar: nada sai do banco, o titular vê tudo", async () 
   assert.equal(full[1]?.fileName, "rascunho-ficticio.pdf");
   assert.equal(full[1]?.deleted, true);
 
-  // "Limpar conversa" hides it for the one who cleared, not for the other.
+  // "Limpar conversa" clears it for both members; the holder's oversight
+  // still reads it all.
   await assert.rejects(
     clearConversationWith(db, OFFICE, id, "escrevente", at(6)),
     MessageError,
   );
   await clearConversationWith(db, OFFICE, id, "auxiliar", at(6));
   assert.deepEqual(await listMessagesWith(db, OFFICE, id, auxiliar), []);
+  assert.deepEqual(
+    await listMessagesWith(db, OFFICE, id, { id: "titular", oversight: false }),
+    [],
+  );
   assert.equal(
-    (
-      await listMessagesWith(db, OFFICE, id, {
-        id: "titular",
-        oversight: false,
-      })
-    )?.length,
+    (await listMessagesWith(db, OFFICE, id, titular, { full: true }))?.length,
     2,
   );
   await sendMessageWith(

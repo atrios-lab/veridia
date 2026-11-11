@@ -14,6 +14,7 @@ import { db } from "@/db/index.ts";
 import {
   type Contact,
   clearConversationWith,
+  clearedAtWith,
   decideLunchWith,
   deleteMessageWith,
   editMessageWith,
@@ -222,6 +223,8 @@ export async function pollMessenger(
     messages: SerializedMessage[];
     /** Where the next poll starts: edits and deletions since then come too. */
     now: string;
+    /** "Limpar conversa", by either member: nothing up to here shows. */
+    clearedAt: string | null;
   }>
 > {
   const access = await messengerAccess();
@@ -238,6 +241,9 @@ export async function pollMessenger(
       })) ?? [])
     : [];
   if (conversationId) await markReadWith(db, conversationId, viewer.id, now);
+  const clearedAt = conversationId
+    ? await clearedAtWith(db, conversationId, viewer.id)
+    : null;
   const contacts = await listContactsWith(
     db,
     access.tenant.slug,
@@ -257,6 +263,7 @@ export async function pollMessenger(
         editedAt: m.editedAt?.toISOString() ?? null,
       })),
       now: now.toISOString(),
+      clearedAt: clearedAt?.toISOString() ?? null,
     },
   };
 }

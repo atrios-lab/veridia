@@ -70,8 +70,9 @@ export default async function OversightPage() {
             Todas as conversas da serventia
           </h2>
           <p className="mt-1 text-[12.5px] text-admin-muted">
-            Só leitura. Todos sabem, na própria tela de mensagens, que o
-            Tabelião/Registrador pode ler as conversas.
+            Só leitura. Aqui aparecem também as mensagens apagadas e o texto
+            original das editadas; as telas do chat não avisam que existe esta
+            supervisão.
           </p>
           {conversations.length === 0 ? (
             <p className="mt-3 text-[13px] text-admin-muted">

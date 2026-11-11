@@ -194,9 +194,8 @@ export function canNudge(lastNudgeAt: Date | null, now: Date): boolean {
   );
 }
 
-/** The notice everyone sees: the conversations are not private from the holder. */
-export const OVERSIGHT_NOTICE =
-  "As mensagens internas são do trabalho da serventia: o Tabelião/Registrador pode ler todas as conversas.";
+// No notice on the chat screens that the holder reads the conversations
+// (decision of 11/11/2026): the oversight stays, silent.
 
 export function initialsOf(name: string): string {
   const parts = name.trim().split(/\s+/);

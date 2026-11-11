@@ -13,6 +13,7 @@ import {
   listSignedDocumentsWith,
 } from "@/lib/signing.ts";
 import { getTenant } from "@/lib/tenant.ts";
+import { AdminIcon } from "../../../_components/icon.tsx";
 import { AdminPageHeader } from "../../../_components/page-header.tsx";
 import {
   RemoveDocumentButton,
@@ -75,11 +76,34 @@ export default async function SignerPage({
           </p>
         )}
 
-        <section className="rounded-[14px] border border-admin-border bg-admin-card px-5 py-4">
-          <div className="flex flex-wrap items-baseline justify-between gap-2">
-            <h2 className="font-serif text-[17px] font-semibold text-admin-primary">
-              {showRemoved ? "Excluídos da lista" : "Documentos assinados"}
-            </h2>
+        {/* Minimized until opened (decision of 11/11/2026): the page
+            starts with the form; the list is one click away. The removed
+            view, asked for on purpose, opens already. */}
+        <details
+          open={showRemoved}
+          className="group rounded-[14px] border border-admin-border bg-admin-card px-5 py-4"
+        >
+          <summary className="flex cursor-pointer list-none items-center justify-between gap-2 [&::-webkit-details-marker]:hidden">
+            <span className="flex items-center gap-2">
+              <AdminIcon
+                name="chevronDown"
+                className="h-4 w-4 -rotate-90 text-admin-primary transition-transform group-open:rotate-0"
+              />
+              <span className="font-serif text-[17px] font-semibold text-admin-primary">
+                {showRemoved ? "Excluídos da lista" : "Documentos assinados"}
+              </span>
+              <span className="rounded-full bg-admin-input-bg px-2 py-0.5 text-[11.5px] font-bold text-admin-muted">
+                {documents.length}
+              </span>
+            </span>
+            <span className="text-[12px] font-semibold text-admin-muted group-open:hidden">
+              Mostrar
+            </span>
+            <span className="hidden text-[12px] font-semibold text-admin-muted group-open:inline">
+              Recolher
+            </span>
+          </summary>
+          <div className="mt-2 flex flex-wrap items-baseline justify-end gap-2">
             <Link
               href={
                 showRemoved
@@ -163,7 +187,7 @@ export default async function SignerPage({
               })}
             </ul>
           )}
-        </section>
+        </details>
       </main>
     </>
   );
