@@ -5,12 +5,15 @@ import {
   type BulletinDraft,
   type BulletinStatus,
   bulletinDraftOf,
+  formatMoneyBRL,
   formatMonthYear,
   isBulletinStatus,
   legacyBulletinDraftOf,
 } from "@/core/transparency/bulletin.ts";
 import type { SupportedState } from "@/core/transparency/rubrics.ts";
+import { db } from "@/db/index.ts";
 import { FEE_TABLE_CATEGORY, readFeeTables } from "@/lib/fee-tables.ts";
+import { pendingBulletinIssWith } from "@/lib/iss-declarations.ts";
 import { getSession } from "@/lib/session.ts";
 import { getTenant, today } from "@/lib/tenant.ts";
 import {
@@ -129,7 +132,10 @@ async function BulletinTab({
 }) {
   // One read serves the header line, the form and the list: most recent
   // month first, so the latest is the head of it.
-  const bulletins = await listBulletins(tenant.slug);
+  const [bulletins, declared] = await Promise.all([
+    listBulletins(tenant.slug),
+    pendingBulletinIssWith(db, tenant.slug).catch(() => ({})),
+  ]);
   return (
     <div className="mt-6 space-y-5">
       <p className="text-[12.5px] text-admin-muted">
@@ -147,6 +153,12 @@ async function BulletinTab({
         currentMonth={Number(today().slice(5, 7))}
         currentYear={Number(today().slice(0, 4))}
         saved={savedDrafts(bulletins, tenant.location.state)}
+        issDeclared={Object.fromEntries(
+          Object.entries(declared).map(([month, cents]) => [
+            month,
+            formatMoneyBRL(cents),
+          ]),
+        )}
       />
       <BulletinList bulletins={bulletins} />
     </div>

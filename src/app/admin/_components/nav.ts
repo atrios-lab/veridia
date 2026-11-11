@@ -117,6 +117,15 @@ export const ADMIN_NAV: readonly AdminNavItem[] = [
     permission: "requests.manage",
   },
   {
+    // The month's ISS on the emolumentos to the municipal tax office, with
+    // the book attached (decision of 11/11/2026).
+    group: "Utilitários",
+    label: "Declaração de ISS",
+    href: "/admin/utilitarios/iss",
+    icon: "clipboard",
+    permission: "requests.manage",
+  },
+  {
     // PAdES signatures with the office's A1 certificates (ICP-Brasil), each
     // with its verification code and QR (see lib/signing.ts).
     group: "Utilitários",

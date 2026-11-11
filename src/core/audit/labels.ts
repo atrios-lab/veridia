@@ -24,6 +24,10 @@ const EXACT: Record<string, string> = {
   "tax-guide.update": "Corrigiu uma guia de recolhimento",
   "tax-guide.renumber": "Alterou o número de uma guia",
   "tax-guide.delete": "Excluiu uma guia de recolhimento",
+  "iss-declaration.issue": "Gerou uma declaração de ISS",
+  "iss-declaration.update": "Corrigiu uma declaração de ISS",
+  "iss-declaration.remove": "Excluiu uma declaração de ISS da lista",
+  "transparency.bulletin.iss": "Lançou o ISS no boletim mensal",
   "signed-document.sign": "Assinou digitalmente um documento",
   "messenger.lunch-request": "Pediu para mudar o horário de almoço",
   "messenger.lunch-approve": "Aprovou o horário de almoço",
@@ -127,6 +131,7 @@ const AREAS: Record<string, string> = {
   chat: "Atendimento online",
   atendimento: "Atendimento online",
   "tax-guide": "Guias de recolhimento",
+  "iss-declaration": "Declaração de ISS",
   publication: "Publicações",
   publicacoes: "Publicações",
   "fee-table": "Tabela de emolumentos",
@@ -230,6 +235,14 @@ const EXPLANATIONS: Record<string, string> = {
   "tax-guide.renumber": "O número de uma guia de recolhimento foi trocado.",
   "tax-guide.delete":
     "Uma guia de recolhimento foi excluída e o número dela ficou livre.",
+  "iss-declaration.issue":
+    "Foi gerada a declaração mensal de ISS ao fisco municipal, com os emolumentos do mês e o livro do caixa anexo.",
+  "iss-declaration.update":
+    "Os valores de uma declaração de ISS foram corrigidos: confira a competência, os emolumentos e a alíquota.",
+  "iss-declaration.remove":
+    "Uma declaração de ISS saiu da lista. O registro continua guardado, e o número dela ficou livre.",
+  "transparency.bulletin.iss":
+    "O ISS de uma declaração foi lançado no boletim mensal da página de transparência.",
   "signed-document.sign":
     "Um documento foi assinado digitalmente com certificado ICP-Brasil.",
   "signed-document.remove":
@@ -302,6 +315,7 @@ const AREA_EXPLANATIONS: Record<string, string> = {
   publication: "Ato feito nas publicações do site.",
   transparency: "Ato feito na área de transparência do site.",
   "tax-guide": "Ato feito numa guia de recolhimento.",
+  "iss-declaration": "Ato feito numa declaração de ISS ao fisco municipal.",
   user: "Ato feito numa conta de acesso ao painel.",
   session: "Entrada ou saída do painel.",
   course: "Ato feito no treinamento.",
@@ -335,6 +349,7 @@ const SETTINGS: Record<string, string> = {
 const NUMBERED: Record<string, string> = {
   guia: "guias",
   notificacao: "notificações",
+  "declaracao-iss": "declarações de ISS",
 };
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;

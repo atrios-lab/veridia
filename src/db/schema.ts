@@ -1217,6 +1217,49 @@ export const taxGuides = pgTable(
 );
 
 /**
+ * Declaração de ISS (decision of 11/11/2026): one per month the office
+ * declares to the municipal tax office. The figures are the month's
+ * emolumentos (the ISS base); the book or cash report of the month goes
+ * attached. Numbered per year, like the guias.
+ */
+export const issDeclarations = pgTable(
+  "iss_declarations",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    tenantSlug,
+    year: integer("year").notNull(),
+    sequence: integer("sequence").notNull(),
+    /** "2026-10": the month declared. */
+    competence: text("competence").notNull(),
+    emolumentsCents: bigint("emoluments_cents", { mode: "number" }).notNull(),
+    rateBasisPoints: integer("rate_basis_points").notNull(),
+    issCents: bigint("iss_cents", { mode: "number" }).notNull(),
+    damNumber: text("dam_number").notNull().default(""),
+    dueDate: text("due_date").notNull().default(""),
+    paidOn: text("paid_on").notNull().default(""),
+    notes: text("notes").notNull().default(""),
+    /** The Livro Diário Auxiliar (or the cash report) of the month, PDF. */
+    attachmentPath: text("attachment_path"),
+    attachmentName: text("attachment_name"),
+    createdBy: text("created_by"),
+    /** "Excluir": the row stays, out of the lists, and frees its number. */
+    deletedAt: timestamp("deleted_at", { withTimezone: true }),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (t) => [
+    uniqueIndex("iss_declarations_tenant_year_sequence_live")
+      .on(t.tenantSlug, t.year, t.sequence)
+      .where(sql`${t.deletedAt} is null`),
+    index("iss_declarations_tenant_competence").on(t.tenantSlug, t.competence),
+  ],
+);
+
+/**
  * The office's A1 certificates (assinador digital, product decision of
  * 10/11/2026): any number of them, e-CPF or e-CNPJ. The .pfx is kept
  * encrypted with the platform's key (lib/signature/vault.ts) on top of its

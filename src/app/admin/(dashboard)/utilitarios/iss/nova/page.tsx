@@ -1,0 +1,50 @@
+import { notFound } from "next/navigation";
+import { can } from "@/core/auth/roles.ts";
+import { getIssSettings } from "@/lib/iss-declarations.ts";
+import { getSession } from "@/lib/session.ts";
+import { getTenant, today } from "@/lib/tenant.ts";
+import { BackLink } from "../../../../_components/back-link.tsx";
+import { AdminPageHeader } from "../../../../_components/page-header.tsx";
+import { IssForm } from "../iss-form.tsx";
+
+export const metadata = { title: "Nova declaração de ISS" };
+
+/** The previous month, in the office's calendar: the one usually declared. */
+function lastMonth(todayIso: string): string {
+  const year = Number(todayIso.slice(0, 4));
+  const month = Number(todayIso.slice(5, 7));
+  return month === 1
+    ? `${year - 1}-12`
+    : `${year}-${String(month - 1).padStart(2, "0")}`;
+}
+
+export default async function NewIssPage() {
+  const session = await getSession();
+  if (
+    !session ||
+    !can(session.user.role ?? "", "requests.manage", session.user.permissions)
+  ) {
+    notFound();
+  }
+  const settings = await getIssSettings(await getTenant());
+  return (
+    <>
+      <AdminPageHeader title="Nova declaração de ISS" />
+      <main className="flex max-w-[900px] flex-col gap-4.5 px-[30px] py-7 max-md:px-4">
+        <BackLink href="/admin/utilitarios/iss" label="Declaração de ISS" />
+        <IssForm
+          initial={{
+            today: today(),
+            competence: lastMonth(today()),
+            emoluments: "",
+            rate: (settings.rateBasisPoints / 100).toFixed(2).replace(".", ","),
+            damNumber: "",
+            dueDate: "",
+            paidOn: "",
+            notes: "",
+          }}
+        />
+      </main>
+    </>
+  );
+}

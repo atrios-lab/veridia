@@ -14,6 +14,7 @@ import type { Database } from "@/db/index.ts";
 import {
   appointments,
   auditNotifications,
+  issDeclarations,
   serviceRequests,
   taxGuides,
   tenantContent,
@@ -56,6 +57,19 @@ export async function lastUsedWith(
           eq(taxGuides.tenantSlug, tenantSlug),
           eq(taxGuides.year, year),
           isNull(taxGuides.deletedAt),
+        ),
+      );
+    return row?.last ?? 0;
+  }
+  if (series === "declaracao-iss") {
+    const [row] = await database
+      .select({ last: max(issDeclarations.sequence) })
+      .from(issDeclarations)
+      .where(
+        and(
+          eq(issDeclarations.tenantSlug, tenantSlug),
+          eq(issDeclarations.year, year),
+          isNull(issDeclarations.deletedAt),
         ),
       );
     return row?.last ?? 0;

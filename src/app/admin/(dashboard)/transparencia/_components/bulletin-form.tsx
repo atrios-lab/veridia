@@ -168,12 +168,18 @@ export function BulletinForm({
   currentMonth,
   currentYear,
   saved,
+  issDeclared = {},
 }: {
   office: BulletinOffice;
   currentMonth: number;
   currentYear: number;
   /** Every published month, as the form shows it, keyed "YYYY-MM". */
   saved: Record<string, BulletinDraft>;
+  /**
+   * The ISS of a Declaração de ISS for a month not published yet, keyed
+   * "YYYY-MM" (decision of 11/11/2026): the form opens with it filled in.
+   */
+  issDeclared?: Record<string, string>;
 }) {
   const [state, formAction, pending] = useActionState<SaveState, FormData>(
     publishBulletinAction,
@@ -193,7 +199,13 @@ export function BulletinForm({
   // never with the figures of the month picked before it.
   const [edits, setEdits] = useState<Record<string, BulletinDraft>>({});
   const published = saved[period];
-  const draft = edits[period] ?? published ?? EMPTY_BULLETIN_DRAFT;
+  const declared = issDeclared[period];
+  const draft =
+    edits[period] ??
+    published ??
+    (declared
+      ? { ...EMPTY_BULLETIN_DRAFT, iss: declared }
+      : EMPTY_BULLETIN_DRAFT);
   const {
     actsCount: acts,
     funds: fundValues,

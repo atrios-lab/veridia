@@ -344,6 +344,13 @@
       "when": 1794400017457,
       "tag": "0048_entrega_assinatura_fisica",
       "breakpoints": true
+    },
+    {
+      "idx": 49,
+      "version": "7",
+      "when": 1794404057877,
+      "tag": "0049_declaracao_iss",
+      "breakpoints": true
     }
   ]
 }
