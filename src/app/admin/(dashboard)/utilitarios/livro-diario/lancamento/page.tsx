@@ -55,6 +55,7 @@ export default async function EntryPage({
       <main className="flex max-w-[1000px] flex-col gap-4 px-[30px] py-7 max-md:px-4">
         <EntryForm
           today={now}
+          interim={settings.interim}
           categories={EXPENSE_CATEGORIES.filter(
             // The interim's pay only where an interim runs the office.
             (c) =>

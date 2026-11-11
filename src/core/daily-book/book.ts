@@ -30,7 +30,8 @@ import { interimSplit } from "./deadlines.ts";
  * único). In RN (Provimento nº 156/2016-CGJ/RN): the balance by 15 January
  * and sent to the CGJ in 5 days (art. 62), the judge's visto by the 15th
  * business day of February (art. 61), the interim's ceiling (arts. 19 and
- * 26-27) and what is not an expense (art. 25, §§ 2º and 3º); see
+ * 26-27) and the interim's income tax, not an expense (art. 25, § 2º:
+ * the holder's is, decision of 11/11/2026); see
  * checks.ts and deadlines.ts.
  *
  * The State's funds (FDJ, FRMP, FCRCPN, FPGE in RN) are someone else's

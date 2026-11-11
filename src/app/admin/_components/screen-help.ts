@@ -191,7 +191,7 @@ const ENTRIES: Record<string, ScreenHelp> = {
       "Despesa: em 'Lançar despesa', anexe o comprovante e clique em 'Ler comprovante' (DAM, comprovante do banco). Confira o valor, a data e a categoria (art. 191-A, § 1º) e lance até o fim do mês em que foi paga.",
       "Todo lançamento tem 'Editar' e 'Excluir' (fica guardado, com a justificativa) e um campo de explicação que sai no livro.",
       "Em 'Gerar PDF do livro', escolha o dia, o mês (com a apuração do art. 192) ou o ano (balanço do art. 193). Assine digitalmente ou imprima; baixe a planilha para o contador.",
-      "Se a despesa parecer pessoal, for repasse ao Estado (FDJ, FRMP, FCRCPN, FPGE), for o imposto de renda do titular ou for de um mês já encerrado, o sistema avisa e pede uma explicação antes de lançar.",
+      "Se a despesa parecer pessoal, for repasse ao Estado (FDJ, FRMP, FCRCPN, FPGE) ou for de um mês já encerrado, o sistema avisa e pede uma explicação antes de lançar. Na serventia sob interinidade, o imposto de renda do interino também.",
       "Em janeiro, o painel lembra o balanço do ano anterior (até 15/01) e o envio à Corregedoria (até 5 dias depois); até o 15º dia útil de fevereiro, o visto do Juiz Corregedor Permanente.",
     ],
     terms: [
@@ -213,7 +213,12 @@ const ENTRIES: Record<string, ScreenHelp> = {
       {
         term: "O que não é despesa",
         meaning:
-          "Os repasses ao Estado (FDJ, FRMP, FCRCPN, FPGE), que já saem da receita, e o imposto de renda do titular ou do interino, inclusive o carnê-leão (art. 191-A, § 2º; CGJ/RN art. 25, §§ 2º e 3º). O IRRF retido dos funcionários é despesa, como parte da folha.",
+          "Os repasses ao Estado (FDJ, FRMP, FCRCPN, FPGE): o livro já lança só os emolumentos como receita. Na serventia vaga, o imposto de renda do interino (CGJ/RN art. 25, § 2º).",
+      },
+      {
+        term: "Imposto de renda do titular",
+        meaning:
+          "O titular é particular que exerce função pública delegada, e o imposto vem dessa atividade: o IR e o carnê-leão dele podem ser lançados como despesa. Nenhuma norma nacional proíbe; a ressalva do Código de Normas do RN (art. 25, § 2º) é só para o interino. Se o livro servir de base para o carnê-leão, confira com o contador se é o caso de marcar 'Tratamento fiscal distinto'.",
       },
       {
         term: "Tratamento fiscal distinto",
