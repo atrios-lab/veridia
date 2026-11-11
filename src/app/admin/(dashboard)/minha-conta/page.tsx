@@ -32,7 +32,7 @@ export default async function MyAccountPage() {
                 {codeEmailFor(access, session.user.id, session.user.email)}
               </strong>
               . Você pode trocar o e-mail (confirmando o novo com um código) ou
-              fazer os seus computadores salvos pedirem o código de novo. O
+              fazer os seus dispositivos salvos pedirem o código de novo. O
               administrador da serventia também pode alterar estes dados.
             </p>
           ) : (

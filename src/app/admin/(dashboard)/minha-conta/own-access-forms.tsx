@@ -159,7 +159,7 @@ export function OwnAccessForms({
         >
           {forgetting
             ? "Aplicando..."
-            : "Pedir o código de novo nos meus computadores salvos"}
+            : "Pedir o código de novo nos meus dispositivos salvos"}
         </button>
       </form>
     </section>

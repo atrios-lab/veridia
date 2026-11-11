@@ -81,6 +81,6 @@ export async function forgetComputers(
   return {
     status: "saved",
     message:
-      "Pronto: os computadores salvos dessa pessoa vão pedir o código de novo.",
+      "Pronto: os dispositivos salvos dessa pessoa vão pedir o código de novo.",
   };
 }

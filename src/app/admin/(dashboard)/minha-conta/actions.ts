@@ -123,6 +123,6 @@ export async function forgetOwnComputers(
   return {
     status: "saved",
     message:
-      "Pronto: seus computadores salvos vão pedir o código no próximo acesso.",
+      "Pronto: seus dispositivos salvos vão pedir o código no próximo acesso.",
   };
 }
