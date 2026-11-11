@@ -8,20 +8,28 @@ import {
   gt,
   inArray,
   isNull,
+  lte,
   ne,
   or,
 } from "drizzle-orm";
 import { PANEL_ROLES } from "@/core/auth/roles.ts";
 import {
+  AWAY_STATUSES,
+  atLunch,
   canNudge,
+  effectiveStatus,
   isColor,
   type Lunch,
+  lingering,
   lunchLabel,
   MAX_TEXT,
   type MessageKind,
   type MessengerColor,
   type Presence,
   presenceOf,
+  STATUS_ALERT_MINUTES,
+  STATUS_LABELS,
+  STATUS_RESET_MINUTES,
   STATUSES,
   type Status,
   validLunch,
@@ -53,6 +61,10 @@ export interface Profile {
   lunchPending: Lunch | null;
   /** The holder turned this person's messenger off. */
   chatDisabled: boolean;
+  /** Inside the lunch window and not back yet: the chat is locked. */
+  atLunch: boolean;
+  /** When the current status began (an away one lapses after 60 min). */
+  statusChangedAt: Date | null;
 }
 
 export async function getProfileWith(
@@ -75,26 +87,30 @@ export async function getProfileWith(
       lunchPendingStart: messengerProfiles.lunchPendingStart,
       lunchPendingMinutes: messengerProfiles.lunchPendingMinutes,
       chatDisabledAt: messengerProfiles.chatDisabledAt,
+      statusChangedAt: messengerProfiles.statusChangedAt,
+      lunchReturnedAt: messengerProfiles.lunchReturnedAt,
     })
     .from(user)
     .leftJoin(messengerProfiles, eq(messengerProfiles.userId, user.id))
     .where(and(eq(user.id, userId), eq(user.tenantSlug, tenantSlug)))
     .limit(1);
   if (!row) return undefined;
+  const now = new Date();
+  const lunch = lunchOf(row.lunchStart, row.lunchMinutes);
   return {
     userId: row.userId,
     name: row.name,
     role: row.role ?? "",
     photo: Boolean(row.photoPath),
-    status: (STATUSES as readonly string[]).includes(row.status ?? "")
-      ? (row.status as Status)
-      : "disponivel",
+    status: effectiveStatus(row.status, row.statusChangedAt, now),
     personalMessage: row.personalMessage ?? "",
     color: isColor(row.color ?? "") ? (row.color as MessengerColor) : "verde",
     sound: row.sound ?? true,
-    lunch: lunchOf(row.lunchStart, row.lunchMinutes),
+    lunch,
     lunchPending: lunchOf(row.lunchPendingStart, row.lunchPendingMinutes),
     chatDisabled: Boolean(row.chatDisabledAt),
+    atLunch: atLunch(lunch, row.lunchReturnedAt, now),
+    statusChangedAt: row.statusChangedAt ?? null,
   };
 }
 
@@ -130,12 +146,29 @@ export async function updateProfileWith(
   now = new Date(),
 ): Promise<void> {
   await ensureProfile(database, tenantSlug, userId);
+  const [current] = await database
+    .select({
+      status: messengerProfiles.status,
+      statusChangedAt: messengerProfiles.statusChangedAt,
+    })
+    .from(messengerProfiles)
+    .where(eq(messengerProfiles.userId, userId))
+    .limit(1);
+  const valid =
+    input.status && (STATUSES as readonly string[]).includes(input.status);
+  // The clock restarts only when the status really changes: saving the
+  // personal message again does not reset an away status's 60 minutes.
+  // A status from before the clock existed starts it now.
+  const changed =
+    valid &&
+    (input.status !==
+      effectiveStatus(current?.status, current?.statusChangedAt, now) ||
+      !current?.statusChangedAt);
   await database
     .update(messengerProfiles)
     .set({
-      ...(input.status && (STATUSES as readonly string[]).includes(input.status)
-        ? { status: input.status }
-        : {}),
+      ...(valid ? { status: input.status } : {}),
+      ...(changed ? { statusChangedAt: now } : {}),
       ...(input.personalMessage !== undefined
         ? { personalMessage: input.personalMessage.trim().slice(0, 140) }
         : {}),
@@ -166,6 +199,154 @@ export async function touchPresenceWith(
       target: messengerProfiles.userId,
       set: { lastSeenAt: now },
     });
+  // An away status past 60 minutes goes back to available for good.
+  await database
+    .update(messengerProfiles)
+    .set({ status: "disponivel", statusChangedAt: now })
+    .where(
+      and(
+        eq(messengerProfiles.userId, userId),
+        inArray(messengerProfiles.status, [...AWAY_STATUSES]),
+        lte(
+          messengerProfiles.statusChangedAt,
+          new Date(now.getTime() - STATUS_RESET_MINUTES * 60_000),
+        ),
+      ),
+    );
+}
+
+/**
+ * "Voltei do almoço / do descanso" (decision of 11/11/2026): unlocks the
+ * chat inside today's window and shows the person as available.
+ */
+export async function returnFromLunchWith(
+  database: Database,
+  tenantSlug: string,
+  userId: string,
+  now = new Date(),
+): Promise<void> {
+  await ensureProfile(database, tenantSlug, userId);
+  await database
+    .update(messengerProfiles)
+    .set({
+      lunchReturnedAt: now,
+      status: "disponivel",
+      statusChangedAt: now,
+      updatedAt: now,
+    })
+    .where(
+      and(
+        eq(messengerProfiles.userId, userId),
+        eq(messengerProfiles.tenantSlug, tenantSlug),
+      ),
+    );
+  await recordAuditWith(database, {
+    tenantSlug,
+    actorId: userId,
+    action: "messenger.lunch-return",
+    targetType: "user",
+    targetId: userId,
+  });
+}
+
+/** The holder changes someone's status (one that lingered, say). */
+export async function setStatusByHolderWith(
+  database: Database,
+  tenantSlug: string,
+  userId: string,
+  status: string,
+  holderId: string,
+  now = new Date(),
+): Promise<void> {
+  if (!(STATUSES as readonly string[]).includes(status)) {
+    throw new MessageError("Status inválido.");
+  }
+  const [member] = await database
+    .select({ id: user.id })
+    .from(user)
+    .where(and(eq(user.id, userId), eq(user.tenantSlug, tenantSlug)))
+    .limit(1);
+  if (!member) throw new MessageError("Pessoa não encontrada.");
+  await ensureProfile(database, tenantSlug, userId);
+  await database
+    .update(messengerProfiles)
+    .set({ status, statusChangedAt: now, updatedAt: now })
+    .where(eq(messengerProfiles.userId, userId));
+  await recordAuditWith(database, {
+    tenantSlug,
+    actorId: holderId,
+    action: "messenger.status-set",
+    targetType: "user",
+    targetId: userId,
+    reason: `Status mudado para "${STATUS_LABELS[status as Status]}"`,
+  });
+}
+
+export interface LingeringStatus {
+  userId: string;
+  name: string;
+  status: Status;
+  since: Date;
+}
+
+/**
+ * Who has been away (busy, at the counter, in a meeting, absent) for 40
+ * minutes or more, while online: the holder is told (decision of
+ * 11/11/2026). Lunch is not counted.
+ */
+export async function lingeringStatusesWith(
+  database: Database,
+  tenantSlug: string,
+  now = new Date(),
+): Promise<LingeringStatus[]> {
+  const rows = await database
+    .select({
+      userId: messengerProfiles.userId,
+      name: user.name,
+      status: messengerProfiles.status,
+      since: messengerProfiles.statusChangedAt,
+      lastSeenAt: messengerProfiles.lastSeenAt,
+      lunchStart: messengerProfiles.lunchStart,
+      lunchMinutes: messengerProfiles.lunchMinutes,
+      lunchReturnedAt: messengerProfiles.lunchReturnedAt,
+    })
+    .from(messengerProfiles)
+    .innerJoin(user, eq(user.id, messengerProfiles.userId))
+    .where(
+      and(
+        eq(messengerProfiles.tenantSlug, tenantSlug),
+        inArray(messengerProfiles.status, [...AWAY_STATUSES]),
+        lte(
+          messengerProfiles.statusChangedAt,
+          new Date(now.getTime() - STATUS_ALERT_MINUTES * 60_000),
+        ),
+        isNull(user.disabledAt),
+      ),
+    );
+  return rows
+    .filter(
+      (row) =>
+        row.since &&
+        lingering(row.status, row.since, now) &&
+        presenceOf(
+          row.status,
+          row.lastSeenAt,
+          now,
+          lunchOf(row.lunchStart, row.lunchMinutes),
+          { statusChangedAt: row.since, lunchReturnedAt: row.lunchReturnedAt },
+        ) !== "offline" &&
+        !atLunch(
+          lunchOf(row.lunchStart, row.lunchMinutes),
+          row.lunchReturnedAt,
+          now,
+        ),
+    )
+    .map((row) => ({
+      userId: row.userId,
+      name: row.name,
+      status: row.status as Status,
+      since: row.since as Date,
+    }));
 }
 
 export async function photoPathOfWith(
@@ -220,6 +401,8 @@ export async function listContactsWith(
       lastSeenAt: messengerProfiles.lastSeenAt,
       lunchStart: messengerProfiles.lunchStart,
       lunchMinutes: messengerProfiles.lunchMinutes,
+      statusChangedAt: messengerProfiles.statusChangedAt,
+      lunchReturnedAt: messengerProfiles.lunchReturnedAt,
       chatDisabledAt: messengerProfiles.chatDisabledAt,
     })
     .from(user)
@@ -267,6 +450,10 @@ export async function listContactsWith(
               person.lastSeenAt,
               now,
               lunchOf(person.lunchStart, person.lunchMinutes),
+              {
+                statusChangedAt: person.statusChangedAt,
+                lunchReturnedAt: person.lunchReturnedAt,
+              },
             ),
         personalMessage: person.personalMessage ?? "",
         conversationId: conversation?.id ?? null,
@@ -1127,12 +1314,19 @@ export interface TeamRow {
   lunchPending: Lunch | null;
   lunchRequestedAt: Date | null;
   chatDisabled: boolean;
+  /** What the others see now, and since when the status stands. */
+  presence: Presence;
+  status: Status;
+  statusSince: Date | null;
+  /** Away for 40 minutes or more: the holder was told. */
+  lingering: boolean;
 }
 
 /** The office's people, for the holder's panel of lunch and chat. */
 export async function listTeamWith(
   database: Database,
   tenantSlug: string,
+  now = new Date(),
 ): Promise<TeamRow[]> {
   const rows = await database
     .select({
@@ -1145,6 +1339,10 @@ export async function listTeamWith(
       lunchPendingMinutes: messengerProfiles.lunchPendingMinutes,
       lunchRequestedAt: messengerProfiles.lunchRequestedAt,
       chatDisabledAt: messengerProfiles.chatDisabledAt,
+      status: messengerProfiles.status,
+      statusChangedAt: messengerProfiles.statusChangedAt,
+      lunchReturnedAt: messengerProfiles.lunchReturnedAt,
+      lastSeenAt: messengerProfiles.lastSeenAt,
     })
     .from(user)
     .leftJoin(messengerProfiles, eq(messengerProfiles.userId, user.id))
@@ -1164,5 +1362,26 @@ export async function listTeamWith(
     lunchPending: lunchOf(row.lunchPendingStart, row.lunchPendingMinutes),
     lunchRequestedAt: row.lunchRequestedAt,
     chatDisabled: Boolean(row.chatDisabledAt),
+    presence: row.chatDisabledAt
+      ? "offline"
+      : presenceOf(
+          row.status,
+          row.lastSeenAt,
+          now,
+          lunchOf(row.lunchStart, row.lunchMinutes),
+          {
+            statusChangedAt: row.statusChangedAt,
+            lunchReturnedAt: row.lunchReturnedAt,
+          },
+        ),
+    status: effectiveStatus(row.status, row.statusChangedAt, now),
+    statusSince: row.statusChangedAt,
+    lingering:
+      lingering(row.status, row.statusChangedAt, now) &&
+      !atLunch(
+        lunchOf(row.lunchStart, row.lunchMinutes),
+        row.lunchReturnedAt,
+        now,
+      ),
   }));
 }

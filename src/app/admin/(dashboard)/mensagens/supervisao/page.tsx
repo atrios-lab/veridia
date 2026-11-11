@@ -61,6 +61,12 @@ export default async function OversightPage() {
                   ? formatOfficeDateTime(m.lunchRequestedAt)
                   : null,
                 chatDisabled: m.chatDisabled,
+                presence: m.presence,
+                status: m.status,
+                statusSince: m.statusSince
+                  ? formatOfficeDateTime(m.statusSince)
+                  : null,
+                lingering: m.lingering,
               }))}
             />
           </section>

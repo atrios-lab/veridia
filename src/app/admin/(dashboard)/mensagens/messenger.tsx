@@ -10,6 +10,7 @@ import {
   COLORS,
   initialsOf,
   isAudio,
+  isAway,
   isImage,
   type Lunch,
   lunchLabel,
@@ -33,6 +34,7 @@ import {
   openConversation,
   pollMessenger,
   requestLunch,
+  returnFromLunch,
   type SerializedContact,
   type SerializedMessage,
   saveProfile,
@@ -54,6 +56,8 @@ export interface Me {
   sound: boolean;
   lunch: Lunch | null;
   lunchPending: Lunch | null;
+  /** Inside the lunch window, not back yet: the chat is locked. */
+  atLunch: boolean;
 }
 
 const TITLE_BAR: Record<MessengerColor, string> = {
@@ -523,6 +527,17 @@ export function Messenger({
     }
   };
 
+  const comeBack = async () => {
+    const result = await returnFromLunch();
+    if (!result.ok) {
+      toast.error(result.message);
+      return;
+    }
+    setMe({ ...me, atLunch: false, status: "disponivel" });
+    toast.success("Bem-vindo de volta. O chat está liberado.");
+    router.refresh();
+  };
+
   const saveMe = async (patch: Partial<Me>, photo?: File) => {
     const next = { ...me, ...patch };
     setMe(next);
@@ -611,6 +626,22 @@ export function Messenger({
           ⚙ Personalizar: foto, status e almoço
         </button>
       </div>
+      {me.atLunch && (
+        <div className="flex flex-wrap items-center gap-3 bg-admin-warning-bg px-4 py-2.5 text-[13px] text-admin-warning-text">
+          <span className="flex-1 font-semibold">
+            🍽 Horário de almoço
+            {me.lunch ? ` (${lunchLabel(me.lunch)})` : ""}: o chat fica
+            bloqueado até você voltar.
+          </span>
+          <button
+            type="button"
+            onClick={() => void comeBack()}
+            className="btn btn-admin-primary btn-sm"
+          >
+            Voltei do almoço
+          </button>
+        </div>
+      )}
       {locked && me.sound && (
         <button
           type="button"
@@ -690,6 +721,11 @@ export function Messenger({
                       : "Horário de almoço: escolher horário"}
                   </option>
                 </select>
+                {isAway(me.status) && (
+                  <p className="mt-0.5 text-[10.5px] leading-tight text-admin-muted">
+                    Volta a Disponível sozinho em 60 minutos.
+                  </p>
+                )}
               </div>
             </div>
             <input

@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 import { after } from "next/server";
 import { closesAt } from "@/core/auth/access-hours.ts";
 import { can } from "@/core/auth/roles.ts";
+import { STATUS_LABELS } from "@/core/messages/rules.ts";
 import { db } from "@/db/index.ts";
 import { getAccessHours } from "@/lib/access-hours.ts";
 import { sendDueRemindersInBackground } from "@/lib/appointment-reminders.ts";
@@ -13,7 +14,11 @@ import {
 } from "@/lib/audit-trail.ts";
 import { waitingCount } from "@/lib/chat.ts";
 import { openGuideRequestCount } from "@/lib/guide-requests.ts";
-import { getProfileWith, inboxWith } from "@/lib/messages.ts";
+import {
+  getProfileWith,
+  inboxWith,
+  lingeringStatusesWith,
+} from "@/lib/messages.ts";
 import { getOfficeAlerts } from "@/lib/office-alerts.ts";
 import { openCountByKind, openRequestCount } from "@/lib/service-request.ts";
 import {
@@ -42,6 +47,7 @@ import {
   AccessRequestsBanner,
   AuditChime,
   AuditNoticeBanner,
+  LingeringStatusBanner,
   UrgentAuditBanner,
 } from "../_components/urgent-audit-banner.tsx";
 
@@ -106,6 +112,10 @@ export default async function DashboardLayout({
     ? hours.requests.length
     : 0;
   const hoursEnd = closesAt(hours, role, session.user.id, new Date());
+  // Away for 40 minutes or more: the holder checks (decision of 11/11/2026).
+  const lingeringNow = can(role, "audit.manage", granted)
+    ? await lingeringStatusesWith(db, tenant.slug).catch(() => [])
+    : [];
   const urgentPending = can(role, "audit.manage", granted)
     ? await pendingUrgentCountWith(db, tenant.slug, session.user.id).catch(
         () => 0,
@@ -239,6 +249,15 @@ export default async function DashboardLayout({
         <div className="scrollbar-hidden relative flex min-h-0 min-w-0 flex-1 flex-col overflow-y-auto">
           <AdminTopBar user={user} />
           {urgentPending > 0 && <UrgentAuditBanner count={urgentPending} />}
+          {lingeringNow.length > 0 && (
+            <LingeringStatusBanner
+              people={lingeringNow.map((p) => ({
+                name: p.name,
+                status: STATUS_LABELS[p.status],
+                minutes: Math.floor((Date.now() - p.since.getTime()) / 60_000),
+              }))}
+            />
+          )}
           {accessRequests > 0 && (
             <AccessRequestsBanner count={accessRequests} />
           )}
@@ -251,13 +270,16 @@ export default async function DashboardLayout({
             />
           )}
           {children}
-          {messenger && !messenger[1]?.chatDisabled && (
-            <MessengerWatch
-              setting={alerts.mensagens}
-              sound={messenger[1]?.sound ?? true}
-              initialUnread={messenger[0].unread}
-            />
-          )}
+          {/* Off, or at lunch (the chat is locked until "voltei"). */}
+          {messenger &&
+            !messenger[1]?.chatDisabled &&
+            !messenger[1]?.atLunch && (
+              <MessengerWatch
+                setting={alerts.mensagens}
+                sound={messenger[1]?.sound ?? true}
+                initialUnread={messenger[0].unread}
+              />
+            )}
           {/* Every screen, not only the queue: the attendant hears and sees
               the chat wherever they are working in the panel. */}
           {can(role, "chat.manage", granted) && (

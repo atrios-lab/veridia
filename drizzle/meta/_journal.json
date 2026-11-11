@@ -330,6 +330,13 @@
       "when": 1794371364109,
       "tag": "0046_mensagens_editar_apagar_limpar",
       "breakpoints": true
+    },
+    {
+      "idx": 47,
+      "version": "7",
+      "when": 1794399220921,
+      "tag": "0047_mensagens_status_e_almoco",
+      "breakpoints": true
     }
   ]
 }

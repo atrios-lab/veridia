@@ -88,6 +88,8 @@ const EXACT: Record<string, AuditLevel> = {
   "messenger.message-delete": "analise",
   "messenger.message-edit": "rotina",
   "messenger.conversation-clear": "rotina",
+  "messenger.lunch-return": "rotina",
+  "messenger.status-set": "analise",
   "audit.notification-answer": "atencao",
   // The panel's hours (decision of 11/11/2026): who works out of hours.
   "access-hours.request": "atencao",

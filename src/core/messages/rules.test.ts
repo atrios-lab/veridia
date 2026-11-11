@@ -49,3 +49,36 @@ test("almoço de até 1 hora, no horário de Brasília", async () => {
   assert.equal(inLunch(lunch, new Date("2026-11-11T16:00:00Z")), false);
   assert.equal(inLunch(null, new Date()), false);
 });
+
+test("almoço trava o chat até 'voltei'; status longe vence em 60 minutos", async () => {
+  const { atLunch, effectiveStatus, lingering, presenceOf } = await import(
+    "./rules.ts"
+  );
+  const at = (hhmm: string) => new Date(`2026-11-11T${hhmm}:00-03:00`);
+  const lunch = { start: "12:00", minutes: 60 };
+  assert.equal(atLunch(lunch, null, at("12:10")), true);
+  assert.equal(atLunch(lunch, null, at("13:00")), false);
+  // Back at 12:30: unlocked for the rest of today's window.
+  assert.equal(atLunch(lunch, at("12:30"), at("12:40")), false);
+  // Yesterday's "voltei" does not count today.
+  assert.equal(
+    atLunch(lunch, new Date("2026-11-10T12:30:00-03:00"), at("12:10")),
+    true,
+  );
+
+  const since = at("09:00");
+  assert.equal(effectiveStatus("ocupado", since, at("09:39")), "ocupado");
+  assert.equal(lingering("ocupado", since, at("09:39")), false);
+  assert.equal(lingering("ocupado", since, at("09:40")), true);
+  assert.equal(effectiveStatus("ocupado", since, at("10:00")), "disponivel");
+  assert.equal(lingering("ocupado", since, at("10:00")), false);
+  // Disponível never lingers; unknown start, no clock.
+  assert.equal(lingering("disponivel", since, at("09:50")), false);
+  assert.equal(effectiveStatus("ausente", null, at("18:00")), "ausente");
+  assert.equal(
+    presenceOf("em-reuniao", at("10:00"), at("10:00"), null, {
+      statusChangedAt: since,
+    }),
+    "disponivel",
+  );
+});

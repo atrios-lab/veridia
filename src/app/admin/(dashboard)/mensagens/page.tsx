@@ -60,6 +60,7 @@ export default async function MessagesPage({
             sound: profile?.sound ?? true,
             lunch: profile?.lunch ?? null,
             lunchPending: profile?.lunchPending ?? null,
+            atLunch: profile?.atLunch ?? false,
           }}
           initialContacts={contacts.map((c) => ({
             ...c,

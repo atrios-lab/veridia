@@ -3,8 +3,15 @@
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { toast } from "sonner";
-import { type Lunch, lunchLabel } from "@/core/messages/rules.ts";
-import { decideLunch, setChatEnabled } from "../actions.ts";
+import {
+  type Lunch,
+  lunchLabel,
+  type Presence,
+  STATUS_LABELS,
+  STATUSES,
+  type Status,
+} from "@/core/messages/rules.ts";
+import { decideLunch, setChatEnabled, setMemberStatus } from "../actions.ts";
 
 export interface TeamMember {
   userId: string;
@@ -14,6 +21,10 @@ export interface TeamMember {
   lunchPending: Lunch | null;
   requestedAt: string | null;
   chatDisabled: boolean;
+  presence: Presence;
+  status: Status;
+  statusSince: string | null;
+  lingering: boolean;
 }
 
 /**
@@ -59,6 +70,40 @@ export function TeamPanel({ team }: { team: TeamMember[] }) {
                 ({member.role})
               </span>
             </p>
+            <p className="text-[12px] text-admin-text">
+              Agora: <strong>{STATUS_LABELS[member.presence]}</strong>
+              {member.statusSince && member.presence !== "offline"
+                ? ` (status desde ${member.statusSince})`
+                : ""}
+            </p>
+            {member.lingering && (
+              <p className="mt-1 rounded-[8px] bg-admin-warning-bg px-2.5 py-1 text-[12px] font-semibold text-admin-warning-text">
+                ⚠ Há mais de 40 minutos como &quot;
+                {STATUS_LABELS[member.status]}
+                &quot;. Com 60 minutos volta a Disponível sozinho.
+              </p>
+            )}
+            <label className="mt-1 flex items-center gap-1.5 text-[12px] text-admin-muted">
+              Mudar status:
+              <select
+                value={member.status}
+                disabled={busy !== null}
+                onChange={(event) =>
+                  void run(
+                    `s-${member.userId}`,
+                    () => setMemberStatus(member.userId, event.target.value),
+                    "Status alterado.",
+                  )
+                }
+                className="rounded-[6px] border border-admin-input-border bg-admin-card px-1.5 py-0.5 text-[12px] text-admin-text"
+              >
+                {STATUSES.map((status) => (
+                  <option key={status} value={status}>
+                    {STATUS_LABELS[status]}
+                  </option>
+                ))}
+              </select>
+            </label>
             <p className="text-[12px] text-admin-text">
               Almoço: {member.lunch ? lunchLabel(member.lunch) : "não definido"}
             </p>

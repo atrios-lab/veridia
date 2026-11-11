@@ -9,7 +9,9 @@ import {
   deleteMessageWith,
   editMessageWith,
   findMessageFileWith,
+  getProfileWith,
   inboxWith,
+  lingeringStatusesWith,
   listAllConversationsWith,
   listContactsWith,
   listMessagesWith,
@@ -17,8 +19,10 @@ import {
   MessageError,
   openDirectWith,
   requestLunchWith,
+  returnFromLunchWith,
   sendMessageWith,
   setChatDisabledWith,
+  setStatusByHolderWith,
   touchPresenceWith,
   updateProfileWith,
 } from "./messages.ts";
@@ -409,4 +413,64 @@ test("editar, apagar e limpar: nada sai do banco, o titular vê tudo", async () 
     (await listMessagesWith(db, OFFICE, id, auxiliar))?.map((m) => m.body),
     ["Obrigada!"],
   );
+});
+
+test("status longe avisa o titular aos 40 min e volta a disponível aos 60; almoço com 'voltei'", async () => {
+  // The next day: the earlier tests used 11/11.
+  const t0 = new Date("2026-11-12T09:00:00-03:00");
+  const at = (minutes: number) => new Date(t0.getTime() + minutes * 60_000);
+  await updateProfileWith(db, OFFICE, "auxiliar", { status: "ocupado" }, t0);
+  // Saving the personal message again does not restart the clock.
+  await updateProfileWith(
+    db,
+    OFFICE,
+    "auxiliar",
+    { status: "ocupado", personalMessage: "Conferindo escrituras" },
+    at(20),
+  );
+  await touchPresenceWith(db, OFFICE, "auxiliar", at(41));
+  const late = await lingeringStatusesWith(db, OFFICE, at(41));
+  assert.deepEqual(
+    late.map((p) => [p.userId, p.status]),
+    [["auxiliar", "ocupado"]],
+  );
+  // The holder changes it; the clock restarts and the alert goes.
+  await setStatusByHolderWith(
+    db,
+    OFFICE,
+    "auxiliar",
+    "disponivel",
+    "titular",
+    at(42),
+  );
+  assert.deepEqual(await lingeringStatusesWith(db, OFFICE, at(43)), []);
+  await assert.rejects(
+    setStatusByHolderWith(db, OFFICE, "de-fora", "ocupado", "titular", at(43)),
+    MessageError,
+  );
+
+  // Away again, then 60 minutes: available again on the next poll.
+  await updateProfileWith(
+    db,
+    OFFICE,
+    "auxiliar",
+    { status: "ausente" },
+    at(50),
+  );
+  await touchPresenceWith(db, OFFICE, "auxiliar", at(111));
+  assert.equal(
+    (await getProfileWith(db, OFFICE, "auxiliar"))?.status,
+    "disponivel",
+  );
+
+  // Lunch: locked inside the window until "voltei do almoço".
+  const noon = new Date("2026-11-12T12:10:00-03:00");
+  await requestLunchWith(db, OFFICE, "auxiliar", "12:00", 60, noon);
+  await decideLunchWith(db, OFFICE, "auxiliar", true, "titular");
+  const { atLunch } = await import("@/core/messages/rules.ts");
+  const lunch = (await getProfileWith(db, OFFICE, "auxiliar"))?.lunch;
+  assert.equal(atLunch(lunch, null, noon), true);
+  await returnFromLunchWith(db, OFFICE, "auxiliar", noon);
+  const back = await getProfileWith(db, OFFICE, "auxiliar");
+  assert.equal(back?.status, "disponivel");
 });
