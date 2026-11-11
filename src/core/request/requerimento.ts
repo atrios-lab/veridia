@@ -93,9 +93,25 @@ export interface RequerimentoSection {
    * `RequerimentoField`. */
   fields?: RequerimentoField[];
   paragraphs?: string[];
+  /** A spreadsheet-like table, after the paragraphs: the papel de
+   * segurança's demonstrativo and its numbering (decision of 11/11/2026). */
+  table?: RequerimentoTable;
   /** A paragraph set apart in a tinted box, after the others: the point a
    * reader must not miss. */
   highlight?: string;
+}
+
+/**
+ * A table drawn in the document's own type: a tinted header row repeated
+ * on every page it runs onto, thin rules between rows, an optional bold
+ * total. `weight` shares the width (1 by default).
+ */
+export interface RequerimentoTable {
+  columns: { label: string; weight?: number; align?: "left" | "right" }[];
+  rows: string[][];
+  total?: string[];
+  /** Said in place of the rows when there are none. */
+  empty?: string;
 }
 
 /**

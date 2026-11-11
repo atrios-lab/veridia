@@ -16,6 +16,7 @@ import {
   appointments,
   auditNotifications,
   issDeclarations,
+  securityPaperReports,
   serviceRequests,
   taxGuides,
   tenantContent,
@@ -71,6 +72,19 @@ export async function lastUsedWith(
           eq(issDeclarations.tenantSlug, tenantSlug),
           eq(issDeclarations.year, year),
           isNull(issDeclarations.deletedAt),
+        ),
+      );
+    return row?.last ?? 0;
+  }
+  if (series === "oficio-papel") {
+    // An ofício is never deleted: its number is never free again.
+    const [row] = await database
+      .select({ last: max(securityPaperReports.sequence) })
+      .from(securityPaperReports)
+      .where(
+        and(
+          eq(securityPaperReports.tenantSlug, tenantSlug),
+          eq(securityPaperReports.year, year),
         ),
       );
     return row?.last ?? 0;

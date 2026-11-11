@@ -79,6 +79,17 @@ const EXACT: Record<string, AuditLevel> = {
   "tax-guide.renumber": "atencao",
   "iss-declaration.renumber": "atencao",
   "office-settings.role-permissions": "atencao",
+  // Papel de segurança (decision of 11/11/2026): a sheet lost or stolen, or
+  // a record voided, is what the holder answers for to the Corregedoria.
+  "security-paper.loss": "urgente",
+  "security-paper.lot-void": "urgente",
+  "security-paper.movement-void": "urgente",
+  "security-paper.spoil": "atencao",
+  "security-paper.lot-add": "atencao",
+  "security-paper.lot-update": "atencao",
+  "security-paper.report-issue": "atencao",
+  "security-paper.use": "analise",
+  "security-paper.report-sent": "analise",
   "signing-certificate.disable": "atencao",
   "signed-document.restore": "atencao",
   "user.update": "atencao",

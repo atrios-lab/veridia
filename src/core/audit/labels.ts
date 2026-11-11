@@ -33,6 +33,20 @@ const EXACT: Record<string, string> = {
   "iss-declaration.file":
     "Registrou a entrega de uma declaração de ISS à prefeitura",
   "transparency.bulletin.iss": "Lançou o ISS no boletim mensal",
+  "security-paper.lot-add": "Cadastrou um lote de papel de segurança",
+  "security-paper.lot-update":
+    "Alterou a nota, a gráfica ou as observações de um lote de papel de segurança",
+  "security-paper.lot-void": "Anulou um lote de papel de segurança",
+  "security-paper.use": "Lançou folhas de papel de segurança utilizadas",
+  "security-paper.spoil":
+    "Lançou folhas de papel de segurança inutilizadas ou avariadas",
+  "security-paper.loss":
+    "Lançou folhas de papel de segurança extraviadas ou subtraídas",
+  "security-paper.movement-void": "Anulou um lançamento de papel de segurança",
+  "security-paper.report-issue":
+    "Gerou um ofício ou relatório do papel de segurança",
+  "security-paper.report-sent":
+    "Registrou o envio de um ofício do papel de segurança à Corregedoria",
   "transparency.bulletin.checked":
     "Conferiu os valores lidos do relatório no boletim mensal",
   "signed-document.sign": "Assinou digitalmente um documento",
@@ -146,6 +160,7 @@ const AREAS: Record<string, string> = {
   atendimento: "Atendimento online",
   "tax-guide": "Guias de transmissão de bens",
   "iss-declaration": "Declaração de ISS",
+  "security-paper": "Papel de segurança",
   publication: "Publicações",
   publicacoes: "Publicações",
   "fee-table": "Tabela de emolumentos",
@@ -267,6 +282,24 @@ const EXPLANATIONS: Record<string, string> = {
     "Os valores do boletim mensal que o sistema leu do relatório foram conferidos por esta pessoa antes de publicar.",
   "transparency.bulletin.iss":
     "O ISS de uma declaração foi lançado no boletim mensal da página de transparência.",
+  "security-paper.lot-add":
+    "Um lote de papel de segurança entrou no classificador, com a numeração da primeira e da última folha.",
+  "security-paper.lot-update":
+    "A nota fiscal, a gráfica, a requisição ou as observações de um lote foram alteradas. A numeração não muda.",
+  "security-paper.lot-void":
+    "Um lote foi anulado, com justificativa. Ele continua guardado no classificador, fora do estoque.",
+  "security-paper.use":
+    "Folhas de papel de segurança foram baixadas do estoque por uso em atos.",
+  "security-paper.spoil":
+    "Folhas de papel de segurança foram inutilizadas ou avariadas. Avaria é comunicada à Corregedoria no fim do mês.",
+  "security-paper.loss":
+    "Folhas de papel de segurança foram extraviadas ou subtraídas. O fato é comunicado à Corregedoria no fim do mês, com a numeração.",
+  "security-paper.movement-void":
+    "Um lançamento de papel de segurança foi anulado, com justificativa. Ele continua guardado e as folhas voltam ao estoque.",
+  "security-paper.report-issue":
+    "Foi gerado um ofício à Corregedoria (extravio ou prestação de contas) ou o relatório do classificador. O conteúdo fica guardado como foi gerado.",
+  "security-paper.report-sent":
+    "Foi anotado quando o ofício chegou à Corregedoria e o número do protocolo ou do malote.",
   "signed-document.sign":
     "Um documento foi assinado digitalmente com certificado ICP-Brasil.",
   "signed-document.remove":
@@ -350,6 +383,8 @@ const AREA_EXPLANATIONS: Record<string, string> = {
   transparency: "Ato feito na área de transparência do site.",
   "tax-guide": "Ato feito numa guia de transmissão de bens.",
   "iss-declaration": "Ato feito numa declaração de ISS ao fisco municipal.",
+  "security-paper":
+    "Ato feito no controle do papel de segurança (lotes, uso, extravios e ofícios à Corregedoria).",
   user: "Ato feito numa conta de acesso ao painel.",
   session: "Entrada ou saída do painel.",
   course: "Ato feito no treinamento.",

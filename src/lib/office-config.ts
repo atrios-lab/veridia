@@ -68,3 +68,9 @@ export const OFFICE_CHAT_KEY = "office-chat";
 export const OFFICE_AGENDA_KEY = "office-agenda";
 /** When the panel opens, and who the holder released outside it. */
 export const OFFICE_ACCESS_HOURS_KEY = "office-access-hours";
+/**
+ * Papel de segurança (decision of 11/11/2026): to whom the ofícios go and
+ * the State's rule; and, apart, which reminders already went by e-mail.
+ */
+export const OFFICE_SECURITY_PAPER_KEY = "office-security-paper";
+export const SECURITY_PAPER_REMINDERS_KEY = "security-paper-reminders";

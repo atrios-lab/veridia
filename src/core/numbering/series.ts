@@ -22,6 +22,7 @@ export const NUMBER_SERIES = [
   "OUV",
   "notificacao",
   "declaracao-iss",
+  "oficio-papel",
 ] as const;
 export type NumberSeries = (typeof NUMBER_SERIES)[number];
 
@@ -74,6 +75,12 @@ export const SERIES_INFO: Record<NumberSeries, SeriesInfo> = {
   "declaracao-iss": {
     label: "Declarações de ISS",
     hint: "Utilitários › Declaração de ISS.",
+    format: formatGuideNumber,
+    max: 99_999,
+  },
+  "oficio-papel": {
+    label: "Ofícios do papel de segurança",
+    hint: "Utilitários › Papel de segurança: comunicação de extravio e prestação de contas à Corregedoria.",
     format: formatGuideNumber,
     max: 99_999,
   },
