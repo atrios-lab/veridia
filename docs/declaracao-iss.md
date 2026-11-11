@@ -39,6 +39,37 @@ declara o total e ratifica o anexo.
   (CNJ), arrecadação bruta é o total sem nenhum abatimento, e inclui esses
   repasses.
 
+## Relatórios do sistema (Notaris)
+
+Ao anexar o **Relatório de Produtividade** e o de **Valores Tributários no
+Período**, o formulário lê os PDFs e se preenche sozinho. Tudo continua
+editável.
+
+- Competência: do período "De: 01/mm/aaaa".
+- Emolumentos: coluna Emol. da linha TOTAL.
+- Alíquota: cabeçalho "ISSQN 5,00%".
+- ISS: coluna ISSQN da linha TOTAL, **apurado ato a ato**. Alguns atos não
+  têm ISS (certidão sem PGE, ato gratuito), então o ISS do mês pode ser menor
+  que a alíquota sobre o total. A declaração diz isso.
+- Boletim mensal: atos, FDJ, FRMP, FCRCPN, FPGE (o FUNAF do boletim),
+  arrecadação e custeio.
+
+Os PDFs podem ser vários (livro, produtividade, valores tributários). Todos
+vão atrás da declaração, no mesmo PDF, na ordem escolhida.
+
+No boletim, "Arrecadação do mês" recebe o **[E] Arrec. Tot. Bruta** (A + D +
+ISSQN), e "Despesas" recebe o **[C] Custeio**. Assim o saldo do boletim
+(arrecadação menos fundos, ISS e despesas) fica igual ao que sobra para a
+serventia.
+
+O boletim **não é publicado sozinho**. Se o mês ainda não foi publicado, os
+números ficam guardados e o formulário do boletim abre com eles. Se o mês já
+foi publicado, só o ISS é atualizado, e os demais números ficam como o
+cartório conferiu.
+
+Se o relatório não for reconhecido (outro sistema, PDF escaneado), ele vai
+anexo do mesmo jeito e os valores são digitados.
+
 ## Fundamentação que sai no PDF
 
 - Constituição Federal, art. 156, III.
@@ -59,11 +90,15 @@ até o Tabelião informar a lei e a alíquota na configuração.
 
 ## Técnico
 
-- Tabela `iss_declarations` (migração 0049, só cria a tabela).
+- Tabela `iss_declarations` (migração 0049, só cria a tabela; migração 0050
+  só acrescenta as colunas `iss_from_report` e `attachments`).
 - Numeração anual na série `declaracao-iss`, que aparece em Configurações ›
   Numeração.
 - "Excluir" não apaga do banco: a declaração sai da lista, o número fica
   livre e o registro fica na auditoria.
-- A configuração fica em `tenant_content` (`office-iss`). O ISS que espera a
-  publicação do boletim fica em `office-iss-bulletin`.
+- A configuração fica em `tenant_content` (`office-iss`). O que espera a
+  publicação do boletim (ISS e, vindo do relatório, os demais números) fica
+  em `office-iss-bulletin`.
+- Leitura dos relatórios: `src/core/iss/notaris-report.ts` (testes com
+  números fictícios).
 - Auditoria: emitir, corrigir (faixa Atenção), excluir e lançar no boletim.

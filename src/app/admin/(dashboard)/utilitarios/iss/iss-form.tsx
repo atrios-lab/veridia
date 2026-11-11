@@ -1,9 +1,13 @@
 "use client";
 
-import { useActionState, useMemo, useState } from "react";
+import { useActionState, useMemo, useState, useTransition } from "react";
 import { competenceLabel, formatRate, issOn } from "@/core/iss/declaration.ts";
 import { formatMoneyBRL, parseMoneyBRL } from "@/core/transparency/bulletin.ts";
-import { type IssFormState, saveIssDeclaration } from "./actions.ts";
+import {
+  type IssFormState,
+  readIssReports,
+  saveIssDeclaration,
+} from "./actions.ts";
 
 const FIELD =
   "w-full rounded-[9px] border border-admin-input-border bg-admin-input-bg px-3.5 py-2.5 text-[13.5px] text-admin-text outline-none focus:border-admin-primary-soft";
@@ -34,13 +38,41 @@ export interface IssFormInitial {
   dueDate: string;
   paidOn: string;
   notes: string;
-  attachmentName?: string | null;
+  /** The ISS of the system's report (act by act), when it was used. */
+  issFromReport?: string;
+  attachmentNames?: string[];
 }
+
+/** The bulletin's figures read from the productivity report. */
+interface BulletinRead {
+  atos: string;
+  fdj: string;
+  frmp: string;
+  fcrcpn: string;
+  funaf: string;
+  arrecadacao: string;
+  despesas: string;
+}
+
+const BULLETIN_FIELDS: { key: keyof BulletinRead; label: string }[] = [
+  { key: "atos", label: "Atos praticados" },
+  { key: "fdj", label: "FDJ" },
+  { key: "frmp", label: "FRMP" },
+  { key: "fcrcpn", label: "FCRCPN" },
+  { key: "funaf", label: "FUNAF/FPGE" },
+  { key: "arrecadacao", label: "Arrecadação total bruta [E]" },
+  { key: "despesas", label: "Custeio (despesas) [C]" },
+];
+
+const money = (cents: number | undefined) =>
+  cents === undefined ? "" : formatMoneyBRL(cents);
 
 /**
  * The month's figures, simple on purpose: the competence, the emolumentos
  * (the ISS base) and the rate; the ISS is worked out as it is typed. The
- * book of the month goes attached; the declaration ratifies it.
+ * book and the system's reports go attached; the declaration ratifies them.
+ * Attaching the system's reports (productivity, taxes) fills everything in,
+ * the ISS act by act and the month's bulletin included; all stays editable.
  */
 export function IssForm({ initial }: { initial: IssFormInitial }) {
   const [state, action, pending] = useActionState<IssFormState, FormData>(
@@ -52,12 +84,66 @@ export function IssForm({ initial }: { initial: IssFormInitial }) {
   const [rate, setRate] = useState(initial.rate);
   const [chosenMonth, setChosenMonth] = useState(Number(month));
   const [chosenYear, setChosenYear] = useState(Number(year));
+  const [byAct, setByAct] = useState(Boolean(initial.issFromReport));
+  const [reportIss, setReportIss] = useState(initial.issFromReport ?? "");
+  const [bulletin, setBulletin] = useState<BulletinRead | null>(null);
+  const [reading, startReading] = useTransition();
+  const [readNote, setReadNote] = useState<string | null>(null);
   const iss = useMemo(() => {
     const cents = parseMoneyBRL(emoluments);
     const basis = Math.round(Number(rate.replace(",", ".")) * 100);
     if (cents === null || !basis) return null;
     return { cents: issOn(cents, basis), basis };
   }, [emoluments, rate]);
+
+  function readReports(files: FileList | null) {
+    if (!files || files.length === 0) return;
+    const sent = new FormData();
+    for (const file of Array.from(files)) sent.append("livro", file);
+    setReadNote(null);
+    startReading(async () => {
+      const result = await readIssReports(sent);
+      if (result.status === "error") {
+        setReadNote(result.message);
+        return;
+      }
+      const f = result.figures;
+      if (f.competence) {
+        setChosenYear(Number(f.competence.slice(0, 4)));
+        setChosenMonth(Number(f.competence.slice(5, 7)));
+      }
+      if (f.emolumentsCents !== undefined)
+        setEmoluments(money(f.emolumentsCents));
+      if (f.rateBasisPoints) {
+        setRate((f.rateBasisPoints / 100).toFixed(2).replace(".", ","));
+      }
+      if (f.issCents !== undefined) {
+        setByAct(true);
+        setReportIss(money(f.issCents));
+      }
+      if (
+        f.kind === "produtividade" ||
+        f.funds ||
+        f.grossRevenueCents !== undefined
+      ) {
+        setBulletin({
+          atos: f.actsCount === undefined ? "" : String(f.actsCount),
+          fdj: money(f.funds?.fdj),
+          frmp: money(f.funds?.frmp),
+          fcrcpn: money(f.funds?.fcrcpn),
+          funaf: money(f.funds?.funaf),
+          arrecadacao: money(f.grossRevenueCents),
+          despesas: money(f.expensesCents),
+        });
+      }
+      const read = f.kind !== "desconhecido";
+      setReadNote(
+        read
+          ? `Lido do relatório${result.unread.length ? ` (não reconhecido: ${result.unread.join(", ")})` : ""}. Confira os valores abaixo; tudo pode ser corrigido.`
+          : "Anexado. Não reconheci um relatório do sistema nesses arquivos: digite os valores.",
+      );
+    });
+  }
   // The years offered: the competence's own and the two before it.
   const thisYear = Math.max(Number(year), Number(initial.today.slice(0, 4)));
 
@@ -68,6 +154,28 @@ export function IssForm({ initial }: { initial: IssFormInitial }) {
     >
       {initial.id && <input type="hidden" name="id" value={initial.id} />}
       <div className="grid grid-cols-1 gap-3.5 md:grid-cols-4">
+        <div className="rounded-[12px] border border-dashed border-admin-primary-soft bg-admin-input-bg px-4 py-3 md:col-span-4">
+          <label htmlFor="iss-livro" className={LABEL}>
+            Livro Diário Auxiliar e relatórios do mês (PDF, um ou mais)
+          </label>
+          <input
+            id="iss-livro"
+            type="file"
+            name="livro"
+            multiple
+            accept="application/pdf,.pdf"
+            onChange={(event) => readReports(event.target.files)}
+            className="block w-full text-[13px] file:mr-3 file:rounded-full file:border-0 file:bg-admin-primary file:px-4 file:py-2 file:text-[12.5px] file:font-semibold file:text-white"
+          />
+          <p className="mt-1 text-[11.5px] text-admin-muted" aria-live="polite">
+            {reading
+              ? "Lendo os relatórios..."
+              : (readNote ??
+                (initial.attachmentNames?.length
+                  ? `Anexados: ${initial.attachmentNames.join(", ")}. Envie de novo só para trocar.`
+                  : "Anexe o relatório de produtividade e o de valores tributários do sistema: os campos se preenchem sozinhos. Vão junto da declaração, no mesmo PDF, e a declaração os ratifica."))}
+          </p>
+        </div>
         <div>
           <label htmlFor="iss-mes" className={LABEL}>
             Competência: mês
@@ -119,7 +227,7 @@ export function IssForm({ initial }: { initial: IssFormInitial }) {
             className={FIELD}
           />
           <p className="mt-1 text-[11.5px] text-admin-muted">
-            Só os emolumentos, sem FDJ, FRMP, FCRCPN, FUNAF nem selo: esses são
+            Só os emolumentos, sem FDJ, FRMP, FCRCPN, FPGE nem selo: esses são
             repasses, não preço do serviço.
           </p>
         </div>
@@ -143,31 +251,45 @@ export function IssForm({ initial }: { initial: IssFormInitial }) {
               `${chosenYear}-${String(chosenMonth).padStart(2, "0")}`,
             )}
           </span>
-          <span className="font-serif text-[24px] font-semibold text-admin-primary">
-            {iss ? `R$ ${formatMoneyBRL(iss.cents)}` : "R$ 0,00"}
-          </span>
-          {iss && (
-            <span className="text-[11.5px] text-admin-muted">
-              {formatRate(iss.basis)} sobre R$ {emoluments}
+          {byAct ? (
+            <label className="mt-0.5 flex items-center gap-1.5 font-serif text-[24px] font-semibold text-admin-primary">
+              R$
+              <input
+                name="iss"
+                inputMode="decimal"
+                aria-label="ISS apurado ato a ato"
+                value={reportIss}
+                onChange={(event) => setReportIss(event.target.value)}
+                className="w-40 rounded-[8px] border border-admin-input-border bg-admin-card px-2 py-0.5 font-serif text-[22px] outline-none focus:border-admin-primary-soft"
+              />
+            </label>
+          ) : (
+            <span className="font-serif text-[24px] font-semibold text-admin-primary">
+              {iss ? `R$ ${formatMoneyBRL(iss.cents)}` : "R$ 0,00"}
             </span>
           )}
-        </div>
-        <div className="md:col-span-4">
-          <label htmlFor="iss-livro" className={LABEL}>
-            Livro Diário Auxiliar ou relatório do caixa do mês (PDF)
+          <span className="text-[11.5px] text-admin-muted">
+            {byAct
+              ? `Apurado ato a ato no relatório${iss ? ` (${formatRate(iss.basis)} sobre o total daria R$ ${formatMoneyBRL(iss.cents)}; atos sem ISS explicam a diferença)` : ""}.`
+              : iss
+                ? `${formatRate(iss.basis)} sobre R$ ${emoluments}`
+                : ""}
+          </span>
+          <label className="mt-1.5 flex items-center gap-2 text-[12px] text-admin-text">
+            <input
+              type="checkbox"
+              name="iss_relatorio"
+              checked={byAct}
+              onChange={(event) => {
+                setByAct(event.target.checked);
+                if (event.target.checked && !reportIss && iss) {
+                  setReportIss(formatMoneyBRL(iss.cents));
+                }
+              }}
+              className="checkbox-admin"
+            />
+            Usar o ISS do relatório do sistema (ato a ato)
           </label>
-          <input
-            id="iss-livro"
-            type="file"
-            name="livro"
-            accept="application/pdf,.pdf"
-            className="block w-full text-[13px] file:mr-3 file:rounded-full file:border-0 file:bg-admin-primary file:px-4 file:py-2 file:text-[12.5px] file:font-semibold file:text-white"
-          />
-          <p className="mt-1 text-[11.5px] text-admin-muted">
-            {initial.attachmentName
-              ? `Anexado: ${initial.attachmentName}. Envie outro só para trocar.`
-              : "Vai junto da declaração, no mesmo PDF; a declaração o ratifica."}
-          </p>
         </div>
         <details className="md:col-span-4 rounded-[12px] bg-admin-input-bg px-3.5 py-2.5">
           <summary className="cursor-pointer text-[12.5px] font-semibold text-admin-primary">
@@ -218,8 +340,38 @@ export function IssForm({ initial }: { initial: IssFormInitial }) {
             defaultChecked
             className="checkbox-admin"
           />
-          Lançar este ISS no boletim mensal da transparência
+          {bulletin
+            ? "Preencher o boletim mensal da transparência com estes números"
+            : "Lançar este ISS no boletim mensal da transparência"}
         </label>
+        {bulletin && (
+          <fieldset className="rounded-[12px] bg-admin-input-bg px-3.5 py-3 md:col-span-4">
+            <legend className="px-1 text-[12.5px] font-semibold text-admin-primary">
+              Boletim mensal, lido do relatório de produtividade
+            </legend>
+            <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
+              {BULLETIN_FIELDS.map(({ key, label }) => (
+                <label key={key} className={LABEL}>
+                  {label}
+                  <input
+                    name={`b_${key}`}
+                    inputMode={key === "atos" ? "numeric" : "decimal"}
+                    value={bulletin[key]}
+                    onChange={(event) =>
+                      setBulletin({ ...bulletin, [key]: event.target.value })
+                    }
+                    className={`${FIELD} mt-1.5 font-normal`}
+                  />
+                </label>
+              ))}
+            </div>
+            <p className="mt-2 text-[11.5px] text-admin-muted">
+              O boletim não é publicado sozinho: ao abrir o mês em
+              Transparência, ele já vem preenchido para você conferir e
+              publicar.
+            </p>
+          </fieldset>
+        )}
       </div>
       {state.status === "error" && (
         <p

@@ -13,7 +13,10 @@ import {
 import type { SupportedState } from "@/core/transparency/rubrics.ts";
 import { db } from "@/db/index.ts";
 import { FEE_TABLE_CATEGORY, readFeeTables } from "@/lib/fee-tables.ts";
-import { pendingBulletinIssWith } from "@/lib/iss-declarations.ts";
+import {
+  type PendingBulletin,
+  pendingBulletinsWith,
+} from "@/lib/iss-declarations.ts";
 import { getSession } from "@/lib/session.ts";
 import { getTenant, today } from "@/lib/tenant.ts";
 import {
@@ -125,6 +128,23 @@ async function DocumentsTab({ tenantSlug }: { tenantSlug: string }) {
   return <DocumentList documents={documents} feeTables={feeTables} />;
 }
 
+/** What a Declaração de ISS left, in the strings the bulletin form shows. */
+function declaredDraft(figures: PendingBulletin): Partial<BulletinDraft> {
+  const money = (cents: number | undefined) =>
+    cents === undefined ? "" : formatMoneyBRL(cents);
+  const funds: Record<string, string> = {};
+  for (const [key, cents] of Object.entries(figures.fundAmountsCents ?? {})) {
+    funds[key] = formatMoneyBRL(cents);
+  }
+  return {
+    iss: formatMoneyBRL(figures.issCents),
+    actsCount: figures.actsCount === undefined ? "" : String(figures.actsCount),
+    funds,
+    grossRevenue: money(figures.grossRevenueCents),
+    expenses: money(figures.expensesCents),
+  };
+}
+
 async function BulletinTab({
   tenant,
 }: {
@@ -134,7 +154,9 @@ async function BulletinTab({
   // month first, so the latest is the head of it.
   const [bulletins, declared] = await Promise.all([
     listBulletins(tenant.slug),
-    pendingBulletinIssWith(db, tenant.slug).catch(() => ({})),
+    pendingBulletinsWith(db, tenant.slug).catch(
+      (): Record<string, PendingBulletin> => ({}),
+    ),
   ]);
   return (
     <div className="mt-6 space-y-5">
@@ -153,10 +175,10 @@ async function BulletinTab({
         currentMonth={Number(today().slice(5, 7))}
         currentYear={Number(today().slice(0, 4))}
         saved={savedDrafts(bulletins, tenant.location.state)}
-        issDeclared={Object.fromEntries(
-          Object.entries(declared).map(([month, cents]) => [
+        declared={Object.fromEntries(
+          Object.entries(declared).map(([month, figures]) => [
             month,
-            formatMoneyBRL(cents),
+            declaredDraft(figures),
           ]),
         )}
       />

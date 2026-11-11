@@ -1,13 +1,14 @@
 import "server-only";
 import { and, desc, eq, isNull } from "drizzle-orm";
 import { PDFDocument } from "pdf-lib";
+import { z } from "zod";
 import {
   buildIssDocument,
   defaultIssSettings,
   type IssDeclarationInput,
   type IssSettings,
   IssSettingsSchema,
-  issOn,
+  issOf,
 } from "@/core/iss/declaration.ts";
 import { toIsoDate } from "@/core/scheduling/calendar.ts";
 import type { Tenant } from "@/core/tenant/schema.ts";
@@ -123,7 +124,7 @@ export async function issueIssDeclarationWith(
   database: Database,
   tenantSlug: string,
   input: IssDeclarationInput,
-  attachment: IssAttachment | null,
+  attachments: IssAttachment[],
   actorId: string,
   now = new Date(),
 ): Promise<StoredIssDeclaration> {
@@ -143,8 +144,7 @@ export async function issueIssDeclarationWith(
           year,
           sequence,
           ...fields(input),
-          attachmentPath: attachment?.path ?? null,
-          attachmentName: attachment?.name ?? null,
+          ...papers(attachments),
           createdBy: actorId,
           createdAt: now,
           updatedAt: now,
@@ -172,7 +172,8 @@ function fields(input: IssDeclarationInput) {
     competence: input.competence,
     emolumentsCents: input.emolumentsCents,
     rateBasisPoints: input.rateBasisPoints,
-    issCents: issOn(input.emolumentsCents, input.rateBasisPoints),
+    issCents: issOf(input),
+    issFromReport: input.issCents !== null,
     damNumber: input.damNumber,
     dueDate: input.dueDate,
     paidOn: input.paidOn,
@@ -180,13 +181,30 @@ function fields(input: IssDeclarationInput) {
   };
 }
 
-/** Corrects a declaration; a new attachment replaces the old one. */
+/** The papers, in the columns of before (the first) and in the list. */
+function papers(attachments: IssAttachment[]) {
+  return {
+    attachmentPath: attachments[0]?.path ?? null,
+    attachmentName: attachments[0]?.name ?? null,
+    attachments,
+  };
+}
+
+/** Every paper behind a declaration, the ones of before included. */
+export function attachmentsOf(row: StoredIssDeclaration): IssAttachment[] {
+  if (row.attachments?.length) return row.attachments;
+  return row.attachmentPath
+    ? [{ path: row.attachmentPath, name: row.attachmentName ?? "anexo.pdf" }]
+    : [];
+}
+
+/** Corrects a declaration; papers sent again replace the old ones. */
 export async function updateIssDeclarationWith(
   database: Database,
   tenantSlug: string,
   id: string,
   input: IssDeclarationInput,
-  attachment: IssAttachment | null,
+  attachments: IssAttachment[],
   actorId: string,
   now = new Date(),
 ): Promise<StoredIssDeclaration> {
@@ -194,9 +212,7 @@ export async function updateIssDeclarationWith(
     .update(issDeclarations)
     .set({
       ...fields(input),
-      ...(attachment
-        ? { attachmentPath: attachment.path, attachmentName: attachment.name }
-        : {}),
+      ...(attachments.length ? papers(attachments) : {}),
       updatedAt: now,
     })
     .where(
@@ -292,20 +308,22 @@ export function inputOf(row: StoredIssDeclaration): IssDeclarationInput {
     dueDate: row.dueDate,
     paidOn: row.paidOn,
     notes: row.notes,
+    issCents: row.issFromReport ? row.issCents : null,
   };
 }
 
 /* -------------------------------------------------------------------- PDF */
 
 /**
- * The declaration and, behind it, the month's book or cash report: one
- * PDF, to print or to sign digitally as a whole.
+ * The declaration and, behind it, the month's book and the system's
+ * reports: one PDF, to print or to sign digitally as a whole.
  */
 export async function renderIssDeclarationPdf(
   tenant: Tenant,
   row: StoredIssDeclaration,
   settings: IssSettings,
 ): Promise<Buffer> {
+  const attached = attachmentsOf(row);
   const declaration = await renderDocument(
     buildIssDocument(tenant, {
       declaration: inputOf(row),
@@ -313,47 +331,59 @@ export async function renderIssDeclarationPdf(
       year: row.year,
       sequence: row.sequence,
       issuedOn: toIsoDate(row.createdAt, OFFICE_TIME_ZONE),
-      withAttachment: Boolean(row.attachmentPath),
+      attachments: attached.length,
     }),
     await brandFor(tenant),
   );
-  if (!row.attachmentPath) return declaration;
-  try {
-    const merged = await PDFDocument.load(declaration);
-    const extra = await PDFDocument.load(
-      await readStoredFile(row.attachmentPath),
-      {
+  if (attached.length === 0) return declaration;
+  const merged = await PDFDocument.load(declaration);
+  for (const paper of attached) {
+    try {
+      const extra = await PDFDocument.load(await readStoredFile(paper.path), {
         ignoreEncryption: true,
-      },
-    );
-    const pages = await merged.copyPages(extra, extra.getPageIndices());
-    for (const page of pages) merged.addPage(page);
-    return Buffer.from(await merged.save());
-  } catch {
-    // A broken or protected attachment never blocks the declaration.
-    return declaration;
+      });
+      const pages = await merged.copyPages(extra, extra.getPageIndices());
+      for (const page of pages) merged.addPage(page);
+    } catch {
+      // A broken or protected paper never blocks the declaration.
+    }
   }
+  return Buffer.from(await merged.save());
 }
 
 /* --------------------------------------------------------- monthly bulletin */
 
 /**
- * The month's ISS goes to the transparency bulletin (decision of
- * 11/11/2026). A bulletin already published for the month takes the new
- * ISS at once; a month not published yet keeps it waiting, and the
- * bulletin form opens with it filled in.
+ * What a declaration hands the month's bulletin: the ISS always; read from
+ * the system's productivity report, also the acts, the funds, the intake and
+ * the costs, so the bulletin opens all filled in (decision of 11/11/2026).
+ */
+export const PendingBulletinSchema = z.object({
+  issCents: z.number().int().min(0),
+  actsCount: z.number().int().min(0).optional(),
+  fundAmountsCents: z.record(z.string(), z.number().int().min(0)).optional(),
+  grossRevenueCents: z.number().int().min(0).optional(),
+  expensesCents: z.number().int().min(0).optional(),
+});
+export type PendingBulletin = z.infer<typeof PendingBulletinSchema>;
+
+/**
+ * A bulletin already published for the month takes the new ISS at once
+ * (only the ISS: what was published stays as the office checked it); a
+ * month not published yet keeps everything waiting, and the bulletin form
+ * opens with it filled in, to check and publish.
  */
 export async function applyIssToBulletinWith(
   database: Database,
   tenantSlug: string,
   competence: string,
-  issCents: number,
+  figures: PendingBulletin,
   actorId: string,
 ): Promise<"updated" | "pending"> {
   const referenceMonth = `${competence}-01`;
   const [row] = await database
     .update(transparencyBulletins)
-    .set({ issCents, updatedAt: new Date() })
+    .set({ issCents: figures.issCents, updatedAt: new Date() })
     .where(
       and(
         eq(transparencyBulletins.tenantSlug, tenantSlug),
@@ -373,29 +403,41 @@ export async function applyIssToBulletinWith(
     });
     return "updated";
   }
-  const pending = await pendingBulletinIssWith(database, tenantSlug);
+  const pending = await pendingBulletinsWith(database, tenantSlug);
   await writeContent(
     database,
     tenantSlug,
     OFFICE_ISS_BULLETIN_KEY,
-    { ...pending, [competence]: issCents },
+    {
+      ...pending,
+      // A correction that brings only the ISS keeps what the report gave.
+      [competence]: PendingBulletinSchema.parse({
+        ...pending[competence],
+        ...figures,
+      }),
+    },
     actorId,
   );
   return "pending";
 }
 
-/** ISS declared for months whose bulletin is not published yet. */
-export async function pendingBulletinIssWith(
+/**
+ * What declarations left for months whose bulletin is not published yet.
+ * The first ones kept only the ISS, as a number.
+ */
+export async function pendingBulletinsWith(
   database: Database,
   tenantSlug: string,
-): Promise<Record<string, number>> {
+): Promise<Record<string, PendingBulletin>> {
   const raw = await readContent(database, tenantSlug, OFFICE_ISS_BULLETIN_KEY);
-  const out: Record<string, number> = {};
+  const out: Record<string, PendingBulletin> = {};
   if (raw && typeof raw === "object") {
-    for (const [month, cents] of Object.entries(raw)) {
-      if (/^20\d\d-\d\d$/.test(month) && Number.isInteger(cents)) {
-        out[month] = cents as number;
-      }
+    for (const [month, value] of Object.entries(raw)) {
+      if (!/^20\d\d-\d\d$/.test(month)) continue;
+      const parsed = PendingBulletinSchema.safeParse(
+        Number.isInteger(value) ? { issCents: value } : value,
+      );
+      if (parsed.success) out[month] = parsed.data;
     }
   }
   return out;

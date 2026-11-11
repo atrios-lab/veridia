@@ -11,9 +11,10 @@ import { transparencyBulletins } from "@/db/schema.ts";
 import { createTestDb } from "@/db/test-db.ts";
 import {
   applyIssToBulletinWith,
+  inputOf,
   issueIssDeclarationWith,
   listIssDeclarationsWith,
-  pendingBulletinIssWith,
+  pendingBulletinsWith,
   removeIssDeclarationWith,
   renderIssDeclarationPdf,
   updateIssDeclarationWith,
@@ -34,6 +35,7 @@ const input = (competence: string, emolumentsCents: number) => ({
   dueDate: "",
   paidOn: "",
   notes: "",
+  issCents: null,
 });
 
 before(async () => {
@@ -49,7 +51,7 @@ test("numeração anual, correção e exclusão que libera o número", async () 
     db,
     TENANT,
     input("2026-09", 100_000),
-    null,
+    [],
     "titular",
     now,
   );
@@ -57,7 +59,7 @@ test("numeração anual, correção e exclusão que libera o número", async () 
     db,
     TENANT,
     input("2026-10", 200_000),
-    null,
+    [],
     "titular",
     now,
   );
@@ -68,7 +70,7 @@ test("numeração anual, correção e exclusão que libera o número", async () 
     TENANT,
     second.id,
     input("2026-10", 300_000),
-    null,
+    [],
     "titular",
     now,
   );
@@ -82,7 +84,7 @@ test("numeração anual, correção e exclusão que libera o número", async () 
     db,
     TENANT,
     input("2026-10", 300_000),
-    null,
+    [],
     "titular",
     now,
   );
@@ -91,11 +93,47 @@ test("numeração anual, correção e exclusão que libera o número", async () 
 
 test("o ISS vai para o boletim do mês, ou espera o boletim ser publicado", async () => {
   assert.equal(
-    await applyIssToBulletinWith(db, TENANT, "2026-08", 4_321, "titular"),
+    await applyIssToBulletinWith(
+      db,
+      TENANT,
+      "2026-08",
+      { issCents: 4_321 },
+      "titular",
+    ),
     "pending",
   );
-  assert.deepEqual(await pendingBulletinIssWith(db, TENANT), {
-    "2026-08": 4_321,
+  // Fictitious figures, as read from a productivity report.
+  const read = {
+    issCents: 9_000,
+    actsCount: 120,
+    fundAmountsCents: {
+      fdj: 50_000,
+      frmp: 15_000,
+      fcrcpn: 16_000,
+      funaf: 2_500,
+    },
+    grossRevenueCents: 292_500,
+    expensesCents: 750_000,
+  };
+  assert.equal(
+    await applyIssToBulletinWith(db, TENANT, "2026-09", read, "titular"),
+    "pending",
+  );
+  assert.deepEqual(await pendingBulletinsWith(db, TENANT), {
+    "2026-08": { issCents: 4_321 },
+    "2026-09": read,
+  });
+  // A correction with only the ISS keeps the report's other figures.
+  await applyIssToBulletinWith(
+    db,
+    TENANT,
+    "2026-09",
+    { issCents: 9_100 },
+    "titular",
+  );
+  assert.deepEqual((await pendingBulletinsWith(db, TENANT))["2026-09"], {
+    ...read,
+    issCents: 9_100,
   });
   await db.insert(transparencyBulletins).values({
     tenantSlug: TENANT,
@@ -106,23 +144,51 @@ test("o ISS vai para o boletim do mês, ou espera o boletim ser publicado", asyn
     status: "preliminary",
   });
   assert.equal(
-    await applyIssToBulletinWith(db, TENANT, "2026-07", 9_999, "titular"),
+    await applyIssToBulletinWith(
+      db,
+      TENANT,
+      "2026-07",
+      { issCents: 9_999, actsCount: 1 },
+      "titular",
+    ),
     "updated",
   );
   const [row] = await db.select().from(transparencyBulletins);
   assert.equal(row.issCents, 9_999);
+  // Only the ISS changes in a published month.
+  assert.equal(row.actsCount, 10);
 });
 
-test("o PDF leva a declaração e, atrás, o livro anexo", async () => {
+test("o ISS ato a ato do relatório fica como foi informado", async () => {
+  const row = await issueIssDeclarationWith(
+    db,
+    TENANT,
+    { ...input("2026-05", 200_000), issCents: 9_000 },
+    [],
+    "titular",
+    new Date("2026-11-11T12:00:00Z"),
+  );
+  assert.equal(row.issCents, 9_000);
+  assert.equal(row.issFromReport, true);
+  assert.equal(inputOf(row).issCents, 9_000);
+});
+
+test("o PDF leva a declaração e, atrás, o livro e o relatório anexos", async () => {
   const book = await PDFDocument.create();
   book.addPage();
   book.addPage();
   const stored = await storeOfficePdf(TENANT, Buffer.from(await book.save()));
+  const one = await PDFDocument.create();
+  one.addPage();
+  const report = await storeOfficePdf(TENANT, Buffer.from(await one.save()));
   const row = await issueIssDeclarationWith(
     db,
     TENANT,
     input("2026-06", 50_000),
-    { path: stored.path, name: "livro-junho.pdf" },
+    [
+      { path: stored.path, name: "livro-junho.pdf" },
+      { path: report.path, name: "produtividade-junho.pdf" },
+    ],
     "titular",
     new Date("2026-11-11T12:00:00Z"),
   );
@@ -132,6 +198,6 @@ test("o PDF leva a declaração e, atrás, o livro anexo", async () => {
     defaultIssSettings(tenant),
   );
   const merged = await PDFDocument.load(pdf);
-  // The declaration's own page(s), then the book's two pages.
-  assert.ok(merged.getPageCount() >= 3);
+  // The declaration's own page(s), the book's two pages, the report's one.
+  assert.ok(merged.getPageCount() >= 4);
 });
