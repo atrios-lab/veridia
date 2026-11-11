@@ -38,7 +38,11 @@ export async function POST(request: Request): Promise<Response> {
   // here: ownership is already proven by the protocol + key above, so kind
   // isn't a security boundary for this route.
   const attachment = await getAttachment(tenant.slug, stored.id, attachmentId);
-  if (!attachment) return new Response("Não encontrado", { status: 404 });
+  // Held back until the office signs it: the citizen never gets the
+  // unsigned copy (decision of 11/11/2026).
+  if (!attachment || attachment.heldForSignatureAt) {
+    return new Response("Não encontrado", { status: 404 });
+  }
   // The 30 days after the closing are over: refused even before the purge
   // (run when the panel's queues open) has deleted the bytes.
   const status = requestFileStatusOf(

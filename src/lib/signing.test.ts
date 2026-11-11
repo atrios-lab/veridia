@@ -31,11 +31,14 @@ import {
   findSignedDocumentWith,
   finishA3DeliveryWith,
   finishA3SignWith,
+  holdForSignatureWith,
+  isHeldForSignatureWith,
   listCertificatesWith,
   listSignedDocumentsWith,
   prepareA3CoSignWith,
   prepareA3DeliveryWith,
   prepareA3SignWith,
+  releaseUnsignedWith,
   SigningError,
   setCertificateSignersWith,
   setSignedDocumentRemovedWith,
@@ -308,6 +311,15 @@ test("o documento entregue sem assinatura é lembrado e assinado pela plataforma
   }[];
   const mine = [delivered].filter((a) => a.requestId === request.id);
   assert.deepEqual([...(await unsignedDeliveries(mine))], [delivered.id]);
+  // The clerk chose to sign it first: held back, the citizen does not see it.
+  const [{ storedName }] = await db
+    .select({ storedName: serviceRequestAttachments.storedName })
+    .from(serviceRequestAttachments);
+  await holdForSignatureWith(db, TENANT, request.id, [storedName], "titular");
+  assert.equal(
+    await isHeldForSignatureWith(db, TENANT, request.id, delivered.id),
+    true,
+  );
 
   const { code } = await signDeliveredDocumentWith(
     db,
@@ -332,6 +344,11 @@ test("o documento entregue sem assinatura é lembrado e assinado pela plataforma
   }[];
   assert.notEqual(after.path, delivered.path);
   assert.ok(hasSignature(await readStoredFile(after.path ?? "")));
+  // Signed: released to the citizen.
+  assert.equal(
+    await isHeldForSignatureWith(db, TENANT, request.id, delivered.id),
+    false,
+  );
   // Signing twice is refused.
   await assert.rejects(
     signDeliveredDocumentWith(
@@ -646,6 +663,37 @@ test("documento sem assinatura digital: o escrevente confirma que é físico dig
   const { auditLog } = await import("@/db/schema.ts");
   const acts = await db.select().from(auditLog);
   assert.ok(acts.some((a) => a.action === "service-request.delivery-physical"));
+
+  // Held, then sent as it is by the clerk's choice: released and recorded.
+  await holdForSignatureWith(
+    db,
+    TENANT,
+    request.id,
+    [stored.storedName],
+    "escrevente",
+  );
+  assert.equal(
+    await isHeldForSignatureWith(db, TENANT, request.id, row.id),
+    true,
+  );
+  assert.equal(
+    await releaseUnsignedWith(db, TENANT, request.id, row.id, "escrevente"),
+    true,
+  );
+  assert.equal(
+    await isHeldForSignatureWith(db, TENANT, request.id, row.id),
+    false,
+  );
+  // Released once: a second time finds nothing held.
+  assert.equal(
+    await releaseUnsignedWith(db, TENANT, request.id, row.id, "escrevente"),
+    false,
+  );
+  const after = await db.select().from(auditLog);
+  assert.ok(
+    after.some((a) => a.action === "service-request.delivery-unsigned"),
+  );
+  assert.ok(after.some((a) => a.action === "service-request.delivery-held"));
 });
 
 test("A3 no documento entregue ao cliente: troca a cópia pela assinada", async () => {

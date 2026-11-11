@@ -43,6 +43,10 @@ const EXACT: Record<string, string> = {
   "messenger.lunch-return": "Voltou do almoço e liberou o chat",
   "service-request.delivery-physical":
     "Enviou ao cliente documento físico digitalizado, sem assinatura digital",
+  "service-request.delivery-held":
+    "Anexou documento ao pedido para assinar antes de enviar ao cliente",
+  "service-request.delivery-unsigned":
+    "Enviou ao cliente documento sem assinatura digital, por escolha própria",
   "messenger.status-set": "Mudou o status de uma pessoa no chat",
   "access-hours.request": "Pediu para acessar o painel fora do horário",
   "access-hours.release": "Liberou o acesso ao painel fora do horário",
@@ -289,6 +293,10 @@ const EXPLANATIONS: Record<string, string> = {
     "A pessoa apagou uma mensagem que tinha enviado no chat interno. Ela some da conversa, mas continua guardada para o Tabelião/Registrador.",
   "messenger.conversation-clear":
     "A pessoa limpou uma conversa do chat interno: as mensagens somem da tela das duas pessoas, e o Tabelião/Registrador continua com o histórico.",
+  "service-request.delivery-held":
+    "O documento foi anexado ao pedido sem assinatura digital e ficou retido: o cliente só o vê depois de assinado na plataforma.",
+  "service-request.delivery-unsigned":
+    "A pessoa escolheu enviar ao cliente um documento sem assinatura digital, assim mesmo. Confira se era o caso.",
   "service-request.delivery-physical":
     "O documento enviado ao cliente não tinha assinatura digital, e a pessoa confirmou que é um documento desmaterializado: assinado à mão no papel e digitalizado.",
   "messenger.lunch-return":

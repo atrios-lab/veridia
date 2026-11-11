@@ -613,7 +613,8 @@ export async function lookupProtocolDetail(
       // A requirement's form is that requirement's, not a delivery: it belongs
       // in its card and never in "Documentos da serventia".
       deliveredDocuments: requestOwnAttachments(allAttachments)
-        .filter((a) => a.kind === "office")
+        // A file held back until it is signed is not delivered yet.
+        .filter((a) => a.kind === "office" && !a.heldForSignatureAt)
         .map((a) => ({
           id: a.id,
           createdAt: a.createdAt.toISOString(),

@@ -1277,6 +1277,8 @@ async function replaceDeliveryWith(
       path: stored.path,
       storedName: stored.storedName,
       sizeBytes: signed.length,
+      // Signed: the citizen sees it from now on.
+      heldForSignatureAt: null,
     })
     .where(eq(serviceRequestAttachments.id, attachment.id));
   await deleteStoredFile(attachment.path);
@@ -1380,6 +1382,119 @@ export function fileHasDigitalSignature(
   mimeType: string,
 ): boolean {
   return mimeType === "application/pdf" && hasSignature(bytes);
+}
+
+/**
+ * PDFs for the citizen kept back until they are signed on the request's
+ * page (decision of 11/11/2026): the clerk chose to sign them digitally, so
+ * the citizen gets only the signed copy.
+ */
+export async function holdForSignatureWith(
+  database: Database,
+  tenantSlug: string,
+  requestId: string,
+  storedNames: string[],
+  userId: string,
+  now = new Date(),
+): Promise<void> {
+  if (!storedNames.length) return;
+  const rows = await database
+    .update(serviceRequestAttachments)
+    .set({ heldForSignatureAt: now })
+    .where(
+      and(
+        eq(serviceRequestAttachments.tenantSlug, tenantSlug),
+        eq(serviceRequestAttachments.requestId, requestId),
+        eq(serviceRequestAttachments.kind, "office"),
+        inArray(serviceRequestAttachments.storedName, storedNames),
+      ),
+    )
+    .returning({ displayName: serviceRequestAttachments.displayName });
+  for (const row of rows) {
+    await recordAuditWith(database, {
+      tenantSlug,
+      actorId: userId,
+      action: "service-request.delivery-held",
+      targetType: "service-request",
+      targetId: `${requestId} · ${row.displayName}`,
+    });
+  }
+}
+
+/** Is this delivered file still held back, waiting for its signature? */
+export async function isHeldForSignatureWith(
+  database: Database,
+  tenantSlug: string,
+  requestId: string,
+  attachmentId: string,
+): Promise<boolean> {
+  const [row] = await database
+    .select({ held: serviceRequestAttachments.heldForSignatureAt })
+    .from(serviceRequestAttachments)
+    .where(
+      and(
+        eq(serviceRequestAttachments.tenantSlug, tenantSlug),
+        eq(serviceRequestAttachments.requestId, requestId),
+        eq(serviceRequestAttachments.id, attachmentId),
+        eq(serviceRequestAttachments.kind, "office"),
+      ),
+    )
+    .limit(1);
+  return Boolean(row?.held);
+}
+
+/**
+ * The clerk sends a held file as it is, with no digital signature (their
+ * choice, recorded): the citizen sees it from now on.
+ */
+export async function releaseUnsignedWith(
+  database: Database,
+  tenantSlug: string,
+  requestId: string,
+  attachmentId: string,
+  userId: string,
+): Promise<boolean> {
+  const [row] = await database
+    .update(serviceRequestAttachments)
+    .set({ heldForSignatureAt: null })
+    .where(
+      and(
+        eq(serviceRequestAttachments.tenantSlug, tenantSlug),
+        eq(serviceRequestAttachments.requestId, requestId),
+        eq(serviceRequestAttachments.id, attachmentId),
+        eq(serviceRequestAttachments.kind, "office"),
+        isNotNull(serviceRequestAttachments.heldForSignatureAt),
+      ),
+    )
+    .returning({ displayName: serviceRequestAttachments.displayName });
+  if (!row) return false;
+  await recordAuditWith(database, {
+    tenantSlug,
+    actorId: userId,
+    action: "service-request.delivery-unsigned",
+    targetType: "service-request",
+    targetId: `${requestId} · ${row.displayName}`,
+  });
+  return true;
+}
+
+/** Files sent unsigned on purpose, straight away (the clerk's choice). */
+export async function recordUnsignedDeliveryWith(
+  database: Database,
+  tenantSlug: string,
+  requestId: string,
+  names: string[],
+  userId: string,
+): Promise<void> {
+  for (const name of names) {
+    await recordAuditWith(database, {
+      tenantSlug,
+      actorId: userId,
+      action: "service-request.delivery-unsigned",
+      targetType: "service-request",
+      targetId: `${requestId} · ${name}`,
+    });
+  }
 }
 
 /**

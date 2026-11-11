@@ -78,7 +78,11 @@ import {
   confirmPhysicalSignatureWith,
   fileHasDigitalSignature,
   finishA3DeliveryWith,
+  holdForSignatureWith,
+  isHeldForSignatureWith,
   prepareA3DeliveryWith,
+  recordUnsignedDeliveryWith,
+  releaseUnsignedWith,
   SigningError,
   signDeliveredDocumentWith,
 } from "@/lib/signing.ts";
@@ -96,7 +100,12 @@ export type ActionState =
   // that the citizen's address does not take mail. The record was saved
   // either way, so this is not an error, and it is not a badge on the page
   // either: it belongs to the moment someone tried to write.
-  | { status: "success"; emailWarning?: string | null };
+  | {
+      status: "success";
+      emailWarning?: string | null;
+      /** The file stayed back, to be signed before the citizen sees it. */
+      held?: boolean;
+    };
 
 const NO_PERMISSION = "Você não tem permissão para alterar este pedido.";
 const GENERIC_ERROR =
@@ -551,8 +560,9 @@ export async function deliverDocumentAction(
       .filter((f): f is File => f instanceof File && f.size > 0);
     // Every file for the client is checked for a digital signature
     // (decision of 11/11/2026). One without it goes only after the clerk
-    // chose: sign it digitally right after, or confirm it is a document
-    // signed by hand and scanned.
+    // chose: sign it digitally here first (it stays held back, the citizen
+    // does not see it until signed), confirm it is a document signed by
+    // hand and scanned, or send it as it is.
     const choice = String(formData.get("assinatura") ?? "");
     const unsigned: boolean[] = await Promise.all(
       files.map(
@@ -563,7 +573,12 @@ export async function deliverDocumentAction(
           ),
       ),
     );
-    if (unsigned.some(Boolean) && choice !== "digital" && choice !== "fisica") {
+    if (
+      unsigned.some(Boolean) &&
+      choice !== "digital" &&
+      choice !== "fisica" &&
+      choice !== "sem"
+    ) {
       return {
         status: "error",
         message:
@@ -588,6 +603,30 @@ export async function deliverDocumentAction(
       return { status: "error", message: "Escolha um arquivo para anexar." };
     }
     await attachToRequest(tenant.slug, requestId, stored, "office");
+    const unsignedNames = stored
+      .filter((_, index) => unsigned[index])
+      .map((s) => s.storedName);
+    if (choice === "digital" && unsignedNames.length) {
+      await holdForSignatureWith(
+        db,
+        tenant.slug,
+        requestId,
+        unsignedNames,
+        session.user.id,
+      );
+      // Nothing reaches the citizen yet: the e-mail goes once it is signed.
+      revalidateAdmin();
+      return { status: "success", held: true };
+    }
+    if (choice === "sem" && unsignedNames.length) {
+      await recordUnsignedDeliveryWith(
+        db,
+        tenant.slug,
+        requestId,
+        files.filter((_, index) => unsigned[index]).map((f) => f.name),
+        session.user.id,
+      );
+    }
     if (choice === "fisica") {
       await confirmPhysicalSignatureWith(
         db,
@@ -1059,13 +1098,20 @@ export async function signDeliveredAction(
   const request = await findById(tenant.slug, requestId);
   if (!request) return { status: "error", message: "Pedido não encontrado." };
   const origin = await requestOrigin();
+  const attachmentId = String(formData.get("attachmentId") ?? "");
+  const wasHeld = await isHeldForSignatureWith(
+    db,
+    tenant.slug,
+    requestId,
+    attachmentId,
+  ).catch(() => false);
   try {
     await signDeliveredDocumentWith(
       db,
       tenant.slug,
       {
         requestId,
-        attachmentId: String(formData.get("attachmentId") ?? ""),
+        attachmentId,
         protocolNumber: request.protocolNumber,
         certificateId: String(formData.get("certificateId") ?? ""),
         password: String(formData.get("password") ?? ""),
@@ -1090,7 +1136,55 @@ export async function signDeliveredAction(
     };
   }
   revalidateAdmin();
-  return { status: "success" };
+  return {
+    status: "success",
+    emailWarning: wasHeld ? await announceDelivery(tenant, request) : null,
+  };
+}
+
+/** The e-mail that tells the citizen a document is ready to download. */
+async function announceDelivery(
+  tenant: Tenant,
+  request: { contact: string | null; protocolNumber: string },
+): Promise<string | null> {
+  return notifyCitizen({
+    tenant,
+    contact: request.contact,
+    protocolNumber: request.protocolNumber,
+    subject: "Documento disponível",
+    body: "A serventia disponibilizou um documento no seu pedido. Consulte o protocolo com a sua chave de acesso para baixá-lo.",
+  });
+}
+
+/**
+ * A held file sent as it is, with no digital signature: only when the clerk
+ * chooses it (decision of 11/11/2026). Recorded in the audit.
+ */
+export async function releaseUnsignedAction(
+  _previous: ActionState,
+  formData: FormData,
+): Promise<ActionState> {
+  const session = await authorize();
+  if (!session) return { status: "error", message: NO_PERMISSION };
+  const tenant = await getTenant();
+  const requestId = String(formData.get("requestId") ?? "");
+  const request = await findById(tenant.slug, requestId);
+  if (!request) return { status: "error", message: "Pedido não encontrado." };
+  const released = await releaseUnsignedWith(
+    db,
+    tenant.slug,
+    requestId,
+    String(formData.get("attachmentId") ?? ""),
+    session.user.id,
+  );
+  if (!released) {
+    return { status: "error", message: "Este documento já foi enviado." };
+  }
+  revalidateAdmin();
+  return {
+    status: "success",
+    emailWarning: await announceDelivery(tenant, request),
+  };
 }
 
 /** Gives a delivered document the name the citizen will see. */
@@ -1198,6 +1292,14 @@ export async function finishA3DeliveryAction(
   const session = await authorize();
   if (!session) return { status: "error", message: NO_PERMISSION };
   const tenant = await getTenant();
+  const requestId = String(formData.get("requestId") ?? "");
+  const attachmentId = String(formData.get("attachmentId") ?? "");
+  const wasHeld = await isHeldForSignatureWith(
+    db,
+    tenant.slug,
+    requestId,
+    attachmentId,
+  ).catch(() => false);
   try {
     const { id } = await finishA3DeliveryWith(
       db,
@@ -1209,12 +1311,16 @@ export async function finishA3DeliveryAction(
           String(formData.get("signature") ?? ""),
           "base64",
         ),
-        requestId: String(formData.get("requestId") ?? ""),
-        attachmentId: String(formData.get("attachmentId") ?? ""),
+        requestId,
+        attachmentId,
       },
       session.user.id,
     );
     revalidateAdmin();
+    if (wasHeld) {
+      const request = await findById(tenant.slug, requestId);
+      if (request) await announceDelivery(tenant, request);
+    }
     return { status: "signed", id };
   } catch (error) {
     return signingFailure(error, "pedidos.a3.finish");
