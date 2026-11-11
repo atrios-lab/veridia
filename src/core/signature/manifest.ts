@@ -43,6 +43,14 @@ export function buildSignatureManifest(
 ): RequerimentoDocument {
   const code = formatVerificationCode(input.code);
   const documentRows = [
+    // What leads back to the signed document itself (decision of
+    // 11/11/2026): the code and the page that verifies it and hands over
+    // the signed file while the office keeps it.
+    { label: "Código de verificação", value: code },
+    {
+      label: "Documento assinado",
+      value: input.verifyUrl.replace(/^https?:\/\//, ""),
+    },
     { label: "Título", value: input.title },
     { label: "Arquivo original", value: input.originalName },
     {
@@ -90,7 +98,7 @@ export function buildSignatureManifest(
         heading: "Validade e verificação",
         paragraphs: [
           `As assinaturas acima foram feitas com certificado digital ICP-Brasil, no padrão PAdES, e têm a validade jurídica da assinatura qualificada (${SIGNATURE_LEGAL_BASIS}).`,
-          `Para conferir, leia o QR Code no alto desta folha, acesse ${input.verifyUrl.replace(/^https?:\/\//, "")} e informe o código ${code}, ou envie o PDF assinado ao validador oficial do ITI (validar.iti.gov.br).`,
+          `Para conferir e abrir o documento assinado, leia o QR Code no alto desta folha ou acesse ${input.verifyUrl.replace(/^https?:\/\//, "")}: a página mostra as assinaturas e entrega o PDF assinado enquanto a serventia o guarda. Também é possível enviar o PDF ao validador oficial do ITI (validar.iti.gov.br).`,
           SIGNATURE_COMPLIANCE_NOTE,
         ],
       },

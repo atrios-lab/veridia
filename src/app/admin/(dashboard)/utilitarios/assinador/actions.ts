@@ -13,7 +13,9 @@ import { requestOrigin, verifyUrlFor } from "@/lib/signature/documents.ts";
 import { PdfNotSignableError } from "@/lib/signature/pades.ts";
 import {
   coSignDocumentWith,
+  findSignedDocumentWith,
   SigningError,
+  setSignedDocumentRemovedWith,
   signNewDocumentWith,
 } from "@/lib/signing.ts";
 import { getTenant } from "@/lib/tenant.ts";
@@ -36,35 +38,50 @@ function failure(error: unknown, where: string): SignState {
   };
 }
 
-export async function signDocument(
-  _previous: SignState,
+/** One PDF signed: the client signs a batch one file at a time. */
+export type SignOneResult =
+  | { status: "signed"; id: string; title: string }
+  | { status: "error"; message: string; stop: boolean };
+
+/**
+ * Signs one PDF and answers, without redirecting: the form sends each
+ * chosen file in its own request (a request carries up to ~4.5 MB on the
+ * host), with the certificate and password typed once.
+ */
+export async function signOneDocument(
   formData: FormData,
-): Promise<SignState> {
+): Promise<SignOneResult> {
   const session = await getSession();
   if (
     !session ||
     !can(session.user.role ?? "", "desk.access", session.user.permissions)
   ) {
-    return { status: "error", message: "Sem permissão." };
+    return { status: "error", message: "Sem permissão.", stop: true };
   }
   const file = formData.get("pdf");
   if (!(file instanceof File) || file.size === 0) {
-    return { status: "error", message: "Escolha o PDF a assinar." };
+    return {
+      status: "error",
+      message: "Escolha o PDF a assinar.",
+      stop: false,
+    };
   }
   const tenant = await getTenant();
   const origin = await requestOrigin();
   const withManifest = formData.get("manifest") === "on";
   const location = `${tenant.location.city}/${tenant.location.state}`;
-  let id: string;
+  const title =
+    String(formData.get("title") ?? "").trim() ||
+    file.name.replace(/\.pdf$/i, "");
   try {
-    ({ id } = await signNewDocumentWith(
+    const { id } = await signNewDocumentWith(
       db,
       tenant.slug,
       {
         certificateId: String(formData.get("certificateId") ?? ""),
         password: String(formData.get("password") ?? ""),
         pdf: Buffer.from(await file.arrayBuffer()),
-        title: String(formData.get("title") ?? ""),
+        title,
         originalName: file.name || "documento.pdf",
         verifyUrl: (code) => verifyUrlFor(tenant, origin, code),
         location,
@@ -74,7 +91,7 @@ export async function signDocument(
               return renderDocument(
                 buildSignatureManifest(tenant, {
                   code,
-                  title: String(formData.get("title") ?? "") || file.name,
+                  title,
                   originalName: file.name || "documento.pdf",
                   pageCount: original.pageCount,
                   originalSha256: original.sha256,
@@ -87,12 +104,59 @@ export async function signDocument(
           : undefined,
       },
       session.user.id,
-    ));
+    );
+    revalidatePath("/admin/utilitarios/assinador");
+    return { status: "signed", id, title };
   } catch (error) {
-    return failure(error, "assinador.sign");
+    const failed = failure(error, "assinador.sign");
+    return {
+      status: "error",
+      message: failed.status === "error" ? failed.message : "Erro.",
+      // A wrong password fails every file the same way: stop the batch.
+      stop: error instanceof CertificatePasswordError,
+    };
   }
+}
+
+/**
+ * Takes a signed document off the list, or puts it back. The
+ * Tabelião/Registrador or whoever signed it. Nothing is erased.
+ */
+export async function setDocumentRemoved(
+  _previous: SignState,
+  formData: FormData,
+): Promise<SignState> {
+  const session = await getSession();
+  const role = session?.user.role ?? "";
+  if (!session || !can(role, "desk.access", session.user.permissions)) {
+    return { status: "error", message: "Sem permissão." };
+  }
+  const tenant = await getTenant();
+  const id = String(formData.get("documentId") ?? "");
+  const view = await findSignedDocumentWith(db, tenant.slug, { id });
+  if (!view) return { status: "error", message: "Documento não encontrado." };
+  if (
+    view.createdBy !== session.user.id &&
+    !can(role, "user.manage", session.user.permissions)
+  ) {
+    return {
+      status: "error",
+      message:
+        "Só quem assinou ou o Tabelião/Registrador retira um documento da lista.",
+    };
+  }
+  const removed = formData.get("removed") === "1";
+  await setSignedDocumentRemovedWith(
+    db,
+    tenant.slug,
+    id,
+    removed,
+    session.user.id,
+  );
   revalidatePath("/admin/utilitarios/assinador");
-  redirect(`/admin/utilitarios/assinador/${id}?assinado=1`);
+  revalidatePath(`/admin/utilitarios/assinador/${id}`);
+  if (removed) redirect("/admin/utilitarios/assinador?retirado=1");
+  return { status: "idle" };
 }
 
 export async function coSignDocument(

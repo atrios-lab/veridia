@@ -201,3 +201,39 @@ test("um segundo assinante não invalida a primeira assinatura", async () => {
   // Both fields in the form.
   assert.match(second.toString("latin1"), /Assinatura 2/);
 });
+
+test("PDF já assinado em outro lugar recebe a assinatura visível (faixa e QR) sem invalidar a anterior", async () => {
+  const elsewhere = await signPdf(
+    await samplePdf(),
+    openCertificate(office, "outra-senha"),
+    {
+      signerName: "CARTORIO EXEMPLO LTDA",
+      reason: "Emitido em outro lugar",
+      location: "Natal/RN",
+      signingTime: new Date("2026-11-10T12:00:00Z"),
+    },
+  );
+  const ours = await signPdf(elsewhere, openCertificate(maria, "senha-teste"), {
+    signerName: "MARIA EXEMPLO DA SILVA",
+    reason: "Assinatura visível",
+    location: "Natal/RN",
+    signingTime: new Date("2026-11-10T12:05:00Z"),
+    visible: {
+      code: "AB12CD34EF56",
+      verifyUrl: "https://cartorio.exemplo/verificar/AB12CD34EF56",
+      signer: { name: "MARIA EXEMPLO DA SILVA", at: "10/11/2026, 09:05" },
+    },
+  });
+  assert.ok(ours.subarray(0, elsewhere.length).equals(elsewhere));
+  const [one, two] = signatures(ours);
+  assert.ok(check(one, publicKeyOf(office, "outra-senha")).digestMatches);
+  assert.ok(check(two, publicKeyOf(maria, "senha-teste")).digestMatches);
+  assert.ok(check(two, publicKeyOf(maria, "senha-teste")).signatureValid);
+  // The second widget has a size and an appearance on the first page.
+  const latin = ours.subarray(elsewhere.length).toString("latin1");
+  assert.match(latin, /\/AP <<\s*\/N \d+ 0 R\s*>>/);
+  assert.doesNotMatch(latin, /\/T \(Assinatura 2\)[\s\S]*\/Rect \[ 0 0 0 0 \]/);
+  // pdf-lib still opens it.
+  const { PDFDocument: Reader } = await import("pdf-lib");
+  assert.equal((await Reader.load(ours)).getPageCount(), 2);
+});

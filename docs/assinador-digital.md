@@ -9,7 +9,20 @@
 - Cada página recebe a faixa lateral e o QR Code de verificação.
 - O documento pode ser coassinado por outra pessoa, e a primeira assinatura continua válida.
 - O cidadão confere em `/verificar`, pelo código, pelo QR ou pelo próprio PDF, e baixa o manifesto de
-  assinaturas.
+  assinaturas. A página inicial tem o cartão **Validar documento**, e a página de verificação mostra a base
+  legal (`LEGAL_VALIDITY_NOTES` em `src/core/signature/policy.ts`).
+- Dá para assinar **vários PDFs de uma vez**: o certificado e a senha são digitados uma vez só, e cada PDF
+  vai num envio próprio (o servidor recebe no máximo cerca de 4,5 MB por envio). Uma senha errada para o lote.
+- **PDF que já vem assinado** (uma CNH, uma certidão de outra serventia): as páginas não podem receber a faixa
+  sem invalidar a assinatura anterior. Por isso, a faixa e o QR entram na primeira página como aparência da
+  nova assinatura (o widget, em atualização incremental), com o nome de quem assinou e a data. O manifesto,
+  nesse caso, fica só para baixar à parte.
+- A faixa respeita o recorte (CropBox) e o giro (/Rotate) da página. Ela fica sempre na borda direita, do
+  jeito que a página é lida.
+- **Excluir da lista** não apaga nada. O arquivo deixa de abrir no painel e na página pública, o registro
+  continua respondendo à verificação, e o documento pode voltar à lista em "Ver excluídos". Só quem assinou
+  ou o Tabelião/Registrador faz isso, e tudo fica na auditoria. A migração `0042` só acrescenta as colunas
+  `removed_at` e `removed_by`.
 
 ## Padrão técnico (fontes conferidas em 10/11/2026)
 

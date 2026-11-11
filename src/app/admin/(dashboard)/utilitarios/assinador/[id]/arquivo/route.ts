@@ -9,7 +9,7 @@ import { readStoredFile } from "@/lib/uploads.ts";
 export const runtime = "nodejs";
 
 export async function GET(
-  _request: Request,
+  request: Request,
   { params }: { params: Promise<{ id: string }> },
 ): Promise<Response> {
   const session = await getSession();
@@ -25,9 +25,16 @@ export async function GET(
     return new Response("Não encontrado", { status: 404 });
   const view = await findSignedDocumentWith(db, tenant.slug, { id });
   if (!view) return new Response("Não encontrado", { status: 404 });
-  if (!view.filePath) return new Response("Arquivo expirado", { status: 410 });
+  if (!view.filePath)
+    return new Response(
+      view.removedAt ? "Documento excluído da lista" : "Arquivo expirado",
+      { status: 410 },
+    );
+  // ?abrir=1: opens in the browser, to read or print again.
+  const inline = new URL(request.url).searchParams.get("abrir") === "1";
   return pdfResponse(
     await readStoredFile(view.filePath),
     downloadName(view.title, "assinado"),
+    inline,
   );
 }

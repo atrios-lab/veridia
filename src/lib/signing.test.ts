@@ -25,8 +25,10 @@ import {
   disableCertificateWith,
   findSignedDocumentWith,
   listCertificatesWith,
+  listSignedDocumentsWith,
   SigningError,
   setCertificateSignersWith,
+  setSignedDocumentRemovedWith,
   signDeliveredDocumentWith,
   signNewDocumentWith,
   unsignedDeliveries,
@@ -350,5 +352,73 @@ test("certificado desativado não assina mais", async () => {
       new Date("2026-11-11T12:00:00Z"),
     ),
     /não está autorizado/,
+  );
+});
+
+test("excluir da lista não apaga: o arquivo deixa de abrir, a verificação continua e dá para devolver", async () => {
+  const { titular } = await byLabel();
+  const at = new Date("2026-11-11T13:00:00Z");
+  const { id, code } = await sign(
+    titular.id,
+    await samplePdf(),
+    "senha-a1",
+    "titular",
+    at,
+  );
+  assert.ok(
+    (await listSignedDocumentsWith(db, TENANT, at)).some((d) => d.id === id),
+  );
+  assert.equal(
+    await setSignedDocumentRemovedWith(db, TENANT, id, true, "titular", at),
+    true,
+  );
+  const removed = await findSignedDocumentWith(db, TENANT, { code }, at);
+  assert.ok(removed?.removedAt);
+  assert.equal(removed?.filePath, null);
+  assert.equal(removed?.signatures.length, 1);
+  assert.ok(
+    !(await listSignedDocumentsWith(db, TENANT, at)).some((d) => d.id === id),
+  );
+  assert.ok(
+    (await listSignedDocumentsWith(db, TENANT, at, { removed: true })).some(
+      (d) => d.id === id,
+    ),
+  );
+  // Another office cannot touch it.
+  assert.equal(
+    await setSignedDocumentRemovedWith(db, "outro-cartorio", id, false, "x"),
+    false,
+  );
+  await setSignedDocumentRemovedWith(db, TENANT, id, false, "titular", at);
+  const back = await findSignedDocumentWith(db, TENANT, { id }, at);
+  assert.equal(back?.removedAt, null);
+  assert.ok(back?.filePath);
+});
+
+test("PDF que já vem assinado recebe a faixa como assinatura visível na primeira página", async () => {
+  const { titular } = await byLabel();
+  const at = new Date("2026-11-11T14:00:00Z");
+  const first = await sign(
+    titular.id,
+    await samplePdf(),
+    "senha-a1",
+    "titular",
+    at,
+  );
+  const signedOnce = await readStoredFile(
+    (await findSignedDocumentWith(db, TENANT, { id: first.id }, at))
+      ?.filePath ?? "",
+  );
+  // That signed PDF comes back as a new document (like a CNH, signed
+  // elsewhere): its pages are not touched, the new signature shows.
+  const again = await sign(titular.id, signedOnce, "senha-a1", "titular", at);
+  const file = await readStoredFile(
+    (await findSignedDocumentWith(db, TENANT, { id: again.id }, at))
+      ?.filePath ?? "",
+  );
+  assert.ok(file.subarray(0, signedOnce.length).equals(signedOnce));
+  assert.match(
+    file.subarray(signedOnce.length).toString("latin1"),
+    /\/AP <<\s*\/N \d+ 0 R\s*>>/,
   );
 });

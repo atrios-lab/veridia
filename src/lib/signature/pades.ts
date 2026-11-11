@@ -9,10 +9,12 @@ import {
   PDFNumber,
   type PDFObject,
   PDFRef,
+  PDFStream,
   PDFString,
 } from "pdf-lib";
 import type { OpenedCertificate } from "./certificate.ts";
 import { buildSignedData } from "./cms.ts";
+import { bandAppearancePage, bandRect } from "./stamp.ts";
 
 /**
  * A PAdES signature added to a PDF as an incremental update (ISO 32000-1,
@@ -47,6 +49,17 @@ export interface PlaceholderInput {
   reason: string;
   location: string;
   signingTime: Date;
+  /**
+   * Shows this signature on the first page (band and QR) as the widget's
+   * appearance: for a PDF already signed elsewhere, whose pages cannot be
+   * drawn on without breaking that signature. Absent, the widget is
+   * invisible (the band was drawn on the pages before signing).
+   */
+  visible?: {
+    code: string;
+    verifyUrl: string;
+    signer: { name: string; at: string };
+  };
 }
 
 const text = (value: string) => PDFHexString.fromText(value);
@@ -68,6 +81,8 @@ export async function addSignaturePlaceholder(
     throw new PdfNotSignableError("PDF sem catálogo de objetos.");
   }
   const page = doc.getPage(0);
+  // Everything created from here on is new and goes into the update.
+  const firstNew = context.largestObjectNumber + 1;
   const changed = new Map<number, { ref: PDFRef; body: string }>();
   const put = (ref: PDFRef, body: string) =>
     changed.set(ref.objectNumber, { ref, body });
@@ -100,6 +115,27 @@ export async function addSignaturePlaceholder(
       : undefined;
   const count = (existingFields?.size() ?? 0) + 1;
   const widgetRef = context.nextRef();
+  let rect = [0, 0, 0, 0];
+  let appearanceRef: PDFRef | undefined;
+  if (input.visible) {
+    const {
+      doc: drawn,
+      page: blank,
+      view,
+    } = await bandAppearancePage(page, input.visible);
+    await drawn.flush();
+    const embedded = await doc.embedPage(blank);
+    await embedded.embed();
+    rect = bandRect(view);
+    appearanceRef = context.register(
+      context.stream("q /Band Do Q", {
+        Type: "XObject",
+        Subtype: "Form",
+        BBox: rect,
+        Resources: { XObject: { Band: embedded.ref } },
+      }),
+    );
+  }
   const widget = context.obj({
     Type: "Annot",
     Subtype: "Widget",
@@ -107,10 +143,17 @@ export async function addSignaturePlaceholder(
     T: PDFString.of(`Assinatura ${count}`),
     V: sigRef,
     F: 132,
-    Rect: [0, 0, 0, 0],
+    Rect: rect,
     P: page.ref,
+    ...(appearanceRef ? { AP: { N: appearanceRef } } : {}),
   });
   put(widgetRef, widget.toString());
+  // The appearance's own objects: the band as a form, its fonts and QR.
+  for (const [ref, object] of context.enumerateIndirectObjects()) {
+    if (ref.objectNumber < firstNew || changed.has(ref.objectNumber)) continue;
+    if (object instanceof PDFStream) object.updateDict();
+    put(ref, object.toString());
+  }
 
   // 3. The page lists the widget among its annotations.
   const annotsRaw = page.node.get(PDFName.of("Annots"));

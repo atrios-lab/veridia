@@ -27,6 +27,31 @@ export const SIGNATURE_LEGAL_BASIS =
 export const SIGNATURE_COMPLIANCE_NOTE =
   'Assinado na Plataforma Eletrônica Oficial da Serventia, nos termos do art. 208, II, "b", do Código Nacional de Normas do CNJ (Provimento CNJ nº 180/2024). Dados tratados conforme a LGPD (Lei nº 13.709/2018).';
 
+/**
+ * Why a document signed here holds, in the citizen's words, for the
+ * verification page (decision of 11/11/2026). Each line names its source;
+ * the platform's own authorization is the same text as the site's footer.
+ * Art. 38 of Lei 11.977/2009 is cited as amended by Lei 14.382/2022.
+ */
+export const LEGAL_VALIDITY_NOTES: { title: string; text: string }[] = [
+  {
+    title: "Plataforma oficial da serventia",
+    text: 'Este site é a Plataforma Eletrônica Oficial da Serventia, nos termos do art. 208, II, "b", do Código Nacional de Normas do CNJ (Provimento CNJ nº 180/2024).',
+  },
+  {
+    title: "Certificado ICP-Brasil",
+    text: "Os documentos são assinados com certificado digital da ICP-Brasil. O documento assim assinado presume-se verdadeiro em relação a quem o assinou (MP nº 2.200-2/2001, art. 10, § 1º).",
+  },
+  {
+    title: "Assinatura qualificada",
+    text: "É a assinatura eletrônica qualificada, o nível mais alto previsto na Lei nº 14.063/2020 (art. 4º, III), acima da assinatura avançada.",
+  },
+  {
+    title: "Documentos dos serviços de registro",
+    text: "A Lei nº 11.977/2009, art. 38 (redação da Lei nº 14.382/2022), admite os documentos eletrônicos expedidos pelos serviços de registros públicos, assinados eletronicamente, nos requisitos da Corregedoria Nacional de Justiça.",
+  },
+];
+
 /** "AB12-CD34-EF56": what the QR and the verification page carry. */
 export function formatVerificationCode(raw: string): string {
   const clean = raw.replace(/[^0-9A-Z]/gi, "").toUpperCase();
