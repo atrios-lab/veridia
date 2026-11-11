@@ -99,7 +99,7 @@ function ModeChoice({
   hasA1,
   prefix,
 }: {
-  mode: Mode;
+  mode: Mode | null;
   onChange: (mode: Mode) => void;
   hasA1: boolean;
   prefix: string;
@@ -214,7 +214,10 @@ export function SignForm({
   certificates: CertificateOption[];
 }) {
   const router = useRouter();
-  const [mode, setMode] = useState<Mode>(certificates.length ? "a1" : "a3");
+  // Nothing chosen at first (decision of 11/11/2026): the certificate
+  // fields appear only after the person picks A1 or A3, so the form starts
+  // with the files and the choice, nothing more.
+  const [mode, setMode] = useState<Mode | null>(null);
   const local = useLocalSigner(mode === "a3");
   const [files, setFiles] = useState<Chosen[]>([]);
   const [error, setError] = useState("");
@@ -259,6 +262,10 @@ export function SignForm({
     const queue = files.filter((f) => f.state.kind === "waiting");
     if (!queue.length) {
       setError("Escolha o PDF a assinar.");
+      return;
+    }
+    if (!mode) {
+      setError("Escolha como assinar: certificado A1 ou A3.");
       return;
     }
     const token = local.certificate;
@@ -397,11 +404,10 @@ export function SignForm({
           hasA1={certificates.length > 0}
           prefix="sign"
         />
-        {mode === "a1" ? (
+        {mode === "a1" && (
           <CertificateAndPassword certificates={certificates} prefix="sign" />
-        ) : (
-          <LocalSignerPicker signer={local} prefix="sign" />
         )}
+        {mode === "a3" && <LocalSignerPicker signer={local} prefix="sign" />}
       </div>
       <label className="mt-3.5 flex items-center gap-2 text-[13px] text-admin-text">
         <input
@@ -490,7 +496,10 @@ export function CoSignForm({
 }) {
   const router = useRouter();
   const [state, action, pending] = useActionState(coSignDocument, IDLE);
-  const [mode, setMode] = useState<Mode>(certificates.length ? "a1" : "a3");
+  // Nothing chosen at first (decision of 11/11/2026): the certificate
+  // fields appear only after the person picks A1 or A3, so the form starts
+  // with the files and the choice, nothing more.
+  const [mode, setMode] = useState<Mode | null>(null);
   const local = useLocalSigner(mode === "a3");
   const [tokenError, setTokenError] = useState("");
   const [tokenBusy, setTokenBusy] = useState(false);
@@ -501,6 +510,10 @@ export function CoSignForm({
       return;
     }
     event.preventDefault();
+    if (!mode) {
+      setTokenError("Escolha como assinar: certificado A1 ou A3.");
+      return;
+    }
     const token = local.certificate;
     if (!token) {
       setTokenError("Escolha o certificado A3.");
@@ -546,11 +559,10 @@ export function CoSignForm({
           hasA1={certificates.length > 0}
           prefix="cosign"
         />
-        {mode === "a1" ? (
+        {mode === "a1" && (
           <CertificateAndPassword certificates={certificates} prefix="cosign" />
-        ) : (
-          <LocalSignerPicker signer={local} prefix="cosign" />
         )}
+        {mode === "a3" && <LocalSignerPicker signer={local} prefix="cosign" />}
       </div>
       {message && (
         <p
