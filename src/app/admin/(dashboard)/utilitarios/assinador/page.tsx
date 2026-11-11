@@ -52,37 +52,27 @@ export default async function SignerPage({
             respondendo à verificação; ele pode voltar em "Excluídos".
           </p>
         )}
-        {certificates.length > 0 ? (
-          <SignForm
-            certificates={certificates.map(({ id, label, holderName }) => ({
-              id,
-              label,
-              holderName,
-            }))}
-          />
-        ) : (
-          <section className="rounded-[14px] border border-admin-border bg-admin-card px-5 py-4 text-[13px] text-admin-text">
-            <h2 className="font-serif text-[17px] font-semibold text-admin-primary">
-              Assinar um documento
-            </h2>
-            <p className="mt-1.5">
-              Você ainda não tem certificado liberado para assinar.{" "}
-              {can(role, "user.manage", granted) ? (
-                <>
-                  Cadastre um certificado A1 e marque quem pode assinar em{" "}
-                  <Link
-                    href="/admin/configuracoes/certificados"
-                    className="font-semibold text-admin-primary underline"
-                  >
-                    Configurações › Certificados
-                  </Link>
-                  .
-                </>
-              ) : (
-                "Peça ao administrador da serventia para liberar um certificado A1 para você."
-              )}
-            </p>
-          </section>
+        {/* A1 from the platform or A3 from a token on this computer: the
+            form offers both, A3 even with no A1 cadastrado. */}
+        <SignForm
+          certificates={certificates.map(({ id, label, holderName }) => ({
+            id,
+            label,
+            holderName,
+          }))}
+        />
+        {certificates.length === 0 && can(role, "user.manage", granted) && (
+          <p className="-mt-2 text-[12px] text-admin-muted">
+            Para assinar com certificado A1, cadastre o arquivo e marque quem
+            pode assinar em{" "}
+            <Link
+              href="/admin/configuracoes/certificados"
+              className="font-semibold text-admin-primary underline"
+            >
+              Configurações › Certificados
+            </Link>
+            .
+          </p>
         )}
 
         <section className="rounded-[14px] border border-admin-border bg-admin-card px-5 py-4">

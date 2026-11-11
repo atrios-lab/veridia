@@ -171,7 +171,7 @@ export default async function SignedDocumentAdminPage({
           </p>
         </section>
 
-        {view.filePath && certificates.length > 0 && (
+        {view.filePath && (
           <CoSignForm
             documentId={view.id}
             certificates={certificates.map(

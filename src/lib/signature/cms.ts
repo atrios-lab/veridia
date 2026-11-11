@@ -1,5 +1,10 @@
 import "server-only";
-import { createHash, sign as rsaSign } from "node:crypto";
+import {
+  createHash,
+  sign as rsaSign,
+  verify as rsaVerify,
+  X509Certificate,
+} from "node:crypto";
 import forge from "node-forge";
 import { ICP_POLICY } from "@/core/signature/policy.ts";
 import type { OpenedCertificate } from "./certificate.ts";
@@ -123,6 +128,33 @@ function signedAttributes(contentDigest: Buffer, holderDer: Buffer): Buffer[] {
 }
 
 /**
+ * The bytes the holder's key signs (SHA-256 with RSA): the signed
+ * attributes as a SET OF with its universal tag. Same input, same bytes,
+ * so a key kept elsewhere (an A3 token) can sign them and the platform
+ * rebuild them to assemble the SignedData.
+ */
+export function attributesToSign(
+  contentDigest: Buffer,
+  holderDer: Buffer,
+): Buffer {
+  return setOf(0x31, signedAttributes(contentDigest, holderDer));
+}
+
+/** True when `signature` is the holder's key over `toBeSigned`. */
+export function signatureMatches(
+  toBeSigned: Buffer,
+  signature: Buffer,
+  holderDer: Buffer,
+): boolean {
+  try {
+    const key = new X509Certificate(holderDer).publicKey;
+    return rsaVerify("sha256", toBeSigned, key, signature);
+  } catch {
+    return false;
+  }
+}
+
+/**
  * The detached SignedData over `contentDigest` (the SHA-256 of the PDF's
  * byte ranges), DER.
  */
@@ -130,14 +162,28 @@ export function buildSignedData(
   contentDigest: Buffer,
   certificate: OpenedCertificate,
 ): Buffer {
-  const attributes = signedAttributes(contentDigest, certificate.holderDer);
-  // Signed as a SET OF with its universal tag; carried as [0] IMPLICIT.
   const signature = rsaSign(
     "sha256",
-    setOf(0x31, attributes),
+    attributesToSign(contentDigest, certificate.holderDer),
     forge.pki.privateKeyToPem(certificate.privateKey),
   );
-  const { issuer, serial } = issuerAndSerial(certificate.holderDer);
+  return assembleSignedData(
+    contentDigest,
+    certificate.holderDer,
+    certificate.chainDer,
+    signature,
+  );
+}
+
+/** The SignedData with a signature made elsewhere (A3) or here (A1). */
+export function assembleSignedData(
+  contentDigest: Buffer,
+  holderDer: Buffer,
+  chainDer: Buffer[],
+  signature: Buffer,
+): Buffer {
+  const attributes = signedAttributes(contentDigest, holderDer);
+  const { issuer, serial } = issuerAndSerial(holderDer);
   const signerInfo = seq(
     int1,
     seq(issuer, serial),
@@ -150,7 +196,7 @@ export function buildSignedData(
     int1,
     set(algorithm(OID.sha256)),
     seq(oid(OID.data)),
-    setOf(0xa0, certificate.chainDer),
+    setOf(0xa0, chainDer),
     set(signerInfo),
   );
   return seq(oid(OID.signedData), contextConstructed(0, signedData));

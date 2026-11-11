@@ -27,12 +27,32 @@ import {
 import { recordAuditWith } from "./audit.ts";
 import {
   type CertificateInfo,
+  type ExternalCertificate,
+  externalCertificate,
   type OpenedCertificate,
   openCertificate,
 } from "./signature/certificate.ts";
-import { hasSignature, signPdf } from "./signature/pades.ts";
+import {
+  assembleSignedData,
+  attributesToSign,
+  signatureMatches,
+} from "./signature/cms.ts";
+import {
+  addSignaturePlaceholder,
+  embedSignature,
+  hasSignature,
+  preparedDigest,
+  prepareSignature,
+  signPdf,
+  signPlaceholder,
+} from "./signature/pades.ts";
 import { stampForSignature } from "./signature/stamp.ts";
-import { openSealedCertificate, sealCertificate } from "./signature/vault.ts";
+import {
+  openSealedCertificate,
+  openToken,
+  sealCertificate,
+  sealToken,
+} from "./signature/vault.ts";
 import {
   deleteStoredFile,
   readStoredFile,
@@ -399,14 +419,7 @@ export async function signNewDocumentWith(
   userId: string,
   now = new Date(),
 ): Promise<{ id: string; code: string }> {
-  if (input.pdf.length > MAX_PDF_BYTES) {
-    throw new SigningError(
-      "O PDF passa de 4 MB. Reduza o arquivo e tente de novo.",
-    );
-  }
-  if (input.pdf.subarray(0, 5).toString("latin1") !== "%PDF-") {
-    throw new SigningError("O arquivo enviado não é um PDF.");
-  }
+  checkPdf(input.pdf);
   const { opened, id: certificateId } = await openForSigning(
     database,
     tenantSlug,
@@ -415,11 +428,53 @@ export async function signNewDocumentWith(
     input.password,
     now,
   );
+  const placed = await placeSignature(input, opened.info, now);
+  const signed = signPlaceholder(placed.withPlaceholder, opened);
+  return saveNewDocument(database, tenantSlug, {
+    input: { ...input, originalSha256: sha256(input.pdf) },
+    placed,
+    signed,
+    certificateId,
+    info: opened.info,
+    userId,
+    now,
+  });
+}
+
+function checkPdf(pdf: Buffer): void {
+  if (pdf.length > MAX_PDF_BYTES) {
+    throw new SigningError(
+      "O PDF passa de 4 MB. Reduza o arquivo e tente de novo.",
+    );
+  }
+  if (pdf.subarray(0, 5).toString("latin1") !== "%PDF-") {
+    throw new SigningError("O arquivo enviado não é um PDF.");
+  }
+}
+
+interface Placed {
+  code: string;
+  pageCount: number;
+  withPlaceholder: Buffer;
+}
+
+/**
+ * The band, the QR and the manifest on every page (unless the PDF already
+ * carries a signature, which a stamp would break), then the empty
+ * signature field: everything but the signature itself, the same for a
+ * key kept here (A1) and one kept in a token (A3).
+ */
+async function placeSignature(
+  input: Omit<SignInput, "certificateId" | "password">,
+  info: CertificateInfo,
+  now: Date,
+): Promise<Placed> {
   const code = newVerificationCode();
   const verifyUrl = input.verifyUrl(code);
   let toSign = input.pdf;
   let pageCount = 0;
-  if (hasSignature(input.pdf)) {
+  const signedElsewhere = hasSignature(input.pdf);
+  if (signedElsewhere) {
     pageCount = (await PDFDocument.load(input.pdf)).getPageCount();
   } else {
     const original = {
@@ -429,18 +484,17 @@ export async function signNewDocumentWith(
     const stamped = await stampForSignature(input.pdf, {
       code,
       verifyUrl,
-      signer: signerOf(opened.info.holderName, now),
+      signer: signerOf(info.holderName, now),
       office: input.officeName,
       manifest: input.manifest
-        ? await input.manifest(code, opened.info, now, original)
+        ? await input.manifest(code, info, now, original)
         : undefined,
     });
     toSign = stamped.pdf;
     pageCount = stamped.pageCount;
   }
-  const signedElsewhere = hasSignature(input.pdf);
-  const signed = await signPdf(toSign, opened, {
-    signerName: opened.info.holderName,
+  const withPlaceholder = await addSignaturePlaceholder(toSign, {
+    signerName: info.holderName,
     reason: `Assinatura digital ICP-Brasil · verificação ${code}`,
     location: input.location,
     signingTime: now,
@@ -451,37 +505,55 @@ export async function signNewDocumentWith(
       ? {
           code,
           verifyUrl,
-          signer: signerOf(opened.info.holderName, now),
+          signer: signerOf(info.holderName, now),
           office: input.officeName,
         }
       : undefined,
   });
-  const path = await storeSignedPdf(tenantSlug, signed);
+  return { code, pageCount, withPlaceholder };
+}
 
+async function saveNewDocument(
+  database: Database,
+  tenantSlug: string,
+  args: {
+    input: Pick<SignInput, "title" | "originalName"> & {
+      originalSha256: string;
+    };
+    placed: Pick<Placed, "code" | "pageCount">;
+    signed: Buffer;
+    certificateId: string | null;
+    info: CertificateInfo;
+    userId: string;
+    now: Date;
+  },
+): Promise<{ id: string; code: string }> {
+  const { input, placed, signed, now } = args;
+  const path = await storeSignedPdf(tenantSlug, signed);
   const [document] = await database
     .insert(signedDocuments)
     .values({
       tenantSlug,
-      code,
+      code: placed.code,
       title: input.title.trim() || input.originalName,
       originalName: input.originalName,
-      originalSha256: sha256(input.pdf),
-      pageCount,
+      originalSha256: input.originalSha256,
+      pageCount: placed.pageCount,
       filePath: path,
       fileExpiresAt: sixMonthsFrom(now),
-      createdBy: userId,
+      createdBy: args.userId,
       createdAt: now,
     })
     .returning({ id: signedDocuments.id });
   await recordSignature(database, tenantSlug, {
     documentId: document.id,
-    certificateId,
-    info: opened.info,
+    certificateId: args.certificateId,
+    info: args.info,
     resultSha256: sha256(signed),
-    userId,
+    userId: args.userId,
     at: now,
   });
-  return { id: document.id, code };
+  return { id: document.id, code: placed.code };
 }
 
 async function recordSignature(
@@ -489,7 +561,8 @@ async function recordSignature(
   tenantSlug: string,
   input: {
     documentId: string;
-    certificateId: string;
+    /** None for an A3: its key never came to the platform. */
+    certificateId: string | null;
     info: CertificateInfo;
     resultSha256: string;
     userId: string;
@@ -569,6 +642,257 @@ export async function coSignDocumentWith(
     userId,
     at: now,
   });
+}
+
+/* ------------------------------------------- A3: the key stays in the token */
+
+/**
+ * An A3 signature in two steps (decision of 11/11/2026). The platform
+ * prepares the PDF (band, QR, empty field), keeps it aside and hands the
+ * browser the bytes to sign; the assinador local on the office's computer
+ * signs them with the token (the driver asks for the PIN); the platform
+ * checks the signature against the certificate and finishes the PDF. The
+ * private key never leaves the token, and nothing about it is stored.
+ */
+export const A3_PREPARED_MINUTES = 15;
+
+interface A3Token {
+  v: 1;
+  tenant: string;
+  user: string;
+  /** The prepared PDF, kept aside until the signature comes back. */
+  path: string;
+  /** SHA-256 of the holder's certificate the bytes were prepared for. */
+  print: string;
+  exp: number;
+  mode: "novo" | "coassinatura";
+  code: string;
+  pageCount: number;
+  title: string;
+  originalName: string;
+  originalSha256: string;
+  documentId?: string;
+  /** The stored file a co-signature was prepared over. */
+  basePath?: string;
+}
+
+export interface A3Prepared {
+  token: string;
+  /** What the token signs: SHA-256 with RSA (PKCS#1 v1.5). */
+  toBeSigned: Buffer;
+}
+
+export interface A3CertificateInput {
+  holderDer: Buffer;
+  chainDer: Buffer[];
+}
+
+function a3Certificate(
+  input: A3CertificateInput,
+  now: Date,
+): ExternalCertificate {
+  const certificate = externalCertificate(input.holderDer, input.chainDer);
+  if (!certificate.info.holderDocument) {
+    throw new SigningError(
+      "Este certificado não traz CPF ou CNPJ: use um certificado ICP-Brasil.",
+    );
+  }
+  if (certificate.info.notAfter <= now) {
+    throw new SigningError("Este certificado venceu.");
+  }
+  if (certificate.info.notBefore > now) {
+    throw new SigningError("Este certificado ainda não está valendo.");
+  }
+  return certificate;
+}
+
+async function prepareA3(
+  tenantSlug: string,
+  userId: string,
+  certificate: ExternalCertificate,
+  withPlaceholder: Buffer,
+  record: Omit<A3Token, "v" | "tenant" | "user" | "path" | "print" | "exp">,
+  now: Date,
+): Promise<A3Prepared> {
+  const { pdf, digest } = prepareSignature(withPlaceholder);
+  const path = await storeSignedPdf(tenantSlug, pdf);
+  const token: A3Token = {
+    v: 1,
+    tenant: tenantSlug,
+    user: userId,
+    path,
+    print: certificate.info.fingerprint,
+    exp: now.getTime() + A3_PREPARED_MINUTES * 60_000,
+    ...record,
+  };
+  return {
+    token: sealToken(token),
+    toBeSigned: attributesToSign(digest, certificate.holderDer),
+  };
+}
+
+/** Step one for a new document: everything but the token's signature. */
+export async function prepareA3SignWith(
+  tenantSlug: string,
+  input: Omit<SignInput, "certificateId" | "password"> & A3CertificateInput,
+  userId: string,
+  now = new Date(),
+): Promise<A3Prepared> {
+  checkPdf(input.pdf);
+  const certificate = a3Certificate(input, now);
+  const placed = await placeSignature(input, certificate.info, now);
+  return prepareA3(
+    tenantSlug,
+    userId,
+    certificate,
+    placed.withPlaceholder,
+    {
+      mode: "novo",
+      code: placed.code,
+      pageCount: placed.pageCount,
+      title: input.title.trim() || input.originalName,
+      originalName: input.originalName,
+      originalSha256: sha256(input.pdf),
+    },
+    now,
+  );
+}
+
+/** Step one for one more signature on a document signed here. */
+export async function prepareA3CoSignWith(
+  database: Database,
+  tenantSlug: string,
+  documentId: string,
+  input: A3CertificateInput & { location: string },
+  userId: string,
+  now = new Date(),
+): Promise<A3Prepared> {
+  const document = await findSignedDocumentWith(database, tenantSlug, {
+    id: documentId,
+  });
+  if (!document) throw new SigningError("Documento não encontrado.");
+  if (!document.filePath) {
+    throw new SigningError(
+      "O arquivo deste documento já saiu do sistema (prazo de 6 meses).",
+    );
+  }
+  const certificate = a3Certificate(input, now);
+  const current = await readStoredFile(document.filePath);
+  const withPlaceholder = await addSignaturePlaceholder(current, {
+    signerName: certificate.info.holderName,
+    reason: `Assinatura digital ICP-Brasil · verificação ${document.code}`,
+    location: input.location,
+    signingTime: now,
+  });
+  return prepareA3(
+    tenantSlug,
+    userId,
+    certificate,
+    withPlaceholder,
+    {
+      mode: "coassinatura",
+      code: document.code,
+      pageCount: document.pageCount,
+      title: document.title,
+      originalName: document.originalName,
+      originalSha256: document.originalSha256,
+      documentId: document.id,
+      basePath: document.filePath,
+    },
+    now,
+  );
+}
+
+/**
+ * Step two: the token's signature comes back. Checked against the
+ * certificate before anything is saved; the prepared file is used once.
+ */
+export async function finishA3SignWith(
+  database: Database,
+  tenantSlug: string,
+  input: A3CertificateInput & { token: string; signature: Buffer },
+  userId: string,
+  now = new Date(),
+): Promise<{ id: string; code: string }> {
+  const token = openToken<A3Token>(input.token);
+  if (
+    !token ||
+    token.v !== 1 ||
+    token.tenant !== tenantSlug ||
+    token.user !== userId
+  ) {
+    throw new SigningError("Assinatura não reconhecida. Tente de novo.");
+  }
+  if (token.exp <= now.getTime()) {
+    throw new SigningError(
+      "A preparação venceu. Assine de novo (vale por 15 minutos).",
+    );
+  }
+  const certificate = a3Certificate(input, now);
+  if (certificate.info.fingerprint !== token.print) {
+    throw new SigningError(
+      "O certificado mudou no meio da assinatura. Tente de novo.",
+    );
+  }
+  let prepared: Buffer;
+  try {
+    prepared = await readStoredFile(token.path);
+  } catch {
+    throw new SigningError("Esta assinatura já foi concluída ou cancelada.");
+  }
+  const digest = preparedDigest(prepared);
+  const toBeSigned = attributesToSign(digest, certificate.holderDer);
+  if (!signatureMatches(toBeSigned, input.signature, certificate.holderDer)) {
+    throw new SigningError(
+      "A assinatura do token não confere com o certificado. Nada foi salvo.",
+    );
+  }
+  const signed = embedSignature(
+    prepared,
+    assembleSignedData(
+      digest,
+      certificate.holderDer,
+      certificate.chainDer,
+      input.signature,
+    ),
+  );
+  // The prepared copy is spent: a second "finish" finds nothing.
+  await deleteStoredFile(token.path);
+
+  if (token.mode === "novo") {
+    return saveNewDocument(database, tenantSlug, {
+      input: token,
+      placed: token,
+      signed,
+      certificateId: null,
+      info: certificate.info,
+      userId,
+      now,
+    });
+  }
+  const document = await findSignedDocumentWith(database, tenantSlug, {
+    id: token.documentId ?? "",
+  });
+  if (!document || document.filePath !== token.basePath) {
+    throw new SigningError(
+      "O documento mudou enquanto você assinava. Assine de novo.",
+    );
+  }
+  const path = await storeSignedPdf(tenantSlug, signed);
+  await database
+    .update(signedDocuments)
+    .set({ filePath: path, fileExpiresAt: sixMonthsFrom(now) })
+    .where(eq(signedDocuments.id, document.id));
+  if (token.basePath) await deleteStoredFile(token.basePath);
+  await recordSignature(database, tenantSlug, {
+    documentId: document.id,
+    certificateId: null,
+    info: certificate.info,
+    resultSha256: sha256(signed),
+    userId,
+    at: now,
+  });
+  return { id: document.id, code: document.code };
 }
 
 export interface SignedDocumentView {

@@ -266,13 +266,14 @@ export function signedRanges(pdf: Buffer): {
 }
 
 /**
- * Signs the placeholder: writes the ByteRange (same width as the
- * placeholder), hashes what it covers, and puts the CMS in /Contents.
+ * Writes the ByteRange over the placeholder (same width) and answers the
+ * SHA-256 of what it covers: the digest a signature commits to. The PDF
+ * waits like this, /Contents still zeros, until a CMS comes back.
  */
-export function signPlaceholder(
-  withPlaceholder: Buffer,
-  certificate: OpenedCertificate,
-): Buffer {
+export function prepareSignature(withPlaceholder: Buffer): {
+  pdf: Buffer;
+  digest: Buffer;
+} {
   const pdf = Buffer.from(withPlaceholder);
   const latin = pdf.toString("latin1");
   const at = latin.lastIndexOf(BYTE_RANGE_PLACEHOLDER);
@@ -284,19 +285,57 @@ export function signPlaceholder(
     throw new PdfNotSignableError("PDF grande demais para assinar.");
   }
   pdf.write(written.padEnd(BYTE_RANGE_PLACEHOLDER.length, " "), at, "latin1");
+  return { pdf, digest: preparedDigest(pdf) };
+}
 
-  const covered = Buffer.concat([
-    pdf.subarray(0, byteRange[1]),
-    pdf.subarray(byteRange[2]),
-  ]);
-  const digest = createHash("sha256").update(covered).digest();
-  const cms = buildSignedData(digest, certificate);
+/** The ByteRange a prepared PDF carries, read back from the file. */
+function writtenByteRange(prepared: Buffer): [number, number, number, number] {
+  const latin = prepared.toString("latin1");
+  const match = latin
+    .slice(latin.lastIndexOf("/ByteRange ["))
+    .match(/^\/ByteRange \[(\d+) (\d+) (\d+) (\d+)\]/);
+  if (!match) {
+    throw new PdfNotSignableError("Campo de assinatura não encontrado.");
+  }
+  const [a, b, c, d] = match.slice(1).map(Number);
+  // The ranges must cover the whole file but the /Contents value.
+  if (a !== 0 || c + d !== prepared.length || b >= c) {
+    throw new PdfNotSignableError("Campo de assinatura não encontrado.");
+  }
+  return [a, b, c, d];
+}
+
+/** The digest of a prepared PDF, read again from its ByteRange. */
+export function preparedDigest(prepared: Buffer): Buffer {
+  const [, end, start] = writtenByteRange(prepared);
+  return createHash("sha256")
+    .update(prepared.subarray(0, end))
+    .update(prepared.subarray(start))
+    .digest();
+}
+
+/** Puts the CMS in the prepared PDF's /Contents. */
+export function embedSignature(prepared: Buffer, cms: Buffer): Buffer {
+  const pdf = Buffer.from(prepared);
+  const [, contentsStart] = writtenByteRange(pdf);
   const hex = cms.toString("hex");
   if (hex.length > CONTENTS_BYTES * 2) {
     throw new PdfNotSignableError("Cadeia do certificado longa demais.");
   }
-  pdf.write(hex.padEnd(CONTENTS_BYTES * 2, "0"), byteRange[1] + 1, "latin1");
+  pdf.write(hex.padEnd(CONTENTS_BYTES * 2, "0"), contentsStart + 1, "latin1");
   return pdf;
+}
+
+/**
+ * Signs the placeholder: writes the ByteRange (same width as the
+ * placeholder), hashes what it covers, and puts the CMS in /Contents.
+ */
+export function signPlaceholder(
+  withPlaceholder: Buffer,
+  certificate: OpenedCertificate,
+): Buffer {
+  const { pdf, digest } = prepareSignature(withPlaceholder);
+  return embedSignature(pdf, buildSignedData(digest, certificate));
 }
 
 /** Placeholder and signature in one step. */

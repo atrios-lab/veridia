@@ -15,7 +15,10 @@ import {
   attachToRequestWith,
   createServiceRequestWith,
 } from "./service-request.ts";
-import { CertificatePasswordError } from "./signature/certificate.ts";
+import {
+  CertificatePasswordError,
+  openCertificate,
+} from "./signature/certificate.ts";
 import { hasSignature } from "./signature/pades.ts";
 import { createTestPki } from "./signature/test-pki.ts";
 import {
@@ -24,8 +27,11 @@ import {
   coSignDocumentWith,
   disableCertificateWith,
   findSignedDocumentWith,
+  finishA3SignWith,
   listCertificatesWith,
   listSignedDocumentsWith,
+  prepareA3CoSignWith,
+  prepareA3SignWith,
   SigningError,
   setCertificateSignersWith,
   setSignedDocumentRemovedWith,
@@ -423,5 +429,165 @@ test("PDF que já vem assinado recebe a faixa como assinatura visível na primei
   assert.match(
     file.subarray(signedOnce.length).toString("latin1"),
     /\/AP <<\s*\/N \d+ 0 R\s*>>/,
+  );
+});
+
+test("A3: a plataforma prepara, o token assina fora, e só a assinatura certa é salva", async () => {
+  const { sign: rsaSign } = await import("node:crypto");
+  const forge = (await import("node-forge")).default;
+  // The token: the key never goes to the platform, only the certificate.
+  const token = openCertificate(
+    pki.issue("JOAO FICTICIO DE SOUZA:11144477735", "pin", "31"),
+    "pin",
+  );
+  const other = openCertificate(
+    pki.issue("ANA MODELO PEREIRA:39053344705", "pin", "32"),
+    "pin",
+  );
+  const pinSign = (key: typeof token, bytes: Buffer) =>
+    rsaSign("sha256", bytes, forge.pki.privateKeyToPem(key.privateKey));
+  const cert = { holderDer: token.holderDer, chainDer: token.chainDer };
+  const at = new Date("2026-11-11T14:00:00Z");
+  const pdf = await samplePdf();
+  const input = {
+    ...cert,
+    pdf,
+    title: "Escritura fictícia",
+    originalName: "escritura.pdf",
+    verifyUrl: (code: string) => `https://cartorio.exemplo/verificar/${code}`,
+    location: "Ielmo Marinho/RN",
+    officeName: "Cartório Exemplo de Notas",
+  };
+
+  const prepared = await prepareA3SignWith(TENANT, input, "escrevente", at);
+  // Another key's signature over the same bytes: refused, nothing saved.
+  await assert.rejects(
+    finishA3SignWith(
+      db,
+      TENANT,
+      {
+        ...cert,
+        token: prepared.token,
+        signature: pinSign(other, prepared.toBeSigned),
+      },
+      "escrevente",
+      at,
+    ),
+    /não confere/,
+  );
+  // Someone else cannot finish it, nor a changed token.
+  await assert.rejects(
+    finishA3SignWith(
+      db,
+      TENANT,
+      {
+        ...cert,
+        token: prepared.token,
+        signature: pinSign(token, prepared.toBeSigned),
+      },
+      "titular",
+      at,
+    ),
+    SigningError,
+  );
+  await assert.rejects(
+    finishA3SignWith(
+      db,
+      TENANT,
+      {
+        ...cert,
+        token: `${prepared.token.slice(0, -4)}AAAA`,
+        signature: pinSign(token, prepared.toBeSigned),
+      },
+      "escrevente",
+      at,
+    ),
+    SigningError,
+  );
+  // After 15 minutes the preparation is gone.
+  await assert.rejects(
+    finishA3SignWith(
+      db,
+      TENANT,
+      {
+        ...cert,
+        token: prepared.token,
+        signature: pinSign(token, prepared.toBeSigned),
+      },
+      "escrevente",
+      new Date(at.getTime() + 16 * 60_000),
+    ),
+    /venceu/,
+  );
+
+  const done = await finishA3SignWith(
+    db,
+    TENANT,
+    {
+      ...cert,
+      token: prepared.token,
+      signature: pinSign(token, prepared.toBeSigned),
+    },
+    "escrevente",
+    at,
+  );
+  // Used once.
+  await assert.rejects(
+    finishA3SignWith(
+      db,
+      TENANT,
+      {
+        ...cert,
+        token: prepared.token,
+        signature: pinSign(token, prepared.toBeSigned),
+      },
+      "escrevente",
+      at,
+    ),
+    /já foi concluída/,
+  );
+  const found = await findSignedDocumentWith(db, TENANT, { id: done.id }, at);
+  assert.equal(found?.code, done.code);
+  assert.equal(found?.signatures[0].holderName, "JOAO FICTICIO DE SOUZA");
+  const file = await readStoredFile(found?.filePath ?? "");
+  assert.ok(hasSignature(file));
+
+  // One more A3 signature on the same document keeps the first one.
+  const second = { holderDer: other.holderDer, chainDer: other.chainDer };
+  const again = await prepareA3CoSignWith(
+    db,
+    TENANT,
+    done.id,
+    { ...second, location: "Ielmo Marinho/RN" },
+    "titular",
+    at,
+  );
+  await finishA3SignWith(
+    db,
+    TENANT,
+    {
+      ...second,
+      token: again.token,
+      signature: pinSign(other, again.toBeSigned),
+    },
+    "titular",
+    at,
+  );
+  const both = await findSignedDocumentWith(db, TENANT, { id: done.id }, at);
+  assert.deepEqual(
+    both?.signatures.map((s) => s.holderName),
+    ["JOAO FICTICIO DE SOUZA", "ANA MODELO PEREIRA"],
+  );
+
+  // A certificate with no CPF/CNPJ is not ICP-Brasil: refused up front.
+  const plain = openCertificate(pki.issue("Fulano", "pin", "33"), "pin");
+  await assert.rejects(
+    prepareA3SignWith(
+      TENANT,
+      { ...input, holderDer: plain.holderDer, chainDer: plain.chainDer },
+      "escrevente",
+      at,
+    ),
+    /CPF ou CNPJ/,
   );
 });
