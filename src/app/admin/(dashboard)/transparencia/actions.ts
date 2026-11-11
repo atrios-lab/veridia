@@ -63,6 +63,7 @@ import {
   getDocument,
   moveDocument,
   publishDocument,
+  removeBulletinWith,
   saveBulletinOption,
   unpublishDocument,
   upsertBulletin,
@@ -826,5 +827,31 @@ export async function saveFeeTableAction(
   revalidatePath("/admin/transparencia");
   revalidatePath(`/admin/transparencia/tabela/${id}`);
   revalidatePath("/solicitar");
+  return { status: "success" };
+}
+
+/**
+ * "Excluir" a bulletin published by mistake (decision of 11/11/2026): off
+ * the site, kept in the database with the reason in the audit.
+ */
+export async function removeBulletinAction(
+  _previous: ActionState,
+  formData: FormData,
+): Promise<ActionState> {
+  const why = justify(formData);
+  if (why) return { status: "error", message: why };
+  const session = await authorize();
+  if (!session) return { status: "error", message: NO_PERMISSION };
+  const tenant = await getTenant();
+  const removed = await removeBulletinWith(
+    db,
+    tenant.slug,
+    String(formData.get("id") ?? ""),
+    session.user.id,
+  ).catch(() => false);
+  if (!removed) {
+    return { status: "error", message: "Não foi possível excluir agora." };
+  }
+  revalidate();
   return { status: "success" };
 }

@@ -379,6 +379,13 @@
       "when": 1794412092615,
       "tag": "0053_boletim_assinado",
       "breakpoints": true
+    },
+    {
+      "idx": 54,
+      "version": "7",
+      "when": 1794413267054,
+      "tag": "0054_boletim_excluido",
+      "breakpoints": true
     }
   ]
 }

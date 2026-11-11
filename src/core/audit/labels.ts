@@ -113,6 +113,7 @@ const EXACT: Record<string, string> = {
   "service-request.requirement.fulfill": "Deu uma exigência por cumprida",
   "service-request.search-answer": "Respondeu a uma busca",
   "transparency.bulletin.publish": "Publicou um boletim de transparência",
+  "transparency.bulletin.remove": "Excluiu um boletim de transparência",
   "transparency.document.create": "Criou um documento de transparência",
   "transparency.document.publish": "Publicou um documento de transparência",
   "transparency.document.unpublish":
@@ -284,6 +285,8 @@ const EXPLANATIONS: Record<string, string> = {
   "publication.archive": "Uma publicação saiu do site e foi arquivada.",
   "publication.delete": "Uma publicação foi excluída.",
   "transparency.document.delete": "Um documento de transparência foi excluído.",
+  "transparency.bulletin.remove":
+    "Um boletim mensal saiu do site e da lista. O registro continua guardado; publicar o mês de novo o traz de volta corrigido.",
   "office.two-step-off":
     "A verificação em duas etapas do painel foi desligada pela própria serventia (por exemplo, o código não chegava por e-mail): todos entram só com a senha até ela ser ligada de novo.",
   "office.two-step-on":

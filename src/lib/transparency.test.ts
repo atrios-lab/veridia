@@ -8,6 +8,7 @@ import { createTestDb } from "@/db/test-db.ts";
 import { OFFICE_BULLETIN_KEY } from "./office-config.ts";
 import {
   getBulletinWith,
+  removeBulletinWith,
   saveBulletinOptionWith,
   storedBulletinOf,
   upsertBulletinWith,
@@ -207,4 +208,38 @@ test("saving the option writes the override and leaves a trail", async () => {
     );
   assert.equal(trail.length, 2);
   assert.equal(trail[0].actorId, ACTOR);
+});
+
+test("excluir um boletim tira do site sem apagar do banco; publicar de novo o traz de volta", async () => {
+  const month = "2026-03-01";
+  await upsertBulletinWith(
+    db,
+    TENANT,
+    { referenceMonth: month, figures: FIGURES, status: "consolidated" },
+    ACTOR,
+  );
+  const [row] = await rowsFor(month);
+  assert.ok(row);
+  assert.equal(await removeBulletinWith(db, TENANT, row.id, ACTOR), true);
+  // Gone from the site and the list, still in the database.
+  assert.equal(await getBulletinWith(db, TENANT, row.id), undefined);
+  const [kept] = await rowsFor(month);
+  assert.ok(kept?.removedAt);
+  // A second "Excluir" finds nothing.
+  assert.equal(await removeBulletinWith(db, TENANT, row.id, ACTOR), false);
+  const acts = await db.select().from(auditLog);
+  assert.ok(acts.some((a) => a.action === "transparency.bulletin.remove"));
+  // Published again, corrected: back, same row.
+  await upsertBulletinWith(
+    db,
+    TENANT,
+    {
+      referenceMonth: month,
+      figures: { ...FIGURES, actsCount: 300 },
+      status: "consolidated",
+    },
+    ACTOR,
+  );
+  const back = await getBulletinWith(db, TENANT, row.id);
+  assert.equal(back?.actsCount, 300);
 });

@@ -775,6 +775,10 @@ export const transparencyBulletins = pgTable(
     signedPdfPath: text("signed_pdf_path"),
     signedCode: text("signed_code"),
     signedFingerprint: text("signed_fingerprint"),
+    // "Excluir" (decision of 11/11/2026): off the site and the panel's
+    // list, the row kept with its audit. Publishing the month again brings
+    // it back with the new figures.
+    removedAt: timestamp("removed_at", { withTimezone: true }),
     createdBy: text("created_by"),
     createdAt: timestamp("created_at", { withTimezone: true })
       .notNull()

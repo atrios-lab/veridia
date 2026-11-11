@@ -1,5 +1,5 @@
 import "server-only";
-import { and, asc, desc, eq, gt, lt, sql } from "drizzle-orm";
+import { and, asc, desc, eq, gt, isNull, lt, sql } from "drizzle-orm";
 import type {
   BulletinFigures,
   BulletinStatus,
@@ -281,7 +281,12 @@ export async function listBulletins(
   return db
     .select()
     .from(transparencyBulletins)
-    .where(eq(transparencyBulletins.tenantSlug, tenantSlug))
+    .where(
+      and(
+        eq(transparencyBulletins.tenantSlug, tenantSlug),
+        isNull(transparencyBulletins.removedAt),
+      ),
+    )
     .orderBy(desc(transparencyBulletins.referenceMonth));
 }
 
@@ -297,9 +302,44 @@ export async function getBulletinWith(
       and(
         eq(transparencyBulletins.tenantSlug, tenantSlug),
         eq(transparencyBulletins.id, id),
+        isNull(transparencyBulletins.removedAt),
       ),
     );
   return row;
+}
+
+/**
+ * "Excluir", for a bulletin published by mistake: off the site and the
+ * list. Nothing is erased: the row stays, marked, with the audit and the
+ * reason; publishing the month again brings it back corrected.
+ */
+export async function removeBulletinWith(
+  database: Database,
+  tenantSlug: string,
+  id: string,
+  actorId: string,
+): Promise<boolean> {
+  if (!/^[0-9a-f-]{36}$/i.test(id)) return false;
+  const [row] = await database
+    .update(transparencyBulletins)
+    .set({ removedAt: new Date(), updatedAt: new Date() })
+    .where(
+      and(
+        eq(transparencyBulletins.tenantSlug, tenantSlug),
+        eq(transparencyBulletins.id, id),
+        isNull(transparencyBulletins.removedAt),
+      ),
+    )
+    .returning({ month: transparencyBulletins.referenceMonth });
+  if (!row) return false;
+  await recordAuditWith(database, {
+    tenantSlug,
+    actorId,
+    action: "transparency.bulletin.remove",
+    targetType: "transparency-bulletin",
+    targetId: row.month,
+  });
+  return true;
 }
 
 export async function getBulletin(
@@ -400,6 +440,8 @@ export async function upsertBulletinWith(
     expensesCents: input.figures.expensesCents,
     taxesPaidCents: null,
     status: input.status,
+    // Published again after an "Excluir": back on the site.
+    removedAt: null,
     // An unsigned republish leaves the last signed copy where it is: the
     // fingerprint no longer matches, so it is simply not served.
     ...(input.signed
