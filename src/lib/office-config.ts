@@ -62,3 +62,5 @@ export const OFFICE_NUMBERING_KEY = "office-numbering";
 // merged into the config-as-code shape the other keys layer onto.
 export const OFFICE_CHAT_KEY = "office-chat";
 export const OFFICE_AGENDA_KEY = "office-agenda";
+/** When the panel opens, and who the holder released outside it. */
+export const OFFICE_ACCESS_HOURS_KEY = "office-access-hours";

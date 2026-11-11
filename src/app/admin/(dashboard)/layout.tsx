@@ -1,8 +1,10 @@
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { after } from "next/server";
+import { closesAt } from "@/core/auth/access-hours.ts";
 import { can } from "@/core/auth/roles.ts";
 import { db } from "@/db/index.ts";
+import { getAccessHours } from "@/lib/access-hours.ts";
 import { sendDueRemindersInBackground } from "@/lib/appointment-reminders.ts";
 import { bookedCountFrom } from "@/lib/appointments.ts";
 import {
@@ -14,10 +16,16 @@ import { openGuideRequestCount } from "@/lib/guide-requests.ts";
 import { getProfileWith, inboxWith } from "@/lib/messages.ts";
 import { getOfficeAlerts } from "@/lib/office-alerts.ts";
 import { openCountByKind, openRequestCount } from "@/lib/service-request.ts";
-import { getPendingSession, getSession } from "@/lib/session.ts";
+import {
+  getClosedHoursSession,
+  getPendingSession,
+  getSession,
+} from "@/lib/session.ts";
 import { getTenant, officeNow } from "@/lib/tenant.ts";
 import { publishedTutorialCount } from "@/lib/tutorials.ts";
 import { MenuPopover } from "../../_components/menu-popover.tsx";
+import { AccessClosed } from "../_components/access-closed.tsx";
+import { AccessHoursWatch } from "../_components/access-hours-watch.tsx";
 import { AgendaAlerts } from "../_components/agenda-alerts.tsx";
 import {
   CHAT_SHAKE_TARGET_ID,
@@ -31,6 +39,7 @@ import { ShortcutListener } from "../_components/shortcut-listener.tsx";
 import { AdminSidebar } from "../_components/sidebar.tsx";
 import { ADMIN_MENU_ID, AdminTopBar } from "../_components/top-bar.tsx";
 import {
+  AccessRequestsBanner,
   AuditChime,
   AuditNoticeBanner,
   UrgentAuditBanner,
@@ -50,6 +59,25 @@ export default async function DashboardLayout({
     !session ||
     !can(session.user.role ?? "", "admin.access", session.user.permissions)
   ) {
+    // Outside the panel's hours and not released by the holder: the closed
+    // screen, with the way to ask for a release (decision of 11/11/2026).
+    const closed = await getClosedHoursSession();
+    if (closed) {
+      const [tenant, hours] = await Promise.all([
+        getTenant(),
+        getAccessHours(closed.user.tenantSlug ?? ""),
+      ]);
+      return (
+        <AccessClosed
+          seal={tenant.logos.seal.light}
+          officeName={tenant.name}
+          personName={closed.user.name}
+          start={hours.start}
+          end={hours.end}
+          pending={hours.requests.some((r) => r.userId === closed.user.id)}
+        />
+      );
+    }
     const pathname = (await headers()).get("x-pathname") ?? "/admin";
     // Password right, e-mail code still missing: the second step, not the
     // login again (lib/access-code.ts).
@@ -73,6 +101,11 @@ export default async function DashboardLayout({
   // on top of a link that is itself hidden without the permission.
   // Urgent acts the Tabelião/Registrador has not marked as seen yet: the
   // alert stays on every screen until he does (decision of 11/11/2026).
+  const hours = await getAccessHours(tenant.slug);
+  const accessRequests = can(role, "audit.manage", granted)
+    ? hours.requests.length
+    : 0;
+  const hoursEnd = closesAt(hours, role, session.user.id, new Date());
   const urgentPending = can(role, "audit.manage", granted)
     ? await pendingUrgentCountWith(db, tenant.slug, session.user.id).catch(
         () => 0,
@@ -206,6 +239,10 @@ export default async function DashboardLayout({
         <div className="scrollbar-hidden relative flex min-h-0 min-w-0 flex-1 flex-col overflow-y-auto">
           <AdminTopBar user={user} />
           {urgentPending > 0 && <UrgentAuditBanner count={urgentPending} />}
+          {accessRequests > 0 && (
+            <AccessRequestsBanner count={accessRequests} />
+          )}
+          {hoursEnd && <AccessHoursWatch closesAt={hoursEnd.toISOString()} />}
           {myNotifications > 0 && <AuditNoticeBanner count={myNotifications} />}
           {alerts.auditoria.enabled && urgentPending + myNotifications > 0 && (
             <AuditChime

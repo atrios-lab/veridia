@@ -52,3 +52,26 @@ export function AuditNoticeBanner({ count }: { count: number }) {
 }
 
 export { AuditChime } from "./audit-chime.tsx";
+
+/**
+ * Release requests from people outside the panel's hours, waiting for
+ * the holder (decision of 11/11/2026).
+ */
+export function AccessRequestsBanner({ count }: { count: number }) {
+  return (
+    <output className="flex items-center gap-2.5 bg-admin-warning-bg px-[30px] py-2.5 text-[13px] font-semibold text-admin-warning-text max-md:px-4">
+      <span aria-hidden="true">🕘</span>
+      <span className="flex-1">
+        {count === 1
+          ? "1 pessoa pediu para acessar o painel fora do horário."
+          : `${count} pessoas pediram para acessar o painel fora do horário.`}
+      </span>
+      <Link
+        href="/admin/configuracoes/horario-de-acesso"
+        className="rounded-full border border-admin-warning-text px-3 py-1 text-[12px] hover:bg-white"
+      >
+        Ver e decidir
+      </Link>
+    </output>
+  );
+}
