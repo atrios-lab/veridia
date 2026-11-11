@@ -184,3 +184,54 @@ test("everyone who works for an office has the desk; a learner does not", () => 
   }
   assert.equal(can("learner", "desk.access"), false);
 });
+
+test("os cargos do cartório: Tabelião/Registrador com tudo, os outros com o padrão", async () => {
+  const { effectivePermissions, defaultPermissions, RESERVED_PERMISSIONS } =
+    await import("./roles.ts");
+  assert.ok(can("admin", "audit.manage"));
+  for (const role of [
+    "substituto-legal",
+    "substituto",
+    "staff",
+    "auxiliar",
+    "contador",
+    "rh",
+  ]) {
+    for (const reserved of RESERVED_PERMISSIONS) {
+      assert.equal(can(role, reserved), false, `${role} ${reserved}`);
+    }
+    assert.ok(can(role, "admin.access"), role);
+    assert.deepEqual(effectivePermissions(role), defaultPermissions(role));
+  }
+  assert.ok(can("substituto-legal", "billing.edit"));
+  assert.equal(can("rh", "requests.manage"), false);
+});
+
+test("o Tabelião/Registrador muda o que um cargo faz, mas nunca entrega o que é só dele", async () => {
+  const { effectivePermissions } = await import("./roles.ts");
+  const configured = {
+    rh: ["requests.manage", "user.manage", "audit.manage", "tutorials.manage"],
+    admin: [],
+  };
+  const rh = effectivePermissions("rh", configured);
+  assert.ok(can("rh", "requests.manage", rh));
+  assert.equal(can("rh", "user.manage", rh), false);
+  assert.equal(can("rh", "audit.manage", rh), false);
+  assert.equal(can("rh", "tutorials.manage", rh), false);
+  assert.ok(can("rh", "admin.access", rh));
+  // The holder and the Átrios account are never narrowed.
+  assert.ok(
+    can("admin", "audit.manage", effectivePermissions("admin", configured)),
+  );
+  assert.ok(
+    can(
+      "superadmin",
+      "access.release",
+      effectivePermissions("superadmin", configured),
+    ),
+  );
+  // An empty list takes everything but the panel away.
+  assert.deepEqual(effectivePermissions("auxiliar", { auxiliar: [] }), [
+    "admin.access",
+  ]);
+});

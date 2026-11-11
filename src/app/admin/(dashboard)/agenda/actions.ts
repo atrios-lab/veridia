@@ -73,7 +73,10 @@ const NO_PERMISSION =
  * `/admin/pedidos`: hiding the button and the page 404-ing are a courtesy. */
 async function authorize() {
   const session = await getSession();
-  if (!session || !can(session.user.role ?? "", "channels.manage")) {
+  if (
+    !session ||
+    !can(session.user.role ?? "", "channels.manage", session.user.permissions)
+  ) {
     return null;
   }
   return session;

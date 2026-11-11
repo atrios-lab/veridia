@@ -16,7 +16,11 @@ export const metadata = { title: "Liberação de acesso" };
  */
 export default async function AccessReleasePage() {
   const session = await getSession();
-  if (!session || !can(session.user.role ?? "", "access.release")) notFound();
+  if (
+    !session ||
+    !can(session.user.role ?? "", "access.release", session.user.permissions)
+  )
+    notFound();
   const tenants = Object.values(TENANTS).sort((a, b) =>
     a.name.localeCompare(b.name, "pt-BR"),
   );

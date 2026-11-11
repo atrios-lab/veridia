@@ -26,7 +26,11 @@ const PATH = "/admin/configuracoes/certificados";
 
 async function admin() {
   const session = await getSession();
-  if (!session || !can(session.user.role ?? "", "user.manage")) return null;
+  if (
+    !session ||
+    !can(session.user.role ?? "", "user.manage", session.user.permissions)
+  )
+    return null;
   return session;
 }
 

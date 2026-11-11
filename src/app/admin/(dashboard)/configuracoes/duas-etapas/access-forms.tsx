@@ -2,6 +2,8 @@
 
 import { startTransition, useActionState, useEffect, useState } from "react";
 import { toast } from "sonner";
+import type { Role } from "@/core/auth/roles.ts";
+import { ROLE_LABELS } from "../../../_components/role-labels.ts";
 import { type AccessState, forgetComputers, saveCodeEmail } from "./actions.ts";
 
 const IDLE: AccessState = { status: "idle" };
@@ -52,12 +54,7 @@ export function AccountAccessRow({
           {name}
         </h3>
         <span className="text-[11.5px] text-admin-muted">
-          {role === "admin"
-            ? "Administrador"
-            : role === "staff"
-              ? "Equipe"
-              : "Treinamento"}{" "}
-          · conta {accountEmail}
+          {ROLE_LABELS[role as Role] ?? role} · conta {accountEmail}
         </span>
       </div>
       <p className="mt-1 text-[12.5px] text-admin-text">

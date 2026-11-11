@@ -63,7 +63,11 @@ export default async function TrainingCatalogPage({
   const resumeLabel = resume?.course.sequential
     ? itemLabels(itemsByCourse.get(resume.course.id) ?? []).get(resume.item.id)
     : undefined;
-  const canManage = can(session.user.role ?? "", "tutorials.manage");
+  const canManage = can(
+    session.user.role ?? "",
+    "tutorials.manage",
+    session.user.permissions,
+  );
 
   return (
     <>

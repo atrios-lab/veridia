@@ -32,7 +32,11 @@ const GENERIC = "Não foi possível salvar agora. Tente novamente.";
 
 async function authorize() {
   const session = await getSession();
-  if (!session || !can(session.user.role ?? "", "channels.manage")) return null;
+  if (
+    !session ||
+    !can(session.user.role ?? "", "channels.manage", session.user.permissions)
+  )
+    return null;
   return session;
 }
 

@@ -63,7 +63,11 @@ export default async function ServiceRequestQueuePage({
   }>;
 }) {
   const session = await getSession();
-  if (!session || !can(session.user.role ?? "", "requests.manage")) notFound();
+  if (
+    !session ||
+    !can(session.user.role ?? "", "requests.manage", session.user.permissions)
+  )
+    notFound();
   const tenant = await getTenant();
   // Read once for the whole queue: every row's term is measured against the
   // same day, and a clock read per row could straddle midnight.

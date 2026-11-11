@@ -40,6 +40,11 @@ const TABS: {
     permission: "user.manage",
   },
   {
+    label: "Perfis e permissões",
+    href: "/admin/configuracoes/perfis",
+    permission: "user.manage",
+  },
+  {
     label: "Duas etapas",
     href: "/admin/configuracoes/duas-etapas",
     permission: "user.manage",
@@ -56,7 +61,14 @@ const TABS: {
   },
 ];
 
-export function ConfiguracoesTabs({ role }: { role: string }) {
+export function ConfiguracoesTabs({
+  role,
+  permissions,
+}: {
+  role: string;
+  /** The session's effective permissions (the Tabelião's choices). */
+  permissions?: readonly string[];
+}) {
   const pathname = usePathname();
 
   return (
@@ -65,7 +77,7 @@ export function ConfiguracoesTabs({ role }: { role: string }) {
       className="flex w-fit max-w-full flex-wrap gap-1.5 rounded-[11px] border border-admin-border bg-admin-card p-1.5"
     >
       {TABS.map((tab) => {
-        const offered = can(role, tab.permission);
+        const offered = can(role, tab.permission, permissions);
         const selected = pathname === tab.href;
         return offered ? (
           <Link

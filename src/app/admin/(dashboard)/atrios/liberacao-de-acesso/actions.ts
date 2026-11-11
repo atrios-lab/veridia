@@ -18,7 +18,10 @@ export async function setTwoStep(
   formData: FormData,
 ): Promise<ReleaseState> {
   const session = await getSession();
-  if (!session || !can(session.user.role ?? "", "access.release")) {
+  if (
+    !session ||
+    !can(session.user.role ?? "", "access.release", session.user.permissions)
+  ) {
     return {
       status: "error",
       message: "Só a conta mestre da Átrios faz isso.",

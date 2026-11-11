@@ -20,7 +20,10 @@ export async function deactivateServiceRequestsAction(
   formData: FormData,
 ): Promise<BulkActionState> {
   const session = await getSession();
-  if (!session || !can(session.user.role ?? "", "requests.manage")) {
+  if (
+    !session ||
+    !can(session.user.role ?? "", "requests.manage", session.user.permissions)
+  ) {
     return { status: "error", message: NO_PERMISSION };
   }
 

@@ -11,7 +11,11 @@ export const metadata = { title: "Nova guia de recolhimento" };
 
 export default async function NewGuidePage() {
   const session = await getSession();
-  if (!session || !can(session.user.role ?? "", "requests.manage")) notFound();
+  if (
+    !session ||
+    !can(session.user.role ?? "", "requests.manage", session.user.permissions)
+  )
+    notFound();
   const settings = await getGuideSettings(await getTenant());
   return (
     <>

@@ -31,7 +31,11 @@ export type CohortFormState =
 /** The platform account, or null: every action here starts with it. */
 async function platformActor(): Promise<string | null> {
   const session = await getSession();
-  if (!session || !can(session.user.role ?? "", "cohorts.manage")) return null;
+  if (
+    !session ||
+    !can(session.user.role ?? "", "cohorts.manage", session.user.permissions)
+  )
+    return null;
   return session.user.id;
 }
 

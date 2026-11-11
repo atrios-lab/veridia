@@ -2,6 +2,7 @@ import "server-only";
 import { createHash, randomBytes } from "node:crypto";
 import { and, asc, desc, eq, inArray, isNull, lte, or } from "drizzle-orm";
 import { PDFDocument } from "pdf-lib";
+import { PANEL_ROLES } from "@/core/auth/roles.ts";
 import { ICP_POLICY } from "@/core/signature/policy.ts";
 import { user } from "@/db/auth-schema.ts";
 import type { Database } from "@/db/index.ts";
@@ -262,7 +263,7 @@ export async function officeSignerCandidatesWith(
     .where(
       and(
         eq(user.tenantSlug, tenantSlug),
-        inArray(user.role, ["admin", "staff"]),
+        inArray(user.role, [...PANEL_ROLES]),
         isNull(user.disabledAt),
       ),
     )

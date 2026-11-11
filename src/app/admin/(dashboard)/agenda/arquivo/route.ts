@@ -12,7 +12,10 @@ export const runtime = "nodejs";
  */
 export async function GET(request: Request): Promise<Response> {
   const session = await getSession();
-  if (!session || !can(session.user.role ?? "", "channels.manage")) {
+  if (
+    !session ||
+    !can(session.user.role ?? "", "channels.manage", session.user.permissions)
+  ) {
     return new Response("Não autorizado", { status: 403 });
   }
 

@@ -44,7 +44,11 @@ export default async function AppointmentDetailPage({
   params: Promise<{ id: string }>;
 }) {
   const session = await getSession();
-  if (!session || !can(session.user.role ?? "", "channels.manage")) notFound();
+  if (
+    !session ||
+    !can(session.user.role ?? "", "channels.manage", session.user.permissions)
+  )
+    notFound();
   const tenant = await getTenant();
   const { id } = await params;
   const appointment = await findAppointmentById(tenant.slug, id);

@@ -32,7 +32,10 @@ export async function POST(request: Request): Promise<Response> {
   }
 
   const session = await getSession();
-  if (!session || !can(session.user.role ?? "", "tutorials.manage")) {
+  if (
+    !session ||
+    !can(session.user.role ?? "", "tutorials.manage", session.user.permissions)
+  ) {
     return Response.json({ error: "Não encontrado." }, { status: 404 });
   }
 

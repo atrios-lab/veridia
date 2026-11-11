@@ -22,7 +22,10 @@ export async function GET(
   { params }: { params: Promise<{ id: string }> },
 ): Promise<Response> {
   const session = await getSession();
-  if (!session || !can(session.user.role ?? "", "content.edit")) {
+  if (
+    !session ||
+    !can(session.user.role ?? "", "content.edit", session.user.permissions)
+  ) {
     return new Response("Não autorizado", { status: 403 });
   }
 

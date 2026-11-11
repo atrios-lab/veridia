@@ -48,7 +48,8 @@ export default async function GuidesPage({
 }) {
   const session = await getSession();
   const role = session?.user.role ?? "";
-  if (!session || !can(role, "requests.manage")) notFound();
+  const granted = session?.user.permissions;
+  if (!session || !can(role, "requests.manage", granted)) notFound();
   const tenant = await getTenant();
   const [guides, settings, requests] = await Promise.all([
     listGuides(tenant.slug).catch(() => [] as StoredGuide[]),
@@ -82,7 +83,7 @@ export default async function GuidesPage({
           >
             <AdminIcon name="plus" className="h-4 w-4" /> Nova guia
           </Link>
-          {can(role, "content.edit") && (
+          {can(role, "content.edit", granted) && (
             <Link
               href="/admin/utilitarios/guias/configuracao"
               className="btn btn-admin-secondary btn-md"

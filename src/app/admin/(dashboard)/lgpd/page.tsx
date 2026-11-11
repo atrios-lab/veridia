@@ -17,7 +17,11 @@ export const metadata = { title: "Requerimentos LGPD" };
 
 export default async function DataRightsQueuePage() {
   const session = await getSession();
-  if (!session || !can(session.user.role ?? "", "channels.manage")) notFound();
+  if (
+    !session ||
+    !can(session.user.role ?? "", "channels.manage", session.user.permissions)
+  )
+    notFound();
   const tenant = await getTenant();
 
   const now = today();

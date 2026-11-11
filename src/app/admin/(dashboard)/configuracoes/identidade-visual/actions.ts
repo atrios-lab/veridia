@@ -80,7 +80,10 @@ export async function saveVisualIdentity(
   // Hiding the tab is not the check; this is. The permission is
   // branding.edit, deciding how the office presents itself, not the day to
   // day content.edit that the Serventia tab uses.
-  if (!session || !can(session.user.role ?? "", "branding.edit")) {
+  if (
+    !session ||
+    !can(session.user.role ?? "", "branding.edit", session.user.permissions)
+  ) {
     return fail("Você não tem permissão para alterar estes dados.", values);
   }
   const tenant = await getTenant();

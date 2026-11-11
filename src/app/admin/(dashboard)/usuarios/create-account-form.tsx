@@ -120,7 +120,8 @@ export function CreateAccountForm() {
       </form>
 
       <p className="mt-3.5 border-t border-admin-border pt-3 text-[11.5px] leading-relaxed text-admin-muted">
-        Operador usa o painel. Registrador usa e também administra contas.
+        O Tabelião/Registrador cadastra as pessoas, define o que cada cargo faz
+        e vê (Configurações › Perfis e permissões) e acompanha a auditoria.
       </p>
     </div>
   );

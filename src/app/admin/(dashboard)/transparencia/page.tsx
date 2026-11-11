@@ -67,7 +67,11 @@ export default async function TransparencyPage({
   searchParams: Promise<{ aba?: string }>;
 }) {
   const session = await getSession();
-  if (!session || !can(session.user.role ?? "", "content.edit")) notFound();
+  if (
+    !session ||
+    !can(session.user.role ?? "", "content.edit", session.user.permissions)
+  )
+    notFound();
 
   const tenant = await getTenant();
   const { aba } = await searchParams;

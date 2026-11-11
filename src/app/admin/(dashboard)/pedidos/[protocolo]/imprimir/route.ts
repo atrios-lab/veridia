@@ -11,7 +11,10 @@ export const runtime = "nodejs";
 /** Session, permission and the request itself, or the Response that refuses. */
 async function load(request: Request, protocolo: string) {
   const session = await getSession();
-  if (!session || !can(session.user.role ?? "", "requests.manage")) {
+  if (
+    !session ||
+    !can(session.user.role ?? "", "requests.manage", session.user.permissions)
+  ) {
     return new Response("Não autorizado", { status: 403 });
   }
   const tenant = await getTenant();

@@ -23,13 +23,17 @@ export const runtime = "nodejs";
 export async function GET(request: Request): Promise<Response> {
   const session = await getSession();
   const role = session?.user.role ?? "";
+  const granted = session?.user.permissions;
   // Either permission: the same file hangs off a service request (requests) or
   // an LGPD requirement (channels), and the two screens are gated differently.
   // Both roles hold both today, so demanding only one is a trap set for the
   // day a channels-only role exists.
   if (
     !session ||
-    !(can(role, "requests.manage") || can(role, "channels.manage"))
+    !(
+      can(role, "requests.manage", granted) ||
+      can(role, "channels.manage", granted)
+    )
   ) {
     return new Response("Não autorizado", { status: 403 });
   }

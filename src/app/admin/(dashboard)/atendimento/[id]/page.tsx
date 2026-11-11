@@ -16,7 +16,11 @@ export default async function ConversationPage({
   params: Promise<{ id: string }>;
 }) {
   const session = await getSession();
-  if (!session || !can(session.user.role ?? "", "chat.manage")) notFound();
+  if (
+    !session ||
+    !can(session.user.role ?? "", "chat.manage", session.user.permissions)
+  )
+    notFound();
 
   const { id } = await params;
   const tenant = await getTenant();

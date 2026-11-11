@@ -22,7 +22,10 @@ export async function saveOfficeAlerts(
   formData: FormData,
 ): Promise<OfficeAlertsState> {
   const session = await getSession();
-  if (!session || !can(session.user.role ?? "", "content.edit")) {
+  if (
+    !session ||
+    !can(session.user.role ?? "", "content.edit", session.user.permissions)
+  ) {
     return {
       status: "error",
       message: "Você não tem permissão para alterar as notificações.",

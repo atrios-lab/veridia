@@ -82,7 +82,11 @@ function revalidate(): void {
 /** Every action here needs the same gate; this returns the session or null. */
 async function authorize() {
   const session = await getSession();
-  if (!session || !can(session.user.role ?? "", "content.edit")) return null;
+  if (
+    !session ||
+    !can(session.user.role ?? "", "content.edit", session.user.permissions)
+  )
+    return null;
   return session;
 }
 
@@ -380,7 +384,10 @@ export async function readFeeTablePdfAction(
   formData: FormData,
 ): Promise<FeeTableReadState> {
   const session = await getSession();
-  if (!session || !can(session.user.role ?? "", "content.edit")) {
+  if (
+    !session ||
+    !can(session.user.role ?? "", "content.edit", session.user.permissions)
+  ) {
     return { status: "error", message: NO_PERMISSION };
   }
   const tenant = await getTenant();
@@ -409,7 +416,10 @@ export async function saveFeeTableAction(
   formData: FormData,
 ): Promise<SaveState> {
   const session = await getSession();
-  if (!session || !can(session.user.role ?? "", "content.edit")) {
+  if (
+    !session ||
+    !can(session.user.role ?? "", "content.edit", session.user.permissions)
+  ) {
     return { status: "error", message: NO_PERMISSION, fieldErrors: {} };
   }
   const tenant = await getTenant();

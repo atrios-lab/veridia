@@ -60,7 +60,10 @@ export async function saveGuide(
   formData: FormData,
 ): Promise<GuideFormState> {
   const session = await getSession();
-  if (!session || !can(session.user.role ?? "", "requests.manage")) {
+  if (
+    !session ||
+    !can(session.user.role ?? "", "requests.manage", session.user.permissions)
+  ) {
     return { status: "error", message: NO_PERMISSION, fieldErrors: {} };
   }
   const tenant = await getTenant();
@@ -127,7 +130,10 @@ export async function saveGuideSettings(
   formData: FormData,
 ): Promise<GuideSettingsState> {
   const session = await getSession();
-  if (!session || !can(session.user.role ?? "", "content.edit")) {
+  if (
+    !session ||
+    !can(session.user.role ?? "", "content.edit", session.user.permissions)
+  ) {
     return {
       status: "error",
       message: "Você não tem permissão para alterar estes dados.",
@@ -170,7 +176,10 @@ export async function renumberGuideAction(
   formData: FormData,
 ): Promise<GuideNumberState> {
   const session = await getSession();
-  if (!session || !can(session.user.role ?? "", "requests.manage")) {
+  if (
+    !session ||
+    !can(session.user.role ?? "", "requests.manage", session.user.permissions)
+  ) {
     return { status: "error", message: NO_PERMISSION };
   }
   const tenant = await getTenant();
@@ -219,7 +228,10 @@ export async function deleteGuideAction(
   formData: FormData,
 ): Promise<DeleteGuideState> {
   const session = await getSession();
-  if (!session || !can(session.user.role ?? "", "requests.manage")) {
+  if (
+    !session ||
+    !can(session.user.role ?? "", "requests.manage", session.user.permissions)
+  ) {
     return { status: "error", message: NO_PERMISSION };
   }
   const tenant = await getTenant();
@@ -250,7 +262,11 @@ export async function guideAlertSnapshotAction(): Promise<
   GuideAlertItem[] | null
 > {
   const session = await getSession();
-  if (!session || !can(session.user.role ?? "", "requests.manage")) return null;
+  if (
+    !session ||
+    !can(session.user.role ?? "", "requests.manage", session.user.permissions)
+  )
+    return null;
   try {
     const tenant = await getTenant();
     return await guideAlertSnapshotWith(db, tenant.slug);
@@ -270,9 +286,12 @@ export async function recordAlertSnapshotAction(): Promise<
   const session = await getSession();
   if (!session) return null;
   const role = session.user.role ?? "";
+  const granted = session.user.permissions;
   const channels: RecordAlertChannel[] = [
-    ...(can(role, "requests.manage") ? (["pedidos"] as const) : []),
-    ...(can(role, "channels.manage") ? (["lgpd", "ouvidoria"] as const) : []),
+    ...(can(role, "requests.manage", granted) ? (["pedidos"] as const) : []),
+    ...(can(role, "channels.manage", granted)
+      ? (["lgpd", "ouvidoria"] as const)
+      : []),
   ];
   if (channels.length === 0) return null;
   try {

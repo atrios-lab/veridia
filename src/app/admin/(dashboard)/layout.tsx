@@ -34,7 +34,10 @@ export default async function DashboardLayout({
   // separate: an admin is an admin of their own office, never of the one
   // whose domain they happened to open.
   const session = await getSession();
-  if (!session || !can(session.user.role ?? "", "admin.access")) {
+  if (
+    !session ||
+    !can(session.user.role ?? "", "admin.access", session.user.permissions)
+  ) {
     const pathname = (await headers()).get("x-pathname") ?? "/admin";
     // Password right, e-mail code still missing: the second step, not the
     // login again (lib/access-code.ts).
@@ -51,19 +54,20 @@ export default async function DashboardLayout({
 
   const tenant = await getTenant();
   const role = session.user.role ?? "";
+  const granted = session.user.permissions;
   // How the office wants each channel to call (Configurações › Notificações).
   const alerts = await getOfficeAlerts(tenant.slug);
   // Only queried when the item is actually offered: the badge is a courtesy
   // on top of a link that is itself hidden without the permission.
   const counts: Record<string, number> = {
-    ...(can(role, "requests.manage")
+    ...(can(role, "requests.manage", granted)
       ? {
           "/admin/pedidos": await openRequestCount(tenant.slug),
           // The guias de recolhimento the site asked for, still open.
           "/admin/utilitarios/guias": await openGuideRequestCount(tenant.slug),
         }
       : {}),
-    ...(can(role, "channels.manage")
+    ...(can(role, "channels.manage", granted)
       ? {
           "/admin/lgpd": await openCountByKind(tenant.slug, "data-rights"),
           "/admin/ouvidoria": await openCountByKind(tenant.slug, "ombudsman"),
@@ -72,14 +76,14 @@ export default async function DashboardLayout({
           "/admin/agenda": await bookedCountFrom(tenant.slug, officeNow().date),
         }
       : {}),
-    ...(can(role, "chat.manage")
+    ...(can(role, "chat.manage", granted)
       ? { "/admin/atendimento": await waitingCount(tenant.slug) }
       : {}),
   };
 
   // Backup for the daily reminders job (api/agenda/lembretes): opening the
   // panel sends whatever is due, after the response, once each.
-  if (can(role, "channels.manage")) {
+  if (can(role, "channels.manage", granted)) {
     after(() => sendDueRemindersInBackground(tenant, officeNow()));
   }
 
@@ -87,25 +91,28 @@ export default async function DashboardLayout({
   // to the platform account, for whom it is the way to the management
   // screen. Hiding it is the courtesy; the route answers either way.
   const showTutorials =
-    can(role, "tutorials.manage") || (await publishedTutorialCount()) > 0;
+    can(role, "tutorials.manage", granted) ||
+    (await publishedTutorialCount()) > 0;
 
   const user = {
     name: session.user.name,
     email: session.user.email,
     role,
+    permissions: granted,
   };
 
   return (
     <GlobalSearchProvider>
       <ShortcutListener
-        canRequests={can(role, "requests.manage")}
-        canChannels={can(role, "channels.manage")}
+        canRequests={can(role, "requests.manage", granted)}
+        canChannels={can(role, "channels.manage", granted)}
       />
       {/* `id` is what the chat alert shakes (see chat-alerts.tsx). */}
       <div id={CHAT_SHAKE_TARGET_ID} className="flex h-screen overflow-hidden">
         <AdminSidebar
           tenant={tenant}
           role={role}
+          permissions={granted}
           counts={counts}
           showTutorials={showTutorials}
           className="hidden md:flex"
@@ -133,6 +140,7 @@ export default async function DashboardLayout({
           <AdminSidebar
             tenant={tenant}
             role={role}
+            permissions={granted}
             counts={counts}
             className="h-full"
           />
@@ -162,17 +170,20 @@ export default async function DashboardLayout({
           {children}
           {/* Every screen, not only the queue: the attendant hears and sees
               the chat wherever they are working in the panel. */}
-          {can(role, "chat.manage") && <ChatAlerts setting={alerts.chat} />}
+          {can(role, "chat.manage", granted) && (
+            <ChatAlerts setting={alerts.chat} />
+          )}
           {/* Same for the agenda: who is coming today, who just booked. */}
-          {can(role, "channels.manage") && (
+          {can(role, "channels.manage", granted) && (
             <AgendaAlerts setting={alerts.agenda} />
           )}
           {/* And the guias de recolhimento: a new one, or one the citizen moved. */}
-          {can(role, "requests.manage") && (
+          {can(role, "requests.manage", granted) && (
             <GuideAlerts setting={alerts.guias} />
           )}
           {/* New requests, LGPD and ouvidoria, each as the office chose. */}
-          {(can(role, "requests.manage") || can(role, "channels.manage")) && (
+          {(can(role, "requests.manage", granted) ||
+            can(role, "channels.manage", granted)) && (
             <RecordAlerts
               settings={{
                 pedidos: alerts.pedidos,

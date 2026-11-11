@@ -159,7 +159,11 @@ export default async function ServiceRequestDetailPage({
   searchParams: Promise<{ "guia-excluida"?: string }>;
 }) {
   const session = await getSession();
-  if (!session || !can(session.user.role ?? "", "requests.manage")) notFound();
+  if (
+    !session ||
+    !can(session.user.role ?? "", "requests.manage", session.user.permissions)
+  )
+    notFound();
 
   const tenant = await getTenant();
   const { protocolo } = await params;
@@ -680,6 +684,7 @@ export default async function ServiceRequestDetailPage({
                 canManageCertificates={can(
                   session.user.role ?? "",
                   "user.manage",
+                  session.user.permissions,
                 )}
               />
             )}

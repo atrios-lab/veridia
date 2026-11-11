@@ -11,7 +11,11 @@ export const metadata = { title: "Minha verificação em duas etapas" };
 
 export default async function MyAccountPage() {
   const session = await getSession();
-  if (!session || !can(session.user.role ?? "", "admin.access")) notFound();
+  if (
+    !session ||
+    !can(session.user.role ?? "", "admin.access", session.user.permissions)
+  )
+    notFound();
   const tenant = await getTenant();
   const access = await getOfficeAccess(tenant.slug);
   const own = access[session.user.id]?.email ?? "";

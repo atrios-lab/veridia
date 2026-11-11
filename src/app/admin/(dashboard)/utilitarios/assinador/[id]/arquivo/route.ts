@@ -13,7 +13,10 @@ export async function GET(
   { params }: { params: Promise<{ id: string }> },
 ): Promise<Response> {
   const session = await getSession();
-  if (!session || !can(session.user.role ?? "", "desk.access")) {
+  if (
+    !session ||
+    !can(session.user.role ?? "", "desk.access", session.user.permissions)
+  ) {
     return new Response("Não encontrado", { status: 404 });
   }
   const tenant = await getTenant();

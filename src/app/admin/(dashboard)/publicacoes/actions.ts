@@ -67,7 +67,10 @@ export async function savePublication(
   formData: FormData,
 ): Promise<SaveState> {
   const session = await getSession();
-  if (!session || !can(session.user.role ?? "", "content.edit")) {
+  if (
+    !session ||
+    !can(session.user.role ?? "", "content.edit", session.user.permissions)
+  ) {
     return { status: "error", message: NO_EDIT_PERMISSION, fieldErrors: {} };
   }
 
@@ -106,7 +109,10 @@ export async function savePublication(
 
   const existing = id ? await getPublication(tenant.slug, id) : undefined;
   const isFirstPublish = !existing?.publishAt && Boolean(parsed.data.publishAt);
-  if (isFirstPublish && !can(session.user.role ?? "", "content.publish")) {
+  if (
+    isFirstPublish &&
+    !can(session.user.role ?? "", "content.publish", session.user.permissions)
+  ) {
     return {
       status: "error",
       message: NO_PUBLISH_PERMISSION,
@@ -187,7 +193,8 @@ export async function deletePublicationAction(
 ): Promise<DeleteState> {
   const session = await getSession();
   const role = session?.user.role ?? "";
-  if (!session || !can(role, "content.edit")) {
+  const granted = session?.user.permissions;
+  if (!session || !can(role, "content.edit", granted)) {
     return { status: "error", message: NO_EDIT_PERMISSION };
   }
 
@@ -196,7 +203,7 @@ export async function deletePublicationAction(
   try {
     const existing = await getPublication(tenant.slug, id);
     if (!existing) return { status: "success" };
-    if (existing.publishAt && !can(role, "content.publish")) {
+    if (existing.publishAt && !can(role, "content.publish", granted)) {
       return { status: "error", message: NO_DELETE_PERMISSION };
     }
     const deleted = await deletePublication(tenant.slug, id, session.user.id);
@@ -223,7 +230,10 @@ export async function archivePublicationAction(
   formData: FormData,
 ): Promise<ArchiveState> {
   const session = await getSession();
-  if (!session || !can(session.user.role ?? "", "content.edit")) {
+  if (
+    !session ||
+    !can(session.user.role ?? "", "content.edit", session.user.permissions)
+  ) {
     return { status: "error", message: NO_EDIT_PERMISSION };
   }
 

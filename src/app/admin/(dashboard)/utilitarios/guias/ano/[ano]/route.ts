@@ -12,7 +12,10 @@ export async function GET(
   { params }: { params: Promise<{ ano: string }> },
 ): Promise<Response> {
   const session = await getSession();
-  if (!session || !can(session.user.role ?? "", "requests.manage")) {
+  if (
+    !session ||
+    !can(session.user.role ?? "", "requests.manage", session.user.permissions)
+  ) {
     return new Response("Não autorizado", { status: 403 });
   }
   const year = Number((await params).ano);

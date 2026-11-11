@@ -81,7 +81,10 @@ export async function createManualServiceRequest(
   formData: FormData,
 ): Promise<ManualEntryState> {
   const session = await getSession();
-  if (!session || !can(session.user.role ?? "", "requests.manage")) {
+  if (
+    !session ||
+    !can(session.user.role ?? "", "requests.manage", session.user.permissions)
+  ) {
     return fail("Você não tem permissão para lançar pedidos.");
   }
 

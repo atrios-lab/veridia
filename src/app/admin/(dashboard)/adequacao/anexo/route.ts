@@ -16,7 +16,10 @@ const READABLE = /^(application\/pdf|image\/)/;
  */
 export async function GET(request: Request): Promise<Response> {
   const session = await getSession();
-  if (!session || !can(session.user.role ?? "", "content.edit")) {
+  if (
+    !session ||
+    !can(session.user.role ?? "", "content.edit", session.user.permissions)
+  ) {
     return new Response("Não autorizado", { status: 403 });
   }
 

@@ -51,6 +51,8 @@ export const OFFICE_ALERTS_KEY = "office-alerts";
 export const OFFICE_ACCESS_KEY = "office-access-codes";
 /** Set by the Átrios master account only: two-step access on or off (lib/access-policy.ts). */
 export const PLATFORM_ACCESS_POLICY_KEY = "platform-access-policy";
+/** What each position may do, set by the Tabelião/Registrador (lib/role-permissions.ts). */
+export const OFFICE_ROLE_PERMISSIONS_KEY = "office-role-permissions";
 /** Where each numbered document goes on, per year (Configurações › Numeração). */
 export const OFFICE_NUMBERING_KEY = "office-numbering";
 // Not part of Tenant/applyTenantOverrides: whether the office's chat is on,

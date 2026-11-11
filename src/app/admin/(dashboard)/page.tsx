@@ -126,15 +126,16 @@ export default async function AdminHome() {
   const session = await getSession();
   if (!session) return null;
   const role = session.user.role ?? "";
+  const granted = session.user.permissions;
   // A role with no desk of its own (a course learner) starts somewhere else.
   const home = homeFor(role);
   if (home) redirect(home);
   const tenant = await getTenant();
 
-  const canRequests = can(role, "requests.manage");
-  const canChannels = can(role, "channels.manage");
-  const canPublish = can(role, "content.edit");
-  const canChat = can(role, "chat.manage");
+  const canRequests = can(role, "requests.manage", granted);
+  const canChannels = can(role, "channels.manage", granted);
+  const canPublish = can(role, "content.edit", granted);
+  const canChat = can(role, "chat.manage", granted);
   const kinds: RequestKind[] = [
     ...(canRequests ? (["service-request"] as const) : []),
     // Same order the sidebar's "Canais do cidadão" group lists them in

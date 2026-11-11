@@ -43,9 +43,12 @@ export async function searchGlobally(
   if (trimmed.length < MIN_QUERY_LENGTH) return [];
 
   const role = session.user.role ?? "";
+  const granted = session.user.permissions;
   const kinds: RequestKind[] = [
-    ...(can(role, "requests.manage") ? (["service-request"] as const) : []),
-    ...(can(role, "channels.manage")
+    ...(can(role, "requests.manage", granted)
+      ? (["service-request"] as const)
+      : []),
+    ...(can(role, "channels.manage", granted)
       ? (["appointment", "data-rights", "ombudsman"] as const)
       : []),
   ];

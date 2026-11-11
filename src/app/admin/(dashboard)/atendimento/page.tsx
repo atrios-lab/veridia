@@ -20,7 +20,11 @@ export const metadata = { title: "Atendimento online" };
 
 export default async function SupportChatQueuePage() {
   const session = await getSession();
-  if (!session || !can(session.user.role ?? "", "chat.manage")) notFound();
+  if (
+    !session ||
+    !can(session.user.role ?? "", "chat.manage", session.user.permissions)
+  )
+    notFound();
 
   const tenant = await getTenant();
   const [waiting, active, availability] = await Promise.all([
@@ -55,7 +59,11 @@ export default async function SupportChatQueuePage() {
           />
           <ChatToggle
             availability={availability}
-            canToggle={can(session.user.role ?? "", "chat.settings")}
+            canToggle={can(
+              session.user.role ?? "",
+              "chat.settings",
+              session.user.permissions,
+            )}
           />
         </div>
 

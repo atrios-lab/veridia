@@ -54,7 +54,11 @@ export default async function DataRightsDetailPage({
   params: Promise<{ protocolo: string }>;
 }) {
   const session = await getSession();
-  if (!session || !can(session.user.role ?? "", "channels.manage")) notFound();
+  if (
+    !session ||
+    !can(session.user.role ?? "", "channels.manage", session.user.permissions)
+  )
+    notFound();
 
   const tenant = await getTenant();
   const { protocolo } = await params;

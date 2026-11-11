@@ -14,7 +14,11 @@ export default async function ManualEntryPage({
   searchParams: Promise<{ deConversa?: string }>;
 }) {
   const session = await getSession();
-  if (!session || !can(session.user.role ?? "", "requests.manage")) notFound();
+  if (
+    !session ||
+    !can(session.user.role ?? "", "requests.manage", session.user.permissions)
+  )
+    notFound();
   const tenant = await getTenant();
 
   // Reached from "Lançar um pedido novo a partir desta conversa" at closing

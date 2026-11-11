@@ -21,7 +21,8 @@ export const metadata = { title: "Assinador digital" };
 export default async function SignerPage() {
   const session = await getSession();
   const role = session?.user.role ?? "";
-  if (!session || !can(role, "desk.access")) notFound();
+  const granted = session?.user.permissions;
+  if (!session || !can(role, "desk.access", granted)) notFound();
   const tenant = await getTenant();
   const [certificates, documents] = await Promise.all([
     certificatesForSignerWith(db, tenant.slug, session.user.id),
@@ -47,7 +48,7 @@ export default async function SignerPage() {
             </h2>
             <p className="mt-1.5">
               Você ainda não tem certificado liberado para assinar.{" "}
-              {can(role, "user.manage") ? (
+              {can(role, "user.manage", granted) ? (
                 <>
                   Cadastre um certificado A1 e marque quem pode assinar em{" "}
                   <Link

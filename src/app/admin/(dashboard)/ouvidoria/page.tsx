@@ -20,7 +20,11 @@ export const metadata = { title: "Ouvidoria" };
 
 export default async function OmbudsmanQueuePage() {
   const session = await getSession();
-  if (!session || !can(session.user.role ?? "", "channels.manage")) notFound();
+  if (
+    !session ||
+    !can(session.user.role ?? "", "channels.manage", session.user.permissions)
+  )
+    notFound();
   const tenant = await getTenant();
 
   // Files 30 days past the closing leave storage as the queue opens.

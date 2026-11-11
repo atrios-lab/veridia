@@ -23,7 +23,11 @@ const DAY = 24 * 60 * 60 * 1000;
 
 export default async function CertificatesPage() {
   const session = await getSession();
-  if (!session || !can(session.user.role ?? "", "user.manage")) notFound();
+  if (
+    !session ||
+    !can(session.user.role ?? "", "user.manage", session.user.permissions)
+  )
+    notFound();
   const tenant = await getTenant();
   const [certificates, people] = await Promise.all([
     listCertificatesWith(db, tenant.slug),
@@ -35,7 +39,10 @@ export default async function CertificatesPage() {
     <>
       <AdminPageHeader title="Configurações" />
       <main className="flex max-w-[860px] flex-col gap-4.5 px-[30px] py-7">
-        <ConfiguracoesTabs role={session.user.role ?? ""} />
+        <ConfiguracoesTabs
+          role={session.user.role ?? ""}
+          permissions={session.user.permissions}
+        />
         <section className="rounded-[14px] border border-admin-border bg-admin-card px-5 py-4">
           <h2 className="font-serif text-[17px] font-semibold text-admin-primary">
             Certificados digitais (A1)

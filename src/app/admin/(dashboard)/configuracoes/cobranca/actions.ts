@@ -53,7 +53,10 @@ export async function savePixKey(
   // Hiding the button is not the check; this is. billing.edit, not
   // content.edit: the key that receives the citizen's money is not day to
   // day content.
-  if (!session || !can(session.user.role ?? "", "billing.edit")) {
+  if (
+    !session ||
+    !can(session.user.role ?? "", "billing.edit", session.user.permissions)
+  ) {
     return fail("Você não tem permissão para alterar a chave.", values);
   }
   const tenant = await getTenant();
@@ -126,7 +129,10 @@ export async function removePixKey(
   _formData: FormData,
 ): Promise<PixKeyState> {
   const session = await getSession();
-  if (!session || !can(session.user.role ?? "", "billing.edit")) {
+  if (
+    !session ||
+    !can(session.user.role ?? "", "billing.edit", session.user.permissions)
+  ) {
     return fail("Você não tem permissão para remover a chave.", {
       type: "",
       key: "",

@@ -34,7 +34,10 @@ const GENERIC_ERROR =
  * `/admin/pedidos`: hiding the link and the page 404-ing are a courtesy. */
 async function authorize() {
   const session = await getSession();
-  if (!session || !can(session.user.role ?? "", "channels.manage")) {
+  if (
+    !session ||
+    !can(session.user.role ?? "", "channels.manage", session.user.permissions)
+  ) {
     return null;
   }
   return session;

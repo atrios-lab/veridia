@@ -23,7 +23,11 @@ export const metadata = { title: "Turmas" };
  */
 export default async function CohortsPage() {
   const session = await getSession();
-  if (!session || !can(session.user.role ?? "", "cohorts.manage")) notFound();
+  if (
+    !session ||
+    !can(session.user.role ?? "", "cohorts.manage", session.user.permissions)
+  )
+    notFound();
 
   const [cohorts, courses] = await Promise.all([
     listCohorts(),
