@@ -118,9 +118,20 @@ function AppointmentRow({ appointment }: { appointment: DayAppointment }) {
   const deskBooked = live && appointment.origin === "desk";
 
   return (
-    <div className="border-b border-admin-border px-5 py-3.5 text-[13px] last:border-b-0">
+    <div
+      className={`border-b border-admin-border px-5 py-3.5 text-[13px] last:border-b-0 ${
+        live ? "border-l-4 border-l-admin-accent bg-admin-warning-soft-bg" : ""
+      }`}
+    >
       <div className="grid grid-cols-[76px_1fr] items-center gap-3 @2xl:grid-cols-[76px_1fr_auto]">
         <span className="font-bold tabular-nums text-admin-primary">
+          {live && (
+            // A booked time calls the eye, the free ones stay quiet.
+            <span className="relative mr-1.5 inline-flex h-2.5 w-2.5 align-middle">
+              <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-admin-accent opacity-60" />
+              <span className="relative inline-flex h-2.5 w-2.5 rounded-full bg-admin-accent" />
+            </span>
+          )}
           {appointment.slotTime}
           <span className="block text-[10.5px] font-normal text-admin-faint">
             até {slotEndTime(appointment.slotTime)}
