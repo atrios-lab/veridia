@@ -52,3 +52,12 @@ jobs:
         run: pnpm dlx @fission-ai/openspec@1.5.0 validate --all
 
       - run: pnpm build
+
+      # The Assinador Veridia (A3 tokens) is Go: its tests, a vet for Windows,
+      # and a check that the .exe the panel offers is exactly this code's.
+      - uses: actions/setup-go@v5
+        with:
+          go-version: 1.24.7
+          cache-dependency-path: tools/assinador-local/go.sum
+      - name: assinador local
+        run: scripts/build-assinador.sh --check

@@ -31,7 +31,7 @@ test("the store host reaches img-src, media-src and connect-src, exact and once"
   );
   assert.equal(
     directive(csp, "connect-src"),
-    "'self' https://vercel.com https://store.example.test",
+    "'self' https://vercel.com https://store.example.test http://127.0.0.1:47820",
   );
   assert.ok(!csp.includes("*"));
 });

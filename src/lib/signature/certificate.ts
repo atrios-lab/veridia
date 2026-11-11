@@ -141,3 +141,49 @@ export function openCertificate(
     },
   };
 }
+
+/** A certificate whose key lives elsewhere (an A3 token or card). */
+export interface ExternalCertificate {
+  holderDer: Buffer;
+  chainDer: Buffer[];
+  info: CertificateInfo;
+}
+
+/**
+ * Reads the holder's certificate the assinador local sent (DER) and the
+ * chain the computer knows for it. Only the public part: the key never
+ * leaves the token.
+ */
+export function externalCertificate(
+  holderDer: Buffer,
+  chain: Buffer[] = [],
+): ExternalCertificate {
+  let holder: forge.pki.Certificate;
+  try {
+    holder = forge.pki.certificateFromAsn1(
+      forge.asn1.fromDer(holderDer.toString("binary")),
+    );
+  } catch {
+    throw new CertificateFileError("Certificado do token ilegível.");
+  }
+  const holderPrint = createHash("sha256").update(holderDer).digest("hex");
+  const others = chain.filter(
+    (der) => createHash("sha256").update(der).digest("hex") !== holderPrint,
+  );
+  const cn = String(holder.subject.getField("CN")?.value ?? "");
+  const who = holderOf(cn);
+  return {
+    holderDer,
+    chainDer: [holderDer, ...others],
+    info: {
+      holderName: who.name,
+      holderDocument: who.document,
+      kind: who.kind,
+      issuerName: String(holder.issuer.getField("CN")?.value ?? ""),
+      serialHex: holder.serialNumber.toLowerCase(),
+      notBefore: holder.validity.notBefore,
+      notAfter: holder.validity.notAfter,
+      fingerprint: holderPrint,
+    },
+  };
+}

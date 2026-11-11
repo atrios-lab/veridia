@@ -10,12 +10,18 @@ import { justify } from "@/lib/audit-reason.ts";
 import { brandFor } from "@/lib/document-brand.ts";
 import { renderDocument } from "@/lib/pdf.ts";
 import { getSession } from "@/lib/session.ts";
-import { CertificatePasswordError } from "@/lib/signature/certificate.ts";
+import {
+  CertificateFileError,
+  CertificatePasswordError,
+} from "@/lib/signature/certificate.ts";
 import { requestOrigin, verifyUrlFor } from "@/lib/signature/documents.ts";
 import { PdfNotSignableError } from "@/lib/signature/pades.ts";
 import {
   coSignDocumentWith,
   findSignedDocumentWith,
+  finishA3SignWith,
+  prepareA3CoSignWith,
+  prepareA3SignWith,
   SigningError,
   setSignedDocumentRemovedWith,
   signNewDocumentWith,
@@ -26,7 +32,12 @@ export type SignState =
   | { status: "idle" }
   | { status: "error"; message: string };
 
-const KNOWN = [CertificatePasswordError, SigningError, PdfNotSignableError];
+const KNOWN = [
+  CertificatePasswordError,
+  CertificateFileError,
+  SigningError,
+  PdfNotSignableError,
+];
 
 function failure(error: unknown, where: string): SignState {
   if (KNOWN.some((kind) => error instanceof kind)) {
@@ -75,6 +86,9 @@ export async function signOneDocument(
   const title =
     String(formData.get("title") ?? "").trim() ||
     file.name.replace(/\.pdf$/i, "");
+  const manifest = withManifest
+    ? manifestFor(tenant, origin, title, file.name || "documento.pdf")
+    : undefined;
   try {
     const { id } = await signNewDocumentWith(
       db,
@@ -88,23 +102,7 @@ export async function signOneDocument(
         verifyUrl: (code) => verifyUrlFor(tenant, origin, code),
         location,
         officeName: officialName(tenant),
-        manifest: withManifest
-          ? async (code, info, at, original) => {
-              const verifyUrl = verifyUrlFor(tenant, origin, code);
-              return renderDocument(
-                buildSignatureManifest(tenant, {
-                  code,
-                  title,
-                  originalName: file.name || "documento.pdf",
-                  pageCount: original.pageCount,
-                  originalSha256: original.sha256,
-                  signatures: [{ ...info, signedAt: at }],
-                  verifyUrl,
-                }),
-                await brandFor(tenant, verifyUrl),
-              );
-            }
-          : undefined,
+        manifest,
       },
       session.user.id,
     );
@@ -197,4 +195,173 @@ export async function coSignDocument(
   }
   revalidatePath(`/admin/utilitarios/assinador/${id}`);
   redirect(`/admin/utilitarios/assinador/${id}?assinado=1`);
+}
+
+type Tenant = Awaited<ReturnType<typeof getTenant>>;
+
+/** The manifest pages appended to a newly signed document. */
+function manifestFor(
+  tenant: Tenant,
+  origin: string,
+  title: string,
+  originalName: string,
+): NonNullable<Parameters<typeof signNewDocumentWith>[2]["manifest"]> {
+  return async (code, info, at, original) => {
+    const verifyUrl = verifyUrlFor(tenant, origin, code);
+    return renderDocument(
+      buildSignatureManifest(tenant, {
+        code,
+        title,
+        originalName,
+        pageCount: original.pageCount,
+        originalSha256: original.sha256,
+        signatures: [{ ...info, signedAt: at }],
+        verifyUrl,
+      }),
+      await brandFor(tenant, verifyUrl),
+    );
+  };
+}
+
+/* ------------------------------------------------ A3: token or smart card */
+
+export type A3Step =
+  | { status: "prepared"; token: string; toBeSigned: string }
+  | { status: "error"; message: string };
+
+export type A3Done =
+  | { status: "signed"; id: string }
+  | { status: "error"; message: string };
+
+async function signer() {
+  const session = await getSession();
+  if (
+    !session ||
+    !can(session.user.role ?? "", "desk.access", session.user.permissions)
+  ) {
+    return undefined;
+  }
+  return session;
+}
+
+/** What the assinador local sent about the certificate: public part only. */
+function certificateFrom(formData: FormData) {
+  const holder = String(formData.get("holder") ?? "");
+  let chain: string[] = [];
+  try {
+    chain = JSON.parse(String(formData.get("chain") ?? "[]"));
+  } catch {
+    chain = [];
+  }
+  return {
+    holderDer: Buffer.from(holder, "base64"),
+    chainDer: (Array.isArray(chain) ? chain : [])
+      .slice(0, 8)
+      .map((item) => Buffer.from(String(item), "base64")),
+  };
+}
+
+function a3Failure(error: unknown, where: string) {
+  const failed = failure(error, where);
+  return {
+    status: "error" as const,
+    message: failed.status === "error" ? failed.message : "Erro.",
+  };
+}
+
+/**
+ * A3, step one for a new document: the platform stamps and prepares the
+ * PDF and answers what the token must sign.
+ */
+export async function prepareA3Document(formData: FormData): Promise<A3Step> {
+  const session = await signer();
+  if (!session) return { status: "error", message: "Sem permissão." };
+  const file = formData.get("pdf");
+  if (!(file instanceof File) || file.size === 0) {
+    return { status: "error", message: "Escolha o PDF a assinar." };
+  }
+  const tenant = await getTenant();
+  const origin = await requestOrigin();
+  const title =
+    String(formData.get("title") ?? "").trim() ||
+    file.name.replace(/\.pdf$/i, "");
+  try {
+    const prepared = await prepareA3SignWith(
+      tenant.slug,
+      {
+        ...certificateFrom(formData),
+        pdf: Buffer.from(await file.arrayBuffer()),
+        title,
+        originalName: file.name || "documento.pdf",
+        verifyUrl: (code) => verifyUrlFor(tenant, origin, code),
+        location: `${tenant.location.city}/${tenant.location.state}`,
+        officeName: officialName(tenant),
+        manifest:
+          formData.get("manifest") === "on"
+            ? manifestFor(tenant, origin, title, file.name || "documento.pdf")
+            : undefined,
+      },
+      session.user.id,
+    );
+    return {
+      status: "prepared",
+      token: prepared.token,
+      toBeSigned: prepared.toBeSigned.toString("base64"),
+    };
+  } catch (error) {
+    return a3Failure(error, "assinador.a3.prepare");
+  }
+}
+
+/** A3, step one for one more signature on a document signed here. */
+export async function prepareA3CoSign(formData: FormData): Promise<A3Step> {
+  const session = await signer();
+  if (!session) return { status: "error", message: "Sem permissão." };
+  const tenant = await getTenant();
+  try {
+    const prepared = await prepareA3CoSignWith(
+      db,
+      tenant.slug,
+      String(formData.get("documentId") ?? ""),
+      {
+        ...certificateFrom(formData),
+        location: `${tenant.location.city}/${tenant.location.state}`,
+      },
+      session.user.id,
+    );
+    return {
+      status: "prepared",
+      token: prepared.token,
+      toBeSigned: prepared.toBeSigned.toString("base64"),
+    };
+  } catch (error) {
+    return a3Failure(error, "assinador.a3.cosign");
+  }
+}
+
+/** A3, step two: the token's signature comes back and the PDF is done. */
+export async function finishA3(formData: FormData): Promise<A3Done> {
+  const session = await signer();
+  if (!session) return { status: "error", message: "Sem permissão." };
+  const tenant = await getTenant();
+  try {
+    const { id } = await finishA3SignWith(
+      db,
+      tenant.slug,
+      {
+        ...certificateFrom(formData),
+        token: String(formData.get("token") ?? ""),
+        signature: Buffer.from(
+          String(formData.get("signature") ?? ""),
+          "base64",
+        ),
+      },
+      session.user.id,
+    );
+    revalidatePath("/admin/utilitarios/assinador");
+    revalidatePath(`/admin/utilitarios/assinador/${id}`);
+    return { status: "signed", id };
+  } catch (error) {
+    return a3Failure(error, "assinador.a3.finish");
+  }
 }

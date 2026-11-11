@@ -5,7 +5,17 @@ import { useRouter } from "next/navigation";
 import { startTransition, useActionState, useRef, useState } from "react";
 import { ConfirmAction } from "../../../_components/confirm-action.tsx";
 import {
+  certificateFields,
+  LocalSignerPicker,
+  signOnToken,
+  type TokenCertificate,
+  useLocalSigner,
+} from "./a3.tsx";
+import {
   coSignDocument,
+  finishA3,
+  prepareA3CoSign,
+  prepareA3Document,
   type SignState,
   setDocumentRemoved,
   signOneDocument,
@@ -77,6 +87,106 @@ function CertificateAndPassword({
   );
 }
 
+type Mode = "a1" | "a3";
+
+/**
+ * A1 (the file kept, sealed, on the platform) or A3 (a token or card on
+ * this computer, through the Assinador Veridia). Decision of 11/11/2026.
+ */
+function ModeChoice({
+  mode,
+  onChange,
+  hasA1,
+  prefix,
+}: {
+  mode: Mode;
+  onChange: (mode: Mode) => void;
+  hasA1: boolean;
+  prefix: string;
+}) {
+  const option = (value: Mode, title: string, hint: string) => (
+    <label
+      className={`flex flex-1 cursor-pointer items-start gap-2.5 rounded-[12px] border px-3.5 py-2.5 ${mode === value ? "border-admin-primary bg-admin-input-bg" : "border-admin-border hover:border-admin-primary"} ${value === "a1" && !hasA1 ? "cursor-not-allowed opacity-60" : ""}`}
+    >
+      <input
+        type="radio"
+        name={`${prefix}-mode`}
+        checked={mode === value}
+        disabled={value === "a1" && !hasA1}
+        onChange={() => onChange(value)}
+        className="mt-1"
+      />
+      <span>
+        <span className="block text-[13px] font-bold text-admin-primary">
+          {title}
+        </span>
+        <span className="block text-[11.5px] leading-snug text-admin-muted">
+          {hint}
+        </span>
+      </span>
+    </label>
+  );
+  return (
+    <fieldset className="md:col-span-2">
+      <legend className={LABEL}>Como assinar</legend>
+      <div className="flex flex-col gap-2 sm:flex-row">
+        {option(
+          "a1",
+          "Certificado A1",
+          hasA1
+            ? "Arquivo cadastrado na plataforma, com a senha dele."
+            : "Nenhum A1 liberado para você.",
+        )}
+        {option(
+          "a3",
+          "Certificado A3 (token ou cartão)",
+          "Conectado neste computador, com o PIN dele.",
+        )}
+      </div>
+    </fieldset>
+  );
+}
+
+/**
+ * One document through the token: the platform prepares, the token signs,
+ * the platform finishes. A cancelled PIN window stops the batch.
+ */
+async function signThroughToken(
+  certificate: TokenCertificate,
+  prepare: () => Promise<
+    | { status: "prepared"; token: string; toBeSigned: string }
+    | { status: "error"; message: string }
+  >,
+): Promise<
+  | { status: "signed"; id: string }
+  | { status: "error"; message: string; stop: boolean }
+> {
+  const prepared = await prepare();
+  if (prepared.status === "error") {
+    return { status: "error", message: prepared.message, stop: false };
+  }
+  let signature: string;
+  try {
+    signature = await signOnToken(certificate, prepared.toBeSigned);
+  } catch (error) {
+    const message = (error as Error).message || "O token não assinou.";
+    return {
+      status: "error",
+      message: /cancelad/i.test(message)
+        ? "Assinatura cancelada no token."
+        : message,
+      stop: true,
+    };
+  }
+  const data = certificateFields(new FormData(), certificate);
+  data.set("token", prepared.token);
+  data.set("signature", signature);
+  const done = await finishA3(data);
+  return done.status === "signed"
+    ? done
+    : { status: "error", message: done.message, stop: false };
+}
+
 interface Chosen {
   key: string;
   file: File;
@@ -104,6 +214,8 @@ export function SignForm({
   certificates: CertificateOption[];
 }) {
   const router = useRouter();
+  const [mode, setMode] = useState<Mode>(certificates.length ? "a1" : "a3");
+  const local = useLocalSigner(mode === "a3");
   const [files, setFiles] = useState<Chosen[]>([]);
   const [error, setError] = useState("");
   const [running, setRunning] = useState(false);
@@ -149,6 +261,11 @@ export function SignForm({
       setError("Escolha o PDF a assinar.");
       return;
     }
+    const token = local.certificate;
+    if (mode === "a3" && !token) {
+      setError("Escolha o certificado A3.");
+      return;
+    }
     setError("");
     setRunning(true);
     let lastId = "";
@@ -158,10 +275,21 @@ export function SignForm({
       const data = new FormData();
       data.set("pdf", item.file);
       data.set("title", item.title);
-      data.set("certificateId", String(form.get("certificateId") ?? ""));
-      data.set("password", String(form.get("password") ?? ""));
       if (form.get("manifest") === "on") data.set("manifest", "on");
-      const result = await signOneDocument(data);
+      let result: Awaited<ReturnType<typeof signOneDocument>>;
+      if (mode === "a3" && token) {
+        const outcome = await signThroughToken(token, () =>
+          prepareA3Document(certificateFields(data, token)),
+        );
+        result =
+          outcome.status === "signed"
+            ? { status: "signed", id: outcome.id, title: item.title }
+            : outcome;
+      } else {
+        data.set("certificateId", String(form.get("certificateId") ?? ""));
+        data.set("password", String(form.get("password") ?? ""));
+        result = await signOneDocument(data);
+      }
       if (result.status === "signed") {
         lastId = result.id;
         signedCount++;
@@ -172,7 +300,8 @@ export function SignForm({
         });
         if (result.stop) {
           setError(result.message);
-          // The rest stay waiting: fix the password and send again.
+          // The rest stay waiting: fix the password (or the PIN) and send
+          // again.
           break;
         }
       }
@@ -262,7 +391,17 @@ export function SignForm({
             </li>
           </ul>
         )}
-        <CertificateAndPassword certificates={certificates} prefix="sign" />
+        <ModeChoice
+          mode={mode}
+          onChange={setMode}
+          hasA1={certificates.length > 0}
+          prefix="sign"
+        />
+        {mode === "a1" ? (
+          <CertificateAndPassword certificates={certificates} prefix="sign" />
+        ) : (
+          <LocalSignerPicker signer={local} prefix="sign" />
+        )}
       </div>
       <label className="mt-3.5 flex items-center gap-2 text-[13px] text-admin-text">
         <input
@@ -349,10 +488,48 @@ export function CoSignForm({
   documentId: string;
   certificates: CertificateOption[];
 }) {
+  const router = useRouter();
   const [state, action, pending] = useActionState(coSignDocument, IDLE);
+  const [mode, setMode] = useState<Mode>(certificates.length ? "a1" : "a3");
+  const local = useLocalSigner(mode === "a3");
+  const [tokenError, setTokenError] = useState("");
+  const [tokenBusy, setTokenBusy] = useState(false);
+
+  const submit = async (event: React.FormEvent<HTMLFormElement>) => {
+    if (mode === "a1") {
+      keepFields(action)(event);
+      return;
+    }
+    event.preventDefault();
+    const token = local.certificate;
+    if (!token) {
+      setTokenError("Escolha o certificado A3.");
+      return;
+    }
+    setTokenError("");
+    setTokenBusy(true);
+    const data = certificateFields(new FormData(), token);
+    data.set("documentId", documentId);
+    const outcome = await signThroughToken(token, () => prepareA3CoSign(data));
+    setTokenBusy(false);
+    if (outcome.status === "error") {
+      setTokenError(outcome.message);
+      return;
+    }
+    router.push(`/admin/utilitarios/assinador/${documentId}?assinado=1`);
+    router.refresh();
+  };
+
+  const message =
+    mode === "a1"
+      ? state.status === "error"
+        ? state.message
+        : ""
+      : tokenError;
+  const busy = mode === "a1" ? pending : tokenBusy;
   return (
     <form
-      onSubmit={keepFields(action)}
+      onSubmit={(event) => void submit(event)}
       className="rounded-[14px] border border-admin-border bg-admin-card px-5 py-4"
     >
       <input type="hidden" name="documentId" value={documentId} />
@@ -363,22 +540,32 @@ export function CoSignForm({
         Mais uma assinatura no mesmo documento. As anteriores continuam válidas.
       </p>
       <div className="mt-3 grid grid-cols-1 gap-3.5 md:grid-cols-2">
-        <CertificateAndPassword certificates={certificates} prefix="cosign" />
+        <ModeChoice
+          mode={mode}
+          onChange={setMode}
+          hasA1={certificates.length > 0}
+          prefix="cosign"
+        />
+        {mode === "a1" ? (
+          <CertificateAndPassword certificates={certificates} prefix="cosign" />
+        ) : (
+          <LocalSignerPicker signer={local} prefix="cosign" />
+        )}
       </div>
-      {state.status === "error" && (
+      {message && (
         <p
           role="alert"
           className="mt-3 text-[12.5px] font-semibold text-admin-error-text"
         >
-          {state.message}
+          {message}
         </p>
       )}
       <button
         type="submit"
-        disabled={pending}
+        disabled={busy}
         className="btn btn-admin-primary btn-md mt-4"
       >
-        {pending ? "Assinando..." : "Assinar"}
+        {busy ? "Assinando..." : "Assinar"}
       </button>
     </form>
   );

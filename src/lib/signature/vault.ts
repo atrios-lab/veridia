@@ -45,3 +45,44 @@ export function openSealedCertificate(sealed: string): Buffer {
   decipher.setAuthTag(raw.subarray(12, 28));
   return Buffer.concat([decipher.update(raw.subarray(28)), decipher.final()]);
 }
+
+/**
+ * A small record sealed for a round trip through the browser (the A3
+ * signature's "prepared" step): encrypted and authenticated with a key of
+ * its own, so the browser can neither read nor change it.
+ */
+function tokenKey(): Buffer {
+  return Buffer.from(
+    hkdfSync("sha256", key(), "veridia", "external-signature/v1", 32),
+  );
+}
+
+export function sealToken(payload: unknown): string {
+  const iv = randomBytes(12);
+  const cipher = createCipheriv("aes-256-gcm", tokenKey(), iv);
+  const body = Buffer.concat([
+    cipher.update(JSON.stringify(payload), "utf8"),
+    cipher.final(),
+  ]);
+  return Buffer.concat([iv, cipher.getAuthTag(), body]).toString("base64url");
+}
+
+/** The sealed record, or undefined when it was changed or is not ours. */
+export function openToken<T>(token: string): T | undefined {
+  try {
+    const raw = Buffer.from(token, "base64url");
+    const decipher = createDecipheriv(
+      "aes-256-gcm",
+      tokenKey(),
+      raw.subarray(0, 12),
+    );
+    decipher.setAuthTag(raw.subarray(12, 28));
+    const text = Buffer.concat([
+      decipher.update(raw.subarray(28)),
+      decipher.final(),
+    ]).toString("utf8");
+    return JSON.parse(text) as T;
+  } catch {
+    return undefined;
+  }
+}

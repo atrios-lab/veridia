@@ -41,6 +41,9 @@ export function isFramablePdfPath(pathname: string): boolean {
 }
 
 // Exact hosts only, never a wildcard, in every directive below.
+/** The Assinador Veridia's address on the office's computer. */
+export const LOCAL_SIGNER = "http://127.0.0.1:47820";
+
 export function buildCsp({
   nonce,
   isDev,
@@ -67,7 +70,9 @@ export function buildCsp({
     // the API the client SDK posts to, and the store's own host is where it
     // is redirected. Without these two the upload is blocked by this very
     // policy and the citizen is back to not being able to attach anything.
-    `connect-src 'self' https://vercel.com${blob}`,
+    // The Assinador Veridia on the office's own computer (A3 tokens, see
+    // tools/assinador-local): that exact loopback port, nothing else local.
+    `connect-src 'self' https://vercel.com${blob} ${LOCAL_SIGNER}`,
     `frame-ancestors '${frameAncestors}'`,
     "base-uri 'self'",
     "form-action 'self'",
