@@ -275,7 +275,8 @@ export default async function PublicLayout({
       {/* Whether the citizen's attachments go straight to the store is a
           server-side fact (see src/lib/uploads.ts) that every upload on the
           public site has to know. */}
-      <main className="flex-1">
+      {/* site-text: the site's paragraphs justified, ABNT style (globals.css). */}
+      <main className="site-text flex-1">
         <BlobUploadProvider
           enabled={blobUploadEnabled()}
           tenantSlug={tenant.slug}
