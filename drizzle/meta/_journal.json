@@ -393,6 +393,13 @@
       "when": 1794414623940,
       "tag": "0055_iss_quem_assina",
       "breakpoints": true
+    },
+    {
+      "idx": 56,
+      "version": "7",
+      "when": 1794425028529,
+      "tag": "0056_papel_de_seguranca",
+      "breakpoints": true
     }
   ]
 }

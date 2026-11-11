@@ -66,6 +66,10 @@ export const OFFICE_PERMISSIONS = [
   "numbering.manage",
   "access.manage",
   "certificates.manage",
+  // Papel de segurança (decision of 11/11/2026): the lots, their use and
+  // losses, and the ofícios to the Corregedoria (Prov. CGJ/RN 156/2016,
+  // arts. 59 and 60).
+  "security-paper.manage",
   // The office's audit trail in full, and the formal notifications that ask
   // a person to explain an act: the Tabelião/Registrador's alone.
   "audit.manage",
@@ -95,6 +99,7 @@ export const GRANTABLE_PERMISSIONS = [
   "numbering.manage",
   "access.manage",
   "certificates.manage",
+  "security-paper.manage",
 ] as const;
 export type GrantablePermission = (typeof GRANTABLE_PERMISSIONS)[number];
 
@@ -112,6 +117,8 @@ export const DERIVED_FROM: Partial<Record<GrantablePermission, Permission>> = {
   "numbering.manage": "content.edit",
   "access.manage": "user.manage",
   "certificates.manage": "user.manage",
+  // Whoever issues the certidões and traslados uses the paper.
+  "security-paper.manage": "requests.manage",
 };
 
 /**
@@ -328,4 +335,6 @@ export const GRANTABLE_LABELS: Record<GrantablePermission, string> = {
   "numbering.manage": "Numeração de documentos",
   "access.manage": "Duas etapas e horário de acesso (ligar, desligar, liberar)",
   "certificates.manage": "Certificados digitais da serventia",
+  "security-paper.manage":
+    "Papel de segurança (lotes, uso, extravios e ofícios à Corregedoria)",
 };

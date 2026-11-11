@@ -1294,6 +1294,119 @@ export const issDeclarations = pgTable(
 );
 
 /**
+ * Papel de segurança (decision of 11/11/2026; Provimento CGJ/RN 156/2016,
+ * arts. 59 and 60): the lots the office receives, numbered sheet by sheet.
+ * Nothing here is ever deleted: a lot typed wrong is voided, with the
+ * reason, and stays in the classificador.
+ */
+export const securityPaperLots = pgTable(
+  "security_paper_lots",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    tenantSlug,
+    /** core/security-paper: certidao-rcpn, traslado, apostila, outro... */
+    kind: text("kind").notNull(),
+    kindLabel: text("kind_label").notNull().default(""),
+    prefix: text("prefix").notNull().default(""),
+    firstNumber: bigint("first_number", { mode: "number" }).notNull(),
+    lastNumber: bigint("last_number", { mode: "number" }).notNull(),
+    digits: integer("digits").notNull().default(6),
+    /** "YYYY-MM-DD": arrived, or counted (opening stock). */
+    receivedOn: text("received_on").notNull(),
+    /** Stock the office had before the control began here. */
+    opening: boolean("opening").notNull().default(false),
+    /** Optional: the printer, the nota fiscal and the requisition. */
+    supplier: text("supplier").notNull().default(""),
+    invoice: text("invoice").notNull().default(""),
+    requisition: text("requisition").notNull().default(""),
+    notes: text("notes").notNull().default(""),
+    /** The nota fiscal or the receipt, scanned (optional). */
+    invoicePath: text("invoice_path"),
+    invoiceName: text("invoice_name"),
+    createdBy: text("created_by"),
+    voidedAt: timestamp("voided_at", { withTimezone: true }),
+    voidedBy: text("voided_by"),
+    voidReason: text("void_reason").notNull().default(""),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (t) => [index("security_paper_lots_tenant").on(t.tenantSlug, t.receivedOn)],
+);
+
+/**
+ * What happened to a range of a lot's sheets: used in an act, spoiled,
+ * damaged, lost or stolen. Voided, never deleted.
+ */
+export const securityPaperMovements = pgTable(
+  "security_paper_movements",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    tenantSlug,
+    lotId: uuid("lot_id")
+      .notNull()
+      .references(() => securityPaperLots.id),
+    type: text("type").notNull(),
+    firstNumber: bigint("first_number", { mode: "number" }).notNull(),
+    lastNumber: bigint("last_number", { mode: "number" }).notNull(),
+    occurredOn: text("occurred_on").notNull(),
+    /** The act, the book and page, the police report. */
+    reference: text("reference").notNull().default(""),
+    notes: text("notes").notNull().default(""),
+    createdBy: text("created_by"),
+    voidedAt: timestamp("voided_at", { withTimezone: true }),
+    voidedBy: text("voided_by"),
+    voidReason: text("void_reason").notNull().default(""),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (t) => [
+    index("security_paper_movements_tenant").on(t.tenantSlug, t.occurredOn),
+    index("security_paper_movements_lot").on(t.lotId),
+  ],
+);
+
+/**
+ * The ofícios to the Corregedoria and the classificador's reports, each
+ * with what it said frozen in `snapshot`, kept for good. The ofícios are
+ * numbered by year (series "oficio-papel"); the report is not.
+ */
+export const securityPaperReports = pgTable(
+  "security_paper_reports",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    tenantSlug,
+    /** extravio | prestacao | relatorio */
+    kind: text("kind").notNull(),
+    year: integer("year").notNull(),
+    sequence: integer("sequence"),
+    periodStart: text("period_start").notNull(),
+    periodEnd: text("period_end").notNull(),
+    snapshot: jsonb("snapshot").notNull(),
+    /** The movements an ofício of art. 59 told (no reminder after). */
+    movementIds: jsonb("movement_ids").$type<string[]>().notNull().default([]),
+    signer: integer("signer").notNull().default(0),
+    /** When and how it reached the Corregedoria (malote, e-mail, protocol). */
+    sentOn: text("sent_on").notNull().default(""),
+    sentReference: text("sent_reference").notNull().default(""),
+    createdBy: text("created_by"),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (t) => [
+    uniqueIndex("security_paper_reports_tenant_year_sequence")
+      .on(t.tenantSlug, t.year, t.sequence)
+      .where(sql`${t.sequence} is not null`),
+    index("security_paper_reports_tenant").on(t.tenantSlug, t.periodEnd),
+  ],
+);
+
+/**
  * The office's A1 certificates (assinador digital, product decision of
  * 10/11/2026): any number of them, e-CPF or e-CNPJ. The .pfx is kept
  * encrypted with the platform's key (lib/signature/vault.ts) on top of its

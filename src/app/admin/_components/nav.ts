@@ -126,6 +126,16 @@ export const ADMIN_NAV: readonly AdminNavItem[] = [
     permission: "iss.manage",
   },
   {
+    // Papel de segurança (decision of 11/11/2026): the classificador of the
+    // lots, their use and losses, and the ofícios to the Corregedoria
+    // (Provimento CGJ/RN 156/2016, arts. 59 and 60).
+    group: "Utilitários",
+    label: "Papel de segurança",
+    href: "/admin/utilitarios/papel-seguranca",
+    icon: "shield",
+    permission: "security-paper.manage",
+  },
+  {
     // PAdES signatures with the office's A1 certificates (ICP-Brasil), each
     // with its verification code and QR (see lib/signing.ts).
     group: "Utilitários",

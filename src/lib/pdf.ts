@@ -8,6 +8,7 @@ import type {
   RequerimentoField,
   RequerimentoRow,
   RequerimentoSection,
+  RequerimentoTable,
 } from "@/core/request/requerimento.ts";
 import { NEUTRALS } from "@/core/tenant/palette.ts";
 import type { DocumentBrand } from "./document-brand.ts";
@@ -209,7 +210,109 @@ function drawSection(
     pdf.moveDown(0.4);
   }
 
+  if (section.table) drawTable(pdf, section.table, brand);
+
   if (section.highlight) drawHighlight(pdf, section.highlight, brand);
+}
+
+/**
+ * A table in the flow: the header row tinted, repeated on each new page the
+ * rows run onto, rules between rows, the total in bold (decision of
+ * 11/11/2026: the papel de segurança's spreadsheet goes inside the ofício).
+ */
+function drawTable(
+  pdf: Pdf,
+  table: RequerimentoTable,
+  brand: DocumentBrand,
+): void {
+  const width = contentWidth(pdf);
+  const weights = table.columns.map((c) => c.weight ?? 1);
+  const sum = weights.reduce((a, b) => a + b, 0);
+  const widths = weights.map((w) => (w / sum) * width);
+  const pad = 3.5;
+  const size = 9;
+  // The header in smaller type: "Inutilizadas" fits a narrow column whole.
+  const headerSize = 7.5;
+
+  const heightOf = (cells: string[], bold: boolean, fontSize = size) => {
+    pdf.font(bold ? "Times-Bold" : "Times-Roman").fontSize(fontSize);
+    return (
+      Math.max(
+        ...cells.map((cell, i) =>
+          pdf.heightOfString(cell || " ", {
+            width: (widths[i] ?? 0) - pad * 2,
+          }),
+        ),
+      ) +
+      pad * 2
+    );
+  };
+
+  const drawCells = (
+    cells: string[],
+    top: number,
+    height: number,
+    options: { bold?: boolean; fill?: string; color?: string; size?: number },
+  ) => {
+    if (options.fill) pdf.rect(MARGIN, top, width, height).fill(options.fill);
+    let x = MARGIN;
+    cells.forEach((cell, i) => {
+      const w = widths[i] ?? 0;
+      pdf
+        .font(options.bold ? "Times-Bold" : "Times-Roman")
+        .fontSize(options.size ?? size)
+        .fillColor(options.color ?? NEUTRALS.text)
+        .text(cell, x + pad, top + pad, {
+          width: w - pad * 2,
+          align: table.columns[i]?.align ?? "left",
+        });
+      x += w;
+    });
+    pdf.rect(MARGIN, top + height, width, 0.5).fill(brand.palette.border);
+  };
+
+  const header = table.columns.map((c) => c.label);
+  const headerHeight = heightOf(header, true, headerSize);
+  const drawHeader = () => {
+    const top = pdf.y;
+    drawCells(header, top, headerHeight, {
+      bold: true,
+      fill: brand.palette.tint,
+      color: brand.palette.primary,
+      size: headerSize,
+    });
+    pdf.y = top + headerHeight;
+  };
+
+  pdf.moveDown(0.4);
+  if (pdf.y + headerHeight * 2 > bottom(pdf)) pdf.addPage();
+  drawHeader();
+
+  if (table.rows.length === 0 && table.empty) {
+    pdf
+      .font("Times-Italic")
+      .fontSize(size)
+      .fillColor(NEUTRALS.textSoft)
+      .text(table.empty, MARGIN + pad, pdf.y + pad, { width: width - pad * 2 });
+    pdf.y += pad;
+  }
+
+  const lines = [
+    ...table.rows.map((cells) => ({ cells, bold: false })),
+    ...(table.total ? [{ cells: table.total, bold: true }] : []),
+  ];
+  for (const line of lines) {
+    const height = heightOf(line.cells, line.bold);
+    if (pdf.y + height > bottom(pdf)) {
+      pdf.addPage();
+      drawHeader();
+    }
+    const top = pdf.y;
+    drawCells(line.cells, top, height, { bold: line.bold });
+    pdf.y = top + height;
+  }
+  pdf.x = MARGIN;
+  pdf.moveDown(0.6);
 }
 
 /** A paragraph in a tinted box with the theme's bar on its left. */

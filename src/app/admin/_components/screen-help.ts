@@ -180,6 +180,26 @@ const ENTRIES: Record<string, ScreenHelp> = {
       ],
     },
   },
+  "/admin/utilitarios/papel-seguranca": {
+    purpose:
+      "O classificador do papel de segurança (Provimento CGJ/RN nº 156/2016, arts. 59 e 60): os lotes recebidos, as folhas usadas e perdidas, o estoque e os ofícios à Corregedoria, com a planilha das folhas.",
+    steps: [
+      "Em 'Cadastrar lote', informe o tipo de papel e a primeira e a última folha. Nota fiscal e gráfica são opcionais. Folhas antigas: marque 'Estoque que a serventia já tinha'.",
+      "No dia a dia, use 'Lançar uso ou ocorrência': diga quantas folhas usou (o sistema baixa a partir da próxima livre) ou informe a numeração da folha inutilizada, avariada, extraviada ou subtraída.",
+      "Errou um lançamento? Use 'Anular', com a justificativa: nada é apagado, as folhas voltam ao estoque.",
+      "No fim do mês com extravio, subtração ou avaria, e a cada trimestre, o aviso amarelo leva ao ofício pronto. Assine digitalmente ou imprima, baixe a planilha e anote o envio.",
+    ],
+    configure: {
+      href: "/admin/utilitarios/papel-seguranca/configuracao",
+      label: "A quem vão os ofícios",
+      permission: "security-paper.manage",
+      steps: [
+        "Confira o órgão (Corregedoria Geral de Justiça do Estado) e o tratamento do(a) Corregedor(a).",
+        "Confira a norma do Estado citada nos ofícios; no RN, o Provimento nº 156/2016-CGJ/RN.",
+        "Se a Corregedoria fixou um prazo para a prestação trimestral, informe o dia. Quem assina vem de Configurações › Quem assina.",
+      ],
+    },
+  },
   "/admin/utilitarios/assinador": {
     purpose:
       "O assinador digital: assina PDFs com o certificado da serventia (A1 no sistema ou A3 no token), com QR de verificação.",

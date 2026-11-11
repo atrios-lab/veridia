@@ -1,5 +1,6 @@
 import { isSectionEnabled } from "@/core/tenant/gating.ts";
 import { sendDueReminders } from "@/lib/appointment-reminders.ts";
+import { sendSecurityPaperReminders } from "@/lib/security-paper-reminders.ts";
 import { allTenantsWithOverrides, officeNow } from "@/lib/tenant.ts";
 
 export const runtime = "nodejs";
@@ -23,7 +24,18 @@ export async function GET(request: Request): Promise<Response> {
 
   const now = officeNow();
   const results: Record<string, { citizens: number; summary: boolean }> = {};
+  const securityPaper: Record<string, boolean> = {};
   for (const tenant of await allTenantsWithOverrides()) {
+    // Papel de segurança (decision of 11/11/2026): the quarter's accounts
+    // and the month's losses, to the office, once each. Every office.
+    try {
+      securityPaper[tenant.slug] = await sendSecurityPaperReminders(
+        tenant,
+        now.date,
+      );
+    } catch (error) {
+      console.error("security-paper.reminders", tenant.slug, error);
+    }
     if (!isSectionEnabled(tenant, "agendamento")) continue;
     try {
       results[tenant.slug] = await sendDueReminders(tenant, now);
@@ -32,5 +44,5 @@ export async function GET(request: Request): Promise<Response> {
       console.error("agenda.reminders", tenant.slug, error);
     }
   }
-  return Response.json({ day: now.date, results });
+  return Response.json({ day: now.date, results, securityPaper });
 }

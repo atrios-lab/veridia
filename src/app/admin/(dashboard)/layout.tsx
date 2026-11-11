@@ -20,6 +20,8 @@ import {
   lingeringStatusesWith,
 } from "@/lib/messages.ts";
 import { getOfficeAlerts } from "@/lib/office-alerts.ts";
+import { pendingDutyCount } from "@/lib/security-paper.ts";
+import { sendSecurityPaperRemindersInBackground } from "@/lib/security-paper-reminders.ts";
 import { openCountByKind, openRequestCount } from "@/lib/service-request.ts";
 import {
   getClosedHoursSession,
@@ -160,12 +162,27 @@ export default async function DashboardLayout({
     ...(can(role, "chat.manage", granted)
       ? { "/admin/atendimento": await waitingCount(tenant.slug) }
       : {}),
+    // The quarter's accounts and the month's losses owed to the
+    // Corregedoria (decision of 11/11/2026).
+    ...(can(role, "security-paper.manage", granted)
+      ? {
+          "/admin/utilitarios/papel-seguranca": await pendingDutyCount(
+            tenant.slug,
+            officeNow().date,
+          ),
+        }
+      : {}),
   };
 
   // Backup for the daily reminders job (api/agenda/lembretes): opening the
   // panel sends whatever is due, after the response, once each.
   if (can(role, "channels.manage", granted)) {
     after(() => sendDueRemindersInBackground(tenant, officeNow()));
+  }
+  if (can(role, "security-paper.manage", granted)) {
+    after(() =>
+      sendSecurityPaperRemindersInBackground(tenant, officeNow().date),
+    );
   }
 
   // "Treinamento" is offered once there is something to watch, and always
