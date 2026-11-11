@@ -2,10 +2,12 @@
  * How much an act of the trail asks of the Tabelião/Registrador (decision
  * of 11/11/2026), in three bands and the routine below them:
  *
- * - urgente: what loses something or opens the door to someone. Every
- *   exclusion, money (the Pix key), access and identity (accounts, e-mail,
- *   two-step access, a sign-in refused at another office). Alerts the
- *   holder on the panel until he marks it as seen.
+ * - urgente: what can hide an error, fraud, dolo, culpa or bad intent
+ *   (decision of 11/11/2026): every exclusion of an act or a document,
+ *   money (the Pix key), access and identity (accounts, e-mail, two-step
+ *   access, a sign-in refused at another office). The only band that
+ *   alerts the holder, on the panel, until he marks it as seen. The
+ *   others are kept for searching, without alert.
  * - atencao: what changes a value, a deadline, a number, a permission or a
  *   signature's rules. Worth a look the same day.
  * - analise: what changes what the public reads (publications, the site,
@@ -33,11 +35,11 @@ export const AUDIT_LEVEL_LABELS: Record<AuditLevel, string> = {
 /** In the holder's words: why each band is what it is. */
 export const AUDIT_LEVEL_HINTS: Record<AuditLevel, string> = {
   urgente:
-    "Exclusões, chave Pix, contas, e-mails e acesso ao painel. Fica em alerta até você verificar.",
+    "Atos que podem esconder erro, fraude, dolo, culpa ou má intenção: exclusões, chave Pix, contas, e-mails e acesso ao painel. Só estes alertam, até você verificar.",
   atencao:
-    "Valores, prazos, números, permissões e certificados. Vale olhar no mesmo dia.",
+    "Valores, prazos, números, permissões e certificados. Sem alerta: ficam para pesquisa e conferência.",
   analise:
-    "Publicações, site, identidade e configurações. Para revisar com calma.",
+    "Publicações, site, identidade e configurações. Sem alerta: ficam para pesquisa.",
   rotina: "Entradas no painel e atos do dia a dia.",
 };
 
@@ -48,7 +50,8 @@ const EXACT: Record<string, AuditLevel> = {
   "user.create": "urgente",
   "user.invite": "urgente",
   "user.reactivate": "urgente",
-  "user.deactivate": "urgente",
+  // Taking access away protects the office: worth knowing, not alarming.
+  "user.deactivate": "atencao",
   "user.email-changed": "urgente",
   "user.password-reset-link-issued": "urgente",
   "platform.two-step-off": "urgente",
@@ -102,6 +105,10 @@ const EXACT: Record<string, AuditLevel> = {
   "service-request.delivery-rename": "analise",
   "service-request.requirement.edit": "analise",
   "appointment.close-day": "analise",
+  // Training material, not an act of the office: no one is harmed.
+  "course.delete": "analise",
+  "course-question.delete": "analise",
+  "tutorial.delete": "analise",
 };
 
 export function auditLevel(action: string): AuditLevel {

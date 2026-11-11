@@ -432,6 +432,36 @@ test("faixas: exclusão é urgente, fica pendente até o titular verificar; resu
     ).length,
     1,
   );
+  // "Lido e ok" takes an act out of its band's waiting list and into
+  // "Analisadas e concluídas", whatever its band.
+  const waitingAttention = () =>
+    listAuditWith(db, {
+      tenantSlugs: [OFFICE],
+      levels: ["atencao"],
+      pending: true,
+      ids: [rows[1].id],
+    });
+  assert.equal((await waitingAttention()).length, 1);
+  const before = (
+    await peopleSummaryWith(db, [OFFICE], new Date(now.getTime() - 60_000))
+  ).find((p) => p.actorId === "escrevente");
+  await markReviewedWith(db, [OFFICE], [rows[1].id], "titular", now);
+  assert.equal((await waitingAttention()).length, 0);
+  const reviewed = await listAuditWith(db, {
+    tenantSlugs: [OFFICE],
+    reviewed: true,
+    ids: rows.map((r) => r.id),
+  });
+  assert.deepEqual(reviewed.map((e) => e.action).sort(), [
+    "service-request.amount",
+    "service-request.delete",
+  ]);
+  const after = (
+    await peopleSummaryWith(db, [OFFICE], new Date(now.getTime() - 60_000))
+  ).find((p) => p.actorId === "escrevente");
+  assert.equal(after?.atencaoPendentes, (before?.atencaoPendentes ?? 0) - 1);
+  assert.equal(after?.analisadas, (before?.analisadas ?? 0) + 1);
+  assert.equal(after?.atencao, before?.atencao);
 });
 
 test("a justificativa digitada vai para o registro do ato", async () => {

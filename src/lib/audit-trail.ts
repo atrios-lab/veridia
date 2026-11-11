@@ -76,8 +76,13 @@ export interface AuditFilter {
   ids?: string[];
   /** Only these bands. */
   levels?: AuditLevel[];
-  /** Only the urgent ones nobody has marked as seen. */
+  /**
+   * Only what nobody has marked as "lido e ok": within `levels` when given,
+   * otherwise the urgent ones.
+   */
   pending?: boolean;
+  /** Only what the holder already marked as "lido e ok" (analisadas). */
+  reviewed?: boolean;
   /** Leaves out one person's acts (the holder's own, in the pending list). */
   excludeActorId?: string;
   /** The Átrios account's own acts: only the Átrios account sees them. */
@@ -132,8 +137,12 @@ export async function listAuditWith(
     filter.ids?.length ? inArray(auditLog.id, filter.ids) : undefined,
     filter.levels?.length ? inArray(levelSql(), filter.levels) : undefined,
     filter.pending
-      ? and(sql`${levelSql()} = 'urgente'`, isNull(auditReviews.id))
+      ? and(
+          filter.levels?.length ? undefined : sql`${levelSql()} = 'urgente'`,
+          isNull(auditReviews.id),
+        )
       : undefined,
+    filter.reviewed ? isNotNull(auditReviews.id) : undefined,
     filter.includePlatform ? undefined : notByPlatform(),
     // An explicit list of ids (a notification, a report) ignores the archive.
     filter.ids?.length
@@ -378,6 +387,11 @@ export interface PersonSummary {
   pendentes: number;
   atencao: number;
   analise: number;
+  /** Atenção and Análise still waiting for the holder's "lido e ok". */
+  atencaoPendentes: number;
+  analisePendentes: number;
+  /** Marked as "lido e ok" and still on the list (analisadas e concluídas). */
+  analisadas: number;
   lastAt: Date;
 }
 
@@ -401,6 +415,9 @@ export async function peopleSummaryWith(
       pendentes: sql<number>`count(*) filter (where ${level} = 'urgente' and ${auditReviews.id} is null)`,
       atencao: sql<number>`count(*) filter (where ${level} = 'atencao')`,
       analise: sql<number>`count(*) filter (where ${level} = 'analise')`,
+      atencaoPendentes: sql<number>`count(*) filter (where ${level} = 'atencao' and ${auditReviews.id} is null)`,
+      analisePendentes: sql<number>`count(*) filter (where ${level} = 'analise' and ${auditReviews.id} is null)`,
+      analisadas: sql<number>`count(*) filter (where ${auditReviews.id} is not null and ${auditReviews.archivedAt} is null)`,
       lastAt: sql<string>`max(${auditLog.createdAt})`,
     })
     .from(auditLog)
@@ -427,6 +444,9 @@ export async function peopleSummaryWith(
       pendentes: Number(row.pendentes),
       atencao: Number(row.atencao),
       analise: Number(row.analise),
+      atencaoPendentes: Number(row.atencaoPendentes),
+      analisePendentes: Number(row.analisePendentes),
+      analisadas: Number(row.analisadas),
       lastAt: new Date(row.lastAt),
     }))
     .sort(

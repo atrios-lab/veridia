@@ -25,6 +25,7 @@ import {
 import { AdminPageHeader } from "../../_components/page-header.tsx";
 import { ROLE_LABELS } from "../../_components/role-labels.ts";
 import { auditAccess, trailScope } from "./access.ts";
+import { PersonPicker } from "./person-picker.tsx";
 import { TrailList } from "./trail-list.tsx";
 
 export const metadata = { title: "Auditoria" };
@@ -108,6 +109,7 @@ type Query = {
   nivel?: string;
   pendentes?: string;
   arquivados?: string;
+  revisadas?: string;
   notificadas?: string;
 };
 
@@ -158,6 +160,7 @@ export default async function AuditPage({
   const level = AUDIT_LEVELS.find((l) => l === query.nivel);
   const pending = query.pendentes === "1";
   const archivedView = query.arquivados === "1";
+  const reviewedView = query.revisadas === "1" && !archivedView;
   const from = query.de ? new Date(`${query.de}T00:00:00-03:00`) : undefined;
   const to = query.ate ? new Date(`${query.ate}T23:59:59-03:00`) : undefined;
   const since = new Date(Date.now() - ALERT_DAYS * 24 * 60 * 60 * 1000);
@@ -170,7 +173,8 @@ export default async function AuditPage({
       to: to && !Number.isNaN(to.getTime()) ? to : undefined,
       text: query.busca?.trim() || undefined,
       levels: level ? [level] : undefined,
-      pending,
+      pending: pending && !reviewedView,
+      reviewed: reviewedView,
       archived: archivedView,
       // The holder's own acts never wait for his own look.
       excludeActorId: pending ? session.user.id : undefined,
@@ -178,15 +182,18 @@ export default async function AuditPage({
     listNotificationsWith(db, tenant.slug),
     peopleSummaryWith(db, scope, since, platform),
   ]);
+  // The holder's own acts never wait for his own look.
   const totals = people.reduce(
-    (sum, person) => ({
-      pendentes:
-        sum.pendentes +
-        (person.actorId === session.user.id ? 0 : person.pendentes),
-      atencao: sum.atencao + person.atencao,
-      analise: sum.analise + person.analise,
-    }),
-    { pendentes: 0, atencao: 0, analise: 0 },
+    (sum, person) => {
+      const own = person.actorId === session.user.id;
+      return {
+        pendentes: sum.pendentes + (own ? 0 : person.pendentes),
+        atencao: sum.atencao + (own ? 0 : person.atencaoPendentes),
+        analise: sum.analise + (own ? 0 : person.analisePendentes),
+        analisadas: sum.analisadas + person.analisadas,
+      };
+    },
+    { pendentes: 0, atencao: 0, analise: 0, analisadas: 0 },
   );
   const chosenPerson = people.find((p) => p.actorId === query.pessoa);
   const FIELD =
@@ -194,29 +201,67 @@ export default async function AuditPage({
   const LABEL =
     "flex min-w-0 flex-col gap-1 text-xs font-bold text-admin-primary";
 
+  const bandHref = (nivel: AuditLevel) =>
+    hrefWith(query, {
+      nivel,
+      pendentes: "1",
+      revisadas: undefined,
+      arquivados: undefined,
+    });
   const summary: {
-    level: AuditLevel;
+    key: string;
+    label: string;
+    tone: string;
     value: number;
     caption: string;
+    hint: string;
     href: string;
+    active: boolean;
   }[] = [
     {
-      level: "urgente",
+      key: "urgente",
+      label: AUDIT_LEVEL_LABELS.urgente,
+      tone: LEVEL_TONE.urgente,
       value: totals.pendentes,
       caption: "aguardando verificação",
-      href: hrefWith(query, { nivel: "urgente", pendentes: "1" }),
+      hint: AUDIT_LEVEL_HINTS.urgente,
+      href: bandHref("urgente"),
+      active: level === "urgente" && !reviewedView,
     },
     {
-      level: "atencao",
+      key: "atencao",
+      label: AUDIT_LEVEL_LABELS.atencao,
+      tone: LEVEL_TONE.atencao,
       value: totals.atencao,
-      caption: `nos últimos ${ALERT_DAYS} dias`,
-      href: hrefWith(query, { nivel: "atencao", pendentes: undefined }),
+      caption: `a conferir, últimos ${ALERT_DAYS} dias`,
+      hint: AUDIT_LEVEL_HINTS.atencao,
+      href: bandHref("atencao"),
+      active: level === "atencao" && !reviewedView,
     },
     {
-      level: "analise",
+      key: "analise",
+      label: AUDIT_LEVEL_LABELS.analise,
+      tone: LEVEL_TONE.analise,
       value: totals.analise,
-      caption: `nos últimos ${ALERT_DAYS} dias`,
-      href: hrefWith(query, { nivel: "analise", pendentes: undefined }),
+      caption: `a conferir, últimos ${ALERT_DAYS} dias`,
+      hint: AUDIT_LEVEL_HINTS.analise,
+      href: bandHref("analise"),
+      active: level === "analise" && !reviewedView,
+    },
+    {
+      key: "analisadas",
+      label: "Analisadas e concluídas",
+      tone: "bg-admin-success-bg text-admin-success-text",
+      value: totals.analisadas,
+      caption: `lidas e ok, últimos ${ALERT_DAYS} dias`,
+      hint: 'O que você marcou como "lido e ok" sai das outras faixas e fica aqui, para consulta.',
+      href: hrefWith(query, {
+        revisadas: "1",
+        nivel: undefined,
+        pendentes: undefined,
+        arquivados: undefined,
+      }),
+      active: reviewedView,
     },
   ];
 
@@ -230,19 +275,20 @@ export default async function AuditPage({
             Elas aparecem em &quot;Notificações enviadas&quot;, mais abaixo.
           </p>
         )}
-        {/* The three bands at a glance: each one opens its list. */}
-        <section className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+        {/* The three bands still to check, and what was already checked:
+            each one opens its list. Only "Urgente" alerts. */}
+        <section className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
           {summary.map((item) => (
             <Link
-              key={item.level}
+              key={item.key}
               href={item.href}
-              title={AUDIT_LEVEL_HINTS[item.level]}
-              className={`flex min-w-0 flex-col rounded-[14px] border px-4 py-3 transition-colors hover:border-admin-primary ${level === item.level ? "border-admin-primary bg-admin-card" : "border-admin-border bg-admin-card"}`}
+              title={item.hint}
+              className={`flex min-w-0 flex-col rounded-[14px] border px-4 py-3 transition-colors hover:border-admin-primary ${item.active ? "border-admin-primary bg-admin-card" : "border-admin-border bg-admin-card"}`}
             >
               <span
-                className={`w-fit rounded-full px-2.5 py-0.5 text-[11px] font-bold uppercase tracking-[0.06em] ${LEVEL_TONE[item.level]}`}
+                className={`w-fit rounded-full px-2.5 py-0.5 text-[11px] font-bold uppercase tracking-[0.06em] ${item.tone}`}
               >
-                {AUDIT_LEVEL_LABELS[item.level]}
+                {item.label}
               </span>
               <span className="mt-1.5 font-serif text-[26px] font-semibold leading-none text-admin-primary">
                 {item.value}
@@ -251,7 +297,7 @@ export default async function AuditPage({
                 {item.caption}
               </span>
               <span className="mt-1.5 text-[11.5px] leading-snug text-admin-muted">
-                {AUDIT_LEVEL_HINTS[item.level]}
+                {item.hint}
               </span>
             </Link>
           ))}
@@ -272,57 +318,73 @@ export default async function AuditPage({
               Nenhum ato no período.
             </p>
           ) : (
-            <ul className="mt-3 grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-3">
-              {people.map((person) => {
-                const active = person.actorId === query.pessoa;
-                return (
-                  <li key={person.actorId} className="min-w-0">
-                    <Link
-                      href={hrefWith(query, {
-                        pessoa: active ? undefined : person.actorId,
-                      })}
-                      aria-current={active ? "true" : undefined}
-                      className={`flex min-w-0 items-center gap-3 rounded-[12px] border px-3 py-2.5 transition-colors hover:border-admin-primary ${active ? "border-admin-primary bg-admin-input-bg" : "border-admin-border"}`}
-                    >
-                      <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-admin-primary text-[12px] font-bold text-white">
-                        {initials(person.name)}
+            <div className="mt-3 grid grid-cols-1 gap-3 md:grid-cols-[minmax(0,1fr)_minmax(0,1.3fr)] md:items-end">
+              <PersonPicker
+                value={chosenPerson?.actorId ?? ""}
+                allHref={hrefWith(query, { pessoa: undefined })}
+                options={people.map((person) => {
+                  const own = person.actorId === session.user.id;
+                  const flags = [
+                    !own && person.pendentes > 0
+                      ? `${person.pendentes} urgente${person.pendentes > 1 ? "s" : ""}`
+                      : "",
+                    !own && person.atencaoPendentes > 0
+                      ? `${person.atencaoPendentes} atenção`
+                      : "",
+                  ].filter(Boolean);
+                  const role =
+                    ROLE_LABELS[(person.role ?? "") as Role] ?? person.role;
+                  const office =
+                    scope === "all"
+                      ? ` · ${TENANTS[person.tenantSlug]?.name ?? person.tenantSlug}`
+                      : "";
+                  return {
+                    value: person.actorId,
+                    label: `${flags.length ? "⚠ " : ""}${person.name} (${role}${office}) · ${person.total} atos${flags.length ? ` · ${flags.join(", ")}` : ""}`,
+                    href: hrefWith(query, { pessoa: person.actorId }),
+                  };
+                })}
+              />
+              {chosenPerson ? (
+                <div className="flex min-w-0 flex-wrap items-center gap-2 rounded-[12px] border border-admin-primary bg-admin-input-bg px-3 py-2">
+                  <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-admin-primary text-[11.5px] font-bold text-white">
+                    {initials(chosenPerson.name)}
+                  </span>
+                  <span className="min-w-0 flex-1 truncate text-[13px] font-semibold text-admin-primary">
+                    {chosenPerson.name}
+                  </span>
+                  {chosenPerson.actorId !== session.user.id &&
+                    chosenPerson.pendentes > 0 && (
+                      <span
+                        className={`rounded-full px-2 py-0.5 text-[10.5px] font-bold ${LEVEL_TONE.urgente}`}
+                      >
+                        {chosenPerson.pendentes} urgente
+                        {chosenPerson.pendentes > 1 ? "s" : ""}
                       </span>
-                      <span className="min-w-0 flex-1">
-                        <span className="block truncate text-[13px] font-semibold text-admin-primary">
-                          {person.name}
-                        </span>
-                        <span className="block truncate text-[11.5px] text-admin-muted">
-                          {ROLE_LABELS[(person.role ?? "") as Role] ??
-                            person.role}
-                          {scope === "all" &&
-                            ` · ${TENANTS[person.tenantSlug]?.name ?? person.tenantSlug}`}{" "}
-                          · {person.total} atos
-                        </span>
-                      </span>
-                      <span className="flex shrink-0 flex-col items-end gap-1">
-                        {person.pendentes > 0 &&
-                          person.actorId !== session.user.id && (
-                            <span
-                              className={`rounded-full px-2 py-0.5 text-[10.5px] font-bold ${LEVEL_TONE.urgente}`}
-                              title="Urgentes aguardando verificação"
-                            >
-                              {person.pendentes} urgente
-                              {person.pendentes > 1 ? "s" : ""}
-                            </span>
-                          )}
-                        {person.atencao > 0 && (
-                          <span
-                            className={`rounded-full px-2 py-0.5 text-[10.5px] font-bold ${LEVEL_TONE.atencao}`}
-                          >
-                            {person.atencao} atenção
-                          </span>
-                        )}
-                      </span>
-                    </Link>
-                  </li>
-                );
-              })}
-            </ul>
+                    )}
+                  <span
+                    className={`rounded-full px-2 py-0.5 text-[10.5px] font-bold ${LEVEL_TONE.atencao}`}
+                  >
+                    {chosenPerson.atencao} atenção
+                  </span>
+                  <span className="rounded-full bg-admin-success-bg px-2 py-0.5 text-[10.5px] font-bold text-admin-success-text">
+                    {chosenPerson.analisadas} analisadas
+                  </span>
+                  <Link
+                    href={hrefWith(query, { pessoa: undefined })}
+                    className="text-[12px] font-semibold text-admin-muted underline hover:text-admin-primary"
+                  >
+                    Ver todas
+                  </Link>
+                </div>
+              ) : (
+                <p className="text-[12px] leading-snug text-admin-muted">
+                  {people.length} pessoa{people.length > 1 ? "s" : ""} com atos
+                  no período. Quem tem urgente esperando aparece primeiro, com
+                  ⚠.
+                </p>
+              )}
+            </div>
           )}
         </section>
 
@@ -334,8 +396,9 @@ export default async function AuditPage({
           </h2>
           <p className="mt-1 text-[12.5px] leading-relaxed text-admin-muted">
             Os registros nunca mudam. Anote, marque os que interessam para gerar
-            o PDF, enviar por e-mail ou notificar a pessoa, e marque os urgentes
-            como verificados.
+            o PDF, enviar por e-mail ou notificar a pessoa. O que você marcar
+            como &quot;lido e ok&quot; sai da faixa e vai para &quot;Analisadas
+            e concluídas&quot;. Só os urgentes ficam em alerta.
           </p>
 
           {/* Band chips: the most used filter, one tap. */}
@@ -344,8 +407,12 @@ export default async function AuditPage({
             className="mt-3 flex flex-wrap gap-1.5 text-[12.5px]"
           >
             <Link
-              href={hrefWith(query, { nivel: undefined, pendentes: undefined })}
-              className={`rounded-full border px-3 py-1 font-semibold ${!level ? "border-admin-primary bg-admin-primary text-white" : "border-admin-border text-admin-muted hover:text-admin-primary"}`}
+              href={hrefWith(query, {
+                nivel: undefined,
+                pendentes: undefined,
+                revisadas: undefined,
+              })}
+              className={`rounded-full border px-3 py-1 font-semibold ${!level && !reviewedView ? "border-admin-primary bg-admin-primary text-white" : "border-admin-border text-admin-muted hover:text-admin-primary"}`}
             >
               Todas
             </Link>
@@ -354,14 +421,15 @@ export default async function AuditPage({
                 key={item}
                 href={hrefWith(query, {
                   nivel: item,
-                  pendentes: item === "urgente" ? query.pendentes : undefined,
+                  pendentes: item === "rotina" ? undefined : query.pendentes,
+                  revisadas: undefined,
                 })}
-                className={`rounded-full border px-3 py-1 font-semibold ${level === item ? "border-admin-primary bg-admin-primary text-white" : "border-admin-border text-admin-muted hover:text-admin-primary"}`}
+                className={`rounded-full border px-3 py-1 font-semibold ${level === item && !reviewedView ? "border-admin-primary bg-admin-primary text-white" : "border-admin-border text-admin-muted hover:text-admin-primary"}`}
               >
                 {AUDIT_LEVEL_LABELS[item]}
               </Link>
             ))}
-            {level === "urgente" && (
+            {level && level !== "rotina" && !reviewedView && (
               <Link
                 href={hrefWith(query, { pendentes: pending ? undefined : "1" })}
                 className={`rounded-full border px-3 py-1 font-semibold ${pending ? "border-admin-error-text bg-admin-error-bg text-admin-error-text" : "border-admin-border text-admin-muted"}`}
@@ -376,6 +444,16 @@ export default async function AuditPage({
               className={`rounded-full border px-3 py-1 font-semibold ${archivedView ? "border-admin-primary bg-admin-primary text-white" : "border-admin-border text-admin-muted hover:text-admin-primary"}`}
             >
               Arquivados
+            </Link>
+            <Link
+              href={hrefWith(query, {
+                revisadas: reviewedView ? undefined : "1",
+                pendentes: undefined,
+                arquivados: undefined,
+              })}
+              className={`rounded-full border px-3 py-1 font-semibold ${reviewedView ? "border-admin-success-text bg-admin-success-bg text-admin-success-text" : "border-admin-border text-admin-muted hover:text-admin-primary"}`}
+            >
+              {reviewedView ? "✓ Analisadas" : "Analisadas"}
             </Link>
           </nav>
 
@@ -393,6 +471,9 @@ export default async function AuditPage({
               )}
               {level && <input type="hidden" name="nivel" value={level} />}
               {pending && <input type="hidden" name="pendentes" value="1" />}
+              {reviewedView && (
+                <input type="hidden" name="revisadas" value="1" />
+              )}
               {platform && (
                 <label className={`${LABEL} col-span-2 md:col-span-4`}>
                   Serventia
