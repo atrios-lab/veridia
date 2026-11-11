@@ -14,7 +14,14 @@ import { formatProtocolNumber } from "../request/protocol.ts";
  * the last one used plus one, so a number never repeats. The guias go
  * further: a deleted guia's number is free again (`lowestFree`).
  */
-export const NUMBER_SERIES = ["guia", "REQ", "AGD", "SOL", "OUV"] as const;
+export const NUMBER_SERIES = [
+  "guia",
+  "REQ",
+  "AGD",
+  "SOL",
+  "OUV",
+  "notificacao",
+] as const;
 export type NumberSeries = (typeof NUMBER_SERIES)[number];
 
 export interface SeriesInfo {
@@ -56,6 +63,12 @@ export const SERIES_INFO: Record<NumberSeries, SeriesInfo> = {
     hint: "Protocolo da manifestação.",
     format: (year, sequence) => formatProtocolNumber("OUV", year, sequence),
     max: 999_999,
+  },
+  notificacao: {
+    label: "Notificações de auditoria",
+    hint: "Auditoria › notificação para esclarecimentos.",
+    format: formatGuideNumber,
+    max: 99_999,
   },
 };
 

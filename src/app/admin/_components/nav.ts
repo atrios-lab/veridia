@@ -154,6 +154,15 @@ export const ADMIN_NAV: readonly AdminNavItem[] = [
     permission: "user.manage",
   },
   {
+    // Everyone of the office: the Tabelião/Registrador sees the whole trail
+    // and the notifications; anyone else, only the notifications addressed
+    // to them (lib/audit-trail.ts).
+    group: "Serventia",
+    label: "Auditoria",
+    href: "/admin/auditoria",
+    icon: "clipboard",
+  },
+  {
     // The Átrios master account only (a platform permission): turning the
     // two-step access off or on for any office (lib/access-policy.ts).
     group: "Átrios",

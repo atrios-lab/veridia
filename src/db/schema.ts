@@ -1332,3 +1332,93 @@ export const signedDocumentSignatures = pgTable(
     index("signed_document_signatures_result").on(t.resultSha256),
   ],
 );
+
+/**
+ * The Tabelião/Registrador's notes on entries of the audit trail
+ * (Auditoria, decision of 11/11/2026). The trail itself never changes.
+ */
+export const auditNotes = pgTable(
+  "audit_notes",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    tenantSlug,
+    auditId: uuid("audit_id")
+      .notNull()
+      .references(() => auditLog.id),
+    authorId: text("author_id"),
+    body: text("body").notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (t) => [index("audit_notes_audit").on(t.auditId)],
+);
+
+/**
+ * A formal notification asking a person of the office to explain acts of
+ * the audit trail, with 24 hours to answer (decision of 11/11/2026). Numbered
+ * per year like the other documents (Configurações › Numeração).
+ */
+export const auditNotifications = pgTable(
+  "audit_notifications",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    tenantSlug,
+    year: integer("year").notNull(),
+    sequence: integer("sequence").notNull(),
+    targetUserId: text("target_user_id").notNull(),
+    createdBy: text("created_by"),
+    subject: text("subject").notNull(),
+    facts: text("facts").notNull(),
+    legalBasis: text("legal_basis").notNull(),
+    /** The audit_log entries the notification is about. */
+    auditIds: jsonb("audit_ids").notNull().default([]),
+    deadlineAt: timestamp("deadline_at", { withTimezone: true }).notNull(),
+    /** "aberta", "respondida" or "encerrada". */
+    status: text("status").notNull().default("aberta"),
+    response: text("response"),
+    respondedAt: timestamp("responded_at", { withTimezone: true }),
+    closedAt: timestamp("closed_at", { withTimezone: true }),
+    closingNote: text("closing_note"),
+    /** The signed PDF, when the Tabelião signed it in the assinador. */
+    signedDocumentId: uuid("signed_document_id").references(
+      () => signedDocuments.id,
+    ),
+    emailedAt: timestamp("emailed_at", { withTimezone: true }),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (t) => [
+    uniqueIndex("audit_notifications_tenant_year_sequence").on(
+      t.tenantSlug,
+      t.year,
+      t.sequence,
+    ),
+    index("audit_notifications_target").on(t.tenantSlug, t.targetUserId),
+  ],
+);
+
+/** Images and files of a notification: the Tabelião's evidence or the answer's. */
+export const auditNotificationFiles = pgTable(
+  "audit_notification_files",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    notificationId: uuid("notification_id")
+      .notNull()
+      .references(() => auditNotifications.id),
+    tenantSlug,
+    /** "titular" (evidence) or "notificado" (sent with the answer). */
+    side: text("side").notNull(),
+    displayName: text("display_name").notNull(),
+    storedName: text("stored_name").notNull(),
+    path: text("path").notNull(),
+    mimeType: text("mime_type").notNull(),
+    sizeBytes: integer("size_bytes").notNull(),
+    uploadedBy: text("uploaded_by"),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (t) => [index("audit_notification_files_notification").on(t.notificationId)],
+);
