@@ -31,7 +31,11 @@ export default async function FeeTablePage({
   const session = await getSession();
   if (
     !session ||
-    !can(session.user.role ?? "", "content.edit", session.user.permissions)
+    !can(
+      session.user.role ?? "",
+      "transparency.manage",
+      session.user.permissions,
+    )
   )
     notFound();
   const tenant = await getTenant();

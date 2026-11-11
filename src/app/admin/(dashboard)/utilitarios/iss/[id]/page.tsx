@@ -40,7 +40,7 @@ export default async function IssDeclarationPage({
   const session = await getSession();
   if (
     !session ||
-    !can(session.user.role ?? "", "requests.manage", session.user.permissions)
+    !can(session.user.role ?? "", "iss.manage", session.user.permissions)
   ) {
     notFound();
   }

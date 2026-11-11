@@ -56,7 +56,10 @@ export const PublicGuideRequestSchema = z
     parties: z.array(PublicGuidePartySchema).max(20, "Use até 20 pessoas."),
     property: z.object({
       type: z.enum(["urbano", "rural"]),
-      description: text(LONG_TEXT_MAX, "Descreva o imóvel (endereço, área)."),
+      description: text(
+        LONG_TEXT_MAX,
+        "Descreva o bem: imóvel (endereço, área), móvel ou digital.",
+      ),
       fiscalRegistration: text(120),
       registration: text(500),
     }),

@@ -21,7 +21,7 @@ async function holder() {
   const session = await getSession();
   if (
     !session ||
-    !can(session.user.role ?? "", "user.manage", session.user.permissions)
+    !can(session.user.role ?? "", "access.manage", session.user.permissions)
   ) {
     return undefined;
   }

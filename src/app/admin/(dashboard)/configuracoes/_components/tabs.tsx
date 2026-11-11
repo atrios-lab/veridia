@@ -56,12 +56,12 @@ const GROUPS: { label: string; tabs: Tab[] }[] = [
       {
         label: "Numeração",
         href: "/admin/configuracoes/numeracao",
-        permission: "content.edit",
+        permission: "numbering.manage",
       },
       {
         label: "Certificados digitais",
         href: "/admin/configuracoes/certificados",
-        permission: "user.manage",
+        permission: "certificates.manage",
       },
     ],
   },
@@ -76,12 +76,12 @@ const GROUPS: { label: string; tabs: Tab[] }[] = [
       {
         label: "Duas etapas",
         href: "/admin/configuracoes/duas-etapas",
-        permission: "user.manage",
+        permission: "access.manage",
       },
       {
         label: "Horário de acesso",
         href: "/admin/configuracoes/horario-de-acesso",
-        permission: "user.manage",
+        permission: "access.manage",
       },
     ],
   },

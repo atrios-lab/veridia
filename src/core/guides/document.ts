@@ -162,10 +162,14 @@ export function buildGuideDocument(
       : first?.personType === "fisica" && first.gender === "masculino"
         ? "o qual pretende"
         : "a qual pretende";
+  // ITCD reaches every kind of asset (inventário, doação): móveis, digitais,
+  // quotas, not only imóveis; ITIV, laudêmio and the IPTU certidão are of an
+  // imóvel (decision of 11/11/2026).
+  const asset = guide.kind.startsWith("itcd") ? "bem" : "imóvel";
   const request =
     info.rate === "none"
       ? `${joinAll(acquiring.concat(transmitting).map(qualify))}, ${acquiring.length + transmitting.length > 1 ? "requerem" : "requer"} a expedição de certidão dos tributos que incidem sobre o imóvel abaixo descrito, para instruir a escritura pública${nature ? ` de ${nature}` : ""} a ser lavrada nesta serventia.`
-      : `${joinAll(acquiring.map(qualify))}, ${who} recolher aos cofres da ${authority} o ${info.subject}, à alíquota ${amount.rateLabel.startsWith("progressiva") ? amount.rateLabel : `de ${amount.rateLabel}`} sobre o valor declarado${law ? `, conforme ${law}` : ""}, porquanto ${acquiring.length > 1 ? "dizem" : "diz"} haver ${guide.kind === "itcd-causa-mortis" ? "recebido, por sucessão" : "adquirido"}${nature ? `, por ${nature},` : ""} de ${joinAll(transmitting.map(qualify))}, o imóvel a seguir descrito.`;
+      : `${joinAll(acquiring.map(qualify))}, ${who} recolher aos cofres da ${authority} o ${info.subject}, à alíquota ${amount.rateLabel.startsWith("progressiva") ? amount.rateLabel : `de ${amount.rateLabel}`} sobre o valor declarado${law ? `, conforme ${law}` : ""}, porquanto ${acquiring.length > 1 ? "dizem" : "diz"} haver ${guide.kind === "itcd-causa-mortis" ? "recebido, por sucessão" : "adquirido"}${nature ? `, por ${nature},` : ""} de ${joinAll(transmitting.map(qualify))}, o ${asset} a seguir descrito.`;
 
   const property: string[] = [
     `${guide.property.type === "rural" ? "IMÓVEL RURAL" : "IMÓVEL URBANO"}: ${guide.property.description.trim()}`,
@@ -197,7 +201,7 @@ export function buildGuideDocument(
   const sections: RequerimentoSection[] = [
     { heading: "Destinatário", paragraphs: [addressee(guide, settings)] },
     { heading: "Requerimento", paragraphs: [request] },
-    { heading: "Do imóvel", paragraphs: property },
+    { heading: asset === "bem" ? "Do bem" : "Do imóvel", paragraphs: property },
   ];
   if (values.length) {
     sections.push({
@@ -221,14 +225,14 @@ export function buildGuideDocument(
   const number = formatGuideNumber(input.year, input.sequence);
   return {
     eyebrow: `${municipal ? "Fisco municipal" : "Fisco estadual"} · ${info.label}`,
-    title: `Guia imobiliária nº ${number}`,
+    title: `Guia de transmissão de bens nº ${number}`,
     subtitle: info.subject,
     office: [officialName(tenant), tenant.subtitle],
     sections,
     dateLine: `${tenant.location.city}/${tenant.location.state}, ${writtenDate(input.issuedOn)}.`,
     signee: signer?.name,
     signature: [signer?.title ?? "", signer?.note ?? ""].filter(Boolean),
-    footer: `${officialName(tenant)} · Guia imobiliária nº ${number} · ${tenant.legalFooter}`,
+    footer: `${officialName(tenant)} · Guia de transmissão de bens nº ${number} · ${tenant.legalFooter}`,
   };
 }
 

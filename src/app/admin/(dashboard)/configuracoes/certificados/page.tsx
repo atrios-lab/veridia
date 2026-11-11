@@ -25,7 +25,11 @@ export default async function CertificatesPage() {
   const session = await getSession();
   if (
     !session ||
-    !can(session.user.role ?? "", "user.manage", session.user.permissions)
+    !can(
+      session.user.role ?? "",
+      "certificates.manage",
+      session.user.permissions,
+    )
   )
     notFound();
   const tenant = await getTenant();

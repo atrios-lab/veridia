@@ -29,7 +29,11 @@ async function admin() {
   const session = await getSession();
   if (
     !session ||
-    !can(session.user.role ?? "", "user.manage", session.user.permissions)
+    !can(
+      session.user.role ?? "",
+      "certificates.manage",
+      session.user.permissions,
+    )
   )
     return null;
   return session;

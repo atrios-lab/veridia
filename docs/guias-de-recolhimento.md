@@ -1,12 +1,16 @@
-# Guias imobiliárias (Utilitários)
+# Guias de transmissão de bens (Utilitários)
 
-Antes se chamavam "Guias de recolhimento". O nome mudou em 11/11/2026 porque
-"recolhimento", sozinho, não dizia de que serviço se tratava. Todas as guias
-deste utilitário são da transmissão de um imóvel: ITIV/ITBI, ITCD/ITCMD
-(doação e causa mortis), laudêmio e certidão de débitos imobiliários (IPTU).
-O subtítulo da tela é montado a partir do catálogo (`guideKindsSummary`), e um
-tipo novo aparece nele sem outra mudança. O PDF traz, acima do título, o fisco
-e o tipo da guia ("Fisco municipal · ITIV / ITBI").
+Antes se chamavam "Guias de recolhimento" e, por pouco tempo, "Guias
+imobiliárias". O nome mudou em 11/11/2026. "Recolhimento", sozinho, não dizia
+de que serviço se tratava. "Imobiliárias" deixava de fora o inventário e a
+doação, cujo ITCD alcança também bens móveis, digitais, quotas e aplicações.
+As guias deste utilitário são da transmissão de bens: ITIV/ITBI e laudêmio, de
+imóvel; ITCD/ITCMD, de doação e causa mortis, de qualquer bem; e a certidão de
+débitos imobiliários (IPTU). No ITCD, o PDF fala em "bem" ("Do bem"); nos
+demais, em "imóvel". O subtítulo da tela é montado a partir do catálogo
+(`guideKindsSummary`), e um tipo novo aparece nele sem outra mudança. O PDF
+traz, acima do título, o fisco e o tipo da guia ("Fisco municipal · ITIV /
+ITBI").
 
 As guias excluídas liberam o número. Em Configurações › Numeração dá para
 alterar o número de uma guia emitida, excluir uma de teste e voltar a
@@ -63,7 +67,7 @@ guarda vencido", mas não é apagada: apagar dados do banco exige uma PR revisad
 
 ## Pedido pelo site
 
-Em Notas, o ato "Guia imobiliária" pede:
+Em Notas, o ato "Guia de transmissão de bens" pede:
 - as partes: nome, CPF ou CNPJ, tratamento, estado civil, profissão e endereço;
 - o imóvel;
 - o valor declarado;
@@ -82,7 +86,7 @@ gera o ITIV. O tipo continua no código só para que uma guia já emitida assim 
 
 ## Onde a serventia trabalha os pedidos
 
-Os pedidos de guia não entram na fila de Pedidos de serviço. Eles aparecem em Guias imobiliárias, na seção
+Os pedidos de guia não entram na fila de Pedidos de serviço. Eles aparecem em Guias de transmissão de bens, na seção
 "Pedidos do site", e o item do menu mostra quantos estão em aberto.
 
 O painel avisa, em qualquer tela, com cartão, som e notificação do navegador:

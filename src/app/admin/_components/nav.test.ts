@@ -55,3 +55,29 @@ test("Treinamento is the one item that calls for attention", () => {
     ["/admin/ajuda"],
   );
 });
+
+test("cada item do menu tem uma permissão que aparece em Perfis e permissões (ou é do Tabelião)", async () => {
+  const { GRANTABLE_LABELS, RESERVED_PERMISSIONS, PLATFORM_PERMISSIONS } =
+    await import("@/core/auth/roles.ts");
+  const allowed = new Set<string>([
+    ...Object.keys(GRANTABLE_LABELS),
+    ...RESERVED_PERMISSIONS,
+    ...PLATFORM_PERMISSIONS,
+    "admin.access",
+  ]);
+  for (const item of ADMIN_NAV) {
+    // No permission: open to everyone of the office (the audit's own
+    // notifications, for instance).
+    if (!item.permission) continue;
+    assert.ok(
+      allowed.has(item.permission),
+      `${item.label}: a permissão ${item.permission} não aparece em Perfis e permissões`,
+    );
+  }
+});
+
+test("os utilitários têm cada um a sua permissão", () => {
+  const tools = ADMIN_NAV.filter((item) => item.group === "Utilitários");
+  const permissions = tools.map((item) => item.permission);
+  assert.deepEqual(permissions, [...new Set(permissions)]);
+});

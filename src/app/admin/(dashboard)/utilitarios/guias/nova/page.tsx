@@ -7,19 +7,19 @@ import { getTenant } from "@/lib/tenant.ts";
 import { AdminPageHeader } from "../../../../_components/page-header.tsx";
 import { GuideForm } from "../guide-form.tsx";
 
-export const metadata = { title: "Nova guia imobiliária" };
+export const metadata = { title: "Nova guia de transmissão de bens" };
 
 export default async function NewGuidePage() {
   const session = await getSession();
   if (
     !session ||
-    !can(session.user.role ?? "", "requests.manage", session.user.permissions)
+    !can(session.user.role ?? "", "guides.manage", session.user.permissions)
   )
     notFound();
   const settings = await getGuideSettings(await getTenant());
   return (
     <>
-      <AdminPageHeader title="Nova guia imobiliária" />
+      <AdminPageHeader title="Nova guia de transmissão de bens" />
       <main className="max-w-[1100px] px-[30px] py-7">
         <GuideForm initial={emptyGuide(settings)} settings={settings} />
       </main>

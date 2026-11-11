@@ -33,7 +33,7 @@ export default async function IssPage({
 }) {
   const session = await getSession();
   const role = session?.user.role ?? "";
-  if (!session || !can(role, "requests.manage", session.user.permissions)) {
+  if (!session || !can(role, "iss.manage", session.user.permissions)) {
     notFound();
   }
   const tenant = await getTenant();

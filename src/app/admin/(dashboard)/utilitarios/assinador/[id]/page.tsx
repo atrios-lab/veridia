@@ -37,7 +37,7 @@ export default async function SignedDocumentAdminPage({
   const session = await getSession();
   if (
     !session ||
-    !can(session.user.role ?? "", "desk.access", session.user.permissions)
+    !can(session.user.role ?? "", "signer.use", session.user.permissions)
   )
     notFound();
   const tenant = await getTenant();
@@ -53,7 +53,11 @@ export default async function SignedDocumentAdminPage({
   const base = `/admin/utilitarios/assinador/${view.id}`;
   const mayRemove =
     view.createdBy === session.user.id ||
-    can(session.user.role ?? "", "user.manage", session.user.permissions);
+    can(
+      session.user.role ?? "",
+      "certificates.manage",
+      session.user.permissions,
+    );
 
   return (
     <>

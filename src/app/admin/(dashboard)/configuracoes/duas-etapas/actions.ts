@@ -25,7 +25,7 @@ async function authorize(formData: FormData) {
   const session = await getSession();
   if (
     !session ||
-    !can(session.user.role ?? "", "user.manage", session.user.permissions)
+    !can(session.user.role ?? "", "access.manage", session.user.permissions)
   )
     return null;
   const tenant = await getTenant();
@@ -103,7 +103,7 @@ export async function setOfficeTwoStep(
   const session = await getSession();
   if (
     !session ||
-    !can(session.user.role ?? "", "user.manage", session.user.permissions)
+    !can(session.user.role ?? "", "access.manage", session.user.permissions)
   ) {
     return NO_PERMISSION;
   }

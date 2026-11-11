@@ -107,14 +107,14 @@ export const ADMIN_NAV: readonly AdminNavItem[] = [
     permission: "chat.manage",
   },
   {
-    // Tools for the deed desk. The first: the guias imobiliárias (ITIV,
+    // Tools for the deed desk. The first: the guias de transmissão de bens (ITIV,
     // ITCD, laudêmio, certidão imobiliária) the notary signs and the party
     // takes to the fisco before the escritura.
     group: "Utilitários",
-    label: "Guias imobiliárias",
+    label: "Guias de transmissão",
     href: "/admin/utilitarios/guias",
     icon: "calculator",
-    permission: "requests.manage",
+    permission: "guides.manage",
   },
   {
     // The month's ISS on the emolumentos to the municipal tax office, with
@@ -123,7 +123,7 @@ export const ADMIN_NAV: readonly AdminNavItem[] = [
     label: "Declaração de ISS",
     href: "/admin/utilitarios/iss",
     icon: "clipboard",
-    permission: "requests.manage",
+    permission: "iss.manage",
   },
   {
     // PAdES signatures with the office's A1 certificates (ICP-Brasil), each
@@ -132,7 +132,7 @@ export const ADMIN_NAV: readonly AdminNavItem[] = [
     label: "Assinador digital",
     href: "/admin/utilitarios/assinador",
     icon: "lock",
-    permission: "desk.access",
+    permission: "signer.use",
   },
   {
     group: "Serventia",
@@ -146,7 +146,7 @@ export const ADMIN_NAV: readonly AdminNavItem[] = [
     label: "Transparência",
     href: "/admin/transparencia",
     icon: "globe",
-    permission: "content.edit",
+    permission: "transparency.manage",
   },
   {
     group: "Serventia",

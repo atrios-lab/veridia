@@ -4,6 +4,7 @@ import {
   GRANTABLE_PERMISSIONS,
   PANEL_ROLES,
   type PanelRole,
+  withDerived,
 } from "@/core/auth/roles.ts";
 import { type Database, db } from "@/db/index.ts";
 import { tenantContent } from "@/db/schema.ts";
@@ -20,12 +21,24 @@ export type RolePermissions = Partial<Record<PanelRole, string[]>>;
 function parse(raw: unknown): RolePermissions {
   const result: RolePermissions = {};
   if (!raw || typeof raw !== "object") return result;
+  // The permissions that existed when the office saved this. One created
+  // after it starts as the one it was split from (roles.ts DERIVED_FROM),
+  // so a new line never takes away what someone could do the day before.
+  const knownRaw = (raw as Record<string, unknown>).known;
+  const known = Array.isArray(knownRaw) ? knownRaw.map(String) : [];
   for (const role of PANEL_ROLES) {
     if (role === "admin") continue;
     const list = (raw as Record<string, unknown>)[role];
     if (!Array.isArray(list)) continue;
-    result[role] = list.filter((item): item is string =>
-      (GRANTABLE_PERMISSIONS as readonly string[]).includes(String(item)),
+    result[role] = withDerived(
+      list
+        .map(String)
+        .filter((item) =>
+          (GRANTABLE_PERMISSIONS as readonly string[]).includes(item),
+        ),
+      known,
+    ).filter((item) =>
+      (GRANTABLE_PERMISSIONS as readonly string[]).includes(item),
     );
   }
   return result;
@@ -65,7 +78,12 @@ export async function saveRolePermissionsWith(
   permissions: RolePermissions,
   actorId: string,
 ): Promise<void> {
-  const published = parse(permissions);
+  // Saved with every permission that exists now: from here on, what the
+  // office left unchecked stays unchecked.
+  const published = {
+    ...parse({ ...permissions, known: GRANTABLE_PERMISSIONS }),
+    known: [...GRANTABLE_PERMISSIONS],
+  };
   await database
     .insert(tenantContent)
     .values({

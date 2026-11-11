@@ -63,7 +63,7 @@ export async function saveGuide(
   const session = await getSession();
   if (
     !session ||
-    !can(session.user.role ?? "", "requests.manage", session.user.permissions)
+    !can(session.user.role ?? "", "guides.manage", session.user.permissions)
   ) {
     return { status: "error", message: NO_PERMISSION, fieldErrors: {} };
   }
@@ -182,7 +182,7 @@ export async function renumberGuideAction(
   const session = await getSession();
   if (
     !session ||
-    !can(session.user.role ?? "", "requests.manage", session.user.permissions)
+    !can(session.user.role ?? "", "guides.manage", session.user.permissions)
   ) {
     return { status: "error", message: NO_PERMISSION };
   }
@@ -237,7 +237,7 @@ export async function deleteGuideAction(
   const session = await getSession();
   if (
     !session ||
-    !can(session.user.role ?? "", "requests.manage", session.user.permissions)
+    !can(session.user.role ?? "", "guides.manage", session.user.permissions)
   ) {
     return { status: "error", message: NO_PERMISSION };
   }
@@ -271,7 +271,7 @@ export async function guideAlertSnapshotAction(): Promise<
   const session = await getSession();
   if (
     !session ||
-    !can(session.user.role ?? "", "requests.manage", session.user.permissions)
+    !can(session.user.role ?? "", "guides.manage", session.user.permissions)
   )
     return null;
   try {

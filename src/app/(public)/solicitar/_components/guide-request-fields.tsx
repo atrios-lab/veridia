@@ -47,7 +47,7 @@ function parseMoney(text: string): number {
 }
 
 /**
- * The guia imobiliária, as the citizen asks for it: a short form (who
+ * The guia de transmissão de bens, as the citizen asks for it: a short form (who
  * transmits, who acquires, the property, the value). It travels as one JSON
  * field, `guia`, and the guia is drawn by itself for the office to check
  * before anything reaches the citizen.
@@ -266,7 +266,7 @@ export function GuideRequestFields({
 
       <div className="grid gap-4 md:grid-cols-2">
         <label className="block">
-          <span className={label}>Imóvel</span>
+          <span className={label}>Bem transmitido</span>
           <select
             className={input}
             value={property.type}
@@ -297,7 +297,10 @@ export function GuideRequestFields({
           />
         </label>
         <label className="block md:col-span-2">
-          <span className={label}>Endereço e descrição do imóvel</span>
+          <span className={label}>
+            Descrição do bem (imóvel: endereço e área; móvel ou digital: o que
+            é)
+          </span>
           <textarea
             rows={3}
             maxLength={LONG_TEXT_MAX}

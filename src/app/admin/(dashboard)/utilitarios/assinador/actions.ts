@@ -68,7 +68,7 @@ export async function signOneDocument(
   const session = await getSession();
   if (
     !session ||
-    !can(session.user.role ?? "", "desk.access", session.user.permissions)
+    !can(session.user.role ?? "", "signer.use", session.user.permissions)
   ) {
     return { status: "error", message: "Sem permissão.", stop: true };
   }
@@ -130,7 +130,7 @@ export async function setDocumentRemoved(
 ): Promise<SignState> {
   const session = await getSession();
   const role = session?.user.role ?? "";
-  if (!session || !can(role, "desk.access", session.user.permissions)) {
+  if (!session || !can(role, "signer.use", session.user.permissions)) {
     return { status: "error", message: "Sem permissão." };
   }
   const tenant = await getTenant();
@@ -139,7 +139,7 @@ export async function setDocumentRemoved(
   if (!view) return { status: "error", message: "Documento não encontrado." };
   if (
     view.createdBy !== session.user.id &&
-    !can(role, "user.manage", session.user.permissions)
+    !can(role, "certificates.manage", session.user.permissions)
   ) {
     return {
       status: "error",
@@ -173,7 +173,7 @@ export async function coSignDocument(
   const session = await getSession();
   if (
     !session ||
-    !can(session.user.role ?? "", "desk.access", session.user.permissions)
+    !can(session.user.role ?? "", "signer.use", session.user.permissions)
   ) {
     return { status: "error", message: "Sem permissão." };
   }
@@ -239,7 +239,7 @@ async function signer() {
   const session = await getSession();
   if (
     !session ||
-    !can(session.user.role ?? "", "desk.access", session.user.permissions)
+    !can(session.user.role ?? "", "signer.use", session.user.permissions)
   ) {
     return undefined;
   }

@@ -112,7 +112,7 @@ const PATHS = {
     "M9 4V3a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v1",
     "m9 13 2 2 4-4",
   ],
-  // Utilitários: the guias imobiliárias (taxes and fees on a deed).
+  // Utilitários: the guias de transmissão de bens (taxes and fees on a deed).
   calculator: [
     "M6 2h12a2 2 0 0 1 2 2v16a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2Z",
     "M8 6h8",

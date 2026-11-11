@@ -185,7 +185,7 @@ export async function submitServiceRequest(
     );
   }
 
-  // A guia imobiliária's own short form (core/guides/request.ts): checked
+  // A guia de transmissão de bens's own short form (core/guides/request.ts): checked
   // here with the rest, so the citizen sees every field to fix at once.
   let guideRequest: PublicGuideRequest | undefined;
   if (act.taxGuide) {

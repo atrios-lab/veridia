@@ -56,6 +56,16 @@ export const OFFICE_PERMISSIONS = [
   "chat.manage",
   "chat.settings",
   "channels.manage",
+  // One per tool (decision of 11/11/2026): each new feature gets its own
+  // line in Perfis e permissões, so the Tabelião/Registrador decides who
+  // sees it. A new one starts as the one it was split from (DERIVED_FROM).
+  "guides.manage",
+  "iss.manage",
+  "signer.use",
+  "transparency.manage",
+  "numbering.manage",
+  "access.manage",
+  "certificates.manage",
   // The office's audit trail in full, and the formal notifications that ask
   // a person to explain an act: the Tabelião/Registrador's alone.
   "audit.manage",
@@ -78,8 +88,48 @@ export const GRANTABLE_PERMISSIONS = [
   "chat.manage",
   "chat.settings",
   "channels.manage",
+  "guides.manage",
+  "iss.manage",
+  "signer.use",
+  "transparency.manage",
+  "numbering.manage",
+  "access.manage",
+  "certificates.manage",
 ] as const;
 export type GrantablePermission = (typeof GRANTABLE_PERMISSIONS)[number];
+
+/**
+ * A permission split off an older, broader one, and that older one. Until
+ * the Tabelião/Registrador decides otherwise, whoever had the older one has
+ * the new one too: a new line in Perfis e permissões never takes away what
+ * someone could already do the day before (decision of 11/11/2026).
+ */
+export const DERIVED_FROM: Partial<Record<GrantablePermission, Permission>> = {
+  "guides.manage": "requests.manage",
+  "iss.manage": "requests.manage",
+  "signer.use": "desk.access",
+  "transparency.manage": "content.edit",
+  "numbering.manage": "content.edit",
+  "access.manage": "user.manage",
+  "certificates.manage": "user.manage",
+};
+
+/**
+ * The list plus every permission derived from one in it. `known`: the
+ * permissions that existed when the list was saved; one created later
+ * follows its parent, one the office already decided on is left alone.
+ */
+export function withDerived(
+  list: readonly string[],
+  known?: readonly string[],
+): string[] {
+  const result = new Set(list);
+  for (const [child, parent] of Object.entries(DERIVED_FROM)) {
+    if (known?.includes(child)) continue;
+    if (parent && result.has(parent)) result.add(child);
+  }
+  return [...result];
+}
 
 // What acts on the platform itself, the same for every office: content the
 // Átrios account publishes and every serventia reads. Kept in its own list
@@ -132,7 +182,7 @@ const ROLE_PERMISSIONS: Record<Role, readonly Permission[]> = {
         !(RESERVED_PERMISSIONS as readonly string[]).includes(permission),
     ),
   ],
-  substituto: [
+  substituto: defaultsOf([
     "admin.access",
     "desk.access",
     "content.edit",
@@ -140,20 +190,30 @@ const ROLE_PERMISSIONS: Record<Role, readonly Permission[]> = {
     "requests.manage",
     "channels.manage",
     "chat.manage",
-  ],
+  ]),
   // The Escrevente (formerly "Operador").
-  staff: [
+  staff: defaultsOf([
     "admin.access",
     "desk.access",
     "content.edit",
     "requests.manage",
     "channels.manage",
     "chat.manage",
-  ],
-  auxiliar: ["admin.access", "desk.access", "requests.manage", "chat.manage"],
-  contador: ["admin.access", "desk.access", "content.edit"],
-  rh: ["admin.access", "desk.access"],
+  ]),
+  auxiliar: defaultsOf([
+    "admin.access",
+    "desk.access",
+    "requests.manage",
+    "chat.manage",
+  ]),
+  contador: defaultsOf(["admin.access", "desk.access", "content.edit"]),
+  rh: defaultsOf(["admin.access", "desk.access"]),
 };
+
+/** A position's defaults, with the permissions split off them. */
+function defaultsOf(list: readonly Permission[]): readonly Permission[] {
+  return withDerived(list) as Permission[];
+}
 
 /** The permissions a position starts with, before the office changes them. */
 export function defaultPermissions(role: string): readonly Permission[] {
@@ -257,8 +317,15 @@ export const GRANTABLE_LABELS: Record<GrantablePermission, string> = {
   "content.publish": "Publicar no site (editais, notícias, documentos)",
   "branding.edit": "Identidade visual (cores e logotipos)",
   "billing.edit": "Cobrança e chave Pix",
-  "requests.manage": "Pedidos de serviço e guias imobiliárias",
+  "requests.manage": "Pedidos de serviço",
   "chat.manage": "Atendimento online (chat)",
   "chat.settings": "Ligar ou desligar o chat do site",
   "channels.manage": "Agenda, LGPD e ouvidoria",
+  "guides.manage": "Guias de transmissão de bens (ITIV, ITCD, laudêmio)",
+  "iss.manage": "Declaração de ISS ao fisco municipal",
+  "signer.use": "Assinador digital (assinar documentos)",
+  "transparency.manage": "Transparência (boletim mensal e documentos)",
+  "numbering.manage": "Numeração de documentos",
+  "access.manage": "Duas etapas e horário de acesso (ligar, desligar, liberar)",
+  "certificates.manage": "Certificados digitais da serventia",
 };

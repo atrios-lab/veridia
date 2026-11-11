@@ -82,7 +82,7 @@ assinar trazem duas opções:
 
 Hoje oferecem a opção:
 
-- a guia imobiliária e o PDF anual de guias (Utilitários › Guias);
+- a guia de transmissão de bens e o PDF anual de guias (Utilitários › Guias);
 - a declaração de comparecimento e o comprovante de agendamento (Agenda);
 - a notificação de auditoria, que já tinha a assinatura na própria tela.
 
