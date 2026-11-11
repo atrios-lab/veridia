@@ -154,6 +154,15 @@ export const ADMIN_NAV: readonly AdminNavItem[] = [
     permission: "user.manage",
   },
   {
+    // The Átrios master account only (a platform permission): turning the
+    // two-step access off or on for any office (lib/access-policy.ts).
+    group: "Átrios",
+    label: "Liberação de acesso",
+    href: "/admin/atrios/liberacao-de-acesso",
+    icon: "shield",
+    permission: "access.release",
+  },
+  {
     // The platform's video tutorials: no permission, every panel user may
     // watch. The sidebar still omits it while the catalog is empty (see
     // sidebar.tsx), the one case where the route exists and the item does

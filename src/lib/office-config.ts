@@ -49,6 +49,8 @@ export const OFFICE_GUIDES_KEY = "office-tax-guides";
 export const OFFICE_ALERTS_KEY = "office-alerts";
 /** Per user: where the access code goes, and saved computers (lib/access-settings.ts). */
 export const OFFICE_ACCESS_KEY = "office-access-codes";
+/** Set by the Átrios master account only: two-step access on or off (lib/access-policy.ts). */
+export const PLATFORM_ACCESS_POLICY_KEY = "platform-access-policy";
 /** Where each numbered document goes on, per year (Configurações › Numeração). */
 export const OFFICE_NUMBERING_KEY = "office-numbering";
 // Not part of Tenant/applyTenantOverrides: whether the office's chat is on,

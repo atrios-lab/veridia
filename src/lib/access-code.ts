@@ -6,6 +6,7 @@ import {
   needsAccessCode,
 } from "@/core/auth/access-settings.ts";
 import type { Tenant } from "@/core/tenant/schema.ts";
+import { twoStepEnabledFor } from "./access-policy.ts";
 import { getOfficeAccess } from "./access-settings.ts";
 import { sendEmail } from "./email/send.ts";
 import {
@@ -70,10 +71,17 @@ export async function isAccessConfirmed(
   if (!accessCodeEnabled()) return true;
   if (!needsAccessCode(pending.user.role ?? "")) return true;
   const jar = await cookies();
-  return verifyMarker(
-    jar.get(MARKER_COOKIE)?.value,
-    bindingOf(pending.session.token, pending.user.id),
-  );
+  if (
+    verifyMarker(
+      jar.get(MARKER_COOKIE)?.value,
+      bindingOf(pending.session.token, pending.user.id),
+    )
+  ) {
+    return true;
+  }
+  // The Átrios master account may have turned the step off for this office
+  // (Liberação de acesso); only asked when the session is not confirmed yet.
+  return !(await twoStepEnabledFor(pending.user.tenantSlug ?? ""));
 }
 
 /** Session length, as lib/auth.ts sets it: eight hours. */
@@ -90,6 +98,7 @@ export async function confirmBySavedComputer(
   user: { id: string; role: string; tenantSlug: string },
 ): Promise<boolean> {
   if (!accessCodeEnabled() || !needsAccessCode(user.role)) return true;
+  if (!(await twoStepEnabledFor(user.tenantSlug))) return true;
   const jar = await cookies();
   const device = jar.get(DEVICE_COOKIE)?.value;
   if (!device) return false;
