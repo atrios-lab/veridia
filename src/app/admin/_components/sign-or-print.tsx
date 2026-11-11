@@ -1,6 +1,18 @@
 import { AdminIcon } from "./icon";
 
 /**
+ * Where "Assinar digitalmente" leads for any PDF the panel generates: the
+ * assinador, with that PDF already on its list. Every new PDF route of the
+ * panel offers it next to its print link (decision of 11/11/2026).
+ */
+export function signHref(pdfHref: string, title: string): string {
+  return `/admin/utilitarios/assinador?${new URLSearchParams({
+    origem: pdfHref,
+    titulo: title,
+  })}#assinar`;
+}
+
+/**
  * A document the panel generates, two ways (decision of 11/11/2026):
  * signed 100% digitally through the platform (band and QR on every page),
  * or printed to sign by hand. Either way it prints: the digital one opens
@@ -17,10 +29,7 @@ export function SignOrPrint({
   title: string;
   size?: "sm" | "md";
 }) {
-  const sign = `/admin/utilitarios/assinador?${new URLSearchParams({
-    origem: pdfHref,
-    titulo: title,
-  })}#assinar`;
+  const sign = signHref(pdfHref, title);
   return (
     <span className="inline-flex flex-wrap gap-2">
       <a href={sign} className={`btn btn-admin-primary btn-${size}`}>

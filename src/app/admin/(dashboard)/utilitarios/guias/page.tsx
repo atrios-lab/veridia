@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import { signHref } from "@/app/admin/_components/sign-or-print";
 import { can } from "@/core/auth/roles.ts";
 import {
   GUIDE_KIND_INFO,
@@ -212,6 +213,18 @@ function GuideYear({
           >
             <AdminIcon name="printer" className="h-3.5 w-3.5" /> Baixar todas de{" "}
             {year} (PDF)
+          </a>
+        )}
+        {year !== undefined && (
+          <a
+            href={signHref(
+              `/admin/utilitarios/guias/ano/${year}`,
+              `Guias de recolhimento de ${year}`,
+            )}
+            className="btn btn-admin-primary btn-sm"
+          >
+            <AdminIcon name="lock" className="h-3.5 w-3.5" /> Assinar
+            digitalmente
           </a>
         )}
       </header>

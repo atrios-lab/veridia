@@ -77,6 +77,8 @@ import { PdfNotSignableError } from "@/lib/signature/pades.ts";
 import {
   confirmPhysicalSignatureWith,
   fileHasDigitalSignature,
+  finishA3DeliveryWith,
+  prepareA3DeliveryWith,
   SigningError,
   signDeliveredDocumentWith,
 } from "@/lib/signing.ts";
@@ -1113,4 +1115,108 @@ export async function renameDeliveredAction(
     return { status: "error", message: "Não foi possível renomear." };
   revalidateAdmin();
   return { status: "success" };
+}
+
+/* ----------------------------------- delivered PDF signed with an A3 token */
+
+export type A3DeliveryStep =
+  | { status: "prepared"; token: string; toBeSigned: string }
+  | { status: "error"; message: string };
+
+function tokenCertificate(formData: FormData) {
+  let chain: unknown = [];
+  try {
+    chain = JSON.parse(String(formData.get("chain") ?? "[]"));
+  } catch {
+    chain = [];
+  }
+  return {
+    holderDer: Buffer.from(String(formData.get("holder") ?? ""), "base64"),
+    chainDer: (Array.isArray(chain) ? chain : [])
+      .slice(0, 8)
+      .map((item) => Buffer.from(String(item), "base64")),
+  };
+}
+
+function signingFailure(error: unknown, where: string) {
+  if (
+    error instanceof SigningError ||
+    error instanceof CertificatePasswordError ||
+    error instanceof PdfNotSignableError
+  ) {
+    return { status: "error" as const, message: error.message };
+  }
+  console.error(where, error);
+  return {
+    status: "error" as const,
+    message: "Não foi possível assinar este PDF agora. Tente de novo.",
+  };
+}
+
+/** A3, step one: prepare the delivered PDF for the token (decision of 11/11/2026). */
+export async function prepareA3DeliveryAction(
+  formData: FormData,
+): Promise<A3DeliveryStep> {
+  const session = await authorize();
+  if (!session) return { status: "error", message: NO_PERMISSION };
+  const tenant = await getTenant();
+  const requestId = String(formData.get("requestId") ?? "");
+  const request = await findById(tenant.slug, requestId);
+  if (!request) return { status: "error", message: "Pedido não encontrado." };
+  const origin = await requestOrigin();
+  try {
+    const prepared = await prepareA3DeliveryWith(
+      db,
+      tenant.slug,
+      {
+        ...tokenCertificate(formData),
+        requestId,
+        attachmentId: String(formData.get("attachmentId") ?? ""),
+        protocolNumber: request.protocolNumber,
+        verifyUrl: (code) => verifyUrlFor(tenant, origin, code),
+        location: `${tenant.location.city}/${tenant.location.state}`,
+        officeName: officialName(tenant),
+      },
+      session.user.id,
+    );
+    return {
+      status: "prepared",
+      token: prepared.token,
+      toBeSigned: prepared.toBeSigned.toString("base64"),
+    };
+  } catch (error) {
+    return signingFailure(error, "pedidos.a3.prepare");
+  }
+}
+
+/** A3, step two: the token's signature comes back; the client's copy is replaced. */
+export async function finishA3DeliveryAction(
+  formData: FormData,
+): Promise<
+  { status: "signed"; id: string } | { status: "error"; message: string }
+> {
+  const session = await authorize();
+  if (!session) return { status: "error", message: NO_PERMISSION };
+  const tenant = await getTenant();
+  try {
+    const { id } = await finishA3DeliveryWith(
+      db,
+      tenant.slug,
+      {
+        ...tokenCertificate(formData),
+        token: String(formData.get("token") ?? ""),
+        signature: Buffer.from(
+          String(formData.get("signature") ?? ""),
+          "base64",
+        ),
+        requestId: String(formData.get("requestId") ?? ""),
+        attachmentId: String(formData.get("attachmentId") ?? ""),
+      },
+      session.user.id,
+    );
+    revalidateAdmin();
+    return { status: "signed", id };
+  } catch (error) {
+    return signingFailure(error, "pedidos.a3.finish");
+  }
 }

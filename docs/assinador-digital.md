@@ -80,9 +80,23 @@ assinar trazem duas opções:
   imprime com a faixa e o QR de conferência ("Abrir para imprimir").
 - **Imprimir para assinar à mão:** abre o PDF para imprimir.
 
-Por enquanto isso vale para a guia de recolhimento (Utilitários › Guias) e
-para a declaração de comparecimento (Agenda). O requerimento não entra,
-porque quem assina é o cliente.
+Hoje oferecem a opção:
+
+- a guia de recolhimento e o PDF anual de guias (Utilitários › Guias);
+- a declaração de comparecimento e o comprovante de agendamento (Agenda);
+- a notificação de auditoria, que já tinha a assinatura na própria tela.
+
+O requerimento e a declaração de hipossuficiência não entram, porque quem
+assina é o cliente.
+
+**Documentos que vierem a ser gerados:** o teste
+`src/app/admin/pdf-sign-option.test.ts` lista todas as rotas do painel que
+geram PDF. Uma rota nova só passa no CI depois de entrar em uma de duas
+listas:
+
+- a que oferece "Assinar digitalmente", com o `signHref` ou o `SignOrPrint`
+  de `src/app/admin/_components/sign-or-print.tsx`;
+- a que explica por que não é documento da serventia.
 
 O assinador aceita `?origem=/admin/...&titulo=...` e só carrega rotas do
 próprio painel.
@@ -97,7 +111,9 @@ navegador e de novo no servidor:
 - **Sem assinatura digital:** aparece o alerta "O documento anexado não
   contém assinatura digital". O funcionário escolhe uma destas opções:
   - **Sim, enviar e assinar digitalmente**, só para PDF. Logo abaixo do
-    arquivo aparece o botão de assinar pela plataforma.
+    arquivo aparece o botão "Assinar digitalmente", com a escolha entre
+    **A1** (arquivo e senha) e **A3** (token ou cartão, pelo Assinador
+    Veridia). A cópia do cliente é trocada pela assinada, com a faixa e o QR.
   - **Confirmo que é um documento desmaterializado, apenas com assinatura
     física, que foi digitalizado.** A confirmação fica no arquivo (colunas
     `physical_signature_at` e `physical_signature_by`, migração 0048, que só
@@ -105,3 +121,7 @@ navegador e de novo no servidor:
     assinatura" deixa de aparecer para esse arquivo.
 
 Sem uma das duas escolhas, o servidor recusa o envio.
+
+Todo documento entregue tem o botão **Imprimir**: o assinado digitalmente
+sai com o QR de conferência, e o físico digitalizado sai como foi
+anexado.

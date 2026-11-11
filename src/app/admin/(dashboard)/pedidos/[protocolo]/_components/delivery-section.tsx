@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import {
   startTransition,
   useActionState,
@@ -10,15 +11,28 @@ import {
 } from "react";
 import { toast } from "sonner";
 import { DocumentNameField } from "../../../../../_components/document-name-field.tsx";
+import { documentHref } from "../../../../_components/attachment-link.ts";
 import {
   type AttachmentItem,
   AttachmentRow,
 } from "../../../../_components/attachment-row.tsx";
 import { useEmailWarning } from "../../../../_components/use-email-warning.ts";
 import {
+  certificateFields,
+  LocalSignerPicker,
+  useLocalSigner,
+} from "../../../utilitarios/assinador/a3.tsx";
+import {
+  type Mode,
+  ModeChoice,
+  signThroughToken,
+} from "../../../utilitarios/assinador/sign-forms.tsx";
+import {
   type ActionState,
   deleteAttachmentAction,
   deliverDocumentAction,
+  finishA3DeliveryAction,
+  prepareA3DeliveryAction,
   renameDeliveredAction,
   signDeliveredAction,
 } from "../actions.ts";
@@ -137,6 +151,17 @@ export function DeliverySection({
                 meta="entregue em"
                 onDelete={deleteAttachmentAction}
               />
+              {!attachment.goneLabel && (
+                <a
+                  href={documentHref(requestId, attachment.id)}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="mr-3 inline-block text-[12px] font-semibold text-admin-primary underline"
+                  title="Abre o documento para imprimir: assinado digitalmente (com o QR) ou físico digitalizado"
+                >
+                  Imprimir
+                </a>
+              )}
               {!attachment.goneLabel && (
                 <RenameDelivered
                   requestId={requestId}
@@ -314,7 +339,14 @@ function UnsignedNotice({
   certificates: DeliveryCertificate[];
   canManageCertificates: boolean;
 }) {
+  const router = useRouter();
   const [open, setOpen] = useState(false);
+  // A1 from the platform or A3 from a token on this computer, the same
+  // choice as in the assinador (decision of 11/11/2026).
+  const [mode, setMode] = useState<Mode | null>(null);
+  const local = useLocalSigner(mode === "a3");
+  const [tokenBusy, setTokenBusy] = useState(false);
+  const [tokenError, setTokenError] = useState("");
   const [state, action, pending] = useActionState<ActionState, FormData>(
     async (previous, formData) => {
       const result = await signDeliveredAction(previous, formData);
@@ -330,6 +362,34 @@ function UnsignedNotice({
   const FIELD =
     "w-full rounded-[9px] border border-admin-input-border bg-admin-card px-3 py-2 text-[13px] text-admin-text outline-none focus:border-admin-primary-soft";
 
+  const signWithToken = async () => {
+    const token = local.certificate;
+    if (!token) {
+      setTokenError("Escolha o certificado A3.");
+      return;
+    }
+    setTokenError("");
+    setTokenBusy(true);
+    const data = certificateFields(new FormData(), token);
+    data.set("requestId", requestId);
+    data.set("attachmentId", attachmentId);
+    const outcome = await signThroughToken(
+      token,
+      () => prepareA3DeliveryAction(data),
+      finishA3DeliveryAction,
+      { requestId, attachmentId },
+    );
+    setTokenBusy(false);
+    if (outcome.status === "error") {
+      setTokenError(outcome.message);
+      return;
+    }
+    toast.success(
+      "Documento assinado. O cidadão já baixa a versão assinada, com o QR de verificação.",
+    );
+    router.refresh();
+  };
+
   return (
     <div className="mt-1.5 rounded-[10px] border border-admin-warning-text/40 bg-admin-warning-bg px-3 py-2.5 text-[12.5px] text-admin-warning-text">
       <div className="flex flex-wrap items-center justify-between gap-2">
@@ -337,74 +397,111 @@ function UnsignedNotice({
           <strong>Sem assinatura digital.</strong> O cidadão vai baixar este PDF
           sem assinatura. Assine pela plataforma antes de concluir.
         </span>
-        {certificates.length > 0 ? (
-          <button
-            type="button"
-            onClick={() => setOpen((value) => !value)}
-            className="btn btn-admin-primary btn-sm shrink-0"
-            aria-expanded={open}
-          >
-            Assinar pela plataforma
-          </button>
-        ) : canManageCertificates ? (
-          <Link
-            href="/admin/configuracoes/certificados"
-            className="font-semibold underline"
-          >
-            Cadastrar certificado
-          </Link>
-        ) : (
-          <span>Peça ao administrador um certificado para assinar.</span>
-        )}
-      </div>
-      {open && certificates.length > 0 && (
-        <form
-          // Not `action={...}`: a wrong password would clear the fields.
-          onSubmit={(event) => {
-            event.preventDefault();
-            const data = new FormData(event.currentTarget);
-            startTransition(() => action(data));
-          }}
-          className="mt-2.5 grid grid-cols-1 gap-2.5 text-admin-text md:grid-cols-[1fr_1fr_auto] md:items-end"
+        <button
+          type="button"
+          onClick={() => setOpen((value) => !value)}
+          className="btn btn-admin-primary btn-sm shrink-0"
+          aria-expanded={open}
         >
-          <input type="hidden" name="requestId" value={requestId} />
-          <input type="hidden" name="attachmentId" value={attachmentId} />
-          <label className="flex flex-col gap-1 text-[12px] font-bold text-admin-primary">
-            Certificado
-            <select name="certificateId" required className={FIELD}>
-              {certificates.map((certificate) => (
-                <option key={certificate.id} value={certificate.id}>
-                  {certificate.label} · {certificate.holderName}
-                </option>
-              ))}
-            </select>
-          </label>
-          <label className="flex flex-col gap-1 text-[12px] font-bold text-admin-primary">
-            Senha do certificado
-            <input
-              name="password"
-              type="password"
-              autoComplete="off"
-              required
-              className={FIELD}
-            />
-          </label>
-          <button
-            type="submit"
-            disabled={pending}
-            className="btn btn-admin-primary btn-md"
-          >
-            {pending ? "Assinando..." : "Assinar"}
-          </button>
-          {state.status === "error" && (
-            <p
-              role="alert"
-              className="font-semibold text-admin-error-text md:col-span-3"
+          Assinar digitalmente
+        </button>
+      </div>
+      {open && (
+        <div className="mt-2.5 grid grid-cols-1 gap-2.5 text-admin-text md:grid-cols-2">
+          <ModeChoice
+            mode={mode}
+            onChange={setMode}
+            hasA1={certificates.length > 0}
+            prefix={`entrega-${attachmentId}`}
+          />
+          {mode === "a1" && (
+            <form
+              // Not `action={...}`: a wrong password would clear the fields.
+              onSubmit={(event) => {
+                event.preventDefault();
+                const data = new FormData(event.currentTarget);
+                startTransition(() => action(data));
+              }}
+              className="grid grid-cols-1 gap-2.5 md:col-span-2 md:grid-cols-[1fr_1fr_auto] md:items-end"
             >
-              {state.message}
+              <input type="hidden" name="requestId" value={requestId} />
+              <input type="hidden" name="attachmentId" value={attachmentId} />
+              <label className="flex flex-col gap-1 text-[12px] font-bold text-admin-primary">
+                Certificado
+                <select name="certificateId" required className={FIELD}>
+                  {certificates.map((certificate) => (
+                    <option key={certificate.id} value={certificate.id}>
+                      {certificate.label} · {certificate.holderName}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <label className="flex flex-col gap-1 text-[12px] font-bold text-admin-primary">
+                Senha do certificado
+                <input
+                  name="password"
+                  type="password"
+                  autoComplete="off"
+                  required
+                  className={FIELD}
+                />
+              </label>
+              <button
+                type="submit"
+                disabled={pending}
+                className="btn btn-admin-primary btn-md"
+              >
+                {pending ? "Assinando..." : "Assinar"}
+              </button>
+              {state.status === "error" && (
+                <p
+                  role="alert"
+                  className="font-semibold text-admin-error-text md:col-span-3"
+                >
+                  {state.message}
+                </p>
+              )}
+            </form>
+          )}
+          {mode === "a3" && (
+            <>
+              <LocalSignerPicker
+                signer={local}
+                prefix={`entrega-${attachmentId}`}
+              />
+              <div className="md:col-span-2">
+                <button
+                  type="button"
+                  disabled={tokenBusy || !local.certificate}
+                  onClick={() => void signWithToken()}
+                  className="btn btn-admin-primary btn-md"
+                >
+                  {tokenBusy ? "Assinando..." : "Assinar com o token"}
+                </button>
+                {tokenError && (
+                  <p
+                    role="alert"
+                    className="mt-1.5 font-semibold text-admin-error-text"
+                  >
+                    {tokenError}
+                  </p>
+                )}
+              </div>
+            </>
+          )}
+          {certificates.length === 0 && canManageCertificates && (
+            <p className="md:col-span-2">
+              Para assinar com A1, cadastre o certificado em{" "}
+              <Link
+                href="/admin/configuracoes/certificados"
+                className="font-semibold underline"
+              >
+                Configurações › Certificados
+              </Link>
+              .
             </p>
           )}
-        </form>
+        </div>
       )}
     </div>
   );

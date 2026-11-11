@@ -93,13 +93,13 @@ function CertificateAndPassword({
   );
 }
 
-type Mode = "a1" | "a3";
+export type Mode = "a1" | "a3";
 
 /**
  * A1 (the file kept, sealed, on the platform) or A3 (a token or card on
  * this computer, through the Assinador Veridia). Decision of 11/11/2026.
  */
-function ModeChoice({
+export function ModeChoice({
   mode,
   onChange,
   hasA1,
@@ -157,12 +157,22 @@ function ModeChoice({
  * One document through the token: the platform prepares, the token signs,
  * the platform finishes. A cancelled PIN window stops the batch.
  */
-async function signThroughToken(
+export async function signThroughToken(
   certificate: TokenCertificate,
   prepare: () => Promise<
     | { status: "prepared"; token: string; toBeSigned: string }
     | { status: "error"; message: string }
   >,
+  /**
+   * Where the signature goes back: the assinador's own documents by
+   * default; a delivered file passes its own (with its ids in `extra`).
+   */
+  finish: (
+    data: FormData,
+  ) => Promise<
+    { status: "signed"; id: string } | { status: "error"; message: string }
+  > = finishA3,
+  extra: Record<string, string> = {},
 ): Promise<
   | { status: "signed"; id: string }
   | { status: "error"; message: string; stop: boolean }
@@ -187,7 +197,8 @@ async function signThroughToken(
   const data = certificateFields(new FormData(), certificate);
   data.set("token", prepared.token);
   data.set("signature", signature);
-  const done = await finishA3(data);
+  for (const [key, value] of Object.entries(extra)) data.set(key, value);
+  const done = await finish(data);
   return done.status === "signed"
     ? done
     : { status: "error", message: done.message, stop: false };
