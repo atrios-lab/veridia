@@ -9,6 +9,7 @@ import {
   GuideSettingsSchema,
 } from "@/core/guides/schema.ts";
 import { db } from "@/db/index.ts";
+import { justify } from "@/lib/audit-reason.ts";
 import {
   type GuideAlertItem,
   guideAlertSnapshotWith,
@@ -175,6 +176,9 @@ export async function renumberGuideAction(
   _previous: GuideNumberState,
   formData: FormData,
 ): Promise<GuideNumberState> {
+  // Sensitive: says why, and the reason goes to the audit.
+  const why = justify(formData);
+  if (why) return { status: "error", message: why };
   const session = await getSession();
   if (
     !session ||
@@ -227,6 +231,9 @@ export async function deleteGuideAction(
   _previous: DeleteGuideState,
   formData: FormData,
 ): Promise<DeleteGuideState> {
+  // Sensitive: says why, and the reason goes to the audit.
+  const why = justify(formData);
+  if (why) return { status: "error", message: why };
   const session = await getSession();
   if (
     !session ||

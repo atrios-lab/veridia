@@ -5,6 +5,8 @@ import { user } from "@/db/auth-schema.ts";
 import type { Database } from "@/db/index.ts";
 import { auditLog } from "@/db/schema.ts";
 import { createTestDb } from "@/db/test-db.ts";
+import { recordAuditWith } from "./audit.ts";
+import { justify } from "./audit-reason.ts";
 import {
   addAuditNoteWith,
   answerNotificationWith,
@@ -13,8 +15,11 @@ import {
   findNotificationWith,
   listAuditWith,
   listNotificationsWith,
+  markReviewedWith,
   NotificationError,
   openNotificationCountWith,
+  pendingUrgentCountWith,
+  peopleSummaryWith,
 } from "./audit-trail.ts";
 
 let db: Database;
@@ -330,4 +335,118 @@ test("texto com CRLF é guardado com quebras simples", async () => {
   assert.equal(view?.facts, "Linha um.\nLinha dois.");
   assert.equal(view?.legalBasis.includes("\r"), false);
   assert.equal(created.sequence, 2);
+});
+
+test("faixas: exclusão é urgente, fica pendente até o titular verificar; resumo por pessoa", async () => {
+  const now = new Date();
+  const rows = await db
+    .insert(auditLog)
+    .values([
+      {
+        tenantSlug: OFFICE,
+        actorId: "escrevente",
+        action: "service-request.delete",
+        targetType: "service-request",
+        targetId: "2026-000777",
+        reason: "Pedido duplicado por engano.",
+        createdAt: now,
+      },
+      {
+        tenantSlug: OFFICE,
+        actorId: "escrevente",
+        action: "service-request.amount",
+        targetType: "service-request",
+        targetId: "2026-000777",
+        createdAt: now,
+      },
+      {
+        tenantSlug: OFFICE,
+        actorId: "titular",
+        action: "publication.delete",
+        targetType: "publication",
+        targetId: "x",
+        createdAt: now,
+      },
+    ])
+    .returning({ id: auditLog.id });
+  const urgent = await listAuditWith(db, {
+    tenantSlugs: [OFFICE],
+    levels: ["urgente"],
+    ids: rows.map((r) => r.id),
+  });
+  assert.deepEqual(urgent.map((e) => e.action).sort(), [
+    "publication.delete",
+    "service-request.delete",
+  ]);
+  assert.equal(
+    urgent.find((e) => e.action === "service-request.delete")?.reason,
+    "Pedido duplicado por engano.",
+  );
+  // The holder's own act does not alert himself.
+  assert.equal(await pendingUrgentCountWith(db, OFFICE, "titular", now), 1);
+  const people = await peopleSummaryWith(
+    db,
+    [OFFICE],
+    new Date(now.getTime() - 60_000),
+  );
+  const joao = people.find((p) => p.actorId === "escrevente");
+  assert.equal(joao?.urgente, 1);
+  assert.equal(joao?.pendentes, 1);
+  // The answer to the earlier notification counts too (also "atenção").
+  assert.ok((joao?.atencao ?? 0) >= 1);
+  assert.ok(
+    people.every((p, i) => i === 0 || people[i - 1].pendentes >= p.pendentes),
+  );
+
+  assert.equal(
+    await markReviewedWith(db, [OFFICE], [rows[0].id], "titular", now),
+    1,
+  );
+  // Twice is harmless; another office cannot mark it.
+  assert.equal(
+    await markReviewedWith(db, [OFFICE], [rows[0].id], "titular", now),
+    0,
+  );
+  assert.equal(
+    await markReviewedWith(db, [OTHER], [rows[2].id], "de-fora", now),
+    0,
+  );
+  assert.equal(await pendingUrgentCountWith(db, OFFICE, "titular", now), 0);
+  const [seen] = await listAuditWith(db, {
+    tenantSlugs: [OFFICE],
+    ids: [rows[0].id],
+  });
+  assert.equal(seen.reviewerName, "Maria Exemplo da Silva");
+  assert.ok(seen.reviewedAt);
+  assert.equal(
+    (
+      await listAuditWith(db, {
+        tenantSlugs: [OFFICE],
+        pending: true,
+        ids: rows.map((r) => r.id),
+      })
+    ).length,
+    1,
+  );
+});
+
+test("a justificativa digitada vai para o registro do ato", async () => {
+  const form = new FormData();
+  form.set("justificativa", "ok");
+  assert.match(justify(form) ?? "", /justificativa/);
+  form.set("justificativa", "Documento enviado ao cidadão errado.");
+  assert.equal(justify(form), null);
+  await recordAuditWith(db, {
+    tenantSlug: OFFICE,
+    actorId: "escrevente",
+    action: "service-request.attachment.delete",
+    targetType: "service-request",
+    targetId: "2026-000888",
+  });
+  const [entry] = await listAuditWith(db, {
+    tenantSlugs: [OFFICE],
+    text: "000888",
+  });
+  assert.equal(entry.reason, "Documento enviado ao cidadão errado.");
+  assert.equal(entry.level, "urgente");
 });

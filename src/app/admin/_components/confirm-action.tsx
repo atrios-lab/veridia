@@ -27,6 +27,7 @@ export function ConfirmAction({
   children,
   className,
   triggerClassName = "btn btn-admin-danger btn-sm",
+  justify = true,
 }: {
   /** The dispatch from the caller's `useActionState`. */
   action: (formData: FormData) => void;
@@ -47,6 +48,12 @@ export function ConfirmAction({
   className?: string;
   /** The trigger's own look; the outline danger button unless told otherwise. */
   triggerClassName?: string;
+  /**
+   * Asks why, and says the act goes to the audit (decision of 11/11/2026).
+   * On by default: every action confirmed here excludes or undoes
+   * something, and its server action reads "justificativa".
+   */
+  justify?: boolean;
 }) {
   const [open, setOpen] = useState(false);
   // False until this opening of the dialog has actually sent something. The
@@ -57,6 +64,8 @@ export function ConfirmAction({
   const sawPending = useRef(false);
   const questionId = useId();
   const consequenceId = useId();
+  const formId = useId();
+  const reasonId = useId();
 
   // Closes once the action lands, and only then: an error keeps the dialog up,
   // because the message belongs where the operator is looking, and a modal in
@@ -107,6 +116,34 @@ export function ConfirmAction({
             >
               {consequence}
             </p>
+            {justify && (
+              <div className="mt-3.5">
+                <label
+                  htmlFor={reasonId}
+                  className="mb-1.5 block text-xs font-bold text-admin-primary"
+                >
+                  Justificativa
+                </label>
+                <textarea
+                  id={reasonId}
+                  name="justificativa"
+                  form={formId}
+                  required
+                  minLength={10}
+                  maxLength={1000}
+                  rows={3}
+                  placeholder="Por que este ato é necessário?"
+                  className="w-full rounded-[9px] border border-admin-input-border bg-admin-input-bg px-3 py-2 text-[13px] text-admin-text outline-none focus:border-admin-primary-soft"
+                />
+                <p className="mt-1.5 flex items-start gap-1.5 rounded-[8px] bg-admin-warning-bg px-2.5 py-2 text-[12px] leading-snug text-admin-warning-text">
+                  <span aria-hidden="true">⚠</span>
+                  <span>
+                    Este ato vai para a auditoria. O Tabelião/Registrador verá o
+                    que foi feito, por quem, quando e a sua justificativa.
+                  </span>
+                </p>
+              </div>
+            )}
             {sent && error && (
               <p
                 role="alert"
@@ -117,6 +154,7 @@ export function ConfirmAction({
             )}
           </div>
           <form
+            id={formId}
             action={action}
             onSubmit={() => setSent(true)}
             className={DIALOG_FOOTER}

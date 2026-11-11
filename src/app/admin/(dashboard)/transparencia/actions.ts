@@ -22,6 +22,7 @@ import {
   documentFormSchema,
 } from "@/core/transparency/documents.ts";
 import { FUNDS_BY_STATE } from "@/core/transparency/rubrics.ts";
+import { justify } from "@/lib/audit-reason.ts";
 import {
   FEE_TABLE_CATEGORY,
   getFeeTableDocument,
@@ -242,6 +243,9 @@ export async function deleteDocumentAction(
   _previous: ActionState,
   formData: FormData,
 ): Promise<ActionState> {
+  // Sensitive: says why, and the reason goes to the audit.
+  const why = justify(formData);
+  if (why) return { status: "error", message: why };
   const session = await authorize();
   if (!session) return { status: "error", message: NO_PERMISSION };
 

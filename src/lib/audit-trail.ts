@@ -1,6 +1,26 @@
 import "server-only";
-import { and, desc, eq, gte, ilike, inArray, lte, or } from "drizzle-orm";
+import {
+  and,
+  count,
+  desc,
+  eq,
+  gte,
+  ilike,
+  inArray,
+  isNull,
+  lte,
+  ne,
+  or,
+  type SQL,
+  sql,
+} from "drizzle-orm";
 import { ANSWER_HOURS } from "@/core/audit/labels.ts";
+import {
+  type AuditLevel,
+  auditLevel,
+  exactActions,
+  URGENT_VERBS_PATTERN,
+} from "@/core/audit/severity.ts";
 import { formatGuideNumber } from "@/core/guides/schema.ts";
 import { officeYear } from "@/core/time/office-time.ts";
 import { user } from "@/db/auth-schema.ts";
@@ -10,6 +30,7 @@ import {
   auditNotes,
   auditNotificationFiles,
   auditNotifications,
+  auditReviews,
 } from "@/db/schema.ts";
 import { recordAuditWith } from "./audit.ts";
 import { nextNumberWith } from "./document-numbering.ts";
@@ -27,6 +48,12 @@ export interface AuditEntry {
   targetId: string | null;
   /** The target with any account id in it replaced by the person's name. */
   targetLabel: string | null;
+  /** Why, for a sensitive act: typed by its author. */
+  reason: string | null;
+  level: AuditLevel;
+  /** When the holder marked it as seen, and who. */
+  reviewedAt: Date | null;
+  reviewerName: string | null;
   createdAt: Date;
   notes: {
     id: string;
@@ -45,6 +72,12 @@ export interface AuditFilter {
   /** Words in the action or the target. */
   text?: string;
   ids?: string[];
+  /** Only these bands. */
+  levels?: AuditLevel[];
+  /** Only the urgent ones nobody has marked as seen. */
+  pending?: boolean;
+  /** Leaves out one person's acts (the holder's own, in the pending list). */
+  excludeActorId?: string;
   limit?: number;
 }
 
@@ -52,6 +85,31 @@ const ACCOUNT_ID = /\b[A-Za-z0-9]{32}\b/g;
 
 /** What a form sent, with the browser's CRLF turned into plain newlines. */
 const typed = (text: string) => text.replace(/\r\n?/g, "\n").trim();
+
+/** The band of an entry, worked out by the database: same rule as the core. */
+function levelSql(): SQL<string> {
+  const list = (level: AuditLevel) => {
+    const codes = exactActions(level);
+    return codes.length
+      ? sql`${auditLog.action} in (${sql.join(
+          codes.map((code) => sql`${code}`),
+          sql`, `,
+        )})`
+      : sql`false`;
+  };
+  return sql<string>`case
+    when ${list("urgente")} then 'urgente'
+    when ${list("atencao")} then 'atencao'
+    when ${list("analise")} then 'analise'
+    when ${auditLog.action} ~ ${URGENT_VERBS_PATTERN} then 'urgente'
+    else 'rotina' end`;
+}
+
+/**
+ * How far back an urgent act still alerts: the trail before the bands
+ * existed is history, not a pile of alerts on the first day.
+ */
+export const ALERT_DAYS = 30;
 
 /** The trail, newest first, with who did it and the notes on each entry. */
 export async function listAuditWith(
@@ -66,6 +124,16 @@ export async function listAuditWith(
     filter.from ? gte(auditLog.createdAt, filter.from) : undefined,
     filter.to ? lte(auditLog.createdAt, filter.to) : undefined,
     filter.ids?.length ? inArray(auditLog.id, filter.ids) : undefined,
+    filter.levels?.length ? inArray(levelSql(), filter.levels) : undefined,
+    filter.pending
+      ? and(sql`${levelSql()} = 'urgente'`, isNull(auditReviews.id))
+      : undefined,
+    filter.excludeActorId
+      ? or(
+          isNull(auditLog.actorId),
+          ne(auditLog.actorId, filter.excludeActorId),
+        )
+      : undefined,
     filter.text
       ? or(
           ilike(auditLog.action, `%${filter.text}%`),
@@ -85,10 +153,14 @@ export async function listAuditWith(
       action: auditLog.action,
       targetType: auditLog.targetType,
       targetId: auditLog.targetId,
+      reason: auditLog.reason,
+      reviewedAt: auditReviews.reviewedAt,
+      reviewedBy: auditReviews.reviewedBy,
       createdAt: auditLog.createdAt,
     })
     .from(auditLog)
     .leftJoin(user, eq(user.id, auditLog.actorId))
+    .leftJoin(auditReviews, eq(auditReviews.auditId, auditLog.id))
     .where(and(...conditions))
     .orderBy(desc(auditLog.createdAt))
     .limit(filter.limit ?? 300);
@@ -110,7 +182,10 @@ export async function listAuditWith(
   // Targets that carry an account id ("user.update" on someone, a
   // notification to someone) read with the person's name instead.
   const accountIds = [
-    ...new Set(rows.flatMap((row) => row.targetId?.match(ACCOUNT_ID) ?? [])),
+    ...new Set([
+      ...rows.flatMap((row) => row.targetId?.match(ACCOUNT_ID) ?? []),
+      ...rows.flatMap((row) => (row.reviewedBy ? [row.reviewedBy] : [])),
+    ]),
   ];
   const names = new Map(
     accountIds.length
@@ -122,8 +197,10 @@ export async function listAuditWith(
         ).map((person) => [person.id, person.name])
       : [],
   );
-  return rows.map((row) => ({
+  return rows.map(({ reviewedBy, ...row }) => ({
     ...row,
+    level: auditLevel(row.action),
+    reviewerName: reviewedBy ? (names.get(reviewedBy) ?? null) : null,
     targetLabel:
       row.targetId?.replace(ACCOUNT_ID, (id) => names.get(id) ?? id) ?? null,
     notes: notes
@@ -162,6 +239,139 @@ export async function addAuditNoteWith(
     body: text,
   });
   return true;
+}
+
+/** Marks urgent entries as seen by the holder; the panel's alert for them ends. */
+export async function markReviewedWith(
+  database: Database,
+  tenantSlugs: string[] | "all",
+  ids: string[],
+  reviewerId: string,
+  now = new Date(),
+): Promise<number> {
+  const wanted = ids.filter((id) => /^[0-9a-f-]{36}$/i.test(id)).slice(0, 300);
+  if (!wanted.length) return 0;
+  if (tenantSlugs !== "all" && !tenantSlugs.length) return 0;
+  const entries = await database
+    .select({ id: auditLog.id, tenantSlug: auditLog.tenantSlug })
+    .from(auditLog)
+    .where(
+      and(
+        inArray(auditLog.id, wanted),
+        tenantSlugs === "all"
+          ? undefined
+          : inArray(auditLog.tenantSlug, tenantSlugs),
+      ),
+    );
+  if (!entries.length) return 0;
+  const inserted = await database
+    .insert(auditReviews)
+    .values(
+      entries.map((entry) => ({
+        tenantSlug: entry.tenantSlug,
+        auditId: entry.id,
+        reviewedBy: reviewerId,
+        reviewedAt: now,
+      })),
+    )
+    .onConflictDoNothing()
+    .returning({ id: auditReviews.id });
+  return inserted.length;
+}
+
+/**
+ * Urgent acts of the last 30 days nobody has marked as seen, by others than
+ * the viewer: the alert on the holder's panel.
+ */
+export async function pendingUrgentCountWith(
+  database: Database,
+  tenantSlug: string,
+  viewerId: string,
+  now = new Date(),
+): Promise<number> {
+  const since = new Date(now.getTime() - ALERT_DAYS * 24 * 60 * 60 * 1000);
+  const [row] = await database
+    .select({ total: count() })
+    .from(auditLog)
+    .leftJoin(auditReviews, eq(auditReviews.auditId, auditLog.id))
+    .where(
+      and(
+        eq(auditLog.tenantSlug, tenantSlug),
+        gte(auditLog.createdAt, since),
+        sql`${levelSql()} = 'urgente'`,
+        isNull(auditReviews.id),
+        or(isNull(auditLog.actorId), ne(auditLog.actorId, viewerId)),
+      ),
+    );
+  return Number(row?.total ?? 0);
+}
+
+export interface PersonSummary {
+  actorId: string;
+  name: string;
+  role: string | null;
+  tenantSlug: string;
+  total: number;
+  urgente: number;
+  pendentes: number;
+  atencao: number;
+  analise: number;
+  lastAt: Date;
+}
+
+/** Who did what, by band, since a date: the trail divided by person. */
+export async function peopleSummaryWith(
+  database: Database,
+  tenantSlugs: string[] | "all",
+  since: Date,
+): Promise<PersonSummary[]> {
+  if (tenantSlugs !== "all" && !tenantSlugs.length) return [];
+  const level = levelSql();
+  const rows = await database
+    .select({
+      actorId: auditLog.actorId,
+      name: user.name,
+      role: user.role,
+      tenantSlug: user.tenantSlug,
+      total: count(),
+      urgente: sql<number>`count(*) filter (where ${level} = 'urgente')`,
+      pendentes: sql<number>`count(*) filter (where ${level} = 'urgente' and ${auditReviews.id} is null)`,
+      atencao: sql<number>`count(*) filter (where ${level} = 'atencao')`,
+      analise: sql<number>`count(*) filter (where ${level} = 'analise')`,
+      lastAt: sql<string>`max(${auditLog.createdAt})`,
+    })
+    .from(auditLog)
+    .innerJoin(user, eq(user.id, auditLog.actorId))
+    .leftJoin(auditReviews, eq(auditReviews.auditId, auditLog.id))
+    .where(
+      and(
+        tenantSlugs === "all"
+          ? undefined
+          : inArray(auditLog.tenantSlug, tenantSlugs),
+        gte(auditLog.createdAt, since),
+      ),
+    )
+    .groupBy(auditLog.actorId, user.name, user.role, user.tenantSlug);
+  return rows
+    .map((row) => ({
+      actorId: row.actorId ?? "",
+      name: row.name,
+      role: row.role,
+      tenantSlug: row.tenantSlug,
+      total: Number(row.total),
+      urgente: Number(row.urgente),
+      pendentes: Number(row.pendentes),
+      atencao: Number(row.atencao),
+      analise: Number(row.analise),
+      lastAt: new Date(row.lastAt),
+    }))
+    .sort(
+      (a, b) =>
+        b.pendentes - a.pendentes ||
+        b.urgente - a.urgente ||
+        b.atencao - a.atencao ||
+        b.lastAt.getTime() - a.lastAt.getTime(),
+    );
 }
 
 /* ------------------------------------------------------- notifications */

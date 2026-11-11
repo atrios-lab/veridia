@@ -5,6 +5,7 @@ import { redirect } from "next/navigation";
 import { can } from "@/core/auth/roles.ts";
 import { buildSignatureManifest } from "@/core/signature/manifest.ts";
 import { db } from "@/db/index.ts";
+import { justify } from "@/lib/audit-reason.ts";
 import { brandFor } from "@/lib/document-brand.ts";
 import { renderDocument } from "@/lib/pdf.ts";
 import { getSession } from "@/lib/session.ts";
@@ -146,6 +147,11 @@ export async function setDocumentRemoved(
     };
   }
   const removed = formData.get("removed") === "1";
+  if (removed) {
+    // Sensitive: says why, and the reason goes to the audit.
+    const why = justify(formData);
+    if (why) return { status: "error", message: why };
+  }
   await setSignedDocumentRemovedWith(
     db,
     tenant.slug,

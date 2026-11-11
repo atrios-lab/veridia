@@ -15,6 +15,8 @@ export interface EntryForDocument {
   /** The target in words, when the trail could name it (a person). */
   targetLabel?: string | null;
   actorName: string | null;
+  /** The justification its author typed, for a sensitive act. */
+  reason?: string | null;
 }
 
 /** Text typed in a form: the browser sends CRLF; each line is a paragraph. */
@@ -35,6 +37,7 @@ const entryRow = (entry: EntryForDocument) => {
       // The person's own account (their sign-in) is said once, not twice.
       target && target !== entry.actorName ? `(${target})` : "",
       entry.actorName ? `· ${entry.actorName}` : "",
+      entry.reason ? `· Justificativa: ${entry.reason}` : "",
     ]
       .filter(Boolean)
       .join(" "),

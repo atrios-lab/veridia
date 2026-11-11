@@ -45,6 +45,7 @@ import { requirementTextSchema } from "@/core/request/requirement.ts";
 import { toIsoDate } from "@/core/scheduling/calendar.ts";
 import type { Tenant } from "@/core/tenant/schema.ts";
 import { db } from "@/db/index.ts";
+import { justify } from "@/lib/audit-reason.ts";
 import { notifyCitizen } from "@/lib/email/service-request.ts";
 import {
   AttachmentInUseError,
@@ -649,6 +650,9 @@ export async function deleteAttachmentAction(
   _previous: ActionState,
   formData: FormData,
 ): Promise<ActionState> {
+  // Sensitive: says why, and the reason goes to the audit.
+  const why = justify(formData);
+  if (why) return { status: "error", message: why };
   const session = await authorize();
   if (!session) return { status: "error", message: NO_PERMISSION };
 
@@ -764,6 +768,9 @@ export async function deleteRequestAction(
   _previous: ActionState,
   formData: FormData,
 ): Promise<ActionState> {
+  // Sensitive: says why, and the reason goes to the audit.
+  const why = justify(formData);
+  if (why) return { status: "error", message: why };
   const session = await authorize();
   if (!session) return { status: "error", message: NO_PERMISSION };
 
@@ -861,6 +868,9 @@ export async function deleteRequirementAction(
   _previous: ActionState,
   formData: FormData,
 ): Promise<ActionState> {
+  // Sensitive: says why, and the reason goes to the audit.
+  const why = justify(formData);
+  if (why) return { status: "error", message: why };
   const session = await authorize();
   if (!session) return { status: "error", message: NO_PERMISSION };
 
