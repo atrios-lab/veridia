@@ -20,10 +20,10 @@ const EXACT: Record<string, string> = {
   "service-request.delivery-signed":
     "Assinou digitalmente um documento entregue",
   "service-request.delivery-rename": "Renomeou um documento entregue",
-  "tax-guide.issue": "Emitiu uma guia imobiliária",
-  "tax-guide.update": "Corrigiu uma guia imobiliária",
+  "tax-guide.issue": "Emitiu uma guia de transmissão de bens",
+  "tax-guide.update": "Corrigiu uma guia de transmissão de bens",
   "tax-guide.renumber": "Alterou o número de uma guia",
-  "tax-guide.delete": "Excluiu uma guia imobiliária",
+  "tax-guide.delete": "Excluiu uma guia de transmissão de bens",
   "iss-declaration.issue": "Gerou uma declaração de ISS",
   "iss-declaration.update": "Corrigiu uma declaração de ISS",
   "iss-declaration.remove": "Excluiu uma declaração de ISS da lista",
@@ -139,7 +139,7 @@ const AREAS: Record<string, string> = {
   ouvidoria: "Ouvidoria",
   chat: "Atendimento online",
   atendimento: "Atendimento online",
-  "tax-guide": "Guias imobiliárias",
+  "tax-guide": "Guias de transmissão de bens",
   "iss-declaration": "Declaração de ISS",
   publication: "Publicações",
   publicacoes: "Publicações",
@@ -240,11 +240,12 @@ const EXPLANATIONS: Record<string, string> = {
   "service-request.delivery-rename":
     "O nome de um documento entregue ao cidadão foi alterado.",
   "tax-guide.issue":
-    "Uma guia imobiliária (imposto ou certidão de um imóvel) foi emitida.",
-  "tax-guide.update": "Uma guia imobiliária foi corrigida.",
-  "tax-guide.renumber": "O número de uma guia imobiliária foi trocado.",
+    "Uma guia de transmissão de bens (imposto ou certidão de um imóvel) foi emitida.",
+  "tax-guide.update": "Uma guia de transmissão de bens foi corrigida.",
+  "tax-guide.renumber":
+    "O número de uma guia de transmissão de bens foi trocado.",
   "tax-guide.delete":
-    "Uma guia imobiliária foi excluída e o número dela ficou livre.",
+    "Uma guia de transmissão de bens foi excluída e o número dela ficou livre.",
   "iss-declaration.issue":
     "Foi gerada a declaração mensal de ISS ao fisco municipal, com os emolumentos do mês e o livro do caixa anexo.",
   "iss-declaration.update":
@@ -336,7 +337,7 @@ const AREA_EXPLANATIONS: Record<string, string> = {
   "data-rights": "Ato feito num requerimento de dados pessoais (LGPD).",
   publication: "Ato feito nas publicações do site.",
   transparency: "Ato feito na área de transparência do site.",
-  "tax-guide": "Ato feito numa guia imobiliária.",
+  "tax-guide": "Ato feito numa guia de transmissão de bens.",
   "iss-declaration": "Ato feito numa declaração de ISS ao fisco municipal.",
   user: "Ato feito numa conta de acesso ao painel.",
   session: "Entrada ou saída do painel.",

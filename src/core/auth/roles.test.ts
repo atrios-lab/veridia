@@ -235,3 +235,24 @@ test("o Tabelião/Registrador muda o que um cargo faz, mas nunca entrega o que �
     "admin.access",
   ]);
 });
+
+test("permissões por recurso: cada uma com nome em Perfis e permissões e herdada da antiga", async () => {
+  const {
+    GRANTABLE_PERMISSIONS,
+    GRANTABLE_LABELS,
+    DERIVED_FROM,
+    defaultPermissions,
+  } = await import("./roles.ts");
+  for (const permission of GRANTABLE_PERMISSIONS) {
+    assert.ok(GRANTABLE_LABELS[permission], permission);
+  }
+  // The Escrevente kept everything it did before the split.
+  const staff = defaultPermissions("staff");
+  for (const [child, parent] of Object.entries(DERIVED_FROM)) {
+    if (parent && staff.includes(parent as never)) {
+      assert.ok(staff.includes(child as never), `${child} (de ${parent})`);
+    }
+  }
+  assert.ok(!defaultPermissions("staff").includes("access.manage" as never));
+  assert.ok(defaultPermissions("admin").includes("access.manage" as never));
+});

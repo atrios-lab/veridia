@@ -85,7 +85,11 @@ async function authorize() {
   const session = await getSession();
   if (
     !session ||
-    !can(session.user.role ?? "", "content.edit", session.user.permissions)
+    !can(
+      session.user.role ?? "",
+      "transparency.manage",
+      session.user.permissions,
+    )
   )
     return null;
   return session;
@@ -390,7 +394,11 @@ export async function readFeeTablePdfAction(
   const session = await getSession();
   if (
     !session ||
-    !can(session.user.role ?? "", "content.edit", session.user.permissions)
+    !can(
+      session.user.role ?? "",
+      "transparency.manage",
+      session.user.permissions,
+    )
   ) {
     return { status: "error", message: NO_PERMISSION };
   }
@@ -422,7 +430,11 @@ export async function saveFeeTableAction(
   const session = await getSession();
   if (
     !session ||
-    !can(session.user.role ?? "", "content.edit", session.user.permissions)
+    !can(
+      session.user.role ?? "",
+      "transparency.manage",
+      session.user.permissions,
+    )
   ) {
     return { status: "error", message: NO_PERMISSION, fieldErrors: {} };
   }

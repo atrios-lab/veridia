@@ -36,7 +36,7 @@ export async function saveNumbering(
   const session = await getSession();
   if (
     !session ||
-    !can(session.user.role ?? "", "content.edit", session.user.permissions)
+    !can(session.user.role ?? "", "numbering.manage", session.user.permissions)
   ) {
     return {
       status: "error",
@@ -73,7 +73,9 @@ export async function saveNumbering(
   return { status: "saved", message: "Numeração salva." };
 }
 
-async function manager(permission: "content.edit" | "requests.manage") {
+async function manager(
+  permission: "numbering.manage" | "guides.manage" | "iss.manage",
+) {
   const session = await getSession();
   if (
     !session ||
@@ -91,7 +93,7 @@ export async function clearNumbering(
   _previous: NumberingState,
   formData: FormData,
 ): Promise<NumberingState> {
-  const ok = await manager("content.edit");
+  const ok = await manager("numbering.manage");
   if (!ok) return { status: "error", message: NO_PERMISSION };
   const series = String(formData.get("series") ?? "");
   if (!(NUMBER_SERIES as readonly string[]).includes(series)) {
@@ -126,9 +128,9 @@ export async function renumberIssued(
 ): Promise<NumberingState> {
   const why = justify(formData);
   if (why) return { status: "error", message: why };
-  const ok = await manager("requests.manage");
-  if (!ok) return { status: "error", message: NO_PERMISSION };
   const series = editableSeries(formData);
+  const ok = await manager(series === "guia" ? "guides.manage" : "iss.manage");
+  if (!ok) return { status: "error", message: NO_PERMISSION };
   const id = String(formData.get("id") ?? "");
   const sequence = Number(formData.get("sequence"));
   const year = Number(formData.get("year"));
@@ -196,9 +198,9 @@ export async function removeIssued(
 ): Promise<NumberingState> {
   const why = justify(formData);
   if (why) return { status: "error", message: why };
-  const ok = await manager("requests.manage");
-  if (!ok) return { status: "error", message: NO_PERMISSION };
   const series = editableSeries(formData);
+  const ok = await manager(series === "guia" ? "guides.manage" : "iss.manage");
+  if (!ok) return { status: "error", message: NO_PERMISSION };
   const id = String(formData.get("id") ?? "");
   if (!series) return { status: "error", message: "Documento desconhecido." };
   try {

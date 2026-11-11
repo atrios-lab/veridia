@@ -36,8 +36,8 @@ export interface SeriesInfo {
 
 export const SERIES_INFO: Record<NumberSeries, SeriesInfo> = {
   guia: {
-    label: "Guias imobiliárias",
-    hint: "Utilitários › Guias imobiliárias.",
+    label: "Guias de transmissão de bens",
+    hint: "Utilitários › Guias de transmissão de bens.",
     format: formatGuideNumber,
     max: 99_999,
   },

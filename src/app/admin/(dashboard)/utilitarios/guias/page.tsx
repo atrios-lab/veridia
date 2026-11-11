@@ -35,10 +35,10 @@ import { getTenant, OFFICE_TIME_ZONE } from "@/lib/tenant.ts";
 import { AdminIcon } from "../../../_components/icon.tsx";
 import { AdminPageHeader } from "../../../_components/page-header.tsx";
 
-export const metadata = { title: "Guias imobiliárias" };
+export const metadata = { title: "Guias de transmissão de bens" };
 
 /**
- * Utilitários: the guias imobiliárias the notary signs and the party
+ * Utilitários: the guias de transmissão de bens the notary signs and the party
  * takes to the fisco before the escritura (ITIV/ITBI, ITCD, laudêmio
  * municipal, certidão imobiliária), and what the SPU asks for a property of
  * the União, where no guia comes out of the office.
@@ -51,7 +51,7 @@ export default async function GuidesPage({
   const session = await getSession();
   const role = session?.user.role ?? "";
   const granted = session?.user.permissions;
-  if (!session || !can(role, "requests.manage", granted)) notFound();
+  if (!session || !can(role, "guides.manage", granted)) notFound();
   const tenant = await getTenant();
   const [guides, settings, requests] = await Promise.all([
     listGuides(tenant.slug).catch(() => [] as StoredGuide[]),
@@ -77,7 +77,7 @@ export default async function GuidesPage({
   return (
     <>
       <AdminPageHeader
-        title="Guias imobiliárias"
+        title="Guias de transmissão de bens"
         description={guideKindsSummary()}
       />
       <main className="flex max-w-[1100px] flex-col gap-4.5 px-[30px] py-7">
@@ -223,7 +223,7 @@ function GuideYear({
           <a
             href={signHref(
               `/admin/utilitarios/guias/ano/${year}`,
-              `Guias imobiliárias de ${year}`,
+              `Guias de transmissão de bens de ${year}`,
             )}
             className="btn btn-admin-primary btn-sm"
           >

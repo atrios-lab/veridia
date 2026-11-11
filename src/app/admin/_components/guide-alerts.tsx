@@ -39,7 +39,7 @@ function writeSeen(seen: Seen): void {
 }
 
 /**
- * The guias imobiliárias in the panel, on every screen, for whoever works
+ * The guias de transmissão de bens in the panel, on every screen, for whoever works
  * requests: each new request from the site and each one the citizen moved
  * (a document, an answer, a comprovante), with a tone and the browser's
  * notification, as the agenda and the chat do. Each card closes by hand and
@@ -102,8 +102,8 @@ export function GuideAlerts({ setting }: { setting: ChannelAlert }) {
       news.map((item) => ({
         title:
           item.kind === "new"
-            ? "Nova guia imobiliária"
-            : "Guia imobiliária atualizada",
+            ? "Nova guia de transmissão de bens"
+            : "Guia de transmissão de bens atualizada",
         body: `${item.applicantName ?? "Cidadão"} · ${item.protocolNumber}`,
         tag: `guia:${item.key}`,
       })),
@@ -127,7 +127,7 @@ export function GuideAlerts({ setting }: { setting: ChannelAlert }) {
           <span className="min-w-0 flex-1 text-[12.5px] leading-snug">
             <strong className="block text-[13px]">
               {item.kind === "new"
-                ? "Nova guia imobiliária"
+                ? "Nova guia de transmissão de bens"
                 : "Cliente atualizou a guia"}
             </strong>
             {item.applicantName ?? "Cidadão"} · {item.protocolNumber}

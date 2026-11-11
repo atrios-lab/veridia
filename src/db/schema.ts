@@ -1173,7 +1173,7 @@ export const cohortMembers = pgTable(
 );
 
 /**
- * A guia imobiliária the office issued from the panel's Utilitários: the
+ * A guia de transmissão de bens the office issued from the panel's Utilitários: the
  * requerimento the notary signs and the party takes to the fisco (the
  * prefeitura for the ITIV/ITBI and the municipal laudêmio, the state's
  * tax office for the ITCD), which then issues the payment slip. Kept so the

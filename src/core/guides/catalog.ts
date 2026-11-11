@@ -205,7 +205,7 @@ export const SPU_LINKS: { label: string; href: string }[] = [
 ];
 
 /**
- * What the "Guias imobiliárias" are, in one line, from the catalogue itself
+ * What the "Guias de transmissão de bens" are, in one line, from the catalogue itself
  * (decision of 11/11/2026): a kind added to `GUIDE_KIND_INFO` and offered
  * shows up here with no other edit, so the name never pins a single tax.
  */
@@ -223,5 +223,5 @@ export function guideKindsSummary(
     labels.length <= 1
       ? labels.join("")
       : `${labels.slice(0, -1).join(", ")} e ${labels.at(-1)}`;
-  return `Tributos e pedidos ao fisco na transmissão de imóveis: ${list}.`;
+  return `Tributos e pedidos ao fisco na transmissão de bens (imóveis, móveis e digitais), por compra e venda, doação ou herança: ${list}.`;
 }

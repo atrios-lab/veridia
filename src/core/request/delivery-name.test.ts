@@ -39,7 +39,7 @@ test("as sugestões partem do ato e do protocolo, sem repetir", () => {
   const list = deliveryNameSuggestions("REQ.2026.000123", "Certidão");
   assert.equal(list[0], "Certidão · REQ.2026.000123");
   assert.equal(new Set(list).size, list.length);
-  assert.ok(list.includes("Guia imobiliária · REQ.2026.000123"));
+  assert.ok(list.includes("Guia de transmissão de bens · REQ.2026.000123"));
 });
 
 test("as entregas antigas aparecem como Documento final", () => {

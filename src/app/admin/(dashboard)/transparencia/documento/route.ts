@@ -16,7 +16,11 @@ export async function GET(request: Request): Promise<Response> {
   const session = await getSession();
   if (
     !session ||
-    !can(session.user.role ?? "", "content.edit", session.user.permissions)
+    !can(
+      session.user.role ?? "",
+      "transparency.manage",
+      session.user.permissions,
+    )
   ) {
     return new Response("Não autorizado", { status: 403 });
   }

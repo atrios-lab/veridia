@@ -508,7 +508,7 @@ export interface QueueFilters {
 }
 
 /**
- * Requests for a guia imobiliária are worked in Utilitários (see
+ * Requests for a guia de transmissão de bens are worked in Utilitários (see
  * lib/guide-requests.ts), not in the Pedidos queue. A request with no act
  * (the counter's own) stays in the queue: `not in` alone would drop it.
  */

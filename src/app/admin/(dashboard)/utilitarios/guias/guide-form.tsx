@@ -442,8 +442,12 @@ export function GuideForm({
 
       <section className="flex flex-col gap-3">
         <h2 className="font-serif text-[16px] font-semibold text-admin-primary">
-          Imóvel
+          Bem transmitido
         </h2>
+        <p className="-mt-2 text-[12px] text-admin-muted">
+          Imóvel, ou, no ITCD (inventário e doação), também bens móveis,
+          digitais, quotas e aplicações.
+        </p>
         <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
           <Select
             label="Tipo"

@@ -4,7 +4,7 @@ import { isValidCnpj } from "../tenant/pix.ts";
 import { LONG_TEXT_MAX } from "../text-limits.ts";
 
 /**
- * A guia imobiliária as the office fills it in the panel: who transmits,
+ * A guia de transmissão de bens as the office fills it in the panel: who transmits,
  * who acquires, which property, at what value. The shape is the same for
  * every kind (ITIV, ITCD, laudêmio municipal, certidão imobiliária); the
  * catalog (catalog.ts) says what each kind calls its parties and whether it
@@ -119,7 +119,10 @@ export type GuideParty = z.infer<typeof GuidePartySchema>;
 export const GuidePropertySchema = z.object({
   type: z.enum(["urbano", "rural"]),
   /** Location, area, limits and confrontations, as on the certidão. */
-  description: text(LONG_TEXT_MAX, "Descreva o imóvel."),
+  description: text(
+    LONG_TEXT_MAX,
+    "Descreva o bem (imóvel, móvel ou digital).",
+  ),
   /** Inscrição imobiliária (urbano) or CCIR/CAR/NIRF (rural). */
   fiscalRegistration: text(120),
   /** Matrícula, livro, folhas, registro: how the registry identifies it. */

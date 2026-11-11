@@ -19,7 +19,7 @@ export async function GET(
   const session = await getSession();
   if (
     !session ||
-    !can(session.user.role ?? "", "desk.access", session.user.permissions)
+    !can(session.user.role ?? "", "signer.use", session.user.permissions)
   ) {
     return new Response("Não encontrado", { status: 404 });
   }

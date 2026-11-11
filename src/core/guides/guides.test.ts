@@ -115,7 +115,7 @@ test("a guia de ITIV sai como o modelo da serventia", () => {
     sequence: 8,
     issuedOn: "2026-07-15",
   });
-  assert.equal(doc.title, "Guia imobiliária nº 008/2026");
+  assert.equal(doc.title, "Guia de transmissão de bens nº 008/2026");
   const text = doc.sections
     .flatMap((s) => [
       ...(s.paragraphs ?? []),
@@ -238,12 +238,12 @@ test("união estável declarada sob as penas da lei, para quem não é casado", 
   );
 });
 
-test("o nome Guias imobiliárias lista os tipos do catálogo, sem fixar um imposto", () => {
+test("o nome Guias de transmissão de bens lista os tipos do catálogo, sem fixar um imposto", () => {
   const line = guideKindsSummary();
   for (const kind of OFFERED_GUIDE_KINDS) {
     const label = GUIDE_KIND_INFO[kind].label;
     assert.ok(line.toLowerCase().includes(label.toLowerCase()), kind);
   }
-  assert.match(line, /transmissão de imóveis/);
+  assert.match(line, /transmissão de bens \(imóveis, móveis e digitais\)/);
   assert.match(line, / e laudêmio municipal\./);
 });

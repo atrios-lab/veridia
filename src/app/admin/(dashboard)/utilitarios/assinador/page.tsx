@@ -39,7 +39,7 @@ export default async function SignerPage({
   const session = await getSession();
   const role = session?.user.role ?? "";
   const granted = session?.user.permissions;
-  if (!session || !can(role, "desk.access", granted)) notFound();
+  if (!session || !can(role, "signer.use", granted)) notFound();
   const tenant = await getTenant();
   const [certificates, documents] = await Promise.all([
     certificatesForSignerWith(db, tenant.slug, session.user.id),
@@ -47,7 +47,7 @@ export default async function SignerPage({
       removed: showRemoved,
     }),
   ]);
-  const holder = can(role, "user.manage", granted);
+  const holder = can(role, "certificates.manage", granted);
 
   return (
     <>
@@ -69,19 +69,20 @@ export default async function SignerPage({
             holderName,
           }))}
         />
-        {certificates.length === 0 && can(role, "user.manage", granted) && (
-          <p className="-mt-2 text-[12px] text-admin-muted">
-            Para assinar com certificado A1, cadastre o arquivo e marque quem
-            pode assinar em{" "}
-            <Link
-              href="/admin/configuracoes/certificados"
-              className="font-semibold text-admin-primary underline"
-            >
-              Configurações › Certificados
-            </Link>
-            .
-          </p>
-        )}
+        {certificates.length === 0 &&
+          can(role, "certificates.manage", granted) && (
+            <p className="-mt-2 text-[12px] text-admin-muted">
+              Para assinar com certificado A1, cadastre o arquivo e marque quem
+              pode assinar em{" "}
+              <Link
+                href="/admin/configuracoes/certificados"
+                className="font-semibold text-admin-primary underline"
+              >
+                Configurações › Certificados
+              </Link>
+              .
+            </p>
+          )}
 
         {/* Minimized until opened (decision of 11/11/2026): the page
             starts with the form; the list is one click away. The removed

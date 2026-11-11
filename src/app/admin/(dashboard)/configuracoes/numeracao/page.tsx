@@ -29,25 +29,24 @@ export default async function NumberingSettingsPage() {
   const session = await getSession();
   if (
     !session ||
-    !can(session.user.role ?? "", "content.edit", session.user.permissions)
+    !can(session.user.role ?? "", "numbering.manage", session.user.permissions)
   )
     notFound();
   const tenant = await getTenant();
   const year = officeYear(new Date());
   const years = [year, year + 1];
   const numbering = await getDocumentNumberingWith(db, tenant.slug);
-  const canManage = can(
-    session.user.role ?? "",
-    "requests.manage",
-    session.user.permissions,
-  );
+  const may = (permission: "guides.manage" | "iss.manage") =>
+    can(session.user.role ?? "", permission, session.user.permissions);
+  const canManage = {
+    guia: may("guides.manage"),
+    "declaracao-iss": may("iss.manage"),
+  };
   // What was issued this year, to renumber or exclude (a test) from here.
-  const [guides, declarations] = canManage
-    ? await Promise.all([
-        listGuidesWith(db, tenant.slug, year),
-        listIssDeclarationsWith(db, tenant.slug),
-      ])
-    : [[], []];
+  const [guides, declarations] = await Promise.all([
+    canManage.guia ? listGuidesWith(db, tenant.slug, year) : [],
+    canManage["declaracao-iss"] ? listIssDeclarationsWith(db, tenant.slug) : [],
+  ]);
   const issued: Record<"guia" | "declaracao-iss", IssuedItem[]> = {
     guia: guides.map((g) => ({
       id: g.id,
@@ -166,7 +165,7 @@ export default async function NumberingSettingsPage() {
               years={perYear.map((row) => ({ year: row.year, next: row.next }))}
             />
             {series === "guia" || series === "declaracao-iss" ? (
-              canManage && (
+              canManage[series] && (
                 <IssuedList
                   series={series}
                   year={year}

@@ -41,7 +41,7 @@ export type IssFormState =
 
 const NO_PERMISSION = "Você não tem permissão para a Declaração de ISS.";
 
-async function access(permission: "requests.manage" | "content.edit") {
+async function access(permission: "iss.manage" | "content.edit") {
   const session = await getSession();
   if (
     !session ||
@@ -114,7 +114,7 @@ export type ReadReportsState =
 export async function readIssReports(
   formData: FormData,
 ): Promise<ReadReportsState> {
-  const ok = await access("requests.manage");
+  const ok = await access("iss.manage");
   if (!ok) return { status: "error", message: NO_PERMISSION };
   const files = sentFiles(formData.getAll("livro"));
   const read: ReportFigures[] = [];
@@ -172,7 +172,7 @@ export async function saveIssDeclaration(
   _previous: IssFormState,
   formData: FormData,
 ): Promise<IssFormState> {
-  const ok = await access("requests.manage");
+  const ok = await access("iss.manage");
   if (!ok) return { status: "error", message: NO_PERMISSION };
   const { session, tenant } = ok;
   const emoluments = parseMoneyBRL(String(formData.get("emolumentos") ?? ""));
@@ -266,7 +266,7 @@ export async function recordIssFiling(
   _previous: IssFormState,
   formData: FormData,
 ): Promise<IssFormState> {
-  const ok = await access("requests.manage");
+  const ok = await access("iss.manage");
   if (!ok) return { status: "error", message: NO_PERMISSION };
   const filedOn = String(formData.get("entregue") ?? "");
   if (filedOn && !/^\d{4}-\d{2}-\d{2}$/.test(filedOn)) {
@@ -306,7 +306,7 @@ export async function removeIssDeclaration(
 ): Promise<RemoveIssState> {
   const why = justify(formData);
   if (why) return { status: "error", message: why };
-  const ok = await access("requests.manage");
+  const ok = await access("iss.manage");
   if (!ok) return { status: "error", message: NO_PERMISSION };
   try {
     await removeIssDeclarationWith(
