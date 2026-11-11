@@ -27,6 +27,7 @@ import {
   BASE_CHECKLIST,
   COUNTER_SERVICES,
   counterServicesByGroup,
+  suggestedServiceIds,
 } from "@/core/scheduling/services.ts";
 import { AdminIcon } from "../../../_components/icon.tsx";
 import { type ActionState, saveAgenda } from "../actions.ts";
@@ -210,9 +211,16 @@ export function AgendaSettingsForm({
 
         <SuggestCard
           key={`suggest-${tab}-${book.serviceIds.join(",")}`}
-          services={tickedServices(book.serviceIds, draft.services)}
+          // No service ticked yet (a new office): the card offers the ones
+          // suggested for this agenda, so the button never sits disabled.
+          starting={book.serviceIds.length === 0}
+          services={
+            book.serviceIds.length
+              ? tickedServices(book.serviceIds, draft.services)
+              : startingServices(tab)
+          }
           weekdays={weekdays}
-          onApply={(days, suggestion) => {
+          onApply={(days, suggestion, chosen) => {
             const grid = { ...book.grid };
             const slotServices = { ...book.slotServices };
             const slotCapacity = { ...book.slotCapacity };
@@ -223,7 +231,14 @@ export function AgendaSettingsForm({
                 Object.entries(suggestion.capacity).filter(([, n]) => n > 1),
               );
             }
-            setBook({ ...book, grid, slotServices, slotCapacity });
+            setBook({
+              ...book,
+              grid,
+              slotServices,
+              slotCapacity,
+              // Starting: the services kept in the card become the agenda's.
+              ...(book.serviceIds.length ? {} : { serviceIds: chosen }),
+            });
           }}
         />
         <GridSection
@@ -371,6 +386,20 @@ function tickedServices(
     ...COUNTER_SERVICES.filter((service) => ticked.has(service.id)),
     ...own.filter((service) => ticked.has(service.id)),
   ].map(({ id, label }) => ({ id, label }));
+}
+
+/**
+ * What a new agenda is offered in "Sugerir horários": the catalogue's
+ * suggestion for it, or the whole catalogue when it suggests none.
+ */
+function startingServices(
+  agenda: "geral" | "tabeliao",
+): Array<{ id: string; label: string }> {
+  const suggested = suggestedServiceIds(agenda);
+  return tickedServices(
+    suggested.length ? suggested : COUNTER_SERVICES.map((s) => s.id),
+    [],
+  );
 }
 
 /** The labels of the ticked services, in the catalogue's order. */
