@@ -36,9 +36,9 @@ export default async function TwoStepPage() {
             Depois da senha, o painel envia um código ao e-mail de quem está
             entrando, e só dessa pessoa. O primeiro acesso (quando a pessoa cria
             a senha pelo convite) não pede código: ele começa no acesso
-            seguinte. Quem marcar "Salvar este computador" não recebe mais o
-            código naquele computador. Aqui você escolhe para qual e-mail vai o
-            código de cada pessoa e pode fazer os computadores salvos pedirem o
+            seguinte. Quem marcar "Salvar este dispositivo" não recebe mais o
+            código naquele dispositivo. Aqui você escolhe para qual e-mail vai o
+            código de cada pessoa e pode fazer os dispositivos salvos pedirem o
             código de novo. Cada pessoa também pode trocar o próprio e-mail em
             Minha conta (menu com o nome, no alto da tela).
           </p>

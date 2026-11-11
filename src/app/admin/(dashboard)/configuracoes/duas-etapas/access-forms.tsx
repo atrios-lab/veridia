@@ -112,7 +112,7 @@ export function AccountAccessRow({
         >
           {forgetting
             ? "Aplicando..."
-            : "Pedir o código de novo nos computadores salvos"}
+            : "Pedir o código de novo nos dispositivos salvos"}
         </button>
       </form>
       {error && (

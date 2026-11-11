@@ -1,6 +1,7 @@
 "use client";
 
 import { startTransition, useActionState } from "react";
+import { FilePicker } from "../../../_components/file-picker.tsx";
 import { coSignDocument, type SignState, signDocument } from "./actions.ts";
 
 const FIELD =
@@ -91,16 +92,12 @@ export function SignForm({
       </p>
       <div className="mt-3.5 grid grid-cols-1 gap-3.5 md:grid-cols-2">
         <div className="md:col-span-2">
-          <label htmlFor="sign-file" className={LABEL}>
-            PDF a assinar
-          </label>
-          <input
-            id="sign-file"
+          <FilePicker
             name="pdf"
-            type="file"
             accept="application/pdf,.pdf"
+            label="PDF a assinar"
+            hint="Clique para escolher o PDF (até 4 MB)"
             required
-            className="w-full text-[13px] text-admin-text"
           />
         </div>
         <div className="md:col-span-2">

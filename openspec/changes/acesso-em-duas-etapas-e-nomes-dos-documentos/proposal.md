@@ -13,13 +13,13 @@
   de quem está entrando, e só dessa pessoa**. O código vale 10 minutos.
   - **Primeiro acesso:** o convite, em que a pessoa cria a senha, não pede código, e a redefinição de senha
     também não, porque o link já veio por e-mail. O código começa no acesso seguinte.
-  - **Salvar este computador:** marcando a opção, aquele navegador não pede mais o código (por até um ano).
+  - **Salvar este dispositivo:** marcando a opção, aquele dispositivo não pede mais o código (por até um ano).
   - **Configurações › Duas etapas:** o administrador escolhe, troca ou apaga o **e-mail de verificação** de
-    cada pessoa (apagado, o código volta para o e-mail da conta). Ali também faz os computadores salvos de
+    cada pessoa (apagado, o código volta para o e-mail da conta). Ali também faz os dispositivos salvos de
     alguém **pedirem o código de novo**, a partir do próximo login dessa pessoa.
   - **Minha conta:** cada pessoa troca **só o próprio** e-mail de verificação, pelo menu com o nome no
     alto da tela, e confirma o e-mail novo com um código enviado a ele. Também pode fazer os próprios
-    computadores salvos pedirem o código de novo.
+    dispositivos salvos pedirem o código de novo.
   - **Átrios:** a conta mestre da Átrios (superadmin) não passa pelo código.
   - **Garantia:** `getSession` recusa sessão sem a confirmação, então toda tela, ação e rota do painel
     exige o código.

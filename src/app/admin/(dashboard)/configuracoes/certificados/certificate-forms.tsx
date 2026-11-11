@@ -3,6 +3,7 @@
 import { startTransition, useActionState, useEffect, useRef } from "react";
 import { toast } from "sonner";
 import { ConfirmAction } from "../../../_components/confirm-action.tsx";
+import { FilePicker } from "../../../_components/file-picker.tsx";
 import {
   addCertificate,
   type CertificateState,
@@ -63,17 +64,13 @@ export function AddCertificateForm() {
             className={FIELD}
           />
         </div>
-        <div>
-          <label htmlFor="cert-file" className={LABEL}>
-            Arquivo do certificado (.pfx ou .p12)
-          </label>
-          <input
-            id="cert-file"
+        <div className="md:col-span-2">
+          <FilePicker
             name="pfx"
-            type="file"
             accept=".pfx,.p12,application/x-pkcs12"
+            label="Arquivo do certificado (.pfx ou .p12)"
+            hint="Clique para escolher o arquivo do certificado A1"
             required
-            className="w-full text-[13px] text-admin-text"
           />
         </div>
         <div>

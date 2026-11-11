@@ -72,9 +72,10 @@ export function AccessCodeForm({ next }: { next: string }) {
             className="checkbox-admin mt-0.5"
           />
           <span>
-            Salvar este computador: não pedir o código de novo aqui.
+            Salvar este dispositivo: não pedir o código de novo aqui.
             <span className="block text-[11.5px] text-admin-muted">
-              Só em computador seu ou da serventia, nunca em computador público.
+              Só no seu celular ou computador, ou num da serventia; nunca em
+              aparelho público.
             </span>
           </span>
         </label>
