@@ -1,3 +1,4 @@
+import { LONG_TEXT_MAX } from "../text-limits.ts";
 /**
  * Mensagens internas (decision of 11/11/2026): the office's own messenger,
  * person to person, in the spirit of the desktop messengers of the 2000s:
@@ -248,7 +249,7 @@ export const FILE_TYPES: Record<string, string> = {
 
 /** A request carries about 4.5 MB on the host: files stay under 4 MB. */
 export const MAX_FILE_BYTES = 4 * 1024 * 1024;
-export const MAX_TEXT = 4000;
+export const MAX_TEXT = LONG_TEXT_MAX;
 
 /** The type to store a file as, or null when it is not accepted. */
 export function acceptedType(name: string, declared: string): string | null {

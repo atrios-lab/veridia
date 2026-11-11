@@ -12,6 +12,7 @@ import {
   type GuideKind,
   OFFERED_GUIDE_KINDS,
 } from "@/core/guides/schema.ts";
+import { LONG_TEXT_MAX } from "@/core/text-limits.ts";
 
 const input =
   "w-full rounded-xl border border-brand-border bg-brand-card px-3.5 py-3 text-sm text-brand-text outline-none placeholder:text-brand-faint focus:border-brand-accent";
@@ -299,6 +300,7 @@ export function GuideRequestFields({
           <span className={label}>Endereço e descrição do imóvel</span>
           <textarea
             rows={3}
+            maxLength={LONG_TEXT_MAX}
             className={input}
             value={property.description}
             onChange={(e) =>

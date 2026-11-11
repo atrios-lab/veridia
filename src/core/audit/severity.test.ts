@@ -28,5 +28,6 @@ test("só alerta o que pode esconder erro, fraude ou má intenção", () => {
 
 test("justificativa curta demais não vale", () => {
   assert.equal(validJustification("ok"), false);
+  assert.equal(validJustification("TESTEEEE"), true);
   assert.equal(validJustification("Pedido duplicado por engano."), true);
 });

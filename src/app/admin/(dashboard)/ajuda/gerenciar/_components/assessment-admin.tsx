@@ -9,6 +9,7 @@ import {
   useTransition,
 } from "react";
 import { toast } from "sonner";
+import { LONG_TEXT_MAX } from "@/core/text-limits.ts";
 import { ConfirmAction } from "../../../../_components/confirm-action.tsx";
 import {
   deleteQuestionAction,
@@ -173,7 +174,7 @@ function QuestionForm({
           id={`${formId}-prompt`}
           name="prompt"
           rows={2}
-          maxLength={500}
+          maxLength={LONG_TEXT_MAX}
           defaultValue={editing?.prompt ?? ""}
           required
           className={FIELD_CLASS}

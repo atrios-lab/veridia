@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { LONG_TEXT_MAX } from "../text-limits.ts";
 import { PANEL_COURSE_SLUG } from "./catalog.ts";
 
 // What the platform may upload as a tutorial, and what the form that
@@ -200,7 +201,7 @@ export function describeTutorialFileProblem(
 
 /** A video's description: room for a paragraph or two on what the lesson
  * covers, shown under the player. */
-export const MAX_TUTORIAL_DESCRIPTION = 2000;
+export const MAX_TUTORIAL_DESCRIPTION = LONG_TEXT_MAX;
 
 /**
  * The form's fields, validated. Which routes exist is the panel's to say
@@ -267,7 +268,10 @@ export const courseFormSchema = z.object({
   description: z
     .string()
     .trim()
-    .max(400, "A descrição passa de 400 caracteres.")
+    .max(
+      LONG_TEXT_MAX,
+      `A descrição passa de ${LONG_TEXT_MAX.toLocaleString("pt-BR")} caracteres.`,
+    )
     .default(""),
   sequential: z.boolean(),
 });

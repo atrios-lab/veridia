@@ -2,6 +2,7 @@
 
 import { useActionState, useMemo, useState, useTransition } from "react";
 import { competenceLabel, formatRate, issOn } from "@/core/iss/declaration.ts";
+import { LONG_TEXT_MAX } from "@/core/text-limits.ts";
 import { formatMoneyBRL, parseMoneyBRL } from "@/core/transparency/bulletin.ts";
 import {
   type IssFormState,
@@ -336,6 +337,7 @@ export function IssForm({
               <textarea
                 name="observacoes"
                 rows={2}
+                maxLength={LONG_TEXT_MAX}
                 defaultValue={initial.notes}
                 className={`${FIELD} mt-1.5 font-normal`}
               />

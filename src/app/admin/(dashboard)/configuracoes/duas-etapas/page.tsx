@@ -1,7 +1,9 @@
 import { notFound } from "next/navigation";
 import { codeEmailFor } from "@/core/auth/access-settings.ts";
 import { can } from "@/core/auth/roles.ts";
+import { formatOfficeDateTime } from "@/core/time/office-time.ts";
 import { db } from "@/db/index.ts";
+import { getAccessPolicyWith } from "@/lib/access-policy.ts";
 import {
   getOfficeAccessWith,
   officeAccountsWith,
@@ -11,6 +13,7 @@ import { getTenant } from "@/lib/tenant.ts";
 import { AdminPageHeader } from "../../../_components/page-header.tsx";
 import { ConfiguracoesTabs } from "../_components/tabs.tsx";
 import { AccountAccessRow } from "./access-forms.tsx";
+import { TwoStepSwitch } from "./two-step-switch.tsx";
 
 export const metadata = { title: "Verificação em duas etapas" };
 
@@ -22,10 +25,17 @@ export default async function TwoStepPage() {
   )
     notFound();
   const tenant = await getTenant();
-  const [accounts, access] = await Promise.all([
+  const [accounts, access, policy] = await Promise.all([
     officeAccountsWith(db, tenant.slug),
     getOfficeAccessWith(db, tenant.slug),
+    getAccessPolicyWith(db, tenant.slug).catch(() => ({
+      twoStep: "on" as const,
+    })),
   ]);
+  const changedLine =
+    "changedAt" in policy && policy.changedAt
+      ? `${policy.twoStep === "off" ? "Desligada" : "Ligada"} em ${formatOfficeDateTime(new Date(policy.changedAt))}${"by" in policy && policy.by === "platform" ? " pela Átrios" : ""}${"reason" in policy && policy.reason ? `: ${policy.reason}` : ""}.`
+      : null;
 
   return (
     <>
@@ -50,6 +60,10 @@ export default async function TwoStepPage() {
             Minha conta (menu com o nome, no alto da tela).
           </p>
         </section>
+        <TwoStepSwitch
+          enabled={policy.twoStep === "on"}
+          changedLine={changedLine}
+        />
         {accounts.map((account) => (
           <AccountAccessRow
             key={account.id}

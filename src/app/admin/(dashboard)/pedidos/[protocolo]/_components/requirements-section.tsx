@@ -2,6 +2,7 @@
 
 import { useActionState, useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
+import { LONG_TEXT_MAX } from "@/core/text-limits.ts";
 import {
   formatOfficeDayMonth,
   formatOfficeDayMonthTime,
@@ -371,6 +372,7 @@ function EditRequirement({ requirement }: { requirement: RequirementItem }) {
       <textarea
         name="text"
         rows={4}
+        maxLength={LONG_TEXT_MAX}
         defaultValue={requirement.text}
         className="w-full rounded-[9px] border border-admin-input-border bg-admin-input-bg px-3.5 py-2.5 text-[13px] text-admin-text"
       />
@@ -656,6 +658,7 @@ export function RequirementsSection({
           <textarea
             name="text"
             rows={4}
+            maxLength={LONG_TEXT_MAX}
             placeholder="O que falta para o pedido seguir? Escreva como falaria no balcão: o cidadão lê isso na consulta."
             className="min-h-[88px] w-full rounded-[9px] border border-admin-input-border bg-admin-card px-[13px] py-2.5 text-[13px] text-admin-text placeholder:text-admin-faint"
           />

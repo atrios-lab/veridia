@@ -1,5 +1,6 @@
 import { z } from "zod";
 import type { Act, CertificateType } from "../acts/catalog.ts";
+import { LONG_TEXT_MAX } from "../text-limits.ts";
 import {
   ALTERNATE_DOCUMENT_TYPES,
   type AlternateDocument,
@@ -153,8 +154,8 @@ const optionalText = (max: number) =>
  */
 const commonFields = {
   applicantName: requiredText(160),
-  description: optionalText(4000),
-  purpose: optionalText(500),
+  description: optionalText(LONG_TEXT_MAX),
+  purpose: optionalText(LONG_TEXT_MAX),
   // Never a price: it is what the operator needs to find the band in the
   // court's fee table.
   parameterValue: optionalText(120),

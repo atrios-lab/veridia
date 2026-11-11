@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 import { buildCalendarEvent } from "../scheduling/ics.ts";
+import { LONG_TEXT_MAX } from "../text-limits.ts";
 import {
   appointmentSchema,
   dataRightOption,
@@ -70,13 +71,17 @@ test("the service details are required, tidied and capped like other description
   const { serviceDetails: _omitted, ...withoutDetails } = validBooking;
   assert.equal(appointment.safeParse(withoutDetails).success, false);
   assert.equal(
-    appointment.safeParse({ ...validBooking, serviceDetails: "a".repeat(4000) })
-      .success,
+    appointment.safeParse({
+      ...validBooking,
+      serviceDetails: "a".repeat(LONG_TEXT_MAX),
+    }).success,
     true,
   );
   assert.equal(
-    appointment.safeParse({ ...validBooking, serviceDetails: "a".repeat(4001) })
-      .success,
+    appointment.safeParse({
+      ...validBooking,
+      serviceDetails: "a".repeat(LONG_TEXT_MAX + 1),
+    }).success,
     false,
   );
 });

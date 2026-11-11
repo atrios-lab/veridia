@@ -5,6 +5,7 @@ import { toast } from "sonner";
 import { type ActVariants, PURPOSE_LABEL } from "@/core/acts/catalog.ts";
 import { formatCpf, formatPhone } from "@/core/request/form.ts";
 import type { AlternateDocumentType } from "@/core/request/kinds.ts";
+import { LONG_TEXT_MAX } from "@/core/text-limits.ts";
 import { AlternateDocumentFields } from "../../_components/alternate-document-fields.tsx";
 import { type ActionState, updateRequestDataAction } from "../actions.ts";
 
@@ -335,6 +336,7 @@ export function ApplicantSection({
               id="description"
               name="description"
               rows={3}
+              maxLength={LONG_TEXT_MAX}
               defaultValue={data.description}
               className={FIELD}
             />

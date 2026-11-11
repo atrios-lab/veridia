@@ -6,6 +6,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 import type { ChannelAlert } from "@/core/alerts/office.ts";
 import { NUDGE_SOUND } from "@/core/chat/alerts.ts";
+import { LONG_TEXT_MAX } from "@/core/text-limits.ts";
 import { playSound, unlockAudio } from "../../_components/chat-sound.ts";
 import { shakeElement, vibrate } from "../../_components/shake.ts";
 import {
@@ -272,7 +273,7 @@ function MiniChat({
               }
             }}
             rows={2}
-            maxLength={4000}
+            maxLength={LONG_TEXT_MAX}
             aria-label="Responder"
             placeholder="Responder (Enter envia)"
             className="min-w-0 flex-1 resize-none rounded-[9px] border border-admin-input-border bg-admin-input-bg px-2.5 py-1.5 text-[12.5px] text-admin-text outline-none focus:border-admin-primary-soft"

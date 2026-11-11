@@ -248,7 +248,7 @@ test("a course address is lower case, digits and hyphens, never 'gerenciar'", ()
   }
 });
 
-test("a description takes up to 2000 characters", () => {
+test("a description takes up to 5000 characters", () => {
   const base = {
     title: "Aula",
     durationSeconds: 60,
@@ -257,13 +257,13 @@ test("a description takes up to 2000 characters", () => {
     courseId: "9b0e3f4a-1c2d-4e5f-8a7b-6c5d4e3f2a1b",
     kind: "lesson",
   };
-  assert.equal(MAX_TUTORIAL_DESCRIPTION, 2000);
+  assert.equal(MAX_TUTORIAL_DESCRIPTION, 5000);
   assert.equal(
-    schema.safeParse({ ...base, description: "a".repeat(2000) }).success,
+    schema.safeParse({ ...base, description: "a".repeat(5000) }).success,
     true,
   );
   assert.equal(
-    schema.safeParse({ ...base, description: "a".repeat(2001) }).success,
+    schema.safeParse({ ...base, description: "a".repeat(5001) }).success,
     false,
   );
 });

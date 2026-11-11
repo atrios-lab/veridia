@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { addDays, type IsoDate } from "../scheduling/calendar.ts";
+import { LONG_TEXT_MAX } from "../text-limits.ts";
 import {
   isValidContact,
   isValidCpf,
@@ -77,7 +78,7 @@ export function appointmentSchema(options: {
         (mode) => options.modes.includes(mode),
         "Escolha o modo de atendimento.",
       ),
-    serviceDetails: requiredText(4000),
+    serviceDetails: requiredText(LONG_TEXT_MAX),
   });
 }
 
@@ -206,7 +207,7 @@ export const dataRightsSchema = z
       .transform((s) => normalizeCpf(s))
       .refine((s) => s === "" || isValidCpf(s), { message: "CPF inválido." })
       .transform((s) => (s === "" ? undefined : s)),
-    description: requiredText(4000),
+    description: requiredText(LONG_TEXT_MAX),
     holderDeclaration: z.coerce.boolean(),
   })
   .refine((data) => data.holderDeclaration, {
@@ -241,7 +242,7 @@ export function manifestationLabel(type: ManifestationType): string {
  */
 export const ombudsmanSchema = z.object({
   manifestationType: ManifestationTypeSchema,
-  message: requiredText(4000),
+  message: requiredText(LONG_TEXT_MAX),
   applicantName: optionalText(160),
   contact: optionalText(160).refine(
     (v) => v === undefined || isValidContact(v),

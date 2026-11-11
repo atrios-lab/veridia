@@ -7,6 +7,7 @@ import {
   validHours,
 } from "@/core/auth/access-hours.ts";
 import { PANEL_ROLES } from "@/core/auth/roles.ts";
+import { LONG_TEXT_MAX, MIN_JUSTIFICATION } from "@/core/text-limits.ts";
 import { user } from "@/db/auth-schema.ts";
 import { type Database, db } from "@/db/index.ts";
 import { tenantContent } from "@/db/schema.ts";
@@ -111,8 +112,8 @@ export async function requestReleaseWith(
   reason: string,
   now = new Date(),
 ): Promise<void> {
-  const text = reason.replace(/\s+/g, " ").trim().slice(0, 500);
-  if (text.length < 10) {
+  const text = reason.replace(/\s+/g, " ").trim().slice(0, LONG_TEXT_MAX);
+  if (text.length < MIN_JUSTIFICATION) {
     throw new AccessHoursError(
       "Diga em poucas palavras qual demanda precisa acompanhar.",
     );

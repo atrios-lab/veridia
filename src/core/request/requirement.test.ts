@@ -32,5 +32,5 @@ test("the ceiling error says how long is too long", () => {
     "a".repeat(MAX_MESSAGE_LENGTH + 1),
   );
   assert.ok(!parsed.success);
-  assert.match(parsed.error.issues[0].message, /4\.000/);
+  assert.match(parsed.error.issues[0].message, /5\.000/);
 });

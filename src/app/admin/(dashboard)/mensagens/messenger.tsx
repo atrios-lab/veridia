@@ -20,6 +20,7 @@ import {
   STATUSES,
   type Status,
 } from "@/core/messages/rules.ts";
+import { LONG_TEXT_MAX } from "@/core/text-limits.ts";
 import {
   isAudioLocked,
   playSound,
@@ -1005,7 +1006,7 @@ export function Messenger({
                                 <textarea
                                   aria-label="Editar mensagem"
                                   value={editing.body}
-                                  maxLength={4000}
+                                  maxLength={LONG_TEXT_MAX}
                                   rows={2}
                                   onChange={(event) =>
                                     setEditing({
@@ -1181,7 +1182,7 @@ export function Messenger({
                       }
                     }}
                     rows={2}
-                    maxLength={4000}
+                    maxLength={LONG_TEXT_MAX}
                     aria-label="Mensagem"
                     placeholder="Escreva e tecle Enter para enviar"
                     className="min-w-0 flex-1 resize-none rounded-[10px] border border-admin-input-border bg-admin-card px-3 py-2 text-[13.5px] text-admin-text outline-none focus:border-admin-primary-soft"

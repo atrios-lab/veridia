@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { isValidCpf } from "../request/form.ts";
 import { isValidCnpj } from "../tenant/pix.ts";
+import { LONG_TEXT_MAX } from "../text-limits.ts";
 
 /**
  * A guia imobiliária as the office fills it in the panel: who transmits,
@@ -29,10 +30,12 @@ export const OFFERED_GUIDE_KINDS: readonly GuideKind[] = GUIDE_KINDS.filter(
   (kind) => kind !== "certidao-imobiliaria",
 );
 
-const text = (max: number, required?: string) =>
-  required
-    ? z.string().trim().min(1, required).max(max, `Use até ${max} caracteres.`)
-    : z.string().trim().max(max, `Use até ${max} caracteres.`);
+const text = (max: number, required?: string) => {
+  const tooLong = `Use até ${max.toLocaleString("pt-BR")} caracteres.`;
+  return required
+    ? z.string().trim().min(1, required).max(max, tooLong)
+    : z.string().trim().max(max, tooLong);
+};
 
 /** CPF or CNPJ, checked by its own digits; stored as typed. */
 const taxId = z
@@ -116,7 +119,7 @@ export type GuideParty = z.infer<typeof GuidePartySchema>;
 export const GuidePropertySchema = z.object({
   type: z.enum(["urbano", "rural"]),
   /** Location, area, limits and confrontations, as on the certidão. */
-  description: text(4000, "Descreva o imóvel."),
+  description: text(LONG_TEXT_MAX, "Descreva o imóvel."),
   /** Inscrição imobiliária (urbano) or CCIR/CAR/NIRF (rural). */
   fiscalRegistration: text(120),
   /** Matrícula, livro, folhas, registro: how the registry identifies it. */
@@ -159,11 +162,11 @@ export const GuideSchema = z.object({
     .nullable()
     .default(null),
   /** This guia's addressee, when it differs from the settings'; "" = settings. */
-  addresseeText: text(400).default(""),
+  addresseeText: text(LONG_TEXT_MAX).default(""),
   /** This guia's local law, when it differs from the settings'; "" = settings. */
   lawText: text(400).default(""),
   /** Anything else the fisco should read: the death date, the process. */
-  notes: text(2000),
+  notes: text(LONG_TEXT_MAX),
   /** Who signs, by index into the office's signers. */
   signer: z.number().int().min(0).max(20),
 });

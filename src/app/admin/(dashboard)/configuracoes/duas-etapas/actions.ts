@@ -3,7 +3,9 @@
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { can } from "@/core/auth/roles.ts";
+import { MIN_JUSTIFICATION } from "@/core/text-limits.ts";
 import { db } from "@/db/index.ts";
+import { setAccessPolicyWith } from "@/lib/access-policy.ts";
 import {
   forgetSavedComputersWith,
   officeAccountsWith,
@@ -86,5 +88,49 @@ export async function forgetComputers(
     status: "saved",
     message:
       "Pronto: os dispositivos salvos dessa pessoa vão pedir o código de novo.",
+  };
+}
+
+/**
+ * The Tabelião/Registrador turns the office's two-step access off (an
+ * e-mail outage, a code that does not arrive) or back on, with the reason
+ * (decision of 11/11/2026). The same switch the Átrios master account has.
+ */
+export async function setOfficeTwoStep(
+  _previous: AccessState,
+  formData: FormData,
+): Promise<AccessState> {
+  const session = await getSession();
+  if (
+    !session ||
+    !can(session.user.role ?? "", "user.manage", session.user.permissions)
+  ) {
+    return NO_PERMISSION;
+  }
+  const twoStep = formData.get("twoStep") === "off" ? "off" : "on";
+  const reason = String(formData.get("reason") ?? "").trim();
+  if (twoStep === "off" && reason.length < MIN_JUSTIFICATION) {
+    return {
+      status: "error",
+      message: `Diga o motivo (pelo menos ${MIN_JUSTIFICATION} letras). Ele vai para a auditoria.`,
+    };
+  }
+  const tenant = await getTenant();
+  await setAccessPolicyWith(
+    db,
+    tenant.slug,
+    twoStep,
+    reason,
+    session.user.id,
+    new Date(),
+    "office",
+  );
+  revalidatePath(PATH);
+  return {
+    status: "saved",
+    message:
+      twoStep === "off"
+        ? "Verificação em duas etapas desligada: o painel pede só a senha até você ligar de novo."
+        : "Verificação em duas etapas ligada de novo.",
   };
 }

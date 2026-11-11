@@ -3,6 +3,7 @@
 import { startTransition, useActionState, useEffect } from "react";
 import { toast } from "sonner";
 import { DocumentNameField } from "@/app/_components/document-name-field.tsx";
+import { LONG_TEXT_MAX } from "@/core/text-limits.ts";
 import {
   type AuditState,
   answerNotification,
@@ -99,7 +100,7 @@ export function CloseForm({ id }: { id: string }) {
           id="c-conclusao"
           name="conclusao"
           rows={3}
-          maxLength={4000}
+          maxLength={LONG_TEXT_MAX}
           className={FIELD}
         />
       </div>

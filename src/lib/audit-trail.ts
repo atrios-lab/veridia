@@ -23,6 +23,7 @@ import {
   URGENT_VERBS_PATTERN,
 } from "@/core/audit/severity.ts";
 import { formatGuideNumber } from "@/core/guides/schema.ts";
+import { LONG_TEXT_MAX } from "@/core/text-limits.ts";
 import { officeYear } from "@/core/time/office-time.ts";
 import { user } from "@/db/auth-schema.ts";
 import type { Database } from "@/db/index.ts";
@@ -255,7 +256,7 @@ export async function addAuditNoteWith(
   body: string,
   authorId: string,
 ): Promise<boolean> {
-  const text = typed(body).slice(0, 2000);
+  const text = typed(body).slice(0, LONG_TEXT_MAX);
   if (!text) return false;
   const [entry] = await database
     .select({ id: auditLog.id, tenantSlug: auditLog.tenantSlug })
@@ -466,7 +467,7 @@ export async function editAuditNoteWith(
   body: string,
   now = new Date(),
 ): Promise<boolean> {
-  const text = typed(body).slice(0, 2000);
+  const text = typed(body).slice(0, LONG_TEXT_MAX);
   if (!text || !/^[0-9a-f-]{36}$/i.test(noteId)) return false;
   const [row] = await database
     .update(auditNotes)
@@ -802,7 +803,7 @@ export async function closeNotificationWith(
     .set({
       status: "encerrada",
       closedAt: now,
-      closingNote: typed(note).slice(0, 4000) || null,
+      closingNote: typed(note).slice(0, LONG_TEXT_MAX) || null,
     })
     .where(
       and(

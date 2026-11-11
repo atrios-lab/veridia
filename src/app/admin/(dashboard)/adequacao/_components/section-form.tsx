@@ -27,6 +27,7 @@ import {
 } from "@/core/compliance/sections.ts";
 import { formatCpf } from "@/core/request/form.ts";
 import { formatCnpj } from "@/core/tenant/pix.ts";
+import { LONG_TEXT_MAX } from "@/core/text-limits.ts";
 import { AdminIcon } from "../../../_components/icon.tsx";
 import { completeSectionAction, saveAnswerAction } from "../actions.ts";
 
@@ -496,6 +497,7 @@ function TextControl({
         <textarea
           id={id}
           rows={3}
+          maxLength={LONG_TEXT_MAX}
           value={draft}
           placeholder={field.placeholder}
           onChange={(e) => setDraft(e.target.value)}

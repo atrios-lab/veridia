@@ -8,6 +8,7 @@ import { holderName, officialName } from "@/core/tenant/identification.ts";
 import type { Tenant } from "@/core/tenant/schema.ts";
 import { formatMoneyBRL } from "@/core/transparency/bulletin.ts";
 import { FUNDS_BY_STATE } from "@/core/transparency/rubrics.ts";
+import { LONG_TEXT_MAX } from "../text-limits.ts";
 
 /**
  * Declaração de ISS (decision of 11/11/2026): the office tells the
@@ -169,7 +170,7 @@ export const IssDeclarationSchema = z.object({
     .regex(/^\d{4}-\d{2}-\d{2}$/)
     .or(z.literal(""))
     .default(""),
-  notes: text(1000),
+  notes: text(LONG_TEXT_MAX),
   /**
    * The ISS as the system's report works it out act by act; null when it
    * is the rate times the month's emolumentos.

@@ -6,10 +6,15 @@ import { getSession } from "@/lib/session.ts";
 import { getTenant } from "@/lib/tenant.ts";
 import { AdminPageHeader } from "../../_components/page-header.tsx";
 import { OwnAccessForms } from "./own-access-forms.tsx";
+import { PasswordForm } from "./password-form.tsx";
 
-export const metadata = { title: "Minha verificação em duas etapas" };
+export const metadata = { title: "Minha conta" };
 
-export default async function MyAccountPage() {
+export default async function MyAccountPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ senha?: string }>;
+}) {
   const session = await getSession();
   if (
     !session ||
@@ -24,6 +29,7 @@ export default async function MyAccountPage() {
     <>
       <AdminPageHeader title="Minha conta" />
       <main className="flex max-w-[720px] flex-col gap-4.5 px-[30px] py-7">
+        <PasswordForm changed={(await searchParams).senha === "trocada"} />
         <section className="rounded-[14px] border border-admin-border bg-admin-card px-5 py-4">
           <h2 className="font-serif text-[17px] font-semibold text-admin-primary">
             Verificação em duas etapas

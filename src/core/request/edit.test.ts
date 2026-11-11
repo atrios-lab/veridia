@@ -203,7 +203,7 @@ test("past the ceiling, the error says how long is too long", () => {
       [field]: "a".repeat(MAX_MESSAGE_LENGTH + 1),
     });
     assert.ok(!parsed.success, field);
-    assert.match(parsed.error.issues[0].message, /4\.000/, field);
+    assert.match(parsed.error.issues[0].message, /5\.000/, field);
   }
 });
 
