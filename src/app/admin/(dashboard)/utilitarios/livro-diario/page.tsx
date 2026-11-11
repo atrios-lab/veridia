@@ -32,6 +32,7 @@ const DONE: Record<string, string> = {
   importado: "Relatório lido e receitas lançadas no livro.",
   despesa: "Despesa lançada.",
   receita: "Receita lançada.",
+  deposito: "Depósito lançado (art. 194, I).",
   editado: "Lançamento corrigido.",
   "pagina-excluida": "Página excluída. Ela continua guardada.",
 };
@@ -75,9 +76,18 @@ export default async function DailyBookPage({
   );
   const duties = bookDuties(now, {
     holidays: officeHolidays(tenant),
+    state: tenant.location.state,
     lastYearBalanceOn: balance ? snapshotOf(balance).issuedOn : null,
     interim: settings.interim,
+    interimPeriod: settings.interimPeriod,
   });
+  // Art. 186: the book is opened by the holder before it is written in.
+  const opened = reports.some(
+    (r) =>
+      r.kind === "abertura" &&
+      !r.removedAt &&
+      snapshotOf(r).book?.number === settings.bookNumber,
+  );
   const live = rows.filter((r) => !r.removedAt).map(entryOf);
   const sum = summarize(live);
   const done = query.feito ? DONE[query.feito] : undefined;
@@ -91,7 +101,7 @@ export default async function DailyBookPage({
     <>
       <AdminPageHeader
         title="Livro Diário Auxiliar"
-        description="Receita e despesa da serventia (Provimento CNJ nº 149/2023, com a redação do Provimento nº 259/2026): o relatório de produtividade lido ato por ato, as despesas com comprovante, o PDF do dia, do mês e o balanço do ano."
+        description="Código Nacional de Normas (Provimento CNJ nº 149/2023, arts. 185 a 195-D, com a redação do Provimento CNJ nº 259/2026): termos de abertura e encerramento, receita por especialidade no dia do ato, despesas até o fim do mês, apuração mensal e balanço anual."
         actions={
           <div className="flex flex-wrap gap-2">
             <Link
@@ -111,8 +121,17 @@ export default async function DailyBookPage({
               href={`${base}/lancamento?tipo=receita`}
               className="btn btn-admin-secondary btn-md"
             >
-              <AdminIcon name="plus" className="h-4 w-4" /> Receita avulsa
+              <AdminIcon name="plus" className="h-4 w-4" /> Lançar receita
             </Link>
+            {settings.interim && (
+              <Link
+                href={`${base}/lancamento?tipo=deposito`}
+                className="btn btn-admin-secondary btn-md"
+              >
+                <AdminIcon name="plus" className="h-4 w-4" /> Depósito do
+                excedente
+              </Link>
+            )}
           </div>
         }
       />
@@ -120,6 +139,17 @@ export default async function DailyBookPage({
         {done && (
           <p className="rounded-[12px] bg-admin-success-bg px-4 py-3 text-[13px] font-semibold text-admin-success-text">
             {done}
+          </p>
+        )}
+        {!opened && (
+          <p className="rounded-[12px] border border-admin-warning-soft-border bg-admin-warning-soft-bg px-4 py-3 text-[13px] text-admin-warning-text">
+            <strong>
+              Livro nº {settings.bookNumber} sem termo de abertura:
+            </strong>{" "}
+            &quot;Os livros previstos neste Capítulo serão abertos, numerados,
+            autenticados e encerrados pelo delegatário&quot; (art. 186). Confira
+            o número do livro e de folhas em Configurar e gere o termo de
+            abertura em &quot;Gerar PDF do livro&quot;.
           </p>
         )}
         {duties.map((d) => (
@@ -174,14 +204,16 @@ export default async function DailyBookPage({
               `${live.filter((e) => e.kind === "despesa").length} lançamento(s)`,
             ],
             [
-              sum.balanceCents >= 0 ? "Saldo positivo" : "Saldo negativo",
+              sum.balanceCents >= 0
+                ? "Saldo líquido positivo"
+                : "Saldo líquido negativo",
               m(Math.abs(sum.balanceCents)),
               "art. 192",
             ],
             [
-              "Repasses e ISS",
+              "Fundos e repasses",
               m(sum.fundsCents),
-              `ISS ${m(sum.issCents)} · não são receita`,
+              `ISSQN ${m(sum.issCents)} · fora da receita (art. 190, § 3º)`,
             ],
           ].map(([label, value, hint]) => (
             <div
@@ -249,13 +281,18 @@ export default async function DailyBookPage({
                           >
                             {e.kind === "receita"
                               ? e.specialty
-                              : categoryLabel(e.category)}
+                              : e.kind === "deposito"
+                                ? `Depósito do excedente (art. 194, I): R$ ${formatMoneyBRL(e.amountCents)}`
+                                : categoryLabel(e.category)}
                           </span>
                           <span className="block">
                             {e.actCode ? `${e.actCode} - ` : ""}
                             {e.description}
                             {e.quantity > 1 ? ` (${e.quantity} atos)` : ""}
                             {e.supplier ? ` · ${e.supplier}` : ""}
+                            {e.documentRef
+                              ? ` · ${e.kind === "deposito" ? "conta " : ""}${e.documentRef}`
+                              : ""}
                           </span>
                           {(e.explanation || e.fiscalDistinct) && (
                             <span className="block text-[12px] text-admin-muted">
@@ -344,12 +381,25 @@ export default async function DailyBookPage({
                     className="mr-auto text-[13.5px] font-semibold text-admin-primary underline"
                   >
                     {BOOK_DOC_LABELS[r.kind as BookDocKind]}:{" "}
-                    {r.kind === "dia"
-                      ? brDate(r.periodStart)
-                      : r.kind === "mes"
-                        ? monthLabel(r.periodStart)
-                        : r.periodStart.slice(0, 4)}
+                    {r.kind === "abertura" || r.kind === "encerramento"
+                      ? `livro nº ${snapshotOf(r).book?.number ?? 1}`
+                      : r.kind === "dia"
+                        ? brDate(r.periodStart)
+                        : r.kind === "mes"
+                          ? monthLabel(r.periodStart)
+                          : r.periodStart.slice(0, 4)}
                   </Link>
+                  {(() => {
+                    const b = snapshotOf(r).book;
+                    return b?.firstSheet && b.lastSheet ? (
+                      <span className="text-[12px] text-admin-muted">
+                        livro {b.number}, fls. {b.firstSheet}
+                        {b.lastSheet !== b.firstSheet
+                          ? ` a ${b.lastSheet}`
+                          : ""}
+                      </span>
+                    ) : null;
+                  })()}
                   <span className="text-[12px] text-admin-muted">
                     gerada em {brDate(toIsoDate(r.createdAt, OFFICE_TIME_ZONE))}
                   </span>

@@ -1,5 +1,6 @@
 import "server-only";
 import { and, asc, desc, eq, gte, isNull, lte } from "drizzle-orm";
+import { PDFDocument } from "pdf-lib";
 import {
   type BookDocKind,
   type BookEntry,
@@ -7,7 +8,10 @@ import {
   type BookSnapshot,
   buildBookPdfDocument,
   DEFAULT_SPECIALTIES,
+  type EntryKind,
+  interimPeriodOf,
   SettingsSchema,
+  SHEET_KINDS,
   summarize,
 } from "@/core/daily-book/book.ts";
 import type { Tenant } from "@/core/tenant/schema.ts";
@@ -94,7 +98,8 @@ export type StoredReport = typeof dailyBookReports.$inferSelect;
 export function entryOf(row: StoredEntry): BookEntry {
   return {
     id: row.id,
-    kind: row.kind === "despesa" ? "despesa" : "receita",
+    kind:
+      row.kind === "despesa" || row.kind === "deposito" ? row.kind : "receita",
     date: row.occurredOn,
     specialty: row.specialty,
     category: row.category,
@@ -157,7 +162,7 @@ export async function findEntryWith(
 }
 
 export interface EntryInput {
-  kind: "receita" | "despesa";
+  kind: EntryKind;
   occurredOn: string;
   specialty: string;
   category: string;
@@ -189,6 +194,11 @@ function checkEntry(input: EntryInput): void {
   if (input.kind === "despesa" && !input.category) {
     throw new DailyBookError(
       "Escolha a categoria da despesa (art. 191-A, § 1º).",
+    );
+  }
+  if (input.kind === "deposito" && !input.documentRef.trim()) {
+    throw new DailyBookError(
+      "Informe a conta em que o depósito foi feito (art. 194, I).",
     );
   }
 }
@@ -312,13 +322,15 @@ export interface ImportLine {
   fundsCents: number;
   issCents: number;
   specialty: string;
+  /** Art. 190: the act's number, or book and sheet, or protocol. */
+  identification?: string;
   explanation: string;
 }
 
 /**
  * Books the productivity report's acts as revenue (art. 190): one line
- * per act code. A report of one day dates them that day; a report of the
- * month dates them its last day, marked as consolidated. A period already
+ * per act code, dated the report's day ("no dia da prática do ato"; a
+ * report of several days is refused). A period already
  * read is refused unless `replace`: then the earlier lines are excluded
  * (kept, with the reason) and the new ones booked.
  */
@@ -336,6 +348,12 @@ export async function importProductivityWith(
   actorId: string,
 ): Promise<{ importId: string; count: number }> {
   if (input.end < input.start) throw new DailyBookError("Confira o período.");
+  // Art. 190: "no dia da prática do ato".
+  if (input.start !== input.end) {
+    throw new DailyBookError(
+      "O art. 190 manda lançar a receita no dia da prática do ato: envie o relatório de um dia só.",
+    );
+  }
   if (input.lines.length === 0) {
     throw new DailyBookError("Nenhum ato para lançar.");
   }
@@ -381,15 +399,11 @@ export async function importProductivityWith(
       })
       .returning();
     if (!imported) throw new Error("relatório não gravado");
-    const oneDay = input.start === input.end;
-    const consolidated = oneDay
-      ? ""
-      : `Consolidado do relatório de ${input.start.split("-").reverse().join("/")} a ${input.end.split("-").reverse().join("/")}. O art. 190 pede a receita no dia do ato: anexe o relatório de cada dia quando possível.`;
     for (const line of input.lines) {
       await tx.insert(dailyBookEntries).values({
         tenantSlug,
         kind: "receita",
-        occurredOn: input.end,
+        occurredOn: input.start,
         specialty: line.specialty,
         actCode: line.code,
         description: line.description,
@@ -397,9 +411,8 @@ export async function importProductivityWith(
         amountCents: line.amountCents,
         fundsCents: line.fundsCents,
         issCents: line.issCents,
-        explanation: [consolidated, line.explanation.trim()]
-          .filter(Boolean)
-          .join(" "),
+        documentRef: line.identification ?? "",
+        explanation: line.explanation.trim(),
         source: "produtividade",
         importId: imported.id,
         createdBy: actorId,
@@ -470,6 +483,33 @@ async function buildSnapshotWith(
     signer: { name: string; title: string; note?: string } | null;
   },
 ): Promise<BookSnapshot> {
+  const settings = await getBookSettingsWith(database, tenantSlug);
+  const book = {
+    number: settings.bookNumber,
+    sheetCount: settings.sheetCount,
+  };
+  // The terms (art. 186) carry the book, not lines.
+  if (input.kind === "abertura" || input.kind === "encerramento") {
+    return {
+      kind: input.kind,
+      start: input.start,
+      end: input.end,
+      issuedOn: input.issuedOn,
+      entries: [],
+      months: [],
+      notes: input.notes.trim(),
+      signer: input.signer,
+      book:
+        input.kind === "encerramento"
+          ? {
+              ...book,
+              lastSheet:
+                (await lastSheetWith(database, tenantSlug, book.number)) ||
+                undefined,
+            }
+          : book,
+    };
+  }
   const rows = await listEntriesWith(database, tenantSlug, {
     start: input.start,
     end: input.end,
@@ -497,19 +537,111 @@ async function buildSnapshotWith(
     months,
     notes: input.notes.trim(),
     signer: input.signer,
-    interim: await interimOf(database, tenantSlug, input.kind),
+    interim:
+      input.kind === "mes"
+        ? await interimOf(database, tenantSlug, settings, input.start)
+        : null,
+    book,
   };
 }
 
-/** A month of an interim office keeps the ceiling in force when generated. */
+/**
+ * Art. 194: in the month that closes the interim's period (every month, or
+ * March, June, September and December), the period's figures and the
+ * ceiling in force when generated.
+ */
 async function interimOf(
   database: Database,
   tenantSlug: string,
-  kind: BookDocKind,
+  settings: BookSettings,
+  monthStart: string,
 ): Promise<BookSnapshot["interim"]> {
-  if (kind !== "mes") return null;
-  const settings = await getBookSettingsWith(database, tenantSlug);
-  return settings.interim ? { ceilingCents: settings.ceilingCents } : null;
+  if (!settings.interim) return null;
+  const period = interimPeriodOf(
+    monthStart.slice(0, 7),
+    settings.interimPeriod,
+  );
+  if (!period) return null;
+  const entries = (await listEntriesWith(database, tenantSlug, period)).map(
+    entryOf,
+  );
+  const pay = entries.filter(
+    (e) => e.kind === "despesa" && e.category === "interino",
+  );
+  const sum = summarize(entries.filter((e) => !pay.includes(e)));
+  return {
+    ceilingCents: settings.ceilingCents,
+    period: settings.interimPeriod,
+    start: period.start,
+    end: period.end,
+    months: period.months,
+    revenueCents: sum.revenueCents,
+    expensesCents: sum.expensesCents,
+    depositsCents: sum.depositsCents,
+  };
+}
+
+/** The last sheet used in a book, removed pages included (art. 186). */
+async function lastSheetWith(
+  database: Database,
+  tenantSlug: string,
+  bookNumber: number,
+  except?: string,
+): Promise<number> {
+  const rows = await database
+    .select({ id: dailyBookReports.id, snapshot: dailyBookReports.snapshot })
+    .from(dailyBookReports)
+    .where(eq(dailyBookReports.tenantSlug, tenantSlug));
+  let last = 0;
+  for (const row of rows) {
+    if (row.id === except) continue;
+    const book = snapshotOf(row).book;
+    if (book?.number === bookNumber && book.lastSheet) {
+      last = Math.max(last, book.lastSheet);
+    }
+  }
+  return last;
+}
+
+/**
+ * Art. 186: a page of the book takes the next sheets of the book, and keeps
+ * them; a sheet once used is never used again, even if the page is
+ * removed. Edited, a page keeps its first sheet and counts its pages again.
+ * Returns the sheets and whether the book's sheets ran out.
+ */
+export async function numberSheetsWith(
+  database: Database,
+  tenant: Tenant,
+  id: string,
+): Promise<{ first: number; last: number; overflow: boolean } | null> {
+  const row = await findBookReportWith(database, tenant.slug, id);
+  if (!row) return null;
+  const snapshot = snapshotOf(row);
+  if (!SHEET_KINDS.includes(snapshot.kind) || !snapshot.book) return null;
+  const first =
+    snapshot.book.firstSheet ??
+    (await lastSheetWith(database, tenant.slug, snapshot.book.number, id)) + 1;
+  const withFirst: BookSnapshot = {
+    ...snapshot,
+    book: { ...snapshot.book, firstSheet: first },
+  };
+  const pdf = await renderBookPdf(tenant, { snapshot: withFirst });
+  const pages = (await PDFDocument.load(pdf)).getPageCount();
+  const last = first + Math.max(1, pages) - 1;
+  await database
+    .update(dailyBookReports)
+    .set({
+      snapshot: {
+        ...withFirst,
+        book: { ...withFirst.book, firstSheet: first, lastSheet: last },
+      },
+    })
+    .where(eq(dailyBookReports.id, id));
+  return {
+    first,
+    last,
+    overflow: snapshot.book.sheetCount > 0 && last > snapshot.book.sheetCount,
+  };
 }
 
 export async function issueBookReportWith(
@@ -571,15 +703,21 @@ export async function updateBookReportWith(
   if (!row || row.removedAt) throw new DailyBookError("Página não encontrada.");
   const old = snapshotOf(row);
   const signer = input.signers[input.signerIndex] ?? input.signers[0] ?? null;
+  // Refreshed, a page keeps its book and first sheet (art. 186).
   const snapshot = input.refresh
-    ? await buildSnapshotWith(database, tenantSlug, {
-        kind: old.kind,
-        start: old.start,
-        end: old.end,
-        issuedOn: input.issuedOn,
-        notes: input.notes,
-        signer,
-      })
+    ? {
+        ...(await buildSnapshotWith(database, tenantSlug, {
+          kind: old.kind,
+          start: old.start,
+          end: old.end,
+          issuedOn: input.issuedOn,
+          notes: input.notes,
+          signer,
+        })),
+        ...(old.book && SHEET_KINDS.includes(old.kind)
+          ? { book: old.book }
+          : {}),
+      }
     : { ...old, issuedOn: input.issuedOn, notes: input.notes.trim(), signer };
   await database
     .update(dailyBookReports)

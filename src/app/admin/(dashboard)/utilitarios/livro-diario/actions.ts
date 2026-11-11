@@ -7,11 +7,13 @@ import { can } from "@/core/auth/roles.ts";
 import {
   BOOK_DOC_KINDS,
   type BookDocKind,
+  type EntryKind,
   EXPENSE_CATEGORIES,
+  INTERIM_PERIODS,
+  type InterimPeriod,
   SettingsSchema,
   specialtyOf,
 } from "@/core/daily-book/book.ts";
-import { expenseWarnings } from "@/core/daily-book/checks.ts";
 import {
   parseProductivity,
   parseReceipt,
@@ -27,6 +29,7 @@ import {
   getBookSettingsWith,
   importProductivityWith,
   issueBookReportWith,
+  numberSheetsWith,
   removeBookReportWith,
   removeEntryWith,
   saveBookSettingsWith,
@@ -137,6 +140,12 @@ export async function readProductivity(formData: FormData): Promise<
           "Não reconheci o relatório de produtividade (período e atos). Confira se é o PDF do sistema, não uma foto.",
       };
     }
+    if (reading.start !== reading.end) {
+      return {
+        ok: false,
+        message: `Este relatório vai de ${reading.start.split("-").reverse().join("/")} a ${reading.end.split("-").reverse().join("/")}. "A receita será lançada no Livro Diário Auxiliar separadamente, por especialidade, de forma individualizada, no dia da prática do ato" (art. 190): gere no sistema o relatório de um dia só e envie um por dia.`,
+      };
+    }
     const settings = await getBookSettingsWith(db, ok.tenant.slug);
     return {
       ok: true,
@@ -169,6 +178,8 @@ const LinesSchema = z
       fundsCents: z.number().int().min(0).max(1_000_000_000_00),
       issCents: z.number().int().min(0).max(1_000_000_000_00),
       specialty: z.string().trim().min(1).max(120),
+      /** Art. 190: the act's number, or book and sheet, or protocol. */
+      identification: z.string().trim().max(500).default(""),
       explanation: z.string().max(LONG_TEXT_MAX).default(""),
     }),
   )
@@ -271,7 +282,9 @@ export async function saveEntry(
 ): Promise<BookFormState> {
   const ok = await access();
   if (!ok) return { status: "error", message: NO_PERMISSION };
-  const kind = field(formData, "tipo") === "despesa" ? "despesa" : "receita";
+  const typed = field(formData, "tipo");
+  const kind: EntryKind =
+    typed === "despesa" || typed === "deposito" ? typed : "receita";
   const occurredOn = field(formData, "data", 10);
   if (!isDate(occurredOn) || occurredOn > today()) {
     return { status: "error", message: "Confira a data." };
@@ -284,28 +297,16 @@ export async function saveEntry(
   if (kind === "despesa" && !CATEGORY_IDS.includes(category)) {
     return { status: "error", message: "Escolha a categoria da despesa." };
   }
-  const id = field(formData, "id", 40);
-  const explanation = field(formData, "explicacao", LONG_TEXT_MAX);
-  if (kind === "despesa" && !explanation) {
-    const warnings = expenseWarnings(
-      {
-        description: field(formData, "descricao", 500),
-        supplier: field(formData, "fornecedor", 160),
-        date: occurredOn,
-      },
-      today(),
-      {
-        isNew: !id,
-        interim: (await getBookSettingsWith(db, ok.tenant.slug)).interim,
-      },
-    );
-    if (warnings.length) {
-      return {
-        status: "error",
-        message: `${warnings.join(" ")} Se for despesa do serviço, explique no campo Explicação.`,
-      };
-    }
+  if (kind === "receita" && !field(formData, "especialidade", 120)) {
+    return {
+      status: "error",
+      message:
+        "Informe a especialidade: a receita é lançada separadamente, por especialidade (art. 190).",
+    };
   }
+  const id = field(formData, "id", 40);
+  // The notices of checks.ts are shown on the form; none refuses the entry.
+  const explanation = field(formData, "explicacao", LONG_TEXT_MAX);
   try {
     const file = pdfFile(formData, "comprovante");
     const [stored] = file
@@ -315,13 +316,16 @@ export async function saveEntry(
           name:
             kind === "despesa"
               ? "Comprovante de despesa"
-              : "Comprovante de receita",
+              : kind === "deposito"
+                ? "Comprovante de depósito"
+                : "Comprovante de receita",
         })
       : [];
     const input: EntryInput = {
       kind,
       occurredOn,
-      specialty: field(formData, "especialidade", 120) || "Receita avulsa",
+      specialty:
+        kind === "receita" ? field(formData, "especialidade", 120) : "",
       category,
       actCode: field(formData, "codigo", 20),
       description: field(formData, "descricao", 500),
@@ -394,6 +398,10 @@ function periodOf(kind: BookDocKind, formData: FormData) {
       end: `${month}-${String(last).padStart(2, "0")}`,
     };
   }
+  if (kind === "abertura" || kind === "encerramento") {
+    const day = field(formData, "data", 10) || today();
+    return isDate(day) ? { start: day, end: day } : null;
+  }
   const year = field(formData, "ano", 4);
   return /^\d{4}$/.test(year)
     ? { start: `${year}-01-01`, end: `${year}-12-31` }
@@ -413,6 +421,7 @@ export async function issueReport(
   const period = periodOf(kind, formData);
   if (!period) return { status: "error", message: "Confira o período." };
   let id: string;
+  let full = false;
   try {
     const row = await issueBookReportWith(
       db,
@@ -428,11 +437,13 @@ export async function issueReport(
       ok.session.user.id,
     );
     id = row.id;
+    // Art. 186: the page takes the next numbered sheets of the book.
+    full = (await numberSheetsWith(db, ok.tenant, row.id))?.overflow ?? false;
   } catch (error) {
     return fail(error);
   }
   revalidatePath(HOME);
-  redirect(`${HOME}/paginas/${id}?gerado=1`);
+  redirect(`${HOME}/paginas/${id}?gerado=1${full ? "&livro=cheio" : ""}`);
 }
 
 export async function editReport(
@@ -458,6 +469,8 @@ export async function editReport(
       },
       ok.session.user.id,
     );
+    // Same first sheet; the pages are counted again (art. 186).
+    await numberSheetsWith(db, ok.tenant, id);
   } catch (error) {
     return fail(error);
   }
@@ -507,13 +520,21 @@ export async function saveSettings(
   const parsed = SettingsSchema.safeParse({
     specialties,
     responsible: field(formData, "responsavel", 160),
+    bookNumber: Number(field(formData, "livro", 4)) || 1,
+    sheetCount: Number(field(formData, "folhas", 6)) || 0,
     interim: formData.get("interino") === "on",
     ceilingCents: amountOf(field(formData, "teto", 20)) ?? 0,
+    interimPeriod: (INTERIM_PERIODS as readonly string[]).includes(
+      field(formData, "periodicidade", 20),
+    )
+      ? (field(formData, "periodicidade", 20) as InterimPeriod)
+      : "trimestral",
   });
   if (!parsed.success)
     return {
       status: "error",
-      message: "Confira as especialidades e o valor do teto.",
+      message:
+        "Confira as especialidades, o número do livro, as folhas e o valor do teto.",
     };
   try {
     await saveBookSettingsWith(

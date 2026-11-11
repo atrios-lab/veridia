@@ -1,13 +1,17 @@
 /**
- * What to warn about before an expense goes into the Livro Diário Auxiliar
- * (decision of 11/11/2026). A warning never refuses the entry: the holder
- * may know better, and says why in the entry's explanation, which goes into
- * the book.
+ * Notices shown while an expense is typed into the Livro Diário Auxiliar
+ * (decision of 11/11/2026: the book follows the text of the law, with no
+ * reading of our own). Each notice repeats a rule written in the law and
+ * says where; none refuses the entry.
  *
- * The national rule comes first (Código Nacional de Normas, Provimento CNJ
- * nº 149/2023, with the wording of the Provimento CNJ nº 259/2026); the
- * state's Código de Normas stays where it agrees with it (art. 195,
- * parágrafo único). For RN that is the Provimento nº 156/2016-CGJ/RN.
+ * - Código Nacional de Normas (Provimento CNJ nº 149/2023, with the wording
+ *   of the Provimento CNJ nº 259/2026), art. 191-A, caput: "As despesas
+ *   serão escrituradas no Livro Diário Auxiliar até o encerramento do mês em
+ *   que se efetivarem".
+ * - Código de Normas da CGJ/RN (Provimento nº 156/2016), art. 25, § 2º, in
+ *   force where it agrees with the national code (art. 195, parágrafo
+ *   único): "O Imposto de Renda devido pelo interino não é considerado como
+ *   despesa da serventia."
  *
  * Kept free of imports so the entry form can run it as the user types.
  */
@@ -19,31 +23,18 @@ export interface ExpenseToCheck {
   date: string;
 }
 
-/** Art. 191-A, § 2º: personal, or foreign to the service. */
-export function looksPersonal(text: string): boolean {
-  return /\b(pessoal|particular|fam[ií]lia|resid[êe]ncia|casa (?:de|do|da)|escola d[oa]s? filh|viagem de f[ée]rias|supermercado|farm[áa]cia)\b/i.test(
-    text,
-  );
-}
+/** Art. 191-A, § 2º, as written: shown on every expense form. */
+export const PERSONAL_EXPENSE_RULE =
+  "Não poderão ser lançadas despesas de natureza exclusivamente pessoal ou estranhas à prestação do serviço delegado (art. 191-A, § 2º).";
+
+/** Art. 191-A, § 3º, as written. */
+export const RECEIPTS_RULE =
+  "Os documentos comprobatórios das despesas serão conservados pelo prazo mínimo de 5 (cinco) anos, sem prejuízo de prazo superior previsto em lei (art. 191-A, § 3º).";
 
 /**
- * The State's funds in the fee guides (FDJ, FRMP, FCRCPN, FPGE): passed on
- * to the State, already out of the revenue. CGJ/RN, art. 25, § 3º.
- */
-export function looksLikeStateFund(text: string): boolean {
-  return /\b(FDJ|FRMP|FCRCPN|FPGE|Fundo de Desenvolvimento da Justi[çc]a|Fundo de Reaparelhamento do Minist[ée]rio P[úu]blico|Fundo de Compensa[çc][ãa]o aos Registradores)\b/i.test(
-    text,
-  );
-}
-
-/**
- * Income tax on the person in charge, carnê-leão included. The holder is a
- * private person running a delegated public service, and the tax comes from
- * that activity: holders book it as an expense, and no national rule says
- * otherwise (decision of 11/11/2026). Only the interim is told apart, by the
- * CGJ/RN's code (art. 25, § 2º), so only an interim office is warned. The
- * tax withheld from the staff's pay (IRRF) is payroll (art. 191-A, § 1º,
- * VII) and is not caught.
+ * The words that name income tax in an expense's description. Used only for
+ * the interim's (CGJ/RN art. 25, § 2º); the tax withheld from the staff's
+ * pay (IRRF) is not that tax and is not caught.
  */
 export function looksLikeIncomeTax(text: string): boolean {
   return /carn[êe][\s-]?le[ãa]o|\bIRPF\b|imposto de renda (?:pessoa f[íi]sica|d[oa] (?:titular|tabeli[ãa]o?|tabeli[ãa]|delegat[áa]ri[oa]|interin[oa]|oficial|registrador[a]?))/i.test(
@@ -51,7 +42,7 @@ export function looksLikeIncomeTax(text: string): boolean {
   );
 }
 
-/** Art. 191-A: the expense of a month gone by, booked only now. */
+/** Art. 191-A, caput: the expense of a month gone by, booked only now. */
 export function bookedLate(date: string, today: string): boolean {
   return /^\d{4}-\d{2}/.test(date) && date.slice(0, 7) < today.slice(0, 7);
 }
@@ -72,9 +63,9 @@ const MONTHS = [
 ];
 
 /**
- * Every warning for an expense, in plain words. `isNew` is false when an
- * entry already booked is being corrected: its month is not late then.
- * `interim` is an office run by an interim (the book's settings).
+ * The notices for an expense. `isNew` is false when an entry already booked
+ * is being corrected: its month is not late then. `interim` is an office
+ * run by an interim (the book's settings).
  */
 export function expenseWarnings(
   e: ExpenseToCheck,
@@ -82,27 +73,16 @@ export function expenseWarnings(
   options: { isNew?: boolean; interim?: boolean } = {},
 ): string[] {
   const { isNew = true, interim = false } = options;
-  const text = `${e.description} ${e.supplier}`;
   const out: string[] = [];
-  if (looksLikeStateFund(text)) {
-    out.push(
-      "FDJ, FRMP, FCRCPN e FPGE são repasses ao Estado: o livro já lança só os emolumentos como receita, então o repasse não entra de novo como despesa (no RN, o art. 25, § 3º do Código de Normas diz o mesmo).",
-    );
-  }
-  if (interim && looksLikeIncomeTax(text)) {
-    out.push(
-      "Na serventia sob interinidade, o imposto de renda devido pelo interino não é despesa da serventia (Código de Normas da CGJ/RN, art. 25, § 2º). O IRRF retido dos funcionários continua sendo despesa, como parte da folha.",
-    );
-  }
-  if (looksPersonal(text)) {
-    out.push(
-      "Despesa de natureza pessoal ou estranha ao serviço não pode ser lançada (art. 191-A, § 2º).",
-    );
-  }
   if (isNew && bookedLate(e.date, today)) {
     const month = MONTHS[Number(e.date.slice(5, 7)) - 1] ?? "";
     out.push(
-      `Despesa paga em ${month} de ${e.date.slice(0, 4)}: o prazo para lançá-la era o fim daquele mês (art. 191-A). Pode lançar agora, explicando o atraso.`,
+      `Despesa de ${month} de ${e.date.slice(0, 4)}: "As despesas serão escrituradas no Livro Diário Auxiliar até o encerramento do mês em que se efetivarem" (art. 191-A).`,
+    );
+  }
+  if (interim && looksLikeIncomeTax(`${e.description} ${e.supplier}`)) {
+    out.push(
+      `"O Imposto de Renda devido pelo interino não é considerado como despesa da serventia" (Código de Normas da CGJ/RN, art. 25, § 2º).`,
     );
   }
   return out;

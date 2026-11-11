@@ -622,6 +622,8 @@ export async function renderDocuments(
   });
 
   let currentOffice: readonly string[] = [];
+  // A book's numbered sheets (CN art. 186): the next number to print.
+  let currentSheet: { next: number; label: string } | null = null;
   pdf.on("pageAdded", () => {
     // A paragraph that overflows goes on, on the new page, in the type it
     // was set in: the footer drawn here must not leave its 9 pt behind.
@@ -629,6 +631,21 @@ export async function renderDocuments(
       keepingType(pdf, () =>
         drawFooter(pdf, currentFooter, brand, currentOffice),
       );
+    if (currentSheet) {
+      const sheet = currentSheet;
+      keepingType(pdf, () => {
+        pdf
+          .font("Times-Bold")
+          .fontSize(9)
+          .fillColor(brand.palette.muted)
+          .text(`${sheet.label} ${sheet.next}`, MARGIN, 16, {
+            width: pdf.page.width - MARGIN * 2,
+            align: "right",
+            lineBreak: false,
+          });
+      });
+      sheet.next += 1;
+    }
     pdf.x = MARGIN;
     pdf.y = MARGIN;
   });
@@ -639,6 +656,9 @@ export async function renderDocuments(
     } else {
       currentFooter = document.footer;
       currentOffice = document.office;
+      currentSheet = document.sheet
+        ? { next: document.sheet.first, label: document.sheet.label }
+        : null;
       drawDocumentBody(pdf, document, brand, qr);
     }
   }

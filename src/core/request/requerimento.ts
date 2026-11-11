@@ -153,6 +153,12 @@ export interface RequerimentoDocument {
   signature: string[];
   footer: string;
   credentials?: RequerimentoCredentials;
+  /**
+   * A page of a book with numbered sheets (Livro Diário Auxiliar, CN art.
+   * 186): each page of this document prints "<label> <n>" at the top,
+   * counting from `first`.
+   */
+  sheet?: { first: number; label: string };
 }
 
 export interface RequerimentoData {
