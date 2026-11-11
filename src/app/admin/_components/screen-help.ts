@@ -380,5 +380,44 @@ export function screenHelpFor(pathname: string | null): ScreenHelp | undefined {
   return match ? ENTRIES[match] : undefined;
 }
 
+/**
+ * What goes to the Corregedoria, and when (decision of 11/11/2026): a "!"
+ * of its own beside the ofícios and on the screen that generates them,
+ * because "only when there is a loss" is the usual misunderstanding.
+ */
+export const PAPER_SENDING_HELP: ScreenHelp = {
+  purpose:
+    "O que enviar à Corregedoria e quando. São três obrigações diferentes do Provimento nº 156/2016-CGJ/RN: a prestação de contas vai sempre, a comunicação só quando acontece algo, e o classificador fica na serventia.",
+  steps: [
+    "Todo fim de trimestre: gere e envie a prestação de contas, mesmo que não tenha havido nenhuma avaria. O aviso amarelo aparece sozinho quando o trimestre termina.",
+    "No fim de um mês em que houve avaria, extravio ou subtração: gere e envie a comunicação, com o número das folhas. O aviso vermelho aparece sozinho.",
+    "Mês sem avaria, extravio ou subtração: não se envia nada naquele mês. Só lance o uso do mês ('Usei até a folha nº').",
+    "Folha inutilizada (erro de impressão) não vai no ofício do mês: entra só na prestação do trimestre.",
+    "Depois de enviar, anote a data e o protocolo ou o malote no ofício. Quem não presta contas no prazo fica impedido de requisitar papel novo (art. 60, § 2º).",
+  ],
+  terms: [
+    {
+      term: "Prestação de contas (art. 60, § 1º)",
+      meaning:
+        "Todo trimestre, sempre. Estoque inicial, recebidas, utilizadas, inutilizadas, avariadas, extraviadas, subtraídas e estoque final, com a numeração em anexo.",
+    },
+    {
+      term: "Comunicação de extravio, subtração ou avaria (art. 59)",
+      meaning:
+        "Só quando acontece, no fim do mês do fato, com o número das folhas, para a Corregedoria publicar no DJe.",
+    },
+    {
+      term: "Classificador (art. 60, caput)",
+      meaning:
+        "O controle da própria serventia (lotes, notas, uso e estoque). Não é enviado: fica guardado para a correição. Aqui, ele é a própria tela do Papel de segurança e o 'Relatório do classificador'.",
+    },
+  ],
+};
+
+ENTRIES["/admin/utilitarios/papel-seguranca/gerar"] = {
+  ...PAPER_SENDING_HELP,
+  configure: ENTRIES["/admin/utilitarios/papel-seguranca"]?.configure,
+};
+
 /** Every screen with help, for the test that keeps the links honest. */
 export const SCREEN_HELP = ENTRIES;
