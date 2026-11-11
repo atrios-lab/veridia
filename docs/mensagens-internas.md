@@ -60,3 +60,10 @@ A migração `0044_mensagens_internas.sql` só cria `messenger_profiles`, `messe
   - "Responder aqui" abre a conversa numa janela pequena no canto, sem sair da tela de trabalho;
   - enquanto houver mensagem sem ler, o som volta a cada 10 segundos e o título da aba pisca.
 - **Configurações › Notificações:** os canais "Mensagens internas" e "Auditoria" ligam ou desligam o cartão, o som, a notificação do navegador e o tremor.
+
+### Janelinha flutuante
+
+- Ela tem **📎 Arquivo** e **🎤 Áudio**, como a tela completa.
+- **Minimizar (botão com um traço):** vira uma barrinha com o nome da pessoa. Quando chega mensagem nova, a conversa reabre sozinha.
+- **Mudar de lugar:** arraste pelo título (ou a barrinha). A posição fica lembrada neste navegador.
+- **Microfone:** `Permissions-Policy: microphone=(self)` vale em todo o painel (`/admin`), para a janelinha gravar áudio em qualquer tela. O site público continua com o microfone desligado.
