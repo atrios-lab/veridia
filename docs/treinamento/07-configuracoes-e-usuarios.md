@@ -15,7 +15,7 @@ telas que o operador não vê, e por um bom motivo: aqui se mexe no que o site m
 dinheiro cai e em quem entra no painel. Nenhuma delas é do dia a dia, mas todas precisam estar
 certas antes do primeiro atendimento.
 
-**Tela.** A tela de Configurações aberta na aba Serventia.
+**Tela.** A tela de Configurações aberta em Serventia › Dados gerais.
 
 **Destaque.** Nenhum. Deixe a tela parada.
 
