@@ -33,6 +33,8 @@ const EXACT: Record<string, string> = {
   "iss-declaration.file":
     "Registrou a entrega de uma declaração de ISS à prefeitura",
   "transparency.bulletin.iss": "Lançou o ISS no boletim mensal",
+  "transparency.bulletin.checked":
+    "Conferiu os valores lidos do relatório no boletim mensal",
   "signed-document.sign": "Assinou digitalmente um documento",
   "messenger.lunch-request": "Pediu para mudar o horário de almoço",
   "messenger.lunch-approve": "Aprovou o horário de almoço",
@@ -260,6 +262,8 @@ const EXPLANATIONS: Record<string, string> = {
     "O número de uma declaração de ISS foi trocado, para seguir a contagem da serventia.",
   "iss-declaration.file":
     "Foi anotado quando a declaração de ISS chegou à prefeitura (pelo site ou na SEMUT) e o número do protocolo.",
+  "transparency.bulletin.checked":
+    "Os valores do boletim mensal que o sistema leu do relatório foram conferidos por esta pessoa antes de publicar.",
   "transparency.bulletin.iss":
     "O ISS de uma declaração foi lançado no boletim mensal da página de transparência.",
   "signed-document.sign":

@@ -9,8 +9,17 @@ import {
   prenotationItemsSchema,
   type ReadPrenotation,
 } from "@/core/fees/prenotation.ts";
+import {
+  mergeReports,
+  parseNotarisReport,
+  type ReportFigures,
+} from "@/core/iss/notaris-report.ts";
+import { officialName } from "@/core/tenant/identification.ts";
 import { OfficeBulletinSchema } from "@/core/tenant/overrides.ts";
 import {
+  type BulletinFigures,
+  type BulletinStatus,
+  formatMonthYear,
   fundFieldName,
   isBulletinStatus,
   parseBulletinFigures,
@@ -22,16 +31,30 @@ import {
   documentFormSchema,
 } from "@/core/transparency/documents.ts";
 import { FUNDS_BY_STATE } from "@/core/transparency/rubrics.ts";
+import { db } from "@/db/index.ts";
+import { recordAudit } from "@/lib/audit.ts";
 import { justify } from "@/lib/audit-reason.ts";
+import { bulletinFingerprint, renderBulletinPdf } from "@/lib/bulletin-pdf.ts";
 import {
   FEE_TABLE_CATEGORY,
   getFeeTableDocument,
+  pdfTableText,
   readNewFeeTable,
   readPrenotationFromPdf,
   saveFeeTableItems,
 } from "@/lib/fee-tables.ts";
 import { notifyIndexNow } from "@/lib/notify-indexnow.ts";
 import { getSession } from "@/lib/session.ts";
+import { CertificatePasswordError } from "@/lib/signature/certificate.ts";
+import { requestOrigin, verifyUrlFor } from "@/lib/signature/documents.ts";
+import { PdfNotSignableError } from "@/lib/signature/pades.ts";
+import {
+  findSignedDocumentWith,
+  finishA3SignWith,
+  prepareA3SignWith,
+  SigningError,
+  signNewDocumentWith,
+} from "@/lib/signing.ts";
 import { getSiteOrigin } from "@/lib/site-origin.ts";
 import { getTenant } from "@/lib/tenant.ts";
 import {
@@ -47,7 +70,9 @@ import {
 import {
   AttachmentError,
   deleteStoredFile,
+  readStoredFile,
   storeAttachments,
+  storeOfficePdf,
 } from "@/lib/uploads.ts";
 
 export type SaveState =
@@ -268,29 +293,39 @@ export async function deleteDocumentAction(
 
 // ── Bulletin ─────────────────────────────────────────────────────────────────
 
-export async function publishBulletinAction(
-  _previous: SaveState,
-  formData: FormData,
-): Promise<SaveState> {
-  const session = await authorize();
-  if (!session) {
-    return { status: "error", message: NO_PERMISSION, fieldErrors: {} };
-  }
-
+/** The month, figures and status typed in the bulletin form, checked. */
+async function bulletinFromForm(formData: FormData): Promise<
+  | {
+      ok: true;
+      input: {
+        referenceMonth: string;
+        figures: BulletinFigures;
+        status: BulletinStatus;
+      };
+      tenant: Awaited<ReturnType<typeof getTenant>>;
+    }
+  | { ok: false; error: SaveState }
+> {
   const month = Number(formData.get("month"));
   const year = Number(formData.get("year"));
   if (!Number.isInteger(month) || month < 1 || month > 12) {
     return {
-      status: "error",
-      message: "Escolha o mês.",
-      fieldErrors: { month: "Mês inválido." },
+      ok: false,
+      error: {
+        status: "error",
+        message: "Escolha o mês.",
+        fieldErrors: { month: "Mês inválido." },
+      },
     };
   }
   if (!Number.isInteger(year) || year < 2000 || year > 2100) {
     return {
-      status: "error",
-      message: "Informe o ano.",
-      fieldErrors: { year: "Ano inválido." },
+      ok: false,
+      error: {
+        status: "error",
+        message: "Informe o ano.",
+        fieldErrors: { year: "Ano inválido." },
+      },
     };
   }
 
@@ -316,33 +351,324 @@ export async function publishBulletinAction(
   );
   if ("fieldErrors" in parsedFigures) {
     return {
-      status: "error",
-      message: "Confira os valores destacados.",
-      fieldErrors: parsedFigures.fieldErrors,
+      ok: false,
+      error: {
+        status: "error",
+        message: "Confira os valores destacados.",
+        fieldErrors: parsedFigures.fieldErrors,
+      },
+    };
+  }
+  // Figures the system read from a report go out only once someone has
+  // checked them (decision of 11/11/2026).
+  if (formData.get("lido") === "1" && formData.get("conferido") !== "on") {
+    return {
+      ok: false,
+      error: {
+        status: "error",
+        message:
+          "Confira os valores lidos do relatório e marque a conferência antes de publicar.",
+        fieldErrors: {},
+      },
     };
   }
 
   const statusRaw = String(formData.get("bulletinStatus") ?? "preliminary");
   const status = isBulletinStatus(statusRaw) ? statusRaw : "preliminary";
+  return {
+    ok: true,
+    tenant,
+    input: {
+      // First day of the month, zero-padded: the column is a date.
+      referenceMonth: `${year}-${String(month).padStart(2, "0")}-01`,
+      figures: parsedFigures.figures,
+      status,
+    },
+  };
+}
 
-  try {
-    await upsertBulletin(
-      tenant.slug,
-      {
-        // First day of the month, zero-padded: the column is a date.
-        referenceMonth: `${year}-${String(month).padStart(2, "0")}-01`,
-        figures: parsedFigures.figures,
-        status,
-      },
-      session.user.id,
-    );
-  } catch (error) {
-    console.error("transparencia.bulletin", error);
-    return { status: "error", message: GENERIC_ERROR, fieldErrors: {} };
+/** The signing inputs of a bulletin: its PDF, as it will be published. */
+async function bulletinToSign(
+  tenant: Awaited<ReturnType<typeof getTenant>>,
+  input: {
+    referenceMonth: string;
+    figures: BulletinFigures;
+    status: BulletinStatus;
+  },
+) {
+  const stored = { kind: "current" as const, figures: input.figures };
+  const [year, month] = input.referenceMonth.split("-").map(Number);
+  const origin = await requestOrigin();
+  return {
+    pdf: await renderBulletinPdf(
+      tenant,
+      input.referenceMonth,
+      input.status,
+      stored,
+    ),
+    fingerprint: bulletinFingerprint(
+      tenant,
+      input.referenceMonth,
+      input.status,
+      stored,
+    ),
+    title: `Boletim Mensal, ${formatMonthYear(month, year)}`,
+    originalName: `boletim-${input.referenceMonth.slice(0, 7)}.pdf`,
+    verifyUrl: (code: string) => verifyUrlFor(tenant, origin, code),
+    location: `${tenant.location.city}/${tenant.location.state}`,
+    officeName: officialName(tenant),
+  };
+}
+
+/** The signed copy, kept with the bulletin (the assinador's expires). */
+async function keepSigned(
+  tenantSlug: string,
+  signed: { id: string; code: string },
+  fingerprint: string,
+) {
+  const view = await findSignedDocumentWith(db, tenantSlug, { id: signed.id });
+  if (!view?.filePath) throw new SigningError("Assinatura sem arquivo.");
+  const bytes = await readStoredFile(view.filePath);
+  const stored = await storeOfficePdf(tenantSlug, bytes);
+  return { path: stored.path, code: signed.code, fingerprint };
+}
+
+async function publish(
+  tenant: Awaited<ReturnType<typeof getTenant>>,
+  input: {
+    referenceMonth: string;
+    figures: BulletinFigures;
+    status: BulletinStatus;
+  },
+  formData: FormData,
+  userId: string,
+  userName: string,
+  signed?: { path: string; code: string; fingerprint: string },
+) {
+  await upsertBulletin(tenant.slug, { ...input, signed }, userId);
+  if (formData.get("lido") === "1") {
+    await recordAudit({
+      tenantSlug: tenant.slug,
+      actorId: userId,
+      action: "transparency.bulletin.checked",
+      targetType: "transparency-bulletin",
+      targetId: input.referenceMonth,
+      reason: `Valores lidos do relatório conferidos por ${userName}.`,
+    });
   }
   revalidate();
   notifyIndexNow(await getSiteOrigin(), ["/transparencia"]);
+}
+
+export async function publishBulletinAction(
+  _previous: SaveState,
+  formData: FormData,
+): Promise<SaveState> {
+  const session = await authorize();
+  if (!session) {
+    return { status: "error", message: NO_PERMISSION, fieldErrors: {} };
+  }
+  const parsed = await bulletinFromForm(formData);
+  if (!parsed.ok) return parsed.error;
+  const { tenant, input } = parsed;
+
+  try {
+    let signed: { path: string; code: string; fingerprint: string } | undefined;
+    // A1: signed with the office's certificate before it goes out, so the
+    // site never shows it unsigned (decision of 11/11/2026).
+    if (formData.get("assinar") === "a1") {
+      if (
+        !can(session.user.role ?? "", "signer.use", session.user.permissions)
+      ) {
+        return {
+          status: "error",
+          message: "Você não tem permissão para assinar digitalmente.",
+          fieldErrors: {},
+        };
+      }
+      const sign = await bulletinToSign(tenant, input);
+      const done = await signNewDocumentWith(
+        db,
+        tenant.slug,
+        {
+          ...sign,
+          certificateId: String(formData.get("certificateId") ?? ""),
+          password: String(formData.get("password") ?? ""),
+        },
+        session.user.id,
+      );
+      signed = await keepSigned(tenant.slug, done, sign.fingerprint);
+    }
+    await publish(
+      tenant,
+      input,
+      formData,
+      session.user.id,
+      session.user.name,
+      signed,
+    );
+  } catch (error) {
+    if (
+      error instanceof SigningError ||
+      error instanceof CertificatePasswordError ||
+      error instanceof PdfNotSignableError
+    ) {
+      return { status: "error", message: error.message, fieldErrors: {} };
+    }
+    console.error("transparencia.bulletin", error);
+    return { status: "error", message: GENERIC_ERROR, fieldErrors: {} };
+  }
   return { status: "success" };
+}
+
+/** The A3 certificate the browser sends: the holder's and its chain. */
+function tokenCertificate(formData: FormData) {
+  let chain: unknown = [];
+  try {
+    chain = JSON.parse(String(formData.get("chain") ?? "[]"));
+  } catch {
+    chain = [];
+  }
+  return {
+    holderDer: Buffer.from(String(formData.get("holder") ?? ""), "base64"),
+    chainDer: (Array.isArray(chain) ? chain : [])
+      .slice(0, 8)
+      .map((item) => Buffer.from(String(item), "base64")),
+  };
+}
+
+type A3Step =
+  | { status: "prepared"; token: string; toBeSigned: string }
+  | { status: "error"; message: string };
+
+/** A3, step one: the bulletin's PDF, prepared for the token. */
+export async function prepareBulletinA3(formData: FormData): Promise<A3Step> {
+  const session = await authorize();
+  if (
+    !session ||
+    !can(session.user.role ?? "", "signer.use", session.user.permissions)
+  ) {
+    return { status: "error", message: NO_PERMISSION };
+  }
+  const parsed = await bulletinFromForm(formData);
+  if (!parsed.ok)
+    return {
+      status: "error",
+      message:
+        parsed.error.status === "error" ? parsed.error.message : GENERIC_ERROR,
+    };
+  try {
+    const sign = await bulletinToSign(parsed.tenant, parsed.input);
+    const prepared = await prepareA3SignWith(
+      parsed.tenant.slug,
+      {
+        ...sign,
+        ...tokenCertificate(formData),
+      },
+      session.user.id,
+    );
+    return {
+      status: "prepared",
+      token: prepared.token,
+      toBeSigned: prepared.toBeSigned.toString("base64"),
+    };
+  } catch (error) {
+    if (error instanceof SigningError || error instanceof PdfNotSignableError) {
+      return { status: "error", message: error.message };
+    }
+    console.error("transparencia.bulletin.a3.prepare", error);
+    return { status: "error", message: GENERIC_ERROR };
+  }
+}
+
+/** A3, step two: the token's signature comes back; the bulletin goes out signed. */
+export async function finishBulletinA3(
+  formData: FormData,
+): Promise<
+  { status: "signed"; id: string } | { status: "error"; message: string }
+> {
+  const session = await authorize();
+  if (
+    !session ||
+    !can(session.user.role ?? "", "signer.use", session.user.permissions)
+  ) {
+    return { status: "error", message: NO_PERMISSION };
+  }
+  const parsed = await bulletinFromForm(formData);
+  if (!parsed.ok)
+    return {
+      status: "error",
+      message:
+        parsed.error.status === "error" ? parsed.error.message : GENERIC_ERROR,
+    };
+  try {
+    const done = await finishA3SignWith(
+      db,
+      parsed.tenant.slug,
+      {
+        ...tokenCertificate(formData),
+        token: String(formData.get("token") ?? ""),
+        signature: Buffer.from(
+          String(formData.get("signature") ?? ""),
+          "base64",
+        ),
+      },
+      session.user.id,
+    );
+    const { fingerprint } = await bulletinToSign(parsed.tenant, parsed.input);
+    const signed = await keepSigned(parsed.tenant.slug, done, fingerprint);
+    await publish(
+      parsed.tenant,
+      parsed.input,
+      formData,
+      session.user.id,
+      session.user.name,
+      signed,
+    );
+    return { status: "signed", id: done.id };
+  } catch (error) {
+    if (error instanceof SigningError) {
+      return { status: "error", message: error.message };
+    }
+    console.error("transparencia.bulletin.a3.finish", error);
+    return { status: "error", message: GENERIC_ERROR };
+  }
+}
+
+/**
+ * Reads the system's productivity report attached to the bulletin form, so
+ * the figures fill themselves in (decision of 11/11/2026). Nothing stored.
+ */
+export async function readBulletinReport(
+  formData: FormData,
+): Promise<
+  | { status: "read"; figures: ReportFigures }
+  | { status: "error"; message: string }
+> {
+  const session = await authorize();
+  if (!session) return { status: "error", message: NO_PERMISSION };
+  const files = formData
+    .getAll("relatorio")
+    .filter((f): f is File => f instanceof File && f.size > 0);
+  const read: ReportFigures[] = [];
+  for (const file of files) {
+    try {
+      const figures = parseNotarisReport(
+        await pdfTableText(new Uint8Array(await file.arrayBuffer())),
+      );
+      if (figures.kind !== "desconhecido") read.push(figures);
+    } catch {
+      // A scan or another system: the office types the figures.
+    }
+  }
+  if (!read.length) {
+    return {
+      status: "error",
+      message:
+        "Não reconheci um relatório do sistema nesse PDF. Digite os valores.",
+    };
+  }
+  return { status: "read", figures: mergeReports(read) };
 }
 
 /**

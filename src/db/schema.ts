@@ -769,6 +769,12 @@ export const transparencyBulletins = pgTable(
     expensesCents: bigint("expenses_cents", { mode: "number" }),
     // "preliminary" | "consolidated": see core/transparency/bulletin.
     status: text("status").notNull().default("preliminary"),
+    // Signed before publishing (decision of 11/11/2026): the signed copy,
+    // its verification code, and what it covers (lib/bulletin-pdf.ts
+    // bulletinFingerprint). Served only while the fingerprint still holds.
+    signedPdfPath: text("signed_pdf_path"),
+    signedCode: text("signed_code"),
+    signedFingerprint: text("signed_fingerprint"),
     createdBy: text("created_by"),
     createdAt: timestamp("created_at", { withTimezone: true })
       .notNull()
