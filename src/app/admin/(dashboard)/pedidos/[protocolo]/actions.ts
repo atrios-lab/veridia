@@ -74,7 +74,12 @@ import { getSession } from "@/lib/session.ts";
 import { CertificatePasswordError } from "@/lib/signature/certificate.ts";
 import { requestOrigin, verifyUrlFor } from "@/lib/signature/documents.ts";
 import { PdfNotSignableError } from "@/lib/signature/pades.ts";
-import { SigningError, signDeliveredDocumentWith } from "@/lib/signing.ts";
+import {
+  confirmPhysicalSignatureWith,
+  fileHasDigitalSignature,
+  SigningError,
+  signDeliveredDocumentWith,
+} from "@/lib/signing.ts";
 import { getTenant, OFFICE_TIME_ZONE, today } from "@/lib/tenant.ts";
 import {
   AttachmentError,
@@ -541,7 +546,28 @@ export async function deliverDocumentAction(
   try {
     const files = formData
       .getAll("documento")
-      .filter((f): f is File => f instanceof File);
+      .filter((f): f is File => f instanceof File && f.size > 0);
+    // Every file for the client is checked for a digital signature
+    // (decision of 11/11/2026). One without it goes only after the clerk
+    // chose: sign it digitally right after, or confirm it is a document
+    // signed by hand and scanned.
+    const choice = String(formData.get("assinatura") ?? "");
+    const unsigned: boolean[] = await Promise.all(
+      files.map(
+        async (file) =>
+          !fileHasDigitalSignature(
+            Buffer.from(await file.arrayBuffer()),
+            file.type || "",
+          ),
+      ),
+    );
+    if (unsigned.some(Boolean) && choice !== "digital" && choice !== "fisica") {
+      return {
+        status: "error",
+        message:
+          "O documento anexado não contém assinatura digital. Escolha assinar digitalmente ou confirme que é um documento físico digitalizado.",
+      };
+    }
     const owner = await findById(tenant.slug, requestId);
     if (!owner) return { status: "error", message: "Pedido não encontrado." };
     const alreadyDelivered = (
@@ -560,6 +586,15 @@ export async function deliverDocumentAction(
       return { status: "error", message: "Escolha um arquivo para anexar." };
     }
     await attachToRequest(tenant.slug, requestId, stored, "office");
+    if (choice === "fisica") {
+      await confirmPhysicalSignatureWith(
+        db,
+        tenant.slug,
+        requestId,
+        stored.filter((_, index) => unsigned[index]).map((s) => s.storedName),
+        { id: session.user.id, name: session.user.name },
+      );
+    }
 
     const request = await findById(tenant.slug, requestId);
     if (request) {

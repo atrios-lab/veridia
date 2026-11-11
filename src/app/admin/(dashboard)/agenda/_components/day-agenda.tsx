@@ -467,17 +467,34 @@ function ReceiptLink({ id }: { id: string }) {
   );
 }
 
-/** The attendance declaration, to sign and stamp at the counter. */
+/**
+ * The attendance declaration: signed digitally through the platform, or
+ * printed to sign and stamp at the counter (decision of 11/11/2026).
+ */
 function DeclarationLink({ id }: { id: string }) {
+  const pdf = `/admin/agenda/comparecimento/${id}`;
+  const sign = `/admin/utilitarios/assinador?${new URLSearchParams({
+    origem: pdf,
+    titulo: "Declaração de comparecimento",
+  })}#assinar`;
   return (
-    <a
-      href={`/admin/agenda/comparecimento/${id}`}
-      target="_blank"
-      rel="noopener"
-      className="rounded-lg bg-admin-primary px-2.5 py-1.5 text-[11.5px] font-semibold text-white"
-    >
-      Declaração de comparecimento
-    </a>
+    <span className="inline-flex flex-wrap gap-1.5">
+      <a
+        href={sign}
+        className="rounded-lg bg-admin-primary px-2.5 py-1.5 text-[11.5px] font-semibold text-white"
+      >
+        Declaração: assinar digitalmente
+      </a>
+      <a
+        href={pdf}
+        target="_blank"
+        rel="noopener"
+        className="rounded-lg border border-admin-primary px-2.5 py-1.5 text-[11.5px] font-semibold text-admin-primary"
+        title="Abre o PDF para imprimir e assinar à mão"
+      >
+        Imprimir para assinar à mão
+      </a>
+    </span>
   );
 }
 

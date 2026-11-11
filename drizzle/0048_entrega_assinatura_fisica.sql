@@ -1,0 +1,2 @@
+ALTER TABLE "service_request_attachments" ADD COLUMN "physical_signature_at" timestamp with time zone;--> statement-breakpoint
+ALTER TABLE "service_request_attachments" ADD COLUMN "physical_signature_by" text;

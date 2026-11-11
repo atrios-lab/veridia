@@ -69,3 +69,39 @@ O expurgo do arquivo roda na leitura (lista e verificação), como o dos anexos 
 Envie o PDF assinado em <https://validar.iti.gov.br>. Os testes automáticos usam uma cadeia fictícia (AC Teste
 Veridia), que o ITI não reconhece. A conferência com a cadeia ICP-Brasil real é feita com o certificado da
 serventia, já em produção.
+
+## Documentos gerados: assinar digital ou à mão
+
+Decisão de 11/11/2026. Os documentos que o painel gera para a serventia
+assinar trazem duas opções:
+
+- **Assinar digitalmente:** abre o Assinador digital com o documento já
+  carregado, para assinar com A1 ou A3. Depois de assinado, o documento se
+  imprime com a faixa e o QR de conferência ("Abrir para imprimir").
+- **Imprimir para assinar à mão:** abre o PDF para imprimir.
+
+Por enquanto isso vale para a guia de recolhimento (Utilitários › Guias) e
+para a declaração de comparecimento (Agenda). O requerimento não entra,
+porque quem assina é o cliente.
+
+O assinador aceita `?origem=/admin/...&titulo=...` e só carrega rotas do
+próprio painel.
+
+## Documentos enviados ao cliente
+
+Todo arquivo anexado em "Entrega ao cidadão" é conferido antes de ir, no
+navegador e de novo no servidor:
+
+- **Com assinatura digital:** aparece "tem assinatura digital", e o arquivo
+  segue para o cliente.
+- **Sem assinatura digital:** aparece o alerta "O documento anexado não
+  contém assinatura digital". O funcionário escolhe uma destas opções:
+  - **Sim, enviar e assinar digitalmente**, só para PDF. Logo abaixo do
+    arquivo aparece o botão de assinar pela plataforma.
+  - **Confirmo que é um documento desmaterializado, apenas com assinatura
+    física, que foi digitalizado.** A confirmação fica no arquivo (colunas
+    `physical_signature_at` e `physical_signature_by`, migração 0048, que só
+    acrescenta colunas) e na auditoria, na faixa Atenção. O lembrete "sem
+    assinatura" deixa de aparecer para esse arquivo.
+
+Sem uma das duas escolhas, o servidor recusa o envio.

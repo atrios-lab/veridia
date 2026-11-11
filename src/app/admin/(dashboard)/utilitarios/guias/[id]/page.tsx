@@ -1,5 +1,6 @@
 import { notFound } from "next/navigation";
 import { BackLink } from "@/app/admin/_components/back-link";
+import { SignOrPrint } from "@/app/admin/_components/sign-or-print";
 import { can } from "@/core/auth/roles.ts";
 import { GUIDE_KIND_INFO } from "@/core/guides/catalog.ts";
 import { formatGuideNumber } from "@/core/guides/schema.ts";
@@ -57,14 +58,10 @@ export default async function GuidePage({
                 : "Corrija abaixo se precisar: o número continua o mesmo."}
             </p>
           </div>
-          <a
-            href={`${base}?formato=pdf`}
-            target="_blank"
-            rel="noreferrer"
-            className="btn btn-admin-primary btn-md"
-          >
-            <AdminIcon name="printer" className="h-4 w-4" /> PDF
-          </a>
+          <SignOrPrint
+            pdfHref={`${base}?formato=pdf`}
+            title={`Guia nº ${number}`}
+          />
           <a
             href={`${base}?formato=docx`}
             className="btn btn-admin-secondary btn-md"
