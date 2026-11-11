@@ -222,6 +222,7 @@ test("PDF já assinado em outro lugar recebe a assinatura visível (faixa e QR) 
       code: "AB12CD34EF56",
       verifyUrl: "https://cartorio.exemplo/verificar/AB12CD34EF56",
       signer: { name: "MARIA EXEMPLO DA SILVA", at: "10/11/2026, 09:05" },
+      office: "Cartório Exemplo de Notas",
     },
   });
   assert.ok(ours.subarray(0, elsewhere.length).equals(elsewhere));
@@ -236,4 +237,20 @@ test("PDF já assinado em outro lugar recebe a assinatura visível (faixa e QR) 
   // pdf-lib still opens it.
   const { PDFDocument: Reader } = await import("pdf-lib");
   assert.equal((await Reader.load(ours)).getPageCount(), 2);
+});
+
+test("a faixa traz o nome completo do titular do certificado e o cartório em maiúsculas", async () => {
+  const { bandLines } = await import("./stamp.ts");
+  const lines = bandLines({
+    code: "AB12CD34EF56",
+    verifyUrl: "https://cartorio.exemplo/verificar/AB12CD34EF56",
+    signer: { name: "MARIA EXEMPLO DA SILVA", at: "11/11/2026, 09:00" },
+    office: "Cartório do Ofício Único de Exemplo/RN",
+  });
+  assert.match(
+    lines[0],
+    /^Assinado digitalmente por MARIA EXEMPLO DA SILVA, em 11\/11\/2026, 09:00/,
+  );
+  assert.equal(lines[1], "CARTÓRIO DO OFÍCIO ÚNICO DE EXEMPLO/RN");
+  assert.match(lines[3], /AB12-CD34-EF56/);
 });
