@@ -439,3 +439,22 @@ export async function storeOfficePdf(
     path: await store(bytes, storedName, "application/pdf"),
   };
 }
+
+/**
+ * A file or voice note sent in the internal messenger, or a person's photo,
+ * under the office's own folder. The type was already checked against the
+ * messenger's list (core/messages/rules.ts).
+ */
+export async function storeMessengerFile(
+  tenantSlug: string,
+  bytes: Buffer,
+  mimeType: string,
+  extension: string,
+  folder: "mensagens" | "fotos" = "mensagens",
+): Promise<string> {
+  return store(
+    bytes,
+    `${tenantSlug}/${folder}/${randomUUID()}.${extension}`,
+    mimeType,
+  );
+}

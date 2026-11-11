@@ -72,6 +72,13 @@ export const ADMIN_NAV: readonly AdminNavItem[] = [
     permission: "desk.access",
   },
   {
+    group: "Operação",
+    label: "Mensagens",
+    href: "/admin/mensagens",
+    icon: "chat",
+    permission: "desk.access",
+  },
+  {
     group: "Canais do cidadão",
     label: "Requerimentos LGPD",
     href: "/admin/lgpd",

@@ -1,0 +1,788 @@
+"use client";
+
+import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { useCallback, useEffect, useRef, useState } from "react";
+import { toast } from "sonner";
+import { NUDGE_SOUND } from "@/core/chat/alerts.ts";
+import {
+  COLOR_LABELS,
+  COLORS,
+  initialsOf,
+  isAudio,
+  isImage,
+  type MessengerColor,
+  OVERSIGHT_NOTICE,
+  type Presence,
+  STATUS_LABELS,
+  STATUSES,
+  type Status,
+} from "@/core/messages/rules.ts";
+import {
+  isAudioLocked,
+  playSound,
+  unlockAudio,
+} from "../../../_components/chat-sound.ts";
+import { shakeElement, vibrate } from "../../../_components/shake.ts";
+import { AdminIcon } from "../../_components/icon.tsx";
+import {
+  openConversation,
+  pollMessenger,
+  type SerializedContact,
+  type SerializedMessage,
+  saveProfile,
+  sendFile,
+  sendNudge,
+  sendText,
+} from "./actions.ts";
+
+const POLL_MS = 3000;
+
+export interface Me {
+  userId: string;
+  name: string;
+  photo: boolean;
+  status: Status;
+  personalMessage: string;
+  color: MessengerColor;
+  sound: boolean;
+}
+
+const TITLE_BAR: Record<MessengerColor, string> = {
+  verde: "from-msg-verde-from to-msg-verde-to",
+  azul: "from-msg-azul-from to-msg-azul-to",
+  vinho: "from-msg-vinho-from to-msg-vinho-to",
+  grafite: "from-msg-grafite-from to-msg-grafite-to",
+  dourado: "from-msg-dourado-from to-msg-dourado-to",
+};
+
+const DOT: Record<Presence, string> = {
+  disponivel: "bg-msg-online",
+  ocupado: "bg-msg-busy",
+  ausente: "bg-msg-away",
+  offline: "bg-msg-offline",
+};
+
+const EMOJIS = [
+  "😊",
+  "😂",
+  "😉",
+  "😍",
+  "😎",
+  "😢",
+  "😮",
+  "👍",
+  "👏",
+  "🙏",
+  "☕",
+  "📄",
+];
+
+function Avatar({
+  userId,
+  name,
+  photo,
+  presence,
+  size = 40,
+  version = 0,
+}: {
+  userId: string;
+  name: string;
+  photo: boolean;
+  presence?: Presence;
+  size?: number;
+  version?: number;
+}) {
+  return (
+    <span
+      className="relative inline-flex shrink-0"
+      style={{ width: size, height: size }}
+    >
+      {photo ? (
+        // biome-ignore lint/performance/noImgElement: a private route, not an optimizable asset
+        <img
+          src={`/admin/mensagens/foto/${userId}?v=${version}`}
+          alt=""
+          className="h-full w-full rounded-[10px] border-2 border-white object-cover shadow"
+        />
+      ) : (
+        <span className="flex h-full w-full items-center justify-center rounded-[10px] border-2 border-white bg-admin-primary text-[13px] font-bold text-white shadow">
+          {initialsOf(name)}
+        </span>
+      )}
+      {presence && (
+        <span
+          role="img"
+          aria-label={STATUS_LABELS[presence]}
+          className={`absolute -right-1 -bottom-1 h-3.5 w-3.5 rounded-full border-2 border-white ${DOT[presence]}`}
+        />
+      )}
+    </span>
+  );
+}
+
+function formatTime(iso: string): string {
+  return new Date(iso).toLocaleTimeString("pt-BR", {
+    hour: "2-digit",
+    minute: "2-digit",
+    timeZone: "America/Sao_Paulo",
+  });
+}
+
+function formatDay(iso: string): string {
+  return new Date(iso).toLocaleDateString("pt-BR", {
+    day: "2-digit",
+    month: "2-digit",
+    year: "numeric",
+    timeZone: "America/Sao_Paulo",
+  });
+}
+
+function MessageBody({ message }: { message: SerializedMessage }) {
+  const href = `/admin/mensagens/arquivo/${message.id}`;
+  if (
+    message.kind === "audio" ||
+    (message.mimeType && isAudio(message.mimeType))
+  ) {
+    return (
+      // biome-ignore lint/a11y/useMediaCaption: a voice note between colleagues has no caption track
+      <audio controls preload="none" src={href} className="mt-1 max-w-full" />
+    );
+  }
+  if (message.kind === "arquivo") {
+    const image = message.mimeType && isImage(message.mimeType);
+    return (
+      <a
+        href={href}
+        target="_blank"
+        rel="noopener"
+        className="mt-1 inline-flex max-w-full flex-col gap-1 rounded-[10px] border border-admin-border bg-admin-card p-2 text-[12.5px] hover:border-admin-primary"
+      >
+        {image && (
+          // biome-ignore lint/performance/noImgElement: a private route, not an optimizable asset
+          <img
+            src={href}
+            alt={message.fileName ?? ""}
+            className="max-h-48 max-w-full rounded-[6px] object-contain"
+          />
+        )}
+        <span className="flex items-center gap-1.5 font-semibold text-admin-primary [overflow-wrap:anywhere]">
+          <AdminIcon name="file" className="h-4 w-4 shrink-0" />
+          {message.fileName}
+          {message.sizeBytes ? (
+            <span className="font-normal text-admin-muted">
+              ({Math.max(1, Math.round(message.sizeBytes / 1024))} KB)
+            </span>
+          ) : null}
+        </span>
+      </a>
+    );
+  }
+  return (
+    <p className="whitespace-pre-wrap text-[13.5px] text-admin-text [overflow-wrap:anywhere]">
+      {message.body}
+    </p>
+  );
+}
+
+/** Voice notes: hold the button to record, as on a phone. */
+function useRecorder(onDone: (file: File) => void) {
+  const [recording, setRecording] = useState(false);
+  const recorder = useRef<MediaRecorder | null>(null);
+  const chunks = useRef<Blob[]>([]);
+  const start = async () => {
+    if (recording) return;
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      const type = ["audio/webm", "audio/mp4", "audio/ogg"].find((t) =>
+        MediaRecorder.isTypeSupported(t),
+      );
+      const media = new MediaRecorder(stream, type ? { mimeType: type } : {});
+      chunks.current = [];
+      media.ondataavailable = (event) => chunks.current.push(event.data);
+      media.onstop = () => {
+        for (const track of stream.getTracks()) track.stop();
+        const mime = (media.mimeType || "audio/webm").split(";")[0];
+        const blob = new Blob(chunks.current, { type: mime });
+        if (blob.size > 0) {
+          const ext = mime.includes("mp4")
+            ? "m4a"
+            : mime.includes("ogg")
+              ? "ogg"
+              : "webm";
+          onDone(
+            new File([blob], `audio-${Date.now()}.${ext}`, { type: mime }),
+          );
+        }
+      };
+      media.start();
+      recorder.current = media;
+      setRecording(true);
+    } catch {
+      toast.error("O navegador não liberou o microfone.");
+    }
+  };
+  const stop = () => {
+    recorder.current?.stop();
+    recorder.current = null;
+    setRecording(false);
+  };
+  return { recording, start, stop };
+}
+
+export function Messenger({
+  me: initialMe,
+  initialContacts,
+  initialConversation,
+  oversight,
+}: {
+  me: Me;
+  initialContacts: SerializedContact[];
+  initialConversation: { id: string; withUserId: string } | null;
+  oversight: boolean;
+}) {
+  const router = useRouter();
+  const [me, setMe] = useState(initialMe);
+  const [photoVersion, setPhotoVersion] = useState(0);
+  const [contacts, setContacts] = useState(initialContacts);
+  const [active, setActive] = useState(initialConversation);
+  const [messages, setMessages] = useState<SerializedMessage[]>([]);
+  const [text, setText] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [settings, setSettings] = useState(false);
+  const [emojis, setEmojis] = useState(false);
+  const [locked, setLocked] = useState(false);
+  const windowRef = useRef<HTMLDivElement>(null);
+  const listRef = useRef<HTMLDivElement>(null);
+  const lastIso = useRef<string | null>(null);
+  const totalUnread = useRef(
+    initialContacts.reduce((sum, c) => sum + c.unread, 0),
+  );
+  const soundOn = useRef(me.sound);
+  soundOn.current = me.sound;
+
+  const partner = contacts.find((c) => c.userId === active?.withUserId);
+
+  const ring = useCallback((nudge: boolean) => {
+    if (nudge) {
+      shakeElement(windowRef.current);
+      vibrate();
+    }
+    if (!soundOn.current) return;
+    if (!playSound(nudge ? NUDGE_SOUND : "mensageiro", 80)) setLocked(true);
+  }, []);
+
+  const poll = useCallback(async () => {
+    const result = await pollMessenger(active?.id ?? null, lastIso.current);
+    if (!result.ok) return;
+    const { contacts: next, messages: fresh } = result.data;
+    setContacts(next);
+    // Another conversation got something: the list's badge and a tone.
+    const unread = next.reduce((sum, c) => sum + c.unread, 0);
+    if (unread > totalUnread.current) ring(false);
+    totalUnread.current = unread;
+    if (fresh.length) {
+      const first = lastIso.current === null;
+      lastIso.current = fresh.at(-1)?.createdAt ?? lastIso.current;
+      setMessages((current) => {
+        const known = new Set(current.map((m) => m.id));
+        return [...current, ...fresh.filter((m) => !known.has(m.id))];
+      });
+      if (!first) {
+        const theirs = fresh.filter((m) => m.senderId !== me.userId);
+        if (theirs.some((m) => m.kind === "chamar")) ring(true);
+        else if (theirs.length) ring(false);
+      }
+    }
+  }, [active?.id, me.userId, ring]);
+
+  // A new conversation starts from its history.
+  // biome-ignore lint/correctness/useExhaustiveDependencies: runs when the conversation changes
+  useEffect(() => {
+    setMessages([]);
+    lastIso.current = null;
+    void poll();
+  }, [active?.id]);
+
+  useEffect(() => {
+    const timer = setInterval(() => void poll(), POLL_MS);
+    return () => clearInterval(timer);
+  }, [poll]);
+
+  useEffect(() => {
+    setLocked(isAudioLocked());
+    const unlock = () =>
+      void unlockAudio().then((ok) => ok && setLocked(false));
+    window.addEventListener("pointerdown", unlock);
+    return () => window.removeEventListener("pointerdown", unlock);
+  }, []);
+
+  // biome-ignore lint/correctness/useExhaustiveDependencies: scrolls when messages arrive
+  useEffect(() => {
+    listRef.current?.scrollTo({ top: listRef.current.scrollHeight });
+  }, [messages.length]);
+
+  const open = async (contact: SerializedContact) => {
+    if (contact.conversationId) {
+      setActive({ id: contact.conversationId, withUserId: contact.userId });
+    } else {
+      const result = await openConversation(contact.userId);
+      if (!result.ok) {
+        toast.error(result.message);
+        return;
+      }
+      setActive({ id: result.data, withUserId: contact.userId });
+    }
+    router.replace(`/admin/mensagens?com=${contact.userId}`, { scroll: false });
+  };
+
+  const send = async () => {
+    if (!active || !text.trim() || busy) return;
+    setBusy(true);
+    const result = await sendText(active.id, text);
+    setBusy(false);
+    if (!result.ok) {
+      toast.error(result.message);
+      return;
+    }
+    setText("");
+    void poll();
+  };
+
+  const upload = async (file: File, audio = false) => {
+    if (!active) return;
+    const data = new FormData();
+    data.set("conversationId", active.id);
+    data.set("file", file);
+    if (audio) data.set("audio", "1");
+    setBusy(true);
+    const result = await sendFile(data);
+    setBusy(false);
+    if (!result.ok) toast.error(result.message);
+    else void poll();
+  };
+
+  const recorder = useRecorder((file) => void upload(file, true));
+
+  const nudge = async () => {
+    if (!active) return;
+    const result = await sendNudge(active.id);
+    if (!result.ok) toast.error(result.message);
+    else {
+      shakeElement(windowRef.current);
+      void poll();
+    }
+  };
+
+  const saveMe = async (patch: Partial<Me>, photo?: File) => {
+    const next = { ...me, ...patch };
+    setMe(next);
+    const data = new FormData();
+    data.set("status", next.status);
+    data.set("personalMessage", next.personalMessage);
+    data.set("color", next.color);
+    data.set("soundField", "1");
+    if (next.sound) data.set("sound", "on");
+    if (photo) data.set("photo", photo);
+    const result = await saveProfile(data);
+    if (!result.ok) toast.error(result.message);
+    else if (photo) {
+      setMe({ ...next, photo: true });
+      setPhotoVersion((v) => v + 1);
+      toast.success("Foto atualizada.");
+    }
+  };
+
+  const online = contacts.filter((c) => c.presence !== "offline");
+  const offline = contacts.filter((c) => c.presence === "offline");
+
+  const contactRow = (contact: SerializedContact) => (
+    <li key={contact.userId}>
+      <button
+        type="button"
+        onClick={() => void open(contact)}
+        aria-current={
+          active?.withUserId === contact.userId ? "true" : undefined
+        }
+        className={`flex w-full items-center gap-2.5 rounded-[10px] px-2.5 py-2 text-left hover:bg-white ${active?.withUserId === contact.userId ? "bg-white shadow-sm" : ""}`}
+      >
+        <Avatar
+          userId={contact.userId}
+          name={contact.name}
+          photo={contact.photo}
+          presence={contact.presence}
+          size={36}
+        />
+        <span className="min-w-0 flex-1">
+          <span className="block truncate text-[13px] font-semibold text-admin-text">
+            {contact.name}
+          </span>
+          <span className="block truncate text-[11.5px] italic text-admin-muted">
+            {contact.personalMessage || STATUS_LABELS[contact.presence]}
+          </span>
+        </span>
+        {contact.unread > 0 && (
+          <span className="inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-msg-busy px-1.5 text-[11px] font-bold text-white">
+            {contact.unread}
+          </span>
+        )}
+      </button>
+    </li>
+  );
+
+  let lastDay = "";
+
+  return (
+    <div
+      ref={windowRef}
+      className="flex h-[calc(100dvh-150px)] min-h-[460px] flex-col overflow-hidden rounded-[14px] border border-admin-border bg-msg-pane shadow-lg md:h-[calc(100dvh-170px)]"
+    >
+      {/* The window's title bar, in the colour the person picked. */}
+      <div
+        className={`flex items-center gap-2 bg-gradient-to-r px-4 py-2 text-white ${TITLE_BAR[me.color]}`}
+      >
+        <AdminIcon name="chat" className="h-4 w-4" />
+        <span className="flex-1 text-[13px] font-semibold tracking-wide">
+          Mensagens da serventia
+        </span>
+        {oversight && (
+          <Link
+            href="/admin/mensagens/supervisao"
+            className="rounded-md bg-white/15 px-2 py-0.5 text-[11.5px] font-semibold hover:bg-white/25"
+          >
+            Todas as conversas
+          </Link>
+        )}
+        <button
+          type="button"
+          onClick={() => setSettings((v) => !v)}
+          aria-expanded={settings}
+          className="rounded-md bg-white/15 px-2 py-0.5 text-[11.5px] font-semibold hover:bg-white/25"
+        >
+          Personalizar
+        </button>
+      </div>
+      {locked && me.sound && (
+        <button
+          type="button"
+          onClick={() =>
+            void unlockAudio().then((ok) => ok && setLocked(false))
+          }
+          className="bg-admin-warning-bg px-4 py-1.5 text-left text-[12px] font-semibold text-admin-warning-text"
+        >
+          Clique aqui para ativar o som das mensagens.
+        </button>
+      )}
+
+      <div className="flex min-h-0 flex-1">
+        {/* Contacts. On a phone, only when no conversation is open. */}
+        <aside
+          className={`${active ? "hidden md:flex" : "flex"} w-full flex-col border-r border-admin-border md:w-[290px] md:shrink-0`}
+        >
+          <div className="border-b border-admin-border bg-white/70 p-3">
+            <div className="flex items-center gap-2.5">
+              <Avatar
+                userId={me.userId}
+                name={me.name}
+                photo={me.photo}
+                presence={me.status}
+                size={46}
+                version={photoVersion}
+              />
+              <div className="min-w-0 flex-1">
+                <p className="truncate text-[14px] font-bold text-admin-primary">
+                  {me.name}
+                </p>
+                <select
+                  aria-label="Meu status"
+                  value={me.status}
+                  onChange={(event) =>
+                    void saveMe({ status: event.target.value as Status })
+                  }
+                  className="mt-0.5 w-full rounded-[6px] border border-admin-input-border bg-admin-card px-1.5 py-0.5 text-[12px] text-admin-text"
+                >
+                  {STATUSES.map((status) => (
+                    <option key={status} value={status}>
+                      {STATUS_LABELS[status]}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            </div>
+            <input
+              aria-label="Minha mensagem pessoal"
+              defaultValue={me.personalMessage}
+              maxLength={140}
+              placeholder="Escreva uma mensagem pessoal"
+              onBlur={(event) =>
+                event.target.value !== me.personalMessage &&
+                void saveMe({ personalMessage: event.target.value })
+              }
+              className="mt-2 w-full rounded-[6px] border border-transparent bg-transparent px-1.5 py-1 text-[12px] italic text-admin-muted hover:border-admin-input-border focus:border-admin-input-border focus:bg-admin-card"
+            />
+          </div>
+
+          {settings && (
+            <div className="space-y-3 border-b border-admin-border bg-admin-card p-3 text-[12.5px]">
+              <label className="block">
+                <span className="mb-1 block font-bold text-admin-primary">
+                  Minha foto
+                </span>
+                <input
+                  type="file"
+                  accept="image/jpeg,image/png,image/webp"
+                  onChange={(event) => {
+                    const file = event.target.files?.[0];
+                    if (file) void saveMe({}, file);
+                  }}
+                  className="block w-full text-[12px]"
+                />
+              </label>
+              <fieldset>
+                <legend className="mb-1 font-bold text-admin-primary">
+                  Cor da janela
+                </legend>
+                <div className="flex flex-wrap gap-1.5">
+                  {COLORS.map((color) => (
+                    <button
+                      key={color}
+                      type="button"
+                      title={COLOR_LABELS[color]}
+                      aria-label={COLOR_LABELS[color]}
+                      aria-pressed={me.color === color}
+                      onClick={() => void saveMe({ color })}
+                      className={`h-7 w-7 rounded-full bg-gradient-to-br ${TITLE_BAR[color]} ${me.color === color ? "ring-2 ring-admin-primary ring-offset-2" : ""}`}
+                    />
+                  ))}
+                </div>
+              </fieldset>
+              <label className="flex items-center gap-2">
+                <input
+                  type="checkbox"
+                  className="checkbox-admin"
+                  checked={me.sound}
+                  onChange={(event) =>
+                    void saveMe({ sound: event.target.checked })
+                  }
+                />
+                Som ao receber mensagens e chamados
+              </label>
+            </div>
+          )}
+
+          <div className="min-h-0 flex-1 overflow-y-auto p-2">
+            <p className="px-2 pt-1 pb-1 text-[11px] font-bold uppercase tracking-[0.08em] text-admin-muted">
+              Disponíveis ({online.length})
+            </p>
+            <ul>{online.map(contactRow)}</ul>
+            <p className="px-2 pt-3 pb-1 text-[11px] font-bold uppercase tracking-[0.08em] text-admin-muted">
+              Offline ({offline.length})
+            </p>
+            <ul>{offline.map(contactRow)}</ul>
+            {contacts.length === 0 && (
+              <p className="px-2 py-3 text-[12.5px] text-admin-muted">
+                Ninguém mais tem conta nesta serventia ainda.
+              </p>
+            )}
+          </div>
+          <p className="border-t border-admin-border bg-white/60 px-3 py-2 text-[11px] leading-snug text-admin-muted">
+            {OVERSIGHT_NOTICE}
+          </p>
+        </aside>
+
+        {/* The conversation. */}
+        <section
+          className={`${active ? "flex" : "hidden md:flex"} min-w-0 flex-1 flex-col bg-white`}
+        >
+          {active && partner ? (
+            <>
+              <header className="flex items-center gap-3 border-b border-admin-border bg-msg-pane px-3 py-2.5">
+                <button
+                  type="button"
+                  onClick={() => setActive(null)}
+                  className="rounded-md px-1.5 py-1 text-[13px] font-semibold text-admin-primary md:hidden"
+                  aria-label="Voltar aos contatos"
+                >
+                  ‹
+                </button>
+                <Avatar
+                  userId={partner.userId}
+                  name={partner.name}
+                  photo={partner.photo}
+                  presence={partner.presence}
+                  size={44}
+                />
+                <div className="min-w-0 flex-1">
+                  <p className="truncate text-[14px] font-bold text-admin-primary">
+                    {partner.name}{" "}
+                    <span className="text-[12px] font-normal text-admin-muted">
+                      ({STATUS_LABELS[partner.presence]})
+                    </span>
+                  </p>
+                  {partner.personalMessage && (
+                    <p className="truncate text-[12px] italic text-admin-muted">
+                      {partner.personalMessage}
+                    </p>
+                  )}
+                </div>
+              </header>
+
+              <div
+                ref={listRef}
+                className="min-h-0 flex-1 overflow-y-auto px-4 py-3"
+              >
+                {messages.length === 0 && (
+                  <p className="py-6 text-center text-[12.5px] text-admin-muted">
+                    Comece a conversa. {OVERSIGHT_NOTICE}
+                  </p>
+                )}
+                {messages.map((message) => {
+                  const day = formatDay(message.createdAt);
+                  const showDay = day !== lastDay;
+                  lastDay = day;
+                  const mine = message.senderId === me.userId;
+                  return (
+                    <div key={message.id}>
+                      {showDay && (
+                        <p className="my-2 text-center text-[11px] font-semibold text-admin-muted">
+                          {day}
+                        </p>
+                      )}
+                      {message.kind === "chamar" ? (
+                        <p className="my-2 text-center text-[12.5px] font-semibold italic text-msg-busy">
+                          *** {mine ? "Você" : message.senderName} chamou a
+                          atenção{mine ? "" : " de você"}! ***
+                        </p>
+                      ) : (
+                        <div
+                          className={`my-1.5 rounded-[10px] px-3 py-1.5 ${mine ? "bg-msg-mine" : ""}`}
+                        >
+                          <p className="text-[12px]">
+                            <span
+                              className={`font-bold ${mine ? "text-admin-primary" : "text-msg-azul-from"}`}
+                            >
+                              {mine ? "Você" : message.senderName} diz:
+                            </span>{" "}
+                            <span className="text-admin-faint">
+                              ({formatTime(message.createdAt)})
+                            </span>
+                          </p>
+                          <div className="pl-3">
+                            <MessageBody message={message} />
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+
+              <div className="border-t border-admin-border bg-msg-pane px-3 py-2">
+                <div className="flex flex-wrap items-center gap-1.5">
+                  <div className="relative">
+                    <button
+                      type="button"
+                      onClick={() => setEmojis((v) => !v)}
+                      aria-expanded={emojis}
+                      className="rounded-md px-2 py-1 text-[16px] hover:bg-white"
+                      title="Emoticons"
+                    >
+                      😊
+                    </button>
+                    {emojis && (
+                      <div className="absolute bottom-full left-0 z-10 mb-1 grid w-[200px] grid-cols-6 gap-1 rounded-[10px] border border-admin-border bg-admin-card p-2 shadow-lg">
+                        {EMOJIS.map((emoji) => (
+                          <button
+                            key={emoji}
+                            type="button"
+                            onClick={() => {
+                              setText((t) => t + emoji);
+                              setEmojis(false);
+                            }}
+                            className="rounded-md p-1 text-[18px] hover:bg-admin-input-bg"
+                          >
+                            {emoji}
+                          </button>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                  <label
+                    className="cursor-pointer rounded-md px-2 py-1 text-[12.5px] font-semibold text-admin-primary hover:bg-white"
+                    title="Enviar arquivo ou PDF (até 4 MB)"
+                  >
+                    📎 Arquivo
+                    <input
+                      type="file"
+                      className="sr-only"
+                      disabled={busy}
+                      onChange={(event) => {
+                        const file = event.target.files?.[0];
+                        if (file) void upload(file);
+                        event.target.value = "";
+                      }}
+                    />
+                  </label>
+                  <button
+                    type="button"
+                    disabled={busy}
+                    onClick={() =>
+                      recorder.recording
+                        ? recorder.stop()
+                        : void recorder.start()
+                    }
+                    className={`rounded-md px-2 py-1 text-[12.5px] font-semibold ${recorder.recording ? "animate-pulse bg-msg-busy text-white" : "text-admin-primary hover:bg-white"}`}
+                  >
+                    {recorder.recording ? "⏹ Parar e enviar" : "🎤 Áudio"}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => void nudge()}
+                    className="rounded-md px-2 py-1 text-[12.5px] font-semibold text-msg-busy hover:bg-white"
+                    title="Faz a janela da outra pessoa tremer, com som"
+                  >
+                    🔔 Chamar atenção
+                  </button>
+                </div>
+                <div className="mt-1.5 flex items-end gap-2">
+                  <textarea
+                    value={text}
+                    onChange={(event) => setText(event.target.value)}
+                    onKeyDown={(event) => {
+                      if (event.key === "Enter" && !event.shiftKey) {
+                        event.preventDefault();
+                        void send();
+                      }
+                    }}
+                    rows={2}
+                    maxLength={4000}
+                    aria-label="Mensagem"
+                    placeholder="Escreva e tecle Enter para enviar"
+                    className="min-w-0 flex-1 resize-none rounded-[10px] border border-admin-input-border bg-admin-card px-3 py-2 text-[13.5px] text-admin-text outline-none focus:border-admin-primary-soft"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => void send()}
+                    disabled={busy || !text.trim()}
+                    className="btn btn-admin-primary btn-md shrink-0"
+                  >
+                    Enviar
+                  </button>
+                </div>
+              </div>
+            </>
+          ) : (
+            <div className="flex flex-1 flex-col items-center justify-center gap-2 p-6 text-center text-[13px] text-admin-muted">
+              <AdminIcon
+                name="chat"
+                className="h-10 w-10 text-admin-primary-soft"
+              />
+              <p>Escolha alguém na lista para conversar.</p>
+              <p className="max-w-sm text-[11.5px]">{OVERSIGHT_NOTICE}</p>
+            </div>
+          )}
+        </section>
+      </div>
+    </div>
+  );
+}

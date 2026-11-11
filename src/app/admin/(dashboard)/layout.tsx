@@ -11,6 +11,7 @@ import {
 } from "@/lib/audit-trail.ts";
 import { waitingCount } from "@/lib/chat.ts";
 import { openGuideRequestCount } from "@/lib/guide-requests.ts";
+import { getProfileWith, inboxWith } from "@/lib/messages.ts";
 import { getOfficeAlerts } from "@/lib/office-alerts.ts";
 import { openCountByKind, openRequestCount } from "@/lib/service-request.ts";
 import { getPendingSession, getSession } from "@/lib/session.ts";
@@ -24,6 +25,7 @@ import {
 } from "../_components/chat-alerts.tsx";
 import { GlobalSearchProvider } from "../_components/global-search.tsx";
 import { GuideAlerts } from "../_components/guide-alerts.tsx";
+import { MessengerWatch } from "../_components/messenger-watch.tsx";
 import { RecordAlerts } from "../_components/record-alerts.tsx";
 import { ShortcutListener } from "../_components/shortcut-listener.tsx";
 import { AdminSidebar } from "../_components/sidebar.tsx";
@@ -72,7 +74,16 @@ export default async function DashboardLayout({
         () => 0,
       )
     : 0;
+  // The internal messenger: unread for the badge, the sound choice for
+  // the watcher that rings on every screen.
+  const messenger = can(role, "desk.access", granted)
+    ? await Promise.all([
+        inboxWith(db, session.user.id, new Date()),
+        getProfileWith(db, tenant.slug, session.user.id),
+      ]).catch(() => null)
+    : null;
   const counts: Record<string, number> = {
+    "/admin/mensagens": messenger?.[0].unread ?? 0,
     // Notifications of the audit waiting for this person's answer, and the
     // urgent acts waiting for the holder's look.
     "/admin/auditoria":
@@ -188,6 +199,7 @@ export default async function DashboardLayout({
           <AdminTopBar user={user} />
           {urgentPending > 0 && <UrgentAuditBanner count={urgentPending} />}
           {children}
+          {messenger && <MessengerWatch sound={messenger[1]?.sound ?? true} />}
           {/* Every screen, not only the queue: the attendant hears and sees
               the chat wherever they are working in the panel. */}
           {can(role, "chat.manage", granted) && (

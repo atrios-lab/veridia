@@ -1452,3 +1452,87 @@ export const auditReviews = pgTable(
   },
   (t) => [uniqueIndex("audit_reviews_audit").on(t.auditId)],
 );
+
+/* ---------------------------------------------------- mensagens internas */
+
+/**
+ * Each person's face in the internal messenger: photo, status, the line
+ * under the name, the window's colour and whether it rings. One per account.
+ */
+export const messengerProfiles = pgTable("messenger_profiles", {
+  userId: text("user_id").primaryKey(),
+  tenantSlug,
+  photoPath: text("photo_path"),
+  status: text("status").notNull().default("disponivel"),
+  personalMessage: text("personal_message"),
+  color: text("color").notNull().default("verde"),
+  sound: boolean("sound").notNull().default(true),
+  lastSeenAt: timestamp("last_seen_at", { withTimezone: true }),
+  updatedAt: timestamp("updated_at", { withTimezone: true })
+    .notNull()
+    .defaultNow(),
+});
+
+/** A conversation between two people of the office (or a group). */
+export const messengerConversations = pgTable(
+  "messenger_conversations",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    tenantSlug,
+    /** "a:b" with the two account ids sorted: one direct conversation per pair. */
+    pairKey: text("pair_key"),
+    title: text("title"),
+    createdBy: text("created_by").notNull(),
+    lastMessageAt: timestamp("last_message_at", { withTimezone: true }),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (t) => [
+    uniqueIndex("messenger_conversations_pair").on(t.tenantSlug, t.pairKey),
+  ],
+);
+
+export const messengerMembers = pgTable(
+  "messenger_members",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    conversationId: uuid("conversation_id")
+      .notNull()
+      .references(() => messengerConversations.id),
+    userId: text("user_id").notNull(),
+    lastReadAt: timestamp("last_read_at", { withTimezone: true }),
+    joinedAt: timestamp("joined_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (t) => [
+    uniqueIndex("messenger_members_unique").on(t.conversationId, t.userId),
+    index("messenger_members_user").on(t.userId),
+  ],
+);
+
+export const messengerMessages = pgTable(
+  "messenger_messages",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    conversationId: uuid("conversation_id")
+      .notNull()
+      .references(() => messengerConversations.id),
+    tenantSlug,
+    senderId: text("sender_id").notNull(),
+    /** "texto" | "arquivo" | "audio" | "chamar" (core/messages/rules.ts). */
+    kind: text("kind").notNull(),
+    body: text("body"),
+    filePath: text("file_path"),
+    fileName: text("file_name"),
+    mimeType: text("mime_type"),
+    sizeBytes: integer("size_bytes"),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (t) => [
+    index("messenger_messages_conversation").on(t.conversationId, t.createdAt),
+  ],
+);
