@@ -16,6 +16,8 @@
   - escolher, trocar ou apagar o e-mail de verificação de cada pessoa. Apagado, o código volta para o
     e-mail da conta;
   - "Pedir o código de novo nos computadores salvos": vale a partir do próximo login daquela pessoa.
+- **Minha conta** (menu com o nome, no alto da tela): cada pessoa troca **só o próprio** e-mail de
+  verificação. O e-mail novo é confirmado com um código enviado a ele antes de valer.
 - **Átrios:** a conta mestre da Átrios (superadmin) não passa pelo código.
 
 ## Como é garantido

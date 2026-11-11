@@ -227,3 +227,81 @@ export async function confirmAccessCode(
   });
   return undefined;
 }
+
+/* ------------------------------------------- the person's own e-mail */
+
+const NEW_EMAIL_COOKIE = "painel-novo-email";
+const newEmailBinding = (userId: string, email: string) =>
+  `novo-email:${userId}:${email.toLowerCase()}`;
+
+/**
+ * Before a person points their own code to another e-mail, that address
+ * proves it is theirs: a code goes to it. Without this, a session left open
+ * on someone's desk could send every future code elsewhere.
+ */
+export async function sendEmailChangeCode(
+  tenant: Tenant,
+  user: { id: string; name: string },
+  newEmail: string,
+): Promise<string> {
+  const { code, token, expiresAt } = createCodeChallenge(
+    newEmailBinding(user.id, newEmail),
+  );
+  const jar = await cookies();
+  jar.set(NEW_EMAIL_COOKIE, token, {
+    httpOnly: true,
+    secure,
+    sameSite: "lax",
+    path: "/admin",
+    expires: expiresAt,
+  });
+  const spaced = `${code.slice(0, 3)} ${code.slice(3)}`;
+  await sendEmail({
+    to: newEmail,
+    fromName: tenant.name,
+    fromAddress: tenant.emailFrom,
+    subject: `Confirme o e-mail de verificação: ${spaced}`,
+    text:
+      `Olá, ${user.name}.\n\n` +
+      `Para receber neste e-mail os códigos de acesso ao painel do ${tenant.name}, informe o código ${spaced}. ` +
+      `Ele vale por ${CODE_MINUTES} minutos.\n\n` +
+      "Se não foi você quem pediu, ignore esta mensagem.",
+    html:
+      `<p>Olá, ${escapeHtml(user.name)}.</p>` +
+      `<p>Para receber neste e-mail os códigos de acesso ao painel do ${escapeHtml(tenant.name)}, informe o código:</p>` +
+      `<p style="font-size:26px;font-weight:bold;letter-spacing:4px">${spaced}</p>` +
+      `<p>Ele vale por ${CODE_MINUTES} minutos. Se não foi você quem pediu, ignore esta mensagem.</p>`,
+  });
+  return maskEmail(newEmail);
+}
+
+/** Undefined when the code proves the new address; otherwise the message. */
+export async function confirmEmailChange(
+  userId: string,
+  newEmail: string,
+  code: string,
+): Promise<string | undefined> {
+  if (await isAccessCodeLocked(userId)) {
+    return "Muitos códigos errados. Espere 10 minutos e tente de novo.";
+  }
+  const jar = await cookies();
+  const result = verifyCodeChallenge(
+    jar.get(NEW_EMAIL_COOKIE)?.value,
+    code,
+    newEmailBinding(userId, newEmail),
+  );
+  if (result === "wrong") {
+    await countWrongAccessCode(userId);
+    return "Código incorreto.";
+  }
+  if (result === "expired") return "O código venceu. Peça um código novo.";
+  if (result === "missing") return "Peça o código para o novo e-mail primeiro.";
+  jar.set(NEW_EMAIL_COOKIE, "", {
+    httpOnly: true,
+    secure,
+    sameSite: "lax",
+    path: "/admin",
+    expires: new Date(0),
+  });
+  return undefined;
+}

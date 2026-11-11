@@ -35,3 +35,8 @@ códigos errados repetidos SHALL bloquear novas tentativas por um tempo.
 
 - **WHEN** a conta mestre da Átrios entra com a senha
 - **THEN** o painel abre sem pedir código
+
+#### Scenario: A pessoa troca o próprio e-mail de verificação
+
+- **WHEN** a pessoa informa um novo e-mail de verificação em Minha conta e confirma o código enviado a ele
+- **THEN** os próximos códigos dela vão para esse e-mail, e ela não consegue alterar o e-mail de outra pessoa

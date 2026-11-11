@@ -39,7 +39,8 @@ export default async function TwoStepPage() {
             seguinte. Quem marcar "Salvar este computador" não recebe mais o
             código naquele computador. Aqui você escolhe para qual e-mail vai o
             código de cada pessoa e pode fazer os computadores salvos pedirem o
-            código de novo.
+            código de novo. Cada pessoa também pode trocar o próprio e-mail em
+            Minha conta (menu com o nome, no alto da tela).
           </p>
         </section>
         {accounts.map((account) => (

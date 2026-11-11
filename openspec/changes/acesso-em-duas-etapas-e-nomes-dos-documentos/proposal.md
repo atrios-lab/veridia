@@ -17,6 +17,9 @@
   - **Configurações › Duas etapas:** o administrador escolhe, troca ou apaga o **e-mail de verificação** de
     cada pessoa (apagado, o código volta para o e-mail da conta). Ali também faz os computadores salvos de
     alguém **pedirem o código de novo**, a partir do próximo login dessa pessoa.
+  - **Minha conta:** cada pessoa troca **só o próprio** e-mail de verificação, pelo menu com o nome no
+    alto da tela, e confirma o e-mail novo com um código enviado a ele. Também pode fazer os próprios
+    computadores salvos pedirem o código de novo.
   - **Átrios:** a conta mestre da Átrios (superadmin) não passa pelo código.
   - **Garantia:** `getSession` recusa sessão sem a confirmação, então toda tela, ação e rota do painel
     exige o código.
