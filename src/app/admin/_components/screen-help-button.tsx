@@ -12,10 +12,13 @@ import type { ScreenHelp } from "./screen-help.ts";
 export function ScreenHelpButton({
   help,
   canConfigure,
+  label = "Como funciona esta tela",
 }: {
   help: ScreenHelp;
   /** The person may open the settings link. */
   canConfigure: boolean;
+  /** What the "!" explains, for a screen reader (one per screen by default). */
+  label?: string;
 }) {
   const [open, setOpen] = useState(false);
   const [pinned, setPinned] = useState(false);
@@ -57,7 +60,7 @@ export function ScreenHelpButton({
     >
       <button
         type="button"
-        aria-label="Como funciona esta tela"
+        aria-label={label}
         aria-expanded={open}
         aria-controls={id}
         onClick={() => {
@@ -72,7 +75,7 @@ export function ScreenHelpButton({
         <span
           id={id}
           role="dialog"
-          aria-label="Como funciona esta tela"
+          aria-label={label}
           className="absolute top-[calc(100%+8px)] left-0 z-40 block max-h-[72vh] w-[min(460px,calc(100vw-48px))] overflow-y-auto rounded-[14px] border border-admin-border bg-admin-card p-4 text-left shadow-[0_12px_32px_rgba(9,24,16,0.18)]"
         >
           <span className="block text-[11px] font-bold uppercase tracking-[0.08em] text-admin-accent">

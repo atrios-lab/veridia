@@ -31,6 +31,8 @@ import { getSession } from "@/lib/session.ts";
 import { getTenant, today } from "@/lib/tenant.ts";
 import { AdminIcon } from "../../../_components/icon.tsx";
 import { AdminPageHeader } from "../../../_components/page-header.tsx";
+import { PAPER_SENDING_HELP } from "../../../_components/screen-help.ts";
+import { ScreenHelpButton } from "../../../_components/screen-help-button.tsx";
 import { VoidMovementButton } from "./forms.tsx";
 
 export const metadata = { title: "Papel de segurança" };
@@ -515,11 +517,19 @@ export default async function SecurityPaperPage({
           )}
         </section>
 
-        <section className="overflow-hidden rounded-[14px] border border-admin-border bg-admin-card">
+        {/* No overflow-hidden here: the "!" opens over the list below. */}
+        <section className="rounded-[14px] border border-admin-border bg-admin-card">
           <div className="flex flex-wrap items-center justify-between gap-2 border-b border-admin-border px-5 py-3.5">
-            <h2 className="font-serif text-[17px] font-semibold text-admin-primary">
-              Ofícios e relatórios
-            </h2>
+            <div className="flex items-center gap-2.5">
+              <h2 className="font-serif text-[17px] font-semibold text-admin-primary">
+                Ofícios e relatórios
+              </h2>
+              <ScreenHelpButton
+                help={PAPER_SENDING_HELP}
+                canConfigure={false}
+                label="O que enviar à Corregedoria e quando"
+              />
+            </div>
             <Link
               href="/admin/utilitarios/papel-seguranca/gerar"
               className="btn btn-admin-secondary btn-sm"
