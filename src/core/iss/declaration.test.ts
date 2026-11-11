@@ -2,12 +2,15 @@ import assert from "node:assert/strict";
 import { test } from "node:test";
 import { TENANTS } from "@/core/tenant/resolve.ts";
 import {
+  buildFilingReceipt,
   buildIssDocument,
   competenceLabel,
   defaultIssSettings,
+  dueDateOf,
   formatRate,
   issOf,
   issOn,
+  portalFields,
 } from "./declaration.ts";
 
 const tenant = TENANTS["cartorio-marinho"];
@@ -95,4 +98,89 @@ test("ISS apurado ato a ato no relatório: menor que a alíquota sobre o total",
     all,
     /cujas cópias seguem anexas e são por esta declaração ratificadas/,
   );
+});
+
+test("vencimento: o digitado, ou o dia configurado do mês seguinte", () => {
+  const d = { competence: "2026-12", dueDate: "" };
+  assert.equal(dueDateOf(d, { dueDay: 10 }), "2027-01-10");
+  assert.equal(
+    dueDateOf({ competence: "2027-01", dueDate: "" }, { dueDay: 31 }),
+    "2027-02-28",
+  );
+  assert.equal(
+    dueDateOf({ ...d, dueDate: "2027-01-05" }, { dueDay: 10 }),
+    "2027-01-05",
+  );
+  assert.equal(dueDateOf(d, { dueDay: null }), "");
+});
+
+test("site da prefeitura: os campos do DAM prontos para copiar", () => {
+  const settings = {
+    ...defaultIssSettings(tenant),
+    cnpj: "00.000.000/0001-00",
+    portalRevenue: "ISS PRÓPRIO (fictício)",
+    dueDay: 15,
+    filing: "portal" as const,
+  };
+  const fields = portalFields(tenant, {
+    declaration: {
+      competence: "2026-10",
+      emolumentsCents: 200_000,
+      rateBasisPoints: 500,
+      damNumber: "",
+      dueDate: "",
+      paidOn: "",
+      notes: "",
+      issCents: 9_000,
+    },
+    settings,
+    year: 2026,
+    sequence: 2,
+    attachments: 2,
+  });
+  const by = Object.fromEntries(fields.map((f) => [f.key, f.value]));
+  assert.deepEqual(
+    fields.map((f) => f.label),
+    [
+      "CPF / CNPJ",
+      "Nome / Razão social",
+      "Receita",
+      "Valor a pagar",
+      "Descrição",
+      "Data para pagamento",
+    ],
+  );
+  assert.equal(by.documento, "00.000.000/0001-00");
+  assert.equal(by.receita, "ISS PRÓPRIO (fictício)");
+  assert.equal(by.valor, "90,00");
+  assert.equal(by.vencimento, "15/11/2026");
+  assert.match(by.descricao, /competência 10\/2026/);
+  assert.match(by.descricao, /apurado ato a ato/);
+  assert.match(by.descricao, /Declaração de ISS nº 002\/2026/);
+});
+
+test("SEMUT: protocolo de entrega com campos para o servidor preencher", () => {
+  const doc = buildFilingReceipt(tenant, {
+    declaration: {
+      competence: "2026-10",
+      emolumentsCents: 200_000,
+      rateBasisPoints: 500,
+      damNumber: "",
+      dueDate: "",
+      paidOn: "",
+      notes: "",
+      issCents: null,
+    },
+    settings: defaultIssSettings(tenant),
+    year: 2026,
+    sequence: 2,
+    attachments: 1,
+  });
+  assert.equal(doc.title, "Protocolo de entrega");
+  const all = JSON.stringify(doc);
+  assert.match(all, /Declaração de ISS nº 002\/2026/);
+  assert.match(all, /R\$ 100,00/);
+  assert.match(all, /Recebimento \(preenchido pela SEMUT\)/);
+  assert.match(all, /Assinatura e carimbo/);
+  assert.equal(defaultIssSettings(tenant).filing, "semut");
 });

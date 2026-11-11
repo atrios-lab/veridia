@@ -4,12 +4,15 @@ import {
   competenceLabel,
   competenceTitle,
   formatDeclarationNumber,
+  portalFields,
 } from "@/core/iss/declaration.ts";
 import { formatMoneyBRL } from "@/core/transparency/bulletin.ts";
 import { db } from "@/db/index.ts";
 import {
   attachmentsOf,
   findIssDeclarationWith,
+  getIssSettings,
+  inputOf,
 } from "@/lib/iss-declarations.ts";
 import { getSession } from "@/lib/session.ts";
 import { getTenant, today } from "@/lib/tenant.ts";
@@ -18,6 +21,7 @@ import { AdminPageHeader } from "../../../../_components/page-header.tsx";
 import { SignOrPrint } from "../../../../_components/sign-or-print.tsx";
 import { IssForm } from "../iss-form.tsx";
 import { RemoveIssButton } from "../remove-button.tsx";
+import { FilingCard } from "./filing-card.tsx";
 
 export const metadata = { title: "Declaração de ISS" };
 
@@ -45,6 +49,7 @@ export default async function IssDeclarationPage({
   const query = await searchParams;
   const number = formatDeclarationNumber(row.year, row.sequence);
   const papers = attachmentsOf(row);
+  const settings = await getIssSettings(tenant);
   const month = competenceLabel(row.competence);
 
   return (
@@ -84,6 +89,28 @@ export default async function IssDeclarationPage({
           />
           <RemoveIssButton id={row.id} />
         </section>
+        <FilingCard
+          id={row.id}
+          mode={settings.filing}
+          portalUrl={settings.portalUrl}
+          fields={portalFields(tenant, {
+            declaration: inputOf(row),
+            settings,
+            year: row.year,
+            sequence: row.sequence,
+            attachments: papers.length,
+          })}
+          pdfHref={`/admin/utilitarios/iss/${row.id}/arquivo`}
+          receiptHref={`/admin/utilitarios/iss/${row.id}/arquivo?via=protocolo`}
+          filedOn={row.filedOn}
+          reference={row.filingReference}
+          today={today()}
+          canConfigure={can(
+            session.user.role ?? "",
+            "content.edit",
+            session.user.permissions,
+          )}
+        />
         <h2 className="font-serif text-[17px] font-semibold text-admin-primary">
           Corrigir
         </h2>

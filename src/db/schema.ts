@@ -1249,6 +1249,12 @@ export const issDeclarations = pgTable(
      * before, which had only `attachmentPath`.
      */
     attachments: jsonb("attachments").$type<{ path: string; name: string }[]>(),
+    /**
+     * When the declaration reached the prefeitura ("YYYY-MM-DD") and the
+     * reference it got there: the SEMUT's protocol, or the portal's.
+     */
+    filedOn: text("filed_on").notNull().default(""),
+    filingReference: text("filing_reference").notNull().default(""),
     createdBy: text("created_by"),
     /** "Excluir": the row stays, out of the lists, and frees its number. */
     deletedAt: timestamp("deleted_at", { withTimezone: true }),

@@ -70,6 +70,33 @@ cartório conferiu.
 Se o relatório não for reconhecido (outro sistema, PDF escaneado), ele vai
 anexo do mesmo jeito e os valores são digitados.
 
+## Como a declaração chega à prefeitura
+
+Na configuração, o cartório escolhe uma das duas formas. Cada declaração mostra
+o passo a passo da forma escolhida.
+
+- **Pelo site da prefeitura (DAM on-line).** A tela mostra, prontos para
+  copiar, os campos que a emissão de DAM costuma pedir: CPF/CNPJ, nome ou
+  razão social, receita, valor a pagar, descrição e data para pagamento. Em
+  seguida vem o PDF da declaração com os anexos, para anexar no site. O
+  endereço do site e o nome da receita ficam na configuração.
+- **Entrega na SEMUT.** É para a prefeitura sem sistema. A declaração é
+  impressa com os anexos, junto com um **protocolo de entrega** de uma página.
+  O servidor da SEMUT preenche nele a data, o número do protocolo, o nome, a
+  matrícula, a assinatura e o carimbo. O protocolo fica com o cartório.
+
+Nas duas formas, o cartório anota a data da entrega e o número do protocolo ou
+do DAM. A lista mostra o que ainda está pendente.
+
+A data para pagamento é o vencimento digitado na declaração. Se não houver,
+vale o dia de vencimento da configuração, no mês seguinte à competência.
+
+**Atenção ao DAM avulso.** Alguns sites avisam que a emissão avulsa ("ISS
+homologado eventual", "ISS substituto") é só para quem não tem cadastro na
+SEMUT, e que o contribuinte cadastrado que a usa não quita o débito. A
+serventia sediada no município deve ter inscrição municipal. Por isso, confirme
+com a SEMUT qual receita usar antes de configurar.
+
 ## Fundamentação que sai no PDF
 
 - Constituição Federal, art. 156, III.
@@ -91,7 +118,8 @@ até o Tabelião informar a lei e a alíquota na configuração.
 ## Técnico
 
 - Tabela `iss_declarations` (migração 0049, só cria a tabela; migração 0050
-  só acrescenta as colunas `iss_from_report` e `attachments`).
+  só acrescenta as colunas `iss_from_report` e `attachments`; migração 0051
+  só acrescenta `filed_on` e `filing_reference`).
 - Numeração anual na série `declaracao-iss`, que aparece em Configurações ›
   Numeração.
 - "Excluir" não apaga do banco: a declaração sai da lista, o número fica

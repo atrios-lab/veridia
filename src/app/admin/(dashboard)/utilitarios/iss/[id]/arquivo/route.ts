@@ -5,15 +5,19 @@ import {
   findIssDeclarationWith,
   getIssSettings,
   renderIssDeclarationPdf,
+  renderIssReceiptPdf,
 } from "@/lib/iss-declarations.ts";
 import { getSession } from "@/lib/session.ts";
 import { getTenant } from "@/lib/tenant.ts";
 
 export const runtime = "nodejs";
 
-/** The declaration with the month's book behind it, one PDF to print or sign. */
+/**
+ * The declaration with the month's book and reports behind it, one PDF to
+ * print or sign; with `?via=protocolo`, the receipt the SEMUT stamps.
+ */
 export async function GET(
-  _request: Request,
+  request: Request,
   { params }: { params: Promise<{ id: string }> },
 ): Promise<Response> {
   const session = await getSession();
@@ -26,15 +30,16 @@ export async function GET(
   const tenant = await getTenant();
   const row = await findIssDeclarationWith(db, tenant.slug, (await params).id);
   if (!row) return new Response("Não encontrada", { status: 404 });
-  const pdf = await renderIssDeclarationPdf(
-    tenant,
-    row,
-    await getIssSettings(tenant),
-  );
+  const receipt = new URL(request.url).searchParams.get("via") === "protocolo";
+  const settings = await getIssSettings(tenant);
+  const pdf = receipt
+    ? await renderIssReceiptPdf(tenant, row, settings)
+    : await renderIssDeclarationPdf(tenant, row, settings);
+  const name = issFileName(row.competence);
   return new Response(new Uint8Array(pdf), {
     headers: {
       "Content-Type": "application/pdf",
-      "Content-Disposition": `inline; filename="${issFileName(row.competence)}"`,
+      "Content-Disposition": `inline; filename="${receipt ? name.replace("declaracao", "protocolo") : name}"`,
       "Cache-Control": "private, no-store",
     },
   });

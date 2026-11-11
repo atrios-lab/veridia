@@ -15,8 +15,10 @@ import {
   issueIssDeclarationWith,
   listIssDeclarationsWith,
   pendingBulletinsWith,
+  recordIssFilingWith,
   removeIssDeclarationWith,
   renderIssDeclarationPdf,
+  renderIssReceiptPdf,
   updateIssDeclarationWith,
 } from "./iss-declarations.ts";
 import { storeOfficePdf } from "./uploads.ts";
@@ -200,4 +202,33 @@ test("o PDF leva a declaração e, atrás, o livro e o relatório anexos", async
   const merged = await PDFDocument.load(pdf);
   // The declaration's own page(s), the book's two pages, the report's one.
   assert.ok(merged.getPageCount() >= 4);
+});
+
+test("entrega anotada (data e protocolo) e protocolo da SEMUT em PDF", async () => {
+  const row = await issueIssDeclarationWith(
+    db,
+    TENANT,
+    input("2026-04", 80_000),
+    [],
+    "titular",
+    new Date("2026-11-11T12:00:00Z"),
+  );
+  await recordIssFilingWith(
+    db,
+    TENANT,
+    row.id,
+    { filedOn: "2026-11-11", reference: " 123/2026 (fictício) " },
+    "titular",
+  );
+  const [saved] = (await listIssDeclarationsWith(db, TENANT)).filter(
+    (r) => r.id === row.id,
+  );
+  assert.equal(saved.filedOn, "2026-11-11");
+  assert.equal(saved.filingReference, "123/2026 (fictício)");
+  const pdf = await renderIssReceiptPdf(
+    tenant,
+    saved,
+    defaultIssSettings(tenant),
+  );
+  assert.equal((await PDFDocument.load(pdf)).getPageCount(), 1);
 });

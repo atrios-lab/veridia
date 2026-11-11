@@ -27,6 +27,8 @@ const EXACT: Record<string, string> = {
   "iss-declaration.issue": "Gerou uma declaração de ISS",
   "iss-declaration.update": "Corrigiu uma declaração de ISS",
   "iss-declaration.remove": "Excluiu uma declaração de ISS da lista",
+  "iss-declaration.file":
+    "Registrou a entrega de uma declaração de ISS à prefeitura",
   "transparency.bulletin.iss": "Lançou o ISS no boletim mensal",
   "signed-document.sign": "Assinou digitalmente um documento",
   "messenger.lunch-request": "Pediu para mudar o horário de almoço",
@@ -241,6 +243,8 @@ const EXPLANATIONS: Record<string, string> = {
     "Os valores de uma declaração de ISS foram corrigidos: confira a competência, os emolumentos e a alíquota.",
   "iss-declaration.remove":
     "Uma declaração de ISS saiu da lista. O registro continua guardado, e o número dela ficou livre.",
+  "iss-declaration.file":
+    "Foi anotado quando a declaração de ISS chegou à prefeitura (pelo site ou na SEMUT) e o número do protocolo.",
   "transparency.bulletin.iss":
     "O ISS de uma declaração foi lançado no boletim mensal da página de transparência.",
   "signed-document.sign":
