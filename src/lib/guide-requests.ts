@@ -22,7 +22,7 @@ import {
 } from "@/db/schema.ts";
 
 /**
- * The citizens' requests for a guia de recolhimento, worked in the panel's
+ * The citizens' requests for a guia imobiliária, worked in the panel's
  * Utilitários instead of the Pedidos queue: what came in, what the citizen
  * moved since (a document, an answer to an exigência, a comprovante), and
  * the guia drawn for each.
@@ -176,7 +176,7 @@ export function listGuideRequests(
   return listGuideRequestsWith(db, tenantSlug, options);
 }
 
-/** Open guia requests: the sidebar badge of "Guias de recolhimento". */
+/** Open guia requests: the sidebar badge of "Guias imobiliárias". */
 export async function openGuideRequestCount(
   tenantSlug: string,
 ): Promise<number> {

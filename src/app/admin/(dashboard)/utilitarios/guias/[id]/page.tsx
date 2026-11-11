@@ -12,7 +12,7 @@ import { AdminPageHeader } from "../../../../_components/page-header.tsx";
 import { GuideForm } from "../guide-form.tsx";
 import { GuideNumber } from "./guide-number.tsx";
 
-export const metadata = { title: "Guia de recolhimento" };
+export const metadata = { title: "Guia imobiliária" };
 
 /** One guia: its files, and the same form to correct it (same number). */
 export default async function GuidePage({
@@ -43,10 +43,7 @@ export default async function GuidePage({
     <>
       <AdminPageHeader title={`Guia nº ${number}`} />
       <main className="flex max-w-[1100px] flex-col gap-4.5 px-[30px] py-7">
-        <BackLink
-          href="/admin/utilitarios/guias"
-          label="Guias de recolhimento"
-        />
+        <BackLink href="/admin/utilitarios/guias" label="Guias imobiliárias" />
         <section className="flex flex-wrap items-center gap-3 rounded-[14px] border border-admin-border bg-admin-card px-5 py-4">
           <div className="mr-auto">
             <p className="text-[13px] font-bold text-admin-primary">

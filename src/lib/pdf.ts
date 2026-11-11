@@ -208,6 +208,32 @@ function drawSection(
       });
     pdf.moveDown(0.4);
   }
+
+  if (section.highlight) drawHighlight(pdf, section.highlight, brand);
+}
+
+/** A paragraph in a tinted box with the theme's bar on its left. */
+function drawHighlight(pdf: Pdf, text: string, brand: DocumentBrand): void {
+  const pad = 10;
+  const width = contentWidth(pdf) - pad * 2 - 4;
+  pdf.font("Times-Roman").fontSize(11.5);
+  const height = pdf.heightOfString(text, { width, lineGap: 2 }) + pad * 2;
+  pdf.moveDown(0.4);
+  if (pdf.y + height > bottom(pdf)) pdf.addPage();
+  const top = pdf.y;
+  pdf.rect(MARGIN, top, contentWidth(pdf), height).fill(brand.palette.tint);
+  pdf.rect(MARGIN, top, 4, height).fill(brand.palette.primary);
+  pdf
+    .font("Times-Roman")
+    .fontSize(11.5)
+    .fillColor(NEUTRALS.text)
+    .text(text, MARGIN + 4 + pad, top + pad, {
+      width,
+      align: "justify",
+      lineGap: 2,
+    });
+  pdf.y = top + height;
+  pdf.moveDown(0.4);
 }
 
 /**

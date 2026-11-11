@@ -263,7 +263,7 @@ export interface Act {
    */
   parameter?: ActParameter;
   /**
-   * The citizen asks for a guia de recolhimento (ITIV/ITBI, ITCD...): the
+   * The citizen asks for a guia imobiliária (ITIV/ITBI, ITCD...): the
    * form takes the parties, the property and the value in a short form, and
    * the guia is drawn by itself into the panel's Utilitários, for the office
    * alone to check, correct, sign and deliver with the boleto (product
@@ -808,7 +808,7 @@ export const ACTS: Act[] = [
   {
     id: "notas-guia-recolhimento",
     attribution: "NOTAS",
-    name: "Guia de recolhimento de imposto (ITIV/ITBI, ITCD, laudêmio)",
+    name: "Guia imobiliária (ITIV/ITBI, ITCD, laudêmio e outras)",
     processingMode: "online",
     processingHint:
       "você informa os dados e anexa os documentos; a serventia confere, prepara a guia e devolve com o boleto",
@@ -1195,7 +1195,7 @@ export const ACTS: Act[] = [
 ];
 
 /**
- * The acts that ask for a guia de recolhimento (`taxGuide`): their requests
+ * The acts that ask for a guia imobiliária (`taxGuide`): their requests
  * live in the panel's Utilitários, not in the Pedidos de serviço queue.
  */
 export const TAX_GUIDE_ACT_IDS: readonly string[] = ACTS.filter(

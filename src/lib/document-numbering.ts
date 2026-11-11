@@ -8,6 +8,7 @@ import {
   type NumberSeries,
   nextSequence,
   parseDocumentNumbering,
+  reusesFreedNumbers,
 } from "@/core/numbering/series.ts";
 import { KIND_BY_PREFIX } from "@/core/request/kinds.ts";
 import type { Database } from "@/db/index.ts";
@@ -121,30 +122,54 @@ export async function nextNumberWith(
   series: NumberSeries,
   year: number,
 ): Promise<number> {
-  if (series === "guia") {
+  if (reusesFreedNumbers(series)) {
     const [used, numbering] = await Promise.all([
-      database
-        .select({ sequence: taxGuides.sequence })
-        .from(taxGuides)
-        .where(
-          and(
-            eq(taxGuides.tenantSlug, tenantSlug),
-            eq(taxGuides.year, year),
-            isNull(taxGuides.deletedAt),
-          ),
-        ),
+      usedNumbersWith(database, tenantSlug, series, year),
       getDocumentNumberingWith(database, tenantSlug),
     ]);
-    return lowestFree(
-      used.map((row) => row.sequence),
-      floorOf(numbering, series, year),
-    );
+    return lowestFree(used, floorOf(numbering, series, year));
   }
   const [lastUsed, numbering] = await Promise.all([
     lastUsedWith(database, tenantSlug, series, year),
     getDocumentNumberingWith(database, tenantSlug),
   ]);
   return nextSequence(lastUsed, floorOf(numbering, series, year));
+}
+
+/** The live numbers of a series that reuses freed ones, in the year. */
+export async function usedNumbersWith(
+  database: Database,
+  tenantSlug: string,
+  series: NumberSeries,
+  year: number,
+): Promise<number[]> {
+  if (series === "guia") {
+    const rows = await database
+      .select({ sequence: taxGuides.sequence })
+      .from(taxGuides)
+      .where(
+        and(
+          eq(taxGuides.tenantSlug, tenantSlug),
+          eq(taxGuides.year, year),
+          isNull(taxGuides.deletedAt),
+        ),
+      );
+    return rows.map((row) => row.sequence);
+  }
+  if (series === "declaracao-iss") {
+    const rows = await database
+      .select({ sequence: issDeclarations.sequence })
+      .from(issDeclarations)
+      .where(
+        and(
+          eq(issDeclarations.tenantSlug, tenantSlug),
+          eq(issDeclarations.year, year),
+          isNull(issDeclarations.deletedAt),
+        ),
+      );
+    return rows.map((row) => row.sequence);
+  }
+  return [];
 }
 
 export class NumberingError extends Error {}
@@ -158,8 +183,11 @@ export async function saveNumberingFloorWith(
   next: number,
   actorId: string,
 ): Promise<void> {
-  const lastUsed = await lastUsedWith(database, tenantSlug, series, year);
-  const problem = checkFloor(series, year, next, lastUsed);
+  const [lastUsed, used] = await Promise.all([
+    lastUsedWith(database, tenantSlug, series, year),
+    usedNumbersWith(database, tenantSlug, series, year),
+  ]);
+  const problem = checkFloor(series, year, next, lastUsed, used);
   if (problem) throw new NumberingError(problem);
 
   const current = await getDocumentNumberingWith(database, tenantSlug);
@@ -167,6 +195,46 @@ export async function saveNumberingFloorWith(
     ...current,
     [series]: { ...(current[series] ?? {}), [String(year)]: next },
   };
+  await writeNumbering(database, tenantSlug, updated, actorId);
+  await recordAuditWith(database, {
+    tenantSlug,
+    actorId,
+    action: "office-settings.save",
+    targetType: "tenant-content",
+    targetId: `${OFFICE_NUMBERING_KEY}:${series}:${year}`,
+  });
+}
+
+/**
+ * Drops the number set by hand for the year: the series goes back to
+ * counting on its own (the lowest free number, or the last one plus one).
+ */
+export async function clearNumberingFloorWith(
+  database: Database,
+  tenantSlug: string,
+  series: NumberSeries,
+  year: number,
+  actorId: string,
+): Promise<void> {
+  const current = await getDocumentNumberingWith(database, tenantSlug);
+  const { [String(year)]: _dropped, ...rest } = current[series] ?? {};
+  const updated: DocumentNumbering = { ...current, [series]: rest };
+  await writeNumbering(database, tenantSlug, updated, actorId);
+  await recordAuditWith(database, {
+    tenantSlug,
+    actorId,
+    action: "office-settings.save",
+    targetType: "tenant-content",
+    targetId: `${OFFICE_NUMBERING_KEY}:${series}:${year}`,
+  });
+}
+
+async function writeNumbering(
+  database: Database,
+  tenantSlug: string,
+  updated: DocumentNumbering,
+  actorId: string,
+): Promise<void> {
   await database
     .insert(tenantContent)
     .values({
@@ -185,11 +253,4 @@ export async function saveNumberingFloorWith(
         updatedBy: actorId,
       },
     });
-  await recordAuditWith(database, {
-    tenantSlug,
-    actorId,
-    action: "office-settings.save",
-    targetType: "tenant-content",
-    targetId: `${OFFICE_NUMBERING_KEY}:${series}:${year}`,
-  });
 }

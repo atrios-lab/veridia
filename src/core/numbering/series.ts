@@ -36,8 +36,8 @@ export interface SeriesInfo {
 
 export const SERIES_INFO: Record<NumberSeries, SeriesInfo> = {
   guia: {
-    label: "Guias de recolhimento",
-    hint: "Utilitários › Guias de recolhimento.",
+    label: "Guias imobiliárias",
+    hint: "Utilitários › Guias imobiliárias.",
     format: formatGuideNumber,
     max: 99_999,
   },
@@ -132,6 +132,20 @@ export function lowestFree(
   return candidate;
 }
 
+/**
+ * The series whose deleted documents give their number back (a test, a
+ * mistake): the next one takes the lowest number free from the floor on.
+ * Protocols never do: the citizen already holds the number.
+ */
+export const REUSES_FREED_NUMBERS: readonly NumberSeries[] = [
+  "guia",
+  "declaracao-iss",
+];
+
+export function reusesFreedNumbers(series: NumberSeries): boolean {
+  return REUSES_FREED_NUMBERS.includes(series);
+}
+
 export function floorOf(
   numbering: DocumentNumbering,
   series: NumberSeries,
@@ -149,6 +163,8 @@ export function checkFloor(
   year: number,
   next: number,
   lastUsed: number,
+  /** The live numbers, for a series that reuses freed ones. */
+  used?: readonly number[],
 ): string | undefined {
   const info = SERIES_INFO[series];
   if (!Number.isInteger(year) || year < 2000 || year > 2100) {
@@ -156,6 +172,12 @@ export function checkFloor(
   }
   if (!Number.isInteger(next) || next < 1 || next > info.max) {
     return `Informe um número entre 1 e ${info.max.toLocaleString("pt-BR")}.`;
+  }
+  if (reusesFreedNumbers(series) && used) {
+    // A freed number (a test deleted) may be taken again; one in use not.
+    return used.includes(next)
+      ? `O número ${info.format(year, next)} já está em uso. O próximo livre a partir dele é ${info.format(year, lowestFree(used, next))}. Para usar o ${info.format(year, next)}, exclua o documento que está com ele (por exemplo, um de teste).`
+      : undefined;
   }
   if (next <= lastUsed) {
     return `Já foi usado até ${info.format(year, lastUsed)}. O próximo precisa ser ${info.format(year, lastUsed + 1)} ou maior.`;

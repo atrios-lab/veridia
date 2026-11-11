@@ -220,15 +220,15 @@ export function buildGuideDocument(
   const signer = settings.signers[guide.signer] ?? settings.signers[0];
   const number = formatGuideNumber(input.year, input.sequence);
   return {
-    eyebrow: municipal ? "Fisco municipal" : "Fisco estadual",
-    title: `Guia de recolhimento nº ${number}`,
+    eyebrow: `${municipal ? "Fisco municipal" : "Fisco estadual"} · ${info.label}`,
+    title: `Guia imobiliária nº ${number}`,
     subtitle: info.subject,
     office: [officialName(tenant), tenant.subtitle],
     sections,
     dateLine: `${tenant.location.city}/${tenant.location.state}, ${writtenDate(input.issuedOn)}.`,
     signee: signer?.name,
     signature: [signer?.title ?? "", signer?.note ?? ""].filter(Boolean),
-    footer: `${officialName(tenant)} · Guia de recolhimento nº ${number} · ${tenant.legalFooter}`,
+    footer: `${officialName(tenant)} · Guia imobiliária nº ${number} · ${tenant.legalFooter}`,
   };
 }
 

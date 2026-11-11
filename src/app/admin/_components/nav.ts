@@ -107,11 +107,11 @@ export const ADMIN_NAV: readonly AdminNavItem[] = [
     permission: "chat.manage",
   },
   {
-    // Tools for the deed desk. The first: the guias de recolhimento (ITIV,
+    // Tools for the deed desk. The first: the guias imobiliárias (ITIV,
     // ITCD, laudêmio, certidão imobiliária) the notary signs and the party
     // takes to the fisco before the escritura.
     group: "Utilitários",
-    label: "Guias de recolhimento",
+    label: "Guias imobiliárias",
     href: "/admin/utilitarios/guias",
     icon: "calculator",
     permission: "requests.manage",

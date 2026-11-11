@@ -203,14 +203,39 @@ function writtenDate(iso: string): string {
   return `${Number(iso.slice(8, 10))} de ${MONTHS[Number(iso.slice(5, 7)) - 1]} de ${iso.slice(0, 4)}`;
 }
 
-/** The funds of the State the parcels go to, as the bulletin names them. */
-export function stateFunds(tenant: Tenant): string {
+/**
+ * The State's funds the office passes parcels on to, by the bulletin's keys.
+ * Each State has its own (its law of emolumentos); an office in a State not
+ * catalogued yet has none listed, and the texts speak in general terms.
+ */
+export function fundsOf(tenant: Tenant): { key: string; label: string }[] {
   // The office's reports call the RN fund of the Procuradoria FPGE.
-  const labels = (FUNDS_BY_STATE[tenant.location.state] ?? []).map((f) =>
-    f.key === "funaf" ? "FUNAF/FPGE" : f.label,
-  );
+  return (FUNDS_BY_STATE[tenant.location.state] ?? []).map((f) => ({
+    key: f.key,
+    label: f.key === "funaf" ? "FUNAF/FPGE" : f.label,
+  }));
+}
+
+/** "FDJ, FRMP, FCRCPN e FUNAF/FPGE": the State's funds, in a sentence. */
+export function stateFunds(tenant: Tenant): string {
+  const labels = fundsOf(tenant).map((f) => f.label);
   if (labels.length <= 1) return labels.join("");
   return `${labels.slice(0, -1).join(", ")} e ${labels.at(-1)}`;
+}
+
+/**
+ * What stays out of the ISS base, in general terms first (any State), the
+ * office's own State as the example (decision of 11/11/2026: the platform
+ * serves offices in other States, whose funds have other names).
+ */
+export function outsideTheBase(tenant: Tenant): string {
+  const funds = stateFunds(tenant);
+  return [
+    "Não integram a base de cálculo os valores que a serventia apenas arrecada e repassa a terceiros, por constituírem receita alheia, com natureza tributária própria. Por exemplo: a taxa de fiscalização devida ao Poder Judiciário, as contribuições aos fundos estaduais (de compensação dos atos gratuitos, do Ministério Público, da Procuradoria do Estado e outros que a lei estadual instituir) e o selo de fiscalização.",
+    funds
+      ? `Neste Estado (${tenant.location.state}), esses repasses são: ${funds}.`
+      : "Os repasses e os seus nomes variam conforme a lei de emolumentos de cada Estado.",
+  ].join(" ");
 }
 
 /** The law, in the order a fiscal reader checks it. */
@@ -299,11 +324,10 @@ export function buildIssDocument(
     ...(d.paidOn ? [{ label: "Recolhido em", value: date(d.paidOn) }] : []),
   ];
 
-  const funds = stateFunds(tenant);
   const declarationText = [
     `${holder ? `${holder}, na qualidade de responsável pela serventia ` : "A serventia "}${office}, DECLARA, para fins de apuração e recolhimento do Imposto Sobre Serviços de Qualquer Natureza (ISSQN), que a receita de emolumentos da serventia na competência de ${month} foi de ${money(d.emolumentsCents)}, conforme a produtividade mensal escriturada no Livro Diário Auxiliar da Receita e da Despesa ${attached}.`,
     `${byAct ? `Aplicada a alíquota de ${formatRate(d.rateBasisPoints)} sobre os emolumentos de cada ato, conforme o relatório de valores tributários do sistema da serventia, o ISS devido é de ${money(iss)}${iss < issOn(d.emolumentsCents, d.rateBasisPoints) ? ", não compondo o imposto os atos sem incidência assim apontados no relatório" : ""}` : `Aplicada a alíquota de ${formatRate(d.rateBasisPoints)}, o ISS devido é de ${money(iss)}`}${d.paidOn ? `, recolhido em ${date(d.paidOn)}` : ""}${d.damNumber.trim() ? ` (DAM/guia nº ${d.damNumber.trim()})` : ""}.`,
-    `A base de cálculo compreende exclusivamente os emolumentos, que são o preço do serviço. Não integram a base os valores arrecadados por conta do Estado e dos fundos${funds ? ` (${funds})` : ""}, nem o selo, por constituírem receita de terceiros, com natureza tributária própria.`,
+    "A base de cálculo compreende exclusivamente os emolumentos, que são o preço do serviço notarial e de registro.",
   ];
 
   const sections: RequerimentoSection[] = [
@@ -315,7 +339,11 @@ export function buildIssDocument(
     },
     { heading: "Prestador do serviço", rows: provider },
     { heading: "Apuração", rows: figures },
-    { heading: "Declaração", paragraphs: declarationText },
+    {
+      heading: "Declaração",
+      paragraphs: declarationText,
+      highlight: outsideTheBase(tenant),
+    },
   ];
   if (d.notes.trim()) {
     sections.push({ heading: "Observações", paragraphs: [d.notes.trim()] });

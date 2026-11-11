@@ -235,6 +235,52 @@ export async function updateIssDeclarationWith(
   return row;
 }
 
+/** The number is already a live declaration's in that year. */
+export class IssNumberTakenError extends IssDeclarationError {}
+
+/**
+ * Gives a declaration another number by hand, to follow the office's own
+ * count. A number a live declaration holds is refused by the index.
+ */
+export async function renumberIssDeclarationWith(
+  database: Database,
+  tenantSlug: string,
+  id: string,
+  year: number,
+  sequence: number,
+  actorId: string,
+): Promise<StoredIssDeclaration> {
+  try {
+    const [row] = await database
+      .update(issDeclarations)
+      .set({ year, sequence, updatedAt: new Date() })
+      .where(
+        and(
+          eq(issDeclarations.tenantSlug, tenantSlug),
+          eq(issDeclarations.id, id),
+          isNull(issDeclarations.deletedAt),
+        ),
+      )
+      .returning();
+    if (!row) throw new IssDeclarationError("Declaração não encontrada.");
+    await recordAuditWith(database, {
+      tenantSlug,
+      actorId,
+      action: "iss-declaration.renumber",
+      targetType: "iss-declaration",
+      targetId: row.id,
+    });
+    return row;
+  } catch (error) {
+    if (isPostgresError(error, UNIQUE_VIOLATION)) {
+      throw new IssNumberTakenError(
+        `Já existe outra declaração com o número ${String(sequence).padStart(3, "0")}/${year}.`,
+      );
+    }
+    throw error;
+  }
+}
+
 /** Notes when the declaration reached the prefeitura, and its protocol. */
 export async function recordIssFilingWith(
   database: Database,

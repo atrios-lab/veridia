@@ -4,6 +4,7 @@ import {
   competenceLabel,
   competenceTitle,
   formatDeclarationNumber,
+  fundsOf,
   portalFields,
 } from "@/core/iss/declaration.ts";
 import { formatMoneyBRL } from "@/core/transparency/bulletin.ts";
@@ -115,6 +116,7 @@ export default async function IssDeclarationPage({
           Corrigir
         </h2>
         <IssForm
+          state={{ uf: tenant.location.state, funds: fundsOf(tenant) }}
           initial={{
             today: today(),
             id: row.id,

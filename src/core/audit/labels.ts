@@ -20,13 +20,14 @@ const EXACT: Record<string, string> = {
   "service-request.delivery-signed":
     "Assinou digitalmente um documento entregue",
   "service-request.delivery-rename": "Renomeou um documento entregue",
-  "tax-guide.issue": "Emitiu uma guia de recolhimento",
-  "tax-guide.update": "Corrigiu uma guia de recolhimento",
+  "tax-guide.issue": "Emitiu uma guia imobiliária",
+  "tax-guide.update": "Corrigiu uma guia imobiliária",
   "tax-guide.renumber": "Alterou o número de uma guia",
-  "tax-guide.delete": "Excluiu uma guia de recolhimento",
+  "tax-guide.delete": "Excluiu uma guia imobiliária",
   "iss-declaration.issue": "Gerou uma declaração de ISS",
   "iss-declaration.update": "Corrigiu uma declaração de ISS",
   "iss-declaration.remove": "Excluiu uma declaração de ISS da lista",
+  "iss-declaration.renumber": "Alterou o número de uma declaração de ISS",
   "iss-declaration.file":
     "Registrou a entrega de uma declaração de ISS à prefeitura",
   "transparency.bulletin.iss": "Lançou o ISS no boletim mensal",
@@ -132,7 +133,7 @@ const AREAS: Record<string, string> = {
   ouvidoria: "Ouvidoria",
   chat: "Atendimento online",
   atendimento: "Atendimento online",
-  "tax-guide": "Guias de recolhimento",
+  "tax-guide": "Guias imobiliárias",
   "iss-declaration": "Declaração de ISS",
   publication: "Publicações",
   publicacoes: "Publicações",
@@ -232,17 +233,20 @@ const EXPLANATIONS: Record<string, string> = {
     "Um documento entregue ao cidadão foi assinado digitalmente.",
   "service-request.delivery-rename":
     "O nome de um documento entregue ao cidadão foi alterado.",
-  "tax-guide.issue": "Uma guia de recolhimento (imposto) foi emitida.",
-  "tax-guide.update": "Uma guia de recolhimento foi corrigida.",
-  "tax-guide.renumber": "O número de uma guia de recolhimento foi trocado.",
+  "tax-guide.issue":
+    "Uma guia imobiliária (imposto ou certidão de um imóvel) foi emitida.",
+  "tax-guide.update": "Uma guia imobiliária foi corrigida.",
+  "tax-guide.renumber": "O número de uma guia imobiliária foi trocado.",
   "tax-guide.delete":
-    "Uma guia de recolhimento foi excluída e o número dela ficou livre.",
+    "Uma guia imobiliária foi excluída e o número dela ficou livre.",
   "iss-declaration.issue":
     "Foi gerada a declaração mensal de ISS ao fisco municipal, com os emolumentos do mês e o livro do caixa anexo.",
   "iss-declaration.update":
     "Os valores de uma declaração de ISS foram corrigidos: confira a competência, os emolumentos e a alíquota.",
   "iss-declaration.remove":
     "Uma declaração de ISS saiu da lista. O registro continua guardado, e o número dela ficou livre.",
+  "iss-declaration.renumber":
+    "O número de uma declaração de ISS foi trocado, para seguir a contagem da serventia.",
   "iss-declaration.file":
     "Foi anotado quando a declaração de ISS chegou à prefeitura (pelo site ou na SEMUT) e o número do protocolo.",
   "transparency.bulletin.iss":
@@ -318,7 +322,7 @@ const AREA_EXPLANATIONS: Record<string, string> = {
   "data-rights": "Ato feito num requerimento de dados pessoais (LGPD).",
   publication: "Ato feito nas publicações do site.",
   transparency: "Ato feito na área de transparência do site.",
-  "tax-guide": "Ato feito numa guia de recolhimento.",
+  "tax-guide": "Ato feito numa guia imobiliária.",
   "iss-declaration": "Ato feito numa declaração de ISS ao fisco municipal.",
   user: "Ato feito numa conta de acesso ao painel.",
   session: "Entrada ou saída do painel.",

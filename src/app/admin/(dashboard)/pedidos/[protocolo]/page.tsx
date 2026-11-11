@@ -329,7 +329,7 @@ export default async function ServiceRequestDetailPage({
         <div className="flex flex-wrap items-center gap-3.5">
           <BackLink
             href={act?.taxGuide ? "/admin/utilitarios/guias" : "/admin/pedidos"}
-            label={act?.taxGuide ? "Guias de recolhimento" : "Fila de pedidos"}
+            label={act?.taxGuide ? "Guias imobiliárias" : "Fila de pedidos"}
           />
           {/*
             Only when the same fields the print route itself requires are
@@ -607,7 +607,7 @@ export default async function ServiceRequestDetailPage({
             {act?.taxGuide && (
               <section className="rounded-[14px] border border-admin-border bg-admin-card p-6">
                 <h4 className="font-serif text-[17px] font-semibold text-admin-primary">
-                  Guia de recolhimento
+                  Guia imobiliária
                 </h4>
                 <p className="mt-1 text-[12.5px] text-admin-muted">
                   Gerada sozinha com os dados do pedido e visível só para a

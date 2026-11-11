@@ -9,11 +9,18 @@ import { officeYear } from "@/core/time/office-time.ts";
 import type { Database } from "@/db/index.ts";
 import { createTestDb } from "@/db/test-db.ts";
 import {
+  clearNumberingFloorWith,
   getDocumentNumberingWith,
   lastUsedWith,
   NumberingError,
+  nextNumberWith,
   saveNumberingFloorWith,
 } from "./document-numbering.ts";
+import {
+  issueIssDeclarationWith,
+  removeIssDeclarationWith,
+  renumberIssDeclarationWith,
+} from "./iss-declarations.ts";
 import { createServiceRequestWith } from "./service-request.ts";
 import { deleteGuideWith, issueGuideWith } from "./tax-guides.ts";
 
@@ -74,10 +81,13 @@ test("a serventia diz que as guias de 2026 seguem da 020 e a próxima sai 020/20
     (error) =>
       error instanceof NumberingError && /022\/2026/.test(error.message),
   );
+  // A number below, free, may be chosen (the guias reuse freed numbers).
+  await saveNumberingFloorWith(db, TENANT.slug, "guia", 2026, 5, "u1");
+  assert.equal(await nextNumberWith(db, TENANT.slug, "guia", 2026), 5);
   // The next year can be set ahead.
   await saveNumberingFloorWith(db, TENANT.slug, "guia", 2028, 50, "u1");
   assert.deepEqual((await getDocumentNumberingWith(db, TENANT.slug)).guia, {
-    "2026": 20,
+    "2026": 5,
     "2028": 50,
   });
 });
@@ -107,4 +117,63 @@ test("excluir uma guia libera o número, mesmo no meio do ano", async () => {
   assert.equal(await deleteGuideWith(db, TENANT.slug, three.id, "u1"), true);
   const last = await issueGuideWith(db, TENANT.slug, guide, "u1", at(5));
   assert.equal(last.sequence, 3);
+});
+
+test("declaração de ISS de teste excluída libera o número; voltar ao automático", async () => {
+  const input = {
+    competence: "2031-01",
+    emolumentsCents: 1_000,
+    rateBasisPoints: 500,
+    damNumber: "",
+    dueDate: "",
+    paidOn: "",
+    notes: "",
+    issCents: null,
+  };
+  const at = new Date(Date.UTC(2031, 1, 5, 12));
+  const one = await issueIssDeclarationWith(
+    db,
+    TENANT.slug,
+    input,
+    [],
+    "u1",
+    at,
+  );
+  const two = await issueIssDeclarationWith(
+    db,
+    TENANT.slug,
+    input,
+    [],
+    "u1",
+    at,
+  );
+  await issueIssDeclarationWith(db, TENANT.slug, input, [], "u1", at);
+  await removeIssDeclarationWith(db, TENANT.slug, two.id, "u1");
+  assert.equal(
+    await nextNumberWith(db, TENANT.slug, "declaracao-iss", 2031),
+    2,
+  );
+  // Renumber by hand; a number in use is refused.
+  await renumberIssDeclarationWith(db, TENANT.slug, one.id, 2031, 7, "u1");
+  await assert.rejects(
+    renumberIssDeclarationWith(db, TENANT.slug, one.id, 2031, 3, "u1"),
+    /003\/2031/,
+  );
+  await saveNumberingFloorWith(
+    db,
+    TENANT.slug,
+    "declaracao-iss",
+    2031,
+    10,
+    "u1",
+  );
+  assert.equal(
+    await nextNumberWith(db, TENANT.slug, "declaracao-iss", 2031),
+    10,
+  );
+  await clearNumberingFloorWith(db, TENANT.slug, "declaracao-iss", 2031, "u1");
+  assert.equal(
+    await nextNumberWith(db, TENANT.slug, "declaracao-iss", 2031),
+    1,
+  );
 });
