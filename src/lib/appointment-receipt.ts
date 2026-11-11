@@ -44,7 +44,7 @@ export async function renderAttendanceDeclaration(
   tenant: Tenant,
   appointment: Appointment,
   origin: string,
-  signer?: { name: string; title: string },
+  signer?: { name: string; title: string; note?: string },
 ): Promise<Buffer> {
   const declaration = attendanceDeclarationFor(
     tenant,
