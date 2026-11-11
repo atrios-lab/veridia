@@ -82,7 +82,6 @@ const GROUPS: { label: string; tabs: Tab[] }[] = [
   },
 ];
 
-
 export function ConfiguracoesTabs({
   role,
   permissions,
