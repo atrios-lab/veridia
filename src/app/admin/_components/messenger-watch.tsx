@@ -59,6 +59,7 @@ function MiniChat({
   onDragStart: (event: React.PointerEvent) => void;
 }) {
   const [messages, setMessages] = useState<SerializedMessage[]>([]);
+  const [cleared, setCleared] = useState<string | null>(null);
   const [text, setText] = useState("");
   const [busy, setBusy] = useState(false);
   const last = useRef<string | null>(null);
@@ -70,6 +71,7 @@ function MiniChat({
     const fresh = result.data.messages;
     // The server's clock: edits and deletions since then come next time.
     last.current = result.data.now;
+    setCleared(result.data.clearedAt);
     if (!fresh.length) return;
     setMessages((current) => {
       const changed = new Map(fresh.map((m) => [m.id, m]));
@@ -172,7 +174,11 @@ function MiniChat({
         className="min-h-0 flex-1 overflow-y-auto bg-msg-pane px-3 py-2"
       >
         {messages
-          .filter((m) => !m.deleted)
+          .filter(
+            (m) =>
+              !m.deleted &&
+              (!cleared || new Date(m.createdAt) > new Date(cleared)),
+          )
           .map((message) => {
             const mine = message.senderId !== caller.senderId;
             const href = `/admin/mensagens/arquivo/${message.id}`;

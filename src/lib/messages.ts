@@ -530,6 +530,26 @@ export async function listMessagesWith(
   });
 }
 
+/** Up to when this member's view of the conversation was cleared. */
+export async function clearedAtWith(
+  database: Database,
+  conversationId: string,
+  userId: string,
+): Promise<Date | null> {
+  if (!/^[0-9a-f-]{36}$/i.test(conversationId)) return null;
+  const [row] = await database
+    .select({ clearedAt: messengerMembers.clearedAt })
+    .from(messengerMembers)
+    .where(
+      and(
+        eq(messengerMembers.conversationId, conversationId),
+        eq(messengerMembers.userId, userId),
+      ),
+    )
+    .limit(1);
+  return row?.clearedAt ?? null;
+}
+
 /** Its author corrects a text; the first version stays for the holder. */
 export async function editMessageWith(
   database: Database,
@@ -611,7 +631,11 @@ export async function deleteMessageWith(
   });
 }
 
-/** "Limpar conversa": hidden for this member only, from now back. */
+/**
+ * "Limpar conversa": from now back, gone from the conversation for both
+ * members (decision of 11/11/2026). Nothing is erased: the holder's
+ * oversight still reads it all.
+ */
 export async function clearConversationWith(
   database: Database,
   tenantSlug: string,
@@ -628,7 +652,11 @@ export async function clearConversationWith(
   if (!conversation?.member) throw new MessageError("Conversa não encontrada.");
   await database
     .update(messengerMembers)
-    .set({ clearedAt: now, lastReadAt: now })
+    .set({ clearedAt: now })
+    .where(eq(messengerMembers.conversationId, conversationId));
+  await database
+    .update(messengerMembers)
+    .set({ lastReadAt: now })
     .where(
       and(
         eq(messengerMembers.conversationId, conversationId),

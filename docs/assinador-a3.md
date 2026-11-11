@@ -11,7 +11,9 @@ Veridia**, um programa pequeno para Windows que fica no computador do
 cartório (código em `tools/assinador-local`).
 
 1. No painel, em Utilitários › Assinador digital, a pessoa escolhe
-   "Certificado A3 (token ou cartão)".
+   "Certificado A3 (token ou cartão)". O formulário começa só com os
+   arquivos e essa escolha: o seletor do A1 e a senha aparecem apenas
+   depois que a pessoa escolhe "Certificado A1".
 2. O painel pergunta ao Assinador Veridia (`http://127.0.0.1:47820`) quais
    certificados o Windows conhece. A cada consulta ele lê o repositório
    "Pessoal" do usuário, onde o Windows coloca os certificados dos tokens e
