@@ -1,4 +1,16 @@
-# Guias de recolhimento (Utilitários)
+# Guias imobiliárias (Utilitários)
+
+Antes se chamavam "Guias de recolhimento". O nome mudou em 11/11/2026 porque
+"recolhimento", sozinho, não dizia de que serviço se tratava. Todas as guias
+deste utilitário são da transmissão de um imóvel: ITIV/ITBI, ITCD/ITCMD
+(doação e causa mortis), laudêmio e certidão de débitos imobiliários (IPTU).
+O subtítulo da tela é montado a partir do catálogo (`guideKindsSummary`), e um
+tipo novo aparece nele sem outra mudança. O PDF traz, acima do título, o fisco
+e o tipo da guia ("Fisco municipal · ITIV / ITBI").
+
+As guias excluídas liberam o número. Em Configurações › Numeração dá para
+alterar o número de uma guia emitida, excluir uma de teste e voltar a
+numeração ao automático.
 
 O painel gera o requerimento que o tabelião assina e a parte leva ao fisco antes da escritura. Com ele, a
 Prefeitura ou a SET/RN emite o documento de arrecadação. Esta página lista de onde vem cada regra e o que foi
@@ -51,7 +63,7 @@ guarda vencido", mas não é apagada: apagar dados do banco exige uma PR revisad
 
 ## Pedido pelo site
 
-Em Notas, o ato "Guia de recolhimento" pede:
+Em Notas, o ato "Guia imobiliária" pede:
 - as partes: nome, CPF ou CNPJ, tratamento, estado civil, profissão e endereço;
 - o imóvel;
 - o valor declarado;
@@ -70,7 +82,7 @@ gera o ITIV. O tipo continua no código só para que uma guia já emitida assim 
 
 ## Onde a serventia trabalha os pedidos
 
-Os pedidos de guia não entram na fila de Pedidos de serviço. Eles aparecem em Guias de recolhimento, na seção
+Os pedidos de guia não entram na fila de Pedidos de serviço. Eles aparecem em Guias imobiliárias, na seção
 "Pedidos do site", e o item do menu mostra quantos estão em aberto.
 
 O painel avisa, em qualquer tela, com cartão, som e notificação do navegador:

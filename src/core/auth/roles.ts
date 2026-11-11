@@ -257,7 +257,7 @@ export const GRANTABLE_LABELS: Record<GrantablePermission, string> = {
   "content.publish": "Publicar no site (editais, notícias, documentos)",
   "branding.edit": "Identidade visual (cores e logotipos)",
   "billing.edit": "Cobrança e chave Pix",
-  "requests.manage": "Pedidos de serviço e guias de recolhimento",
+  "requests.manage": "Pedidos de serviço e guias imobiliárias",
   "chat.manage": "Atendimento online (chat)",
   "chat.settings": "Ligar ou desligar o chat do site",
   "channels.manage": "Agenda, LGPD e ouvidoria",

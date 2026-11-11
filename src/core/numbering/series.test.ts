@@ -7,6 +7,7 @@ import {
   NUMBER_SERIES,
   nextSequence,
   parseDocumentNumbering,
+  reusesFreedNumbers,
   SERIES_INFO,
 } from "./series.ts";
 
@@ -57,4 +58,17 @@ test("a guia excluída deixa o número dela para a próxima", () => {
   assert.equal(lowestFree([20, 22], 20), 21);
   // Below the office's floor is not a vacancy.
   assert.equal(lowestFree([5], 20), 20);
+});
+
+test("guias e declarações de ISS reaproveitam número liberado; protocolos não", () => {
+  assert.ok(reusesFreedNumbers("guia"));
+  assert.ok(reusesFreedNumbers("declaracao-iss"));
+  assert.ok(!reusesFreedNumbers("REQ"));
+  // 2 was a test, deleted: it may be the next again; 3 is still in use.
+  assert.equal(checkFloor("declaracao-iss", 2026, 2, 3, [1, 3]), undefined);
+  assert.match(
+    checkFloor("declaracao-iss", 2026, 3, 3, [1, 3]) ?? "",
+    /003\/2026 já está em uso/,
+  );
+  assert.equal(lowestFree([1, 3], 1), 2);
 });

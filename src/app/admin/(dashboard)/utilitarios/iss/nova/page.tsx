@@ -1,5 +1,6 @@
 import { notFound } from "next/navigation";
 import { can } from "@/core/auth/roles.ts";
+import { fundsOf } from "@/core/iss/declaration.ts";
 import { getIssSettings } from "@/lib/iss-declarations.ts";
 import { getSession } from "@/lib/session.ts";
 import { getTenant, today } from "@/lib/tenant.ts";
@@ -26,13 +27,15 @@ export default async function NewIssPage() {
   ) {
     notFound();
   }
-  const settings = await getIssSettings(await getTenant());
+  const tenant = await getTenant();
+  const settings = await getIssSettings(tenant);
   return (
     <>
       <AdminPageHeader title="Nova declaração de ISS" />
       <main className="flex max-w-[900px] flex-col gap-4.5 px-[30px] py-7 max-md:px-4">
         <BackLink href="/admin/utilitarios/iss" label="Declaração de ISS" />
         <IssForm
+          state={{ uf: tenant.location.state, funds: fundsOf(tenant) }}
           initial={{
             today: today(),
             competence: lastMonth(today()),

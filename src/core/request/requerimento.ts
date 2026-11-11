@@ -93,6 +93,9 @@ export interface RequerimentoSection {
    * `RequerimentoField`. */
   fields?: RequerimentoField[];
   paragraphs?: string[];
+  /** A paragraph set apart in a tinted box, after the others: the point a
+   * reader must not miss. */
+  highlight?: string;
 }
 
 /**

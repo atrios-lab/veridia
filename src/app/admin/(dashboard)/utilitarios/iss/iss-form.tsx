@@ -43,26 +43,17 @@ export interface IssFormInitial {
   attachmentNames?: string[];
 }
 
-/** The bulletin's figures read from the productivity report. */
-interface BulletinRead {
-  atos: string;
-  fdj: string;
-  frmp: string;
-  fcrcpn: string;
-  funaf: string;
-  arrecadacao: string;
-  despesas: string;
-}
+/**
+ * The bulletin's figures read from the productivity report, by field: the
+ * acts, each of the State's funds, the intake and the costs.
+ */
+type BulletinRead = Record<string, string>;
 
-const BULLETIN_FIELDS: { key: keyof BulletinRead; label: string }[] = [
-  { key: "atos", label: "Atos praticados" },
-  { key: "fdj", label: "FDJ" },
-  { key: "frmp", label: "FRMP" },
-  { key: "fcrcpn", label: "FCRCPN" },
-  { key: "funaf", label: "FUNAF/FPGE" },
-  { key: "arrecadacao", label: "Arrecadação total bruta [E]" },
-  { key: "despesas", label: "Custeio (despesas) [C]" },
-];
+/** The State's funds the office passes on to (they differ by State). */
+export interface IssFormOffice {
+  uf: string;
+  funds: { key: string; label: string }[];
+}
 
 const money = (cents: number | undefined) =>
   cents === undefined ? "" : formatMoneyBRL(cents);
@@ -74,7 +65,20 @@ const money = (cents: number | undefined) =>
  * Attaching the system's reports (productivity, taxes) fills everything in,
  * the ISS act by act and the month's bulletin included; all stays editable.
  */
-export function IssForm({ initial }: { initial: IssFormInitial }) {
+export function IssForm({
+  initial,
+  state: office,
+}: {
+  initial: IssFormInitial;
+  state: IssFormOffice;
+}) {
+  const bulletinFields = [
+    { key: "atos", label: "Atos praticados" },
+    ...office.funds,
+    { key: "arrecadacao", label: "Arrecadação total bruta [E]" },
+    { key: "despesas", label: "Custeio (despesas) [C]" },
+  ];
+  const fundNames = office.funds.map((f) => f.label).join(", ");
   const [state, action, pending] = useActionState<IssFormState, FormData>(
     saveIssDeclaration,
     { status: "idle" },
@@ -126,15 +130,18 @@ export function IssForm({ initial }: { initial: IssFormInitial }) {
         f.funds ||
         f.grossRevenueCents !== undefined
       ) {
-        setBulletin({
+        const read: BulletinRead = {
           atos: f.actsCount === undefined ? "" : String(f.actsCount),
-          fdj: money(f.funds?.fdj),
-          frmp: money(f.funds?.frmp),
-          fcrcpn: money(f.funds?.fcrcpn),
-          funaf: money(f.funds?.funaf),
           arrecadacao: money(f.grossRevenueCents),
           despesas: money(f.expensesCents),
-        });
+        };
+        // Only the funds this State has; a report's other columns stay out.
+        for (const fund of office.funds) {
+          read[fund.key] = money(
+            f.funds?.[fund.key as keyof NonNullable<typeof f.funds>],
+          );
+        }
+        setBulletin(read);
       }
       const read = f.kind !== "desconhecido";
       setReadNote(
@@ -227,8 +234,10 @@ export function IssForm({ initial }: { initial: IssFormInitial }) {
             className={FIELD}
           />
           <p className="mt-1 text-[11.5px] text-admin-muted">
-            Só os emolumentos, sem FDJ, FRMP, FCRCPN, FPGE nem selo: esses são
-            repasses, não preço do serviço.
+            Só os emolumentos. Ficam de fora os repasses a terceiros (taxa de
+            fiscalização, fundos do Estado, selo)
+            {fundNames ? `: no ${office.uf}, ${fundNames}` : ""}. Eles não são
+            preço do serviço.
           </p>
         </div>
         <div>
@@ -350,13 +359,13 @@ export function IssForm({ initial }: { initial: IssFormInitial }) {
               Boletim mensal, lido do relatório de produtividade
             </legend>
             <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
-              {BULLETIN_FIELDS.map(({ key, label }) => (
+              {bulletinFields.map(({ key, label }) => (
                 <label key={key} className={LABEL}>
                   {label}
                   <input
                     name={`b_${key}`}
                     inputMode={key === "atos" ? "numeric" : "decimal"}
-                    value={bulletin[key]}
+                    value={bulletin[key] ?? ""}
                     onChange={(event) =>
                       setBulletin({ ...bulletin, [key]: event.target.value })
                     }

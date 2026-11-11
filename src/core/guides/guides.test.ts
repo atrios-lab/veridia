@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 import { cartorioMarinho } from "../tenant/tenants/marinho.ts";
-import { itcdRn } from "./catalog.ts";
+import { GUIDE_KIND_INFO, guideKindsSummary, itcdRn } from "./catalog.ts";
 import { buildGuideDocument, guideAmount } from "./document.ts";
 import { missingQualification, qualify } from "./qualification.ts";
 import {
@@ -9,6 +9,7 @@ import {
   type Guide,
   type GuideParty,
   GuideSchema,
+  OFFERED_GUIDE_KINDS,
   retentionState,
 } from "./schema.ts";
 import { defaultGuideSettings } from "./settings.ts";
@@ -114,7 +115,7 @@ test("a guia de ITIV sai como o modelo da serventia", () => {
     sequence: 8,
     issuedOn: "2026-07-15",
   });
-  assert.equal(doc.title, "Guia de recolhimento nº 008/2026");
+  assert.equal(doc.title, "Guia imobiliária nº 008/2026");
   const text = doc.sections
     .flatMap((s) => [
       ...(s.paragraphs ?? []),
@@ -235,4 +236,14 @@ test("união estável declarada sob as penas da lei, para quem não é casado", 
     qualify(party({ stableUnion: "nao-informado" })),
     /união estável/,
   );
+});
+
+test("o nome Guias imobiliárias lista os tipos do catálogo, sem fixar um imposto", () => {
+  const line = guideKindsSummary();
+  for (const kind of OFFERED_GUIDE_KINDS) {
+    const label = GUIDE_KIND_INFO[kind].label;
+    assert.ok(line.toLowerCase().includes(label.toLowerCase()), kind);
+  }
+  assert.match(line, /transmissão de imóveis/);
+  assert.match(line, / e laudêmio municipal\./);
 });

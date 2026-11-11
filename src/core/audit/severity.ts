@@ -74,6 +74,7 @@ const EXACT: Record<string, AuditLevel> = {
   "iss-declaration.update": "atencao",
   "transparency.bulletin.iss": "analise",
   "tax-guide.renumber": "atencao",
+  "iss-declaration.renumber": "atencao",
   "office-settings.role-permissions": "atencao",
   "signing-certificate.disable": "atencao",
   "signed-document.restore": "atencao",

@@ -21,10 +21,7 @@ export default async function GuideSettingsPage() {
     <>
       <AdminPageHeader title="Leis, alíquotas e quem assina" />
       <main className="flex max-w-[960px] flex-col gap-4.5 px-[30px] py-7">
-        <BackLink
-          href="/admin/utilitarios/guias"
-          label="Guias de recolhimento"
-        />
+        <BackLink href="/admin/utilitarios/guias" label="Guias imobiliárias" />
         <GuideSettingsForm initial={settings} />
       </main>
     </>

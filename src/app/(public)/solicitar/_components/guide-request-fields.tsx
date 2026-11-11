@@ -46,7 +46,7 @@ function parseMoney(text: string): number {
 }
 
 /**
- * The guia de recolhimento, as the citizen asks for it: a short form (who
+ * The guia imobiliária, as the citizen asks for it: a short form (who
  * transmits, who acquires, the property, the value). It travels as one JSON
  * field, `guia`, and the guia is drawn by itself for the office to check
  * before anything reaches the citizen.

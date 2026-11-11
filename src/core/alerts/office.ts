@@ -27,7 +27,7 @@ export type AlertChannel = (typeof ALERT_CHANNELS)[number];
 export const ALERT_CHANNEL_LABELS: Record<AlertChannel, string> = {
   chat: "Atendimento online (chat)",
   agenda: "Agendamentos",
-  guias: "Guias de recolhimento",
+  guias: "Guias imobiliárias",
   pedidos: "Pedidos de serviço",
   lgpd: "Requerimentos LGPD",
   ouvidoria: "Ouvidoria",

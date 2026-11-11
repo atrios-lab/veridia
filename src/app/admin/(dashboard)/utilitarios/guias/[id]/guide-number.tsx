@@ -60,6 +60,17 @@ export function GuideNumber({
             className={FIELD}
           />
         </label>
+        <label className="block w-[240px]">
+          <span className="mb-1 block text-[11.5px] font-bold text-admin-primary">
+            Motivo (vai para a auditoria)
+          </span>
+          <input
+            name="justificativa"
+            required
+            placeholder="Ex.: seguir a numeração do livro"
+            className={FIELD}
+          />
+        </label>
         <button
           type="submit"
           disabled={pending}

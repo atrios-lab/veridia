@@ -1,6 +1,7 @@
-import Link from "next/link";
 import { notFound } from "next/navigation";
 import { can } from "@/core/auth/roles.ts";
+import { GUIDE_KIND_INFO } from "@/core/guides/catalog.ts";
+import { competenceTitle } from "@/core/iss/declaration.ts";
 import {
   floorOf,
   NUMBER_SERIES,
@@ -13,10 +14,13 @@ import {
   lastUsedWith,
   nextNumberWith,
 } from "@/lib/document-numbering.ts";
+import { listIssDeclarationsWith } from "@/lib/iss-declarations.ts";
 import { getSession } from "@/lib/session.ts";
+import { listGuidesWith } from "@/lib/tax-guides.ts";
 import { getTenant } from "@/lib/tenant.ts";
 import { AdminPageHeader } from "../../../_components/page-header.tsx";
 import { ConfiguracoesTabs } from "../_components/tabs.tsx";
+import { ClearNumbering, type IssuedItem, IssuedList } from "./issued-list.tsx";
 import { NumberingForm } from "./numbering-form.tsx";
 
 export const metadata = { title: "Numeração de documentos" };
@@ -32,6 +36,39 @@ export default async function NumberingSettingsPage() {
   const year = officeYear(new Date());
   const years = [year, year + 1];
   const numbering = await getDocumentNumberingWith(db, tenant.slug);
+  const canManage = can(
+    session.user.role ?? "",
+    "requests.manage",
+    session.user.permissions,
+  );
+  // What was issued this year, to renumber or exclude (a test) from here.
+  const [guides, declarations] = canManage
+    ? await Promise.all([
+        listGuidesWith(db, tenant.slug, year),
+        listIssDeclarationsWith(db, tenant.slug),
+      ])
+    : [[], []];
+  const issued: Record<"guia" | "declaracao-iss", IssuedItem[]> = {
+    guia: guides.map((g) => ({
+      id: g.id,
+      year: g.year,
+      sequence: g.sequence,
+      number: SERIES_INFO.guia.format(g.year, g.sequence),
+      description: GUIDE_KIND_INFO[g.guide.kind]?.label ?? "Guia",
+      href: `/admin/utilitarios/guias/${g.id}`,
+    })),
+    "declaracao-iss": declarations
+      .filter((d) => d.year === year)
+      .sort((a, b) => a.sequence - b.sequence)
+      .map((d) => ({
+        id: d.id,
+        year: d.year,
+        sequence: d.sequence,
+        number: SERIES_INFO["declaracao-iss"].format(d.year, d.sequence),
+        description: `Competência ${competenceTitle(d.competence).toLowerCase()}`,
+        href: `/admin/utilitarios/iss/${d.id}`,
+      })),
+  };
 
   const rows = await Promise.all(
     NUMBER_SERIES.map(async (series) => {
@@ -73,8 +110,13 @@ export default async function NumberingSettingsPage() {
             Cada documento numerado recomeça do 1 todo ano. Se a serventia já
             vinha numerando em outro lugar (por exemplo, as guias já estão na
             019/2026 no livro), informe aqui o próximo número, deste ano ou do
-            ano que vem. O sistema nunca repete um número: o próximo é sempre o
-            maior entre o que você informou e o último usado mais um.
+            ano que vem. O sistema nunca repete um número em uso.
+          </p>
+          <p className="mt-1.5 text-[12.5px] leading-relaxed text-admin-muted">
+            Nas guias e nas declarações de ISS, você também pode alterar o
+            número de um documento já emitido ou excluir um de teste: o número
+            dele fica livre e é o próximo a ser usado. Excluir não apaga do
+            banco; o registro continua na auditoria.
           </p>
         </section>
 
@@ -105,8 +147,16 @@ export default async function NumberingSettingsPage() {
                     ? `último usado ${row.lastLabel}, `
                     : "nenhum emitido, "}
                   próximo <strong>{row.nextLabel}</strong>
-                  {row.floor && row.floor === row.next ? (
-                    <span className="text-admin-muted"> (definido aqui)</span>
+                  {row.floor ? (
+                    <>
+                      {row.floor === row.next && (
+                        <span className="text-admin-muted">
+                          {" "}
+                          (definido aqui)
+                        </span>
+                      )}{" "}
+                      <ClearNumbering series={series} year={row.year} />
+                    </>
                   ) : null}
                 </li>
               ))}
@@ -115,18 +165,15 @@ export default async function NumberingSettingsPage() {
               series={series}
               years={perYear.map((row) => ({ year: row.year, next: row.next }))}
             />
-            {series === "guia" ? (
-              <p className="mt-2.5 text-[12px] text-admin-muted">
-                Para trocar o número de uma guia já emitida, abra a guia em{" "}
-                <Link
-                  href="/admin/utilitarios/guias"
-                  className="font-semibold text-admin-primary underline"
-                >
-                  Guias de recolhimento
-                </Link>{" "}
-                e use "Alterar número".
-              </p>
-            ) : (
+            {series === "guia" || series === "declaracao-iss" ? (
+              canManage && (
+                <IssuedList
+                  series={series}
+                  year={year}
+                  items={issued[series]}
+                />
+              )
+            ) : series === "notificacao" ? null : (
               <p className="mt-2.5 text-[12px] text-admin-muted">
                 Protocolos já entregues não mudam: o cidadão já tem o número e o
                 pagamento por Pix está ligado a ele.

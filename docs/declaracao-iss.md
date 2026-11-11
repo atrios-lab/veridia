@@ -39,6 +39,22 @@ declara o total e ratifica o anexo.
   (CNJ), arrecadação bruta é o total sem nenhum abatimento, e inclui esses
   repasses.
 
+## O que fica fora da base (qualquer Estado)
+
+O PDF explica isso num quadro em destaque. A regra vem primeiro em termos
+gerais, que valem em qualquer Estado: ficam fora os valores que a serventia
+só arrecada e repassa a terceiros. Por exemplo:
+
+- a taxa de fiscalização do Poder Judiciário;
+- os fundos estaduais (compensação dos atos gratuitos, Ministério Público,
+  Procuradoria e outros);
+- o selo.
+
+Depois vem o exemplo do Estado da serventia, com os fundos dele, por exemplo:
+"Neste Estado (RN), esses repasses são: FDJ, FRMP, FCRCPN e FUNAF/FPGE". Um
+Estado ainda sem fundos cadastrados fica só com o texto geral. Os campos de
+fundos do boletim também seguem o Estado da serventia.
+
 ## Relatórios do sistema (Notaris)
 
 Ao anexar o **Relatório de Produtividade** e o de **Valores Tributários no

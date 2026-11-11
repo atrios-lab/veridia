@@ -14,6 +14,7 @@ import {
   type ReportFigures,
 } from "@/core/iss/notaris-report.ts";
 import { parseMoneyBRL } from "@/core/transparency/bulletin.ts";
+import { FUNDS_BY_STATE } from "@/core/transparency/rubrics.ts";
 import { db } from "@/db/index.ts";
 import { justify } from "@/lib/audit-reason.ts";
 import { pdfTableText } from "@/lib/fee-tables.ts";
@@ -135,6 +136,13 @@ export async function readIssReports(
 const cents = (value: FormDataEntryValue | null) =>
   parseMoneyBRL(String(value ?? "")) ?? undefined;
 
+/** Every fund key any State has: the form sends only its own State's. */
+const FUND_KEYS = [
+  ...new Set(
+    Object.values(FUNDS_BY_STATE).flatMap((funds) => funds.map((f) => f.key)),
+  ),
+];
+
 /** The bulletin's figures the form carries, read from the report. */
 function bulletinOf(formData: FormData, issCents: number): PendingBulletin {
   const out: PendingBulletin = { issCents };
@@ -147,7 +155,7 @@ function bulletinOf(formData: FormData, issCents: number): PendingBulletin {
     out.actsCount = acts;
   }
   const funds: Record<string, number> = {};
-  for (const key of ["fdj", "frmp", "fcrcpn", "funaf"]) {
+  for (const key of FUND_KEYS) {
     const value = cents(formData.get(`b_${key}`));
     if (value !== undefined) funds[key] = value;
   }

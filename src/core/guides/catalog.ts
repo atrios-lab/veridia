@@ -1,4 +1,4 @@
-import type { GuideKind } from "./schema.ts";
+import { type GuideKind, OFFERED_GUIDE_KINDS } from "./schema.ts";
 
 /**
  * Every guia the Utilitários issue, what each one calls its parties, which
@@ -203,3 +203,25 @@ export const SPU_LINKS: { label: string; href: string }[] = [
     href: "https://www.gov.br/pt-br/servicos/transferir-titular-de-imovel-da-uniao",
   },
 ];
+
+/**
+ * What the "Guias imobiliárias" are, in one line, from the catalogue itself
+ * (decision of 11/11/2026): a kind added to `GUIDE_KIND_INFO` and offered
+ * shows up here with no other edit, so the name never pins a single tax.
+ */
+export function guideKindsSummary(
+  kinds: readonly GuideKind[] = OFFERED_GUIDE_KINDS,
+): string {
+  // Mid-sentence: "laudêmio municipal", but "ITIV / ITBI" stays as is.
+  const labels = kinds.map((kind) => {
+    const label = GUIDE_KIND_INFO[kind].label;
+    return /^[A-ZÀ-Ú][a-zà-ú]/.test(label)
+      ? label.charAt(0).toLowerCase() + label.slice(1)
+      : label;
+  });
+  const list =
+    labels.length <= 1
+      ? labels.join("")
+      : `${labels.slice(0, -1).join(", ")} e ${labels.at(-1)}`;
+  return `Tributos e pedidos ao fisco na transmissão de imóveis: ${list}.`;
+}

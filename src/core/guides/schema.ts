@@ -3,7 +3,7 @@ import { isValidCpf } from "../request/form.ts";
 import { isValidCnpj } from "../tenant/pix.ts";
 
 /**
- * A guia de recolhimento as the office fills it in the panel: who transmits,
+ * A guia imobiliária as the office fills it in the panel: who transmits,
  * who acquires, which property, at what value. The shape is the same for
  * every kind (ITIV, ITCD, laudêmio municipal, certidão imobiliária); the
  * catalog (catalog.ts) says what each kind calls its parties and whether it

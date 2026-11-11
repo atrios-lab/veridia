@@ -144,7 +144,7 @@ export default async function DashboardLayout({
     ...(can(role, "requests.manage", granted)
       ? {
           "/admin/pedidos": await openRequestCount(tenant.slug),
-          // The guias de recolhimento the site asked for, still open.
+          // The guias imobiliárias the site asked for, still open.
           "/admin/utilitarios/guias": await openGuideRequestCount(tenant.slug),
         }
       : {}),
@@ -289,7 +289,7 @@ export default async function DashboardLayout({
           {can(role, "channels.manage", granted) && (
             <AgendaAlerts setting={alerts.agenda} />
           )}
-          {/* And the guias de recolhimento: a new one, or one the citizen moved. */}
+          {/* And the guias imobiliárias: a new one, or one the citizen moved. */}
           {can(role, "requests.manage", granted) && (
             <GuideAlerts setting={alerts.guias} />
           )}

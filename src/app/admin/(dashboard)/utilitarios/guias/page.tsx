@@ -4,6 +4,7 @@ import { signHref } from "@/app/admin/_components/sign-or-print";
 import { can } from "@/core/auth/roles.ts";
 import {
   GUIDE_KIND_INFO,
+  guideKindsSummary,
   SPU_LINKS,
   SPU_STEPS,
 } from "@/core/guides/catalog.ts";
@@ -34,10 +35,10 @@ import { getTenant, OFFICE_TIME_ZONE } from "@/lib/tenant.ts";
 import { AdminIcon } from "../../../_components/icon.tsx";
 import { AdminPageHeader } from "../../../_components/page-header.tsx";
 
-export const metadata = { title: "Guias de recolhimento" };
+export const metadata = { title: "Guias imobiliárias" };
 
 /**
- * Utilitários: the guias de recolhimento the notary signs and the party
+ * Utilitários: the guias imobiliárias the notary signs and the party
  * takes to the fisco before the escritura (ITIV/ITBI, ITCD, laudêmio
  * municipal, certidão imobiliária), and what the SPU asks for a property of
  * the União, where no guia comes out of the office.
@@ -75,7 +76,10 @@ export default async function GuidesPage({
 
   return (
     <>
-      <AdminPageHeader title="Guias de recolhimento" />
+      <AdminPageHeader
+        title="Guias imobiliárias"
+        description={guideKindsSummary()}
+      />
       <main className="flex max-w-[1100px] flex-col gap-4.5 px-[30px] py-7">
         <div className="flex flex-wrap items-center gap-3">
           <Link
@@ -219,7 +223,7 @@ function GuideYear({
           <a
             href={signHref(
               `/admin/utilitarios/guias/ano/${year}`,
-              `Guias de recolhimento de ${year}`,
+              `Guias imobiliárias de ${year}`,
             )}
             className="btn btn-admin-primary btn-sm"
           >

@@ -8,8 +8,10 @@ import {
   defaultIssSettings,
   dueDateOf,
   formatRate,
+  fundsOf,
   issOf,
   issOn,
+  outsideTheBase,
   portalFields,
 } from "./declaration.ts";
 
@@ -58,7 +60,15 @@ test("o PDF declara os emolumentos, ratifica o livro e cita a lei", () => {
   assert.match(all, /Livro Diário Auxiliar da Receita e da Despesa/);
   assert.match(all, /Provimento CN-CNJ nº 259\/2026/);
   assert.match(all, /REsp 1\.328\.384\/RS/);
-  assert.match(all, /FDJ, FRMP, FCRCPN e FUNAF\/FPGE/);
+  assert.match(
+    all,
+    /Neste Estado \(RN\), esses repasses são: FDJ, FRMP, FCRCPN e FUNAF\/FPGE/,
+  );
+  assert.match(
+    all,
+    /Por exemplo: a taxa de fiscalização devida ao Poder Judiciário/,
+  );
+  assert.match(all, /"highlight":"Não integram a base de cálculo/);
   assert.match(all, /Lei Complementar Municipal nº 1\/2000/);
   assert.match(all, /00\.000\.000\/0001-00/);
   // No en/em dashes in what the fisco reads.
@@ -183,4 +193,15 @@ test("SEMUT: protocolo de entrega com campos para o servidor preencher", () => {
   assert.match(all, /Recebimento \(preenchido pela SEMUT\)/);
   assert.match(all, /Assinatura e carimbo/);
   assert.equal(defaultIssSettings(tenant).filing, "semut");
+});
+
+test("fora do RN, o texto fica geral, sem os fundos do RN", () => {
+  const elsewhere = {
+    ...tenant,
+    location: { ...tenant.location, state: "PB" },
+  } as unknown as typeof tenant;
+  const text = outsideTheBase(elsewhere);
+  assert.doesNotMatch(text, /FDJ|FCRCPN|FUNAF/);
+  assert.match(text, /variam conforme a lei de emolumentos de cada Estado/);
+  assert.deepEqual(fundsOf(elsewhere), []);
 });

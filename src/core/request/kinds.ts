@@ -64,7 +64,7 @@ export const SERVICE_REQUEST_STATUSES = [
   "awaiting-payment",
   "payment-reported",
   "awaiting-compliance",
-  // A guia de recolhimento (ITIV/ITBI, ITCD) delivered with its boleto: the
+  // A guia imobiliária (ITIV/ITBI, ITCD) delivered with its boleto: the
   // party pays it to the fisco, not to the office, before the escritura.
   "awaiting-guide-payment",
   "processing",
