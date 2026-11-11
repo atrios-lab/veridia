@@ -43,7 +43,10 @@ export type AuditState =
 
 const DENIED: AuditState = { status: "error", message: "Sem permissão." };
 
-/** Marks urgent acts as seen: the panel's alert for them ends. */
+/**
+ * Marks acts as "lido e ok": an urgent one's alert ends, and every one
+ * leaves its band for "Analisadas e concluídas".
+ */
 export async function markReviewed(
   _previous: AuditState,
   formData: FormData,
@@ -62,9 +65,9 @@ export async function markReviewed(
     status: "saved",
     message:
       done === 1
-        ? "Marcado como verificado."
+        ? 'Marcado como lido e ok. Ele foi para "Analisadas e concluídas".'
         : done
-          ? `${done} atos marcados como verificados.`
+          ? `${done} atos marcados como lidos e ok. Eles foram para "Analisadas e concluídas".`
           : "Esses atos já estavam verificados.",
   };
 }

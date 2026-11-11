@@ -87,3 +87,22 @@ tabelas (`audit_reviews`) e acrescentam colunas (`audit_log.reason`). Não apaga
   - por e-mail só quando marcado;
   - para imprimir, use "Abrir PDF (imprimir)" na notificação.
 - **A migração `0045` só acrescenta colunas.**
+
+## Atualização de 11/11/2026: só os urgentes alertam
+
+- **Urgente** fica só para os atos que podem esconder erro, fraude, dolo,
+  culpa ou má intenção: exclusão de pedidos, guias, documentos, anexos e
+  publicações, chave Pix, contas, e-mails, acesso ao painel e certificado.
+  Só esta faixa alerta o Tabelião/Registrador, até ele verificar.
+- Saíram do Urgente:
+  - exclusão de material de treinamento (curso, pergunta, tutorial), que
+    foi para Análise;
+  - desativar um usuário, que foi para Atenção.
+- **Atenção** e **Análise** não alertam. Ficam para pesquisa, e o balão de
+  cada uma mostra quantos atos ainda faltam conferir.
+- **Analisadas e concluídas**: novo balão. O que for marcado como "lido e
+  ok", um por um ou com "Marcar todos", sai da faixa e passa a contar aqui.
+  O filtro "Analisadas" lista esses atos.
+- **Por pessoa** virou uma lista para escolher, em vez de um cartão por
+  pessoa. Funciona do mesmo jeito com 2 ou com 50 funcionários. Quem tem
+  urgente esperando aparece primeiro, marcado com ⚠.
