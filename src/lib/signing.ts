@@ -1129,11 +1129,14 @@ export async function unsignedDeliveries(
     mimeType: string;
     path: string | null;
     sizeBytes: number;
+    physicalSignatureAt?: Date | null;
   }[],
 ): Promise<Set<string>> {
   const pdfs = attachments.filter(
     (a) =>
       a.kind === "office" &&
+      // Confirmed as signed by hand and scanned: nothing to remind.
+      !a.physicalSignatureAt &&
       a.mimeType === "application/pdf" &&
       a.path &&
       a.sizeBytes <= CHECK_LIMIT,
@@ -1230,4 +1233,54 @@ export async function signDeliveredDocumentWith(
     targetId: `${input.requestId} · ${signedDocument.code}`,
   });
   return signedDocument;
+}
+
+/**
+ * Does a file sent to the client carry a digital signature? Only a PDF
+ * can (decision of 11/11/2026): an image never does.
+ */
+export function fileHasDigitalSignature(
+  bytes: Buffer,
+  mimeType: string,
+): boolean {
+  return mimeType === "application/pdf" && hasSignature(bytes);
+}
+
+/**
+ * The clerk confirms that files sent with no digital signature are
+ * dematerialized documents, signed by hand and scanned (decision of
+ * 11/11/2026). Recorded on each file and in the audit.
+ */
+export async function confirmPhysicalSignatureWith(
+  database: Database,
+  tenantSlug: string,
+  requestId: string,
+  storedNames: string[],
+  who: { id: string; name: string },
+  now = new Date(),
+): Promise<void> {
+  if (!storedNames.length) return;
+  const rows = await database
+    .update(serviceRequestAttachments)
+    .set({ physicalSignatureAt: now, physicalSignatureBy: who.name })
+    .where(
+      and(
+        eq(serviceRequestAttachments.tenantSlug, tenantSlug),
+        eq(serviceRequestAttachments.requestId, requestId),
+        eq(serviceRequestAttachments.kind, "office"),
+        inArray(serviceRequestAttachments.storedName, storedNames),
+      ),
+    )
+    .returning({ displayName: serviceRequestAttachments.displayName });
+  for (const row of rows) {
+    await recordAuditWith(database, {
+      tenantSlug,
+      actorId: who.id,
+      action: "service-request.delivery-physical",
+      targetType: "service-request",
+      targetId: `${requestId} · ${row.displayName}`,
+      reason:
+        "Confirmou que é documento desmaterializado: assinado à mão e digitalizado, sem assinatura digital.",
+    });
+  }
 }

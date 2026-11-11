@@ -34,6 +34,8 @@ const EXACT: Record<string, string> = {
   "messenger.message-delete": "Apagou uma mensagem interna",
   "messenger.conversation-clear": "Limpou uma conversa interna",
   "messenger.lunch-return": "Voltou do almoço e liberou o chat",
+  "service-request.delivery-physical":
+    "Enviou ao cliente documento físico digitalizado, sem assinatura digital",
   "messenger.status-set": "Mudou o status de uma pessoa no chat",
   "access-hours.request": "Pediu para acessar o painel fora do horário",
   "access-hours.release": "Liberou o acesso ao painel fora do horário",
@@ -266,6 +268,8 @@ const EXPLANATIONS: Record<string, string> = {
     "A pessoa apagou uma mensagem que tinha enviado no chat interno. Ela some da conversa, mas continua guardada para o Tabelião/Registrador.",
   "messenger.conversation-clear":
     "A pessoa limpou uma conversa do chat interno: as mensagens somem da tela das duas pessoas, e o Tabelião/Registrador continua com o histórico.",
+  "service-request.delivery-physical":
+    "O documento enviado ao cliente não tinha assinatura digital, e a pessoa confirmou que é um documento desmaterializado: assinado à mão no papel e digitalizado.",
   "messenger.lunch-return":
     "No horário de almoço o chat interno fica bloqueado; a pessoa declarou que voltou do almoço ou do descanso e liberou o chat antes do fim do horário.",
   "messenger.status-set":

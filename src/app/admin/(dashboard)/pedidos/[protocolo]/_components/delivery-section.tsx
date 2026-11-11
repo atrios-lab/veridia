@@ -29,10 +29,26 @@ export interface DeliveryCertificate {
   holderName: string;
 }
 
+/** The same check the server makes (lib/signature/pades.ts hasSignature). */
+async function carriesSignature(file: File): Promise<boolean> {
+  if (file.type !== "application/pdf" && !/\.pdf$/i.test(file.name)) {
+    return false;
+  }
+  const text = new TextDecoder("latin1").decode(await file.arrayBuffer());
+  return /\/ByteRange\s*\[/.test(text);
+}
+
+type Check =
+  | { kind: "idle" }
+  | { kind: "checking" }
+  | { kind: "signed"; name: string }
+  | { kind: "unsigned"; name: string; pdf: boolean };
+
 export function DeliverySection({
   requestId,
   delivered,
   unsigned,
+  physical,
   certificates,
   canManageCertificates,
   nameSuggestions,
@@ -46,6 +62,8 @@ export function DeliverySection({
   defaultName: string;
   /** Delivered PDFs with no digital signature (see lib/signing.ts). */
   unsigned: string[];
+  /** Confirmed as signed by hand and scanned: id to "who, when". */
+  physical: Record<string, string>;
   /** The certificates this clerk may sign with. */
   certificates: DeliveryCertificate[];
   canManageCertificates: boolean;
@@ -56,6 +74,35 @@ export function DeliverySection({
   );
   useEmailWarning(state);
   const formRef = useRef<HTMLFormElement>(null);
+  const choiceRef = useRef<HTMLInputElement>(null);
+  const [check, setCheck] = useState<Check>({ kind: "idle" });
+  const [confirmed, setConfirmed] = useState(false);
+
+  // Every file for the client is checked before it goes (decision of
+  // 11/11/2026): signed digitally, or the clerk decides what to do.
+  const inspect = async (file: File) => {
+    setConfirmed(false);
+    setCheck({ kind: "checking" });
+    const signed = await carriesSignature(file).catch(() => false);
+    setCheck(
+      signed
+        ? { kind: "signed", name: file.name }
+        : {
+            kind: "unsigned",
+            name: file.name,
+            pdf: file.type === "application/pdf" || /\.pdf$/i.test(file.name),
+          },
+    );
+  };
+  const send = (choice: "" | "digital" | "fisica") => {
+    if (choiceRef.current) choiceRef.current.value = choice;
+    setCheck({ kind: "idle" });
+    formRef.current?.requestSubmit();
+  };
+  const cancel = () => {
+    setCheck({ kind: "idle" });
+    formRef.current?.reset();
+  };
 
   useEffect(() => {
     if (state.status !== "success") return;
@@ -97,6 +144,12 @@ export function DeliverySection({
                   suggestions={nameSuggestions}
                 />
               )}
+              {physical[attachment.id] && (
+                <p className="mt-1 rounded-[8px] bg-admin-input-bg px-2.5 py-1.5 text-[12px] text-admin-muted">
+                  📄 Documento físico digitalizado, sem assinatura digital ·
+                  confirmado por {physical[attachment.id]}
+                </p>
+              )}
               {unsigned.includes(attachment.id) && (
                 <UnsignedNotice
                   requestId={requestId}
@@ -112,6 +165,7 @@ export function DeliverySection({
 
       <form action={action} ref={formRef} className="mt-3.5">
         <input type="hidden" name="requestId" value={requestId} />
+        <input type="hidden" name="assinatura" ref={choiceRef} />
         <div className="mb-3">
           <DocumentNameField
             field="documento"
@@ -143,13 +197,96 @@ export function DeliverySection({
             className="sr-only"
             disabled={pending}
             onChange={(event) => {
-              if (event.target.files?.length) {
-                event.target.form?.requestSubmit();
-              }
+              const file = event.target.files?.[0];
+              if (file) void inspect(file);
             }}
           />
         </label>
       </form>
+      {check.kind === "checking" && (
+        <p className="mt-2 text-[12.5px] text-admin-muted">
+          Conferindo a assinatura digital do documento...
+        </p>
+      )}
+      {check.kind === "signed" && (
+        <div className="mt-3 rounded-[12px] border border-admin-success-text/30 bg-admin-success-bg px-4 py-3 text-[13px] text-admin-success-text">
+          <p className="font-semibold">
+            ✓ &quot;{check.name}&quot; tem assinatura digital.
+          </p>
+          <div className="mt-2 flex flex-wrap gap-2">
+            <button
+              type="button"
+              onClick={() => send("")}
+              className="btn btn-admin-primary btn-sm"
+            >
+              Enviar ao cliente
+            </button>
+            <button
+              type="button"
+              onClick={cancel}
+              className="btn btn-admin-secondary btn-sm"
+            >
+              Cancelar
+            </button>
+          </div>
+        </div>
+      )}
+      {check.kind === "unsigned" && (
+        <div
+          role="alertdialog"
+          aria-label="Documento sem assinatura digital"
+          className="mt-3 rounded-[12px] border border-admin-warning-soft-border bg-admin-warning-bg px-4 py-3 text-[13px] text-admin-warning-text"
+        >
+          <p className="font-bold">
+            ⚠ O documento anexado não contém assinatura digital.
+          </p>
+          <p className="mt-0.5">&quot;{check.name}&quot;</p>
+          {check.pdf && (
+            <>
+              <p className="mt-2 font-semibold">
+                Deseja assinar o documento digitalmente?
+              </p>
+              <button
+                type="button"
+                onClick={() => send("digital")}
+                className="btn btn-admin-primary btn-sm mt-1.5"
+              >
+                Sim, enviar e assinar digitalmente
+              </button>
+            </>
+          )}
+          <label className="mt-3 flex items-start gap-2 text-[12.5px]">
+            <input
+              type="checkbox"
+              checked={confirmed}
+              onChange={(event) => setConfirmed(event.target.checked)}
+              className="checkbox-admin mt-0.5"
+            />
+            Confirmo que é um documento desmaterializado, apenas com assinatura
+            física, que foi digitalizado.
+          </label>
+          <div className="mt-2 flex flex-wrap gap-2">
+            <button
+              type="button"
+              disabled={!confirmed}
+              onClick={() => send("fisica")}
+              className="btn btn-admin-secondary btn-sm"
+            >
+              Enviar como documento físico digitalizado
+            </button>
+            <button
+              type="button"
+              onClick={cancel}
+              className="text-[12.5px] font-semibold underline"
+            >
+              Cancelar
+            </button>
+          </div>
+          <p className="mt-2 text-[11.5px]">
+            A escolha fica registrada na auditoria.
+          </p>
+        </div>
+      )}
       {state.status === "error" && (
         <p
           role="alert"

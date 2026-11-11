@@ -24,8 +24,10 @@ import { createTestPki } from "./signature/test-pki.ts";
 import {
   addCertificateWith,
   certificatesForSignerWith,
+  confirmPhysicalSignatureWith,
   coSignDocumentWith,
   disableCertificateWith,
+  fileHasDigitalSignature,
   findSignedDocumentWith,
   finishA3SignWith,
   listCertificatesWith,
@@ -590,4 +592,56 @@ test("A3: a plataforma prepara, o token assina fora, e só a assinatura certa é
     ),
     /CPF ou CNPJ/,
   );
+});
+
+test("documento sem assinatura digital: o escrevente confirma que é físico digitalizado", async () => {
+  const act = getAct("notas-ata-notarial");
+  if (!act) throw new Error("catálogo incompleto");
+  const request = await createServiceRequestWith(db, TENANTS[TENANT], act, {
+    applicantName: "Bruno Modelo Lima",
+    contact: "bruno@exemplo.com",
+    accessKeyHash: hashAccessKey("CHAVE-EXEMPLO-FISICO"),
+  });
+  const pdf = await samplePdf();
+  assert.equal(fileHasDigitalSignature(pdf, "application/pdf"), false);
+  // An image never carries a digital signature.
+  assert.equal(fileHasDigitalSignature(pdf, "image/jpeg"), false);
+  const stored = await storeOfficePdf(TENANT, pdf);
+  await attachToRequestWith(
+    db,
+    TENANT,
+    request.id,
+    [
+      {
+        storedName: stored.storedName,
+        displayName: "escritura-digitalizada",
+        path: stored.path,
+        mimeType: "application/pdf",
+        sizeBytes: pdf.length,
+      },
+    ],
+    "office",
+  );
+  const mine = async () =>
+    (await db.select().from(serviceRequestAttachments)).filter(
+      (a) => a.requestId === request.id,
+    );
+  assert.equal((await unsignedDeliveries(await mine())).size, 1);
+
+  await confirmPhysicalSignatureWith(
+    db,
+    TENANT,
+    request.id,
+    [stored.storedName],
+    { id: "escrevente", name: "João Fictício de Souza" },
+    new Date("2026-11-11T14:00:00Z"),
+  );
+  const [row] = await mine();
+  assert.equal(row.physicalSignatureBy, "João Fictício de Souza");
+  assert.ok(row.physicalSignatureAt);
+  // Confirmed: no more "sem assinatura digital" reminder.
+  assert.equal((await unsignedDeliveries(await mine())).size, 0);
+  const { auditLog } = await import("@/db/schema.ts");
+  const acts = await db.select().from(auditLog);
+  assert.ok(acts.some((a) => a.action === "service-request.delivery-physical"));
 });

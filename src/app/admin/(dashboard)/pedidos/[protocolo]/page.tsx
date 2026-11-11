@@ -57,6 +57,7 @@ import {
 } from "@/core/scheduling/calendar.ts";
 import {
   formatOfficeDate,
+  formatOfficeDateTime,
   formatOfficeDayMonthTime,
 } from "@/core/time/office-time.ts";
 import { db } from "@/db/index.ts";
@@ -674,6 +675,14 @@ export default async function ServiceRequestDetailPage({
                 requestId={request.id}
                 delivered={deliveredAttachments}
                 unsigned={[...unsignedDelivered]}
+                physical={Object.fromEntries(
+                  ownAttachments
+                    .filter((a) => a.kind === "office" && a.physicalSignatureAt)
+                    .map((a) => [
+                      a.id,
+                      `${a.physicalSignatureBy ?? "a serventia"} em ${formatOfficeDateTime(a.physicalSignatureAt as Date)}`,
+                    ]),
+                )}
                 certificates={signingCertificates.map(
                   ({ id, label, holderName }) => ({ id, label, holderName }),
                 )}

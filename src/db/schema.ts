@@ -228,6 +228,15 @@ export const serviceRequestAttachments = pgTable(
       (): AnyPgColumn => serviceRequestRequirementMessages.id,
       { onDelete: "cascade" },
     ),
+    /**
+     * A file sent to the client with no digital signature, confirmed by the
+     * clerk as a dematerialized document: signed by hand on paper and
+     * scanned (decision of 11/11/2026). Who confirmed, by name, and when.
+     */
+    physicalSignatureAt: timestamp("physical_signature_at", {
+      withTimezone: true,
+    }),
+    physicalSignatureBy: text("physical_signature_by"),
     createdAt: timestamp("created_at", { withTimezone: true })
       .notNull()
       .defaultNow(),

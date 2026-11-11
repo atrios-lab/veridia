@@ -26,7 +26,13 @@ export const metadata = { title: "Assinador digital" };
 export default async function SignerPage({
   searchParams,
 }: {
-  searchParams: Promise<{ excluidos?: string; retirado?: string }>;
+  searchParams: Promise<{
+    excluidos?: string;
+    retirado?: string;
+    /** A panel route that generates a PDF (guia, declaração) to sign. */
+    origem?: string;
+    titulo?: string;
+  }>;
 }) {
   const query = await searchParams;
   const showRemoved = query.excluidos === "1";
@@ -56,6 +62,7 @@ export default async function SignerPage({
         {/* A1 from the platform or A3 from a token on this computer: the
             form offers both, A3 even with no A1 cadastrado. */}
         <SignForm
+          preload={preloadFrom(query.origem, query.titulo)}
           certificates={certificates.map(({ id, label, holderName }) => ({
             id,
             label,
@@ -191,4 +198,23 @@ export default async function SignerPage({
       </main>
     </>
   );
+}
+
+/**
+ * Only the panel's own routes may be preloaded: a path under /admin/, on
+ * this site, never another host.
+ */
+function preloadFrom(origem?: string, titulo?: string) {
+  if (!origem?.startsWith("/admin/") || origem.startsWith("//")) {
+    return undefined;
+  }
+  const title = (titulo ?? "").trim().slice(0, 120) || "Documento";
+  const name = `${
+    title
+      .replace(/[^\w\s-]/g, "")
+      .trim()
+      .replace(/\s+/g, "-")
+      .toLowerCase() || "documento"
+  }.pdf`;
+  return { url: origem, name, title };
 }

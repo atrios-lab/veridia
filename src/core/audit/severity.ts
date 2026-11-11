@@ -89,6 +89,8 @@ const EXACT: Record<string, AuditLevel> = {
   "messenger.message-edit": "rotina",
   "messenger.conversation-clear": "rotina",
   "messenger.lunch-return": "rotina",
+  // Sent with no digital signature, on the clerk's word: worth a look.
+  "service-request.delivery-physical": "atencao",
   "messenger.status-set": "analise",
   "audit.notification-answer": "atencao",
   // The panel's hours (decision of 11/11/2026): who works out of hours.
