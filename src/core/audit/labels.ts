@@ -32,7 +32,12 @@ const EXACT: Record<string, string> = {
   "messenger.chat-on": "Reativou o chat interno de uma pessoa",
   "messenger.message-edit": "Editou uma mensagem interna",
   "messenger.message-delete": "Apagou uma mensagem interna",
-  "messenger.conversation-clear": "Limpou uma conversa interna (só para si)",
+  "messenger.conversation-clear": "Limpou uma conversa interna",
+  "access-hours.request": "Pediu para acessar o painel fora do horário",
+  "access-hours.release": "Liberou o acesso ao painel fora do horário",
+  "access-hours.deny": "Recusou o acesso ao painel fora do horário",
+  "access-hours.revoke": "Retirou a liberação fora do horário",
+  "office-settings.access-hours": "Mudou o horário de acesso ao painel",
   "signed-document.remove": "Retirou um documento assinado da lista",
   "signed-document.restore": "Devolveu um documento assinado à lista",
   "signed-document.file-purge": "Arquivo assinado saiu do sistema (6 meses)",
@@ -258,7 +263,17 @@ const EXPLANATIONS: Record<string, string> = {
   "messenger.message-delete":
     "A pessoa apagou uma mensagem que tinha enviado no chat interno. Ela some da conversa, mas continua guardada para o Tabelião/Registrador.",
   "messenger.conversation-clear":
-    "A pessoa limpou uma conversa do chat interno só na tela dela; a outra pessoa e o Tabelião/Registrador continuam com o histórico.",
+    "A pessoa limpou uma conversa do chat interno: as mensagens somem da tela das duas pessoas, e o Tabelião/Registrador continua com o histórico.",
+  "access-hours.request":
+    "Fora do horário de acesso, a pessoa pediu ao Tabelião/Registrador para usar o painel, dizendo qual demanda precisava acompanhar.",
+  "access-hours.release":
+    "O Tabelião/Registrador liberou uma pessoa para usar o painel fora do horário, só naquele dia ou até retirar a liberação.",
+  "access-hours.deny":
+    "O Tabelião/Registrador recusou o pedido de uma pessoa para usar o painel fora do horário.",
+  "access-hours.revoke":
+    "O Tabelião/Registrador retirou a liberação de uma pessoa para usar o painel fora do horário.",
+  "office-settings.access-hours":
+    "O Tabelião/Registrador mudou o horário em que o painel fica aberto para a equipe.",
   "audit.notification":
     "O Tabelião/Registrador enviou uma notificação pedindo explicações sobre atos registrados.",
   "audit.notification-answer":

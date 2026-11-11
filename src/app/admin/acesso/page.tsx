@@ -1,6 +1,10 @@
 import Image from "next/image";
 import { redirect } from "next/navigation";
-import { getPendingSession, getSession } from "@/lib/session.ts";
+import {
+  getClosedHoursSession,
+  getPendingSession,
+  getSession,
+} from "@/lib/session.ts";
 import { getTenant } from "@/lib/tenant.ts";
 import { signOut } from "../actions.ts";
 import { AccessCodeForm } from "./access-code-form.tsx";
@@ -16,7 +20,10 @@ export default async function AccessCodePage({
   const { next } = await searchParams;
   const destination =
     next && (next.startsWith("/admin/") || next === "/admin") ? next : "/admin";
-  if (await getSession()) redirect(destination);
+  // Past the code but outside the hours: the panel shows the closed screen.
+  if ((await getSession()) || (await getClosedHoursSession())) {
+    redirect(destination);
+  }
   if (!(await getPendingSession())) redirect("/admin/login");
   const tenant = await getTenant();
 

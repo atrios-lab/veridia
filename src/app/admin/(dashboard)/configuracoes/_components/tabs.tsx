@@ -78,6 +78,11 @@ const GROUPS: { label: string; tabs: Tab[] }[] = [
         href: "/admin/configuracoes/duas-etapas",
         permission: "user.manage",
       },
+      {
+        label: "Horário de acesso",
+        href: "/admin/configuracoes/horario-de-acesso",
+        permission: "user.manage",
+      },
     ],
   },
 ];
