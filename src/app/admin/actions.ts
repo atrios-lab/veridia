@@ -4,10 +4,11 @@ import { APIError } from "better-auth/api";
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { canAccessTenant } from "@/core/auth/roles.ts";
+import { confirmBySavedComputer } from "@/lib/access-code.ts";
 import { recordAudit } from "@/lib/audit.ts";
 import { auth } from "@/lib/auth.ts";
 import { isRateLimited } from "@/lib/rate-limit.ts";
-import { getSession } from "@/lib/session.ts";
+import { getPendingSession } from "@/lib/session.ts";
 import { getTenant } from "@/lib/tenant.ts";
 
 export async function signIn(formData: FormData) {
@@ -21,6 +22,7 @@ export async function signIn(formData: FormData) {
   let userId: string;
   let userRole: string;
   let userTenantSlug: string;
+  let sessionToken: string;
   try {
     const result = await auth.api.signInEmail({
       body: { email, password },
@@ -29,6 +31,7 @@ export async function signIn(formData: FormData) {
     userId = result.user.id;
     userRole = result.user.role;
     userTenantSlug = result.user.tenantSlug;
+    sessionToken = result.token;
   } catch (error) {
     // One generic outcome for every failure. Telling the visitor which field
     // was wrong turns the login form into a list of valid e-mail addresses.
@@ -68,11 +71,25 @@ export async function signIn(formData: FormData) {
 
   // Only internal paths: an open redirect here would hand the login flow to
   // whoever crafts the link.
-  redirect(next.startsWith("/admin/") || next === "/admin" ? next : "/admin");
+  const destination =
+    next.startsWith("/admin/") || next === "/admin" ? next : "/admin";
+  // A computer the person saved confirms this new session right here; any
+  // other goes through the e-mail code (lib/access-code.ts).
+  if (
+    await confirmBySavedComputer(sessionToken, {
+      id: userId,
+      role: userRole,
+      tenantSlug: userTenantSlug,
+    })
+  ) {
+    redirect(destination);
+  }
+  redirect(`/admin/acesso?${new URLSearchParams({ next: destination })}`);
 }
 
 export async function signOut() {
-  const session = await getSession();
+  // Also from the code screen, before the second step.
+  const session = await getPendingSession();
   if (session) {
     const tenant = await getTenant();
     await recordAudit({

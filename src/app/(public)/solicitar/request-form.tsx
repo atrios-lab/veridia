@@ -10,6 +10,7 @@ import {
   type UseFormWatch,
   useForm,
 } from "react-hook-form";
+import { DocumentNameField } from "@/app/_components/document-name-field.tsx";
 import type { Act, ActVariants } from "@/core/acts/catalog.ts";
 import {
   ATTRIBUTION_SHORT_NAMES,
@@ -24,6 +25,7 @@ import {
 } from "@/core/acts/catalog.ts";
 import { MAX_ATTACHMENTS } from "@/core/request/attachment.ts";
 import { DEADLINE_CAVEAT } from "@/core/request/deadline.ts";
+import { CITIZEN_DOCUMENT_NAMES } from "@/core/request/delivery-name.ts";
 import {
   formatCpf,
   formatPhone,
@@ -939,8 +941,17 @@ export function RequestForm({
                     name="file"
                     className="h-4 w-4 shrink-0 text-brand-accent"
                   />
-                  <span className="flex-1 truncate text-[12.5px] text-brand-text">
-                    {file.name}
+                  <span className="flex min-w-0 flex-1 flex-col gap-1.5">
+                    <span className="truncate text-[12.5px] text-brand-text">
+                      {file.name}
+                    </span>
+                    <DocumentNameField
+                      field="anexos"
+                      tone="public"
+                      suggestions={CITIZEN_DOCUMENT_NAMES}
+                      placeholder="Que documento é este? (opcional)"
+                      compactLabel={`Nome do documento ${file.name}`}
+                    />
                   </span>
                   <span className="shrink-0 text-[11px] text-brand-faint">
                     {formatFileSize(file.size)}

@@ -4,6 +4,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import Link from "next/link";
 import { useActionState, useState } from "react";
 import { useForm } from "react-hook-form";
+import { DocumentNameField } from "@/app/_components/document-name-field.tsx";
 import {
   MANIFESTATION_OPTIONS,
   manifestationLabel,
@@ -227,6 +228,20 @@ export function ManifestationScreen() {
           </div>
 
           <div>
+            <div className="mb-2.5">
+              <DocumentNameField
+                field="anexos"
+                tone="public"
+                suggestions={[
+                  "Foto",
+                  "Comprovante",
+                  "Documento",
+                  "Protocolo anterior",
+                  "Print de tela",
+                ]}
+                placeholder="Ex.: Foto do local"
+              />
+            </div>
             <label
               htmlFor="anexos"
               className="block cursor-pointer rounded-xl border-[1.5px] border-dashed border-brand-border px-3 py-3.5 text-center hover:border-brand-accent has-[:focus-visible]:border-brand-accent"

@@ -14,6 +14,7 @@ import {
   storedFileName,
   type UploadedRef,
 } from "@/core/request/attachment.ts";
+import { namesForFiles } from "@/core/request/delivery-name.ts";
 import {
   type BrandImageKind,
   brandImageFileName,
@@ -125,6 +126,11 @@ export async function storeAttachments(
     startIndex?: number;
     kind?: string;
     limit?: number;
+    /**
+     * The name typed for these files (numbered when there are several), or
+     * one per file, in order.
+     */
+    name?: string | string[];
   },
 ): Promise<StoredAttachment[]> {
   // An untouched file input still arrives: a server action encodes it as an
@@ -155,6 +161,7 @@ export async function storeAttachments(
   if (problem) throw new AttachmentError(describeProblem(problem));
 
   const startIndex = options.startIndex ?? 0;
+  const names = namesForFiles([options.name ?? ""].flat(), read.length);
   const stored: StoredAttachment[] = [];
   for (const [index, file] of read.entries()) {
     const storedName = storedFileName(
@@ -165,7 +172,8 @@ export async function storeAttachments(
     const path = await store(file.bytes, storedName, file.mimeType);
     stored.push({
       storedName,
-      displayName: options.kind ?? displayFileName(startIndex + index),
+      displayName:
+        names[index] ?? options.kind ?? displayFileName(startIndex + index),
       path,
       mimeType: file.mimeType,
       sizeBytes: file.size,
@@ -188,6 +196,7 @@ export async function acceptUploadedAttachments(
     startIndex?: number;
     kind?: string;
     limit?: number;
+    name?: string | string[];
   },
 ): Promise<StoredAttachment[]> {
   if (refs.length === 0) return [];
@@ -197,6 +206,7 @@ export async function acceptUploadedAttachments(
   if (problem) throw new AttachmentError(describeProblem(problem));
 
   const startIndex = options.startIndex ?? 0;
+  const names = namesForFiles([options.name ?? ""].flat(), refs.length);
   const stored: StoredAttachment[] = [];
   for (const [index, ref] of refs.entries()) {
     const blob = await head(ref.url);
@@ -217,7 +227,8 @@ export async function acceptUploadedAttachments(
       // The blob's own pathname is already the generated name this deploy
       // asked for (see the upload route), minus the folder.
       storedName: blob.pathname.split("/").pop() ?? blob.pathname,
-      displayName: options.kind ?? displayFileName(startIndex + index),
+      displayName:
+        names[index] ?? options.kind ?? displayFileName(startIndex + index),
       path: ref.url,
       mimeType: blob.contentType ?? ref.mimeType,
       sizeBytes: blob.size,
@@ -240,15 +251,22 @@ export async function collectAttachments(
     startIndex?: number;
     kind?: string;
     limit?: number;
+    name?: string | string[];
   },
 ): Promise<StoredAttachment[]> {
+  // A file with a fixed role (a signed form, a receipt) keeps its own name;
+  // any other takes the name typed next to it ("<field>Name").
+  const named =
+    options.kind || options.name !== undefined
+      ? options
+      : { ...options, name: formData.getAll(`${field}Name`).map(String) };
   const refs = formData.getAll(`${field}Ref`).map(parseRef);
-  if (refs.length > 0) return acceptUploadedAttachments(refs, options);
+  if (refs.length > 0) return acceptUploadedAttachments(refs, named);
 
   const files = formData
     .getAll(field)
     .filter((value): value is File => value instanceof File);
-  return storeAttachments(files, options);
+  return storeAttachments(files, named);
 }
 
 function parseRef(value: FormDataEntryValue): UploadedRef {

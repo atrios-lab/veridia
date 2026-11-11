@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useEffect, useId, useRef, useState } from "react";
 import { signOut } from "../actions.ts";
 import { AdminIcon } from "./icon.tsx";
@@ -85,6 +86,14 @@ export function UserMenu({
             <p className="text-[11.5px] text-admin-muted">{roleLabel}</p>
           </div>
           <hr className="my-0.5 border-0 border-t border-admin-border" />
+          <Link
+            href="/admin/minha-conta"
+            role="menuitem"
+            onClick={() => setOpen(false)}
+            className="flex w-full items-center rounded-[7px] px-2.5 py-2 text-left text-[13px] font-medium text-admin-text transition-colors duration-120 hover:bg-admin-input-bg"
+          >
+            Verificação em duas etapas
+          </Link>
           <form action={signOut} role="none">
             <SignOutButton className="flex w-full cursor-pointer items-center rounded-[7px] px-2.5 py-2 text-left text-[13px] font-medium text-admin-text transition-colors duration-120 hover:bg-admin-input-bg disabled:cursor-default disabled:opacity-60" />
           </form>

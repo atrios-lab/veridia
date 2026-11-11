@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useActionState, useEffect, useState } from "react";
+import { DocumentNameField } from "@/app/_components/document-name-field.tsx";
 import {
   DATA_RIGHT_OPTIONS,
   DATA_RIGHTS_DEADLINE_DAYS,
@@ -9,6 +10,7 @@ import {
   manifestationLabel,
 } from "@/core/request/channels.ts";
 import { DEADLINE_CAVEAT, type PauseReason } from "@/core/request/deadline.ts";
+import { CITIZEN_DOCUMENT_NAMES } from "@/core/request/delivery-name.ts";
 import {
   SIGNED_FORM_COUNTER_OPTION,
   SIGNED_FORM_REQUIRED_NOTICE,
@@ -1014,6 +1016,14 @@ function RequirementConversation({
             className="w-full rounded-xl border border-brand-border bg-brand-card px-3 py-2.5 text-[13px] text-brand-text placeholder:text-brand-faint"
           />
           <div className="mt-2 flex flex-wrap items-center gap-2">
+            <div className="mb-2 basis-full">
+              <DocumentNameField
+                field="resposta"
+                tone="public"
+                suggestions={CITIZEN_DOCUMENT_NAMES}
+                placeholder="Ex.: Resposta à exigência"
+              />
+            </div>
             <label
               className={`btn btn-secondary btn-sm cursor-pointer ${sending ? "opacity-60" : ""}`}
             >
@@ -1504,6 +1514,13 @@ function RequestDetail({ result }: { result: ServiceRequestDetail }) {
                 value={result.protocolNumber}
               />
               <input type="hidden" name="accessKey" value={result.accessKey} />
+              <div className="mb-2.5">
+                <DocumentNameField
+                  field="documento"
+                  tone="public"
+                  suggestions={CITIZEN_DOCUMENT_NAMES}
+                />
+              </div>
               <label
                 className={`flex cursor-pointer items-center justify-center gap-2 rounded-xl border-[1.5px] border-dashed border-brand-border px-3 py-3 text-[12.5px] font-semibold text-brand-primary hover:border-brand-accent ${sendingDoc ? "opacity-60" : ""}`}
               >
@@ -1852,6 +1869,13 @@ export function AppointmentCard({
             className="mt-3"
           >
             <ProtocolFields result={result} />
+            <div className="mb-2.5">
+              <DocumentNameField
+                field="documento"
+                tone="public"
+                suggestions={CITIZEN_DOCUMENT_NAMES}
+              />
+            </div>
             <label
               className={`flex cursor-pointer items-center justify-center gap-2 rounded-xl border-[1.5px] border-dashed border-brand-border px-3 py-3 text-[12.5px] font-semibold text-brand-primary hover:border-brand-accent ${sendingDoc ? "opacity-60" : ""}`}
             >

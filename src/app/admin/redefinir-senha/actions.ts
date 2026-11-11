@@ -11,6 +11,7 @@ import {
   verification as verificationTable,
 } from "@/db/auth-schema.ts";
 import { db } from "@/db/index.ts";
+import { markAccessConfirmed } from "@/lib/access-code.ts";
 import { recordAudit } from "@/lib/audit.ts";
 import { auth } from "@/lib/auth.ts";
 import { getTenant } from "@/lib/tenant.ts";
@@ -81,6 +82,14 @@ export async function acceptInvite(formData: FormData) {
     body: { email: invitedUser.email, password },
     headers: requestHeaders,
   });
+  // The first access (and a reset) came through a link sent by e-mail:
+  // this session counts as confirmed, and the e-mail code starts from the
+  // next sign-in (lib/access-code.ts).
+  await markAccessConfirmed(
+    result.token,
+    result.user.id,
+    new Date(Date.now() + 8 * 60 * 60 * 1000), // lib/auth.ts: eight hours
+  );
 
   // Same guard as the regular sign-in: the password is now set, but a link
   // opened on the wrong office's domain still may not enter that office.

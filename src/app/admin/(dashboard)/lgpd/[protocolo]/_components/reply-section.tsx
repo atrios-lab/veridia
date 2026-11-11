@@ -1,6 +1,7 @@
 "use client";
 
 import { useActionState, useState } from "react";
+import { DocumentNameField } from "../../../../../_components/document-name-field.tsx";
 import { useEmailWarning } from "../../../../_components/use-email-warning.ts";
 import {
   type ActionState,
@@ -48,6 +49,20 @@ export function ReplySection({
       <form action={respondAction} className="mt-2.5">
         <input type="hidden" name="requestId" value={requestId} />
         <input type="hidden" name="reply" value={reply} />
+        <div className="mb-2.5">
+          <DocumentNameField
+            field="relatorio"
+            tone="admin"
+            suggestions={[
+              "Relatório de dados pessoais",
+              "Resposta ao titular",
+              "Cópia dos dados",
+              "Comprovante de correção",
+              "Comprovante de eliminação",
+            ]}
+            placeholder="Relatório de dados"
+          />
+        </div>
         <label className="relative mt-1 flex cursor-pointer flex-col items-center gap-1 rounded-[10px] border-[1.5px] border-dashed border-admin-input-border px-4 py-3.5 text-center focus-within:border-admin-accent focus-within:ring-2 focus-within:ring-admin-accent">
           <span className="text-[12.5px] font-semibold text-admin-primary">
             Anexar relatório de dados (opcional)

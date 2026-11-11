@@ -4,6 +4,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import Link from "next/link";
 import { useActionState, useRef, useState } from "react";
 import { useForm } from "react-hook-form";
+import { DocumentNameField } from "@/app/_components/document-name-field.tsx";
 import {
   DATA_RIGHT_OPTIONS,
   DATA_RIGHTS_DEADLINE_DAYS,
@@ -258,6 +259,19 @@ export function DataRightsScreen(props: DataRightsScreenProps) {
             </div>
 
             <div>
+              <div className="mb-2.5">
+                <DocumentNameField
+                  field="anexos"
+                  tone="public"
+                  suggestions={[
+                    "Documento de identidade (RG ou CNH)",
+                    "Procuração",
+                    "Comprovante de residência",
+                    "Outro documento",
+                  ]}
+                  placeholder="Ex.: Documento de identidade"
+                />
+              </div>
               <label
                 htmlFor="anexos"
                 className="block cursor-pointer rounded-xl border-[1.5px] border-dashed border-brand-border bg-brand-card px-3 py-3.5 text-center hover:border-brand-accent has-[:focus-visible]:border-brand-accent"

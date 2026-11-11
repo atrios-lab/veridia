@@ -9,6 +9,7 @@ import {
   useState,
 } from "react";
 import { toast } from "sonner";
+import { DocumentNameField } from "../../../../../_components/document-name-field.tsx";
 import {
   type AttachmentItem,
   AttachmentRow,
@@ -18,6 +19,7 @@ import {
   type ActionState,
   deleteAttachmentAction,
   deliverDocumentAction,
+  renameDeliveredAction,
   signDeliveredAction,
 } from "../actions.ts";
 
@@ -33,9 +35,15 @@ export function DeliverySection({
   unsigned,
   certificates,
   canManageCertificates,
+  nameSuggestions,
+  defaultName,
 }: {
   requestId: string;
   delivered: AttachmentItem[];
+  /** Names built from the act and the protocol (core/request/delivery-name). */
+  nameSuggestions: string[];
+  /** What a delivery with no name typed is called. */
+  defaultName: string;
   /** Delivered PDFs with no digital signature (see lib/signing.ts). */
   unsigned: string[];
   /** The certificates this clerk may sign with. */
@@ -82,6 +90,13 @@ export function DeliverySection({
                 meta="entregue em"
                 onDelete={deleteAttachmentAction}
               />
+              {!attachment.goneLabel && (
+                <RenameDelivered
+                  requestId={requestId}
+                  attachmentId={attachment.id}
+                  suggestions={nameSuggestions}
+                />
+              )}
               {unsigned.includes(attachment.id) && (
                 <UnsignedNotice
                   requestId={requestId}
@@ -97,6 +112,15 @@ export function DeliverySection({
 
       <form action={action} ref={formRef} className="mt-3.5">
         <input type="hidden" name="requestId" value={requestId} />
+        <div className="mb-3">
+          <DocumentNameField
+            field="documento"
+            tone="admin"
+            suggestions={nameSuggestions}
+            placeholder={defaultName}
+            hint={`Sem nome, o documento sai como "${defaultName}".`}
+          />
+        </div>
         {/* The file input is visually hidden but still in the tab order, so
             the ring is the only thing telling a keyboard user they are on it. */}
         <label
@@ -246,5 +270,82 @@ function UnsignedNotice({
         </form>
       )}
     </div>
+  );
+}
+
+/** Gives a delivered document the name the citizen sees, after the fact. */
+function RenameDelivered({
+  requestId,
+  attachmentId,
+  suggestions,
+}: {
+  requestId: string;
+  attachmentId: string;
+  suggestions: string[];
+}) {
+  const [open, setOpen] = useState(false);
+  const [state, action, pending] = useActionState<ActionState, FormData>(
+    async (previous, formData) => {
+      const result = await renameDeliveredAction(previous, formData);
+      if (result.status === "success") {
+        toast.success("Nome alterado. O cidadão já vê o novo nome.");
+        setOpen(false);
+      }
+      return result;
+    },
+    { status: "idle" },
+  );
+  if (!open) {
+    return (
+      <button
+        type="button"
+        onClick={() => setOpen(true)}
+        className="mt-1 ml-1 text-[11.5px] font-semibold text-admin-muted underline hover:text-admin-primary"
+      >
+        Renomear
+      </button>
+    );
+  }
+  return (
+    <form
+      onSubmit={(event) => {
+        event.preventDefault();
+        const data = new FormData(event.currentTarget);
+        startTransition(() => action(data));
+      }}
+      className="mt-1.5 flex flex-wrap items-end gap-2"
+    >
+      <input type="hidden" name="requestId" value={requestId} />
+      <input type="hidden" name="attachmentId" value={attachmentId} />
+      <div className="min-w-0 flex-1">
+        <DocumentNameField
+          field="novo"
+          tone="admin"
+          suggestions={suggestions}
+        />
+      </div>
+      <button
+        type="submit"
+        disabled={pending}
+        className="btn btn-admin-primary btn-sm"
+      >
+        {pending ? "Salvando..." : "Salvar nome"}
+      </button>
+      <button
+        type="button"
+        onClick={() => setOpen(false)}
+        className="btn btn-admin-secondary btn-sm"
+      >
+        Cancelar
+      </button>
+      {state.status === "error" && (
+        <p
+          role="alert"
+          className="basis-full text-[12px] font-semibold text-admin-error-text"
+        >
+          {state.message}
+        </p>
+      )}
+    </form>
   );
 }

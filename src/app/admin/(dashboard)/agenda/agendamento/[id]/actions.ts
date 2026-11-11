@@ -91,6 +91,7 @@ export async function attachOfficeFilesAction(
     const stored = await storeAttachments(files, {
       tenantSlug: tenant.slug,
       kind: "anexo-agenda",
+      name: String(formData.get("arquivoName") ?? ""),
     });
     if (stored.length === 0) {
       return { status: "error", message: "Escolha um arquivo para anexar." };
