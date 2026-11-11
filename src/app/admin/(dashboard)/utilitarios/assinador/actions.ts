@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { can } from "@/core/auth/roles.ts";
 import { buildSignatureManifest } from "@/core/signature/manifest.ts";
+import { officialName } from "@/core/tenant/identification.ts";
 import { db } from "@/db/index.ts";
 import { justify } from "@/lib/audit-reason.ts";
 import { brandFor } from "@/lib/document-brand.ts";
@@ -86,6 +87,7 @@ export async function signOneDocument(
         originalName: file.name || "documento.pdf",
         verifyUrl: (code) => verifyUrlFor(tenant, origin, code),
         location,
+        officeName: officialName(tenant),
         manifest: withManifest
           ? async (code, info, at, original) => {
               const verifyUrl = verifyUrlFor(tenant, origin, code);

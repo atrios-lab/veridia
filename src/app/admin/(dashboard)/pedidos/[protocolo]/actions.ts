@@ -43,6 +43,7 @@ import {
 import { parseCentsInput } from "@/core/request/money.ts";
 import { requirementTextSchema } from "@/core/request/requirement.ts";
 import { toIsoDate } from "@/core/scheduling/calendar.ts";
+import { officialName } from "@/core/tenant/identification.ts";
 import type { Tenant } from "@/core/tenant/schema.ts";
 import { db } from "@/db/index.ts";
 import { justify } from "@/lib/audit-reason.ts";
@@ -1033,6 +1034,7 @@ export async function signDeliveredAction(
         password: String(formData.get("password") ?? ""),
         verifyUrl: (code) => verifyUrlFor(tenant, origin, code),
         location: `${tenant.location.city}/${tenant.location.state}`,
+        officeName: officialName(tenant),
       },
       session.user.id,
     );

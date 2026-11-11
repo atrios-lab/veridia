@@ -4,6 +4,7 @@ import { and, eq } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { z } from "zod";
+import { officialName } from "@/core/tenant/identification.ts";
 import { user } from "@/db/auth-schema.ts";
 import { db } from "@/db/index.ts";
 import {
@@ -308,6 +309,7 @@ export async function signNotification(
         originalName: "notificacao.pdf",
         verifyUrl: (code) => verifyUrlFor(tenant, origin, code),
         location: `${tenant.location.city}/${tenant.location.state}`,
+        officeName: officialName(tenant),
       },
       access.session.user.id,
     );

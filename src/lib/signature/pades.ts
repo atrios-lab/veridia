@@ -59,6 +59,7 @@ export interface PlaceholderInput {
     code: string;
     verifyUrl: string;
     signer: { name: string; at: string };
+    office: string;
   };
 }
 

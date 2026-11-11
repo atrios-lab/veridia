@@ -359,6 +359,12 @@ function sixMonthsFrom(instant: Date): Date {
   return next;
 }
 
+/** Who signed and when, as the band prints it. */
+const signerOf = (name: string, at: Date) => ({
+  name,
+  at: formatOfficeDateTime(at),
+});
+
 export interface SignInput {
   certificateId: string;
   password: string;
@@ -374,6 +380,11 @@ export interface SignInput {
   ) => Promise<Buffer>;
   verifyUrl: (code: string) => string;
   location: string;
+  /**
+   * The office as registered on the platform (its official name): printed
+   * in capitals on the signature band, beside the signer's full name.
+   */
+  officeName: string;
 }
 
 /**
@@ -418,6 +429,8 @@ export async function signNewDocumentWith(
     const stamped = await stampForSignature(input.pdf, {
       code,
       verifyUrl,
+      signer: signerOf(opened.info.holderName, now),
+      office: input.officeName,
       manifest: input.manifest
         ? await input.manifest(code, opened.info, now, original)
         : undefined,
@@ -438,10 +451,8 @@ export async function signNewDocumentWith(
       ? {
           code,
           verifyUrl,
-          signer: {
-            name: opened.info.holderName,
-            at: formatOfficeDateTime(now),
-          },
+          signer: signerOf(opened.info.holderName, now),
+          office: input.officeName,
         }
       : undefined,
   });
@@ -829,6 +840,7 @@ export async function signDeliveredDocumentWith(
     password: string;
     verifyUrl: (code: string) => string;
     location: string;
+    officeName: string;
   },
   userId: string,
   now = new Date(),
@@ -863,6 +875,7 @@ export async function signDeliveredDocumentWith(
       originalName: `${attachment.displayName}.pdf`,
       verifyUrl: input.verifyUrl,
       location: input.location,
+      officeName: input.officeName,
     },
     userId,
     now,

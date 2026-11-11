@@ -28,12 +28,17 @@ import {
 
 const INK = rgb(0.2, 0.2, 0.2);
 
-/** The lines of the band: the first one bold. */
+/**
+ * The lines of the band, bottom to top along the margin (decision of
+ * 11/11/2026): who signed, by the certificate holder's full name, and
+ * when; the office in capitals, as registered on the platform; the legal
+ * basis; where to check. The first two in bold.
+ */
 export function bandLines(input: {
   code: string;
   verifyUrl: string;
-  /** Who signed, when the band belongs to one signature (a signed PDF). */
-  signer?: { name: string; at: string };
+  signer: { name: string; at: string };
+  office: string;
 }): string[] {
   const code = formatVerificationCode(input.code);
   // The site's address without the code: the code goes apart, readable.
@@ -41,15 +46,15 @@ export function bandLines(input: {
     .replace(/^https?:\/\//, "")
     .replace(/\/[^/]*$/, "");
   return [
-    input.signer
-      ? `Assinado digitalmente por ${input.signer.name} em ${input.signer.at}, com certificado ICP-Brasil (PAdES).`
-      : "Documento assinado digitalmente com certificado ICP-Brasil (PAdES).",
+    `Assinado digitalmente por ${input.signer.name.trim()}, em ${input.signer.at}, com certificado ICP-Brasil (PAdES).`,
+    input.office.trim().toLocaleUpperCase("pt-BR"),
     `Validade jurídica: ${SIGNATURE_LEGAL_BASIS}.`,
-    input.signer
-      ? `Verifique em ${site} com o código ${code}, ou em validar.iti.gov.br.`
-      : `Verifique em ${site} com o código ${code}, ou em validar.iti.gov.br. Assinantes, datas e certificados no manifesto.`,
+    `Verifique em ${site} com o código ${code}, ou em validar.iti.gov.br. Assinaturas e certificados no manifesto.`,
   ];
 }
+
+/** How many of the band's first lines are bold. */
+const BOLD_LINES = 2;
 
 export async function qrPng(url: string): Promise<Buffer> {
   return QRCode.toBuffer(url, {
@@ -122,7 +127,10 @@ export function drawBand(
   const room = height - 160;
   const widest = Math.max(
     ...parts.lines.map((line, index) =>
-      (index === 0 ? parts.bold : parts.font).widthOfTextAtSize(line, 6.5),
+      (index < BOLD_LINES ? parts.bold : parts.font).widthOfTextAtSize(
+        line,
+        6.5,
+      ),
     ),
   );
   const size = Math.min(6.5, (6.5 * room) / widest);
@@ -136,7 +144,7 @@ export function drawBand(
     target.drawText(line, {
       ...at,
       size,
-      font: index === 0 ? parts.bold : parts.font,
+      font: index < BOLD_LINES ? parts.bold : parts.font,
       color: INK,
       rotate: degrees(90 + view.rotation),
     });
@@ -184,14 +192,17 @@ async function fontsFor(doc: Doc) {
 
 /**
  * The band on every page before signing, the manifest pages at the end
- * first when given. It names no signer, so a second signature (added
- * later, without touching these pages) keeps it true.
+ * first when given. It names the signer (the certificate holder's full
+ * name) and the office; a later co-signature, added without touching these
+ * pages, is listed in the manifest and in the PDF's signature panel.
  */
 export async function stampForSignature(
   original: Buffer,
   options: {
     code: string;
     verifyUrl: string;
+    signer: { name: string; at: string };
+    office: string;
     manifest?: Buffer;
   },
 ): Promise<{ pdf: Buffer; pageCount: number }> {
@@ -229,6 +240,7 @@ export async function bandAppearancePage(
     code: string;
     verifyUrl: string;
     signer: { name: string; at: string };
+    office: string;
   },
 ): Promise<{ doc: Doc; page: PDFPage; view: PageView }> {
   const view = viewOf(page);
