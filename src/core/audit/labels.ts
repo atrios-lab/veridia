@@ -30,6 +30,9 @@ const EXACT: Record<string, string> = {
   "messenger.lunch-reject": "Recusou o horário de almoço pedido",
   "messenger.chat-off": "Desativou o chat interno de uma pessoa",
   "messenger.chat-on": "Reativou o chat interno de uma pessoa",
+  "messenger.message-edit": "Editou uma mensagem interna",
+  "messenger.message-delete": "Apagou uma mensagem interna",
+  "messenger.conversation-clear": "Limpou uma conversa interna (só para si)",
   "signed-document.remove": "Retirou um documento assinado da lista",
   "signed-document.restore": "Devolveu um documento assinado à lista",
   "signed-document.file-purge": "Arquivo assinado saiu do sistema (6 meses)",
@@ -250,6 +253,12 @@ const EXPLANATIONS: Record<string, string> = {
     "O Tabelião/Registrador desligou as mensagens internas de uma pessoa: ela não envia nem recebe mensagens.",
   "messenger.chat-on":
     "O Tabelião/Registrador religou as mensagens internas de uma pessoa.",
+  "messenger.message-edit":
+    "A pessoa corrigiu uma mensagem que tinha enviado no chat interno. O texto original continua guardado para o Tabelião/Registrador.",
+  "messenger.message-delete":
+    "A pessoa apagou uma mensagem que tinha enviado no chat interno. Ela some da conversa, mas continua guardada para o Tabelião/Registrador.",
+  "messenger.conversation-clear":
+    "A pessoa limpou uma conversa do chat interno só na tela dela; a outra pessoa e o Tabelião/Registrador continuam com o histórico.",
   "audit.notification":
     "O Tabelião/Registrador enviou uma notificação pedindo explicações sobre atos registrados.",
   "audit.notification-answer":

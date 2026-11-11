@@ -1,6 +1,6 @@
 import { and, asc, eq, inArray, isNull, ne } from "drizzle-orm";
-import Link from "next/link";
 import { notFound } from "next/navigation";
+import { BackLink } from "@/app/admin/_components/back-link";
 import {
   auditActionLabel,
   DEFAULT_LEGAL_BASIS,
@@ -67,12 +67,7 @@ export default async function NewNotificationPage({
     <>
       <AdminPageHeader title="Auditoria" />
       <main className="flex max-w-[900px] flex-col gap-4.5 px-[30px] py-7">
-        <Link
-          href="/admin/auditoria"
-          className="text-[12.5px] text-admin-muted hover:text-admin-primary"
-        >
-          ‹ Auditoria
-        </Link>
+        <BackLink href="/admin/auditoria" label="Auditoria" />
         <section className="rounded-[14px] border border-admin-border bg-admin-card px-5 py-4">
           <h2 className="font-serif text-[18px] font-semibold text-admin-primary">
             Notificar para esclarecimentos

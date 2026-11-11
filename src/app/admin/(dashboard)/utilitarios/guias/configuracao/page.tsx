@@ -1,5 +1,5 @@
-import Link from "next/link";
 import { notFound } from "next/navigation";
+import { BackLink } from "@/app/admin/_components/back-link";
 import { can } from "@/core/auth/roles.ts";
 import { getSession } from "@/lib/session.ts";
 import { getGuideSettings } from "@/lib/tax-guides.ts";
@@ -21,12 +21,10 @@ export default async function GuideSettingsPage() {
     <>
       <AdminPageHeader title="Leis, alíquotas e quem assina" />
       <main className="flex max-w-[960px] flex-col gap-4.5 px-[30px] py-7">
-        <Link
+        <BackLink
           href="/admin/utilitarios/guias"
-          className="text-[12.5px] font-semibold text-admin-muted hover:underline"
-        >
-          ‹ Guias de recolhimento
-        </Link>
+          label="Guias de recolhimento"
+        />
         <GuideSettingsForm initial={settings} />
       </main>
     </>

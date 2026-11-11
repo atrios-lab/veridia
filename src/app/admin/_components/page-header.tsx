@@ -4,6 +4,7 @@ import type { ReactNode } from "react";
 import { courseHref, PANEL_COURSE_SLUG } from "@/core/tutorials/catalog.ts";
 import { tutorialForRoute } from "@/core/tutorials/progress.ts";
 import { listPanelTutorials } from "@/lib/tutorials.ts";
+import { BackLink } from "./back-link";
 import { AdminIcon } from "./icon.tsx";
 
 /**
@@ -31,7 +32,7 @@ export async function AdminPageHeader({
   actions,
 }: {
   title: string;
-  /** A subordinate screen's way home, rendered as "‹ Label" over the title. */
+  /** A subordinate screen's way home, rendered as a "Voltar" button over the title. */
   back?: { href: string; label: string };
   /** One sentence under the title, for a screen that needs introducing. */
   description?: string;
@@ -48,14 +49,7 @@ export async function AdminPageHeader({
   return (
     <div className="flex flex-none flex-wrap items-center gap-5 px-[30px] pt-[30px]">
       <div className="flex min-w-[280px] flex-1 flex-col gap-[5px]">
-        {back && (
-          <Link
-            href={back.href}
-            className="self-start text-[13.5px] font-semibold text-admin-muted hover:text-admin-primary"
-          >
-            ‹ {back.label}
-          </Link>
-        )}
+        {back && <BackLink href={back.href} label={back.label} />}
         <div className="flex flex-wrap items-baseline gap-x-4 gap-y-1">
           <h1 className="font-serif text-[26px] leading-[1.1] font-semibold text-admin-primary">
             {title}

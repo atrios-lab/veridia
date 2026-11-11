@@ -1,5 +1,5 @@
-import Link from "next/link";
 import { notFound } from "next/navigation";
+import { BackLink } from "@/app/admin/_components/back-link";
 import { can } from "@/core/auth/roles.ts";
 import { REQUEST_FILE_RETENTION_DAYS } from "@/core/request/attachment-retention.ts";
 import {
@@ -91,12 +91,7 @@ export default async function DataRightsDetailPage({
       <AdminPageHeader title={request.protocolNumber} />
       <main className="flex flex-col gap-4.5 px-[30px] py-7">
         <div className="flex flex-wrap items-center gap-3">
-          <Link
-            href="/admin/lgpd"
-            className="flex items-center gap-1.5 text-[12.5px] text-admin-muted hover:text-admin-primary"
-          >
-            ‹ Requerimentos LGPD
-          </Link>
+          <BackLink href="/admin/lgpd" label="Requerimentos LGPD" />
           <span className="h-[18px] w-px bg-admin-border" />
           <DeadlineBadge
             status={request.status}

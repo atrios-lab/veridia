@@ -64,22 +64,24 @@ export function AdminSidebar({
     <aside
       className={`flex min-h-0 w-[236px] flex-none flex-col bg-admin-primary ${className}`}
     >
-      <div className="flex items-center gap-3 border-b border-white/12 px-[18px] py-5">
-        <Image
-          src={tenant.logos.seal.dark}
-          alt=""
-          width={36}
-          height={36}
-          className="h-9 w-9 flex-none object-contain"
-        />
-        <span className="min-w-0">
-          <span className="block font-serif text-[15px] font-semibold leading-tight text-white">
-            {tenant.name}
+      <div className="border-b border-white/12 px-3 py-4">
+        <div className="flex items-center gap-3 rounded-md border-l-[3px] border-admin-on-dark-accent bg-white/5 px-2.5 py-2.5 motion-safe:animate-brand-glow">
+          <Image
+            src={tenant.logos.seal.dark}
+            alt=""
+            width={36}
+            height={36}
+            className="h-9 w-9 flex-none rounded-full object-contain ring-1 ring-admin-on-dark-accent/40"
+          />
+          <span className="min-w-0">
+            <span className="block font-serif text-[13.5px] font-bold uppercase leading-snug tracking-[0.06em] text-white">
+              {tenant.name}
+            </span>
+            <span className="mt-0.5 block text-[9.5px] font-extrabold uppercase tracking-[0.12em] whitespace-nowrap text-admin-on-dark-accent">
+              Painel administrativo
+            </span>
           </span>
-          <span className="block text-[10.5px] uppercase tracking-[0.08em] text-admin-on-dark-subtitle">
-            Painel administrativo
-          </span>
-        </span>
+        </div>
       </div>
 
       <AdminSidebarNav items={items} counts={counts} />

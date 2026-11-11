@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import { BackLink } from "@/app/admin/_components/back-link";
 import { can } from "@/core/auth/roles.ts";
 import {
   formatVerificationCode,
@@ -58,12 +59,10 @@ export default async function SignedDocumentAdminPage({
     <>
       <AdminPageHeader title="Assinador digital" />
       <main className="flex max-w-[1000px] flex-col gap-4.5 px-[30px] py-7">
-        <Link
+        <BackLink
           href="/admin/utilitarios/assinador"
-          className="text-[12.5px] text-admin-muted hover:text-admin-primary"
-        >
-          ‹ Assinador digital
-        </Link>
+          label="Assinador digital"
+        />
         {justSigned && (
           <p className="rounded-[12px] bg-admin-success-bg px-4 py-3 text-[13px] font-semibold text-admin-success-text">
             Documento assinado. Abra para imprimir, baixe o PDF assinado ou

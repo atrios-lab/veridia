@@ -13,7 +13,10 @@ import {
 import { db } from "@/db/index.ts";
 import {
   type Contact,
+  clearConversationWith,
   decideLunchWith,
+  deleteMessageWith,
+  editMessageWith,
   getProfileWith,
   type Incoming,
   inboxWith,
@@ -195,8 +198,10 @@ export async function sendFile(formData: FormData): Promise<Result> {
   }
 }
 
-export interface SerializedMessage extends Omit<MessageView, "createdAt"> {
+export interface SerializedMessage
+  extends Omit<MessageView, "createdAt" | "editedAt"> {
   createdAt: string;
+  editedAt: string | null;
 }
 
 export interface SerializedContact extends Omit<Contact, "lastMessageAt"> {
@@ -212,7 +217,12 @@ export async function pollMessenger(
   conversationId: string | null,
   afterIso: string | null,
 ): Promise<
-  Result<{ contacts: SerializedContact[]; messages: SerializedMessage[] }>
+  Result<{
+    contacts: SerializedContact[];
+    messages: SerializedMessage[];
+    /** Where the next poll starts: edits and deletions since then come too. */
+    now: string;
+  }>
 > {
   const access = await messengerAccess();
   if (!access) return DENIED;
@@ -244,7 +254,9 @@ export async function pollMessenger(
       messages: messages.map((m) => ({
         ...m,
         createdAt: m.createdAt.toISOString(),
+        editedAt: m.editedAt?.toISOString() ?? null,
       })),
+      now: now.toISOString(),
     },
   };
 }
@@ -402,4 +414,65 @@ export async function setChatEnabled(
   );
   revalidatePath("/admin/mensagens/supervisao");
   return { ok: true };
+}
+
+/** Its author corrects a text message. */
+export async function editMessage(
+  messageId: string,
+  body: string,
+): Promise<Result> {
+  const access = await messengerAccess();
+  if (!access) return DENIED;
+  if (access.platform) return PLATFORM_READS_ONLY;
+  if (access.off) return CHAT_OFF;
+  try {
+    await editMessageWith(
+      db,
+      access.tenant.slug,
+      messageId,
+      access.session.user.id,
+      body,
+    );
+    return { ok: true };
+  } catch (error) {
+    return failure(error, "mensagens.editar");
+  }
+}
+
+/** Its author deletes a message: gone from the chat, kept for the holder. */
+export async function deleteMessage(messageId: string): Promise<Result> {
+  const access = await messengerAccess();
+  if (!access) return DENIED;
+  if (access.platform) return PLATFORM_READS_ONLY;
+  try {
+    await deleteMessageWith(
+      db,
+      access.tenant.slug,
+      messageId,
+      access.session.user.id,
+    );
+    return { ok: true };
+  } catch (error) {
+    return failure(error, "mensagens.apagar");
+  }
+}
+
+/** "Limpar conversa": for this person only. */
+export async function clearConversation(
+  conversationId: string,
+): Promise<Result> {
+  const access = await messengerAccess();
+  if (!access) return DENIED;
+  if (access.platform) return PLATFORM_READS_ONLY;
+  try {
+    await clearConversationWith(
+      db,
+      access.tenant.slug,
+      conversationId,
+      access.session.user.id,
+    );
+    return { ok: true };
+  } catch (error) {
+    return failure(error, "mensagens.limpar");
+  }
 }

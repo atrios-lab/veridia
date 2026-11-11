@@ -142,11 +142,14 @@ export default async function PublicLayout({
               priority
               className="h-11 w-11 shrink-0 object-contain md:h-12 md:w-12"
             />
-            <span className="block">
-              <span className="block font-serif text-[15px] font-semibold text-brand-primary md:text-[17px]">
+            {/* The office's own name, in capitals and with the accent rule
+                the panel's sidebar uses, so it reads first on every page
+                (decision of 11/11/2026). */}
+            <span className="block border-l-[3px] border-brand-accent pl-2.5">
+              <span className="block font-serif text-[13px] font-bold uppercase leading-tight tracking-[0.05em] text-brand-primary sm:text-[15px] md:text-[17px] xl:whitespace-nowrap">
                 {tenant.name}
               </span>
-              <span className="block text-[9px] uppercase tracking-[0.08em] text-brand-muted md:text-[10px]">
+              <span className="mt-0.5 block text-[9px] font-semibold uppercase tracking-[0.1em] text-brand-accent-ink md:text-[10px]">
                 {tenant.subtitle}
               </span>
             </span>
@@ -298,7 +301,7 @@ export default async function PublicLayout({
                   className="h-11 w-11 shrink-0 object-contain"
                 />
                 <span className="block">
-                  <span className="block font-serif text-base font-semibold">
+                  <span className="block font-serif text-base font-bold uppercase tracking-[0.05em]">
                     {tenant.name}
                   </span>
                   <span className="block text-xs text-brand-on-dark-body">

@@ -204,6 +204,29 @@
   --radius-control: 0.625rem;
 }
 
+/*
+ * The panel's own name at the top of the sidebar (decision of 11/11/2026):
+ * a slow, soft glow on its accent edge and seal, the same gold as the
+ * "Canais do cidadão" and "Operação" headings, so the office's name is
+ * present without calling for a click. One breath every 4s, always behind
+ * `motion-safe:`.
+ */
+@theme {
+  --animate-brand-glow: brand-glow 4s ease-in-out infinite;
+
+  @keyframes brand-glow {
+    0%,
+    100% {
+      box-shadow: -3px 0 10px -6px
+        color-mix(in srgb, var(--color-admin-on-dark-accent) 20%, transparent);
+    }
+    50% {
+      box-shadow: -3px 0 18px -4px
+        color-mix(in srgb, var(--color-admin-on-dark-accent) 55%, transparent);
+    }
+  }
+}
+
 /* Entrance of the cookie notice card: rises once and stays put. */
 @theme {
   --animate-notice-rise: notice-rise 0.4s cubic-bezier(0.16, 1, 0.3, 1) both;

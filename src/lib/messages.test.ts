@@ -4,7 +4,10 @@ import { user } from "@/db/auth-schema.ts";
 import type { Database } from "@/db/index.ts";
 import { createTestDb } from "@/db/test-db.ts";
 import {
+  clearConversationWith,
   decideLunchWith,
+  deleteMessageWith,
+  editMessageWith,
   findMessageFileWith,
   inboxWith,
   listAllConversationsWith,
@@ -277,4 +280,133 @@ test("almoço: pedido espera o titular, não muda de novo até a decisão, e cha
   );
   await setChatDisabledWith(db, OFFICE, "auxiliar", false, "titular");
   assert.ok(await openDirectWith(db, OFFICE, "titular", "auxiliar"));
+});
+
+test("editar, apagar e limpar: nada sai do banco, o titular vê tudo", async () => {
+  const id = await openDirectWith(db, OFFICE, "titular", "auxiliar");
+  const t0 = new Date("2026-11-11T15:00:00Z");
+  const at = (s: number) => new Date(t0.getTime() + s * 1000);
+  await sendMessageWith(
+    db,
+    OFFICE,
+    id,
+    "auxiliar",
+    { kind: "texto", body: "Protocolo fictício 123 conferido." },
+    t0,
+  );
+  await sendMessageWith(
+    db,
+    OFFICE,
+    id,
+    "auxiliar",
+    {
+      kind: "arquivo",
+      file: {
+        path: "uploads/y.pdf",
+        name: "rascunho-ficticio.pdf",
+        mimeType: "application/pdf",
+        sizeBytes: 2048,
+      },
+    },
+    at(1),
+  );
+  const auxiliar = { id: "auxiliar", oversight: false };
+  const titular = { id: "titular", oversight: true };
+  const [text, file] = (await listMessagesWith(db, OFFICE, id, auxiliar)) ?? [];
+  assert.ok(text && file);
+
+  // Only the author edits, only text, and the first version stays.
+  await assert.rejects(
+    editMessageWith(db, OFFICE, text.id, "titular", "Outro texto", at(2)),
+    MessageError,
+  );
+  await assert.rejects(
+    editMessageWith(db, OFFICE, file.id, "auxiliar", "Texto", at(2)),
+    MessageError,
+  );
+  await editMessageWith(
+    db,
+    OFFICE,
+    text.id,
+    "auxiliar",
+    "Protocolo fictício 124 conferido.",
+    at(2),
+  );
+  await editMessageWith(
+    db,
+    OFFICE,
+    text.id,
+    "auxiliar",
+    "Protocolo fictício 125 conferido.",
+    at(3),
+  );
+
+  // Only the author deletes; the member sees no content, the holder does.
+  await assert.rejects(
+    deleteMessageWith(db, OFFICE, file.id, "titular", at(4)),
+    MessageError,
+  );
+  await deleteMessageWith(db, OFFICE, file.id, "auxiliar", at(4));
+  await assert.rejects(
+    deleteMessageWith(db, OFFICE, file.id, "auxiliar", at(5)),
+    MessageError,
+  );
+
+  // An open screen gets the changes since its last look.
+  const changes =
+    (await listMessagesWith(db, OFFICE, id, auxiliar, {
+      after: at(1.5),
+    })) ?? [];
+  assert.deepEqual(
+    changes.map((m) => m.id),
+    [text.id, file.id],
+  );
+  const [edited, gone] = changes;
+  assert.equal(edited?.body, "Protocolo fictício 125 conferido.");
+  assert.ok(edited?.editedAt);
+  assert.equal(edited?.originalBody, null);
+  assert.equal(gone?.deleted, true);
+  assert.equal(gone?.fileName, null);
+  assert.equal(
+    await findMessageFileWith(db, OFFICE, file.id, auxiliar),
+    undefined,
+  );
+  assert.ok(await findMessageFileWith(db, OFFICE, file.id, titular));
+
+  const full =
+    (await listMessagesWith(db, OFFICE, id, titular, {
+      full: true,
+    })) ?? [];
+  assert.equal(full[0]?.originalBody, "Protocolo fictício 123 conferido.");
+  assert.equal(full[1]?.fileName, "rascunho-ficticio.pdf");
+  assert.equal(full[1]?.deleted, true);
+
+  // "Limpar conversa" hides it for the one who cleared, not for the other.
+  await assert.rejects(
+    clearConversationWith(db, OFFICE, id, "escrevente", at(6)),
+    MessageError,
+  );
+  await clearConversationWith(db, OFFICE, id, "auxiliar", at(6));
+  assert.deepEqual(await listMessagesWith(db, OFFICE, id, auxiliar), []);
+  assert.equal(
+    (
+      await listMessagesWith(db, OFFICE, id, {
+        id: "titular",
+        oversight: false,
+      })
+    )?.length,
+    2,
+  );
+  await sendMessageWith(
+    db,
+    OFFICE,
+    id,
+    "titular",
+    { kind: "texto", body: "Obrigada!" },
+    at(7),
+  );
+  assert.deepEqual(
+    (await listMessagesWith(db, OFFICE, id, auxiliar))?.map((m) => m.body),
+    ["Obrigada!"],
+  );
 });

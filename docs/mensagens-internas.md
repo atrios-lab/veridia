@@ -67,3 +67,33 @@ A migração `0044_mensagens_internas.sql` só cria `messenger_profiles`, `messe
 - **Minimizar (botão com um traço):** vira uma barrinha com o nome da pessoa. Quando chega mensagem nova, a conversa reabre sozinha.
 - **Mudar de lugar:** arraste pelo título (ou a barrinha). A posição fica lembrada neste navegador.
 - **Microfone:** `Permissions-Policy: microphone=(self)` vale em todo o painel (`/admin`), para a janelinha gravar áudio em qualquer tela. O site público continua com o microfone desligado.
+
+### Editar, apagar e limpar a conversa
+
+Nada disso apaga dados do banco. Tudo fica guardado para a supervisão do
+Tabelião/Registrador e vai para a auditoria.
+
+- **Editar**: só o autor, só mensagem de texto. A mensagem passa a mostrar
+  "(editada)". Na supervisão aparece a data da edição e o texto original
+  (coluna `original_body`).
+- **Apagar**: só o autor. Para as duas pessoas, no lugar da mensagem aparece
+  "Mensagem apagada", e um arquivo apagado deixa de abrir no chat. Na
+  supervisão, a mensagem continua visível com a marca "Apagada pelo autor"
+  (colunas `deleted_at` e `deleted_by`). Fica na faixa "Análise" da
+  auditoria.
+- **Limpar conversa**: some só para quem limpou (coluna `cleared_at` em
+  `messenger_members`). A outra pessoa e o Tabelião/Registrador continuam
+  com todo o histórico. Mensagens novas aparecem normalmente.
+
+A tela aberta acompanha edições e mensagens apagadas sem recarregar: cada
+consulta devolve o horário do servidor, e a próxima traz o que foi enviado,
+editado ou apagado depois dele.
+
+Migração `0046_mensagens_editar_apagar_limpar.sql`: só acrescenta colunas.
+
+### Horário de almoço no menu de status
+
+O menu de status tem a opção "Horário de almoço". Ela não muda o status na
+hora: abre logo abaixo o pedido do horário diário (até 1 hora), que vai para
+o Tabelião/Registrador aprovar. No horário aprovado a pessoa aparece como
+"Horário de almoço"; depois volta a aparecer disponível sozinha.

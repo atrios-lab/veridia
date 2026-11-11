@@ -58,9 +58,12 @@ export default async function SignedDocumentPage({
     <div className="mx-auto max-w-4xl px-4 py-6 md:px-10 md:py-10">
       <Link
         href="/verificar"
-        className="text-sm text-brand-muted hover:text-brand-primary"
+        className="inline-flex min-h-11 items-center gap-2 rounded-full border border-brand-border bg-brand-surface py-1.5 pr-4 pl-3 text-sm font-semibold text-brand-primary shadow-sm transition-colors hover:border-brand-primary md:min-h-9"
       >
-        ‹ Verificar outro documento
+        <span aria-hidden="true" className="text-base leading-none">
+          ←
+        </span>
+        Voltar: verificar outro documento
       </Link>
       <div className="mt-3 flex items-start gap-3 rounded-2xl border-2 border-brand-open bg-brand-surface px-5 py-4">
         <Icon name="shield" className="mt-1 h-6 w-6 shrink-0 text-brand-open" />

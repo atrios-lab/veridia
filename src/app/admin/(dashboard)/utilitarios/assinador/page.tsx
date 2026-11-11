@@ -96,9 +96,13 @@ export default async function SignerPage({
                   ? "/admin/utilitarios/assinador"
                   : "/admin/utilitarios/assinador?excluidos=1"
               }
-              className="text-[12.5px] font-semibold text-admin-muted underline hover:text-admin-primary"
+              className={
+                showRemoved
+                  ? "inline-flex min-h-10 items-center gap-1.5 rounded-full border border-admin-primary bg-admin-primary/10 px-4 text-[13.5px] font-semibold text-admin-primary hover:bg-admin-primary hover:text-white"
+                  : "text-[12.5px] font-semibold text-admin-muted underline hover:text-admin-primary"
+              }
             >
-              {showRemoved ? "‹ Voltar aos assinados" : "Ver excluídos"}
+              {showRemoved ? "← Voltar aos assinados" : "Ver excluídos"}
             </Link>
           </div>
           <p className="mt-1 text-[12.5px] text-admin-muted">

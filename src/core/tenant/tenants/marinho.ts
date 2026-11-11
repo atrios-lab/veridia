@@ -11,7 +11,7 @@ export const cartorioMarinho: Tenant = parseTenant({
   // from presenting itself under any name but its own, so the old trade
   // name is gone from everything the citizen reads. The seal images still
   // carry it until the office uploads new art from the panel.
-  name: "Cartório Ielmo Marinho/RN",
+  name: "Cartório Único de Ielmo Marinho/RN",
   // The domain's DKIM and Return-Path are verified in Postmark, so the
   // office signs its own mail instead of borrowing the platform fallback
   // (nao-responda@atrioss.com), which signed the serventia's name over a

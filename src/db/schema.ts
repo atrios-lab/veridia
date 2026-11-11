@@ -1527,6 +1527,11 @@ export const messengerMembers = pgTable(
       .references(() => messengerConversations.id),
     userId: text("user_id").notNull(),
     lastReadAt: timestamp("last_read_at", { withTimezone: true }),
+    /**
+     * "Limpar conversa" (decision of 11/11/2026): messages up to here are
+     * hidden from this member only; the other one and the holder keep them.
+     */
+    clearedAt: timestamp("cleared_at", { withTimezone: true }),
     joinedAt: timestamp("joined_at", { withTimezone: true })
       .notNull()
       .defaultNow(),
@@ -1556,6 +1561,15 @@ export const messengerMessages = pgTable(
     createdAt: timestamp("created_at", { withTimezone: true })
       .notNull()
       .defaultNow(),
+    /**
+     * Edited by its author: the text as first sent stays here, for the
+     * holder's oversight (decision of 11/11/2026).
+     */
+    editedAt: timestamp("edited_at", { withTimezone: true }),
+    originalBody: text("original_body"),
+    /** "Apagar": hidden from the conversation, kept for the holder. */
+    deletedAt: timestamp("deleted_at", { withTimezone: true }),
+    deletedBy: text("deleted_by"),
   },
   (t) => [
     index("messenger_messages_conversation").on(t.conversationId, t.createdAt),

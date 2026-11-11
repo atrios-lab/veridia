@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import { BackLink } from "@/app/admin/_components/back-link";
 import {
   ATTRIBUTION_NAMES,
   actVariantName,
@@ -325,12 +326,10 @@ export default async function ServiceRequestDetailPage({
           </p>
         )}
         <div className="flex flex-wrap items-center gap-3.5">
-          <Link
+          <BackLink
             href={act?.taxGuide ? "/admin/utilitarios/guias" : "/admin/pedidos"}
-            className="text-[12.5px] text-admin-muted hover:text-admin-primary"
-          >
-            {act?.taxGuide ? "‹ Guias de recolhimento" : "‹ Fila de pedidos"}
-          </Link>
+            label={act?.taxGuide ? "Guias de recolhimento" : "Fila de pedidos"}
+          />
           {/*
             Only when the same fields the print route itself requires are
             present: this page already knows `kind === "service-request"`
