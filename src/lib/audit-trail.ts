@@ -32,7 +32,7 @@ import {
   auditNotifications,
   auditReviews,
 } from "@/db/schema.ts";
-import { recordAuditWith } from "./audit.ts";
+import { notByPlatform, recordAuditWith } from "./audit.ts";
 import { nextNumberWith } from "./document-numbering.ts";
 
 /* ------------------------------------------------------------- the trail */
@@ -78,6 +78,8 @@ export interface AuditFilter {
   pending?: boolean;
   /** Leaves out one person's acts (the holder's own, in the pending list). */
   excludeActorId?: string;
+  /** The Átrios account's own acts: only the Átrios account sees them. */
+  includePlatform?: boolean;
   limit?: number;
 }
 
@@ -128,6 +130,7 @@ export async function listAuditWith(
     filter.pending
       ? and(sql`${levelSql()} = 'urgente'`, isNull(auditReviews.id))
       : undefined,
+    filter.includePlatform ? undefined : notByPlatform(),
     filter.excludeActorId
       ? or(
           isNull(auditLog.actorId),
@@ -176,7 +179,15 @@ export async function listAuditWith(
         })
         .from(auditNotes)
         .leftJoin(user, eq(user.id, auditNotes.authorId))
-        .where(inArray(auditNotes.auditId, ids))
+        .where(
+          and(
+            inArray(auditNotes.auditId, ids),
+            // A note of the Átrios account is as invisible as its acts.
+            filter.includePlatform
+              ? undefined
+              : or(isNull(user.role), ne(user.role, "superadmin")),
+          ),
+        )
         .orderBy(auditNotes.createdAt)
     : [];
   // Targets that carry an account id ("user.update" on someone, a
@@ -301,6 +312,7 @@ export async function pendingUrgentCountWith(
         sql`${levelSql()} = 'urgente'`,
         isNull(auditReviews.id),
         or(isNull(auditLog.actorId), ne(auditLog.actorId, viewerId)),
+        notByPlatform(),
       ),
     );
   return Number(row?.total ?? 0);
@@ -324,6 +336,7 @@ export async function peopleSummaryWith(
   database: Database,
   tenantSlugs: string[] | "all",
   since: Date,
+  includePlatform = false,
 ): Promise<PersonSummary[]> {
   if (tenantSlugs !== "all" && !tenantSlugs.length) return [];
   const level = levelSql();
@@ -349,6 +362,7 @@ export async function peopleSummaryWith(
           ? undefined
           : inArray(auditLog.tenantSlug, tenantSlugs),
         gte(auditLog.createdAt, since),
+        includePlatform ? undefined : ne(user.role, "superadmin"),
       ),
     )
     .groupBy(auditLog.actorId, user.name, user.role, user.tenantSlug);

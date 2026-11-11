@@ -15,6 +15,7 @@ export async function POST(request: Request): Promise<Response> {
   if (!ids.length)
     return new Response("Marque ao menos um registro.", { status: 400 });
   const entries = await listAuditWith(db, {
+    includePlatform: access.platform,
     tenantSlugs: trailScope(access, String(form.get("serventia") ?? "")),
     ids,
   });

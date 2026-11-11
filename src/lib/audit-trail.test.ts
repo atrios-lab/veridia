@@ -450,3 +450,71 @@ test("a justificativa digitada vai para o registro do ato", async () => {
   assert.equal(entry.reason, "Documento enviado ao cidadão errado.");
   assert.equal(entry.level, "urgente");
 });
+
+test("a conta da Átrios é invisível para a serventia: atos, anotações, resumo e alertas", async () => {
+  await db.insert(user).values({
+    id: "plataforma",
+    name: "Átrios",
+    email: "mestre.auditoria@exemplo.com",
+    tenantSlug: "atrios",
+    role: "superadmin",
+  });
+  const now = new Date();
+  const [act] = await db
+    .insert(auditLog)
+    .values({
+      tenantSlug: OFFICE,
+      actorId: "plataforma",
+      action: "publication.delete",
+      targetType: "publication",
+      targetId: "teste-da-atrios",
+      createdAt: now,
+    })
+    .returning({ id: auditLog.id });
+  // The Átrios account notes on an office entry: hidden from the office too.
+  await addAuditNoteWith(
+    db,
+    "*",
+    entryId,
+    "Nota interna da Átrios.",
+    "plataforma",
+  );
+
+  const office = await listAuditWith(db, { tenantSlugs: [OFFICE] });
+  assert.ok(!office.some((e) => e.id === act.id));
+  assert.ok(
+    !office.some((e) => e.notes.some((n) => n.body.includes("Átrios"))),
+  );
+  const atrios = await listAuditWith(db, {
+    tenantSlugs: [OFFICE],
+    includePlatform: true,
+  });
+  assert.ok(atrios.some((e) => e.id === act.id));
+  assert.ok(atrios.some((e) => e.notes.some((n) => n.body.includes("Átrios"))));
+
+  const since = new Date(now.getTime() - 60_000);
+  assert.ok(
+    !(await peopleSummaryWith(db, [OFFICE], since)).some(
+      (p) => p.actorId === "plataforma",
+    ),
+  );
+  assert.ok(
+    (await peopleSummaryWith(db, [OFFICE], since, true)).some(
+      (p) => p.actorId === "plataforma",
+    ),
+  );
+  // Its urgent act never alerts the holder.
+  const before = await pendingUrgentCountWith(db, OFFICE, "titular", now);
+  await db.insert(auditLog).values({
+    tenantSlug: OFFICE,
+    actorId: "plataforma",
+    action: "service-request.delete",
+    targetType: "service-request",
+    targetId: "teste-2",
+    createdAt: now,
+  });
+  assert.equal(
+    await pendingUrgentCountWith(db, OFFICE, "titular", now),
+    before,
+  );
+});

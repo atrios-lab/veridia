@@ -79,6 +79,7 @@ export default async function DataRightsDetailPage({
       "data-rights",
       request.id,
       request.protocolNumber,
+      session?.user.role === "superadmin",
     ),
   ]);
   const identityAttachment = attachments.find((a) => a.kind !== "office");

@@ -156,6 +156,7 @@ export default async function AuditPage({
   const since = new Date(Date.now() - ALERT_DAYS * 24 * 60 * 60 * 1000);
   const [entries, notifications, people] = await Promise.all([
     listAuditWith(db, {
+      includePlatform: platform,
       tenantSlugs: scope,
       actorId: query.pessoa || undefined,
       from: from && !Number.isNaN(from.getTime()) ? from : undefined,
@@ -167,7 +168,7 @@ export default async function AuditPage({
       excludeActorId: pending ? session.user.id : undefined,
     }),
     listNotificationsWith(db, tenant.slug),
-    peopleSummaryWith(db, scope, since),
+    peopleSummaryWith(db, scope, since, platform),
   ]);
   const totals = people.reduce(
     (sum, person) => ({

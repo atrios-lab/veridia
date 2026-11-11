@@ -1,4 +1,5 @@
 import "server-only";
+import { type SQL, sql } from "drizzle-orm";
 import { type Database, db } from "../db/index.ts";
 import { auditLog } from "../db/schema.ts";
 import { currentJustification } from "./audit-reason.ts";
@@ -33,6 +34,16 @@ export async function recordAuditWith(
     targetId: entry.targetId ?? null,
     reason: entry.reason ?? currentJustification() ?? null,
   });
+}
+
+/**
+ * Leaves out what the Átrios platform account did (decision of 11/11/2026):
+ * it is invisible to every office, its acts, tests and changes included.
+ * Only the Átrios account itself sees them. An act with no actor (the
+ * system) stays.
+ */
+export function notByPlatform(): SQL {
+  return sql`(${auditLog.actorId} is null or ${auditLog.actorId} not in (select "id" from "user" where "role" = 'superadmin'))`;
 }
 
 /** The production singleton, for callers that do not test against it. */
