@@ -6,17 +6,24 @@ import { can } from "@/core/auth/roles.ts";
 import {
   IssDeclarationSchema,
   IssSettingsSchema,
-  issOn,
+  issOf,
 } from "@/core/iss/declaration.ts";
+import {
+  mergeReports,
+  parseNotarisReport,
+  type ReportFigures,
+} from "@/core/iss/notaris-report.ts";
 import { parseMoneyBRL } from "@/core/transparency/bulletin.ts";
 import { db } from "@/db/index.ts";
 import { justify } from "@/lib/audit-reason.ts";
+import { pdfTableText } from "@/lib/fee-tables.ts";
 import {
   applyIssToBulletinWith,
   getIssSettings,
   type IssAttachment,
   IssDeclarationError,
   issueIssDeclarationWith,
+  type PendingBulletin,
   removeIssDeclarationWith,
   saveIssSettingsWith,
   updateIssDeclarationWith,
@@ -54,20 +61,101 @@ function rateOf(value: FormDataEntryValue | null): number | null {
   return Math.round(rate * 100);
 }
 
-/** One PDF of the month's book (or cash report), when sent. */
+const sentFiles = (entries: FormDataEntryValue[]) =>
+  entries.filter((f): f is File => f instanceof File && f.size > 0);
+
+function onlyPdfs(files: File[]): void {
+  if (
+    files.some((f) => f.type !== "application/pdf" && !/\.pdf$/i.test(f.name))
+  ) {
+    throw new IssDeclarationError("Anexe o livro e os relatórios em PDF.");
+  }
+}
+
+/** The PDFs sent (the book, the system's reports), in the order chosen. */
+async function storedPdfs(
+  entries: FormDataEntryValue[],
+  tenantSlug: string,
+  name: string,
+): Promise<IssAttachment[]> {
+  const files = sentFiles(entries);
+  if (files.length === 0) return [];
+  onlyPdfs(files);
+  const stored = await storeAttachments(files, { tenantSlug, kind: name });
+  if (stored.length !== files.length) {
+    throw new IssDeclarationError("Não foi possível guardar os anexos.");
+  }
+  return stored.map((s, i) => ({
+    path: s.path,
+    name: files[i]?.name ?? "anexo.pdf",
+  }));
+}
+
 async function storedPdf(
   file: FormDataEntryValue | null,
   tenantSlug: string,
   name: string,
 ): Promise<IssAttachment | null> {
-  if (!(file instanceof File) || file.size === 0) return null;
-  if (file.type !== "application/pdf" && !/\.pdf$/i.test(file.name)) {
-    throw new IssDeclarationError("Anexe o livro ou relatório em PDF.");
+  const [one] = await storedPdfs(file ? [file] : [], tenantSlug, name);
+  return one ?? null;
+}
+
+export type ReadReportsState =
+  | { status: "read"; figures: ReportFigures; unread: string[] }
+  | { status: "error"; message: string };
+
+/**
+ * Reads the month's reports printed by the office's system (productivity,
+ * taxes) as they are attached, so the form fills itself in; nothing is
+ * stored here, and everything read stays editable.
+ */
+export async function readIssReports(
+  formData: FormData,
+): Promise<ReadReportsState> {
+  const ok = await access("requests.manage");
+  if (!ok) return { status: "error", message: NO_PERMISSION };
+  const files = sentFiles(formData.getAll("livro"));
+  const read: ReportFigures[] = [];
+  const unread: string[] = [];
+  for (const file of files) {
+    try {
+      const figures = parseNotarisReport(
+        await pdfTableText(new Uint8Array(await file.arrayBuffer())),
+      );
+      if (figures.kind === "desconhecido") unread.push(file.name);
+      else read.push(figures);
+    } catch {
+      unread.push(file.name);
+    }
   }
-  const [stored] = await storeAttachments([file], { tenantSlug, kind: name });
-  if (!stored)
-    throw new IssDeclarationError("Não foi possível guardar o anexo.");
-  return { path: stored.path, name: file.name };
+  return { status: "read", figures: mergeReports(read), unread };
+}
+
+const cents = (value: FormDataEntryValue | null) =>
+  parseMoneyBRL(String(value ?? "")) ?? undefined;
+
+/** The bulletin's figures the form carries, read from the report. */
+function bulletinOf(formData: FormData, issCents: number): PendingBulletin {
+  const out: PendingBulletin = { issCents };
+  const acts = Number(String(formData.get("b_atos") ?? "").trim());
+  if (
+    String(formData.get("b_atos") ?? "").trim() &&
+    Number.isInteger(acts) &&
+    acts >= 0
+  ) {
+    out.actsCount = acts;
+  }
+  const funds: Record<string, number> = {};
+  for (const key of ["fdj", "frmp", "fcrcpn", "funaf"]) {
+    const value = cents(formData.get(`b_${key}`));
+    if (value !== undefined) funds[key] = value;
+  }
+  if (Object.keys(funds).length) out.fundAmountsCents = funds;
+  const gross = cents(formData.get("b_arrecadacao"));
+  if (gross !== undefined) out.grossRevenueCents = gross;
+  const expenses = cents(formData.get("b_despesas"));
+  if (expenses !== undefined) out.expensesCents = expenses;
+  return out;
 }
 
 /** Issues (no id) or corrects (with id) a declaration. */
@@ -93,6 +181,11 @@ export async function saveIssDeclaration(
     dueDate: String(formData.get("vencimento") ?? ""),
     paidOn: String(formData.get("pagamento") ?? ""),
     notes: String(formData.get("observacoes") ?? ""),
+    // The ISS worked out act by act, when the report gave it.
+    issCents:
+      formData.get("iss_relatorio") === "on"
+        ? (parseMoneyBRL(String(formData.get("iss") ?? "")) ?? -1)
+        : null,
   });
   if (!parsed.success) {
     const field = String(parsed.error.issues[0]?.path[0] ?? "");
@@ -101,14 +194,16 @@ export async function saveIssDeclaration(
       message:
         field === "rateBasisPoints"
           ? "A alíquota vai de 2% a 5% (LC 116/2003, art. 8º-A e art. 8º, II)."
-          : "Confira a competência e os valores.",
+          : field === "issCents"
+            ? "Informe o ISS do relatório, por exemplo 159,17."
+            : "Confira a competência e os valores.",
     };
   }
   const id = String(formData.get("id") ?? "");
   let savedId: string;
   try {
-    const attachment = await storedPdf(
-      formData.get("livro"),
+    const attachments = await storedPdfs(
+      formData.getAll("livro"),
       tenant.slug,
       `livro-${parsed.data.competence}`,
     );
@@ -118,14 +213,14 @@ export async function saveIssDeclaration(
           tenant.slug,
           id,
           parsed.data,
-          attachment,
+          attachments,
           session.user.id,
         )
       : await issueIssDeclarationWith(
           db,
           tenant.slug,
           parsed.data,
-          attachment,
+          attachments,
           session.user.id,
         );
     savedId = row.id;
@@ -134,7 +229,7 @@ export async function saveIssDeclaration(
         db,
         tenant.slug,
         parsed.data.competence,
-        issOn(parsed.data.emolumentsCents, parsed.data.rateBasisPoints),
+        bulletinOf(formData, issOf(parsed.data)),
         session.user.id,
       );
       revalidatePath("/admin/transparencia");

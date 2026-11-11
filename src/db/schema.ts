@@ -1234,6 +1234,8 @@ export const issDeclarations = pgTable(
     emolumentsCents: bigint("emoluments_cents", { mode: "number" }).notNull(),
     rateBasisPoints: integer("rate_basis_points").notNull(),
     issCents: bigint("iss_cents", { mode: "number" }).notNull(),
+    /** The ISS came worked out act by act from the system's report. */
+    issFromReport: boolean("iss_from_report").notNull().default(false),
     damNumber: text("dam_number").notNull().default(""),
     dueDate: text("due_date").notNull().default(""),
     paidOn: text("paid_on").notNull().default(""),
@@ -1241,6 +1243,12 @@ export const issDeclarations = pgTable(
     /** The Livro Diário Auxiliar (or the cash report) of the month, PDF. */
     attachmentPath: text("attachment_path"),
     attachmentName: text("attachment_name"),
+    /**
+     * Every paper behind the declaration, in order: the book and the
+     * system's reports (productivity, taxes). Null on the declarations of
+     * before, which had only `attachmentPath`.
+     */
+    attachments: jsonb("attachments").$type<{ path: string; name: string }[]>(),
     createdBy: text("created_by"),
     /** "Excluir": the row stays, out of the lists, and frees its number. */
     deletedAt: timestamp("deleted_at", { withTimezone: true }),

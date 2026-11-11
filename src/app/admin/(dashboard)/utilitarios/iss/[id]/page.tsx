@@ -7,7 +7,10 @@ import {
 } from "@/core/iss/declaration.ts";
 import { formatMoneyBRL } from "@/core/transparency/bulletin.ts";
 import { db } from "@/db/index.ts";
-import { findIssDeclarationWith } from "@/lib/iss-declarations.ts";
+import {
+  attachmentsOf,
+  findIssDeclarationWith,
+} from "@/lib/iss-declarations.ts";
 import { getSession } from "@/lib/session.ts";
 import { getTenant, today } from "@/lib/tenant.ts";
 import { BackLink } from "../../../../_components/back-link.tsx";
@@ -41,6 +44,7 @@ export default async function IssDeclarationPage({
   if (!row) notFound();
   const query = await searchParams;
   const number = formatDeclarationNumber(row.year, row.sequence);
+  const papers = attachmentsOf(row);
   const month = competenceLabel(row.competence);
 
   return (
@@ -54,7 +58,7 @@ export default async function IssDeclarationPage({
             {query.boletim === "updated"
               ? `O ISS foi lançado no boletim mensal de ${month}.`
               : query.boletim === "pending"
-                ? `O boletim de ${month} ainda não foi publicado: o ISS já vai preenchido quando você abrir o boletim desse mês.`
+                ? `O boletim de ${month} ainda não foi publicado: os números já vão preenchidos quando você abrir o boletim desse mês em Transparência.`
                 : ""}
           </p>
         )}
@@ -66,7 +70,12 @@ export default async function IssDeclarationPage({
             <p className="text-[12px] text-admin-muted">
               Emolumentos R$ {formatMoneyBRL(row.emolumentsCents)} · ISS R${" "}
               {formatMoneyBRL(row.issCents)}
-              {row.attachmentName ? " · livro anexo" : " · sem livro anexo"}
+              {row.issFromReport ? " (ato a ato)" : ""}
+              {papers.length === 0
+                ? " · sem anexos"
+                : papers.length === 1
+                  ? " · 1 anexo"
+                  : ` · ${papers.length} anexos`}
             </p>
           </div>
           <SignOrPrint
@@ -89,7 +98,10 @@ export default async function IssDeclarationPage({
             dueDate: row.dueDate,
             paidOn: row.paidOn,
             notes: row.notes,
-            attachmentName: row.attachmentName,
+            attachmentNames: papers.map((p) => p.name),
+            issFromReport: row.issFromReport
+              ? formatMoneyBRL(row.issCents)
+              : undefined,
           }}
         />
       </main>

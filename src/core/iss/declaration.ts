@@ -22,6 +22,12 @@ import { FUNDS_BY_STATE } from "@/core/transparency/rubrics.ts";
  * Seção, REsp 1.328.384/RS). Not the gross intake: the parcels passed on
  * to the State and its funds (FDJ, FRMP, FCRCPN, FUNAF in RN) are other
  * taxes, of other creditors.
+ *
+ * The ISS itself may come worked out act by act from the system's
+ * "Valores Tributários" report (decision of 11/11/2026): some acts carry no
+ * ISS (a certidão without the PGE parcel, a free act), so the month's ISS is
+ * then less than the rate times the whole emolumentos, and the declaration
+ * says so.
  */
 
 const MONTHS = [
@@ -123,8 +129,28 @@ export const IssDeclarationSchema = z.object({
     .or(z.literal(""))
     .default(""),
   notes: text(1000),
+  /**
+   * The ISS as the system's report works it out act by act; null when it
+   * is the rate times the month's emolumentos.
+   */
+  issCents: z
+    .number()
+    .int()
+    .min(0)
+    .max(100_000_000_00)
+    .nullable()
+    .default(null),
 });
 export type IssDeclarationInput = z.infer<typeof IssDeclarationSchema>;
+
+/** The month's ISS: the report's, act by act, or the rate on the total. */
+export function issOf(d: {
+  emolumentsCents: number;
+  rateBasisPoints: number;
+  issCents?: number | null;
+}): number {
+  return d.issCents ?? issOn(d.emolumentsCents, d.rateBasisPoints);
+}
 
 const money = (cents: number) =>
   `R$ ${formatMoneyBRL(cents)} (${reaisInWords(cents)})`;
@@ -138,8 +164,9 @@ function writtenDate(iso: string): string {
 
 /** The funds of the State the parcels go to, as the bulletin names them. */
 export function stateFunds(tenant: Tenant): string {
-  const labels = (FUNDS_BY_STATE[tenant.location.state] ?? []).map(
-    (f) => f.label,
+  // The office's reports call the RN fund of the Procuradoria FPGE.
+  const labels = (FUNDS_BY_STATE[tenant.location.state] ?? []).map((f) =>
+    f.key === "funaf" ? "FUNAF/FPGE" : f.label,
   );
   if (labels.length <= 1) return labels.join("");
   return `${labels.slice(0, -1).join(", ")} e ${labels.at(-1)}`;
@@ -166,8 +193,8 @@ export interface IssDocumentInput {
   sequence: number;
   /** The date the paper is dated (office calendar, "YYYY-MM-DD"). */
   issuedOn: string;
-  /** A copy of the book (or the cash report) goes attached. */
-  withAttachment: boolean;
+  /** How many papers go attached: the book, the system's reports. */
+  attachments: number;
 }
 
 /**
@@ -181,7 +208,14 @@ export function buildIssDocument(
   input: IssDocumentInput,
 ): RequerimentoDocument {
   const { declaration: d, settings: s } = input;
-  const iss = issOn(d.emolumentsCents, d.rateBasisPoints);
+  const iss = issOf(d);
+  const byAct = d.issCents !== null && d.issCents !== undefined;
+  const attached =
+    input.attachments > 1
+      ? "do referido mês e nos relatórios do sistema da serventia, cujas cópias seguem anexas e são por esta declaração ratificadas"
+      : input.attachments === 1
+        ? "do referido mês, cuja cópia segue anexa e é por esta declaração ratificada"
+        : "do referido mês, à disposição do fisco municipal";
   const month = competenceLabel(d.competence);
   const number = formatDeclarationNumber(input.year, input.sequence);
   const office = officialName(tenant);
@@ -213,7 +247,10 @@ export function buildIssDocument(
       value: money(d.emolumentsCents),
     },
     { label: "Alíquota", value: formatRate(d.rateBasisPoints) },
-    { label: "ISS devido", value: money(iss) },
+    {
+      label: byAct ? "ISS devido (apurado ato a ato)" : "ISS devido",
+      value: money(iss),
+    },
     ...(d.damNumber.trim()
       ? [{ label: "DAM/guia de recolhimento", value: d.damNumber.trim() }]
       : []),
@@ -223,8 +260,8 @@ export function buildIssDocument(
 
   const funds = stateFunds(tenant);
   const declarationText = [
-    `${holder ? `${holder}, na qualidade de responsável pela serventia ` : "A serventia "}${office}, DECLARA, para fins de apuração e recolhimento do Imposto Sobre Serviços de Qualquer Natureza (ISSQN), que a receita de emolumentos da serventia na competência de ${month} foi de ${money(d.emolumentsCents)}, conforme a produtividade mensal escriturada no Livro Diário Auxiliar da Receita e da Despesa ${input.withAttachment ? "do referido mês, cuja cópia segue anexa e é por esta declaração ratificada" : "do referido mês, à disposição do fisco municipal"}.`,
-    `Aplicada a alíquota de ${formatRate(d.rateBasisPoints)}, o ISS devido é de ${money(iss)}${d.paidOn ? `, recolhido em ${date(d.paidOn)}` : ""}${d.damNumber.trim() ? ` (DAM/guia nº ${d.damNumber.trim()})` : ""}.`,
+    `${holder ? `${holder}, na qualidade de responsável pela serventia ` : "A serventia "}${office}, DECLARA, para fins de apuração e recolhimento do Imposto Sobre Serviços de Qualquer Natureza (ISSQN), que a receita de emolumentos da serventia na competência de ${month} foi de ${money(d.emolumentsCents)}, conforme a produtividade mensal escriturada no Livro Diário Auxiliar da Receita e da Despesa ${attached}.`,
+    `${byAct ? `Aplicada a alíquota de ${formatRate(d.rateBasisPoints)} sobre os emolumentos de cada ato, conforme o relatório de valores tributários do sistema da serventia, o ISS devido é de ${money(iss)}${iss < issOn(d.emolumentsCents, d.rateBasisPoints) ? ", não compondo o imposto os atos sem incidência assim apontados no relatório" : ""}` : `Aplicada a alíquota de ${formatRate(d.rateBasisPoints)}, o ISS devido é de ${money(iss)}`}${d.paidOn ? `, recolhido em ${date(d.paidOn)}` : ""}${d.damNumber.trim() ? ` (DAM/guia nº ${d.damNumber.trim()})` : ""}.`,
     `A base de cálculo compreende exclusivamente os emolumentos, que são o preço do serviço. Não integram a base os valores arrecadados por conta do Estado e dos fundos${funds ? ` (${funds})` : ""}, nem o selo, por constituírem receita de terceiros, com natureza tributária própria.`,
   ];
 
