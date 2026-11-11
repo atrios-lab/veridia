@@ -7,14 +7,17 @@ import {
   monthLabel,
   summarize,
 } from "@/core/daily-book/book.ts";
-import { toIsoDate } from "@/core/scheduling/calendar.ts";
+import { bookDuties } from "@/core/daily-book/deadlines.ts";
+import { officeHolidays, toIsoDate } from "@/core/scheduling/calendar.ts";
 import { OFFICE_TIME_ZONE } from "@/core/time/office-time.ts";
 import { formatMoneyBRL } from "@/core/transparency/bulletin.ts";
 import { db } from "@/db/index.ts";
 import {
   entryOf,
+  getBookSettingsWith,
   listBookReportsWith,
   listEntriesWith,
+  snapshotOf,
 } from "@/lib/daily-book.ts";
 import { getGuideSettings } from "@/lib/tax-guides.ts";
 import { getTenant, today } from "@/lib/tenant.ts";
@@ -58,11 +61,23 @@ export default async function DailyBookPage({
     : now.slice(0, 7);
   const period = monthPeriod(month);
   const showRemoved = query.excluidos === "1";
-  const [rows, reports, guide] = await Promise.all([
+  const [rows, reports, guide, settings] = await Promise.all([
     listEntriesWith(db, tenant.slug, period, { withRemoved: showRemoved }),
     listBookReportsWith(db, tenant.slug),
     getGuideSettings(tenant),
+    getBookSettingsWith(db, tenant.slug),
   ]);
+  // CN art. 193 and, in RN, arts. 61 and 62 of the CGJ/RN's code.
+  const lastYear = String(Number(now.slice(0, 4)) - 1);
+  const balance = reports.find(
+    (r) =>
+      r.kind === "ano" && !r.removedAt && r.periodStart.startsWith(lastYear),
+  );
+  const duties = bookDuties(now, {
+    holidays: officeHolidays(tenant),
+    lastYearBalanceOn: balance ? snapshotOf(balance).issuedOn : null,
+    interim: settings.interim,
+  });
   const live = rows.filter((r) => !r.removedAt).map(entryOf);
   const sum = summarize(live);
   const done = query.feito ? DONE[query.feito] : undefined;
@@ -107,6 +122,18 @@ export default async function DailyBookPage({
             {done}
           </p>
         )}
+        {duties.map((d) => (
+          <p
+            key={d.id}
+            className={`rounded-[12px] border px-4 py-3 text-[13px] ${d.late ? "border-admin-error-border bg-admin-error-bg text-admin-error-text" : "border-admin-warning-soft-border bg-admin-warning-soft-bg text-admin-warning-text"}`}
+          >
+            <strong>
+              {d.title}
+              {d.late ? " (prazo vencido)" : ""}:
+            </strong>{" "}
+            {d.detail}
+          </p>
+        ))}
         {lastDays && (
           <p className="rounded-[12px] border border-admin-warning-soft-border bg-admin-warning-soft-bg px-4 py-3 text-[13px] text-admin-warning-text">
             <strong>Fim do mês:</strong> as despesas de{" "}

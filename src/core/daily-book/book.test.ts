@@ -146,7 +146,12 @@ test("apuração: receitas e despesas à parte, saldo, repasses fora", () => {
 });
 
 test("especialidade pelo código, despesa pessoal e despesa fora do mês", () => {
-  const settings = { specialties: DEFAULT_SPECIALTIES, responsible: "" };
+  const settings = {
+    specialties: DEFAULT_SPECIALTIES,
+    responsible: "",
+    interim: false,
+    ceilingCents: 0,
+  };
   assert.equal(specialtyOf("2200556", settings), "Tabelionato de Notas");
   assert.equal(
     specialtyOf("2300107", settings),
@@ -228,4 +233,71 @@ test("a página do mês tem as colunas do art. 189, a apuração e as explicaç�
   });
   assert.ok(csv.startsWith("﻿"));
   assert.match(csv, /"Firma; fictícia"/);
+});
+
+test("RN: o balanço cita o art. 62 e o envio à Corregedoria em 5 dias", () => {
+  const year = buildAnnualDocument(tenant, {
+    kind: "ano",
+    start: "2026-01-01",
+    end: "2026-12-31",
+    issuedOn: "2027-01-12",
+    entries: [],
+    months: [],
+    notes: "",
+    signer: null,
+  });
+  const text = JSON.stringify(year);
+  assert.match(text, /art\. 62 do Código de Normas/);
+  assert.match(text, /até 5 \(cinco\) dias depois de sua conclusão/);
+  const elsewhere = buildAnnualDocument(
+    {
+      ...tenant,
+      location: { city: "Exemplo", state: "PB" },
+    } as unknown as Tenant,
+    {
+      kind: "ano",
+      start: "2026-01-01",
+      end: "2026-12-31",
+      issuedOn: "2027-01-12",
+      entries: [],
+      months: [],
+      notes: "",
+      signer: null,
+    },
+  );
+  assert.doesNotMatch(JSON.stringify(elsewhere), /CGJ\/RN/);
+});
+
+test("interino: a apuração do mês separa a remuneração e o excedente ao FDJ", () => {
+  const doc = buildBookDocument(tenant, {
+    kind: "mes",
+    start: "2026-10-01",
+    end: "2026-10-31",
+    issuedOn: "2026-11-03",
+    entries: [
+      entry({ amountCents: 5_000_000 }),
+      entry({ kind: "despesa", category: "locacao", amountCents: 1_000_000 }),
+      entry({ kind: "despesa", category: "interino", amountCents: 3_000_000 }),
+    ],
+    months: [],
+    notes: "",
+    signer: null,
+    interim: { ceilingCents: 3_000_000 },
+  });
+  const text = JSON.stringify(doc);
+  // 50.000 - 10.000 = 40.000 antes da remuneração; teto 30.000.
+  assert.match(text, /Interinidade \(CGJ\/RN, arts\. 19, 26 e 27\)/);
+  assert.match(text, /R\$ 40\.000,00/);
+  assert.match(text, /R\$ 10\.000,00, até 10\/11\/2026/);
+  const titular = buildBookDocument(tenant, {
+    kind: "mes",
+    start: "2026-10-01",
+    end: "2026-10-31",
+    issuedOn: "2026-11-03",
+    entries: [],
+    months: [],
+    notes: "",
+    signer: null,
+  });
+  assert.doesNotMatch(JSON.stringify(titular), /Interinidade/);
 });

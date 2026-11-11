@@ -18,7 +18,7 @@ export default async function BookSettingsPage() {
           href: "/admin/utilitarios/livro-diario",
           label: "Livro Diário Auxiliar",
         }}
-        description="As especialidades pelo código do ato e o responsável pela escrituração."
+        description="As especialidades pelo código do ato, o responsável pela escrituração e, se a serventia estiver vaga, o teto do interino."
       />
       <main className="flex max-w-[900px] flex-col gap-4 px-[30px] py-7 max-md:px-4">
         <SettingsForm initial={await getBookSettingsWith(db, tenant.slug)} />
