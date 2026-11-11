@@ -31,7 +31,7 @@ export default async function OversightConversationPage({
   if (!conversation || !messages) notFound();
   return (
     <>
-      <AdminPageHeader title="Mensagens" />
+      <AdminPageHeader title="Mensagens internas" />
       <main className="flex max-w-[900px] flex-col gap-4 px-[30px] py-7 max-md:px-4">
         <Link
           href="/admin/mensagens/supervisao"

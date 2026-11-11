@@ -1,6 +1,10 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { auditActionLabel } from "@/core/audit/labels.ts";
+import {
+  auditActionExplanation,
+  auditActionLabel,
+  targetInWords,
+} from "@/core/audit/labels.ts";
 import {
   AUDIT_LEVEL_HINTS,
   AUDIT_LEVEL_LABELS,
@@ -103,6 +107,8 @@ type Query = {
   serventia?: string;
   nivel?: string;
   pendentes?: string;
+  arquivados?: string;
+  notificadas?: string;
 };
 
 /** The page's own address with some filters changed, others kept. */
@@ -151,6 +157,7 @@ export default async function AuditPage({
   const scope = trailScope(access, query.serventia);
   const level = AUDIT_LEVELS.find((l) => l === query.nivel);
   const pending = query.pendentes === "1";
+  const archivedView = query.arquivados === "1";
   const from = query.de ? new Date(`${query.de}T00:00:00-03:00`) : undefined;
   const to = query.ate ? new Date(`${query.ate}T23:59:59-03:00`) : undefined;
   const since = new Date(Date.now() - ALERT_DAYS * 24 * 60 * 60 * 1000);
@@ -164,6 +171,7 @@ export default async function AuditPage({
       text: query.busca?.trim() || undefined,
       levels: level ? [level] : undefined,
       pending,
+      archived: archivedView,
       // The holder's own acts never wait for his own look.
       excludeActorId: pending ? session.user.id : undefined,
     }),
@@ -216,6 +224,12 @@ export default async function AuditPage({
     <>
       <AdminPageHeader title="Auditoria" />
       <main className="flex max-w-[1100px] flex-col gap-4.5 px-[30px] py-7 max-md:px-4">
+        {query.notificadas && (
+          <p className="rounded-[12px] bg-admin-success-bg px-4 py-3 text-[13px] font-semibold text-admin-success-text">
+            {query.notificadas} notificações enviadas, uma para cada pessoa.
+            Elas aparecem em &quot;Notificações enviadas&quot;, mais abaixo.
+          </p>
+        )}
         {/* The three bands at a glance: each one opens its list. */}
         <section className="grid grid-cols-1 gap-3 sm:grid-cols-3">
           {summary.map((item) => (
@@ -355,6 +369,14 @@ export default async function AuditPage({
                 {pending ? "✓ Só pendentes" : "Só pendentes"}
               </Link>
             )}
+            <Link
+              href={hrefWith(query, {
+                arquivados: archivedView ? undefined : "1",
+              })}
+              className={`rounded-full border px-3 py-1 font-semibold ${archivedView ? "border-admin-primary bg-admin-primary text-white" : "border-admin-border text-admin-muted hover:text-admin-primary"}`}
+            >
+              Arquivados
+            </Link>
           </nav>
 
           <details
@@ -426,6 +448,7 @@ export default async function AuditPage({
 
           <TrailList
             serventia={query.serventia ?? ""}
+            archivedView={archivedView}
             showOffice={scope === "all" || scope[0] !== tenant.slug}
             entries={entries.map((entry) => {
               const when = formatOfficeDateTime(entry.createdAt);
@@ -446,17 +469,21 @@ export default async function AuditPage({
                 level: entry.level,
                 reason: entry.reason,
                 reviewed: entry.reviewedAt
-                  ? `Verificado por ${entry.reviewerName ?? "Tabelião/Registrador"} em ${formatOfficeDateTime(entry.reviewedAt)}`
+                  ? `Lido e ok por ${entry.reviewerName ?? "Tabelião/Registrador"} em ${formatOfficeDateTime(entry.reviewedAt)}`
                   : null,
                 // The person's own sign-in names them once, not twice.
-                target:
-                  entry.targetLabel && entry.targetLabel !== entry.actorName
-                    ? entry.targetLabel
-                    : "",
+                target: (() => {
+                  const words = targetInWords(
+                    entry.targetType,
+                    entry.targetLabel,
+                  );
+                  return words && words !== entry.actorName ? words : "";
+                })(),
+                explanation: auditActionExplanation(entry.action),
                 notes: entry.notes.map((note) => ({
                   id: note.id,
                   body: note.body,
-                  meta: `${note.authorName ?? ""} · ${formatOfficeDateTime(note.createdAt)}`,
+                  meta: `${note.authorName ?? ""} · ${formatOfficeDateTime(note.createdAt)}${note.editedAt ? ` · editada em ${formatOfficeDateTime(note.editedAt)}` : ""}`,
                 })),
               };
             })}

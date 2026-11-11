@@ -26,6 +26,10 @@ const CHANNEL_HINTS: Record<AlertChannel, string> = {
   pedidos: "Pedido de serviço novo feito pelo site.",
   lgpd: "Requerimento novo do titular de dados (LGPD).",
   ouvidoria: "Manifestação nova na ouvidoria.",
+  mensagens:
+    "Mensagem ou chamado de um colega. O som se repete até a pessoa abrir a conversa.",
+  auditoria:
+    "Notificação de auditoria para a pessoa responder e, para o Tabelião/Registrador, ato urgente a verificar.",
 };
 
 type Permission = NotificationPermission | "unsupported";

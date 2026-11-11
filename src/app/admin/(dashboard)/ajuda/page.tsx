@@ -16,7 +16,7 @@ import { AdminPageHeader } from "../../_components/page-header.tsx";
 import { CourseCard } from "./_components/course-card.tsx";
 import { TutorialCover } from "./_components/tutorial-cover.tsx";
 
-export const metadata = { title: "Treinamento" };
+export const metadata = { title: "Ajuda e treinamentos" };
 
 /**
  * The catalog: "Continue de onde parou", then every published course that
@@ -72,7 +72,7 @@ export default async function TrainingCatalogPage({
   return (
     <>
       <AdminPageHeader
-        title="Treinamento"
+        title="Ajuda e treinamentos"
         description="Cursos em vídeo: como usar cada tela do painel e o que a equipe precisa saber no dia a dia."
         actions={
           canManage || tenant.demo ? (

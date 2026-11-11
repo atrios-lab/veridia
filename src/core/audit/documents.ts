@@ -5,7 +5,12 @@ import { toIsoDate } from "../scheduling/calendar.ts";
 import { officialName } from "../tenant/identification.ts";
 import type { Tenant } from "../tenant/schema.ts";
 import { formatOfficeDateTime, OFFICE_TIME_ZONE } from "../time/office-time.ts";
-import { ANSWER_HOURS, auditActionLabel } from "./labels.ts";
+import {
+  ANSWER_HOURS,
+  auditActionExplanation,
+  auditActionLabel,
+  targetInWords,
+} from "./labels.ts";
 
 export interface EntryForDocument {
   createdAt: Date;
@@ -29,7 +34,12 @@ export function paragraphsOf(text: string): string[] {
 }
 
 const entryRow = (entry: EntryForDocument) => {
-  const target = entry.targetLabel ?? entry.targetId;
+  // In words, never a code: an internal id or a setting key means nothing
+  // to whoever reads the paper (decision of 11/11/2026).
+  const target = targetInWords(
+    entry.targetType,
+    entry.targetLabel ?? entry.targetId,
+  );
   return {
     label: formatOfficeDateTime(entry.createdAt),
     value: [
@@ -38,6 +48,7 @@ const entryRow = (entry: EntryForDocument) => {
       target && target !== entry.actorName ? `(${target})` : "",
       entry.actorName ? `· ${entry.actorName}` : "",
       entry.reason ? `· Justificativa: ${entry.reason}` : "",
+      `\nO que significa: ${auditActionExplanation(entry.action)}`,
     ]
       .filter(Boolean)
       .join(" "),

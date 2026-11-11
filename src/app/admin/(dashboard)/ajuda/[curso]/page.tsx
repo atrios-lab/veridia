@@ -77,7 +77,7 @@ export default async function CoursePage({
     <>
       <AdminPageHeader
         title={course.title}
-        back={{ href: "/admin/ajuda", label: "Treinamento" }}
+        back={{ href: "/admin/ajuda", label: "Ajuda e treinamentos" }}
         description={course.description || undefined}
         actions={
           // A reference course has no player column of its own to sit

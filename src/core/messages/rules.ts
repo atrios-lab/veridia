@@ -14,16 +14,81 @@ export const MESSAGE_KINDS = ["texto", "arquivo", "audio", "chamar"] as const;
 export type MessageKind = (typeof MESSAGE_KINDS)[number];
 
 /** The status each person picks, as the contact list shows it. */
-export const STATUSES = ["disponivel", "ocupado", "ausente"] as const;
+export const STATUSES = [
+  "disponivel",
+  "em-atendimento",
+  "em-reuniao",
+  "ocupado",
+  "ausente",
+] as const;
 export type Status = (typeof STATUSES)[number];
-export type Presence = Status | "offline";
+/** "almoco" is never chosen: the approved lunch window sets it. */
+export type Presence = Status | "almoco" | "offline";
 
 export const STATUS_LABELS: Record<Presence, string> = {
   disponivel: "Disponível",
+  "em-atendimento": "Em atendimento no balcão",
+  "em-reuniao": "Em reunião",
   ocupado: "Ocupado",
   ausente: "Ausente",
+  almoco: "Horário de almoço",
   offline: "Offline",
 };
+
+/* ------------------------------------------------------------------ lunch */
+
+/** At most an hour a day (decision of 11/11/2026). */
+export const MAX_LUNCH_MINUTES = 60;
+export const MIN_LUNCH_MINUTES = 15;
+
+export interface Lunch {
+  start: string;
+  minutes: number;
+}
+
+/** "12:00" and 15 to 60 minutes; anything else is refused. */
+export function validLunch(start: string, minutes: number): string | null {
+  if (!/^([01]\d|2[0-3]):[0-5]\d$/.test(start)) {
+    return "Informe o início do almoço (hora e minuto).";
+  }
+  if (
+    !Number.isInteger(minutes) ||
+    minutes < MIN_LUNCH_MINUTES ||
+    minutes > MAX_LUNCH_MINUTES
+  ) {
+    return `O almoço vai de ${MIN_LUNCH_MINUTES} minutos a 1 hora por dia.`;
+  }
+  return null;
+}
+
+/** "12:00 às 13:00". */
+export function lunchLabel(lunch: Lunch): string {
+  const [h, m] = lunch.start.split(":").map(Number);
+  const end = h * 60 + m + lunch.minutes;
+  const pad = (n: number) => String(n).padStart(2, "0");
+  return `${lunch.start} às ${pad(Math.floor(end / 60) % 24)}:${pad(end % 60)}`;
+}
+
+/** Minutes since midnight, in Brasília time. */
+function officeMinutes(now: Date): number {
+  const parts = new Intl.DateTimeFormat("en-GB", {
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: false,
+    timeZone: "America/Sao_Paulo",
+  }).formatToParts(now);
+  const hour = Number(parts.find((p) => p.type === "hour")?.value ?? 0) % 24;
+  const minute = Number(parts.find((p) => p.type === "minute")?.value ?? 0);
+  return hour * 60 + minute;
+}
+
+export function inLunch(lunch: Lunch | null | undefined, now: Date): boolean {
+  if (!lunch || validLunch(lunch.start, lunch.minutes)) return false;
+  const [h, m] = lunch.start.split(":").map(Number);
+  const start = h * 60 + m;
+  const at = officeMinutes(now);
+  return at >= start && at < start + lunch.minutes;
+}
 
 /** Seen within this long counts as online (the screen polls every few s). */
 export const ONLINE_WINDOW_MS = 90_000;
@@ -33,10 +98,15 @@ export function presenceOf(
   status: string | null | undefined,
   lastSeenAt: Date | null | undefined,
   now: Date,
+  lunch?: Lunch | null,
 ): Presence {
   if (!lastSeenAt || now.getTime() - lastSeenAt.getTime() > ONLINE_WINDOW_MS) {
     return "offline";
   }
+  // The approved lunch window, and only it, shows "almoço": once it is
+  // over the person shows as chosen again, so lunch cannot become a way
+  // of staying unreachable.
+  if (inLunch(lunch, now)) return "almoco";
   return (STATUSES as readonly string[]).includes(status ?? "")
     ? (status as Status)
     : "disponivel";

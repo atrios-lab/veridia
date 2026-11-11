@@ -6,8 +6,11 @@ import { AUDIT_LEVEL_LABELS, type AuditLevel } from "@/core/audit/severity.ts";
 import {
   type AuditState,
   addNote,
+  archiveEntries,
+  editNote,
   emailReport,
   markReviewed,
+  removeNote,
 } from "./actions.ts";
 
 const IDLE: AuditState = { status: "idle" };
@@ -26,6 +29,8 @@ export interface TrailRow {
   reason: string | null;
   reviewed: string | null;
   target: string;
+  /** What the act means, in plain words. */
+  explanation: string;
   notes: { id: string; body: string; meta: string }[];
 }
 
@@ -45,6 +50,91 @@ const BAND: Record<AuditLevel, { stripe: string; badge: string }> = {
   },
   rotina: { stripe: "border-l-admin-border", badge: "" },
 };
+
+/** A note of the holder: corrected or excluded (kept in the database). */
+function NoteItem({
+  note,
+}: {
+  note: { id: string; body: string; meta: string };
+}) {
+  const [editing, setEditing] = useState(false);
+  const [text, setText] = useState(note.body);
+  const [editState, edit, saving] = useActionState(editNote, IDLE);
+  const [removeState, remove, removing] = useActionState(removeNote, IDLE);
+  useEffect(() => {
+    if (editState.status === "saved") {
+      toast.success(editState.message);
+      setEditing(false);
+    }
+  }, [editState]);
+  useEffect(() => {
+    if (removeState.status === "saved") toast.success(removeState.message);
+  }, [removeState]);
+  const send = (action: (data: FormData) => void, body?: string) => {
+    const data = new FormData();
+    data.set("noteId", note.id);
+    if (body !== undefined) data.set("body", body);
+    startTransition(() => action(data));
+  };
+  return (
+    <div className="mt-1.5 rounded-[8px] bg-admin-input-bg px-2.5 py-1.5 text-[12px] text-admin-text [overflow-wrap:anywhere]">
+      {editing ? (
+        <div className="flex flex-col gap-1.5">
+          <textarea
+            value={text}
+            onChange={(event) => setText(event.target.value)}
+            rows={2}
+            maxLength={2000}
+            aria-label="Corrigir anotação"
+            className="w-full rounded-[8px] border border-admin-input-border bg-admin-card px-2.5 py-1.5 text-[12.5px]"
+          />
+          <div className="flex gap-2">
+            <button
+              type="button"
+              disabled={saving}
+              onClick={() => send(edit, text)}
+              className="btn btn-admin-primary btn-sm"
+            >
+              {saving ? "Salvando..." : "Salvar"}
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                setText(note.body);
+                setEditing(false);
+              }}
+              className="btn btn-admin-secondary btn-sm"
+            >
+              Cancelar
+            </button>
+          </div>
+        </div>
+      ) : (
+        <>
+          {note.body}
+          <span className="mt-0.5 flex flex-wrap items-center gap-x-3 text-[11px] text-admin-muted">
+            {note.meta}
+            <button
+              type="button"
+              onClick={() => setEditing(true)}
+              className="font-semibold underline hover:text-admin-primary"
+            >
+              Editar
+            </button>
+            <button
+              type="button"
+              disabled={removing}
+              onClick={() => send(remove)}
+              className="font-semibold underline hover:text-admin-error-text"
+            >
+              {removing ? "Excluindo..." : "Excluir"}
+            </button>
+          </span>
+        </>
+      )}
+    </div>
+  );
+}
 
 function NoteForm({ auditId }: { auditId: string }) {
   const [open, setOpen] = useState(false);
@@ -138,14 +228,27 @@ export function TrailList({
   entries,
   serventia,
   showOffice,
+  archivedView = false,
 }: {
   entries: TrailRow[];
   serventia: string;
   showOffice: boolean;
+  /** Showing what was archived: the bar brings entries back. */
+  archivedView?: boolean;
 }) {
   const [chosen, setChosen] = useState<string[]>([]);
   const [mailState, mail, mailing] = useActionState(emailReport, IDLE);
   const [reviewState, review, reviewing] = useActionState(markReviewed, IDLE);
+  const [archiveState, archive, archiving] = useActionState(
+    archiveEntries,
+    IDLE,
+  );
+  useEffect(() => {
+    if (archiveState.status === "saved") {
+      toast.success(archiveState.message);
+      setChosen([]);
+    }
+  }, [archiveState]);
   const [email, setEmail] = useState("");
   useEffect(() => {
     if (mailState.status === "saved") toast.success(mailState.message);
@@ -162,9 +265,8 @@ export function TrailList({
     );
   const picked = entries.filter((e) => chosen.includes(e.id));
   const people = [...new Set(picked.map((e) => e.actorId).filter(Boolean))];
-  const pendingUrgent = picked.filter(
-    (e) => e.level === "urgente" && !e.reviewed,
-  );
+  const unseen = picked.filter((e) => !e.reviewed);
+  const allTicked = entries.length > 0 && chosen.length === entries.length;
   const days = entries.reduce<{ day: string; rows: TrailRow[] }[]>(
     (groups, entry) => {
       const last = groups.at(-1);
@@ -177,6 +279,19 @@ export function TrailList({
 
   return (
     <div className="mt-4">
+      {entries.length > 0 && (
+        <label className="mb-2 inline-flex cursor-pointer items-center gap-2 text-[12.5px] font-semibold text-admin-primary">
+          <input
+            type="checkbox"
+            className="checkbox-admin"
+            checked={allTicked}
+            onChange={() =>
+              setChosen(allTicked ? [] : entries.map((e) => e.id))
+            }
+          />
+          Marcar todos ({entries.length})
+        </label>
+      )}
       {entries.length === 0 ? (
         <p className="text-[13px] text-admin-muted">
           Nenhum registro com esses filtros.
@@ -240,6 +355,9 @@ export function TrailList({
                           </span>
                         )}
                       </p>
+                      <p className="mt-0.5 text-[11.5px] leading-snug text-admin-muted">
+                        {entry.explanation}
+                      </p>
                       {entry.reason && (
                         <p className="mt-1.5 rounded-[8px] bg-admin-warning-soft-bg px-2.5 py-1.5 text-[12px] text-admin-text [overflow-wrap:anywhere]">
                           <span className="font-semibold">Justificativa:</span>{" "}
@@ -247,29 +365,19 @@ export function TrailList({
                         </p>
                       )}
                       {entry.notes.map((note) => (
-                        <p
-                          key={note.id}
-                          className="mt-1.5 rounded-[8px] bg-admin-input-bg px-2.5 py-1.5 text-[12px] text-admin-text [overflow-wrap:anywhere]"
-                        >
-                          {note.body}
-                          <span className="block text-[11px] text-admin-muted">
-                            {note.meta}
-                          </span>
-                        </p>
+                        <NoteItem key={note.id} note={note} />
                       ))}
                       <div className="mt-1.5 flex flex-wrap items-center gap-3">
-                        {entry.level === "urgente" &&
-                          (entry.reviewed ? (
-                            <span className="text-[11.5px] font-semibold text-admin-success-text">
-                              ✓ {entry.reviewed}
-                            </span>
-                          ) : (
+                        {entry.reviewed ? (
+                          <span className="text-[11.5px] font-semibold text-admin-success-text">
+                            ✓ {entry.reviewed}
+                          </span>
+                        ) : (
+                          entry.level === "urgente" && (
                             <ReviewButton id={entry.id} />
-                          ))}
+                          )
+                        )}
                         <NoteForm auditId={entry.id} />
-                        <span className="text-[10.5px] text-admin-faint">
-                          {entry.code}
-                        </span>
                       </div>
                     </div>
                   </li>
@@ -296,20 +404,38 @@ export function TrailList({
             </button>
           </div>
           <div className="mt-2 flex flex-wrap gap-2">
-            {pendingUrgent.length > 0 && (
+            {unseen.length > 0 && (
               <button
                 type="button"
                 disabled={reviewing}
                 onClick={() => {
                   const data = new FormData();
-                  for (const e of pendingUrgent) data.append("ids", e.id);
+                  for (const e of unseen) data.append("ids", e.id);
                   startTransition(() => review(data));
                 }}
-                className="btn btn-admin-danger btn-sm"
+                className="btn btn-admin-primary btn-sm"
               >
-                Marcar {pendingUrgent.length} urgente(s) como verificado(s)
+                ✓ Marcar como lido e ok ({unseen.length})
               </button>
             )}
+            <button
+              type="button"
+              disabled={archiving}
+              onClick={() => {
+                const data = new FormData();
+                for (const id of chosen) data.append("ids", id);
+                data.set("arquivar", archivedView ? "0" : "1");
+                startTransition(() => archive(data));
+              }}
+              className="btn btn-admin-secondary btn-sm"
+              title={
+                archivedView
+                  ? "Volta para a lista"
+                  : "Sai da lista e fica guardado em Arquivados; nada é apagado"
+              }
+            >
+              {archivedView ? "Desarquivar" : "Arquivar (excluir da lista)"}
+            </button>
             <form
               method="post"
               action="/admin/auditoria/relatorio"
@@ -324,17 +450,15 @@ export function TrailList({
                 Gerar PDF
               </button>
             </form>
-            {people.length === 1 ? (
+            {people.length > 0 && (
               <a
-                href={`/admin/auditoria/notificacao/nova?pessoa=${people[0]}&${chosen.map((id) => `ids=${id}`).join("&")}`}
+                href={`/admin/auditoria/notificacao/nova?${people.length === 1 ? `pessoa=${people[0]}&` : ""}${chosen.map((id) => `ids=${id}`).join("&")}`}
                 className="btn btn-admin-primary btn-sm"
               >
-                Notificar a pessoa
+                {people.length === 1
+                  ? "Notificar a pessoa"
+                  : `Notificar as ${people.length} pessoas`}
               </a>
-            ) : (
-              <span className="self-center text-[11.5px] text-admin-muted">
-                Para notificar, marque atos de uma só pessoa.
-              </span>
             )}
           </div>
           <div className="mt-2 flex min-w-0 gap-2">

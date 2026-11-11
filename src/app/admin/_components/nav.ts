@@ -73,7 +73,7 @@ export const ADMIN_NAV: readonly AdminNavItem[] = [
   },
   {
     group: "Operação",
-    label: "Mensagens",
+    label: "Mensagens internas",
     href: "/admin/mensagens",
     icon: "chat",
     permission: "desk.access",
@@ -186,8 +186,8 @@ export const ADMIN_NAV: readonly AdminNavItem[] = [
     // nowhere until the first video lands. It pulses: the office was
     // asked to watch the videos, and an item at the foot of the column went
     // unnoticed.
-    group: "Ajuda",
-    label: "Treinamento",
+    group: "Ajuda e treinamentos",
+    label: "Ajuda e treinamentos",
     href: "/admin/ajuda",
     icon: "play",
     attention: true,

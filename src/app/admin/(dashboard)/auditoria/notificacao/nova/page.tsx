@@ -1,7 +1,11 @@
 import { and, asc, eq, inArray, isNull, ne } from "drizzle-orm";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { auditActionLabel, DEFAULT_LEGAL_BASIS } from "@/core/audit/labels.ts";
+import {
+  auditActionLabel,
+  DEFAULT_LEGAL_BASIS,
+  targetInWords,
+} from "@/core/audit/labels.ts";
 import { PANEL_ROLES, type Role } from "@/core/auth/roles.ts";
 import { formatOfficeDateTime } from "@/core/time/office-time.ts";
 import { user } from "@/db/auth-schema.ts";
@@ -48,6 +52,14 @@ export default async function NewNotificationPage({
       )
       .orderBy(asc(user.name)),
   ]);
+  // Acts of several people: one notification for each of them.
+  const authors = [
+    ...new Map(
+      entries
+        .filter((e) => e.actorId && e.actorId !== session.user.id)
+        .map((e) => [e.actorId as string, e.actorName ?? ""]),
+    ),
+  ];
   const chosen =
     query.pessoa ?? (entries.length ? (entries[0]?.actorId ?? "") : "");
 
@@ -80,7 +92,8 @@ export default async function NewNotificationPage({
                   <li key={entry.id}>
                     {formatOfficeDateTime(entry.createdAt)} ·{" "}
                     {auditActionLabel(entry.action)}
-                    {entry.targetLabel && ` · ${entry.targetLabel}`}
+                    {targetInWords(entry.targetType, entry.targetLabel) &&
+                      ` · ${targetInWords(entry.targetType, entry.targetLabel)}`}
                   </li>
                 ))}
               </ul>
@@ -95,6 +108,7 @@ export default async function NewNotificationPage({
             defaultPerson={people.some((p) => p.id === chosen) ? chosen : ""}
             defaultFacts={FACTS}
             defaultLegalBasis={DEFAULT_LEGAL_BASIS}
+            each={authors.length > 1 ? authors.map(([, name]) => name) : null}
           />
         </section>
       </main>

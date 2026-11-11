@@ -16,7 +16,7 @@ test("Email corporativo sits right below the request queue, then Mensagens, insi
     "Visão geral",
     "Pedidos de serviço",
     "Email corporativo",
-    "Mensagens",
+    "Mensagens internas",
   ]);
 });
 
@@ -39,13 +39,13 @@ test("no two adjacent items wear the same icon", () => {
   }
 });
 
-test("Ajuda is the last group, and its one item asks no permission", () => {
+test("Ajuda e treinamentos is the last group, and its one item asks no permission", () => {
   const groups = navGroups(ADMIN_NAV);
   const last = groups.at(-1);
-  assert.equal(last?.group, "Ajuda");
+  assert.equal(last?.group, "Ajuda e treinamentos");
   assert.deepEqual(
     last?.items.map((item) => [item.label, item.href, item.permission]),
-    [["Treinamento", "/admin/ajuda", undefined]],
+    [["Ajuda e treinamentos", "/admin/ajuda", undefined]],
   );
 });
 

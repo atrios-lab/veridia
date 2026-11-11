@@ -79,7 +79,9 @@ export function AdminSidebarNav({
               aria-controls={listId}
               disabled={hasCurrent}
               onClick={() => toggle(group, open)}
-              className="group flex items-center gap-2 rounded-md px-2.5 pt-2.5 pb-1.5 text-left text-[10px] font-bold uppercase tracking-[0.14em] text-admin-on-dark-accent hover:text-white disabled:cursor-default disabled:hover:text-admin-on-dark-accent"
+              // The groups' titles stand out (decision of 11/11/2026): a
+              // larger, heavier label with a gold bar, a line between groups.
+              className="group mt-1 flex items-center gap-2 rounded-md border-l-[3px] border-admin-on-dark-accent bg-white/5 px-2.5 py-2 text-left text-[11.5px] font-extrabold uppercase tracking-[0.12em] text-admin-on-dark-accent hover:bg-white/10 hover:text-white disabled:cursor-default disabled:hover:bg-white/5 disabled:hover:text-admin-on-dark-accent"
             >
               <span className="flex-1">{group}</span>
               {!open && waiting > 0 && (
@@ -94,7 +96,11 @@ export function AdminSidebarNav({
                 />
               )}
             </button>
-            <div id={listId} hidden={!open} className="flex flex-col gap-px">
+            <div
+              id={listId}
+              hidden={!open}
+              className="mt-1 flex flex-col gap-px"
+            >
               {groupItems.map((item) => {
                 const current = pathname === item.href;
                 const count = counts[item.href];

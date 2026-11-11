@@ -1360,6 +1360,11 @@ export const auditNotes = pgTable(
     createdAt: timestamp("created_at", { withTimezone: true })
       .notNull()
       .defaultNow(),
+    /** The holder corrected the note (decision of 11/11/2026). */
+    editedAt: timestamp("edited_at", { withTimezone: true }),
+    /** "Excluir": the note leaves the screen and stays in the database. */
+    removedAt: timestamp("removed_at", { withTimezone: true }),
+    removedBy: text("removed_by"),
   },
   (t) => [index("audit_notes_audit").on(t.auditId)],
 );
@@ -1449,6 +1454,12 @@ export const auditReviews = pgTable(
     reviewedAt: timestamp("reviewed_at", { withTimezone: true })
       .notNull()
       .defaultNow(),
+    /**
+     * Taken off the trail's list by the holder (decision of 11/11/2026):
+     * nothing is erased, the entry stays and comes back from "Arquivados".
+     */
+    archivedAt: timestamp("archived_at", { withTimezone: true }),
+    archivedBy: text("archived_by"),
   },
   (t) => [uniqueIndex("audit_reviews_audit").on(t.auditId)],
 );
@@ -1468,6 +1479,20 @@ export const messengerProfiles = pgTable("messenger_profiles", {
   color: text("color").notNull().default("verde"),
   sound: boolean("sound").notNull().default(true),
   lastSeenAt: timestamp("last_seen_at", { withTimezone: true }),
+  /**
+   * The daily lunch window, "HH:MM" and up to 60 minutes, as the
+   * Tabelião/Registrador approved it (decision of 11/11/2026). Inside it
+   * the person shows "Horário de almoço"; after it, available again.
+   */
+  lunchStart: text("lunch_start"),
+  lunchMinutes: integer("lunch_minutes"),
+  /** A change asked for, waiting for the holder's yes or no. */
+  lunchPendingStart: text("lunch_pending_start"),
+  lunchPendingMinutes: integer("lunch_pending_minutes"),
+  lunchRequestedAt: timestamp("lunch_requested_at", { withTimezone: true }),
+  /** The holder turned this person's messenger off. */
+  chatDisabledAt: timestamp("chat_disabled_at", { withTimezone: true }),
+  chatDisabledBy: text("chat_disabled_by"),
   updatedAt: timestamp("updated_at", { withTimezone: true })
     .notNull()
     .defaultNow(),

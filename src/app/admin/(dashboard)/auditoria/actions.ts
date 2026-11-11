@@ -20,11 +20,14 @@ import {
   answerNotificationWith,
   closeNotificationWith,
   createNotificationWith,
+  editAuditNoteWith,
   findNotificationWith,
   listAuditWith,
   markNotificationEmailedWith,
   markReviewedWith,
   NotificationError,
+  removeAuditNoteWith,
+  setArchivedWith,
   setNotificationSignedWith,
 } from "@/lib/audit-trail.ts";
 import { CertificatePasswordError } from "@/lib/signature/certificate.ts";
@@ -117,6 +120,12 @@ export async function emailReport(
   return { status: "saved", message: `Relatório enviado para ${to}.` };
 }
 
+/**
+ * Sends the notification: always on the person's panel (Auditoria, and a
+ * warning on every screen until answered), and by e-mail when chosen
+ * (decision of 11/11/2026). Acts of several people ticked together make
+ * one notification each, with the same text.
+ */
 export async function createNotification(
   _previous: AuditState,
   formData: FormData,
@@ -124,8 +133,37 @@ export async function createNotification(
   const access = await auditAccess();
   if (!access?.manager) return DENIED;
   const tenant = access.tenant;
-  let id: string;
+  const byEmail = formData.get("porEmail") === "on";
+  const ids = formData.getAll("ids").map(String);
+  const created: string[] = [];
   try {
+    // Who gets one: the person chosen, or each author of the ticked acts.
+    let targets: { userId: string; ids: string[] }[];
+    if (formData.get("modo") === "cada") {
+      const entries = await listAuditWith(db, {
+        tenantSlugs: [tenant.slug],
+        ids,
+      });
+      const byActor = new Map<string, string[]>();
+      for (const entry of entries) {
+        if (!entry.actorId || entry.actorId === access.session.user.id) {
+          continue;
+        }
+        byActor.set(entry.actorId, [
+          ...(byActor.get(entry.actorId) ?? []),
+          entry.id,
+        ]);
+      }
+      targets = [...byActor].map(([userId, own]) => ({ userId, ids: own }));
+      if (!targets.length) {
+        return {
+          status: "error",
+          message: "Nenhum dos atos marcados é de outra pessoa da serventia.",
+        };
+      }
+    } else {
+      targets = [{ userId: String(formData.get("pessoa") ?? ""), ids }];
+    }
     const files = formData
       .getAll("provas")
       .filter((f): f is File => f instanceof File && f.size > 0);
@@ -135,20 +173,22 @@ export async function createNotification(
           name: String(formData.get("provasName") ?? "") || "Prova",
         })
       : [];
-    const created = await createNotificationWith(
-      db,
-      tenant.slug,
-      {
-        targetUserId: String(formData.get("pessoa") ?? ""),
-        subject: String(formData.get("assunto") ?? ""),
-        facts: String(formData.get("fatos") ?? ""),
-        legalBasis: String(formData.get("fundamentacao") ?? ""),
-        auditIds: formData.getAll("ids").map(String),
-        files: stored,
-      },
-      access.session.user.id,
-    );
-    id = created.id;
+    for (const target of targets) {
+      const one = await createNotificationWith(
+        db,
+        tenant.slug,
+        {
+          targetUserId: target.userId,
+          subject: String(formData.get("assunto") ?? ""),
+          facts: String(formData.get("fatos") ?? ""),
+          legalBasis: String(formData.get("fundamentacao") ?? ""),
+          auditIds: target.ids,
+          files: stored,
+        },
+        access.session.user.id,
+      );
+      created.push(one.id);
+    }
   } catch (error) {
     if (
       error instanceof NotificationError ||
@@ -162,9 +202,77 @@ export async function createNotification(
       message: "Não foi possível criar a notificação.",
     };
   }
-  await sendNotificationEmail(tenant, id);
+  if (byEmail) {
+    for (const id of created) await sendNotificationEmail(tenant, id);
+  }
+  revalidatePath("/admin", "layout");
+  if (created.length === 1) {
+    redirect(`/admin/auditoria/notificacao/${created[0]}?enviada=1`);
+  }
+  redirect(`/admin/auditoria?notificadas=${created.length}`);
+}
+
+/** The holder corrects a note. */
+export async function editNote(
+  _previous: AuditState,
+  formData: FormData,
+): Promise<AuditState> {
+  const access = await auditAccess();
+  if (!access?.manager) return DENIED;
+  const ok = await editAuditNoteWith(
+    db,
+    access.platform ? "*" : access.tenant.slug,
+    String(formData.get("noteId") ?? ""),
+    String(formData.get("body") ?? ""),
+  );
+  if (!ok) return { status: "error", message: "Escreva a anotação." };
   revalidatePath("/admin/auditoria");
-  redirect(`/admin/auditoria/notificacao/${id}?enviada=1`);
+  return { status: "saved", message: "Anotação corrigida." };
+}
+
+/** "Excluir" a note: off the screen, kept in the database. */
+export async function removeNote(
+  _previous: AuditState,
+  formData: FormData,
+): Promise<AuditState> {
+  const access = await auditAccess();
+  if (!access?.manager) return DENIED;
+  const ok = await removeAuditNoteWith(
+    db,
+    access.platform ? "*" : access.tenant.slug,
+    String(formData.get("noteId") ?? ""),
+    access.session.user.id,
+  );
+  if (!ok) return { status: "error", message: "Anotação não encontrada." };
+  revalidatePath("/admin/auditoria");
+  return { status: "saved", message: "Anotação excluída." };
+}
+
+/**
+ * Archives the ticked entries, or brings them back: the trail's "excluir",
+ * which never erases.
+ */
+export async function archiveEntries(
+  _previous: AuditState,
+  formData: FormData,
+): Promise<AuditState> {
+  const access = await auditAccess();
+  if (!access?.manager) return DENIED;
+  const archived = formData.get("arquivar") !== "0";
+  const done = await setArchivedWith(
+    db,
+    access.platform ? "all" : [access.tenant.slug],
+    formData.getAll("ids").map(String),
+    access.session.user.id,
+    archived,
+  );
+  revalidatePath("/admin", "layout");
+  return {
+    status: "saved",
+    message: archived
+      ? `${done} registro(s) arquivado(s). Eles continuam guardados em "Arquivados".`
+      : `${done} registro(s) de volta à lista.`,
+  };
 }
 
 async function sendNotificationEmail(
