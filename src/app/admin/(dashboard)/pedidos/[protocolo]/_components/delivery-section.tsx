@@ -33,6 +33,7 @@ import {
   deliverDocumentAction,
   finishA3DeliveryAction,
   prepareA3DeliveryAction,
+  releaseUnsignedAction,
   renameDeliveredAction,
   signDeliveredAction,
 } from "../actions.ts";
@@ -62,6 +63,7 @@ export function DeliverySection({
   requestId,
   delivered,
   unsigned,
+  held,
   physical,
   certificates,
   canManageCertificates,
@@ -76,6 +78,8 @@ export function DeliverySection({
   defaultName: string;
   /** Delivered PDFs with no digital signature (see lib/signing.ts). */
   unsigned: string[];
+  /** Held back until signed here: the citizen does not see them yet. */
+  held: string[];
   /** Confirmed as signed by hand and scanned: id to "who, when". */
   physical: Record<string, string>;
   /** The certificates this clerk may sign with. */
@@ -108,7 +112,7 @@ export function DeliverySection({
           },
     );
   };
-  const send = (choice: "" | "digital" | "fisica") => {
+  const send = (choice: "" | "digital" | "fisica" | "sem") => {
     if (choiceRef.current) choiceRef.current.value = choice;
     setCheck({ kind: "idle" });
     formRef.current?.requestSubmit();
@@ -121,7 +125,9 @@ export function DeliverySection({
   useEffect(() => {
     if (state.status !== "success") return;
     toast.success(
-      "Documento entregue. Já aparece na consulta do cidadão. Confira se ele está assinado digitalmente.",
+      state.held
+        ? "Documento anexado e retido. Assine logo abaixo: o cidadão só vê depois de assinado."
+        : "Documento entregue. Já aparece na consulta do cidadão.",
     );
     // Without this the input keeps the file it just sent, so picking the very
     // same file again fires no change event and nothing happens, silently:
@@ -135,7 +141,8 @@ export function DeliverySection({
         Entrega ao cidadão
       </h4>
       <p className="mt-1 text-[12.5px] text-admin-muted">
-        O que você anexar aqui fica disponível na consulta do cidadão.
+        O que você anexar aqui fica disponível na consulta do cidadão. Um PDF
+        sem assinatura digital fica retido até ser assinado aqui.
       </p>
 
       {/* Choosing the file publishes it, with no review step in between, so
@@ -148,7 +155,9 @@ export function DeliverySection({
               <AttachmentRow
                 requestId={requestId}
                 attachment={attachment}
-                meta="entregue em"
+                meta={
+                  held.includes(attachment.id) ? "anexado em" : "entregue em"
+                }
                 onDelete={deleteAttachmentAction}
               />
               {!attachment.goneLabel && (
@@ -179,6 +188,7 @@ export function DeliverySection({
                 <UnsignedNotice
                   requestId={requestId}
                   attachmentId={attachment.id}
+                  held={held.includes(attachment.id)}
                   certificates={certificates}
                   canManageCertificates={canManageCertificates}
                 />
@@ -276,8 +286,12 @@ export function DeliverySection({
                 onClick={() => send("digital")}
                 className="btn btn-admin-primary btn-sm mt-1.5"
               >
-                Sim, enviar e assinar digitalmente
+                Sim, assinar antes de enviar
               </button>
+              <p className="mt-1 text-[11.5px]">
+                O documento fica retido aqui: o cidadão só o vê depois de
+                assinado.
+              </p>
             </>
           )}
           <label className="mt-3 flex items-start gap-2 text-[12.5px]">
@@ -298,6 +312,13 @@ export function DeliverySection({
               className="btn btn-admin-secondary btn-sm"
             >
               Enviar como documento físico digitalizado
+            </button>
+            <button
+              type="button"
+              onClick={() => send("sem")}
+              className="btn btn-admin-secondary btn-sm"
+            >
+              Enviar sem assinatura assim mesmo
             </button>
             <button
               type="button"
@@ -331,16 +352,37 @@ export function DeliverySection({
 function UnsignedNotice({
   requestId,
   attachmentId,
+  held,
   certificates,
   canManageCertificates,
 }: {
   requestId: string;
   attachmentId: string;
+  /** Held back: the citizen sees it only once signed (or sent as it is). */
+  held: boolean;
   certificates: DeliveryCertificate[];
   canManageCertificates: boolean;
 }) {
   const router = useRouter();
-  const [open, setOpen] = useState(false);
+  // A held file is there to be signed: the signing opens with it.
+  const [open, setOpen] = useState(held);
+  const [confirmUnsigned, setConfirmUnsigned] = useState(false);
+  const [releaseState, release, releasing] = useActionState<
+    ActionState,
+    FormData
+  >(
+    async (previous, formData) => {
+      const result = await releaseUnsignedAction(previous, formData);
+      if (result.status === "success") {
+        toast.success("Enviado sem assinatura. O cidadão já vê o documento.");
+      }
+      return result;
+    },
+    { status: "idle" },
+  );
+  const signedMessage = held
+    ? "Documento assinado e enviado. O cidadão já baixa a versão assinada, com o QR de verificação."
+    : "Documento assinado. O cidadão já baixa a versão assinada, com o QR de verificação.";
   // A1 from the platform or A3 from a token on this computer, the same
   // choice as in the assinador (decision of 11/11/2026).
   const [mode, setMode] = useState<Mode | null>(null);
@@ -350,11 +392,7 @@ function UnsignedNotice({
   const [state, action, pending] = useActionState<ActionState, FormData>(
     async (previous, formData) => {
       const result = await signDeliveredAction(previous, formData);
-      if (result.status === "success") {
-        toast.success(
-          "Documento assinado. O cidadão já baixa a versão assinada, com o QR de verificação.",
-        );
-      }
+      if (result.status === "success") toast.success(signedMessage);
       return result;
     },
     { status: "idle" },
@@ -384,19 +422,25 @@ function UnsignedNotice({
       setTokenError(outcome.message);
       return;
     }
-    toast.success(
-      "Documento assinado. O cidadão já baixa a versão assinada, com o QR de verificação.",
-    );
+    toast.success(signedMessage);
     router.refresh();
   };
 
   return (
     <div className="mt-1.5 rounded-[10px] border border-admin-warning-text/40 bg-admin-warning-bg px-3 py-2.5 text-[12.5px] text-admin-warning-text">
       <div className="flex flex-wrap items-center justify-between gap-2">
-        <span>
-          <strong>Sem assinatura digital.</strong> O cidadão vai baixar este PDF
-          sem assinatura. Assine pela plataforma antes de concluir.
-        </span>
+        {held ? (
+          <span>
+            <strong>🔒 Aguardando assinatura.</strong> O cidadão ainda não vê
+            este documento: ele é enviado assim que for assinado aqui.
+          </span>
+        ) : (
+          <span>
+            <strong>Enviado sem assinatura digital.</strong> O cidadão já baixa
+            este PDF sem assinatura. Se assinar agora, ele passa a baixar a
+            versão assinada.
+          </span>
+        )}
         <button
           type="button"
           onClick={() => setOpen((value) => !value)}
@@ -499,6 +543,53 @@ function UnsignedNotice({
                 Configurações › Certificados
               </Link>
               .
+            </p>
+          )}
+        </div>
+      )}
+      {held && (
+        <div className="mt-2.5 border-t border-admin-warning-text/25 pt-2">
+          {confirmUnsigned ? (
+            <form
+              action={release}
+              className="flex flex-wrap items-center gap-2"
+            >
+              <input type="hidden" name="requestId" value={requestId} />
+              <input type="hidden" name="attachmentId" value={attachmentId} />
+              <span className="font-semibold">
+                Enviar ao cidadão sem assinatura digital? Fica registrado na
+                auditoria.
+              </span>
+              <button
+                type="submit"
+                disabled={releasing}
+                className="btn btn-admin-secondary btn-sm"
+              >
+                {releasing ? "Enviando..." : "Sim, enviar sem assinatura"}
+              </button>
+              <button
+                type="button"
+                onClick={() => setConfirmUnsigned(false)}
+                className="font-semibold underline"
+              >
+                Voltar
+              </button>
+            </form>
+          ) : (
+            <button
+              type="button"
+              onClick={() => setConfirmUnsigned(true)}
+              className="font-semibold underline"
+            >
+              Enviar sem assinatura assim mesmo
+            </button>
+          )}
+          {releaseState.status === "error" && (
+            <p
+              role="alert"
+              className="mt-1 font-semibold text-admin-error-text"
+            >
+              {releaseState.message}
             </p>
           )}
         </div>

@@ -1,0 +1,1 @@
+ALTER TABLE "service_request_attachments" ADD COLUMN "held_for_signature_at" timestamp with time zone;

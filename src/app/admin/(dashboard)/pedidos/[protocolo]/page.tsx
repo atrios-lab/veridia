@@ -675,6 +675,9 @@ export default async function ServiceRequestDetailPage({
                 requestId={request.id}
                 delivered={deliveredAttachments}
                 unsigned={[...unsignedDelivered]}
+                held={ownAttachments
+                  .filter((a) => a.kind === "office" && a.heldForSignatureAt)
+                  .map((a) => a.id)}
                 physical={Object.fromEntries(
                   ownAttachments
                     .filter((a) => a.kind === "office" && a.physicalSignatureAt)

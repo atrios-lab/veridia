@@ -237,6 +237,14 @@ export const serviceRequestAttachments = pgTable(
       withTimezone: true,
     }),
     physicalSignatureBy: text("physical_signature_by"),
+    /**
+     * A PDF for the citizen held back until it is signed digitally on the
+     * request's page (decision of 11/11/2026): while set, the citizen does
+     * not see it. Cleared when signed, or when the clerk sends it unsigned.
+     */
+    heldForSignatureAt: timestamp("held_for_signature_at", {
+      withTimezone: true,
+    }),
     createdAt: timestamp("created_at", { withTimezone: true })
       .notNull()
       .defaultNow(),

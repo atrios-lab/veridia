@@ -365,6 +365,13 @@
       "when": 1794406292181,
       "tag": "0051_declaracao_iss_entrega",
       "breakpoints": true
+    },
+    {
+      "idx": 52,
+      "version": "7",
+      "when": 1794407831052,
+      "tag": "0052_entrega_retida_ate_assinar",
+      "breakpoints": true
     }
   ]
 }
