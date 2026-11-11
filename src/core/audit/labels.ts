@@ -33,6 +33,8 @@ const EXACT: Record<string, string> = {
   "messenger.message-edit": "Editou uma mensagem interna",
   "messenger.message-delete": "Apagou uma mensagem interna",
   "messenger.conversation-clear": "Limpou uma conversa interna",
+  "messenger.lunch-return": "Voltou do almoço e liberou o chat",
+  "messenger.status-set": "Mudou o status de uma pessoa no chat",
   "access-hours.request": "Pediu para acessar o painel fora do horário",
   "access-hours.release": "Liberou o acesso ao painel fora do horário",
   "access-hours.deny": "Recusou o acesso ao painel fora do horário",
@@ -264,6 +266,10 @@ const EXPLANATIONS: Record<string, string> = {
     "A pessoa apagou uma mensagem que tinha enviado no chat interno. Ela some da conversa, mas continua guardada para o Tabelião/Registrador.",
   "messenger.conversation-clear":
     "A pessoa limpou uma conversa do chat interno: as mensagens somem da tela das duas pessoas, e o Tabelião/Registrador continua com o histórico.",
+  "messenger.lunch-return":
+    "No horário de almoço o chat interno fica bloqueado; a pessoa declarou que voltou do almoço ou do descanso e liberou o chat antes do fim do horário.",
+  "messenger.status-set":
+    'O Tabelião/Registrador mudou o status de uma pessoa no chat interno (por exemplo, um "Ocupado" que já passava de 40 minutos).',
   "access-hours.request":
     "Fora do horário de acesso, a pessoa pediu ao Tabelião/Registrador para usar o painel, dizendo qual demanda precisava acompanhar.",
   "access-hours.release":

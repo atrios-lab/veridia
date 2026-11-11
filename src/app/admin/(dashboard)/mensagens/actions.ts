@@ -28,8 +28,10 @@ import {
   markReadWith,
   openDirectWith,
   requestLunchWith,
+  returnFromLunchWith,
   sendMessageWith,
   setChatDisabledWith,
+  setStatusByHolderWith,
   touchPresenceWith,
   updateProfileWith,
 } from "@/lib/messages.ts";
@@ -50,6 +52,8 @@ async function messengerAccess() {
     tenant,
     /** The holder turned this person's messenger off. */
     off: Boolean(profile?.chatDisabled),
+    /** Inside the lunch window, not back yet: the chat is locked. */
+    lunch: Boolean(profile?.atLunch),
     // The Átrios account reads every conversation and is seen by no one:
     // it never writes, never shows online (decision of 11/11/2026).
     platform: role === "superadmin",
@@ -68,6 +72,11 @@ const CHAT_OFF = {
   ok: false as const,
   message:
     "Suas mensagens internas foram desativadas pelo Tabelião/Registrador.",
+};
+const AT_LUNCH = {
+  ok: false as const,
+  message:
+    'Você está no horário de almoço: o chat fica bloqueado. Clique em "Voltei do almoço" para usar de novo.',
 };
 const PLATFORM_READS_ONLY = {
   ok: false as const,
@@ -94,6 +103,7 @@ export async function openConversation(
   if (!access) return DENIED;
   if (access.platform) return PLATFORM_READS_ONLY;
   if (access.off) return CHAT_OFF;
+  if (access.lunch) return AT_LUNCH;
   try {
     const id = await openDirectWith(
       db,
@@ -115,6 +125,7 @@ export async function sendText(
   if (!access) return DENIED;
   if (access.platform) return PLATFORM_READS_ONLY;
   if (access.off) return CHAT_OFF;
+  if (access.lunch) return AT_LUNCH;
   try {
     await sendMessageWith(
       db,
@@ -134,6 +145,7 @@ export async function sendNudge(conversationId: string): Promise<Result> {
   if (!access) return DENIED;
   if (access.platform) return PLATFORM_READS_ONLY;
   if (access.off) return CHAT_OFF;
+  if (access.lunch) return AT_LUNCH;
   try {
     await sendMessageWith(
       db,
@@ -154,6 +166,7 @@ export async function sendFile(formData: FormData): Promise<Result> {
   if (!access) return DENIED;
   if (access.platform) return PLATFORM_READS_ONLY;
   if (access.off) return CHAT_OFF;
+  if (access.lunch) return AT_LUNCH;
   const conversationId = String(formData.get("conversationId") ?? "");
   const file = formData.get("file");
   if (!(file instanceof File) || file.size === 0) {
@@ -432,6 +445,7 @@ export async function editMessage(
   if (!access) return DENIED;
   if (access.platform) return PLATFORM_READS_ONLY;
   if (access.off) return CHAT_OFF;
+  if (access.lunch) return AT_LUNCH;
   try {
     await editMessageWith(
       db,
@@ -482,4 +496,36 @@ export async function clearConversation(
   } catch (error) {
     return failure(error, "mensagens.limpar");
   }
+}
+
+/** "Voltei do almoço / do descanso": unlocks the chat inside the window. */
+export async function returnFromLunch(): Promise<Result> {
+  const access = await messengerAccess();
+  if (!access) return DENIED;
+  if (access.platform) return PLATFORM_READS_ONLY;
+  await returnFromLunchWith(db, access.tenant.slug, access.session.user.id);
+  revalidatePath("/admin", "layout");
+  return { ok: true };
+}
+
+/** The holder changes someone's status, say one that lingered. */
+export async function setMemberStatus(
+  userId: string,
+  status: string,
+): Promise<Result> {
+  const holder = await holderAccess();
+  if (!holder) return DENIED;
+  try {
+    await setStatusByHolderWith(
+      db,
+      holder.tenant.slug,
+      userId,
+      status,
+      holder.session.user.id,
+    );
+  } catch (error) {
+    return failure(error, "mensagens.status-pelo-titular");
+  }
+  revalidatePath("/admin", "layout");
+  return { ok: true };
 }

@@ -90,6 +90,89 @@ export function inLunch(lunch: Lunch | null | undefined, now: Date): boolean {
   return at >= start && at < start + lunch.minutes;
 }
 
+/**
+ * When today's lunch window began, while it is on; null outside it.
+ */
+export function lunchStartedAt(
+  lunch: Lunch | null | undefined,
+  now: Date,
+): Date | null {
+  if (!inLunch(lunch, now) || !lunch) return null;
+  const [h, m] = lunch.start.split(":").map(Number);
+  const since = officeMinutes(now) - (h * 60 + m);
+  const start = new Date(now.getTime() - since * 60_000);
+  start.setSeconds(0, 0);
+  return start;
+}
+
+/**
+ * At lunch, with the chat locked (decision of 11/11/2026): inside the
+ * approved window, unless the person said "voltei do almoço" in it.
+ */
+export function atLunch(
+  lunch: Lunch | null | undefined,
+  returnedAt: Date | null | undefined,
+  now: Date,
+): boolean {
+  const start = lunchStartedAt(lunch, now);
+  if (!start) return false;
+  return !(returnedAt && returnedAt.getTime() >= start.getTime());
+}
+
+/* ------------------------------------------------- statuses that linger */
+
+/**
+ * The statuses that keep a person out of reach (decision of 11/11/2026):
+ * after 40 minutes the Tabelião/Registrador is told; after 60 the person
+ * shows as available again on their own. Lunch is apart: it has its own
+ * window.
+ */
+export const AWAY_STATUSES: readonly Status[] = [
+  "em-atendimento",
+  "em-reuniao",
+  "ocupado",
+  "ausente",
+];
+export const STATUS_ALERT_MINUTES = 40;
+export const STATUS_RESET_MINUTES = 60;
+
+function minutesSince(at: Date | null | undefined, now: Date): number {
+  return at ? (now.getTime() - at.getTime()) / 60_000 : 0;
+}
+
+export function isAway(status: string | null | undefined): boolean {
+  return (AWAY_STATUSES as readonly string[]).includes(status ?? "");
+}
+
+/** The status as it stands now: an away status past 60 minutes is over. */
+export function effectiveStatus(
+  status: string | null | undefined,
+  changedAt: Date | null | undefined,
+  now: Date,
+): Status {
+  if (!(STATUSES as readonly string[]).includes(status ?? "")) {
+    return "disponivel";
+  }
+  if (isAway(status) && minutesSince(changedAt, now) >= STATUS_RESET_MINUTES) {
+    return "disponivel";
+  }
+  return status as Status;
+}
+
+/** Between 40 and 60 minutes away: the holder is told. */
+export function lingering(
+  status: string | null | undefined,
+  changedAt: Date | null | undefined,
+  now: Date,
+): boolean {
+  const minutes = minutesSince(changedAt, now);
+  return (
+    isAway(status) &&
+    minutes >= STATUS_ALERT_MINUTES &&
+    minutes < STATUS_RESET_MINUTES
+  );
+}
+
 /** Seen within this long counts as online (the screen polls every few s). */
 export const ONLINE_WINDOW_MS = 90_000;
 
@@ -99,6 +182,10 @@ export function presenceOf(
   lastSeenAt: Date | null | undefined,
   now: Date,
   lunch?: Lunch | null,
+  times: {
+    statusChangedAt?: Date | null;
+    lunchReturnedAt?: Date | null;
+  } = {},
 ): Presence {
   if (!lastSeenAt || now.getTime() - lastSeenAt.getTime() > ONLINE_WINDOW_MS) {
     return "offline";
@@ -106,10 +193,8 @@ export function presenceOf(
   // The approved lunch window, and only it, shows "almoço": once it is
   // over the person shows as chosen again, so lunch cannot become a way
   // of staying unreachable.
-  if (inLunch(lunch, now)) return "almoco";
-  return (STATUSES as readonly string[]).includes(status ?? "")
-    ? (status as Status)
-    : "disponivel";
+  if (atLunch(lunch, times.lunchReturnedAt, now)) return "almoco";
+  return effectiveStatus(status, times.statusChangedAt, now);
 }
 
 /** The window's colour each person chooses: tokens, not free hex. */

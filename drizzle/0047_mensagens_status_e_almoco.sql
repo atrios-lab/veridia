@@ -1,0 +1,2 @@
+ALTER TABLE "messenger_profiles" ADD COLUMN "status_changed_at" timestamp with time zone;--> statement-breakpoint
+ALTER TABLE "messenger_profiles" ADD COLUMN "lunch_returned_at" timestamp with time zone;

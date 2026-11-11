@@ -75,3 +75,36 @@ export function AccessRequestsBanner({ count }: { count: number }) {
     </output>
   );
 }
+
+/**
+ * Someone away (busy, at the counter, in a meeting, absent) for 40
+ * minutes or more (decision of 11/11/2026): the holder checks, and can
+ * change the status in Equipe e conversas. At 60 it lapses on its own.
+ */
+export function LingeringStatusBanner({
+  people,
+}: {
+  people: { name: string; status: string; minutes: number }[];
+}) {
+  const [first, ...rest] = people;
+  if (!first) return null;
+  return (
+    <output className="flex items-center gap-2.5 bg-admin-warning-bg px-[30px] py-2.5 text-[13px] font-semibold text-admin-warning-text max-md:px-4">
+      <span aria-hidden="true">⏱</span>
+      <span className="flex-1">
+        {first.name} está como &quot;{first.status}&quot; há {first.minutes}{" "}
+        minutos
+        {rest.length > 0
+          ? ` (e mais ${rest.length} ${rest.length === 1 ? "pessoa" : "pessoas"})`
+          : ""}
+        .
+      </span>
+      <Link
+        href="/admin/mensagens/supervisao"
+        className="rounded-full border border-admin-warning-text px-3 py-1 text-[12px] hover:bg-white"
+      >
+        Verificar
+      </Link>
+    </output>
+  );
+}

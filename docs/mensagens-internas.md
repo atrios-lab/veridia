@@ -100,3 +100,22 @@ O menu de status tem a opção "Horário de almoço". Ela não muda o status na
 hora: abre logo abaixo o pedido do horário diário (até 1 hora), que vai para
 o Tabelião/Registrador aprovar. No horário aprovado a pessoa aparece como
 "Horário de almoço"; depois volta a aparecer disponível sozinha.
+
+### Almoço bloqueia o chat; status prolongado avisa o Tabelião
+
+Decisão de 11/11/2026.
+
+- **Almoço:** no horário de almoço aprovado, o chat da pessoa fica bloqueado.
+  Ela não envia nem abre conversas, e a janelinha flutuante some. No topo do
+  chat aparece "Horário de almoço: o chat fica bloqueado até você voltar",
+  com o botão **Voltei do almoço**. O botão libera o chat pelo resto da
+  janela daquele dia e deixa a pessoa como Disponível. Isso fica na
+  auditoria. A coluna é `lunch_returned_at`.
+- **Status prolongado:** Ocupado, Em atendimento no balcão, Em reunião e
+  Ausente contam o tempo desde a escolha (coluna `status_changed_at`).
+  - Aos **40 minutos**, o Tabelião/Registrador vê a faixa "Fulano está como
+    'Ocupado' há 45 minutos". Em Equipe e conversas, ele muda o status da
+    pessoa, e isso fica na auditoria.
+  - Aos **60 minutos**, a pessoa volta a Disponível sozinha.
+  - O almoço não entra nessa conta.
+- Migração `0047_mensagens_status_e_almoco.sql`: só acrescenta colunas.

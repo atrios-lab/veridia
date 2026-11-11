@@ -1493,6 +1493,10 @@ export const messengerProfiles = pgTable("messenger_profiles", {
   /** The holder turned this person's messenger off. */
   chatDisabledAt: timestamp("chat_disabled_at", { withTimezone: true }),
   chatDisabledBy: text("chat_disabled_by"),
+  /** When the status last changed: an away one lapses after 60 minutes. */
+  statusChangedAt: timestamp("status_changed_at", { withTimezone: true }),
+  /** "Voltei do almoço": unlocks the chat inside today's window. */
+  lunchReturnedAt: timestamp("lunch_returned_at", { withTimezone: true }),
   updatedAt: timestamp("updated_at", { withTimezone: true })
     .notNull()
     .defaultNow(),
