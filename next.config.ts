@@ -61,6 +61,26 @@ const nextConfig: NextConfig = {
         source: "/transparencia/:kind(documento|boletim)/:id",
         headers: [{ key: "X-Frame-Options", value: "SAMEORIGIN" }],
       },
+      // The internal messenger records voice notes: the microphone, for
+      // this origin only, on that screen only. Everywhere else it stays off.
+      {
+        source: "/admin/mensagens/:path*",
+        headers: [
+          {
+            key: "Permissions-Policy",
+            value: "camera=(), microphone=(self), geolocation=(), payment=()",
+          },
+        ],
+      },
+      {
+        source: "/admin/mensagens",
+        headers: [
+          {
+            key: "Permissions-Policy",
+            value: "camera=(), microphone=(self), geolocation=(), payment=()",
+          },
+        ],
+      },
     ];
   },
   // IndexNow (see src/lib/indexnow.ts) requires the key served at the

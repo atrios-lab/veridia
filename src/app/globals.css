@@ -924,3 +924,27 @@
     box-shadow: 0 0 0 1.5px var(--brand-accent);
   }
 }
+
+/*
+ * Mensagens internas: the messenger window's title bar in the colour each
+ * person picks (core/messages/rules.ts), and the presence dots of the
+ * contact list, as the desktop messengers drew them.
+ */
+@theme {
+  --color-msg-verde-from: #1c5638;
+  --color-msg-verde-to: #3f8a63;
+  --color-msg-azul-from: #1f4e8c;
+  --color-msg-azul-to: #5b93d6;
+  --color-msg-vinho-from: #5e1b2b;
+  --color-msg-vinho-to: #9b3a52;
+  --color-msg-grafite-from: #2b2f36;
+  --color-msg-grafite-to: #5a616d;
+  --color-msg-dourado-from: #7f6532;
+  --color-msg-dourado-to: #c9a75d;
+  --color-msg-online: #3fae49;
+  --color-msg-busy: #d64541;
+  --color-msg-away: #e8a33d;
+  --color-msg-offline: #a3a8ae;
+  --color-msg-pane: #eef3f8;
+  --color-msg-mine: #e4f1e7;
+}
