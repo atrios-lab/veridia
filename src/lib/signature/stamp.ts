@@ -29,6 +29,25 @@ import {
 const INK = rgb(0.2, 0.2, 0.2);
 
 /**
+ * The platform's mark at the end of the band (decision of 11/11/2026): the
+ * Átrios "chapéu", the arch of its logo, alone and without the name block,
+ * as on the Átrios contracts, with "Assinador digital ÁTRIOS" under it.
+ * Drawn as a vector in a 100 x 100 box (SVG coordinates, y down): two
+ * pieces, the left wall rising to the roof and the right one falling from
+ * it, with the doorway between them.
+ */
+const ATRIOS_HAT = [
+  "M0 100 L0 22 L46 0 L46 28 L28 37 L28 100 Z",
+  "M54 0 L100 22 L100 100 L72 100 L72 37 L54 28 Z",
+];
+const ATRIOS_NAVY = rgb(0.137, 0.165, 0.392);
+export const ATRIOS_SIGNATURE_MARK = "Assinador digital ÁTRIOS";
+/** The platform's support line, under the mark. */
+export const ATRIOS_SUPPORT_PHONE = "0800 878 0304";
+const HAT_SIZE = 15;
+const MARK_SIZE = 5.5;
+
+/**
  * The lines of the band, bottom to top along the margin (decision of
  * 11/11/2026): who signed, by the certificate holder's full name, and
  * when; the office in capitals, as registered on the platform; the legal
@@ -123,8 +142,19 @@ export function drawBand(
   },
 ): void {
   const { width, height } = shownSize(view);
+  const markLength = parts.font.widthOfTextAtSize(
+    ATRIOS_SIGNATURE_MARK,
+    MARK_SIZE,
+  );
+  // The top of the band is the platform's mark: the hat, then the name
+  // with the support line under it.
+  const brandRoom = HAT_SIZE + 6 + markLength + 10;
+  const phoneLength = parts.font.widthOfTextAtSize(
+    ATRIOS_SUPPORT_PHONE,
+    MARK_SIZE,
+  );
   // As large as 6.5 pt while the longest line fits the page's height.
-  const room = height - 160;
+  const room = height - 160 - brandRoom;
   const widest = Math.max(
     ...parts.lines.map((line, index) =>
       (index < BOLD_LINES ? parts.bold : parts.font).widthOfTextAtSize(
@@ -149,6 +179,41 @@ export function drawBand(
       rotate: degrees(90 + view.rotation),
     });
   });
+  // Centred on the band's columns, at its end, as on the Átrios contracts.
+  const span = (parts.lines.length - 1) * (size + 2) + size;
+  const centre = width - 14 - span / 2;
+  const top = height - 30;
+  for (const path of ATRIOS_HAT) {
+    target.drawSvgPath(path, {
+      ...toUser(view, centre - HAT_SIZE / 2, top),
+      scale: HAT_SIZE / 100,
+      color: ATRIOS_NAVY,
+      opacity: 0.8,
+      rotate: degrees(view.rotation),
+    });
+  }
+  // Two columns read bottom to top, so "under" the name is the next one
+  // to the right; both start at the same height, under the hat.
+  const start = top - HAT_SIZE - 6 - markLength;
+  target.drawText(ATRIOS_SIGNATURE_MARK, {
+    ...toUser(view, centre - 0.5, start),
+    size: MARK_SIZE,
+    font: parts.font,
+    color: ATRIOS_NAVY,
+    rotate: degrees(90 + view.rotation),
+  });
+  target.drawText(ATRIOS_SUPPORT_PHONE, {
+    ...toUser(
+      view,
+      centre + MARK_SIZE + 1,
+      start + (markLength - phoneLength) / 2,
+    ),
+    size: MARK_SIZE,
+    font: parts.bold,
+    color: ATRIOS_NAVY,
+    rotate: degrees(90 + view.rotation),
+  });
+
   const qrAt = toUser(view, width - QR_SIZE - 24, 16);
   target.drawImage(parts.qr, {
     ...qrAt,
