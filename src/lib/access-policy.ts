@@ -9,13 +9,15 @@ import { recordAuditWith } from "./audit.ts";
 /**
  * Liberação de acesso (decision of 11/11/2026): the Átrios master account
  * turns the panel's two-step access off, or back on, for any office, from
- * its own login. On by default; stored in the office's own tenant_content
- * row, written only by the platform permission `access.release`.
+ * its own login; the office's Tabelião/Registrador can too, from
+ * Configurações › Duas etapas (an e-mail outage). On by default; stored in
+ * the office's own tenant_content row.
  */
 const PolicySchema = z.object({
   twoStep: z.enum(["on", "off"]),
   reason: z.string().max(300).optional(),
   changedAt: z.string().optional(),
+  by: z.enum(["platform", "office"]).optional(),
 });
 export type AccessPolicy = z.infer<typeof PolicySchema>;
 
@@ -85,9 +87,12 @@ export async function setAccessPolicyWith(
   reason: string,
   actorId: string,
   now = new Date(),
+  /** Who switched it: the Átrios master account, or the office itself. */
+  by: "platform" | "office" = "platform",
 ): Promise<void> {
   const published: AccessPolicy = {
     twoStep,
+    by,
     ...(reason.trim() ? { reason: reason.trim().slice(0, 300) } : {}),
     changedAt: now.toISOString(),
   };
@@ -107,8 +112,7 @@ export async function setAccessPolicyWith(
   await recordAuditWith(database, {
     tenantSlug,
     actorId,
-    action:
-      twoStep === "off" ? "platform.two-step-off" : "platform.two-step-on",
+    action: `${by}.two-step-${twoStep}`,
     targetType: "tenant",
     targetId: tenantSlug,
   });

@@ -24,6 +24,7 @@ import {
   REQUESTER_ROLES,
 } from "@/core/request/kinds.ts";
 import type { Attribution, Tenant } from "@/core/tenant/schema.ts";
+import { LONG_TEXT_MAX } from "@/core/text-limits.ts";
 import { AdminIcon } from "../../../_components/icon.tsx";
 import { AlternateDocumentFields } from "../_components/alternate-document-fields.tsx";
 import {
@@ -255,7 +256,7 @@ function ManualPurposeField({ error }: { error?: string }) {
         id="purpose"
         name="purpose"
         rows={2}
-        maxLength={500}
+        maxLength={LONG_TEXT_MAX}
         placeholder={PURPOSE_PLACEHOLDER}
         aria-describedby="purpose-hint"
         className={FIELD_CLASS}
@@ -687,6 +688,7 @@ export function ManualEntryForm({
             id="description"
             name="description"
             rows={3}
+            maxLength={LONG_TEXT_MAX}
             placeholder="Detalhes do pedido, documentos já entregues em mãos…"
             className={FIELD_CLASS}
           />

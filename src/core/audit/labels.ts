@@ -63,6 +63,8 @@ const EXACT: Record<string, string> = {
   "office-settings.role-permissions": "Alterou as permissões dos cargos",
   "platform.two-step-off": "Átrios desligou a verificação em duas etapas",
   "platform.two-step-on": "Átrios religou a verificação em duas etapas",
+  "office.two-step-off": "Desligou a verificação em duas etapas da serventia",
+  "office.two-step-on": "Religou a verificação em duas etapas da serventia",
   "audit.notification": "Enviou uma notificação de auditoria",
   "audit.notification-answer": "Respondeu a uma notificação de auditoria",
   "audit.notification-close": "Encerrou uma notificação de auditoria",
@@ -273,6 +275,10 @@ const EXPLANATIONS: Record<string, string> = {
   "publication.archive": "Uma publicação saiu do site e foi arquivada.",
   "publication.delete": "Uma publicação foi excluída.",
   "transparency.document.delete": "Um documento de transparência foi excluído.",
+  "office.two-step-off":
+    "A verificação em duas etapas do painel foi desligada pela própria serventia (por exemplo, o código não chegava por e-mail): todos entram só com a senha até ela ser ligada de novo.",
+  "office.two-step-on":
+    "A verificação em duas etapas do painel foi ligada de novo pela própria serventia.",
   "platform.two-step-off":
     "A Átrios desligou a verificação em duas etapas desta serventia.",
   "platform.two-step-on":

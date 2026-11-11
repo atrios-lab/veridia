@@ -1,6 +1,7 @@
 "use client";
 
 import { type ReactNode, useEffect, useId, useRef, useState } from "react";
+import { LONG_TEXT_MAX, MIN_JUSTIFICATION } from "@/core/text-limits.ts";
 import { AdminDialog, DIALOG_FOOTER } from "./dialog.tsx";
 
 /**
@@ -129,8 +130,8 @@ export function ConfirmAction({
                   name="justificativa"
                   form={formId}
                   required
-                  minLength={10}
-                  maxLength={1000}
+                  minLength={MIN_JUSTIFICATION}
+                  maxLength={LONG_TEXT_MAX}
                   rows={3}
                   placeholder="Por que este ato é necessário?"
                   className="w-full rounded-[9px] border border-admin-input-border bg-admin-input-bg px-3 py-2 text-[13px] text-admin-text outline-none focus:border-admin-primary-soft"

@@ -5,6 +5,7 @@ import {
   CITIZEN_DOCUMENT_NAMES,
   OFFICE_DOCUMENT_NAMES,
 } from "@/core/request/delivery-name.ts";
+import { LONG_TEXT_MAX } from "@/core/text-limits.ts";
 import { DocumentNameField } from "../../../../../_components/document-name-field.tsx";
 import {
   addNoteAction,
@@ -53,7 +54,7 @@ export function NoteForm({ id }: { id: string }) {
         id="nota"
         name="body"
         rows={3}
-        maxLength={4000}
+        maxLength={LONG_TEXT_MAX}
         placeholder="Ex.: cliente avisou que vai chegar 10 minutos atrasado."
         className={FIELD}
       />
@@ -204,7 +205,7 @@ export function CorrectionForm({
           name="serviceDetails"
           rows={3}
           defaultValue={initial.serviceDetails}
-          maxLength={2000}
+          maxLength={LONG_TEXT_MAX}
           className={FIELD}
         />
       </label>

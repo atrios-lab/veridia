@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { LONG_TEXT_MAX } from "../text-limits.ts";
 import { GUIDE_KIND_INFO } from "./catalog.ts";
 import {
   CIVIL_STATUSES,
@@ -21,10 +22,12 @@ import {
  * signing.
  */
 
-const text = (max: number, required?: string) =>
-  required
-    ? z.string().trim().min(1, required).max(max, `Use até ${max} caracteres.`)
-    : z.string().trim().max(max, `Use até ${max} caracteres.`);
+const text = (max: number, required?: string) => {
+  const tooLong = `Use até ${max.toLocaleString("pt-BR")} caracteres.`;
+  return required
+    ? z.string().trim().min(1, required).max(max, tooLong)
+    : z.string().trim().max(max, tooLong);
+};
 
 export const PublicGuidePartySchema = z.object({
   role: z.enum(["transmitente", "adquirente"]),
@@ -53,7 +56,7 @@ export const PublicGuideRequestSchema = z
     parties: z.array(PublicGuidePartySchema).max(20, "Use até 20 pessoas."),
     property: z.object({
       type: z.enum(["urbano", "rural"]),
-      description: text(4000, "Descreva o imóvel (endereço, área)."),
+      description: text(LONG_TEXT_MAX, "Descreva o imóvel (endereço, área)."),
       fiscalRegistration: text(120),
       registration: text(500),
     }),

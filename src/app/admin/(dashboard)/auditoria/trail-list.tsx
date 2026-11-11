@@ -3,6 +3,7 @@
 import { startTransition, useActionState, useEffect, useState } from "react";
 import { toast } from "sonner";
 import { AUDIT_LEVEL_LABELS, type AuditLevel } from "@/core/audit/severity.ts";
+import { LONG_TEXT_MAX } from "@/core/text-limits.ts";
 import {
   type AuditState,
   addNote,
@@ -84,7 +85,7 @@ function NoteItem({
             value={text}
             onChange={(event) => setText(event.target.value)}
             rows={2}
-            maxLength={2000}
+            maxLength={LONG_TEXT_MAX}
             aria-label="Corrigir anotação"
             className="w-full rounded-[8px] border border-admin-input-border bg-admin-card px-2.5 py-1.5 text-[12.5px]"
           />
@@ -161,7 +162,7 @@ function NoteForm({ auditId }: { auditId: string }) {
       <textarea
         id={`nota-${auditId}`}
         rows={2}
-        maxLength={2000}
+        maxLength={LONG_TEXT_MAX}
         aria-label="Anotação"
         className="min-w-0 flex-1 rounded-[9px] border border-admin-input-border bg-admin-input-bg px-3 py-2 text-[12.5px] text-admin-text"
       />

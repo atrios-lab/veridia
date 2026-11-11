@@ -11,6 +11,7 @@ import {
   ombudsmanSchema,
 } from "@/core/request/channels.ts";
 import type { ManifestationType } from "@/core/request/kinds.ts";
+import { LONG_TEXT_MAX } from "@/core/text-limits.ts";
 import { DemoFormNotice } from "../_components/demo-notice.tsx";
 import { Icon, type IconName } from "../_components/icon.tsx";
 import { ProtocolReveal } from "../_components/protocol-reveal.tsx";
@@ -185,6 +186,7 @@ export function ManifestationScreen() {
             <textarea
               id="message"
               rows={5}
+              maxLength={LONG_TEXT_MAX}
               className={inputClass}
               placeholder="Conte o que aconteceu, com data e horário se lembrar."
               {...register("message")}

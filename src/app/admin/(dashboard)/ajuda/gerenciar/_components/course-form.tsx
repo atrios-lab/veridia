@@ -8,6 +8,7 @@ import {
   useId,
   useState,
 } from "react";
+import { LONG_TEXT_MAX } from "@/core/text-limits.ts";
 import {
   checkTutorialFile,
   describeTutorialFileProblem,
@@ -206,7 +207,7 @@ export function CourseForm({
           id={`${formId}-description`}
           name="description"
           defaultValue={editing?.description ?? ""}
-          maxLength={400}
+          maxLength={LONG_TEXT_MAX}
           rows={2}
           disabled={busy}
           className={fieldErrors.description ? ERROR_FIELD_CLASS : FIELD_CLASS}

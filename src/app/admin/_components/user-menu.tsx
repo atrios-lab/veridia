@@ -12,9 +12,8 @@ import { SignOutButton } from "./sign-out-button.tsx";
  * footer, and the sign out stays a `<form action={signOut}>` the way it was
  * there: the server ends the session, the button only asks.
  *
- * "Trocar senha" is still not offered here, for the reason the sidebar gave:
- * there is no screen inside the panel for it yet, and a menu item that
- * bounces is worse than one that is missing.
+ * "Trocar minha senha" opens Minha conta, where the person changes their
+ * own password knowing the current one (decision of 11/11/2026).
  */
 export function UserMenu({
   name,
@@ -86,6 +85,14 @@ export function UserMenu({
             <p className="text-[11.5px] text-admin-muted">{roleLabel}</p>
           </div>
           <hr className="my-0.5 border-0 border-t border-admin-border" />
+          <Link
+            href="/admin/minha-conta#senha"
+            role="menuitem"
+            onClick={() => setOpen(false)}
+            className="flex w-full items-center rounded-[7px] px-2.5 py-2 text-left text-[13px] font-medium text-admin-text transition-colors duration-120 hover:bg-admin-input-bg"
+          >
+            Trocar minha senha
+          </Link>
           <Link
             href="/admin/minha-conta"
             role="menuitem"

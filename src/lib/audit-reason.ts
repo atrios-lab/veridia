@@ -1,6 +1,6 @@
 import "server-only";
 import { AsyncLocalStorage } from "node:async_hooks";
-import { MIN_JUSTIFICATION } from "@/core/audit/severity.ts";
+import { LONG_TEXT_MAX, MIN_JUSTIFICATION } from "@/core/text-limits.ts";
 
 /**
  * The justification of a sensitive act (decision of 11/11/2026): whoever
@@ -20,7 +20,7 @@ export function justify(formData: FormData): string | null {
   const text = String(formData.get("justificativa") ?? "")
     .replace(/\r\n?/g, "\n")
     .trim()
-    .slice(0, 1000);
+    .slice(0, LONG_TEXT_MAX);
   if (text.length < MIN_JUSTIFICATION) {
     return `Escreva a justificativa (pelo menos ${MIN_JUSTIFICATION} letras). Ela vai para a auditoria.`;
   }

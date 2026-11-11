@@ -14,6 +14,7 @@ import {
 } from "@/core/request/channels.ts";
 import { formatCpf } from "@/core/request/form.ts";
 import { formatDate } from "@/core/scheduling/calendar.ts";
+import { LONG_TEXT_MAX } from "@/core/text-limits.ts";
 import { DemoFormNotice } from "../_components/demo-notice.tsx";
 import { Icon } from "../_components/icon.tsx";
 import { ProtocolReveal } from "../_components/protocol-reveal.tsx";
@@ -251,6 +252,7 @@ export function DataRightsScreen(props: DataRightsScreenProps) {
               <textarea
                 id="description"
                 rows={4}
+                maxLength={LONG_TEXT_MAX}
                 className={inputClass}
                 placeholder="Ex.: quero saber quais dados constam do meu cadastro"
                 {...register("description")}

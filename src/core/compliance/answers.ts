@@ -1,6 +1,7 @@
 import { isValidCpf } from "../request/form.ts";
 import { isValidCnpj } from "../tenant/pix.ts";
 import type { Tenant } from "../tenant/schema.ts";
+import { LONG_TEXT_MAX } from "../text-limits.ts";
 import {
   type Answers,
   type FieldContext,
@@ -347,7 +348,9 @@ function validateText(
   field: FieldDef,
   value: string,
 ): { value: Value } | { error: string } {
-  if (value.length > 2000) return { error: "Texto longo demais." };
+  // A multi-line answer takes a long text; a one-line field stays short.
+  const max = field.type === "textarea" ? LONG_TEXT_MAX : 2000;
+  if (value.length > max) return { error: "Texto longo demais." };
   if (field.type === "email" && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value)) {
     return { error: "Informe um e-mail válido." };
   }

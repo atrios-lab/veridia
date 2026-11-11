@@ -27,6 +27,7 @@ import {
   documentsByEmailNotice,
   type OfferedService,
 } from "@/core/scheduling/services.ts";
+import { LONG_TEXT_MAX } from "@/core/text-limits.ts";
 import { DemoFormNotice } from "../_components/demo-notice.tsx";
 import { Icon } from "../_components/icon.tsx";
 import { ProtocolReveal } from "../_components/protocol-reveal.tsx";
@@ -596,6 +597,7 @@ function AppointmentForm({
           <textarea
             id="serviceDetails"
             rows={3}
+            maxLength={LONG_TEXT_MAX}
             className={inputClass}
             placeholder="Ex.: qual documento você precisa e para que ele vai servir."
             {...register("serviceDetails")}

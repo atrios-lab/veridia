@@ -22,6 +22,7 @@ import {
   rateFor,
   STABLE_UNION_OPTIONS,
 } from "@/core/guides/schema.ts";
+import { LONG_TEXT_MAX } from "@/core/text-limits.ts";
 import { formatMoneyBRL } from "@/core/transparency/bulletin.ts";
 import { AdminIcon } from "../../../_components/icon.tsx";
 import { type GuideFormState, saveGuide } from "./actions.ts";
@@ -481,6 +482,7 @@ export function GuideForm({
           <span className={LABEL}>Descrição (localização, área, limites)</span>
           <textarea
             rows={4}
+            maxLength={LONG_TEXT_MAX}
             value={guide.property.description}
             onChange={(event) =>
               update({
@@ -587,6 +589,7 @@ export function GuideForm({
           <span className={LABEL}>Destinatário desta guia (opcional)</span>
           <textarea
             rows={2}
+            maxLength={LONG_TEXT_MAX}
             value={guide.addresseeText}
             onChange={(event) => update({ addresseeText: event.target.value })}
             placeholder={addressee(plain, settings)}
@@ -612,6 +615,7 @@ export function GuideForm({
           <span className={LABEL}>Observações para o fisco (opcional)</span>
           <textarea
             rows={2}
+            maxLength={LONG_TEXT_MAX}
             value={guide.notes}
             onChange={(event) => update({ notes: event.target.value })}
             className={FIELD}

@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { LONG_TEXT_MAX } from "../text-limits.ts";
 
 /**
  * Who wrote a message. `note` is its own type, not a flag on `staff`: see
@@ -9,7 +10,7 @@ import { z } from "zod";
 export const AUTHOR_TYPES = ["citizen", "staff", "system", "note"] as const;
 export type AuthorType = (typeof AUTHOR_TYPES)[number];
 
-export const MAX_MESSAGE_LENGTH = 4000;
+export const MAX_MESSAGE_LENGTH = LONG_TEXT_MAX;
 
 /**
  * Lives next to the ceiling so the two never drift apart. "Texto longo

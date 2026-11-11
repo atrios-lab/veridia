@@ -1,3 +1,5 @@
+import { MIN_JUSTIFICATION } from "../text-limits.ts";
+
 /**
  * How much an act of the trail asks of the Tabelião/Registrador (decision
  * of 11/11/2026), in three bands and the routine below them:
@@ -55,6 +57,7 @@ const EXACT: Record<string, AuditLevel> = {
   "user.email-changed": "urgente",
   "user.password-reset-link-issued": "urgente",
   "platform.two-step-off": "urgente",
+  "office.two-step-off": "atencao",
   "signing-certificate.add": "urgente",
   "signing-certificate.signers": "urgente",
   "signed-document.remove": "urgente",
@@ -82,6 +85,7 @@ const EXACT: Record<string, AuditLevel> = {
   "user.email-change-requested": "atencao",
   "fee-table.items": "atencao",
   "platform.two-step-on": "atencao",
+  "office.two-step-on": "analise",
   "audit.notification": "atencao",
   "messenger.lunch-request": "atencao",
   "messenger.chat-off": "atencao",
@@ -152,10 +156,10 @@ export function needsReview(level: AuditLevel): boolean {
 }
 
 /**
- * The minimum a justification needs to say something: an exclusion with
- * "ok" for a reason is no reason.
+ * The minimum a justification needs to say something lives in
+ * `@/core/text-limits.ts`; re-exported here for the existing imports.
  */
-export const MIN_JUSTIFICATION = 10;
+export { MIN_JUSTIFICATION };
 
 export function validJustification(text: string): boolean {
   return text.trim().length >= MIN_JUSTIFICATION;

@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { LONG_TEXT_MAX } from "../text-limits.ts";
 
 // What the platform types into the assessment forms, validated the same
 // way in the browser and on the server.
@@ -8,7 +9,10 @@ export const questionFormSchema = z.object({
     .string()
     .trim()
     .min(5, "Escreva o enunciado.")
-    .max(500, "O enunciado passa de 500 caracteres."),
+    .max(
+      LONG_TEXT_MAX,
+      `O enunciado passa de ${LONG_TEXT_MAX.toLocaleString("pt-BR")} caracteres.`,
+    ),
   options: z
     .array(
       z

@@ -1,6 +1,7 @@
 "use client";
 
 import { useActionState, useEffect, useState } from "react";
+import { LONG_TEXT_MAX } from "@/core/text-limits.ts";
 import { useEmailWarning } from "../../../../_components/use-email-warning.ts";
 import { type ActionState, answerSearchAction } from "../actions.ts";
 
@@ -124,6 +125,7 @@ export function SearchAnswerSection({
               id="search-answer-text"
               name="text"
               rows={4}
+              maxLength={LONG_TEXT_MAX}
               defaultValue={answer?.text}
               placeholder="Ex.: O registro de nascimento consta nesta serventia. A profissão registrada é agricultor."
               className={FIELD}

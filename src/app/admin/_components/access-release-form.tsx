@@ -1,6 +1,7 @@
 "use client";
 
 import { useActionState } from "react";
+import { LONG_TEXT_MAX, MIN_JUSTIFICATION } from "@/core/text-limits.ts";
 import {
   type ReleaseRequestState,
   requestAccessRelease,
@@ -28,8 +29,8 @@ export function AccessReleaseForm({ pending }: { pending: boolean }) {
         name="reason"
         rows={3}
         required
-        minLength={10}
-        maxLength={500}
+        minLength={MIN_JUSTIFICATION}
+        maxLength={LONG_TEXT_MAX}
         placeholder="Ex.: conferir o protocolo de uma escritura com prazo amanhã cedo."
         className="w-full rounded-[9px] border border-admin-input-border bg-admin-input-bg px-3.5 py-2.5 text-[13.5px] text-admin-text outline-none focus:border-admin-primary-soft"
       />

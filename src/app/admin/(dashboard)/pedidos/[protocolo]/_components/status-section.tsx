@@ -11,6 +11,7 @@ import {
   type ServiceRequestStatus,
   statusLabel,
 } from "@/core/request/kinds.ts";
+import { LONG_TEXT_MAX } from "@/core/text-limits.ts";
 import { AdminIcon } from "../../../../_components/icon.tsx";
 import { useEmailWarning } from "../../../../_components/use-email-warning.ts";
 import { type ActionState, changeStatus } from "../actions.ts";
@@ -157,6 +158,7 @@ function ReasonConfirmation({
         name="reason"
         required={!allowsDocument}
         rows={3}
+        maxLength={LONG_TEXT_MAX}
         aria-label={`Motivo para mudar o andamento para ${label}`}
         placeholder={`Explique por que o pedido está sendo ${label === "indeferido" ? "indeferido" : "cancelado"}.`}
         className="w-full rounded-[9px] border border-admin-input-border bg-admin-card px-3 py-2 text-[13px] text-admin-text"

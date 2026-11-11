@@ -10,6 +10,7 @@ import {
   usesChannels,
 } from "@/core/scheduling/agenda.ts";
 import { servicesOfAgenda } from "@/core/scheduling/services.ts";
+import { LONG_TEXT_MAX, LONG_TEXT_TOO_LONG } from "@/core/text-limits.ts";
 import {
   addAppointmentNote,
   addOfficeAppointmentAttachments,
@@ -55,8 +56,8 @@ export async function addNoteAction(
   const id = String(formData.get("id") ?? "");
   const body = String(formData.get("body") ?? "").trim();
   if (!body) return { status: "error", message: "Escreva a anotação." };
-  if (body.length > 4000) {
-    return { status: "error", message: "Use até 4.000 caracteres." };
+  if (body.length > LONG_TEXT_MAX) {
+    return { status: "error", message: LONG_TEXT_TOO_LONG };
   }
   const tenant = await getTenant();
   try {
@@ -135,7 +136,7 @@ const correctionSchema = z.object({
     }),
   serviceId: z.string().min(1, "Escolha o serviço."),
   mode: z.string().min(1, "Escolha o modo."),
-  serviceDetails: z.string().trim().max(2000, "Use até 2.000 caracteres."),
+  serviceDetails: z.string().trim().max(LONG_TEXT_MAX, LONG_TEXT_TOO_LONG),
 });
 
 /** The citizen's data corrected by the office, audited. */

@@ -1,3 +1,4 @@
+import { LONG_TEXT_MAX } from "../text-limits.ts";
 import type { ClosedReason } from "./conversation.ts";
 
 /**
@@ -50,7 +51,7 @@ export const GIVE_UP_REASONS = [
 ] as const;
 export type GiveUpReason = (typeof GIVE_UP_REASONS)[number];
 
-export const GIVE_UP_DETAIL_MAX = 300;
+export const GIVE_UP_DETAIL_MAX = LONG_TEXT_MAX;
 
 export function isGiveUpReason(value: unknown): value is GiveUpReason {
   return (

@@ -44,6 +44,7 @@ import {
 } from "@/core/request/kinds.ts";
 import { SIGNED_FORM_REQUIRED_NOTICE } from "@/core/request/requerimento.ts";
 import type { Attribution } from "@/core/tenant/schema.ts";
+import { LONG_TEXT_MAX } from "@/core/text-limits.ts";
 import { DemoFormNotice } from "../_components/demo-notice.tsx";
 import { Icon } from "../_components/icon.tsx";
 import { ProtocolReveal } from "../_components/protocol-reveal.tsx";
@@ -287,7 +288,7 @@ function PurposeField({
       <textarea
         id="purpose"
         rows={2}
-        maxLength={500}
+        maxLength={LONG_TEXT_MAX}
         className={inputClass}
         placeholder={PURPOSE_PLACEHOLDER}
         aria-describedby="purpose-hint"
@@ -832,6 +833,7 @@ export function RequestForm({
           <textarea
             id="description"
             rows={4}
+            maxLength={LONG_TEXT_MAX}
             className={inputClass}
             placeholder={
               act.descriptionPlaceholder ??
