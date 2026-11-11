@@ -6,6 +6,7 @@ import { officeSite } from "@/lib/attendance-declaration.ts";
 import { brandFor } from "@/lib/document-brand.ts";
 import { renderDocument } from "@/lib/pdf.ts";
 import type { SignedDocumentView } from "@/lib/signing.ts";
+import { markManifest } from "./stamp.ts";
 
 /** The site this request came through, for the QR when the office has no domain. */
 export async function requestOrigin(): Promise<string> {
@@ -34,7 +35,7 @@ export async function renderManifestPdf(
 ): Promise<Buffer> {
   const verifyUrl = verifyUrlFor(tenant, origin, view.code);
   const current = view.signatures.at(-1)?.resultSha256;
-  return renderDocument(
+  const manifest = await renderDocument(
     buildSignatureManifest(tenant, {
       code: view.code,
       title: view.title,
@@ -47,6 +48,7 @@ export async function renderManifestPdf(
     }),
     await brandFor(tenant, verifyUrl),
   );
+  return markManifest(manifest);
 }
 
 /** A file name a browser saves without surprises. */

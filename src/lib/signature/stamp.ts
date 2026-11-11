@@ -324,3 +324,43 @@ export async function bandAppearancePage(
   });
   return { doc, page: blank, view };
 }
+
+/**
+ * The platform's mark on the manifest (decision of 11/11/2026): the hat,
+ * "Assinador digital ÁTRIOS" and the support line, in the first page's
+ * top left corner, across from the QR, where the letterhead leaves room.
+ */
+export async function markManifest(manifest: Buffer): Promise<Buffer> {
+  const doc = await PDFDocument.load(manifest, { updateMetadata: false });
+  const page = doc.getPage(0);
+  const { height } = page.getSize();
+  const font = await doc.embedFont(StandardFonts.TimesRoman);
+  const bold = await doc.embedFont(StandardFonts.TimesRomanBold);
+  const left = 42;
+  const top = height - 36;
+  const hat = 20;
+  for (const path of ATRIOS_HAT) {
+    page.drawSvgPath(path, {
+      x: left,
+      y: top,
+      scale: hat / 100,
+      color: ATRIOS_NAVY,
+      opacity: 0.85,
+    });
+  }
+  page.drawText(ATRIOS_SIGNATURE_MARK, {
+    x: left + hat + 6,
+    y: top - 8,
+    size: 7.5,
+    font,
+    color: ATRIOS_NAVY,
+  });
+  page.drawText(ATRIOS_SUPPORT_PHONE, {
+    x: left + hat + 6,
+    y: top - 17.5,
+    size: 7.5,
+    font: bold,
+    color: ATRIOS_NAVY,
+  });
+  return Buffer.from(await doc.save({ useObjectStreams: false }));
+}

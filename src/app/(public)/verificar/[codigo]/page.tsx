@@ -16,6 +16,7 @@ import { db } from "@/db/index.ts";
 import { isVerifyRateLimited } from "@/lib/rate-limit.ts";
 import { findSignedDocumentWith } from "@/lib/signing.ts";
 import { getTenant } from "@/lib/tenant.ts";
+import { AtriosMark } from "../../_components/atrios-mark.tsx";
 import { Icon } from "../../_components/icon.tsx";
 import { TooManyLookups } from "../limited.tsx";
 
@@ -192,6 +193,7 @@ export default async function SignedDocumentPage({
         </p>
         <p className="mt-1.5">{SIGNATURE_COMPLIANCE_NOTE}</p>
       </div>
+      <AtriosMark />
     </div>
   );
 }
