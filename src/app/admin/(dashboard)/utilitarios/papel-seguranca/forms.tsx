@@ -387,7 +387,7 @@ export function MovementForm({
   const [state, action, pending] = useActionState(addMovement, IDLE);
   const [type, setType] = useState(initialType);
   const [mode, setMode] = useState(
-    initialType === "utilizado" ? "quantidade" : "numeracao",
+    initialType === "utilizado" ? "ate" : "numeracao",
   );
   const [lotId, setLotId] = useState(lots[0]?.id ?? "");
   const lot = lots.find((l) => l.id === lotId);
@@ -481,6 +481,18 @@ export function MovementForm({
       <fieldset className="flex flex-col gap-3">
         <legend className={LABEL}>Quais folhas?</legend>
         <div className="flex flex-wrap gap-4 text-[13px]">
+          {type === "utilizado" && (
+            <label className="flex items-center gap-2">
+              <input
+                type="radio"
+                name="modo"
+                value="ate"
+                checked={mode === "ate"}
+                onChange={() => setMode("ate")}
+              />
+              <strong>Usei até a folha nº</strong> (fechamento do mês)
+            </label>
+          )}
           <label className="flex items-center gap-2">
             <input
               type="radio"
@@ -502,7 +514,31 @@ export function MovementForm({
             Pela numeração
           </label>
         </div>
-        {mode === "quantidade" ? (
+        {mode === "ate" ? (
+          <div className="max-w-[420px]">
+            <label htmlFor="mv-upto" className={LABEL}>
+              Última folha usada
+            </label>
+            <input
+              id="mv-upto"
+              name="ate"
+              required
+              placeholder={lot?.next ?? "AB 000350"}
+              className={`${FIELD} font-mono`}
+            />
+            <span className={HINT}>
+              Olhe a primeira folha em branco na gaveta: a anterior a ela é a
+              última usada. O sistema baixa todas as folhas livres de{" "}
+              {lot?.next ? (
+                <strong className="font-mono">{lot.next}</strong>
+              ) : (
+                "a próxima livre"
+              )}{" "}
+              até ela, pulando as inutilizadas, avariadas e extraviadas já
+              lançadas. Use a data do último dia do mês.
+            </span>
+          </div>
+        ) : mode === "quantidade" ? (
           <div className="max-w-[220px]">
             <label htmlFor="mv-qty" className={LABEL}>
               Quantas folhas

@@ -18,6 +18,7 @@ import {
   sheetNumber,
   sheetsIn,
   stockByKind,
+  usageMissing,
 } from "@/core/security-paper/stock.ts";
 import { db } from "@/db/index.ts";
 import {
@@ -99,6 +100,11 @@ export default async function SecurityPaperPage({
     .slice(0, 60);
   const shownLots = lots.filter((l) => showRemoved || !l.voided);
   const low = lowStock(lots, movements, settings.lowStock);
+  // In the first half of the month: the month before has no use yet.
+  const missingUse =
+    Number(now.slice(8, 10)) <= 15
+      ? usageMissing({ today: now, lots, movements })
+      : null;
   const canOrder = can(
     session.user.role ?? "",
     "paper-orders.manage",
@@ -136,6 +142,31 @@ export default async function SecurityPaperPage({
           <p className="rounded-[12px] bg-admin-success-bg px-4 py-3 text-[13px] font-semibold text-admin-success-text">
             {done}
           </p>
+        )}
+
+        {missingUse && (
+          <div className="flex flex-wrap items-center gap-3 rounded-[14px] border border-admin-border bg-admin-card px-5 py-4">
+            <AdminIcon
+              name="clipboard"
+              className="h-5 w-5 shrink-0 text-admin-primary"
+            />
+            <div className="mr-auto min-w-[240px] flex-1">
+              <p className="text-[13.5px] font-bold text-admin-primary">
+                Lance o uso de {monthLabel(missingUse.start)}
+              </p>
+              <p className="text-[12.5px] text-admin-text">
+                Ainda não há folhas utilizadas lançadas nesse mês. Basta
+                informar a última folha usada, com a data de{" "}
+                {brDate(missingUse.end)}. Se não houve uso, ignore este aviso.
+              </p>
+            </div>
+            <Link
+              href="/admin/utilitarios/papel-seguranca/lancar?tipo=utilizado"
+              className="btn btn-admin-primary btn-md"
+            >
+              Lançar o uso do mês
+            </Link>
+          </div>
         )}
 
         {low.map((l) => (

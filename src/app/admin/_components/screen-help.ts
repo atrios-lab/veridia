@@ -12,6 +12,8 @@ export interface ScreenHelp {
   purpose: string;
   /** How to use it, step by step. */
   steps: string[];
+  /** The words of the screen a lay reader may not know, explained. */
+  terms?: { term: string; meaning: string }[];
   /** Where it is set up, when it has settings of its own. */
   configure?: {
     href: string;
@@ -184,11 +186,45 @@ const ENTRIES: Record<string, ScreenHelp> = {
     purpose:
       "O classificador do papel de segurança (Provimento CGJ/RN nº 156/2016, arts. 59 e 60): os lotes recebidos, as folhas usadas e perdidas, o estoque e os ofícios à Corregedoria, com a planilha das folhas.",
     steps: [
-      "Em 'Cadastrar lote', informe o tipo de papel e a primeira e a última folha. Nota fiscal e gráfica são opcionais. Folhas antigas: marque 'Estoque que a serventia já tinha'.",
-      "No dia a dia, use 'Lançar uso ou ocorrência': diga quantas folhas usou (o sistema baixa a partir da próxima livre) ou informe a numeração da folha inutilizada, avariada, extraviada ou subtraída.",
+      "Em 'Cadastrar lote', informe o tipo de papel e a primeira e a última folha (ex.: AB 000001 a AB 001000). Nota fiscal e gráfica são opcionais. Folhas antigas: marque 'Estoque que a serventia já tinha'.",
+      "Não é preciso lançar todo dia. Durante o mês, lance só o que der errado, na hora: a folha inutilizada, avariada, extraviada ou subtraída, com o número dela.",
+      "No fim de cada mês, lance o uso uma vez: 'Lançar uso ou ocorrência' › Utilizadas › 'Usei até a folha nº'. Olhe a primeira folha em branco na gaveta; a anterior é a última usada. Use a data do último dia do mês. O sistema baixa tudo até ela e pula as folhas já lançadas.",
+      "Lance o uso dentro do próprio mês: a prestação de contas do trimestre conta pela data de cada lançamento. No começo do mês, um aviso lembra de lançar o uso do mês anterior.",
       "Errou? Todo lote, lançamento e ofício tem 'Editar' e 'Excluir'. Excluir pede a justificativa e não apaga do banco: o registro some da lista e fica guardado.",
       "Quando restarem 200 folhas de um tipo (o número é ajustável), aparece o aviso com o botão para solicitar um novo lote.",
       "No fim do mês com extravio, subtração ou avaria, e a cada trimestre, o aviso amarelo leva ao ofício pronto. Assine digitalmente ou imprima, baixe a planilha e anote o envio.",
+    ],
+    terms: [
+      {
+        term: "Utilizada",
+        meaning:
+          "A folha usada num ato que saiu certo (o traslado, a certidão, a etiqueta entregue).",
+      },
+      {
+        term: "Inutilizada",
+        meaning:
+          "A folha que estragou na própria serventia por erro: impressão torta ou borrada, dado errado, ato refeito. Ela não sai da serventia: risque, guarde no classificador e lance com o número. Entra na prestação de contas do trimestre.",
+      },
+      {
+        term: "Avariada",
+        meaning:
+          "A folha danificada por acidente antes de ser usada: molhou, rasgou, queimou, mofou. Lance com o número; vai no ofício do fim do mês à Corregedoria.",
+      },
+      {
+        term: "Extraviada",
+        meaning:
+          "A folha que sumiu e ninguém sabe onde está (perdeu no balcão, na mudança, no malote). Lance com o número e conte como aconteceu; vai no ofício do fim do mês, para a Corregedoria publicar no DJe e ninguém usar aquela folha.",
+      },
+      {
+        term: "Subtraída",
+        meaning:
+          "A folha furtada ou roubada. Registre o boletim de ocorrência, lance com o número e o B.O.; vai no ofício do fim do mês.",
+      },
+      {
+        term: "Classificador",
+        meaning:
+          "A pasta (aqui, digital) com a requisição, a nota e o recebimento de cada lote e o controle das folhas usadas e do estoque (art. 60).",
+      },
     ],
     configure: {
       href: "/admin/utilitarios/papel-seguranca/configuracao",

@@ -319,3 +319,54 @@ test("editar lote e lançamento, excluir ofício e avisar estoque baixo", async 
   assert.equal(low[0]?.paperKind, "traslado");
   assert.equal(low[0]?.remaining, 179);
 });
+
+test("'usei até a folha' grava uma faixa por trecho livre", async () => {
+  const lot = await addLotWith(
+    db,
+    TENANT,
+    lotInput({
+      kind: "apostila",
+      prefix: "AP",
+      first: 1,
+      last: 100,
+      receivedOn: "2026-10-01",
+    }),
+    "titular",
+  );
+  await addMovementWith(
+    db,
+    TENANT,
+    {
+      lotId: lot.id,
+      type: "inutilizado",
+      first: 10,
+      last: 10,
+      occurredOn: "2026-10-05",
+      reference: "erro",
+      notes: "",
+    },
+    "escrevente",
+  );
+  await addMovementWith(
+    db,
+    TENANT,
+    {
+      lotId: lot.id,
+      type: "utilizado",
+      upTo: 30,
+      occurredOn: "2026-10-31",
+      reference: "",
+      notes: "",
+    },
+    "escrevente",
+  );
+  const { movementRows } = await classifierWith(db, TENANT);
+  const used = movementRows
+    .filter((m) => m.lotId === lot.id && m.type === "utilizado")
+    .map((m) => [m.firstNumber, m.lastNumber])
+    .sort((a, b) => (a[0] ?? 0) - (b[0] ?? 0));
+  assert.deepEqual(used, [
+    [1, 9],
+    [11, 30],
+  ]);
+});

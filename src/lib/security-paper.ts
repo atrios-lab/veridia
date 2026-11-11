@@ -23,6 +23,7 @@ import {
   pendingDuties,
   type Quarter,
   rangeForQuantity,
+  rangesUpTo,
 } from "@/core/security-paper/stock.ts";
 import type { Tenant } from "@/core/tenant/schema.ts";
 import { officeYear } from "@/core/time/office-time.ts";
@@ -407,6 +408,8 @@ export interface MovementInput {
   last?: number;
   /** ...or how many, from the next free sheet on. */
   quantity?: number;
+  /** ...or "usei até a folha nº": every free sheet up to that one. */
+  upTo?: number;
   occurredOn: string;
   reference: string;
   notes: string;
@@ -455,35 +458,47 @@ export async function addMovementWith(
         .from(securityPaperMovements)
         .where(eq(securityPaperMovements.lotId, lot.id))
     ).map(movementOf);
-    const range =
-      input.first !== undefined
-        ? { first: input.first, last: input.last ?? input.first }
-        : rangeForQuantity(lot, taken, input.quantity ?? 0);
-    if (typeof range === "string") throw new SecurityPaperError(range);
-    const problem = checkRange(lot, taken, range);
-    if (problem) throw new SecurityPaperError(problem);
-    const [row] = await tx
-      .insert(securityPaperMovements)
-      .values({
+    let ranges: { first: number; last: number }[];
+    if (input.upTo !== undefined) {
+      const found = rangesUpTo(lot, taken, input.upTo);
+      if (typeof found === "string") throw new SecurityPaperError(found);
+      ranges = found;
+    } else {
+      const range =
+        input.first !== undefined
+          ? { first: input.first, last: input.last ?? input.first }
+          : rangeForQuantity(lot, taken, input.quantity ?? 0);
+      if (typeof range === "string") throw new SecurityPaperError(range);
+      const problem = checkRange(lot, taken, range);
+      if (problem) throw new SecurityPaperError(problem);
+      ranges = [range];
+    }
+    let row: StoredMovement | undefined;
+    for (const range of ranges) {
+      [row] = await tx
+        .insert(securityPaperMovements)
+        .values({
+          tenantSlug,
+          lotId: lot.id,
+          type: input.type,
+          firstNumber: range.first,
+          lastNumber: range.last,
+          occurredOn: input.occurredOn,
+          reference: input.reference,
+          notes: input.notes,
+          createdBy: actorId,
+        })
+        .returning();
+      if (!row) throw new Error("lançamento não gravado");
+      await recordAuditWith(tx as unknown as Database, {
         tenantSlug,
-        lotId: lot.id,
-        type: input.type,
-        firstNumber: range.first,
-        lastNumber: range.last,
-        occurredOn: input.occurredOn,
-        reference: input.reference,
-        notes: input.notes,
-        createdBy: actorId,
-      })
-      .returning();
+        actorId,
+        action: MOVEMENT_ACTION[input.type],
+        targetType: "security-paper",
+        targetId: row.id,
+      });
+    }
     if (!row) throw new Error("lançamento não gravado");
-    await recordAuditWith(tx as unknown as Database, {
-      tenantSlug,
-      actorId,
-      action: MOVEMENT_ACTION[input.type],
-      targetType: "security-paper",
-      targetId: row.id,
-    });
     return row;
   });
 }

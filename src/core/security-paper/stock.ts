@@ -625,3 +625,54 @@ export function checkLotChange(
     ? `Há lançamentos fora da nova numeração (${rangeLabel(lot, outside.first, outside.last)}). Corrija ou exclua esses lançamentos antes.`
     : null;
 }
+
+/* ----------------------------------------------------------- "usei até" */
+
+/**
+ * "Usei até a folha nº ___" (decision of 11/11/2026): every free sheet of
+ * the lot up to that one, skipping those already given (a sheet spoiled or
+ * lost in the month), so closing the month takes one number.
+ */
+export function rangesUpTo(
+  lot: PaperLot,
+  movements: readonly PaperMovement[],
+  last: number,
+): { first: number; last: number }[] | string {
+  if (lot.voided) return "Este lote foi excluído.";
+  if (last < lot.first || last > lot.last) {
+    return `O lote vai de ${rangeLabel(lot, lot.first, lot.last)}: confira a numeração.`;
+  }
+  const ranges = freeRanges(lot, movements)
+    .filter((r) => r.first <= last)
+    .map((r) => ({ first: r.first, last: Math.min(r.last, last) }));
+  if (ranges.length === 0) {
+    return `Todas as folhas até ${sheetNumber(lot, last)} já estão lançadas.`;
+  }
+  return ranges;
+}
+
+/**
+ * The month whose use is not in yet (decision of 11/11/2026: the use goes
+ * in at least once a month, dated in the month): the month before
+ * `today`, when the office had sheets then and no use is dated in it.
+ */
+export function usageMissing(input: {
+  today: string;
+  lots: readonly PaperLot[];
+  movements: readonly PaperMovement[];
+}): Period | null {
+  const month = previousMonth(input.today);
+  const had = live(input.lots).some(
+    (lot) =>
+      lot.receivedOn <= month.end &&
+      remainingIn(lot, input.movements, dayBefore(month.start)) > 0,
+  );
+  if (!had) return null;
+  const used = live(input.movements).some(
+    (m) =>
+      m.type === "utilizado" &&
+      m.occurredOn >= month.start &&
+      m.occurredOn <= month.end,
+  );
+  return used ? null : month;
+}

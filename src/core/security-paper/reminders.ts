@@ -15,8 +15,15 @@ export function buildSecurityPaperReminderEmail(input: {
   deadlineDay: number | null;
   /** Kinds down to the warning line (decision of 11/11/2026: 200 sheets). */
   low?: { kind: string; remaining: number }[];
+  /** "outubro de 2026": a month with sheets and no use registered. */
+  usageMonth?: string;
 }): EmailText {
   const lines: string[] = [];
+  if (input.usageMonth) {
+    lines.push(
+      `Ainda não há uso de papel de segurança lançado em ${input.usageMonth}. Em "Lançar uso ou ocorrência", escolha "Usei até a folha nº", informe a última folha usada no mês e a data do último dia do mês. Se não houve uso, não é preciso fazer nada.`,
+    );
+  }
   for (const l of input.low ?? []) {
     lines.push(
       l.remaining === 0
@@ -54,7 +61,9 @@ export function buildSecurityPaperReminderEmail(input: {
     ? `Papel de segurança: prestação de contas do ${quarterLabel(input.quarter, false)}`
     : input.occurrences.length
       ? "Papel de segurança: comunicar extravio à Corregedoria"
-      : "Papel de segurança: estoque baixo, pedir novo lote";
+      : input.low?.length
+        ? "Papel de segurança: estoque baixo, pedir novo lote"
+        : `Papel de segurança: lance o uso de ${input.usageMonth ?? "o mês"}`;
   return {
     subject,
     paragraphs: lines,

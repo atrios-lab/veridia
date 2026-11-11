@@ -220,9 +220,29 @@ export async function addMovement(
   if (!isDate(occurredOn) || occurredOn > today()) {
     return { status: "error", message: "Confira a data." };
   }
-  const byQuantity = field(formData, "modo") === "quantidade";
-  let range: { first?: number; last?: number; quantity?: number };
-  if (byQuantity) {
+  const mode = field(formData, "modo");
+  let range: {
+    first?: number;
+    last?: number;
+    quantity?: number;
+    upTo?: number;
+  };
+  if (mode === "ate") {
+    const last = parseSheet(field(formData, "ate", 40));
+    if (!last) {
+      return {
+        status: "error",
+        message: "Informe a última folha usada no período.",
+      };
+    }
+    if (last.prefix && last.prefix !== lot.prefix) {
+      return {
+        status: "error",
+        message: `As folhas deste lote são da série ${lot.prefix || "sem letras"}: confira a numeração.`,
+      };
+    }
+    range = { upTo: last.n };
+  } else if (mode === "quantidade") {
     const quantity = Number(field(formData, "quantidade", 9));
     if (!Number.isInteger(quantity) || quantity < 1) {
       return { status: "error", message: "Informe quantas folhas." };

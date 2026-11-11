@@ -24,9 +24,11 @@ import {
   quarterOf,
   rangeForQuantity,
   rangeLabel,
+  rangesUpTo,
   remainingIn,
   summarize,
   totalOf,
+  usageMissing,
 } from "./stock.ts";
 
 const lot = (over: Partial<PaperLot> = {}): PaperLot => ({
@@ -366,4 +368,53 @@ test("o lembrete diz o trimestre e o extravio pendentes", () => {
   assert.match(body, /dia 10/);
   assert.match(body, /outubro de 2026/);
   assert.match(body, /impedido de requisitar/);
+});
+
+test("'usei até a folha' pula as folhas já lançadas e lembra o uso do mês", () => {
+  const moves = [
+    move({ first: 1, last: 100, occurredOn: "2026-09-30" }),
+    move({
+      type: "inutilizado",
+      first: 150,
+      last: 150,
+      occurredOn: "2026-10-03",
+    }),
+    move({
+      type: "extraviado",
+      first: 200,
+      last: 201,
+      occurredOn: "2026-10-09",
+    }),
+  ];
+  assert.deepEqual(rangesUpTo(lot(), moves, 350), [
+    { first: 101, last: 149 },
+    { first: 151, last: 199 },
+    { first: 202, last: 350 },
+  ]);
+  assert.match(rangesUpTo(lot(), moves, 90) as string, /já estão lançadas/);
+  assert.match(rangesUpTo(lot(), moves, 900) as string, /o lote vai de/i);
+
+  // October has no use yet: in November, the reminder.
+  assert.equal(
+    usageMissing({ today: "2026-11-05", lots: [lot()], movements: moves })
+      ?.start,
+    "2026-10-01",
+  );
+  const closed = [
+    ...moves,
+    move({ first: 202, last: 350, occurredOn: "2026-10-31" }),
+  ];
+  assert.equal(
+    usageMissing({ today: "2026-11-05", lots: [lot()], movements: closed }),
+    null,
+  );
+  // No paper then: nothing to remind.
+  assert.equal(
+    usageMissing({
+      today: "2026-11-05",
+      lots: [lot({ receivedOn: "2026-11-02" })],
+      movements: [],
+    }),
+    null,
+  );
 });
