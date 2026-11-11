@@ -30,8 +30,14 @@
 - **Tentativas:** cinco códigos errados bloqueiam a pessoa por 10 minutos (Upstash, o mesmo limitador do
   login).
 
+## Liberação de acesso (só a Átrios)
+
+A conta mestre da Átrios tem a tela **Átrios › Liberação de acesso**. Nela dá para desligar ou religar a
+verificação em duas etapas de qualquer serventia, com um motivo, sem afetar as outras e sem mexer na Vercel.
+Cada mudança fica na auditoria da serventia.
+
 ## Emergência
 
-Se o provedor de e-mail (Postmark) cair, ninguém recebe o código. Para liberar o acesso só com a senha
+Se o provedor de e-mail (Postmark) cair para todas as serventias, ninguém recebe o código. Para liberar o acesso só com a senha
 enquanto isso, defina `PANEL_ACCESS_CODE=off` nas variáveis da Vercel e faça um novo deploy. Remova a
 variável assim que o e-mail voltar.

@@ -46,6 +46,9 @@ export const PLATFORM_PERMISSIONS = [
   // The course cohorts: offices that are not clients, their links and the
   // learners who joined through them.
   "cohorts.manage",
+  // Liberação de acesso: turning the panel's two-step access off or on for
+  // any office (lib/access-policy.ts). The Átrios master account only.
+  "access.release",
 ] as const;
 
 export const PERMISSIONS = [
