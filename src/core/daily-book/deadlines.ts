@@ -4,26 +4,36 @@ import {
   nextBusinessDays,
   type OfficeHolidays,
 } from "../scheduling/calendar.ts";
+import type { InterimPeriod } from "./book.ts";
 
 /**
- * The book's dates during the year (decision of 11/11/2026). The national
- * code (art. 193, Provimento CNJ nº 259/2026) asks for the year's balance
- * "ao final de cada exercício" and leaves the dates to the state
- * (art. 195, parágrafo único). In RN (Provimento nº 156/2016-CGJ/RN):
+ * The book's dates during the year, each one written in a rule (decision
+ * of 11/11/2026: the law, nothing of our own). The text of each rule is in
+ * docs/livro-diario-auxiliar.md.
  *
+ * National (Código Nacional de Normas, Provimento CNJ nº 149/2023):
+ * - art. 194, I and VI: an interim deposits what goes over the ceiling and
+ *   books it; quarterly, "não havendo lei estadual que estabeleça
+ *   periodicidade diversa";
+ * - art. 194, V, with the Provimento CNJ nº 24/2012, art. 2º: the deposits
+ *   go into "Justiça Aberta" by the 15th of January and of July (or the
+ *   next business day).
+ *
+ * RN (Provimento nº 156/2016-CGJ/RN, kept by art. 195, parágrafo único):
  * - art. 62: the balance of the year before by 15 January, sent to the
  *   Corregedoria Geral de Justiça within 5 days of being done;
- * - art. 61, parágrafo único: the judge's "visto" on the book by the 15th
- *   business day of February;
- * - interim offices: the accounts of the month to the judge by the 20th of
- *   the next (art. 21) and what goes over the ceiling paid to the FDJ by
- *   the 10th (art. 27).
+ * - art. 61, parágrafo único: the judge's visto by the 15th business day of
+ *   February;
+ * - art. 21: the interim's accounts by the 20th of the next month;
+ * - art. 27: the excess paid to the FDJ by the 10th of the next month.
  */
 
 export type BookDutyId =
   | "balanco"
   | "remessa"
   | "visto"
+  | "interino-deposito"
+  | "interino-justica-aberta"
   | "interino-fdj"
   | "interino-contas";
 
@@ -31,7 +41,8 @@ export interface BookDuty {
   id: BookDutyId;
   title: string;
   detail: string;
-  due: IsoDate;
+  /** Null when the rule names no day. */
+  due: IsoDate | null;
   late: boolean;
 }
 
@@ -42,6 +53,16 @@ export function februaryVisto(
 ): IsoDate {
   const days = nextBusinessDays(`${year}-02-01`, 15, holidays);
   return days[14] ?? `${year}-02-28`;
+}
+
+/** "Até o dia 15 ... (ou até o próximo dia útil subsequente)". */
+export function fifteenthOrNextBusinessDay(
+  year: number,
+  month: number,
+  holidays: OfficeHolidays = {},
+): IsoDate {
+  const day = `${year}-${String(month).padStart(2, "0")}-15`;
+  return nextBusinessDays(day, 1, holidays)[0] ?? day;
 }
 
 const br = (iso: string) =>
@@ -72,89 +93,97 @@ export function bookDuties(
   today: IsoDate,
   options: {
     holidays?: OfficeHolidays;
+    /** The office's state: the state's own rules apply only there. */
+    state?: string;
     /** The day the balance of last year was generated, if it was. */
     lastYearBalanceOn: IsoDate | null;
     interim?: boolean;
+    interimPeriod?: InterimPeriod;
   },
 ): BookDuty[] {
   const year = Number(today.slice(0, 4));
   const last = year - 1;
   const month = Number(today.slice(5, 7));
   const day = Number(today.slice(8, 10));
+  const rn = (options.state ?? "RN") === "RN";
   const duties: BookDuty[] = [];
 
-  // Art. 62: the balance, January to March, until it is generated.
-  if (!options.lastYearBalanceOn && month <= 3) {
+  if (rn && !options.lastYearBalanceOn && month <= 3) {
     const due = `${year}-01-15`;
     duties.push({
       id: "balanco",
       title: `Balanço anual de ${last}`,
-      detail: `Gere o balanço de ${last} (receita, despesa e resultado mês a mês) até ${br(due)} e envie à Corregedoria Geral de Justiça até 5 dias depois de concluído (CN art. 193; CGJ/RN art. 62).`,
+      detail: `"Ao final de cada exercício será elaborado o balanço anual" (CN art. 193). No RN, até ${br(due)}, remetido à Corregedoria Geral de Justiça até 5 dias depois de sua conclusão (CGJ/RN art. 62).`,
       due,
       late: today > due,
     });
   }
-  // Art. 62, parágrafo único: sent within 5 days of being done.
-  if (options.lastYearBalanceOn) {
+  if (rn && options.lastYearBalanceOn) {
     const due = addDays(options.lastYearBalanceOn, 5);
     if (today <= due) {
       duties.push({
         id: "remessa",
-        title: `Enviar o balanço de ${last} à Corregedoria`,
-        detail: `O balanço foi gerado em ${br(options.lastYearBalanceOn)}: envie à Corregedoria Geral de Justiça até ${br(due)} (CGJ/RN art. 62, parágrafo único).`,
+        title: `Remeter o balanço de ${last} à Corregedoria`,
+        detail: `Balanço concluído em ${br(options.lastYearBalanceOn)}: remessa à Corregedoria Geral de Justiça até ${br(due)} (CGJ/RN art. 62, parágrafo único).`,
         due,
         late: false,
       });
     }
   }
-  // Art. 61, parágrafo único: from the balance's deadline to the visto.
   const visto = februaryVisto(year, options.holidays);
-  if (today > `${year}-01-15` && today <= visto) {
+  if (rn && today > `${year}-01-15` && today <= visto) {
     duties.push({
       id: "visto",
       title: "Visto anual do Juiz Corregedor Permanente",
-      detail: `O livro precisa ser visado pelo Juiz Corregedor Permanente até ${br(visto)}, o 15º dia útil de fevereiro (CGJ/RN art. 61, parágrafo único). Leve o balanço de ${last} e as páginas do livro.`,
+      detail: `"Anualmente, até o 15º (décimo quinto) dia útil do mês de fevereiro, o Livro de Registro Diário Auxiliar da Receita e da Despesa será visado pelo Juiz Corregedor Permanente" (CGJ/RN art. 61, parágrafo único): ${br(visto)}.`,
       due: visto,
       late: false,
     });
   }
-  if (options.interim) {
-    const ym = today.slice(0, 7);
-    if (day <= 10) {
+
+  if (!options.interim) return duties;
+  const period = options.interimPeriod ?? "trimestral";
+  if (period === "trimestral" && [1, 4, 7, 10].includes(month)) {
+    duties.push({
+      id: "interino-deposito",
+      title: "Excedente do trimestre (interino)",
+      detail:
+        'A página de março, junho, setembro ou dezembro apura a renda líquida do trimestre. O excedente a 90,25% dos subsídios de ministro do STF é depositado à disposição do Tribunal de Justiça, conforme as normas do Tribunal, e lançado no livro com a data do depósito e a conta (CN art. 194, I e VI). Use "Lançar" › "Depósito do excedente".',
+      due: null,
+      late: false,
+    });
+  }
+  if (month === 1 || month === 7) {
+    const due = fifteenthOrNextBusinessDay(year, month, options.holidays);
+    if (today <= due) {
       duties.push({
-        id: "interino-fdj",
-        title: "Excedente ao teto para o FDJ",
-        detail: `Se a receita líquida de ${previousMonth(today)} passou do teto do interino (90,25% do subsídio dos Ministros do STF), recolha o excedente ao FDJ até ${br(`${ym}-10`)} (CGJ/RN arts. 19 e 27). A apuração do mês mostra o valor.`,
-        due: `${ym}-10`,
-        late: false,
-      });
-    }
-    if (day <= 20) {
-      duties.push({
-        id: "interino-contas",
-        title: "Prestação de contas do interino",
-        detail: `Preste contas de ${previousMonth(today)} ao Juiz Corregedor Permanente até ${br(`${ym}-20`)}, com receitas, despesas e comprovantes (CGJ/RN art. 21).`,
-        due: `${ym}-20`,
+        id: "interino-justica-aberta",
+        title: "Justiça Aberta (interino)",
+        detail: `Lançar no sistema "Justiça Aberta" os valores depositados à disposição do Tribunal de Justiça até ${br(due)} (CN art. 194, V; Provimento CNJ nº 24/2012, art. 2º).`,
+        due,
         late: false,
       });
     }
   }
+  if (rn && period === "mensal" && day <= 10) {
+    const due = `${today.slice(0, 7)}-10`;
+    duties.push({
+      id: "interino-fdj",
+      title: "Excedente ao teto para o FDJ (interino)",
+      detail: `O excedente de ${previousMonth(today)} é recolhido ao FDJ até ${br(due)} (CGJ/RN art. 27) e lançado no livro (CN art. 194, I).`,
+      due,
+      late: false,
+    });
+  }
+  if (rn && day <= 20) {
+    const due = `${today.slice(0, 7)}-20`;
+    duties.push({
+      id: "interino-contas",
+      title: "Prestação de contas do interino",
+      detail: `"O interino prestará contas ao Juiz Corregedor Permanente, até o dia 20 (vinte) do mês subsequente ao vencido" (CGJ/RN art. 21): ${previousMonth(today)}, até ${br(due)}.`,
+      due,
+      late: false,
+    });
+  }
   return duties;
-}
-
-/**
- * Interim offices (CGJ/RN arts. 19, 26 and 27): the month's net result
- * before the interim's pay; up to the ceiling it is the interim's pay
- * (booked as an expense), above it goes to the FDJ.
- */
-export function interimSplit(
-  netCents: number,
-  ceilingCents: number,
-): { payCents: number; excessCents: number } {
-  const net = Math.max(0, netCents);
-  if (ceilingCents <= 0) return { payCents: net, excessCents: 0 };
-  return {
-    payCents: Math.min(net, ceilingCents),
-    excessCents: Math.max(0, net - ceilingCents),
-  };
 }

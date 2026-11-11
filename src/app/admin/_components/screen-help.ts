@@ -184,81 +184,80 @@ const ENTRIES: Record<string, ScreenHelp> = {
   },
   "/admin/utilitarios/livro-diario": {
     purpose:
-      "O Livro Diário Auxiliar da Receita e da Despesa (Provimento CNJ nº 149/2023, arts. 189 a 195, com a redação do Provimento CNJ nº 259/2026): a receita lida do relatório de produtividade, as despesas com comprovante, a página do dia, a do mês com a apuração e o balanço anual. Vale primeiro a regra nacional; o Código de Normas do Estado (no RN, o Provimento nº 156/2016-CGJ/RN) continua no que for compatível (art. 195, parágrafo único).",
+      "Livro Diário Auxiliar da Receita e da Despesa, pelo texto do Código Nacional de Normas (Provimento CNJ nº 149/2023, arts. 185 a 195-D, com a redação do Provimento CNJ nº 259/2026, que revogou o Provimento nº 45/2015). As normas da Corregedoria do Estado continuam no que forem compatíveis (art. 195, parágrafo único).",
     steps: [
-      "Receita: em 'Anexar produtividade', envie o PDF do relatório do sistema (do dia ou do mês) e clique em 'Ler relatório'. Confira as linhas (especialidade, valor, explicação), exclua o que não for e clique em 'Lançar no livro'.",
-      "O ideal é o relatório de cada dia: o art. 190 pede a receita no dia do ato, por especialidade. O relatório do mês entra no último dia, marcado como consolidado.",
-      "Despesa: em 'Lançar despesa', anexe o comprovante e clique em 'Ler comprovante' (DAM, comprovante do banco). Confira o valor, a data e a categoria (art. 191-A, § 1º) e lance até o fim do mês em que foi paga.",
+      "Abertura (art. 186): em Configurar, informe o número do livro e o de folhas; em 'Gerar PDF do livro', gere o termo de abertura. Cada página gerada depois recebe as folhas seguintes do livro, numeradas.",
+      "Receita (art. 190): em 'Anexar produtividade', envie o relatório de um dia. A receita é lançada 'no dia da prática do ato', por especialidade, com o nº do ato, ou o livro e a folha, ou o protocolo, quando existente.",
+      "Despesa (art. 191-A): em 'Lançar despesa', informe a data, a categoria do § 1º e os elementos de identificação e comprovação, até o encerramento do mês em que se efetivou. Anexe o comprovante.",
       "Todo lançamento tem 'Editar' e 'Excluir' (fica guardado, com a justificativa) e um campo de explicação que sai no livro.",
-      "Em 'Gerar PDF do livro', escolha o dia, o mês (com a apuração do art. 192) ou o ano (balanço do art. 193). Assine digitalmente ou imprima; baixe a planilha para o contador.",
-      "Se a despesa parecer pessoal, for repasse ao Estado (FDJ, FRMP, FCRCPN, FPGE) ou for de um mês já encerrado, o sistema avisa e pede uma explicação antes de lançar. Na serventia sob interinidade, o imposto de renda do interino também.",
-      "Em janeiro, o painel lembra o balanço do ano anterior (até 15/01) e o envio à Corregedoria (até 5 dias depois); até o 15º dia útil de fevereiro, o visto do Juiz Corregedor Permanente.",
+      "Em 'Gerar PDF do livro': o dia, o mês (apuração do art. 192), o balanço anual (art. 193) ou os termos (art. 186). Assine digitalmente ou imprima.",
+      "Livro cheio: gere o termo de encerramento, passe para o número seguinte em Configurar e gere o novo termo de abertura.",
     ],
     terms: [
       {
-        term: "Receita",
+        term: "Colunas (art. 189)",
         meaning:
-          "Os emolumentos dos atos, lançados no dia do ato, por especialidade, mesmo antes de receber (art. 190).",
+          "'O Livro Diário Auxiliar observará o modelo usual para a forma contábil e terá suas folhas divididas em colunas para anotação da data, da discriminação da receita e da despesa, além do valor respectivo, devendo, quando impresso em folhas soltas, encadernar-se tão logo encerrado.'",
       },
       {
-        term: "Repasses",
+        term: "Dia da prática do ato (art. 190, § 1º)",
         meaning:
-          "FDJ, FRMP, FCRCPN, FPGE e outros fundos: dinheiro do Estado que a serventia só arrecada. Aparecem no livro, mas não são receita nem despesa da serventia.",
+          "Notas: o da lavratura e do encerramento do ato. Registros de imóveis, títulos e documentos e civil de pessoa jurídica: o do registro. Registro Civil das Pessoas Naturais: o do registro, para os atos não compensáveis; para os gratuitos, o do recebimento do pagamento feito pelo fundo de reembolso de atos gratuitos e fundo de renda mínima.",
       },
       {
-        term: "Despesa",
+        term: "O que é receita (art. 190, § 3º)",
         meaning:
-          "Gasto ligado ao serviço (aluguel, folha, sistemas, material, ISS...), lançado até o fim do mês em que foi pago, com o comprovante guardado 5 anos (art. 191-A). Despesa pessoal não pode (§ 2º).",
+          "Os emolumentos do regimento de custas, só na parte que é receita do próprio delegatário, pelos atos praticados. Ficam fora: depósitos para atos futuros, tributos recebidos por substituição tributária e valores devidos ao Estado, ao Tribunal de Justiça, a outras entidades e aos fundos. Por isso só os emolumentos do relatório de produtividade entram como receita; os fundos (FDJ, FRMP, FCRCPN, FPGE) e o ISSQN aparecem à parte.",
       },
       {
-        term: "O que não é despesa",
+        term: "Despesas (art. 191-A, § 1º)",
         meaning:
-          "Os repasses ao Estado (FDJ, FRMP, FCRCPN, FPGE): o livro já lança só os emolumentos como receita. Na serventia vaga, o imposto de renda do interino (CGJ/RN art. 25, § 2º).",
+          "'Poderão ser lançadas, entre outras': I locação; II obras e manutenção dos imóveis; III limpeza, segurança e terceirizados; IV móveis, equipamentos, sistemas e tecnologia; V acervo; VI materiais e insumos; VII despesas trabalhistas e previdenciárias dos prepostos; VIII planos coletivos de saúde; IX cursos; X ISS sobre a atividade, quando devido; XI assessoria jurídica; XII serviços técnicos especializados.",
       },
       {
-        term: "Imposto de renda do titular",
+        term: "O que não pode (art. 191-A, § 2º)",
         meaning:
-          "O titular é particular que exerce função pública delegada, e o imposto vem dessa atividade: o IR e o carnê-leão dele podem ser lançados como despesa. Nenhuma norma nacional proíbe; a ressalva do Código de Normas do RN (art. 25, § 2º) é só para o interino. Se o livro servir de base para o carnê-leão, confira com o contador se é o caso de marcar 'Tratamento fiscal distinto'.",
+          "'Não poderão ser lançadas despesas de natureza exclusivamente pessoal ou estranhas à prestação do serviço delegado.' O Código Nacional não trata do imposto de renda do delegatário como despesa. O Código de Normas do RN (art. 25, § 2º) diz: 'O Imposto de Renda devido pelo interino não é considerado como despesa da serventia.'",
       },
       {
-        term: "Tratamento fiscal distinto",
+        term: "Comprovantes (art. 191-A, § 3º)",
         meaning:
-          "Despesa que vale para o livro mas tem outro tratamento no imposto de renda (carnê-leão). Marque e explique (art. 193-A, § 2º).",
+          "Conservados por no mínimo 5 anos, sem prejuízo de prazo maior previsto em lei, admitido o meio eletrônico com integridade, autenticidade e disponibilidade.",
       },
       {
-        term: "Apuração do mês",
+        term: "Apuração do mês (art. 192)",
         meaning:
-          "No fim do mês, receitas e despesas somadas à parte e o saldo positivo ou negativo (art. 192).",
+          "'Ao final de cada mês serão somadas, em separado, as receitas e as despesas da unidade de serviço extrajudicial, com a apuração do saldo líquido positivo ou negativo do período.'",
       },
       {
-        term: "Balanço anual",
+        term: "Balanço anual (art. 193)",
         meaning:
-          "Receita, despesa e resultado líquido do ano, mês a mês (art. 193). No RN, feito até 15 de janeiro e enviado à Corregedoria Geral de Justiça até 5 dias depois de concluído (CGJ/RN art. 62).",
+          "'Ao final de cada exercício será elaborado o balanço anual da unidade de serviço extrajudicial, com indicação das receitas, das despesas e do resultado líquido.' No RN: até 15 de janeiro, remetido à Corregedoria Geral de Justiça até 5 dias depois de concluído (CGJ/RN art. 62); livro visado pelo Juiz Corregedor Permanente até o 15º dia útil de fevereiro (art. 61, parágrafo único).",
       },
       {
-        term: "Visto anual (RN)",
+        term: "Tratamento fiscal distinto (art. 193-A)",
         meaning:
-          "O Juiz Corregedor Permanente vista o livro até o 15º dia útil de fevereiro e pode determinar glosas (CGJ/RN art. 61, parágrafo único). O sistema conta os dias úteis com os feriados e o Carnaval.",
+          "O livro pode subsidiar a escrituração e a apuração tributária, sem virar escrituração fiscal (§ 1º). Usado para fins tributários, identificam-se as despesas com tratamento fiscal distinto do adotado para fins administrativos e correicionais (§ 2º).",
       },
       {
-        term: "Uso tributário",
+        term: "Interino (art. 194)",
         meaning:
-          "O livro pode servir de base para o imposto de renda e o ISS, mas continua sendo um livro administrativo, não fiscal (art. 193-A). Na correição, a Corregedoria confere a escrituração dos últimos 12 meses e o recolhimento do carnê-leão (arts. 195-A e 195-B).",
+          "Lança no livro a renda líquida excedente a 90,25% dos subsídios de ministro do STF que depositar à disposição do Tribunal de Justiça, com a data do depósito e a conta (I). Abate as despesas previstas em disposição legal ou infralegal (IV). Lança os depósitos no Justiça Aberta, até 15 de janeiro e 15 de julho (V; Provimento CNJ nº 24/2012, art. 2º). Periodicidade trimestral, salvo lei estadual (VI).",
       },
       {
-        term: "Interino",
+        term: "Fiscalização (arts. 195-A a 195-D)",
         meaning:
-          "Na serventia vaga, a receita líquida do mês até o teto (90,25% do subsídio dos Ministros do STF) é a remuneração do interino, lançada como despesa; o que passar vai ao FDJ até o dia 10. As contas vão ao Juiz Corregedor até o dia 20 (CGJ/RN arts. 19, 21, 26 e 27). Ligue em Configurar.",
+          "A Corregedoria verifica a escrituração, os comprovantes e, quanto ao delegatário, o recolhimento mensal do imposto de renda, inclusive o carnê-leão (art. 195-B, § 1º). Abrange, em regra, os 12 meses anteriores à correição ou inspeção (§ 3º).",
       },
     ],
     configure: {
       href: "/admin/utilitarios/livro-diario/configuracao",
-      label: "Especialidades, responsável e interino",
+      label: "Livro, folhas, especialidades e interino",
       permission: "daily-book.manage",
       steps: [
+        "Informe o número do livro e o número de folhas (art. 186).",
         "Confira as especialidades pelo código do ato (ex.: 22 = Tabelionato de Notas, 23 = Registro Civil), conforme a tabela de emolumentos do Estado.",
-        "Informe o responsável pela escrituração, se quiser. Quem assina as páginas vem de Configurações › Quem assina.",
-        "Serventia vaga: marque 'Serventia sob interinidade' e informe o teto do interino. Atualize o teto quando o subsídio do STF mudar.",
+        "Serventia vaga: marque a opção do interino, informe 90,25% do subsídio mensal de ministro do STF e a periodicidade (art. 194, VI).",
       ],
     },
   },

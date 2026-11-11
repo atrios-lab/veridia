@@ -24,13 +24,9 @@ export default async function EntryPage({
     : undefined;
   if (query.id && (!row || row.removedAt)) notFound();
   const now = today();
-  const kind = row
-    ? row.kind === "despesa"
-      ? "despesa"
-      : "receita"
-    : query.tipo === "receita"
-      ? "receita"
-      : "despesa";
+  const asked = row?.kind ?? query.tipo;
+  const kind: "receita" | "despesa" | "deposito" =
+    asked === "receita" || asked === "deposito" ? asked : "despesa";
   return (
     <>
       <AdminPageHeader
@@ -39,7 +35,9 @@ export default async function EntryPage({
             ? "Editar lançamento"
             : kind === "despesa"
               ? "Lançar despesa"
-              : "Lançar receita"
+              : kind === "deposito"
+                ? "Lançar depósito do excedente"
+                : "Lançar receita"
         }
         back={{
           href: `/admin/utilitarios/livro-diario?mes=${(row?.occurredOn ?? now).slice(0, 7)}`,
@@ -47,8 +45,10 @@ export default async function EntryPage({
         }}
         description={
           kind === "despesa"
-            ? "Toda despesa do serviço, até o fim do mês em que foi paga, com o comprovante (art. 191-A)."
-            : "Receita que não veio no relatório de produtividade, lançada no dia do ato (art. 190)."
+            ? '"As despesas serão escrituradas no Livro Diário Auxiliar até o encerramento do mês em que se efetivarem, com indicação da respectiva data e dos elementos necessários à sua identificação e comprovação" (art. 191-A).'
+            : kind === "deposito"
+              ? 'Os responsáveis interinamente por delegações vagas "lançarão, no Livro Diário Auxiliar, o valor da renda líquida excedente a 90,25% dos subsídios de ministro do Supremo Tribunal Federal (STF) que depositarem à disposição do Tribunal de Justiça correspondente, indicando a data do depósito e a conta em que foi realizado" (art. 194, I).'
+              : '"A receita será lançada no Livro Diário Auxiliar separadamente, por especialidade, de forma individualizada, no dia da prática do ato" (art. 190).'
         }
         actions={row ? <RemoveEntryButton id={row.id} /> : undefined}
       />

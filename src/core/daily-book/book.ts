@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { integerInWords } from "../money/extenso.ts";
 import type {
   RequerimentoDocument,
   RequerimentoSection,
@@ -6,90 +7,126 @@ import type {
 import { holderName, officialName } from "../tenant/identification.ts";
 import type { Tenant } from "../tenant/schema.ts";
 import { formatMoneyBRL } from "../transparency/bulletin.ts";
-import { interimSplit } from "./deadlines.ts";
 
 /**
- * Livro Diário Auxiliar da Receita e da Despesa (decision of 11/11/2026),
- * as the Código Nacional de Normas (Provimento CNJ nº 149/2023) has it,
- * with the wording of the Provimento CNJ nº 259/2026, which revoked the
- * Provimento nº 45/2015:
+ * Livro Diário Auxiliar da Receita e da Despesa, by the text of the law and
+ * nothing else (decision of 11/11/2026). The law, word for word, is in
+ * docs/livro-diario-auxiliar.md: the Código Nacional de Normas (Provimento
+ * CNJ nº 149/2023) as the Provimento CNJ nº 259/2026 left it.
  *
- * - art. 189: columns for the date, the description of the revenue and of
- *   the expense, and the amount;
- * - art. 190: the revenue booked by specialty, act by act, on the day of
- *   the act, even before the emolumentos are received;
- * - art. 191-A: the expenses booked by the end of the month they were
- *   paid, with what proves them, related to the service (§ 1º lists them;
- *   § 2º forbids personal ones; § 3º keeps the papers 5 years);
- * - art. 192: each month, revenue and expenses added up apart, and the
- *   balance;
- * - art. 193: the year's balance;
- * - art. 193-A, § 2º: the expenses whose tax treatment differs, marked.
+ * - art. 186: the book opened, its sheets numbered, and closed by the
+ *   holder; the opening term says the book's number, what it is for, how
+ *   many sheets it has, that every sheet is initialled, and closes with the
+ *   date, the holder's name and signature;
+ * - art. 189: columns for the date, the "discriminação da receita e da
+ *   despesa" and the amount;
+ * - art. 190: the revenue by specialty, act by act, on the day of the act,
+ *   with the act's number, or book and sheet, or protocol, when there is
+ *   one; § 3º: only the emolumentos that are the holder's own;
+ * - art. 191-A: the expenses by the end of the month they were made, with
+ *   what identifies and proves them; § 1º lists twelve kinds "entre
+ *   outras"; § 2º; § 3º;
+ * - art. 192: each month, revenue and expenses added up apart, and the net
+ *   balance, positive or negative;
+ * - art. 193: the year's balance: revenue, expenses and net result;
+ * - art. 193-A, § 2º: the expenses with a distinct tax treatment, marked;
+ * - art. 194: an interim books what goes over 90,25% of the STF Ministers'
+ *   pay and is deposited, with the day and the account (I), quarterly
+ *   unless a state law says otherwise (VI).
  *
- * The state's Código de Normas stays where it agrees (art. 195, parágrafo
- * único). In RN (Provimento nº 156/2016-CGJ/RN): the balance by 15 January
- * and sent to the CGJ in 5 days (art. 62), the judge's visto by the 15th
- * business day of February (art. 61), the interim's ceiling (arts. 19 and
- * 26-27) and the interim's income tax, not an expense (art. 25, § 2º:
- * the holder's is, decision of 11/11/2026); see
- * checks.ts and deadlines.ts.
- *
- * The State's funds (FDJ, FRMP, FCRCPN, FPGE in RN) are someone else's
- * money: shown, never revenue nor expense of the office.
+ * The state's code stays where it agrees with the national one (art. 195,
+ * parágrafo único); for RN, the Provimento nº 156/2016-CGJ/RN: see
+ * deadlines.ts and checks.ts.
  */
 
-/** Art. 191-A, § 1º, I to XII, and the way out. */
+/** Art. 191-A, § 1º, I to XII, word for word. */
 export const EXPENSE_CATEGORIES = [
-  { id: "locacao", law: "I", label: "Locação de bens móveis e imóveis" },
+  {
+    id: "locacao",
+    law: "I",
+    label:
+      "Locação de bens móveis e imóveis utilizados na prestação do serviço ou na guarda do acervo",
+  },
   {
     id: "imovel",
     law: "II",
-    label: "Obras, adaptações, conservação e manutenção do imóvel",
+    label:
+      "Obras, adaptações, conservação e manutenção dos imóveis utilizados pela serventia",
   },
   {
     id: "terceirizados",
     law: "III",
-    label: "Limpeza, segurança e serviços terceirizados",
+    label:
+      "Limpeza, segurança e outros serviços terceirizados vinculados ao funcionamento da unidade",
   },
   {
     id: "tecnologia",
     law: "IV",
-    label: "Móveis, equipamentos, sistemas e tecnologia",
+    label:
+      "Aquisição, locação e manutenção de móveis, equipamentos, sistemas, programas e serviços de tecnologia da informação",
   },
   {
     id: "acervo",
     law: "V",
-    label: "Formação, preservação e segurança do acervo",
+    label:
+      "Formação, manutenção, preservação e segurança do acervo físico ou eletrônico",
   },
   {
     id: "materiais",
     law: "VI",
-    label: "Materiais, insumos e bens de funcionamento",
+    label:
+      "Materiais, insumos e demais bens necessários ao funcionamento da serventia",
   },
   {
     id: "pessoal",
     law: "VII",
-    label: "Despesas trabalhistas e previdenciárias dos prepostos",
+    label:
+      "Despesas trabalhistas e previdenciárias relativas aos prepostos, inclusive remuneração, encargos e benefícios",
   },
   {
     id: "saude",
     law: "VIII",
-    label: "Plano coletivo de saúde ou odontológico",
+    label:
+      "Planos coletivos de assistência médica ou odontológica destinados aos prepostos e seus dependentes, admitida a inclusão do delegatário e de seus dependentes no mesmo plano coletivo",
   },
-  { id: "cursos", law: "IX", label: "Cursos e capacitação" },
-  { id: "iss", law: "X", label: "ISS sobre a atividade" },
-  { id: "juridica", law: "XI", label: "Assessoria jurídica" },
+  {
+    id: "cursos",
+    law: "IX",
+    label:
+      "Cursos, capacitações e atividades de aperfeiçoamento profissional relacionados à prestação do serviço",
+  },
+  {
+    id: "iss",
+    law: "X",
+    label:
+      "Imposto Sobre Serviços (ISS) incidente sobre a atividade, quando devido",
+  },
+  {
+    id: "juridica",
+    law: "XI",
+    label:
+      "Serviços de assessoria jurídica relacionados à prestação do serviço",
+  },
   {
     id: "tecnicos",
     law: "XII",
-    label: "Serviços técnicos especializados (engenharia, arquitetura)",
+    label:
+      "Serviços técnicos especializados necessários à atividade, inclusive de engenharia e arquitetura",
   },
   {
+    // CGJ/RN art. 26, §§ 1º and 2º: "registrado como despesa da serventia a
+    // título de remuneração do interino". Offered only to an interim office.
     id: "interino",
     law: "",
-    label: "Remuneração do interino (até o teto, CGJ/RN art. 26)",
+    label: "Remuneração do interino (Código de Normas da CGJ/RN, art. 26)",
   },
-  { id: "outra", law: "", label: "Outra despesa do serviço (explique)" },
+  {
+    // § 1º: "Poderão ser lançadas, entre outras, as despesas relativas a".
+    id: "outra",
+    law: "",
+    label:
+      'Outra despesa relacionada à prestação do serviço delegado (art. 191-A, caput e § 1º: "entre outras")',
+  },
 ] as const;
 export type ExpenseCategory = (typeof EXPENSE_CATEGORIES)[number]["id"];
 
@@ -99,9 +136,10 @@ export function categoryLabel(id: string): string {
   return c.law ? `${c.label} (art. 191-A, § 1º, ${c.law})` : c.label;
 }
 
-export { looksPersonal } from "./checks.ts";
+/** Art. 194, VI: quarterly, unless a state law sets another period. */
+export const INTERIM_PERIODS = ["trimestral", "mensal"] as const;
+export type InterimPeriod = (typeof INTERIM_PERIODS)[number];
 
-/** The office's specialties, by the first two digits of the act's code. */
 export const SettingsSchema = z.object({
   /** "22" -> "Tabelionato de Notas": the office's own table of codes. */
   specialties: z
@@ -116,15 +154,17 @@ export const SettingsSchema = z.object({
     )
     .max(40)
     .default([]),
-  /** Who is responsible for the book; empty, the holder. */
+  /** Who keeps the book for the holder (art. 187); empty, the holder. */
   responsible: z.string().trim().max(160).default(""),
-  /**
-   * An office run by an interim (CGJ/RN arts. 19 to 27): the month's page
-   * splits the net result between the interim's pay and the FDJ.
-   */
+  /** Art. 186, parágrafo único: the book's number and its sheets. */
+  bookNumber: z.number().int().min(1).max(9999).default(1),
+  sheetCount: z.number().int().min(0).max(100_000).default(0),
+  /** Art. 194: an office run by an interim. */
   interim: z.boolean().default(false),
-  /** The interim's ceiling: 90,25% of the STF Ministers' pay, in cents. */
+  /** 90,25% of the STF Ministers' monthly pay, in cents (art. 194, I). */
   ceilingCents: z.number().int().min(0).max(100_000_000).default(0),
+  /** Art. 194, VI. */
+  interimPeriod: z.enum(INTERIM_PERIODS).default("trimestral"),
 });
 export type BookSettings = z.infer<typeof SettingsSchema>;
 
@@ -144,22 +184,35 @@ export function specialtyOf(code: string, settings: BookSettings): string {
 
 /* ---------------------------------------------------------------- entries */
 
+/**
+ * A line of the book. "deposito" is the interim's deposit of what went over
+ * the ceiling (art. 194, I): booked with its day and account, neither
+ * revenue nor expense.
+ */
+export type EntryKind = "receita" | "despesa" | "deposito";
+
 export interface BookEntry {
   id: string;
-  kind: "receita" | "despesa";
+  kind: EntryKind;
   /** "YYYY-MM-DD" */
   date: string;
-  /** Revenue: the specialty; expense: the category's label. */
+  /** Revenue: the specialty. */
   specialty: string;
+  /** Expense: the art. 191-A category. */
   category: string;
   actCode: string;
   description: string;
   quantity: number;
   amountCents: number;
-  /** Revenue only: what went to the State's funds, and the ISS. */
+  /** Revenue only, from the productivity report: not emolumentos (art. 190, § 3º). */
   fundsCents: number;
   issCents: number;
   supplier: string;
+  /**
+   * Revenue: the act's number, or book and sheet, or protocol (art. 190).
+   * Expense: the paper that proves it (art. 191-A). Deposit: the account
+   * (art. 194, I).
+   */
   documentRef: string;
   fiscalDistinct: boolean;
   fiscalNote: string;
@@ -197,13 +250,14 @@ export interface Summary {
   balanceCents: number;
   fundsCents: number;
   issCents: number;
+  depositsCents: number;
   acts: number;
   bySpecialty: { name: string; acts: number; cents: number }[];
   byCategory: { name: string; cents: number }[];
   byDay: { date: string; revenueCents: number; expensesCents: number }[];
 }
 
-/** Art. 192: the revenue and the expenses apart, and the balance. */
+/** Art. 192: the revenue and the expenses added up apart, and the balance. */
 export function summarize(entries: readonly BookEntry[]): Summary {
   const s: Summary = {
     revenueCents: 0,
@@ -211,6 +265,7 @@ export function summarize(entries: readonly BookEntry[]): Summary {
     balanceCents: 0,
     fundsCents: 0,
     issCents: 0,
+    depositsCents: 0,
     acts: 0,
     bySpecialty: [],
     byCategory: [],
@@ -223,6 +278,10 @@ export function summarize(entries: readonly BookEntry[]): Summary {
     { revenueCents: number; expensesCents: number }
   >();
   for (const e of entries) {
+    if (e.kind === "deposito") {
+      s.depositsCents += e.amountCents;
+      continue;
+    }
     const d = day.get(e.date) ?? { revenueCents: 0, expensesCents: 0 };
     if (e.kind === "receita") {
       s.revenueCents += e.amountCents;
@@ -255,7 +314,7 @@ export function summarize(entries: readonly BookEntry[]): Summary {
   return s;
 }
 
-/** Art. 191-A: an expense booked after the end of the month it was paid. */
+/** Art. 191-A: an expense booked after the end of the month it was made. */
 export function lateExpense(
   entry: { kind: string; date: string },
   bookedOn: string,
@@ -265,15 +324,75 @@ export function lateExpense(
   );
 }
 
+/* ----------------------------------------------------------------- interim */
+
+/**
+ * Art. 194 (and, for RN, arts. 26 and 27 of the CGJ/RN's code): the net
+ * income of the period, without the interim's own pay (CGJ/RN art. 26, I),
+ * against 90,25% of the STF Ministers' pay for each month of the period.
+ */
+export interface InterimSnapshot {
+  ceilingCents: number;
+  period: InterimPeriod;
+  start: string;
+  end: string;
+  months: number;
+  revenueCents: number;
+  /** The period's expenses, the interim's pay left out. */
+  expensesCents: number;
+  /** Deposits booked in the period (art. 194, I). */
+  depositsCents: number;
+}
+
+/** The period an interim office settles in the month that ends it. */
+export function interimPeriodOf(
+  month: string,
+  period: InterimPeriod,
+): { start: string; end: string; months: number } | null {
+  const y = Number(month.slice(0, 4));
+  const m = Number(month.slice(5, 7));
+  const last = (mm: number) =>
+    `${y}-${String(mm).padStart(2, "0")}-${String(new Date(Date.UTC(y, mm, 0)).getUTCDate()).padStart(2, "0")}`;
+  if (period === "mensal") {
+    return { start: `${month}-01`, end: last(m), months: 1 };
+  }
+  if (m % 3 !== 0) return null;
+  return {
+    start: `${y}-${String(m - 2).padStart(2, "0")}-01`,
+    end: last(m),
+    months: 3,
+  };
+}
+
+export function interimFigures(i: InterimSnapshot) {
+  const netCents = i.revenueCents - i.expensesCents;
+  const limitCents = i.ceilingCents * i.months;
+  return {
+    netCents,
+    limitCents,
+    excessCents: i.ceilingCents > 0 ? Math.max(0, netCents - limitCents) : 0,
+  };
+}
+
 /* -------------------------------------------------------------- documents */
 
-export const BOOK_DOC_KINDS = ["dia", "mes", "ano"] as const;
+export const BOOK_DOC_KINDS = [
+  "dia",
+  "mes",
+  "ano",
+  "abertura",
+  "encerramento",
+] as const;
 export type BookDocKind = (typeof BOOK_DOC_KINDS)[number];
 export const BOOK_DOC_LABELS: Record<BookDocKind, string> = {
   dia: "Movimento do dia",
   mes: "Movimento e apuração do mês (art. 192)",
   ano: "Balanço anual (art. 193)",
+  abertura: "Termo de abertura (art. 186)",
+  encerramento: "Termo de encerramento (art. 186)",
 };
+/** The pages that take numbered sheets of the book (art. 186). */
+export const SHEET_KINDS: readonly BookDocKind[] = ["dia", "mes", "ano"];
 
 /** What a generated page said, frozen. */
 export interface BookSnapshot {
@@ -286,8 +405,15 @@ export interface BookSnapshot {
   months: { month: string; revenueCents: number; expensesCents: number }[];
   notes: string;
   signer: { name: string; title: string; note?: string } | null;
-  /** A month of an interim office: the ceiling in force when generated. */
-  interim?: { ceilingCents: number } | null;
+  /** An interim office, in the month that closes its period (art. 194). */
+  interim?: InterimSnapshot | { ceilingCents: number } | null;
+  /** Art. 186: the book, and the sheets this page takes in it. */
+  book?: {
+    number: number;
+    sheetCount: number;
+    firstSheet?: number;
+    lastSheet?: number;
+  } | null;
 }
 
 function signerLines(tenant: Tenant, s: BookSnapshot) {
@@ -301,24 +427,50 @@ function signerLines(tenant: Tenant, s: BookSnapshot) {
   };
 }
 
+/** Where the law puts an expense's category. */
+function categoryRef(id: string): string {
+  const c = EXPENSE_CATEGORIES.find((x) => x.id === id);
+  if (c?.law) return `art. 191-A, § 1º, ${c.law}`;
+  if (id === "interino") return "CGJ/RN, art. 26";
+  return "art. 191-A, caput";
+}
+
 function entryRows(entries: readonly BookEntry[]): string[][] {
+  const order = { receita: 0, despesa: 1, deposito: 2 } as const;
   return [...entries]
     .sort(
       (a, b) =>
         a.date.localeCompare(b.date) ||
-        (a.kind === b.kind ? 0 : a.kind === "receita" ? -1 : 1) ||
+        order[a.kind] - order[b.kind] ||
         a.specialty.localeCompare(b.specialty),
     )
-    .map((e) => [
-      brDate(e.date),
-      e.kind === "receita"
-        ? `${e.specialty}: ${e.actCode ? `${e.actCode} - ` : ""}${e.description}${e.quantity > 1 ? ` (${e.quantity} atos)` : ""}`
-        : `${categoryLabel(e.category)}: ${e.description}${e.supplier ? `, ${e.supplier}` : ""}${e.documentRef ? ` (${e.documentRef})` : ""}${e.fiscalDistinct ? " [trat. fiscal distinto]" : ""}`,
-      e.kind === "receita" ? formatMoneyBRL(e.amountCents) : "",
-      e.kind === "despesa" ? formatMoneyBRL(e.amountCents) : "",
-    ]);
+    .map((e) => {
+      if (e.kind === "deposito") {
+        return [
+          brDate(e.date),
+          `Renda líquida excedente a 90,25% dos subsídios de ministro do STF depositada à disposição do Tribunal de Justiça (art. 194, I): ${money(e.amountCents)}, em ${brDate(e.date)}${e.documentRef ? `, conta ${e.documentRef}` : ""}${e.description ? `. ${e.description}` : ""}`,
+          "",
+          "",
+        ];
+      }
+      if (e.kind === "receita") {
+        return [
+          brDate(e.date),
+          `${e.specialty}: ${e.actCode ? `${e.actCode} - ` : ""}${e.description}${e.quantity > 1 ? ` (${e.quantity} atos)` : ""}${e.documentRef ? `; ${e.documentRef}` : ""}`,
+          formatMoneyBRL(e.amountCents),
+          "",
+        ];
+      }
+      return [
+        brDate(e.date),
+        `Despesa (${categoryRef(e.category)}): ${e.description}${e.supplier ? `, ${e.supplier}` : ""}${e.documentRef ? ` (${e.documentRef})` : ""}${e.fiscalDistinct ? " [tratamento fiscal distinto, art. 193-A, § 2º]" : ""}`,
+        "",
+        formatMoneyBRL(e.amountCents),
+      ];
+    });
 }
 
+/** Art. 189: the date, the discriminação, and the amount. */
 const COLUMNS = [
   { label: "Data", weight: 0.9 },
   { label: "Discriminação da receita e da despesa", weight: 4.2 },
@@ -348,44 +500,71 @@ function explanations(
   ];
 }
 
-/**
- * CGJ/RN arts. 26 and 27: first the month without the interim's pay, then
- * the net result split between the pay (up to the ceiling) and the FDJ.
- */
-function interimSection(s: BookSnapshot, sum: Summary): RequerimentoSection {
-  const ceiling = s.interim?.ceilingCents ?? 0;
-  const pay = s.entries
-    .filter((e) => e.kind === "despesa" && e.category === "interino")
-    .reduce((a, e) => a + e.amountCents, 0);
-  const before = sum.balanceCents + pay;
-  const split = interimSplit(before, ceiling);
-  const [y, m] = s.start.split("-").map(Number);
-  const next = new Date(Date.UTC(y ?? 2000, m ?? 1, 10));
-  const tenth = `10/${String(next.getUTCMonth() + 1).padStart(2, "0")}/${next.getUTCFullYear()}`;
+function isFullInterim(i: BookSnapshot["interim"]): i is InterimSnapshot {
+  return Boolean(i && "period" in i);
+}
+
+/** Art. 194, I, IV and VI. */
+function interimSection(i: InterimSnapshot): RequerimentoSection {
+  const f = interimFigures(i);
+  const period =
+    i.period === "trimestral"
+      ? `${brDate(i.start)} a ${brDate(i.end)} (trimestral, art. 194, VI)`
+      : `${monthLabel(i.start)} (mensal, norma estadual; art. 194, VI)`;
   return {
-    heading: "Interinidade (CGJ/RN, arts. 19, 26 e 27)",
+    heading: "Responsável interino: renda líquida excedente (art. 194)",
     rows: [
+      { label: "Período de apuração", value: period },
+      { label: "Receitas do período", value: money(i.revenueCents) },
       {
-        label: "Receita líquida antes da remuneração do interino",
-        value: money(before),
+        label: "Despesas abatidas (art. 194, IV)",
+        value: `${money(i.expensesCents)}, sem a remuneração do interino`,
       },
       {
-        label: "Teto (90,25% do subsídio dos Ministros do STF)",
-        value: ceiling > 0 ? money(ceiling) : "não informado na configuração",
+        label:
+          f.netCents >= 0 ? "Renda líquida do período" : "Resultado negativo",
+        value: money(Math.abs(f.netCents)),
       },
       {
-        label: "Remuneração do interino (lançar como despesa)",
-        value: `${money(split.payCents)}${pay ? `, lançado: ${money(pay)}` : ""}`,
-      },
-      {
-        label: "Excedente a recolher ao FDJ",
+        label: "90,25% dos subsídios de ministro do STF",
         value:
-          split.excessCents > 0
-            ? `${money(split.excessCents)}, até ${tenth}`
-            : "nenhum",
+          i.ceilingCents > 0
+            ? `${money(i.ceilingCents)} por mês${i.months > 1 ? ` × ${i.months} meses = ${money(f.limitCents)}` : ""}`
+            : "não informado na configuração",
+      },
+      {
+        label: "Excedente a depositar à disposição do Tribunal de Justiça",
+        value: money(f.excessCents),
+      },
+      {
+        label: "Depósitos lançados no período (art. 194, I)",
+        value: money(i.depositsCents),
       },
     ],
   };
+}
+
+function bookRows(s: BookSnapshot) {
+  if (!s.book) return [];
+  const sheets =
+    s.book.firstSheet && s.book.lastSheet
+      ? s.book.firstSheet === s.book.lastSheet
+        ? `folha ${s.book.firstSheet}`
+        : `folhas ${s.book.firstSheet} a ${s.book.lastSheet}`
+      : "";
+  return [
+    {
+      label: "Livro",
+      value: `nº ${s.book.number}${sheets ? `, ${sheets}` : ""}`,
+    },
+  ];
+}
+
+/** The page's sheet numbers, printed on each page (art. 186). */
+function sheetOf(s: BookSnapshot) {
+  return s.book?.firstSheet
+    ? { first: s.book.firstSheet, label: `Livro nº ${s.book.number} · Folha` }
+    : undefined;
 }
 
 /** The day's or the month's page of the book. */
@@ -403,11 +582,12 @@ export function buildBookDocument(
       rows: [
         { label: "Serventia", value: office },
         { label: "CNS", value: tenant.cns },
+        ...bookRows(s),
         { label: isDay ? "Dia" : "Mês", value: period },
       ],
     },
     {
-      heading: "Lançamentos",
+      heading: "Lançamentos (art. 189)",
       table: {
         columns: COLUMNS,
         rows: entryRows(s.entries),
@@ -423,22 +603,42 @@ export function buildBookDocument(
     {
       heading: isDay ? "Resultado do dia" : "Apuração do mês (art. 192)",
       rows: [
-        { label: "Receita (emolumentos)", value: money(sum.revenueCents) },
-        { label: "Despesa", value: money(sum.expensesCents) },
+        { label: "Receitas", value: money(sum.revenueCents) },
+        { label: "Despesas", value: money(sum.expensesCents) },
         {
-          label: sum.balanceCents >= 0 ? "Saldo positivo" : "Saldo negativo",
+          label:
+            sum.balanceCents >= 0
+              ? "Saldo líquido positivo"
+              : "Saldo líquido negativo",
           value: money(Math.abs(sum.balanceCents)),
         },
-        { label: "Atos praticados", value: sum.acts.toLocaleString("pt-BR") },
-        {
-          label: "Repasses (fundos do Estado)",
-          value: `${money(sum.fundsCents)}, não são receita da serventia`,
-        },
-        { label: "ISS dos atos", value: money(sum.issCents) },
       ],
     },
   ];
-  if (!isDay && s.interim) sections.push(interimSection(s, sum));
+  if (sum.fundsCents > 0 || sum.issCents > 0) {
+    sections.push({
+      heading:
+        "Valores do relatório não lançados como receita (art. 190, § 3º)",
+      rows: [
+        ...(sum.fundsCents > 0
+          ? [
+              {
+                label: "Fundos e repasses (FDJ, FRMP, FCRCPN, FPGE e outros)",
+                value: money(sum.fundsCents),
+              },
+            ]
+          : []),
+        ...(sum.issCents > 0
+          ? [
+              {
+                label: "ISSQN destacado no relatório",
+                value: money(sum.issCents),
+              },
+            ]
+          : []),
+      ],
+    });
+  }
   if (!isDay && sum.bySpecialty.length) {
     sections.push({
       heading: "Receita por especialidade (art. 190)",
@@ -468,28 +668,32 @@ export function buildBookDocument(
       },
     });
   }
+  if (!isDay && isFullInterim(s.interim)) {
+    sections.push(interimSection(s.interim));
+  }
   sections.push(...explanations(s.entries, s.notes));
   sections.push({
     heading: "Encerramento",
     paragraphs: [
       isDay
-        ? `Encerra-se o movimento do dia ${period}, com receita de ${money(sum.revenueCents)} e despesa de ${money(sum.expensesCents)}.`
-        : `Encerra-se o movimento de ${period}, com receita total de ${money(sum.revenueCents)}, despesa total de ${money(sum.expensesCents)} e saldo ${sum.balanceCents >= 0 ? "positivo" : "negativo"} de ${money(Math.abs(sum.balanceCents))}, nos termos do art. 192 do Código Nacional de Normas (Provimento CNJ nº 149/2023).`,
+        ? `Encerra-se o movimento do dia ${period}, com receitas de ${money(sum.revenueCents)} e despesas de ${money(sum.expensesCents)}.`
+        : `Somadas em separado as receitas (${money(sum.revenueCents)}) e as despesas (${money(sum.expensesCents)}) de ${period}, apura-se o saldo líquido ${sum.balanceCents >= 0 ? "positivo" : "negativo"} de ${money(Math.abs(sum.balanceCents))} do período (art. 192 do Código Nacional de Normas, Provimento CNJ nº 149/2023).`,
     ],
   });
   return {
     eyebrow: "Livro Diário Auxiliar da Receita e da Despesa",
-    title: isDay ? `Movimento de ${period}` : `Movimento de ${period}`,
+    title: `Movimento de ${period}`,
     subtitle: isDay ? "Lançamentos do dia" : "Lançamentos e apuração do mês",
     office: [office, tenant.subtitle],
     sections,
     dateLine: `${tenant.location.city}/${tenant.location.state}, ${writtenDate(s.issuedOn)}.`,
     ...signerLines(tenant, s),
     footer: `${office} · Livro Diário Auxiliar · ${period} · ${tenant.legalFooter}`,
+    sheet: sheetOf(s),
   };
 }
 
-/** Art. 193: the year, month by month, and the net result. */
+/** Art. 193: the year's revenue, expenses and net result. */
 export function buildAnnualDocument(
   tenant: Tenant,
   s: BookSnapshot,
@@ -510,7 +714,22 @@ export function buildAnnualDocument(
         rows: [
           { label: "Serventia", value: office },
           { label: "CNS", value: tenant.cns },
+          ...bookRows(s),
           { label: "Exercício", value: year },
+        ],
+      },
+      {
+        heading: "Balanço (art. 193)",
+        rows: [
+          { label: "Receitas", value: money(revenue) },
+          { label: "Despesas", value: money(expenses) },
+          {
+            label:
+              net >= 0
+                ? "Resultado líquido positivo"
+                : "Resultado líquido negativo",
+            value: money(Math.abs(net)),
+          },
         ],
       },
       {
@@ -539,10 +758,10 @@ export function buildAnnualDocument(
       {
         heading: "Resultado",
         paragraphs: [
-          `No exercício de ${year}, a serventia teve receita de ${money(revenue)} e despesa de ${money(expenses)}, com resultado líquido ${net >= 0 ? "positivo" : "negativo"} de ${money(Math.abs(net))}, nos termos do art. 193 do Código Nacional de Normas (Provimento CNJ nº 149/2023, com a redação do Provimento CNJ nº 259/2026).`,
+          `Ao final do exercício de ${year}, elabora-se o balanço anual da unidade, com receitas de ${money(revenue)}, despesas de ${money(expenses)} e resultado líquido ${net >= 0 ? "positivo" : "negativo"} de ${money(Math.abs(net))} (art. 193 do Código Nacional de Normas, com a redação do Provimento CNJ nº 259/2026).`,
           ...(tenant.location.state === "RN"
             ? [
-                "Balanço elaborado na forma do art. 62 do Código de Normas da Corregedoria Geral de Justiça do Rio Grande do Norte (Provimento nº 156/2016-CGJ/RN), a ser remetido à Corregedoria Geral de Justiça até 5 (cinco) dias depois de sua conclusão, e o livro, visado pelo Juiz Corregedor Permanente até o 15º dia útil de fevereiro (art. 61, parágrafo único).",
+                "No Rio Grande do Norte: balanço até o dia 15 de janeiro, remetido à Corregedoria Geral de Justiça até 5 (cinco) dias depois de sua conclusão (Código de Normas da CGJ/RN, art. 62), e livro visado pelo Juiz Corregedor Permanente até o 15º dia útil de fevereiro (art. 61, parágrafo único).",
               ]
             : []),
         ],
@@ -554,13 +773,114 @@ export function buildAnnualDocument(
     dateLine: `${tenant.location.city}/${tenant.location.state}, ${writtenDate(s.issuedOn)}.`,
     ...signerLines(tenant, s),
     footer: `${office} · Livro Diário Auxiliar · Balanço de ${year} · ${tenant.legalFooter}`,
+    sheet: sheetOf(s),
+  };
+}
+
+/** Art. 186: opened and closed by the holder, who signs. */
+function holderLines(tenant: Tenant) {
+  return {
+    signee: holderName(tenant) || undefined,
+    signature: [tenant.holderTitle || "Delegatário"],
+  };
+}
+
+/**
+ * Art. 186, parágrafo único: "O termo de abertura deverá conter o número do
+ * livro, o fim a que se destina, o número de folhas que contém, a
+ * declaração de que todas as suas folhas estão rubricadas e o fecho, com
+ * data, nome do delegatário e assinatura."
+ */
+export function buildOpeningDocument(
+  tenant: Tenant,
+  s: BookSnapshot,
+): RequerimentoDocument {
+  const office = officialName(tenant);
+  const n = s.book?.number ?? 1;
+  const sheets = s.book?.sheetCount ?? 0;
+  return {
+    eyebrow: "Livro Diário Auxiliar da Receita e da Despesa",
+    title: "Termo de abertura",
+    subtitle: `Livro nº ${n}`,
+    office: [office, tenant.subtitle],
+    sections: [
+      {
+        heading: "Livro",
+        rows: [
+          { label: "Número do livro", value: String(n) },
+          {
+            label: "Fim a que se destina",
+            value: `Livro Diário Auxiliar da Receita e da Despesa da serventia ${office}, CNS ${tenant.cns} (Código Nacional de Normas, arts. 185, II, e 189 a 194)`,
+          },
+          {
+            label: "Número de folhas",
+            value: sheets
+              ? `${sheets} (${integerInWords(sheets)})`
+              : "não informado na configuração",
+          },
+        ],
+      },
+      {
+        heading: "Termo",
+        paragraphs: [
+          `Este livro nº ${n} contém ${sheets ? `${sheets} (${integerInWords(sheets)})` : "___"} folhas e destina-se à escrituração do Livro Diário Auxiliar da Receita e da Despesa da serventia ${office}. Declaro que todas as suas folhas estão rubricadas.`,
+          ...(s.notes.trim() ? [s.notes.trim()] : []),
+        ],
+      },
+    ],
+    dateLine: `${tenant.location.city}/${tenant.location.state}, ${writtenDate(s.issuedOn)}.`,
+    ...holderLines(tenant),
+    footer: `${office} · Livro Diário Auxiliar nº ${n} · Termo de abertura · ${tenant.legalFooter}`,
+  };
+}
+
+/** Art. 186: the book closed by the holder. */
+export function buildClosingDocument(
+  tenant: Tenant,
+  s: BookSnapshot,
+): RequerimentoDocument {
+  const office = officialName(tenant);
+  const n = s.book?.number ?? 1;
+  const sheets = s.book?.sheetCount ?? 0;
+  const last = s.book?.lastSheet ?? 0;
+  return {
+    eyebrow: "Livro Diário Auxiliar da Receita e da Despesa",
+    title: "Termo de encerramento",
+    subtitle: `Livro nº ${n}`,
+    office: [office, tenant.subtitle],
+    sections: [
+      {
+        heading: "Livro",
+        rows: [
+          { label: "Número do livro", value: String(n) },
+          {
+            label: "Número de folhas",
+            value: sheets ? String(sheets) : "não informado na configuração",
+          },
+          ...(last
+            ? [{ label: "Última folha escriturada", value: String(last) }]
+            : []),
+        ],
+      },
+      {
+        heading: "Termo",
+        paragraphs: [
+          `Encerra-se o livro nº ${n} do Livro Diário Auxiliar da Receita e da Despesa da serventia ${office}, CNS ${tenant.cns}${sheets ? `, com ${sheets} (${integerInWords(sheets)}) folhas` : ""}${last ? `, escrituradas até a folha nº ${last}` : ""}.`,
+          ...(s.notes.trim() ? [s.notes.trim()] : []),
+        ],
+      },
+    ],
+    dateLine: `${tenant.location.city}/${tenant.location.state}, ${writtenDate(s.issuedOn)}.`,
+    ...holderLines(tenant),
+    footer: `${office} · Livro Diário Auxiliar nº ${n} · Termo de encerramento · ${tenant.legalFooter}`,
   };
 }
 
 export function buildBookPdfDocument(tenant: Tenant, s: BookSnapshot) {
-  return s.kind === "ano"
-    ? buildAnnualDocument(tenant, s)
-    : buildBookDocument(tenant, s);
+  if (s.kind === "ano") return buildAnnualDocument(tenant, s);
+  if (s.kind === "abertura") return buildOpeningDocument(tenant, s);
+  if (s.kind === "encerramento") return buildClosingDocument(tenant, s);
+  return buildBookDocument(tenant, s);
 }
 
 /** The same lines as a spreadsheet, for the accountant. */
@@ -579,22 +899,28 @@ export function bookCsv(s: BookSnapshot): string {
       "Quantidade",
       "Receita",
       "Despesa",
-      "Repasses",
+      "Depósito (art. 194, I)",
+      "Fundos e repasses",
       "ISS",
       "Fornecedor",
-      "Documento",
+      "Identificação/Documento/Conta",
       "Trat. fiscal distinto",
       "Explicação",
     ],
     ...s.entries.map((e) => [
       brDate(e.date),
       e.kind,
-      e.kind === "receita" ? e.specialty : categoryLabel(e.category),
+      e.kind === "receita"
+        ? e.specialty
+        : e.kind === "despesa"
+          ? categoryLabel(e.category)
+          : "",
       e.actCode,
       e.description,
       e.quantity,
       e.kind === "receita" ? formatMoneyBRL(e.amountCents) : "",
       e.kind === "despesa" ? formatMoneyBRL(e.amountCents) : "",
+      e.kind === "deposito" ? formatMoneyBRL(e.amountCents) : "",
       formatMoneyBRL(e.fundsCents),
       formatMoneyBRL(e.issCents),
       e.supplier,

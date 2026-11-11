@@ -6,10 +6,15 @@ import {
   bookCsv,
   buildAnnualDocument,
   buildBookDocument,
+  buildClosingDocument,
+  buildOpeningDocument,
   categoryLabel,
   DEFAULT_SPECIALTIES,
+  EXPENSE_CATEGORIES,
+  interimFigures,
+  interimPeriodOf,
   lateExpense,
-  looksPersonal,
+  SettingsSchema,
   specialtyOf,
   summarize,
 } from "./book.ts";
@@ -145,21 +150,14 @@ test("apuração: receitas e despesas à parte, saldo, repasses fora", () => {
   assert.match(categoryLabel("iss"), /art\. 191-A, § 1º, X\)/);
 });
 
-test("especialidade pelo código, despesa pessoal e despesa fora do mês", () => {
-  const settings = {
-    specialties: DEFAULT_SPECIALTIES,
-    responsible: "",
-    interim: false,
-    ceilingCents: 0,
-  };
+test("especialidade pelo código e despesa fora do mês", () => {
+  const settings = SettingsSchema.parse({ specialties: DEFAULT_SPECIALTIES });
   assert.equal(specialtyOf("2200556", settings), "Tabelionato de Notas");
   assert.equal(
     specialtyOf("2300107", settings),
     "Registro Civil das Pessoas Naturais",
   );
   assert.equal(specialtyOf("2601599", settings), "Atos de código 26");
-  assert.ok(looksPersonal("Compra no supermercado da família"));
-  assert.ok(!looksPersonal("Aluguel do imóvel da serventia"));
   assert.ok(lateExpense({ kind: "despesa", date: "2026-10-30" }, "2026-11-02"));
   assert.ok(
     !lateExpense({ kind: "despesa", date: "2026-10-30" }, "2026-10-31"),
@@ -203,7 +201,7 @@ test("a página do mês tem as colunas do art. 189, a apuração e as explicaç�
   const text = JSON.stringify(doc);
   assert.match(text, /Discriminação da receita e da despesa/);
   assert.match(text, /Apuração do mês \(art\. 192\)/);
-  assert.match(text, /Saldo positivo/);
+  assert.match(text, /Saldo líquido positivo/);
   assert.match(text, /Retifica o lançamento de 04\/10/);
   assert.match(text, /Tratamento fiscal distinto: não dedutível/);
 
@@ -247,8 +245,12 @@ test("RN: o balanço cita o art. 62 e o envio à Corregedoria em 5 dias", () => 
     signer: null,
   });
   const text = JSON.stringify(year);
-  assert.match(text, /art\. 62 do Código de Normas/);
+  assert.match(text, /CGJ\/RN, art\. 62/);
   assert.match(text, /até 5 \(cinco\) dias depois de sua conclusão/);
+  assert.match(
+    text,
+    /com receitas de R\$ 0,00, despesas de R\$ 0,00 e resultado líquido/,
+  );
   const elsewhere = buildAnnualDocument(
     {
       ...tenant,
@@ -268,27 +270,135 @@ test("RN: o balanço cita o art. 62 e o envio à Corregedoria em 5 dias", () => 
   assert.doesNotMatch(JSON.stringify(elsewhere), /CGJ\/RN/);
 });
 
-test("interino: a apuração do mês separa a remuneração e o excedente ao FDJ", () => {
+test("art. 191-A, § 1º: as doze categorias com o texto da lei", () => {
+  const withLaw = EXPENSE_CATEGORIES.filter((c) => c.law);
+  assert.deepEqual(
+    withLaw.map((c) => c.law),
+    ["I", "II", "III", "IV", "V", "VI", "VII", "VIII", "IX", "X", "XI", "XII"],
+  );
+  assert.equal(
+    categoryLabel("locacao"),
+    "Locação de bens móveis e imóveis utilizados na prestação do serviço ou na guarda do acervo (art. 191-A, § 1º, I)",
+  );
+  assert.match(categoryLabel("saude"), /admitida a inclusão do delegatário/);
+});
+
+test("art. 190: receita com especialidade e identificação do ato; art. 192 com o texto da lei", () => {
   const doc = buildBookDocument(tenant, {
     kind: "mes",
     start: "2026-10-01",
     end: "2026-10-31",
     issuedOn: "2026-11-03",
     entries: [
-      entry({ amountCents: 5_000_000 }),
-      entry({ kind: "despesa", category: "locacao", amountCents: 1_000_000 }),
-      entry({ kind: "despesa", category: "interino", amountCents: 3_000_000 }),
+      entry({
+        amountCents: 10000,
+        actCode: "2200556",
+        description: "Procuração",
+        documentRef: "Livro 12, fls. 30",
+      }),
+      entry({ kind: "despesa", category: "materiais", amountCents: 2500 }),
     ],
     months: [],
     notes: "",
     signer: null,
-    interim: { ceilingCents: 3_000_000 },
+    book: { number: 2, sheetCount: 200, firstSheet: 7, lastSheet: 8 },
   });
   const text = JSON.stringify(doc);
-  // 50.000 - 10.000 = 40.000 antes da remuneração; teto 30.000.
-  assert.match(text, /Interinidade \(CGJ\/RN, arts\. 19, 26 e 27\)/);
-  assert.match(text, /R\$ 40\.000,00/);
-  assert.match(text, /R\$ 10\.000,00, até 10\/11\/2026/);
+  assert.match(
+    text,
+    /Tabelionato de Notas: 2200556 - Procuração; Livro 12, fls\. 30/,
+  );
+  assert.match(text, /Despesa \(art\. 191-A, § 1º, VI\)/);
+  assert.match(text, /Saldo líquido positivo/);
+  assert.match(text, /nº 2, folhas 7 a 8/);
+  assert.deepEqual(doc.sheet, { first: 7, label: "Livro nº 2 · Folha" });
+});
+
+test("art. 186: termo de abertura com os elementos do parágrafo único; encerramento", () => {
+  const base = {
+    start: "2026-11-11",
+    end: "2026-11-11",
+    issuedOn: "2026-11-11",
+    entries: [],
+    months: [],
+    notes: "",
+    signer: null,
+  };
+  const opening = buildOpeningDocument(tenant, {
+    ...base,
+    kind: "abertura",
+    book: { number: 3, sheetCount: 200 },
+  });
+  const text = JSON.stringify(opening);
+  assert.match(text, /Número do livro/);
+  assert.match(text, /Fim a que se destina/);
+  assert.match(text, /200 \(duzentos\)/);
+  assert.match(text, /Declaro que todas as suas folhas estão rubricadas/);
+  assert.equal(opening.signee, "Maria Exemplo");
+  assert.equal(opening.dateLine, "Cidade Exemplo/RN, 11 de novembro de 2026.");
+  assert.equal(opening.sheet, undefined);
+  const closing = buildClosingDocument(tenant, {
+    ...base,
+    kind: "encerramento",
+    book: { number: 3, sheetCount: 200, lastSheet: 187 },
+  });
+  assert.match(JSON.stringify(closing), /escrituradas até a folha nº 187/);
+});
+
+test("art. 194: período trimestral ou mensal, renda líquida e excedente", () => {
+  assert.equal(interimPeriodOf("2026-11", "trimestral"), null);
+  assert.deepEqual(interimPeriodOf("2026-12", "trimestral"), {
+    start: "2026-10-01",
+    end: "2026-12-31",
+    months: 3,
+  });
+  assert.deepEqual(interimPeriodOf("2026-02", "mensal"), {
+    start: "2026-02-01",
+    end: "2026-02-28",
+    months: 1,
+  });
+  const interim = {
+    ceilingCents: 3_000_000,
+    period: "trimestral" as const,
+    start: "2026-10-01",
+    end: "2026-12-31",
+    months: 3,
+    revenueCents: 15_000_000,
+    expensesCents: 4_000_000,
+    depositsCents: 0,
+  };
+  // 150.000 - 40.000 = 110.000; limite 3 x 30.000 = 90.000.
+  assert.deepEqual(interimFigures(interim), {
+    netCents: 11_000_000,
+    limitCents: 9_000_000,
+    excessCents: 2_000_000,
+  });
+  const doc = buildBookDocument(tenant, {
+    kind: "mes",
+    start: "2026-12-01",
+    end: "2026-12-31",
+    issuedOn: "2027-01-03",
+    entries: [
+      entry({
+        kind: "deposito",
+        date: "2026-12-20",
+        amountCents: 2_000_000,
+        documentRef: "Conta judicial 0001",
+      }),
+    ],
+    months: [],
+    notes: "",
+    signer: null,
+    interim,
+  });
+  const text = JSON.stringify(doc);
+  assert.match(text, /renda líquida excedente \(art\. 194\)/);
+  assert.match(text, /R\$ 30\.000,00 por mês × 3 meses = R\$ 90\.000,00/);
+  assert.match(text, /conta Conta judicial 0001/);
+  // The deposit is neither revenue nor expense.
+  const withDeposit = summarize([entry({ kind: "deposito", amountCents: 9 })]);
+  assert.equal(withDeposit.revenueCents + withDeposit.expensesCents, 0);
+  assert.equal(withDeposit.depositsCents, 9);
   const titular = buildBookDocument(tenant, {
     kind: "mes",
     start: "2026-10-01",
@@ -298,6 +408,8 @@ test("interino: a apuração do mês separa a remuneração e o excedente ao FDJ
     months: [],
     notes: "",
     signer: null,
+    // A snapshot from before: the ceiling only, no period.
+    interim: { ceilingCents: 3_000_000 },
   });
-  assert.doesNotMatch(JSON.stringify(titular), /Interinidade/);
+  assert.doesNotMatch(JSON.stringify(titular), /art\. 194/);
 });

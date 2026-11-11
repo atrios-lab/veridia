@@ -8,7 +8,11 @@ import {
   useTransition,
 } from "react";
 import { toast } from "sonner";
-import { expenseWarnings } from "@/core/daily-book/checks.ts";
+import {
+  expenseWarnings,
+  PERSONAL_EXPENSE_RULE,
+  RECEIPTS_RULE,
+} from "@/core/daily-book/checks.ts";
 import { ConfirmAction } from "../../../_components/confirm-action.tsx";
 import {
   type BookFormState,
@@ -81,6 +85,8 @@ function Submit({
 interface Row extends ReadLine {
   key: number;
   amount: string;
+  /** Art. 190: the act's number, or book and sheet, or protocol. */
+  identification: string;
   explanation: string;
 }
 
@@ -117,13 +123,12 @@ export function ImportForm({ specialties }: { specialties: string[] }) {
           ...l,
           key: i,
           amount: money(l.amountCents),
+          identification: "",
           explanation: "",
         })),
       );
       setNote(
-        result.start === result.end
-          ? `Relatório do dia ${br(result.start)}: ${result.lines.length} linha(s) lida(s). Confira, corrija o que precisar e clique em Lançar.`
-          : `Relatório de ${br(result.start)} a ${br(result.end)} (mês): ${result.lines.length} linha(s). Elas entram no último dia como consolidado; o ideal é anexar o relatório de cada dia (art. 190).`,
+        `Relatório do dia ${br(result.start)}: ${result.lines.length} linha(s) lida(s). Confira, informe o nº do ato, ou o livro e a folha, ou o protocolo de cada linha (art. 190) e clique em Lançar.`,
       );
     });
   };
@@ -138,6 +143,7 @@ export function ImportForm({ specialties }: { specialties: string[] }) {
     fundsCents: r.fundsCents,
     issCents: r.issCents,
     specialty: r.specialty,
+    identification: r.identification,
     explanation: r.explanation,
   }));
   const total = lines.reduce((s, l) => s + l.amountCents, 0);
@@ -190,6 +196,9 @@ export function ImportForm({ specialties }: { specialties: string[] }) {
                   <th className="px-2.5 py-2">Especialidade</th>
                   <th className="px-2.5 py-2 text-right">Qtd.</th>
                   <th className="px-2.5 py-2">Receita (R$)</th>
+                  <th className="px-2.5 py-2">
+                    Nº do ato, livro e folha, ou protocolo
+                  </th>
                   <th className="px-2.5 py-2">Explicação</th>
                   <th className="px-2.5 py-2">
                     <span className="sr-only">Ações</span>
@@ -254,6 +263,23 @@ export function ImportForm({ specialties }: { specialties: string[] }) {
                           )
                         }
                         className={`${SMALL} max-w-[120px]`}
+                      />
+                    </td>
+                    <td className="px-2.5 py-1.5">
+                      <input
+                        aria-label="Nº do ato, livro e folha, ou protocolo"
+                        value={r.identification}
+                        placeholder="Ex.: Livro 12, fls. 30 a 32"
+                        onChange={(e) =>
+                          setRows((p) =>
+                            p.map((x) =>
+                              x.key === r.key
+                                ? { ...x, identification: e.target.value }
+                                : x,
+                            ),
+                          )
+                        }
+                        className={SMALL}
                       />
                     </td>
                     <td className="px-2.5 py-1.5">
@@ -326,7 +352,7 @@ export function ImportForm({ specialties }: { specialties: string[] }) {
 
 export interface EntryInitial {
   id?: string;
-  kind: "receita" | "despesa";
+  kind: "receita" | "despesa" | "deposito";
   date: string;
   specialty: string;
   category: string;
@@ -416,7 +442,10 @@ export function EntryForm({
       {initial.id && <input type="hidden" name="id" value={initial.id} />}
       <fieldset className="flex flex-wrap gap-4 text-[13px]">
         <legend className={LABEL}>Tipo</legend>
-        {(["despesa", "receita"] as const).map((k) => (
+        {(interim || kind === "deposito"
+          ? (["despesa", "receita", "deposito"] as const)
+          : (["despesa", "receita"] as const)
+        ).map((k) => (
           <label key={k} className="flex items-center gap-2">
             <input
               type="radio"
@@ -425,15 +454,21 @@ export function EntryForm({
               checked={kind === k}
               onChange={() => setKind(k)}
             />
-            {k === "despesa" ? "Despesa" : "Receita avulsa (fora do relatório)"}
+            {k === "despesa"
+              ? "Despesa (art. 191-A)"
+              : k === "receita"
+                ? "Receita (art. 190)"
+                : "Depósito do excedente do interino (art. 194, I)"}
           </label>
         ))}
       </fieldset>
 
-      {kind === "despesa" && (
+      {kind !== "receita" && (
         <section className="flex flex-col gap-2 rounded-[12px] bg-admin-input-bg px-4 py-3.5">
           <p className="text-[13px] font-bold text-admin-primary">
-            Comprovante (art. 191-A, § 3º: guardado 5 anos)
+            {kind === "despesa"
+              ? "Comprovante (art. 191-A, caput e § 3º)"
+              : "Comprovante do depósito"}
           </p>
           <div className="flex flex-wrap items-center gap-2">
             <input
@@ -470,7 +505,11 @@ export function EntryForm({
       <div className="grid gap-4 md:grid-cols-3">
         <div>
           <label htmlFor="en-date" className={LABEL}>
-            {kind === "despesa" ? "Data do pagamento" : "Data do ato"}
+            {kind === "despesa"
+              ? "Data da despesa"
+              : kind === "deposito"
+                ? "Data do depósito (art. 194, I)"
+                : "Dia da prática do ato (art. 190, § 1º)"}
           </label>
           <input
             id="en-date"
@@ -519,14 +558,17 @@ export function EntryForm({
               ))}
             </select>
           </div>
+        ) : kind === "deposito" ? (
+          <div />
         ) : (
           <div>
             <label htmlFor="en-spec" className={LABEL}>
-              Especialidade
+              Especialidade (art. 190)
             </label>
             <input
               id="en-spec"
               name="especialidade"
+              required
               list="entry-specialties"
               value={v.specialty}
               onChange={set("specialty")}
@@ -553,12 +595,14 @@ export function EntryForm({
             placeholder={
               kind === "despesa"
                 ? "Ex.: Aluguel do imóvel da serventia, outubro"
-                : "Ex.: Certidão, livro 3, folha 20"
+                : kind === "deposito"
+                  ? "Ex.: Excedente do 3º trimestre de 2026"
+                  : "Ex.: Certidão de nascimento"
             }
             className={FIELD}
           />
         </div>
-        {kind === "despesa" ? (
+        {kind === "deposito" ? null : kind === "despesa" ? (
           <div>
             <label htmlFor="en-sup" className={LABEL}>
               Fornecedor / favorecido
@@ -607,11 +651,16 @@ export function EntryForm({
         )}
         <div>
           <label htmlFor="en-doc" className={LABEL}>
-            Documento (nota, recibo, protocolo)
+            {kind === "despesa"
+              ? "Documento (nota, recibo)"
+              : kind === "deposito"
+                ? "Conta em que foi depositado (art. 194, I)"
+                : "Nº do ato, ou livro e folha, ou protocolo (art. 190)"}
           </label>
           <input
             id="en-doc"
             name="documento"
+            required={kind === "deposito"}
             maxLength={160}
             value={v.documentRef}
             onChange={set("documentRef")}
@@ -636,19 +685,15 @@ export function EntryForm({
 
       {kind === "despesa" && (
         <>
+          <p className="rounded-[10px] bg-admin-input-bg px-3.5 py-2.5 text-[12.5px] text-admin-muted">
+            {PERSONAL_EXPENSE_RULE} {RECEIPTS_RULE}
+          </p>
           {warnings.length > 0 && (
-            <div className="flex flex-col gap-1.5 rounded-[10px] bg-admin-warning-soft-bg px-3.5 py-2.5 text-[12.5px] text-admin-warning-text">
-              <strong>Atenção antes de lançar</strong>
-              <ul className="list-disc pl-4">
-                {warnings.map((w) => (
-                  <li key={w}>{w}</li>
-                ))}
-              </ul>
-              <span>
-                Se mesmo assim for despesa do serviço, explique no campo
-                Explicação: ela vai para o livro.
-              </span>
-            </div>
+            <ul className="flex list-disc flex-col gap-1 rounded-[10px] bg-admin-warning-soft-bg py-2.5 pr-3.5 pl-8 text-[12.5px] text-admin-warning-text">
+              {warnings.map((w) => (
+                <li key={w}>{w}</li>
+              ))}
+            </ul>
           )}
           <label className="flex items-start gap-2.5 rounded-[10px] bg-admin-input-bg px-3.5 py-3 text-[13px] text-admin-text">
             <input
@@ -659,9 +704,11 @@ export function EntryForm({
               className="mt-0.5"
             />
             <span>
-              <strong>Tratamento fiscal distinto</strong> (art. 193-A, § 2º): a
-              despesa vale para o livro, mas tem outro tratamento no imposto de
-              renda (ex.: não dedutível no carnê-leão).
+              <strong>Tratamento fiscal distinto</strong> (art. 193-A, § 2º):
+              &quot;Quando as informações do Livro Diário Auxiliar forem
+              utilizadas para fins tributários, deverão ser identificadas as
+              despesas que recebam tratamento fiscal distinto daquele adotado
+              para fins administrativos e correicionais.&quot;
             </span>
           </label>
           {fiscal && (
@@ -730,8 +777,10 @@ export function ReportForm({
         <legend className={LABEL}>Qual página?</legend>
         {[
           ["dia", "Do dia"],
-          ["mes", "Do mês inteiro (apuração)"],
-          ["ano", "Balanço anual"],
+          ["mes", "Do mês (apuração, art. 192)"],
+          ["ano", "Balanço anual (art. 193)"],
+          ["abertura", "Termo de abertura (art. 186)"],
+          ["encerramento", "Termo de encerramento (art. 186)"],
         ].map(([value, label]) => (
           <label key={value} className="flex items-center gap-2">
             <input
@@ -796,7 +845,9 @@ export function ReportForm({
         )}
         <div>
           <label htmlFor="rp-date" className={LABEL}>
-            Data da página
+            {kind === "abertura" || kind === "encerramento"
+              ? "Data do termo"
+              : "Data da página"}
           </label>
           <input
             id="rp-date"
@@ -807,7 +858,10 @@ export function ReportForm({
             className={FIELD}
           />
         </div>
-        <div>
+        <div
+          hidden={kind === "abertura" || kind === "encerramento"}
+          title="O termo é assinado pelo delegatário (art. 186)"
+        >
           <label htmlFor="rp-signer" className={LABEL}>
             Quem assina
           </label>
@@ -834,6 +888,13 @@ export function ReportForm({
           />
         </div>
       </div>
+      {(kind === "abertura" || kind === "encerramento") && (
+        <p className={HINT}>
+          {kind === "abertura"
+            ? '"O termo de abertura deverá conter o número do livro, o fim a que se destina, o número de folhas que contém, a declaração de que todas as suas folhas estão rubricadas e o fecho, com data, nome do delegatário e assinatura" (art. 186, parágrafo único). O número do livro e o de folhas vêm de Configurar.'
+            : "O livro é encerrado pelo delegatário (art. 186). O termo diz o número do livro, as folhas e a última folha escriturada."}
+        </p>
+      )}
       <Submit pending={pending} label="Gerar página" busy="Gerando..." />
     </form>
   );
@@ -938,8 +999,11 @@ export function SettingsForm({
   initial: {
     specialties: { prefix: string; name: string }[];
     responsible: string;
+    bookNumber: number;
+    sheetCount: number;
     interim: boolean;
     ceilingCents: number;
+    interimPeriod: "trimestral" | "mensal";
   };
 }) {
   const [state, action, pending] = useActionState(saveSettings, IDLE);
@@ -947,6 +1011,44 @@ export function SettingsForm({
   return (
     <form action={action} className={CARD}>
       <Feedback state={state} />
+      <div className="grid gap-4 md:grid-cols-2">
+        <div>
+          <label htmlFor="cf-book" className={LABEL}>
+            Número do livro (art. 186)
+          </label>
+          <input
+            id="cf-book"
+            name="livro"
+            type="number"
+            min={1}
+            max={9999}
+            defaultValue={initial.bookNumber}
+            className={`${FIELD} max-w-[160px]`}
+          />
+        </div>
+        <div>
+          <label htmlFor="cf-sheets" className={LABEL}>
+            Número de folhas do livro (art. 186)
+          </label>
+          <input
+            id="cf-sheets"
+            name="folhas"
+            type="number"
+            min={0}
+            max={100000}
+            defaultValue={initial.sheetCount || ""}
+            placeholder="Ex.: 200"
+            className={`${FIELD} max-w-[160px]`}
+          />
+        </div>
+        <span className={`${HINT} md:col-span-2`}>
+          &quot;Os livros previstos neste Capítulo serão abertos, numerados,
+          autenticados e encerrados pelo delegatário&quot; (art. 186). O termo
+          de abertura sai com estes números; cada página gerada recebe as folhas
+          seguintes do livro. Livro cheio: gere o termo de encerramento, passe
+          para o número seguinte e gere o novo termo de abertura.
+        </span>
+      </div>
       <div>
         <label htmlFor="cf-spec" className={LABEL}>
           Especialidades pelo código do ato (uma por linha: código = nome)
@@ -961,15 +1063,15 @@ export function SettingsForm({
           className={`${FIELD} font-mono`}
         />
         <span className={HINT}>
-          O art. 190 pede a receita separada por especialidade. O sistema usa o
-          começo do código do ato no relatório (ex.: 22 = Tabelionato de Notas,
-          23 = Registro Civil). Confira com a tabela de emolumentos do seu
-          Estado.
+          &quot;A receita será lançada no Livro Diário Auxiliar separadamente,
+          por especialidade&quot; (art. 190). O sistema usa o começo do código
+          do ato no relatório (ex.: 22 = Tabelionato de Notas, 23 = Registro
+          Civil). Confira com a tabela de emolumentos do seu Estado.
         </span>
       </div>
       <div>
         <label htmlFor="cf-resp" className={LABEL}>
-          Responsável pela escrituração (opcional)
+          Preposto que escritura (opcional)
         </label>
         <input
           id="cf-resp"
@@ -979,8 +1081,9 @@ export function SettingsForm({
           className={FIELD}
         />
         <span className={HINT}>
-          A escrituração é de responsabilidade do titular, mesmo feita por
-          preposto. Quem assina as páginas vem de Configurações › Quem assina.
+          &quot;A responsabilidade pela escrituração dos livros referidos neste
+          Código de Normas é do delegatário, ainda quando escriturado pelo seu
+          preposto&quot; (art. 187).
         </span>
       </div>
       <label className="flex items-start gap-2.5 rounded-[10px] bg-admin-input-bg px-3.5 py-3 text-[13px] text-admin-text">
@@ -992,31 +1095,59 @@ export function SettingsForm({
           className="mt-0.5"
         />
         <span>
-          <strong>Serventia sob interinidade</strong> (vaga, respondida por
-          interino): a apuração do mês mostra a remuneração do interino até o
-          teto e o excedente a recolher ao FDJ até o dia 10, e o painel lembra a
-          prestação de contas até o dia 20 (CGJ/RN arts. 19, 21, 26 e 27).
+          <strong>Serventia vaga, respondida por interino</strong> (art. 194): a
+          apuração mostra a renda líquida excedente a 90,25% dos subsídios de
+          ministro do STF, e o livro aceita o lançamento do depósito, com a data
+          e a conta (art. 194, I).
         </span>
       </label>
       {interim && (
-        <div>
-          <label htmlFor="cf-teto" className={LABEL}>
-            Teto do interino (R$)
-          </label>
-          <input
-            id="cf-teto"
-            name="teto"
-            inputMode="decimal"
-            placeholder="0,00"
-            defaultValue={
-              initial.ceilingCents ? money(initial.ceilingCents) : ""
-            }
-            className={`${FIELD} max-w-[240px]`}
-          />
-          <span className={HINT}>
-            90,25% do subsídio mensal dos Ministros do STF. Atualize quando o
-            subsídio mudar: cada página do mês guarda o teto da época.
-          </span>
+        <div className="grid gap-4 md:grid-cols-2">
+          <div>
+            <label htmlFor="cf-teto" className={LABEL}>
+              90,25% do subsídio mensal de ministro do STF (R$)
+            </label>
+            <input
+              id="cf-teto"
+              name="teto"
+              inputMode="decimal"
+              placeholder="0,00"
+              defaultValue={
+                initial.ceilingCents ? money(initial.ceilingCents) : ""
+              }
+              className={`${FIELD} max-w-[240px]`}
+            />
+            <span className={HINT}>
+              Atualize quando o subsídio mudar: cada página guarda o valor da
+              época.
+            </span>
+          </div>
+          <fieldset>
+            <legend className={LABEL}>Periodicidade (art. 194, VI)</legend>
+            <label className="flex items-start gap-2 text-[13px]">
+              <input
+                type="radio"
+                name="periodicidade"
+                value="trimestral"
+                defaultChecked={initial.interimPeriod !== "mensal"}
+                className="mt-0.5"
+              />
+              Trimestral: &quot;considerando-se as receitas e as despesas do
+              trimestre, não havendo lei estadual que estabeleça periodicidade
+              diversa&quot;
+            </label>
+            <label className="mt-1.5 flex items-start gap-2 text-[13px]">
+              <input
+                type="radio"
+                name="periodicidade"
+                value="mensal"
+                defaultChecked={initial.interimPeriod === "mensal"}
+                className="mt-0.5"
+              />
+              Mensal: quando a norma do Estado fixar (no RN, recolhimento ao FDJ
+              até o dia 10 do mês seguinte, Código de Normas da CGJ/RN, art. 27)
+            </label>
+          </fieldset>
         </div>
       )}
       <Submit

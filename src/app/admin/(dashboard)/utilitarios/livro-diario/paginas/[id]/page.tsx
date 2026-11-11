@@ -24,7 +24,7 @@ export default async function BookPagePage({
   searchParams,
 }: {
   params: Promise<{ id: string }>;
-  searchParams: Promise<{ gerado?: string }>;
+  searchParams: Promise<{ gerado?: string; livro?: string }>;
 }) {
   await requireBookAccess();
   const tenant = await getTenant();
@@ -33,12 +33,18 @@ export default async function BookPagePage({
   const s = snapshotOf(row);
   const query = await searchParams;
   const signers = (await getGuideSettings(tenant)).signers;
-  const label =
-    s.kind === "dia"
+  const terms = s.kind === "abertura" || s.kind === "encerramento";
+  const label = terms
+    ? `livro nº ${s.book?.number ?? 1}`
+    : s.kind === "dia"
       ? brDate(s.start)
       : s.kind === "mes"
         ? monthLabel(s.start)
         : s.start.slice(0, 4);
+  const sheets =
+    s.book?.firstSheet && s.book.lastSheet
+      ? `Livro nº ${s.book.number}, ${s.book.firstSheet === s.book.lastSheet ? `folha ${s.book.firstSheet}` : `folhas ${s.book.firstSheet} a ${s.book.lastSheet}`}`
+      : "";
   const title = `${BOOK_DOC_LABELS[s.kind as BookDocKind]}: ${label}`;
   const sum = summarize(s.entries);
   const revenue =
@@ -58,13 +64,26 @@ export default async function BookPagePage({
           href: `/admin/utilitarios/livro-diario?mes=${s.start.slice(0, 7)}`,
           label: "Livro Diário Auxiliar",
         }}
-        description={`Receita R$ ${formatMoneyBRL(revenue)} · despesa R$ ${formatMoneyBRL(expenses)} · saldo R$ ${formatMoneyBRL(revenue - expenses)}`}
+        description={
+          terms
+            ? `${BOOK_DOC_LABELS[s.kind as BookDocKind]}, ${s.book?.sheetCount ? `${s.book.sheetCount} folhas` : "número de folhas não informado"}`
+            : `${sheets ? `${sheets} · ` : ""}Receita R$ ${formatMoneyBRL(revenue)} · despesa R$ ${formatMoneyBRL(expenses)} · saldo R$ ${formatMoneyBRL(revenue - expenses)}`
+        }
       />
       <main className="flex max-w-[1000px] flex-col gap-4.5 px-[30px] py-7 max-md:px-4">
         {query.gerado && (
           <p className="rounded-[12px] bg-admin-success-bg px-4 py-3 text-[13px] font-semibold text-admin-success-text">
             Página gerada e guardada. Assine digitalmente ou imprima para
             assinar.
+          </p>
+        )}
+        {query.livro === "cheio" && (
+          <p className="rounded-[12px] border border-admin-warning-soft-border bg-admin-warning-soft-bg px-4 py-3 text-[13px] text-admin-warning-text">
+            <strong>As folhas do livro nº {s.book?.number} acabaram:</strong>{" "}
+            esta página vai até a folha {s.book?.lastSheet}, e o livro tem{" "}
+            {s.book?.sheetCount}. Gere o termo de encerramento, passe para o
+            livro seguinte em Configurar e gere o novo termo de abertura (art.
+            186).
           </p>
         )}
         {row.removedAt && (
@@ -112,6 +131,9 @@ export default async function BookPagePage({
         <p className="text-[12px] text-admin-muted">
           A página fica guardada como foi gerada. Correções nos lançamentos só
           entram nela se você marcar "Refazer com os lançamentos de agora".
+          {sheets
+            ? " Refeita, ela continua na mesma folha inicial; uma folha usada não é usada de novo, nem se a página for excluída (art. 186)."
+            : ""}
         </p>
       </main>
     </>
