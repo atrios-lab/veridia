@@ -184,6 +184,7 @@ export function BulletinForm({
   declared = {},
   certificates = [],
   canSign = false,
+  fromBook,
 }: {
   office: BulletinOffice;
   currentMonth: number;
@@ -200,6 +201,11 @@ export function BulletinForm({
   certificates?: { id: string; label: string; holderName: string }[];
   /** May sign digitally (Assinador permission). */
   canSign?: boolean;
+  /**
+   * The month the Livro Diário Auxiliar sent (decision of 11/11/2026): the
+   * form opens on it, filled in, and asks for the check before publishing.
+   */
+  fromBook?: { period: string; draft: Partial<BulletinDraft>; note: string };
 }) {
   const [state, formAction, pending] = useActionState<SaveState, FormData>(
     publishBulletinAction,
@@ -208,8 +214,12 @@ export function BulletinForm({
   const fieldErrors = state.status === "error" ? state.fieldErrors : {};
   const funds = FUNDS_BY_STATE[office.state];
 
-  const [month, setMonth] = useState(currentMonth);
-  const [year, setYear] = useState(currentYear);
+  const [month, setMonth] = useState(
+    fromBook ? Number(fromBook.period.slice(5, 7)) : currentMonth,
+  );
+  const [year, setYear] = useState(
+    fromBook ? Number(fromBook.period.slice(0, 4)) : currentYear,
+  );
   const period = bulletinPeriodKey(year, month);
 
   // Each month keeps its own figures. What the operator has typed for a
@@ -217,11 +227,21 @@ export function BulletinForm({
   // month and back loses nothing; a month with no edits shows what is
   // published for it, ready to correct; a month with neither opens blank,
   // never with the figures of the month picked before it.
-  const [edits, setEdits] = useState<Record<string, BulletinDraft>>({});
+  const [edits, setEdits] = useState<Record<string, BulletinDraft>>(() =>
+    fromBook
+      ? {
+          [fromBook.period]: {
+            ...(saved[fromBook.period] ?? EMPTY_BULLETIN_DRAFT),
+            ...fromBook.draft,
+            legacy: false,
+          },
+        }
+      : {},
+  );
   const router = useRouter();
   // Read from the system's report: checked before it goes out (decision of
   // 11/11/2026).
-  const [readFromReport, setReadFromReport] = useState(false);
+  const [readFromReport, setReadFromReport] = useState(Boolean(fromBook));
   const [reading, setReading] = useState(false);
   const [readNote, setReadNote] = useState<string | null>(null);
   // Signed before publishing, with A1 (here) or A3 (the token).
@@ -449,7 +469,9 @@ export function BulletinForm({
               {reading
                 ? "Lendo o relatório..."
                 : (readNote ??
-                  "O sistema lê os números e preenche o mês. Tudo continua editável.")}
+                  (fromBook && period === fromBook.period
+                    ? fromBook.note
+                    : "O sistema lê os números e preenche o mês. Tudo continua editável."))}
             </p>
           </div>
 

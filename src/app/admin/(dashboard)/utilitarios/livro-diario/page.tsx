@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { can } from "@/core/auth/roles.ts";
 import {
   BOOK_DOC_LABELS,
   type BookDocKind,
@@ -24,6 +25,7 @@ import { getTenant, today } from "@/lib/tenant.ts";
 import { AdminIcon } from "../../../_components/icon.tsx";
 import { AdminPageHeader } from "../../../_components/page-header.tsx";
 import { monthPeriod, requireBookAccess } from "./_lib/access.ts";
+import { sendMonthToBulletin } from "./actions.ts";
 import { RemoveEntryButton, ReportForm } from "./forms.tsx";
 
 export const metadata = { title: "Livro Diário Auxiliar" };
@@ -53,8 +55,14 @@ export default async function DailyBookPage({
 }: {
   searchParams: Promise<{ mes?: string; excluidos?: string; feito?: string }>;
 }) {
-  await requireBookAccess();
+  const session = await requireBookAccess();
   const tenant = await getTenant();
+  // The monthly bulletin is the Transparência's: its own permission.
+  const canBulletin = can(
+    session.user.role ?? "",
+    "transparency.manage",
+    session.user.permissions,
+  );
   const query = await searchParams;
   const now = today();
   const month = /^\d{4}-\d{2}$/.test(query.mes ?? "")
@@ -189,6 +197,15 @@ export default async function DailyBookPage({
           >
             Próximo mês ›
           </Link>
+          {canBulletin && (
+            <form action={sendMonthToBulletin} className="ml-auto">
+              <input type="hidden" name="mes" value={month} />
+              <button type="submit" className="btn btn-admin-secondary btn-sm">
+                <AdminIcon name="upload" className="h-4 w-4" /> Enviar o mês ao
+                boletim
+              </button>
+            </form>
+          )}
         </div>
 
         <section className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">

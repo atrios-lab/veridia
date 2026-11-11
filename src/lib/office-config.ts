@@ -78,3 +78,9 @@ export const SECURITY_PAPER_REMINDERS_KEY = "security-paper-reminders";
 export const OFFICE_PAPER_ORDERS_KEY = "office-paper-orders";
 /** Livro Diário Auxiliar: the specialties by act code, who answers for it. */
 export const OFFICE_DAILY_BOOK_KEY = "office-daily-book";
+/**
+ * Livro Diário Auxiliar › boletim mensal: the month's figures prepared from
+ * the productivity reports, waiting on the bulletin's form to be checked
+ * and published.
+ */
+export const OFFICE_BOOK_BULLETIN_KEY = "office-book-bulletin";

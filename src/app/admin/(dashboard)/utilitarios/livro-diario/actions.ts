@@ -15,10 +15,16 @@ import {
   specialtyOf,
 } from "@/core/daily-book/book.ts";
 import {
+  addFigures,
+  type BookBulletin,
+  sumReadings,
+} from "@/core/daily-book/bulletin.ts";
+import {
   parseProductivity,
   parseReceipt,
   type ReceiptReading,
 } from "@/core/daily-book/reports.ts";
+import { parseNotarisReport } from "@/core/iss/notaris-report.ts";
 import { LONG_TEXT_MAX } from "@/core/text-limits.ts";
 import { db } from "@/db/index.ts";
 import { justify } from "@/lib/audit-reason.ts";
@@ -29,9 +35,11 @@ import {
   getBookSettingsWith,
   importProductivityWith,
   issueBookReportWith,
+  monthBulletinFromBookWith,
   numberSheetsWith,
   removeBookReportWith,
   removeEntryWith,
+  saveBookBulletinWith,
   saveBookSettingsWith,
   updateBookReportWith,
   updateEntryWith,
@@ -111,7 +119,11 @@ export interface ReadLine {
   specialty: string;
 }
 
-/** Reads the productivity report, for the check before booking. */
+/**
+ * Reads the productivity report, for the check before booking. The same
+ * upload can go to the book (a report of one day, art. 190), to the monthly
+ * bulletin (a report within one month), or both (decision of 11/11/2026).
+ */
 export async function readProductivity(formData: FormData): Promise<
   | {
       ok: true;
@@ -119,6 +131,12 @@ export async function readProductivity(formData: FormData): Promise<
       end: string;
       lines: ReadLine[];
       costsCents: number | null;
+      /** One day: may go into the book (art. 190). */
+      oneDay: boolean;
+      /** Within one month: may go to the monthly bulletin. */
+      oneMonth: boolean;
+      /** May prepare the bulletin (Transparência permission). */
+      canBulletin: boolean;
     }
   | { ok: false; message: string }
 > {
@@ -140,18 +158,15 @@ export async function readProductivity(formData: FormData): Promise<
           "Não reconheci o relatório de produtividade (período e atos). Confira se é o PDF do sistema, não uma foto.",
       };
     }
-    if (reading.start !== reading.end) {
-      return {
-        ok: false,
-        message: `Este relatório vai de ${reading.start.split("-").reverse().join("/")} a ${reading.end.split("-").reverse().join("/")}. "A receita será lançada no Livro Diário Auxiliar separadamente, por especialidade, de forma individualizada, no dia da prática do ato" (art. 190): gere no sistema o relatório de um dia só e envie um por dia.`,
-      };
-    }
     const settings = await getBookSettingsWith(db, ok.tenant.slug);
     return {
       ok: true,
       start: reading.start,
       end: reading.end,
       costsCents: reading.costsCents,
+      oneDay: reading.start === reading.end,
+      oneMonth: reading.start.slice(0, 7) === reading.end.slice(0, 7),
+      canBulletin: canPublishBulletin(ok.session),
       lines: reading.acts.map((a) => ({
         code: a.code,
         description: a.description,
@@ -185,6 +200,19 @@ const LinesSchema = z
   )
   .max(2000);
 
+/** The bulletin is the Transparência's: its own permission. */
+function canPublishBulletin(
+  session: NonNullable<Awaited<ReturnType<typeof getSession>>>,
+) {
+  return can(
+    session.user.role ?? "",
+    "transparency.manage",
+    session.user.permissions,
+  );
+}
+
+const BULLETIN_FORM = "/admin/transparencia?aba=boletim&origem=livro";
+
 export async function importProductivity(
   _previous: BookFormState,
   formData: FormData,
@@ -196,44 +224,126 @@ export async function importProductivity(
   if (!isDate(start) || !isDate(end)) {
     return { status: "error", message: "Leia o relatório antes de lançar." };
   }
-  let lines: z.infer<typeof LinesSchema>;
-  try {
-    const parsed = LinesSchema.safeParse(
-      JSON.parse(field(formData, "linhas", 2_000_000)),
-    );
-    if (!parsed.success)
-      return { status: "error", message: "Confira as linhas lidas." };
-    lines = parsed.data;
-  } catch {
-    return { status: "error", message: "Leia o relatório antes de lançar." };
+  const toBook = formData.get("livro") === "on";
+  const toBulletin = formData.get("boletim") === "on";
+  if (!toBook && !toBulletin) {
+    return {
+      status: "error",
+      message:
+        "Marque o que fazer com o relatório: lançar no livro, enviar ao boletim mensal, ou os dois.",
+    };
   }
+  if (toBook && start !== end) {
+    return {
+      status: "error",
+      message:
+        'O livro recebe só o relatório de um dia: "A receita será lançada no Livro Diário Auxiliar [...] no dia da prática do ato" (art. 190). Desmarque o livro para enviar este relatório só ao boletim.',
+    };
+  }
+  if (toBulletin && !canPublishBulletin(ok.session)) {
+    return {
+      status: "error",
+      message:
+        "Você não tem permissão para o boletim mensal (Transparência). Desmarque o boletim ou peça a permissão.",
+    };
+  }
+  if (toBulletin && start.slice(0, 7) !== end.slice(0, 7)) {
+    return {
+      status: "error",
+      message: "O boletim é mensal: envie um relatório dentro de um mês só.",
+    };
+  }
+  let lines: z.infer<typeof LinesSchema> = [];
+  if (toBook) {
+    try {
+      const parsed = LinesSchema.safeParse(
+        JSON.parse(field(formData, "linhas", 2_000_000)),
+      );
+      if (!parsed.success)
+        return { status: "error", message: "Confira as linhas lidas." };
+      lines = parsed.data;
+    } catch {
+      return { status: "error", message: "Leia o relatório antes de lançar." };
+    }
+  }
+  const month = start.slice(0, 7);
   try {
     const file = pdfFile(formData, "relatorio");
-    const stored = file
-      ? await storeOfficePdf(
-          ok.tenant.slug,
-          Buffer.from(await file.arrayBuffer()),
-        )
-      : null;
-    await importProductivityWith(
-      db,
-      ok.tenant.slug,
-      {
-        start,
-        end,
-        lines,
-        file: stored
-          ? { path: stored.path, name: file?.name ?? "produtividade.pdf" }
-          : null,
-        replace: formData.get("substituir") === "on",
-      },
-      ok.session.user.id,
+    if (!file) {
+      return {
+        status: "error",
+        message: "Escolha de novo o PDF do relatório.",
+      };
+    }
+    const bytes = Buffer.from(await file.arrayBuffer());
+    // The report's totals, as the bulletin reads them.
+    const totals = parseNotarisReport(
+      await pdfTableText(new Uint8Array(bytes)),
     );
+    if (toBook) {
+      const stored = await storeOfficePdf(ok.tenant.slug, bytes);
+      await importProductivityWith(
+        db,
+        ok.tenant.slug,
+        {
+          start,
+          end,
+          lines,
+          file: { path: stored.path, name: file.name || "produtividade.pdf" },
+          reading: totals.kind === "produtividade" ? totals : null,
+          replace: formData.get("substituir") === "on",
+        },
+        ok.session.user.id,
+      );
+    }
+    if (toBulletin) {
+      const bulletin: BookBulletin =
+        start === end
+          ? await monthBulletinFromBookWith(db, ok.tenant.slug, month)
+          : {
+              month,
+              figures: sumReadings([totals]),
+              source: "relatorio",
+              days: [],
+              start,
+              end,
+            };
+      // A day sent to the bulletin and not to the book still counts; with
+      // no day in the book yet, it is the bulletin's only day.
+      if (start === end && !toBook && !bulletin.days.includes(start)) {
+        bulletin.figures = bulletin.days.length
+          ? addFigures(bulletin.figures, sumReadings([totals]))
+          : sumReadings([totals]);
+        bulletin.days = [...bulletin.days, start].sort();
+      }
+      await saveBookBulletinWith(
+        db,
+        ok.tenant.slug,
+        bulletin,
+        ok.session.user.id,
+      );
+    }
   } catch (error) {
     return fail(error);
   }
   revalidatePath(HOME);
-  redirect(`${HOME}?mes=${end.slice(0, 7)}&feito=importado`);
+  if (toBulletin) redirect(`${BULLETIN_FORM}&mes=${month}`);
+  redirect(`${HOME}?mes=${month}&feito=importado`);
+}
+
+/** Livro › "Enviar o mês ao boletim": the book's days, to check and publish. */
+export async function sendMonthToBulletin(formData: FormData): Promise<void> {
+  const ok = await access();
+  const month = field(formData, "mes", 7);
+  if (!ok || !canPublishBulletin(ok.session)) redirect(HOME);
+  if (!/^\d{4}-(0[1-9]|1[0-2])$/.test(month)) redirect(HOME);
+  await saveBookBulletinWith(
+    db,
+    ok.tenant.slug,
+    await monthBulletinFromBookWith(db, ok.tenant.slug, month),
+    ok.session.user.id,
+  );
+  redirect(`${BULLETIN_FORM}&mes=${month}`);
 }
 
 /* ---------------------------------------------------------------- entries */

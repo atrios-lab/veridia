@@ -7,15 +7,18 @@ import type { Database } from "@/db/index.ts";
 import { createTestDb } from "@/db/test-db.ts";
 import {
   addEntryWith,
+  bookBulletinWith,
   DailyBookError,
   entryOf,
   importProductivityWith,
   issueBookReportWith,
   listEntriesWith,
+  monthBulletinFromBookWith,
   numberSheetsWith,
   removeBookReportWith,
   removeEntryWith,
   renderBookPdf,
+  saveBookBulletinWith,
   saveBookSettingsWith,
   snapshotOf,
   updateBookReportWith,
@@ -344,4 +347,38 @@ test("art. 194: depósito com a conta, fora da receita e da despesa; apuração 
   assert.equal(december.interim.depositsCents, 7000);
   assert.equal(summarize(december.entries).depositsCents, 7000);
   assert.equal(summarize(december.entries).expensesCents, 0);
+});
+
+test("boletim do mês: soma os dias do livro com relatório; substituído sai; fica guardado", async () => {
+  const reading = (acts: number) => ({
+    kind: "produtividade" as const,
+    actsCount: acts,
+    issCents: acts,
+    funds: { fdj: acts * 10, frmp: 0, fcrcpn: 0, funaf: 0 },
+  });
+  const read = (date: string, acts: number, replace = false) =>
+    importProductivityWith(
+      db,
+      TENANT,
+      {
+        start: date,
+        end: date,
+        lines: [line(100)],
+        reading: reading(acts),
+        replace,
+      },
+      "titular",
+    );
+  await read("2027-03-01", 5);
+  await read("2027-03-02", 7);
+  // The 2nd read again: the first reading of that day leaves.
+  await read("2027-03-02", 9, true);
+  const b = await monthBulletinFromBookWith(db, TENANT, "2027-03");
+  assert.deepEqual(b.days, ["2027-03-01", "2027-03-02"]);
+  assert.equal(b.figures.actsCount, 14);
+  assert.equal(b.figures.fundAmountsCents.fdj, 140);
+  assert.equal(b.source, "dias");
+  await saveBookBulletinWith(db, TENANT, b, "titular");
+  assert.deepEqual(await bookBulletinWith(db, TENANT, "2027-03"), b);
+  assert.equal(await bookBulletinWith(db, TENANT, "2027-04"), null);
 });
