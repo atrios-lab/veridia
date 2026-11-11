@@ -61,10 +61,11 @@ const nextConfig: NextConfig = {
         source: "/transparencia/:kind(documento|boletim)/:id",
         headers: [{ key: "X-Frame-Options", value: "SAMEORIGIN" }],
       },
-      // The internal messenger records voice notes: the microphone, for
-      // this origin only, on that screen only. Everywhere else it stays off.
+      // The internal messenger records voice notes, in its own screen and
+      // in the floating window over any panel screen: the microphone, for
+      // this origin only, in the panel only. The public site keeps it off.
       {
-        source: "/admin/mensagens/:path*",
+        source: "/admin/:path*",
         headers: [
           {
             key: "Permissions-Policy",
@@ -73,7 +74,7 @@ const nextConfig: NextConfig = {
         ],
       },
       {
-        source: "/admin/mensagens",
+        source: "/admin",
         headers: [
           {
             key: "Permissions-Policy",

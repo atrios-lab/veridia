@@ -12,8 +12,10 @@ import {
   pollInbox,
   pollMessenger,
   type SerializedMessage,
+  sendFile,
   sendText,
 } from "../(dashboard)/mensagens/actions.ts";
+import { MicHelp, useRecorder } from "../(dashboard)/mensagens/recorder.tsx";
 import { CHAT_SHAKE_TARGET_ID } from "./chat-alerts.tsx";
 
 const POLL_MS = 4000;
@@ -40,16 +42,21 @@ function time(iso: string): string {
 
 /**
  * The conversation in a small floating window, over any screen, to read
- * and answer without leaving what is being done there (decision of
- * 11/11/2026). The page behind stays usable: the window is small, in a
- * corner, and not a modal.
+ * and answer without leaving what is being done there (decisions of
+ * 11/11/2026): text, files and voice notes; it minimizes to a bar and
+ * moves wherever the person drags it by its title. The page behind stays
+ * usable: the window is small and not a modal.
  */
 function MiniChat({
   caller,
   onClose,
+  onMinimize,
+  onDragStart,
 }: {
   caller: Caller;
   onClose: () => void;
+  onMinimize: () => void;
+  onDragStart: (event: React.PointerEvent) => void;
 }) {
   const [messages, setMessages] = useState<SerializedMessage[]>([]);
   const [text, setText] = useState("");
@@ -95,17 +102,38 @@ function MiniChat({
     void poll();
   };
 
+  const upload = async (file: File, audio = false) => {
+    const data = new FormData();
+    data.set("conversationId", caller.conversationId);
+    data.set("file", file);
+    if (audio) data.set("audio", "1");
+    setBusy(true);
+    const result = await sendFile(data);
+    setBusy(false);
+    if (!result.ok) toast.error(result.message);
+    else void poll();
+  };
+  const recorder = useRecorder((file) => void upload(file, true));
+
   return (
     <section
       aria-label={`Conversa com ${caller.senderName}`}
-      className="pointer-events-auto flex h-[420px] max-h-[70vh] w-[330px] max-w-[calc(100vw-2rem)] flex-col overflow-hidden rounded-[14px] border border-admin-border bg-admin-card shadow-2xl"
+      className="pointer-events-auto flex h-[440px] max-h-[75vh] w-[340px] max-w-[calc(100vw-2rem)] flex-col overflow-hidden rounded-[14px] border border-admin-border bg-admin-card shadow-2xl"
     >
-      <header className="flex items-center gap-2 bg-gradient-to-r from-msg-verde-from to-msg-verde-to px-3 py-2 text-white">
+      <header
+        onPointerDown={onDragStart}
+        title="Arraste para mudar de lugar"
+        className="flex cursor-move touch-none select-none items-center gap-1.5 bg-gradient-to-r from-msg-verde-from to-msg-verde-to px-3 py-2 text-white"
+      >
+        <span aria-hidden="true" className="text-[12px] opacity-70">
+          ⠿
+        </span>
         <span className="min-w-0 flex-1 truncate text-[13px] font-semibold">
           {caller.senderName}
         </span>
         <Link
           href={`/admin/mensagens?com=${caller.senderId}`}
+          onPointerDown={(event) => event.stopPropagation()}
           className="rounded-md bg-white/15 px-1.5 py-0.5 text-[11px] font-semibold hover:bg-white/25"
           title="Abrir em Mensagens internas"
         >
@@ -113,6 +141,20 @@ function MiniChat({
         </Link>
         <button
           type="button"
+          onPointerDown={(event) => event.stopPropagation()}
+          onClick={onMinimize}
+          aria-label="Minimizar a conversa"
+          title="Minimizar (reabre quando chegar mensagem)"
+          className="flex h-6 w-6 items-center justify-center rounded-md hover:bg-white/20"
+        >
+          <span
+            aria-hidden="true"
+            className="block h-0.5 w-3 rounded bg-white"
+          />
+        </button>
+        <button
+          type="button"
+          onPointerDown={(event) => event.stopPropagation()}
           onClick={onClose}
           aria-label="Fechar a conversa flutuante"
           className="rounded-md px-1.5 text-[16px] leading-none hover:bg-white/20"
@@ -126,6 +168,7 @@ function MiniChat({
       >
         {messages.map((message) => {
           const mine = message.senderId !== caller.senderId;
+          const href = `/admin/mensagens/arquivo/${message.id}`;
           return message.kind === "chamar" ? (
             <p
               key={message.id}
@@ -148,49 +191,144 @@ function MiniChat({
                 <p className="whitespace-pre-wrap text-admin-text [overflow-wrap:anywhere]">
                   {message.body}
                 </p>
+              ) : message.kind === "audio" ? (
+                // biome-ignore lint/a11y/useMediaCaption: a voice note between colleagues has no caption track
+                <audio
+                  controls
+                  preload="none"
+                  src={href}
+                  className="mt-1 h-9 w-full"
+                />
               ) : (
                 <a
-                  href={`/admin/mensagens/arquivo/${message.id}`}
+                  href={href}
                   target="_blank"
                   rel="noopener"
                   className="font-semibold text-admin-primary underline [overflow-wrap:anywhere]"
                 >
-                  {message.kind === "audio"
-                    ? "🎤 Ouvir áudio"
-                    : `📎 ${message.fileName}`}
+                  📎 {message.fileName}
                 </a>
               )}
             </div>
           );
         })}
       </div>
-      <div className="flex items-end gap-1.5 border-t border-admin-border p-2">
-        <textarea
-          value={text}
-          onChange={(event) => setText(event.target.value)}
-          onKeyDown={(event) => {
-            if (event.key === "Enter" && !event.shiftKey) {
-              event.preventDefault();
-              void send();
+      <div className="border-t border-admin-border p-2">
+        <div className="mb-1.5 flex items-center gap-1">
+          <label
+            className="cursor-pointer rounded-md px-2 py-1 text-[12px] font-semibold text-admin-primary hover:bg-admin-input-bg"
+            title="Enviar arquivo ou PDF (até 4 MB)"
+          >
+            📎 Arquivo
+            <input
+              type="file"
+              className="sr-only"
+              disabled={busy}
+              onChange={(event) => {
+                const file = event.target.files?.[0];
+                if (file) void upload(file);
+                event.target.value = "";
+              }}
+            />
+          </label>
+          <button
+            type="button"
+            disabled={busy}
+            onClick={() =>
+              recorder.recording ? recorder.stop() : void recorder.start()
             }
-          }}
-          rows={2}
-          maxLength={4000}
-          aria-label="Responder"
-          placeholder="Responder (Enter envia)"
-          className="min-w-0 flex-1 resize-none rounded-[9px] border border-admin-input-border bg-admin-input-bg px-2.5 py-1.5 text-[12.5px] text-admin-text outline-none focus:border-admin-primary-soft"
-        />
-        <button
-          type="button"
-          onClick={() => void send()}
-          disabled={busy || !text.trim()}
-          className="btn btn-admin-primary btn-sm shrink-0"
-        >
-          Enviar
-        </button>
+            className={`rounded-md px-2 py-1 text-[12px] font-semibold ${recorder.recording ? "animate-pulse bg-msg-busy text-white" : "text-admin-primary hover:bg-admin-input-bg"}`}
+          >
+            {recorder.recording ? "⏹ Parar e enviar" : "🎤 Áudio"}
+          </button>
+          {busy && (
+            <span className="text-[11px] text-admin-muted">Enviando...</span>
+          )}
+        </div>
+        {recorder.mic === "denied" && (
+          <MicHelp onRetry={() => void recorder.allow()} />
+        )}
+        <div className="flex items-end gap-1.5">
+          <textarea
+            value={text}
+            onChange={(event) => setText(event.target.value)}
+            onKeyDown={(event) => {
+              if (event.key === "Enter" && !event.shiftKey) {
+                event.preventDefault();
+                void send();
+              }
+            }}
+            rows={2}
+            maxLength={4000}
+            aria-label="Responder"
+            placeholder="Responder (Enter envia)"
+            className="min-w-0 flex-1 resize-none rounded-[9px] border border-admin-input-border bg-admin-input-bg px-2.5 py-1.5 text-[12.5px] text-admin-text outline-none focus:border-admin-primary-soft"
+          />
+          <button
+            type="button"
+            onClick={() => void send()}
+            disabled={busy || !text.trim()}
+            className="btn btn-admin-primary btn-sm shrink-0"
+          >
+            Enviar
+          </button>
+        </div>
       </div>
     </section>
   );
+}
+
+const POSITION_KEY = "veridia.mensagens.posicao";
+
+/** Where the floating window sits: distance from the right and the bottom. */
+function useFloatingPosition() {
+  const [pos, setPos] = useState({ right: 16, bottom: 16 });
+  // A drag ends in a click too: this tells the click it was a drag.
+  const dragged = useRef(false);
+  useEffect(() => {
+    try {
+      const saved = JSON.parse(
+        window.localStorage.getItem(POSITION_KEY) ?? "null",
+      ) as { right: number; bottom: number } | null;
+      if (saved) setPos(saved);
+    } catch {
+      // Nothing saved, or a private window: the corner it is.
+    }
+  }, []);
+  const startDrag = (event: React.PointerEvent) => {
+    event.preventDefault();
+    const origin = { x: event.clientX, y: event.clientY, ...pos };
+    let latest = pos;
+    dragged.current = false;
+    const move = (e: PointerEvent) => {
+      if (Math.abs(e.clientX - origin.x) + Math.abs(e.clientY - origin.y) > 4) {
+        dragged.current = true;
+      }
+      latest = {
+        right: Math.min(
+          Math.max(0, origin.right - (e.clientX - origin.x)),
+          window.innerWidth - 120,
+        ),
+        bottom: Math.min(
+          Math.max(0, origin.bottom - (e.clientY - origin.y)),
+          window.innerHeight - 60,
+        ),
+      };
+      setPos(latest);
+    };
+    const up = () => {
+      window.removeEventListener("pointermove", move);
+      window.removeEventListener("pointerup", up);
+      try {
+        window.localStorage.setItem(POSITION_KEY, JSON.stringify(latest));
+      } catch {
+        // Not remembered; it still moved.
+      }
+    };
+    window.addEventListener("pointermove", move);
+    window.addEventListener("pointerup", up);
+  };
+  return { pos, startDrag, wasDragged: () => dragged.current };
 }
 
 /**
@@ -215,7 +353,12 @@ export function MessengerWatch({
   const [unread, setUnread] = useState(initialUnread);
   const [caller, setCaller] = useState<Caller | null>(null);
   const [open, setOpen] = useState<Caller | null>(null);
+  const [minimized, setMinimized] = useState(false);
+  const { pos, startDrag, wasDragged } = useFloatingPosition();
   const since = useRef(new Date().toISOString());
+  // Read inside the poll, which outlives renders.
+  const state = useRef({ open, minimized });
+  state.current = { open, minimized };
   const tone = setting.enabled && sound ? setting.sound : "none";
   const onMessenger = pathname.startsWith("/admin/mensagens");
 
@@ -246,6 +389,17 @@ export function MessengerWatch({
       );
       const last = result.data.incoming.at(-1);
       if (!last) return;
+      // Minimized, the conversation opens again when a message arrives.
+      if (state.current.open && state.current.minimized && latest) {
+        setOpen({
+          conversationId: latest.conversationId,
+          senderId: latest.senderId,
+          senderName: latest.senderName,
+          preview: latest.preview,
+          nudge: latest.kind === "chamar",
+        });
+        setMinimized(false);
+      }
       const nudge = result.data.incoming.some((i) => i.kind === "chamar");
       if (nudge && setting.shake) {
         shakeElement(document.getElementById(CHAT_SHAKE_TARGET_ID));
@@ -293,10 +447,36 @@ export function MessengerWatch({
 
   if (!setting.enabled || onMessenger) return null;
   const showBalloon = setting.popup && unread > 0 && !open;
+  // With the conversation open or minimized, the bar already stands in.
+  const showBubble = unread > 0 && !open;
 
   return (
-    <div className="pointer-events-none fixed right-4 bottom-4 z-50 flex flex-col items-end gap-2">
-      {open && <MiniChat caller={open} onClose={() => setOpen(null)} />}
+    <div
+      className="pointer-events-none fixed z-50 flex flex-col items-end gap-2"
+      style={{ right: pos.right, bottom: pos.bottom }}
+    >
+      {open && !minimized && (
+        <MiniChat
+          caller={open}
+          onClose={() => setOpen(null)}
+          onMinimize={() => setMinimized(true)}
+          onDragStart={startDrag}
+        />
+      )}
+      {open && minimized && (
+        <button
+          type="button"
+          onPointerDown={startDrag}
+          onClick={() => {
+            if (!wasDragged()) setMinimized(false);
+          }}
+          title="Abrir a conversa (arraste para mudar de lugar)"
+          className="pointer-events-auto flex max-w-[260px] cursor-pointer items-center gap-2 rounded-full bg-gradient-to-r from-msg-verde-from to-msg-verde-to px-3.5 py-2 text-[12.5px] font-semibold text-white shadow-xl"
+        >
+          💬 <span className="truncate">{open.senderName}</span>
+          <span className="text-[11px] opacity-80">(minimizado)</span>
+        </button>
+      )}
       {showBalloon && (
         <div className="pointer-events-auto w-[300px] max-w-[calc(100vw-2rem)] overflow-hidden rounded-[14px] border-2 border-msg-busy bg-admin-card shadow-xl">
           <span className="flex items-center justify-between bg-gradient-to-r from-msg-verde-from to-msg-verde-to px-3 py-1 text-[11.5px] font-semibold text-white">
@@ -349,10 +529,10 @@ export function MessengerWatch({
         </div>
       )}
       {/* The floating balloon itself: always at hand while something waits. */}
-      {unread > 0 && (
+      {showBubble && (
         <button
           type="button"
-          onClick={() => (caller ? setOpen(open ? null : caller) : null)}
+          onClick={() => (caller ? setOpen(caller) : null)}
           aria-label={`${unread} mensagens internas sem ler`}
           className="pointer-events-auto relative flex h-14 w-14 items-center justify-center rounded-full bg-gradient-to-br from-msg-verde-from to-msg-verde-to text-[24px] text-white shadow-xl motion-safe:animate-bounce"
         >
