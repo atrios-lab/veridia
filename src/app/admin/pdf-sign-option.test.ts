@@ -17,6 +17,7 @@ const OFFERS_DIGITAL_SIGNATURE = new Set([
   "(dashboard)/utilitarios/guias/ano/[ano]",
   "(dashboard)/utilitarios/iss/[id]/arquivo",
   "(dashboard)/utilitarios/papel-seguranca/oficios/[id]/arquivo",
+  "(dashboard)/utilitarios/solicitacao-papeis/[id]/arquivo",
   // Signed on its own screen (Auditoria › notificação › assinar).
   "(dashboard)/auditoria/notificacao/[id]/pdf",
 ]);

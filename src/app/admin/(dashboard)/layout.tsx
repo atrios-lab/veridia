@@ -167,7 +167,7 @@ export default async function DashboardLayout({
     ...(can(role, "security-paper.manage", granted)
       ? {
           "/admin/utilitarios/papel-seguranca": await pendingDutyCount(
-            tenant.slug,
+            tenant,
             officeNow().date,
           ),
         }

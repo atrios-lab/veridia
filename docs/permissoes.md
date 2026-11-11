@@ -39,3 +39,4 @@ a mesma permissão.
 | `access.manage` | Duas etapas e horário de acesso | Só o Tabelião |
 | `certificates.manage` | Certificados digitais | Só o Tabelião |
 | `security-paper.manage` | Papel de segurança | Pedidos de serviço |
+| `paper-orders.manage` | Solicitação de papéis de segurança | Papel de segurança |

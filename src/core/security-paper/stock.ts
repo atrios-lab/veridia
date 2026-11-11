@@ -575,3 +575,53 @@ export function occurrencesIn(
       (a, b) => a.occurredOn.localeCompare(b.occurredOn) || a.first - b.first,
     );
 }
+
+/* ------------------------------------------------------------- low stock */
+
+/**
+ * The kinds whose stock is down to the warning line (decision of
+ * 11/11/2026: 200 sheets), to order a new lot in time. A kind whose lots
+ * are all used up is warned too: it is the most urgent.
+ */
+export function lowStock(
+  lots: readonly PaperLot[],
+  movements: readonly PaperMovement[],
+  threshold: number,
+): { kind: string; paperKind: PaperKind; remaining: number }[] {
+  if (threshold <= 0) return [];
+  const byKind = new Map<string, { paperKind: PaperKind; remaining: number }>();
+  for (const lot of live(lots)) {
+    const entry = byKind.get(kindName(lot)) ?? {
+      paperKind: lot.kind,
+      remaining: 0,
+    };
+    entry.remaining += remainingIn(lot, movements);
+    byKind.set(kindName(lot), entry);
+  }
+  return [...byKind.entries()]
+    .filter(([, v]) => v.remaining <= threshold)
+    .map(([kind, v]) => ({ kind, ...v }))
+    .sort((a, b) => a.remaining - b.remaining);
+}
+
+/** Why a lot cannot take the new numbering; null if it can. */
+export function checkLotChange(
+  lot: Pick<
+    PaperLot,
+    "id" | "kind" | "kindLabel" | "prefix" | "first" | "last" | "digits"
+  >,
+  others: readonly PaperLot[],
+  movements: readonly PaperMovement[],
+): string | null {
+  const problem = checkLot(
+    lot,
+    others.filter((o) => o.id !== lot.id),
+  );
+  if (problem) return problem;
+  const outside = live(movements).find(
+    (m) => m.lotId === lot.id && (m.first < lot.first || m.last > lot.last),
+  );
+  return outside
+    ? `Há lançamentos fora da nova numeração (${rangeLabel(lot, outside.first, outside.last)}). Corrija ou exclua esses lançamentos antes.`
+    : null;
+}

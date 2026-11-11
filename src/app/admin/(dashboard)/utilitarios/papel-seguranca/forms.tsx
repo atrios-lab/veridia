@@ -6,11 +6,14 @@ import { ConfirmAction } from "../../../_components/confirm-action.tsx";
 import {
   addLot,
   addMovement,
+  editLot,
+  editMovement,
+  editReport,
   issueReport,
   type PaperFormState,
   recordSent,
+  removeReport,
   saveSettings,
-  updateLot,
   voidLot,
   voidMovement,
 } from "./actions.ts";
@@ -66,18 +69,38 @@ function numberOf(text: string): number | null {
 
 /* ------------------------------------------------------------------ lots */
 
+export interface LotEdit {
+  id: string;
+  kind: string;
+  kindLabel: string;
+  first: string;
+  last: string;
+  receivedOn: string;
+  opening: boolean;
+  supplier: string;
+  invoice: string;
+  requisition: string;
+  notes: string;
+}
+
+/** Registers a lot, or (with `edit`) changes one, numbering included. */
 export function LotForm({
   kinds,
   today,
+  edit,
 }: {
   kinds: { value: string; label: string }[];
   today: string;
+  edit?: LotEdit;
 }) {
-  const [state, action, pending] = useActionState(addLot, IDLE);
-  const [kind, setKind] = useState(kinds[0]?.value ?? "");
-  const [first, setFirst] = useState("");
-  const [last, setLast] = useState("");
-  const [opening, setOpening] = useState(false);
+  const [state, action, pending] = useActionState(
+    edit ? editLot : addLot,
+    IDLE,
+  );
+  const [kind, setKind] = useState(edit?.kind ?? kinds[0]?.value ?? "");
+  const [first, setFirst] = useState(edit?.first ?? "");
+  const [last, setLast] = useState(edit?.last ?? "");
+  const [opening, setOpening] = useState(edit?.opening ?? false);
   const a = numberOf(first);
   const b = numberOf(last);
   const count = a !== null && b !== null && b >= a ? b - a + 1 : null;
@@ -85,6 +108,7 @@ export function LotForm({
   return (
     <form action={action} className={CARD}>
       <Feedback state={state} />
+      {edit && <input type="hidden" name="id" value={edit.id} />}
       <div className="grid gap-4 md:grid-cols-2">
         <div>
           <label htmlFor="lot-kind" className={LABEL}>
@@ -113,6 +137,7 @@ export function LotForm({
               id="lot-name"
               name="nome"
               required
+              defaultValue={edit?.kindLabel}
               maxLength={120}
               placeholder="Ex.: folha de procuração"
               className={FIELD}
@@ -172,7 +197,7 @@ export function LotForm({
             type="date"
             required
             max={today}
-            defaultValue={today}
+            defaultValue={edit?.receivedOn ?? today}
             className={FIELD}
           />
         </div>
@@ -193,7 +218,10 @@ export function LotForm({
         </span>
       </label>
 
-      <details className="rounded-[10px] border border-admin-border px-4 py-3">
+      <details
+        open={Boolean(edit)}
+        className="rounded-[10px] border border-admin-border px-4 py-3"
+      >
         <summary className="cursor-pointer text-[13px] font-semibold text-admin-primary">
           Nota fiscal, gráfica e requisição (opcional)
         </summary>
@@ -201,10 +229,14 @@ export function LotForm({
           Nada aqui é obrigatório: há lotes comprados há anos cuja nota não está
           mais na serventia. Dá para completar depois, no lote.
         </p>
-        <LotDetailsFields />
+        <LotDetailsFields initial={edit} />
       </details>
 
-      <Submit pending={pending} label="Cadastrar lote" busy="Cadastrando..." />
+      <Submit
+        pending={pending}
+        label={edit ? "Salvar alterações" : "Cadastrar lote"}
+        busy={edit ? "Salvando..." : "Cadastrando..."}
+      />
     </form>
   );
 }
@@ -288,33 +320,6 @@ function LotDetailsFields({
   );
 }
 
-export function LotDetailsForm({
-  id,
-  initial,
-}: {
-  id: string;
-  initial: {
-    supplier: string;
-    invoice: string;
-    requisition: string;
-    notes: string;
-  };
-}) {
-  const [state, action, pending] = useActionState(updateLot, IDLE);
-  return (
-    <form action={action} className={CARD}>
-      <Feedback state={state} />
-      <input type="hidden" name="id" value={id} />
-      <LotDetailsFields initial={initial} />
-      <Submit
-        pending={pending}
-        label="Salvar dados do lote"
-        busy="Salvando..."
-      />
-    </form>
-  );
-}
-
 export function VoidLotButton({ id }: { id: string }) {
   const [state, action, pending] = useActionState(voidLot, IDLE);
   return (
@@ -322,11 +327,11 @@ export function VoidLotButton({ id }: { id: string }) {
       action={action}
       pending={pending}
       error={state.status === "error" ? state.message : null}
-      trigger="Anular lote"
-      question="Anular este lote?"
-      consequence="Ele sai do estoque, mas continua guardado no classificador, com a justificativa. Use quando o lote foi cadastrado errado; depois cadastre de novo."
-      confirmLabel="Anular"
-      pendingLabel="Anulando..."
+      trigger="Excluir lote"
+      question="Excluir este lote?"
+      consequence="Ele sai do estoque e da lista, mas continua guardado no classificador, com a justificativa. Para corrigir um dado, prefira Editar."
+      confirmLabel="Excluir"
+      pendingLabel="Excluindo..."
     >
       <input type="hidden" name="id" value={id} />
     </ConfirmAction>
@@ -598,11 +603,11 @@ export function VoidMovementButton({ id }: { id: string }) {
       action={action}
       pending={pending}
       error={state.status === "error" ? state.message : null}
-      trigger="Anular"
-      question="Anular este lançamento?"
-      consequence="As folhas voltam ao estoque. O lançamento continua guardado no classificador, riscado, com a justificativa."
-      confirmLabel="Anular"
-      pendingLabel="Anulando..."
+      trigger="Excluir"
+      question="Excluir este lançamento?"
+      consequence="As folhas voltam ao estoque. O lançamento sai da lista, mas continua guardado no classificador, com a justificativa. Para corrigir, prefira Editar."
+      confirmLabel="Excluir"
+      pendingLabel="Excluindo..."
     >
       <input type="hidden" name="id" value={id} />
     </ConfirmAction>
@@ -861,6 +866,7 @@ export function SettingsForm({
     email: string;
     stateRule: string;
     deadlineDay: number | null;
+    lowStock: number;
   };
 }) {
   const [state, action, pending] = useActionState(saveSettings, IDLE);
@@ -963,6 +969,23 @@ export function SettingsForm({
             Se a Corregedoria fixou um dia, ele aparece no lembrete.
           </span>
         </div>
+        <div>
+          <label htmlFor="cfg-low" className={LABEL}>
+            Avisar quando restarem (folhas de cada tipo)
+          </label>
+          <input
+            id="cfg-low"
+            name="alerta"
+            type="number"
+            min={0}
+            max={100000}
+            defaultValue={initial.lowStock}
+            className={FIELD}
+          />
+          <span className={HINT}>
+            Padrão: 200. O aviso leva ao pedido de um novo lote. Zero desliga.
+          </span>
+        </div>
       </div>
       <Submit
         pending={pending}
@@ -970,5 +993,214 @@ export function SettingsForm({
         busy="Salvando..."
       />
     </form>
+  );
+}
+
+/* ------------------------------------------------------------------- edits */
+
+export function MovementEditForm({
+  id,
+  today,
+  initial,
+}: {
+  id: string;
+  today: string;
+  initial: {
+    type: string;
+    first: string;
+    last: string;
+    occurredOn: string;
+    reference: string;
+    notes: string;
+  };
+}) {
+  const [state, action, pending] = useActionState(editMovement, IDLE);
+  const [type, setType] = useState(initial.type);
+  return (
+    <form action={action} className={CARD}>
+      <Feedback state={state} />
+      <input type="hidden" name="id" value={id} />
+      <fieldset>
+        <legend className={LABEL}>O que aconteceu com as folhas?</legend>
+        <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-5">
+          {TYPES.map((t) => (
+            <label
+              key={t.value}
+              className={`flex cursor-pointer items-center gap-2 rounded-[10px] border px-3 py-2.5 text-[12.5px] font-bold text-admin-primary ${
+                type === t.value
+                  ? "border-admin-primary bg-admin-success-bg"
+                  : "border-admin-border bg-admin-card"
+              }`}
+            >
+              <input
+                type="radio"
+                name="tipo"
+                value={t.value}
+                checked={type === t.value}
+                onChange={() => setType(t.value)}
+              />
+              {t.label}
+            </label>
+          ))}
+        </div>
+      </fieldset>
+      <div className="grid gap-4 md:grid-cols-3">
+        <div>
+          <label htmlFor="me-first" className={LABEL}>
+            Primeira folha
+          </label>
+          <input
+            id="me-first"
+            name="primeira"
+            required
+            defaultValue={initial.first}
+            className={`${FIELD} font-mono`}
+          />
+        </div>
+        <div>
+          <label htmlFor="me-last" className={LABEL}>
+            Última folha
+          </label>
+          <input
+            id="me-last"
+            name="ultima"
+            defaultValue={initial.last}
+            className={`${FIELD} font-mono`}
+          />
+        </div>
+        <div>
+          <label htmlFor="me-date" className={LABEL}>
+            Data
+          </label>
+          <input
+            id="me-date"
+            name="data"
+            type="date"
+            required
+            max={today}
+            defaultValue={initial.occurredOn}
+            className={FIELD}
+          />
+        </div>
+        <div className="md:col-span-2">
+          <label htmlFor="me-ref" className={LABEL}>
+            Referência (atos, motivo, boletim de ocorrência)
+          </label>
+          <input
+            id="me-ref"
+            name="referencia"
+            maxLength={300}
+            defaultValue={initial.reference}
+            className={FIELD}
+          />
+        </div>
+        <div>
+          <label htmlFor="me-notes" className={LABEL}>
+            Observações
+          </label>
+          <input
+            id="me-notes"
+            name="observacoes"
+            maxLength={5000}
+            defaultValue={initial.notes}
+            className={FIELD}
+          />
+        </div>
+      </div>
+      <Submit pending={pending} label="Salvar alterações" busy="Salvando..." />
+    </form>
+  );
+}
+
+export function ReportEditForm({
+  id,
+  signers,
+  initial,
+}: {
+  id: string;
+  signers: { name: string; title: string }[];
+  initial: { issuedOn: string; notes: string; signer: number };
+}) {
+  const [state, action, pending] = useActionState(editReport, IDLE);
+  return (
+    <form action={action} className={CARD}>
+      <Feedback state={state} />
+      <input type="hidden" name="id" value={id} />
+      <div className="grid gap-4 md:grid-cols-3">
+        <div>
+          <label htmlFor="re-date" className={LABEL}>
+            Data do documento
+          </label>
+          <input
+            id="re-date"
+            name="data"
+            type="date"
+            required
+            defaultValue={initial.issuedOn}
+            className={FIELD}
+          />
+        </div>
+        <div>
+          <label htmlFor="re-signer" className={LABEL}>
+            Quem assina
+          </label>
+          <select
+            id="re-signer"
+            name="assina"
+            defaultValue={initial.signer}
+            className={FIELD}
+          >
+            {signers.length === 0 && (
+              <option value="0">O Tabelião/Registrador</option>
+            )}
+            {signers.map((s, i) => (
+              <option key={`${s.name}-${i}`} value={i}>
+                {s.name}
+                {s.title ? `, ${s.title}` : ""}
+              </option>
+            ))}
+          </select>
+        </div>
+        <div>
+          <label htmlFor="re-notes" className={LABEL}>
+            Observações
+          </label>
+          <input
+            id="re-notes"
+            name="observacoes"
+            maxLength={5000}
+            defaultValue={initial.notes}
+            className={FIELD}
+          />
+        </div>
+      </div>
+      <label className="flex items-start gap-2.5 rounded-[10px] bg-admin-input-bg px-3.5 py-3 text-[13px] text-admin-text">
+        <input type="checkbox" name="atualizar" className="mt-0.5" />
+        <span>
+          <strong>Refazer os números com o classificador de agora</strong> (use
+          depois de corrigir um lote ou um lançamento). O número do ofício
+          continua o mesmo.
+        </span>
+      </label>
+      <Submit pending={pending} label="Salvar alterações" busy="Salvando..." />
+    </form>
+  );
+}
+
+export function RemoveReportButton({ id }: { id: string }) {
+  const [state, action, pending] = useActionState(removeReport, IDLE);
+  return (
+    <ConfirmAction
+      action={action}
+      pending={pending}
+      error={state.status === "error" ? state.message : null}
+      trigger="Excluir"
+      question="Excluir este documento?"
+      consequence="Ele sai da lista, mas continua guardado, com a justificativa. O número não é reaproveitado. Se era a prestação do trimestre, o lembrete volta."
+      confirmLabel="Excluir"
+      pendingLabel="Excluindo..."
+    >
+      <input type="hidden" name="id" value={id} />
+    </ConfirmAction>
   );
 }

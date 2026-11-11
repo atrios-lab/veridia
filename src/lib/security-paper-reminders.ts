@@ -10,6 +10,7 @@ import { sendEmail } from "./email/send.ts";
 import { SECURITY_PAPER_REMINDERS_KEY } from "./office-config.ts";
 import {
   getSecurityPaperSettingsWith,
+  lowStockWith,
   pendingDutiesWith,
 } from "./security-paper.ts";
 
@@ -21,7 +22,7 @@ import {
 export async function claimSecurityPaperReminderWith(
   database: Database,
   tenantSlug: string,
-  field: "quarter" | "month",
+  field: "quarter" | "month" | "low",
   tag: string,
 ): Promise<boolean> {
   const value = { [field]: tag };
@@ -70,13 +71,24 @@ export async function sendSecurityPaperReminders(
       "month",
       today.slice(0, 7),
     ));
-  if (!quarter && !month) return false;
   const settings = await getSecurityPaperSettingsWith(database, tenant);
+  const lowKinds = await lowStockWith(database, tenant);
+  // Once a month while the stock stays low, and again if another kind joins.
+  const low =
+    lowKinds.length > 0 &&
+    (await claimSecurityPaperReminderWith(
+      database,
+      tenant.slug,
+      "low",
+      `${today.slice(0, 7)}:${lowKinds.map((l) => l.paperKind).join(",")}`,
+    ));
+  if (!quarter && !month && !low) return false;
   const text = buildSecurityPaperReminderEmail({
     officeName: tenant.name,
     quarter,
     occurrences: month ? duties.occurrences : [],
     deadlineDay: settings.deadlineDay,
+    low: low ? lowKinds : [],
   });
   const host = tenant.hosts[0];
   const url = `${host ? `https://${host}` : ""}/admin/utilitarios/papel-seguranca`;

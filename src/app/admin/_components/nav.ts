@@ -136,6 +136,15 @@ export const ADMIN_NAV: readonly AdminNavItem[] = [
     permission: "security-paper.manage",
   },
   {
+    // Orders of security paper (and ribbons, labels) to the suppliers, in
+    // each supplier's own form (decision of 11/11/2026).
+    group: "Utilitários",
+    label: "Solicitação de papéis de segurança",
+    href: "/admin/utilitarios/solicitacao-papeis",
+    icon: "inbox",
+    permission: "paper-orders.manage",
+  },
+  {
     // PAdES signatures with the office's A1 certificates (ICP-Brasil), each
     // with its verification code and QR (see lib/signing.ts).
     group: "Utilitários",

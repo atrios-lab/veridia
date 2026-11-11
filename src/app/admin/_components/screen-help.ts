@@ -186,7 +186,8 @@ const ENTRIES: Record<string, ScreenHelp> = {
     steps: [
       "Em 'Cadastrar lote', informe o tipo de papel e a primeira e a última folha. Nota fiscal e gráfica são opcionais. Folhas antigas: marque 'Estoque que a serventia já tinha'.",
       "No dia a dia, use 'Lançar uso ou ocorrência': diga quantas folhas usou (o sistema baixa a partir da próxima livre) ou informe a numeração da folha inutilizada, avariada, extraviada ou subtraída.",
-      "Errou um lançamento? Use 'Anular', com a justificativa: nada é apagado, as folhas voltam ao estoque.",
+      "Errou? Todo lote, lançamento e ofício tem 'Editar' e 'Excluir'. Excluir pede a justificativa e não apaga do banco: o registro some da lista e fica guardado.",
+      "Quando restarem 200 folhas de um tipo (o número é ajustável), aparece o aviso com o botão para solicitar um novo lote.",
       "No fim do mês com extravio, subtração ou avaria, e a cada trimestre, o aviso amarelo leva ao ofício pronto. Assine digitalmente ou imprima, baixe a planilha e anote o envio.",
     ],
     configure: {
@@ -197,6 +198,26 @@ const ENTRIES: Record<string, ScreenHelp> = {
         "Confira o órgão (Corregedoria Geral de Justiça do Estado) e o tratamento do(a) Corregedor(a).",
         "Confira a norma do Estado citada nos ofícios; no RN, o Provimento nº 156/2016-CGJ/RN.",
         "Se a Corregedoria fixou um prazo para a prestação trimestral, informe o dia. Quem assina vem de Configurações › Quem assina.",
+      ],
+    },
+  },
+  "/admin/utilitarios/solicitacao-papeis": {
+    purpose:
+      "Os pedidos de papéis de segurança às empresas (traslado, certidão, apostila, etiquetas, ribbon), cada um no formulário da empresa, para assinar digitalmente ou imprimir.",
+    steps: [
+      "Na primeira vez, clique em 'Usar as empresas da ANOREG/RN' (IGB e M2) ou cadastre a sua em 'Nova empresa'.",
+      "Em 'Novo pedido', escolha a empresa e informe as quantidades. Não está na lista? Use '+ Adicionar item novo'.",
+      "Gere o pedido: assine digitalmente ou imprima. Se a empresa tem o formulário em Word, baixe-o já preenchido.",
+      "Todo pedido tem 'Editar' e 'Excluir'. Anote o envio e o recebimento; ao receber, cadastre o lote no Papel de segurança.",
+    ],
+    configure: {
+      href: "/admin/utilitarios/solicitacao-papeis/configuracao",
+      label: "Dados do cartório para os pedidos",
+      permission: "paper-orders.manage",
+      steps: [
+        "Confira o nome do cartório, o CNS, o responsável, o CPF e o CNPJ de faturamento.",
+        "Confira o endereço, o CEP, o município, o telefone e o e-mail.",
+        "Para mudar a empresa, os itens ou o formulário dela, abra a empresa e clique em Editar; para ler um formulário novo, envie o .docx e clique em 'Ler o modelo'.",
       ],
     },
   },

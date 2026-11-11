@@ -104,6 +104,11 @@ export const SecurityPaperSettingsSchema = z.object({
   stateRule: text(400),
   /** Day of the month after the quarter the accounts are due, if set. */
   deadlineDay: z.number().int().min(1).max(31).nullable().default(null),
+  /**
+   * Below how many sheets of a kind the office is warned to order a new
+   * lot (decision of 11/11/2026: 200).
+   */
+  lowStock: z.number().int().min(0).max(100_000).default(200),
 });
 export type SecurityPaperSettings = z.infer<typeof SecurityPaperSettingsSchema>;
 
@@ -122,6 +127,7 @@ export function defaultSecurityPaperSettings(
     email: "",
     stateRule: uf === "RN" ? RN_RULE : "",
     deadlineDay: null,
+    lowStock: 200,
   };
 }
 
