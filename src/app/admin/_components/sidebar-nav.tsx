@@ -2,22 +2,9 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useEffect, useState } from "react";
 import { ATTENTION_CLASS } from "./attention.ts";
 import { AdminIcon } from "./icon.tsx";
 import { type AdminNavItem, navGroups } from "./nav.ts";
-
-const STORAGE_KEY = "veridia.sidebar.groups";
-
-/** What the person opened or closed, remembered in this browser. */
-function readSaved(): Record<string, boolean> {
-  try {
-    const raw = window.localStorage.getItem(STORAGE_KEY);
-    return raw ? (JSON.parse(raw) as Record<string, boolean>) : {};
-  } catch {
-    return {};
-  }
-}
 
 /**
  * The navigation list, on the client.
@@ -43,64 +30,28 @@ export function AdminSidebarNav({
 }) {
   const pathname = usePathname();
   const groups = navGroups(items);
-  // Groups fold (decision of 11/11/2026): the menu grows with every
-  // delivery, and a list that scrolls is a list nobody reads. Open by
-  // default: the first group and the one holding the current screen; the
-  // person's own choices win once made.
-  const [saved, setSaved] = useState<Record<string, boolean>>({});
-  useEffect(() => setSaved(readSaved()), []);
-  const isOpen = (group: string, index: number, hasCurrent: boolean) =>
-    hasCurrent || (saved[group] ?? index === 0);
-  const toggle = (group: string, open: boolean) => {
-    const next = { ...saved, [group]: !open };
-    setSaved(next);
-    try {
-      window.localStorage.setItem(STORAGE_KEY, JSON.stringify(next));
-    } catch {
-      // Private window: folding still works, it is just not remembered.
-    }
-  };
+  // Every group open, always (decision of 11/11/2026): with the groups
+  // folded, people could not find the screens. The titles only organize.
 
   return (
     <nav className="relative flex min-h-0 flex-1 flex-col gap-1 overflow-y-auto px-3 py-3">
       {groups.map(({ group, items: groupItems }, index) => {
-        const hasCurrent = groupItems.some((item) => item.href === pathname);
-        const open = isOpen(group, index, hasCurrent);
-        const waiting = groupItems.reduce(
-          (sum, item) => sum + (counts[item.href] ?? 0),
-          0,
-        );
         const listId = `nav-${index}`;
         return (
-          <div key={group} className="flex flex-col">
-            <button
-              type="button"
-              aria-expanded={open}
-              aria-controls={listId}
-              disabled={hasCurrent}
-              onClick={() => toggle(group, open)}
-              // The groups' titles stand out (decision of 11/11/2026): a
-              // larger, heavier label with a gold bar, a line between groups.
-              className="group mt-1 flex items-center gap-2 rounded-md border-l-[3px] border-admin-on-dark-accent bg-white/5 px-2.5 py-2 text-left text-[11.5px] font-extrabold uppercase tracking-[0.12em] text-admin-on-dark-accent hover:bg-white/10 hover:text-white disabled:cursor-default disabled:hover:bg-white/5 disabled:hover:text-admin-on-dark-accent"
+          <section
+            key={group}
+            aria-labelledby={`${listId}-title`}
+            className="flex flex-col"
+          >
+            {/* The groups' titles stand out (decision of 11/11/2026): a
+                larger, heavier label with a gold bar. */}
+            <h2
+              id={`${listId}-title`}
+              className="mt-1 rounded-md border-l-[3px] border-admin-on-dark-accent bg-white/5 px-2.5 py-2 text-[11.5px] font-extrabold uppercase tracking-[0.12em] text-admin-on-dark-accent"
             >
-              <span className="flex-1">{group}</span>
-              {!open && waiting > 0 && (
-                <span className="inline-flex h-[17px] min-w-[17px] items-center justify-center rounded-full bg-admin-on-dark-accent px-1.5 text-[10px] font-bold tracking-normal text-admin-primary">
-                  {waiting}
-                </span>
-              )}
-              {!hasCurrent && (
-                <AdminIcon
-                  name="chevronDown"
-                  className={`h-3.5 w-3.5 flex-none opacity-70 transition-transform ${open ? "" : "-rotate-90"}`}
-                />
-              )}
-            </button>
-            <div
-              id={listId}
-              hidden={!open}
-              className="mt-1 flex flex-col gap-px"
-            >
+              {group}
+            </h2>
+            <div className="mt-1 flex flex-col gap-px">
               {groupItems.map((item) => {
                 const current = pathname === item.href;
                 const count = counts[item.href];
@@ -150,7 +101,7 @@ export function AdminSidebarNav({
                 );
               })}
             </div>
-          </div>
+          </section>
         );
       })}
     </nav>
