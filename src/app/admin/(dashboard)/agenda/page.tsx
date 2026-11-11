@@ -62,6 +62,126 @@ import { DayChannelsCard } from "./_components/day-channels.tsx";
 
 export const metadata = { title: "Agenda de atendimentos" };
 
+/** Each agenda's colour and icon, the same in the tabs and the panel. */
+const AGENDA_TONE: Record<
+  AgendaId,
+  {
+    icon: "users" | "shield";
+    chosen: string;
+    idle: string;
+    iconBg: string;
+    badge: string;
+    chip: string;
+  }
+> = {
+  geral: {
+    icon: "users",
+    chosen: "border-admin-primary bg-admin-primary text-white",
+    idle: "border-admin-primary/40 bg-admin-card text-admin-primary hover:bg-admin-input-bg",
+    iconBg: "bg-admin-input-bg text-admin-primary",
+    badge: "bg-admin-primary text-white",
+    chip: "bg-admin-primary text-white",
+  },
+  tabeliao: {
+    icon: "shield",
+    chosen: "border-admin-accent bg-admin-accent text-white",
+    idle: "border-admin-accent/50 bg-admin-card text-admin-accent-ink hover:bg-admin-warning-soft-bg",
+    iconBg: "bg-admin-warning-soft-bg text-admin-accent-ink",
+    badge: "bg-admin-accent text-white",
+    chip: "bg-admin-accent text-white",
+  },
+};
+
+/**
+ * Who comes next, across both agendas, at a glance: the name, the service,
+ * when, and which agenda (decision of 11/11/2026).
+ */
+function UpcomingPanel({
+  items,
+  todayCounts,
+  weekCount,
+}: {
+  items: {
+    id: string;
+    date: string;
+    time: string;
+    name: string;
+    service: string;
+    agenda: AgendaId;
+  }[];
+  todayCounts: Record<string, number>;
+  weekCount: number;
+}) {
+  const when = (date: string) =>
+    date === today()
+      ? "Hoje"
+      : date === addDays(today(), 1)
+        ? "Amanhã"
+        : formatShortDate(date);
+  return (
+    <section className="rounded-[14px] border border-admin-border bg-admin-card px-5 py-4">
+      <div className="flex flex-wrap items-center gap-2.5">
+        <h2 className="mr-auto font-serif text-[17px] font-semibold text-admin-primary">
+          Próximos agendamentos
+        </h2>
+        {AGENDA_IDS.map((id) => (
+          <span
+            key={id}
+            className={`rounded-full px-3 py-1 text-[12px] font-bold ${AGENDA_TONE[id].chip}`}
+          >
+            Hoje · {AGENDA_NAMES[id].short}: {todayCounts[id] ?? 0}
+          </span>
+        ))}
+        <span className="rounded-full bg-admin-input-bg px-3 py-1 text-[12px] font-semibold text-admin-text">
+          Próximos 7 dias: {weekCount}
+        </span>
+      </div>
+      {items.length === 0 ? (
+        <p className="mt-2.5 text-[13px] text-admin-muted">
+          Nenhum agendamento pela frente.
+        </p>
+      ) : (
+        <ul className="mt-3 grid gap-2 md:grid-cols-2">
+          {items.map((item) => (
+            <li key={item.id}>
+              <Link
+                href={`/admin/agenda?agenda=${item.agenda}&dia=${item.date}`}
+                className="flex items-center gap-3 rounded-[11px] border border-admin-border px-3 py-2.5 hover:bg-admin-input-bg"
+              >
+                <span
+                  className={`h-9 w-1.5 shrink-0 rounded-full ${AGENDA_TONE[item.agenda].badge}`}
+                  aria-hidden
+                />
+                <span className="w-[86px] shrink-0 text-[12px] leading-tight">
+                  <span className="block font-bold text-admin-primary">
+                    {when(item.date)}
+                  </span>
+                  <span className="tabular-nums text-admin-muted">
+                    {item.time}
+                  </span>
+                </span>
+                <span className="min-w-0 flex-1">
+                  <span className="block truncate text-[13px] font-semibold text-admin-text">
+                    {item.name}
+                  </span>
+                  <span className="block truncate text-[11.5px] text-admin-muted">
+                    {item.service}
+                  </span>
+                </span>
+                <span
+                  className={`shrink-0 rounded-full px-2 py-0.5 text-[10.5px] font-bold ${AGENDA_TONE[item.agenda].chip}`}
+                >
+                  {AGENDA_NAMES[item.agenda].short}
+                </span>
+              </Link>
+            </li>
+          ))}
+        </ul>
+      )}
+    </section>
+  );
+}
+
 const ISO = /^\d{4}-\d{2}-\d{2}$/;
 
 /** The next `count` weekdays from `from` (included), holidays among them. */
@@ -255,32 +375,77 @@ export default async function AgendaPage({
     <>
       <AdminPageHeader title="Agenda de atendimentos" />
       <main className="flex flex-col gap-3 px-[30px] py-7">
-        <nav aria-label="Agendas" className="flex flex-wrap gap-2">
+        <UpcomingPanel
+          items={upcoming
+            .filter(
+              (a) =>
+                a.date > now.date ||
+                (a.date === now.date && slotEndTime(a.slotTime) > now.time),
+            )
+            .slice(0, 8)
+            .map((a) => ({
+              id: a.id,
+              date: a.date,
+              time: a.slotTime,
+              name: a.citizenName,
+              service: a.serviceLabel,
+              agenda: agendaIdOf(a.agenda),
+            }))}
+          todayCounts={Object.fromEntries(
+            AGENDA_IDS.map((id) => [
+              id,
+              upcoming.filter(
+                (a) => a.date === now.date && agendaIdOf(a.agenda) === id,
+              ).length,
+            ]),
+          )}
+          weekCount={
+            upcoming.filter((a) => a.date <= addDays(now.date, 6)).length
+          }
+        />
+        {/* The two agendas, each with its own colour and the day's count,
+            so it is never in doubt which one is open (decision of
+            11/11/2026). */}
+        <nav aria-label="Agendas" className="grid gap-2.5 sm:grid-cols-2">
           {AGENDA_IDS.map((id) => {
             const chosen = id === agenda;
-            const other = otherAgendaCounts.find((item) => item.id === id);
+            const count =
+              id === agenda
+                ? live.length
+                : (otherAgendaCounts.find((item) => item.id === id)?.count ??
+                  0);
+            const tone = AGENDA_TONE[id];
             return (
               <Link
                 key={id}
                 href={`/admin/agenda?agenda=${id}&dia=${date}&de=${anchor}`}
                 aria-current={chosen ? "page" : undefined}
-                className={`rounded-full border px-4 py-2 text-[13px] font-semibold ${
-                  chosen
-                    ? "border-admin-primary bg-admin-primary text-white"
-                    : "border-admin-border bg-admin-card text-admin-text hover:bg-admin-input-bg"
+                className={`flex items-center gap-3.5 rounded-[14px] border-2 px-4 py-3.5 transition-colors ${
+                  chosen ? tone.chosen : tone.idle
                 }`}
               >
-                {AGENDA_NAMES[id].name}
-                {!chosen && other && other.count > 0 && (
-                  <span className="ml-1.5 rounded-full bg-admin-input-bg px-1.5 py-0.5 text-[11px] text-admin-muted">
-                    {other.count} no dia
+                <span
+                  className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl ${chosen ? "bg-white/20" : tone.iconBg}`}
+                >
+                  <AdminIcon name={tone.icon} className="h-5 w-5" />
+                </span>
+                <span className="min-w-0 flex-1">
+                  <span className="block font-serif text-[17px] font-bold leading-tight">
+                    {AGENDA_NAMES[id].name}
                   </span>
-                )}
-                {!hasGrid(agendaRules(agendaConfig, id)) && (
                   <span
-                    className={`ml-1.5 text-[11px] font-normal ${chosen ? "text-white/80" : "text-admin-faint"}`}
+                    className={`block text-[12px] ${chosen ? "text-white/85" : "text-admin-muted"}`}
                   >
-                    · sem horários
+                    {hasGrid(agendaRules(agendaConfig, id))
+                      ? `${count} ${count === 1 ? "agendado" : "agendados"} em ${formatShortDate(date)}`
+                      : "sem horários configurados"}
+                  </span>
+                </span>
+                {count > 0 && (
+                  <span
+                    className={`flex h-7 min-w-7 items-center justify-center rounded-full px-2 text-[13px] font-bold ${chosen ? "bg-white text-admin-primary" : tone.badge}`}
+                  >
+                    {count}
                   </span>
                 )}
               </Link>
@@ -613,8 +778,18 @@ function DayStrip({
                     <AdminIcon name="lock" className="h-3 w-3" />
                     {holiday ? "Feriado" : "Fechado"}
                   </>
+                ) : occupied > 0 ? (
+                  <span
+                    className={`inline-flex items-center gap-1.5 font-bold ${isSelected ? "text-white" : "text-admin-primary"}`}
+                  >
+                    <span className="relative flex h-2 w-2">
+                      <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-admin-accent opacity-60" />
+                      <span className="relative inline-flex h-2 w-2 rounded-full bg-admin-accent" />
+                    </span>
+                    {occupied} {occupied === 1 ? "agendado" : "agendados"}
+                  </span>
                 ) : (
-                  `${occupied} de ${total}${isSelected ? " ocupados" : ""}`
+                  `0 de ${total}`
                 )}
               </span>
             </Link>
