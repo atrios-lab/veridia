@@ -334,8 +334,9 @@ export function IssForm({
             ))}
           </select>
           <p className="mt-1 text-[11.5px] text-admin-muted">
-            A mesma lista das guias (Guias de transmissão › Leis, alíquotas e
-            quem assina). Vale para a assinatura digital e para a impressa.
+            Edite a lista na configuração do ISS ou em Configurações › Quem
+            assina (é a mesma das guias). Vale para a assinatura digital e para
+            a impressa.
           </p>
         </div>
         <details className="md:col-span-4 rounded-[12px] bg-admin-input-bg px-3.5 py-2.5">

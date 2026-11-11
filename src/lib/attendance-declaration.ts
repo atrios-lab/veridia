@@ -40,7 +40,7 @@ export function attendanceDeclarationFor(
   tenant: Tenant,
   appointment: Appointment,
   requestOrigin: string,
-  signer?: { name: string; title: string },
+  signer?: { name: string; title: string; note?: string },
 ) {
   const site = officeSite(tenant, requestOrigin);
   const url = attendanceUrl(site.origin, tenant.slug, appointment.id);

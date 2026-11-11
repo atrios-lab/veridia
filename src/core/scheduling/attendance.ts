@@ -68,7 +68,7 @@ export interface AttendanceData {
    * Who signs, from the office's list (the same as the guias'); absent, the
    * generic line for whoever signs at the counter (decision of 11/11/2026).
    */
-  signer?: { name: string; title: string };
+  signer?: { name: string; title: string; note?: string };
 }
 
 export function buildAttendanceDeclaration(
@@ -121,6 +121,9 @@ export function buildAttendanceDeclaration(
     signature: [
       ...(data.signer?.name.trim() && data.signer.title.trim()
         ? [data.signer.title.trim()]
+        : []),
+      ...(data.signer?.name.trim() && data.signer.note?.trim()
+        ? [data.signer.note.trim()]
         : []),
       "(assinatura e carimbo)",
     ],

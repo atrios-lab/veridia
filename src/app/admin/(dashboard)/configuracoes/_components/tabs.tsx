@@ -59,6 +59,11 @@ const GROUPS: { label: string; tabs: Tab[] }[] = [
         permission: "numbering.manage",
       },
       {
+        label: "Quem assina",
+        href: "/admin/configuracoes/quem-assina",
+        permission: "content.edit",
+      },
+      {
         label: "Certificados digitais",
         href: "/admin/configuracoes/certificados",
         permission: "certificates.manage",
