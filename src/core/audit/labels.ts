@@ -36,13 +36,31 @@ const EXACT: Record<string, string> = {
   "security-paper.lot-add": "Cadastrou um lote de papel de segurança",
   "security-paper.lot-update":
     "Alterou a nota, a gráfica ou as observações de um lote de papel de segurança",
-  "security-paper.lot-void": "Anulou um lote de papel de segurança",
+  "security-paper.lot-void":
+    "Excluiu um lote de papel de segurança (fica guardado)",
+  "security-paper.lot-edit": "Editou um lote de papel de segurança",
+  "security-paper.movement-edit": "Editou um lançamento de papel de segurança",
+  "security-paper.report-edit":
+    "Editou um ofício ou relatório do papel de segurança",
+  "security-paper.report-remove":
+    "Excluiu um ofício ou relatório do papel de segurança (fica guardado)",
+  "paper-supplier.create": "Cadastrou uma empresa de papéis de segurança",
+  "paper-supplier.update": "Editou uma empresa de papéis de segurança",
+  "paper-supplier.remove":
+    "Excluiu uma empresa de papéis de segurança (fica guardada)",
+  "paper-order.issue": "Gerou um pedido de papéis de segurança",
+  "paper-order.update": "Editou um pedido de papéis de segurança",
+  "paper-order.status":
+    "Registrou o envio ou o recebimento de um pedido de papéis de segurança",
+  "paper-order.remove":
+    "Excluiu um pedido de papéis de segurança (fica guardado)",
   "security-paper.use": "Lançou folhas de papel de segurança utilizadas",
   "security-paper.spoil":
     "Lançou folhas de papel de segurança inutilizadas ou avariadas",
   "security-paper.loss":
     "Lançou folhas de papel de segurança extraviadas ou subtraídas",
-  "security-paper.movement-void": "Anulou um lançamento de papel de segurança",
+  "security-paper.movement-void":
+    "Excluiu um lançamento de papel de segurança (fica guardado)",
   "security-paper.report-issue":
     "Gerou um ofício ou relatório do papel de segurança",
   "security-paper.report-sent":
@@ -161,6 +179,8 @@ const AREAS: Record<string, string> = {
   "tax-guide": "Guias de transmissão de bens",
   "iss-declaration": "Declaração de ISS",
   "security-paper": "Papel de segurança",
+  "paper-supplier": "Solicitação de papéis de segurança",
+  "paper-order": "Solicitação de papéis de segurança",
   publication: "Publicações",
   publicacoes: "Publicações",
   "fee-table": "Tabela de emolumentos",
@@ -287,7 +307,28 @@ const EXPLANATIONS: Record<string, string> = {
   "security-paper.lot-update":
     "A nota fiscal, a gráfica, a requisição ou as observações de um lote foram alteradas. A numeração não muda.",
   "security-paper.lot-void":
-    "Um lote foi anulado, com justificativa. Ele continua guardado no classificador, fora do estoque.",
+    "Um lote foi excluído, com justificativa. Ele continua guardado no classificador, fora do estoque.",
+  "security-paper.lot-edit":
+    "Os dados de um lote foram editados (tipo, numeração, datas ou nota fiscal).",
+  "security-paper.movement-edit":
+    "Um lançamento de papel de segurança foi editado (ocorrência, folhas, data ou referência).",
+  "security-paper.report-edit":
+    "Um ofício ou relatório do papel de segurança foi editado. O número continua o mesmo.",
+  "security-paper.report-remove":
+    "Um ofício ou relatório do papel de segurança foi excluído, com justificativa. Ele continua guardado.",
+  "paper-supplier.create":
+    "Uma empresa fornecedora de papéis de segurança foi cadastrada, com os itens que vende.",
+  "paper-supplier.update":
+    "Os dados, os itens ou o modelo de formulário de uma empresa fornecedora foram editados.",
+  "paper-supplier.remove":
+    "Uma empresa fornecedora foi excluída da lista, com justificativa. Os pedidos antigos continuam guardados.",
+  "paper-order.issue":
+    "Foi gerado um pedido de papéis de segurança a uma empresa, com as quantidades.",
+  "paper-order.update": "Um pedido de papéis de segurança foi editado.",
+  "paper-order.status":
+    "Foi anotado quando o pedido foi enviado à empresa ou quando o material chegou.",
+  "paper-order.remove":
+    "Um pedido de papéis de segurança foi excluído da lista, com justificativa. Ele continua guardado.",
   "security-paper.use":
     "Folhas de papel de segurança foram baixadas do estoque por uso em atos.",
   "security-paper.spoil":
@@ -295,7 +336,7 @@ const EXPLANATIONS: Record<string, string> = {
   "security-paper.loss":
     "Folhas de papel de segurança foram extraviadas ou subtraídas. O fato é comunicado à Corregedoria no fim do mês, com a numeração.",
   "security-paper.movement-void":
-    "Um lançamento de papel de segurança foi anulado, com justificativa. Ele continua guardado e as folhas voltam ao estoque.",
+    "Um lançamento de papel de segurança foi excluído, com justificativa. Ele continua guardado e as folhas voltam ao estoque.",
   "security-paper.report-issue":
     "Foi gerado um ofício à Corregedoria (extravio ou prestação de contas) ou o relatório do classificador. O conteúdo fica guardado como foi gerado.",
   "security-paper.report-sent":
@@ -385,6 +426,9 @@ const AREA_EXPLANATIONS: Record<string, string> = {
   "iss-declaration": "Ato feito numa declaração de ISS ao fisco municipal.",
   "security-paper":
     "Ato feito no controle do papel de segurança (lotes, uso, extravios e ofícios à Corregedoria).",
+  "paper-supplier":
+    "Ato feito no cadastro das empresas de papéis de segurança.",
+  "paper-order": "Ato feito num pedido de papéis de segurança a uma empresa.",
   user: "Ato feito numa conta de acesso ao painel.",
   session: "Entrada ou saída do painel.",
   course: "Ato feito no treinamento.",

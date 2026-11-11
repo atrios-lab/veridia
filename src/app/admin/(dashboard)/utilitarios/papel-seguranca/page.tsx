@@ -8,6 +8,7 @@ import {
 import {
   brDate,
   kindName,
+  lowStock,
   MOVEMENT_COLUMNS,
   monthLabel,
   pendingDuties,
@@ -17,6 +18,7 @@ import {
   sheetNumber,
   sheetsIn,
   stockByKind,
+  usageMissing,
 } from "@/core/security-paper/stock.ts";
 import { db } from "@/db/index.ts";
 import {
@@ -35,7 +37,10 @@ export const metadata = { title: "Papel de segurança" };
 
 const DONE: Record<string, string> = {
   lote: "Lote cadastrado no classificador.",
-  "lote-anulado": "Lote anulado. Ele continua guardado no classificador.",
+  "lote-anulado": "Lote excluído. Ele continua guardado no classificador.",
+  editado: "Lançamento corrigido.",
+  "documento-excluido":
+    "Documento excluído da lista. Ele continua guardado, com a justificativa.",
   utilizado: "Folhas utilizadas baixadas do estoque.",
   inutilizado: "Folhas inutilizadas lançadas.",
   avariado:
@@ -53,7 +58,7 @@ const TD = "px-4 py-2.5 align-top text-[13px] text-admin-text";
 export default async function SecurityPaperPage({
   searchParams,
 }: {
-  searchParams: Promise<{ feito?: string }>;
+  searchParams: Promise<{ feito?: string; excluidos?: string }>;
 }) {
   const session = await getSession();
   if (
@@ -88,7 +93,23 @@ export default async function SecurityPaperPage({
     })),
   });
   const lotById = new Map(lots.map((l) => [l.id, l]));
-  const recent = movementRows.slice(0, 40);
+  // Excluded rows stay stored; they show only when asked for.
+  const showRemoved = query.excluidos === "1";
+  const recent = movementRows
+    .filter((m) => showRemoved || m.voidedAt === null)
+    .slice(0, 60);
+  const shownLots = lots.filter((l) => showRemoved || !l.voided);
+  const low = lowStock(lots, movements, settings.lowStock);
+  // In the first half of the month: the month before has no use yet.
+  const missingUse =
+    Number(now.slice(8, 10)) <= 15
+      ? usageMissing({ today: now, lots, movements })
+      : null;
+  const canOrder = can(
+    session.user.role ?? "",
+    "paper-orders.manage",
+    session.user.permissions,
+  );
   const done = query.feito ? DONE[query.feito] : undefined;
   const occurrenceMonth = duties.occurrences[0]?.occurredOn.slice(0, 7);
   const canConfigure = !settings.authority.trim();
@@ -122,6 +143,63 @@ export default async function SecurityPaperPage({
             {done}
           </p>
         )}
+
+        {missingUse && (
+          <div className="flex flex-wrap items-center gap-3 rounded-[14px] border border-admin-border bg-admin-card px-5 py-4">
+            <AdminIcon
+              name="clipboard"
+              className="h-5 w-5 shrink-0 text-admin-primary"
+            />
+            <div className="mr-auto min-w-[240px] flex-1">
+              <p className="text-[13.5px] font-bold text-admin-primary">
+                Lance o uso de {monthLabel(missingUse.start)}
+              </p>
+              <p className="text-[12.5px] text-admin-text">
+                Ainda não há folhas utilizadas lançadas nesse mês. Basta
+                informar a última folha usada, com a data de{" "}
+                {brDate(missingUse.end)}. Se não houve uso, ignore este aviso.
+              </p>
+            </div>
+            <Link
+              href="/admin/utilitarios/papel-seguranca/lancar?tipo=utilizado"
+              className="btn btn-admin-primary btn-md"
+            >
+              Lançar o uso do mês
+            </Link>
+          </div>
+        )}
+
+        {low.map((l) => (
+          <div
+            key={l.kind}
+            className="flex flex-wrap items-center gap-3 rounded-[14px] border border-admin-warning-soft-border bg-admin-warning-soft-bg px-5 py-4"
+          >
+            <AdminIcon
+              name="alert"
+              className="h-5 w-5 shrink-0 text-admin-warning-text"
+            />
+            <div className="mr-auto min-w-[240px] flex-1">
+              <p className="text-[13.5px] font-bold text-admin-warning-text">
+                {l.kind}:{" "}
+                {l.remaining === 0
+                  ? "o estoque acabou"
+                  : `faltam ${l.remaining.toLocaleString("pt-BR")} folhas para acabar`}
+              </p>
+              <p className="text-[12.5px] text-admin-text">
+                O aviso aparece com {settings.lowStock.toLocaleString("pt-BR")}{" "}
+                folhas ou menos. Providencie o pedido de um novo lote.
+              </p>
+            </div>
+            {canOrder && (
+              <Link
+                href="/admin/utilitarios/solicitacao-papeis"
+                className="btn btn-admin-primary btn-md"
+              >
+                Solicitar novo lote
+              </Link>
+            )}
+          </div>
+        ))}
 
         {(duties.quarter || duties.occurrences.length > 0) && (
           <section className="flex flex-col gap-3">
@@ -267,9 +345,19 @@ export default async function SecurityPaperPage({
         </section>
 
         <section className="overflow-hidden rounded-[14px] border border-admin-border bg-admin-card">
-          <h2 className="border-b border-admin-border px-5 py-3.5 font-serif text-[17px] font-semibold text-admin-primary">
-            Lançamentos
-          </h2>
+          <div className="flex flex-wrap items-center justify-between gap-2 border-b border-admin-border px-5 py-3.5">
+            <h2 className="font-serif text-[17px] font-semibold text-admin-primary">
+              Lançamentos
+            </h2>
+            <Link
+              href={`/admin/utilitarios/papel-seguranca${showRemoved ? "" : "?excluidos=1"}`}
+              className="text-[12.5px] font-semibold text-admin-primary underline"
+            >
+              {showRemoved
+                ? "Esconder os excluídos"
+                : "Mostrar também os excluídos"}
+            </Link>
+          </div>
           {recent.length === 0 ? (
             <p className="px-5 py-4 text-[13px] text-admin-muted">
               Nenhum lançamento ainda. Use{" "}
@@ -315,7 +403,7 @@ export default async function SecurityPaperPage({
                           </span>
                           {voided && (
                             <span className="block text-[11.5px] text-admin-muted">
-                              Anulado: {row.voidReason}
+                              Excluído: {row.voidReason}
                             </span>
                           )}
                         </td>
@@ -333,7 +421,17 @@ export default async function SecurityPaperPage({
                             .join(" · ")}
                         </td>
                         <td className={`${TD} text-right`}>
-                          {!voided && <VoidMovementButton id={row.id} />}
+                          {!voided && (
+                            <span className="inline-flex gap-1.5">
+                              <Link
+                                href={`/admin/utilitarios/papel-seguranca/lancamentos/${row.id}`}
+                                className="btn btn-admin-secondary btn-sm"
+                              >
+                                Editar
+                              </Link>
+                              <VoidMovementButton id={row.id} />
+                            </span>
+                          )}
                         </td>
                       </tr>
                     );
@@ -365,7 +463,7 @@ export default async function SecurityPaperPage({
                   </tr>
                 </thead>
                 <tbody>
-                  {lots.map((lot) => {
+                  {shownLots.map((lot) => {
                     const row = stock
                       .flatMap((s) => s.lots)
                       .find((l) => l.lot.id === lot.id);
@@ -405,7 +503,7 @@ export default async function SecurityPaperPage({
                         </td>
                         <td className={TD}>
                           {lot.voided
-                            ? "Anulado"
+                            ? "Excluído"
                             : (row?.remaining ?? 0).toLocaleString("pt-BR")}
                         </td>
                       </tr>

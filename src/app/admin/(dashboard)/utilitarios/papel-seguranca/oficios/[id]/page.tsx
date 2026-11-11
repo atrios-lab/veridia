@@ -16,12 +16,13 @@ import {
   reportNumber,
   snapshotOf,
 } from "@/lib/security-paper.ts";
+import { getGuideSettings } from "@/lib/tax-guides.ts";
 import { getTenant, today } from "@/lib/tenant.ts";
 import { AdminIcon } from "../../../../../_components/icon.tsx";
 import { AdminPageHeader } from "../../../../../_components/page-header.tsx";
 import { SignOrPrint } from "../../../../../_components/sign-or-print.tsx";
 import { requirePaperAccess } from "../../_lib/access.ts";
-import { SentForm } from "../../forms.tsx";
+import { RemoveReportButton, ReportEditForm, SentForm } from "../../forms.tsx";
 
 export const metadata = { title: "Ofício do papel de segurança" };
 
@@ -41,6 +42,7 @@ export default async function ReportPage({
   const row = await findReportWith(db, tenant.slug, (await params).id);
   if (!row) notFound();
   const snapshot = snapshotOf(row);
+  const signers = (await getGuideSettings(tenant)).signers;
   const query = await searchParams;
   const number = reportNumber(row);
   const kind = row.kind as ReportKind;
@@ -159,7 +161,31 @@ export default async function ReportPage({
           </section>
         )}
 
-        {kind !== "relatorio" && (
+        {row.removedAt ? (
+          <p className="rounded-[12px] bg-admin-error-bg px-4 py-3 text-[13px] font-semibold text-admin-error-text">
+            Documento excluído: {row.removeReason}
+          </p>
+        ) : (
+          <>
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <h2 className="font-serif text-[17px] font-semibold text-admin-primary">
+                Editar
+              </h2>
+              <RemoveReportButton id={row.id} />
+            </div>
+            <ReportEditForm
+              id={row.id}
+              signers={signers.map(({ name, title }) => ({ name, title }))}
+              initial={{
+                issuedOn: snapshot.issuedOn,
+                notes: snapshot.notes,
+                signer: row.signer,
+              }}
+            />
+          </>
+        )}
+
+        {kind !== "relatorio" && !row.removedAt && (
           <>
             <h2 className="font-serif text-[17px] font-semibold text-admin-primary">
               Envio à Corregedoria
@@ -174,9 +200,8 @@ export default async function ReportPage({
         )}
         <p className="text-[12px] text-admin-muted">
           Este documento fica guardado como foi gerado: correções feitas depois
-          no classificador não o alteram. Se algo estava errado, gere um novo
-          (ele recebe outro número) e mencione nas observações que substitui
-          este.
+          no classificador só entram nele se você marcar "Refazer os números com
+          o classificador de agora" em Editar. O número continua o mesmo.
         </p>
       </main>
     </>

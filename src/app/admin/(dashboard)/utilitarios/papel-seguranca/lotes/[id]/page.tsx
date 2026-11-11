@@ -6,8 +6,11 @@ import {
   kindName,
   MOVEMENT_LABELS,
   type MovementType,
+  PAPER_KIND_LABELS,
+  PAPER_KINDS,
   rangeLabel,
   remainingIn,
+  sheetNumber,
   sheetsIn,
 } from "@/core/security-paper/stock.ts";
 import { db } from "@/db/index.ts";
@@ -17,14 +20,10 @@ import {
   lotOf,
   movementOf,
 } from "@/lib/security-paper.ts";
-import { getTenant } from "@/lib/tenant.ts";
+import { getTenant, today } from "@/lib/tenant.ts";
 import { AdminPageHeader } from "../../../../../_components/page-header.tsx";
 import { requirePaperAccess } from "../../_lib/access.ts";
-import {
-  LotDetailsForm,
-  VoidLotButton,
-  VoidMovementButton,
-} from "../../forms.tsx";
+import { LotForm, VoidLotButton, VoidMovementButton } from "../../forms.tsx";
 
 export const metadata = { title: "Lote de papel de segurança" };
 
@@ -59,7 +58,7 @@ export default async function LotPage({
       <main className="flex max-w-[1000px] flex-col gap-4.5 px-[30px] py-7 max-md:px-4">
         {row.voidedAt && (
           <p className="rounded-[12px] bg-admin-error-bg px-4 py-3 text-[13px] font-semibold text-admin-error-text">
-            Lote anulado: {row.voidReason}
+            Lote excluído: {row.voidReason}
           </p>
         )}
         <section className="grid gap-3 sm:grid-cols-3">
@@ -100,22 +99,43 @@ export default async function LotPage({
                 Ver a nota fiscal
               </a>
             )}
-            {!anyLive && <VoidLotButton id={lot.id} />}
+            {anyLive ? (
+              <span className="self-center text-[12px] text-admin-muted">
+                Para excluir o lote, exclua antes os lançamentos dele.
+              </span>
+            ) : (
+              <VoidLotButton id={lot.id} />
+            )}
           </div>
         )}
 
-        <h2 className="font-serif text-[17px] font-semibold text-admin-primary">
-          Nota fiscal, gráfica e requisição
-        </h2>
-        <LotDetailsForm
-          id={lot.id}
-          initial={{
-            supplier: lot.supplier,
-            invoice: lot.invoice,
-            requisition: lot.requisition,
-            notes: lot.notes,
-          }}
-        />
+        {!row.voidedAt && (
+          <>
+            <h2 className="font-serif text-[17px] font-semibold text-admin-primary">
+              Editar o lote
+            </h2>
+            <LotForm
+              kinds={PAPER_KINDS.map((value) => ({
+                value,
+                label: PAPER_KIND_LABELS[value],
+              }))}
+              today={today()}
+              edit={{
+                id: lot.id,
+                kind: lot.kind,
+                kindLabel: lot.kindLabel,
+                first: sheetNumber(lot, lot.first),
+                last: sheetNumber(lot, lot.last),
+                receivedOn: lot.receivedOn,
+                opening: lot.opening,
+                supplier: lot.supplier,
+                invoice: lot.invoice,
+                requisition: lot.requisition,
+                notes: lot.notes,
+              }}
+            />
+          </>
+        )}
 
         <h2 className="font-serif text-[17px] font-semibold text-admin-primary">
           Lançamentos deste lote
@@ -142,10 +162,20 @@ export default async function LotPage({
               </span>
               <span className="mr-auto text-admin-muted">
                 {m.voidedAt
-                  ? `Anulado: ${m.voidReason}`
+                  ? `Excluído: ${m.voidReason}`
                   : [m.reference, m.notes].filter(Boolean).join(" · ")}
               </span>
-              {!m.voidedAt && <VoidMovementButton id={m.id} />}
+              {!m.voidedAt && (
+                <>
+                  <Link
+                    href={`/admin/utilitarios/papel-seguranca/lancamentos/${m.id}`}
+                    className="btn btn-admin-secondary btn-sm"
+                  >
+                    Editar
+                  </Link>
+                  <VoidMovementButton id={m.id} />
+                </>
+              )}
             </li>
           ))}
         </ul>

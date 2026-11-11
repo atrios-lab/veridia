@@ -26,10 +26,14 @@ import {
   addMovementWith,
   findLotWith,
   issueReportWith,
+  type LotInput,
   recordReportSentWith,
+  removeReportWith,
   SecurityPaperError,
   saveSecurityPaperSettingsWith,
-  updateLotDetailsWith,
+  updateLotWith,
+  updateMovementWith,
+  updateReportWith,
   voidLotWith,
   voidMovementWith,
 } from "@/lib/security-paper.ts";
@@ -93,58 +97,54 @@ async function invoiceFileOf(formData: FormData, tenantSlug: string) {
 
 /* ------------------------------------------------------------------ lots */
 
+/** The lot as typed, checked; a message when something is off. */
+async function lotInputFrom(
+  formData: FormData,
+  tenantSlug: string,
+): Promise<LotInput | string> {
+  const kind = field(formData, "tipo") as PaperKind;
+  if (!PAPER_KINDS.includes(kind)) return "Escolha o tipo de papel.";
+  const first = parseSheet(field(formData, "primeira", 40));
+  const last = parseSheet(
+    field(formData, "ultima", 40) || field(formData, "primeira", 40),
+  );
+  if (!first || !last) {
+    return "Informe a numeração da primeira e da última folha, como impressa (por exemplo, AB 000001).";
+  }
+  if (first.prefix !== last.prefix) {
+    return "A primeira e a última folha têm letras (série) diferentes.";
+  }
+  const receivedOn = field(formData, "recebido", 10);
+  if (!isDate(receivedOn) || receivedOn > today()) {
+    return "Confira a data de recebimento.";
+  }
+  return {
+    kind,
+    kindLabel: field(formData, "nome", 120),
+    prefix: first.prefix,
+    first: first.n,
+    last: last.n,
+    digits: Math.max(first.digits, last.digits),
+    receivedOn,
+    opening: formData.get("anterior") === "on",
+    supplier: field(formData, "grafica", 160),
+    invoice: field(formData, "nota", 80),
+    requisition: field(formData, "requisicao", 120),
+    notes: field(formData, "observacoes", LONG_TEXT_MAX),
+    invoiceFile: await invoiceFileOf(formData, tenantSlug),
+  };
+}
+
 export async function addLot(
   _previous: PaperFormState,
   formData: FormData,
 ): Promise<PaperFormState> {
   const ok = await access();
   if (!ok) return { status: "error", message: NO_PERMISSION };
-  const kind = field(formData, "tipo") as PaperKind;
-  if (!PAPER_KINDS.includes(kind)) {
-    return { status: "error", message: "Escolha o tipo de papel." };
-  }
-  const first = parseSheet(field(formData, "primeira", 40));
-  const last = parseSheet(
-    field(formData, "ultima", 40) || field(formData, "primeira", 40),
-  );
-  if (!first || !last) {
-    return {
-      status: "error",
-      message:
-        "Informe a numeração da primeira e da última folha, como impressa (por exemplo, AB 000001).",
-    };
-  }
-  if (first.prefix !== last.prefix) {
-    return {
-      status: "error",
-      message: "A primeira e a última folha têm letras (série) diferentes.",
-    };
-  }
-  const receivedOn = field(formData, "recebido", 10);
-  if (!isDate(receivedOn) || receivedOn > today()) {
-    return { status: "error", message: "Confira a data de recebimento." };
-  }
   try {
-    await addLotWith(
-      db,
-      ok.tenant.slug,
-      {
-        kind,
-        kindLabel: field(formData, "nome", 120),
-        prefix: first.prefix,
-        first: first.n,
-        last: last.n,
-        digits: Math.max(first.digits, last.digits),
-        receivedOn,
-        opening: formData.get("anterior") === "on",
-        supplier: field(formData, "grafica", 160),
-        invoice: field(formData, "nota", 80),
-        requisition: field(formData, "requisicao", 120),
-        notes: field(formData, "observacoes", LONG_TEXT_MAX),
-        invoiceFile: await invoiceFileOf(formData, ok.tenant.slug),
-      },
-      ok.session.user.id,
-    );
+    const input = await lotInputFrom(formData, ok.tenant.slug);
+    if (typeof input === "string") return { status: "error", message: input };
+    await addLotWith(db, ok.tenant.slug, input, ok.session.user.id);
   } catch (error) {
     return fail(error);
   }
@@ -152,7 +152,7 @@ export async function addLot(
   redirect(`${HOME}?feito=lote`);
 }
 
-export async function updateLot(
+export async function editLot(
   _previous: PaperFormState,
   formData: FormData,
 ): Promise<PaperFormState> {
@@ -160,24 +160,15 @@ export async function updateLot(
   if (!ok) return { status: "error", message: NO_PERMISSION };
   const id = field(formData, "id", 40);
   try {
-    await updateLotDetailsWith(
-      db,
-      ok.tenant.slug,
-      id,
-      {
-        supplier: field(formData, "grafica", 160),
-        invoice: field(formData, "nota", 80),
-        requisition: field(formData, "requisicao", 120),
-        notes: field(formData, "observacoes", LONG_TEXT_MAX),
-        invoiceFile: await invoiceFileOf(formData, ok.tenant.slug),
-      },
-      ok.session.user.id,
-    );
+    const input = await lotInputFrom(formData, ok.tenant.slug);
+    if (typeof input === "string") return { status: "error", message: input };
+    await updateLotWith(db, ok.tenant.slug, id, input, ok.session.user.id);
   } catch (error) {
     return fail(error);
   }
+  revalidatePath(HOME);
   revalidatePath(`${HOME}/lotes/${id}`);
-  return { status: "saved", message: "Dados do lote salvos." };
+  return { status: "saved", message: "Lote salvo." };
 }
 
 export async function voidLot(
@@ -229,9 +220,29 @@ export async function addMovement(
   if (!isDate(occurredOn) || occurredOn > today()) {
     return { status: "error", message: "Confira a data." };
   }
-  const byQuantity = field(formData, "modo") === "quantidade";
-  let range: { first?: number; last?: number; quantity?: number };
-  if (byQuantity) {
+  const mode = field(formData, "modo");
+  let range: {
+    first?: number;
+    last?: number;
+    quantity?: number;
+    upTo?: number;
+  };
+  if (mode === "ate") {
+    const last = parseSheet(field(formData, "ate", 40));
+    if (!last) {
+      return {
+        status: "error",
+        message: "Informe a última folha usada no período.",
+      };
+    }
+    if (last.prefix && last.prefix !== lot.prefix) {
+      return {
+        status: "error",
+        message: `As folhas deste lote são da série ${lot.prefix || "sem letras"}: confira a numeração.`,
+      };
+    }
+    range = { upTo: last.n };
+  } else if (mode === "quantidade") {
     const quantity = Number(field(formData, "quantidade", 9));
     if (!Number.isInteger(quantity) || quantity < 1) {
       return { status: "error", message: "Informe quantas folhas." };
@@ -314,7 +325,7 @@ export async function voidMovement(
   revalidatePath(HOME);
   return {
     status: "saved",
-    message: "Lançamento anulado. As folhas voltaram ao estoque.",
+    message: "Lançamento excluído. As folhas voltaram ao estoque.",
   };
 }
 
@@ -433,6 +444,7 @@ export async function saveSettings(
     email: field(formData, "email", 160),
     stateRule: field(formData, "norma", 400),
     deadlineDay: day ? Number(day) : null,
+    lowStock: Number(field(formData, "alerta", 6) || 200),
   });
   if (!parsed.success) {
     return {
@@ -452,4 +464,108 @@ export async function saveSettings(
   }
   revalidatePath(HOME);
   return { status: "saved", message: "Configuração salva." };
+}
+
+export async function editMovement(
+  _previous: PaperFormState,
+  formData: FormData,
+): Promise<PaperFormState> {
+  const ok = await access();
+  if (!ok) return { status: "error", message: NO_PERMISSION };
+  const type = field(formData, "tipo") as MovementType;
+  if (!MOVEMENT_TYPES.includes(type)) {
+    return {
+      status: "error",
+      message: "Escolha o que aconteceu com as folhas.",
+    };
+  }
+  const first = parseSheet(field(formData, "primeira", 40));
+  const last = parseSheet(
+    field(formData, "ultima", 40) || field(formData, "primeira", 40),
+  );
+  if (!first || !last) {
+    return { status: "error", message: "Informe a numeração das folhas." };
+  }
+  const occurredOn = field(formData, "data", 10);
+  if (!isDate(occurredOn) || occurredOn > today()) {
+    return { status: "error", message: "Confira a data." };
+  }
+  try {
+    await updateMovementWith(
+      db,
+      ok.tenant.slug,
+      field(formData, "id", 40),
+      {
+        type,
+        first: first.n,
+        last: last.n,
+        occurredOn,
+        reference: field(formData, "referencia", 300),
+        notes: field(formData, "observacoes", LONG_TEXT_MAX),
+      },
+      ok.session.user.id,
+    );
+  } catch (error) {
+    return fail(error);
+  }
+  revalidatePath(HOME);
+  redirect(`${HOME}?feito=editado`);
+}
+
+export async function editReport(
+  _previous: PaperFormState,
+  formData: FormData,
+): Promise<PaperFormState> {
+  const ok = await access();
+  if (!ok) return { status: "error", message: NO_PERMISSION };
+  const issuedOn = field(formData, "data", 10);
+  if (!isDate(issuedOn)) {
+    return { status: "error", message: "Confira a data do documento." };
+  }
+  const id = field(formData, "id", 40);
+  try {
+    await updateReportWith(
+      db,
+      ok.tenant,
+      id,
+      {
+        issuedOn,
+        notes: field(formData, "observacoes", LONG_TEXT_MAX),
+        signerIndex: Number(field(formData, "assina", 3)) || 0,
+        signers: (await getGuideSettings(ok.tenant)).signers,
+        refresh: formData.get("atualizar") === "on",
+      },
+      ok.session.user.id,
+    );
+  } catch (error) {
+    return fail(error);
+  }
+  revalidatePath(`${HOME}/oficios/${id}`);
+  return {
+    status: "saved",
+    message: "Documento salvo. O PDF já sai com a alteração.",
+  };
+}
+
+export async function removeReport(
+  _previous: PaperFormState,
+  formData: FormData,
+): Promise<PaperFormState> {
+  const ok = await access();
+  if (!ok) return { status: "error", message: NO_PERMISSION };
+  const problem = justify(formData);
+  if (problem) return { status: "error", message: problem };
+  try {
+    await removeReportWith(
+      db,
+      ok.tenant.slug,
+      field(formData, "id", 40),
+      String(formData.get("justificativa") ?? "").trim(),
+      ok.session.user.id,
+    );
+  } catch (error) {
+    return fail(error);
+  }
+  revalidatePath(HOME);
+  redirect(`${HOME}?feito=documento-excluido`);
 }

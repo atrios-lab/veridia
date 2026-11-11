@@ -12,7 +12,9 @@ import {
 } from "@/core/security-paper/documents.ts";
 import {
   checkLot,
+  checkLotChange,
   checkRange,
+  lowStock,
   type MovementType,
   type PaperKind,
   type PaperLot,
@@ -21,6 +23,7 @@ import {
   pendingDuties,
   type Quarter,
   rangeForQuantity,
+  rangesUpTo,
 } from "@/core/security-paper/stock.ts";
 import type { Tenant } from "@/core/tenant/schema.ts";
 import { officeYear } from "@/core/time/office-time.ts";
@@ -167,11 +170,23 @@ export async function listMovementsWith(
     );
 }
 
-export async function listReportsWith(database: Database, tenantSlug: string) {
+/** The ofícios and reports; the excluded ones only when asked for. */
+export async function listReportsWith(
+  database: Database,
+  tenantSlug: string,
+  options: { withRemoved?: boolean } = {},
+) {
   return database
     .select()
     .from(securityPaperReports)
-    .where(eq(securityPaperReports.tenantSlug, tenantSlug))
+    .where(
+      options.withRemoved
+        ? eq(securityPaperReports.tenantSlug, tenantSlug)
+        : and(
+            eq(securityPaperReports.tenantSlug, tenantSlug),
+            isNull(securityPaperReports.removedAt),
+          ),
+    )
     .orderBy(desc(securityPaperReports.createdAt));
 }
 
@@ -393,6 +408,8 @@ export interface MovementInput {
   last?: number;
   /** ...or how many, from the next free sheet on. */
   quantity?: number;
+  /** ...or "usei até a folha nº": every free sheet up to that one. */
+  upTo?: number;
   occurredOn: string;
   reference: string;
   notes: string;
@@ -441,35 +458,47 @@ export async function addMovementWith(
         .from(securityPaperMovements)
         .where(eq(securityPaperMovements.lotId, lot.id))
     ).map(movementOf);
-    const range =
-      input.first !== undefined
-        ? { first: input.first, last: input.last ?? input.first }
-        : rangeForQuantity(lot, taken, input.quantity ?? 0);
-    if (typeof range === "string") throw new SecurityPaperError(range);
-    const problem = checkRange(lot, taken, range);
-    if (problem) throw new SecurityPaperError(problem);
-    const [row] = await tx
-      .insert(securityPaperMovements)
-      .values({
+    let ranges: { first: number; last: number }[];
+    if (input.upTo !== undefined) {
+      const found = rangesUpTo(lot, taken, input.upTo);
+      if (typeof found === "string") throw new SecurityPaperError(found);
+      ranges = found;
+    } else {
+      const range =
+        input.first !== undefined
+          ? { first: input.first, last: input.last ?? input.first }
+          : rangeForQuantity(lot, taken, input.quantity ?? 0);
+      if (typeof range === "string") throw new SecurityPaperError(range);
+      const problem = checkRange(lot, taken, range);
+      if (problem) throw new SecurityPaperError(problem);
+      ranges = [range];
+    }
+    let row: StoredMovement | undefined;
+    for (const range of ranges) {
+      [row] = await tx
+        .insert(securityPaperMovements)
+        .values({
+          tenantSlug,
+          lotId: lot.id,
+          type: input.type,
+          firstNumber: range.first,
+          lastNumber: range.last,
+          occurredOn: input.occurredOn,
+          reference: input.reference,
+          notes: input.notes,
+          createdBy: actorId,
+        })
+        .returning();
+      if (!row) throw new Error("lançamento não gravado");
+      await recordAuditWith(tx as unknown as Database, {
         tenantSlug,
-        lotId: lot.id,
-        type: input.type,
-        firstNumber: range.first,
-        lastNumber: range.last,
-        occurredOn: input.occurredOn,
-        reference: input.reference,
-        notes: input.notes,
-        createdBy: actorId,
-      })
-      .returning();
+        actorId,
+        action: MOVEMENT_ACTION[input.type],
+        targetType: "security-paper",
+        targetId: row.id,
+      });
+    }
     if (!row) throw new Error("lançamento não gravado");
-    await recordAuditWith(tx as unknown as Database, {
-      tenantSlug,
-      actorId,
-      action: MOVEMENT_ACTION[input.type],
-      targetType: "security-paper",
-      targetId: row.id,
-    });
     return row;
   });
 }
@@ -685,13 +714,263 @@ export async function pendingDutiesWith(
 
 /** How many papers are owed: the badge on the menu. */
 export async function pendingDutyCount(
-  tenantSlug: string,
+  tenant: Tenant,
   today: string,
 ): Promise<number> {
   try {
-    const duties = await pendingDutiesWith(db, tenantSlug, today);
-    return (duties.quarter ? 1 : 0) + (duties.occurrences.length ? 1 : 0);
+    const [duties, low] = await Promise.all([
+      pendingDutiesWith(db, tenant.slug, today),
+      lowStockWith(db, tenant),
+    ]);
+    return (
+      (duties.quarter ? 1 : 0) +
+      (duties.occurrences.length ? 1 : 0) +
+      low.length
+    );
   } catch {
     return 0;
   }
+}
+
+/** The kinds down to the warning line (settings: 200 sheets by default). */
+export async function lowStockWith(database: Database, tenant: Tenant) {
+  const [{ lots, movements }, settings] = await Promise.all([
+    classifierWith(database, tenant.slug),
+    getSecurityPaperSettingsWith(database, tenant),
+  ]);
+  return lowStock(lots, movements, settings.lowStock);
+}
+
+/* ------------------------------------------------------------------ edits */
+
+/**
+ * Edits a lot whole, its numbering included, as long as every live
+ * movement of it still fits and no other lot has those numbers.
+ */
+export async function updateLotWith(
+  database: Database,
+  tenantSlug: string,
+  id: string,
+  input: LotInput,
+  actorId: string,
+): Promise<void> {
+  const row = await findLotWith(database, tenantSlug, id);
+  if (!row || row.voidedAt)
+    throw new SecurityPaperError("Lote não encontrado.");
+  const { lots, movements } = await classifierWith(database, tenantSlug);
+  const problem = checkLotChange({ id, ...input }, lots, movements);
+  if (problem) throw new SecurityPaperError(problem);
+  await database
+    .update(securityPaperLots)
+    .set({
+      kind: input.kind,
+      kindLabel: input.kind === "outro" ? input.kindLabel : "",
+      prefix: input.prefix,
+      firstNumber: input.first,
+      lastNumber: input.last,
+      digits: input.digits,
+      receivedOn: input.receivedOn,
+      opening: input.opening,
+      supplier: input.supplier,
+      invoice: input.invoice,
+      requisition: input.requisition,
+      notes: input.notes,
+      ...(input.invoiceFile
+        ? {
+            invoicePath: input.invoiceFile.path,
+            invoiceName: input.invoiceFile.name,
+          }
+        : {}),
+      updatedAt: new Date(),
+    })
+    .where(
+      and(
+        eq(securityPaperLots.tenantSlug, tenantSlug),
+        eq(securityPaperLots.id, id),
+      ),
+    );
+  await recordAuditWith(database, {
+    tenantSlug,
+    actorId,
+    action: "security-paper.lot-edit",
+    targetType: "security-paper",
+    targetId: id,
+  });
+}
+
+/** Edits a movement: what happened, the sheets, the date, the reference. */
+export async function updateMovementWith(
+  database: Database,
+  tenantSlug: string,
+  id: string,
+  input: Omit<MovementInput, "lotId" | "quantity"> & {
+    first: number;
+    last: number;
+  },
+  actorId: string,
+): Promise<void> {
+  await database.transaction(async (tx) => {
+    const [current] = await tx
+      .select()
+      .from(securityPaperMovements)
+      .where(
+        and(
+          eq(securityPaperMovements.tenantSlug, tenantSlug),
+          eq(securityPaperMovements.id, id),
+          isNull(securityPaperMovements.voidedAt),
+        ),
+      )
+      .limit(1);
+    if (!current) throw new SecurityPaperError("Lançamento não encontrado.");
+    const [lotRow] = await tx
+      .select()
+      .from(securityPaperLots)
+      .where(eq(securityPaperLots.id, current.lotId))
+      .for("update")
+      .limit(1);
+    if (!lotRow) throw new SecurityPaperError("Lote não encontrado.");
+    const lot = lotOf(lotRow);
+    if (input.occurredOn < lot.receivedOn && !lot.opening) {
+      throw new SecurityPaperError(
+        "A data do lançamento é anterior ao recebimento do lote.",
+      );
+    }
+    const others = (
+      await tx
+        .select()
+        .from(securityPaperMovements)
+        .where(eq(securityPaperMovements.lotId, lot.id))
+    )
+      .filter((m) => m.id !== id)
+      .map(movementOf);
+    const problem = checkRange(lot, others, input);
+    if (problem) throw new SecurityPaperError(problem);
+    await tx
+      .update(securityPaperMovements)
+      .set({
+        type: input.type,
+        firstNumber: input.first,
+        lastNumber: input.last,
+        occurredOn: input.occurredOn,
+        reference: input.reference,
+        notes: input.notes,
+      })
+      .where(eq(securityPaperMovements.id, id));
+    await recordAuditWith(tx as unknown as Database, {
+      tenantSlug,
+      actorId,
+      action: "security-paper.movement-edit",
+      targetType: "security-paper",
+      targetId: id,
+    });
+  });
+}
+
+/** "Excluir" an ofício or report: out of the lists, kept, with the reason. */
+export async function removeReportWith(
+  database: Database,
+  tenantSlug: string,
+  id: string,
+  reason: string,
+  actorId: string,
+): Promise<void> {
+  const updated = await database
+    .update(securityPaperReports)
+    .set({ removedAt: new Date(), removedBy: actorId, removeReason: reason })
+    .where(
+      and(
+        eq(securityPaperReports.tenantSlug, tenantSlug),
+        eq(securityPaperReports.id, id),
+        isNull(securityPaperReports.removedAt),
+      ),
+    )
+    .returning({ id: securityPaperReports.id });
+  if (!updated.length)
+    throw new SecurityPaperError("Documento não encontrado.");
+  await recordAuditWith(database, {
+    tenantSlug,
+    actorId,
+    action: "security-paper.report-remove",
+    targetType: "security-paper",
+    targetId: id,
+    reason,
+  });
+}
+
+/**
+ * Edits an ofício: its date, who signs, the notes; and, when asked, its
+ * figures taken again from the classificador as it is now. The number
+ * stays.
+ */
+export async function updateReportWith(
+  database: Database,
+  tenant: Tenant,
+  id: string,
+  input: {
+    issuedOn: string;
+    notes: string;
+    signerIndex: number;
+    signers: { name: string; title: string; note?: string }[];
+    refresh: boolean;
+  },
+  actorId: string,
+): Promise<void> {
+  const row = await findReportWith(database, tenant.slug, id);
+  if (!row || row.removedAt) {
+    throw new SecurityPaperError("Documento não encontrado.");
+  }
+  const old = snapshotOf(row);
+  const signer = input.signers[input.signerIndex] ?? input.signers[0] ?? null;
+  let snapshot: ReportSnapshot = {
+    ...old,
+    issuedOn: input.issuedOn,
+    notes: input.notes.trim(),
+    signer,
+  };
+  if (input.refresh) {
+    const [{ lots, movements }, settings, reports] = await Promise.all([
+      classifierWith(database, tenant.slug),
+      getSecurityPaperSettingsWith(database, tenant),
+      listReportsWith(database, tenant.slug),
+    ]);
+    snapshot = buildSnapshot({
+      kind: old.kind,
+      period: old.period,
+      issuedOn: input.issuedOn,
+      number: old.number,
+      settings,
+      lots,
+      movements,
+      toldBy: reports
+        .filter(
+          (r) =>
+            r.id !== id &&
+            r.kind === "extravio" &&
+            r.periodEnd >= old.period.start &&
+            r.periodStart <= old.period.end,
+        )
+        .map((r) => reportNumber(r))
+        .filter((n): n is string => Boolean(n))
+        .reverse(),
+      notes: input.notes,
+      signer,
+    });
+  }
+  await database
+    .update(securityPaperReports)
+    .set({
+      snapshot,
+      signer: input.signerIndex,
+      movementIds:
+        old.kind === "extravio" ? snapshot.movements.map((m) => m.id) : [],
+      updatedAt: new Date(),
+    })
+    .where(eq(securityPaperReports.id, id));
+  await recordAuditWith(database, {
+    tenantSlug: tenant.slug,
+    actorId,
+    action: "security-paper.report-edit",
+    targetType: "security-paper",
+    targetId: id,
+  });
 }

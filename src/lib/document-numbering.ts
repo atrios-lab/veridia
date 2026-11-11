@@ -16,6 +16,7 @@ import {
   appointments,
   auditNotifications,
   issDeclarations,
+  paperOrders,
   securityPaperReports,
   serviceRequests,
   taxGuides,
@@ -86,6 +87,16 @@ export async function lastUsedWith(
           eq(securityPaperReports.tenantSlug, tenantSlug),
           eq(securityPaperReports.year, year),
         ),
+      );
+    return row?.last ?? 0;
+  }
+  if (series === "pedido-papel") {
+    // An order excluded keeps its number: it may have reached the supplier.
+    const [row] = await database
+      .select({ last: max(paperOrders.sequence) })
+      .from(paperOrders)
+      .where(
+        and(eq(paperOrders.tenantSlug, tenantSlug), eq(paperOrders.year, year)),
       );
     return row?.last ?? 0;
   }

@@ -73,7 +73,7 @@ export function ScreenHelpButton({
           id={id}
           role="dialog"
           aria-label="Como funciona esta tela"
-          className="absolute top-[calc(100%+8px)] left-0 z-40 block w-[min(420px,calc(100vw-48px))] rounded-[14px] border border-admin-border bg-admin-card p-4 text-left shadow-[0_12px_32px_rgba(9,24,16,0.18)]"
+          className="absolute top-[calc(100%+8px)] left-0 z-40 block max-h-[72vh] w-[min(460px,calc(100vw-48px))] overflow-y-auto rounded-[14px] border border-admin-border bg-admin-card p-4 text-left shadow-[0_12px_32px_rgba(9,24,16,0.18)]"
         >
           <span className="block text-[11px] font-bold uppercase tracking-[0.08em] text-admin-accent">
             Para que serve
@@ -89,6 +89,23 @@ export function ScreenHelpButton({
               <li key={step}>{step}</li>
             ))}
           </ol>
+          {help.terms && help.terms.length > 0 && (
+            <>
+              <span className="mt-3 block text-[11px] font-bold uppercase tracking-[0.08em] text-admin-accent">
+                O que significa
+              </span>
+              <dl className="mt-1 space-y-1.5 text-[12.5px] leading-relaxed text-admin-text">
+                {help.terms.map((t) => (
+                  <div key={t.term}>
+                    <dt className="inline font-bold text-admin-primary">
+                      {t.term}:
+                    </dt>{" "}
+                    <dd className="inline">{t.meaning}</dd>
+                  </div>
+                ))}
+              </dl>
+            </>
+          )}
           {help.configure && (
             <>
               <span className="mt-3 block text-[11px] font-bold uppercase tracking-[0.08em] text-admin-accent">

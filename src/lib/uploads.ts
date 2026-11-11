@@ -458,3 +458,18 @@ export async function storeMessengerFile(
     mimeType,
   );
 }
+
+/**
+ * A supplier's order form (Word), under the office's folder: read and
+ * filled by the platform (core/paper-orders/docx-model.ts), never run.
+ */
+export async function storeSupplierModel(
+  tenantSlug: string,
+  bytes: Buffer,
+): Promise<string> {
+  return store(
+    bytes,
+    `${tenantSlug}/modelos/${randomUUID()}.docx`,
+    "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+  );
+}

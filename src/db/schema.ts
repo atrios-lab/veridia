@@ -1393,6 +1393,11 @@ export const securityPaperReports = pgTable(
     /** When and how it reached the Corregedoria (malote, e-mail, protocol). */
     sentOn: text("sent_on").notNull().default(""),
     sentReference: text("sent_reference").notNull().default(""),
+    /** "Excluir": out of the lists, kept, with the reason. */
+    removedAt: timestamp("removed_at", { withTimezone: true }),
+    removedBy: text("removed_by"),
+    removeReason: text("remove_reason").notNull().default(""),
+    updatedAt: timestamp("updated_at", { withTimezone: true }),
     createdBy: text("created_by"),
     createdAt: timestamp("created_at", { withTimezone: true })
       .notNull()
@@ -1403,6 +1408,73 @@ export const securityPaperReports = pgTable(
       .on(t.tenantSlug, t.year, t.sequence)
       .where(sql`${t.sequence} is not null`),
     index("security_paper_reports_tenant").on(t.tenantSlug, t.periodEnd),
+  ],
+);
+
+/**
+ * Solicitação de papéis de segurança (decision of 11/11/2026): the
+ * suppliers the office orders from, each with its items, texts and,
+ * optionally, its own Word form. "Excluir" keeps the row.
+ */
+export const paperSuppliers = pgTable(
+  "paper_suppliers",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    tenantSlug,
+    /** core/paper-orders SupplierSchema. */
+    data: jsonb("data").notNull(),
+    modelPath: text("model_path"),
+    modelName: text("model_name"),
+    removedAt: timestamp("removed_at", { withTimezone: true }),
+    removedBy: text("removed_by"),
+    removeReason: text("remove_reason").notNull().default(""),
+    createdBy: text("created_by"),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (t) => [index("paper_suppliers_tenant").on(t.tenantSlug)],
+);
+
+/** An order to a supplier, numbered by year; "Excluir" keeps the row. */
+export const paperOrders = pgTable(
+  "paper_orders",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    tenantSlug,
+    year: integer("year").notNull(),
+    sequence: integer("sequence").notNull(),
+    supplierId: uuid("supplier_id")
+      .notNull()
+      .references(() => paperSuppliers.id),
+    /** The supplier as it was when the order was last saved. */
+    supplier: jsonb("supplier").notNull(),
+    /** core/paper-orders OrderInputSchema. */
+    order: jsonb("order").notNull(),
+    status: text("status").notNull().default("rascunho"),
+    sentOn: text("sent_on").notNull().default(""),
+    receivedOn: text("received_on").notNull().default(""),
+    removedAt: timestamp("removed_at", { withTimezone: true }),
+    removedBy: text("removed_by"),
+    removeReason: text("remove_reason").notNull().default(""),
+    createdBy: text("created_by"),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (t) => [
+    uniqueIndex("paper_orders_tenant_year_sequence").on(
+      t.tenantSlug,
+      t.year,
+      t.sequence,
+    ),
+    index("paper_orders_tenant").on(t.tenantSlug, t.createdAt),
   ],
 );
 

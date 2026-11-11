@@ -1,6 +1,7 @@
 import "server-only";
 import { sql } from "drizzle-orm";
 import { buildSecurityPaperReminderEmail } from "@/core/security-paper/reminders.ts";
+import { monthLabel, usageMissing } from "@/core/security-paper/stock.ts";
 import { brandImageUrl } from "@/core/tenant/brand-image.ts";
 import type { Tenant } from "@/core/tenant/schema.ts";
 import { type Database, db } from "@/db/index.ts";
@@ -9,7 +10,9 @@ import { renderEmailCardHtml, renderEmailCardText } from "./email/render.ts";
 import { sendEmail } from "./email/send.ts";
 import { SECURITY_PAPER_REMINDERS_KEY } from "./office-config.ts";
 import {
+  classifierWith,
   getSecurityPaperSettingsWith,
+  lowStockWith,
   pendingDutiesWith,
 } from "./security-paper.ts";
 
@@ -21,7 +24,7 @@ import {
 export async function claimSecurityPaperReminderWith(
   database: Database,
   tenantSlug: string,
-  field: "quarter" | "month",
+  field: "quarter" | "month" | "low" | "usage",
   tag: string,
 ): Promise<boolean> {
   const value = { [field]: tag };
@@ -70,13 +73,35 @@ export async function sendSecurityPaperReminders(
       "month",
       today.slice(0, 7),
     ));
-  if (!quarter && !month) return false;
   const settings = await getSecurityPaperSettingsWith(database, tenant);
+  const lowKinds = await lowStockWith(database, tenant);
+  // Once a month while the stock stays low, and again if another kind joins.
+  const low =
+    lowKinds.length > 0 &&
+    (await claimSecurityPaperReminderWith(
+      database,
+      tenant.slug,
+      "low",
+      `${today.slice(0, 7)}:${lowKinds.map((l) => l.paperKind).join(",")}`,
+    ));
+  const { lots, movements } = await classifierWith(database, tenant.slug);
+  const missing = usageMissing({ today, lots, movements });
+  const usage =
+    missing !== null &&
+    (await claimSecurityPaperReminderWith(
+      database,
+      tenant.slug,
+      "usage",
+      missing.start.slice(0, 7),
+    ));
+  if (!quarter && !month && !low && !usage) return false;
   const text = buildSecurityPaperReminderEmail({
     officeName: tenant.name,
     quarter,
     occurrences: month ? duties.occurrences : [],
     deadlineDay: settings.deadlineDay,
+    low: low ? lowKinds : [],
+    usageMonth: usage && missing ? monthLabel(missing.start) : undefined,
   });
   const host = tenant.hosts[0];
   const url = `${host ? `https://${host}` : ""}/admin/utilitarios/papel-seguranca`;

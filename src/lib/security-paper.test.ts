@@ -11,10 +11,15 @@ import {
   classifierWith,
   issueReportWith,
   type LotInput,
+  listReportsWith,
+  lowStockWith,
   pendingDutiesWith,
+  removeReportWith,
   renderReportPdf,
   SecurityPaperError,
   snapshotOf,
+  updateLotWith,
+  updateMovementWith,
   voidLotWith,
   voidMovementWith,
 } from "./security-paper.ts";
@@ -230,4 +235,138 @@ test("o lembrete por e-mail sai uma vez por trimestre e por mês", async () => {
     await claimSecurityPaperReminderWith(db, TENANT, "quarter", "2026-T4"),
     true,
   );
+});
+
+test("editar lote e lançamento, excluir ofício e avisar estoque baixo", async () => {
+  const { lots, movementRows } = await classifierWith(db, TENANT);
+  const lot = lots.find((l) => !l.voided);
+  assert.ok(lot);
+  const live = movementRows.find((m) => m.voidedAt === null);
+  assert.ok(live);
+
+  // The numbering may shrink only while every live movement still fits.
+  await assert.rejects(
+    updateLotWith(
+      db,
+      TENANT,
+      lot.id,
+      { ...lotInput(), first: 60, last: 200 },
+      "titular",
+    ),
+    /fora da nova numeração/,
+  );
+  await updateLotWith(
+    db,
+    TENANT,
+    lot.id,
+    { ...lotInput(), last: 180, supplier: "Gráfica Exemplo" },
+    "titular",
+  );
+
+  await updateMovementWith(
+    db,
+    TENANT,
+    live.id,
+    {
+      type: "avariado",
+      first: live.firstNumber,
+      last: live.lastNumber,
+      occurredOn: "2026-08-05",
+      reference: "corrigido",
+      notes: "",
+    },
+    "titular",
+  );
+  await assert.rejects(
+    addMovementWith(
+      db,
+      TENANT,
+      {
+        lotId: lot.id,
+        type: "utilizado",
+        first: live.firstNumber,
+        last: live.firstNumber,
+        occurredOn: "2026-08-06",
+        reference: "",
+        notes: "",
+      },
+      "escrevente",
+    ),
+    /já foram lançadas/,
+  );
+
+  const reports = await listReportsWith(db, TENANT);
+  const prestacao = reports.find((r) => r.kind === "prestacao");
+  assert.ok(prestacao);
+  await removeReportWith(
+    db,
+    TENANT,
+    prestacao.id,
+    "gerado em duplicidade",
+    "titular",
+  );
+  assert.equal(
+    (await pendingDutiesWith(db, TENANT, "2026-11-11")).quarter?.quarter,
+    3,
+  );
+  assert.equal(
+    (await listReportsWith(db, TENANT, { withRemoved: true })).length,
+    reports.length,
+  );
+
+  // 180 sheets in the lot, one taken: under the default 200, a warning.
+  const low = await lowStockWith(db, tenant);
+  assert.equal(low[0]?.paperKind, "traslado");
+  assert.equal(low[0]?.remaining, 179);
+});
+
+test("'usei até a folha' grava uma faixa por trecho livre", async () => {
+  const lot = await addLotWith(
+    db,
+    TENANT,
+    lotInput({
+      kind: "apostila",
+      prefix: "AP",
+      first: 1,
+      last: 100,
+      receivedOn: "2026-10-01",
+    }),
+    "titular",
+  );
+  await addMovementWith(
+    db,
+    TENANT,
+    {
+      lotId: lot.id,
+      type: "inutilizado",
+      first: 10,
+      last: 10,
+      occurredOn: "2026-10-05",
+      reference: "erro",
+      notes: "",
+    },
+    "escrevente",
+  );
+  await addMovementWith(
+    db,
+    TENANT,
+    {
+      lotId: lot.id,
+      type: "utilizado",
+      upTo: 30,
+      occurredOn: "2026-10-31",
+      reference: "",
+      notes: "",
+    },
+    "escrevente",
+  );
+  const { movementRows } = await classifierWith(db, TENANT);
+  const used = movementRows
+    .filter((m) => m.lotId === lot.id && m.type === "utilizado")
+    .map((m) => [m.firstNumber, m.lastNumber])
+    .sort((a, b) => (a[0] ?? 0) - (b[0] ?? 0));
+  assert.deepEqual(used, [
+    [1, 9],
+    [11, 30],
+  ]);
 });
