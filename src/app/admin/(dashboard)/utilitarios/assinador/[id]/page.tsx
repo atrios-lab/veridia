@@ -18,7 +18,11 @@ import {
 } from "@/lib/signing.ts";
 import { getTenant } from "@/lib/tenant.ts";
 import { AdminPageHeader } from "../../../../_components/page-header.tsx";
-import { CoSignForm } from "../sign-forms.tsx";
+import {
+  CoSignForm,
+  RemoveDocumentButton,
+  RestoreDocumentButton,
+} from "../sign-forms.tsx";
 
 export const metadata = { title: "Documento assinado" };
 
@@ -46,6 +50,9 @@ export default async function SignedDocumentAdminPage({
   const justSigned = (await searchParams).assinado === "1";
   const verifyUrl = verifyUrlFor(tenant, await requestOrigin(), view.code);
   const base = `/admin/utilitarios/assinador/${view.id}`;
+  const mayRemove =
+    view.createdBy === session.user.id ||
+    can(session.user.role ?? "", "user.manage", session.user.permissions);
 
   return (
     <>
@@ -59,8 +66,18 @@ export default async function SignedDocumentAdminPage({
         </Link>
         {justSigned && (
           <p className="rounded-[12px] bg-admin-success-bg px-4 py-3 text-[13px] font-semibold text-admin-success-text">
-            Documento assinado. Baixe o PDF assinado e, se quiser, o manifesto.
+            Documento assinado. Abra para imprimir, baixe o PDF assinado ou
+            assine outro documento.
           </p>
+        )}
+        {view.removedAt && (
+          <div className="flex flex-wrap items-center justify-between gap-2 rounded-[12px] bg-admin-warning-bg px-4 py-3 text-[13px] text-admin-warning-text">
+            <span className="font-semibold">
+              Excluído da lista em {formatOfficeDate(view.removedAt)}. O arquivo
+              não abre mais; a verificação do código continua.
+            </span>
+            {mayRemove && <RestoreDocumentButton documentId={view.id} />}
+          </div>
         )}
         <section className="rounded-[14px] border border-admin-border bg-admin-card px-5 py-4">
           <h2 className="font-serif text-[18px] font-semibold text-admin-primary [overflow-wrap:anywhere]">
@@ -83,12 +100,22 @@ export default async function SignedDocumentAdminPage({
           </p>
           <div className="mt-3.5 flex flex-wrap gap-2.5">
             {view.filePath && (
-              <a
-                href={`${base}/arquivo`}
-                className="btn btn-admin-primary btn-md"
-              >
-                Baixar PDF assinado
-              </a>
+              <>
+                <a
+                  href={`${base}/arquivo?abrir=1`}
+                  target="_blank"
+                  rel="noopener"
+                  className="btn btn-admin-primary btn-md"
+                >
+                  Abrir para imprimir
+                </a>
+                <a
+                  href={`${base}/arquivo`}
+                  className="btn btn-admin-secondary btn-md"
+                >
+                  Baixar PDF assinado
+                </a>
+              </>
             )}
             <a
               href={`${base}/manifesto`}
@@ -100,8 +127,21 @@ export default async function SignedDocumentAdminPage({
           <p className="mt-2 text-[12px] text-admin-muted">
             {view.filePath
               ? `O arquivo assinado fica no sistema até ${formatOfficeDate(view.fileExpiresAt)}. Salve uma cópia no arquivo da serventia.`
-              : "O arquivo assinado já saiu do sistema (6 meses). O registro e o manifesto continuam."}
+              : view.removedAt
+                ? "Documento excluído da lista. O registro e o manifesto continuam."
+                : "O arquivo assinado já saiu do sistema (6 meses). O registro e o manifesto continuam."}
           </p>
+          <div className="mt-4 flex flex-wrap items-center gap-2.5 border-t border-admin-border pt-3.5">
+            <Link
+              href="/admin/utilitarios/assinador#assinar"
+              className="btn btn-admin-primary btn-sm"
+            >
+              Assinar outro documento
+            </Link>
+            {mayRemove && !view.removedAt && (
+              <RemoveDocumentButton documentId={view.id} title={view.title} />
+            )}
+          </div>
         </section>
 
         <section className="rounded-[14px] border border-admin-border bg-admin-card px-5 py-4">

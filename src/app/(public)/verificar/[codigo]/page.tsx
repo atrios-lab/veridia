@@ -167,7 +167,9 @@ export default async function SignedDocumentPage({
       <p className="mt-2 text-[12.5px] text-brand-muted">
         {view.filePath
           ? `O documento assinado fica disponível para baixar até ${formatOfficeDate(view.fileExpiresAt)}. O registro da assinatura e o manifesto ficam sempre.`
-          : "O arquivo assinado já não está no sistema (prazo de 6 meses). O registro da assinatura e o manifesto continuam aqui. Para conferir uma cópia que você tem, envie o PDF na página de verificação."}
+          : view.removedAt
+            ? "A serventia retirou o arquivo assinado. O registro da assinatura e o manifesto continuam aqui. Para conferir uma cópia que você tem, envie o PDF na página de verificação."
+            : "O arquivo assinado já não está no sistema (prazo de 6 meses). O registro da assinatura e o manifesto continuam aqui. Para conferir uma cópia que você tem, envie o PDF na página de verificação."}
       </p>
 
       <div className="mt-6 rounded-2xl bg-brand-tint px-4 py-3 text-[12.5px] leading-relaxed text-brand-primary">

@@ -1,9 +1,20 @@
 import "server-only";
 import { createHash, randomBytes } from "node:crypto";
-import { and, asc, desc, eq, inArray, isNull, lte, or } from "drizzle-orm";
+import {
+  and,
+  asc,
+  desc,
+  eq,
+  inArray,
+  isNotNull,
+  isNull,
+  lte,
+  or,
+} from "drizzle-orm";
 import { PDFDocument } from "pdf-lib";
 import { PANEL_ROLES } from "@/core/auth/roles.ts";
 import { ICP_POLICY } from "@/core/signature/policy.ts";
+import { formatOfficeDateTime } from "@/core/time/office-time.ts";
 import { user } from "@/db/auth-schema.ts";
 import type { Database } from "@/db/index.ts";
 import {
@@ -414,11 +425,25 @@ export async function signNewDocumentWith(
     toSign = stamped.pdf;
     pageCount = stamped.pageCount;
   }
+  const signedElsewhere = hasSignature(input.pdf);
   const signed = await signPdf(toSign, opened, {
     signerName: opened.info.holderName,
     reason: `Assinatura digital ICP-Brasil · verificação ${code}`,
     location: input.location,
     signingTime: now,
+    // Already signed elsewhere (a CNH, a certidão from another office):
+    // its pages cannot take the band, so this signature carries it on the
+    // first page, as its visible appearance.
+    visible: signedElsewhere
+      ? {
+          code,
+          verifyUrl,
+          signer: {
+            name: opened.info.holderName,
+            at: formatOfficeDateTime(now),
+          },
+        }
+      : undefined,
   });
   const path = await storeSignedPdf(tenantSlug, signed);
 
@@ -545,6 +570,9 @@ export interface SignedDocumentView {
   filePath: string | null;
   fileExpiresAt: Date;
   filePurgedAt: Date | null;
+  /** Taken off the office's list; its file is no longer served. */
+  removedAt: Date | null;
+  createdBy: string | null;
   createdAt: Date;
   signatures: {
     holderName: string;
@@ -630,9 +658,12 @@ export async function findSignedDocumentWith(
     originalName: document.originalName,
     originalSha256: document.originalSha256,
     pageCount: document.pageCount,
-    filePath: document.filePath,
+    // A document taken off the list serves no file, anywhere.
+    filePath: document.removedAt ? null : document.filePath,
     fileExpiresAt: document.fileExpiresAt,
     filePurgedAt: document.filePurgedAt,
+    removedAt: document.removedAt,
+    createdBy: document.createdBy,
     createdAt: document.createdAt,
     signatures,
   };
@@ -643,12 +674,20 @@ export async function listSignedDocumentsWith(
   database: Database,
   tenantSlug: string,
   now = new Date(),
+  options: { removed?: boolean } = {},
 ): Promise<SignedDocumentView[]> {
   await purgeExpiredSignedFilesWith(database, tenantSlug, now);
   const documents = await database
     .select({ id: signedDocuments.id })
     .from(signedDocuments)
-    .where(eq(signedDocuments.tenantSlug, tenantSlug))
+    .where(
+      and(
+        eq(signedDocuments.tenantSlug, tenantSlug),
+        options.removed
+          ? isNotNull(signedDocuments.removedAt)
+          : isNull(signedDocuments.removedAt),
+      ),
+    )
     .orderBy(desc(signedDocuments.createdAt))
     .limit(200);
   const views = await Promise.all(
@@ -657,6 +696,45 @@ export async function listSignedDocumentsWith(
     ),
   );
   return views.filter((view): view is SignedDocumentView => Boolean(view));
+}
+
+/**
+ * Takes a document off the office's list, or puts it back. Nothing is
+ * erased: the file stops being served (panel and public page) and the
+ * record keeps answering the verification. Audited both ways.
+ */
+export async function setSignedDocumentRemovedWith(
+  database: Database,
+  tenantSlug: string,
+  id: string,
+  removed: boolean,
+  userId: string,
+  now = new Date(),
+): Promise<boolean> {
+  if (!/^[0-9a-f-]{36}$/i.test(id)) return false;
+  const [row] = await database
+    .update(signedDocuments)
+    .set(
+      removed
+        ? { removedAt: now, removedBy: userId }
+        : { removedAt: null, removedBy: null },
+    )
+    .where(
+      and(
+        eq(signedDocuments.tenantSlug, tenantSlug),
+        eq(signedDocuments.id, id),
+      ),
+    )
+    .returning({ code: signedDocuments.code });
+  if (!row) return false;
+  await recordAuditWith(database, {
+    tenantSlug,
+    actorId: userId,
+    action: removed ? "signed-document.remove" : "signed-document.restore",
+    targetType: "signed-document",
+    targetId: row.code,
+  });
+  return true;
 }
 
 /**

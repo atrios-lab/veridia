@@ -1,5 +1,6 @@
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
+import { LEGAL_VALIDITY_NOTES } from "@/core/signature/policy.ts";
 import { db } from "@/db/index.ts";
 import { isVerifyRateLimited } from "@/lib/rate-limit.ts";
 import { findSignedDocumentWith } from "@/lib/signing.ts";
@@ -52,7 +53,28 @@ export default async function VerifyPage({
       <div className="mt-6">
         <VerifyForm notFound={notFound} />
       </div>
-      <div className="mt-6 flex items-start gap-2.5 rounded-2xl bg-brand-tint px-4 py-3">
+      <section className="mt-6 rounded-2xl border border-brand-border bg-brand-card p-5">
+        <h2 className="font-serif text-lg font-semibold text-brand-primary">
+          Segurança jurídica dos documentos da serventia
+        </h2>
+        <dl className="mt-3 grid gap-3 md:grid-cols-2">
+          {LEGAL_VALIDITY_NOTES.map((note) => (
+            <div key={note.title}>
+              <dt className="flex items-center gap-1.5 text-[13px] font-semibold text-brand-primary">
+                <Icon
+                  name="check"
+                  className="h-4 w-4 shrink-0 text-brand-accent"
+                />
+                {note.title}
+              </dt>
+              <dd className="mt-0.5 text-[12.5px] leading-relaxed text-brand-muted">
+                {note.text}
+              </dd>
+            </div>
+          ))}
+        </dl>
+      </section>
+      <div className="mt-4 flex items-start gap-2.5 rounded-2xl bg-brand-tint px-4 py-3">
         <Icon
           name="info"
           className="mt-0.5 h-4 w-4 shrink-0 text-brand-primary-soft"

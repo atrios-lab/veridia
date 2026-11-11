@@ -25,6 +25,8 @@ const EXACT: Record<string, string> = {
   "tax-guide.renumber": "Alterou o número de uma guia",
   "tax-guide.delete": "Excluiu uma guia de recolhimento",
   "signed-document.sign": "Assinou digitalmente um documento",
+  "signed-document.remove": "Retirou um documento assinado da lista",
+  "signed-document.restore": "Devolveu um documento assinado à lista",
   "signed-document.file-purge": "Arquivo assinado saiu do sistema (6 meses)",
   "signing-certificate.add": "Cadastrou um certificado digital",
   "signing-certificate.disable": "Desativou um certificado digital",

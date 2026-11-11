@@ -1293,6 +1293,14 @@ export const signedDocuments = pgTable(
       withTimezone: true,
     }).notNull(),
     filePurgedAt: timestamp("file_purged_at", { withTimezone: true }),
+    /**
+     * Taken off the office's list (decision of 11/11/2026): nothing is
+     * erased. The file stops being served, here and on the public page;
+     * the record still answers the verification, and the office can put
+     * it back.
+     */
+    removedAt: timestamp("removed_at", { withTimezone: true }),
+    removedBy: text("removed_by"),
     createdBy: text("created_by"),
     createdAt: timestamp("created_at", { withTimezone: true })
       .notNull()

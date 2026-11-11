@@ -278,6 +278,28 @@ export default async function Home() {
               />
             </Link>
           ))}
+          {/* Every office signs with the platform's signer, so every site
+              has its verification page: no section gates it. */}
+          <Link
+            href="/verificar"
+            className="flex items-center gap-3 rounded-2xl border border-brand-border bg-brand-card p-4 hover:border-brand-accent md:flex-col md:items-start md:gap-0 md:p-5"
+          >
+            <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-brand-tint text-brand-accent md:mb-3 md:h-11 md:w-11">
+              <Icon name="lock" className="h-5 w-5" />
+            </span>
+            <span className="flex-1">
+              <span className="block font-serif text-base font-semibold text-brand-primary md:text-lg">
+                Validar documento
+              </span>
+              <span className="block text-xs text-brand-muted md:mt-1 md:text-[13px]">
+                Confira um documento assinado pela serventia (ICP-Brasil)
+              </span>
+            </span>
+            <Icon
+              name="arrowRight"
+              className="h-4 w-4 text-brand-primary-soft md:hidden"
+            />
+          </Link>
         </section>
 
         {/* Only exists on the site at all when there is a live publication:
