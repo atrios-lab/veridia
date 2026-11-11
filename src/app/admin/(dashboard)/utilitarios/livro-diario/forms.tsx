@@ -347,11 +347,14 @@ export function EntryForm({
   categories,
   specialties,
   today,
+  interim = false,
 }: {
   initial: EntryInitial;
   categories: { id: string; label: string }[];
   specialties: string[];
   today: string;
+  /** An office run by an interim: its income tax is not an expense. */
+  interim?: boolean;
 }) {
   const [state, action, pending] = useActionState(saveEntry, IDLE);
   const [kind, setKind] = useState(initial.kind);
@@ -366,7 +369,7 @@ export function EntryForm({
       ? expenseWarnings(
           { description: v.description, supplier: v.supplier, date: v.date },
           today,
-          !initial.id,
+          { isNew: !initial.id, interim },
         )
       : [];
 

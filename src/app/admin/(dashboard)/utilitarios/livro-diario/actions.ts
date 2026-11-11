@@ -294,7 +294,10 @@ export async function saveEntry(
         date: occurredOn,
       },
       today(),
-      !id,
+      {
+        isNew: !id,
+        interim: (await getBookSettingsWith(db, ok.tenant.slug)).interim,
+      },
     );
     if (warnings.length) {
       return {

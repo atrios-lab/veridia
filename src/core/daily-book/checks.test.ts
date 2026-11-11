@@ -3,7 +3,7 @@ import { test } from "node:test";
 import {
   bookedLate,
   expenseWarnings,
-  looksLikeHolderIncomeTax,
+  looksLikeIncomeTax,
   looksLikeStateFund,
 } from "./checks.ts";
 
@@ -13,11 +13,19 @@ test("repasses ao Estado não são despesa (CGJ/RN art. 25, § 3º)", () => {
   assert.ok(!looksLikeStateFund("Aluguel da sede"));
 });
 
-test("IR do titular não é despesa; o IRRF dos funcionários é", () => {
-  assert.ok(looksLikeHolderIncomeTax("DARF carnê-leão outubro"));
-  assert.ok(looksLikeHolderIncomeTax("Imposto de renda do titular"));
-  assert.ok(looksLikeHolderIncomeTax("IRPF 2026"));
-  assert.ok(!looksLikeHolderIncomeTax("IRRF retido da folha dos prepostos"));
+test("IR: despesa do titular; aviso só na serventia sob interinidade", () => {
+  assert.ok(looksLikeIncomeTax("DARF carnê-leão outubro"));
+  assert.ok(looksLikeIncomeTax("Imposto de renda do interino"));
+  assert.ok(!looksLikeIncomeTax("IRRF retido da folha dos prepostos"));
+  const e = {
+    description: "DARF carnê-leão de outubro",
+    supplier: "",
+    date: "2026-10-30",
+  };
+  assert.deepEqual(expenseWarnings(e, "2026-10-31"), []);
+  const interim = expenseWarnings(e, "2026-10-31", { interim: true });
+  assert.equal(interim.length, 1);
+  assert.match(interim[0] ?? "", /interino.*art\. 25, § 2º/);
 });
 
 test("despesa de mês encerrado avisa só no lançamento novo", () => {
@@ -30,7 +38,7 @@ test("despesa de mês encerrado avisa só no lançamento novo", () => {
   };
   assert.equal(expenseWarnings(e, "2026-10-02").length, 1);
   assert.match(expenseWarnings(e, "2026-10-02")[0] ?? "", /setembro de 2026/);
-  assert.equal(expenseWarnings(e, "2026-10-02", false).length, 0);
+  assert.equal(expenseWarnings(e, "2026-10-02", { isNew: false }).length, 0);
 });
 
 test("despesa comum do serviço não gera aviso", () => {

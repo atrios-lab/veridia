@@ -37,12 +37,15 @@ export function looksLikeStateFund(text: string): boolean {
 }
 
 /**
- * The holder's (or the interim's) own income tax, carnê-leão included: not
- * an expense of the office (art. 191-A, § 2º; CGJ/RN, art. 25, § 2º). The
- * tax withheld from the staff's pay (IRRF) is, as part of the payroll
- * (art. 191-A, § 1º, VII), so it is not caught here.
+ * Income tax on the person in charge, carnê-leão included. The holder is a
+ * private person running a delegated public service, and the tax comes from
+ * that activity: holders book it as an expense, and no national rule says
+ * otherwise (decision of 11/11/2026). Only the interim is told apart, by the
+ * CGJ/RN's code (art. 25, § 2º), so only an interim office is warned. The
+ * tax withheld from the staff's pay (IRRF) is payroll (art. 191-A, § 1º,
+ * VII) and is not caught.
  */
-export function looksLikeHolderIncomeTax(text: string): boolean {
+export function looksLikeIncomeTax(text: string): boolean {
   return /carn[êe][\s-]?le[ãa]o|\bIRPF\b|imposto de renda (?:pessoa f[íi]sica|d[oa] (?:titular|tabeli[ãa]o?|tabeli[ãa]|delegat[áa]ri[oa]|interin[oa]|oficial|registrador[a]?))/i.test(
     text,
   );
@@ -71,22 +74,24 @@ const MONTHS = [
 /**
  * Every warning for an expense, in plain words. `isNew` is false when an
  * entry already booked is being corrected: its month is not late then.
+ * `interim` is an office run by an interim (the book's settings).
  */
 export function expenseWarnings(
   e: ExpenseToCheck,
   today: string,
-  isNew = true,
+  options: { isNew?: boolean; interim?: boolean } = {},
 ): string[] {
+  const { isNew = true, interim = false } = options;
   const text = `${e.description} ${e.supplier}`;
   const out: string[] = [];
   if (looksLikeStateFund(text)) {
     out.push(
-      "FDJ, FRMP, FCRCPN e FPGE são repasses ao Estado e não são despesa da serventia: já saem da receita no relatório de produtividade (Código de Normas da CGJ/RN, art. 25, § 3º).",
+      "FDJ, FRMP, FCRCPN e FPGE são repasses ao Estado: o livro já lança só os emolumentos como receita, então o repasse não entra de novo como despesa (no RN, o art. 25, § 3º do Código de Normas diz o mesmo).",
     );
   }
-  if (looksLikeHolderIncomeTax(text)) {
+  if (interim && looksLikeIncomeTax(text)) {
     out.push(
-      "O imposto de renda do titular ou do interino, inclusive o carnê-leão, não é despesa da serventia (art. 191-A, § 2º; CGJ/RN, art. 25, § 2º). O IRRF retido dos funcionários é, como parte da folha (inciso VII).",
+      "Na serventia sob interinidade, o imposto de renda devido pelo interino não é despesa da serventia (Código de Normas da CGJ/RN, art. 25, § 2º). O IRRF retido dos funcionários continua sendo despesa, como parte da folha.",
     );
   }
   if (looksPersonal(text)) {
