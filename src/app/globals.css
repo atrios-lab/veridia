@@ -948,3 +948,17 @@
   --color-msg-pane: #eef3f8;
   --color-msg-mine: #e4f1e7;
 }
+
+/*
+ * The public site's running text justified, as documents are by ABNT
+ * (decision of 11/11/2026), with Portuguese hyphenation so a narrow phone
+ * column does not open holes between words. In the base layer and behind
+ * :where(), so any text-center or text-left on an element still wins.
+ */
+@layer base {
+  :where(.site-text) :where(p, li, dd) {
+    text-align: justify;
+    hyphens: auto;
+    -webkit-hyphens: auto;
+  }
+}

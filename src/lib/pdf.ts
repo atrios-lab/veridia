@@ -28,6 +28,13 @@ import {
 } from "./pdf-primitives.ts";
 
 const LABEL_WIDTH = 138;
+
+/**
+ * The body text of a document, by ABNT NBR 14724: 12 pt, line spacing 1.5
+ * (Times at 12 pt sets about 13.8 pt per line; 4.2 more makes 18) and a
+ * 1.25 cm (35.4 pt) indent on each paragraph's first line.
+ */
+export const ABNT = { fontSize: 12, lineGap: 4.2, indent: 35.4 } as const;
 /** Below this much room left, a section heading starts on the next page. */
 const HEADING_ORPHAN_GUARD = 90;
 
@@ -110,6 +117,9 @@ function drawRow(
     .fillColor(NEUTRALS.text)
     .text(row.value, MARGIN + LABEL_WIDTH, top, {
       width: contentWidth(pdf) - LABEL_WIDTH,
+      // A value that wraps (a description, an address) reads justified;
+      // one line stays as it is, since the last line is never stretched.
+      align: "justify",
     });
   pdf.y = Math.max(afterLabel, pdf.y);
 
@@ -183,17 +193,20 @@ function drawSection(
     drawField(pdf, field, brand);
   }
 
+  // ABNT (NBR 14724, decision of 11/11/2026): justified, 12 pt, 1.5 line
+  // spacing and the first line indented 1.25 cm.
   for (const paragraph of section.paragraphs ?? []) {
     pdf
       .font("Times-Roman")
-      .fontSize(11)
+      .fontSize(ABNT.fontSize)
       .fillColor(NEUTRALS.text)
       .text(paragraph, MARGIN, pdf.y, {
         width: contentWidth(pdf),
         align: "justify",
-        lineGap: 1.5,
+        lineGap: ABNT.lineGap,
+        indent: ABNT.indent,
       });
-    pdf.moveDown(0.5);
+    pdf.moveDown(0.4);
   }
 }
 

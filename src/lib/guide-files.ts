@@ -199,8 +199,11 @@ export async function renderGuideDocx(
     for (const paragraph of section.paragraphs ?? []) {
       body.push(
         new Paragraph({
+          // ABNT: justified, 1.5 line spacing (360), first line indented
+          // 1.25 cm (709 twips).
           alignment: AlignmentType.JUSTIFIED,
-          spacing: { after: 120, line: 320 },
+          spacing: { after: 120, line: 360 },
+          indent: { firstLine: 709 },
           children: [run(paragraph)],
         }),
       );

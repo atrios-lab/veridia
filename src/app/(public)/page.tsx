@@ -127,7 +127,8 @@ export default async function Home() {
             <h1 className="mt-2 font-serif text-[28px] font-semibold uppercase leading-tight text-brand-on-dark-heading md:mt-3.5 md:text-5xl">
               {tenant.home.title}
             </h1>
-            <p className="mt-2 text-sm leading-relaxed text-brand-on-dark-body md:mt-3.5 md:max-w-[44ch] md:text-base">
+            {/* A short display line: justified, it would open holes. */}
+            <p className="mt-2 text-left text-sm leading-relaxed text-brand-on-dark-body md:mt-3.5 md:max-w-[44ch] md:text-base">
               Segurança e validade legal para cada ato da vida da comunidade
               <span className="md:hidden">
                 , sem sair de casa: peça, agende ou acompanhe.
