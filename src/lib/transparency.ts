@@ -368,6 +368,8 @@ export interface BulletinInput {
   referenceMonth: string;
   figures: BulletinFigures;
   status: BulletinStatus;
+  /** Signed before publishing: the copy, its code and what it covers. */
+  signed?: { path: string; code: string; fingerprint: string };
 }
 
 /**
@@ -398,6 +400,15 @@ export async function upsertBulletinWith(
     expensesCents: input.figures.expensesCents,
     taxesPaidCents: null,
     status: input.status,
+    // An unsigned republish leaves the last signed copy where it is: the
+    // fingerprint no longer matches, so it is simply not served.
+    ...(input.signed
+      ? {
+          signedPdfPath: input.signed.path,
+          signedCode: input.signed.code,
+          signedFingerprint: input.signed.fingerprint,
+        }
+      : {}),
   };
   await database
     .insert(transparencyBulletins)

@@ -12,12 +12,14 @@ import {
 } from "@/core/transparency/bulletin.ts";
 import type { SupportedState } from "@/core/transparency/rubrics.ts";
 import { db } from "@/db/index.ts";
+import { bulletinFingerprint } from "@/lib/bulletin-pdf.ts";
 import { FEE_TABLE_CATEGORY, readFeeTables } from "@/lib/fee-tables.ts";
 import {
   type PendingBulletin,
   pendingBulletinsWith,
 } from "@/lib/iss-declarations.ts";
 import { getSession } from "@/lib/session.ts";
+import { certificatesForSignerWith } from "@/lib/signing.ts";
 import { getTenant, today } from "@/lib/tenant.ts";
 import {
   listBulletins,
@@ -99,7 +101,15 @@ export default async function TransparencyPage({
             <DocumentForm />
           </div>
         ) : (
-          <BulletinTab tenant={tenant} />
+          <BulletinTab
+            tenant={tenant}
+            userId={session.user.id}
+            canSign={can(
+              session.user.role ?? "",
+              "signer.use",
+              session.user.permissions,
+            )}
+          />
         )}
       </div>
     </>
@@ -151,16 +161,23 @@ function declaredDraft(figures: PendingBulletin): Partial<BulletinDraft> {
 
 async function BulletinTab({
   tenant,
+  userId,
+  canSign,
 }: {
   tenant: Awaited<ReturnType<typeof getTenant>>;
+  userId: string;
+  canSign: boolean;
 }) {
   // One read serves the header line, the form and the list: most recent
   // month first, so the latest is the head of it.
-  const [bulletins, declared] = await Promise.all([
+  const [bulletins, declared, certificates] = await Promise.all([
     listBulletins(tenant.slug),
     pendingBulletinsWith(db, tenant.slug).catch(
       (): Record<string, PendingBulletin> => ({}),
     ),
+    canSign
+      ? certificatesForSignerWith(db, tenant.slug, userId).catch(() => [])
+      : [],
   ]);
   return (
     <div className="mt-6 space-y-5">
@@ -179,6 +196,12 @@ async function BulletinTab({
         currentMonth={Number(today().slice(5, 7))}
         currentYear={Number(today().slice(0, 4))}
         saved={savedDrafts(bulletins, tenant.location.state)}
+        canSign={canSign}
+        certificates={certificates.map(({ id, label, holderName }) => ({
+          id,
+          label,
+          holderName,
+        }))}
         declared={Object.fromEntries(
           Object.entries(declared).map(([month, figures]) => [
             month,
@@ -186,7 +209,25 @@ async function BulletinTab({
           ]),
         )}
       />
-      <BulletinList bulletins={bulletins} />
+      <BulletinList
+        bulletins={bulletins}
+        signed={bulletins
+          .filter((row) => {
+            const stored = storedBulletinOf(row, tenant.location.state);
+            return (
+              stored &&
+              row.signedPdfPath &&
+              row.signedFingerprint ===
+                bulletinFingerprint(
+                  tenant,
+                  row.referenceMonth,
+                  isBulletinStatus(row.status) ? row.status : "preliminary",
+                  stored,
+                )
+            );
+          })
+          .map((row) => row.id)}
+      />
     </div>
   );
 }

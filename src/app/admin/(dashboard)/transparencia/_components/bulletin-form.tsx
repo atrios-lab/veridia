@@ -1,5 +1,6 @@
 "use client";
 
+import { useRouter } from "next/navigation";
 import {
   startTransition,
   useActionState,
@@ -28,8 +29,20 @@ import {
   type SupportedState,
 } from "@/core/transparency/rubrics.ts";
 import {
+  LocalSignerPicker,
+  useLocalSigner,
+} from "../../utilitarios/assinador/a3.tsx";
+import {
+  type Mode,
+  ModeChoice,
+  signThroughToken,
+} from "../../utilitarios/assinador/sign-forms.tsx";
+import {
   type ActionState,
+  finishBulletinA3,
+  prepareBulletinA3,
   publishBulletinAction,
+  readBulletinReport,
   type SaveState,
   saveBulletinOptionAction,
 } from "../actions.ts";
@@ -169,6 +182,8 @@ export function BulletinForm({
   currentYear,
   saved,
   declared = {},
+  certificates = [],
+  canSign = false,
 }: {
   office: BulletinOffice;
   currentMonth: number;
@@ -181,6 +196,10 @@ export function BulletinForm({
    * the system's productivity report. The form opens with it filled in.
    */
   declared?: Record<string, Partial<BulletinDraft>>;
+  /** The A1 certificates this person may sign with. */
+  certificates?: { id: string; label: string; holderName: string }[];
+  /** May sign digitally (Assinador permission). */
+  canSign?: boolean;
 }) {
   const [state, formAction, pending] = useActionState<SaveState, FormData>(
     publishBulletinAction,
@@ -199,6 +218,18 @@ export function BulletinForm({
   // published for it, ready to correct; a month with neither opens blank,
   // never with the figures of the month picked before it.
   const [edits, setEdits] = useState<Record<string, BulletinDraft>>({});
+  const router = useRouter();
+  // Read from the system's report: checked before it goes out (decision of
+  // 11/11/2026).
+  const [readFromReport, setReadFromReport] = useState(false);
+  const [reading, setReading] = useState(false);
+  const [readNote, setReadNote] = useState<string | null>(null);
+  // Signed before publishing, with A1 (here) or A3 (the token).
+  const [signing, setSigning] = useState(false);
+  const [signMode, setSignMode] = useState<Mode | null>(null);
+  const local = useLocalSigner(signing && signMode === "a3");
+  const [tokenBusy, setTokenBusy] = useState(false);
+  const [tokenError, setTokenError] = useState("");
   const published = saved[period];
   const fromDeclaration = declared[period];
   const draft =
@@ -223,6 +254,94 @@ export function BulletinForm({
     }));
   }
 
+  /** The system's report read into the month it covers. */
+  async function readReport(files: FileList | null) {
+    if (!files?.length) return;
+    const sent = new FormData();
+    for (const file of Array.from(files)) sent.append("relatorio", file);
+    setReading(true);
+    setReadNote(null);
+    const result = await readBulletinReport(sent);
+    setReading(false);
+    if (result.status === "error") {
+      setReadNote(result.message);
+      return;
+    }
+    const f = result.figures;
+    const [y, m] = f.competence
+      ? f.competence.split("-").map(Number)
+      : [year, month];
+    const money = (cents: number | undefined) =>
+      cents === undefined ? "" : formatMoneyBRL(cents);
+    const key = bulletinPeriodKey(y, m);
+    setYear(y);
+    setMonth(m);
+    setEdits((current) => {
+      const base = current[key] ?? saved[key] ?? EMPTY_BULLETIN_DRAFT;
+      const fundValues: Record<string, string> = { ...base.funds };
+      for (const fund of funds) {
+        const cents = f.funds?.[fund.key as keyof NonNullable<typeof f.funds>];
+        if (cents !== undefined) fundValues[fund.key] = money(cents);
+      }
+      return {
+        ...current,
+        [key]: {
+          ...base,
+          actsCount:
+            f.actsCount === undefined ? base.actsCount : String(f.actsCount),
+          funds: fundValues,
+          iss: f.issCents === undefined ? base.iss : money(f.issCents),
+          grossRevenue:
+            f.grossRevenueCents === undefined
+              ? base.grossRevenue
+              : money(f.grossRevenueCents),
+          expenses:
+            f.expensesCents === undefined
+              ? base.expenses
+              : money(f.expensesCents),
+          legacy: false,
+        },
+      };
+    });
+    setReadFromReport(true);
+    setReadNote(
+      "Lido do relatório. Confira os valores e marque a conferência antes de publicar.",
+    );
+  }
+
+  /** A3: the token signs the bulletin's PDF, then it is published signed. */
+  async function publishWithToken(form: HTMLFormElement) {
+    const token = local.certificate;
+    if (!token) {
+      setTokenError("Escolha o certificado A3.");
+      return;
+    }
+    setTokenError("");
+    setTokenBusy(true);
+    const data = new FormData(form);
+    const fields: Record<string, string> = {};
+    for (const [k, v] of data.entries()) fields[k] = String(v);
+    const prepareData = new FormData();
+    for (const [k, v] of Object.entries(fields)) prepareData.set(k, v);
+    prepareData.set("holder", token.certificado);
+    prepareData.set("chain", JSON.stringify(token.cadeia));
+    const outcome = await signThroughToken(
+      token,
+      () => prepareBulletinA3(prepareData),
+      finishBulletinA3,
+      fields,
+    );
+    setTokenBusy(false);
+    if (outcome.status === "error") {
+      setTokenError(outcome.message);
+      return;
+    }
+    toast.success("Boletim assinado e publicado no site.");
+    setEdits(({ [period]: _published, ...rest }) => rest);
+    setReadFromReport(false);
+    router.refresh();
+  }
+
   // The period the last submit published, so its edits can be dropped once
   // the page comes back with the month as stored. A ref, not state: the
   // effect has to run once per finished publish, not again on the next click.
@@ -230,6 +349,7 @@ export function BulletinForm({
   useEffect(() => {
     if (state.status !== "success") return;
     toast.success("Boletim publicado no site.");
+    setReadFromReport(false);
     const done = submitted.current;
     if (done) setEdits(({ [done]: _published, ...rest }) => rest);
   }, [state]);
@@ -278,6 +398,10 @@ export function BulletinForm({
         <form
           onSubmit={(event) => {
             event.preventDefault();
+            if (signing && signMode === "a3") {
+              void publishWithToken(event.currentTarget);
+              return;
+            }
             const formData = new FormData(event.currentTarget);
             submitted.current = period;
             startTransition(() => formAction(formData));
@@ -304,6 +428,30 @@ export function BulletinForm({
               publicar de novo.
             </p>
           )}
+
+          <div className="mt-3 rounded-[12px] border border-dashed border-admin-primary-soft bg-admin-input-bg px-3.5 py-2.5">
+            <label htmlFor="b-relatorio" className={LABEL_CLASS}>
+              Preencher pelo relatório do sistema (PDF de produtividade)
+            </label>
+            <input
+              id="b-relatorio"
+              type="file"
+              accept="application/pdf,.pdf"
+              multiple
+              form="b-relatorio-sozinho"
+              onChange={(event) => void readReport(event.target.files)}
+              className="block w-full text-[12.5px] file:mr-3 file:rounded-full file:border-0 file:bg-admin-primary file:px-3.5 file:py-1.5 file:text-[12px] file:font-semibold file:text-white"
+            />
+            <p
+              className="mt-1 text-[11.5px] text-admin-muted"
+              aria-live="polite"
+            >
+              {reading
+                ? "Lendo o relatório..."
+                : (readNote ??
+                  "O sistema lê os números e preenche o mês. Tudo continua editável.")}
+            </p>
+          </div>
 
           <div className="mt-4 grid grid-cols-2 gap-3">
             <div>
@@ -451,6 +599,95 @@ export function BulletinForm({
             </p>
           </div>
 
+          {readFromReport && (
+            <div className="mt-4 rounded-[12px] border border-admin-warning-soft-border bg-admin-warning-bg px-3.5 py-3 text-[12.5px] text-admin-warning-text">
+              <input type="hidden" name="lido" value="1" />
+              <p className="font-semibold">
+                Conferência: estes números foram lidos do relatório pelo
+                sistema.
+              </p>
+              <label className="mt-1.5 flex items-start gap-2 font-semibold">
+                <input
+                  type="checkbox"
+                  name="conferido"
+                  required
+                  className="checkbox-admin mt-0.5"
+                />
+                Conferi os valores com o relatório e estão corretos. (Fica na
+                auditoria com o meu nome.)
+              </label>
+            </div>
+          )}
+
+          {canSign && (
+            <div className="mt-4 rounded-[12px] border border-admin-border px-3.5 py-3">
+              <label className="flex items-center gap-2 text-[13px] font-semibold text-admin-primary">
+                <input
+                  type="checkbox"
+                  checked={signing}
+                  onChange={(event) => setSigning(event.target.checked)}
+                  className="checkbox-admin"
+                />
+                Assinar digitalmente antes de publicar
+              </label>
+              {signing && (
+                <div className="mt-2.5 grid grid-cols-1 gap-2.5">
+                  <ModeChoice
+                    mode={signMode}
+                    onChange={setSignMode}
+                    hasA1={certificates.length > 0}
+                    prefix="boletim"
+                  />
+                  {signMode === "a1" && (
+                    <div className="grid grid-cols-1 gap-2.5 md:grid-cols-2">
+                      <input type="hidden" name="assinar" value="a1" />
+                      <label className={LABEL_CLASS}>
+                        Certificado
+                        <select
+                          name="certificateId"
+                          required
+                          className={`${FIELD_CLASS} mt-1.5`}
+                        >
+                          {certificates.map((c) => (
+                            <option key={c.id} value={c.id}>
+                              {c.label} · {c.holderName}
+                            </option>
+                          ))}
+                        </select>
+                      </label>
+                      <label className={LABEL_CLASS}>
+                        Senha do certificado
+                        <input
+                          name="password"
+                          type="password"
+                          autoComplete="off"
+                          required
+                          className={`${FIELD_CLASS} mt-1.5`}
+                        />
+                      </label>
+                    </div>
+                  )}
+                  {signMode === "a3" && (
+                    <LocalSignerPicker signer={local} prefix="boletim" />
+                  )}
+                  {tokenError && (
+                    <p
+                      role="alert"
+                      className="text-[12.5px] font-semibold text-admin-error-text"
+                    >
+                      {tokenError}
+                    </p>
+                  )}
+                  <p className="text-[11.5px] text-admin-muted">
+                    O boletim sobe no site já assinado, com o QR de verificação.
+                    Se você corrigir algo depois, é só editar e publicar de novo
+                    (e assinar de novo).
+                  </p>
+                </div>
+              )}
+            </div>
+          )}
+
           {state.status === "error" && !Object.keys(fieldErrors).length && (
             <p
               role="alert"
@@ -462,14 +699,18 @@ export function BulletinForm({
 
           <button
             type="submit"
-            disabled={pending}
+            disabled={pending || tokenBusy || (signing && !signMode)}
             className="btn btn-admin-primary btn-lg mt-4 w-full"
           >
-            {pending
-              ? "Publicando…"
-              : published
-                ? "Publicar correção no site"
-                : "Publicar no site"}
+            {pending || tokenBusy
+              ? signing
+                ? "Assinando e publicando…"
+                : "Publicando…"
+              : signing
+                ? "Assinar e publicar no site"
+                : published
+                  ? "Publicar correção no site"
+                  : "Publicar no site"}
           </button>
         </form>
 

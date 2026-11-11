@@ -13,8 +13,11 @@ function monthYearOf(referenceMonth: string): string {
 
 export function BulletinList({
   bulletins,
+  signed = [],
 }: {
   bulletins: TransparencyBulletinRow[];
+  /** The ids whose signed copy still matches what is published. */
+  signed?: string[];
 }) {
   return (
     <div className="rounded-[14px] border border-admin-border bg-admin-card">
@@ -33,6 +36,11 @@ export function BulletinList({
               <li key={b.id} className="flex items-center gap-3 px-5 py-3.5">
                 <span className="flex-1 text-[13.5px] font-semibold text-admin-primary">
                   {monthYearOf(b.referenceMonth)}
+                  {signed.includes(b.id) && (
+                    <span className="ml-2 rounded-full bg-admin-success-bg px-2 py-0.5 text-[10.5px] font-bold text-admin-success-text">
+                      Assinado digitalmente
+                    </span>
+                  )}
                 </span>
                 <span
                   className={`rounded-full px-2.5 py-0.5 text-[10.5px] font-bold ${

@@ -372,6 +372,13 @@
       "when": 1794407831052,
       "tag": "0052_entrega_retida_ate_assinar",
       "breakpoints": true
+    },
+    {
+      "idx": 53,
+      "version": "7",
+      "when": 1794412092615,
+      "tag": "0053_boletim_assinado",
+      "breakpoints": true
     }
   ]
 }
