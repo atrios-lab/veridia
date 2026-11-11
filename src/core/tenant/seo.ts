@@ -18,7 +18,7 @@ export type PageMeta = {
 
 /**
  * Title of the home, and the fallback of every route that sets none: the
- * office's name and what it is. "Cartório Ielmo Marinho/RN" alone is what
+ * office's name and what it is. "Cartório Único de Ielmo Marinho/RN" alone is what
  * nobody searches for; "Ofício Único de Ielmo Marinho / RN" carries the
  * kind of serventia and the town, which is what the query says.
  */
@@ -37,7 +37,7 @@ export const PAGE_META: Record<string, PageMeta> = {
     title: "Solicitar serviço",
     description: (t) =>
       `Peça certidões e atos do ${t.name} em 3 etapas, sem sair de casa: ` +
-      "escolha a área, preencha o pedido e acompanhe pelo número do protocolo.",
+      "escolha a área, preencha o pedido e acompanhe pelo protocolo.",
   },
   "/agendar": {
     title: "Agendar atendimento",
@@ -61,7 +61,7 @@ export const PAGE_META: Record<string, PageMeta> = {
     title: "Selo digital",
     description: (t) =>
       "Confira no sistema do Tribunal de Justiça se um documento emitido " +
-      `pelo ${t.name} é autêntico, pelo código do selo digital impresso nele.`,
+      `pelo ${t.name} é autêntico pelo código do selo digital impresso.`,
   },
   "/verificar": {
     title: "Verificar documento assinado",
