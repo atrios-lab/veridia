@@ -7,6 +7,7 @@ import {
   gte,
   ilike,
   inArray,
+  isNotNull,
   isNull,
   lte,
   ne,
@@ -59,6 +60,7 @@ export interface AuditEntry {
     id: string;
     body: string;
     createdAt: Date;
+    editedAt: Date | null;
     authorName: string | null;
   }[];
 }
@@ -80,6 +82,8 @@ export interface AuditFilter {
   excludeActorId?: string;
   /** The Átrios account's own acts: only the Átrios account sees them. */
   includePlatform?: boolean;
+  /** true: only what the holder archived; otherwise archived ones stay out. */
+  archived?: boolean;
   limit?: number;
 }
 
@@ -131,6 +135,12 @@ export async function listAuditWith(
       ? and(sql`${levelSql()} = 'urgente'`, isNull(auditReviews.id))
       : undefined,
     filter.includePlatform ? undefined : notByPlatform(),
+    // An explicit list of ids (a notification, a report) ignores the archive.
+    filter.ids?.length
+      ? undefined
+      : filter.archived
+        ? isNotNull(auditReviews.archivedAt)
+        : isNull(auditReviews.archivedAt),
     filter.excludeActorId
       ? or(
           isNull(auditLog.actorId),
@@ -175,6 +185,7 @@ export async function listAuditWith(
           auditId: auditNotes.auditId,
           body: auditNotes.body,
           createdAt: auditNotes.createdAt,
+          editedAt: auditNotes.editedAt,
           authorName: user.name,
         })
         .from(auditNotes)
@@ -182,6 +193,7 @@ export async function listAuditWith(
         .where(
           and(
             inArray(auditNotes.auditId, ids),
+            isNull(auditNotes.removedAt),
             // A note of the Átrios account is as invisible as its acts.
             filter.includePlatform
               ? undefined
@@ -216,10 +228,11 @@ export async function listAuditWith(
       row.targetId?.replace(ACCOUNT_ID, (id) => names.get(id) ?? id) ?? null,
     notes: notes
       .filter((note) => note.auditId === row.id)
-      .map(({ id, body, createdAt, authorName }) => ({
+      .map(({ id, body, createdAt, editedAt, authorName }) => ({
         id,
         body,
         createdAt,
+        editedAt,
         authorName,
       })),
   }));
@@ -288,6 +301,43 @@ export async function markReviewedWith(
     .onConflictDoNothing()
     .returning({ id: auditReviews.id });
   return inserted.length;
+}
+
+/**
+ * Archives entries, or brings them back (decision of 11/11/2026): the
+ * holder's "excluir" for the trail, which never erases. An archived entry
+ * leaves the list and the alerts, and counts as seen.
+ */
+export async function setArchivedWith(
+  database: Database,
+  tenantSlugs: string[] | "all",
+  ids: string[],
+  userId: string,
+  archived: boolean,
+  now = new Date(),
+): Promise<number> {
+  const wanted = ids.filter((id) => /^[0-9a-f-]{36}$/i.test(id)).slice(0, 300);
+  if (!wanted.length) return 0;
+  if (tenantSlugs !== "all" && !tenantSlugs.length) return 0;
+  // Seen first: an archived act is an act someone looked at.
+  await markReviewedWith(database, tenantSlugs, wanted, userId, now);
+  const changed = await database
+    .update(auditReviews)
+    .set(
+      archived
+        ? { archivedAt: now, archivedBy: userId }
+        : { archivedAt: null, archivedBy: null },
+    )
+    .where(
+      and(
+        inArray(auditReviews.auditId, wanted),
+        tenantSlugs === "all"
+          ? undefined
+          : inArray(auditReviews.tenantSlug, tenantSlugs),
+      ),
+    )
+    .returning({ id: auditReviews.id });
+  return changed.length;
 }
 
 /**
@@ -386,6 +436,56 @@ export async function peopleSummaryWith(
         b.atencao - a.atencao ||
         b.lastAt.getTime() - a.lastAt.getTime(),
     );
+}
+
+/** The holder corrects a note. The act it hangs on never changes. */
+export async function editAuditNoteWith(
+  database: Database,
+  tenantSlug: string | "*",
+  noteId: string,
+  body: string,
+  now = new Date(),
+): Promise<boolean> {
+  const text = typed(body).slice(0, 2000);
+  if (!text || !/^[0-9a-f-]{36}$/i.test(noteId)) return false;
+  const [row] = await database
+    .update(auditNotes)
+    .set({ body: text, editedAt: now })
+    .where(
+      and(
+        eq(auditNotes.id, noteId),
+        isNull(auditNotes.removedAt),
+        tenantSlug === "*" ? undefined : eq(auditNotes.tenantSlug, tenantSlug),
+      ),
+    )
+    .returning({ id: auditNotes.id });
+  return Boolean(row);
+}
+
+/**
+ * "Excluir" a note: it leaves the screen and the reports; the row stays in
+ * the database (nothing of the audit is ever erased).
+ */
+export async function removeAuditNoteWith(
+  database: Database,
+  tenantSlug: string | "*",
+  noteId: string,
+  userId: string,
+  now = new Date(),
+): Promise<boolean> {
+  if (!/^[0-9a-f-]{36}$/i.test(noteId)) return false;
+  const [row] = await database
+    .update(auditNotes)
+    .set({ removedAt: now, removedBy: userId })
+    .where(
+      and(
+        eq(auditNotes.id, noteId),
+        isNull(auditNotes.removedAt),
+        tenantSlug === "*" ? undefined : eq(auditNotes.tenantSlug, tenantSlug),
+      ),
+    )
+    .returning({ id: auditNotes.id });
+  return Boolean(row);
 }
 
 /* ------------------------------------------------------- notifications */

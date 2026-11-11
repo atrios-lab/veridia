@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { auditActionLabel } from "@/core/audit/labels.ts";
+import { auditActionLabel, targetInWords } from "@/core/audit/labels.ts";
 import type { Role } from "@/core/auth/roles.ts";
 import { formatOfficeDateTime } from "@/core/time/office-time.ts";
 import { db } from "@/db/index.ts";
@@ -86,8 +86,9 @@ export default async function NotificationPage({
         </Link>
         {sent && (
           <p className="rounded-[12px] bg-admin-success-bg px-4 py-3 text-[13px] font-semibold text-admin-success-text">
-            Notificação enviada para o e-mail de {view.targetName}. Ela também
-            aparece na aba Auditoria do painel da pessoa.
+            Notificação enviada pelo painel: {view.targetName} vê o pedido na
+            aba Auditoria e um aviso em todas as telas até responder
+            {view.emailedAt ? ", e recebeu também por e-mail" : ""}.
           </p>
         )}
         <section className="rounded-[14px] border border-admin-border bg-admin-card px-5 py-4">
@@ -157,7 +158,8 @@ export default async function NotificationPage({
                 <li key={entry.id} className="[overflow-wrap:anywhere]">
                   {formatOfficeDateTime(entry.createdAt)} ·{" "}
                   {auditActionLabel(entry.action)}
-                  {entry.targetLabel && ` · ${entry.targetLabel}`}
+                  {targetInWords(entry.targetType, entry.targetLabel) &&
+                    ` · ${targetInWords(entry.targetType, entry.targetLabel)}`}
                 </li>
               ))}
             </ul>

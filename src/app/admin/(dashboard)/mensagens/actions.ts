@@ -1,5 +1,7 @@
 "use server";
 
+import { revalidatePath } from "next/cache";
+
 import { can } from "@/core/auth/roles.ts";
 import {
   acceptedType,
@@ -11,6 +13,8 @@ import {
 import { db } from "@/db/index.ts";
 import {
   type Contact,
+  decideLunchWith,
+  getProfileWith,
   type Incoming,
   inboxWith,
   listContactsWith,
@@ -19,7 +23,9 @@ import {
   type MessageView,
   markReadWith,
   openDirectWith,
+  requestLunchWith,
   sendMessageWith,
+  setChatDisabledWith,
   touchPresenceWith,
   updateProfileWith,
 } from "@/lib/messages.ts";
@@ -34,9 +40,12 @@ async function messengerAccess() {
     return null;
   }
   const tenant = await getTenant();
+  const profile = await getProfileWith(db, tenant.slug, session.user.id);
   return {
     session,
     tenant,
+    /** The holder turned this person's messenger off. */
+    off: Boolean(profile?.chatDisabled),
     // The Átrios account reads every conversation and is seen by no one:
     // it never writes, never shows online (decision of 11/11/2026).
     platform: role === "superadmin",
@@ -51,6 +60,11 @@ export type Result<T = undefined> =
   | { ok: false; message: string };
 
 const DENIED = { ok: false as const, message: "Sem permissão." };
+const CHAT_OFF = {
+  ok: false as const,
+  message:
+    "Suas mensagens internas foram desativadas pelo Tabelião/Registrador.",
+};
 const PLATFORM_READS_ONLY = {
   ok: false as const,
   message:
@@ -75,6 +89,7 @@ export async function openConversation(
   const access = await messengerAccess();
   if (!access) return DENIED;
   if (access.platform) return PLATFORM_READS_ONLY;
+  if (access.off) return CHAT_OFF;
   try {
     const id = await openDirectWith(
       db,
@@ -95,6 +110,7 @@ export async function sendText(
   const access = await messengerAccess();
   if (!access) return DENIED;
   if (access.platform) return PLATFORM_READS_ONLY;
+  if (access.off) return CHAT_OFF;
   try {
     await sendMessageWith(
       db,
@@ -113,6 +129,7 @@ export async function sendNudge(conversationId: string): Promise<Result> {
   const access = await messengerAccess();
   if (!access) return DENIED;
   if (access.platform) return PLATFORM_READS_ONLY;
+  if (access.off) return CHAT_OFF;
   try {
     await sendMessageWith(
       db,
@@ -132,6 +149,7 @@ export async function sendFile(formData: FormData): Promise<Result> {
   const access = await messengerAccess();
   if (!access) return DENIED;
   if (access.platform) return PLATFORM_READS_ONLY;
+  if (access.off) return CHAT_OFF;
   const conversationId = String(formData.get("conversationId") ?? "");
   const file = formData.get("file");
   if (!(file instanceof File) || file.size === 0) {
@@ -235,6 +253,7 @@ export async function pollMessenger(
 export async function pollInbox(sinceIso: string): Promise<
   Result<{
     incoming: (Omit<Incoming, "createdAt"> & { createdAt: string })[];
+    latest: (Omit<Incoming, "createdAt"> & { createdAt: string }) | null;
     unread: number;
     now: string;
   }>
@@ -251,7 +270,7 @@ export async function pollInbox(sinceIso: string): Promise<
     );
   }
   const since = new Date(sinceIso);
-  const { incoming, unread } = await inboxWith(
+  const { incoming, unread, latest } = await inboxWith(
     db,
     access.session.user.id,
     Number.isNaN(since.getTime()) ? now : since,
@@ -260,6 +279,9 @@ export async function pollInbox(sinceIso: string): Promise<
     ok: true,
     data: {
       unread,
+      latest: latest
+        ? { ...latest, createdAt: latest.createdAt.toISOString() }
+        : null,
       now: now.toISOString(),
       incoming: incoming.map((i) => ({
         ...i,
@@ -307,5 +329,77 @@ export async function saveProfile(formData: FormData): Promise<Result> {
       : undefined,
     ...(photoPath ? { photoPath } : {}),
   });
+  return { ok: true };
+}
+
+/**
+ * Asks for the daily lunch window (or a change): it waits for the holder,
+ * goes to the audit and cannot be asked again until decided.
+ */
+export async function requestLunch(
+  start: string,
+  minutes: number,
+): Promise<Result> {
+  const access = await messengerAccess();
+  if (!access) return DENIED;
+  if (access.platform) return PLATFORM_READS_ONLY;
+  try {
+    await requestLunchWith(
+      db,
+      access.tenant.slug,
+      access.session.user.id,
+      start,
+      minutes,
+    );
+    return { ok: true };
+  } catch (error) {
+    return failure(error, "mensagens.almoco");
+  }
+}
+
+async function holderAccess() {
+  const access = await messengerAccess();
+  if (!access) return null;
+  const role = access.session.user.role ?? "";
+  return can(role, "audit.manage", access.session.user.permissions)
+    ? access
+    : null;
+}
+
+/** The holder approves, or not, the lunch window asked for. */
+export async function decideLunch(
+  userId: string,
+  approve: boolean,
+): Promise<Result> {
+  const access = await holderAccess();
+  if (!access) return DENIED;
+  const done = await decideLunchWith(
+    db,
+    access.tenant.slug,
+    userId,
+    approve,
+    access.session.user.id,
+  );
+  revalidatePath("/admin/mensagens/supervisao");
+  return done
+    ? { ok: true }
+    : { ok: false, message: "Não há pedido de almoço desta pessoa." };
+}
+
+/** The holder turns one person's messenger off, or back on. */
+export async function setChatEnabled(
+  userId: string,
+  enabled: boolean,
+): Promise<Result> {
+  const access = await holderAccess();
+  if (!access) return DENIED;
+  await setChatDisabledWith(
+    db,
+    access.tenant.slug,
+    userId,
+    !enabled,
+    access.session.user.id,
+  );
+  revalidatePath("/admin/mensagens/supervisao");
   return { ok: true };
 }

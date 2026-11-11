@@ -114,7 +114,7 @@ export default async function ManageTutorialsPage() {
     <>
       <AdminPageHeader
         title="Gerenciar vídeos"
-        back={{ href: "/admin/ajuda", label: "Treinamento" }}
+        back={{ href: "/admin/ajuda", label: "Ajuda e treinamentos" }}
         description="Os cursos do Treinamento e os vídeos de cada um, na ordem em que são assistidos."
         actions={
           can(

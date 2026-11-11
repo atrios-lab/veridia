@@ -1,12 +1,14 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { can } from "@/core/auth/roles.ts";
+import { can, type Role } from "@/core/auth/roles.ts";
 import { formatOfficeDateTime } from "@/core/time/office-time.ts";
 import { db } from "@/db/index.ts";
-import { listAllConversationsWith } from "@/lib/messages.ts";
+import { listAllConversationsWith, listTeamWith } from "@/lib/messages.ts";
 import { getSession } from "@/lib/session.ts";
 import { getTenant } from "@/lib/tenant.ts";
 import { AdminPageHeader } from "../../../_components/page-header.tsx";
+import { ROLE_LABELS } from "../../../_components/role-labels.ts";
+import { TeamPanel } from "./team-panel.tsx";
 
 export const metadata = { title: "Todas as conversas" };
 
@@ -24,10 +26,14 @@ export default async function OversightPage() {
     notFound();
   }
   const tenant = await getTenant();
-  const conversations = await listAllConversationsWith(db, tenant.slug);
+  const holder = can(role, "audit.manage", session.user.permissions);
+  const [conversations, team] = await Promise.all([
+    listAllConversationsWith(db, tenant.slug),
+    holder ? listTeamWith(db, tenant.slug) : Promise.resolve([]),
+  ]);
   return (
     <>
-      <AdminPageHeader title="Mensagens" />
+      <AdminPageHeader title="Mensagens internas" />
       <main className="flex max-w-[900px] flex-col gap-4 px-[30px] py-7 max-md:px-4">
         {role !== "superadmin" && (
           <Link
@@ -36,6 +42,32 @@ export default async function OversightPage() {
           >
             ‹ Minhas mensagens
           </Link>
+        )}
+        {holder && (
+          <section className="rounded-[14px] border border-admin-border bg-admin-card px-5 py-4">
+            <h2 className="font-serif text-[17px] font-semibold text-admin-primary">
+              Equipe: horário de almoço e chat
+            </h2>
+            <p className="mt-1 text-[12.5px] text-admin-muted">
+              Cada pessoa pede o próprio horário de almoço (até 1 hora por dia);
+              ele só vale depois que você aprovar. Fora desse horário a pessoa
+              volta a aparecer disponível sozinha. Você também pode desligar o
+              chat de alguém. Tudo vai para a auditoria.
+            </p>
+            <TeamPanel
+              team={team.map((m) => ({
+                userId: m.userId,
+                name: m.name,
+                role: ROLE_LABELS[m.role as Role] ?? m.role,
+                lunch: m.lunch,
+                lunchPending: m.lunchPending,
+                requestedAt: m.lunchRequestedAt
+                  ? formatOfficeDateTime(m.lunchRequestedAt)
+                  : null,
+                chatDisabled: m.chatDisabled,
+              }))}
+            />
+          </section>
         )}
         <section className="rounded-[14px] border border-admin-border bg-admin-card px-5 py-4">
           <h2 className="font-serif text-[17px] font-semibold text-admin-primary">

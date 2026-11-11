@@ -26,3 +26,29 @@ export function UrgentAuditBanner({ count }: { count: number }) {
     </output>
   );
 }
+
+/**
+ * On every screen of whoever has an audit notification to answer: the
+ * notice inside the platform, besides the e-mail (decision of 11/11/2026).
+ * It stays until the answer is sent.
+ */
+export function AuditNoticeBanner({ count }: { count: number }) {
+  return (
+    <output className="mx-[30px] mt-4 flex flex-wrap items-center justify-between gap-2 rounded-[12px] border border-admin-warning-soft-border bg-admin-warning-bg px-4 py-2.5 text-[13px] text-admin-warning-text max-md:mx-4">
+      <span className="flex items-center gap-2 font-semibold">
+        <span
+          aria-hidden="true"
+          className="inline-block h-2.5 w-2.5 animate-pulse rounded-full bg-admin-warning-text"
+        />
+        {count === 1
+          ? "O Tabelião/Registrador enviou uma notificação de auditoria para você. Responda em até 24 horas."
+          : `O Tabelião/Registrador enviou ${count} notificações de auditoria para você. Responda em até 24 horas.`}
+      </span>
+      <Link href="/admin/auditoria" className="btn btn-admin-secondary btn-sm">
+        Ver e responder
+      </Link>
+    </output>
+  );
+}
+
+export { AuditChime } from "./audit-chime.tsx";

@@ -38,3 +38,25 @@ permite `microphone=(self)` para gravar os áudios.
 
 A migração `0044_mensagens_internas.sql` só cria `messenger_profiles`, `messenger_conversations`,
 `messenger_members` e `messenger_messages`. Não apaga nem altera nada.
+
+## Atualização de 11/11/2026
+
+- **Nome:** "Mensagens internas", no menu e na tela.
+- **Aviso:** "o Tabelião/Registrador pode ler todas as conversas" fica no topo de cada conversa.
+- **Foto:** clique na própria foto (etiqueta "+ Foto" ou "Trocar") ou use o botão em "Personalizar".
+- **Microfone:**
+  - o botão "Liberar microfone" faz o navegador perguntar;
+  - quando o navegador bloqueou, a tela mostra o passo a passo para Chrome e Edge, iPhone e Android.
+- **Status:**
+  - Disponível, Em atendimento no balcão, Em reunião, Ocupado, Ausente;
+  - "Horário de almoço" é automático e não pode ser escolhido à mão.
+- **Horário de almoço:**
+  - cada pessoa pede o próprio horário, de 15 minutos a 1 hora por dia;
+  - o pedido vai para a auditoria e para o Tabelião/Registrador aprovar ou não, e não pode ser mudado até a decisão;
+  - no horário aprovado, a pessoa aparece em almoço; depois, volta sozinha ao status escolhido.
+- **Tabelião/Registrador, em Mensagens internas › Equipe e conversas:** aprova ou recusa o almoço e ativa ou desativa o chat de cada pessoa. Quem fica com o chat desativado não envia nem recebe mensagens.
+- **Balão flutuante:**
+  - chegou mensagem, aparece em qualquer tela um balão e a janelinha "Fulano diz:";
+  - "Responder aqui" abre a conversa numa janela pequena no canto, sem sair da tela de trabalho;
+  - enquanto houver mensagem sem ler, o som volta a cada 10 segundos e o título da aba pisca.
+- **Configurações › Notificações:** os canais "Mensagens internas" e "Auditoria" ligam ou desligam o cartão, o som, a notificação do navegador e o tremor.

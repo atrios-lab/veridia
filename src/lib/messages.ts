@@ -15,6 +15,8 @@ import { PANEL_ROLES } from "@/core/auth/roles.ts";
 import {
   canNudge,
   isColor,
+  type Lunch,
+  lunchLabel,
   MAX_TEXT,
   type MessageKind,
   type MessengerColor,
@@ -22,6 +24,7 @@ import {
   presenceOf,
   STATUSES,
   type Status,
+  validLunch,
 } from "@/core/messages/rules.ts";
 import { user } from "@/db/auth-schema.ts";
 import type { Database } from "@/db/index.ts";
@@ -31,6 +34,7 @@ import {
   messengerMessages,
   messengerProfiles,
 } from "@/db/schema.ts";
+import { recordAuditWith } from "./audit.ts";
 
 /* -------------------------------------------------------------- profile */
 
@@ -43,6 +47,12 @@ export interface Profile {
   personalMessage: string;
   color: MessengerColor;
   sound: boolean;
+  /** The approved daily lunch window, if any. */
+  lunch: Lunch | null;
+  /** A change waiting for the holder's decision. */
+  lunchPending: Lunch | null;
+  /** The holder turned this person's messenger off. */
+  chatDisabled: boolean;
 }
 
 export async function getProfileWith(
@@ -60,6 +70,11 @@ export async function getProfileWith(
       personalMessage: messengerProfiles.personalMessage,
       color: messengerProfiles.color,
       sound: messengerProfiles.sound,
+      lunchStart: messengerProfiles.lunchStart,
+      lunchMinutes: messengerProfiles.lunchMinutes,
+      lunchPendingStart: messengerProfiles.lunchPendingStart,
+      lunchPendingMinutes: messengerProfiles.lunchPendingMinutes,
+      chatDisabledAt: messengerProfiles.chatDisabledAt,
     })
     .from(user)
     .leftJoin(messengerProfiles, eq(messengerProfiles.userId, user.id))
@@ -77,7 +92,17 @@ export async function getProfileWith(
     personalMessage: row.personalMessage ?? "",
     color: isColor(row.color ?? "") ? (row.color as MessengerColor) : "verde",
     sound: row.sound ?? true,
+    lunch: lunchOf(row.lunchStart, row.lunchMinutes),
+    lunchPending: lunchOf(row.lunchPendingStart, row.lunchPendingMinutes),
+    chatDisabled: Boolean(row.chatDisabledAt),
   };
+}
+
+function lunchOf(
+  start: string | null | undefined,
+  minutes: number | null | undefined,
+): Lunch | null {
+  return start && minutes ? { start, minutes } : null;
 }
 
 async function ensureProfile(
@@ -193,6 +218,9 @@ export async function listContactsWith(
       status: messengerProfiles.status,
       personalMessage: messengerProfiles.personalMessage,
       lastSeenAt: messengerProfiles.lastSeenAt,
+      lunchStart: messengerProfiles.lunchStart,
+      lunchMinutes: messengerProfiles.lunchMinutes,
+      chatDisabledAt: messengerProfiles.chatDisabledAt,
     })
     .from(user)
     .leftJoin(messengerProfiles, eq(messengerProfiles.userId, user.id))
@@ -232,7 +260,14 @@ export async function listContactsWith(
         name: person.name,
         role: person.role ?? "",
         photo: Boolean(person.photoPath),
-        presence: presenceOf(person.status, person.lastSeenAt, now),
+        presence: person.chatDisabledAt
+          ? ("offline" as const)
+          : presenceOf(
+              person.status,
+              person.lastSeenAt,
+              now,
+              lunchOf(person.lunchStart, person.lunchMinutes),
+            ),
         personalMessage: person.personalMessage ?? "",
         conversationId: conversation?.id ?? null,
         unread: conversation ? (unread.get(conversation.id) ?? 0) : 0,
@@ -304,6 +339,16 @@ export async function openDirectWith(
     )
     .limit(1);
   if (!other) throw new MessageError("Pessoa não encontrada nesta serventia.");
+  const [off] = await database
+    .select({ at: messengerProfiles.chatDisabledAt })
+    .from(messengerProfiles)
+    .where(eq(messengerProfiles.userId, otherId))
+    .limit(1);
+  if (off?.at) {
+    throw new MessageError(
+      "O chat desta pessoa foi desativado pelo Tabelião/Registrador.",
+    );
+  }
   const pairKey = pairKeyOf(viewerId, otherId);
   await database
     .insert(messengerConversations)
@@ -559,7 +604,11 @@ export async function inboxWith(
   database: Database,
   userId: string,
   since: Date,
-): Promise<{ incoming: Incoming[]; unread: number }> {
+): Promise<{
+  incoming: Incoming[];
+  unread: number;
+  latest: Incoming | null;
+}> {
   const rows = await database
     .select({
       id: messengerMessages.id,
@@ -591,8 +640,69 @@ export async function inboxWith(
   const unread = [
     ...(await unreadByConversation(database, userId)).values(),
   ].reduce((sum, n) => sum + n, 0);
+  // The newest message still unread, whenever it came: what the floating
+  // balloon offers to answer, also right after a page load.
+  const [newest] = unread
+    ? await database
+        .select({
+          id: messengerMessages.id,
+          conversationId: messengerMessages.conversationId,
+          senderId: messengerMessages.senderId,
+          senderName: user.name,
+          kind: messengerMessages.kind,
+          body: messengerMessages.body,
+          fileName: messengerMessages.fileName,
+          createdAt: messengerMessages.createdAt,
+        })
+        .from(messengerMessages)
+        .innerJoin(
+          messengerMembers,
+          and(
+            eq(
+              messengerMembers.conversationId,
+              messengerMessages.conversationId,
+            ),
+            eq(messengerMembers.userId, userId),
+          ),
+        )
+        .leftJoin(user, eq(user.id, messengerMessages.senderId))
+        .where(
+          and(
+            ne(messengerMessages.senderId, userId),
+            or(
+              isNull(messengerMembers.lastReadAt),
+              gt(messengerMessages.createdAt, messengerMembers.lastReadAt),
+            ),
+          ),
+        )
+        .orderBy(desc(messengerMessages.createdAt))
+        .limit(1)
+    : [];
+  const preview = (row: {
+    kind: string;
+    body: string | null;
+    fileName: string | null;
+  }) =>
+    row.kind === "chamar"
+      ? "chamou a sua atenção!"
+      : row.kind === "audio"
+        ? "enviou um áudio"
+        : row.kind === "arquivo"
+          ? `enviou ${row.fileName ?? "um arquivo"}`
+          : (row.body ?? "").slice(0, 120);
   return {
     unread,
+    latest: newest
+      ? {
+          id: newest.id,
+          conversationId: newest.conversationId,
+          senderId: newest.senderId,
+          senderName: newest.senderName ?? "Alguém",
+          kind: newest.kind as MessageKind,
+          createdAt: newest.createdAt,
+          preview: preview(newest),
+        }
+      : null,
     incoming: rows.map((row) => ({
       id: row.id,
       conversationId: row.conversationId,
@@ -702,4 +812,170 @@ export async function findMessageFileWith(
     name: row.name ?? "arquivo",
     mimeType: row.mimeType ?? "application/octet-stream",
   };
+}
+
+/* ------------------------------------------------- lunch and the holder */
+
+/**
+ * Asks for a daily lunch window (or a change of it): it waits for the
+ * Tabelião/Registrador's decision, goes to the audit, and cannot be asked
+ * again while it waits (decision of 11/11/2026).
+ */
+export async function requestLunchWith(
+  database: Database,
+  tenantSlug: string,
+  userId: string,
+  start: string,
+  minutes: number,
+  now = new Date(),
+): Promise<void> {
+  const problem = validLunch(start, minutes);
+  if (problem) throw new MessageError(problem);
+  await ensureProfile(database, tenantSlug, userId);
+  const [row] = await database
+    .select({ pending: messengerProfiles.lunchPendingStart })
+    .from(messengerProfiles)
+    .where(eq(messengerProfiles.userId, userId))
+    .limit(1);
+  if (row?.pending) {
+    throw new MessageError(
+      "Já existe um pedido de horário de almoço esperando o Tabelião/Registrador. Ele não pode ser mudado até a decisão.",
+    );
+  }
+  await database
+    .update(messengerProfiles)
+    .set({
+      lunchPendingStart: start,
+      lunchPendingMinutes: minutes,
+      lunchRequestedAt: now,
+    })
+    .where(eq(messengerProfiles.userId, userId));
+  await recordAuditWith(database, {
+    tenantSlug,
+    actorId: userId,
+    action: "messenger.lunch-request",
+    targetType: "user",
+    targetId: `${lunchLabel({ start, minutes })} · ${userId}`,
+  });
+}
+
+/** The holder's yes or no to a lunch window asked for. */
+export async function decideLunchWith(
+  database: Database,
+  tenantSlug: string,
+  userId: string,
+  approve: boolean,
+  holderId: string,
+): Promise<boolean> {
+  const [row] = await database
+    .select({
+      start: messengerProfiles.lunchPendingStart,
+      minutes: messengerProfiles.lunchPendingMinutes,
+    })
+    .from(messengerProfiles)
+    .where(
+      and(
+        eq(messengerProfiles.userId, userId),
+        eq(messengerProfiles.tenantSlug, tenantSlug),
+      ),
+    )
+    .limit(1);
+  if (!row?.start || !row.minutes) return false;
+  await database
+    .update(messengerProfiles)
+    .set({
+      ...(approve ? { lunchStart: row.start, lunchMinutes: row.minutes } : {}),
+      lunchPendingStart: null,
+      lunchPendingMinutes: null,
+      lunchRequestedAt: null,
+    })
+    .where(eq(messengerProfiles.userId, userId));
+  await recordAuditWith(database, {
+    tenantSlug,
+    actorId: holderId,
+    action: approve ? "messenger.lunch-approve" : "messenger.lunch-reject",
+    targetType: "user",
+    targetId: `${lunchLabel({ start: row.start, minutes: row.minutes })} · ${userId}`,
+  });
+  return true;
+}
+
+/** The holder turns one person's messenger off, or back on. */
+export async function setChatDisabledWith(
+  database: Database,
+  tenantSlug: string,
+  userId: string,
+  disabled: boolean,
+  holderId: string,
+  now = new Date(),
+): Promise<void> {
+  await ensureProfile(database, tenantSlug, userId);
+  await database
+    .update(messengerProfiles)
+    .set(
+      disabled
+        ? { chatDisabledAt: now, chatDisabledBy: holderId }
+        : { chatDisabledAt: null, chatDisabledBy: null },
+    )
+    .where(
+      and(
+        eq(messengerProfiles.userId, userId),
+        eq(messengerProfiles.tenantSlug, tenantSlug),
+      ),
+    );
+  await recordAuditWith(database, {
+    tenantSlug,
+    actorId: holderId,
+    action: disabled ? "messenger.chat-off" : "messenger.chat-on",
+    targetType: "user",
+    targetId: userId,
+  });
+}
+
+export interface TeamRow {
+  userId: string;
+  name: string;
+  role: string;
+  lunch: Lunch | null;
+  lunchPending: Lunch | null;
+  lunchRequestedAt: Date | null;
+  chatDisabled: boolean;
+}
+
+/** The office's people, for the holder's panel of lunch and chat. */
+export async function listTeamWith(
+  database: Database,
+  tenantSlug: string,
+): Promise<TeamRow[]> {
+  const rows = await database
+    .select({
+      userId: user.id,
+      name: user.name,
+      role: user.role,
+      lunchStart: messengerProfiles.lunchStart,
+      lunchMinutes: messengerProfiles.lunchMinutes,
+      lunchPendingStart: messengerProfiles.lunchPendingStart,
+      lunchPendingMinutes: messengerProfiles.lunchPendingMinutes,
+      lunchRequestedAt: messengerProfiles.lunchRequestedAt,
+      chatDisabledAt: messengerProfiles.chatDisabledAt,
+    })
+    .from(user)
+    .leftJoin(messengerProfiles, eq(messengerProfiles.userId, user.id))
+    .where(
+      and(
+        eq(user.tenantSlug, tenantSlug),
+        inArray(user.role, [...PANEL_ROLES]),
+        isNull(user.disabledAt),
+      ),
+    )
+    .orderBy(asc(user.name));
+  return rows.map((row) => ({
+    userId: row.userId,
+    name: row.name,
+    role: row.role ?? "",
+    lunch: lunchOf(row.lunchStart, row.lunchMinutes),
+    lunchPending: lunchOf(row.lunchPendingStart, row.lunchPendingMinutes),
+    lunchRequestedAt: row.lunchRequestedAt,
+    chatDisabled: Boolean(row.chatDisabledAt),
+  }));
 }

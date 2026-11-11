@@ -68,3 +68,22 @@ regimento interno, cite-o também.
 
 As migrações `0041_auditoria_e_notificacoes.sql` e `0043_auditoria_niveis_e_justificativa.sql` só criam
 tabelas (`audit_reviews`) e acrescentam colunas (`audit_log.reason`). Não apagam nem alteram nada.
+
+## Atualização de 11/11/2026
+
+- **Em português:** nada aparece em código. Cada ato mostra o nome, o alvo em palavras e "O que significa", no painel e no PDF.
+- **Marcar todos:** marca a lista inteira. Com os registros marcados, dá para:
+  - "Marcar como lido e ok", em qualquer faixa;
+  - notificar uma pessoa ou várias (uma notificação para cada);
+  - "Arquivar (excluir da lista)".
+- **Arquivar não apaga:**
+  - o registro sai da lista e fica em "Arquivados", de onde volta com "Desarquivar";
+  - as colunas ficam em `audit_reviews.archived_at` e `archived_by`.
+- **Anotações:**
+  - o Tabelião/Registrador edita, e a marca "editada em" fica visível;
+  - pode também excluir. A anotação some da tela e do relatório, mas continua no banco (`audit_notes.removed_at`).
+- **Notificação:**
+  - vai sempre pelo painel: aba Auditoria e uma faixa em todas as telas da pessoa até ela responder;
+  - por e-mail só quando marcado;
+  - para imprimir, use "Abrir PDF (imprimir)" na notificação.
+- **A migração `0045` só acrescenta colunas.**

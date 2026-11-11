@@ -11,6 +11,8 @@ import {
   initialsOf,
   isAudio,
   isImage,
+  type Lunch,
+  lunchLabel,
   type MessengerColor,
   OVERSIGHT_NOTICE,
   type Presence,
@@ -28,6 +30,7 @@ import { AdminIcon } from "../../_components/icon.tsx";
 import {
   openConversation,
   pollMessenger,
+  requestLunch,
   type SerializedContact,
   type SerializedMessage,
   saveProfile,
@@ -46,6 +49,8 @@ export interface Me {
   personalMessage: string;
   color: MessengerColor;
   sound: boolean;
+  lunch: Lunch | null;
+  lunchPending: Lunch | null;
 }
 
 const TITLE_BAR: Record<MessengerColor, string> = {
@@ -58,8 +63,11 @@ const TITLE_BAR: Record<MessengerColor, string> = {
 
 const DOT: Record<Presence, string> = {
   disponivel: "bg-msg-online",
+  "em-atendimento": "bg-msg-busy",
+  "em-reuniao": "bg-msg-busy",
   ocupado: "bg-msg-busy",
   ausente: "bg-msg-away",
+  almoco: "bg-msg-away",
   offline: "bg-msg-offline",
 };
 
@@ -185,15 +193,57 @@ function MessageBody({ message }: { message: SerializedMessage }) {
   );
 }
 
-/** Voice notes: hold the button to record, as on a phone. */
+type MicState = "unknown" | "prompt" | "granted" | "denied" | "unsupported";
+
+/**
+ * Voice notes, and the microphone's permission spelled out (decision of
+ * 11/11/2026): the browser asks once; when it was refused, the screen says
+ * how to give it back instead of failing in silence.
+ */
 function useRecorder(onDone: (file: File) => void) {
   const [recording, setRecording] = useState(false);
+  const [mic, setMic] = useState<MicState>("unknown");
   const recorder = useRef<MediaRecorder | null>(null);
   const chunks = useRef<Blob[]>([]);
+
+  useEffect(() => {
+    if (
+      typeof navigator === "undefined" ||
+      !navigator.mediaDevices?.getUserMedia ||
+      typeof MediaRecorder === "undefined"
+    ) {
+      setMic("unsupported");
+      return;
+    }
+    // Not every browser answers this (Safari did not for a long time):
+    // "unknown" then, and the first recording asks.
+    navigator.permissions
+      ?.query({ name: "microphone" as PermissionName })
+      .then((status) => {
+        setMic(status.state as MicState);
+        status.onchange = () => setMic(status.state as MicState);
+      })
+      .catch(() => setMic("unknown"));
+  }, []);
+
+  /** Asks the browser for the microphone without recording anything. */
+  const allow = async (): Promise<boolean> => {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      for (const track of stream.getTracks()) track.stop();
+      setMic("granted");
+      return true;
+    } catch {
+      setMic("denied");
+      return false;
+    }
+  };
+
   const start = async () => {
     if (recording) return;
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      setMic("granted");
       const type = ["audio/webm", "audio/mp4", "audio/ogg"].find((t) =>
         MediaRecorder.isTypeSupported(t),
       );
@@ -219,7 +269,7 @@ function useRecorder(onDone: (file: File) => void) {
       recorder.current = media;
       setRecording(true);
     } catch {
-      toast.error("O navegador não liberou o microfone.");
+      setMic("denied");
     }
   };
   const stop = () => {
@@ -227,7 +277,153 @@ function useRecorder(onDone: (file: File) => void) {
     recorder.current = null;
     setRecording(false);
   };
-  return { recording, start, stop };
+  return { recording, mic, allow, start, stop };
+}
+
+/** When the browser holds the microphone back: how to give it back. */
+function MicHelp({ onRetry }: { onRetry: () => void }) {
+  return (
+    <div
+      role="alert"
+      className="mt-1.5 rounded-[10px] border border-admin-warning-soft-border bg-admin-warning-bg px-3 py-2 text-[12px] leading-snug text-admin-warning-text"
+    >
+      <p className="font-semibold">
+        O microfone está bloqueado neste navegador.
+      </p>
+      <ul className="mt-1 list-disc pl-4">
+        <li>
+          No computador (Chrome ou Edge): clique no cadeado ao lado do endereço
+          do site, em Microfone escolha Permitir e recarregue a página.
+        </li>
+        <li>
+          No iPhone: Ajustes › Safari › Microfone › Permitir (ou toque em
+          &quot;aA&quot; na barra de endereço › Configurações do Site).
+        </li>
+        <li>
+          No Android: toque no cadeado ao lado do endereço › Permissões ›
+          Microfone.
+        </li>
+      </ul>
+      <button
+        type="button"
+        onClick={onRetry}
+        className="btn btn-admin-secondary btn-sm mt-1.5"
+      >
+        Tentar liberar de novo
+      </button>
+    </div>
+  );
+}
+
+/**
+ * The daily lunch window, up to an hour (decision of 11/11/2026): asked
+ * for here, decided by the Tabelião/Registrador, written to the audit, and
+ * not open to a new change while one waits.
+ */
+function LunchField({
+  lunch,
+  pending,
+  onAsked,
+}: {
+  lunch: Lunch | null;
+  pending: Lunch | null;
+  onAsked: (lunch: Lunch) => void;
+}) {
+  const [start, setStart] = useState(lunch?.start ?? "12:00");
+  const [minutes, setMinutes] = useState(lunch?.minutes ?? 60);
+  const [confirming, setConfirming] = useState(false);
+  const [busy, setBusy] = useState(false);
+  const ask = async () => {
+    setBusy(true);
+    const result = await requestLunch(start, minutes);
+    setBusy(false);
+    setConfirming(false);
+    if (!result.ok) {
+      toast.error(result.message);
+      return;
+    }
+    toast.success("Pedido enviado ao Tabelião/Registrador.");
+    onAsked({ start, minutes });
+  };
+  return (
+    <fieldset>
+      <legend className="mb-1 font-bold text-admin-primary">
+        Horário de almoço
+      </legend>
+      <p className="text-[12px] text-admin-text">
+        {lunch
+          ? `Aprovado: ${lunchLabel(lunch)}. Nesse horário você aparece como "Horário de almoço"; depois, volta a aparecer disponível sozinho.`
+          : "Nenhum horário aprovado ainda."}
+      </p>
+      {pending ? (
+        <p className="mt-1.5 rounded-[8px] bg-admin-warning-bg px-2.5 py-1.5 text-[12px] font-semibold text-admin-warning-text">
+          Pedido {lunchLabel(pending)} aguardando o Tabelião/Registrador. Até a
+          decisão, não dá para mudar de novo.
+        </p>
+      ) : (
+        <div className="mt-1.5 flex flex-wrap items-end gap-2">
+          <label className="text-[11.5px] font-semibold text-admin-muted">
+            Início
+            <input
+              type="time"
+              value={start}
+              onChange={(event) => setStart(event.target.value)}
+              className="mt-0.5 block rounded-[8px] border border-admin-input-border bg-admin-input-bg px-2 py-1 text-[12.5px]"
+            />
+          </label>
+          <label className="text-[11.5px] font-semibold text-admin-muted">
+            Duração
+            <select
+              value={minutes}
+              onChange={(event) => setMinutes(Number(event.target.value))}
+              className="mt-0.5 block rounded-[8px] border border-admin-input-border bg-admin-input-bg px-2 py-1 text-[12.5px]"
+            >
+              {[15, 30, 45, 60].map((m) => (
+                <option key={m} value={m}>
+                  {m === 60 ? "1 hora (máximo)" : `${m} minutos`}
+                </option>
+              ))}
+            </select>
+          </label>
+          {confirming ? null : (
+            <button
+              type="button"
+              onClick={() => setConfirming(true)}
+              className="btn btn-admin-secondary btn-sm"
+            >
+              {lunch ? "Pedir mudança" : "Pedir este horário"}
+            </button>
+          )}
+        </div>
+      )}
+      {confirming && (
+        <div className="mt-2 rounded-[8px] border border-admin-warning-soft-border bg-admin-warning-bg px-2.5 py-2 text-[12px] text-admin-warning-text">
+          <p className="font-semibold">
+            ⚠ Este pedido vai para a auditoria e para o Tabelião/Registrador
+            aprovar ou não. Até a decisão, você não poderá modificar o horário
+            novamente.
+          </p>
+          <div className="mt-1.5 flex gap-2">
+            <button
+              type="button"
+              disabled={busy}
+              onClick={() => void ask()}
+              className="btn btn-admin-primary btn-sm"
+            >
+              {busy ? "Enviando..." : "Confirmar o pedido"}
+            </button>
+            <button
+              type="button"
+              onClick={() => setConfirming(false)}
+              className="btn btn-admin-secondary btn-sm"
+            >
+              Voltar
+            </button>
+          </div>
+        </div>
+      )}
+    </fieldset>
+  );
 }
 
 export function Messenger({
@@ -255,9 +451,6 @@ export function Messenger({
   const windowRef = useRef<HTMLDivElement>(null);
   const listRef = useRef<HTMLDivElement>(null);
   const lastIso = useRef<string | null>(null);
-  const totalUnread = useRef(
-    initialContacts.reduce((sum, c) => sum + c.unread, 0),
-  );
   const soundOn = useRef(me.sound);
   soundOn.current = me.sound;
 
@@ -277,10 +470,9 @@ export function Messenger({
     if (!result.ok) return;
     const { contacts: next, messages: fresh } = result.data;
     setContacts(next);
-    // Another conversation got something: the list's badge and a tone.
-    const unread = next.reduce((sum, c) => sum + c.unread, 0);
-    if (unread > totalUnread.current) ring(false);
-    totalUnread.current = unread;
+    // Another conversation's news rings through the panel's watcher
+    // (messenger-watch.tsx), insisting until it is read; here only the
+    // list's badges follow.
     if (fresh.length) {
       const first = lastIso.current === null;
       lastIso.current = fresh.at(-1)?.createdAt ?? lastIso.current;
@@ -443,14 +635,14 @@ export function Messenger({
       >
         <AdminIcon name="chat" className="h-4 w-4" />
         <span className="flex-1 text-[13px] font-semibold tracking-wide">
-          Mensagens da serventia
+          Mensagens internas
         </span>
         {oversight && (
           <Link
             href="/admin/mensagens/supervisao"
             className="rounded-md bg-white/15 px-2 py-0.5 text-[11.5px] font-semibold hover:bg-white/25"
           >
-            Todas as conversas
+            Equipe e conversas
           </Link>
         )}
         <button
@@ -459,7 +651,7 @@ export function Messenger({
           aria-expanded={settings}
           className="rounded-md bg-white/15 px-2 py-0.5 text-[11.5px] font-semibold hover:bg-white/25"
         >
-          Personalizar
+          ⚙ Personalizar: foto, status e almoço
         </button>
       </div>
       {locked && me.sound && (
@@ -481,14 +673,36 @@ export function Messenger({
         >
           <div className="border-b border-admin-border bg-white/70 p-3">
             <div className="flex items-center gap-2.5">
-              <Avatar
-                userId={me.userId}
-                name={me.name}
-                photo={me.photo}
-                presence={me.status}
-                size={46}
-                version={photoVersion}
-              />
+              {/* The person's own photo, one tap away: optional. */}
+              <label
+                className="group relative cursor-pointer"
+                title={me.photo ? "Trocar minha foto" : "Colocar minha foto"}
+              >
+                <Avatar
+                  userId={me.userId}
+                  name={me.name}
+                  photo={me.photo}
+                  presence={me.status}
+                  size={52}
+                  version={photoVersion}
+                />
+                <span className="absolute inset-x-0 bottom-0 rounded-b-[10px] bg-black/55 py-0.5 text-center text-[9.5px] font-semibold text-white">
+                  {me.photo ? "Trocar" : "+ Foto"}
+                </span>
+                <input
+                  type="file"
+                  accept="image/jpeg,image/png,image/webp"
+                  className="sr-only"
+                  aria-label={
+                    me.photo ? "Trocar minha foto" : "Colocar minha foto"
+                  }
+                  onChange={(event) => {
+                    const file = event.target.files?.[0];
+                    if (file) void saveMe({}, file);
+                    event.target.value = "";
+                  }}
+                />
+              </label>
               <div className="min-w-0 flex-1">
                 <p className="truncate text-[14px] font-bold text-admin-primary">
                   {me.name}
@@ -524,20 +738,41 @@ export function Messenger({
 
           {settings && (
             <div className="space-y-3 border-b border-admin-border bg-admin-card p-3 text-[12.5px]">
-              <label className="block">
+              <div>
                 <span className="mb-1 block font-bold text-admin-primary">
-                  Minha foto
+                  Minha foto (opcional)
                 </span>
-                <input
-                  type="file"
-                  accept="image/jpeg,image/png,image/webp"
-                  onChange={(event) => {
-                    const file = event.target.files?.[0];
-                    if (file) void saveMe({}, file);
-                  }}
-                  className="block w-full text-[12px]"
-                />
-              </label>
+                <label className="flex cursor-pointer items-center gap-3 rounded-[12px] border-2 border-dashed border-admin-input-border px-3 py-2.5 hover:border-admin-primary hover:bg-admin-input-bg focus-within:ring-2 focus-within:ring-admin-accent">
+                  <Avatar
+                    userId={me.userId}
+                    name={me.name}
+                    photo={me.photo}
+                    size={40}
+                    version={photoVersion}
+                  />
+                  <span className="btn btn-admin-primary btn-sm">
+                    {me.photo ? "Trocar foto" : "Escolher foto"}
+                  </span>
+                  <span className="text-[11px] text-admin-muted">
+                    JPG, PNG ou WEBP, até 2 MB
+                  </span>
+                  <input
+                    type="file"
+                    accept="image/jpeg,image/png,image/webp"
+                    className="sr-only"
+                    onChange={(event) => {
+                      const file = event.target.files?.[0];
+                      if (file) void saveMe({}, file);
+                      event.target.value = "";
+                    }}
+                  />
+                </label>
+              </div>
+              <LunchField
+                lunch={me.lunch}
+                pending={me.lunchPending}
+                onAsked={(lunchPending) => setMe({ ...me, lunchPending })}
+              />
               <fieldset>
                 <legend className="mb-1 font-bold text-admin-primary">
                   Cor da janela
@@ -626,6 +861,10 @@ export function Messenger({
                   )}
                 </div>
               </header>
+              <p className="flex items-center gap-1.5 border-b border-admin-border bg-admin-warning-bg px-3 py-1.5 text-[11.5px] font-semibold text-admin-warning-text">
+                <AdminIcon name="eye" className="h-3.5 w-3.5 shrink-0" />
+                {OVERSIGHT_NOTICE}
+              </p>
 
               <div
                 ref={listRef}
@@ -633,7 +872,7 @@ export function Messenger({
               >
                 {messages.length === 0 && (
                   <p className="py-6 text-center text-[12.5px] text-admin-muted">
-                    Comece a conversa. {OVERSIGHT_NOTICE}
+                    Comece a conversa.
                   </p>
                 )}
                 {messages.map((message) => {
@@ -735,6 +974,17 @@ export function Messenger({
                   >
                     {recorder.recording ? "⏹ Parar e enviar" : "🎤 Áudio"}
                   </button>
+                  {(recorder.mic === "prompt" || recorder.mic === "unknown") &&
+                    !recorder.recording && (
+                      <button
+                        type="button"
+                        onClick={() => void recorder.allow()}
+                        className="rounded-md px-2 py-1 text-[12px] font-semibold text-admin-muted underline hover:bg-white"
+                        title="O navegador pergunta uma vez se este site pode usar o microfone"
+                      >
+                        Liberar microfone
+                      </button>
+                    )}
                   <button
                     type="button"
                     onClick={() => void nudge()}
@@ -744,6 +994,15 @@ export function Messenger({
                     🔔 Chamar atenção
                   </button>
                 </div>
+                {recorder.mic === "denied" && (
+                  <MicHelp onRetry={() => void recorder.allow()} />
+                )}
+                {recorder.mic === "unsupported" && (
+                  <p className="mt-1 text-[11.5px] text-admin-muted">
+                    Este navegador não grava áudio. Use o Chrome, o Edge ou o
+                    Safari atualizado.
+                  </p>
+                )}
                 <div className="mt-1.5 flex items-end gap-2">
                   <textarea
                     value={text}

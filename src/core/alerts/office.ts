@@ -4,7 +4,8 @@ import { SOUND_IDS, type SoundChoice } from "../chat/alerts.ts";
 /**
  * How the office wants the panel to call it, channel by channel (product
  * decision of 09/11/2026): for each part of the site that brings news (the
- * chat, the agenda, the guias, the requests, LGPD, ouvidoria), whether to
+ * chat, the agenda, the guias, the requests, LGPD, ouvidoria, the internal
+ * messenger and the audit), whether to
  * call at all, with a card on screen, the browser's notification, which
  * tone, and whether the screen shakes. The office's choice, for every
  * attendant: kept in `tenant_content`, edited in Configurações. The chat
@@ -17,6 +18,9 @@ export const ALERT_CHANNELS = [
   "pedidos",
   "lgpd",
   "ouvidoria",
+  // Added 11/11/2026: the internal messenger and the audit's notices.
+  "mensagens",
+  "auditoria",
 ] as const;
 export type AlertChannel = (typeof ALERT_CHANNELS)[number];
 
@@ -27,6 +31,8 @@ export const ALERT_CHANNEL_LABELS: Record<AlertChannel, string> = {
   pedidos: "Pedidos de serviço",
   lgpd: "Requerimentos LGPD",
   ouvidoria: "Ouvidoria",
+  mensagens: "Mensagens internas",
+  auditoria: "Auditoria (notificações e atos urgentes)",
 };
 
 const soundChoice = z.custom<SoundChoice>(
@@ -90,6 +96,21 @@ const DEFAULTS: Record<AlertChannel, ChannelAlert> = {
     popup: true,
     notify: true,
     sound: "suave",
+    shake: false,
+  },
+  // Rings again and again until the person answers (decision of 11/11/2026).
+  mensagens: {
+    enabled: true,
+    popup: true,
+    notify: true,
+    sound: "mensageiro",
+    shake: true,
+  },
+  auditoria: {
+    enabled: true,
+    popup: true,
+    notify: true,
+    sound: "alerta",
     shake: false,
   },
 };

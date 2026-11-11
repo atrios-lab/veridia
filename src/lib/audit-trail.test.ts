@@ -1,9 +1,10 @@
 import assert from "node:assert/strict";
 import { after, before, test } from "node:test";
+import { eq } from "drizzle-orm";
 import { DEFAULT_LEGAL_BASIS } from "@/core/audit/labels.ts";
 import { user } from "@/db/auth-schema.ts";
 import type { Database } from "@/db/index.ts";
-import { auditLog } from "@/db/schema.ts";
+import { auditLog, auditNotes } from "@/db/schema.ts";
 import { createTestDb } from "@/db/test-db.ts";
 import { recordAuditWith } from "./audit.ts";
 import { justify } from "./audit-reason.ts";
@@ -12,6 +13,7 @@ import {
   answerNotificationWith,
   closeNotificationWith,
   createNotificationWith,
+  editAuditNoteWith,
   findNotificationWith,
   listAuditWith,
   listNotificationsWith,
@@ -20,6 +22,8 @@ import {
   openNotificationCountWith,
   pendingUrgentCountWith,
   peopleSummaryWith,
+  removeAuditNoteWith,
+  setArchivedWith,
 } from "./audit-trail.ts";
 
 let db: Database;
@@ -517,4 +521,72 @@ test("a conta da Átrios é invisível para a serventia: atos, anotações, resu
     await pendingUrgentCountWith(db, OFFICE, "titular", now),
     before,
   );
+});
+
+test("arquivar tira da lista sem apagar, e anotação editada ou excluída fica guardada", async () => {
+  const now = new Date();
+  const [row] = await db
+    .insert(auditLog)
+    .values({
+      tenantSlug: OFFICE,
+      actorId: "escrevente",
+      action: "service-request.status",
+      targetType: "service-request",
+      targetId: "REQ-2026-000555",
+      createdAt: now,
+    })
+    .returning({ id: auditLog.id });
+  assert.equal(
+    await setArchivedWith(db, [OFFICE], [row.id], "titular", true, now),
+    1,
+  );
+  const listed = await listAuditWith(db, { tenantSlugs: [OFFICE] });
+  assert.ok(!listed.some((e) => e.id === row.id));
+  const archived = await listAuditWith(db, {
+    tenantSlugs: [OFFICE],
+    archived: true,
+  });
+  assert.ok(archived.some((e) => e.id === row.id && e.reviewedAt));
+  // Another office cannot archive it back.
+  assert.equal(
+    await setArchivedWith(db, [OTHER], [row.id], "de-fora", false, now),
+    0,
+  );
+  await setArchivedWith(db, [OFFICE], [row.id], "titular", false, now);
+  assert.ok(
+    (await listAuditWith(db, { tenantSlugs: [OFFICE] })).some(
+      (e) => e.id === row.id,
+    ),
+  );
+
+  await addAuditNoteWith(db, OFFICE, row.id, "Primeira versão.", "titular");
+  const [withNote] = await listAuditWith(db, {
+    tenantSlugs: [OFFICE],
+    ids: [row.id],
+  });
+  const noteId = withNote.notes[0].id;
+  assert.equal(
+    await editAuditNoteWith(db, OFFICE, noteId, "Versão corrigida."),
+    true,
+  );
+  assert.equal(await editAuditNoteWith(db, OTHER, noteId, "Não pode."), false);
+  const [edited] = await listAuditWith(db, {
+    tenantSlugs: [OFFICE],
+    ids: [row.id],
+  });
+  assert.equal(edited.notes[0].body, "Versão corrigida.");
+  assert.ok(edited.notes[0].editedAt);
+  assert.equal(await removeAuditNoteWith(db, OFFICE, noteId, "titular"), true);
+  const [gone] = await listAuditWith(db, {
+    tenantSlugs: [OFFICE],
+    ids: [row.id],
+  });
+  assert.equal(gone.notes.length, 0);
+  // Excluded from the screen, still in the database.
+  const kept = await db
+    .select()
+    .from(auditNotes)
+    .where(eq(auditNotes.id, noteId));
+  assert.equal(kept.length, 1);
+  assert.ok(kept[0].removedAt);
 });

@@ -30,7 +30,11 @@ import { RecordAlerts } from "../_components/record-alerts.tsx";
 import { ShortcutListener } from "../_components/shortcut-listener.tsx";
 import { AdminSidebar } from "../_components/sidebar.tsx";
 import { ADMIN_MENU_ID, AdminTopBar } from "../_components/top-bar.tsx";
-import { UrgentAuditBanner } from "../_components/urgent-audit-banner.tsx";
+import {
+  AuditChime,
+  AuditNoticeBanner,
+  UrgentAuditBanner,
+} from "../_components/urgent-audit-banner.tsx";
 
 // The protected skeleton. The check runs on every request and hits the
 // database, so a session revoked there is gone on the next navigation.
@@ -74,6 +78,13 @@ export default async function DashboardLayout({
         () => 0,
       )
     : 0;
+  // Audit notifications waiting for this person's answer: a warning on
+  // every screen until answered (decision of 11/11/2026).
+  const myNotifications = await openNotificationCountWith(
+    db,
+    tenant.slug,
+    session.user.id,
+  ).catch(() => 0);
   // The internal messenger: unread for the badge, the sound choice for
   // the watcher that rings on every screen.
   const messenger = can(role, "desk.access", granted)
@@ -86,10 +97,7 @@ export default async function DashboardLayout({
     "/admin/mensagens": messenger?.[0].unread ?? 0,
     // Notifications of the audit waiting for this person's answer, and the
     // urgent acts waiting for the holder's look.
-    "/admin/auditoria":
-      (await openNotificationCountWith(db, tenant.slug, session.user.id).catch(
-        () => 0,
-      )) + urgentPending,
+    "/admin/auditoria": myNotifications + urgentPending,
     ...(can(role, "requests.manage", granted)
       ? {
           "/admin/pedidos": await openRequestCount(tenant.slug),
@@ -198,8 +206,21 @@ export default async function DashboardLayout({
         <div className="scrollbar-hidden relative flex min-h-0 min-w-0 flex-1 flex-col overflow-y-auto">
           <AdminTopBar user={user} />
           {urgentPending > 0 && <UrgentAuditBanner count={urgentPending} />}
+          {myNotifications > 0 && <AuditNoticeBanner count={myNotifications} />}
+          {alerts.auditoria.enabled && urgentPending + myNotifications > 0 && (
+            <AuditChime
+              count={urgentPending + myNotifications}
+              setting={alerts.auditoria}
+            />
+          )}
           {children}
-          {messenger && <MessengerWatch sound={messenger[1]?.sound ?? true} />}
+          {messenger && !messenger[1]?.chatDisabled && (
+            <MessengerWatch
+              setting={alerts.mensagens}
+              sound={messenger[1]?.sound ?? true}
+              initialUnread={messenger[0].unread}
+            />
+          )}
           {/* Every screen, not only the queue: the attendant hears and sees
               the chat wherever they are working in the panel. */}
           {can(role, "chat.manage", granted) && (

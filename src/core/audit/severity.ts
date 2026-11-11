@@ -76,6 +76,11 @@ const EXACT: Record<string, AuditLevel> = {
   "fee-table.items": "atencao",
   "platform.two-step-on": "atencao",
   "audit.notification": "atencao",
+  "messenger.lunch-request": "atencao",
+  "messenger.chat-off": "atencao",
+  "messenger.chat-on": "analise",
+  "messenger.lunch-approve": "analise",
+  "messenger.lunch-reject": "analise",
   "audit.notification-answer": "atencao",
 
   "office-settings.save": "analise",

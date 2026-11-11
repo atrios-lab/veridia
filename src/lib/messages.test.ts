@@ -4,14 +4,18 @@ import { user } from "@/db/auth-schema.ts";
 import type { Database } from "@/db/index.ts";
 import { createTestDb } from "@/db/test-db.ts";
 import {
+  decideLunchWith,
   findMessageFileWith,
   inboxWith,
   listAllConversationsWith,
   listContactsWith,
   listMessagesWith,
+  listTeamWith,
   MessageError,
   openDirectWith,
+  requestLunchWith,
   sendMessageWith,
+  setChatDisabledWith,
   touchPresenceWith,
   updateProfileWith,
 } from "./messages.ts";
@@ -207,4 +211,70 @@ test("perfil e presença: status escolhido enquanto online, offline depois", asy
     new Date(now.getTime() + 10 * 60_000),
   );
   assert.equal(later.find((c) => c.userId === "auxiliar")?.presence, "offline");
+});
+
+test("almoço: pedido espera o titular, não muda de novo até a decisão, e chat desligado não recebe", async () => {
+  await assert.rejects(
+    requestLunchWith(db, OFFICE, "escrevente", "12:00", 90),
+    /1 hora/,
+  );
+  await requestLunchWith(db, OFFICE, "escrevente", "12:00", 60);
+  await assert.rejects(
+    requestLunchWith(db, OFFICE, "escrevente", "13:00", 30),
+    /esperando/,
+  );
+  let team = await listTeamWith(db, OFFICE);
+  assert.deepEqual(team.find((m) => m.userId === "escrevente")?.lunchPending, {
+    start: "12:00",
+    minutes: 60,
+  });
+  assert.equal(
+    await decideLunchWith(db, OFFICE, "escrevente", true, "titular"),
+    true,
+  );
+  team = await listTeamWith(db, OFFICE);
+  const joao = team.find((m) => m.userId === "escrevente");
+  assert.deepEqual(joao?.lunch, { start: "12:00", minutes: 60 });
+  assert.equal(joao?.lunchPending, null);
+  // 12:30 in Brasília (15:30 UTC): shows lunch while online; after, available.
+  await touchPresenceWith(
+    db,
+    OFFICE,
+    "escrevente",
+    new Date("2026-11-11T15:30:00Z"),
+  );
+  const atLunch = await listContactsWith(
+    db,
+    OFFICE,
+    "auxiliar",
+    new Date("2026-11-11T15:30:30Z"),
+  );
+  assert.equal(
+    atLunch.find((c) => c.userId === "escrevente")?.presence,
+    "almoco",
+  );
+  await touchPresenceWith(
+    db,
+    OFFICE,
+    "escrevente",
+    new Date("2026-11-11T16:05:00Z"),
+  );
+  const after = await listContactsWith(
+    db,
+    OFFICE,
+    "auxiliar",
+    new Date("2026-11-11T16:05:30Z"),
+  );
+  assert.notEqual(
+    after.find((c) => c.userId === "escrevente")?.presence,
+    "almoco",
+  );
+
+  await setChatDisabledWith(db, OFFICE, "auxiliar", true, "titular");
+  await assert.rejects(
+    openDirectWith(db, OFFICE, "titular", "auxiliar"),
+    /desativado/,
+  );
+  await setChatDisabledWith(db, OFFICE, "auxiliar", false, "titular");
+  assert.ok(await openDirectWith(db, OFFICE, "titular", "auxiliar"));
 });

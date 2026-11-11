@@ -77,3 +77,49 @@ test("texto digitado no formulário (CRLF) vira um parágrafo por linha, sem car
     "Terceiro.",
   ]);
 });
+
+test("na auditoria nada sai em código: alvos em português e uma explicação para leigos", async () => {
+  const { targetInWords, auditActionExplanation } = await import("./labels.ts");
+  assert.equal(
+    targetInWords("tenant-content", "office-role-permissions"),
+    "permissões dos cargos",
+  );
+  assert.equal(
+    targetInWords("tenant-content", "office-numbering:guia:2026"),
+    "numeração das guias de 2026",
+  );
+  assert.equal(targetInWords("tenant", "cartorio-marinho"), "");
+  assert.equal(
+    targetInWords(
+      "service-request",
+      "f6795be3-79a2-4090-aa30-e56f4e8cb64d · REQ-2026-000123",
+    ),
+    "REQ-2026-000123",
+  );
+  assert.equal(
+    targetInWords("signed-document", "LTS2ADBH2UKT"),
+    "código LTS2-ADBH-2UKT",
+  );
+  assert.match(
+    auditActionExplanation("office-settings.role-permissions"),
+    /o que cada cargo pode ver e fazer/,
+  );
+  assert.match(auditActionExplanation("algo.novo-delete"), /excluído/);
+  const doc = buildAuditReportDocument(TENANT, {
+    entries: [
+      {
+        createdAt: new Date("2026-11-11T03:32:00Z"),
+        action: "office-settings.role-permissions",
+        targetType: "tenant-content",
+        targetId: "office-role-permissions",
+        actorName: "Maria Exemplo da Silva",
+      },
+    ],
+    issuedAt: new Date("2026-11-11T04:00:00Z"),
+    scope: "Registros marcados",
+  });
+  const text = JSON.stringify(doc);
+  assert.ok(!text.includes("office-role-permissions"));
+  assert.ok(text.includes("permissões dos cargos"));
+  assert.ok(text.includes("O que significa"));
+});
