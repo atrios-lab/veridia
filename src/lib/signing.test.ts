@@ -29,10 +29,12 @@ import {
   disableCertificateWith,
   fileHasDigitalSignature,
   findSignedDocumentWith,
+  finishA3DeliveryWith,
   finishA3SignWith,
   listCertificatesWith,
   listSignedDocumentsWith,
   prepareA3CoSignWith,
+  prepareA3DeliveryWith,
   prepareA3SignWith,
   SigningError,
   setCertificateSignersWith,
@@ -644,4 +646,94 @@ test("documento sem assinatura digital: o escrevente confirma que é físico dig
   const { auditLog } = await import("@/db/schema.ts");
   const acts = await db.select().from(auditLog);
   assert.ok(acts.some((a) => a.action === "service-request.delivery-physical"));
+});
+
+test("A3 no documento entregue ao cliente: troca a cópia pela assinada", async () => {
+  const { sign: rsaSign } = await import("node:crypto");
+  const forge = (await import("node-forge")).default;
+  const token = openCertificate(
+    pki.issue("CARLA EXEMPLO ROCHA:52998224725", "pin", "41"),
+    "pin",
+  );
+  const pinSign = (bytes: Buffer) =>
+    rsaSign("sha256", bytes, forge.pki.privateKeyToPem(token.privateKey));
+  const act = getAct("notas-ata-notarial");
+  if (!act) throw new Error("catálogo incompleto");
+  const request = await createServiceRequestWith(db, TENANTS[TENANT], act, {
+    applicantName: "Davi Teste Nunes",
+    contact: "davi@exemplo.com",
+    accessKeyHash: hashAccessKey("CHAVE-EXEMPLO-A3"),
+  });
+  const pdf = await samplePdf();
+  const stored = await storeOfficePdf(TENANT, pdf);
+  await attachToRequestWith(
+    db,
+    TENANT,
+    request.id,
+    [
+      {
+        storedName: stored.storedName,
+        displayName: "certidao-ficticia",
+        path: stored.path,
+        mimeType: "application/pdf",
+        sizeBytes: pdf.length,
+      },
+    ],
+    "office",
+  );
+  const [attachment] = (
+    await db.select().from(serviceRequestAttachments)
+  ).filter((a) => a.requestId === request.id);
+  const at = new Date("2026-11-11T15:00:00Z");
+  const cert = { holderDer: token.holderDer, chainDer: token.chainDer };
+  const target = { requestId: request.id, attachmentId: attachment.id };
+  const prepared = await prepareA3DeliveryWith(
+    db,
+    TENANT,
+    {
+      ...cert,
+      ...target,
+      protocolNumber: request.protocolNumber,
+      verifyUrl: (code) => `https://cartorio.exemplo/verificar/${code}`,
+      location: "Ielmo Marinho/RN",
+      officeName: "Cartório Exemplo de Notas",
+    },
+    "escrevente",
+    at,
+  );
+  await finishA3DeliveryWith(
+    db,
+    TENANT,
+    {
+      ...cert,
+      ...target,
+      token: prepared.token,
+      signature: pinSign(prepared.toBeSigned),
+    },
+    "escrevente",
+    at,
+  );
+  const [after] = (await db.select().from(serviceRequestAttachments)).filter(
+    (a) => a.id === attachment.id,
+  );
+  assert.ok(hasSignature(await readStoredFile(after.path ?? "")));
+  assert.equal((await unsignedDeliveries([after])).size, 0);
+  // Signed already: a second try is refused.
+  await assert.rejects(
+    prepareA3DeliveryWith(
+      db,
+      TENANT,
+      {
+        ...cert,
+        ...target,
+        protocolNumber: request.protocolNumber,
+        verifyUrl: (code) => code,
+        location: "x",
+        officeName: "x",
+      },
+      "escrevente",
+      at,
+    ),
+    /já está assinado/,
+  );
 });

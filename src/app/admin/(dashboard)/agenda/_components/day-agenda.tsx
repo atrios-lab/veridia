@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useActionState, useEffect, useState } from "react";
 import { toast } from "sonner";
+import { signHref } from "@/app/admin/_components/sign-or-print";
 import { slotEndTime } from "@/core/scheduling/agenda.ts";
 import { appointmentStatusLabel } from "@/core/scheduling/appointment.ts";
 import { ConfirmAction } from "../../../_components/confirm-action.tsx";
@@ -455,15 +456,25 @@ function DeskReserveForm({
 /** The citizen's receipt, with the list of what to bring, printed at the
  * counter: for a visit reserved by phone, or a citizen without theirs. */
 function ReceiptLink({ id }: { id: string }) {
+  const pdf = `/admin/agenda/comprovante/${id}`;
   return (
-    <a
-      href={`/admin/agenda/comprovante/${id}`}
-      target="_blank"
-      rel="noopener"
-      className="rounded-lg border border-admin-border px-2.5 py-1.5 text-[11.5px] font-semibold text-admin-muted hover:bg-admin-input-bg"
-    >
-      Comprovante
-    </a>
+    <span className="inline-flex flex-wrap gap-1.5">
+      <a
+        href={pdf}
+        target="_blank"
+        rel="noopener"
+        className="rounded-lg border border-admin-border px-2.5 py-1.5 text-[11.5px] font-semibold text-admin-muted hover:bg-admin-input-bg"
+      >
+        Comprovante
+      </a>
+      <a
+        href={signHref(pdf, "Comprovante de agendamento")}
+        className="rounded-lg border border-admin-border px-2.5 py-1.5 text-[11.5px] font-semibold text-admin-primary hover:bg-admin-input-bg"
+        title="Assinar o comprovante digitalmente"
+      >
+        Assinar
+      </a>
+    </span>
   );
 }
 
@@ -473,10 +484,7 @@ function ReceiptLink({ id }: { id: string }) {
  */
 function DeclarationLink({ id }: { id: string }) {
   const pdf = `/admin/agenda/comparecimento/${id}`;
-  const sign = `/admin/utilitarios/assinador?${new URLSearchParams({
-    origem: pdf,
-    titulo: "Declaração de comparecimento",
-  })}#assinar`;
+  const sign = signHref(pdf, "Declaração de comparecimento");
   return (
     <span className="inline-flex flex-wrap gap-1.5">
       <a

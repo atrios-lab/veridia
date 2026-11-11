@@ -810,7 +810,12 @@ export async function prepareA3CoSignWith(
 export async function finishA3SignWith(
   database: Database,
   tenantSlug: string,
-  input: A3CertificateInput & { token: string; signature: Buffer },
+  input: A3CertificateInput & {
+    token: string;
+    signature: Buffer;
+    /** Refuse unless the prepared document came from exactly this file. */
+    expectOriginalSha256?: string;
+  },
   userId: string,
   now = new Date(),
 ): Promise<{ id: string; code: string }> {
@@ -826,6 +831,14 @@ export async function finishA3SignWith(
   if (token.exp <= now.getTime()) {
     throw new SigningError(
       "A preparação venceu. Assine de novo (vale por 15 minutos).",
+    );
+  }
+  if (
+    input.expectOriginalSha256 &&
+    token.originalSha256 !== input.expectOriginalSha256
+  ) {
+    throw new SigningError(
+      "O documento mudou enquanto você assinava. Assine de novo.",
     );
   }
   const certificate = a3Certificate(input, now);
@@ -1172,25 +1185,12 @@ export async function signDeliveredDocumentWith(
   userId: string,
   now = new Date(),
 ): Promise<{ id: string; code: string }> {
-  const [attachment] = await database
-    .select()
-    .from(serviceRequestAttachments)
-    .where(
-      and(
-        eq(serviceRequestAttachments.tenantSlug, tenantSlug),
-        eq(serviceRequestAttachments.requestId, input.requestId),
-        eq(serviceRequestAttachments.id, input.attachmentId),
-        eq(serviceRequestAttachments.kind, "office"),
-      ),
-    )
-    .limit(1);
-  if (!attachment?.path || attachment.mimeType !== "application/pdf") {
-    throw new SigningError("Documento entregue não encontrado.");
-  }
-  const original = await readStoredFile(attachment.path);
-  if (hasSignature(original)) {
-    throw new SigningError("Este documento já está assinado digitalmente.");
-  }
+  const { attachment, original } = await unsignedDeliveryWith(
+    database,
+    tenantSlug,
+    input.requestId,
+    input.attachmentId,
+  );
   const signedDocument = await signNewDocumentWith(
     database,
     tenantSlug,
@@ -1206,6 +1206,61 @@ export async function signDeliveredDocumentWith(
     },
     userId,
     now,
+  );
+  await replaceDeliveryWith(
+    database,
+    tenantSlug,
+    { requestId: input.requestId, attachmentId: attachment.id },
+    signedDocument,
+    userId,
+    now,
+  );
+  return signedDocument;
+}
+
+/** A delivered PDF with no digital signature yet, and its bytes. */
+async function unsignedDeliveryWith(
+  database: Database,
+  tenantSlug: string,
+  requestId: string,
+  attachmentId: string,
+) {
+  const [attachment] = await database
+    .select()
+    .from(serviceRequestAttachments)
+    .where(
+      and(
+        eq(serviceRequestAttachments.tenantSlug, tenantSlug),
+        eq(serviceRequestAttachments.requestId, requestId),
+        eq(serviceRequestAttachments.id, attachmentId),
+        eq(serviceRequestAttachments.kind, "office"),
+      ),
+    )
+    .limit(1);
+  if (!attachment?.path || attachment.mimeType !== "application/pdf") {
+    throw new SigningError("Documento entregue não encontrado.");
+  }
+  const original = await readStoredFile(attachment.path);
+  if (hasSignature(original)) {
+    throw new SigningError("Este documento já está assinado digitalmente.");
+  }
+  return { attachment: { ...attachment, path: attachment.path }, original };
+}
+
+/** The client's copy becomes the signed one; the unsigned file goes. */
+async function replaceDeliveryWith(
+  database: Database,
+  tenantSlug: string,
+  target: { requestId: string; attachmentId: string },
+  signedDocument: { id: string; code: string },
+  userId: string,
+  now: Date,
+): Promise<void> {
+  const { attachment } = await unsignedDeliveryWith(
+    database,
+    tenantSlug,
+    target.requestId,
+    target.attachmentId,
   );
   const view = await findSignedDocumentWith(
     database,
@@ -1230,8 +1285,89 @@ export async function signDeliveredDocumentWith(
     actorId: userId,
     action: "service-request.delivery-signed",
     targetType: "service-request",
-    targetId: `${input.requestId} · ${signedDocument.code}`,
+    targetId: `${target.requestId} · ${signedDocument.code}`,
   });
+}
+
+/**
+ * A delivered PDF signed with an A3 token, step one (decision of
+ * 11/11/2026): the same preparation as any A3 signature, over the file the
+ * client receives.
+ */
+export async function prepareA3DeliveryWith(
+  database: Database,
+  tenantSlug: string,
+  input: A3CertificateInput & {
+    requestId: string;
+    attachmentId: string;
+    protocolNumber: string;
+    verifyUrl: (code: string) => string;
+    location: string;
+    officeName: string;
+  },
+  userId: string,
+  now = new Date(),
+): Promise<A3Prepared> {
+  const { attachment, original } = await unsignedDeliveryWith(
+    database,
+    tenantSlug,
+    input.requestId,
+    input.attachmentId,
+  );
+  return prepareA3SignWith(
+    tenantSlug,
+    {
+      holderDer: input.holderDer,
+      chainDer: input.chainDer,
+      pdf: original,
+      title: `Documento do pedido ${input.protocolNumber}`,
+      originalName: `${attachment.displayName}.pdf`,
+      verifyUrl: input.verifyUrl,
+      location: input.location,
+      officeName: input.officeName,
+    },
+    userId,
+    now,
+  );
+}
+
+/**
+ * Step two: the token's signature comes back. Only for the very file that
+ * was prepared (same SHA-256), and the client's copy becomes the signed one.
+ */
+export async function finishA3DeliveryWith(
+  database: Database,
+  tenantSlug: string,
+  input: A3CertificateInput & {
+    token: string;
+    signature: Buffer;
+    requestId: string;
+    attachmentId: string;
+  },
+  userId: string,
+  now = new Date(),
+): Promise<{ id: string; code: string }> {
+  const { original } = await unsignedDeliveryWith(
+    database,
+    tenantSlug,
+    input.requestId,
+    input.attachmentId,
+  );
+  const signedDocument = await finishA3SignWith(
+    database,
+    tenantSlug,
+    { ...input, expectOriginalSha256: sha256(original) },
+    userId,
+    now,
+  );
+  await replaceDeliveryWith(
+    database,
+    tenantSlug,
+    { requestId: input.requestId, attachmentId: input.attachmentId },
+    signedDocument,
+    userId,
+    now,
+  );
   return signedDocument;
 }
 
