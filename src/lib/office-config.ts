@@ -76,3 +76,5 @@ export const OFFICE_SECURITY_PAPER_KEY = "office-security-paper";
 export const SECURITY_PAPER_REMINDERS_KEY = "security-paper-reminders";
 /** Solicitação de papéis de segurança: the office as the orders present it. */
 export const OFFICE_PAPER_ORDERS_KEY = "office-paper-orders";
+/** Livro Diário Auxiliar: the specialties by act code, who answers for it. */
+export const OFFICE_DAILY_BOOK_KEY = "office-daily-book";

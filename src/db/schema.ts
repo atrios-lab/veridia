@@ -1479,6 +1479,108 @@ export const paperOrders = pgTable(
 );
 
 /**
+ * Livro Diário Auxiliar da Receita e da Despesa (decision of 11/11/2026;
+ * Provimento CNJ nº 149/2023, arts. 189 to 195, with the wording of the
+ * Provimento CNJ nº 259/2026). One row per line of the book: a revenue (an
+ * act, or acts of one code on one day) or an expense. "Excluir" keeps it.
+ */
+export const dailyBookEntries = pgTable(
+  "daily_book_entries",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    tenantSlug,
+    /** receita | despesa */
+    kind: text("kind").notNull(),
+    occurredOn: text("occurred_on").notNull(),
+    specialty: text("specialty").notNull().default(""),
+    /** Expense: a category of art. 191-A, § 1º. */
+    category: text("category").notNull().default(""),
+    actCode: text("act_code").notNull().default(""),
+    description: text("description").notNull(),
+    quantity: integer("quantity").notNull().default(1),
+    amountCents: bigint("amount_cents", { mode: "number" }).notNull(),
+    /** Revenue: the State's funds and the ISS, shown, not revenue. */
+    fundsCents: bigint("funds_cents", { mode: "number" }).notNull().default(0),
+    issCents: bigint("iss_cents", { mode: "number" }).notNull().default(0),
+    supplier: text("supplier").notNull().default(""),
+    documentRef: text("document_ref").notNull().default(""),
+    /** Art. 193-A, § 2º. */
+    fiscalDistinct: boolean("fiscal_distinct").notNull().default(false),
+    fiscalNote: text("fiscal_note").notNull().default(""),
+    explanation: text("explanation").notNull().default(""),
+    /** The receipt (art. 191-A, § 3º: kept 5 years). */
+    attachmentPath: text("attachment_path"),
+    attachmentName: text("attachment_name"),
+    /** manual | produtividade | comprovante */
+    source: text("source").notNull().default("manual"),
+    importId: uuid("import_id"),
+    removedAt: timestamp("removed_at", { withTimezone: true }),
+    removedBy: text("removed_by"),
+    removeReason: text("remove_reason").notNull().default(""),
+    createdBy: text("created_by"),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (t) => [
+    index("daily_book_entries_tenant_day").on(t.tenantSlug, t.occurredOn),
+    index("daily_book_entries_import").on(t.importId),
+  ],
+);
+
+/** A report the office attached (the productivity), kept as sent. */
+export const dailyBookImports = pgTable(
+  "daily_book_imports",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    tenantSlug,
+    periodStart: text("period_start").notNull(),
+    periodEnd: text("period_end").notNull(),
+    filePath: text("file_path"),
+    fileName: text("file_name"),
+    /** What was read, as read (for a later check). */
+    reading: jsonb("reading"),
+    removedAt: timestamp("removed_at", { withTimezone: true }),
+    removedBy: text("removed_by"),
+    removeReason: text("remove_reason").notNull().default(""),
+    createdBy: text("created_by"),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (t) => [index("daily_book_imports_tenant").on(t.tenantSlug, t.periodStart)],
+);
+
+/** A page generated (the day, the month, the year), frozen in `snapshot`. */
+export const dailyBookReports = pgTable(
+  "daily_book_reports",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    tenantSlug,
+    /** dia | mes | ano */
+    kind: text("kind").notNull(),
+    periodStart: text("period_start").notNull(),
+    periodEnd: text("period_end").notNull(),
+    snapshot: jsonb("snapshot").notNull(),
+    signer: integer("signer").notNull().default(0),
+    removedAt: timestamp("removed_at", { withTimezone: true }),
+    removedBy: text("removed_by"),
+    removeReason: text("remove_reason").notNull().default(""),
+    createdBy: text("created_by"),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (t) => [index("daily_book_reports_tenant").on(t.tenantSlug, t.periodEnd)],
+);
+
+/**
  * The office's A1 certificates (assinador digital, product decision of
  * 10/11/2026): any number of them, e-CPF or e-CNPJ. The .pfx is kept
  * encrypted with the platform's key (lib/signature/vault.ts) on top of its

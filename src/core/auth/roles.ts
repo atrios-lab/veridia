@@ -73,6 +73,8 @@ export const OFFICE_PERMISSIONS = [
   // Solicitação de papéis de segurança (decision of 11/11/2026): the
   // suppliers, their forms and the orders.
   "paper-orders.manage",
+  // Livro Diário Auxiliar da Receita e da Despesa (decision of 11/11/2026).
+  "daily-book.manage",
   // The office's audit trail in full, and the formal notifications that ask
   // a person to explain an act: the Tabelião/Registrador's alone.
   "audit.manage",
@@ -104,6 +106,7 @@ export const GRANTABLE_PERMISSIONS = [
   "certificates.manage",
   "security-paper.manage",
   "paper-orders.manage",
+  "daily-book.manage",
 ] as const;
 export type GrantablePermission = (typeof GRANTABLE_PERMISSIONS)[number];
 
@@ -125,6 +128,8 @@ export const DERIVED_FROM: Partial<Record<GrantablePermission, Permission>> = {
   "security-paper.manage": "requests.manage",
   // Listed after its parent: `withDerived` adds it in the same pass.
   "paper-orders.manage": "security-paper.manage",
+  // Whoever declares the ISS works the book the ISS comes from.
+  "daily-book.manage": "iss.manage",
 };
 
 /**
@@ -345,4 +350,6 @@ export const GRANTABLE_LABELS: Record<GrantablePermission, string> = {
     "Papel de segurança (lotes, uso, extravios e ofícios à Corregedoria)",
   "paper-orders.manage":
     "Solicitação de papéis de segurança (empresas, modelos e pedidos)",
+  "daily-book.manage":
+    "Livro Diário Auxiliar da Receita e da Despesa (lançamentos, PDFs e balanço)",
 };

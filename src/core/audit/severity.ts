@@ -99,6 +99,12 @@ const EXACT: Record<string, AuditLevel> = {
   "paper-order.issue": "atencao",
   "paper-order.update": "atencao",
   "paper-order.status": "analise",
+  // The book the Corregedoria checks (Prov. CNJ 259/2026): values matter.
+  "daily-book.entry-edit": "atencao",
+  "daily-book.entry-add": "analise",
+  "daily-book.import": "analise",
+  "daily-book.report-issue": "analise",
+  "daily-book.report-edit": "atencao",
   "signing-certificate.disable": "atencao",
   "signed-document.restore": "atencao",
   "user.update": "atencao",

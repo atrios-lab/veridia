@@ -18,6 +18,7 @@ const OFFERS_DIGITAL_SIGNATURE = new Set([
   "(dashboard)/utilitarios/iss/[id]/arquivo",
   "(dashboard)/utilitarios/papel-seguranca/oficios/[id]/arquivo",
   "(dashboard)/utilitarios/solicitacao-papeis/[id]/arquivo",
+  "(dashboard)/utilitarios/livro-diario/paginas/[id]/arquivo",
   // Signed on its own screen (Auditoria › notificação › assinar).
   "(dashboard)/auditoria/notificacao/[id]/pdf",
 ]);
@@ -38,6 +39,8 @@ const NOT_SIGNED_BY_THE_OFFICE: Record<string, string> = {
   "(dashboard)/adequacao/anexo": "arquivo enviado, não gerado",
   "(dashboard)/mensagens/arquivo/[id]": "arquivo do chat, não gerado",
   "(dashboard)/utilitarios/iss/lei": "lei municipal anexada, não gerada",
+  "(dashboard)/utilitarios/livro-diario/lancamento/[id]/comprovante":
+    "comprovante de despesa anexado, não gerado",
   "(dashboard)/utilitarios/papel-seguranca/lotes/[id]/nota":
     "nota fiscal anexada, não gerada",
 };

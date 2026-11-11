@@ -44,6 +44,15 @@ const EXACT: Record<string, string> = {
     "Editou um ofício ou relatório do papel de segurança",
   "security-paper.report-remove":
     "Excluiu um ofício ou relatório do papel de segurança (fica guardado)",
+  "daily-book.import": "Anexou um relatório ao Livro Diário Auxiliar",
+  "daily-book.entry-add": "Fez um lançamento no Livro Diário Auxiliar",
+  "daily-book.entry-edit": "Editou um lançamento do Livro Diário Auxiliar",
+  "daily-book.entry-remove":
+    "Excluiu um lançamento do Livro Diário Auxiliar (fica guardado)",
+  "daily-book.report-issue": "Gerou uma página do Livro Diário Auxiliar",
+  "daily-book.report-edit": "Editou uma página do Livro Diário Auxiliar",
+  "daily-book.report-remove":
+    "Excluiu uma página do Livro Diário Auxiliar (fica guardada)",
   "paper-supplier.create": "Cadastrou uma empresa de papéis de segurança",
   "paper-supplier.update": "Editou uma empresa de papéis de segurança",
   "paper-supplier.remove":
@@ -180,6 +189,7 @@ const AREAS: Record<string, string> = {
   "iss-declaration": "Declaração de ISS",
   "security-paper": "Papel de segurança",
   "paper-supplier": "Solicitação de papéis de segurança",
+  "daily-book": "Livro Diário Auxiliar",
   "paper-order": "Solicitação de papéis de segurança",
   publication: "Publicações",
   publicacoes: "Publicações",
@@ -316,6 +326,20 @@ const EXPLANATIONS: Record<string, string> = {
     "Um ofício ou relatório do papel de segurança foi editado. O número continua o mesmo.",
   "security-paper.report-remove":
     "Um ofício ou relatório do papel de segurança foi excluído, com justificativa. Ele continua guardado.",
+  "daily-book.import":
+    "Um relatório de produtividade foi anexado e os atos lidos foram lançados como receita no Livro Diário Auxiliar.",
+  "daily-book.entry-add":
+    "Uma receita ou uma despesa foi lançada no Livro Diário Auxiliar.",
+  "daily-book.entry-edit":
+    "Um lançamento do Livro Diário Auxiliar foi corrigido (valor, data, categoria ou explicação).",
+  "daily-book.entry-remove":
+    "Um lançamento do Livro Diário Auxiliar foi excluído, com justificativa. Ele continua guardado.",
+  "daily-book.report-issue":
+    "Foi gerada a página do dia, do mês ou o balanço anual do Livro Diário Auxiliar.",
+  "daily-book.report-edit":
+    "Uma página do Livro Diário Auxiliar foi editada ou refeita com os lançamentos atuais.",
+  "daily-book.report-remove":
+    "Uma página do Livro Diário Auxiliar foi excluída, com justificativa. Ela continua guardada.",
   "paper-supplier.create":
     "Uma empresa fornecedora de papéis de segurança foi cadastrada, com os itens que vende.",
   "paper-supplier.update":
@@ -428,6 +452,8 @@ const AREA_EXPLANATIONS: Record<string, string> = {
     "Ato feito no controle do papel de segurança (lotes, uso, extravios e ofícios à Corregedoria).",
   "paper-supplier":
     "Ato feito no cadastro das empresas de papéis de segurança.",
+  "daily-book":
+    "Ato feito no Livro Diário Auxiliar da Receita e da Despesa (receitas, despesas e páginas geradas).",
   "paper-order": "Ato feito num pedido de papéis de segurança a uma empresa.",
   user: "Ato feito numa conta de acesso ao painel.",
   session: "Entrada ou saída do painel.",
