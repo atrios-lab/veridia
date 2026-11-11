@@ -6,8 +6,12 @@ import { readStoredFile } from "@/lib/uploads.ts";
 
 export const runtime = "nodejs";
 
-/** The municipal law (or plano diretor) the holder attached, to read. */
-export async function GET(): Promise<Response> {
+/**
+ * What the holder attached to the configuration, to read: the municipal law
+ * (or plano diretor), or with `?doc=portaria` the appointment of the mayor
+ * and the secretary.
+ */
+export async function GET(request: Request): Promise<Response> {
   const session = await getSession();
   if (
     !session ||
@@ -16,14 +20,18 @@ export async function GET(): Promise<Response> {
     return new Response("Não autorizado", { status: 403 });
   }
   const settings = await getIssSettings(await getTenant());
-  if (!settings.lawAttachment) {
-    return new Response("Nenhuma lei anexada", { status: 404 });
+  const portaria = new URL(request.url).searchParams.get("doc") === "portaria";
+  const file = portaria
+    ? settings.appointmentAttachment
+    : settings.lawAttachment;
+  if (!file) {
+    return new Response("Nenhum arquivo anexado", { status: 404 });
   }
-  const bytes = await readStoredFile(settings.lawAttachment.path);
+  const bytes = await readStoredFile(file.path);
   return new Response(new Uint8Array(bytes), {
     headers: {
       "Content-Type": "application/pdf",
-      "Content-Disposition": 'inline; filename="lei-municipal-iss.pdf"',
+      "Content-Disposition": `inline; filename="${portaria ? "portaria" : "lei-municipal-iss"}.pdf"`,
       "Cache-Control": "private, no-store",
     },
   });

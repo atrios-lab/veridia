@@ -73,7 +73,17 @@ export const IssSettingsSchema = z.object({
   municipalLaw: text(400),
   authority: text(200),
   department: text(200),
-  /** The office's CNPJ and municipal registration, as on its NFS-e. */
+  /** The prefeitura itself (decision of 11/11/2026): CNPJ and address. */
+  authorityCnpj: text(20),
+  authorityAddress: text(300),
+  /** Optional: who answers for it, by name, and their appointment. */
+  mayorName: text(160),
+  secretaryName: text(160),
+  appointmentAttachment: z
+    .object({ path: z.string(), name: z.string() })
+    .nullable()
+    .default(null),
+  /** The office's CNPJ (or the holder's CPF) and municipal registration. */
   cnpj: text(20),
   municipalRegistration: text(40),
   cnae: text(20),
@@ -99,6 +109,10 @@ export const IssSettingsSchema = z.object({
     .default(""),
   /** The "Receita" picked on that page, as the page names it. */
   portalRevenue: text(120),
+  /** The office as the fisco reads it; empty, the office's own settings. */
+  officeAddress: text(300),
+  officePhone: text(40),
+  officeEmail: text(160),
 });
 export type IssSettings = z.infer<typeof IssSettingsSchema>;
 
@@ -116,7 +130,30 @@ export function defaultIssSettings(tenant: Tenant): IssSettings {
     filing: "semut",
     portalUrl: "",
     portalRevenue: "",
+    authorityCnpj: "",
+    authorityAddress: "",
+    mayorName: "",
+    secretaryName: "",
+    appointmentAttachment: null,
+    officeAddress: tenant.address ?? "",
+    officePhone: tenant.contacts.phone ?? "",
+    officeEmail: tenant.contacts.email ?? "",
   };
+}
+
+/**
+ * What the declaration still lacks, in the office's words. The reminder on
+ * the list goes away only when this is empty (decision of 11/11/2026).
+ */
+export function issSettingsMissing(s: IssSettings): string[] {
+  return [
+    !s.municipalLaw.trim() && "a lei municipal do ISS",
+    !s.cnpj.trim() && "o CNPJ da serventia",
+    !s.municipalRegistration.trim() && "a inscrição municipal",
+    !s.officeAddress.trim() && "o endereço da serventia",
+    !s.authorityCnpj.trim() && "o CNPJ da prefeitura",
+    !s.authorityAddress.trim() && "o endereço da prefeitura",
+  ].filter((item): item is string => Boolean(item));
 }
 
 export const FILING_LABELS: Record<IssSettings["filing"], string> = {
@@ -253,6 +290,36 @@ export function legalBasis(tenant: Tenant, settings: IssSettings): string[] {
   ];
 }
 
+/** To whom: the department, the prefeitura, its CNPJ and address, who heads them. */
+export function addresseeRows(
+  tenant: Tenant,
+  s: IssSettings,
+): { label: string; value: string }[] {
+  return [
+    {
+      label: "Órgão",
+      value: s.department.trim() || "Secretaria Municipal de Tributação",
+    },
+    {
+      label: "Município",
+      value:
+        s.authority.trim() || `Prefeitura Municipal de ${tenant.location.city}`,
+    },
+    ...(s.authorityCnpj.trim()
+      ? [{ label: "CNPJ", value: s.authorityCnpj.trim() }]
+      : []),
+    ...(s.authorityAddress.trim()
+      ? [{ label: "Endereço", value: s.authorityAddress.trim() }]
+      : []),
+    ...(s.mayorName.trim()
+      ? [{ label: "Prefeito(a)", value: s.mayorName.trim() }]
+      : []),
+    ...(s.secretaryName.trim()
+      ? [{ label: "Secretário(a)", value: s.secretaryName.trim() }]
+      : []),
+  ];
+}
+
 export interface IssDocumentInput {
   declaration: IssDeclarationInput;
   settings: IssSettings;
@@ -291,7 +358,14 @@ export function buildIssDocument(
   const provider = [
     { label: "Serventia", value: office },
     { label: "CNS", value: tenant.cns },
-    ...(s.cnpj.trim() ? [{ label: "CNPJ", value: s.cnpj.trim() }] : []),
+    ...(s.cnpj.trim()
+      ? [
+          {
+            label: s.cnpj.replace(/\D/g, "").length === 11 ? "CPF" : "CNPJ",
+            value: s.cnpj.trim(),
+          },
+        ]
+      : []),
     ...(s.municipalRegistration.trim()
       ? [
           {
@@ -301,6 +375,15 @@ export function buildIssDocument(
         ]
       : []),
     ...(s.cnae.trim() ? [{ label: "CNAE", value: s.cnae.trim() }] : []),
+    ...(s.officeAddress.trim()
+      ? [{ label: "Endereço", value: s.officeAddress.trim() }]
+      : []),
+    ...(s.officePhone.trim()
+      ? [{ label: "Telefone", value: s.officePhone.trim() }]
+      : []),
+    ...(s.officeEmail.trim()
+      ? [{ label: "E-mail", value: s.officeEmail.trim() }]
+      : []),
     {
       label: "Serviço (LC 116/2003)",
       value: "21.01: registros públicos, cartorários e notariais",
@@ -334,9 +417,7 @@ export function buildIssDocument(
   const sections: RequerimentoSection[] = [
     {
       heading: "Destinatário",
-      paragraphs: [
-        `À ${s.department.trim() || "Secretaria Municipal de Tributação"} da ${s.authority.trim() || `Prefeitura Municipal de ${tenant.location.city}`}.`,
-      ],
+      rows: addresseeRows(tenant, s),
     },
     { heading: "Prestador do serviço", rows: provider },
     { heading: "Apuração", rows: figures },

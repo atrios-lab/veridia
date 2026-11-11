@@ -1,7 +1,9 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 import { TENANTS } from "@/core/tenant/resolve.ts";
+import { formatTaxId, isValidTaxId } from "../tax-id.ts";
 import {
+  addresseeRows,
   buildFilingReceipt,
   buildIssDocument,
   competenceLabel,
@@ -11,6 +13,7 @@ import {
   fundsOf,
   issOf,
   issOn,
+  issSettingsMissing,
   outsideTheBase,
   portalFields,
 } from "./declaration.ts";
@@ -204,4 +207,35 @@ test("fora do RN, o texto fica geral, sem os fundos do RN", () => {
   assert.doesNotMatch(text, /FDJ|FCRCPN|FUNAF/);
   assert.match(text, /variam conforme a lei de emolumentos de cada Estado/);
   assert.deepEqual(fundsOf(elsewhere), []);
+});
+
+test("configuração: o aviso só some com tudo preenchido; destinatário com CNPJ e nomes", () => {
+  const base = defaultIssSettings(tenant);
+  assert.ok(issSettingsMissing(base).includes("o CNPJ da prefeitura"));
+  const full = {
+    ...base,
+    municipalLaw: "Lei fictícia nº 1/2000",
+    cnpj: "11.222.333/0001-81",
+    municipalRegistration: "000",
+    officeAddress: "Rua Fictícia, 1",
+    authorityCnpj: "11.222.333/0001-81",
+    authorityAddress: "Praça Fictícia, s/n",
+    mayorName: "Fulano Fictício",
+    secretaryName: "Beltrana Fictícia",
+  };
+  assert.deepEqual(issSettingsMissing(full), []);
+  const rows = addresseeRows(tenant, full);
+  assert.deepEqual(
+    rows.map((r) => r.label),
+    ["Órgão", "Município", "CNPJ", "Endereço", "Prefeito(a)", "Secretário(a)"],
+  );
+});
+
+test("CPF ou CNPJ: a pontuação entra sozinha ao digitar e o dígito é conferido", () => {
+  assert.equal(formatTaxId("11122233396"), "111.222.333-96");
+  assert.equal(formatTaxId("11222333000181"), "11.222.333/0001-81");
+  assert.equal(formatTaxId("1122"), "112.2");
+  assert.ok(isValidTaxId(""));
+  assert.ok(isValidTaxId("11.222.333/0001-81"));
+  assert.ok(!isValidTaxId("11.222.333/0001-82"));
 });

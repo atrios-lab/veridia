@@ -3,6 +3,7 @@
 import { useActionState, useEffect, useState } from "react";
 import { toast } from "sonner";
 import { FILING_LABELS, type IssSettings } from "@/core/iss/declaration.ts";
+import { TaxIdInput } from "../../../../_components/tax-id-input.tsx";
 import { type IssFormState, saveIssSettings } from "../actions.ts";
 
 const FIELD =
@@ -153,7 +154,7 @@ export function IssSettingsForm({ settings }: { settings: IssSettings }) {
       )}
 
       <h2 className="mt-2 font-serif text-[17px] font-semibold text-admin-primary md:col-span-2">
-        Destinatário
+        Destinatário: prefeitura
       </h2>
       <label className={LABEL}>
         Prefeitura
@@ -171,17 +172,78 @@ export function IssSettingsForm({ settings }: { settings: IssSettings }) {
           className={FIELD}
         />
       </label>
+      <label htmlFor="iss-cnpj-prefeitura" className={LABEL}>
+        CNPJ da prefeitura
+        <TaxIdInput
+          id="iss-cnpj-prefeitura"
+          name="cnpj_prefeitura"
+          defaultValue={settings.authorityCnpj}
+          className={`${FIELD} font-normal`}
+        />
+      </label>
+      <label className={LABEL}>
+        Endereço da prefeitura (ou da secretaria)
+        <input
+          name="endereco_prefeitura"
+          defaultValue={settings.authorityAddress}
+          placeholder="Rua, número, bairro, cidade/UF, CEP"
+          className={FIELD}
+        />
+      </label>
+      <label className={LABEL}>
+        Prefeito(a) (opcional)
+        <input
+          name="prefeito"
+          defaultValue={settings.mayorName}
+          className={FIELD}
+        />
+      </label>
+      <label className={LABEL}>
+        Secretário(a) de Tributação (opcional)
+        <input
+          name="secretario"
+          defaultValue={settings.secretaryName}
+          className={FIELD}
+        />
+      </label>
+      <label className={`${LABEL} md:col-span-2`}>
+        Portaria de nomeação do prefeito ou do secretário (PDF, opcional)
+        <input
+          type="file"
+          name="portaria"
+          accept="application/pdf,.pdf"
+          className="block w-full text-[13px] font-normal file:mr-3 file:rounded-full file:border-0 file:bg-admin-primary file:px-4 file:py-2 file:text-[12.5px] file:font-semibold file:text-white"
+        />
+        <span className="font-normal text-admin-muted">
+          {settings.appointmentAttachment ? (
+            <>
+              Anexada:{" "}
+              <a
+                href="/admin/utilitarios/iss/lei?doc=portaria"
+                target="_blank"
+                rel="noreferrer"
+                className="font-semibold text-admin-primary underline"
+              >
+                {settings.appointmentAttachment.name}
+              </a>
+              . Envie outra só para trocar.
+            </>
+          ) : (
+            "Fica guardada para consulta da equipe."
+          )}
+        </span>
+      </label>
 
       <h2 className="mt-2 font-serif text-[17px] font-semibold text-admin-primary md:col-span-2">
-        Dados da serventia no fisco
+        Dados da serventia
       </h2>
-      <label className={LABEL}>
-        CNPJ da serventia
-        <input
+      <label htmlFor="iss-cnpj-serventia" className={LABEL}>
+        CNPJ da serventia (ou CPF do titular)
+        <TaxIdInput
+          id="iss-cnpj-serventia"
           name="cnpj"
           defaultValue={settings.cnpj}
-          placeholder="00.000.000/0000-00"
-          className={FIELD}
+          className={`${FIELD} font-normal`}
         />
       </label>
       <label className={LABEL}>
@@ -195,6 +257,32 @@ export function IssSettingsForm({ settings }: { settings: IssSettings }) {
       <label className={LABEL}>
         CNAE
         <input name="cnae" defaultValue={settings.cnae} className={FIELD} />
+      </label>
+      <label className={`${LABEL} md:col-span-2`}>
+        Endereço da serventia
+        <input
+          name="endereco_serventia"
+          defaultValue={settings.officeAddress}
+          placeholder="Rua, número, bairro, cidade/UF, CEP"
+          className={FIELD}
+        />
+      </label>
+      <label className={LABEL}>
+        Telefone da serventia
+        <input
+          name="telefone_serventia"
+          defaultValue={settings.officePhone}
+          className={FIELD}
+        />
+      </label>
+      <label className={LABEL}>
+        E-mail da serventia
+        <input
+          name="email_serventia"
+          type="email"
+          defaultValue={settings.officeEmail}
+          className={FIELD}
+        />
       </label>
 
       {state.status === "error" && (

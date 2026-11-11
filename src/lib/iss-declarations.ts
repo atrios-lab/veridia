@@ -14,6 +14,7 @@ import {
 import { toIsoDate } from "@/core/scheduling/calendar.ts";
 import type { Tenant } from "@/core/tenant/schema.ts";
 import { OFFICE_TIME_ZONE, officeYear } from "@/core/time/office-time.ts";
+import { FUNDS_BY_STATE } from "@/core/transparency/rubrics.ts";
 import { isPostgresError, UNIQUE_VIOLATION } from "@/db/errors.ts";
 import { type Database, db } from "@/db/index.ts";
 import {
@@ -26,6 +27,7 @@ import { brandFor } from "./document-brand.ts";
 import { nextNumberWith } from "./document-numbering.ts";
 import { OFFICE_ISS_BULLETIN_KEY, OFFICE_ISS_KEY } from "./office-config.ts";
 import { renderDocument } from "./pdf.ts";
+import { upsertBulletinWith } from "./transparency.ts";
 import { readStoredFile } from "./uploads.ts";
 
 export class IssDeclarationError extends Error {}
@@ -83,7 +85,17 @@ export async function getIssSettingsWith(
     const parsed = IssSettingsSchema.safeParse(
       await readContent(database, tenant.slug, OFFICE_ISS_KEY),
     );
-    if (parsed.success) return parsed.data;
+    if (parsed.success) {
+      // Saved before the office's own address and contacts were here: they
+      // start as the office's settings, until the holder changes them.
+      const fallback = defaultIssSettings(tenant);
+      return {
+        ...parsed.data,
+        officeAddress: parsed.data.officeAddress || fallback.officeAddress,
+        officePhone: parsed.data.officePhone || fallback.officePhone,
+        officeEmail: parsed.data.officeEmail || fallback.officeEmail,
+      };
+    }
   } catch {
     // The database being down shows the defaults, never a broken screen.
   }
@@ -540,4 +552,57 @@ export async function pendingBulletinsWith(
     }
   }
   return out;
+}
+
+/**
+ * Publishes the month's bulletin straight from the declaration, when the
+ * holder chose it (decision of 11/11/2026): only with every figure the
+ * bulletin needs; otherwise it stays waiting, filled in, as before.
+ */
+export async function publishBulletinFromIssWith(
+  database: Database,
+  tenant: Tenant,
+  competence: string,
+  figures: PendingBulletin,
+  actorId: string,
+): Promise<"published" | "pending"> {
+  const funds = FUNDS_BY_STATE[tenant.location.state] ?? [];
+  const privateFigures = tenant.publishBulletinPrivateFigures;
+  const complete =
+    figures.actsCount !== undefined &&
+    funds.every((f) => figures.fundAmountsCents?.[f.key] !== undefined) &&
+    (!privateFigures ||
+      (figures.grossRevenueCents !== undefined &&
+        figures.expensesCents !== undefined));
+  if (!complete) {
+    await applyIssToBulletinWith(
+      database,
+      tenant.slug,
+      competence,
+      figures,
+      actorId,
+    );
+    return "pending";
+  }
+  await upsertBulletinWith(
+    database,
+    tenant.slug,
+    {
+      referenceMonth: `${competence}-01`,
+      figures: {
+        actsCount: figures.actsCount ?? 0,
+        fundAmountsCents: Object.fromEntries(
+          funds.map((f) => [f.key, figures.fundAmountsCents?.[f.key] ?? 0]),
+        ),
+        issCents: figures.issCents,
+        grossRevenueCents: privateFigures
+          ? (figures.grossRevenueCents ?? null)
+          : null,
+        expensesCents: privateFigures ? (figures.expensesCents ?? null) : null,
+      },
+      status: "consolidated",
+    },
+    actorId,
+  );
+  return "published";
 }
