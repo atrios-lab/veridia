@@ -3,6 +3,7 @@ import { and, desc, eq, isNull } from "drizzle-orm";
 import { PDFDocument } from "pdf-lib";
 import { z } from "zod";
 import {
+  buildFilingReceipt,
   buildIssDocument,
   defaultIssSettings,
   type IssDeclarationInput,
@@ -234,6 +235,40 @@ export async function updateIssDeclarationWith(
   return row;
 }
 
+/** Notes when the declaration reached the prefeitura, and its protocol. */
+export async function recordIssFilingWith(
+  database: Database,
+  tenantSlug: string,
+  id: string,
+  filing: { filedOn: string; reference: string },
+  actorId: string,
+  now = new Date(),
+): Promise<void> {
+  const [row] = await database
+    .update(issDeclarations)
+    .set({
+      filedOn: filing.filedOn,
+      filingReference: filing.reference.trim().slice(0, 120),
+      updatedAt: now,
+    })
+    .where(
+      and(
+        eq(issDeclarations.tenantSlug, tenantSlug),
+        eq(issDeclarations.id, id),
+        isNull(issDeclarations.deletedAt),
+      ),
+    )
+    .returning({ id: issDeclarations.id });
+  if (!row) throw new IssDeclarationError("Declaração não encontrada.");
+  await recordAuditWith(database, {
+    tenantSlug,
+    actorId,
+    action: "iss-declaration.file",
+    targetType: "iss-declaration",
+    targetId: row.id,
+  });
+}
+
 /** "Excluir": out of the list, kept with its trail; the number is free. */
 export async function removeIssDeclarationWith(
   database: Database,
@@ -349,6 +384,24 @@ export async function renderIssDeclarationPdf(
     }
   }
   return Buffer.from(await merged.save());
+}
+
+/** The receipt the SEMUT stamps, for an office that delivers on paper. */
+export async function renderIssReceiptPdf(
+  tenant: Tenant,
+  row: StoredIssDeclaration,
+  settings: IssSettings,
+): Promise<Buffer> {
+  return renderDocument(
+    buildFilingReceipt(tenant, {
+      declaration: inputOf(row),
+      settings,
+      year: row.year,
+      sequence: row.sequence,
+      attachments: attachmentsOf(row).length,
+    }),
+    await brandFor(tenant),
+  );
 }
 
 /* --------------------------------------------------------- monthly bulletin */

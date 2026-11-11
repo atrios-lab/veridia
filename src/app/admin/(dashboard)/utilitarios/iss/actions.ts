@@ -24,6 +24,7 @@ import {
   IssDeclarationError,
   issueIssDeclarationWith,
   type PendingBulletin,
+  recordIssFilingWith,
   removeIssDeclarationWith,
   saveIssSettingsWith,
   updateIssDeclarationWith,
@@ -252,6 +253,40 @@ export async function saveIssDeclaration(
   );
 }
 
+/** When the declaration reached the prefeitura, and the protocol it got. */
+export async function recordIssFiling(
+  _previous: IssFormState,
+  formData: FormData,
+): Promise<IssFormState> {
+  const ok = await access("requests.manage");
+  if (!ok) return { status: "error", message: NO_PERMISSION };
+  const filedOn = String(formData.get("entregue") ?? "");
+  if (filedOn && !/^\d{4}-\d{2}-\d{2}$/.test(filedOn)) {
+    return { status: "error", message: "Confira a data da entrega." };
+  }
+  const id = String(formData.get("id") ?? "");
+  try {
+    await recordIssFilingWith(
+      db,
+      ok.tenant.slug,
+      id,
+      { filedOn, reference: String(formData.get("protocolo") ?? "") },
+      ok.session.user.id,
+    );
+  } catch (error) {
+    if (error instanceof IssDeclarationError) {
+      return { status: "error", message: error.message };
+    }
+    return { status: "error", message: "Não foi possível salvar agora." };
+  }
+  revalidatePath("/admin/utilitarios/iss");
+  revalidatePath(`/admin/utilitarios/iss/${id}`);
+  return {
+    status: "saved",
+    message: filedOn ? "Entrega anotada." : "Entrega desmarcada.",
+  };
+}
+
 export type RemoveIssState =
   | { status: "idle" }
   | { status: "error"; message: string };
@@ -315,12 +350,18 @@ export async function saveIssSettings(
     cnae: String(formData.get("cnae") ?? ""),
     dueDay: Number.isInteger(due) && due >= 1 && due <= 31 ? due : null,
     lawAttachment,
+    filing: formData.get("envio") === "portal" ? "portal" : "semut",
+    portalUrl: String(formData.get("portal") ?? ""),
+    portalRevenue: String(formData.get("receita") ?? ""),
   });
   if (!parsed.success) {
+    const field = String(parsed.error.issues[0]?.path[0] ?? "");
     return {
       status: "error",
       message:
-        "A alíquota vai de 2% a 5% (LC 116/2003, art. 8º-A e art. 8º, II).",
+        field === "portalUrl"
+          ? "Informe o endereço do site da prefeitura começando com https://."
+          : "A alíquota vai de 2% a 5% (LC 116/2003, art. 8º-A e art. 8º, II).",
     };
   }
   await saveIssSettingsWith(

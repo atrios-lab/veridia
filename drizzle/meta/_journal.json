@@ -358,6 +358,13 @@
       "when": 1794405615699,
       "tag": "0050_declaracao_iss_relatorios",
       "breakpoints": true
+    },
+    {
+      "idx": 51,
+      "version": "7",
+      "when": 1794406292181,
+      "tag": "0051_declaracao_iss_entrega",
+      "breakpoints": true
     }
   ]
 }

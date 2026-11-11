@@ -1,8 +1,8 @@
 "use client";
 
-import { useActionState, useEffect } from "react";
+import { useActionState, useEffect, useState } from "react";
 import { toast } from "sonner";
-import type { IssSettings } from "@/core/iss/declaration.ts";
+import { FILING_LABELS, type IssSettings } from "@/core/iss/declaration.ts";
 import { type IssFormState, saveIssSettings } from "../actions.ts";
 
 const FIELD =
@@ -14,6 +14,7 @@ export function IssSettingsForm({ settings }: { settings: IssSettings }) {
     saveIssSettings,
     { status: "idle" },
   );
+  const [filing, setFiling] = useState(settings.filing);
   useEffect(() => {
     if (state.status === "saved") toast.success(state.message);
   }, [state]);
@@ -85,6 +86,71 @@ export function IssSettingsForm({ settings }: { settings: IssSettings }) {
           )}
         </span>
       </label>
+
+      <h2 className="mt-2 font-serif text-[17px] font-semibold text-admin-primary md:col-span-2">
+        Como a declaração chega à prefeitura
+      </h2>
+      <fieldset className="flex flex-col gap-2 md:col-span-2">
+        <legend className="sr-only">Canal de envio</legend>
+        {(Object.keys(FILING_LABELS) as IssSettings["filing"][]).map((key) => (
+          <label
+            key={key}
+            className="flex items-start gap-2.5 rounded-[12px] border border-admin-border bg-admin-input-bg px-3.5 py-2.5 text-[13px] text-admin-text"
+          >
+            <input
+              type="radio"
+              name="envio"
+              value={key}
+              checked={filing === key}
+              onChange={() => setFiling(key)}
+              className="mt-0.5"
+            />
+            <span>
+              <span className="font-semibold">{FILING_LABELS[key]}</span>
+              <span className="block text-[12px] text-admin-muted">
+                {key === "portal"
+                  ? "A declaração mostra os dados prontos para copiar no site (CNPJ, receita, valor, descrição, data) e o PDF para anexar."
+                  : "Sai também um protocolo de entrega, que a SEMUT carimba e assina e fica com o cartório."}
+              </span>
+            </span>
+          </label>
+        ))}
+      </fieldset>
+      {filing !== "portal" && (
+        // Kept as they were, for the day the prefeitura opens its site.
+        <>
+          <input type="hidden" name="portal" value={settings.portalUrl} />
+          <input type="hidden" name="receita" value={settings.portalRevenue} />
+        </>
+      )}
+      {filing === "portal" && (
+        <>
+          <label className={LABEL}>
+            Endereço do site da prefeitura
+            <input
+              name="portal"
+              type="url"
+              defaultValue={settings.portalUrl}
+              placeholder="https://"
+              className={FIELD}
+            />
+          </label>
+          <label className={LABEL}>
+            Receita escolhida no site
+            <input
+              name="receita"
+              defaultValue={settings.portalRevenue}
+              placeholder="Como aparece na lista do site"
+              className={FIELD}
+            />
+            <span className="font-normal text-admin-muted">
+              Se a serventia tem inscrição municipal, confirme com a SEMUT qual
+              receita usar: em alguns sites, o DAM avulso é só para quem não é
+              cadastrado e não quita o ISS de quem é.
+            </span>
+          </label>
+        </>
+      )}
 
       <h2 className="mt-2 font-serif text-[17px] font-semibold text-admin-primary md:col-span-2">
         Destinatário

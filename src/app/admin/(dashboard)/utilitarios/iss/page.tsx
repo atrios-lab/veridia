@@ -111,6 +111,7 @@ export default async function IssPage({
                   </th>
                   <th className="px-4 py-2.5 text-right">ISS</th>
                   <th className="px-4 py-2.5 max-md:hidden">Recolhido</th>
+                  <th className="px-4 py-2.5">Entregue</th>
                 </tr>
               </thead>
               <tbody>
@@ -141,6 +142,15 @@ export default async function IssPage({
                     </td>
                     <td className="px-4 py-2.5 max-md:hidden">
                       {row.paidOn ? date(row.paidOn) : "Não informado"}
+                    </td>
+                    <td className="px-4 py-2.5">
+                      {row.filedOn ? (
+                        date(row.filedOn)
+                      ) : (
+                        <span className="font-semibold text-admin-warning-text">
+                          Pendente
+                        </span>
+                      )}
                     </td>
                   </tr>
                 ))}

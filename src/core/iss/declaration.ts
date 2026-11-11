@@ -83,6 +83,21 @@ export const IssSettingsSchema = z.object({
     .object({ path: z.string(), name: z.string() })
     .nullable()
     .default(null),
+  /**
+   * How the declaration reaches the prefeitura (decision of 11/11/2026):
+   * through its website, where the DAM is issued and the PDFs attached, or
+   * delivered on paper at the SEMUT, against a receipt.
+   */
+  filing: z.enum(["portal", "semut"]).default("semut"),
+  /** The prefeitura's page where the DAM is issued. */
+  portalUrl: z
+    .string()
+    .trim()
+    .max(300)
+    .regex(/^(https?:\/\/\S+)?$/)
+    .default(""),
+  /** The "Receita" picked on that page, as the page names it. */
+  portalRevenue: text(120),
 });
 export type IssSettings = z.infer<typeof IssSettingsSchema>;
 
@@ -97,7 +112,33 @@ export function defaultIssSettings(tenant: Tenant): IssSettings {
     cnae: "6912-5/00",
     dueDay: null,
     lawAttachment: null,
+    filing: "semut",
+    portalUrl: "",
+    portalRevenue: "",
   };
+}
+
+export const FILING_LABELS: Record<IssSettings["filing"], string> = {
+  portal: "Pelo site da prefeitura (DAM on-line)",
+  semut: "Entrega na SEMUT (papel, com protocolo)",
+};
+
+/**
+ * The day the ISS is due: the one typed, or the configured day of the month
+ * after the competence (the last day, in a shorter month).
+ */
+export function dueDateOf(
+  d: { competence: string; dueDate: string },
+  settings: Pick<IssSettings, "dueDay">,
+): string {
+  if (d.dueDate) return d.dueDate;
+  if (!settings.dueDay) return "";
+  const [year, month] = d.competence.split("-").map(Number);
+  const nextYear = month === 12 ? year + 1 : year;
+  const nextMonth = month === 12 ? 1 : month + 1;
+  const last = new Date(Date.UTC(nextYear, nextMonth, 0)).getUTCDate();
+  const day = Math.min(settings.dueDay, last);
+  return `${nextYear}-${String(nextMonth).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
 }
 
 /** "5,00%" */
@@ -294,6 +335,101 @@ export function buildIssDocument(
     signee: holder || undefined,
     signature: [tenant.holderTitle ?? "Tabelião/Registrador"],
     footer: `${office} · Declaração de ISS nº ${number} · ${tenant.legalFooter}`,
+  };
+}
+
+export interface FilingInput {
+  declaration: IssDeclarationInput;
+  settings: IssSettings;
+  year: number;
+  sequence: number;
+  attachments: number;
+}
+
+/**
+ * What the prefeitura's DAM page asks, in its order, ready to copy: who
+ * pays, the revenue, the amount, a description the fiscal reader
+ * understands on its own, the day to pay.
+ */
+export function portalFields(
+  tenant: Tenant,
+  input: FilingInput,
+): { key: string; label: string; value: string }[] {
+  const { declaration: d, settings: s } = input;
+  const iss = issOf(d);
+  const [year, month] = d.competence.split("-");
+  const number = formatDeclarationNumber(input.year, input.sequence);
+  const byAct = d.issCents !== null && d.issCents !== undefined;
+  const description = [
+    `ISSQN da competência ${month}/${year}: serviços notariais e de registro (LC 116/2003, item 21.01).`,
+    `Base de cálculo: emolumentos de R$ ${formatMoneyBRL(d.emolumentsCents)}; alíquota de ${formatRate(d.rateBasisPoints)}; ISS de R$ ${formatMoneyBRL(iss)}${byAct ? ", apurado ato a ato" : ""}.`,
+    `Conforme a Declaração de ISS nº ${number}${input.attachments ? ", com o Livro Diário Auxiliar e os relatórios do mês anexos" : ""}.`,
+  ].join(" ");
+  return [
+    { key: "documento", label: "CPF / CNPJ", value: s.cnpj.trim() },
+    { key: "nome", label: "Nome / Razão social", value: officialName(tenant) },
+    { key: "receita", label: "Receita", value: s.portalRevenue.trim() },
+    { key: "valor", label: "Valor a pagar", value: formatMoneyBRL(iss) },
+    { key: "descricao", label: "Descrição", value: description },
+    {
+      key: "vencimento",
+      label: "Data para pagamento",
+      value: date(dueDateOf(d, s)),
+    },
+  ];
+}
+
+/**
+ * The receipt for the SEMUT counter: one page that stays with the office,
+ * stamped and signed by whoever receives the declaration.
+ */
+export function buildFilingReceipt(
+  tenant: Tenant,
+  input: FilingInput,
+): RequerimentoDocument {
+  const { declaration: d, settings: s } = input;
+  const number = formatDeclarationNumber(input.year, input.sequence);
+  const office = officialName(tenant);
+  const blank = "_______________________________________";
+  return {
+    eyebrow: "Fisco municipal · ISSQN",
+    title: "Protocolo de entrega",
+    subtitle: `Declaração de ISS nº ${number} · competência ${competenceLabel(d.competence)}`,
+    office: [office, tenant.subtitle],
+    sections: [
+      {
+        heading: "Entregue",
+        rows: [
+          {
+            label: "Destinatário",
+            value: `${s.department.trim() || "Secretaria Municipal de Tributação"} da ${s.authority.trim() || `Prefeitura Municipal de ${tenant.location.city}`}`,
+          },
+          { label: "Serventia", value: office },
+          ...(s.cnpj.trim() ? [{ label: "CNPJ", value: s.cnpj.trim() }] : []),
+          { label: "Documento", value: `Declaração de ISS nº ${number}` },
+          { label: "Competência", value: competenceLabel(d.competence) },
+          { label: "ISS declarado", value: money(issOf(d)) },
+          {
+            label: "Anexos",
+            value: input.attachments
+              ? `${input.attachments} (Livro Diário Auxiliar e relatórios do mês)`
+              : "nenhum",
+          },
+        ],
+      },
+      {
+        heading: "Recebimento (preenchido pela SEMUT)",
+        rows: [
+          { label: "Recebido em", value: "____/____/________, às ____:____" },
+          { label: "Nº do protocolo", value: blank },
+          { label: "Servidor (nome)", value: blank },
+          { label: "Matrícula", value: blank },
+          { label: "Assinatura e carimbo", value: blank },
+        ],
+      },
+    ],
+    signature: ["Via da serventia: guardar com a cópia da declaração."],
+    footer: `${office} · Protocolo de entrega da Declaração de ISS nº ${number} · ${tenant.legalFooter}`,
   };
 }
 
