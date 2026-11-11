@@ -16,6 +16,7 @@ import {
 } from "@/lib/signature/certificate.ts";
 import { requestOrigin, verifyUrlFor } from "@/lib/signature/documents.ts";
 import { PdfNotSignableError } from "@/lib/signature/pades.ts";
+import { markManifest } from "@/lib/signature/stamp.ts";
 import {
   coSignDocumentWith,
   findSignedDocumentWith,
@@ -208,7 +209,7 @@ function manifestFor(
 ): NonNullable<Parameters<typeof signNewDocumentWith>[2]["manifest"]> {
   return async (code, info, at, original) => {
     const verifyUrl = verifyUrlFor(tenant, origin, code);
-    return renderDocument(
+    const manifest = await renderDocument(
       buildSignatureManifest(tenant, {
         code,
         title,
@@ -220,6 +221,7 @@ function manifestFor(
       }),
       await brandFor(tenant, verifyUrl),
     );
+    return markManifest(manifest);
   };
 }
 

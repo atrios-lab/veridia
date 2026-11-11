@@ -11,6 +11,9 @@
   (decisão de 11/11/2026). É o "chapéu" do logo da Átrios, desenhado em
   vetor, com "Assinador digital ÁTRIOS" e, abaixo, o 0800 878 0304, em azul
   discreto. O texto da faixa encolhe para caber, se for preciso.
+- A mesma marca aparece no canto superior esquerdo da primeira folha do
+  manifesto de assinaturas, em frente ao QR, e no fim da página pública de
+  verificação (`/verificar/[codigo]`), com o 0800 clicável no celular.
 - O documento pode ser coassinado por outra pessoa, e a primeira assinatura continua válida.
 - O cidadão confere em `/verificar`, pelo código, pelo QR ou pelo próprio PDF, e baixa o manifesto de
   assinaturas. A página inicial tem o cartão **Validar documento**, e a página de verificação mostra a base

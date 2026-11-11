@@ -957,6 +957,8 @@
   --color-msg-verde-from: #1c5638;
   --color-msg-verde-to: #3f8a63;
   --color-msg-azul-from: #1f4e8c;
+  /* The Átrios navy: its mark on signed documents and their verification. */
+  --color-atrios-navy: #232a64;
   --color-msg-azul-to: #5b93d6;
   --color-msg-vinho-from: #5e1b2b;
   --color-msg-vinho-to: #9b3a52;
