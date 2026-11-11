@@ -2,8 +2,10 @@ import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { after } from "next/server";
 import { can } from "@/core/auth/roles.ts";
+import { db } from "@/db/index.ts";
 import { sendDueRemindersInBackground } from "@/lib/appointment-reminders.ts";
 import { bookedCountFrom } from "@/lib/appointments.ts";
+import { openNotificationCountWith } from "@/lib/audit-trail.ts";
 import { waitingCount } from "@/lib/chat.ts";
 import { openGuideRequestCount } from "@/lib/guide-requests.ts";
 import { getOfficeAlerts } from "@/lib/office-alerts.ts";
@@ -60,6 +62,12 @@ export default async function DashboardLayout({
   // Only queried when the item is actually offered: the badge is a courtesy
   // on top of a link that is itself hidden without the permission.
   const counts: Record<string, number> = {
+    // Notifications of the audit waiting for this person's answer.
+    "/admin/auditoria": await openNotificationCountWith(
+      db,
+      tenant.slug,
+      session.user.id,
+    ).catch(() => 0),
     ...(can(role, "requests.manage", granted)
       ? {
           "/admin/pedidos": await openRequestCount(tenant.slug),

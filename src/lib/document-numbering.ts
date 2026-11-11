@@ -13,6 +13,7 @@ import { KIND_BY_PREFIX } from "@/core/request/kinds.ts";
 import type { Database } from "@/db/index.ts";
 import {
   appointments,
+  auditNotifications,
   serviceRequests,
   taxGuides,
   tenantContent,
@@ -55,6 +56,18 @@ export async function lastUsedWith(
           eq(taxGuides.tenantSlug, tenantSlug),
           eq(taxGuides.year, year),
           isNull(taxGuides.deletedAt),
+        ),
+      );
+    return row?.last ?? 0;
+  }
+  if (series === "notificacao") {
+    const [row] = await database
+      .select({ last: max(auditNotifications.sequence) })
+      .from(auditNotifications)
+      .where(
+        and(
+          eq(auditNotifications.tenantSlug, tenantSlug),
+          eq(auditNotifications.year, year),
         ),
       );
     return row?.last ?? 0;

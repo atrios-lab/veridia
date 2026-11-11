@@ -288,6 +288,13 @@
       "when": 1794350317192,
       "tag": "0040_assinador_digital",
       "breakpoints": true
+    },
+    {
+      "idx": 41,
+      "version": "7",
+      "when": 1794360736470,
+      "tag": "0041_auditoria_e_notificacoes",
+      "breakpoints": true
     }
   ]
 }
