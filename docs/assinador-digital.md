@@ -7,6 +7,10 @@
 - Em **Utilitários › Assinador digital**, quem está autorizado envia um PDF, escolhe o certificado, digita a
   senha e assina.
 - Cada página recebe a faixa lateral e o QR Code de verificação.
+- No fim da faixa, no alto da borda direita, fica a marca da plataforma
+  (decisão de 11/11/2026). É o "chapéu" do logo da Átrios, desenhado em
+  vetor, com "Assinador digital ÁTRIOS" e, abaixo, o 0800 878 0304, em azul
+  discreto. O texto da faixa encolhe para caber, se for preciso.
 - O documento pode ser coassinado por outra pessoa, e a primeira assinatura continua válida.
 - O cidadão confere em `/verificar`, pelo código, pelo QR ou pelo próprio PDF, e baixa o manifesto de
   assinaturas. A página inicial tem o cartão **Validar documento**, e a página de verificação mostra a base
