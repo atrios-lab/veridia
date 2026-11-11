@@ -1,4 +1,4 @@
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 import { can } from "@/core/auth/roles.ts";
 import { db } from "@/db/index.ts";
 import { getProfileWith, listContactsWith } from "@/lib/messages.ts";
@@ -19,6 +19,8 @@ export default async function MessagesPage({
   if (!session || !can(role, "desk.access", session.user.permissions)) {
     notFound();
   }
+  // The Átrios account only reads: straight to every conversation.
+  if (role === "superadmin") redirect("/admin/mensagens/supervisao");
   const tenant = await getTenant();
   const [profile, contacts] = await Promise.all([
     getProfileWith(db, tenant.slug, session.user.id),

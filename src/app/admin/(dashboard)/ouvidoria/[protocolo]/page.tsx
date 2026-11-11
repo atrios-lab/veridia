@@ -65,6 +65,7 @@ export default async function OmbudsmanDetailPage({
     "ombudsman",
     record.id,
     record.protocolNumber,
+    session?.user.role === "superadmin",
   );
 
   return (

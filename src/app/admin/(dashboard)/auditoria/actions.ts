@@ -99,6 +99,7 @@ export async function emailReport(
   if (!ids.length)
     return { status: "error", message: "Marque ao menos um registro." };
   const entries = await listAuditWith(db, {
+    includePlatform: access.platform,
     tenantSlugs: trailScope(access, String(formData.get("serventia") ?? "")),
     ids,
   });
@@ -291,6 +292,7 @@ export async function signNotification(
   if (!view) return { status: "error", message: "Notificação não encontrada." };
   const entries = view.auditIds.length
     ? await listAuditWith(db, {
+        includePlatform: access.platform,
         tenantSlugs: [tenant.slug],
         ids: view.auditIds,
       })

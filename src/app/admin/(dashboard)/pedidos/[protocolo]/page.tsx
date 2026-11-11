@@ -185,7 +185,12 @@ export default async function ServiceRequestDetailPage({
     await Promise.all([
       listAttachments(tenant.slug, request.id),
       listRequirements(tenant.slug, request.id),
-      listRequestHistory(tenant.slug, request.id, request.protocolNumber),
+      listRequestHistory(
+        tenant.slug,
+        request.id,
+        request.protocolNumber,
+        session.user.role === "superadmin",
+      ),
       linkedConversations(tenant.slug, request.id),
       // The guia the request drew by itself, for the office alone.
       act?.taxGuide

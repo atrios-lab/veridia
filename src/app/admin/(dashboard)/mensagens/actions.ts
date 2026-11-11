@@ -37,6 +37,9 @@ async function messengerAccess() {
   return {
     session,
     tenant,
+    // The Átrios account reads every conversation and is seen by no one:
+    // it never writes, never shows online (decision of 11/11/2026).
+    platform: role === "superadmin",
     oversight:
       role === "superadmin" ||
       can(role, "audit.manage", session.user.permissions),
@@ -48,6 +51,11 @@ export type Result<T = undefined> =
   | { ok: false; message: string };
 
 const DENIED = { ok: false as const, message: "Sem permissão." };
+const PLATFORM_READS_ONLY = {
+  ok: false as const,
+  message:
+    "A conta da Átrios só acompanha as conversas, em Todas as conversas.",
+};
 
 function failure(error: unknown, where: string) {
   if (error instanceof MessageError) {
@@ -66,6 +74,7 @@ export async function openConversation(
 ): Promise<Result<string>> {
   const access = await messengerAccess();
   if (!access) return DENIED;
+  if (access.platform) return PLATFORM_READS_ONLY;
   try {
     const id = await openDirectWith(
       db,
@@ -85,6 +94,7 @@ export async function sendText(
 ): Promise<Result> {
   const access = await messengerAccess();
   if (!access) return DENIED;
+  if (access.platform) return PLATFORM_READS_ONLY;
   try {
     await sendMessageWith(
       db,
@@ -102,6 +112,7 @@ export async function sendText(
 export async function sendNudge(conversationId: string): Promise<Result> {
   const access = await messengerAccess();
   if (!access) return DENIED;
+  if (access.platform) return PLATFORM_READS_ONLY;
   try {
     await sendMessageWith(
       db,
@@ -120,6 +131,7 @@ export async function sendNudge(conversationId: string): Promise<Result> {
 export async function sendFile(formData: FormData): Promise<Result> {
   const access = await messengerAccess();
   if (!access) return DENIED;
+  if (access.platform) return PLATFORM_READS_ONLY;
   const conversationId = String(formData.get("conversationId") ?? "");
   const file = formData.get("file");
   if (!(file instanceof File) || file.size === 0) {
@@ -188,7 +200,9 @@ export async function pollMessenger(
   if (!access) return DENIED;
   const now = new Date();
   const viewer = { id: access.session.user.id, oversight: access.oversight };
-  await touchPresenceWith(db, access.tenant.slug, viewer.id, now);
+  if (!access.platform) {
+    await touchPresenceWith(db, access.tenant.slug, viewer.id, now);
+  }
   const after = afterIso ? new Date(afterIso) : undefined;
   const messages = conversationId
     ? ((await listMessagesWith(db, access.tenant.slug, conversationId, viewer, {
@@ -228,7 +242,14 @@ export async function pollInbox(sinceIso: string): Promise<
   const access = await messengerAccess();
   if (!access) return DENIED;
   const now = new Date();
-  await touchPresenceWith(db, access.tenant.slug, access.session.user.id, now);
+  if (!access.platform) {
+    await touchPresenceWith(
+      db,
+      access.tenant.slug,
+      access.session.user.id,
+      now,
+    );
+  }
   const since = new Date(sinceIso);
   const { incoming, unread } = await inboxWith(
     db,
@@ -254,6 +275,7 @@ const PHOTO_BYTES = 2 * 1024 * 1024;
 export async function saveProfile(formData: FormData): Promise<Result> {
   const access = await messengerAccess();
   if (!access) return DENIED;
+  if (access.platform) return PLATFORM_READS_ONLY;
   let photoPath: string | undefined;
   const photo = formData.get("photo");
   if (photo instanceof File && photo.size > 0) {

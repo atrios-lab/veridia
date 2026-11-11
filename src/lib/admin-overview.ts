@@ -29,6 +29,7 @@ import {
   serviceRequestRequirements,
   serviceRequests,
 } from "@/db/schema.ts";
+import { notByPlatform } from "./audit.ts";
 
 export interface RecentActivityEntry {
   action: string;
@@ -83,6 +84,7 @@ export async function listRecentActivity(
       and(
         eq(auditLog.tenantSlug, tenantSlug),
         inArray(auditLog.targetType, kinds),
+        notByPlatform(),
       ),
     )
     .orderBy(desc(auditLog.createdAt))

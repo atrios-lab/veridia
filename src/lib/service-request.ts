@@ -79,7 +79,7 @@ import {
   serviceRequestRequirements,
   serviceRequests,
 } from "@/db/schema.ts";
-import { recordAudit, recordAuditWith } from "./audit.ts";
+import { notByPlatform, recordAudit, recordAuditWith } from "./audit.ts";
 import { nextNumberWith } from "./document-numbering.ts";
 import { findPermanentBounceWith } from "./email/bounces.ts";
 import { OFFICE_TIME_ZONE } from "./office-config.ts";
@@ -2129,6 +2129,8 @@ export async function listRequestHistory(
   tenantSlug: string,
   requestId: string,
   protocolNumber: string,
+  /** The Átrios account's own acts: only the Átrios account sees them. */
+  includePlatform = false,
 ): Promise<RequestHistoryEntry[]> {
   return db
     .select({
@@ -2142,6 +2144,7 @@ export async function listRequestHistory(
       and(
         eq(auditLog.tenantSlug, tenantSlug),
         eq(auditLog.targetType, "service-request"),
+        includePlatform ? undefined : notByPlatform(),
         or(
           eq(auditLog.targetId, requestId),
           eq(auditLog.targetId, protocolNumber),
@@ -2163,6 +2166,8 @@ export async function listRecordHistory(
   kind: RequestKind,
   requestId: string,
   protocolNumber: string,
+  /** The Átrios account's own acts: only the Átrios account sees them. */
+  includePlatform = false,
 ): Promise<RequestHistoryEntry[]> {
   return db
     .select({
@@ -2176,6 +2181,7 @@ export async function listRecordHistory(
       and(
         eq(auditLog.tenantSlug, tenantSlug),
         eq(auditLog.targetType, kind),
+        includePlatform ? undefined : notByPlatform(),
         or(
           eq(auditLog.targetId, requestId),
           eq(auditLog.targetId, protocolNumber),
