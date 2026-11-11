@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import { BackLink } from "@/app/admin/_components/back-link";
 import { can, type Role } from "@/core/auth/roles.ts";
 import { formatOfficeDateTime } from "@/core/time/office-time.ts";
 import { db } from "@/db/index.ts";
@@ -36,12 +37,7 @@ export default async function OversightPage() {
       <AdminPageHeader title="Mensagens internas" />
       <main className="flex max-w-[900px] flex-col gap-4 px-[30px] py-7 max-md:px-4">
         {role !== "superadmin" && (
-          <Link
-            href="/admin/mensagens"
-            className="text-[12.5px] text-admin-muted hover:text-admin-primary"
-          >
-            ‹ Minhas mensagens
-          </Link>
+          <BackLink href="/admin/mensagens" label="Minhas mensagens" />
         )}
         {holder && (
           <section className="rounded-[14px] border border-admin-border bg-admin-card px-5 py-4">

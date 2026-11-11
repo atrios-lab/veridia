@@ -35,6 +35,8 @@ const PATHS = {
     "M4 15v3a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-3",
   ],
   chevronDown: ["m6 9 6 6 6-6"],
+  // "Voltar": the way back from a subordinate screen.
+  arrowLeft: ["M19 12H5", "m11 18-6-6 6-6"],
   // Opens the sidebar as a drawer, on a screen too narrow for the column.
   menu: ["M4 7h16M4 12h16M4 17h16"],
   // Sidebar navigation: the service request queue.

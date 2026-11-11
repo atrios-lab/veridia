@@ -303,6 +303,7 @@ async function unreadByConversation(
     .where(
       and(
         ne(messengerMessages.senderId, userId),
+        isNull(messengerMessages.deletedAt),
         or(
           isNull(messengerMembers.lastReadAt),
           gt(messengerMessages.createdAt, messengerMembers.lastReadAt),
@@ -440,15 +441,25 @@ export interface MessageView {
   mimeType: string | null;
   sizeBytes: number | null;
   createdAt: Date;
+  editedAt: Date | null;
+  /** Deleted by its author: members see "Mensagem apagada", no content. */
+  deleted: boolean;
+  /** For the holder's oversight only: the text as first sent. */
+  originalBody: string | null;
 }
 
-/** The conversation's messages, oldest first; newer than `after` when given. */
+/**
+ * The conversation's messages, oldest first. With `after`, only what was
+ * sent, edited or deleted since then, so an open screen follows edits too.
+ * A member does not see what they cleared, nor the content of a deleted
+ * message; the holder's oversight (`full`) sees everything.
+ */
 export async function listMessagesWith(
   database: Database,
   tenantSlug: string,
   conversationId: string,
   viewer: Viewer,
-  options: { after?: Date; limit?: number } = {},
+  options: { after?: Date; limit?: number; full?: boolean } = {},
 ): Promise<MessageView[] | undefined> {
   const conversation = await findConversationWith(
     database,
@@ -457,6 +468,21 @@ export async function listMessagesWith(
     viewer,
   );
   if (!conversation) return undefined;
+  const full = Boolean(options.full && viewer.oversight);
+  // What this member cleared stays out of their view.
+  const [membership] = conversation.member
+    ? await database
+        .select({ clearedAt: messengerMembers.clearedAt })
+        .from(messengerMembers)
+        .where(
+          and(
+            eq(messengerMembers.conversationId, conversationId),
+            eq(messengerMembers.userId, viewer.id),
+          ),
+        )
+        .limit(1)
+    : [];
+  const cleared = full ? null : (membership?.clearedAt ?? null);
   const rows = await database
     .select({
       id: messengerMessages.id,
@@ -468,24 +494,154 @@ export async function listMessagesWith(
       mimeType: messengerMessages.mimeType,
       sizeBytes: messengerMessages.sizeBytes,
       createdAt: messengerMessages.createdAt,
+      editedAt: messengerMessages.editedAt,
+      originalBody: messengerMessages.originalBody,
+      deletedAt: messengerMessages.deletedAt,
     })
     .from(messengerMessages)
     .leftJoin(user, eq(user.id, messengerMessages.senderId))
     .where(
       and(
         eq(messengerMessages.conversationId, conversationId),
+        cleared ? gt(messengerMessages.createdAt, cleared) : undefined,
         options.after
-          ? gt(messengerMessages.createdAt, options.after)
+          ? or(
+              gt(messengerMessages.createdAt, options.after),
+              gt(messengerMessages.editedAt, options.after),
+              gt(messengerMessages.deletedAt, options.after),
+            )
           : undefined,
       ),
     )
     .orderBy(desc(messengerMessages.createdAt))
     .limit(options.limit ?? 200);
-  return rows.reverse().map((row) => ({
-    ...row,
-    senderName: row.senderName ?? "Conta removida",
-    kind: row.kind as MessageKind,
-  }));
+  return rows.reverse().map(({ deletedAt, originalBody, ...row }) => {
+    const deleted = Boolean(deletedAt);
+    const hide = deleted && !full;
+    return {
+      ...row,
+      senderName: row.senderName ?? "Conta removida",
+      kind: row.kind as MessageKind,
+      body: hide ? null : row.body,
+      fileName: hide ? null : row.fileName,
+      deleted,
+      originalBody: full ? originalBody : null,
+    };
+  });
+}
+
+/** Its author corrects a text; the first version stays for the holder. */
+export async function editMessageWith(
+  database: Database,
+  tenantSlug: string,
+  messageId: string,
+  userId: string,
+  body: string,
+  now = new Date(),
+): Promise<void> {
+  const text = body.replace(/\r\n?/g, "\n").trim().slice(0, MAX_TEXT);
+  if (!text) throw new MessageError("Escreva a mensagem.");
+  const [row] = await database
+    .select({
+      kind: messengerMessages.kind,
+      body: messengerMessages.body,
+      originalBody: messengerMessages.originalBody,
+      deletedAt: messengerMessages.deletedAt,
+      conversationId: messengerMessages.conversationId,
+    })
+    .from(messengerMessages)
+    .where(
+      and(
+        eq(messengerMessages.id, messageId),
+        eq(messengerMessages.tenantSlug, tenantSlug),
+        eq(messengerMessages.senderId, userId),
+      ),
+    )
+    .limit(1);
+  if (!row || row.deletedAt || row.kind !== "texto") {
+    throw new MessageError("Só dá para editar as suas mensagens de texto.");
+  }
+  await database
+    .update(messengerMessages)
+    .set({
+      body: text,
+      editedAt: now,
+      originalBody: row.originalBody ?? row.body,
+    })
+    .where(eq(messengerMessages.id, messageId));
+  await recordAuditWith(database, {
+    tenantSlug,
+    actorId: userId,
+    action: "messenger.message-edit",
+    targetType: "messenger-conversation",
+    targetId: row.conversationId,
+  });
+}
+
+/**
+ * Its author "apaga" a message: it leaves the conversation for everyone,
+ * and stays in the database for the holder's oversight.
+ */
+export async function deleteMessageWith(
+  database: Database,
+  tenantSlug: string,
+  messageId: string,
+  userId: string,
+  now = new Date(),
+): Promise<void> {
+  const [row] = await database
+    .update(messengerMessages)
+    .set({ deletedAt: now, deletedBy: userId })
+    .where(
+      and(
+        eq(messengerMessages.id, messageId),
+        eq(messengerMessages.tenantSlug, tenantSlug),
+        eq(messengerMessages.senderId, userId),
+        isNull(messengerMessages.deletedAt),
+      ),
+    )
+    .returning({ conversationId: messengerMessages.conversationId });
+  if (!row) throw new MessageError("Só dá para apagar as suas mensagens.");
+  await recordAuditWith(database, {
+    tenantSlug,
+    actorId: userId,
+    action: "messenger.message-delete",
+    targetType: "messenger-conversation",
+    targetId: row.conversationId,
+  });
+}
+
+/** "Limpar conversa": hidden for this member only, from now back. */
+export async function clearConversationWith(
+  database: Database,
+  tenantSlug: string,
+  conversationId: string,
+  userId: string,
+  now = new Date(),
+): Promise<void> {
+  const conversation = await findConversationWith(
+    database,
+    tenantSlug,
+    conversationId,
+    { id: userId, oversight: false },
+  );
+  if (!conversation?.member) throw new MessageError("Conversa não encontrada.");
+  await database
+    .update(messengerMembers)
+    .set({ clearedAt: now, lastReadAt: now })
+    .where(
+      and(
+        eq(messengerMembers.conversationId, conversationId),
+        eq(messengerMembers.userId, userId),
+      ),
+    );
+  await recordAuditWith(database, {
+    tenantSlug,
+    actorId: userId,
+    action: "messenger.conversation-clear",
+    targetType: "messenger-conversation",
+    targetId: conversationId,
+  });
 }
 
 export interface OutgoingFile {
@@ -790,6 +946,7 @@ export async function findMessageFileWith(
       path: messengerMessages.filePath,
       name: messengerMessages.fileName,
       mimeType: messengerMessages.mimeType,
+      deletedAt: messengerMessages.deletedAt,
     })
     .from(messengerMessages)
     .where(
@@ -800,6 +957,8 @@ export async function findMessageFileWith(
     )
     .limit(1);
   if (!row?.path) return undefined;
+  // A deleted file no longer opens in the chat; the holder still reads it.
+  if (row.deletedAt && !viewer.oversight) return undefined;
   const conversation = await findConversationWith(
     database,
     tenantSlug,

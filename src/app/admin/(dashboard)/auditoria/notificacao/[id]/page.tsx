@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import { BackLink } from "@/app/admin/_components/back-link";
 import { auditActionLabel, targetInWords } from "@/core/audit/labels.ts";
 import type { Role } from "@/core/auth/roles.ts";
 import { formatOfficeDateTime } from "@/core/time/office-time.ts";
@@ -78,12 +79,7 @@ export default async function NotificationPage({
     <>
       <AdminPageHeader title="Auditoria" />
       <main className="flex max-w-[900px] flex-col gap-4.5 px-[30px] py-7">
-        <Link
-          href="/admin/auditoria"
-          className="text-[12.5px] text-admin-muted hover:text-admin-primary"
-        >
-          ‹ Auditoria
-        </Link>
+        <BackLink href="/admin/auditoria" label="Auditoria" />
         {sent && (
           <p className="rounded-[12px] bg-admin-success-bg px-4 py-3 text-[13px] font-semibold text-admin-success-text">
             Notificação enviada pelo painel: {view.targetName} vê o pedido na

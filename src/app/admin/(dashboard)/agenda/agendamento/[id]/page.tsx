@@ -1,5 +1,5 @@
-import Link from "next/link";
 import { notFound } from "next/navigation";
+import { BackLink } from "@/app/admin/_components/back-link";
 import { can } from "@/core/auth/roles.ts";
 import {
   AGENDA_NAMES,
@@ -86,12 +86,7 @@ export default async function AppointmentDetailPage({
     <>
       <AdminPageHeader title="Detalhes do agendamento" />
       <main className="flex max-w-[960px] flex-col gap-4.5 px-[30px] py-7">
-        <Link
-          href={dayHref}
-          className="text-[12.5px] font-semibold text-admin-muted hover:underline"
-        >
-          ‹ Agenda do dia
-        </Link>
+        <BackLink href={dayHref} label="Agenda do dia" />
 
         <section className="rounded-[14px] border border-admin-border bg-admin-card px-5 py-4">
           <h2 className="font-serif text-[18px] font-semibold text-admin-primary">

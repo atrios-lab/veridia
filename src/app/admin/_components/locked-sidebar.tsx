@@ -31,13 +31,13 @@ export function AdminLockedSidebar({
           alt=""
           width={36}
           height={36}
-          className="h-9 w-9 flex-none object-contain"
+          className="h-9 w-9 flex-none rounded-full object-contain ring-1 ring-admin-on-dark-accent/40"
         />
         <span className="min-w-0 flex-1">
-          <span className="block truncate font-serif text-[15px] font-semibold leading-tight text-white md:whitespace-normal">
+          <span className="block truncate font-serif text-[13.5px] font-bold uppercase leading-snug tracking-[0.06em] text-white md:whitespace-normal">
             {tenant.name}
           </span>
-          <span className="block text-[10.5px] uppercase tracking-[0.08em] text-admin-on-dark-subtitle">
+          <span className="mt-0.5 block text-[9.5px] font-extrabold uppercase tracking-[0.12em] whitespace-nowrap text-admin-on-dark-accent">
             Painel administrativo
           </span>
         </span>

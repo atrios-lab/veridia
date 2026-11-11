@@ -28,6 +28,9 @@ import {
 import { shakeElement, vibrate } from "../../../_components/shake.ts";
 import { AdminIcon } from "../../_components/icon.tsx";
 import {
+  clearConversation,
+  deleteMessage,
+  editMessage,
   openConversation,
   pollMessenger,
   requestLunch,
@@ -199,6 +202,9 @@ function MessageBody({ message }: { message: SerializedMessage }) {
  * for here, decided by the Tabelião/Registrador, written to the audit, and
  * not open to a new change while one waits.
  */
+/** The status menu's entry that opens the lunch window instead. */
+const LUNCH_OPTION = "almoco-horario";
+
 function LunchField({
   lunch,
   pending,
@@ -325,11 +331,19 @@ export function Messenger({
   const [text, setText] = useState("");
   const [busy, setBusy] = useState(false);
   const [settings, setSettings] = useState(false);
+  const [lunchOpen, setLunchOpen] = useState(false);
   const [emojis, setEmojis] = useState(false);
   const [locked, setLocked] = useState(false);
   const windowRef = useRef<HTMLDivElement>(null);
   const listRef = useRef<HTMLDivElement>(null);
   const lastIso = useRef<string | null>(null);
+  const messagesRef = useRef<SerializedMessage[]>([]);
+  messagesRef.current = messages;
+  const [editing, setEditing] = useState<{ id: string; body: string } | null>(
+    null,
+  );
+  const [deleting, setDeleting] = useState<string | null>(null);
+  const [clearing, setClearing] = useState(false);
   const soundOn = useRef(me.sound);
   soundOn.current = me.sound;
 
@@ -347,20 +361,30 @@ export function Messenger({
   const poll = useCallback(async () => {
     const result = await pollMessenger(active?.id ?? null, lastIso.current);
     if (!result.ok) return;
-    const { contacts: next, messages: fresh } = result.data;
+    const { contacts: next, messages: fresh, now } = result.data;
     setContacts(next);
     // Another conversation's news rings through the panel's watcher
     // (messenger-watch.tsx), insisting until it is read; here only the
     // list's badges follow.
+    const first = lastIso.current === null;
+    // The server's clock, so edits and deletions since then come next time.
+    lastIso.current = now;
     if (fresh.length) {
-      const first = lastIso.current === null;
-      lastIso.current = fresh.at(-1)?.createdAt ?? lastIso.current;
+      const known = new Set(messagesRef.current.map((m) => m.id));
+      const added = fresh.filter((m) => !known.has(m.id));
+      // An edited or deleted message comes again: it takes its old place.
       setMessages((current) => {
-        const known = new Set(current.map((m) => m.id));
-        return [...current, ...fresh.filter((m) => !known.has(m.id))];
+        const changed = new Map(fresh.map((m) => [m.id, m]));
+        const have = new Set(current.map((m) => m.id));
+        return [
+          ...current.map((m) => changed.get(m.id) ?? m),
+          ...fresh.filter((m) => !have.has(m.id)),
+        ];
       });
       if (!first) {
-        const theirs = fresh.filter((m) => m.senderId !== me.userId);
+        const theirs = added.filter(
+          (m) => m.senderId !== me.userId && !m.deleted,
+        );
         if (theirs.some((m) => m.kind === "chamar")) ring(true);
         else if (theirs.length) ring(false);
       }
@@ -371,6 +395,9 @@ export function Messenger({
   // biome-ignore lint/correctness/useExhaustiveDependencies: runs when the conversation changes
   useEffect(() => {
     setMessages([]);
+    setEditing(null);
+    setDeleting(null);
+    setClearing(false);
     lastIso.current = null;
     void poll();
   }, [active?.id]);
@@ -431,6 +458,49 @@ export function Messenger({
     setBusy(false);
     if (!result.ok) toast.error(result.message);
     else void poll();
+  };
+
+  const saveEdit = async () => {
+    if (!editing || !editing.body.trim() || busy) return;
+    setBusy(true);
+    const result = await editMessage(editing.id, editing.body);
+    setBusy(false);
+    if (!result.ok) {
+      toast.error(result.message);
+      return;
+    }
+    setEditing(null);
+    void poll();
+  };
+
+  const remove = async (messageId: string) => {
+    setBusy(true);
+    const result = await deleteMessage(messageId);
+    setBusy(false);
+    setDeleting(null);
+    if (!result.ok) {
+      toast.error(result.message);
+      return;
+    }
+    toast.success("Mensagem apagada.");
+    void poll();
+  };
+
+  const clearAll = async () => {
+    if (!active) return;
+    setBusy(true);
+    const result = await clearConversation(active.id);
+    setBusy(false);
+    setClearing(false);
+    if (!result.ok) {
+      toast.error(result.message);
+      return;
+    }
+    setMessages([]);
+    setEditing(null);
+    lastIso.current = null;
+    toast.success("Conversa limpa para você.");
+    void poll();
   };
 
   const recorder = useRecorder((file) => void upload(file, true));
@@ -589,9 +659,16 @@ export function Messenger({
                 <select
                   aria-label="Meu status"
                   value={me.status}
-                  onChange={(event) =>
-                    void saveMe({ status: event.target.value as Status })
-                  }
+                  onChange={(event) => {
+                    // "Horário de almoço" is not a status one switches on
+                    // at will: it opens the daily window, which the
+                    // Tabelião/Registrador approves and the clock applies.
+                    if (event.target.value === LUNCH_OPTION) {
+                      setLunchOpen(true);
+                      return;
+                    }
+                    void saveMe({ status: event.target.value as Status });
+                  }}
                   className="mt-0.5 w-full rounded-[6px] border border-admin-input-border bg-admin-card px-1.5 py-0.5 text-[12px] text-admin-text"
                 >
                   {STATUSES.map((status) => (
@@ -599,6 +676,11 @@ export function Messenger({
                       {STATUS_LABELS[status]}
                     </option>
                   ))}
+                  <option value={LUNCH_OPTION}>
+                    {me.lunch
+                      ? `Horário de almoço (${lunchLabel(me.lunch)})`
+                      : "Horário de almoço: escolher horário"}
+                  </option>
                 </select>
               </div>
             </div>
@@ -613,6 +695,22 @@ export function Messenger({
               }
               className="mt-2 w-full rounded-[6px] border border-transparent bg-transparent px-1.5 py-1 text-[12px] italic text-admin-muted hover:border-admin-input-border focus:border-admin-input-border focus:bg-admin-card"
             />
+            {lunchOpen && (
+              <div className="mt-2 rounded-[10px] border border-admin-border bg-admin-card p-2.5 text-[12.5px]">
+                <LunchField
+                  lunch={me.lunch}
+                  pending={me.lunchPending}
+                  onAsked={(lunchPending) => setMe({ ...me, lunchPending })}
+                />
+                <button
+                  type="button"
+                  onClick={() => setLunchOpen(false)}
+                  className="mt-2 text-[12px] font-semibold text-admin-muted underline hover:text-admin-primary"
+                >
+                  Fechar
+                </button>
+              </div>
+            )}
           </div>
 
           {settings && (
@@ -647,11 +745,13 @@ export function Messenger({
                   />
                 </label>
               </div>
-              <LunchField
-                lunch={me.lunch}
-                pending={me.lunchPending}
-                onAsked={(lunchPending) => setMe({ ...me, lunchPending })}
-              />
+              {!lunchOpen && (
+                <LunchField
+                  lunch={me.lunch}
+                  pending={me.lunchPending}
+                  onAsked={(lunchPending) => setMe({ ...me, lunchPending })}
+                />
+              )}
               <fieldset>
                 <legend className="mb-1 font-bold text-admin-primary">
                   Cor da janela
@@ -714,10 +814,15 @@ export function Messenger({
                 <button
                   type="button"
                   onClick={() => setActive(null)}
-                  className="rounded-md px-1.5 py-1 text-[13px] font-semibold text-admin-primary md:hidden"
+                  className="inline-flex min-h-10 flex-none items-center gap-1 rounded-full border border-admin-border bg-white py-1 pr-3 pl-2 text-[13px] font-semibold text-admin-primary shadow-sm md:hidden"
                   aria-label="Voltar aos contatos"
                 >
-                  ‹
+                  <AdminIcon
+                    name="arrowLeft"
+                    className="h-4 w-4"
+                    strokeWidth={2.2}
+                  />
+                  Contatos
                 </button>
                 <Avatar
                   userId={partner.userId}
@@ -739,7 +844,47 @@ export function Messenger({
                     </p>
                   )}
                 </div>
+                <button
+                  type="button"
+                  onClick={() => setClearing((v) => !v)}
+                  aria-expanded={clearing}
+                  className="inline-flex min-h-9 flex-none items-center gap-1.5 rounded-full border border-admin-border bg-white px-3 text-[12px] font-semibold text-admin-primary hover:border-admin-primary"
+                  title="Limpar toda a conversa para você"
+                >
+                  <AdminIcon name="trash" className="h-3.5 w-3.5" />
+                  <span className="hidden sm:inline">Limpar conversa</span>
+                  <span className="sm:hidden">Limpar</span>
+                </button>
               </header>
+              {clearing && (
+                <div className="border-b border-admin-warning-soft-border bg-admin-warning-bg px-3 py-2 text-[12px] text-admin-warning-text">
+                  <p className="font-semibold">
+                    Limpar toda a conversa com {partner.name}?
+                  </p>
+                  <p className="mt-0.5">
+                    As mensagens somem só da sua tela. {partner.name} continua
+                    com o histórico, e o Tabelião/Registrador também. O ato fica
+                    registrado na auditoria.
+                  </p>
+                  <div className="mt-1.5 flex gap-2">
+                    <button
+                      type="button"
+                      disabled={busy}
+                      onClick={() => void clearAll()}
+                      className="btn btn-admin-primary btn-sm"
+                    >
+                      {busy ? "Limpando..." : "Sim, limpar para mim"}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setClearing(false)}
+                      className="btn btn-admin-secondary btn-sm"
+                    >
+                      Cancelar
+                    </button>
+                  </div>
+                </div>
+              )}
               <p className="flex items-center gap-1.5 border-b border-admin-border bg-admin-warning-bg px-3 py-1.5 text-[11.5px] font-semibold text-admin-warning-text">
                 <AdminIcon name="eye" className="h-3.5 w-3.5 shrink-0" />
                 {OVERSIGHT_NOTICE}
@@ -773,20 +918,143 @@ export function Messenger({
                         </p>
                       ) : (
                         <div
-                          className={`my-1.5 rounded-[10px] px-3 py-1.5 ${mine ? "bg-msg-mine" : ""}`}
+                          className={`group my-1.5 rounded-[10px] px-3 py-1.5 ${mine ? "bg-msg-mine" : ""}`}
                         >
-                          <p className="text-[12px]">
-                            <span
-                              className={`font-bold ${mine ? "text-admin-primary" : "text-msg-azul-from"}`}
-                            >
-                              {mine ? "Você" : message.senderName} diz:
-                            </span>{" "}
-                            <span className="text-admin-faint">
-                              ({formatTime(message.createdAt)})
-                            </span>
-                          </p>
+                          <div className="flex flex-wrap items-start gap-x-2">
+                            <p className="min-w-0 flex-1 text-[12px]">
+                              <span
+                                className={`font-bold ${mine ? "text-admin-primary" : "text-msg-azul-from"}`}
+                              >
+                                {mine ? "Você" : message.senderName} diz:
+                              </span>{" "}
+                              <span className="text-admin-faint">
+                                ({formatTime(message.createdAt)})
+                              </span>
+                              {message.editedAt && !message.deleted && (
+                                <span className="ml-1 text-[11px] italic text-admin-muted">
+                                  (editada)
+                                </span>
+                              )}
+                            </p>
+                            {mine &&
+                              !message.deleted &&
+                              editing?.id !== message.id && (
+                                <span className="flex gap-1 opacity-100 md:opacity-0 md:group-focus-within:opacity-100 md:group-hover:opacity-100">
+                                  {message.kind === "texto" && (
+                                    <button
+                                      type="button"
+                                      onClick={() => {
+                                        setDeleting(null);
+                                        setEditing({
+                                          id: message.id,
+                                          body: message.body ?? "",
+                                        });
+                                      }}
+                                      className="rounded-full border border-admin-border bg-white px-2 py-0.5 text-[11px] font-semibold text-admin-primary hover:border-admin-primary"
+                                    >
+                                      Editar
+                                    </button>
+                                  )}
+                                  <button
+                                    type="button"
+                                    onClick={() => {
+                                      setEditing(null);
+                                      setDeleting(message.id);
+                                    }}
+                                    className="rounded-full border border-admin-border bg-white px-2 py-0.5 text-[11px] font-semibold text-admin-error-text hover:border-admin-error-border"
+                                  >
+                                    Apagar
+                                  </button>
+                                </span>
+                              )}
+                          </div>
                           <div className="pl-3">
-                            <MessageBody message={message} />
+                            {message.deleted ? (
+                              <p className="text-[12.5px] italic text-admin-muted">
+                                🚫 Mensagem apagada
+                              </p>
+                            ) : editing?.id === message.id ? (
+                              <div className="mt-1">
+                                <textarea
+                                  aria-label="Editar mensagem"
+                                  value={editing.body}
+                                  maxLength={4000}
+                                  rows={2}
+                                  onChange={(event) =>
+                                    setEditing({
+                                      id: message.id,
+                                      body: event.target.value,
+                                    })
+                                  }
+                                  onKeyDown={(event) => {
+                                    if (
+                                      event.key === "Enter" &&
+                                      !event.shiftKey
+                                    ) {
+                                      event.preventDefault();
+                                      void saveEdit();
+                                    }
+                                    if (event.key === "Escape")
+                                      setEditing(null);
+                                  }}
+                                  className="w-full resize-none rounded-[8px] border border-admin-input-border bg-white px-2 py-1 text-[13.5px]"
+                                />
+                                <div className="mt-1 flex flex-wrap items-center gap-2">
+                                  <button
+                                    type="button"
+                                    disabled={busy || !editing.body.trim()}
+                                    onClick={() => void saveEdit()}
+                                    className="btn btn-admin-primary btn-sm"
+                                  >
+                                    Salvar
+                                  </button>
+                                  <button
+                                    type="button"
+                                    onClick={() => setEditing(null)}
+                                    className="btn btn-admin-secondary btn-sm"
+                                  >
+                                    Cancelar
+                                  </button>
+                                  <span className="text-[11px] text-admin-muted">
+                                    Aparece como &quot;editada&quot;. O texto
+                                    original fica guardado para o
+                                    Tabelião/Registrador.
+                                  </span>
+                                </div>
+                              </div>
+                            ) : (
+                              <MessageBody message={message} />
+                            )}
+                            {deleting === message.id && (
+                              <div className="mt-1.5 rounded-[8px] border border-admin-warning-soft-border bg-admin-warning-bg px-2.5 py-2 text-[12px] text-admin-warning-text">
+                                <p className="font-semibold">
+                                  Apagar esta mensagem para os dois?
+                                </p>
+                                <p className="mt-0.5">
+                                  No lugar dela aparece &quot;Mensagem
+                                  apagada&quot;. O conteúdo continua guardado
+                                  para o Tabelião/Registrador, e o ato vai para
+                                  a auditoria.
+                                </p>
+                                <div className="mt-1.5 flex gap-2">
+                                  <button
+                                    type="button"
+                                    disabled={busy}
+                                    onClick={() => void remove(message.id)}
+                                    className="btn btn-admin-primary btn-sm"
+                                  >
+                                    {busy ? "Apagando..." : "Sim, apagar"}
+                                  </button>
+                                  <button
+                                    type="button"
+                                    onClick={() => setDeleting(null)}
+                                    className="btn btn-admin-secondary btn-sm"
+                                  >
+                                    Cancelar
+                                  </button>
+                                </div>
+                              </div>
+                            )}
                           </div>
                         </div>
                       )}

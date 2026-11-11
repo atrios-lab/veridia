@@ -1,5 +1,5 @@
-import Link from "next/link";
 import { notFound } from "next/navigation";
+import { BackLink } from "@/app/admin/_components/back-link";
 import { can } from "@/core/auth/roles.ts";
 import { GUIDE_KIND_INFO } from "@/core/guides/catalog.ts";
 import { formatGuideNumber } from "@/core/guides/schema.ts";
@@ -42,12 +42,10 @@ export default async function GuidePage({
     <>
       <AdminPageHeader title={`Guia nº ${number}`} />
       <main className="flex max-w-[1100px] flex-col gap-4.5 px-[30px] py-7">
-        <Link
+        <BackLink
           href="/admin/utilitarios/guias"
-          className="text-[12.5px] font-semibold text-admin-muted hover:underline"
-        >
-          ‹ Guias de recolhimento
-        </Link>
+          label="Guias de recolhimento"
+        />
         <section className="flex flex-wrap items-center gap-3 rounded-[14px] border border-admin-border bg-admin-card px-5 py-4">
           <div className="mr-auto">
             <p className="text-[13px] font-bold text-admin-primary">

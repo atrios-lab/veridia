@@ -68,11 +68,16 @@ function MiniChat({
     const result = await pollMessenger(caller.conversationId, last.current);
     if (!result.ok) return;
     const fresh = result.data.messages;
+    // The server's clock: edits and deletions since then come next time.
+    last.current = result.data.now;
     if (!fresh.length) return;
-    last.current = fresh.at(-1)?.createdAt ?? last.current;
     setMessages((current) => {
-      const known = new Set(current.map((m) => m.id));
-      return [...current, ...fresh.filter((m) => !known.has(m.id))].slice(-40);
+      const changed = new Map(fresh.map((m) => [m.id, m]));
+      const have = new Set(current.map((m) => m.id));
+      return [
+        ...current.map((m) => changed.get(m.id) ?? m),
+        ...fresh.filter((m) => !have.has(m.id)),
+      ].slice(-40);
     });
   }, [caller.conversationId]);
 
@@ -186,8 +191,11 @@ function MiniChat({
                   {mine ? "Você" : message.senderName}
                 </strong>{" "}
                 · {time(message.createdAt)}
+                {message.editedAt && !message.deleted && <em> · editada</em>}
               </p>
-              {message.kind === "texto" ? (
+              {message.deleted ? (
+                <p className="italic text-admin-muted">🚫 Mensagem apagada</p>
+              ) : message.kind === "texto" ? (
                 <p className="whitespace-pre-wrap text-admin-text [overflow-wrap:anywhere]">
                   {message.body}
                 </p>

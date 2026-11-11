@@ -81,6 +81,10 @@ const EXACT: Record<string, AuditLevel> = {
   "messenger.chat-on": "analise",
   "messenger.lunch-approve": "analise",
   "messenger.lunch-reject": "analise",
+  // A chat message hidden by its own author: kept for the holder, no alarm.
+  "messenger.message-delete": "analise",
+  "messenger.message-edit": "rotina",
+  "messenger.conversation-clear": "rotina",
   "audit.notification-answer": "atencao",
 
   "office-settings.save": "analise",
