@@ -28,7 +28,12 @@ export const ADMIN_MENU_ID = "admin-menu";
 export async function AdminTopBar({
   user,
 }: {
-  user: { name?: string | null; email: string; role: string };
+  user: {
+    name?: string | null;
+    email: string;
+    role: string;
+    permissions?: readonly string[];
+  };
 }) {
   const tenant = await getTenant();
   const availability = await readChatAvailability(tenant.slug);
@@ -52,7 +57,7 @@ export async function AdminTopBar({
       <span className="hidden flex-1 md:block" />
       {/* Only for someone who answers the chat: a course learner has no
           citizen writing to them. */}
-      {can(user.role, "chat.manage") && (
+      {can(user.role, "chat.manage", user.permissions) && (
         <span
           className={`hidden items-center gap-[7px] rounded-full px-3 py-1.5 text-[12px] font-semibold whitespace-nowrap sm:inline-flex ${
             open

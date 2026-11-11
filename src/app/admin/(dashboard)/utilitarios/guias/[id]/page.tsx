@@ -22,7 +22,11 @@ export default async function GuidePage({
   searchParams: Promise<{ emitida?: string }>;
 }) {
   const session = await getSession();
-  if (!session || !can(session.user.role ?? "", "requests.manage")) notFound();
+  if (
+    !session ||
+    !can(session.user.role ?? "", "requests.manage", session.user.permissions)
+  )
+    notFound();
   const tenant = await getTenant();
   const { id } = await params;
   const [stored, settings] = await Promise.all([

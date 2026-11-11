@@ -23,7 +23,11 @@ export const metadata = { title: "Numeração de documentos" };
 
 export default async function NumberingSettingsPage() {
   const session = await getSession();
-  if (!session || !can(session.user.role ?? "", "content.edit")) notFound();
+  if (
+    !session ||
+    !can(session.user.role ?? "", "content.edit", session.user.permissions)
+  )
+    notFound();
   const tenant = await getTenant();
   const year = officeYear(new Date());
   const years = [year, year + 1];
@@ -57,7 +61,10 @@ export default async function NumberingSettingsPage() {
     <>
       <AdminPageHeader title="Configurações" />
       <main className="flex max-w-[860px] flex-col gap-4.5 px-[30px] py-7">
-        <ConfiguracoesTabs role={session.user.role ?? ""} />
+        <ConfiguracoesTabs
+          role={session.user.role ?? ""}
+          permissions={session.user.permissions}
+        />
         <section className="rounded-[14px] border border-admin-border bg-admin-card px-5 py-4">
           <h2 className="font-serif text-[17px] font-semibold text-admin-primary">
             Numeração de documentos

@@ -1,8 +1,13 @@
 import "server-only";
 import { headers } from "next/headers";
-import { canAccessTenant, isAccountDisabled } from "@/core/auth/roles.ts";
+import {
+  canAccessTenant,
+  effectivePermissions,
+  isAccountDisabled,
+} from "@/core/auth/roles.ts";
 import { isAccessConfirmed } from "./access-code.ts";
 import { auth } from "./auth.ts";
+import { getRolePermissions } from "./role-permissions.ts";
 import { getTenant } from "./tenant.ts";
 
 /**
@@ -44,5 +49,18 @@ export async function getSession() {
   const session = await getPendingSession();
   if (!session) return null;
   if (!(await isAccessConfirmed(session))) return null;
-  return session;
+  // What this person may do here: the position's defaults or what the
+  // Tabelião/Registrador set for it. Every check passes it to `can`.
+  const role = session.user.role ?? "";
+  const configured =
+    role === "admin" || role === "superadmin"
+      ? undefined
+      : await getRolePermissions(session.user.tenantSlug ?? "");
+  return {
+    ...session,
+    user: {
+      ...session.user,
+      permissions: effectivePermissions(role, configured),
+    },
+  };
 }

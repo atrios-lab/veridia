@@ -62,7 +62,10 @@ async function authorize(conversationId: string): Promise<
   }
 
   const session = await getSession();
-  if (session && can(session.user.role ?? "", "chat.manage")) {
+  if (
+    session &&
+    can(session.user.role ?? "", "chat.manage", session.user.permissions)
+  ) {
     const conversation = await getConversation(tenant.slug, conversationId);
     if (!conversation) return { ok: false };
     return {

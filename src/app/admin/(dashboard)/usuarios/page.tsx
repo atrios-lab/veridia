@@ -72,7 +72,11 @@ export default async function UsuariosPage() {
   // Hiding "Usuários" from the sidebar is a courtesy, not the gate: see
   // admin-shell spec. This is the gate.
   const session = await getSession();
-  if (!session || !can(session.user.role ?? "", "user.manage")) notFound();
+  if (
+    !session ||
+    !can(session.user.role ?? "", "user.manage", session.user.permissions)
+  )
+    notFound();
 
   const tenant = await getTenant();
   const accounts = await listAccounts(tenant.slug);

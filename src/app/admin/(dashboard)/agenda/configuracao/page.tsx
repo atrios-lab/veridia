@@ -31,7 +31,11 @@ const PREVIEW_WINDOW_DAYS = 27;
 
 export default async function AgendaSettingsPage() {
   const session = await getSession();
-  if (!session || !can(session.user.role ?? "", "channels.manage")) notFound();
+  if (
+    !session ||
+    !can(session.user.role ?? "", "channels.manage", session.user.permissions)
+  )
+    notFound();
   const tenant = await getTenant();
 
   const from = today();

@@ -35,7 +35,10 @@ export async function toggleChatEnabledAction(
   formData: FormData,
 ): Promise<ActionState> {
   const session = await getSession();
-  if (!session || !can(session.user.role ?? "", "chat.settings")) {
+  if (
+    !session ||
+    !can(session.user.role ?? "", "chat.settings", session.user.permissions)
+  ) {
     return { status: "error", message: NO_PERMISSION };
   }
   const tenant = await getTenant();
@@ -58,7 +61,10 @@ export async function assignConversationAction(
   formData: FormData,
 ): Promise<ActionState> {
   const session = await getSession();
-  if (!session || !can(session.user.role ?? "", "chat.manage")) {
+  if (
+    !session ||
+    !can(session.user.role ?? "", "chat.manage", session.user.permissions)
+  ) {
     return { status: "error", message: NO_PERMISSION };
   }
   const tenant = await getTenant();
@@ -85,7 +91,11 @@ export async function assignConversationAction(
  */
 export async function queueVersionAction(): Promise<string | null> {
   const session = await getSession();
-  if (!session || !can(session.user.role ?? "", "chat.manage")) return null;
+  if (
+    !session ||
+    !can(session.user.role ?? "", "chat.manage", session.user.permissions)
+  )
+    return null;
   const tenant = await getTenant();
   const [waiting, active] = await Promise.all([
     waitingConversations(tenant.slug),
@@ -103,7 +113,11 @@ export async function queueVersionAction(): Promise<string | null> {
  */
 export async function alertSnapshotAction(): Promise<AlertSnapshot | null> {
   const session = await getSession();
-  if (!session || !can(session.user.role ?? "", "chat.manage")) return null;
+  if (
+    !session ||
+    !can(session.user.role ?? "", "chat.manage", session.user.permissions)
+  )
+    return null;
   try {
     const tenant = await getTenant();
     return await alertSnapshot(tenant.slug, session.user.id);
@@ -120,7 +134,10 @@ export async function setStatusAction(
   formData: FormData,
 ): Promise<ActionState> {
   const session = await getSession();
-  if (!session || !can(session.user.role ?? "", "chat.manage")) {
+  if (
+    !session ||
+    !can(session.user.role ?? "", "chat.manage", session.user.permissions)
+  ) {
     return { status: "error", message: NO_PERMISSION };
   }
   const value = String(formData.get("status") ?? "");

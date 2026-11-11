@@ -97,7 +97,10 @@ const GENERIC_ERROR =
  * the page 404-ing, are both a courtesy: never the gate. */
 async function authorize() {
   const session = await getSession();
-  if (!session || !can(session.user.role ?? "", "requests.manage")) {
+  if (
+    !session ||
+    !can(session.user.role ?? "", "requests.manage", session.user.permissions)
+  ) {
     return null;
   }
   return session;

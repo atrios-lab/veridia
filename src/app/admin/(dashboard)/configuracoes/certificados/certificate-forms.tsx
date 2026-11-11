@@ -2,8 +2,10 @@
 
 import { startTransition, useActionState, useEffect, useRef } from "react";
 import { toast } from "sonner";
+import type { Role } from "@/core/auth/roles.ts";
 import { ConfirmAction } from "../../../_components/confirm-action.tsx";
 import { FilePicker } from "../../../_components/file-picker.tsx";
+import { ROLE_LABELS } from "../../../_components/role-labels.ts";
 import {
   addCertificate,
   type CertificateState,
@@ -142,7 +144,7 @@ export function CertificateSigners({
               />
               {person.name}
               <span className="text-[11.5px] text-admin-muted">
-                ({person.role === "admin" ? "administrador" : "equipe"})
+                ({ROLE_LABELS[person.role as Role] ?? person.role})
               </span>
             </label>
           ))}

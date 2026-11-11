@@ -95,7 +95,10 @@ export async function saveOfficeContact(
   const session = await getSession();
   // Hiding the screen is not the check; this is. A person who reaches the
   // action by any other route is refused here, on the server.
-  if (!session || !can(session.user.role ?? "", "content.edit")) {
+  if (
+    !session ||
+    !can(session.user.role ?? "", "content.edit", session.user.permissions)
+  ) {
     return fail("Você não tem permissão para alterar estes dados.", values);
   }
   const tenant = await getTenant();
@@ -203,7 +206,10 @@ export async function saveOfficeDeadline(
   const value = String(formData.get("requestDeadlineDays") ?? "").trim();
 
   const session = await getSession();
-  if (!session || !can(session.user.role ?? "", "content.edit")) {
+  if (
+    !session ||
+    !can(session.user.role ?? "", "content.edit", session.user.permissions)
+  ) {
     return {
       status: "error",
       message: "Você não tem permissão para alterar estes dados.",
@@ -301,7 +307,10 @@ export async function saveOfficeHolidays(
   formData: FormData,
 ): Promise<OfficeHolidaysState> {
   const session = await getSession();
-  if (!session || !can(session.user.role ?? "", "content.edit")) {
+  if (
+    !session ||
+    !can(session.user.role ?? "", "content.edit", session.user.permissions)
+  ) {
     return {
       status: "error",
       message: "Você não tem permissão para alterar estes dados.",
@@ -428,7 +437,10 @@ export async function saveOfficeIdentification(
   formData: FormData,
 ): Promise<OfficeIdentificationState> {
   const session = await getSession();
-  if (!session || !can(session.user.role ?? "", "content.edit")) {
+  if (
+    !session ||
+    !can(session.user.role ?? "", "content.edit", session.user.permissions)
+  ) {
     return {
       status: "error",
       message: "Você não tem permissão para alterar estes dados.",

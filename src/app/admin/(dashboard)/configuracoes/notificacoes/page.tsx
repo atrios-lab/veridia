@@ -11,7 +11,11 @@ export const metadata = { title: "Notificações" };
 
 export default async function NotificationSettingsPage() {
   const session = await getSession();
-  if (!session || !can(session.user.role ?? "", "content.edit")) notFound();
+  if (
+    !session ||
+    !can(session.user.role ?? "", "content.edit", session.user.permissions)
+  )
+    notFound();
   const tenant = await getTenant();
   const alerts = await getOfficeAlerts(tenant.slug);
 
@@ -19,7 +23,10 @@ export default async function NotificationSettingsPage() {
     <>
       <AdminPageHeader title="Configurações" />
       <main className="flex max-w-[860px] flex-col gap-4.5 px-[30px] py-7">
-        <ConfiguracoesTabs role={session.user.role ?? ""} />
+        <ConfiguracoesTabs
+          role={session.user.role ?? ""}
+          permissions={session.user.permissions}
+        />
         <OfficeAlertsForm initial={alerts} />
       </main>
     </>

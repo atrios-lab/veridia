@@ -25,7 +25,11 @@ const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 /** One cohort: its link, its settings and every learner's progress. */
 export default async function CohortPage({ params }: { params: Params }) {
   const session = await getSession();
-  if (!session || !can(session.user.role ?? "", "cohorts.manage")) notFound();
+  if (
+    !session ||
+    !can(session.user.role ?? "", "cohorts.manage", session.user.permissions)
+  )
+    notFound();
   const { id } = await params;
   // Not a uuid is an address that does not exist, not a database error.
   if (!UUID.test(id)) notFound();

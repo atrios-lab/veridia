@@ -84,7 +84,10 @@ function revalidate(): void {
 
 async function requireManager(): Promise<string | null> {
   const session = await getSession();
-  if (!session || !can(session.user.role ?? "", "tutorials.manage")) {
+  if (
+    !session ||
+    !can(session.user.role ?? "", "tutorials.manage", session.user.permissions)
+  ) {
     return null;
   }
   return session.user.id;

@@ -27,7 +27,11 @@ const PATH = "/admin/minha-conta";
  */
 async function self() {
   const session = await getSession();
-  if (!session || !can(session.user.role ?? "", "admin.access")) return null;
+  if (
+    !session ||
+    !can(session.user.role ?? "", "admin.access", session.user.permissions)
+  )
+    return null;
   return { session, tenant: await getTenant() };
 }
 

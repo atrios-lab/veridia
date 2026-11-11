@@ -29,6 +29,7 @@ export function initials(
 export function AdminSidebar({
   tenant,
   role,
+  permissions,
   counts = {},
   showTutorials = true,
   className = "",
@@ -36,6 +37,8 @@ export function AdminSidebar({
   tenant: Tenant;
   /** The session's role: decides which items are offered. */
   role: string;
+  /** The session's effective permissions (the Tabelião's choices). */
+  permissions?: readonly string[];
   /** Badge count per item href, e.g. open requests for "/admin/pedidos". */
   counts?: Record<string, number>;
   /** Whether "Treinamento" has somewhere to lead: a published video, or
@@ -53,7 +56,7 @@ export function AdminSidebar({
   // yet: the route answers either way, it just has nothing to show.
   const items = ADMIN_NAV.filter(
     (item) =>
-      (!item.permission || can(role, item.permission)) &&
+      (!item.permission || can(role, item.permission, permissions)) &&
       !(item.href === "/admin/ajuda" && !showTutorials),
   );
 

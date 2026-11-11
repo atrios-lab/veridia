@@ -127,16 +127,21 @@ export default async function SettingsPage() {
   // A 404, not a redirect with an explanation: a panel user who may not edit
   // settings has no business learning the screen is there.
   const session = await getSession();
-  if (!session || !can(session.user.role ?? "", "content.edit")) notFound();
+  if (
+    !session ||
+    !can(session.user.role ?? "", "content.edit", session.user.permissions)
+  )
+    notFound();
   const tenant = await getTenant();
   const role = session.user.role ?? "";
-  const canBrand = can(role, "branding.edit");
+  const granted = session.user.permissions;
+  const canBrand = can(role, "branding.edit", granted);
 
   return (
     <>
       <AdminPageHeader title="Configurações" />
       <main className="flex max-w-[960px] flex-col gap-4.5 px-[30px] py-7">
-        <ConfiguracoesTabs role={role} />
+        <ConfiguracoesTabs role={role} permissions={granted} />
 
         <div className="rounded-[14px] border border-admin-border bg-admin-card p-6">
           <OfficeContactForm tenant={tenant} />

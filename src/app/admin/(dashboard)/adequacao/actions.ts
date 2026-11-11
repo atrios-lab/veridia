@@ -33,7 +33,11 @@ const GENERIC_ERROR =
  */
 async function authorize() {
   const session = await getSession();
-  if (!session || !can(session.user.role ?? "", "content.edit")) return null;
+  if (
+    !session ||
+    !can(session.user.role ?? "", "content.edit", session.user.permissions)
+  )
+    return null;
   return { session, tenant: await getTenant() };
 }
 

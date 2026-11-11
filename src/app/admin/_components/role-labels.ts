@@ -6,8 +6,13 @@ import type { Role } from "@/core/auth/roles.ts";
 // footer and the Usuários screen so the two never name the same role
 // differently.
 export const ROLE_LABELS: Record<Role, string> = {
-  admin: "Registrador",
-  staff: "Operador",
+  admin: "Tabelião/Registrador",
+  "substituto-legal": "Substituto Legal",
+  substituto: "Substituto",
+  staff: "Escrevente",
+  auxiliar: "Auxiliar de Cartório",
+  contador: "Contador",
+  rh: "RH",
   superadmin: "Átrios",
   learner: "Aluno",
 };

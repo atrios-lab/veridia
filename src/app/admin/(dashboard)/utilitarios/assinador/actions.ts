@@ -41,7 +41,10 @@ export async function signDocument(
   formData: FormData,
 ): Promise<SignState> {
   const session = await getSession();
-  if (!session || !can(session.user.role ?? "", "desk.access")) {
+  if (
+    !session ||
+    !can(session.user.role ?? "", "desk.access", session.user.permissions)
+  ) {
     return { status: "error", message: "Sem permissão." };
   }
   const file = formData.get("pdf");
@@ -97,7 +100,10 @@ export async function coSignDocument(
   formData: FormData,
 ): Promise<SignState> {
   const session = await getSession();
-  if (!session || !can(session.user.role ?? "", "desk.access")) {
+  if (
+    !session ||
+    !can(session.user.role ?? "", "desk.access", session.user.permissions)
+  ) {
     return { status: "error", message: "Sem permissão." };
   }
   const tenant = await getTenant();

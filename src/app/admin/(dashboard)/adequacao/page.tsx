@@ -51,7 +51,11 @@ export default async function CompliancePage() {
   // content.edit and checks for itself. A 404, not an explanation: same rule
   // as Configurações.
   const session = await getSession();
-  if (!session || !can(session.user.role ?? "", "content.edit")) notFound();
+  if (
+    !session ||
+    !can(session.user.role ?? "", "content.edit", session.user.permissions)
+  )
+    notFound();
   const tenant = await getTenant();
   // The Átrios platform account. Its extra: the pendências ledger and the
   // export. The route behind the button checks the role again.

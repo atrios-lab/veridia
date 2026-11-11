@@ -37,7 +37,10 @@ const ROUTES = ADMIN_NAV.filter((item) => !item.external).map((item) => ({
  */
 export default async function ManageTutorialsPage() {
   const session = await getSession();
-  if (!session || !can(session.user.role ?? "", "tutorials.manage")) {
+  if (
+    !session ||
+    !can(session.user.role ?? "", "tutorials.manage", session.user.permissions)
+  ) {
     notFound();
   }
 
@@ -114,7 +117,11 @@ export default async function ManageTutorialsPage() {
         back={{ href: "/admin/ajuda", label: "Treinamento" }}
         description="Os cursos do Treinamento e os vídeos de cada um, na ordem em que são assistidos."
         actions={
-          can(session.user.role ?? "", "cohorts.manage") ? (
+          can(
+            session.user.role ?? "",
+            "cohorts.manage",
+            session.user.permissions,
+          ) ? (
             <Link
               href="/admin/ajuda/gerenciar/turmas"
               className="btn btn-admin-secondary btn-md"

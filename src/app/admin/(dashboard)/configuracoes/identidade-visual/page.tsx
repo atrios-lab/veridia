@@ -13,14 +13,21 @@ export default async function VisualIdentityPage() {
   // decides how the office presents itself, not the day to day content.edit
   // the Serventia tab uses (see design.md, decision 0).
   const session = await getSession();
-  if (!session || !can(session.user.role ?? "", "branding.edit")) notFound();
+  if (
+    !session ||
+    !can(session.user.role ?? "", "branding.edit", session.user.permissions)
+  )
+    notFound();
   const tenant = await getTenant();
 
   return (
     <>
       <AdminPageHeader title="Configurações" />
       <main className="flex max-w-[1180px] flex-col gap-4.5 px-[30px] py-7">
-        <ConfiguracoesTabs role={session.user.role ?? ""} />
+        <ConfiguracoesTabs
+          role={session.user.role ?? ""}
+          permissions={session.user.permissions}
+        />
         <VisualIdentityForm tenant={tenant} />
       </main>
     </>

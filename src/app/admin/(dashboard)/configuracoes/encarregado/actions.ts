@@ -50,7 +50,10 @@ export async function saveDpo(
 
   const session = await getSession();
   // Hiding the tab is not the check; this is.
-  if (!session || !can(session.user.role ?? "", "content.edit")) {
+  if (
+    !session ||
+    !can(session.user.role ?? "", "content.edit", session.user.permissions)
+  ) {
     return fail("Você não tem permissão para alterar estes dados.", values);
   }
   const tenant = await getTenant();

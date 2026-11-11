@@ -9,7 +9,7 @@ test("every role has a Portuguese label", () => {
   }
 });
 
-test("labels match the design: admin is Registrador, staff is Operador", () => {
-  assert.equal(ROLE_LABELS.admin, "Registrador");
-  assert.equal(ROLE_LABELS.staff, "Operador");
+test("labels match the office's positions: admin is the Tabelião/Registrador, staff the Escrevente", () => {
+  assert.equal(ROLE_LABELS.admin, "Tabelião/Registrador");
+  assert.equal(ROLE_LABELS.staff, "Escrevente");
 });

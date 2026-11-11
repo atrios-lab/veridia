@@ -26,7 +26,11 @@ const GENERIC_ERROR =
 
 async function authorize() {
   const session = await getSession();
-  if (!session || !can(session.user.role ?? "", "chat.manage")) return null;
+  if (
+    !session ||
+    !can(session.user.role ?? "", "chat.manage", session.user.permissions)
+  )
+    return null;
   return session;
 }
 

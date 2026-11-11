@@ -4,13 +4,35 @@ import { isRegisteredSlug } from "../tenant/resolve.ts";
 // office they may do it in, is decided here, as pure functions, so replacing
 // the library never means rewriting authorization.
 
-export const ROLES = ["admin", "staff", "superadmin", "learner"] as const;
+export const ROLES = [
+  "admin",
+  "substituto-legal",
+  "substituto",
+  "staff",
+  "auxiliar",
+  "contador",
+  "rh",
+  "superadmin",
+  "learner",
+] as const;
 export type Role = (typeof ROLES)[number];
 
 // The subset a registrador may assign from the panel. Superadmin is an
 // Átrios platform role, created only by scripts/seed-superadmin.ts: never
 // offered in the account form or accepted from a forged submission.
-export const PANEL_ROLES = ["admin", "staff"] as const;
+// The office's own positions (decision of 11/11/2026): "admin" is the
+// Tabelião/Registrador, "staff" the Escrevente (the ids stay, so every
+// existing account keeps its place), and the other five are new.
+export const PANEL_ROLES = [
+  "admin",
+  "substituto-legal",
+  "substituto",
+  "staff",
+  "auxiliar",
+  "contador",
+  "rh",
+] as const;
+export type PanelRole = (typeof PANEL_ROLES)[number];
 
 // The office column is NOT NULL, so a platform account still needs a value.
 // This slug is deliberately never registered in src/core/tenant, so it never
@@ -34,7 +56,30 @@ export const OFFICE_PERMISSIONS = [
   "chat.manage",
   "chat.settings",
   "channels.manage",
+  // The office's audit trail in full, and the formal notifications that ask
+  // a person to explain an act: the Tabelião/Registrador's alone.
+  "audit.manage",
 ] as const;
+
+/**
+ * What only the Tabelião/Registrador holds and never hands to anyone:
+ * registering people and setting what they do, and the audit.
+ */
+export const RESERVED_PERMISSIONS = ["user.manage", "audit.manage"] as const;
+
+/** What the Tabelião/Registrador may grant to the other positions. */
+export const GRANTABLE_PERMISSIONS = [
+  "desk.access",
+  "content.edit",
+  "content.publish",
+  "branding.edit",
+  "billing.edit",
+  "requests.manage",
+  "chat.manage",
+  "chat.settings",
+  "channels.manage",
+] as const;
+export type GrantablePermission = (typeof GRANTABLE_PERMISSIONS)[number];
 
 // What acts on the platform itself, the same for every office: content the
 // Átrios account publishes and every serventia reads. Kept in its own list
@@ -75,6 +120,28 @@ const ROLE_PERMISSIONS: Record<Role, readonly Permission[]> = {
   // of its own permission, which is what keeps the role this small. Never
   // in PANEL_ROLES: only the cohort sign-up creates one.
   learner: ["admin.access"],
+  // The defaults of each position; the Tabelião/Registrador changes them in
+  // Configurações › Perfis e permissões (effectivePermissions below).
+  // The Substituto Legal answers for the office in the holder's absence:
+  // everything but registering people and the audit.
+  "substituto-legal": [
+    "admin.access",
+    ...OFFICE_PERMISSIONS.filter(
+      (permission) =>
+        permission !== "admin.access" &&
+        !(RESERVED_PERMISSIONS as readonly string[]).includes(permission),
+    ),
+  ],
+  substituto: [
+    "admin.access",
+    "desk.access",
+    "content.edit",
+    "content.publish",
+    "requests.manage",
+    "channels.manage",
+    "chat.manage",
+  ],
+  // The Escrevente (formerly "Operador").
   staff: [
     "admin.access",
     "desk.access",
@@ -83,7 +150,38 @@ const ROLE_PERMISSIONS: Record<Role, readonly Permission[]> = {
     "channels.manage",
     "chat.manage",
   ],
+  auxiliar: ["admin.access", "desk.access", "requests.manage", "chat.manage"],
+  contador: ["admin.access", "desk.access", "content.edit"],
+  rh: ["admin.access", "desk.access"],
 };
+
+/** The permissions a position starts with, before the office changes them. */
+export function defaultPermissions(role: string): readonly Permission[] {
+  return isRole(role) ? ROLE_PERMISSIONS[role] : [];
+}
+
+/**
+ * What this person may do in their office: the position's defaults, or what
+ * the Tabelião/Registrador set for it (only grantable permissions, always
+ * with panel access). The holder and the Átrios account are never changed.
+ */
+export function effectivePermissions(
+  role: string,
+  configured?: Partial<Record<string, readonly string[]>>,
+): readonly Permission[] {
+  if (!isRole(role)) return [];
+  if (role === "admin" || role === "superadmin" || role === "learner") {
+    return ROLE_PERMISSIONS[role];
+  }
+  const chosen = configured?.[role];
+  if (!chosen) return ROLE_PERMISSIONS[role];
+  return [
+    "admin.access",
+    ...GRANTABLE_PERMISSIONS.filter((permission) =>
+      chosen.includes(permission),
+    ),
+  ];
+}
 
 export function isRole(value: string): value is Role {
   return (ROLES as readonly string[]).includes(value);
@@ -92,7 +190,7 @@ export function isRole(value: string): value is Role {
 /**
  * Whether deactivating this account would leave the office with zero active
  * Registrador accounts: the one role that holds `user.manage`, so losing
- * the last of them locks the office out of ever undoing it. An Operador
+ * the last of them locks the office out of ever undoing it. Any other
  * leaving never trips this: only "admin" counts.
  */
 export function isLastActiveAdmin(
@@ -109,8 +207,19 @@ export function isAccountDisabled(
   return disabledAt != null;
 }
 
-export function can(role: string, permission: Permission): boolean {
-  return isRole(role) && ROLE_PERMISSIONS[role].includes(permission);
+/**
+ * Whether this role may do this. `granted` is the person's effective list
+ * (lib/session.ts puts it on the session): when given, it decides; without
+ * it, the position's defaults do (client screens, tests).
+ */
+export function can(
+  role: string,
+  permission: Permission,
+  granted?: readonly string[],
+): boolean {
+  if (!isRole(role)) return false;
+  if (granted) return granted.includes(permission);
+  return ROLE_PERMISSIONS[role].includes(permission);
 }
 
 /**
@@ -140,3 +249,16 @@ export function canAccessTenant(
 export function homeFor(role: string): string | null {
   return role === "learner" ? "/admin/ajuda" : null;
 }
+
+/** What each grantable permission opens, in the office's words. */
+export const GRANTABLE_LABELS: Record<GrantablePermission, string> = {
+  "desk.access": "Visão geral e mesa de trabalho",
+  "content.edit": "Editar o site e as configurações da serventia",
+  "content.publish": "Publicar no site (editais, notícias, documentos)",
+  "branding.edit": "Identidade visual (cores e logotipos)",
+  "billing.edit": "Cobrança e chave Pix",
+  "requests.manage": "Pedidos de serviço e guias de recolhimento",
+  "chat.manage": "Atendimento online (chat)",
+  "chat.settings": "Ligar ou desligar o chat do site",
+  "channels.manage": "Agenda, LGPD e ouvidoria",
+};

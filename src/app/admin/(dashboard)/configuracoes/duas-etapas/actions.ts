@@ -21,7 +21,11 @@ const PATH = "/admin/configuracoes/duas-etapas";
 
 async function authorize(formData: FormData) {
   const session = await getSession();
-  if (!session || !can(session.user.role ?? "", "user.manage")) return null;
+  if (
+    !session ||
+    !can(session.user.role ?? "", "user.manage", session.user.permissions)
+  )
+    return null;
   const tenant = await getTenant();
   const userId = String(formData.get("userId") ?? "");
   // Only an account of this office.

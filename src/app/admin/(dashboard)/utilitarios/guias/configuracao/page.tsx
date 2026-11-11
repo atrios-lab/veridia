@@ -11,7 +11,11 @@ export const metadata = { title: "Configuração das guias" };
 
 export default async function GuideSettingsPage() {
   const session = await getSession();
-  if (!session || !can(session.user.role ?? "", "content.edit")) notFound();
+  if (
+    !session ||
+    !can(session.user.role ?? "", "content.edit", session.user.permissions)
+  )
+    notFound();
   const settings = await getGuideSettings(await getTenant());
   return (
     <>

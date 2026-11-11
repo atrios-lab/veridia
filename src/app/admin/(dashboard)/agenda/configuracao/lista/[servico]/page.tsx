@@ -26,7 +26,11 @@ export default async function ChecklistPage({
   params: Promise<{ servico: string }>;
 }) {
   const session = await getSession();
-  if (!session || !can(session.user.role ?? "", "channels.manage")) notFound();
+  if (
+    !session ||
+    !can(session.user.role ?? "", "channels.manage", session.user.permissions)
+  )
+    notFound();
   const tenant = await getTenant();
   const serviceId = decodeURIComponent((await params).servico);
 

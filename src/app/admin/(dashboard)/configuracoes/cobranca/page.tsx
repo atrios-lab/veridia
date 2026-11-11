@@ -14,15 +14,26 @@ export default async function BillingSettingsPage() {
   // again by the action on the server; here it only decides whether the
   // form renders as editable or as read-only.
   const session = await getSession();
-  if (!session || !can(session.user.role ?? "", "content.edit")) notFound();
+  if (
+    !session ||
+    !can(session.user.role ?? "", "content.edit", session.user.permissions)
+  )
+    notFound();
   const tenant = await getTenant();
-  const canEdit = can(session.user.role ?? "", "billing.edit");
+  const canEdit = can(
+    session.user.role ?? "",
+    "billing.edit",
+    session.user.permissions,
+  );
 
   return (
     <>
       <AdminPageHeader title="Configurações" />
       <main className="flex max-w-[720px] flex-col gap-4.5 px-[30px] py-7">
-        <ConfiguracoesTabs role={session.user.role ?? ""} />
+        <ConfiguracoesTabs
+          role={session.user.role ?? ""}
+          permissions={session.user.permissions}
+        />
         <div className="rounded-[14px] border border-admin-border bg-admin-card p-6">
           <PixKeyForm tenant={tenant} canEdit={canEdit} />
         </div>

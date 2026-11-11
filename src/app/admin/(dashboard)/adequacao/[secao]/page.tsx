@@ -24,7 +24,11 @@ export default async function SectionPage({
   params: Promise<{ secao: string }>;
 }) {
   const session = await getSession();
-  if (!session || !can(session.user.role ?? "", "content.edit")) notFound();
+  if (
+    !session ||
+    !can(session.user.role ?? "", "content.edit", session.user.permissions)
+  )
+    notFound();
   const section = findSection((await params).secao);
   if (!section) notFound();
 

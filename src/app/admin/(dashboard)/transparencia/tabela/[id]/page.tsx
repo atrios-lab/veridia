@@ -29,7 +29,11 @@ export default async function FeeTablePage({
   params: Promise<{ id: string }>;
 }) {
   const session = await getSession();
-  if (!session || !can(session.user.role ?? "", "content.edit")) notFound();
+  if (
+    !session ||
+    !can(session.user.role ?? "", "content.edit", session.user.permissions)
+  )
+    notFound();
   const tenant = await getTenant();
   const { id } = await params;
 

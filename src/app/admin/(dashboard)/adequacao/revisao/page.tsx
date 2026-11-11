@@ -27,7 +27,11 @@ export const metadata = { title: "Revisão e envio" };
 
 export default async function ReviewPage() {
   const session = await getSession();
-  if (!session || !can(session.user.role ?? "", "content.edit")) notFound();
+  if (
+    !session ||
+    !can(session.user.role ?? "", "content.edit", session.user.permissions)
+  )
+    notFound();
   const tenant = await getTenant();
   const { intake, answers } = await loadIntake(tenant);
   const state = progress(answers, intake.sectionUpdatedAt);

@@ -75,7 +75,10 @@ export async function createUser(
   };
 
   const session = await getSession();
-  if (!session || !can(session.user.role ?? "", "user.manage")) {
+  if (
+    !session ||
+    !can(session.user.role ?? "", "user.manage", session.user.permissions)
+  ) {
     return fail("Você não tem permissão para criar contas.", values);
   }
 
@@ -234,7 +237,11 @@ export async function resendInvite(
 ): Promise<AccountActionState> {
   const userId = String(formData.get("userId") ?? "");
   const session = await getSession();
-  if (!session || !can(session.user.role ?? "", "user.manage")) notFound();
+  if (
+    !session ||
+    !can(session.user.role ?? "", "user.manage", session.user.permissions)
+  )
+    notFound();
 
   const tenant = await getTenant();
   const target = await findOwnAccount(userId, tenant.slug);
@@ -284,7 +291,11 @@ export async function triggerPasswordReset(
 ): Promise<AccountActionState> {
   const userId = String(formData.get("userId") ?? "");
   const session = await getSession();
-  if (!session || !can(session.user.role ?? "", "user.manage")) notFound();
+  if (
+    !session ||
+    !can(session.user.role ?? "", "user.manage", session.user.permissions)
+  )
+    notFound();
 
   const tenant = await getTenant();
   const target = await findOwnAccount(userId, tenant.slug);
@@ -328,7 +339,11 @@ export async function deactivateAccount(
 ): Promise<AccountActionState> {
   const userId = String(formData.get("userId") ?? "");
   const session = await getSession();
-  if (!session || !can(session.user.role ?? "", "user.manage")) notFound();
+  if (
+    !session ||
+    !can(session.user.role ?? "", "user.manage", session.user.permissions)
+  )
+    notFound();
 
   if (userId === session.user.id) {
     return {
@@ -375,7 +390,11 @@ export async function reactivateAccount(
 ): Promise<AccountActionState> {
   const userId = String(formData.get("userId") ?? "");
   const session = await getSession();
-  if (!session || !can(session.user.role ?? "", "user.manage")) notFound();
+  if (
+    !session ||
+    !can(session.user.role ?? "", "user.manage", session.user.permissions)
+  )
+    notFound();
 
   const tenant = await getTenant();
   const target = await findOwnAccount(userId, tenant.slug);
@@ -441,7 +460,11 @@ export async function updateAccount(
   };
 
   const session = await getSession();
-  if (!session || !can(session.user.role ?? "", "user.manage")) notFound();
+  if (
+    !session ||
+    !can(session.user.role ?? "", "user.manage", session.user.permissions)
+  )
+    notFound();
 
   const parsed = UpdateAccountSchema.safeParse(values);
   if (!parsed.success) {
@@ -581,7 +604,11 @@ export async function createPasswordResetLink(
 ): Promise<ResetLinkState> {
   const userId = String(formData.get("userId") ?? "");
   const session = await getSession();
-  if (!session || !can(session.user.role ?? "", "user.manage")) notFound();
+  if (
+    !session ||
+    !can(session.user.role ?? "", "user.manage", session.user.permissions)
+  )
+    notFound();
 
   const tenant = await getTenant();
   const target = await findOwnAccount(userId, tenant.slug);
@@ -631,7 +658,11 @@ export async function deleteAccount(
 ): Promise<AccountActionState> {
   const userId = String(formData.get("userId") ?? "");
   const session = await getSession();
-  if (!session || !can(session.user.role ?? "", "user.manage")) notFound();
+  if (
+    !session ||
+    !can(session.user.role ?? "", "user.manage", session.user.permissions)
+  )
+    notFound();
 
   const tenant = await getTenant();
   const target = await findOwnAccount(userId, tenant.slug);

@@ -30,7 +30,11 @@ export default async function SignedDocumentAdminPage({
   searchParams: Promise<{ assinado?: string }>;
 }) {
   const session = await getSession();
-  if (!session || !can(session.user.role ?? "", "desk.access")) notFound();
+  if (
+    !session ||
+    !can(session.user.role ?? "", "desk.access", session.user.permissions)
+  )
+    notFound();
   const tenant = await getTenant();
   const { id } = await params;
   if (!/^[0-9a-f-]{36}$/i.test(id)) notFound();
