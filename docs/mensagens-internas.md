@@ -119,3 +119,19 @@ Decisão de 11/11/2026.
   - Aos **60 minutos**, a pessoa volta a Disponível sozinha.
   - O almoço não entra nessa conta.
 - Migração `0047_mensagens_status_e_almoco.sql`: só acrescenta colunas.
+
+### "Acabou de entrar e está online"
+
+Decisão de 11/11/2026. Quando alguém da equipe se conecta, aparece no canto
+de qualquer tela do painel o aviso "Fulano acabou de entrar e está online",
+como nos mensageiros antigos.
+
+- O aviso traz a foto ou as iniciais da pessoa.
+- Some sozinho em **10 segundos**, ou antes, no **X**. Um clique abre a
+  conversa com a pessoa.
+- Toca um som baixo se o som das mensagens estiver ligado.
+- Quem cai e volta em menos de 10 minutos não é anunciado de novo.
+- Não aparecem: a própria pessoa, quem teve o chat desligado pelo
+  Tabelião/Registrador e a conta da plataforma.
+- A lista de quem está online vem na mesma consulta que o painel já faz a
+  cada 4 segundos (`pollInbox`).

@@ -17,6 +17,7 @@ import {
   listMessagesWith,
   listTeamWith,
   MessageError,
+  onlineNowWith,
   openDirectWith,
   requestLunchWith,
   returnFromLunchWith,
@@ -473,4 +474,25 @@ test("status longe avisa o titular aos 40 min e volta a disponível aos 60; almo
   await returnFromLunchWith(db, OFFICE, "auxiliar", noon);
   const back = await getProfileWith(db, OFFICE, "auxiliar");
   assert.equal(back?.status, "disponivel");
+});
+
+test("quem está online agora: para o aviso 'acabou de entrar'", async () => {
+  const now = new Date("2026-11-13T10:00:00-03:00");
+  await touchPresenceWith(db, OFFICE, "escrevente", now);
+  await touchPresenceWith(
+    db,
+    OFFICE,
+    "auxiliar",
+    new Date(now.getTime() - 5 * 60_000),
+  );
+  const online = await onlineNowWith(db, OFFICE, "titular", now);
+  // Seen in the last 90 s only; never the viewer; never another office.
+  assert.deepEqual(
+    online.map((p) => p.userId),
+    ["escrevente"],
+  );
+  assert.deepEqual(await onlineNowWith(db, OFFICE, "escrevente", now), []);
+  await setChatDisabledWith(db, OFFICE, "escrevente", true, "titular");
+  assert.deepEqual(await onlineNowWith(db, OFFICE, "titular", now), []);
+  await setChatDisabledWith(db, OFFICE, "escrevente", false, "titular");
 });

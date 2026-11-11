@@ -369,6 +369,10 @@ export function MessengerWatch({
   const [minimized, setMinimized] = useState(false);
   const { pos, startDrag, wasDragged } = useFloatingPosition();
   const since = useRef(new Date().toISOString());
+  // Who was online at the last look: someone new "acabou de entrar".
+  const known = useRef<Set<string> | null>(null);
+  const lastAnnounced = useRef(new Map<string, number>());
+  const [arrivals, setArrivals] = useState<Arrival[]>([]);
   // Read inside the poll, which outlives renders.
   const state = useRef({ open, minimized });
   state.current = { open, minimized };
@@ -388,6 +392,31 @@ export function MessengerWatch({
       if (!result?.ok) return;
       since.current = result.data.now;
       setUnread(result.data.unread);
+      // Signed in just now, like the old desktop messengers (decision of
+      // 11/11/2026). The first look only learns who is there; someone who
+      // blinks offline and back within 10 minutes is not announced again.
+      const online = result.data.online ?? [];
+      const seen = known.current;
+      known.current = new Set(online.map((p) => p.userId));
+      if (seen) {
+        const at = Date.now();
+        const fresh = online.filter(
+          (p) =>
+            !seen.has(p.userId) &&
+            at - (lastAnnounced.current.get(p.userId) ?? 0) > 10 * 60_000,
+        );
+        for (const person of fresh)
+          lastAnnounced.current.set(person.userId, at);
+        if (fresh.length) {
+          setArrivals((current) =>
+            [
+              ...current,
+              ...fresh.map((p) => ({ ...p, key: `${p.userId}-${at}` })),
+            ].slice(-4),
+          );
+          if (tone !== "none") playSound(tone, VOLUME / 2);
+        }
+      }
       const latest = result.data.latest;
       setCaller(
         latest
@@ -458,103 +487,218 @@ export function MessengerWatch({
     };
   }, [unread, setting.enabled]);
 
-  if (!setting.enabled || onMessenger) return null;
+  const notices = (
+    <ArrivalNotices
+      arrivals={arrivals}
+      onClose={(key) =>
+        setArrivals((current) => current.filter((a) => a.key !== key))
+      }
+    />
+  );
+  if (!setting.enabled) return null;
+  if (onMessenger) return notices;
   const showBalloon = setting.popup && unread > 0 && !open;
   // With the conversation open or minimized, the bar already stands in.
   const showBubble = unread > 0 && !open;
 
   return (
-    <div
-      className="pointer-events-none fixed z-50 flex flex-col items-end gap-2"
-      style={{ right: pos.right, bottom: pos.bottom }}
-    >
-      {open && !minimized && (
-        <MiniChat
-          caller={open}
-          onClose={() => setOpen(null)}
-          onMinimize={() => setMinimized(true)}
-          onDragStart={startDrag}
-        />
-      )}
-      {open && minimized && (
-        <button
-          type="button"
-          onPointerDown={startDrag}
-          onClick={() => {
-            if (!wasDragged()) setMinimized(false);
-          }}
-          title="Abrir a conversa (arraste para mudar de lugar)"
-          className="pointer-events-auto flex max-w-[260px] cursor-pointer items-center gap-2 rounded-full bg-gradient-to-r from-msg-verde-from to-msg-verde-to px-3.5 py-2 text-[12.5px] font-semibold text-white shadow-xl"
-        >
-          💬 <span className="truncate">{open.senderName}</span>
-          <span className="text-[11px] opacity-80">(minimizado)</span>
-        </button>
-      )}
-      {showBalloon && (
-        <div className="pointer-events-auto w-[300px] max-w-[calc(100vw-2rem)] overflow-hidden rounded-[14px] border-2 border-msg-busy bg-admin-card shadow-xl">
-          <span className="flex items-center justify-between bg-gradient-to-r from-msg-verde-from to-msg-verde-to px-3 py-1 text-[11.5px] font-semibold text-white">
-            Mensagens internas
-            <span className="rounded-full bg-white/25 px-1.5 text-[10.5px]">
-              {unread} sem ler
+    <>
+      {notices}
+      <div
+        className="pointer-events-none fixed z-50 flex flex-col items-end gap-2"
+        style={{ right: pos.right, bottom: pos.bottom }}
+      >
+        {open && !minimized && (
+          <MiniChat
+            caller={open}
+            onClose={() => setOpen(null)}
+            onMinimize={() => setMinimized(true)}
+            onDragStart={startDrag}
+          />
+        )}
+        {open && minimized && (
+          <button
+            type="button"
+            onPointerDown={startDrag}
+            onClick={() => {
+              if (!wasDragged()) setMinimized(false);
+            }}
+            title="Abrir a conversa (arraste para mudar de lugar)"
+            className="pointer-events-auto flex max-w-[260px] cursor-pointer items-center gap-2 rounded-full bg-gradient-to-r from-msg-verde-from to-msg-verde-to px-3.5 py-2 text-[12.5px] font-semibold text-white shadow-xl"
+          >
+            💬 <span className="truncate">{open.senderName}</span>
+            <span className="text-[11px] opacity-80">(minimizado)</span>
+          </button>
+        )}
+        {showBalloon && (
+          <div className="pointer-events-auto w-[300px] max-w-[calc(100vw-2rem)] overflow-hidden rounded-[14px] border-2 border-msg-busy bg-admin-card shadow-xl">
+            <span className="flex items-center justify-between bg-gradient-to-r from-msg-verde-from to-msg-verde-to px-3 py-1 text-[11.5px] font-semibold text-white">
+              Mensagens internas
+              <span className="rounded-full bg-white/25 px-1.5 text-[10.5px]">
+                {unread} sem ler
+              </span>
             </span>
-          </span>
-          <span className="block px-3 pt-2.5 text-[12.5px] text-admin-text">
-            {caller ? (
-              <>
-                <strong className="text-admin-primary">
-                  {caller.senderName}
-                </strong>{" "}
-                {caller.nudge ? (
-                  <span className="font-semibold text-msg-busy">
-                    chamou a sua atenção!
-                  </span>
-                ) : (
-                  <>
-                    diz:
-                    <span className="mt-0.5 block truncate text-admin-muted">
-                      {caller.preview}
+            <span className="block px-3 pt-2.5 text-[12.5px] text-admin-text">
+              {caller ? (
+                <>
+                  <strong className="text-admin-primary">
+                    {caller.senderName}
+                  </strong>{" "}
+                  {caller.nudge ? (
+                    <span className="font-semibold text-msg-busy">
+                      chamou a sua atenção!
                     </span>
-                  </>
-                )}
-              </>
-            ) : (
-              "Você tem mensagens de colegas esperando resposta."
-            )}
-          </span>
-          <span className="flex justify-end gap-2 px-3 pt-2 pb-2.5">
-            {caller ? (
-              <button
-                type="button"
-                onClick={() => setOpen(caller)}
-                className="btn btn-admin-primary btn-sm"
-              >
-                Responder aqui
-              </button>
-            ) : (
-              <Link
-                href="/admin/mensagens"
-                className="btn btn-admin-primary btn-sm"
-              >
-                Abrir mensagens
-              </Link>
-            )}
-          </span>
-        </div>
-      )}
-      {/* The floating balloon itself: always at hand while something waits. */}
-      {showBubble && (
+                  ) : (
+                    <>
+                      diz:
+                      <span className="mt-0.5 block truncate text-admin-muted">
+                        {caller.preview}
+                      </span>
+                    </>
+                  )}
+                </>
+              ) : (
+                "Você tem mensagens de colegas esperando resposta."
+              )}
+            </span>
+            <span className="flex justify-end gap-2 px-3 pt-2 pb-2.5">
+              {caller ? (
+                <button
+                  type="button"
+                  onClick={() => setOpen(caller)}
+                  className="btn btn-admin-primary btn-sm"
+                >
+                  Responder aqui
+                </button>
+              ) : (
+                <Link
+                  href="/admin/mensagens"
+                  className="btn btn-admin-primary btn-sm"
+                >
+                  Abrir mensagens
+                </Link>
+              )}
+            </span>
+          </div>
+        )}
+        {/* The floating balloon itself: always at hand while something waits. */}
+        {showBubble && (
+          <button
+            type="button"
+            onClick={() => (caller ? setOpen(caller) : null)}
+            aria-label={`${unread} mensagens internas sem ler`}
+            className="pointer-events-auto relative flex h-14 w-14 items-center justify-center rounded-full bg-gradient-to-br from-msg-verde-from to-msg-verde-to text-[24px] text-white shadow-xl motion-safe:animate-bounce"
+          >
+            💬
+            <span className="absolute -top-1 -right-1 inline-flex h-6 min-w-6 items-center justify-center rounded-full border-2 border-white bg-msg-busy px-1 text-[11px] font-bold">
+              {unread}
+            </span>
+          </button>
+        )}
+      </div>
+    </>
+  );
+}
+
+interface Arrival {
+  key: string;
+  userId: string;
+  name: string;
+  photo: boolean;
+}
+
+/** How long an "acabou de entrar" notice stays, unless closed first. */
+const ARRIVAL_MS = 10_000;
+
+/**
+ * "Fulano acabou de entrar e está online", in the corner, the way the old
+ * desktop messengers did it: it goes by itself after 10 seconds, or with
+ * the X. A click opens the conversation.
+ */
+function ArrivalNotices({
+  arrivals,
+  onClose,
+}: {
+  arrivals: Arrival[];
+  onClose: (key: string) => void;
+}) {
+  if (!arrivals.length) return null;
+  return (
+    <div
+      aria-live="polite"
+      className="pointer-events-none fixed bottom-24 left-4 z-50 flex flex-col gap-2 max-md:bottom-20"
+    >
+      {arrivals.map((arrival) => (
+        <ArrivalNotice
+          key={arrival.key}
+          arrival={arrival}
+          onClose={() => onClose(arrival.key)}
+        />
+      ))}
+    </div>
+  );
+}
+
+function ArrivalNotice({
+  arrival,
+  onClose,
+}: {
+  arrival: Arrival;
+  onClose: () => void;
+}) {
+  // The parent re-renders on every poll: the timer must not restart then.
+  const close = useRef(onClose);
+  close.current = onClose;
+  useEffect(() => {
+    const timer = setTimeout(() => close.current(), ARRIVAL_MS);
+    return () => clearTimeout(timer);
+  }, []);
+  const initials = arrival.name
+    .split(/\s+/)
+    .filter(Boolean)
+    .map((part, index, all) =>
+      index === 0 || index === all.length - 1 ? part[0] : "",
+    )
+    .join("")
+    .toUpperCase();
+  return (
+    <div className="pointer-events-auto w-[280px] max-w-[calc(100vw-2rem)] overflow-hidden rounded-[12px] border border-admin-border bg-admin-card shadow-xl motion-safe:animate-notice-rise">
+      <div className="flex items-center justify-between bg-gradient-to-r from-msg-verde-from to-msg-verde-to px-3 py-1 text-[11.5px] font-semibold text-white">
+        Mensagens internas
         <button
           type="button"
-          onClick={() => (caller ? setOpen(caller) : null)}
-          aria-label={`${unread} mensagens internas sem ler`}
-          className="pointer-events-auto relative flex h-14 w-14 items-center justify-center rounded-full bg-gradient-to-br from-msg-verde-from to-msg-verde-to text-[24px] text-white shadow-xl motion-safe:animate-bounce"
+          onClick={onClose}
+          aria-label="Fechar aviso"
+          className="rounded px-1 text-[15px] leading-none hover:bg-white/20"
         >
-          💬
-          <span className="absolute -top-1 -right-1 inline-flex h-6 min-w-6 items-center justify-center rounded-full border-2 border-white bg-msg-busy px-1 text-[11px] font-bold">
-            {unread}
-          </span>
+          ×
         </button>
-      )}
+      </div>
+      <Link
+        href={`/admin/mensagens?com=${arrival.userId}`}
+        onClick={onClose}
+        className="flex items-center gap-3 px-3 py-2.5 hover:bg-admin-input-bg"
+      >
+        <span className="relative flex h-10 w-10 flex-none items-center justify-center overflow-hidden rounded-[10px] bg-admin-primary text-[13px] font-bold text-white">
+          {/* The initials stay under the photo while it loads. */}
+          {initials}
+          {arrival.photo && (
+            // biome-ignore lint/performance/noImgElement: a private route, not an optimizable asset
+            <img
+              src={`/admin/mensagens/foto/${arrival.userId}`}
+              alt=""
+              className="absolute inset-0 h-full w-full object-cover"
+            />
+          )}
+          <span className="absolute right-0.5 bottom-0.5 h-2.5 w-2.5 rounded-full border-2 border-white bg-msg-online" />
+        </span>
+        <span className="min-w-0 text-[12.5px] leading-snug text-admin-text">
+          <strong className="block truncate text-admin-primary">
+            {arrival.name}
+          </strong>
+          acabou de entrar e está online.
+        </span>
+      </Link>
     </div>
   );
 }

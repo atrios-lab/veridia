@@ -25,6 +25,7 @@ import {
   MAX_TEXT,
   type MessageKind,
   type MessengerColor,
+  ONLINE_WINDOW_MS,
   type Presence,
   presenceOf,
   STATUS_ALERT_MINUTES,
@@ -1383,5 +1384,53 @@ export async function listTeamWith(
         row.lunchReturnedAt,
         now,
       ),
+  }));
+}
+
+export interface OnlinePerson {
+  userId: string;
+  name: string;
+  photo: boolean;
+}
+
+/**
+ * Who of the office is online right now (seen in the last 90 s), for the
+ * "acabou de entrar" notice on every screen (decision of 11/11/2026). Not
+ * the viewer, not someone whose chat the holder turned off, never the
+ * platform account.
+ */
+export async function onlineNowWith(
+  database: Database,
+  tenantSlug: string,
+  viewerId: string,
+  now = new Date(),
+): Promise<OnlinePerson[]> {
+  const rows = await database
+    .select({
+      userId: messengerProfiles.userId,
+      name: user.name,
+      photoPath: messengerProfiles.photoPath,
+    })
+    .from(messengerProfiles)
+    .innerJoin(user, eq(user.id, messengerProfiles.userId))
+    .where(
+      and(
+        eq(messengerProfiles.tenantSlug, tenantSlug),
+        eq(user.tenantSlug, tenantSlug),
+        ne(messengerProfiles.userId, viewerId),
+        inArray(user.role, [...PANEL_ROLES]),
+        isNull(user.disabledAt),
+        isNull(messengerProfiles.chatDisabledAt),
+        gt(
+          messengerProfiles.lastSeenAt,
+          new Date(now.getTime() - ONLINE_WINDOW_MS),
+        ),
+      ),
+    )
+    .orderBy(asc(user.name));
+  return rows.map((row) => ({
+    userId: row.userId,
+    name: row.name,
+    photo: Boolean(row.photoPath),
   }));
 }
