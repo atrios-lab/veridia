@@ -32,11 +32,23 @@ export function SuggestCard({
   services,
   weekdays,
   onApply,
+  starting = false,
 }: {
-  /** The services this agenda takes. */
+  /** The services this agenda takes (or, starting, the ones suggested). */
   services: Array<{ id: string; label: string }>;
   weekdays: Array<{ day: string; label: string }>;
-  onApply: (days: string[], suggestion: Suggestion) => void;
+  /** The days, the grid, and the services kept ticked in the card. */
+  onApply: (
+    days: string[],
+    suggestion: Suggestion,
+    serviceIds: string[],
+  ) => void;
+  /**
+   * The agenda has no service ticked yet (a new office): the card offers
+   * the suggested ones, and using the grid ticks them in the agenda
+   * (decision of 11/11/2026). Before, the button stayed disabled.
+   */
+  starting?: boolean;
 }) {
   const [open, setOpen] = useState(false);
   const [openAt, setOpenAt] = useState("08:00");
@@ -101,7 +113,6 @@ export function SuggestCard({
         <button
           type="button"
           onClick={() => setOpen(true)}
-          disabled={services.length === 0}
           className="rounded-lg bg-admin-primary px-3.5 py-2 text-[12.5px] font-semibold text-white disabled:opacity-50"
         >
           Sugerir horários
@@ -202,6 +213,14 @@ export function SuggestCard({
         <h3 className="text-[13px] font-bold text-admin-primary">
           Serviços e tempo de cada um
         </h3>
+        {starting && (
+          <p className="mt-1 rounded-lg bg-admin-warning-soft-bg px-3 py-2 text-[12px] text-admin-warning-text">
+            Esta agenda ainda não tem serviços marcados. Estes são os sugeridos
+            para ela: desmarque os que a serventia não atende. Ao usar a grade,
+            os marcados passam a ser os serviços da agenda (dá para mudar
+            depois, mais abaixo).
+          </p>
+        )}
         <p className="mt-0.5 text-[12px] text-admin-muted">
           Os marcados como rápidos entram entre os outros, para sempre haver uma
           vaga rápida perto. Desmarque o que não entra na grade.
@@ -320,7 +339,11 @@ export function SuggestCard({
           type="button"
           disabled={days.length === 0 || suggestion.times.length === 0}
           onClick={() => {
-            onApply(days, suggestion);
+            onApply(
+              days,
+              suggestion,
+              rows.filter((row) => row.included).map((row) => row.id),
+            );
             setOpen(false);
           }}
           className="ml-auto rounded-lg bg-admin-primary px-3.5 py-2 text-[12.5px] font-semibold text-white disabled:opacity-50"
