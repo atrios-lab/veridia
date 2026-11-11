@@ -407,6 +407,13 @@
       "when": 1794427206509,
       "tag": "0057_pedidos_de_papel",
       "breakpoints": true
+    },
+    {
+      "idx": 58,
+      "version": "7",
+      "when": 1794436314280,
+      "tag": "0058_livro_diario_auxiliar",
+      "breakpoints": true
     }
   ]
 }

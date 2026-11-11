@@ -126,6 +126,16 @@ export const ADMIN_NAV: readonly AdminNavItem[] = [
     permission: "iss.manage",
   },
   {
+    // The Livro Diário Auxiliar da Receita e da Despesa (decision of
+    // 11/11/2026): the productivity report read act by act, the expenses
+    // with their receipts, the day's and the month's pages, the year.
+    group: "Utilitários",
+    label: "Livro Diário Auxiliar",
+    href: "/admin/utilitarios/livro-diario",
+    icon: "grid",
+    permission: "daily-book.manage",
+  },
+  {
     // Papel de segurança (decision of 11/11/2026): the classificador of the
     // lots, their use and losses, and the ofícios to the Corregedoria
     // (Provimento CGJ/RN 156/2016, arts. 59 and 60).

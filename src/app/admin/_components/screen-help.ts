@@ -182,6 +182,58 @@ const ENTRIES: Record<string, ScreenHelp> = {
       ],
     },
   },
+  "/admin/utilitarios/livro-diario": {
+    purpose:
+      "O Livro Diário Auxiliar da Receita e da Despesa (Provimento CNJ nº 149/2023, arts. 189 a 195, com a redação do Provimento CNJ nº 259/2026): a receita lida do relatório de produtividade, as despesas com comprovante, a página do dia, a do mês com a apuração e o balanço anual.",
+    steps: [
+      "Receita: em 'Anexar produtividade', envie o PDF do relatório do sistema (do dia ou do mês) e clique em 'Ler relatório'. Confira as linhas (especialidade, valor, explicação), exclua o que não for e clique em 'Lançar no livro'.",
+      "O ideal é o relatório de cada dia: o art. 190 pede a receita no dia do ato, por especialidade. O relatório do mês entra no último dia, marcado como consolidado.",
+      "Despesa: em 'Lançar despesa', anexe o comprovante e clique em 'Ler comprovante' (DAM, comprovante do banco). Confira o valor, a data e a categoria (art. 191-A, § 1º) e lance até o fim do mês em que foi paga.",
+      "Todo lançamento tem 'Editar' e 'Excluir' (fica guardado, com a justificativa) e um campo de explicação que sai no livro.",
+      "Em 'Gerar PDF do livro', escolha o dia, o mês (com a apuração do art. 192) ou o ano (balanço do art. 193). Assine digitalmente ou imprima; baixe a planilha para o contador.",
+    ],
+    terms: [
+      {
+        term: "Receita",
+        meaning:
+          "Os emolumentos dos atos, lançados no dia do ato, por especialidade, mesmo antes de receber (art. 190).",
+      },
+      {
+        term: "Repasses",
+        meaning:
+          "FDJ, FRMP, FCRCPN, FPGE e outros fundos: dinheiro do Estado que a serventia só arrecada. Aparecem no livro, mas não são receita nem despesa da serventia.",
+      },
+      {
+        term: "Despesa",
+        meaning:
+          "Gasto ligado ao serviço (aluguel, folha, sistemas, material, ISS...), lançado até o fim do mês em que foi pago, com o comprovante guardado 5 anos (art. 191-A). Despesa pessoal não pode.",
+      },
+      {
+        term: "Tratamento fiscal distinto",
+        meaning:
+          "Despesa que vale para o livro mas tem outro tratamento no imposto de renda (carnê-leão). Marque e explique (art. 193-A, § 2º).",
+      },
+      {
+        term: "Apuração do mês",
+        meaning:
+          "No fim do mês, receitas e despesas somadas à parte e o saldo positivo ou negativo (art. 192).",
+      },
+      {
+        term: "Visto anual (RN)",
+        meaning:
+          "O Código de Normas do RN pede o visto do Juiz Corregedor Permanente no livro até o 15º dia útil de fevereiro. Confira a regra atual da sua Corregedoria.",
+      },
+    ],
+    configure: {
+      href: "/admin/utilitarios/livro-diario/configuracao",
+      label: "Especialidades e responsável",
+      permission: "daily-book.manage",
+      steps: [
+        "Confira as especialidades pelo código do ato (ex.: 22 = Tabelionato de Notas, 23 = Registro Civil), conforme a tabela de emolumentos do Estado.",
+        "Informe o responsável pela escrituração, se quiser. Quem assina as páginas vem de Configurações › Quem assina.",
+      ],
+    },
+  },
   "/admin/utilitarios/papel-seguranca": {
     purpose:
       "O classificador do papel de segurança (Provimento CGJ/RN nº 156/2016, arts. 59 e 60): os lotes recebidos, as folhas usadas e perdidas, o estoque e os ofícios à Corregedoria, com a planilha das folhas.",
