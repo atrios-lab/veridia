@@ -13,9 +13,11 @@ import {
   parseNotarisReport,
   type ReportFigures,
 } from "@/core/iss/notaris-report.ts";
+import { formatTaxId, isValidTaxId } from "@/core/tax-id.ts";
 import { parseMoneyBRL } from "@/core/transparency/bulletin.ts";
 import { FUNDS_BY_STATE } from "@/core/transparency/rubrics.ts";
 import { db } from "@/db/index.ts";
+import { recordAuditWith } from "@/lib/audit.ts";
 import { justify } from "@/lib/audit-reason.ts";
 import { pdfTableText } from "@/lib/fee-tables.ts";
 import {
@@ -25,6 +27,7 @@ import {
   IssDeclarationError,
   issueIssDeclarationWith,
   type PendingBulletin,
+  publishBulletinFromIssWith,
   recordIssFilingWith,
   removeIssDeclarationWith,
   saveIssSettingsWith,
@@ -209,6 +212,13 @@ export async function saveIssDeclaration(
     };
   }
   const id = String(formData.get("id") ?? "");
+  if (formData.get("lido") === "1" && formData.get("conferido") !== "on") {
+    return {
+      status: "error",
+      message:
+        "Confira os valores lidos do relatório e marque a conferência antes de gerar.",
+    };
+  }
   let savedId: string;
   try {
     const attachments = await storedPdfs(
@@ -233,14 +243,41 @@ export async function saveIssDeclaration(
           session.user.id,
         );
     savedId = row.id;
-    if (formData.get("boletim") === "on") {
-      const result = await applyIssToBulletinWith(
-        db,
-        tenant.slug,
-        parsed.data.competence,
-        bulletinOf(formData, issOf(parsed.data)),
-        session.user.id,
-      );
+    if (formData.get("lido") === "1") {
+      // Who checked the figures the system read, in the audit.
+      await recordAuditWith(db, {
+        tenantSlug: tenant.slug,
+        actorId: session.user.id,
+        action: "iss-declaration.checked",
+        targetType: "iss-declaration",
+        targetId: row.id,
+        reason: `Valores lidos do relatório conferidos por ${session.user.name}.`,
+      });
+    }
+    const choice = String(formData.get("boletim") ?? "rascunho");
+    if (choice === "rascunho" || choice === "publicar") {
+      const figures = bulletinOf(formData, issOf(parsed.data));
+      const result =
+        choice === "publicar" &&
+        can(
+          session.user.role ?? "",
+          "transparency.manage",
+          session.user.permissions,
+        )
+          ? await publishBulletinFromIssWith(
+              db,
+              tenant,
+              parsed.data.competence,
+              figures,
+              session.user.id,
+            )
+          : await applyIssToBulletinWith(
+              db,
+              tenant.slug,
+              parsed.data.competence,
+              figures,
+              session.user.id,
+            );
       revalidatePath("/admin/transparencia");
       revalidatePath("/transparencia");
       savedId = `${savedId}?boletim=${result}`;
@@ -332,6 +369,7 @@ export async function saveIssSettings(
   const current = await getIssSettings(ok.tenant);
   const due = Number(formData.get("vencimentoDia") ?? "");
   let lawAttachment = current.lawAttachment;
+  let appointmentAttachment = current.appointmentAttachment;
   try {
     const sent = await storedPdf(
       formData.get("lei"),
@@ -339,6 +377,12 @@ export async function saveIssSettings(
       "lei-iss",
     );
     if (sent) lawAttachment = sent;
+    const portaria = await storedPdf(
+      formData.get("portaria"),
+      ok.tenant.slug,
+      "portaria-prefeitura",
+    );
+    if (portaria) appointmentAttachment = portaria;
   } catch (error) {
     if (
       error instanceof IssDeclarationError ||
@@ -361,7 +405,31 @@ export async function saveIssSettings(
     filing: formData.get("envio") === "portal" ? "portal" : "semut",
     portalUrl: String(formData.get("portal") ?? ""),
     portalRevenue: String(formData.get("receita") ?? ""),
+    authorityCnpj: formatTaxId(String(formData.get("cnpj_prefeitura") ?? "")),
+    authorityAddress: String(formData.get("endereco_prefeitura") ?? ""),
+    mayorName: String(formData.get("prefeito") ?? ""),
+    secretaryName: String(formData.get("secretario") ?? ""),
+    appointmentAttachment,
+    officeAddress: String(formData.get("endereco_serventia") ?? ""),
+    officePhone: String(formData.get("telefone_serventia") ?? ""),
+    officeEmail: String(formData.get("email_serventia") ?? ""),
   });
+  if (parsed.success) {
+    // Typed with or without dots, kept with them; a wrong digit is refused.
+    parsed.data.cnpj = formatTaxId(parsed.data.cnpj);
+    if (!isValidTaxId(parsed.data.cnpj)) {
+      return {
+        status: "error",
+        message: "Confira o CNPJ (ou CPF) da serventia: um dígito não confere.",
+      };
+    }
+    if (!isValidTaxId(parsed.data.authorityCnpj)) {
+      return {
+        status: "error",
+        message: "Confira o CNPJ da prefeitura: um dígito não confere.",
+      };
+    }
+  }
   if (!parsed.success) {
     const field = String(parsed.error.issues[0]?.path[0] ?? "");
     return {

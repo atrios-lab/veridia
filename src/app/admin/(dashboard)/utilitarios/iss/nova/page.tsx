@@ -35,7 +35,15 @@ export default async function NewIssPage() {
       <main className="flex max-w-[900px] flex-col gap-4.5 px-[30px] py-7 max-md:px-4">
         <BackLink href="/admin/utilitarios/iss" label="Declaração de ISS" />
         <IssForm
-          state={{ uf: tenant.location.state, funds: fundsOf(tenant) }}
+          state={{
+            uf: tenant.location.state,
+            funds: fundsOf(tenant),
+            canPublish: can(
+              session.user.role ?? "",
+              "transparency.manage",
+              session.user.permissions,
+            ),
+          }}
           initial={{
             today: today(),
             competence: lastMonth(today()),

@@ -63,9 +63,11 @@ export default async function IssDeclarationPage({
             {query.emitida ? "Declaração gerada." : "Correção salva."}{" "}
             {query.boletim === "updated"
               ? `O ISS foi lançado no boletim mensal de ${month}.`
-              : query.boletim === "pending"
-                ? `O boletim de ${month} ainda não foi publicado: os números já vão preenchidos quando você abrir o boletim desse mês em Transparência.`
-                : ""}
+              : query.boletim === "published"
+                ? `O boletim de ${month} foi publicado no site, como consolidado.`
+                : query.boletim === "pending"
+                  ? `O boletim de ${month} ainda não foi publicado: os números já vão preenchidos quando você abrir o boletim desse mês em Transparência.`
+                  : ""}
           </p>
         )}
         <section className="flex flex-wrap items-center gap-3 rounded-[14px] border border-admin-border bg-admin-card px-5 py-4">
@@ -116,7 +118,15 @@ export default async function IssDeclarationPage({
           Corrigir
         </h2>
         <IssForm
-          state={{ uf: tenant.location.state, funds: fundsOf(tenant) }}
+          state={{
+            uf: tenant.location.state,
+            funds: fundsOf(tenant),
+            canPublish: can(
+              session.user.role ?? "",
+              "transparency.manage",
+              session.user.permissions,
+            ),
+          }}
           initial={{
             today: today(),
             id: row.id,

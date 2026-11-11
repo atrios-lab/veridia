@@ -5,6 +5,7 @@ import {
   competenceTitle,
   formatDeclarationNumber,
   formatRate,
+  issSettingsMissing,
 } from "@/core/iss/declaration.ts";
 import { formatMoneyBRL } from "@/core/transparency/bulletin.ts";
 import { db } from "@/db/index.ts";
@@ -42,11 +43,7 @@ export default async function IssPage({
     getIssSettings(tenant),
     searchParams,
   ]);
-  const missing = [
-    !settings.municipalLaw.trim() && "a lei municipal do ISS",
-    !settings.cnpj.trim() && "o CNPJ da serventia",
-    !settings.municipalRegistration.trim() && "a inscrição municipal",
-  ].filter(Boolean);
+  const missing = issSettingsMissing(settings);
   const canConfigure = can(role, "content.edit", session.user.permissions);
 
   return (
@@ -79,7 +76,7 @@ export default async function IssPage({
             Declaração excluída da lista. O registro continua na auditoria.
           </p>
         )}
-        {missing.length > 0 && (
+        {missing.length > 0 ? (
           <p className="rounded-[12px] bg-admin-warning-bg px-4 py-3 text-[13px] text-admin-warning-text">
             Falta informar na configuração: {missing.join(", ")}. A declaração
             sai sem esses dados até lá.{" "}
@@ -89,6 +86,19 @@ export default async function IssPage({
                 className="font-semibold underline"
               >
                 Completar agora
+              </Link>
+            )}
+          </p>
+        ) : (
+          <p className="flex flex-wrap items-center gap-x-2 text-[12.5px] text-admin-muted">
+            ✓ Dados da serventia e da prefeitura completos (alíquota de{" "}
+            {formatRate(settings.rateBasisPoints)}).
+            {canConfigure && (
+              <Link
+                href="/admin/utilitarios/iss/configuracao"
+                className="font-semibold text-admin-primary underline"
+              >
+                Deseja alterar os dados?
               </Link>
             )}
           </p>

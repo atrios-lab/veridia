@@ -54,6 +54,8 @@ type BulletinRead = Record<string, string>;
 export interface IssFormOffice {
   uf: string;
   funds: { key: string; label: string }[];
+  /** May publish the bulletin to the site (Transparência permission). */
+  canPublish?: boolean;
 }
 
 const money = (cents: number | undefined) =>
@@ -94,6 +96,12 @@ export function IssForm({
   const [bulletin, setBulletin] = useState<BulletinRead | null>(null);
   const [reading, startReading] = useTransition();
   const [readNote, setReadNote] = useState<string | null>(null);
+  // The figures came from a report: someone has to check them before the
+  // declaration (and the bulletin) go out (decision of 11/11/2026).
+  const [readFromReport, setReadFromReport] = useState(false);
+  const [bulletinChoice, setBulletinChoice] = useState<
+    "rascunho" | "publicar" | "nao"
+  >("rascunho");
   const iss = useMemo(() => {
     const cents = parseMoneyBRL(emoluments);
     const basis = Math.round(Number(rate.replace(",", ".")) * 100);
@@ -145,6 +153,7 @@ export function IssForm({
         setBulletin(read);
       }
       const read = f.kind !== "desconhecido";
+      if (read) setReadFromReport(true);
       setReadNote(
         read
           ? `Lido do relatório${result.unread.length ? ` (não reconhecido: ${result.unread.join(", ")})` : ""}. Confira os valores abaixo; tudo pode ser corrigido.`
@@ -344,17 +353,41 @@ export function IssForm({
             </label>
           </div>
         </details>
-        <label className="flex items-center gap-2 text-[13px] text-admin-text md:col-span-4">
-          <input
-            type="checkbox"
-            name="boletim"
-            defaultChecked
-            className="checkbox-admin"
-          />
-          {bulletin
-            ? "Preencher o boletim mensal da transparência com estes números"
-            : "Lançar este ISS no boletim mensal da transparência"}
-        </label>
+        <fieldset className="flex flex-col gap-1.5 text-[13px] text-admin-text md:col-span-4">
+          <legend className="mb-1 text-xs font-bold text-admin-primary">
+            Boletim mensal da transparência
+          </legend>
+          {(
+            [
+              [
+                "rascunho",
+                bulletin
+                  ? "Preencher o boletim com estes números (publico depois, em Transparência)"
+                  : "Lançar este ISS no boletim (publico depois, em Transparência)",
+              ],
+              ...(bulletin && office.canPublish
+                ? ([
+                    [
+                      "publicar",
+                      "Preencher e publicar o boletim agora no site",
+                    ],
+                  ] as const)
+                : []),
+              ["nao", "Não mexer no boletim"],
+            ] as const
+          ).map(([value, label]) => (
+            <label key={value} className="flex items-center gap-2">
+              <input
+                type="radio"
+                name="boletim"
+                value={value}
+                checked={bulletinChoice === value}
+                onChange={() => setBulletinChoice(value)}
+              />
+              {label}
+            </label>
+          ))}
+        </fieldset>
         {bulletin && (
           <fieldset className="rounded-[12px] bg-admin-input-bg px-3.5 py-3 md:col-span-4">
             <legend className="px-1 text-[12.5px] font-semibold text-admin-primary">
@@ -377,11 +410,34 @@ export function IssForm({
               ))}
             </div>
             <p className="mt-2 text-[11.5px] text-admin-muted">
-              O boletim não é publicado sozinho: ao abrir o mês em
-              Transparência, ele já vem preenchido para você conferir e
-              publicar.
+              {bulletinChoice === "publicar"
+                ? "O boletim vai para o site assim que a declaração for gerada, como consolidado. Dá para corrigir depois em Transparência."
+                : "O boletim não é publicado sozinho: ao abrir o mês em Transparência, ele já vem preenchido para você conferir e publicar."}
             </p>
           </fieldset>
+        )}
+        {readFromReport && (
+          <div className="rounded-[12px] border border-admin-warning-soft-border bg-admin-warning-bg px-4 py-3 text-[13px] text-admin-warning-text md:col-span-4">
+            <p className="font-semibold">
+              Conferência: os valores acima foram lidos do relatório pelo
+              sistema.
+            </p>
+            <p className="mt-0.5">
+              Antes de gerar, confira competência, emolumentos, ISS e os números
+              do boletim com o relatório. A conferência fica registrada na
+              auditoria com o seu nome.
+            </p>
+            <input type="hidden" name="lido" value="1" />
+            <label className="mt-2 flex items-start gap-2 font-semibold">
+              <input
+                type="checkbox"
+                name="conferido"
+                required
+                className="checkbox-admin mt-0.5"
+              />
+              Conferi os valores lidos com o relatório e estão corretos.
+            </label>
+          </div>
         )}
       </div>
       {state.status === "error" && (
