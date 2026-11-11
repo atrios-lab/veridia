@@ -1,11 +1,15 @@
 import { headers } from "next/headers";
 import Link from "next/link";
 import type { ReactNode } from "react";
+import { can } from "@/core/auth/roles.ts";
 import { courseHref, PANEL_COURSE_SLUG } from "@/core/tutorials/catalog.ts";
 import { tutorialForRoute } from "@/core/tutorials/progress.ts";
+import { getSession } from "@/lib/session.ts";
 import { listPanelTutorials } from "@/lib/tutorials.ts";
 import { BackLink } from "./back-link";
 import { AdminIcon } from "./icon.tsx";
+import { screenHelpFor } from "./screen-help.ts";
+import { ScreenHelpButton } from "./screen-help-button.tsx";
 
 /**
  * A screen's title, in the screen's own content: the heading, an optional
@@ -40,6 +44,24 @@ export async function AdminPageHeader({
   actions?: ReactNode;
 }) {
   const pathname = (await headers()).get("x-pathname");
+  // The "!" and the "Configurar" of this screen (decision of 11/11/2026).
+  const help = screenHelpFor(pathname);
+  const session = help?.configure ? await getSession() : null;
+  const canConfigure = Boolean(
+    help?.configure &&
+      session &&
+      can(
+        session.user.role ?? "",
+        help.configure.permission,
+        session.user.permissions,
+      ),
+  );
+  // Not on the settings screen itself.
+  const showConfigure =
+    canConfigure &&
+    help?.configure &&
+    pathname !== help.configure.href &&
+    !pathname?.startsWith(`${help.configure.href}/`);
   const tutorial =
     // The tutorials screens teaching themselves would be one link too many.
     pathname && !pathname.startsWith("/admin/ajuda")
@@ -54,6 +76,11 @@ export async function AdminPageHeader({
           <h1 className="font-serif text-[26px] leading-[1.1] font-semibold text-admin-primary">
             {title}
           </h1>
+          {help && (
+            <span className="self-center">
+              <ScreenHelpButton help={help} canConfigure={canConfigure} />
+            </span>
+          )}
           {tutorial && (
             <Link
               href={courseHref(PANEL_COURSE_SLUG, tutorial.id)}
@@ -70,7 +97,21 @@ export async function AdminPageHeader({
           </p>
         )}
       </div>
-      {actions}
+      {(showConfigure || actions) && (
+        <div className="flex flex-wrap items-center gap-2">
+          {showConfigure && help?.configure && (
+            <Link
+              href={help.configure.href}
+              className="btn btn-admin-secondary btn-md"
+              title={`Configurar: ${help.configure.label}`}
+            >
+              <AdminIcon name="settings" className="h-4 w-4" />
+              Configurar
+            </Link>
+          )}
+          {actions}
+        </div>
+      )}
     </div>
   );
 }
