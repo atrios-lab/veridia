@@ -88,15 +88,6 @@ export default async function GuidesPage({
           >
             <AdminIcon name="plus" className="h-4 w-4" /> Nova guia
           </Link>
-          {can(role, "content.edit", granted) && (
-            <Link
-              href="/admin/utilitarios/guias/configuracao"
-              className="btn btn-admin-secondary btn-md"
-            >
-              <AdminIcon name="settings" className="h-4 w-4" /> Leis, alíquotas
-              e quem assina
-            </Link>
-          )}
         </div>
 
         {itivUnset && (

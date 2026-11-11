@@ -53,14 +53,6 @@ export default async function IssPage({
         description="O ISS do mês sobre os emolumentos, para o fisco municipal, com o livro do caixa anexo. Imprima ou assine digitalmente."
         actions={
           <div className="flex flex-wrap gap-2">
-            {canConfigure && (
-              <Link
-                href="/admin/utilitarios/iss/configuracao"
-                className="btn btn-admin-secondary btn-md"
-              >
-                <AdminIcon name="settings" className="h-4 w-4" /> Configuração
-              </Link>
-            )}
             <Link
               href="/admin/utilitarios/iss/nova"
               className="btn btn-admin-primary btn-md"
