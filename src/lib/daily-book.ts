@@ -49,7 +49,7 @@ export async function getBookSettingsWith(
   } catch {
     // The defaults, never a broken screen.
   }
-  return { specialties: DEFAULT_SPECIALTIES, responsible: "" };
+  return SettingsSchema.parse({ specialties: DEFAULT_SPECIALTIES });
 }
 
 export async function saveBookSettingsWith(
@@ -497,7 +497,19 @@ async function buildSnapshotWith(
     months,
     notes: input.notes.trim(),
     signer: input.signer,
+    interim: await interimOf(database, tenantSlug, input.kind),
   };
+}
+
+/** A month of an interim office keeps the ceiling in force when generated. */
+async function interimOf(
+  database: Database,
+  tenantSlug: string,
+  kind: BookDocKind,
+): Promise<BookSnapshot["interim"]> {
+  if (kind !== "mes") return null;
+  const settings = await getBookSettingsWith(database, tenantSlug);
+  return settings.interim ? { ceilingCents: settings.ceilingCents } : null;
 }
 
 export async function issueBookReportWith(

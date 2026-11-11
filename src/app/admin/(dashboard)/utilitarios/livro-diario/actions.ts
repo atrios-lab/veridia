@@ -11,6 +11,7 @@ import {
   SettingsSchema,
   specialtyOf,
 } from "@/core/daily-book/book.ts";
+import { expenseWarnings } from "@/core/daily-book/checks.ts";
 import {
   parseProductivity,
   parseReceipt,
@@ -284,6 +285,24 @@ export async function saveEntry(
     return { status: "error", message: "Escolha a categoria da despesa." };
   }
   const id = field(formData, "id", 40);
+  const explanation = field(formData, "explicacao", LONG_TEXT_MAX);
+  if (kind === "despesa" && !explanation) {
+    const warnings = expenseWarnings(
+      {
+        description: field(formData, "descricao", 500),
+        supplier: field(formData, "fornecedor", 160),
+        date: occurredOn,
+      },
+      today(),
+      !id,
+    );
+    if (warnings.length) {
+      return {
+        status: "error",
+        message: `${warnings.join(" ")} Se for despesa do serviço, explique no campo Explicação.`,
+      };
+    }
+  }
   try {
     const file = pdfFile(formData, "comprovante");
     const [stored] = file
@@ -311,7 +330,7 @@ export async function saveEntry(
       documentRef: field(formData, "documento", 160),
       fiscalDistinct: formData.get("fiscal") === "on",
       fiscalNote: field(formData, "fiscalNota", 1000),
-      explanation: field(formData, "explicacao", LONG_TEXT_MAX),
+      explanation,
       attachment: stored
         ? { path: stored.path, name: stored.displayName }
         : null,
@@ -485,9 +504,14 @@ export async function saveSettings(
   const parsed = SettingsSchema.safeParse({
     specialties,
     responsible: field(formData, "responsavel", 160),
+    interim: formData.get("interino") === "on",
+    ceilingCents: amountOf(field(formData, "teto", 20)) ?? 0,
   });
   if (!parsed.success)
-    return { status: "error", message: "Confira as especialidades." };
+    return {
+      status: "error",
+      message: "Confira as especialidades e o valor do teto.",
+    };
   try {
     await saveBookSettingsWith(
       db,

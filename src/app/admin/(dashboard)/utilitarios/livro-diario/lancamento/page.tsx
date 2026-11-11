@@ -55,7 +55,13 @@ export default async function EntryPage({
       <main className="flex max-w-[1000px] flex-col gap-4 px-[30px] py-7 max-md:px-4">
         <EntryForm
           today={now}
-          categories={EXPENSE_CATEGORIES.map((c) => ({
+          categories={EXPENSE_CATEGORIES.filter(
+            // The interim's pay only where an interim runs the office.
+            (c) =>
+              c.id !== "interino" ||
+              settings.interim ||
+              row?.category === "interino",
+          ).map((c) => ({
             id: c.id,
             label: categoryLabel(c.id),
           }))}

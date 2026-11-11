@@ -6,6 +6,7 @@ import type {
 import { holderName, officialName } from "../tenant/identification.ts";
 import type { Tenant } from "../tenant/schema.ts";
 import { formatMoneyBRL } from "../transparency/bulletin.ts";
+import { interimSplit } from "./deadlines.ts";
 
 /**
  * Livro Diário Auxiliar da Receita e da Despesa (decision of 11/11/2026),
@@ -24,6 +25,13 @@ import { formatMoneyBRL } from "../transparency/bulletin.ts";
  *   balance;
  * - art. 193: the year's balance;
  * - art. 193-A, § 2º: the expenses whose tax treatment differs, marked.
+ *
+ * The state's Código de Normas stays where it agrees (art. 195, parágrafo
+ * único). In RN (Provimento nº 156/2016-CGJ/RN): the balance by 15 January
+ * and sent to the CGJ in 5 days (art. 62), the judge's visto by the 15th
+ * business day of February (art. 61), the interim's ceiling (arts. 19 and
+ * 26-27) and what is not an expense (art. 25, §§ 2º and 3º); see
+ * checks.ts and deadlines.ts.
  *
  * The State's funds (FDJ, FRMP, FCRCPN, FPGE in RN) are someone else's
  * money: shown, never revenue nor expense of the office.
@@ -75,6 +83,11 @@ export const EXPENSE_CATEGORIES = [
     law: "XII",
     label: "Serviços técnicos especializados (engenharia, arquitetura)",
   },
+  {
+    id: "interino",
+    law: "",
+    label: "Remuneração do interino (até o teto, CGJ/RN art. 26)",
+  },
   { id: "outra", law: "", label: "Outra despesa do serviço (explique)" },
 ] as const;
 export type ExpenseCategory = (typeof EXPENSE_CATEGORIES)[number]["id"];
@@ -85,15 +98,7 @@ export function categoryLabel(id: string): string {
   return c.law ? `${c.label} (art. 191-A, § 1º, ${c.law})` : c.label;
 }
 
-/**
- * Words that point to a personal expense (art. 191-A, § 2º): a warning,
- * never a refusal; the holder explains.
- */
-export function looksPersonal(text: string): boolean {
-  return /\b(pessoal|particular|fam[ií]lia|resid[êe]ncia|casa (?:de|do|da)|escola d[oa]s? filh|viagem de f[ée]rias|supermercado|farm[áa]cia)\b/i.test(
-    text,
-  );
-}
+export { looksPersonal } from "./checks.ts";
 
 /** The office's specialties, by the first two digits of the act's code. */
 export const SettingsSchema = z.object({
@@ -112,6 +117,13 @@ export const SettingsSchema = z.object({
     .default([]),
   /** Who is responsible for the book; empty, the holder. */
   responsible: z.string().trim().max(160).default(""),
+  /**
+   * An office run by an interim (CGJ/RN arts. 19 to 27): the month's page
+   * splits the net result between the interim's pay and the FDJ.
+   */
+  interim: z.boolean().default(false),
+  /** The interim's ceiling: 90,25% of the STF Ministers' pay, in cents. */
+  ceilingCents: z.number().int().min(0).max(100_000_000).default(0),
 });
 export type BookSettings = z.infer<typeof SettingsSchema>;
 
@@ -273,6 +285,8 @@ export interface BookSnapshot {
   months: { month: string; revenueCents: number; expensesCents: number }[];
   notes: string;
   signer: { name: string; title: string; note?: string } | null;
+  /** A month of an interim office: the ceiling in force when generated. */
+  interim?: { ceilingCents: number } | null;
 }
 
 function signerLines(tenant: Tenant, s: BookSnapshot) {
@@ -333,6 +347,46 @@ function explanations(
   ];
 }
 
+/**
+ * CGJ/RN arts. 26 and 27: first the month without the interim's pay, then
+ * the net result split between the pay (up to the ceiling) and the FDJ.
+ */
+function interimSection(s: BookSnapshot, sum: Summary): RequerimentoSection {
+  const ceiling = s.interim?.ceilingCents ?? 0;
+  const pay = s.entries
+    .filter((e) => e.kind === "despesa" && e.category === "interino")
+    .reduce((a, e) => a + e.amountCents, 0);
+  const before = sum.balanceCents + pay;
+  const split = interimSplit(before, ceiling);
+  const [y, m] = s.start.split("-").map(Number);
+  const next = new Date(Date.UTC(y ?? 2000, m ?? 1, 10));
+  const tenth = `10/${String(next.getUTCMonth() + 1).padStart(2, "0")}/${next.getUTCFullYear()}`;
+  return {
+    heading: "Interinidade (CGJ/RN, arts. 19, 26 e 27)",
+    rows: [
+      {
+        label: "Receita líquida antes da remuneração do interino",
+        value: money(before),
+      },
+      {
+        label: "Teto (90,25% do subsídio dos Ministros do STF)",
+        value: ceiling > 0 ? money(ceiling) : "não informado na configuração",
+      },
+      {
+        label: "Remuneração do interino (lançar como despesa)",
+        value: `${money(split.payCents)}${pay ? `, lançado: ${money(pay)}` : ""}`,
+      },
+      {
+        label: "Excedente a recolher ao FDJ",
+        value:
+          split.excessCents > 0
+            ? `${money(split.excessCents)}, até ${tenth}`
+            : "nenhum",
+      },
+    ],
+  };
+}
+
 /** The day's or the month's page of the book. */
 export function buildBookDocument(
   tenant: Tenant,
@@ -383,6 +437,7 @@ export function buildBookDocument(
       ],
     },
   ];
+  if (!isDay && s.interim) sections.push(interimSection(s, sum));
   if (!isDay && sum.bySpecialty.length) {
     sections.push({
       heading: "Receita por especialidade (art. 190)",
@@ -484,6 +539,11 @@ export function buildAnnualDocument(
         heading: "Resultado",
         paragraphs: [
           `No exercício de ${year}, a serventia teve receita de ${money(revenue)} e despesa de ${money(expenses)}, com resultado líquido ${net >= 0 ? "positivo" : "negativo"} de ${money(Math.abs(net))}, nos termos do art. 193 do Código Nacional de Normas (Provimento CNJ nº 149/2023, com a redação do Provimento CNJ nº 259/2026).`,
+          ...(tenant.location.state === "RN"
+            ? [
+                "Balanço elaborado na forma do art. 62 do Código de Normas da Corregedoria Geral de Justiça do Rio Grande do Norte (Provimento nº 156/2016-CGJ/RN), a ser remetido à Corregedoria Geral de Justiça até 5 (cinco) dias depois de sua conclusão, e o livro, visado pelo Juiz Corregedor Permanente até o 15º dia útil de fevereiro (art. 61, parágrafo único).",
+              ]
+            : []),
         ],
       },
       ...(s.notes.trim()

@@ -1,7 +1,14 @@
 "use client";
 
-import { useActionState, useEffect, useState, useTransition } from "react";
+import {
+  startTransition,
+  useActionState,
+  useEffect,
+  useState,
+  useTransition,
+} from "react";
 import { toast } from "sonner";
+import { expenseWarnings } from "@/core/daily-book/checks.ts";
 import { ConfirmAction } from "../../../_components/confirm-action.tsx";
 import {
   type BookFormState,
@@ -354,10 +361,14 @@ export function EntryForm({
   const [note, setNote] = useState("");
   const set = (k: keyof EntryInitial) => (e: { target: { value: string } }) =>
     setV((x) => ({ ...x, [k]: e.target.value }));
-  const personal =
-    /\b(pessoal|particular|fam[ií]lia|resid[êe]ncia|supermercado|farm[áa]cia|f[ée]rias)\b/i.test(
-      `${v.description} ${v.supplier}`,
-    );
+  const warnings =
+    kind === "despesa"
+      ? expenseWarnings(
+          { description: v.description, supplier: v.supplier, date: v.date },
+          today,
+          !initial.id,
+        )
+      : [];
 
   const read = (form: HTMLFormElement | null) => {
     const file = (
@@ -388,7 +399,16 @@ export function EntryForm({
   };
 
   return (
-    <form action={action} className={CARD}>
+    <form
+      // Sent by hand so a refused entry keeps every field as typed (a form
+      // action resets the form, and a controlled select loses its choice).
+      onSubmit={(e) => {
+        e.preventDefault();
+        const data = new FormData(e.currentTarget);
+        startTransition(() => action(data));
+      }}
+      className={CARD}
+    >
       <Feedback state={state} />
       {initial.id && <input type="hidden" name="id" value={initial.id} />}
       <fieldset className="flex flex-wrap gap-4 text-[13px]">
@@ -613,11 +633,19 @@ export function EntryForm({
 
       {kind === "despesa" && (
         <>
-          {personal && (
-            <p className="rounded-[10px] bg-admin-warning-soft-bg px-3.5 py-2.5 text-[12.5px] text-admin-warning-text">
-              Atenção: despesa de natureza pessoal ou estranha ao serviço não
-              pode ser lançada (art. 191-A, § 2º). Se for do serviço, explique.
-            </p>
+          {warnings.length > 0 && (
+            <div className="flex flex-col gap-1.5 rounded-[10px] bg-admin-warning-soft-bg px-3.5 py-2.5 text-[12.5px] text-admin-warning-text">
+              <strong>Atenção antes de lançar</strong>
+              <ul className="list-disc pl-4">
+                {warnings.map((w) => (
+                  <li key={w}>{w}</li>
+                ))}
+              </ul>
+              <span>
+                Se mesmo assim for despesa do serviço, explique no campo
+                Explicação: ela vai para o livro.
+              </span>
+            </div>
           )}
           <label className="flex items-start gap-2.5 rounded-[10px] bg-admin-input-bg px-3.5 py-3 text-[13px] text-admin-text">
             <input
@@ -907,9 +935,12 @@ export function SettingsForm({
   initial: {
     specialties: { prefix: string; name: string }[];
     responsible: string;
+    interim: boolean;
+    ceilingCents: number;
   };
 }) {
   const [state, action, pending] = useActionState(saveSettings, IDLE);
+  const [interim, setInterim] = useState(initial.interim);
   return (
     <form action={action} className={CARD}>
       <Feedback state={state} />
@@ -949,6 +980,42 @@ export function SettingsForm({
           preposto. Quem assina as páginas vem de Configurações › Quem assina.
         </span>
       </div>
+      <label className="flex items-start gap-2.5 rounded-[10px] bg-admin-input-bg px-3.5 py-3 text-[13px] text-admin-text">
+        <input
+          type="checkbox"
+          name="interino"
+          checked={interim}
+          onChange={(e) => setInterim(e.target.checked)}
+          className="mt-0.5"
+        />
+        <span>
+          <strong>Serventia sob interinidade</strong> (vaga, respondida por
+          interino): a apuração do mês mostra a remuneração do interino até o
+          teto e o excedente a recolher ao FDJ até o dia 10, e o painel lembra a
+          prestação de contas até o dia 20 (CGJ/RN arts. 19, 21, 26 e 27).
+        </span>
+      </label>
+      {interim && (
+        <div>
+          <label htmlFor="cf-teto" className={LABEL}>
+            Teto do interino (R$)
+          </label>
+          <input
+            id="cf-teto"
+            name="teto"
+            inputMode="decimal"
+            placeholder="0,00"
+            defaultValue={
+              initial.ceilingCents ? money(initial.ceilingCents) : ""
+            }
+            className={`${FIELD} max-w-[240px]`}
+          />
+          <span className={HINT}>
+            90,25% do subsídio mensal dos Ministros do STF. Atualize quando o
+            subsídio mudar: cada página do mês guarda o teto da época.
+          </span>
+        </div>
+      )}
       <Submit
         pending={pending}
         label="Salvar configuração"

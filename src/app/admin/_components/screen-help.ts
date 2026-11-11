@@ -184,13 +184,15 @@ const ENTRIES: Record<string, ScreenHelp> = {
   },
   "/admin/utilitarios/livro-diario": {
     purpose:
-      "O Livro Diário Auxiliar da Receita e da Despesa (Provimento CNJ nº 149/2023, arts. 189 a 195, com a redação do Provimento CNJ nº 259/2026): a receita lida do relatório de produtividade, as despesas com comprovante, a página do dia, a do mês com a apuração e o balanço anual.",
+      "O Livro Diário Auxiliar da Receita e da Despesa (Provimento CNJ nº 149/2023, arts. 189 a 195, com a redação do Provimento CNJ nº 259/2026): a receita lida do relatório de produtividade, as despesas com comprovante, a página do dia, a do mês com a apuração e o balanço anual. Vale primeiro a regra nacional; o Código de Normas do Estado (no RN, o Provimento nº 156/2016-CGJ/RN) continua no que for compatível (art. 195, parágrafo único).",
     steps: [
       "Receita: em 'Anexar produtividade', envie o PDF do relatório do sistema (do dia ou do mês) e clique em 'Ler relatório'. Confira as linhas (especialidade, valor, explicação), exclua o que não for e clique em 'Lançar no livro'.",
       "O ideal é o relatório de cada dia: o art. 190 pede a receita no dia do ato, por especialidade. O relatório do mês entra no último dia, marcado como consolidado.",
       "Despesa: em 'Lançar despesa', anexe o comprovante e clique em 'Ler comprovante' (DAM, comprovante do banco). Confira o valor, a data e a categoria (art. 191-A, § 1º) e lance até o fim do mês em que foi paga.",
       "Todo lançamento tem 'Editar' e 'Excluir' (fica guardado, com a justificativa) e um campo de explicação que sai no livro.",
       "Em 'Gerar PDF do livro', escolha o dia, o mês (com a apuração do art. 192) ou o ano (balanço do art. 193). Assine digitalmente ou imprima; baixe a planilha para o contador.",
+      "Se a despesa parecer pessoal, for repasse ao Estado (FDJ, FRMP, FCRCPN, FPGE), for o imposto de renda do titular ou for de um mês já encerrado, o sistema avisa e pede uma explicação antes de lançar.",
+      "Em janeiro, o painel lembra o balanço do ano anterior (até 15/01) e o envio à Corregedoria (até 5 dias depois); até o 15º dia útil de fevereiro, o visto do Juiz Corregedor Permanente.",
     ],
     terms: [
       {
@@ -206,7 +208,12 @@ const ENTRIES: Record<string, ScreenHelp> = {
       {
         term: "Despesa",
         meaning:
-          "Gasto ligado ao serviço (aluguel, folha, sistemas, material, ISS...), lançado até o fim do mês em que foi pago, com o comprovante guardado 5 anos (art. 191-A). Despesa pessoal não pode.",
+          "Gasto ligado ao serviço (aluguel, folha, sistemas, material, ISS...), lançado até o fim do mês em que foi pago, com o comprovante guardado 5 anos (art. 191-A). Despesa pessoal não pode (§ 2º).",
+      },
+      {
+        term: "O que não é despesa",
+        meaning:
+          "Os repasses ao Estado (FDJ, FRMP, FCRCPN, FPGE), que já saem da receita, e o imposto de renda do titular ou do interino, inclusive o carnê-leão (art. 191-A, § 2º; CGJ/RN art. 25, §§ 2º e 3º). O IRRF retido dos funcionários é despesa, como parte da folha.",
       },
       {
         term: "Tratamento fiscal distinto",
@@ -219,18 +226,34 @@ const ENTRIES: Record<string, ScreenHelp> = {
           "No fim do mês, receitas e despesas somadas à parte e o saldo positivo ou negativo (art. 192).",
       },
       {
+        term: "Balanço anual",
+        meaning:
+          "Receita, despesa e resultado líquido do ano, mês a mês (art. 193). No RN, feito até 15 de janeiro e enviado à Corregedoria Geral de Justiça até 5 dias depois de concluído (CGJ/RN art. 62).",
+      },
+      {
         term: "Visto anual (RN)",
         meaning:
-          "O Código de Normas do RN pede o visto do Juiz Corregedor Permanente no livro até o 15º dia útil de fevereiro. Confira a regra atual da sua Corregedoria.",
+          "O Juiz Corregedor Permanente vista o livro até o 15º dia útil de fevereiro e pode determinar glosas (CGJ/RN art. 61, parágrafo único). O sistema conta os dias úteis com os feriados e o Carnaval.",
+      },
+      {
+        term: "Uso tributário",
+        meaning:
+          "O livro pode servir de base para o imposto de renda e o ISS, mas continua sendo um livro administrativo, não fiscal (art. 193-A). Na correição, a Corregedoria confere a escrituração dos últimos 12 meses e o recolhimento do carnê-leão (arts. 195-A e 195-B).",
+      },
+      {
+        term: "Interino",
+        meaning:
+          "Na serventia vaga, a receita líquida do mês até o teto (90,25% do subsídio dos Ministros do STF) é a remuneração do interino, lançada como despesa; o que passar vai ao FDJ até o dia 10. As contas vão ao Juiz Corregedor até o dia 20 (CGJ/RN arts. 19, 21, 26 e 27). Ligue em Configurar.",
       },
     ],
     configure: {
       href: "/admin/utilitarios/livro-diario/configuracao",
-      label: "Especialidades e responsável",
+      label: "Especialidades, responsável e interino",
       permission: "daily-book.manage",
       steps: [
         "Confira as especialidades pelo código do ato (ex.: 22 = Tabelionato de Notas, 23 = Registro Civil), conforme a tabela de emolumentos do Estado.",
         "Informe o responsável pela escrituração, se quiser. Quem assina as páginas vem de Configurações › Quem assina.",
+        "Serventia vaga: marque 'Serventia sob interinidade' e informe o teto do interino. Atualize o teto quando o subsídio do STF mudar.",
       ],
     },
   },
