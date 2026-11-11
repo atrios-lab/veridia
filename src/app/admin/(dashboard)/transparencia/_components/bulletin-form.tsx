@@ -631,7 +631,9 @@ export function BulletinForm({
                 Assinar digitalmente antes de publicar
               </label>
               {signing && (
-                <div className="mt-2.5 grid grid-cols-1 gap-2.5">
+                // Two columns, as the sign choice (it spans both) expects:
+                // with one, the A1 fields fell into a zero-width column.
+                <div className="mt-2.5 grid grid-cols-1 gap-2.5 md:grid-cols-2">
                   <ModeChoice
                     mode={signMode}
                     onChange={setSignMode}
@@ -639,7 +641,7 @@ export function BulletinForm({
                     prefix="boletim"
                   />
                   {signMode === "a1" && (
-                    <div className="grid grid-cols-1 gap-2.5 md:grid-cols-2">
+                    <div className="grid grid-cols-1 gap-2.5 md:col-span-2 md:grid-cols-2">
                       <input type="hidden" name="assinar" value="a1" />
                       <label className={LABEL_CLASS}>
                         Certificado
@@ -673,12 +675,12 @@ export function BulletinForm({
                   {tokenError && (
                     <p
                       role="alert"
-                      className="text-[12.5px] font-semibold text-admin-error-text"
+                      className="text-[12.5px] font-semibold text-admin-error-text md:col-span-2"
                     >
                       {tokenError}
                     </p>
                   )}
-                  <p className="text-[11.5px] text-admin-muted">
+                  <p className="text-[11.5px] text-admin-muted md:col-span-2">
                     O boletim sobe no site já assinado, com o QR de verificação.
                     Se você corrigir algo depois, é só editar e publicar de novo
                     (e assinar de novo).

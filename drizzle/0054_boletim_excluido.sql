@@ -1,0 +1,1 @@
+ALTER TABLE "transparency_bulletins" ADD COLUMN "removed_at" timestamp with time zone;

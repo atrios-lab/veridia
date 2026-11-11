@@ -501,6 +501,8 @@ export async function applyIssToBulletinWith(
         eq(transparencyBulletins.referenceMonth, referenceMonth),
         // A bulletin in the old format has one taxes total and no ISS line.
         isNull(transparencyBulletins.taxesPaidCents),
+        // An excluded month is not published: it waits, like a new one.
+        isNull(transparencyBulletins.removedAt),
       ),
     )
     .returning({ id: transparencyBulletins.id });

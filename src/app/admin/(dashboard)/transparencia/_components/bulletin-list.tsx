@@ -4,6 +4,7 @@ import {
   formatMonthYear,
 } from "@/core/transparency/bulletin.ts";
 import type { TransparencyBulletinRow } from "@/lib/transparency.ts";
+import { RemoveBulletinButton } from "./remove-bulletin-button.tsx";
 
 function monthYearOf(referenceMonth: string): string {
   // "YYYY-MM-01": read the parts, never a Date (that would shift by zone).
@@ -59,6 +60,10 @@ export function BulletinList({
                 >
                   Ver PDF
                 </a>
+                <RemoveBulletinButton
+                  id={b.id}
+                  label={monthYearOf(b.referenceMonth)}
+                />
               </li>
             );
           })}
