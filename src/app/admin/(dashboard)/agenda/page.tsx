@@ -49,6 +49,7 @@ import {
   liveCountsByDay,
 } from "@/lib/appointments.ts";
 import { getSession } from "@/lib/session.ts";
+import { getGuideSettings } from "@/lib/tax-guides.ts";
 import { getTenant, officeNow, today } from "@/lib/tenant.ts";
 import { AdminIcon } from "../../_components/icon.tsx";
 import { AdminPageHeader } from "../../_components/page-header.tsx";
@@ -367,6 +368,12 @@ export default async function AgendaPage({
       }),
   ].sort((a, b) => a.time.localeCompare(b.time));
 
+  // Who may sign the office's papers: the same list as the guias'.
+  const signers =
+    (await getGuideSettings(tenant).catch(() => null))?.signers.map(
+      ({ name, title }) => ({ name, title }),
+    ) ?? [];
+
   const futureClosed = [...config.closedDates]
     .filter((item) => item.date >= today())
     .sort((a, b) => a.date.localeCompare(b.date));
@@ -493,6 +500,7 @@ export default async function AgendaPage({
                   : agendaConfig.modes
               }
               closed={Boolean(closed) || Boolean(dayOff)}
+              signers={signers}
             />
           </section>
 

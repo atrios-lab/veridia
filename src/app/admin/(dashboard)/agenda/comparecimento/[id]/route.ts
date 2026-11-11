@@ -6,6 +6,7 @@ import {
 import { findAppointmentById } from "@/lib/appointments.ts";
 import { canDeclareAttendance } from "@/lib/attendance-declaration.ts";
 import { getSession } from "@/lib/session.ts";
+import { getGuideSettings } from "@/lib/tax-guides.ts";
 import { getTenant } from "@/lib/tenant.ts";
 
 export const runtime = "nodejs";
@@ -36,10 +37,18 @@ export async function GET(
     );
   }
 
+  // "?assina=N": who signs, from the office's list (the guias' one).
+  const url = new URL(request.url);
+  const chosen = url.searchParams.get("assina");
+  const signer =
+    chosen === null
+      ? undefined
+      : (await getGuideSettings(tenant)).signers[Number(chosen)];
   const bytes = await renderAttendanceDeclaration(
     tenant,
     appointment,
-    new URL(request.url).origin,
+    url.origin,
+    signer,
   );
   return new Response(new Uint8Array(bytes), {
     headers: {

@@ -3,6 +3,7 @@ import { can } from "@/core/auth/roles.ts";
 import { fundsOf } from "@/core/iss/declaration.ts";
 import { getIssSettings } from "@/lib/iss-declarations.ts";
 import { getSession } from "@/lib/session.ts";
+import { getGuideSettings } from "@/lib/tax-guides.ts";
 import { getTenant, today } from "@/lib/tenant.ts";
 import { BackLink } from "../../../../_components/back-link.tsx";
 import { AdminPageHeader } from "../../../../_components/page-header.tsx";
@@ -38,6 +39,9 @@ export default async function NewIssPage() {
           state={{
             uf: tenant.location.state,
             funds: fundsOf(tenant),
+            signers: (await getGuideSettings(tenant)).signers.map(
+              ({ name, title }) => ({ name, title }),
+            ),
             canPublish: can(
               session.user.role ?? "",
               "transparency.manage",

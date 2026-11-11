@@ -187,6 +187,7 @@ function fields(input: IssDeclarationInput) {
     rateBasisPoints: input.rateBasisPoints,
     issCents: issOf(input),
     issFromReport: input.issCents !== null,
+    signer: input.signer ?? 0,
     damNumber: input.damNumber,
     dueDate: input.dueDate,
     paidOn: input.paidOn,
@@ -402,6 +403,7 @@ export function inputOf(row: StoredIssDeclaration): IssDeclarationInput {
     paidOn: row.paidOn,
     notes: row.notes,
     issCents: row.issFromReport ? row.issCents : null,
+    signer: row.signer,
   };
 }
 
@@ -415,6 +417,8 @@ export async function renderIssDeclarationPdf(
   tenant: Tenant,
   row: StoredIssDeclaration,
   settings: IssSettings,
+  /** The office's signers (the guias' list); the row says which one. */
+  signers: { name: string; title: string; note?: string }[] = [],
 ): Promise<Buffer> {
   const attached = attachmentsOf(row);
   const declaration = await renderDocument(
@@ -425,6 +429,7 @@ export async function renderIssDeclarationPdf(
       sequence: row.sequence,
       issuedOn: toIsoDate(row.createdAt, OFFICE_TIME_ZONE),
       attachments: attached.length,
+      signer: signers[row.signer] ?? signers[0],
     }),
     await brandFor(tenant),
   );

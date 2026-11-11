@@ -64,6 +64,11 @@ export interface AttendanceData {
   siteDomain: string;
   /** The code printed under the title, the last part of the address. */
   validationCode: string;
+  /**
+   * Who signs, from the office's list (the same as the guias'); absent, the
+   * generic line for whoever signs at the counter (decision of 11/11/2026).
+   */
+  signer?: { name: string; title: string };
 }
 
 export function buildAttendanceDeclaration(
@@ -112,8 +117,13 @@ export function buildAttendanceDeclaration(
       },
     ],
     dateLine: `${tenant.location.city}/${tenant.location.state}, ${writtenDate(data.issuedOn)}.`,
-    signee: ATTENDANCE_SIGNEE,
-    signature: ["(assinatura e carimbo)"],
+    signee: data.signer?.name.trim() || ATTENDANCE_SIGNEE,
+    signature: [
+      ...(data.signer?.name.trim() && data.signer.title.trim()
+        ? [data.signer.title.trim()]
+        : []),
+      "(assinatura e carimbo)",
+    ],
     footer: [
       officialName(tenant),
       "Declaração de comparecimento",

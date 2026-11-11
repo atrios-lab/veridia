@@ -129,6 +129,7 @@ test("declaração de ISS de teste excluída libera o número; voltar ao automá
     paidOn: "",
     notes: "",
     issCents: null,
+    signer: 0,
   };
   const at = new Date(Date.UTC(2031, 1, 5, 12));
   const one = await issueIssDeclarationWith(

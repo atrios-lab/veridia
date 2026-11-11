@@ -16,6 +16,7 @@ import {
   inputOf,
 } from "@/lib/iss-declarations.ts";
 import { getSession } from "@/lib/session.ts";
+import { getGuideSettings } from "@/lib/tax-guides.ts";
 import { getTenant, today } from "@/lib/tenant.ts";
 import { BackLink } from "../../../../_components/back-link.tsx";
 import { AdminPageHeader } from "../../../../_components/page-header.tsx";
@@ -121,6 +122,9 @@ export default async function IssDeclarationPage({
           state={{
             uf: tenant.location.state,
             funds: fundsOf(tenant),
+            signers: (await getGuideSettings(tenant)).signers.map(
+              ({ name, title }) => ({ name, title }),
+            ),
             canPublish: can(
               session.user.role ?? "",
               "transparency.manage",
@@ -137,6 +141,7 @@ export default async function IssDeclarationPage({
             dueDate: row.dueDate,
             paidOn: row.paidOn,
             notes: row.notes,
+            signer: row.signer,
             attachmentNames: papers.map((p) => p.name),
             issFromReport: row.issFromReport
               ? formatMoneyBRL(row.issCents)

@@ -193,6 +193,7 @@ export async function saveIssDeclaration(
     dueDate: String(formData.get("vencimento") ?? ""),
     paidOn: String(formData.get("pagamento") ?? ""),
     notes: String(formData.get("observacoes") ?? ""),
+    signer: Number(formData.get("assina") ?? 0) || 0,
     // The ISS worked out act by act, when the report gave it.
     issCents:
       formData.get("iss_relatorio") === "on"

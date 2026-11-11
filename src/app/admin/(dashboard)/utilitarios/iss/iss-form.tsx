@@ -39,6 +39,8 @@ export interface IssFormInitial {
   dueDate: string;
   paidOn: string;
   notes: string;
+  /** Who signs: index into the office's signers. */
+  signer?: number;
   /** The ISS of the system's report (act by act), when it was used. */
   issFromReport?: string;
   attachmentNames?: string[];
@@ -56,6 +58,8 @@ export interface IssFormOffice {
   funds: { key: string; label: string }[];
   /** May publish the bulletin to the site (Transparência permission). */
   canPublish?: boolean;
+  /** Who may sign (the office's list, the same as the guias'). */
+  signers?: { name: string; title: string }[];
 }
 
 const money = (cents: number | undefined) =>
@@ -309,6 +313,30 @@ export function IssForm({
             />
             Usar o ISS do relatório do sistema (ato a ato)
           </label>
+        </div>
+        <div className="md:col-span-2">
+          <label htmlFor="iss-assina" className={LABEL}>
+            Quem assina
+          </label>
+          <select
+            id="iss-assina"
+            name="assina"
+            defaultValue={String(initial.signer ?? 0)}
+            className={FIELD}
+          >
+            {(office.signers?.length
+              ? office.signers
+              : [{ name: "Titular da serventia", title: "" }]
+            ).map((signer, index) => (
+              <option key={`${signer.name}-${index}`} value={index}>
+                {[signer.name, signer.title].filter(Boolean).join(", ")}
+              </option>
+            ))}
+          </select>
+          <p className="mt-1 text-[11.5px] text-admin-muted">
+            A mesma lista das guias (Guias de transmissão › Leis, alíquotas e
+            quem assina). Vale para a assinatura digital e para a impressa.
+          </p>
         </div>
         <details className="md:col-span-4 rounded-[12px] bg-admin-input-bg px-3.5 py-2.5">
           <summary className="cursor-pointer text-[12.5px] font-semibold text-admin-primary">

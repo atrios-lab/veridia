@@ -43,6 +43,7 @@ test("o PDF declara os emolumentos, ratifica o livro e cita a lei", () => {
       paidOn: "",
       notes: "",
       issCents: null,
+      signer: 0,
     },
     settings,
     year: 2026,
@@ -90,6 +91,7 @@ test("ISS apurado ato a ato no relatório: menor que a alíquota sobre o total",
     notes: "",
     // Fictitious: 10.000 would be 5% of the total; acts without ISS lower it.
     issCents: 9_000,
+    signer: 0,
   };
   assert.equal(issOf(declaration), 9_000);
   assert.equal(issOf({ ...declaration, issCents: null }), 10_000);
@@ -145,6 +147,7 @@ test("site da prefeitura: os campos do DAM prontos para copiar", () => {
       paidOn: "",
       notes: "",
       issCents: 9_000,
+      signer: 0,
     },
     settings,
     year: 2026,
@@ -183,6 +186,7 @@ test("SEMUT: protocolo de entrega com campos para o servidor preencher", () => {
       paidOn: "",
       notes: "",
       issCents: null,
+      signer: 0,
     },
     settings: defaultIssSettings(tenant),
     year: 2026,
@@ -238,4 +242,29 @@ test("CPF ou CNPJ: a pontuação entra sozinha ao digitar e o dígito é conferi
   assert.ok(isValidTaxId(""));
   assert.ok(isValidTaxId("11.222.333/0001-81"));
   assert.ok(!isValidTaxId("11.222.333/0001-82"));
+});
+
+test("quem assina: o escolhido na lista assina e declara, como nas guias", () => {
+  const doc = buildIssDocument(tenant, {
+    declaration: {
+      competence: "2026-10",
+      emolumentsCents: 100_000,
+      rateBasisPoints: 500,
+      damNumber: "",
+      dueDate: "",
+      paidOn: "",
+      notes: "",
+      issCents: null,
+      signer: 1,
+    },
+    settings: defaultIssSettings(tenant),
+    year: 2026,
+    sequence: 9,
+    issuedOn: "2026-11-11",
+    attachments: 0,
+    signer: { name: "Fulana Fictícia", title: "Substituta", note: "" },
+  });
+  assert.equal(doc.signee, "Fulana Fictícia");
+  assert.deepEqual(doc.signature, ["Substituta"]);
+  assert.match(JSON.stringify(doc), /Fulana Fictícia, Substituta da serventia/);
 });

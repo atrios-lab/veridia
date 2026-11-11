@@ -44,8 +44,14 @@ export async function renderAttendanceDeclaration(
   tenant: Tenant,
   appointment: Appointment,
   origin: string,
+  signer?: { name: string; title: string },
 ): Promise<Buffer> {
-  const declaration = attendanceDeclarationFor(tenant, appointment, origin);
+  const declaration = attendanceDeclarationFor(
+    tenant,
+    appointment,
+    origin,
+    signer,
+  );
   return renderDocument(
     declaration.document,
     await brandFor(tenant, declaration.url),

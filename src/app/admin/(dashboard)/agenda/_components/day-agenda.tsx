@@ -63,6 +63,7 @@ export function DaySlotList({
   services,
   modes,
   closed,
+  signers = [],
 }: {
   agenda: string;
   date: string;
@@ -70,6 +71,8 @@ export function DaySlotList({
   services: Array<{ id: string; label: string }>;
   modes: string[];
   closed: boolean;
+  /** Who may sign the office's papers (the guias' list). */
+  signers?: Signer[];
 }) {
   if (rows.length === 0) {
     return (
@@ -92,6 +95,7 @@ export function DaySlotList({
           <AppointmentRow
             key={row.appointment.id}
             appointment={row.appointment}
+            signers={signers}
           />
         ) : (
           <FreeSlotRow
@@ -112,7 +116,18 @@ export function DaySlotList({
   );
 }
 
-function AppointmentRow({ appointment }: { appointment: DayAppointment }) {
+interface Signer {
+  name: string;
+  title: string;
+}
+
+function AppointmentRow({
+  appointment,
+  signers,
+}: {
+  appointment: DayAppointment;
+  signers: Signer[];
+}) {
   const [cancelling, setCancelling] = useState(false);
   const live = appointment.status === "booked";
   const deskBooked = live && appointment.origin === "desk";
@@ -192,7 +207,9 @@ function AppointmentRow({ appointment }: { appointment: DayAppointment }) {
         ) : appointment.status === "attended" ? (
           <span className="col-span-2 flex flex-wrap gap-1.5 @2xl:col-span-1 @2xl:justify-end">
             <ReceiptLink id={appointment.id} />
-            {appointment.canDeclare && <DeclarationLink id={appointment.id} />}
+            {appointment.canDeclare && (
+              <DeclarationLink id={appointment.id} signers={signers} />
+            )}
             <RevertButton id={appointment.id} />
             <RemoveButton
               id={appointment.id}
@@ -493,11 +510,27 @@ function ReceiptLink({ id }: { id: string }) {
  * The attendance declaration: signed digitally through the platform, or
  * printed to sign and stamp at the counter (decision of 11/11/2026).
  */
-function DeclarationLink({ id }: { id: string }) {
-  const pdf = `/admin/agenda/comparecimento/${id}`;
+function DeclarationLink({ id, signers }: { id: string; signers: Signer[] }) {
+  // Who signs, as in the guias: the line under the signature says it, on
+  // the digital and on the printed one alike (decision of 11/11/2026).
+  const [signer, setSigner] = useState(signers.length ? "0" : "");
+  const pdf = `/admin/agenda/comparecimento/${id}${signer ? `?assina=${signer}` : ""}`;
   const sign = signHref(pdf, "Declaração de comparecimento");
   return (
-    <span className="inline-flex flex-wrap gap-1.5">
+    <span className="inline-flex flex-wrap items-center gap-1.5">
+      <select
+        aria-label="Quem assina a declaração"
+        value={signer}
+        onChange={(event) => setSigner(event.target.value)}
+        className="rounded-lg border border-admin-border bg-admin-card px-2 py-1.5 text-[11.5px] text-admin-text"
+      >
+        {signers.map((s, index) => (
+          <option key={`${s.name}-${index}`} value={String(index)}>
+            Assina: {[s.name, s.title].filter(Boolean).join(", ")}
+          </option>
+        ))}
+        <option value="">Assina: quem estiver no balcão</option>
+      </select>
       <a
         href={sign}
         className="rounded-lg bg-admin-primary px-2.5 py-1.5 text-[11.5px] font-semibold text-white"

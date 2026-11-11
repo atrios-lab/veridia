@@ -1254,6 +1254,8 @@ export const issDeclarations = pgTable(
     issCents: bigint("iss_cents", { mode: "number" }).notNull(),
     /** The ISS came worked out act by act from the system's report. */
     issFromReport: boolean("iss_from_report").notNull().default(false),
+    /** Who signs: an index into the office's signers (decision of 11/11/2026). */
+    signer: integer("signer").notNull().default(0),
     damNumber: text("dam_number").notNull().default(""),
     dueDate: text("due_date").notNull().default(""),
     paidOn: text("paid_on").notNull().default(""),

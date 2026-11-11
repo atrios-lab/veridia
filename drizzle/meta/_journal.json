@@ -386,6 +386,13 @@
       "when": 1794413267054,
       "tag": "0054_boletim_excluido",
       "breakpoints": true
+    },
+    {
+      "idx": 55,
+      "version": "7",
+      "when": 1794414623940,
+      "tag": "0055_iss_quem_assina",
+      "breakpoints": true
     }
   ]
 }
