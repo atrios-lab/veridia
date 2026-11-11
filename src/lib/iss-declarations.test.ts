@@ -38,6 +38,7 @@ const input = (competence: string, emolumentsCents: number) => ({
   paidOn: "",
   notes: "",
   issCents: null,
+  signer: 0,
 });
 
 before(async () => {

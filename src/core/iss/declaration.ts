@@ -219,6 +219,8 @@ export const IssDeclarationSchema = z.object({
     .max(100_000_000_00)
     .nullable()
     .default(null),
+  /** Who signs: an index into the office's signers (0, the first). */
+  signer: z.number().int().min(0).max(50).default(0),
 });
 export type IssDeclarationInput = z.infer<typeof IssDeclarationSchema>;
 
@@ -329,6 +331,11 @@ export interface IssDocumentInput {
   issuedOn: string;
   /** How many papers go attached: the book, the system's reports. */
   attachments: number;
+  /**
+   * Who signs, from the office's list (the same as the guias'); absent,
+   * the holder (decision of 11/11/2026).
+   */
+  signer?: { name: string; title: string; note?: string };
 }
 
 /**
@@ -354,6 +361,12 @@ export function buildIssDocument(
   const number = formatDeclarationNumber(input.year, input.sequence);
   const office = officialName(tenant);
   const holder = holderName(tenant);
+  const signer = input.signer?.name.trim()
+    ? input.signer
+    : holder
+      ? { name: holder, title: tenant.holderTitle ?? "Tabelião/Registrador" }
+      : undefined;
+  const isHolder = !input.signer || input.signer.name.trim() === holder;
 
   const provider = [
     { label: "Serventia", value: office },
@@ -409,7 +422,7 @@ export function buildIssDocument(
   ];
 
   const declarationText = [
-    `${holder ? `${holder}, na qualidade de responsável pela serventia ` : "A serventia "}${office}, DECLARA, para fins de apuração e recolhimento do Imposto Sobre Serviços de Qualquer Natureza (ISSQN), que a receita de emolumentos da serventia na competência de ${month} foi de ${money(d.emolumentsCents)}, conforme a produtividade mensal escriturada no Livro Diário Auxiliar da Receita e da Despesa ${attached}.`,
+    `${signer ? (isHolder ? `${signer.name}, na qualidade de responsável pela serventia ` : `${signer.name}, ${signer.title.trim() || "preposto(a)"} da serventia `) : "A serventia "}${office}, DECLARA, para fins de apuração e recolhimento do Imposto Sobre Serviços de Qualquer Natureza (ISSQN), que a receita de emolumentos da serventia na competência de ${month} foi de ${money(d.emolumentsCents)}, conforme a produtividade mensal escriturada no Livro Diário Auxiliar da Receita e da Despesa ${attached}.`,
     `${byAct ? `Aplicada a alíquota de ${formatRate(d.rateBasisPoints)} sobre os emolumentos de cada ato, conforme o relatório de valores tributários do sistema da serventia, o ISS devido é de ${money(iss)}${iss < issOn(d.emolumentsCents, d.rateBasisPoints) ? ", não compondo o imposto os atos sem incidência assim apontados no relatório" : ""}` : `Aplicada a alíquota de ${formatRate(d.rateBasisPoints)}, o ISS devido é de ${money(iss)}`}${d.paidOn ? `, recolhido em ${date(d.paidOn)}` : ""}${d.damNumber.trim() ? ` (DAM/guia nº ${d.damNumber.trim()})` : ""}.`,
     "A base de cálculo compreende exclusivamente os emolumentos, que são o preço do serviço notarial e de registro.",
   ];
@@ -442,8 +455,11 @@ export function buildIssDocument(
     office: [office, tenant.subtitle],
     sections,
     dateLine: `${tenant.location.city}/${tenant.location.state}, ${writtenDate(input.issuedOn)}.`,
-    signee: holder || undefined,
-    signature: [tenant.holderTitle ?? "Tabelião/Registrador"],
+    signee: signer?.name || undefined,
+    signature: [
+      signer?.title || tenant.holderTitle || "Tabelião/Registrador",
+      ...(input.signer?.note?.trim() ? [input.signer.note.trim()] : []),
+    ],
     footer: `${office} · Declaração de ISS nº ${number} · ${tenant.legalFooter}`,
   };
 }

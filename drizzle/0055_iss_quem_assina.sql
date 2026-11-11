@@ -1,0 +1,1 @@
+ALTER TABLE "iss_declarations" ADD COLUMN "signer" integer DEFAULT 0 NOT NULL;

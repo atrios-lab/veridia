@@ -8,6 +8,7 @@ import {
   renderIssReceiptPdf,
 } from "@/lib/iss-declarations.ts";
 import { getSession } from "@/lib/session.ts";
+import { getGuideSettings } from "@/lib/tax-guides.ts";
 import { getTenant } from "@/lib/tenant.ts";
 
 export const runtime = "nodejs";
@@ -34,7 +35,12 @@ export async function GET(
   const settings = await getIssSettings(tenant);
   const pdf = receipt
     ? await renderIssReceiptPdf(tenant, row, settings)
-    : await renderIssDeclarationPdf(tenant, row, settings);
+    : await renderIssDeclarationPdf(
+        tenant,
+        row,
+        settings,
+        (await getGuideSettings(tenant)).signers,
+      );
   const name = issFileName(row.competence);
   return new Response(new Uint8Array(pdf), {
     headers: {

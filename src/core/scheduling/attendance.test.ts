@@ -72,3 +72,27 @@ test("the purpose of the visit stays off the declaration", () => {
   assert.doesNotMatch(text, /divórcio|testamento|inventário|serviço/i);
   assert.equal(writtenDate("2026-03-01"), "1 de março de 2026");
 });
+
+test("quem assina a declaração de comparecimento: o escolhido, ou a linha do balcão", () => {
+  const base = {
+    citizenName: "Maria Souza",
+    cpf: null,
+    date: "2026-11-06",
+    slotTime: "09:00",
+    protocolNumber: null,
+    issuedOn: "2026-11-09",
+    siteDomain: "cartorio.exemplo",
+    validationCode: "XYZ",
+  };
+  const chosen = buildAttendanceDeclaration(tenant, {
+    ...base,
+    signer: { name: "Fulano Fictício", title: "Escrevente autorizado" },
+  });
+  assert.equal(chosen.signee, "Fulano Fictício");
+  assert.deepEqual(chosen.signature, [
+    "Escrevente autorizado",
+    "(assinatura e carimbo)",
+  ]);
+  const counter = buildAttendanceDeclaration(tenant, base);
+  assert.equal(counter.signee, ATTENDANCE_SIGNEE);
+});
