@@ -26,6 +26,8 @@ import {
   MessageError,
   type MessageView,
   markReadWith,
+  type OnlinePerson,
+  onlineNowWith,
   openDirectWith,
   requestLunchWith,
   returnFromLunchWith,
@@ -288,6 +290,8 @@ export async function pollInbox(sinceIso: string): Promise<
     latest: (Omit<Incoming, "createdAt"> & { createdAt: string }) | null;
     unread: number;
     now: string;
+    /** Who is online now: a new name shows "acabou de entrar". */
+    online: OnlinePerson[];
   }>
 > {
   const access = await messengerAccess();
@@ -302,11 +306,14 @@ export async function pollInbox(sinceIso: string): Promise<
     );
   }
   const since = new Date(sinceIso);
-  const { incoming, unread, latest } = await inboxWith(
-    db,
-    access.session.user.id,
-    Number.isNaN(since.getTime()) ? now : since,
-  );
+  const [{ incoming, unread, latest }, online] = await Promise.all([
+    inboxWith(
+      db,
+      access.session.user.id,
+      Number.isNaN(since.getTime()) ? now : since,
+    ),
+    onlineNowWith(db, access.tenant.slug, access.session.user.id, now),
+  ]);
   return {
     ok: true,
     data: {
@@ -315,6 +322,7 @@ export async function pollInbox(sinceIso: string): Promise<
         ? { ...latest, createdAt: latest.createdAt.toISOString() }
         : null,
       now: now.toISOString(),
+      online,
       incoming: incoming.map((i) => ({
         ...i,
         createdAt: i.createdAt.toISOString(),
