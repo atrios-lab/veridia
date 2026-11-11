@@ -171,55 +171,54 @@ function MiniChat({
         ref={list}
         className="min-h-0 flex-1 overflow-y-auto bg-msg-pane px-3 py-2"
       >
-        {messages.map((message) => {
-          const mine = message.senderId !== caller.senderId;
-          const href = `/admin/mensagens/arquivo/${message.id}`;
-          return message.kind === "chamar" ? (
-            <p
-              key={message.id}
-              className="my-1.5 text-center text-[11.5px] font-semibold italic text-msg-busy"
-            >
-              *** {mine ? "Você" : message.senderName} chamou a atenção! ***
-            </p>
-          ) : (
-            <div
-              key={message.id}
-              className={`my-1.5 rounded-[10px] px-2.5 py-1.5 text-[12.5px] ${mine ? "ml-6 bg-msg-mine" : "mr-6 bg-admin-card"}`}
-            >
-              <p className="text-[11px] text-admin-muted">
-                <strong className="text-admin-primary">
-                  {mine ? "Você" : message.senderName}
-                </strong>{" "}
-                · {time(message.createdAt)}
-                {message.editedAt && !message.deleted && <em> · editada</em>}
+        {messages
+          .filter((m) => !m.deleted)
+          .map((message) => {
+            const mine = message.senderId !== caller.senderId;
+            const href = `/admin/mensagens/arquivo/${message.id}`;
+            return message.kind === "chamar" ? (
+              <p
+                key={message.id}
+                className="my-1.5 text-center text-[11.5px] font-semibold italic text-msg-busy"
+              >
+                *** {mine ? "Você" : message.senderName} chamou a atenção! ***
               </p>
-              {message.deleted ? (
-                <p className="italic text-admin-muted">🚫 Mensagem apagada</p>
-              ) : message.kind === "texto" ? (
-                <p className="whitespace-pre-wrap text-admin-text [overflow-wrap:anywhere]">
-                  {message.body}
+            ) : (
+              <div
+                key={message.id}
+                className={`my-1.5 rounded-[10px] px-2.5 py-1.5 text-[12.5px] ${mine ? "ml-6 bg-msg-mine" : "mr-6 bg-admin-card"}`}
+              >
+                <p className="text-[11px] text-admin-muted">
+                  <strong className="text-admin-primary">
+                    {mine ? "Você" : message.senderName}
+                  </strong>{" "}
+                  · {time(message.createdAt)}
                 </p>
-              ) : message.kind === "audio" ? (
-                // biome-ignore lint/a11y/useMediaCaption: a voice note between colleagues has no caption track
-                <audio
-                  controls
-                  preload="none"
-                  src={href}
-                  className="mt-1 h-9 w-full"
-                />
-              ) : (
-                <a
-                  href={href}
-                  target="_blank"
-                  rel="noopener"
-                  className="font-semibold text-admin-primary underline [overflow-wrap:anywhere]"
-                >
-                  📎 {message.fileName}
-                </a>
-              )}
-            </div>
-          );
-        })}
+                {message.kind === "texto" ? (
+                  <p className="whitespace-pre-wrap text-admin-text [overflow-wrap:anywhere]">
+                    {message.body}
+                  </p>
+                ) : message.kind === "audio" ? (
+                  // biome-ignore lint/a11y/useMediaCaption: a voice note between colleagues has no caption track
+                  <audio
+                    controls
+                    preload="none"
+                    src={href}
+                    className="mt-1 h-9 w-full"
+                  />
+                ) : (
+                  <a
+                    href={href}
+                    target="_blank"
+                    rel="noopener"
+                    className="font-semibold text-admin-primary underline [overflow-wrap:anywhere]"
+                  >
+                    📎 {message.fileName}
+                  </a>
+                )}
+              </div>
+            );
+          })}
       </div>
       <div className="border-t border-admin-border p-2">
         <div className="mb-1.5 flex items-center gap-1">

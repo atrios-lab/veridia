@@ -348,6 +348,9 @@ export function Messenger({
   soundOn.current = me.sound;
 
   const partner = contacts.find((c) => c.userId === active?.withUserId);
+  // A deleted message leaves the conversation for both people; the record
+  // stays for the holder's oversight, without telling anyone.
+  const shown = messages.filter((m) => !m.deleted);
 
   const ring = useCallback((nudge: boolean) => {
     if (nudge) {
@@ -863,8 +866,7 @@ export function Messenger({
                   </p>
                   <p className="mt-0.5">
                     As mensagens somem só da sua tela. {partner.name} continua
-                    com o histórico, e o Tabelião/Registrador também. O ato fica
-                    registrado na auditoria.
+                    com o histórico.
                   </p>
                   <div className="mt-1.5 flex gap-2">
                     <button
@@ -894,12 +896,12 @@ export function Messenger({
                 ref={listRef}
                 className="min-h-0 flex-1 overflow-y-auto px-4 py-3"
               >
-                {messages.length === 0 && (
+                {shown.length === 0 && (
                   <p className="py-6 text-center text-[12.5px] text-admin-muted">
                     Comece a conversa.
                   </p>
                 )}
-                {messages.map((message) => {
+                {shown.map((message) => {
                   const day = formatDay(message.createdAt);
                   const showDay = day !== lastDay;
                   lastDay = day;
@@ -930,11 +932,6 @@ export function Messenger({
                               <span className="text-admin-faint">
                                 ({formatTime(message.createdAt)})
                               </span>
-                              {message.editedAt && !message.deleted && (
-                                <span className="ml-1 text-[11px] italic text-admin-muted">
-                                  (editada)
-                                </span>
-                              )}
                             </p>
                             {mine &&
                               !message.deleted &&
@@ -969,11 +966,7 @@ export function Messenger({
                               )}
                           </div>
                           <div className="pl-3">
-                            {message.deleted ? (
-                              <p className="text-[12.5px] italic text-admin-muted">
-                                🚫 Mensagem apagada
-                              </p>
-                            ) : editing?.id === message.id ? (
+                            {editing?.id === message.id ? (
                               <div className="mt-1">
                                 <textarea
                                   aria-label="Editar mensagem"
@@ -1015,11 +1008,6 @@ export function Messenger({
                                   >
                                     Cancelar
                                   </button>
-                                  <span className="text-[11px] text-admin-muted">
-                                    Aparece como &quot;editada&quot;. O texto
-                                    original fica guardado para o
-                                    Tabelião/Registrador.
-                                  </span>
                                 </div>
                               </div>
                             ) : (
@@ -1031,10 +1019,8 @@ export function Messenger({
                                   Apagar esta mensagem para os dois?
                                 </p>
                                 <p className="mt-0.5">
-                                  No lugar dela aparece &quot;Mensagem
-                                  apagada&quot;. O conteúdo continua guardado
-                                  para o Tabelião/Registrador, e o ato vai para
-                                  a auditoria.
+                                  Ela some da conversa para você e para{" "}
+                                  {partner.name}.
                                 </p>
                                 <div className="mt-1.5 flex gap-2">
                                   <button

@@ -73,14 +73,16 @@ A migração `0044_mensagens_internas.sql` só cria `messenger_profiles`, `messe
 Nada disso apaga dados do banco. Tudo fica guardado para a supervisão do
 Tabelião/Registrador e vai para a auditoria.
 
-- **Editar**: só o autor, só mensagem de texto. A mensagem passa a mostrar
-  "(editada)". Na supervisão aparece a data da edição e o texto original
-  (coluna `original_body`).
-- **Apagar**: só o autor. Para as duas pessoas, no lugar da mensagem aparece
-  "Mensagem apagada", e um arquivo apagado deixa de abrir no chat. Na
-  supervisão, a mensagem continua visível com a marca "Apagada pelo autor"
-  (colunas `deleted_at` e `deleted_by`). Fica na faixa "Análise" da
-  auditoria.
+- **Editar**: só o autor, só mensagem de texto. O texto muda para as duas
+  pessoas, sem marca na tela delas. Na supervisão aparecem a data da edição
+  e o texto original (coluna `original_body`).
+- **Apagar**: só o autor. A mensagem some da conversa para as duas pessoas,
+  e um arquivo apagado deixa de abrir no chat. Na supervisão, a mensagem
+  continua visível com a marca "Apagada pelo autor" (colunas `deleted_at` e
+  `deleted_by`). O ato fica na faixa "Análise" da auditoria.
+- Os usuários não recebem aviso de que a auditoria e a supervisão guardam
+  essas mensagens (decisão de 11/11/2026). O aviso geral de que o
+  Tabelião/Registrador pode ler as conversas continua na tela.
 - **Limpar conversa**: some só para quem limpou (coluna `cleared_at` em
   `messenger_members`). A outra pessoa e o Tabelião/Registrador continuam
   com todo o histórico. Mensagens novas aparecem normalmente.
