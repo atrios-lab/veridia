@@ -46,6 +46,10 @@ export const OFFICE_BULLETIN_KEY = "office-bulletin";
 export const OFFICE_HOLIDAYS_KEY = "office-holidays";
 export const OFFICE_IDENTIFICATION_KEY = "office-identification";
 export const OFFICE_GUIDES_KEY = "office-tax-guides";
+/** Declaração de ISS: rate, law, the office's CNPJ, the law attached. */
+export const OFFICE_ISS_KEY = "office-iss";
+/** ISS declared for a month whose bulletin is not published yet. */
+export const OFFICE_ISS_BULLETIN_KEY = "office-iss-bulletin";
 export const OFFICE_ALERTS_KEY = "office-alerts";
 /** Per user: where the access code goes, and saved computers (lib/access-settings.ts). */
 export const OFFICE_ACCESS_KEY = "office-access-codes";

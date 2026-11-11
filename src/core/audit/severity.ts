@@ -70,6 +70,9 @@ const EXACT: Record<string, AuditLevel> = {
   "appointment.correct": "atencao",
   "appointment.revert": "atencao",
   "tax-guide.update": "atencao",
+  // The month's ISS to the tax office: values the fisco relies on.
+  "iss-declaration.update": "atencao",
+  "transparency.bulletin.iss": "analise",
   "tax-guide.renumber": "atencao",
   "office-settings.role-permissions": "atencao",
   "signing-certificate.disable": "atencao",

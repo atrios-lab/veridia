@@ -437,6 +437,28 @@ export async function renderQr(
  * drawn, so those pages are buffered and their footers written in a final
  * pass. A file is one kind or the other; the routes never mix them.
  */
+/**
+ * Runs `draw` and puts the font, size and colour back as they were: what
+ * pdfkit draws on `pageAdded` happens in the middle of a paragraph that
+ * overflowed, and that paragraph carries on in the current type.
+ */
+function keepingType(pdf: PDFKit.PDFDocument, draw: () => void): void {
+  const state = pdf as unknown as {
+    _font: unknown;
+    _fontSize: number;
+    _fillColor: unknown;
+  };
+  const saved = {
+    font: state._font,
+    size: state._fontSize,
+    fill: state._fillColor,
+  };
+  draw();
+  state._font = saved.font;
+  state._fontSize = saved.size;
+  state._fillColor = saved.fill;
+}
+
 export async function renderDocuments(
   documents: (RequerimentoDocument | DeclaracaoDocument)[],
   brand: DocumentBrand,
@@ -472,7 +494,12 @@ export async function renderDocuments(
 
   let currentOffice: readonly string[] = [];
   pdf.on("pageAdded", () => {
-    if (!forms) drawFooter(pdf, currentFooter, brand, currentOffice);
+    // A paragraph that overflows goes on, on the new page, in the type it
+    // was set in: the footer drawn here must not leave its 9 pt behind.
+    if (!forms)
+      keepingType(pdf, () =>
+        drawFooter(pdf, currentFooter, brand, currentOffice),
+      );
     pdf.x = MARGIN;
     pdf.y = MARGIN;
   });
@@ -543,7 +570,9 @@ export async function renderBulletin(
     pdf.on("end", () => resolve(Buffer.concat(chunks)));
   });
   pdf.on("pageAdded", () => {
-    drawFooter(pdf, document.footer, brand, document.office);
+    keepingType(pdf, () =>
+      drawFooter(pdf, document.footer, brand, document.office),
+    );
     pdf.x = MARGIN;
     pdf.y = MARGIN;
   });

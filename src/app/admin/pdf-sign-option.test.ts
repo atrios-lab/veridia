@@ -15,6 +15,7 @@ const OFFERS_DIGITAL_SIGNATURE = new Set([
   "(dashboard)/agenda/comprovante/[id]",
   "(dashboard)/utilitarios/guias/[id]/arquivo",
   "(dashboard)/utilitarios/guias/ano/[ano]",
+  "(dashboard)/utilitarios/iss/[id]/arquivo",
   // Signed on its own screen (Auditoria › notificação › assinar).
   "(dashboard)/auditoria/notificacao/[id]/pdf",
 ]);
@@ -34,6 +35,7 @@ const NOT_SIGNED_BY_THE_OFFICE: Record<string, string> = {
   "(dashboard)/transparencia/documento": "arquivo enviado, não gerado",
   "(dashboard)/adequacao/anexo": "arquivo enviado, não gerado",
   "(dashboard)/mensagens/arquivo/[id]": "arquivo do chat, não gerado",
+  "(dashboard)/utilitarios/iss/lei": "lei municipal anexada, não gerada",
 };
 
 const ROOT = new URL(".", import.meta.url).pathname;
