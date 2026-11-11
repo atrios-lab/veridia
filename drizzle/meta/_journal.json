@@ -302,6 +302,13 @@
       "when": 1794363323767,
       "tag": "0042_retirar_documento_assinado",
       "breakpoints": true
+    },
+    {
+      "idx": 43,
+      "version": "7",
+      "when": 1794364282034,
+      "tag": "0043_auditoria_niveis_e_justificativa",
+      "breakpoints": true
     }
   ]
 }

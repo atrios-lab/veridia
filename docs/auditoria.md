@@ -10,6 +10,27 @@
 
 A trilha vem da tabela `audit_log`, que nunca é alterada. As anotações ficam à parte, em `audit_notes`.
 
+## Faixas: Urgente, Atenção e Análise
+
+Cada ato da trilha cai numa faixa (`src/core/audit/severity.ts`):
+
+| Faixa | O que entra | O que acontece |
+| --- | --- | --- |
+| Urgente | Toda exclusão (protocolo, anexo, exigência, guia, publicação, documento, conta), chave Pix, criar, reativar ou desativar conta, troca de e-mail, link de nova senha, certificado digital, acesso a outra serventia, duas etapas desligada | Aviso vermelho em todas as telas do Tabelião/Registrador até ele marcar como verificado (atos dos últimos 30 dias, menos os dele mesmo) |
+| Atenção | Valor, prazo, gratuidade, nova chave de acesso, correção e número de guia, permissões dos cargos, tabela de emolumentos, edição de conta | Destaque amarelo e contagem por pessoa |
+| Análise | Publicações, transparência, configurações, identidade visual, encarregado, agenda | Destaque discreto, para revisar com calma |
+| Rotina | Entradas no painel e atos do dia a dia | Sem destaque |
+
+Um ato novo cujo código termine em `delete`, `remove` ou `detach` cai em Urgente sem que ninguém precise lembrar
+desta lista.
+
+## Justificativa em toda exclusão
+
+Toda confirmação de exclusão (e de desativar, arquivar, renumerar) pede uma justificativa de pelo menos 10
+letras e avisa: "Este ato vai para a auditoria. O Tabelião/Registrador verá o que foi feito, por quem, quando e
+a sua justificativa." O servidor recusa o ato sem justificativa (`justify()` em `src/lib/audit-reason.ts`), e
+o texto fica na coluna `reason` do registro.
+
 ## O que o Tabelião/Registrador faz
 
 1. Filtra a trilha por pessoa, período ou texto (protocolo, ação).
@@ -45,4 +66,5 @@ regimento interno, cite-o também.
 
 ## Banco
 
-A migração `0041_auditoria_e_notificacoes.sql` só cria tabelas. Ela não apaga nem altera nada.
+As migrações `0041_auditoria_e_notificacoes.sql` e `0043_auditoria_niveis_e_justificativa.sql` só criam
+tabelas (`audit_reviews`) e acrescentam colunas (`audit_log.reason`). Não apagam nem alteram nada.

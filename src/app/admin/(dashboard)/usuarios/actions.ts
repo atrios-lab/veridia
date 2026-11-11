@@ -17,6 +17,7 @@ import {
 } from "@/db/auth-schema.ts";
 import { db } from "@/db/index.ts";
 import { recordAudit } from "@/lib/audit.ts";
+import { justify } from "@/lib/audit-reason.ts";
 import { auth } from "@/lib/auth.ts";
 import {
   buildConfirmEmailUrl,
@@ -337,6 +338,9 @@ export async function deactivateAccount(
   _previous: AccountActionState,
   formData: FormData,
 ): Promise<AccountActionState> {
+  // Sensitive: says why, and the reason goes to the audit.
+  const why = justify(formData);
+  if (why) return { status: "error", message: why };
   const userId = String(formData.get("userId") ?? "");
   const session = await getSession();
   if (
@@ -656,6 +660,9 @@ export async function deleteAccount(
   _previous: AccountActionState,
   formData: FormData,
 ): Promise<AccountActionState> {
+  // Sensitive: says why, and the reason goes to the audit.
+  const why = justify(formData);
+  if (why) return { status: "error", message: why };
   const userId = String(formData.get("userId") ?? "");
   const session = await getSession();
   if (

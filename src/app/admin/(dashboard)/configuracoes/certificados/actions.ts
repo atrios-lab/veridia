@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { can } from "@/core/auth/roles.ts";
 import { db } from "@/db/index.ts";
+import { justify } from "@/lib/audit-reason.ts";
 import { getSession } from "@/lib/session.ts";
 import {
   CertificateFileError,
@@ -114,6 +115,9 @@ export async function disableCertificate(
   _previous: CertificateState,
   formData: FormData,
 ): Promise<CertificateState> {
+  // Sensitive: says why, and the reason goes to the audit.
+  const why = justify(formData);
+  if (why) return { status: "error", message: why };
   const session = await admin();
   if (!session) return { status: "error", message: NO_PERMISSION };
   const tenant = await getTenant();

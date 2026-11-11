@@ -5,7 +5,10 @@ import { can } from "@/core/auth/roles.ts";
 import { db } from "@/db/index.ts";
 import { sendDueRemindersInBackground } from "@/lib/appointment-reminders.ts";
 import { bookedCountFrom } from "@/lib/appointments.ts";
-import { openNotificationCountWith } from "@/lib/audit-trail.ts";
+import {
+  openNotificationCountWith,
+  pendingUrgentCountWith,
+} from "@/lib/audit-trail.ts";
 import { waitingCount } from "@/lib/chat.ts";
 import { openGuideRequestCount } from "@/lib/guide-requests.ts";
 import { getOfficeAlerts } from "@/lib/office-alerts.ts";
@@ -25,6 +28,7 @@ import { RecordAlerts } from "../_components/record-alerts.tsx";
 import { ShortcutListener } from "../_components/shortcut-listener.tsx";
 import { AdminSidebar } from "../_components/sidebar.tsx";
 import { ADMIN_MENU_ID, AdminTopBar } from "../_components/top-bar.tsx";
+import { UrgentAuditBanner } from "../_components/urgent-audit-banner.tsx";
 
 // The protected skeleton. The check runs on every request and hits the
 // database, so a session revoked there is gone on the next navigation.
@@ -61,13 +65,20 @@ export default async function DashboardLayout({
   const alerts = await getOfficeAlerts(tenant.slug);
   // Only queried when the item is actually offered: the badge is a courtesy
   // on top of a link that is itself hidden without the permission.
+  // Urgent acts the Tabelião/Registrador has not marked as seen yet: the
+  // alert stays on every screen until he does (decision of 11/11/2026).
+  const urgentPending = can(role, "audit.manage", granted)
+    ? await pendingUrgentCountWith(db, tenant.slug, session.user.id).catch(
+        () => 0,
+      )
+    : 0;
   const counts: Record<string, number> = {
-    // Notifications of the audit waiting for this person's answer.
-    "/admin/auditoria": await openNotificationCountWith(
-      db,
-      tenant.slug,
-      session.user.id,
-    ).catch(() => 0),
+    // Notifications of the audit waiting for this person's answer, and the
+    // urgent acts waiting for the holder's look.
+    "/admin/auditoria":
+      (await openNotificationCountWith(db, tenant.slug, session.user.id).catch(
+        () => 0,
+      )) + urgentPending,
     ...(can(role, "requests.manage", granted)
       ? {
           "/admin/pedidos": await openRequestCount(tenant.slug),
@@ -175,6 +186,7 @@ export default async function DashboardLayout({
         */}
         <div className="scrollbar-hidden relative flex min-h-0 min-w-0 flex-1 flex-col overflow-y-auto">
           <AdminTopBar user={user} />
+          {urgentPending > 0 && <UrgentAuditBanner count={urgentPending} />}
           {children}
           {/* Every screen, not only the queue: the attendant hears and sees
               the chat wherever they are working in the panel. */}

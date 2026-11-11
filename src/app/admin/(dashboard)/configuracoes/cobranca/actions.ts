@@ -9,6 +9,7 @@ import { normalizePixKey } from "@/core/tenant/pix.ts";
 import { db } from "@/db/index.ts";
 import { tenantContent } from "@/db/schema.ts";
 import { recordAudit } from "@/lib/audit.ts";
+import { justify } from "@/lib/audit-reason.ts";
 import { getSession } from "@/lib/session.ts";
 import { getTenant, OFFICE_PIX_KEY } from "@/lib/tenant.ts";
 
@@ -126,8 +127,11 @@ export async function savePixKey(
 
 export async function removePixKey(
   _previous: PixKeyState,
-  _formData: FormData,
+  formData: FormData,
 ): Promise<PixKeyState> {
+  // Sensitive: says why, and the reason goes to the audit.
+  const why = justify(formData);
+  if (why) return fail(why, { type: "", key: "" });
   const session = await getSession();
   if (
     !session ||

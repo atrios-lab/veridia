@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { can } from "@/core/auth/roles.ts";
+import { justify } from "@/lib/audit-reason.ts";
 import { deactivateServiceRequests } from "@/lib/service-request.ts";
 import { getSession } from "@/lib/session.ts";
 import { getTenant } from "@/lib/tenant.ts";
@@ -19,6 +20,9 @@ export async function deactivateServiceRequestsAction(
   _previous: BulkActionState,
   formData: FormData,
 ): Promise<BulkActionState> {
+  // Sensitive: says why, and the reason goes to the audit.
+  const why = justify(formData);
+  if (why) return { status: "error", message: why };
   const session = await getSession();
   if (
     !session ||

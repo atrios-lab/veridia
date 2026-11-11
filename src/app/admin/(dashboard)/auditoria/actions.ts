@@ -22,6 +22,7 @@ import {
   findNotificationWith,
   listAuditWith,
   markNotificationEmailedWith,
+  markReviewedWith,
   NotificationError,
   setNotificationSignedWith,
 } from "@/lib/audit-trail.ts";
@@ -37,6 +38,32 @@ export type AuditState =
   | { status: "error"; message: string };
 
 const DENIED: AuditState = { status: "error", message: "Sem permissão." };
+
+/** Marks urgent acts as seen: the panel's alert for them ends. */
+export async function markReviewed(
+  _previous: AuditState,
+  formData: FormData,
+): Promise<AuditState> {
+  const access = await auditAccess();
+  if (!access?.manager) return DENIED;
+  const ids = formData.getAll("ids").map(String);
+  const done = await markReviewedWith(
+    db,
+    access.platform ? "all" : [access.tenant.slug],
+    ids,
+    access.session.user.id,
+  );
+  revalidatePath("/admin", "layout");
+  return {
+    status: "saved",
+    message:
+      done === 1
+        ? "Marcado como verificado."
+        : done
+          ? `${done} atos marcados como verificados.`
+          : "Esses atos já estavam verificados.",
+  };
+}
 
 export async function addNote(
   _previous: AuditState,

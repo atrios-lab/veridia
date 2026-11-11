@@ -5,6 +5,7 @@ import { redirect } from "next/navigation";
 import { can } from "@/core/auth/roles.ts";
 import { parseAnswer, progress } from "@/core/compliance/answers.ts";
 import { findSection, SECTIONS } from "@/core/compliance/sections.ts";
+import { justify } from "@/lib/audit-reason.ts";
 import {
   addAttachments,
   loadIntake,
@@ -197,6 +198,9 @@ export async function deleteAttachmentAction(
   _previous: AttachmentState,
   formData: FormData,
 ): Promise<AttachmentState> {
+  // Sensitive: says why, and the reason goes to the audit.
+  const why = justify(formData);
+  if (why) return { status: "error", message: why };
   const auth = await authorize();
   if (!auth) return { status: "error", message: NO_PERMISSION };
 

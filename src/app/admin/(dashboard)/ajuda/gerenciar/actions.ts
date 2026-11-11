@@ -19,6 +19,7 @@ import {
   tutorialFormSchema,
 } from "@/core/tutorials/video.ts";
 import { db } from "@/db/index.ts";
+import { justify } from "@/lib/audit-reason.ts";
 import {
   createCourse,
   deleteCourse,
@@ -294,6 +295,9 @@ export async function deleteTutorialAction(
   _previous: TutorialActionState,
   formData: FormData,
 ): Promise<TutorialActionState> {
+  // Sensitive: says why, and the reason goes to the audit.
+  const why = justify(formData);
+  if (why) return { status: "error", message: why };
   const id = String(formData.get("id") ?? "");
   return simple(async (actorId) => {
     const orphaned = await deleteTutorial(id, actorId);
@@ -428,6 +432,9 @@ export async function deleteCourseAction(
   _previous: TutorialActionState,
   formData: FormData,
 ): Promise<TutorialActionState> {
+  // Sensitive: says why, and the reason goes to the audit.
+  const why = justify(formData);
+  if (why) return { status: "error", message: why };
   const actorId = await requireManager();
   if (!actorId) return { status: "error", message: NOT_ALLOWED };
   const id = String(formData.get("id") ?? "");
@@ -553,6 +560,9 @@ export async function deleteQuestionAction(
   _previous: TutorialActionState,
   formData: FormData,
 ): Promise<TutorialActionState> {
+  // Sensitive: says why, and the reason goes to the audit.
+  const why = justify(formData);
+  if (why) return { status: "error", message: why };
   const actorId = await requireManager();
   if (!actorId) return { status: "error", message: NOT_ALLOWED };
   const id = String(formData.get("id") ?? "");

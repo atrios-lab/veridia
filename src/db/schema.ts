@@ -75,6 +75,8 @@ export const auditLog = pgTable(
     action: text("action").notNull(),
     targetType: text("target_type").notNull(),
     targetId: text("target_id"),
+    /** Why, for a sensitive act (an exclusion): typed by its author. */
+    reason: text("reason"),
     createdAt: timestamp("created_at", { withTimezone: true })
       .notNull()
       .defaultNow(),
@@ -1429,4 +1431,24 @@ export const auditNotificationFiles = pgTable(
       .defaultNow(),
   },
   (t) => [index("audit_notification_files_notification").on(t.notificationId)],
+);
+
+/**
+ * The Tabelião/Registrador saw an urgent act (decision of 11/11/2026): the
+ * panel's alert for it ends. One per entry; the entry itself never changes.
+ */
+export const auditReviews = pgTable(
+  "audit_reviews",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    tenantSlug,
+    auditId: uuid("audit_id")
+      .notNull()
+      .references(() => auditLog.id),
+    reviewedBy: text("reviewed_by").notNull(),
+    reviewedAt: timestamp("reviewed_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (t) => [uniqueIndex("audit_reviews_audit").on(t.auditId)],
 );

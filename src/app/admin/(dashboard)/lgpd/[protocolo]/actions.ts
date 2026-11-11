@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { can } from "@/core/auth/roles.ts";
+import { justify } from "@/lib/audit-reason.ts";
 import { notifyCitizen } from "@/lib/email/service-request.ts";
 import {
   AttachmentInUseError,
@@ -151,6 +152,9 @@ export async function deleteAttachmentAction(
   _previous: ActionState,
   formData: FormData,
 ): Promise<ActionState> {
+  // Sensitive: says why, and the reason goes to the audit.
+  const why = justify(formData);
+  if (why) return { status: "error", message: why };
   const session = await authorize();
   if (!session) return { status: "error", message: NO_PERMISSION };
 

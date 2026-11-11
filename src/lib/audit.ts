@@ -1,6 +1,7 @@
 import "server-only";
 import { type Database, db } from "../db/index.ts";
 import { auditLog } from "../db/schema.ts";
+import { currentJustification } from "./audit-reason.ts";
 
 export interface AuditEntry {
   tenantSlug: string;
@@ -10,10 +11,13 @@ export interface AuditEntry {
   action: string;
   targetType: string;
   targetId?: string | null;
+  /** Why, when the act asked for it; the request's justification otherwise. */
+  reason?: string | null;
 }
 
 /**
- * Records actor, action, target and date. Nothing else goes in: no password,
+ * Records actor, action, target, date and, for a sensitive act, the
+ * justification its author typed. Nothing else goes in: no password,
  * no token, no document body. A trail that carries payloads is a second copy
  * of the data to leak, and it is the copy nobody remembers to protect.
  */
@@ -27,6 +31,7 @@ export async function recordAuditWith(
     action: entry.action,
     targetType: entry.targetType,
     targetId: entry.targetId ?? null,
+    reason: entry.reason ?? currentJustification() ?? null,
   });
 }
 
