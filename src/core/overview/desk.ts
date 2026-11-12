@@ -134,6 +134,9 @@ function displayName(item: DeskItemInput): string {
 function defaultSummary(item: DeskItemInput): string {
   switch (item.kind) {
     case "service-request":
+      if (item.status === "awaiting-signed-form") {
+        return "Requerimento a punho a conferir";
+      }
       return item.status === "payment-reported"
         ? "Comprovante de pagamento a conferir"
         : item.status === "in-review"
@@ -158,6 +161,8 @@ function defaultActionLabel(item: DeskItemInput): string {
     case "service-request":
       if (item.status === "payment-reported") return "Conferir pagamento";
       if (item.status === "in-review") return "Continuar a análise";
+      if (item.status === "awaiting-signed-form")
+        return "Conferir requerimento";
       return item.status === "new" ? "Iniciar análise" : "Ver pedido";
     case "ombudsman":
       return item.status === "new" ? "Ler manifestação" : "Ver manifestação";

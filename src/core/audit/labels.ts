@@ -17,6 +17,10 @@ const EXACT: Record<string, string> = {
   "user.reactivate": "Reativou uma conta",
   "service-request.delete": "Excluiu um protocolo",
   "service-request.status": "Mudou o andamento de um pedido",
+  "service-request.signed-form-check":
+    "Conferência do requerimento assinado enviado pelo site",
+  "service-request.signed-form-returned":
+    "Devolveu o requerimento assinado ao solicitante",
   "service-request.delivery-signed":
     "Assinou digitalmente um documento entregue",
   "service-request.delivery-rename": "Renomeou um documento entregue",
@@ -281,6 +285,10 @@ const EXPLANATIONS: Record<string, string> = {
   "service-request.create": "Um pedido de serviço foi registrado.",
   "service-request.status":
     "O andamento de um pedido mudou (por exemplo: em análise, pronto, entregue).",
+  "service-request.signed-form-check":
+    "O sistema leu o requerimento assinado enviado pelo solicitante: aceito (requerimento deste protocolo com assinatura digital) ou enviado para conferência da serventia (foto, escaneado ou sem assinatura digital reconhecida).",
+  "service-request.signed-form-returned":
+    "A serventia conferiu o requerimento enviado pelo solicitante e o devolveu, com o motivo, pedindo outro arquivo. O solicitante foi avisado por e-mail.",
   "request.status": "O andamento de um pedido mudou.",
   "service-request.edit": "Os dados de um pedido foram corrigidos.",
   "service-request.amount": "O valor cobrado num pedido foi alterado.",

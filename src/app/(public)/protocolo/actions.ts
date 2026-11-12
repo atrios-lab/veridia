@@ -41,6 +41,7 @@ import { citeLegalBasis } from "@/core/request/legal-grounds.ts";
 import { formatCents } from "@/core/request/money.ts";
 import { parseProtocolNumber } from "@/core/request/protocol.ts";
 import { signatureCaveatFor } from "@/core/request/requerimento.ts";
+import { readSignedFormCheck } from "@/core/request/signed-form-check.ts";
 import {
   AGENDA_NAMES,
   agendaIdOf,
@@ -182,6 +183,10 @@ export interface ServiceRequestDetail extends BaseDetail {
   searchAnswer?: { found: boolean; text: string; answeredAt: string };
   /** The signed requerimento arrived (the most recent one, on a resend). */
   hasSignedForm: boolean;
+  /** The reading of the signed requerimento, or the office's check of it
+   * (decision of 12/11/2026): a "review" waits for the office, a
+   * "returned" was sent back with the office's reason. */
+  signedFormCheck?: { verdict: string; returnedReason?: string };
   /** Whether the pedido asked for the gratuidade: only then does the
    * download screen offer the declaração de hipossuficiência alongside the
    * requerimento (Provimento CGJ/TJRN n. 7/2026, Anexo I), and only then is
@@ -550,6 +555,19 @@ export async function lookupProtocolDetail(
         ? readSearchAnswer(record.details)
         : undefined,
       hasSignedForm: Boolean(signedForm),
+      ...(() => {
+        const check = readSignedFormCheck(record.details);
+        return check
+          ? {
+              signedFormCheck: {
+                verdict: check.verdict,
+                ...(check.returnedReason
+                  ? { returnedReason: check.returnedReason }
+                  : {}),
+              },
+            }
+          : {};
+      })(),
       hasExemption: Boolean(readExemption(record.details)),
       signedFormReceivedAt: signedForm?.createdAt.toISOString(),
       signedFormAttachmentId: servableId(signedForm),
@@ -819,6 +837,15 @@ export async function attachExtraDocument(
     accessKey,
   );
   if (!request) return { status: "error", message: NOT_FOUND };
+  // First the signed requerimento, then the documents (decision of
+  // 12/11/2026): until it is accepted, nothing else goes in.
+  if (request.status === "awaiting-signed-form") {
+    return {
+      status: "error",
+      message:
+        "Anexe primeiro o requerimento assinado. Os demais documentos ficam liberados depois que ele for aceito.",
+    };
+  }
 
   if (await isRateLimited(await headers())) {
     return {

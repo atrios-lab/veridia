@@ -34,7 +34,7 @@ export const KIND_BY_PREFIX: Record<ProtocolPrefix, RequestKind> = {
 };
 
 /**
- * The eleven andamentos a service request may be in. A closed list, not a
+ * The twelve andamentos a service request may be in. A closed list, not a
  * database enum: every other kind's vocabulary lives in `STATUS_LABELS`
  * below the same way, so a new value is a code change here, never a
  * migration.
@@ -60,6 +60,11 @@ export const KIND_BY_PREFIX: Record<ProtocolPrefix, RequestKind> = {
  * and `confirmed` side by side in the same column, forever.
  */
 export const SERVICE_REQUEST_STATUSES = [
+  // Filed on the site, before the signed requerimento is accepted (decision
+  // of 12/11/2026): signed digitally and ours, it moves to "new" by itself;
+  // a scan or a photo waits for the office to check it. The office sees it
+  // apart, off the desk and the counts, with the term paused.
+  "awaiting-signed-form",
   "new",
   // The qualificação (decision of 12/11/2026): the clerk has opened the
   // request and is checking the documents. It ends in a value (payment), an
@@ -107,6 +112,7 @@ export const TERMINAL_SERVICE_REQUEST_STATUSES: readonly ServiceRequestStatus[] 
  */
 export function isPaymentSettled(status: string): boolean {
   return (
+    status !== "awaiting-signed-form" &&
     status !== "new" &&
     status !== "in-review" &&
     status !== "awaiting-payment" &&
@@ -120,7 +126,11 @@ export function isPaymentSettled(status: string): boolean {
  * request stands. The office does, and the office reads the detail screen.
  */
 export const SERVICE_REQUEST_PHASES = [
-  { id: "intake", label: "Entrada", statuses: ["new"] },
+  {
+    id: "intake",
+    label: "Entrada",
+    statuses: ["awaiting-signed-form", "new"],
+  },
   {
     id: "analysis",
     label: "Análise",
@@ -197,6 +207,9 @@ const SUGGESTED_NEXT_STATUSES: Record<
   // exigência moves it to "Aguardando cumprimento de exigência" the same way.
   // From the analysis the request goes to payment by informing the value,
   // or to an exigência by registering it; the buttons are the rest.
+  // A scan or a photo is checked by the office; a digital signature that is
+  // ours moves the request by itself.
+  "awaiting-signed-form": ["new", "cancelled"],
   new: ["in-review", "cancelled"],
   "in-review": [
     "processing",
@@ -227,6 +240,10 @@ export function transitionLabel(
   to: ServiceRequestStatus,
 ): string {
   switch (to) {
+    case "new":
+      return from === "awaiting-signed-form"
+        ? "Requerimento conferido: liberar o pedido"
+        : statusLabel("service-request", to);
     case "in-review":
       if (from === "awaiting-compliance") {
         return "Exigência cumprida: retomar a análise";
@@ -298,6 +315,7 @@ export function statusAfterAmount(
  * endings without delivery (Indeferido, Cancelado): no bar to fill there.
  */
 const PROGRESS: Record<ServiceRequestStatus, number | null> = {
+  "awaiting-signed-form": 5,
   new: 10,
   "in-review": 20,
   "awaiting-compliance": 25,
@@ -359,6 +377,12 @@ export interface StatusGuidance {
 }
 
 export const STATUS_GUIDANCE: Record<ServiceRequestStatus, StatusGuidance> = {
+  "awaiting-signed-form": {
+    holder: "applicant",
+    meaning:
+      "Pedido feito pelo site que ainda não tem o requerimento assinado aceito. O requerimento assinado digitalmente (gov.br ou certificado ICP-Brasil) é conferido pelo sistema e libera o pedido sozinho; o enviado em foto ou escaneado aguarda a conferência da serventia.",
+    next: "Se o solicitante enviou o requerimento em foto ou escaneado, confira se é o requerimento deste protocolo, assinado e com firma reconhecida. Estando correto, libere o pedido; não estando, devolva com o motivo, e o solicitante é avisado por e-mail.",
+  },
   new: {
     holder: "office",
     meaning:
@@ -629,6 +653,7 @@ export function isOpenStatus(kind: RequestKind, status: string): boolean {
  */
 const STATUS_LABELS: Record<RequestKind, Record<string, string>> = {
   "service-request": {
+    "awaiting-signed-form": "Aguardando requerimento assinado",
     new: "Recebido",
     "in-review": "Em análise",
     "awaiting-payment": "Aguardando pagamento",

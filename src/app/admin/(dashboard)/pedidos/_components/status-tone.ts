@@ -7,7 +7,7 @@ import type { ServiceRequestStatus } from "@/core/request/kinds.ts";
  * análise" share the analysis phase while meaning opposite things to whoever
  * is scanning the list for what stalled.
  *
- * Five tones, and every one of the eleven andamentos names its own. A
+ * Five tones, and every one of the twelve andamentos names its own. A
  * `Record` with no fallback on purpose: an eleventh andamento fails the
  * type check instead of quietly inheriting a colour nobody chose for it.
  */
@@ -42,6 +42,9 @@ export const STATUS_TONES: Record<ServiceRequestStatus, Tone> = {
   // Waiting on the counter to pick it up, or on the citizen to pay. Money
   // pending is expected waiting; an exigência is an impediment, hence the
   // different tone.
+  // Waiting on the citizen's signed requerimento, or the office's check of
+  // a scan (decision of 12/11/2026).
+  "awaiting-signed-form": "waiting",
   new: "waiting",
   "awaiting-payment": "waiting",
   "payment-reported": "waiting",

@@ -652,3 +652,21 @@ test("every andamento says who holds it and what comes next", () => {
   assert.equal(STATUS_GUIDANCE["payment-reported"].holder, "office");
   assert.equal(STATUS_GUIDANCE["awaiting-payment"].holder, "applicant");
 });
+
+test("pedido do site espera o requerimento assinado antes de chegar ao cartório", () => {
+  assert.ok(isServiceRequestStatus("awaiting-signed-form"));
+  assert.equal(
+    statusLabel("service-request", "awaiting-signed-form"),
+    "Aguardando requerimento assinado",
+  );
+  assert.deepEqual(suggestedNextStatuses("awaiting-signed-form"), [
+    "new",
+    "cancelled",
+  ]);
+  assert.equal(
+    transitionLabel("awaiting-signed-form", "new"),
+    "Requerimento conferido: liberar o pedido",
+  );
+  assert.equal(isPaymentSettled("awaiting-signed-form"), false);
+  assert.equal(STATUS_GUIDANCE["awaiting-signed-form"].holder, "applicant");
+});

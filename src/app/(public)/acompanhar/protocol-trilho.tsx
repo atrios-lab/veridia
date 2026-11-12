@@ -18,6 +18,10 @@ import {
   SIGNED_FORM_REQUIRED_NOTICE,
 } from "@/core/request/requerimento.ts";
 import {
+  SIGNED_FORM_MESSAGES,
+  SIGNED_FORM_REPLACE_QUESTION,
+} from "@/core/request/signed-form-check.ts";
+import {
   addDays,
   formatDate as formatCalendarDate,
   type IsoDate,
@@ -95,6 +99,7 @@ function addCalendarDays(iso: string, days: number): IsoDate {
 const PAUSE_LABELS: Record<PauseReason, string> = {
   requirement: "o cumprimento da exigência",
   payment: "o pagamento",
+  "signed-form": "o requerimento assinado ser aceito",
 };
 
 /* ---------------------------------------------------------------- tone */
@@ -306,6 +311,22 @@ function computeHeadline(
         result.deliveredDocuments.every((d) => d.gone)
           ? "terminamos o seu pedido. O arquivo ficou disponível por 30 dias e já foi apagado."
           : "terminamos o seu pedido. É só baixar ao lado. O arquivo fica disponível por 30 dias.",
+    };
+  }
+  if (!hasSignedForm && result.signedFormCheck?.verdict === "review") {
+    return {
+      headline: "Seu requerimento está em análise.",
+      leadDate: `${formatDateTime(result.createdAt)}:`,
+      leadText:
+        "recebemos o requerimento, mas a assinatura não foi reconhecida como digital. O cartório vai conferir antes de o pedido seguir. Requerimento assinado a punho deve ter firma reconhecida; se preferir, envie outro arquivo abaixo.",
+    };
+  }
+  if (!hasSignedForm && result.signedFormCheck?.verdict === "returned") {
+    return {
+      headline: "Precisamos de outro requerimento.",
+      leadDate: `${formatDateTime(result.createdAt)}:`,
+      leadText:
+        "o cartório devolveu o requerimento enviado. Veja o motivo ao lado e envie o requerimento correto, assinado.",
     };
   }
   if (!hasSignedForm) {
@@ -573,6 +594,12 @@ function groupHistory(log: LogEvent[]): HistoryGroup[] {
     }));
 }
 
+/** The requerimento was taken and the pedido went on (decision of
+ * 12/11/2026). */
+function formAccepted(r: ServiceRequestDetail): boolean {
+  return r.hasSignedForm && r.requestStatus !== "awaiting-signed-form";
+}
+
 /* ---------------------------------------------------------------- gate */
 
 function Gate({
@@ -801,6 +828,7 @@ function SignCard({
   awaitingForm,
   signatureCaveat,
   awaitingDeclaration,
+  check,
   onSigned,
   onDeclarationSigned,
 }: {
@@ -809,11 +837,42 @@ function SignCard({
   awaitingForm: boolean;
   signatureCaveat: string;
   awaitingDeclaration: boolean;
-  onSigned: () => void;
+  /** The reading of the requerimento already sent, or the office's check. */
+  check?: { verdict: string; returnedReason?: string };
+  onSigned: (outcome: "success" | "review") => void;
   onDeclarationSigned: () => void;
 }) {
   return (
     <div className="flex animate-notice-rise flex-col gap-3 rounded-2xl border border-brand-border bg-brand-card p-5 shadow-[0_1px_2px_rgba(20,40,25,.05)]">
+      {awaitingForm && check?.verdict === "review" && (
+        <output className="flex flex-col gap-1.5 rounded-[10px] border-[1.5px] border-brand-accent bg-brand-accent-soft px-3.5 py-3">
+          <p className="text-[13px] leading-relaxed text-brand-accent-ink">
+            {SIGNED_FORM_MESSAGES.review}
+          </p>
+          <p className="text-[13px] font-semibold text-brand-primary">
+            {SIGNED_FORM_REPLACE_QUESTION} Use o envio do passo 3, abaixo.
+          </p>
+        </output>
+      )}
+      {awaitingForm && check?.verdict === "returned" && (
+        <div
+          role="alert"
+          className="flex flex-col gap-1.5 rounded-[10px] border-[1.5px] border-brand-alert bg-brand-card px-3.5 py-3"
+        >
+          <p className="text-[13px] font-semibold text-brand-alert">
+            O cartório devolveu o requerimento enviado.
+          </p>
+          {check.returnedReason && (
+            <p className="text-[13px] leading-relaxed text-brand-text">
+              Motivo: {check.returnedReason}
+            </p>
+          )}
+          <p className="text-[13px] text-brand-text-soft">
+            Envie o requerimento deste protocolo, assinado digitalmente pelo
+            gov.br ou assinado a punho com firma reconhecida.
+          </p>
+        </div>
+      )}
       <div className="flex items-center gap-3">
         <span className="flex h-[26px] w-[26px] shrink-0 items-center justify-center rounded-full bg-brand-primary text-xs font-bold text-white">
           1
@@ -1643,7 +1702,10 @@ function FilesSection({
   >(attachExtraDocument, { status: "idle" });
   const { send, uploading, error } = useAttachmentUpload(action);
   const sending = pending || uploading;
+  // First the signed requerimento, then the documents (decision of
+  // 12/11/2026).
   const canAttachExtra =
+    (result.requestStatus !== "awaiting-signed-form" || hasSignedForm) &&
     result.requestStatus !== "rejected" &&
     result.requestStatus !== "cancelled" &&
     result.deliveredDocuments.length === 0;
@@ -1759,6 +1821,12 @@ function FilesSection({
         </form>
       ))}
 
+      {result.requestStatus === "awaiting-signed-form" && !hasSignedForm && (
+        <p className="pt-4 text-[13px] leading-relaxed text-brand-muted">
+          Os demais documentos ficam liberados aqui depois que o requerimento
+          assinado for aceito.
+        </p>
+      )}
       {canAttachExtra && (
         <div className="flex flex-col gap-2 pt-4">
           <form
@@ -1824,7 +1892,9 @@ function ServiceRequestTrilho({
   initial: ServiceRequestDetail;
   onReset: () => void;
 }) {
-  const [hasSignedForm, setHasSignedForm] = useState(initial.hasSignedForm);
+  // "Signed" means accepted (decision of 12/11/2026): a requerimento that
+  // waits for the office's check, or was sent back, is still awaited.
+  const [hasSignedForm, setHasSignedForm] = useState(formAccepted(initial));
   const [hasSignedDeclaration, setHasSignedDeclaration] = useState(
     initial.hasSignedDeclaration,
   );
@@ -1843,7 +1913,7 @@ function ServiceRequestTrilho({
   // A fresher snapshot (see LookupFlow's polling) replaces what the citizen
   // sees but not what they are typing: the cards below keep their drafts.
   useEffect(() => {
-    setHasSignedForm(initial.hasSignedForm);
+    setHasSignedForm(formAccepted(initial));
     setHasSignedDeclaration(initial.hasSignedDeclaration);
     setCitizenDocuments(initial.citizenDocuments);
     setRequirements(initial.requirements);
@@ -2023,7 +2093,10 @@ function ServiceRequestTrilho({
                 awaitingForm={!hasSignedForm}
                 signatureCaveat={result.signatureCaveat}
                 awaitingDeclaration={awaitingDeclaration}
-                onSigned={() => setHasSignedForm(true)}
+                check={result.signedFormCheck}
+                onSigned={(outcome) => {
+                  if (outcome === "success") setHasSignedForm(true);
+                }}
                 onDeclarationSigned={() => setHasSignedDeclaration(true)}
               />
             )}

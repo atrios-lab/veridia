@@ -48,6 +48,7 @@ import {
   variantOwner,
 } from "@/core/request/kinds.ts";
 import { formatCents } from "@/core/request/money.ts";
+import { readSignedFormCheck } from "@/core/request/signed-form-check.ts";
 import {
   formatDate,
   type OfficeHolidays,
@@ -97,6 +98,7 @@ import { LiveRequest } from "./_components/live-request.tsx";
 import type { RequirementItem } from "./_components/requirements-section.tsx";
 import { RequirementsSection } from "./_components/requirements-section.tsx";
 import { SearchAnswerSection } from "./_components/search-answer-section.tsx";
+import { SignedFormReview } from "./_components/signed-form-review.tsx";
 import {
   CONSULTATION_PATH,
   PAID_CONSULTATION_PATH,
@@ -424,6 +426,30 @@ export default async function ServiceRequestDetailPage({
 
         <div className="grid grid-cols-1 gap-5 lg:grid-cols-[1fr_340px] lg:items-start">
           <div className="flex min-w-0 flex-col gap-4">
+            {status === "awaiting-signed-form" &&
+              (() => {
+                const check = readSignedFormCheck(request.details);
+                return (
+                  <SignedFormReview
+                    requestId={request.id}
+                    hasFile={Boolean(signedRequerimento)}
+                    check={
+                      check
+                        ? {
+                            verdict: check.verdict,
+                            reason: check.reason,
+                            checkedAtLabel: formatOfficeDayMonthTime(
+                              new Date(check.checkedAt),
+                            ),
+                            ...(check.returnedReason
+                              ? { returnedReason: check.returnedReason }
+                              : {}),
+                          }
+                        : null
+                    }
+                  />
+                );
+              })()}
             <StatusSection
               requestId={request.id}
               protocolNumber={request.protocolNumber}

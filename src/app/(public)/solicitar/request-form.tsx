@@ -904,81 +904,98 @@ export function RequestForm({
             )}
           </div>
 
-          <label
-            htmlFor="anexos"
-            className={`block cursor-pointer rounded-xl border-[1.5px] border-dashed border-brand-border px-3 py-3.5 text-center hover:border-brand-accent has-[:focus-visible]:border-brand-accent ${act.documents ? "mt-3 md:mt-0" : "mt-3"}`}
-          >
-            <span className="inline-flex items-center gap-2 text-[13px] font-semibold text-brand-primary">
-              <Icon name="plus" className="h-4 w-4 text-brand-accent" />
-              <span className="md:hidden">Tirar foto ou anexar arquivo</span>
-              <span className="hidden md:inline">
-                Anexar arquivos{" "}
-                <span className="font-normal text-brand-muted">
-                  · até {MAX_ATTACHMENTS}, foto ou PDF
+          {/* First the signed requerimento, then the documents (decision
+              of 12/11/2026): the documents are sent once the requerimento
+              of this protocol is accepted. A busca has no requerimento. */}
+          {act.consultation ? (
+            <>
+              <label
+                htmlFor="anexos"
+                className={`block cursor-pointer rounded-xl border-[1.5px] border-dashed border-brand-border px-3 py-3.5 text-center hover:border-brand-accent has-[:focus-visible]:border-brand-accent ${act.documents ? "mt-3 md:mt-0" : "mt-3"}`}
+              >
+                <span className="inline-flex items-center gap-2 text-[13px] font-semibold text-brand-primary">
+                  <Icon name="plus" className="h-4 w-4 text-brand-accent" />
+                  <span className="md:hidden">
+                    Tirar foto ou anexar arquivo
+                  </span>
+                  <span className="hidden md:inline">
+                    Anexar arquivos{" "}
+                    <span className="font-normal text-brand-muted">
+                      · até {MAX_ATTACHMENTS}, foto ou PDF
+                    </span>
+                  </span>
                 </span>
-              </span>
-            </span>
-            {/* Hidden, not gone: the dashed box is the visible control, and
+                {/* Hidden, not gone: the dashed box is the visible control, and
                 the input keeps working for keyboard, screen reader and the
                 form post. */}
-            <input
-              ref={fileInputRef}
-              id="anexos"
-              name="anexos"
-              type="file"
-              multiple
-              accept={ATTACHMENT_ACCEPT}
-              className="sr-only"
-              onChange={(event) => addAttachments(event.target.files)}
-            />
-          </label>
-          {attachments.length > 0 && (
-            <ul className="mt-2.5 flex flex-col gap-2">
-              {attachments.map((file, index) => (
-                <li
-                  key={`${file.name}-${file.lastModified}`}
-                  className="flex items-center gap-2 rounded-lg border border-brand-border bg-brand-card px-3 py-2"
-                >
-                  <Icon
-                    name="file"
-                    className="h-4 w-4 shrink-0 text-brand-accent"
-                  />
-                  <span className="flex min-w-0 flex-1 flex-col gap-1.5">
-                    <span className="truncate text-[12.5px] text-brand-text">
-                      {file.name}
-                    </span>
-                    <DocumentNameField
-                      field="anexos"
-                      tone="public"
-                      suggestions={CITIZEN_DOCUMENT_NAMES}
-                      placeholder="Que documento é este? (opcional)"
-                      compactLabel={`Nome do documento ${file.name}`}
-                    />
-                  </span>
-                  <span className="shrink-0 text-[11px] text-brand-faint">
-                    {formatFileSize(file.size)}
-                  </span>
-                  <button
-                    type="button"
-                    onClick={() => removeAttachment(index)}
-                    className="shrink-0 text-brand-faint hover:text-brand-alert"
-                    aria-label={`Remover ${file.name}`}
-                  >
-                    <Icon name="x" className="h-4 w-4" strokeWidth={2} />
-                  </button>
-                </li>
-              ))}
-            </ul>
+                <input
+                  ref={fileInputRef}
+                  id="anexos"
+                  name="anexos"
+                  type="file"
+                  multiple
+                  accept={ATTACHMENT_ACCEPT}
+                  className="sr-only"
+                  onChange={(event) => addAttachments(event.target.files)}
+                />
+              </label>
+              {attachments.length > 0 && (
+                <ul className="mt-2.5 flex flex-col gap-2">
+                  {attachments.map((file, index) => (
+                    <li
+                      key={`${file.name}-${file.lastModified}`}
+                      className="flex items-center gap-2 rounded-lg border border-brand-border bg-brand-card px-3 py-2"
+                    >
+                      <Icon
+                        name="file"
+                        className="h-4 w-4 shrink-0 text-brand-accent"
+                      />
+                      <span className="flex min-w-0 flex-1 flex-col gap-1.5">
+                        <span className="truncate text-[12.5px] text-brand-text">
+                          {file.name}
+                        </span>
+                        <DocumentNameField
+                          field="anexos"
+                          tone="public"
+                          suggestions={CITIZEN_DOCUMENT_NAMES}
+                          placeholder="Que documento é este? (opcional)"
+                          compactLabel={`Nome do documento ${file.name}`}
+                        />
+                      </span>
+                      <span className="shrink-0 text-[11px] text-brand-faint">
+                        {formatFileSize(file.size)}
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => removeAttachment(index)}
+                        className="shrink-0 text-brand-faint hover:text-brand-alert"
+                        aria-label={`Remover ${file.name}`}
+                      >
+                        <Icon name="x" className="h-4 w-4" strokeWidth={2} />
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+              )}
+              {attachmentError && (
+                <output className="mt-2 block text-xs font-semibold text-brand-alert">
+                  {attachmentError}
+                </output>
+              )}
+              <p className="mt-2 text-[11px] text-brand-faint">
+                Até {MAX_ATTACHMENTS} arquivos (foto ou PDF). Pode enviar
+                depois, pela consulta do protocolo.
+              </p>
+            </>
+          ) : (
+            <p className="mt-3 rounded-xl bg-brand-tint px-3 py-2.5 text-[12.5px] leading-relaxed text-brand-text-soft md:mt-0">
+              <strong className="font-semibold text-brand-primary">
+                Os documentos são enviados depois.
+              </strong>{" "}
+              Primeiro o requerimento deste pedido, assinado; quando ele for
+              aceito, a tela libera o envio dos documentos acima.
+            </p>
           )}
-          {attachmentError && (
-            <output className="mt-2 block text-xs font-semibold text-brand-alert">
-              {attachmentError}
-            </output>
-          )}
-          <p className="mt-2 text-[11px] text-brand-faint">
-            Até {MAX_ATTACHMENTS} arquivos (foto ou PDF). Pode enviar depois,
-            pela consulta do protocolo.
-          </p>
         </div>
 
         {act.chargesPrenotation && <PrenotationCard notice={prenotation} />}
@@ -1335,6 +1352,9 @@ function SuccessScreen({
   // The red stays until the signed requerimento is actually in.
   const [requerimentoDownloaded, setRequerimentoDownloaded] = useState(false);
   const [requerimentoSent, setRequerimentoSent] = useState(false);
+  // Accepted: ours and signed digitally (decision of 12/11/2026). Only then
+  // do the documents go in.
+  const [requerimentoAccepted, setRequerimentoAccepted] = useState(false);
   const router = useRouter();
   const requestHref = `${lookupHref}?numero=${encodeURIComponent(result.protocolNumber)}`;
   // The request's page opens already consulted: the key goes with the
@@ -1503,8 +1523,10 @@ function SuccessScreen({
             emphasis={requerimentoSent ? undefined : "alert"}
           >
             <p className="text-[12px] leading-relaxed text-brand-muted">
-              Pode ser agora, depois pela consulta do protocolo, ou em papel no
-              balcão.
+              Assinado digitalmente pelo gov.br, o requerimento é conferido na
+              hora e o pedido segue para o cartório. Assinado a punho, ele é
+              analisado pelo cartório e precisa ter firma reconhecida. Pode ser
+              agora ou depois, pelo link enviado ao seu e-mail.
               {result.hasExemption &&
                 " Se assinou os dois num arquivo só, envie como requerimento."}
             </p>
@@ -1513,8 +1535,10 @@ function SuccessScreen({
                 protocolNumber={result.protocolNumber}
                 accessKey={result.accessKey}
                 documento="requerimento"
-                onSent={() => {
+                onSent={(outcome) => {
                   setRequerimentoSent(true);
+                  if (outcome !== "success") return;
+                  setRequerimentoAccepted(true);
                   // With the prenotação charged, the next step is the
                   // payment, and it lives on the request's page: go there,
                   // already open, instead of leaving the citizen here.
@@ -1531,6 +1555,26 @@ function SuccessScreen({
                 />
               )}
             </div>
+          </Step>
+        )}
+
+        {!result.consultation && (
+          <Step number={4} title="Anexe os documentos">
+            <p className="text-[12px] leading-relaxed text-brand-muted">
+              {requerimentoAccepted
+                ? "Requerimento aceito. Agora anexe os documentos pedidos para este ato, na página do pedido."
+                : "Liberado depois que o requerimento assinado for aceito."}
+            </p>
+            {requerimentoAccepted && (
+              <button
+                type="button"
+                onClick={openRequest}
+                className="btn btn-primary btn-md mt-2.5"
+              >
+                <Icon name="plus" className="h-4 w-4" />
+                Anexar os documentos
+              </button>
+            )}
           </Step>
         )}
       </ol>

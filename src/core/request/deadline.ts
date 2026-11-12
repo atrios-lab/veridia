@@ -119,7 +119,7 @@ export type Deadline = z.infer<typeof deadlineSchema>;
  * pauses nothing, because a term paused on a label is a term paused on a
  * whim.
  */
-export type PauseReason = "requirement" | "payment";
+export type PauseReason = "requirement" | "payment" | "signed-form";
 
 export function pauseReasons(request: {
   status: string;
@@ -131,6 +131,8 @@ export function pauseReasons(request: {
   if (request.status === "awaiting-payment" && request.amountCents != null) {
     reasons.push("payment");
   }
+  // The pedido has not reached the office yet (decision of 12/11/2026).
+  if (request.status === "awaiting-signed-form") reasons.push("signed-form");
   return reasons;
 }
 

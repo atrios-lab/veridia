@@ -43,6 +43,7 @@ import {
 } from "@/core/request/kinds.ts";
 import { parseCentsInput } from "@/core/request/money.ts";
 import { requirementTextSchema } from "@/core/request/requirement.ts";
+import { readSignedFormCheck } from "@/core/request/signed-form-check.ts";
 import { toIsoDate } from "@/core/scheduling/calendar.ts";
 import { officialName } from "@/core/tenant/identification.ts";
 import type { Tenant } from "@/core/tenant/schema.ts";
@@ -75,6 +76,7 @@ import { getSession } from "@/lib/session.ts";
 import { CertificatePasswordError } from "@/lib/signature/certificate.ts";
 import { requestOrigin, verifyUrlFor } from "@/lib/signature/documents.ts";
 import { PdfNotSignableError } from "@/lib/signature/pades.ts";
+import { saveSignedFormCheckWith } from "@/lib/signed-form-reading.ts";
 import {
   confirmPhysicalSignatureWith,
   fileHasDigitalSignature,
@@ -1336,4 +1338,66 @@ export async function finishA3DeliveryAction(
   } catch (error) {
     return signingFailure(error, "pedidos.a3.finish");
   }
+}
+
+/**
+ * The office's check of a requerimento sent as a scan or a photo (decision
+ * of 12/11/2026): wrong, it goes back to the citizen with the reason, read
+ * on the protocol's page; the e-mail only says there is something to see.
+ * Right, the office frees the pedido by the andamento ("Requerimento
+ * conferido: liberar o pedido").
+ */
+export async function returnSignedFormAction(
+  _previous: ActionState,
+  formData: FormData,
+): Promise<ActionState> {
+  const session = await authorize();
+  if (!session) return { status: "error", message: NO_PERMISSION };
+  const requestId = String(formData.get("requestId") ?? "");
+  const reason = String(formData.get("motivo") ?? "")
+    .trim()
+    .slice(0, 5000);
+  if (reason.length < 3) {
+    return {
+      status: "error",
+      message: "Escreva o motivo da devolução, para o solicitante entender.",
+    };
+  }
+  let emailWarning: string | null = null;
+  try {
+    const tenant = await getTenant();
+    const request = await findById(tenant.slug, requestId);
+    if (!request) return { status: "error", message: "Pedido não encontrado." };
+    if (request.status !== "awaiting-signed-form") {
+      return {
+        status: "error",
+        message: "Este pedido não está aguardando o requerimento assinado.",
+      };
+    }
+    const previous = readSignedFormCheck(request.details);
+    await saveSignedFormCheckWith(
+      db,
+      tenant.slug,
+      requestId,
+      {
+        verdict: "returned",
+        reason: previous?.reason ?? "",
+        checkedAt: new Date().toISOString(),
+        returnedReason: reason,
+      },
+      session.user.id,
+    );
+    emailWarning = await notifyCitizen({
+      tenant,
+      contact: request.contact,
+      protocolNumber: request.protocolNumber,
+      subject: "Requerimento devolvido",
+      body: "O cartório conferiu o requerimento enviado e precisa de outro arquivo. Consulte o protocolo com a sua chave de acesso para ver o motivo e enviar o requerimento correto, assinado digitalmente pelo gov.br ou assinado a punho com firma reconhecida.",
+    });
+  } catch (error) {
+    console.error("pedidos.return-signed-form", error);
+    return { status: "error", message: GENERIC_ERROR };
+  }
+  revalidateAdmin();
+  return { status: "success", emailWarning };
 }

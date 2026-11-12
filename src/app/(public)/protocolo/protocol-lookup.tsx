@@ -16,6 +16,10 @@ import {
   SIGNED_FORM_REQUIRED_NOTICE,
 } from "@/core/request/requerimento.ts";
 import {
+  SIGNED_FORM_MESSAGES,
+  SIGNED_FORM_REPLACE_QUESTION,
+} from "@/core/request/signed-form-check.ts";
+import {
   formatDate as formatCalendarDate,
   formatLongDate,
 } from "@/core/scheduling/calendar.ts";
@@ -603,6 +607,7 @@ function markCurrentStep(steps: TimelineStepData[]): TimelineStepData[] {
 const PAUSE_LABELS: Record<PauseReason, string> = {
   requirement: "o cumprimento da exigência",
   payment: "o pagamento",
+  "signed-form": "o requerimento assinado ser aceito",
 };
 
 function DeadlineNote({
@@ -1164,7 +1169,13 @@ function RequestDetail({ result }: { result: ServiceRequestDetail }) {
   // The lookup already answered whether the signed form arrived; a
   // successful upload in this same visit flips it without asking the server
   // to look everything up again.
-  const [hasSignedForm, setHasSignedForm] = useState(result.hasSignedForm);
+  // Accepted, not only sent (decision of 12/11/2026): a requerimento that
+  // waits for the office's check, or was sent back, is still awaited.
+  const [hasSignedForm, setHasSignedForm] = useState(
+    result.hasSignedForm && result.requestStatus !== "awaiting-signed-form",
+  );
+  const docsLocked =
+    result.requestStatus === "awaiting-signed-form" && !hasSignedForm;
   const [hasSignedDeclaration, setHasSignedDeclaration] = useState(
     result.hasSignedDeclaration,
   );
@@ -1354,12 +1365,37 @@ function RequestDetail({ result }: { result: ServiceRequestDetail }) {
                           : "Envie o arquivo assinado"}
                       </div>
                       <div className="mt-2 flex flex-col gap-2">
+                        {!hasSignedForm &&
+                          result.signedFormCheck?.verdict === "review" && (
+                            <p className="rounded-[10px] border-[1.5px] border-brand-accent bg-brand-accent-soft px-3 py-2.5 text-[12px] leading-relaxed text-brand-accent-ink">
+                              {SIGNED_FORM_MESSAGES.review}{" "}
+                              <strong className="font-semibold text-brand-primary">
+                                {SIGNED_FORM_REPLACE_QUESTION}
+                              </strong>
+                            </p>
+                          )}
+                        {!hasSignedForm &&
+                          result.signedFormCheck?.verdict === "returned" && (
+                            <p
+                              role="alert"
+                              className="rounded-[10px] border-[1.5px] border-brand-alert px-3 py-2.5 text-[12px] leading-relaxed text-brand-text"
+                            >
+                              <strong className="font-semibold text-brand-alert">
+                                O cartório devolveu o requerimento enviado.
+                              </strong>{" "}
+                              {result.signedFormCheck.returnedReason
+                                ? `Motivo: ${result.signedFormCheck.returnedReason}`
+                                : ""}
+                            </p>
+                          )}
                         {!hasSignedForm && (
                           <SignedFormUpload
                             protocolNumber={result.protocolNumber}
                             accessKey={result.accessKey}
                             documento="requerimento"
-                            onSent={() => setHasSignedForm(true)}
+                            onSent={(outcome) => {
+                              if (outcome === "success") setHasSignedForm(true);
+                            }}
                           />
                         )}
                         {result.hasExemption && !hasSignedDeclaration && (
@@ -1501,57 +1537,68 @@ function RequestDetail({ result }: { result: ServiceRequestDetail }) {
                 ))}
               </div>
             )}
-            <form
-              onSubmit={(event) => {
-                event.preventDefault();
-                void docUpload.send(event.currentTarget, "documento", 1);
-              }}
-              className="mt-3"
-            >
-              <input
-                type="hidden"
-                name="protocolNumber"
-                value={result.protocolNumber}
-              />
-              <input type="hidden" name="accessKey" value={result.accessKey} />
-              <div className="mb-2.5">
-                <DocumentNameField
-                  field="documento"
-                  tone="public"
-                  suggestions={CITIZEN_DOCUMENT_NAMES}
-                />
-              </div>
-              <label
-                className={`flex cursor-pointer items-center justify-center gap-2 rounded-xl border-[1.5px] border-dashed border-brand-border px-3 py-3 text-[12.5px] font-semibold text-brand-primary hover:border-brand-accent ${sendingDoc ? "opacity-60" : ""}`}
+            {docsLocked ? (
+              <p className="mt-3 text-[12px] leading-relaxed text-brand-muted">
+                Os demais documentos ficam liberados aqui depois que o
+                requerimento assinado for aceito.
+              </p>
+            ) : (
+              <form
+                onSubmit={(event) => {
+                  event.preventDefault();
+                  void docUpload.send(event.currentTarget, "documento", 1);
+                }}
+                className="mt-3"
               >
-                <Icon name="plus" className="h-3.5 w-3.5 text-brand-accent" />
-                {sendingDoc ? "Enviando..." : "Anexar outro documento"}
                 <input
-                  type="file"
-                  name="documento"
-                  accept={ATTACHMENT_ACCEPT}
-                  className="sr-only"
-                  disabled={sendingDoc}
-                  onChange={(event) => {
-                    if (event.target.files?.length) {
-                      event.target.form?.requestSubmit();
-                    }
-                  }}
+                  type="hidden"
+                  name="protocolNumber"
+                  value={result.protocolNumber}
                 />
-              </label>
-              {(docUpload.error || docState.status !== "idle") && (
-                <output
-                  className={`mt-1.5 block text-[11.5px] font-semibold ${
-                    docUpload.error || docState.status === "error"
-                      ? "text-brand-alert"
-                      : "text-brand-primary-soft"
-                  }`}
+                <input
+                  type="hidden"
+                  name="accessKey"
+                  value={result.accessKey}
+                />
+                <div className="mb-2.5">
+                  <DocumentNameField
+                    field="documento"
+                    tone="public"
+                    suggestions={CITIZEN_DOCUMENT_NAMES}
+                  />
+                </div>
+                <label
+                  className={`flex cursor-pointer items-center justify-center gap-2 rounded-xl border-[1.5px] border-dashed border-brand-border px-3 py-3 text-[12.5px] font-semibold text-brand-primary hover:border-brand-accent ${sendingDoc ? "opacity-60" : ""}`}
                 >
-                  {docUpload.error ??
-                    (docState.status !== "idle" && docState.message)}
-                </output>
-              )}
-            </form>
+                  <Icon name="plus" className="h-3.5 w-3.5 text-brand-accent" />
+                  {sendingDoc ? "Enviando..." : "Anexar outro documento"}
+                  <input
+                    type="file"
+                    name="documento"
+                    accept={ATTACHMENT_ACCEPT}
+                    className="sr-only"
+                    disabled={sendingDoc}
+                    onChange={(event) => {
+                      if (event.target.files?.length) {
+                        event.target.form?.requestSubmit();
+                      }
+                    }}
+                  />
+                </label>
+                {(docUpload.error || docState.status !== "idle") && (
+                  <output
+                    className={`mt-1.5 block text-[11.5px] font-semibold ${
+                      docUpload.error || docState.status === "error"
+                        ? "text-brand-alert"
+                        : "text-brand-primary-soft"
+                    }`}
+                  >
+                    {docUpload.error ??
+                      (docState.status !== "idle" && docState.message)}
+                  </output>
+                )}
+              </form>
+            )}
             <p className="mt-2 text-[11px] text-brand-faint">
               Se a serventia pedir algo a mais, envie por aqui: chega direto no
               seu pedido.

@@ -9,6 +9,7 @@ import {
   SIGNED_FORM_CONFIRMATIONS,
   SIGNED_FORM_WRONG_DOCUMENT_WARNING,
 } from "@/core/request/requerimento.ts";
+import { SIGNED_FORM_REPLACE_QUESTION } from "@/core/request/signed-form-check.ts";
 import {
   ATTACHMENT_ACCEPT,
   useAttachmentUpload,
@@ -42,9 +43,10 @@ export function SignedFormUpload({
   protocolNumber: string;
   accessKey: string;
   documento: SignedFormDocument;
-  /** Told once per successful send, for the screen around it to update
-   * whatever it says about the document being awaited. */
-  onSent?: () => void;
+  /** Told once per send that was taken, for the screen around it to update
+   * whatever it says about the document being awaited: "success" (accepted)
+   * or "review" (waits for the office's check). */
+  onSent?: (outcome: "success" | "review") => void;
 }) {
   const [state, action, saving] = useActionState<AttachState, FormData>(
     attachSignedForm,
@@ -58,15 +60,18 @@ export function SignedFormUpload({
   const [pickedName, setPickedName] = useState<string>();
   const [confirmed, setConfirmed] = useState(false);
   const inputId = useId();
-  const showForm = state.status !== "success" || replacing;
+  const sent = state.status === "success" || state.status === "review";
+  const showForm = !sent || replacing;
+  // The requerimento is read before it is taken (decision of 12/11/2026).
+  const checking = documento === "requerimento";
 
   // biome-ignore lint/correctness/useExhaustiveDependencies: runs per send (a new `state` object), not per parent render; listing `onSent` would re-announce the same send whenever the parent re-renders with a fresh closure.
   useEffect(() => {
-    if (state.status === "success") {
+    if (state.status === "success" || state.status === "review") {
       setReplacing(false);
       setPickedName(undefined);
       setConfirmed(false);
-      onSent?.();
+      onSent?.(state.status);
     }
   }, [state]);
 
@@ -77,6 +82,31 @@ export function SignedFormUpload({
     if (problem) input.value = "";
     setError(problem);
     setPickedName(problem ? undefined : file?.name);
+  }
+
+  if (!showForm && state.status === "review") {
+    return (
+      <output className="flex flex-col gap-2.5 rounded-[10px] border-[1.5px] border-brand-accent bg-brand-accent-soft px-3.5 py-3">
+        <p className="text-[12.5px] leading-relaxed text-brand-accent-ink">
+          {state.message}
+        </p>
+        <p className="text-[12.5px] font-semibold text-brand-primary">
+          {SIGNED_FORM_REPLACE_QUESTION}
+        </p>
+        <div className="flex flex-wrap gap-2">
+          <button
+            type="button"
+            onClick={() => setReplacing(true)}
+            className="btn btn-primary btn-sm"
+          >
+            Sim, trocar o arquivo
+          </button>
+          <span className="self-center text-[12px] text-brand-muted">
+            Ou aguarde: o cartório avisa por e-mail o resultado da análise.
+          </span>
+        </div>
+      </output>
+    );
   }
 
   if (!showForm) {
@@ -171,8 +201,22 @@ export function SignedFormUpload({
             className="btn btn-primary btn-md self-start"
             disabled={!confirmed || sending}
           >
-            {sending ? "Enviando..." : "Enviar"}
+            {sending
+              ? checking
+                ? "Verificando o documento..."
+                : "Enviando..."
+              : "Enviar"}
           </button>
+          {sending && checking && (
+            <output className="flex items-center gap-2 text-[12px] text-brand-muted">
+              <span
+                aria-hidden="true"
+                className="h-3 w-3 animate-spin rounded-full border-2 border-brand-border border-t-brand-accent"
+              />
+              Verificando documentos: o sistema confere se é o requerimento
+              deste protocolo e se está assinado.
+            </output>
+          )}
         </div>
       )}
       {(error || state.status === "error") && (
