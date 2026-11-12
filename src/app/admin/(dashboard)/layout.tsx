@@ -1,4 +1,4 @@
-import { headers } from "next/headers";
+import { cookies, headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { after } from "next/server";
 import { closesAt } from "@/core/auth/access-hours.ts";
@@ -30,7 +30,6 @@ import {
 } from "@/lib/session.ts";
 import { getTenant, officeNow } from "@/lib/tenant.ts";
 import { publishedTutorialCount } from "@/lib/tutorials.ts";
-import { MenuPopover } from "../../_components/menu-popover.tsx";
 import { AccessClosed } from "../_components/access-closed.tsx";
 import { AccessHoursWatch } from "../_components/access-hours-watch.tsx";
 import { AgendaAlerts } from "../_components/agenda-alerts.tsx";
@@ -44,7 +43,7 @@ import { MessengerWatch } from "../_components/messenger-watch.tsx";
 import { RecordAlerts } from "../_components/record-alerts.tsx";
 import { ShortcutListener } from "../_components/shortcut-listener.tsx";
 import { AdminSidebar } from "../_components/sidebar.tsx";
-import { ADMIN_MENU_ID, AdminTopBar } from "../_components/top-bar.tsx";
+import { AdminTopBar } from "../_components/top-bar.tsx";
 import {
   AccessRequestsBanner,
   AuditChime,
@@ -52,6 +51,8 @@ import {
   LingeringStatusBanner,
   UrgentAuditBanner,
 } from "../_components/urgent-audit-banner.tsx";
+import { SidebarProvider } from "../_ui/sidebar.tsx";
+import { TooltipProvider } from "../_ui/tooltip.tsx";
 
 // The protected skeleton. The check runs on every request and hits the
 // database, so a session revoked there is gone on the next navigation.
@@ -192,6 +193,10 @@ export default async function DashboardLayout({
     can(role, "tutorials.manage", granted) ||
     (await publishedTutorialCount()) > 0;
 
+  // Open unless the person collapsed it last time (the cookie the sidebar
+  // writes, see _ui/sidebar.tsx).
+  const sidebarOpen = (await cookies()).get("sidebar_state")?.value !== "false";
+
   const user = {
     name: session.user.name,
     email: session.user.email,
@@ -205,124 +210,100 @@ export default async function DashboardLayout({
         canRequests={can(role, "requests.manage", granted)}
         canChannels={can(role, "channels.manage", granted)}
       />
-      {/* `id` is what the chat alert shakes (see chat-alerts.tsx). */}
-      <div id={CHAT_SHAKE_TARGET_ID} className="flex h-screen overflow-hidden">
-        <AdminSidebar
-          tenant={tenant}
-          role={role}
-          permissions={granted}
-          counts={counts}
-          showTutorials={showTutorials}
-          className="hidden md:flex"
-        />
-
-        {/*
-          The same bar as a drawer, for a screen with no room to spare: 236px
-          of a 375px phone was the panel's whole navigation sitting on top of
-          the work. Native popover, the way the public site's menu does it, so
-          it opens before hydration and the browser handles Escape, the tap
-          outside and the backdrop. The button that opens it lives in the page
-          header (see ../../_components/page-header.tsx): `popovertarget`
-          matches by id, anywhere in the document.
-        */}
-        <div
-          id={ADMIN_MENU_ID}
-          popover="auto"
-          // `right-auto w-fit` is load bearing: a popover inherits `inset: 0`
-          // from the UA sheet, so without them the box spans the whole width
-          // and the empty space beside the bar counts as inside it. The tap
-          // meant to dismiss would land on the popover and do nothing, which
-          // is the very complaint this fixes.
-          className="inset-y-0 right-auto left-0 m-0 h-full w-fit max-w-none border-0 bg-transparent p-0 backdrop:bg-black/40 md:hidden"
+      <TooltipProvider>
+        {/* `id` is what the chat alert shakes (see chat-alerts.tsx). The
+            shell is bounded to the viewport: the sidebar never scrolls away,
+            and the column on its right is where a page's own length
+            scrolls. A screen that manages its own internal scroll region
+            (the chat conversation, see atendimento/[id]/page.tsx) fills
+            that column exactly instead. The sidebar remembers whether it
+            was collapsed, in a cookie the server reads here. */}
+        <SidebarProvider
+          id={CHAT_SHAKE_TARGET_ID}
+          defaultOpen={sidebarOpen}
+          className="h-svh min-h-0 overflow-hidden"
         >
           <AdminSidebar
             tenant={tenant}
             role={role}
             permissions={granted}
             counts={counts}
-            className="h-full"
+            showTutorials={showTutorials}
           />
-          <MenuPopover />
-        </div>
-        {/*
-          `h-screen overflow-hidden` above bounds the whole shell to the
-          viewport so the sidebar never scrolls away; `overflow-y-auto` here is
-          where an ordinary page's own length scrolls. A screen that manages
-          its own internal scroll region (the chat conversation, see
-          atendimento/[id]/page.tsx) fills this exactly instead and this div
-          never actually overflows for it.
-
-          The top bar sits inside this column, above the page: one bar for
-          every screen, rendered here rather than by each page, which is what
-          let the screens' own headers shrink to a title (see page-header.tsx).
-
-          `relative` is load bearing too: a `sr-only` span is absolutely
-          positioned, and without a positioned ancestor its containing block
-          is the document, so one sitting below the fold of a long table (the
-          pagination arrows have them) stretches the page past the shell and
-          the whole panel scrolls away under the wheel. Positioned here, they
-          belong to this column and its overflow clips them.
-        */}
-        <div className="scrollbar-hidden relative flex min-h-0 min-w-0 flex-1 flex-col overflow-y-auto">
-          <AdminTopBar user={user} />
-          {urgentPending > 0 && <UrgentAuditBanner count={urgentPending} />}
-          {lingeringNow.length > 0 && (
-            <LingeringStatusBanner
-              people={lingeringNow.map((p) => ({
-                name: p.name,
-                status: STATUS_LABELS[p.status],
-                minutes: Math.floor((Date.now() - p.since.getTime()) / 60_000),
-              }))}
-            />
-          )}
-          {accessRequests > 0 && (
-            <AccessRequestsBanner count={accessRequests} />
-          )}
-          {hoursEnd && <AccessHoursWatch closesAt={hoursEnd.toISOString()} />}
-          {myNotifications > 0 && <AuditNoticeBanner count={myNotifications} />}
-          {alerts.auditoria.enabled && urgentPending + myNotifications > 0 && (
-            <AuditChime
-              count={urgentPending + myNotifications}
-              setting={alerts.auditoria}
-            />
-          )}
-          {children}
-          {/* Off, or at lunch (the chat is locked until "voltei"). */}
-          {messenger &&
-            !messenger[1]?.chatDisabled &&
-            !messenger[1]?.atLunch && (
-              <MessengerWatch
-                setting={alerts.mensagens}
-                sound={messenger[1]?.sound ?? true}
-                initialUnread={messenger[0].unread}
+          {/*
+            `relative` is load bearing: a `sr-only` span is absolutely
+            positioned, and without a positioned ancestor its containing
+            block is the document, so one sitting below the fold of a long
+            table stretches the page past the shell and the whole panel
+            scrolls away under the wheel. Positioned here, they belong to
+            this column and its overflow clips them.
+          */}
+          <div className="relative flex min-h-0 min-w-0 flex-1 flex-col overflow-y-auto bg-background">
+            <AdminTopBar user={user} />
+            {urgentPending > 0 && <UrgentAuditBanner count={urgentPending} />}
+            {lingeringNow.length > 0 && (
+              <LingeringStatusBanner
+                people={lingeringNow.map((p) => ({
+                  name: p.name,
+                  status: STATUS_LABELS[p.status],
+                  minutes: Math.floor(
+                    (Date.now() - p.since.getTime()) / 60_000,
+                  ),
+                }))}
               />
             )}
-          {/* Every screen, not only the queue: the attendant hears and sees
+            {accessRequests > 0 && (
+              <AccessRequestsBanner count={accessRequests} />
+            )}
+            {hoursEnd && <AccessHoursWatch closesAt={hoursEnd.toISOString()} />}
+            {myNotifications > 0 && (
+              <AuditNoticeBanner count={myNotifications} />
+            )}
+            {alerts.auditoria.enabled &&
+              urgentPending + myNotifications > 0 && (
+                <AuditChime
+                  count={urgentPending + myNotifications}
+                  setting={alerts.auditoria}
+                />
+              )}
+            {children}
+            {/* Off, or at lunch (the chat is locked until "voltei"). */}
+            {messenger &&
+              !messenger[1]?.chatDisabled &&
+              !messenger[1]?.atLunch && (
+                <MessengerWatch
+                  setting={alerts.mensagens}
+                  sound={messenger[1]?.sound ?? true}
+                  initialUnread={messenger[0].unread}
+                />
+              )}
+            {/* Every screen, not only the queue: the attendant hears and sees
               the chat wherever they are working in the panel. */}
-          {can(role, "chat.manage", granted) && (
-            <ChatAlerts setting={alerts.chat} />
-          )}
-          {/* Same for the agenda: who is coming today, who just booked. */}
-          {can(role, "channels.manage", granted) && (
-            <AgendaAlerts setting={alerts.agenda} />
-          )}
-          {/* And the guias de transmissão de bens: a new one, or one the citizen moved. */}
-          {can(role, "requests.manage", granted) && (
-            <GuideAlerts setting={alerts.guias} />
-          )}
-          {/* New requests, LGPD and ouvidoria, each as the office chose. */}
-          {(can(role, "requests.manage", granted) ||
-            can(role, "channels.manage", granted)) && (
-            <RecordAlerts
-              settings={{
-                pedidos: alerts.pedidos,
-                lgpd: alerts.lgpd,
-                ouvidoria: alerts.ouvidoria,
-              }}
-            />
-          )}
-        </div>
-      </div>
+            {can(role, "chat.manage", granted) && (
+              <ChatAlerts setting={alerts.chat} />
+            )}
+            {/* Same for the agenda: who is coming today, who just booked. */}
+            {can(role, "channels.manage", granted) && (
+              <AgendaAlerts setting={alerts.agenda} />
+            )}
+            {/* And the guias de transmissão de bens: a new one, or one the citizen moved. */}
+            {can(role, "requests.manage", granted) && (
+              <GuideAlerts setting={alerts.guias} />
+            )}
+            {/* New requests, LGPD and ouvidoria, each as the office chose. */}
+            {(can(role, "requests.manage", granted) ||
+              can(role, "channels.manage", granted)) && (
+              <RecordAlerts
+                settings={{
+                  pedidos: alerts.pedidos,
+                  lgpd: alerts.lgpd,
+                  ouvidoria: alerts.ouvidoria,
+                }}
+              />
+            )}
+          </div>
+        </SidebarProvider>
+      </TooltipProvider>
     </GlobalSearchProvider>
   );
 }

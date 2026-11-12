@@ -1,7 +1,7 @@
 import Image from "next/image";
 import { can } from "@/core/auth/roles.ts";
-
 import type { Tenant } from "@/core/tenant/schema.ts";
+import { Sidebar, SidebarHeader, SidebarRail } from "../_ui/sidebar.tsx";
 import { ADMIN_NAV } from "./nav.ts";
 import { AdminSidebarNav } from "./sidebar-nav.tsx";
 
@@ -22,9 +22,37 @@ export function initials(
 }
 
 /**
- * The navigation column. The person signed in used to have a footer here
- * (avatar, name, role, "Sair"); that moved to the top bar's user menu, so the
- * column is the office's seal and the navigation, nothing else.
+ * The office in the panel: its seal and its name, the only place the office
+ * shows up in the panel's chrome (painel-neutro-shadcn). The seal for a
+ * light background, since the sidebar is light. The name folds away when
+ * the sidebar collapses to its icons, and the seal stays.
+ */
+export function OfficeMark({ tenant }: { tenant: Tenant }) {
+  return (
+    <div className="flex items-center gap-2.5 px-1 py-1">
+      <Image
+        src={tenant.logos.seal.light}
+        alt=""
+        width={32}
+        height={32}
+        className="size-8 flex-none object-contain"
+      />
+      <span className="min-w-0 group-data-[collapsible=icon]:hidden">
+        <span className="block text-sm leading-tight font-semibold text-sidebar-foreground">
+          {tenant.name}
+        </span>
+        <span className="mt-0.5 block text-xs text-sidebar-label">
+          Painel administrativo
+        </span>
+      </span>
+    </div>
+  );
+}
+
+/**
+ * The navigation column: the office's seal and the navigation, nothing else.
+ * The person signed in lives in the top bar's user menu. On a phone the same
+ * column opens as a drawer from the top bar's menu button.
  */
 export function AdminSidebar({
   tenant,
@@ -32,7 +60,6 @@ export function AdminSidebar({
   permissions,
   counts = {},
   showTutorials = true,
-  className = "",
 }: {
   tenant: Tenant;
   /** The session's role: decides which items are offered. */
@@ -44,11 +71,6 @@ export function AdminSidebar({
   /** Whether "Treinamento" has somewhere to lead: a published video, or
    * the management screen for the account that can reach it. */
   showTutorials?: boolean;
-  /**
-   * How this copy is laid out: the fixed column hides itself on a phone, the
-   * drawer hides itself on a desktop. The bar itself is the same either way.
-   */
-  className?: string;
 }) {
   // Hiding a link is a courtesy, not a gate: each route re-checks on the
   // server, so a person who types the URL still gets refused there. The
@@ -61,30 +83,12 @@ export function AdminSidebar({
   );
 
   return (
-    <aside
-      className={`flex min-h-0 w-[236px] flex-none flex-col bg-admin-primary ${className}`}
-    >
-      <div className="border-b border-white/12 px-3 py-4">
-        <div className="flex items-center gap-3 rounded-md border-l-[3px] border-admin-on-dark-accent bg-white/5 px-2.5 py-2.5 motion-safe:animate-brand-glow">
-          <Image
-            src={tenant.logos.seal.dark}
-            alt=""
-            width={36}
-            height={36}
-            className="h-9 w-9 flex-none rounded-full object-contain ring-1 ring-admin-on-dark-accent/40"
-          />
-          <span className="min-w-0">
-            <span className="block font-serif text-[13.5px] font-bold uppercase leading-snug tracking-[0.06em] text-white">
-              {tenant.name}
-            </span>
-            <span className="mt-0.5 block text-[9.5px] font-extrabold uppercase tracking-[0.12em] whitespace-nowrap text-admin-on-dark-accent">
-              Painel administrativo
-            </span>
-          </span>
-        </div>
-      </div>
-
+    <Sidebar collapsible="icon" className="border-sidebar-border">
+      <SidebarHeader className="border-b border-sidebar-border">
+        <OfficeMark tenant={tenant} />
+      </SidebarHeader>
       <AdminSidebarNav items={items} counts={counts} />
-    </aside>
+      <SidebarRail />
+    </Sidebar>
   );
 }

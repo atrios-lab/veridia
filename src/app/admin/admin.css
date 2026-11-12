@@ -212,8 +212,240 @@
   .btn-admin-ghost:hover:not(:disabled) {
     color: var(--color-admin-primary);
   }
-  .dialog,
+}
+
+/*
+ * The panel's motion (decision of 12/11/2026, kept by the owner when the
+ * panel went neutral): whatever has something pending calls the eye. A
+ * number that blinks softly (opacity only, so the text keeps its colour), a
+ * row whose background breathes, and a halo around a solid fill. One cycle
+ * every 1.2s to 2s, far below the three flashes per second WCAG 2.3.1
+ * allows, and always behind `motion-safe:`. The chat alert's shake and
+ * flash run once per alert, never on their own.
+ */
+@theme {
+  --animate-attention-pulse: attention-pulse 1.6s linear infinite;
+  --animate-attention-pulse-light: attention-pulse-light 1.6s linear infinite;
+  --animate-number-blink: number-blink 1.4s ease-in-out infinite;
+  --animate-row-glow: row-glow 2s ease-in-out infinite;
+  --animate-signature-blink: signature-blink 1.2s ease-in-out infinite;
+  --animate-notice-rise: notice-rise 0.4s cubic-bezier(0.16, 1, 0.3, 1) both;
+  --animate-chat-shake: chat-shake 0.6s cubic-bezier(0.36, 0.07, 0.19, 0.97)
+    both;
+  --animate-chat-flash: chat-flash 0.5s ease-in-out 3 both;
+
+  @keyframes attention-pulse {
+    0% {
+      box-shadow: 0 0 0 0
+        color-mix(in srgb, var(--color-primary) 60%, transparent);
+    }
+    70%,
+    100% {
+      box-shadow: 0 0 0 8px
+        color-mix(in srgb, var(--color-primary) 0%, transparent);
+    }
+  }
+
+  @keyframes attention-pulse-light {
+    0% {
+      box-shadow: 0 0 0 0
+        color-mix(in srgb, var(--color-primary) 45%, transparent);
+    }
+    70%,
+    100% {
+      box-shadow: 0 0 0 8px
+        color-mix(in srgb, var(--color-primary) 0%, transparent);
+    }
+  }
+
+  @keyframes number-blink {
+    50% {
+      opacity: 0.45;
+    }
+  }
+
+  @keyframes row-glow {
+    50% {
+      background-color: color-mix(in srgb, var(--color-primary) 8%, transparent);
+    }
+  }
+
+  @keyframes signature-blink {
+    50% {
+      border-color: var(--color-border);
+    }
+  }
+
+  @keyframes notice-rise {
+    from {
+      opacity: 0;
+      transform: translateY(0.75rem);
+    }
+  }
+
+  @keyframes chat-shake {
+    10%,
+    90% {
+      transform: translateX(-3px);
+    }
+    20%,
+    80% {
+      transform: translateX(6px);
+    }
+    30%,
+    50%,
+    70% {
+      transform: translateX(-9px);
+    }
+    40%,
+    60% {
+      transform: translateX(9px);
+    }
+  }
+
+  @keyframes chat-flash {
+    0%,
+    100% {
+      opacity: 0;
+    }
+    50% {
+      opacity: 1;
+    }
+  }
+}
+
+/*
+ * Native controls the panel keeps, drawn to match the components in _ui.
+ *
+ * A checkbox inside a server-action form and a <dialog> opened with
+ * showModal() come with the browser's own form submission, focus trap,
+ * Escape and inert background, so the screens that rely on them keep them;
+ * only the look follows the panel. Declared here in full (not on top of
+ * brand.css), so they stay when the bridge goes.
+ */
+@layer components {
+  .checkbox-admin {
+    appearance: none;
+    width: 1rem;
+    height: 1rem;
+    margin: 0;
+    flex: none;
+    display: inline-grid;
+    place-content: center;
+    border: 1px solid var(--color-input);
+    border-radius: 0.25rem;
+    background: var(--color-background);
+    cursor: pointer;
+    transition:
+      background-color 120ms,
+      border-color 120ms;
+  }
+  .checkbox-admin:checked {
+    background: var(--color-primary);
+    border-color: var(--color-primary);
+  }
+  .checkbox-admin:checked::before {
+    content: "";
+    width: 0.625rem;
+    height: 0.625rem;
+    background: var(--color-primary-foreground);
+    clip-path: polygon(14% 44%, 0 65%, 50% 100%, 100% 16%, 80% 0%, 43% 62%);
+  }
+  .checkbox-admin:focus-visible {
+    outline: none;
+    box-shadow: 0 0 0 3px color-mix(in srgb, var(--color-ring) 50%, transparent);
+  }
+  .checkbox-admin:disabled {
+    cursor: not-allowed;
+    opacity: 0.5;
+  }
+
+  .scrollbar-hidden {
+    scrollbar-width: none;
+  }
+  .scrollbar-hidden::-webkit-scrollbar {
+    display: none;
+  }
+
+  /* The modal every confirmation in the panel opens into: a native
+     <dialog> driven by showModal(). Same box as _ui/dialog.tsx. */
+  .dialog {
+    margin: auto;
+    width: min(28rem, calc(100vw - 2rem));
+    max-height: calc(100dvh - 2rem);
+    padding: 0;
+    border: 0;
+    border-radius: 0.75rem;
+    background: var(--color-popover);
+    color: var(--color-popover-foreground);
+    box-shadow:
+      0 0 0 1px color-mix(in srgb, var(--color-foreground) 10%, transparent),
+      0 10px 30px -10px rgb(0 0 0 / 0.25);
+    overflow: hidden;
+  }
+  .dialog[open],
+  .dialog[open] > form:not(.dialog-footer) {
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+  }
+  .dialog[open] > form:not(.dialog-footer) {
+    flex: 1;
+  }
+  .dialog-body {
+    flex: 1;
+    min-height: 0;
+    overflow-y: auto;
+    padding: 1.5rem;
+    font-size: 0.875rem;
+  }
+  .dialog::backdrop {
+    background: rgb(0 0 0 / 0.4);
+  }
+  /* Confirming action on top under a thumb on a phone, to the right on a
+     computer; cancel stays first in the DOM and keeps the initial focus. */
   .dialog-footer {
-    border-color: var(--color-border);
+    display: flex;
+    flex: none;
+    flex-direction: column-reverse;
+    gap: 0.5rem;
+    border-top: 1px solid var(--color-border);
+    background: color-mix(in srgb, var(--color-muted) 50%, transparent);
+    padding: 1rem 1.5rem;
+  }
+  @media (width >= 40rem) {
+    .dialog-footer {
+      flex-direction: row;
+      align-items: center;
+      justify-content: flex-end;
+    }
+  }
+  .dialog[open] {
+    opacity: 1;
+    transform: none;
+    transition:
+      opacity 150ms ease-out,
+      transform 150ms ease-out;
+  }
+  @starting-style {
+    .dialog[open] {
+      opacity: 0;
+      transform: scale(0.95);
+    }
+  }
+  .dialog[open]::backdrop {
+    opacity: 1;
+    transition: opacity 150ms ease-out;
+  }
+  @starting-style {
+    .dialog[open]::backdrop {
+      opacity: 0;
+    }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .dialog[open],
+    .dialog[open]::backdrop {
+      transition: none;
+    }
   }
 }

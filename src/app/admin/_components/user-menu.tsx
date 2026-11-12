@@ -1,19 +1,25 @@
 "use client";
 
+import { ChevronDown } from "lucide-react";
 import Link from "next/link";
-import { useEffect, useId, useRef, useState } from "react";
+import { useRef } from "react";
+import { useFormStatus } from "react-dom";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuGroup,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "../_ui/dropdown-menu.tsx";
 import { signOut } from "../actions.ts";
-import { AdminIcon } from "./icon.tsx";
-import { SignOutButton } from "./sign-out-button.tsx";
 
 /**
- * The person signed in, at the right end of the top bar: avatar, name and a
- * chevron. Clicking opens the role and "Sair". It replaces the sidebar's old
- * footer, and the sign out stays a `<form action={signOut}>` the way it was
- * there: the server ends the session, the button only asks.
- *
- * "Trocar minha senha" opens Minha conta, where the person changes their
- * own password knowing the current one (decision of 11/11/2026).
+ * The person signed in, at the right of the top bar: initials and name, and
+ * behind them the account's own actions and "Sair". A menu from _ui, so the
+ * keyboard, Escape and the click outside behave like every other menu in
+ * the panel.
  */
 export function UserMenu({
   name,
@@ -24,88 +30,62 @@ export function UserMenu({
   initials: string;
   roleLabel: string;
 }) {
-  const [open, setOpen] = useState(false);
-  const root = useRef<HTMLDivElement>(null);
-  const trigger = useRef<HTMLButtonElement>(null);
-  const menuId = useId();
-
-  useEffect(() => {
-    if (!open) return;
-    function onPointerDown(event: PointerEvent) {
-      if (!root.current?.contains(event.target as Node)) setOpen(false);
-    }
-    function onKeyDown(event: globalThis.KeyboardEvent) {
-      if (event.key === "Escape") {
-        setOpen(false);
-        trigger.current?.focus();
-      }
-    }
-    document.addEventListener("pointerdown", onPointerDown);
-    document.addEventListener("keydown", onKeyDown);
-    return () => {
-      document.removeEventListener("pointerdown", onPointerDown);
-      document.removeEventListener("keydown", onKeyDown);
-    };
-  }, [open]);
+  const signOutForm = useRef<HTMLFormElement>(null);
 
   return (
-    <div ref={root} className="relative flex-none">
-      <button
-        ref={trigger}
-        type="button"
-        aria-haspopup="menu"
-        aria-expanded={open}
-        aria-controls={open ? menuId : undefined}
-        aria-label={`Menu de ${name}`}
-        onClick={() => setOpen((v) => !v)}
-        className="inline-flex cursor-pointer items-center gap-[9px] rounded-full py-[3px] pr-1.5 pl-[3px] transition-colors duration-120 hover:bg-admin-input-bg"
-      >
-        <span className="inline-flex h-8 w-8 flex-none items-center justify-center rounded-full bg-admin-success-bg text-[12px] font-bold tracking-[0.02em] text-admin-primary">
-          {initials}
-        </span>
-        <span className="hidden text-[13px] font-semibold whitespace-nowrap text-admin-text sm:inline">
-          {name}
-        </span>
-        <AdminIcon
-          name="chevronDown"
-          className="h-4 w-4 flex-none text-admin-muted"
-          strokeWidth={2}
-        />
-      </button>
-      {open && (
-        <div
-          id={menuId}
-          role="menu"
-          className="absolute top-[calc(100%+6px)] right-0 z-30 flex min-w-[200px] flex-col gap-0.5 rounded-[11px] border border-admin-border bg-admin-card p-1.5 shadow-[0_8px_24px_rgba(9,24,16,0.12)]"
+    <>
+      <DropdownMenu>
+        <DropdownMenuTrigger
+          aria-label={`Menu de ${name}`}
+          className="inline-flex flex-none cursor-pointer items-center gap-2 rounded-full py-1 pr-2 pl-1 transition-colors hover:bg-muted data-popup-open:bg-muted"
         >
-          <div className="px-2.5 pt-2 pb-2.5">
-            <p className="truncate text-[13px] font-semibold text-admin-text">
-              {name}
-            </p>
-            <p className="text-[11.5px] text-admin-muted">{roleLabel}</p>
-          </div>
-          <hr className="my-0.5 border-0 border-t border-admin-border" />
-          <Link
-            href="/admin/minha-conta#senha"
-            role="menuitem"
-            onClick={() => setOpen(false)}
-            className="flex w-full items-center rounded-[7px] px-2.5 py-2 text-left text-[13px] font-medium text-admin-text transition-colors duration-120 hover:bg-admin-input-bg"
-          >
+          <span className="inline-flex size-8 flex-none items-center justify-center rounded-full bg-primary text-xs font-semibold text-primary-foreground">
+            {initials}
+          </span>
+          <span className="hidden text-sm font-medium whitespace-nowrap sm:inline">
+            {name}
+          </span>
+          <ChevronDown aria-hidden className="size-4 text-muted-foreground" />
+        </DropdownMenuTrigger>
+        <DropdownMenuContent align="end" className="min-w-56">
+          <DropdownMenuGroup>
+            <DropdownMenuLabel>
+              <span className="block truncate text-sm font-medium text-foreground">
+                {name}
+              </span>
+              <span className="block text-xs font-normal text-muted-foreground">
+                {roleLabel}
+              </span>
+            </DropdownMenuLabel>
+          </DropdownMenuGroup>
+          <DropdownMenuSeparator />
+          <DropdownMenuItem render={<Link href="/admin/minha-conta#senha" />}>
             Trocar minha senha
-          </Link>
-          <Link
-            href="/admin/minha-conta"
-            role="menuitem"
-            onClick={() => setOpen(false)}
-            className="flex w-full items-center rounded-[7px] px-2.5 py-2 text-left text-[13px] font-medium text-admin-text transition-colors duration-120 hover:bg-admin-input-bg"
-          >
+          </DropdownMenuItem>
+          <DropdownMenuItem render={<Link href="/admin/minha-conta" />}>
             Verificação em duas etapas
-          </Link>
-          <form action={signOut} role="none">
-            <SignOutButton className="flex w-full cursor-pointer items-center rounded-[7px] px-2.5 py-2 text-left text-[13px] font-medium text-admin-text transition-colors duration-120 hover:bg-admin-input-bg disabled:cursor-default disabled:opacity-60" />
-          </form>
-        </div>
-      )}
-    </div>
+          </DropdownMenuItem>
+          <DropdownMenuSeparator />
+          <DropdownMenuItem
+            onClick={() => signOutForm.current?.requestSubmit()}
+          >
+            Sair
+          </DropdownMenuItem>
+        </DropdownMenuContent>
+      </DropdownMenu>
+      {/* The sign-out action, outside the menu: the menu closes on click,
+          and a form inside a closed popup would unmount mid-submit. */}
+      <form ref={signOutForm} action={signOut} className="contents">
+        <SigningOut />
+      </form>
+    </>
+  );
+}
+
+/** Says the wait out loud for the second the sign-out action takes. */
+function SigningOut() {
+  const { pending } = useFormStatus();
+  return (
+    <output className="sr-only">{pending ? "Saindo…" : ""}</output>
   );
 }

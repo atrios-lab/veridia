@@ -2,18 +2,12 @@ import { can, type Role } from "@/core/auth/roles.ts";
 import { isChatOpen } from "@/core/chat/hours.ts";
 import { readChatAvailability } from "@/lib/chat.ts";
 import { getTenant } from "@/lib/tenant.ts";
+import { Separator } from "../_ui/separator.tsx";
+import { SidebarTrigger } from "../_ui/sidebar.tsx";
 import { SearchTriggerButton } from "./global-search.tsx";
-import { AdminIcon } from "./icon.tsx";
 import { ROLE_LABELS } from "./role-labels.ts";
 import { initials } from "./sidebar.tsx";
 import { UserMenu } from "./user-menu.tsx";
-
-/**
- * The drawer the mobile menu button opens. Shared with the dashboard layout,
- * which renders the drawer itself: `popovertarget` pairs them by id, so the
- * two do not have to sit next to each other in the tree.
- */
-export const ADMIN_MENU_ID = "admin-menu";
 
 /**
  * The one bar over every panel screen: the global search, the chat pill and
@@ -40,35 +34,22 @@ export async function AdminTopBar({
   const open = isChatOpen(availability, tenant, new Date());
 
   return (
-    <header className="flex flex-none items-center gap-3.5 border-b border-admin-border bg-admin-card px-[30px] py-3">
-      {/* The only way to the navigation on a phone, where the sidebar is a
-          drawer instead of a column. */}
-      <button
-        type="button"
-        popoverTarget={ADMIN_MENU_ID}
-        className="-ml-1.5 flex cursor-pointer items-center rounded-lg p-1.5 text-admin-primary md:hidden"
-      >
-        <AdminIcon name="menu" className="h-5.5 w-5.5" />
-        <span className="sr-only">Abrir menu do painel</span>
-      </button>
-      <div className="min-w-0 flex-1 md:max-w-[460px]">
+    <header className="sticky top-0 z-20 flex h-14 flex-none items-center gap-3 border-b bg-background px-4 md:px-6">
+      {/* Collapses the sidebar to its icons; on a phone, where the sidebar
+          is a drawer, it is the only way to the navigation. */}
+      <SidebarTrigger className="-ml-1.5" />
+      <Separator orientation="vertical" className="my-4 hidden md:block" />
+      <div className="min-w-0 flex-1 md:max-w-md">
         <SearchTriggerButton />
       </div>
       <span className="hidden flex-1 md:block" />
       {/* Only for someone who answers the chat: a course learner has no
           citizen writing to them. */}
       {can(user.role, "chat.manage", user.permissions) && (
-        <span
-          className={`hidden items-center gap-[7px] rounded-full px-3 py-1.5 text-[12px] font-semibold whitespace-nowrap sm:inline-flex ${
-            open
-              ? "bg-admin-success-bg text-admin-success-text"
-              : "bg-admin-readonly-bg text-admin-muted"
-          }`}
-        >
-          <AdminIcon
-            name="chat"
-            className="h-[13px] w-[13px]"
-            strokeWidth={2}
+        <span className="hidden items-center gap-2 rounded-full border px-2.5 py-1 text-xs font-medium whitespace-nowrap text-foreground sm:inline-flex">
+          <span
+            aria-hidden
+            className={`size-2 flex-none rounded-full ${open ? "bg-success" : "bg-muted-foreground"}`}
           />
           {open
             ? "Disponível para o chat"
