@@ -15,9 +15,10 @@ import type { InterimPeriod } from "./book.ts";
  * - art. 194, I and VI: an interim deposits what goes over the ceiling and
  *   books it; quarterly, "não havendo lei estadual que estabeleça
  *   periodicidade diversa";
- * - art. 194, V, with the Provimento CNJ nº 24/2012, art. 2º: the deposits
- *   go into "Justiça Aberta" by the 15th of January and of July (or the
- *   next business day).
+ * - Provimento CNJ nº 24/2012, art. 2º: every office, held or interim,
+ *   feeds "Justiça Aberta" by the 15th of January and of July (or the next
+ *   business day), productivity and revenue included (parágrafo único);
+ *   art. 194, V adds the interim's deposits, in fields of their own.
  *
  * RN (Provimento nº 156/2016-CGJ/RN, kept by art. 195, parágrafo único):
  * - art. 62: the balance of the year before by 15 January, sent to the
@@ -32,8 +33,8 @@ export type BookDutyId =
   | "balanco"
   | "remessa"
   | "visto"
+  | "justica-aberta"
   | "interino-deposito"
-  | "interino-justica-aberta"
   | "interino-fdj"
   | "interino-contas";
 
@@ -141,6 +142,30 @@ export function bookDuties(
     });
   }
 
+  // Every office, not only an interim (decision of 12/11/2026): the
+  // Provimento nº 24/2012 speaks of "os responsáveis pelos serviços
+  // notariais e de registro".
+  if (month === 1 || month === 7) {
+    const due = fifteenthOrNextBusinessDay(year, month, options.holidays);
+    if (today <= due) {
+      const semester =
+        month === 1
+          ? `01/07/${last} a 31/12/${last}`
+          : `01/01/${year} a 30/06/${year}`;
+      duties.push({
+        id: "justica-aberta",
+        title: "Justiça Aberta: dados do semestre",
+        detail: `Alimentar o sistema "Justiça Aberta" com os dados do semestre de ${semester}, inclusive produtividade e arrecadação, até ${br(due)} (Provimento CNJ nº 24/2012, art. 2º e parágrafo único).${
+          options.interim
+            ? " O responsável interino lança também, em campos próprios, os valores depositados à disposição do Tribunal de Justiça (Código Nacional de Normas, art. 194, V)."
+            : ""
+        }`,
+        due,
+        late: false,
+      });
+    }
+  }
+
   if (!options.interim) return duties;
   const period = options.interimPeriod ?? "trimestral";
   if (period === "trimestral" && [1, 4, 7, 10].includes(month)) {
@@ -152,18 +177,6 @@ export function bookDuties(
       due: null,
       late: false,
     });
-  }
-  if (month === 1 || month === 7) {
-    const due = fifteenthOrNextBusinessDay(year, month, options.holidays);
-    if (today <= due) {
-      duties.push({
-        id: "interino-justica-aberta",
-        title: "Justiça Aberta (interino)",
-        detail: `Lançar no sistema "Justiça Aberta" os valores depositados à disposição do Tribunal de Justiça até ${br(due)} (CN art. 194, V; Provimento CNJ nº 24/2012, art. 2º).`,
-        due,
-        late: false,
-      });
-    }
   }
   if (rn && period === "mensal" && day <= 10) {
     const due = `${today.slice(0, 7)}-10`;
