@@ -86,3 +86,8 @@ export const OFFICE_DAILY_BOOK_KEY = "office-daily-book";
 export const OFFICE_BOOK_BULLETIN_KEY = "office-book-bulletin";
 /** Livro Diário Auxiliar: the interim's excess calculations (art. 194). */
 export const OFFICE_INTERIM_EXCESS_KEY = "office-interim-excess";
+/**
+ * Livro Diário Auxiliar › Justiça Aberta: the FCRCPN repasses received, and
+ * the semesters the office declared without one.
+ */
+export const OFFICE_FCRCPN_KEY = "office-fcrcpn";

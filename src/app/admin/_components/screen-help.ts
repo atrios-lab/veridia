@@ -642,5 +642,50 @@ ENTRIES["/admin/utilitarios/papel-seguranca/gerar"] = {
 
 ENTRIES["/admin/utilitarios/livro-diario/excedente"] = INTERIM_EXCESS_HELP;
 
+/**
+ * Livro Diário › Justiça Aberta (decision of 12/11/2026): the semester's
+ * figures in the order of the CNJ form, ready to copy.
+ */
+export const JUSTICA_ABERTA_HELP: ScreenHelp = {
+  purpose:
+    'Reúne, a partir do Livro Diário Auxiliar, os números que o sistema "Justiça Aberta" pede a cada semestre, na mesma ordem do formulário "Produtividade do cartório". Cada valor tem o botão Copiar, para colar no campo correspondente do CNJ.',
+  steps: [
+    "Escolha o semestre: de 1º de janeiro a 30 de junho, lançado até 15 de julho; de 1º de julho a 31 de dezembro, lançado até 15 de janeiro (ou o próximo dia útil).",
+    'Confira os avisos de "Antes de lançar": meses sem receita no livro e especialidades cujo nome não corresponde a nenhuma do formulário. Corrija no livro antes de copiar.',
+    'Informe o repasse do FCRCPN recebido no semestre (data, quem pagou, valor recebido e imposto retido, se houver). Ele entra em "Receita terceiros - Outros" do Registro Civil das Pessoas Naturais. Se não houve repasse, registre isso no botão próprio.',
+    'Copie, especialidade por especialidade, "Atos praticados", "Receita própria - Emolumentos", "Receita terceiros - Legal" e "Receita terceiros - Outros". Depois copie as despesas e confira o resultado consolidado com o que o formulário calcular.',
+    "Gere o PDF dos dados do semestre, assine digitalmente ou imprima, e guarde com os comprovantes.",
+  ],
+  terms: [
+    {
+      term: "Receita própria - Emolumentos",
+      meaning:
+        "Os emolumentos lançados no livro como receita do delegatário (Código Nacional de Normas, art. 190, § 3º), por especialidade.",
+    },
+    {
+      term: "Receita terceiros - Legal",
+      meaning:
+        "Lançada como R$ 0,00, como a serventia já declara. Fundos e ISS aparecem na tela só para conferência.",
+    },
+    {
+      term: "Receita terceiros - Outros",
+      meaning:
+        "O repasse do FCRCPN recebido no semestre, no Registro Civil das Pessoas Naturais.",
+    },
+    {
+      term: "Despesas de funcionamento",
+      meaning:
+        'Todas as despesas lançadas no livro no semestre. "Despesas legais" e "Outras despesas" ficam em R$ 0,00.',
+    },
+    {
+      term: "Prazo",
+      meaning:
+        "\"Os responsáveis pelos serviços notariais e de registro deverão alimentar semestralmente e diretamente, via internet, todos os dados no sistema 'Justiça Aberta' até o dia 15 dos meses de JANEIRO e JULHO (ou até o próximo dia útil subsequente)\" (Provimento CNJ nº 24/2012, art. 2º).",
+    },
+    { term: "Referências", meaning: `${REF_CN_24} ${REF_CN_149}` },
+  ],
+};
+ENTRIES["/admin/utilitarios/livro-diario/justica-aberta"] = JUSTICA_ABERTA_HELP;
+
 /** Every screen with help, for the test that keeps the links honest. */
 export const SCREEN_HELP = ENTRIES;

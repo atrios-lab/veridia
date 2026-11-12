@@ -27,6 +27,7 @@ import { AdminPageHeader } from "../../../_components/page-header.tsx";
 import {
   BOOK_TERMS_HELP,
   INTERIM_EXCESS_HELP,
+  JUSTICA_ABERTA_HELP,
 } from "../../../_components/screen-help.ts";
 import { ScreenHelpButton } from "../../../_components/screen-help-button.tsx";
 import { Button, buttonVariants } from "../../../_ui/button.tsx";
@@ -177,6 +178,17 @@ export default async function DailyBookPage({
               {d.late ? " (prazo vencido)" : ""}:
             </strong>{" "}
             {d.detail}
+            {d.id === "justica-aberta" && (
+              <>
+                {" "}
+                <Link
+                  href={`${base}/justica-aberta`}
+                  className="font-semibold underline underline-offset-4"
+                >
+                  Abrir os dados prontos para o Justiça Aberta
+                </Link>
+              </>
+            )}
           </p>
         ))}
         {lastDays && (
@@ -234,6 +246,30 @@ export default async function DailyBookPage({
           </div>
           <Link href={`${base}/excedente`} className={buttonVariants()}>
             <AdminIcon name="grid" className="h-4 w-4" /> Abrir a calculadora
+          </Link>
+        </section>
+
+        <section className="flex flex-wrap items-center gap-4 rounded-xl border-2 border-primary bg-card px-5 py-4">
+          <div className="flex min-w-[260px] flex-1 flex-col gap-1">
+            <div className="flex flex-wrap items-center gap-2.5">
+              <h2 className="text-lg font-semibold text-foreground">
+                Justiça Aberta: dados do semestre
+              </h2>
+              <ScreenHelpButton
+                help={JUSTICA_ABERTA_HELP}
+                canConfigure
+                label="Como copiar os dados para o Justiça Aberta"
+              />
+            </div>
+            <p className="text-sm text-muted-foreground">
+              Atos, receitas por especialidade, despesas e resultado, na ordem
+              do formulário do CNJ, prontos para copiar, com o repasse do
+              FCRCPN. Até 15 de janeiro e 15 de julho (Provimento CNJ nº
+              24/2012, art. 2º).
+            </p>
+          </div>
+          <Link href={`${base}/justica-aberta`} className={buttonVariants()}>
+            <AdminIcon name="grid" className="h-4 w-4" /> Abrir o Justiça Aberta
           </Link>
         </section>
 
