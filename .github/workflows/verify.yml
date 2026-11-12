@@ -44,6 +44,7 @@ jobs:
       - run: pnpm test
       - run: pnpm check:dashes
       - run: pnpm check:tokens
+      - run: pnpm check:admin-scale
       - run: pnpm check:destructive
 
       - name: openspec validate
