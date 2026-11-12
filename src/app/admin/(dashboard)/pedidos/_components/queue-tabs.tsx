@@ -58,9 +58,11 @@ export function QueueTabs({
               className={`flex flex-col gap-1 rounded-[12px] border-2 px-3.5 py-3 transition hover:-translate-y-0.5 hover:shadow-sm ${
                 active
                   ? "border-admin-primary bg-admin-primary text-white shadow-[0_10px_24px_-14px_rgba(0,0,0,0.6)]"
-                  : count > 0
-                    ? FILLED[tab.tone]
-                    : "border-admin-border bg-admin-card text-admin-faint"
+                  : count > 0 && !closed
+                    ? `${FILLED[tab.tone]} motion-safe:animate-attention-pulse-light`
+                    : count > 0
+                      ? FILLED[tab.tone]
+                      : "border-admin-border bg-admin-card text-admin-faint"
               }`}
             >
               <span className="flex items-center justify-between gap-2 text-[10.5px] font-bold uppercase tracking-[0.1em] opacity-85">

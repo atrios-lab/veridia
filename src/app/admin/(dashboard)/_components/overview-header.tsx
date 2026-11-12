@@ -77,16 +77,28 @@ export function OverviewHeader({
                 href={kpi.href}
                 className={`group flex flex-col gap-1.5 rounded-[14px] px-4 py-3.5 ring-1 max-md:px-3 max-md:py-3 backdrop-blur-sm transition hover:-translate-y-0.5 ${
                   kpi.alert
-                    ? "bg-admin-error-text/90 ring-white/25 hover:bg-admin-error-text"
-                    : "bg-white/10 ring-white/15 hover:bg-white/15"
+                    ? "bg-admin-error-text/90 ring-white/25 hover:bg-admin-error-text motion-safe:animate-attention-pulse"
+                    : kpi.value > 0
+                      ? "bg-admin-on-dark-accent/20 ring-2 ring-admin-on-dark-accent hover:bg-admin-on-dark-accent/30 motion-safe:animate-attention-pulse"
+                      : "bg-white/10 ring-white/15 hover:bg-white/15"
                 }`}
               >
                 <span className="flex items-center gap-2 text-[11.5px] font-bold uppercase tracking-[0.08em] text-white/80">
                   <AdminIcon name={kpi.icon} className="h-4 w-4" />
                   {kpi.label}
                 </span>
-                <span className="font-serif text-[36px] leading-none font-semibold tabular-nums max-md:text-[30px]">
+                <span
+                  className={`flex items-center gap-2 font-serif text-[36px] leading-none font-semibold tabular-nums max-md:text-[30px] ${
+                    kpi.value > 0 ? "motion-safe:animate-number-blink" : ""
+                  }`}
+                >
                   {kpi.value}
+                  {kpi.value > 0 && (
+                    <span className="relative flex h-2.5 w-2.5">
+                      <span className="absolute inline-flex h-full w-full rounded-full bg-admin-on-dark-accent opacity-75 motion-safe:animate-ping" />
+                      <span className="relative inline-flex h-2.5 w-2.5 rounded-full bg-admin-on-dark-accent" />
+                    </span>
+                  )}
                 </span>
                 <span className="text-[12px] text-white/75 group-hover:text-white">
                   {kpi.caption} →

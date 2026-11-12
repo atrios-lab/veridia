@@ -277,6 +277,48 @@
 }
 
 /*
+ * The Visão geral's movement (decision of 12/11/2026): whatever has
+ * something in it calls the eye. A number that blinks softly (opacity only,
+ * so the text keeps its colour), a row whose background breathes in the
+ * accent, and the "look here" halo for a block on a light surface. One
+ * cycle every 1.4s to 2s, far below the three flashes per second WCAG 2.3.1
+ * allows, and always behind `motion-safe:`.
+ */
+@theme {
+  --animate-number-blink: number-blink 1.4s ease-in-out infinite;
+  --animate-row-glow: row-glow 2s ease-in-out infinite;
+  --animate-attention-pulse-light: attention-pulse-light 1.6s linear infinite;
+
+  @keyframes number-blink {
+    50% {
+      opacity: 0.45;
+    }
+  }
+
+  @keyframes row-glow {
+    50% {
+      background-color: color-mix(
+        in srgb,
+        var(--color-admin-accent) 16%,
+        transparent
+      );
+    }
+  }
+
+  @keyframes attention-pulse-light {
+    0% {
+      box-shadow: 0 0 0 0
+        color-mix(in srgb, var(--color-admin-accent) 70%, transparent);
+    }
+    70%,
+    100% {
+      box-shadow: 0 0 0 8px
+        color-mix(in srgb, var(--color-admin-accent) 0%, transparent);
+    }
+  }
+}
+
+/*
  * The home's opening hours card: the panel's "click here" halo (see
  * attention-pulse, the Treinamento item), turned inward. It starts at the
  * card's edge at 85% and fades as it grows inside: green while the counter
