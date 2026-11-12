@@ -36,6 +36,7 @@ import {
   readReceipt,
   removeEntry,
   removeReport,
+  saveBalanceOficio,
   saveEntry,
   saveSettings,
 } from "./actions.ts";
@@ -1348,5 +1349,73 @@ export function BookTermsPanel({
         primary={false}
       />
     </div>
+  );
+}
+
+/* ---------------------------------------------------------------- ofício */
+
+/**
+ * The ofício that sends the year's balance to the Corregedoria (CGJ/RN art.
+ * 62). The office numbers its ofícios in its own book, so the number is
+ * theirs to type.
+ */
+export function BalanceOficioForm({
+  id,
+  initial,
+}: {
+  id: string;
+  initial: { number: string; addressee: string; date: string };
+}) {
+  const [state, action, pending] = useActionState(saveBalanceOficio, IDLE);
+  return (
+    <form action={action} className={CARD}>
+      <Feedback state={state} />
+      <input type="hidden" name="id" value={id} />
+      <div className="grid gap-4 md:grid-cols-[180px_180px_1fr]">
+        <div>
+          <label htmlFor="of-number" className={LABEL}>
+            Número do ofício
+          </label>
+          <Input
+            id="of-number"
+            name="numero"
+            required
+            maxLength={40}
+            placeholder="Ex.: 04/2026"
+            defaultValue={initial.number}
+          />
+        </div>
+        <div>
+          <label htmlFor="of-date" className={LABEL}>
+            Data do ofício
+          </label>
+          <Input
+            id="of-date"
+            name="data"
+            type="date"
+            required
+            defaultValue={initial.date}
+          />
+        </div>
+        <div>
+          <label htmlFor="of-to" className={LABEL}>
+            Destinatário (uma linha por linha do endereçamento)
+          </label>
+          <Textarea
+            id="of-to"
+            name="destinatario"
+            required
+            rows={3}
+            maxLength={600}
+            defaultValue={initial.addressee}
+          />
+        </div>
+      </div>
+      <p className={HINT}>
+        O ofício sai na primeira página, seguido do balanço com as folhas do
+        livro. O envio é feito pelos canais oficiais do Tribunal.
+      </p>
+      <Submit pending={pending} label="Salvar ofício" busy="Salvando..." />
+    </form>
   );
 }

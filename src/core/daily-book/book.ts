@@ -401,8 +401,18 @@ export interface BookSnapshot {
   end: string;
   issuedOn: string;
   entries: BookEntry[];
-  /** For the year's balance: month by month. */
-  months: { month: string; revenueCents: number; expensesCents: number }[];
+  /** For the year's balance: month by month. The acts, funds and ISS came
+   * later (decision of 12/11/2026): a balance generated before has none. */
+  months: {
+    month: string;
+    revenueCents: number;
+    expensesCents: number;
+    acts?: number;
+    fundsCents?: number;
+    issCents?: number;
+  }[];
+  /** The year's balance: the ofício that sends it to the Corregedoria. */
+  oficio?: BalanceOficio | null;
   notes: string;
   signer: { name: string; title: string; note?: string } | null;
   /** An interim office, in the month that closes its period (art. 194). */
@@ -693,6 +703,91 @@ export function buildBookDocument(
   };
 }
 
+/** The year's figures, added up from the months. */
+export function annualTotals(s: Pick<BookSnapshot, "months">) {
+  const sum = (pick: (m: BookSnapshot["months"][number]) => number) =>
+    s.months.reduce((a, m) => a + pick(m), 0);
+  const revenue = sum((m) => m.revenueCents);
+  const expenses = sum((m) => m.expensesCents);
+  // Acts, funds and ISS: only when every month carries them.
+  const detailed =
+    s.months.length > 0 && s.months.every((m) => m.acts !== undefined);
+  const third = sum((m) => (m.fundsCents ?? 0) + (m.issCents ?? 0));
+  return {
+    revenue,
+    expenses,
+    net: revenue - expenses,
+    detailed,
+    acts: sum((m) => m.acts ?? 0),
+    thirdPartyCents: third,
+    grossCents: revenue + third,
+  };
+}
+
+const signed = (cents: number) =>
+  `${cents < 0 ? "-" : ""}${formatMoneyBRL(Math.abs(cents))}`;
+
+function monthTable(s: BookSnapshot): RequerimentoSection["table"] {
+  const t = annualTotals(s);
+  if (!t.detailed) {
+    return {
+      columns: [
+        { label: "Mês", weight: 1.6 },
+        { label: "Receita (R$)", align: "right" },
+        { label: "Despesa (R$)", align: "right" },
+        { label: "Saldo (R$)", align: "right" },
+      ],
+      rows: s.months.map((m) => [
+        monthLabel(`${m.month}-01`),
+        formatMoneyBRL(m.revenueCents),
+        formatMoneyBRL(m.expensesCents),
+        signed(m.revenueCents - m.expensesCents),
+      ]),
+      total: [
+        "Total do exercício",
+        formatMoneyBRL(t.revenue),
+        formatMoneyBRL(t.expenses),
+        signed(t.net),
+      ],
+    };
+  }
+  // The columns the office already sends the Corregedoria (decision of
+  // 12/11/2026): acts, what was collected, what went to funds and ISS, the
+  // emolumentos that are the delegatário's revenue, expenses and net.
+  return {
+    columns: [
+      { label: "Mês", weight: 1.25 },
+      { label: "Atos", align: "right", weight: 0.6 },
+      { label: "Arrecadação bruta (R$)", align: "right" },
+      { label: "Fundos e ISS (R$)", align: "right" },
+      { label: "Emolumentos (R$)", align: "right" },
+      { label: "Despesas (R$)", align: "right" },
+      { label: "Líquido (R$)", align: "right" },
+    ],
+    rows: s.months.map((m) => {
+      const third = (m.fundsCents ?? 0) + (m.issCents ?? 0);
+      return [
+        monthLabel(`${m.month}-01`),
+        (m.acts ?? 0).toLocaleString("pt-BR"),
+        formatMoneyBRL(m.revenueCents + third),
+        formatMoneyBRL(third),
+        formatMoneyBRL(m.revenueCents),
+        formatMoneyBRL(m.expensesCents),
+        signed(m.revenueCents - m.expensesCents),
+      ];
+    }),
+    total: [
+      "Total",
+      t.acts.toLocaleString("pt-BR"),
+      formatMoneyBRL(t.grossCents),
+      formatMoneyBRL(t.thirdPartyCents),
+      formatMoneyBRL(t.revenue),
+      formatMoneyBRL(t.expenses),
+      signed(t.net),
+    ],
+  };
+}
+
 /** Art. 193: the year's revenue, expenses and net result. */
 export function buildAnnualDocument(
   tenant: Tenant,
@@ -700,9 +795,10 @@ export function buildAnnualDocument(
 ): RequerimentoDocument {
   const office = officialName(tenant);
   const year = s.start.slice(0, 4);
-  const revenue = s.months.reduce((a, m) => a + m.revenueCents, 0);
-  const expenses = s.months.reduce((a, m) => a + m.expensesCents, 0);
-  const net = revenue - expenses;
+  const t = annualTotals(s);
+  const revenue = t.revenue;
+  const expenses = t.expenses;
+  const net = t.net;
   return {
     eyebrow: "Livro Diário Auxiliar da Receita e da Despesa",
     title: `Balanço anual de ${year}`,
@@ -721,7 +817,26 @@ export function buildAnnualDocument(
       {
         heading: "Balanço (art. 193)",
         rows: [
-          { label: "Receitas", value: money(revenue) },
+          ...(t.detailed
+            ? [
+                {
+                  label: "Atos praticados",
+                  value: t.acts.toLocaleString("pt-BR"),
+                },
+                {
+                  label: "Arrecadação bruta (emolumentos, fundos e ISS)",
+                  value: money(t.grossCents),
+                },
+                {
+                  label: "Fundos e ISS (não lançados como receita)",
+                  value: money(t.thirdPartyCents),
+                },
+              ]
+            : []),
+          {
+            label: "Receitas: emolumentos (art. 190, § 3º)",
+            value: money(revenue),
+          },
           { label: "Despesas", value: money(expenses) },
           {
             label:
@@ -732,29 +847,7 @@ export function buildAnnualDocument(
           },
         ],
       },
-      {
-        heading: "Mês a mês",
-        table: {
-          columns: [
-            { label: "Mês", weight: 1.6 },
-            { label: "Receita (R$)", align: "right" },
-            { label: "Despesa (R$)", align: "right" },
-            { label: "Saldo (R$)", align: "right" },
-          ],
-          rows: s.months.map((m) => [
-            monthLabel(`${m.month}-01`),
-            formatMoneyBRL(m.revenueCents),
-            formatMoneyBRL(m.expensesCents),
-            `${m.revenueCents - m.expensesCents < 0 ? "-" : ""}${formatMoneyBRL(Math.abs(m.revenueCents - m.expensesCents))}`,
-          ]),
-          total: [
-            "Total do exercício",
-            formatMoneyBRL(revenue),
-            formatMoneyBRL(expenses),
-            `${net < 0 ? "-" : ""}${formatMoneyBRL(Math.abs(net))}`,
-          ],
-        },
-      },
+      { heading: "Mês a mês", table: monthTable(s) },
       {
         heading: "Resultado",
         paragraphs: [
@@ -775,6 +868,94 @@ export function buildAnnualDocument(
     footer: `${office} · Livro Diário Auxiliar · Balanço de ${year} · ${tenant.legalFooter}`,
     sheet: sheetOf(s),
   };
+}
+
+/* ---------------------------------------------------------------- ofício */
+
+/**
+ * The ofício that sends the year's balance to the Corregedoria (decision of
+ * 12/11/2026). In RN the balance is "remetido à Corregedoria Geral de
+ * Justiça até 5 dias depois de sua conclusão" (CGJ/RN art. 62); the office
+ * sends it through the Tribunal's own channels, so the platform writes the
+ * ofício and leaves the sending to them.
+ */
+export interface BalanceOficio {
+  /** As the office numbers its ofícios: "04/2026". */
+  number: string;
+  /** One line per line of the address. */
+  addressee: string;
+  /** "YYYY-MM-DD" */
+  date: string;
+}
+
+export function buildBalanceOficio(
+  tenant: Tenant,
+  s: BookSnapshot,
+  options: {
+    /** The portal's address, when every month of the year is published. */
+    transparencyUrl?: string;
+  } = {},
+): RequerimentoDocument {
+  const office = officialName(tenant);
+  const year = s.start.slice(0, 4);
+  const t = annualTotals(s);
+  const oficio = s.oficio;
+  const number = oficio?.number.trim() || "";
+  const rn = tenant.location.state === "RN";
+  const sheets =
+    s.book?.firstSheet && s.book.lastSheet
+      ? `, lavrado no Livro nº ${s.book.number}, ${s.book.firstSheet === s.book.lastSheet ? `folha ${s.book.firstSheet}` : `folhas ${s.book.firstSheet} a ${s.book.lastSheet}`}`
+      : "";
+  const addressee = (oficio?.addressee ?? "")
+    .split("\n")
+    .map((line) => line.trim())
+    .filter(Boolean);
+  return {
+    eyebrow: number ? `Ofício nº ${number}` : "Ofício",
+    title: `Encaminhamento do balanço anual de ${year}`,
+    subtitle: "Livro Diário Auxiliar da Receita e da Despesa",
+    office: [office, tenant.subtitle],
+    sections: [
+      {
+        heading: "Destinatário",
+        paragraphs: addressee.length
+          ? [addressee.join("\n")]
+          : ["Corregedoria Geral da Justiça"],
+      },
+      {
+        heading: "Encaminhamento",
+        paragraphs: [
+          "Excelentíssimo(a) Senhor(a) Corregedor(a)-Geral,",
+          `Encaminho a Vossa Excelência o balanço anual do exercício de ${year} desta serventia (CNS ${tenant.cns}), elaborado nos termos do art. 193 do Código Nacional de Normas da Corregedoria Nacional de Justiça (Provimento CNJ nº 149/2023, com a redação do Provimento CNJ nº 259/2026)${rn ? " e remetido na forma do art. 62 do Código de Normas da Corregedoria Geral de Justiça do Estado do Rio Grande do Norte (Provimento nº 156/2016-CGJ/RN)" : ""}.`,
+          `No exercício, a serventia registrou receitas de ${money(t.revenue)}, despesas de ${money(t.expenses)} e resultado líquido ${t.net >= 0 ? "positivo" : "negativo"} de ${money(Math.abs(t.net))}, conforme o demonstrativo mês a mês que acompanha este ofício.`,
+          `Os valores foram extraídos do Livro Diário Auxiliar da Receita e da Despesa, escriturado na forma dos arts. 189 a 192 do mesmo Código${sheets}.${options.transparencyUrl ? ` Os boletins mensais de receita do exercício estão publicados no Portal da Transparência da serventia, em ${options.transparencyUrl}.` : ""}`,
+          "O referido é verdade e dou fé. Aproveito a oportunidade para renovar a Vossa Excelência os protestos de elevada estima e consideração.",
+        ],
+      },
+    ],
+    dateLine: `${tenant.location.city}/${tenant.location.state}, ${writtenDate(oficio?.date || s.issuedOn)}.`,
+    ...signerLines(tenant, s),
+    footer: `${office} · ${number ? `Ofício nº ${number} · ` : ""}Balanço anual de ${year} · ${tenant.legalFooter}`,
+  };
+}
+
+/** What the ofício form starts with: the Corregedoria as the office keeps
+ * it for the papel de segurança, when it has. */
+export function defaultOficioAddressee(parts: {
+  headName?: string;
+  headTitle?: string;
+  authority?: string;
+}): string {
+  return [
+    "A Sua Excelência",
+    [
+      parts.headName?.trim(),
+      parts.headTitle?.trim() || "Corregedor(a)-Geral da Justiça",
+    ]
+      .filter(Boolean)
+      .join(", "),
+    parts.authority?.trim() || "Corregedoria Geral da Justiça",
+  ].join("\n");
 }
 
 /** Art. 186: opened and closed by the holder, who signs. */

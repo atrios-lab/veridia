@@ -2,14 +2,17 @@ import assert from "node:assert/strict";
 import { test } from "node:test";
 import type { Tenant } from "../tenant/schema.ts";
 import {
+  annualTotals,
   type BookEntry,
   bookCsv,
   buildAnnualDocument,
+  buildBalanceOficio,
   buildBookDocument,
   buildClosingDocument,
   buildOpeningDocument,
   categoryLabel,
   DEFAULT_SPECIALTIES,
+  defaultOficioAddressee,
   EXPENSE_CATEGORIES,
   interimFigures,
   interimPeriodOf,
@@ -412,4 +415,107 @@ test("art. 194: período trimestral ou mensal, renda líquida e excedente", () =
     interim: { ceilingCents: 3_000_000 },
   });
   assert.doesNotMatch(JSON.stringify(titular), /art\. 194/);
+});
+
+const DETAILED = {
+  kind: "ano" as const,
+  start: "2026-01-01",
+  end: "2026-12-31",
+  issuedOn: "2027-01-05",
+  entries: [],
+  months: [
+    {
+      month: "2026-01",
+      revenueCents: 1_000_000,
+      expensesCents: 400_000,
+      acts: 120,
+      fundsCents: 300_000,
+      issCents: 50_000,
+    },
+    {
+      month: "2026-02",
+      revenueCents: 500_000,
+      expensesCents: 600_000,
+      acts: 80,
+      fundsCents: 150_000,
+      issCents: 25_000,
+    },
+  ],
+  notes: "",
+  signer: null,
+  book: { number: 2, sheetCount: 200, firstSheet: 31, lastSheet: 32 },
+};
+
+test("balanço anual: atos, arrecadação bruta, fundos e ISS, emolumentos, despesas e líquido", () => {
+  const t = annualTotals(DETAILED);
+  assert.equal(t.detailed, true);
+  assert.equal(t.acts, 200);
+  assert.equal(t.revenue, 1_500_000);
+  assert.equal(t.thirdPartyCents, 525_000);
+  assert.equal(t.grossCents, 2_025_000);
+  assert.equal(t.net, 500_000);
+  const text = JSON.stringify(buildAnnualDocument(tenant, DETAILED));
+  assert.match(text, /Arrecadação bruta \(R\$\)/);
+  assert.match(text, /Fundos e ISS \(R\$\)/);
+  assert.match(text, /20\.250,00/);
+  // A negative month keeps its sign.
+  assert.match(text, /-1\.000,00/);
+  // A balance from before keeps the old columns.
+  assert.equal(
+    annualTotals({
+      months: [{ month: "2026-01", revenueCents: 1, expensesCents: 0 }],
+    }).detailed,
+    false,
+  );
+});
+
+test("ofício do balanço: número, destinatário, art. 193 e, no RN, art. 62", () => {
+  const doc = buildBalanceOficio(tenant, {
+    ...DETAILED,
+    oficio: {
+      number: "04/2027",
+      addressee: "A Sua Excelência\nCorregedor(a)-Geral da Justiça",
+      date: "2027-01-05",
+    },
+  });
+  const text = JSON.stringify(doc);
+  assert.equal(doc.eyebrow, "Ofício nº 04/2027");
+  assert.match(text, /balanço anual do exercício de 2026/);
+  assert.match(text, /art\. 193 do Código Nacional de Normas/);
+  assert.match(text, /art\. 62 do Código de Normas/);
+  assert.match(text, /resultado líquido positivo de R\$ 5\.000,00/);
+  assert.match(text, /Livro nº 2, folhas 31 a 32/);
+  // The portal only when the caller knows every month is published.
+  assert.doesNotMatch(text, /Portal da Transparência/);
+  assert.match(
+    JSON.stringify(
+      buildBalanceOficio(tenant, DETAILED, {
+        transparencyUrl: "https://cartorio.exemplo.com.br/transparencia",
+      }),
+    ),
+    /Portal da Transparência da serventia, em https:\/\/cartorio\.exemplo/,
+  );
+  const elsewhere = buildBalanceOficio(
+    {
+      ...tenant,
+      location: { city: "Exemplo", state: "PB" },
+    } as unknown as Tenant,
+    DETAILED,
+  );
+  assert.doesNotMatch(JSON.stringify(elsewhere), /CGJ\/RN|art\. 62/);
+});
+
+test("ofício: destinatário sugerido a partir da Corregedoria cadastrada", () => {
+  assert.equal(
+    defaultOficioAddressee({
+      headName: "Fulano Fictício",
+      headTitle: "Desembargador Corregedor-Geral",
+      authority: "Corregedoria Geral de Justiça do Estado Exemplo",
+    }),
+    "A Sua Excelência\nFulano Fictício, Desembargador Corregedor-Geral\nCorregedoria Geral de Justiça do Estado Exemplo",
+  );
+  assert.equal(
+    defaultOficioAddressee({}),
+    "A Sua Excelência\nCorregedor(a)-Geral da Justiça\nCorregedoria Geral da Justiça",
+  );
 });

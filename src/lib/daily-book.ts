@@ -2,10 +2,12 @@ import "server-only";
 import { and, asc, desc, eq, gte, isNotNull, isNull, lte } from "drizzle-orm";
 import { PDFDocument } from "pdf-lib";
 import {
+  type BalanceOficio,
   type BookDocKind,
   type BookEntry,
   type BookSettings,
   type BookSnapshot,
+  buildBalanceOficio,
   buildBookPdfDocument,
   DEFAULT_SPECIALTIES,
   type EntryKind,
@@ -34,7 +36,7 @@ import {
   OFFICE_BOOK_BULLETIN_KEY,
   OFFICE_DAILY_BOOK_KEY,
 } from "./office-config.ts";
-import { renderDocument } from "./pdf.ts";
+import { renderDocument, renderDocuments } from "./pdf.ts";
 
 export class DailyBookError extends Error {}
 
@@ -533,6 +535,9 @@ async function buildSnapshotWith(
         month,
         revenueCents: sum.revenueCents,
         expensesCents: sum.expensesCents,
+        acts: sum.acts,
+        fundsCents: sum.fundsCents,
+        issCents: sum.issCents,
       });
     }
   }
@@ -776,6 +781,49 @@ export async function renderBookPdf(
 ): Promise<Buffer> {
   return renderDocument(
     buildBookPdfDocument(tenant, snapshotOf(row)),
+    await brandFor(tenant),
+  );
+}
+
+/**
+ * The ofício that sends the year's balance to the Corregedoria: kept with
+ * the balance, so the PDF comes out the same every time it is opened.
+ */
+export async function saveBalanceOficioWith(
+  database: Database,
+  tenantSlug: string,
+  id: string,
+  oficio: BalanceOficio,
+  actorId: string,
+): Promise<void> {
+  const row = await findBookReportWith(database, tenantSlug, id);
+  if (!row || row.removedAt) throw new DailyBookError("Página não encontrada.");
+  const old = snapshotOf(row);
+  if (old.kind !== "ano") {
+    throw new DailyBookError("O ofício acompanha o balanço anual.");
+  }
+  await database
+    .update(dailyBookReports)
+    .set({ snapshot: { ...old, oficio }, updatedAt: new Date() })
+    .where(eq(dailyBookReports.id, id));
+  await recordAuditWith(database, {
+    tenantSlug,
+    actorId,
+    action: "daily-book.report-edit",
+    targetType: "daily-book",
+    targetId: id,
+  });
+}
+
+/** The ofício first, then the balance it sends, in one PDF. */
+export async function renderBalanceOficioPdf(
+  tenant: Tenant,
+  row: Pick<StoredReport, "snapshot">,
+  options: { transparencyUrl?: string } = {},
+): Promise<Buffer> {
+  const s = snapshotOf(row);
+  return renderDocuments(
+    [buildBalanceOficio(tenant, s, options), buildBookPdfDocument(tenant, s)],
     await brandFor(tenant),
   );
 }

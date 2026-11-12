@@ -182,10 +182,14 @@ test("página do mês congela os lançamentos; refazer traz os de agora; balanç
     "titular",
   );
   const october = snapshotOf(year).months.find((m) => m.month === "2026-10");
+  // Acts, funds and ISS ride along for the balance's columns.
   assert.deepEqual(october, {
     month: "2026-10",
     revenueCents: 5000,
     expensesCents: 61000,
+    acts: 10,
+    fundsCents: 0,
+    issCents: 210,
   });
   const pdf = await PDFDocument.load(await renderBookPdf(tenant, page));
   assert.ok(pdf.getPageCount() >= 1);
