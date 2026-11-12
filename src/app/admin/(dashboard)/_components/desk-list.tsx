@@ -96,7 +96,10 @@ export function DeskList({
                 )}
               >
                 <Badge
-                  className={cn("w-21 flex-none", CHIP_STYLES[item.chipTone])}
+                  className={cn(
+                    "min-w-28 flex-none",
+                    CHIP_STYLES[item.chipTone],
+                  )}
                 >
                   {item.chipLabel}
                 </Badge>
