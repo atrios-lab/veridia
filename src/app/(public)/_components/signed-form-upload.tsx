@@ -9,7 +9,6 @@ import {
   SIGNED_FORM_CONFIRMATIONS,
   SIGNED_FORM_WRONG_DOCUMENT_WARNING,
 } from "@/core/request/requerimento.ts";
-import { SIGNED_FORM_REPLACE_QUESTION } from "@/core/request/signed-form-check.ts";
 import {
   ATTACHMENT_ACCEPT,
   useAttachmentUpload,
@@ -17,6 +16,7 @@ import {
 } from "../_lib/attachments.tsx";
 import { type AttachState, attachSignedForm } from "../solicitar/actions.ts";
 import { Icon } from "./icon.tsx";
+import { SignedFormReviewNotice } from "./signed-form-review-notice.tsx";
 
 const LABELS: Record<SignedFormDocument, string> = {
   requerimento: "Anexar requerimento assinado",
@@ -86,26 +86,11 @@ export function SignedFormUpload({
 
   if (!showForm && state.status === "review") {
     return (
-      <output className="flex flex-col gap-2.5 rounded-[10px] border-[1.5px] border-brand-accent bg-brand-accent-soft px-3.5 py-3">
-        <p className="text-[12.5px] leading-relaxed text-brand-accent-ink">
-          {state.message}
-        </p>
-        <p className="text-[12.5px] font-semibold text-brand-primary">
-          {SIGNED_FORM_REPLACE_QUESTION}
-        </p>
-        <div className="flex flex-wrap gap-2">
-          <button
-            type="button"
-            onClick={() => setReplacing(true)}
-            className="btn btn-primary btn-sm"
-          >
-            Sim, trocar o arquivo
-          </button>
-          <span className="self-center text-[12px] text-brand-muted">
-            Ou aguarde: o cartório avisa por e-mail o resultado da análise.
-          </span>
-        </div>
-      </output>
+      <SignedFormReviewNotice
+        protocolNumber={protocolNumber}
+        accessKey={accessKey}
+        onReplace={() => setReplacing(true)}
+      />
     );
   }
 
