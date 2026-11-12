@@ -51,7 +51,7 @@ export default async function SignerPage({
 
   return (
     <>
-      <AdminPageHeader title="Assinador digital" />
+      <AdminPageHeader maxWidth={1000} title="Assinador digital" />
       <main className="flex max-w-[1000px] flex-col gap-4.5 px-[30px] py-7">
         {query.retirado === "1" && (
           <p className="rounded-[12px] bg-admin-success-bg px-4 py-3 text-[13px] font-semibold text-admin-success-text">

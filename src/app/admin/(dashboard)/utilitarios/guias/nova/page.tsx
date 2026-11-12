@@ -19,7 +19,10 @@ export default async function NewGuidePage() {
   const settings = await getGuideSettings(await getTenant());
   return (
     <>
-      <AdminPageHeader title="Nova guia de transmissão de bens" />
+      <AdminPageHeader
+        maxWidth={1100}
+        title="Nova guia de transmissão de bens"
+      />
       <main className="max-w-[1100px] px-[30px] py-7">
         <GuideForm initial={emptyGuide(settings)} settings={settings} />
       </main>

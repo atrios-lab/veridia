@@ -22,7 +22,7 @@ export default async function VisualIdentityPage() {
 
   return (
     <>
-      <AdminPageHeader title="Configurações" />
+      <AdminPageHeader maxWidth={1180} title="Configurações" />
       <main className="flex max-w-[1180px] flex-col gap-4.5 px-[30px] py-7">
         <ConfiguracoesTabs
           role={session.user.role ?? ""}

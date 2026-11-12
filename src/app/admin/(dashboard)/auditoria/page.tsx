@@ -139,7 +139,7 @@ export default async function AuditPage({
     const mine = await listNotificationsWith(db, tenant.slug, session.user.id);
     return (
       <>
-        <AdminPageHeader title="Auditoria" />
+        <AdminPageHeader title="Auditoria" maxWidth={900} />
         <main className="flex max-w-[900px] flex-col gap-4.5 px-[30px] py-7 max-md:px-4">
           <section className={CARD}>
             <h2 className="font-serif text-[17px] font-semibold text-admin-primary">
@@ -267,7 +267,7 @@ export default async function AuditPage({
 
   return (
     <>
-      <AdminPageHeader title="Auditoria" />
+      <AdminPageHeader title="Auditoria" maxWidth={1100} />
       <main className="flex max-w-[1100px] flex-col gap-4.5 px-[30px] py-7 max-md:px-4">
         {query.notificadas && (
           <p className="rounded-[12px] bg-admin-success-bg px-4 py-3 text-[13px] font-semibold text-admin-success-text">

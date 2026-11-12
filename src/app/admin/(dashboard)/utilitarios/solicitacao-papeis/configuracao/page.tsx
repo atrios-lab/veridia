@@ -13,6 +13,7 @@ export default async function OfficeDataPage() {
   return (
     <>
       <AdminPageHeader
+        maxWidth={900}
         title="Dados do cartório para os pedidos"
         back={{
           href: "/admin/utilitarios/solicitacao-papeis",

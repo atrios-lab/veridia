@@ -95,7 +95,7 @@ export default async function NumberingSettingsPage() {
 
   return (
     <>
-      <AdminPageHeader title="Configurações" />
+      <AdminPageHeader maxWidth={860} title="Configurações" />
       <main className="flex max-w-[860px] flex-col gap-4.5 px-[30px] py-7">
         <ConfiguracoesTabs
           role={session.user.role ?? ""}

@@ -53,6 +53,7 @@ export default async function ReportPage({
   return (
     <>
       <AdminPageHeader
+        maxWidth={1000}
         title={title}
         back={{
           href: "/admin/utilitarios/papel-seguranca",

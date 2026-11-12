@@ -38,6 +38,7 @@ export default async function SectionPage({
   return (
     <>
       <AdminPageHeader
+        maxWidth={900}
         title={`Seção ${section.number} · ${section.title}`}
         back={{ href: "/admin/adequacao", label: "Adequação ao Provimento" }}
       />

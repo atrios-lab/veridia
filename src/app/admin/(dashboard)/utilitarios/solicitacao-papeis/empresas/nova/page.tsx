@@ -10,6 +10,7 @@ export default async function NewSupplierPage() {
   return (
     <>
       <AdminPageHeader
+        maxWidth={1000}
         title="Nova empresa"
         back={{
           href: "/admin/utilitarios/solicitacao-papeis",

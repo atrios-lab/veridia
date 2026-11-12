@@ -49,6 +49,7 @@ export default async function IssPage({
   return (
     <>
       <AdminPageHeader
+        maxWidth={1100}
         title="Declaração de ISS"
         description="O ISS do mês sobre os emolumentos, para o fisco municipal, com o livro do caixa anexo. Imprima ou assine digitalmente."
         actions={

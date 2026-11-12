@@ -34,7 +34,7 @@ export default async function OversightPage() {
   ]);
   return (
     <>
-      <AdminPageHeader title="Mensagens internas" />
+      <AdminPageHeader maxWidth={900} title="Mensagens internas" />
       <main className="flex max-w-[900px] flex-col gap-4 px-[30px] py-7 max-md:px-4">
         {role !== "superadmin" && (
           <BackLink href="/admin/mensagens" label="Minhas mensagens" />

@@ -36,7 +36,7 @@ export default async function RolesPage() {
 
   return (
     <>
-      <AdminPageHeader title="Configurações" />
+      <AdminPageHeader maxWidth={1000} title="Configurações" />
       <main className="flex max-w-[1000px] flex-col gap-4.5 px-[30px] py-7">
         <ConfiguracoesTabs
           role={session.user.role ?? ""}

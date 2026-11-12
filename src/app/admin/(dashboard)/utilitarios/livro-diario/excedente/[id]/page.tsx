@@ -30,6 +30,7 @@ export default async function ExcessCalcPage({
   return (
     <>
       <AdminPageHeader
+        maxWidth={1000}
         title={`Excedente: ${period}`}
         back={{
           href: "/admin/utilitarios/livro-diario/excedente",

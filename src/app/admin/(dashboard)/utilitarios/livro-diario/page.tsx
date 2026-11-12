@@ -110,6 +110,7 @@ export default async function DailyBookPage({
   return (
     <>
       <AdminPageHeader
+        maxWidth={1150}
         title="Livro Diário Auxiliar"
         description="Código Nacional de Normas (Provimento CNJ nº 149/2023, arts. 185 a 195-D, com a redação do Provimento CNJ nº 259/2026): termos de abertura e encerramento, receita por especialidade no dia do ato, despesas até o fim do mês, apuração mensal e balanço anual."
         actions={

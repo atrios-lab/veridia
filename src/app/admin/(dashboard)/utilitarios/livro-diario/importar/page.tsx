@@ -14,6 +14,7 @@ export default async function ImportPage() {
   return (
     <>
       <AdminPageHeader
+        maxWidth={1100}
         title="Anexar relatório de produtividade"
         back={{
           href: "/admin/utilitarios/livro-diario",

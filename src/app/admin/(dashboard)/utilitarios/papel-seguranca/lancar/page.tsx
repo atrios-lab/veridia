@@ -39,6 +39,7 @@ export default async function MovementPage({
   return (
     <>
       <AdminPageHeader
+        maxWidth={1000}
         title="Lançar uso ou ocorrência"
         back={{
           href: "/admin/utilitarios/papel-seguranca",

@@ -43,6 +43,7 @@ export default async function ReviewPage() {
   return (
     <>
       <AdminPageHeader
+        maxWidth={900}
         title="Revisão e envio"
         back={{ href: "/admin/adequacao", label: "Adequação ao Provimento" }}
       />

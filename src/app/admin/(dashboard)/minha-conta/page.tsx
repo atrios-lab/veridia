@@ -27,7 +27,7 @@ export default async function MyAccountPage({
 
   return (
     <>
-      <AdminPageHeader title="Minha conta" />
+      <AdminPageHeader maxWidth={720} title="Minha conta" />
       <main className="flex max-w-[720px] flex-col gap-4.5 px-[30px] py-7">
         <PasswordForm changed={(await searchParams).senha === "trocada"} />
         <section className="rounded-[14px] border border-admin-border bg-admin-card px-5 py-4">

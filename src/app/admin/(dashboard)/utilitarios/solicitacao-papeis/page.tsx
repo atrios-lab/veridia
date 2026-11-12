@@ -65,6 +65,7 @@ export default async function PaperOrdersPage({
   return (
     <>
       <AdminPageHeader
+        maxWidth={1100}
         title="Solicitação de papéis de segurança"
         description="Os pedidos de papéis às empresas (traslado, certidão, apostila, etiquetas, ribbon), no formulário de cada uma, prontos para assinar digitalmente ou imprimir."
         actions={

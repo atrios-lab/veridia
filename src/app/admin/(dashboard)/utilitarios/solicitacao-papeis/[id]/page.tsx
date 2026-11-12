@@ -56,6 +56,7 @@ export default async function OrderPage({
   return (
     <>
       <AdminPageHeader
+        maxWidth={1000}
         title={`Pedido nº ${number}`}
         back={{
           href: "/admin/utilitarios/solicitacao-papeis",

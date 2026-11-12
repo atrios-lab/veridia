@@ -77,7 +77,7 @@ export default async function NotificationPage({
 
   return (
     <>
-      <AdminPageHeader title="Auditoria" />
+      <AdminPageHeader maxWidth={900} title="Auditoria" />
       <main className="flex max-w-[900px] flex-col gap-4.5 px-[30px] py-7">
         <BackLink href="/admin/auditoria" label="Auditoria" />
         {sent && (

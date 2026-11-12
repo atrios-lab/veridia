@@ -41,7 +41,7 @@ export default async function GuidePage({
 
   return (
     <>
-      <AdminPageHeader title={`Guia nº ${number}`} />
+      <AdminPageHeader maxWidth={1100} title={`Guia nº ${number}`} />
       <main className="flex max-w-[1100px] flex-col gap-4.5 px-[30px] py-7">
         <BackLink
           href="/admin/utilitarios/guias"

@@ -61,7 +61,7 @@ export default async function SignedDocumentAdminPage({
 
   return (
     <>
-      <AdminPageHeader title="Assinador digital" />
+      <AdminPageHeader maxWidth={1000} title="Assinador digital" />
       <main className="flex max-w-[1000px] flex-col gap-4.5 px-[30px] py-7">
         <BackLink
           href="/admin/utilitarios/assinador"

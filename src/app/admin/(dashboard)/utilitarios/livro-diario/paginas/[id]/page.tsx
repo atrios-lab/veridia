@@ -59,6 +59,7 @@ export default async function BookPagePage({
   return (
     <>
       <AdminPageHeader
+        maxWidth={1000}
         title={title}
         back={{
           href: `/admin/utilitarios/livro-diario?mes=${s.start.slice(0, 7)}`,
