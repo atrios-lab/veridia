@@ -38,6 +38,7 @@ import {
   requiresStatusReason,
   type ServiceRequestStatus,
   searchAnswerInputSchema,
+  statusAfterAmount,
   validateStatusReason,
 } from "@/core/request/kinds.ts";
 import { parseCentsInput } from "@/core/request/money.ts";
@@ -425,6 +426,16 @@ export async function setAmountAction(
     // would put an e-mail in a mailbox saying nothing new.
     const request = await findById(tenant.slug, requestId);
     await setRequestAmount(tenant.slug, requestId, cents, session.user.id);
+    // The value informed moves the request to "Aguardando pagamento" by
+    // itself, so the citizen's consult shows the Pix at once (decision of
+    // 12/11/2026); cleared, it goes back to "Novo".
+    const next =
+      request && isServiceRequestStatus(request.status)
+        ? statusAfterAmount(request.status, request.amountCents, cents)
+        : null;
+    if (next) {
+      await updateRequestStatus(tenant.slug, requestId, next, session.user.id);
+    }
     await reconcileDeadlinePause(tenant, requestId, session.user.id, today());
 
     if (!clearing && request && request.amountCents === null) {

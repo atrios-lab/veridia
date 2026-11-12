@@ -6,10 +6,13 @@ import {
   MIN_DEADLINE_DAYS,
 } from "@/core/request/deadline.ts";
 import {
+  PROGRESS_MILESTONES,
+  progressOf,
   requiresStatusReason,
   SERVICE_REQUEST_PHASES,
   type ServiceRequestStatus,
   statusLabel,
+  transitionLabel,
 } from "@/core/request/kinds.ts";
 import { LONG_TEXT_MAX } from "@/core/text-limits.ts";
 import { AdminIcon } from "../../../../_components/icon.tsx";
@@ -209,6 +212,111 @@ function ReasonConfirmation({
   );
 }
 
+/**
+ * How far along the request is (decision of 12/11/2026): one bar with the
+ * percent and the milestones it has passed, for every andamento, so a
+ * request in "Pagamento informado" or "Disponível para retirada" no longer
+ * falls off the trail. A consulta has fewer milestones: it is received,
+ * maybe paid, and answered.
+ */
+function ProgressBar({
+  status,
+  happyPath,
+}: {
+  status: ServiceRequestStatus;
+  happyPath: readonly ServiceRequestStatus[];
+}) {
+  const percent = progressOf(status);
+  const milestones = PROGRESS_MILESTONES.filter((m) =>
+    happyPath === CONSULTATION_PATH
+      ? m.at === 10 || m.at === 100
+      : happyPath === PAID_CONSULTATION_PATH
+        ? m.at === 10 || m.at === 35 || m.at === 100
+        : true,
+  );
+  if (percent === null) {
+    return (
+      <p className="rounded-[10px] bg-admin-readonly-bg px-4 py-3 text-center text-[13px] text-admin-muted">
+        Pedido encerrado sem entrega:{" "}
+        <strong className="text-admin-primary">
+          {statusLabel("service-request", status)}
+        </strong>
+      </p>
+    );
+  }
+  const blocked = status === "awaiting-compliance";
+  return (
+    <div className="flex flex-col gap-3">
+      <div className="flex items-baseline justify-between gap-3">
+        <span className="text-[13px] font-semibold text-admin-text">
+          {statusLabel("service-request", status)}
+        </span>
+        <span className="font-serif text-[26px] font-semibold text-admin-primary tabular-nums">
+          {percent}%
+        </span>
+      </div>
+      <div
+        role="progressbar"
+        aria-valuenow={percent}
+        aria-valuemin={0}
+        aria-valuemax={100}
+        aria-label="Andamento do pedido"
+        className="h-3 w-full overflow-hidden rounded-full bg-admin-border"
+      >
+        <div
+          className={`h-full rounded-full transition-all duration-500 ${blocked ? "bg-admin-error-text" : "bg-admin-primary"}`}
+          style={{ width: `${percent}%` }}
+        />
+      </div>
+      <ol
+        className="grid gap-2"
+        style={{
+          gridTemplateColumns: `repeat(${milestones.length}, minmax(0, 1fr))`,
+        }}
+      >
+        {milestones.map((m, i) => {
+          // Done once the next milestone is reached (the last, at 100%);
+          // current while the request is between this one and the next.
+          const next = milestones[i + 1]?.at ?? 101;
+          const done = percent >= next || percent === 100;
+          const current = !done && percent >= m.at;
+          return (
+            <li key={m.label} className="flex flex-col items-center gap-1.5">
+              <span
+                className={`flex h-6 w-6 items-center justify-center rounded-full text-[12px] font-bold ${
+                  done
+                    ? "bg-admin-primary text-white"
+                    : current
+                      ? "border-[3px] border-admin-primary bg-admin-card"
+                      : "border border-admin-border bg-admin-card text-admin-faint"
+                }`}
+              >
+                {done ? "✓" : ""}
+              </span>
+              <span
+                className={`text-center text-[12px] leading-[1.3] ${
+                  done
+                    ? "font-bold text-admin-text"
+                    : current
+                      ? "font-bold text-admin-primary"
+                      : "font-medium text-admin-faint"
+                }`}
+              >
+                {m.label}
+              </span>
+            </li>
+          );
+        })}
+      </ol>
+      {blocked && (
+        <p className="text-center text-[12.5px] font-semibold text-admin-error-text">
+          Parado: há exigência a cumprir pelo solicitante.
+        </p>
+      )}
+    </div>
+  );
+}
+
 export function StatusSection({
   requestId,
   protocolNumber,
@@ -254,8 +362,6 @@ export function StatusSection({
     if (state.status === "success") setReasonTarget(null);
   }, [state.status]);
 
-  const happyIndex = happyPath.indexOf(status);
-
   return (
     <div className="flex flex-col gap-[26px] rounded-[14px] border border-admin-border bg-admin-card px-7 pt-[30px] pb-6">
       <div className="flex flex-col items-center gap-2 text-center">
@@ -271,51 +377,7 @@ export function StatusSection({
         <div className="mt-1 flex flex-wrap justify-center gap-2">{badges}</div>
       </div>
 
-      {happyIndex >= 0 ? (
-        <div
-          className={`grid gap-2.5 ${
-            happyPath === CONSULTATION_PATH
-              ? "grid-cols-2"
-              : happyPath === PAID_CONSULTATION_PATH
-                ? "grid-cols-3"
-                : "grid-cols-5"
-          }`}
-        >
-          {happyPath.map((step, i) => (
-            <div key={step} className="flex flex-col items-center gap-2.5">
-              <div className="h-[5px] w-full overflow-hidden rounded-full bg-admin-border">
-                <div
-                  className={`h-full rounded-full bg-admin-primary-soft ${
-                    i < happyIndex || (i === happyIndex && step === "done")
-                      ? "w-full"
-                      : i === happyIndex
-                        ? "w-1/2"
-                        : "w-0"
-                  }`}
-                />
-              </div>
-              <span
-                className={`text-center text-[12.5px] leading-[1.3] ${
-                  i < happyIndex
-                    ? "font-bold text-admin-text"
-                    : i === happyIndex
-                      ? "font-bold text-admin-primary-soft"
-                      : "font-medium text-admin-faint"
-                }`}
-              >
-                {statusLabel("service-request", step)}
-              </span>
-            </div>
-          ))}
-        </div>
-      ) : (
-        <p className="text-[12.5px] text-admin-muted">
-          Andamento atual:{" "}
-          <strong className="text-admin-primary">
-            {statusLabel("service-request", status)}
-          </strong>
-        </p>
-      )}
+      <ProgressBar status={status} happyPath={happyPath} />
 
       {/* One form for both routes to a new andamento, so the term control
           below applies to whichever the operator uses. A pill submits its own
@@ -349,7 +411,7 @@ export function StatusSection({
                     : suggestionPillClass(next)
                 }
               >
-                {statusLabel("service-request", next)}
+                {transitionLabel(status, next)}
               </button>
             );
           })}

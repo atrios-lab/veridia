@@ -57,7 +57,7 @@ export function AmountSection({
       <p className="mt-1 text-[12.5px] text-admin-muted">
         {amountLabel
           ? `Valor atual: ${amountLabel}`
-          : "Ainda não informado: o cidadão só vê e paga depois que você preencher aqui."}
+          : "Ainda não informado. Ao salvar o valor, o pedido passa sozinho para Aguardando pagamento e o cliente vê o Pix (QR Code) na consulta do protocolo."}
       </p>
       {receipt && (
         <p className="mt-1.5 text-[12.5px] text-admin-text">
