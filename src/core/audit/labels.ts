@@ -59,6 +59,10 @@ const EXACT: Record<string, string> = {
     "Excluiu um cálculo do excedente do interino (fica guardado)",
   "daily-book.report-remove":
     "Excluiu uma página do Livro Diário Auxiliar (fica guardada)",
+  "daily-book.fcrcpn-save": "Lançou um repasse do FCRCPN",
+  "daily-book.fcrcpn-edit": "Corrigiu um repasse do FCRCPN",
+  "daily-book.fcrcpn-remove": "Excluiu um repasse do FCRCPN (fica guardado)",
+  "daily-book.fcrcpn-none": "Declarou o semestre sem repasse do FCRCPN",
   "paper-supplier.create": "Cadastrou uma empresa de papéis de segurança",
   "paper-supplier.update": "Editou uma empresa de papéis de segurança",
   "paper-supplier.remove":
@@ -353,6 +357,14 @@ const EXPLANATIONS: Record<string, string> = {
     "Um cálculo do excedente do interino foi excluído, com justificativa. Ele continua guardado.",
   "daily-book.report-remove":
     "Uma página do Livro Diário Auxiliar foi excluída, com justificativa. Ela continua guardada.",
+  "daily-book.fcrcpn-save":
+    "Foi lançado um repasse do FCRCPN (compensação dos atos gratuitos do Registro Civil), que entra no Justiça Aberta em Receita terceiros: outros, do Registro Civil das Pessoas Naturais.",
+  "daily-book.fcrcpn-edit":
+    "Um repasse do FCRCPN foi corrigido (data, valor recebido, imposto retido ou quem pagou).",
+  "daily-book.fcrcpn-remove":
+    "Um repasse do FCRCPN foi excluído, com justificativa. Ele continua guardado.",
+  "daily-book.fcrcpn-none":
+    "Foi declarado que não houve repasse do FCRCPN no semestre, ou essa declaração foi desfeita.",
   "paper-supplier.create":
     "Uma empresa fornecedora de papéis de segurança foi cadastrada, com os itens que vende.",
   "paper-supplier.update":
