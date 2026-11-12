@@ -3,15 +3,14 @@
 ## Purpose
 
 TBD
-
 ## Requirements
-
 ### Requirement: Tela de login com identidade da serventia
 
 O sistema SHALL exibir, em `/admin/login`, um painel institucional com o selo, o nome e o
 subtítulo da serventia resolvida pelo domínio, ao lado do formulário de e-mail e senha. A
-aparência do painel (cores, tipografia) SHALL herdar o tema de marca publicado pela serventia —
-o mesmo `data-theme` que o site público dela usa — em vez de uma estética fixa da plataforma.
+aparência da tela (cores, tipografia) SHALL ser a do tema neutro do painel, igual em toda
+serventia: a tela NÃO SHALL herdar o tema de marca publicado pela serventia nem aplicar o
+`data-theme` dela. O selo, o nome e o subtítulo são o que identifica a serventia.
 
 #### Scenario: Visita não autenticada a /admin/login
 
@@ -22,8 +21,8 @@ o mesmo `data-theme` que o site público dela usa — em vez de uma estética fi
 #### Scenario: Duas serventias, temas diferentes
 
 - **WHEN** `/admin/login` é aberto em domínios de duas serventias com temas de marca diferentes
-- **THEN** as cores e a tipografia do painel de login variam conforme o tema publicado de cada
-  uma; o selo, o nome e o subtítulo já variavam antes
+- **THEN** as cores e a tipografia da tela são as mesmas nas duas; o selo, o nome e o subtítulo
+  variam conforme a serventia
 
 ### Requirement: Erro genérico de credencial inválida
 O sistema SHALL responder com uma única mensagem genérica de erro para senha incorreta, e-mail
@@ -152,3 +151,4 @@ auditoria.
 
 - **WHEN** a pessoa abre o link recebido dentro de 48 horas e envia a nova senha confirmada
 - **THEN** a senha é gravada e a pessoa entra no painel, pelo mesmo caminho do convite
+
