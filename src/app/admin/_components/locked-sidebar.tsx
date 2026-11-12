@@ -40,7 +40,7 @@ export function AdminLockedSidebar({
       </div>
 
       <div className="hidden flex-1 p-4 md:block">
-        <p className="text-sm leading-relaxed text-muted-foreground">
+        <p className="text-sm leading-relaxed text-sidebar-label">
           {explanation}
         </p>
       </div>
@@ -51,7 +51,7 @@ export function AdminLockedSidebar({
         </span>
         <div className="min-w-0 flex-1">
           <p className="truncate text-sm font-medium">{person.name}</p>
-          <p className="truncate text-xs text-muted-foreground">
+          <p className="truncate text-xs text-sidebar-label">
             {person.roleLabel}
           </p>
         </div>

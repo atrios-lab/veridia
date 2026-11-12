@@ -34,7 +34,7 @@ const TEXT: [foreground: string, backgrounds: string[]][] = [
     "foreground",
     ["background", "surface", "card", "popover", "muted", "accent"],
   ],
-  ["muted-foreground", ["background", "surface", "card", "muted", "sidebar"]],
+  ["muted-foreground", ["background", "surface", "card", "muted"]],
   ["primary", ["background", "surface", "muted", "sidebar"]],
   ["primary-foreground", ["primary"]],
   ["secondary-foreground", ["secondary"]],
