@@ -1,6 +1,7 @@
 "use client";
 
 import { useActionState } from "react";
+import { Button } from "../../../_ui/button.tsx";
 import { type ActionState, assignConversationAction } from "../actions.ts";
 
 export function AssignButton({ conversationId }: { conversationId: string }) {
@@ -15,15 +16,11 @@ export function AssignButton({ conversationId }: { conversationId: string }) {
       className="flex flex-none flex-col items-end gap-1"
     >
       <input type="hidden" name="conversationId" value={conversationId} />
-      <button
-        type="submit"
-        disabled={pending}
-        className="btn btn-admin-primary btn-sm"
-      >
+      <Button type="submit" size="sm" disabled={pending}>
         {pending ? "Atendendo…" : "Atender"}
-      </button>
+      </Button>
       {state.status === "error" && (
-        <span className="text-[10.5px] font-semibold text-admin-error-text">
+        <span className="text-xs font-medium text-destructive">
           {state.message}
         </span>
       )}

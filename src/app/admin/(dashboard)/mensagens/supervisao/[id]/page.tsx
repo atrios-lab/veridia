@@ -7,6 +7,8 @@ import { findConversationWith, listMessagesWith } from "@/lib/messages.ts";
 import { getSession } from "@/lib/session.ts";
 import { getTenant } from "@/lib/tenant.ts";
 import { AdminPageHeader } from "../../../../_components/page-header.tsx";
+import { Badge } from "../../../../_ui/badge.tsx";
+import { cn } from "../../../../_ui/cn.ts";
 
 export const metadata = { title: "Conversa" };
 
@@ -32,45 +34,50 @@ export default async function OversightConversationPage({
   return (
     <>
       <AdminPageHeader maxWidth={900} title="Mensagens internas" />
-      <main className="flex max-w-[900px] flex-col gap-4 px-[30px] py-7 max-md:px-4">
+      <main className="flex max-w-[900px] flex-col gap-6 px-4 pt-6 pb-8 md:px-8">
         <BackLink
           href="/admin/mensagens/supervisao"
           label="Todas as conversas"
         />
-        <section className="rounded-[14px] border border-admin-border bg-admin-card px-5 py-4">
-          <h2 className="font-serif text-[17px] font-semibold text-admin-primary">
+        <section className="rounded-xl border bg-card p-6 shadow-xs">
+          <h2 className="text-lg font-semibold text-foreground">
             {conversation.members.map((m) => m.name).join(" e ")}
           </h2>
           <ol className="mt-3 flex flex-col gap-2">
             {messages.map((m) => (
               <li
                 key={m.id}
-                className={`text-[13px] ${m.deleted ? "rounded-[8px] bg-admin-error-bg/40 px-2 py-1" : ""}`}
+                className={cn(
+                  "text-sm",
+                  m.deleted && "rounded-lg bg-destructive-soft px-2 py-1",
+                )}
               >
-                <p className="text-[12px]">
-                  <strong className="text-admin-primary">{m.senderName}</strong>{" "}
-                  <span className="text-admin-muted">
+                <p className="text-xs">
+                  <strong className="font-semibold text-foreground">
+                    {m.senderName}
+                  </strong>{" "}
+                  <span className="text-muted-foreground">
                     {m.kind === "chamar" ? "chamou a atenção" : "diz"} ·{" "}
                     {formatOfficeDateTime(m.createdAt)}
                   </span>
                   {m.deleted && (
-                    <span className="ml-2 rounded-full bg-admin-error-bg px-2 py-0.5 text-[11px] font-semibold text-admin-error-text">
+                    <Badge variant="destructive" className="ml-2">
                       Apagada pelo autor
-                    </span>
+                    </Badge>
                   )}
                   {m.editedAt && (
-                    <span className="ml-2 rounded-full bg-admin-warning-bg px-2 py-0.5 text-[11px] font-semibold text-admin-warning-text">
+                    <Badge className="ml-2 bg-warning-soft text-warning-text">
                       Editada em {formatOfficeDateTime(m.editedAt)}
-                    </span>
+                    </Badge>
                   )}
                 </p>
                 {m.editedAt && m.originalBody && m.originalBody !== m.body && (
-                  <p className="pl-3 text-[12px] text-admin-muted [overflow-wrap:anywhere]">
+                  <p className="pl-3 text-xs text-muted-foreground [overflow-wrap:anywhere]">
                     <strong>Texto original:</strong> {m.originalBody}
                   </p>
                 )}
                 {m.kind === "texto" && (
-                  <p className="whitespace-pre-wrap pl-3 text-admin-text [overflow-wrap:anywhere]">
+                  <p className="whitespace-pre-wrap pl-3 text-foreground [overflow-wrap:anywhere]">
                     {m.body}
                   </p>
                 )}
@@ -79,7 +86,7 @@ export default async function OversightConversationPage({
                     href={`/admin/mensagens/arquivo/${m.id}`}
                     target="_blank"
                     rel="noopener"
-                    className="pl-3 font-semibold text-admin-primary underline [overflow-wrap:anywhere]"
+                    className="pl-3 font-medium text-primary underline underline-offset-4 [overflow-wrap:anywhere]"
                   >
                     {m.kind === "audio" ? "Áudio" : m.fileName}
                   </a>

@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { cn } from "../../_ui/cn.ts";
 import { CLOSED_TAB, QUEUE_TABS } from "../pedidos/_components/queue-order.ts";
 import type { Tone } from "../pedidos/_components/status-tone.ts";
 
@@ -8,13 +9,11 @@ import type { Tone } from "../pedidos/_components/status-tone.ts";
  * The same tones the queue's tabs use.
  */
 const ACTIVE_STYLES: Record<Tone, string> = {
-  blocked: "border-admin-error-border bg-admin-error-bg text-admin-error-text",
-  waiting:
-    "border-admin-warning-soft-border bg-admin-warning-bg text-admin-warning-text",
-  working:
-    "border-admin-success-bg bg-admin-success-bg text-admin-success-text",
-  delivered: "border-admin-primary bg-admin-primary text-white",
-  closed: "border-admin-border bg-admin-readonly-bg text-admin-muted",
+  blocked: "border-destructive/40 bg-destructive-soft text-destructive",
+  waiting: "border-warning/30 bg-warning-soft text-warning-text",
+  working: "border-success/30 bg-success-soft text-success-text",
+  delivered: "border-primary bg-primary text-primary-foreground",
+  closed: "border-border bg-muted text-muted-foreground",
 };
 
 /**
@@ -33,18 +32,18 @@ export function PipelineCard({ counts }: { counts: Record<string, number> }) {
   );
   const total = stages.reduce((sum, s) => sum + s.count, 0);
   return (
-    <section className="rounded-[16px] border border-admin-border bg-admin-card p-5.5">
+    <section className="rounded-xl border bg-card p-6 shadow-xs">
       <div className="flex flex-wrap items-end justify-between gap-2">
         <div>
-          <h2 className="font-serif text-[18px] font-semibold text-admin-primary">
+          <h2 className="text-lg font-semibold text-foreground">
             Pedidos em aberto por etapa
           </h2>
-          <p className="text-[12.5px] text-admin-muted">
+          <p className="text-sm text-muted-foreground">
             Do recebimento à retirada. Clique numa etapa para abrir a fila.
           </p>
         </div>
-        <p className="text-[13px] text-admin-muted">
-          <strong className="font-serif text-[26px] font-semibold text-admin-primary tabular-nums">
+        <p className="text-sm text-muted-foreground">
+          <strong className="text-2xl font-semibold text-foreground tabular-nums">
             {total}
           </strong>{" "}
           {total === 1 ? "pedido em aberto" : "pedidos em aberto"}
@@ -57,35 +56,38 @@ export function PipelineCard({ counts }: { counts: Record<string, number> }) {
             <li key={s.id} className="relative">
               <Link
                 href={`/admin/pedidos?aba=${s.id}`}
-                className={`flex h-full flex-col gap-1 rounded-[12px] border px-3.5 py-3 transition hover:-translate-y-0.5 hover:shadow-sm ${
+                className={cn(
+                  "flex h-full flex-col gap-1 rounded-lg border px-3.5 py-3 transition hover:-translate-y-0.5 hover:shadow-sm",
                   active
-                    ? `${ACTIVE_STYLES[s.tone]} border-2 motion-safe:animate-attention-pulse-light`
-                    : "border-admin-border bg-admin-card text-admin-faint"
-                }`}
+                    ? `${ACTIVE_STYLES[s.tone]} motion-safe:animate-attention-pulse-light`
+                    : "border-border bg-card text-muted-foreground",
+                )}
               >
-                <span className="text-[10.5px] font-bold uppercase tracking-[0.1em] opacity-80">
+                <span className="text-xs font-medium opacity-80">
                   Etapa {i + 1}
                 </span>
                 <span
-                  className={`font-serif text-[32px] leading-none font-semibold tabular-nums ${
-                    active ? "motion-safe:animate-number-blink" : ""
-                  }`}
+                  className={cn(
+                    "text-3xl leading-none font-semibold tabular-nums",
+                    active && "motion-safe:animate-number-blink",
+                  )}
                 >
                   {s.count}
                 </span>
                 <span
-                  className={`text-[12.5px] leading-tight font-semibold ${active ? "" : "text-admin-muted"}`}
+                  className={cn(
+                    "text-xs leading-tight font-semibold",
+                    !active && "text-muted-foreground",
+                  )}
                 >
                   {s.label}
                 </span>
-                {active && (
-                  <span className="text-[11.5px] opacity-85">{s.hint}</span>
-                )}
+                {active && <span className="text-xs opacity-85">{s.hint}</span>}
               </Link>
               {i < stages.length - 1 && (
                 <span
                   aria-hidden="true"
-                  className="absolute top-1/2 -right-[11px] z-10 hidden h-5 w-5 -translate-y-1/2 items-center justify-center rounded-full border border-admin-border bg-admin-card text-[12px] text-admin-muted xl:flex"
+                  className="absolute top-1/2 -right-[11px] z-10 hidden h-5 w-5 -translate-y-1/2 items-center justify-center rounded-full border bg-card text-xs text-muted-foreground xl:flex"
                 >
                   ›
                 </span>

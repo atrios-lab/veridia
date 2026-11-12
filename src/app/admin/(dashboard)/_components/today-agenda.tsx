@@ -1,5 +1,8 @@
 import Link from "next/link";
 import type { RankedTodayAppointment } from "@/core/overview/desk.ts";
+import { Badge } from "../../_ui/badge.tsx";
+import { buttonVariants } from "../../_ui/button.tsx";
+import { cn } from "../../_ui/cn.ts";
 
 const STATE_LABEL: Record<RankedTodayAppointment["state"], string> = {
   done: "concluído",
@@ -13,63 +16,70 @@ export function TodayAgenda({
   appointments: RankedTodayAppointment[];
 }) {
   return (
-    <div className="rounded-[14px] border border-admin-border bg-admin-card p-5.5">
-      <div className="flex items-baseline gap-2.5">
-        <h4 className="flex-1 font-serif text-[16.5px] font-semibold text-admin-primary">
+    <section className="rounded-xl border bg-card shadow-xs">
+      <div className="flex items-center gap-2.5 px-6 pt-6 pb-3">
+        <h2 className="flex-1 text-lg font-semibold text-foreground">
           Agenda de hoje
-        </h4>
-        <Link href="/admin/agenda" className="btn btn-admin-ghost btn-sm px-0">
+        </h2>
+        <Link
+          href="/admin/agenda"
+          className={cn(
+            buttonVariants({ variant: "link", size: "sm" }),
+            "px-0",
+          )}
+        >
           abrir agenda
         </Link>
       </div>
       {appointments.length === 0 ? (
-        <p className="mt-3.5 text-[13px] text-admin-muted">
+        <p className="px-6 pb-6 text-sm text-muted-foreground">
           Nenhum compromisso hoje.
         </p>
       ) : (
-        <div className="mt-3 flex flex-col">
+        <ul className="divide-y border-t">
           {appointments.map((appointment) => (
-            <div
+            <li
               key={appointment.id}
-              className={`flex items-center gap-3 py-2.5 ${
-                appointment.state === "next"
-                  ? "-mx-2.5 rounded-[8px] bg-admin-surface px-2.5"
-                  : "border-b border-admin-border last:border-b-0"
-              }`}
+              className={cn(
+                "flex items-center gap-3 px-6 py-2.5",
+                appointment.state === "next" && "bg-muted/50",
+              )}
             >
               <span
-                className={`w-[46px] flex-none text-[12.5px] font-bold ${
+                className={cn(
+                  "w-12 flex-none text-sm font-medium tabular-nums",
                   appointment.state === "next"
-                    ? "text-admin-primary-soft"
-                    : "text-admin-faint"
-                }`}
+                    ? "text-foreground"
+                    : "text-muted-foreground",
+                )}
               >
                 {appointment.slotTime}
               </span>
               <span
-                className={`flex-1 truncate text-[13px] ${
+                className={cn(
+                  "flex-1 truncate text-sm",
                   appointment.state === "next"
-                    ? "font-semibold text-admin-primary"
-                    : "text-admin-muted"
-                }`}
+                    ? "font-semibold text-foreground"
+                    : "text-muted-foreground",
+                )}
               >
                 {appointment.citizenName} · {appointment.serviceLabel}
               </span>
               {appointment.state !== "upcoming" && (
-                <span
-                  className={`flex-none text-[11px] font-semibold ${
-                    appointment.state === "next"
-                      ? "text-admin-primary-soft"
-                      : "text-admin-faint"
-                  }`}
+                <Badge
+                  variant={appointment.state === "next" ? "default" : "outline"}
+                  className={cn(
+                    "flex-none",
+                    appointment.state === "done" && "text-muted-foreground",
+                  )}
                 >
                   {STATE_LABEL[appointment.state]}
-                </span>
+                </Badge>
               )}
-            </div>
+            </li>
           ))}
-        </div>
+        </ul>
       )}
-    </div>
+    </section>
   );
 }

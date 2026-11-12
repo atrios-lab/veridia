@@ -13,10 +13,14 @@ import {
   readAlertPrefs,
   saveAlertPrefs,
 } from "../../../_components/chat-alert-prefs.ts";
+import { Button } from "../../../_ui/button.tsx";
+import {
+  NativeSelect,
+  NativeSelectOptGroup,
+  NativeSelectOption,
+} from "../../../_ui/native-select.tsx";
 
-const SELECT_CLASS =
-  "rounded-[9px] border border-admin-input-border bg-admin-input-bg px-3 py-2 text-[13px] text-admin-text outline-none focus:border-admin-primary-soft";
-const LABEL_CLASS = "mb-1.5 block text-xs font-bold text-admin-primary";
+const LABEL_CLASS = "mb-1.5 block text-sm font-medium text-foreground";
 
 type Permission = NotificationPermission | "unsupported";
 
@@ -76,11 +80,11 @@ export function AlertSettings() {
   }
 
   return (
-    <section className="rounded-[14px] border border-admin-border bg-admin-card px-5 py-4">
-      <h2 className="font-serif text-[16px] font-semibold text-admin-primary">
+    <section className="rounded-xl border bg-card p-6 shadow-xs">
+      <h2 className="text-lg font-semibold text-foreground">
         Avisos do atendimento
       </h2>
-      <p className="mt-1 text-[12.5px] text-admin-muted">
+      <p className="mt-1 text-sm text-muted-foreground">
         Como este computador avisa de uma conversa nova, de uma mensagem nova
         numa conversa sua ou de uma transferência para você, em qualquer tela do
         painel. Fica salvo neste navegador.
@@ -123,23 +127,23 @@ export function AlertSettings() {
             onChange={(event) => update({ volume: Number(event.target.value) })}
             onPointerUp={() => void test()}
             onKeyUp={() => void test()}
-            className="mt-2 w-full accent-admin-primary"
+            className="mt-2 w-full accent-primary"
           />
         </div>
 
         <div className="flex items-end">
-          <button
+          <Button
             type="button"
+            variant="outline"
             onClick={() => void test()}
             disabled={prefs.sound === "none" && prefs.messageSound === "none"}
-            className="btn btn-admin-secondary btn-md"
           >
             Testar
-          </button>
+          </Button>
         </div>
       </div>
 
-      <div className="mt-4 flex flex-wrap items-center gap-x-5 gap-y-3 text-[13px] text-admin-text">
+      <div className="mt-4 flex flex-wrap items-center gap-x-5 gap-y-3 text-sm text-foreground">
         <label className="flex items-center gap-2">
           <input
             type="checkbox"
@@ -149,21 +153,20 @@ export function AlertSettings() {
           />
           Repetir até alguém atender, a cada
         </label>
-        <select
+        <NativeSelect
           aria-label="Intervalo da repetição"
           value={prefs.repeatSeconds}
           disabled={!prefs.repeat}
           onChange={(event) =>
             update({ repeatSeconds: Number(event.target.value) })
           }
-          className={SELECT_CLASS}
         >
           {REPEAT_OPTIONS.map((seconds) => (
-            <option key={seconds} value={seconds}>
+            <NativeSelectOption key={seconds} value={seconds}>
               {seconds} segundos
-            </option>
+            </NativeSelectOption>
           ))}
-        </select>
+        </NativeSelect>
 
         <label className="flex items-center gap-2">
           <input
@@ -186,14 +189,14 @@ export function AlertSettings() {
         </label>
       </div>
 
-      <div className="mt-4 rounded-[10px] border border-admin-border bg-admin-input-bg px-3.5 py-3 text-[12.5px]">
-        <span className="font-bold text-admin-primary">
+      <div className="mt-4 rounded-lg border bg-muted/50 px-3.5 py-3 text-sm">
+        <span className="font-semibold text-foreground">
           Notificações do navegador:{" "}
         </span>
         {permission === "granted" && (
           <>
-            <span className="text-admin-success-text">ativadas.</span>{" "}
-            <label className="ml-1 inline-flex items-center gap-1.5 text-admin-text">
+            <span className="text-success-text">ativadas.</span>{" "}
+            <label className="ml-1 inline-flex items-center gap-1.5 text-foreground">
               <input
                 type="checkbox"
                 className="checkbox-admin"
@@ -206,25 +209,28 @@ export function AlertSettings() {
         )}
         {permission === "default" && (
           <>
-            <span className="text-admin-muted">ainda não autorizadas. </span>
-            <button
+            <span className="text-muted-foreground">
+              ainda não autorizadas.{" "}
+            </span>
+            <Button
               type="button"
+              size="sm"
               onClick={() => void askPermission()}
-              className="btn btn-admin-primary btn-sm ml-1"
+              className="ml-1"
             >
               Ativar notificações
-            </button>
+            </Button>
           </>
         )}
         {permission === "denied" && (
-          <span className="text-admin-text">
+          <span className="text-foreground">
             bloqueadas neste navegador. Para liberar no Chrome: clique no
             cadeado (ou no ícone de ajustes) ao lado do endereço do site, abra
             "Notificações" e escolha "Permitir". Depois recarregue a página.
           </span>
         )}
         {permission === "unsupported" && (
-          <span className="text-admin-muted">
+          <span className="text-muted-foreground">
             este navegador não oferece notificações. O som e o aviso na tela
             continuam funcionando.
           </span>
@@ -254,23 +260,22 @@ function SoundSelect({
       <label htmlFor={id} className={LABEL_CLASS}>
         {label}
       </label>
-      <select
+      <NativeSelect
         id={id}
         value={value}
         onChange={(event) => onChange(event.target.value as SoundChoice)}
-        className={SELECT_CLASS}
       >
         {soundGroups().map(({ group, ids }) => (
-          <optgroup key={group} label={group}>
+          <NativeSelectOptGroup key={group} label={group}>
             {ids.map((soundId) => (
-              <option key={soundId} value={soundId}>
+              <NativeSelectOption key={soundId} value={soundId}>
                 {SOUNDS[soundId].label}
-              </option>
+              </NativeSelectOption>
             ))}
-          </optgroup>
+          </NativeSelectOptGroup>
         ))}
-        <option value="none">Sem som</option>
-      </select>
+        <NativeSelectOption value="none">Sem som</NativeSelectOption>
+      </NativeSelect>
     </div>
   );
 }

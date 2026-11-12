@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { Button } from "../../_ui/button.tsx";
 
 type MicState = "unknown" | "prompt" | "granted" | "denied" | "unsupported";
 
@@ -94,7 +95,7 @@ export function MicHelp({ onRetry }: { onRetry: () => void }) {
   return (
     <div
       role="alert"
-      className="mt-1.5 rounded-[10px] border border-admin-warning-soft-border bg-admin-warning-bg px-3 py-2 text-[12px] leading-snug text-admin-warning-text"
+      className="mt-1.5 rounded-lg border border-warning/30 bg-warning-soft px-3 py-2 text-xs leading-snug text-warning-text"
     >
       <p className="font-semibold">
         O microfone está bloqueado neste navegador.
@@ -113,13 +114,15 @@ export function MicHelp({ onRetry }: { onRetry: () => void }) {
           Microfone.
         </li>
       </ul>
-      <button
+      <Button
         type="button"
+        variant="outline"
+        size="sm"
         onClick={onRetry}
-        className="btn btn-admin-secondary btn-sm mt-1.5"
+        className="mt-1.5"
       >
         Tentar liberar de novo
-      </button>
+      </Button>
     </div>
   );
 }

@@ -9,9 +9,9 @@ function waitMinutes(waitingSince: string, now: number): number {
 }
 
 function urgencyClass(minutes: number): string {
-  if (minutes >= 10) return "text-admin-error-text";
-  if (minutes >= 5) return "text-admin-warning-text";
-  return "text-admin-success-text";
+  if (minutes >= 10) return "text-destructive";
+  if (minutes >= 5) return "text-warning-text";
+  return "text-success-text";
 }
 
 /**
@@ -31,7 +31,7 @@ export function WaitingTime({ waitingSince }: { waitingSince: string }) {
   const minutes = waitMinutes(waitingSince, now);
   return (
     <span
-      className={`flex-none text-[12px] font-bold ${urgencyClass(minutes)}`}
+      className={`flex-none text-xs font-semibold tabular-nums ${urgencyClass(minutes)}`}
     >
       {minutes} min
     </span>

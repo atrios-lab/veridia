@@ -1,4 +1,6 @@
 import Link from "next/link";
+import { buttonVariants } from "../../_ui/button.tsx";
+import { cn } from "../../_ui/cn.ts";
 
 export function LiveChatCard({
   citizenName,
@@ -10,25 +12,25 @@ export function LiveChatCard({
   waitMinutes: number;
 }) {
   return (
-    <div className="rounded-[14px] bg-admin-primary p-5 text-white">
+    <section className="rounded-xl border bg-card p-6 shadow-xs">
       <div className="flex items-center gap-2">
-        <span className="h-2 w-2 flex-none rounded-full bg-admin-on-dark-muted" />
-        <span className="text-[11px] font-bold uppercase tracking-[0.08em] text-admin-on-dark-subtitle">
+        <span className="h-2 w-2 flex-none rounded-full bg-success" />
+        <span className="text-xs font-medium text-muted-foreground">
           Acontecendo agora
         </span>
       </div>
-      <p className="mt-3 text-[14px] font-semibold">
+      <h2 className="mt-2 text-base font-semibold text-foreground">
         {citizenName} aguarda no chat
-      </p>
-      <p className="mt-0.5 text-[12.5px] text-admin-on-dark-subtitle">
+      </h2>
+      <p className="mt-0.5 text-sm text-muted-foreground">
         {subject} · esperando há {waitMinutes} min
       </p>
       <Link
         href="/admin/atendimento"
-        className="btn btn-admin-primary btn-md mt-3.5 w-full bg-admin-on-dark-accent text-admin-primary"
+        className={cn(buttonVariants(), "mt-4 w-full")}
       >
         Assumir conversa
       </Link>
-    </div>
+    </section>
   );
 }

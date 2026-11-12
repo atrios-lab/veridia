@@ -1,4 +1,6 @@
 import Link from "next/link";
+import { buttonVariants } from "../../_ui/button.tsx";
+import { cn } from "../../_ui/cn.ts";
 
 export function ResumeCard({
   protocolNumber,
@@ -10,17 +12,23 @@ export function ResumeCard({
   href: string;
 }) {
   return (
-    <div className="rounded-[14px] border border-admin-border bg-admin-card p-5">
-      <span className="text-[11px] font-bold uppercase tracking-[0.08em] text-admin-faint">
+    <section className="rounded-xl border bg-card p-6 shadow-xs">
+      <h2 className="text-base font-semibold text-foreground">
         Continuar de onde parou
-      </span>
-      <p className="mt-2.5 text-[13px] font-semibold text-admin-primary">
+      </h2>
+      <p className="mt-3 text-sm font-medium text-foreground tabular-nums">
         {protocolNumber}
       </p>
-      <p className="mt-0.5 text-[12px] text-admin-muted">{description}</p>
-      <Link href={href} className="btn btn-admin-secondary btn-sm mt-3">
+      <p className="mt-0.5 text-sm text-muted-foreground">{description}</p>
+      <Link
+        href={href}
+        className={cn(
+          buttonVariants({ variant: "outline", size: "sm" }),
+          "mt-4",
+        )}
+      >
         Continuar
       </Link>
-    </div>
+    </section>
   );
 }

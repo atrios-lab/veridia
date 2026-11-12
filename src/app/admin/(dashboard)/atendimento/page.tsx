@@ -9,6 +9,7 @@ import {
 import { getSession } from "@/lib/session.ts";
 import { getTenant } from "@/lib/tenant.ts";
 import { AdminPageHeader } from "../../_components/page-header.tsx";
+import { Badge } from "../../_ui/badge.tsx";
 import { AlertSettings } from "./_components/alert-settings.tsx";
 import { AssignButton } from "./_components/assign-button.tsx";
 import { ChatToggle } from "./_components/chat-toggle.tsx";
@@ -46,12 +47,12 @@ export default async function SupportChatQueuePage() {
     <>
       <AdminPageHeader title="Atendimento online" />
       <QueuePoller version={queueVersion} />
-      <main className="flex flex-col gap-4.5 px-[30px] py-7">
-        <div className="flex flex-wrap items-center gap-3.5 rounded-[14px] border border-admin-border bg-admin-card px-5 py-3.5">
-          <h2 className="flex-1 font-serif text-[17px] font-semibold text-admin-primary">
+      <main className="flex flex-col gap-6 px-4 pt-6 pb-8 md:px-8">
+        <div className="flex flex-wrap items-center gap-3.5 rounded-xl border bg-card px-5 py-3.5 shadow-xs">
+          <h2 className="flex-1 text-lg font-semibold text-foreground">
             Atendimento online
           </h2>
-          <span className="text-[12px] text-admin-muted">
+          <span className="text-xs text-muted-foreground">
             {active.length} conversas ativas
           </span>
           <StatusControl
@@ -70,80 +71,84 @@ export default async function SupportChatQueuePage() {
         <AlertSettings />
 
         <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-          <section className="overflow-hidden rounded-[14px] border border-admin-border bg-admin-card">
-            <div className="flex items-center gap-2 border-b border-admin-border px-4.5 py-3">
-              <span className="font-bold text-[13.5px] text-admin-primary">
+          <section className="overflow-hidden rounded-xl border bg-card shadow-xs">
+            <div className="flex items-center gap-2 border-b px-4.5 py-3">
+              <span className="text-sm font-semibold text-foreground">
                 Aguardando
               </span>
-              <span className="rounded-full bg-admin-warning-bg px-2.5 py-0.5 text-[11px] font-bold text-admin-warning-text">
+              <Badge className="bg-warning text-warning-foreground tabular-nums">
                 {waiting.length}
-              </span>
+              </Badge>
             </div>
             {waiting.length === 0 ? (
-              <p className="px-4.5 py-6 text-center text-[13px] text-admin-muted">
+              <p className="px-4.5 py-6 text-center text-sm text-muted-foreground">
                 Ninguém esperando.
               </p>
             ) : (
-              waiting.map((conversation) => (
-                <div
-                  key={conversation.id}
-                  className="flex items-center gap-3 border-b border-admin-border px-4.5 py-3 last:border-b-0"
-                >
-                  <span className="min-w-0 flex-1">
-                    <span className="block truncate text-[13px] font-semibold text-admin-text">
-                      {conversation.citizenName}
+              <div className="divide-y">
+                {waiting.map((conversation) => (
+                  <div
+                    key={conversation.id}
+                    className="flex items-center gap-3 px-4.5 py-3"
+                  >
+                    <span className="min-w-0 flex-1">
+                      <span className="block truncate text-sm font-medium text-foreground">
+                        {conversation.citizenName}
+                      </span>
+                      <span className="block truncate text-xs text-muted-foreground">
+                        {conversation.subject}
+                        {conversation.informedProtocolNumber
+                          ? ` · ${conversation.informedProtocolNumber}`
+                          : ""}
+                      </span>
                     </span>
-                    <span className="block truncate text-[11.5px] text-admin-faint">
-                      {conversation.subject}
-                      {conversation.informedProtocolNumber
-                        ? ` · ${conversation.informedProtocolNumber}`
-                        : ""}
-                    </span>
-                  </span>
-                  <WaitingTime
-                    waitingSince={conversation.waitingSince.toISOString()}
-                  />
-                  <AssignButton conversationId={conversation.id} />
-                </div>
-              ))
+                    <WaitingTime
+                      waitingSince={conversation.waitingSince.toISOString()}
+                    />
+                    <AssignButton conversationId={conversation.id} />
+                  </div>
+                ))}
+              </div>
             )}
           </section>
 
-          <section className="overflow-hidden rounded-[14px] border border-admin-border bg-admin-card">
-            <div className="flex items-center gap-2 border-b border-admin-border px-4.5 py-3">
-              <span className="font-bold text-[13.5px] text-admin-primary">
+          <section className="overflow-hidden rounded-xl border bg-card shadow-xs">
+            <div className="flex items-center gap-2 border-b px-4.5 py-3">
+              <span className="text-sm font-semibold text-foreground">
                 Em atendimento
               </span>
-              <span className="rounded-full bg-admin-success-bg px-2.5 py-0.5 text-[11px] font-bold text-admin-success-text">
+              <Badge className="bg-success text-success-foreground tabular-nums">
                 {active.length}
-              </span>
+              </Badge>
             </div>
             {activeWithAttendant.length === 0 ? (
-              <p className="px-4.5 py-6 text-center text-[13px] text-admin-muted">
+              <p className="px-4.5 py-6 text-center text-sm text-muted-foreground">
                 Nenhuma conversa em atendimento.
               </p>
             ) : (
-              activeWithAttendant.map(({ conversation, attendant }) => (
-                <a
-                  key={conversation.id}
-                  href={`/admin/atendimento/${conversation.id}`}
-                  className="flex items-center gap-3 border-b border-admin-border px-4.5 py-3 last:border-b-0 hover:bg-admin-input-bg"
-                >
-                  <span className="min-w-0 flex-1">
-                    <span className="block truncate text-[13px] font-semibold text-admin-text">
-                      {conversation.citizenName}
+              <div className="divide-y">
+                {activeWithAttendant.map(({ conversation, attendant }) => (
+                  <a
+                    key={conversation.id}
+                    href={`/admin/atendimento/${conversation.id}`}
+                    className="flex items-center gap-3 px-4.5 py-3 transition-colors hover:bg-muted/50"
+                  >
+                    <span className="min-w-0 flex-1">
+                      <span className="block truncate text-sm font-medium text-foreground">
+                        {conversation.citizenName}
+                      </span>
+                      <span className="block truncate text-xs text-muted-foreground">
+                        {attendant?.sector ?? conversation.subject}
+                      </span>
                     </span>
-                    <span className="block truncate text-[11.5px] text-admin-faint">
-                      {attendant?.sector ?? conversation.subject}
-                    </span>
-                  </span>
-                  {attendant && (
-                    <span className="inline-flex flex-none items-center gap-1.5 rounded-full bg-admin-input-bg px-2.5 py-1 text-[11.5px] font-bold text-admin-primary">
-                      {attendant.name}
-                    </span>
-                  )}
-                </a>
-              ))
+                    {attendant && (
+                      <Badge variant="secondary" className="flex-none">
+                        {attendant.name}
+                      </Badge>
+                    )}
+                  </a>
+                ))}
+              </div>
             )}
           </section>
         </div>

@@ -36,8 +36,8 @@ export default async function MessagesPage({
     return (
       <>
         <AdminPageHeader title="Mensagens internas" />
-        <main className="px-[30px] py-7 max-md:px-4">
-          <p className="max-w-[640px] rounded-[14px] border border-admin-border bg-admin-card px-5 py-4 text-[13.5px] text-admin-text">
+        <main className="px-4 pt-6 pb-8 md:px-8">
+          <p className="max-w-[640px] rounded-xl border bg-card px-5 py-4 text-sm text-foreground shadow-xs">
             Suas mensagens internas foram desativadas pelo Tabelião/Registrador.
             Fale com ele para reativar.
           </p>
@@ -48,7 +48,7 @@ export default async function MessagesPage({
   return (
     <>
       <AdminPageHeader title="Mensagens internas" />
-      <main className="px-[30px] py-5 max-md:px-3">
+      <main className="px-3 pt-5 pb-8 md:px-8">
         <Messenger
           me={{
             userId: session.user.id,

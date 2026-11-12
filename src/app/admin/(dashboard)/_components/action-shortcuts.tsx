@@ -1,6 +1,7 @@
 import Link from "next/link";
 import type { AdminIconName } from "../../_components/icon.tsx";
 import { AdminIcon } from "../../_components/icon.tsx";
+import { cn } from "../../_ui/cn.ts";
 
 export interface ActionShortcut {
   key: string;
@@ -29,24 +30,27 @@ export function ActionShortcuts({
         <Link
           key={shortcut.key}
           href={shortcut.href}
-          className="flex items-center gap-3 rounded-[12px] border border-admin-border bg-admin-card px-4 py-3.5 hover:border-admin-primary"
+          className="flex items-center gap-3 rounded-xl border bg-card px-4 py-3.5 shadow-xs transition-colors hover:bg-muted/50"
         >
           <span
-            className={`flex h-[34px] w-[34px] flex-none items-center justify-center rounded-[9px] ${
-              index === 0 ? "bg-admin-primary" : "bg-admin-surface"
-            }`}
+            className={cn(
+              "flex h-9 w-9 flex-none items-center justify-center rounded-lg",
+              index === 0
+                ? "bg-primary text-primary-foreground"
+                : "bg-muted text-foreground",
+            )}
           >
             <AdminIcon
               name={shortcut.icon}
-              className={`h-4 w-4 ${index === 0 ? "text-white" : "text-admin-primary-soft"}`}
+              className="h-4 w-4"
               strokeWidth={2}
             />
           </span>
           <span className="min-w-0">
-            <span className="block text-[12.5px] font-bold leading-tight text-admin-primary">
+            <span className="block text-sm leading-tight font-medium text-foreground">
               {shortcut.title}
             </span>
-            <span className="mt-0.5 block text-[11px] text-admin-faint">
+            <span className="mt-0.5 block text-xs text-muted-foreground">
               {shortcut.caption}
             </span>
           </span>
