@@ -6,11 +6,11 @@ bateria do `CLAUDE.md` roda inteira antes de abrir cada PR. Nenhuma tarefa toca 
 
 ## 1. Antes de começar
 
-- [ ] 1.1 Confirmar com o dono do projeto as duas premissas da decisão 7 do design: prévias do site dentro do painel continuam tematizadas; PDFs e e-mails continuam com a marca do cartório
-- [ ] 1.2 Desenhar no canvas a folha de tokens da versão shadcn (cores, escala de letra, raios, controles) e aprovar o valor de `muted-foreground`
-- [ ] 1.3 Arquivar a change `admin-redesign-7a-v2`, que está com as 26 tarefas feitas
-- [ ] 1.4 Conferir o `logos.seal.light` de cada serventia cadastrada sobre a tinta da barra lateral e listar as que precisam de arquivo novo
-- [ ] 1.5 Criar o branch de integração `painel-neutro` a partir da `main` e conferir que a Vercel gera Preview para ele
+- [x] 1.1 Confirmar com o dono do projeto as duas premissas da decisão 7 do design: prévias do site dentro do painel continuam tematizadas; PDFs e e-mails continuam com a marca do cartório
+- [x] 1.2 Folha de tokens: o usuário dispensou a aprovação prévia; valores do protótipo, `muted-foreground` decidido pelo teste de contraste
+- [x] 1.3 Arquivar a change `admin-redesign-7a-v2`, que está com as 26 tarefas feitas
+- [x] 1.4 Conferir o `logos.seal.light` de cada serventia cadastrada sobre a tinta da barra lateral e listar as que precisam de arquivo novo
+- [x] 1.5 Criar o branch `claude/painel-neutro` a partir da `main` (um branch só, commit por etapa, PR única no fim, por decisão do usuário)
 
 ## 2. Trava do CI, direto na `main`
 

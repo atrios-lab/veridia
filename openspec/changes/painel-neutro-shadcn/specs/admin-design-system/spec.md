@@ -104,18 +104,25 @@ site, e o inverso também vale.
 - **THEN** título, descrição, canônico, favicon e cartão social de cada uma são os mesmos de
   antes, e as rotas do painel continuam com `noindex`
 
-### Requirement: Movimento só com função
+### Requirement: Movimento com função e movimento reduzido respeitado
 
-O painel SHALL animar apenas entrada e saída de camadas (diálogo, menu, notificação) e mudança
-de estado, e SHALL suprimir essas animações quando o sistema pedir movimento reduzido. Animação
-contínua de enfeite NÃO SHALL existir no painel.
+O painel SHALL animar a entrada e a saída de camadas (diálogo, menu, notificação), a mudança de
+estado e o que pede atenção do operador: o que tem pendência na Visão geral e o item
+"Treinamento" da navegação podem pulsar enquanto a pendência existir. Animação de enfeite, sem
+relação com estado ou pendência, NÃO SHALL existir no painel. Toda animação SHALL ser suprimida
+quando o sistema pedir movimento reduzido.
 
 #### Scenario: Movimento reduzido
 
 - **WHEN** o sistema operacional do usuário está com movimento reduzido ligado e um diálogo abre
 - **THEN** o diálogo aparece sem animação
 
-#### Scenario: Nada pulsa parado
+#### Scenario: Pendência continua chamando o olho
 
-- **WHEN** uma tela do painel está aberta sem nenhuma ação do usuário e sem evento novo
-- **THEN** nenhum elemento da tela fica animando
+- **WHEN** a Visão geral tem item pendente e o movimento reduzido está desligado
+- **THEN** o número e a linha do item pendente pulsam como antes da migração
+
+#### Scenario: Movimento reduzido para o pulso
+
+- **WHEN** a Visão geral tem item pendente e o movimento reduzido está ligado
+- **THEN** nada pulsa, e o item pendente continua destacado pela cor
