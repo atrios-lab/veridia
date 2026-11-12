@@ -465,6 +465,65 @@ export function screenHelpFor(pathname: string | null): ScreenHelp | undefined {
  * of its own beside the ofícios and on the screen that generates them,
  * because "only when there is a loss" is the usual misunderstanding.
  */
+/**
+ * The interim's excess over 90,25% of the STF minister's pay, for a lay
+ * reader, with fictitious examples (decision of 12/11/2026). Its own "!" on
+ * the book, its settings and the calculator.
+ */
+export const INTERIM_EXCESS_HELP: ScreenHelp = {
+  purpose:
+    "Quando o cartório está vago (sem titular aprovado em concurso), quem responde por ele é o interino. Ele não é o dono do cartório: só o administra até o novo titular assumir. Por isso a lei limita quanto ele pode ganhar com o cartório: no máximo 90,25% do subsídio (o salário) de um ministro do Supremo Tribunal Federal. O que passar disso é o excedente e não fica com o interino: é depositado à disposição do Tribunal de Justiça (Código Nacional de Normas, art. 194).",
+  steps: [
+    "Some as receitas do período: os emolumentos dos atos.",
+    "Tire as despesas do cartório que as normas permitem (folha dos funcionários, aluguel, energia, sistemas, material...). Não entram a remuneração do próprio interino nem o imposto de renda dele (no RN, art. 25, § 2º).",
+    "O que sobrar é a renda líquida.",
+    "Calcule o teto: 90,25% do subsídio mensal de ministro do STF. Se o período tiver mais de um mês, multiplique pelos meses.",
+    "Compare: se a renda líquida passou do teto, a diferença é o excedente, que é depositado e lançado no Livro Diário Auxiliar com a data do depósito e a conta (art. 194, I). Se não passou, não há nada a depositar e a renda líquida fica com o interino.",
+    "Período: a regra nacional soma o trimestre (art. 194, VI), salvo lei estadual com outro prazo. No RN, o Código de Normas manda recolher ao FDJ até o dia 10 do mês seguinte (arts. 19 e 27), mês a mês.",
+    "A calculadora faz essa conta, pode puxar as receitas e despesas do livro, e guarda cada cálculo com PDF para assinar digitalmente ou imprimir, editar e excluir.",
+  ],
+  terms: [
+    {
+      term: "Exemplos",
+      meaning:
+        "Todos com valores fictícios: subsídio de ministro do STF de R$ 40.000,00, então o teto do mês é R$ 36.100,00 (90,25%).",
+    },
+    {
+      term: "Exemplo 1: mês acima do teto",
+      meaning:
+        "Receitas R$ 80.000,00, despesas R$ 30.000,00: renda líquida R$ 50.000,00. Passou do teto em R$ 13.900,00 (50.000 - 36.100). O interino fica com R$ 36.100,00 e deposita R$ 13.900,00.",
+    },
+    {
+      term: "Exemplo 2: mês abaixo do teto",
+      meaning:
+        "Receitas R$ 50.000,00, despesas R$ 25.000,00: renda líquida R$ 25.000,00. Não chegou ao teto de R$ 36.100,00: nada a depositar, e o interino fica com R$ 25.000,00.",
+    },
+    {
+      term: "Exemplo 3: trimestre",
+      meaning:
+        "Renda líquida de R$ 40.000,00 em janeiro, R$ 5.000,00 em fevereiro e R$ 60.000,00 em março: soma R$ 105.000,00. O teto do trimestre é R$ 108.300,00 (36.100 × 3). Não passou: nada a depositar. Se a conta fosse mês a mês, só março (R$ 60.000,00) passaria do teto, em R$ 23.900,00.",
+    },
+    {
+      term: "Exemplo 4: mês com prejuízo",
+      meaning:
+        "Receitas R$ 20.000,00, despesas R$ 26.000,00: resultado negativo de R$ 6.000,00. Nada a depositar. No trimestre, esse negativo diminui a soma dos três meses.",
+    },
+    {
+      term: "Subsídio",
+      meaning:
+        "O salário mensal de um ministro do STF, fixado em lei. Quando ele mudar, atualize o valor na configuração do livro e na calculadora: cada cálculo guarda o valor usado.",
+    },
+  ],
+  configure: {
+    href: "/admin/utilitarios/livro-diario/configuracao",
+    label: "Interino, teto e periodicidade",
+    permission: "daily-book.manage",
+    steps: [
+      "Marque 'Serventia vaga, respondida por interino', informe 90,25% do subsídio e a periodicidade (trimestral ou mensal).",
+    ],
+  },
+};
+
 export const PAPER_SENDING_HELP: ScreenHelp = {
   purpose:
     "O que enviar à Corregedoria e quando. São três obrigações diferentes do Provimento nº 156/2016-CGJ/RN: a prestação de contas vai sempre, a comunicação só quando acontece algo, e o classificador fica na serventia.",
@@ -498,6 +557,8 @@ ENTRIES["/admin/utilitarios/papel-seguranca/gerar"] = {
   ...PAPER_SENDING_HELP,
   configure: ENTRIES["/admin/utilitarios/papel-seguranca"]?.configure,
 };
+
+ENTRIES["/admin/utilitarios/livro-diario/excedente"] = INTERIM_EXCESS_HELP;
 
 /** Every screen with help, for the test that keeps the links honest. */
 export const SCREEN_HELP = ENTRIES;

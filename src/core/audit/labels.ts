@@ -53,6 +53,10 @@ const EXACT: Record<string, string> = {
   "daily-book.report-edit": "Editou uma página do Livro Diário Auxiliar",
   "daily-book.bulletin-prepare":
     "Preparou o boletim mensal a partir do Livro Diário Auxiliar",
+  "daily-book.excess-save": "Salvou um cálculo do excedente do interino",
+  "daily-book.excess-edit": "Editou um cálculo do excedente do interino",
+  "daily-book.excess-remove":
+    "Excluiu um cálculo do excedente do interino (fica guardado)",
   "daily-book.report-remove":
     "Excluiu uma página do Livro Diário Auxiliar (fica guardada)",
   "paper-supplier.create": "Cadastrou uma empresa de papéis de segurança",
@@ -342,6 +346,11 @@ const EXPLANATIONS: Record<string, string> = {
     "Uma página do Livro Diário Auxiliar foi editada ou refeita com os lançamentos atuais.",
   "daily-book.bulletin-prepare":
     "Levou os valores dos relatórios de produtividade do mês para o formulário do boletim mensal, para conferir e publicar.",
+  "daily-book.excess-save":
+    "Foi salvo um cálculo do excedente do interino ao teto de 90,25% do subsídio de ministro do STF (art. 194).",
+  "daily-book.excess-edit": "Um cálculo do excedente do interino foi alterado.",
+  "daily-book.excess-remove":
+    "Um cálculo do excedente do interino foi excluído, com justificativa. Ele continua guardado.",
   "daily-book.report-remove":
     "Uma página do Livro Diário Auxiliar foi excluída, com justificativa. Ela continua guardada.",
   "paper-supplier.create":
