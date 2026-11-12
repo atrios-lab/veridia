@@ -1037,7 +1037,15 @@ export function drawFormDocumentBody(
 
   // Title block.
   pdf.y = y;
-  drawEyebrow(pdf, document.eyebrow, NEUTRALS.text, contentWidth(pdf));
+  // Large enough to read at a glance (decision of 12/11/2026).
+  drawEyebrow(
+    pdf,
+    document.eyebrow,
+    NEUTRALS.text,
+    contentWidth(pdf),
+    MARGIN,
+    13,
+  );
   pdf
     .font("Times-Bold")
     .fontSize(18)
