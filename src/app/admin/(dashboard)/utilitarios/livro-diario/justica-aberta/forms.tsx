@@ -151,7 +151,7 @@ export function FcrcpnForm({
           />
         </div>
         <div className="flex flex-col gap-1.5">
-          <Label htmlFor={`fc-rec-${key}`}>Valor recebido (R$)</Label>
+          <Label htmlFor={`fc-rec-${key}`}>Valor líquido recebido (R$)</Label>
           <Input
             id={`fc-rec-${key}`}
             name="recebido"

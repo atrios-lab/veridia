@@ -442,16 +442,30 @@ export default async function DailyBookPage({
                                 Comprovante
                               </a>
                             )}
-                            <Link
-                              href={`${base}/lancamento?id=${row.id}`}
-                              className={buttonVariants({
-                                variant: "outline",
-                                size: "sm",
-                              })}
-                            >
-                              Editar
-                            </Link>
-                            <RemoveEntryButton id={row.id} />
+                            {e.source === "fcrcpn" ? (
+                              <Link
+                                href={`${base}/justica-aberta`}
+                                className={buttonVariants({
+                                  variant: "outline",
+                                  size: "sm",
+                                })}
+                              >
+                                Corrigir no Justiça Aberta
+                              </Link>
+                            ) : (
+                              <>
+                                <Link
+                                  href={`${base}/lancamento?id=${row.id}`}
+                                  className={buttonVariants({
+                                    variant: "outline",
+                                    size: "sm",
+                                  })}
+                                >
+                                  Editar
+                                </Link>
+                                <RemoveEntryButton id={row.id} />
+                              </>
+                            )}
                           </span>
                         )}
                       </TableCell>

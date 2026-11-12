@@ -3,8 +3,10 @@ import { randomUUID } from "node:crypto";
 import { and, eq } from "drizzle-orm";
 import {
   buildJusticaAbertaDocument,
+  cnjSpecialtyOf,
   type FcrcpnRecord,
   type FcrcpnRepasse,
+  fcrcpnEntryDescription,
   type JusticaAbertaFigures,
   justicaAbertaFigures,
   repassesIn,
@@ -16,10 +18,14 @@ import type { Database } from "@/db/index.ts";
 import { tenantContent } from "@/db/schema.ts";
 import { recordAuditWith } from "./audit.ts";
 import {
+  addEntryWith,
   DailyBookError,
+  type EntryInput,
   entryOf,
   getBookSettingsWith,
   listEntriesWith,
+  removeEntryWith,
+  updateEntryWith,
 } from "./daily-book.ts";
 import { brandFor } from "./document-brand.ts";
 import { OFFICE_FCRCPN_KEY } from "./office-config.ts";
@@ -128,14 +134,31 @@ export async function saveFcrcpnRepasseWith(
     payer: input.payer.trim(),
     notes: input.notes.trim(),
   };
+  // The book's line first (decision of 12/11/2026): the net amount as
+  // revenue of the Registro Civil, so the book shows the repasse as the
+  // law asks; then the repasse that points at it.
+  const line = await bookLine(database, tenantSlug, clean);
   let saved: FcrcpnRepasse;
   if (id) {
     const old = record.repasses.find((r) => r.id === id && !r.removedAt);
     if (!old) throw new DailyBookError("Repasse não encontrado.");
-    saved = { ...old, ...clean, updatedAt: now };
+    let entryId = old.entryId;
+    if (entryId) {
+      await updateEntryWith(database, tenantSlug, entryId, line, actorId);
+    } else {
+      entryId = (await addEntryWith(database, tenantSlug, line, actorId)).id;
+    }
+    saved = { ...old, ...clean, entryId, updatedAt: now };
     record.repasses = record.repasses.map((r) => (r.id === id ? saved : r));
   } else {
-    saved = { ...clean, id: randomUUID(), createdAt: now, createdBy: actorId };
+    const entry = await addEntryWith(database, tenantSlug, line, actorId);
+    saved = {
+      ...clean,
+      id: randomUUID(),
+      entryId: entry.id,
+      createdAt: now,
+      createdBy: actorId,
+    };
     record.repasses = [...record.repasses, saved];
   }
   await write(database, tenantSlug, record, actorId);
@@ -149,6 +172,36 @@ export async function saveFcrcpnRepasseWith(
   return saved;
 }
 
+/** The repasse as a line of the Livro Diário: revenue, net, no act. */
+async function bookLine(
+  database: Database,
+  tenantSlug: string,
+  r: FcrcpnInput,
+): Promise<EntryInput> {
+  const settings = await getBookSettingsWith(database, tenantSlug);
+  const specialty =
+    settings.specialties.find((s) => cnjSpecialtyOf(s.name) === "rcpn")?.name ??
+    "Registro Civil das Pessoas Naturais";
+  return {
+    kind: "receita",
+    occurredOn: r.receivedOn,
+    specialty,
+    category: "",
+    actCode: "",
+    description: fcrcpnEntryDescription(r),
+    quantity: 0,
+    amountCents: r.receivedCents,
+    fundsCents: 0,
+    issCents: 0,
+    supplier: "",
+    documentRef: "Repasse do FCRCPN",
+    fiscalDistinct: false,
+    fiscalNote: "",
+    explanation: r.notes,
+    source: "fcrcpn",
+  };
+}
+
 /** Marked removed, with the reason; it stays stored. */
 export async function removeFcrcpnRepasseWith(
   database: Database,
@@ -160,6 +213,11 @@ export async function removeFcrcpnRepasseWith(
   const record = await getFcrcpnRecordWith(database, tenantSlug);
   if (!record.repasses.some((r) => r.id === id && !r.removedAt)) {
     throw new DailyBookError("Repasse não encontrado.");
+  }
+  const old = record.repasses.find((r) => r.id === id);
+  // Its line leaves the book with the same reason; it stays stored too.
+  if (old?.entryId) {
+    await removeEntryWith(database, tenantSlug, old.entryId, reason, actorId);
   }
   const now = new Date().toISOString();
   record.repasses = record.repasses.map((r) =>
