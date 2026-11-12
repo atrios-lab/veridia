@@ -16,10 +16,6 @@ import {
   SIGNED_FORM_REQUIRED_NOTICE,
 } from "@/core/request/requerimento.ts";
 import {
-  SIGNED_FORM_MESSAGES,
-  SIGNED_FORM_REPLACE_QUESTION,
-} from "@/core/request/signed-form-check.ts";
-import {
   formatDate as formatCalendarDate,
   formatLongDate,
 } from "@/core/scheduling/calendar.ts";
@@ -32,6 +28,7 @@ import { Icon } from "../_components/icon.tsx";
 import { CopyField } from "../_components/protocol-reveal.tsx";
 import { ProtocolSearchButton } from "../_components/protocol-search-button.tsx";
 import { SearchAnswerCard } from "../_components/search-answer-card.tsx";
+import { SignedFormReviewNotice } from "../_components/signed-form-review-notice.tsx";
 import { SignedFormUpload } from "../_components/signed-form-upload.tsx";
 import {
   ATTACHMENT_ACCEPT,
@@ -1367,12 +1364,10 @@ function RequestDetail({ result }: { result: ServiceRequestDetail }) {
                       <div className="mt-2 flex flex-col gap-2">
                         {!hasSignedForm &&
                           result.signedFormCheck?.verdict === "review" && (
-                            <p className="rounded-[10px] border-[1.5px] border-brand-accent bg-brand-accent-soft px-3 py-2.5 text-[12px] leading-relaxed text-brand-accent-ink">
-                              {SIGNED_FORM_MESSAGES.review}{" "}
-                              <strong className="font-semibold text-brand-primary">
-                                {SIGNED_FORM_REPLACE_QUESTION}
-                              </strong>
-                            </p>
+                            <SignedFormReviewNotice
+                              protocolNumber={result.protocolNumber}
+                              accessKey={result.accessKey}
+                            />
                           )}
                         {!hasSignedForm &&
                           result.signedFormCheck?.verdict === "returned" && (

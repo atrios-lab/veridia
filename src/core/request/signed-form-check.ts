@@ -96,11 +96,19 @@ export const SIGNED_FORM_MESSAGES = {
   accepted:
     "Requerimento conferido: é o requerimento deste protocolo e a assinatura digital foi reconhecida. O pedido seguiu para o cartório. Agora anexe os documentos pedidos.",
   review:
-    "Recebemos o requerimento, mas a assinatura não foi reconhecida como assinatura digital. Ele será analisado pelo cartório antes de o pedido seguir. Atenção: requerimento assinado a punho deve ter firma reconhecida.",
+    "Seu requerimento está em análise pelo cartório porque não segue o padrão correto ou não contém assinatura digital. Requerimento assinado a punho deve ter firma reconhecida.",
   wrong:
     "Anexe primeiro o requerimento gerado para este protocolo, devidamente assinado; os demais documentos são anexados depois. Se preferir, faça isso em outro momento: o link e a chave de acesso estão no e-mail informado no pedido.",
 } as const;
 
-/** Asked after a "review", with the button to send another file. */
+/** Asked after a "review", next to the right requerimento (decision of
+ * 12/11/2026). */
 export const SIGNED_FORM_REPLACE_QUESTION =
-  "Deseja trocar o arquivo e enviar o correto? Um requerimento assinado digitalmente pelo gov.br segue na hora.";
+  "Deseja anexar outro arquivo ou baixar o requerimento correto e assiná-lo agora digitalmente?";
+
+/** How to be accepted there and then. */
+export const SIGNED_FORM_DIRECT_PATH =
+  "Baixe o requerimento deste protocolo, assine pelo gov.br e anexe o arquivo assinado: seguindo esses passos, ele é aceito na hora e o pedido segue para o cartório.";
+
+/** The gov.br signer, where the citizen signs the PDF for free. */
+export const GOVBR_SIGNER_URL = "https://assinador.iti.br/";

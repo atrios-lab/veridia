@@ -18,10 +18,6 @@ import {
   SIGNED_FORM_REQUIRED_NOTICE,
 } from "@/core/request/requerimento.ts";
 import {
-  SIGNED_FORM_MESSAGES,
-  SIGNED_FORM_REPLACE_QUESTION,
-} from "@/core/request/signed-form-check.ts";
-import {
   addDays,
   formatDate as formatCalendarDate,
   type IsoDate,
@@ -37,6 +33,7 @@ import {
 import { useLiveVersion } from "../../_components/use-live-version.ts";
 import { Icon } from "../_components/icon.tsx";
 import { SearchAnswerCard } from "../_components/search-answer-card.tsx";
+import { SignedFormReviewNotice } from "../_components/signed-form-review-notice.tsx";
 import { SignedFormUpload } from "../_components/signed-form-upload.tsx";
 import { takeHandedOffAccess } from "../_lib/access-handoff.ts";
 import {
@@ -845,14 +842,10 @@ function SignCard({
   return (
     <div className="flex animate-notice-rise flex-col gap-3 rounded-2xl border border-brand-border bg-brand-card p-5 shadow-[0_1px_2px_rgba(20,40,25,.05)]">
       {awaitingForm && check?.verdict === "review" && (
-        <output className="flex flex-col gap-1.5 rounded-[10px] border-[1.5px] border-brand-accent bg-brand-accent-soft px-3.5 py-3">
-          <p className="text-[13px] leading-relaxed text-brand-accent-ink">
-            {SIGNED_FORM_MESSAGES.review}
-          </p>
-          <p className="text-[13px] font-semibold text-brand-primary">
-            {SIGNED_FORM_REPLACE_QUESTION} Use o envio do passo 3, abaixo.
-          </p>
-        </output>
+        <SignedFormReviewNotice
+          protocolNumber={protocolNumber}
+          accessKey={accessKey}
+        />
       )}
       {awaitingForm && check?.verdict === "returned" && (
         <div
