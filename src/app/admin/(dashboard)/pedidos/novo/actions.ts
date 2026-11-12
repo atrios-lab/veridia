@@ -202,7 +202,7 @@ export async function createManualServiceRequest(
       contact: parsed.data.contact,
       protocolNumber,
       accessKey,
-      reason: "received",
+      reason: "counter",
     });
 
     if (fromConversationId) {
