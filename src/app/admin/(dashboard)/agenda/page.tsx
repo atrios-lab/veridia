@@ -93,11 +93,11 @@ const AGENDA_TONE: Record<
   },
   tabeliao: {
     icon: "shield",
-    chosen: "border-primary bg-primary text-primary-foreground",
-    idle: "border-primary/40 bg-card text-primary hover:bg-muted",
-    iconBg: "bg-muted text-primary",
-    badge: "bg-primary text-primary-foreground",
-    chip: "bg-primary text-primary-foreground",
+    chosen: "border-holder bg-holder text-holder-foreground",
+    idle: "border-holder/50 bg-card text-holder hover:bg-holder-soft",
+    iconBg: "bg-holder-soft text-holder",
+    badge: "bg-holder text-holder-foreground",
+    chip: "bg-holder text-holder-foreground",
   },
 };
 

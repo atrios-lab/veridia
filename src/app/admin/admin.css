@@ -57,6 +57,13 @@
   --color-success-text: #016630;
   --color-success-soft: #f0fdf4;
   --color-destructive-soft: #fef2f2;
+  /* The Tabelião's own agenda, next to the general one in navy (decision
+     of 11/11/2026, kept when the panel went neutral): a bronze close to the
+     gold the office knew it by, darker than --color-warning so it never
+     reads as a deadline. */
+  --color-holder: #7a5418;
+  --color-holder-foreground: #ffffff;
+  --color-holder-soft: #f7f1e6;
   --color-border: #e5e5e5;
   /* The border that identifies a field, a checkbox or a select. #e5e5e5
      would be 1.26:1 against white; WCAG 1.4.11 asks 3:1 for the edge that

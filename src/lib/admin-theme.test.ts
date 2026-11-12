@@ -44,6 +44,8 @@ const TEXT: [foreground: string, backgrounds: string[]][] = [
   ["success-text", ["background", "success-soft"]],
   ["sidebar-foreground", ["sidebar", "sidebar-hover", "sidebar-accent"]],
   ["sidebar-accent-foreground", ["sidebar-accent"]],
+  ["holder", ["background", "holder-soft", "muted"]],
+  ["holder-foreground", ["holder"]],
   ["sidebar-label", ["sidebar"]],
   ["sidebar-primary-foreground", ["sidebar-primary"]],
 ];

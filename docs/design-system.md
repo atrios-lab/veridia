@@ -47,6 +47,7 @@ Use sempre o token, nunca a cor. Hex só existe dentro de `@theme` (`pnpm check:
 | `destructive` / `destructive-foreground` / `destructive-soft` | Erro, exclusão, prazo vencido |
 | `warning` / `warning-foreground` / `warning-text` / `warning-soft` | Atenção, prazo perto, exigência |
 | `success` / `success-foreground` / `success-text` / `success-soft` | Concluído, pago, disponível |
+| `holder` / `holder-foreground` / `holder-soft` | Só a agenda do Tabelião, ao lado da Geral em navy |
 | `sidebar-*` | Só a barra lateral |
 | `msg-*` | Só Mensagens internas (cor que cada pessoa escolhe) |
 
