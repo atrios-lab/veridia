@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useActionState, useEffect, useRef, useState } from "react";
+import { useActionState, useEffect, useId, useRef, useState } from "react";
 import { toast } from "sonner";
 import {
   AGENDA_IDS,
@@ -30,6 +30,10 @@ import {
   suggestedServiceIds,
 } from "@/core/scheduling/services.ts";
 import { AdminIcon } from "../../../_components/icon.tsx";
+import { Badge } from "../../../_ui/badge.tsx";
+import { Button, buttonVariants } from "../../../_ui/button.tsx";
+import { cn } from "../../../_ui/cn.ts";
+import { Input } from "../../../_ui/input.tsx";
 import { type ActionState, saveAgenda } from "../actions.ts";
 import { SuggestCard } from "./suggest-card.tsx";
 
@@ -98,10 +102,8 @@ const KNOWN_MODES: Array<{ label: string; description: string }> = [
   },
 ];
 
-const cardClass =
-  "rounded-[14px] border border-admin-border bg-admin-card px-5 py-4";
-const inputClass =
-  "rounded-lg border border-admin-border bg-admin-input-bg px-3 py-2 text-[13px] text-admin-text outline-none focus:border-admin-accent";
+const cardClass = "rounded-xl border bg-card px-5 py-4";
+const inputClass = "bg-background";
 
 /**
  * Both agendas as structured state: chips for times, ticks for services,
@@ -162,16 +164,14 @@ export function AgendaSettingsForm({
   return (
     <form
       action={formAction}
-      className="grid items-start gap-4.5 lg:grid-cols-[1fr_360px]"
+      className="grid items-start gap-6 lg:grid-cols-[1fr_360px]"
     >
       <input type="hidden" name="config" value={JSON.stringify(draft)} />
 
-      <div className="flex flex-col gap-4.5">
+      <div className="flex flex-col gap-6">
         <section className={cardClass}>
-          <h2 className="font-serif text-[16px] font-semibold text-admin-primary">
-            Agendas
-          </h2>
-          <p className="mt-1 text-[12.5px] leading-relaxed text-admin-muted">
+          <h2 className="text-base font-semibold text-foreground">Agendas</h2>
+          <p className="mt-1 text-xs leading-relaxed text-muted-foreground">
             O cartório tem duas agendas, cada uma com os seus dias, horários e
             serviços. Uma agenda sem horários não aparece no site.
           </p>
@@ -187,17 +187,17 @@ export function AgendaSettingsForm({
                   role="tab"
                   aria-selected={chosen}
                   onClick={() => setTab(id)}
-                  className={`rounded-xl border px-3.5 py-3 text-left ${
+                  className={`rounded-lg border px-3.5 py-3 text-left transition-colors ${
                     chosen
-                      ? "border-admin-primary bg-admin-primary text-white"
-                      : "border-admin-border bg-admin-card text-admin-text hover:bg-admin-input-bg"
+                      ? "border-primary bg-primary text-primary-foreground"
+                      : "bg-background text-foreground hover:bg-muted/50"
                   }`}
                 >
-                  <span className="block text-[13.5px] font-bold">
+                  <span className="block text-sm font-semibold">
                     {AGENDA_NAMES[id].name}
                   </span>
                   <span
-                    className={`block text-[12px] ${chosen ? "text-white/80" : "text-admin-muted"}`}
+                    className={`block text-xs ${chosen ? "text-primary-foreground/80" : "text-muted-foreground"}`}
                   >
                     {times === 0
                       ? "Sem horários: não aparece no site"
@@ -307,17 +307,20 @@ export function AgendaSettingsForm({
           className={`${cardClass} flex items-center justify-between gap-3`}
         >
           <div>
-            <h2 className="text-[13.5px] font-bold text-admin-primary">
+            <h2 className="text-sm font-semibold text-foreground">
               Fechar um dia específico (feriado, ausência)
             </h2>
-            <p className="mt-1 text-[12.5px] text-admin-muted">
+            <p className="mt-1 text-xs text-muted-foreground">
               Isso se faz na própria agenda, abrindo a data; aqui só o que vale
               para todas as semanas.
             </p>
           </div>
           <Link
             href="/admin/agenda"
-            className="shrink-0 rounded-lg border border-admin-border px-3.5 py-2 text-[12.5px] font-semibold text-admin-muted hover:bg-admin-input-bg"
+            className={cn(
+              buttonVariants({ variant: "outline", size: "sm" }),
+              "shrink-0",
+            )}
           >
             Ir para a agenda
           </Link>
@@ -326,36 +329,38 @@ export function AgendaSettingsForm({
         {state.status === "error" && (
           <p
             role="alert"
-            className="rounded-lg border border-admin-alert px-3.5 py-2.5 text-[13px] font-semibold text-admin-alert"
+            className="rounded-lg border border-destructive/40 bg-destructive-soft px-3.5 py-2.5 text-sm font-medium text-destructive"
           >
             {state.message}
           </p>
         )}
 
         {(dirty || pending) && (
-          <div className="sticky bottom-4 flex items-center justify-between gap-3 rounded-[14px] bg-admin-primary px-5 py-3 text-white shadow-lg">
-            <p className="flex items-center gap-2.5 text-[13px]">
+          <div className="sticky bottom-4 flex items-center justify-between gap-3 rounded-xl bg-primary px-5 py-3 text-primary-foreground shadow-lg">
+            <p className="flex items-center gap-2.5 text-sm">
               <span
                 aria-hidden
-                className="h-2 w-2 shrink-0 rounded-full bg-admin-warning-bg"
+                className="h-2 w-2 shrink-0 rounded-full bg-warning-soft"
               />
               Alterações não salvas{summarize(baseline, draft)}
             </p>
             <span className="flex shrink-0 gap-2">
-              <button
+              <Button
                 type="button"
+                variant="ghost"
                 onClick={() => setDraft(baseline)}
-                className="px-3 py-2 text-[13px] font-semibold text-white/85 hover:text-white"
+                className="text-primary-foreground/85 hover:bg-primary-foreground/10 hover:text-primary-foreground"
               >
                 Descartar
-              </button>
-              <button
+              </Button>
+              <Button
                 type="submit"
+                variant="outline"
                 disabled={pending}
-                className="rounded-lg bg-white px-4 py-2 text-[13px] font-semibold text-admin-primary disabled:opacity-60"
+                className="border-transparent bg-background text-primary hover:bg-background/90 hover:text-primary"
               >
                 {pending ? "Salvando..." : "Salvar agendas"}
-              </button>
+              </Button>
             </span>
           </div>
         )}
@@ -531,17 +536,15 @@ function GridSection({
 
   return (
     <section className={cardClass}>
-      <h2 className="font-serif text-[16px] font-semibold text-admin-primary">
-        {title}
-      </h2>
-      <p className="mt-1 text-[12.5px] leading-relaxed text-admin-muted">
+      <h2 className="text-base font-semibold text-foreground">{title}</h2>
+      <p className="mt-1 text-xs leading-relaxed text-muted-foreground">
         Cada horário atende <strong>um cidadão</strong>. Um dia sem horários não
         aparece no site. Clique num horário para escolher os serviços que ele
         atende (por exemplo, 08:30 só para reconhecimento de firma); sem
         escolha, ele atende todos os serviços desta agenda.
       </p>
 
-      <div className="mt-3.5 flex flex-col">
+      <div className="mt-4 flex flex-col">
         {weekdays.map(({ day, label }) => {
           const times = grid[day] ?? [];
           const source =
@@ -557,9 +560,9 @@ function GridSection({
           return (
             <div
               key={day}
-              className="grid grid-cols-[92px_1fr_auto] items-center gap-3 border-b border-admin-border py-2.5 last:border-b-0"
+              className="grid grid-cols-[92px_1fr_auto] items-center gap-3 border-b py-2.5 last:border-b-0"
             >
-              <span className="text-[13px] font-semibold text-admin-text">
+              <span className="text-sm font-medium text-foreground">
                 {label}
               </span>
               <span className="flex flex-wrap items-center gap-2">
@@ -570,12 +573,12 @@ function GridSection({
                   return (
                     <span
                       key={time}
-                      className={`inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-[12.5px] font-semibold tabular-nums ${
+                      className={`inline-flex items-center gap-1.5 rounded-md px-2.5 py-1.5 text-xs font-medium tabular-nums ${
                         open
-                          ? "bg-admin-primary text-white"
+                          ? "bg-primary text-primary-foreground"
                           : only
-                            ? "border border-admin-accent bg-admin-input-bg text-admin-text"
-                            : "bg-admin-input-bg text-admin-text"
+                            ? "border border-primary bg-muted text-foreground"
+                            : "bg-muted text-foreground"
                       }`}
                     >
                       <button
@@ -589,12 +592,12 @@ function GridSection({
                       >
                         {time}
                         {seats > 1 && (
-                          <span className="rounded bg-admin-accent px-1 text-[10.5px] font-bold text-admin-accent-ink">
+                          <span className="rounded-sm bg-background px-1 text-xs font-semibold text-primary">
                             ×{seats}
                           </span>
                         )}
                         {only && (
-                          <span className="max-w-[140px] truncate text-[11px] font-normal">
+                          <span className="max-w-[140px] truncate text-xs font-normal">
                             ·{" "}
                             {only.length === 1
                               ? (labelOf.get(only[0]) ?? "1 serviço")
@@ -608,8 +611,8 @@ function GridSection({
                         onClick={() => removeTime(day, time)}
                         className={
                           open
-                            ? "text-white/70 hover:text-white"
-                            : "text-admin-faint hover:text-admin-alert"
+                            ? "text-primary-foreground/70 hover:text-primary-foreground"
+                            : "text-muted-foreground hover:text-destructive"
                         }
                       >
                         <AdminIcon name="x" className="h-3 w-3" />
@@ -618,9 +621,9 @@ function GridSection({
                   );
                 })}
                 {adding === day ? (
-                  <input
+                  <Input
                     type="time"
-                    className={`${inputClass} py-1`}
+                    className={cn(inputClass, "h-8 w-auto")}
                     onBlur={(event) => addTime(day, event.currentTarget.value)}
                     onKeyDown={(event) => {
                       if (event.key === "Enter") {
@@ -634,7 +637,7 @@ function GridSection({
                   <button
                     type="button"
                     onClick={() => setAdding(day)}
-                    className="rounded-lg border border-dashed border-admin-border px-2.5 py-1.5 text-[12.5px] font-semibold text-admin-muted hover:bg-admin-input-bg"
+                    className="rounded-md border border-dashed border-input px-2.5 py-1.5 text-xs font-medium text-muted-foreground transition-colors hover:bg-muted/50 hover:text-foreground"
                   >
                     + horário
                   </button>
@@ -642,25 +645,26 @@ function GridSection({
                 {source && sourceLabel && (
                   // The day before already has its times: they are suggested
                   // here, so a week is set up once, not five times.
-                  <span className="flex basis-full flex-wrap items-center gap-1.5 rounded-lg border border-dashed border-admin-accent px-2.5 py-2">
-                    <span className="text-[11.5px] text-admin-muted">
+                  <span className="flex basis-full flex-wrap items-center gap-1.5 rounded-lg border border-dashed border-primary/50 px-2.5 py-2">
+                    <span className="text-xs text-muted-foreground">
                       Sugestão, os mesmos de {sourceLabel.toLowerCase()}:
                     </span>
                     {(grid[String(source)] ?? []).map((time) => (
                       <span
                         key={time}
-                        className="rounded-md bg-admin-input-bg px-2 py-0.5 text-[11.5px] tabular-nums text-admin-muted"
+                        className="rounded-md bg-muted px-2 py-0.5 text-xs tabular-nums text-muted-foreground"
                       >
                         {time}
                       </span>
                     ))}
-                    <button
+                    <Button
                       type="button"
+                      size="xs"
                       onClick={() => copyDay(String(source), day)}
-                      className="ml-auto rounded-lg bg-admin-primary px-2.5 py-1 text-[12px] font-semibold text-white"
+                      className="ml-auto"
                     >
                       Usar os mesmos de {sourceLabel.toLowerCase()}
-                    </button>
+                    </Button>
                   </span>
                 )}
                 {editingTime && (
@@ -679,7 +683,7 @@ function GridSection({
                 )}
                 {channels && times.length > 0 && (
                   <span className="flex basis-full flex-wrap items-center gap-1.5 pt-1">
-                    <span className="text-[11.5px] text-admin-faint">
+                    <span className="text-xs text-muted-foreground">
                       Atende:
                     </span>
                     {ATTENDANCE_CHANNELS.map((channel) => {
@@ -693,10 +697,10 @@ function GridSection({
                           aria-pressed={on}
                           aria-label={`${label}: ${CHANNEL_NAMES[channel].label}`}
                           onClick={() => toggleChannel(day, channel)}
-                          className={`rounded-full border px-2.5 py-1 text-[11.5px] font-semibold ${
+                          className={`rounded-full border px-2.5 py-1 text-xs font-medium transition-colors ${
                             on
-                              ? "border-admin-primary bg-admin-primary text-white"
-                              : "border-admin-border text-admin-muted hover:bg-admin-input-bg"
+                              ? "border-primary bg-primary text-primary-foreground"
+                              : "text-muted-foreground hover:bg-muted/50 hover:text-foreground"
                           }`}
                         >
                           {CHANNEL_NAMES[channel].label}
@@ -707,10 +711,10 @@ function GridSection({
                 )}
               </span>
               <span
-                className={`justify-self-end text-[12px] ${
+                className={`justify-self-end text-xs ${
                   times.length === 0
-                    ? "font-semibold text-admin-alert"
-                    : "text-admin-muted"
+                    ? "font-semibold text-destructive"
+                    : "text-muted-foreground"
                 }`}
               >
                 {times.length === 0
@@ -721,7 +725,7 @@ function GridSection({
           );
         })}
       </div>
-      <p className="mt-3 text-[11.5px] leading-relaxed text-admin-faint">
+      <p className="mt-3 text-xs leading-relaxed text-muted-foreground">
         Remover um horário nunca apaga agendamentos já feitos: eles continuam na
         agenda, e só as novas datas deixam de oferecer o horário.
         {channels &&
@@ -757,6 +761,7 @@ function SlotServicesEditor({
   onClose: () => void;
 }) {
   const [filter, setFilter] = useState("");
+  const capacityId = useId();
   const visible = services.filter((service) =>
     normalize(service.label).includes(normalize(filter)),
   );
@@ -771,33 +776,37 @@ function SlotServicesEditor({
   }
 
   return (
-    <span className="flex basis-full flex-col gap-2 rounded-lg border border-admin-primary bg-admin-card px-3 py-2.5">
+    <span className="flex basis-full flex-col gap-2 rounded-lg border border-primary bg-background px-3 py-2.5">
       <span className="flex flex-wrap items-center justify-between gap-2">
-        <span className="text-[12.5px] font-semibold text-admin-primary">
+        <span className="text-xs font-semibold text-foreground">
           {dayLabel}, {time}: o que este horário atende
         </span>
-        <label className="flex items-center gap-1.5 text-[12px] text-admin-muted">
+        <label
+          htmlFor={capacityId}
+          className="flex items-center gap-1.5 text-xs text-muted-foreground"
+        >
           Vagas
-          <input
+          <Input
+            id={capacityId}
             type="number"
             min={1}
             max={99}
             value={capacity}
             onChange={(event) => onCapacity(Number(event.target.value))}
             aria-label={`Vagas às ${time}: quantas pessoas atendem ao mesmo tempo`}
-            className={`${inputClass} w-16 py-1 text-center tabular-nums`}
+            className={cn(inputClass, "h-8 w-16 text-center tabular-nums")}
           />
-          <span className="text-[11px]">pessoas atendendo ao mesmo tempo</span>
+          <span className="text-xs">pessoas atendendo ao mesmo tempo</span>
         </label>
         <span className="flex items-center gap-2">
           <button
             type="button"
             aria-pressed={all}
             onClick={() => onChange([])}
-            className={`rounded-full border px-2.5 py-1 text-[11.5px] font-semibold ${
+            className={`rounded-full border px-2.5 py-1 text-xs font-medium transition-colors ${
               all
-                ? "border-admin-primary bg-admin-primary text-white"
-                : "border-admin-border text-admin-muted hover:bg-admin-input-bg"
+                ? "border-primary bg-primary text-primary-foreground"
+                : "text-muted-foreground hover:bg-muted/50 hover:text-foreground"
             }`}
           >
             Todos os serviços
@@ -805,45 +814,45 @@ function SlotServicesEditor({
           <button
             type="button"
             onClick={onClose}
-            className="text-[12px] font-semibold text-admin-accent underline"
+            className="text-xs font-medium text-primary underline"
           >
             Pronto
           </button>
         </span>
       </span>
       {services.length === 0 ? (
-        <span className="text-[12px] text-admin-muted">
+        <span className="text-xs text-muted-foreground">
           Marque os serviços desta agenda (mais abaixo) para escolher quais este
           horário atende.
         </span>
       ) : (
         <>
           {services.length > 8 && (
-            <input
+            <Input
               value={filter}
               onChange={(event) => setFilter(event.target.value)}
               placeholder="Procurar serviço, ex.: firma"
               aria-label="Procurar serviço"
-              className={`${inputClass} py-1.5`}
+              className={cn(inputClass, "h-8")}
             />
           )}
           <span className="grid max-h-56 gap-1 overflow-y-auto sm:grid-cols-2">
             {visible.map((service) => (
               <label
                 key={service.id}
-                className="flex cursor-pointer items-center gap-2 rounded-md px-1.5 py-1 text-[12.5px] text-admin-text hover:bg-admin-input-bg"
+                className="flex cursor-pointer items-center gap-2 rounded-md px-1.5 py-1 text-xs text-foreground hover:bg-muted/50"
               >
                 <input
                   type="checkbox"
                   checked={selected.includes(service.id)}
                   onChange={() => toggle(service.id)}
-                  className="h-3.5 w-3.5 accent-admin-primary"
+                  className="checkbox-admin"
                 />
                 {service.label}
               </label>
             ))}
           </span>
-          <span className="text-[11.5px] text-admin-faint">
+          <span className="text-xs text-muted-foreground">
             {all
               ? "Sem escolha, este horário atende todos os serviços desta agenda."
               : `Este horário atende só ${selected.length === 1 ? "o serviço marcado" : `os ${selected.length} serviços marcados`}.`}
@@ -924,26 +933,26 @@ function ServicePicker({
   return (
     <section className={cardClass}>
       <div className="flex flex-wrap items-baseline justify-between gap-2">
-        <h2 className="font-serif text-[16px] font-semibold text-admin-primary">
+        <h2 className="text-base font-semibold text-foreground">
           Serviços que esta agenda atende
         </h2>
-        <span className="text-[12px] text-admin-muted">
+        <span className="text-xs text-muted-foreground">
           {selected.length} marcados
         </span>
       </div>
-      <p className="mt-1 text-[12.5px] leading-relaxed text-admin-muted">
+      <p className="mt-1 text-xs leading-relaxed text-muted-foreground">
         Todos os serviços de um cartório de ofício único. Marque os que o
         cidadão pode agendar em{" "}
         <strong>{AGENDA_NAMES[agenda].name.toLowerCase()}</strong>. Cada um já
         traz a lista do que levar, que vai no comprovante.
       </p>
-      <input
+      <Input
         type="search"
         value={query}
         onChange={(event) => setQuery(event.target.value)}
         placeholder="Procurar serviço..."
         aria-label="Procurar serviço"
-        className={`${inputClass} mt-3 w-full`}
+        className={cn(inputClass, "mt-3 w-full")}
       />
 
       <div className="mt-2 flex flex-col">
@@ -951,18 +960,15 @@ function ServicePicker({
           const ids = services.map((service) => service.id);
           const all = ids.every((id) => ticked.has(id));
           return (
-            <div
-              key={group}
-              className="border-b border-admin-border py-2.5 last:border-b-0"
-            >
+            <div key={group} className="border-b py-2.5 last:border-b-0">
               <div className="flex items-center justify-between gap-2">
-                <h3 className="text-[12px] font-bold tracking-[0.06em] text-admin-faint uppercase">
+                <h3 className="text-xs font-medium text-muted-foreground">
                   {group}
                 </h3>
                 <button
                   type="button"
                   onClick={() => setGroup(ids, !all)}
-                  className="text-[12px] font-semibold text-admin-accent underline"
+                  className="text-xs font-medium text-primary underline"
                 >
                   {all ? "Desmarcar todos" : "Marcar todos"}
                 </button>
@@ -973,7 +979,7 @@ function ServicePicker({
                   const expanded = open === service.id;
                   return (
                     <li key={service.id} className="min-w-0">
-                      <span className="flex items-start gap-2 rounded-lg px-1.5 py-1 hover:bg-admin-input-bg">
+                      <span className="flex items-start gap-2 rounded-md px-1.5 py-1 hover:bg-muted/50">
                         <input
                           id={`svc-${agenda}-${service.id}`}
                           type="checkbox"
@@ -984,13 +990,13 @@ function ServicePicker({
                         <span className="min-w-0 flex-1">
                           <label
                             htmlFor={`svc-${agenda}-${service.id}`}
-                            className="block cursor-pointer text-[13px] text-admin-text"
+                            className="block cursor-pointer text-sm text-foreground"
                           >
                             {service.label}
                           </label>
-                          <span className="flex flex-wrap items-center gap-x-2 text-[11.5px]">
+                          <span className="flex flex-wrap items-center gap-x-2 text-xs">
                             {elsewhere.has(service.id) && (
-                              <span className="text-admin-faint">
+                              <span className="text-muted-foreground">
                                 também na agenda {otherName}
                               </span>
                             )}
@@ -1000,24 +1006,24 @@ function ServicePicker({
                                 setOpen(expanded ? null : service.id)
                               }
                               aria-expanded={expanded}
-                              className="font-semibold text-admin-muted underline"
+                              className="font-medium text-muted-foreground underline hover:text-foreground"
                             >
                               {expanded ? "Fechar" : "O que levar"}
                             </button>
                             {lists[service.id]?.edited && (
-                              <span className="font-semibold text-admin-accent">
+                              <span className="font-medium text-primary">
                                 lista do cartório
                               </span>
                             )}
                             {lists[service.id]?.hasFile && (
-                              <span className="font-semibold text-admin-accent">
+                              <span className="font-medium text-primary">
                                 com arquivo
                               </span>
                             )}
                           </span>
                           {expanded && (
                             <>
-                              <ul className="mt-1 list-disc pl-4 text-[11.5px] leading-relaxed text-admin-muted">
+                              <ul className="mt-1 list-disc pl-4 text-xs leading-relaxed text-muted-foreground">
                                 {(
                                   lists[service.id]?.items ?? [
                                     ...BASE_CHECKLIST,
@@ -1030,12 +1036,12 @@ function ServicePicker({
                               {lists[service.id] ? (
                                 <Link
                                   href={listHref(service.id)}
-                                  className="mt-1 inline-block text-[11.5px] font-semibold text-admin-accent underline"
+                                  className="mt-1 inline-block text-xs font-medium text-primary underline"
                                 >
                                   Editar a lista ou anexar a do cartório
                                 </Link>
                               ) : (
-                                <span className="mt-1 block text-[11.5px] text-admin-faint">
+                                <span className="mt-1 block text-xs text-muted-foreground">
                                   Salve as agendas para editar a lista deste
                                   serviço.
                                 </span>
@@ -1052,7 +1058,7 @@ function ServicePicker({
           );
         })}
         {groups.length === 0 && (
-          <p className="py-4 text-center text-[12.5px] text-admin-muted">
+          <p className="py-4 text-center text-xs text-muted-foreground">
             Nenhum serviço com esse nome.
           </p>
         )}
@@ -1099,43 +1105,42 @@ function OwnServicesSection({
 
   return (
     <section className={cardClass}>
-      <h2 className="font-serif text-[16px] font-semibold text-admin-primary">
+      <h2 className="text-base font-semibold text-foreground">
         Serviços próprios da serventia
       </h2>
-      <p className="mt-1 text-[12.5px] leading-relaxed text-admin-muted">
+      <p className="mt-1 text-xs leading-relaxed text-muted-foreground">
         Para o que não está na lista acima. Depois de salvar, escreva o que o
         cidadão precisa levar ou anexe a lista do cartório.
       </p>
       <div className="mt-2 flex flex-col">
         {services.map((service, index) => (
-          <div
-            key={service.id}
-            className="border-b border-admin-border py-2.5 last:border-b-0"
-          >
+          <div key={service.id} className="border-b py-2.5 last:border-b-0">
             <div className="flex items-center justify-between gap-3">
-              <span className="min-w-0 truncate text-[13.5px] font-semibold text-admin-text">
+              <span className="min-w-0 truncate text-sm font-medium text-foreground">
                 {service.label}
               </span>
-              <button
+              <Button
                 type="button"
+                variant="ghost"
+                size="icon-xs"
                 aria-label={`Remover ${service.label}`}
                 onClick={() => onChange(services.filter((_, i) => i !== index))}
-                className="text-admin-faint hover:text-admin-alert"
+                className="text-muted-foreground hover:text-destructive"
               >
                 <AdminIcon name="x" className="h-3.5 w-3.5" />
-              </button>
+              </Button>
             </div>
             {lists[service.id] ? (
               <Link
                 href={listHref(service.id)}
-                className="mt-1 inline-block text-[12px] font-semibold text-admin-accent underline"
+                className="mt-1 inline-block text-xs font-medium text-primary underline"
               >
                 Editar o que levar ({lists[service.id].items.length}{" "}
                 {lists[service.id].items.length === 1 ? "item" : "itens"}
                 {lists[service.id].hasFile ? " e arquivo" : ""})
               </Link>
             ) : (
-              <span className="mt-1 block text-[12px] text-admin-faint">
+              <span className="mt-1 block text-xs text-muted-foreground">
                 Salve as agendas para escrever o que levar.
               </span>
             )}
@@ -1143,7 +1148,7 @@ function OwnServicesSection({
         ))}
       </div>
       <div className="mt-3 flex gap-2">
-        <input
+        <Input
           value={label}
           onChange={(event) => setLabel(event.target.value)}
           onKeyDown={(event) => {
@@ -1153,15 +1158,11 @@ function OwnServicesSection({
             }
           }}
           placeholder="Nome do novo serviço..."
-          className={`${inputClass} flex-1`}
+          className={cn(inputClass, "flex-1")}
         />
-        <button
-          type="button"
-          onClick={add}
-          className="rounded-lg border border-admin-border px-3.5 py-2 text-[12.5px] font-semibold text-admin-muted hover:bg-admin-input-bg"
-        >
+        <Button type="button" variant="outline" onClick={add}>
           Adicionar
-        </button>
+        </Button>
       </div>
     </section>
   );
@@ -1185,10 +1186,10 @@ function ModesSection({
 
   return (
     <section className={cardClass}>
-      <h2 className="font-serif text-[16px] font-semibold text-admin-primary">
+      <h2 className="text-base font-semibold text-foreground">
         Modos de atendimento do cartório
       </h2>
-      <p className="mt-1 text-[12.5px] leading-relaxed text-admin-muted">
+      <p className="mt-1 text-xs leading-relaxed text-muted-foreground">
         Valem para a agenda do cartório. O tabelião escolhe os canais dele
         (presencial, vídeo ou ligação) em cada dia, na aba dele.
       </p>
@@ -1198,10 +1199,8 @@ function ModesSection({
           return (
             <label
               key={label}
-              className={`relative flex cursor-pointer items-start gap-2.5 rounded-xl border px-3.5 py-3 text-left ${
-                checked
-                  ? "border-admin-primary bg-admin-input-bg"
-                  : "border-admin-border"
+              className={`relative flex cursor-pointer items-start gap-2.5 rounded-lg border px-3.5 py-3 text-left transition-colors has-focus-visible:ring-3 has-focus-visible:ring-ring/50 ${
+                checked ? "border-primary bg-muted/50" : "hover:bg-muted/50"
               }`}
             >
               <input
@@ -1217,20 +1216,20 @@ function ModesSection({
                 className="sr-only"
               />
               <span
-                className={`mt-0.5 flex h-4.5 w-4.5 shrink-0 items-center justify-center rounded ${
+                className={`mt-0.5 flex h-4.5 w-4.5 shrink-0 items-center justify-center rounded-sm ${
                   checked
-                    ? "bg-admin-primary text-white"
-                    : "border border-admin-border"
+                    ? "bg-primary text-primary-foreground"
+                    : "border border-input bg-background"
                 }`}
               >
                 {checked && <AdminIcon name="check" className="h-3 w-3" />}
               </span>
               <span>
-                <span className="block text-[13px] font-bold text-admin-text">
+                <span className="block text-sm font-semibold text-foreground">
                   {label}
                 </span>
                 {description && (
-                  <span className="block text-[12px] leading-snug text-admin-muted">
+                  <span className="block text-xs leading-snug text-muted-foreground">
                     {description}
                   </span>
                 )}
@@ -1285,27 +1284,27 @@ function Preview({
       : officeModes;
 
   return (
-    <aside className="rounded-[14px] border border-admin-border bg-admin-card px-5 py-4 lg:sticky lg:top-4">
+    <aside className="rounded-xl border bg-card px-5 py-4 lg:sticky lg:top-4">
       <div className="flex items-center justify-between gap-2">
-        <h2 className="font-serif text-[16px] font-semibold text-admin-primary">
+        <h2 className="text-base font-semibold text-foreground">
           Como o cidadão vê
         </h2>
-        <span className="rounded-full bg-admin-warning-bg px-2.5 py-1 text-[11px] font-bold text-admin-warning-text">
+        <Badge className="border-warning/30 bg-warning-soft text-warning-text">
           prévia ao vivo
-        </span>
+        </Badge>
       </div>
-      <p className="mt-1 text-[12px] font-semibold text-admin-muted">
+      <p className="mt-1 text-xs font-medium text-muted-foreground">
         {AGENDA_NAMES[agenda].name}
       </p>
 
-      <div className="mt-3 rounded-xl border border-admin-border bg-admin-input-bg/50 p-4">
+      <div className="mt-3 rounded-lg bg-muted/50 p-4">
         {days.length === 0 ? (
-          <p className="text-[12.5px] leading-relaxed text-admin-muted">
+          <p className="text-xs leading-relaxed text-muted-foreground">
             Sem nenhum horário, esta agenda não aparece no site.
           </p>
         ) : (
           <>
-            <p className="text-[12px] font-bold text-admin-text">
+            <p className="text-xs font-semibold text-foreground">
               Escolha o dia
             </p>
             <div className="mt-1.5 flex flex-wrap gap-1.5">
@@ -1314,10 +1313,10 @@ function Preview({
                   key={date}
                   type="button"
                   onClick={() => setPicked(index)}
-                  className={`rounded-lg px-2.5 py-1.5 text-[12px] font-semibold ${
+                  className={`rounded-md px-2.5 py-1.5 text-xs font-medium ${
                     date === selected
-                      ? "bg-admin-primary text-white"
-                      : "border border-admin-border bg-admin-card text-admin-text"
+                      ? "bg-primary text-primary-foreground"
+                      : "border bg-card text-foreground hover:bg-muted"
                   }`}
                 >
                   {previewDayLabel(date)}
@@ -1325,7 +1324,7 @@ function Preview({
               ))}
             </div>
 
-            <p className="mt-3 text-[12px] font-bold text-admin-text">
+            <p className="mt-3 text-xs font-semibold text-foreground">
               Horários de {selected ? longWeekday(selected) : ""}
             </p>
             <div className="mt-1.5 flex flex-wrap gap-1.5">
@@ -1336,12 +1335,12 @@ function Preview({
                 return (
                   <span
                     key={time}
-                    className={`rounded-lg px-2.5 py-1.5 text-[12px] font-semibold tabular-nums ${
+                    className={`rounded-md px-2.5 py-1.5 text-xs font-medium tabular-nums ${
                       isTaken
-                        ? "border border-admin-border bg-admin-card text-admin-faint line-through"
+                        ? "border bg-muted text-muted-foreground line-through"
                         : highlighted
-                          ? "bg-admin-primary text-white"
-                          : "border border-admin-border bg-admin-card text-admin-text"
+                          ? "bg-primary text-primary-foreground"
+                          : "border bg-card text-foreground"
                     }`}
                   >
                     {time}
@@ -1350,25 +1349,25 @@ function Preview({
               })}
             </div>
 
-            <p className="mt-3 text-[12px] font-bold text-admin-text">
+            <p className="mt-3 text-xs font-semibold text-foreground">
               Serviços ({serviceLabels.length})
             </p>
             {serviceLabels.length === 0 ? (
-              <p className="mt-1.5 text-[12px] font-semibold text-admin-alert">
+              <p className="mt-1.5 text-xs font-medium text-destructive">
                 Nenhum serviço marcado: marque ao menos um.
               </p>
             ) : (
-              <ul className="mt-1.5 flex flex-col gap-1 text-[12.5px] text-admin-text">
+              <ul className="mt-1.5 flex flex-col gap-1 text-xs text-foreground">
                 {serviceLabels.slice(0, 5).map((label) => (
                   <li
                     key={label}
-                    className="rounded-lg border border-admin-border bg-admin-card px-3 py-1.5"
+                    className="rounded-md border bg-card px-3 py-1.5"
                   >
                     {label}
                   </li>
                 ))}
                 {serviceLabels.length > 5 && (
-                  <li className="text-[12px] text-admin-muted">
+                  <li className="text-xs text-muted-foreground">
                     e mais {serviceLabels.length - 5}
                   </li>
                 )}
@@ -1377,20 +1376,20 @@ function Preview({
 
             {modes.length > 0 && (
               <>
-                <p className="mt-3 text-[12px] font-bold text-admin-text">
+                <p className="mt-3 text-xs font-semibold text-foreground">
                   {channels ? "Como o tabelião atende" : "Modo"}
                 </p>
                 <div className="mt-1.5 flex flex-wrap gap-3">
                   {modes.map((mode, index) => (
                     <span
                       key={mode}
-                      className="flex items-center gap-1.5 text-[12.5px] text-admin-text"
+                      className="flex items-center gap-1.5 text-xs text-foreground"
                     >
                       <span
                         className={`h-3.5 w-3.5 rounded-full ${
                           index === 0
-                            ? "border-4 border-admin-primary"
-                            : "border border-admin-border bg-admin-card"
+                            ? "border-4 border-primary"
+                            : "border border-input bg-card"
                         }`}
                       />
                       {mode}
@@ -1403,7 +1402,7 @@ function Preview({
         )}
       </div>
 
-      <p className="mt-3 text-[11.5px] leading-relaxed text-admin-faint">
+      <p className="mt-3 text-xs leading-relaxed text-muted-foreground">
         A prévia usa os dados desta tela. Horários já ocupados aparecem
         riscados. Ao final, o cidadão recebe o comprovante em PDF com a lista do
         que levar e o aviso de chegar 15 minutos antes.

@@ -1,10 +1,12 @@
+import { Badge } from "../../../_ui/badge.tsx";
+
 const STATUS_STYLES: Record<string, string> = {
-  new: "bg-admin-warning-bg text-admin-warning-text",
-  "in-review": "bg-admin-warning-bg text-admin-warning-text",
-  answered: "bg-admin-success-bg text-admin-success-text",
-  done: "bg-admin-primary text-white",
+  new: "border-warning/30 bg-warning-soft text-warning-text",
+  "in-review": "border-warning/30 bg-warning-soft text-warning-text",
+  answered: "border-success/30 bg-success-soft text-success-text",
+  done: "bg-primary text-primary-foreground",
   // Terminal like "done", and saying something else: nothing to see to.
-  archived: "bg-admin-readonly-bg text-admin-muted",
+  archived: "bg-muted text-muted-foreground",
 };
 
 export function ManifestationStatusBadge({
@@ -15,13 +17,11 @@ export function ManifestationStatusBadge({
   label: string;
 }) {
   return (
-    <span
-      className={`inline-flex items-center rounded-full px-2.5 py-1 text-[11px] font-bold ${
-        STATUS_STYLES[status] ?? "bg-admin-readonly-bg text-admin-muted"
-      }`}
+    <Badge
+      className={STATUS_STYLES[status] ?? "bg-muted text-muted-foreground"}
     >
       {label}
-    </span>
+    </Badge>
   );
 }
 

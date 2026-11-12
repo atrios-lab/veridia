@@ -2,6 +2,9 @@
 
 import { useActionState, useState } from "react";
 import { AdminIcon } from "../../../../_components/icon.tsx";
+import { Button } from "../../../../_ui/button.tsx";
+import { Label } from "../../../../_ui/label.tsx";
+import { Textarea } from "../../../../_ui/textarea.tsx";
 import { type ActionState, saveInternalNote } from "../actions.ts";
 
 /**
@@ -24,56 +27,46 @@ export function InternalNoteSection({
   );
 
   return (
-    <div className="mt-5 border-t border-admin-border pt-4.5">
-      <div className="flex items-start gap-2.5 rounded-[11px] border border-admin-border bg-admin-warning-bg px-3.5 py-3">
+    <div className="mt-5 border-t pt-4">
+      <div className="flex items-start gap-2.5 rounded-lg border border-warning/30 bg-warning-soft px-4 py-3">
         <AdminIcon
           name="clock"
-          className="mt-0.5 h-3.5 w-3.5 flex-none text-admin-warning-text"
+          className="mt-0.5 h-3.5 w-3.5 flex-none text-warning-text"
           strokeWidth={1.9}
         />
-        <p className="text-[12.5px] leading-relaxed text-admin-warning-text">
+        <p className="text-xs leading-relaxed text-warning-text">
           Sem nome nem contato informado: não há como enviar resposta a quem
           manifestou. Só é possível deixar uma nota interna para a equipe.
         </p>
       </div>
 
-      <label
-        htmlFor="note"
-        className="mt-3.5 mb-2 block text-[13px] font-bold text-admin-primary"
-      >
+      <Label htmlFor="note" className="mt-4 mb-2">
         Anotação interna
-      </label>
-      <textarea
+      </Label>
+      <Textarea
         id="note"
         rows={3}
         value={note}
         onChange={(event) => setNote(event.target.value)}
         placeholder="Não é enviada a ninguém."
-        className="w-full rounded-[10px] border border-admin-input-border bg-admin-input-bg px-3.5 py-3 text-[13.5px] text-admin-text placeholder:text-admin-faint"
+        className="field-sizing-fixed bg-background"
       />
 
       <form action={action} className="mt-3">
         <input type="hidden" name="requestId" value={requestId} />
         <input type="hidden" name="note" value={note} />
-        <button
-          type="submit"
-          disabled={pending}
-          className="btn btn-admin-primary btn-md"
-        >
+        <Button type="submit" disabled={pending}>
           {pending ? "Salvando…" : "Salvar anotação"}
-        </button>
+        </Button>
       </form>
 
       {state.status === "error" && (
-        <p
-          role="alert"
-          className="mt-2.5 text-[12.5px] font-semibold text-admin-error-text"
-        >
+        <p role="alert" className="mt-2.5 text-sm font-medium text-destructive">
           {state.message}
         </p>
       )}
       {state.status === "success" && (
-        <p className="mt-2.5 text-[12.5px] font-semibold text-admin-success-text">
+        <p className="mt-2.5 text-sm font-medium text-success-text">
           Anotação salva.
         </p>
       )}

@@ -1,3 +1,4 @@
+import { ChevronLeft, ChevronRight } from "lucide-react";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { can } from "@/core/auth/roles.ts";
@@ -53,6 +54,9 @@ import { getGuideSettings } from "@/lib/tax-guides.ts";
 import { getTenant, officeNow, today } from "@/lib/tenant.ts";
 import { AdminIcon } from "../../_components/icon.tsx";
 import { AdminPageHeader } from "../../_components/page-header.tsx";
+import { Badge } from "../../_ui/badge.tsx";
+import { buttonVariants } from "../../_ui/button.tsx";
+import { cn } from "../../_ui/cn.ts";
 import {
   CloseDayCard,
   ClosedDayCard,
@@ -63,7 +67,11 @@ import { DayChannelsCard } from "./_components/day-channels.tsx";
 
 export const metadata = { title: "Agenda de atendimentos" };
 
-/** Each agenda's colour and icon, the same in the tabs and the panel. */
+/**
+ * Each agenda's colour and icon, the same in the tabs and the panel. The
+ * neutral panel has one ink, the navy, so the two agendas tell themselves
+ * apart by icon and name; the colour only says which one is open.
+ */
 const AGENDA_TONE: Record<
   AgendaId,
   {
@@ -77,19 +85,19 @@ const AGENDA_TONE: Record<
 > = {
   geral: {
     icon: "users",
-    chosen: "border-admin-primary bg-admin-primary text-white",
-    idle: "border-admin-primary/40 bg-admin-card text-admin-primary hover:bg-admin-input-bg",
-    iconBg: "bg-admin-input-bg text-admin-primary",
-    badge: "bg-admin-primary text-white",
-    chip: "bg-admin-primary text-white",
+    chosen: "border-primary bg-primary text-primary-foreground",
+    idle: "border-primary/40 bg-card text-primary hover:bg-muted",
+    iconBg: "bg-muted text-primary",
+    badge: "bg-primary text-primary-foreground",
+    chip: "bg-primary text-primary-foreground",
   },
   tabeliao: {
     icon: "shield",
-    chosen: "border-admin-accent bg-admin-accent text-white",
-    idle: "border-admin-accent/50 bg-admin-card text-admin-accent-ink hover:bg-admin-warning-soft-bg",
-    iconBg: "bg-admin-warning-soft-bg text-admin-accent-ink",
-    badge: "bg-admin-accent text-white",
-    chip: "bg-admin-accent text-white",
+    chosen: "border-primary bg-primary text-primary-foreground",
+    idle: "border-primary/40 bg-card text-primary hover:bg-muted",
+    iconBg: "bg-muted text-primary",
+    badge: "bg-primary text-primary-foreground",
+    chip: "bg-primary text-primary-foreground",
   },
 };
 
@@ -120,25 +128,22 @@ function UpcomingPanel({
         ? "Amanhã"
         : formatShortDate(date);
   return (
-    <section className="rounded-[14px] border border-admin-border bg-admin-card px-5 py-4">
+    <section className="rounded-xl border bg-card px-5 py-4">
       <div className="flex flex-wrap items-center gap-2.5">
-        <h2 className="mr-auto font-serif text-[17px] font-semibold text-admin-primary">
+        <h2 className="mr-auto text-lg font-semibold text-foreground">
           Próximos agendamentos
         </h2>
         {AGENDA_IDS.map((id) => (
-          <span
-            key={id}
-            className={`rounded-full px-3 py-1 text-[12px] font-bold ${AGENDA_TONE[id].chip}`}
-          >
+          <Badge key={id} className={cn("h-6 px-3", AGENDA_TONE[id].chip)}>
             Hoje · {AGENDA_NAMES[id].short}: {todayCounts[id] ?? 0}
-          </span>
+          </Badge>
         ))}
-        <span className="rounded-full bg-admin-input-bg px-3 py-1 text-[12px] font-semibold text-admin-text">
+        <Badge className="h-6 bg-muted px-3 text-foreground">
           Próximos 7 dias: {weekCount}
-        </span>
+        </Badge>
       </div>
       {items.length === 0 ? (
-        <p className="mt-2.5 text-[13px] text-admin-muted">
+        <p className="mt-2.5 text-sm text-muted-foreground">
           Nenhum agendamento pela frente.
         </p>
       ) : (
@@ -147,33 +152,33 @@ function UpcomingPanel({
             <li key={item.id}>
               <Link
                 href={`/admin/agenda?agenda=${item.agenda}&dia=${item.date}`}
-                className="flex items-center gap-3 rounded-[11px] border border-admin-border px-3 py-2.5 hover:bg-admin-input-bg"
+                className="flex items-center gap-3 rounded-lg border px-3 py-2.5 transition-colors hover:bg-muted/50"
               >
                 <span
                   className={`h-9 w-1.5 shrink-0 rounded-full ${AGENDA_TONE[item.agenda].badge}`}
                   aria-hidden
                 />
-                <span className="w-[86px] shrink-0 text-[12px] leading-tight">
-                  <span className="block font-bold text-admin-primary">
+                <span className="w-[86px] shrink-0 text-xs leading-tight">
+                  <span className="block font-semibold text-foreground">
                     {when(item.date)}
                   </span>
-                  <span className="tabular-nums text-admin-muted">
+                  <span className="tabular-nums text-muted-foreground">
                     {item.time}
                   </span>
                 </span>
                 <span className="min-w-0 flex-1">
-                  <span className="block truncate text-[13px] font-semibold text-admin-text">
+                  <span className="block truncate text-sm font-medium text-foreground">
                     {item.name}
                   </span>
-                  <span className="block truncate text-[11.5px] text-admin-muted">
+                  <span className="block truncate text-xs text-muted-foreground">
                     {item.service}
                   </span>
                 </span>
-                <span
-                  className={`shrink-0 rounded-full px-2 py-0.5 text-[10.5px] font-bold ${AGENDA_TONE[item.agenda].chip}`}
+                <Badge
+                  className={cn("shrink-0", AGENDA_TONE[item.agenda].chip)}
                 >
                   {AGENDA_NAMES[item.agenda].short}
-                </span>
+                </Badge>
               </Link>
             </li>
           ))}
@@ -381,7 +386,7 @@ export default async function AgendaPage({
   return (
     <>
       <AdminPageHeader title="Agenda de atendimentos" />
-      <main className="flex flex-col gap-3 px-[30px] py-7">
+      <main className="flex flex-col gap-3 px-4 pt-6 pb-8 md:px-8">
         <UpcomingPanel
           items={upcoming
             .filter(
@@ -427,21 +432,30 @@ export default async function AgendaPage({
                 key={id}
                 href={`/admin/agenda?agenda=${id}&dia=${date}&de=${anchor}`}
                 aria-current={chosen ? "page" : undefined}
-                className={`flex items-center gap-3.5 rounded-[14px] border-2 px-4 py-3.5 transition-colors ${
-                  chosen ? tone.chosen : tone.idle
-                }`}
+                className={cn(
+                  "flex items-center gap-3.5 rounded-xl border-2 px-4 py-3.5 transition-colors",
+                  chosen ? tone.chosen : tone.idle,
+                )}
               >
                 <span
-                  className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl ${chosen ? "bg-white/20" : tone.iconBg}`}
+                  className={cn(
+                    "flex h-10 w-10 shrink-0 items-center justify-center rounded-lg",
+                    chosen ? "bg-primary-foreground/20" : tone.iconBg,
+                  )}
                 >
                   <AdminIcon name={tone.icon} className="h-5 w-5" />
                 </span>
                 <span className="min-w-0 flex-1">
-                  <span className="block font-serif text-[17px] font-bold leading-tight">
+                  <span className="block text-lg leading-tight font-semibold">
                     {AGENDA_NAMES[id].name}
                   </span>
                   <span
-                    className={`block text-[12px] ${chosen ? "text-white/85" : "text-admin-muted"}`}
+                    className={cn(
+                      "block text-xs",
+                      chosen
+                        ? "text-primary-foreground/85"
+                        : "text-muted-foreground",
+                    )}
                   >
                     {hasGrid(agendaRules(agendaConfig, id))
                       ? `${count} ${count === 1 ? "agendado" : "agendados"} em ${formatShortDate(date)}`
@@ -450,7 +464,12 @@ export default async function AgendaPage({
                 </span>
                 {count > 0 && (
                   <span
-                    className={`flex h-7 min-w-7 items-center justify-center rounded-full px-2 text-[13px] font-bold ${chosen ? "bg-white text-admin-primary" : tone.badge}`}
+                    className={cn(
+                      "flex h-7 min-w-7 items-center justify-center rounded-full px-2 text-sm font-semibold tabular-nums",
+                      chosen
+                        ? "bg-primary-foreground text-primary"
+                        : tone.badge,
+                    )}
                   >
                     {count}
                   </span>
@@ -468,19 +487,19 @@ export default async function AgendaPage({
           config={config}
           counts={counts}
         />
-        <p className="text-[12px] text-admin-faint">
+        <p className="text-xs text-muted-foreground">
           Sábado e domingo não têm horários configurados e não aparecem: nem
           aqui, nem no site. Feriado aparece como fechado e não é oferecido no
           site.
         </p>
 
-        <div className="mt-1.5 grid items-start gap-4.5 lg:grid-cols-[1fr_320px]">
-          <section className="overflow-hidden rounded-[14px] border border-admin-border bg-admin-card">
+        <div className="mt-1.5 grid items-start gap-6 lg:grid-cols-[1fr_320px]">
+          <section className="overflow-hidden rounded-xl border bg-card">
             <div className="flex flex-wrap items-baseline justify-between gap-2 px-5 pt-4 pb-3">
-              <h2 className="font-serif text-[17px] font-semibold text-admin-primary">
+              <h2 className="text-lg font-semibold text-foreground">
                 {formatFullDate(date)}
               </h2>
-              <span className="text-[12.5px] text-admin-muted">
+              <span className="text-xs text-muted-foreground">
                 {grid.length} {grid.length === 1 ? "horário" : "horários"} ·{" "}
                 {live.length} {live.length === 1 ? "agendado" : "agendados"} ·{" "}
                 {freeVacancies}{" "}
@@ -507,27 +526,27 @@ export default async function AgendaPage({
           <aside className="flex flex-col gap-3">
             <Link
               href="/admin/agenda/configuracao"
-              className="flex items-center gap-3.5 rounded-[14px] border border-admin-border bg-admin-card px-5 py-4 hover:bg-admin-input-bg"
+              className="flex items-center gap-3.5 rounded-xl border bg-card px-5 py-4 transition-colors hover:bg-muted/50"
             >
-              <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-admin-input-bg text-admin-primary">
+              <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-muted text-primary">
                 <AdminIcon name="settings" className="h-4.5 w-4.5" />
               </span>
               <span>
-                <span className="block text-[13px] font-bold text-admin-primary">
+                <span className="block text-sm font-semibold text-foreground">
                   Configurar as agendas
                 </span>
-                <span className="block text-[12px] text-admin-muted">
+                <span className="block text-xs text-muted-foreground">
                   dias, horários e serviços do cartório e do tabelião
                 </span>
               </span>
             </Link>
 
             {stranded.length > 0 && (
-              <section className="rounded-[14px] border-2 border-admin-warning-bg bg-admin-card px-5 py-4">
-                <h3 className="text-[13px] font-bold text-admin-primary">
+              <section className="rounded-xl border-2 border-warning/40 bg-card px-5 py-4">
+                <h3 className="text-sm font-semibold text-foreground">
                   Agendados em dia sem atendimento ({stranded.length})
                 </h3>
-                <p className="mt-1 text-[12px] leading-relaxed text-admin-muted">
+                <p className="mt-1 text-xs leading-relaxed text-muted-foreground">
                   Foram marcados antes de o dia virar feriado ou ficar sem
                   atendimento. O site já não oferece esses dias. Abra o dia para
                   remarcar com o cidadão ou cancelar (o Cancelar avisa por
@@ -538,18 +557,18 @@ export default async function AgendaPage({
                     <li key={appointment.id}>
                       <Link
                         href={`/admin/agenda?agenda=${agendaIdOf(appointment.agenda)}&dia=${appointment.date}`}
-                        className="block text-[12.5px] text-admin-text hover:underline"
+                        className="block text-xs text-foreground hover:underline"
                       >
                         <span className="flex justify-between gap-2">
-                          <span className="min-w-0 truncate font-semibold">
+                          <span className="min-w-0 truncate font-medium">
                             {appointment.citizenName}
                           </span>
-                          <span className="shrink-0 tabular-nums text-admin-muted">
+                          <span className="shrink-0 tabular-nums text-muted-foreground">
                             {formatShortDate(appointment.date)}{" "}
                             {appointment.slotTime}
                           </span>
                         </span>
-                        <span className="block text-[11.5px] text-admin-warning-text">
+                        <span className="block text-xs text-warning-text">
                           {reason}
                         </span>
                       </Link>
@@ -557,7 +576,7 @@ export default async function AgendaPage({
                   ))}
                 </ul>
                 {stranded.length > 8 && (
-                  <p className="mt-1.5 text-[11.5px] text-admin-faint">
+                  <p className="mt-1.5 text-xs text-muted-foreground">
                     e mais {stranded.length - 8}.
                   </p>
                 )}
@@ -565,11 +584,11 @@ export default async function AgendaPage({
             )}
 
             {unconfirmed.length > 0 && (
-              <section className="rounded-[14px] border-2 border-admin-warning-bg bg-admin-card px-5 py-4">
-                <h3 className="text-[13px] font-bold text-admin-primary">
+              <section className="rounded-xl border-2 border-warning/40 bg-card px-5 py-4">
+                <h3 className="text-sm font-semibold text-foreground">
                   Aguardando confirmação ({unconfirmed.length})
                 </h3>
-                <p className="mt-1 text-[12px] leading-relaxed text-admin-muted">
+                <p className="mt-1 text-xs leading-relaxed text-muted-foreground">
                   O horário passou e ninguém marcou se a pessoa foi atendida ou
                   não compareceu.
                 </p>
@@ -578,12 +597,12 @@ export default async function AgendaPage({
                     <li key={item.id}>
                       <Link
                         href={`/admin/agenda?agenda=${agendaIdOf(item.agenda)}&dia=${item.date}`}
-                        className="flex justify-between gap-2 text-[12.5px] text-admin-text hover:underline"
+                        className="flex justify-between gap-2 text-xs text-foreground hover:underline"
                       >
                         <span className="min-w-0 truncate">
                           {item.citizenName}
                         </span>
-                        <span className="shrink-0 tabular-nums text-admin-muted">
+                        <span className="shrink-0 tabular-nums text-muted-foreground">
                           {item.date === today()
                             ? "hoje"
                             : formatShortDate(item.date)}{" "}
@@ -594,7 +613,7 @@ export default async function AgendaPage({
                   ))}
                 </ul>
                 {unconfirmed.length > 6 && (
-                  <p className="mt-1.5 text-[11.5px] text-admin-faint">
+                  <p className="mt-1.5 text-xs text-muted-foreground">
                     e mais {unconfirmed.length - 6}.
                   </p>
                 )}
@@ -620,19 +639,17 @@ export default async function AgendaPage({
             {closed ? (
               <ClosedDayCard date={date} reason={closed.reason} />
             ) : dayOff ? (
-              <section className="rounded-[14px] border border-admin-warning-soft-border bg-admin-warning-bg px-5 py-4">
-                <h3 className="text-[13px] font-bold text-admin-warning-text">
+              <section className="rounded-xl border border-warning/30 bg-warning-soft px-5 py-4">
+                <h3 className="text-sm font-semibold text-warning-text">
                   Sem atendimento neste dia
                 </h3>
-                <p className="mt-1 text-[12.5px] text-admin-warning-text">
-                  {dayOff}
-                </p>
-                <p className="mt-1 text-[12.5px] leading-relaxed text-admin-warning-text">
+                <p className="mt-1 text-xs text-warning-text">{dayOff}</p>
+                <p className="mt-1 text-xs leading-relaxed text-warning-text">
                   As duas agendas ficam fechadas: o site não oferece esta data e
                   o balcão não reserva. Os feriados do cartório ficam em{" "}
                   <Link
                     href="/admin/configuracoes"
-                    className="font-semibold underline"
+                    className="font-medium underline"
                   >
                     Configurações
                   </Link>
@@ -651,20 +668,20 @@ export default async function AgendaPage({
             )}
 
             {futureClosed.length > 0 && (
-              <section className="rounded-[14px] border border-admin-border bg-admin-card px-5 py-4">
-                <h3 className="text-[13px] font-bold text-admin-primary">
+              <section className="rounded-xl border bg-card px-5 py-4">
+                <h3 className="text-sm font-semibold text-foreground">
                   Dias fechados à frente
                 </h3>
                 <ul className="mt-2.5 flex flex-col gap-2">
                   {futureClosed.map((item) => (
                     <li
                       key={item.date}
-                      className="flex items-center justify-between gap-2 text-[12.5px]"
+                      className="flex items-center justify-between gap-2 text-xs"
                     >
-                      <span className="flex items-center gap-2 text-admin-text">
+                      <span className="flex items-center gap-2 text-foreground">
                         <AdminIcon
                           name="lock"
-                          className="h-3.5 w-3.5 text-admin-alert"
+                          className="h-3.5 w-3.5 text-muted-foreground"
                         />
                         {formatShortDate(item.date)}
                         {item.date === today() && " (hoje)"}
@@ -673,7 +690,7 @@ export default async function AgendaPage({
                     </li>
                   ))}
                 </ul>
-                <p className="mt-2.5 text-[11.5px] leading-relaxed text-admin-faint">
+                <p className="mt-2.5 text-xs leading-relaxed text-muted-foreground">
                   Um dia sem nenhum horário configurado não precisa ser fechado:
                   ele já não aparece no site.
                 </p>
@@ -709,8 +726,10 @@ function DayStrip({
   /** The agenda's vacancies per time, so a day counts citizens, not hours. */
   book: Pick<AgendaBook, "slotCapacity">;
 }) {
-  const arrowClass =
-    "flex h-9 w-9 shrink-0 items-center justify-center self-center rounded-full border border-admin-border bg-admin-card text-admin-muted hover:bg-admin-input-bg";
+  const arrowClass = cn(
+    buttonVariants({ variant: "outline", size: "icon" }),
+    "self-center rounded-full text-muted-foreground",
+  );
   return (
     <nav className="flex items-stretch gap-2">
       <Link
@@ -718,7 +737,7 @@ function DayStrip({
         aria-label="Dias anteriores"
         className={arrowClass}
       >
-        ‹
+        <ChevronLeft aria-hidden="true" />
       </Link>
       <div className="grid flex-1 grid-cols-7 gap-2">
         {dates.map((date) => {
@@ -739,47 +758,58 @@ function DayStrip({
               key={date}
               href={`/admin/agenda?agenda=${agenda}&dia=${date}&de=${anchor}`}
               aria-current={isSelected ? "date" : undefined}
-              className={`rounded-xl border px-3 py-2.5 ${
+              className={cn(
+                "rounded-xl border px-3 py-2.5 transition-colors",
                 isSelected
-                  ? "border-admin-primary bg-admin-primary text-white"
-                  : "border-admin-border bg-admin-card hover:bg-admin-input-bg"
-              }`}
+                  ? "border-primary bg-primary text-primary-foreground"
+                  : closed
+                    ? "bg-muted hover:bg-muted/70"
+                    : occupied > 0
+                      ? "border-primary/30 bg-primary/10 hover:bg-primary/15"
+                      : "bg-card hover:bg-muted/50",
+              )}
             >
               <span
-                className={`flex items-center gap-1.5 text-[11px] font-bold tracking-[0.06em] uppercase ${
-                  isSelected ? "text-white/80" : "text-admin-faint"
-                }`}
+                className={cn(
+                  "flex items-center gap-1.5 text-xs font-medium",
+                  isSelected
+                    ? "text-primary-foreground/80"
+                    : "text-muted-foreground",
+                )}
               >
                 {shortWeekday(date)}
                 <span
-                  className={`text-[13px] tracking-normal ${
-                    isSelected ? "text-white" : "text-admin-primary"
-                  }`}
+                  className={cn(
+                    "text-sm font-semibold tabular-nums",
+                    isSelected ? "text-primary-foreground" : "text-foreground",
+                  )}
                 >
                   {Number(dayOfMonth(date))}
                 </span>
                 {date === today() && (
                   <span
-                    className={`rounded-full px-1.5 py-0.5 text-[10px] font-semibold tracking-normal normal-case ${
+                    className={cn(
+                      "rounded-full px-1.5 py-0.5 text-xs font-medium",
                       isSelected
-                        ? "bg-white/20 text-white"
-                        : "bg-admin-input-bg text-admin-muted"
-                    }`}
+                        ? "bg-primary-foreground/20 text-primary-foreground"
+                        : "bg-muted text-muted-foreground",
+                    )}
                   >
                     hoje
                   </span>
                 )}
               </span>
               <span
-                className={`mt-1 flex items-center gap-1 text-[11.5px] ${
+                className={cn(
+                  "mt-1 flex items-center gap-1 text-xs",
                   closed
                     ? isSelected
-                      ? "font-semibold text-white"
-                      : "font-semibold text-admin-alert"
+                      ? "font-medium text-primary-foreground"
+                      : "font-medium text-muted-foreground"
                     : isSelected
-                      ? "text-white/80"
-                      : "text-admin-muted"
-                }`}
+                      ? "text-primary-foreground/80"
+                      : "text-muted-foreground",
+                )}
               >
                 {closed ? (
                   <>
@@ -788,11 +818,24 @@ function DayStrip({
                   </>
                 ) : occupied > 0 ? (
                   <span
-                    className={`inline-flex items-center gap-1.5 font-bold ${isSelected ? "text-white" : "text-admin-primary"}`}
+                    className={cn(
+                      "inline-flex items-center gap-1.5 font-semibold",
+                      isSelected ? "text-primary-foreground" : "text-primary",
+                    )}
                   >
                     <span className="relative flex h-2 w-2">
-                      <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-admin-accent opacity-60" />
-                      <span className="relative inline-flex h-2 w-2 rounded-full bg-admin-accent" />
+                      <span
+                        className={cn(
+                          "absolute inline-flex h-full w-full rounded-full opacity-60 motion-safe:animate-ping",
+                          isSelected ? "bg-primary-foreground" : "bg-primary",
+                        )}
+                      />
+                      <span
+                        className={cn(
+                          "relative inline-flex h-2 w-2 rounded-full",
+                          isSelected ? "bg-primary-foreground" : "bg-primary",
+                        )}
+                      />
                     </span>
                     {occupied} {occupied === 1 ? "agendado" : "agendados"}
                   </span>
@@ -809,7 +852,7 @@ function DayStrip({
         aria-label="Próximos dias"
         className={arrowClass}
       >
-        ›
+        <ChevronRight aria-hidden="true" />
       </Link>
     </nav>
   );

@@ -3,6 +3,9 @@
 import { useActionState, useState } from "react";
 import { DocumentNameField } from "../../../../../_components/document-name-field.tsx";
 import { useEmailWarning } from "../../../../_components/use-email-warning.ts";
+import { Button } from "../../../../_ui/button.tsx";
+import { Label } from "../../../../_ui/label.tsx";
+import { Textarea } from "../../../../_ui/textarea.tsx";
 import {
   type ActionState,
   respondDataRights,
@@ -30,20 +33,17 @@ export function ReplySection({
   const pending = respondPending || draftPending;
 
   return (
-    <div className="mt-5 border-t border-admin-border pt-4.5">
-      <label
-        htmlFor="reply"
-        className="mb-2.5 block text-[13px] font-bold text-admin-primary"
-      >
+    <div className="mt-5 border-t pt-4">
+      <Label htmlFor="reply" className="mb-2.5">
         Resposta ao titular
-      </label>
-      <textarea
+      </Label>
+      <Textarea
         id="reply"
         rows={4}
         value={reply}
         onChange={(event) => setReply(event.target.value)}
         placeholder="Escreva a resposta. Ela chega ao titular pela consulta com chave, como qualquer pedido."
-        className="w-full rounded-[10px] border border-admin-input-border bg-admin-input-bg px-3.5 py-3 text-[13.5px] text-admin-text placeholder:text-admin-faint"
+        className="field-sizing-fixed bg-background"
       />
 
       <form action={respondAction} className="mt-2.5">
@@ -63,8 +63,8 @@ export function ReplySection({
             placeholder="Relatório de dados"
           />
         </div>
-        <label className="relative mt-1 flex cursor-pointer flex-col items-center gap-1 rounded-[10px] border-[1.5px] border-dashed border-admin-input-border px-4 py-3.5 text-center focus-within:border-admin-accent focus-within:ring-2 focus-within:ring-admin-accent">
-          <span className="text-[12.5px] font-semibold text-admin-primary">
+        <label className="relative mt-1 flex cursor-pointer flex-col items-center gap-1 rounded-lg border border-dashed border-input px-4 py-3.5 text-center transition-colors hover:bg-muted/50 focus-within:border-ring focus-within:ring-3 focus-within:ring-ring/50">
+          <span className="text-sm font-medium text-primary">
             Anexar relatório de dados (opcional)
           </span>
           <input
@@ -76,42 +76,32 @@ export function ReplySection({
         </label>
 
         <div className="mt-3 flex items-center gap-2.5">
-          <button
-            type="submit"
-            disabled={pending || !reply.trim()}
-            className="btn btn-admin-primary btn-md"
-          >
+          <Button type="submit" disabled={pending || !reply.trim()}>
             {respondPending ? "Enviando…" : "Enviar resposta e concluir"}
-          </button>
-          <button
+          </Button>
+          <Button
             type="submit"
+            variant="outline"
             formAction={draftAction}
             disabled={pending}
-            className="btn btn-admin-secondary btn-md"
           >
             {draftPending ? "Salvando…" : "Salvar rascunho"}
-          </button>
+          </Button>
         </div>
       </form>
 
       {respondState.status === "error" && (
-        <p
-          role="alert"
-          className="mt-2.5 text-[12.5px] font-semibold text-admin-error-text"
-        >
+        <p role="alert" className="mt-2.5 text-sm font-medium text-destructive">
           {respondState.message}
         </p>
       )}
       {draftState.status === "error" && (
-        <p
-          role="alert"
-          className="mt-2.5 text-[12.5px] font-semibold text-admin-error-text"
-        >
+        <p role="alert" className="mt-2.5 text-sm font-medium text-destructive">
           {draftState.message}
         </p>
       )}
       {draftState.status === "success" && (
-        <p className="mt-2.5 text-[12.5px] font-semibold text-admin-success-text">
+        <p className="mt-2.5 text-sm font-medium text-success-text">
           Rascunho salvo.
         </p>
       )}

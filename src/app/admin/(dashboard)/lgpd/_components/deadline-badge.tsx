@@ -3,13 +3,16 @@ import {
   dataRightsUrgency,
 } from "@/core/overview/urgency.ts";
 import type { IsoDate } from "@/core/scheduling/calendar.ts";
+import { Badge } from "../../../_ui/badge.tsx";
 
+// A term about to end, or already over, is a badge that has to be seen:
+// solid colour, not a tint (decision of 11/11/2026).
 const URGENCY_STYLES: Record<DataRightsUrgency["kind"], string> = {
-  received: "bg-admin-readonly-bg text-admin-text",
-  "due-soon": "bg-admin-warning-bg text-admin-warning-text",
-  overdue: "bg-admin-error-bg text-admin-error-text",
-  answered: "bg-admin-success-bg text-admin-success-text",
-  cancelled: "bg-admin-readonly-bg text-admin-muted",
+  received: "bg-muted text-foreground",
+  "due-soon": "bg-warning text-warning-foreground",
+  overdue: "bg-destructive text-destructive-foreground",
+  answered: "border-success/30 bg-success-soft text-success-text",
+  cancelled: "bg-muted text-muted-foreground",
 };
 
 function urgencyLabel(urgency: DataRightsUrgency): string {
@@ -40,10 +43,8 @@ export function DeadlineBadge({
 }) {
   const urgency = dataRightsUrgency(status, requestedOn, today);
   return (
-    <span
-      className={`inline-flex items-center rounded-full px-2.5 py-1 text-[11px] font-bold ${URGENCY_STYLES[urgency.kind]}`}
-    >
+    <Badge className={URGENCY_STYLES[urgency.kind]}>
       {urgencyLabel(urgency)}
-    </span>
+    </Badge>
   );
 }

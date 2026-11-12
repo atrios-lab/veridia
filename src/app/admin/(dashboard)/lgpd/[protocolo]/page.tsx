@@ -38,10 +38,10 @@ const HISTORY_LABELS: Record<string, string> = {
 function Field({ label, value }: { label: string; value: string }) {
   return (
     <div>
-      <span className="mb-1.5 block text-xs font-bold text-admin-primary">
+      <span className="mb-1.5 block text-xs font-medium text-foreground">
         {label}
       </span>
-      <p className="rounded-[9px] border border-admin-input-border bg-admin-input-bg px-3.5 py-2.5 text-[13.5px] text-admin-text">
+      <p className="rounded-md border bg-muted px-3 py-2 text-sm text-foreground">
         {value}
       </p>
     </div>
@@ -89,10 +89,10 @@ export default async function DataRightsDetailPage({
   return (
     <>
       <AdminPageHeader title={request.protocolNumber} />
-      <main className="flex flex-col gap-4.5 px-[30px] py-7">
+      <main className="flex flex-col gap-6 px-4 pt-6 pb-8 md:px-8">
         <div className="flex flex-wrap items-center gap-3">
           <BackLink href="/admin/lgpd" label="Requerimentos LGPD" />
-          <span className="h-[18px] w-px bg-admin-border" />
+          <span className="h-4.5 w-px bg-border" />
           <DeadlineBadge
             status={request.status}
             requestedOn={requestedOn}
@@ -100,35 +100,35 @@ export default async function DataRightsDetailPage({
           />
         </div>
 
-        <div className="grid grid-cols-1 gap-5 lg:grid-cols-[1fr_340px] lg:items-start">
-          <div className="flex flex-col gap-4.5">
+        <div className="grid grid-cols-1 gap-6 lg:grid-cols-[1fr_340px] lg:items-start">
+          <div className="flex flex-col gap-6">
             <RequestFilesNotice
               files={attachments.map((a) => ({
                 status: requestFileStatusOf(a, request, todayIso),
                 purgedAt: a.purgedAt,
               }))}
             />
-            <div className="rounded-[14px] border border-admin-border bg-admin-card p-6">
-              <div className="rounded-[11px] border border-admin-border bg-admin-input-bg px-4 py-3.5">
-                <span className="text-[11.5px] font-bold tracking-[0.06em] text-admin-accent uppercase">
+            <div className="rounded-xl border bg-card p-6">
+              <div className="rounded-lg bg-muted/50 px-4 py-3.5">
+                <span className="text-xs font-medium text-muted-foreground">
                   Direito solicitado
                 </span>
-                <p className="mt-1 text-[13.5px] whitespace-pre-line text-admin-text [overflow-wrap:anywhere]">
+                <p className="mt-1 text-sm whitespace-pre-line text-foreground [overflow-wrap:anywhere]">
                   {option.label} ({option.legalName})
                 </p>
               </div>
               {request.description && (
-                <div className="mt-2.5 rounded-[11px] border border-admin-border bg-admin-input-bg px-4 py-3.5">
-                  <span className="text-[11.5px] font-bold tracking-[0.06em] text-admin-accent uppercase">
+                <div className="mt-2.5 rounded-lg bg-muted/50 px-4 py-3.5">
+                  <span className="text-xs font-medium text-muted-foreground">
                     Pedido descrito pela titular
                   </span>
-                  <p className="mt-1 text-[13.5px] whitespace-pre-line text-admin-text [overflow-wrap:anywhere]">
+                  <p className="mt-1 text-sm whitespace-pre-line text-foreground [overflow-wrap:anywhere]">
                     {request.description}
                   </p>
                 </div>
               )}
 
-              <div className="mt-3.5 grid grid-cols-1 gap-3.5 md:grid-cols-2">
+              <div className="mt-4 grid grid-cols-1 gap-4 md:grid-cols-2">
                 <Field
                   label="Titular"
                   value={request.applicantName ?? "Não informado"}
@@ -140,7 +140,7 @@ export default async function DataRightsDetailPage({
               </div>
 
               {identityAttachment && (
-                <div className="mt-3.5">
+                <div className="mt-4">
                   <AttachmentRow
                     requestId={request.id}
                     attachment={{
@@ -171,11 +171,11 @@ export default async function DataRightsDetailPage({
                   initialDraft={details.draftReply ?? ""}
                 />
               ) : (
-                <div className="mt-5 border-t border-admin-border pt-4.5">
-                  <span className="text-[13px] font-bold text-admin-primary">
+                <div className="mt-5 border-t pt-4">
+                  <span className="text-sm font-medium text-foreground">
                     Resposta enviada
                   </span>
-                  <p className="mt-2 rounded-[10px] border border-admin-border bg-admin-input-bg px-3.5 py-3 text-[13.5px] text-admin-text">
+                  <p className="mt-2 rounded-lg bg-muted/50 px-3.5 py-3 text-sm text-foreground">
                     {request.officeReply}
                   </p>
                   <div className="mt-2 flex flex-col gap-2">
@@ -203,24 +203,24 @@ export default async function DataRightsDetailPage({
             </div>
           </div>
 
-          <div className="flex flex-col gap-4.5">
-            <div className="rounded-[14px] border border-admin-border bg-admin-card p-4.5">
-              <h4 className="font-serif text-[15.5px] font-semibold text-admin-primary">
+          <div className="flex flex-col gap-6">
+            <div className="rounded-xl border bg-card p-4">
+              <h4 className="text-base font-semibold text-foreground">
                 {dataRightsDeadlineLabel(details.right)}
               </h4>
-              <p className="mt-2 text-[12.5px] leading-relaxed text-admin-muted">
+              <p className="mt-2 text-xs leading-relaxed text-muted-foreground">
                 Recebido em {formatOfficeDayMonthTime(request.createdAt)}.{" "}
                 {dataRightsDeadlineNotice(details.right)} A resposta fica a
                 cargo de {tenant.dpo.name}.
               </p>
             </div>
 
-            <div className="rounded-[14px] border border-admin-border bg-admin-card p-4.5">
-              <h4 className="font-serif text-[15.5px] font-semibold text-admin-primary">
+            <div className="rounded-xl border bg-card p-4">
+              <h4 className="text-base font-semibold text-foreground">
                 Histórico
               </h4>
               {history.length === 0 ? (
-                <p className="mt-2 text-[12px] text-admin-muted">
+                <p className="mt-2 text-xs text-muted-foreground">
                   Sem eventos registrados.
                 </p>
               ) : (
@@ -228,16 +228,16 @@ export default async function DataRightsDetailPage({
                   {history.map((entry, index) => (
                     <li
                       key={`${entry.action}-${entry.createdAt.toISOString()}-${index}`}
-                      className="text-[12.5px] leading-snug text-admin-text"
+                      className="text-xs leading-snug text-foreground"
                     >
-                      <strong className="text-admin-primary">
+                      <strong className="font-semibold text-foreground">
                         {entry.action.endsWith(".attachment-purge")
                           ? "Plataforma"
                           : (entry.actorName ?? "Sistema")}
                       </strong>{" "}
                       {HISTORY_LABELS[entry.action] ?? entry.action}
                       <br />
-                      <span className="text-[11px] text-admin-faint">
+                      <span className="text-xs text-muted-foreground">
                         {formatOfficeDayMonthTime(entry.createdAt)}
                       </span>
                     </li>

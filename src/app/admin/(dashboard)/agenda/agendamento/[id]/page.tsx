@@ -85,20 +85,20 @@ export default async function AppointmentDetailPage({
   return (
     <>
       <AdminPageHeader maxWidth={960} title="Detalhes do agendamento" />
-      <main className="flex max-w-[960px] flex-col gap-4.5 px-[30px] py-7">
+      <main className="flex max-w-[960px] flex-col gap-6 px-4 pt-6 pb-8 md:px-8">
         <BackLink href={dayHref} label="Agenda do dia" />
 
-        <section className="rounded-[14px] border border-admin-border bg-admin-card px-5 py-4">
-          <h2 className="font-serif text-[18px] font-semibold text-admin-primary">
+        <section className="rounded-xl border bg-card px-5 py-4">
+          <h2 className="text-lg font-semibold text-foreground">
             {appointment.citizenName}
           </h2>
-          <p className="mt-1 text-[13px] text-admin-text">
+          <p className="mt-1 text-sm text-foreground">
             {formatFullDate(appointment.date)}, das {appointment.slotTime} às{" "}
             {slotEndTime(appointment.slotTime)} · {AGENDA_NAMES[agenda].name} ·{" "}
             {appointmentStatusLabel(appointment.status)}
             {appointment.protocolNumber && ` · ${appointment.protocolNumber}`}
           </p>
-          <p className="mt-0.5 text-[12.5px] text-admin-muted">
+          <p className="mt-0.5 text-xs text-muted-foreground">
             {appointment.serviceLabel} · {appointment.mode} ·{" "}
             {appointment.origin === "desk"
               ? "Reservado no balcão"
@@ -106,18 +106,18 @@ export default async function AppointmentDetailPage({
           </p>
         </section>
 
-        <section className="rounded-[14px] border border-admin-border bg-admin-card px-5 py-4">
-          <h3 className="text-[13px] font-bold text-admin-primary">
+        <section className="rounded-xl border bg-card px-5 py-4">
+          <h3 className="text-sm font-semibold text-foreground">
             O que o cliente informou
           </h3>
-          <p className="mt-1.5 whitespace-pre-line [overflow-wrap:anywhere] text-[13px] text-admin-text">
+          <p className="mt-1.5 whitespace-pre-line [overflow-wrap:anywhere] text-sm text-foreground">
             {appointment.serviceDetails?.trim() || "Nenhuma observação."}
           </p>
-          <h4 className="mt-3 text-[12px] font-bold text-admin-muted">
+          <h4 className="mt-3 text-xs font-medium text-muted-foreground">
             Documentos que enviou
           </h4>
           {citizenFiles.length === 0 ? (
-            <p className="mt-1 text-[12.5px] text-admin-faint">
+            <p className="mt-1 text-xs text-muted-foreground">
               Nenhum documento.
             </p>
           ) : (
@@ -128,7 +128,7 @@ export default async function AppointmentDetailPage({
                     href={`/admin/agenda/arquivo?id=${file.id}`}
                     target="_blank"
                     rel="noreferrer"
-                    className="rounded-full bg-admin-input-bg px-2.5 py-1 text-[12px] font-semibold text-admin-primary hover:underline"
+                    className="rounded-full bg-muted px-2.5 py-1 text-xs font-medium text-primary hover:underline"
                   >
                     Documento {index + 1}
                   </a>
@@ -138,11 +138,11 @@ export default async function AppointmentDetailPage({
           )}
         </section>
 
-        <section className="rounded-[14px] border border-admin-border bg-admin-card px-5 py-4">
-          <h3 className="text-[13px] font-bold text-admin-primary">
+        <section className="rounded-xl border bg-card px-5 py-4">
+          <h3 className="text-sm font-semibold text-foreground">
             Anotações internas
           </h3>
-          <p className="mt-0.5 text-[12px] text-admin-muted">
+          <p className="mt-0.5 text-xs text-muted-foreground">
             Só a serventia vê. O cliente não recebe.
           </p>
           {notes.length > 0 && (
@@ -150,12 +150,12 @@ export default async function AppointmentDetailPage({
               {notes.map((note) => (
                 <li
                   key={note.id}
-                  className="rounded-lg bg-admin-input-bg px-3.5 py-2.5"
+                  className="rounded-lg bg-muted/50 px-3.5 py-2.5"
                 >
-                  <p className="whitespace-pre-line [overflow-wrap:anywhere] text-[13px] text-admin-text">
+                  <p className="whitespace-pre-line [overflow-wrap:anywhere] text-sm text-foreground">
                     {note.body}
                   </p>
-                  <p className="mt-1 text-[11.5px] text-admin-faint">
+                  <p className="mt-1 text-xs text-muted-foreground">
                     {note.authorName} · {DATE_TIME.format(note.createdAt)}
                   </p>
                 </li>
@@ -165,26 +165,26 @@ export default async function AppointmentDetailPage({
           <NoteForm id={appointment.id} />
         </section>
 
-        <section className="rounded-[14px] border border-admin-border bg-admin-card px-5 py-4">
-          <h3 className="text-[13px] font-bold text-admin-primary">
+        <section className="rounded-xl border bg-card px-5 py-4">
+          <h3 className="text-sm font-semibold text-foreground">
             Anexos da serventia
           </h3>
-          <p className="mt-0.5 text-[12px] text-admin-muted">
+          <p className="mt-0.5 text-xs text-muted-foreground">
             Arquivos guardados com o agendamento. O cliente não vê.
           </p>
           {officeFiles.length > 0 && (
             <ul className="mt-2 flex flex-col gap-1.5">
               {officeFiles.map((file, index) => (
-                <li key={file.id} className="text-[12.5px]">
+                <li key={file.id} className="text-xs">
                   <a
                     href={`/admin/agenda/arquivo?id=${file.id}`}
                     target="_blank"
                     rel="noreferrer"
-                    className="font-semibold text-admin-primary hover:underline"
+                    className="font-medium text-primary hover:underline"
                   >
                     Anexo {index + 1}
                   </a>{" "}
-                  <span className="text-admin-faint">
+                  <span className="text-muted-foreground">
                     · {DATE_TIME.format(file.createdAt)}
                   </span>
                 </li>
@@ -194,11 +194,11 @@ export default async function AppointmentDetailPage({
           <OfficeFilesForm id={appointment.id} />
         </section>
 
-        <section className="rounded-[14px] border border-admin-border bg-admin-card px-5 py-4">
-          <h3 className="text-[13px] font-bold text-admin-primary">
+        <section className="rounded-xl border bg-card px-5 py-4">
+          <h3 className="text-sm font-semibold text-foreground">
             Dados do cliente
           </h3>
-          <p className="mt-0.5 text-[12px] text-admin-muted">
+          <p className="mt-0.5 text-xs text-muted-foreground">
             Corrija o que o cliente preencheu errado. Dia e horário não mudam
             aqui: para mudar, cancele e reserve de novo.
           </p>

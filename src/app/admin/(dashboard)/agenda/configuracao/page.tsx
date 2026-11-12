@@ -102,7 +102,7 @@ export default async function AgendaSettingsPage() {
         title="Configuração das agendas"
         back={{ href: "/admin/agenda", label: "Agenda" }}
       />
-      <main className="px-[30px] py-7">
+      <main className="px-4 pt-6 pb-8 md:px-8">
         <AgendaSettingsForm
           lists={lists}
           initial={{

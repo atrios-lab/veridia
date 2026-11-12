@@ -7,7 +7,11 @@ import {
   statusLabel,
   suggestedOmbudsmanStatuses,
 } from "@/core/request/kinds.ts";
-import { AdminIcon } from "../../../../_components/icon.tsx";
+import { Button } from "../../../../_ui/button.tsx";
+import {
+  NativeSelect,
+  NativeSelectOption,
+} from "../../../../_ui/native-select.tsx";
 import { type ActionState, changeManifestationStatus } from "../actions.ts";
 
 /** The four the office may set. "Respondida" is reached by sending the reply,
@@ -18,9 +22,9 @@ const SELECTABLE = OMBUDSMAN_STATUSES.filter((s) => s !== "answered");
  * neutral for the rest. */
 function pillClass(status: OmbudsmanStatus): string {
   if (status === "archived") {
-    return "rounded-full border border-admin-border bg-admin-readonly-bg px-3.5 py-1.5 text-[12.5px] font-semibold text-admin-muted disabled:opacity-60";
+    return "rounded-full bg-muted text-muted-foreground";
   }
-  return "rounded-full border border-admin-input-border bg-admin-input-bg px-3.5 py-1.5 text-[12.5px] font-semibold text-admin-primary disabled:opacity-60";
+  return "rounded-full";
 }
 
 export function ManifestationStatusSection({
@@ -38,67 +42,53 @@ export function ManifestationStatusSection({
   const suggested = suggestedOmbudsmanStatuses(status);
 
   return (
-    <div className="mt-5 border-t border-admin-border pt-4.5">
+    <div className="mt-5 border-t pt-4">
       <div className="flex flex-wrap items-center gap-2">
-        <span className="text-xs font-bold text-admin-primary">
-          Mudar para:
-        </span>
+        <span className="text-xs font-medium text-foreground">Mudar para:</span>
         {suggested.map((next) => (
           <form key={next} action={action}>
             <input type="hidden" name="requestId" value={requestId} />
             <input type="hidden" name="status" value={next} />
-            <button
+            <Button
               type="submit"
+              variant="outline"
+              size="sm"
               disabled={pending}
               className={pillClass(next)}
             >
               {statusLabel("ombudsman", next)}
-            </button>
+            </Button>
           </form>
         ))}
       </div>
 
-      <details className="mt-3.5">
-        <summary className="cursor-pointer text-[12px] font-semibold text-admin-muted">
+      <details className="mt-4">
+        <summary className="cursor-pointer text-xs font-medium text-muted-foreground hover:text-foreground">
           Corrigir para outro andamento
         </summary>
         <form action={action} className="mt-2.5 flex items-center gap-2.5">
           <input type="hidden" name="requestId" value={requestId} />
-          <div className="relative">
-            {/* Flat list: four options are not the wall that makes
-                /admin/pedidos group its eighteen by phase. */}
-            <select
-              name="status"
-              defaultValue={status === "answered" ? "done" : status}
-              className="appearance-none rounded-[9px] border border-admin-input-border bg-admin-input-bg py-2 pr-9 pl-3 text-[13px] text-admin-text"
-            >
-              {SELECTABLE.map((s) => (
-                <option key={s} value={s}>
-                  {statusLabel("ombudsman", s)}
-                </option>
-              ))}
-            </select>
-            <AdminIcon
-              name="chevronDown"
-              className="pointer-events-none absolute top-1/2 right-3 h-3.5 w-3.5 -translate-y-1/2 text-admin-muted"
-              strokeWidth={2}
-            />
-          </div>
-          <button
-            type="submit"
-            disabled={pending}
-            className="btn btn-admin-primary btn-md"
+          {/* Flat list: four options are not the wall that makes
+              /admin/pedidos group its eighteen by phase. */}
+          <NativeSelect
+            name="status"
+            aria-label="Andamento"
+            defaultValue={status === "answered" ? "done" : status}
           >
+            {SELECTABLE.map((s) => (
+              <NativeSelectOption key={s} value={s}>
+                {statusLabel("ombudsman", s)}
+              </NativeSelectOption>
+            ))}
+          </NativeSelect>
+          <Button type="submit" disabled={pending}>
             {pending ? "Aplicando…" : "Aplicar"}
-          </button>
+          </Button>
         </form>
       </details>
 
       {state.status === "error" && (
-        <p
-          role="alert"
-          className="mt-3 text-[12.5px] font-semibold text-admin-error-text"
-        >
+        <p role="alert" className="mt-3 text-sm font-medium text-destructive">
           {state.message}
         </p>
       )}

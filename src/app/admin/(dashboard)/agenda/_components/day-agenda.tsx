@@ -1,12 +1,22 @@
 "use client";
 
 import Link from "next/link";
-import { useActionState, useEffect, useState } from "react";
+import { useActionState, useEffect, useId, useState } from "react";
 import { toast } from "sonner";
 import { signHref } from "@/app/admin/_components/sign-or-print";
 import { slotEndTime } from "@/core/scheduling/agenda.ts";
 import { appointmentStatusLabel } from "@/core/scheduling/appointment.ts";
 import { ConfirmAction } from "../../../_components/confirm-action.tsx";
+import { Badge } from "../../../_ui/badge.tsx";
+import { Button, buttonVariants } from "../../../_ui/button.tsx";
+import { cn } from "../../../_ui/cn.ts";
+import { Input } from "../../../_ui/input.tsx";
+import { Label } from "../../../_ui/label.tsx";
+import {
+  NativeSelect,
+  NativeSelectOption,
+} from "../../../_ui/native-select.tsx";
+import { Textarea } from "../../../_ui/textarea.tsx";
 import {
   type ActionState,
   attendAppointment,
@@ -48,8 +58,8 @@ export type DayRow =
    * the two agendas still share their times. */
   | { kind: "held"; time: string; heldBy: string };
 
-const inputClass =
-  "w-full rounded-lg border border-admin-border bg-admin-card px-3 py-2 text-[13px] text-admin-text outline-none focus:border-admin-accent";
+/** The label over each field of the inline forms. */
+const fieldLabelClass = "text-xs font-medium text-foreground";
 
 /**
  * The whole day, hour by hour: who is coming, and which hours the site is
@@ -76,7 +86,7 @@ export function DaySlotList({
 }) {
   if (rows.length === 0) {
     return (
-      <p className="border-t border-admin-border px-5 py-8 text-center text-[13px] text-admin-muted">
+      <p className="border-t px-5 py-8 text-center text-sm text-muted-foreground">
         {closed
           ? "Dia fechado, sem agendamentos."
           : "Nenhum horário na grade deste dia e nenhum agendamento."}
@@ -89,7 +99,7 @@ export function DaySlotList({
   // narrower than on a large phone held sideways. Each row reads this width to
   // decide whether its actions fit beside the text or go under it.
   return (
-    <div className="@container border-t border-admin-border">
+    <div className="@container border-t">
       {rows.map((row) =>
         row.kind === "appointment" ? (
           <AppointmentRow
@@ -134,35 +144,34 @@ function AppointmentRow({
 
   return (
     <div
-      className={`border-b border-admin-border px-5 py-3.5 text-[13px] last:border-b-0 ${
-        live ? "border-l-4 border-l-admin-accent bg-admin-warning-soft-bg" : ""
-      }`}
+      className={cn(
+        "border-b px-5 py-3.5 text-sm last:border-b-0",
+        live && "border-l-4 border-l-primary bg-primary/10",
+      )}
     >
       <div className="grid grid-cols-[76px_1fr] items-center gap-3 @2xl:grid-cols-[76px_1fr_auto]">
-        <span className="font-bold tabular-nums text-admin-primary">
+        <span className="font-semibold tabular-nums text-primary">
           {live && (
             // A booked time calls the eye, the free ones stay quiet.
             <span className="relative mr-1.5 inline-flex h-2.5 w-2.5 align-middle">
-              <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-admin-accent opacity-60" />
-              <span className="relative inline-flex h-2.5 w-2.5 rounded-full bg-admin-accent" />
+              <span className="absolute inline-flex h-full w-full rounded-full bg-primary opacity-60 motion-safe:animate-ping" />
+              <span className="relative inline-flex h-2.5 w-2.5 rounded-full bg-primary" />
             </span>
           )}
           {appointment.slotTime}
-          <span className="block text-[10.5px] font-normal text-admin-faint">
+          <span className="block text-xs font-normal text-muted-foreground">
             até {slotEndTime(appointment.slotTime)}
           </span>
         </span>
         <span className="min-w-0" title={appointment.email}>
           <span className="flex flex-wrap items-center gap-x-2 gap-y-1 @2xl:flex-nowrap">
-            <span className="min-w-0 font-semibold text-admin-text @2xl:truncate">
+            <span className="min-w-0 font-medium text-foreground @2xl:truncate">
               {appointment.citizenName}
             </span>
             {deskBooked ? (
-              <span
-                className={`inline-flex shrink-0 items-center rounded-full px-2.5 py-1 text-[11px] font-bold ${DESK_BADGE_STYLE}`}
-              >
+              <Badge className={cn("shrink-0", DESK_BADGE_STYLE)}>
                 Reservado no balcão
-              </span>
+              </Badge>
             ) : (
               <AppointmentStatusBadge
                 status={appointment.status}
@@ -173,18 +182,21 @@ function AppointmentRow({
                 and the citizen's data to correct. */}
             <Link
               href={`/admin/agenda/agendamento/${appointment.id}`}
-              className="shrink-0 rounded-lg border border-admin-border px-2 py-0.5 text-[11px] font-semibold text-admin-primary hover:bg-admin-input-bg"
+              className={cn(
+                buttonVariants({ variant: "outline", size: "xs" }),
+                "text-primary",
+              )}
             >
               Detalhes
             </Link>
           </span>
-          <span className="mt-0.5 block text-[11.5px] text-admin-faint @2xl:truncate">
+          <span className="mt-0.5 block text-xs text-muted-foreground @2xl:truncate">
             {appointment.serviceLabel} · {appointment.mode} ·{" "}
             {appointment.phone}
             {appointment.protocolNumber && (
               <>
                 {" · "}
-                <span className="font-semibold text-admin-accent">
+                <span className="font-medium text-primary">
                   {appointment.protocolNumber}
                 </span>
               </>
@@ -196,13 +208,14 @@ function AppointmentRow({
             <ReceiptLink id={appointment.id} />
             <AttendButton id={appointment.id} />
             <NoShowButton id={appointment.id} />
-            <button
+            <Button
               type="button"
+              variant="destructive"
+              size="sm"
               onClick={() => setCancelling((open) => !open)}
-              className="rounded-lg border border-admin-border px-2.5 py-1.5 text-[11.5px] font-semibold text-admin-alert hover:bg-admin-input-bg"
             >
               Cancelar
-            </button>
+            </Button>
           </span>
         ) : appointment.status === "attended" ? (
           <span className="col-span-2 flex flex-wrap gap-1.5 @2xl:col-span-1 @2xl:justify-end">
@@ -230,28 +243,28 @@ function AppointmentRow({
       </div>
 
       {appointment.awaitingConfirmation && (
-        <p className="mt-1.5 inline-flex rounded-md bg-admin-warning-bg px-2.5 py-1 text-[11.5px] font-semibold text-admin-warning-text">
+        <p className="mt-1.5 inline-flex rounded-md bg-warning px-2.5 py-1 text-xs font-medium text-warning-foreground">
           O horário passou: marque se foi atendido ou não compareceu.
         </p>
       )}
 
       {appointment.serviceDetails && (
-        <p className="mt-1.5 break-words text-[12px] leading-relaxed text-admin-text">
-          <span className="font-semibold">O que precisa:</span>{" "}
+        <p className="mt-1.5 break-words text-xs leading-relaxed text-foreground">
+          <span className="font-medium">O que precisa:</span>{" "}
           {appointment.serviceDetails}
         </p>
       )}
 
       {appointment.files && appointment.files.length > 0 && (
-        <p className="mt-1.5 flex flex-wrap items-center gap-x-2 gap-y-1 text-[12px] text-admin-text">
-          <span className="font-semibold">Enviou antes:</span>
+        <p className="mt-1.5 flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-foreground">
+          <span className="font-medium">Enviou antes:</span>
           {appointment.files.map((file) => (
             <a
               key={file.id}
               href={`/admin/agenda/arquivo?id=${file.id}`}
               target="_blank"
               rel="noopener"
-              className="inline-flex max-w-[220px] items-center gap-1 truncate rounded-md bg-admin-input-bg px-2 py-0.5 font-semibold text-admin-primary underline-offset-2 hover:underline"
+              className="inline-flex max-w-[220px] items-center gap-1 truncate rounded-md bg-muted px-2 py-0.5 font-medium text-primary underline-offset-2 hover:underline"
             >
               {file.name}
             </a>
@@ -260,7 +273,7 @@ function AppointmentRow({
       )}
 
       {appointment.cancelReason && (
-        <p className="mt-1.5 text-[11.5px] text-admin-muted">
+        <p className="mt-1.5 text-xs text-muted-foreground">
           Motivo informado: {appointment.cancelReason}
         </p>
       )}
@@ -311,10 +324,12 @@ function FreeSlotRow({
   const [reserving, setReserving] = useState(false);
 
   return (
-    <div className="border-b border-admin-border bg-admin-input-bg/40 px-5 py-3.5 text-[13px] last:border-b-0">
+    <div className="border-b bg-muted/40 px-5 py-3.5 text-sm last:border-b-0">
       <div className="grid grid-cols-[76px_1fr] items-center gap-3 @2xl:grid-cols-[76px_1fr_auto]">
-        <span className="font-bold tabular-nums text-admin-faint">{time}</span>
-        <span className="text-admin-muted">
+        <span className="font-semibold tabular-nums text-muted-foreground">
+          {time}
+        </span>
+        <span className="text-muted-foreground">
           {offered
             ? vacancies && vacancies > 1
               ? `Livre: ${vacancies} vagas aparecem no site para agendamento`
@@ -326,13 +341,15 @@ function FreeSlotRow({
                 : "Ficou livre: o horário já passou"}
         </span>
         {offered ? (
-          <button
+          <Button
             type="button"
+            variant="outline"
+            size="sm"
             onClick={() => setReserving((open) => !open)}
-            className="col-span-2 justify-self-start rounded-lg border border-dashed border-admin-border px-2.5 py-1.5 text-[11.5px] font-semibold text-admin-muted hover:bg-admin-input-bg @2xl:col-span-1 @2xl:justify-self-end"
+            className="col-span-2 justify-self-start border-dashed text-muted-foreground @2xl:col-span-1 @2xl:justify-self-end"
           >
             Reservar para um cidadão
-          </button>
+          </Button>
         ) : (
           <span className="hidden @2xl:block" />
         )}
@@ -373,109 +390,107 @@ function DeskReserveForm({
     reserveDeskAppointment,
     { status: "idle" },
   );
+  const uid = useId();
 
   if (state.status === "success") {
     return (
-      <p className="mt-2.5 rounded-lg bg-admin-success-bg px-3 py-2 text-[12px] font-semibold text-admin-success-text">
+      <p className="mt-2.5 rounded-lg border border-success/30 bg-success-soft px-3 py-2 text-xs font-medium text-success-text">
         {state.message ?? "Horário reservado."}
       </p>
     );
   }
 
   return (
-    <form action={formAction} className="mt-2.5 rounded-lg bg-admin-card p-3">
+    <form action={formAction} className="mt-2.5 rounded-lg border bg-card p-3">
       <input type="hidden" name="agenda" value={agenda} />
       <input type="hidden" name="date" value={date} />
       <input type="hidden" name="slotTime" value={time} />
       <div className="grid gap-2.5 sm:grid-cols-2">
-        <label className="text-[12px] font-semibold text-admin-text">
+        <label htmlFor={`${uid}-name`} className={fieldLabelClass}>
           Nome do cidadão
-          <input
+          <Input
+            id={`${uid}-name`}
             name="citizenName"
             required
-            className={`${inputClass} mt-1 font-normal`}
+            className="mt-1 bg-background font-normal"
           />
         </label>
-        <label className="text-[12px] font-semibold text-admin-text">
+        <label htmlFor={`${uid}-phone`} className={fieldLabelClass}>
           Telefone
-          <input
+          <Input
+            id={`${uid}-phone`}
             name="phone"
             required
-            className={`${inputClass} mt-1 font-normal`}
+            className="mt-1 bg-background font-normal"
             placeholder="(84) 9 9999-9999"
           />
         </label>
-        <label className="text-[12px] font-semibold text-admin-text sm:col-span-2">
+        <label
+          htmlFor={`${uid}-email`}
+          className={cn(fieldLabelClass, "sm:col-span-2")}
+        >
           E-mail
-          <span className="ml-1 font-normal text-admin-faint">
+          <span className="ml-1 font-normal text-muted-foreground">
             · opcional; com ele o cidadão recebe a confirmação
           </span>
-          <input
+          <Input
+            id={`${uid}-email`}
             name="email"
             type="email"
-            className={`${inputClass} mt-1 font-normal`}
+            className="mt-1 bg-background font-normal"
           />
         </label>
-        <label className="text-[12px] font-semibold text-admin-text">
+        <label htmlFor={`${uid}-service`} className={fieldLabelClass}>
           Serviço
-          <select
+          <NativeSelect
+            id={`${uid}-service`}
             name="serviceId"
             required
             defaultValue=""
-            className={`${inputClass} mt-1 font-normal`}
+            className="mt-1 w-full font-normal"
           >
-            <option value="" disabled>
+            <NativeSelectOption value="" disabled>
               Escolha o serviço
-            </option>
+            </NativeSelectOption>
             {services.map((service) => (
-              <option key={service.id} value={service.id}>
+              <NativeSelectOption key={service.id} value={service.id}>
                 {service.label}
-              </option>
+              </NativeSelectOption>
             ))}
-          </select>
+          </NativeSelect>
         </label>
-        <label className="text-[12px] font-semibold text-admin-text">
+        <label htmlFor={`${uid}-mode`} className={fieldLabelClass}>
           Modo
-          <select
+          <NativeSelect
+            id={`${uid}-mode`}
             name="mode"
             required
             defaultValue=""
-            className={`${inputClass} mt-1 font-normal`}
+            className="mt-1 w-full font-normal"
           >
-            <option value="" disabled>
+            <NativeSelectOption value="" disabled>
               Escolha o modo
-            </option>
+            </NativeSelectOption>
             {modes.map((mode) => (
-              <option key={mode} value={mode}>
+              <NativeSelectOption key={mode} value={mode}>
                 {mode}
-              </option>
+              </NativeSelectOption>
             ))}
-          </select>
+          </NativeSelect>
         </label>
       </div>
       {state.status === "error" && (
-        <p
-          role="alert"
-          className="mt-1.5 text-[12px] font-semibold text-admin-alert"
-        >
+        <p role="alert" className="mt-1.5 text-xs font-medium text-destructive">
           {state.message}
         </p>
       )}
       <div className="mt-2.5 flex gap-2">
-        <button
-          type="submit"
-          disabled={pending}
-          className="rounded-lg bg-admin-primary px-3 py-1.5 text-[12px] font-semibold text-white disabled:opacity-60"
-        >
+        <Button type="submit" size="sm" disabled={pending}>
           {pending ? "Reservando..." : "Reservar"}
-        </button>
-        <button
-          type="button"
-          onClick={onDone}
-          className="rounded-lg border border-admin-border px-3 py-1.5 text-[12px] font-semibold text-admin-muted"
-        >
+        </Button>
+        <Button type="button" variant="outline" size="sm" onClick={onDone}>
           Voltar
-        </button>
+        </Button>
       </div>
     </form>
   );
@@ -491,13 +506,16 @@ function ReceiptLink({ id }: { id: string }) {
         href={pdf}
         target="_blank"
         rel="noopener"
-        className="rounded-lg border border-admin-border px-2.5 py-1.5 text-[11.5px] font-semibold text-admin-muted hover:bg-admin-input-bg"
+        className={buttonVariants({ variant: "outline", size: "sm" })}
       >
         Comprovante
       </a>
       <a
         href={signHref(pdf, "Comprovante de agendamento")}
-        className="rounded-lg border border-admin-border px-2.5 py-1.5 text-[11.5px] font-semibold text-admin-primary hover:bg-admin-input-bg"
+        className={cn(
+          buttonVariants({ variant: "outline", size: "sm" }),
+          "text-primary",
+        )}
         title="Assinar o comprovante digitalmente"
       >
         Assinar
@@ -518,30 +536,33 @@ function DeclarationLink({ id, signers }: { id: string; signers: Signer[] }) {
   const sign = signHref(pdf, "Declaração de comparecimento");
   return (
     <span className="inline-flex flex-wrap items-center gap-1.5">
-      <select
+      <NativeSelect
+        size="sm"
         aria-label="Quem assina a declaração"
         value={signer}
         onChange={(event) => setSigner(event.target.value)}
-        className="rounded-lg border border-admin-border bg-admin-card px-2 py-1.5 text-[11.5px] text-admin-text"
+        className="bg-background"
       >
         {signers.map((s, index) => (
-          <option key={`${s.name}-${index}`} value={String(index)}>
+          <NativeSelectOption key={`${s.name}-${index}`} value={String(index)}>
             Assina: {[s.name, s.title].filter(Boolean).join(", ")}
-          </option>
+          </NativeSelectOption>
         ))}
-        <option value="">Assina: quem estiver no balcão</option>
-      </select>
-      <a
-        href={sign}
-        className="rounded-lg bg-admin-primary px-2.5 py-1.5 text-[11.5px] font-semibold text-white"
-      >
+        <NativeSelectOption value="">
+          Assina: quem estiver no balcão
+        </NativeSelectOption>
+      </NativeSelect>
+      <a href={sign} className={buttonVariants({ size: "sm" })}>
         Declaração: assinar digitalmente
       </a>
       <a
         href={pdf}
         target="_blank"
         rel="noopener"
-        className="rounded-lg border border-admin-primary px-2.5 py-1.5 text-[11.5px] font-semibold text-admin-primary"
+        className={cn(
+          buttonVariants({ variant: "outline", size: "sm" }),
+          "border-primary text-primary",
+        )}
         title="Abre o PDF para imprimir e assinar à mão"
       >
         Imprimir para assinar à mão
@@ -558,14 +579,14 @@ function AttendButton({ id }: { id: string }) {
   return (
     <form action={formAction}>
       <input type="hidden" name="id" value={id} />
-      <button
+      <Button
         type="submit"
+        size="sm"
         disabled={pending}
         title={state.status === "error" ? state.message : undefined}
-        className="rounded-lg bg-admin-primary px-2.5 py-1.5 text-[11.5px] font-semibold text-white disabled:opacity-60"
       >
         {pending ? "..." : "Marcar atendido"}
-      </button>
+      </Button>
     </form>
   );
 }
@@ -583,14 +604,16 @@ function RevertButton({ id }: { id: string }) {
   return (
     <form action={formAction}>
       <input type="hidden" name="id" value={id} />
-      <button
+      <Button
         type="submit"
+        variant="outline"
+        size="sm"
         disabled={pending}
         title="Marcou errado? Volta para agendado, para marcar de novo."
-        className="rounded-lg border border-admin-border px-2.5 py-1.5 text-[11.5px] font-semibold text-admin-primary hover:bg-admin-input-bg disabled:opacity-60"
+        className="text-primary"
       >
         {pending ? "..." : "Desfazer"}
-      </button>
+      </Button>
     </form>
   );
 }
@@ -636,14 +659,15 @@ function NoShowButton({ id }: { id: string }) {
   return (
     <form action={formAction}>
       <input type="hidden" name="id" value={id} />
-      <button
+      <Button
         type="submit"
+        variant="outline"
+        size="sm"
         disabled={pending}
         title={state.status === "error" ? state.message : undefined}
-        className="rounded-lg border border-admin-border px-2.5 py-1.5 text-[11.5px] font-semibold text-admin-muted hover:bg-admin-input-bg disabled:opacity-60"
       >
         {pending ? "..." : "Não compareceu"}
-      </button>
+      </Button>
     </form>
   );
 }
@@ -666,58 +690,41 @@ function CancelForm({
 
   if (state.status === "success") {
     return (
-      <p className="mt-2.5 rounded-lg bg-admin-success-bg px-3 py-2 text-[12px] font-semibold text-admin-success-text">
+      <p className="mt-2.5 rounded-lg border border-success/30 bg-success-soft px-3 py-2 text-xs font-medium text-success-text">
         {state.message ?? "Agendamento cancelado."}
       </p>
     );
   }
 
   return (
-    <form
-      action={formAction}
-      className="mt-2.5 rounded-lg bg-admin-input-bg p-3"
-    >
+    <form action={formAction} className="mt-2.5 rounded-lg bg-muted/50 p-3">
       <input type="hidden" name="id" value={id} />
-      <label
-        htmlFor={`reason-${id}`}
-        className="mb-1.5 block text-[12px] font-semibold text-admin-text"
-      >
+      <Label htmlFor={`reason-${id}`} className="mb-1.5 gap-0 text-xs">
         Motivo do cancelamento
-        <span className="ml-1 font-normal text-admin-faint">
+        <span className="ml-1 font-normal text-muted-foreground">
           · vai no e-mail para {citizenName.split(/\s+/)[0]}
         </span>
-      </label>
-      <textarea
+      </Label>
+      <Textarea
         id={`reason-${id}`}
         name="reason"
         rows={2}
         required
-        className={inputClass}
+        className="field-sizing-fixed bg-background"
         placeholder="Ex.: o tabelião foi convocado para uma diligência neste horário."
       />
       {state.status === "error" && (
-        <p
-          role="alert"
-          className="mt-1.5 text-[12px] font-semibold text-admin-alert"
-        >
+        <p role="alert" className="mt-1.5 text-xs font-medium text-destructive">
           {state.message}
         </p>
       )}
       <div className="mt-2 flex gap-2">
-        <button
-          type="submit"
-          disabled={pending}
-          className="rounded-lg bg-admin-primary px-3 py-1.5 text-[12px] font-semibold text-white disabled:opacity-60"
-        >
+        <Button type="submit" size="sm" disabled={pending}>
           {pending ? "Cancelando..." : "Cancelar e avisar"}
-        </button>
-        <button
-          type="button"
-          onClick={onDone}
-          className="rounded-lg border border-admin-border px-3 py-1.5 text-[12px] font-semibold text-admin-muted"
-        >
+        </Button>
+        <Button type="button" variant="outline" size="sm" onClick={onDone}>
           Voltar
-        </button>
+        </Button>
       </div>
     </form>
   );

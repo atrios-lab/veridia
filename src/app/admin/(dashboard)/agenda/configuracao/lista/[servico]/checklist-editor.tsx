@@ -15,12 +15,12 @@ import {
   useAttachmentPrepare,
 } from "@/app/(public)/_lib/attachments.tsx";
 import { AdminIcon } from "../../../../../_components/icon.tsx";
+import { Button, buttonVariants } from "../../../../../_ui/button.tsx";
+import { Input } from "../../../../../_ui/input.tsx";
+import { Textarea } from "../../../../../_ui/textarea.tsx";
 import { type ActionState, saveServiceChecklist } from "../../../actions.ts";
 
-const inputClass =
-  "rounded-lg border border-admin-border bg-admin-input-bg px-3 py-2 text-[13px] text-admin-text outline-none focus:border-admin-accent";
-const cardClass =
-  "rounded-[14px] border border-admin-border bg-admin-card px-5 py-4";
+const cardClass = "rounded-xl border bg-card px-5 py-4";
 
 /**
  * The list as editable lines (fix the wording, remove any item, the base
@@ -95,23 +95,23 @@ export function ChecklistEditor({
     <form
       ref={formRef}
       onSubmit={handleSubmit}
-      className="grid items-start gap-4.5 lg:grid-cols-[1fr_340px]"
+      className="grid items-start gap-6 lg:grid-cols-[1fr_340px]"
     >
       <input type="hidden" name="serviceId" value={serviceId} />
       <input type="hidden" name="items" value={JSON.stringify(items)} />
       {dropFile && <input type="hidden" name="dropFile" value="1" />}
 
-      <div className="flex flex-col gap-4.5">
+      <div className="flex flex-col gap-6">
         <section className={cardClass}>
           <div className="flex flex-wrap items-baseline justify-between gap-2">
-            <h2 className="font-serif text-[16px] font-semibold text-admin-primary">
+            <h2 className="text-base font-semibold text-foreground">
               Lista do que levar
             </h2>
-            <span className="text-[12px] text-admin-muted">
+            <span className="text-xs text-muted-foreground">
               {group} · {edited ? "lista do cartório" : "lista padrão"}
             </span>
           </div>
-          <p className="mt-1 text-[12.5px] leading-relaxed text-admin-muted">
+          <p className="mt-1 text-xs leading-relaxed text-muted-foreground">
             É o que o cidadão vê ao escolher o serviço, na confirmação, no
             e-mail e no comprovante em PDF. Corrija o texto, tire o que não se
             aplica (inclusive os itens de todos os serviços) e acrescente o que
@@ -121,10 +121,10 @@ export function ChecklistEditor({
           <ol className="mt-3 flex flex-col gap-2">
             {items.map((item, index) => (
               <li key={`${index}-${item}`} className="flex items-start gap-2">
-                <span className="mt-2 w-5 shrink-0 text-right text-[12px] tabular-nums text-admin-faint">
+                <span className="mt-2 w-5 shrink-0 text-right text-xs tabular-nums text-muted-foreground">
                   {index + 1}.
                 </span>
-                <textarea
+                <Textarea
                   aria-label={`Item ${index + 1}`}
                   rows={item.length > 90 ? 2 : 1}
                   defaultValue={item}
@@ -136,20 +136,22 @@ export function ChecklistEditor({
                         : items.filter((_, i) => i !== index),
                     );
                   }}
-                  className={`${inputClass} min-w-0 flex-1 resize-y`}
+                  className="field-sizing-fixed min-h-0 min-w-0 flex-1 resize-y bg-background"
                 />
-                <button
+                <Button
                   type="button"
+                  variant="ghost"
+                  size="icon-sm"
                   aria-label={`Excluir: ${item}`}
                   onClick={() => setItems(items.filter((_, i) => i !== index))}
-                  className="mt-2 text-admin-faint hover:text-admin-alert"
+                  className="mt-0.5 text-muted-foreground hover:text-destructive"
                 >
                   <AdminIcon name="x" className="h-4 w-4" />
-                </button>
+                </Button>
               </li>
             ))}
             {items.length === 0 && (
-              <li className="text-[12.5px] text-admin-muted">
+              <li className="text-xs text-muted-foreground">
                 Nenhum item. Acrescente ao menos um, ou anexe a lista do
                 cartório ao lado.
               </li>
@@ -157,7 +159,7 @@ export function ChecklistEditor({
           </ol>
 
           <div className="mt-3 flex gap-2">
-            <input
+            <Input
               value={draft}
               onChange={(event) => setDraft(event.target.value)}
               onKeyDown={(event) => {
@@ -168,24 +170,20 @@ export function ChecklistEditor({
               }}
               placeholder="Novo item, ex.: Certidão negativa de débitos municipais"
               aria-label="Novo item"
-              className={`${inputClass} flex-1`}
+              className="flex-1 bg-background"
             />
-            <button
-              type="button"
-              onClick={add}
-              className="rounded-lg border border-admin-border px-3.5 py-2 text-[12.5px] font-semibold text-admin-muted hover:bg-admin-input-bg"
-            >
+            <Button type="button" variant="outline" onClick={add}>
               Acrescentar
-            </button>
+            </Button>
           </div>
 
           {(edited || changed) && (
-            <div className="mt-3 flex flex-wrap items-center gap-2 text-[12px] text-admin-muted">
+            <div className="mt-3 flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
               {changed && (
                 <button
                   type="button"
                   onClick={() => setItems(initialItems)}
-                  className="font-semibold underline"
+                  className="font-medium underline hover:text-foreground"
                 >
                   Desfazer alterações
                 </button>
@@ -196,7 +194,7 @@ export function ChecklistEditor({
                   name="restoreItems"
                   value="1"
                   disabled={busy}
-                  className="font-semibold text-admin-accent underline"
+                  className="font-medium text-primary underline disabled:opacity-50"
                 >
                   Voltar à lista padrão ({defaults.length} itens)
                 </button>
@@ -206,50 +204,50 @@ export function ChecklistEditor({
         </section>
       </div>
 
-      <aside className="flex flex-col gap-4.5 lg:sticky lg:top-4">
+      <aside className="flex flex-col gap-6 lg:sticky lg:top-4">
         <section className={cardClass}>
-          <h2 className="font-serif text-[16px] font-semibold text-admin-primary">
+          <h2 className="text-base font-semibold text-foreground">
             Lista própria do cartório
           </h2>
-          <p className="mt-1 text-[12.5px] leading-relaxed text-admin-muted">
+          <p className="mt-1 text-xs leading-relaxed text-muted-foreground">
             Se o cartório já tem um checklist, anexe o PDF (ou uma foto da
             folha). O cidadão recebe o link junto com a lista acima, na
             confirmação, no e-mail e no comprovante.
           </p>
 
           {file && !dropFile && (
-            <p className="mt-3 flex items-center justify-between gap-2 rounded-lg bg-admin-input-bg px-3 py-2 text-[12.5px]">
+            <p className="mt-3 flex items-center justify-between gap-2 rounded-lg bg-muted/50 px-3 py-2 text-xs">
               <a
                 href={file.href}
                 target="_blank"
                 rel="noopener"
-                className="font-semibold text-admin-primary underline"
+                className="font-medium text-primary underline"
               >
                 Ver o arquivo anexado
               </a>
               <button
                 type="button"
                 onClick={() => setDropFile(true)}
-                className="text-admin-alert hover:underline"
+                className="text-destructive hover:underline"
               >
                 Tirar
               </button>
             </p>
           )}
           {dropFile && (
-            <p className="mt-3 text-[12.5px] text-admin-alert">
+            <p className="mt-3 text-xs text-destructive">
               O arquivo sai do site ao salvar.{" "}
               <button
                 type="button"
                 onClick={() => setDropFile(false)}
-                className="font-semibold underline"
+                className="font-medium underline"
               >
                 Manter
               </button>
             </p>
           )}
 
-          <label className="mt-3 flex cursor-pointer items-center justify-center gap-2 rounded-lg border border-dashed border-admin-border px-3 py-3 text-[12.5px] font-semibold text-admin-muted hover:bg-admin-input-bg">
+          <label className="mt-3 flex cursor-pointer items-center justify-center gap-2 rounded-lg border border-dashed border-input px-3 py-3 text-xs font-medium text-muted-foreground transition-colors hover:bg-muted/50 focus-within:border-ring focus-within:ring-3 focus-within:ring-ring/50">
             <AdminIcon name="file" className="h-4 w-4" />
             {picked ?? (file ? "Trocar o arquivo" : "Anexar PDF ou imagem")}
             <input
@@ -268,7 +266,7 @@ export function ChecklistEditor({
         {(uploadError || state.status === "error") && (
           <p
             role="alert"
-            className="rounded-lg border border-admin-alert px-3.5 py-2.5 text-[13px] font-semibold text-admin-alert"
+            className="rounded-lg border border-destructive/40 bg-destructive-soft px-3.5 py-2.5 text-sm font-medium text-destructive"
           >
             {uploadError ??
               (state.status === "error" ? state.message : undefined)}
@@ -276,20 +274,16 @@ export function ChecklistEditor({
         )}
 
         <div className="flex flex-col gap-2">
-          <button
-            type="submit"
-            disabled={busy}
-            className="btn btn-admin-primary btn-md"
-          >
+          <Button type="submit" disabled={busy}>
             {uploading
               ? "Enviando arquivo..."
               : pending
                 ? "Salvando..."
                 : "Salvar lista"}
-          </button>
+          </Button>
           <Link
             href="/admin/agenda/configuracao"
-            className="btn btn-admin-secondary btn-md"
+            className={buttonVariants({ variant: "outline" })}
           >
             Voltar à configuração
           </Link>

@@ -1,13 +1,16 @@
+import { Badge } from "../../../_ui/badge.tsx";
+
 const STATUS_STYLES: Record<string, string> = {
-  booked: "bg-admin-success-bg text-admin-success-text",
-  attended: "bg-admin-primary text-white",
-  no_show: "bg-admin-warning-bg text-admin-warning-text",
-  cancelled: "bg-admin-readonly-bg text-admin-muted",
+  booked: "border-success/30 bg-success-soft text-success-text",
+  attended: "bg-primary text-primary-foreground",
+  no_show: "border-warning/30 bg-warning-soft text-warning-text",
+  cancelled: "bg-muted text-muted-foreground",
 };
 
 /** A desk reservation is a live booking with its own badge: the operator
  * reading the day should know who came through the site and who did not. */
-export const DESK_BADGE_STYLE = "bg-admin-warning-bg text-admin-warning-text";
+export const DESK_BADGE_STYLE =
+  "border-warning/30 bg-warning-soft text-warning-text";
 
 export function AppointmentStatusBadge({
   status,
@@ -17,12 +20,10 @@ export function AppointmentStatusBadge({
   label: string;
 }) {
   return (
-    <span
-      className={`inline-flex items-center rounded-full px-2.5 py-1 text-[11px] font-bold ${
-        STATUS_STYLES[status] ?? "bg-admin-readonly-bg text-admin-muted"
-      }`}
+    <Badge
+      className={STATUS_STYLES[status] ?? "bg-muted text-muted-foreground"}
     >
       {label}
-    </span>
+    </Badge>
   );
 }
