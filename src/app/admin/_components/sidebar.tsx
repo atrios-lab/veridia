@@ -29,7 +29,7 @@ export function initials(
  */
 export function OfficeMark({ tenant }: { tenant: Tenant }) {
   return (
-    <div className="flex items-center gap-2.5 px-1 py-1">
+    <div className="flex items-center gap-2.5 px-1">
       <Image
         src={tenant.logos.seal.light}
         alt=""
@@ -84,7 +84,9 @@ export function AdminSidebar({
 
   return (
     <Sidebar collapsible="icon" className="border-sidebar-border">
-      <SidebarHeader className="border-b border-sidebar-border">
+      {/* 56px, the top bar's height, so the two lines under them meet as
+          one across the screen. */}
+      <SidebarHeader className="h-14 flex-none justify-center border-b border-sidebar-border py-0">
         <OfficeMark tenant={tenant} />
       </SidebarHeader>
       <AdminSidebarNav items={items} counts={counts} />

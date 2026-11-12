@@ -36,7 +36,8 @@ Use sempre o token, nunca a cor. Hex só existe dentro de `@theme` (`pnpm check:
 
 | Token (classe) | Uso |
 | --- | --- |
-| `background` / `foreground` | Fundo da página e texto principal |
+| `surface` | Fundo da área de conteúdo, atrás dos cartões (navy a 4%) |
+| `background` / `foreground` | Branco dos cartões, campos, menus e topo; texto principal |
 | `card` / `card-foreground` | Cartão |
 | `muted` | Fundo discreto: faixa de filtro, rodapé de tabela, área somente leitura |
 | `muted-foreground` | Texto secundário: descrição, data, legenda |

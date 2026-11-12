@@ -26,6 +26,10 @@
 
 @theme {
   --color-background: #ffffff;
+  /* The page behind the cards: navy at 4% over white, half the sidebar's
+     tint, so a white card stands out without a heavy shadow (decision of
+     12/11/2026). Cards, tables, fields and the top bar stay white. */
+  --color-surface: #f6f6f9;
   --color-foreground: #0a0a0a;
   --color-card: #ffffff;
   --color-card-foreground: #0a0a0a;
