@@ -44,7 +44,6 @@ import {
   readSearchAnswer,
   requesterQualificationRows,
   requiresStatusReason,
-  statusLabel,
   suggestedNextStatuses,
   variantOwner,
 } from "@/core/request/kinds.ts";
@@ -86,7 +85,6 @@ import {
 import { AdminPageHeader } from "../../../_components/page-header.tsx";
 import { RequestFilesNotice } from "../../../_components/request-files-notice.tsx";
 import { DeadlineBadge } from "../_components/deadline-badge.tsx";
-import { StatusBadge } from "../_components/status-badge.tsx";
 import { AmountSection } from "./_components/amount-section.tsx";
 import { ApplicantSection } from "./_components/applicant-section.tsx";
 import { AttachmentsSection } from "./_components/attachments-section.tsx";
@@ -434,11 +432,6 @@ export default async function ServiceRequestDetailPage({
               } · pedido em ${formatOfficeDate(request.createdAt)}`}
               badges={
                 <>
-                  <StatusBadge
-                    status={status}
-                    label={statusLabel("service-request", status)}
-                    hero
-                  />
                   {/* The term as a fact, next to the andamento it belongs to.
                       The urgency badge beside it only speaks when it must. */}
                   {isOpenServiceRequestStatus(status) && (
@@ -620,8 +613,8 @@ export default async function ServiceRequestDetailPage({
                   Gerada sozinha com os dados do pedido e visível só para a
                   serventia. Confira com os documentos, corrija o que precisar e
                   baixe de novo. Depois, assine e anexe a guia com o boleto em
-                  “Entrega ao cidadão” e mude o andamento para “Aguardando
-                  pagamento da guia”, ou envie você mesmo aos órgãos.
+                  “Entrega ao cidadão” e use “Aguardar o recolhimento do
+                  imposto”, ou envie você mesmo aos órgãos.
                 </p>
                 {guides.length === 0 ? (
                   <p className="mt-3 text-[12.5px] text-admin-warning-text">

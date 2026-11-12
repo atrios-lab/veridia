@@ -11,6 +11,7 @@ import {
   isServiceRequestStatus,
   OMBUDSMAN_STATUSES,
   ombudsmanDetailsSchema,
+  PROGRESS_STEPS,
   parseDetails,
   phaseOfStatus,
   progressOf,
@@ -19,10 +20,12 @@ import {
   requiresStatusReason,
   SERVICE_REQUEST_PHASES,
   SERVICE_REQUEST_STATUSES,
+  STATUS_GUIDANCE,
   statusAfterAmount,
   statusForRequirements,
   statusLabel,
   statusReasonSchema,
+  stepStates,
   suggestedNextStatuses,
   suggestedOmbudsmanStatuses,
   transitionLabel,
@@ -42,14 +45,16 @@ test("a value outside the eleven is not a service request status", () => {
   assert.equal(isServiceRequestStatus("awaiting-compliance"), true);
 });
 
-test("the nine andamentos folded away by enxugar-status-pedido no longer validate", () => {
-  // Trimmed from twenty to eleven: filed and in-review had no rule of their
-  // own; the registral steps and with-requirement/inactive folded into a
-  // status that already existed. A row still holding one of these needs the
-  // data migration, not a fallback here.
+test("the andamentos folded away by enxugar-status-pedido no longer validate", () => {
+  // Trimmed from twenty to eleven: filed had no rule of its own; the
+  // registral steps and with-requirement/inactive folded into a status that
+  // already existed. A row still holding one of these needs the data
+  // migration, not a fallback here. "in-review" came back (decision of
+  // 12/11/2026) with a rule of its own: the qualificação, before anything
+  // is asked or charged.
+  assert.equal(isServiceRequestStatus("in-review"), true);
   for (const status of [
     "filed",
-    "in-review",
     "pre-noted",
     "in-qualification",
     "registered",
@@ -100,14 +105,16 @@ test("open counts everything short of a terminal andamento", () => {
 
 test("suggested transitions match what the detail screen offers", () => {
   // "Aguardando pagamento" comes from informing the value, not a button.
-  assert.deepEqual(suggestedNextStatuses("new"), [
+  assert.deepEqual(suggestedNextStatuses("new"), ["in-review", "cancelled"]);
+  assert.deepEqual(suggestedNextStatuses("in-review"), [
     "processing",
     "awaiting-guide-payment",
     "rejected",
     "cancelled",
   ]);
+  // A cumprida exigência is examined again before the act goes on.
   assert.deepEqual(suggestedNextStatuses("awaiting-compliance"), [
-    "processing",
+    "in-review",
     "rejected",
     "cancelled",
   ]);
@@ -117,6 +124,7 @@ test("suggested transitions match what the detail screen offers", () => {
 
 test("informing the value moves the request to Aguardando pagamento", () => {
   assert.equal(statusAfterAmount("new", null, 4210), "awaiting-payment");
+  assert.equal(statusAfterAmount("in-review", null, 4210), "awaiting-payment");
   // Taken to processing before any value: the value still asks for payment.
   assert.equal(statusAfterAmount("processing", null, 4210), "awaiting-payment");
   // A correction of a value already informed does not move it back.
@@ -126,31 +134,41 @@ test("informing the value moves the request to Aguardando pagamento", () => {
   assert.equal(statusAfterAmount("awaiting-compliance", null, 4210), null);
   assert.equal(statusAfterAmount("done", null, 4210), null);
   assert.equal(statusAfterAmount("new", null, 0), null);
-  // Cleared, a request waiting on it goes back to Novo.
-  assert.equal(statusAfterAmount("awaiting-payment", 4210, null), "new");
+  // Cleared, a request waiting on it goes back to the analysis.
+  assert.equal(statusAfterAmount("awaiting-payment", 4210, null), "in-review");
   assert.equal(statusAfterAmount("processing", 4210, null), null);
 });
 
 test("the buttons say the act, not only the andamento", () => {
   assert.equal(
     transitionLabel("payment-reported", "processing"),
-    "Confirmar pagamento",
+    "Confirmar o pagamento",
   );
   assert.equal(
     transitionLabel("payment-reported", "awaiting-payment"),
-    "Recusar comprovante",
+    "Recusar o comprovante",
   );
-  assert.equal(transitionLabel("new", "processing"), "Iniciar processamento");
+  assert.equal(transitionLabel("new", "in-review"), "Iniciar a análise");
+  assert.equal(
+    transitionLabel("awaiting-compliance", "in-review"),
+    "Exigência cumprida: retomar a análise",
+  );
+  assert.equal(
+    transitionLabel("in-review", "processing"),
+    "Concluir a análise e executar o ato",
+  );
   assert.equal(
     transitionLabel("ready-for-pickup", "done"),
-    "Entregue: concluir",
+    "Registrar a entrega e concluir",
   );
-  assert.equal(transitionLabel("new", "rejected"), "Indeferir");
+  assert.equal(transitionLabel("in-review", "rejected"), "Indeferir o pedido");
+  assert.equal(transitionLabel("new", "cancelled"), "Cancelar o pedido");
 });
 
 test("the andamento in percent, rising along the way", () => {
   const path = [
     "new",
+    "in-review",
     "awaiting-compliance",
     "awaiting-payment",
     "payment-reported",
@@ -176,7 +194,7 @@ test("payment-reported: the one andamento the citizen writes", () => {
   assert.equal(phaseOfStatus("payment-reported"), "payment");
   assert.equal(
     statusLabel("service-request", "payment-reported"),
-    "Pagamento informado",
+    "Comprovante em conferência",
   );
   assert.deepEqual(suggestedNextStatuses("payment-reported"), [
     "processing",
@@ -188,6 +206,7 @@ test("payment-reported: the one andamento the citizen writes", () => {
 
 test("payment is settled once a request leaves the two andamentos that wait on money", () => {
   assert.equal(isPaymentSettled("new"), false);
+  assert.equal(isPaymentSettled("in-review"), false);
   assert.equal(isPaymentSettled("awaiting-payment"), false);
   assert.equal(isPaymentSettled("payment-reported"), false);
   // Reached from any prior andamento, including one where payment was
@@ -454,8 +473,8 @@ test("registering a requirement moves the request to Aguardando exigência", () 
   assert.equal(statusForRequirements("awaiting-compliance", 2), null);
 });
 
-test("closing the last requirement sends the request back to processamento", () => {
-  assert.equal(statusForRequirements("awaiting-compliance", 0), "processing");
+test("closing the last requirement sends the request back to the analysis", () => {
+  assert.equal(statusForRequirements("awaiting-compliance", 0), "in-review");
   // One still open: it stays where it is.
   assert.equal(statusForRequirements("awaiting-compliance", 1), null);
 });
@@ -582,7 +601,7 @@ test("aguardando pagamento da guia: o imposto vai ao fisco, não à serventia", 
   assert.equal(phaseOfStatus("awaiting-guide-payment"), "payment");
   assert.equal(
     statusLabel("service-request", "awaiting-guide-payment"),
-    "Aguardando pagamento da guia",
+    "Aguardando recolhimento do imposto",
   );
   // The office's Pix charge is not what is pending here.
   assert.equal(isPaymentSettled("awaiting-guide-payment"), true);
@@ -590,4 +609,46 @@ test("aguardando pagamento da guia: o imposto vai ao fisco, não à serventia", 
   assert.ok(
     suggestedNextStatuses("processing").includes("awaiting-guide-payment"),
   );
+});
+
+test("the steps: done behind, the current one named, the rest ahead", () => {
+  assert.deepEqual(stepStates(PROGRESS_STEPS, 10), [
+    "current",
+    "todo",
+    "todo",
+    "todo",
+    "todo",
+  ]);
+  // Comprovante em conferência (50%) is still the payment step.
+  assert.deepEqual(
+    stepStates(PROGRESS_STEPS, progressOf("payment-reported") ?? 0),
+    ["done", "done", "current", "todo", "todo"],
+  );
+  // An exigência (25%) holds the request in the analysis.
+  assert.equal(
+    stepStates(PROGRESS_STEPS, progressOf("awaiting-compliance") ?? 0)[1],
+    "current",
+  );
+  assert.deepEqual(stepStates(PROGRESS_STEPS, 100), [
+    "done",
+    "done",
+    "done",
+    "done",
+    "done",
+  ]);
+});
+
+test("every andamento says who holds it and what comes next", () => {
+  for (const status of SERVICE_REQUEST_STATUSES) {
+    const g = STATUS_GUIDANCE[status];
+    assert.ok(g.meaning.length > 10, status);
+    assert.ok(g.next.length > 10, status);
+    assert.equal(
+      g.holder === null,
+      !isOpenServiceRequestStatus(status),
+      status,
+    );
+  }
+  assert.equal(STATUS_GUIDANCE["payment-reported"].holder, "office");
+  assert.equal(STATUS_GUIDANCE["awaiting-payment"].holder, "applicant");
 });

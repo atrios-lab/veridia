@@ -34,7 +34,7 @@ export const KIND_BY_PREFIX: Record<ProtocolPrefix, RequestKind> = {
 };
 
 /**
- * The ten andamentos a service request may be in. A closed list, not a
+ * The eleven andamentos a service request may be in. A closed list, not a
  * database enum: every other kind's vocabulary lives in `STATUS_LABELS`
  * below the same way, so a new value is a code change here, never a
  * migration.
@@ -61,6 +61,13 @@ export const KIND_BY_PREFIX: Record<ProtocolPrefix, RequestKind> = {
  */
 export const SERVICE_REQUEST_STATUSES = [
   "new",
+  // The qualificação (decision of 12/11/2026): the clerk has opened the
+  // request and is checking the documents. It ends in a value (payment), an
+  // exigência, an indeferimento, or straight in the act when it is isento.
+  // Back after `enxugar-status-pedido` folded it into `processing`: the
+  // office asked for it, and the rule that sets it apart is that nothing
+  // has been asked of the citizen yet and nothing has been charged.
+  "in-review",
   "awaiting-payment",
   "payment-reported",
   "awaiting-compliance",
@@ -101,6 +108,7 @@ export const TERMINAL_SERVICE_REQUEST_STATUSES: readonly ServiceRequestStatus[] 
 export function isPaymentSettled(status: string): boolean {
   return (
     status !== "new" &&
+    status !== "in-review" &&
     status !== "awaiting-payment" &&
     status !== "payment-reported"
   );
@@ -116,7 +124,7 @@ export const SERVICE_REQUEST_PHASES = [
   {
     id: "analysis",
     label: "Análise",
-    statuses: ["awaiting-compliance"],
+    statuses: ["in-review", "awaiting-compliance"],
   },
   {
     id: "payment",
@@ -175,7 +183,7 @@ export function isServiceRequestStatus(
  * detail screen. This is UX guidance, not a state machine: the andamento of a
  * title does not fit one (a exigência pode voltar depois de resolvida, um
  * concluído pode reabrir), so the server enforces only that the value is one
- * of the ten above and that it is not the current one. A correction
+ * of the eleven above and that it is not the current one. A correction
  * outside this table (moving a request back out of "Cancelado", say) is
  * still accepted.
  */
@@ -187,10 +195,19 @@ const SUGGESTED_NEXT_STATUSES: Record<
   // the request there by itself (`statusAfterAmount`), and moving there
   // with no value would ask the citizen for nothing. Registering an
   // exigência moves it to "Aguardando cumprimento de exigência" the same way.
-  new: ["processing", "awaiting-guide-payment", "rejected", "cancelled"],
+  // From the analysis the request goes to payment by informing the value,
+  // or to an exigência by registering it; the buttons are the rest.
+  new: ["in-review", "cancelled"],
+  "in-review": [
+    "processing",
+    "awaiting-guide-payment",
+    "rejected",
+    "cancelled",
+  ],
   "awaiting-payment": ["processing", "cancelled"],
   "payment-reported": ["processing", "awaiting-payment", "cancelled"],
-  "awaiting-compliance": ["processing", "rejected", "cancelled"],
+  // A cumprida exigência is examined again before the act goes on.
+  "awaiting-compliance": ["in-review", "rejected", "cancelled"],
   "awaiting-guide-payment": ["processing", "cancelled"],
   processing: ["ready-for-pickup", "done", "awaiting-guide-payment"],
   "ready-for-pickup": ["done"],
@@ -210,32 +227,43 @@ export function transitionLabel(
   to: ServiceRequestStatus,
 ): string {
   switch (to) {
-    case "processing":
-      if (from === "awaiting-payment" || from === "payment-reported") {
-        return "Confirmar pagamento";
+    case "in-review":
+      if (from === "awaiting-compliance") {
+        return "Exigência cumprida: retomar a análise";
       }
-      if (from === "awaiting-compliance") return "Exigência cumprida: retomar";
-      if (from === "awaiting-guide-payment") return "Guia paga: retomar";
       if (from === "cancelled" || from === "rejected" || from === "archived") {
         return "Reabrir";
       }
-      return "Iniciar processamento";
+      return "Iniciar a análise";
+    case "processing":
+      if (from === "awaiting-payment" || from === "payment-reported") {
+        return "Confirmar o pagamento";
+      }
+      if (from === "awaiting-guide-payment") {
+        return "Imposto recolhido: executar o ato";
+      }
+      if (from === "cancelled" || from === "rejected" || from === "archived") {
+        return "Reabrir";
+      }
+      return "Concluir a análise e executar o ato";
     case "awaiting-payment":
       return from === "payment-reported"
-        ? "Recusar comprovante"
-        : "Aguardar pagamento";
+        ? "Recusar o comprovante"
+        : "Aguardar o pagamento";
     case "awaiting-guide-payment":
-      return "Aguardar pagamento da guia";
+      return "Aguardar o recolhimento do imposto";
     case "ready-for-pickup":
-      return "Disponibilizar para retirada";
+      return "Ato praticado: disponibilizar para retirada";
     case "done":
-      return from === "ready-for-pickup" ? "Entregue: concluir" : "Concluir";
+      return from === "ready-for-pickup"
+        ? "Registrar a entrega e concluir"
+        : "Concluir com entrega digital";
     case "archived":
       return "Arquivar";
     case "cancelled":
-      return "Cancelar";
+      return "Cancelar o pedido";
     case "rejected":
-      return "Indeferir";
+      return "Indeferir o pedido";
     default:
       return statusLabel("service-request", to);
   }
@@ -255,9 +283,9 @@ export function statusAfterAmount(
   previousCents: number | null,
   cents: number | null,
 ): ServiceRequestStatus | null {
-  if (cents === null) return from === "awaiting-payment" ? "new" : null;
+  if (cents === null) return from === "awaiting-payment" ? "in-review" : null;
   if (cents <= 0) return null;
-  if (from === "new") return "awaiting-payment";
+  if (from === "new" || from === "in-review") return "awaiting-payment";
   if (from === "processing" && previousCents === null) {
     return "awaiting-payment";
   }
@@ -271,8 +299,9 @@ export function statusAfterAmount(
  */
 const PROGRESS: Record<ServiceRequestStatus, number | null> = {
   new: 10,
+  "in-review": 20,
   "awaiting-compliance": 25,
-  "awaiting-payment": 35,
+  "awaiting-payment": 40,
   "payment-reported": 50,
   "awaiting-guide-payment": 55,
   processing: 70,
@@ -287,14 +316,118 @@ export function progressOf(status: string): number | null {
   return isServiceRequestStatus(status) ? PROGRESS[status] : null;
 }
 
-/** The milestones the bar marks, at the percent each one is reached. */
-export const PROGRESS_MILESTONES = [
-  { label: "Recebido", at: 10 },
-  { label: "Pagamento", at: 35 },
-  { label: "Em processamento", at: 70 },
-  { label: "Pronto para retirada", at: 90 },
-  { label: "Concluído", at: 100 },
+/**
+ * The steps the office's detail draws (decision of 12/11/2026), each at the
+ * percent it is reached: the step a request is in is the last one it has
+ * reached, and every step before it is done. "Entrega" is done at 100%.
+ */
+export const PROGRESS_STEPS = [
+  { id: "received", label: "Recebimento", at: 10 },
+  { id: "analysis", label: "Análise", at: 20 },
+  { id: "payment", label: "Pagamento", at: 40 },
+  { id: "execution", label: "Execução do ato", at: 70 },
+  { id: "delivery", label: "Entrega", at: 90 },
 ] as const;
+
+export type ProgressStepId = (typeof PROGRESS_STEPS)[number]["id"];
+export type StepState = "done" | "current" | "todo";
+
+/** Where each of the given steps stands for a request at `percent`. */
+export function stepStates(
+  steps: readonly { at: number }[],
+  percent: number,
+): StepState[] {
+  let current = -1;
+  steps.forEach((step, i) => {
+    if (percent >= step.at) current = i;
+  });
+  return steps.map((_, i) =>
+    percent >= 100 || i < current ? "done" : i === current ? "current" : "todo",
+  );
+}
+
+/**
+ * Who has the request in hand and what the stage means, for the card under
+ * the steps (decision of 12/11/2026): what the clerk reads to know what is
+ * expected of them, in the office's own words.
+ */
+export interface StatusGuidance {
+  /** Null once the request is over. */
+  holder: "office" | "applicant" | null;
+  meaning: string;
+  next: string;
+}
+
+export const STATUS_GUIDANCE: Record<ServiceRequestStatus, StatusGuidance> = {
+  new: {
+    holder: "office",
+    meaning:
+      "Pedido protocolado pela plataforma e ainda não examinado pela serventia.",
+    next: "Abra os documentos enviados e inicie a análise.",
+  },
+  "in-review": {
+    holder: "office",
+    meaning:
+      "A serventia confere os documentos e verifica se o pedido está em condições de ser atendido.",
+    next: "Concluída a análise, informe o valor dos emolumentos no quadro Valor, e o pedido passará a aguardar o pagamento. Faltando documento, registre a exigência; não sendo possível atender, indefira com a devida fundamentação. Ato isento segue direto para a execução.",
+  },
+  "awaiting-compliance": {
+    holder: "applicant",
+    meaning:
+      "Há exigência formulada ao solicitante, e o prazo fica suspenso até o seu cumprimento.",
+    next: "Atendida a exigência, retome a análise.",
+  },
+  "awaiting-payment": {
+    holder: "applicant",
+    meaning:
+      "O valor dos emolumentos foi comunicado ao solicitante, que pode pagar pelo Pix na consulta do protocolo.",
+    next: "Recebido o comprovante ou identificado o crédito, confirme o pagamento.",
+  },
+  "payment-reported": {
+    holder: "office",
+    meaning: "O solicitante enviou o comprovante de pagamento.",
+    next: "Confira o crédito na conta da serventia. Confirmado, o pedido segue para a execução do ato; se o comprovante não corresponder ao valor, recuse-o.",
+  },
+  "awaiting-guide-payment": {
+    holder: "applicant",
+    meaning:
+      "A guia do imposto de transmissão foi entregue ao solicitante. O recolhimento é feito diretamente ao fisco, e não à serventia.",
+    next: "Apresentado o comprovante do imposto, prossiga com a execução do ato.",
+  },
+  processing: {
+    holder: "office",
+    meaning:
+      "A serventia pratica o ato: lavratura, registro, averbação ou emissão do documento.",
+    next: "Praticado o ato, disponibilize o documento para retirada ou conclua o pedido, se a entrega for digital.",
+  },
+  "ready-for-pickup": {
+    holder: "applicant",
+    meaning:
+      "O ato foi praticado e o documento está à disposição do solicitante.",
+    next: "Registre a entrega para concluir o pedido.",
+  },
+  done: {
+    holder: null,
+    meaning: "Pedido concluído, com o documento entregue ao solicitante.",
+    next: "Nenhuma providência pendente.",
+  },
+  rejected: {
+    holder: null,
+    meaning:
+      "Pedido indeferido, com a fundamentação comunicada ao solicitante.",
+    next: "Nenhuma providência pendente.",
+  },
+  cancelled: {
+    holder: null,
+    meaning: "Pedido cancelado, com o motivo comunicado ao solicitante.",
+    next: "Nenhuma providência pendente.",
+  },
+  archived: {
+    holder: null,
+    meaning: "Pedido arquivado.",
+    next: "Para retomá-lo, use a correção do andamento.",
+  },
+};
 
 export function suggestedNextStatuses(
   status: ServiceRequestStatus,
@@ -388,7 +521,9 @@ export function validateStatusReason({
 /**
  * O andamento que as exigências abertas impõem ao pedido, depois de registrar,
  * cumprir ou excluir uma. Registrar a exigência já é dizer que o pedido está
- * com exigência, e cumprir a última é devolvê-lo ao processamento: deixar
+ * com exigência, e cumprir a última é devolvê-lo à análise, onde o
+ * cumprimento é conferido (decisão de 12/11/2026; antes ia direto ao
+ * processamento): deixar
  * isso para um segundo clique é o que fazia a fila mostrar "Em processamento"
  * com exigência aberta, ou "Aguardando exigência" sem nenhuma, quando o
  * operador esquecia de mover na mão.
@@ -408,7 +543,7 @@ export function statusForRequirements(
   if (pendingRequirements > 0) {
     return from === "awaiting-compliance" ? null : "awaiting-compliance";
   }
-  return from === "awaiting-compliance" ? "processing" : null;
+  return from === "awaiting-compliance" ? "in-review" : null;
 }
 
 /**
@@ -494,12 +629,13 @@ export function isOpenStatus(kind: RequestKind, status: string): boolean {
  */
 const STATUS_LABELS: Record<RequestKind, Record<string, string>> = {
   "service-request": {
-    new: "Novo",
+    new: "Recebido",
+    "in-review": "Em análise",
     "awaiting-payment": "Aguardando pagamento",
-    "payment-reported": "Pagamento informado",
+    "payment-reported": "Comprovante em conferência",
     "awaiting-compliance": "Aguardando cumprimento de exigência",
-    "awaiting-guide-payment": "Aguardando pagamento da guia",
-    processing: "Em processamento",
+    "awaiting-guide-payment": "Aguardando recolhimento do imposto",
+    processing: "Em execução do ato",
     "ready-for-pickup": "Disponível para retirada",
     done: "Concluído",
     rejected: "Indeferido",
