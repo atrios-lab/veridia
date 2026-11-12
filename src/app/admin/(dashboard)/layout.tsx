@@ -241,7 +241,7 @@ export default async function DashboardLayout({
             scrolls away under the wheel. Positioned here, they belong to
             this column and its overflow clips them.
           */}
-          <div className="relative flex min-h-0 min-w-0 flex-1 flex-col overflow-y-auto bg-background">
+          <div className="relative flex min-h-0 min-w-0 flex-1 flex-col overflow-y-auto bg-surface">
             <AdminTopBar user={user} />
             {urgentPending > 0 && <UrgentAuditBanner count={urgentPending} />}
             {lingeringNow.length > 0 && (

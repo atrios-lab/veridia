@@ -30,9 +30,12 @@ function contrast(a: string, b: string): number {
 }
 
 const TEXT: [foreground: string, backgrounds: string[]][] = [
-  ["foreground", ["background", "card", "popover", "muted", "accent"]],
-  ["muted-foreground", ["background", "card", "muted", "sidebar"]],
-  ["primary", ["background", "muted", "sidebar"]],
+  [
+    "foreground",
+    ["background", "surface", "card", "popover", "muted", "accent"],
+  ],
+  ["muted-foreground", ["background", "surface", "card", "muted"]],
+  ["primary", ["background", "surface", "muted", "sidebar"]],
   ["primary-foreground", ["primary"]],
   ["secondary-foreground", ["secondary"]],
   ["accent-foreground", ["accent"]],
@@ -63,7 +66,7 @@ test("every text colour of the panel reaches 4.5:1 on its backgrounds", () => {
 });
 
 test("the edge of a field reaches 3:1 against the page", () => {
-  for (const background of ["background", "card", "muted"]) {
+  for (const background of ["background", "surface", "card", "muted"]) {
     const ratio = contrast(token("input"), token(background));
     assert.ok(ratio >= 3, `input on ${background}: ${ratio.toFixed(2)}:1`);
   }

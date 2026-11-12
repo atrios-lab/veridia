@@ -26,6 +26,10 @@
 
 @theme {
   --color-background: #ffffff;
+  /* The page behind the cards: navy at 4% over white, half the sidebar's
+     tint, so a white card stands out without a heavy shadow (decision of
+     12/11/2026). Cards, tables, fields and the top bar stay white. */
+  --color-surface: #f6f6f9;
   --color-foreground: #0a0a0a;
   --color-card: #ffffff;
   --color-card-foreground: #0a0a0a;
@@ -71,16 +75,19 @@
   --color-input: #888888;
   --color-ring: #232a64;
 
-  /* The sidebar: navy at 8% over white, item under the pointer 12%, current
-     item 16%, written out because the contrast test reads plain values. */
-  --color-sidebar: #edeef3;
+  /* The sidebar and the top bar: navy at 14% over white (decision of
+     12/11/2026, up from 8%), item under the pointer 20%, current item 26%,
+     edge 30%. Solid, written out because the contrast test reads plain
+     values. Secondary text on it is --color-sidebar-label, not
+     --color-muted-foreground, which drops to 4.41:1 here. */
+  --color-sidebar: #e0e1e9;
   --color-sidebar-foreground: #0a0a0a;
   --color-sidebar-primary: #232a64;
   --color-sidebar-primary-foreground: #ffffff;
-  --color-sidebar-accent: #dcdde6;
-  --color-sidebar-hover: #e5e5ec;
+  --color-sidebar-accent: #c6c8d7;
+  --color-sidebar-hover: #d3d4e0;
   --color-sidebar-accent-foreground: #232a64;
-  --color-sidebar-border: #c6c7d0;
+  --color-sidebar-border: #bdbfd0;
   --color-sidebar-ring: #232a64;
   /* Group titles in the sidebar. */
   --color-sidebar-label: #535862;

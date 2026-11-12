@@ -40,13 +40,13 @@ export default async function ForgotPasswordPage({
           <h1 className="text-2xl leading-tight font-semibold text-foreground">
             Recuperar o acesso ao painel
           </h1>
-          <p className="mt-3 max-w-[38ch] text-sm leading-relaxed text-muted-foreground">
+          <p className="mt-3 max-w-[38ch] text-sm leading-relaxed text-sidebar-label">
             O link chega no e-mail da sua conta e vale por 48 horas. Ao criar a
             nova senha, você já entra no painel.
           </p>
         </div>
 
-        <p className="text-xs text-muted-foreground">
+        <p className="text-xs text-sidebar-label">
           Acesso restrito à equipe da serventia. Cada entrada fica registrada no
           log de auditoria.
         </p>

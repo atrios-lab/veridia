@@ -65,13 +65,13 @@ export default async function LoginPage({
           <h1 className="text-2xl leading-tight font-semibold text-foreground">
             Painel administrativo da serventia
           </h1>
-          <p className="mt-3 max-w-[38ch] text-sm leading-relaxed text-muted-foreground">
+          <p className="mt-3 max-w-[38ch] text-sm leading-relaxed text-sidebar-label">
             Pedidos de serviço, agenda, requerimentos LGPD, ouvidoria e
             atendimento online: tudo que o cidadão manda pelo site chega aqui.
           </p>
         </div>
 
-        <p className="text-xs text-muted-foreground">
+        <p className="text-xs text-sidebar-label">
           Acesso restrito à equipe da serventia. Cada entrada fica registrada no
           log de auditoria.
         </p>
