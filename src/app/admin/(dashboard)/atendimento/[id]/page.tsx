@@ -39,7 +39,7 @@ export default async function ConversationPage({
   return (
     <>
       <AdminPageHeader title="Atendimento online" />
-      <main className="flex min-h-0 flex-1 flex-col">
+      <main className="flex h-[calc(100svh-3.5rem)] min-h-0 flex-none flex-col md:h-[calc(100svh-4rem)]">
         <div className="mt-6 flex items-center gap-3 border-y bg-card px-4 py-3.5 md:px-8">
           <span className="min-w-0 flex-1">
             <span className="block text-sm font-semibold text-foreground">

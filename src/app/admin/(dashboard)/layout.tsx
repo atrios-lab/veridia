@@ -241,69 +241,74 @@ export default async function DashboardLayout({
             scrolls away under the wheel. Positioned here, they belong to
             this column and its overflow clips them.
           */}
-          <div className="relative flex min-h-0 min-w-0 flex-1 flex-col overflow-y-auto bg-surface">
-            <AdminTopBar user={user} />
-            {urgentPending > 0 && <UrgentAuditBanner count={urgentPending} />}
-            {lingeringNow.length > 0 && (
-              <LingeringStatusBanner
-                people={lingeringNow.map((p) => ({
-                  name: p.name,
-                  status: STATUS_LABELS[p.status],
-                  minutes: Math.floor(
-                    (Date.now() - p.since.getTime()) / 60_000,
-                  ),
-                }))}
-              />
-            )}
-            {accessRequests > 0 && (
-              <AccessRequestsBanner count={accessRequests} />
-            )}
-            {hoursEnd && <AccessHoursWatch closesAt={hoursEnd.toISOString()} />}
-            {myNotifications > 0 && (
-              <AuditNoticeBanner count={myNotifications} />
-            )}
-            {alerts.auditoria.enabled &&
-              urgentPending + myNotifications > 0 && (
-                <AuditChime
-                  count={urgentPending + myNotifications}
-                  setting={alerts.auditoria}
+          <div className="relative flex min-h-0 min-w-0 flex-1 flex-col overflow-y-auto [scrollbar-color:var(--color-sidebar-border)_transparent] [scrollbar-width:thin]">
+            {/* The frame, as in shadcn's inset sidebar: the page scrolls in the column above, so the scrollbar runs along the window's right edge, and the frame keeps its margin and border on the right. */}
+            <div className="flex min-h-full flex-none flex-col bg-surface md:mt-2 md:mr-2 md:rounded-t-xl md:border md:border-b-0 md:border-sidebar-border md:shadow-sm">
+              <AdminTopBar user={user} />
+              {urgentPending > 0 && <UrgentAuditBanner count={urgentPending} />}
+              {lingeringNow.length > 0 && (
+                <LingeringStatusBanner
+                  people={lingeringNow.map((p) => ({
+                    name: p.name,
+                    status: STATUS_LABELS[p.status],
+                    minutes: Math.floor(
+                      (Date.now() - p.since.getTime()) / 60_000,
+                    ),
+                  }))}
                 />
               )}
-            {children}
-            {/* Off, or at lunch (the chat is locked until "voltei"). */}
-            {messenger &&
-              !messenger[1]?.chatDisabled &&
-              !messenger[1]?.atLunch && (
-                <MessengerWatch
-                  setting={alerts.mensagens}
-                  sound={messenger[1]?.sound ?? true}
-                  initialUnread={messenger[0].unread}
-                />
+              {accessRequests > 0 && (
+                <AccessRequestsBanner count={accessRequests} />
               )}
-            {/* Every screen, not only the queue: the attendant hears and sees
+              {hoursEnd && (
+                <AccessHoursWatch closesAt={hoursEnd.toISOString()} />
+              )}
+              {myNotifications > 0 && (
+                <AuditNoticeBanner count={myNotifications} />
+              )}
+              {alerts.auditoria.enabled &&
+                urgentPending + myNotifications > 0 && (
+                  <AuditChime
+                    count={urgentPending + myNotifications}
+                    setting={alerts.auditoria}
+                  />
+                )}
+              {children}
+              {/* Off, or at lunch (the chat is locked until "voltei"). */}
+              {messenger &&
+                !messenger[1]?.chatDisabled &&
+                !messenger[1]?.atLunch && (
+                  <MessengerWatch
+                    setting={alerts.mensagens}
+                    sound={messenger[1]?.sound ?? true}
+                    initialUnread={messenger[0].unread}
+                  />
+                )}
+              {/* Every screen, not only the queue: the attendant hears and sees
               the chat wherever they are working in the panel. */}
-            {can(role, "chat.manage", granted) && (
-              <ChatAlerts setting={alerts.chat} />
-            )}
-            {/* Same for the agenda: who is coming today, who just booked. */}
-            {can(role, "channels.manage", granted) && (
-              <AgendaAlerts setting={alerts.agenda} />
-            )}
-            {/* And the guias de transmissão de bens: a new one, or one the citizen moved. */}
-            {can(role, "requests.manage", granted) && (
-              <GuideAlerts setting={alerts.guias} />
-            )}
-            {/* New requests, LGPD and ouvidoria, each as the office chose. */}
-            {(can(role, "requests.manage", granted) ||
-              can(role, "channels.manage", granted)) && (
-              <RecordAlerts
-                settings={{
-                  pedidos: alerts.pedidos,
-                  lgpd: alerts.lgpd,
-                  ouvidoria: alerts.ouvidoria,
-                }}
-              />
-            )}
+              {can(role, "chat.manage", granted) && (
+                <ChatAlerts setting={alerts.chat} />
+              )}
+              {/* Same for the agenda: who is coming today, who just booked. */}
+              {can(role, "channels.manage", granted) && (
+                <AgendaAlerts setting={alerts.agenda} />
+              )}
+              {/* And the guias de transmissão de bens: a new one, or one the citizen moved. */}
+              {can(role, "requests.manage", granted) && (
+                <GuideAlerts setting={alerts.guias} />
+              )}
+              {/* New requests, LGPD and ouvidoria, each as the office chose. */}
+              {(can(role, "requests.manage", granted) ||
+                can(role, "channels.manage", granted)) && (
+                <RecordAlerts
+                  settings={{
+                    pedidos: alerts.pedidos,
+                    lgpd: alerts.lgpd,
+                    ouvidoria: alerts.ouvidoria,
+                  }}
+                />
+              )}
+            </div>
           </div>
         </SidebarProvider>
       </TooltipProvider>
