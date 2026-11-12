@@ -1,3 +1,4 @@
+import { cookies } from "next/headers";
 import { can, type Role } from "@/core/auth/roles.ts";
 import { isChatOpen } from "@/core/chat/hours.ts";
 import { readChatAvailability } from "@/lib/chat.ts";
@@ -7,6 +8,8 @@ import { SidebarTrigger } from "../_ui/sidebar.tsx";
 import { SearchTriggerButton } from "./global-search.tsx";
 import { ROLE_LABELS } from "./role-labels.ts";
 import { initials } from "./sidebar.tsx";
+import { DARK, THEME_COOKIE } from "./theme.ts";
+import { ThemeToggle } from "./theme-toggle.tsx";
 import { UserMenu } from "./user-menu.tsx";
 
 /**
@@ -44,6 +47,9 @@ export async function AdminTopBar({
       </div>
       {/* The search takes the free space; the rest sits at the right. */}
       <div className="ml-auto flex flex-none items-center gap-3">
+        <ThemeToggle
+          initialDark={(await cookies()).get(THEME_COOKIE)?.value === DARK}
+        />
         {/* Only for someone who answers the chat: a course learner has no
           citizen writing to them. */}
         {can(user.role, "chat.manage", user.permissions) && (

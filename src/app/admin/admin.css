@@ -5,8 +5,8 @@
  * layout, so nothing here reaches the public site and the other way round.
  *
  * Token names follow shadcn/ui, so a component taken from its registry works
- * without edits. Values live straight in @theme (no light/dark switch: the
- * panel has no dark theme), which keeps check:tokens strict.
+ * without edits. Values live straight in @theme, which keeps check:tokens
+ * strict; the dark theme further down swaps them under `.dark`.
  *
  * The contrast of every text and background pair below is checked by
  * src/lib/admin-theme.test.ts. Change a colour, run the test.
@@ -111,6 +111,115 @@
   --color-msg-offline: #a3a8ae;
   --color-msg-pane: #eef3f8;
   --color-msg-mine: #e4f1e7;
+}
+
+/*
+ * The dark theme (decision of 12/11/2026): the sun and moon button in the
+ * top bar puts `.dark` on <html> and remembers it in a cookie the root
+ * layout reads, so the page arrives already dark. A dark navy rather than a
+ * neutral grey, to sit with the Átrios navy; the navy itself disappears on
+ * a dark ground, so the accent turns into a light indigo of the same
+ * family. Every token the light theme declares above has its dark value
+ * here, and src/lib/admin-theme.test.ts checks both themes. The previews of
+ * the site keep the office's own light palette.
+ */
+@theme static {
+  --palette-dark-background: #151a2d;
+  --palette-dark-surface: #0c0f1c;
+  --palette-dark-foreground: #e8eaf2;
+  --palette-dark-card: #151a2d;
+  --palette-dark-card-foreground: #e8eaf2;
+  --palette-dark-popover: #1a2036;
+  --palette-dark-popover-foreground: #e8eaf2;
+  --palette-dark-primary: #8f9af2;
+  --palette-dark-primary-foreground: #0c0f1c;
+  --palette-dark-secondary: #1e2439;
+  --palette-dark-secondary-foreground: #e8eaf2;
+  --palette-dark-muted: #1e2439;
+  --palette-dark-muted-foreground: #a3a9bf;
+  --palette-dark-accent: #1e2439;
+  --palette-dark-accent-foreground: #e8eaf2;
+  --palette-dark-destructive: #f87171;
+  --palette-dark-destructive-foreground: #0c0f1c;
+  --palette-dark-warning: #f5a524;
+  --palette-dark-warning-foreground: #0c0f1c;
+  --palette-dark-warning-text: #fbbf24;
+  --palette-dark-warning-soft: #33260c;
+  --palette-dark-success: #3ccf7f;
+  --palette-dark-success-foreground: #0c0f1c;
+  --palette-dark-success-text: #4ade80;
+  --palette-dark-success-soft: #0f2a1c;
+  --palette-dark-destructive-soft: #3a1520;
+  --palette-dark-holder: #d9a85c;
+  --palette-dark-holder-foreground: #0c0f1c;
+  --palette-dark-holder-soft: #2e2414;
+  --palette-dark-border: #2a3150;
+  --palette-dark-input: #666e8c;
+  --palette-dark-ring: #8f9af2;
+  --palette-dark-sidebar: #111526;
+  --palette-dark-sidebar-foreground: #e8eaf2;
+  --palette-dark-sidebar-primary: #8f9af2;
+  --palette-dark-sidebar-primary-foreground: #0c0f1c;
+  --palette-dark-sidebar-accent: #252b4a;
+  --palette-dark-sidebar-hover: #1a1f37;
+  --palette-dark-sidebar-accent-foreground: #b8c0fa;
+  --palette-dark-sidebar-border: #2a3150;
+  --palette-dark-sidebar-ring: #8f9af2;
+  --palette-dark-sidebar-label: #9ca3bc;
+  --palette-dark-msg-pane: #1a2036;
+  --palette-dark-msg-mine: #14281e;
+}
+
+.dark {
+  color-scheme: dark;
+  --color-background: var(--palette-dark-background);
+  --color-surface: var(--palette-dark-surface);
+  --color-foreground: var(--palette-dark-foreground);
+  --color-card: var(--palette-dark-card);
+  --color-card-foreground: var(--palette-dark-card-foreground);
+  --color-popover: var(--palette-dark-popover);
+  --color-popover-foreground: var(--palette-dark-popover-foreground);
+  --color-primary: var(--palette-dark-primary);
+  --color-primary-foreground: var(--palette-dark-primary-foreground);
+  --color-secondary: var(--palette-dark-secondary);
+  --color-secondary-foreground: var(--palette-dark-secondary-foreground);
+  --color-muted: var(--palette-dark-muted);
+  --color-muted-foreground: var(--palette-dark-muted-foreground);
+  --color-accent: var(--palette-dark-accent);
+  --color-accent-foreground: var(--palette-dark-accent-foreground);
+  --color-destructive: var(--palette-dark-destructive);
+  --color-destructive-foreground: var(--palette-dark-destructive-foreground);
+  --color-warning: var(--palette-dark-warning);
+  --color-warning-foreground: var(--palette-dark-warning-foreground);
+  --color-warning-text: var(--palette-dark-warning-text);
+  --color-warning-soft: var(--palette-dark-warning-soft);
+  --color-success: var(--palette-dark-success);
+  --color-success-foreground: var(--palette-dark-success-foreground);
+  --color-success-text: var(--palette-dark-success-text);
+  --color-success-soft: var(--palette-dark-success-soft);
+  --color-destructive-soft: var(--palette-dark-destructive-soft);
+  --color-holder: var(--palette-dark-holder);
+  --color-holder-foreground: var(--palette-dark-holder-foreground);
+  --color-holder-soft: var(--palette-dark-holder-soft);
+  --color-border: var(--palette-dark-border);
+  --color-input: var(--palette-dark-input);
+  --color-ring: var(--palette-dark-ring);
+  --color-sidebar: var(--palette-dark-sidebar);
+  --color-sidebar-foreground: var(--palette-dark-sidebar-foreground);
+  --color-sidebar-primary: var(--palette-dark-sidebar-primary);
+  --color-sidebar-primary-foreground: var(
+    --palette-dark-sidebar-primary-foreground
+  );
+  --color-sidebar-accent: var(--palette-dark-sidebar-accent);
+  --color-sidebar-hover: var(--palette-dark-sidebar-hover);
+  --color-sidebar-accent-foreground: var(
+    --palette-dark-sidebar-accent-foreground
+  );
+  --color-sidebar-border: var(--palette-dark-sidebar-border);
+  --color-sidebar-ring: var(--palette-dark-sidebar-ring);
+  --color-sidebar-label: var(--palette-dark-sidebar-label);
+  --color-msg-pane: var(--palette-dark-msg-pane);
+  --color-msg-mine: var(--palette-dark-msg-mine);
 }
 
 @theme inline {
