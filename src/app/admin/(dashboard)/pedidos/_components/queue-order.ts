@@ -19,11 +19,12 @@ import type { Tone } from "./status-tone.ts";
  * person scanning the tabs. "Pago" never got one: confirming a comprovante
  * moves the request straight into "Em andamento" (see `isPaymentSettled` in
  * `core/request/kinds.ts`), so there was never a moment for a tab of its own
- * to catch. Seven tabs have to fit on one line, so the long labels carry a
+ * to catch. Eight tabs have to fit on one line, so the long labels carry a
  * short form for a narrow row (see queue-tabs.tsx).
  */
 export type QueueTabId =
   | "new"
+  | "in-review"
   | "awaiting-compliance"
   | "awaiting-payment"
   | "payment-reported"
@@ -47,17 +48,24 @@ export const CLOSED_TAB: QueueTabId = "closed";
 export const QUEUE_TABS: readonly QueueTab[] = [
   {
     id: "new",
-    label: "Novo",
+    label: "Recebido",
     tone: "waiting",
-    hint: "aguarda o cartório",
+    hint: "aguarda a análise do cartório",
     statuses: ["new"],
+  },
+  {
+    id: "in-review",
+    label: "Em análise",
+    tone: "working",
+    hint: "conferência dos documentos",
+    statuses: ["in-review"],
   },
   {
     id: "awaiting-compliance",
     label: "Aguardando cumprimento de exigência",
     shortLabel: "Exigência",
     tone: "blocked",
-    hint: "parado: exigência com o cliente",
+    hint: "parado: exigência com o solicitante",
     statuses: ["awaiting-compliance"],
   },
   {
@@ -65,25 +73,25 @@ export const QUEUE_TABS: readonly QueueTab[] = [
     label: "Aguardando pagamento",
     shortLabel: "Aguard. pagamento",
     tone: "waiting",
-    hint: "aguarda o pagamento",
+    hint: "emolumentos ou imposto a pagar",
     // The office's own fees and the fisco's guia alike: money the party
     // still has to pay before the act goes on.
     statuses: ["awaiting-payment", "awaiting-guide-payment"],
   },
   {
     id: "payment-reported",
-    label: "Pagamento informado",
-    shortLabel: "Pgto. informado",
+    label: "Comprovante em conferência",
+    shortLabel: "Comprovante",
     tone: "waiting",
     hint: "conferir o comprovante",
     statuses: ["payment-reported"],
   },
   {
     id: "processing",
-    label: "Em processamento",
-    shortLabel: "Processamento",
+    label: "Em execução do ato",
+    shortLabel: "Execução",
     tone: "working",
-    hint: "em trabalho no cartório",
+    hint: "lavratura, registro ou emissão",
     statuses: ["processing"],
   },
   {
@@ -115,7 +123,7 @@ export function queueTab(id: QueueTabId): QueueTab {
 
 export function queueTabOf(status: ServiceRequestStatus): QueueTabId {
   const tab = QUEUE_TABS.find((t) => t.statuses.includes(status));
-  // Every one of the ten andamentos is listed above; an eleventh would be
+  // Every one of the eleven andamentos is listed above; a twelfth would be
   // a type error in QUEUE_TABS long before it got here.
   return tab?.id ?? CLOSED_TAB;
 }

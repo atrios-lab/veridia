@@ -43,7 +43,7 @@ export function QueueTabs({
       <p className="mb-2.5 text-[12.5px] text-admin-muted">
         Escolha uma etapa para ver os pedidos que estão nela.
       </p>
-      <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-3 lg:grid-cols-4 2xl:grid-cols-7">
+      <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-3 lg:grid-cols-4 2xl:grid-cols-8">
         {QUEUE_TABS.map((tab) => {
           const active = tab.id === query.tab;
           const count = counts[tab.id] ?? 0;

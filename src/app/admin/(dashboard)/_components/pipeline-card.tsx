@@ -50,7 +50,7 @@ export function PipelineCard({ counts }: { counts: Record<string, number> }) {
           {total === 1 ? "pedido em aberto" : "pedidos em aberto"}
         </p>
       </div>
-      <ol className="mt-4 grid grid-cols-2 gap-2.5 sm:grid-cols-3 xl:grid-cols-6">
+      <ol className="mt-4 grid grid-cols-2 gap-2.5 sm:grid-cols-4 xl:grid-cols-7">
         {stages.map((s, i) => {
           const active = s.count > 0;
           return (

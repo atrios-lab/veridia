@@ -138,7 +138,7 @@ test("pedido em pagamento informado ganha resumo e ação de conferência, na ro
     hasFulfilledPendingRequirement: false,
   });
   const [ranked] = rankDeskItems([reported], TODAY, NOW);
-  assert.equal(ranked.summary, "Pagamento informado, comprovante a conferir");
+  assert.equal(ranked.summary, "Comprovante de pagamento a conferir");
   assert.equal(ranked.actionLabel, "Conferir pagamento");
 });
 

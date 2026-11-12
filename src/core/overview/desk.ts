@@ -135,8 +135,10 @@ function defaultSummary(item: DeskItemInput): string {
   switch (item.kind) {
     case "service-request":
       return item.status === "payment-reported"
-        ? "Pagamento informado, comprovante a conferir"
-        : "Novo pedido de serviço";
+        ? "Comprovante de pagamento a conferir"
+        : item.status === "in-review"
+          ? "Pedido em análise"
+          : "Novo pedido de serviço";
     case "ombudsman":
       return item.manifestationType
         ? manifestationLabel(item.manifestationType)
@@ -155,6 +157,7 @@ function defaultActionLabel(item: DeskItemInput): string {
   switch (item.kind) {
     case "service-request":
       if (item.status === "payment-reported") return "Conferir pagamento";
+      if (item.status === "in-review") return "Continuar a análise";
       return item.status === "new" ? "Iniciar análise" : "Ver pedido";
     case "ombudsman":
       return item.status === "new" ? "Ler manifestação" : "Ver manifestação";
