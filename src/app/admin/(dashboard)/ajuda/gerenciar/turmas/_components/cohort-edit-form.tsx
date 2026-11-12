@@ -2,8 +2,10 @@
 
 import { useActionState } from "react";
 import { AdminIcon } from "../../../../../_components/icon.tsx";
+import { Button } from "../../../../../_ui/button.tsx";
+import { Input } from "../../../../../_ui/input.tsx";
 import { type CohortFormState, updateCohortAction } from "../actions.ts";
-import { Field, FormError, fieldClass } from "./fields.tsx";
+import { Field, FormError } from "./fields.tsx";
 
 export interface CohortEditValues {
   officeName: string;
@@ -38,19 +40,19 @@ export function CohortEditForm({
         error={errors.officeName}
         hint="Muda o nome nos próximos certificados. Os já emitidos ficam como estão."
       >
-        <input
+        <Input
           id="officeName"
           name="officeName"
           defaultValue={value("officeName")}
-          className={fieldClass(errors.officeName)}
+          aria-invalid={errors.officeName ? true : undefined}
         />
       </Field>
       <Field name="officeCity" label="Cidade" error={errors.officeCity}>
-        <input
+        <Input
           id="officeCity"
           name="officeCity"
           defaultValue={value("officeCity")}
-          className={fieldClass(errors.officeCity)}
+          aria-invalid={errors.officeCity ? true : undefined}
         />
       </Field>
       <div className="grid grid-cols-1 gap-3.5 sm:grid-cols-2">
@@ -59,41 +61,41 @@ export function CohortEditForm({
           label="Responsável"
           error={errors.contactName}
         >
-          <input
+          <Input
             id="contactName"
             name="contactName"
             defaultValue={value("contactName")}
-            className={fieldClass(errors.contactName)}
+            aria-invalid={errors.contactName ? true : undefined}
           />
         </Field>
         <Field name="contactPhone" label="Telefone" error={errors.contactPhone}>
-          <input
+          <Input
             id="contactPhone"
             name="contactPhone"
             type="tel"
             defaultValue={value("contactPhone")}
-            className={fieldClass(errors.contactPhone)}
+            aria-invalid={errors.contactPhone ? true : undefined}
           />
         </Field>
       </div>
       <div className="grid grid-cols-2 gap-3.5">
         <Field name="seats" label="Vagas" error={errors.seats}>
-          <input
+          <Input
             id="seats"
             name="seats"
             type="number"
             min={1}
             defaultValue={value("seats")}
-            className={fieldClass(errors.seats)}
+            aria-invalid={errors.seats ? true : undefined}
           />
         </Field>
         <Field name="lastDay" label="Link vale até" error={errors.lastDay}>
-          <input
+          <Input
             id="lastDay"
             name="lastDay"
             type="date"
             defaultValue={value("lastDay")}
-            className={fieldClass(errors.lastDay)}
+            aria-invalid={errors.lastDay ? true : undefined}
           />
         </Field>
       </div>
@@ -103,15 +105,11 @@ export function CohortEditForm({
       />
 
       <div className="flex flex-wrap items-center gap-3">
-        <button
-          type="submit"
-          disabled={pending}
-          className="btn btn-admin-primary btn-md"
-        >
+        <Button type="submit" disabled={pending}>
           {pending ? "Salvando…" : "Salvar alterações"}
-        </button>
+        </Button>
         {state.status === "saved" && (
-          <output className="flex items-center gap-1.5 rounded-full bg-admin-success-bg px-3 py-1.5 text-[12.5px] font-semibold text-admin-success-text">
+          <output className="flex items-center gap-1.5 rounded-full bg-success-soft px-3 py-1.5 text-xs font-semibold text-success-text">
             <AdminIcon name="check" className="h-3.5 w-3.5" strokeWidth={2.4} />
             Turma atualizada.
           </output>

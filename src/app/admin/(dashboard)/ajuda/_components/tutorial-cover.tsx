@@ -22,7 +22,7 @@ export function TutorialCover({
   children?: React.ReactNode;
 }) {
   return (
-    <span className="relative block aspect-video w-full overflow-hidden bg-admin-primary">
+    <span className="relative block aspect-video w-full overflow-hidden bg-primary">
       {posterUrl ? (
         // A plain <img>: the cover comes from the Blob store, already sized
         // by whoever made it, and next/image would need the store host in
@@ -47,15 +47,15 @@ export function TutorialCover({
           <span
             className={
               size === "thumb"
-                ? "block h-[2px] w-4 rounded-full bg-admin-accent"
-                : "block h-[3px] w-8 rounded-full bg-admin-accent"
+                ? "block h-0.5 w-4 rounded-full bg-primary-foreground/60"
+                : "block h-[3px] w-8 rounded-full bg-primary-foreground/60"
             }
           />
           <span
             className={
               size === "thumb"
-                ? "line-clamp-3 font-serif text-[9px] leading-[1.15] font-semibold text-white"
-                : "line-clamp-3 max-w-[85%] font-serif text-[21px] leading-[1.1] font-semibold text-white"
+                ? "line-clamp-3 text-xs leading-tight font-semibold text-primary-foreground"
+                : "line-clamp-3 max-w-[85%] text-xl leading-tight font-semibold text-primary-foreground"
             }
           >
             {title}

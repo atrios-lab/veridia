@@ -1,14 +1,6 @@
 // The cohort forms' fields, in the panel's own look (see Usuários).
 
-const FIELD_CLASS =
-  "w-full rounded-[9px] border border-admin-input-border bg-admin-input-bg px-3.5 py-2.5 text-[13.5px] text-admin-text outline-none focus:border-admin-primary-soft";
-const ERROR_FIELD_CLASS =
-  "w-full rounded-[9px] border border-admin-error-border bg-admin-error-input-bg px-3.5 py-2.5 text-[13.5px] text-admin-text outline-none focus:border-admin-error-text";
-const LABEL_CLASS = "mb-1.5 block text-xs font-bold text-admin-primary";
-
-export function fieldClass(error?: string): string {
-  return error ? ERROR_FIELD_CLASS : FIELD_CLASS;
-}
+import { Label } from "../../../../../_ui/label.tsx";
 
 export function Field({
   name,
@@ -25,16 +17,14 @@ export function Field({
 }) {
   return (
     <div>
-      <label className={LABEL_CLASS} htmlFor={name}>
+      <Label className="mb-1.5" htmlFor={name}>
         {label}
-      </label>
+      </Label>
       {children}
       {error ? (
-        <p className="mt-1.5 text-xs font-semibold text-admin-error-text">
-          {error}
-        </p>
+        <p className="mt-1.5 text-xs font-medium text-destructive">{error}</p>
       ) : (
-        hint && <p className="mt-1.5 text-[11.5px] text-admin-muted">{hint}</p>
+        hint && <p className="mt-1.5 text-xs text-muted-foreground">{hint}</p>
       )}
     </div>
   );
@@ -45,7 +35,7 @@ export function FormError({ message }: { message?: string }) {
   return (
     <p
       role="alert"
-      className="rounded-lg bg-admin-error-bg px-3.5 py-2.5 text-sm font-semibold text-admin-error-text"
+      className="rounded-lg border border-destructive/40 bg-destructive-soft px-4 py-3 text-sm font-medium text-destructive"
     >
       {message}
     </p>

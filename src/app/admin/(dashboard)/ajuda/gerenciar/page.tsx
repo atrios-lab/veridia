@@ -14,6 +14,7 @@ import { listAllTutorials } from "@/lib/tutorials.ts";
 import { blobUploadEnabled } from "@/lib/uploads.ts";
 import { ADMIN_NAV } from "../../../_components/nav.ts";
 import { AdminPageHeader } from "../../../_components/page-header.tsx";
+import { buttonVariants } from "../../../_ui/button.tsx";
 import {
   type AdminCourseItem,
   type AdminTutorialItem,
@@ -124,17 +125,17 @@ export default async function ManageTutorialsPage() {
           ) ? (
             <Link
               href="/admin/ajuda/gerenciar/turmas"
-              className="btn btn-admin-secondary btn-md"
+              className={buttonVariants({ variant: "outline" })}
             >
               Turmas
             </Link>
           ) : undefined
         }
       />
-      <main className="flex flex-col gap-4.5 px-[30px] py-7">
+      <main className="flex flex-col gap-4.5 px-4 py-6 md:px-8">
         <p
           role="note"
-          className="rounded-[12px] border border-admin-warning-soft-border bg-admin-warning-soft-bg px-4 py-3 text-[13px] text-admin-warning-text"
+          className="rounded-lg border border-warning/30 bg-warning-soft px-4 py-3 text-sm text-warning-text"
         >
           <strong>Conteúdo da plataforma.</strong> O que você publica aqui
           aparece no Treinamento de todas as serventias, não só na que você está

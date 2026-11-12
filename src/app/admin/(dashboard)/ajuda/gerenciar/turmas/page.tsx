@@ -42,20 +42,20 @@ export default async function CohortsPage() {
         back={{ href: "/admin/ajuda/gerenciar", label: "Gerenciar vídeos" }}
         description="Links de inscrição para cartórios que ainda não são clientes. Cada funcionário cria a própria conta e emite o certificado com o nome do cartório da turma."
       />
-      <main className="grid grid-cols-1 gap-4.5 px-[30px] py-7 xl:grid-cols-[minmax(0,1fr)_360px] xl:items-start">
-        <div className="min-w-0 rounded-2xl border border-admin-border bg-admin-card">
-          <div className="border-b border-admin-border px-5 py-3.5 font-serif text-base font-semibold text-admin-primary">
+      <main className="grid grid-cols-1 gap-4.5 px-4 py-6 md:px-8 xl:grid-cols-[minmax(0,1fr)_360px] xl:items-start">
+        <div className="min-w-0 rounded-xl border bg-card">
+          <div className="border-b px-5 py-3.5 text-lg font-semibold text-foreground">
             {cohorts.length === 0
               ? "Nenhuma turma ainda"
               : `${cohorts.length} ${cohorts.length === 1 ? "turma" : "turmas"}`}
           </div>
           {cohorts.length === 0 ? (
-            <p className="px-5 py-6 text-[13px] text-admin-muted">
+            <p className="px-5 py-6 text-sm text-muted-foreground">
               Crie a primeira turma ao lado. O link aparece aqui para copiar e
               mandar ao responsável do cartório.
             </p>
           ) : (
-            <ul className="flex flex-col divide-y divide-admin-border">
+            <ul className="flex flex-col divide-y">
               {cohorts.map(
                 ({ cohort, courseTitle, members, certified, state }) => (
                   <li
@@ -65,15 +65,15 @@ export default async function CohortsPage() {
                     <div className="min-w-0">
                       <Link
                         href={cohortPath(cohort.id)}
-                        className="block truncate text-[14px] font-semibold text-admin-primary hover:underline"
+                        className="block truncate text-sm font-semibold text-foreground hover:underline"
                       >
                         {cohort.officeName}
                       </Link>
-                      <p className="truncate text-[12px] text-admin-muted">
+                      <p className="truncate text-xs text-muted-foreground">
                         {cohort.officeCity} · {courseTitle} ·{" "}
                         <span className="font-mono">{cohort.code}</span>
                       </p>
-                      <p className="mt-0.5 text-[12px] text-admin-faint">
+                      <p className="mt-0.5 text-xs text-muted-foreground">
                         Link vale até{" "}
                         {formatDate(lastValidDay(cohort.expiresAt))}
                       </p>
@@ -81,15 +81,15 @@ export default async function CohortsPage() {
                         <CopyLink url={`${origin}/turma/${cohort.code}`} />
                       </div>
                     </div>
-                    <div className="flex shrink-0 flex-wrap items-center gap-x-4 gap-y-1.5 text-[12.5px] text-admin-muted">
+                    <div className="flex shrink-0 flex-wrap items-center gap-x-4 gap-y-1.5 text-xs text-muted-foreground">
                       <span className="tabular-nums">
-                        <strong className="text-admin-text">
+                        <strong className="text-foreground">
                           {members}/{cohort.seats}
                         </strong>{" "}
                         vagas
                       </span>
                       <span className="tabular-nums">
-                        <strong className="text-admin-text">{certified}</strong>{" "}
+                        <strong className="text-foreground">{certified}</strong>{" "}
                         {certified === 1 ? "concluiu" : "concluíram"}
                       </span>
                       <CohortStateBadge

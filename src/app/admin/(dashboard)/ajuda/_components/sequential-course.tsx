@@ -13,6 +13,7 @@ import {
 } from "@/core/tutorials/course.ts";
 import { formatDuration } from "@/core/tutorials/progress.ts";
 import { AdminIcon } from "../../../_components/icon.tsx";
+import { cn } from "../../../_ui/cn.ts";
 import { CourseMaterial } from "./course-material.tsx";
 import { TutorialPlayer } from "./tutorial-player.tsx";
 
@@ -76,9 +77,9 @@ export function SequentialCourse({
 
       <nav
         aria-label={`Conteúdo de ${course.title}`}
-        className="rounded-[14px] border border-admin-border bg-admin-card p-3"
+        className="rounded-xl border bg-card p-3"
       >
-        <span className="block px-3 pt-2 pb-2.5 text-[11px] font-bold uppercase tracking-[0.08em] text-admin-faint">
+        <span className="block px-3 pt-2 pb-2.5 text-xs font-medium text-muted-foreground">
           Conteúdo
         </span>
         <ol className="flex flex-col gap-1">
@@ -93,10 +94,10 @@ export function SequentialCourse({
                   aria-hidden="true"
                   className={
                     watched
-                      ? "inline-flex h-6 w-6 flex-none items-center justify-center rounded-full bg-admin-success-bg text-admin-success-text"
+                      ? "inline-flex h-6 w-6 flex-none items-center justify-center rounded-full bg-success text-success-foreground"
                       : isOpen
-                        ? "inline-flex h-6 w-6 flex-none items-center justify-center rounded-full bg-admin-primary text-white"
-                        : "inline-flex h-6 w-6 flex-none items-center justify-center rounded-full border border-admin-input-border text-admin-faint"
+                        ? "inline-flex h-6 w-6 flex-none items-center justify-center rounded-full bg-primary text-primary-foreground"
+                        : "inline-flex h-6 w-6 flex-none items-center justify-center rounded-full border border-input text-muted-foreground"
                   }
                 >
                   <AdminIcon
@@ -105,15 +106,18 @@ export function SequentialCourse({
                   />
                 </span>
                 <span className="min-w-0 flex-1">
-                  <span className="block text-[10.5px] font-bold uppercase tracking-[0.06em] text-admin-faint">
+                  <span className="block text-xs font-medium text-muted-foreground">
                     {label}
                   </span>
                   <span
-                    className={`block truncate text-[13.5px] font-semibold ${isOpen ? "text-admin-primary" : "text-admin-muted"}`}
+                    className={cn(
+                      "block truncate text-sm font-semibold",
+                      isOpen ? "text-foreground" : "text-muted-foreground",
+                    )}
                   >
                     {item.title}
                   </span>
-                  <span className="block text-[12px] text-admin-muted">
+                  <span className="block text-xs text-muted-foreground">
                     {formatDuration(item.durationSeconds)}
                     {!isOpen &&
                       blocker &&
@@ -126,7 +130,7 @@ export function SequentialCourse({
               </>
             );
             const base =
-              "flex items-center gap-3 rounded-[10px] border px-3 py-2.5";
+              "flex items-center gap-3 rounded-lg border px-3 py-2.5";
             return (
               <li key={item.id}>
                 {isOpen ? (
@@ -135,8 +139,8 @@ export function SequentialCourse({
                     aria-current={isCurrent ? "true" : undefined}
                     className={
                       isCurrent
-                        ? `${base} border-admin-active-border bg-admin-surface`
-                        : `${base} border-transparent hover:bg-admin-surface`
+                        ? `${base} border-border bg-muted`
+                        : `${base} border-transparent hover:bg-muted`
                     }
                   >
                     {body}

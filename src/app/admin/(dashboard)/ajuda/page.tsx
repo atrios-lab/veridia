@@ -13,6 +13,14 @@ import { getSession } from "@/lib/session.ts";
 import { getTenant } from "@/lib/tenant.ts";
 import { listPublishedTutorials, listWatchedAt } from "@/lib/tutorials.ts";
 import { AdminPageHeader } from "../../_components/page-header.tsx";
+import { Badge } from "../../_ui/badge.tsx";
+import { buttonVariants } from "../../_ui/button.tsx";
+import {
+  Empty,
+  EmptyDescription,
+  EmptyHeader,
+  EmptyTitle,
+} from "../../_ui/empty.tsx";
 import { CourseCard } from "./_components/course-card.tsx";
 import { TutorialCover } from "./_components/tutorial-cover.tsx";
 
@@ -84,7 +92,7 @@ export default async function TrainingCatalogPage({
                   href="/"
                   target="_blank"
                   rel="noopener"
-                  className="btn btn-admin-secondary btn-md"
+                  className={buttonVariants({ variant: "outline" })}
                 >
                   Ver o site do cartório de demonstração
                 </a>
@@ -92,7 +100,7 @@ export default async function TrainingCatalogPage({
               {canManage && (
                 <Link
                   href="/admin/ajuda/gerenciar"
-                  className="btn btn-admin-secondary btn-md"
+                  className={buttonVariants({ variant: "outline" })}
                 >
                   Gerenciar vídeos
                 </Link>
@@ -101,53 +109,55 @@ export default async function TrainingCatalogPage({
           ) : undefined
         }
       />
-      <main className="flex min-w-0 flex-col gap-8 px-[30px] py-7">
+      <main className="flex min-w-0 flex-col gap-8 px-4 py-6 md:px-8">
         {shown.length === 0 ? (
-          <div className="rounded-[14px] border border-admin-border bg-admin-card px-6 py-10 text-center">
-            <p className="font-serif text-[18px] font-semibold text-admin-primary">
-              Os vídeos de treinamento estão sendo preparados
-            </p>
-            <p className="mx-auto mt-2 max-w-[440px] text-[13.5px] leading-normal text-admin-muted">
-              Assim que o primeiro estiver pronto, ele aparece aqui e na Visão
-              geral, sem precisar fazer nada.
-            </p>
-          </div>
+          <Empty className="rounded-xl border border-solid bg-card px-6 py-10">
+            <EmptyHeader className="max-w-md">
+              <EmptyTitle className="font-semibold text-foreground">
+                Os vídeos de treinamento estão sendo preparados
+              </EmptyTitle>
+              <EmptyDescription>
+                Assim que o primeiro estiver pronto, ele aparece aqui e na Visão
+                geral, sem precisar fazer nada.
+              </EmptyDescription>
+            </EmptyHeader>
+          </Empty>
         ) : (
           <>
             {resume && (
               <section
                 aria-labelledby="continue-title"
-                className="grid grid-cols-1 overflow-hidden rounded-[16px] border border-admin-border bg-admin-card md:grid-cols-[minmax(0,1fr)_minmax(0,1.2fr)]"
+                className="grid grid-cols-1 overflow-hidden rounded-xl border bg-card md:grid-cols-[minmax(0,1fr)_minmax(0,1.2fr)]"
               >
                 <TutorialCover
                   title={resume.item.title}
                   posterUrl={resume.item.posterUrl ?? resume.course.posterUrl}
                 />
                 <div className="flex flex-col justify-center gap-2.5 p-6 lg:p-8">
-                  <span className="self-start rounded-full bg-admin-primary px-3 py-1 text-[11.5px] font-bold text-white">
+                  <Badge className="self-start">
                     {watchedIds.size === 0
                       ? "Comece por aqui"
                       : "Continue de onde parou"}
-                  </span>
-                  <span className="text-[11px] font-bold uppercase tracking-[0.08em] text-admin-faint">
+                  </Badge>
+                  <span className="text-xs font-medium text-muted-foreground">
                     {resume.course.title}
                     {resumeLabel && ` · ${resumeLabel}`}
                   </span>
                   <h2
                     id="continue-title"
-                    className="font-serif text-[22px] leading-tight font-semibold text-admin-primary"
+                    className="text-xl leading-tight font-semibold text-foreground"
                   >
                     {resume.item.title}
                   </h2>
                   {resume.item.description && (
-                    <p className="line-clamp-3 text-[13.5px] leading-normal text-admin-muted">
+                    <p className="line-clamp-3 text-sm leading-normal text-muted-foreground">
                       {resume.item.description}
                     </p>
                   )}
                   <div className="pt-1">
                     <Link
                       href={courseHref(resume.course.slug, resume.item.id)}
-                      className="btn btn-admin-primary btn-sm"
+                      className={buttonVariants({ size: "sm" })}
                     >
                       Assistir
                     </Link>
@@ -162,7 +172,7 @@ export default async function TrainingCatalogPage({
             >
               <h2
                 id="courses-title"
-                className="font-serif text-[18px] leading-tight font-semibold text-admin-primary"
+                className="text-lg leading-tight font-semibold text-foreground"
               >
                 Cursos
               </h2>

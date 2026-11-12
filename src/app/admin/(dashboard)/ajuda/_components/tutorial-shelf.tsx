@@ -10,6 +10,7 @@ import {
   useState,
 } from "react";
 import { AdminIcon } from "../../../_components/icon.tsx";
+import { Button } from "../../../_ui/button.tsx";
 
 /**
  * A row of cards that scrolls sideways, CSS scroll-snap and nothing else:
@@ -95,35 +96,37 @@ export function TutorialShelf({
         <div className="min-w-0">
           <h2
             id={headingId}
-            className="flex items-baseline gap-2 font-serif text-[18px] leading-tight font-semibold text-admin-primary"
+            className="flex items-baseline gap-2 text-lg leading-tight font-semibold text-foreground"
           >
             {title}
-            <span className="font-sans text-[13px] font-semibold text-admin-faint tabular-nums">
+            <span className="text-sm font-semibold text-muted-foreground tabular-nums">
               {count}
             </span>
           </h2>
-          <p className="mt-0.5 text-[13px] text-admin-muted">{subtitle}</p>
+          <p className="mt-0.5 text-sm text-muted-foreground">{subtitle}</p>
         </div>
         {!fits && (
           <div className="flex flex-none items-center gap-1">
-            <button
+            <Button
               type="button"
+              variant="ghost"
+              size="icon-sm"
               onClick={() => page(-1)}
               disabled={edges.start}
               aria-label={`Voltar em ${title}`}
-              className="btn btn-admin-ghost btn-sm px-2"
             >
               <AdminIcon name="chevronDown" className="h-4 w-4 rotate-90" />
-            </button>
-            <button
+            </Button>
+            <Button
               type="button"
+              variant="ghost"
+              size="icon-sm"
               onClick={() => page(1)}
               disabled={edges.end}
               aria-label={`Avançar em ${title}`}
-              className="btn btn-admin-ghost btn-sm px-2"
             >
               <AdminIcon name="chevronDown" className="h-4 w-4 -rotate-90" />
-            </button>
+            </Button>
           </div>
         )}
       </div>
