@@ -33,6 +33,16 @@ import { AdminIcon } from "../../../_components/icon.tsx";
 import { AdminPageHeader } from "../../../_components/page-header.tsx";
 import { PAPER_SENDING_HELP } from "../../../_components/screen-help.ts";
 import { ScreenHelpButton } from "../../../_components/screen-help-button.tsx";
+import { Badge } from "../../../_ui/badge.tsx";
+import { buttonVariants } from "../../../_ui/button.tsx";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "../../../_ui/table.tsx";
 import { VoidMovementButton } from "./forms.tsx";
 
 export const metadata = { title: "Papel de segurança" };
@@ -53,9 +63,8 @@ const DONE: Record<string, string> = {
     "Subtração lançada. Ela entra na comunicação do fim do mês à Corregedoria.",
 };
 
-const TH =
-  "px-4 py-2.5 text-left text-[11px] font-bold uppercase tracking-[0.06em] text-admin-muted";
-const TD = "px-4 py-2.5 align-top text-[13px] text-admin-text";
+const TH = "px-4 text-xs font-medium text-muted-foreground";
+const TD = "px-4 py-2.5 align-top whitespace-normal text-foreground";
 
 export default async function SecurityPaperPage({
   searchParams,
@@ -126,13 +135,13 @@ export default async function SecurityPaperPage({
           <div className="flex flex-wrap gap-2">
             <Link
               href="/admin/utilitarios/papel-seguranca/novo-lote"
-              className="btn btn-admin-secondary btn-md"
+              className={buttonVariants({ variant: "outline" })}
             >
               <AdminIcon name="plus" className="h-4 w-4" /> Cadastrar lote
             </Link>
             <Link
               href="/admin/utilitarios/papel-seguranca/lancar"
-              className="btn btn-admin-primary btn-md"
+              className={buttonVariants()}
             >
               <AdminIcon name="check" className="h-4 w-4" /> Lançar uso ou
               ocorrência
@@ -140,24 +149,24 @@ export default async function SecurityPaperPage({
           </div>
         }
       />
-      <main className="flex max-w-[1100px] flex-col gap-5 px-[30px] py-7 max-md:px-4">
+      <main className="flex max-w-[1100px] flex-col gap-5 px-4 py-7 md:px-8">
         {done && (
-          <p className="rounded-[12px] bg-admin-success-bg px-4 py-3 text-[13px] font-semibold text-admin-success-text">
+          <p className="rounded-lg border border-success/30 bg-success-soft px-4 py-3 text-sm font-medium text-success-text">
             {done}
           </p>
         )}
 
         {missingUse && (
-          <div className="flex flex-wrap items-center gap-3 rounded-[14px] border border-admin-border bg-admin-card px-5 py-4">
+          <div className="flex flex-wrap items-center gap-3 rounded-xl border bg-card px-5 py-4">
             <AdminIcon
               name="clipboard"
-              className="h-5 w-5 shrink-0 text-admin-primary"
+              className="h-5 w-5 shrink-0 text-primary"
             />
             <div className="mr-auto min-w-[240px] flex-1">
-              <p className="text-[13.5px] font-bold text-admin-primary">
+              <p className="text-sm font-semibold text-foreground">
                 Lance o uso de {monthLabel(missingUse.start)}
               </p>
-              <p className="text-[12.5px] text-admin-text">
+              <p className="text-xs text-foreground">
                 Ainda não há folhas utilizadas lançadas nesse mês. Basta
                 informar a última folha usada, com a data de{" "}
                 {brDate(missingUse.end)}. Se não houve uso, ignore este aviso.
@@ -165,7 +174,7 @@ export default async function SecurityPaperPage({
             </div>
             <Link
               href="/admin/utilitarios/papel-seguranca/lancar?tipo=utilizado"
-              className="btn btn-admin-primary btn-md"
+              className={buttonVariants()}
             >
               Lançar o uso do mês
             </Link>
@@ -175,20 +184,20 @@ export default async function SecurityPaperPage({
         {low.map((l) => (
           <div
             key={l.kind}
-            className="flex flex-wrap items-center gap-3 rounded-[14px] border border-admin-warning-soft-border bg-admin-warning-soft-bg px-5 py-4"
+            className="flex flex-wrap items-center gap-3 rounded-xl border border-warning/30 bg-warning-soft px-5 py-4"
           >
             <AdminIcon
               name="alert"
-              className="h-5 w-5 shrink-0 text-admin-warning-text"
+              className="h-5 w-5 shrink-0 text-warning-text"
             />
             <div className="mr-auto min-w-[240px] flex-1">
-              <p className="text-[13.5px] font-bold text-admin-warning-text">
+              <p className="text-sm font-semibold text-warning-text">
                 {l.kind}:{" "}
                 {l.remaining === 0
                   ? "o estoque acabou"
                   : `faltam ${l.remaining.toLocaleString("pt-BR")} folhas para acabar`}
               </p>
-              <p className="text-[12.5px] text-admin-text">
+              <p className="text-xs text-foreground">
                 O aviso aparece com {settings.lowStock.toLocaleString("pt-BR")}{" "}
                 folhas ou menos. Providencie o pedido de um novo lote.
               </p>
@@ -196,7 +205,7 @@ export default async function SecurityPaperPage({
             {canOrder && (
               <Link
                 href="/admin/utilitarios/solicitacao-papeis"
-                className="btn btn-admin-primary btn-md"
+                className={buttonVariants()}
               >
                 Solicitar novo lote
               </Link>
@@ -207,17 +216,17 @@ export default async function SecurityPaperPage({
         {(duties.quarter || duties.occurrences.length > 0) && (
           <section className="flex flex-col gap-3">
             {duties.quarter && (
-              <div className="flex flex-wrap items-center gap-3 rounded-[14px] border border-admin-warning-soft-border bg-admin-warning-soft-bg px-5 py-4">
+              <div className="flex flex-wrap items-center gap-3 rounded-xl border border-warning/30 bg-warning-soft px-5 py-4">
                 <AdminIcon
                   name="calendar"
-                  className="h-5 w-5 shrink-0 text-admin-warning-text"
+                  className="h-5 w-5 shrink-0 text-warning-text"
                 />
                 <div className="mr-auto min-w-[240px] flex-1">
-                  <p className="text-[13.5px] font-bold text-admin-warning-text">
+                  <p className="text-sm font-semibold text-warning-text">
                     Prestação de contas do {quarterLabel(duties.quarter, false)}{" "}
                     pendente
                   </p>
-                  <p className="text-[12.5px] text-admin-text">
+                  <p className="text-xs text-foreground">
                     {quarterLabel(duties.quarter)}. O ofício sai pronto, com o
                     demonstrativo e a numeração; quem não presta contas não pode
                     requisitar novos lotes.
@@ -228,25 +237,25 @@ export default async function SecurityPaperPage({
                 </div>
                 <Link
                   href={`/admin/utilitarios/papel-seguranca/gerar?tipo=prestacao&trimestre=${duties.quarter.year}-${duties.quarter.quarter}`}
-                  className="btn btn-admin-primary btn-md"
+                  className={buttonVariants()}
                 >
                   Gerar a prestação de contas
                 </Link>
               </div>
             )}
             {duties.occurrences.length > 0 && occurrenceMonth && (
-              <div className="flex flex-wrap items-center gap-3 rounded-[14px] border border-admin-error-border bg-admin-error-bg px-5 py-4">
+              <div className="flex flex-wrap items-center gap-3 rounded-xl border border-destructive/40 bg-destructive-soft px-5 py-4">
                 <AdminIcon
                   name="alert"
-                  className="h-5 w-5 shrink-0 text-admin-error-text"
+                  className="h-5 w-5 shrink-0 text-destructive"
                 />
                 <div className="mr-auto min-w-[240px] flex-1">
-                  <p className="text-[13.5px] font-bold text-admin-error-text">
+                  <p className="text-sm font-semibold text-destructive">
                     {duties.occurrences.length === 1
                       ? "1 extravio, subtração ou avaria a comunicar"
                       : `${duties.occurrences.length} extravios, subtrações ou avarias a comunicar`}
                   </p>
-                  <p className="text-[12.5px] text-admin-text">
+                  <p className="text-xs text-foreground">
                     De {monthLabel(`${occurrenceMonth}-01`)} em diante. A
                     comunicação vai à Corregedoria no fim de cada mês, com a
                     numeração, para publicação no DJe.
@@ -254,7 +263,7 @@ export default async function SecurityPaperPage({
                 </div>
                 <Link
                   href={`/admin/utilitarios/papel-seguranca/gerar?tipo=extravio&mes=${occurrenceMonth}`}
-                  className="btn btn-admin-primary btn-md"
+                  className={buttonVariants()}
                 >
                   Gerar o ofício de comunicação
                 </Link>
@@ -264,11 +273,11 @@ export default async function SecurityPaperPage({
         )}
 
         {canConfigure && (
-          <p className="text-[12.5px] text-admin-muted">
+          <p className="text-xs text-muted-foreground">
             Antes do primeiro ofício, confira a quem ele vai em{" "}
             <Link
               href="/admin/utilitarios/papel-seguranca/configuracao"
-              className="font-semibold text-admin-primary underline"
+              className="font-medium text-primary underline underline-offset-4"
             >
               Configurar
             </Link>
@@ -278,29 +287,29 @@ export default async function SecurityPaperPage({
 
         <section className="flex flex-col gap-3">
           <div className="flex flex-wrap items-baseline justify-between gap-2">
-            <h2 className="font-serif text-[19px] font-semibold text-admin-primary">
+            <h2 className="text-lg font-semibold text-foreground">
               Estoque agora
             </h2>
             <Link
               href="/admin/utilitarios/papel-seguranca/gerar"
-              className="text-[13px] font-semibold text-admin-primary underline"
+              className="text-sm font-medium text-primary underline underline-offset-4"
             >
               Gerar ofício ou relatório
             </Link>
           </div>
           {stock.length === 0 ? (
-            <div className="rounded-[14px] border border-dashed border-admin-border bg-admin-card px-5 py-6 text-[13.5px] text-admin-text">
-              <p className="font-semibold text-admin-primary">
+            <div className="rounded-xl border border-dashed bg-card px-5 py-6 text-sm text-foreground">
+              <p className="font-semibold text-foreground">
                 Comece cadastrando os lotes que a serventia tem.
               </p>
-              <p className="mt-1 text-admin-muted">
+              <p className="mt-1 text-muted-foreground">
                 Para folhas compradas antes deste controle, marque{" "}
                 <em>Estoque que a serventia já tinha</em> e informe só as que
                 ainda estão na gaveta. A nota fiscal e a gráfica são opcionais.
               </p>
               <Link
                 href="/admin/utilitarios/papel-seguranca/novo-lote"
-                className="btn btn-admin-primary btn-md mt-3 inline-flex"
+                className={buttonVariants({ className: "mt-3" })}
               >
                 Cadastrar o primeiro lote
               </Link>
@@ -310,29 +319,29 @@ export default async function SecurityPaperPage({
               {stock.map((s) => (
                 <div
                   key={s.kind}
-                  className="flex flex-col gap-2 rounded-[14px] border border-admin-border bg-admin-card px-5 py-4"
+                  className="flex flex-col gap-2 rounded-xl border bg-card px-5 py-4"
                 >
-                  <p className="text-[12px] font-bold uppercase tracking-[0.06em] text-admin-muted">
+                  <p className="text-xs font-medium text-muted-foreground">
                     {s.kind}
                   </p>
-                  <p className="font-serif text-[30px] leading-none font-semibold text-admin-primary">
+                  <p className="text-3xl leading-none font-semibold text-foreground tabular-nums">
                     {s.remaining.toLocaleString("pt-BR")}
-                    <span className="ml-1.5 font-sans text-[13px] font-normal text-admin-muted">
+                    <span className="ml-1.5 text-sm font-normal text-muted-foreground">
                       folha{s.remaining === 1 ? "" : "s"}
                     </span>
                   </p>
-                  <ul className="flex flex-col gap-1 text-[12px] text-admin-text">
+                  <ul className="flex flex-col gap-1 text-xs text-foreground">
                     {s.lots
                       .filter((l) => l.remaining > 0)
                       .map(({ lot, remaining, next }) => (
                         <li key={lot.id} className="flex justify-between gap-2">
                           <Link
                             href={`/admin/utilitarios/papel-seguranca/lotes/${lot.id}`}
-                            className="font-mono underline decoration-admin-border"
+                            className="font-mono underline decoration-border underline-offset-2 hover:text-primary"
                           >
                             {rangeLabel(lot, lot.first, lot.last)}
                           </Link>
-                          <span className="shrink-0 text-admin-muted">
+                          <span className="shrink-0 text-muted-foreground tabular-nums">
                             próxima{" "}
                             {next !== null ? sheetNumber(lot, next) : "-"}
                             {" · "}
@@ -347,14 +356,14 @@ export default async function SecurityPaperPage({
           )}
         </section>
 
-        <section className="overflow-hidden rounded-[14px] border border-admin-border bg-admin-card">
-          <div className="flex flex-wrap items-center justify-between gap-2 border-b border-admin-border px-5 py-3.5">
-            <h2 className="font-serif text-[17px] font-semibold text-admin-primary">
+        <section className="overflow-hidden rounded-xl border bg-card">
+          <div className="flex flex-wrap items-center justify-between gap-2 border-b px-5 py-3.5">
+            <h2 className="text-lg font-semibold text-foreground">
               Lançamentos
             </h2>
             <Link
               href={`/admin/utilitarios/papel-seguranca${showRemoved ? "" : "?excluidos=1"}`}
-              className="text-[12.5px] font-semibold text-admin-primary underline"
+              className="text-xs font-medium text-primary underline underline-offset-4"
             >
               {showRemoved
                 ? "Esconder os excluídos"
@@ -362,167 +371,168 @@ export default async function SecurityPaperPage({
             </Link>
           </div>
           {recent.length === 0 ? (
-            <p className="px-5 py-4 text-[13px] text-admin-muted">
+            <p className="px-5 py-4 text-sm text-muted-foreground">
               Nenhum lançamento ainda. Use{" "}
               <strong>Lançar uso ou ocorrência</strong> para baixar folhas
               usadas, inutilizadas, avariadas, extraviadas ou subtraídas.
             </p>
           ) : (
-            <div className="overflow-x-auto">
-              <table className="w-full min-w-[760px]">
-                <thead className="border-b border-admin-border bg-admin-input-bg">
-                  <tr>
-                    <th className={TH}>Data</th>
-                    <th className={TH}>Ocorrência</th>
-                    <th className={TH}>Espécie</th>
-                    <th className={TH}>Folhas</th>
-                    <th className={TH}>Referência</th>
-                    <th className={TH}>
-                      <span className="sr-only">Ações</span>
-                    </th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {recent.map((row) => {
-                    const lot = lotById.get(row.lotId);
-                    const voided = row.voidedAt !== null;
-                    const range = {
-                      first: row.firstNumber,
-                      last: row.lastNumber,
-                    };
-                    return (
-                      <tr
-                        key={row.id}
-                        className={`border-b border-admin-border last:border-0 ${voided ? "opacity-55" : ""}`}
-                      >
-                        <td className={TD}>{brDate(row.occurredOn)}</td>
-                        <td className={TD}>
-                          <span className={voided ? "line-through" : ""}>
-                            {
-                              MOVEMENT_COLUMNS[
-                                row.type as keyof typeof MOVEMENT_COLUMNS
-                              ]
-                            }
+            <Table className="min-w-[760px]">
+              <TableHeader className="bg-muted/50">
+                <TableRow className="hover:bg-transparent">
+                  <TableHead className={TH}>Data</TableHead>
+                  <TableHead className={TH}>Ocorrência</TableHead>
+                  <TableHead className={TH}>Espécie</TableHead>
+                  <TableHead className={TH}>Folhas</TableHead>
+                  <TableHead className={TH}>Referência</TableHead>
+                  <TableHead className={TH}>
+                    <span className="sr-only">Ações</span>
+                  </TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {recent.map((row) => {
+                  const lot = lotById.get(row.lotId);
+                  const voided = row.voidedAt !== null;
+                  const range = {
+                    first: row.firstNumber,
+                    last: row.lastNumber,
+                  };
+                  return (
+                    <TableRow
+                      key={row.id}
+                      className={voided ? "opacity-55" : undefined}
+                    >
+                      <TableCell className={`${TD} tabular-nums`}>
+                        {brDate(row.occurredOn)}
+                      </TableCell>
+                      <TableCell className={TD}>
+                        <span className={voided ? "line-through" : ""}>
+                          {
+                            MOVEMENT_COLUMNS[
+                              row.type as keyof typeof MOVEMENT_COLUMNS
+                            ]
+                          }
+                        </span>
+                        {voided && (
+                          <span className="block text-xs text-muted-foreground">
+                            Excluído: {row.voidReason}
                           </span>
-                          {voided && (
-                            <span className="block text-[11.5px] text-admin-muted">
-                              Excluído: {row.voidReason}
-                            </span>
-                          )}
-                        </td>
-                        <td className={TD}>{lot ? kindName(lot) : ""}</td>
-                        <td className={`${TD} font-mono text-[12px]`}>
-                          {lot ? rangeLabel(lot, range.first, range.last) : ""}
-                          <span className="block font-sans text-admin-muted">
-                            {sheetsIn(range).toLocaleString("pt-BR")} folha
-                            {sheetsIn(range) === 1 ? "" : "s"}
+                        )}
+                      </TableCell>
+                      <TableCell className={TD}>
+                        {lot ? kindName(lot) : ""}
+                      </TableCell>
+                      <TableCell className={`${TD} font-mono text-xs`}>
+                        {lot ? rangeLabel(lot, range.first, range.last) : ""}
+                        <span className="block font-sans text-muted-foreground tabular-nums">
+                          {sheetsIn(range).toLocaleString("pt-BR")} folha
+                          {sheetsIn(range) === 1 ? "" : "s"}
+                        </span>
+                      </TableCell>
+                      <TableCell className={TD}>
+                        {[row.reference, row.notes].filter(Boolean).join(" · ")}
+                      </TableCell>
+                      <TableCell className={`${TD} text-right`}>
+                        {!voided && (
+                          <span className="inline-flex gap-1.5">
+                            <Link
+                              href={`/admin/utilitarios/papel-seguranca/lancamentos/${row.id}`}
+                              className={buttonVariants({
+                                variant: "outline",
+                                size: "sm",
+                              })}
+                            >
+                              Editar
+                            </Link>
+                            <VoidMovementButton id={row.id} />
                           </span>
-                        </td>
-                        <td className={TD}>
-                          {[row.reference, row.notes]
-                            .filter(Boolean)
-                            .join(" · ")}
-                        </td>
-                        <td className={`${TD} text-right`}>
-                          {!voided && (
-                            <span className="inline-flex gap-1.5">
-                              <Link
-                                href={`/admin/utilitarios/papel-seguranca/lancamentos/${row.id}`}
-                                className="btn btn-admin-secondary btn-sm"
-                              >
-                                Editar
-                              </Link>
-                              <VoidMovementButton id={row.id} />
-                            </span>
-                          )}
-                        </td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-            </div>
+                        )}
+                      </TableCell>
+                    </TableRow>
+                  );
+                })}
+              </TableBody>
+            </Table>
           )}
         </section>
 
-        <section className="overflow-hidden rounded-[14px] border border-admin-border bg-admin-card">
-          <h2 className="border-b border-admin-border px-5 py-3.5 font-serif text-[17px] font-semibold text-admin-primary">
+        <section className="overflow-hidden rounded-xl border bg-card">
+          <h2 className="border-b px-5 py-3.5 text-lg font-semibold text-foreground">
             Lotes do classificador
           </h2>
           {lotRows.length === 0 ? (
-            <p className="px-5 py-4 text-[13px] text-admin-muted">
+            <p className="px-5 py-4 text-sm text-muted-foreground">
               Nenhum lote cadastrado.
             </p>
           ) : (
-            <div className="overflow-x-auto">
-              <table className="w-full min-w-[760px]">
-                <thead className="border-b border-admin-border bg-admin-input-bg">
-                  <tr>
-                    <th className={TH}>Recebido</th>
-                    <th className={TH}>Espécie</th>
-                    <th className={TH}>Numeração</th>
-                    <th className={TH}>Gráfica / nota</th>
-                    <th className={TH}>Restam</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {shownLots.map((lot) => {
-                    const row = stock
-                      .flatMap((s) => s.lots)
-                      .find((l) => l.lot.id === lot.id);
-                    return (
-                      <tr
-                        key={lot.id}
-                        className={`border-b border-admin-border last:border-0 ${lot.voided ? "opacity-55" : ""}`}
-                      >
-                        <td className={TD}>
-                          {brDate(lot.receivedOn)}
-                          {lot.opening && (
-                            <span className="block text-[11.5px] text-admin-muted">
-                              estoque anterior
-                            </span>
-                          )}
-                        </td>
-                        <td className={TD}>{kindName(lot)}</td>
-                        <td className={`${TD} font-mono text-[12px]`}>
-                          <Link
-                            href={`/admin/utilitarios/papel-seguranca/lotes/${lot.id}`}
-                            className={`text-admin-primary underline ${lot.voided ? "line-through" : ""}`}
-                          >
-                            {rangeLabel(lot, lot.first, lot.last)}
-                          </Link>
-                          <span className="block font-sans text-admin-muted">
-                            {sheetsIn(lot).toLocaleString("pt-BR")} folhas
+            <Table className="min-w-[760px]">
+              <TableHeader className="bg-muted/50">
+                <TableRow className="hover:bg-transparent">
+                  <TableHead className={TH}>Recebido</TableHead>
+                  <TableHead className={TH}>Espécie</TableHead>
+                  <TableHead className={TH}>Numeração</TableHead>
+                  <TableHead className={TH}>Gráfica / nota</TableHead>
+                  <TableHead className={TH}>Restam</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {shownLots.map((lot) => {
+                  const row = stock
+                    .flatMap((s) => s.lots)
+                    .find((l) => l.lot.id === lot.id);
+                  return (
+                    <TableRow
+                      key={lot.id}
+                      className={lot.voided ? "opacity-55" : undefined}
+                    >
+                      <TableCell className={`${TD} tabular-nums`}>
+                        {brDate(lot.receivedOn)}
+                        {lot.opening && (
+                          <span className="block text-xs text-muted-foreground">
+                            estoque anterior
                           </span>
-                        </td>
-                        <td className={TD}>
-                          {[lot.supplier, lot.invoice && `NF ${lot.invoice}`]
-                            .filter(Boolean)
-                            .join(" · ") || (
-                            <span className="text-admin-muted">
-                              Não informado
-                            </span>
-                          )}
-                        </td>
-                        <td className={TD}>
-                          {lot.voided
-                            ? "Excluído"
-                            : (row?.remaining ?? 0).toLocaleString("pt-BR")}
-                        </td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-            </div>
+                        )}
+                      </TableCell>
+                      <TableCell className={TD}>{kindName(lot)}</TableCell>
+                      <TableCell className={`${TD} font-mono text-xs`}>
+                        <Link
+                          href={`/admin/utilitarios/papel-seguranca/lotes/${lot.id}`}
+                          className={`text-primary underline ${lot.voided ? "line-through" : ""}`}
+                        >
+                          {rangeLabel(lot, lot.first, lot.last)}
+                        </Link>
+                        <span className="block font-sans text-muted-foreground tabular-nums">
+                          {sheetsIn(lot).toLocaleString("pt-BR")} folhas
+                        </span>
+                      </TableCell>
+                      <TableCell className={TD}>
+                        {[lot.supplier, lot.invoice && `NF ${lot.invoice}`]
+                          .filter(Boolean)
+                          .join(" · ") || (
+                          <span className="text-muted-foreground">
+                            Não informado
+                          </span>
+                        )}
+                      </TableCell>
+                      <TableCell className={`${TD} tabular-nums`}>
+                        {lot.voided
+                          ? "Excluído"
+                          : (row?.remaining ?? 0).toLocaleString("pt-BR")}
+                      </TableCell>
+                    </TableRow>
+                  );
+                })}
+              </TableBody>
+            </Table>
           )}
         </section>
 
         {/* No overflow-hidden here: the "!" opens over the list below. */}
-        <section className="rounded-[14px] border border-admin-border bg-admin-card">
-          <div className="flex flex-wrap items-center justify-between gap-2 border-b border-admin-border px-5 py-3.5">
+        <section className="rounded-xl border bg-card">
+          <div className="flex flex-wrap items-center justify-between gap-2 border-b px-5 py-3.5">
             <div className="flex items-center gap-2.5">
-              <h2 className="font-serif text-[17px] font-semibold text-admin-primary">
+              <h2 className="text-lg font-semibold text-foreground">
                 Ofícios e relatórios
               </h2>
               <ScreenHelpButton
@@ -533,13 +543,13 @@ export default async function SecurityPaperPage({
             </div>
             <Link
               href="/admin/utilitarios/papel-seguranca/gerar"
-              className="btn btn-admin-secondary btn-sm"
+              className={buttonVariants({ variant: "outline", size: "sm" })}
             >
               <AdminIcon name="file" className="h-4 w-4" /> Gerar
             </Link>
           </div>
           {reports.length === 0 ? (
-            <p className="px-5 py-4 text-[13px] text-admin-muted">
+            <p className="px-5 py-4 text-sm text-muted-foreground">
               Nenhum ofício gerado ainda. Tudo o que for gerado fica guardado
               aqui, como foi gerado.
             </p>
@@ -548,33 +558,34 @@ export default async function SecurityPaperPage({
               {reports.map((r) => (
                 <li
                   key={r.id}
-                  className="flex flex-wrap items-center gap-3 border-b border-admin-border px-5 py-3 last:border-0"
+                  className="flex flex-wrap items-center gap-3 border-b px-5 py-3 last:border-0"
                 >
                   <Link
                     href={`/admin/utilitarios/papel-seguranca/oficios/${r.id}`}
-                    className="mr-auto text-[13.5px] font-semibold text-admin-primary underline"
+                    className="mr-auto text-sm font-medium text-primary underline underline-offset-4"
                   >
                     {reportNumber(r) ? `Ofício nº ${reportNumber(r)} · ` : ""}
                     {REPORT_SHORT[r.kind as ReportKind]}
                   </Link>
-                  <span className="text-[12.5px] text-admin-muted">
+                  <span className="text-xs text-muted-foreground tabular-nums">
                     {periodLabel({ start: r.periodStart, end: r.periodEnd })}
                   </span>
-                  <span
-                    className={`rounded-full px-2.5 py-0.5 text-[11.5px] font-bold ${
+                  <Badge
+                    variant={r.kind === "relatorio" ? "secondary" : "default"}
+                    className={
                       r.kind === "relatorio"
-                        ? "bg-admin-input-bg text-admin-muted"
+                        ? undefined
                         : r.sentOn
-                          ? "bg-admin-success-bg text-admin-success-text"
-                          : "bg-admin-warning-soft-bg text-admin-warning-text"
-                    }`}
+                          ? "bg-success text-success-foreground"
+                          : "bg-warning text-warning-foreground"
+                    }
                   >
                     {r.kind === "relatorio"
                       ? "Arquivo da serventia"
                       : r.sentOn
                         ? `Enviado em ${brDate(r.sentOn)}`
                         : "Envio não registrado"}
-                  </span>
+                  </Badge>
                 </li>
               ))}
             </ul>

@@ -22,6 +22,7 @@ import {
 } from "@/lib/security-paper.ts";
 import { getTenant, today } from "@/lib/tenant.ts";
 import { AdminPageHeader } from "../../../../../_components/page-header.tsx";
+import { buttonVariants } from "../../../../../_ui/button.tsx";
 import { requirePaperAccess } from "../../_lib/access.ts";
 import { LotForm, VoidLotButton, VoidMovementButton } from "../../forms.tsx";
 
@@ -56,26 +57,24 @@ export default async function LotPage({
         }}
         description={`${sheetsIn(lot).toLocaleString("pt-BR")} folhas ${lot.opening ? "de estoque anterior, contadas" : "recebidas"} em ${brDate(lot.receivedOn)}.`}
       />
-      <main className="flex max-w-[1000px] flex-col gap-4.5 px-[30px] py-7 max-md:px-4">
+      <main className="flex max-w-[1000px] flex-col gap-4.5 px-4 py-7 md:px-8">
         {row.voidedAt && (
-          <p className="rounded-[12px] bg-admin-error-bg px-4 py-3 text-[13px] font-semibold text-admin-error-text">
+          <p className="rounded-lg border border-destructive/40 bg-destructive-soft px-4 py-3 text-sm font-medium text-destructive">
             Lote excluído: {row.voidReason}
           </p>
         )}
         <section className="grid gap-3 sm:grid-cols-3">
-          <div className="rounded-[14px] border border-admin-border bg-admin-card px-5 py-4">
-            <p className="text-[11.5px] font-bold uppercase tracking-[0.06em] text-admin-muted">
-              Restam
-            </p>
-            <p className="font-serif text-[28px] font-semibold text-admin-primary">
+          <div className="rounded-xl border bg-card px-5 py-4">
+            <p className="text-xs font-medium text-muted-foreground">Restam</p>
+            <p className="text-3xl font-semibold text-foreground tabular-nums">
               {remaining.toLocaleString("pt-BR")}
             </p>
           </div>
-          <div className="rounded-[14px] border border-admin-border bg-admin-card px-5 py-4 sm:col-span-2">
-            <p className="text-[11.5px] font-bold uppercase tracking-[0.06em] text-admin-muted">
+          <div className="rounded-xl border bg-card px-5 py-4 sm:col-span-2">
+            <p className="text-xs font-medium text-muted-foreground">
               Folhas na gaveta
             </p>
-            <p className="mt-1 font-mono text-[12.5px] text-admin-text">
+            <p className="mt-1 font-mono text-xs text-foreground">
               {free.map((r) => rangeLabel(lot, r.first, r.last)).join("; ") ||
                 "Nenhuma"}
             </p>
@@ -86,7 +85,7 @@ export default async function LotPage({
           <div className="flex flex-wrap gap-2">
             <Link
               href={`/admin/utilitarios/papel-seguranca/lancar?lote=${lot.id}`}
-              className="btn btn-admin-primary btn-md"
+              className={buttonVariants()}
             >
               Lançar folhas deste lote
             </Link>
@@ -95,13 +94,13 @@ export default async function LotPage({
                 href={`/admin/utilitarios/papel-seguranca/lotes/${lot.id}/nota`}
                 target="_blank"
                 rel="noreferrer"
-                className="btn btn-admin-secondary btn-md"
+                className={buttonVariants({ variant: "outline" })}
               >
                 Ver a nota fiscal
               </a>
             )}
             {anyLive ? (
-              <span className="self-center text-[12px] text-admin-muted">
+              <span className="self-center text-xs text-muted-foreground">
                 Para excluir o lote, exclua antes os lançamentos dele.
               </span>
             ) : (
@@ -112,7 +111,7 @@ export default async function LotPage({
 
         {!row.voidedAt && (
           <>
-            <h2 className="font-serif text-[17px] font-semibold text-admin-primary">
+            <h2 className="text-lg font-semibold text-foreground">
               Editar o lote
             </h2>
             <LotForm
@@ -138,30 +137,32 @@ export default async function LotPage({
           </>
         )}
 
-        <h2 className="font-serif text-[17px] font-semibold text-admin-primary">
+        <h2 className="text-lg font-semibold text-foreground">
           Lançamentos deste lote
         </h2>
-        <ul className="overflow-hidden rounded-[14px] border border-admin-border bg-admin-card">
+        <ul className="overflow-hidden rounded-xl border bg-card">
           {rows.length === 0 && (
-            <li className="px-5 py-4 text-[13px] text-admin-muted">
+            <li className="px-5 py-4 text-sm text-muted-foreground">
               Nenhum lançamento.
             </li>
           )}
           {rows.map((m) => (
             <li
               key={m.id}
-              className={`flex flex-wrap items-center gap-x-4 gap-y-1 border-b border-admin-border px-5 py-3 text-[13px] last:border-0 ${m.voidedAt ? "opacity-55" : ""}`}
+              className={`flex flex-wrap items-center gap-x-4 gap-y-1 border-b px-5 py-3 text-sm last:border-0 ${m.voidedAt ? "opacity-55" : ""}`}
             >
-              <span className="w-[86px]">{brDate(m.occurredOn)}</span>
+              <span className="w-[86px] tabular-nums">
+                {brDate(m.occurredOn)}
+              </span>
               <span
                 className={`font-semibold ${m.voidedAt ? "line-through" : ""}`}
               >
                 {MOVEMENT_LABELS[m.type as MovementType]}
               </span>
-              <span className="font-mono text-[12px]">
+              <span className="font-mono text-xs">
                 {rangeLabel(lot, m.firstNumber, m.lastNumber)}
               </span>
-              <span className="mr-auto text-admin-muted">
+              <span className="mr-auto text-muted-foreground">
                 {m.voidedAt
                   ? `Excluído: ${m.voidReason}`
                   : [m.reference, m.notes].filter(Boolean).join(" · ")}
@@ -170,7 +171,10 @@ export default async function LotPage({
                 <>
                   <Link
                     href={`/admin/utilitarios/papel-seguranca/lancamentos/${m.id}`}
-                    className="btn btn-admin-secondary btn-sm"
+                    className={buttonVariants({
+                      variant: "outline",
+                      size: "sm",
+                    })}
                   >
                     Editar
                   </Link>

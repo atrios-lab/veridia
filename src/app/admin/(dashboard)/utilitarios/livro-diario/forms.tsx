@@ -14,6 +14,18 @@ import {
   RECEIPTS_RULE,
 } from "@/core/daily-book/checks.ts";
 import { ConfirmAction } from "../../../_components/confirm-action.tsx";
+import { Button, buttonVariants } from "../../../_ui/button.tsx";
+import { Input } from "../../../_ui/input.tsx";
+import { NativeSelect } from "../../../_ui/native-select.tsx";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "../../../_ui/table.tsx";
+import { Textarea } from "../../../_ui/textarea.tsx";
 import {
   type BookFormState,
   editReport,
@@ -28,14 +40,10 @@ import {
   saveSettings,
 } from "./actions.ts";
 
-const FIELD =
-  "w-full rounded-[9px] border border-admin-input-border bg-admin-input-bg px-3.5 py-2.5 text-[13.5px] text-admin-text outline-none focus:border-admin-primary-soft";
-const SMALL =
-  "w-full rounded-[8px] border border-admin-input-border bg-admin-input-bg px-2.5 py-1.5 text-[12.5px] text-admin-text outline-none focus:border-admin-primary-soft";
-const LABEL = "mb-1.5 block text-[12.5px] font-semibold text-admin-text";
-const HINT = "mt-1 block text-[11.5px] text-admin-muted";
-const CARD =
-  "flex flex-col gap-4 rounded-[14px] border border-admin-border bg-admin-card px-5 py-5";
+const LABEL = "mb-1.5 block text-sm font-medium text-foreground";
+const HINT = "mt-1 block text-xs text-muted-foreground";
+const CARD = "flex flex-col gap-4 rounded-xl border bg-card p-5";
+const TH = "h-9 px-2.5 text-xs font-medium text-muted-foreground";
 const IDLE: BookFormState = { status: "idle" };
 
 const money = (c: number) =>
@@ -53,7 +61,7 @@ function Feedback({ state }: { state: BookFormState }) {
   return (
     <p
       role="alert"
-      className="rounded-[10px] bg-admin-error-bg px-3.5 py-2.5 text-[13px] font-semibold text-admin-error-text"
+      className="rounded-lg bg-destructive-soft px-3.5 py-2.5 text-sm font-semibold text-destructive"
     >
       {state.message}
     </p>
@@ -70,13 +78,9 @@ function Submit({
   busy: string;
 }) {
   return (
-    <button
-      type="submit"
-      disabled={pending}
-      className="btn btn-admin-primary btn-md self-start"
-    >
+    <Button type="submit" size="lg" disabled={pending} className="self-start">
       {pending ? busy : label}
-    </button>
+    </Button>
   );
 }
 
@@ -176,12 +180,11 @@ export function ImportForm({ specialties }: { specialties: string[] }) {
           <label htmlFor="imp-file" className={LABEL}>
             Relatório de produtividade (PDF do sistema)
           </label>
-          <input
+          <Input
             id="imp-file"
             name="relatorio"
             type="file"
             accept="application/pdf"
-            className={FIELD}
           />
           <span className={HINT}>
             Do dia (De: 05/10 até 05/10), para o livro e o boletim; do mês, só
@@ -189,25 +192,23 @@ export function ImportForm({ specialties }: { specialties: string[] }) {
             lançamento.
           </span>
         </div>
-        <button
+        <Button
           type="button"
+          variant="outline"
           disabled={reading}
           onClick={(e) => read(e.currentTarget.form)}
-          className="btn btn-admin-secondary btn-md"
         >
           {reading ? "Lendo..." : "Ler relatório"}
-        </button>
+        </Button>
       </div>
       {note && (
-        <output className="text-[12.5px] font-semibold text-admin-primary">
-          {note}
-        </output>
+        <output className="text-sm font-semibold text-primary">{note}</output>
       )}
 
       {period && (
-        <fieldset className="flex flex-col gap-2 rounded-[12px] bg-admin-input-bg px-4 py-3.5 text-[13px] text-admin-text">
+        <fieldset className="flex flex-col gap-2 rounded-lg bg-muted/50 px-4 py-3.5 text-sm text-foreground">
           <legend className="sr-only">O que fazer com este relatório</legend>
-          <p className="font-bold text-admin-primary">
+          <p className="font-semibold text-foreground">
             O que fazer com este relatório
           </p>
           <label className="flex items-start gap-2">
@@ -217,7 +218,7 @@ export function ImportForm({ specialties }: { specialties: string[] }) {
               checked={toBook}
               disabled={!scope.oneDay}
               onChange={(e) => setToBook(e.target.checked)}
-              className="mt-0.5"
+              className="checkbox-admin mt-0.5"
             />
             <span>
               <strong>Lançar no Livro Diário Auxiliar</strong>: a receita do
@@ -238,7 +239,7 @@ export function ImportForm({ specialties }: { specialties: string[] }) {
                 checked={toBulletin}
                 disabled={!scope.oneMonth}
                 onChange={(e) => setToBulletin(e.target.checked)}
-                className="mt-0.5"
+                className="checkbox-admin mt-0.5"
               />
               <span>
                 <strong>Enviar ao boletim mensal (Transparência)</strong>: abre
@@ -263,31 +264,28 @@ export function ImportForm({ specialties }: { specialties: string[] }) {
 
       {rows.length > 0 && toBook && (
         <>
-          <div className="overflow-x-auto rounded-[12px] border border-admin-border">
-            <table className="w-full min-w-[760px]">
-              <thead className="bg-admin-input-bg text-left text-[11px] font-bold uppercase tracking-[0.05em] text-admin-muted">
-                <tr>
-                  <th className="px-2.5 py-2">Ato</th>
-                  <th className="px-2.5 py-2">Especialidade</th>
-                  <th className="px-2.5 py-2 text-right">Qtd.</th>
-                  <th className="px-2.5 py-2">Receita (R$)</th>
-                  <th className="px-2.5 py-2">
+          <div className="rounded-lg border">
+            <Table className="min-w-[760px]">
+              <TableHeader className="bg-muted/50">
+                <TableRow className="hover:bg-transparent">
+                  <TableHead className={TH}>Ato</TableHead>
+                  <TableHead className={TH}>Especialidade</TableHead>
+                  <TableHead className={`${TH} text-right`}>Qtd.</TableHead>
+                  <TableHead className={TH}>Receita (R$)</TableHead>
+                  <TableHead className={TH}>
                     Nº do ato, livro e folha, ou protocolo
-                  </th>
-                  <th className="px-2.5 py-2">Explicação</th>
-                  <th className="px-2.5 py-2">
+                  </TableHead>
+                  <TableHead className={TH}>Explicação</TableHead>
+                  <TableHead className={TH}>
                     <span className="sr-only">Ações</span>
-                  </th>
-                </tr>
-              </thead>
-              <tbody>
+                  </TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
                 {rows.map((r) => (
-                  <tr
-                    key={r.key}
-                    className="border-t border-admin-border align-top text-[12.5px]"
-                  >
-                    <td className="px-2.5 py-1.5">
-                      <input
+                  <TableRow key={r.key} className="align-top">
+                    <TableCell className="px-2.5 py-1.5">
+                      <Input
                         aria-label="Descrição do ato"
                         value={r.description}
                         onChange={(e) =>
@@ -299,15 +297,15 @@ export function ImportForm({ specialties }: { specialties: string[] }) {
                             ),
                           )
                         }
-                        className={SMALL}
+                        className="h-8"
                       />
-                      <span className="text-[11px] text-admin-muted">
+                      <span className="text-xs whitespace-normal text-muted-foreground">
                         {r.code || "sem código"} · repasses R${" "}
                         {money(r.fundsCents)} · ISS R$ {money(r.issCents)}
                       </span>
-                    </td>
-                    <td className="px-2.5 py-1.5">
-                      <input
+                    </TableCell>
+                    <TableCell className="px-2.5 py-1.5">
+                      <Input
                         aria-label="Especialidade"
                         list="book-specialties"
                         value={r.specialty}
@@ -320,12 +318,14 @@ export function ImportForm({ specialties }: { specialties: string[] }) {
                             ),
                           )
                         }
-                        className={SMALL}
+                        className="h-8"
                       />
-                    </td>
-                    <td className="px-2.5 py-1.5 text-right">{r.quantity}</td>
-                    <td className="px-2.5 py-1.5">
-                      <input
+                    </TableCell>
+                    <TableCell className="px-2.5 py-1.5 text-right tabular-nums">
+                      {r.quantity}
+                    </TableCell>
+                    <TableCell className="px-2.5 py-1.5">
+                      <Input
                         aria-label="Receita"
                         value={r.amount}
                         onChange={(e) =>
@@ -337,11 +337,11 @@ export function ImportForm({ specialties }: { specialties: string[] }) {
                             ),
                           )
                         }
-                        className={`${SMALL} max-w-[120px]`}
+                        className="h-8 max-w-[120px]"
                       />
-                    </td>
-                    <td className="px-2.5 py-1.5">
-                      <input
+                    </TableCell>
+                    <TableCell className="px-2.5 py-1.5">
+                      <Input
                         aria-label="Nº do ato, livro e folha, ou protocolo"
                         value={r.identification}
                         placeholder="Ex.: Livro 12, fls. 30 a 32"
@@ -354,11 +354,11 @@ export function ImportForm({ specialties }: { specialties: string[] }) {
                             ),
                           )
                         }
-                        className={SMALL}
+                        className="h-8"
                       />
-                    </td>
-                    <td className="px-2.5 py-1.5">
-                      <input
+                    </TableCell>
+                    <TableCell className="px-2.5 py-1.5">
+                      <Input
                         aria-label="Explicação"
                         value={r.explanation}
                         placeholder="Opcional"
@@ -371,31 +371,32 @@ export function ImportForm({ specialties }: { specialties: string[] }) {
                             ),
                           )
                         }
-                        className={SMALL}
+                        className="h-8"
                       />
-                    </td>
-                    <td className="px-2.5 py-1.5">
-                      <button
+                    </TableCell>
+                    <TableCell className="px-2.5 py-1.5">
+                      <Button
                         type="button"
+                        variant="destructive"
+                        size="sm"
                         onClick={() =>
                           setRows((p) => p.filter((x) => x.key !== r.key))
                         }
-                        className="btn btn-admin-danger btn-sm"
                       >
                         Excluir
-                      </button>
-                    </td>
-                  </tr>
+                      </Button>
+                    </TableCell>
+                  </TableRow>
                 ))}
-              </tbody>
-            </table>
+              </TableBody>
+            </Table>
             <datalist id="book-specialties">
               {specialties.map((s) => (
                 <option key={s} value={s} />
               ))}
             </datalist>
           </div>
-          <p className="text-[12.5px] text-admin-text">
+          <p className="text-sm text-foreground">
             Receita a lançar: <strong>R$ {money(total)}</strong> (emolumentos;
             os repasses aos fundos não são receita da serventia).
             {costs !== null && (
@@ -407,8 +408,12 @@ export function ImportForm({ specialties }: { specialties: string[] }) {
               </>
             )}
           </p>
-          <label className="flex items-start gap-2 text-[12.5px] text-admin-text">
-            <input type="checkbox" name="substituir" className="mt-0.5" />
+          <label className="flex items-start gap-2 text-sm text-foreground">
+            <input
+              type="checkbox"
+              name="substituir"
+              className="checkbox-admin mt-0.5"
+            />
             Substituir as receitas já lidas desse período (as anteriores ficam
             guardadas como excluídas)
           </label>
@@ -523,7 +528,7 @@ export function EntryForm({
     >
       <Feedback state={state} />
       {initial.id && <input type="hidden" name="id" value={initial.id} />}
-      <fieldset className="flex flex-wrap gap-4 text-[13px]">
+      <fieldset className="flex flex-wrap gap-4 text-sm">
         <legend className={LABEL}>Tipo</legend>
         {(interim || kind === "deposito"
           ? (["despesa", "receita", "deposito"] as const)
@@ -547,28 +552,28 @@ export function EntryForm({
       </fieldset>
 
       {kind !== "receita" && (
-        <section className="flex flex-col gap-2 rounded-[12px] bg-admin-input-bg px-4 py-3.5">
-          <p className="text-[13px] font-bold text-admin-primary">
+        <section className="flex flex-col gap-2 rounded-lg bg-muted/50 px-4 py-3.5">
+          <p className="text-sm font-semibold text-foreground">
             {kind === "despesa"
               ? "Comprovante (art. 191-A, caput e § 3º)"
               : "Comprovante do depósito"}
           </p>
           <div className="flex flex-wrap items-center gap-2">
-            <input
+            <Input
               name="comprovante"
               type="file"
               aria-label="Comprovante (PDF ou foto)"
               accept="application/pdf,image/*"
-              className={`${FIELD} max-w-[420px]`}
+              className="max-w-[420px]"
             />
-            <button
+            <Button
               type="button"
+              variant="outline"
               disabled={reading}
               onClick={(e) => read(e.currentTarget.form)}
-              className="btn btn-admin-secondary btn-md"
             >
               {reading ? "Lendo..." : "Ler comprovante"}
-            </button>
+            </Button>
           </div>
           <span className={HINT}>
             Do PDF (DAM, comprovante do banco) o sistema lê o valor, a data e o
@@ -578,7 +583,7 @@ export function EntryForm({
               : ""}
           </span>
           {note && (
-            <output className="text-[12.5px] font-semibold text-admin-primary">
+            <output className="text-sm font-semibold text-primary">
               {note}
             </output>
           )}
@@ -594,7 +599,7 @@ export function EntryForm({
                 ? "Data do depósito (art. 194, I)"
                 : "Dia da prática do ato (art. 190, § 1º)"}
           </label>
-          <input
+          <Input
             id="en-date"
             name="data"
             type="date"
@@ -602,14 +607,13 @@ export function EntryForm({
             max={today}
             value={v.date}
             onChange={set("date")}
-            className={FIELD}
           />
         </div>
         <div>
           <label htmlFor="en-amount" className={LABEL}>
             Valor (R$)
           </label>
-          <input
+          <Input
             id="en-amount"
             name="valor"
             required
@@ -617,7 +621,6 @@ export function EntryForm({
             placeholder="0,00"
             value={v.amount}
             onChange={set("amount")}
-            className={FIELD}
           />
         </div>
         {kind === "despesa" ? (
@@ -625,13 +628,13 @@ export function EntryForm({
             <label htmlFor="en-cat" className={LABEL}>
               Categoria (art. 191-A, § 1º)
             </label>
-            <select
+            <NativeSelect
               id="en-cat"
               name="categoria"
               required
               value={v.category}
               onChange={set("category")}
-              className={FIELD}
+              className="w-full"
             >
               <option value="">Escolha</option>
               {categories.map((c) => (
@@ -639,7 +642,7 @@ export function EntryForm({
                   {c.label}
                 </option>
               ))}
-            </select>
+            </NativeSelect>
           </div>
         ) : kind === "deposito" ? (
           <div />
@@ -648,14 +651,13 @@ export function EntryForm({
             <label htmlFor="en-spec" className={LABEL}>
               Especialidade (art. 190)
             </label>
-            <input
+            <Input
               id="en-spec"
               name="especialidade"
               required
               list="entry-specialties"
               value={v.specialty}
               onChange={set("specialty")}
-              className={FIELD}
             />
             <datalist id="entry-specialties">
               {specialties.map((s) => (
@@ -668,7 +670,7 @@ export function EntryForm({
           <label htmlFor="en-desc" className={LABEL}>
             Discriminação
           </label>
-          <input
+          <Input
             id="en-desc"
             name="descricao"
             required
@@ -682,7 +684,6 @@ export function EntryForm({
                   ? "Ex.: Excedente do 3º trimestre de 2026"
                   : "Ex.: Certidão de nascimento"
             }
-            className={FIELD}
           />
         </div>
         {kind === "deposito" ? null : kind === "despesa" ? (
@@ -690,13 +691,12 @@ export function EntryForm({
             <label htmlFor="en-sup" className={LABEL}>
               Fornecedor / favorecido
             </label>
-            <input
+            <Input
               id="en-sup"
               name="fornecedor"
               maxLength={160}
               value={v.supplier}
               onChange={set("supplier")}
-              className={FIELD}
             />
           </div>
         ) : (
@@ -705,20 +705,19 @@ export function EntryForm({
               <label htmlFor="en-code" className={LABEL}>
                 Código do ato
               </label>
-              <input
+              <Input
                 id="en-code"
                 name="codigo"
                 maxLength={20}
                 value={v.actCode}
                 onChange={set("actCode")}
-                className={FIELD}
               />
             </div>
             <div>
               <label htmlFor="en-qty" className={LABEL}>
                 Qtd.
               </label>
-              <input
+              <Input
                 id="en-qty"
                 name="quantidade"
                 type="number"
@@ -727,7 +726,6 @@ export function EntryForm({
                 onChange={(e) =>
                   setV((x) => ({ ...x, quantity: Number(e.target.value) || 1 }))
                 }
-                className={FIELD}
               />
             </div>
           </div>
@@ -740,51 +738,49 @@ export function EntryForm({
                 ? "Conta em que foi depositado (art. 194, I)"
                 : "Nº do ato, ou livro e folha, ou protocolo (art. 190)"}
           </label>
-          <input
+          <Input
             id="en-doc"
             name="documento"
             required={kind === "deposito"}
             maxLength={160}
             value={v.documentRef}
             onChange={set("documentRef")}
-            className={FIELD}
           />
         </div>
         <div className="md:col-span-2">
           <label htmlFor="en-exp" className={LABEL}>
             Explicação (vai no livro)
           </label>
-          <input
+          <Input
             id="en-exp"
             name="explicacao"
             maxLength={5000}
             value={v.explanation}
             onChange={set("explanation")}
             placeholder="Ex.: retificação do lançamento de 05/10"
-            className={FIELD}
           />
         </div>
       </div>
 
       {kind === "despesa" && (
         <>
-          <p className="rounded-[10px] bg-admin-input-bg px-3.5 py-2.5 text-[12.5px] text-admin-muted">
+          <p className="rounded-lg bg-muted/50 px-3.5 py-2.5 text-xs text-muted-foreground">
             {PERSONAL_EXPENSE_RULE} {RECEIPTS_RULE}
           </p>
           {warnings.length > 0 && (
-            <ul className="flex list-disc flex-col gap-1 rounded-[10px] bg-admin-warning-soft-bg py-2.5 pr-3.5 pl-8 text-[12.5px] text-admin-warning-text">
+            <ul className="flex list-disc flex-col gap-1 rounded-lg bg-warning-soft py-2.5 pr-3.5 pl-8 text-xs text-warning-text">
               {warnings.map((w) => (
                 <li key={w}>{w}</li>
               ))}
             </ul>
           )}
-          <label className="flex items-start gap-2.5 rounded-[10px] bg-admin-input-bg px-3.5 py-3 text-[13px] text-admin-text">
+          <label className="flex items-start gap-2.5 rounded-lg bg-muted/50 px-3.5 py-3 text-sm text-foreground">
             <input
               type="checkbox"
               name="fiscal"
               checked={fiscal}
               onChange={(e) => setFiscal(e.target.checked)}
-              className="mt-0.5"
+              className="checkbox-admin mt-0.5"
             />
             <span>
               <strong>Tratamento fiscal distinto</strong> (art. 193-A, § 2º):
@@ -799,12 +795,11 @@ export function EntryForm({
               <label htmlFor="en-fiscal" className={LABEL}>
                 Qual o tratamento fiscal
               </label>
-              <input
+              <Input
                 id="en-fiscal"
                 name="fiscalNota"
                 maxLength={1000}
                 defaultValue={initial.fiscalNote}
-                className={FIELD}
               />
             </div>
           )}
@@ -856,7 +851,7 @@ export function ReportForm({
   return (
     <form action={action} className={CARD}>
       <Feedback state={state} />
-      <fieldset className="flex flex-wrap gap-4 text-[13px]">
+      <fieldset className="flex flex-wrap gap-4 text-sm">
         <legend className={LABEL}>Qual página?</legend>
         {[
           ["dia", "Do dia"],
@@ -883,14 +878,13 @@ export function ReportForm({
             <label htmlFor="rp-day" className={LABEL}>
               Dia
             </label>
-            <input
+            <Input
               id="rp-day"
               name="dia"
               type="date"
               required
               max={today}
               defaultValue={today}
-              className={FIELD}
             />
           </div>
         )}
@@ -899,13 +893,12 @@ export function ReportForm({
             <label htmlFor="rp-month" className={LABEL}>
               Mês
             </label>
-            <input
+            <Input
               id="rp-month"
               name="mes"
               type="month"
               required
               defaultValue={month}
-              className={FIELD}
             />
           </div>
         )}
@@ -914,7 +907,7 @@ export function ReportForm({
             <label htmlFor="rp-year" className={LABEL}>
               Ano
             </label>
-            <input
+            <Input
               id="rp-year"
               name="ano"
               type="number"
@@ -922,7 +915,6 @@ export function ReportForm({
               max={2100}
               required
               defaultValue={Number(month.slice(0, 4))}
-              className={FIELD}
             />
           </div>
         )}
@@ -932,13 +924,12 @@ export function ReportForm({
               ? "Data do termo"
               : "Data da página"}
           </label>
-          <input
+          <Input
             id="rp-date"
             name="data"
             type="date"
             required
             defaultValue={today}
-            className={FIELD}
           />
         </div>
         <div
@@ -948,7 +939,7 @@ export function ReportForm({
           <label htmlFor="rp-signer" className={LABEL}>
             Quem assina
           </label>
-          <select id="rp-signer" name="assina" className={FIELD}>
+          <NativeSelect id="rp-signer" name="assina" className="w-full">
             {signers.length === 0 && (
               <option value="0">O Tabelião/Registrador</option>
             )}
@@ -957,18 +948,13 @@ export function ReportForm({
                 {s.name}
               </option>
             ))}
-          </select>
+          </NativeSelect>
         </div>
         <div>
           <label htmlFor="rp-notes" className={LABEL}>
             Observações
           </label>
-          <input
-            id="rp-notes"
-            name="observacoes"
-            maxLength={5000}
-            className={FIELD}
-          />
+          <Input id="rp-notes" name="observacoes" maxLength={5000} />
         </div>
       </div>
       {(kind === "abertura" || kind === "encerramento") && (
@@ -1002,24 +988,23 @@ export function ReportEditForm({
           <label htmlFor="re-date" className={LABEL}>
             Data da página
           </label>
-          <input
+          <Input
             id="re-date"
             name="data"
             type="date"
             required
             defaultValue={initial.issuedOn}
-            className={FIELD}
           />
         </div>
         <div>
           <label htmlFor="re-signer" className={LABEL}>
             Quem assina
           </label>
-          <select
+          <NativeSelect
             id="re-signer"
             name="assina"
             defaultValue={initial.signer}
-            className={FIELD}
+            className="w-full"
           >
             {signers.length === 0 && (
               <option value="0">O Tabelião/Registrador</option>
@@ -1029,23 +1014,26 @@ export function ReportEditForm({
                 {s.name}
               </option>
             ))}
-          </select>
+          </NativeSelect>
         </div>
         <div>
           <label htmlFor="re-notes" className={LABEL}>
             Observações
           </label>
-          <input
+          <Input
             id="re-notes"
             name="observacoes"
             maxLength={5000}
             defaultValue={initial.notes}
-            className={FIELD}
           />
         </div>
       </div>
-      <label className="flex items-start gap-2.5 rounded-[10px] bg-admin-input-bg px-3.5 py-3 text-[13px] text-admin-text">
-        <input type="checkbox" name="atualizar" className="mt-0.5" />
+      <label className="flex items-start gap-2.5 rounded-lg bg-muted/50 px-3.5 py-3 text-sm text-foreground">
+        <input
+          type="checkbox"
+          name="atualizar"
+          className="checkbox-admin mt-0.5"
+        />
         <span>
           <strong>Refazer com os lançamentos de agora</strong> (use depois de
           corrigir ou excluir um lançamento do período).
@@ -1099,21 +1087,21 @@ export function SettingsForm({
           <label htmlFor="cf-book" className={LABEL}>
             Número do livro (art. 186)
           </label>
-          <input
+          <Input
             id="cf-book"
             name="livro"
             type="number"
             min={1}
             max={9999}
             defaultValue={initial.bookNumber}
-            className={`${FIELD} max-w-[160px]`}
+            className="max-w-[160px]"
           />
         </div>
         <div>
           <label htmlFor="cf-sheets" className={LABEL}>
             Número de folhas do livro (art. 186)
           </label>
-          <input
+          <Input
             id="cf-sheets"
             name="folhas"
             type="number"
@@ -1121,7 +1109,7 @@ export function SettingsForm({
             max={100000}
             defaultValue={initial.sheetCount || ""}
             placeholder="Ex.: 200"
-            className={`${FIELD} max-w-[160px]`}
+            className="max-w-[160px]"
           />
         </div>
         <span className={`${HINT} md:col-span-2`}>
@@ -1136,14 +1124,14 @@ export function SettingsForm({
         <label htmlFor="cf-spec" className={LABEL}>
           Especialidades pelo código do ato (uma por linha: código = nome)
         </label>
-        <textarea
+        <Textarea
           id="cf-spec"
           name="especialidades"
           rows={6}
           defaultValue={initial.specialties
             .map((s) => `${s.prefix} = ${s.name}`)
             .join("\n")}
-          className={`${FIELD} font-mono`}
+          className="font-mono"
         />
         <span className={HINT}>
           &quot;A receita será lançada no Livro Diário Auxiliar separadamente,
@@ -1156,12 +1144,11 @@ export function SettingsForm({
         <label htmlFor="cf-resp" className={LABEL}>
           Preposto que escritura (opcional)
         </label>
-        <input
+        <Input
           id="cf-resp"
           name="responsavel"
           maxLength={160}
           defaultValue={initial.responsible}
-          className={FIELD}
         />
         <span className={HINT}>
           &quot;A responsabilidade pela escrituração dos livros referidos neste
@@ -1169,13 +1156,13 @@ export function SettingsForm({
           preposto&quot; (art. 187).
         </span>
       </div>
-      <label className="flex items-start gap-2.5 rounded-[10px] bg-admin-input-bg px-3.5 py-3 text-[13px] text-admin-text">
+      <label className="flex items-start gap-2.5 rounded-lg bg-muted/50 px-3.5 py-3 text-sm text-foreground">
         <input
           type="checkbox"
           name="interino"
           checked={interim}
           onChange={(e) => setInterim(e.target.checked)}
-          className="mt-0.5"
+          className="checkbox-admin mt-0.5"
         />
         <span>
           <strong>Serventia vaga, respondida por interino</strong> (art. 194): a
@@ -1190,7 +1177,7 @@ export function SettingsForm({
             <label htmlFor="cf-teto" className={LABEL}>
               90,25% do subsídio mensal de ministro do STF (R$)
             </label>
-            <input
+            <Input
               id="cf-teto"
               name="teto"
               inputMode="decimal"
@@ -1198,7 +1185,7 @@ export function SettingsForm({
               defaultValue={
                 initial.ceilingCents ? money(initial.ceilingCents) : ""
               }
-              className={`${FIELD} max-w-[240px]`}
+              className="max-w-[240px]"
             />
             <span className={HINT}>
               Atualize quando o subsídio mudar: cada página guarda o valor da
@@ -1207,7 +1194,7 @@ export function SettingsForm({
           </div>
           <fieldset>
             <legend className={LABEL}>Periodicidade (art. 194, VI)</legend>
-            <label className="flex items-start gap-2 text-[13px]">
+            <label className="flex items-start gap-2 text-sm">
               <input
                 type="radio"
                 name="periodicidade"
@@ -1219,7 +1206,7 @@ export function SettingsForm({
               trimestre, não havendo lei estadual que estabeleça periodicidade
               diversa&quot;
             </label>
-            <label className="mt-1.5 flex items-start gap-2 text-[13px]">
+            <label className="mt-1.5 flex items-start gap-2 text-sm">
               <input
                 type="radio"
                 name="periodicidade"
@@ -1264,19 +1251,20 @@ function TermBlock({
 }) {
   const [state, action, pending] = useActionState(issueReport, IDLE);
   return (
-    <div className="flex flex-col gap-3 rounded-[12px] border border-admin-border bg-admin-input-bg px-4 py-4">
+    <div className="flex flex-col gap-3 rounded-lg bg-muted/50 p-4">
       <div>
-        <p className="font-serif text-[16px] font-semibold text-admin-primary">
-          {title}
-        </p>
-        <p className="mt-1 text-[12.5px] text-admin-muted">{description}</p>
+        <p className="text-base font-semibold text-foreground">{title}</p>
+        <p className="mt-1 text-xs text-muted-foreground">{description}</p>
       </div>
       {done ? (
         <div className="flex flex-wrap items-center gap-2">
-          <span className="rounded-full bg-admin-success-bg px-3 py-1 text-[12px] font-semibold text-admin-success-text">
+          <span className="rounded-full bg-success-soft px-3 py-1 text-xs font-semibold text-success-text">
             Gerado em {br(done.date)}
           </span>
-          <a href={done.href} className="btn btn-admin-secondary btn-md">
+          <a
+            href={done.href}
+            className={buttonVariants({ variant: "outline" })}
+          >
             Abrir, assinar ou imprimir
           </a>
         </div>
@@ -1288,23 +1276,23 @@ function TermBlock({
             <label htmlFor={`term-${kind}`} className={LABEL}>
               Data do termo
             </label>
-            <input
+            <Input
               id={`term-${kind}`}
               name="data"
               type="date"
               required
               defaultValue={today}
-              className={`${FIELD} max-w-[180px]`}
+              className="max-w-[180px]"
             />
           </div>
-          <button
+          <Button
             type="submit"
+            variant={primary ? "default" : "outline"}
             disabled={pending || Boolean(disabled)}
             title={disabled ?? undefined}
-            className={`btn ${primary ? "btn-admin-primary" : "btn-admin-secondary"} btn-md`}
           >
             {pending ? "Gerando..." : `Gerar ${title.toLowerCase()}`}
-          </button>
+          </Button>
           {disabled && <span className={HINT}>{disabled}</span>}
         </form>
       )}

@@ -29,6 +29,15 @@ import {
   INTERIM_EXCESS_HELP,
 } from "../../../_components/screen-help.ts";
 import { ScreenHelpButton } from "../../../_components/screen-help-button.tsx";
+import { Button, buttonVariants } from "../../../_ui/button.tsx";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "../../../_ui/table.tsx";
 import { monthPeriod, requireBookAccess } from "./_lib/access.ts";
 import { sendMonthToBulletin } from "./actions.ts";
 import { BookTermsPanel, RemoveEntryButton, ReportForm } from "./forms.tsx";
@@ -44,9 +53,8 @@ const DONE: Record<string, string> = {
   "pagina-excluida": "Página excluída. Ela continua guardada.",
 };
 
-const TH =
-  "px-3 py-2.5 text-left text-[11px] font-bold uppercase tracking-[0.05em] text-admin-muted";
-const TD = "px-3 py-2.5 align-top text-[13px] text-admin-text";
+const TH = "px-3 text-xs font-medium text-muted-foreground";
+const TD = "px-3 py-2.5 align-top whitespace-normal text-foreground";
 const m = (c: number) => `R$ ${formatMoneyBRL(c)}`;
 
 function shiftMonth(month: string, delta: number): string {
@@ -125,29 +133,26 @@ export default async function DailyBookPage({
         description="Código Nacional de Normas (Provimento CNJ nº 149/2023, arts. 185 a 195-D, com a redação do Provimento CNJ nº 259/2026): termos de abertura e encerramento, receita por especialidade no dia do ato, despesas até o fim do mês, apuração mensal e balanço anual."
         actions={
           <div className="flex flex-wrap gap-2">
-            <Link
-              href={`${base}/importar`}
-              className="btn btn-admin-primary btn-md"
-            >
+            <Link href={`${base}/importar`} className={buttonVariants()}>
               <AdminIcon name="upload" className="h-4 w-4" /> Anexar
               produtividade
             </Link>
             <Link
               href={`${base}/lancamento?tipo=despesa`}
-              className="btn btn-admin-secondary btn-md"
+              className={buttonVariants({ variant: "outline" })}
             >
               <AdminIcon name="plus" className="h-4 w-4" /> Lançar despesa
             </Link>
             <Link
               href={`${base}/lancamento?tipo=receita`}
-              className="btn btn-admin-secondary btn-md"
+              className={buttonVariants({ variant: "outline" })}
             >
               <AdminIcon name="plus" className="h-4 w-4" /> Lançar receita
             </Link>
             {settings.interim && (
               <Link
                 href={`${base}/lancamento?tipo=deposito`}
-                className="btn btn-admin-secondary btn-md"
+                className={buttonVariants({ variant: "outline" })}
               >
                 <AdminIcon name="plus" className="h-4 w-4" /> Depósito do
                 excedente
@@ -156,16 +161,16 @@ export default async function DailyBookPage({
           </div>
         }
       />
-      <main className="flex max-w-[1150px] flex-col gap-5 px-[30px] py-7 max-md:px-4">
+      <main className="flex max-w-[1150px] flex-col gap-5 px-4 py-7 md:px-8">
         {done && (
-          <p className="rounded-[12px] bg-admin-success-bg px-4 py-3 text-[13px] font-semibold text-admin-success-text">
+          <p className="rounded-lg bg-success-soft px-4 py-3 text-sm font-semibold text-success-text">
             {done}
           </p>
         )}
         {duties.map((d) => (
           <p
             key={d.id}
-            className={`rounded-[12px] border px-4 py-3 text-[13px] ${d.late ? "border-admin-error-border bg-admin-error-bg text-admin-error-text" : "border-admin-warning-soft-border bg-admin-warning-soft-bg text-admin-warning-text"}`}
+            className={`rounded-lg border px-4 py-3 text-sm ${d.late ? "border-destructive/40 bg-destructive-soft text-destructive" : "border-warning/30 bg-warning-soft text-warning-text"}`}
           >
             <strong>
               {d.title}
@@ -175,7 +180,7 @@ export default async function DailyBookPage({
           </p>
         ))}
         {lastDays && (
-          <p className="rounded-[12px] border border-admin-warning-soft-border bg-admin-warning-soft-bg px-4 py-3 text-[13px] text-admin-warning-text">
+          <p className="rounded-lg border border-warning/30 bg-warning-soft px-4 py-3 text-sm text-warning-text">
             <strong>Fim do mês:</strong> as despesas de{" "}
             {monthLabel(period.start)} precisam estar lançadas até{" "}
             {brDate(period.end)} (art. 191-A), com o comprovante.
@@ -183,9 +188,9 @@ export default async function DailyBookPage({
         )}
 
         {/* Art. 186: the terms in plain sight (decision of 12/11/2026). */}
-        <section className="rounded-[14px] border-2 border-admin-primary-soft bg-admin-card px-5 py-4">
+        <section className="rounded-xl border-2 border-primary bg-card px-5 py-4">
           <div className="mb-3 flex flex-wrap items-center gap-2.5">
-            <h2 className="font-serif text-[19px] font-semibold text-admin-primary">
+            <h2 className="text-lg font-semibold text-foreground">
               Abertura e encerramento do livro nº {settings.bookNumber}
             </h2>
             <ScreenHelpButton
@@ -194,7 +199,7 @@ export default async function DailyBookPage({
               label="O que são os termos de abertura e de encerramento"
             />
             {!term("abertura") && (
-              <span className="rounded-full bg-admin-warning-soft-bg px-3 py-1 text-[12px] font-semibold text-admin-warning-text">
+              <span className="rounded-full bg-warning-soft px-3 py-1 text-xs font-semibold text-warning-text">
                 Livro ainda não aberto
               </span>
             )}
@@ -209,10 +214,10 @@ export default async function DailyBookPage({
           />
         </section>
 
-        <section className="flex flex-wrap items-center gap-4 rounded-[14px] border-2 border-admin-primary-soft bg-admin-card px-5 py-4">
+        <section className="flex flex-wrap items-center gap-4 rounded-xl border-2 border-primary bg-card px-5 py-4">
           <div className="flex min-w-[260px] flex-1 flex-col gap-1">
             <div className="flex flex-wrap items-center gap-2.5">
-              <h2 className="font-serif text-[19px] font-semibold text-admin-primary">
+              <h2 className="text-lg font-semibold text-foreground">
                 Calculadora do excedente do interino
               </h2>
               <ScreenHelpButton
@@ -221,16 +226,13 @@ export default async function DailyBookPage({
                 label="O que é o excedente de 90,25% do STF, com exemplos"
               />
             </div>
-            <p className="text-[13px] text-admin-muted">
+            <p className="text-sm text-muted-foreground">
               Para serventia vaga: calcula quanto da renda líquida ultrapassa
               90,25% do subsídio de ministro do STF e deve ser depositado à
               disposição do Tribunal de Justiça (art. 194).
             </p>
           </div>
-          <Link
-            href={`${base}/excedente`}
-            className="btn btn-admin-primary btn-md"
-          >
+          <Link href={`${base}/excedente`} className={buttonVariants()}>
             <AdminIcon name="grid" className="h-4 w-4" /> Abrir a calculadora
           </Link>
         </section>
@@ -238,27 +240,27 @@ export default async function DailyBookPage({
         <div className="flex flex-wrap items-center gap-3">
           <Link
             href={`${base}?mes=${shiftMonth(month, -1)}`}
-            className="btn btn-admin-secondary btn-sm"
+            className={buttonVariants({ variant: "outline", size: "sm" })}
           >
             ‹ Mês anterior
           </Link>
-          <h2 className="font-serif text-[20px] font-semibold text-admin-primary">
+          <h2 className="text-xl font-semibold text-foreground">
             {monthLabel(period.start).charAt(0).toUpperCase()}
             {monthLabel(period.start).slice(1)}
           </h2>
           <Link
             href={`${base}?mes=${shiftMonth(month, 1)}`}
-            className="btn btn-admin-secondary btn-sm"
+            className={buttonVariants({ variant: "outline", size: "sm" })}
           >
             Próximo mês ›
           </Link>
           {canBulletin && (
             <form action={sendMonthToBulletin} className="ml-auto">
               <input type="hidden" name="mes" value={month} />
-              <button type="submit" className="btn btn-admin-secondary btn-sm">
+              <Button type="submit" variant="outline" size="sm">
                 <AdminIcon name="upload" className="h-4 w-4" /> Enviar o mês ao
                 boletim
-              </button>
+              </Button>
             </form>
           )}
         </div>
@@ -288,29 +290,26 @@ export default async function DailyBookPage({
               `ISSQN ${m(sum.issCents)} · fora da receita (art. 190, § 3º)`,
             ],
           ].map(([label, value, hint]) => (
-            <div
-              key={label}
-              className="rounded-[14px] border border-admin-border bg-admin-card px-5 py-4"
-            >
-              <p className="text-[11.5px] font-bold uppercase tracking-[0.06em] text-admin-muted">
+            <div key={label} className="rounded-xl border bg-card px-5 py-4">
+              <p className="text-xs font-medium text-muted-foreground">
                 {label}
               </p>
-              <p className="font-serif text-[24px] font-semibold text-admin-primary">
+              <p className="text-2xl font-semibold text-foreground tabular-nums">
                 {value}
               </p>
-              <p className="text-[12px] text-admin-muted">{hint}</p>
+              <p className="text-xs text-muted-foreground">{hint}</p>
             </div>
           ))}
         </section>
 
-        <section className="overflow-hidden rounded-[14px] border border-admin-border bg-admin-card">
-          <div className="flex flex-wrap items-center justify-between gap-2 border-b border-admin-border px-5 py-3.5">
-            <h2 className="font-serif text-[17px] font-semibold text-admin-primary">
+        <section className="overflow-hidden rounded-xl border bg-card">
+          <div className="flex flex-wrap items-center justify-between gap-2 border-b px-5 py-3.5">
+            <h2 className="text-lg font-semibold text-foreground">
               Lançamentos do mês
             </h2>
             <Link
               href={`${base}?mes=${month}${showRemoved ? "" : "&excluidos=1"}`}
-              className="text-[12.5px] font-semibold text-admin-primary underline"
+              className="text-xs font-semibold text-primary underline"
             >
               {showRemoved
                 ? "Esconder os excluídos"
@@ -318,112 +317,118 @@ export default async function DailyBookPage({
             </Link>
           </div>
           {rows.length === 0 ? (
-            <p className="px-5 py-4 text-[13px] text-admin-muted">
+            <p className="px-5 py-4 text-sm text-muted-foreground">
               Nenhum lançamento neste mês. Comece em{" "}
               <strong>Anexar produtividade</strong> (as receitas) e{" "}
               <strong>Lançar despesa</strong>.
             </p>
           ) : (
-            <div className="overflow-x-auto">
-              <table className="w-full min-w-[860px]">
-                <thead className="border-b border-admin-border bg-admin-input-bg">
-                  <tr>
-                    <th className={TH}>Data</th>
-                    <th className={TH}>Discriminação</th>
-                    <th className={`${TH} text-right`}>Receita</th>
-                    <th className={`${TH} text-right`}>Despesa</th>
-                    <th className={TH}>
-                      <span className="sr-only">Ações</span>
-                    </th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {rows.map((row) => {
-                    const e = entryOf(row);
-                    const removed = row.removedAt !== null;
-                    return (
-                      <tr
-                        key={row.id}
-                        className={`border-b border-admin-border last:border-0 ${removed ? "opacity-55" : ""}`}
-                      >
-                        <td className={TD}>{brDate(e.date)}</td>
-                        <td className={TD}>
-                          <span
-                            className={`font-semibold ${removed ? "line-through" : ""}`}
-                          >
-                            {e.kind === "receita"
-                              ? e.specialty
-                              : e.kind === "deposito"
-                                ? `Depósito do excedente (art. 194, I): R$ ${formatMoneyBRL(e.amountCents)}`
-                                : categoryLabel(e.category)}
-                          </span>
-                          <span className="block">
-                            {e.actCode ? `${e.actCode} - ` : ""}
-                            {e.description}
-                            {e.quantity > 1 ? ` (${e.quantity} atos)` : ""}
-                            {e.supplier ? ` · ${e.supplier}` : ""}
-                            {e.documentRef
-                              ? ` · ${e.kind === "deposito" ? "conta " : ""}${e.documentRef}`
-                              : ""}
-                          </span>
-                          {(e.explanation || e.fiscalDistinct) && (
-                            <span className="block text-[12px] text-admin-muted">
-                              {e.fiscalDistinct
-                                ? "Tratamento fiscal distinto. "
-                                : ""}
-                              {e.explanation}
-                            </span>
-                          )}
-                          {removed && (
-                            <span className="block text-[12px] text-admin-muted">
-                              Excluído: {row.removeReason}
-                            </span>
-                          )}
-                        </td>
-                        <td className={`${TD} text-right`}>
+            <Table className="min-w-[860px]">
+              <TableHeader className="bg-muted/50">
+                <TableRow className="hover:bg-transparent">
+                  <TableHead className={TH}>Data</TableHead>
+                  <TableHead className={TH}>Discriminação</TableHead>
+                  <TableHead className={`${TH} text-right`}>Receita</TableHead>
+                  <TableHead className={`${TH} text-right`}>Despesa</TableHead>
+                  <TableHead className={TH}>
+                    <span className="sr-only">Ações</span>
+                  </TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {rows.map((row) => {
+                  const e = entryOf(row);
+                  const removed = row.removedAt !== null;
+                  return (
+                    <TableRow
+                      key={row.id}
+                      className={removed ? "opacity-55" : ""}
+                    >
+                      <TableCell className={`${TD} tabular-nums`}>
+                        {brDate(e.date)}
+                      </TableCell>
+                      <TableCell className={TD}>
+                        <span
+                          className={`font-semibold ${removed ? "line-through" : ""}`}
+                        >
                           {e.kind === "receita"
-                            ? formatMoneyBRL(e.amountCents)
+                            ? e.specialty
+                            : e.kind === "deposito"
+                              ? `Depósito do excedente (art. 194, I): R$ ${formatMoneyBRL(e.amountCents)}`
+                              : categoryLabel(e.category)}
+                        </span>
+                        <span className="block">
+                          {e.actCode ? `${e.actCode} - ` : ""}
+                          {e.description}
+                          {e.quantity > 1 ? ` (${e.quantity} atos)` : ""}
+                          {e.supplier ? ` · ${e.supplier}` : ""}
+                          {e.documentRef
+                            ? ` · ${e.kind === "deposito" ? "conta " : ""}${e.documentRef}`
                             : ""}
-                        </td>
-                        <td className={`${TD} text-right`}>
-                          {e.kind === "despesa"
-                            ? formatMoneyBRL(e.amountCents)
-                            : ""}
-                        </td>
-                        <td className={`${TD} text-right`}>
-                          {!removed && (
-                            <span className="inline-flex flex-wrap justify-end gap-1.5">
-                              {e.hasAttachment && (
-                                <a
-                                  href={`${base}/lancamento/${row.id}/comprovante`}
-                                  target="_blank"
-                                  rel="noreferrer"
-                                  className="btn btn-admin-secondary btn-sm"
-                                >
-                                  Comprovante
-                                </a>
-                              )}
-                              <Link
-                                href={`${base}/lancamento?id=${row.id}`}
-                                className="btn btn-admin-secondary btn-sm"
+                        </span>
+                        {(e.explanation || e.fiscalDistinct) && (
+                          <span className="block text-xs text-muted-foreground">
+                            {e.fiscalDistinct
+                              ? "Tratamento fiscal distinto. "
+                              : ""}
+                            {e.explanation}
+                          </span>
+                        )}
+                        {removed && (
+                          <span className="block text-xs text-muted-foreground">
+                            Excluído: {row.removeReason}
+                          </span>
+                        )}
+                      </TableCell>
+                      <TableCell className={`${TD} text-right tabular-nums`}>
+                        {e.kind === "receita"
+                          ? formatMoneyBRL(e.amountCents)
+                          : ""}
+                      </TableCell>
+                      <TableCell className={`${TD} text-right tabular-nums`}>
+                        {e.kind === "despesa"
+                          ? formatMoneyBRL(e.amountCents)
+                          : ""}
+                      </TableCell>
+                      <TableCell className={`${TD} text-right`}>
+                        {!removed && (
+                          <span className="inline-flex flex-wrap justify-end gap-1.5">
+                            {e.hasAttachment && (
+                              <a
+                                href={`${base}/lancamento/${row.id}/comprovante`}
+                                target="_blank"
+                                rel="noreferrer"
+                                className={buttonVariants({
+                                  variant: "outline",
+                                  size: "sm",
+                                })}
                               >
-                                Editar
-                              </Link>
-                              <RemoveEntryButton id={row.id} />
-                            </span>
-                          )}
-                        </td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-            </div>
+                                Comprovante
+                              </a>
+                            )}
+                            <Link
+                              href={`${base}/lancamento?id=${row.id}`}
+                              className={buttonVariants({
+                                variant: "outline",
+                                size: "sm",
+                              })}
+                            >
+                              Editar
+                            </Link>
+                            <RemoveEntryButton id={row.id} />
+                          </span>
+                        )}
+                      </TableCell>
+                    </TableRow>
+                  );
+                })}
+              </TableBody>
+            </Table>
           )}
         </section>
 
         <section className="flex flex-col gap-3">
-          <h2 className="font-serif text-[17px] font-semibold text-admin-primary">
+          <h2 className="text-lg font-semibold text-foreground">
             Gerar PDF do livro
           </h2>
           <ReportForm
@@ -433,12 +438,12 @@ export default async function DailyBookPage({
           />
         </section>
 
-        <section className="overflow-hidden rounded-[14px] border border-admin-border bg-admin-card">
-          <h2 className="border-b border-admin-border px-5 py-3.5 font-serif text-[17px] font-semibold text-admin-primary">
+        <section className="overflow-hidden rounded-xl border bg-card">
+          <h2 className="border-b px-5 py-3.5 text-lg font-semibold text-foreground">
             Páginas geradas
           </h2>
           {reports.length === 0 ? (
-            <p className="px-5 py-4 text-[13px] text-admin-muted">
+            <p className="px-5 py-4 text-sm text-muted-foreground">
               Nenhuma página gerada ainda.
             </p>
           ) : (
@@ -446,11 +451,11 @@ export default async function DailyBookPage({
               {reports.map((r) => (
                 <li
                   key={r.id}
-                  className="flex flex-wrap items-center gap-3 border-b border-admin-border px-5 py-3 last:border-0"
+                  className="flex flex-wrap items-center gap-3 border-b px-5 py-3 last:border-0"
                 >
                   <Link
                     href={`${base}/paginas/${r.id}`}
-                    className="mr-auto text-[13.5px] font-semibold text-admin-primary underline"
+                    className="mr-auto text-sm font-semibold text-primary underline"
                   >
                     {BOOK_DOC_LABELS[r.kind as BookDocKind]}:{" "}
                     {r.kind === "abertura" || r.kind === "encerramento"
@@ -464,7 +469,7 @@ export default async function DailyBookPage({
                   {(() => {
                     const b = snapshotOf(r).book;
                     return b?.firstSheet && b.lastSheet ? (
-                      <span className="text-[12px] text-admin-muted">
+                      <span className="text-xs text-muted-foreground">
                         livro {b.number}, fls. {b.firstSheet}
                         {b.lastSheet !== b.firstSheet
                           ? ` a ${b.lastSheet}`
@@ -472,7 +477,7 @@ export default async function DailyBookPage({
                       </span>
                     ) : null;
                   })()}
-                  <span className="text-[12px] text-admin-muted">
+                  <span className="text-xs text-muted-foreground">
                     gerada em {brDate(toIsoDate(r.createdAt, OFFICE_TIME_ZONE))}
                   </span>
                 </li>

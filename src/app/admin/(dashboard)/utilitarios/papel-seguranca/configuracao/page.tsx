@@ -22,13 +22,13 @@ export default async function SettingsPage() {
         }}
         description="A quem os ofícios vão e a norma do Estado que eles citam. Vale para os próximos ofícios; os já gerados ficam como foram."
       />
-      <main className="flex max-w-[900px] flex-col gap-4 px-[30px] py-7 max-md:px-4">
+      <main className="flex max-w-[900px] flex-col gap-4 px-4 py-7 md:px-8">
         <SettingsForm initial={settings} />
-        <p className="text-[12.5px] text-admin-muted">
+        <p className="text-xs text-muted-foreground">
           Quem assina os ofícios vem da mesma lista das guias e do ISS:{" "}
           <Link
             href="/admin/configuracoes/quem-assina"
-            className="font-semibold text-admin-primary underline"
+            className="font-medium text-primary underline underline-offset-4"
           >
             Configurações › Quem assina
           </Link>

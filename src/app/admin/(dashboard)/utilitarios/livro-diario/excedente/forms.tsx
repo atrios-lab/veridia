@@ -12,6 +12,10 @@ import {
   type ExcessPeriod,
 } from "@/core/daily-book/excess-calc.ts";
 import { ConfirmAction } from "../../../../_components/confirm-action.tsx";
+import { Button } from "../../../../_ui/button.tsx";
+import { Input } from "../../../../_ui/input.tsx";
+import { Label } from "../../../../_ui/label.tsx";
+import { NativeSelect } from "../../../../_ui/native-select.tsx";
 import {
   type ExcessFormState,
   readBookFigures,
@@ -19,10 +23,7 @@ import {
   saveExcess,
 } from "./actions.ts";
 
-const FIELD =
-  "w-full rounded-[9px] border border-admin-input-border bg-admin-input-bg px-3.5 py-2.5 text-[13.5px] text-admin-text outline-none focus:border-admin-primary-soft";
-const LABEL = "mb-1.5 block text-[12.5px] font-semibold text-admin-text";
-const HINT = "mt-1 block text-[11.5px] text-admin-muted";
+const HINT = "mt-1 block text-xs text-muted-foreground";
 const IDLE: ExcessFormState = { status: "idle" };
 
 const money = (c: number) =>
@@ -138,7 +139,7 @@ export function ExcessForm({ initial }: { initial: ExcessInitial }) {
       {state.status === "error" && (
         <p
           role="alert"
-          className="rounded-[10px] bg-admin-error-bg px-3.5 py-2.5 text-[13px] font-semibold text-admin-error-text"
+          className="rounded-lg bg-destructive-soft px-3.5 py-2.5 text-sm font-semibold text-destructive"
         >
           {state.message}
         </p>
@@ -148,7 +149,7 @@ export function ExcessForm({ initial }: { initial: ExcessInitial }) {
       <input type="hidden" name="fim" value={range.end} />
 
       <Step n={1} title="Período da apuração">
-        <fieldset className="flex flex-col gap-2 text-[13px]">
+        <fieldset className="flex flex-col gap-2 text-sm">
           <legend className="sr-only">Periodicidade</legend>
           {(
             [
@@ -171,11 +172,11 @@ export function ExcessForm({ initial }: { initial: ExcessInitial }) {
                 value={value}
                 checked={period === value}
                 onChange={() => setPeriod(value)}
-                className="mt-1"
+                className="mt-1 accent-primary"
               />
               <span>
                 <strong>{label}</strong>
-                <span className="block text-[12px] text-admin-muted">
+                <span className="block text-xs text-muted-foreground">
                   {hint}
                 </span>
               </span>
@@ -185,25 +186,24 @@ export function ExcessForm({ initial }: { initial: ExcessInitial }) {
         <div className="grid gap-4 sm:grid-cols-2">
           {period === "mensal" ? (
             <div>
-              <label htmlFor="ex-month" className={LABEL}>
+              <Label htmlFor="ex-month" className="mb-1.5">
                 Mês
-              </label>
-              <input
+              </Label>
+              <Input
                 id="ex-month"
                 type="month"
                 required
                 value={month}
                 onChange={(e) => setMonth(e.target.value)}
-                className={FIELD}
               />
             </div>
           ) : (
             <>
               <div>
-                <label htmlFor="ex-year" className={LABEL}>
+                <Label htmlFor="ex-year" className="mb-1.5">
                   Ano
-                </label>
-                <input
+                </Label>
+                <Input
                   id="ex-year"
                   type="number"
                   min={2000}
@@ -211,24 +211,23 @@ export function ExcessForm({ initial }: { initial: ExcessInitial }) {
                   required
                   value={year}
                   onChange={(e) => setYear(Number(e.target.value) || year)}
-                  className={FIELD}
                 />
               </div>
               <div>
-                <label htmlFor="ex-quarter" className={LABEL}>
+                <Label htmlFor="ex-quarter" className="mb-1.5">
                   Trimestre
-                </label>
-                <select
+                </Label>
+                <NativeSelect
                   id="ex-quarter"
                   value={quarter}
                   onChange={(e) => setQuarter(Number(e.target.value))}
-                  className={FIELD}
+                  className="w-full"
                 >
                   <option value={1}>1º trimestre (janeiro a março)</option>
                   <option value={2}>2º trimestre (abril a junho)</option>
                   <option value={3}>3º trimestre (julho a setembro)</option>
                   <option value={4}>4º trimestre (outubro a dezembro)</option>
-                </select>
+                </NativeSelect>
               </div>
             </>
           )}
@@ -238,10 +237,10 @@ export function ExcessForm({ initial }: { initial: ExcessInitial }) {
       <Step n={2} title="Teto do interino">
         <div className="grid gap-4 sm:grid-cols-2">
           <div>
-            <label htmlFor="ex-subsidy" className={LABEL}>
+            <Label htmlFor="ex-subsidy" className="mb-1.5">
               Subsídio mensal de ministro do STF (R$)
-            </label>
-            <input
+            </Label>
+            <Input
               id="ex-subsidy"
               name="subsidio"
               required
@@ -249,22 +248,23 @@ export function ExcessForm({ initial }: { initial: ExcessInitial }) {
               placeholder="Ex.: 40.000,00"
               value={v.subsidy}
               onChange={set("subsidy")}
-              className={FIELD}
             />
             <span className={HINT}>
               Digite o valor cheio; a calculadora aplica os 90,25%.
             </span>
           </div>
-          <dl className="flex flex-col justify-center gap-1 rounded-[10px] bg-admin-input-bg px-4 py-3 text-[13px]">
+          <dl className="flex flex-col justify-center gap-1 rounded-lg bg-muted/50 px-4 py-3 text-sm">
             <div className="flex justify-between gap-3">
               <dt>Teto do mês (90,25%)</dt>
-              <dd className="font-semibold">
+              <dd className="font-semibold tabular-nums">
                 R$ {money(result.ceilingMonthCents)}
               </dd>
             </div>
             <div className="flex justify-between gap-3">
               <dt>Teto do período ({months})</dt>
-              <dd className="font-semibold">R$ {money(result.limitCents)}</dd>
+              <dd className="font-semibold tabular-nums">
+                R$ {money(result.limitCents)}
+              </dd>
             </div>
           </dl>
         </div>
@@ -273,10 +273,10 @@ export function ExcessForm({ initial }: { initial: ExcessInitial }) {
       <Step n={3} title="Receitas e despesas do período">
         <div className="grid gap-4 sm:grid-cols-2">
           <div>
-            <label htmlFor="ex-revenue" className={LABEL}>
+            <Label htmlFor="ex-revenue" className="mb-1.5">
               Receitas (R$)
-            </label>
-            <input
+            </Label>
+            <Input
               id="ex-revenue"
               name="receitas"
               required
@@ -284,15 +284,14 @@ export function ExcessForm({ initial }: { initial: ExcessInitial }) {
               placeholder="0,00"
               value={v.revenue}
               onChange={set("revenue")}
-              className={FIELD}
             />
             <span className={HINT}>Emolumentos do período.</span>
           </div>
           <div>
-            <label htmlFor="ex-expenses" className={LABEL}>
+            <Label htmlFor="ex-expenses" className="mb-1.5">
               Despesas (R$)
-            </label>
-            <input
+            </Label>
+            <Input
               id="ex-expenses"
               name="despesas"
               required
@@ -300,7 +299,6 @@ export function ExcessForm({ initial }: { initial: ExcessInitial }) {
               placeholder="0,00"
               value={v.expenses}
               onChange={set("expenses")}
-              className={FIELD}
             />
             <span className={HINT}>
               Despesas da serventia (art. 194, IV), sem a remuneração do próprio
@@ -309,18 +307,18 @@ export function ExcessForm({ initial }: { initial: ExcessInitial }) {
           </div>
         </div>
         <div className="flex flex-wrap items-center gap-3">
-          <button
+          <Button
             type="button"
+            variant="outline"
             disabled={reading}
             onClick={fromBook}
-            className="btn btn-admin-secondary btn-md"
           >
             {reading
               ? "Lendo o livro..."
               : "Preencher com os lançamentos do livro"}
-          </button>
+          </Button>
           {note && (
-            <output className="text-[12.5px] font-semibold text-admin-primary">
+            <output className="text-sm font-semibold text-primary">
               {note}
             </output>
           )}
@@ -328,7 +326,7 @@ export function ExcessForm({ initial }: { initial: ExcessInitial }) {
       </Step>
 
       <Step n={4} title="Resultado">
-        <ol className="flex flex-col gap-1.5 text-[13.5px] text-admin-text">
+        <ol className="flex flex-col gap-1.5 text-sm text-foreground">
           <li>
             <strong>Renda líquida</strong> = receitas (R${" "}
             {money(cents(v.revenue))}) − despesas (R$ {money(cents(v.expenses))}
@@ -349,14 +347,14 @@ export function ExcessForm({ initial }: { initial: ExcessInitial }) {
           </li>
         </ol>
         <div
-          className={`rounded-[12px] border px-4 py-3.5 ${over ? "border-admin-warning-soft-border bg-admin-warning-soft-bg text-admin-warning-text" : "border-admin-success-bg bg-admin-success-bg text-admin-success-text"}`}
+          className={`rounded-lg border px-4 py-3.5 ${over ? "border-warning/30 bg-warning-soft text-warning-text" : "border-success/30 bg-success-soft text-success-text"}`}
         >
-          <p className="text-[17px] font-bold">
+          <p className="text-lg font-semibold">
             {over
               ? `Excedente a depositar: R$ ${money(result.excessCents)}`
               : "Não há excedente a depositar."}
           </p>
-          <p className="mt-1 text-[13px]">
+          <p className="mt-1 text-sm">
             O interino fica com R$ {money(result.interimPayCents)}.
             {over
               ? " O excedente é depositado à disposição do Tribunal de Justiça e lançado no Livro Diário Auxiliar, com a data do depósito e a conta (art. 194, I)."
@@ -365,7 +363,7 @@ export function ExcessForm({ initial }: { initial: ExcessInitial }) {
           {over && (
             <a
               href="/admin/utilitarios/livro-diario/lancamento?tipo=deposito"
-              className="mt-2 inline-block text-[13px] font-semibold underline"
+              className="mt-2 inline-block text-sm font-semibold underline"
             >
               Lançar o depósito no livro
             </a>
@@ -373,31 +371,31 @@ export function ExcessForm({ initial }: { initial: ExcessInitial }) {
         </div>
       </Step>
 
-      <section className="flex flex-col gap-3 rounded-[14px] border border-admin-border bg-admin-card px-5 py-4">
+      <section className="flex flex-col gap-3 rounded-xl border bg-card px-5 py-4">
         <div>
-          <label htmlFor="ex-notes" className={LABEL}>
+          <Label htmlFor="ex-notes" className="mb-1.5">
             Observações (saem no PDF)
-          </label>
-          <input
+          </Label>
+          <Input
             id="ex-notes"
             name="observacoes"
             maxLength={5000}
             value={v.notes}
             onChange={set("notes")}
-            className={FIELD}
           />
         </div>
-        <button
+        <Button
           type="submit"
+          size="lg"
           disabled={pending}
-          className="btn btn-admin-primary btn-md self-start"
+          className="self-start"
         >
           {pending
             ? "Salvando..."
             : initial.id
               ? "Salvar alterações"
               : "Salvar o cálculo e gerar o PDF"}
-        </button>
+        </Button>
         <span className={HINT}>
           O PDF (memória de cálculo) pode ser assinado digitalmente ou impresso
           para assinatura à mão.
@@ -418,9 +416,9 @@ function Step({
   children: React.ReactNode;
 }) {
   return (
-    <section className="flex flex-col gap-3 rounded-[14px] border border-admin-border bg-admin-card px-5 py-4">
-      <h2 className="flex items-center gap-2.5 font-serif text-[17px] font-semibold text-admin-primary">
-        <span className="inline-flex h-7 w-7 flex-none items-center justify-center rounded-full bg-admin-primary text-[13px] font-bold text-white">
+    <section className="flex flex-col gap-3 rounded-xl border bg-card px-5 py-4">
+      <h2 className="flex items-center gap-2.5 text-lg font-semibold text-foreground">
+        <span className="inline-flex h-7 w-7 flex-none items-center justify-center rounded-full bg-primary text-sm font-semibold text-primary-foreground">
           {n}
         </span>
         {title}

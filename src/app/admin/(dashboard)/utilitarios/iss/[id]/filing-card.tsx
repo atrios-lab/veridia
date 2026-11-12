@@ -3,32 +3,34 @@
 import Link from "next/link";
 import { useActionState, useEffect, useState } from "react";
 import { toast } from "sonner";
+import { Button } from "../../../../_ui/button.tsx";
+import { Input } from "../../../../_ui/input.tsx";
+import { Label } from "../../../../_ui/label.tsx";
 import { type IssFormState, recordIssFiling } from "../actions.ts";
 
-const FIELD =
-  "w-full rounded-[9px] border border-admin-input-border bg-admin-input-bg px-3.5 py-2.5 text-[13.5px] text-admin-text outline-none focus:border-admin-primary-soft";
 const STEP =
-  "flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-admin-primary text-[12px] font-bold text-white";
+  "flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-primary text-xs font-semibold text-primary-foreground";
 
 function CopyField({ label, value }: { label: string; value: string }) {
   const [copied, setCopied] = useState(false);
   return (
-    <div className="flex items-start gap-3 border-b border-admin-border py-2.5 last:border-0">
+    <div className="flex items-start gap-3 border-b py-2.5 last:border-0">
       <div className="min-w-0 flex-1">
-        <p className="text-[11.5px] font-bold uppercase tracking-[0.05em] text-admin-muted">
-          {label}
-        </p>
-        <p className="break-words text-[13.5px] text-admin-text">
+        <p className="text-xs font-semibold text-muted-foreground">{label}</p>
+        <p className="break-words text-sm text-foreground">
           {value || (
-            <span className="text-admin-muted">
+            <span className="text-muted-foreground">
               Não configurado. Complete na configuração.
             </span>
           )}
         </p>
       </div>
       {value && (
-        <button
+        <Button
           type="button"
+          variant="outline"
+          size="sm"
+          className="shrink-0"
           onClick={async () => {
             try {
               await navigator.clipboard.writeText(value);
@@ -38,11 +40,10 @@ function CopyField({ label, value }: { label: string; value: string }) {
               toast.error("Não foi possível copiar. Selecione o texto.");
             }
           }}
-          className="btn btn-admin-secondary btn-sm shrink-0"
           aria-label={`Copiar ${label}`}
         >
           {copied ? "Copiado" : "Copiar"}
-        </button>
+        </Button>
       )}
     </div>
   );
@@ -78,25 +79,25 @@ export function FilingCard(props: FilingCardProps) {
   const portal = props.mode === "portal";
 
   return (
-    <section className="rounded-[14px] border border-admin-border bg-admin-card px-5 py-4">
+    <section className="rounded-xl border bg-card px-5 py-4">
       <div className="flex flex-wrap items-baseline justify-between gap-2">
-        <h2 className="font-serif text-[17px] font-semibold text-admin-primary">
+        <h2 className="text-lg font-semibold text-foreground">
           {portal ? "Enviar pelo site da prefeitura" : "Entregar na SEMUT"}
         </h2>
         {props.filedOn ? (
-          <span className="rounded-full bg-admin-success-bg px-3 py-1 text-[12px] font-semibold text-admin-success-text">
+          <span className="rounded-full bg-success-soft px-3 py-1 text-xs font-semibold text-success-text">
             Entregue em {props.filedOn.split("-").reverse().join("/")}
             {props.reference ? ` · protocolo ${props.reference}` : ""}
           </span>
         ) : (
-          <span className="rounded-full bg-admin-warning-bg px-3 py-1 text-[12px] font-semibold text-admin-warning-text">
+          <span className="rounded-full bg-warning-soft px-3 py-1 text-xs font-semibold text-warning-text">
             Ainda não entregue
           </span>
         )}
       </div>
 
       {portal ? (
-        <ol className="mt-3 flex flex-col gap-3 text-[13px] text-admin-text">
+        <ol className="mt-3 flex flex-col gap-3 text-sm text-foreground">
           <li className="flex gap-2.5">
             <span className={STEP}>1</span>
             <div className="min-w-0 flex-1">
@@ -108,13 +109,13 @@ export function FilingCard(props: FilingCardProps) {
                     href={props.portalUrl}
                     target="_blank"
                     rel="noreferrer"
-                    className="font-semibold text-admin-primary underline"
+                    className="font-semibold text-primary underline"
                   >
                     Abrir o site da prefeitura
                   </a>
                 )}
               </p>
-              <div className="mt-2 rounded-[12px] bg-admin-input-bg px-3.5">
+              <div className="mt-2 rounded-lg bg-muted/50 px-3.5">
                 {props.fields.map((field) => (
                   <CopyField
                     key={field.key}
@@ -133,7 +134,7 @@ export function FilingCard(props: FilingCardProps) {
                 href={props.pdfHref}
                 target="_blank"
                 rel="noreferrer"
-                className="font-semibold text-admin-primary underline"
+                className="font-semibold text-primary underline"
               >
                 PDF da declaração com os anexos
               </a>{" "}
@@ -146,7 +147,7 @@ export function FilingCard(props: FilingCardProps) {
           </li>
         </ol>
       ) : (
-        <ol className="mt-3 flex flex-col gap-3 text-[13px] text-admin-text">
+        <ol className="mt-3 flex flex-col gap-3 text-sm text-foreground">
           <li className="flex gap-2.5">
             <span className={STEP}>1</span>
             <p>
@@ -155,7 +156,7 @@ export function FilingCard(props: FilingCardProps) {
                 href={props.pdfHref}
                 target="_blank"
                 rel="noreferrer"
-                className="font-semibold text-admin-primary underline"
+                className="font-semibold text-primary underline"
               >
                 declaração com os anexos
               </a>{" "}
@@ -170,7 +171,7 @@ export function FilingCard(props: FilingCardProps) {
                 href={props.receiptHref}
                 target="_blank"
                 rel="noreferrer"
-                className="font-semibold text-admin-primary underline"
+                className="font-semibold text-primary underline"
               >
                 protocolo de entrega
               </a>
@@ -187,49 +188,45 @@ export function FilingCard(props: FilingCardProps) {
 
       <form
         action={action}
-        className="mt-4 grid grid-cols-1 items-end gap-3 border-t border-admin-border pt-4 md:grid-cols-[180px_1fr_auto]"
+        className="mt-4 grid grid-cols-1 items-end gap-3 border-t pt-4 md:grid-cols-[180px_1fr_auto]"
       >
         <input type="hidden" name="id" value={props.id} />
-        <label className="flex flex-col gap-1.5 text-xs font-bold text-admin-primary">
+        <Label className="flex flex-col gap-1.5 text-sm font-medium text-foreground items-stretch leading-normal">
           Entregue em
-          <input
+          <Input
             type="date"
             name="entregue"
             max={props.today}
             defaultValue={props.filedOn}
-            className={`${FIELD} font-normal`}
+            className="font-normal"
           />
-        </label>
-        <label className="flex flex-col gap-1.5 text-xs font-bold text-admin-primary">
+        </Label>
+        <Label className="flex flex-col gap-1.5 text-sm font-medium text-foreground items-stretch leading-normal">
           {portal ? "Nº do DAM ou do protocolo" : "Nº do protocolo"}
-          <input
+          <Input
             name="protocolo"
             defaultValue={props.reference}
-            className={`${FIELD} font-normal`}
+            className="font-normal"
           />
-        </label>
-        <button
-          type="submit"
-          disabled={pending}
-          className="btn btn-admin-primary btn-md"
-        >
+        </Label>
+        <Button type="submit" disabled={pending}>
           {pending ? "Salvando..." : "Anotar entrega"}
-        </button>
+        </Button>
         {state.status === "error" && (
           <p
             role="alert"
-            className="text-[12.5px] font-semibold text-admin-error-text md:col-span-3"
+            className="text-xs font-semibold text-destructive md:col-span-3"
           >
             {state.message}
           </p>
         )}
       </form>
       {props.canConfigure && (
-        <p className="mt-3 text-[12px] text-admin-muted">
+        <p className="mt-3 text-xs text-muted-foreground">
           A prefeitura recebe de outro jeito?{" "}
           <Link
             href="/admin/utilitarios/iss/configuracao"
-            className="font-semibold text-admin-primary underline"
+            className="font-semibold text-primary underline"
           >
             Trocar na configuração
           </Link>

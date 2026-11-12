@@ -14,6 +14,7 @@ import { getTenant } from "@/lib/tenant.ts";
 import { AdminIcon } from "../../../../../_components/icon.tsx";
 import { AdminPageHeader } from "../../../../../_components/page-header.tsx";
 import { SignOrPrint } from "../../../../../_components/sign-or-print.tsx";
+import { buttonVariants } from "../../../../../_ui/button.tsx";
 import { requireBookAccess } from "../../_lib/access.ts";
 import { RemoveReportButton, ReportEditForm } from "../../forms.tsx";
 
@@ -71,15 +72,15 @@ export default async function BookPagePage({
             : `${sheets ? `${sheets} · ` : ""}Receita R$ ${formatMoneyBRL(revenue)} · despesa R$ ${formatMoneyBRL(expenses)} · saldo R$ ${formatMoneyBRL(revenue - expenses)}`
         }
       />
-      <main className="flex max-w-[1000px] flex-col gap-4.5 px-[30px] py-7 max-md:px-4">
+      <main className="flex max-w-[1000px] flex-col gap-4.5 px-4 py-7 md:px-8">
         {query.gerado && (
-          <p className="rounded-[12px] bg-admin-success-bg px-4 py-3 text-[13px] font-semibold text-admin-success-text">
+          <p className="rounded-lg bg-success-soft px-4 py-3 text-sm font-semibold text-success-text">
             Página gerada e guardada. Assine digitalmente ou imprima para
             assinar.
           </p>
         )}
         {query.livro === "cheio" && (
-          <p className="rounded-[12px] border border-admin-warning-soft-border bg-admin-warning-soft-bg px-4 py-3 text-[13px] text-admin-warning-text">
+          <p className="rounded-lg border border-warning/30 bg-warning-soft px-4 py-3 text-sm text-warning-text">
             <strong>As folhas do livro nº {s.book?.number} acabaram:</strong>{" "}
             esta página vai até a folha {s.book?.lastSheet}, e o livro tem{" "}
             {s.book?.sheetCount}. Gere o termo de encerramento, passe para o
@@ -88,12 +89,12 @@ export default async function BookPagePage({
           </p>
         )}
         {row.removedAt && (
-          <p className="rounded-[12px] bg-admin-error-bg px-4 py-3 text-[13px] font-semibold text-admin-error-text">
+          <p className="rounded-lg bg-destructive-soft px-4 py-3 text-sm font-semibold text-destructive">
             Página excluída: {row.removeReason}
           </p>
         )}
-        <section className="flex flex-wrap items-center gap-3 rounded-[14px] border border-admin-border bg-admin-card px-5 py-4">
-          <p className="mr-auto text-[13px] font-bold text-admin-primary">
+        <section className="flex flex-wrap items-center gap-3 rounded-xl border bg-card px-5 py-4">
+          <p className="mr-auto text-sm font-semibold text-foreground">
             {title}
           </p>
           <SignOrPrint
@@ -102,7 +103,7 @@ export default async function BookPagePage({
           />
           <a
             href={`${pdf}?formato=planilha`}
-            className="btn btn-admin-secondary btn-md"
+            className={buttonVariants({ variant: "outline" })}
           >
             <AdminIcon name="grid" className="h-4 w-4" /> Baixar planilha
           </a>
@@ -110,9 +111,7 @@ export default async function BookPagePage({
         {!row.removedAt && (
           <>
             <div className="flex flex-wrap items-center justify-between gap-2">
-              <h2 className="font-serif text-[17px] font-semibold text-admin-primary">
-                Editar
-              </h2>
+              <h2 className="text-lg font-semibold text-foreground">Editar</h2>
               <RemoveReportButton id={row.id} />
             </div>
             <ReportEditForm
@@ -129,7 +128,7 @@ export default async function BookPagePage({
             />
           </>
         )}
-        <p className="text-[12px] text-admin-muted">
+        <p className="text-xs text-muted-foreground">
           A página fica guardada como foi gerada. Correções nos lançamentos só
           entram nela se você marcar "Refazer com os lançamentos de agora".
           {sheets

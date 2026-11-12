@@ -10,6 +10,13 @@ import {
   useState,
 } from "react";
 import { ConfirmAction } from "../../../_components/confirm-action.tsx";
+import { Button, buttonVariants } from "../../../_ui/button.tsx";
+import { cn } from "../../../_ui/cn.ts";
+import { Input } from "../../../_ui/input.tsx";
+import {
+  NativeSelect,
+  NativeSelectOption,
+} from "../../../_ui/native-select.tsx";
 import {
   certificateFields,
   LocalSignerPicker,
@@ -27,9 +34,7 @@ import {
   signOneDocument,
 } from "./actions.ts";
 
-const FIELD =
-  "w-full rounded-[9px] border border-admin-input-border bg-admin-input-bg px-3.5 py-2.5 text-[13.5px] text-admin-text outline-none focus:border-admin-primary-soft";
-const LABEL = "mb-1.5 block text-xs font-bold text-admin-primary";
+const LABEL = "mb-1.5 block text-sm font-medium text-foreground";
 const IDLE: SignState = { status: "idle" };
 
 /**
@@ -63,30 +68,29 @@ function CertificateAndPassword({
         <label htmlFor={`${prefix}-cert`} className={LABEL}>
           Certificado
         </label>
-        <select
+        <NativeSelect
           id={`${prefix}-cert`}
           name="certificateId"
           required
-          className={FIELD}
+          className="w-full"
         >
           {certificates.map((certificate) => (
-            <option key={certificate.id} value={certificate.id}>
+            <NativeSelectOption key={certificate.id} value={certificate.id}>
               {certificate.label} · {certificate.holderName}
-            </option>
+            </NativeSelectOption>
           ))}
-        </select>
+        </NativeSelect>
       </div>
       <div>
         <label htmlFor={`${prefix}-password`} className={LABEL}>
           Senha do certificado
         </label>
-        <input
+        <Input
           id={`${prefix}-password`}
           name="password"
           type="password"
           autoComplete="off"
           required
-          className={FIELD}
         />
       </div>
     </>
@@ -112,7 +116,13 @@ export function ModeChoice({
 }) {
   const option = (value: Mode, title: string, hint: string) => (
     <label
-      className={`flex flex-1 cursor-pointer items-start gap-2.5 rounded-[12px] border px-3.5 py-2.5 ${mode === value ? "border-admin-primary bg-admin-input-bg" : "border-admin-border hover:border-admin-primary"} ${value === "a1" && !hasA1 ? "cursor-not-allowed opacity-60" : ""}`}
+      className={cn(
+        "flex flex-1 cursor-pointer items-start gap-2.5 rounded-lg border px-3.5 py-2.5",
+        mode === value
+          ? "border-primary bg-muted/50"
+          : "border-border hover:border-primary",
+        value === "a1" && !hasA1 && "cursor-not-allowed opacity-60",
+      )}
     >
       <input
         type="radio"
@@ -120,13 +130,13 @@ export function ModeChoice({
         checked={mode === value}
         disabled={value === "a1" && !hasA1}
         onChange={() => onChange(value)}
-        className="mt-1"
+        className="mt-1 accent-primary"
       />
       <span>
-        <span className="block text-[13px] font-bold text-admin-primary">
+        <span className="block text-sm font-semibold text-foreground">
           {title}
         </span>
-        <span className="block text-[11.5px] leading-snug text-admin-muted">
+        <span className="block text-xs leading-snug text-muted-foreground">
           {hint}
         </span>
       </span>
@@ -381,12 +391,12 @@ export function SignForm({
     <form
       id="assinar"
       onSubmit={submit}
-      className="scroll-mt-4 rounded-[14px] border border-admin-border bg-admin-card px-5 py-4"
+      className="scroll-mt-4 rounded-xl border bg-card px-5 py-4"
     >
-      <h2 className="font-serif text-[17px] font-semibold text-admin-primary">
+      <h2 className="text-lg font-semibold text-foreground">
         Assinar documentos
       </h2>
-      <p className="mt-1 text-[12.5px] leading-relaxed text-admin-muted">
+      <p className="mt-1 text-sm leading-relaxed text-muted-foreground">
         Um PDF ou vários de uma vez (até 4 MB cada). Cada página recebe a faixa
         de assinatura e o QR Code de verificação, no padrão PAdES ICP-Brasil. Um
         PDF que já vem assinado (uma CNH, uma certidão de outra serventia)
@@ -396,11 +406,11 @@ export function SignForm({
       <div className="mt-3.5 grid grid-cols-1 gap-3.5 md:grid-cols-2">
         <div className="md:col-span-2">
           <span className={LABEL}>PDFs a assinar</span>
-          <label className="flex cursor-pointer flex-col items-center gap-2 rounded-[12px] border-2 border-dashed border-admin-input-border bg-admin-card px-4 py-5 text-center focus-within:ring-2 focus-within:ring-admin-accent hover:border-admin-primary hover:bg-admin-input-bg">
-            <span className="btn btn-admin-primary btn-md">
+          <label className="flex cursor-pointer flex-col items-center gap-2 rounded-lg border-2 border-dashed border-input bg-card px-4 py-5 text-center focus-within:ring-3 focus-within:ring-ring/50 hover:border-primary hover:bg-muted/50">
+            <span className={buttonVariants()}>
               {files.length ? "Trocar arquivos" : "Escolher arquivos"}
             </span>
-            <span className="text-[12px] text-admin-muted">
+            <span className="text-xs text-muted-foreground">
               Um ou vários PDFs, até 4 MB cada
             </span>
             <input
@@ -416,33 +426,30 @@ export function SignForm({
         </div>
         {files.length > 0 && (
           <ul className="flex flex-col gap-2 md:col-span-2">
-            {files.map((item) => (
-              <li
-                key={item.key}
-                className="rounded-[10px] border border-admin-border px-3 py-2.5"
-              >
-                <div className="flex items-center justify-between gap-2 text-[12px]">
-                  <span className="min-w-0 truncate text-admin-muted">
+            {files.map((item, index) => (
+              <li key={item.key} className="rounded-lg border px-3 py-2.5">
+                <div className="flex items-center justify-between gap-2 text-xs">
+                  <span className="min-w-0 truncate text-muted-foreground">
                     {item.file.name} ·{" "}
                     {Math.max(1, Math.round(item.file.size / 1024))} KB
                   </span>
                   <ItemState item={item} />
                 </div>
-                <label className="mt-1.5 block">
+                <label htmlFor={`sign-title-${index}`} className="mt-1.5 block">
                   <span className="sr-only">Título de {item.file.name}</span>
-                  <input
+                  <Input
+                    id={`sign-title-${index}`}
                     value={item.title}
                     disabled={item.state.kind !== "waiting" || running}
                     onChange={(event) =>
                       update(item.key, { title: event.target.value })
                     }
                     placeholder="Título do documento"
-                    className={FIELD}
                   />
                 </label>
               </li>
             ))}
-            <li className="text-[11.5px] text-admin-muted">
+            <li className="text-xs text-muted-foreground">
               O título aparece na página de verificação para quem tiver o
               código. Evite nome e CPF de pessoas.
             </li>
@@ -459,7 +466,7 @@ export function SignForm({
         )}
         {mode === "a3" && <LocalSignerPicker signer={local} prefix="sign" />}
       </div>
-      <label className="mt-3.5 flex items-center gap-2 text-[13px] text-admin-text">
+      <label className="mt-3.5 flex items-center gap-2 text-sm text-foreground">
         <input
           type="checkbox"
           name="manifest"
@@ -469,35 +476,24 @@ export function SignForm({
         Incluir o manifesto de assinaturas no fim do documento
       </label>
       {error && (
-        <p
-          role="alert"
-          className="mt-3 text-[12.5px] font-semibold text-admin-error-text"
-        >
+        <p role="alert" className="mt-3 text-sm font-medium text-destructive">
           {error}
         </p>
       )}
       <div className="mt-4 flex flex-wrap gap-2">
         {!finished && (
-          <button
-            type="submit"
-            disabled={running}
-            className="btn btn-admin-primary btn-md"
-          >
+          <Button type="submit" size="lg" disabled={running}>
             {running
               ? "Assinando..."
               : files.length > 1
                 ? `Assinar ${files.filter((f) => f.state.kind === "waiting").length} documentos`
                 : "Assinar digitalmente"}
-          </button>
+          </Button>
         )}
         {finished && (
-          <button
-            type="button"
-            onClick={restart}
-            className="btn btn-admin-primary btn-md"
-          >
+          <Button type="button" size="lg" onClick={restart}>
             Assinar outros documentos
-          </button>
+          </Button>
         )}
       </div>
     </form>
@@ -508,19 +504,15 @@ function ItemState({ item }: { item: Chosen }) {
   switch (item.state.kind) {
     case "signing":
       return (
-        <span className="shrink-0 font-semibold text-admin-primary">
-          Assinando...
-        </span>
+        <span className="shrink-0 font-medium text-primary">Assinando...</span>
       );
     case "signed":
       return (
         <span className="flex shrink-0 items-center gap-2">
-          <span className="font-semibold text-admin-success-text">
-            Assinado
-          </span>
+          <span className="font-medium text-success-text">Assinado</span>
           <Link
             href={`/admin/utilitarios/assinador/${item.state.id}`}
-            className="font-semibold text-admin-primary underline"
+            className="font-medium text-primary underline underline-offset-4"
           >
             Abrir
           </Link>
@@ -528,12 +520,12 @@ function ItemState({ item }: { item: Chosen }) {
       );
     case "error":
       return (
-        <span className="shrink-0 font-semibold text-admin-error-text">
+        <span className="shrink-0 font-medium text-destructive">
           {item.state.message}
         </span>
       );
     default:
-      return <span className="shrink-0 text-admin-muted">Na fila</span>;
+      return <span className="shrink-0 text-muted-foreground">Na fila</span>;
   }
 }
 
@@ -593,13 +585,11 @@ export function CoSignForm({
   return (
     <form
       onSubmit={(event) => void submit(event)}
-      className="rounded-[14px] border border-admin-border bg-admin-card px-5 py-4"
+      className="rounded-xl border bg-card px-5 py-4"
     >
       <input type="hidden" name="documentId" value={documentId} />
-      <h2 className="font-serif text-[16px] font-semibold text-admin-primary">
-        Assinar também
-      </h2>
-      <p className="mt-1 text-[12.5px] text-admin-muted">
+      <h2 className="text-lg font-semibold text-foreground">Assinar também</h2>
+      <p className="mt-1 text-sm text-muted-foreground">
         Mais uma assinatura no mesmo documento. As anteriores continuam válidas.
       </p>
       <div className="mt-3 grid grid-cols-1 gap-3.5 md:grid-cols-2">
@@ -615,20 +605,13 @@ export function CoSignForm({
         {mode === "a3" && <LocalSignerPicker signer={local} prefix="cosign" />}
       </div>
       {message && (
-        <p
-          role="alert"
-          className="mt-3 text-[12.5px] font-semibold text-admin-error-text"
-        >
+        <p role="alert" className="mt-3 text-sm font-medium text-destructive">
           {message}
         </p>
       )}
-      <button
-        type="submit"
-        disabled={busy}
-        className="btn btn-admin-primary btn-md mt-4"
-      >
+      <Button type="submit" size="lg" disabled={busy} className="mt-4">
         {busy ? "Assinando..." : "Assinar"}
-      </button>
+      </Button>
     </form>
   );
 }
@@ -669,15 +652,11 @@ export function RestoreDocumentButton({ documentId }: { documentId: string }) {
     <form action={action} className="inline">
       <input type="hidden" name="documentId" value={documentId} />
       <input type="hidden" name="removed" value="0" />
-      <button
-        type="submit"
-        disabled={pending}
-        className="btn btn-admin-secondary btn-sm"
-      >
+      <Button type="submit" variant="outline" size="sm" disabled={pending}>
         {pending ? "Devolvendo…" : "Devolver à lista"}
-      </button>
+      </Button>
       {state.status === "error" && (
-        <span role="alert" className="ml-2 text-[12px] text-admin-error-text">
+        <span role="alert" className="ml-2 text-xs text-destructive">
           {state.message}
         </span>
       )}

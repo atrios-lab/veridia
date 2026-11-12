@@ -40,21 +40,21 @@ export default async function ExcessCalcPage({
         }}
         description={`Renda líquida R$ ${formatMoneyBRL(Math.max(0, r.netCents))} · teto do período R$ ${formatMoneyBRL(r.limitCents)} · excedente R$ ${formatMoneyBRL(r.excessCents)}`}
       />
-      <main className="flex max-w-[1000px] flex-col gap-4.5 px-[30px] py-7 max-md:px-4">
+      <main className="flex max-w-[1000px] flex-col gap-4.5 px-4 py-7 md:px-8">
         {query.salvo && (
-          <p className="rounded-[12px] bg-admin-success-bg px-4 py-3 text-[13px] font-semibold text-admin-success-text">
+          <p className="rounded-lg bg-success-soft px-4 py-3 text-sm font-semibold text-success-text">
             {query.salvo === "editado"
               ? "Cálculo alterado. O PDF já sai com a alteração."
               : "Cálculo salvo. Assine digitalmente ou imprima para assinar à mão."}
           </p>
         )}
         {calc.removedAt && (
-          <p className="rounded-[12px] bg-admin-error-bg px-4 py-3 text-[13px] font-semibold text-admin-error-text">
+          <p className="rounded-lg bg-destructive-soft px-4 py-3 text-sm font-semibold text-destructive">
             Cálculo excluído: {calc.removeReason}
           </p>
         )}
-        <section className="flex flex-wrap items-center gap-3 rounded-[14px] border border-admin-border bg-admin-card px-5 py-4">
-          <p className="mr-auto text-[13px] font-bold text-admin-primary">
+        <section className="flex flex-wrap items-center gap-3 rounded-xl border bg-card px-5 py-4">
+          <p className="mr-auto text-sm font-semibold text-foreground">
             Memória de cálculo do excedente, {period}
           </p>
           <SignOrPrint
@@ -65,15 +65,13 @@ export default async function ExcessCalcPage({
         {!calc.removedAt && (
           <>
             <div className="flex flex-wrap items-center justify-between gap-2">
-              <h2 className="font-serif text-[17px] font-semibold text-admin-primary">
-                Editar
-              </h2>
+              <h2 className="text-lg font-semibold text-foreground">Editar</h2>
               <RemoveExcessButton id={calc.id} />
             </div>
-            <section className="flex flex-wrap items-center gap-3 rounded-[14px] border-2 border-admin-primary-soft bg-admin-card px-5 py-4">
+            <section className="flex flex-wrap items-center gap-3 rounded-xl border-2 border-primary bg-card px-5 py-4">
               <div className="flex min-w-[260px] flex-1 flex-col gap-1">
                 <div className="flex flex-wrap items-center gap-2.5">
-                  <h2 className="font-serif text-[18px] font-semibold text-admin-primary">
+                  <h2 className="text-lg font-semibold text-foreground">
                     Como usar a calculadora
                   </h2>
                   <ScreenHelpButton
@@ -82,7 +80,7 @@ export default async function ExcessCalcPage({
                     label="Como preencher a calculadora, passo a passo"
                   />
                 </div>
-                <p className="text-[13px] text-admin-muted">
+                <p className="text-sm text-muted-foreground">
                   Preencha os passos 1 a 3. O passo 4 mostra, enquanto você
                   digita, se há valor a depositar para o Tribunal de Justiça e
                   quanto fica com o interino.

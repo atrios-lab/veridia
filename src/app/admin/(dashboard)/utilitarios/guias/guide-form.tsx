@@ -25,13 +25,14 @@ import {
 import { LONG_TEXT_MAX } from "@/core/text-limits.ts";
 import { formatMoneyBRL } from "@/core/transparency/bulletin.ts";
 import { AdminIcon } from "../../../_components/icon.tsx";
+import { Button } from "../../../_ui/button.tsx";
+import { Input } from "../../../_ui/input.tsx";
+import { Label } from "../../../_ui/label.tsx";
+import { NativeSelect } from "../../../_ui/native-select.tsx";
+import { Textarea } from "../../../_ui/textarea.tsx";
 import { type GuideFormState, saveGuide } from "./actions.ts";
 
-const FIELD =
-  "w-full rounded-[9px] border border-admin-input-border bg-admin-input-bg px-3 py-2 text-[13px] text-admin-text outline-none focus:border-admin-primary-soft";
-const FIELD_ERROR =
-  "w-full rounded-[9px] border border-admin-error-border bg-admin-error-input-bg px-3 py-2 text-[13px] text-admin-text outline-none focus:border-admin-error-text";
-const LABEL = "mb-1 block text-[11.5px] font-bold text-admin-primary";
+const LABEL = "mb-1.5 block text-sm font-medium text-foreground";
 
 /** "27.000,00" or "27000" → cents; NaN when it is not a value. */
 function parseMoney(input: string): number {
@@ -59,21 +60,22 @@ function Field({
   wide?: boolean;
 }) {
   return (
-    <label className={`block ${wide ? "md:col-span-2" : ""}`}>
+    <Label
+      className={`block font-normal leading-normal ${wide ? "md:col-span-2" : ""}`}
+    >
       <span className={LABEL}>{label}</span>
-      <input
+      <Input
         value={value}
         onChange={(event) => onChange(event.target.value)}
         placeholder={placeholder}
         aria-invalid={error ? true : undefined}
-        className={error ? FIELD_ERROR : FIELD}
       />
       {error && (
-        <span className="mt-1 block text-[11.5px] font-semibold text-admin-error-text">
+        <span className="mt-1 block text-xs font-semibold text-destructive">
           {error}
         </span>
       )}
-    </label>
+    </Label>
   );
 }
 
@@ -91,14 +93,14 @@ function Select<T extends string>({
   empty?: string;
 }) {
   return (
-    <label className="block">
+    <Label className="block leading-normal font-normal">
       <span className={LABEL}>{label}</span>
-      <select
+      <NativeSelect
         value={value ?? ""}
         onChange={(event) =>
           onChange((event.target.value || undefined) as T | undefined)
         }
-        className={FIELD}
+        className="w-full"
       >
         {empty !== undefined && <option value="">{empty}</option>}
         {options.map((option) => (
@@ -106,8 +108,8 @@ function Select<T extends string>({
             {option.label}
           </option>
         ))}
-      </select>
-    </label>
+      </NativeSelect>
+    </Label>
   );
 }
 
@@ -133,8 +135,8 @@ function PartyCard({
   const pf = party.personType === "fisica";
 
   return (
-    <fieldset className="rounded-[12px] border border-admin-border bg-admin-card p-4">
-      <legend className="px-1 text-[12px] font-bold uppercase tracking-[0.08em] text-admin-accent">
+    <fieldset className="rounded-xl border bg-card p-4">
+      <legend className="px-1 text-xs font-semibold text-primary">
         {roleLabel}
       </legend>
       <div className="grid grid-cols-1 gap-3 md:grid-cols-4">
@@ -271,19 +273,19 @@ function PartyCard({
       </div>
 
       {party.name.trim() && (
-        <p className="mt-3 rounded-lg bg-admin-input-bg px-3 py-2 text-[12px] leading-relaxed text-admin-text">
+        <p className="mt-3 rounded-lg bg-muted/50 px-3 py-2 text-xs leading-relaxed text-foreground">
           {qualify(party)}
         </p>
       )}
       {missing.length > 0 && (
-        <p className="mt-2 text-[12px] text-admin-warning-text">
+        <p className="mt-2 text-xs text-warning-text">
           Falta para a qualificação (Lei 6.015, art. 176): {missing.join(", ")}.
         </p>
       )}
       <button
         type="button"
         onClick={onRemove}
-        className="mt-3 text-[12px] font-semibold text-admin-alert hover:underline"
+        className="mt-3 text-xs font-semibold text-destructive hover:underline"
       >
         Remover esta parte
       </button>
@@ -377,26 +379,25 @@ export function GuideForm({
             label: GUIDE_KIND_INFO[kind].label,
           }))}
         />
-        <label className="block md:col-span-2">
+        <Label className="block md:col-span-2 leading-normal font-normal">
           <span className={LABEL}>Natureza do ato</span>
-          <input
+          <Input
             list="guide-natures"
             value={guide.nature}
             onChange={(event) => update({ nature: event.target.value })}
             placeholder={info.natures[0]}
-            className={FIELD}
           />
           <datalist id="guide-natures">
             {info.natures.map((nature) => (
               <option key={nature} value={nature} />
             ))}
           </datalist>
-        </label>
+        </Label>
       </section>
 
       {roles.map((role) => (
         <section key={role} className="flex flex-col gap-3">
-          <h2 className="font-serif text-[16px] font-semibold text-admin-primary">
+          <h2 className="text-base font-semibold text-foreground">
             {info.roles[role]}
           </h2>
           {guide.parties.map((party, index) =>
@@ -423,28 +424,29 @@ export function GuideForm({
               />
             ) : null,
           )}
-          <button
+          <Button
             type="button"
+            variant="outline"
             onClick={() =>
               update({ parties: [...guide.parties, emptyParty(role)] })
             }
-            className="btn btn-admin-secondary btn-md self-start"
+            className="self-start"
           >
             + {info.roles[role]}
-          </button>
+          </Button>
         </section>
       ))}
       {errors.parties && (
-        <p className="text-[12px] font-semibold text-admin-error-text">
+        <p className="text-xs font-semibold text-destructive">
           {errors.parties}
         </p>
       )}
 
       <section className="flex flex-col gap-3">
-        <h2 className="font-serif text-[16px] font-semibold text-admin-primary">
+        <h2 className="text-base font-semibold text-foreground">
           Bem transmitido
         </h2>
-        <p className="-mt-2 text-[12px] text-admin-muted">
+        <p className="-mt-2 text-xs text-muted-foreground">
           Imóvel, ou, no ITCD (inventário e doação), também bens móveis,
           digitais, quotas e aplicações.
         </p>
@@ -482,9 +484,9 @@ export function GuideForm({
             placeholder="Ex.: matrícula nº 9.999, livro 2-A, fls. 010/012"
           />
         </div>
-        <label className="block">
+        <Label className="block leading-normal font-normal">
           <span className={LABEL}>Descrição (localização, área, limites)</span>
-          <textarea
+          <Textarea
             rows={4}
             maxLength={LONG_TEXT_MAX}
             value={guide.property.description}
@@ -497,18 +499,17 @@ export function GuideForm({
               })
             }
             aria-invalid={errors["property.description"] ? true : undefined}
-            className={errors["property.description"] ? FIELD_ERROR : FIELD}
           />
           {errors["property.description"] && (
-            <span className="mt-1 block text-[11.5px] font-semibold text-admin-error-text">
+            <span className="mt-1 block text-xs font-semibold text-destructive">
               {errors["property.description"]}
             </span>
           )}
-        </label>
+        </Label>
       </section>
 
       <section className="flex flex-col gap-3">
-        <h2 className="font-serif text-[16px] font-semibold text-admin-primary">
+        <h2 className="text-base font-semibold text-foreground">
           Valores e assinatura
         </h2>
         <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
@@ -533,10 +534,10 @@ export function GuideForm({
             />
           )}
           {info.rate === "itcd-rn" && (
-            <div className="text-[12px] leading-relaxed text-admin-muted md:pt-5">
+            <div className="text-xs leading-relaxed text-muted-foreground md:pt-5">
               {!guide.manualRate &&
                 "ITCD do RN por faixa: 3% até R$ 500 mil, 4% até R$ 1 milhão, 5% até R$ 3 milhões e 6% acima (Lei 5.887/1989, art. 7º)."}
-              <label className="mt-1 flex items-center gap-2 text-admin-text">
+              <label className="mt-1 flex items-center gap-2 text-foreground">
                 <input
                   type="checkbox"
                   className="checkbox-admin"
@@ -575,7 +576,7 @@ export function GuideForm({
           </div>
         )}
         {amount.taxCents !== null && (
-          <div className="rounded-lg bg-admin-input-bg px-3.5 py-2.5 text-[13px] text-admin-text">
+          <div className="rounded-lg bg-muted/50 px-3.5 py-2.5 text-sm text-foreground">
             <strong>
               Imposto{" "}
               {draft.taxOverrideCents === null ? "estimado" : "ajustado à mão"}:
@@ -583,68 +584,61 @@ export function GuideForm({
             </strong>{" "}
             ({amount.rateLabel})
             {amount.breakdown.map((line) => (
-              <span key={line} className="block text-[12px] text-admin-muted">
+              <span key={line} className="block text-xs text-muted-foreground">
                 {line}
               </span>
             ))}
           </div>
         )}
-        <label className="block">
+        <Label className="block leading-normal font-normal">
           <span className={LABEL}>Destinatário desta guia (opcional)</span>
-          <textarea
+          <Textarea
             rows={2}
             maxLength={LONG_TEXT_MAX}
             value={guide.addresseeText}
             onChange={(event) => update({ addresseeText: event.target.value })}
             placeholder={addressee(plain, settings)}
-            className={FIELD}
           />
-        </label>
+        </Label>
         {info.rate !== "none" && (
-          <label className="block">
+          <Label className="block leading-normal font-normal">
             <span className={LABEL}>Lei citada nesta guia (opcional)</span>
-            <input
+            <Input
               value={guide.lawText}
               onChange={(event) => update({ lawText: event.target.value })}
               placeholder={localLaw(plain, settings) || "Informe a lei"}
-              className={FIELD}
             />
-          </label>
+          </Label>
         )}
-        <p className="-mt-1 text-[11.5px] text-admin-muted">
+        <p className="-mt-1 text-xs text-muted-foreground">
           Em branco, saem o destinatário e a lei da configuração. O Word baixado
           também pode ser editado antes de assinar.
         </p>
-        <label className="block">
+        <Label className="block leading-normal font-normal">
           <span className={LABEL}>Observações para o fisco (opcional)</span>
-          <textarea
+          <Textarea
             rows={2}
             maxLength={LONG_TEXT_MAX}
             value={guide.notes}
             onChange={(event) => update({ notes: event.target.value })}
-            className={FIELD}
           />
-        </label>
+        </Label>
       </section>
 
       {state.status === "error" && (
         <p
           role="alert"
-          className="rounded-lg bg-admin-error-bg px-3.5 py-2.5 text-sm font-semibold text-admin-error-text"
+          className="rounded-lg bg-destructive-soft px-3.5 py-2.5 text-sm font-semibold text-destructive"
         >
           {state.message}
         </p>
       )}
       <div className="flex items-center gap-3.5">
-        <button
-          type="submit"
-          disabled={pending}
-          className="btn btn-admin-primary btn-lg"
-        >
+        <Button type="submit" size="lg" disabled={pending}>
           {pending ? "Salvando…" : id ? "Salvar correções" : "Emitir guia"}
-        </button>
+        </Button>
         {state.status === "saved" && (
-          <output className="flex items-center gap-1.5 rounded-full bg-admin-success-bg px-3 py-1.5 text-[12.5px] font-semibold text-admin-success-text">
+          <output className="flex items-center gap-1.5 rounded-full bg-success-soft px-3 py-1.5 text-xs font-semibold text-success-text">
             <AdminIcon name="check" className="h-3.5 w-3.5" strokeWidth={2.4} />
             Salvo. O PDF e o Word já saem corrigidos.
           </output>

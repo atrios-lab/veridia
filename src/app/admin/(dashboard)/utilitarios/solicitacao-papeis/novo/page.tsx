@@ -36,7 +36,7 @@ export default async function NewOrderPage({
         }}
         description="Escolha a empresa e informe as quantidades. O pedido sai pronto no padrão da empresa, para assinar digitalmente ou imprimir."
       />
-      <main className="flex max-w-[1000px] flex-col gap-4 px-[30px] py-7 max-md:px-4">
+      <main className="flex max-w-[1000px] flex-col gap-4 px-4 py-7 md:px-8">
         <OrderForm
           suppliers={suppliers}
           signers={guide.signers.map(({ name, title }) => ({ name, title }))}

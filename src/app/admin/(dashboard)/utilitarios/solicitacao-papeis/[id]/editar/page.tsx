@@ -33,7 +33,7 @@ export default async function EditOrderPage({
         }}
         description="Altere as quantidades, os itens, o frete, o pagamento ou a data. O número do pedido continua o mesmo."
       />
-      <main className="flex max-w-[1000px] flex-col gap-4 px-[30px] py-7 max-md:px-4">
+      <main className="flex max-w-[1000px] flex-col gap-4 px-4 py-7 md:px-8">
         <OrderForm
           suppliers={suppliers.filter((s) => s.id === row.supplierId)}
           signers={(await getGuideSettings(tenant)).signers.map(

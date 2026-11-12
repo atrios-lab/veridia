@@ -21,7 +21,7 @@ export default async function OfficeDataPage() {
         }}
         description="Os dados que vão em todo pedido e no formulário da empresa: cartório, CNS, responsável, faturamento e contato."
       />
-      <main className="flex max-w-[900px] flex-col gap-4 px-[30px] py-7 max-md:px-4">
+      <main className="flex max-w-[900px] flex-col gap-4 px-4 py-7 md:px-8">
         <OfficeDataForm initial={await getOfficeOrderDataWith(db, tenant)} />
       </main>
     </>

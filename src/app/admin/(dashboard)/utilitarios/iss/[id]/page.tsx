@@ -60,10 +60,10 @@ export default async function IssDeclarationPage({
         maxWidth={900}
         title={`Declaração de ISS nº ${number}`}
       />
-      <main className="flex max-w-[900px] flex-col gap-4.5 px-[30px] py-7 max-md:px-4">
+      <main className="flex max-w-[900px] flex-col gap-4.5 px-4 py-7 md:px-8">
         <BackLink href="/admin/utilitarios/iss" label="Declaração de ISS" />
         {(query.emitida || query.corrigida) && (
-          <p className="rounded-[12px] bg-admin-success-bg px-4 py-3 text-[13px] font-semibold text-admin-success-text">
+          <p className="rounded-lg bg-success-soft px-4 py-3 text-sm font-semibold text-success-text">
             {query.emitida ? "Declaração gerada." : "Correção salva."}{" "}
             {query.boletim === "updated"
               ? `O ISS foi lançado no boletim mensal de ${month}.`
@@ -74,12 +74,12 @@ export default async function IssDeclarationPage({
                   : ""}
           </p>
         )}
-        <section className="flex flex-wrap items-center gap-3 rounded-[14px] border border-admin-border bg-admin-card px-5 py-4">
+        <section className="flex flex-wrap items-center gap-3 rounded-xl border bg-card px-5 py-4">
           <div className="mr-auto">
-            <p className="text-[13px] font-bold text-admin-primary">
+            <p className="text-sm font-semibold text-foreground">
               {competenceTitle(row.competence)}
             </p>
-            <p className="text-[12px] text-admin-muted">
+            <p className="text-xs text-muted-foreground">
               Emolumentos R$ {formatMoneyBRL(row.emolumentsCents)} · ISS R${" "}
               {formatMoneyBRL(row.issCents)}
               {row.issFromReport ? " (ato a ato)" : ""}
@@ -118,9 +118,7 @@ export default async function IssDeclarationPage({
             session.user.permissions,
           )}
         />
-        <h2 className="font-serif text-[17px] font-semibold text-admin-primary">
-          Corrigir
-        </h2>
+        <h2 className="text-lg font-semibold text-foreground">Corrigir</h2>
         <IssForm
           state={{
             uf: tenant.location.state,

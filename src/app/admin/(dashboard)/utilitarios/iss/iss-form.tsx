@@ -4,15 +4,18 @@ import { useActionState, useMemo, useState, useTransition } from "react";
 import { competenceLabel, formatRate, issOn } from "@/core/iss/declaration.ts";
 import { LONG_TEXT_MAX } from "@/core/text-limits.ts";
 import { formatMoneyBRL, parseMoneyBRL } from "@/core/transparency/bulletin.ts";
+import { Button } from "../../../_ui/button.tsx";
+import { Input } from "../../../_ui/input.tsx";
+import { Label } from "../../../_ui/label.tsx";
+import { NativeSelect } from "../../../_ui/native-select.tsx";
+import { Textarea } from "../../../_ui/textarea.tsx";
 import {
   type IssFormState,
   readIssReports,
   saveIssDeclaration,
 } from "./actions.ts";
 
-const FIELD =
-  "w-full rounded-[9px] border border-admin-input-border bg-admin-input-bg px-3.5 py-2.5 text-[13.5px] text-admin-text outline-none focus:border-admin-primary-soft";
-const LABEL = "mb-1.5 block text-xs font-bold text-admin-primary";
+const LABEL = "mb-1.5 block text-sm leading-normal font-medium text-foreground";
 const MONTHS = [
   "Janeiro",
   "Fevereiro",
@@ -169,13 +172,10 @@ export function IssForm({
   const thisYear = Math.max(Number(year), Number(initial.today.slice(0, 4)));
 
   return (
-    <form
-      action={action}
-      className="rounded-[14px] border border-admin-border bg-admin-card px-5 py-4"
-    >
+    <form action={action} className="rounded-xl border bg-card px-5 py-4">
       {initial.id && <input type="hidden" name="id" value={initial.id} />}
       <div className="grid grid-cols-1 gap-3.5 md:grid-cols-4">
-        <div className="rounded-[12px] border border-dashed border-admin-primary-soft bg-admin-input-bg px-4 py-3 md:col-span-4">
+        <div className="rounded-lg border border-dashed border-primary bg-muted/50 px-4 py-3 md:col-span-4">
           <label htmlFor="iss-livro" className={LABEL}>
             Livro Diário Auxiliar e relatórios do mês (PDF, um ou mais)
           </label>
@@ -186,9 +186,9 @@ export function IssForm({
             multiple
             accept="application/pdf,.pdf"
             onChange={(event) => readReports(event.target.files)}
-            className="block w-full text-[13px] file:mr-3 file:rounded-full file:border-0 file:bg-admin-primary file:px-4 file:py-2 file:text-[12.5px] file:font-semibold file:text-white"
+            className="block w-full text-sm file:mr-3 file:rounded-full file:border-0 file:bg-primary file:px-4 file:py-2 file:text-xs file:font-semibold file:text-primary-foreground"
           />
-          <p className="mt-1 text-[11.5px] text-admin-muted" aria-live="polite">
+          <p className="mt-1 text-xs text-muted-foreground" aria-live="polite">
             {reading
               ? "Lendo os relatórios..."
               : (readNote ??
@@ -201,43 +201,43 @@ export function IssForm({
           <label htmlFor="iss-mes" className={LABEL}>
             Competência: mês
           </label>
-          <select
+          <NativeSelect
             id="iss-mes"
             name="mes"
             value={chosenMonth}
             onChange={(event) => setChosenMonth(Number(event.target.value))}
-            className={FIELD}
+            className="w-full"
           >
             {MONTHS.map((name, index) => (
               <option key={name} value={index + 1}>
                 {name}
               </option>
             ))}
-          </select>
+          </NativeSelect>
         </div>
         <div>
           <label htmlFor="iss-ano" className={LABEL}>
             Ano
           </label>
-          <select
+          <NativeSelect
             id="iss-ano"
             name="ano"
             value={chosenYear}
             onChange={(event) => setChosenYear(Number(event.target.value))}
-            className={FIELD}
+            className="w-full"
           >
             {[thisYear - 2, thisYear - 1, thisYear].map((y) => (
               <option key={y} value={y}>
                 {y}
               </option>
             ))}
-          </select>
+          </NativeSelect>
         </div>
         <div className="md:col-span-2">
           <label htmlFor="iss-emolumentos" className={LABEL}>
             Emolumentos do mês (base de cálculo)
           </label>
-          <input
+          <Input
             id="iss-emolumentos"
             name="emolumentos"
             inputMode="decimal"
@@ -245,9 +245,8 @@ export function IssForm({
             placeholder="0,00"
             value={emoluments}
             onChange={(event) => setEmoluments(event.target.value)}
-            className={FIELD}
           />
-          <p className="mt-1 text-[11.5px] text-admin-muted">
+          <p className="mt-1 text-xs text-muted-foreground">
             Só os emolumentos. Ficam de fora os repasses a terceiros (taxa de
             fiscalização, fundos do Estado, selo)
             {fundNames ? `: no ${office.uf}, ${fundNames}` : ""}. Eles não são
@@ -258,47 +257,46 @@ export function IssForm({
           <label htmlFor="iss-aliquota" className={LABEL}>
             Alíquota (%)
           </label>
-          <input
+          <Input
             id="iss-aliquota"
             name="aliquota"
             inputMode="decimal"
             value={rate}
             onChange={(event) => setRate(event.target.value)}
-            className={FIELD}
           />
         </div>
-        <div className="flex flex-col justify-end rounded-[12px] bg-admin-input-bg px-4 py-2.5 md:col-span-3">
-          <span className="text-[11.5px] font-bold uppercase tracking-[0.06em] text-admin-muted">
+        <div className="flex flex-col justify-end rounded-lg bg-muted/50 px-4 py-2.5 md:col-span-3">
+          <span className="text-xs font-semibold text-muted-foreground">
             ISS de{" "}
             {competenceLabel(
               `${chosenYear}-${String(chosenMonth).padStart(2, "0")}`,
             )}
           </span>
           {byAct ? (
-            <label className="mt-0.5 flex items-center gap-1.5 font-serif text-[24px] font-semibold text-admin-primary">
+            <Label className="mt-0.5 flex items-center gap-1.5 text-2xl font-semibold text-foreground leading-normal">
               R$
-              <input
+              <Input
                 name="iss"
                 inputMode="decimal"
                 aria-label="ISS apurado ato a ato"
                 value={reportIss}
                 onChange={(event) => setReportIss(event.target.value)}
-                className="w-40 rounded-[8px] border border-admin-input-border bg-admin-card px-2 py-0.5 font-serif text-[22px] outline-none focus:border-admin-primary-soft"
+                className="w-40 bg-card px-2 text-xl tabular-nums md:text-xl"
               />
-            </label>
+            </Label>
           ) : (
-            <span className="font-serif text-[24px] font-semibold text-admin-primary">
+            <span className="text-2xl font-semibold text-foreground tabular-nums">
               {iss ? `R$ ${formatMoneyBRL(iss.cents)}` : "R$ 0,00"}
             </span>
           )}
-          <span className="text-[11.5px] text-admin-muted">
+          <span className="text-xs text-muted-foreground">
             {byAct
               ? `Apurado ato a ato no relatório${iss ? ` (${formatRate(iss.basis)} sobre o total daria R$ ${formatMoneyBRL(iss.cents)}; atos sem ISS explicam a diferença)` : ""}.`
               : iss
                 ? `${formatRate(iss.basis)} sobre R$ ${emoluments}`
                 : ""}
           </span>
-          <label className="mt-1.5 flex items-center gap-2 text-[12px] text-admin-text">
+          <label className="mt-1.5 flex items-center gap-2 text-xs text-foreground">
             <input
               type="checkbox"
               name="iss_relatorio"
@@ -318,11 +316,11 @@ export function IssForm({
           <label htmlFor="iss-assina" className={LABEL}>
             Quem assina
           </label>
-          <select
+          <NativeSelect
             id="iss-assina"
             name="assina"
             defaultValue={String(initial.signer ?? 0)}
-            className={FIELD}
+            className="w-full"
           >
             {(office.signers?.length
               ? office.signers
@@ -332,58 +330,58 @@ export function IssForm({
                 {[signer.name, signer.title].filter(Boolean).join(", ")}
               </option>
             ))}
-          </select>
-          <p className="mt-1 text-[11.5px] text-admin-muted">
+          </NativeSelect>
+          <p className="mt-1 text-xs text-muted-foreground">
             Edite a lista na configuração do ISS ou em Configurações › Quem
             assina (é a mesma das guias). Vale para a assinatura digital e para
             a impressa.
           </p>
         </div>
-        <details className="md:col-span-4 rounded-[12px] bg-admin-input-bg px-3.5 py-2.5">
-          <summary className="cursor-pointer text-[12.5px] font-semibold text-admin-primary">
+        <details className="rounded-lg bg-muted/50 px-3.5 py-2.5 md:col-span-4">
+          <summary className="cursor-pointer text-sm font-medium text-foreground">
             Recolhimento e observações (opcional)
           </summary>
           <div className="mt-3 grid grid-cols-1 gap-3 md:grid-cols-3">
-            <label className={LABEL}>
+            <Label className={LABEL}>
               Nº do DAM/guia
-              <input
+              <Input
                 name="dam"
                 defaultValue={initial.damNumber}
-                className={`${FIELD} mt-1.5 font-normal`}
+                className="mt-1.5 font-normal"
               />
-            </label>
-            <label className={LABEL}>
+            </Label>
+            <Label className={LABEL}>
               Vencimento
-              <input
+              <Input
                 type="date"
                 name="vencimento"
                 defaultValue={initial.dueDate}
-                className={`${FIELD} mt-1.5 font-normal`}
+                className="mt-1.5 font-normal"
               />
-            </label>
-            <label className={LABEL}>
+            </Label>
+            <Label className={LABEL}>
               Recolhido em
-              <input
+              <Input
                 type="date"
                 name="pagamento"
                 defaultValue={initial.paidOn}
-                className={`${FIELD} mt-1.5 font-normal`}
+                className="mt-1.5 font-normal"
               />
-            </label>
-            <label className={`${LABEL} md:col-span-3`}>
+            </Label>
+            <Label className={`${LABEL} md:col-span-3`}>
               Observações
-              <textarea
+              <Textarea
                 name="observacoes"
                 rows={2}
                 maxLength={LONG_TEXT_MAX}
                 defaultValue={initial.notes}
-                className={`${FIELD} mt-1.5 font-normal`}
+                className="mt-1.5 font-normal"
               />
-            </label>
+            </Label>
           </div>
         </details>
-        <fieldset className="flex flex-col gap-1.5 text-[13px] text-admin-text md:col-span-4">
-          <legend className="mb-1 text-xs font-bold text-admin-primary">
+        <fieldset className="flex flex-col gap-1.5 text-sm text-foreground md:col-span-4">
+          <legend className="mb-1 text-sm font-medium text-foreground">
             Boletim mensal da transparência
           </legend>
           {(
@@ -412,33 +410,34 @@ export function IssForm({
                 value={value}
                 checked={bulletinChoice === value}
                 onChange={() => setBulletinChoice(value)}
+                className="accent-primary"
               />
               {label}
             </label>
           ))}
         </fieldset>
         {bulletin && (
-          <fieldset className="rounded-[12px] bg-admin-input-bg px-3.5 py-3 md:col-span-4">
-            <legend className="px-1 text-[12.5px] font-semibold text-admin-primary">
+          <fieldset className="rounded-lg bg-muted/50 px-3.5 py-3 md:col-span-4">
+            <legend className="px-1 text-sm font-medium text-foreground">
               Boletim mensal, lido do relatório de produtividade
             </legend>
             <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
               {bulletinFields.map(({ key, label }) => (
-                <label key={key} className={LABEL}>
+                <Label key={key} className={LABEL}>
                   {label}
-                  <input
+                  <Input
                     name={`b_${key}`}
                     inputMode={key === "atos" ? "numeric" : "decimal"}
                     value={bulletin[key] ?? ""}
                     onChange={(event) =>
                       setBulletin({ ...bulletin, [key]: event.target.value })
                     }
-                    className={`${FIELD} mt-1.5 font-normal`}
+                    className="mt-1.5 font-normal"
                   />
-                </label>
+                </Label>
               ))}
             </div>
-            <p className="mt-2 text-[11.5px] text-admin-muted">
+            <p className="mt-2 text-xs text-muted-foreground">
               {bulletinChoice === "publicar"
                 ? "O boletim vai para o site assim que a declaração for gerada, como consolidado. Dá para corrigir depois em Transparência."
                 : "O boletim não é publicado sozinho: ao abrir o mês em Transparência, ele já vem preenchido para você conferir e publicar."}
@@ -446,7 +445,7 @@ export function IssForm({
           </fieldset>
         )}
         {readFromReport && (
-          <div className="rounded-[12px] border border-admin-warning-soft-border bg-admin-warning-bg px-4 py-3 text-[13px] text-admin-warning-text md:col-span-4">
+          <div className="rounded-lg border border-warning/30 bg-warning-soft px-4 py-3 text-sm text-warning-text md:col-span-4">
             <p className="font-semibold">
               Conferência: os valores acima foram lidos do relatório pelo
               sistema.
@@ -470,24 +469,17 @@ export function IssForm({
         )}
       </div>
       {state.status === "error" && (
-        <p
-          role="alert"
-          className="mt-3 text-[12.5px] font-semibold text-admin-error-text"
-        >
+        <p role="alert" className="mt-3 text-xs font-semibold text-destructive">
           {state.message}
         </p>
       )}
-      <button
-        type="submit"
-        disabled={pending}
-        className="btn btn-admin-primary btn-md mt-4"
-      >
+      <Button type="submit" size="lg" disabled={pending} className="mt-4">
         {pending
           ? "Salvando..."
           : initial.id
             ? "Salvar correção"
             : "Gerar declaração"}
-      </button>
+      </Button>
     </form>
   );
 }

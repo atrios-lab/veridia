@@ -33,7 +33,7 @@ export default async function MovementEditPage({
         description={`${kindName(lot)} · lote ${sheetNumber(lot, lot.first)} a ${sheetNumber(lot, lot.last)}. Corrija o que estiver errado; a auditoria guarda a alteração.`}
         actions={<VoidMovementButton id={row.id} />}
       />
-      <main className="flex max-w-[1000px] flex-col gap-4 px-[30px] py-7 max-md:px-4">
+      <main className="flex max-w-[1000px] flex-col gap-4 px-4 py-7 md:px-8">
         <MovementEditForm
           id={row.id}
           today={today()}
