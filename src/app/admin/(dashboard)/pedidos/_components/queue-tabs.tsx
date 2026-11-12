@@ -32,7 +32,10 @@ export function QueueTabs({
       <p className="mb-2 text-xs text-muted-foreground">
         Escolha uma etapa para ver os pedidos que estão nela.
       </p>
-      <div className="grid grid-cols-2 gap-x-2 sm:grid-cols-3 lg:grid-cols-4 2xl:grid-cols-8">
+      {/* One row from 1280px: the eight stages side by side, the count on
+          the "Etapa N" line so the stage's name gets the column's whole
+          width. Narrower, they wrap into a grid. */}
+      <div className="grid grid-cols-2 gap-x-1 sm:grid-cols-4 xl:grid-cols-8">
         {QUEUE_TABS.map((tab) => {
           const active = tab.id === query.tab;
           const count = counts[tab.id] ?? 0;
@@ -45,25 +48,14 @@ export function QueueTabs({
               scroll={false}
               aria-current={active ? "page" : undefined}
               className={cn(
-                "-mb-px flex flex-col gap-1 border-b-2 px-2 pt-2 pb-3 transition-colors",
-                // Finalizados takes the last column of its row, whatever the
-                // width: the right end, apart from the stages still moving.
-                closed && "col-end-[-1]",
+                "-mb-px flex min-w-0 flex-col gap-1 border-b-2 px-2 pt-2 pb-3 transition-colors",
                 active
                   ? "border-primary text-foreground"
                   : "border-transparent text-muted-foreground hover:border-border hover:text-foreground",
               )}
             >
-              <span className="flex items-center justify-between gap-2 text-xs text-muted-foreground">
+              <span className="flex items-center justify-between gap-2 text-xs whitespace-nowrap text-muted-foreground">
                 {closed ? "Encerrados" : `Etapa ${step}`}
-                {active && (
-                  <span className="font-medium text-primary">aberta</span>
-                )}
-              </span>
-              <span className="flex items-start justify-between gap-2">
-                <span className="text-sm leading-tight font-medium">
-                  {tab.label}
-                </span>
                 <Badge
                   className={cn(
                     "tabular-nums",
@@ -77,6 +69,10 @@ export function QueueTabs({
                 >
                   {count}
                 </Badge>
+              </span>
+              <span className="text-sm leading-tight font-medium">
+                {tab.label}
+                {active && <span className="sr-only"> (aberta)</span>}
               </span>
               <span className="text-xs leading-snug text-muted-foreground">
                 {tab.hint}
