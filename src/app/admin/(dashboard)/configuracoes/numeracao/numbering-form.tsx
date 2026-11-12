@@ -3,11 +3,11 @@
 import { startTransition, useActionState, useEffect, useState } from "react";
 import { toast } from "sonner";
 import type { NumberSeries } from "@/core/numbering/series.ts";
+import { Button } from "../../../_ui/button.tsx";
+import { Input } from "../../../_ui/input.tsx";
+import { Label } from "../../../_ui/label.tsx";
+import { NativeSelect } from "../../../_ui/native-select.tsx";
 import { type NumberingState, saveNumbering } from "./actions.ts";
-
-const FIELD =
-  "rounded-[9px] border border-admin-input-border bg-admin-input-bg px-3 py-2 text-[13px] text-admin-text outline-none focus:border-admin-primary-soft";
-const LABEL = "mb-1 block text-xs font-bold text-admin-primary";
 
 /** The year and the next number of one series, saved on their own. */
 export function NumberingForm({
@@ -42,10 +42,10 @@ export function NumberingForm({
     >
       <input type="hidden" name="series" value={series} />
       <div>
-        <label htmlFor={`${id}-ano`} className={LABEL}>
+        <Label htmlFor={`${id}-ano`} className="mb-1.5">
           Ano
-        </label>
-        <select
+        </Label>
+        <NativeSelect
           id={`${id}-ano`}
           name="year"
           value={year}
@@ -55,20 +55,19 @@ export function NumberingForm({
             const known = years.find((row) => row.year === chosen);
             if (known) setNext(String(known.next));
           }}
-          className={FIELD}
         >
           {years.map((row) => (
             <option key={row.year} value={row.year}>
               {row.year}
             </option>
           ))}
-        </select>
+        </NativeSelect>
       </div>
       <div>
-        <label htmlFor={`${id}-proximo`} className={LABEL}>
+        <Label htmlFor={`${id}-proximo`} className="mb-1.5">
           Próximo número
-        </label>
-        <input
+        </Label>
+        <Input
           id={`${id}-proximo`}
           name="next"
           type="number"
@@ -79,21 +78,17 @@ export function NumberingForm({
           onChange={(event) => setNext(event.target.value)}
           aria-invalid={state.status === "error" ? true : undefined}
           aria-describedby={state.status === "error" ? `${id}-erro` : undefined}
-          className={`${FIELD} w-32`}
+          className="w-32"
         />
       </div>
-      <button
-        type="submit"
-        disabled={pending}
-        className="btn btn-admin-primary btn-md"
-      >
+      <Button type="submit" disabled={pending}>
         {pending ? "Salvando..." : "Salvar"}
-      </button>
+      </Button>
       {state.status === "error" && (
         <p
           id={`${id}-erro`}
           role="alert"
-          className="basis-full text-[12.5px] font-semibold text-admin-error-text"
+          className="basis-full text-sm text-destructive"
         >
           {state.message}
         </p>

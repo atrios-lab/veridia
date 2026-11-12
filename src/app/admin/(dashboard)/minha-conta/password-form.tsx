@@ -2,11 +2,10 @@
 
 import { startTransition, useActionState, useEffect, useRef } from "react";
 import { toast } from "sonner";
+import { Button } from "../../_ui/button.tsx";
+import { Input } from "../../_ui/input.tsx";
+import { Label } from "../../_ui/label.tsx";
 import { changeOwnPassword, type PasswordState } from "./actions.ts";
-
-const FIELD =
-  "w-full rounded-[9px] border border-admin-input-border bg-admin-input-bg px-3.5 py-2.5 text-[13.5px] text-admin-text outline-none focus:border-admin-primary-soft";
-const LABEL = "flex flex-col gap-1.5 text-xs font-bold text-admin-primary";
 
 /** Trocar a própria senha: the current one, the new one twice. */
 export function PasswordForm({ changed }: { changed: boolean }) {
@@ -22,20 +21,17 @@ export function PasswordForm({ changed }: { changed: boolean }) {
   }, [state]);
 
   return (
-    <section
-      id="senha"
-      className="rounded-[14px] border border-admin-border bg-admin-card px-5 py-4"
-    >
-      <h2 className="font-serif text-[17px] font-semibold text-admin-primary">
+    <section id="senha" className="rounded-xl border bg-card px-5 py-4">
+      <h2 className="text-lg font-semibold text-foreground">
         Trocar minha senha
       </h2>
       {changed && (
-        <output className="mt-2 block rounded-[10px] bg-admin-success-bg px-3.5 py-2.5 text-[12.5px] font-semibold text-admin-success-text">
+        <output className="mt-2 block rounded-lg border border-success/30 bg-success-soft px-4 py-3 text-sm font-medium text-success-text">
           Senha trocada. Nos outros dispositivos, entre de novo com a senha
           nova.
         </output>
       )}
-      <p className="mt-1 text-[12.5px] text-admin-muted">
+      <p className="mt-1 text-sm text-muted-foreground">
         Informe a senha atual e a nova, com pelo menos 8 caracteres. Os outros
         dispositivos onde você está conectado saem e pedem a senha nova.
       </p>
@@ -50,51 +46,44 @@ export function PasswordForm({ changed }: { changed: boolean }) {
         }}
         className="mt-3 grid grid-cols-1 gap-3 md:grid-cols-3"
       >
-        <label className={LABEL}>
+        <Label className="flex-col items-stretch gap-1.5">
           Senha atual
-          <input
+          <Input
             name="atual"
             type="password"
             autoComplete="current-password"
             required
-            className={`${FIELD} font-normal`}
+            className="font-normal"
           />
-        </label>
-        <label className={LABEL}>
+        </Label>
+        <Label className="flex-col items-stretch gap-1.5">
           Nova senha
-          <input
+          <Input
             name="nova"
             type="password"
             autoComplete="new-password"
             minLength={8}
             required
-            className={`${FIELD} font-normal`}
+            className="font-normal"
           />
-        </label>
-        <label className={LABEL}>
+        </Label>
+        <Label className="flex-col items-stretch gap-1.5">
           Repita a nova senha
-          <input
+          <Input
             name="confirmar"
             type="password"
             autoComplete="new-password"
             minLength={8}
             required
-            className={`${FIELD} font-normal`}
+            className="font-normal"
           />
-        </label>
+        </Label>
         <div className="md:col-span-3">
-          <button
-            type="submit"
-            disabled={pending}
-            className="btn btn-admin-primary btn-md"
-          >
+          <Button type="submit" disabled={pending}>
             {pending ? "Trocando..." : "Trocar senha"}
-          </button>
+          </Button>
           {state.status === "error" && (
-            <p
-              role="alert"
-              className="mt-2 text-[12.5px] font-semibold text-admin-error-text"
-            >
+            <p role="alert" className="mt-2 text-sm text-destructive">
               {state.message}
             </p>
           )}

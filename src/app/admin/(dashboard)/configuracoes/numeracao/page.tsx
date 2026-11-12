@@ -96,22 +96,22 @@ export default async function NumberingSettingsPage() {
   return (
     <>
       <AdminPageHeader maxWidth={860} title="Configurações" />
-      <main className="flex max-w-[860px] flex-col gap-4.5 px-[30px] py-7">
+      <main className="flex max-w-[860px] flex-col gap-6 px-4 pt-6 pb-8 md:px-8">
         <ConfiguracoesTabs
           role={session.user.role ?? ""}
           permissions={session.user.permissions}
         />
-        <section className="rounded-[14px] border border-admin-border bg-admin-card px-5 py-4">
-          <h2 className="font-serif text-[17px] font-semibold text-admin-primary">
+        <section className="rounded-xl border bg-card px-5 py-4">
+          <h2 className="text-lg font-semibold text-foreground">
             Numeração de documentos
           </h2>
-          <p className="mt-1 text-[12.5px] leading-relaxed text-admin-muted">
+          <p className="mt-1 text-sm leading-relaxed text-muted-foreground">
             Cada documento numerado recomeça do 1 todo ano. Se a serventia já
             vinha numerando em outro lugar (por exemplo, as guias já estão na
             019/2026 no livro), informe aqui o próximo número, deste ano ou do
             ano que vem. O sistema nunca repete um número em uso.
           </p>
-          <p className="mt-1.5 text-[12.5px] leading-relaxed text-admin-muted">
+          <p className="mt-1.5 text-sm leading-relaxed text-muted-foreground">
             Nas guias e nas declarações de ISS, você também pode alterar o
             número de um documento já emitido ou excluir um de teste: o número
             dele fica livre e é o próximo a ser usado. Excluir não apaga do
@@ -123,22 +123,22 @@ export default async function NumberingSettingsPage() {
           <section
             key={series}
             aria-labelledby={`numeracao-${series}`}
-            className="rounded-[14px] border border-admin-border bg-admin-card px-5 py-4"
+            className="rounded-xl border bg-card px-5 py-4"
           >
             <h3
               id={`numeracao-${series}`}
-              className="font-serif text-[16px] font-semibold text-admin-primary"
+              className="text-base font-semibold text-foreground"
             >
               {info.label}
             </h3>
-            <p className="mt-0.5 text-[12.5px] text-admin-muted">{info.hint}</p>
-            <ul className="mt-3 grid gap-2 text-[13px] text-admin-text md:grid-cols-2">
+            <p className="mt-0.5 text-xs text-muted-foreground">{info.hint}</p>
+            <ul className="mt-3 grid gap-2 text-sm text-foreground md:grid-cols-2">
               {perYear.map((row) => (
                 <li
                   key={row.year}
-                  className="rounded-[10px] border border-admin-border bg-admin-input-bg px-3.5 py-2.5"
+                  className="rounded-lg border bg-muted/50 px-3.5 py-2.5"
                 >
-                  <span className="font-bold text-admin-primary">
+                  <span className="font-semibold text-foreground tabular-nums">
                     {row.year}
                   </span>
                   {": "}
@@ -149,7 +149,7 @@ export default async function NumberingSettingsPage() {
                   {row.floor ? (
                     <>
                       {row.floor === row.next && (
-                        <span className="text-admin-muted">
+                        <span className="text-muted-foreground">
                           {" "}
                           (definido aqui)
                         </span>
@@ -173,7 +173,7 @@ export default async function NumberingSettingsPage() {
                 />
               )
             ) : series === "notificacao" ? null : (
-              <p className="mt-2.5 text-[12px] text-admin-muted">
+              <p className="mt-2.5 text-xs text-muted-foreground">
                 Protocolos já entregues não mudam: o cidadão já tem o número e o
                 pagamento por Pix está ligado a ele.
               </p>

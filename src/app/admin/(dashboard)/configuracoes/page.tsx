@@ -21,10 +21,10 @@ export const metadata = { title: "Configurações" };
 function ReadOnlyField({ label, value }: { label: string; value: string }) {
   return (
     <div>
-      <span className="mb-1.5 block text-xs font-bold text-admin-primary">
+      <span className="mb-1.5 block text-sm font-medium text-foreground">
         {label}
       </span>
-      <p className="rounded-[9px] border border-admin-border bg-admin-readonly-bg px-3.5 py-2.5 text-[13.5px] text-admin-muted">
+      <p className="rounded-md border bg-muted px-3 py-2 text-sm text-muted-foreground">
         {value}
       </p>
     </div>
@@ -79,38 +79,36 @@ function AttributionRow({
   const { label, gloss } = ATTRIBUTION_PANEL_LABELS[attribution];
   return (
     <div
-      className={`flex items-center gap-3 rounded-[10px] border bg-admin-input-bg px-3.5 py-3 ${
-        delegated
-          ? "border-admin-active-border"
-          : "border-admin-border opacity-75"
+      className={`flex items-center gap-3 rounded-lg border bg-muted/50 px-3.5 py-3 ${
+        delegated ? "border-primary/40" : "opacity-75"
       }`}
     >
       {delegated ? (
         <span
           aria-hidden="true"
-          className="flex h-5 w-5 flex-none items-center justify-center rounded-full bg-admin-primary-soft"
+          className="flex h-5 w-5 flex-none items-center justify-center rounded-full bg-primary"
         >
           <AdminIcon
             name="check"
-            className="h-[11px] w-[11px] text-white"
+            className="h-3 w-3 text-primary-foreground"
             strokeWidth={3}
           />
         </span>
       ) : (
         <span
           aria-hidden="true"
-          className="h-5 w-5 flex-none rounded-full border-[1.5px] border-admin-input-border"
+          className="h-5 w-5 flex-none rounded-full border-2 border-input"
         />
       )}
       <span className="min-w-0 flex-1">
-        <span className="block text-[13px] font-bold text-admin-primary">
+        <span className="block text-sm font-semibold text-foreground">
           {label}
         </span>
-        <span className="block text-[11.5px] text-admin-muted">{gloss}</span>
+        <span className="block text-xs text-muted-foreground">{gloss}</span>
       </span>
       <span
-        className={`flex-none text-[10.5px] font-bold ${
-          delegated ? "text-admin-primary-soft" : "text-admin-faint"
+        className={`flex-none text-xs font-semibold ${
+          delegated ? "text-primary" : "text-muted-foreground"
         }`}
       >
         {delegated ? "Delegada" : "Não delegada"}
@@ -140,21 +138,21 @@ export default async function SettingsPage() {
   return (
     <>
       <AdminPageHeader maxWidth={960} title="Configurações" />
-      <main className="flex max-w-[960px] flex-col gap-4.5 px-[30px] py-7">
+      <main className="flex max-w-[960px] flex-col gap-6 px-4 pt-6 pb-8 md:px-8">
         <ConfiguracoesTabs role={role} permissions={granted} />
 
-        <div className="rounded-[14px] border border-admin-border bg-admin-card p-6">
+        <div className="rounded-xl border bg-card p-6">
           <OfficeContactForm tenant={tenant} />
 
-          <section className="mt-6 border-t border-admin-border pt-5.5">
+          <section className="mt-6 border-t pt-5.5">
             <OfficeIdentificationForm tenant={tenant} />
           </section>
 
-          <section className="mt-6 border-t border-admin-border pt-5.5">
+          <section className="mt-6 border-t pt-5.5">
             <OfficeDeadlineForm tenant={tenant} />
           </section>
 
-          <section className="mt-6 border-t border-admin-border pt-5.5">
+          <section className="mt-6 border-t pt-5.5">
             <OfficeHolidaysForm
               initial={officeHolidays(tenant)}
               initialHidden={tenant.hiddenHolidays}
@@ -162,12 +160,12 @@ export default async function SettingsPage() {
             />
           </section>
 
-          <section className="mt-6 border-t border-admin-border pt-5.5">
+          <section className="mt-6 border-t pt-5.5">
             <div className="flex items-center gap-2.5">
-              <h2 className="font-serif text-[17px] font-semibold text-admin-primary">
+              <h2 className="text-lg font-semibold text-foreground">
                 Dados da serventia
               </h2>
-              <span className="rounded-full bg-admin-warning-bg px-2.5 py-0.5 text-[11px] font-bold text-admin-warning-text">
+              <span className="rounded-full bg-warning px-2.5 py-0.5 text-xs font-medium text-warning-foreground">
                 Somente leitura
               </span>
             </div>
@@ -180,7 +178,7 @@ export default async function SettingsPage() {
               <ReadOnlyField label="CNS" value={tenant.cns} />
             </div>
 
-            <h3 className="mt-5.5 mb-3 text-[11.5px] font-bold uppercase tracking-[0.09em] text-admin-accent">
+            <h3 className="mt-5.5 mb-3 text-xs font-medium text-muted-foreground">
               Atribuições da serventia
             </h3>
             <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-2 lg:grid-cols-3">
@@ -192,7 +190,7 @@ export default async function SettingsPage() {
                 />
               ))}
             </div>
-            <p className="mt-3 text-xs leading-relaxed text-admin-muted">
+            <p className="mt-3 text-xs leading-relaxed text-muted-foreground">
               A atribuição é uma delegação do tribunal, não uma preferência da
               serventia, por isso não tem como alterar por aqui. É ela que
               decide quais seções o site oferece e quais atos o cidadão pode
@@ -201,7 +199,7 @@ export default async function SettingsPage() {
               {canBrand ? (
                 <Link
                   href="/admin/configuracoes/identidade-visual"
-                  className="font-semibold underline"
+                  className="font-medium text-primary underline"
                 >
                   Identidade Visual
                 </Link>
@@ -211,14 +209,14 @@ export default async function SettingsPage() {
               . O contato do Encarregado de Dados fica na aba{" "}
               <Link
                 href="/admin/configuracoes/encarregado"
-                className="font-semibold underline"
+                className="font-medium text-primary underline"
               >
                 Encarregado
               </Link>
               , e a chave Pix da serventia, na aba{" "}
               <Link
                 href="/admin/configuracoes/cobranca"
-                className="font-semibold underline"
+                className="font-medium text-primary underline"
               >
                 Cobrança
               </Link>

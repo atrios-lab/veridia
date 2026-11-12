@@ -22,7 +22,7 @@ export default async function NotificationSettingsPage() {
   return (
     <>
       <AdminPageHeader maxWidth={860} title="Configurações" />
-      <main className="flex max-w-[860px] flex-col gap-4.5 px-[30px] py-7">
+      <main className="flex max-w-[860px] flex-col gap-6 px-4 pt-6 pb-8 md:px-8">
         <ConfiguracoesTabs
           role={session.user.role ?? ""}
           permissions={session.user.permissions}

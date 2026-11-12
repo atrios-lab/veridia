@@ -28,17 +28,17 @@ export default async function MyAccountPage({
   return (
     <>
       <AdminPageHeader maxWidth={720} title="Minha conta" />
-      <main className="flex max-w-[720px] flex-col gap-4.5 px-[30px] py-7">
+      <main className="flex max-w-[720px] flex-col gap-6 px-4 pt-6 pb-8 md:px-8">
         <PasswordForm changed={(await searchParams).senha === "trocada"} />
-        <section className="rounded-[14px] border border-admin-border bg-admin-card px-5 py-4">
-          <h2 className="font-serif text-[17px] font-semibold text-admin-primary">
+        <section className="rounded-xl border bg-card px-5 py-4">
+          <h2 className="text-lg font-semibold text-foreground">
             Verificação em duas etapas
           </h2>
           {needsAccessCode(session.user.role ?? "") ? (
-            <p className="mt-1 text-[12.5px] leading-relaxed text-admin-muted">
+            <p className="mt-1 text-sm leading-relaxed text-muted-foreground">
               Depois da senha, o painel envia um código para o seu e-mail de
               verificação. Hoje ele vai para{" "}
-              <strong className="text-admin-text">
+              <strong className="text-foreground">
                 {codeEmailFor(access, session.user.id, session.user.email)}
               </strong>
               . Você pode trocar o e-mail (confirmando o novo com um código) ou
@@ -46,7 +46,7 @@ export default async function MyAccountPage({
               administrador da serventia também pode alterar estes dados.
             </p>
           ) : (
-            <p className="mt-1 text-[12.5px] text-admin-muted">
+            <p className="mt-1 text-sm text-muted-foreground">
               A conta mestre da Átrios não passa pela verificação em duas
               etapas.
             </p>

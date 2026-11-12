@@ -11,16 +11,16 @@ import {
   type Tenant,
 } from "@/core/tenant/schema.ts";
 import { AdminIcon } from "../../_components/icon.tsx";
+import { Button } from "../../_ui/button.tsx";
+import { Input } from "../../_ui/input.tsx";
+import { Label } from "../../_ui/label.tsx";
+import { NativeSelect } from "../../_ui/native-select.tsx";
+import { Switch } from "../../_ui/switch.tsx";
+import { Textarea } from "../../_ui/textarea.tsx";
 import {
   type OfficeIdentificationState,
   saveOfficeIdentification,
 } from "./actions.ts";
-
-const FIELD_CLASS =
-  "w-full rounded-[9px] border border-admin-input-border bg-admin-input-bg px-3.5 py-2.5 text-[13.5px] text-admin-text outline-none focus:border-admin-primary-soft";
-const ERROR_FIELD_CLASS =
-  "w-full rounded-[9px] border border-admin-error-border bg-admin-error-input-bg px-3.5 py-2.5 text-[13.5px] text-admin-text outline-none focus:border-admin-error-text";
-const LABEL_CLASS = "mb-1.5 block text-xs font-bold text-admin-primary";
 
 type Kind = Jurisdiction["kind"];
 
@@ -88,10 +88,10 @@ export function OfficeIdentificationForm({ tenant }: { tenant: Tenant }) {
 
   return (
     <form action={formAction}>
-      <h2 className="font-serif text-[17px] font-semibold text-admin-primary">
+      <h2 className="text-lg font-semibold text-foreground">
         Identificação nos documentos
       </h2>
-      <p className="mt-1 text-[12.5px] text-admin-muted">
+      <p className="mt-1 text-sm text-muted-foreground">
         Sai no cabeçalho de todo documento que o site gera (requerimento,
         comprovantes, declarações), com o brasão da República, como manda o
         Código de Normas (Provimento CGJ/TJRN 156/2016, art. 2º). Logomarca não
@@ -100,10 +100,10 @@ export function OfficeIdentificationForm({ tenant }: { tenant: Tenant }) {
 
       <div className="mt-4.5 grid grid-cols-1 gap-3.5 md:grid-cols-[1fr_1fr_120px]">
         <div className="md:col-span-3">
-          <label className={LABEL_CLASS} htmlFor="officialName">
+          <Label htmlFor="officialName" className="mb-1.5">
             Denominação oficial da serventia
-          </label>
-          <input
+          </Label>
+          <Input
             id="officialName"
             name="officialName"
             value={officialName}
@@ -111,55 +111,45 @@ export function OfficeIdentificationForm({ tenant }: { tenant: Tenant }) {
             placeholder={tenant.name}
             maxLength={120}
             aria-invalid={fieldErrors.officialName ? true : undefined}
-            className={
-              fieldErrors.officialName ? ERROR_FIELD_CLASS : FIELD_CLASS
-            }
           />
-          <p className="mt-1.5 text-[11.5px] text-admin-muted">
+          <p className="mt-1.5 text-xs text-muted-foreground">
             Como está nas certidões. Ex.: Cartório do Ofício Único de Ielmo
             Marinho/RN. Em branco, sai “{tenant.name}”.
           </p>
         </div>
 
         <div>
-          <label className={LABEL_CLASS} htmlFor="jurisdictionKind">
+          <Label htmlFor="jurisdictionKind" className="mb-1.5">
             Comarca ou termo
-          </label>
-          <div className="relative">
-            <select
-              id="jurisdictionKind"
-              name="jurisdictionKind"
-              value={kind}
-              onChange={(event) => setKind(event.target.value as Kind | "")}
-              aria-invalid={fieldErrors.jurisdictionKind ? true : undefined}
-              className={`appearance-none pr-9 ${fieldErrors.jurisdictionKind ? ERROR_FIELD_CLASS : FIELD_CLASS}`}
-            >
-              <option value="" disabled>
-                Escolher…
+          </Label>
+          <NativeSelect
+            id="jurisdictionKind"
+            name="jurisdictionKind"
+            value={kind}
+            onChange={(event) => setKind(event.target.value as Kind | "")}
+            aria-invalid={fieldErrors.jurisdictionKind ? true : undefined}
+            className="w-full"
+          >
+            <option value="" disabled>
+              Escolher…
+            </option>
+            {KIND_OPTIONS.map((option) => (
+              <option key={option.value} value={option.value}>
+                {option.label}
               </option>
-              {KIND_OPTIONS.map((option) => (
-                <option key={option.value} value={option.value}>
-                  {option.label}
-                </option>
-              ))}
-            </select>
-            <AdminIcon
-              name="chevronDown"
-              className="pointer-events-none absolute top-1/2 right-3.5 h-3.5 w-3.5 -translate-y-1/2 text-admin-muted"
-              strokeWidth={2}
-            />
-          </div>
-          <p className="mt-1.5 text-[11.5px] text-admin-muted">
+            ))}
+          </NativeSelect>
+          <p className="mt-1.5 text-xs text-muted-foreground">
             Se o município é sede, “Comarca”. Se pertence à comarca de outra
             cidade, “Termo” ou “Comarca/Termo”, como a serventia escreve.
           </p>
         </div>
 
         <div>
-          <label className={LABEL_CLASS} htmlFor="jurisdictionSeat">
+          <Label htmlFor="jurisdictionSeat" className="mb-1.5">
             Cidade sede da comarca
-          </label>
-          <input
+          </Label>
+          <Input
             id="jurisdictionSeat"
             name="jurisdictionSeat"
             value={seat}
@@ -171,73 +161,63 @@ export function OfficeIdentificationForm({ tenant }: { tenant: Tenant }) {
             aria-describedby={
               fieldErrors.jurisdictionSeat ? "jurisdictionSeat-erro" : undefined
             }
-            className={`disabled:opacity-60 ${fieldErrors.jurisdictionSeat ? ERROR_FIELD_CLASS : FIELD_CLASS}`}
           />
           {fieldErrors.jurisdictionSeat ? (
             <p
               id="jurisdictionSeat-erro"
-              className="mt-1.5 text-xs font-semibold text-admin-error-text"
+              className="mt-1.5 text-sm text-destructive"
             >
               {fieldErrors.jurisdictionSeat}
             </p>
           ) : (
-            <p className="mt-1.5 text-[11.5px] text-admin-muted">
+            <p className="mt-1.5 text-xs text-muted-foreground">
               Só o nome da cidade; a UF vai ao lado.
             </p>
           )}
         </div>
 
         <div>
-          <label className={LABEL_CLASS} htmlFor="jurisdictionUf">
+          <Label htmlFor="jurisdictionUf" className="mb-1.5">
             UF
-          </label>
-          <div className="relative">
-            <select
-              id="jurisdictionUf"
-              name="jurisdictionUf"
-              value={uf}
-              onChange={(event) => setUf(event.target.value)}
-              disabled={kind === "none"}
-              aria-invalid={fieldErrors.jurisdictionUf ? true : undefined}
-              className={`appearance-none pr-9 disabled:opacity-60 ${fieldErrors.jurisdictionUf ? ERROR_FIELD_CLASS : FIELD_CLASS}`}
-            >
-              {BRAZILIAN_UFS.map((code) => (
-                <option key={code} value={code}>
-                  {code}
-                </option>
-              ))}
-            </select>
-            <AdminIcon
-              name="chevronDown"
-              className="pointer-events-none absolute top-1/2 right-3.5 h-3.5 w-3.5 -translate-y-1/2 text-admin-muted"
-              strokeWidth={2}
-            />
-          </div>
+          </Label>
+          <NativeSelect
+            id="jurisdictionUf"
+            name="jurisdictionUf"
+            value={uf}
+            onChange={(event) => setUf(event.target.value)}
+            disabled={kind === "none"}
+            aria-invalid={fieldErrors.jurisdictionUf ? true : undefined}
+            className="w-full"
+          >
+            {BRAZILIAN_UFS.map((code) => (
+              <option key={code} value={code}>
+                {code}
+              </option>
+            ))}
+          </NativeSelect>
         </div>
       </div>
 
-      <h3 className="mt-5.5 text-[11.5px] font-bold uppercase tracking-[0.09em] text-admin-accent">
+      <h3 className="mt-5.5 text-xs font-medium text-muted-foreground">
         Abaixo da identificação, em letra menor (opcional)
       </h3>
       <div className="mt-2.5 flex flex-col gap-3">
-        <label className="flex items-start gap-2.5 text-[13px] text-admin-text">
-          <input
-            type="checkbox"
+        <Label className="gap-2.5 font-normal text-foreground">
+          <Switch
             name="showHolder"
-            className="checkbox-admin mt-0.5"
             checked={showHolder}
-            onChange={(event) => setShowHolder(event.target.checked)}
+            onCheckedChange={(checked) => setShowHolder(checked)}
           />
           Mostrar o nome do(a) titular
-        </label>
+        </Label>
         <div
-          className={`grid grid-cols-1 gap-3.5 pl-6.5 md:grid-cols-2 ${showHolder ? "" : "hidden"}`}
+          className={`grid grid-cols-1 gap-3.5 pl-10.5 md:grid-cols-2 ${showHolder ? "" : "hidden"}`}
         >
           <div>
-            <label className={LABEL_CLASS} htmlFor="holderName">
+            <Label htmlFor="holderName" className="mb-1.5">
               Nome do(a) titular
-            </label>
-            <input
+            </Label>
+            <Input
               id="holderName"
               name="holderName"
               value={holderName}
@@ -245,69 +225,63 @@ export function OfficeIdentificationForm({ tenant }: { tenant: Tenant }) {
               placeholder="Nome completo"
               maxLength={120}
               aria-invalid={fieldErrors.holderName ? true : undefined}
-              className={
-                fieldErrors.holderName ? ERROR_FIELD_CLASS : FIELD_CLASS
-              }
             />
-            <p className="mt-1.5 text-[11.5px] text-admin-muted">
+            <p className="mt-1.5 text-xs text-muted-foreground">
               Mudou o tabelião? Troque aqui; os próximos documentos já saem com
               o nome novo.
             </p>
           </div>
           <div>
-            <label className={LABEL_CLASS} htmlFor="holderTitle">
+            <Label htmlFor="holderTitle" className="mb-1.5">
               Cargo, como sai depois do nome
-            </label>
-            <input
+            </Label>
+            <Input
               id="holderTitle"
               name="holderTitle"
               value={holderTitle}
               onChange={(event) => setHolderTitle(event.target.value)}
               placeholder="Ex.: Tabeliã e Registradora"
               maxLength={80}
-              className={FIELD_CLASS}
             />
           </div>
         </div>
-        <label className="flex items-start gap-2.5 text-[13px] text-admin-text">
-          <input
-            type="checkbox"
+        <Label className="gap-2.5 font-normal text-foreground">
+          <Switch
             name="showAttributions"
-            className="checkbox-admin mt-0.5"
             checked={showAttributions}
-            onChange={(event) => setShowAttributions(event.target.checked)}
+            onCheckedChange={(checked) => setShowAttributions(checked)}
           />
           Mostrar as atribuições da serventia
-        </label>
+        </Label>
       </div>
 
-      <h3 className="mt-5.5 text-[11.5px] font-bold uppercase tracking-[0.09em] text-admin-accent">
+      <h3 className="mt-5.5 text-xs font-medium text-muted-foreground">
         Prévia do cabeçalho
       </h3>
       <figure
-        className="mt-2.5 rounded-lg border border-admin-border bg-admin-card px-5 py-4 text-center font-serif text-admin-text"
+        className="mt-2.5 rounded-lg border bg-card px-5 py-4 text-center text-foreground"
         aria-label="Prévia do cabeçalho dos documentos"
       >
-        <p className="text-[10.5px] text-admin-muted">(brasão da República)</p>
+        <p className="text-xs text-muted-foreground">(brasão da República)</p>
         {preview.header.map((line) => (
-          <p key={line} className="text-[13px] leading-snug font-bold">
+          <p key={line} className="text-sm leading-snug font-semibold">
             {line}
           </p>
         ))}
         {preview.holder && (
-          <p className="mt-1 text-[11.5px] text-admin-muted">
-            {preview.holder}
-          </p>
+          <p className="mt-1 text-xs text-muted-foreground">{preview.holder}</p>
         )}
         {preview.attributions && (
-          <p className="text-[11px] text-admin-muted">{preview.attributions}</p>
+          <p className="text-xs text-muted-foreground">
+            {preview.attributions}
+          </p>
         )}
       </figure>
       <div className="mt-5.5">
-        <label className={LABEL_CLASS} htmlFor="footerLines">
+        <Label htmlFor="footerLines" className="mb-1.5">
           Rodapé dos documentos (opcional)
-        </label>
-        <textarea
+        </Label>
+        <Textarea
           id="footerLines"
           name="footerLines"
           value={footer}
@@ -316,11 +290,10 @@ export function OfficeIdentificationForm({ tenant }: { tenant: Tenant }) {
           placeholder={defaultFooter(tenant).join("\n")}
           aria-invalid={fieldErrors.footerLines ? true : undefined}
           aria-describedby="footerLines-ajuda"
-          className={fieldErrors.footerLines ? ERROR_FIELD_CLASS : FIELD_CLASS}
         />
         <p
           id="footerLines-ajuda"
-          className={`mt-1.5 text-[11.5px] ${fieldErrors.footerLines ? "font-semibold text-admin-error-text" : "text-admin-muted"}`}
+          className={`mt-1.5 text-xs ${fieldErrors.footerLines ? "text-destructive" : "text-muted-foreground"}`}
         >
           {fieldErrors.footerLines ??
             "Até 3 linhas, uma por linha. Em branco, sai o endereço e os contatos do formulário de contato acima."}
@@ -328,34 +301,30 @@ export function OfficeIdentificationForm({ tenant }: { tenant: Tenant }) {
       </div>
 
       {preview.missingJurisdiction && (
-        <p className="mt-2 text-[12px] text-admin-warning-text">
+        <p className="mt-2 text-xs text-warning-text">
           Falta a comarca ou o termo: sem ela, a linha não sai no cabeçalho. O
           Código de Normas pede a indicação da comarca.
         </p>
       )}
-      <p className="mt-2 text-[11.5px] text-admin-muted">
+      <p className="mt-2 text-xs text-muted-foreground">
         No rodapé: {preview.footer.join(" · ")}.
       </p>
 
       {state.status === "error" && (
         <p
           role="alert"
-          className="mt-4 rounded-lg bg-admin-error-bg px-3.5 py-2.5 text-sm font-semibold text-admin-error-text"
+          className="mt-4 rounded-lg border border-destructive/40 bg-destructive-soft px-4 py-3 text-sm font-medium text-destructive"
         >
           {state.message}
         </p>
       )}
 
       <div className="mt-4.5 flex items-center gap-3.5">
-        <button
-          type="submit"
-          disabled={pending}
-          className="btn btn-admin-primary btn-lg"
-        >
+        <Button type="submit" disabled={pending} size="lg">
           {pending ? "Salvando…" : "Salvar identificação"}
-        </button>
+        </Button>
         {state.status === "saved" && (
-          <output className="flex items-center gap-1.5 rounded-full bg-admin-success-bg px-3 py-1.5 text-[12.5px] font-semibold text-admin-success-text">
+          <output className="flex items-center gap-1.5 rounded-full bg-success-soft px-3 py-1.5 text-xs font-medium text-success-text">
             <AdminIcon name="check" className="h-3.5 w-3.5" strokeWidth={2.4} />
             Salvo. Já sai nos próximos documentos.
           </output>

@@ -10,6 +10,7 @@ import {
 } from "@/lib/signing.ts";
 import { getTenant } from "@/lib/tenant.ts";
 import { AdminPageHeader } from "../../../_components/page-header.tsx";
+import { Badge } from "../../../_ui/badge.tsx";
 import { ConfiguracoesTabs } from "../_components/tabs.tsx";
 import {
   AddCertificateForm,
@@ -42,16 +43,16 @@ export default async function CertificatesPage() {
   return (
     <>
       <AdminPageHeader maxWidth={860} title="Configurações" />
-      <main className="flex max-w-[860px] flex-col gap-4.5 px-[30px] py-7">
+      <main className="flex max-w-[860px] flex-col gap-6 px-4 pt-6 pb-8 md:px-8">
         <ConfiguracoesTabs
           role={session.user.role ?? ""}
           permissions={session.user.permissions}
         />
-        <section className="rounded-[14px] border border-admin-border bg-admin-card px-5 py-4">
-          <h2 className="font-serif text-[17px] font-semibold text-admin-primary">
+        <section className="rounded-xl border bg-card px-5 py-4">
+          <h2 className="text-lg font-semibold text-foreground">
             Certificados digitais (A1)
           </h2>
-          <p className="mt-1 text-[12.5px] leading-relaxed text-admin-muted">
+          <p className="mt-1 text-sm leading-relaxed text-muted-foreground">
             Cadastre os certificados A1 da serventia, e-CPF do titular e dos
             substitutos ou e-CNPJ, e escolha quem pode assinar com cada um no
             Assinador digital (Utilitários). O arquivo fica guardado
@@ -69,28 +70,37 @@ export default async function CertificatesPage() {
             <section
               key={certificate.id}
               aria-labelledby={`cert-${certificate.id}`}
-              className={`rounded-[14px] border bg-admin-card px-5 py-4 ${off || expired ? "border-admin-border opacity-70" : ending ? "border-admin-warning-text" : "border-admin-border"}`}
+              className={`rounded-xl border bg-card px-5 py-4 ${off || expired ? "opacity-70" : ending ? "border-warning" : ""}`}
             >
               <div className="flex flex-wrap items-start justify-between gap-3">
                 <div>
                   <h3
                     id={`cert-${certificate.id}`}
-                    className="font-serif text-[16px] font-semibold text-admin-primary"
+                    className="text-base font-semibold text-foreground"
                   >
                     {certificate.label}
                   </h3>
-                  <p className="mt-0.5 text-[13px] text-admin-text">
+                  <p className="mt-0.5 text-sm text-foreground">
                     {certificate.holderName}
                     {certificate.holderDocument &&
                       ` · ${certificate.kind === "cnpj" ? "CNPJ" : "CPF"} ${maskHolderDocument(certificate.holderDocument)}`}
                   </p>
-                  <p className="mt-0.5 text-[12px] text-admin-muted">
+                  <p className="mt-0.5 text-xs text-muted-foreground">
                     Emitido por {certificate.issuerName} · válido até{" "}
                     {formatOfficeDate(certificate.notAfter)}
                   </p>
                 </div>
-                <span
-                  className={`rounded-full px-2.5 py-0.5 text-[11px] font-bold ${off ? "bg-admin-input-bg text-admin-muted" : expired ? "bg-admin-error-bg text-admin-error-text" : ending ? "bg-admin-warning-bg text-admin-warning-text" : "bg-admin-success-bg text-admin-success-text"}`}
+                <Badge
+                  variant={off ? "outline" : "default"}
+                  className={
+                    off
+                      ? "text-muted-foreground"
+                      : expired
+                        ? "bg-destructive text-destructive-foreground"
+                        : ending
+                          ? "bg-warning text-warning-foreground"
+                          : "bg-success text-success-foreground"
+                  }
                 >
                   {off
                     ? "Desativado"
@@ -99,7 +109,7 @@ export default async function CertificatesPage() {
                       : ending
                         ? "Vence em menos de 30 dias"
                         : "Ativo"}
-                </span>
+                </Badge>
               </div>
               {!off && !expired && (
                 <CertificateSigners

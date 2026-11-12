@@ -40,16 +40,16 @@ export default async function TwoStepPage() {
   return (
     <>
       <AdminPageHeader maxWidth={860} title="Configurações" />
-      <main className="flex max-w-[860px] flex-col gap-4.5 px-[30px] py-7">
+      <main className="flex max-w-[860px] flex-col gap-6 px-4 pt-6 pb-8 md:px-8">
         <ConfiguracoesTabs
           role={session.user.role ?? ""}
           permissions={session.user.permissions}
         />
-        <section className="rounded-[14px] border border-admin-border bg-admin-card px-5 py-4">
-          <h2 className="font-serif text-[17px] font-semibold text-admin-primary">
+        <section className="rounded-xl border bg-card px-5 py-4">
+          <h2 className="text-lg font-semibold text-foreground">
             Verificação em duas etapas
           </h2>
-          <p className="mt-1 text-[12.5px] leading-relaxed text-admin-muted">
+          <p className="mt-1 text-sm leading-relaxed text-muted-foreground">
             Depois da senha, o painel envia um código ao e-mail de quem está
             entrando, e só dessa pessoa. O primeiro acesso (quando a pessoa cria
             a senha pelo convite) não pede código: ele começa no acesso

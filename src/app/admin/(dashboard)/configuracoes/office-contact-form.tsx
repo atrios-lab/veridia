@@ -3,13 +3,10 @@
 import { useActionState } from "react";
 import type { Tenant } from "@/core/tenant/schema.ts";
 import { AdminIcon } from "../../_components/icon.tsx";
+import { Button } from "../../_ui/button.tsx";
+import { FieldError, FieldLabel, Field as UiField } from "../../_ui/field.tsx";
+import { Input } from "../../_ui/input.tsx";
 import { type OfficeContactState, saveOfficeContact } from "./actions.ts";
-
-const FIELD_CLASS =
-  "w-full rounded-[9px] border border-admin-input-border bg-admin-input-bg px-3.5 py-2.5 text-[13.5px] text-admin-text outline-none focus:border-admin-primary-soft";
-const ERROR_FIELD_CLASS =
-  "w-full rounded-[9px] border border-admin-error-border bg-admin-error-input-bg px-3.5 py-2.5 text-[13.5px] text-admin-text outline-none focus:border-admin-error-text";
-const LABEL_CLASS = "mb-1.5 block text-xs font-bold text-admin-primary";
 
 export function Field({
   label,
@@ -27,29 +24,19 @@ export function Field({
 } & Pick<React.ComponentProps<"input">, "min" | "max" | "step" | "inputMode">) {
   const errorId = `${name}-erro`;
   return (
-    <div>
-      <label className={LABEL_CLASS} htmlFor={name}>
-        {label}
-      </label>
-      <input
+    <UiField className="gap-1.5" data-invalid={error ? true : undefined}>
+      <FieldLabel htmlFor={name}>{label}</FieldLabel>
+      <Input
         id={name}
         name={name}
         type={type}
         defaultValue={defaultValue}
         aria-invalid={error ? true : undefined}
         aria-describedby={error ? errorId : undefined}
-        className={error ? ERROR_FIELD_CLASS : FIELD_CLASS}
         {...input}
       />
-      {error && (
-        <p
-          id={errorId}
-          className="mt-1.5 text-xs font-semibold text-admin-error-text"
-        >
-          {error}
-        </p>
-      )}
-    </div>
+      {error && <FieldError id={errorId}>{error}</FieldError>}
+    </UiField>
   );
 }
 
@@ -68,10 +55,10 @@ export function OfficeContactForm({ tenant }: { tenant: Tenant }) {
 
   return (
     <form action={formAction}>
-      <h2 className="font-serif text-[17px] font-semibold text-admin-primary">
+      <h2 className="text-lg font-semibold text-foreground">
         Atendimento e contato
       </h2>
-      <p className="mt-1 text-[12.5px] text-admin-muted">
+      <p className="mt-1 text-sm text-muted-foreground">
         Aparecem no site: no topo da home, na página de contato e no rodapé.
       </p>
 
@@ -82,12 +69,12 @@ export function OfficeContactForm({ tenant }: { tenant: Tenant }) {
           defaultValue={sent?.openingHours ?? tenant.openingHours}
           error={fieldErrors.openingHours}
         />
-        <p className="mt-1.5 text-[11.5px] text-admin-muted">
+        <p className="mt-1.5 text-xs text-muted-foreground">
           A frase que o cidadão lê. As horas abaixo são as que o site usa para
           calcular: mantenha as duas dizendo a mesma coisa.
         </p>
       </div>
-      <div className="mt-3.5 grid grid-cols-2 gap-3.5 md:max-w-[320px]">
+      <div className="mt-3.5 grid grid-cols-2 gap-3.5 md:max-w-80">
         <Field
           label="Abre às"
           name="startHour"
@@ -111,7 +98,7 @@ export function OfficeContactForm({ tenant }: { tenant: Tenant }) {
           error={fieldErrors.endHour}
         />
       </div>
-      <div className="mt-3.5 grid grid-cols-2 gap-3.5 md:max-w-[320px]">
+      <div className="mt-3.5 grid grid-cols-2 gap-3.5 md:max-w-80">
         <Field
           label="Intervalo, das"
           name="breakStart"
@@ -131,7 +118,7 @@ export function OfficeContactForm({ tenant }: { tenant: Tenant }) {
           error={fieldErrors.breakEnd}
         />
       </div>
-      <p className="mt-1.5 text-[11.5px] text-admin-muted">
+      <p className="mt-1.5 text-xs text-muted-foreground">
         Opcional. Preencha se o balcão fecha para o almoço: nesse horário o site
         mostra "Em intervalo" e o chat não abre. Deixe os dois em branco se o
         atendimento é corrido.
@@ -161,22 +148,18 @@ export function OfficeContactForm({ tenant }: { tenant: Tenant }) {
       {state.status === "error" && (
         <p
           role="alert"
-          className="mt-4 rounded-lg bg-admin-error-bg px-3.5 py-2.5 text-sm font-semibold text-admin-error-text"
+          className="mt-4 rounded-lg border border-destructive/40 bg-destructive-soft px-4 py-3 text-sm font-medium text-destructive"
         >
           {state.message}
         </p>
       )}
 
       <div className="mt-4.5 flex items-center gap-3.5">
-        <button
-          type="submit"
-          disabled={pending}
-          className="btn btn-admin-primary btn-lg"
-        >
+        <Button type="submit" disabled={pending} size="lg">
           {pending ? "Salvando…" : "Salvar"}
-        </button>
+        </Button>
         {state.status === "saved" && (
-          <output className="flex items-center gap-1.5 rounded-full bg-admin-success-bg px-3 py-1.5 text-[12.5px] font-semibold text-admin-success-text">
+          <output className="flex items-center gap-1.5 rounded-full bg-success-soft px-3 py-1.5 text-xs font-medium text-success-text">
             <AdminIcon name="check" className="h-3.5 w-3.5" strokeWidth={2.4} />
             Salvo. Já está valendo no site.
           </output>

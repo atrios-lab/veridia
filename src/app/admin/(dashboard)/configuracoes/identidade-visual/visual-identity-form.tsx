@@ -11,6 +11,11 @@ import type { Section, Tenant, Theme } from "@/core/tenant/schema.ts";
 import { THEMES } from "@/core/tenant/schema.ts";
 import { SERIF } from "@/lib/fonts.ts";
 import { AdminIcon } from "../../../_components/icon.tsx";
+import { Button, buttonVariants } from "../../../_ui/button.tsx";
+import { cn } from "../../../_ui/cn.ts";
+import { Input } from "../../../_ui/input.tsx";
+import { Label } from "../../../_ui/label.tsx";
+import { Switch } from "../../../_ui/switch.tsx";
 import { saveVisualIdentity, type VisualIdentityState } from "./actions.ts";
 import { VisualIdentityPreview } from "./preview.tsx";
 
@@ -40,12 +45,6 @@ const THEME_META: Record<Theme, { label: string; description: string }> = {
   },
 };
 
-const FIELD_CLASS =
-  "w-full rounded-[9px] border border-admin-input-border bg-admin-input-bg px-3.5 py-2.5 text-[13.5px] text-admin-text outline-none focus:border-admin-primary-soft";
-const ERROR_FIELD_CLASS =
-  "w-full rounded-[9px] border border-admin-error-border bg-admin-error-input-bg px-3.5 py-2.5 text-[13.5px] text-admin-text outline-none focus:border-admin-error-text";
-const LABEL_CLASS = "mb-1.5 block text-xs font-bold text-admin-primary";
-
 /** A file's local preview, falling back to what is already published. */
 function useObjectUrl(file: File | null, published: string | undefined) {
   const [url, setUrl] = useState(published);
@@ -73,10 +72,8 @@ function ThemeCard({
   const meta = THEME_META[theme];
   return (
     <label
-      className={`relative flex cursor-pointer items-center gap-3.5 rounded-[11px] border px-4 py-3 ${
-        selected
-          ? "border-admin-primary-soft bg-admin-card-surface"
-          : "border-admin-border bg-admin-card"
+      className={`relative flex cursor-pointer items-center gap-3.5 rounded-lg border px-4 py-3 has-[:focus-visible]:ring-3 has-[:focus-visible]:ring-ring/50 ${
+        selected ? "border-primary bg-muted/50" : "bg-card"
       }`}
     >
       <input
@@ -99,22 +96,20 @@ function ThemeCard({
         >
           {meta.label}
         </span>
-        <span className="block text-[11.5px] text-admin-muted">
+        <span className="block text-xs text-muted-foreground">
           {meta.description}
         </span>
       </span>
       <span
         aria-hidden="true"
-        className={`flex h-[22px] w-[22px] flex-none items-center justify-center rounded-full ${
-          selected
-            ? "bg-admin-primary-soft"
-            : "border-[1.5px] border-admin-input-border"
+        className={`flex size-5.5 flex-none items-center justify-center rounded-full ${
+          selected ? "bg-primary" : "border-2 border-input"
         }`}
       >
         {selected && (
           <AdminIcon
             name="check"
-            className="h-3 w-3 text-white"
+            className="h-3 w-3 text-primary-foreground"
             strokeWidth={3}
           />
         )}
@@ -141,7 +136,7 @@ function ImageField({
   return (
     <div className="flex items-center gap-4">
       <span
-        className={`flex h-[68px] w-[68px] flex-none items-center justify-center overflow-hidden rounded-[10px] ${previewBg}`}
+        className={`flex size-17 flex-none items-center justify-center overflow-hidden rounded-lg ${previewBg}`}
       >
         {previewSrc && (
           // biome-ignore lint/performance/noImgElement: local unpublished file previewed via a blob: object URL, which next/image cannot optimize.
@@ -153,9 +148,14 @@ function ImageField({
         )}
       </span>
       <div className="min-w-0 flex-1">
-        <p className="text-[13px] font-bold text-admin-primary">{label}</p>
-        <p className="mt-0.5 text-[12px] text-admin-muted">{hint}</p>
-        <label className="relative mt-2 inline-flex cursor-pointer items-center gap-1.5 rounded-lg border border-admin-input-border px-3 py-1.5 text-[12px] font-bold text-admin-muted hover:border-admin-primary-soft hover:text-admin-primary">
+        <p className="text-sm font-medium text-foreground">{label}</p>
+        <p className="mt-0.5 text-xs text-muted-foreground">{hint}</p>
+        <label
+          className={cn(
+            buttonVariants({ variant: "outline", size: "sm" }),
+            "relative mt-2 cursor-pointer has-[:focus-visible]:border-ring has-[:focus-visible]:ring-3 has-[:focus-visible]:ring-ring/50",
+          )}
+        >
           <AdminIcon name="upload" className="h-3.5 w-3.5" />
           Trocar imagem
           <input
@@ -231,13 +231,13 @@ export function VisualIdentityForm({ tenant }: { tenant: Tenant }) {
       <form
         key={formKey}
         action={formAction}
-        className="flex min-w-0 flex-col gap-4.5"
+        className="flex min-w-0 flex-col gap-6"
       >
-        <div className="rounded-[14px] border border-admin-border bg-admin-card p-6">
-          <h2 className="font-serif text-[17px] font-semibold text-admin-primary">
+        <div className="rounded-xl border bg-card p-6">
+          <h2 className="text-lg font-semibold text-foreground">
             Estilo do site
           </h2>
-          <p className="mt-1 text-[12.5px] text-admin-muted">
+          <p className="mt-1 text-sm text-muted-foreground">
             Escolha o jeito do seu site. Cada estilo combina cores e letra
             própria: veja o resultado na prévia ao lado.
           </p>
@@ -256,17 +256,13 @@ export function VisualIdentityForm({ tenant }: { tenant: Tenant }) {
             ))}
           </div>
           {fieldErrors.theme && (
-            <p className="mt-2 text-xs font-semibold text-admin-error-text">
-              {fieldErrors.theme}
-            </p>
+            <p className="mt-2 text-sm text-destructive">{fieldErrors.theme}</p>
           )}
         </div>
 
-        <div className="rounded-[14px] border border-admin-border bg-admin-card p-6">
-          <h2 className="font-serif text-[17px] font-semibold text-admin-primary">
-            Logotipo
-          </h2>
-          <p className="mt-1 text-[12.5px] text-admin-muted">
+        <div className="rounded-xl border bg-card p-6">
+          <h2 className="text-lg font-semibold text-foreground">Logotipo</h2>
+          <p className="mt-1 text-sm text-muted-foreground">
             A marca quadrada, em PNG com fundo transparente, até 3 MB. Aparece
             no cabeçalho e rodapé do site, no ícone da aba, nos e-mails e nos
             documentos.
@@ -277,7 +273,7 @@ export function VisualIdentityForm({ tenant }: { tenant: Tenant }) {
               hint="Cabeçalho do site, ícone da aba, e-mails e documentos."
               name="sealLight"
               previewSrc={sealLightPreview}
-              previewBg="bg-admin-card-surface"
+              previewBg="bg-muted"
               onChange={setSealLightFile}
             />
             <ImageField
@@ -285,14 +281,14 @@ export function VisualIdentityForm({ tenant }: { tenant: Tenant }) {
               hint="Rodapé do site, sidebar e tela de entrada do painel."
               name="sealDark"
               previewSrc={sealDarkPreview}
-              previewBg="bg-admin-primary"
+              previewBg="bg-primary"
               onChange={setSealDarkFile}
             />
           </div>
         </div>
 
-        <div className="rounded-[14px] border border-admin-border bg-admin-card p-6">
-          <h2 className="font-serif text-[17px] font-semibold text-admin-primary">
+        <div className="rounded-xl border bg-card p-6">
+          <h2 className="text-lg font-semibold text-foreground">
             Página inicial
           </h2>
           <div className="mt-4">
@@ -301,97 +297,79 @@ export function VisualIdentityForm({ tenant }: { tenant: Tenant }) {
               hint="Primeira coisa que o cidadão vê. Horizontal, mínimo 1600 px de largura, até 4 MB."
               name="heroImage"
               previewSrc={heroPreview}
-              previewBg="bg-admin-card-surface"
+              previewBg="bg-muted"
               onChange={setHeroFile}
             />
           </div>
           <div className="mt-4 flex flex-col gap-3.5">
             <div>
-              <label className={LABEL_CLASS} htmlFor="eyebrow">
+              <Label htmlFor="eyebrow" className="mb-1.5">
                 Frase de destaque (acima do título)
-              </label>
-              <input
+              </Label>
+              <Input
                 id="eyebrow"
                 name="eyebrow"
                 value={eyebrow}
                 onChange={(event) => setEyebrow(event.target.value)}
-                className={
-                  fieldErrors.eyebrow ? ERROR_FIELD_CLASS : FIELD_CLASS
-                }
+                aria-invalid={fieldErrors.eyebrow ? true : undefined}
               />
               {fieldErrors.eyebrow && (
-                <p className="mt-1.5 text-xs font-semibold text-admin-error-text">
+                <p className="mt-1.5 text-sm text-destructive">
                   {fieldErrors.eyebrow}
                 </p>
               )}
             </div>
             <div>
-              <label className={LABEL_CLASS} htmlFor="title">
+              <Label htmlFor="title" className="mb-1.5">
                 Título de boas-vindas
-              </label>
-              <input
+              </Label>
+              <Input
                 id="title"
                 name="title"
                 value={title}
                 onChange={(event) => setTitle(event.target.value)}
-                className={fieldErrors.title ? ERROR_FIELD_CLASS : FIELD_CLASS}
+                aria-invalid={fieldErrors.title ? true : undefined}
               />
               {fieldErrors.title && (
-                <p className="mt-1.5 text-xs font-semibold text-admin-error-text">
+                <p className="mt-1.5 text-sm text-destructive">
                   {fieldErrors.title}
                 </p>
               )}
             </div>
           </div>
 
-          <h3 className="mt-5.5 mb-2.5 text-[11.5px] font-bold uppercase tracking-[0.09em] text-admin-accent">
+          <h3 className="mt-5.5 mb-2.5 text-xs font-medium text-muted-foreground">
             Seções do site
           </h3>
           <div className="flex flex-col gap-1.5">
             {optional.map((section) => {
               const enabled = !disabledSections.has(section);
               return (
-                <label
+                <Label
                   key={section}
-                  className="relative flex cursor-pointer items-center gap-3 rounded-[10px] border border-admin-border bg-admin-input-bg px-3.5 py-2.5"
+                  className="relative cursor-pointer gap-3 rounded-lg border bg-muted/50 px-3.5 py-2.5 leading-normal"
                 >
-                  <span className="flex-1 text-[13px] font-bold text-admin-primary">
+                  <span className="flex-1 text-sm font-medium text-foreground">
                     {SECTION_LABELS[section]}
                   </span>
-                  <input
-                    type="checkbox"
+                  <Switch
                     checked={enabled}
-                    onChange={() => toggleSection(section)}
-                    className="sr-only"
+                    onCheckedChange={() => toggleSection(section)}
                   />
-                  <span
-                    aria-hidden="true"
-                    className={`relative h-[21px] w-9 flex-none rounded-full ${
-                      enabled
-                        ? "bg-admin-primary-soft"
-                        : "bg-admin-input-border"
-                    }`}
-                  >
-                    <span
-                      className={`absolute top-0.5 h-4 w-4 rounded-full bg-white transition-all ${
-                        enabled ? "left-[18px]" : "left-0.5"
-                      }`}
-                    />
-                  </span>
-                </label>
+                </Label>
               );
             })}
             {MANDATORY_SECTIONS.map((section) => (
               <div
                 key={section}
-                className="flex items-center gap-3 rounded-[10px] border border-admin-border bg-admin-input-bg px-3.5 py-2.5 opacity-70"
+                className="flex items-center gap-3 rounded-lg border bg-muted/50 px-3.5 py-2.5 opacity-70"
               >
-                <span className="flex-1 text-[13px] font-bold text-admin-primary">
+                <span className="flex-1 text-sm font-medium text-foreground">
                   {SECTION_LABELS[section]}
                 </span>
                 <AdminIcon
                   name="lock"
-                  className="h-3.5 w-3.5 flex-none text-admin-accent"
+                  className="h-3.5 w-3.5 flex-none text-primary"
                 />
               </div>
             ))}
@@ -408,7 +386,7 @@ export function VisualIdentityForm({ tenant }: { tenant: Tenant }) {
               />
             ))}
           </div>
-          <p className="mt-2.5 text-xs text-admin-muted">
+          <p className="mt-2.5 text-xs text-muted-foreground">
             O que você desligar some do site na hora que publicar. As seções com
             cadeado são obrigatórias por lei e ficam sempre no ar.
           </p>
@@ -417,36 +395,33 @@ export function VisualIdentityForm({ tenant }: { tenant: Tenant }) {
         {state.status === "error" && (
           <p
             role="alert"
-            className="rounded-lg bg-admin-error-bg px-3.5 py-2.5 text-sm font-semibold text-admin-error-text"
+            className="rounded-lg border border-destructive/40 bg-destructive-soft px-4 py-3 text-sm font-medium text-destructive"
           >
             {state.message}
           </p>
         )}
 
         <div className="flex flex-wrap items-center gap-3.5">
-          <button
-            type="submit"
-            disabled={saving}
-            className="btn btn-admin-primary btn-lg"
-          >
+          <Button type="submit" size="lg" disabled={saving}>
             {saving ? "Salvando…" : "Salvar e publicar"}
-          </button>
-          <button
+          </Button>
+          <Button
             type="button"
+            variant="outline"
+            size="lg"
             onClick={handleDiscard}
             disabled={saving}
-            className="btn btn-admin-secondary btn-lg"
           >
             Descartar mudanças
-          </button>
-          <span className="text-[12.5px] text-admin-faint">
+          </Button>
+          <span className="text-xs text-muted-foreground">
             As mudanças só valem depois de "Salvar e publicar".
           </span>
         </div>
       </form>
 
       <div className="flex flex-col gap-2.5 xl:sticky xl:top-5">
-        <span className="text-[11.5px] font-bold uppercase tracking-[0.09em] text-admin-accent">
+        <span className="text-xs font-medium text-muted-foreground">
           Veja como fica no celular
         </span>
         <VisualIdentityPreview
@@ -459,7 +434,7 @@ export function VisualIdentityForm({ tenant }: { tenant: Tenant }) {
           officeName={tenant.name}
           sections={enabledPreviewSections}
         />
-        <p className="text-xs leading-relaxed text-admin-faint">
+        <p className="text-xs leading-relaxed text-muted-foreground">
           A prévia segue o estilo, os textos, a imagem e as seções escolhidos ao
           lado, antes de publicar.
         </p>

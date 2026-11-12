@@ -13,10 +13,9 @@ import {
 import { SOUNDS, type SoundChoice, soundGroups } from "@/core/chat/alerts.ts";
 import { playSound, unlockAudio } from "../../../../_components/chat-sound.ts";
 import { readAlertPrefs } from "../../../_components/chat-alert-prefs.ts";
+import { Button } from "../../../_ui/button.tsx";
+import { NativeSelect } from "../../../_ui/native-select.tsx";
 import { type OfficeAlertsState, saveOfficeAlerts } from "./actions.ts";
-
-const SELECT_CLASS =
-  "rounded-[9px] border border-admin-input-border bg-admin-input-bg px-3 py-2 text-[13px] text-admin-text outline-none focus:border-admin-primary-soft disabled:opacity-60";
 
 /** What each channel announces, under its name. */
 const CHANNEL_HINTS: Record<AlertChannel, string> = {
@@ -93,44 +92,47 @@ export function OfficeAlertsForm({ initial }: { initial: OfficeAlerts }) {
     >
       <input type="hidden" name="alerts" value={JSON.stringify(alerts)} />
 
-      <section className="rounded-[14px] border border-admin-border bg-admin-card px-5 py-4">
-        <h2 className="font-serif text-[17px] font-semibold text-admin-primary">
+      <section className="rounded-xl border bg-card px-5 py-4">
+        <h2 className="text-lg font-semibold text-foreground">
           Notificações do painel
         </h2>
-        <p className="mt-1 text-[12.5px] leading-relaxed text-admin-muted">
+        <p className="mt-1 text-sm leading-relaxed text-muted-foreground">
           Escolha, para cada parte do site, se o painel avisa ou fica em
           silêncio, e como avisa: o aviso na tela, a notificação do navegador, o
           som e a tela tremendo (no celular, vibrando). Vale para todos os
           atendentes da serventia. O volume e a repetição do chat continuam
           sendo de cada computador, em Atendimento online.
         </p>
-        <div className="mt-3 rounded-[10px] border border-admin-border bg-admin-input-bg px-3.5 py-3 text-[12.5px]">
-          <span className="font-bold text-admin-primary">
+        <div className="mt-3 rounded-lg border bg-muted/50 px-3.5 py-3 text-xs">
+          <span className="font-medium text-foreground">
             Notificações do navegador neste computador:{" "}
           </span>
           {permission === "granted" && (
-            <span className="text-admin-success-text">autorizadas.</span>
+            <span className="text-success-text">autorizadas.</span>
           )}
           {permission === "default" && (
             <>
-              <span className="text-admin-muted">ainda não autorizadas. </span>
-              <button
+              <span className="text-muted-foreground">
+                ainda não autorizadas.{" "}
+              </span>
+              <Button
                 type="button"
                 onClick={() => void askPermission()}
-                className="btn btn-admin-primary btn-sm ml-1"
+                size="sm"
+                className="ml-1"
               >
                 Permitir neste navegador
-              </button>
+              </Button>
             </>
           )}
           {permission === "denied" && (
-            <span className="text-admin-text">
+            <span className="text-foreground">
               bloqueadas. Para liberar: clique no cadeado ao lado do endereço do
               site, abra "Notificações", escolha "Permitir" e recarregue.
             </span>
           )}
           {permission === "unsupported" && (
-            <span className="text-admin-muted">
+            <span className="text-muted-foreground">
               este navegador não oferece. O som e o aviso na tela continuam.
             </span>
           )}
@@ -147,20 +149,16 @@ export function OfficeAlertsForm({ initial }: { initial: OfficeAlerts }) {
       ))}
 
       <div className="flex flex-wrap items-center gap-3">
-        <button
-          type="submit"
-          disabled={pending}
-          className="btn btn-admin-primary btn-md"
-        >
+        <Button type="submit" disabled={pending}>
           {pending ? "Salvando..." : "Salvar notificações"}
-        </button>
-        <button
+        </Button>
+        <Button
           type="button"
           onClick={() => setAlerts(defaultOfficeAlerts())}
-          className="btn btn-admin-secondary btn-md"
+          variant="outline"
         >
           Voltar ao padrão
-        </button>
+        </Button>
       </div>
     </form>
   );
@@ -180,23 +178,23 @@ function ChannelCard({
   return (
     <section
       aria-labelledby={`${id}-titulo`}
-      className="rounded-[14px] border border-admin-border bg-admin-card px-5 py-4"
+      className="rounded-xl border bg-card px-5 py-4"
     >
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
           <h3
             id={`${id}-titulo`}
-            className="font-serif text-[16px] font-semibold text-admin-primary"
+            className="text-base font-semibold text-foreground"
           >
             {ALERT_CHANNEL_LABELS[channel]}
           </h3>
-          <p className="mt-0.5 text-[12.5px] text-admin-muted">
+          <p className="mt-0.5 text-xs text-muted-foreground">
             {CHANNEL_HINTS[channel]}
           </p>
         </div>
         <fieldset
           aria-label={`Avisos de ${ALERT_CHANNEL_LABELS[channel]}`}
-          className="flex gap-1 rounded-[10px] border border-admin-border bg-admin-input-bg p-1"
+          className="flex gap-1 rounded-lg border bg-muted/50 p-1"
         >
           {[
             { enabled: true, label: "Notificar" },
@@ -211,8 +209,8 @@ function ChannelCard({
                 onClick={() => onChange({ enabled: option.enabled })}
                 className={
                   selected
-                    ? "rounded-lg bg-admin-primary px-3 py-1.5 text-[12.5px] font-bold text-white"
-                    : "rounded-lg px-3 py-1.5 text-[12.5px] font-semibold text-admin-muted hover:text-admin-primary"
+                    ? "rounded-md bg-primary px-3 py-1.5 text-xs font-medium text-primary-foreground"
+                    : "rounded-md px-3 py-1.5 text-xs font-medium text-muted-foreground hover:text-foreground"
                 }
               >
                 {option.label}
@@ -223,7 +221,7 @@ function ChannelCard({
       </div>
 
       <div
-        className={`mt-3.5 flex flex-wrap items-center gap-x-5 gap-y-3 text-[13px] text-admin-text ${off ? "opacity-60" : ""}`}
+        className={`mt-3.5 flex flex-wrap items-center gap-x-5 gap-y-3 text-sm text-foreground ${off ? "opacity-60" : ""}`}
       >
         <label className="flex items-center gap-2">
           <input
@@ -256,10 +254,10 @@ function ChannelCard({
           Tremer a tela e vibrar
         </label>
         <span className="flex min-w-0 max-w-full items-center gap-2">
-          <label htmlFor={`${id}-som`} className="font-semibold">
+          <label htmlFor={`${id}-som`} className="font-medium">
             Som
           </label>
-          <select
+          <NativeSelect
             id={`${id}-som`}
             value={value.sound}
             disabled={off}
@@ -268,7 +266,7 @@ function ChannelCard({
               onChange({ sound });
               void hear(sound);
             }}
-            className={`${SELECT_CLASS} min-w-0 flex-1`}
+            className="min-w-0 flex-1"
           >
             {soundGroups().map(({ group, ids }) => (
               <optgroup key={group} label={group}>
@@ -280,15 +278,16 @@ function ChannelCard({
               </optgroup>
             ))}
             <option value="none">Sem som</option>
-          </select>
-          <button
+          </NativeSelect>
+          <Button
             type="button"
             disabled={off || value.sound === "none"}
             onClick={() => void hear(value.sound)}
-            className="btn btn-admin-secondary btn-sm"
+            variant="outline"
+            size="sm"
           >
             Ouvir
-          </button>
+          </Button>
         </span>
       </div>
     </section>
