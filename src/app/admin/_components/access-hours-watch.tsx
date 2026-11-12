@@ -2,6 +2,7 @@
 
 import { useEffect } from "react";
 import { toast } from "sonner";
+import { OFFICE_TIME_ZONE } from "@/core/time/office-time.ts";
 
 /**
  * An open panel follows the hours too: ten minutes before they end the
@@ -16,7 +17,7 @@ export function AccessHoursWatch({ closesAt }: { closesAt: string }) {
     const time = new Date(closesAt).toLocaleTimeString("pt-BR", {
       hour: "2-digit",
       minute: "2-digit",
-      timeZone: "America/Sao_Paulo",
+      timeZone: OFFICE_TIME_ZONE,
     });
     if (left > 10 * 60_000) {
       timers.push(

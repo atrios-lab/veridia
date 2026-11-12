@@ -7,6 +7,7 @@ import { toast } from "sonner";
 import type { ChannelAlert } from "@/core/alerts/office.ts";
 import { NUDGE_SOUND } from "@/core/chat/alerts.ts";
 import { LONG_TEXT_MAX } from "@/core/text-limits.ts";
+import { OFFICE_TIME_ZONE } from "@/core/time/office-time.ts";
 import { playSound, unlockAudio } from "../../_components/chat-sound.ts";
 import { shakeElement, vibrate } from "../../_components/shake.ts";
 import { Button, buttonVariants } from "../_ui/button.tsx";
@@ -40,7 +41,7 @@ function time(iso: string): string {
   return new Date(iso).toLocaleTimeString("pt-BR", {
     hour: "2-digit",
     minute: "2-digit",
-    timeZone: "America/Sao_Paulo",
+    timeZone: OFFICE_TIME_ZONE,
   });
 }
 

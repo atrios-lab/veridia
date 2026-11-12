@@ -21,6 +21,7 @@ import {
   type Status,
 } from "@/core/messages/rules.ts";
 import { LONG_TEXT_MAX } from "@/core/text-limits.ts";
+import { OFFICE_TIME_ZONE } from "@/core/time/office-time.ts";
 import {
   isAudioLocked,
   playSound,
@@ -145,7 +146,7 @@ function formatTime(iso: string): string {
   return new Date(iso).toLocaleTimeString("pt-BR", {
     hour: "2-digit",
     minute: "2-digit",
-    timeZone: "America/Sao_Paulo",
+    timeZone: OFFICE_TIME_ZONE,
   });
 }
 
@@ -154,7 +155,7 @@ function formatDay(iso: string): string {
     day: "2-digit",
     month: "2-digit",
     year: "numeric",
-    timeZone: "America/Sao_Paulo",
+    timeZone: OFFICE_TIME_ZONE,
   });
 }
 
