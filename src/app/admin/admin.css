@@ -1,0 +1,219 @@
+/*
+ * The panel's stylesheet (change painel-neutro-shadcn). The panel has one
+ * neutral theme, the same for every office: the office shows up in its seal
+ * and name, never in the panel's colours. Imported only by the panel's root
+ * layout, so nothing here reaches the public site and the other way round.
+ *
+ * Token names follow shadcn/ui, so a component taken from its registry works
+ * without edits. Values live straight in @theme (no light/dark switch: the
+ * panel has no dark theme), which keeps check:tokens strict.
+ *
+ * The contrast of every text and background pair below is checked by
+ * src/lib/admin-theme.test.ts. Change a colour, run the test.
+ */
+@import "tailwindcss";
+@import "tw-animate-css";
+/*
+ * Bridge while the panel migrates: the screens not yet moved to _ui still
+ * use --color-admin-*, .btn-admin-*, .checkbox-admin and .dialog. They come
+ * from brand.css and are repainted in neutral values further down. The two
+ * previews of the site inside the panel use the palettes for real.
+ */
+@import "../brand.css";
+
+/* The public site's sources stay out: its classes are never generated
+   here. */
+@source not "../(public)";
+
+@custom-variant dark (&:is(.dark *));
+
+@theme {
+  --color-background: #ffffff;
+  --color-foreground: #0a0a0a;
+  --color-card: #ffffff;
+  --color-card-foreground: #0a0a0a;
+  --color-popover: #ffffff;
+  --color-popover-foreground: #0a0a0a;
+  /* The Átrios navy, the same as --color-atrios-navy on signed documents. */
+  --color-primary: #232a64;
+  --color-primary-foreground: #ffffff;
+  --color-secondary: #f5f5f5;
+  --color-secondary-foreground: #171717;
+  --color-muted: #f5f5f5;
+  /* Darker than shadcn's #737373, which gives 4.35:1 on --color-muted and
+     4.09:1 on the sidebar: under the 4.5:1 line for text. */
+  --color-muted-foreground: #666666;
+  --color-accent: #f5f5f5;
+  --color-accent-foreground: #171717;
+  /* One red for fill and text. shadcn's #e7000b measures 4.77:1 on white and
+     drops below 4.5:1 on its own soft background. */
+  --color-destructive: #c10007;
+  --color-destructive-foreground: #ffffff;
+  /* shadcn ships no warning or success colour. Fill with white text, and a
+     darker tone for text on a light background. */
+  --color-warning: #bb4d00;
+  --color-warning-foreground: #ffffff;
+  --color-warning-text: #973c00;
+  --color-warning-soft: #fffbeb;
+  --color-success: #008236;
+  --color-success-foreground: #ffffff;
+  --color-success-text: #016630;
+  --color-success-soft: #f0fdf4;
+  --color-destructive-soft: #fef2f2;
+  --color-border: #e5e5e5;
+  /* The border that identifies a field, a checkbox or a select. #e5e5e5
+     would be 1.26:1 against white; WCAG 1.4.11 asks 3:1 for the edge that
+     tells a control apart. */
+  --color-input: #888888;
+  --color-ring: #232a64;
+
+  /* The sidebar: navy at 8% over white, item under the pointer 12%, current
+     item 16%, written out because the contrast test reads plain values. */
+  --color-sidebar: #edeef3;
+  --color-sidebar-foreground: #0a0a0a;
+  --color-sidebar-primary: #232a64;
+  --color-sidebar-primary-foreground: #ffffff;
+  --color-sidebar-accent: #dcdde6;
+  --color-sidebar-hover: #e5e5ec;
+  --color-sidebar-accent-foreground: #232a64;
+  --color-sidebar-border: #c6c7d0;
+  --color-sidebar-ring: #232a64;
+  /* Group titles in the sidebar. */
+  --color-sidebar-label: #535862;
+
+  /* Mensagens internas: the messenger's title bar in the colour each person
+     picks (core/messages/rules.ts) and the presence dots, as the desktop
+     messengers drew them. A personal choice, so it stays out of the theme. */
+  --color-msg-verde-from: #1c5638;
+  --color-msg-verde-to: #3f8a63;
+  --color-msg-azul-from: #1f4e8c;
+  --color-msg-azul-to: #5b93d6;
+  --color-msg-vinho-from: #5e1b2b;
+  --color-msg-vinho-to: #9b3a52;
+  --color-msg-grafite-from: #2b2f36;
+  --color-msg-grafite-to: #5a616d;
+  --color-msg-dourado-from: #7f6532;
+  --color-msg-dourado-to: #c9a75d;
+  --color-msg-online: #3fae49;
+  --color-msg-busy: #d64541;
+  --color-msg-away: #e8a33d;
+  --color-msg-offline: #a3a8ae;
+  --color-msg-pane: #eef3f8;
+  --color-msg-mine: #e4f1e7;
+
+  /* Bridge: the old admin tokens in neutral values. Deleted with brand.css's
+     import above once the last screen has moved to the tokens above. */
+  --color-admin-primary: #1b2150;
+  --color-admin-primary-soft: #232a64;
+  --color-admin-accent: #232a64;
+  --color-admin-accent-ink: #232a64;
+  --color-admin-on-dark-accent: #232a64;
+  --color-admin-surface: #fafafa;
+  --color-admin-card: #ffffff;
+  --color-admin-card-surface: #fafafa;
+  --color-admin-border: #e5e5e5;
+  --color-admin-input-bg: #ffffff;
+  --color-admin-input-border: #888888;
+  --color-admin-readonly-bg: #f5f5f5;
+  --color-admin-active-border: #d4d4d4;
+  --color-admin-text: #0a0a0a;
+  --color-admin-muted: #525252;
+  --color-admin-faint: #666666;
+  --color-admin-on-dark-subtitle: #525252;
+  --color-admin-on-dark-muted: #525252;
+  --color-admin-error-bg: #fef2f2;
+  --color-admin-error-text: #c10007;
+  --color-admin-error-border: #ffa2a2;
+  --color-admin-error-input-bg: #fef2f2;
+  --color-admin-warning-bg: #fef3c6;
+  --color-admin-warning-text: #973c00;
+  --color-admin-warning-soft-bg: #fffbeb;
+  --color-admin-warning-soft-border: #fee685;
+  --color-admin-success-bg: #dcfce7;
+  --color-admin-success-text: #016630;
+  --color-admin-footer-bg: #fafafa;
+  --color-admin-focus-ring: #a7aac1;
+}
+
+@theme inline {
+  /* IBM Plex Sans, loaded by the panel's root layout. The bridge points the
+     serif at it too, so a `font-serif` left on a screen not yet migrated
+     renders in the sans. The previews of the site set their own serif on
+     their box and keep it. */
+  --font-sans: var(--font-panel-sans), system-ui, sans-serif;
+  --font-serif: var(--font-brand-serif), var(--font-panel-sans), sans-serif;
+}
+
+:root {
+  --radius: 0.5rem;
+  --font-brand-serif: var(--font-panel-sans);
+  /* The brand variables at the root, for the few screens not yet migrated
+     that read them straight: neutral here. A preview of the site sets its
+     own [data-theme] on its box, which wins on that box. */
+  --brand-primary: var(--color-primary);
+  --brand-primary-soft: var(--color-primary);
+  --brand-accent: var(--color-primary);
+  --brand-accent-ink: var(--color-primary);
+  --brand-muted: var(--color-admin-muted);
+  --brand-border: var(--color-border);
+  --brand-surface: var(--color-admin-surface);
+  --brand-tint: var(--color-admin-surface);
+}
+
+@layer base {
+  * {
+    border-color: var(--color-border);
+    outline-color: color-mix(in srgb, var(--color-ring) 50%, transparent);
+  }
+
+  body {
+    font-family: var(--font-sans);
+    background: var(--color-background);
+    color: var(--color-foreground);
+  }
+
+  /* The keyboard ring of anything clickable that does not draw its own:
+     the same safety net as the site's, in the panel's navy. */
+  :where(button, a[href], [role="button"]):focus-visible {
+    outline: none;
+    box-shadow:
+      0 0 0 2px var(--color-background),
+      0 0 0 4px var(--color-ring);
+  }
+  :where(input, select, textarea):focus-visible {
+    outline: none;
+    box-shadow: 0 0 0 1.5px var(--color-ring);
+  }
+}
+
+/* Bridge: the old admin button variants read --brand-* straight. Repainted
+   on the neutral tokens until the last .btn-admin-* is gone. */
+@layer components {
+  .btn-admin-primary {
+    background: var(--color-primary);
+    color: var(--color-primary-foreground);
+  }
+  .btn-admin-primary:hover:not(:disabled) {
+    background: var(--color-admin-primary);
+  }
+  .btn-admin-secondary {
+    background: var(--color-background);
+    color: var(--color-foreground);
+    border: 1px solid var(--color-border);
+  }
+  .btn-admin-secondary:hover:not(:disabled) {
+    background: var(--color-muted);
+    border-color: var(--color-border);
+    color: var(--color-foreground);
+  }
+  .btn-admin-ghost {
+    color: var(--color-primary);
+  }
+  .btn-admin-ghost:hover:not(:disabled) {
+    color: var(--color-admin-primary);
+  }
+  .dialog,
+  .dialog-footer {
+    border-color: var(--color-border);
+  }
+}

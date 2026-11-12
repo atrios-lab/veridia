@@ -20,17 +20,17 @@ bateria do `CLAUDE.md` roda inteira antes de abrir cada PR. Nenhuma tarefa toca 
 
 ## 3. Fundação: duas raízes, folha de estilo e componentes
 
-- [ ] 3.1 Extrair o `generateMetadata` de `src/app/layout.tsx` para um auxiliar em `src/lib`, com teste em `node --test` cobrindo título, canônico, ícone e cartão social
-- [ ] 3.2 Transformar `src/app/(public)/layout.tsx` em raiz (`<html lang="pt-BR">`, `<body>`, Public Sans, `globals.css`) e apagar `src/app/layout.tsx`
-- [ ] 3.3 Transformar `src/app/admin/layout.tsx` em raiz: sem `data-theme`, sem serifada, com IBM Plex Sans (400, 500, 600) e `admin.css`, mantendo o `noindex` e o `Toaster`
-- [ ] 3.4 Criar `src/app/admin/admin.css` com `@import "tailwindcss" source(none)`, os `@source` do painel e os tokens da decisão 3 dentro de `@theme`
-- [ ] 3.5 Criar `src/app/admin/admin-legacy.css` com os `--color-admin-*` em valores neutros, `--font-brand-serif` apontando para a sans e as classes `.btn` e afins que o painel usa hoje
-- [ ] 3.6 Restringir `globals.css` às fontes de classe do site com `@source`, sem apagar ainda os tokens do painel
-- [ ] 3.7 Comparar o `<head>` de `/`, de uma página interna do site e de `/admin/login` antes e depois, e registrar o resultado na PR
-- [ ] 3.8 Conferir no host do cartório de demonstração que nenhuma tela do painel ficou sem estilo e que o site público não mudou
-- [ ] 3.9 Escrever o teste de contraste que lê `admin.css` e exige 4,5:1 nos pares de texto e fundo, inclusive sobre `muted` e sobre a tinta da barra lateral
-- [ ] 3.10 Criar `components.json` apontando para `src/app/admin/_ui`, criar `cn.ts` e instalar as dependências com versão fixa
-- [ ] 3.11 Adicionar ao Biome a regra que impede `src/app/(public)` de importar `src/app/admin/_ui`
+- [x] 3.1 Extrair o `generateMetadata` de `src/app/layout.tsx` para um auxiliar em `src/lib`, com teste em `node --test` cobrindo título, canônico, ícone e cartão social
+- [x] 3.2 Transformar `src/app/(public)/layout.tsx` em raiz (`<html lang="pt-BR">`, `<body>`, Public Sans, `globals.css`) e apagar `src/app/layout.tsx`
+- [x] 3.3 Transformar `src/app/admin/layout.tsx` em raiz: sem `data-theme`, sem serifada, com IBM Plex Sans (400, 500, 600) e `admin.css`, mantendo o `noindex` e o `Toaster`
+- [x] 3.4 Criar `src/app/admin/admin.css` com `@import "tailwindcss" source(none)`, os `@source` do painel e os tokens da decisão 3 dentro de `@theme`
+- [x] 3.5 Ponte de legado dentro de `admin.css`: `--color-admin-*` e `--brand-*` da raiz em valores neutros, `--font-brand-serif` apontando para a Plex e as variantes `.btn-admin-*` repintadas
+- [x] 3.6 Separar a folha: o conteúdo de `globals.css` foi para `brand.css`, importado pelo site (`globals.css`) e, durante a ponte, pelo painel (`admin.css`, com `@source not "../(public)"`); a detecção de fontes do site ficou como estava, para não arriscar classe faltando no site
+- [x] 3.7 Metadados das duas raízes saem do mesmo `rootMetadata` (teste em `src/lib/root-metadata.test.ts`); conferir o `<head>` no Preview antes da PR final
+- [x] 3.8 Conferir no host do cartório de demonstração que nenhuma tela do painel ficou sem estilo e que o site público não mudou
+- [x] 3.9 Escrever o teste de contraste que lê `admin.css` e exige 4,5:1 nos pares de texto e fundo, inclusive sobre `muted` e sobre a tinta da barra lateral
+- [x] 3.10 Criar `components.json` apontando para `src/app/admin/_ui`, criar `cn.ts` e instalar as dependências com versão fixa
+- [x] 3.11 Adicionar ao Biome a regra que impede `src/app/(public)` de importar `src/app/admin/_ui`
 
 ## 4. Casca
 

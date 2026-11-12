@@ -63,6 +63,26 @@
           }
         }
       }
+    },
+    {
+      "includes": ["src/app/(public)/**", "src/app/_components/**"],
+      "linter": {
+        "rules": {
+          "style": {
+            "noRestrictedImports": {
+              "level": "error",
+              "options": {
+                "patterns": [
+                  {
+                    "group": ["@/app/admin/_ui/**", "**/admin/_ui/**"],
+                    "message": "src/app/admin/_ui is the panel's component kit; the public site draws with its own brand classes (painel-neutro-shadcn)."
+                  }
+                ]
+              }
+            }
+          }
+        }
+      }
     }
   ]
 }

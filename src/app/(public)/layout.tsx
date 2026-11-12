@@ -1,3 +1,5 @@
+import type { Metadata } from "next";
+import { Public_Sans } from "next/font/google";
 import { cookies } from "next/headers";
 import Image from "next/image";
 import Link from "next/link";
@@ -10,6 +12,7 @@ import {
 import { jsonLdScript, organizationJsonLd } from "@/core/tenant/seo.ts";
 import { isChatEnabled } from "@/lib/chat.ts";
 import { SERIF } from "@/lib/fonts.ts";
+import { rootMetadata } from "@/lib/root-metadata.ts";
 import { getSiteOrigin } from "@/lib/site-origin.ts";
 import { getTenant } from "@/lib/tenant.ts";
 import { blobUploadEnabled } from "@/lib/uploads.ts";
@@ -22,6 +25,21 @@ import { NavGroupButton } from "./_components/nav-group-button.tsx";
 import { NavLinks } from "./_components/nav-links.tsx";
 import { BlobUploadProvider } from "./_lib/attachments.tsx";
 import { COOKIE_NOTICE_COOKIE } from "./_lib/cookie-notice.ts";
+import "../globals.css";
+
+// The body face is the same for every office. Only the serif carries the
+// brand, and the layout below picks it from the office's theme.
+const publicSans = Public_Sans({
+  subsets: ["latin"],
+  variable: "--font-brand-sans",
+  display: "swap",
+});
+
+// This is a root layout: the site and the panel each have their own, so
+// each loads only its own stylesheet and fonts. The metadata is shared.
+export async function generateMetadata(): Promise<Metadata> {
+  return rootMetadata(await getTenant(), await getSiteOrigin());
+}
 
 // The bar, in order: an address is a link, a group title opens that group
 // as a submenu, minus whatever the bar already links to on its own. The
@@ -119,297 +137,303 @@ export default async function PublicLayout({
   );
 
   return (
-    <div
-      data-theme={tenant.theme}
-      className={`${SERIF[tenant.theme].variable} flex min-h-screen flex-col bg-brand-surface text-brand-text`}
-    >
-      <script
-        type="application/ld+json"
-        // biome-ignore lint/security/noDangerouslySetInnerHtml: JSON.stringify of the office's own config, with "<" escaped by jsonLdScript; never citizen input.
-        dangerouslySetInnerHTML={{ __html: jsonLd }}
-      />
-      {tenant.demo && <DemoBanner officeName={tenant.name} />}
-      <header className="border-b border-brand-border">
-        <div className="mx-auto flex max-w-6xl items-center justify-between gap-4 px-4 py-3 md:px-10 md:py-4">
-          <Link href="/" className="flex items-center gap-3">
-            {/* The seals ship as 1480px squares: served raw they would be a
+    <html lang="pt-BR" className={publicSans.variable}>
+      <body>
+        <div
+          data-theme={tenant.theme}
+          className={`${SERIF[tenant.theme].variable} flex min-h-screen flex-col bg-brand-surface text-brand-text`}
+        >
+          <script
+            type="application/ld+json"
+            // biome-ignore lint/security/noDangerouslySetInnerHtml: JSON.stringify of the office's own config, with "<" escaped by jsonLdScript; never citizen input.
+            dangerouslySetInnerHTML={{ __html: jsonLd }}
+          />
+          {tenant.demo && <DemoBanner officeName={tenant.name} />}
+          <header className="border-b border-brand-border">
+            <div className="mx-auto flex max-w-6xl items-center justify-between gap-4 px-4 py-3 md:px-10 md:py-4">
+              <Link href="/" className="flex items-center gap-3">
+                {/* The seals ship as 1480px squares: served raw they would be a
                 40 KB download for a 48px mark. */}
-            <Image
-              src={tenant.logos.seal.light}
-              alt=""
-              width={48}
-              height={48}
-              priority
-              className="h-11 w-11 shrink-0 object-contain md:h-12 md:w-12"
-            />
-            {/* The office's own name, in capitals and with the accent rule
+                <Image
+                  src={tenant.logos.seal.light}
+                  alt=""
+                  width={48}
+                  height={48}
+                  priority
+                  className="h-11 w-11 shrink-0 object-contain md:h-12 md:w-12"
+                />
+                {/* The office's own name, in capitals and with the accent rule
                 the panel's sidebar uses, so it reads first on every page
                 (decision of 11/11/2026). */}
-            <span className="block border-l-[3px] border-brand-accent pl-2.5">
-              <span className="block font-serif text-[13px] font-bold uppercase leading-tight tracking-[0.05em] text-brand-primary sm:text-[15px] md:text-[17px] xl:whitespace-nowrap">
-                {tenant.name}
-              </span>
-              <span className="mt-0.5 block text-[9px] font-semibold uppercase tracking-[0.1em] text-brand-accent-ink md:text-[10px]">
-                {tenant.subtitle}
-              </span>
-            </span>
-          </Link>
+                <span className="block border-l-[3px] border-brand-accent pl-2.5">
+                  <span className="block font-serif text-[13px] font-bold uppercase leading-tight tracking-[0.05em] text-brand-primary sm:text-[15px] md:text-[17px] xl:whitespace-nowrap">
+                    {tenant.name}
+                  </span>
+                  <span className="mt-0.5 block text-[9px] font-semibold uppercase tracking-[0.1em] text-brand-accent-ink md:text-[10px]">
+                    {tenant.subtitle}
+                  </span>
+                </span>
+              </Link>
 
-          {/* From lg, not md: at 768px the full bar measured 807px of content
+              {/* From lg, not md: at 768px the full bar measured 807px of content
               in a 768px window, with "Solicitar serviço" broken over two
               lines. A tablet gets the phone menu instead. */}
-          <nav
-            aria-label="Navegação principal"
-            className="hidden items-center gap-6 lg:flex"
-          >
-            {/* "Início" entra na mesma lista para ser marcado como as outras
+              <nav
+                aria-label="Navegação principal"
+                className="hidden items-center gap-6 lg:flex"
+              >
+                {/* "Início" entra na mesma lista para ser marcado como as outras
                 na home. O data-section vai junto: no rodapé enxuto ela não tem
                 link próprio, então é este que prova ao e2e de gating que a
                 seção rendeu. */}
-            {HEADER_ITEMS.map((item) => {
-              if ("href" in item) {
-                return (
+                {HEADER_ITEMS.map((item) => {
+                  if ("href" in item) {
+                    return (
+                      <NavLinks
+                        key={item.href}
+                        links={pick([item.href])}
+                        className={BAR_ITEM}
+                        currentClassName={BAR_CURRENT}
+                      />
+                    );
+                  }
+                  const group = groups.find((g) => g.title === item.group);
+                  const groupLinks = submenu(item.group);
+                  if (!group || groupLinks.length === 0) return null;
+                  const id = `header-menu-${group.slug}`;
+                  return (
+                    // Native popover, like the phone menu below: Escape and the
+                    // click outside are the browser's own. Where it hangs is CSS
+                    // (.header-menu in globals.css): a popover renders in the
+                    // top layer, so no wrapper here could position it.
+                    <Fragment key={item.group}>
+                      <NavGroupButton
+                        hrefs={groupLinks.map((link) => link.href)}
+                        popoverTarget={id}
+                        className={`flex cursor-pointer items-center gap-1 ${BAR_ITEM}`}
+                        currentClassName={BAR_CURRENT}
+                      >
+                        {item.group}
+                        <Icon
+                          name="chevronRight"
+                          className="h-3.5 w-3.5 rotate-90"
+                        />
+                      </NavGroupButton>
+                      <div
+                        id={id}
+                        popover="auto"
+                        style={{ positionAnchor: `--${id}` }}
+                        className="header-menu m-0 w-[21rem] rounded-2xl border border-brand-border bg-brand-card p-2 shadow-lg"
+                      >
+                        <NavLinks
+                          links={groupLinks}
+                          descriptions
+                          className={MENU_LINK}
+                          currentClassName={MENU_CURRENT}
+                        />
+                        <MenuPopover />
+                      </div>
+                    </Fragment>
+                  );
+                })}
+                {lookup && (
+                  // Pela mesma lista, só para ganhar o aria-current na consulta:
+                  // um botão de ação já é o elemento mais visível do cabeçalho e
+                  // não precisa de realce, mas quem navega por leitor de tela
+                  // precisa saber que está nessa página.
                   <NavLinks
-                    key={item.href}
-                    links={pick([item.href])}
-                    className={BAR_ITEM}
-                    currentClassName={BAR_CURRENT}
+                    links={[lookup]}
+                    className="btn btn-primary btn-md"
+                    currentClassName=""
                   />
-                );
-              }
-              const group = groups.find((g) => g.title === item.group);
-              const groupLinks = submenu(item.group);
-              if (!group || groupLinks.length === 0) return null;
-              const id = `header-menu-${group.slug}`;
-              return (
-                // Native popover, like the phone menu below: Escape and the
-                // click outside are the browser's own. Where it hangs is CSS
-                // (.header-menu in globals.css): a popover renders in the
-                // top layer, so no wrapper here could position it.
-                <Fragment key={item.group}>
-                  <NavGroupButton
-                    hrefs={groupLinks.map((link) => link.href)}
-                    popoverTarget={id}
-                    className={`flex cursor-pointer items-center gap-1 ${BAR_ITEM}`}
-                    currentClassName={BAR_CURRENT}
-                  >
-                    {item.group}
-                    <Icon
-                      name="chevronRight"
-                      className="h-3.5 w-3.5 rotate-90"
-                    />
-                  </NavGroupButton>
-                  <div
-                    id={id}
-                    popover="auto"
-                    style={{ positionAnchor: `--${id}` }}
-                    className="header-menu m-0 w-[21rem] rounded-2xl border border-brand-border bg-brand-card p-2 shadow-lg"
-                  >
-                    <NavLinks
-                      links={groupLinks}
-                      descriptions
-                      className={MENU_LINK}
-                      currentClassName={MENU_CURRENT}
-                    />
-                    <MenuPopover />
-                  </div>
-                </Fragment>
-              );
-            })}
-            {lookup && (
-              // Pela mesma lista, só para ganhar o aria-current na consulta:
-              // um botão de ação já é o elemento mais visível do cabeçalho e
-              // não precisa de realce, mas quem navega por leitor de tela
-              // precisa saber que está nessa página.
-              <NavLinks
-                links={[lookup]}
-                className="btn btn-primary btn-md"
-                currentClassName=""
-              />
-            )}
-          </nav>
+                )}
+              </nav>
 
-          {/* Native popover: the menu opens with no JavaScript at all, so
+              {/* Native popover: the menu opens with no JavaScript at all, so
               it works while the page is still hydrating, and the browser
               closes it on Escape and on a tap outside for free. The only
               script is the close after a tap on a link, which the browser
               cannot do on its own here: see close-menu-on-navigate.tsx. */}
-          <div className="lg:hidden">
-            <button
-              type="button"
-              popoverTarget="site-menu"
-              className="flex cursor-pointer items-center rounded-lg p-1.5 text-brand-primary"
-            >
-              <Icon name="menu" className="h-6 w-6" />
-              <span className="sr-only">Abrir menu</span>
-            </button>
-            <nav
-              id="site-menu"
-              popover="auto"
-              aria-label="Menu do site"
-              // max-h and its own scroll: with the groups the list is taller
-              // than a short phone's viewport, and a popover clipped by the
-              // screen edge has no way to reach the last item.
-              className="fixed top-[4.25rem] right-4 bottom-auto left-auto z-20 m-0 max-h-[calc(100dvh-5rem)] w-64 overflow-y-auto rounded-2xl border border-brand-border bg-brand-card p-2 shadow-lg"
-            >
-              {/* Grouped by task, the way the footer is, with home on top: a
+              <div className="lg:hidden">
+                <button
+                  type="button"
+                  popoverTarget="site-menu"
+                  className="flex cursor-pointer items-center rounded-lg p-1.5 text-brand-primary"
+                >
+                  <Icon name="menu" className="h-6 w-6" />
+                  <span className="sr-only">Abrir menu</span>
+                </button>
+                <nav
+                  id="site-menu"
+                  popover="auto"
+                  aria-label="Menu do site"
+                  // max-h and its own scroll: with the groups the list is taller
+                  // than a short phone's viewport, and a popover clipped by the
+                  // screen edge has no way to reach the last item.
+                  className="fixed top-[4.25rem] right-4 bottom-auto left-auto z-20 m-0 max-h-[calc(100dvh-5rem)] w-64 overflow-y-auto rounded-2xl border border-brand-border bg-brand-card p-2 shadow-lg"
+                >
+                  {/* Grouped by task, the way the footer is, with home on top: a
                   flat list in gating order put "Canal LGPD" second. */}
-              <NavLinks
-                links={pick(["/"])}
-                className={MENU_LINK}
-                currentClassName={MENU_CURRENT}
-              />
-              {groups.map(({ title, links: groupLinks }) => (
-                <div key={title}>
-                  <span className={MENU_GROUP}>{title}</span>
                   <NavLinks
-                    links={groupLinks}
+                    links={pick(["/"])}
                     className={MENU_LINK}
                     currentClassName={MENU_CURRENT}
                   />
-                </div>
-              ))}
-              <MenuPopover />
-            </nav>
-          </div>
-        </div>
-      </header>
+                  {groups.map(({ title, links: groupLinks }) => (
+                    <div key={title}>
+                      <span className={MENU_GROUP}>{title}</span>
+                      <NavLinks
+                        links={groupLinks}
+                        className={MENU_LINK}
+                        currentClassName={MENU_CURRENT}
+                      />
+                    </div>
+                  ))}
+                  <MenuPopover />
+                </nav>
+              </div>
+            </div>
+          </header>
 
-      {/* Whether the citizen's attachments go straight to the store is a
+          {/* Whether the citizen's attachments go straight to the store is a
           server-side fact (see src/lib/uploads.ts) that every upload on the
           public site has to know. */}
-      {/* site-text: the site's paragraphs justified, ABNT style (globals.css). */}
-      <main className="site-text flex-1">
-        <BlobUploadProvider
-          enabled={blobUploadEnabled()}
-          tenantSlug={tenant.slug}
-        >
-          <DemoProvider demo={tenant.demo}>{children}</DemoProvider>
-        </BlobUploadProvider>
-      </main>
+          {/* site-text: the site's paragraphs justified, ABNT style (globals.css). */}
+          <main className="site-text flex-1">
+            <BlobUploadProvider
+              enabled={blobUploadEnabled()}
+              tenantSlug={tenant.slug}
+            >
+              <DemoProvider demo={tenant.demo}>{children}</DemoProvider>
+            </BlobUploadProvider>
+          </main>
 
-      <footer className="bg-brand-primary text-white">
-        <div className="mx-auto max-w-6xl px-4 py-8 md:px-10 md:py-10">
-          <div className="grid grid-cols-1 gap-8 sm:grid-cols-2 md:grid-cols-[1.5fr_1fr_1fr]">
-            <div className="flex flex-col gap-4 sm:col-span-2 md:col-span-1">
-              <div className="flex items-center gap-3">
-                <Image
-                  src={tenant.logos.seal.dark}
-                  alt=""
-                  width={44}
-                  height={44}
-                  className="h-11 w-11 shrink-0 object-contain"
-                />
-                <span className="block">
-                  <span className="block font-serif text-base font-bold uppercase tracking-[0.05em]">
-                    {tenant.name}
-                  </span>
-                  <span className="block text-xs text-brand-on-dark-body">
-                    {tenant.subtitle}
-                  </span>
-                </span>
-              </div>
+          <footer className="bg-brand-primary text-white">
+            <div className="mx-auto max-w-6xl px-4 py-8 md:px-10 md:py-10">
+              <div className="grid grid-cols-1 gap-8 sm:grid-cols-2 md:grid-cols-[1.5fr_1fr_1fr]">
+                <div className="flex flex-col gap-4 sm:col-span-2 md:col-span-1">
+                  <div className="flex items-center gap-3">
+                    <Image
+                      src={tenant.logos.seal.dark}
+                      alt=""
+                      width={44}
+                      height={44}
+                      className="h-11 w-11 shrink-0 object-contain"
+                    />
+                    <span className="block">
+                      <span className="block font-serif text-base font-bold uppercase tracking-[0.05em]">
+                        {tenant.name}
+                      </span>
+                      <span className="block text-xs text-brand-on-dark-body">
+                        {tenant.subtitle}
+                      </span>
+                    </span>
+                  </div>
 
-              {/* The short version; the long one is /plataforma. Named here
+                  {/* The short version; the long one is /plataforma. Named here
                   because it is the same platform the declaração's carimbo
                   cites, and a citizen (or the fundo) checking the site should
                   find the same claim under the same norm. */}
-              <p className="max-w-sm text-sm leading-relaxed text-brand-on-dark-body">
-                Serventia dotada de fé pública. Plataforma Eletrônica Oficial da
-                Serventia, nos termos do art. 208, II, "b", do Código Nacional
-                de Normas do CNJ (Provimento CNJ n. 180/2024), em conformidade
-                com a LGPD e o Provimento CNJ n. 213/2026.
-              </p>
-            </div>
+                  <p className="max-w-sm text-sm leading-relaxed text-brand-on-dark-body">
+                    Serventia dotada de fé pública. Plataforma Eletrônica
+                    Oficial da Serventia, nos termos do art. 208, II, "b", do
+                    Código Nacional de Normas do CNJ (Provimento CNJ n.
+                    180/2024), em conformidade com a LGPD e o Provimento CNJ n.
+                    213/2026.
+                  </p>
+                </div>
 
-            {/* The same groups as the menus (NAV_GROUPS above). The e2e de
+                {/* The same groups as the menus (NAV_GROUPS above). The e2e de
                 gating compara os data-section como conjunto (ver
                 tenants.spec.ts), e "Início" fica coberto pelo link do header. */}
-            {groups.map(({ title, links: groupLinks }) => (
-              // No toque os links ficam mais afastados: apertar a lista é um
-              // ganho de altura na tela grande, não no dedo.
-              <nav
-                key={title}
-                aria-label={title}
-                className="flex flex-col gap-3 md:gap-2.5"
-              >
-                <span className="text-xs font-semibold uppercase tracking-[0.14em] text-brand-on-dark-accent">
-                  {title}
-                </span>
-                {groupLinks.map((link) => (
-                  <Link
-                    key={link.href}
-                    data-section={link.section}
-                    href={link.href}
-                    className="text-sm text-brand-on-dark-body hover:text-white"
+                {groups.map(({ title, links: groupLinks }) => (
+                  // No toque os links ficam mais afastados: apertar a lista é um
+                  // ganho de altura na tela grande, não no dedo.
+                  <nav
+                    key={title}
+                    aria-label={title}
+                    className="flex flex-col gap-3 md:gap-2.5"
                   >
-                    {link.label}
-                  </Link>
-                ))}
-                {/* None of these carries data-section: they are not gated sections,
+                    <span className="text-xs font-semibold uppercase tracking-[0.14em] text-brand-on-dark-accent">
+                      {title}
+                    </span>
+                    {groupLinks.map((link) => (
+                      <Link
+                        key={link.href}
+                        data-section={link.section}
+                        href={link.href}
+                        className="text-sm text-brand-on-dark-body hover:text-white"
+                      >
+                        {link.label}
+                      </Link>
+                    ))}
+                    {/* None of these carries data-section: they are not gated sections,
                     and the gating e2e compares the footer's data-section set. */}
-                {title === "Serviços" && (
-                  <Link
-                    href="/verificar"
-                    className="text-sm text-brand-on-dark-body hover:text-white"
-                  >
-                    Verificar documento assinado
-                  </Link>
-                )}
-                {title === "Cidadão" && (
-                  <>
-                    <Link
-                      href="/plataforma"
-                      className="text-sm text-brand-on-dark-body hover:text-white"
-                    >
-                      Sobre a plataforma
-                    </Link>
-                    <Link
-                      href="/privacidade"
-                      className="text-sm text-brand-on-dark-body hover:text-white"
-                    >
-                      Política de privacidade
-                    </Link>
-                  </>
-                )}
-              </nav>
-            ))}
-          </div>
+                    {title === "Serviços" && (
+                      <Link
+                        href="/verificar"
+                        className="text-sm text-brand-on-dark-body hover:text-white"
+                      >
+                        Verificar documento assinado
+                      </Link>
+                    )}
+                    {title === "Cidadão" && (
+                      <>
+                        <Link
+                          href="/plataforma"
+                          className="text-sm text-brand-on-dark-body hover:text-white"
+                        >
+                          Sobre a plataforma
+                        </Link>
+                        <Link
+                          href="/privacidade"
+                          className="text-sm text-brand-on-dark-body hover:text-white"
+                        >
+                          Política de privacidade
+                        </Link>
+                      </>
+                    )}
+                  </nav>
+                ))}
+              </div>
 
-          <div className="mt-8 flex flex-col gap-2 border-t border-white/15 pt-5 text-xs text-brand-on-dark-muted md:flex-row md:items-center md:justify-between">
-            <span>
-              {tenant.name} · {tenant.subtitle}. Todos os direitos reservados.
-            </span>
-            <span className="flex items-center gap-2">
-              {/* Duas paths e fill currentColor: inline, a marca acompanha a
+              <div className="mt-8 flex flex-col gap-2 border-t border-white/15 pt-5 text-xs text-brand-on-dark-muted md:flex-row md:items-center md:justify-between">
+                <span>
+                  {tenant.name} · {tenant.subtitle}. Todos os direitos
+                  reservados.
+                </span>
+                <span className="flex items-center gap-2">
+                  {/* Duas paths e fill currentColor: inline, a marca acompanha a
                   cor do crédito sem virar um segundo request. */}
-              <svg
-                viewBox="0 0 400 400"
-                className="h-[18px] w-[18px]"
-                fill="currentColor"
-                fillRule="evenodd"
-                clipRule="evenodd"
-                aria-hidden="true"
-              >
-                <path d="M39.04 128.87c-1.23,77.99 -0.52,163.71 -0.22,240.81 11.39,-3.28 84.14,-35.7 89.52,-40.65l-0.01 -155.23c2.75,-2.73 11.89,-8.51 15.41,-10.74l32.07 -21.05c4.81,-3.37 11.76,-7.08 16.56,-11.1 0.97,-27.3 0.07,-71.63 0.14,-101.19l-153.47 99.15z" />
-                <path d="M207.59 131.2c4.74,2.03 11.39,7.13 16.07,10.19l48.52 31.16 -0.58 157.71c10.39,3.14 70.09,34.07 89.51,40.04l0.55 -241.76 -76.79 -49.37c-17.31,-11.87 -39.72,-24.95 -57.79,-37.18 -4.81,-3.26 -15.12,-10.65 -19.67,-12.29l0.18 101.5z" />
-              </svg>
-              Desenvolvido por Átrios
-            </span>
-          </div>
-        </div>
-      </footer>
+                  <svg
+                    viewBox="0 0 400 400"
+                    className="h-[18px] w-[18px]"
+                    fill="currentColor"
+                    fillRule="evenodd"
+                    clipRule="evenodd"
+                    aria-hidden="true"
+                  >
+                    <path d="M39.04 128.87c-1.23,77.99 -0.52,163.71 -0.22,240.81 11.39,-3.28 84.14,-35.7 89.52,-40.65l-0.01 -155.23c2.75,-2.73 11.89,-8.51 15.41,-10.74l32.07 -21.05c4.81,-3.37 11.76,-7.08 16.56,-11.1 0.97,-27.3 0.07,-71.63 0.14,-101.19l-153.47 99.15z" />
+                    <path d="M207.59 131.2c4.74,2.03 11.39,7.13 16.07,10.19l48.52 31.16 -0.58 157.71c10.39,3.14 70.09,34.07 89.51,40.04l0.55 -241.76 -76.79 -49.37c-17.31,-11.87 -39.72,-24.95 -57.79,-37.18 -4.81,-3.26 -15.12,-10.65 -19.67,-12.29l0.18 101.5z" />
+                  </svg>
+                  Desenvolvido por Átrios
+                </span>
+              </div>
+            </div>
+          </footer>
 
-      {/* The chat waits for the cookie notice: both live in the bottom-right
+          {/* The chat waits for the cookie notice: both live in the bottom-right
           corner, and the chat sets its own cookie: it only shows up once the
           citizen has seen the notice. */}
-      {chatEnabled && cookieNoticeAcknowledged && (
-        <ChatWidget
-          tenant={tenant}
-          lookupHref={SECTION_ROUTES["consulta-protocolo"]}
-        />
-      )}
-      {!cookieNoticeAcknowledged && <CookieNotice />}
-    </div>
+          {chatEnabled && cookieNoticeAcknowledged && (
+            <ChatWidget
+              tenant={tenant}
+              lookupHref={SECTION_ROUTES["consulta-protocolo"]}
+            />
+          )}
+          {!cookieNoticeAcknowledged && <CookieNotice />}
+        </div>
+      </body>
+    </html>
   );
 }

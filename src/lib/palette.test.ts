@@ -4,7 +4,7 @@ import { test } from "node:test";
 import { NEUTRALS, PALETTES } from "../core/tenant/palette.ts";
 import { THEMES } from "../core/tenant/schema.ts";
 
-const stylesheet = readFileSync("src/app/globals.css", "utf8");
+const stylesheet = readFileSync("src/app/brand.css", "utf8");
 
 /** Reads one `--palette-<name>` declaration out of the stylesheet. */
 function declared(name: string): string | undefined {
