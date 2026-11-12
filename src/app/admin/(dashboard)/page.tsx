@@ -9,7 +9,10 @@ import {
   type TodayAppointmentInput,
 } from "@/core/overview/desk.ts";
 import type { RequestKind } from "@/core/request/kinds.ts";
-import { parseDetails } from "@/core/request/kinds.ts";
+import {
+  isOpenServiceRequestStatus,
+  parseDetails,
+} from "@/core/request/kinds.ts";
 import { toIsoDate } from "@/core/scheduling/calendar.ts";
 import { nextUnwatched, trailProgress } from "@/core/tutorials/progress.ts";
 import {
@@ -25,6 +28,7 @@ import {
   isChatEnabled,
   waitingConversations,
 } from "@/lib/chat.ts";
+import { countByStatus } from "@/lib/service-request.ts";
 import { getSession } from "@/lib/session.ts";
 import { getTenant, OFFICE_TIME_ZONE, officeNow, today } from "@/lib/tenant.ts";
 import { listPanelTutorials, listWatchedIds } from "@/lib/tutorials.ts";
@@ -36,7 +40,11 @@ import { ComplianceCard } from "./_components/compliance-card.tsx";
 import { DeskList } from "./_components/desk-list.tsx";
 import { KeyboardShortcutsCard } from "./_components/keyboard-shortcuts-card.tsx";
 import { LiveChatCard } from "./_components/live-chat-card.tsx";
-import { OverviewHeader } from "./_components/overview-header.tsx";
+import {
+  OverviewHeader,
+  type OverviewKpi,
+} from "./_components/overview-header.tsx";
+import { PipelineCard } from "./_components/pipeline-card.tsx";
 import { ResumeCard } from "./_components/resume-card.tsx";
 import { TodayAgenda } from "./_components/today-agenda.tsx";
 import { TutorialTrailCard } from "./_components/tutorial-trail-card.tsx";
@@ -147,21 +155,29 @@ export default async function AdminHome() {
   ];
 
   const todayIso = today();
-  const [deskRecords, todayAppointmentRecords, resumePoint, waitingChat] =
-    await Promise.all([
-      listDeskItems(tenant.slug, kinds),
-      canChannels
-        ? listTodayAppointments(tenant.slug, todayIso)
-        : Promise.resolve([]),
-      findResumePoint(tenant.slug, session.user.id),
-      canChat
-        ? Promise.all([
-            isChatEnabled(tenant.slug),
-            waitingConversations(tenant.slug),
-            activeConversations(tenant.slug),
-          ])
-        : Promise.resolve([false, [], []] as const),
-    ]);
+  const [
+    deskRecords,
+    todayAppointmentRecords,
+    resumePoint,
+    waitingChat,
+    statusCounts,
+  ] = await Promise.all([
+    listDeskItems(tenant.slug, kinds),
+    canChannels
+      ? listTodayAppointments(tenant.slug, todayIso)
+      : Promise.resolve([]),
+    findResumePoint(tenant.slug, session.user.id),
+    canChat
+      ? Promise.all([
+          isChatEnabled(tenant.slug),
+          waitingConversations(tenant.slug),
+          activeConversations(tenant.slug),
+        ])
+      : Promise.resolve([false, [], []] as const),
+    canRequests
+      ? countByStatus(tenant.slug).catch((): Record<string, number> => ({}))
+      : Promise.resolve({} as Record<string, number>),
+  ]);
 
   const now = new Date();
   const deskItems = deskRecords.map(toDeskItemInput);
@@ -237,12 +253,75 @@ export default async function AdminHome() {
     critical: kind === "data-rights" && criticalCount > 0,
   }));
 
+  // The day's numbers, each opening the screen it counts.
+  const openRequests = Object.entries(statusCounts)
+    .filter(([status]) => isOpenServiceRequestStatus(status))
+    .reduce((sum, [, count]) => sum + count, 0);
+  const kpis: OverviewKpi[] = [
+    {
+      key: "mesa",
+      label: "Na sua mesa",
+      value: deskCount,
+      caption: "aguardando o cartório",
+      href: "/admin/pedidos",
+      icon: "inbox",
+    },
+    {
+      key: "criticos",
+      label: "Prazos críticos",
+      value: criticalCount,
+      caption: criticalCount > 0 ? "resolver primeiro" : "nenhum vencendo",
+      href: canChannels ? "/admin/lgpd" : "/admin/pedidos",
+      icon: "alert",
+      alert: criticalCount > 0,
+    },
+    ...(canRequests
+      ? [
+          {
+            key: "abertos",
+            label: "Pedidos em aberto",
+            value: openRequests,
+            caption: "em todas as etapas",
+            href: "/admin/pedidos",
+            icon: "file" as const,
+          },
+          {
+            key: "pagamentos",
+            label: "Pagamentos a conferir",
+            value: statusCounts["payment-reported"] ?? 0,
+            caption: "comprovantes enviados",
+            href: "/admin/pedidos?aba=payment-reported",
+            icon: "checkCircle" as const,
+          },
+        ]
+      : []),
+    ...(canChannels
+      ? [
+          {
+            key: "agenda",
+            label: "Atendimentos hoje",
+            value: rankedAgenda.length,
+            caption: "na agenda do dia",
+            href: "/admin/agenda",
+            icon: "calendar" as const,
+          },
+        ]
+      : []),
+  ];
+  const dateLabel = new Intl.DateTimeFormat("pt-BR", {
+    weekday: "long",
+    day: "numeric",
+    month: "long",
+    year: "numeric",
+    timeZone: OFFICE_TIME_ZONE,
+  }).format(now);
+
   return (
     <>
       <OverviewHeader
         greeting={`${greeting()}, ${firstName(session.user.name, session.user.email)}`}
-        deskCount={deskCount}
-        criticalCount={criticalCount}
+        dateLabel={dateLabel}
+        kpis={kpis}
       />
       <QueuePoller version={queueVersion} />
       <main className="flex flex-col gap-4.5 px-[30px] py-7">
@@ -251,6 +330,7 @@ export default async function AdminHome() {
         <div className="grid grid-cols-1 gap-4 lg:grid-cols-[1fr_348px] lg:items-start">
           <div className="flex min-w-0 flex-col gap-4">
             <DeskList items={rankedDesk} totalCount={deskCount} />
+            {canRequests && <PipelineCard counts={statusCounts} />}
             {canChannels && <TodayAgenda appointments={rankedAgenda} />}
           </div>
 
