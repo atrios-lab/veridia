@@ -1,5 +1,6 @@
 import "server-only";
 import { after } from "next/server";
+import { type AccessKeyReason, consultLink } from "@/core/email/access-key.ts";
 import type { EmailText } from "@/core/email/text.ts";
 import {
   DATA_RIGHT_OPTIONS,
@@ -147,13 +148,15 @@ export interface SendAccessKeyParams {
   protocolNumber: string;
   /** In the clear: this is the one function allowed to put it in a message. */
   accessKey: string;
-  /** "received": the pedido that just generated this key. "recovered": the
-   * citizen asked the consult page for a new one. */
-  reason: "received" | "recovered";
+  /** "received": the pedido just filed on the site. "counter": filed at
+   * the balcão. "recovered": the citizen asked the consult page for a new
+   * one. */
+  reason: AccessKeyReason;
 }
 
 const ACCESS_KEY_SUBJECTS: Record<SendAccessKeyParams["reason"], string> = {
-  received: "Pedido recebido",
+  received: "Pedido recebido: protocolo e chave de acesso",
+  counter: "Pedido protocolado: protocolo e chave de acesso",
   recovered: "Nova chave de acesso",
 };
 
@@ -180,7 +183,7 @@ export async function sendAccessKey(
         sealUrl: brandImageUrl(params.tenant.logos.seal.light, host),
         protocolNumber: params.protocolNumber,
         accessKey: params.accessKey,
-        consultUrl: host ? `https://${host}/protocolo` : "",
+        consultUrl: consultLink(host, params.protocolNumber),
         reason: params.reason,
       } as const;
       return {

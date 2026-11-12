@@ -586,6 +586,12 @@ function Gate({
   pending: boolean;
   error?: string;
 }) {
+  // Reached from the e-mail's link, the protocol is already there: the key
+  // is the one thing left to type (decision of 12/11/2026).
+  const keyRef = useRef<HTMLInputElement>(null);
+  useEffect(() => {
+    if (initialNumber) keyRef.current?.focus();
+  }, [initialNumber]);
   return (
     <div className="mx-auto flex w-full max-w-md flex-col items-center gap-6 py-16 text-center">
       <div className="flex flex-col items-center gap-2.5">
@@ -596,8 +602,9 @@ function Gate({
           Veja o andamento
         </h1>
         <p className="text-sm leading-relaxed text-brand-muted">
-          Digite o número do protocolo e a chave de acesso que você recebeu ao
-          fazer o pedido.
+          {initialNumber
+            ? "O número do protocolo já está preenchido. Digite a chave de acesso que você recebeu por e-mail."
+            : "Digite o número do protocolo e a chave de acesso que você recebeu ao fazer o pedido."}
         </p>
       </div>
       <form action={action} className="flex w-full flex-col gap-3 text-left">
@@ -616,16 +623,13 @@ function Gate({
             placeholder="REQ.2026.000200"
             className={inputClass}
           />
+          {initialNumber && (
+            <p className="mt-1.5 text-[12px] text-brand-muted">
+              Preenchido pelo link do e-mail.
+            </p>
+          )}
         </div>
         <div>
-          <div className="mb-2 basis-full">
-            <DocumentNameField
-              field="resposta"
-              tone="public"
-              suggestions={CITIZEN_DOCUMENT_NAMES}
-              placeholder="Ex.: Resposta à exigência"
-            />
-          </div>
           <label
             htmlFor="accessKey"
             className="mb-1.5 block text-[13px] font-semibold text-brand-primary"
@@ -636,6 +640,10 @@ function Gate({
             id="accessKey"
             name="accessKey"
             required
+            ref={keyRef}
+            autoComplete="off"
+            autoCapitalize="characters"
+            spellCheck={false}
             placeholder="Ex.: BBM8-6XVB-8PUK"
             className={inputClass}
           />

@@ -13,6 +13,7 @@ import {
   PURPOSE_PLACEHOLDER,
   REQUESTER_QUALIFICATION_NOTICE,
 } from "@/core/acts/catalog.ts";
+import { isEmailContact } from "@/core/request/form.ts";
 import {
   asksPurpose,
   asksRequesterQualification,
@@ -628,6 +629,10 @@ export function ManualEntryForm({
               className={FIELD_CLASS}
             />
             <FieldError message={fieldErrors.contact} />
+            <p className="mt-1 text-[11.5px] leading-snug text-admin-muted">
+              Com e-mail, o cliente recebe o protocolo, a chave de acesso e o
+              passo a passo para acompanhar o pedido.
+            </p>
           </div>
           <div>
             <label className={LABEL_CLASS} htmlFor="amount">
@@ -1106,12 +1111,30 @@ function SuccessScreen({ state }: { state: SuccessState }) {
           person, and this is the one moment a wrong address can be fixed by
           asking. A toast that fades while they read the protocol out loud
           would take the chance with it. */}
-      {state.emailWarning && (
+      {state.emailWarning ? (
         <p
           role="alert"
           className="rounded-[14px] bg-admin-warning-bg px-4 py-3 text-[13px] font-semibold text-admin-warning-text"
         >
           {state.emailWarning}
+        </p>
+      ) : state.contact && isEmailContact(state.contact) ? (
+        <p className="flex items-start gap-2.5 rounded-[14px] bg-admin-success-bg px-4 py-3 text-[13px] text-admin-success-text">
+          <AdminIcon
+            name="mail"
+            className="mt-0.5 h-4 w-4 flex-none"
+            strokeWidth={2}
+          />
+          <span>
+            Protocolo, chave de acesso e passo a passo enviados para{" "}
+            <strong>{state.contact.trim()}</strong>, com o link que abre o
+            acompanhamento já com o protocolo preenchido.
+          </span>
+        </p>
+      ) : (
+        <p className="rounded-[14px] bg-admin-warning-bg px-4 py-3 text-[13px] font-semibold text-admin-warning-text">
+          Sem e-mail informado, nada foi enviado ao cliente. Entregue o
+          comprovante impresso, que traz o protocolo e a chave de acesso.
         </p>
       )}
       <section className="rounded-[14px] border border-admin-border bg-admin-card p-6">
