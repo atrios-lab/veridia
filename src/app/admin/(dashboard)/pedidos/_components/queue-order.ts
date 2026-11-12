@@ -46,7 +46,7 @@ export const QUEUE_TABS: readonly QueueTab[] = [
   { id: "new", label: "Novo", tone: "waiting", statuses: ["new"] },
   {
     id: "awaiting-compliance",
-    label: "Aguardando exigência",
+    label: "Aguardando cumprimento de exigência",
     shortLabel: "Exigência",
     tone: "blocked",
     statuses: ["awaiting-compliance"],
@@ -69,7 +69,8 @@ export const QUEUE_TABS: readonly QueueTab[] = [
   },
   {
     id: "processing",
-    label: "Em andamento",
+    label: "Em processamento",
+    shortLabel: "Processamento",
     tone: "working",
     statuses: ["processing"],
   },

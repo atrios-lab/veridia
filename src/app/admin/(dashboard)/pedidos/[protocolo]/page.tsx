@@ -6,6 +6,7 @@ import {
   actVariantName,
   getActForTenant,
 } from "@/core/acts/catalog.ts";
+import { auditActionLabel } from "@/core/audit/labels.ts";
 import { can } from "@/core/auth/roles.ts";
 import { GUIDE_KIND_INFO } from "@/core/guides/catalog.ts";
 import { formatGuideNumber } from "@/core/guides/schema.ts";
@@ -111,6 +112,10 @@ const EXEMPTION_DECISION_LABELS: Record<ExemptionDecisionOutcome, string> = {
   denied: "indeferida",
   installments: "substituída por parcelamento",
 };
+
+/** "Renomeou um documento" -> "renomeou um documento", after the name. */
+const lowerFirst = (text: string) =>
+  text ? text.charAt(0).toLocaleLowerCase("pt-BR") + text.slice(1) : text;
 
 const HISTORY_LABELS: Record<string, string> = {
   "service-request.create": "registrou o pedido",
@@ -811,7 +816,8 @@ export default async function ServiceRequestDetailPage({
                               request.applicantName ??
                               "Cidadão")}
                         </strong>{" "}
-                        {HISTORY_LABELS[entry.action] ?? entry.action}
+                        {HISTORY_LABELS[entry.action] ??
+                          lowerFirst(auditActionLabel(entry.action))}
                         <br />
                         <span className="text-[11px] text-admin-faint">
                           {formatOfficeDayMonthTime(entry.createdAt)}

@@ -12,6 +12,7 @@ import {
 import { DocumentNameField } from "@/app/_components/document-name-field.tsx";
 import type { PauseReason } from "@/core/request/deadline.ts";
 import { CITIZEN_DOCUMENT_NAMES } from "@/core/request/delivery-name.ts";
+import { progressOf } from "@/core/request/kinds.ts";
 import {
   SIGNED_FORM_COUNTER_OPTION,
   SIGNED_FORM_REQUIRED_NOTICE,
@@ -1959,6 +1960,7 @@ function ServiceRequestTrilho({
           <span className="h-[7px] w-[7px] rounded-full bg-current" />
           {pill.label}
         </span>
+        <PercentDone status={finished ? "done" : result.requestStatus} />
       </div>
 
       <ProgressRail steps={steps} />
@@ -2204,6 +2206,11 @@ function ConsultationTrilho({
           <span className="h-[7px] w-[7px] rounded-full bg-current" />
           {pill.label}
         </span>
+        <PercentDone
+          status={
+            result.searchAnswer && !closed ? "done" : result.requestStatus
+          }
+        />
       </div>
 
       <div className="mx-auto flex w-full max-w-[620px] flex-col gap-4">
@@ -2345,6 +2352,41 @@ function LookupFlow({
           error={state.status === "error" ? state.message : undefined}
         />
       )}
+    </div>
+  );
+}
+
+/**
+ * How far along the request is, in percent (decision of 12/11/2026), under
+ * the status pill. Nothing for a request closed without delivery. The
+ * caller passes "done" when the screen already reads the request as
+ * finished (a document delivered, a search answered), so the bar and the
+ * pill never disagree.
+ */
+function PercentDone({ status }: { status: string }) {
+  const percent = progressOf(status);
+  if (percent === null) return null;
+  return (
+    <div className="mt-2 flex w-full max-w-[320px] flex-col items-center gap-1.5">
+      <span className="text-[13px] font-semibold text-brand-muted">
+        Andamento do pedido:{" "}
+        <strong className="text-[15px] text-brand-primary tabular-nums">
+          {percent}%
+        </strong>
+      </span>
+      <div
+        role="progressbar"
+        aria-valuenow={percent}
+        aria-valuemin={0}
+        aria-valuemax={100}
+        aria-label="Andamento do pedido"
+        className="h-2 w-full overflow-hidden rounded-full bg-brand-tint"
+      >
+        <div
+          className="h-full rounded-full bg-brand-primary transition-all duration-500"
+          style={{ width: `${percent}%` }}
+        />
+      </div>
     </div>
   );
 }

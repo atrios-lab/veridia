@@ -183,23 +183,118 @@ const SUGGESTED_NEXT_STATUSES: Record<
   ServiceRequestStatus,
   readonly ServiceRequestStatus[]
 > = {
-  new: [
-    "processing",
-    "awaiting-payment",
-    "awaiting-guide-payment",
-    "cancelled",
-  ],
+  // "Aguardando pagamento" is not offered here: informing the value moves
+  // the request there by itself (`statusAfterAmount`), and moving there
+  // with no value would ask the citizen for nothing. Registering an
+  // exigência moves it to "Aguardando cumprimento de exigência" the same way.
+  new: ["processing", "awaiting-guide-payment", "rejected", "cancelled"],
   "awaiting-payment": ["processing", "cancelled"],
   "payment-reported": ["processing", "awaiting-payment", "cancelled"],
-  "awaiting-compliance": ["processing", "cancelled"],
-  "awaiting-guide-payment": ["processing", "done", "cancelled"],
-  processing: ["ready-for-pickup", "awaiting-guide-payment", "done"],
-  "ready-for-pickup": ["done", "archived"],
+  "awaiting-compliance": ["processing", "rejected", "cancelled"],
+  "awaiting-guide-payment": ["processing", "cancelled"],
+  processing: ["ready-for-pickup", "done", "awaiting-guide-payment"],
+  "ready-for-pickup": ["done"],
   done: ["archived"],
   rejected: ["archived"],
-  cancelled: ["processing", "archived"],
+  cancelled: ["archived"],
   archived: [],
 };
+
+/**
+ * What a suggestion button says: the act the clerk performs, not only the
+ * andamento it lands on (decision of 12/11/2026). "Confirmar pagamento"
+ * reads as what it is; "Em processamento" did not.
+ */
+export function transitionLabel(
+  from: ServiceRequestStatus,
+  to: ServiceRequestStatus,
+): string {
+  switch (to) {
+    case "processing":
+      if (from === "awaiting-payment" || from === "payment-reported") {
+        return "Confirmar pagamento";
+      }
+      if (from === "awaiting-compliance") return "Exigência cumprida: retomar";
+      if (from === "awaiting-guide-payment") return "Guia paga: retomar";
+      if (from === "cancelled" || from === "rejected" || from === "archived") {
+        return "Reabrir";
+      }
+      return "Iniciar processamento";
+    case "awaiting-payment":
+      return from === "payment-reported"
+        ? "Recusar comprovante"
+        : "Aguardar pagamento";
+    case "awaiting-guide-payment":
+      return "Aguardar pagamento da guia";
+    case "ready-for-pickup":
+      return "Disponibilizar para retirada";
+    case "done":
+      return from === "ready-for-pickup" ? "Entregue: concluir" : "Concluir";
+    case "archived":
+      return "Arquivar";
+    case "cancelled":
+      return "Cancelar";
+    case "rejected":
+      return "Indeferir";
+    default:
+      return statusLabel("service-request", to);
+  }
+}
+
+/**
+ * The andamento that informing (or clearing) the value implies (decision of
+ * 12/11/2026): the citizen sees the Pix only in "Aguardando pagamento", so
+ * leaving it to a second click was what kept the QR from showing. A new
+ * request, or one taken to processing before it had any value, goes to
+ * "Aguardando pagamento"; clearing the value of one waiting on it takes it
+ * back to "Novo". `null`: nothing to move (a zero value, an exigência still
+ * open, a payment already reported or settled, a closed request).
+ */
+export function statusAfterAmount(
+  from: ServiceRequestStatus,
+  previousCents: number | null,
+  cents: number | null,
+): ServiceRequestStatus | null {
+  if (cents === null) return from === "awaiting-payment" ? "new" : null;
+  if (cents <= 0) return null;
+  if (from === "new") return "awaiting-payment";
+  if (from === "processing" && previousCents === null) {
+    return "awaiting-payment";
+  }
+  return null;
+}
+
+/**
+ * How far along a request is, in percent (decision of 12/11/2026), for the
+ * bar on the office's detail and the citizen's consult. `null` for the two
+ * endings without delivery (Indeferido, Cancelado): no bar to fill there.
+ */
+const PROGRESS: Record<ServiceRequestStatus, number | null> = {
+  new: 10,
+  "awaiting-compliance": 25,
+  "awaiting-payment": 35,
+  "payment-reported": 50,
+  "awaiting-guide-payment": 55,
+  processing: 70,
+  "ready-for-pickup": 90,
+  done: 100,
+  archived: 100,
+  rejected: null,
+  cancelled: null,
+};
+
+export function progressOf(status: string): number | null {
+  return isServiceRequestStatus(status) ? PROGRESS[status] : null;
+}
+
+/** The milestones the bar marks, at the percent each one is reached. */
+export const PROGRESS_MILESTONES = [
+  { label: "Recebido", at: 10 },
+  { label: "Pagamento", at: 35 },
+  { label: "Em processamento", at: 70 },
+  { label: "Pronto para retirada", at: 90 },
+  { label: "Concluído", at: 100 },
+] as const;
 
 export function suggestedNextStatuses(
   status: ServiceRequestStatus,
@@ -402,7 +497,7 @@ const STATUS_LABELS: Record<RequestKind, Record<string, string>> = {
     new: "Novo",
     "awaiting-payment": "Aguardando pagamento",
     "payment-reported": "Pagamento informado",
-    "awaiting-compliance": "Aguardando exigência",
+    "awaiting-compliance": "Aguardando cumprimento de exigência",
     "awaiting-guide-payment": "Aguardando pagamento da guia",
     processing: "Em processamento",
     "ready-for-pickup": "Disponível para retirada",

@@ -13,16 +13,19 @@ import {
   ombudsmanDetailsSchema,
   parseDetails,
   phaseOfStatus,
+  progressOf,
   readChannel,
   readExemption,
   requiresStatusReason,
   SERVICE_REQUEST_PHASES,
   SERVICE_REQUEST_STATUSES,
+  statusAfterAmount,
   statusForRequirements,
   statusLabel,
   statusReasonSchema,
   suggestedNextStatuses,
   suggestedOmbudsmanStatuses,
+  transitionLabel,
   validateStatusReason,
 } from "./kinds.ts";
 
@@ -96,17 +99,76 @@ test("open counts everything short of a terminal andamento", () => {
 });
 
 test("suggested transitions match what the detail screen offers", () => {
+  // "Aguardando pagamento" comes from informing the value, not a button.
   assert.deepEqual(suggestedNextStatuses("new"), [
     "processing",
-    "awaiting-payment",
     "awaiting-guide-payment",
+    "rejected",
     "cancelled",
   ]);
   assert.deepEqual(suggestedNextStatuses("awaiting-compliance"), [
     "processing",
+    "rejected",
     "cancelled",
   ]);
+  assert.deepEqual(suggestedNextStatuses("ready-for-pickup"), ["done"]);
   assert.deepEqual(suggestedNextStatuses("archived"), []);
+});
+
+test("informing the value moves the request to Aguardando pagamento", () => {
+  assert.equal(statusAfterAmount("new", null, 4210), "awaiting-payment");
+  // Taken to processing before any value: the value still asks for payment.
+  assert.equal(statusAfterAmount("processing", null, 4210), "awaiting-payment");
+  // A correction of a value already informed does not move it back.
+  assert.equal(statusAfterAmount("processing", 4000, 4210), null);
+  assert.equal(statusAfterAmount("awaiting-payment", 4000, 4210), null);
+  assert.equal(statusAfterAmount("payment-reported", 4000, 4210), null);
+  assert.equal(statusAfterAmount("awaiting-compliance", null, 4210), null);
+  assert.equal(statusAfterAmount("done", null, 4210), null);
+  assert.equal(statusAfterAmount("new", null, 0), null);
+  // Cleared, a request waiting on it goes back to Novo.
+  assert.equal(statusAfterAmount("awaiting-payment", 4210, null), "new");
+  assert.equal(statusAfterAmount("processing", 4210, null), null);
+});
+
+test("the buttons say the act, not only the andamento", () => {
+  assert.equal(
+    transitionLabel("payment-reported", "processing"),
+    "Confirmar pagamento",
+  );
+  assert.equal(
+    transitionLabel("payment-reported", "awaiting-payment"),
+    "Recusar comprovante",
+  );
+  assert.equal(transitionLabel("new", "processing"), "Iniciar processamento");
+  assert.equal(
+    transitionLabel("ready-for-pickup", "done"),
+    "Entregue: concluir",
+  );
+  assert.equal(transitionLabel("new", "rejected"), "Indeferir");
+});
+
+test("the andamento in percent, rising along the way", () => {
+  const path = [
+    "new",
+    "awaiting-compliance",
+    "awaiting-payment",
+    "payment-reported",
+    "awaiting-guide-payment",
+    "processing",
+    "ready-for-pickup",
+    "done",
+  ] as const;
+  const values = path.map((s) => progressOf(s) ?? -1);
+  assert.deepEqual(
+    values,
+    [...values].sort((a, b) => a - b),
+  );
+  assert.equal(progressOf("new"), 10);
+  assert.equal(progressOf("done"), 100);
+  assert.equal(progressOf("cancelled"), null);
+  assert.equal(progressOf("rejected"), null);
+  assert.equal(progressOf("nonsense"), null);
 });
 
 test("payment-reported: the one andamento the citizen writes", () => {
