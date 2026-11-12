@@ -85,7 +85,5 @@ export function UserMenu({
 /** Says the wait out loud for the second the sign-out action takes. */
 function SigningOut() {
   const { pending } = useFormStatus();
-  return (
-    <output className="sr-only">{pending ? "Saindo…" : ""}</output>
-  );
+  return <output className="sr-only">{pending ? "Saindo…" : ""}</output>;
 }
