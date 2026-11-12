@@ -24,6 +24,8 @@ import { getGuideSettings } from "@/lib/tax-guides.ts";
 import { getTenant, today } from "@/lib/tenant.ts";
 import { AdminIcon } from "../../../_components/icon.tsx";
 import { AdminPageHeader } from "../../../_components/page-header.tsx";
+import { INTERIM_EXCESS_HELP } from "../../../_components/screen-help.ts";
+import { ScreenHelpButton } from "../../../_components/screen-help-button.tsx";
 import { monthPeriod, requireBookAccess } from "./_lib/access.ts";
 import { sendMonthToBulletin } from "./actions.ts";
 import { RemoveEntryButton, ReportForm } from "./forms.tsx";
@@ -133,6 +135,15 @@ export default async function DailyBookPage({
             </Link>
             {settings.interim && (
               <Link
+                href={`${base}/excedente`}
+                className="btn btn-admin-secondary btn-md"
+              >
+                <AdminIcon name="grid" className="h-4 w-4" /> Calculadora do
+                excedente
+              </Link>
+            )}
+            {settings.interim && (
+              <Link
                 href={`${base}/lancamento?tipo=deposito`}
                 className="btn btn-admin-secondary btn-md"
               >
@@ -148,6 +159,24 @@ export default async function DailyBookPage({
           <p className="rounded-[12px] bg-admin-success-bg px-4 py-3 text-[13px] font-semibold text-admin-success-text">
             {done}
           </p>
+        )}
+        {settings.interim && (
+          <div className="flex flex-wrap items-center gap-2.5 rounded-[12px] border border-admin-border bg-admin-card px-4 py-3 text-[13px] text-admin-text">
+            <strong className="text-admin-primary">
+              Interino: excedente de 90,25% do subsídio de ministro do STF
+            </strong>
+            <ScreenHelpButton
+              help={INTERIM_EXCESS_HELP}
+              canConfigure
+              label="O que é o excedente de 90,25% do STF, com exemplos"
+            />
+            <Link
+              href={`${base}/excedente`}
+              className="ml-auto text-[12.5px] font-semibold text-admin-primary underline"
+            >
+              Abrir a calculadora
+            </Link>
+          </div>
         )}
         {!opened && (
           <p className="rounded-[12px] border border-admin-warning-soft-border bg-admin-warning-soft-bg px-4 py-3 text-[13px] text-admin-warning-text">

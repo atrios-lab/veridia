@@ -191,6 +191,7 @@ Regras: `src/core/daily-book/` (`book.ts`, `checks.ts`, `deadlines.ts`). Banco: 
 | 193-A, § 2º | Identificar despesas com tratamento fiscal distinto | Marcação "Tratamento fiscal distinto" na despesa, com a nota, impressa no livro |
 | 194, I | Interino lança o excedente depositado, com data e conta | Lançamento "Depósito do excedente", que exige a conta; não soma como receita nem despesa |
 | 194, IV | Despesas abatidas na apuração do excedente | Apuração do interino: receitas menos despesas do período, sem a remuneração do interino (CGJ/RN art. 26, I) |
+| 194, I, IV e VI | Conta do excedente | Livro › Excedente do interino: calculadora (mensal ou trimestral, pode puxar do livro), "!" com exemplos fictícios, e cada cálculo salvo com memória de cálculo em PDF (assinar digitalmente ou imprimir), editar e excluir com justificativa |
 | 194, V | Lançar os depósitos no Justiça Aberta, nos prazos do Prov. 24/2012, art. 2º | Aviso no painel até 15 de janeiro e 15 de julho (ou o próximo dia útil) |
 | 194, VI | Periodicidade trimestral, salvo lei estadual | Configurar: trimestral (padrão) ou mensal; a apuração sai na página de março, junho, setembro e dezembro, ou todo mês |
 | 195, parágrafo único | Normas estaduais compatíveis continuam | RN: balanço até 15/01 e remessa à CGJ em 5 dias (art. 62); visto até o 15º dia útil de fevereiro (art. 61); interino: contas até o dia 20 (art. 21), FDJ até o dia 10 no mensal (art. 27), IR do interino não é despesa (art. 25, § 2º) |
