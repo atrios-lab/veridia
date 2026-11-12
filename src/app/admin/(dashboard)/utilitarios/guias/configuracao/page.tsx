@@ -19,7 +19,7 @@ export default async function GuideSettingsPage() {
   const settings = await getGuideSettings(await getTenant());
   return (
     <>
-      <AdminPageHeader title="Leis, alíquotas e quem assina" />
+      <AdminPageHeader maxWidth={960} title="Leis, alíquotas e quem assina" />
       <main className="flex max-w-[960px] flex-col gap-4.5 px-[30px] py-7">
         <BackLink
           href="/admin/utilitarios/guias"

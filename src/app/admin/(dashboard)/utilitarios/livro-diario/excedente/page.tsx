@@ -38,6 +38,7 @@ export default async function ExcessPage({
   return (
     <>
       <AdminPageHeader
+        maxWidth={1000}
         title="Excedente do interino"
         back={{
           href: "/admin/utilitarios/livro-diario",

@@ -84,7 +84,7 @@ export default async function AppointmentDetailPage({
 
   return (
     <>
-      <AdminPageHeader title="Detalhes do agendamento" />
+      <AdminPageHeader maxWidth={960} title="Detalhes do agendamento" />
       <main className="flex max-w-[960px] flex-col gap-4.5 px-[30px] py-7">
         <BackLink href={dayHref} label="Agenda do dia" />
 

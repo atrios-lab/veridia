@@ -25,6 +25,7 @@ export default async function EditOrderPage({
   return (
     <>
       <AdminPageHeader
+        maxWidth={1000}
         title={`Editar pedido nº ${orderNumber(row)}`}
         back={{
           href: `/admin/utilitarios/solicitacao-papeis/${row.id}`,

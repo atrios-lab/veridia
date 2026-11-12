@@ -48,6 +48,7 @@ export default async function LotPage({
   return (
     <>
       <AdminPageHeader
+        maxWidth={1000}
         title={`${kindName(lot)} · ${rangeLabel(lot, lot.first, lot.last)}`}
         back={{
           href: "/admin/utilitarios/papel-seguranca",

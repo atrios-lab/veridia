@@ -28,6 +28,7 @@ export default async function NewOrderPage({
   return (
     <>
       <AdminPageHeader
+        maxWidth={1000}
         title="Novo pedido"
         back={{
           href: "/admin/utilitarios/solicitacao-papeis",

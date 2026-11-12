@@ -21,7 +21,7 @@ export default async function DpoSettingsPage() {
 
   return (
     <>
-      <AdminPageHeader title="Configurações" />
+      <AdminPageHeader maxWidth={720} title="Configurações" />
       <main className="flex max-w-[720px] flex-col gap-4.5 px-[30px] py-7">
         <ConfiguracoesTabs
           role={session.user.role ?? ""}

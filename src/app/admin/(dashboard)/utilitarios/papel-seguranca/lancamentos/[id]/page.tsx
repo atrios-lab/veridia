@@ -24,6 +24,7 @@ export default async function MovementEditPage({
   return (
     <>
       <AdminPageHeader
+        maxWidth={1000}
         title="Editar lançamento"
         back={{
           href: "/admin/utilitarios/papel-seguranca",

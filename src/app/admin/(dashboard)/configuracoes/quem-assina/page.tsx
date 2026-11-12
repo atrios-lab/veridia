@@ -21,7 +21,7 @@ export default async function SignersPage() {
   const settings = await getGuideSettings(await getTenant());
   return (
     <>
-      <AdminPageHeader title="Configurações" />
+      <AdminPageHeader maxWidth={960} title="Configurações" />
       <main className="flex max-w-[960px] flex-col gap-4.5 px-[30px] py-7">
         <ConfiguracoesTabs
           role={session.user.role ?? ""}

@@ -56,7 +56,10 @@ export default async function IssDeclarationPage({
 
   return (
     <>
-      <AdminPageHeader title={`Declaração de ISS nº ${number}`} />
+      <AdminPageHeader
+        maxWidth={900}
+        title={`Declaração de ISS nº ${number}`}
+      />
       <main className="flex max-w-[900px] flex-col gap-4.5 px-[30px] py-7 max-md:px-4">
         <BackLink href="/admin/utilitarios/iss" label="Declaração de ISS" />
         {(query.emitida || query.corrigida) && (

@@ -14,6 +14,7 @@ export default async function SettingsPage() {
   return (
     <>
       <AdminPageHeader
+        maxWidth={900}
         title="Configurar o papel de segurança"
         back={{
           href: "/admin/utilitarios/papel-seguranca",

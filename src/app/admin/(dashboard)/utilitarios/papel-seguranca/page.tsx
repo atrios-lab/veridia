@@ -119,6 +119,7 @@ export default async function SecurityPaperPage({
   return (
     <>
       <AdminPageHeader
+        maxWidth={1100}
         title="Papel de segurança"
         description="O classificador das folhas de segurança: lotes recebidos, folhas usadas, extravios e os ofícios à Corregedoria, com a planilha das folhas."
         actions={

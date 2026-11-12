@@ -16,6 +16,7 @@ export default async function BookSettingsPage() {
   return (
     <>
       <AdminPageHeader
+        maxWidth={900}
         title="Configurar o Livro Diário Auxiliar"
         back={{
           href: "/admin/utilitarios/livro-diario",

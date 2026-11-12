@@ -77,6 +77,7 @@ export default async function GuidesPage({
   return (
     <>
       <AdminPageHeader
+        maxWidth={1100}
         title="Guias de transmissão de bens"
         description={guideKindsSummary()}
       />

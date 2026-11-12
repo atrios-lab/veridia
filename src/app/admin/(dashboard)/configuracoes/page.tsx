@@ -139,7 +139,7 @@ export default async function SettingsPage() {
 
   return (
     <>
-      <AdminPageHeader title="Configurações" />
+      <AdminPageHeader maxWidth={960} title="Configurações" />
       <main className="flex max-w-[960px] flex-col gap-4.5 px-[30px] py-7">
         <ConfiguracoesTabs role={role} permissions={granted} />
 

@@ -30,6 +30,7 @@ export default async function EntryPage({
   return (
     <>
       <AdminPageHeader
+        maxWidth={1000}
         title={
           row
             ? "Editar lançamento"

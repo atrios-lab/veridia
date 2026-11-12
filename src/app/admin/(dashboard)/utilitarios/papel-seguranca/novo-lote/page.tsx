@@ -11,6 +11,7 @@ export default async function NewLotPage() {
   return (
     <>
       <AdminPageHeader
+        maxWidth={900}
         title="Cadastrar lote"
         back={{
           href: "/admin/utilitarios/papel-seguranca",

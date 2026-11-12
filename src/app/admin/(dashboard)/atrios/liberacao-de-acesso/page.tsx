@@ -32,7 +32,7 @@ export default async function AccessReleasePage() {
 
   return (
     <>
-      <AdminPageHeader title="Liberação de acesso" />
+      <AdminPageHeader maxWidth={900} title="Liberação de acesso" />
       <main className="flex max-w-[900px] flex-col gap-4.5 px-[30px] py-7">
         <section className="rounded-[14px] border border-admin-border bg-admin-card px-5 py-4">
           <h2 className="font-serif text-[17px] font-semibold text-admin-primary">

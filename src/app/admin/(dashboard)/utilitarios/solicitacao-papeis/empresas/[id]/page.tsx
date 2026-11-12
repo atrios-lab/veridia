@@ -22,6 +22,7 @@ export default async function SupplierPage({
   return (
     <>
       <AdminPageHeader
+        maxWidth={1000}
         title={s.name}
         back={{
           href: "/admin/utilitarios/solicitacao-papeis",

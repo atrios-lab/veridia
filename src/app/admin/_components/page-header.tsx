@@ -34,6 +34,7 @@ export async function AdminPageHeader({
   back,
   description,
   actions,
+  maxWidth,
 }: {
   title: string;
   /** A subordinate screen's way home, rendered as a "Voltar" button over the title. */
@@ -42,6 +43,12 @@ export async function AdminPageHeader({
   description?: string;
   /** The screen's primary action, e.g. the queue's "Lançar pedido". */
   actions?: ReactNode;
+  /**
+   * The width of the screen's content, in px, when it is limited: the
+   * header then ends where the content's box ends, so the actions sit over
+   * it and not at the far edge of a wide screen (decision of 12/11/2026).
+   */
+  maxWidth?: number;
 }) {
   const pathname = (await headers()).get("x-pathname");
   // The "!" and the "Configurar" of this screen (decision of 11/11/2026).
@@ -69,7 +76,10 @@ export async function AdminPageHeader({
       : undefined;
 
   return (
-    <div className="flex flex-none flex-wrap items-center gap-5 px-[30px] pt-[30px]">
+    <div
+      className="flex flex-none flex-wrap items-center gap-5 px-[30px] pt-[30px] max-md:px-4"
+      style={maxWidth ? { maxWidth } : undefined}
+    >
       <div className="flex min-w-[280px] flex-1 flex-col gap-[5px]">
         {back && <BackLink href={back.href} label={back.label} />}
         <div className="flex flex-wrap items-baseline gap-x-4 gap-y-1">

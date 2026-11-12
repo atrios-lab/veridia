@@ -83,7 +83,7 @@ export default async function UsuariosPage() {
 
   return (
     <>
-      <AdminPageHeader title="Usuários" />
+      <AdminPageHeader maxWidth={1100} title="Usuários" />
       <main className="grid max-w-[1100px] grid-cols-1 gap-4.5 px-[30px] py-7 lg:grid-cols-[1fr_340px] lg:items-start">
         <div className="rounded-2xl border border-admin-border bg-admin-card">
           <div className="border-b border-admin-border px-5 py-3.5 font-serif text-base font-semibold text-admin-primary">

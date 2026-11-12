@@ -24,7 +24,10 @@ export default async function IssSettingsPage() {
   const settings = await getIssSettings(tenant);
   return (
     <>
-      <AdminPageHeader title="Configuração da Declaração de ISS" />
+      <AdminPageHeader
+        maxWidth={900}
+        title="Configuração da Declaração de ISS"
+      />
       <main className="flex max-w-[900px] flex-col gap-4.5 px-[30px] py-7 max-md:px-4">
         <BackLink href="/admin/utilitarios/iss" label="Declaração de ISS" />
         <IssSettingsForm settings={settings} />

@@ -46,6 +46,7 @@ export default async function GeneratePage({
   return (
     <>
       <AdminPageHeader
+        maxWidth={1000}
         title="Gerar ofício ou relatório"
         back={{
           href: "/admin/utilitarios/papel-seguranca",
