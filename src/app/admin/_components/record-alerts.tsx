@@ -130,7 +130,7 @@ export function RecordAlerts({
   return (
     // Top left, beside the sidebar: the guias take the top right, the
     // agenda the bottom left and the chat the bottom right.
-    <div className="pointer-events-none fixed top-20 left-4 z-40 flex w-[min(320px,calc(100vw-2rem))] flex-col gap-2 md:left-68">
+    <div className="pointer-events-none fixed top-20 left-4 z-40 flex w-[min(320px,calc(100vw-2rem))] flex-col gap-2 md:left-[calc(var(--content-left)+1rem)]">
       {cards.slice(0, 4).map((item) => (
         <output
           key={item.key}

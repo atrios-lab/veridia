@@ -5,9 +5,9 @@
 //   pnpm check:admin-scale             fails if any file went over its count
 //   pnpm check:admin-scale -- --update lowers the baseline to what is left
 //
-// --update never raises a count or adds a file. With no baseline file at
-// all it records the current counts as the starting point: that only
-// happens once, and deleting the file to reseed it shows up in review.
+// --update never raises a count or adds a file. Since the panel finished
+// its migration (painel-neutro-shadcn) there is no baseline at all: every
+// file of the panel is held at zero.
 import { existsSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
 import {
   type Baseline,
@@ -39,22 +39,15 @@ const total = (baseline: Baseline) =>
 const write = (baseline: Baseline) =>
   writeFileSync(BASELINE_FILE, `${JSON.stringify(baseline, null, 2)}\n`);
 
-if (!existsSync(BASELINE_FILE)) {
-  if (!update) {
-    console.error(`${BASELINE_FILE} não existe.`);
-    process.exit(1);
-  }
-  write(counts);
-  console.log(
-    `Linha de base criada: ${total(counts)} valores avulsos em ${Object.keys(counts).length} arquivos.`,
-  );
-  process.exit(0);
-}
-
-const baseline: Baseline = JSON.parse(readFileSync(BASELINE_FILE, "utf8"));
+// No baseline file: the migration is over and the rule is absolute, every
+// file at zero. A baseline only comes back for a deliberate, reviewed
+// reason, written by hand.
+const baseline: Baseline = existsSync(BASELINE_FILE)
+  ? JSON.parse(readFileSync(BASELINE_FILE, "utf8"))
+  : {};
 const { failures, improved } = compareWithBaseline(counts, baseline);
 
-if (update && improved.length > 0) {
+if (update && improved.length > 0 && existsSync(BASELINE_FILE)) {
   const next = lowerBaseline(counts, baseline);
   write(next);
   console.log(

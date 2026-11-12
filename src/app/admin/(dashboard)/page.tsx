@@ -326,11 +326,14 @@ export default async function AdminHome() {
       <QueuePoller version={queueVersion} />
       <main className="flex flex-col gap-6 px-4 pt-6 pb-8 md:px-8">
         <ActionShortcuts shortcuts={shortcuts} />
+        {/* The open requests by stage, across the whole width, on top (the
+            approved prototype): every stage in view at once, in the order of
+            the work. */}
+        {canRequests && <PipelineCard counts={statusCounts} />}
 
         <div className="grid grid-cols-1 gap-4 lg:grid-cols-[1fr_348px] lg:items-start">
           <div className="flex min-w-0 flex-col gap-4">
             <DeskList items={rankedDesk} totalCount={deskCount} />
-            {canRequests && <PipelineCard counts={statusCounts} />}
             {canChannels && <TodayAgenda appointments={rankedAgenda} />}
           </div>
 

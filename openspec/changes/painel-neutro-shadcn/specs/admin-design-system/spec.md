@@ -22,7 +22,7 @@ serventia.
 ### Requirement: Escalas fechadas de letra, raio e cor
 
 As telas do painel SHALL usar apenas os degraus da escala de letra (12, 14, 16, 18, 20 e 24
-px), os degraus da escala de raio (4, 6, 8 e 12 px) e as cores declaradas como token do painel.
+px, e 30 px só para número de indicador), os degraus da escala de raio (4, 6, 8 e 12 px) e as cores declaradas como token do painel.
 Tamanho de letra, raio ou espaçamento entre letras escrito como valor avulso na tela NÃO SHALL
 ser aceito em tela nova nem em tela já migrada.
 

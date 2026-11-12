@@ -221,7 +221,10 @@ export default async function DashboardLayout({
         <SidebarProvider
           id={CHAT_SHAKE_TARGET_ID}
           defaultOpen={sidebarOpen}
-          className="h-svh min-h-0 overflow-hidden"
+          // --content-left: where the content column starts, for the alerts
+          // that float at its left edge (agenda-alerts, record-alerts). It
+          // follows the sidebar when it collapses to its icons.
+          className="h-svh min-h-0 overflow-hidden [--content-left:var(--sidebar-width)] has-[[data-slot=sidebar][data-state=collapsed]]:[--content-left:var(--sidebar-width-icon)]"
         >
           <AdminSidebar
             tenant={tenant}

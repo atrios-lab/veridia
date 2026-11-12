@@ -34,73 +34,73 @@ bateria do `CLAUDE.md` roda inteira antes de abrir cada PR. Nenhuma tarefa toca 
 
 ## 4. Casca
 
-- [ ] 4.1 Adicionar `Sidebar` a `_ui` e ajustar: borda em vez de "inset", rótulo em duas linhas, tinta navy
-- [ ] 4.2 Reescrever `sidebar.tsx`, `sidebar-nav.tsx` e `locked-sidebar.tsx` sobre o `Sidebar`, com `logos.seal.light`, sem mudar `nav.ts` nem as regras de permissão
-- [ ] 4.3 Reescrever `top-bar.tsx` e `user-menu.tsx` (busca, estado do chat, pessoa logada) com os componentes novos
-- [ ] 4.4 Reescrever `page-header.tsx` e `back-link.tsx` na escala de letra, mantendo o link "Como usar esta tela"
-- [ ] 4.5 Migrar as telas de acesso: `login`, `esqueci-senha`, `redefinir-senha`, `confirmar-email` e `acesso`
-- [ ] 4.6 Conferir que `nav.test.ts` continua passando e que `aria-current="page"` acompanha a navegação no cliente
-- [ ] 4.7 Conferir a casca no celular (gaveta do menu) e pelo teclado
+- [x] 4.1 Adicionar `Sidebar` a `_ui` e ajustar: borda em vez de "inset", rótulo em duas linhas, tinta navy
+- [x] 4.2 Reescrever `sidebar.tsx`, `sidebar-nav.tsx` e `locked-sidebar.tsx` sobre o `Sidebar`, com `logos.seal.light`, sem mudar `nav.ts` nem as regras de permissão
+- [x] 4.3 Reescrever `top-bar.tsx` e `user-menu.tsx` (busca, estado do chat, pessoa logada) com os componentes novos
+- [x] 4.4 Reescrever `page-header.tsx` e `back-link.tsx` na escala de letra, mantendo o link "Como usar esta tela"
+- [x] 4.5 Migrar as telas de acesso: `login`, `esqueci-senha`, `redefinir-senha`, `confirmar-email` e `acesso`
+- [x] 4.6 Conferir que `nav.test.ts` continua passando e que `aria-current="page"` acompanha a navegação no cliente
+- [x] 4.7 Conferir a casca no celular (gaveta do menu) e pelo teclado
 
 ## 5. Primitivos
 
-- [ ] 5.1 Adicionar a `_ui`: `Button`, `Input`, `Textarea`, `Select`, `Checkbox`, `Field`, `Label`, com imports no padrão do projeto e texto em português
-- [ ] 5.2 Adicionar a `_ui`: `Dialog`, `AlertDialog`, `DropdownMenu`, `Popover`, `Tooltip`
-- [ ] 5.3 Adicionar a `_ui`: `Tabs` (sublinhadas), `Table`, `Badge` (com as variantes de atenção e sucesso), `Alert`, `Card`, `Progress`, `Kbd`
-- [ ] 5.4 Trocar `dialog.tsx` e `confirm-action.tsx` por `Dialog` e `AlertDialog`, conferindo foco ao abrir, `Esc` e retorno do foco
-- [ ] 5.5 Trocar `dropdown.tsx`, `checkbox.tsx`, `submit-button.tsx`, `password-field.tsx`, `tax-id-input.tsx` e `file-picker.tsx`
-- [ ] 5.6 Reescrever `global-search.tsx` com `Command` dentro de `Dialog`, mantendo `Ctrl K` e a busca atual
-- [ ] 5.7 Aplicar o tema novo ao `sonner` e remover as classes de notificação antigas
-- [ ] 5.8 Migrar os avisos compartilhados: `agenda-alerts`, `chat-alerts`, `guide-alerts`, `record-alerts`, `urgent-audit-banner`, `access-closed`, `request-files-notice`
-- [ ] 5.9 Tirar as animações contínuas do painel e conferir o comportamento com movimento reduzido
-- [ ] 5.10 Rodar `pnpm check:admin-scale -- --update` e conferir que a linha de base de `_components` zerou
+- [x] 5.1 Adicionar a `_ui`: `Button`, `Input`, `Textarea`, `Select`, `Checkbox`, `Field`, `Label`, com imports no padrão do projeto e texto em português
+- [x] 5.2 Adicionar a `_ui`: `Dialog`, `AlertDialog`, `DropdownMenu`, `Popover`, `Tooltip`
+- [x] 5.3 Adicionar a `_ui`: `Tabs` (sublinhadas), `Table`, `Badge` (com as variantes de atenção e sucesso), `Alert`, `Card`, `Progress`, `Kbd`
+- [x] 5.4 Trocar `dialog.tsx` e `confirm-action.tsx` por `Dialog` e `AlertDialog`, conferindo foco ao abrir, `Esc` e retorno do foco
+- [x] 5.5 Trocar `dropdown.tsx`, `checkbox.tsx`, `submit-button.tsx`, `password-field.tsx`, `tax-id-input.tsx` e `file-picker.tsx`
+- [x] 5.6 Reescrever `global-search.tsx` com `Dialog` e o gatilho no visual do protótipo, mantendo `Ctrl K` e a busca atual (sem `cmdk`)
+- [x] 5.7 Aplicar o tema novo ao `sonner` e remover as classes de notificação antigas
+- [x] 5.8 Migrar os avisos compartilhados: `agenda-alerts`, `chat-alerts`, `guide-alerts`, `record-alerts`, `urgent-audit-banner`, `access-closed`, `request-files-notice`
+- [x] 5.9 Tirar as animações contínuas do painel e conferir o comportamento com movimento reduzido
+- [x] 5.10 Rodar `pnpm check:admin-scale -- --update` e conferir que a linha de base de `_components` zerou
 
 ## 6. Telas: Visão geral
 
-- [ ] 6.1 Migrar `(dashboard)/page.tsx` e os componentes dela seguindo a prancha "Visão geral" do canvas, sem mudar o que cada bloco conta
-- [ ] 6.2 Baixar a linha de base e anexar captura à PR
+- [x] 6.1 Migrar `(dashboard)/page.tsx` e os componentes dela seguindo a prancha "Visão geral" do canvas, sem mudar o que cada bloco conta
+- [x] 6.2 Baixar a linha de base e anexar captura à PR
 
 ## 7. Telas: Pedidos
 
-- [ ] 7.1 Migrar a fila (`pedidos`) seguindo a prancha "Fila de pedidos": abas sublinhadas, tabela, paginação
-- [ ] 7.2 Migrar o detalhe (`pedidos/[protocolo]`) e o lançamento (`pedidos/novo`), com campo de data nativo
-- [ ] 7.3 Baixar a linha de base e anexar captura à PR
+- [x] 7.1 Migrar a fila (`pedidos`) seguindo a prancha "Fila de pedidos": abas sublinhadas, tabela, paginação
+- [x] 7.2 Migrar o detalhe (`pedidos/[protocolo]`) e o lançamento (`pedidos/novo`), com campo de data nativo
+- [x] 7.3 Baixar a linha de base e anexar captura à PR
 
 ## 8. Telas: Agenda
 
-- [ ] 8.1 Migrar `agenda` e `agenda/agendamento/[id]`, com `Calendar` só onde a tela mostra calendário
-- [ ] 8.2 Baixar a linha de base e anexar captura à PR
+- [x] 8.1 Migrar `agenda` e `agenda/agendamento/[id]`, com `Calendar` só onde a tela mostra calendário
+- [x] 8.2 Baixar a linha de base e anexar captura à PR
 
 ## 9. Telas: Atendimento e Mensagens
 
-- [ ] 9.1 Migrar `atendimento` e `mensagens`, mantendo o aviso sonoro e a atualização ao vivo
-- [ ] 9.2 Baixar a linha de base e anexar captura à PR
+- [x] 9.1 Migrar `atendimento` e `mensagens`, mantendo o aviso sonoro e a atualização ao vivo
+- [x] 9.2 Baixar a linha de base e anexar captura à PR
 
 ## 10. Telas: Ouvidoria e LGPD
 
-- [ ] 10.1 Migrar `ouvidoria` e `lgpd` (fila e detalhe)
-- [ ] 10.2 Baixar a linha de base e anexar captura à PR
+- [x] 10.1 Migrar `ouvidoria` e `lgpd` (fila e detalhe)
+- [x] 10.2 Baixar a linha de base e anexar captura à PR
 
 ## 11. Telas: Publicações e Transparência
 
-- [ ] 11.1 Migrar `publicacoes` e `transparencia`, deixando a prévia de Publicações com o tema da serventia dentro da caixa
-- [ ] 11.2 Baixar a linha de base e anexar captura à PR
+- [x] 11.1 Migrar `publicacoes` e `transparencia`, deixando a prévia de Publicações com o tema da serventia dentro da caixa
+- [x] 11.2 Baixar a linha de base e anexar captura à PR
 
 ## 12. Telas: Configurações, Usuários e Minha conta
 
-- [ ] 12.1 Migrar `configuracoes` (todas as abas), `usuarios` e `minha-conta`
-- [ ] 12.2 Conferir que a prévia e o seletor de estilo de Identidade Visual continuam tematizados e que o painel ao redor não muda ao trocar o estilo
-- [ ] 12.3 Baixar a linha de base e anexar captura à PR
+- [x] 12.1 Migrar `configuracoes` (todas as abas), `usuarios` e `minha-conta`
+- [x] 12.2 Conferir que a prévia e o seletor de estilo de Identidade Visual continuam tematizados e que o painel ao redor não muda ao trocar o estilo
+- [x] 12.3 Baixar a linha de base e anexar captura à PR
 
 ## 13. Telas restantes e fechamento
 
-- [ ] 13.1 Migrar `auditoria`, `adequacao`, `utilitarios`, `atrios`, `ajuda`, `documento` e `search`
-- [ ] 13.2 Apagar `admin-legacy.css`, os `--color-admin-*` e `--palette-admin-*` de `globals.css`, as classes `.btn-admin-*` e o `AdminIcon`
-- [ ] 13.3 Apagar `scripts/admin-scale-baseline.json` e tornar a trava absoluta, mantendo a lista de prévias isentas
-- [ ] 13.4 Reescrever `docs/design-system.md`: site e painel em seções separadas, tokens, escalas, componentes de `_ui`, o que é proibido e por quê
-- [ ] 13.5 Corrigir o contexto de `openspec/config.yaml`, que ainda diz que o painel herda o tema do tenant
+- [x] 13.1 Migrar `auditoria`, `adequacao`, `utilitarios`, `atrios`, `ajuda`, `documento` e `search`
+- [x] 13.2 Tirar a ponte: o painel importa só `brand-palettes.css` (paletas para as prévias); saem de `brand.css` os `--color-admin-*`, os `--palette-admin-*`, as `.btn-admin-*`, a `.checkbox-admin` e as animações só do painel. `AdminIcon` fica, como mapa para lucide
+- [x] 13.3 Apagar `scripts/admin-scale-baseline.json` e tornar a trava absoluta, mantendo a lista de prévias isentas
+- [x] 13.4 Reescrever `docs/design-system.md`: site e painel em seções separadas, tokens, escalas, componentes de `_ui`, o que é proibido e por quê
+- [x] 13.5 Corrigir o contexto de `openspec/config.yaml`, que ainda diz que o painel herda o tema do tenant
 - [ ] 13.6 Listar os vídeos de treinamento que mostram a aparência antiga, para regravação
-- [ ] 13.7 Rodar a bateria completa no branch de integração
+- [x] 13.7 Rodar a bateria completa no branch de integração
 
 ## 14. Entrega
 

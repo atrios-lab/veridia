@@ -415,7 +415,7 @@ export function TutorialForm({
             </label>
             <p className="mt-1.5 text-xs text-muted-foreground">
               Até 2 MB, de preferência 1280×720. Sem capa, o card mostra o
-              título sobre a cor da serventia.
+              título sobre fundo azul-marinho.
             </p>
             {editing?.posterUrl && !posterPreview && (
               <label className="mt-1.5 flex items-center gap-2 text-xs text-muted-foreground">

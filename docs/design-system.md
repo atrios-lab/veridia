@@ -21,7 +21,7 @@ e o porquê estão na change `painel-neutro-shadcn` do OpenSpec.
 | Tokens, escalas, classes nativas e animações | `src/app/admin/admin.css` |
 | Componentes (shadcn/ui sobre Base UI, estilo base-vega) | `src/app/admin/_ui/` |
 | Junção de classes | `cn` em `src/app/admin/_ui/cn.ts` |
-| Ícones | `lucide-react`, direto ou por `AdminIcon` (`_components/icon.tsx`) |
+| Ícones | `lucide-react`, direto ou por `AdminIcon` (`_components/icon.tsx`), que mapeia nomes para ícones lucide |
 | Casca (barra lateral, topo, cabeçalho de página) | `src/app/admin/_components/` |
 | Contraste dos tokens | `src/lib/admin-theme.test.ts` |
 | Trava das escalas | `pnpm check:admin-scale` |
@@ -89,9 +89,8 @@ alta saiu do painel; use frase normal em `text-xs font-medium text-muted-foregro
 `shadow-[…]` (use `shadow-xs` a `shadow-lg`) e `leading-[…]` (use `leading-tight`, `snug`,
 `normal`, `relaxed`).
 
-A trava compara com `scripts/admin-scale-baseline.json`: arquivo novo não pode ter nenhum,
-arquivo antigo não pode ganhar. Quando um arquivo melhora, `pnpm check:admin-scale -- --update`
-baixa a linha de base.
+A trava é absoluta: todo arquivo do painel tem de estar em zero. Ela nasceu com uma linha de
+base de 2.603 ocorrências, que só podia descer, e chegou a zero com a migração.
 
 Exceção: as duas prévias do site dentro do painel (Identidade visual e Publicações) e o seletor
 de estilo desenham o site do cartório e usam a paleta e a serifada dele.
@@ -178,8 +177,10 @@ Toda ação que remove, invalida ou tira do ar passa por duas coisas:
 
 ## Site público
 
-O site usa `src/app/globals.css`, que importa `src/app/brand.css` com as cinco paletas, os
-tokens `--color-brand-*`, a serifada de cada estilo e os botões.
+O site usa `src/app/globals.css`, que importa `src/app/brand.css` (botões, diálogos, menus,
+movimento e a camada base), que por sua vez importa `src/app/brand-palettes.css` (as cinco
+paletas, os tokens `--color-brand-*` e a serifada de cada estilo). O painel importa só
+`brand-palettes.css`, para as prévias do site.
 
 ### Botões
 

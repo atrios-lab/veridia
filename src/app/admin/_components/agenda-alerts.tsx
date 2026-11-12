@@ -175,7 +175,7 @@ export function AgendaAlerts({ setting }: { setting: ChannelAlert }) {
   return (
     <section
       aria-label="Avisos da agenda"
-      className="fixed bottom-4 left-4 z-40 flex w-[min(340px,calc(100vw-2rem))] flex-col gap-2.5 md:left-68"
+      className="fixed bottom-4 left-4 z-40 flex w-[min(340px,calc(100vw-2rem))] flex-col gap-2.5 md:left-[calc(var(--content-left)+1rem)]"
     >
       {shownPending.map((item) => (
         <ConfirmCard

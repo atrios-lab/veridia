@@ -13,13 +13,10 @@
  */
 @import "tailwindcss";
 @import "tw-animate-css";
-/*
- * Bridge while the panel migrates: the screens not yet moved to _ui still
- * use --color-admin-*, .btn-admin-*, .checkbox-admin and .dialog. They come
- * from brand.css and are repainted in neutral values further down. The two
- * previews of the site inside the panel use the palettes for real.
- */
-@import "../brand.css";
+/* The five palettes, for the previews of the site inside the panel
+   (Identidade visual, Publicações): each sets its own [data-theme] on its
+   box, and nothing else in the panel reads them. */
+@import "../brand-palettes.css";
 
 /* The public site's sources stay out: its classes are never generated
    here. */
@@ -100,64 +97,17 @@
   --color-msg-offline: #a3a8ae;
   --color-msg-pane: #eef3f8;
   --color-msg-mine: #e4f1e7;
-
-  /* Bridge: the old admin tokens in neutral values. Deleted with brand.css's
-     import above once the last screen has moved to the tokens above. */
-  --color-admin-primary: #1b2150;
-  --color-admin-primary-soft: #232a64;
-  --color-admin-accent: #232a64;
-  --color-admin-accent-ink: #232a64;
-  --color-admin-on-dark-accent: #232a64;
-  --color-admin-surface: #fafafa;
-  --color-admin-card: #ffffff;
-  --color-admin-card-surface: #fafafa;
-  --color-admin-border: #e5e5e5;
-  --color-admin-input-bg: #ffffff;
-  --color-admin-input-border: #888888;
-  --color-admin-readonly-bg: #f5f5f5;
-  --color-admin-active-border: #d4d4d4;
-  --color-admin-text: #0a0a0a;
-  --color-admin-muted: #525252;
-  --color-admin-faint: #666666;
-  --color-admin-on-dark-subtitle: #525252;
-  --color-admin-on-dark-muted: #525252;
-  --color-admin-error-bg: #fef2f2;
-  --color-admin-error-text: #c10007;
-  --color-admin-error-border: #ffa2a2;
-  --color-admin-error-input-bg: #fef2f2;
-  --color-admin-warning-bg: #fef3c6;
-  --color-admin-warning-text: #973c00;
-  --color-admin-warning-soft-bg: #fffbeb;
-  --color-admin-warning-soft-border: #fee685;
-  --color-admin-success-bg: #dcfce7;
-  --color-admin-success-text: #016630;
-  --color-admin-footer-bg: #fafafa;
-  --color-admin-focus-ring: #a7aac1;
 }
 
 @theme inline {
-  /* IBM Plex Sans, loaded by the panel's root layout. The bridge points the
-     serif at it too, so a `font-serif` left on a screen not yet migrated
-     renders in the sans. The previews of the site set their own serif on
-     their box and keep it. */
+  /* IBM Plex Sans, loaded by the panel's root layout. The serif stays the
+     office's (brand-palettes.css): only the previews of the site use it,
+     and they set it on their own box. */
   --font-sans: var(--font-panel-sans), system-ui, sans-serif;
-  --font-serif: var(--font-brand-serif), var(--font-panel-sans), sans-serif;
 }
 
 :root {
   --radius: 0.5rem;
-  --font-brand-serif: var(--font-panel-sans);
-  /* The brand variables at the root, for the few screens not yet migrated
-     that read them straight: neutral here. A preview of the site sets its
-     own [data-theme] on its box, which wins on that box. */
-  --brand-primary: var(--color-primary);
-  --brand-primary-soft: var(--color-primary);
-  --brand-accent: var(--color-primary);
-  --brand-accent-ink: var(--color-primary);
-  --brand-muted: var(--color-admin-muted);
-  --brand-border: var(--color-border);
-  --brand-surface: var(--color-admin-surface);
-  --brand-tint: var(--color-admin-surface);
 }
 
 @layer base {
@@ -183,34 +133,6 @@
   :where(input, select, textarea):focus-visible {
     outline: none;
     box-shadow: 0 0 0 1.5px var(--color-ring);
-  }
-}
-
-/* Bridge: the old admin button variants read --brand-* straight. Repainted
-   on the neutral tokens until the last .btn-admin-* is gone. */
-@layer components {
-  .btn-admin-primary {
-    background: var(--color-primary);
-    color: var(--color-primary-foreground);
-  }
-  .btn-admin-primary:hover:not(:disabled) {
-    background: var(--color-admin-primary);
-  }
-  .btn-admin-secondary {
-    background: var(--color-background);
-    color: var(--color-foreground);
-    border: 1px solid var(--color-border);
-  }
-  .btn-admin-secondary:hover:not(:disabled) {
-    background: var(--color-muted);
-    border-color: var(--color-border);
-    color: var(--color-foreground);
-  }
-  .btn-admin-ghost {
-    color: var(--color-primary);
-  }
-  .btn-admin-ghost:hover:not(:disabled) {
-    color: var(--color-admin-primary);
   }
 }
 
@@ -320,8 +242,7 @@
  * A checkbox inside a server-action form and a <dialog> opened with
  * showModal() come with the browser's own form submission, focus trap,
  * Escape and inert background, so the screens that rely on them keep them;
- * only the look follows the panel. Declared here in full (not on top of
- * brand.css), so they stay when the bridge goes.
+ * only the look follows the panel.
  */
 @layer components {
   .checkbox-admin {
