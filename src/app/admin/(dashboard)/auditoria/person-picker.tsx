@@ -1,7 +1,8 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useTransition } from "react";
+import { useId, useTransition } from "react";
+import { NativeSelect, NativeSelectOption } from "../../_ui/native-select.tsx";
 
 export interface PersonOption {
   value: string;
@@ -25,25 +26,32 @@ export function PersonPicker({
 }) {
   const router = useRouter();
   const [loading, start] = useTransition();
+  const id = useId();
   return (
-    <label className="flex min-w-0 flex-col gap-1 text-xs font-bold text-admin-primary">
+    <label
+      htmlFor={id}
+      className="flex min-w-0 flex-col gap-1.5 text-sm font-medium text-foreground"
+    >
       Escolha a pessoa
-      <select
+      <NativeSelect
+        id={id}
         value={value}
         disabled={loading}
         onChange={(event) => {
           const next = options.find((o) => o.value === event.target.value);
           start(() => router.push(next?.href ?? allHref, { scroll: false }));
         }}
-        className="w-full min-w-0 rounded-[9px] border border-admin-input-border bg-admin-input-bg px-3 py-2.5 text-[13.5px] font-normal text-admin-text outline-none focus:border-admin-primary-soft"
+        className="w-full min-w-0 font-normal"
       >
-        <option value="">Todas as pessoas ({options.length})</option>
+        <NativeSelectOption value="">
+          Todas as pessoas ({options.length})
+        </NativeSelectOption>
         {options.map((option) => (
-          <option key={option.value} value={option.value}>
+          <NativeSelectOption key={option.value} value={option.value}>
             {option.label}
-          </option>
+          </NativeSelectOption>
         ))}
-      </select>
+      </NativeSelect>
     </label>
   );
 }

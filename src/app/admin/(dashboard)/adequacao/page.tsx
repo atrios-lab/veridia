@@ -22,6 +22,7 @@ import { getSession } from "@/lib/session.ts";
 import { getTenant, OFFICE_TIME_ZONE } from "@/lib/tenant.ts";
 import { AdminIcon } from "../../_components/icon.tsx";
 import { AdminPageHeader } from "../../_components/page-header.tsx";
+import { buttonVariants } from "../../_ui/button.tsx";
 
 export const metadata = { title: "Adequação ao Provimento" };
 
@@ -31,9 +32,9 @@ const STATUS_LABEL: Record<SectionStatus, string> = {
   complete: "concluída",
 };
 const STATUS_PILL: Record<SectionStatus, string> = {
-  "not-started": "bg-admin-readonly-bg text-admin-faint",
-  "in-progress": "bg-admin-accent-soft text-admin-accent-ink",
-  complete: "bg-admin-success-bg text-admin-success-text",
+  "not-started": "bg-muted text-muted-foreground",
+  "in-progress": "bg-primary text-primary-foreground",
+  complete: "bg-success-soft text-success-text",
 };
 
 function stamp(date: Date): string {
@@ -77,17 +78,17 @@ export default async function CompliancePage() {
   return (
     <>
       <AdminPageHeader title="Adequação ao Provimento" />
-      <main className="flex flex-col gap-4 px-[30px] py-7">
-        <div className="grid grid-cols-1 gap-4 lg:grid-cols-[1fr_348px] lg:items-start">
-          <div className="flex min-w-0 flex-col gap-4">
+      <main className="flex flex-col gap-6 px-4 pt-6 pb-8 md:px-8">
+        <div className="grid grid-cols-1 gap-6 lg:grid-cols-[1fr_348px] lg:items-start">
+          <div className="flex min-w-0 flex-col gap-6">
             {intake.submittedAt && (
-              <p className="flex items-start gap-2.5 rounded-[10px] bg-admin-success-bg px-3.5 py-3 text-[12.5px] leading-relaxed text-admin-success-text">
+              <p className="flex items-start gap-2.5 rounded-lg border border-success/30 bg-success-soft p-4 text-sm text-success-text">
                 <AdminIcon
                   name="checkCircle"
                   className="mt-0.5 h-4 w-4 flex-none"
                 />
                 <span>
-                  <strong className="block font-bold">
+                  <strong className="block font-semibold">
                     Enviado à Átrios em {stamp(intake.submittedAt)}
                     {intake.submittedVersion > 1
                       ? ` (versão ${intake.submittedVersion})`
@@ -101,11 +102,11 @@ export default async function CompliancePage() {
               </p>
             )}
 
-            <section className="rounded-[14px] border border-admin-border bg-admin-card p-6">
-              <h2 className="font-serif text-[17px] font-semibold text-admin-primary">
+            <section className="rounded-xl border border-border bg-card p-6">
+              <h2 className="text-lg font-semibold text-foreground">
                 Responda aos poucos. O painel guarda cada resposta.
               </h2>
-              <p className="mt-1.5 text-[12.5px] leading-relaxed text-admin-muted">
+              <p className="mt-1.5 text-sm text-muted-foreground">
                 São {SECTIONS.length} seções curtas sobre a serventia, a equipe
                 e os equipamentos. A Átrios usa as respostas para montar a
                 documentação do Provimento 243 e entrega em mãos. Nada é
@@ -113,7 +114,7 @@ export default async function CompliancePage() {
               </p>
               <div className="mt-5 flex items-center gap-4">
                 <div
-                  className="h-2 flex-1 overflow-hidden rounded-full bg-admin-readonly-bg"
+                  className="h-2 flex-1 overflow-hidden rounded-full bg-muted"
                   role="progressbar"
                   aria-valuenow={state.complete}
                   aria-valuemin={0}
@@ -121,28 +122,28 @@ export default async function CompliancePage() {
                   aria-label={`${state.complete} de ${state.total} seções respondidas`}
                 >
                   <span
-                    className="block h-full rounded-full bg-admin-primary-soft"
+                    className="block h-full rounded-full bg-primary"
                     style={{
                       width: `${(state.complete / state.total) * 100}%`,
                     }}
                   />
                 </div>
-                <span className="whitespace-nowrap text-[13px] font-bold tabular-nums text-admin-primary">
+                <span className="whitespace-nowrap text-sm font-medium tabular-nums text-foreground">
                   {state.complete} de {state.total} seções
                 </span>
               </div>
-              <div className="mt-4.5 flex flex-wrap items-center gap-3.5">
+              <div className="mt-5 flex flex-wrap items-center gap-3">
                 {state.ready ? (
                   <Link
                     href="/admin/adequacao/revisao"
-                    className="btn btn-admin-primary btn-lg"
+                    className={buttonVariants({ size: "lg" })}
                   >
                     Revisar e enviar
                   </Link>
                 ) : (
                   <Link
                     href={`/admin/adequacao/${resume.id}`}
-                    className="btn btn-admin-primary btn-lg"
+                    className={buttonVariants({ size: "lg" })}
                   >
                     {state.complete === 0
                       ? "Começar pela Seção 1"
@@ -150,15 +151,15 @@ export default async function CompliancePage() {
                   </Link>
                 )}
                 {!state.ready && state.complete > 0 && (
-                  <span className="text-[12px] text-admin-muted">
+                  <span className="text-xs text-muted-foreground">
                     Próxima: Seção {resume.number} · {resume.title}
                   </span>
                 )}
               </div>
             </section>
 
-            <section className="rounded-[14px] border border-admin-border bg-admin-card p-6">
-              <h3 className="text-[11.5px] font-bold uppercase tracking-[0.09em] text-admin-accent">
+            <section className="rounded-xl border border-border bg-card p-6">
+              <h3 className="text-lg font-semibold text-foreground">
                 As {SECTIONS.length} seções
               </h3>
               <ol className="mt-2 flex flex-col">
@@ -168,27 +169,27 @@ export default async function CompliancePage() {
                   return (
                     <li
                       key={section.id}
-                      className="border-t border-admin-border first:border-t-0"
+                      className="border-t border-border first:border-t-0"
                     >
                       <Link
                         href={`/admin/adequacao/${section.id}`}
-                        className="grid grid-cols-[28px_1fr_auto] items-center gap-3 py-3 text-[13px] text-admin-text hover:text-admin-primary"
+                        className="grid grid-cols-[28px_1fr_auto] items-center gap-3 py-3 text-sm text-foreground hover:text-primary"
                       >
-                        <span className="text-right text-[12px] font-bold tabular-nums text-admin-faint">
+                        <span className="text-right text-xs font-medium tabular-nums text-muted-foreground">
                           {section.number}
                         </span>
                         <span className="min-w-0">
-                          <span className="block font-semibold">
+                          <span className="block font-medium">
                             {section.title}
                           </span>
                           {section.prefilled && status === "not-started" && (
-                            <span className="block text-[11.5px] text-admin-muted">
+                            <span className="block text-xs text-muted-foreground">
                               Já vem preenchida com o que o painel sabe. Abra
                               para confirmar.
                             </span>
                           )}
                           {atrios && changed.has(section.id) && (
-                            <span className="block text-[11.5px] text-admin-muted">
+                            <span className="block text-xs text-muted-foreground">
                               Editada em{" "}
                               {formatDate(
                                 toIsoDate(
@@ -202,17 +203,17 @@ export default async function CompliancePage() {
                         </span>
                         <span className="flex items-center gap-2">
                           {atrios && changed.has(section.id) && (
-                            <span className="rounded-full bg-admin-warning-bg px-2.5 py-0.5 text-[11px] font-bold text-admin-warning-text">
+                            <span className="rounded-full bg-warning px-2.5 py-0.5 text-xs font-medium text-warning-foreground">
                               alterada após o envio
                             </span>
                           )}
                           {count > 0 && (
-                            <span className="rounded-full bg-admin-error-bg px-2.5 py-0.5 text-[11px] font-bold text-admin-error-text">
+                            <span className="rounded-full bg-destructive px-2.5 py-0.5 text-xs font-medium text-destructive-foreground">
                               {count} {count === 1 ? "aviso" : "avisos"}
                             </span>
                           )}
                           <span
-                            className={`rounded-full px-2.5 py-0.5 text-[11px] font-bold ${STATUS_PILL[status]}`}
+                            className={`rounded-full px-2.5 py-0.5 text-xs font-medium ${STATUS_PILL[status]}`}
                           >
                             {STATUS_LABEL[status]}
                           </span>
@@ -225,57 +226,57 @@ export default async function CompliancePage() {
             </section>
           </div>
 
-          <div className="flex flex-col gap-4">
+          <div className="flex flex-col gap-6">
             {atrios && (
-              <section className="rounded-[14px] border border-admin-primary-soft bg-admin-card p-5">
-                <span className="text-[11px] font-bold uppercase tracking-[0.08em] text-admin-faint">
+              <section className="rounded-xl border border-primary bg-card p-5">
+                <span className="text-xs font-medium text-muted-foreground">
                   Perfil Átrios
                 </span>
-                <p className="mt-2 text-[12.5px] text-admin-text">
+                <p className="mt-2 text-xs text-foreground">
                   {intake.submittedAt
                     ? `Versão ${intake.submittedVersion}, enviada em ${stamp(intake.submittedAt)}.`
                     : "A serventia ainda não enviou. O JSON já sai com o que existe."}
                 </p>
                 <a
                   href="/admin/adequacao/exportar"
-                  className="btn btn-admin-primary btn-md mt-3"
+                  className={buttonVariants({ className: "mt-3" })}
                 >
                   Exportar JSON · {tenant.slug}.json
                 </a>
-                <p className="mt-2 text-[11.5px] text-admin-muted">
+                <p className="mt-2 text-xs text-muted-foreground">
                   Só este perfil vê o botão. A serventia vê a mesma lista sem
                   ele.
                 </p>
               </section>
             )}
 
-            <section className="rounded-[14px] border border-admin-border bg-admin-card p-5">
-              <span className="text-[11px] font-bold uppercase tracking-[0.08em] text-admin-faint">
+            <section className="rounded-xl border border-border bg-card p-5">
+              <span className="text-xs font-medium text-muted-foreground">
                 Classe da serventia
               </span>
               {classification ? (
                 <>
-                  <p className="mt-2.5 font-serif text-[22px] font-semibold text-admin-primary">
+                  <p className="mt-2.5 text-xl font-semibold text-foreground">
                     Classe {classification.classe} · subclasse{" "}
                     {classification.subclasse}
                   </p>
-                  <p className="mt-0.5 text-[12px] text-admin-muted">
+                  <p className="mt-0.5 text-xs text-muted-foreground">
                     Receita bruta de {formatMoney(revenue)} no último semestre,
                     pela tabela do art. 16 do Provimento 243.
                   </p>
-                  <dl className="mt-3 grid grid-cols-[auto_1fr] gap-x-3 gap-y-1 text-[12.5px]">
-                    <dt className="text-admin-muted">Etapa 1 até</dt>
-                    <dd className="font-bold tabular-nums text-admin-text">
+                  <dl className="mt-3 grid grid-cols-[auto_1fr] gap-x-3 gap-y-1 text-xs">
+                    <dt className="text-muted-foreground">Etapa 1 até</dt>
+                    <dd className="font-medium tabular-nums text-foreground">
                       {formatDate(classification.stage1Deadline)}
                     </dd>
-                    <dt className="text-admin-muted">Conclusão até</dt>
-                    <dd className="font-bold tabular-nums text-admin-text">
+                    <dt className="text-muted-foreground">Conclusão até</dt>
+                    <dd className="font-medium tabular-nums text-foreground">
                       {formatDate(classification.completionDeadline)}
                     </dd>
                   </dl>
                 </>
               ) : (
-                <p className="mt-2 text-[12.5px] text-admin-muted">
+                <p className="mt-2 text-xs text-muted-foreground">
                   Aparece assim que a receita bruta do último semestre for
                   informada na Seção 1.
                 </p>
@@ -284,16 +285,16 @@ export default async function CompliancePage() {
 
             {atrios && (
               <>
-                <section className="rounded-[14px] border border-admin-border bg-admin-card p-5">
-                  <span className="text-[11px] font-bold uppercase tracking-[0.08em] text-admin-faint">
+                <section className="rounded-xl border border-border bg-card p-5">
+                  <span className="text-xs font-medium text-muted-foreground">
                     Pendências detectadas
                   </span>
-                  <p className="mt-1 text-[11.5px] text-admin-muted">
+                  <p className="mt-1 text-xs text-muted-foreground">
                     Pelas regras de derivação. Quem aplica no documento é o
                     gerador.
                   </p>
                   {pendencies.length === 0 ? (
-                    <p className="mt-3 text-[12.5px] text-admin-faint">
+                    <p className="mt-3 text-xs text-muted-foreground">
                       Nenhuma até agora.
                     </p>
                   ) : (
@@ -301,29 +302,29 @@ export default async function CompliancePage() {
                       {pendencies.map((p) => (
                         <li
                           key={p.code}
-                          className="flex items-start gap-2.5 border-t border-admin-border py-2.5 text-[12.5px] first:border-t-0"
+                          className="flex items-start gap-2.5 border-t border-border py-2.5 text-xs first:border-t-0"
                         >
                           <span
                             aria-hidden="true"
                             className={`mt-1.5 h-2 w-2 flex-none rounded-full ${
                               p.severity === "critical"
-                                ? "bg-admin-error-text"
+                                ? "bg-destructive"
                                 : p.severity === "warning"
-                                  ? "bg-admin-accent"
-                                  : "bg-admin-faint"
+                                  ? "bg-warning"
+                                  : "bg-muted-foreground"
                             }`}
                           />
                           <span className="min-w-0 flex-1">
-                            <span className="block font-semibold text-admin-text">
+                            <span className="block font-medium text-foreground">
                               {p.title}
                             </span>
-                            <span className="block text-[11.5px] text-admin-muted">
+                            <span className="block text-xs text-muted-foreground">
                               {p.detail}
                             </span>
                           </span>
                           <Link
                             href={`/admin/adequacao/${p.sectionId}`}
-                            className="text-[12px] font-semibold text-admin-primary"
+                            className="text-xs font-medium text-primary hover:underline"
                           >
                             {sectionTitle(p.sectionId)}
                           </Link>
@@ -333,23 +334,23 @@ export default async function CompliancePage() {
                   )}
                 </section>
 
-                <section className="rounded-[14px] border border-admin-border bg-admin-card p-5">
-                  <span className="text-[11px] font-bold uppercase tracking-[0.08em] text-admin-faint">
+                <section className="rounded-xl border border-border bg-card p-5">
+                  <span className="text-xs font-medium text-muted-foreground">
                     "Não sei" a confirmar
                   </span>
                   {unknowns.length === 0 ? (
-                    <p className="mt-3 text-[12.5px] text-admin-faint">
+                    <p className="mt-3 text-xs text-muted-foreground">
                       Nenhum.
                     </p>
                   ) : (
-                    <ul className="mt-2 flex flex-col gap-1.5 text-[12.5px]">
+                    <ul className="mt-2 flex flex-col gap-1.5 text-xs">
                       {unknowns.map((u) => (
                         <li key={`${u.sectionId}.${u.field}`}>
                           <Link
                             href={`/admin/adequacao/${u.sectionId}`}
                             className="hover:underline"
                           >
-                            <span className="text-admin-muted">
+                            <span className="text-muted-foreground">
                               {u.sectionTitle}:
                             </span>{" "}
                             {u.label}
@@ -362,11 +363,11 @@ export default async function CompliancePage() {
               </>
             )}
 
-            <section className="rounded-[14px] border border-admin-border bg-admin-card p-5">
-              <span className="text-[11px] font-bold uppercase tracking-[0.08em] text-admin-faint">
+            <section className="rounded-xl border border-border bg-card p-5">
+              <span className="text-xs font-medium text-muted-foreground">
                 Como funciona
               </span>
-              <ol className="mt-2.5 list-decimal pl-4.5 text-[12.5px] leading-relaxed text-admin-text">
+              <ol className="mt-2.5 list-decimal pl-4.5 text-sm leading-relaxed text-foreground">
                 <li>
                   Você responde as seções, na ordem que quiser, pelo celular ou
                   computador. Cada resposta salva sozinha.
@@ -377,7 +378,7 @@ export default async function CompliancePage() {
                   documentos pessoalmente.
                 </li>
               </ol>
-              <p className="mt-2.5 text-[11.5px] text-admin-muted">
+              <p className="mt-2.5 text-xs text-muted-foreground">
                 Cada pergunta tem um "?" explicando onde achar a resposta. Se
                 travar, marque "não sei" e siga.
               </p>

@@ -27,6 +27,7 @@ import { getSession } from "@/lib/session.ts";
 import { getTenant, today } from "@/lib/tenant.ts";
 import { blobUploadEnabled } from "@/lib/uploads.ts";
 import { AdminPageHeader } from "../../_components/page-header.tsx";
+import { buttonVariants } from "../../_ui/button.tsx";
 import { ArchiveButton } from "./_components/archive-button.tsx";
 import { DeleteButton } from "./_components/delete-button.tsx";
 import { PublicationForm } from "./_components/publication-form.tsx";
@@ -130,16 +131,17 @@ export default async function PublicationsPage({
   return (
     <>
       <AdminPageHeader title="Publicações" />
-      <main className="flex flex-col gap-4.5 px-[30px] py-7">
-        <div className="flex gap-2">
+      <main className="flex flex-col gap-6 px-4 pt-6 pb-8 md:px-8">
+        <div className="flex gap-6 border-b border-border">
           {TABS.map((tab) => (
             <Link
               key={tab.slug}
               href={`/admin/publicacoes?aba=${tab.slug}`}
+              aria-current={tab.state === activeState ? "page" : undefined}
               className={
                 tab.state === activeState
-                  ? "rounded-full bg-admin-primary px-3.5 py-1.5 text-xs font-bold text-white"
-                  : "rounded-full border border-admin-input-border px-3.5 py-1.5 text-xs font-semibold text-admin-muted"
+                  ? "-mb-px border-b-2 border-primary pb-2.5 text-sm font-medium text-foreground"
+                  : "-mb-px border-b-2 border-transparent pb-2.5 text-sm font-medium text-muted-foreground hover:text-foreground"
               }
             >
               {tab.label} ({counts[tab.state] ?? 0})
@@ -148,7 +150,7 @@ export default async function PublicationsPage({
         </div>
 
         {expiringSoon.length > 0 && (
-          <div className="rounded-[12px] border border-admin-warning-soft-border bg-admin-warning-soft-bg px-4.5 py-3.5 text-[12.5px] leading-relaxed text-admin-warning-text">
+          <div className="rounded-lg border border-warning/30 bg-warning-soft p-4 text-sm text-warning-text">
             <strong>
               {expiringSoon.length === 1
                 ? "1 arquivo será apagado"
@@ -163,7 +165,7 @@ export default async function PublicationsPage({
                 <li key={row.id}>
                   <Link
                     href={`/admin/publicacoes/${row.id}`}
-                    className="font-semibold underline underline-offset-2"
+                    className="font-medium underline underline-offset-2"
                   >
                     {row.title}
                   </Link>
@@ -175,9 +177,9 @@ export default async function PublicationsPage({
           </div>
         )}
 
-        <div className="overflow-hidden rounded-[14px] border border-admin-border bg-admin-card">
+        <div className="overflow-hidden rounded-xl border border-border bg-card">
           {visible.length === 0 ? (
-            <p className="px-5 py-8 text-center text-[13px] text-admin-muted">
+            <p className="px-5 py-8 text-center text-sm text-muted-foreground">
               Nenhuma publicação nesta aba. O formulário abaixo cria uma nova
               publicação.
             </p>
@@ -185,9 +187,9 @@ export default async function PublicationsPage({
             visible.map(({ row, state, file }) => (
               <div
                 key={row.id}
-                className="flex items-start gap-3.5 border-b border-admin-border px-5 py-4 last:border-b-0"
+                className="flex items-start gap-3.5 border-b border-border px-5 py-4 last:border-b-0"
               >
-                <span className="mt-0.5 flex-none rounded-full bg-admin-warning-bg px-2.5 py-1 text-[10.5px] font-bold text-admin-warning-text">
+                <span className="mt-0.5 flex-none rounded-full bg-warning-soft px-2.5 py-1 text-xs font-medium text-warning-text">
                   {publicationHeadline(row, day, officeHolidays(tenant)).label}
                 </span>
                 <span className="min-w-0 flex-1">
@@ -195,18 +197,22 @@ export default async function PublicationsPage({
                       rule and file, in any tab, archived included. */}
                   <Link
                     href={`/admin/publicacoes/${row.id}`}
-                    className="block truncate text-[13.5px] font-bold text-admin-text underline-offset-2 hover:text-admin-primary hover:underline"
+                    className="block truncate text-sm font-medium text-foreground underline-offset-2 hover:text-primary hover:underline"
                   >
                     {row.title}
                   </Link>
-                  <span className="block text-xs text-admin-faint">
+                  <span className="block text-xs text-muted-foreground">
                     {exitLabel(row, state, day, officeHolidays(tenant))}
                     {fileLabel(file) && ` · ${fileLabel(file)}`}
                   </span>
                 </span>
                 <Link
                   href={`/admin/publicacoes/${row.id}`}
-                  className="btn btn-admin-secondary btn-sm flex-none"
+                  className={buttonVariants({
+                    variant: "outline",
+                    size: "sm",
+                    className: "flex-none",
+                  })}
                 >
                   Ver
                 </Link>
@@ -214,7 +220,11 @@ export default async function PublicationsPage({
                     publication out of the archive by itself (see the spec). */}
                 <Link
                   href={`/admin/publicacoes?aba=${aba ?? "no-site"}&editar=${row.id}`}
-                  className="btn btn-admin-secondary btn-sm flex-none"
+                  className={buttonVariants({
+                    variant: "outline",
+                    size: "sm",
+                    className: "flex-none",
+                  })}
                 >
                   Editar
                 </Link>

@@ -11,6 +11,11 @@ import {
 } from "@/core/transparency/documents.ts";
 import type { TransparencyDocumentRow } from "@/lib/transparency.ts";
 import { ConfirmAction } from "../../../_components/confirm-action.tsx";
+import { Button, buttonVariants } from "../../../_ui/button.tsx";
+import {
+  NativeSelect,
+  NativeSelectOption,
+} from "../../../_ui/native-select.tsx";
 import {
   type ActionState,
   deleteDocumentAction,
@@ -26,9 +31,9 @@ function formatFileSize(bytes: number): string {
 }
 
 const STATUS_PILL: Record<DocumentStatus, string> = {
-  draft: "bg-admin-warning-bg text-admin-warning-text",
-  published: "bg-admin-success-bg text-admin-success-text",
-  unpublished: "bg-admin-readonly-bg text-admin-muted",
+  draft: "bg-warning-soft text-warning-text",
+  published: "bg-success-soft text-success-text",
+  unpublished: "bg-muted text-muted-foreground",
 };
 
 /** A one-field form that fires a document action on submit. */
@@ -37,6 +42,7 @@ function ActionForm({
   id,
   extra,
   disabled,
+  variant = "outline",
   className,
   children,
   successMessage,
@@ -45,7 +51,8 @@ function ActionForm({
   id: string;
   extra?: Record<string, string>;
   disabled?: boolean;
-  className: string;
+  variant?: "default" | "outline";
+  className?: string;
   children: React.ReactNode;
   successMessage?: string;
 }) {
@@ -67,13 +74,15 @@ function ActionForm({
         Object.entries(extra).map(([k, v]) => (
           <input key={k} type="hidden" name={k} value={v} />
         ))}
-      <button
+      <Button
         type="submit"
+        variant={variant}
+        size="sm"
         disabled={disabled || pending}
         className={className}
       >
         {children}
-      </button>
+      </Button>
     </form>
   );
 }
@@ -145,7 +154,7 @@ function DocumentRow({
   return (
     <div
       className={`flex flex-wrap items-center gap-3 px-4 py-3.5 ${
-        status === "draft" ? "bg-admin-warning-bg/40" : ""
+        status === "draft" ? "bg-warning-soft/40" : ""
       }`}
     >
       <div className="flex flex-none flex-col">
@@ -154,7 +163,7 @@ function DocumentRow({
           id={doc.id}
           extra={{ direction: "up" }}
           disabled={isFirst}
-          className="btn btn-admin-secondary btn-sm px-2 disabled:opacity-40"
+          className="px-2 disabled:opacity-40"
         >
           <span aria-hidden>↑</span>
           <span className="sr-only">Mover para cima</span>
@@ -166,7 +175,7 @@ function DocumentRow({
           id={doc.id}
           extra={{ direction: "down" }}
           disabled={isLast}
-          className="btn btn-admin-secondary btn-sm px-2 disabled:opacity-40"
+          className="px-2 disabled:opacity-40"
         >
           <span aria-hidden>↓</span>
           <span className="sr-only">Mover para baixo</span>
@@ -175,27 +184,27 @@ function DocumentRow({
 
       <span className="min-w-0 flex-1">
         <span className="flex flex-wrap items-center gap-2">
-          <span className="text-[13.5px] font-bold text-admin-primary">
+          <span className="text-sm font-medium text-foreground">
             {doc.title}
           </span>
           <span
-            className={`rounded-full px-2.5 py-0.5 text-[10.5px] font-bold ${STATUS_PILL[status]}`}
+            className={`rounded-full px-2.5 py-0.5 text-xs font-medium ${STATUS_PILL[status]}`}
           >
             {DOCUMENT_STATUS_LABELS[status]}
           </span>
           {feeTable?.inForce && (
-            <span className="rounded-full border border-admin-accent px-2.5 py-0.5 text-[10.5px] font-bold text-admin-primary">
+            <span className="rounded-full bg-primary px-2.5 py-0.5 text-xs font-medium text-primary-foreground">
               Vigente
             </span>
           )}
         </span>
-        <span className="mt-0.5 block text-[11.5px] text-admin-muted">
+        <span className="mt-0.5 block text-xs text-muted-foreground">
           {meta}
         </span>
         {feeTable && (
           <Link
             href={`/admin/transparencia/tabela/${doc.id}`}
-            className="mt-1 inline-block text-[12px] font-semibold text-admin-primary underline underline-offset-2 hover:text-admin-accent"
+            className="mt-1 inline-block text-xs font-medium text-primary underline underline-offset-2 hover:no-underline"
           >
             {feeTableNote(feeTable)} ›
           </Link>
@@ -206,7 +215,11 @@ function DocumentRow({
         href={documentHref(doc.id)}
         target="_blank"
         rel="noopener"
-        className="btn btn-admin-secondary btn-sm flex-none"
+        className={buttonVariants({
+          variant: "outline",
+          size: "sm",
+          className: "flex-none",
+        })}
       >
         Ver
       </a>
@@ -214,7 +227,6 @@ function DocumentRow({
         <ActionForm
           action={unpublishDocumentAction}
           id={doc.id}
-          className="btn btn-admin-secondary btn-sm"
           successMessage="Documento despublicado."
         >
           Despublicar
@@ -223,7 +235,7 @@ function DocumentRow({
         <ActionForm
           action={publishDocumentAction}
           id={doc.id}
-          className="btn btn-admin-primary btn-sm"
+          variant="default"
           successMessage="Documento publicado."
         >
           {status === "unpublished" ? "Publicar de novo" : "Publicar"}
@@ -258,35 +270,37 @@ export function DocumentList({
   const visible = expanded ? filtered : filtered.slice(0, INITIAL);
 
   return (
-    <div className="rounded-[14px] border border-admin-border bg-admin-card">
-      <div className="flex flex-wrap items-center gap-3 border-b border-admin-border px-4 py-3.5">
-        <h3 className="flex-1 font-serif text-[15.5px] font-semibold text-admin-primary">
+    <div className="rounded-xl border border-border bg-card">
+      <div className="flex flex-wrap items-center gap-3 border-b border-border px-4 py-3.5">
+        <h3 className="flex-1 text-lg font-semibold text-foreground">
           Documentos{" "}
-          <span className="font-sans text-[12.5px] font-normal text-admin-muted">
+          <span className="text-xs font-normal text-muted-foreground">
             · na ordem em que aparecem no site
           </span>
         </h3>
-        <select
+        <NativeSelect
           value={category}
           onChange={(e) => setCategory(e.target.value)}
           aria-label="Filtrar por categoria"
-          className="rounded-[9px] border border-admin-input-border bg-admin-input-bg px-3 py-1.5 text-[12.5px] text-admin-text outline-none focus:border-admin-primary-soft"
+          size="sm"
         >
-          <option value="all">Todas as categorias</option>
+          <NativeSelectOption value="all">
+            Todas as categorias
+          </NativeSelectOption>
           {DOCUMENT_CATEGORIES.map((c) => (
-            <option key={c} value={c}>
+            <NativeSelectOption key={c} value={c}>
               {c}
-            </option>
+            </NativeSelectOption>
           ))}
-        </select>
+        </NativeSelect>
       </div>
 
       {filtered.length === 0 ? (
-        <p className="px-4 py-8 text-center text-[13px] text-admin-muted">
+        <p className="px-4 py-8 text-center text-sm text-muted-foreground">
           Nenhum documento nesta categoria ainda.
         </p>
       ) : (
-        <div className="divide-y divide-admin-border">
+        <div className="divide-y divide-border">
           {visible.map((doc) => {
             // Position among the *filtered* view drives the arrows' disabled
             // state; the action still swaps by real neighbour in the full set.
@@ -305,17 +319,19 @@ export function DocumentList({
       )}
 
       {filtered.length > INITIAL && (
-        <div className="flex items-center justify-between border-t border-admin-border px-4 py-3">
-          <span className="text-[12px] text-admin-muted">
+        <div className="flex items-center justify-between rounded-b-xl border-t border-border bg-muted/50 px-4 py-3">
+          <span className="text-xs text-muted-foreground">
             Mostrando {visible.length} de {filtered.length} documentos
           </span>
-          <button
+          <Button
             type="button"
+            variant="link"
+            size="sm"
             onClick={() => setExpanded((v) => !v)}
-            className="btn btn-admin-ghost btn-sm px-0"
+            className="px-0"
           >
             {expanded ? "Ver menos" : "Ver todos"}
-          </button>
+          </Button>
         </div>
       )}
     </div>

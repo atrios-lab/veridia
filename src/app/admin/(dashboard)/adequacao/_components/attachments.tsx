@@ -7,15 +7,18 @@ import { ATTACHMENT_KINDS, SECTIONS } from "@/core/compliance/sections.ts";
 import type { IntakeAttachment } from "@/lib/compliance.ts";
 import { ConfirmAction } from "../../../_components/confirm-action.tsx";
 import { AdminIcon } from "../../../_components/icon.tsx";
+import { Button, buttonVariants } from "../../../_ui/button.tsx";
+import { Label } from "../../../_ui/label.tsx";
+import {
+  NativeSelect,
+  NativeSelectOption,
+} from "../../../_ui/native-select.tsx";
 import {
   type AttachmentState,
   completeSectionAction,
   deleteAttachmentAction,
   uploadAttachmentsAction,
 } from "../actions.ts";
-
-const SELECT =
-  "w-full rounded-[9px] border border-admin-input-border bg-admin-input-bg px-3.5 py-2.5 text-[13.5px] text-admin-text outline-none focus:border-admin-primary-soft";
 
 function formatFileSize(bytes: number): string {
   if (bytes < 1024 * 1024) return `${Math.max(1, Math.round(bytes / 1024))} KB`;
@@ -48,40 +51,36 @@ export function Attachments({
   const [chosen, setChosen] = useState(0);
 
   return (
-    <div className="rounded-[14px] border border-admin-border bg-admin-card p-6">
-      <h2 className="font-serif text-[17px] font-semibold text-admin-primary">
+    <div className="rounded-xl border border-border bg-card p-6">
+      <h2 className="text-lg font-semibold text-foreground">
         {section?.question}
       </h2>
-      <p className="mt-1.5 text-[12.5px] leading-relaxed text-admin-muted">
-        {section?.intro}
-      </p>
+      <p className="mt-1.5 text-sm text-muted-foreground">{section?.intro}</p>
 
       <form
         action={formAction}
-        className="mt-5 grid grid-cols-1 gap-3.5 rounded-[10px] border border-admin-border bg-admin-input-bg p-4 sm:grid-cols-[1fr_1fr_auto] sm:items-end"
+        className="mt-6 grid grid-cols-1 gap-4 rounded-lg bg-muted/50 p-4 sm:grid-cols-[1fr_1fr_auto] sm:items-end"
       >
         <div>
-          <label
-            htmlFor="kind"
-            className="mb-1.5 block text-xs font-bold text-admin-primary"
-          >
+          <Label htmlFor="kind" className="mb-1.5">
             O que é
-          </label>
-          <select id="kind" name="kind" className={SELECT}>
+          </Label>
+          <NativeSelect
+            id="kind"
+            name="kind"
+            className="w-full rounded-md bg-background"
+          >
             {ATTACHMENT_KINDS.map((k) => (
-              <option key={k.value} value={k.value}>
+              <NativeSelectOption key={k.value} value={k.value}>
                 {k.label}
-              </option>
+              </NativeSelectOption>
             ))}
-          </select>
+          </NativeSelect>
         </div>
         <div>
-          <label
-            htmlFor="arquivo"
-            className="mb-1.5 block text-xs font-bold text-admin-primary"
-          >
+          <Label htmlFor="arquivo" className="mb-1.5">
             Arquivos (foto ou PDF, até 20 MB cada)
-          </label>
+          </Label>
           <input
             id="arquivo"
             name="arquivo"
@@ -89,45 +88,38 @@ export function Attachments({
             multiple
             accept="image/*,application/pdf"
             onChange={(e) => setChosen(e.target.files?.length ?? 0)}
-            className="block w-full text-[13px] text-admin-text file:mr-3 file:rounded-[8px] file:border file:border-admin-input-border file:bg-admin-card file:px-3 file:py-1.5 file:text-[12px] file:font-semibold file:text-admin-primary"
+            className="block w-full text-sm text-foreground file:mr-3 file:rounded-md file:border file:border-border file:bg-background file:px-3 file:py-1.5 file:text-xs file:font-medium file:text-foreground"
           />
         </div>
-        <button
-          type="submit"
-          disabled={pending || chosen === 0}
-          className="btn btn-admin-primary btn-md"
-        >
+        <Button type="submit" disabled={pending || chosen === 0}>
           {pending ? "Enviando…" : "Anexar"}
-        </button>
+        </Button>
         {state.status === "error" && (
           <p
             role="alert"
-            className="rounded-lg bg-admin-error-bg px-3.5 py-2.5 text-sm font-semibold text-admin-error-text sm:col-span-3"
+            className="rounded-lg border border-destructive/40 bg-destructive-soft px-3.5 py-2.5 text-sm font-medium text-destructive sm:col-span-3"
           >
             {state.message}
           </p>
         )}
       </form>
 
-      <div className="mt-5 flex flex-col gap-2.5">
+      <div className="mt-6 flex flex-col divide-y divide-border">
         {attachments.length === 0 && (
-          <p className="text-[12.5px] text-admin-faint">
+          <p className="text-sm text-muted-foreground">
             Nenhum arquivo anexado. Tudo bem: os anexos são opcionais.
           </p>
         )}
         {attachments.map((file) => (
-          <div
-            key={file.id}
-            className="flex items-center gap-3 rounded-[10px] border border-admin-border bg-admin-input-bg px-3 py-2.5"
-          >
-            <span className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-[7px] bg-admin-readonly-bg text-admin-muted">
+          <div key={file.id} className="flex items-center gap-3 py-3">
+            <span className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-md bg-muted text-muted-foreground">
               <AdminIcon name="file" className="h-4 w-4" />
             </span>
             <span className="min-w-0 flex-1">
-              <span className="block truncate text-[13px] font-semibold text-admin-text">
+              <span className="block truncate text-sm font-medium text-foreground">
                 {file.displayName}
               </span>
-              <span className="block text-[11px] text-admin-muted">
+              <span className="block text-xs text-muted-foreground">
                 {formatFileSize(file.sizeBytes)}
               </span>
             </span>
@@ -135,7 +127,11 @@ export function Attachments({
               href={`/admin/adequacao/anexo?id=${file.id}`}
               target="_blank"
               rel="noopener"
-              className="btn btn-admin-secondary btn-sm shrink-0"
+              className={buttonVariants({
+                variant: "outline",
+                size: "sm",
+                className: "shrink-0",
+              })}
             >
               Ver
             </a>
@@ -146,14 +142,14 @@ export function Attachments({
 
       <form
         action={completeSectionAction}
-        className="mt-6 flex flex-col gap-3 border-t border-admin-border pt-4.5 sm:flex-row sm:items-center sm:justify-between"
+        className="mt-6 flex flex-col gap-3 border-t border-border pt-5 sm:flex-row sm:items-center sm:justify-between"
       >
         <input type="hidden" name="sectionId" value="anexos" />
         {previous && (
           <Link
             href={`/admin/adequacao/${previous.id}`}
             // Same size as "Revisar e enviar" on the other end of this row.
-            className="btn btn-admin-secondary btn-md"
+            className={buttonVariants({ variant: "outline" })}
           >
             ‹ Seção {previous.number} · {previous.title}
           </Link>
@@ -161,13 +157,11 @@ export function Attachments({
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
           <Link
             href="/admin/adequacao"
-            className="btn btn-admin-secondary btn-md"
+            className={buttonVariants({ variant: "outline" })}
           >
             Voltar à lista
           </Link>
-          <button type="submit" className="btn btn-admin-primary btn-md">
-            Revisar e enviar ›
-          </button>
+          <Button type="submit">Revisar e enviar ›</Button>
         </div>
       </form>
     </div>

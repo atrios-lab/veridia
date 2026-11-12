@@ -29,6 +29,7 @@ import {
 import { getSession } from "@/lib/session.ts";
 import { getTenant, today } from "@/lib/tenant.ts";
 import { AdminPageHeader } from "../../../_components/page-header.tsx";
+import { buttonVariants } from "../../../_ui/button.tsx";
 import { ArchiveButton } from "../_components/archive-button.tsx";
 import { DeleteButton } from "../_components/delete-button.tsx";
 
@@ -73,10 +74,8 @@ function Field({
 }) {
   return (
     <div>
-      <dt className="text-[11px] font-bold uppercase tracking-[0.06em] text-admin-faint">
-        {label}
-      </dt>
-      <dd className="mt-0.5 text-[13.5px] text-admin-text">{children}</dd>
+      <dt className="text-xs font-medium text-muted-foreground">{label}</dt>
+      <dd className="mt-0.5 text-sm text-foreground">{children}</dd>
     </div>
   );
 }
@@ -132,18 +131,18 @@ export default async function PublicationDetailPage({
         title={row.title}
         back={{ href: `/admin/publicacoes?aba=${tab}`, label: "Publicações" }}
       />
-      <main className="flex flex-col gap-4.5 px-[30px] py-7">
+      <main className="flex flex-col gap-6 px-4 pt-6 pb-8 md:px-8">
         <div className="flex flex-wrap items-center gap-2.5">
-          <span className="rounded-full bg-admin-warning-bg px-2.5 py-1 text-[10.5px] font-bold text-admin-warning-text">
+          <span className="rounded-full bg-warning-soft px-2.5 py-1 text-xs font-medium text-warning-text">
             {headline.label}
           </span>
-          <span className="rounded-full border border-admin-input-border px-2.5 py-1 text-[10.5px] font-bold text-admin-muted">
+          <span className="rounded-full border border-border px-2.5 py-1 text-xs font-medium text-muted-foreground">
             {STATE_LABELS[state]}
           </span>
           <span className="flex-1" />
           <Link
             href={`/admin/publicacoes?aba=${tab}&editar=${row.id}`}
-            className="btn btn-admin-secondary btn-sm"
+            className={buttonVariants({ variant: "outline", size: "sm" })}
           >
             Editar
           </Link>
@@ -157,7 +156,7 @@ export default async function PublicationDetailPage({
           />
         </div>
 
-        <section className="rounded-[14px] border border-admin-border bg-admin-card p-6">
+        <section className="rounded-xl border border-border bg-card p-6">
           <dl className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
             <Field label="Tipo">
               {PUBLICATION_KIND_LABELS[row.kind as PublicationKind] ?? row.kind}
@@ -171,7 +170,7 @@ export default async function PublicationDetailPage({
             {type && (
               <Field label="Tipo de edital">
                 {type.label}
-                <span className="block text-xs text-admin-muted">
+                <span className="block text-xs text-muted-foreground">
                   {type.legalBasis}
                 </span>
               </Field>
@@ -203,7 +202,7 @@ export default async function PublicationDetailPage({
             <Field label="Cadastrada em">
               {formatOfficeDateTime(row.createdAt)}
               {createdBy && (
-                <span className="block text-xs text-admin-muted">
+                <span className="block text-xs text-muted-foreground">
                   por {createdBy}
                 </span>
               )}
@@ -215,21 +214,21 @@ export default async function PublicationDetailPage({
           </dl>
         </section>
 
-        <section className="rounded-[14px] border border-admin-border bg-admin-card p-6">
-          <h2 className="font-serif text-[16px] font-semibold text-admin-primary">
+        <section className="rounded-xl border border-border bg-card p-6">
+          <h2 className="text-lg font-semibold text-foreground">
             Texto publicado
           </h2>
-          <p className="mt-3 whitespace-pre-line [overflow-wrap:anywhere] text-[13.5px] leading-relaxed text-admin-text">
+          <p className="mt-3 whitespace-pre-line [overflow-wrap:anywhere] text-sm leading-relaxed text-foreground">
             {row.body}
           </p>
         </section>
 
-        <section className="rounded-[14px] border border-admin-border bg-admin-card p-6">
-          <h2 className="font-serif text-[16px] font-semibold text-admin-primary">
+        <section className="rounded-xl border border-border bg-card p-6">
+          <h2 className="text-lg font-semibold text-foreground">
             Arquivo anexado
           </h2>
           {file.kind === "available" && (
-            <p className="mt-2 rounded-[9px] border border-admin-warning-soft-border bg-admin-warning-soft-bg px-3 py-2 text-[12px] leading-relaxed text-admin-warning-text">
+            <p className="mt-2 rounded-lg border border-warning/30 bg-warning-soft px-3 py-2 text-xs text-warning-text">
               Disponível até <strong>{formatDate(file.until)}</strong>
               {file.daysLeft > 0
                 ? ` (faltam ${file.daysLeft} ${file.daysLeft === 1 ? "dia" : "dias"})`
@@ -240,7 +239,7 @@ export default async function PublicationDetailPage({
             </p>
           )}
           {file.kind === "held" && (
-            <p className="mt-2 rounded-[9px] border border-admin-warning-soft-border bg-admin-warning-soft-bg px-3 py-2 text-[12px] leading-relaxed text-admin-warning-text">
+            <p className="mt-2 rounded-lg border border-warning/30 bg-warning-soft px-3 py-2 text-xs text-warning-text">
               Os {ATTACHMENT_RETENTION_DAYS} dias terminaram em{" "}
               {formatDate(file.until)}, mas a publicação ainda está no site: o
               arquivo fica até ela sair e é apagado em seguida. Baixe e guarde
@@ -249,7 +248,7 @@ export default async function PublicationDetailPage({
           )}
           {row.attachmentPath && attachmentServable(file) ? (
             <>
-              <p className="mt-2 text-xs text-admin-muted">
+              <p className="mt-2 text-xs text-muted-foreground">
                 {isImage ? "Imagem" : "Documento"}
                 {row.attachmentSizeBytes
                   ? `, ${formatBytes(row.attachmentSizeBytes)}`
@@ -268,14 +267,14 @@ export default async function PublicationDetailPage({
                   <img
                     src={fileHref}
                     alt={`Imagem anexada: ${row.title}`}
-                    className="max-h-[32rem] w-auto max-w-full rounded-[10px] border border-admin-border"
+                    className="max-h-[32rem] w-auto max-w-full rounded-lg border border-border"
                   />
                 </a>
               )}
               <div className="mt-3 flex flex-wrap gap-2.5">
                 <a
                   href={`${fileHref}?baixar=1`}
-                  className="btn btn-admin-primary btn-sm"
+                  className={buttonVariants({ size: "sm" })}
                 >
                   Baixar o arquivo
                 </a>
@@ -283,14 +282,14 @@ export default async function PublicationDetailPage({
                   href={fileHref}
                   target="_blank"
                   rel="noopener"
-                  className="btn btn-admin-secondary btn-sm"
+                  className={buttonVariants({ variant: "outline", size: "sm" })}
                 >
                   {isImage ? "Abrir a imagem em nova aba" : "Abrir o arquivo"}
                 </a>
               </div>
             </>
           ) : row.attachmentPurgedAt || file.kind === "expired" ? (
-            <p className="mt-2 text-[13px] leading-relaxed text-admin-muted">
+            <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
               O arquivo foi apagado
               {row.attachmentPurgedAt
                 ? ` em ${formatOfficeDateTime(row.attachmentPurgedAt)}`
@@ -306,18 +305,16 @@ export default async function PublicationDetailPage({
               . As informações escritas desta publicação continuam registradas.
             </p>
           ) : (
-            <p className="mt-2 text-[13px] text-admin-muted">
+            <p className="mt-2 text-sm text-muted-foreground">
               Esta publicação não tem arquivo anexado.
             </p>
           )}
         </section>
 
-        <section className="rounded-[14px] border border-admin-border bg-admin-card p-6">
-          <h2 className="font-serif text-[16px] font-semibold text-admin-primary">
-            Histórico
-          </h2>
+        <section className="rounded-xl border border-border bg-card p-6">
+          <h2 className="text-lg font-semibold text-foreground">Histórico</h2>
           {history.length === 0 ? (
-            <p className="mt-2 text-[13px] text-admin-muted">
+            <p className="mt-2 text-sm text-muted-foreground">
               Sem registros de alteração.
             </p>
           ) : (
@@ -325,9 +322,9 @@ export default async function PublicationDetailPage({
               {history.map((entry) => (
                 <li
                   key={`${entry.action}-${entry.at.toISOString()}`}
-                  className="text-[13px] text-admin-text"
+                  className="text-sm text-foreground"
                 >
-                  <span className="text-admin-muted">
+                  <span className="text-muted-foreground">
                     {formatOfficeDateTime(entry.at)}
                   </span>{" "}
                   · {HISTORY_LABELS[entry.action] ?? entry.action}

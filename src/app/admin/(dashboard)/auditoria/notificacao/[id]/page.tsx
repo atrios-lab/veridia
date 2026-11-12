@@ -10,6 +10,7 @@ import { findNotificationWith, listAuditWith } from "@/lib/audit-trail.ts";
 import { certificatesForSignerWith } from "@/lib/signing.ts";
 import { AdminPageHeader } from "../../../../_components/page-header.tsx";
 import { ROLE_LABELS } from "../../../../_components/role-labels.ts";
+import { buttonVariants } from "../../../../_ui/button.tsx";
 import { auditAccess } from "../../access.ts";
 import { AnswerForm, CloseForm, ResendButton, SignForm } from "./forms.tsx";
 
@@ -23,7 +24,7 @@ const STATUS: Record<string, string> = {
 
 function Paragraphs({ text }: { text: string }) {
   return (
-    <p className="mt-1.5 whitespace-pre-line text-[13px] leading-relaxed text-admin-text [overflow-wrap:anywhere]">
+    <p className="mt-1.5 whitespace-pre-line text-sm leading-relaxed text-foreground [overflow-wrap:anywhere]">
       {text.trim()}
     </p>
   );
@@ -65,11 +66,11 @@ export default async function NotificationPage({
         href={`/admin/auditoria/arquivo/${file.id}`}
         target="_blank"
         rel="noopener"
-        className="font-semibold text-admin-primary underline [overflow-wrap:anywhere]"
+        className="font-medium text-primary underline [overflow-wrap:anywhere]"
       >
         {file.displayName}
       </a>{" "}
-      <span className="text-admin-muted">
+      <span className="text-muted-foreground">
         ({Math.max(1, Math.round(file.sizeBytes / 1024))} KB)
       </span>
     </li>
@@ -78,51 +79,51 @@ export default async function NotificationPage({
   return (
     <>
       <AdminPageHeader maxWidth={900} title="Auditoria" />
-      <main className="flex max-w-[900px] flex-col gap-4.5 px-[30px] py-7">
+      <main className="flex max-w-[900px] flex-col gap-6 px-4 pt-6 pb-8 md:px-8">
         <BackLink href="/admin/auditoria" label="Auditoria" />
         {sent && (
-          <p className="rounded-[12px] bg-admin-success-bg px-4 py-3 text-[13px] font-semibold text-admin-success-text">
+          <p className="rounded-lg border border-success/30 bg-success-soft p-4 text-sm font-medium text-success-text">
             Notificação enviada pelo painel: {view.targetName} vê o pedido na
             aba Auditoria e um aviso em todas as telas até responder
             {view.emailedAt ? ", e recebeu também por e-mail" : ""}.
           </p>
         )}
-        <section className="rounded-[14px] border border-admin-border bg-admin-card px-5 py-4">
+        <section className="rounded-xl border border-border bg-card p-6">
           <div className="flex flex-wrap items-start justify-between gap-2">
             <div>
-              <h2 className="font-serif text-[18px] font-semibold text-admin-primary">
+              <h2 className="text-lg font-semibold text-foreground">
                 Notificação nº {notificationNumber(view)}
               </h2>
-              <p className="text-[13px] font-semibold text-admin-text">
+              <p className="text-sm font-medium text-foreground">
                 {view.subject}
               </p>
             </div>
             <span
-              className={`rounded-full px-2.5 py-0.5 text-[11.5px] font-bold ${view.status === "aberta" ? (late ? "bg-admin-error-bg text-admin-error-text" : "bg-admin-warning-bg text-admin-warning-text") : "bg-admin-success-bg text-admin-success-text"}`}
+              className={`rounded-full px-2.5 py-0.5 text-xs font-medium ${view.status === "aberta" ? (late ? "bg-destructive text-destructive-foreground" : "bg-warning-soft text-warning-text") : "bg-success-soft text-success-text"}`}
             >
               {late ? "Prazo vencido" : (STATUS[view.status] ?? view.status)}
             </span>
           </div>
-          <dl className="mt-3 grid grid-cols-[auto_1fr] gap-x-4 gap-y-1 text-[12.5px]">
-            <dt className="font-semibold text-admin-muted">Notificado(a)</dt>
-            <dd className="text-admin-text">
+          <dl className="mt-3 grid grid-cols-[auto_1fr] gap-x-4 gap-y-1 text-xs">
+            <dt className="font-medium text-muted-foreground">Notificado(a)</dt>
+            <dd className="text-foreground">
               {view.targetName} (
               {ROLE_LABELS[(view.targetRole ?? "") as Role] ?? view.targetRole})
             </dd>
-            <dt className="font-semibold text-admin-muted">Enviada em</dt>
-            <dd className="text-admin-text">
+            <dt className="font-medium text-muted-foreground">Enviada em</dt>
+            <dd className="text-foreground">
               {formatOfficeDateTime(view.createdAt)}
             </dd>
-            <dt className="font-semibold text-admin-muted">
+            <dt className="font-medium text-muted-foreground">
               Prazo para responder
             </dt>
-            <dd className="text-admin-text">
+            <dd className="text-foreground">
               {formatOfficeDateTime(view.deadlineAt)} (24 horas)
             </dd>
             {manager && (
               <>
-                <dt className="font-semibold text-admin-muted">E-mail</dt>
-                <dd className="text-admin-text">
+                <dt className="font-medium text-muted-foreground">E-mail</dt>
+                <dd className="text-foreground">
                   {view.emailedAt
                     ? `enviado em ${formatOfficeDateTime(view.emailedAt)}`
                     : "ainda não enviado"}
@@ -135,7 +136,7 @@ export default async function NotificationPage({
               href={`/admin/auditoria/notificacao/${view.id}/pdf`}
               target="_blank"
               rel="noopener"
-              className="btn btn-admin-secondary btn-sm"
+              className={buttonVariants({ variant: "outline", size: "sm" })}
             >
               {view.signedDocumentId
                 ? "PDF assinado (imprimir)"
@@ -144,12 +145,12 @@ export default async function NotificationPage({
             {manager && <ResendButton id={view.id} />}
           </div>
 
-          <h3 className="mt-5 text-[13px] font-bold text-admin-primary">
+          <h3 className="mt-5 text-sm font-semibold text-foreground">
             Dos fatos
           </h3>
           <Paragraphs text={view.facts} />
           {entries.length > 0 && (
-            <ul className="mt-2 flex flex-col gap-0.5 rounded-[10px] bg-admin-input-bg px-3.5 py-2.5 text-[12.5px] text-admin-text">
+            <ul className="mt-2 flex flex-col gap-0.5 rounded-lg bg-muted/50 px-3.5 py-2.5 text-xs text-foreground">
               {entries.map((entry) => (
                 <li key={entry.id} className="[overflow-wrap:anywhere]">
                   {formatOfficeDateTime(entry.createdAt)} ·{" "}
@@ -162,33 +163,31 @@ export default async function NotificationPage({
           )}
           {ownFiles.length > 0 && (
             <>
-              <h3 className="mt-4 text-[13px] font-bold text-admin-primary">
+              <h3 className="mt-4 text-sm font-semibold text-foreground">
                 Provas anexadas
               </h3>
-              <ul className="mt-1 flex flex-col gap-0.5 text-[12.5px]">
+              <ul className="mt-1 flex flex-col gap-0.5 text-xs">
                 {ownFiles.map(fileLink)}
               </ul>
             </>
           )}
-          <h3 className="mt-4 text-[13px] font-bold text-admin-primary">
+          <h3 className="mt-4 text-sm font-semibold text-foreground">
             Da fundamentação
           </h3>
           <Paragraphs text={view.legalBasis} />
         </section>
 
-        <section className="rounded-[14px] border border-admin-border bg-admin-card px-5 py-4">
-          <h2 className="font-serif text-[17px] font-semibold text-admin-primary">
-            Resposta
-          </h2>
+        <section className="rounded-xl border border-border bg-card p-6">
+          <h2 className="text-lg font-semibold text-foreground">Resposta</h2>
           {view.response ? (
             <>
-              <p className="text-[12px] text-admin-muted">
+              <p className="text-xs text-muted-foreground">
                 Enviada em{" "}
                 {formatOfficeDateTime(view.respondedAt ?? view.createdAt)}
               </p>
               <Paragraphs text={view.response} />
               {answerFiles.length > 0 && (
-                <ul className="mt-2 flex flex-col gap-0.5 text-[12.5px]">
+                <ul className="mt-2 flex flex-col gap-0.5 text-xs">
                   {answerFiles.map(fileLink)}
                 </ul>
               )}
@@ -196,7 +195,7 @@ export default async function NotificationPage({
           ) : target && view.status === "aberta" ? (
             <AnswerForm id={view.id} />
           ) : (
-            <p className="mt-1 text-[13px] text-admin-muted">
+            <p className="mt-1 text-sm text-muted-foreground">
               {view.status === "aberta"
                 ? "A pessoa ainda não respondeu."
                 : "Encerrada sem resposta."}
@@ -205,13 +204,11 @@ export default async function NotificationPage({
         </section>
 
         {(view.closedAt || manager) && (
-          <section className="rounded-[14px] border border-admin-border bg-admin-card px-5 py-4">
-            <h2 className="font-serif text-[17px] font-semibold text-admin-primary">
-              Conclusão
-            </h2>
+          <section className="rounded-xl border border-border bg-card p-6">
+            <h2 className="text-lg font-semibold text-foreground">Conclusão</h2>
             {view.closedAt ? (
               <>
-                <p className="text-[12px] text-admin-muted">
+                <p className="text-xs text-muted-foreground">
                   Encerrada em {formatOfficeDateTime(view.closedAt)}
                 </p>
                 {view.closingNote && <Paragraphs text={view.closingNote} />}
@@ -223,11 +220,11 @@ export default async function NotificationPage({
         )}
 
         {view.signedDocumentId && (
-          <section className="rounded-[14px] border border-admin-border bg-admin-success-bg px-5 py-4">
-            <h2 className="font-serif text-[17px] font-semibold text-admin-success-text">
+          <section className="rounded-xl border border-success/30 bg-success-soft p-6">
+            <h2 className="text-lg font-semibold text-success-text">
               Assinada digitalmente
             </h2>
-            <p className="mt-1 text-[13px] text-admin-text">
+            <p className="mt-1 text-sm text-foreground">
               O PDF da notificação foi assinado com certificado ICP-Brasil. O
               botão "PDF assinado (imprimir)" já entrega essa via.
               {manager && (
@@ -235,7 +232,7 @@ export default async function NotificationPage({
                   {" "}
                   <Link
                     href={`/admin/utilitarios/assinador/${view.signedDocumentId}`}
-                    className="font-semibold text-admin-primary underline"
+                    className="font-medium text-primary underline"
                   >
                     Ver no assinador (código de verificação e manifesto)
                   </Link>
@@ -246,8 +243,8 @@ export default async function NotificationPage({
         )}
 
         {manager && !view.signedDocumentId && (
-          <section className="rounded-[14px] border border-admin-border bg-admin-card px-5 py-4">
-            <h2 className="font-serif text-[17px] font-semibold text-admin-primary">
+          <section className="rounded-xl border border-border bg-card p-6">
+            <h2 className="text-lg font-semibold text-foreground">
               Assinar digitalmente
             </h2>
             {certificates.length ? (
@@ -260,11 +257,11 @@ export default async function NotificationPage({
                 }))}
               />
             ) : (
-              <p className="mt-1 text-[13px] text-admin-muted">
+              <p className="mt-1 text-sm text-muted-foreground">
                 Nenhum certificado A1 liberado para você. Cadastre em{" "}
                 <Link
                   href="/admin/configuracoes/certificados"
-                  className="font-semibold text-admin-primary underline"
+                  className="font-medium text-primary underline"
                 >
                   Configurações › Certificados digitais
                 </Link>
