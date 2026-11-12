@@ -6,6 +6,8 @@ import { db } from "@/db/index.ts";
 import { findExcessWith } from "@/lib/daily-book-excess.ts";
 import { getTenant } from "@/lib/tenant.ts";
 import { AdminPageHeader } from "../../../../../_components/page-header.tsx";
+import { EXCESS_CALCULATOR_HELP } from "../../../../../_components/screen-help.ts";
+import { ScreenHelpButton } from "../../../../../_components/screen-help-button.tsx";
 import { SignOrPrint } from "../../../../../_components/sign-or-print.tsx";
 import { requireBookAccess } from "../../_lib/access.ts";
 import { ExcessForm, RemoveExcessButton } from "../forms.tsx";
@@ -68,6 +70,25 @@ export default async function ExcessCalcPage({
               </h2>
               <RemoveExcessButton id={calc.id} />
             </div>
+            <section className="flex flex-wrap items-center gap-3 rounded-[14px] border-2 border-admin-primary-soft bg-admin-card px-5 py-4">
+              <div className="flex min-w-[260px] flex-1 flex-col gap-1">
+                <div className="flex flex-wrap items-center gap-2.5">
+                  <h2 className="font-serif text-[18px] font-semibold text-admin-primary">
+                    Como usar a calculadora
+                  </h2>
+                  <ScreenHelpButton
+                    help={EXCESS_CALCULATOR_HELP}
+                    canConfigure={false}
+                    label="Como preencher a calculadora, passo a passo"
+                  />
+                </div>
+                <p className="text-[13px] text-admin-muted">
+                  Preencha os passos 1 a 3. O passo 4 mostra, enquanto você
+                  digita, se há valor a depositar para o Tribunal de Justiça e
+                  quanto fica com o interino.
+                </p>
+              </div>
+            </section>
             <ExcessForm
               initial={{
                 id: calc.id,

@@ -24,6 +24,19 @@ export interface ScreenHelp {
   };
 }
 
+/**
+ * The rules the Livro Diário Auxiliar follows, as ABNT NBR 6023:2018 sets
+ * a legislative reference (decision of 12/11/2026).
+ */
+const REF_CN_149 =
+  "BRASIL. Conselho Nacional de Justiça. Corregedoria Nacional de Justiça. Provimento nº 149, de 30 de agosto de 2023. Institui o Código Nacional de Normas da Corregedoria Nacional de Justiça, Foro Extrajudicial (CNN/CN/CNJ-Extra). Brasília, DF: CNJ, 2023.";
+const REF_CN_259 =
+  "BRASIL. Conselho Nacional de Justiça. Corregedoria Nacional de Justiça. Provimento nº 259, de 5 de novembro de 2026. Altera o Código Nacional de Normas quanto ao Livro Diário Auxiliar da Receita e da Despesa e revoga o Provimento nº 45, de 13 de maio de 2015. Brasília, DF: CNJ, 2026.";
+const REF_CN_24 =
+  "BRASIL. Conselho Nacional de Justiça. Corregedoria Nacional de Justiça. Provimento nº 24, de 12 de outubro de 2012. Brasília, DF: CNJ, 2012.";
+const REF_RN_156 =
+  "RIO GRANDE DO NORTE. Corregedoria Geral de Justiça. Provimento nº 156, de 18 de outubro de 2016. Institui, no âmbito extrajudicial, o novo Código de Normas da Corregedoria Geral de Justiça do Estado do Rio Grande do Norte. Natal: CGJ/RN, 2016.";
+
 const ENTRIES: Record<string, ScreenHelp> = {
   "/admin": {
     purpose:
@@ -250,6 +263,10 @@ const ENTRIES: Record<string, ScreenHelp> = {
         meaning:
           "A Corregedoria verifica a escrituração, os comprovantes e, quanto ao delegatário, o recolhimento mensal do imposto de renda, inclusive o carnê-leão (art. 195-B, § 1º). Abrange, em regra, os 12 meses anteriores à correição ou inspeção (§ 3º).",
       },
+      {
+        term: "Referências",
+        meaning: `${REF_CN_149} ${REF_CN_259} ${REF_RN_156}`,
+      },
     ],
     configure: {
       href: "/admin/utilitarios/livro-diario/configuracao",
@@ -465,6 +482,67 @@ export function screenHelpFor(pathname: string | null): ScreenHelp | undefined {
  * of its own beside the ofícios and on the screen that generates them,
  * because "only when there is a loss" is the usual misunderstanding.
  */
+/** The opening and closing terms of the book (CN art. 186). */
+export const BOOK_TERMS_HELP: ScreenHelp = {
+  purpose:
+    "Todo livro administrativo tem começo e fim formais. O termo de abertura é a primeira folha do livro: declara o número do livro, a sua finalidade, a quantidade de folhas e que todas estão rubricadas. O termo de encerramento é a última: declara que o livro foi encerrado e até que folha foi escriturado. Ambos são assinados pelo delegatário (Código Nacional de Normas, art. 186).",
+  steps: [
+    "Em Configurar, informe o número do livro e a quantidade de folhas.",
+    'Clique em "Gerar termo de abertura" antes do primeiro lançamento do livro. Assine digitalmente ou imprima e assine à mão.',
+    'A partir daí, cada página gerada recebe as folhas seguintes, numeradas no alto ("Livro nº 1 · Folha 3").',
+    'Quando as folhas acabarem, clique em "Gerar termo de encerramento". Depois, em Configurar, passe para o livro seguinte e gere o novo termo de abertura.',
+  ],
+  terms: [
+    {
+      term: "Texto da norma",
+      meaning:
+        '"Os livros previstos neste Capítulo serão abertos, numerados, autenticados e encerrados pelo delegatário [...]. O termo de abertura deverá conter o número do livro, o fim a que se destina, o número de folhas que contém, a declaração de que todas as suas folhas estão rubricadas e o fecho, com data, nome do delegatário e assinatura." (art. 186 e parágrafo único).',
+    },
+    { term: "Referência", meaning: REF_CN_149 },
+  ],
+  configure: {
+    href: "/admin/utilitarios/livro-diario/configuracao",
+    label: "Número do livro e de folhas",
+    permission: "daily-book.manage",
+    steps: ["Informe o número do livro e a quantidade de folhas."],
+  },
+};
+
+/** How to fill in the excess calculator, field by field. */
+export const EXCESS_CALCULATOR_HELP: ScreenHelp = {
+  purpose:
+    "A calculadora responde a uma pergunta: neste período, o interino tem valor a depositar para o Tribunal de Justiça? Preencha os passos de cima para baixo; o resultado aparece no passo 4 enquanto você digita.",
+  steps: [
+    'Passo 1, período: deixe "Trimestral", que é a regra nacional, e escolha o ano e o trimestre. Use "Mensal" apenas se a norma do Estado mandar apurar mês a mês (no Rio Grande do Norte, art. 27 do Código de Normas).',
+    "Passo 2, teto: digite o subsídio mensal de ministro do STF, isto é, o valor cheio. A calculadora mostra os 90,25% (teto do mês) e multiplica pelos meses do período.",
+    'Passo 3, valores: digite as receitas (emolumentos) e as despesas do período, ou clique em "Preencher com o livro" para trazer o que já foi lançado. A remuneração do próprio interino não entra nas despesas.',
+    "Passo 4, resultado: veja a conta por extenso. Se houver excedente, a tela indica o valor a depositar e o atalho para lançar o depósito no livro.",
+    "Salve o cálculo para ter a memória de cálculo em PDF, que pode ser assinada digitalmente ou impressa. Cálculos salvos podem ser editados ou excluídos (com justificativa).",
+  ],
+  terms: [
+    {
+      term: "Subsídio",
+      meaning:
+        "Remuneração mensal de ministro do Supremo Tribunal Federal, fixada em lei. Use o valor vigente no período calculado.",
+    },
+    {
+      term: "Teto do período",
+      meaning:
+        "90,25% do subsídio, multiplicado pelo número de meses do período (três, no trimestre).",
+    },
+    {
+      term: "Renda líquida",
+      meaning: "Receitas menos despesas do período.",
+    },
+    {
+      term: "Excedente",
+      meaning:
+        "Parte da renda líquida que ultrapassa o teto do período. Não pertence ao interino: é depositada à disposição do Tribunal de Justiça (art. 194, I).",
+    },
+    { term: "Referências", meaning: `${REF_CN_149} ${REF_RN_156}` },
+  ],
+};
+
 /**
  * The interim's excess over 90,25% of the STF minister's pay, for a lay
  * reader, with fictitious examples (decision of 12/11/2026). Its own "!" on
@@ -512,6 +590,10 @@ export const INTERIM_EXCESS_HELP: ScreenHelp = {
       term: "Subsídio",
       meaning:
         "O salário mensal de um ministro do STF, fixado em lei. Quando ele mudar, atualize o valor na configuração do livro e na calculadora: cada cálculo guarda o valor usado.",
+    },
+    {
+      term: "Referências",
+      meaning: `${REF_CN_149} ${REF_CN_24} ${REF_RN_156}`,
     },
   ],
   configure: {
