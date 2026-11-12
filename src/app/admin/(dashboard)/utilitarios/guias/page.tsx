@@ -34,6 +34,15 @@ import {
 import { getTenant, OFFICE_TIME_ZONE } from "@/lib/tenant.ts";
 import { AdminIcon } from "../../../_components/icon.tsx";
 import { AdminPageHeader } from "../../../_components/page-header.tsx";
+import { buttonVariants } from "../../../_ui/button.tsx";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "../../../_ui/table.tsx";
 
 export const metadata = { title: "Guias de transmissão de bens" };
 
@@ -81,18 +90,18 @@ export default async function GuidesPage({
         title="Guias de transmissão de bens"
         description={guideKindsSummary()}
       />
-      <main className="flex max-w-[1100px] flex-col gap-4.5 px-[30px] py-7">
+      <main className="flex max-w-[1100px] flex-col gap-4.5 px-4 py-7 md:px-8">
         <div className="flex flex-wrap items-center gap-3">
           <Link
             href="/admin/utilitarios/guias/nova"
-            className="btn btn-admin-primary btn-md"
+            className={buttonVariants()}
           >
             <AdminIcon name="plus" className="h-4 w-4" /> Nova guia
           </Link>
         </div>
 
         {itivUnset && (
-          <p className="rounded-[12px] border border-admin-warning-soft-border bg-admin-warning-bg px-4 py-3 text-[13px] text-admin-warning-text">
+          <p className="rounded-lg border border-warning/30 bg-warning-soft px-4 py-3 text-sm text-warning-text">
             Falta a lei municipal ou a alíquota do ITIV/ITBI de{" "}
             {tenant.location.city}. Informe em “Leis, alíquotas e quem assina”
             antes de emitir guias de ITIV.
@@ -102,14 +111,14 @@ export default async function GuidesPage({
         <GuideRequests requests={requests} />
 
         {deleted && (
-          <p className="rounded-[12px] bg-admin-success-bg px-4 py-3 text-[13px] font-semibold text-admin-success-text">
+          <p className="rounded-lg bg-success-soft px-4 py-3 text-sm font-semibold text-success-text">
             Guia excluída. O número ficou livre para a próxima.
           </p>
         )}
 
         {(ending.length > 0 || past.length > 0) && (
-          <section className="rounded-[12px] border-2 border-admin-warning-bg bg-admin-card px-4 py-3 text-[13px] text-admin-text">
-            <strong className="text-admin-primary">
+          <section className="rounded-lg border-2 border-warning/30 bg-card px-4 py-3 text-sm text-foreground">
+            <strong className="text-foreground">
               Baixe as guias para o arquivo da serventia.
             </strong>{" "}
             O sistema guarda cada guia por {RETENTION_MONTHS} meses.{" "}
@@ -123,7 +132,7 @@ export default async function GuidesPage({
         )}
 
         {kept.length === 0 && (
-          <p className="rounded-[14px] border border-admin-border bg-admin-card px-5 py-8 text-center text-[13px] text-admin-muted">
+          <p className="rounded-xl border bg-card px-5 py-8 text-center text-sm text-muted-foreground">
             Nenhuma guia emitida ainda.
           </p>
         )}
@@ -140,11 +149,11 @@ export default async function GuidesPage({
           <GuideYear title="Prazo de guarda vencido" guides={past} now={now} />
         )}
 
-        <section className="rounded-[14px] border border-admin-border bg-admin-card px-5 py-4">
-          <h2 className="font-serif text-[16px] font-semibold text-admin-primary">
+        <section className="rounded-xl border bg-card px-5 py-4">
+          <h2 className="text-base font-semibold text-foreground">
             Imóvel da União (terreno de marinha): guias da SPU
           </h2>
-          <p className="mt-1 text-[12.5px] text-admin-muted">
+          <p className="mt-1 text-xs text-muted-foreground">
             Não sai guia do cartório: a parte resolve na Secretaria do
             Patrimônio da União, e o cartório confere a CAT antes de lavrar
             (Decreto-Lei nº 2.398/1987, art. 3º).
@@ -153,7 +162,7 @@ export default async function GuidesPage({
             {SPU_STEPS.map((step, index) => (
               <li
                 key={step.title}
-                className="text-[12.5px] leading-relaxed text-admin-text"
+                className="text-xs leading-relaxed text-foreground"
               >
                 <strong>
                   {index + 1}. {step.title}.
@@ -169,7 +178,7 @@ export default async function GuidesPage({
                   href={link.href}
                   target="_blank"
                   rel="noreferrer"
-                  className="text-[12.5px] font-semibold text-admin-primary underline"
+                  className="text-xs font-semibold text-primary underline"
                 >
                   {link.label}
                 </a>
@@ -194,18 +203,18 @@ function GuideYear({
   now: Date;
 }) {
   return (
-    <section className="overflow-hidden rounded-[14px] border border-admin-border bg-admin-card">
-      <header className="flex flex-wrap items-center gap-3 border-b border-admin-border px-4 py-3">
-        <h2 className="mr-auto font-serif text-[17px] font-semibold text-admin-primary">
+    <section className="overflow-hidden rounded-xl border bg-card">
+      <header className="flex flex-wrap items-center gap-3 border-b px-4 py-3">
+        <h2 className="mr-auto text-lg font-semibold text-foreground">
           {title}{" "}
-          <span className="text-[13px] font-normal text-admin-muted">
+          <span className="text-sm font-normal text-muted-foreground">
             ({guides.length} {guides.length === 1 ? "guia" : "guias"})
           </span>
         </h2>
         {year !== undefined && (
           <a
             href={`/admin/utilitarios/guias/ano/${year}`}
-            className="btn btn-admin-secondary btn-sm"
+            className={buttonVariants({ variant: "outline", size: "sm" })}
           >
             <AdminIcon name="printer" className="h-3.5 w-3.5" /> Baixar todas de{" "}
             {year} (PDF)
@@ -217,25 +226,37 @@ function GuideYear({
               `/admin/utilitarios/guias/ano/${year}`,
               `Guias de transmissão de bens de ${year}`,
             )}
-            className="btn btn-admin-primary btn-sm"
+            className={buttonVariants({ size: "sm" })}
           >
             <AdminIcon name="lock" className="h-3.5 w-3.5" /> Assinar
             digitalmente
           </a>
         )}
       </header>
-      <table className="w-full text-left text-[13px]">
-        <thead className="border-b border-admin-border text-[11px] font-bold uppercase tracking-[0.06em] text-admin-faint">
-          <tr>
-            <th className="px-4 py-2.5">Nº</th>
-            <th className="px-4 py-2.5">Guia</th>
-            <th className="px-4 py-2.5">Adquirente</th>
-            <th className="px-4 py-2.5 text-right">Valor</th>
-            <th className="px-4 py-2.5 text-right">Imposto</th>
-            <th className="px-4 py-2.5">Arquivos</th>
-          </tr>
-        </thead>
-        <tbody>
+      <Table>
+        <TableHeader>
+          <TableRow className="hover:bg-transparent">
+            <TableHead className="px-4 text-xs font-medium text-muted-foreground">
+              Nº
+            </TableHead>
+            <TableHead className="px-4 text-xs font-medium text-muted-foreground">
+              Guia
+            </TableHead>
+            <TableHead className="px-4 text-xs font-medium text-muted-foreground">
+              Adquirente
+            </TableHead>
+            <TableHead className="px-4 text-xs font-medium text-muted-foreground text-right">
+              Valor
+            </TableHead>
+            <TableHead className="px-4 text-xs font-medium text-muted-foreground text-right">
+              Imposto
+            </TableHead>
+            <TableHead className="px-4 text-xs font-medium text-muted-foreground">
+              Arquivos
+            </TableHead>
+          </TableRow>
+        </TableHeader>
+        <TableBody>
           {guides.map((stored) => {
             const amount = guideAmount(stored.guide);
             const acquirer = stored.guide.parties.find(
@@ -244,43 +265,40 @@ function GuideYear({
             const base = `/admin/utilitarios/guias/${stored.id}`;
             const state = retentionState(stored.createdAt, now);
             return (
-              <tr
-                key={stored.id}
-                className="border-b border-admin-border last:border-b-0"
-              >
-                <td className="px-4 py-2.5 font-bold tabular-nums">
+              <TableRow key={stored.id}>
+                <TableCell className="px-4 py-2.5 font-semibold tabular-nums">
                   <Link href={base} className="hover:underline">
                     {formatGuideNumber(stored.year, stored.sequence)}
                   </Link>
                   {state === "ending" && (
-                    <span className="ml-2 rounded-full bg-admin-warning-bg px-2 py-0.5 text-[10.5px] font-semibold text-admin-warning-text">
+                    <span className="ml-2 rounded-full bg-warning-soft px-2 py-0.5 text-xs font-semibold text-warning-text">
                       baixar
                     </span>
                   )}
-                </td>
-                <td className="px-4 py-2.5">
+                </TableCell>
+                <TableCell className="px-4 py-2.5 whitespace-normal">
                   {GUIDE_KIND_INFO[stored.guide.kind].label}
-                </td>
-                <td className="px-4 py-2.5">
+                </TableCell>
+                <TableCell className="px-4 py-2.5 whitespace-normal">
                   {acquirer?.name ?? ""}
                   {stored.requestProtocol && (
                     <Link
                       href={`/admin/pedidos/${encodeURIComponent(stored.requestProtocol)}`}
-                      className="ml-2 rounded-full bg-admin-input-bg px-2 py-0.5 text-[10.5px] font-semibold text-admin-primary hover:underline"
+                      className="ml-2 rounded-full bg-muted px-2 py-0.5 text-xs font-semibold text-primary hover:underline"
                     >
                       pedido {stored.requestProtocol}
                     </Link>
                   )}
-                </td>
-                <td className="px-4 py-2.5 text-right tabular-nums">
+                </TableCell>
+                <TableCell className="px-4 py-2.5 text-right tabular-nums">
                   R$ {formatMoneyBRL(stored.guide.declaredValueCents)}
-                </td>
-                <td className="px-4 py-2.5 text-right tabular-nums">
+                </TableCell>
+                <TableCell className="px-4 py-2.5 text-right tabular-nums">
                   {amount.taxCents === null
                     ? ""
                     : `R$ ${formatMoneyBRL(amount.taxCents)}`}
-                </td>
-                <td className="px-4 py-2.5">
+                </TableCell>
+                <TableCell className="px-4 py-2.5 whitespace-normal">
                   <a
                     href={`${base}/arquivo?formato=pdf`}
                     className="font-semibold hover:underline"
@@ -294,12 +312,12 @@ function GuideYear({
                   >
                     Word
                   </a>
-                </td>
-              </tr>
+                </TableCell>
+              </TableRow>
             );
           })}
-        </tbody>
-      </table>
+        </TableBody>
+      </Table>
     </section>
   );
 }
@@ -315,42 +333,49 @@ function GuideRequests({ requests }: { requests: GuideRequestRow[] }) {
   const open = requests.filter((row) => !CLOSED.has(row.status));
   const closed = requests.filter((row) => CLOSED.has(row.status)).slice(0, 20);
   return (
-    <section className="overflow-hidden rounded-[14px] border border-admin-border bg-admin-card">
-      <header className="border-b border-admin-border px-4 py-3">
-        <h2 className="font-serif text-[17px] font-semibold text-admin-primary">
+    <section className="overflow-hidden rounded-xl border bg-card">
+      <header className="border-b px-4 py-3">
+        <h2 className="text-lg font-semibold text-foreground">
           Pedidos do site{" "}
-          <span className="text-[13px] font-normal text-admin-muted">
+          <span className="text-sm font-normal text-muted-foreground">
             ({open.length} em aberto)
           </span>
         </h2>
-        <p className="mt-0.5 text-[12px] text-admin-muted">
+        <p className="mt-0.5 text-xs text-muted-foreground">
           A guia de cada pedido é gerada sozinha e só a serventia vê. Abra o
           pedido para conferir os documentos, corrigir a guia, fazer exigência e
           entregar a guia assinada com o boleto.
         </p>
       </header>
       {requests.length === 0 ? (
-        <p className="px-5 py-6 text-center text-[13px] text-admin-muted">
+        <p className="px-5 py-6 text-center text-sm text-muted-foreground">
           Nenhum pedido de guia pelo site ainda.
         </p>
       ) : (
-        <table className="w-full text-left text-[13px]">
-          <thead className="border-b border-admin-border text-[11px] font-bold uppercase tracking-[0.06em] text-admin-faint">
-            <tr>
-              <th className="px-4 py-2.5">Protocolo</th>
-              <th className="px-4 py-2.5">Cliente</th>
-              <th className="px-4 py-2.5">Andamento</th>
-              <th className="px-4 py-2.5">Guia</th>
-              <th className="px-4 py-2.5">Recebido</th>
-            </tr>
-          </thead>
-          <tbody>
+        <Table>
+          <TableHeader>
+            <TableRow className="hover:bg-transparent">
+              <TableHead className="px-4 text-xs font-medium text-muted-foreground">
+                Protocolo
+              </TableHead>
+              <TableHead className="px-4 text-xs font-medium text-muted-foreground">
+                Cliente
+              </TableHead>
+              <TableHead className="px-4 text-xs font-medium text-muted-foreground">
+                Andamento
+              </TableHead>
+              <TableHead className="px-4 text-xs font-medium text-muted-foreground">
+                Guia
+              </TableHead>
+              <TableHead className="px-4 text-xs font-medium text-muted-foreground">
+                Recebido
+              </TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
             {[...open, ...closed].map((row) => (
-              <tr
-                key={row.id}
-                className="border-b border-admin-border last:border-b-0"
-              >
-                <td className="px-4 py-2.5 font-bold tabular-nums">
+              <TableRow key={row.id}>
+                <TableCell className="px-4 py-2.5 font-semibold tabular-nums">
                   <Link
                     href={`/admin/pedidos/${encodeURIComponent(row.protocolNumber)}`}
                     className="hover:underline"
@@ -358,25 +383,27 @@ function GuideRequests({ requests }: { requests: GuideRequestRow[] }) {
                     {row.protocolNumber}
                   </Link>
                   {row.citizenUpdatedAt && !CLOSED.has(row.status) && (
-                    <span className="ml-2 rounded-full bg-admin-warning-bg px-2 py-0.5 text-[10.5px] font-semibold text-admin-warning-text">
+                    <span className="ml-2 rounded-full bg-warning-soft px-2 py-0.5 text-xs font-semibold text-warning-text">
                       cliente atualizou
                     </span>
                   )}
-                </td>
-                <td className="px-4 py-2.5">{row.applicantName ?? ""}</td>
-                <td className="px-4 py-2.5">
+                </TableCell>
+                <TableCell className="px-4 py-2.5 whitespace-normal">
+                  {row.applicantName ?? ""}
+                </TableCell>
+                <TableCell className="px-4 py-2.5 whitespace-normal">
                   {statusLabel("service-request", row.status)}
-                </td>
-                <td className="px-4 py-2.5 tabular-nums">
+                </TableCell>
+                <TableCell className="px-4 py-2.5 tabular-nums">
                   {row.guideNumber ?? "sem guia"}
-                </td>
-                <td className="px-4 py-2.5 tabular-nums">
+                </TableCell>
+                <TableCell className="px-4 py-2.5 tabular-nums">
                   {formatShortDate(toIsoDate(row.createdAt, OFFICE_TIME_ZONE))}
-                </td>
-              </tr>
+                </TableCell>
+              </TableRow>
             ))}
-          </tbody>
-        </table>
+          </TableBody>
+        </Table>
       )}
     </section>
   );

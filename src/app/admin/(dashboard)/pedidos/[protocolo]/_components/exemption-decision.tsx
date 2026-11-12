@@ -3,6 +3,10 @@
 import { useActionState, useRef } from "react";
 import type { ExemptionDecisionOutcome } from "@/core/request/kinds.ts";
 import { EXEMPTION_DECISION_OUTCOMES } from "@/core/request/kinds.ts";
+import {
+  NativeSelect,
+  NativeSelectOption,
+} from "../../../../_ui/native-select.tsx";
 import { type ActionState, setExemptionDecisionAction } from "../actions.ts";
 
 const OUTCOME_LABELS: Record<ExemptionDecisionOutcome, string> = {
@@ -39,22 +43,24 @@ export function ExemptionDecisionControl({
       className="inline-flex items-center gap-1.5"
     >
       <input type="hidden" name="requestId" value={requestId} />
-      <select
+      <NativeSelect
         name="outcome"
+        size="sm"
+        aria-label="Desfecho da gratuidade"
         defaultValue={outcome ?? ""}
         disabled={pending}
         onChange={() => formRef.current?.requestSubmit()}
-        className="rounded-full border border-admin-warning-text bg-transparent px-2.5 py-[3px] text-[11px] font-bold text-admin-warning-text"
+        className="[&_select]:border-warning/40 [&_select]:bg-background [&_select]:text-xs [&_select]:font-medium [&_select]:text-warning-text"
       >
-        <option value="">Sem decisão</option>
+        <NativeSelectOption value="">Sem decisão</NativeSelectOption>
         {EXEMPTION_DECISION_OUTCOMES.map((value) => (
-          <option key={value} value={value}>
+          <NativeSelectOption key={value} value={value}>
             {OUTCOME_LABELS[value]}
-          </option>
+          </NativeSelectOption>
         ))}
-      </select>
+      </NativeSelect>
       {state.status === "error" && (
-        <span className="text-[11px] font-semibold text-admin-error-text">
+        <span className="text-xs font-medium text-destructive">
           {state.message}
         </span>
       )}

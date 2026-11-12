@@ -75,31 +75,31 @@ export default async function AcceptInvitePage({
 
   if (!invite) {
     return (
-      <main className="flex min-h-screen items-center justify-center bg-admin-surface px-4 py-12 md:px-6">
-        <div className="w-full max-w-[400px]">
-          <div className="flex flex-col gap-3.5 rounded-2xl border border-admin-border bg-admin-card p-6">
-            <span className="flex h-10 w-10 items-center justify-center rounded-full bg-admin-warning-bg">
+      <main className="flex min-h-screen items-center justify-center bg-muted px-4 py-12 md:px-6">
+        <div className="w-full max-w-100">
+          <div className="flex flex-col gap-4 rounded-xl border bg-card p-6 shadow-xs">
+            <span className="flex size-10 items-center justify-center rounded-full bg-warning">
               <AdminIcon
                 name="clock"
-                className="h-5 w-5 text-admin-warning-text"
+                className="h-5 w-5 text-warning-foreground"
               />
             </span>
             <div>
-              <h1 className="font-serif text-xl font-semibold text-admin-primary">
+              <h1 className="text-xl font-semibold text-foreground">
                 Este link venceu
               </h1>
-              <p className="mt-1.5 text-sm leading-relaxed text-admin-muted">
+              <p className="mt-1.5 text-sm leading-relaxed text-muted-foreground">
                 Por segurança, os links de acesso ao painel valem 48 horas. Peça
                 um novo com o seu e-mail: ele chega no mesmo endereço.
               </p>
             </div>
             <Link
               href="/admin/esqueci-senha"
-              className="text-sm font-semibold text-admin-primary underline"
+              className="text-sm font-medium text-primary underline underline-offset-4"
             >
               Pedir um novo link
             </Link>
-            <p className="text-xs leading-relaxed text-admin-faint">
+            <p className="text-xs leading-relaxed text-muted-foreground">
               Se a sua conta ainda não existe, ou foi desativada, o link não
               chega: nesse caso, fale com quem responde pela serventia.
             </p>
@@ -130,33 +130,33 @@ export default async function AcceptInvitePage({
         }}
       />
       <div className="flex min-w-0 flex-1 flex-col md:overflow-y-auto">
-        <div className="flex items-center gap-4 border-b border-admin-border bg-admin-card px-4 py-3.5 md:px-[30px] md:py-4">
-          <h1 className="flex-1 font-serif text-xl font-semibold text-admin-primary">
+        <div className="flex h-14 flex-none items-center gap-4 border-b bg-background px-4 md:px-8">
+          <h1 className="flex-1 text-lg font-semibold text-foreground">
             {isFirstAccess ? "Criar sua senha" : "Criar nova senha"}
           </h1>
-          <span className="hidden text-[12.5px] text-admin-muted sm:inline">
+          <span className="hidden text-sm text-muted-foreground sm:inline">
             {formatFullDate(today())}
           </span>
         </div>
 
         <div className="flex flex-1 items-start justify-center px-4 py-8 md:px-6 md:py-16">
-          <div className="w-full max-w-[400px] rounded-2xl border border-admin-border bg-admin-card p-5 md:p-6">
+          <div className="w-full max-w-100 rounded-xl border bg-card p-5 shadow-xs md:p-6">
             {isFirstAccess ? (
               <div>
-                <h2 className="font-serif text-xl font-semibold text-admin-primary">
+                <h2 className="text-xl font-semibold text-foreground">
                   Bem-vindo(a), {invite.name.split(" ")[0]}
                 </h2>
-                <p className="mt-1 text-sm leading-relaxed text-admin-muted">
+                <p className="mt-1 text-sm leading-relaxed text-muted-foreground">
                   Crie sua senha para começar a usar o painel: só você vai
                   conhecê-la.
                 </p>
               </div>
             ) : (
               <div>
-                <h2 className="font-serif text-xl font-semibold text-admin-primary">
+                <h2 className="text-xl font-semibold text-foreground">
                   Criar nova senha
                 </h2>
-                <p className="mt-1 text-sm leading-relaxed text-admin-muted">
+                <p className="mt-1 text-sm leading-relaxed text-muted-foreground">
                   Sua senha atual continua valendo até você confirmar a nova. Ao
                   confirmar, as sessões abertas antes da troca são encerradas.
                 </p>
@@ -166,16 +166,13 @@ export default async function AcceptInvitePage({
             {erro === "1" && (
               <p
                 role="alert"
-                className="mt-3.5 rounded-lg bg-admin-error-bg px-3.5 py-2.5 text-sm font-semibold text-admin-error-text"
+                className="mt-4 rounded-lg border border-destructive/40 bg-destructive-soft px-4 py-3 text-sm font-medium text-destructive"
               >
                 As senhas não coincidem.
               </p>
             )}
 
-            <form
-              action={acceptInvite}
-              className="mt-3.5 flex flex-col gap-3.5"
-            >
+            <form action={acceptInvite} className="mt-4 flex flex-col gap-4">
               <input type="hidden" name="token" value={token} />
               <PasswordField
                 label="Nova senha"

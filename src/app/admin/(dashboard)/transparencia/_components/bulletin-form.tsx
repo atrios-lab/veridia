@@ -28,6 +28,12 @@ import {
   FUNDS_BY_STATE,
   type SupportedState,
 } from "@/core/transparency/rubrics.ts";
+import { Button } from "../../../_ui/button.tsx";
+import { Input } from "../../../_ui/input.tsx";
+import {
+  NativeSelect,
+  NativeSelectOption,
+} from "../../../_ui/native-select.tsx";
 import {
   LocalSignerPicker,
   useLocalSigner,
@@ -48,18 +54,12 @@ import {
 } from "../actions.ts";
 import { BulletinPreview } from "./bulletin-preview.tsx";
 
-const FIELD_CLASS =
-  "w-full rounded-[9px] border border-admin-input-border bg-admin-input-bg px-3.5 py-2.5 text-[13.5px] text-admin-text outline-none focus:border-admin-primary-soft";
-const ERROR_FIELD_CLASS =
-  "w-full rounded-[9px] border border-admin-error-border bg-admin-error-input-bg px-3.5 py-2.5 text-[13.5px] text-admin-text outline-none focus:border-admin-error-text";
-const LABEL_CLASS = "mb-1.5 block text-xs font-bold text-admin-primary";
+const LABEL_CLASS = "mb-1.5 block text-sm font-medium text-foreground";
 
 function FieldError({ message }: { message?: string }) {
   if (!message) return null;
   return (
-    <p className="mt-1.5 text-xs font-semibold text-admin-error-text">
-      {message}
-    </p>
+    <p className="mt-1.5 text-xs font-medium text-destructive">{message}</p>
   );
 }
 
@@ -84,15 +84,17 @@ function MoneyField({
     <div>
       <label htmlFor={id} className={LABEL_CLASS}>
         {label} (R$)
-        {hint && <span className="font-medium text-admin-faint"> {hint}</span>}
+        {hint && (
+          <span className="font-normal text-muted-foreground"> {hint}</span>
+        )}
       </label>
-      <input
+      <Input
         id={id}
         name={name}
         inputMode="decimal"
         value={value}
         onChange={(e) => onChange(e.target.value)}
-        className={error ? ERROR_FIELD_CLASS : FIELD_CLASS}
+        aria-invalid={error ? true : undefined}
       />
       <FieldError message={error} />
     </div>
@@ -135,16 +137,16 @@ function BulletinOption({ enabled }: { enabled: boolean }) {
         setShown(!enabled);
         formAction(formData);
       }}
-      className="flex items-start justify-between gap-4 rounded-[14px] border border-admin-border bg-admin-card p-5"
+      className="flex items-start justify-between gap-4 rounded-xl border border-border bg-card p-5"
     >
       <div>
         <p
           id="bulletin-option-label"
-          className="text-[13.5px] font-semibold text-admin-primary"
+          className="text-sm font-semibold text-foreground"
         >
           Publicar também arrecadação, despesas e saldo
         </p>
-        <p className="mt-1 max-w-[62ch] text-[12.5px] leading-relaxed text-admin-muted">
+        <p className="mt-1 max-w-prose text-sm text-muted-foreground">
           A norma exige só os valores recolhidos aos fundos. Arrecadação,
           despesas e saldo são da serventia e saem no site só se esta opção
           estiver ligada. Desligar tira esses números de todos os boletins, os
@@ -163,11 +165,11 @@ function BulletinOption({ enabled }: { enabled: boolean }) {
         aria-labelledby="bulletin-option-label"
         disabled={pending}
         className={`relative mt-0.5 h-5.5 w-10 flex-none rounded-full transition-colors ${
-          shown ? "bg-admin-primary" : "bg-admin-readonly-bg"
+          shown ? "bg-primary" : "bg-input"
         }`}
       >
         <span
-          className={`absolute top-0.5 h-4.5 w-4.5 rounded-full bg-white transition-all ${
+          className={`absolute top-0.5 h-4.5 w-4.5 rounded-full bg-background shadow-xs transition-all ${
             shown ? "left-5" : "left-0.5"
           }`}
         />
@@ -426,14 +428,14 @@ export function BulletinForm({
             submitted.current = period;
             startTransition(() => formAction(formData));
           }}
-          className="rounded-[14px] border border-admin-border bg-admin-card p-5"
+          className="rounded-xl border border-border bg-card p-5"
         >
-          <h3 className="font-serif text-[16px] font-semibold text-admin-primary">
+          <h3 className="text-lg font-semibold text-foreground">
             {published
               ? `Boletim de ${formatMonthYear(month, year)}`
               : "Novo boletim"}
           </h3>
-          <p className="mt-1 text-[12.5px] text-admin-muted">
+          <p className="mt-1 text-sm text-muted-foreground">
             {published
               ? "Este mês já está no site. Corrija o que precisar e publique de novo: o boletim publicado é substituído."
               : "Digite os valores do mês como aparecem nas guias de recolhimento."}{" "}
@@ -442,14 +444,14 @@ export function BulletinForm({
               : "Os totais são calculados automaticamente."}
           </p>
           {published?.legacy && (
-            <p className="mt-2.5 rounded-[10px] bg-admin-warning-bg px-3.5 py-2.5 text-[12.5px] font-semibold text-admin-warning-text">
+            <p className="mt-2.5 rounded-lg border border-warning/30 bg-warning-soft px-3.5 py-2.5 text-xs font-medium text-warning-text">
               Este mês foi publicado no formato antigo, com os tributos num
               valor só. Informe cada fundo e o ISS conforme as guias para
               publicar de novo.
             </p>
           )}
 
-          <div className="mt-3 rounded-[12px] border border-dashed border-admin-primary-soft bg-admin-input-bg px-3.5 py-2.5">
+          <div className="mt-3 rounded-lg border border-dashed border-primary bg-background px-3.5 py-2.5">
             <label htmlFor="b-relatorio" className={LABEL_CLASS}>
               Preencher pelo relatório do sistema (PDF de produtividade)
             </label>
@@ -460,10 +462,10 @@ export function BulletinForm({
               multiple
               form="b-relatorio-sozinho"
               onChange={(event) => void readReport(event.target.files)}
-              className="block w-full text-[12.5px] file:mr-3 file:rounded-full file:border-0 file:bg-admin-primary file:px-3.5 file:py-1.5 file:text-[12px] file:font-semibold file:text-white"
+              className="block w-full text-xs file:mr-3 file:rounded-md file:border-0 file:bg-primary file:px-3 file:py-1.5 file:text-xs file:font-medium file:text-primary-foreground"
             />
             <p
-              className="mt-1 text-[11.5px] text-admin-muted"
+              className="mt-1 text-xs text-muted-foreground"
               aria-live="polite"
             >
               {reading
@@ -480,32 +482,33 @@ export function BulletinForm({
               <label htmlFor="b-month" className={LABEL_CLASS}>
                 Mês
               </label>
-              <select
+              <NativeSelect
                 id="b-month"
                 name="month"
                 value={month}
                 onChange={(e) => setMonth(Number(e.target.value))}
-                className={fieldErrors.month ? ERROR_FIELD_CLASS : FIELD_CLASS}
+                aria-invalid={fieldErrors.month ? true : undefined}
+                className="w-full"
               >
                 {MONTHS_PT.map((label, i) => (
-                  <option key={label} value={i + 1}>
+                  <NativeSelectOption key={label} value={i + 1}>
                     {label}
-                  </option>
+                  </NativeSelectOption>
                 ))}
-              </select>
+              </NativeSelect>
               <FieldError message={fieldErrors.month} />
             </div>
             <div>
               <label htmlFor="b-year" className={LABEL_CLASS}>
                 Ano
               </label>
-              <input
+              <Input
                 id="b-year"
                 name="year"
                 type="number"
                 value={year}
                 onChange={(e) => setYear(Number(e.target.value))}
-                className={fieldErrors.year ? ERROR_FIELD_CLASS : FIELD_CLASS}
+                aria-invalid={fieldErrors.year ? true : undefined}
               />
               <FieldError message={fieldErrors.year} />
             </div>
@@ -516,15 +519,13 @@ export function BulletinForm({
               <label htmlFor="b-acts" className={LABEL_CLASS}>
                 Atos praticados
               </label>
-              <input
+              <Input
                 id="b-acts"
                 name="actsCount"
                 inputMode="numeric"
                 value={acts}
                 onChange={(e) => edit({ actsCount: e.target.value })}
-                className={
-                  fieldErrors.actsCount ? ERROR_FIELD_CLASS : FIELD_CLASS
-                }
+                aria-invalid={fieldErrors.actsCount ? true : undefined}
               />
               <FieldError message={fieldErrors.actsCount} />
             </div>
@@ -541,7 +542,7 @@ export function BulletinForm({
           </div>
 
           <fieldset className="mt-4">
-            <legend className="text-[11px] font-bold uppercase tracking-[0.08em] text-admin-accent">
+            <legend className="text-xs font-medium text-muted-foreground">
               Recolhido aos fundos
             </legend>
             <div className="mt-2 grid grid-cols-2 gap-3">
@@ -586,11 +587,11 @@ export function BulletinForm({
           {/* Calculated, never an input: the saldo is the one figure the
               office is promised it will not have to type or reconcile. */}
           {privateFigures && (
-            <div className="mt-4 flex items-center justify-between gap-3 rounded-[10px] bg-admin-success-bg px-4 py-3">
-              <span className="text-[12.5px] font-bold text-admin-success-text">
+            <div className="mt-4 flex items-center justify-between gap-3 rounded-lg bg-success-soft px-4 py-3">
+              <span className="text-xs font-medium text-success-text">
                 {BALANCE_LABEL}, calculado
               </span>
-              <span className="font-serif text-[17px] font-bold text-admin-success-text tabular-nums">
+              <span className="text-lg font-semibold text-success-text tabular-nums">
                 R$ {formatMoneyBRL(privateFigures.balanceCents)}
               </span>
             </div>
@@ -598,7 +599,7 @@ export function BulletinForm({
 
           <div className="mt-4">
             <span className={LABEL_CLASS}>Situação</span>
-            <div className="flex w-fit gap-1 rounded-[10px] border border-admin-input-border bg-admin-input-bg p-1">
+            <div className="flex w-fit gap-1 rounded-lg border border-input bg-background p-1">
               {(["preliminary", "consolidated"] as const).map((s) => (
                 <button
                   key={s}
@@ -607,8 +608,8 @@ export function BulletinForm({
                   aria-pressed={status === s}
                   className={
                     status === s
-                      ? "rounded-lg bg-admin-primary px-4 py-1.5 text-[12.5px] font-bold text-white"
-                      : "rounded-lg px-4 py-1.5 text-[12.5px] font-semibold text-admin-muted"
+                      ? "rounded-md bg-primary px-4 py-1.5 text-xs font-medium text-primary-foreground"
+                      : "rounded-md px-4 py-1.5 text-xs font-medium text-muted-foreground hover:text-foreground"
                   }
                 >
                   {s === "preliminary" ? "Preliminar" : "Consolidado"}
@@ -616,19 +617,19 @@ export function BulletinForm({
               ))}
             </div>
             <input type="hidden" name="bulletinStatus" value={status} />
-            <p className="mt-1.5 text-[11.5px] text-admin-faint">
+            <p className="mt-1.5 text-xs text-muted-foreground">
               Preliminar sai no site com a etiqueta "Dados preliminares".
             </p>
           </div>
 
           {readFromReport && (
-            <div className="mt-4 rounded-[12px] border border-admin-warning-soft-border bg-admin-warning-bg px-3.5 py-3 text-[12.5px] text-admin-warning-text">
+            <div className="mt-4 rounded-lg border border-warning/30 bg-warning-soft px-3.5 py-3 text-xs text-warning-text">
               <input type="hidden" name="lido" value="1" />
-              <p className="font-semibold">
+              <p className="font-medium">
                 Conferência: estes números foram lidos do relatório pelo
                 sistema.
               </p>
-              <label className="mt-1.5 flex items-start gap-2 font-semibold">
+              <label className="mt-1.5 flex items-start gap-2 font-medium">
                 <input
                   type="checkbox"
                   name="conferido"
@@ -642,8 +643,8 @@ export function BulletinForm({
           )}
 
           {canSign && (
-            <div className="mt-4 rounded-[12px] border border-admin-border px-3.5 py-3">
-              <label className="flex items-center gap-2 text-[13px] font-semibold text-admin-primary">
+            <div className="mt-4 rounded-lg bg-muted/50 px-3.5 py-3">
+              <label className="flex items-center gap-2 text-sm font-medium text-foreground">
                 <input
                   type="checkbox"
                   checked={signing}
@@ -665,28 +666,30 @@ export function BulletinForm({
                   {signMode === "a1" && (
                     <div className="grid grid-cols-1 gap-2.5 md:col-span-2 md:grid-cols-2">
                       <input type="hidden" name="assinar" value="a1" />
-                      <label className={LABEL_CLASS}>
+                      <label htmlFor="b-certificate" className={LABEL_CLASS}>
                         Certificado
-                        <select
+                        <NativeSelect
+                          id="b-certificate"
                           name="certificateId"
                           required
-                          className={`${FIELD_CLASS} mt-1.5`}
+                          className="mt-1.5 w-full font-normal"
                         >
                           {certificates.map((c) => (
-                            <option key={c.id} value={c.id}>
+                            <NativeSelectOption key={c.id} value={c.id}>
                               {c.label} · {c.holderName}
-                            </option>
+                            </NativeSelectOption>
                           ))}
-                        </select>
+                        </NativeSelect>
                       </label>
-                      <label className={LABEL_CLASS}>
+                      <label htmlFor="b-password" className={LABEL_CLASS}>
                         Senha do certificado
-                        <input
+                        <Input
+                          id="b-password"
                           name="password"
                           type="password"
                           autoComplete="off"
                           required
-                          className={`${FIELD_CLASS} mt-1.5`}
+                          className="mt-1.5 font-normal"
                         />
                       </label>
                     </div>
@@ -697,12 +700,12 @@ export function BulletinForm({
                   {tokenError && (
                     <p
                       role="alert"
-                      className="text-[12.5px] font-semibold text-admin-error-text md:col-span-2"
+                      className="text-xs font-medium text-destructive md:col-span-2"
                     >
                       {tokenError}
                     </p>
                   )}
-                  <p className="text-[11.5px] text-admin-muted md:col-span-2">
+                  <p className="text-xs text-muted-foreground md:col-span-2">
                     O boletim sobe no site já assinado, com o QR de verificação.
                     Se você corrigir algo depois, é só editar e publicar de novo
                     (e assinar de novo).
@@ -715,16 +718,17 @@ export function BulletinForm({
           {state.status === "error" && !Object.keys(fieldErrors).length && (
             <p
               role="alert"
-              className="mt-3 text-[12.5px] font-semibold text-admin-error-text"
+              className="mt-3 text-xs font-medium text-destructive"
             >
               {state.message}
             </p>
           )}
 
-          <button
+          <Button
             type="submit"
+            size="lg"
             disabled={pending || tokenBusy || (signing && !signMode)}
-            className="btn btn-admin-primary btn-lg mt-4 w-full"
+            className="mt-4 w-full"
           >
             {pending || tokenBusy
               ? signing
@@ -735,11 +739,11 @@ export function BulletinForm({
                 : published
                   ? "Publicar correção no site"
                   : "Publicar no site"}
-          </button>
+          </Button>
         </form>
 
         <div>
-          <p className="mb-2.5 text-[11px] font-bold uppercase tracking-[0.08em] text-admin-accent">
+          <p className="mb-2.5 text-xs font-medium text-muted-foreground">
             Pré-visualização do PDF · como sai no site
           </p>
           <BulletinPreview

@@ -2,6 +2,9 @@
 
 import { startTransition, useActionState, useEffect, useState } from "react";
 import { toast } from "sonner";
+import { Button } from "../../_ui/button.tsx";
+import { Input } from "../../_ui/input.tsx";
+import { Label } from "../../_ui/label.tsx";
 import {
   confirmOwnEmail,
   forgetOwnComputers,
@@ -10,9 +13,6 @@ import {
 } from "./actions.ts";
 
 const IDLE: OwnAccessState = { status: "idle" };
-const FIELD =
-  "rounded-[9px] border border-admin-input-border bg-admin-input-bg px-3.5 py-2.5 text-[13.5px] text-admin-text outline-none focus:border-admin-primary-soft";
-
 function keep(dispatch: (data: FormData) => void) {
   return (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -58,49 +58,42 @@ export function OwnAccessForms({
   }, [forgot]);
 
   return (
-    <section className="flex flex-col gap-4 rounded-[14px] border border-admin-border bg-admin-card px-5 py-4">
+    <section className="flex flex-col gap-4 rounded-xl border bg-card px-5 py-4">
       <form onSubmit={keep(request)} className="flex flex-wrap items-end gap-2">
-        <label className="flex min-w-0 flex-1 flex-col gap-1 text-xs font-bold text-admin-primary">
+        <Label className="min-w-0 flex-1 flex-col items-stretch gap-1.5 text-foreground">
           Meu e-mail de verificação
-          <input
+          <Input
             name="email"
             type="email"
             value={email}
             onChange={(event) => setEmail(event.target.value)}
             placeholder={`${accountEmail} (o da conta)`}
-            className={`${FIELD} font-normal`}
+            className="font-normal"
           />
-        </label>
-        <button
-          type="submit"
-          disabled={requesting}
-          className="btn btn-admin-primary btn-md"
-        >
+        </Label>
+        <Button type="submit" disabled={requesting}>
           {requesting
             ? "Enviando..."
             : email.trim()
               ? "Enviar código ao novo e-mail"
               : "Usar o e-mail da conta"}
-        </button>
+        </Button>
         {ownEmail && (
-          <button
+          <Button
             type="button"
             disabled={requesting}
             onClick={() => {
               setEmail("");
               startTransition(() => request(new FormData()));
             }}
-            className="btn btn-admin-secondary btn-md"
+            variant="outline"
           >
             Apagar
-          </button>
+          </Button>
         )}
       </form>
       {requested.status === "error" && (
-        <p
-          role="alert"
-          className="text-[12.5px] font-semibold text-admin-error-text"
-        >
+        <p role="alert" className="text-sm text-destructive">
           {requested.message}
         </p>
       )}
@@ -108,10 +101,10 @@ export function OwnAccessForms({
       {pendingEmail && (
         <form
           onSubmit={keep(confirm)}
-          className="rounded-[10px] bg-admin-input-bg px-3.5 py-3"
+          className="rounded-lg bg-muted/50 px-3.5 py-3"
         >
           <input type="hidden" name="email" value={pendingEmail} />
-          <p className="text-[12.5px] text-admin-text">
+          <p className="text-sm text-foreground">
             Enviamos um código para{" "}
             <strong>
               {requested.status === "code-sent" ? requested.to : pendingEmail}
@@ -119,7 +112,7 @@ export function OwnAccessForms({
             . Informe-o para confirmar o novo e-mail.
           </p>
           <div className="mt-2 flex flex-wrap items-end gap-2">
-            <input
+            <Input
               name="code"
               inputMode="numeric"
               autoComplete="one-time-code"
@@ -127,35 +120,25 @@ export function OwnAccessForms({
               placeholder="000 000"
               required
               aria-label="Código enviado ao novo e-mail"
-              className={`${FIELD} w-40 text-center tracking-[0.3em]`}
+              className="w-40 text-center tabular-nums"
             />
-            <button
-              type="submit"
-              disabled={confirming}
-              className="btn btn-admin-primary btn-md"
-            >
+            <Button type="submit" disabled={confirming}>
               {confirming ? "Conferindo..." : "Confirmar"}
-            </button>
+            </Button>
           </div>
           {confirmed.status === "error" && (
-            <p
-              role="alert"
-              className="mt-2 text-[12.5px] font-semibold text-admin-error-text"
-            >
+            <p role="alert" className="mt-2 text-sm text-destructive">
               {confirmed.message}
             </p>
           )}
         </form>
       )}
 
-      <form
-        onSubmit={keep(forget)}
-        className="border-t border-admin-border pt-3"
-      >
+      <form onSubmit={keep(forget)} className="border-t pt-3">
         <button
           type="submit"
           disabled={forgetting}
-          className="text-[12.5px] font-semibold text-admin-muted underline hover:text-admin-primary"
+          className="text-xs font-medium text-muted-foreground underline hover:text-foreground"
         >
           {forgetting
             ? "Aplicando..."

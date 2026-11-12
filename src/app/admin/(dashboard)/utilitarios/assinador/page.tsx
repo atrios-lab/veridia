@@ -15,6 +15,8 @@ import {
 import { getTenant } from "@/lib/tenant.ts";
 import { AdminIcon } from "../../../_components/icon.tsx";
 import { AdminPageHeader } from "../../../_components/page-header.tsx";
+import { Badge } from "../../../_ui/badge.tsx";
+import { buttonVariants } from "../../../_ui/button.tsx";
 import {
   RemoveDocumentButton,
   RestoreDocumentButton,
@@ -52,9 +54,9 @@ export default async function SignerPage({
   return (
     <>
       <AdminPageHeader maxWidth={1000} title="Assinador digital" />
-      <main className="flex max-w-[1000px] flex-col gap-4.5 px-[30px] py-7">
+      <main className="flex max-w-[1000px] flex-col gap-4.5 px-4 py-7 md:px-8">
         {query.retirado === "1" && (
-          <p className="rounded-[12px] bg-admin-success-bg px-4 py-3 text-[13px] font-semibold text-admin-success-text">
+          <p className="rounded-lg border border-success/30 bg-success-soft px-4 py-3 text-sm font-medium text-success-text">
             Documento excluído da lista. O registro da assinatura continua
             respondendo à verificação; ele pode voltar em "Excluídos".
           </p>
@@ -71,12 +73,12 @@ export default async function SignerPage({
         />
         {certificates.length === 0 &&
           can(role, "certificates.manage", granted) && (
-            <p className="-mt-2 text-[12px] text-admin-muted">
+            <p className="-mt-2 text-xs text-muted-foreground">
               Para assinar com certificado A1, cadastre o arquivo e marque quem
               pode assinar em{" "}
               <Link
                 href="/admin/configuracoes/certificados"
-                className="font-semibold text-admin-primary underline"
+                className="font-medium text-primary underline underline-offset-4"
               >
                 Configurações › Certificados
               </Link>
@@ -89,25 +91,25 @@ export default async function SignerPage({
             view, asked for on purpose, opens already. */}
         <details
           open={showRemoved}
-          className="group rounded-[14px] border border-admin-border bg-admin-card px-5 py-4"
+          className="group rounded-xl border bg-card px-5 py-4"
         >
           <summary className="flex cursor-pointer list-none items-center justify-between gap-2 [&::-webkit-details-marker]:hidden">
             <span className="flex items-center gap-2">
               <AdminIcon
                 name="chevronDown"
-                className="h-4 w-4 -rotate-90 text-admin-primary transition-transform group-open:rotate-0"
+                className="h-4 w-4 -rotate-90 text-muted-foreground transition-transform group-open:rotate-0"
               />
-              <span className="font-serif text-[17px] font-semibold text-admin-primary">
+              <span className="text-lg font-semibold text-foreground">
                 {showRemoved ? "Excluídos da lista" : "Documentos assinados"}
               </span>
-              <span className="rounded-full bg-admin-input-bg px-2 py-0.5 text-[11.5px] font-bold text-admin-muted">
+              <Badge variant="secondary" className="tabular-nums">
                 {documents.length}
-              </span>
+              </Badge>
             </span>
-            <span className="text-[12px] font-semibold text-admin-muted group-open:hidden">
+            <span className="text-xs font-medium text-muted-foreground group-open:hidden">
               Mostrar
             </span>
-            <span className="hidden text-[12px] font-semibold text-admin-muted group-open:inline">
+            <span className="hidden text-xs font-medium text-muted-foreground group-open:inline">
               Recolher
             </span>
           </summary>
@@ -120,42 +122,42 @@ export default async function SignerPage({
               }
               className={
                 showRemoved
-                  ? "inline-flex min-h-10 items-center gap-1.5 rounded-full border border-admin-primary bg-admin-primary/10 px-4 text-[13.5px] font-semibold text-admin-primary hover:bg-admin-primary hover:text-white"
-                  : "text-[12.5px] font-semibold text-admin-muted underline hover:text-admin-primary"
+                  ? buttonVariants({ variant: "outline" })
+                  : "text-xs font-medium text-muted-foreground underline underline-offset-4 hover:text-primary"
               }
             >
               {showRemoved ? "← Voltar aos assinados" : "Ver excluídos"}
             </Link>
           </div>
-          <p className="mt-1 text-[12.5px] text-admin-muted">
+          <p className="mt-1 text-xs text-muted-foreground">
             {showRemoved
               ? "Não abrem mais, aqui nem na página pública. O registro da assinatura continua respondendo à verificação."
               : "Clique no título para ver os detalhes, ou em Abrir para ler e imprimir de novo. O arquivo assinado fica disponível por 6 meses; o registro e o manifesto, para sempre."}
           </p>
           {documents.length === 0 ? (
-            <p className="mt-3 text-[13px] text-admin-muted">
+            <p className="mt-3 text-sm text-muted-foreground">
               {showRemoved
                 ? "Nenhum documento excluído."
                 : "Nenhum documento assinado ainda."}
             </p>
           ) : (
-            <ul className="mt-3 flex flex-col divide-y divide-admin-border">
+            <ul className="mt-3 flex flex-col divide-y">
               {documents.map((document) => {
                 const mayRemove =
                   holder || document.createdBy === session.user.id;
                 return (
                   <li
                     key={document.id}
-                    className="flex flex-wrap items-center justify-between gap-3 py-3 text-[13px]"
+                    className="flex flex-wrap items-center justify-between gap-3 py-3 text-sm"
                   >
                     <div className="min-w-0 flex-1">
                       <Link
                         href={`/admin/utilitarios/assinador/${document.id}`}
-                        className="font-semibold text-admin-primary hover:underline [overflow-wrap:anywhere]"
+                        className="font-medium text-primary underline-offset-4 hover:underline [overflow-wrap:anywhere]"
                       >
                         {document.title}
                       </Link>
-                      <p className="text-[12px] text-admin-muted [overflow-wrap:anywhere]">
+                      <p className="text-xs text-muted-foreground [overflow-wrap:anywhere]">
                         {formatVerificationCode(document.code)} ·{" "}
                         {document.signatures
                           .map((s) => s.holderName)
@@ -175,7 +177,10 @@ export default async function SignerPage({
                           href={`/admin/utilitarios/assinador/${document.id}/arquivo?abrir=1`}
                           target="_blank"
                           rel="noopener"
-                          className="btn btn-admin-secondary btn-sm"
+                          className={buttonVariants({
+                            variant: "outline",
+                            size: "sm",
+                          })}
                         >
                           Abrir
                         </a>

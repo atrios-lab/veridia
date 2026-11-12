@@ -15,6 +15,8 @@ import type {
   PrenotationItems,
   ReadFeeItem,
 } from "@/core/fees/prenotation.ts";
+import { Button, buttonVariants } from "../../../../_ui/button.tsx";
+import { Input } from "../../../../_ui/input.tsx";
 import {
   type FeeTableReadState,
   readFeeTablePdfAction,
@@ -22,10 +24,8 @@ import {
   saveFeeTableAction,
 } from "../../actions.ts";
 
-const inputClass =
-  "w-full rounded-lg border border-admin-border bg-admin-input-bg px-3 py-2 text-[13px] text-admin-text outline-none focus:border-admin-accent aria-[invalid=true]:border-admin-alert";
-const cardClass =
-  "rounded-[14px] border border-admin-border bg-admin-card px-5 py-4";
+const labelClass = "flex flex-col gap-1.5 text-sm font-medium text-foreground";
+const cardClass = "rounded-xl border border-border bg-card px-5 py-4";
 
 /** What the reading says about one registry, under its fields. */
 function readNote(item: ReadFeeItem | undefined): {
@@ -198,10 +198,10 @@ export function FeeTableEditor({
 
       <div className="flex flex-col gap-4.5">
         <section className={cardClass}>
-          <h2 className="font-serif text-[16px] font-semibold text-admin-primary">
+          <h2 className="text-lg font-semibold text-foreground">
             Valores da prenotação
           </h2>
-          <p className="mt-1 text-[12.5px] leading-relaxed text-admin-muted">
+          <p className="mt-1 text-sm text-muted-foreground">
             Informe o código e o <strong>total</strong> de cada prenotação, como
             estão na tabela (por exemplo, Imóveis: código 2600103, total 57,90).
             É o valor cobrado quando o cidadão pede a prenotação (análise) para
@@ -224,13 +224,17 @@ export function FeeTableEditor({
           const error = (key: keyof Fields) => errors[`${attribution}.${key}`];
           return (
             <fieldset key={attribution} className={cardClass}>
-              <legend className="float-left w-full text-[14px] font-bold text-admin-primary">
+              <legend className="float-left w-full text-base font-semibold text-foreground">
                 {label}
               </legend>
               <div className="clear-both grid gap-3 pt-3 sm:grid-cols-[150px_1fr_130px]">
-                <label className="flex flex-col gap-1 text-[12px] font-semibold text-admin-muted">
+                <label
+                  htmlFor={`prenotacao-${attribution}-code`}
+                  className={labelClass}
+                >
                   Código
-                  <input
+                  <Input
+                    id={`prenotacao-${attribution}-code`}
                     name={`${attribution}.code`}
                     value={value.code}
                     onChange={(event) =>
@@ -239,17 +243,20 @@ export function FeeTableEditor({
                     inputMode="numeric"
                     placeholder="2600103"
                     aria-invalid={Boolean(error("code"))}
-                    className={inputClass}
                   />
                   {error("code") && (
-                    <span className="font-normal text-admin-alert">
+                    <span className="text-xs font-normal text-destructive">
                       {error("code")}
                     </span>
                   )}
                 </label>
-                <label className="flex flex-col gap-1 text-[12px] font-semibold text-admin-muted">
+                <label
+                  htmlFor={`prenotacao-${attribution}-description`}
+                  className={labelClass}
+                >
                   Descrição na tabela
-                  <input
+                  <Input
+                    id={`prenotacao-${attribution}-description`}
                     name={`${attribution}.description`}
                     value={value.description}
                     onChange={(event) =>
@@ -257,17 +264,20 @@ export function FeeTableEditor({
                     }
                     placeholder="Prenotação"
                     aria-invalid={Boolean(error("description"))}
-                    className={inputClass}
                   />
                   {error("description") && (
-                    <span className="font-normal text-admin-alert">
+                    <span className="text-xs font-normal text-destructive">
                       {error("description")}
                     </span>
                   )}
                 </label>
-                <label className="flex flex-col gap-1 text-[12px] font-semibold text-admin-muted">
+                <label
+                  htmlFor={`prenotacao-${attribution}-total`}
+                  className={labelClass}
+                >
                   Total (R$)
-                  <input
+                  <Input
+                    id={`prenotacao-${attribution}-total`}
                     name={`${attribution}.total`}
                     value={value.total}
                     onChange={(event) =>
@@ -276,10 +286,10 @@ export function FeeTableEditor({
                     inputMode="decimal"
                     placeholder="57,90"
                     aria-invalid={Boolean(error("total"))}
-                    className={`${inputClass} tabular-nums`}
+                    className="tabular-nums"
                   />
                   {error("total") && (
-                    <span className="font-normal text-admin-alert">
+                    <span className="text-xs font-normal text-destructive">
                       {error("total")}
                     </span>
                   )}
@@ -287,13 +297,13 @@ export function FeeTableEditor({
               </div>
               {note && (
                 <p
-                  className={`mt-2 text-[12px] ${note.warn ? "font-semibold text-admin-alert" : "text-admin-muted"}`}
+                  className={`mt-2 text-xs ${note.warn ? "font-medium text-destructive" : "text-muted-foreground"}`}
                 >
                   {note.text}
                 </p>
               )}
               {otherCode && (
-                <p className="mt-2 text-[12px] font-semibold text-admin-alert">
+                <p className="mt-2 text-xs font-medium text-destructive">
                   Atenção: na tabela do estado, a prenotação de {label} tem o
                   código {expectedCode}. Confira se {value.code.trim()} é mesmo
                   o item certo.
@@ -306,10 +316,10 @@ export function FeeTableEditor({
 
       <aside className="flex flex-col gap-4.5 lg:sticky lg:top-4">
         <section className={cardClass}>
-          <h2 className="font-serif text-[16px] font-semibold text-admin-primary">
+          <h2 className="text-lg font-semibold text-foreground">
             {inForce ? "Tabela vigente" : "Tabela fora de vigência"}
           </h2>
-          <p className="mt-1 text-[12.5px] leading-relaxed text-admin-muted">
+          <p className="mt-1 text-sm text-muted-foreground">
             {inForce
               ? "É desta tabela que o site tira a prenotação agora. Ao salvar, o valor novo já vale para os próximos pedidos."
               : status !== "published"
@@ -317,7 +327,7 @@ export function FeeTableEditor({
                 : `O site cobra pela tabela que está acima na lista${inForceTitle ? ` (${inForceTitle})` : ""}. Para usar esta, mova-a para cima das outras tabelas de emolumentos.`}
           </p>
           {source && (
-            <p className="mt-2 text-[12px] text-admin-faint">
+            <p className="mt-2 text-xs text-muted-foreground">
               {source === "pdf"
                 ? "Valores lidos do PDF e ainda não conferidos"
                 : "Valores conferidos pelo cartório"}
@@ -327,35 +337,34 @@ export function FeeTableEditor({
         </section>
 
         <section className={cardClass}>
-          <h2 className="font-serif text-[16px] font-semibold text-admin-primary">
-            Ler do PDF
-          </h2>
-          <p className="mt-1 text-[12.5px] leading-relaxed text-admin-muted">
+          <h2 className="text-lg font-semibold text-foreground">Ler do PDF</h2>
+          <p className="mt-1 text-sm text-muted-foreground">
             Lê a tabela linha a linha pelo código de cada prenotação
             {expectedCodes ? ` (${expectedCodes})` : ""}, pega o total e confere
             se as parcelas somam esse total. Nada é salvo antes de você
             conferir.
           </p>
           <div className="mt-3 flex flex-wrap gap-2">
-            <button
+            <Button
               type="button"
+              variant="outline"
+              size="sm"
               onClick={readPdf}
               disabled={!isPdf || reading}
-              className="btn btn-admin-secondary btn-sm"
             >
               {reading ? "Lendo o PDF..." : "Ler do PDF"}
-            </button>
+            </Button>
             <a
               href={pdfHref}
               target="_blank"
               rel="noopener"
-              className="btn btn-admin-ghost btn-sm"
+              className={buttonVariants({ variant: "ghost", size: "sm" })}
             >
               Abrir a tabela
             </a>
           </div>
           {readState.status === "error" && (
-            <p role="alert" className="mt-2 text-[12.5px] text-admin-alert">
+            <p role="alert" className="mt-2 text-xs text-destructive">
               {readState.message}
             </p>
           )}
@@ -364,23 +373,19 @@ export function FeeTableEditor({
         {saveState.status === "error" && (
           <p
             role="alert"
-            className="rounded-lg border border-admin-alert px-3.5 py-2.5 text-[13px] font-semibold text-admin-alert"
+            className="rounded-lg border border-destructive/40 bg-destructive-soft px-3.5 py-2.5 text-sm font-medium text-destructive"
           >
             {saveState.message}
           </p>
         )}
 
         <div className="flex flex-col gap-2">
-          <button
-            type="submit"
-            disabled={saving}
-            className="btn btn-admin-primary btn-md"
-          >
+          <Button type="submit" size="lg" disabled={saving}>
             {saving ? "Salvando..." : "Salvar valores"}
-          </button>
+          </Button>
           <Link
             href="/admin/transparencia"
-            className="btn btn-admin-secondary btn-md"
+            className={buttonVariants({ variant: "outline" })}
           >
             Voltar à transparência
           </Link>

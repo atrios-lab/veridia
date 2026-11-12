@@ -19,7 +19,7 @@ export default async function NewLotPage() {
         }}
         description="Um lote é uma sequência de folhas numeradas que chegou à serventia. Informe a primeira e a última folha: o sistema conta as folhas e controla o estoque."
       />
-      <main className="flex max-w-[900px] flex-col gap-4 px-[30px] py-7 max-md:px-4">
+      <main className="flex max-w-[900px] flex-col gap-4 px-4 py-7 md:px-8">
         <LotForm
           kinds={PAPER_KINDS.map((value) => ({
             value,

@@ -2,6 +2,8 @@
 
 import { useRef } from "react";
 import { toast } from "sonner";
+import { Button } from "../../../../../_ui/button.tsx";
+import { Input } from "../../../../../_ui/input.tsx";
 
 /**
  * A cohort's link, on screen and one click from the clipboard. Shown and
@@ -13,15 +15,15 @@ export function CopyLink({ url }: { url: string }) {
   const field = useRef<HTMLInputElement>(null);
   return (
     <div className="flex min-w-0 items-center gap-2">
-      <input
+      <Input
         ref={field}
         readOnly
         value={url}
         aria-label="Link da turma"
         onFocus={(event) => event.currentTarget.select()}
-        className="min-w-0 flex-1 rounded-[9px] border border-admin-input-border bg-admin-input-bg px-3 py-2 font-mono text-[12.5px] text-admin-text"
+        className="min-w-0 flex-1 font-mono text-xs md:text-xs"
       />
-      <button
+      <Button
         type="button"
         onClick={async () => {
           try {
@@ -32,10 +34,12 @@ export function CopyLink({ url }: { url: string }) {
             toast.error("Não deu para copiar. Selecione o link e copie.");
           }
         }}
-        className="btn btn-admin-secondary btn-sm shrink-0"
+        variant="outline"
+        size="sm"
+        className="shrink-0"
       >
         Copiar
-      </button>
+      </Button>
     </div>
   );
 }

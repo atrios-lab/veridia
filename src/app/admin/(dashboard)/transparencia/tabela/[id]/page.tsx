@@ -56,7 +56,7 @@ export default async function FeeTablePage({
         title={`Prenotação · ${document.title}`}
         back={{ href: "/admin/transparencia", label: "Transparência" }}
       />
-      <main className="px-[30px] py-7">
+      <main className="px-4 pt-6 pb-8 md:px-8">
         <FeeTableEditor
           id={id}
           pdfHref={`/admin/transparencia/documento?id=${id}`}

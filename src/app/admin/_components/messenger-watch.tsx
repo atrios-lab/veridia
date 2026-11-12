@@ -9,6 +9,9 @@ import { NUDGE_SOUND } from "@/core/chat/alerts.ts";
 import { LONG_TEXT_MAX } from "@/core/text-limits.ts";
 import { playSound, unlockAudio } from "../../_components/chat-sound.ts";
 import { shakeElement, vibrate } from "../../_components/shake.ts";
+import { Button, buttonVariants } from "../_ui/button.tsx";
+import { cn } from "../_ui/cn.ts";
+import { Textarea } from "../_ui/textarea.tsx";
 import {
   pollInbox,
   pollMessenger,
@@ -126,23 +129,23 @@ function MiniChat({
   return (
     <section
       aria-label={`Conversa com ${caller.senderName}`}
-      className="pointer-events-auto flex h-[440px] max-h-[75vh] w-[340px] max-w-[calc(100vw-2rem)] flex-col overflow-hidden rounded-[14px] border border-admin-border bg-admin-card shadow-2xl"
+      className="pointer-events-auto flex h-110 max-h-[75vh] w-85 max-w-[calc(100vw-2rem)] flex-col overflow-hidden rounded-xl border bg-card text-card-foreground shadow-lg"
     >
       <header
         onPointerDown={onDragStart}
         title="Arraste para mudar de lugar"
         className="flex cursor-move touch-none select-none items-center gap-1.5 bg-gradient-to-r from-msg-verde-from to-msg-verde-to px-3 py-2 text-white"
       >
-        <span aria-hidden="true" className="text-[12px] opacity-70">
+        <span aria-hidden="true" className="text-xs opacity-70">
           ⠿
         </span>
-        <span className="min-w-0 flex-1 truncate text-[13px] font-semibold">
+        <span className="min-w-0 flex-1 truncate text-sm font-semibold">
           {caller.senderName}
         </span>
         <Link
           href={`/admin/mensagens?com=${caller.senderId}`}
           onPointerDown={(event) => event.stopPropagation()}
-          className="rounded-md bg-white/15 px-1.5 py-0.5 text-[11px] font-semibold hover:bg-white/25"
+          className="rounded-md bg-white/15 px-1.5 py-0.5 text-xs font-medium hover:bg-white/25"
           title="Abrir em Mensagens internas"
         >
           Abrir tudo
@@ -153,11 +156,11 @@ function MiniChat({
           onClick={onMinimize}
           aria-label="Minimizar a conversa"
           title="Minimizar (reabre quando chegar mensagem)"
-          className="flex h-6 w-6 items-center justify-center rounded-md hover:bg-white/20"
+          className="flex size-6 cursor-pointer items-center justify-center rounded-md hover:bg-white/20"
         >
           <span
             aria-hidden="true"
-            className="block h-0.5 w-3 rounded bg-white"
+            className="block h-0.5 w-3 rounded-sm bg-white"
           />
         </button>
         <button
@@ -165,7 +168,7 @@ function MiniChat({
           onPointerDown={(event) => event.stopPropagation()}
           onClick={onClose}
           aria-label="Fechar a conversa flutuante"
-          className="rounded-md px-1.5 text-[16px] leading-none hover:bg-white/20"
+          className="cursor-pointer rounded-md px-1.5 text-base leading-none hover:bg-white/20"
         >
           ×
         </button>
@@ -186,23 +189,26 @@ function MiniChat({
             return message.kind === "chamar" ? (
               <p
                 key={message.id}
-                className="my-1.5 text-center text-[11.5px] font-semibold italic text-msg-busy"
+                className="my-1.5 text-center text-xs font-medium text-msg-busy italic"
               >
                 *** {mine ? "Você" : message.senderName} chamou a atenção! ***
               </p>
             ) : (
               <div
                 key={message.id}
-                className={`my-1.5 rounded-[10px] px-2.5 py-1.5 text-[12.5px] ${mine ? "ml-6 bg-msg-mine" : "mr-6 bg-admin-card"}`}
+                className={cn(
+                  "my-1.5 rounded-lg px-2.5 py-1.5 text-sm",
+                  mine ? "ml-6 bg-msg-mine" : "mr-6 bg-card",
+                )}
               >
-                <p className="text-[11px] text-admin-muted">
-                  <strong className="text-admin-primary">
+                <p className="text-xs text-muted-foreground">
+                  <strong className="font-semibold text-foreground">
                     {mine ? "Você" : message.senderName}
                   </strong>{" "}
                   · {time(message.createdAt)}
                 </p>
                 {message.kind === "texto" ? (
-                  <p className="whitespace-pre-wrap text-admin-text [overflow-wrap:anywhere]">
+                  <p className="whitespace-pre-wrap text-foreground [overflow-wrap:anywhere]">
                     {message.body}
                   </p>
                 ) : message.kind === "audio" ? (
@@ -218,7 +224,7 @@ function MiniChat({
                     href={href}
                     target="_blank"
                     rel="noopener"
-                    className="font-semibold text-admin-primary underline [overflow-wrap:anywhere]"
+                    className="font-medium text-primary underline [overflow-wrap:anywhere]"
                   >
                     📎 {message.fileName}
                   </a>
@@ -227,10 +233,13 @@ function MiniChat({
             );
           })}
       </div>
-      <div className="border-t border-admin-border p-2">
+      <div className="border-t p-2">
         <div className="mb-1.5 flex items-center gap-1">
           <label
-            className="cursor-pointer rounded-md px-2 py-1 text-[12px] font-semibold text-admin-primary hover:bg-admin-input-bg"
+            className={cn(
+              buttonVariants({ variant: "ghost", size: "xs" }),
+              "cursor-pointer text-primary has-focus-visible:ring-3 has-focus-visible:ring-ring/50",
+            )}
             title="Enviar arquivo ou PDF (até 4 MB)"
           >
             📎 Arquivo
@@ -251,19 +260,24 @@ function MiniChat({
             onClick={() =>
               recorder.recording ? recorder.stop() : void recorder.start()
             }
-            className={`rounded-md px-2 py-1 text-[12px] font-semibold ${recorder.recording ? "animate-pulse bg-msg-busy text-white" : "text-admin-primary hover:bg-admin-input-bg"}`}
+            className={cn(
+              buttonVariants({ variant: "ghost", size: "xs" }),
+              recorder.recording
+                ? "animate-pulse bg-msg-busy text-white hover:bg-msg-busy hover:text-white"
+                : "text-primary",
+            )}
           >
             {recorder.recording ? "⏹ Parar e enviar" : "🎤 Áudio"}
           </button>
           {busy && (
-            <span className="text-[11px] text-admin-muted">Enviando...</span>
+            <span className="text-xs text-muted-foreground">Enviando...</span>
           )}
         </div>
         {recorder.mic === "denied" && (
           <MicHelp onRetry={() => void recorder.allow()} />
         )}
         <div className="flex items-end gap-1.5">
-          <textarea
+          <Textarea
             value={text}
             onChange={(event) => setText(event.target.value)}
             onKeyDown={(event) => {
@@ -276,16 +290,17 @@ function MiniChat({
             maxLength={LONG_TEXT_MAX}
             aria-label="Responder"
             placeholder="Responder (Enter envia)"
-            className="min-w-0 flex-1 resize-none rounded-[9px] border border-admin-input-border bg-admin-input-bg px-2.5 py-1.5 text-[12.5px] text-admin-text outline-none focus:border-admin-primary-soft"
+            className="field-sizing-fixed min-h-0 min-w-0 flex-1 resize-none px-2.5 py-1.5"
           />
-          <button
+          <Button
             type="button"
+            size="sm"
             onClick={() => void send()}
             disabled={busy || !text.trim()}
-            className="btn btn-admin-primary btn-sm shrink-0"
+            className="shrink-0"
           >
             Enviar
-          </button>
+          </Button>
         </div>
       </div>
     </section>
@@ -525,34 +540,34 @@ export function MessengerWatch({
               if (!wasDragged()) setMinimized(false);
             }}
             title="Abrir a conversa (arraste para mudar de lugar)"
-            className="pointer-events-auto flex max-w-[260px] cursor-pointer items-center gap-2 rounded-full bg-gradient-to-r from-msg-verde-from to-msg-verde-to px-3.5 py-2 text-[12.5px] font-semibold text-white shadow-xl"
+            className="pointer-events-auto flex max-w-65 cursor-pointer items-center gap-2 rounded-full bg-gradient-to-r from-msg-verde-from to-msg-verde-to px-3.5 py-2 text-sm font-medium text-white shadow-lg"
           >
             💬 <span className="truncate">{open.senderName}</span>
-            <span className="text-[11px] opacity-80">(minimizado)</span>
+            <span className="text-xs opacity-80">(minimizado)</span>
           </button>
         )}
         {showBalloon && (
-          <div className="pointer-events-auto w-[300px] max-w-[calc(100vw-2rem)] overflow-hidden rounded-[14px] border-2 border-msg-busy bg-admin-card shadow-xl">
-            <span className="flex items-center justify-between bg-gradient-to-r from-msg-verde-from to-msg-verde-to px-3 py-1 text-[11.5px] font-semibold text-white">
+          <div className="pointer-events-auto w-75 max-w-[calc(100vw-2rem)] overflow-hidden rounded-xl border-2 border-msg-busy bg-card text-card-foreground shadow-lg">
+            <span className="flex items-center justify-between bg-gradient-to-r from-msg-verde-from to-msg-verde-to px-3 py-1 text-xs font-medium text-white">
               Mensagens internas
-              <span className="rounded-full bg-white/25 px-1.5 text-[10.5px]">
+              <span className="rounded-full bg-white/25 px-1.5 text-xs">
                 {unread} sem ler
               </span>
             </span>
-            <span className="block px-3 pt-2.5 text-[12.5px] text-admin-text">
+            <span className="block px-3 pt-2.5 text-sm text-foreground">
               {caller ? (
                 <>
-                  <strong className="text-admin-primary">
+                  <strong className="font-semibold text-foreground">
                     {caller.senderName}
                   </strong>{" "}
                   {caller.nudge ? (
-                    <span className="font-semibold text-msg-busy">
+                    <span className="font-medium text-msg-busy">
                       chamou a sua atenção!
                     </span>
                   ) : (
                     <>
                       diz:
-                      <span className="mt-0.5 block truncate text-admin-muted">
+                      <span className="mt-0.5 block truncate text-muted-foreground">
                         {caller.preview}
                       </span>
                     </>
@@ -564,17 +579,13 @@ export function MessengerWatch({
             </span>
             <span className="flex justify-end gap-2 px-3 pt-2 pb-2.5">
               {caller ? (
-                <button
-                  type="button"
-                  onClick={() => setOpen(caller)}
-                  className="btn btn-admin-primary btn-sm"
-                >
+                <Button type="button" size="sm" onClick={() => setOpen(caller)}>
                   Responder aqui
-                </button>
+                </Button>
               ) : (
                 <Link
                   href="/admin/mensagens"
-                  className="btn btn-admin-primary btn-sm"
+                  className={buttonVariants({ size: "sm" })}
                 >
                   Abrir mensagens
                 </Link>
@@ -588,10 +599,10 @@ export function MessengerWatch({
             type="button"
             onClick={() => (caller ? setOpen(caller) : null)}
             aria-label={`${unread} mensagens internas sem ler`}
-            className="pointer-events-auto relative flex h-14 w-14 items-center justify-center rounded-full bg-gradient-to-br from-msg-verde-from to-msg-verde-to text-[24px] text-white shadow-xl motion-safe:animate-bounce"
+            className="pointer-events-auto relative flex size-14 cursor-pointer items-center justify-center rounded-full bg-gradient-to-br from-msg-verde-from to-msg-verde-to text-2xl text-white shadow-lg motion-safe:animate-bounce"
           >
             💬
-            <span className="absolute -top-1 -right-1 inline-flex h-6 min-w-6 items-center justify-center rounded-full border-2 border-white bg-msg-busy px-1 text-[11px] font-bold">
+            <span className="absolute -top-1 -right-1 inline-flex h-6 min-w-6 items-center justify-center rounded-full border-2 border-white bg-msg-busy px-1 text-xs font-semibold">
               {unread}
             </span>
           </button>
@@ -663,14 +674,14 @@ function ArrivalNotice({
     .join("")
     .toUpperCase();
   return (
-    <div className="pointer-events-auto w-[280px] max-w-[calc(100vw-2rem)] overflow-hidden rounded-[12px] border border-admin-border bg-admin-card shadow-xl motion-safe:animate-notice-rise">
-      <div className="flex items-center justify-between bg-gradient-to-r from-msg-verde-from to-msg-verde-to px-3 py-1 text-[11.5px] font-semibold text-white">
+    <div className="pointer-events-auto w-70 max-w-[calc(100vw-2rem)] overflow-hidden rounded-xl border bg-card text-card-foreground shadow-lg motion-safe:animate-notice-rise">
+      <div className="flex items-center justify-between bg-gradient-to-r from-msg-verde-from to-msg-verde-to px-3 py-1 text-xs font-medium text-white">
         Mensagens internas
         <button
           type="button"
           onClick={onClose}
           aria-label="Fechar aviso"
-          className="rounded px-1 text-[15px] leading-none hover:bg-white/20"
+          className="cursor-pointer rounded-sm px-1 text-base leading-none hover:bg-white/20"
         >
           ×
         </button>
@@ -678,9 +689,9 @@ function ArrivalNotice({
       <Link
         href={`/admin/mensagens?com=${arrival.userId}`}
         onClick={onClose}
-        className="flex items-center gap-3 px-3 py-2.5 hover:bg-admin-input-bg"
+        className="flex items-center gap-3 px-3 py-2.5 hover:bg-muted"
       >
-        <span className="relative flex h-10 w-10 flex-none items-center justify-center overflow-hidden rounded-[10px] bg-admin-primary text-[13px] font-bold text-white">
+        <span className="relative flex size-10 flex-none items-center justify-center overflow-hidden rounded-lg bg-primary text-sm font-semibold text-primary-foreground">
           {/* The initials stay under the photo while it loads. */}
           {initials}
           {arrival.photo && (
@@ -693,8 +704,8 @@ function ArrivalNotice({
           )}
           <span className="absolute right-0.5 bottom-0.5 h-2.5 w-2.5 rounded-full border-2 border-white bg-msg-online" />
         </span>
-        <span className="min-w-0 text-[12.5px] leading-snug text-admin-text">
-          <strong className="block truncate text-admin-primary">
+        <span className="min-w-0 text-sm leading-snug text-foreground">
+          <strong className="block truncate font-semibold">
             {arrival.name}
           </strong>
           acabou de entrar e está online.

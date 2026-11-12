@@ -7,6 +7,7 @@ import {
   type AttendanceChannel,
   CHANNEL_NAMES,
 } from "@/core/scheduling/agenda.ts";
+import { Button } from "../../../_ui/button.tsx";
 import { type ActionState, saveDayChannels } from "../actions.ts";
 
 /**
@@ -61,11 +62,11 @@ export function DayChannelsCard({
       .join(", ");
 
   return (
-    <section className="rounded-[14px] border border-admin-border bg-admin-card px-5 py-4">
-      <h3 className="text-[13px] font-bold text-admin-primary">
+    <section className="rounded-xl border bg-card px-5 py-4">
+      <h3 className="text-sm font-semibold text-foreground">
         Como o tabelião atende em {dateLabel}
       </h3>
-      <p className="mt-1 text-[12.5px] leading-relaxed text-admin-muted">
+      <p className="mt-1 text-xs leading-relaxed text-muted-foreground">
         {own
           ? `Escolha só deste dia. O padrão da semana é ${names(weekdayChannels)}.`
           : "Segue o padrão do dia da semana. Mude aqui para valer só nesta data."}
@@ -75,7 +76,7 @@ export function DayChannelsCard({
         {ATTENDANCE_CHANNELS.map((channel) => (
           <label
             key={channel}
-            className="flex cursor-pointer items-start gap-2 text-[12.5px] text-admin-text"
+            className="flex cursor-pointer items-start gap-2 text-sm text-foreground"
           >
             <input
               type="checkbox"
@@ -92,44 +93,42 @@ export function DayChannelsCard({
               }
             />
             <span>
-              <span className="font-semibold">
+              <span className="font-medium">
                 {CHANNEL_NAMES[channel].label}
               </span>
-              <span className="block text-[11.5px] text-admin-muted">
+              <span className="block text-xs text-muted-foreground">
                 {CHANNEL_NAMES[channel].description}
               </span>
             </span>
           </label>
         ))}
         {state.status === "error" && (
-          <p
-            role="alert"
-            className="text-[12px] font-semibold text-admin-alert"
-          >
+          <p role="alert" className="text-xs font-medium text-destructive">
             {state.message}
           </p>
         )}
         <div className="mt-1 flex flex-wrap gap-2">
-          <button
+          <Button
             type="submit"
+            size="sm"
             disabled={pending || !changed || picked.length === 0}
-            className="rounded-lg bg-admin-primary px-3.5 py-2 text-[12.5px] font-semibold text-white disabled:opacity-50"
           >
             {pending ? "Salvando..." : "Salvar para este dia"}
-          </button>
+          </Button>
           {own && (
-            <button
+            <Button
               type="submit"
+              variant="outline"
+              size="sm"
               name="restore"
               value="1"
               disabled={pending}
-              className="rounded-lg border border-admin-border px-3 py-2 text-[12.5px] font-semibold text-admin-muted hover:bg-admin-input-bg"
             >
               Voltar ao padrão da semana
-            </button>
+            </Button>
           )}
         </div>
-        <p className="text-[11.5px] leading-relaxed text-admin-faint">
+        <p className="text-xs leading-relaxed text-muted-foreground">
           Agendamentos já feitos continuam como foram marcados.
         </p>
       </form>

@@ -3,10 +3,11 @@
 import { useActionState, useEffect, useState } from "react";
 import { LONG_TEXT_MAX } from "@/core/text-limits.ts";
 import { useEmailWarning } from "../../../../_components/use-email-warning.ts";
+import { Badge } from "../../../../_ui/badge.tsx";
+import { Button } from "../../../../_ui/button.tsx";
+import { Label } from "../../../../_ui/label.tsx";
+import { Textarea } from "../../../../_ui/textarea.tsx";
 import { type ActionState, answerSearchAction } from "../actions.ts";
-
-const FIELD =
-  "w-full rounded-[9px] border border-admin-input-border bg-admin-input-bg px-3.5 py-2.5 text-[13px] text-admin-text";
 
 /**
  * A resposta da busca de registro, no lugar da entrega: a busca é uma
@@ -37,22 +38,23 @@ export function SearchAnswerSection({
   }, [state]);
 
   return (
-    <div className="rounded-[14px] border-2 border-admin-primary bg-admin-card p-6">
-      <div className="flex items-center gap-2.5">
-        <h4 className="flex-1 font-serif text-[17px] font-semibold text-admin-primary">
+    <div className="rounded-xl border-2 border-primary bg-card p-6">
+      <div className="flex items-center gap-2">
+        <h4 className="flex-1 text-base font-semibold text-foreground">
           Resposta da busca
         </h4>
         {answer && !editing && (
-          <button
+          <Button
             type="button"
+            variant="outline"
+            size="sm"
             onClick={() => setEditing(true)}
-            className="btn btn-admin-secondary btn-sm"
           >
             Corrigir resposta
-          </button>
+          </Button>
         )}
       </div>
-      <p className="mt-1 text-[12.5px] leading-relaxed text-admin-muted">
+      <p className="mt-1 text-sm leading-relaxed text-muted-foreground">
         A busca é só uma consulta: não tem entrega. Responda aqui se o registro
         consta nesta serventia e o que foi perguntado. O pedido é concluído, e o
         cidadão recebe um e-mail para ler a resposta na consulta do protocolo.
@@ -60,8 +62,8 @@ export function SearchAnswerSection({
         serventia cobra a busca, informe o valor no cartão "Valor do pedido".
       </p>
       {unpaid && editing && (
-        <p className="mt-2.5 rounded-lg bg-admin-warning-text px-3 py-2.5 text-[12.5px] leading-snug text-white">
-          <strong className="font-bold">
+        <p className="mt-2 rounded-lg bg-warning px-3 py-2 text-sm leading-snug text-warning-foreground">
+          <strong className="font-semibold">
             O valor da busca ainda não foi pago.
           </strong>{" "}
           Responder agora conclui o pedido e tira a cobrança da consulta do
@@ -70,28 +72,30 @@ export function SearchAnswerSection({
       )}
 
       {answer && !editing && (
-        <div className="mt-3.5 flex flex-col gap-2">
-          <span
-            className={`inline-flex w-fit items-center rounded-full px-[11px] py-[5px] text-[12px] font-bold text-white ${
-              answer.found ? "bg-admin-success-text" : "bg-admin-warning-text"
+        <div className="mt-4 flex flex-col gap-2">
+          <Badge
+            className={`h-6 px-2.5 ${
+              answer.found
+                ? "bg-success text-success-foreground"
+                : "bg-warning text-warning-foreground"
             }`}
           >
             {answer.found ? "Registro localizado" : "Registro não localizado"}
-          </span>
-          <p className="whitespace-pre-line [overflow-wrap:anywhere] text-[13px] leading-relaxed text-admin-text">
+          </Badge>
+          <p className="whitespace-pre-line [overflow-wrap:anywhere] text-sm leading-relaxed text-foreground">
             {answer.text}
           </p>
-          <p className="text-[11px] text-admin-faint">
+          <p className="text-xs text-muted-foreground">
             Respondida em {answer.answeredAtLabel}
           </p>
         </div>
       )}
 
       {editing && (
-        <form action={action} className="mt-3.5 flex flex-col gap-3">
+        <form action={action} className="mt-4 flex flex-col gap-4">
           <input type="hidden" name="requestId" value={requestId} />
           <fieldset className="flex flex-wrap gap-4">
-            <legend className="mb-1.5 text-xs font-bold text-admin-primary">
+            <legend className="mb-2 text-sm font-medium text-foreground">
               O registro foi localizado?
             </legend>
             {(
@@ -108,59 +112,48 @@ export function SearchAnswerSection({
                   defaultChecked={
                     answer ? answer.found === (value === "yes") : undefined
                   }
-                  className="h-4 w-4 accent-admin-primary-soft"
+                  className="size-4 accent-primary"
                 />
-                <span className="text-[12.5px] text-admin-text">{label}</span>
+                <span className="text-sm text-foreground">{label}</span>
               </label>
             ))}
           </fieldset>
           <div>
-            <label
-              htmlFor="search-answer-text"
-              className="mb-1.5 block text-xs font-bold text-admin-primary"
-            >
+            <Label htmlFor="search-answer-text" className="mb-2">
               Resposta ao cidadão
-            </label>
-            <textarea
+            </Label>
+            <Textarea
               id="search-answer-text"
               name="text"
               rows={4}
               maxLength={LONG_TEXT_MAX}
               defaultValue={answer?.text}
               placeholder="Ex.: O registro de nascimento consta nesta serventia. A profissão registrada é agricultor."
-              className={FIELD}
             />
           </div>
-          <div className="flex gap-2.5">
-            <button
-              type="submit"
-              disabled={pending}
-              className="btn btn-admin-primary btn-md"
-            >
+          <div className="flex gap-2">
+            <Button type="submit" disabled={pending}>
               {pending
                 ? "Enviando…"
                 : answer
                   ? "Salvar correção"
                   : "Enviar resposta e concluir"}
-            </button>
+            </Button>
             {answer && (
-              <button
+              <Button
                 type="button"
+                variant="outline"
                 onClick={() => setEditing(false)}
-                className="btn btn-admin-secondary btn-md"
               >
                 Cancelar
-              </button>
+              </Button>
             )}
           </div>
         </form>
       )}
 
       {state.status === "error" && (
-        <p
-          role="alert"
-          className="mt-2 text-[12.5px] font-semibold text-admin-error-text"
-        >
+        <p role="alert" className="mt-2 text-sm font-medium text-destructive">
           {state.message}
         </p>
       )}

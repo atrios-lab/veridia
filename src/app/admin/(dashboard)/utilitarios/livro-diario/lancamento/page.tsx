@@ -53,7 +53,7 @@ export default async function EntryPage({
         }
         actions={row ? <RemoveEntryButton id={row.id} /> : undefined}
       />
-      <main className="flex max-w-[1000px] flex-col gap-4 px-[30px] py-7 max-md:px-4">
+      <main className="flex max-w-[1000px] flex-col gap-4 px-4 py-7 md:px-8">
         <EntryForm
           today={now}
           interim={settings.interim}

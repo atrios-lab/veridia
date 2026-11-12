@@ -17,7 +17,7 @@ export function TransparencyTabs() {
   const active = params.get("aba") === "boletim" ? "boletim" : "documentos";
 
   return (
-    <div role="tablist" className="flex gap-6 border-b border-admin-border">
+    <div role="tablist" className="flex gap-6 border-b border-border">
       {TABS.map((tab) => {
         const selected = active === tab.slug;
         return (
@@ -28,8 +28,8 @@ export function TransparencyTabs() {
             aria-selected={selected}
             className={
               selected
-                ? "-mb-px border-b-2 border-admin-primary pb-2.5 text-[13.5px] font-bold text-admin-primary"
-                : "-mb-px border-b-2 border-transparent pb-2.5 text-[13.5px] font-semibold text-admin-muted hover:text-admin-primary"
+                ? "-mb-px border-b-2 border-primary pb-2.5 text-sm font-medium text-foreground"
+                : "-mb-px border-b-2 border-transparent pb-2.5 text-sm font-medium text-muted-foreground hover:text-foreground"
             }
           >
             {tab.label}

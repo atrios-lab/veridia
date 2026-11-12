@@ -33,12 +33,12 @@ export default async function AccessReleasePage() {
   return (
     <>
       <AdminPageHeader maxWidth={900} title="Liberação de acesso" />
-      <main className="flex max-w-[900px] flex-col gap-4.5 px-[30px] py-7">
-        <section className="rounded-[14px] border border-admin-border bg-admin-card px-5 py-4">
-          <h2 className="font-serif text-[17px] font-semibold text-admin-primary">
+      <main className="flex max-w-[900px] flex-col gap-6 px-4 pt-6 pb-8 md:px-8">
+        <section className="rounded-xl border bg-card p-6 shadow-xs">
+          <h2 className="text-lg font-semibold text-foreground">
             Verificação em duas etapas por serventia
           </h2>
-          <p className="mt-1 text-[12.5px] leading-relaxed text-admin-muted">
+          <p className="mt-1 text-sm leading-relaxed text-muted-foreground">
             Só a conta mestre da Átrios vê esta tela. Desligada, a serventia
             entra no painel só com a senha, sem o código por e-mail. Use quando
             a serventia não está recebendo os e-mails, ou a pedido dela, e ligue
@@ -46,7 +46,7 @@ export default async function AccessReleasePage() {
             serventia.
           </p>
           {envOff && (
-            <p className="mt-2 rounded-[10px] bg-admin-warning-bg px-3 py-2 text-[12.5px] font-semibold text-admin-warning-text">
+            <p className="mt-3 rounded-lg border border-warning/30 bg-warning-soft px-3 py-2 text-sm font-medium text-warning-text">
               A variável PANEL_ACCESS_CODE=off está ativa neste deploy: a
               verificação está desligada para todas as serventias, qualquer que
               seja a escolha abaixo.
@@ -59,13 +59,13 @@ export default async function AccessReleasePage() {
             return (
               <li
                 key={tenant.slug}
-                className="flex flex-wrap items-center justify-between gap-3 rounded-[12px] border border-admin-border bg-admin-card px-4 py-3"
+                className="flex flex-wrap items-center justify-between gap-3 rounded-xl border bg-card px-4 py-3 shadow-xs"
               >
                 <div className="min-w-0">
-                  <p className="font-semibold text-[13.5px] text-admin-primary">
+                  <p className="text-sm font-medium text-foreground">
                     {tenant.name}
                   </p>
-                  <p className="text-[11.5px] text-admin-muted [overflow-wrap:anywhere]">
+                  <p className="text-xs text-muted-foreground [overflow-wrap:anywhere]">
                     {tenant.hosts[0] ?? tenant.slug}
                     {policy.changedAt &&
                       ` · alterado em ${formatOfficeDateTime(new Date(policy.changedAt))}`}

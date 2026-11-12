@@ -2,6 +2,7 @@
 
 import { useActionState } from "react";
 import { AdminIcon } from "../../../_components/icon.tsx";
+import { Button } from "../../../_ui/button.tsx";
 import { type SubmitState, submitIntakeAction } from "../actions.ts";
 
 export function SubmitForm({
@@ -20,14 +21,14 @@ export function SubmitForm({
 
   if (state.status === "sent") {
     return (
-      <section className="rounded-[14px] border border-admin-primary-soft bg-admin-card p-6">
-        <p className="flex items-start gap-2.5 text-[13px] leading-relaxed text-admin-text">
+      <section className="rounded-xl border border-success/30 bg-success-soft p-6">
+        <p className="flex items-start gap-2.5 text-sm leading-relaxed text-foreground">
           <AdminIcon
             name="checkCircle"
-            className="mt-0.5 h-4.5 w-4.5 flex-none text-admin-success-text"
+            className="mt-0.5 h-4.5 w-4.5 flex-none text-success-text"
           />
           <span>
-            <strong className="block font-serif text-[16px] font-semibold text-admin-primary">
+            <strong className="block text-base font-semibold text-foreground">
               Recebemos.
             </strong>
             A Átrios revisa as respostas, confirma o que precisar com você pelo
@@ -43,14 +44,14 @@ export function SubmitForm({
   return (
     <form
       action={formAction}
-      className="rounded-[14px] border border-admin-border bg-admin-card p-6"
+      className="rounded-xl border border-border bg-card p-6"
     >
-      <label className="flex items-start gap-3 rounded-[10px] border border-admin-border bg-admin-input-bg px-4 py-3.5 text-[13px] leading-relaxed text-admin-text">
+      <label className="flex items-start gap-3 rounded-lg bg-muted/50 px-4 py-3.5 text-sm leading-relaxed text-foreground">
         <input
           type="checkbox"
           name="declaration"
           required
-          className="mt-0.5 h-4.5 w-4.5 flex-none accent-admin-primary-soft"
+          className="checkbox-admin mt-0.5"
         />
         Declaro que as informações são verdadeiras e autorizo a Átrios a usá-las
         para elaborar a documentação de adequação da serventia.
@@ -58,24 +59,20 @@ export function SubmitForm({
       {state.status === "error" && (
         <p
           role="alert"
-          className="mt-3.5 rounded-lg bg-admin-error-bg px-3.5 py-2.5 text-sm font-semibold text-admin-error-text"
+          className="mt-3.5 rounded-lg border border-destructive/40 bg-destructive-soft px-3.5 py-2.5 text-sm font-medium text-destructive"
         >
           {state.message}
         </p>
       )}
-      <div className="mt-4 flex flex-wrap items-center gap-3.5">
-        <button
-          type="submit"
-          disabled={!ready || pending}
-          className="btn btn-admin-primary btn-lg"
-        >
+      <div className="mt-4 flex flex-wrap items-center gap-3">
+        <Button type="submit" size="lg" disabled={!ready || pending}>
           {pending
             ? "Enviando…"
             : submittedAt
               ? "Enviar de novo para a Átrios"
               : "Enviar para a Átrios"}
-        </button>
-        <span className="text-[12px] text-admin-muted">
+        </Button>
+        <span className="text-xs text-muted-foreground">
           {ready
             ? `A Átrios recebe um aviso por e-mail. A confirmação vai para ${officeEmail}.`
             : "O envio abre quando todas as seções estiverem concluídas."}

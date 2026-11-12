@@ -7,6 +7,7 @@ import {
 } from "@/core/request/deadline.ts";
 import type { Tenant } from "@/core/tenant/schema.ts";
 import { AdminIcon } from "../../_components/icon.tsx";
+import { Button } from "../../_ui/button.tsx";
 import { type OfficeDeadlineState, saveOfficeDeadline } from "./actions.ts";
 import { Field } from "./office-contact-form.tsx";
 
@@ -22,16 +23,16 @@ export function OfficeDeadlineForm({ tenant }: { tenant: Tenant }) {
 
   return (
     <form action={formAction}>
-      <h2 className="font-serif text-[17px] font-semibold text-admin-primary">
+      <h2 className="text-lg font-semibold text-foreground">
         Prazo dos atos sem prazo legal
       </h2>
-      <p className="mt-1 text-[12.5px] text-admin-muted">
+      <p className="mt-1 text-sm text-muted-foreground">
         Os atos com prazo na lei já nascem com ele: certidão em 5 dias, registro
         na matrícula em 10, e assim por diante. Este campo vale para os atos que
         a lei não fixa prazo, como escritura, ata notarial e abertura de firma.
       </p>
 
-      <div className="mt-4.5 max-w-[260px]">
+      <div className="mt-4.5 max-w-64">
         <Field
           label="Prazo padrão (dias úteis)"
           name="requestDeadlineDays"
@@ -45,7 +46,7 @@ export function OfficeDeadlineForm({ tenant }: { tenant: Tenant }) {
         />
       </div>
 
-      <p className="mt-3.5 text-xs leading-relaxed text-admin-muted">
+      <p className="mt-3.5 text-xs leading-relaxed text-muted-foreground">
         Todo prazo daqui conta em dias úteis, sem contar o dia do protocolo,
         como manda a Lei 14.382/2022. Feriados (nacionais, do Código de Normas e
         os da serventia, cadastrados abaixo) ficam fora da conta. No pedido, dá
@@ -55,15 +56,11 @@ export function OfficeDeadlineForm({ tenant }: { tenant: Tenant }) {
       </p>
 
       <div className="mt-4.5 flex items-center gap-3.5">
-        <button
-          type="submit"
-          disabled={pending}
-          className="btn btn-admin-primary btn-lg"
-        >
+        <Button type="submit" disabled={pending} size="lg">
           {pending ? "Salvando…" : "Salvar"}
-        </button>
+        </Button>
         {state.status === "saved" && (
-          <output className="flex items-center gap-1.5 rounded-full bg-admin-success-bg px-3 py-1.5 text-[12.5px] font-semibold text-admin-success-text">
+          <output className="flex items-center gap-1.5 rounded-full bg-success-soft px-3 py-1.5 text-xs font-medium text-success-text">
             <AdminIcon name="check" className="h-3.5 w-3.5" strokeWidth={2.4} />
             Salvo. Já está valendo nos novos pedidos.
           </output>

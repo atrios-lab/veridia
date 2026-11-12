@@ -3,11 +3,12 @@
 import { useActionState, useState } from "react";
 import type { GuideSettings } from "@/core/guides/schema.ts";
 import { AdminIcon } from "../../../../_components/icon.tsx";
+import { Button } from "../../../../_ui/button.tsx";
+import { Input } from "../../../../_ui/input.tsx";
+import { Label } from "../../../../_ui/label.tsx";
 import { type GuideSettingsState, saveGuideSettings } from "../actions.ts";
 
-const FIELD =
-  "w-full rounded-[9px] border border-admin-input-border bg-admin-input-bg px-3 py-2 text-[13px] text-admin-text outline-none focus:border-admin-primary-soft";
-const LABEL = "mb-1 block text-[11.5px] font-bold text-admin-primary";
+const LABEL = "mb-1.5 block text-sm font-medium text-foreground";
 
 const percent = (bp: number) => (bp ? String(bp / 100).replace(".", ",") : "");
 const basisPoints = (text: string) => {
@@ -27,19 +28,13 @@ function Text({
   hint?: string;
 }) {
   return (
-    <label className="block">
+    <Label className="block leading-normal font-normal">
       <span className={LABEL}>{label}</span>
-      <input
-        value={value}
-        onChange={(e) => onChange(e.target.value)}
-        className={FIELD}
-      />
+      <Input value={value} onChange={(e) => onChange(e.target.value)} />
       {hint && (
-        <span className="mt-1 block text-[11.5px] text-admin-muted">
-          {hint}
-        </span>
+        <span className="mt-1 block text-xs text-muted-foreground">{hint}</span>
       )}
-    </label>
+    </Label>
   );
 }
 
@@ -77,10 +72,8 @@ export function GuideSettingsForm({ initial }: { initial: GuideSettings }) {
     <form action={formAction} className="flex flex-col gap-5">
       <input type="hidden" name="settings" value={JSON.stringify(payload)} />
 
-      <section className="rounded-[14px] border border-admin-border bg-admin-card p-5">
-        <h2 className="font-serif text-[16px] font-semibold text-admin-primary">
-          Prefeitura
-        </h2>
+      <section className="rounded-xl border bg-card p-5">
+        <h2 className="text-base font-semibold text-foreground">Prefeitura</h2>
         <div className="mt-3 grid grid-cols-1 gap-3 md:grid-cols-2">
           <Text
             label="Prefeitura"
@@ -123,8 +116,8 @@ export function GuideSettingsForm({ initial }: { initial: GuideSettings }) {
         </div>
       </section>
 
-      <section className="rounded-[14px] border border-admin-border bg-admin-card p-5">
-        <h2 className="font-serif text-[16px] font-semibold text-admin-primary">
+      <section className="rounded-xl border bg-card p-5">
+        <h2 className="text-base font-semibold text-foreground">
           Estado (ITCD)
         </h2>
         <div className="mt-3 grid grid-cols-1 gap-3 md:grid-cols-2">
@@ -149,16 +142,14 @@ export function GuideSettingsForm({ initial }: { initial: GuideSettings }) {
         </div>
       </section>
 
-      <section className="rounded-[14px] border border-admin-border bg-admin-card p-5">
-        <h2 className="font-serif text-[16px] font-semibold text-admin-primary">
-          Quem assina
-        </h2>
+      <section className="rounded-xl border bg-card p-5">
+        <h2 className="text-base font-semibold text-foreground">Quem assina</h2>
         <div className="mt-3 flex flex-col gap-3">
           {s.signers.map((signer, index) => (
             <div
               // biome-ignore lint/suspicious/noArrayIndexKey: signers have no id; the index is their identity here.
               key={index}
-              className="grid grid-cols-1 gap-3 border-b border-admin-border pb-3 md:grid-cols-[1fr_1fr_1fr_auto]"
+              className="grid grid-cols-1 gap-3 border-b pb-3 md:grid-cols-[1fr_1fr_1fr_auto]"
             >
               {(["name", "title", "note"] as const).map((key) => (
                 <Text
@@ -190,45 +181,42 @@ export function GuideSettingsForm({ initial }: { initial: GuideSettings }) {
                   })
                 }
                 disabled={s.signers.length <= 1}
-                className="self-end pb-2 text-[12px] font-semibold text-admin-alert hover:underline disabled:opacity-40"
+                className="self-end pb-2 text-xs font-semibold text-destructive hover:underline disabled:opacity-40"
               >
                 Remover
               </button>
             </div>
           ))}
-          <button
+          <Button
             type="button"
+            variant="outline"
             onClick={() =>
               setS({
                 ...s,
                 signers: [...s.signers, { name: "", title: "", note: "" }],
               })
             }
-            className="btn btn-admin-secondary btn-md self-start"
+            className="self-start"
           >
             + Quem assina
-          </button>
+          </Button>
         </div>
       </section>
 
       {state.status === "error" && (
         <p
           role="alert"
-          className="rounded-lg bg-admin-error-bg px-3.5 py-2.5 text-sm font-semibold text-admin-error-text"
+          className="rounded-lg bg-destructive-soft px-3.5 py-2.5 text-sm font-semibold text-destructive"
         >
           {state.message} {Object.values(state.fieldErrors)[0] ?? ""}
         </p>
       )}
       <div className="flex items-center gap-3.5">
-        <button
-          type="submit"
-          disabled={pending}
-          className="btn btn-admin-primary btn-lg"
-        >
+        <Button type="submit" size="lg" disabled={pending}>
           {pending ? "Salvando…" : "Salvar"}
-        </button>
+        </Button>
         {state.status === "saved" && (
-          <output className="flex items-center gap-1.5 rounded-full bg-admin-success-bg px-3 py-1.5 text-[12.5px] font-semibold text-admin-success-text">
+          <output className="flex items-center gap-1.5 rounded-full bg-success-soft px-3 py-1.5 text-xs font-semibold text-success-text">
             <AdminIcon name="check" className="h-3.5 w-3.5" strokeWidth={2.4} />
             Salvo. Vale para as próximas guias.
           </output>

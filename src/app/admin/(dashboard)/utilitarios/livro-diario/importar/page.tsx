@@ -22,7 +22,7 @@ export default async function ImportPage() {
         }}
         description="Um envio só: o sistema lê o relatório e você escolhe lançar no livro (relatório do dia, art. 190), enviar ao boletim mensal da Transparência para conferir e publicar, ou os dois."
       />
-      <main className="flex max-w-[1100px] flex-col gap-4 px-[30px] py-7 max-md:px-4">
+      <main className="flex max-w-[1100px] flex-col gap-4 px-4 py-7 md:px-8">
         <ImportForm specialties={settings.specialties.map((s) => s.name)} />
       </main>
     </>

@@ -24,6 +24,9 @@ import {
 } from "@/lib/audit-trail.ts";
 import { AdminPageHeader } from "../../_components/page-header.tsx";
 import { ROLE_LABELS } from "../../_components/role-labels.ts";
+import { Button } from "../../_ui/button.tsx";
+import { Input } from "../../_ui/input.tsx";
+import { NativeSelect, NativeSelectOption } from "../../_ui/native-select.tsx";
 import { auditAccess, trailScope } from "./access.ts";
 import { PersonPicker } from "./person-picker.tsx";
 import { TrailList } from "./trail-list.tsx";
@@ -37,14 +40,13 @@ const STATUS: Record<string, string> = {
 };
 
 const LEVEL_TONE: Record<AuditLevel, string> = {
-  urgente: "bg-admin-error-bg text-admin-error-text",
-  atencao: "bg-admin-warning-bg text-admin-warning-text",
-  analise: "bg-admin-readonly-bg text-admin-primary",
-  rotina: "bg-admin-input-bg text-admin-muted",
+  urgente: "bg-destructive text-destructive-foreground",
+  atencao: "bg-warning text-warning-foreground",
+  analise: "bg-muted text-foreground",
+  rotina: "bg-background text-muted-foreground",
 };
 
-const CARD =
-  "rounded-[14px] border border-admin-border bg-admin-card px-5 py-4";
+const CARD = "rounded-xl border border-border bg-card p-6";
 
 function NotificationList({
   items,
@@ -55,36 +57,36 @@ function NotificationList({
 }) {
   if (!items.length) {
     return (
-      <p className="mt-2 text-[13px] text-admin-muted">Nenhuma notificação.</p>
+      <p className="mt-2 text-sm text-muted-foreground">Nenhuma notificação.</p>
     );
   }
   const now = Date.now();
   return (
-    <ul className="mt-2 flex flex-col divide-y divide-admin-border">
+    <ul className="mt-2 flex flex-col divide-y divide-border">
       {items.map((item) => {
         const late =
           item.status === "aberta" && item.deadlineAt.getTime() < now;
         return (
           <li
             key={item.id}
-            className="flex flex-wrap items-center justify-between gap-2 py-2.5 text-[13px]"
+            className="flex flex-wrap items-center justify-between gap-2 py-2.5 text-sm"
           >
             <div className="min-w-0">
               <Link
                 href={`/admin/auditoria/notificacao/${item.id}`}
-                className="font-semibold text-admin-primary hover:underline [overflow-wrap:anywhere]"
+                className="font-medium text-foreground hover:underline [overflow-wrap:anywhere]"
               >
                 Nº {formatGuideNumber(item.year, item.sequence)} ·{" "}
                 {item.subject}
               </Link>
-              <p className="text-[12px] text-admin-muted">
+              <p className="text-xs text-muted-foreground">
                 {showPerson && `${item.targetName ?? ""} · `}
                 enviada em {formatOfficeDateTime(item.createdAt)} · prazo{" "}
                 {formatOfficeDateTime(item.deadlineAt)}
               </p>
             </div>
             <span
-              className={`rounded-full px-2.5 py-0.5 text-[11px] font-bold ${item.status === "aberta" ? (late ? "bg-admin-error-bg text-admin-error-text" : "bg-admin-warning-bg text-admin-warning-text") : "bg-admin-success-bg text-admin-success-text"}`}
+              className={`rounded-full px-2.5 py-0.5 text-xs font-medium ${item.status === "aberta" ? (late ? "bg-destructive text-destructive-foreground" : "bg-warning-soft text-warning-text") : "bg-success-soft text-success-text"}`}
             >
               {late ? "Prazo vencido" : (STATUS[item.status] ?? item.status)}
             </span>
@@ -140,12 +142,12 @@ export default async function AuditPage({
     return (
       <>
         <AdminPageHeader title="Auditoria" maxWidth={900} />
-        <main className="flex max-w-[900px] flex-col gap-4.5 px-[30px] py-7 max-md:px-4">
+        <main className="flex max-w-[900px] flex-col gap-6 px-4 pt-6 pb-8 md:px-8">
           <section className={CARD}>
-            <h2 className="font-serif text-[17px] font-semibold text-admin-primary">
+            <h2 className="text-lg font-semibold text-foreground">
               Minhas notificações
             </h2>
-            <p className="mt-1 text-[12.5px] text-admin-muted">
+            <p className="mt-1 text-sm text-muted-foreground">
               Pedidos de esclarecimento do Tabelião/Registrador endereçados a
               você. Responda em até 24 horas, por aqui.
             </p>
@@ -196,10 +198,8 @@ export default async function AuditPage({
     { pendentes: 0, atencao: 0, analise: 0, analisadas: 0 },
   );
   const chosenPerson = people.find((p) => p.actorId === query.pessoa);
-  const FIELD =
-    "w-full min-w-0 rounded-[9px] border border-admin-input-border bg-admin-input-bg px-3 py-2 text-[13px] text-admin-text outline-none focus:border-admin-primary-soft";
   const LABEL =
-    "flex min-w-0 flex-col gap-1 text-xs font-bold text-admin-primary";
+    "flex min-w-0 flex-col gap-1.5 text-sm font-medium text-foreground";
 
   const bandHref = (nivel: AuditLevel) =>
     hrefWith(query, {
@@ -251,7 +251,7 @@ export default async function AuditPage({
     {
       key: "analisadas",
       label: "Analisadas e concluídas",
-      tone: "bg-admin-success-bg text-admin-success-text",
+      tone: "bg-success-soft text-success-text",
       value: totals.analisadas,
       caption: `lidas e ok, últimos ${ALERT_DAYS} dias`,
       hint: 'O que você marcou como "lido e ok" sai das outras faixas e fica aqui, para consulta.',
@@ -268,9 +268,9 @@ export default async function AuditPage({
   return (
     <>
       <AdminPageHeader title="Auditoria" maxWidth={1100} />
-      <main className="flex max-w-[1100px] flex-col gap-4.5 px-[30px] py-7 max-md:px-4">
+      <main className="flex max-w-[1100px] flex-col gap-6 px-4 pt-6 pb-8 md:px-8">
         {query.notificadas && (
-          <p className="rounded-[12px] bg-admin-success-bg px-4 py-3 text-[13px] font-semibold text-admin-success-text">
+          <p className="rounded-lg border border-success/30 bg-success-soft p-4 text-sm font-medium text-success-text">
             {query.notificadas} notificações enviadas, uma para cada pessoa.
             Elas aparecem em &quot;Notificações enviadas&quot;, mais abaixo.
           </p>
@@ -283,20 +283,20 @@ export default async function AuditPage({
               key={item.key}
               href={item.href}
               title={item.hint}
-              className={`flex min-w-0 flex-col rounded-[14px] border px-4 py-3 transition-colors hover:border-admin-primary ${item.active ? "border-admin-primary bg-admin-card" : "border-admin-border bg-admin-card"}`}
+              className={`flex min-w-0 flex-col rounded-xl border bg-card px-4 py-3 transition-colors hover:border-primary ${item.active ? "border-primary ring-1 ring-primary" : "border-border"}`}
             >
               <span
-                className={`w-fit rounded-full px-2.5 py-0.5 text-[11px] font-bold uppercase tracking-[0.06em] ${item.tone}`}
+                className={`w-fit rounded-full px-2.5 py-0.5 text-xs font-medium ${item.tone}`}
               >
                 {item.label}
               </span>
-              <span className="mt-1.5 font-serif text-[26px] font-semibold leading-none text-admin-primary">
+              <span className="mt-2 text-3xl font-semibold leading-none tabular-nums text-foreground">
                 {item.value}
               </span>
-              <span className="mt-1 text-[12px] text-admin-muted">
+              <span className="mt-1 text-xs text-muted-foreground">
                 {item.caption}
               </span>
-              <span className="mt-1.5 text-[11.5px] leading-snug text-admin-muted">
+              <span className="mt-1.5 text-xs leading-snug text-muted-foreground">
                 {item.hint}
               </span>
             </Link>
@@ -306,15 +306,15 @@ export default async function AuditPage({
         {/* The trail divided by person: who did what, by band. */}
         <section className={CARD}>
           <div className="flex flex-wrap items-baseline justify-between gap-2">
-            <h2 className="font-serif text-[17px] font-semibold text-admin-primary">
+            <h2 className="text-lg font-semibold text-foreground">
               Por pessoa
             </h2>
-            <span className="text-[12px] text-admin-muted">
+            <span className="text-xs text-muted-foreground">
               últimos {ALERT_DAYS} dias
             </span>
           </div>
           {people.length === 0 ? (
-            <p className="mt-2 text-[13px] text-admin-muted">
+            <p className="mt-2 text-sm text-muted-foreground">
               Nenhum ato no período.
             </p>
           ) : (
@@ -346,39 +346,39 @@ export default async function AuditPage({
                 })}
               />
               {chosenPerson ? (
-                <div className="flex min-w-0 flex-wrap items-center gap-2 rounded-[12px] border border-admin-primary bg-admin-input-bg px-3 py-2">
-                  <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-admin-primary text-[11.5px] font-bold text-white">
+                <div className="flex min-w-0 flex-wrap items-center gap-2 rounded-lg bg-muted/50 px-3 py-2">
+                  <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-primary text-xs font-medium text-primary-foreground">
                     {initials(chosenPerson.name)}
                   </span>
-                  <span className="min-w-0 flex-1 truncate text-[13px] font-semibold text-admin-primary">
+                  <span className="min-w-0 flex-1 truncate text-sm font-medium text-foreground">
                     {chosenPerson.name}
                   </span>
                   {chosenPerson.actorId !== session.user.id &&
                     chosenPerson.pendentes > 0 && (
                       <span
-                        className={`rounded-full px-2 py-0.5 text-[10.5px] font-bold ${LEVEL_TONE.urgente}`}
+                        className={`rounded-full px-2 py-0.5 text-xs font-medium ${LEVEL_TONE.urgente}`}
                       >
                         {chosenPerson.pendentes} urgente
                         {chosenPerson.pendentes > 1 ? "s" : ""}
                       </span>
                     )}
                   <span
-                    className={`rounded-full px-2 py-0.5 text-[10.5px] font-bold ${LEVEL_TONE.atencao}`}
+                    className={`rounded-full px-2 py-0.5 text-xs font-medium ${LEVEL_TONE.atencao}`}
                   >
                     {chosenPerson.atencao} atenção
                   </span>
-                  <span className="rounded-full bg-admin-success-bg px-2 py-0.5 text-[10.5px] font-bold text-admin-success-text">
+                  <span className="rounded-full bg-success-soft px-2 py-0.5 text-xs font-medium text-success-text">
                     {chosenPerson.analisadas} analisadas
                   </span>
                   <Link
                     href={hrefWith(query, { pessoa: undefined })}
-                    className="text-[12px] font-semibold text-admin-muted underline hover:text-admin-primary"
+                    className="text-xs font-medium text-primary underline hover:no-underline"
                   >
                     Ver todas
                   </Link>
                 </div>
               ) : (
-                <p className="text-[12px] leading-snug text-admin-muted">
+                <p className="text-xs leading-snug text-muted-foreground">
                   {people.length} pessoa{people.length > 1 ? "s" : ""} com atos
                   no período. Quem tem urgente esperando aparece primeiro, com
                   ⚠.
@@ -389,12 +389,12 @@ export default async function AuditPage({
         </section>
 
         <section className={CARD}>
-          <h2 className="font-serif text-[17px] font-semibold text-admin-primary">
+          <h2 className="text-lg font-semibold text-foreground">
             {chosenPerson
               ? `Atos de ${chosenPerson.name}`
               : "Registros do painel"}
           </h2>
-          <p className="mt-1 text-[12.5px] leading-relaxed text-admin-muted">
+          <p className="mt-1 text-sm text-muted-foreground">
             Os registros nunca mudam. Anote, marque os que interessam para gerar
             o PDF, enviar por e-mail ou notificar a pessoa. O que você marcar
             como &quot;lido e ok&quot; sai da faixa e vai para &quot;Analisadas
@@ -404,7 +404,7 @@ export default async function AuditPage({
           {/* Band chips: the most used filter, one tap. */}
           <nav
             aria-label="Faixa"
-            className="mt-3 flex flex-wrap gap-1.5 text-[12.5px]"
+            className="mt-3 flex flex-wrap gap-1.5 text-xs"
           >
             <Link
               href={hrefWith(query, {
@@ -412,7 +412,7 @@ export default async function AuditPage({
                 pendentes: undefined,
                 revisadas: undefined,
               })}
-              className={`rounded-full border px-3 py-1 font-semibold ${!level && !reviewedView ? "border-admin-primary bg-admin-primary text-white" : "border-admin-border text-admin-muted hover:text-admin-primary"}`}
+              className={`rounded-full border px-3 py-1 font-medium ${!level && !reviewedView ? "border-primary bg-primary text-primary-foreground" : "border-border text-muted-foreground hover:text-foreground"}`}
             >
               Todas
             </Link>
@@ -424,7 +424,7 @@ export default async function AuditPage({
                   pendentes: item === "rotina" ? undefined : query.pendentes,
                   revisadas: undefined,
                 })}
-                className={`rounded-full border px-3 py-1 font-semibold ${level === item && !reviewedView ? "border-admin-primary bg-admin-primary text-white" : "border-admin-border text-admin-muted hover:text-admin-primary"}`}
+                className={`rounded-full border px-3 py-1 font-medium ${level === item && !reviewedView ? "border-primary bg-primary text-primary-foreground" : "border-border text-muted-foreground hover:text-foreground"}`}
               >
                 {AUDIT_LEVEL_LABELS[item]}
               </Link>
@@ -432,7 +432,7 @@ export default async function AuditPage({
             {level && level !== "rotina" && !reviewedView && (
               <Link
                 href={hrefWith(query, { pendentes: pending ? undefined : "1" })}
-                className={`rounded-full border px-3 py-1 font-semibold ${pending ? "border-admin-error-text bg-admin-error-bg text-admin-error-text" : "border-admin-border text-admin-muted"}`}
+                className={`rounded-full border px-3 py-1 font-medium ${pending ? "border-destructive bg-destructive text-destructive-foreground" : "border-border text-muted-foreground hover:text-foreground"}`}
               >
                 {pending ? "✓ Só pendentes" : "Só pendentes"}
               </Link>
@@ -441,7 +441,7 @@ export default async function AuditPage({
               href={hrefWith(query, {
                 arquivados: archivedView ? undefined : "1",
               })}
-              className={`rounded-full border px-3 py-1 font-semibold ${archivedView ? "border-admin-primary bg-admin-primary text-white" : "border-admin-border text-admin-muted hover:text-admin-primary"}`}
+              className={`rounded-full border px-3 py-1 font-medium ${archivedView ? "border-primary bg-primary text-primary-foreground" : "border-border text-muted-foreground hover:text-foreground"}`}
             >
               Arquivados
             </Link>
@@ -451,17 +451,17 @@ export default async function AuditPage({
                 pendentes: undefined,
                 arquivados: undefined,
               })}
-              className={`rounded-full border px-3 py-1 font-semibold ${reviewedView ? "border-admin-success-text bg-admin-success-bg text-admin-success-text" : "border-admin-border text-admin-muted hover:text-admin-primary"}`}
+              className={`rounded-full border px-3 py-1 font-medium ${reviewedView ? "border-success bg-success text-success-foreground" : "border-border text-muted-foreground hover:text-foreground"}`}
             >
               {reviewedView ? "✓ Analisadas" : "Analisadas"}
             </Link>
           </nav>
 
           <details
-            className="group mt-3 rounded-[12px] bg-admin-input-bg px-3.5 py-2.5"
+            className="group mt-3 rounded-lg bg-muted/50 px-3.5 py-2.5"
             open={Boolean(query.de || query.ate || query.busca)}
           >
-            <summary className="cursor-pointer select-none text-[12.5px] font-semibold text-admin-primary">
+            <summary className="cursor-pointer select-none text-sm font-medium text-foreground">
               Mais filtros (período, busca
               {platform ? ", serventia" : ""})
             </summary>
@@ -475,55 +475,68 @@ export default async function AuditPage({
                 <input type="hidden" name="revisadas" value="1" />
               )}
               {platform && (
-                <label className={`${LABEL} col-span-2 md:col-span-4`}>
+                <label
+                  htmlFor="filtro-serventia"
+                  className={`${LABEL} col-span-2 md:col-span-4`}
+                >
                   Serventia
-                  <select
+                  <NativeSelect
+                    id="filtro-serventia"
                     name="serventia"
                     defaultValue={query.serventia ?? tenant.slug}
-                    className={FIELD}
+                    className="w-full rounded-md bg-background font-normal"
                   >
-                    <option value="todas">Todas as serventias</option>
+                    <NativeSelectOption value="todas">
+                      Todas as serventias
+                    </NativeSelectOption>
                     {Object.values(TENANTS).map((t) => (
-                      <option key={t.slug} value={t.slug}>
+                      <NativeSelectOption key={t.slug} value={t.slug}>
                         {t.name}
-                      </option>
+                      </NativeSelectOption>
                     ))}
-                  </select>
+                  </NativeSelect>
                 </label>
               )}
-              <label className={LABEL}>
+              <label htmlFor="filtro-de" className={LABEL}>
                 De
-                <input
+                <Input
+                  id="filtro-de"
                   type="date"
                   name="de"
                   defaultValue={query.de ?? ""}
-                  className={FIELD}
+                  className="bg-background font-normal"
                 />
               </label>
-              <label className={LABEL}>
+              <label htmlFor="filtro-ate" className={LABEL}>
                 Até
-                <input
+                <Input
+                  id="filtro-ate"
                   type="date"
                   name="ate"
                   defaultValue={query.ate ?? ""}
-                  className={FIELD}
+                  className="bg-background font-normal"
                 />
               </label>
-              <label className={`${LABEL} col-span-2 md:col-span-1`}>
+              <label
+                htmlFor="filtro-busca"
+                className={`${LABEL} col-span-2 md:col-span-1`}
+              >
                 Buscar
-                <input
+                <Input
+                  id="filtro-busca"
                   name="busca"
                   defaultValue={query.busca ?? ""}
                   placeholder="Protocolo, ação..."
-                  className={FIELD}
+                  className="bg-background font-normal"
                 />
               </label>
-              <button
+              <Button
                 type="submit"
-                className="btn btn-admin-secondary btn-md col-span-2 md:col-span-1"
+                variant="outline"
+                className="col-span-2 md:col-span-1"
               >
                 Filtrar
-              </button>
+              </Button>
             </form>
           </details>
 
@@ -572,7 +585,7 @@ export default async function AuditPage({
         </section>
 
         <section className={CARD}>
-          <h2 className="font-serif text-[17px] font-semibold text-admin-primary">
+          <h2 className="text-lg font-semibold text-foreground">
             Notificações enviadas
           </h2>
           <NotificationList items={notifications} showPerson />

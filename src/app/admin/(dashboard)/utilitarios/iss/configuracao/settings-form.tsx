@@ -4,11 +4,16 @@ import { useActionState, useEffect, useState } from "react";
 import { toast } from "sonner";
 import { FILING_LABELS, type IssSettings } from "@/core/iss/declaration.ts";
 import { TaxIdInput } from "../../../../_components/tax-id-input.tsx";
+import { Button } from "../../../../_ui/button.tsx";
+import { Input } from "../../../../_ui/input.tsx";
+import { Label } from "../../../../_ui/label.tsx";
 import { type IssFormState, saveIssSettings } from "../actions.ts";
 
+// TaxIdInput draws its own <input>: the same look as _ui/input.tsx.
 const FIELD =
-  "w-full rounded-[9px] border border-admin-input-border bg-admin-input-bg px-3.5 py-2.5 text-[13.5px] text-admin-text outline-none focus:border-admin-primary-soft";
-const LABEL = "flex flex-col gap-1.5 text-xs font-bold text-admin-primary";
+  "h-9 w-full min-w-0 rounded-md border border-input bg-transparent px-2.5 py-1 text-sm shadow-xs outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50";
+const LABEL =
+  "flex flex-col items-stretch gap-1.5 text-sm leading-normal font-medium text-foreground";
 
 export function IssSettingsForm({ settings }: { settings: IssSettings }) {
   const [state, action, pending] = useActionState<IssFormState, FormData>(
@@ -22,53 +27,53 @@ export function IssSettingsForm({ settings }: { settings: IssSettings }) {
   return (
     <form
       action={action}
-      className="grid grid-cols-1 gap-3.5 rounded-[14px] border border-admin-border bg-admin-card px-5 py-4 md:grid-cols-2"
+      className="grid grid-cols-1 gap-3.5 rounded-xl border bg-card px-5 py-4 md:grid-cols-2"
     >
-      <h2 className="font-serif text-[17px] font-semibold text-admin-primary md:col-span-2">
+      <h2 className="text-lg font-semibold text-foreground md:col-span-2">
         Imposto e lei municipal
       </h2>
-      <label className={LABEL}>
+      <Label className={LABEL}>
         Alíquota do ISS (%)
-        <input
+        <Input
           name="aliquota"
           inputMode="decimal"
           defaultValue={(settings.rateBasisPoints / 100)
             .toFixed(2)
             .replace(".", ",")}
-          className={FIELD}
+          className="font-normal"
         />
-        <span className="font-normal text-admin-muted">
+        <span className="text-xs font-normal text-muted-foreground">
           De 2% a 5%, conforme a lei do município (LC 116/2003).
         </span>
-      </label>
-      <label className={LABEL}>
+      </Label>
+      <Label className={LABEL}>
         Vencimento (dia do mês seguinte)
-        <input
+        <Input
           name="vencimentoDia"
           inputMode="numeric"
           defaultValue={settings.dueDay ?? ""}
           placeholder="Ex.: 10"
-          className={FIELD}
+          className="font-normal"
         />
-      </label>
-      <label className={`${LABEL} md:col-span-2`}>
+      </Label>
+      <Label className={`${LABEL} md:col-span-2`}>
         Lei municipal do ISS (aparece na fundamentação)
-        <input
+        <Input
           name="lei_municipal"
           defaultValue={settings.municipalLaw}
           placeholder="Ex.: Código Tributário Municipal, Lei Complementar nº ..., art. ..."
-          className={FIELD}
+          className="font-normal"
         />
-      </label>
+      </Label>
       <label className={`${LABEL} md:col-span-2`}>
         Anexar a lei municipal ou o plano diretor (PDF)
         <input
           type="file"
           name="lei"
           accept="application/pdf,.pdf"
-          className="block w-full text-[13px] font-normal file:mr-3 file:rounded-full file:border-0 file:bg-admin-primary file:px-4 file:py-2 file:text-[12.5px] file:font-semibold file:text-white"
+          className="block w-full text-sm font-normal file:mr-3 file:rounded-full file:border-0 file:bg-primary file:px-4 file:py-2 file:text-xs file:font-semibold file:text-primary-foreground"
         />
-        <span className="font-normal text-admin-muted">
+        <span className="text-xs font-normal text-muted-foreground">
           {settings.lawAttachment ? (
             <>
               Anexada:{" "}
@@ -76,7 +81,7 @@ export function IssSettingsForm({ settings }: { settings: IssSettings }) {
                 href="/admin/utilitarios/iss/lei"
                 target="_blank"
                 rel="noreferrer"
-                className="font-semibold text-admin-primary underline"
+                className="font-semibold text-primary underline"
               >
                 {settings.lawAttachment.name}
               </a>
@@ -88,7 +93,7 @@ export function IssSettingsForm({ settings }: { settings: IssSettings }) {
         </span>
       </label>
 
-      <h2 className="mt-2 font-serif text-[17px] font-semibold text-admin-primary md:col-span-2">
+      <h2 className="mt-2 text-lg font-semibold text-foreground md:col-span-2">
         Como a declaração chega à prefeitura
       </h2>
       <fieldset className="flex flex-col gap-2 md:col-span-2">
@@ -96,7 +101,7 @@ export function IssSettingsForm({ settings }: { settings: IssSettings }) {
         {(Object.keys(FILING_LABELS) as IssSettings["filing"][]).map((key) => (
           <label
             key={key}
-            className="flex items-start gap-2.5 rounded-[12px] border border-admin-border bg-admin-input-bg px-3.5 py-2.5 text-[13px] text-admin-text"
+            className="flex items-start gap-2.5 rounded-lg border bg-muted/50 px-3.5 py-2.5 text-sm text-foreground"
           >
             <input
               type="radio"
@@ -104,11 +109,11 @@ export function IssSettingsForm({ settings }: { settings: IssSettings }) {
               value={key}
               checked={filing === key}
               onChange={() => setFiling(key)}
-              className="mt-0.5"
+              className="mt-0.5 accent-primary"
             />
             <span>
               <span className="font-semibold">{FILING_LABELS[key]}</span>
-              <span className="block text-[12px] text-admin-muted">
+              <span className="block text-xs text-muted-foreground">
                 {key === "portal"
                   ? "A declaração mostra os dados prontos para copiar no site (CNPJ, receita, valor, descrição, data) e o PDF para anexar."
                   : "Sai também um protocolo de entrega, que a SEMUT carimba e assina e fica com o cartório."}
@@ -126,52 +131,52 @@ export function IssSettingsForm({ settings }: { settings: IssSettings }) {
       )}
       {filing === "portal" && (
         <>
-          <label className={LABEL}>
+          <Label className={LABEL}>
             Endereço do site da prefeitura
-            <input
+            <Input
               name="portal"
               type="url"
               defaultValue={settings.portalUrl}
               placeholder="https://"
-              className={FIELD}
+              className="font-normal"
             />
-          </label>
-          <label className={LABEL}>
+          </Label>
+          <Label className={LABEL}>
             Receita escolhida no site
-            <input
+            <Input
               name="receita"
               defaultValue={settings.portalRevenue}
               placeholder="Como aparece na lista do site"
-              className={FIELD}
+              className="font-normal"
             />
-            <span className="font-normal text-admin-muted">
+            <span className="text-xs font-normal text-muted-foreground">
               Se a serventia tem inscrição municipal, confirme com a SEMUT qual
               receita usar: em alguns sites, o DAM avulso é só para quem não é
               cadastrado e não quita o ISS de quem é.
             </span>
-          </label>
+          </Label>
         </>
       )}
 
-      <h2 className="mt-2 font-serif text-[17px] font-semibold text-admin-primary md:col-span-2">
+      <h2 className="mt-2 text-lg font-semibold text-foreground md:col-span-2">
         Destinatário: prefeitura
       </h2>
-      <label className={LABEL}>
+      <Label className={LABEL}>
         Prefeitura
-        <input
+        <Input
           name="prefeitura"
           defaultValue={settings.authority}
-          className={FIELD}
+          className="font-normal"
         />
-      </label>
-      <label className={LABEL}>
+      </Label>
+      <Label className={LABEL}>
         Secretaria
-        <input
+        <Input
           name="secretaria"
           defaultValue={settings.department}
-          className={FIELD}
+          className="font-normal"
         />
-      </label>
+      </Label>
       <label htmlFor="iss-cnpj-prefeitura" className={LABEL}>
         CNPJ da prefeitura
         <TaxIdInput
@@ -181,40 +186,40 @@ export function IssSettingsForm({ settings }: { settings: IssSettings }) {
           className={`${FIELD} font-normal`}
         />
       </label>
-      <label className={LABEL}>
+      <Label className={LABEL}>
         Endereço da prefeitura (ou da secretaria)
-        <input
+        <Input
           name="endereco_prefeitura"
           defaultValue={settings.authorityAddress}
           placeholder="Rua, número, bairro, cidade/UF, CEP"
-          className={FIELD}
+          className="font-normal"
         />
-      </label>
-      <label className={LABEL}>
+      </Label>
+      <Label className={LABEL}>
         Prefeito(a) (opcional)
-        <input
+        <Input
           name="prefeito"
           defaultValue={settings.mayorName}
-          className={FIELD}
+          className="font-normal"
         />
-      </label>
-      <label className={LABEL}>
+      </Label>
+      <Label className={LABEL}>
         Secretário(a) de Tributação (opcional)
-        <input
+        <Input
           name="secretario"
           defaultValue={settings.secretaryName}
-          className={FIELD}
+          className="font-normal"
         />
-      </label>
+      </Label>
       <label className={`${LABEL} md:col-span-2`}>
         Portaria de nomeação do prefeito ou do secretário (PDF, opcional)
         <input
           type="file"
           name="portaria"
           accept="application/pdf,.pdf"
-          className="block w-full text-[13px] font-normal file:mr-3 file:rounded-full file:border-0 file:bg-admin-primary file:px-4 file:py-2 file:text-[12.5px] file:font-semibold file:text-white"
+          className="block w-full text-sm font-normal file:mr-3 file:rounded-full file:border-0 file:bg-primary file:px-4 file:py-2 file:text-xs file:font-semibold file:text-primary-foreground"
         />
-        <span className="font-normal text-admin-muted">
+        <span className="text-xs font-normal text-muted-foreground">
           {settings.appointmentAttachment ? (
             <>
               Anexada:{" "}
@@ -222,7 +227,7 @@ export function IssSettingsForm({ settings }: { settings: IssSettings }) {
                 href="/admin/utilitarios/iss/lei?doc=portaria"
                 target="_blank"
                 rel="noreferrer"
-                className="font-semibold text-admin-primary underline"
+                className="font-semibold text-primary underline"
               >
                 {settings.appointmentAttachment.name}
               </a>
@@ -234,7 +239,7 @@ export function IssSettingsForm({ settings }: { settings: IssSettings }) {
         </span>
       </label>
 
-      <h2 className="mt-2 font-serif text-[17px] font-semibold text-admin-primary md:col-span-2">
+      <h2 className="mt-2 text-lg font-semibold text-foreground md:col-span-2">
         Dados da serventia
       </h2>
       <label htmlFor="iss-cnpj-serventia" className={LABEL}>
@@ -246,61 +251,61 @@ export function IssSettingsForm({ settings }: { settings: IssSettings }) {
           className={`${FIELD} font-normal`}
         />
       </label>
-      <label className={LABEL}>
+      <Label className={LABEL}>
         Inscrição municipal
-        <input
+        <Input
           name="inscricao"
           defaultValue={settings.municipalRegistration}
-          className={FIELD}
+          className="font-normal"
         />
-      </label>
-      <label className={LABEL}>
+      </Label>
+      <Label className={LABEL}>
         CNAE
-        <input name="cnae" defaultValue={settings.cnae} className={FIELD} />
-      </label>
-      <label className={`${LABEL} md:col-span-2`}>
+        <Input
+          name="cnae"
+          defaultValue={settings.cnae}
+          className="font-normal"
+        />
+      </Label>
+      <Label className={`${LABEL} md:col-span-2`}>
         Endereço da serventia
-        <input
+        <Input
           name="endereco_serventia"
           defaultValue={settings.officeAddress}
           placeholder="Rua, número, bairro, cidade/UF, CEP"
-          className={FIELD}
+          className="font-normal"
         />
-      </label>
-      <label className={LABEL}>
+      </Label>
+      <Label className={LABEL}>
         Telefone da serventia
-        <input
+        <Input
           name="telefone_serventia"
           defaultValue={settings.officePhone}
-          className={FIELD}
+          className="font-normal"
         />
-      </label>
-      <label className={LABEL}>
+      </Label>
+      <Label className={LABEL}>
         E-mail da serventia
-        <input
+        <Input
           name="email_serventia"
           type="email"
           defaultValue={settings.officeEmail}
-          className={FIELD}
+          className="font-normal"
         />
-      </label>
+      </Label>
 
       {state.status === "error" && (
         <p
           role="alert"
-          className="text-[12.5px] font-semibold text-admin-error-text md:col-span-2"
+          className="text-xs font-semibold text-destructive md:col-span-2"
         >
           {state.message}
         </p>
       )}
       <div className="md:col-span-2">
-        <button
-          type="submit"
-          disabled={pending}
-          className="btn btn-admin-primary btn-md"
-        >
+        <Button type="submit" size="lg" disabled={pending}>
           {pending ? "Salvando..." : "Salvar configuração"}
-        </button>
+        </Button>
       </div>
     </form>
   );

@@ -23,6 +23,8 @@ import {
 import { getTenant } from "@/lib/tenant.ts";
 import { AdminIcon } from "../../../_components/icon.tsx";
 import { AdminPageHeader } from "../../../_components/page-header.tsx";
+import { Badge } from "../../../_ui/badge.tsx";
+import { Button, buttonVariants } from "../../../_ui/button.tsx";
 import { requireOrderAccess, stockByPaperKind } from "./_lib/data.ts";
 import { addStarterSuppliers } from "./actions.ts";
 import { RemoveOrderButton } from "./forms.tsx";
@@ -72,14 +74,14 @@ export default async function PaperOrdersPage({
           <div className="flex flex-wrap gap-2">
             <Link
               href="/admin/utilitarios/solicitacao-papeis/empresas/nova"
-              className="btn btn-admin-secondary btn-md"
+              className={buttonVariants({ variant: "outline" })}
             >
               <AdminIcon name="plus" className="h-4 w-4" /> Nova empresa
             </Link>
             {suppliers.length > 0 && (
               <Link
                 href="/admin/utilitarios/solicitacao-papeis/novo"
-                className="btn btn-admin-primary btn-md"
+                className={buttonVariants()}
               >
                 <AdminIcon name="file" className="h-4 w-4" /> Novo pedido
               </Link>
@@ -87,9 +89,9 @@ export default async function PaperOrdersPage({
           </div>
         }
       />
-      <main className="flex max-w-[1100px] flex-col gap-5 px-[30px] py-7 max-md:px-4">
+      <main className="flex max-w-[1100px] flex-col gap-5 px-4 py-7 md:px-8">
         {done && (
-          <p className="rounded-[12px] bg-admin-success-bg px-4 py-3 text-[13px] font-semibold text-admin-success-text">
+          <p className="rounded-lg border border-success/30 bg-success-soft px-4 py-3 text-sm font-medium text-success-text">
             {done}
           </p>
         )}
@@ -105,20 +107,20 @@ export default async function PaperOrdersPage({
           return (
             <div
               key={l.kind}
-              className="flex flex-wrap items-center gap-3 rounded-[14px] border border-admin-warning-soft-border bg-admin-warning-soft-bg px-5 py-4"
+              className="flex flex-wrap items-center gap-3 rounded-xl border border-warning/30 bg-warning-soft px-5 py-4"
             >
               <AdminIcon
                 name="alert"
-                className="h-5 w-5 shrink-0 text-admin-warning-text"
+                className="h-5 w-5 shrink-0 text-warning-text"
               />
               <div className="mr-auto min-w-[240px] flex-1">
-                <p className="text-[13.5px] font-bold text-admin-warning-text">
+                <p className="text-sm font-semibold text-warning-text">
                   {l.kind}:{" "}
                   {l.remaining === 0
                     ? "acabou o estoque"
                     : `restam ${l.remaining.toLocaleString("pt-BR")} folhas`}
                 </p>
-                <p className="text-[12.5px] text-admin-text">
+                <p className="text-xs text-foreground">
                   O aviso aparece quando faltam{" "}
                   {settings.lowStock.toLocaleString("pt-BR")} folhas ou menos.
                   Providencie o pedido de um novo lote.
@@ -127,14 +129,14 @@ export default async function PaperOrdersPage({
               {match ? (
                 <Link
                   href={`/admin/utilitarios/solicitacao-papeis/novo?empresa=${match.row.id}&item=${match.i.id}`}
-                  className="btn btn-admin-primary btn-md"
+                  className={buttonVariants()}
                 >
                   Pedir {match.i.name} ({match.s.name.split(" (")[0]})
                 </Link>
               ) : (
                 <Link
                   href="/admin/utilitarios/solicitacao-papeis/novo"
-                  className="btn btn-admin-primary btn-md"
+                  className={buttonVariants()}
                 >
                   Fazer o pedido
                 </Link>
@@ -144,11 +146,11 @@ export default async function PaperOrdersPage({
         })}
 
         {missing.length > 0 && (
-          <p className="text-[12.5px] text-admin-warning-text">
+          <p className="text-xs text-warning-text">
             Faltam nos dados do cartório: {missing.join(", ")}.{" "}
             <Link
               href="/admin/utilitarios/solicitacao-papeis/configuracao"
-              className="font-semibold underline"
+              className="font-medium underline underline-offset-4"
             >
               Completar agora
             </Link>
@@ -156,11 +158,11 @@ export default async function PaperOrdersPage({
         )}
 
         {suppliers.length === 0 ? (
-          <section className="flex flex-col gap-3 rounded-[14px] border border-dashed border-admin-border bg-admin-card px-5 py-5">
-            <p className="text-[14px] font-semibold text-admin-primary">
+          <section className="flex flex-col gap-3 rounded-xl border border-dashed bg-card px-5 py-5">
+            <p className="text-sm font-semibold text-foreground">
               Nenhuma empresa cadastrada.
             </p>
-            <p className="text-[13px] text-admin-text">
+            <p className="text-sm text-foreground">
               Comece com as empresas dos formulários da ANOREG/RN: a IGB
               (traslado, certidão RCPN, extensor, apostila e etiquetas) e a M2
               (ribbon). Tudo fica editável: se mudar de empresa, é só alterar ou
@@ -168,13 +170,11 @@ export default async function PaperOrdersPage({
             </p>
             <div className="flex flex-wrap gap-2">
               <form action={addStarterSuppliers}>
-                <button type="submit" className="btn btn-admin-primary btn-md">
-                  Usar as empresas da ANOREG/RN
-                </button>
+                <Button type="submit">Usar as empresas da ANOREG/RN</Button>
               </form>
               <Link
                 href="/admin/utilitarios/solicitacao-papeis/empresas/nova"
-                className="btn btn-admin-secondary btn-md"
+                className={buttonVariants({ variant: "outline" })}
               >
                 Cadastrar outra empresa
               </Link>
@@ -182,21 +182,21 @@ export default async function PaperOrdersPage({
           </section>
         ) : (
           <section className="flex flex-col gap-3">
-            <h2 className="font-serif text-[19px] font-semibold text-admin-primary">
+            <h2 className="text-lg font-semibold text-foreground">
               O que pedir, por empresa
             </h2>
             <div className="grid gap-3 md:grid-cols-2">
               {suppliers.map(({ row, s }) => (
                 <div
                   key={row.id}
-                  className="flex flex-col gap-2.5 rounded-[14px] border border-admin-border bg-admin-card px-5 py-4"
+                  className="flex flex-col gap-2.5 rounded-xl border bg-card px-5 py-4"
                 >
                   <div className="flex flex-wrap items-start justify-between gap-2">
                     <div>
-                      <p className="text-[14px] font-bold text-admin-primary">
+                      <p className="text-sm font-semibold text-foreground">
                         {s.name}
                       </p>
-                      <p className="text-[11.5px] text-admin-muted">
+                      <p className="text-xs text-muted-foreground">
                         {row.modelPath
                           ? "Com o formulário da empresa (.docx)"
                           : "Sem formulário da empresa: sai no padrão do sistema"}
@@ -205,29 +205,32 @@ export default async function PaperOrdersPage({
                     <div className="flex gap-1.5">
                       <Link
                         href={`/admin/utilitarios/solicitacao-papeis/empresas/${row.id}`}
-                        className="btn btn-admin-secondary btn-sm"
+                        className={buttonVariants({
+                          variant: "outline",
+                          size: "sm",
+                        })}
                       >
                         Editar
                       </Link>
                       <Link
                         href={`/admin/utilitarios/solicitacao-papeis/novo?empresa=${row.id}`}
-                        className="btn btn-admin-primary btn-sm"
+                        className={buttonVariants({ size: "sm" })}
                       >
                         Pedir
                       </Link>
                     </div>
                   </div>
-                  <ul className="flex flex-col divide-y divide-admin-border text-[12.5px]">
+                  <ul className="flex flex-col divide-y text-xs">
                     {s.items.map((i) => (
                       <li
                         key={i.id}
                         className="flex flex-wrap justify-between gap-2 py-1.5"
                       >
                         <span>
-                          <span className="font-semibold text-admin-text">
+                          <span className="font-semibold text-foreground">
                             {i.name}
                           </span>
-                          <span className="text-admin-muted">
+                          <span className="text-muted-foreground">
                             {" "}
                             · {i.unit}
                             {i.minimum
@@ -239,7 +242,7 @@ export default async function PaperOrdersPage({
                           </span>
                         </span>
                         {i.paperKind && (
-                          <span className="text-admin-muted">
+                          <span className="text-muted-foreground tabular-nums">
                             estoque{" "}
                             {(stock.get(i.paperKind) ?? 0).toLocaleString(
                               "pt-BR",
@@ -249,7 +252,7 @@ export default async function PaperOrdersPage({
                       </li>
                     ))}
                     {s.items.length === 0 && (
-                      <li className="py-1.5 text-admin-muted">
+                      <li className="py-1.5 text-muted-foreground">
                         Nenhum item. Edite a empresa para incluir.
                       </li>
                     )}
@@ -260,14 +263,12 @@ export default async function PaperOrdersPage({
           </section>
         )}
 
-        <section className="overflow-hidden rounded-[14px] border border-admin-border bg-admin-card">
-          <div className="flex flex-wrap items-center justify-between gap-2 border-b border-admin-border px-5 py-3.5">
-            <h2 className="font-serif text-[17px] font-semibold text-admin-primary">
-              Pedidos
-            </h2>
+        <section className="overflow-hidden rounded-xl border bg-card">
+          <div className="flex flex-wrap items-center justify-between gap-2 border-b px-5 py-3.5">
+            <h2 className="text-lg font-semibold text-foreground">Pedidos</h2>
             <Link
               href={`/admin/utilitarios/solicitacao-papeis${query.excluidos === "1" ? "" : "?excluidos=1"}`}
-              className="text-[12.5px] font-semibold text-admin-primary underline"
+              className="text-xs font-medium text-primary underline underline-offset-4"
             >
               {query.excluidos === "1"
                 ? "Esconder os excluídos"
@@ -275,7 +276,7 @@ export default async function PaperOrdersPage({
             </Link>
           </div>
           {orders.length === 0 ? (
-            <p className="px-5 py-4 text-[13px] text-admin-muted">
+            <p className="px-5 py-4 text-sm text-muted-foreground">
               Nenhum pedido ainda.
             </p>
           ) : (
@@ -287,16 +288,16 @@ export default async function PaperOrdersPage({
                 return (
                   <li
                     key={row.id}
-                    className={`flex flex-wrap items-center gap-3 border-b border-admin-border px-5 py-3 last:border-0 ${row.removedAt ? "opacity-55" : ""}`}
+                    className={`flex flex-wrap items-center gap-3 border-b px-5 py-3 last:border-0 ${row.removedAt ? "opacity-55" : ""}`}
                   >
                     <div className="mr-auto min-w-[240px]">
                       <Link
                         href={`/admin/utilitarios/solicitacao-papeis/${row.id}`}
-                        className={`text-[13.5px] font-semibold text-admin-primary underline ${row.removedAt ? "line-through" : ""}`}
+                        className={`text-sm font-medium text-primary underline underline-offset-4 ${row.removedAt ? "line-through" : ""}`}
                       >
                         Pedido nº {orderNumber(row)} · {supplier.name}
                       </Link>
-                      <p className="text-[12px] text-admin-muted">
+                      <p className="text-xs text-muted-foreground">
                         {date(order.orderDate)} ·{" "}
                         {order.lines
                           .map(
@@ -310,23 +311,29 @@ export default async function PaperOrdersPage({
                           : ""}
                       </p>
                     </div>
-                    <span
-                      className={`rounded-full px-2.5 py-0.5 text-[11.5px] font-bold ${
+                    <Badge
+                      variant={
+                        row.status === "enviado" ? "secondary" : "default"
+                      }
+                      className={
                         row.status === "recebido"
-                          ? "bg-admin-success-bg text-admin-success-text"
+                          ? "bg-success text-success-foreground"
                           : row.status === "enviado"
-                            ? "bg-admin-input-bg text-admin-primary"
-                            : "bg-admin-warning-soft-bg text-admin-warning-text"
-                      }`}
+                            ? undefined
+                            : "bg-warning text-warning-foreground"
+                      }
                     >
                       {ORDER_STATUS_LABELS[row.status as OrderStatus] ??
                         row.status}
-                    </span>
+                    </Badge>
                     {!row.removedAt && (
                       <>
                         <Link
                           href={`/admin/utilitarios/solicitacao-papeis/${row.id}/editar`}
-                          className="btn btn-admin-secondary btn-sm"
+                          className={buttonVariants({
+                            variant: "outline",
+                            size: "sm",
+                          })}
                         >
                           Editar
                         </Link>

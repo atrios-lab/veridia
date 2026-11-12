@@ -2,6 +2,8 @@
 
 import { useActionState, useId, useState } from "react";
 import { AdminDialog, DIALOG_FOOTER } from "../../../../_components/dialog.tsx";
+import { Button, buttonVariants } from "../../../../_ui/button.tsx";
+import { cn } from "../../../../_ui/cn.ts";
 import { type ActionState, closeConversationAction } from "../actions.ts";
 
 type Choice = "link" | "new" | "none";
@@ -30,26 +32,22 @@ export function CloseDialog({
         <div className="dialog-body">
           <h2
             id={headingId}
-            className="font-serif text-[18px] font-semibold text-admin-primary"
+            className="text-lg leading-snug font-semibold text-foreground"
           >
             Lançar um pedido novo?
           </h2>
-          <p className="mt-2 text-[13px] leading-relaxed text-admin-muted">
+          <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
             Preencha o formulário e depois volte aqui para confirmar o
             encerramento. A conversa continua aberta até lá.
           </p>
         </div>
         <div className={DIALOG_FOOTER}>
-          <button
-            type="button"
-            onClick={onCancel}
-            className="btn btn-admin-secondary btn-md"
-          >
+          <Button type="button" variant="outline" onClick={onCancel}>
             Cancelar
-          </button>
+          </Button>
           <a
             href={`/admin/pedidos/novo?deConversa=${conversationId}`}
-            className="btn btn-admin-primary btn-md"
+            className={buttonVariants()}
           >
             Abrir lançamento manual
           </a>
@@ -69,11 +67,11 @@ export function CloseDialog({
         <div className="dialog-body flex flex-col gap-2">
           <h2
             id={headingId}
-            className="font-serif text-[18px] font-semibold text-admin-primary"
+            className="text-lg leading-snug font-semibold text-foreground"
           >
             Encerrar a conversa?
           </h2>
-          <p className="mb-2 text-[13px] leading-relaxed text-admin-muted">
+          <p className="mb-2 text-sm leading-relaxed text-muted-foreground">
             A transcrição fica guardada por 6 meses.
           </p>
           <input type="hidden" name="conversationId" value={conversationId} />
@@ -102,30 +100,23 @@ export function CloseDialog({
             label="Só encerrar, sem vincular"
           />
           {state.status === "error" && (
-            <p
-              role="alert"
-              className="text-[12.5px] font-semibold text-admin-error-text"
-            >
+            <p role="alert" className="text-sm font-medium text-destructive">
               {state.message}
             </p>
           )}
         </div>
         <div className={DIALOG_FOOTER}>
-          <button
+          <Button
             type="button"
+            variant="outline"
             onClick={onCancel}
             disabled={pending}
-            className="btn btn-admin-secondary btn-md"
           >
             Voltar
-          </button>
-          <button
-            type="submit"
-            disabled={pending}
-            className="btn btn-admin-primary btn-md"
-          >
+          </Button>
+          <Button type="submit" disabled={pending}>
             {pending ? "Encerrando…" : "Encerrar conversa"}
-          </button>
+          </Button>
         </div>
       </form>
     </AdminDialog>
@@ -143,19 +134,18 @@ function RadioOption({
 }) {
   return (
     <label
-      className={`flex cursor-pointer items-center gap-3 rounded-[10px] border px-3.5 py-2.5 ${
-        checked
-          ? "border-admin-primary-soft bg-admin-input-bg"
-          : "border-admin-border"
-      }`}
+      className={cn(
+        "flex cursor-pointer items-center gap-3 rounded-lg border px-3.5 py-2.5 transition-colors",
+        checked ? "border-primary bg-muted/50" : "hover:bg-muted/50",
+      )}
     >
       <input
         type="radio"
         checked={checked}
         onChange={onSelect}
-        className="h-4 w-4"
+        className="h-4 w-4 accent-primary"
       />
-      <span className="text-[13px] text-admin-text">{label}</span>
+      <span className="text-sm text-foreground">{label}</span>
     </label>
   );
 }

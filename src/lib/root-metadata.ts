@@ -1,23 +1,14 @@
 import type { Metadata } from "next";
-import { Public_Sans } from "next/font/google";
+import type { Tenant } from "@/core/tenant/schema.ts";
 import { PAGE_META, siteTitle, socialMetadata } from "@/core/tenant/seo.ts";
-import { getSiteOrigin } from "@/lib/site-origin.ts";
-import { getTenant } from "@/lib/tenant.ts";
-import "./globals.css";
 
-// The body face is the same for every office. Only the serif carries the
-// brand, and the public layout picks it from the office's theme.
-const publicSans = Public_Sans({
-  subsets: ["latin"],
-  variable: "--font-brand-sans",
-  display: "swap",
-});
-
-// Metadata lives in the root layout so every route inherits the office title
-// and seal without repeating the lookup.
-export async function generateMetadata(): Promise<Metadata> {
-  const tenant = await getTenant();
-  const origin = await getSiteOrigin();
+/**
+ * The metadata every route inherits: the office's title and seal, the
+ * canonical and the social card. The site and the panel each have their own
+ * root layout (they load different stylesheets and fonts), and both start
+ * from this, so a route reads the same `<head>` under either.
+ */
+export function rootMetadata(tenant: Tenant, origin: string): Metadata {
   return {
     // The canonical of every route is its own path on the office's domain,
     // query string dropped: "./" is resolved by Next against the pathname
@@ -47,16 +38,4 @@ export async function generateMetadata(): Promise<Metadata> {
       PAGE_META["/"].description(tenant),
     ),
   };
-}
-
-export default function RootLayout({
-  children,
-}: Readonly<{
-  children: React.ReactNode;
-}>) {
-  return (
-    <html lang="pt-BR" className={publicSans.variable}>
-      <body>{children}</body>
-    </html>
-  );
 }

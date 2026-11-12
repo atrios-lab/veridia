@@ -9,6 +9,10 @@ import {
   AttachmentRow,
 } from "../../../../_components/attachment-row.tsx";
 import {
+  NativeSelect,
+  NativeSelectOption,
+} from "../../../../_ui/native-select.tsx";
+import {
   type ActionState,
   attachCitizenDocumentAction,
   deleteAttachmentAction,
@@ -36,16 +40,16 @@ export function AttachmentsSection({
   }, [state]);
 
   return (
-    <div className="rounded-[14px] border border-admin-border bg-admin-card p-6">
-      <h4 className="font-serif text-[17px] font-semibold text-admin-primary">
+    <div className="rounded-xl border bg-card p-6">
+      <h4 className="text-base font-semibold text-foreground">
         Documentos anexados pelo cidadão
       </h4>
       {attachments.length === 0 ? (
-        <p className="mt-2 text-[12.5px] text-admin-muted">
+        <p className="mt-2 text-sm text-muted-foreground">
           Nenhum documento anexado.
         </p>
       ) : (
-        <div className="mt-3.5 flex flex-col gap-2">
+        <div className="mt-4 flex flex-col gap-2">
           {attachments.map((attachment) => (
             <AttachmentRow
               key={attachment.id}
@@ -61,25 +65,35 @@ export function AttachmentsSection({
       {/* The counter case: the citizen arrives with the paper in hand, and
           whoever is serving them scans it. It lands in this same list, because
           it is the citizen's document however it got here. */}
-      <form action={action} className="mt-3.5 flex flex-col gap-2.5">
+      <form action={action} className="mt-4 flex flex-col gap-2">
         <input type="hidden" name="requestId" value={requestId} />
         {/* Which paper is being scanned. A signed requerimento or declaração
             filed here becomes the via assinada the header opens, the same as
             one the citizen sent through the site. */}
-        <label className="flex items-center gap-2.5 text-[12.5px] text-admin-text">
-          <span className="shrink-0 font-semibold">Este arquivo é</span>
-          <select
+        <label
+          htmlFor={`como-${requestId}`}
+          className="flex items-center gap-2 text-sm text-foreground"
+        >
+          <span className="shrink-0 font-medium">Este arquivo é</span>
+          <NativeSelect
+            id={`como-${requestId}`}
             name="como"
             defaultValue="documento"
             disabled={pending}
-            className="flex-1 rounded-[9px] border border-admin-input-border bg-admin-input-bg px-3 py-2 text-[12.5px] text-admin-text outline-none focus:border-admin-primary-soft"
+            className="w-full flex-1"
           >
-            <option value="documento">Documento do cidadão</option>
-            <option value="requerimento">Requerimento assinado</option>
+            <NativeSelectOption value="documento">
+              Documento do cidadão
+            </NativeSelectOption>
+            <NativeSelectOption value="requerimento">
+              Requerimento assinado
+            </NativeSelectOption>
             {hasExemption && (
-              <option value="declaracao">Declaração assinada</option>
+              <NativeSelectOption value="declaracao">
+                Declaração assinada
+              </NativeSelectOption>
             )}
-          </select>
+          </NativeSelect>
         </label>
         <DocumentNameField
           field="documento"
@@ -88,7 +102,7 @@ export function AttachmentsSection({
           hint="Para documento do cidadão. Requerimento e declaração assinados já têm nome."
         />
         <label
-          className={`relative flex cursor-pointer items-center justify-center gap-2 rounded-[9px] border-[1.5px] border-dashed border-admin-input-border px-3 py-2.5 text-center text-[12px] font-semibold text-admin-primary focus-within:border-admin-accent focus-within:ring-2 focus-within:ring-admin-accent ${pending ? "cursor-not-allowed opacity-60" : ""}`}
+          className={`relative flex cursor-pointer items-center justify-center gap-2 rounded-md border border-dashed border-input px-3 py-2.5 text-center text-sm font-medium text-primary transition-colors focus-within:border-ring focus-within:ring-3 focus-within:ring-ring/50 hover:bg-muted/50 ${pending ? "cursor-not-allowed opacity-60" : ""}`}
         >
           {pending ? "Anexando…" : "Anexar arquivo (balcão)"}
           <input

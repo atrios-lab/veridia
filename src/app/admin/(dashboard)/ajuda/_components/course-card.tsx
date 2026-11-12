@@ -3,6 +3,8 @@ import { type Course, courseHref } from "@/core/tutorials/catalog.ts";
 import type { CourseProgress } from "@/core/tutorials/course.ts";
 import { formatDuration } from "@/core/tutorials/progress.ts";
 import { AdminIcon } from "../../../_components/icon.tsx";
+import { Badge } from "../../../_ui/badge.tsx";
+import { Progress } from "../../../_ui/progress.tsx";
 import { TutorialCover } from "./tutorial-cover.tsx";
 
 /**
@@ -25,44 +27,36 @@ export function CourseCard({
   return (
     <Link
       href={courseHref(course.slug)}
-      className="group flex h-full flex-col overflow-hidden rounded-[14px] border border-admin-border bg-admin-card transition-colors duration-120 hover:border-admin-input-border focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-admin-focus-ring"
+      className="group flex h-full flex-col overflow-hidden rounded-xl border bg-card transition-colors duration-120 hover:border-input focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
     >
       <TutorialCover title={course.title} posterUrl={course.posterUrl}>
         {done && (
-          <span className="absolute top-2.5 right-2.5 inline-flex items-center gap-1 rounded-full bg-white px-2 py-0.5 text-[10.5px] font-bold text-admin-success-text shadow-sm">
+          <Badge className="absolute top-2.5 right-2.5 bg-success text-success-foreground shadow-sm">
             <AdminIcon name="check" className="h-3 w-3" strokeWidth={2.4} />
             Concluído
-          </span>
+          </Badge>
         )}
       </TutorialCover>
       <span className="flex flex-1 flex-col gap-2 px-4 pt-3.5 pb-4">
-        <span className="text-[10.5px] font-bold uppercase tracking-[0.08em] text-admin-faint">
+        <span className="text-xs font-medium text-muted-foreground">
           {course.sequential ? "Curso em aulas" : "Consulta"}
         </span>
-        <span className="text-[16px] leading-snug font-semibold text-admin-primary group-hover:underline">
+        <span className="text-base leading-snug font-semibold text-foreground group-hover:underline">
           {course.title}
         </span>
         {course.description && (
-          <span className="line-clamp-2 text-[12.5px] leading-normal text-admin-muted">
+          <span className="line-clamp-2 text-xs leading-normal text-muted-foreground">
             {course.description}
           </span>
         )}
         <span className="mt-auto flex flex-col gap-1.5 pt-1">
-          <span className="text-[12px] text-admin-muted">
+          <span className="text-xs text-muted-foreground">
             {progress.total} {progress.total === 1 ? "vídeo" : "vídeos"} ·{" "}
             {formatDuration(progress.durationSeconds)}
           </span>
           <span className="flex items-center gap-2.5">
-            <span
-              className="h-1.5 flex-1 overflow-hidden rounded-full bg-admin-surface"
-              aria-hidden="true"
-            >
-              <span
-                className="block h-full rounded-full bg-admin-primary"
-                style={{ width: `${percent}%` }}
-              />
-            </span>
-            <span className="text-[12px] font-semibold text-admin-primary tabular-nums">
+            <Progress value={percent} className="flex-1" aria-hidden="true" />
+            <span className="text-xs font-semibold text-foreground tabular-nums">
               {progress.watched} de {progress.total}
             </span>
           </span>

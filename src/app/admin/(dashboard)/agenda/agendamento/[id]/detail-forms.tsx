@@ -1,12 +1,20 @@
 "use client";
 
-import { useActionState, useEffect, useRef } from "react";
+import { useActionState, useEffect, useId, useRef } from "react";
 import {
   CITIZEN_DOCUMENT_NAMES,
   OFFICE_DOCUMENT_NAMES,
 } from "@/core/request/delivery-name.ts";
 import { LONG_TEXT_MAX } from "@/core/text-limits.ts";
 import { DocumentNameField } from "../../../../../_components/document-name-field.tsx";
+import { Button } from "../../../../_ui/button.tsx";
+import { cn } from "../../../../_ui/cn.ts";
+import { Input } from "../../../../_ui/input.tsx";
+import {
+  NativeSelect,
+  NativeSelectOption,
+} from "../../../../_ui/native-select.tsx";
+import { Textarea } from "../../../../_ui/textarea.tsx";
 import {
   addNoteAction,
   attachOfficeFilesAction,
@@ -14,18 +22,17 @@ import {
   type DetailState,
 } from "./actions.ts";
 
-const FIELD =
-  "w-full rounded-[9px] border border-admin-input-border bg-admin-input-bg px-3 py-2 text-[13px] text-admin-text outline-none focus:border-admin-primary-soft";
-const FIELD_ERROR =
-  "w-full rounded-[9px] border border-admin-error-border bg-admin-error-input-bg px-3 py-2 text-[13px] text-admin-text outline-none focus:border-admin-error-text";
-const LABEL = "mb-1 block text-[11.5px] font-bold text-admin-primary";
+const LABEL = "mb-1 block text-xs font-medium text-foreground";
 
 function Feedback({ state }: { state: DetailState }) {
   if (state.status === "idle") return null;
   return (
     <span
       role={state.status === "error" ? "alert" : "status"}
-      className={`text-[12.5px] font-semibold ${state.status === "error" ? "text-admin-error-text" : "text-admin-success-text"}`}
+      className={cn(
+        "text-sm font-medium",
+        state.status === "error" ? "text-destructive" : "text-success-text",
+      )}
     >
       {state.message}
     </span>
@@ -50,22 +57,18 @@ export function NoteForm({ id }: { id: string }) {
       <label className="sr-only" htmlFor="nota">
         Nova anotação
       </label>
-      <textarea
+      <Textarea
         id="nota"
         name="body"
         rows={3}
         maxLength={LONG_TEXT_MAX}
         placeholder="Ex.: cliente avisou que vai chegar 10 minutos atrasado."
-        className={FIELD}
+        className="field-sizing-fixed bg-background"
       />
       <div className="flex items-center gap-3">
-        <button
-          type="submit"
-          disabled={pending}
-          className="btn btn-admin-primary btn-md"
-        >
+        <Button type="submit" disabled={pending}>
           {pending ? "Salvando…" : "Anotar"}
-        </button>
+        </Button>
         <Feedback state={state} />
       </div>
     </form>
@@ -104,15 +107,11 @@ export function OfficeFilesForm({ id }: { id: string }) {
         name="arquivo"
         type="file"
         multiple
-        className="text-[12.5px]"
+        className="text-sm text-muted-foreground file:mr-3 file:rounded-md file:border file:border-input file:bg-background file:px-2.5 file:py-1 file:text-sm file:font-medium file:text-foreground"
       />
-      <button
-        type="submit"
-        disabled={pending}
-        className="btn btn-admin-secondary btn-md"
-      >
+      <Button type="submit" variant="outline" disabled={pending}>
         {pending ? "Anexando…" : "Anexar"}
-      </button>
+      </Button>
       <Feedback state={state} />
     </form>
   );
@@ -145,21 +144,26 @@ export function CorrectionForm({
     { status: "idle" },
   );
   const errors = state.status === "error" ? (state.fieldErrors ?? {}) : {};
+  const uid = useId();
   const text = (
     name: keyof CorrectionValues,
     label: string,
     wide?: boolean,
   ) => (
-    <label className={`block ${wide ? "md:col-span-2" : ""}`}>
+    <label
+      htmlFor={`${uid}-${name}`}
+      className={cn("block", wide && "md:col-span-2")}
+    >
       <span className={LABEL}>{label}</span>
-      <input
+      <Input
+        id={`${uid}-${name}`}
         name={name}
         defaultValue={initial[name]}
         aria-invalid={errors[name] ? true : undefined}
-        className={errors[name] ? FIELD_ERROR : FIELD}
+        className="bg-background"
       />
       {errors[name] && (
-        <span className="mt-1 block text-[11.5px] font-semibold text-admin-error-text">
+        <span className="mt-1 block text-xs font-medium text-destructive">
           {errors[name]}
         </span>
       )}
@@ -175,48 +179,51 @@ export function CorrectionForm({
       {text("cpf", "CPF")}
       {text("phone", "Telefone")}
       {text("email", "E-mail", true)}
-      <label className="block">
+      <label htmlFor={`${uid}-serviceId`} className="block">
         <span className={LABEL}>Serviço</span>
-        <select
+        <NativeSelect
+          id={`${uid}-serviceId`}
           name="serviceId"
           defaultValue={initial.serviceId}
-          className={FIELD}
+          className="w-full bg-background"
         >
           {services.map((service) => (
-            <option key={service.id} value={service.id}>
+            <NativeSelectOption key={service.id} value={service.id}>
               {service.label}
-            </option>
+            </NativeSelectOption>
           ))}
-        </select>
+        </NativeSelect>
       </label>
-      <label className="block">
+      <label htmlFor={`${uid}-mode`} className="block">
         <span className={LABEL}>Modo</span>
-        <select name="mode" defaultValue={initial.mode} className={FIELD}>
+        <NativeSelect
+          id={`${uid}-mode`}
+          name="mode"
+          defaultValue={initial.mode}
+          className="w-full bg-background"
+        >
           {modes.map((mode) => (
-            <option key={mode} value={mode}>
+            <NativeSelectOption key={mode} value={mode}>
               {mode}
-            </option>
+            </NativeSelectOption>
           ))}
-        </select>
+        </NativeSelect>
       </label>
-      <label className="block md:col-span-2">
+      <label htmlFor={`${uid}-serviceDetails`} className="block md:col-span-2">
         <span className={LABEL}>Observação do cliente (o que precisa)</span>
-        <textarea
+        <Textarea
+          id={`${uid}-serviceDetails`}
           name="serviceDetails"
           rows={3}
           defaultValue={initial.serviceDetails}
           maxLength={LONG_TEXT_MAX}
-          className={FIELD}
+          className="field-sizing-fixed bg-background"
         />
       </label>
       <div className="flex items-center gap-3 md:col-span-2">
-        <button
-          type="submit"
-          disabled={pending}
-          className="btn btn-admin-primary btn-md"
-        >
+        <Button type="submit" disabled={pending}>
           {pending ? "Salvando…" : "Salvar correções"}
-        </button>
+        </Button>
         <Feedback state={state} />
       </div>
     </form>

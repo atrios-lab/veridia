@@ -2,23 +2,31 @@
 
 import { useEffect, useId, useRef, useState } from "react";
 
+/**
+ * The two faces draw the same field. The panel's tone is the panel's theme
+ * (admin.css): the look of _ui's Input, outline Button and popover, written
+ * out here because this file also serves the public site, which may not
+ * import the panel's kit. The public tone is the office's palette
+ * (brand.css).
+ */
 const STYLES = {
   admin: {
-    label: "mb-1.5 block text-xs font-bold text-admin-primary",
+    label: "mb-2 block text-sm leading-none font-medium text-foreground",
     input:
-      "min-w-0 flex-1 rounded-[9px] border border-admin-input-border bg-admin-input-bg px-3.5 py-2.5 text-[13.5px] text-admin-text outline-none focus:border-admin-primary-soft",
-    button: "btn btn-admin-secondary btn-md shrink-0",
-    menu: "border-admin-border bg-admin-card",
-    item: "text-admin-text hover:bg-admin-input-bg",
-    hint: "mt-1 text-[11.5px] text-admin-muted",
+      "h-9 min-w-0 flex-1 rounded-md border border-input bg-transparent px-2.5 py-1 text-base text-foreground shadow-xs outline-none transition-[color,box-shadow] placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 md:text-sm",
+    button:
+      "inline-flex h-9 shrink-0 items-center justify-center gap-1.5 rounded-md border border-border bg-background px-2.5 text-sm font-medium whitespace-nowrap text-foreground shadow-xs transition-all outline-none hover:bg-muted focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 aria-expanded:bg-muted",
+    menu: "rounded-md bg-popover text-popover-foreground ring-1 ring-foreground/10",
+    item: "rounded-sm text-sm text-foreground hover:bg-accent hover:text-accent-foreground",
+    hint: "mt-2 text-sm text-muted-foreground",
   },
   public: {
     label: "mb-1.5 block text-sm font-semibold text-brand-primary",
     input:
       "min-w-0 flex-1 rounded-xl border border-brand-border bg-brand-surface px-3.5 py-3 text-sm text-brand-text outline-none placeholder:text-brand-faint focus:border-brand-accent",
     button: "btn btn-secondary btn-md shrink-0",
-    menu: "border-brand-border bg-brand-surface",
-    item: "text-brand-text hover:bg-brand-tint",
+    menu: "rounded-[12px] border border-brand-border bg-brand-surface",
+    item: "rounded-[8px] text-[13px] text-brand-text hover:bg-brand-tint",
     hint: "mt-1 text-xs text-brand-muted",
   },
 } as const;
@@ -101,7 +109,7 @@ export function DocumentNameField({
           <ul
             id={`${id}-opcoes`}
             aria-label="Nomes sugeridos"
-            className={`absolute top-full right-0 z-30 mt-1 max-h-72 w-full max-w-sm overflow-y-auto rounded-[12px] border p-1 shadow-lg ${style.menu}`}
+            className={`absolute top-full right-0 z-30 mt-1 max-h-72 w-full max-w-sm overflow-y-auto p-1 shadow-lg ${style.menu}`}
           >
             {suggestions.map((suggestion) => (
               <li key={suggestion}>
@@ -111,7 +119,7 @@ export function DocumentNameField({
                     setValue(suggestion);
                     setOpen(false);
                   }}
-                  className={`block w-full rounded-[8px] px-3 py-2 text-left text-[13px] ${style.item}`}
+                  className={`block w-full px-3 py-2 text-left ${style.item}`}
                 >
                   {suggestion}
                 </button>

@@ -9,6 +9,7 @@ import { findGuide, getGuideSettings } from "@/lib/tax-guides.ts";
 import { getTenant } from "@/lib/tenant.ts";
 import { AdminIcon } from "../../../../_components/icon.tsx";
 import { AdminPageHeader } from "../../../../_components/page-header.tsx";
+import { buttonVariants } from "../../../../_ui/button.tsx";
 import { GuideForm } from "../guide-form.tsx";
 import { GuideNumber } from "./guide-number.tsx";
 
@@ -42,17 +43,17 @@ export default async function GuidePage({
   return (
     <>
       <AdminPageHeader maxWidth={1100} title={`Guia nº ${number}`} />
-      <main className="flex max-w-[1100px] flex-col gap-4.5 px-[30px] py-7">
+      <main className="flex max-w-[1100px] flex-col gap-4.5 px-4 py-7 md:px-8">
         <BackLink
           href="/admin/utilitarios/guias"
           label="Guias de transmissão de bens"
         />
-        <section className="flex flex-wrap items-center gap-3 rounded-[14px] border border-admin-border bg-admin-card px-5 py-4">
+        <section className="flex flex-wrap items-center gap-3 rounded-xl border bg-card px-5 py-4">
           <div className="mr-auto">
-            <p className="text-[13px] font-bold text-admin-primary">
+            <p className="text-sm font-semibold text-foreground">
               {GUIDE_KIND_INFO[stored.guide.kind].label} · nº {number}
             </p>
-            <p className="text-[12px] text-admin-muted">
+            <p className="text-xs text-muted-foreground">
               {issued
                 ? "Guia emitida. Baixe, confira, assine e entregue à parte."
                 : "Corrija abaixo se precisar: o número continua o mesmo."}
@@ -64,7 +65,7 @@ export default async function GuidePage({
           />
           <a
             href={`${base}?formato=docx`}
-            className="btn btn-admin-secondary btn-md"
+            className={buttonVariants({ variant: "outline" })}
           >
             <AdminIcon name="file" className="h-4 w-4" /> Word (editável)
           </a>

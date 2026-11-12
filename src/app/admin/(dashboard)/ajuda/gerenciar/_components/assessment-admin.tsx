@@ -11,6 +11,11 @@ import {
 import { toast } from "sonner";
 import { LONG_TEXT_MAX } from "@/core/text-limits.ts";
 import { ConfirmAction } from "../../../../_components/confirm-action.tsx";
+import { Button } from "../../../../_ui/button.tsx";
+import { cn } from "../../../../_ui/cn.ts";
+import { Input } from "../../../../_ui/input.tsx";
+import { Label } from "../../../../_ui/label.tsx";
+import { Textarea } from "../../../../_ui/textarea.tsx";
 import {
   deleteQuestionAction,
   type SaveTutorialState,
@@ -20,9 +25,7 @@ import {
   type TutorialActionState,
 } from "../actions.ts";
 
-const FIELD_CLASS =
-  "w-full rounded-[9px] border border-admin-input-border bg-admin-input-bg px-3.5 py-2.5 text-[13.5px] text-admin-text outline-none focus:border-admin-primary-soft";
-const LABEL_CLASS = "mb-1.5 block text-xs font-bold text-admin-primary";
+const LABEL_CLASS = "mb-1.5 block text-sm font-medium text-foreground";
 const LETTERS = ["A", "B", "C", "D"];
 
 /** A question as the management screen sees it: the right answer
@@ -47,7 +50,7 @@ function Message({ state }: { state: SaveTutorialState }) {
   return (
     <p
       role="alert"
-      className="rounded-[9px] border border-admin-error-border bg-admin-error-bg px-3.5 py-2.5 text-[12.5px] font-semibold text-admin-error-text"
+      className="rounded-lg border border-destructive/40 bg-destructive-soft px-4 py-3 text-sm font-medium text-destructive"
     >
       {state.message}
     </p>
@@ -77,10 +80,10 @@ function SettingsForm({
     <form action={formAction} className="flex flex-col gap-3">
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
         <div>
-          <label className={LABEL_CLASS} htmlFor={`${formId}-hours`}>
+          <Label className="mb-1.5" htmlFor={`${formId}-hours`}>
             Carga horária (horas)
-          </label>
-          <input
+          </Label>
+          <Input
             id={`${formId}-hours`}
             name="workloadHours"
             type="number"
@@ -88,52 +91,45 @@ function SettingsForm({
             max={200}
             defaultValue={settings.workloadHours ?? ""}
             placeholder="Sem certificado"
-            className={FIELD_CLASS}
           />
         </div>
         <div>
-          <label className={LABEL_CLASS} htmlFor={`${formId}-score`}>
+          <Label className="mb-1.5" htmlFor={`${formId}-score`}>
             Nota mínima (%)
-          </label>
-          <input
+          </Label>
+          <Input
             id={`${formId}-score`}
             name="passingScore"
             type="number"
             min={1}
             max={100}
             defaultValue={settings.passingScore}
-            className={FIELD_CLASS}
           />
         </div>
         <div>
-          <label className={LABEL_CLASS} htmlFor={`${formId}-retry`}>
+          <Label className="mb-1.5" htmlFor={`${formId}-retry`}>
             Intervalo entre tentativas (horas)
-          </label>
-          <input
+          </Label>
+          <Input
             id={`${formId}-retry`}
             name="retryHours"
             type="number"
             min={0}
             max={168}
             defaultValue={settings.retryHours}
-            className={FIELD_CLASS}
           />
         </div>
       </div>
-      <p className="text-[11.5px] text-admin-faint">
+      <p className="text-xs text-muted-foreground">
         Sem carga horária, o curso não tem avaliação nem certificado. Com carga
         horária e ao menos uma questão ativa, a avaliação abre para quem
         assistiu a todos os vídeos.
       </p>
       <Message state={state} />
       <div>
-        <button
-          type="submit"
-          disabled={pending}
-          className="btn btn-admin-secondary btn-sm"
-        >
+        <Button type="submit" disabled={pending} variant="outline" size="sm">
           {pending ? "Salvando…" : "Salvar configuração"}
-        </button>
+        </Button>
       </div>
     </form>
   );
@@ -163,21 +159,20 @@ function QuestionForm({
   return (
     <form
       action={formAction}
-      className="flex flex-col gap-3 rounded-[12px] border border-admin-border bg-admin-card p-4"
+      className="flex flex-col gap-3 rounded-lg border bg-muted/50 p-4"
     >
       {editing && <input type="hidden" name="id" value={editing.id} />}
       <div>
-        <label className={LABEL_CLASS} htmlFor={`${formId}-prompt`}>
+        <Label className="mb-1.5" htmlFor={`${formId}-prompt`}>
           Enunciado
-        </label>
-        <textarea
+        </Label>
+        <Textarea
           id={`${formId}-prompt`}
           name="prompt"
           rows={2}
           maxLength={LONG_TEXT_MAX}
           defaultValue={editing?.prompt ?? ""}
           required
-          className={FIELD_CLASS}
         />
       </div>
       <fieldset className="flex flex-col gap-2">
@@ -191,48 +186,45 @@ function QuestionForm({
               defaultChecked={editing?.correctIndex === i}
               aria-label={`Alternativa ${letter} é a certa`}
               required
+              className="accent-primary"
             />
-            <span className="w-4 text-[12px] font-bold text-admin-faint">
+            <span className="w-4 text-xs font-semibold text-muted-foreground">
               {letter}
             </span>
-            <input
+            <Input
               name={`option${i}`}
               maxLength={240}
               defaultValue={editing?.options[i] ?? ""}
               required
               aria-label={`Alternativa ${letter}`}
-              className={FIELD_CLASS}
             />
           </div>
         ))}
       </fieldset>
       {editing?.used && (
-        <p className="text-[11.5px] text-admin-warning-text">
+        <p className="text-xs text-warning-text">
           Esta questão já apareceu em tentativas. Mudar a alternativa certa muda
           a correção das tentativas ainda não enviadas.
         </p>
       )}
       <Message state={state} />
       <div className="flex gap-2">
-        <button
-          type="submit"
-          disabled={pending}
-          className="btn btn-admin-primary btn-sm"
-        >
+        <Button type="submit" disabled={pending} size="sm">
           {pending
             ? "Salvando…"
             : editing
               ? "Salvar questão"
               : "Adicionar questão"}
-        </button>
-        <button
+        </Button>
+        <Button
           type="button"
           onClick={onDone}
           disabled={pending}
-          className="btn btn-admin-ghost btn-sm"
+          variant="outline"
+          size="sm"
         >
           Cancelar
-        </button>
+        </Button>
       </div>
     </form>
   );
@@ -254,7 +246,6 @@ function DeleteQuestion({ id }: { id: string }) {
       confirmLabel="Excluir a questão"
       pendingLabel="Excluindo…"
       className="flex-none"
-      triggerClassName="btn btn-admin-danger btn-sm"
     >
       <input type="hidden" name="id" value={id} />
     </ConfirmAction>
@@ -281,27 +272,27 @@ export function AssessmentAdmin({
   const active = questions.filter((q) => q.active).length;
 
   return (
-    <div className="rounded-[12px] border border-admin-border bg-admin-card">
+    <div className="rounded-xl border bg-card">
       <button
         type="button"
         onClick={() => setOpen((value) => !value)}
         aria-expanded={open}
         className="flex w-full items-center justify-between gap-3 px-4 py-3 text-left"
       >
-        <span className="text-[13.5px] font-semibold text-admin-primary">
+        <span className="text-sm font-semibold text-foreground">
           Avaliação e certificado
         </span>
-        <span className="text-[12px] text-admin-muted">
+        <span className="text-xs text-muted-foreground">
           {settings.workloadHours
             ? `${settings.workloadHours} h · nota ${settings.passingScore}% · ${active} ${active === 1 ? "questão ativa" : "questões ativas"}`
             : "sem certificado"}
         </span>
       </button>
       {open && (
-        <div className="flex flex-col gap-5 border-t border-admin-border px-4 py-4">
+        <div className="flex flex-col gap-5 border-t px-4 py-4">
           <SettingsForm courseId={courseId} settings={settings} />
           <div className="flex flex-col gap-2.5">
-            <span className="text-[11px] font-bold uppercase tracking-[0.08em] text-admin-faint">
+            <span className="text-xs font-medium text-muted-foreground">
               Questões
             </span>
             <ol className="flex flex-col gap-2">
@@ -317,32 +308,38 @@ export function AssessmentAdmin({
                 ) : (
                   <li
                     key={question.id}
-                    className="flex flex-wrap items-start gap-3 rounded-[10px] border border-admin-border px-3.5 py-3"
+                    className="flex flex-wrap items-start gap-3 rounded-lg border px-3.5 py-3"
                   >
-                    <span className="w-6 flex-none text-[12px] font-bold text-admin-faint">
+                    <span className="w-6 flex-none text-xs font-semibold text-muted-foreground tabular-nums">
                       {index + 1}.
                     </span>
                     <div className="min-w-[220px] flex-1">
                       <p
-                        className={`text-[13.5px] font-semibold ${question.active ? "text-admin-primary" : "text-admin-faint line-through"}`}
+                        className={cn(
+                          "text-sm font-semibold",
+                          question.active
+                            ? "text-foreground"
+                            : "text-muted-foreground line-through",
+                        )}
                       >
                         {question.prompt}
                       </p>
-                      <p className="mt-0.5 text-[12px] text-admin-muted">
+                      <p className="mt-0.5 text-xs text-muted-foreground">
                         Certa: {LETTERS[question.correctIndex]}){" "}
                         {question.options[question.correctIndex]}
                         {!question.active && " · desativada"}
                       </p>
                     </div>
                     <div className="flex flex-wrap gap-1.5">
-                      <button
+                      <Button
                         type="button"
                         onClick={() => setEditing(question.id)}
-                        className="btn btn-admin-secondary btn-sm"
+                        variant="outline"
+                        size="sm"
                       >
                         Editar
-                      </button>
-                      <button
+                      </Button>
+                      <Button
                         type="button"
                         disabled={pending}
                         onClick={() =>
@@ -356,10 +353,11 @@ export function AssessmentAdmin({
                             }
                           })
                         }
-                        className="btn btn-admin-ghost btn-sm"
+                        variant="ghost"
+                        size="sm"
                       >
                         {question.active ? "Desativar" : "Ativar"}
-                      </button>
+                      </Button>
                       {!question.used && <DeleteQuestion id={question.id} />}
                     </div>
                   </li>
@@ -373,13 +371,14 @@ export function AssessmentAdmin({
               />
             ) : (
               <div>
-                <button
+                <Button
                   type="button"
                   onClick={() => setEditing("new")}
-                  className="btn btn-admin-ghost btn-sm"
+                  variant="ghost"
+                  size="sm"
                 >
                   + Nova questão
-                </button>
+                </Button>
               </div>
             )}
           </div>

@@ -1,7 +1,7 @@
 import type { Theme } from "./schema.ts";
 
 /**
- * The same colours as the `@theme` block of `src/app/globals.css`, in
+ * The same colours as the `@theme` block of `src/app/brand-palettes.css`, in
  * TypeScript, because the PDF documents are drawn by PDFKit and PDFKit does
  * not read CSS. The stylesheet stays the reference: `palette.test.ts` parses
  * it and fails if these two ever disagree.

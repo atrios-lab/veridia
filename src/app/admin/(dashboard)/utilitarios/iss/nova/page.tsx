@@ -33,7 +33,7 @@ export default async function NewIssPage() {
   return (
     <>
       <AdminPageHeader maxWidth={900} title="Nova declaração de ISS" />
-      <main className="flex max-w-[900px] flex-col gap-4.5 px-[30px] py-7 max-md:px-4">
+      <main className="flex max-w-[900px] flex-col gap-4.5 px-4 py-7 md:px-8">
         <BackLink href="/admin/utilitarios/iss" label="Declaração de ISS" />
         <IssForm
           state={{

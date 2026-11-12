@@ -42,7 +42,7 @@ export default async function SectionPage({
         title={`Seção ${section.number} · ${section.title}`}
         back={{ href: "/admin/adequacao", label: "Adequação ao Provimento" }}
       />
-      <main className="flex max-w-[900px] flex-col gap-4.5 px-[30px] py-7">
+      <main className="flex max-w-[900px] flex-col gap-6 px-4 pt-6 pb-8 md:px-8">
         {section.id === "anexos" ? (
           <Attachments attachments={intake.attachments} />
         ) : (

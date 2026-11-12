@@ -21,21 +21,20 @@ import {
   type TutorialFileKind,
   tutorialFilePath,
 } from "@/core/tutorials/video.ts";
+import { Button } from "../../../../_ui/button.tsx";
+import { Input } from "../../../../_ui/input.tsx";
+import { Label } from "../../../../_ui/label.tsx";
+import { NativeSelect } from "../../../../_ui/native-select.tsx";
+import { Textarea } from "../../../../_ui/textarea.tsx";
 import { TutorialCover } from "../../_components/tutorial-cover.tsx";
 import { type SaveTutorialState, saveTutorialAction } from "../actions.ts";
 
-const FIELD_CLASS =
-  "w-full rounded-[9px] border border-admin-input-border bg-admin-input-bg px-3.5 py-2.5 text-[13.5px] text-admin-text outline-none focus:border-admin-primary-soft";
-const ERROR_FIELD_CLASS =
-  "w-full rounded-[9px] border border-admin-error-border bg-admin-error-input-bg px-3.5 py-2.5 text-[13.5px] text-admin-text outline-none focus:border-admin-error-text";
-const LABEL_CLASS = "mb-1.5 block text-xs font-bold text-admin-primary";
+const LABEL_CLASS = "mb-1.5 block text-sm font-medium text-foreground";
 
 function FieldError({ message }: { message?: string }) {
   if (!message) return null;
   return (
-    <p className="mt-1.5 text-xs font-semibold text-admin-error-text">
-      {message}
-    </p>
+    <p className="mt-1.5 text-xs font-medium text-destructive">{message}</p>
   );
 }
 
@@ -311,15 +310,12 @@ export function TutorialForm({
 
   const fieldErrors = state.status === "error" ? state.fieldErrors : {};
   const busy = pending || Boolean(uploading);
-  const pickerClass = `relative flex cursor-pointer items-center justify-center gap-2 rounded-[10px] border-[1.5px] border-dashed border-admin-input-border px-4 py-3 text-center text-[12.5px] font-semibold text-admin-primary focus-within:border-admin-accent focus-within:ring-2 focus-within:ring-admin-accent ${busy ? "cursor-not-allowed opacity-60" : ""}`;
+  const pickerClass = `relative flex cursor-pointer items-center justify-center gap-2 rounded-lg border-[1.5px] border-dashed border-input px-4 py-3 text-center text-sm font-medium text-primary focus-within:border-ring focus-within:ring-3 focus-within:ring-ring/50 ${busy ? "cursor-not-allowed opacity-60" : ""}`;
 
   return (
-    <form
-      onSubmit={handleSubmit}
-      className="rounded-[14px] border border-admin-border bg-admin-card p-6.5"
-    >
+    <form onSubmit={handleSubmit} className="rounded-xl border bg-card p-6">
       {editing && <input type="hidden" name="id" value={editing.id} />}
-      <h3 className="font-serif text-[17px] font-semibold text-admin-primary">
+      <h3 className="text-lg font-semibold text-foreground">
         {editing ? "Editar vídeo" : "Novo vídeo"}
       </h3>
 
@@ -340,7 +336,7 @@ export function TutorialForm({
               }
             />
           </label>
-          <p className="mt-1.5 text-[11px] text-admin-faint">
+          <p className="mt-1.5 text-xs text-muted-foreground">
             {duration !== null
               ? `Duração lida do arquivo: ${formatExactDuration(duration)}.`
               : `Até ${Math.round(videoLimit / (1024 * 1024))} MB. A duração é lida do arquivo.`}
@@ -366,8 +362,13 @@ export function TutorialForm({
             />
           </label>
           {editing?.hasCaptions && !captionsName && (
-            <label className="mt-1.5 flex items-center gap-2 text-[12px] text-admin-muted">
-              <input type="checkbox" name="removeCaptions" disabled={busy} />
+            <label className="mt-1.5 flex items-center gap-2 text-xs text-muted-foreground">
+              <input
+                type="checkbox"
+                className="checkbox-admin"
+                name="removeCaptions"
+                disabled={busy}
+              />
               Remover a legenda atual
             </label>
           )}
@@ -378,7 +379,7 @@ export function TutorialForm({
       <div className="mt-4">
         <span className={LABEL_CLASS}>Capa (JPEG, PNG ou WebP, opcional)</span>
         <div className="flex flex-wrap items-start gap-4">
-          <span className="block w-[176px] flex-none overflow-hidden rounded-[8px] border border-admin-border">
+          <span className="block w-[176px] flex-none overflow-hidden rounded-lg border">
             {posterPreview ? (
               // biome-ignore lint/performance/noImgElement: local unpublished file previewed via a blob: object URL, which next/image cannot optimize.
               <img
@@ -412,14 +413,15 @@ export function TutorialForm({
                 }
               />
             </label>
-            <p className="mt-1.5 text-[11px] text-admin-faint">
+            <p className="mt-1.5 text-xs text-muted-foreground">
               Até 2 MB, de preferência 1280×720. Sem capa, o card mostra o
-              título sobre a cor da serventia.
+              título sobre fundo azul-marinho.
             </p>
             {editing?.posterUrl && !posterPreview && (
-              <label className="mt-1.5 flex items-center gap-2 text-[12px] text-admin-muted">
+              <label className="mt-1.5 flex items-center gap-2 text-xs text-muted-foreground">
                 <input
                   type="checkbox"
+                  className="checkbox-admin"
                   name="removePoster"
                   checked={removePoster}
                   onChange={(event) => setRemovePoster(event.target.checked)}
@@ -434,26 +436,26 @@ export function TutorialForm({
       </div>
 
       <div className="mt-4">
-        <label className={LABEL_CLASS} htmlFor={`${formId}-title`}>
+        <Label className="mb-1.5" htmlFor={`${formId}-title`}>
           Título
-        </label>
-        <input
+        </Label>
+        <Input
           id={`${formId}-title`}
           name="title"
           defaultValue={editing?.title ?? ""}
           maxLength={120}
           required
           disabled={busy}
-          className={fieldErrors.title ? ERROR_FIELD_CLASS : FIELD_CLASS}
+          aria-invalid={fieldErrors.title ? true : undefined}
         />
         <FieldError message={fieldErrors.title} />
       </div>
 
       <div className="mt-4">
-        <label className={LABEL_CLASS} htmlFor={`${formId}-description`}>
+        <Label className="mb-1.5" htmlFor={`${formId}-description`}>
           Descrição
-        </label>
-        <textarea
+        </Label>
+        <Textarea
           id={`${formId}-description`}
           name="description"
           aria-describedby={`${formId}-description-help`}
@@ -461,11 +463,11 @@ export function TutorialForm({
           maxLength={MAX_TUTORIAL_DESCRIPTION}
           rows={4}
           disabled={busy}
-          className={fieldErrors.description ? ERROR_FIELD_CLASS : FIELD_CLASS}
+          aria-invalid={fieldErrors.description ? true : undefined}
         />
         <p
           id={`${formId}-description-help`}
-          className="mt-1 text-[12px] text-admin-muted"
+          className="mt-1 text-xs text-muted-foreground"
         >
           Separe os parágrafos com uma linha em branco. Use *texto* ou **texto**
           para destacar títulos e trechos em negrito.
@@ -475,43 +477,45 @@ export function TutorialForm({
 
       <div className="mt-4 grid grid-cols-1 gap-4 md:grid-cols-2">
         <div>
-          <label className={LABEL_CLASS} htmlFor={`${formId}-course`}>
+          <Label className="mb-1.5" htmlFor={`${formId}-course`}>
             Curso
-          </label>
-          <select
+          </Label>
+          <NativeSelect
             id={`${formId}-course`}
             name="courseId"
             value={courseId}
             onChange={(event) => setCourseId(event.target.value)}
             disabled={busy}
-            className={fieldErrors.courseId ? ERROR_FIELD_CLASS : FIELD_CLASS}
+            className="w-full"
+            aria-invalid={fieldErrors.courseId ? true : undefined}
           >
             {courses.map((course) => (
               <option key={course.id} value={course.id}>
                 {course.title}
               </option>
             ))}
-          </select>
+          </NativeSelect>
           <FieldError message={fieldErrors.courseId} />
         </div>
         <div>
-          <label className={LABEL_CLASS} htmlFor={`${formId}-kind`}>
+          <Label className="mb-1.5" htmlFor={`${formId}-kind`}>
             Tipo
-          </label>
-          <select
+          </Label>
+          <NativeSelect
             id={`${formId}-kind`}
             name="kind"
             defaultValue={editing?.kind ?? "lesson"}
             disabled={busy}
-            className={fieldErrors.kind ? ERROR_FIELD_CLASS : FIELD_CLASS}
+            className="w-full"
+            aria-invalid={fieldErrors.kind ? true : undefined}
           >
             {KIND_OPTIONS.map((option) => (
               <option key={option.value} value={option.value}>
                 {option.label}
               </option>
             ))}
-          </select>
-          <p className="mt-1.5 text-[11px] text-admin-faint">
+          </NativeSelect>
+          <p className="mt-1.5 text-xs text-muted-foreground">
             As aulas são numeradas pela ordem do curso.
           </p>
           <FieldError message={fieldErrors.kind} />
@@ -524,15 +528,16 @@ export function TutorialForm({
         }
       >
         <div>
-          <label className={LABEL_CLASS} htmlFor={`${formId}-route`}>
+          <Label className="mb-1.5" htmlFor={`${formId}-route`}>
             Tela que o vídeo ensina
-          </label>
-          <select
+          </Label>
+          <NativeSelect
             id={`${formId}-route`}
             name="route"
             defaultValue={editing?.route ?? ""}
             disabled={busy}
-            className={fieldErrors.route ? ERROR_FIELD_CLASS : FIELD_CLASS}
+            className="w-full"
+            aria-invalid={fieldErrors.route ? true : undefined}
           >
             <option value="">Nenhuma, é sobre o painel inteiro</option>
             {routes.map((route) => (
@@ -540,23 +545,23 @@ export function TutorialForm({
                 {route.label}
               </option>
             ))}
-          </select>
-          <p className="mt-1.5 text-[11px] text-admin-faint">
+          </NativeSelect>
+          <p className="mt-1.5 text-xs text-muted-foreground">
             A tela escolhida ganha o link "Como usar esta tela".
           </p>
           <FieldError message={fieldErrors.route} />
         </div>
-        <label className="flex items-start gap-2.5 pt-6 text-[13px] text-admin-text">
+        <label className="flex items-start gap-2.5 pt-6 text-sm text-foreground">
           <input
             type="checkbox"
             name="trail"
             defaultChecked={editing?.trail ?? true}
             disabled={busy}
-            className="mt-0.5"
+            className="checkbox-admin mt-0.5"
           />
           <span>
             Faz parte dos primeiros passos
-            <span className="block text-[11.5px] text-admin-muted">
+            <span className="block text-xs text-muted-foreground">
               Entra na trilha que a Visão geral sugere a quem é novo.
             </span>
           </span>
@@ -566,35 +571,31 @@ export function TutorialForm({
       {(localError || state.status === "error") && (
         <p
           role="alert"
-          className="mt-4 rounded-[9px] border border-admin-error-border bg-admin-error-bg px-3.5 py-2.5 text-[12.5px] font-semibold text-admin-error-text"
+          className="mt-4 rounded-lg border border-destructive/40 bg-destructive-soft px-4 py-3 text-sm font-medium text-destructive"
         >
           {localError ?? (state.status === "error" ? state.message : "")}
         </p>
       )}
 
       <div className="mt-5 flex flex-wrap items-center gap-3">
-        <button
-          type="submit"
-          disabled={busy}
-          className="btn btn-admin-primary btn-md"
-        >
+        <Button type="submit" disabled={busy}>
           {uploading ??
             (pending
               ? "Salvando…"
               : editing
                 ? "Salvar alterações"
                 : "Salvar como rascunho")}
-        </button>
-        <button
+        </Button>
+        <Button
           type="button"
           onClick={onDone}
           disabled={busy}
-          className="btn btn-admin-ghost btn-md"
+          variant="outline"
         >
           Cancelar
-        </button>
+        </Button>
         {!editing && (
-          <span className="text-[11.5px] text-admin-faint">
+          <span className="text-xs text-muted-foreground">
             O vídeo só aparece para as serventias depois de publicado.
           </span>
         )}

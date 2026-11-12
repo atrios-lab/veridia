@@ -2,6 +2,15 @@
 
 import { startTransition, useActionState, useEffect } from "react";
 import { toast } from "sonner";
+import { Button } from "../../../_ui/button.tsx";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "../../../_ui/table.tsx";
 import { type RolesState, saveRoles } from "./actions.ts";
 
 const IDLE: RolesState = { status: "idle" };
@@ -25,63 +34,54 @@ export function RolesForm({
         const data = new FormData(event.currentTarget);
         startTransition(() => action(data));
       }}
-      className="rounded-[14px] border border-admin-border bg-admin-card px-5 py-4"
+      className="rounded-xl border bg-card px-5 py-4"
     >
-      <div className="overflow-x-auto">
-        <table className="w-full min-w-[720px] border-collapse text-[12.5px]">
-          <thead>
-            <tr>
-              <th className="py-2 pr-3 text-left font-bold text-admin-primary">
-                O que pode fazer
-              </th>
-              {roles.map((role) => (
-                <th
-                  key={role.id}
-                  className="px-2 py-2 text-center font-bold text-admin-primary"
-                >
-                  {role.label}
-                </th>
-              ))}
-            </tr>
-          </thead>
-          <tbody>
-            {permissions.map((permission) => (
-              <tr key={permission.id} className="border-t border-admin-border">
-                <td className="py-2 pr-3 text-admin-text">
-                  {permission.label}
-                </td>
-                {roles.map((role) => (
-                  <td key={role.id} className="px-2 py-2 text-center">
-                    <input
-                      type="checkbox"
-                      name={role.id}
-                      value={permission.id}
-                      defaultChecked={role.granted.includes(permission.id)}
-                      aria-label={`${role.label}: ${permission.label}`}
-                      className="checkbox-admin"
-                    />
-                  </td>
-                ))}
-              </tr>
+      <Table className="min-w-[720px]">
+        <TableHeader>
+          <TableRow className="hover:bg-transparent">
+            <TableHead className="pr-3 pl-0 text-xs text-muted-foreground">
+              O que pode fazer
+            </TableHead>
+            {roles.map((role) => (
+              <TableHead
+                key={role.id}
+                className="text-center text-xs text-muted-foreground"
+              >
+                {role.label}
+              </TableHead>
             ))}
-          </tbody>
-        </table>
-      </div>
+          </TableRow>
+        </TableHeader>
+        <TableBody>
+          {permissions.map((permission) => (
+            <TableRow key={permission.id}>
+              <TableCell className="pr-3 pl-0 whitespace-normal text-foreground">
+                {permission.label}
+              </TableCell>
+              {roles.map((role) => (
+                <TableCell key={role.id} className="text-center">
+                  <input
+                    type="checkbox"
+                    name={role.id}
+                    value={permission.id}
+                    defaultChecked={role.granted.includes(permission.id)}
+                    aria-label={`${role.label}: ${permission.label}`}
+                    className="checkbox-admin"
+                  />
+                </TableCell>
+              ))}
+            </TableRow>
+          ))}
+        </TableBody>
+      </Table>
       {state.status === "error" && (
-        <p
-          role="alert"
-          className="mt-3 text-[12.5px] font-semibold text-admin-error-text"
-        >
+        <p role="alert" className="mt-3 text-sm text-destructive">
           {state.message}
         </p>
       )}
-      <button
-        type="submit"
-        disabled={pending}
-        className="btn btn-admin-primary btn-md mt-4"
-      >
+      <Button type="submit" disabled={pending} className="mt-4">
         {pending ? "Salvando..." : "Salvar permissões"}
-      </button>
+      </Button>
     </form>
   );
 }

@@ -30,6 +30,7 @@ import { getSession } from "@/lib/session.ts";
 import { getTenant, OFFICE_TIME_ZONE, today } from "@/lib/tenant.ts";
 import { AdminIcon } from "../../_components/icon.tsx";
 import { AdminPageHeader } from "../../_components/page-header.tsx";
+import { buttonVariants } from "../../_ui/button.tsx";
 import {
   CLOSED_TAB,
   clampPage,
@@ -171,15 +172,15 @@ export default async function ServiceRequestQueuePage({
         actions={
           <Link
             href="/admin/pedidos/novo"
-            className="inline-flex items-center gap-[9px] rounded-[11px] bg-admin-primary-soft px-[22px] py-[13px] text-[14px] font-bold whitespace-nowrap text-white transition-colors duration-120 hover:bg-admin-primary"
+            className={buttonVariants({ size: "lg" })}
           >
-            <AdminIcon name="plus" strokeWidth={2.4} className="h-4 w-4" />
+            <AdminIcon name="plus" strokeWidth={2.4} className="size-4" />
             Lançar pedido
           </Link>
         }
       />
-      <main className="flex flex-col gap-6 px-[30px] pt-6 pb-9">
-        <div className="overflow-hidden rounded-[14px] border border-admin-border bg-admin-card">
+      <main className="flex flex-col gap-6 px-4 pt-6 pb-8 md:px-8">
+        <div className="overflow-hidden rounded-xl border bg-card">
           <QueueTabs query={current} counts={counts} />
           <QueueToolbar query={current} attributions={tenant.attributions} />
           <QueueRows

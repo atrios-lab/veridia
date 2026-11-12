@@ -1,6 +1,8 @@
 "use client";
 
 import { useFormStatus } from "react-dom";
+import { Button } from "../_ui/button.tsx";
+import { Spinner } from "../_ui/spinner.tsx";
 
 export function SubmitButton({
   label,
@@ -27,12 +29,9 @@ export function SubmitButton({
       : label;
 
   return (
-    <button
-      type="submit"
-      disabled={disabled}
-      className="btn btn-admin-primary btn-lg mt-1"
-    >
+    <Button type="submit" size="lg" disabled={disabled} className="mt-1">
+      {disabled && !blocked && <Spinner />}
       {text}
-    </button>
+    </Button>
   );
 }

@@ -4,6 +4,13 @@ import { startTransition, useActionState, useEffect } from "react";
 import { toast } from "sonner";
 import { DocumentNameField } from "@/app/_components/document-name-field.tsx";
 import { LONG_TEXT_MAX } from "@/core/text-limits.ts";
+import { Button } from "../../../../_ui/button.tsx";
+import { Input } from "../../../../_ui/input.tsx";
+import {
+  NativeSelect,
+  NativeSelectOption,
+} from "../../../../_ui/native-select.tsx";
+import { Textarea } from "../../../../_ui/textarea.tsx";
 import {
   type AuditState,
   answerNotification,
@@ -14,9 +21,7 @@ import {
 import { EvidenceFiles } from "../evidence-files.tsx";
 
 const IDLE: AuditState = { status: "idle" };
-const LABEL = "mb-1.5 block text-xs font-bold text-admin-primary";
-const FIELD =
-  "w-full rounded-[9px] border border-admin-input-border bg-admin-input-bg px-3.5 py-2.5 text-[13.5px] text-admin-text outline-none focus:border-admin-primary-soft";
+const LABEL = "mb-1.5 block text-sm font-medium text-foreground";
 
 /** Posts without React clearing the fields when the action answers an error. */
 function submitWith(dispatch: (data: FormData) => void) {
@@ -35,7 +40,7 @@ function useToast(state: AuditState) {
 
 function ErrorLine({ state }: { state: AuditState }) {
   return state.status === "error" ? (
-    <p role="alert" className="text-[12.5px] text-admin-error-text">
+    <p role="alert" className="text-xs text-destructive">
       {state.message}
     </p>
   ) : null;
@@ -51,13 +56,12 @@ export function AnswerForm({ id }: { id: string }) {
         <label htmlFor="a-resposta" className={LABEL}>
           Sua justificativa
         </label>
-        <textarea
+        <Textarea
           id="a-resposta"
           name="resposta"
           required
           rows={6}
           maxLength={6000}
-          className={FIELD}
         />
       </div>
       <DocumentNameField
@@ -74,13 +78,9 @@ export function AnswerForm({ id }: { id: string }) {
       <EvidenceFiles name="anexos" label="Anexos (opcional)" />
       <ErrorLine state={state} />
       <div>
-        <button
-          type="submit"
-          disabled={pending}
-          className="btn btn-admin-primary btn-md"
-        >
+        <Button type="submit" size="lg" disabled={pending}>
           {pending ? "Enviando..." : "Enviar resposta"}
-        </button>
+        </Button>
       </div>
     </form>
   );
@@ -96,23 +96,18 @@ export function CloseForm({ id }: { id: string }) {
         <label htmlFor="c-conclusao" className={LABEL}>
           Conclusão do Tabelião/Registrador (opcional)
         </label>
-        <textarea
+        <Textarea
           id="c-conclusao"
           name="conclusao"
           rows={3}
           maxLength={LONG_TEXT_MAX}
-          className={FIELD}
         />
       </div>
       <ErrorLine state={state} />
       <div>
-        <button
-          type="submit"
-          disabled={pending}
-          className="btn btn-admin-secondary btn-md"
-        >
+        <Button type="submit" variant="outline" disabled={pending}>
           {pending ? "Encerrando..." : "Encerrar notificação"}
-        </button>
+        </Button>
       </div>
     </form>
   );
@@ -125,18 +120,19 @@ export function ResendButton({ id }: { id: string }) {
     if (state.status === "error") toast.error(state.message);
   }, [state]);
   return (
-    <button
+    <Button
       type="button"
+      variant="outline"
+      size="sm"
       disabled={pending}
       onClick={() => {
         const data = new FormData();
         data.set("id", id);
         startTransition(() => action(data));
       }}
-      className="btn btn-admin-secondary btn-sm"
     >
       {pending ? "Enviando..." : "Reenviar por e-mail"}
-    </button>
+    </Button>
   );
 }
 
@@ -159,36 +155,36 @@ export function SignForm({
         <label htmlFor="s-cert" className={LABEL}>
           Certificado
         </label>
-        <select id="s-cert" name="certificateId" required className={FIELD}>
+        <NativeSelect
+          id="s-cert"
+          name="certificateId"
+          required
+          className="w-full"
+        >
           {certificates.map((certificate) => (
-            <option key={certificate.id} value={certificate.id}>
+            <NativeSelectOption key={certificate.id} value={certificate.id}>
               {certificate.label} · {certificate.holderName}
-            </option>
+            </NativeSelectOption>
           ))}
-        </select>
+        </NativeSelect>
       </div>
       <div>
         <label htmlFor="s-password" className={LABEL}>
           Senha do certificado
         </label>
-        <input
+        <Input
           id="s-password"
           name="password"
           type="password"
           autoComplete="off"
           required
-          className={FIELD}
         />
       </div>
-      <div className="sm:col-span-2">
+      <div className="flex flex-col items-start gap-3 sm:col-span-2">
         <ErrorLine state={state} />
-        <button
-          type="submit"
-          disabled={pending}
-          className="btn btn-admin-primary btn-md"
-        >
+        <Button type="submit" disabled={pending}>
           {pending ? "Assinando..." : "Assinar o PDF"}
-        </button>
+        </Button>
       </div>
     </form>
   );

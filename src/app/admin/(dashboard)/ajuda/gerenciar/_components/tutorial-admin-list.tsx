@@ -5,6 +5,8 @@ import { toast } from "sonner";
 import { formatDuration } from "@/core/tutorials/progress.ts";
 import { ConfirmAction } from "../../../../_components/confirm-action.tsx";
 import { AdminIcon } from "../../../../_components/icon.tsx";
+import { Badge } from "../../../../_ui/badge.tsx";
+import { Button } from "../../../../_ui/button.tsx";
 import { TutorialCover } from "../../_components/tutorial-cover.tsx";
 import {
   deleteCourseAction,
@@ -57,7 +59,6 @@ function DeleteButton({ item }: { item: AdminTutorialItem }) {
       confirmLabel="Excluir o vídeo"
       pendingLabel="Excluindo…"
       className="flex-none"
-      triggerClassName="btn btn-admin-danger btn-sm"
     >
       <input type="hidden" name="id" value={item.id} />
     </ConfirmAction>
@@ -90,12 +91,12 @@ function Row({
   }
 
   return (
-    <li className="rounded-[12px] border border-admin-border bg-admin-card">
+    <li className="rounded-xl border bg-card">
       <div className="flex flex-wrap items-center gap-3 px-4 py-3">
-        <span className="inline-flex h-7 w-7 flex-none items-center justify-center rounded-full border border-admin-input-border text-[11.5px] font-bold text-admin-muted">
+        <span className="inline-flex h-7 w-7 flex-none items-center justify-center rounded-full border border-input text-xs font-semibold text-muted-foreground tabular-nums">
           {index + 1}
         </span>
-        <span className="block w-[96px] flex-none overflow-hidden rounded-[6px] border border-admin-border">
+        <span className="block w-[96px] flex-none overflow-hidden rounded-md border">
           <TutorialCover
             title={item.title}
             posterUrl={item.posterUrl}
@@ -104,21 +105,21 @@ function Row({
         </span>
         <div className="min-w-[200px] flex-1">
           <div className="flex flex-wrap items-center gap-2">
-            <span className="text-[14px] font-semibold text-admin-primary">
+            <span className="text-sm font-semibold text-foreground">
               {item.title}
             </span>
             {!item.published && (
-              <span className="rounded-full bg-admin-warning-soft-bg px-2 py-0.5 text-[10.5px] font-bold uppercase tracking-[0.06em] text-admin-warning-text">
+              <Badge className="bg-warning text-warning-foreground">
                 Rascunho
-              </span>
+              </Badge>
             )}
             {!item.captionsUrl && (
-              <span className="rounded-full border border-admin-input-border px-2 py-0.5 text-[10.5px] font-bold uppercase tracking-[0.06em] text-admin-faint">
+              <Badge variant="outline" className="text-muted-foreground">
                 Sem legenda
-              </span>
+              </Badge>
             )}
           </div>
-          <p className="mt-0.5 text-[12px] text-admin-muted">
+          <p className="mt-0.5 text-xs text-muted-foreground">
             {item.label && `${item.label} · `}
             {formatDuration(item.durationSeconds)}
             {!sequential &&
@@ -130,72 +131,77 @@ function Row({
           </p>
         </div>
         <div className="flex flex-wrap items-center gap-1.5">
-          <button
+          <Button
             type="button"
             aria-label="Subir"
             title="Subir"
             disabled={pending || index === 0}
             onClick={() => run(() => moveTutorialAction(item.id, "up"))}
-            className="btn btn-admin-ghost btn-sm px-2"
+            variant="ghost"
+            size="icon-sm"
           >
             <AdminIcon name="chevronDown" className="h-4 w-4 rotate-180" />
-          </button>
-          <button
+          </Button>
+          <Button
             type="button"
             aria-label="Descer"
             title="Descer"
             disabled={pending || index === total - 1}
             onClick={() => run(() => moveTutorialAction(item.id, "down"))}
-            className="btn btn-admin-ghost btn-sm px-2"
+            variant="ghost"
+            size="icon-sm"
           >
             <AdminIcon name="chevronDown" className="h-4 w-4" />
-          </button>
-          <button
+          </Button>
+          <Button
             type="button"
             onClick={() => setOpen((value) => !value)}
             aria-expanded={open}
-            className="btn btn-admin-ghost btn-sm"
+            variant="ghost"
+            size="sm"
           >
             {open ? "Fechar" : "Conferir"}
-          </button>
-          <button
+          </Button>
+          <Button
             type="button"
             onClick={onEdit}
             disabled={pending}
-            className="btn btn-admin-secondary btn-sm"
+            variant="outline"
+            size="sm"
           >
             Editar
-          </button>
+          </Button>
           {item.published ? (
-            <button
+            <Button
               type="button"
               disabled={pending}
               onClick={() => run(() => unpublishTutorialAction(item.id))}
-              className="btn btn-admin-secondary btn-sm"
+              variant="outline"
+              size="sm"
             >
               Despublicar
-            </button>
+            </Button>
           ) : (
-            <button
+            <Button
               type="button"
               disabled={pending}
               onClick={() => run(() => publishTutorialAction(item.id))}
-              className="btn btn-admin-primary btn-sm"
+              size="sm"
             >
               Publicar
-            </button>
+            </Button>
           )}
           <DeleteButton item={item} />
         </div>
       </div>
       {open && (
-        <div className="border-t border-admin-border px-4 py-4">
+        <div className="border-t px-4 py-4">
           {/* biome-ignore lint/a11y/useMediaCaption: the <track> renders whenever the video has captions; a video without them is the platform's own call, flagged "Sem legenda" where it is managed. */}
           <video
             controls
             preload="metadata"
             crossOrigin="anonymous"
-            className="aspect-video w-full max-w-[720px] rounded-[10px] bg-black"
+            className="aspect-video w-full max-w-[720px] rounded-lg bg-black"
           >
             <source src={item.videoUrl} type="video/mp4" />
             {item.captionsUrl && (
@@ -209,7 +215,7 @@ function Row({
             )}
           </video>
           {item.description && (
-            <p className="mt-3 max-w-[720px] text-[13px] text-admin-muted">
+            <p className="mt-3 max-w-[720px] text-sm text-muted-foreground">
               {item.description}
             </p>
           )}
@@ -235,7 +241,6 @@ function DeleteCourseButton({ course }: { course: AdminCourseItem }) {
       confirmLabel="Excluir o curso"
       pendingLabel="Excluindo…"
       className="flex-none"
-      triggerClassName="btn btn-admin-danger btn-sm"
     >
       <input type="hidden" name="id" value={course.id} />
     </ConfirmAction>
@@ -288,14 +293,10 @@ export function TutorialAdminList({
         <CourseForm directUpload={directUpload} onDone={close} />
       ) : (
         <div>
-          <button
-            type="button"
-            onClick={() => setOpen({ kind: "new-course" })}
-            className="btn btn-admin-primary btn-md"
-          >
+          <Button type="button" onClick={() => setOpen({ kind: "new-course" })}>
             <AdminIcon name="plus" className="h-4 w-4" />
             Novo curso
-          </button>
+          </Button>
         </div>
       )}
 
@@ -314,7 +315,7 @@ export function TutorialAdminList({
                 onDone={close}
               />
             ) : (
-              <div className="flex flex-wrap items-center gap-3 rounded-[12px] bg-admin-surface px-4 py-3">
+              <div className="flex flex-wrap items-center gap-3 rounded-xl bg-muted/50 px-4 py-3">
                 {/* The course's own cover, apart from its videos': the way
                     in to change it is "Editar curso", right of the title. */}
                 <button
@@ -325,32 +326,32 @@ export function TutorialAdminList({
                   disabled={pending}
                   aria-label={`Trocar a capa do curso ${course.title}`}
                   title="Trocar a capa do curso"
-                  className="group relative block w-[120px] flex-none overflow-hidden rounded-[8px] border border-admin-border"
+                  className="group relative block w-[120px] flex-none overflow-hidden rounded-lg border"
                 >
                   <TutorialCover
                     title={course.title}
                     posterUrl={course.posterUrl}
                     size="thumb"
                   />
-                  <span className="absolute inset-x-0 bottom-0 bg-black/60 py-0.5 text-center text-[10px] font-semibold text-white opacity-0 transition-opacity group-hover:opacity-100 group-focus-visible:opacity-100">
+                  <span className="absolute inset-x-0 bottom-0 bg-black/60 py-0.5 text-center text-xs font-semibold text-white opacity-0 transition-opacity group-hover:opacity-100 group-focus-visible:opacity-100">
                     {course.posterUrl ? "Trocar capa" : "Pôr capa"}
                   </span>
                 </button>
                 <div className="min-w-[200px] flex-1">
                   <div className="flex flex-wrap items-center gap-2">
-                    <h2 className="font-serif text-[17px] font-semibold text-admin-primary">
+                    <h2 className="text-lg font-semibold text-foreground">
                       {course.title}
                     </h2>
                     {!course.published && (
-                      <span className="rounded-full bg-admin-warning-soft-bg px-2 py-0.5 text-[10.5px] font-bold uppercase tracking-[0.06em] text-admin-warning-text">
+                      <Badge className="bg-warning text-warning-foreground">
                         Rascunho
-                      </span>
+                      </Badge>
                     )}
-                    <span className="rounded-full border border-admin-input-border px-2 py-0.5 text-[10.5px] font-bold uppercase tracking-[0.06em] text-admin-faint">
+                    <Badge variant="outline" className="text-muted-foreground">
                       {course.sequential ? "Em sequência" : "Consulta"}
-                    </span>
+                    </Badge>
                   </div>
-                  <p className="mt-0.5 text-[12px] text-admin-muted">
+                  <p className="mt-0.5 text-xs text-muted-foreground">
                     /admin/ajuda/{course.slug} · {videos.length}{" "}
                     {videos.length === 1 ? "vídeo" : "vídeos"}
                     {course.materialUrl && " · com apostila"}
@@ -358,20 +359,21 @@ export function TutorialAdminList({
                   </p>
                 </div>
                 <div className="flex flex-wrap items-center gap-1.5">
-                  <button
+                  <Button
                     type="button"
                     aria-label={`Subir o curso ${course.title}`}
                     title="Subir"
                     disabled={pending || courseIndex === 0}
                     onClick={() => run(() => moveCourseAction(course.id, "up"))}
-                    className="btn btn-admin-ghost btn-sm px-2"
+                    variant="ghost"
+                    size="icon-sm"
                   >
                     <AdminIcon
                       name="chevronDown"
                       className="h-4 w-4 rotate-180"
                     />
-                  </button>
-                  <button
+                  </Button>
+                  <Button
                     type="button"
                     aria-label={`Descer o curso ${course.title}`}
                     title="Descer"
@@ -379,40 +381,43 @@ export function TutorialAdminList({
                     onClick={() =>
                       run(() => moveCourseAction(course.id, "down"))
                     }
-                    className="btn btn-admin-ghost btn-sm px-2"
+                    variant="ghost"
+                    size="icon-sm"
                   >
                     <AdminIcon name="chevronDown" className="h-4 w-4" />
-                  </button>
-                  <button
+                  </Button>
+                  <Button
                     type="button"
                     onClick={() =>
                       setOpen({ kind: "edit-course", id: course.id })
                     }
                     disabled={pending}
-                    className="btn btn-admin-secondary btn-sm"
+                    variant="outline"
+                    size="sm"
                   >
                     Editar curso
-                  </button>
+                  </Button>
                   {course.published ? (
-                    <button
+                    <Button
                       type="button"
                       disabled={pending || course.isPanel}
                       onClick={() =>
                         run(() => unpublishCourseAction(course.id))
                       }
-                      className="btn btn-admin-secondary btn-sm"
+                      variant="outline"
+                      size="sm"
                     >
                       Despublicar
-                    </button>
+                    </Button>
                   ) : (
-                    <button
+                    <Button
                       type="button"
                       disabled={pending}
                       onClick={() => run(() => publishCourseAction(course.id))}
-                      className="btn btn-admin-primary btn-sm"
+                      size="sm"
                     >
                       Publicar
-                    </button>
+                    </Button>
                   )}
                   {!course.isPanel && <DeleteCourseButton course={course} />}
                 </div>
@@ -463,16 +468,17 @@ export function TutorialAdminList({
               />
             ) : (
               <div>
-                <button
+                <Button
                   type="button"
                   onClick={() =>
                     setOpen({ kind: "new-video", courseId: course.id })
                   }
-                  className="btn btn-admin-ghost btn-sm"
+                  variant="ghost"
+                  size="sm"
                 >
                   <AdminIcon name="plus" className="h-4 w-4" />
                   Novo vídeo neste curso
-                </button>
+                </Button>
               </div>
             )}
           </section>

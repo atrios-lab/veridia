@@ -28,15 +28,15 @@ export default async function IssSettingsPage() {
         maxWidth={900}
         title="Configuração da Declaração de ISS"
       />
-      <main className="flex max-w-[900px] flex-col gap-4.5 px-[30px] py-7 max-md:px-4">
+      <main className="flex max-w-[900px] flex-col gap-4.5 px-4 py-7 md:px-8">
         <BackLink href="/admin/utilitarios/iss" label="Declaração de ISS" />
         <IssSettingsForm settings={settings} />
         <SignersEditor initial={(await getGuideSettings(tenant)).signers} />
-        <section className="rounded-[14px] border border-admin-border bg-admin-card px-5 py-4">
-          <h2 className="font-serif text-[17px] font-semibold text-admin-primary">
+        <section className="rounded-xl border bg-card px-5 py-4">
+          <h2 className="text-lg font-semibold text-foreground">
             Fundamentação que sai no PDF
           </h2>
-          <ul className="mt-2 list-disc space-y-1 pl-5 text-[12.5px] leading-relaxed text-admin-text">
+          <ul className="mt-2 list-disc space-y-1 pl-5 text-xs leading-relaxed text-foreground">
             {legalBasis(tenant, settings).map((line) => (
               <li key={line}>{line}</li>
             ))}

@@ -2,10 +2,10 @@
 
 import { useActionState, useEffect, useState } from "react";
 import { toast } from "sonner";
+import { Button } from "../../../_ui/button.tsx";
+import { Input } from "../../../_ui/input.tsx";
+import { Label } from "../../../_ui/label.tsx";
 import { type AccessState, setOfficeTwoStep } from "./actions.ts";
-
-const FIELD =
-  "w-full rounded-[9px] border border-admin-input-border bg-admin-input-bg px-3.5 py-2.5 text-[13.5px] text-admin-text outline-none focus:border-admin-primary-soft";
 
 /**
  * On or off for the whole office: off, the panel asks only for the
@@ -34,81 +34,71 @@ export function TwoStepSwitch({
 
   return (
     <section
-      className={`rounded-[14px] border px-5 py-4 ${enabled ? "border-admin-border bg-admin-card" : "border-admin-warning-soft-border bg-admin-warning-bg"}`}
+      className={`rounded-xl border px-5 py-4 ${enabled ? "bg-card" : "border-warning/30 bg-warning-soft"}`}
     >
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
-          <h3 className="font-serif text-[16px] font-semibold text-admin-primary">
+          <h3 className="text-base font-semibold text-foreground">
             {enabled
               ? "Duas etapas: ligada"
               : "Duas etapas: desligada (só senha)"}
           </h3>
-          <p className="mt-0.5 text-[12.5px] text-admin-muted">
+          <p className="mt-0.5 text-xs text-muted-foreground">
             {enabled
               ? "Se o código não estiver chegando por e-mail, desligue aqui. Ligue de novo assim que voltar ao normal."
               : "O painel está pedindo só a senha. Ligue de novo assim que o e-mail voltar ao normal."}
           </p>
           {changedLine && (
-            <p className="mt-1 text-[12px] text-admin-muted">{changedLine}</p>
+            <p className="mt-1 text-xs text-muted-foreground">{changedLine}</p>
           )}
         </div>
         {enabled ? (
-          <button
+          <Button
             type="button"
             onClick={() => setAsking(true)}
-            className="btn btn-admin-secondary btn-md"
+            variant="outline"
             aria-expanded={asking}
           >
             Desligar
-          </button>
+          </Button>
         ) : (
           <form action={action}>
             <input type="hidden" name="twoStep" value="on" />
-            <button
-              type="submit"
-              disabled={pending}
-              className="btn btn-admin-primary btn-md"
-            >
+            <Button type="submit" disabled={pending}>
               {pending ? "Ligando..." : "Ligar de novo"}
-            </button>
+            </Button>
           </form>
         )}
       </div>
       {enabled && asking && (
         <form action={action} className="mt-3 flex flex-col gap-2">
           <input type="hidden" name="twoStep" value="off" />
-          <label className="flex flex-col gap-1.5 text-xs font-bold text-admin-primary">
+          <Label className="flex-col items-stretch gap-1.5 text-foreground">
             Motivo (vai para a auditoria)
-            <input
+            <Input
               name="reason"
               required
               placeholder="Ex.: o código não está chegando no e-mail"
-              className={`${FIELD} font-normal`}
+              className="font-normal"
             />
-          </label>
+          </Label>
           <div className="flex flex-wrap gap-2">
-            <button
-              type="submit"
-              disabled={pending}
-              className="btn btn-admin-primary btn-sm"
-            >
+            <Button type="submit" disabled={pending} size="sm">
               {pending ? "Desligando..." : "Desligar as duas etapas"}
-            </button>
-            <button
+            </Button>
+            <Button
               type="button"
               onClick={() => setAsking(false)}
-              className="btn btn-admin-secondary btn-sm"
+              variant="outline"
+              size="sm"
             >
               Cancelar
-            </button>
+            </Button>
           </div>
         </form>
       )}
       {state.status === "error" && (
-        <p
-          role="alert"
-          className="mt-2 text-[12.5px] font-semibold text-admin-error-text"
-        >
+        <p role="alert" className="mt-2 text-sm text-destructive">
           {state.message}
         </p>
       )}

@@ -2,6 +2,10 @@
 
 import { type ReactNode, useEffect, useId, useRef, useState } from "react";
 import { LONG_TEXT_MAX, MIN_JUSTIFICATION } from "@/core/text-limits.ts";
+import { Button, buttonVariants } from "../_ui/button.tsx";
+import { cn } from "../_ui/cn.ts";
+import { Label } from "../_ui/label.tsx";
+import { Textarea } from "../_ui/textarea.tsx";
 import { AdminDialog, DIALOG_FOOTER } from "./dialog.tsx";
 
 /**
@@ -27,7 +31,7 @@ export function ConfirmAction({
   pendingLabel,
   children,
   className,
-  triggerClassName = "btn btn-admin-danger btn-sm",
+  triggerClassName = buttonVariants({ variant: "destructive", size: "sm" }),
   justify = true,
 }: {
   /** The dispatch from the caller's `useActionState`. */
@@ -47,7 +51,7 @@ export function ConfirmAction({
   children?: ReactNode;
   /** Layout classes for the trigger. */
   className?: string;
-  /** The trigger's own look; the outline danger button unless told otherwise. */
+  /** The trigger's own look; the soft destructive button unless told otherwise. */
   triggerClassName?: string;
   /**
    * Asks why, and says the act goes to the audit (decision of 11/11/2026).
@@ -93,7 +97,7 @@ export function ConfirmAction({
           setSent(false);
           setOpen(true);
         }}
-        className={`${triggerClassName} ${className ?? ""}`}
+        className={cn(triggerClassName, className)}
       >
         {trigger}
       </button>
@@ -107,25 +111,20 @@ export function ConfirmAction({
           <div className="dialog-body">
             <h2
               id={questionId}
-              className="font-serif text-[18px] font-semibold text-admin-primary"
+              className="text-lg leading-snug font-semibold text-foreground"
             >
               {question}
             </h2>
             <p
               id={consequenceId}
-              className="mt-2 text-[13px] leading-relaxed text-admin-muted"
+              className="mt-2 text-sm leading-relaxed text-muted-foreground"
             >
               {consequence}
             </p>
             {justify && (
-              <div className="mt-3.5">
-                <label
-                  htmlFor={reasonId}
-                  className="mb-1.5 block text-xs font-bold text-admin-primary"
-                >
-                  Justificativa
-                </label>
-                <textarea
+              <div className="mt-4 flex flex-col gap-2">
+                <Label htmlFor={reasonId}>Justificativa</Label>
+                <Textarea
                   id={reasonId}
                   name="justificativa"
                   form={formId}
@@ -134,9 +133,8 @@ export function ConfirmAction({
                   maxLength={LONG_TEXT_MAX}
                   rows={3}
                   placeholder="Por que este ato é necessário?"
-                  className="w-full rounded-[9px] border border-admin-input-border bg-admin-input-bg px-3 py-2 text-[13px] text-admin-text outline-none focus:border-admin-primary-soft"
                 />
-                <p className="mt-1.5 flex items-start gap-1.5 rounded-[8px] bg-admin-warning-bg px-2.5 py-2 text-[12px] leading-snug text-admin-warning-text">
+                <p className="flex items-start gap-1.5 rounded-lg border border-warning/30 bg-warning-soft px-3 py-2 text-xs leading-snug text-warning-text">
                   <span aria-hidden="true">⚠</span>
                   <span>
                     Este ato vai para a auditoria. O Tabelião/Registrador verá o
@@ -148,7 +146,7 @@ export function ConfirmAction({
             {sent && error && (
               <p
                 role="alert"
-                className="mt-3 text-[12.5px] font-semibold text-admin-error-text"
+                className="mt-3 text-sm font-medium text-destructive"
               >
                 {error}
               </p>
@@ -168,22 +166,22 @@ export function ConfirmAction({
                 confirmation should never be the key that completes it.
                 `flex-col-reverse` on a narrow screen keeps that DOM order
                 while putting the action where a thumb expects it. */}
-            <button
+            <Button
               type="button"
+              variant="outline"
               onClick={() => setOpen(false)}
               disabled={pending}
-              className="btn btn-admin-secondary btn-md"
             >
               Voltar
-            </button>
-            <button
+            </Button>
+            <Button
               type="submit"
+              variant="destructive-solid"
               aria-describedby={consequenceId}
               disabled={pending}
-              className="btn btn-admin-danger-solid btn-md"
             >
               {pending ? pendingLabel : confirmLabel}
-            </button>
+            </Button>
           </form>
         </AdminDialog>
       )}

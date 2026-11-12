@@ -3,13 +3,10 @@
 import { useActionState } from "react";
 import type { Tenant } from "@/core/tenant/schema.ts";
 import { AdminIcon } from "../../../_components/icon.tsx";
+import { Button } from "../../../_ui/button.tsx";
+import { Input } from "../../../_ui/input.tsx";
+import { Label } from "../../../_ui/label.tsx";
 import { type DpoState, saveDpo } from "./actions.ts";
-
-const FIELD_CLASS =
-  "w-full rounded-[9px] border border-admin-input-border bg-admin-input-bg px-3.5 py-2.5 text-[13.5px] text-admin-text outline-none focus:border-admin-primary-soft";
-const ERROR_FIELD_CLASS =
-  "w-full rounded-[9px] border border-admin-error-border bg-admin-error-input-bg px-3.5 py-2.5 text-[13.5px] text-admin-text outline-none focus:border-admin-error-text";
-const LABEL_CLASS = "mb-1.5 block text-xs font-bold text-admin-primary";
 
 function Field({
   label,
@@ -27,23 +24,19 @@ function Field({
   const errorId = `${name}-erro`;
   return (
     <div>
-      <label className={LABEL_CLASS} htmlFor={name}>
+      <Label htmlFor={name} className="mb-1.5">
         {label}
-      </label>
-      <input
+      </Label>
+      <Input
         id={name}
         name={name}
         type={type}
         defaultValue={defaultValue}
         aria-invalid={error ? true : undefined}
         aria-describedby={error ? errorId : undefined}
-        className={error ? ERROR_FIELD_CLASS : FIELD_CLASS}
       />
       {error && (
-        <p
-          id={errorId}
-          className="mt-1.5 text-xs font-semibold text-admin-error-text"
-        >
+        <p id={errorId} className="mt-1.5 text-sm text-destructive">
           {error}
         </p>
       )}
@@ -61,10 +54,10 @@ export function DpoForm({ tenant }: { tenant: Tenant }) {
 
   return (
     <form action={formAction}>
-      <h2 className="font-serif text-[17px] font-semibold text-admin-primary">
+      <h2 className="text-lg font-semibold text-foreground">
         Encarregado de Dados (DPO)
       </h2>
-      <p className="mt-1 text-[12.5px] text-admin-muted">
+      <p className="mt-1 text-sm text-muted-foreground">
         Aparece publicamente na área LGPD do site, por exigência da Lei
         13.709/2018 (art. 41, §3º). É para este e-mail que o cidadão escreve
         quando o assunto é dado pessoal.
@@ -89,22 +82,18 @@ export function DpoForm({ tenant }: { tenant: Tenant }) {
       {state.status === "error" && (
         <p
           role="alert"
-          className="mt-4 rounded-lg bg-admin-error-bg px-3.5 py-2.5 text-sm font-semibold text-admin-error-text"
+          className="mt-4 rounded-lg border border-destructive/40 bg-destructive-soft px-4 py-3 text-sm font-medium text-destructive"
         >
           {state.message}
         </p>
       )}
 
       <div className="mt-4.5 flex items-center gap-3.5">
-        <button
-          type="submit"
-          disabled={pending}
-          className="btn btn-admin-primary btn-lg"
-        >
+        <Button type="submit" disabled={pending} size="lg">
           {pending ? "Salvando…" : "Salvar"}
-        </button>
+        </Button>
         {state.status === "saved" && (
-          <output className="flex items-center gap-1.5 rounded-full bg-admin-success-bg px-3 py-1.5 text-[12.5px] font-semibold text-admin-success-text">
+          <output className="flex items-center gap-1.5 rounded-full bg-success-soft px-3 py-1.5 text-xs font-medium text-success-text">
             <AdminIcon name="check" className="h-3.5 w-3.5" strokeWidth={2.4} />
             Encarregado atualizado. Já reflete no site.
           </output>

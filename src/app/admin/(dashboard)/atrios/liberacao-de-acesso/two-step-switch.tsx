@@ -2,6 +2,9 @@
 
 import { startTransition, useActionState, useEffect, useState } from "react";
 import { toast } from "sonner";
+import { Badge } from "../../../_ui/badge.tsx";
+import { Button } from "../../../_ui/button.tsx";
+import { Input } from "../../../_ui/input.tsx";
 import { type ReleaseState, setTwoStep } from "./actions.ts";
 
 const IDLE: ReleaseState = { status: "idle" };
@@ -35,29 +38,34 @@ export function TwoStepSwitch({
   return (
     <div className="flex flex-col items-end gap-1.5">
       <div className="flex items-center gap-2">
-        <span
-          className={`rounded-full px-2.5 py-0.5 text-[11px] font-bold ${on ? "bg-admin-success-bg text-admin-success-text" : "bg-admin-warning-bg text-admin-warning-text"}`}
+        <Badge
+          className={
+            on
+              ? "bg-success text-success-foreground"
+              : "bg-warning text-warning-foreground"
+          }
         >
           {on ? "Duas etapas ligada" : "Duas etapas desligada"}
-        </span>
+        </Badge>
         {on ? (
-          <button
+          <Button
             type="button"
+            variant="outline"
+            size="sm"
             disabled={pending}
             onClick={() => setAsking((value) => !value)}
-            className="btn btn-admin-secondary btn-sm"
           >
             Desligar
-          </button>
+          </Button>
         ) : (
-          <button
+          <Button
             type="button"
+            size="sm"
             disabled={pending}
             onClick={() => send("on")}
-            className="btn btn-admin-primary btn-sm"
           >
             {pending ? "Ligando..." : "Ligar"}
-          </button>
+          </Button>
         )}
       </div>
       {asking && on && (
@@ -71,27 +79,20 @@ export function TwoStepSwitch({
           }}
           className="flex flex-wrap items-center gap-2"
         >
-          <input
+          <Input
             name="reason"
             maxLength={300}
             placeholder="Motivo (ex.: e-mail fora do ar)"
             aria-label={`Motivo para desligar em ${name}`}
-            className="w-60 rounded-[9px] border border-admin-input-border bg-admin-input-bg px-3 py-1.5 text-[12.5px] text-admin-text outline-none focus:border-admin-primary-soft"
+            className="h-8 w-60 bg-background"
           />
-          <button
-            type="submit"
-            disabled={pending}
-            className="btn btn-admin-primary btn-sm"
-          >
+          <Button type="submit" size="sm" disabled={pending}>
             {pending ? "Desligando..." : `Confirmar: desligar em ${name}`}
-          </button>
+          </Button>
         </form>
       )}
       {state.status === "error" && (
-        <p
-          role="alert"
-          className="text-[12px] font-semibold text-admin-error-text"
-        >
+        <p role="alert" className="text-xs font-medium text-destructive">
           {state.message}
         </p>
       )}

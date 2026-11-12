@@ -13,6 +13,10 @@ import { AttachmentRow } from "../../../../_components/attachment-row.tsx";
 import { ConfirmAction } from "../../../../_components/confirm-action.tsx";
 import { AdminIcon } from "../../../../_components/icon.tsx";
 import { useEmailWarning } from "../../../../_components/use-email-warning.ts";
+import { Badge } from "../../../../_ui/badge.tsx";
+import { Button, buttonVariants } from "../../../../_ui/button.tsx";
+import { cn } from "../../../../_ui/cn.ts";
+import { Textarea } from "../../../../_ui/textarea.tsx";
 import {
   type ActionState,
   attachRequirementFormAction,
@@ -77,7 +81,11 @@ function AttachFormButton({
       <input type="hidden" name="requestId" value={requestId} />
       <input type="hidden" name="requirementId" value={requirementId} />
       <label
-        className={`btn btn-admin-secondary btn-sm relative cursor-pointer focus-within:border-admin-accent ${pending ? "cursor-not-allowed opacity-60" : ""}`}
+        className={cn(
+          buttonVariants({ variant: "outline", size: "sm" }),
+          "relative cursor-pointer focus-within:border-ring focus-within:ring-3 focus-within:ring-ring/50",
+          pending && "cursor-not-allowed opacity-60",
+        )}
       >
         {pending ? "Enviando…" : "Anexar formulário"}
         <input
@@ -111,16 +119,13 @@ function FileLine({
   onShowConversation?: () => void;
 }) {
   return (
-    <div className="flex flex-wrap items-center gap-2 text-[12px] text-admin-muted">
-      <AdminIcon
-        name="file"
-        className="h-[13px] w-[13px] flex-none text-admin-accent"
-      />
+    <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
+      <AdminIcon name="file" className="size-3.5 flex-none text-primary" />
       <a
         href={href}
         target="_blank"
         rel="noopener"
-        className="font-semibold text-admin-primary-soft hover:underline"
+        className="font-medium text-primary underline-offset-4 hover:underline"
       >
         {name}
       </a>
@@ -131,7 +136,7 @@ function FileLine({
           <button
             type="button"
             onClick={onShowConversation}
-            className="font-semibold text-admin-primary-soft hover:underline"
+            className="cursor-pointer font-medium text-primary underline-offset-4 hover:underline"
           >
             ver conversa
           </button>
@@ -152,10 +157,10 @@ function Initials({ name, staff }: { name: string; staff: boolean }) {
     .join("");
   return (
     <span
-      className={`inline-flex h-8 w-8 flex-none items-center justify-center rounded-full text-[11px] font-bold ${
+      className={`inline-flex size-8 flex-none items-center justify-center rounded-full text-xs font-semibold ${
         staff
-          ? "bg-admin-primary text-white"
-          : "bg-admin-accent/20 text-admin-accent"
+          ? "bg-primary text-primary-foreground"
+          : "bg-primary/10 text-primary"
       }`}
       aria-hidden="true"
     >
@@ -174,7 +179,7 @@ function RequirementAction({
 }: {
   action: (p: ActionState, f: FormData) => Promise<ActionState>;
   requirementId: string;
-  className: string;
+  className?: string;
   successMessage?: string;
   children: React.ReactNode;
 }) {
@@ -193,9 +198,9 @@ function RequirementAction({
   return (
     <form action={formAction} className="flex-none">
       <input type="hidden" name="requirementId" value={requirementId} />
-      <button type="submit" disabled={pending} className={className}>
+      <Button type="submit" size="sm" disabled={pending} className={className}>
         {children}
-      </button>
+      </Button>
     </form>
   );
 }
@@ -238,31 +243,27 @@ function RequirementConversation({
   if (closed && requirement.messages.length === 0) return null;
 
   return (
-    <div className="border-t border-admin-border pt-2.5">
+    <div className="border-t pt-3">
       <div className="flex flex-wrap items-center gap-2">
-        <h5 className="flex-1 font-serif text-[14px] font-semibold text-admin-primary">
+        <h5 className="flex-1 text-sm font-semibold text-foreground">
           Perguntas do cidadão
         </h5>
-        {awaitingOffice && (
-          <span className="rounded-full bg-admin-accent px-2.5 py-0.5 text-[10.5px] font-bold text-white">
-            Novo
-          </span>
-        )}
+        {awaitingOffice && <Badge>Novo</Badge>}
         {!awaitingOffice && requirement.messages.length > 0 && (
-          <span className="rounded-full bg-admin-success-bg px-2.5 py-0.5 text-[10.5px] font-bold text-admin-success-text">
+          <Badge className="border-success/30 bg-success-soft text-success-text">
             {closed ? "Encerrada" : "Respondida"}
-          </span>
+          </Badge>
         )}
       </div>
 
       {requirement.messages.length > 0 && (
-        <div className="mt-2.5 flex max-h-80 flex-col gap-3 overflow-y-auto pr-1">
+        <div className="mt-3 flex max-h-80 flex-col gap-3 overflow-y-auto pr-1">
           {requirement.messages.map((message) => {
             const staff = message.author === "staff";
             return (
               <div
                 key={message.id}
-                className={`flex min-w-0 items-start gap-2.5 ${staff ? "flex-row-reverse" : ""}`}
+                className={`flex min-w-0 items-start gap-2 ${staff ? "flex-row-reverse" : ""}`}
               >
                 <Initials name={message.authorName} staff={staff} />
                 <div
@@ -271,19 +272,19 @@ function RequirementConversation({
                   <div
                     className={`flex flex-wrap items-baseline gap-2 ${staff ? "flex-row-reverse" : ""}`}
                   >
-                    <span className="text-[12.5px] font-bold text-admin-primary">
+                    <span className="text-sm font-semibold text-foreground">
                       {message.authorName}
                     </span>
-                    <span className="text-[11px] text-admin-faint">
+                    <span className="text-xs text-muted-foreground tabular-nums">
                       {formatDayMonthTime(message.createdAt)}
                     </span>
                   </div>
                   {message.body && (
                     <p
-                      className={`m-0 max-w-full min-w-0 [overflow-wrap:anywhere] rounded-[10px] px-3 py-2 text-[12.5px] leading-relaxed whitespace-pre-line ${
+                      className={`m-0 max-w-full min-w-0 [overflow-wrap:anywhere] rounded-lg px-3 py-2 text-sm leading-relaxed whitespace-pre-line ${
                         staff
-                          ? "bg-admin-primary text-white"
-                          : "bg-admin-input-bg text-admin-text"
+                          ? "bg-primary text-primary-foreground"
+                          : "bg-muted text-foreground"
                       }`}
                     >
                       {message.body}
@@ -295,9 +296,9 @@ function RequirementConversation({
                       href={documentHref(requestId, file.id)}
                       target="_blank"
                       rel="noopener"
-                      className="flex min-w-0 max-w-full items-center gap-1.5 rounded-[10px] border border-admin-border bg-admin-card px-3 py-1.5 text-[12px] font-semibold text-admin-primary-soft"
+                      className="flex min-w-0 max-w-full items-center gap-1.5 rounded-lg border bg-background px-3 py-1.5 text-xs font-medium text-primary hover:bg-muted"
                     >
-                      <AdminIcon name="file" className="h-3.5 w-3.5 shrink-0" />
+                      <AdminIcon name="file" className="size-3.5 shrink-0" />
                       <span className="truncate">{file.displayName}</span>
                     </a>
                   ))}
@@ -310,27 +311,23 @@ function RequirementConversation({
       )}
 
       {closed ? (
-        <p className="mt-2.5 text-[11.5px] text-admin-faint">
+        <p className="mt-3 text-xs text-muted-foreground">
           Exigência cumprida: a conversa está encerrada nos dois lados.
         </p>
       ) : (
-        <form ref={formRef} action={action} className="mt-2.5">
+        <form ref={formRef} action={action} className="mt-3">
           <input type="hidden" name="requirementId" value={requirement.id} />
-          <textarea
+          <Textarea
             name="body"
             rows={2}
             disabled={pending}
             placeholder="Responder ao cidadão..."
-            className="w-full rounded-[10px] border border-admin-input-border bg-admin-input-bg px-3.5 py-2.5 text-[12.5px] text-admin-text placeholder:text-admin-faint"
+            aria-label="Responder ao cidadão"
           />
           <div className="mt-2 flex justify-end">
-            <button
-              type="submit"
-              disabled={pending}
-              className="btn btn-admin-primary btn-sm"
-            >
+            <Button type="submit" size="sm" disabled={pending}>
               {pending ? "Enviando…" : "Enviar resposta"}
-            </button>
+            </Button>
           </div>
         </form>
       )}
@@ -356,41 +353,39 @@ function EditRequirement({ requirement }: { requirement: RequirementItem }) {
 
   if (!open) {
     return (
-      <button
+      <Button
         type="button"
+        variant="outline"
+        size="sm"
         onClick={() => setOpen(true)}
-        className="btn btn-admin-secondary btn-sm"
       >
         Editar
-      </button>
+      </Button>
     );
   }
 
   return (
     <form action={action} className="flex w-full flex-col gap-2">
       <input type="hidden" name="requirementId" value={requirement.id} />
-      <textarea
+      <Textarea
         name="text"
         rows={4}
         maxLength={LONG_TEXT_MAX}
         defaultValue={requirement.text}
-        className="w-full rounded-[9px] border border-admin-input-border bg-admin-input-bg px-3.5 py-2.5 text-[13px] text-admin-text"
+        aria-label="Texto da exigência"
       />
-      <div className="flex gap-2.5">
-        <button
-          type="submit"
-          disabled={pending}
-          className="btn btn-admin-primary btn-sm"
-        >
+      <div className="flex gap-2">
+        <Button type="submit" size="sm" disabled={pending}>
           {pending ? "Salvando…" : "Salvar"}
-        </button>
-        <button
+        </Button>
+        <Button
           type="button"
+          variant="outline"
+          size="sm"
           onClick={() => setOpen(false)}
-          className="btn btn-admin-secondary btn-sm"
         >
           Cancelar
-        </button>
+        </Button>
       </div>
     </form>
   );
@@ -417,7 +412,6 @@ function DeleteRequirement({ requirement }: { requirement: RequirementItem }) {
       consequence="A exigência, a conversa com o cidadão e os arquivos enviados nela somem dos dois lados. Não dá para desfazer. Se ela já foi resolvida, marque como cumprida em vez de excluir."
       confirmLabel="Confirmar exclusão"
       pendingLabel="Excluindo…"
-      triggerClassName="text-[12px] font-semibold text-admin-error-text hover:underline"
     >
       <input type="hidden" name="requirementId" value={requirement.id} />
     </ConfirmAction>
@@ -458,26 +452,26 @@ function RequirementCard({
     <div
       className={
         pendingReq
-          ? "flex flex-col gap-2.5 rounded-[11px] border border-admin-warning-soft-border bg-admin-card px-4 py-3.5"
-          : "flex flex-col gap-2 rounded-[11px] border border-admin-border bg-admin-input-bg px-4 py-3.5"
+          ? "flex flex-col gap-3 rounded-lg border border-warning/40 bg-background px-4 py-3"
+          : "flex flex-col gap-2 rounded-lg border bg-muted/50 px-4 py-3"
       }
     >
       <button
         type="button"
         onClick={() => setOpen((o) => !o)}
         aria-expanded={open}
-        className="flex w-full cursor-pointer items-center gap-2.5 text-left"
+        className="flex w-full cursor-pointer items-center gap-2 rounded-md text-left"
       >
-        <span
-          className={`flex-none rounded-full px-[9px] py-[3px] text-[10.5px] font-bold ${
+        <Badge
+          className={
             pendingReq
-              ? "bg-admin-warning-soft-bg text-admin-accent"
-              : "bg-admin-success-bg text-admin-success-text"
-          }`}
+              ? "bg-warning text-warning-foreground"
+              : "border-success/30 bg-success-soft text-success-text"
+          }
         >
           {pendingReq ? "Aguardando o cidadão" : "Cumprida"}
-        </span>
-        <span className="flex-none text-[11.5px] text-admin-faint">
+        </Badge>
+        <span className="flex-none text-xs text-muted-foreground">
           registrada em {formatOfficeDayMonth(requirement.createdAt)}
           {requirement.fulfilledAt
             ? ` · resolvida em ${formatOfficeDayMonth(requirement.fulfilledAt)}`
@@ -488,25 +482,21 @@ function RequirementCard({
         {open ? (
           <span className="flex-1" />
         ) : (
-          <span className="min-w-0 flex-1 truncate text-[13px] text-admin-text">
+          <span className="min-w-0 flex-1 truncate text-sm text-foreground">
             {requirement.text}
           </span>
         )}
-        {!open && awaitingOffice && (
-          <span className="flex-none rounded-full bg-admin-accent px-2.5 py-0.5 text-[10.5px] font-bold text-white">
-            Novo
-          </span>
-        )}
+        {!open && awaitingOffice && <Badge className="flex-none">Novo</Badge>}
         <AdminIcon
           name="chevronDown"
           strokeWidth={2}
-          className={`h-4 w-4 flex-none text-admin-text transition-transform duration-300 ${open ? "rotate-180" : ""}`}
+          className={`size-4 flex-none text-muted-foreground transition-transform duration-300 ${open ? "rotate-180" : ""}`}
         />
       </button>
 
       {open && (
         <>
-          <p className="whitespace-pre-line [overflow-wrap:anywhere] text-[13px] leading-normal text-admin-text">
+          <p className="whitespace-pre-line [overflow-wrap:anywhere] text-sm leading-normal text-foreground">
             {requirement.text}
           </p>
           {/* Kept for requirements resolved before the office took over the
@@ -573,11 +563,10 @@ function RequirementCard({
           {/* Only while pending: a fulfilled requirement is the record of
               what was asked and met, and records do not get edited. */}
           {pendingReq && (
-            <div className="flex flex-wrap items-center gap-2.5 border-t border-admin-border pt-2.5">
+            <div className="flex flex-wrap items-center gap-2 border-t pt-3">
               <RequirementAction
                 action={resolveRequirementAction}
                 requirementId={requirement.id}
-                className="btn btn-admin-primary btn-sm"
                 successMessage="Exigência marcada como cumprida."
               >
                 Marcar como cumprida
@@ -614,34 +603,37 @@ export function RequirementsSection({
   }, [state]);
 
   return (
-    <div className="flex flex-col gap-3.5 rounded-[14px] border border-admin-border bg-admin-card px-6 py-[22px]">
+    <div className="flex flex-col gap-4 rounded-xl border bg-card p-6">
       <div className="flex items-start gap-3">
         <div className="flex min-w-0 flex-1 flex-col gap-1">
-          <h4 className="font-serif text-[17px] font-semibold text-admin-primary">
+          <h4 className="text-base font-semibold text-foreground">
             Exigências
           </h4>
-          <p className="text-[12.5px] leading-normal text-admin-muted">
+          <p className="text-sm leading-normal text-muted-foreground">
             O que você registrar aqui aparece na consulta do cidadão, que
             responde por lá. Você confere e marca como cumprida.
           </p>
         </div>
         {editing ? (
-          <button
+          <Button
             type="button"
+            variant="outline"
+            size="sm"
             onClick={() => setEditing(false)}
-            className="btn btn-admin-secondary btn-sm flex-none"
+            className="flex-none"
           >
             Cancelar
-          </button>
+          </Button>
         ) : (
-          <button
+          <Button
             type="button"
+            size="sm"
             onClick={() => setEditing(true)}
-            className="btn btn-admin-primary btn-sm flex-none gap-[7px] px-3.5 text-[12.5px]"
+            className="flex-none"
           >
-            <AdminIcon name="plus" className="h-3.5 w-3.5" strokeWidth={2.4} />
+            <AdminIcon name="plus" className="size-3.5" strokeWidth={2.4} />
             Registrar exigência
-          </button>
+          </Button>
         )}
       </div>
 
@@ -649,39 +641,33 @@ export function RequirementsSection({
       {editing && (
         <form
           action={action}
-          className="flex flex-col gap-2.5 rounded-[11px] border border-admin-warning-soft-border bg-admin-warning-soft-bg p-4"
+          className="flex flex-col gap-2 rounded-lg border border-warning/30 bg-warning-soft p-4"
         >
           <input type="hidden" name="requestId" value={requestId} />
-          <span className="text-[12px] font-bold text-admin-accent">
+          <span className="text-sm font-medium text-warning-text">
             Nova exigência
           </span>
-          <textarea
+          <Textarea
             name="text"
             rows={4}
             maxLength={LONG_TEXT_MAX}
             placeholder="O que falta para o pedido seguir? Escreva como falaria no balcão: o cidadão lê isso na consulta."
-            className="min-h-[88px] w-full rounded-[9px] border border-admin-input-border bg-admin-card px-[13px] py-2.5 text-[13px] text-admin-text placeholder:text-admin-faint"
+            aria-label="Nova exigência"
+            className="min-h-22 bg-background"
           />
           {state.status === "error" && (
-            <p
-              role="alert"
-              className="text-[12.5px] font-semibold text-admin-error-text"
-            >
+            <p role="alert" className="text-sm font-medium text-destructive">
               {state.message}
             </p>
           )}
-          <div className="flex items-center gap-2.5">
-            <button
-              type="submit"
-              disabled={pending}
-              className="btn btn-admin-primary btn-md"
-            >
+          <div className="flex items-center gap-2">
+            <Button type="submit" disabled={pending}>
               {pending ? "Registrando…" : "Registrar"}
-            </button>
+            </Button>
             {/* See `pauseReasons` in deadline.ts: the term stops while any
                 requirement is pending, and only "Marcar como cumprida" ends
                 that, not the citizen's answer. */}
-            <span className="text-[11.5px] text-admin-faint">
+            <span className="text-xs text-warning-text">
               Suspende o prazo até você marcar como cumprida
             </span>
           </div>
@@ -689,19 +675,19 @@ export function RequirementsSection({
       )}
 
       {requirements.length === 0 && !editing && (
-        <div className="flex items-center gap-3 border-t border-admin-border pt-4">
-          <span className="inline-flex h-[34px] w-[34px] flex-none items-center justify-center rounded-full bg-admin-success-bg">
+        <div className="flex items-center gap-3 border-t pt-4">
+          <span className="inline-flex size-8 flex-none items-center justify-center rounded-full bg-success-soft">
             <AdminIcon
               name="check"
-              className="h-4 w-4 text-admin-success-text"
+              className="size-4 text-success-text"
               strokeWidth={2}
             />
           </span>
           <div className="flex flex-col gap-0.5">
-            <span className="text-[13.5px] font-semibold text-admin-text">
+            <span className="text-sm font-medium text-foreground">
               Nenhuma exigência neste pedido
             </span>
-            <span className="text-[12.5px] text-admin-muted">
+            <span className="text-sm text-muted-foreground">
               O pedido segue sem pendências com o cidadão.
             </span>
           </div>
@@ -709,7 +695,7 @@ export function RequirementsSection({
       )}
 
       {requirements.length > 0 && (
-        <div className="flex flex-col gap-2.5">
+        <div className="flex flex-col gap-2">
           {requirements.map((requirement) => (
             <RequirementCard
               key={requirement.id}

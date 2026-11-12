@@ -2,11 +2,13 @@
 
 import { useActionState, useEffect } from "react";
 import { toast } from "sonner";
+import { Button } from "../../../_ui/button.tsx";
+import { Input } from "../../../_ui/input.tsx";
+import { Label } from "../../../_ui/label.tsx";
+import { Switch } from "../../../_ui/switch.tsx";
 import { type HoursState, saveAccessWindow } from "./actions.ts";
 
 const IDLE: HoursState = { status: "idle" };
-const FIELD =
-  "rounded-[9px] border border-admin-input-border bg-admin-input-bg px-3 py-2 text-[13.5px] text-admin-text outline-none focus:border-admin-primary-soft";
 
 export function WindowForm({
   enabled,
@@ -23,40 +25,33 @@ export function WindowForm({
   }, [state]);
   return (
     <form action={action} className="mt-3 flex flex-wrap items-end gap-3">
-      <label className="flex items-center gap-2 text-[13px] text-admin-text">
-        <input
-          type="checkbox"
-          name="enabled"
-          defaultChecked={enabled}
-          className="checkbox-admin"
-        />
+      <Label className="h-9 font-normal text-foreground">
+        <Switch name="enabled" defaultChecked={enabled} />
         Limitar o acesso ao horário
-      </label>
-      <label className="flex flex-col gap-1 text-xs font-bold text-admin-primary">
+      </Label>
+      <Label className="flex-col items-stretch gap-1.5 text-foreground">
         Abre às
-        <input
+        <Input
           type="time"
           name="start"
           defaultValue={start}
-          className={FIELD}
+          className="font-normal"
         />
-      </label>
-      <label className="flex flex-col gap-1 text-xs font-bold text-admin-primary">
+      </Label>
+      <Label className="flex-col items-stretch gap-1.5 text-foreground">
         Fecha às
-        <input type="time" name="end" defaultValue={end} className={FIELD} />
-      </label>
-      <button
-        type="submit"
-        disabled={pending}
-        className="btn btn-admin-primary btn-md"
-      >
+        <Input
+          type="time"
+          name="end"
+          defaultValue={end}
+          className="font-normal"
+        />
+      </Label>
+      <Button type="submit" disabled={pending}>
         {pending ? "Salvando..." : "Salvar horário"}
-      </button>
+      </Button>
       {state.status === "error" && (
-        <p
-          role="alert"
-          className="basis-full text-[12.5px] font-semibold text-admin-error-text"
-        >
+        <p role="alert" className="basis-full text-sm text-destructive">
           {state.message}
         </p>
       )}

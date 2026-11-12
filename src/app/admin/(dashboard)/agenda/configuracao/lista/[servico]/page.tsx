@@ -48,7 +48,7 @@ export default async function ChecklistPage({
           label: "Configuração das agendas",
         }}
       />
-      <main className="px-[30px] py-7">
+      <main className="px-4 pt-6 pb-8 md:px-8">
         <BlobUploadProvider
           enabled={blobUploadEnabled()}
           tenantSlug={tenant.slug}

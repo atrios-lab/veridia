@@ -1,6 +1,5 @@
-import Image from "next/image";
 import type { Tenant } from "@/core/tenant/schema.ts";
-import { initials } from "./sidebar.tsx";
+import { initials, OfficeMark } from "./sidebar.tsx";
 
 /**
  * The panel's shell for a person who has no session yet: the invite and
@@ -24,26 +23,14 @@ export function AdminLockedSidebar({
   person: { name: string; roleLabel: string };
 }) {
   return (
-    <aside className="flex flex-none flex-col bg-admin-primary md:w-[236px]">
-      <div className="flex items-center gap-3 px-4 py-3.5 md:border-b md:border-white/12 md:px-[18px] md:py-5">
-        <Image
-          src={tenant.logos.seal.dark}
-          alt=""
-          width={36}
-          height={36}
-          className="h-9 w-9 flex-none rounded-full object-contain ring-1 ring-admin-on-dark-accent/40"
-        />
-        <span className="min-w-0 flex-1">
-          <span className="block truncate font-serif text-[13.5px] font-bold uppercase leading-snug tracking-[0.06em] text-white md:whitespace-normal">
-            {tenant.name}
-          </span>
-          <span className="mt-0.5 block text-[9.5px] font-extrabold uppercase tracking-[0.12em] whitespace-nowrap text-admin-on-dark-accent">
-            Painel administrativo
-          </span>
-        </span>
+    <aside className="flex flex-none flex-col border-sidebar-border bg-sidebar text-sidebar-foreground max-md:border-b md:w-64 md:border-r">
+      <div className="flex items-center gap-3 p-3 md:border-b md:border-sidebar-border">
+        <div className="min-w-0 flex-1">
+          <OfficeMark tenant={tenant} />
+        </div>
         <span
           title={`${person.name} · ${person.roleLabel}`}
-          className="relative flex h-8 w-8 flex-none items-center justify-center rounded-full bg-admin-on-dark-accent text-xs font-bold text-admin-primary md:hidden"
+          className="relative flex size-8 flex-none items-center justify-center rounded-full bg-primary text-xs font-semibold text-primary-foreground md:hidden"
         >
           <span aria-hidden="true">{initials(person.name, "")}</span>
           <span className="sr-only">
@@ -52,21 +39,19 @@ export function AdminLockedSidebar({
         </span>
       </div>
 
-      <div className="hidden flex-1 px-[18px] py-5 md:block">
-        <p className="text-[12.5px] leading-relaxed text-admin-on-dark-subtitle">
+      <div className="hidden flex-1 p-4 md:block">
+        <p className="text-sm leading-relaxed text-muted-foreground">
           {explanation}
         </p>
       </div>
 
-      <div className="hidden items-center gap-2.5 border-t border-white/12 p-3.5 md:flex">
-        <span className="flex h-8 w-8 flex-none items-center justify-center rounded-full bg-admin-on-dark-accent text-xs font-bold text-admin-primary">
+      <div className="hidden items-center gap-2.5 border-t border-sidebar-border p-3 md:flex">
+        <span className="flex size-8 flex-none items-center justify-center rounded-full bg-primary text-xs font-semibold text-primary-foreground">
           {initials(person.name, "")}
         </span>
         <div className="min-w-0 flex-1">
-          <p className="truncate text-[12.5px] font-semibold text-white">
-            {person.name}
-          </p>
-          <p className="truncate text-[11px] text-admin-on-dark-subtitle">
+          <p className="truncate text-sm font-medium">{person.name}</p>
+          <p className="truncate text-xs text-muted-foreground">
             {person.roleLabel}
           </p>
         </div>

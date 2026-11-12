@@ -51,7 +51,7 @@ export function PublicationPreview({
   return (
     <div
       data-theme={theme}
-      className={`${SERIF[theme].variable} overflow-hidden rounded-[14px] border border-admin-border bg-brand-surface`}
+      className={`${SERIF[theme].variable} overflow-hidden rounded-xl border border-border bg-brand-surface`}
     >
       <div className="flex items-center gap-2 bg-brand-primary px-3.5 py-2.5">
         {/* biome-ignore lint/performance/noImgElement: preview mirrors the

@@ -54,7 +54,7 @@ export default async function GeneratePage({
         }}
         description="Três modelos, cada um para o seu fim. O documento sai com a numeração das folhas, fica guardado e pode ser assinado digitalmente ou impresso."
       />
-      <main className="flex max-w-[1000px] flex-col gap-4 px-[30px] py-7 max-md:px-4">
+      <main className="flex max-w-[1000px] flex-col gap-4 px-4 py-7 md:px-8">
         <ReportForm
           initial={{
             kind: query.tipo ?? "prestacao",

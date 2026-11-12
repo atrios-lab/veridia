@@ -14,6 +14,8 @@ import { getTenant } from "@/lib/tenant.ts";
 import { listPublishedTutorials, listWatchedIds } from "@/lib/tutorials.ts";
 import { AdminIcon } from "../../../_components/icon.tsx";
 import { AdminPageHeader } from "../../../_components/page-header.tsx";
+import { buttonVariants } from "../../../_ui/button.tsx";
+import { Progress } from "../../../_ui/progress.tsx";
 import {
   AssessmentPanel,
   type PanelState,
@@ -87,7 +89,7 @@ export default async function CoursePage({
               href={`/admin/ajuda/${encodeURIComponent(course.slug)}/apostila`}
               target="_blank"
               rel="noopener"
-              className="btn btn-admin-secondary btn-md"
+              className={buttonVariants({ variant: "outline" })}
             >
               <AdminIcon name="file" className="h-4 w-4" />
               Apostila (PDF)
@@ -95,23 +97,15 @@ export default async function CoursePage({
           ) : undefined
         }
       />
-      <main className="flex min-w-0 flex-col gap-7 px-[30px] py-7">
+      <main className="flex min-w-0 flex-col gap-7 px-4 py-6 md:px-8">
         <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
-          <span className="text-[13px] text-admin-muted">
+          <span className="text-sm text-muted-foreground">
             {progress.total} {progress.total === 1 ? "vídeo" : "vídeos"} ·{" "}
             {formatDuration(progress.durationSeconds)}
           </span>
           <span className="flex min-w-[220px] flex-1 items-center gap-2.5 sm:max-w-[360px]">
-            <span
-              className="h-1.5 flex-1 overflow-hidden rounded-full bg-admin-surface"
-              aria-hidden="true"
-            >
-              <span
-                className="block h-full rounded-full bg-admin-primary"
-                style={{ width: `${percent}%` }}
-              />
-            </span>
-            <span className="text-[13px] font-semibold text-admin-primary tabular-nums">
+            <Progress value={percent} className="flex-1" aria-hidden="true" />
+            <span className="text-sm font-semibold text-foreground tabular-nums">
               {progress.watched} de {progress.total} assistidos
             </span>
           </span>

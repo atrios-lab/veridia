@@ -1,6 +1,11 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
+import { Button, buttonVariants } from "../../../_ui/button.tsx";
+import {
+  NativeSelect,
+  NativeSelectOption,
+} from "../../../_ui/native-select.tsx";
 
 /**
  * The Assinador Veridia on the office's computer (tools/assinador-local):
@@ -112,7 +117,7 @@ export function certificateFields(
   return data;
 }
 
-const LABEL = "mb-1.5 block text-xs font-bold text-admin-primary";
+const LABEL = "mb-1.5 block text-sm font-medium text-foreground";
 
 export function LocalSignerPicker({
   signer,
@@ -124,15 +129,15 @@ export function LocalSignerPicker({
   const { state, refresh, chosen, setChosen } = signer;
   if (state.kind === "procurando") {
     return (
-      <p className="text-[12.5px] text-admin-muted md:col-span-2">
+      <p className="text-xs text-muted-foreground md:col-span-2">
         Procurando o Assinador Veridia neste computador...
       </p>
     );
   }
   if (state.kind === "ausente") {
     return (
-      <div className="rounded-[12px] border border-admin-warning-soft-border bg-admin-warning-bg px-4 py-3 text-[12.5px] text-admin-warning-text md:col-span-2">
-        <p className="font-semibold">
+      <div className="rounded-lg border border-warning/30 bg-warning-soft px-4 py-3 text-xs text-warning-text md:col-span-2">
+        <p className="font-medium">
           Para assinar com token ou cartão, instale o Assinador Veridia neste
           computador (Windows). É uma vez só.
         </p>
@@ -153,19 +158,20 @@ export function LocalSignerPicker({
           <a
             href={DOWNLOAD_HREF}
             download
-            className="btn btn-admin-primary btn-sm"
+            className={buttonVariants({ size: "sm" })}
           >
             Baixar o Assinador Veridia
           </a>
-          <button
+          <Button
             type="button"
+            variant="outline"
+            size="sm"
             onClick={() => void refresh()}
-            className="btn btn-admin-secondary btn-sm"
           >
             Já instalei, procurar de novo
-          </button>
+          </Button>
         </div>
-        <p className="mt-2 text-[11.5px]">
+        <p className="mt-2 text-xs">
           Se o navegador perguntar se este site pode acessar dispositivos da
           rede local, responda Permitir.
         </p>
@@ -174,41 +180,45 @@ export function LocalSignerPicker({
   }
   if (state.kind === "negado") {
     return (
-      <div className="rounded-[12px] border border-admin-error-border bg-admin-error-bg px-4 py-3 text-[12.5px] text-admin-error-text md:col-span-2">
-        <p className="font-semibold">{state.message}</p>
+      <div className="rounded-lg border border-destructive/40 bg-destructive-soft px-4 py-3 text-xs text-destructive md:col-span-2">
+        <p className="font-medium">{state.message}</p>
         <p className="mt-1">
           Na janela do Assinador Veridia, responda Sim para este site. Se você
           respondeu Não, feche e abra o Assinador de novo (ele está no menu
           Iniciar como AssinadorVeridia).
         </p>
-        <button
+        <Button
           type="button"
+          variant="outline"
+          size="sm"
           onClick={() => void refresh()}
-          className="btn btn-admin-secondary btn-sm mt-2"
+          className="mt-2"
         >
           Tentar de novo
-        </button>
+        </Button>
       </div>
     );
   }
   if (!state.certificados.length) {
     return (
-      <div className="rounded-[12px] border border-admin-border px-4 py-3 text-[12.5px] text-admin-text md:col-span-2">
-        <p className="font-semibold text-admin-primary">
+      <div className="rounded-lg border px-4 py-3 text-xs text-foreground md:col-span-2">
+        <p className="font-medium text-foreground">
           Nenhum certificado A3 encontrado neste computador.
         </p>
-        <p className="mt-1 text-admin-muted">
+        <p className="mt-1 text-muted-foreground">
           Conecte o token ou insira o cartão. Se for a primeira vez, instale o
           driver do fabricante (ele vem com o certificado) e aguarde alguns
           segundos.
         </p>
-        <button
+        <Button
           type="button"
+          variant="outline"
+          size="sm"
           onClick={() => void refresh()}
-          className="btn btn-admin-secondary btn-sm mt-2"
+          className="mt-2"
         >
           Procurar de novo
-        </button>
+        </Button>
       </div>
     );
   }
@@ -218,28 +228,28 @@ export function LocalSignerPicker({
         Certificado A3 (token ou cartão)
       </label>
       <div className="flex flex-wrap gap-2">
-        <select
+        <NativeSelect
           id={`${prefix}-token`}
           value={chosen}
           onChange={(event) => setChosen(event.target.value)}
-          className="min-w-0 flex-1 rounded-[9px] border border-admin-input-border bg-admin-input-bg px-3 py-2 text-[13px] text-admin-text outline-none focus:border-admin-primary-soft"
+          className="min-w-0 flex-1"
         >
           {state.certificados.map((certificate) => (
-            <option key={certificate.id} value={certificate.id}>
+            <NativeSelectOption key={certificate.id} value={certificate.id}>
               {certificateLabel(certificate)}
-            </option>
+            </NativeSelectOption>
           ))}
-        </select>
-        <button
+        </NativeSelect>
+        <Button
           type="button"
+          variant="outline"
           onClick={() => void refresh()}
-          className="btn btn-admin-secondary btn-sm"
           title="Conectou outro token? Atualize a lista."
         >
           Atualizar lista
-        </button>
+        </Button>
       </div>
-      <p className="mt-1 text-[11.5px] text-admin-muted">
+      <p className="mt-1 text-xs text-muted-foreground">
         O PIN é pedido pela janela do próprio token. A chave nunca sai dele.
       </p>
     </div>

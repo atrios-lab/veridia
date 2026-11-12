@@ -22,6 +22,39 @@ visível sem travessão (`pnpm check:dashes`); imports com extensão explícita 
 teste é `node --test`, sem suíte de navegador no CI; a CSP já permite estilo inline
 (`style-src 'self' 'unsafe-inline'`), que o Base UI usa para posicionar camadas.
 
+## Ajustes feitos na implementação
+
+Decisões tomadas durante a implementação, que valem sobre o texto das seções abaixo:
+
+- **Entrega**: um branch só (`claude/painel-neutro`), um commit por etapa e uma PR única para a
+  `main` no fim, por decisão do usuário. Não há branch de integração com PRs intermediárias. A
+  trava `check:admin-scale` foi para a `main` antes (PR #291).
+- **Movimento**: o que tem pendência na Visão geral continua piscando (PR #289) e o item
+  "Treinamento" continua pulsando, por decisão do usuário. As animações foram para `admin.css`,
+  em navy. Só o enfeite sem relação com estado saiu (o brilho do nome na barra lateral escura).
+- **Folha de estilo**: o conteúdo de `globals.css` foi para `brand.css`, sem mudança;
+  `globals.css` só importa o Tailwind e `brand.css`, e o site não mudou. A ponte do painel não é
+  um `admin-legacy.css`: `admin.css` importa `brand.css` e repinta em neutro os
+  `--color-admin-*`, os `--brand-*` da raiz e as variantes `.btn-admin-*`.
+- **Raio**: o `--radius` de 0,5rem dá exatamente os raios padrão do Tailwind (4, 6, 8 e 12px),
+  então os `--radius-*` não foram redefinidos e o motivo de raio da decisão 1 deixou de existir.
+  As duas raízes continuam pelos outros motivos (portais no `<body>`, fonte do `<body>`, CSS do
+  painel fora do site).
+- **Vermelho**: um token só, `destructive` = `#c10007`, para fundo e texto (6,4:1 no branco).
+  Não existe `destructive-text`.
+- **Cinza do texto secundário**: `muted-foreground` = `#666666` (5,3:1 sobre `muted`, 5,0:1
+  sobre a barra lateral). **Borda de campo**: `input` = `#888888`, 3:1 contra branco e `muted`.
+- **Ícones**: `AdminIcon` não sumiu: virou um mapa de nomes para ícones `lucide`, então toda
+  tela passou ao mesmo traço dos componentes sem trocar cada chamada.
+- **Controles nativos**: `<dialog>` com `showModal()` (em `AdminDialog` e `ConfirmAction`), a
+  caixa de marcação `.checkbox-admin` e o `<select>` (pelo `NativeSelect`) continuam nativos
+  onde a tela depende do envio de formulário do navegador; o visual é o do shadcn, declarado em
+  `admin.css`.
+- **Barra lateral**: o `Sidebar` do shadcn, recolhível para os ícones, estado num cookie, gaveta
+  (`Sheet`) no celular. A gaveta só abre depois da hidratação, diferente do popover nativo de
+  antes.
+- **Letra**: a escala ganhou `text-3xl` (30px), só para número de indicador.
+
 ## Goals / Non-Goals
 
 **Goals:**

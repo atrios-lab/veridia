@@ -6,6 +6,9 @@ import type { Role } from "@/core/auth/roles.ts";
 import { ConfirmAction } from "../../../_components/confirm-action.tsx";
 import { FilePicker } from "../../../_components/file-picker.tsx";
 import { ROLE_LABELS } from "../../../_components/role-labels.ts";
+import { Button } from "../../../_ui/button.tsx";
+import { Input } from "../../../_ui/input.tsx";
+import { Label } from "../../../_ui/label.tsx";
 import {
   addCertificate,
   type CertificateState,
@@ -13,9 +16,6 @@ import {
   saveSigners,
 } from "./actions.ts";
 
-const FIELD =
-  "w-full rounded-[9px] border border-admin-input-border bg-admin-input-bg px-3.5 py-2.5 text-[13.5px] text-admin-text outline-none focus:border-admin-primary-soft";
-const LABEL = "mb-1.5 block text-xs font-bold text-admin-primary";
 const IDLE: CertificateState = { status: "idle" };
 
 /**
@@ -49,21 +49,20 @@ export function AddCertificateForm() {
     <form
       ref={form}
       onSubmit={keepFields(action)}
-      className="rounded-[14px] border border-admin-border bg-admin-card px-5 py-4"
+      className="rounded-xl border bg-card px-5 py-4"
     >
-      <h3 className="font-serif text-[16px] font-semibold text-admin-primary">
+      <h3 className="text-base font-semibold text-foreground">
         Cadastrar certificado A1
       </h3>
       <div className="mt-3 grid grid-cols-1 gap-3.5 md:grid-cols-2">
         <div>
-          <label htmlFor="cert-label" className={LABEL}>
+          <Label htmlFor="cert-label" className="mb-1.5">
             Nome para identificar
-          </label>
-          <input
+          </Label>
+          <Input
             id="cert-label"
             name="label"
             placeholder="Ex.: Titular, Substituto, e-CNPJ da serventia"
-            className={FIELD}
           />
         </div>
         <div className="md:col-span-2">
@@ -76,37 +75,29 @@ export function AddCertificateForm() {
           />
         </div>
         <div>
-          <label htmlFor="cert-password" className={LABEL}>
+          <Label htmlFor="cert-password" className="mb-1.5">
             Senha do certificado
-          </label>
-          <input
+          </Label>
+          <Input
             id="cert-password"
             name="password"
             type="password"
             autoComplete="off"
             required
-            className={FIELD}
           />
-          <p className="mt-1 text-[11.5px] text-admin-muted">
+          <p className="mt-1.5 text-xs text-muted-foreground">
             Usada só para conferir o certificado agora. Não é guardada.
           </p>
         </div>
       </div>
       {state.status === "error" && (
-        <p
-          role="alert"
-          className="mt-3 text-[12.5px] font-semibold text-admin-error-text"
-        >
+        <p role="alert" className="mt-3 text-sm text-destructive">
           {state.message}
         </p>
       )}
-      <button
-        type="submit"
-        disabled={pending}
-        className="btn btn-admin-primary btn-md mt-4"
-      >
+      <Button type="submit" disabled={pending} className="mt-4">
         {pending ? "Conferindo..." : "Cadastrar certificado"}
-      </button>
+      </Button>
     </form>
   );
 }
@@ -123,16 +114,13 @@ export function CertificateSigners({
   const [state, action, pending] = useActionState(saveSigners, IDLE);
   useToast(state);
   return (
-    <form
-      onSubmit={keepFields(action)}
-      className="mt-3.5 border-t border-admin-border pt-3"
-    >
+    <form onSubmit={keepFields(action)} className="mt-3.5 border-t pt-3">
       <input type="hidden" name="certificateId" value={certificateId} />
       <fieldset>
-        <legend className="text-xs font-bold text-admin-primary">
+        <legend className="text-sm font-medium text-foreground">
           Quem pode assinar com este certificado
         </legend>
-        <div className="mt-2 flex flex-wrap gap-x-5 gap-y-2 text-[13px] text-admin-text">
+        <div className="mt-2 flex flex-wrap gap-x-5 gap-y-2 text-sm text-foreground">
           {people.map((person) => (
             <label key={person.id} className="flex items-center gap-2">
               <input
@@ -143,7 +131,7 @@ export function CertificateSigners({
                 className="checkbox-admin"
               />
               {person.name}
-              <span className="text-[11.5px] text-admin-muted">
+              <span className="text-xs text-muted-foreground">
                 ({ROLE_LABELS[person.role as Role] ?? person.role})
               </span>
             </label>
@@ -151,20 +139,19 @@ export function CertificateSigners({
         </div>
       </fieldset>
       {state.status === "error" && (
-        <p
-          role="alert"
-          className="mt-2 text-[12.5px] font-semibold text-admin-error-text"
-        >
+        <p role="alert" className="mt-2 text-sm text-destructive">
           {state.message}
         </p>
       )}
-      <button
+      <Button
         type="submit"
         disabled={pending}
-        className="btn btn-admin-secondary btn-sm mt-3"
+        variant="outline"
+        size="sm"
+        className="mt-3"
       >
         {pending ? "Salvando..." : "Salvar autorizações"}
-      </button>
+      </Button>
     </form>
   );
 }

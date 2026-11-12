@@ -37,16 +37,16 @@ export default async function RolesPage() {
   return (
     <>
       <AdminPageHeader maxWidth={1000} title="Configurações" />
-      <main className="flex max-w-[1000px] flex-col gap-4.5 px-[30px] py-7">
+      <main className="flex max-w-[1000px] flex-col gap-6 px-4 pt-6 pb-8 md:px-8">
         <ConfiguracoesTabs
           role={session.user.role ?? ""}
           permissions={session.user.permissions}
         />
-        <section className="rounded-[14px] border border-admin-border bg-admin-card px-5 py-4">
-          <h2 className="font-serif text-[17px] font-semibold text-admin-primary">
+        <section className="rounded-xl border bg-card px-5 py-4">
+          <h2 className="text-lg font-semibold text-foreground">
             Perfis e permissões
           </h2>
-          <p className="mt-1 text-[12.5px] leading-relaxed text-admin-muted">
+          <p className="mt-1 text-sm leading-relaxed text-muted-foreground">
             Marque o que cada cargo faz e vê no painel. O Tabelião/Registrador
             tem acesso total e é o único que cadastra as pessoas, define estas
             permissões e acompanha a auditoria. Cada cargo começa com um padrão,

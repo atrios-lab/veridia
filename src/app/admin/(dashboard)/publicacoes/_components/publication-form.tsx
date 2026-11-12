@@ -40,21 +40,22 @@ import { NOTICE_SECTOR_META, noticeSectors } from "@/core/tenant/gating.ts";
 import type { Tenant } from "@/core/tenant/schema.ts";
 import { OFFICE_TIME_ZONE } from "@/core/time/office-time.ts";
 import type { PublicationRow } from "@/lib/publications.ts";
+import { buttonVariants } from "../../../_ui/button.tsx";
+import { Input } from "../../../_ui/input.tsx";
+import {
+  NativeSelect,
+  NativeSelectOption,
+} from "../../../_ui/native-select.tsx";
+import { Textarea } from "../../../_ui/textarea.tsx";
 import { type SaveState, savePublication } from "../actions.ts";
 import { PublicationPreview } from "./preview.tsx";
 
-const FIELD_CLASS =
-  "w-full rounded-[9px] border border-admin-input-border bg-admin-input-bg px-3.5 py-2.5 text-[13.5px] text-admin-text outline-none focus:border-admin-primary-soft";
-const ERROR_FIELD_CLASS =
-  "w-full rounded-[9px] border border-admin-error-border bg-admin-error-input-bg px-3.5 py-2.5 text-[13.5px] text-admin-text outline-none focus:border-admin-error-text";
-const LABEL_CLASS = "mb-1.5 block text-xs font-bold text-admin-primary";
+const LABEL_CLASS = "mb-1.5 block text-sm font-medium text-foreground";
 
 function FieldError({ message }: { message?: string }) {
   if (!message) return null;
   return (
-    <p className="mt-1.5 text-xs font-semibold text-admin-error-text">
-      {message}
-    </p>
+    <p className="mt-1.5 text-xs font-medium text-destructive">{message}</p>
   );
 }
 
@@ -208,15 +209,15 @@ export function PublicationForm({
   }, [state, editing]);
 
   return (
-    <div className="grid grid-cols-1 items-start gap-5 xl:grid-cols-[1fr_360px]">
+    <div className="grid grid-cols-1 items-start gap-6 xl:grid-cols-[1fr_360px]">
       <form
         ref={formRef}
         onSubmit={handleSubmit}
-        className="rounded-[14px] border border-admin-border bg-admin-card p-6.5"
+        className="rounded-xl border border-border bg-card p-6"
       >
         {editing && <input type="hidden" name="id" value={editing.id} />}
 
-        <h3 className="font-serif text-[17px] font-semibold text-admin-primary">
+        <h3 className="text-lg font-semibold text-foreground">
           {editing ? "Editar publicação" : "Nova publicação"}
         </h3>
 
@@ -226,11 +227,10 @@ export function PublicationForm({
               key={k}
               type="button"
               onClick={() => handleKindChange(k)}
-              className={
-                k === kind
-                  ? "rounded-[9px] border-[1.5px] border-admin-primary-soft bg-admin-input-bg px-4 py-2 text-[12.5px] font-bold text-admin-primary"
-                  : "rounded-[9px] border border-admin-border px-4 py-2 text-[12.5px] font-semibold text-admin-muted"
-              }
+              aria-pressed={k === kind}
+              className={buttonVariants({
+                variant: k === kind ? "default" : "outline",
+              })}
             >
               {PUBLICATION_KIND_LABELS[k]}
             </button>
@@ -243,25 +243,26 @@ export function PublicationForm({
             <label className={LABEL_CLASS} htmlFor="sector">
               Setor
             </label>
-            <select
+            <NativeSelect
               id="sector"
               name="sector"
               value={sector}
               onChange={(event) =>
                 handleSectorChange(event.target.value as NoticeSector | "")
               }
-              className={fieldErrors.sector ? ERROR_FIELD_CLASS : FIELD_CLASS}
+              aria-invalid={fieldErrors.sector ? true : undefined}
+              className="w-full"
             >
-              <option value="">Escolha o setor…</option>
+              <NativeSelectOption value="">Escolha o setor…</NativeSelectOption>
               {sectorOptions.map((option) => (
-                <option key={option} value={option}>
+                <NativeSelectOption key={option} value={option}>
                   {NOTICE_SECTOR_META[option].name} ·{" "}
                   {NOTICE_SECTOR_META[option].noticeType}
-                </option>
+                </NativeSelectOption>
               ))}
-            </select>
+            </NativeSelect>
             <FieldError message={fieldErrors.sector} />
-            <p className="mt-1.5 text-[11px] text-admin-faint">
+            <p className="mt-1.5 text-xs text-muted-foreground">
               O edital aparece em /editais dentro do setor escolhido. Proclamas
               não perguntam: têm setor próprio.
             </p>
@@ -273,32 +274,33 @@ export function PublicationForm({
             <label className={LABEL_CLASS} htmlFor="noticeType">
               Tipo de edital
             </label>
-            <select
+            <NativeSelect
               id="noticeType"
               name="noticeType"
               value={noticeType}
               onChange={(event) =>
                 handleNoticeTypeChange(event.target.value as NoticeTypeKey | "")
               }
-              className={
-                fieldErrors.noticeType ? ERROR_FIELD_CLASS : FIELD_CLASS
-              }
+              aria-invalid={fieldErrors.noticeType ? true : undefined}
+              className="w-full"
             >
-              <option value="">Outro (sem prazo calculado)</option>
+              <NativeSelectOption value="">
+                Outro (sem prazo calculado)
+              </NativeSelectOption>
               {noticeTypesOf(sector).map((key) => (
-                <option key={key} value={key}>
+                <NativeSelectOption key={key} value={key}>
                   {NOTICE_TYPES[key].label}
-                </option>
+                </NativeSelectOption>
               ))}
-            </select>
+            </NativeSelect>
             <FieldError message={fieldErrors.noticeType} />
           </div>
         )}
 
         {rule && (
-          <div className="mt-3.5 rounded-[10px] border border-admin-border bg-admin-input-bg px-3.5 py-3 text-[12px] leading-relaxed text-admin-text">
+          <div className="mt-3.5 rounded-lg bg-muted/50 px-3.5 py-3 text-xs leading-relaxed text-foreground">
             <p>
-              <strong className="text-admin-primary">{rule.legalBasis}.</strong>{" "}
+              <strong className="text-foreground">{rule.legalBasis}.</strong>{" "}
               {rule.summary}
             </p>
             {schedule && (
@@ -312,14 +314,14 @@ export function PublicationForm({
                       : ""}
                   </li>
                 ))}
-                <li className="font-bold">
+                <li className="font-medium">
                   {rule.termLabel} até {formatDate(schedule.termEndsOn)}
                   {rule.counting === "business" ? " (dias úteis)" : ""}
                 </li>
               </ul>
             )}
             {schedule && schedule.termEndsOn < todayIso && (
-              <p className="mt-2 font-semibold text-admin-warning-text">
+              <p className="mt-2 font-medium text-warning-text">
                 Esse prazo já terminou. Ao publicar com essas datas, a
                 publicação fica registrada direto em Arquivadas.
               </p>
@@ -331,13 +333,13 @@ export function PublicationForm({
           <label className={LABEL_CLASS} htmlFor="title">
             Título
           </label>
-          <input
+          <Input
             id="title"
             name="title"
             value={title}
             onChange={(event) => setTitle(event.target.value)}
             placeholder="Ex.: Edital de proclamas nº 113/2026, nomes dos nubentes"
-            className={fieldErrors.title ? ERROR_FIELD_CLASS : FIELD_CLASS}
+            aria-invalid={fieldErrors.title ? true : undefined}
           />
           <FieldError message={fieldErrors.title} />
         </div>
@@ -346,14 +348,14 @@ export function PublicationForm({
           <label className={LABEL_CLASS} htmlFor="body">
             Texto
           </label>
-          <textarea
+          <Textarea
             id="body"
             name="body"
             rows={4}
             value={body}
             onChange={(event) => setBody(event.target.value)}
             placeholder="Conteúdo publicado no site, como o cidadão lê"
-            className={fieldErrors.body ? ERROR_FIELD_CLASS : FIELD_CLASS}
+            aria-invalid={fieldErrors.body ? true : undefined}
           />
           <FieldError message={fieldErrors.body} />
         </div>
@@ -367,15 +369,13 @@ export function PublicationForm({
             </label>
             {/* No `min`: an edital published on paper a month ago is entered
                 with that date, and its runs and term are counted from it. */}
-            <input
+            <Input
               id="publishAt"
               name="publishAt"
               type="date"
               value={publishAt}
               onChange={(event) => handlePublishAtChange(event.target.value)}
-              className={
-                fieldErrors.publishAt ? ERROR_FIELD_CLASS : FIELD_CLASS
-              }
+              aria-invalid={fieldErrors.publishAt ? true : undefined}
             />
             <FieldError message={fieldErrors.publishAt} />
           </div>
@@ -383,7 +383,7 @@ export function PublicationForm({
             <label className={LABEL_CLASS} htmlFor="expireAt">
               Sai do site em
             </label>
-            <input
+            <Input
               id="expireAt"
               name="expireAt"
               type="date"
@@ -393,17 +393,17 @@ export function PublicationForm({
                 setExpireAt(event.target.value);
                 setExpirySuggested(false);
               }}
-              className={fieldErrors.expireAt ? ERROR_FIELD_CLASS : FIELD_CLASS}
+              aria-invalid={fieldErrors.expireAt ? true : undefined}
             />
             <FieldError message={fieldErrors.expireAt} />
             {expirySuggested && rule && (
-              <p className="mt-1.5 text-[11px] text-admin-faint">
+              <p className="mt-1.5 text-xs text-muted-foreground">
                 Preenchido: fim do prazo legal, depois de todas as publicações
               </p>
             )}
           </div>
         </div>
-        <p className="mt-2 text-[11.5px] text-admin-muted">
+        <p className="mt-2 text-xs text-muted-foreground">
           A data da publicação pode ser passada, para registrar um edital já
           publicado: o site o mostra na etapa em que estiver hoje e republica
           sozinho quando a lei pede uma nova publicação. A saída é preenchida
@@ -413,7 +413,7 @@ export function PublicationForm({
         <div className="mt-3.5">
           <span className={LABEL_CLASS}>Documento ou imagem (opcional)</span>
           {editing?.attachmentPath && !file && (
-            <p className="mb-1.5 text-[11.5px] text-admin-muted">
+            <p className="mb-1.5 text-xs text-muted-foreground">
               Já anexado
               {editing.attachmentUploadedAt
                 ? `, disponível até ${formatDate(
@@ -429,13 +429,13 @@ export function PublicationForm({
             </p>
           )}
           {editing?.attachmentPurgedAt && !editing.attachmentPath && !file && (
-            <p className="mb-1.5 text-[11.5px] text-admin-muted">
+            <p className="mb-1.5 text-xs text-muted-foreground">
               O arquivo desta publicação já foi apagado pela regra de{" "}
               {ATTACHMENT_RETENTION_DAYS} dias. Você pode anexar outro.
             </p>
           )}
           <label
-            className={`relative flex cursor-pointer items-center justify-center gap-2 rounded-[10px] border-[1.5px] border-dashed border-admin-input-border px-4 py-3 text-center text-[12.5px] font-semibold text-admin-primary focus-within:border-admin-accent focus-within:ring-2 focus-within:ring-admin-accent ${busy ? "cursor-not-allowed opacity-60" : ""}`}
+            className={`relative flex cursor-pointer items-center justify-center gap-2 rounded-lg border border-dashed border-input px-4 py-3 text-center text-sm font-medium text-foreground hover:bg-muted/50 focus-within:border-ring focus-within:ring-3 focus-within:ring-ring/50 ${busy ? "cursor-not-allowed opacity-60" : ""}`}
           >
             {file ??
               (editing?.attachmentPath
@@ -452,13 +452,13 @@ export function PublicationForm({
               }
             />
           </label>
-          <p className="mt-1.5 text-[11px] text-admin-faint">
+          <p className="mt-1.5 text-xs text-muted-foreground">
             Aparece junto da publicação na página inicial e em /editais: a
             imagem é mostrada no próprio cartão, o PDF abre em nova aba.
           </p>
           {/* The 30-day rule, said before the save, in every state (draft,
               scheduled, live): the office must know to keep its own copy. */}
-          <p className="mt-2 rounded-[9px] border border-admin-warning-soft-border bg-admin-warning-soft-bg px-3 py-2 text-[11.5px] leading-relaxed text-admin-warning-text">
+          <p className="mt-2 rounded-lg border border-warning/30 bg-warning-soft px-3 py-2 text-xs leading-relaxed text-warning-text">
             <strong>
               O arquivo fica disponível por {ATTACHMENT_RETENTION_DAYS} dias
             </strong>
@@ -475,7 +475,7 @@ export function PublicationForm({
         {uploadError && (
           <p
             role="alert"
-            className="mt-4 rounded-lg bg-admin-error-bg px-3.5 py-2.5 text-sm font-semibold text-admin-error-text"
+            className="mt-4 rounded-lg border border-destructive/40 bg-destructive-soft px-3.5 py-2.5 text-sm font-medium text-destructive"
           >
             {uploadError}
           </p>
@@ -484,19 +484,19 @@ export function PublicationForm({
         {!uploadError && state.status === "error" && (
           <p
             role="alert"
-            className="mt-4 rounded-lg bg-admin-error-bg px-3.5 py-2.5 text-sm font-semibold text-admin-error-text"
+            className="mt-4 rounded-lg border border-destructive/40 bg-destructive-soft px-3.5 py-2.5 text-sm font-medium text-destructive"
           >
             {state.message}
           </p>
         )}
 
-        <div className="mt-5.5 flex flex-wrap items-center gap-3.5">
+        <div className="mt-6 flex flex-wrap items-center gap-3">
           <button
             type="submit"
             name="intent"
             value="publish"
             disabled={busy}
-            className="btn btn-admin-primary btn-lg"
+            className={buttonVariants({ size: "lg" })}
           >
             {uploading
               ? "Enviando arquivo…"
@@ -509,7 +509,7 @@ export function PublicationForm({
             name="intent"
             value="draft"
             disabled={busy}
-            className="btn btn-admin-secondary btn-lg"
+            className={buttonVariants({ variant: "outline", size: "lg" })}
           >
             {uploading
               ? "Enviando arquivo…"
@@ -518,7 +518,7 @@ export function PublicationForm({
                 : "Salvar rascunho"}
           </button>
           {state.status === "success" && (
-            <span className="text-[12.5px] font-semibold text-admin-success-text">
+            <span className="text-xs font-medium text-success-text">
               {state.fileUntil
                 ? `Salvo. O arquivo fica disponível até ${formatDate(state.fileUntil)}: baixe e guarde uma cópia na nuvem do cartório.`
                 : "Salvo."}
@@ -528,7 +528,7 @@ export function PublicationForm({
       </form>
 
       <div className="flex flex-col gap-2.5 xl:sticky xl:top-5">
-        <span className="text-[11px] font-bold uppercase tracking-[0.08em] text-admin-faint">
+        <span className="text-xs font-medium text-muted-foreground">
           Como aparece no site
         </span>
         <PublicationPreview
@@ -543,7 +543,7 @@ export function PublicationForm({
           title={title}
           body={body}
         />
-        <p className="text-xs leading-relaxed text-admin-faint">
+        <p className="text-xs leading-relaxed text-muted-foreground">
           A seção de publicações da página inicial leva o nome do que está no ar
           (proclamas, avisos, editais) e some quando não há nenhuma vigente.
         </p>

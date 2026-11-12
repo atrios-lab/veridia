@@ -13,6 +13,8 @@ import {
 import { toast } from "sonner";
 import { ConfirmAction } from "../../_components/confirm-action.tsx";
 import { AdminDialog, DIALOG_FOOTER } from "../../_components/dialog.tsx";
+import { Button } from "../../_ui/button.tsx";
+import { Input } from "../../_ui/input.tsx";
 import {
   type AccountActionState,
   createPasswordResetLink,
@@ -27,7 +29,6 @@ import {
   UpdateAccountAction,
 } from "./update-account-dialog.tsx";
 
-const BUTTON_CLASS = "btn btn-admin-secondary btn-sm";
 // A "use server" file may only export async functions, so this plain object
 // lives here instead of next to AccountActionState in actions.ts.
 const IDLE_ACCOUNT_ACTION_STATE: AccountActionState = { status: "idle" };
@@ -48,34 +49,27 @@ function ResetLinkDialog({ url, onDone }: { url: string; onDone: () => void }) {
   return (
     <AdminDialog labelledBy={headingId} onClose={onDone}>
       <div className="dialog-body">
-        <h2
-          id={headingId}
-          className="font-serif text-[18px] font-semibold text-admin-primary"
-        >
+        <h2 id={headingId} className="text-lg font-semibold text-foreground">
           Link de nova senha
         </h2>
-        <p className="mt-2 text-[13px] leading-relaxed text-admin-muted">
+        <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
           Entregue este link à pessoa. Ele vale 48 horas, só funciona uma vez e
           substitui qualquer link anterior desta conta.
         </p>
-        <input
+        <Input
           ref={field}
           readOnly
           value={url}
           aria-label="Link de nova senha"
           onFocus={(event) => event.currentTarget.select()}
-          className="mt-3 w-full rounded-[9px] border border-admin-input-border bg-admin-input-bg px-3.5 py-2.5 text-[12.5px] text-admin-text outline-none"
+          className="mt-3"
         />
       </div>
       <div className={DIALOG_FOOTER}>
-        <button
-          type="button"
-          onClick={onDone}
-          className="btn btn-admin-secondary btn-md"
-        >
+        <Button type="button" onClick={onDone} variant="outline">
           Fechar
-        </button>
-        <button
+        </Button>
+        <Button
           type="button"
           onClick={async () => {
             try {
@@ -88,10 +82,9 @@ function ResetLinkDialog({ url, onDone }: { url: string; onDone: () => void }) {
               toast.error("Não deu para copiar. Selecione o link e copie.");
             }
           }}
-          className="btn btn-admin-primary btn-md"
         >
           Copiar link
-        </button>
+        </Button>
       </div>
     </AdminDialog>
   );
@@ -141,10 +134,11 @@ function KeyAction({ userId, active }: { userId: string; active: boolean }) {
     <>
       <form action={formAction}>
         <input type="hidden" name="userId" value={userId} />
-        <button
+        <Button
           type="submit"
+          variant="outline"
+          size="sm"
           disabled={pending || issuing}
-          className={BUTTON_CLASS}
         >
           {active
             ? pending
@@ -153,7 +147,7 @@ function KeyAction({ userId, active }: { userId: string; active: boolean }) {
             : pending
               ? "Reenviando…"
               : "Reenviar convite"}
-        </button>
+        </Button>
       </form>
       {link && <ResetLinkDialog url={link} onDone={() => setLink(null)} />}
     </>
@@ -206,9 +200,9 @@ function ReactivateAction({ userId }: { userId: string }) {
   return (
     <form action={formAction}>
       <input type="hidden" name="userId" value={userId} />
-      <button type="submit" disabled={pending} className={BUTTON_CLASS}>
+      <Button type="submit" variant="outline" size="sm" disabled={pending}>
         {pending ? "Reativando…" : "Reativar acesso"}
-      </button>
+      </Button>
     </form>
   );
 }
@@ -259,20 +253,21 @@ function RowMenu({ children }: { children: ReactNode }) {
 
   return (
     <div className="relative">
-      <button
+      <Button
         ref={trigger}
         type="button"
+        variant="outline"
+        size="sm"
         aria-expanded={open}
         aria-label="Mais ações desta conta"
         onClick={() => setOpen((was) => !was)}
-        className={`${BUTTON_CLASS} px-2.5`}
       >
         ⋯
-      </button>
+      </Button>
       {open && (
         <div
           ref={box}
-          className="absolute right-0 top-full z-10 mt-1.5 flex min-w-[210px] flex-col items-stretch gap-1.5 rounded-xl border border-admin-border bg-admin-card p-1.5 shadow-lg"
+          className="absolute top-full right-0 z-10 mt-1.5 flex min-w-52 flex-col items-stretch gap-1.5 rounded-lg border bg-popover p-1.5 text-popover-foreground shadow-md"
         >
           {children}
         </div>

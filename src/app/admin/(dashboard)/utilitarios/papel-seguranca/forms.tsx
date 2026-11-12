@@ -3,6 +3,13 @@
 import { useActionState, useEffect, useState } from "react";
 import { toast } from "sonner";
 import { ConfirmAction } from "../../../_components/confirm-action.tsx";
+import { Button } from "../../../_ui/button.tsx";
+import { Input } from "../../../_ui/input.tsx";
+import {
+  NativeSelect,
+  NativeSelectOption,
+} from "../../../_ui/native-select.tsx";
+import { Textarea } from "../../../_ui/textarea.tsx";
 import {
   addLot,
   addMovement,
@@ -18,12 +25,9 @@ import {
   voidMovement,
 } from "./actions.ts";
 
-const FIELD =
-  "w-full rounded-[9px] border border-admin-input-border bg-admin-input-bg px-3.5 py-2.5 text-[13.5px] text-admin-text outline-none focus:border-admin-primary-soft";
-const LABEL = "mb-1.5 block text-[12.5px] font-semibold text-admin-text";
-const HINT = "mt-1 block text-[11.5px] text-admin-muted";
-const CARD =
-  "flex flex-col gap-4 rounded-[14px] border border-admin-border bg-admin-card px-5 py-5";
+const LABEL = "mb-1.5 block text-sm font-medium text-foreground";
+const HINT = "mt-1 block text-xs text-muted-foreground";
+const CARD = "flex flex-col gap-4 rounded-xl border bg-card px-5 py-5";
 const IDLE: PaperFormState = { status: "idle" };
 
 function Feedback({ state }: { state: PaperFormState }) {
@@ -34,7 +38,7 @@ function Feedback({ state }: { state: PaperFormState }) {
   return (
     <p
       role="alert"
-      className="rounded-[10px] bg-admin-error-bg px-3.5 py-2.5 text-[13px] font-semibold text-admin-error-text"
+      className="rounded-lg border border-destructive/40 bg-destructive-soft px-3.5 py-2.5 text-sm font-medium text-destructive"
     >
       {state.message}
     </p>
@@ -51,13 +55,9 @@ function Submit({
   busy: string;
 }) {
   return (
-    <button
-      type="submit"
-      disabled={pending}
-      className="btn btn-admin-primary btn-md self-start"
-    >
+    <Button type="submit" size="lg" disabled={pending} className="self-start">
       {pending ? busy : label}
-    </button>
+    </Button>
   );
 }
 
@@ -114,33 +114,32 @@ export function LotForm({
           <label htmlFor="lot-kind" className={LABEL}>
             Tipo de papel
           </label>
-          <select
+          <NativeSelect
             id="lot-kind"
             name="tipo"
             value={kind}
             onChange={(e) => setKind(e.target.value)}
-            className={FIELD}
+            className="w-full"
           >
             {kinds.map((k) => (
-              <option key={k.value} value={k.value}>
+              <NativeSelectOption key={k.value} value={k.value}>
                 {k.label}
-              </option>
+              </NativeSelectOption>
             ))}
-          </select>
+          </NativeSelect>
         </div>
         {kind === "outro" && (
           <div>
             <label htmlFor="lot-name" className={LABEL}>
               Que papel é este?
             </label>
-            <input
+            <Input
               id="lot-name"
               name="nome"
               required
               defaultValue={edit?.kindLabel}
               maxLength={120}
               placeholder="Ex.: folha de procuração"
-              className={FIELD}
             />
           </div>
         )}
@@ -151,14 +150,14 @@ export function LotForm({
           <label htmlFor="lot-first" className={LABEL}>
             Primeira folha
           </label>
-          <input
+          <Input
             id="lot-first"
             name="primeira"
             required
             value={first}
             onChange={(e) => setFirst(e.target.value)}
             placeholder="AB 000001"
-            className={`${FIELD} font-mono`}
+            className="font-mono"
           />
           <span className={HINT}>
             Como está impressa, com as letras da série.
@@ -168,18 +167,18 @@ export function LotForm({
           <label htmlFor="lot-last" className={LABEL}>
             Última folha
           </label>
-          <input
+          <Input
             id="lot-last"
             name="ultima"
             required
             value={last}
             onChange={(e) => setLast(e.target.value)}
             placeholder="AB 000500"
-            className={`${FIELD} font-mono`}
+            className="font-mono"
           />
           <span className={HINT}>
             {count ? (
-              <strong className="text-admin-primary">
+              <strong className="text-foreground">
                 {count.toLocaleString("pt-BR")} folha{count === 1 ? "" : "s"}
               </strong>
             ) : (
@@ -191,25 +190,24 @@ export function LotForm({
           <label htmlFor="lot-date" className={LABEL}>
             {opening ? "Contado em" : "Recebido em"}
           </label>
-          <input
+          <Input
             id="lot-date"
             name="recebido"
             type="date"
             required
             max={today}
             defaultValue={edit?.receivedOn ?? today}
-            className={FIELD}
           />
         </div>
       </div>
 
-      <label className="flex items-start gap-2.5 rounded-[10px] bg-admin-input-bg px-3.5 py-3 text-[13px] text-admin-text">
+      <label className="flex items-start gap-2.5 rounded-lg bg-muted/50 px-3.5 py-3 text-sm text-foreground">
         <input
           type="checkbox"
           name="anterior"
           checked={opening}
           onChange={(e) => setOpening(e.target.checked)}
-          className="mt-0.5"
+          className="checkbox-admin mt-0.5"
         />
         <span>
           <strong>Estoque que a serventia já tinha</strong> (folhas compradas
@@ -218,14 +216,11 @@ export function LotForm({
         </span>
       </label>
 
-      <details
-        open={Boolean(edit)}
-        className="rounded-[10px] border border-admin-border px-4 py-3"
-      >
-        <summary className="cursor-pointer text-[13px] font-semibold text-admin-primary">
+      <details open={Boolean(edit)} className="rounded-lg border px-4 py-3">
+        <summary className="cursor-pointer text-sm font-semibold text-foreground">
           Nota fiscal, gráfica e requisição (opcional)
         </summary>
-        <p className="mt-2 text-[12px] text-admin-muted">
+        <p className="mt-2 text-xs text-muted-foreground">
           Nada aqui é obrigatório: há lotes comprados há anos cuja nota não está
           mais na serventia. Dá para completar depois, no lote.
         </p>
@@ -257,63 +252,58 @@ function LotDetailsFields({
         <label htmlFor="lot-supplier" className={LABEL}>
           Gráfica (onde comprou)
         </label>
-        <input
+        <Input
           id="lot-supplier"
           name="grafica"
           maxLength={160}
           defaultValue={initial?.supplier}
           placeholder="Nome da gráfica ou fornecedor"
-          className={FIELD}
         />
       </div>
       <div>
         <label htmlFor="lot-invoice" className={LABEL}>
           Nº da nota fiscal
         </label>
-        <input
+        <Input
           id="lot-invoice"
           name="nota"
           maxLength={80}
           defaultValue={initial?.invoice}
-          className={FIELD}
         />
       </div>
       <div>
         <label htmlFor="lot-requisition" className={LABEL}>
           Requisição ou autorização da Corregedoria
         </label>
-        <input
+        <Input
           id="lot-requisition"
           name="requisicao"
           maxLength={120}
           defaultValue={initial?.requisition}
           placeholder="Nº do ofício, pedido ou protocolo"
-          className={FIELD}
         />
       </div>
       <div>
         <label htmlFor="lot-file" className={LABEL}>
           Arquivo da nota (PDF ou foto)
         </label>
-        <input
+        <Input
           id="lot-file"
           name="arquivo"
           type="file"
           accept="application/pdf,image/*"
-          className={FIELD}
         />
       </div>
       <div className="md:col-span-2">
         <label htmlFor="lot-notes" className={LABEL}>
           Observações
         </label>
-        <textarea
+        <Textarea
           id="lot-notes"
           name="observacoes"
           rows={2}
           maxLength={5000}
           defaultValue={initial?.notes}
-          className={FIELD}
         />
       </div>
     </div>
@@ -395,7 +385,7 @@ export function MovementForm({
 
   if (lots.length === 0) {
     return (
-      <p className="rounded-[12px] bg-admin-input-bg px-4 py-3 text-[13px] text-admin-text">
+      <p className="rounded-lg bg-muted/50 px-4 py-3 text-sm text-foreground">
         Cadastre primeiro um lote: os lançamentos baixam folhas de um lote.
       </p>
     );
@@ -410,15 +400,16 @@ export function MovementForm({
           {TYPES.map((t) => (
             <label
               key={t.value}
-              className={`flex cursor-pointer flex-col gap-1 rounded-[10px] border px-3 py-2.5 text-[12.5px] ${
+              className={`flex cursor-pointer flex-col gap-1 rounded-lg border px-3 py-2.5 text-xs ${
                 type === t.value
-                  ? "border-admin-primary bg-admin-success-bg"
-                  : "border-admin-border bg-admin-card"
+                  ? "border-primary bg-muted/50"
+                  : "border-border bg-card"
               }`}
             >
-              <span className="flex items-center gap-2 font-bold text-admin-primary">
+              <span className="flex items-center gap-2 font-semibold text-foreground">
                 <input
                   type="radio"
+                  className="accent-primary"
                   name="tipo"
                   value={t.value}
                   checked={type === t.value}
@@ -431,7 +422,7 @@ export function MovementForm({
                 />
                 {t.label}
               </span>
-              <span className="text-admin-muted">{t.hint}</span>
+              <span className="text-muted-foreground">{t.hint}</span>
             </label>
           ))}
         </div>
@@ -442,19 +433,23 @@ export function MovementForm({
           <label htmlFor="mv-lot" className={LABEL}>
             Lote
           </label>
-          <select
+          <NativeSelect
             id="mv-lot"
             name="lote"
             value={lotId}
             onChange={(e) => setLotId(e.target.value)}
-            className={FIELD}
+            className="w-full"
           >
             {lots.map((l) => (
-              <option key={l.id} value={l.id} disabled={l.remaining === 0}>
+              <NativeSelectOption
+                key={l.id}
+                value={l.id}
+                disabled={l.remaining === 0}
+              >
                 {l.label} · restam {l.remaining.toLocaleString("pt-BR")}
-              </option>
+              </NativeSelectOption>
             ))}
-          </select>
+          </NativeSelect>
           {lot?.next && (
             <span className={HINT}>
               Próxima folha livre:{" "}
@@ -466,25 +461,25 @@ export function MovementForm({
           <label htmlFor="mv-date" className={LABEL}>
             Data
           </label>
-          <input
+          <Input
             id="mv-date"
             name="data"
             type="date"
             required
             max={today}
             defaultValue={today}
-            className={FIELD}
           />
         </div>
       </div>
 
       <fieldset className="flex flex-col gap-3">
         <legend className={LABEL}>Quais folhas?</legend>
-        <div className="flex flex-wrap gap-4 text-[13px]">
+        <div className="flex flex-wrap gap-4 text-sm">
           {type === "utilizado" && (
             <label className="flex items-center gap-2">
               <input
                 type="radio"
+                className="accent-primary"
                 name="modo"
                 value="ate"
                 checked={mode === "ate"}
@@ -496,6 +491,7 @@ export function MovementForm({
           <label className="flex items-center gap-2">
             <input
               type="radio"
+              className="accent-primary"
               name="modo"
               value="quantidade"
               checked={mode === "quantidade"}
@@ -506,6 +502,7 @@ export function MovementForm({
           <label className="flex items-center gap-2">
             <input
               type="radio"
+              className="accent-primary"
               name="modo"
               value="numeracao"
               checked={mode === "numeracao"}
@@ -519,12 +516,12 @@ export function MovementForm({
             <label htmlFor="mv-upto" className={LABEL}>
               Última folha usada
             </label>
-            <input
+            <Input
               id="mv-upto"
               name="ate"
               required
               placeholder={lot?.next ?? "AB 000350"}
-              className={`${FIELD} font-mono`}
+              className="font-mono"
             />
             <span className={HINT}>
               Olhe a primeira folha em branco na gaveta: a anterior a ela é a
@@ -543,14 +540,13 @@ export function MovementForm({
             <label htmlFor="mv-qty" className={LABEL}>
               Quantas folhas
             </label>
-            <input
+            <Input
               id="mv-qty"
               name="quantidade"
               type="number"
               min={1}
               required
               inputMode="numeric"
-              className={FIELD}
             />
           </div>
         ) : (
@@ -559,23 +555,23 @@ export function MovementForm({
               <label htmlFor="mv-first" className={LABEL}>
                 Folha (ou primeira folha)
               </label>
-              <input
+              <Input
                 id="mv-first"
                 name="primeira"
                 required
                 placeholder={lot?.next ?? "AB 000001"}
-                className={`${FIELD} font-mono`}
+                className="font-mono"
               />
             </div>
             <div>
               <label htmlFor="mv-last" className={LABEL}>
                 Última folha (se for mais de uma)
               </label>
-              <input
+              <Input
                 id="mv-last"
                 name="ultima"
                 placeholder="Em branco: só uma folha"
-                className={`${FIELD} font-mono`}
+                className="font-mono"
               />
             </div>
           </div>
@@ -591,7 +587,7 @@ export function MovementForm({
                 ? "Atos (livro e folhas), opcional"
                 : "Motivo, opcional"}
           </label>
-          <input
+          <Input
             id="mv-ref"
             name="referencia"
             maxLength={300}
@@ -603,7 +599,6 @@ export function MovementForm({
                   ? "Ex.: Livro 12, fls. 34 a 40"
                   : "Ex.: erro de impressão"
             }
-            className={FIELD}
           />
           {loss && (
             <span className={HINT}>
@@ -615,12 +610,7 @@ export function MovementForm({
           <label htmlFor="mv-notes" className={LABEL}>
             Observações
           </label>
-          <input
-            id="mv-notes"
-            name="observacoes"
-            maxLength={5000}
-            className={FIELD}
-          />
+          <Input id="mv-notes" name="observacoes" maxLength={5000} />
         </div>
       </div>
 
@@ -694,15 +684,16 @@ export function ReportForm({
           {MODELS.map((m) => (
             <label
               key={m.value}
-              className={`flex cursor-pointer flex-col gap-1 rounded-[10px] border px-3.5 py-3 text-[12.5px] ${
+              className={`flex cursor-pointer flex-col gap-1 rounded-lg border px-3.5 py-3 text-xs ${
                 kind === m.value
-                  ? "border-admin-primary bg-admin-success-bg"
-                  : "border-admin-border bg-admin-card"
+                  ? "border-primary bg-muted/50"
+                  : "border-border bg-card"
               }`}
             >
-              <span className="flex items-center gap-2 font-bold text-admin-primary">
+              <span className="flex items-center gap-2 font-semibold text-foreground">
                 <input
                   type="radio"
+                  className="accent-primary"
                   name="tipo"
                   value={m.value}
                   checked={kind === m.value}
@@ -710,7 +701,7 @@ export function ReportForm({
                 />
                 {m.label}
               </span>
-              <span className="text-admin-muted">{m.hint}</span>
+              <span className="text-muted-foreground">{m.hint}</span>
             </label>
           ))}
         </div>
@@ -722,18 +713,18 @@ export function ReportForm({
             <label htmlFor="rp-quarter" className={LABEL}>
               Trimestre
             </label>
-            <select
+            <NativeSelect
               id="rp-quarter"
               name="trimestre"
               defaultValue={initial.quarter}
-              className={FIELD}
+              className="w-full"
             >
               {quarters.map((q) => (
-                <option key={q.value} value={q.value}>
+                <NativeSelectOption key={q.value} value={q.value}>
                   {q.label}
-                </option>
+                </NativeSelectOption>
               ))}
-            </select>
+            </NativeSelect>
           </div>
         )}
         {kind === "extravio" && (
@@ -741,18 +732,18 @@ export function ReportForm({
             <label htmlFor="rp-month" className={LABEL}>
               Mês das ocorrências
             </label>
-            <select
+            <NativeSelect
               id="rp-month"
               name="mes"
               defaultValue={initial.month}
-              className={FIELD}
+              className="w-full"
             >
               {months.map((m) => (
-                <option key={m.value} value={m.value}>
+                <NativeSelectOption key={m.value} value={m.value}>
                   {m.label}
-                </option>
+                </NativeSelectOption>
               ))}
-            </select>
+            </NativeSelect>
           </div>
         )}
         {kind === "relatorio" && (
@@ -761,26 +752,24 @@ export function ReportForm({
               <label htmlFor="rp-start" className={LABEL}>
                 De
               </label>
-              <input
+              <Input
                 id="rp-start"
                 name="inicio"
                 type="date"
                 required
                 defaultValue={`${today.slice(0, 4)}-01-01`}
-                className={FIELD}
               />
             </div>
             <div>
               <label htmlFor="rp-end" className={LABEL}>
                 Até
               </label>
-              <input
+              <Input
                 id="rp-end"
                 name="fim"
                 type="date"
                 required
                 defaultValue={today}
-                className={FIELD}
               />
             </div>
           </>
@@ -789,13 +778,12 @@ export function ReportForm({
           <label htmlFor="rp-date" className={LABEL}>
             Data do documento
           </label>
-          <input
+          <Input
             id="rp-date"
             name="data"
             type="date"
             required
             defaultValue={today}
-            className={FIELD}
           />
         </div>
       </div>
@@ -805,32 +793,29 @@ export function ReportForm({
           <label htmlFor="rp-signer" className={LABEL}>
             Quem assina
           </label>
-          <select id="rp-signer" name="assina" className={FIELD}>
+          <NativeSelect id="rp-signer" name="assina" className="w-full">
             {signers.length === 0 && (
-              <option value="0">O Tabelião/Registrador</option>
+              <NativeSelectOption value="0">
+                O Tabelião/Registrador
+              </NativeSelectOption>
             )}
             {signers.map((s, i) => (
-              <option key={`${s.name}-${i}`} value={i}>
+              <NativeSelectOption key={`${s.name}-${i}`} value={i}>
                 {s.name}
                 {s.title ? `, ${s.title}` : ""}
-              </option>
+              </NativeSelectOption>
             ))}
-          </select>
+          </NativeSelect>
         </div>
         <div>
           <label htmlFor="rp-notes" className={LABEL}>
             Observações (vão no documento)
           </label>
-          <input
-            id="rp-notes"
-            name="observacoes"
-            maxLength={5000}
-            className={FIELD}
-          />
+          <Input id="rp-notes" name="observacoes" maxLength={5000} />
         </div>
       </div>
 
-      <p className="text-[12px] text-admin-muted">
+      <p className="text-xs text-muted-foreground">
         O documento sai com o que está lançado agora e fica guardado assim, com
         número, mesmo que algo seja corrigido depois. Na tela seguinte: assinar
         digitalmente, imprimir, baixar a planilha e anotar o envio.
@@ -861,26 +846,24 @@ export function SentForm({
           <label htmlFor="snt-date" className={LABEL}>
             Enviado à Corregedoria em
           </label>
-          <input
+          <Input
             id="snt-date"
             name="enviado"
             type="date"
             max={today}
             defaultValue={sentOn}
-            className={FIELD}
           />
         </div>
         <div>
           <label htmlFor="snt-ref" className={LABEL}>
             Protocolo, malote digital ou e-mail
           </label>
-          <input
+          <Input
             id="snt-ref"
             name="protocolo"
             maxLength={160}
             defaultValue={reference}
             placeholder="Ex.: Malote Digital nº 2026.0001234"
-            className={FIELD}
           />
         </div>
       </div>
@@ -914,72 +897,66 @@ export function SettingsForm({
           <label htmlFor="cfg-authority" className={LABEL}>
             Órgão destinatário
           </label>
-          <input
+          <Input
             id="cfg-authority"
             name="orgao"
             maxLength={200}
             defaultValue={initial.authority}
-            className={FIELD}
           />
         </div>
         <div>
           <label htmlFor="cfg-name" className={LABEL}>
             Nome do(a) Corregedor(a)-Geral (opcional)
           </label>
-          <input
+          <Input
             id="cfg-name"
             name="nome"
             maxLength={160}
             defaultValue={initial.headName}
-            className={FIELD}
           />
         </div>
         <div>
           <label htmlFor="cfg-title" className={LABEL}>
             Tratamento e cargo
           </label>
-          <input
+          <Input
             id="cfg-title"
             name="cargo"
             maxLength={160}
             defaultValue={initial.headTitle}
-            className={FIELD}
           />
         </div>
         <div>
           <label htmlFor="cfg-address" className={LABEL}>
             Endereço (opcional)
           </label>
-          <input
+          <Input
             id="cfg-address"
             name="endereco"
             maxLength={300}
             defaultValue={initial.address}
-            className={FIELD}
           />
         </div>
         <div>
           <label htmlFor="cfg-email" className={LABEL}>
             E-mail ou malote (opcional)
           </label>
-          <input
+          <Input
             id="cfg-email"
             name="email"
             maxLength={160}
             defaultValue={initial.email}
-            className={FIELD}
           />
         </div>
         <div className="md:col-span-2">
           <label htmlFor="cfg-rule" className={LABEL}>
             Norma do Estado sobre o papel de segurança
           </label>
-          <input
+          <Input
             id="cfg-rule"
             name="norma"
             maxLength={400}
             defaultValue={initial.stateRule}
-            className={FIELD}
           />
           <span className={HINT}>
             Citada nos ofícios com os artigos (art. 59 na comunicação, art. 60
@@ -991,7 +968,7 @@ export function SettingsForm({
           <label htmlFor="cfg-deadline" className={LABEL}>
             Prazo da prestação (dia do mês seguinte ao trimestre)
           </label>
-          <input
+          <Input
             id="cfg-deadline"
             name="prazo"
             type="number"
@@ -999,7 +976,6 @@ export function SettingsForm({
             max={31}
             defaultValue={initial.deadlineDay ?? ""}
             placeholder="Em branco: sem prazo fixo"
-            className={FIELD}
           />
           <span className={HINT}>
             Se a Corregedoria fixou um dia, ele aparece no lembrete.
@@ -1009,14 +985,13 @@ export function SettingsForm({
           <label htmlFor="cfg-low" className={LABEL}>
             Avisar quando restarem (folhas de cada tipo)
           </label>
-          <input
+          <Input
             id="cfg-low"
             name="alerta"
             type="number"
             min={0}
             max={100000}
             defaultValue={initial.lowStock}
-            className={FIELD}
           />
           <span className={HINT}>
             Padrão: 200. O aviso leva ao pedido de um novo lote. Zero desliga.
@@ -1062,14 +1037,15 @@ export function MovementEditForm({
           {TYPES.map((t) => (
             <label
               key={t.value}
-              className={`flex cursor-pointer items-center gap-2 rounded-[10px] border px-3 py-2.5 text-[12.5px] font-bold text-admin-primary ${
+              className={`flex cursor-pointer items-center gap-2 rounded-lg border px-3 py-2.5 text-xs font-semibold text-foreground ${
                 type === t.value
-                  ? "border-admin-primary bg-admin-success-bg"
-                  : "border-admin-border bg-admin-card"
+                  ? "border-primary bg-muted/50"
+                  : "border-border bg-card"
               }`}
             >
               <input
                 type="radio"
+                className="accent-primary"
                 name="tipo"
                 value={t.value}
                 checked={type === t.value}
@@ -1085,61 +1061,58 @@ export function MovementEditForm({
           <label htmlFor="me-first" className={LABEL}>
             Primeira folha
           </label>
-          <input
+          <Input
             id="me-first"
             name="primeira"
             required
             defaultValue={initial.first}
-            className={`${FIELD} font-mono`}
+            className="font-mono"
           />
         </div>
         <div>
           <label htmlFor="me-last" className={LABEL}>
             Última folha
           </label>
-          <input
+          <Input
             id="me-last"
             name="ultima"
             defaultValue={initial.last}
-            className={`${FIELD} font-mono`}
+            className="font-mono"
           />
         </div>
         <div>
           <label htmlFor="me-date" className={LABEL}>
             Data
           </label>
-          <input
+          <Input
             id="me-date"
             name="data"
             type="date"
             required
             max={today}
             defaultValue={initial.occurredOn}
-            className={FIELD}
           />
         </div>
         <div className="md:col-span-2">
           <label htmlFor="me-ref" className={LABEL}>
             Referência (atos, motivo, boletim de ocorrência)
           </label>
-          <input
+          <Input
             id="me-ref"
             name="referencia"
             maxLength={300}
             defaultValue={initial.reference}
-            className={FIELD}
           />
         </div>
         <div>
           <label htmlFor="me-notes" className={LABEL}>
             Observações
           </label>
-          <input
+          <Input
             id="me-notes"
             name="observacoes"
             maxLength={5000}
             defaultValue={initial.notes}
-            className={FIELD}
           />
         </div>
       </div>
@@ -1167,51 +1140,55 @@ export function ReportEditForm({
           <label htmlFor="re-date" className={LABEL}>
             Data do documento
           </label>
-          <input
+          <Input
             id="re-date"
             name="data"
             type="date"
             required
             defaultValue={initial.issuedOn}
-            className={FIELD}
           />
         </div>
         <div>
           <label htmlFor="re-signer" className={LABEL}>
             Quem assina
           </label>
-          <select
+          <NativeSelect
             id="re-signer"
             name="assina"
             defaultValue={initial.signer}
-            className={FIELD}
+            className="w-full"
           >
             {signers.length === 0 && (
-              <option value="0">O Tabelião/Registrador</option>
+              <NativeSelectOption value="0">
+                O Tabelião/Registrador
+              </NativeSelectOption>
             )}
             {signers.map((s, i) => (
-              <option key={`${s.name}-${i}`} value={i}>
+              <NativeSelectOption key={`${s.name}-${i}`} value={i}>
                 {s.name}
                 {s.title ? `, ${s.title}` : ""}
-              </option>
+              </NativeSelectOption>
             ))}
-          </select>
+          </NativeSelect>
         </div>
         <div>
           <label htmlFor="re-notes" className={LABEL}>
             Observações
           </label>
-          <input
+          <Input
             id="re-notes"
             name="observacoes"
             maxLength={5000}
             defaultValue={initial.notes}
-            className={FIELD}
           />
         </div>
       </div>
-      <label className="flex items-start gap-2.5 rounded-[10px] bg-admin-input-bg px-3.5 py-3 text-[13px] text-admin-text">
-        <input type="checkbox" name="atualizar" className="mt-0.5" />
+      <label className="flex items-start gap-2.5 rounded-lg bg-muted/50 px-3.5 py-3 text-sm text-foreground">
+        <input
+          type="checkbox"
+          name="atualizar"
+          className="checkbox-admin mt-0.5"
+        />
         <span>
           <strong>Refazer os números com o classificador de agora</strong> (use
           depois de corrigir um lote ou um lançamento). O número do ofício

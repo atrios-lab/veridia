@@ -47,7 +47,7 @@ export default async function MovementPage({
         }}
         description="Baixe do estoque as folhas usadas nos atos, inutilizadas, avariadas, extraviadas ou subtraídas. Extravio, subtração e avaria entram na comunicação do fim do mês à Corregedoria."
       />
-      <main className="flex max-w-[1000px] flex-col gap-4 px-[30px] py-7 max-md:px-4">
+      <main className="flex max-w-[1000px] flex-col gap-4 px-4 py-7 md:px-8">
         <MovementForm
           lots={choices}
           today={today()}

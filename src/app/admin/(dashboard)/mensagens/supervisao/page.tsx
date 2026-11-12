@@ -35,16 +35,16 @@ export default async function OversightPage() {
   return (
     <>
       <AdminPageHeader maxWidth={900} title="Mensagens internas" />
-      <main className="flex max-w-[900px] flex-col gap-4 px-[30px] py-7 max-md:px-4">
+      <main className="flex max-w-[900px] flex-col gap-6 px-4 pt-6 pb-8 md:px-8">
         {role !== "superadmin" && (
           <BackLink href="/admin/mensagens" label="Minhas mensagens" />
         )}
         {holder && (
-          <section className="rounded-[14px] border border-admin-border bg-admin-card px-5 py-4">
-            <h2 className="font-serif text-[17px] font-semibold text-admin-primary">
+          <section className="rounded-xl border bg-card p-6 shadow-xs">
+            <h2 className="text-lg font-semibold text-foreground">
               Equipe: horário de almoço e chat
             </h2>
-            <p className="mt-1 text-[12.5px] text-admin-muted">
+            <p className="mt-1 text-sm text-muted-foreground">
               Cada pessoa pede o próprio horário de almoço (até 1 hora por dia);
               ele só vale depois que você aprovar. Fora desse horário a pessoa
               volta a aparecer disponível sozinha. Você também pode desligar o
@@ -71,30 +71,30 @@ export default async function OversightPage() {
             />
           </section>
         )}
-        <section className="rounded-[14px] border border-admin-border bg-admin-card px-5 py-4">
-          <h2 className="font-serif text-[17px] font-semibold text-admin-primary">
+        <section className="rounded-xl border bg-card p-6 shadow-xs">
+          <h2 className="text-lg font-semibold text-foreground">
             Todas as conversas da serventia
           </h2>
-          <p className="mt-1 text-[12.5px] text-admin-muted">
+          <p className="mt-1 text-sm text-muted-foreground">
             Só leitura. Aqui aparecem também as mensagens apagadas e o texto
             original das editadas; as telas do chat não avisam que existe esta
             supervisão.
           </p>
           {conversations.length === 0 ? (
-            <p className="mt-3 text-[13px] text-admin-muted">
+            <p className="mt-3 text-sm text-muted-foreground">
               Nenhuma conversa ainda.
             </p>
           ) : (
-            <ul className="mt-3 flex flex-col divide-y divide-admin-border">
+            <ul className="mt-3 flex flex-col divide-y">
               {conversations.map((c) => (
-                <li key={c.id} className="py-2.5 text-[13px]">
+                <li key={c.id} className="py-2.5 text-sm">
                   <Link
                     href={`/admin/mensagens/supervisao/${c.id}`}
-                    className="font-semibold text-admin-primary hover:underline"
+                    className="font-medium text-primary underline-offset-4 hover:underline"
                   >
                     {c.members.join(" e ")}
                   </Link>
-                  <p className="text-[12px] text-admin-muted">
+                  <p className="text-xs text-muted-foreground">
                     {c.messages} mensagem(ns)
                     {c.lastMessageAt &&
                       ` · última em ${formatOfficeDateTime(c.lastMessageAt)}`}

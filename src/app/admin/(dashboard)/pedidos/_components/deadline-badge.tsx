@@ -5,6 +5,7 @@ import {
   type IsoDate,
   type OfficeHolidays,
 } from "@/core/scheduling/calendar.ts";
+import { Badge } from "../../../_ui/badge.tsx";
 
 /**
  * How the term stands, said only when it is worth saying. A request with
@@ -45,7 +46,7 @@ export function DeadlineBadge({
     if (!showRunning) return null;
     const due = deadlineDate(deadline.startedOn, deadline.days, holidays);
     return (
-      <span className="text-[12.5px] whitespace-nowrap text-admin-faint">
+      <span className="text-xs whitespace-nowrap text-muted-foreground tabular-nums">
         Vence em {formatDate(due).slice(0, 5)}
       </span>
     );
@@ -53,28 +54,30 @@ export function DeadlineBadge({
 
   if (urgency.kind === "paused") {
     return (
-      <span className="inline-flex items-center rounded-full bg-admin-readonly-bg px-[9px] py-1 text-[11px] font-bold whitespace-nowrap text-admin-muted">
+      <Badge className="bg-muted text-muted-foreground">
         {urgency.waitingDays === 0
           ? "Aguardando o cidadão desde hoje"
           : `Aguardando o cidadão há ${urgency.waitingDays} dia${urgency.waitingDays === 1 ? "" : "s"} úte${urgency.waitingDays === 1 ? "l" : "is"}`}
-      </span>
+      </Badge>
     );
   }
 
   const overdue = urgency.kind === "overdue";
   return (
-    <span
-      className={`inline-flex items-center rounded-full px-[9px] py-1 text-[11px] font-bold whitespace-nowrap ${
+    // Late or due within days: the badge the row is scanned for, so it is
+    // solid ("destaque é cor cheia"), red when late and amber when close.
+    <Badge
+      className={
         overdue
-          ? "bg-admin-error-bg text-admin-error-text"
-          : "bg-admin-warning-bg text-admin-warning-text"
-      }`}
+          ? "bg-destructive text-destructive-foreground"
+          : "bg-warning text-warning-foreground"
+      }
     >
       {overdue
         ? `Prazo vencido há ${urgency.daysLate} dia${urgency.daysLate === 1 ? "" : "s"}`
         : urgency.daysLeft <= 0
           ? "Vence hoje"
           : `Vence em ${urgency.daysLeft} dia${urgency.daysLeft === 1 ? "" : "s"}`}
-    </span>
+    </Badge>
   );
 }

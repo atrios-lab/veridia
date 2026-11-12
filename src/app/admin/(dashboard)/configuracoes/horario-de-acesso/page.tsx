@@ -8,14 +8,14 @@ import { getSession } from "@/lib/session.ts";
 import { getTenant } from "@/lib/tenant.ts";
 import { AdminPageHeader } from "../../../_components/page-header.tsx";
 import { ROLE_LABELS } from "../../../_components/role-labels.ts";
+import { Button } from "../../../_ui/button.tsx";
 import { ConfiguracoesTabs } from "../_components/tabs.tsx";
 import { decideRelease } from "./actions.ts";
 import { WindowForm } from "./window-form.tsx";
 
 export const metadata = { title: "Horário de acesso" };
 
-const CARD =
-  "rounded-[14px] border border-admin-border bg-admin-card px-5 py-4";
+const CARD = "rounded-xl border bg-card px-5 py-4";
 
 function Decide({
   userId,
@@ -32,12 +32,19 @@ function Decide({
     <form action={decideRelease}>
       <input type="hidden" name="userId" value={userId} />
       <input type="hidden" name="decision" value={decision} />
-      <button
+      <Button
         type="submit"
-        className={`btn btn-sm ${tone === "primary" ? "btn-admin-primary" : tone === "danger" ? "btn-admin-danger" : "btn-admin-secondary"}`}
+        size="sm"
+        variant={
+          tone === "primary"
+            ? "default"
+            : tone === "danger"
+              ? "destructive"
+              : "outline"
+        }
       >
         {label}
-      </button>
+      </Button>
     </form>
   );
 }
@@ -64,16 +71,16 @@ export default async function AccessHoursPage() {
   return (
     <>
       <AdminPageHeader maxWidth={1000} title="Configurações" />
-      <main className="flex max-w-[1000px] flex-col gap-4.5 px-[30px] py-7 max-md:px-4">
+      <main className="flex max-w-[1000px] flex-col gap-6 px-4 pt-6 pb-8 md:px-8">
         <ConfiguracoesTabs
           role={session.user.role ?? ""}
           permissions={session.user.permissions}
         />
         <section className={CARD}>
-          <h2 className="font-serif text-[17px] font-semibold text-admin-primary">
+          <h2 className="text-lg font-semibold text-foreground">
             Horário de acesso ao painel
           </h2>
-          <p className="mt-1 text-[12.5px] leading-relaxed text-admin-muted">
+          <p className="mt-1 text-sm leading-relaxed text-muted-foreground">
             Fora deste horário, quem não estiver liberado abaixo vê &quot;Acesso
             indisponível neste horário&quot; e pode pedir liberação a você. Você
             e a conta da plataforma entram a qualquer hora. Uma tela aberta
@@ -84,26 +91,26 @@ export default async function AccessHoursPage() {
             start={hours.start}
             end={hours.end}
           />
-          <p className="mt-3 text-[11.5px] text-admin-muted">
+          <p className="mt-3 text-xs text-muted-foreground">
             O que aparece para a pessoa: {ACCESS_CLOSED_NOTICE}
           </p>
         </section>
 
         {hours.requests.length > 0 && (
-          <section className={`${CARD} border-admin-warning-soft-border`}>
-            <h2 className="font-serif text-[17px] font-semibold text-admin-primary">
+          <section className={`${CARD} border-warning`}>
+            <h2 className="text-lg font-semibold text-foreground">
               Pedidos de liberação
             </h2>
-            <ul className="mt-2 flex flex-col divide-y divide-admin-border">
+            <ul className="mt-2 flex flex-col divide-y">
               {hours.requests.map((request) => (
                 <li key={request.userId} className="py-3">
-                  <p className="text-[13.5px] font-semibold text-admin-primary">
+                  <p className="text-sm font-medium text-foreground">
                     {request.name}
-                    <span className="ml-2 text-[12px] font-normal text-admin-muted">
+                    <span className="ml-2 text-xs font-normal text-muted-foreground tabular-nums">
                       {formatOfficeDateTime(new Date(request.at))}
                     </span>
                   </p>
-                  <p className="mt-0.5 text-[13px] text-admin-text [overflow-wrap:anywhere]">
+                  <p className="mt-0.5 text-sm text-foreground [overflow-wrap:anywhere]">
                     {request.reason}
                   </p>
                   <div className="mt-2 flex flex-wrap gap-2">
@@ -132,18 +139,18 @@ export default async function AccessHoursPage() {
         )}
 
         <section className={CARD}>
-          <h2 className="font-serif text-[17px] font-semibold text-admin-primary">
+          <h2 className="text-lg font-semibold text-foreground">
             Quem pode acessar fora do horário
           </h2>
-          <p className="mt-1 text-[12.5px] text-admin-muted">
+          <p className="mt-1 text-sm text-muted-foreground">
             Tudo o que você liberar ou retirar fica registrado na auditoria.
           </p>
           {people.length === 0 ? (
-            <p className="mt-2 text-[13px] text-admin-muted">
+            <p className="mt-2 text-sm text-muted-foreground">
               Ninguém mais tem conta nesta serventia.
             </p>
           ) : (
-            <ul className="mt-2 flex flex-col divide-y divide-admin-border">
+            <ul className="mt-2 flex flex-col divide-y">
               {people.map((person) => {
                 const always = hours.always.includes(person.id);
                 const today =
@@ -156,13 +163,13 @@ export default async function AccessHoursPage() {
                     className="flex flex-wrap items-center justify-between gap-2 py-2.5"
                   >
                     <span className="min-w-0">
-                      <span className="block text-[13.5px] font-semibold text-admin-primary">
+                      <span className="block text-sm font-medium text-foreground">
                         {person.name}{" "}
-                        <span className="font-normal text-admin-muted">
+                        <span className="font-normal text-muted-foreground">
                           ({ROLE_LABELS[person.role as Role] ?? person.role})
                         </span>
                       </span>
-                      <span className="block text-[12px] text-admin-muted">
+                      <span className="block text-xs text-muted-foreground">
                         {always
                           ? "Liberado sempre, fora do horário"
                           : today

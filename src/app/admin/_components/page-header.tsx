@@ -6,7 +6,8 @@ import { courseHref, PANEL_COURSE_SLUG } from "@/core/tutorials/catalog.ts";
 import { tutorialForRoute } from "@/core/tutorials/progress.ts";
 import { getSession } from "@/lib/session.ts";
 import { listPanelTutorials } from "@/lib/tutorials.ts";
-import { BackLink } from "./back-link";
+import { buttonVariants } from "../_ui/button.tsx";
+import { BackLink } from "./back-link.tsx";
 import { AdminIcon } from "./icon.tsx";
 import { screenHelpFor } from "./screen-help.ts";
 import { ScreenHelpButton } from "./screen-help-button.tsx";
@@ -77,13 +78,13 @@ export async function AdminPageHeader({
 
   return (
     <div
-      className="flex flex-none flex-wrap items-center gap-5 px-[30px] pt-[30px] max-md:px-4"
+      className="flex flex-none flex-wrap items-end gap-4 px-4 pt-6 md:px-8 md:pt-8"
       style={maxWidth ? { maxWidth } : undefined}
     >
-      <div className="flex min-w-[280px] flex-1 flex-col gap-[5px]">
+      <div className="flex min-w-[280px] flex-1 flex-col gap-1.5">
         {back && <BackLink href={back.href} label={back.label} />}
         <div className="flex flex-wrap items-baseline gap-x-4 gap-y-1">
-          <h1 className="font-serif text-[26px] leading-[1.1] font-semibold text-admin-primary">
+          <h1 className="text-2xl leading-tight font-semibold text-foreground">
             {title}
           </h1>
           {help && (
@@ -94,7 +95,7 @@ export async function AdminPageHeader({
           {tutorial && (
             <Link
               href={courseHref(PANEL_COURSE_SLUG, tutorial.id)}
-              className="inline-flex items-center gap-1.5 text-[13px] font-semibold text-admin-muted hover:text-admin-primary"
+              className="inline-flex items-center gap-1.5 text-sm font-medium text-muted-foreground hover:text-foreground"
             >
               <AdminIcon name="play" className="h-4 w-4 flex-none" />
               Como usar esta tela
@@ -102,7 +103,7 @@ export async function AdminPageHeader({
           )}
         </div>
         {description && (
-          <p className="max-w-[560px] text-[13.5px] leading-normal text-admin-muted">
+          <p className="max-w-2xl text-sm text-muted-foreground">
             {description}
           </p>
         )}
@@ -112,7 +113,7 @@ export async function AdminPageHeader({
           {showConfigure && help?.configure && (
             <Link
               href={help.configure.href}
-              className="btn btn-admin-secondary btn-md"
+              className={buttonVariants({ variant: "outline" })}
               title={`Configurar: ${help.configure.label}`}
             >
               <AdminIcon name="settings" className="h-4 w-4" />

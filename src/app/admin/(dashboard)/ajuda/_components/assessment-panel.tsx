@@ -10,6 +10,10 @@ import {
 import type { ShownQuestion } from "@/core/courses/quiz.ts";
 import { formatWait } from "@/core/courses/quiz.ts";
 import { formatCpf, isValidCpf } from "@/core/request/form.ts";
+import { Button, buttonVariants } from "../../../_ui/button.tsx";
+import { cn } from "../../../_ui/cn.ts";
+import { Input } from "../../../_ui/input.tsx";
+import { Label } from "../../../_ui/label.tsx";
 import {
   type AttemptActionState,
   type IssueActionState,
@@ -35,17 +39,11 @@ export type PanelState =
   | { kind: "passed"; score: number }
   | { kind: "certified"; code: string; issuedAt: string };
 
-const FIELD_CLASS =
-  "w-full rounded-[9px] border border-admin-input-border bg-admin-input-bg px-3.5 py-2.5 text-[13.5px] text-admin-text outline-none focus:border-admin-primary-soft";
-const ERROR_FIELD_CLASS =
-  "w-full rounded-[9px] border border-admin-error-border bg-admin-error-input-bg px-3.5 py-2.5 text-[13.5px] text-admin-text outline-none focus:border-admin-error-text";
-const LABEL_CLASS = "mb-1.5 block text-xs font-bold text-admin-primary";
-
 function Alert({ message }: { message: string }) {
   return (
     <p
       role="alert"
-      className="rounded-[9px] border border-admin-error-border bg-admin-error-bg px-3.5 py-2.5 text-[12.5px] font-semibold text-admin-error-text"
+      className="rounded-lg border border-destructive/40 bg-destructive-soft px-4 py-3 text-sm font-medium text-destructive"
     >
       {message}
     </p>
@@ -85,14 +83,14 @@ export function AssessmentPanel({
   return (
     <section
       aria-labelledby="assessment-title"
-      className="rounded-[16px] border border-admin-border bg-admin-card p-6"
+      className="rounded-xl border bg-card p-6"
     >
-      <span className="text-[11px] font-bold uppercase tracking-[0.08em] text-admin-faint">
+      <span className="text-xs font-medium text-muted-foreground">
         Avaliação e certificado
       </span>
       <h2
         id="assessment-title"
-        className="mt-1 font-serif text-[20px] leading-tight font-semibold text-admin-primary"
+        className="mt-1 text-xl leading-tight font-semibold text-foreground"
       >
         {state.kind === "certified"
           ? "Curso concluído"
@@ -102,7 +100,7 @@ export function AssessmentPanel({
       </h2>
       <div className="mt-3">
         {state.kind === "locked" && (
-          <p className="text-[13.5px] text-admin-muted">
+          <p className="text-sm text-muted-foreground">
             Abre depois que você assistir a todos os vídeos do curso. Falta
             {state.videosLeft === 1
               ? " 1 vídeo"
@@ -123,11 +121,11 @@ export function AssessmentPanel({
           <Attempt attemptId={state.attemptId} questions={state.questions} />
         )}
         {state.kind === "wait" && (
-          <p className="text-[13.5px] text-admin-muted">
+          <p className="text-sm text-muted-foreground">
             Na última tentativa você acertou {state.last.correct} de{" "}
             {state.last.total}, abaixo da nota mínima de {passingScore}%. Uma
             nova tentativa fica disponível em{" "}
-            <strong className="text-admin-primary">
+            <strong className="text-foreground">
               {formatWait(state.remainingMs)}
             </strong>
             .
@@ -148,11 +146,11 @@ export function AssessmentPanel({
         )}
         {state.kind === "certified" && (
           <div className="flex flex-col gap-3">
-            <p className="text-[13.5px] text-admin-muted">
+            <p className="text-sm text-muted-foreground">
               Seu certificado foi emitido em{" "}
               {formatCertificateDate(new Date(state.issuedAt))}, com o código de
               validação{" "}
-              <strong className="font-mono text-admin-primary">
+              <strong className="font-mono text-foreground">
                 {state.code}
               </strong>
               . O PDF é assinado digitalmente; qualquer pessoa confere a
@@ -161,7 +159,7 @@ export function AssessmentPanel({
             <div className="flex flex-wrap gap-2">
               <a
                 href={`/admin/ajuda/${encodeURIComponent(courseSlug)}/certificado`}
-                className="btn btn-admin-primary btn-sm"
+                className={buttonVariants({ size: "sm" })}
               >
                 Baixar certificado (PDF)
               </a>
@@ -169,7 +167,7 @@ export function AssessmentPanel({
                 href={`${checkUrl.replace(/\/+$/, "")}/${state.code}`}
                 target="_blank"
                 rel="noopener"
-                className="btn btn-admin-secondary btn-sm"
+                className={buttonVariants({ variant: "outline", size: "sm" })}
               >
                 Página de validação
               </a>
@@ -199,21 +197,22 @@ function Available({
   const [error, setError] = useState<string>();
   return (
     <div className="flex flex-col gap-3">
-      <p className="text-[13.5px] leading-normal text-admin-muted">
+      <p className="text-sm leading-normal text-muted-foreground">
         São {questionCount} questões de múltipla escolha, em ordem sorteada.
         Para ser aprovado, acerte pelo menos {passingScore}%. Se não atingir a
         nota, uma nova tentativa abre {retryHours} horas depois. O resultado
         mostra quantas você acertou, sem indicar as respostas.
       </p>
       {last && (
-        <p className="text-[12.5px] text-admin-faint">
+        <p className="text-xs text-muted-foreground">
           Última tentativa: {last.correct} de {last.total}.
         </p>
       )}
       {error && <Alert message={error} />}
       <div>
-        <button
+        <Button
           type="button"
+          size="sm"
           disabled={pending}
           onClick={() =>
             startTransition(async () => {
@@ -222,10 +221,9 @@ function Available({
               else router.refresh();
             })
           }
-          className="btn btn-admin-primary btn-sm"
         >
           {pending ? "Preparando…" : "Iniciar avaliação"}
-        </button>
+        </Button>
       </div>
     </div>
   );
@@ -253,8 +251,8 @@ function Attempt({
         <p
           className={
             result.passed
-              ? "rounded-[10px] bg-admin-success-bg px-4 py-3 text-[14px] font-semibold text-admin-success-text"
-              : "rounded-[10px] bg-admin-warning-soft-bg px-4 py-3 text-[14px] font-semibold text-admin-warning-text"
+              ? "rounded-lg bg-success-soft px-4 py-3 text-sm font-semibold text-success-text"
+              : "rounded-lg bg-warning-soft px-4 py-3 text-sm font-semibold text-warning-text"
           }
         >
           Você acertou {result.correct} de {result.total}.{" "}
@@ -263,13 +261,9 @@ function Attempt({
             : "Não foi desta vez: a nota ficou abaixo da mínima."}
         </p>
         <div>
-          <button
-            type="button"
-            onClick={() => router.refresh()}
-            className="btn btn-admin-primary btn-sm"
-          >
+          <Button type="button" size="sm" onClick={() => router.refresh()}>
             {result.passed ? "Emitir o certificado" : "Continuar"}
-          </button>
+          </Button>
         </div>
       </div>
     );
@@ -290,7 +284,7 @@ function Attempt({
         {questions.map((question, q) => (
           <li key={question.id}>
             <fieldset>
-              <legend className="text-[14px] leading-snug font-semibold text-admin-primary">
+              <legend className="text-sm leading-snug font-semibold text-foreground">
                 {q + 1}. {question.prompt}
               </legend>
               <div className="mt-2 flex flex-col gap-1.5">
@@ -300,11 +294,12 @@ function Attempt({
                     <label
                       key={id}
                       htmlFor={id}
-                      className={`flex cursor-pointer items-start gap-2.5 rounded-[9px] border px-3.5 py-2.5 text-[13.5px] text-admin-text ${
+                      className={cn(
+                        "flex cursor-pointer items-start gap-2.5 rounded-lg border px-3.5 py-2.5 text-sm text-foreground",
                         picks[q] === o
-                          ? "border-admin-primary bg-admin-surface"
-                          : "border-admin-border hover:bg-admin-surface"
-                      }`}
+                          ? "border-primary bg-muted"
+                          : "border-border hover:bg-muted",
+                      )}
                     >
                       <input
                         id={id}
@@ -317,7 +312,7 @@ function Attempt({
                             current.map((p, i) => (i === q ? o : p)),
                           )
                         }
-                        className="mt-0.5"
+                        className="mt-0.5 accent-primary"
                       />
                       <span>{option}</span>
                     </label>
@@ -330,14 +325,10 @@ function Attempt({
       </ol>
       {result?.status === "error" && <Alert message={result.message} />}
       <div className="flex flex-wrap items-center gap-3">
-        <button
-          type="submit"
-          disabled={pending || answered < questions.length}
-          className="btn btn-admin-primary btn-md"
-        >
+        <Button type="submit" disabled={pending || answered < questions.length}>
           {pending ? "Enviando…" : "Enviar respostas"}
-        </button>
-        <span className="text-[12.5px] text-admin-faint">
+        </Button>
+        <span className="text-xs text-muted-foreground">
           {answered} de {questions.length} respondidas
         </span>
       </div>
@@ -393,7 +384,7 @@ function IssueForm({
 
   return (
     <form action={formAction} className="flex flex-col gap-4">
-      <p className="text-[13.5px] text-admin-muted">
+      <p className="text-sm text-muted-foreground">
         Aproveitamento de {score}%. Para emitir o certificado, confira os seus
         dados. Eles são usados só para emitir e validar o certificado; o CPF
         aparece completo apenas no seu PDF. Depois de emitido, o certificado não
@@ -401,10 +392,10 @@ function IssueForm({
       </p>
       <div className="grid grid-cols-1 gap-4 md:grid-cols-[2fr_1fr_1fr]">
         <div>
-          <label className={LABEL_CLASS} htmlFor={`${formId}-name`}>
+          <Label className="mb-1.5" htmlFor={`${formId}-name`}>
             Nome completo
-          </label>
-          <input
+          </Label>
+          <Input
             id={`${formId}-name`}
             name="fullName"
             value={fullName}
@@ -412,19 +403,19 @@ function IssueForm({
             maxLength={120}
             required
             autoComplete="name"
-            className={fieldErrors.fullName ? ERROR_FIELD_CLASS : FIELD_CLASS}
+            aria-invalid={fieldErrors.fullName ? true : undefined}
           />
           {fieldErrors.fullName && (
-            <p className="mt-1.5 text-xs font-semibold text-admin-error-text">
+            <p className="mt-1.5 text-xs font-medium text-destructive">
               {fieldErrors.fullName}
             </p>
           )}
         </div>
         <div>
-          <label className={LABEL_CLASS} htmlFor={`${formId}-cpf`}>
+          <Label className="mb-1.5" htmlFor={`${formId}-cpf`}>
             CPF
-          </label>
-          <input
+          </Label>
+          <Input
             id={`${formId}-cpf`}
             name="cpf"
             value={cpf}
@@ -432,19 +423,19 @@ function IssueForm({
             inputMode="numeric"
             required
             placeholder="000.000.000-00"
-            className={fieldErrors.cpf ? ERROR_FIELD_CLASS : FIELD_CLASS}
+            aria-invalid={fieldErrors.cpf ? true : undefined}
           />
           {fieldErrors.cpf && (
-            <p className="mt-1.5 text-xs font-semibold text-admin-error-text">
+            <p className="mt-1.5 text-xs font-medium text-destructive">
               {fieldErrors.cpf}
             </p>
           )}
         </div>
         <div>
-          <label className={LABEL_CLASS} htmlFor={`${formId}-role`}>
+          <Label className="mb-1.5" htmlFor={`${formId}-role`}>
             Função
-          </label>
-          <input
+          </Label>
+          <Input
             id={`${formId}-role`}
             name="roleTitle"
             value={roleTitle}
@@ -452,32 +443,28 @@ function IssueForm({
             maxLength={60}
             required
             placeholder="Escrevente"
-            className={fieldErrors.roleTitle ? ERROR_FIELD_CLASS : FIELD_CLASS}
+            aria-invalid={fieldErrors.roleTitle ? true : undefined}
           />
           {fieldErrors.roleTitle && (
-            <p className="mt-1.5 text-xs font-semibold text-admin-error-text">
+            <p className="mt-1.5 text-xs font-medium text-destructive">
               {fieldErrors.roleTitle}
             </p>
           )}
         </div>
       </div>
-      <div className="rounded-[10px] border border-admin-border bg-admin-surface px-4 py-3">
-        <span className="block text-[10.5px] font-bold uppercase tracking-[0.08em] text-admin-faint">
+      <div className="rounded-lg border bg-muted/50 px-4 py-3">
+        <span className="block text-xs font-medium text-muted-foreground">
           O seu certificado vai sair assim
         </span>
-        <p className="mt-1.5 font-serif text-[15px] leading-relaxed text-admin-primary">
+        <p className="mt-1.5 text-base leading-relaxed text-foreground">
           {preview}
         </p>
       </div>
       {state.status === "error" && <Alert message={state.message} />}
       <div>
-        <button
-          type="submit"
-          disabled={pending}
-          className="btn btn-admin-primary btn-md"
-        >
+        <Button type="submit" disabled={pending}>
           {pending ? "Emitindo…" : "Emitir certificado"}
-        </button>
+        </Button>
       </div>
     </form>
   );

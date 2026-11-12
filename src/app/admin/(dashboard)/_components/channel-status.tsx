@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { ROUTE_BY_KIND } from "@/core/overview/desk.ts";
 import type { RequestKind } from "@/core/request/kinds.ts";
+import { cn } from "../../_ui/cn.ts";
 
 export interface ChannelStatusRow {
   kind: RequestKind;
@@ -12,31 +13,32 @@ export interface ChannelStatusRow {
 export function ChannelStatus({ rows }: { rows: ChannelStatusRow[] }) {
   if (rows.length === 0) return null;
   return (
-    <div className="rounded-[14px] border border-admin-border bg-admin-card p-5">
-      <span className="text-[11px] font-bold uppercase tracking-[0.08em] text-admin-muted">
+    <section className="rounded-xl border bg-card shadow-xs">
+      <h2 className="px-6 pt-6 pb-2 text-base font-semibold text-foreground">
         Situação dos canais
-      </span>
-      <div className="mt-3 flex flex-col gap-2.5">
+      </h2>
+      <div className="flex flex-col divide-y px-3 pb-3">
         {rows.map((row) => (
           <Link
             key={row.kind}
             href={ROUTE_BY_KIND[row.kind]}
-            className={`flex items-center gap-2.5 text-[12.5px] ${
+            className={cn(
+              "flex items-center gap-2.5 rounded-md px-3 py-2 text-sm transition-colors hover:bg-muted/50",
               row.critical
-                ? "font-semibold text-admin-error-text"
-                : "text-admin-text"
-            }`}
+                ? "font-semibold text-destructive"
+                : "text-foreground",
+            )}
           >
-            <span className="w-6 flex-none font-serif text-[19px] font-semibold">
+            <span className="w-6 flex-none text-lg font-semibold tabular-nums">
               {row.count}
             </span>
             <span className="flex-1">{row.label}</span>
-            <span aria-hidden="true" className="text-admin-faint">
+            <span aria-hidden="true" className="text-muted-foreground">
               →
             </span>
           </Link>
         ))}
       </div>
-    </div>
+    </section>
   );
 }

@@ -13,12 +13,25 @@ import type { ServiceRequestStatus } from "@/core/request/kinds.ts";
  */
 export type Tone = "blocked" | "waiting" | "working" | "delivered" | "closed";
 
+// Tinted, for a badge read up close (a row of the queue): the soft fill
+// with a hairline of the tone, so the pill still shows on white.
 const TONE_STYLES: Record<Tone, string> = {
-  blocked: "bg-admin-error-bg text-admin-error-text",
-  waiting: "bg-admin-warning-bg text-admin-warning-text",
-  working: "bg-admin-success-bg text-admin-success-text",
-  delivered: "bg-admin-primary text-white",
-  closed: "bg-admin-readonly-bg text-admin-faint",
+  blocked: "border-destructive/30 bg-destructive-soft text-destructive",
+  waiting: "border-warning/30 bg-warning-soft text-warning-text",
+  working: "border-success/30 bg-success-soft text-success-text",
+  delivered: "bg-primary text-primary-foreground",
+  closed: "bg-muted text-muted-foreground",
+};
+
+// Solid, for a badge that has to be seen from across the screen (the detail
+// header, the counter of a stage with requests in it): "destaque é cor
+// cheia". Closed stays quiet even here: nothing is left to do.
+const TONE_SOLID_STYLES: Record<Tone, string> = {
+  blocked: "bg-destructive text-destructive-foreground",
+  waiting: "bg-warning text-warning-foreground",
+  working: "bg-success text-success-foreground",
+  delivered: "bg-primary text-primary-foreground",
+  closed: "bg-muted text-muted-foreground",
 };
 
 export const STATUS_TONES: Record<ServiceRequestStatus, Tone> = {
@@ -45,12 +58,20 @@ export const STATUS_TONES: Record<ServiceRequestStatus, Tone> = {
   archived: "closed",
 };
 
-/** The tinted pill of a tone: the andamento badge, and the counter of the
- * queue's active tab, which wears the tone of the andamento it holds. */
+/** The tinted pill of a tone: the andamento badge in a row of the queue. */
 export function toneClass(tone: Tone): string {
   return TONE_STYLES[tone];
 }
 
-export function statusBadgeClass(status: ServiceRequestStatus): string {
-  return TONE_STYLES[STATUS_TONES[status]];
+/** The solid pill of a tone: a badge read from afar. */
+export function toneSolidClass(tone: Tone): string {
+  return TONE_SOLID_STYLES[tone];
+}
+
+export function statusBadgeClass(
+  status: ServiceRequestStatus,
+  solid = false,
+): string {
+  const tone = STATUS_TONES[status];
+  return solid ? TONE_SOLID_STYLES[tone] : TONE_STYLES[tone];
 }

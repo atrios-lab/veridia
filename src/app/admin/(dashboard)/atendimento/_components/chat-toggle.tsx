@@ -7,6 +7,7 @@ import {
   CHAT_AVAILABILITY_LABELS,
   type ChatAvailability,
 } from "@/core/chat/hours.ts";
+import { cn } from "../../../_ui/cn.ts";
 import { type ActionState, toggleChatEnabledAction } from "../actions.ts";
 
 /**
@@ -43,11 +44,12 @@ export function ChatToggle({
   if (!canToggle) {
     return (
       <span
-        className={`inline-flex items-center gap-2 rounded-full px-3.5 py-1.5 text-[12.5px] font-semibold ${
+        className={cn(
+          "inline-flex items-center gap-2 rounded-full px-3 py-1 text-xs font-medium",
           availability === "off"
-            ? "bg-admin-readonly-bg text-admin-muted"
-            : "bg-admin-success-bg text-admin-success-text"
-        }`}
+            ? "bg-muted text-muted-foreground"
+            : "bg-success text-success-foreground",
+        )}
       >
         {CHAT_AVAILABILITY_LABELS[availability]}
       </span>
@@ -56,10 +58,7 @@ export function ChatToggle({
 
   return (
     <div className="flex flex-col items-end gap-1.5">
-      <form
-        action={formAction}
-        className="inline-flex rounded-full bg-admin-readonly-bg p-1"
-      >
+      <form action={formAction} className="inline-flex rounded-lg bg-muted p-1">
         {CHAT_AVAILABILITIES.map((option) => {
           const current = option === availability;
           return (
@@ -70,18 +69,19 @@ export function ChatToggle({
               value={option}
               disabled={pending}
               aria-pressed={current}
-              className={`rounded-full px-3.5 py-1.5 text-[12.5px] font-semibold disabled:opacity-70 ${
+              className={cn(
+                "rounded-md px-3 py-1 text-sm font-medium transition-colors disabled:opacity-70",
                 current
-                  ? "bg-admin-card text-admin-primary shadow-sm"
-                  : "text-admin-muted hover:text-admin-primary"
-              }`}
+                  ? "bg-background text-foreground shadow-xs"
+                  : "text-muted-foreground hover:text-foreground",
+              )}
             >
               {CHAT_AVAILABILITY_LABELS[option]}
             </button>
           );
         })}
       </form>
-      <p className="text-[11.5px] text-admin-muted">
+      <p className="text-xs text-muted-foreground">
         {pending ? "Atualizando…" : HINTS[availability]}
       </p>
     </div>

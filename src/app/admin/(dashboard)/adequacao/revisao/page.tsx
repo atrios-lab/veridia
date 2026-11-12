@@ -21,6 +21,7 @@ import { getSession } from "@/lib/session.ts";
 import { getTenant } from "@/lib/tenant.ts";
 import { AdminIcon } from "../../../_components/icon.tsx";
 import { AdminPageHeader } from "../../../_components/page-header.tsx";
+import { buttonVariants } from "../../../_ui/button.tsx";
 import { SubmitForm } from "./submit-form.tsx";
 
 export const metadata = { title: "Revisão e envio" };
@@ -47,25 +48,25 @@ export default async function ReviewPage() {
         title="Revisão e envio"
         back={{ href: "/admin/adequacao", label: "Adequação ao Provimento" }}
       />
-      <main className="flex max-w-[900px] flex-col gap-4 px-[30px] py-7">
+      <main className="flex max-w-[900px] flex-col gap-6 px-4 pt-6 pb-8 md:px-8">
         {state.ready ? (
-          <p className="flex items-start gap-2.5 rounded-[10px] bg-admin-success-bg px-3.5 py-3 text-[12.5px] leading-relaxed text-admin-success-text">
+          <p className="flex items-start gap-2.5 rounded-lg border border-success/30 bg-success-soft p-4 text-sm text-success-text">
             <AdminIcon
               name="checkCircle"
               className="mt-0.5 h-4 w-4 flex-none"
             />
             <span>
-              <strong className="block font-bold">
+              <strong className="block font-medium">
                 As {SECTIONS.length} seções estão respondidas.
               </strong>
               Confira abaixo. Tudo pode ser editado, inclusive depois do envio.
             </span>
           </p>
         ) : (
-          <p className="flex items-start gap-2.5 rounded-[10px] bg-admin-warning-bg px-3.5 py-3 text-[12.5px] leading-relaxed text-admin-warning-text">
+          <p className="flex items-start gap-2.5 rounded-lg border border-warning/30 bg-warning-soft p-4 text-sm text-warning-text">
             <AdminIcon name="alert" className="mt-0.5 h-4 w-4 flex-none" />
             <span>
-              <strong className="block font-bold">
+              <strong className="block font-medium">
                 Faltam {missing.length}{" "}
                 {missing.length === 1 ? "seção" : "seções"} para enviar.
               </strong>
@@ -76,11 +77,11 @@ export default async function ReviewPage() {
         )}
 
         {pendencies.length > 0 && (
-          <section className="rounded-[14px] border border-admin-border bg-admin-card p-6">
-            <h2 className="text-[11.5px] font-bold uppercase tracking-[0.09em] text-admin-accent">
+          <section className="rounded-xl border border-border bg-card p-6">
+            <h2 className="text-lg font-semibold text-foreground">
               O que vai aparecer como pendência nos documentos
             </h2>
-            <p className="mt-1.5 text-[12.5px] text-admin-muted">
+            <p className="mt-1.5 text-sm text-muted-foreground">
               Nada disso impede o envio. São fatos que a Átrios registra com
               prazo de 30 dias no plano de continuidade.
             </p>
@@ -88,27 +89,30 @@ export default async function ReviewPage() {
               {pendencies.map((p) => (
                 <li
                   key={p.code}
-                  className="flex items-center gap-3 border-t border-admin-border py-2.5 text-[13px] first:border-t-0"
+                  className="flex items-center gap-3 border-t border-border py-2.5 text-sm first:border-t-0"
                 >
                   <span
                     aria-hidden="true"
                     className={`h-2 w-2 flex-none rounded-full ${
                       p.severity === "critical"
-                        ? "bg-admin-error-text"
-                        : "bg-admin-accent"
+                        ? "bg-destructive"
+                        : "bg-warning"
                     }`}
                   />
                   <span className="min-w-0 flex-1">
-                    <span className="block font-semibold text-admin-text">
+                    <span className="block font-medium text-foreground">
                       {p.title}
                     </span>
-                    <span className="block text-[11.5px] text-admin-muted">
+                    <span className="block text-xs text-muted-foreground">
                       Seção {sectionTitle(p.sectionId)}
                     </span>
                   </span>
                   <Link
                     href={`/admin/adequacao/${p.sectionId}`}
-                    className="btn btn-admin-secondary btn-sm"
+                    className={buttonVariants({
+                      variant: "outline",
+                      size: "sm",
+                    })}
                   >
                     Editar
                   </Link>
@@ -118,7 +122,7 @@ export default async function ReviewPage() {
           </section>
         )}
 
-        <section className="rounded-[14px] border border-admin-border bg-admin-card p-6">
+        <section className="rounded-xl border border-border bg-card p-6">
           {SECTIONS.map((section) => {
             const fields = visibleFields(section, answers).filter(
               (f) => !isEmpty(answers[section.id]?.[f.name]),
@@ -126,37 +130,42 @@ export default async function ReviewPage() {
             return (
               <div
                 key={section.id}
-                className="border-t border-admin-border py-4.5 first:border-t-0 first:pt-0 last:pb-0"
+                className="border-t border-border py-5 first:border-t-0 first:pt-0 last:pb-0"
               >
                 <div className="flex items-center justify-between gap-4">
-                  <h3 className="font-serif text-[15px] font-semibold text-admin-primary">
+                  <h3 className="text-base font-semibold text-foreground">
                     {section.number} · {section.title}
                   </h3>
                   <Link
                     href={`/admin/adequacao/${section.id}`}
-                    className="btn btn-admin-secondary btn-sm"
+                    className={buttonVariants({
+                      variant: "outline",
+                      size: "sm",
+                    })}
                   >
                     Editar
                   </Link>
                 </div>
                 {section.id === "anexos" ? (
-                  <p className="mt-2 text-[13px] text-admin-text">
+                  <p className="mt-2 text-sm text-foreground">
                     {intake.attachments.length === 0
                       ? "Nenhum arquivo anexado."
                       : intake.attachments.map((a) => a.displayName).join(", ")}
                   </p>
                 ) : fields.length === 0 ? (
-                  <p className="mt-2 text-[12.5px] text-admin-faint">
+                  <p className="mt-2 text-xs text-muted-foreground">
                     Nada respondido ainda.
                   </p>
                 ) : (
-                  <dl className="mt-3 grid grid-cols-1 gap-x-4 gap-y-2 text-[13px] sm:grid-cols-[220px_1fr]">
+                  <dl className="mt-3 grid grid-cols-1 gap-x-4 gap-y-2 text-sm sm:grid-cols-[220px_1fr]">
                     {fields.map((field) => {
                       const value = answers[section.id][field.name];
                       return (
                         <div key={field.name} className="contents">
-                          <dt className="text-admin-muted">{field.label}</dt>
-                          <dd className="font-semibold text-admin-text">
+                          <dt className="text-muted-foreground">
+                            {field.label}
+                          </dt>
+                          <dd className="font-medium text-foreground">
                             {field.type === "list" ? (
                               <ul className="flex flex-col gap-1">
                                 {(value as ListItem[]).map((item, index) => (

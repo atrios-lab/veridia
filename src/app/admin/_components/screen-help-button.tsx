@@ -2,6 +2,8 @@
 
 import Link from "next/link";
 import { useEffect, useId, useRef, useState } from "react";
+import { buttonVariants } from "../_ui/button.tsx";
+import { cn } from "../_ui/cn.ts";
 import type { ScreenHelp } from "./screen-help.ts";
 
 /**
@@ -67,7 +69,7 @@ export function ScreenHelpButton({
           setPinned((was) => !was);
           setOpen((was) => !(was && pinned));
         }}
-        className="flex h-7 w-7 items-center justify-center rounded-full border-2 border-admin-accent bg-admin-card font-serif text-[15px] font-bold text-admin-accent-ink hover:bg-admin-warning-soft-bg"
+        className="flex size-7 cursor-pointer items-center justify-center rounded-full border-2 border-primary bg-background text-sm font-semibold text-primary hover:bg-muted"
       >
         !
       </button>
@@ -76,31 +78,31 @@ export function ScreenHelpButton({
           id={id}
           role="dialog"
           aria-label={label}
-          className="absolute top-[calc(100%+8px)] left-0 z-40 block max-h-[72vh] w-[min(460px,calc(100vw-48px))] overflow-y-auto rounded-[14px] border border-admin-border bg-admin-card p-4 text-left shadow-[0_12px_32px_rgba(9,24,16,0.18)]"
+          className="absolute top-full left-0 z-40 mt-2 block max-h-[72vh] w-[min(460px,calc(100vw-48px))] overflow-y-auto rounded-xl border bg-popover p-4 text-left text-popover-foreground shadow-lg"
         >
-          <span className="block text-[11px] font-bold uppercase tracking-[0.08em] text-admin-accent">
+          <span className="block text-xs font-medium text-muted-foreground">
             Para que serve
           </span>
-          <span className="mt-1 block text-[13px] leading-relaxed text-admin-text">
+          <span className="mt-1 block text-sm leading-relaxed text-foreground">
             {help.purpose}
           </span>
-          <span className="mt-3 block text-[11px] font-bold uppercase tracking-[0.08em] text-admin-accent">
+          <span className="mt-4 block text-xs font-medium text-muted-foreground">
             Como usar
           </span>
-          <ol className="mt-1 list-decimal space-y-1 pl-5 text-[12.5px] leading-relaxed text-admin-text">
+          <ol className="mt-1 list-decimal space-y-1 pl-5 text-sm leading-relaxed text-foreground">
             {help.steps.map((step) => (
               <li key={step}>{step}</li>
             ))}
           </ol>
           {help.terms && help.terms.length > 0 && (
             <>
-              <span className="mt-3 block text-[11px] font-bold uppercase tracking-[0.08em] text-admin-accent">
+              <span className="mt-4 block text-xs font-medium text-muted-foreground">
                 O que significa
               </span>
-              <dl className="mt-1 space-y-1.5 text-[12.5px] leading-relaxed text-admin-text">
+              <dl className="mt-1 space-y-1.5 text-sm leading-relaxed text-foreground">
                 {help.terms.map((t) => (
                   <div key={t.term}>
-                    <dt className="inline font-bold text-admin-primary">
+                    <dt className="inline font-semibold text-foreground">
                       {t.term}:
                     </dt>{" "}
                     <dd className="inline">{t.meaning}</dd>
@@ -111,10 +113,10 @@ export function ScreenHelpButton({
           )}
           {help.configure && (
             <>
-              <span className="mt-3 block text-[11px] font-bold uppercase tracking-[0.08em] text-admin-accent">
+              <span className="mt-4 block text-xs font-medium text-muted-foreground">
                 Como configurar
               </span>
-              <ol className="mt-1 list-decimal space-y-1 pl-5 text-[12.5px] leading-relaxed text-admin-text">
+              <ol className="mt-1 list-decimal space-y-1 pl-5 text-sm leading-relaxed text-foreground">
                 {help.configure.steps.map((step) => (
                   <li key={step}>{step}</li>
                 ))}
@@ -122,12 +124,12 @@ export function ScreenHelpButton({
               {canConfigure ? (
                 <Link
                   href={help.configure.href}
-                  className="btn btn-admin-primary btn-sm mt-2.5 inline-flex"
+                  className={cn(buttonVariants({ size: "sm" }), "mt-3")}
                 >
                   Ir para: {help.configure.label}
                 </Link>
               ) : (
-                <span className="mt-2 block text-[11.5px] text-admin-muted">
+                <span className="mt-2 block text-xs text-muted-foreground">
                   Quem configura é o Tabelião/Registrador ou quem tem essa
                   permissão.
                 </span>

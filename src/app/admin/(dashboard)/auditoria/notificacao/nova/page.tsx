@@ -66,23 +66,23 @@ export default async function NewNotificationPage({
   return (
     <>
       <AdminPageHeader maxWidth={900} title="Auditoria" />
-      <main className="flex max-w-[900px] flex-col gap-4.5 px-[30px] py-7">
+      <main className="flex max-w-[900px] flex-col gap-6 px-4 pt-6 pb-8 md:px-8">
         <BackLink href="/admin/auditoria" label="Auditoria" />
-        <section className="rounded-[14px] border border-admin-border bg-admin-card px-5 py-4">
-          <h2 className="font-serif text-[18px] font-semibold text-admin-primary">
+        <section className="rounded-xl border border-border bg-card p-6">
+          <h2 className="text-lg font-semibold text-foreground">
             Notificar para esclarecimentos
           </h2>
-          <p className="mt-1 text-[12.5px] leading-relaxed text-admin-muted">
+          <p className="mt-1 text-sm text-muted-foreground">
             A pessoa recebe a notificação no e-mail da conta dela, com o PDF, e
             vê o pedido na aba Auditoria do painel. Ela tem 24 horas para
             responder, por lá. Revise o texto antes de enviar.
           </p>
           {entries.length > 0 && (
-            <div className="mt-3 rounded-[10px] bg-admin-input-bg px-3.5 py-2.5">
-              <p className="text-xs font-bold text-admin-primary">
+            <div className="mt-3 rounded-lg bg-muted/50 px-3.5 py-2.5">
+              <p className="text-xs font-medium text-foreground">
                 Atos que vão na notificação ({entries.length})
               </p>
-              <ul className="mt-1 flex flex-col gap-0.5 text-[12.5px] text-admin-text">
+              <ul className="mt-1 flex flex-col gap-0.5 text-xs text-foreground">
                 {entries.map((entry) => (
                   <li key={entry.id}>
                     {formatOfficeDateTime(entry.createdAt)} ·{" "}

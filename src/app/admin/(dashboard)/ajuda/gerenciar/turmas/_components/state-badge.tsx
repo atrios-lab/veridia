@@ -1,10 +1,13 @@
 import type { CohortState } from "@/core/cohorts/cohort.ts";
+import { Badge } from "../../../../../_ui/badge.tsx";
 
+// Solid where the state asks for attention (open, full); the closed ones
+// recede. The label always says the state, so it never rests on colour.
 const TONE: Record<CohortState, string> = {
-  open: "bg-admin-success-bg text-admin-success-text",
-  full: "bg-admin-warning-bg text-admin-warning-text",
-  expired: "bg-admin-surface text-admin-muted",
-  closed: "bg-admin-surface text-admin-muted",
+  open: "bg-success text-success-foreground",
+  full: "bg-warning text-warning-foreground",
+  expired: "bg-muted text-muted-foreground",
+  closed: "bg-muted text-muted-foreground",
 };
 
 export function CohortStateBadge({
@@ -14,11 +17,5 @@ export function CohortStateBadge({
   state: CohortState;
   label: string;
 }) {
-  return (
-    <span
-      className={`rounded-full px-2.5 py-1 text-[11px] font-bold ${TONE[state]}`}
-    >
-      {label}
-    </span>
-  );
+  return <Badge className={TONE[state]}>{label}</Badge>;
 }

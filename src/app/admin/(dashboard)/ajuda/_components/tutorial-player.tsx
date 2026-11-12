@@ -6,6 +6,8 @@ import { useEffect, useRef, useState, useTransition } from "react";
 import { toast } from "sonner";
 import type { Tutorial } from "@/core/tutorials/catalog.ts";
 import { formatDuration } from "@/core/tutorials/progress.ts";
+import { Badge } from "../../../_ui/badge.tsx";
+import { Button, buttonVariants } from "../../../_ui/button.tsx";
 import {
   markTutorialWatchedAction,
   unmarkTutorialWatchedAction,
@@ -148,18 +150,18 @@ export function TutorialPlayer({
     return (
       <section
         aria-labelledby="tutorial-title"
-        className="overflow-hidden rounded-[16px] border border-admin-border bg-admin-card"
+        className="overflow-hidden rounded-xl border bg-card"
       >
         <div className="bg-black">{player}</div>
         <div className="flex flex-col gap-2.5 p-6">
           {label && (
-            <span className="text-[11px] font-bold uppercase tracking-[0.08em] text-admin-faint">
+            <span className="text-xs font-medium text-muted-foreground">
               {label}
             </span>
           )}
           <h2
             id="tutorial-title"
-            className="font-serif text-[22px] leading-tight font-semibold text-admin-primary"
+            className="text-xl leading-tight font-semibold text-foreground"
           >
             {tutorial.title}
           </h2>
@@ -167,14 +169,14 @@ export function TutorialPlayer({
             <TutorialDescription text={tutorial.description} />
           )}
           <div className="flex flex-wrap items-center gap-3 pt-1">
-            <span className="text-[12px] text-admin-faint">
+            <span className="text-xs text-muted-foreground">
               {formatDuration(tutorial.durationSeconds)}
               {watched
                 ? " · assistido"
                 : " · conta como assistido ao chegar ao fim"}
             </span>
             {watched && next && (
-              <Link href={next.href} className="btn btn-admin-primary btn-sm">
+              <Link href={next.href} className={buttonVariants({ size: "sm" })}>
                 {next.label} →
               </Link>
             )}
@@ -187,43 +189,36 @@ export function TutorialPlayer({
   return (
     <section
       aria-labelledby="tutorial-title"
-      className="grid grid-cols-1 overflow-hidden rounded-[16px] border border-admin-border bg-admin-card lg:grid-cols-[minmax(0,1.6fr)_minmax(0,1fr)]"
+      className="grid grid-cols-1 overflow-hidden rounded-xl border bg-card lg:grid-cols-[minmax(0,1.6fr)_minmax(0,1fr)]"
     >
       <div className="bg-black">{player}</div>
 
       <div className="flex flex-col justify-center gap-3 p-6 lg:p-8">
-        {badge && (
-          <span className="self-start rounded-full bg-admin-primary px-3 py-1 text-[11.5px] font-bold text-white">
-            {badge}
-          </span>
-        )}
+        {badge && <Badge className="self-start">{badge}</Badge>}
         <h2
           id="tutorial-title"
-          className="font-serif text-[22px] leading-tight font-semibold text-admin-primary"
+          className="text-xl leading-tight font-semibold text-foreground"
         >
           {tutorial.title}
         </h2>
         {tutorial.description && (
           <TutorialDescription text={tutorial.description} />
         )}
-        <p className="text-[12px] text-admin-faint">
+        <p className="text-xs text-muted-foreground">
           {formatDuration(tutorial.durationSeconds)}
           {screenLabel && ` · ensina a tela ${screenLabel}`}
         </p>
         <div className="pt-1">
-          <button
+          <Button
             type="button"
+            size="sm"
+            variant={watched ? "outline" : "default"}
             onClick={() => persist(!watched)}
             disabled={pending}
             aria-pressed={watched}
-            className={
-              watched
-                ? "btn btn-admin-secondary btn-sm"
-                : "btn btn-admin-primary btn-sm"
-            }
           >
             {watched ? "Assistido · Desfazer" : "Marcar como assistido"}
-          </button>
+          </Button>
         </div>
       </div>
     </section>

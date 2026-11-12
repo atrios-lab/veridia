@@ -1,3 +1,4 @@
+import { ChevronRight } from "lucide-react";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { can } from "@/core/auth/roles.ts";
@@ -11,6 +12,14 @@ import {
 import { getSession } from "@/lib/session.ts";
 import { getTenant, OFFICE_TIME_ZONE, today } from "@/lib/tenant.ts";
 import { AdminPageHeader } from "../../_components/page-header.tsx";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "../../_ui/table.tsx";
 import {
   identificationLabel,
   ManifestationStatusBadge,
@@ -34,67 +43,97 @@ export default async function OmbudsmanQueuePage() {
   return (
     <>
       <AdminPageHeader title="Ouvidoria" />
-      <main className="flex flex-col gap-4.5 px-[30px] py-7">
-        <div className="overflow-hidden rounded-[14px] border border-admin-border bg-admin-card">
-          <div className="grid grid-cols-[150px_1.6fr_1.2fr_140px_100px_20px] gap-2 border-b border-admin-border px-5 py-2.5 text-[11px] font-bold tracking-[0.06em] text-admin-faint uppercase">
-            <span>Protocolo</span>
-            <span>Manifestante</span>
-            <span>Tipo</span>
-            <span>Situação</span>
-            <span>Data</span>
-            <span />
-          </div>
-
-          {manifestations.length === 0 ? (
-            <p className="px-5 py-8 text-center text-[13px] text-admin-muted">
-              Nenhuma manifestação registrada ainda.
-            </p>
-          ) : (
-            manifestations.map((record) => {
-              const details = parseDetails("ombudsman", record.details);
-              const identified = identificationLabel({
-                applicantName: record.applicantName,
-                contact: record.contact,
-                confidential: details.confidential,
-              });
-              return (
-                <Link
-                  key={record.id}
-                  href={`/admin/ouvidoria/${encodeURIComponent(record.protocolNumber)}`}
-                  className="grid grid-cols-[150px_1.6fr_1.2fr_140px_100px_20px] items-center gap-2 border-b border-admin-border px-5 py-3 text-[13px] last:border-b-0 hover:bg-admin-input-bg"
-                >
-                  <span className="font-bold tabular-nums text-admin-primary">
-                    {record.protocolNumber}
-                  </span>
-                  <span className="min-w-0">
-                    <span className="block truncate font-semibold text-admin-text">
-                      {record.applicantName ?? identified}
-                    </span>
-                    <span className="block truncate text-[11.5px] text-admin-faint">
-                      {record.applicantName
-                        ? identified
-                        : "sem contato informado"}
-                    </span>
-                  </span>
-                  <span className="truncate text-admin-muted">
-                    {manifestationLabel(details.manifestationType)}
-                  </span>
-                  <ManifestationStatusBadge
-                    status={record.status}
-                    label={statusLabel("ombudsman", record.status)}
-                  />
-                  <span className="text-admin-faint">
-                    {formatDate(
-                      toIsoDate(record.createdAt, OFFICE_TIME_ZONE),
-                    ).slice(0, 5)}
-                  </span>
-                  <span aria-hidden="true" className="text-admin-faint">
-                    ›
-                  </span>
-                </Link>
-              );
-            })
-          )}
+      <main className="flex flex-col gap-6 px-4 pt-6 pb-8 md:px-8">
+        <div className="overflow-hidden rounded-xl border bg-card">
+          <Table className="min-w-[760px] table-fixed">
+            <TableHeader>
+              <TableRow className="hover:bg-transparent">
+                <TableHead className="w-[150px] px-5 text-xs text-muted-foreground">
+                  Protocolo
+                </TableHead>
+                <TableHead className="text-xs text-muted-foreground">
+                  Manifestante
+                </TableHead>
+                <TableHead className="w-[28%] text-xs text-muted-foreground">
+                  Tipo
+                </TableHead>
+                <TableHead className="w-[140px] text-xs text-muted-foreground">
+                  Situação
+                </TableHead>
+                <TableHead className="w-[100px] text-xs text-muted-foreground">
+                  Data
+                </TableHead>
+                <TableHead className="w-10 pr-5">
+                  <span className="sr-only">Abrir</span>
+                </TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {manifestations.length === 0 ? (
+                <TableRow className="hover:bg-transparent">
+                  <TableCell
+                    colSpan={6}
+                    className="px-5 py-8 text-center text-sm whitespace-normal text-muted-foreground"
+                  >
+                    Nenhuma manifestação registrada ainda.
+                  </TableCell>
+                </TableRow>
+              ) : (
+                manifestations.map((record) => {
+                  const details = parseDetails("ombudsman", record.details);
+                  const identified = identificationLabel({
+                    applicantName: record.applicantName,
+                    contact: record.contact,
+                    confidential: details.confidential,
+                  });
+                  return (
+                    <TableRow key={record.id} className="relative">
+                      <TableCell className="px-5 py-3">
+                        {/* The whole row opens the manifestation: the link
+                            stretches over it. */}
+                        <Link
+                          href={`/admin/ouvidoria/${encodeURIComponent(record.protocolNumber)}`}
+                          className="font-semibold tabular-nums text-primary after:absolute after:inset-0 hover:underline"
+                        >
+                          {record.protocolNumber}
+                        </Link>
+                      </TableCell>
+                      <TableCell className="min-w-0 py-3">
+                        <span className="block truncate font-medium text-foreground">
+                          {record.applicantName ?? identified}
+                        </span>
+                        <span className="block truncate text-xs text-muted-foreground">
+                          {record.applicantName
+                            ? identified
+                            : "sem contato informado"}
+                        </span>
+                      </TableCell>
+                      <TableCell className="truncate py-3 text-muted-foreground">
+                        {manifestationLabel(details.manifestationType)}
+                      </TableCell>
+                      <TableCell className="py-3">
+                        <ManifestationStatusBadge
+                          status={record.status}
+                          label={statusLabel("ombudsman", record.status)}
+                        />
+                      </TableCell>
+                      <TableCell className="py-3 tabular-nums text-muted-foreground">
+                        {formatDate(
+                          toIsoDate(record.createdAt, OFFICE_TIME_ZONE),
+                        ).slice(0, 5)}
+                      </TableCell>
+                      <TableCell className="py-3 pr-5 text-right text-muted-foreground">
+                        <ChevronRight
+                          aria-hidden="true"
+                          className="ml-auto size-4"
+                        />
+                      </TableCell>
+                    </TableRow>
+                  );
+                })
+              )}
+            </TableBody>
+          </Table>
         </div>
       </main>
     </>

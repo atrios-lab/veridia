@@ -1,17 +1,19 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useId, useMemo, useState } from "react";
 import {
   isQuickService,
   type Suggestion,
   suggestGrid,
   usualMinutes,
 } from "@/core/scheduling/suggest.ts";
+import { Button } from "../../../_ui/button.tsx";
+import { cn } from "../../../_ui/cn.ts";
+import { Input } from "../../../_ui/input.tsx";
 
-const cardClass =
-  "rounded-[14px] border border-admin-border bg-admin-card px-5 py-4";
-const inputClass =
-  "rounded-lg border border-admin-border bg-admin-input-bg px-2.5 py-1.5 text-[13px] text-admin-text outline-none focus:border-admin-accent";
+const cardClass = "rounded-xl border bg-card px-5 py-4";
+/** The fields sit inline in sentences: sized by content, not full width. */
+const inputClass = "h-8 w-auto bg-background tabular-nums";
 
 interface ServiceRow {
   id: string;
@@ -51,6 +53,7 @@ export function SuggestCard({
   starting?: boolean;
 }) {
   const [open, setOpen] = useState(false);
+  const fieldId = useId();
   const [openAt, setOpenAt] = useState("08:00");
   const [closeAt, setCloseAt] = useState("14:00");
   const [staff, setStaff] = useState(2);
@@ -101,22 +104,18 @@ export function SuggestCard({
         className={`${cardClass} flex flex-wrap items-center justify-between gap-3`}
       >
         <div>
-          <h2 className="font-serif text-[16px] font-semibold text-admin-primary">
+          <h2 className="text-base font-semibold text-foreground">
             Montar a grade automaticamente
           </h2>
-          <p className="mt-1 text-[12.5px] text-admin-muted">
+          <p className="mt-1 text-xs text-muted-foreground">
             Diga quantas pessoas atendem, o horário, o almoço e quanto tempo
             leva cada serviço: o sistema monta os horários, as vagas e intercala
             os serviços rápidos.
           </p>
         </div>
-        <button
-          type="button"
-          onClick={() => setOpen(true)}
-          className="rounded-lg bg-admin-primary px-3.5 py-2 text-[12.5px] font-semibold text-white disabled:opacity-50"
-        >
+        <Button type="button" size="sm" onClick={() => setOpen(true)}>
           Sugerir horários
-        </button>
+        </Button>
       </section>
     );
   }
@@ -124,63 +123,75 @@ export function SuggestCard({
   return (
     <section className={cardClass}>
       <div className="flex flex-wrap items-baseline justify-between gap-2">
-        <h2 className="font-serif text-[16px] font-semibold text-admin-primary">
+        <h2 className="text-base font-semibold text-foreground">
           Montar a grade automaticamente
         </h2>
         <button
           type="button"
           onClick={() => setOpen(false)}
-          className="text-[12px] font-semibold text-admin-muted underline"
+          className="text-xs font-medium text-muted-foreground underline hover:text-foreground"
         >
           Fechar
         </button>
       </div>
 
       <div className="mt-3 grid gap-3 sm:grid-cols-3">
-        <label className="flex flex-col gap-1 text-[12px] font-semibold text-admin-muted">
+        <label
+          htmlFor={`${fieldId}-open`}
+          className="flex flex-col gap-1 text-xs font-medium text-muted-foreground"
+        >
           Abre às
-          <input
+          <Input
+            id={`${fieldId}-open`}
             type="time"
             value={openAt}
             onChange={(e) => setOpenAt(e.target.value)}
             className={inputClass}
           />
         </label>
-        <label className="flex flex-col gap-1 text-[12px] font-semibold text-admin-muted">
+        <label
+          htmlFor={`${fieldId}-close`}
+          className="flex flex-col gap-1 text-xs font-medium text-muted-foreground"
+        >
           Último atendimento termina às
-          <input
+          <Input
+            id={`${fieldId}-close`}
             type="time"
             value={closeAt}
             onChange={(e) => setCloseAt(e.target.value)}
             className={inputClass}
           />
         </label>
-        <label className="flex flex-col gap-1 text-[12px] font-semibold text-admin-muted">
+        <label
+          htmlFor={`${fieldId}-staff`}
+          className="flex flex-col gap-1 text-xs font-medium text-muted-foreground"
+        >
           Pessoas atendendo
-          <input
+          <Input
+            id={`${fieldId}-staff`}
             type="number"
             min={1}
             max={99}
             value={staff}
             onChange={(e) => setStaff(Number(e.target.value) || 1)}
-            className={`${inputClass} tabular-nums`}
+            className={inputClass}
           />
         </label>
       </div>
 
-      <div className="mt-3 flex flex-wrap items-center gap-2 text-[12.5px] text-admin-text">
-        <label className="flex items-center gap-2 font-semibold">
+      <div className="mt-3 flex flex-wrap items-center gap-2 text-xs text-foreground">
+        <label className="flex items-center gap-2 font-medium">
           <input
             type="checkbox"
             checked={lunchOn}
             onChange={(e) => setLunchOn(e.target.checked)}
-            className="h-4 w-4 accent-admin-primary"
+            className="checkbox-admin"
           />
           Almoço em turnos, sem fechar o atendimento:
         </label>
-        <span className="flex flex-wrap items-center gap-1.5 text-admin-muted">
+        <span className="flex flex-wrap items-center gap-1.5 text-muted-foreground">
           entre
-          <input
+          <Input
             type="time"
             value={lunchFrom}
             onChange={(e) => setLunchFrom(e.target.value)}
@@ -188,7 +199,7 @@ export function SuggestCard({
             className={inputClass}
           />
           e
-          <input
+          <Input
             type="time"
             value={lunchTo}
             onChange={(e) => setLunchTo(e.target.value)}
@@ -196,32 +207,32 @@ export function SuggestCard({
             className={inputClass}
           />
           , cada pessoa
-          <input
+          <Input
             type="number"
             min={15}
             step={15}
             value={lunchMinutes}
             onChange={(e) => setLunchMinutes(Number(e.target.value) || 60)}
             disabled={!lunchOn}
-            className={`${inputClass} w-16 tabular-nums`}
+            className={cn(inputClass, "w-16")}
           />
           min
         </span>
       </div>
 
       <div className="mt-4">
-        <h3 className="text-[13px] font-bold text-admin-primary">
+        <h3 className="text-sm font-semibold text-foreground">
           Serviços e tempo de cada um
         </h3>
         {starting && (
-          <p className="mt-1 rounded-lg bg-admin-warning-soft-bg px-3 py-2 text-[12px] text-admin-warning-text">
+          <p className="mt-1 rounded-lg border border-warning/30 bg-warning-soft px-3 py-2 text-xs text-warning-text">
             Esta agenda ainda não tem serviços marcados. Estes são os sugeridos
             para ela: desmarque os que a serventia não atende. Ao usar a grade,
             os marcados passam a ser os serviços da agenda (dá para mudar
             depois, mais abaixo).
           </p>
         )}
-        <p className="mt-0.5 text-[12px] text-admin-muted">
+        <p className="mt-0.5 text-xs text-muted-foreground">
           Os marcados como rápidos entram entre os outros, para sempre haver uma
           vaga rápida perto. Desmarque o que não entra na grade.
         </p>
@@ -229,19 +240,19 @@ export function SuggestCard({
           {rows.map((row) => (
             <li
               key={row.id}
-              className="flex flex-wrap items-center gap-2 text-[12.5px]"
+              className="flex flex-wrap items-center gap-2 text-xs"
             >
               <input
                 type="checkbox"
                 checked={row.included}
                 onChange={(e) => update(row.id, { included: e.target.checked })}
                 aria-label={`Incluir ${row.label}`}
-                className="h-4 w-4 accent-admin-primary"
+                className="checkbox-admin"
               />
-              <span className="min-w-0 flex-1 truncate text-admin-text">
+              <span className="min-w-0 flex-1 truncate text-foreground">
                 {row.label}
               </span>
-              <input
+              <Input
                 type="number"
                 min={10}
                 step={5}
@@ -250,15 +261,15 @@ export function SuggestCard({
                   update(row.id, { minutes: Number(e.target.value) || 30 })
                 }
                 aria-label={`Minutos de ${row.label}`}
-                className={`${inputClass} w-16 tabular-nums`}
+                className={cn(inputClass, "w-16")}
               />
-              <span className="text-admin-muted">min</span>
-              <label className="flex items-center gap-1 text-admin-muted">
+              <span className="text-muted-foreground">min</span>
+              <label className="flex items-center gap-1 text-muted-foreground">
                 <input
                   type="checkbox"
                   checked={row.quick}
                   onChange={(e) => update(row.id, { quick: e.target.checked })}
-                  className="h-3.5 w-3.5 accent-admin-primary"
+                  className="checkbox-admin"
                 />
                 rápido
               </label>
@@ -267,15 +278,15 @@ export function SuggestCard({
         </ul>
       </div>
 
-      <div className="mt-4 rounded-lg bg-admin-input-bg px-3 py-2.5">
-        <p className="text-[12.5px] font-semibold text-admin-primary">
+      <div className="mt-4 rounded-lg bg-muted/50 px-3 py-2.5">
+        <p className="text-xs font-semibold text-foreground">
           {total} atendimentos por dia, em {suggestion.times.length} horários
         </p>
         <ul className="mt-1.5 flex flex-wrap gap-1.5">
           {suggestion.times.map((time) => (
             <li
               key={time}
-              className="rounded-md bg-admin-card px-2 py-1 text-[11.5px] tabular-nums text-admin-text"
+              className="rounded-md border bg-background px-2 py-1 text-xs tabular-nums text-foreground"
               title={suggestion.services[time]
                 .map((id) => labelOf.get(id) ?? id)
                 .join(", ")}
@@ -287,7 +298,7 @@ export function SuggestCard({
           ))}
         </ul>
         <details className="mt-2">
-          <summary className="cursor-pointer text-[12px] font-semibold text-admin-accent">
+          <summary className="cursor-pointer text-xs font-medium text-primary">
             Ver o dia de cada pessoa
           </summary>
           <ol className="mt-1.5 flex flex-col gap-1">
@@ -295,9 +306,11 @@ export function SuggestCard({
               <li
                 // biome-ignore lint/suspicious/noArrayIndexKey: one lane per attendant, by position.
                 key={index}
-                className="text-[11.5px] leading-relaxed text-admin-muted"
+                className="text-xs leading-relaxed text-muted-foreground"
               >
-                <strong className="text-admin-text">Pessoa {index + 1}:</strong>{" "}
+                <strong className="font-semibold text-foreground">
+                  Pessoa {index + 1}:
+                </strong>{" "}
                 {lane
                   .map(
                     (block) =>
@@ -316,10 +329,13 @@ export function SuggestCard({
         </details>
       </div>
 
-      <div className="mt-3 flex flex-wrap items-center gap-2 text-[12.5px]">
-        <span className="font-semibold text-admin-text">Usar em:</span>
+      <div className="mt-3 flex flex-wrap items-center gap-2 text-xs">
+        <span className="font-semibold text-foreground">Usar em:</span>
         {weekdays.map(({ day, label }) => (
-          <label key={day} className="flex items-center gap-1 text-admin-muted">
+          <label
+            key={day}
+            className="flex items-center gap-1 text-muted-foreground"
+          >
             <input
               type="checkbox"
               checked={days.includes(day)}
@@ -330,13 +346,14 @@ export function SuggestCard({
                     : current.filter((d) => d !== day),
                 )
               }
-              className="h-3.5 w-3.5 accent-admin-primary"
+              className="checkbox-admin"
             />
             {label}
           </label>
         ))}
-        <button
+        <Button
           type="button"
+          size="sm"
           disabled={days.length === 0 || suggestion.times.length === 0}
           onClick={() => {
             onApply(
@@ -346,12 +363,12 @@ export function SuggestCard({
             );
             setOpen(false);
           }}
-          className="ml-auto rounded-lg bg-admin-primary px-3.5 py-2 text-[12.5px] font-semibold text-white disabled:opacity-50"
+          className="ml-auto"
         >
           Usar esta grade
-        </button>
+        </Button>
       </div>
-      <p className="mt-2 text-[11.5px] text-admin-faint">
+      <p className="mt-2 text-xs text-muted-foreground">
         A grade dos dias marcados é trocada pela sugestão. Confira abaixo e
         clique em Salvar agendas: nada muda no site antes disso.
       </p>

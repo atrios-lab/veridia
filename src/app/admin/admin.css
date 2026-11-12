@@ -1,0 +1,379 @@
+/*
+ * The panel's stylesheet (change painel-neutro-shadcn). The panel has one
+ * neutral theme, the same for every office: the office shows up in its seal
+ * and name, never in the panel's colours. Imported only by the panel's root
+ * layout, so nothing here reaches the public site and the other way round.
+ *
+ * Token names follow shadcn/ui, so a component taken from its registry works
+ * without edits. Values live straight in @theme (no light/dark switch: the
+ * panel has no dark theme), which keeps check:tokens strict.
+ *
+ * The contrast of every text and background pair below is checked by
+ * src/lib/admin-theme.test.ts. Change a colour, run the test.
+ */
+@import "tailwindcss";
+@import "tw-animate-css";
+/* The five palettes, for the previews of the site inside the panel
+   (Identidade visual, Publicações): each sets its own [data-theme] on its
+   box, and nothing else in the panel reads them. */
+@import "../brand-palettes.css";
+
+/* The public site's sources stay out: its classes are never generated
+   here. */
+@source not "../(public)";
+
+@custom-variant dark (&:is(.dark *));
+
+@theme {
+  --color-background: #ffffff;
+  --color-foreground: #0a0a0a;
+  --color-card: #ffffff;
+  --color-card-foreground: #0a0a0a;
+  --color-popover: #ffffff;
+  --color-popover-foreground: #0a0a0a;
+  /* The Átrios navy, the same as --color-atrios-navy on signed documents. */
+  --color-primary: #232a64;
+  --color-primary-foreground: #ffffff;
+  --color-secondary: #f5f5f5;
+  --color-secondary-foreground: #171717;
+  --color-muted: #f5f5f5;
+  /* Darker than shadcn's #737373, which gives 4.35:1 on --color-muted and
+     4.09:1 on the sidebar: under the 4.5:1 line for text. */
+  --color-muted-foreground: #666666;
+  --color-accent: #f5f5f5;
+  --color-accent-foreground: #171717;
+  /* One red for fill and text. shadcn's #e7000b measures 4.77:1 on white and
+     drops below 4.5:1 on its own soft background. */
+  --color-destructive: #c10007;
+  --color-destructive-foreground: #ffffff;
+  /* shadcn ships no warning or success colour. Fill with white text, and a
+     darker tone for text on a light background. */
+  --color-warning: #bb4d00;
+  --color-warning-foreground: #ffffff;
+  --color-warning-text: #973c00;
+  --color-warning-soft: #fffbeb;
+  --color-success: #008236;
+  --color-success-foreground: #ffffff;
+  --color-success-text: #016630;
+  --color-success-soft: #f0fdf4;
+  --color-destructive-soft: #fef2f2;
+  /* The Tabelião's own agenda, next to the general one in navy (decision
+     of 11/11/2026, kept when the panel went neutral): a bronze close to the
+     gold the office knew it by, darker than --color-warning so it never
+     reads as a deadline. */
+  --color-holder: #7a5418;
+  --color-holder-foreground: #ffffff;
+  --color-holder-soft: #f7f1e6;
+  --color-border: #e5e5e5;
+  /* The border that identifies a field, a checkbox or a select. #e5e5e5
+     would be 1.26:1 against white; WCAG 1.4.11 asks 3:1 for the edge that
+     tells a control apart. */
+  --color-input: #888888;
+  --color-ring: #232a64;
+
+  /* The sidebar: navy at 8% over white, item under the pointer 12%, current
+     item 16%, written out because the contrast test reads plain values. */
+  --color-sidebar: #edeef3;
+  --color-sidebar-foreground: #0a0a0a;
+  --color-sidebar-primary: #232a64;
+  --color-sidebar-primary-foreground: #ffffff;
+  --color-sidebar-accent: #dcdde6;
+  --color-sidebar-hover: #e5e5ec;
+  --color-sidebar-accent-foreground: #232a64;
+  --color-sidebar-border: #c6c7d0;
+  --color-sidebar-ring: #232a64;
+  /* Group titles in the sidebar. */
+  --color-sidebar-label: #535862;
+
+  /* Mensagens internas: the messenger's title bar in the colour each person
+     picks (core/messages/rules.ts) and the presence dots, as the desktop
+     messengers drew them. A personal choice, so it stays out of the theme. */
+  --color-msg-verde-from: #1c5638;
+  --color-msg-verde-to: #3f8a63;
+  --color-msg-azul-from: #1f4e8c;
+  --color-msg-azul-to: #5b93d6;
+  --color-msg-vinho-from: #5e1b2b;
+  --color-msg-vinho-to: #9b3a52;
+  --color-msg-grafite-from: #2b2f36;
+  --color-msg-grafite-to: #5a616d;
+  --color-msg-dourado-from: #7f6532;
+  --color-msg-dourado-to: #c9a75d;
+  --color-msg-online: #3fae49;
+  --color-msg-busy: #d64541;
+  --color-msg-away: #e8a33d;
+  --color-msg-offline: #a3a8ae;
+  --color-msg-pane: #eef3f8;
+  --color-msg-mine: #e4f1e7;
+}
+
+@theme inline {
+  /* IBM Plex Sans, loaded by the panel's root layout. The serif stays the
+     office's (brand-palettes.css): only the previews of the site use it,
+     and they set it on their own box. */
+  --font-sans: var(--font-panel-sans), system-ui, sans-serif;
+}
+
+:root {
+  --radius: 0.5rem;
+}
+
+@layer base {
+  * {
+    border-color: var(--color-border);
+    outline-color: color-mix(in srgb, var(--color-ring) 50%, transparent);
+  }
+
+  body {
+    font-family: var(--font-sans);
+    background: var(--color-background);
+    color: var(--color-foreground);
+  }
+
+  /* The keyboard ring of anything clickable that does not draw its own:
+     the same safety net as the site's, in the panel's navy. */
+  :where(button, a[href], [role="button"]):focus-visible {
+    outline: none;
+    box-shadow:
+      0 0 0 2px var(--color-background),
+      0 0 0 4px var(--color-ring);
+  }
+  :where(input, select, textarea):focus-visible {
+    outline: none;
+    box-shadow: 0 0 0 1.5px var(--color-ring);
+  }
+}
+
+/*
+ * The panel's motion (decision of 12/11/2026, kept by the owner when the
+ * panel went neutral): whatever has something pending calls the eye. A
+ * number that blinks softly (opacity only, so the text keeps its colour), a
+ * row whose background breathes, and a halo around a solid fill. One cycle
+ * every 1.2s to 2s, far below the three flashes per second WCAG 2.3.1
+ * allows, and always behind `motion-safe:`. The chat alert's shake and
+ * flash run once per alert, never on their own.
+ */
+@theme {
+  --animate-attention-pulse: attention-pulse 1.6s linear infinite;
+  --animate-attention-pulse-light: attention-pulse-light 1.6s linear infinite;
+  --animate-number-blink: number-blink 1.4s ease-in-out infinite;
+  --animate-row-glow: row-glow 2s ease-in-out infinite;
+  --animate-signature-blink: signature-blink 1.2s ease-in-out infinite;
+  --animate-notice-rise: notice-rise 0.4s cubic-bezier(0.16, 1, 0.3, 1) both;
+  --animate-chat-shake: chat-shake 0.6s cubic-bezier(0.36, 0.07, 0.19, 0.97)
+    both;
+  --animate-chat-flash: chat-flash 0.5s ease-in-out 3 both;
+
+  @keyframes attention-pulse {
+    0% {
+      box-shadow: 0 0 0 0
+        color-mix(in srgb, var(--color-primary) 60%, transparent);
+    }
+    70%,
+    100% {
+      box-shadow: 0 0 0 8px
+        color-mix(in srgb, var(--color-primary) 0%, transparent);
+    }
+  }
+
+  @keyframes attention-pulse-light {
+    0% {
+      box-shadow: 0 0 0 0
+        color-mix(in srgb, var(--color-primary) 45%, transparent);
+    }
+    70%,
+    100% {
+      box-shadow: 0 0 0 8px
+        color-mix(in srgb, var(--color-primary) 0%, transparent);
+    }
+  }
+
+  @keyframes number-blink {
+    50% {
+      opacity: 0.45;
+    }
+  }
+
+  @keyframes row-glow {
+    50% {
+      background-color: color-mix(in srgb, var(--color-primary) 8%, transparent);
+    }
+  }
+
+  @keyframes signature-blink {
+    50% {
+      border-color: var(--color-border);
+    }
+  }
+
+  @keyframes notice-rise {
+    from {
+      opacity: 0;
+      transform: translateY(0.75rem);
+    }
+  }
+
+  @keyframes chat-shake {
+    10%,
+    90% {
+      transform: translateX(-3px);
+    }
+    20%,
+    80% {
+      transform: translateX(6px);
+    }
+    30%,
+    50%,
+    70% {
+      transform: translateX(-9px);
+    }
+    40%,
+    60% {
+      transform: translateX(9px);
+    }
+  }
+
+  @keyframes chat-flash {
+    0%,
+    100% {
+      opacity: 0;
+    }
+    50% {
+      opacity: 1;
+    }
+  }
+}
+
+/*
+ * Native controls the panel keeps, drawn to match the components in _ui.
+ *
+ * A checkbox inside a server-action form and a <dialog> opened with
+ * showModal() come with the browser's own form submission, focus trap,
+ * Escape and inert background, so the screens that rely on them keep them;
+ * only the look follows the panel.
+ */
+@layer components {
+  .checkbox-admin {
+    appearance: none;
+    width: 1rem;
+    height: 1rem;
+    margin: 0;
+    flex: none;
+    display: inline-grid;
+    place-content: center;
+    border: 1px solid var(--color-input);
+    border-radius: 0.25rem;
+    background: var(--color-background);
+    cursor: pointer;
+    transition:
+      background-color 120ms,
+      border-color 120ms;
+  }
+  .checkbox-admin:checked {
+    background: var(--color-primary);
+    border-color: var(--color-primary);
+  }
+  .checkbox-admin:checked::before {
+    content: "";
+    width: 0.625rem;
+    height: 0.625rem;
+    background: var(--color-primary-foreground);
+    clip-path: polygon(14% 44%, 0 65%, 50% 100%, 100% 16%, 80% 0%, 43% 62%);
+  }
+  .checkbox-admin:focus-visible {
+    outline: none;
+    box-shadow: 0 0 0 3px color-mix(in srgb, var(--color-ring) 50%, transparent);
+  }
+  .checkbox-admin:disabled {
+    cursor: not-allowed;
+    opacity: 0.5;
+  }
+
+  .scrollbar-hidden {
+    scrollbar-width: none;
+  }
+  .scrollbar-hidden::-webkit-scrollbar {
+    display: none;
+  }
+
+  /* The modal every confirmation in the panel opens into: a native
+     <dialog> driven by showModal(). Same box as _ui/dialog.tsx. */
+  .dialog {
+    margin: auto;
+    width: min(28rem, calc(100vw - 2rem));
+    max-height: calc(100dvh - 2rem);
+    padding: 0;
+    border: 0;
+    border-radius: 0.75rem;
+    background: var(--color-popover);
+    color: var(--color-popover-foreground);
+    box-shadow:
+      0 0 0 1px color-mix(in srgb, var(--color-foreground) 10%, transparent),
+      0 10px 30px -10px rgb(0 0 0 / 0.25);
+    overflow: hidden;
+  }
+  .dialog[open],
+  .dialog[open] > form:not(.dialog-footer) {
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+  }
+  .dialog[open] > form:not(.dialog-footer) {
+    flex: 1;
+  }
+  .dialog-body {
+    flex: 1;
+    min-height: 0;
+    overflow-y: auto;
+    padding: 1.5rem;
+    font-size: 0.875rem;
+  }
+  .dialog::backdrop {
+    background: rgb(0 0 0 / 0.4);
+  }
+  /* Confirming action on top under a thumb on a phone, to the right on a
+     computer; cancel stays first in the DOM and keeps the initial focus. */
+  .dialog-footer {
+    display: flex;
+    flex: none;
+    flex-direction: column-reverse;
+    gap: 0.5rem;
+    border-top: 1px solid var(--color-border);
+    background: color-mix(in srgb, var(--color-muted) 50%, transparent);
+    padding: 1rem 1.5rem;
+  }
+  @media (width >= 40rem) {
+    .dialog-footer {
+      flex-direction: row;
+      align-items: center;
+      justify-content: flex-end;
+    }
+  }
+  .dialog[open] {
+    opacity: 1;
+    transform: none;
+    transition:
+      opacity 150ms ease-out,
+      transform 150ms ease-out;
+  }
+  @starting-style {
+    .dialog[open] {
+      opacity: 0;
+      transform: scale(0.95);
+    }
+  }
+  .dialog[open]::backdrop {
+    opacity: 1;
+    transition: opacity 150ms ease-out;
+  }
+  @starting-style {
+    .dialog[open]::backdrop {
+      opacity: 0;
+    }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .dialog[open],
+    .dialog[open]::backdrop {
+      transition: none;
+    }
+  }
+}

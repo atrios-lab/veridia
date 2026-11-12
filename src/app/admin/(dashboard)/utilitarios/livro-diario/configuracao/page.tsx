@@ -24,8 +24,8 @@ export default async function BookSettingsPage() {
         }}
         description="As especialidades pelo código do ato, o responsável pela escrituração e, se a serventia estiver vaga, o teto do interino."
       />
-      <main className="flex max-w-[900px] flex-col gap-4 px-[30px] py-7 max-md:px-4">
-        <div className="flex flex-wrap items-center gap-2.5 rounded-[12px] border border-admin-border bg-admin-card px-4 py-3 text-[13px] text-admin-text">
+      <main className="flex max-w-[900px] flex-col gap-4 px-4 py-7 md:px-8">
+        <div className="flex flex-wrap items-center gap-2.5 rounded-xl border bg-card px-4 py-3 text-sm text-foreground">
           <span>
             Serventia vaga? Entenda o excedente de 90,25% do subsídio de
             ministro do STF, com exemplos:
@@ -37,7 +37,7 @@ export default async function BookSettingsPage() {
           />
           <Link
             href="/admin/utilitarios/livro-diario/excedente"
-            className="ml-auto text-[12.5px] font-semibold text-admin-primary underline"
+            className="ml-auto text-xs font-semibold text-primary underline"
           >
             Calculadora do excedente
           </Link>

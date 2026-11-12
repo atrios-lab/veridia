@@ -17,6 +17,15 @@ import { getSession } from "@/lib/session.ts";
 import { getTenant } from "@/lib/tenant.ts";
 import { AdminIcon } from "../../../_components/icon.tsx";
 import { AdminPageHeader } from "../../../_components/page-header.tsx";
+import { buttonVariants } from "../../../_ui/button.tsx";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "../../../_ui/table.tsx";
 
 export const metadata = { title: "Declaração de ISS" };
 
@@ -56,21 +65,21 @@ export default async function IssPage({
           <div className="flex flex-wrap gap-2">
             <Link
               href="/admin/utilitarios/iss/nova"
-              className="btn btn-admin-primary btn-md"
+              className={buttonVariants()}
             >
               <AdminIcon name="plus" className="h-4 w-4" /> Nova declaração
             </Link>
           </div>
         }
       />
-      <main className="flex max-w-[1100px] flex-col gap-4.5 px-[30px] py-7 max-md:px-4">
+      <main className="flex max-w-[1100px] flex-col gap-4.5 px-4 py-7 md:px-8">
         {query.excluida === "1" && (
-          <p className="rounded-[12px] bg-admin-success-bg px-4 py-3 text-[13px] font-semibold text-admin-success-text">
+          <p className="rounded-lg bg-success-soft px-4 py-3 text-sm font-semibold text-success-text">
             Declaração excluída da lista. O registro continua na auditoria.
           </p>
         )}
         {missing.length > 0 ? (
-          <p className="rounded-[12px] bg-admin-warning-bg px-4 py-3 text-[13px] text-admin-warning-text">
+          <p className="rounded-lg bg-warning-soft px-4 py-3 text-sm text-warning-text">
             Falta informar na configuração: {missing.join(", ")}. A declaração
             sai sem esses dados até lá.{" "}
             {canConfigure && (
@@ -83,85 +92,94 @@ export default async function IssPage({
             )}
           </p>
         ) : (
-          <p className="flex flex-wrap items-center gap-x-2 text-[12.5px] text-admin-muted">
+          <p className="flex flex-wrap items-center gap-x-2 text-xs text-muted-foreground">
             ✓ Dados da serventia e da prefeitura completos (alíquota de{" "}
             {formatRate(settings.rateBasisPoints)}).
             {canConfigure && (
               <Link
                 href="/admin/utilitarios/iss/configuracao"
-                className="font-semibold text-admin-primary underline"
+                className="font-semibold text-primary underline"
               >
                 Deseja alterar os dados?
               </Link>
             )}
           </p>
         )}
-        <section className="overflow-hidden rounded-[14px] border border-admin-border bg-admin-card">
+        <section className="overflow-hidden rounded-xl border bg-card">
           {rows.length === 0 ? (
-            <p className="px-5 py-8 text-center text-[13px] text-admin-muted">
+            <p className="px-5 py-8 text-center text-sm text-muted-foreground">
               Nenhuma declaração ainda. Clique em &quot;Nova declaração&quot; e
               informe os emolumentos do mês.
             </p>
           ) : (
-            <table className="w-full text-left text-[13px]">
-              <thead className="border-b border-admin-border text-[11px] font-bold uppercase tracking-[0.06em] text-admin-faint">
-                <tr>
-                  <th className="px-4 py-2.5">Nº</th>
-                  <th className="px-4 py-2.5">Competência</th>
-                  <th className="px-4 py-2.5 text-right">Emolumentos</th>
-                  <th className="px-4 py-2.5 text-right max-md:hidden">
+            <Table>
+              <TableHeader>
+                <TableRow className="hover:bg-transparent">
+                  <TableHead className="px-4 text-xs font-medium text-muted-foreground">
+                    Nº
+                  </TableHead>
+                  <TableHead className="px-4 text-xs font-medium text-muted-foreground">
+                    Competência
+                  </TableHead>
+                  <TableHead className="px-4 text-xs font-medium text-muted-foreground text-right">
+                    Emolumentos
+                  </TableHead>
+                  <TableHead className="px-4 text-xs font-medium text-muted-foreground text-right max-md:hidden">
                     Alíquota
-                  </th>
-                  <th className="px-4 py-2.5 text-right">ISS</th>
-                  <th className="px-4 py-2.5 max-md:hidden">Recolhido</th>
-                  <th className="px-4 py-2.5">Entregue</th>
-                </tr>
-              </thead>
-              <tbody>
+                  </TableHead>
+                  <TableHead className="px-4 text-xs font-medium text-muted-foreground text-right">
+                    ISS
+                  </TableHead>
+                  <TableHead className="px-4 text-xs font-medium text-muted-foreground max-md:hidden">
+                    Recolhido
+                  </TableHead>
+                  <TableHead className="px-4 text-xs font-medium text-muted-foreground">
+                    Entregue
+                  </TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
                 {rows.map((row) => (
-                  <tr
-                    key={row.id}
-                    className="border-b border-admin-border last:border-0 hover:bg-admin-input-bg"
-                  >
-                    <td className="px-4 py-2.5 font-semibold">
+                  <TableRow key={row.id}>
+                    <TableCell className="px-4 py-2.5 font-semibold tabular-nums">
                       <Link
                         href={`/admin/utilitarios/iss/${row.id}`}
-                        className="text-admin-primary underline"
+                        className="text-primary underline"
                       >
                         {formatDeclarationNumber(row.year, row.sequence)}
                       </Link>
-                    </td>
-                    <td className="px-4 py-2.5">
+                    </TableCell>
+                    <TableCell className="px-4 py-2.5">
                       {competenceTitle(row.competence)}
-                    </td>
-                    <td className="px-4 py-2.5 text-right">
+                    </TableCell>
+                    <TableCell className="px-4 py-2.5 text-right tabular-nums">
                       R$ {formatMoneyBRL(row.emolumentsCents)}
-                    </td>
-                    <td className="px-4 py-2.5 text-right max-md:hidden">
+                    </TableCell>
+                    <TableCell className="px-4 py-2.5 text-right tabular-nums max-md:hidden">
                       {formatRate(row.rateBasisPoints)}
-                    </td>
-                    <td className="px-4 py-2.5 text-right font-semibold">
+                    </TableCell>
+                    <TableCell className="px-4 py-2.5 text-right font-semibold tabular-nums">
                       R$ {formatMoneyBRL(row.issCents)}
-                    </td>
-                    <td className="px-4 py-2.5 max-md:hidden">
+                    </TableCell>
+                    <TableCell className="px-4 py-2.5 tabular-nums max-md:hidden">
                       {row.paidOn ? date(row.paidOn) : "Não informado"}
-                    </td>
-                    <td className="px-4 py-2.5">
+                    </TableCell>
+                    <TableCell className="px-4 py-2.5 tabular-nums">
                       {row.filedOn ? (
                         date(row.filedOn)
                       ) : (
-                        <span className="font-semibold text-admin-warning-text">
+                        <span className="font-semibold text-warning-text">
                           Pendente
                         </span>
                       )}
-                    </td>
-                  </tr>
+                    </TableCell>
+                  </TableRow>
                 ))}
-              </tbody>
-            </table>
+              </TableBody>
+            </Table>
           )}
         </section>
-        <p className="text-[12px] leading-relaxed text-admin-muted">
+        <p className="text-xs leading-relaxed text-muted-foreground">
           Base de cálculo: só os emolumentos, que são o preço do serviço (LC
           116/2003, art. 7º; STJ, REsp 1.328.384/RS). Não entram os repasses ao
           Estado e aos fundos nem o selo.

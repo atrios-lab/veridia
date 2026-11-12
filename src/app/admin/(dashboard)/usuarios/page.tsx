@@ -12,6 +12,15 @@ import { getSession } from "@/lib/session.ts";
 import { getTenant } from "@/lib/tenant.ts";
 import { AdminPageHeader } from "../../_components/page-header.tsx";
 import { ROLE_LABELS } from "../../_components/role-labels.ts";
+import { Badge } from "../../_ui/badge.tsx";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "../../_ui/table.tsx";
 import { AccountRowActions } from "./account-row-actions.tsx";
 import { CreateAccountForm } from "./create-account-form.tsx";
 
@@ -84,73 +93,84 @@ export default async function UsuariosPage() {
   return (
     <>
       <AdminPageHeader maxWidth={1100} title="Usuários" />
-      <main className="grid max-w-[1100px] grid-cols-1 gap-4.5 px-[30px] py-7 lg:grid-cols-[1fr_340px] lg:items-start">
-        <div className="rounded-2xl border border-admin-border bg-admin-card">
-          <div className="border-b border-admin-border px-5 py-3.5 font-serif text-base font-semibold text-admin-primary">
+      <main className="grid max-w-[1100px] grid-cols-1 gap-6 px-4 pt-6 pb-8 md:px-8 lg:grid-cols-[1fr_340px] lg:items-start">
+        <div className="rounded-xl border bg-card">
+          <div className="border-b px-5 py-3.5 text-base font-semibold text-foreground">
             Contas do painel
           </div>
-          <div className="flex flex-col divide-y divide-admin-border">
-            {accounts.map((account) => (
-              <div
-                key={account.id}
-                className="grid grid-cols-[minmax(0,1fr)_110px_170px_minmax(150px,max-content)] items-center gap-3 px-5 py-3.5"
-              >
-                <div className="min-w-0">
-                  <p className="truncate text-[13.5px] font-semibold text-admin-text">
-                    {account.name}
-                    {account.id === session.user.id && (
-                      <span className="ml-1 font-normal text-admin-faint">
-                        {" "}
-                        (você)
-                      </span>
-                    )}
-                  </p>
-                  <p className="truncate text-[11.5px] text-admin-faint">
-                    {account.email}
-                  </p>
-                  {/* A change nobody can see is a change nobody remembers
-                      asking for: the registrador saves, the list looks the
-                      same, and the pending confirmation is invisible. */}
-                  {account.pendingEmail && (
-                    <p className="truncate text-[11.5px] text-admin-warning-text">
-                      Troca para {account.pendingEmail} aguardando confirmação
+          <Table>
+            <TableHeader className="sr-only">
+              <TableRow>
+                <TableHead>Conta</TableHead>
+                <TableHead>Cargo</TableHead>
+                <TableHead>Situação</TableHead>
+                <TableHead>Ações</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {accounts.map((account) => (
+                <TableRow key={account.id} className="hover:bg-transparent">
+                  <TableCell className="w-full max-w-0 min-w-40 py-3.5 pl-5">
+                    <p className="truncate text-sm font-medium text-foreground">
+                      {account.name}
+                      {account.id === session.user.id && (
+                        <span className="ml-1 font-normal text-muted-foreground">
+                          {" "}
+                          (você)
+                        </span>
+                      )}
                     </p>
-                  )}
-                </div>
-                <span className="text-[12.5px] text-admin-muted">
-                  {ROLE_LABELS[account.role as Role] ?? account.role}
-                </span>
-                <span>
-                  {account.disabled ? (
-                    <span className="rounded-full bg-admin-error-bg px-2.5 py-1 text-[11px] font-bold text-admin-error-text">
-                      Acesso desativado
-                    </span>
-                  ) : account.active ? (
-                    <span className="rounded-full bg-admin-success-bg px-2.5 py-1 text-[11px] font-bold text-admin-success-text">
-                      Ativa
-                    </span>
-                  ) : (
-                    <span className="rounded-full bg-admin-warning-bg px-2.5 py-1 text-[11px] font-bold text-admin-warning-text">
-                      Aguardando 1º acesso
-                    </span>
-                  )}
-                </span>
-                <div className="flex justify-end">
-                  <AccountRowActions
-                    account={{
-                      id: account.id,
-                      name: account.name,
-                      email: account.email,
-                      role: account.role,
-                    }}
-                    active={account.active}
-                    disabled={account.disabled}
-                    isSelf={account.id === session.user.id}
-                  />
-                </div>
-              </div>
-            ))}
-          </div>
+                    <p className="truncate text-xs text-muted-foreground">
+                      {account.email}
+                    </p>
+                    {/* A change nobody can see is a change nobody remembers
+                        asking for: the registrador saves, the list looks the
+                        same, and the pending confirmation is invisible. */}
+                    {account.pendingEmail && (
+                      <p className="truncate text-xs text-warning-text">
+                        Troca para {account.pendingEmail} aguardando confirmação
+                      </p>
+                    )}
+                  </TableCell>
+                  <TableCell className="py-3.5">
+                    <Badge variant="outline">
+                      {ROLE_LABELS[account.role as Role] ?? account.role}
+                    </Badge>
+                  </TableCell>
+                  <TableCell className="py-3.5">
+                    {account.disabled ? (
+                      <Badge className="bg-destructive text-destructive-foreground">
+                        Acesso desativado
+                      </Badge>
+                    ) : account.active ? (
+                      <Badge className="bg-success text-success-foreground">
+                        Ativa
+                      </Badge>
+                    ) : (
+                      <Badge className="bg-warning text-warning-foreground">
+                        Aguardando 1º acesso
+                      </Badge>
+                    )}
+                  </TableCell>
+                  <TableCell className="py-3.5 pr-5">
+                    <div className="flex justify-end">
+                      <AccountRowActions
+                        account={{
+                          id: account.id,
+                          name: account.name,
+                          email: account.email,
+                          role: account.role,
+                        }}
+                        active={account.active}
+                        disabled={account.disabled}
+                        isSelf={account.id === session.user.id}
+                      />
+                    </div>
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
         </div>
 
         <CreateAccountForm />

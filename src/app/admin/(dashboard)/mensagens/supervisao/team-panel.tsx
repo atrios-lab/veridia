@@ -11,6 +11,12 @@ import {
   STATUSES,
   type Status,
 } from "@/core/messages/rules.ts";
+import { Badge } from "../../../_ui/badge.tsx";
+import { Button } from "../../../_ui/button.tsx";
+import {
+  NativeSelect,
+  NativeSelectOption,
+} from "../../../_ui/native-select.tsx";
 import { decideLunch, setChatEnabled, setMemberStatus } from "../actions.ts";
 
 export interface TeamMember {
@@ -51,41 +57,46 @@ export function TeamPanel({ team }: { team: TeamMember[] }) {
   };
   if (!team.length) {
     return (
-      <p className="mt-2 text-[13px] text-admin-muted">
+      <p className="mt-2 text-sm text-muted-foreground">
         Ninguém na equipe ainda.
       </p>
     );
   }
   return (
-    <ul className="mt-3 flex flex-col divide-y divide-admin-border">
+    <ul className="mt-3 flex flex-col divide-y">
       {team.map((member) => (
         <li
           key={member.userId}
-          className="flex flex-wrap items-start justify-between gap-3 py-3 text-[13px]"
+          className="flex flex-wrap items-start justify-between gap-3 py-3 text-sm"
         >
           <div className="min-w-0">
-            <p className="font-semibold text-admin-primary">
+            <p className="font-medium text-foreground">
               {member.name}{" "}
-              <span className="font-normal text-admin-muted">
+              <span className="font-normal text-muted-foreground">
                 ({member.role})
               </span>
             </p>
-            <p className="text-[12px] text-admin-text">
+            <p className="text-xs text-foreground">
               Agora: <strong>{STATUS_LABELS[member.presence]}</strong>
               {member.statusSince && member.presence !== "offline"
                 ? ` (status desde ${member.statusSince})`
                 : ""}
             </p>
             {member.lingering && (
-              <p className="mt-1 rounded-[8px] bg-admin-warning-bg px-2.5 py-1 text-[12px] font-semibold text-admin-warning-text">
+              <p className="mt-1 rounded-lg border border-warning/30 bg-warning-soft px-2.5 py-1 text-xs font-medium text-warning-text">
                 ⚠ Há mais de 40 minutos como &quot;
                 {STATUS_LABELS[member.status]}
                 &quot;. Com 60 minutos volta a Disponível sozinho.
               </p>
             )}
-            <label className="mt-1 flex items-center gap-1.5 text-[12px] text-admin-muted">
+            <label
+              htmlFor={`status-${member.userId}`}
+              className="mt-1 flex items-center gap-1.5 text-xs text-muted-foreground"
+            >
               Mudar status:
-              <select
+              <NativeSelect
+                id={`status-${member.userId}`}
+                size="sm"
                 value={member.status}
                 disabled={busy !== null}
                 onChange={(event) =>
@@ -95,27 +106,28 @@ export function TeamPanel({ team }: { team: TeamMember[] }) {
                     "Status alterado.",
                   )
                 }
-                className="rounded-[6px] border border-admin-input-border bg-admin-card px-1.5 py-0.5 text-[12px] text-admin-text"
+                className="text-foreground"
               >
                 {STATUSES.map((status) => (
-                  <option key={status} value={status}>
+                  <NativeSelectOption key={status} value={status}>
                     {STATUS_LABELS[status]}
-                  </option>
+                  </NativeSelectOption>
                 ))}
-              </select>
+              </NativeSelect>
             </label>
-            <p className="text-[12px] text-admin-text">
+            <p className="text-xs text-foreground">
               Almoço: {member.lunch ? lunchLabel(member.lunch) : "não definido"}
             </p>
             {member.lunchPending && (
-              <div className="mt-1.5 rounded-[8px] bg-admin-warning-bg px-2.5 py-1.5 text-[12px] text-admin-warning-text">
+              <div className="mt-1.5 rounded-lg border border-warning/30 bg-warning-soft px-2.5 py-1.5 text-xs text-warning-text">
                 <p className="font-semibold">
                   Pediu {lunchLabel(member.lunchPending)}
                   {member.requestedAt ? ` em ${member.requestedAt}` : ""}.
                 </p>
                 <div className="mt-1 flex gap-2">
-                  <button
+                  <Button
                     type="button"
+                    size="sm"
                     disabled={busy !== null}
                     onClick={() =>
                       void run(
@@ -124,12 +136,13 @@ export function TeamPanel({ team }: { team: TeamMember[] }) {
                         "Horário de almoço aprovado.",
                       )
                     }
-                    className="btn btn-admin-primary btn-sm"
                   >
                     Aprovar
-                  </button>
-                  <button
+                  </Button>
+                  <Button
                     type="button"
+                    variant="outline"
+                    size="sm"
                     disabled={busy !== null}
                     onClick={() =>
                       void run(
@@ -138,22 +151,27 @@ export function TeamPanel({ team }: { team: TeamMember[] }) {
                         "Pedido recusado.",
                       )
                     }
-                    className="btn btn-admin-secondary btn-sm"
                   >
                     Recusar
-                  </button>
+                  </Button>
                 </div>
               </div>
             )}
           </div>
           <div className="flex shrink-0 flex-col items-end gap-1">
-            <span
-              className={`rounded-full px-2.5 py-0.5 text-[11px] font-bold ${member.chatDisabled ? "bg-admin-error-bg text-admin-error-text" : "bg-admin-success-bg text-admin-success-text"}`}
+            <Badge
+              className={
+                member.chatDisabled
+                  ? "bg-destructive text-destructive-foreground"
+                  : "bg-success text-success-foreground"
+              }
             >
               {member.chatDisabled ? "Chat desativado" : "Chat ativo"}
-            </span>
-            <button
+            </Badge>
+            <Button
               type="button"
+              size="sm"
+              variant={member.chatDisabled ? "default" : "destructive"}
               disabled={busy !== null}
               onClick={() =>
                 void run(
@@ -162,10 +180,9 @@ export function TeamPanel({ team }: { team: TeamMember[] }) {
                   member.chatDisabled ? "Chat reativado." : "Chat desativado.",
                 )
               }
-              className={`btn btn-sm ${member.chatDisabled ? "btn-admin-primary" : "btn-admin-danger"}`}
             >
               {member.chatDisabled ? "Ativar chat" : "Desativar chat"}
-            </button>
+            </Button>
           </div>
         </li>
       ))}

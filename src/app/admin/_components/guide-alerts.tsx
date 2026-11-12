@@ -118,14 +118,14 @@ export function GuideAlerts({ setting }: { setting: ChannelAlert }) {
       {fresh.slice(0, 4).map((item) => (
         <output
           key={item.key}
-          className="pointer-events-auto flex items-start gap-3 rounded-xl bg-admin-primary px-4 py-3 text-white shadow-xl"
+          className="pointer-events-auto flex items-start gap-3 rounded-xl bg-primary px-4 py-3 text-primary-foreground shadow-lg"
         >
           <AdminIcon
             name="calculator"
             className="mt-0.5 h-4.5 w-4.5 shrink-0"
           />
-          <span className="min-w-0 flex-1 text-[12.5px] leading-snug">
-            <strong className="block text-[13px]">
+          <span className="min-w-0 flex-1 text-xs leading-snug">
+            <strong className="block text-sm font-semibold">
               {item.kind === "new"
                 ? "Nova guia de transmissão de bens"
                 : "Cliente atualizou a guia"}
@@ -134,7 +134,7 @@ export function GuideAlerts({ setting }: { setting: ChannelAlert }) {
             <Link
               href={`/admin/pedidos/${encodeURIComponent(item.protocolNumber)}`}
               onClick={() => dismiss(item.key)}
-              className="mt-1 block font-semibold underline"
+              className="mt-1 block font-medium underline"
             >
               Abrir o pedido
             </Link>
@@ -143,7 +143,7 @@ export function GuideAlerts({ setting }: { setting: ChannelAlert }) {
             type="button"
             onClick={() => dismiss(item.key)}
             aria-label="Fechar aviso"
-            className="text-white/80 hover:text-white"
+            className="text-primary-foreground/80 hover:text-primary-foreground"
           >
             <AdminIcon name="x" className="h-4 w-4" />
           </button>

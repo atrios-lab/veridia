@@ -103,7 +103,7 @@ export default async function TransparencyPage({
   return (
     <>
       <AdminPageHeader title="Transparência" />
-      <div className="px-[30px] py-6">
+      <div className="px-4 pt-6 pb-8 md:px-8">
         <TransparencyTabs />
 
         {tab === "documentos" ? (
@@ -234,7 +234,7 @@ async function BulletinTab({
   const saved = savedDrafts(bulletins, tenant.location.state);
   return (
     <div className="mt-6 space-y-5">
-      <p className="text-[12.5px] text-admin-muted">
+      <p className="text-xs text-muted-foreground">
         {latestLabel(bulletins[0])}
       </p>
       <BulletinForm

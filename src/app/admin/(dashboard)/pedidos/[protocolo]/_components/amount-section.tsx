@@ -2,6 +2,8 @@
 
 import { useActionState, useEffect, useState } from "react";
 import { documentHref } from "../../../../_components/attachment-link.ts";
+import { Button } from "../../../../_ui/button.tsx";
+import { Input } from "../../../../_ui/input.tsx";
 import { type ActionState, setAmountAction } from "../actions.ts";
 
 export function AmountSection({
@@ -26,47 +28,49 @@ export function AmountSection({
   }, [state]);
 
   return (
-    <div className="rounded-[14px] border border-admin-border bg-admin-card p-6">
-      <div className="flex items-center gap-2.5">
-        <h4 className="flex-1 font-serif text-[17px] font-semibold text-admin-primary">
+    <div className="rounded-xl border bg-card p-6">
+      <div className="flex items-center gap-2">
+        <h4 className="flex-1 text-base font-semibold text-foreground">
           Valor do pedido
         </h4>
         {!editing && (
-          <button
+          <Button
             type="button"
+            variant="outline"
+            size="sm"
             onClick={() => setEditing(true)}
-            className="btn btn-admin-secondary btn-sm"
           >
             {amountLabel ? "Corrigir valor" : "Informar valor"}
-          </button>
+          </Button>
         )}
         {!editing && amountLabel && (
           <form action={action}>
             <input type="hidden" name="requestId" value={requestId} />
             <input type="hidden" name="intent" value="clear" />
-            <button
+            <Button
               type="submit"
+              variant="outline"
+              size="sm"
               disabled={pending}
-              className="btn btn-admin-secondary btn-sm"
             >
               Remover valor
-            </button>
+            </Button>
           </form>
         )}
       </div>
-      <p className="mt-1 text-[12.5px] text-admin-muted">
+      <p className="mt-1 text-sm text-muted-foreground">
         {amountLabel
           ? `Valor atual: ${amountLabel}`
           : "Ainda não informado. Ao salvar o valor, o pedido passa sozinho para Aguardando pagamento e o cliente vê o Pix (QR Code) na consulta do protocolo."}
       </p>
       {receipt && (
-        <p className="mt-1.5 text-[12.5px] text-admin-text">
+        <p className="mt-1.5 text-sm text-foreground">
           Pagamento informado em {receipt.sentAtLabel} ·{" "}
           <a
             href={documentHref(requestId, receipt.id)}
             target="_blank"
             rel="noopener"
-            className="font-semibold text-admin-accent hover:underline"
+            className="font-medium text-primary underline-offset-4 hover:underline"
           >
             ver comprovante
           </a>
@@ -74,29 +78,23 @@ export function AmountSection({
       )}
 
       {editing && (
-        <form action={action} className="mt-3.5 flex items-center gap-2.5">
+        <form action={action} className="mt-4 flex items-center gap-2">
           <input type="hidden" name="requestId" value={requestId} />
-          <input
+          <Input
             type="text"
             name="amount"
             inputMode="decimal"
             placeholder="0,00"
-            className="w-32 rounded-[9px] border border-admin-input-border bg-admin-input-bg px-3.5 py-2 text-[13px] text-admin-text"
+            aria-label="Valor do pedido"
+            className="w-32"
           />
-          <button
-            type="submit"
-            disabled={pending}
-            className="btn btn-admin-primary btn-md"
-          >
+          <Button type="submit" disabled={pending}>
             {pending ? "Salvando…" : "Salvar"}
-          </button>
+          </Button>
         </form>
       )}
       {state.status === "error" && (
-        <p
-          role="alert"
-          className="mt-2 text-[12.5px] font-semibold text-admin-error-text"
-        >
+        <p role="alert" className="mt-2 text-sm font-medium text-destructive">
           {state.message}
         </p>
       )}

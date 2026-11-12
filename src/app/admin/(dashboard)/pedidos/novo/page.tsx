@@ -36,7 +36,7 @@ export default async function ManualEntryPage({
       <AdminPageHeader maxWidth={820} title="Lançar pedido manual" />
       {/* Centred, not flush left: this screen is a single column with nothing
           beside it, and the counter's monitor is wide. */}
-      <main className="mx-auto w-full max-w-[820px] px-[30px] py-7">
+      <main className="mx-auto w-full max-w-205 px-4 pt-6 pb-8 md:px-8">
         <ManualEntryForm
           tenant={tenant}
           fromConversation={

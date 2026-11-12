@@ -4,6 +4,9 @@ import { startTransition, useActionState, useEffect, useState } from "react";
 import { toast } from "sonner";
 import type { Role } from "@/core/auth/roles.ts";
 import { ROLE_LABELS } from "../../../_components/role-labels.ts";
+import { Button } from "../../../_ui/button.tsx";
+import { Input } from "../../../_ui/input.tsx";
+import { Label } from "../../../_ui/label.tsx";
 import { type AccessState, forgetComputers, saveCodeEmail } from "./actions.ts";
 
 const IDLE: AccessState = { status: "idle" };
@@ -48,16 +51,14 @@ export function AccountAccessRow({
         : null;
 
   return (
-    <section className="rounded-[14px] border border-admin-border bg-admin-card px-5 py-4">
+    <section className="rounded-xl border bg-card px-5 py-4">
       <div className="flex flex-wrap items-baseline justify-between gap-2">
-        <h3 className="font-serif text-[16px] font-semibold text-admin-primary">
-          {name}
-        </h3>
-        <span className="text-[11.5px] text-admin-muted">
+        <h3 className="text-base font-semibold text-foreground">{name}</h3>
+        <span className="text-xs text-muted-foreground">
           {ROLE_LABELS[role as Role] ?? role} · conta {accountEmail}
         </span>
       </div>
-      <p className="mt-1 text-[12.5px] text-admin-text">
+      <p className="mt-1 text-xs text-foreground">
         O código vai para <strong>{sendsTo}</strong>.
       </p>
       <form
@@ -65,26 +66,22 @@ export function AccountAccessRow({
         className="mt-3 flex flex-wrap items-end gap-2"
       >
         <input type="hidden" name="userId" value={userId} />
-        <label className="flex min-w-0 flex-1 flex-col gap-1 text-xs font-bold text-admin-primary">
+        <Label className="min-w-0 flex-1 flex-col items-stretch gap-1.5 text-foreground">
           E-mail de verificação
-          <input
+          <Input
             name="email"
             type="email"
             value={email}
             onChange={(event) => setEmail(event.target.value)}
             placeholder={`${accountEmail} (o da conta)`}
-            className="rounded-[9px] border border-admin-input-border bg-admin-input-bg px-3.5 py-2.5 text-[13.5px] font-normal text-admin-text outline-none focus:border-admin-primary-soft"
+            className="font-normal"
           />
-        </label>
-        <button
-          type="submit"
-          disabled={saving}
-          className="btn btn-admin-primary btn-md"
-        >
+        </Label>
+        <Button type="submit" disabled={saving}>
           {saving ? "Salvando..." : "Salvar"}
-        </button>
+        </Button>
         {codeEmail && (
-          <button
+          <Button
             type="button"
             disabled={saving}
             onClick={() => {
@@ -94,10 +91,10 @@ export function AccountAccessRow({
               data.set("email", "");
               startTransition(() => save(data));
             }}
-            className="btn btn-admin-secondary btn-md"
+            variant="outline"
           >
             Apagar
-          </button>
+          </Button>
         )}
       </form>
       <form onSubmit={submitKeeping(forget)} className="mt-2.5">
@@ -105,7 +102,7 @@ export function AccountAccessRow({
         <button
           type="submit"
           disabled={forgetting}
-          className="text-[12px] font-semibold text-admin-muted underline hover:text-admin-primary"
+          className="text-xs font-medium text-muted-foreground underline hover:text-foreground"
         >
           {forgetting
             ? "Aplicando..."
@@ -113,10 +110,7 @@ export function AccountAccessRow({
         </button>
       </form>
       {error && (
-        <p
-          role="alert"
-          className="mt-2 text-[12.5px] font-semibold text-admin-error-text"
-        >
+        <p role="alert" className="mt-2 text-sm text-destructive">
           {error}
         </p>
       )}

@@ -2,6 +2,8 @@
 
 import { useActionState } from "react";
 import { toast } from "sonner";
+import { buttonVariants } from "../_ui/button.tsx";
+import { cn } from "../_ui/cn.ts";
 import {
   type AttachmentItem,
   attachmentLabel,
@@ -29,7 +31,10 @@ function formatFileSize(bytes: number): string {
   return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
 }
 
-const BUTTON = "btn btn-admin-secondary btn-sm shrink-0";
+const BUTTON = cn(
+  buttonVariants({ variant: "outline", size: "sm" }),
+  "shrink-0",
+);
 
 /**
  * One attached file, everywhere the panel shows one: icon, name, when it
@@ -55,22 +60,22 @@ export function AttachmentRow({
   const label = attachmentLabel(attachment.displayName);
 
   return (
-    <div className="rounded-[10px] border border-admin-border bg-admin-input-bg px-3 py-2.5">
+    <div className="rounded-lg border bg-muted/50 px-3 py-2.5">
       <div className="flex items-center gap-3">
-        <span className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-[7px] bg-admin-readonly-bg text-admin-muted">
+        <span className="inline-flex size-8 shrink-0 items-center justify-center rounded-md bg-muted text-muted-foreground">
           <AdminIcon name="file" className="h-4 w-4" />
         </span>
         <span className="min-w-0 flex-1">
-          <span className="block truncate text-[13px] font-semibold text-admin-text">
+          <span className="block truncate text-sm font-medium text-foreground">
             {label}
           </span>
-          <span className="block text-[11px] text-admin-muted">
+          <span className="block text-xs text-muted-foreground">
             {meta} {attachment.createdAtLabel}
             {attachment.goneLabel && ` · ${attachment.goneLabel}`}
           </span>
         </span>
         {attachment.sizeBytes != null && (
-          <span className="shrink-0 text-[11.5px] text-admin-muted">
+          <span className="shrink-0 text-xs text-muted-foreground tabular-nums">
             {formatFileSize(attachment.sizeBytes)}
           </span>
         )}

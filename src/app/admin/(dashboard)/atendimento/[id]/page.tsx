@@ -6,6 +6,7 @@ import { findById } from "@/lib/service-request.ts";
 import { getSession } from "@/lib/session.ts";
 import { getTenant } from "@/lib/tenant.ts";
 import { AdminPageHeader } from "../../../_components/page-header.tsx";
+import { buttonVariants } from "../../../_ui/button.tsx";
 import { ConversationConsole } from "./_components/conversation-console.tsx";
 
 export const metadata = { title: "Atendimento online" };
@@ -39,12 +40,12 @@ export default async function ConversationPage({
     <>
       <AdminPageHeader title="Atendimento online" />
       <main className="flex min-h-0 flex-1 flex-col">
-        <div className="flex items-center gap-3 border-b border-admin-border bg-admin-card px-5.5 py-3.5">
+        <div className="mt-6 flex items-center gap-3 border-y bg-card px-4 py-3.5 md:px-8">
           <span className="min-w-0 flex-1">
-            <span className="block text-[14px] font-bold text-admin-text">
+            <span className="block text-sm font-semibold text-foreground">
               {conversation.citizenName}
             </span>
-            <span className="block text-[11.5px] text-admin-faint">
+            <span className="block text-xs text-muted-foreground">
               {conversation.sourcePath
                 ? `na página ${conversation.sourcePath}`
                 : "origem não registrada"}
@@ -55,7 +56,7 @@ export default async function ConversationPage({
           {matchedRequest && (
             <Link
               href={`/admin/pedidos/${encodeURIComponent(matchedRequest.protocolNumber)}`}
-              className="btn btn-admin-secondary btn-sm"
+              className={buttonVariants({ variant: "outline", size: "sm" })}
             >
               Abrir {matchedRequest.protocolNumber}
             </Link>

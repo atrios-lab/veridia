@@ -1,0 +1,21 @@
+{
+  "$schema": "https://ui.shadcn.com/schema.json",
+  "style": "base-vega",
+  "rsc": true,
+  "tsx": true,
+  "tailwind": {
+    "config": "",
+    "css": "src/app/admin/admin.css",
+    "baseColor": "neutral",
+    "cssVariables": true,
+    "prefix": ""
+  },
+  "iconLibrary": "lucide",
+  "aliases": {
+    "components": "@/app/admin/_ui",
+    "utils": "@/app/admin/_ui/cn",
+    "ui": "@/app/admin/_ui",
+    "lib": "@/app/admin/_ui",
+    "hooks": "@/app/admin/_ui"
+  }
+}

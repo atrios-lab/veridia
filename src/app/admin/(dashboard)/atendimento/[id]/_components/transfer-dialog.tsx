@@ -4,6 +4,10 @@ import { useActionState, useEffect, useId, useState } from "react";
 import { toast } from "sonner";
 import type { Colleague } from "@/lib/chat.ts";
 import { AdminDialog, DIALOG_FOOTER } from "../../../../_components/dialog.tsx";
+import { Button } from "../../../../_ui/button.tsx";
+import { cn } from "../../../../_ui/cn.ts";
+import { Label } from "../../../../_ui/label.tsx";
+import { Textarea } from "../../../../_ui/textarea.tsx";
 import { type ActionState, transferConversationAction } from "../actions.ts";
 
 const STATUS_LABEL: Record<string, string> = {
@@ -46,7 +50,7 @@ export function TransferDialog({
         <div className="dialog-body flex flex-col gap-3.5">
           <h2
             id={headingId}
-            className="font-serif text-[18px] font-semibold text-admin-primary"
+            className="text-lg leading-snug font-semibold text-foreground"
           >
             Transferir atendimento
           </h2>
@@ -55,11 +59,12 @@ export function TransferDialog({
             {colleagues.map((colleague) => (
               <label
                 key={colleague.id}
-                className={`flex cursor-pointer items-center gap-3 rounded-[10px] border px-3.5 py-2.5 ${
+                className={cn(
+                  "flex cursor-pointer items-center gap-3 rounded-lg border px-3.5 py-2.5 transition-colors",
                   toUserId === colleague.id
-                    ? "border-admin-primary-soft bg-admin-input-bg"
-                    : "border-admin-border"
-                }`}
+                    ? "border-primary bg-muted/50"
+                    : "hover:bg-muted/50",
+                )}
               >
                 <input
                   type="radio"
@@ -67,19 +72,19 @@ export function TransferDialog({
                   value={colleague.id}
                   checked={toUserId === colleague.id}
                   onChange={() => setToUserId(colleague.id)}
-                  className="h-4 w-4"
+                  className="h-4 w-4 accent-primary"
                 />
                 <span className="min-w-0 flex-1">
-                  <span className="block text-[13px] font-bold text-admin-text">
+                  <span className="block text-sm font-medium text-foreground">
                     {colleague.name}
                   </span>
                   {colleague.chatSector && (
-                    <span className="block text-[11.5px] text-admin-faint">
+                    <span className="block text-xs text-muted-foreground">
                       {colleague.chatSector}
                     </span>
                   )}
                 </span>
-                <span className="flex-none text-[11.5px] font-bold text-admin-muted">
+                <span className="flex-none text-xs font-medium text-muted-foreground">
                   {STATUS_LABEL[colleague.chatStatus] ?? colleague.chatStatus}
                   {" · "}
                   {colleague.activeCount} conversa
@@ -88,11 +93,12 @@ export function TransferDialog({
               </label>
             ))}
             <label
-              className={`flex cursor-pointer items-center gap-3 rounded-[10px] border px-3.5 py-2.5 ${
+              className={cn(
+                "flex cursor-pointer items-center gap-3 rounded-lg border px-3.5 py-2.5 transition-colors",
                 toUserId === ""
-                  ? "border-admin-primary-soft bg-admin-input-bg"
-                  : "border-admin-border"
-              }`}
+                  ? "border-primary bg-muted/50"
+                  : "hover:bg-muted/50",
+              )}
             >
               <input
                 type="radio"
@@ -100,56 +106,46 @@ export function TransferDialog({
                 value=""
                 checked={toUserId === ""}
                 onChange={() => setToUserId("")}
-                className="h-4 w-4"
+                className="h-4 w-4 accent-primary"
               />
-              <span className="text-[13px] font-bold text-admin-text">
+              <span className="text-sm font-medium text-foreground">
                 Devolver à fila geral
               </span>
             </label>
           </div>
           <div>
-            <label
-              className="mb-1.5 block text-[12px] font-bold text-admin-primary"
-              htmlFor="transfer-note"
-            >
-              Nota interna <span className="text-admin-error-text">*</span>{" "}
-              <span className="font-medium text-admin-faint">
+            <Label className="mb-1.5 block" htmlFor="transfer-note">
+              Nota interna <span className="text-destructive">*</span>{" "}
+              <span className="font-normal text-muted-foreground">
                 (por que está transferindo)
               </span>
-            </label>
-            <textarea
+            </Label>
+            <Textarea
               id="transfer-note"
               name="note"
               required
               rows={2}
-              className="w-full rounded-[10px] border border-admin-warning-bg bg-admin-warning-bg px-3.5 py-2.5 text-[13px] outline-none"
+              className="border-warning/30 bg-warning-soft"
             />
           </div>
           {state.status === "error" && (
-            <p
-              role="alert"
-              className="text-[12.5px] font-semibold text-admin-error-text"
-            >
+            <p role="alert" className="text-sm font-medium text-destructive">
               {state.message}
             </p>
           )}
         </div>
         <div className={DIALOG_FOOTER}>
-          <button
+          <Button
             type="button"
+            variant="outline"
             onClick={onDone}
             disabled={pending}
-            className="btn btn-admin-secondary btn-md"
           >
             Cancelar
-          </button>
-          <button
-            type="submit"
-            disabled={pending}
-            className="btn btn-admin-primary btn-md"
-          >
+          </Button>
+          <Button type="submit" disabled={pending}>
             {pending ? "Transferindo…" : "Transferir"}
-          </button>
+          </Button>
         </div>
       </form>
     </AdminDialog>

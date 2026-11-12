@@ -27,22 +27,30 @@ import {
 import type { Attribution, Tenant } from "@/core/tenant/schema.ts";
 import { LONG_TEXT_MAX } from "@/core/text-limits.ts";
 import { AdminIcon } from "../../../_components/icon.tsx";
+import { Badge } from "../../../_ui/badge.tsx";
+import { Button, buttonVariants } from "../../../_ui/button.tsx";
+import { cn } from "../../../_ui/cn.ts";
+import { Input } from "../../../_ui/input.tsx";
+import { Label } from "../../../_ui/label.tsx";
+import {
+  NativeSelect,
+  NativeSelectOption,
+} from "../../../_ui/native-select.tsx";
+import { Textarea } from "../../../_ui/textarea.tsx";
 import { AlternateDocumentFields } from "../_components/alternate-document-fields.tsx";
 import {
   createManualServiceRequest,
   type ManualEntryState,
 } from "./actions.ts";
 
-const FIELD_CLASS =
-  "w-full rounded-[9px] border border-admin-input-border bg-admin-input-bg px-3.5 py-2.5 text-[13.5px] text-admin-text outline-none focus:border-admin-primary-soft";
-const LABEL_CLASS = "mb-1.5 block text-xs font-bold text-admin-primary";
+/** A group's own heading (Atribuição), in the same voice as a field label. */
+const GROUP_LABEL =
+  "mb-2 block text-sm leading-none font-medium text-foreground";
 
 function FieldError({ message }: { message?: string }) {
   if (!message) return null;
   return (
-    <p className="mt-1.5 text-xs font-semibold text-admin-error-text">
-      {message}
-    </p>
+    <p className="mt-1.5 text-xs font-medium text-destructive">{message}</p>
   );
 }
 
@@ -75,34 +83,26 @@ function ManualBeneficiaryFields({
   return (
     <div className="flex flex-col gap-3">
       {heading && (
-        <p className="text-[12.5px] font-bold text-admin-primary">{heading}</p>
+        <p className="text-sm font-semibold text-foreground">{heading}</p>
       )}
       <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
         <div>
-          <label className={LABEL_CLASS} htmlFor={`${prefix}.name`}>
+          <Label className="mb-2" htmlFor={`${prefix}.name`}>
             Nome completo
-          </label>
-          <input
-            id={`${prefix}.name`}
-            name={`${prefix}.name`}
-            className={FIELD_CLASS}
-          />
+          </Label>
+          <Input id={`${prefix}.name`} name={`${prefix}.name`} />
           <FieldError message={fieldErrors[`${prefix}.name`]} />
         </div>
         <div>
-          <label className={LABEL_CLASS} htmlFor={`${prefix}.cpfOrId`}>
+          <Label className="mb-2" htmlFor={`${prefix}.cpfOrId`}>
             CPF ou RG (opcional)
-          </label>
-          <input
-            id={`${prefix}.cpfOrId`}
-            name={`${prefix}.cpfOrId`}
-            className={FIELD_CLASS}
-          />
+          </Label>
+          <Input id={`${prefix}.cpfOrId`} name={`${prefix}.cpfOrId`} />
         </div>
       </div>
 
       <fieldset className="flex flex-col gap-1.5">
-        <legend className="mb-0.5 text-xs font-bold text-admin-primary">
+        <legend className="mb-1 text-sm font-medium text-foreground">
           Quem formaliza esta declaração?
         </legend>
         {EXEMPTION_SIGNED_BY.map((value) => (
@@ -113,9 +113,9 @@ function ManualBeneficiaryFields({
               value={value}
               checked={signedBy === value}
               onChange={() => setSignedBy(value)}
-              className="h-4 w-4 accent-admin-primary-soft"
+              className="size-4 accent-primary"
             />
-            <span className="text-[12.5px] text-admin-text">
+            <span className="text-sm text-foreground">
               {SIGNED_BY_LABELS[value]}
             </span>
           </label>
@@ -123,51 +123,41 @@ function ManualBeneficiaryFields({
       </fieldset>
 
       {signedBy !== "self" && (
-        <div className="rounded-[10px] border border-admin-input-border bg-admin-input-bg p-3">
-          <p className="mb-2 text-xs font-bold text-admin-primary">
+        <div className="rounded-lg border bg-background p-3">
+          <p className="mb-2 text-sm font-medium text-foreground">
             Dados de quem assina em lugar da pessoa beneficiária
           </p>
           <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
-            <input
-              placeholder="Nome completo"
-              name={`${prefix}.signer.name`}
-              className={FIELD_CLASS}
-            />
-            <input
-              placeholder="CPF ou RG"
-              name={`${prefix}.signer.cpfOrId`}
-              className={FIELD_CLASS}
-            />
+            <Input placeholder="Nome completo" name={`${prefix}.signer.name`} />
+            <Input placeholder="CPF ou RG" name={`${prefix}.signer.cpfOrId`} />
             {signedBy === "legal-representative" && (
-              <input
+              <Input
                 placeholder="Qualidade (ex.: pai, tutor, curador)"
                 name={`${prefix}.signer.capacity`}
-                className={FIELD_CLASS}
               />
             )}
           </div>
           <FieldError message={fieldErrors[`${prefix}.signer.name`]} />
 
           {signedBy === "on-behalf" && (
-            <div className="mt-3 grid grid-cols-1 gap-3 border-t border-admin-border pt-3 md:grid-cols-2">
+            <div className="mt-3 grid grid-cols-1 gap-3 border-t pt-3 md:grid-cols-2">
               {[0, 1].map((witness) => (
                 <div key={witness}>
-                  <label
-                    className={LABEL_CLASS}
+                  <Label
+                    className="mb-2"
                     htmlFor={`${prefix}.witnesses.${witness}.name`}
                   >
                     Testemunha {witness + 1}
-                  </label>
-                  <input
+                  </Label>
+                  <Input
                     id={`${prefix}.witnesses.${witness}.name`}
                     name={`${prefix}.witnesses.${witness}.name`}
                     placeholder="Nome completo"
-                    className={FIELD_CLASS}
                   />
-                  <input
+                  <Input
                     name={`${prefix}.witnesses.${witness}.cpfOrId`}
                     placeholder="CPF ou RG"
-                    className={`${FIELD_CLASS} mt-2`}
+                    className="mt-2"
                   />
                 </div>
               ))}
@@ -185,12 +175,13 @@ const STEPS = ["Dados do pedido", "Impressão"] as const;
 /**
  * The counter's two moments: filling the request, then handing the paper over.
  * Its own component rather than the public site's `Stepper`: that one is fixed
- * at three steps and paints itself with `--color-brand-*`, and the panel reads
- * `--color-admin-*` on purpose, so the two can change independently.
+ * at three steps and paints itself with the office's palette, and the panel
+ * reads its own neutral tokens on purpose, so the two can change
+ * independently.
  */
 function Stepper({ current }: { current: 1 | 2 }) {
   return (
-    <ol className="mb-5 flex items-center gap-3">
+    <ol className="mb-6 flex items-center gap-3">
       {STEPS.map((label, index) => {
         const step = index + 1;
         const done = step < current;
@@ -198,43 +189,33 @@ function Stepper({ current }: { current: 1 | 2 }) {
         return (
           <li
             key={label}
-            className={`flex items-center gap-2.5 ${
+            className={`flex items-center gap-2 ${
               step < STEPS.length ? "flex-1" : ""
             }`}
           >
             <span
-              className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-[12.5px] font-bold ${
-                done
-                  ? "bg-admin-primary-soft text-white"
-                  : active
-                    ? "bg-admin-primary text-white"
-                    : "bg-admin-border text-admin-faint"
+              className={`flex size-7 shrink-0 items-center justify-center rounded-full text-xs font-semibold tabular-nums ${
+                done || active
+                  ? "bg-primary text-primary-foreground"
+                  : "bg-muted text-muted-foreground"
               }`}
             >
               {done ? (
-                <AdminIcon
-                  name="check"
-                  className="h-3.5 w-3.5"
-                  strokeWidth={3}
-                />
+                <AdminIcon name="check" className="size-3.5" strokeWidth={3} />
               ) : (
                 step
               )}
             </span>
             <span
-              className={`text-[13px] ${
-                active
-                  ? "font-bold text-admin-primary"
-                  : "font-semibold text-admin-faint"
+              className={`text-sm font-medium ${
+                active ? "text-foreground" : "text-muted-foreground"
               }`}
             >
               {label}
             </span>
             {step < STEPS.length && (
               <span
-                className={`h-0.5 flex-1 ${
-                  done ? "bg-admin-primary-soft" : "bg-admin-border"
-                }`}
+                className={`h-0.5 flex-1 ${done ? "bg-primary" : "bg-border"}`}
               />
             )}
           </li>
@@ -250,19 +231,18 @@ function Stepper({ current }: { current: 1 | 2 }) {
 function ManualPurposeField({ error }: { error?: string }) {
   return (
     <div>
-      <label className={LABEL_CLASS} htmlFor="purpose">
+      <Label className="mb-2" htmlFor="purpose">
         {PURPOSE_LABEL}
-      </label>
-      <textarea
+      </Label>
+      <Textarea
         id="purpose"
         name="purpose"
         rows={2}
         maxLength={LONG_TEXT_MAX}
         placeholder={PURPOSE_PLACEHOLDER}
         aria-describedby="purpose-hint"
-        className={FIELD_CLASS}
       />
-      <p id="purpose-hint" className="mt-1 text-[11px] text-admin-faint">
+      <p id="purpose-hint" className="mt-1 text-xs text-muted-foreground">
         {PURPOSE_HINT}
       </p>
       <FieldError message={error} />
@@ -272,8 +252,8 @@ function ManualPurposeField({ error }: { error?: string }) {
 
 function ManualDeliveryFormatField({ error }: { error?: string }) {
   return (
-    <fieldset className="mt-3.5 flex flex-col gap-1.5">
-      <legend className="mb-0.5 text-xs font-bold text-admin-primary">
+    <fieldset className="mt-4 flex flex-col gap-1.5">
+      <legend className="mb-1 text-sm font-medium text-foreground">
         Como quer receber a certidão?
       </legend>
       {DELIVERY_FORMATS.map((value) => (
@@ -282,9 +262,9 @@ function ManualDeliveryFormatField({ error }: { error?: string }) {
             type="radio"
             name="deliveryFormat"
             value={value}
-            className="h-4 w-4 accent-admin-primary-soft"
+            className="size-4 accent-primary"
           />
-          <span className="text-[12.5px] text-admin-text">
+          <span className="text-sm text-foreground">
             {DELIVERY_FORMAT_LABELS[value]}
           </span>
         </label>
@@ -301,9 +281,9 @@ function ManualRequesterQualificationFields({
 }) {
   const [role, setRole] = useState("");
   return (
-    <div className="mt-3.5 flex flex-col gap-3 rounded-[10px] border border-admin-border bg-admin-input-bg p-4">
+    <div className="mt-4 flex flex-col gap-3 rounded-lg bg-muted/50 p-4">
       <fieldset className="flex flex-col gap-1.5">
-        <legend className="mb-0.5 text-xs font-bold text-admin-primary">
+        <legend className="mb-1 text-sm font-medium text-foreground">
           Quem está pedindo?
         </legend>
         {REQUESTER_ROLES.map((value) => (
@@ -314,9 +294,9 @@ function ManualRequesterQualificationFields({
               value={value}
               checked={role === value}
               onChange={() => setRole(value)}
-              className="h-4 w-4 accent-admin-primary-soft"
+              className="size-4 accent-primary"
             />
-            <span className="text-[12.5px] text-admin-text">
+            <span className="text-sm text-foreground">
               {REQUESTER_ROLE_LABELS[value]}
             </span>
           </label>
@@ -326,27 +306,23 @@ function ManualRequesterQualificationFields({
 
       {role === "attorney" && (
         <div>
-          <label className={LABEL_CLASS} htmlFor="representedName">
+          <Label className="mb-2" htmlFor="representedName">
             Nome do representado
-          </label>
-          <input
-            id="representedName"
-            name="representedName"
-            className={FIELD_CLASS}
-          />
+          </Label>
+          <Input id="representedName" name="representedName" />
           <FieldError message={fieldErrors.representedName} />
           {/* Cor cheia, como as faixas da fila: a nota miúda passava. */}
           <div
             role="note"
-            className="mt-2 flex items-start gap-2 rounded-lg bg-admin-warning-text px-3 py-2.5 text-white"
+            className="mt-2 flex items-start gap-2 rounded-lg bg-warning px-3 py-2.5 text-warning-foreground"
           >
             <AdminIcon
               name="alert"
-              className="mt-0.5 h-4 w-4 shrink-0"
+              className="mt-0.5 size-4 shrink-0"
               strokeWidth={2}
             />
-            <p className="text-[12.5px] leading-snug">
-              <strong className="font-bold">
+            <p className="text-sm leading-snug">
+              <strong className="font-semibold">
                 Confira o mandato (procuração).
               </strong>{" "}
               Anexe-o ao pedido depois de registrar.
@@ -357,16 +333,16 @@ function ManualRequesterQualificationFields({
 
       {role && role !== "self" && (
         <div>
-          <label className={LABEL_CLASS} htmlFor="kinship">
+          <Label className="mb-2" htmlFor="kinship">
             Grau de parentesco com a pessoa registrada (se houver)
-          </label>
-          <input id="kinship" name="kinship" className={FIELD_CLASS} />
+          </Label>
+          <Input id="kinship" name="kinship" />
           <FieldError message={fieldErrors.kinship} />
         </div>
       )}
 
       <fieldset className="flex flex-col gap-1.5">
-        <legend className="mb-0.5 text-xs font-bold text-admin-primary">
+        <legend className="mb-1 text-sm font-medium text-foreground">
           A pessoa registrada é falecida?
         </legend>
         <div className="flex gap-4">
@@ -381,16 +357,16 @@ function ManualRequesterQualificationFields({
                 type="radio"
                 name="registrantDeceased"
                 value={value}
-                className="h-4 w-4 accent-admin-primary-soft"
+                className="size-4 accent-primary"
               />
-              <span className="text-[12.5px] text-admin-text">{label}</span>
+              <span className="text-sm text-foreground">{label}</span>
             </label>
           ))}
         </div>
         <FieldError message={fieldErrors.registrantDeceased} />
       </fieldset>
 
-      <p className="text-[11.5px] leading-relaxed text-admin-muted">
+      <p className="text-xs leading-relaxed text-muted-foreground">
         {REQUESTER_QUALIFICATION_NOTICE}
       </p>
     </div>
@@ -412,32 +388,25 @@ function ManualVariantField({
 }) {
   return (
     <div>
-      <label className={LABEL_CLASS} htmlFor="actVariant">
+      <Label className="mb-2" htmlFor="actVariant">
         {variants.question}
-      </label>
-      <div className="relative">
-        <select
-          id="actVariant"
-          name="actVariant"
-          {...(value === undefined ? { defaultValue: "" } : { value })}
-          onChange={(event) => onChange?.(event.target.value)}
-          className={`appearance-none pr-9 ${FIELD_CLASS}`}
-        >
-          <option value="" disabled>
-            Escolha uma opção
-          </option>
-          {variants.options.map((option) => (
-            <option key={option.id} value={option.id}>
-              {option.name}
-            </option>
-          ))}
-        </select>
-        <AdminIcon
-          name="chevronDown"
-          className="pointer-events-none absolute top-1/2 right-3.5 h-3.5 w-3.5 -translate-y-1/2 text-admin-muted"
-          strokeWidth={2}
-        />
-      </div>
+      </Label>
+      <NativeSelect
+        id="actVariant"
+        name="actVariant"
+        {...(value === undefined ? { defaultValue: "" } : { value })}
+        onChange={(event) => onChange?.(event.target.value)}
+        className="w-full"
+      >
+        <NativeSelectOption value="" disabled>
+          Escolha uma opção
+        </NativeSelectOption>
+        {variants.options.map((option) => (
+          <NativeSelectOption key={option.id} value={option.id}>
+            {option.name}
+          </NativeSelectOption>
+        ))}
+      </NativeSelect>
       <FieldError message={error} />
     </div>
   );
@@ -512,7 +481,7 @@ export function ManualEntryForm({
           const data = new FormData(event.currentTarget);
           startTransition(() => formAction(data));
         }}
-        className="rounded-[14px] border border-admin-border bg-admin-card p-6.5"
+        className="rounded-xl border bg-card p-6"
       >
         {fromConversation && (
           <>
@@ -521,29 +490,30 @@ export function ManualEntryForm({
               name="fromConversationId"
               value={fromConversation.id}
             />
-            <p className="mb-4.5 rounded-[10px] border border-admin-input-border bg-admin-input-bg px-3.5 py-2.5 text-[12.5px] text-admin-muted">
+            <p className="mb-4 rounded-lg bg-muted/50 px-4 py-3 text-sm text-muted-foreground">
               A partir da conversa com <b>{fromConversation.name}</b>. Ao
               registrar, o atendimento é encerrado e vinculado a este pedido.
             </p>
           </>
         )}
-        <span className="mb-3 block text-[11.5px] font-bold uppercase tracking-[0.09em] text-admin-accent">
-          Atribuição
-        </span>
+        <span className={GROUP_LABEL}>Atribuição</span>
         <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
           {tenant.attributions.map((a) => (
             <button
               key={a}
               type="button"
+              aria-pressed={a === attribution}
               onClick={() => {
                 setAttribution(a);
                 setActId(actsOfAttribution(tenant, a)[0]?.id ?? "");
               }}
-              className={
-                a === attribution
-                  ? "rounded-[9px] border-[1.5px] border-admin-primary-soft bg-admin-input-bg px-3 py-2 text-center text-[12.5px] font-bold text-admin-primary"
-                  : "rounded-[9px] border border-admin-border px-3 py-2 text-center text-[12.5px] font-semibold text-admin-muted"
-              }
+              className={cn(
+                buttonVariants({
+                  variant: a === attribution ? "default" : "outline",
+                }),
+                "w-full",
+                a !== attribution && "text-muted-foreground",
+              )}
             >
               {a}
             </button>
@@ -551,63 +521,55 @@ export function ManualEntryForm({
         </div>
 
         <div className="mt-5">
-          <label className={LABEL_CLASS} htmlFor="actId">
+          <Label className="mb-2" htmlFor="actId">
             Ato
-          </label>
-          <div className="relative">
-            <select
-              id="actId"
-              name="actId"
-              value={actId}
-              onChange={(event) => setActId(event.target.value)}
-              className={`appearance-none pr-9 ${FIELD_CLASS}`}
-            >
-              {acts.map((a) => (
-                <option key={a.id} value={a.id}>
-                  {a.name}
-                </option>
-              ))}
-            </select>
-            <AdminIcon
-              name="chevronDown"
-              className="pointer-events-none absolute top-1/2 right-3.5 h-3.5 w-3.5 -translate-y-1/2 text-admin-muted"
-              strokeWidth={2}
-            />
-          </div>
+          </Label>
+          <NativeSelect
+            id="actId"
+            name="actId"
+            value={actId}
+            onChange={(event) => setActId(event.target.value)}
+            className="w-full"
+          >
+            {acts.map((a) => (
+              <NativeSelectOption key={a.id} value={a.id}>
+                {a.name}
+              </NativeSelectOption>
+            ))}
+          </NativeSelect>
         </div>
 
-        <div className="mt-4 grid grid-cols-1 gap-3.5 md:grid-cols-2">
+        <div className="mt-4 grid grid-cols-1 gap-4 md:grid-cols-2">
           <div>
-            <label className={LABEL_CLASS} htmlFor="applicantName">
+            <Label className="mb-2" htmlFor="applicantName">
               Nome do solicitante
-            </label>
-            <input
+            </Label>
+            <Input
               id="applicantName"
               name="applicantName"
               defaultValue={fromConversation?.name}
-              className={FIELD_CLASS}
             />
             <FieldError message={fieldErrors.applicantName} />
           </div>
           <div>
-            <label className={LABEL_CLASS} htmlFor="cpf">
+            <Label className="mb-2" htmlFor="cpf">
               CPF
               {act?.consultation && (
-                <span className="font-normal text-admin-muted">
+                <span className="font-normal text-muted-foreground">
                   {" "}
                   · opcional na busca
                 </span>
               )}
-            </label>
+            </Label>
             {/* Remounted on the toggle: a number left behind in the disabled
                 field would read as if it were being filed. */}
-            <input
+            <Input
               key={noCpf ? "no-cpf" : "cpf"}
               id="cpf"
               name="cpf"
               placeholder="000.000.000-00"
               disabled={noCpf}
-              className={`${FIELD_CLASS} disabled:bg-admin-readonly-bg disabled:text-admin-muted`}
+              className="disabled:bg-muted"
             />
             <FieldError message={fieldErrors.cpf} />
             <AlternateDocumentFields
@@ -618,15 +580,14 @@ export function ManualEntryForm({
             />
           </div>
           <div>
-            <label className={LABEL_CLASS} htmlFor="contact">
+            <Label className="mb-2" htmlFor="contact">
               E-mail ou WhatsApp
-            </label>
-            <input
+            </Label>
+            <Input
               id="contact"
               name="contact"
               defaultValue={fromConversation?.contact}
               placeholder="Para avisar sobre o andamento"
-              className={FIELD_CLASS}
             />
             <FieldError message={fieldErrors.contact} />
             <p className="mt-1 text-xs leading-snug text-admin-muted">
@@ -635,21 +596,20 @@ export function ManualEntryForm({
             </p>
           </div>
           <div>
-            <label className={LABEL_CLASS} htmlFor="amount">
+            <Label className="mb-2" htmlFor="amount">
               Valor (se já souber)
-            </label>
-            <input
+            </Label>
+            <Input
               id="amount"
               name="amount"
               inputMode="decimal"
               placeholder="Pode informar depois"
-              className={FIELD_CLASS}
             />
           </div>
         </div>
 
         {act?.variants && (
-          <div className="mt-3.5">
+          <div className="mt-4">
             {/* Keyed so that changing the act discards the kind chosen. */}
             <ManualVariantField
               key={act.id}
@@ -673,7 +633,7 @@ export function ManualEntryForm({
         {/* Na gratuidade, o campo vem dentro do bloco, depois do tipo de
             certidão que o decide. */}
         {purposeAsked && !exemptionTargets && (
-          <div className="mt-3.5">
+          <div className="mt-4">
             <ManualPurposeField error={fieldErrors.purpose} />
           </div>
         )}
@@ -685,25 +645,24 @@ export function ManualEntryForm({
           />
         )}
 
-        <div className="mt-3.5">
-          <label className={LABEL_CLASS} htmlFor="description">
+        <div className="mt-4">
+          <Label className="mb-2" htmlFor="description">
             Discrimine sua solicitação
-          </label>
-          <textarea
+          </Label>
+          <Textarea
             id="description"
             name="description"
             rows={3}
             maxLength={LONG_TEXT_MAX}
             placeholder="Detalhes do pedido, documentos já entregues em mãos…"
-            className={FIELD_CLASS}
           />
           <FieldError message={fieldErrors.description} />
         </div>
 
         {exemptionTargets && (
-          <div className="mt-4.5 flex flex-col gap-4 rounded-[10px] border border-admin-border bg-admin-input-bg p-4">
+          <div className="mt-4 flex flex-col gap-4 rounded-lg bg-muted/50 p-4">
             <fieldset className="flex flex-col gap-2">
-              <legend className="mb-0.5 text-xs font-bold text-admin-primary">
+              <legend className="mb-1 text-sm font-medium text-foreground">
                 Para qual ato é a gratuidade?
               </legend>
               {exemptionTargets.map((option) => (
@@ -717,11 +676,11 @@ export function ManualEntryForm({
                       setExemptionActId(option.id);
                       setChosenVariant(undefined);
                     }}
-                    className="mt-0.5 h-4 w-4 shrink-0 accent-admin-primary-soft"
+                    className="mt-0.5 size-4 shrink-0 accent-primary"
                   />
-                  <span className="text-[12.5px] text-admin-text">
+                  <span className="text-sm text-foreground">
                     {option.name}
-                    <span className="block text-[11px] text-admin-faint">
+                    <span className="block text-xs text-muted-foreground">
                       {option.feeExemption?.legalBasis}
                     </span>
                   </span>
@@ -731,7 +690,7 @@ export function ManualEntryForm({
             <FieldError message={fieldErrors.exemptionActId} />
 
             {exemptionTarget?.variants && (
-              <div className="border-t border-admin-border pt-3">
+              <div className="border-t pt-3">
                 {/* Controlado: no inteiro teor, o óbito não pede o motivo. */}
                 <ManualVariantField
                   key={exemptionTarget.id}
@@ -746,8 +705,8 @@ export function ManualEntryForm({
             )}
 
             {exemptionTarget?.feeExemption?.askCertificateType && (
-              <fieldset className="flex flex-col gap-2 border-t border-admin-border pt-3">
-                <legend className="mb-0.5 text-xs font-bold text-admin-primary">
+              <fieldset className="flex flex-col gap-2 border-t pt-3">
+                <legend className="mb-1 text-sm font-medium text-foreground">
                   Que tipo de certidão?
                 </legend>
                 <div className="flex flex-wrap gap-3">
@@ -764,9 +723,9 @@ export function ManualEntryForm({
                             value,
                           })
                         }
-                        className="h-4 w-4 accent-admin-primary-soft"
+                        className="size-4 accent-primary"
                       />
-                      <span className="text-[12.5px] text-admin-text">
+                      <span className="text-sm text-foreground">
                         {CERTIFICATE_TYPE_LABELS[value]}
                       </span>
                     </label>
@@ -777,13 +736,13 @@ export function ManualEntryForm({
             )}
 
             {purposeAsked && (
-              <div className="border-t border-admin-border pt-3">
+              <div className="border-t pt-3">
                 <ManualPurposeField error={fieldErrors.purpose} />
               </div>
             )}
 
             {exemptionTarget && (
-              <div className="border-t border-admin-border pt-3">
+              <div className="border-t pt-3">
                 <ManualBeneficiaryFields
                   index={0}
                   fieldErrors={fieldErrors}
@@ -796,7 +755,7 @@ export function ManualEntryForm({
               </div>
             )}
             {exemptionTarget?.feeExemption?.beneficiaryCount === 2 && (
-              <div className="border-t border-admin-border pt-3">
+              <div className="border-t pt-3">
                 <ManualBeneficiaryFields
                   index={1}
                   fieldErrors={fieldErrors}
@@ -805,18 +764,18 @@ export function ManualEntryForm({
               </div>
             )}
 
-            <div className="border-t border-admin-border pt-3">
-              <label className="flex items-start gap-2.5">
+            <div className="border-t pt-3">
+              <label className="flex items-start gap-2">
                 <input
                   type="checkbox"
                   name="exemptionDeclaration"
-                  className="mt-0.5 h-4.5 w-4.5 shrink-0 accent-admin-primary-soft"
+                  className="checkbox-admin mt-0.5 shrink-0"
                 />
-                <span className="text-[12px] leading-relaxed text-admin-text">
+                <span className="text-sm leading-relaxed text-foreground">
                   {FEE_EXEMPTION_DECLARATION} Declaro, ainda, ciência de que:
                 </span>
               </label>
-              <ul className="ml-7 mt-1.5 flex list-disc flex-col gap-1 text-[11px] leading-relaxed text-admin-faint">
+              <ul className="mt-1.5 ml-7 flex list-disc flex-col gap-1 text-xs leading-relaxed text-muted-foreground">
                 {FEE_EXEMPTION_ACKNOWLEDGEMENTS.map((item) => (
                   <li key={item}>{item}</li>
                 ))}
@@ -828,21 +787,21 @@ export function ManualEntryForm({
               href="/solicitar/declaracao-hipossuficiencia"
               target="_blank"
               rel="noreferrer"
-              className="text-[11.5px] font-semibold text-admin-accent underline"
+              className="text-xs font-medium text-primary underline underline-offset-4"
             >
               Formulário em branco do Anexo I (PDF), para entregar
             </a>
           </div>
         )}
 
-        <label className="mt-4.5 flex items-center gap-2.5 rounded-[10px] border border-admin-border bg-admin-input-bg px-3.5 py-3">
+        <label className="mt-4 flex items-center gap-2 rounded-lg bg-muted/50 px-4 py-3">
           <input
             type="checkbox"
             name="counter"
             defaultChecked
-            className="h-[18px] w-[18px] accent-admin-primary-soft"
+            className="checkbox-admin"
           />
-          <span className="text-[12.5px] text-admin-text">
+          <span className="text-sm text-foreground">
             Pedido recebido presencialmente no balcão: documentos já estão em
             mãos da serventia.
           </span>
@@ -851,21 +810,17 @@ export function ManualEntryForm({
         {state.status === "error" && (
           <p
             role="alert"
-            className="mt-4 rounded-lg bg-admin-error-bg px-3.5 py-2.5 text-sm font-semibold text-admin-error-text"
+            className="mt-4 rounded-lg border border-destructive/40 bg-destructive-soft px-4 py-3 text-sm font-medium text-destructive"
           >
             {state.message}
           </p>
         )}
 
-        <div className="mt-5.5 flex items-center gap-3.5">
-          <button
-            type="submit"
-            disabled={pending}
-            className="btn btn-admin-primary btn-lg"
-          >
+        <div className="mt-6 flex items-center gap-3">
+          <Button type="submit" size="lg" disabled={pending}>
             {pending ? "Registrando…" : "Registrar pedido"}
-          </button>
-          <span className="text-[12px] text-admin-faint">
+          </Button>
+          <span className="text-xs text-muted-foreground">
             Gera o protocolo REQ e a chave de acesso, como no site público.
           </span>
         </div>
@@ -959,38 +914,40 @@ function CredentialBlock({
     <div
       className={
         guarded
-          ? "flex-1 rounded-[10px] border border-admin-warning-text/25 bg-admin-warning-bg p-3.5"
-          : "flex-1 rounded-[10px] border border-admin-input-border bg-admin-input-bg p-3.5"
+          ? "flex-1 rounded-lg border border-warning/30 bg-warning-soft p-4"
+          : "flex-1 rounded-lg border bg-muted/50 p-4"
       }
     >
-      <span className="flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-[0.11em] text-admin-muted">
-        {guarded && <AdminIcon name="lock" className="h-3 w-3" />}
+      <span className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground">
+        {guarded && <AdminIcon name="lock" className="size-3" />}
         {label}
       </span>
       <div className="mt-1.5 flex items-center justify-between gap-2">
-        <span className="font-mono text-[17px] font-bold tracking-[0.06em] text-admin-primary">
+        <span className="font-mono text-lg font-semibold tracking-wider text-foreground">
           {value}
         </span>
-        <button
+        <Button
           type="button"
+          variant="outline"
+          size="icon-sm"
           onClick={onCopy}
           aria-label={`Copiar ${label.toLowerCase()}`}
-          className="btn btn-admin-secondary btn-sm shrink-0"
+          className="shrink-0"
         >
           <AdminIcon
             name={copied?.ok ? "check" : "copy"}
-            className="h-3.5 w-3.5"
+            className="size-3.5"
             strokeWidth={2}
           />
-        </button>
+        </Button>
       </div>
       {/* The note gives way to the copy result, so success and failure land
           in the same spot the eye is already on, instead of a toast the
           operator may never look at. */}
       {copied ? (
         <output
-          className={`mt-1.5 block text-[11.5px] font-semibold leading-snug ${
-            copied.ok ? "text-admin-success-text" : "text-admin-error-text"
+          className={`mt-1.5 block text-xs leading-snug font-medium ${
+            copied.ok ? "text-success-text" : "text-destructive"
           }`}
         >
           {copied.ok
@@ -999,8 +956,8 @@ function CredentialBlock({
         </output>
       ) : (
         <p
-          className={`mt-1.5 text-[11.5px] leading-snug ${
-            guarded ? "text-admin-warning-text" : "text-admin-muted"
+          className={`mt-1.5 text-xs leading-snug ${
+            guarded ? "text-warning-text" : "text-muted-foreground"
           }`}
         >
           {note}
@@ -1013,10 +970,10 @@ function CredentialBlock({
 function SummaryField({ label, value }: { label: string; value: string }) {
   return (
     <div>
-      <span className="block text-[10px] font-bold uppercase tracking-[0.11em] text-admin-muted">
+      <span className="block text-xs font-medium text-muted-foreground">
         {label}
       </span>
-      <span className="mt-0.5 block text-[13px] text-admin-text">{value}</span>
+      <span className="mt-0.5 block text-sm text-foreground">{value}</span>
     </div>
   );
 }
@@ -1114,7 +1071,7 @@ function SuccessScreen({ state }: { state: SuccessState }) {
       {state.emailWarning ? (
         <p
           role="alert"
-          className="rounded-[14px] bg-admin-warning-bg px-4 py-3 text-[13px] font-semibold text-admin-warning-text"
+          className="rounded-lg border border-warning/30 bg-warning-soft p-4 text-sm font-medium text-warning-text"
         >
           {state.emailWarning}
         </p>
@@ -1137,22 +1094,22 @@ function SuccessScreen({ state }: { state: SuccessState }) {
           comprovante impresso, que traz o protocolo e a chave de acesso.
         </p>
       )}
-      <section className="rounded-[14px] border border-admin-border bg-admin-card p-6">
-        <div className="flex items-start gap-3.5">
-          <span className="mt-0.5 flex h-9 w-9 flex-none items-center justify-center rounded-full bg-admin-success-bg">
+      <section className="rounded-xl border bg-card p-6">
+        <div className="flex items-start gap-3">
+          <span className="mt-0.5 flex size-9 flex-none items-center justify-center rounded-full bg-success-soft">
             <AdminIcon
               name="check"
-              className="h-4.5 w-4.5 text-admin-success-text"
+              className="size-4.5 text-success-text"
               strokeWidth={2.5}
             />
           </span>
           <div className="min-w-0">
-            <h3 className="font-serif text-[19px] font-semibold text-admin-primary">
+            <h3 className="text-xl font-semibold text-foreground">
               Pedido registrado
             </h3>
-            <p className="mt-0.5 text-[13px] text-admin-muted">
+            <p className="mt-0.5 text-sm text-muted-foreground">
               {state.actName} ·{" "}
-              <b className="font-semibold text-admin-text">
+              <b className="font-semibold text-foreground">
                 {state.applicantName}
               </b>{" "}
               · {state.filedAtLabel}
@@ -1160,7 +1117,7 @@ function SuccessScreen({ state }: { state: SuccessState }) {
           </div>
         </div>
 
-        <div className="mt-4.5 flex flex-col gap-3 sm:flex-row">
+        <div className="mt-4 flex flex-col gap-3 sm:flex-row">
           <CredentialBlock
             label="Protocolo"
             value={state.protocolNumber}
@@ -1178,35 +1135,31 @@ function SuccessScreen({ state }: { state: SuccessState }) {
           />
         </div>
 
-        <div className="mt-4.5 grid grid-cols-2 gap-4 border-t border-admin-border pt-4 sm:grid-cols-4">
+        <div className="mt-4 grid grid-cols-2 gap-4 border-t pt-4 sm:grid-cols-4">
           {summary.map((field) => (
             <SummaryField key={field.label} {...field} />
           ))}
         </div>
       </section>
 
-      <section className="overflow-hidden rounded-[14px] border border-admin-border bg-admin-card">
+      <section className="overflow-hidden rounded-xl border bg-card">
         <div className="flex flex-wrap items-center gap-3 p-5">
           <div className="min-w-0 flex-1">
-            <h4 className="font-serif text-[16px] font-semibold text-admin-primary">
+            <h4 className="text-base font-semibold text-foreground">
               Emitir agora
             </h4>
-            <p className="mt-0.5 text-[12px] text-admin-muted">
+            <p className="mt-0.5 text-xs text-muted-foreground">
               Cada emissão fica registrada na auditoria, com quem emitiu e
               quando.
             </p>
           </div>
-          <span className="rounded-full bg-admin-surface px-2.5 py-1 text-[11px] font-bold text-admin-muted">
+          <Badge className="bg-muted text-muted-foreground tabular-nums">
             {printed.length} de {docs.length}
-          </span>
-          <button
-            type="button"
-            onClick={printBoth}
-            className="btn btn-admin-primary btn-md"
-          >
-            <AdminIcon name="printer" className="h-4 w-4" strokeWidth={2} />
+          </Badge>
+          <Button type="button" onClick={printBoth}>
+            <AdminIcon name="printer" className="size-4" strokeWidth={2} />
             Emitir os dois
-          </button>
+          </Button>
         </div>
 
         {docs.map((doc) => (
@@ -1229,23 +1182,21 @@ function SuccessScreen({ state }: { state: SuccessState }) {
           for "voltar à fila".
         */}
         <div
-          className={`flex flex-wrap items-center gap-3 border-t px-5 py-3.5 ${
+          className={`flex flex-wrap items-center gap-3 border-t px-5 py-3 ${
             receiptPrinted
-              ? "border-admin-border bg-admin-surface"
-              : "border-admin-warning-text/20 bg-admin-warning-bg"
+              ? "bg-muted/50"
+              : "border-warning bg-warning text-warning-foreground"
           }`}
         >
           <AdminIcon
             name={receiptPrinted ? "checkCircle" : "alert"}
-            className={`h-4 w-4 flex-none ${
-              receiptPrinted
-                ? "text-admin-success-text"
-                : "text-admin-warning-text"
+            className={`size-4 flex-none ${
+              receiptPrinted ? "text-success-text" : ""
             }`}
           />
           <span
-            className={`min-w-0 flex-1 text-[12px] font-semibold ${
-              receiptPrinted ? "text-admin-muted" : "text-admin-warning-text"
+            className={`min-w-0 flex-1 text-sm font-medium ${
+              receiptPrinted ? "text-muted-foreground" : ""
             }`}
           >
             {receiptPrinted
@@ -1258,11 +1209,11 @@ function SuccessScreen({ state }: { state: SuccessState }) {
       {/* The way out of the wizard, and the only one: the pedido is already
           filed, so this closes the counter's turn rather than saving
           anything. */}
-      <div className="flex flex-wrap items-center justify-end gap-3.5">
-        <span className="mr-auto text-[12px] text-admin-faint">
+      <div className="flex flex-wrap items-center justify-end gap-3">
+        <span className="mr-auto text-xs text-muted-foreground">
           O pedido já está na fila. Isto encerra o atendimento no balcão.
         </span>
-        <a href="/admin/pedidos" className="btn btn-admin-primary btn-md">
+        <a href="/admin/pedidos" className={buttonVariants()}>
           Finalizar pedido
         </a>
       </div>
@@ -1311,45 +1262,43 @@ function PrintableRow({
   const href = doc.query ? `${printHref}?${doc.query}` : printHref;
 
   return (
-    <div className="flex items-start gap-3.5 border-t border-admin-border px-5 py-4">
+    <div className="flex items-start gap-3 border-t px-5 py-4">
       <span
-        className={`mt-0.5 flex h-8 w-8 flex-none items-center justify-center rounded-[9px] ${
-          leaves ? "bg-admin-warning-bg" : "bg-admin-surface"
+        className={`mt-0.5 flex size-8 flex-none items-center justify-center rounded-md ${
+          leaves ? "bg-warning-soft" : "bg-muted"
         }`}
       >
         <AdminIcon
           name={doc.icon}
-          className={`h-4 w-4 ${
-            leaves ? "text-admin-warning-text" : "text-admin-primary-soft"
-          }`}
+          className={`size-4 ${leaves ? "text-warning-text" : "text-primary"}`}
         />
       </span>
       <div className="min-w-0 flex-1">
         <div className="flex flex-wrap items-center gap-2">
-          <span className="text-[13.5px] font-bold text-admin-primary">
+          <span className="text-sm font-semibold text-foreground">
             {doc.title}
           </span>
-          <span
-            className={`rounded-full px-2 py-0.5 text-[10px] font-bold uppercase tracking-[0.07em] ${
+          <Badge
+            className={
               leaves
-                ? "bg-admin-warning-bg text-admin-warning-text"
-                : "bg-admin-success-bg text-admin-success-text"
-            }`}
+                ? "border-warning/30 bg-warning-soft text-warning-text"
+                : "border-success/30 bg-success-soft text-success-text"
+            }
           >
             {doc.tag}
-          </span>
+          </Badge>
           {printed && (
-            <span className="flex items-center gap-1 text-[11px] font-semibold text-admin-success-text">
-              <AdminIcon name="check" className="h-3 w-3" strokeWidth={3} />
+            <span className="flex items-center gap-1 text-xs font-medium text-success-text">
+              <AdminIcon name="check" className="size-3" strokeWidth={3} />
               {downloads ? "Baixado" : "Enviado para impressão"}
             </span>
           )}
         </div>
-        <p className="mt-1 text-[12px] leading-snug text-admin-muted">
+        <p className="mt-1 text-xs leading-snug text-muted-foreground">
           {doc.description}
         </p>
         {blocked && (
-          <p className="mt-1.5 text-[11.5px] font-semibold leading-snug text-admin-error-text">
+          <p className="mt-1.5 text-xs leading-snug font-medium text-destructive">
             O navegador bloqueou a aba deste documento. Use o botão ao lado para
             abri-lo.
           </p>
@@ -1365,13 +1314,9 @@ function PrintableRow({
           className="shrink-0"
         >
           <input type="hidden" name="chave" value={accessKey} />
-          <button
-            type="submit"
-            onClick={onPrint}
-            className="btn btn-admin-secondary btn-sm"
-          >
+          <Button type="submit" variant="outline" size="sm" onClick={onPrint}>
             {label}
-          </button>
+          </Button>
         </form>
       ) : (
         <a
@@ -1379,7 +1324,10 @@ function PrintableRow({
           target="_blank"
           rel="noreferrer"
           onClick={onPrint}
-          className="btn btn-admin-secondary btn-sm shrink-0"
+          className={cn(
+            buttonVariants({ variant: "outline", size: "sm" }),
+            "shrink-0",
+          )}
         >
           {label}
         </a>

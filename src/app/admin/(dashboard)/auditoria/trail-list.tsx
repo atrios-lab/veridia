@@ -4,6 +4,9 @@ import { startTransition, useActionState, useEffect, useState } from "react";
 import { toast } from "sonner";
 import { AUDIT_LEVEL_LABELS, type AuditLevel } from "@/core/audit/severity.ts";
 import { LONG_TEXT_MAX } from "@/core/text-limits.ts";
+import { Button, buttonVariants } from "../../_ui/button.tsx";
+import { Input } from "../../_ui/input.tsx";
+import { Textarea } from "../../_ui/textarea.tsx";
 import {
   type AuditState,
   addNote,
@@ -38,18 +41,18 @@ export interface TrailRow {
 /** The band's colour: a stripe on the left and the badge. */
 const BAND: Record<AuditLevel, { stripe: string; badge: string }> = {
   urgente: {
-    stripe: "border-l-admin-error-text",
-    badge: "bg-admin-error-bg text-admin-error-text",
+    stripe: "border-l-destructive",
+    badge: "bg-destructive text-destructive-foreground",
   },
   atencao: {
-    stripe: "border-l-admin-warning-text",
-    badge: "bg-admin-warning-bg text-admin-warning-text",
+    stripe: "border-l-warning",
+    badge: "bg-warning text-warning-foreground",
   },
   analise: {
-    stripe: "border-l-admin-primary-soft",
-    badge: "bg-admin-readonly-bg text-admin-primary",
+    stripe: "border-l-primary",
+    badge: "bg-muted text-foreground",
   },
-  rotina: { stripe: "border-l-admin-border", badge: "" },
+  rotina: { stripe: "border-l-border", badge: "" },
 };
 
 /** A note of the holder: corrected or excluded (kept in the database). */
@@ -78,47 +81,48 @@ function NoteItem({
     startTransition(() => action(data));
   };
   return (
-    <div className="mt-1.5 rounded-[8px] bg-admin-input-bg px-2.5 py-1.5 text-[12px] text-admin-text [overflow-wrap:anywhere]">
+    <div className="mt-1.5 rounded-md bg-muted/50 px-2.5 py-1.5 text-xs text-foreground [overflow-wrap:anywhere]">
       {editing ? (
         <div className="flex flex-col gap-1.5">
-          <textarea
+          <Textarea
             value={text}
             onChange={(event) => setText(event.target.value)}
             rows={2}
             maxLength={LONG_TEXT_MAX}
             aria-label="Corrigir anotação"
-            className="w-full rounded-[8px] border border-admin-input-border bg-admin-card px-2.5 py-1.5 text-[12.5px]"
+            className="bg-background md:text-xs"
           />
           <div className="flex gap-2">
-            <button
+            <Button
               type="button"
+              size="sm"
               disabled={saving}
               onClick={() => send(edit, text)}
-              className="btn btn-admin-primary btn-sm"
             >
               {saving ? "Salvando..." : "Salvar"}
-            </button>
-            <button
+            </Button>
+            <Button
               type="button"
+              variant="outline"
+              size="sm"
               onClick={() => {
                 setText(note.body);
                 setEditing(false);
               }}
-              className="btn btn-admin-secondary btn-sm"
             >
               Cancelar
-            </button>
+            </Button>
           </div>
         </div>
       ) : (
         <>
           {note.body}
-          <span className="mt-0.5 flex flex-wrap items-center gap-x-3 text-[11px] text-admin-muted">
+          <span className="mt-0.5 flex flex-wrap items-center gap-x-3 text-xs text-muted-foreground">
             {note.meta}
             <button
               type="button"
               onClick={() => setEditing(true)}
-              className="font-semibold underline hover:text-admin-primary"
+              className="font-medium underline hover:text-primary"
             >
               Editar
             </button>
@@ -126,7 +130,7 @@ function NoteItem({
               type="button"
               disabled={removing}
               onClick={() => send(remove)}
-              className="font-semibold underline hover:text-admin-error-text"
+              className="font-medium underline hover:text-destructive"
             >
               {removing ? "Excluindo..." : "Excluir"}
             </button>
@@ -151,7 +155,7 @@ function NoteForm({ auditId }: { auditId: string }) {
       <button
         type="button"
         onClick={() => setOpen(true)}
-        className="text-[11.5px] font-semibold text-admin-muted underline hover:text-admin-primary"
+        className="text-xs font-medium text-muted-foreground underline hover:text-primary"
       >
         Anotar
       </button>
@@ -159,15 +163,16 @@ function NoteForm({ auditId }: { auditId: string }) {
   }
   return (
     <div className="mt-1.5 flex flex-wrap items-start gap-2">
-      <textarea
+      <Textarea
         id={`nota-${auditId}`}
         rows={2}
         maxLength={LONG_TEXT_MAX}
         aria-label="Anotação"
-        className="min-w-0 flex-1 rounded-[9px] border border-admin-input-border bg-admin-input-bg px-3 py-2 text-[12.5px] text-admin-text"
+        className="w-auto min-w-0 flex-1 md:text-xs"
       />
-      <button
+      <Button
         type="button"
+        size="sm"
         disabled={pending}
         onClick={() => {
           const data = new FormData();
@@ -182,15 +187,11 @@ function NoteForm({ auditId }: { auditId: string }) {
           );
           startTransition(() => action(data));
         }}
-        className="btn btn-admin-primary btn-sm"
       >
         {pending ? "Salvando..." : "Salvar"}
-      </button>
+      </Button>
       {state.status === "error" && (
-        <p
-          role="alert"
-          className="basis-full text-[12px] text-admin-error-text"
-        >
+        <p role="alert" className="basis-full text-xs text-destructive">
           {state.message}
         </p>
       )}
@@ -205,18 +206,19 @@ function ReviewButton({ id }: { id: string }) {
     if (state.status === "saved") toast.success(state.message);
   }, [state]);
   return (
-    <button
+    <Button
       type="button"
+      variant="destructive"
+      size="sm"
       disabled={pending}
       onClick={() => {
         const data = new FormData();
         data.append("ids", id);
         startTransition(() => action(data));
       }}
-      className="btn btn-admin-danger btn-sm"
     >
       {pending ? "Marcando..." : "Marcar como verificado"}
-    </button>
+    </Button>
   );
 }
 
@@ -281,7 +283,7 @@ export function TrailList({
   return (
     <div className="mt-4">
       {entries.length > 0 && (
-        <label className="mb-2 inline-flex cursor-pointer items-center gap-2 text-[12.5px] font-semibold text-admin-primary">
+        <label className="mb-2 inline-flex cursor-pointer items-center gap-2 text-xs font-medium text-foreground">
           <input
             type="checkbox"
             className="checkbox-admin"
@@ -294,13 +296,13 @@ export function TrailList({
         </label>
       )}
       {entries.length === 0 ? (
-        <p className="text-[13px] text-admin-muted">
+        <p className="text-sm text-muted-foreground">
           Nenhum registro com esses filtros.
         </p>
       ) : (
         days.map((group) => (
           <section key={group.day} className="mt-3 first:mt-0">
-            <h3 className="sticky top-0 z-[1] bg-admin-card py-1.5 text-[11.5px] font-bold uppercase tracking-[0.08em] text-admin-muted">
+            <h3 className="sticky top-0 z-1 bg-card py-1.5 text-xs font-medium text-muted-foreground">
               {group.day}
             </h3>
             <ul className="flex flex-col gap-2">
@@ -310,7 +312,7 @@ export function TrailList({
                 return (
                   <li
                     key={entry.id}
-                    className={`flex gap-3 rounded-[10px] border border-l-4 border-admin-border px-3 py-2.5 text-[13px] ${band.stripe} ${ticked ? "bg-admin-input-bg" : ""}`}
+                    className={`flex gap-3 rounded-lg border border-l-4 border-border px-3 py-2.5 text-sm ${band.stripe} ${ticked ? "bg-muted/50" : ""}`}
                   >
                     <input
                       type="checkbox"
@@ -323,45 +325,45 @@ export function TrailList({
                       <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
                         {entry.level !== "rotina" && (
                           <span
-                            className={`rounded-full px-2 py-0.5 text-[10.5px] font-bold uppercase tracking-[0.05em] ${band.badge}`}
+                            className={`rounded-full px-2 py-0.5 text-xs font-medium ${band.badge}`}
                           >
                             {AUDIT_LEVEL_LABELS[entry.level]}
                           </span>
                         )}
-                        <strong className="text-admin-primary">
+                        <strong className="font-medium text-foreground">
                           {entry.what}
                         </strong>
-                        <span className="text-[12px] text-admin-muted">
+                        <span className="text-xs text-muted-foreground">
                           {entry.time}
                         </span>
                       </div>
-                      <p className="mt-0.5 text-[12px] text-admin-text [overflow-wrap:anywhere]">
+                      <p className="mt-0.5 text-xs text-foreground [overflow-wrap:anywhere]">
                         {entry.who}
                         {entry.role && (
-                          <span className="text-admin-muted">
+                          <span className="text-muted-foreground">
                             {" "}
                             ({entry.role})
                           </span>
                         )}
                         {entry.target && (
-                          <span className="text-admin-muted">
+                          <span className="text-muted-foreground">
                             {" "}
                             · {entry.target}
                           </span>
                         )}
                         {showOffice && (
-                          <span className="text-admin-muted">
+                          <span className="text-muted-foreground">
                             {" "}
                             · {entry.tenantName}
                           </span>
                         )}
                       </p>
-                      <p className="mt-0.5 text-[11.5px] leading-snug text-admin-muted">
+                      <p className="mt-0.5 text-xs leading-snug text-muted-foreground">
                         {entry.explanation}
                       </p>
                       {entry.reason && (
-                        <p className="mt-1.5 rounded-[8px] bg-admin-warning-soft-bg px-2.5 py-1.5 text-[12px] text-admin-text [overflow-wrap:anywhere]">
-                          <span className="font-semibold">Justificativa:</span>{" "}
+                        <p className="mt-1.5 rounded-md bg-warning-soft px-2.5 py-1.5 text-xs text-foreground [overflow-wrap:anywhere]">
+                          <span className="font-medium">Justificativa:</span>{" "}
                           {entry.reason}
                         </p>
                       )}
@@ -370,7 +372,7 @@ export function TrailList({
                       ))}
                       <div className="mt-1.5 flex flex-wrap items-center gap-3">
                         {entry.reviewed ? (
-                          <span className="text-[11.5px] font-semibold text-admin-success-text">
+                          <span className="text-xs font-medium text-success-text">
                             ✓ {entry.reviewed}
                           </span>
                         ) : (
@@ -391,36 +393,38 @@ export function TrailList({
 
       {/* What to do with the ticked acts: only there when something is. */}
       {chosen.length > 0 && (
-        <div className="sticky bottom-3 z-10 mt-4 rounded-[14px] border border-admin-border bg-admin-card px-3.5 py-3 shadow-lg">
-          <div className="flex flex-wrap items-center gap-2 text-[12.5px]">
-            <span className="font-semibold text-admin-primary">
+        <div className="sticky bottom-3 z-10 mt-4 rounded-xl border border-border bg-card px-3.5 py-3 shadow-lg">
+          <div className="flex flex-wrap items-center gap-2 text-xs">
+            <span className="font-medium text-foreground">
               {chosen.length} marcado(s)
             </span>
             <button
               type="button"
               onClick={() => setChosen([])}
-              className="text-[12px] text-admin-muted underline"
+              className="text-xs text-muted-foreground underline"
             >
               limpar
             </button>
           </div>
           <div className="mt-2 flex flex-wrap gap-2">
             {unseen.length > 0 && (
-              <button
+              <Button
                 type="button"
+                size="sm"
                 disabled={reviewing}
                 onClick={() => {
                   const data = new FormData();
                   for (const e of unseen) data.append("ids", e.id);
                   startTransition(() => review(data));
                 }}
-                className="btn btn-admin-primary btn-sm"
               >
                 ✓ Marcar como lido e ok ({unseen.length})
-              </button>
+              </Button>
             )}
-            <button
+            <Button
               type="button"
+              variant="outline"
+              size="sm"
               disabled={archiving}
               onClick={() => {
                 const data = new FormData();
@@ -428,7 +432,6 @@ export function TrailList({
                 data.set("arquivar", archivedView ? "0" : "1");
                 startTransition(() => archive(data));
               }}
-              className="btn btn-admin-secondary btn-sm"
               title={
                 archivedView
                   ? "Volta para a lista"
@@ -436,7 +439,7 @@ export function TrailList({
               }
             >
               {archivedView ? "Desarquivar" : "Arquivar (excluir da lista)"}
-            </button>
+            </Button>
             <form
               method="post"
               action="/admin/auditoria/relatorio"
@@ -447,14 +450,14 @@ export function TrailList({
                 <input key={id} type="hidden" name="ids" value={id} />
               ))}
               <input type="hidden" name="serventia" value={serventia} />
-              <button type="submit" className="btn btn-admin-secondary btn-sm">
+              <Button type="submit" variant="outline" size="sm">
                 Gerar PDF
-              </button>
+              </Button>
             </form>
             {people.length > 0 && (
               <a
                 href={`/admin/auditoria/notificacao/nova?${people.length === 1 ? `pessoa=${people[0]}&` : ""}${chosen.map((id) => `ids=${id}`).join("&")}`}
-                className="btn btn-admin-primary btn-sm"
+                className={buttonVariants({ size: "sm" })}
               >
                 {people.length === 1
                   ? "Notificar a pessoa"
@@ -463,16 +466,18 @@ export function TrailList({
             )}
           </div>
           <div className="mt-2 flex min-w-0 gap-2">
-            <input
+            <Input
               type="email"
               value={email}
               onChange={(event) => setEmail(event.target.value)}
               placeholder="E-mail para enviar o relatório"
               aria-label="E-mail para enviar o relatório"
-              className="min-w-0 flex-1 rounded-[8px] border border-admin-input-border bg-admin-input-bg px-2.5 py-1.5 text-[12.5px]"
+              className="h-8 w-auto min-w-0 flex-1"
             />
-            <button
+            <Button
               type="button"
+              variant="outline"
+              size="sm"
               disabled={mailing}
               onClick={() => {
                 const data = new FormData();
@@ -481,16 +486,13 @@ export function TrailList({
                 data.set("serventia", serventia);
                 startTransition(() => mail(data));
               }}
-              className="btn btn-admin-secondary btn-sm shrink-0"
+              className="shrink-0"
             >
               {mailing ? "Enviando..." : "Enviar"}
-            </button>
+            </Button>
           </div>
           {mailState.status === "error" && (
-            <p
-              role="alert"
-              className="mt-1.5 text-[12px] text-admin-error-text"
-            >
+            <p role="alert" className="mt-1.5 text-xs text-destructive">
               {mailState.message}
             </p>
           )}

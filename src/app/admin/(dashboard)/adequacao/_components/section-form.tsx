@@ -29,10 +29,18 @@ import { formatCpf } from "@/core/request/form.ts";
 import { formatCnpj } from "@/core/tenant/pix.ts";
 import { LONG_TEXT_MAX } from "@/core/text-limits.ts";
 import { AdminIcon } from "../../../_components/icon.tsx";
+import { Button, buttonVariants } from "../../../_ui/button.tsx";
+import { Field as FieldRoot } from "../../../_ui/field.tsx";
+import { Input } from "../../../_ui/input.tsx";
+import { Label } from "../../../_ui/label.tsx";
+import {
+  NativeSelect,
+  NativeSelectOption,
+} from "../../../_ui/native-select.tsx";
+import { RadioGroup, RadioGroupItem } from "../../../_ui/radio-group.tsx";
+import { Textarea } from "../../../_ui/textarea.tsx";
 import { completeSectionAction, saveAnswerAction } from "../actions.ts";
 
-const INPUT =
-  "w-full rounded-[9px] border border-admin-input-border bg-admin-input-bg px-3.5 py-2.5 text-[13.5px] text-admin-text outline-none focus:border-admin-primary-soft disabled:opacity-60";
 /**
  * Masks applied while the office types, keyed by field name across every
  * section: the same identifiers `parseAnswer`'s `validateText` already
@@ -48,12 +56,12 @@ const FIELD_MASKS: Record<string, (value: string) => string> = {
     return digits.length > 11 ? formatCnpj(digits) : formatCpf(digits);
   },
 };
-const LABEL = "flex items-center gap-2 text-xs font-bold text-admin-primary";
+const LABEL = "flex items-center gap-2 text-sm font-medium text-foreground";
 // Big enough for a thumb: the office answers this from a phone between
-// customers. Native radio and checkbox inside, so keyboard and screen reader
-// get the control for free; the card is only the target.
+// customers. A radio (RadioGroup) or a native checkbox inside, so keyboard
+// and screen reader get the control for free; the card is only the target.
 const CARD =
-  "flex min-h-11 cursor-pointer items-center gap-3 rounded-[10px] border border-admin-input-border bg-admin-input-bg px-3.5 py-2.5 text-[13px] font-semibold text-admin-text has-checked:border-admin-primary-soft has-checked:bg-admin-surface";
+  "flex min-h-11 cursor-pointer items-center gap-3 rounded-lg border border-input bg-background px-3.5 py-2.5 text-sm font-medium text-foreground hover:bg-muted/50 has-checked:border-primary has-checked:bg-muted/50 has-data-checked:border-primary has-data-checked:bg-muted/50";
 
 type SaveStatus = "idle" | "saving" | "saved";
 
@@ -107,14 +115,14 @@ export function SectionForm({
   }
 
   return (
-    <div className="flex flex-col gap-4.5">
+    <div className="flex flex-col gap-6">
       <div className="flex items-center justify-between gap-4">
         <div className="flex-1">
-          <span className="text-[11px] font-bold uppercase tracking-[0.08em] text-admin-faint">
+          <span className="text-xs font-medium text-muted-foreground">
             Seção {section.number} de {SECTIONS.length}
           </span>
           <div
-            className="mt-2 h-1 overflow-hidden rounded-full bg-admin-readonly-bg"
+            className="mt-2 h-1 overflow-hidden rounded-full bg-muted"
             role="progressbar"
             aria-valuenow={section.number}
             aria-valuemin={0}
@@ -122,14 +130,14 @@ export function SectionForm({
             aria-label={`Seção ${section.number} de ${SECTIONS.length}`}
           >
             <span
-              className="block h-full rounded-full bg-admin-primary-soft"
+              className="block h-full rounded-full bg-primary"
               style={{ width: `${(section.number / SECTIONS.length) * 100}%` }}
             />
           </div>
         </div>
         <output
-          className={`text-[12px] font-semibold ${
-            status === "saved" ? "text-admin-success-text" : "text-admin-muted"
+          className={`text-xs font-medium ${
+            status === "saved" ? "text-success-text" : "text-muted-foreground"
           }`}
         >
           {status === "saving"
@@ -140,17 +148,17 @@ export function SectionForm({
         </output>
       </div>
 
-      <div className="rounded-[14px] border border-admin-border bg-admin-card p-6">
-        <h2 className="font-serif text-[17px] font-semibold text-admin-primary">
+      <div className="rounded-xl border border-border bg-card p-6">
+        <h2 className="text-lg font-semibold text-foreground">
           {section.question}
         </h2>
         {section.intro && (
-          <p className="mt-1.5 text-[12.5px] leading-relaxed text-admin-muted">
+          <p className="mt-1.5 text-sm text-muted-foreground">
             {section.intro}
           </p>
         )}
 
-        <div className="mt-5 flex flex-col gap-5">
+        <div className="mt-6 flex flex-col gap-6">
           {section.fields
             .filter((f) => isVisible(f, ctx))
             .map((field) => (
@@ -168,7 +176,7 @@ export function SectionForm({
 
         <form
           action={completeSectionAction}
-          className="mt-6 flex flex-col gap-3 border-t border-admin-border pt-4.5 sm:flex-row sm:items-center sm:justify-between"
+          className="mt-6 flex flex-col gap-3 border-t border-border pt-5 sm:flex-row sm:items-center sm:justify-between"
         >
           <input type="hidden" name="sectionId" value={sectionId} />
           {previous ? (
@@ -177,7 +185,7 @@ export function SectionForm({
               // Same size as the primary "next" button on the other end of
               // this row, same as the confirm/cancel pair in ConfirmAction:
               // the hierarchy is the fill, not the size.
-              className="btn btn-admin-secondary btn-md"
+              className={buttonVariants({ variant: "outline" })}
             >
               ‹ Seção {previous.number} · {previous.title}
             </Link>
@@ -187,15 +195,15 @@ export function SectionForm({
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
             <Link
               href="/admin/adequacao"
-              className="btn btn-admin-secondary btn-md"
+              className={buttonVariants({ variant: "outline" })}
             >
               Voltar à lista
             </Link>
-            <button type="submit" className="btn btn-admin-primary btn-md">
+            <Button type="submit">
               {next
                 ? `Seção ${next.number} · ${next.title} ›`
                 : "Revisar e enviar ›"}
-            </button>
+            </Button>
           </div>
         </form>
       </div>
@@ -221,17 +229,17 @@ function Field({
 }) {
   const id = `${field.name}`;
   return (
-    <div className="flex flex-col gap-2">
+    <FieldRoot className="gap-2">
       <span className={LABEL}>
         <label htmlFor={field.type === "list" ? undefined : id}>
           {field.label}
           {field.required && (
-            <span className="ml-1 text-admin-accent" aria-hidden="true">
+            <span className="ml-1 text-primary" aria-hidden="true">
               *
             </span>
           )}
           {!field.required && (
-            <span className="ml-2 text-[11px] font-semibold text-admin-faint">
+            <span className="ml-2 text-xs font-normal text-muted-foreground">
               opcional
             </span>
           )}
@@ -249,7 +257,7 @@ function Field({
       {warnings.map((w) => (
         <Notice key={w.code} pendency={w} />
       ))}
-    </div>
+    </FieldRoot>
   );
 }
 
@@ -267,12 +275,12 @@ function Help({ text }: { text: string }) {
     <span className="group relative inline-flex">
       <button
         type="button"
-        className="inline-grid h-[18px] w-[18px] cursor-pointer place-items-center rounded-full border-[1.5px] border-admin-input-border text-[11px] font-bold text-admin-faint transition-colors hover:border-admin-primary-soft hover:bg-admin-primary-soft hover:text-white focus-visible:border-admin-primary-soft focus-visible:bg-admin-primary-soft focus-visible:text-white"
+        className="inline-grid size-4.5 cursor-pointer place-items-center rounded-full border border-input text-xs font-medium text-muted-foreground transition-colors hover:border-primary hover:bg-primary hover:text-primary-foreground focus-visible:border-ring focus-visible:bg-primary focus-visible:text-primary-foreground"
         aria-label="Ajuda"
       >
         ?
       </button>
-      <span className="pointer-events-none absolute bottom-full left-1/2 z-10 mb-2 w-max max-w-[min(60ch,78vw)] -translate-x-1/2 rounded-lg bg-admin-primary px-3 py-2 text-[12px] font-normal leading-relaxed text-white opacity-0 shadow-lg transition-opacity group-hover:opacity-100 group-focus-within:opacity-100">
+      <span className="pointer-events-none absolute bottom-full left-1/2 z-10 mb-2 w-max max-w-[min(60ch,78vw)] -translate-x-1/2 rounded-md bg-primary px-3 py-2 text-xs font-normal leading-relaxed text-primary-foreground opacity-0 shadow-md transition-opacity group-hover:opacity-100 group-focus-within:opacity-100">
         {text}
       </span>
     </span>
@@ -309,7 +317,7 @@ function OriginNote({
   if (origin.kind === "value") {
     if (current !== origin.value) return null;
     return (
-      <p className="text-[11.5px] leading-relaxed text-admin-muted">
+      <p className="text-xs leading-relaxed text-muted-foreground">
         Veio do Justiça Aberta, extraído em {shortDate(origin.extractedOn)}. Se
         você declarou ou corrigiu depois disso, ajuste aqui.
       </p>
@@ -317,7 +325,7 @@ function OriginNote({
   }
   if (current !== "") return null;
   return (
-    <p className="text-[11.5px] leading-relaxed text-admin-muted">
+    <p className="text-xs leading-relaxed text-muted-foreground">
       O Justiça Aberta não tinha declaração sua para este semestre na extração
       de {shortDate(origin.extractedOn)}. Informe o valor.
     </p>
@@ -337,10 +345,10 @@ function BoundaryNote({ boundary }: { boundary: ClassBoundary | null }) {
   // dispensation of Provimento 214 belongs to Classe 1 alone.
   const dpoTurns = lower.classe === 1;
   return (
-    <output className="flex items-start gap-2.5 rounded-[10px] bg-admin-warning-bg px-3.5 py-2.5 text-[12.5px] leading-relaxed text-admin-warning-text">
+    <output className="flex items-start gap-2.5 rounded-lg border border-warning/30 bg-warning-soft px-3.5 py-2.5 text-xs leading-relaxed text-warning-text">
       <AdminIcon name="alert" className="mt-0.5 h-4 w-4 flex-none" />
       <span>
-        <strong className="block font-bold">
+        <strong className="block font-medium">
           Este valor está a {MONEY.format(boundary.distance)} do limite entre a
           Classe {lower.classe} e a Classe {upper.classe}.
         </strong>
@@ -357,19 +365,19 @@ function BoundaryNote({ boundary }: { boundary: ClassBoundary | null }) {
 function Notice({ pendency }: { pendency: Pendency }) {
   const tone =
     pendency.severity === "critical"
-      ? "bg-admin-error-bg text-admin-error-text"
+      ? "border-destructive/40 bg-destructive-soft text-destructive"
       : pendency.severity === "warning"
-        ? "bg-admin-warning-bg text-admin-warning-text"
-        : "bg-admin-surface text-admin-text";
+        ? "border-warning/30 bg-warning-soft text-warning-text"
+        : "border-border bg-muted text-foreground";
   // An <output>, so the warning is announced when it appears under the answer
   // that raised it, the same way the "Salvo" indicator is.
   return (
     <output
-      className={`flex items-start gap-2.5 rounded-[10px] px-3.5 py-2.5 text-[12.5px] leading-relaxed ${tone}`}
+      className={`flex items-start gap-2.5 rounded-lg border px-3.5 py-2.5 text-xs leading-relaxed ${tone}`}
     >
       <AdminIcon name="alert" className="mt-0.5 h-4 w-4 flex-none" />
       <span>
-        <strong className="block font-bold">{pendency.title}</strong>
+        <strong className="block font-medium">{pendency.title}</strong>
         {pendency.detail}
       </span>
     </output>
@@ -394,21 +402,20 @@ function Control({
   switch (field.type) {
     case "choice":
       return (
-        <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+        <RadioGroup
+          name={id}
+          value={typeof value === "string" ? value : null}
+          onValueChange={(next) => onSave(next as string)}
+          className="grid grid-cols-1 gap-2 sm:grid-cols-2"
+        >
           {optionsOf(field, ctx).map((option) => (
+            // biome-ignore lint/a11y/noLabelWithoutControl: the control is the RadioGroupItem inside, a radio that Biome does not recognise as one.
             <label key={option.value} className={CARD}>
-              <input
-                type="radio"
-                name={id}
-                value={option.value}
-                checked={value === option.value}
-                onChange={() => onSave(option.value)}
-                className="h-4 w-4 flex-none accent-admin-primary-soft"
-              />
+              <RadioGroupItem value={option.value} />
               {option.label}
             </label>
           ))}
-        </div>
+        </RadioGroup>
       );
     case "multi": {
       const chosen = Array.isArray(value) ? (value as string[]) : [];
@@ -428,7 +435,7 @@ function Control({
                       : chosen.filter((v) => v !== option.value),
                   )
                 }
-                className="h-4 w-4 flex-none accent-admin-primary-soft"
+                className="checkbox-admin"
               />
               {option.label}
             </label>
@@ -494,7 +501,7 @@ function TextControl({
   return (
     <div className="flex flex-col gap-2">
       {field.type === "textarea" ? (
-        <textarea
+        <Textarea
           id={id}
           rows={3}
           maxLength={LONG_TEXT_MAX}
@@ -502,10 +509,9 @@ function TextControl({
           placeholder={field.placeholder}
           onChange={(e) => setDraft(e.target.value)}
           onBlur={commit}
-          className={INPUT}
         />
       ) : (
-        <input
+        <Input
           id={id}
           type={inputType}
           value={draft}
@@ -527,7 +533,6 @@ function TextControl({
             setDraft(mask ? mask(e.target.value) : e.target.value);
           }}
           onBlur={commit}
-          className={INPUT}
         />
       )}
       {origin && <OriginNote origin={origin} value={draft} />}
@@ -538,7 +543,7 @@ function TextControl({
         <BoundaryNote boundary={classBoundary(Number(draft))} />
       )}
       {field.unknown && (
-        <label className="flex items-center gap-2 text-[12px] text-admin-muted">
+        <label className="flex items-center gap-2 text-xs text-muted-foreground">
           <input
             type="checkbox"
             checked={unknown}
@@ -550,7 +555,7 @@ function TextControl({
                 onSave("");
               }
             }}
-            className="h-4 w-4 accent-admin-primary-soft"
+            className="checkbox-admin"
           />
           {unknownLabel(field)}
         </label>
@@ -612,7 +617,7 @@ function ListEditor({
   return (
     <div className="flex flex-col gap-3">
       {draft.length === 0 && (
-        <p className="rounded-[10px] border border-dashed border-admin-input-border px-3.5 py-3 text-[12.5px] text-admin-faint">
+        <p className="rounded-lg border border-dashed border-input px-3.5 py-3 text-sm text-muted-foreground">
           Nenhum {label} ainda. Use o botão abaixo para incluir.
         </p>
       )}
@@ -620,22 +625,23 @@ function ListEditor({
         <fieldset
           // biome-ignore lint/suspicious/noArrayIndexKey: items have no id; order is the identity the office sees.
           key={index}
-          className="flex flex-col gap-3 rounded-[10px] border border-admin-border bg-admin-input-bg p-3.5"
+          className="flex flex-col gap-3 rounded-lg bg-muted/50 p-4"
         >
           <legend className="sr-only">
             {label} {index + 1}
           </legend>
           <div className="flex items-center justify-between">
-            <span className="text-[11px] font-bold uppercase tracking-[0.08em] text-admin-faint">
+            <span className="text-xs font-medium text-muted-foreground">
               {label} {index + 1}
             </span>
-            <button
+            <Button
               type="button"
+              variant="ghost"
+              size="sm"
               onClick={() => remove(index)}
-              className="btn btn-admin-ghost btn-sm"
             >
               Remover
-            </button>
+            </Button>
           </div>
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
             {(field.items ?? [])
@@ -654,13 +660,14 @@ function ListEditor({
           </div>
         </fieldset>
       ))}
-      <button
+      <Button
         type="button"
+        variant="outline"
         onClick={add}
-        className="btn btn-admin-secondary btn-md self-start"
+        className="self-start"
       >
         Incluir {label}
-      </button>
+      </Button>
     </div>
   );
 }
@@ -681,30 +688,30 @@ function ItemField({
   const id = useId();
   return (
     <div className="flex flex-col gap-1.5">
-      <label htmlFor={id} className={LABEL}>
+      <Label htmlFor={id}>
         {sub.label}
         {sub.required && (
-          <span className="text-admin-accent" aria-hidden="true">
+          <span className="text-primary" aria-hidden="true">
             *
           </span>
         )}
-      </label>
+      </Label>
       {sub.type === "choice" ? (
-        <select
+        <NativeSelect
           id={id}
           value={text}
           onChange={(e) => onChange(e.target.value, true)}
-          className={INPUT}
+          className="w-full rounded-md bg-background"
         >
-          <option value="">Escolha</option>
+          <NativeSelectOption value="">Escolha</NativeSelectOption>
           {optionsOf(sub, ctx).map((o) => (
-            <option key={o.value} value={o.value}>
+            <NativeSelectOption key={o.value} value={o.value}>
               {o.label}
-            </option>
+            </NativeSelectOption>
           ))}
-        </select>
+        </NativeSelect>
       ) : (
-        <input
+        <Input
           id={id}
           type={
             sub.type === "money"
@@ -718,7 +725,7 @@ function ItemField({
           placeholder={sub.placeholder}
           onChange={(e) => onChange(e.target.value, false)}
           onBlur={() => onChange(text, true)}
-          className={INPUT}
+          className="bg-background"
         />
       )}
     </div>

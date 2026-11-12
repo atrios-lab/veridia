@@ -5,6 +5,9 @@ import {
   type Tutorial,
 } from "@/core/tutorials/catalog.ts";
 import type { TrailProgress } from "@/core/tutorials/progress.ts";
+import { buttonVariants } from "../../_ui/button.tsx";
+import { cn } from "../../_ui/cn.ts";
+import { Progress } from "../../_ui/progress.tsx";
 
 /**
  * "Primeiros passos": how far this person is along the tutorial trail and
@@ -20,22 +23,31 @@ export function TutorialTrailCard({
   next: Tutorial;
 }) {
   return (
-    <div className="rounded-[14px] border border-admin-border bg-admin-card p-5">
-      <span className="text-[11px] font-bold uppercase tracking-[0.08em] text-admin-faint">
+    <section className="rounded-xl border bg-card p-6 shadow-xs">
+      <h2 className="text-base font-semibold text-foreground">
         Primeiros passos
-      </span>
-      <p className="mt-2.5 text-[13px] font-semibold text-admin-primary">
+      </h2>
+      <p className="mt-1 text-sm text-muted-foreground">
         {progress.watched} de {progress.total} assistidos
       </p>
-      <p className="mt-0.5 text-[12px] text-admin-muted">
+      <Progress
+        className="mt-3"
+        value={progress.watched}
+        max={Math.max(progress.total, 1)}
+        aria-label={`${progress.watched} de ${progress.total} assistidos`}
+      />
+      <p className="mt-2 text-sm text-muted-foreground">
         Próximo: {next.title}
       </p>
       <Link
         href={courseHref(PANEL_COURSE_SLUG, next.id)}
-        className="btn btn-admin-secondary btn-sm mt-3"
+        className={cn(
+          buttonVariants({ variant: "outline", size: "sm" }),
+          "mt-4",
+        )}
       >
         Assistir
       </Link>
-    </div>
+    </section>
   );
 }

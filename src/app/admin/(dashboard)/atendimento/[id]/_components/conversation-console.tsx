@@ -14,6 +14,9 @@ import type { Colleague } from "@/lib/chat.ts";
 import { shakeElement } from "../../../../../_components/shake.ts";
 import { CHAT_SHAKE_TARGET_ID } from "../../../../_components/chat-alerts.tsx";
 import { AdminIcon } from "../../../../_components/icon.tsx";
+import { Button, buttonVariants } from "../../../../_ui/button.tsx";
+import { cn } from "../../../../_ui/cn.ts";
+import { Input } from "../../../../_ui/input.tsx";
 import {
   type ActionState,
   nudgeCitizenAction,
@@ -140,48 +143,50 @@ export function ConversationConsole({
           place of the toolbar and the composer: a screen of grey buttons
           reads as frozen, and the attendant has nothing left to do here. */}
       {closed ? (
-        <div className="flex flex-wrap items-center gap-3 border-b border-admin-border bg-admin-warning-soft-bg px-5.5 py-3 text-[13px] text-admin-text">
+        <div className="flex flex-wrap items-center gap-3 border-b border-warning/30 bg-warning-soft px-4 py-3 text-sm text-warning-text md:px-8">
           <AdminIcon name="chat" className="h-4.5 w-4.5 flex-none" />
           <span className="flex-1 font-semibold">
             {closedByForStaff(closedReason)}
           </span>
           <Link
             href="/admin/atendimento"
-            className="btn btn-admin-primary btn-sm"
+            className={buttonVariants({ size: "sm" })}
           >
             Voltar para a fila
           </Link>
         </div>
       ) : (
-        <div className="flex flex-wrap items-center gap-2.5 border-b border-admin-border bg-admin-card px-5.5 py-3">
-          <button
+        <div className="flex flex-wrap items-center gap-2.5 border-b bg-card px-4 py-3 md:px-8">
+          <Button
             type="button"
+            size="sm"
             onClick={() => void nudge()}
             disabled={nudging}
-            className="btn btn-admin-primary btn-sm"
             title="Faz a tela do cidadão tremer e tocar"
           >
             {nudging ? "Chamando…" : "Chamar atenção"}
-          </button>
+          </Button>
           {nudgeError && (
-            <span className="text-[12px] font-semibold text-admin-error-text">
+            <span className="text-xs font-medium text-destructive">
               {nudgeError}
             </span>
           )}
-          <button
+          <Button
             type="button"
+            variant="outline"
+            size="sm"
             onClick={() => setShowTransfer((v) => !v)}
-            className="btn btn-admin-secondary btn-sm"
           >
             Transferir
-          </button>
-          <button
+          </Button>
+          <Button
             type="button"
+            variant="destructive"
+            size="sm"
             onClick={() => setShowClose((v) => !v)}
-            className="btn btn-admin-danger btn-sm"
           >
             Encerrar conversa
-          </button>
+          </Button>
         </div>
       )}
 
@@ -200,9 +205,9 @@ export function ConversationConsole({
         />
       )}
 
-      <div className="flex flex-1 flex-col gap-2.5 overflow-y-auto bg-admin-input-bg p-4">
+      <div className="flex flex-1 flex-col gap-2.5 overflow-y-auto bg-muted/50 p-4">
         {messages.length === 0 ? (
-          <p className="self-center py-6 text-center text-[13px] text-admin-muted">
+          <p className="self-center py-6 text-center text-sm text-muted-foreground">
             Ainda não há mensagens nesta conversa.
           </p>
         ) : (
@@ -213,26 +218,26 @@ export function ConversationConsole({
       </div>
 
       {closed ? (
-        <div className="flex flex-wrap items-center justify-between gap-3 border-t border-admin-border bg-admin-card px-5.5 py-3.5 text-[12.5px] text-admin-muted">
+        <div className="flex flex-wrap items-center justify-between gap-3 border-t bg-card px-4 py-3.5 text-sm text-muted-foreground md:px-8">
           <span>
             Conversa finalizada. A transcrição fica guardada por 6 meses.
           </span>
           <Link
             href="/admin/atendimento"
-            className="btn btn-admin-secondary btn-sm"
+            className={buttonVariants({ variant: "outline", size: "sm" })}
           >
             Fechar
           </Link>
         </div>
       ) : (
-        <div className="border-t border-admin-border bg-admin-card p-3.5">
+        <div className="border-t bg-card px-4 py-3.5 md:px-8">
           <div className="mb-2.5 flex flex-wrap gap-1.5">
             {CANNED_RESPONSES.map((canned) => (
               <button
                 key={canned.key}
                 type="button"
                 onClick={() => setDraft(canned.text)}
-                className="rounded-full border border-admin-input-border bg-admin-input-bg px-3 py-1 text-[11.5px] font-semibold text-admin-muted hover:text-admin-primary"
+                className="rounded-full border bg-background px-3 py-1 text-xs font-medium text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
               >
                 {canned.label}
               </button>
@@ -244,44 +249,41 @@ export function ConversationConsole({
             className="flex items-center gap-2"
           >
             <input type="hidden" name="conversationId" value={conversationId} />
-            <input
+            <Input
               name="body"
               value={draft}
               onChange={(event) => setDraft(event.target.value)}
               placeholder="Escreva sua mensagem…"
-              className="min-w-0 flex-1 rounded-[10px] border border-admin-input-border bg-admin-input-bg px-3.5 py-2.5 text-[13.5px] outline-none focus:border-admin-primary-soft disabled:opacity-60"
+              className="flex-1 bg-background"
             />
-            <button
-              type="submit"
-              disabled={messagePending}
-              className="btn btn-admin-primary btn-md"
-            >
+            <Button type="submit" disabled={messagePending}>
               {messagePending ? "Enviando…" : "Enviar"}
-            </button>
+            </Button>
           </form>
           {messageState.status === "error" && (
-            <p className="mt-1.5 text-[11.5px] font-semibold text-admin-error-text">
+            <p className="mt-1.5 text-xs font-medium text-destructive">
               {messageState.message}
             </p>
           )}
 
           <form action={noteAction} className="mt-2.5 flex items-center gap-2">
             <input type="hidden" name="conversationId" value={conversationId} />
-            <input
+            <Input
               name="note"
               placeholder="Nota interna · só a equipe vê"
-              className="min-w-0 flex-1 rounded-[10px] border border-admin-warning-bg bg-admin-warning-bg px-3.5 py-2 text-[12.5px] outline-none disabled:opacity-60"
+              className="flex-1 border-warning/30 bg-warning-soft"
             />
-            <button
+            <Button
               type="submit"
+              variant="outline"
               disabled={notePending}
-              className="rounded-[10px] border border-admin-warning-bg bg-admin-warning-bg px-3.5 py-2 text-[12px] font-bold text-admin-warning-text disabled:opacity-60"
+              className="border-warning/30 bg-warning-soft text-warning-text hover:bg-warning-soft hover:text-warning-text"
             >
               {notePending ? "Salvando…" : "+ Nota"}
-            </button>
+            </Button>
           </form>
           {noteState.status === "error" && (
-            <p className="mt-1.5 text-[11.5px] font-semibold text-admin-error-text">
+            <p className="mt-1.5 text-xs font-medium text-destructive">
               {noteState.message}
             </p>
           )}
@@ -294,29 +296,30 @@ export function ConversationConsole({
 function MessageRow({ message }: { message: MessageView }) {
   if (message.authorType === "system") {
     return (
-      <div className="self-center rounded-full bg-admin-card px-3 py-1 text-center text-[11px] text-admin-faint">
+      <div className="self-center rounded-full border bg-card px-3 py-1 text-center text-xs text-muted-foreground">
         {message.body}
       </div>
     );
   }
   if (message.authorType === "note") {
     return (
-      <div className="max-w-[74%] self-stretch rounded-[10px] border border-admin-warning-bg border-l-[3px] bg-admin-warning-bg px-3.5 py-2.5">
-        <div className="text-[10.5px] font-bold uppercase tracking-[0.06em] text-admin-warning-text">
+      <div className="max-w-[74%] self-stretch rounded-lg border border-l-4 border-warning/30 border-l-warning bg-warning-soft px-3.5 py-2.5">
+        <div className="text-xs font-medium text-warning-text">
           Nota interna · só a equipe vê
         </div>
-        <p className="mt-1 text-[13px] text-admin-text">{message.body}</p>
+        <p className="mt-1 text-sm text-foreground">{message.body}</p>
       </div>
     );
   }
   const fromStaff = message.authorType === "staff";
   return (
     <div
-      className={`max-w-[74%] rounded-xl px-3.5 py-2.5 text-[13.5px] leading-relaxed ${
+      className={cn(
+        "max-w-[74%] rounded-xl px-3.5 py-2.5 text-sm leading-relaxed",
         fromStaff
-          ? "self-end rounded-br-sm bg-admin-primary text-white"
-          : "self-start rounded-bl-sm border border-admin-border bg-admin-card text-admin-text"
-      }`}
+          ? "self-end rounded-br-sm bg-primary text-primary-foreground"
+          : "self-start rounded-bl-sm border bg-card text-foreground",
+      )}
     >
       {message.attachment ? (
         <span className="flex items-center gap-2">

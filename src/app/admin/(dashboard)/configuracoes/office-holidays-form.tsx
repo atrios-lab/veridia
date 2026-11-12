@@ -11,12 +11,10 @@ import {
 } from "@/core/scheduling/calendar.ts";
 import { MAX_CUSTOM_HOLIDAYS } from "@/core/tenant/schema.ts";
 import { AdminIcon } from "../../_components/icon.tsx";
+import { Button } from "../../_ui/button.tsx";
+import { Input } from "../../_ui/input.tsx";
+import { Label } from "../../_ui/label.tsx";
 import { type OfficeHolidaysState, saveOfficeHolidays } from "./actions.ts";
-
-const FIELD_CLASS =
-  "w-full rounded-[9px] border border-admin-input-border bg-admin-input-bg px-3.5 py-2.5 text-[13.5px] text-admin-text outline-none focus:border-admin-primary-soft";
-const ERROR_FIELD_CLASS =
-  "w-full rounded-[9px] border border-admin-error-border bg-admin-error-input-bg px-3.5 py-2.5 text-[13.5px] text-admin-text outline-none focus:border-admin-error-text";
 
 /**
  * Names an office reaches for most, offered as one-click starts. Only the
@@ -160,10 +158,10 @@ export function OfficeHolidaysForm({
 
   return (
     <form action={formAction}>
-      <h2 className="font-serif text-[17px] font-semibold text-admin-primary">
+      <h2 className="text-lg font-semibold text-foreground">
         Feriados e dias sem expediente
       </h2>
-      <p className="mt-1 text-[12.5px] leading-relaxed text-admin-muted">
+      <p className="mt-1 text-sm leading-relaxed text-muted-foreground">
         Os feriados nacionais e os dias do Código de Normas do RN já entram
         sozinhos, e você pode alterar, desligar ou excluir algum que não valha
         aqui. Cadastre aqui os do município e outros dias em que a serventia
@@ -171,12 +169,12 @@ export function OfficeHolidaysForm({
         não oferece horário e os prazos não correm.
       </p>
 
-      <details className="mt-3.5 rounded-[10px] border border-admin-border bg-admin-input-bg px-3.5 py-2.5">
-        <summary className="cursor-pointer text-[12.5px] font-semibold text-admin-primary">
+      <details className="mt-3.5 rounded-lg border bg-muted/50 px-3.5 py-2.5">
+        <summary className="cursor-pointer text-sm font-medium text-foreground">
           Ver e ajustar os {keptCount} dias já considerados nos próximos 12
           meses
         </summary>
-        <p className="mt-2 text-[11.5px] leading-relaxed text-admin-muted">
+        <p className="mt-2 text-xs leading-relaxed text-muted-foreground">
           Algum não vale na sua localidade, ou cai em outra data? "Não fecha
           aqui" deixa o feriado na lista, riscado; "Excluir" tira da lista;
           "Alterar" traz para a lista da serventia para mudar nome e data. Nos
@@ -184,7 +182,7 @@ export function OfficeHolidaysForm({
           excluiu por engano, ou se uma lei nova criar o feriado, cadastre-o
           abaixo e marque "Feriado por lei".
         </p>
-        <ul className="mt-2.5 flex flex-col divide-y divide-admin-border text-[12.5px] text-admin-text">
+        <ul className="mt-2.5 flex flex-col divide-y text-xs text-foreground">
           {listed.map((day) => {
             const counts = !disabled.has(day.id);
             return (
@@ -195,53 +193,59 @@ export function OfficeHolidaysForm({
                 <span
                   className={`flex-1 ${counts ? "" : "line-through opacity-60"}`}
                 >
-                  <span className="font-semibold">{formatDate(day.date)}</span>{" "}
-                  <span className="text-admin-muted">
+                  <span className="font-medium tabular-nums">
+                    {formatDate(day.date)}
+                  </span>{" "}
+                  <span className="text-muted-foreground">
                     ({longWeekday(day.date)})
                   </span>{" "}
                   {day.name}
                 </span>
                 {counts ? (
                   <span className="flex flex-wrap gap-1.5">
-                    <button
+                    <Button
                       type="button"
                       onClick={() => takeOver(day)}
                       disabled={full}
-                      className="btn btn-admin-ghost btn-sm"
+                      variant="ghost"
+                      size="sm"
                       aria-label={`Alterar ${day.name}`}
                     >
                       Alterar
-                    </button>
-                    <button
+                    </Button>
+                    <Button
                       type="button"
                       onClick={() => setKept(day.id, false)}
-                      className="btn btn-admin-ghost btn-sm"
+                      variant="ghost"
+                      size="sm"
                       aria-label={`${day.name}: não fecha aqui`}
                     >
                       Não fecha aqui
-                    </button>
-                    <button
+                    </Button>
+                    <Button
                       type="button"
                       onClick={() => exclude(day.id)}
-                      className="btn btn-admin-ghost btn-sm"
+                      variant="ghost"
+                      size="sm"
                       aria-label={`Excluir ${day.name}`}
                     >
                       Excluir
-                    </button>
+                    </Button>
                   </span>
                 ) : (
                   <span className="flex items-center gap-1.5">
-                    <span className="rounded-full bg-admin-warning-bg px-2.5 py-0.5 text-[11px] font-bold text-admin-warning-text">
+                    <span className="rounded-full bg-warning px-2.5 py-0.5 text-xs font-medium text-warning-foreground">
                       Não fecha aqui
                     </span>
-                    <button
+                    <Button
                       type="button"
                       onClick={() => setKept(day.id, true)}
-                      className="btn btn-admin-ghost btn-sm"
+                      variant="ghost"
+                      size="sm"
                       aria-label={`Voltar a considerar ${day.name}`}
                     >
                       Voltar a considerar
-                    </button>
+                    </Button>
                   </span>
                 )}
               </li>
@@ -250,12 +254,12 @@ export function OfficeHolidaysForm({
         </ul>
       </details>
 
-      <h3 className="mt-5 mb-2.5 text-[11.5px] font-bold uppercase tracking-[0.09em] text-admin-accent">
+      <h3 className="mt-5 mb-2.5 text-xs font-medium text-muted-foreground">
         Feriados da serventia
       </h3>
 
       {rows.length === 0 && (
-        <p className="text-[12.5px] text-admin-muted">
+        <p className="text-xs text-muted-foreground">
           Nenhum feriado próprio cadastrado.
         </p>
       )}
@@ -271,16 +275,13 @@ export function OfficeHolidaysForm({
           return (
             <li
               key={row.key}
-              className="grid grid-cols-1 items-start gap-2.5 rounded-[10px] border border-admin-border p-3 md:grid-cols-[1fr_180px_auto_auto]"
+              className="grid grid-cols-1 items-start gap-2.5 rounded-lg border p-3 md:grid-cols-[1fr_180px_auto_auto]"
             >
               <div>
-                <label
-                  htmlFor={nameId}
-                  className="mb-1 block text-xs font-bold text-admin-primary"
-                >
+                <Label htmlFor={nameId} className="mb-1.5">
                   Nome
-                </label>
-                <input
+                </Label>
+                <Input
                   id={nameId}
                   value={row.name}
                   onChange={(event) =>
@@ -290,25 +291,21 @@ export function OfficeHolidaysForm({
                   maxLength={80}
                   aria-invalid={nameError ? true : undefined}
                   aria-describedby={nameError ? `${nameId}-erro` : undefined}
-                  className={nameError ? ERROR_FIELD_CLASS : FIELD_CLASS}
                 />
                 {nameError && (
                   <p
                     id={`${nameId}-erro`}
-                    className="mt-1 text-xs font-semibold text-admin-error-text"
+                    className="mt-1.5 text-sm text-destructive"
                   >
                     {nameError}
                   </p>
                 )}
               </div>
               <div>
-                <label
-                  htmlFor={dateId}
-                  className="mb-1 block text-xs font-bold text-admin-primary"
-                >
+                <Label htmlFor={dateId} className="mb-1.5">
                   Data
-                </label>
-                <input
+                </Label>
+                <Input
                   id={dateId}
                   type="date"
                   value={row.date}
@@ -317,18 +314,17 @@ export function OfficeHolidaysForm({
                   }
                   aria-invalid={dateError ? true : undefined}
                   aria-describedby={dateError ? `${dateId}-erro` : undefined}
-                  className={dateError ? ERROR_FIELD_CLASS : FIELD_CLASS}
                 />
                 {dateError && (
                   <p
                     id={`${dateId}-erro`}
-                    className="mt-1 text-xs font-semibold text-admin-error-text"
+                    className="mt-1.5 text-sm text-destructive"
                   >
                     {dateError}
                   </p>
                 )}
               </div>
-              <label className="flex items-center gap-2 text-[12.5px] text-admin-text md:mt-7">
+              <label className="flex items-center gap-2 text-xs text-foreground md:mt-7">
                 <input
                   type="checkbox"
                   className="checkbox-admin"
@@ -339,16 +335,18 @@ export function OfficeHolidaysForm({
                 />
                 Todo ano
               </label>
-              <button
+              <Button
                 type="button"
                 onClick={() => remove(row.key)}
-                className="btn btn-admin-ghost btn-sm md:mt-6"
+                variant="ghost"
+                size="sm"
+                className="md:mt-6"
                 aria-label={`Excluir ${row.name || "este feriado"}`}
               >
                 Excluir
-              </button>
+              </Button>
               <div className="flex flex-col gap-2 md:col-span-4 md:flex-row md:items-start">
-                <label className="flex items-center gap-2 text-[12.5px] text-admin-text md:mt-2.5">
+                <label className="flex items-center gap-2 text-xs text-foreground md:mt-2.5">
                   <input
                     type="checkbox"
                     className="checkbox-admin"
@@ -364,7 +362,7 @@ export function OfficeHolidaysForm({
                     <label htmlFor={lawId} className="sr-only">
                       Qual lei cria {row.name || "este feriado"}
                     </label>
-                    <input
+                    <Input
                       id={lawId}
                       value={row.legalBasis}
                       onChange={(event) =>
@@ -374,12 +372,11 @@ export function OfficeHolidaysForm({
                       maxLength={120}
                       aria-invalid={lawError ? true : undefined}
                       aria-describedby={lawError ? `${lawId}-erro` : undefined}
-                      className={lawError ? ERROR_FIELD_CLASS : FIELD_CLASS}
                     />
                     {lawError && (
                       <p
                         id={`${lawId}-erro`}
-                        className="mt-1 text-xs font-semibold text-admin-error-text"
+                        className="mt-1.5 text-sm text-destructive"
                       >
                         {lawError}
                       </p>
@@ -393,29 +390,30 @@ export function OfficeHolidaysForm({
       </ul>
 
       <div className="mt-3.5 flex flex-wrap items-center gap-2">
-        <button
+        <Button
           type="button"
           onClick={() => add()}
           disabled={full}
-          className="btn btn-admin-secondary btn-md"
+          variant="outline"
         >
           Adicionar feriado
-        </button>
+        </Button>
         {SUGGESTIONS.filter(
           (name) => !rows.some((row) => row.name === name),
         ).map((name) => (
-          <button
+          <Button
             key={name}
             type="button"
             onClick={() => add(name)}
             disabled={full}
-            className="btn btn-admin-ghost btn-sm"
+            variant="ghost"
+            size="sm"
           >
             + {name}
-          </button>
+          </Button>
         ))}
       </div>
-      <p className="mt-2 text-[11.5px] text-admin-muted">
+      <p className="mt-2 text-xs text-muted-foreground">
         "Todo ano" repete no mesmo dia e mês. Desmarque para um dia que só vale
         naquele ano, como um ponto facultativo decretado.
       </p>
@@ -425,22 +423,18 @@ export function OfficeHolidaysForm({
       {state.status === "error" && (
         <p
           role="alert"
-          className="mt-4 rounded-lg bg-admin-error-bg px-3.5 py-2.5 text-sm font-semibold text-admin-error-text"
+          className="mt-4 rounded-lg border border-destructive/40 bg-destructive-soft px-4 py-3 text-sm font-medium text-destructive"
         >
           {state.message}
         </p>
       )}
 
       <div className="mt-4.5 flex items-center gap-3.5">
-        <button
-          type="submit"
-          disabled={pending}
-          className="btn btn-admin-primary btn-lg"
-        >
+        <Button type="submit" disabled={pending} size="lg">
           {pending ? "Salvando…" : "Salvar feriados"}
-        </button>
+        </Button>
         {state.status === "saved" && (
-          <output className="flex items-center gap-1.5 rounded-full bg-admin-success-bg px-3 py-1.5 text-[12.5px] font-semibold text-admin-success-text">
+          <output className="flex items-center gap-1.5 rounded-full bg-success-soft px-3 py-1.5 text-xs font-medium text-success-text">
             <AdminIcon name="check" className="h-3.5 w-3.5" strokeWidth={2.4} />
             Salvo. Já está valendo no site e na agenda.
           </output>
@@ -452,12 +446,12 @@ export function OfficeHolidaysForm({
       {state.status === "saved" && state.stranded > 0 && (
         <p
           role="alert"
-          className="mt-3 rounded-lg bg-admin-warning-bg px-3.5 py-2.5 text-[13px] leading-relaxed text-admin-warning-text"
+          className="mt-3 rounded-lg border border-warning/30 bg-warning-soft px-4 py-3 text-sm leading-relaxed text-warning-text"
         >
           {state.stranded === 1
             ? "Há 1 agendamento marcado em dia que agora não tem atendimento."
             : `Há ${state.stranded} agendamentos marcados em dias que agora não têm atendimento.`}{" "}
-          <Link href="/admin/agenda" className="font-semibold underline">
+          <Link href="/admin/agenda" className="font-medium underline">
             Veja na Agenda
           </Link>{" "}
           para remarcar com o cidadão ou cancelar.

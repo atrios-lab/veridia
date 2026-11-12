@@ -4,16 +4,15 @@ import Link from "next/link";
 import { useActionState, useEffect, useState } from "react";
 import { toast } from "sonner";
 import { ConfirmAction } from "../../../_components/confirm-action.tsx";
+import { Button } from "../../../_ui/button.tsx";
+import { Input } from "../../../_ui/input.tsx";
+import { Label } from "../../../_ui/label.tsx";
 import {
   clearNumbering,
   type NumberingState,
   removeIssued,
   renumberIssued,
 } from "./actions.ts";
-
-const FIELD =
-  "w-full rounded-[9px] border border-admin-input-border bg-admin-input-bg px-3 py-2 text-[13px] text-admin-text outline-none focus:border-admin-primary-soft";
-const LABEL = "mb-1 block text-[11.5px] font-bold text-admin-primary";
 
 export interface IssuedItem {
   id: string;
@@ -54,25 +53,26 @@ function IssuedRow({
   }, [state]);
 
   return (
-    <li className="border-b border-admin-border py-2.5 last:border-0">
+    <li className="border-b py-2.5 last:border-0">
       <div className="flex flex-wrap items-center gap-x-3 gap-y-1.5">
         <Link
           href={item.href}
-          className="font-semibold text-admin-primary underline"
+          className="font-medium text-primary underline tabular-nums"
         >
           {item.number}
         </Link>
-        <span className="min-w-0 flex-1 truncate text-[12.5px] text-admin-muted">
+        <span className="min-w-0 flex-1 truncate text-xs text-muted-foreground">
           {item.description}
         </span>
-        <button
+        <Button
           type="button"
           onClick={() => setEditing((open) => !open)}
-          className="btn btn-admin-secondary btn-sm"
+          variant="outline"
+          size="sm"
           aria-expanded={editing}
         >
           Alterar número
-        </button>
+        </Button>
         <ConfirmAction
           action={remove}
           pending={removing}
@@ -90,52 +90,45 @@ function IssuedRow({
       {editing && (
         <form
           action={action}
-          className="mt-2.5 grid grid-cols-2 items-end gap-2.5 rounded-[10px] bg-admin-input-bg p-3 md:grid-cols-[110px_100px_1fr_auto]"
+          className="mt-2.5 grid grid-cols-2 items-end gap-2.5 rounded-lg bg-muted/50 p-3 md:grid-cols-[110px_100px_1fr_auto]"
         >
           <input type="hidden" name="series" value={series} />
           <input type="hidden" name="id" value={item.id} />
-          <label className="block">
-            <span className={LABEL}>Nº de ordem</span>
-            <input
+          <Label className="flex-col items-stretch gap-1.5">
+            <span>Nº de ordem</span>
+            <Input
               name="sequence"
               type="number"
               min={1}
               defaultValue={item.sequence}
-              className={FIELD}
+              className="font-normal"
             />
-          </label>
-          <label className="block">
-            <span className={LABEL}>Ano</span>
-            <input
+          </Label>
+          <Label className="flex-col items-stretch gap-1.5">
+            <span>Ano</span>
+            <Input
               name="year"
               type="number"
               min={2000}
               max={2100}
               defaultValue={item.year}
-              className={FIELD}
+              className="font-normal"
             />
-          </label>
-          <label className="col-span-2 block md:col-span-1">
-            <span className={LABEL}>Motivo (vai para a auditoria)</span>
-            <input
+          </Label>
+          <Label className="col-span-2 flex-col items-stretch gap-1.5 md:col-span-1">
+            <span>Motivo (vai para a auditoria)</span>
+            <Input
               name="justificativa"
               required
               placeholder="Ex.: seguir a numeração do livro"
-              className={FIELD}
+              className="font-normal"
             />
-          </label>
-          <button
-            type="submit"
-            disabled={pending}
-            className="btn btn-admin-primary btn-md"
-          >
+          </Label>
+          <Button type="submit" disabled={pending}>
             {pending ? "Salvando..." : "Salvar"}
-          </button>
+          </Button>
           {state.status === "error" && (
-            <p
-              role="alert"
-              className="col-span-full text-[12.5px] font-semibold text-admin-error-text"
-            >
+            <p role="alert" className="col-span-full text-sm text-destructive">
               {state.message}
             </p>
           )}
@@ -159,12 +152,12 @@ export function IssuedList({
   items: IssuedItem[];
 }) {
   return (
-    <details className="mt-3 rounded-[10px] border border-admin-border px-3.5 py-2">
-      <summary className="cursor-pointer text-[12.5px] font-semibold text-admin-primary">
+    <details className="mt-3 rounded-lg border px-3.5 py-2">
+      <summary className="cursor-pointer text-sm font-medium text-foreground">
         Emitidos em {year} ({items.length}): alterar número ou excluir
       </summary>
       {items.length === 0 ? (
-        <p className="py-2 text-[12.5px] text-admin-muted">
+        <p className="py-2 text-xs text-muted-foreground">
           Nenhum emitido neste ano.
         </p>
       ) : (
@@ -198,7 +191,7 @@ export function ClearNumbering({
       <button
         type="submit"
         disabled={pending}
-        className="text-[12px] font-semibold text-admin-primary underline"
+        className="text-xs font-medium text-primary underline"
       >
         {pending ? "Voltando..." : `Voltar ao automático em ${year}`}
       </button>

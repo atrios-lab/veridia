@@ -1,164 +1,87 @@
-// Private to the admin route group, same idea as (public)/_components/icon.tsx
-// but its own small set: the panel never shares components with the public
-// site, on purpose, so the two can change independently.
-const PATHS = {
-  eye: [
-    "M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7Z",
-    "M12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6Z",
-  ],
-  eyeOff: [
-    "M9.9 4.24A9.1 9.1 0 0 1 12 4c6.5 0 10 7 10 7a13.2 13.2 0 0 1-2.16 3.19M6.1 6.1C3.3 7.9 2 11 2 11s3.5 7 10 7a9.3 9.3 0 0 0 5.05-1.5",
-    "M9.5 9.5a3 3 0 0 0 4.24 4.24",
-    "M2 2l20 20",
-  ],
-  check: ["m5 13 4 4L19 7"],
-  clock: ["M12 3a9 9 0 1 0 0 18 9 9 0 0 0 0-18Z", "M12 7v5l3 2"],
-  // Sidebar navigation. The rounded rectangles are written as paths rather
-  // than <rect> so every icon in this set is the same one-shape-per-string
-  // list.
-  grid: [
-    "M4.5 3h4A1.5 1.5 0 0 1 10 4.5v6A1.5 1.5 0 0 1 8.5 12h-4A1.5 1.5 0 0 1 3 10.5v-6A1.5 1.5 0 0 1 4.5 3Z",
-    "M15.5 3h4A1.5 1.5 0 0 1 21 4.5v2A1.5 1.5 0 0 1 19.5 8h-4A1.5 1.5 0 0 1 14 6.5v-2A1.5 1.5 0 0 1 15.5 3Z",
-    "M15.5 12h4a1.5 1.5 0 0 1 1.5 1.5v6a1.5 1.5 0 0 1-1.5 1.5h-4a1.5 1.5 0 0 1-1.5-1.5v-6a1.5 1.5 0 0 1 1.5-1.5Z",
-    "M4.5 16h4A1.5 1.5 0 0 1 10 17.5v2A1.5 1.5 0 0 1 8.5 21h-4A1.5 1.5 0 0 1 3 19.5v-2A1.5 1.5 0 0 1 4.5 16Z",
-  ],
-  settings: [
-    "M12 9a3 3 0 1 0 0 6 3 3 0 0 0 0-6Z",
-    "M12 2v3M12 19v3M2 12h3M19 12h3M4.9 4.9 7 7M17 17l2.1 2.1M19.1 4.9 17 7M7 17l-2.1 2.1",
-  ],
-  lock: [
-    "M6 10h12a2 2 0 0 1 2 2v6a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2v-6a2 2 0 0 1 2-2Z",
-    "M8 10V7a4 4 0 0 1 8 0v3",
-  ],
-  upload: [
-    "M12 16V4M12 4 7 9M12 4l5 5",
-    "M4 15v3a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-3",
-  ],
-  chevronDown: ["m6 9 6 6 6-6"],
-  // "Voltar": the way back from a subordinate screen.
-  arrowLeft: ["M19 12H5", "m11 18-6-6 6-6"],
-  // Opens the sidebar as a drawer, on a screen too narrow for the column.
-  menu: ["M4 7h16M4 12h16M4 17h16"],
-  // Sidebar navigation: the service request queue.
-  inbox: [
-    "M4 12h4l2 3h4l2-3h4",
-    "M4 12 5.5 5A2 2 0 0 1 7.4 3.5h9.2A2 2 0 0 1 18.5 5L20 12v6a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2v-6Z",
-  ],
-  // Sidebar navigation: publications (a folded document with two lines).
-  file: [
-    "M4 22V4a2 2 0 0 1 2-2h9l5 5v15a1 1 0 0 1-1 1H6a2 2 0 0 1-2-2Z",
-    "M14 2v6h6",
-    "M8 13h8",
-    "M8 17h5",
-  ],
-  // Sidebar navigation: transparency (a globe, for public documents).
-  globe: [
-    "M12 3a9 9 0 1 0 0 18 9 9 0 0 0 0-18Z",
-    "M3 12h18",
-    "M12 3c2.5 2.5 3.8 5.7 3.8 9s-1.3 6.5-3.8 9c-2.5-2.5-3.8-5.7-3.8-9s1.3-6.5 3.8-9Z",
-  ],
-  // Sidebar navigation and header indicator: support chat (a speech bubble).
-  chat: ["M7.9 20A9 9 0 1 0 4 16.1L2 22Z"],
-  x: ["M18 6 6 18", "M6 6l12 12"],
-  // Sidebar navigation: the office's Zoho Mail inbox. Its own envelope rather
-  // than `inbox`, which sits one item above it as "Pedidos de serviço": two
-  // adjacent items wearing the same icon read as the same destination.
-  mail: [
-    "M4 5h16a1 1 0 0 1 1 1v12a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V6a1 1 0 0 1 1-1Z",
-    "m3.5 6.5 8.5 6 8.5-6",
-  ],
-  // Sidebar navigation: the appointment queue.
-  calendar: [
-    "M8 2v4M16 2v4M3 10h18M5 4h14a2 2 0 0 1 2 2v13a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2Z",
-  ],
-  // Sidebar navigation: the ombudsman queue.
-  megaphone: ["M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"],
-  // Sidebar navigation: the data rights (LGPD) queue.
-  shield: [
-    "M5.5 10h13A1.5 1.5 0 0 1 20 11.5v8A1.5 1.5 0 0 1 18.5 21h-13A1.5 1.5 0 0 1 4 19.5v-8A1.5 1.5 0 0 1 5.5 10Z",
-    "M8 10V7a4 4 0 0 1 8 0v3",
-  ],
-  // Sidebar navigation: the Usuários screen.
-  users: [
-    "M2 21v-1.5A4.5 4.5 0 0 1 6.5 15h4a4.5 4.5 0 0 1 4.5 4.5V21",
-    "M8.5 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8Z",
-    "M16 6.2a4 4 0 0 1 0 7.6",
-    "M22 21v-1.5a4.5 4.5 0 0 0-3.2-4.3",
-  ],
-  // Visão geral: the global search trigger and overlay.
-  search: ["M11 19a8 8 0 1 0 0-16 8 8 0 0 0 0 16Z", "m21 21-4.35-4.35"],
-  // Visão geral: "novo pedido no balcão" and other action shortcuts.
-  plus: ["M12 5v14M5 12h14"],
-  // Visão geral: "acontecendo agora" (chat waiting) and "confirmar horário".
-  checkCircle: [
-    "M12 22a10 10 0 1 0 0-20 10 10 0 0 0 0 20Z",
-    "m8.5 12.5 2.5 2.5 5-5",
-  ],
-  // Counter work: printing the requerimento and the access receipt.
-  printer: [
-    "M7 8V3h10v5",
-    "M5 8h14a2 2 0 0 1 2 2v6a1 1 0 0 1-1 1h-3",
-    "M7 17H4a1 1 0 0 1-1-1v-6a2 2 0 0 1 2-2",
-    "M7 14h10v7H7z",
-  ],
-  // Copying the protocol or the access key to the clipboard.
-  copy: [
-    "M9.5 3h8A1.5 1.5 0 0 1 19 4.5v10a1.5 1.5 0 0 1-1.5 1.5h-8A1.5 1.5 0 0 1 8 14.5v-10A1.5 1.5 0 0 1 9.5 3Z",
-    "M5 8v11.5A1.5 1.5 0 0 0 6.5 21H15",
-  ],
-  // Sidebar navigation: the Provimento intake (a clipboard with a tick).
-  clipboard: [
-    "M8 4h8a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2Z",
-    "M9 4V3a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v1",
-    "m9 13 2 2 4-4",
-  ],
-  // Utilitários: the guias de transmissão de bens (taxes and fees on a deed).
-  calculator: [
-    "M6 2h12a2 2 0 0 1 2 2v16a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2Z",
-    "M8 6h8",
-    "M16 14v4",
-    "M8 10h.01M12 10h.01M16 10h.01M8 14h.01M12 14h.01M8 18h.01M12 18h.01",
-  ],
-  // The queue's bulk action: archiving the selected protocols.
-  trash: ["M3 6h18M8 6V4h8v2M6 6l1 14h10l1-14M10 11v6M14 11v6"],
-  // Sidebar navigation: the video tutorials (a play triangle in a circle).
-  play: [
-    "M12 22a10 10 0 1 0 0-20 10 10 0 0 0 0 20Z",
-    "m10 8.5 5.5 3.5-5.5 3.5z",
-  ],
-  // A warning that needs the operator to act before leaving the screen.
-  alert: [
-    "M12 22a10 10 0 1 0 0-20 10 10 0 0 0 0 20Z",
-    "M12 7v6",
-    "M12 16.5v.5",
-  ],
-} as const;
+import {
+  ArrowLeft,
+  Calculator,
+  Calendar,
+  Check,
+  ChevronDown,
+  CircleAlert,
+  CircleCheck,
+  ClipboardList,
+  Clock,
+  Copy,
+  Eye,
+  EyeOff,
+  FileText,
+  Globe,
+  Inbox,
+  LayoutGrid,
+  Lock,
+  type LucideIcon,
+  Mail,
+  Megaphone,
+  Menu,
+  MessageSquare,
+  Play,
+  Plus,
+  Printer,
+  Search,
+  Settings,
+  Shield,
+  Trash2,
+  Upload,
+  Users,
+  X,
+} from "lucide-react";
 
-export type AdminIconName = keyof typeof PATHS;
+// The panel's icons by name. Drawn by lucide, the set the components in
+// ../_ui use, so a screen never mixes two strokes (painel-neutro-shadcn).
+// Private to the panel: the public site keeps its own small set in
+// (public)/_components/icon.tsx, so the two change independently.
+const ICONS = {
+  eye: Eye,
+  eyeOff: EyeOff,
+  check: Check,
+  clock: Clock,
+  grid: LayoutGrid,
+  settings: Settings,
+  lock: Lock,
+  upload: Upload,
+  chevronDown: ChevronDown,
+  arrowLeft: ArrowLeft,
+  menu: Menu,
+  inbox: Inbox,
+  file: FileText,
+  globe: Globe,
+  chat: MessageSquare,
+  x: X,
+  mail: Mail,
+  calendar: Calendar,
+  megaphone: Megaphone,
+  shield: Shield,
+  users: Users,
+  search: Search,
+  plus: Plus,
+  checkCircle: CircleCheck,
+  printer: Printer,
+  copy: Copy,
+  clipboard: ClipboardList,
+  calculator: Calculator,
+  trash: Trash2,
+  play: Play,
+  alert: CircleAlert,
+} satisfies Record<string, LucideIcon>;
+
+export type AdminIconName = keyof typeof ICONS;
 
 export function AdminIcon({
   name,
   className,
-  strokeWidth = 1.8,
+  strokeWidth = 2,
 }: {
   name: AdminIconName;
   className?: string;
   strokeWidth?: number;
 }) {
-  return (
-    <svg
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth={strokeWidth}
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      className={className}
-      aria-hidden="true"
-    >
-      {PATHS[name].map((d) => (
-        <path key={d} d={d} />
-      ))}
-    </svg>
-  );
+  const Icon = ICONS[name];
+  return <Icon className={className} strokeWidth={strokeWidth} aria-hidden />;
 }
