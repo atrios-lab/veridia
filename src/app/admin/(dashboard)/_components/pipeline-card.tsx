@@ -59,14 +59,18 @@ export function PipelineCard({ counts }: { counts: Record<string, number> }) {
                 href={`/admin/pedidos?aba=${s.id}`}
                 className={`flex h-full flex-col gap-1 rounded-[12px] border px-3.5 py-3 transition hover:-translate-y-0.5 hover:shadow-sm ${
                   active
-                    ? ACTIVE_STYLES[s.tone]
+                    ? `${ACTIVE_STYLES[s.tone]} border-2 motion-safe:animate-attention-pulse-light`
                     : "border-admin-border bg-admin-card text-admin-faint"
                 }`}
               >
                 <span className="text-[10.5px] font-bold uppercase tracking-[0.1em] opacity-80">
                   Etapa {i + 1}
                 </span>
-                <span className="font-serif text-[32px] leading-none font-semibold tabular-nums">
+                <span
+                  className={`font-serif text-[32px] leading-none font-semibold tabular-nums ${
+                    active ? "motion-safe:animate-number-blink" : ""
+                  }`}
+                >
                   {s.count}
                 </span>
                 <span

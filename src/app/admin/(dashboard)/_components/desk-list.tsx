@@ -53,8 +53,18 @@ export function DeskList({
             O que aguarda o cartório, do mais urgente ao menos urgente
           </p>
         </div>
-        <span className="rounded-full bg-white px-3.5 py-1 font-serif text-[20px] font-semibold text-admin-primary tabular-nums">
-          {totalCount}
+        <span
+          className={`rounded-full bg-white px-3.5 py-1 font-serif text-[20px] font-semibold text-admin-primary tabular-nums ${
+            totalCount > 0 ? "motion-safe:animate-attention-pulse" : ""
+          }`}
+        >
+          <span
+            className={
+              totalCount > 0 ? "motion-safe:animate-number-blink" : undefined
+            }
+          >
+            {totalCount}
+          </span>
         </span>
       </div>
       <div className="px-5.5 pb-4">
@@ -76,7 +86,7 @@ export function DeskList({
             {items.map((item) => (
               <div
                 key={`${item.kind}-${item.protocolNumber}`}
-                className={`-mx-2 flex flex-wrap items-center gap-x-3.5 gap-y-2 rounded-[10px] border-l-4 px-2 py-3 hover:bg-admin-input-bg ${EDGE_STYLES[item.chipTone]}`}
+                className={`-mx-2 flex flex-wrap items-center gap-x-3.5 gap-y-2 rounded-[10px] border-l-4 px-2 py-3 hover:bg-admin-input-bg motion-safe:animate-row-glow ${EDGE_STYLES[item.chipTone]}`}
               >
                 <span
                   className={`w-[84px] flex-none rounded-full py-1 text-center text-[10.5px] font-bold ${CHIP_STYLES[item.chipTone]}`}
