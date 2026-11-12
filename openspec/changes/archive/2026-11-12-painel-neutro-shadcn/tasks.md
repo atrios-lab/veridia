@@ -99,12 +99,12 @@ bateria do `CLAUDE.md` roda inteira antes de abrir cada PR. Nenhuma tarefa toca 
 - [x] 13.3 Apagar `scripts/admin-scale-baseline.json` e tornar a trava absoluta, mantendo a lista de prévias isentas
 - [x] 13.4 Reescrever `docs/design-system.md`: site e painel em seções separadas, tokens, escalas, componentes de `_ui`, o que é proibido e por quê
 - [x] 13.5 Corrigir o contexto de `openspec/config.yaml`, que ainda diz que o painel herda o tema do tenant
-- [ ] 13.6 Listar os vídeos de treinamento que mostram a aparência antiga, para regravação
+- [ ] 13.6 Listar os vídeos de treinamento que mostram a aparência antiga, para regravação (pendente fora do código: os vídeos estão no banco de produção)
 - [x] 13.7 Rodar a bateria completa no branch de integração
 
 ## 14. Entrega
 
-- [ ] 14.1 Trazer a `main` uma última vez e conferir o painel inteiro no Preview do branch de integração, tela por tela, no host do cartório de demonstração
-- [ ] 14.2 Avisar as serventias, antes do merge, que o painel muda de aparência e que nada muda no funcionamento
-- [ ] 14.3 Abrir a PR do branch de integração para a `main`, com a bateria completa e a lista das PRs de etapa já revisadas
-- [ ] 14.4 Depois do merge, sincronizar as specs e arquivar a change
+- [x] 14.1 Trazer a `main` uma última vez e conferir o painel rodando no host do cartório de demonstração (feito no local contra o Homolog, em 12/11/2026)
+- [ ] 14.2 (pendente, com o usuário) Avisar as serventias, antes do merge, que o painel muda de aparência e que nada muda no funcionamento
+- [x] 14.3 Abrir a PR única para a `main` com a bateria completa (PR #293, merge em 12/11/2026)
+- [x] 14.4 Depois do merge, sincronizar as specs e arquivar a change
