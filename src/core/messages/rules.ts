@@ -1,4 +1,5 @@
 import { LONG_TEXT_MAX } from "../text-limits.ts";
+import { OFFICE_TIME_ZONE } from "../time/office-time.ts";
 /**
  * Mensagens internas (decision of 11/11/2026): the office's own messenger,
  * person to person, in the spirit of the desktop messengers of the 2000s:
@@ -70,13 +71,13 @@ export function lunchLabel(lunch: Lunch): string {
   return `${lunch.start} às ${pad(Math.floor(end / 60) % 24)}:${pad(end % 60)}`;
 }
 
-/** Minutes since midnight, in Brasília time. */
+/** Minutes since midnight, in the office's time zone. */
 function officeMinutes(now: Date): number {
   const parts = new Intl.DateTimeFormat("en-GB", {
     hour: "2-digit",
     minute: "2-digit",
     hour12: false,
-    timeZone: "America/Sao_Paulo",
+    timeZone: OFFICE_TIME_ZONE,
   }).formatToParts(now);
   const hour = Number(parts.find((p) => p.type === "hour")?.value ?? 0) % 24;
   const minute = Number(parts.find((p) => p.type === "minute")?.value ?? 0);
