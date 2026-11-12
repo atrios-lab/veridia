@@ -1,20 +1,38 @@
 import Link from "next/link";
 import { CLOSED_TAB, QUEUE_TABS } from "../pedidos/_components/queue-order.ts";
+import type { Tone } from "../pedidos/_components/status-tone.ts";
 
-/** One colour per open tab of the queue, from the office's own tokens. */
-const SEGMENT_COLOURS: Record<string, string> = {
-  new: "bg-admin-primary-soft",
-  "awaiting-compliance": "bg-admin-error-text",
-  "awaiting-payment": "bg-admin-accent",
-  "payment-reported": "bg-admin-warning-text",
-  processing: "bg-admin-primary",
-  "ready-for-pickup": "bg-admin-success-text",
+/**
+ * A stage with requests in it, coloured by what it means: stopped on an
+ * exigência, waiting on the citizen, being worked on, ready to hand over.
+ * The same tones the queue's tabs use.
+ */
+const ACTIVE_STYLES: Record<Tone, string> = {
+  blocked: "border-admin-error-border bg-admin-error-bg text-admin-error-text",
+  waiting:
+    "border-admin-warning-soft-border bg-admin-warning-bg text-admin-warning-text",
+  working:
+    "border-admin-success-bg bg-admin-success-bg text-admin-success-text",
+  delivered: "border-admin-primary bg-admin-primary text-white",
+  closed: "border-admin-border bg-admin-readonly-bg text-admin-muted",
+};
+
+/** What each stage is waiting on, in a few words. */
+const STAGE_NOTES: Record<string, string> = {
+  new: "aguarda o cartório",
+  "awaiting-compliance": "parado: exigência com o cliente",
+  "awaiting-payment": "aguarda o pagamento",
+  "payment-reported": "conferir o comprovante",
+  processing: "em trabalho no cartório",
+  "ready-for-pickup": "aguarda a retirada",
 };
 
 /**
- * The open service requests by stage (decision of 12/11/2026): one bar
- * split by the queue's tabs, so the whole pipeline reads at a glance, and
- * each stage opens its tab. Same tabs and same counting as the queue.
+ * The open service requests, stage by stage, in the order the work goes
+ * (decision of 12/11/2026): one block per stage with its number large and
+ * its name under it, an arrow to the next, and the colour of what the
+ * stage means. A stage with nothing in it stays quiet. Each block opens its
+ * tab of the queue; the counting is the queue's own.
  */
 export function PipelineCard({ counts }: { counts: Record<string, number> }) {
   const stages = QUEUE_TABS.filter((tab) => tab.id !== CLOSED_TAB).map(
@@ -26,53 +44,64 @@ export function PipelineCard({ counts }: { counts: Record<string, number> }) {
   const total = stages.reduce((sum, s) => sum + s.count, 0);
   return (
     <section className="rounded-[16px] border border-admin-border bg-admin-card p-5.5">
-      <div className="flex flex-wrap items-baseline justify-between gap-2">
-        <h2 className="font-serif text-[17px] font-semibold text-admin-primary">
-          Pedidos em aberto por etapa
-        </h2>
-        <span className="text-[12.5px] text-admin-muted">
-          <strong className="font-serif text-[20px] text-admin-primary tabular-nums">
+      <div className="flex flex-wrap items-end justify-between gap-2">
+        <div>
+          <h2 className="font-serif text-[18px] font-semibold text-admin-primary">
+            Pedidos em aberto por etapa
+          </h2>
+          <p className="text-[12.5px] text-admin-muted">
+            Do recebimento à retirada. Clique numa etapa para abrir a fila.
+          </p>
+        </div>
+        <p className="text-[13px] text-admin-muted">
+          <strong className="font-serif text-[26px] font-semibold text-admin-primary tabular-nums">
             {total}
           </strong>{" "}
-          em aberto
-        </span>
+          {total === 1 ? "pedido em aberto" : "pedidos em aberto"}
+        </p>
       </div>
-      <div
-        className="mt-3.5 flex h-4 w-full overflow-hidden rounded-full bg-admin-border"
-        role="img"
-        aria-label={stages.map((s) => `${s.label}: ${s.count}`).join("; ")}
-      >
-        {total > 0 &&
-          stages
-            .filter((s) => s.count > 0)
-            .map((s) => (
-              <div
-                key={s.id}
-                className={`${SEGMENT_COLOURS[s.id] ?? "bg-admin-primary"} h-full border-r-2 border-admin-card last:border-r-0`}
-                style={{ width: `${(s.count / total) * 100}%` }}
-              />
-            ))}
-      </div>
-      <ul className="mt-4 grid grid-cols-2 gap-2 sm:grid-cols-3">
-        {stages.map((s) => (
-          <li key={s.id}>
-            <Link
-              href={`/admin/pedidos?aba=${s.id}`}
-              className="flex items-center gap-2.5 rounded-[10px] px-2.5 py-2 hover:bg-admin-input-bg"
-            >
-              <span
-                className={`h-2.5 w-2.5 flex-none rounded-full ${SEGMENT_COLOURS[s.id] ?? "bg-admin-primary"}`}
-              />
-              <span className="min-w-0 flex-1 text-[12.5px] leading-tight text-admin-text">
-                {s.label}
-              </span>
-              <span className="font-serif text-[17px] font-semibold text-admin-primary tabular-nums">
-                {s.count}
-              </span>
-            </Link>
-          </li>
-        ))}
-      </ul>
+      <ol className="mt-4 grid grid-cols-2 gap-2.5 sm:grid-cols-3 xl:grid-cols-6">
+        {stages.map((s, i) => {
+          const active = s.count > 0;
+          return (
+            <li key={s.id} className="relative">
+              <Link
+                href={`/admin/pedidos?aba=${s.id}`}
+                className={`flex h-full flex-col gap-1 rounded-[12px] border px-3.5 py-3 transition hover:-translate-y-0.5 hover:shadow-sm ${
+                  active
+                    ? ACTIVE_STYLES[s.tone]
+                    : "border-admin-border bg-admin-card text-admin-faint"
+                }`}
+              >
+                <span className="text-[10.5px] font-bold uppercase tracking-[0.1em] opacity-80">
+                  Etapa {i + 1}
+                </span>
+                <span className="font-serif text-[32px] leading-none font-semibold tabular-nums">
+                  {s.count}
+                </span>
+                <span
+                  className={`text-[12.5px] leading-tight font-semibold ${active ? "" : "text-admin-muted"}`}
+                >
+                  {s.label}
+                </span>
+                {active && STAGE_NOTES[s.id] && (
+                  <span className="text-[11.5px] opacity-85">
+                    {STAGE_NOTES[s.id]}
+                  </span>
+                )}
+              </Link>
+              {i < stages.length - 1 && (
+                <span
+                  aria-hidden="true"
+                  className="absolute top-1/2 -right-[11px] z-10 hidden h-5 w-5 -translate-y-1/2 items-center justify-center rounded-full border border-admin-border bg-admin-card text-[12px] text-admin-muted xl:flex"
+                >
+                  ›
+                </span>
+              )}
+            </li>
+          );
+        })}
+      </ol>
     </section>
   );
 }

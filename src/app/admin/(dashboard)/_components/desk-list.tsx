@@ -76,14 +76,14 @@ export function DeskList({
             {items.map((item) => (
               <div
                 key={`${item.kind}-${item.protocolNumber}`}
-                className={`-mx-2 flex items-center gap-3.5 rounded-[10px] border-l-4 px-2 py-3 hover:bg-admin-input-bg ${EDGE_STYLES[item.chipTone]}`}
+                className={`-mx-2 flex flex-wrap items-center gap-x-3.5 gap-y-2 rounded-[10px] border-l-4 px-2 py-3 hover:bg-admin-input-bg ${EDGE_STYLES[item.chipTone]}`}
               >
                 <span
                   className={`w-[84px] flex-none rounded-full py-1 text-center text-[10.5px] font-bold ${CHIP_STYLES[item.chipTone]}`}
                 >
                   {item.chipLabel}
                 </span>
-                <span className="min-w-0 flex-1">
+                <span className="min-w-0 flex-1 max-md:basis-[calc(100%-100px)]">
                   <span className="block truncate text-[14px] font-semibold text-admin-primary">
                     {item.protocolNumber} · {item.displayName}
                   </span>
@@ -93,7 +93,7 @@ export function DeskList({
                 </span>
                 <Link
                   href={item.actionHref}
-                  className={`flex-none rounded-[8px] px-3.5 py-2 text-[12px] font-bold ${ACTION_STYLES[item.chipTone]}`}
+                  className={`flex-none rounded-[8px] px-3.5 py-2 text-center text-[12px] font-bold max-md:w-full ${ACTION_STYLES[item.chipTone]}`}
                 >
                   {item.actionLabel}
                 </Link>
