@@ -223,8 +223,8 @@ export function QueueRows({
               </p>
               <p className="text-[13px] text-admin-muted">
                 {hasFilters
-                  ? "Nenhum protocolo nesta aba com esses filtros."
-                  : "Nenhum pedido nesta aba."}
+                  ? "Nenhum protocolo nesta etapa com esses filtros."
+                  : "Nenhum pedido nesta etapa."}
               </p>
             </div>
           )}

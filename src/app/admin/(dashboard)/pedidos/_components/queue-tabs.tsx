@@ -1,29 +1,31 @@
 import Link from "next/link";
 import {
+  CLOSED_TAB,
   QUEUE_TABS,
   type QueueQuery,
   type QueueTabId,
   queueHref,
 } from "./queue-order.ts";
-import { toneClass } from "./status-tone.ts";
+import type { Tone } from "./status-tone.ts";
+
+/** A stage with requests in it, in the colour of what it means. */
+const FILLED: Record<Tone, string> = {
+  blocked: "border-admin-error-border bg-admin-error-bg text-admin-error-text",
+  waiting:
+    "border-admin-warning-soft-border bg-admin-warning-bg text-admin-warning-text",
+  working:
+    "border-admin-success-bg bg-admin-success-bg text-admin-success-text",
+  delivered: "border-admin-primary-soft bg-admin-input-bg text-admin-primary",
+  closed: "border-admin-border bg-admin-readonly-bg text-admin-muted",
+};
 
 /**
- * One tab per andamento, each with how many protocols it holds. Links, not
- * buttons: the tab is the `aba` parameter of the URL, so the address bar,
- * the back button and a bookmark all agree on which tab is open. The
- * counter of the active tab wears the tone of its andamento; the others
- * stay neutral so the row of numbers does not read as a traffic light.
- *
- * One line, always, and never a scrollbar: a second row of tabs reads as a
- * second set of choices, and a row that scrolls hides the tab that matters
- * most, Finalizados, off the right edge. The tabs share the row's width
- * equally, so on a wide screen they spread across the card instead of
- * huddling at the left. Below 1120px of card (a 1366px laptop, or a wide
- * screen zoomed in) the four long labels switch to their short form, which
- * leaves real slack instead of fitting to the pixel. The short row is 907px
- * of content, which a 1210px viewport gives the card; narrower than that (a
- * tablet, a phone) the tabs wrap, since clipping one is worse than a second
- * line.
+ * The queue's stages as blocks (decision of 12/11/2026): one per andamento,
+ * in the order the work goes, each with its count large, its name and what
+ * it waits on, in the colour of what it means; the stage being read is
+ * filled in the office's colour and marked. Links, not buttons: the stage
+ * is the `aba` parameter of the URL, so the address bar, the back button
+ * and a bookmark all agree on which one is open.
  */
 export function QueueTabs({
   query,
@@ -32,47 +34,60 @@ export function QueueTabs({
   query: QueueQuery;
   counts: Record<QueueTabId, number>;
 }) {
+  let step = 0;
   return (
     <nav
-      aria-label="Andamentos"
-      className="flex flex-wrap items-stretch border-b border-admin-border px-3 @container min-[1210px]:flex-nowrap"
+      aria-label="Etapas dos pedidos"
+      className="border-b border-admin-border px-4 pt-4 pb-4"
     >
-      {QUEUE_TABS.map((tab) => {
-        const active = tab.id === query.tab;
-        return (
-          <Link
-            key={tab.id}
-            href={queueHref(query, { tab: tab.id })}
-            scroll={false}
-            aria-current={active ? "page" : undefined}
-            className={`-mb-px inline-flex flex-1 items-center justify-center gap-1.5 border-b-[3px] px-1.5 pt-[15px] pb-3 text-[13px] whitespace-nowrap transition-colors duration-120 ${
-              active
-                ? "border-admin-primary-soft font-bold text-admin-primary"
-                : "border-transparent font-medium text-admin-muted hover:text-admin-primary"
-            }`}
-          >
-            {tab.shortLabel ? (
-              <>
-                <span className="@max-[1120px]:hidden">{tab.label}</span>
-                <span className="hidden @max-[1120px]:inline">
-                  {tab.shortLabel}
-                </span>
-              </>
-            ) : (
-              tab.label
-            )}
-            <span
-              className={`inline-flex h-5 min-w-5 items-center justify-center rounded-[10px] px-1.5 text-[11px] font-bold tabular-nums ${
+      <p className="mb-2.5 text-[12.5px] text-admin-muted">
+        Escolha uma etapa para ver os pedidos que estão nela.
+      </p>
+      <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-3 lg:grid-cols-4 2xl:grid-cols-7">
+        {QUEUE_TABS.map((tab) => {
+          const active = tab.id === query.tab;
+          const count = counts[tab.id] ?? 0;
+          const closed = tab.id === CLOSED_TAB;
+          if (!closed) step += 1;
+          return (
+            <Link
+              key={tab.id}
+              href={queueHref(query, { tab: tab.id })}
+              scroll={false}
+              aria-current={active ? "page" : undefined}
+              className={`flex flex-col gap-1 rounded-[12px] border-2 px-3.5 py-3 transition hover:-translate-y-0.5 hover:shadow-sm ${
                 active
-                  ? toneClass(tab.tone)
-                  : "bg-admin-readonly-bg text-admin-muted"
+                  ? "border-admin-primary bg-admin-primary text-white shadow-[0_10px_24px_-14px_rgba(0,0,0,0.6)]"
+                  : count > 0
+                    ? FILLED[tab.tone]
+                    : "border-admin-border bg-admin-card text-admin-faint"
               }`}
             >
-              {counts[tab.id] ?? 0}
-            </span>
-          </Link>
-        );
-      })}
+              <span className="flex items-center justify-between gap-2 text-[10.5px] font-bold uppercase tracking-[0.1em] opacity-85">
+                {closed ? "Encerrados" : `Etapa ${step}`}
+                {active && (
+                  <span className="rounded-full bg-white/20 px-2 py-0.5 tracking-normal normal-case">
+                    aberta
+                  </span>
+                )}
+              </span>
+              <span className="font-serif text-[28px] leading-none font-semibold tabular-nums">
+                {count}
+              </span>
+              <span
+                className={`text-[13px] leading-tight font-semibold ${
+                  active || count > 0 ? "" : "text-admin-muted"
+                }`}
+              >
+                {tab.label}
+              </span>
+              <span className="text-[11.5px] leading-snug opacity-85">
+                {tab.hint}
+              </span>
+            </Link>
+          );
+        })}
+      </div>
     </nav>
   );
 }

@@ -17,16 +17,6 @@ const ACTIVE_STYLES: Record<Tone, string> = {
   closed: "border-admin-border bg-admin-readonly-bg text-admin-muted",
 };
 
-/** What each stage is waiting on, in a few words. */
-const STAGE_NOTES: Record<string, string> = {
-  new: "aguarda o cartório",
-  "awaiting-compliance": "parado: exigência com o cliente",
-  "awaiting-payment": "aguarda o pagamento",
-  "payment-reported": "conferir o comprovante",
-  processing: "em trabalho no cartório",
-  "ready-for-pickup": "aguarda a retirada",
-};
-
 /**
  * The open service requests, stage by stage, in the order the work goes
  * (decision of 12/11/2026): one block per stage with its number large and
@@ -84,10 +74,8 @@ export function PipelineCard({ counts }: { counts: Record<string, number> }) {
                 >
                   {s.label}
                 </span>
-                {active && STAGE_NOTES[s.id] && (
-                  <span className="text-[11.5px] opacity-85">
-                    {STAGE_NOTES[s.id]}
-                  </span>
+                {active && (
+                  <span className="text-[11.5px] opacity-85">{s.hint}</span>
                 )}
               </Link>
               {i < stages.length - 1 && (
