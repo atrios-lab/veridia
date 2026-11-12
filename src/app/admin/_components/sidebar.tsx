@@ -83,10 +83,11 @@ export function AdminSidebar({
   );
 
   return (
-    <Sidebar collapsible="icon" className="border-sidebar-border">
-      {/* 56px, the top bar's height, so the two lines under them meet as
-          one across the screen. */}
-      <SidebarHeader className="h-14 flex-none justify-center border-b border-sidebar-border py-0">
+    <Sidebar collapsible="icon" variant="inset">
+      {/* 56px, the top bar's height. The inset variant (shadcn): the
+          sidebar's colour frames the screen and the content sits in a
+          card on it, see the dashboard layout. */}
+      <SidebarHeader className="h-14 flex-none justify-center py-0">
         <OfficeMark tenant={tenant} />
       </SidebarHeader>
       <AdminSidebarNav items={items} counts={counts} />

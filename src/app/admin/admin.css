@@ -75,11 +75,13 @@
   --color-input: #888888;
   --color-ring: #232a64;
 
-  /* The sidebar and the top bar: navy at 14% over white (decision of
-     12/11/2026, up from 8%), item under the pointer 20%, current item 26%,
-     edge 30%. Solid, written out because the contrast test reads plain
-     values. Secondary text on it is --color-sidebar-label, not
-     --color-muted-foreground, which drops to 4.41:1 here. */
+  /* The sidebar and the frame around the content (shadcn's inset
+     layout): navy at 14% over white (decision of 12/11/2026, up from 8%),
+     item under the pointer 20%, current item 26%, edge 30%. The top bar
+     sits inside the frame, in white. Solid, written out because the
+     contrast test reads plain values. Secondary text on it is
+     --color-sidebar-label, not --color-muted-foreground, which drops to
+     4.41:1 here. */
   --color-sidebar: #e0e1e9;
   --color-sidebar-foreground: #0a0a0a;
   --color-sidebar-primary: #232a64;

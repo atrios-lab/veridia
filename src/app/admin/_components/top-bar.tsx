@@ -37,7 +37,7 @@ export async function AdminTopBar({
   const open = isChatOpen(availability, tenant, new Date());
 
   return (
-    <header className="sticky top-0 z-20 flex h-14 flex-none items-center gap-3 border-b border-sidebar-border bg-sidebar px-4 md:px-6">
+    <header className="sticky top-0 z-20 flex h-14 flex-none items-center gap-3 border-b bg-background px-4 md:rounded-t-xl md:px-6">
       {/* Collapses the sidebar to its icons; on a phone, where the sidebar
           is a drawer, it is the only way to the navigation. */}
       <SidebarTrigger className="-ml-1.5" />
