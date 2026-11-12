@@ -24,12 +24,14 @@ const ACTIVE_STYLES: Record<Tone, string> = {
  * tab of the queue; the counting is the queue's own.
  */
 export function PipelineCard({ counts }: { counts: Record<string, number> }) {
-  const stages = QUEUE_TABS.filter((tab) => tab.id !== CLOSED_TAB).map(
-    (tab) => ({
-      ...tab,
-      count: tab.statuses.reduce((sum, s) => sum + (counts[s] ?? 0), 0),
-    }),
-  );
+  // The pedidos still waiting on the signed requerimento have not reached
+  // the office: they have their own tab in the queue, not a stage here.
+  const stages = QUEUE_TABS.filter(
+    (tab) => tab.id !== CLOSED_TAB && tab.id !== "awaiting-signed-form",
+  ).map((tab) => ({
+    ...tab,
+    count: tab.statuses.reduce((sum, s) => sum + (counts[s] ?? 0), 0),
+  }));
   const total = stages.reduce((sum, s) => sum + s.count, 0);
   return (
     <section className="rounded-xl border bg-card p-6 shadow-xs">

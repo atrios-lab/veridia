@@ -255,7 +255,11 @@ export default async function AdminHome() {
 
   // The day's numbers, each opening the screen it counts.
   const openRequests = Object.entries(statusCounts)
-    .filter(([status]) => isOpenServiceRequestStatus(status))
+    // Not yet with the office: waiting on the signed requerimento.
+    .filter(
+      ([status]) =>
+        isOpenServiceRequestStatus(status) && status !== "awaiting-signed-form",
+    )
     .reduce((sum, [, count]) => sum + count, 0);
   const kpis: OverviewKpi[] = [
     {

@@ -38,9 +38,11 @@ import {
 import { readExemption } from "@/core/request/kinds.ts";
 import { formatProtocolNumber } from "@/core/request/protocol.ts";
 import { signatureCaveatFor } from "@/core/request/requerimento.ts";
+import { SIGNED_FORM_MESSAGES } from "@/core/request/signed-form-check.ts";
 import { formatDate, officeHolidays } from "@/core/scheduling/calendar.ts";
 import { isSectionEnabled } from "@/core/tenant/gating.ts";
 import { officeYear } from "@/core/time/office-time.ts";
+import { db } from "@/db/index.ts";
 import { clientIp } from "@/lib/client-ip.ts";
 import { sendAccessKey } from "@/lib/email/service-request.ts";
 import { currentPrenotation } from "@/lib/fee-tables.ts";
@@ -50,7 +52,13 @@ import {
   createServiceRequest,
   findByProtocol,
   findOpenServiceRequestDuplicate,
+  reconcileDeadlinePauseWith,
+  updateRequestStatus,
 } from "@/lib/service-request.ts";
+import {
+  readSignedForm,
+  saveSignedFormCheckWith,
+} from "@/lib/signed-form-reading.ts";
 import { getGuideSettings, issueGuideForRequest } from "@/lib/tax-guides.ts";
 import { getTenant, today } from "@/lib/tenant.ts";
 import { AttachmentError, collectAttachments } from "@/lib/uploads.ts";
@@ -283,6 +291,9 @@ export async function submitServiceRequest(
       {
         ...data,
         ...(prenotation ? { amountCents: prenotation.item.totalCents } : {}),
+        // The pedido reaches the office once the signed requerimento is
+        // accepted (decision of 12/11/2026); a busca has none to sign.
+        ...(act.consultation ? {} : { status: "awaiting-signed-form" }),
         contact: email,
         accessKeyHash: hashAccessKey(accessKey),
         details: {
@@ -312,6 +323,12 @@ export async function submitServiceRequest(
       },
       attachments,
     );
+
+    // Waiting on the signed requerimento, the term does not run (decision
+    // of 12/11/2026): the pedido has not reached the office yet.
+    if (!act.consultation) {
+      await reconcileDeadlinePauseWith(db, tenant, requestId, null, today());
+    }
 
     // The guia is drawn by itself, numbered, into the panel only: the office
     // checks it against the documents, corrects it, signs it and delivers it
@@ -380,7 +397,10 @@ export async function submitServiceRequest(
 export type AttachState =
   | { status: "idle" }
   | { status: "error"; message: string }
-  | { status: "success"; message: string };
+  | { status: "success"; message: string }
+  /** Sent, but its signature was not recognised: the office checks it, and
+   * the citizen may send another file (decision of 12/11/2026). */
+  | { status: "review"; message: string };
 
 /**
  * The signed form, sent from the success screen or the consult. Authorised
@@ -456,6 +476,38 @@ export async function attachSignedForm(
             ? "Escolha o arquivo da declaração assinada."
             : "Escolha o arquivo do requerimento assinado.",
       };
+    }
+    // The requerimento is read before it is taken (decision of 12/11/2026):
+    // ours and signed digitally, the pedido goes on to the office; a scan or
+    // a photo waits for the office's check; anything else is refused.
+    if (documento === "requerimento" && stored[0]) {
+      const reading = await readSignedForm(stored[0], request.protocolNumber);
+      if (reading.verdict === "wrong") {
+        return {
+          status: "error",
+          message: `${reading.reason} ${SIGNED_FORM_MESSAGES.wrong}`,
+        };
+      }
+      await attachToRequest(tenant.slug, request.id, stored, "signed-form");
+      await saveSignedFormCheckWith(
+        db,
+        tenant.slug,
+        request.id,
+        {
+          verdict: reading.verdict,
+          reason: reading.reason,
+          checkedAt: new Date().toISOString(),
+        },
+        null,
+      );
+      if (reading.verdict === "review") {
+        return { status: "review", message: SIGNED_FORM_MESSAGES.review };
+      }
+      if (request.status === "awaiting-signed-form") {
+        await updateRequestStatus(tenant.slug, request.id, "new", null);
+        await reconcileDeadlinePauseWith(db, tenant, request.id, null, today());
+      }
+      return { status: "success", message: SIGNED_FORM_MESSAGES.accepted };
     }
     await attachToRequest(tenant.slug, request.id, stored, "signed-form");
     return {

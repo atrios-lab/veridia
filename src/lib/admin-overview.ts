@@ -1,3 +1,4 @@
+import { readSignedFormCheck } from "@/core/request/signed-form-check.ts";
 import "server-only";
 import {
   and,
@@ -398,7 +399,15 @@ export async function listDeskItems(
     lastCitizenAttachmentAt(tenantSlug, serviceRequestIds),
   ]);
 
-  return rows.map((row) => {
+  // A pedido from the site waiting on its signed requerimento has not
+  // reached the office (decision of 12/11/2026): off the desk, unless it
+  // carries a scan or a photo for the office to check.
+  const reached = rows.filter(
+    (row) =>
+      row.status !== "awaiting-signed-form" ||
+      readSignedFormCheck(row.details)?.verdict === "review",
+  );
+  return reached.map((row) => {
     const office = [officeAt.get(row.id), officeAt.get(row.protocolNumber)]
       .filter((at) => at !== undefined)
       .sort((a, b) => b.getTime() - a.getTime())[0];

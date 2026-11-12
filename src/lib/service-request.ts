@@ -643,7 +643,11 @@ export async function openCountByKind(
       and(
         eq(serviceRequests.tenantSlug, tenantSlug),
         eq(serviceRequests.kind, kind),
-        notInArray(serviceRequests.status, [...TERMINAL_STATUSES[kind]]),
+        notInArray(serviceRequests.status, [
+          ...TERMINAL_STATUSES[kind],
+          // Not yet with the office (decision of 12/11/2026).
+          ...(kind === "service-request" ? ["awaiting-signed-form"] : []),
+        ]),
       ),
     );
   return row?.count ?? 0;
@@ -753,8 +757,11 @@ export async function openRequestCount(tenantSlug: string): Promise<number> {
         eq(serviceRequests.tenantSlug, tenantSlug),
         eq(serviceRequests.kind, "service-request"),
         notTaxGuide(),
+        // Not yet with the office: waiting on the signed requerimento
+        // (decision of 12/11/2026).
         notInArray(serviceRequests.status, [
           ...TERMINAL_SERVICE_REQUEST_STATUSES,
+          "awaiting-signed-form",
         ]),
       ),
     );

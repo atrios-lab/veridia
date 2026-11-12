@@ -23,6 +23,7 @@ import type { Tone } from "./status-tone.ts";
  * short form for a narrow row (see queue-tabs.tsx).
  */
 export type QueueTabId =
+  | "awaiting-signed-form"
   | "new"
   | "in-review"
   | "awaiting-compliance"
@@ -46,6 +47,17 @@ export interface QueueTab {
 export const CLOSED_TAB: QueueTabId = "closed";
 
 export const QUEUE_TABS: readonly QueueTab[] = [
+  {
+    // Before the pedido reaches the office (decision of 12/11/2026): the
+    // site's pedidos whose signed requerimento is not accepted yet. Left out
+    // of the pipeline and the counts of the Visão geral.
+    id: "awaiting-signed-form",
+    label: "Aguardando requerimento assinado",
+    shortLabel: "Aguard. requerimento",
+    tone: "waiting",
+    hint: "o pedido só chega ao cartório depois do requerimento",
+    statuses: ["awaiting-signed-form"],
+  },
   {
     id: "new",
     label: "Recebido",

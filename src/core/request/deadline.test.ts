@@ -223,3 +223,18 @@ test("the office's own holiday stops the term as well", () => {
   // 07/09 is Independência and 08/09 the office's own: Friday to Wednesday.
   assert.equal(deadlineDate("2026-09-04", 1, own), "2026-09-09");
 });
+
+test("o prazo fica suspenso enquanto o requerimento assinado não é aceito", () => {
+  assert.deepEqual(
+    pauseReasons({
+      status: "awaiting-signed-form",
+      amountCents: null,
+      pendingRequirements: 0,
+    }),
+    ["signed-form"],
+  );
+  assert.deepEqual(
+    pauseReasons({ status: "new", amountCents: null, pendingRequirements: 0 }),
+    [],
+  );
+});
