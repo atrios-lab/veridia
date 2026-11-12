@@ -84,6 +84,7 @@ import {
 } from "../../../_components/attachment-link.ts";
 import { AdminPageHeader } from "../../../_components/page-header.tsx";
 import { RequestFilesNotice } from "../../../_components/request-files-notice.tsx";
+import { Badge } from "../../../_ui/badge.tsx";
 import { DeadlineBadge } from "../_components/deadline-badge.tsx";
 import { AmountSection } from "./_components/amount-section.tsx";
 import { ApplicantSection } from "./_components/applicant-section.tsx";
@@ -319,9 +320,9 @@ export default async function ServiceRequestDetailPage({
         requestId={request.id}
         version={request.updatedAt.toISOString()}
       />
-      <main className="flex flex-col gap-4.5 px-[30px] py-7">
+      <main className="flex flex-col gap-4 px-4 pt-6 pb-8 md:px-8">
         {deletedGuide && act?.taxGuide && (
-          <p className="rounded-[12px] bg-admin-success-bg px-4 py-3 text-[13px] text-admin-success-text">
+          <p className="rounded-lg border border-success/30 bg-success-soft p-4 text-sm text-success-text">
             <strong>Guia {deletedGuide} excluída.</strong> O número ficou livre
             para a próxima. Este pedido do site continua aberto: se ele também
             foi teste ou aberto por engano, use o botão "Excluir protocolo",
@@ -329,7 +330,7 @@ export default async function ServiceRequestDetailPage({
             real, emita outra guia.
           </p>
         )}
-        <div className="flex flex-wrap items-center gap-3.5">
+        <div className="flex flex-wrap items-center gap-3">
           <BackLink
             href={act?.taxGuide ? "/admin/utilitarios/guias" : "/admin/pedidos"}
             label={
@@ -344,14 +345,14 @@ export default async function ServiceRequestDetailPage({
             than no link.
           */}
           {request.actId && request.applicantName && request.contact && (
-            <div className="ml-auto flex flex-wrap items-center gap-3.5">
+            <div className="ml-auto flex flex-wrap items-center gap-3">
               {signedRequerimento ? (
                 <>
                   <a
                     href={documentHref(request.id, signedRequerimento.id)}
                     target="_blank"
                     rel="noreferrer"
-                    className="text-[12.5px] font-semibold text-admin-primary-soft hover:underline"
+                    className="text-sm font-medium text-primary underline-offset-4 hover:underline"
                   >
                     Requerimento assinado
                   </a>
@@ -359,7 +360,7 @@ export default async function ServiceRequestDetailPage({
                     href={`/admin/pedidos/${encodeURIComponent(request.protocolNumber)}/imprimir`}
                     target="_blank"
                     rel="noreferrer"
-                    className="text-[12.5px] text-admin-muted hover:underline"
+                    className="text-sm text-muted-foreground underline-offset-4 hover:underline"
                     title="Gera o requerimento de novo, sem a assinatura"
                   >
                     Gerar sem assinatura
@@ -370,7 +371,7 @@ export default async function ServiceRequestDetailPage({
                   href={`/admin/pedidos/${encodeURIComponent(request.protocolNumber)}/imprimir`}
                   target="_blank"
                   rel="noreferrer"
-                  className="text-[12.5px] font-semibold text-admin-primary-soft hover:underline"
+                  className="text-sm font-medium text-primary underline-offset-4 hover:underline"
                 >
                   Imprimir requerimento
                 </a>
@@ -383,7 +384,7 @@ export default async function ServiceRequestDetailPage({
                         href={documentHref(request.id, signedDeclaracao.id)}
                         target="_blank"
                         rel="noreferrer"
-                        className="text-[12.5px] font-semibold text-admin-primary-soft hover:underline"
+                        className="text-sm font-medium text-primary underline-offset-4 hover:underline"
                       >
                         Declaração assinada
                       </a>
@@ -391,7 +392,7 @@ export default async function ServiceRequestDetailPage({
                         href={`/admin/pedidos/${encodeURIComponent(request.protocolNumber)}/imprimir?documento=declaracao`}
                         target="_blank"
                         rel="noreferrer"
-                        className="text-[12.5px] text-admin-muted hover:underline"
+                        className="text-sm text-muted-foreground underline-offset-4 hover:underline"
                         title="Gera a declaração de novo, com o carimbo e sem a assinatura"
                       >
                         Gerar sem assinatura
@@ -402,7 +403,7 @@ export default async function ServiceRequestDetailPage({
                       href={`/admin/pedidos/${encodeURIComponent(request.protocolNumber)}/imprimir?documento=declaracao`}
                       target="_blank"
                       rel="noreferrer"
-                      className="text-[12.5px] font-semibold text-admin-primary-soft hover:underline"
+                      className="text-sm font-medium text-primary underline-offset-4 hover:underline"
                     >
                       Baixar declaração
                     </a>
@@ -411,7 +412,7 @@ export default async function ServiceRequestDetailPage({
                     href={`/admin/pedidos/${encodeURIComponent(request.protocolNumber)}/imprimir?documento=declaracao-em-branco`}
                     target="_blank"
                     rel="noreferrer"
-                    className="text-[12.5px] text-admin-muted hover:underline"
+                    className="text-sm text-muted-foreground underline-offset-4 hover:underline"
                   >
                     Declaração em branco
                   </a>
@@ -422,7 +423,7 @@ export default async function ServiceRequestDetailPage({
         </div>
 
         <div className="grid grid-cols-1 gap-5 lg:grid-cols-[1fr_340px] lg:items-start">
-          <div className="flex min-w-0 flex-col gap-4.5">
+          <div className="flex min-w-0 flex-col gap-4">
             <StatusSection
               requestId={request.id}
               protocolNumber={request.protocolNumber}
@@ -435,7 +436,7 @@ export default async function ServiceRequestDetailPage({
                   {/* The term as a fact, next to the andamento it belongs to.
                       The urgency badge beside it only speaks when it must. */}
                   {isOpenServiceRequestStatus(status) && (
-                    <span className="inline-flex items-center rounded-full bg-admin-readonly-bg px-[11px] py-[5px] text-[12px] font-semibold text-admin-muted">
+                    <Badge className="h-6 bg-muted px-2.5 text-muted-foreground">
                       {deadline.pausedOn
                         ? `Prazo suspenso desde ${formatDate(deadline.pausedOn)}`
                         : `Prazo até ${formatDate(
@@ -445,7 +446,7 @@ export default async function ServiceRequestDetailPage({
                               officeHolidays(tenant),
                             ),
                           )} · ${deadline.days} dias úteis`}
-                    </span>
+                    </Badge>
                   )}
                   <DeadlineBadge
                     open={isOpenServiceRequestStatus(status)}
@@ -459,7 +460,7 @@ export default async function ServiceRequestDetailPage({
                       selos porque muda como o pedido é trabalhado desde o
                       primeiro olhar. */}
                   {exemption && (
-                    <span className="inline-flex items-center gap-2 rounded-full bg-admin-warning-bg px-[11px] py-[5px] text-[12px] font-bold text-admin-warning-text">
+                    <span className="inline-flex items-center gap-2 rounded-full border border-warning/30 bg-warning-soft px-2.5 py-1 text-xs font-medium text-warning-text">
                       {exemption.decision
                         ? `Gratuidade ${
                             EXEMPTION_DECISION_LABELS[
@@ -605,11 +606,11 @@ export default async function ServiceRequestDetailPage({
             />
 
             {act?.taxGuide && (
-              <section className="rounded-[14px] border border-admin-border bg-admin-card p-6">
-                <h4 className="font-serif text-[17px] font-semibold text-admin-primary">
+              <section className="rounded-xl border bg-card p-6">
+                <h4 className="text-base font-semibold text-foreground">
                   Guia de transmissão de bens
                 </h4>
-                <p className="mt-1 text-[12.5px] text-admin-muted">
+                <p className="mt-1 text-sm text-muted-foreground">
                   Gerada sozinha com os dados do pedido e visível só para a
                   serventia. Confira com os documentos, corrija o que precisar e
                   baixe de novo. Depois, assine e anexe a guia com o boleto em
@@ -617,11 +618,11 @@ export default async function ServiceRequestDetailPage({
                   imposto”, ou envie você mesmo aos órgãos.
                 </p>
                 {guides.length === 0 ? (
-                  <p className="mt-3 text-[12.5px] text-admin-warning-text">
+                  <p className="mt-3 text-sm text-warning-text">
                     Nenhuma guia ligada a este pedido.{" "}
                     <Link
                       href="/admin/utilitarios/guias/nova"
-                      className="font-semibold underline"
+                      className="font-medium underline underline-offset-4"
                     >
                       Emitir em Utilitários
                     </Link>
@@ -633,15 +634,15 @@ export default async function ServiceRequestDetailPage({
                       return (
                         <li
                           key={guide.id}
-                          className="flex flex-wrap items-center gap-3 rounded-lg bg-admin-input-bg px-3.5 py-2.5 text-[13px]"
+                          className="flex flex-wrap items-center gap-3 rounded-lg bg-muted/50 px-3 py-2 text-sm"
                         >
-                          <span className="mr-auto font-semibold text-admin-text">
+                          <span className="mr-auto font-medium text-foreground">
                             Nº {formatGuideNumber(guide.year, guide.sequence)} ·{" "}
                             {GUIDE_KIND_INFO[guide.guide.kind].label}
                           </span>
                           <Link
                             href={base}
-                            className="font-semibold text-admin-primary underline"
+                            className="font-medium text-primary underline underline-offset-4"
                           >
                             Conferir e corrigir
                           </Link>
@@ -649,13 +650,13 @@ export default async function ServiceRequestDetailPage({
                             href={`${base}/arquivo?formato=pdf`}
                             target="_blank"
                             rel="noreferrer"
-                            className="font-semibold text-admin-primary underline"
+                            className="font-medium text-primary underline underline-offset-4"
                           >
                             PDF
                           </a>
                           <a
                             href={`${base}/arquivo?formato=docx`}
-                            className="font-semibold text-admin-primary underline"
+                            className="font-medium text-primary underline underline-offset-4"
                           >
                             Word
                           </a>
@@ -726,7 +727,7 @@ export default async function ServiceRequestDetailPage({
             />
           </div>
 
-          <div className="flex flex-col gap-4.5">
+          <div className="flex flex-col gap-4">
             <KeySection
               contact={request.contact}
               issuedLabel={formatDate(
@@ -735,8 +736,8 @@ export default async function ServiceRequestDetailPage({
             />
 
             {conversations.length > 0 && (
-              <div className="rounded-[14px] border border-admin-border bg-admin-card p-4.5">
-                <h4 className="font-serif text-[15.5px] font-semibold text-admin-primary">
+              <div className="rounded-xl border bg-card p-4">
+                <h4 className="text-base font-semibold text-foreground">
                   Atendimentos vinculados
                 </h4>
                 <ul className="mt-3 flex flex-col gap-2">
@@ -744,12 +745,12 @@ export default async function ServiceRequestDetailPage({
                     <li key={conversation.id}>
                       <Link
                         href={`/admin/atendimento/${conversation.id}`}
-                        className="flex items-center justify-between gap-2 rounded-[9px] border border-admin-border bg-admin-input-bg px-3 py-2 text-[12px] hover:border-admin-primary-soft"
+                        className="flex items-center justify-between gap-2 rounded-lg border bg-muted/50 px-3 py-2 text-xs transition-colors hover:bg-muted"
                       >
-                        <span className="text-admin-text">
+                        <span className="text-foreground">
                           {conversation.attendantName ?? "Atendente"}
                         </span>
-                        <span className="text-admin-faint">
+                        <span className="text-muted-foreground">
                           {conversation.closedAt
                             ? formatOfficeDayMonthTime(conversation.closedAt)
                             : "Em andamento"}
@@ -761,12 +762,12 @@ export default async function ServiceRequestDetailPage({
               </div>
             )}
 
-            <div className="rounded-[14px] border border-admin-border bg-admin-card p-4.5">
-              <h4 className="font-serif text-[15.5px] font-semibold text-admin-primary">
+            <div className="rounded-xl border bg-card p-4">
+              <h4 className="text-base font-semibold text-foreground">
                 Histórico
               </h4>
               {history.length === 0 ? (
-                <p className="mt-2 text-[12px] text-admin-muted">
+                <p className="mt-2 text-xs text-muted-foreground">
                   Sem eventos registrados.
                 </p>
               ) : (
@@ -795,9 +796,9 @@ export default async function ServiceRequestDetailPage({
                     return (
                       <li
                         key={`${entry.action}-${entry.createdAt.toISOString()}-${index}`}
-                        className="text-[12.5px] leading-snug text-admin-text"
+                        className="text-sm leading-snug text-foreground"
                       >
-                        <strong className="text-admin-primary">
+                        <strong className="font-semibold text-foreground">
                           {/* No `actorId` means the citizen did it (creation,
                               or recovering their own key from the consult
                               page): the applicant's own name reads better
@@ -812,17 +813,17 @@ export default async function ServiceRequestDetailPage({
                         {HISTORY_LABELS[entry.action] ??
                           lowerFirst(auditActionLabel(entry.action))}
                         <br />
-                        <span className="text-[11px] text-admin-faint">
+                        <span className="text-xs text-muted-foreground tabular-nums">
                           {formatOfficeDayMonthTime(entry.createdAt)}
                         </span>
                         {showReason &&
                           (request.statusReason || !showRejectionDocument) && (
-                            <p className="mt-1 text-[12px] text-admin-text">
+                            <p className="mt-1 text-xs text-foreground">
                               Motivo: {request.statusReason ?? "não informado"}
                             </p>
                           )}
                         {showRejectionDocument && rejectionDocument && (
-                          <p className="mt-1 text-[12px] text-admin-text">
+                          <p className="mt-1 text-xs text-foreground">
                             <a
                               href={documentHref(
                                 request.id,
@@ -830,7 +831,7 @@ export default async function ServiceRequestDetailPage({
                               )}
                               target="_blank"
                               rel="noopener"
-                              className="font-semibold text-admin-primary-soft hover:underline"
+                              className="font-medium text-primary underline-offset-4 hover:underline"
                             >
                               Ver documento do indeferimento
                             </a>

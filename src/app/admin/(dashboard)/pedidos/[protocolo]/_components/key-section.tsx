@@ -20,15 +20,15 @@ export function KeySection({
   const hasEmail = Boolean(contact) && isEmailContact(contact as string);
 
   return (
-    <div className="rounded-[14px] border border-admin-border bg-admin-card p-4.5">
-      <h4 className="font-serif text-[15.5px] font-semibold text-admin-primary">
+    <div className="rounded-xl border bg-card p-4">
+      <h4 className="text-base font-semibold text-foreground">
         Chave de acesso
       </h4>
-      <p className="mt-1 text-[12px] text-admin-muted">
+      <p className="mt-1 text-xs text-muted-foreground">
         Ativa desde {issuedLabel}. O cidadão usa junto do protocolo para ver o
         pedido completo.
       </p>
-      <p className="mt-2 text-[12px] leading-relaxed text-admin-text">
+      <p className="mt-2 text-xs leading-relaxed text-foreground">
         {hasEmail
           ? "Se o cidadão perder a chave, ele recupera pelo site, na consulta de protocolo, informando o protocolo e o e-mail do pedido."
           : "Este pedido tem telefone como contato: atualize para um e-mail (seção de dados do solicitante) para o cidadão poder recuperar a chave pelo site, caso a perca."}

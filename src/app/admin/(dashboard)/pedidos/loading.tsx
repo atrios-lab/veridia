@@ -2,6 +2,7 @@ import Link from "next/link";
 import { ATTRIBUTIONS } from "@/core/tenant/schema.ts";
 import { AdminIcon } from "../../_components/icon.tsx";
 import { AdminPageHeader } from "../../_components/page-header.tsx";
+import { buttonVariants } from "../../_ui/button.tsx";
 import { QUEUE_TABS, queueSearchParams } from "./_components/queue-order.ts";
 import { QueueToolbar } from "./_components/queue-toolbar.tsx";
 
@@ -32,52 +33,52 @@ export default function ServiceRequestQueueLoading() {
         actions={
           <Link
             href="/admin/pedidos/novo"
-            className="inline-flex items-center gap-[9px] rounded-[11px] bg-admin-primary-soft px-[22px] py-[13px] text-[14px] font-bold whitespace-nowrap text-white transition-colors duration-120 hover:bg-admin-primary"
+            className={buttonVariants({ size: "lg" })}
           >
-            <AdminIcon name="plus" strokeWidth={2.4} className="h-4 w-4" />
+            <AdminIcon name="plus" strokeWidth={2.4} className="size-4" />
             Lançar pedido
           </Link>
         }
       />
-      <div className="animate-pulse px-[30px] pt-6 pb-9">
-        <div className="overflow-hidden rounded-[14px] border border-admin-border bg-admin-card">
-          <div className="flex flex-wrap border-b border-admin-border px-3 @container min-[1210px]:flex-nowrap">
+      <div className="animate-pulse px-4 pt-6 pb-8 md:px-8">
+        <div className="overflow-hidden rounded-xl border bg-card">
+          <div className="grid grid-cols-2 gap-x-2 border-b px-4 pt-4 sm:grid-cols-3 lg:grid-cols-4 2xl:grid-cols-8 @container">
             {QUEUE_TABS.map((tab) => (
               <span
                 key={tab.id}
-                className="inline-flex flex-1 items-center justify-center gap-1.5 px-1.5 pt-[15px] pb-3 text-[13px] font-medium whitespace-nowrap text-admin-muted"
+                className="flex items-start justify-between gap-2 px-2 pt-2 pb-3 text-sm leading-tight font-medium text-muted-foreground"
               >
                 {tab.shortLabel ? (
-                  <>
+                  <span>
                     <span className="@max-[1120px]:hidden">{tab.label}</span>
                     <span className="hidden @max-[1120px]:inline">
                       {tab.shortLabel}
                     </span>
-                  </>
+                  </span>
                 ) : (
                   tab.label
                 )}
-                <span className="h-5 w-6 rounded-[10px] bg-admin-readonly-bg" />
+                <span className="h-5 w-6 shrink-0 rounded-full bg-muted" />
               </span>
             ))}
           </div>
           <QueueToolbar query={DEFAULT_QUERY} attributions={ATTRIBUTIONS} />
-          <div className="h-[39px] border-b border-admin-border" />
+          <div className="h-10 border-b" />
           {SKELETON_ROWS.map((id) => (
             <div
               key={id}
-              className="flex h-[49px] items-center gap-2.5 border-b border-admin-border/60 px-[22px]"
+              className="flex h-12 items-center gap-2 border-b px-4"
             >
-              <div className="h-4 w-4 rounded-[4px] bg-admin-readonly-bg" />
-              <div className="h-3.5 w-[120px] rounded bg-admin-readonly-bg" />
-              <div className="h-3.5 flex-[1.6] rounded bg-admin-readonly-bg" />
-              <div className="h-3.5 flex-[1.4] rounded bg-admin-readonly-bg" />
-              <div className="h-3.5 w-[60px] rounded bg-admin-readonly-bg" />
-              <div className="h-3.5 w-[160px] rounded bg-admin-readonly-bg" />
-              <div className="h-[31px] w-[76px] rounded-[8px] bg-admin-readonly-bg" />
+              <div className="size-4 rounded-sm bg-muted" />
+              <div className="h-3.5 w-30 rounded-sm bg-muted" />
+              <div className="h-3.5 flex-[1.6] rounded-sm bg-muted" />
+              <div className="h-3.5 flex-[1.4] rounded-sm bg-muted" />
+              <div className="h-3.5 w-15 rounded-sm bg-muted" />
+              <div className="h-3.5 w-40 rounded-sm bg-muted" />
+              <div className="h-8 w-20 rounded-md bg-muted" />
             </div>
           ))}
-          <div className="h-[60px] bg-admin-footer-bg" />
+          <div className="h-14 border-t bg-muted/50" />
         </div>
       </div>
     </output>

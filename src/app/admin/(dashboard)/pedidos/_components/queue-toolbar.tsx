@@ -3,6 +3,8 @@ import { ATTRIBUTION_ACRONYMS } from "@/core/acts/catalog.ts";
 import type { Attribution } from "@/core/tenant/schema.ts";
 import { Dropdown } from "../../../_components/dropdown.tsx";
 import { AdminIcon } from "../../../_components/icon.tsx";
+import { buttonVariants } from "../../../_ui/button.tsx";
+import { Input } from "../../../_ui/input.tsx";
 import {
   DEFAULT_PAGE_SIZE,
   PAGE_SIZES,
@@ -29,8 +31,8 @@ export function QueueToolbar({
   const hasFilters = Boolean(query.attribution || query.search);
 
   return (
-    <div className="flex flex-wrap items-center gap-2.5 border-b border-admin-border px-[22px] py-4">
-      <span className="inline-flex items-center gap-2 text-[13px] text-admin-muted">
+    <div className="flex flex-wrap items-center gap-2 border-b px-4 py-3">
+      <span className="inline-flex items-center gap-2 text-sm text-muted-foreground">
         Exibir
         <Dropdown
           label={String(query.size)}
@@ -41,7 +43,7 @@ export function QueueToolbar({
             href: queueHref(query, { size }),
           }))}
           triggerClassName="gap-2 py-2 pr-2.5 pl-3"
-          menuClassName="min-w-[96px]"
+          menuClassName="min-w-24"
         />
         por página
       </span>
@@ -65,14 +67,14 @@ export function QueueToolbar({
             href: queueHref(query, { attribution }),
           })),
         ]}
-        triggerClassName="py-[9px] pr-2.5 pl-3"
-        menuClassName="min-w-[200px]"
+        triggerClassName="py-2 pr-2.5 pl-3"
+        menuClassName="min-w-50"
       />
       <form
         method="get"
         action={QUEUE_PATH}
         aria-label="Buscar nesta etapa"
-        className="relative flex min-w-[260px] flex-1 items-center md:max-w-[420px]"
+        className="relative flex min-w-65 flex-1 items-center md:max-w-105"
       >
         {query.tab !== "new" && (
           <input type="hidden" name="aba" value={query.tab} />
@@ -86,22 +88,22 @@ export function QueueToolbar({
         <AdminIcon
           name="search"
           strokeWidth={2}
-          className="pointer-events-none absolute left-3 h-3.5 w-3.5 text-admin-faint"
+          className="pointer-events-none absolute left-2.5 size-4 text-muted-foreground"
         />
-        <input
+        <Input
           type="search"
           name="q"
           defaultValue={query.search ?? ""}
           placeholder="Buscar protocolo ou nome"
           aria-label="Buscar protocolo ou nome"
-          className="w-full rounded-[9px] border border-admin-input-border bg-admin-card py-2.5 pr-3 pl-[34px] text-[13px] text-admin-text transition-colors duration-120 placeholder:text-admin-faint focus:border-admin-primary-soft focus:outline-none"
+          className="pl-8"
         />
       </form>
       {hasFilters && (
         <Link
           href={queueHref(query, { attribution: undefined, search: undefined })}
           scroll={false}
-          className="px-0.5 py-1.5 text-[12.5px] font-semibold text-admin-primary-soft underline underline-offset-2 hover:text-admin-primary"
+          className={buttonVariants({ variant: "link", size: "sm" })}
         >
           Limpar
         </Link>

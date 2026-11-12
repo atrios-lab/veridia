@@ -6,6 +6,14 @@ import { type ActVariants, PURPOSE_LABEL } from "@/core/acts/catalog.ts";
 import { formatCpf, formatPhone } from "@/core/request/form.ts";
 import type { AlternateDocumentType } from "@/core/request/kinds.ts";
 import { LONG_TEXT_MAX } from "@/core/text-limits.ts";
+import { Button } from "../../../../_ui/button.tsx";
+import { Input } from "../../../../_ui/input.tsx";
+import { Label as UiLabel } from "../../../../_ui/label.tsx";
+import {
+  NativeSelect,
+  NativeSelectOption,
+} from "../../../../_ui/native-select.tsx";
+import { Textarea } from "../../../../_ui/textarea.tsx";
 import { AlternateDocumentFields } from "../../_components/alternate-document-fields.tsx";
 import { type ActionState, updateRequestDataAction } from "../actions.ts";
 
@@ -26,9 +34,6 @@ export interface ApplicantData {
   createdAt: string;
 }
 
-const FIELD =
-  "w-full rounded-[9px] border border-admin-input-border bg-admin-input-bg px-3.5 py-2.5 text-[13.5px] text-admin-text outline-none focus:border-admin-primary-soft";
-
 const EMPTY = "Não informado";
 
 /** Label over value, in plain text: the read view has no boxes to fill. */
@@ -43,10 +48,10 @@ function Field({
 }) {
   return (
     <div className={wide ? "col-span-2 min-w-0" : "min-w-0"}>
-      <div className="text-[11px] text-admin-faint">{label}</div>
+      <div className="text-xs text-muted-foreground">{label}</div>
       <div
-        className={`mt-0.5 text-[13.5px] leading-[1.4] whitespace-pre-line [overflow-wrap:anywhere] ${
-          value === EMPTY ? "text-admin-muted" : "text-admin-text"
+        className={`mt-0.5 text-sm leading-snug whitespace-pre-line [overflow-wrap:anywhere] ${
+          value === EMPTY ? "text-muted-foreground" : "text-foreground"
         }`}
       >
         {value}
@@ -63,12 +68,9 @@ function Label({
   children: React.ReactNode;
 }) {
   return (
-    <label
-      htmlFor={htmlFor}
-      className="mb-1.5 block text-xs font-bold text-admin-primary"
-    >
+    <UiLabel htmlFor={htmlFor} className="mb-2">
       {children}
-    </label>
+    </UiLabel>
   );
 }
 
@@ -131,7 +133,7 @@ export function ApplicantSection({
   const closed = mode === "closed";
 
   return (
-    <div className="rounded-[14px] border border-admin-border bg-admin-card px-6 py-[22px]">
+    <div className="rounded-xl border bg-card p-6">
       {/* The whole row toggles, so the hit area is the row and not a chevron.
           The title is the real button (keyboard, aria-expanded); its click
           bubbles up to the row, which is the one place the toggle lives. The
@@ -147,13 +149,13 @@ export function ApplicantSection({
         <button
           type="button"
           aria-expanded={!closed}
-          className="flex min-w-0 flex-1 cursor-pointer flex-col gap-[3px] text-left"
+          className="flex min-w-0 flex-1 cursor-pointer flex-col gap-1 rounded-md text-left"
         >
-          <h4 className="font-serif text-[17px] font-semibold text-admin-primary">
+          <h4 className="text-base font-semibold text-foreground">
             Dados do solicitante
           </h4>
           {closed && (
-            <span className="w-full truncate text-[12.5px] text-admin-muted">
+            <span className="w-full truncate text-sm text-muted-foreground">
               {data.applicantName || EMPTY} · {data.contact || EMPTY} · CPF{" "}
               {cpfMasked}
               {alternateDocumentMasked && ` · ${alternateDocumentMasked}`}
@@ -161,16 +163,17 @@ export function ApplicantSection({
           )}
         </button>
         {mode === "open" && (
-          <button
+          <Button
             type="button"
+            variant="outline"
+            size="sm"
             onClick={(event) => {
               event.stopPropagation();
               setMode("editing");
             }}
-            className="btn btn-admin-secondary btn-sm"
           >
             Editar dados
-          </button>
+          </Button>
         )}
         <svg
           width="18"
@@ -181,7 +184,7 @@ export function ApplicantSection({
           strokeWidth={2}
           strokeLinecap="round"
           strokeLinejoin="round"
-          className={`flex-none text-admin-text transition-transform duration-300 ${closed ? "rotate-180" : ""}`}
+          className={`flex-none text-muted-foreground transition-transform duration-300 ${closed ? "rotate-180" : ""}`}
           aria-hidden="true"
         >
           <path d="m6 15 6-6 6 6" />
@@ -189,7 +192,7 @@ export function ApplicantSection({
       </div>
 
       {mode === "open" && (
-        <div className="mt-3.5 grid grid-cols-2 gap-x-6 gap-y-3.5 border-t border-admin-border pt-3.5">
+        <div className="mt-4 grid grid-cols-2 gap-x-6 gap-y-4 border-t pt-4">
           <Field label="Nome" value={data.applicantName || EMPTY} />
           <Field
             label="CPF"
@@ -220,22 +223,21 @@ export function ApplicantSection({
       {mode === "editing" && (
         <form
           action={action}
-          className="mt-3.5 flex flex-col gap-3.5 border-t border-admin-border pt-4"
+          className="mt-4 flex flex-col gap-4 border-t pt-4"
         >
           <input type="hidden" name="requestId" value={requestId} />
-          <div className="grid grid-cols-1 gap-3.5 md:grid-cols-2">
+          <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
             <div>
               <Label htmlFor="applicantName">Nome</Label>
-              <input
+              <Input
                 id="applicantName"
                 name="applicantName"
                 defaultValue={data.applicantName}
-                className={FIELD}
               />
             </div>
             <div>
               <Label htmlFor="cpf">CPF</Label>
-              <input
+              <Input
                 id="cpf"
                 name="cpf"
                 inputMode="numeric"
@@ -243,7 +245,7 @@ export function ApplicantSection({
                 onChange={(event) => setCpf(formatCpf(event.target.value))}
                 placeholder="000.000.000-00"
                 disabled={noCpf}
-                className={`${FIELD} disabled:bg-admin-readonly-bg disabled:text-admin-muted`}
+                className="disabled:bg-muted"
               />
               <AlternateDocumentFields
                 checked={noCpf}
@@ -254,47 +256,40 @@ export function ApplicantSection({
             </div>
             <div>
               <Label htmlFor="contact">Contato</Label>
-              <input
-                id="contact"
-                name="contact"
-                defaultValue={data.contact}
-                className={FIELD}
-              />
+              <Input id="contact" name="contact" defaultValue={data.contact} />
             </div>
             <div>
               <Label htmlFor="phone">Telefone</Label>
-              <input
+              <Input
                 id="phone"
                 name="phone"
                 inputMode="tel"
                 value={phone}
                 onChange={(event) => setPhone(formatPhone(event.target.value))}
                 placeholder="(00) 00000-0000"
-                className={FIELD}
               />
             </div>
             <div>
               <Label htmlFor="createdAt">Data e hora do atendimento</Label>
-              <input
+              <Input
                 id="createdAt"
                 name="createdAt"
                 type="datetime-local"
                 defaultValue={data.createdAt}
-                className={FIELD}
               />
-              <p className="mt-1 text-[11px] text-admin-faint">
+              <p className="mt-1 text-xs text-muted-foreground">
                 O balcão lança depois; o protocolo vale pelo atendimento.
               </p>
             </div>
           </div>
           <div>
-            <span className="mb-1.5 block text-xs font-bold text-admin-primary">
+            <span className="mb-2 block text-sm leading-none font-medium text-foreground">
               Ato
             </span>
-            <p className="rounded-[9px] border border-admin-input-border bg-admin-readonly-bg px-3.5 py-2.5 text-[13.5px] text-admin-muted">
+            <p className="rounded-md border border-input bg-muted px-2.5 py-2 text-sm text-muted-foreground">
               {actLabel}
             </p>
-            <p className="mt-1 text-[11px] text-admin-faint">
+            <p className="mt-1 text-xs text-muted-foreground">
               O ato não se corrige: trocá-lo muda a atribuição e a base legal do
               que já foi protocolado. Nesse caso, cancele e abra outro pedido.
             </p>
@@ -302,69 +297,58 @@ export function ApplicantSection({
           {actVariants && (
             <div>
               <Label htmlFor="actVariant">{actVariants.question}</Label>
-              <select
+              <NativeSelect
                 id="actVariant"
                 name="actVariant"
                 defaultValue={data.actVariant}
-                className={FIELD}
+                className="w-full"
               >
                 {/* Only while nothing is stored: an old request stays
                     correctable without anyone having to guess its kind. */}
-                {!data.actVariant && <option value="">{EMPTY}</option>}
+                {!data.actVariant && (
+                  <NativeSelectOption value="">{EMPTY}</NativeSelectOption>
+                )}
                 {actVariants.options.map((option) => (
-                  <option key={option.id} value={option.id}>
+                  <NativeSelectOption key={option.id} value={option.id}>
                     {option.name}
-                  </option>
+                  </NativeSelectOption>
                 ))}
-              </select>
+              </NativeSelect>
             </div>
           )}
           {allowsPurpose && (
             <div>
               <Label htmlFor="purpose">{PURPOSE_LABEL}</Label>
-              <input
-                id="purpose"
-                name="purpose"
-                defaultValue={data.purpose}
-                className={FIELD}
-              />
+              <Input id="purpose" name="purpose" defaultValue={data.purpose} />
             </div>
           )}
           <div>
             <Label htmlFor="description">Descrição</Label>
-            <textarea
+            <Textarea
               id="description"
               name="description"
               rows={3}
               maxLength={LONG_TEXT_MAX}
               defaultValue={data.description}
-              className={FIELD}
             />
           </div>
           {state.status === "error" && (
-            <p
-              role="alert"
-              className="text-[12.5px] font-semibold text-admin-error-text"
-            >
+            <p role="alert" className="text-sm font-medium text-destructive">
               {state.message}
             </p>
           )}
           <div className="flex gap-2">
-            <button
-              type="submit"
-              disabled={pending}
-              className="btn btn-admin-primary btn-md"
-            >
+            <Button type="submit" disabled={pending}>
               {pending ? "Salvando…" : "Salvar dados"}
-            </button>
-            <button
+            </Button>
+            <Button
               type="button"
+              variant="outline"
               onClick={() => setMode("open")}
               disabled={pending}
-              className="btn btn-admin-secondary btn-md"
             >
               Cancelar
-            </button>
+            </Button>
           </div>
         </form>
       )}

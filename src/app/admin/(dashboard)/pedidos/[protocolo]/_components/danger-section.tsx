@@ -24,7 +24,7 @@ export function DangerSection({ requestId }: { requestId: string }) {
       >
         <input type="hidden" name="requestId" value={requestId} />
       </ConfirmAction>
-      <p className="mt-1.5 max-w-[280px] text-[11px] leading-relaxed text-admin-faint">
+      <p className="mt-1.5 max-w-70 text-xs leading-relaxed text-muted-foreground">
         Só para abertura por engano (protocolo duplicado, teste). Um pedido real
         que não deve seguir usa o andamento "Cancelado": ele fica no histórico.
       </p>

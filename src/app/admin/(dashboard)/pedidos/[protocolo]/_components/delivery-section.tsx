@@ -17,6 +17,12 @@ import {
   AttachmentRow,
 } from "../../../../_components/attachment-row.tsx";
 import { useEmailWarning } from "../../../../_components/use-email-warning.ts";
+import { Button } from "../../../../_ui/button.tsx";
+import { Input } from "../../../../_ui/input.tsx";
+import {
+  NativeSelect,
+  NativeSelectOption,
+} from "../../../../_ui/native-select.tsx";
 import {
   certificateFields,
   LocalSignerPicker,
@@ -136,11 +142,11 @@ export function DeliverySection({
   }, [state]);
 
   return (
-    <div className="rounded-[14px] border border-admin-border bg-admin-card p-6">
-      <h4 className="font-serif text-[17px] font-semibold text-admin-primary">
+    <div className="rounded-xl border bg-card p-6">
+      <h4 className="text-base font-semibold text-foreground">
         Entrega ao cidadão
       </h4>
-      <p className="mt-1 text-[12.5px] text-admin-muted">
+      <p className="mt-1 text-sm text-muted-foreground">
         O que você anexar aqui fica disponível na consulta do cidadão. Um PDF
         sem assinatura digital fica retido até ser assinado aqui.
       </p>
@@ -149,7 +155,7 @@ export function DeliverySection({
           the row below is what makes that recoverable: it opens the file the
           citizen will get, and takes it back. */}
       {delivered.length > 0 && (
-        <div className="mt-3.5 flex flex-col gap-2">
+        <div className="mt-4 flex flex-col gap-2">
           {delivered.map((attachment) => (
             <div key={attachment.id}>
               <AttachmentRow
@@ -165,7 +171,7 @@ export function DeliverySection({
                   href={documentHref(requestId, attachment.id)}
                   target="_blank"
                   rel="noreferrer"
-                  className="mr-3 inline-block text-[12px] font-semibold text-admin-primary underline"
+                  className="mr-3 inline-block text-xs font-medium text-primary underline underline-offset-4"
                   title="Abre o documento para imprimir: assinado digitalmente (com o QR) ou físico digitalizado"
                 >
                   Imprimir
@@ -179,7 +185,7 @@ export function DeliverySection({
                 />
               )}
               {physical[attachment.id] && (
-                <p className="mt-1 rounded-[8px] bg-admin-input-bg px-2.5 py-1.5 text-[12px] text-admin-muted">
+                <p className="mt-1 rounded-md bg-muted px-2.5 py-1.5 text-xs text-muted-foreground">
                   📄 Documento físico digitalizado, sem assinatura digital ·
                   confirmado por {physical[attachment.id]}
                 </p>
@@ -198,22 +204,22 @@ export function DeliverySection({
         </div>
       )}
 
-      <form action={action} ref={formRef} className="mt-3.5">
+      <form action={action} ref={formRef} className="mt-4">
         <input type="hidden" name="requestId" value={requestId} />
         <input type="hidden" name="assinatura" ref={choiceRef} />
         {/* The file input is visually hidden but still in the tab order, so
             the ring is the only thing telling a keyboard user they are on it. */}
         <label
-          className={`relative flex flex-col items-center gap-1 rounded-[11px] border-[1.5px] border-dashed border-admin-input-border px-5 py-5 text-center focus-within:border-admin-accent focus-within:ring-2 focus-within:ring-admin-accent ${pending ? "cursor-not-allowed opacity-60" : "cursor-pointer"}`}
+          className={`relative flex flex-col items-center gap-1 rounded-lg border border-dashed border-input px-5 py-5 text-center transition-colors focus-within:border-ring focus-within:ring-3 focus-within:ring-ring/50 hover:bg-muted/50 ${pending ? "cursor-not-allowed opacity-60" : "cursor-pointer"}`}
         >
-          <span className="text-[13px] font-bold text-admin-primary">
+          <span className="text-sm font-medium text-primary">
             {pending
               ? "Enviando…"
               : delivered.length > 0
                 ? "Anexar outro documento"
                 : "Anexar documento final"}
           </span>
-          <span className="text-[12px] text-admin-faint">
+          <span className="text-xs text-muted-foreground">
             Escolha o arquivo: em seguida você dá o nome e confere a assinatura
             digital, antes de enviar.
           </span>
@@ -230,16 +236,16 @@ export function DeliverySection({
           />
         </label>
         {check.kind === "checking" && (
-          <p className="mt-2 text-[12.5px] text-admin-muted">
+          <p className="mt-2 text-sm text-muted-foreground">
             Conferindo a assinatura digital do documento...
           </p>
         )}
         {check.kind === "signed" && (
-          <div className="mt-3 rounded-[12px] border border-admin-success-text/30 bg-admin-success-bg px-4 py-3 text-[13px] text-admin-success-text">
+          <div className="mt-3 rounded-lg border border-success/30 bg-success-soft p-4 text-sm text-success-text">
             <p className="font-semibold">
               ✓ &quot;{check.name}&quot; tem assinatura digital.
             </p>
-            <div className="mt-2.5 mb-1">
+            <div className="mt-2 mb-1 text-foreground">
               <DocumentNameField
                 field="documento"
                 tone="admin"
@@ -249,20 +255,17 @@ export function DeliverySection({
               />
             </div>
             <div className="mt-2 flex flex-wrap gap-2">
-              <button
-                type="button"
-                onClick={() => send("")}
-                className="btn btn-admin-primary btn-sm"
-              >
+              <Button type="button" size="sm" onClick={() => send("")}>
                 Enviar ao cliente
-              </button>
-              <button
+              </Button>
+              <Button
                 type="button"
+                variant="outline"
+                size="sm"
                 onClick={cancel}
-                className="btn btn-admin-secondary btn-sm"
               >
                 Cancelar
-              </button>
+              </Button>
             </div>
           </div>
         )}
@@ -270,14 +273,14 @@ export function DeliverySection({
           <div
             role="alertdialog"
             aria-label="Documento sem assinatura digital"
-            className="mt-3 rounded-[12px] border border-admin-warning-soft-border bg-admin-warning-bg px-4 py-3 text-[13px] text-admin-warning-text"
+            className="mt-3 rounded-lg border border-warning/30 bg-warning-soft p-4 text-sm text-warning-text"
           >
-            <p className="font-bold">
+            <p className="font-semibold">
               ⚠ O documento anexado não contém assinatura digital.
             </p>
             <p className="mt-0.5">&quot;{check.name}&quot;</p>
-            <div className="text-admin-text">
-              <div className="mt-2.5 mb-1">
+            <div className="text-foreground">
+              <div className="mt-2 mb-1">
                 <DocumentNameField
                   field="documento"
                   tone="admin"
@@ -292,20 +295,21 @@ export function DeliverySection({
                 <p className="mt-2 font-semibold">
                   Deseja assinar o documento digitalmente?
                 </p>
-                <button
+                <Button
                   type="button"
+                  size="sm"
                   onClick={() => send("digital")}
-                  className="btn btn-admin-primary btn-sm mt-1.5"
+                  className="mt-1.5"
                 >
                   Sim, assinar antes de enviar
-                </button>
-                <p className="mt-1 text-[11.5px]">
+                </Button>
+                <p className="mt-1 text-xs">
                   O documento fica retido aqui: o cidadão só o vê depois de
                   assinado.
                 </p>
               </>
             )}
-            <label className="mt-3 flex items-start gap-2 text-[12.5px]">
+            <label className="mt-3 flex items-start gap-2 text-sm">
               <input
                 type="checkbox"
                 checked={confirmed}
@@ -316,40 +320,41 @@ export function DeliverySection({
               assinatura física, que foi digitalizado.
             </label>
             <div className="mt-2 flex flex-wrap gap-2">
-              <button
+              <Button
                 type="button"
+                variant="outline"
+                size="sm"
                 disabled={!confirmed}
                 onClick={() => send("fisica")}
-                className="btn btn-admin-secondary btn-sm"
               >
                 Enviar como documento físico digitalizado
-              </button>
-              <button
+              </Button>
+              <Button
                 type="button"
+                variant="outline"
+                size="sm"
                 onClick={() => send("sem")}
-                className="btn btn-admin-secondary btn-sm"
               >
                 Enviar sem assinatura assim mesmo
-              </button>
-              <button
+              </Button>
+              <Button
                 type="button"
+                variant="link"
+                size="sm"
                 onClick={cancel}
-                className="text-[12.5px] font-semibold underline"
+                className="text-warning-text"
               >
                 Cancelar
-              </button>
+              </Button>
             </div>
-            <p className="mt-2 text-[11.5px]">
+            <p className="mt-2 text-xs">
               A escolha fica registrada na auditoria.
             </p>
           </div>
         )}
       </form>
       {state.status === "error" && (
-        <p
-          role="alert"
-          className="mt-2 text-[12.5px] font-semibold text-admin-error-text"
-        >
+        <p role="alert" className="mt-2 text-sm font-medium text-destructive">
           {state.message}
         </p>
       )}
@@ -409,8 +414,6 @@ function UnsignedNotice({
     },
     { status: "idle" },
   );
-  const FIELD =
-    "w-full rounded-[9px] border border-admin-input-border bg-admin-card px-3 py-2 text-[13px] text-admin-text outline-none focus:border-admin-primary-soft";
 
   const signWithToken = async () => {
     const token = local.certificate;
@@ -439,7 +442,7 @@ function UnsignedNotice({
   };
 
   return (
-    <div className="mt-1.5 rounded-[10px] border border-admin-warning-text/40 bg-admin-warning-bg px-3 py-2.5 text-[12.5px] text-admin-warning-text">
+    <div className="mt-1.5 rounded-lg border border-warning/30 bg-warning-soft px-3 py-2.5 text-sm text-warning-text">
       <div className="flex flex-wrap items-center justify-between gap-2">
         {held ? (
           <span>
@@ -453,17 +456,18 @@ function UnsignedNotice({
             versão assinada.
           </span>
         )}
-        <button
+        <Button
           type="button"
+          size="sm"
           onClick={() => setOpen((value) => !value)}
-          className="btn btn-admin-primary btn-sm shrink-0"
+          className="shrink-0"
           aria-expanded={open}
         >
           Assinar digitalmente
-        </button>
+        </Button>
       </div>
       {open && (
-        <div className="mt-2.5 grid grid-cols-1 gap-2.5 text-admin-text md:grid-cols-2">
+        <div className="mt-2 grid grid-cols-1 gap-2 text-foreground md:grid-cols-2">
           <ModeChoice
             mode={mode}
             onChange={setMode}
@@ -478,41 +482,52 @@ function UnsignedNotice({
                 const data = new FormData(event.currentTarget);
                 startTransition(() => action(data));
               }}
-              className="grid grid-cols-1 gap-2.5 md:col-span-2 md:grid-cols-[1fr_1fr_auto] md:items-end"
+              className="grid grid-cols-1 gap-2 md:col-span-2 md:grid-cols-[1fr_1fr_auto] md:items-end"
             >
               <input type="hidden" name="requestId" value={requestId} />
               <input type="hidden" name="attachmentId" value={attachmentId} />
-              <label className="flex flex-col gap-1 text-[12px] font-bold text-admin-primary">
+              <label
+                htmlFor={`certificado-${attachmentId}`}
+                className="flex flex-col gap-2 text-sm font-medium text-foreground"
+              >
                 Certificado
-                <select name="certificateId" required className={FIELD}>
+                <NativeSelect
+                  id={`certificado-${attachmentId}`}
+                  name="certificateId"
+                  required
+                  className="w-full bg-background"
+                >
                   {certificates.map((certificate) => (
-                    <option key={certificate.id} value={certificate.id}>
+                    <NativeSelectOption
+                      key={certificate.id}
+                      value={certificate.id}
+                    >
                       {certificate.label} · {certificate.holderName}
-                    </option>
+                    </NativeSelectOption>
                   ))}
-                </select>
+                </NativeSelect>
               </label>
-              <label className="flex flex-col gap-1 text-[12px] font-bold text-admin-primary">
+              <label
+                htmlFor={`senha-${attachmentId}`}
+                className="flex flex-col gap-2 text-sm font-medium text-foreground"
+              >
                 Senha do certificado
-                <input
+                <Input
+                  id={`senha-${attachmentId}`}
                   name="password"
                   type="password"
                   autoComplete="off"
                   required
-                  className={FIELD}
+                  className="bg-background font-normal"
                 />
               </label>
-              <button
-                type="submit"
-                disabled={pending}
-                className="btn btn-admin-primary btn-md"
-              >
+              <Button type="submit" disabled={pending}>
                 {pending ? "Assinando..." : "Assinar"}
-              </button>
+              </Button>
               {state.status === "error" && (
                 <p
                   role="alert"
-                  className="font-semibold text-admin-error-text md:col-span-3"
+                  className="font-medium text-destructive md:col-span-3"
                 >
                   {state.message}
                 </p>
@@ -526,18 +541,17 @@ function UnsignedNotice({
                 prefix={`entrega-${attachmentId}`}
               />
               <div className="md:col-span-2">
-                <button
+                <Button
                   type="button"
                   disabled={tokenBusy || !local.certificate}
                   onClick={() => void signWithToken()}
-                  className="btn btn-admin-primary btn-md"
                 >
                   {tokenBusy ? "Assinando..." : "Assinar com o token"}
-                </button>
+                </Button>
                 {tokenError && (
                   <p
                     role="alert"
-                    className="mt-1.5 font-semibold text-admin-error-text"
+                    className="mt-1.5 font-medium text-destructive"
                   >
                     {tokenError}
                   </p>
@@ -550,7 +564,7 @@ function UnsignedNotice({
               Para assinar com A1, cadastre o certificado em{" "}
               <Link
                 href="/admin/configuracoes/certificados"
-                className="font-semibold underline"
+                className="font-medium underline underline-offset-4"
               >
                 Configurações › Certificados
               </Link>
@@ -560,7 +574,7 @@ function UnsignedNotice({
         </div>
       )}
       {held && (
-        <div className="mt-2.5 border-t border-admin-warning-text/25 pt-2">
+        <div className="mt-2 border-t border-warning/30 pt-2">
           {confirmUnsigned ? (
             <form
               action={release}
@@ -572,35 +586,37 @@ function UnsignedNotice({
                 Enviar ao cidadão sem assinatura digital? Fica registrado na
                 auditoria.
               </span>
-              <button
+              <Button
                 type="submit"
+                variant="outline"
+                size="sm"
                 disabled={releasing}
-                className="btn btn-admin-secondary btn-sm"
               >
                 {releasing ? "Enviando..." : "Sim, enviar sem assinatura"}
-              </button>
-              <button
+              </Button>
+              <Button
                 type="button"
+                variant="link"
+                size="sm"
                 onClick={() => setConfirmUnsigned(false)}
-                className="font-semibold underline"
+                className="text-warning-text"
               >
                 Voltar
-              </button>
+              </Button>
             </form>
           ) : (
-            <button
+            <Button
               type="button"
+              variant="link"
+              size="sm"
               onClick={() => setConfirmUnsigned(true)}
-              className="font-semibold underline"
+              className="px-0 text-warning-text"
             >
               Enviar sem assinatura assim mesmo
-            </button>
+            </Button>
           )}
           {releaseState.status === "error" && (
-            <p
-              role="alert"
-              className="mt-1 font-semibold text-admin-error-text"
-            >
+            <p role="alert" className="mt-1 font-medium text-destructive">
               {releaseState.message}
             </p>
           )}
@@ -637,7 +653,7 @@ function RenameDelivered({
       <button
         type="button"
         onClick={() => setOpen(true)}
-        className="mt-1 ml-1 text-[11.5px] font-semibold text-admin-muted underline hover:text-admin-primary"
+        className="mt-1 ml-1 cursor-pointer text-xs font-medium text-muted-foreground underline underline-offset-4 hover:text-foreground"
       >
         Renomear
       </button>
@@ -661,24 +677,21 @@ function RenameDelivered({
           suggestions={suggestions}
         />
       </div>
-      <button
-        type="submit"
-        disabled={pending}
-        className="btn btn-admin-primary btn-sm"
-      >
+      <Button type="submit" size="sm" disabled={pending}>
         {pending ? "Salvando..." : "Salvar nome"}
-      </button>
-      <button
+      </Button>
+      <Button
         type="button"
+        variant="outline"
+        size="sm"
         onClick={() => setOpen(false)}
-        className="btn btn-admin-secondary btn-sm"
       >
         Cancelar
-      </button>
+      </Button>
       {state.status === "error" && (
         <p
           role="alert"
-          className="basis-full text-[12px] font-semibold text-admin-error-text"
+          className="basis-full text-xs font-medium text-destructive"
         >
           {state.message}
         </p>

@@ -1,4 +1,6 @@
 import Link from "next/link";
+import { buttonVariants } from "../../../_ui/button.tsx";
+import { cn } from "../../../_ui/cn.ts";
 import {
   PAGE_GAP,
   pageCount,
@@ -7,8 +9,7 @@ import {
   queueHref,
 } from "./queue-order.ts";
 
-const BUTTON =
-  "inline-flex h-8 min-w-8 items-center justify-center rounded-[8px] border text-[13px] transition-colors duration-120";
+const BUTTON = buttonVariants({ variant: "outline", size: "icon-sm" });
 
 function Arrow({
   glyph,
@@ -24,7 +25,7 @@ function Arrow({
     return (
       <span
         aria-disabled="true"
-        className={`${BUTTON} w-8 border-admin-border bg-admin-card text-admin-input-border`}
+        className={cn(BUTTON, "pointer-events-none opacity-50")}
       >
         <span aria-hidden="true">{glyph}</span>
         <span className="sr-only">{label}</span>
@@ -32,11 +33,7 @@ function Arrow({
     );
   }
   return (
-    <Link
-      href={href}
-      scroll={false}
-      className={`${BUTTON} w-8 border-admin-border bg-admin-card text-admin-primary hover:bg-admin-input-bg`}
-    >
+    <Link href={href} scroll={false} className={BUTTON}>
       <span aria-hidden="true">{glyph}</span>
       <span className="sr-only">{label}</span>
     </Link>
@@ -68,8 +65,10 @@ export function QueuePagination({
   const to = (page: number) => queueHref(query, { page });
 
   return (
-    <div className="flex flex-wrap items-center gap-3.5 bg-admin-footer-bg px-[22px] py-3.5">
-      <p className="flex-1 text-[13px] text-admin-muted">{range}</p>
+    <div className="flex flex-wrap items-center gap-3 border-t bg-muted/50 px-4 py-3">
+      <p className="flex-1 text-sm text-muted-foreground tabular-nums">
+        {range}
+      </p>
       <nav aria-label="Paginação" className="inline-flex items-center gap-1">
         <Arrow
           glyph="«"
@@ -88,7 +87,7 @@ export function QueuePagination({
               // twice, so the number before it names it.
               key={`gap-after-${items[index - 1]}`}
               aria-hidden="true"
-              className="inline-flex h-8 w-6 items-center justify-center text-[13px] text-admin-faint"
+              className="inline-flex h-8 w-6 items-center justify-center text-sm text-muted-foreground"
             >
               {PAGE_GAP}
             </span>
@@ -96,7 +95,10 @@ export function QueuePagination({
             <span
               key={item}
               aria-current="page"
-              className={`${BUTTON} border-admin-primary bg-admin-primary px-2 font-bold text-white tabular-nums`}
+              className={cn(
+                buttonVariants({ size: "icon-sm" }),
+                "w-auto min-w-8 px-2 tabular-nums",
+              )}
             >
               {item}
             </span>
@@ -105,7 +107,7 @@ export function QueuePagination({
               key={item}
               href={to(item)}
               scroll={false}
-              className={`${BUTTON} border-admin-border bg-admin-card px-2 font-bold text-admin-primary tabular-nums hover:bg-admin-input-bg`}
+              className={cn(BUTTON, "w-auto min-w-8 px-2 tabular-nums")}
             >
               {item}
             </Link>
