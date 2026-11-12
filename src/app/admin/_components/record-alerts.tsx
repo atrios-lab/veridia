@@ -130,28 +130,28 @@ export function RecordAlerts({
   return (
     // Top left, beside the sidebar: the guias take the top right, the
     // agenda the bottom left and the chat the bottom right.
-    <div className="pointer-events-none fixed top-20 left-4 z-40 flex w-[min(320px,calc(100vw-2rem))] flex-col gap-2 md:left-[252px]">
+    <div className="pointer-events-none fixed top-20 left-4 z-40 flex w-[min(320px,calc(100vw-2rem))] flex-col gap-2 md:left-68">
       {cards.slice(0, 4).map((item) => (
         <output
           key={item.key}
-          className="pointer-events-auto flex items-start gap-3 rounded-xl border border-admin-border bg-admin-card px-4 py-3 text-admin-text shadow-xl"
+          className="pointer-events-auto flex items-start gap-3 rounded-xl border bg-card px-4 py-3 text-card-foreground shadow-lg"
         >
           <AdminIcon
             name="inbox"
-            className="mt-0.5 h-4.5 w-4.5 shrink-0 text-admin-primary"
+            className="mt-0.5 h-4.5 w-4.5 shrink-0 text-primary"
           />
-          <span className="min-w-0 flex-1 text-[12.5px] leading-snug">
-            <strong className="block text-[13px] text-admin-primary">
+          <span className="min-w-0 flex-1 text-xs leading-snug">
+            <strong className="block text-sm font-semibold text-foreground">
               {TITLES[item.channel]}
             </strong>
             {item.applicantName ?? "Cidadão"} · {item.protocolNumber}
-            <span className="block text-[11px] text-admin-faint">
+            <span className="block text-xs text-muted-foreground">
               {ALERT_CHANNEL_LABELS[item.channel]}
             </span>
             <Link
               href={item.href}
               onClick={() => dismiss(item.key)}
-              className="mt-1 block font-semibold text-admin-primary underline"
+              className="mt-1 block font-medium text-primary underline"
             >
               Abrir
             </Link>
@@ -160,7 +160,7 @@ export function RecordAlerts({
             type="button"
             onClick={() => dismiss(item.key)}
             aria-label="Fechar aviso"
-            className="text-admin-muted hover:text-admin-text"
+            className="text-muted-foreground hover:text-foreground"
           >
             <AdminIcon name="x" className="h-4 w-4" />
           </button>

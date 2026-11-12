@@ -261,11 +261,11 @@ export function ChatAlerts({ setting }: { setting: ChannelAlert }) {
   const flash = burst && (
     <div
       aria-hidden="true"
-      className="pointer-events-none fixed inset-0 z-50 flex items-center justify-center bg-admin-primary/85 opacity-0 motion-safe:animate-chat-flash"
+      className="pointer-events-none fixed inset-0 z-50 flex items-center justify-center bg-primary/85 opacity-0 motion-safe:animate-chat-flash"
     >
-      <div className="px-6 text-center text-white">
-        <p className="font-serif text-5xl font-semibold md:text-7xl">Chat</p>
-        <p className="mt-3 text-lg font-bold md:text-2xl">{burst.title}</p>
+      <div className="px-6 text-center text-primary-foreground">
+        <p className="text-5xl font-semibold md:text-7xl">Chat</p>
+        <p className="mt-3 text-lg font-semibold md:text-2xl">{burst.title}</p>
         <p className="mt-1 text-base opacity-90 md:text-xl">{burst.body}</p>
       </div>
     </div>
@@ -286,7 +286,7 @@ export function ChatAlerts({ setting }: { setting: ChannelAlert }) {
           <button
             type="button"
             onClick={() => void unlockAudio().then((ok) => setLocked(!ok))}
-            className="flex items-center gap-2 rounded-xl bg-admin-warning-bg px-3.5 py-2.5 text-left text-[12.5px] font-semibold text-admin-warning-text shadow-lg"
+            className="flex cursor-pointer items-center gap-2 rounded-xl bg-warning px-3.5 py-2.5 text-left text-xs font-medium text-warning-foreground shadow-lg"
           >
             <AdminIcon name="alert" className="h-4 w-4 flex-none" />O navegador
             bloqueou o som. Clique aqui para ativar.
@@ -346,14 +346,14 @@ function AlertCard({
   onDismiss: () => void;
 }) {
   return (
-    <output className="flex items-start gap-3 rounded-xl bg-admin-primary px-4 py-3 text-white shadow-xl motion-safe:animate-attention-pulse">
+    <output className="flex items-start gap-3 rounded-xl bg-primary px-4 py-3 text-primary-foreground shadow-lg motion-safe:animate-attention-pulse">
       <AdminIcon name="chat" className="mt-0.5 h-4.5 w-4.5 flex-none" />
       <div className="min-w-0 flex-1">
-        <p className="text-[13.5px] font-bold">{title}</p>
-        {body && <p className="truncate text-[12.5px] opacity-85">{body}</p>}
+        <p className="text-sm font-semibold">{title}</p>
+        {body && <p className="truncate text-xs opacity-85">{body}</p>}
         <Link
           href={href}
-          className="mt-1.5 inline-block text-[12.5px] font-bold underline"
+          className="mt-1.5 inline-block text-xs font-medium underline"
         >
           {action}
         </Link>

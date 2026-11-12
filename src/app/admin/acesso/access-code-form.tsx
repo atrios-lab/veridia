@@ -1,6 +1,10 @@
 "use client";
 
 import { startTransition, useActionState, useEffect, useRef } from "react";
+import { Button } from "../_ui/button.tsx";
+import { cn } from "../_ui/cn.ts";
+import { Input } from "../_ui/input.tsx";
+import { Label } from "../_ui/label.tsx";
 import {
   type AccessCodeState,
   confirmAccessCodeAction,
@@ -28,7 +32,12 @@ export function AccessCodeForm({ next }: { next: string }) {
     <>
       <p
         aria-live="polite"
-        className={`mt-4 rounded-[10px] px-3.5 py-2.5 text-[12.5px] ${sent.status === "error" ? "bg-admin-error-bg font-semibold text-admin-error-text" : "bg-admin-input-bg text-admin-text"}`}
+        className={cn(
+          "mt-4 rounded-lg border px-4 py-3 text-sm",
+          sent.status === "error"
+            ? "border-destructive/40 bg-destructive-soft font-medium text-destructive"
+            : "bg-muted/50 text-foreground",
+        )}
       >
         {sending
           ? "Enviando o código..."
@@ -47,13 +56,8 @@ export function AccessCodeForm({ next }: { next: string }) {
         className="mt-4 flex flex-col gap-3"
       >
         <input type="hidden" name="next" value={next} />
-        <label
-          htmlFor="codigo-acesso"
-          className="text-xs font-bold text-admin-primary"
-        >
-          Código de acesso
-        </label>
-        <input
+        <Label htmlFor="codigo-acesso">Código de acesso</Label>
+        <Input
           id="codigo-acesso"
           name="code"
           inputMode="numeric"
@@ -61,11 +65,11 @@ export function AccessCodeForm({ next }: { next: string }) {
           maxLength={7}
           placeholder="000 000"
           required
-          // biome-ignore lint/a11y/noAutofocus: the only field of the screen, reached right after the password.
+          // The only field of the screen, reached right after the password.
           autoFocus
-          className="rounded-[10px] border border-admin-input-border bg-admin-input-bg px-4 py-3 text-center text-[20px] tracking-[0.35em] text-admin-text outline-none focus:border-admin-primary-soft"
+          className="h-12 text-center text-xl tracking-widest tabular-nums md:text-xl"
         />
-        <label className="flex items-start gap-2 text-[12.5px] text-admin-text">
+        <label className="flex items-start gap-2 text-sm text-foreground">
           <input
             type="checkbox"
             name="salvar"
@@ -73,35 +77,29 @@ export function AccessCodeForm({ next }: { next: string }) {
           />
           <span>
             Salvar este dispositivo: não pedir o código de novo aqui.
-            <span className="block text-[11.5px] text-admin-muted">
+            <span className="block text-xs text-muted-foreground">
               Só no seu celular ou computador, ou num da serventia; nunca em
               aparelho público.
             </span>
           </span>
         </label>
         {checked.status === "error" && (
-          <p
-            role="alert"
-            className="text-[12.5px] font-semibold text-admin-error-text"
-          >
+          <p role="alert" className="text-sm font-medium text-destructive">
             {checked.message}
           </p>
         )}
-        <button
-          type="submit"
-          disabled={confirming}
-          className="btn btn-admin-primary btn-lg"
-        >
+        <Button type="submit" size="lg" disabled={confirming}>
           {confirming ? "Conferindo..." : "Entrar"}
-        </button>
-        <button
+        </Button>
+        <Button
           type="button"
+          variant="link"
           disabled={sending}
           onClick={() => startTransition(() => send(new FormData()))}
-          className="text-[12.5px] font-semibold text-admin-primary underline disabled:opacity-60"
+          className="underline"
         >
           Reenviar código
-        </button>
+        </Button>
       </form>
     </>
   );

@@ -17,6 +17,8 @@ import type {
   AgendaAlertItem,
   AgendaAlertSnapshot,
 } from "@/lib/appointment-reminders.ts";
+import { Button } from "../_ui/button.tsx";
+import { cn } from "../_ui/cn.ts";
 import {
   type ActionState,
   agendaAlertSnapshotAction,
@@ -173,7 +175,7 @@ export function AgendaAlerts({ setting }: { setting: ChannelAlert }) {
   return (
     <section
       aria-label="Avisos da agenda"
-      className="fixed bottom-4 left-4 z-40 flex w-[min(340px,calc(100vw-2rem))] flex-col gap-2.5 md:left-[252px]"
+      className="fixed bottom-4 left-4 z-40 flex w-[min(340px,calc(100vw-2rem))] flex-col gap-2.5 md:left-68"
     >
       {shownPending.map((item) => (
         <ConfirmCard
@@ -187,7 +189,7 @@ export function AgendaAlerts({ setting }: { setting: ChannelAlert }) {
       {pending.length > shownPending.length && (
         <Link
           href={agendaHref(pending[shownPending.length])}
-          className="rounded-xl border border-admin-border bg-admin-card px-4 py-2.5 text-[12.5px] font-semibold text-admin-text shadow-xl hover:bg-admin-input-bg"
+          className="rounded-xl border bg-card px-4 py-2.5 text-xs font-medium text-card-foreground shadow-lg hover:bg-muted"
         >
           Mais {pending.length - shownPending.length} aguardando confirmação
         </Link>
@@ -295,7 +297,7 @@ function ConfirmCard({
 
   if (done) {
     return (
-      <output className="rounded-xl bg-admin-success-bg px-4 py-3 text-[13px] font-semibold text-admin-success-text shadow-xl">
+      <output className="rounded-xl bg-success px-4 py-3 text-sm font-medium text-success-foreground shadow-lg">
         {attended.status === "success"
           ? `${item.citizenName}: atendido.`
           : `${item.citizenName}: não compareceu.`}
@@ -305,17 +307,17 @@ function ConfirmCard({
 
   const busy = attending || missing;
   return (
-    <output className="flex flex-col gap-2 rounded-xl border-2 border-admin-warning-bg bg-admin-card px-4 py-3 text-admin-text shadow-xl">
+    <output className="flex flex-col gap-2 rounded-xl border-2 border-warning bg-card px-4 py-3 text-card-foreground shadow-lg">
       <span className="flex items-start gap-3">
         <AdminIcon
           name="alert"
-          className="mt-0.5 h-4.5 w-4.5 flex-none text-admin-warning-text"
+          className="mt-0.5 h-4.5 w-4.5 flex-none text-warning-text"
         />
         <span className="min-w-0 flex-1">
-          <span className="block text-[13.5px] font-bold">
+          <span className="block text-sm font-semibold">
             {item.citizenName} foi atendido?
           </span>
-          <span className="block text-[12.5px] text-admin-muted">
+          <span className="block text-xs text-muted-foreground">
             {isToday ? "Hoje" : formatShortDate(item.date)} às {item.slotTime} ·{" "}
             {item.serviceLabel} · {item.agendaName}
           </span>
@@ -324,36 +326,36 @@ function ConfirmCard({
       <span className="flex flex-wrap items-center gap-2 pl-7.5">
         <form action={attend}>
           <input type="hidden" name="id" value={item.id} />
-          <button
-            type="submit"
-            disabled={busy}
-            className="rounded-lg bg-admin-primary px-3 py-1.5 text-[12px] font-semibold text-white disabled:opacity-60"
-          >
+          <Button type="submit" size="sm" disabled={busy}>
             {attending ? "..." : "Atendido"}
-          </button>
+          </Button>
         </form>
         <form action={miss}>
           <input type="hidden" name="id" value={item.id} />
-          <button
+          <Button
             type="submit"
+            variant="outline"
+            size="sm"
             disabled={busy}
-            className="rounded-lg border border-admin-border px-3 py-1.5 text-[12px] font-semibold text-admin-alert hover:bg-admin-input-bg disabled:opacity-60"
+            className="text-destructive hover:text-destructive"
           >
             {missing ? "..." : "Não compareceu"}
-          </button>
+          </Button>
         </form>
-        <button
+        <Button
           type="button"
+          variant="link"
+          size="sm"
           onClick={onLater}
-          className="text-[12px] font-semibold text-admin-muted underline"
+          className="text-muted-foreground underline"
         >
           Depois
-        </button>
+        </Button>
       </span>
       {error && (
         <span
           role="alert"
-          className="pl-7.5 text-[12px] font-semibold text-admin-alert"
+          className="pl-7.5 text-xs font-medium text-destructive"
         >
           {error}
         </span>
@@ -379,19 +381,20 @@ function Card({
 }) {
   return (
     <output
-      className={`flex items-start gap-3 rounded-xl px-4 py-3 shadow-xl ${
+      className={cn(
+        "flex items-start gap-3 rounded-xl px-4 py-3 shadow-lg",
         tone === "strong"
-          ? "bg-admin-primary text-white motion-safe:animate-attention-pulse"
-          : "border border-admin-border bg-admin-card text-admin-text"
-      }`}
+          ? "bg-primary text-primary-foreground motion-safe:animate-attention-pulse"
+          : "border bg-card text-card-foreground",
+      )}
     >
       <AdminIcon name="calendar" className="mt-0.5 h-4.5 w-4.5 flex-none" />
       <div className="min-w-0 flex-1">
-        <p className="text-[13.5px] font-bold">{title}</p>
-        {body && <p className="text-[12.5px] opacity-85">{body}</p>}
+        <p className="text-sm font-semibold">{title}</p>
+        {body && <p className="text-xs opacity-85">{body}</p>}
         <Link
           href={href}
-          className="mt-1.5 inline-block text-[12.5px] font-bold underline"
+          className="mt-1.5 inline-block text-xs font-medium underline"
         >
           {action}
         </Link>

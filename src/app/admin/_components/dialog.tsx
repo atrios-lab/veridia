@@ -19,7 +19,7 @@ import { type ReactNode, useEffect, useRef } from "react";
  * asking to delete something should not be one of them.
  */
 /**
- * The row of actions at the bottom of a dialog. Styled in `globals.css`.
+ * The row of actions at the bottom of a dialog. Styled in `admin.css`.
  *
  * Put cancel first among its children: `showModal()` focuses the first
  * focusable descendant, and on a narrow screen the row reverses so the

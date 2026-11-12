@@ -1,3 +1,4 @@
+import { buttonVariants } from "../_ui/button.tsx";
 import { AdminIcon } from "./icon";
 
 /**
@@ -32,16 +33,18 @@ export function SignOrPrint({
   size?: "sm" | "md";
 }) {
   const sign = signHref(pdfHref, title);
+  // "md" is the panel's default button size (36px).
+  const buttonSize = size === "sm" ? "sm" : "default";
   return (
     <span className="inline-flex flex-wrap gap-2">
-      <a href={sign} className={`btn btn-admin-primary btn-${size}`}>
+      <a href={sign} className={buttonVariants({ size: buttonSize })}>
         <AdminIcon name="lock" className="h-4 w-4" /> Assinar digitalmente
       </a>
       <a
         href={pdfHref}
         target="_blank"
         rel="noreferrer"
-        className={`btn btn-admin-secondary btn-${size}`}
+        className={buttonVariants({ variant: "outline", size: buttonSize })}
         title="Abre o PDF para imprimir e assinar à mão"
       >
         <AdminIcon name="printer" className="h-4 w-4" /> Imprimir para assinar à

@@ -1,4 +1,3 @@
-import Image from "next/image";
 import { redirect } from "next/navigation";
 import {
   getClosedHoursSession,
@@ -6,6 +5,8 @@ import {
   getSession,
 } from "@/lib/session.ts";
 import { getTenant } from "@/lib/tenant.ts";
+import { OfficeMark } from "../_components/sidebar.tsx";
+import { Button } from "../_ui/button.tsx";
 import { signOut } from "../actions.ts";
 import { AccessCodeForm } from "./access-code-form.tsx";
 
@@ -28,38 +29,25 @@ export default async function AccessCodePage({
   const tenant = await getTenant();
 
   return (
-    <main className="flex min-h-screen items-center justify-center bg-admin-surface px-4 py-10">
-      <div className="w-full max-w-[420px] rounded-[16px] border border-admin-border bg-admin-card px-7 py-8">
-        <div className="flex items-center gap-3">
-          <Image
-            src={tenant.logos.seal.light}
-            alt=""
-            width={40}
-            height={40}
-            className="h-10 w-10 object-contain"
-          />
-          <span className="font-serif text-[15px] font-semibold text-admin-primary">
-            {tenant.name}
-          </span>
-        </div>
-        <h1 className="mt-6 font-serif text-[22px] font-semibold text-admin-primary">
+    <main className="flex min-h-screen items-center justify-center bg-muted px-4 py-10">
+      <div className="w-full max-w-105 rounded-xl border bg-card px-6 py-8 shadow-xs sm:px-8">
+        <OfficeMark tenant={tenant} />
+        <h1 className="mt-6 text-xl font-semibold text-foreground">
           Confirme que é você
         </h1>
-        <p className="mt-1.5 text-[13px] leading-relaxed text-admin-muted">
+        <p className="mt-1.5 text-sm leading-relaxed text-muted-foreground">
           Por segurança, o acesso ao painel tem duas etapas: a senha e um código
           enviado ao seu e-mail.
         </p>
         <AccessCodeForm next={destination} />
-        <form
-          action={signOut}
-          className="mt-5 border-t border-admin-border pt-4"
-        >
-          <button
+        <form action={signOut} className="mt-6 border-t pt-4">
+          <Button
             type="submit"
-            className="text-[12.5px] font-semibold text-admin-muted underline hover:text-admin-primary"
+            variant="link"
+            className="h-auto px-0 text-muted-foreground underline hover:text-foreground"
           >
             Sair e entrar com outra conta
-          </button>
+          </Button>
         </form>
       </div>
     </main>

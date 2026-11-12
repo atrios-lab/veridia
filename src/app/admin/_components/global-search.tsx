@@ -1,5 +1,6 @@
 "use client";
 
+import { Search } from "lucide-react";
 import { useRouter } from "next/navigation";
 import {
   createContext,
@@ -14,7 +15,11 @@ import {
   type GlobalSearchResult,
   searchGlobally,
 } from "@/app/admin/(dashboard)/search/actions.ts";
-import { AdminIcon } from "./icon.tsx";
+import { Badge } from "../_ui/badge.tsx";
+import { Button } from "../_ui/button.tsx";
+import { cn } from "../_ui/cn.ts";
+import { Dialog, DialogContent } from "../_ui/dialog.tsx";
+import { Kbd, KbdGroup } from "../_ui/kbd.tsx";
 
 interface SearchOverlayContextValue {
   open: () => void;
@@ -58,29 +63,28 @@ export function GlobalSearchProvider({
 }
 
 /** The top bar's search field: a button, not a real input (the overlay owns
- * the actual typing, this only opens it). Short label on purpose: the bar
- * is on every screen and the overlay's own placeholder still spells out
- * what can be searched. */
+ * the actual typing, this only opens it). Drawn as the prototype's field: a
+ * wide outline button, the magnifier, what can be searched in the muted
+ * tone (cut with an ellipsis when the bar is narrow) and the Ctrl K keys,
+ * which never shrink. */
 export function SearchTriggerButton() {
   const { open } = useGlobalSearch();
   return (
-    <button
+    <Button
       type="button"
+      variant="outline"
       onClick={open}
-      className="flex w-full cursor-pointer items-center gap-2.5 rounded-[10px] border border-admin-border bg-admin-input-bg px-3 py-[9px] text-left transition-colors duration-120 hover:border-admin-input-border"
+      className="w-full justify-start gap-2 px-3 font-normal"
     >
-      <AdminIcon
-        name="search"
-        className="h-[15px] w-[15px] flex-none text-admin-faint"
-        strokeWidth={2}
-      />
-      <span className="flex-1 truncate text-[13px] text-admin-faint">
-        Buscar no painel
+      <Search aria-hidden className="text-muted-foreground" />
+      <span className="min-w-0 flex-1 truncate text-left text-muted-foreground">
+        Buscar protocolo, CPF ou nome
       </span>
-      <span className="flex-none rounded-[5px] border border-admin-input-border bg-admin-card px-1.5 py-0.5 text-[10.5px] font-bold text-admin-muted">
-        Ctrl K
-      </span>
-    </button>
+      <KbdGroup className="flex-none">
+        <Kbd>Ctrl</Kbd>
+        <Kbd>K</Kbd>
+      </KbdGroup>
+    </Button>
   );
 }
 
@@ -95,10 +99,6 @@ function SearchOverlay({ onClose }: { onClose: () => void }) {
   const [activeIndex, setActiveIndex] = useState(0);
   const inputRef = useRef<HTMLInputElement>(null);
   const latestRequest = useRef(0);
-
-  useEffect(() => {
-    inputRef.current?.focus();
-  }, []);
 
   useEffect(() => {
     const trimmed = query.trim();
@@ -128,11 +128,9 @@ function SearchOverlay({ onClose }: { onClose: () => void }) {
     [onClose, router],
   );
 
+  // Escape, the click outside and the focus trap come from the Dialog.
   function handleKeyDown(event: React.KeyboardEvent<HTMLDivElement>) {
-    if (event.key === "Escape") {
-      event.preventDefault();
-      onClose();
-    } else if (event.key === "ArrowDown") {
+    if (event.key === "ArrowDown") {
       event.preventDefault();
       setActiveIndex((i) => Math.min(i + 1, results.length - 1));
     } else if (event.key === "ArrowUp") {
@@ -150,24 +148,23 @@ function SearchOverlay({ onClose }: { onClose: () => void }) {
   const trimmed = query.trim();
 
   return (
-    <div className="fixed inset-0 z-50 flex items-start justify-center px-4 pt-[12vh]">
-      <button
-        type="button"
-        aria-label="Fechar busca"
-        onClick={onClose}
-        className="fixed inset-0 z-0 cursor-default bg-black/40"
-      />
-      <div
-        role="dialog"
-        aria-modal="true"
+    <Dialog
+      open
+      onOpenChange={(next) => {
+        if (!next) onClose();
+      }}
+    >
+      <DialogContent
         aria-label="Busca global"
+        initialFocus={inputRef}
+        showCloseButton={false}
         onKeyDown={handleKeyDown}
-        className="relative z-10 flex w-full max-w-[560px] flex-col overflow-hidden rounded-[14px] border border-admin-border bg-admin-card shadow-2xl focus-within:outline focus-within:outline-[1.5px] focus-within:outline-[var(--brand-accent)]"
+        className="top-[12vh] flex translate-y-0 flex-col gap-0 overflow-hidden p-0 shadow-lg sm:max-w-xl"
       >
-        <div className="flex items-center gap-2.5 border-b border-admin-border px-4 py-3.5">
-          <AdminIcon
-            name="search"
-            className="h-4 w-4 flex-none text-admin-faint"
+        <div className="flex items-center gap-2.5 border-b px-4 py-3">
+          <Search
+            aria-hidden
+            className="size-4 flex-none text-muted-foreground"
           />
           <input
             ref={inputRef}
@@ -175,34 +172,36 @@ function SearchOverlay({ onClose }: { onClose: () => void }) {
             value={query}
             onChange={(event) => setQuery(event.target.value)}
             placeholder="Buscar protocolo, CPF ou nome do interessado…"
-            className="flex-1 bg-transparent text-[14px] text-admin-text placeholder:text-admin-faint focus:outline-none focus-visible:shadow-none"
+            className="h-8 flex-1 bg-transparent text-base text-foreground outline-none placeholder:text-muted-foreground focus:outline-none focus-visible:shadow-none md:text-sm"
           />
-          <button
+          <Button
             type="button"
+            variant="outline"
+            size="xs"
             onClick={onClose}
-            className="flex-none rounded-[5px] border border-admin-input-border bg-admin-input-bg px-2 py-0.5 text-[10.5px] font-bold text-admin-muted"
+            className="flex-none text-muted-foreground"
           >
             Esc
-          </button>
+          </Button>
         </div>
-        <div className="max-h-[360px] overflow-y-auto">
+        <div className="max-h-90 overflow-y-auto">
           {trimmed.length === 0 && (
-            <p className="px-4 py-8 text-center text-[13px] text-admin-muted">
+            <p className="px-4 py-8 text-center text-sm text-muted-foreground">
               Digite um protocolo, CPF ou nome para buscar.
             </p>
           )}
           {trimmed.length > 0 && trimmed.length < MIN_QUERY_LENGTH && (
-            <p className="px-4 py-8 text-center text-[13px] text-admin-muted">
+            <p className="px-4 py-8 text-center text-sm text-muted-foreground">
               Digite ao menos {MIN_QUERY_LENGTH} caracteres.
             </p>
           )}
           {status === "loading" && trimmed.length >= MIN_QUERY_LENGTH && (
-            <p className="px-4 py-8 text-center text-[13px] text-admin-muted">
+            <p className="px-4 py-8 text-center text-sm text-muted-foreground">
               Buscando…
             </p>
           )}
           {status === "done" && results.length === 0 && (
-            <p className="px-4 py-8 text-center text-[13px] text-admin-muted">
+            <p className="px-4 py-8 text-center text-sm text-muted-foreground">
               Nada encontrado para "{trimmed}".
             </p>
           )}
@@ -213,25 +212,26 @@ function SearchOverlay({ onClose }: { onClose: () => void }) {
                 type="button"
                 onMouseEnter={() => setActiveIndex(index)}
                 onClick={() => goTo(result)}
-                className={`flex w-full items-center gap-3 border-b border-admin-border px-4 py-3 text-left text-[13px] last:border-b-0 ${
-                  index === activeIndex ? "bg-admin-input-bg" : ""
-                }`}
+                className={cn(
+                  "flex w-full cursor-pointer items-center gap-3 border-b px-4 py-3 text-left text-sm last:border-b-0",
+                  index === activeIndex && "bg-muted",
+                )}
               >
-                <span className="flex-none rounded-full bg-admin-surface px-2.5 py-0.5 text-[10.5px] font-bold text-admin-primary">
+                <Badge variant="secondary" className="flex-none">
                   {result.channelLabel}
-                </span>
+                </Badge>
                 <span className="min-w-0 flex-1">
-                  <span className="block truncate font-semibold text-admin-text">
+                  <span className="block truncate font-medium text-foreground">
                     {result.applicantName ?? "Não informado"}
                   </span>
-                  <span className="block truncate text-[11.5px] text-admin-faint">
+                  <span className="block truncate text-xs text-muted-foreground">
                     {result.protocolNumber} · {result.statusLabel}
                   </span>
                 </span>
               </button>
             ))}
         </div>
-      </div>
-    </div>
+      </DialogContent>
+    </Dialog>
   );
 }

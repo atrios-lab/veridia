@@ -18,31 +18,30 @@ function Card({
   title: string;
   children: React.ReactNode;
 }) {
+  // The state in solid colour, with the icon saying it too.
   const bg = {
-    warning: "bg-admin-warning-bg",
-    success: "bg-admin-success-bg",
-    error: "bg-admin-error-bg",
+    warning: "bg-warning",
+    success: "bg-success",
+    error: "bg-destructive",
   }[tone];
   const fg = {
-    warning: "text-admin-warning-text",
-    success: "text-admin-success-text",
-    error: "text-admin-error-text",
+    warning: "text-warning-foreground",
+    success: "text-success-foreground",
+    error: "text-destructive-foreground",
   }[tone];
 
   return (
-    <main className="flex min-h-screen items-center justify-center bg-admin-surface px-6 py-12">
-      <div className="w-full max-w-[420px]">
-        <div className="flex flex-col gap-3.5 rounded-2xl border border-admin-border bg-admin-card p-6">
+    <main className="flex min-h-screen items-center justify-center bg-muted px-6 py-12">
+      <div className="w-full max-w-105">
+        <div className="flex flex-col gap-4 rounded-xl border bg-card p-6 shadow-xs">
           <span
-            className={`flex h-10 w-10 items-center justify-center rounded-full ${bg}`}
+            className={`flex size-10 items-center justify-center rounded-full ${bg}`}
           >
             <AdminIcon name={icon} className={`h-5 w-5 ${fg}`} />
           </span>
           <div>
-            <h1 className="font-serif text-xl font-semibold text-admin-primary">
-              {title}
-            </h1>
-            <div className="mt-1.5 flex flex-col gap-2 text-sm leading-relaxed text-admin-muted">
+            <h1 className="text-xl font-semibold text-foreground">{title}</h1>
+            <div className="mt-1.5 flex flex-col gap-2 text-sm leading-relaxed text-muted-foreground">
               {children}
             </div>
           </div>
@@ -73,7 +72,7 @@ export default async function ConfirmEmailPage({
         </p>
         <Link
           href="/admin/login"
-          className="text-sm font-semibold text-admin-primary underline"
+          className="text-sm font-medium text-primary underline underline-offset-4"
         >
           Entrar no painel
         </Link>
@@ -91,7 +90,7 @@ export default async function ConfirmEmailPage({
           Os links de confirmação valem 48 horas, servem uma vez só, e um pedido
           novo cancela o anterior. O e-mail da conta não mudou.
         </p>
-        <p className="text-xs text-admin-faint">
+        <p className="text-xs text-muted-foreground">
           Peça à serventia para refazer a troca: um link novo chega neste mesmo
           endereço.
         </p>
@@ -107,7 +106,7 @@ export default async function ConfirmEmailPage({
           usado por outra conta. O e-mail da conta continua sendo{" "}
           {pending.previousEmail}.
         </p>
-        <p className="text-xs text-admin-faint">
+        <p className="text-xs text-muted-foreground">
           Fale com quem responde pela serventia para escolher outro endereço.
         </p>
       </Card>
@@ -131,7 +130,7 @@ export default async function ConfirmEmailPage({
           pendingLabel="Confirmando…"
         />
       </form>
-      <p className="text-xs text-admin-faint">
+      <p className="text-xs text-muted-foreground">
         Até confirmar, a conta continua entrando com o endereço antigo. A senha
         não muda.
       </p>

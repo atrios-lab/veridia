@@ -1,6 +1,8 @@
 "use client";
 
 import { useEffect, useId, useRef, useState } from "react";
+import { buttonVariants } from "../_ui/button.tsx";
+import { cn } from "../_ui/cn.ts";
 import { AdminIcon } from "./icon.tsx";
 
 /**
@@ -36,15 +38,16 @@ export function FilePicker({
   }, []);
 
   return (
-    <div>
-      <span className="mb-1.5 block text-xs font-bold text-admin-primary">
-        {label}
-      </span>
+    <div className="flex flex-col gap-2">
+      <span className="text-sm leading-none font-medium">{label}</span>
       <label
         htmlFor={id}
-        className={`flex cursor-pointer flex-col items-center gap-2 rounded-[12px] border-2 border-dashed px-4 py-5 text-center transition-colors focus-within:ring-2 focus-within:ring-admin-accent hover:border-admin-primary hover:bg-admin-input-bg ${file ? "border-admin-primary-soft bg-admin-input-bg" : "border-admin-input-border bg-admin-card"}`}
+        className={cn(
+          "flex cursor-pointer flex-col items-center gap-2 rounded-xl border-2 border-dashed px-4 py-5 text-center transition-colors focus-within:border-ring focus-within:ring-3 focus-within:ring-ring/50 hover:border-primary hover:bg-muted/50",
+          file ? "border-primary bg-muted/50" : "border-input bg-card",
+        )}
       >
-        <span className="inline-flex h-10 w-10 items-center justify-center rounded-full bg-admin-success-bg text-admin-primary">
+        <span className="inline-flex size-10 items-center justify-center rounded-full bg-muted text-primary">
           <AdminIcon
             name={file ? "checkCircle" : "upload"}
             className="h-5 w-5"
@@ -52,21 +55,21 @@ export function FilePicker({
         </span>
         {file ? (
           <>
-            <span className="max-w-full truncate text-[13.5px] font-semibold text-admin-text">
+            <span className="max-w-full truncate text-sm font-medium text-foreground">
               {file.name}
             </span>
-            <span className="text-[11.5px] text-admin-muted">
+            <span className="text-xs text-muted-foreground">
               {Math.max(1, Math.round(file.size / 1024))} KB · clique para
               trocar
             </span>
           </>
         ) : (
           <>
-            <span className="btn btn-admin-primary btn-md pointer-events-none">
+            <span className={cn(buttonVariants(), "pointer-events-none")}>
               Escolher arquivo
             </span>
             {hint && (
-              <span className="text-[11.5px] text-admin-muted">{hint}</span>
+              <span className="text-xs text-muted-foreground">{hint}</span>
             )}
           </>
         )}

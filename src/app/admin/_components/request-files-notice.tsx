@@ -40,8 +40,8 @@ export function RequestFilesNotice({
       <p
         className={
           soon
-            ? "rounded-[10px] border border-admin-warning-soft-border bg-admin-warning-bg px-4 py-3 text-[12.5px] leading-relaxed text-admin-warning-text"
-            : "rounded-[10px] border border-admin-warning-soft-border bg-admin-warning-soft-bg px-4 py-3 text-[12.5px] leading-relaxed text-admin-warning-text"
+            ? "rounded-lg bg-warning px-4 py-3 text-sm leading-relaxed text-warning-foreground"
+            : "rounded-lg border border-warning/30 bg-warning-soft px-4 py-3 text-sm leading-relaxed text-warning-text"
         }
       >
         Protocolo encerrado. Os arquivos ficam até{" "}
@@ -60,7 +60,7 @@ export function RequestFilesNotice({
     .sort((a, b) => b.getTime() - a.getTime())[0];
   if (purged && files.every((f) => f.status.kind !== "held")) {
     return (
-      <p className="rounded-[10px] border border-admin-border bg-admin-readonly-bg px-4 py-3 text-[12.5px] leading-relaxed text-admin-muted">
+      <p className="rounded-lg border bg-muted px-4 py-3 text-sm leading-relaxed text-muted-foreground">
         Os arquivos deste protocolo foram apagados em {formatOfficeDate(purged)}
         , {REQUEST_FILE_RETENTION_DAYS} dias após o encerramento. O registro de
         cada um (nome, data e tamanho) continua.
@@ -71,7 +71,7 @@ export function RequestFilesNotice({
   // the next queue opening removes them from storage.
   if (files.some((f) => f.status.kind === "expired")) {
     return (
-      <p className="rounded-[10px] border border-admin-border bg-admin-readonly-bg px-4 py-3 text-[12.5px] leading-relaxed text-admin-muted">
+      <p className="rounded-lg border bg-muted px-4 py-3 text-sm leading-relaxed text-muted-foreground">
         Os arquivos deste protocolo passaram dos {REQUEST_FILE_RETENTION_DAYS}{" "}
         dias após o encerramento e não abrem mais. O registro de cada um (nome,
         data e tamanho) continua.

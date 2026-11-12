@@ -2,6 +2,9 @@
 
 import { useActionState } from "react";
 import { LONG_TEXT_MAX, MIN_JUSTIFICATION } from "@/core/text-limits.ts";
+import { Button } from "../_ui/button.tsx";
+import { Label } from "../_ui/label.tsx";
+import { Textarea } from "../_ui/textarea.tsx";
 import {
   type ReleaseRequestState,
   requestAccessRelease,
@@ -13,7 +16,7 @@ export function AccessReleaseForm({ pending }: { pending: boolean }) {
   const [state, action, sending] = useActionState(requestAccessRelease, IDLE);
   if (state.status === "sent" || (pending && state.status === "idle")) {
     return (
-      <p className="mt-3 rounded-[12px] bg-admin-success-bg px-4 py-3 text-[13px] font-semibold text-admin-success-text">
+      <p className="mt-3 rounded-lg border border-success/30 bg-success-soft px-4 py-3 text-sm font-medium text-success-text">
         Pedido enviado ao Tabelião/Registrador. Quando ele liberar, é só
         recarregar esta página.
       </p>
@@ -21,10 +24,8 @@ export function AccessReleaseForm({ pending }: { pending: boolean }) {
   }
   return (
     <form action={action} className="mt-3 flex flex-col gap-2">
-      <label className="text-xs font-bold text-admin-primary" htmlFor="reason">
-        Qual demanda você precisa acompanhar?
-      </label>
-      <textarea
+      <Label htmlFor="reason">Qual demanda você precisa acompanhar?</Label>
+      <Textarea
         id="reason"
         name="reason"
         rows={3}
@@ -32,23 +33,15 @@ export function AccessReleaseForm({ pending }: { pending: boolean }) {
         minLength={MIN_JUSTIFICATION}
         maxLength={LONG_TEXT_MAX}
         placeholder="Ex.: conferir o protocolo de uma escritura com prazo amanhã cedo."
-        className="w-full rounded-[9px] border border-admin-input-border bg-admin-input-bg px-3.5 py-2.5 text-[13.5px] text-admin-text outline-none focus:border-admin-primary-soft"
       />
       {state.status === "error" && (
-        <p
-          role="alert"
-          className="text-[12.5px] font-semibold text-admin-error-text"
-        >
+        <p role="alert" className="text-sm font-medium text-destructive">
           {state.message}
         </p>
       )}
-      <button
-        type="submit"
-        disabled={sending}
-        className="btn btn-admin-primary btn-md self-start"
-      >
+      <Button type="submit" disabled={sending} className="self-start">
         {sending ? "Enviando..." : "Pedir liberação ao Tabelião/Registrador"}
-      </button>
+      </Button>
     </form>
   );
 }

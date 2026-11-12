@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { buttonVariants } from "../_ui/button.tsx";
 
 /**
  * On every screen of the Tabelião/Registrador while an urgent act of the
@@ -7,11 +8,11 @@ import Link from "next/link";
  */
 export function UrgentAuditBanner({ count }: { count: number }) {
   return (
-    <output className="mx-[30px] mt-4 flex flex-wrap items-center justify-between gap-2 rounded-[12px] border border-admin-error-border bg-admin-error-bg px-4 py-2.5 text-[13px] text-admin-error-text max-md:mx-4">
-      <span className="flex items-center gap-2 font-semibold">
+    <output className="mx-4 mt-4 flex flex-wrap items-center justify-between gap-2 rounded-lg bg-destructive px-4 py-2.5 text-sm text-destructive-foreground md:mx-8">
+      <span className="flex items-center gap-2 font-medium">
         <span
           aria-hidden="true"
-          className="inline-block h-2.5 w-2.5 animate-pulse rounded-full bg-admin-error-text"
+          className="inline-block size-2.5 animate-pulse rounded-full bg-destructive-foreground"
         />
         {count === 1
           ? "1 ato urgente aguarda a sua verificação na auditoria."
@@ -19,7 +20,7 @@ export function UrgentAuditBanner({ count }: { count: number }) {
       </span>
       <Link
         href="/admin/auditoria?nivel=urgente&pendentes=1"
-        className="btn btn-admin-danger btn-sm"
+        className={buttonVariants({ variant: "secondary", size: "sm" })}
       >
         Verificar agora
       </Link>
@@ -34,17 +35,20 @@ export function UrgentAuditBanner({ count }: { count: number }) {
  */
 export function AuditNoticeBanner({ count }: { count: number }) {
   return (
-    <output className="mx-[30px] mt-4 flex flex-wrap items-center justify-between gap-2 rounded-[12px] border border-admin-warning-soft-border bg-admin-warning-bg px-4 py-2.5 text-[13px] text-admin-warning-text max-md:mx-4">
-      <span className="flex items-center gap-2 font-semibold">
+    <output className="mx-4 mt-4 flex flex-wrap items-center justify-between gap-2 rounded-lg bg-warning px-4 py-2.5 text-sm text-warning-foreground md:mx-8">
+      <span className="flex items-center gap-2 font-medium">
         <span
           aria-hidden="true"
-          className="inline-block h-2.5 w-2.5 animate-pulse rounded-full bg-admin-warning-text"
+          className="inline-block size-2.5 animate-pulse rounded-full bg-warning-foreground"
         />
         {count === 1
           ? "O Tabelião/Registrador enviou uma notificação de auditoria para você. Responda em até 24 horas."
           : `O Tabelião/Registrador enviou ${count} notificações de auditoria para você. Responda em até 24 horas.`}
       </span>
-      <Link href="/admin/auditoria" className="btn btn-admin-secondary btn-sm">
+      <Link
+        href="/admin/auditoria"
+        className={buttonVariants({ variant: "secondary", size: "sm" })}
+      >
         Ver e responder
       </Link>
     </output>
@@ -59,7 +63,7 @@ export { AuditChime } from "./audit-chime.tsx";
  */
 export function AccessRequestsBanner({ count }: { count: number }) {
   return (
-    <output className="flex items-center gap-2.5 bg-admin-warning-bg px-[30px] py-2.5 text-[13px] font-semibold text-admin-warning-text max-md:px-4">
+    <output className="flex items-center gap-2.5 bg-warning px-4 py-2.5 text-sm font-medium text-warning-foreground md:px-8">
       <span aria-hidden="true">🕘</span>
       <span className="flex-1">
         {count === 1
@@ -68,7 +72,7 @@ export function AccessRequestsBanner({ count }: { count: number }) {
       </span>
       <Link
         href="/admin/configuracoes/horario-de-acesso"
-        className="rounded-full border border-admin-warning-text px-3 py-1 text-[12px] hover:bg-white"
+        className={buttonVariants({ variant: "secondary", size: "sm" })}
       >
         Ver e decidir
       </Link>
@@ -89,7 +93,7 @@ export function LingeringStatusBanner({
   const [first, ...rest] = people;
   if (!first) return null;
   return (
-    <output className="flex items-center gap-2.5 bg-admin-warning-bg px-[30px] py-2.5 text-[13px] font-semibold text-admin-warning-text max-md:px-4">
+    <output className="flex items-center gap-2.5 bg-warning px-4 py-2.5 text-sm font-medium text-warning-foreground md:px-8">
       <span aria-hidden="true">⏱</span>
       <span className="flex-1">
         {first.name} está como &quot;{first.status}&quot; há {first.minutes}{" "}
@@ -101,7 +105,7 @@ export function LingeringStatusBanner({
       </span>
       <Link
         href="/admin/mensagens/supervisao"
-        className="rounded-full border border-admin-warning-text px-3 py-1 text-[12px] hover:bg-white"
+        className={buttonVariants({ variant: "secondary", size: "sm" })}
       >
         Verificar
       </Link>

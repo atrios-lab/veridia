@@ -1,6 +1,8 @@
 "use client";
 
 import { useFormStatus } from "react-dom";
+import { buttonVariants } from "../_ui/button.tsx";
+import { cn } from "../_ui/cn.ts";
 
 /**
  * The "Sair" button in the user menu, as its own client boundary: only this
@@ -9,7 +11,7 @@ import { useFormStatus } from "react-dom";
  * login screen.
  */
 export function SignOutButton({
-  className = "btn btn-admin-ghost btn-sm px-0",
+  className = cn(buttonVariants({ variant: "link", size: "sm" }), "px-0"),
 }: {
   className?: string;
 }) {

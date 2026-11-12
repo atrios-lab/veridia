@@ -1,7 +1,14 @@
 "use client";
 
+import { Eye, EyeOff } from "lucide-react";
 import { useId, useState } from "react";
-import { AdminIcon } from "./icon.tsx";
+import { Field, FieldLabel } from "../_ui/field.tsx";
+import {
+  InputGroup,
+  InputGroupAddon,
+  InputGroupButton,
+  InputGroupInput,
+} from "../_ui/input-group.tsx";
 
 export function PasswordField({
   label,
@@ -16,33 +23,29 @@ export function PasswordField({
   const id = useId();
 
   return (
-    <div>
-      <label
-        htmlFor={id}
-        className="mb-1.5 block text-xs font-bold text-admin-primary"
-      >
-        {label}
-      </label>
-      <div className="flex items-center rounded-lg border border-admin-input-border bg-admin-input-bg px-3.5 py-2.5 focus-within:border-admin-accent focus-within:ring-2 focus-within:ring-admin-accent">
-        <input
+    <Field>
+      <FieldLabel htmlFor={id}>{label}</FieldLabel>
+      <InputGroup>
+        {/* 16px on a phone (the Input's `text-base md:text-sm`): below that,
+            Safari on iOS zooms the page in on focus and leaves it zoomed
+            after the keyboard closes. */}
+        <InputGroupInput
           id={id}
           name={name}
           type={visible ? "text" : "password"}
           autoComplete={autoComplete}
           required
-          // 16px on a phone: below that, Safari on iOS zooms the page in on
-          // focus and leaves it zoomed after the keyboard closes.
-          className="min-w-0 flex-1 bg-transparent text-base text-admin-text outline-none focus-visible:shadow-none md:text-sm"
         />
-        <button
-          type="button"
-          onClick={() => setVisible((v) => !v)}
-          className="shrink-0 text-admin-faint hover:text-admin-muted"
-          aria-label={visible ? "Ocultar senha" : "Mostrar senha"}
-        >
-          <AdminIcon name={visible ? "eyeOff" : "eye"} className="h-4 w-4" />
-        </button>
-      </div>
-    </div>
+        <InputGroupAddon align="inline-end">
+          <InputGroupButton
+            size="icon-xs"
+            onClick={() => setVisible((v) => !v)}
+            aria-label={visible ? "Ocultar senha" : "Mostrar senha"}
+          >
+            {visible ? <EyeOff aria-hidden /> : <Eye aria-hidden />}
+          </InputGroupButton>
+        </InputGroupAddon>
+      </InputGroup>
+    </Field>
   );
 }
