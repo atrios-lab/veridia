@@ -35,7 +35,10 @@ import { Icon } from "../_components/icon.tsx";
 import { SearchAnswerCard } from "../_components/search-answer-card.tsx";
 import { SignedFormReviewNotice } from "../_components/signed-form-review-notice.tsx";
 import { SignedFormUpload } from "../_components/signed-form-upload.tsx";
-import { takeHandedOffAccess } from "../_lib/access-handoff.ts";
+import {
+  takeHandedOffAccess,
+  takeKeyFromLink,
+} from "../_lib/access-handoff.ts";
 import {
   ATTACHMENT_ACCEPT,
   useAttachmentUpload,
@@ -2373,13 +2376,14 @@ function LookupFlow({
   const detail = live ?? (state.status === "success" ? state : undefined);
 
   // Arriving from the success screen, the key came along in this tab's
-  // memory (see access-handoff.ts): consult at once instead of asking for
-  // what the citizen was just shown.
+  // memory (see access-handoff.ts); arriving from the e-mail, in the
+  // link's "#chave=": consult at once instead of asking for what the
+  // citizen was just shown.
   const handedOff = useRef(false);
   useEffect(() => {
     if (handedOff.current || !initialNumber) return;
     handedOff.current = true;
-    const accessKey = takeHandedOffAccess(initialNumber);
+    const accessKey = takeHandedOffAccess(initialNumber) ?? takeKeyFromLink();
     if (!accessKey) return;
     const form = new FormData();
     form.set("protocolNumber", initialNumber);

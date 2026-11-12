@@ -183,7 +183,7 @@ export async function sendAccessKey(
         sealUrl: brandImageUrl(params.tenant.logos.seal.light, host),
         protocolNumber: params.protocolNumber,
         accessKey: params.accessKey,
-        consultUrl: consultLink(host, params.protocolNumber),
+        consultUrl: consultLink(host, params.protocolNumber, params.accessKey),
         reason: params.reason,
       } as const;
       return {
