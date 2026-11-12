@@ -79,3 +79,19 @@ test("todo PDF do painel oferece assinar digitalmente, ou diz por que não", () 
     "Rota nova que gera PDF: ofereça 'Assinar digitalmente' (signHref) e ponha em OFFERS_DIGITAL_SIGNATURE, ou explique em NOT_SIGNED_BY_THE_OFFICE.",
   );
 });
+
+test("assinado digitalmente, o PDF sai sem a linha de assinatura à mão", () => {
+  // "Assinar digitalmente" asks for `?assinatura=digital`; each route of the
+  // list answers it through `renderingFor` (src/lib/pdf.ts).
+  const missing = [...OFFERS_DIGITAL_SIGNATURE].filter(
+    (route) =>
+      !readFileSync(join(ROOT, route, "route.ts"), "utf8").includes(
+        "renderingFor(",
+      ),
+  );
+  assert.deepEqual(
+    missing,
+    [],
+    "Rota que oferece assinatura digital: responda por renderingFor(request, ...) para tirar a linha de assinatura na versão digital.",
+  );
+});

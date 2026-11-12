@@ -1,4 +1,5 @@
 import "server-only";
+import { AsyncLocalStorage } from "node:async_hooks";
 import PDFDocument from "pdfkit";
 import QRCode from "qrcode";
 import type { DeclaracaoDocument } from "@/core/request/declaracao.ts";
@@ -80,6 +81,54 @@ function drawLetterhead(
   const y = Math.max(ruleY, HEADER_BOTTOM - 28);
   pdf.rect(MARGIN, y, contentWidth(pdf), 0.8).fill(palette.border);
   return y + 18;
+}
+
+/**
+ * Documents drawn to be signed digitally (decision of 12/11/2026): the
+ * assinador asks for the PDF with `assinatura=digital` (see `signHref`), and
+ * the paper then carries, in place of the line to sign by hand, a note that
+ * it is signed digitally, as the band in the margin shows. Printed to sign
+ * by hand, the same document keeps its line.
+ */
+const signing = new AsyncLocalStorage<"digital">();
+
+export const DIGITAL_SIGNATURE_NOTE =
+  "Documento assinado digitalmente com certificado ICP-Brasil, nos termos do art. 10, § 1º, da Medida Provisória nº 2.200-2/2001, dispensada a assinatura de próprio punho. A identificação do signatário e o código de verificação de autenticidade constam da margem lateral.";
+
+/** Draws what `run` renders as documents to be signed digitally. */
+export function forDigitalSignature<T>(run: () => Promise<T>): Promise<T> {
+  return signing.run("digital", run);
+}
+
+/**
+ * A PDF route's rendering, in the digital version when the request asks for
+ * it (`?assinatura=digital`, added by "Assinar digitalmente").
+ */
+export function renderingFor<T>(
+  request: Request,
+  run: () => Promise<T>,
+): Promise<T> {
+  return new URL(request.url).searchParams.get("assinatura") === "digital"
+    ? forDigitalSignature(run)
+    : run();
+}
+
+function drawDigitalSignatureNote(pdf: Pdf, brand: DocumentBrand): void {
+  const width = contentWidth(pdf) - 40;
+  pdf.font("Times-Italic").fontSize(10);
+  const height = pdf.heightOfString(DIGITAL_SIGNATURE_NOTE, { width });
+  pdf.moveDown(1.6);
+  if (pdf.y + height + 16 > bottom(pdf)) pdf.addPage();
+  const top = pdf.y;
+  pdf.rect(MARGIN + 30, top, width, 0.6).fill(brand.palette.border);
+  pdf
+    .font("Times-Italic")
+    .fontSize(10)
+    .fillColor(NEUTRALS.textSoft)
+    .text(DIGITAL_SIGNATURE_NOTE, MARGIN + 20, top + 8, {
+      width,
+      align: "center",
+    });
 }
 
 /** Repeated on every page, in the bottom margin so no flow text collides:
@@ -460,6 +509,11 @@ function drawDocumentBody(
     0,
   );
   const blockHeight = 28 + noteHeight;
+  // Going to be signed digitally: no line to sign by hand, a note instead.
+  const digital =
+    signing.getStore() === "digital" &&
+    Boolean(document.signee || document.signature.length);
+  const byHand = Boolean(document.signee) && !digital;
 
   if (document.dateLine) {
     // Centred, as the office dates its papers, between the text and the
@@ -471,7 +525,7 @@ function drawDocumentBody(
     pdf.moveDown(1.2);
     const room = bottom(pdf) - pdf.y - dateHeight;
     if (
-      document.signee
+      byHand
         ? room - blockHeight < 48
         : room < HEADING_ORPHAN_GUARD - dateHeight
     ) {
@@ -486,6 +540,11 @@ function drawDocumentBody(
         width: contentWidth(pdf),
         align: "center",
       });
+  }
+
+  if (digital) {
+    drawDigitalSignatureNote(pdf, brand);
+    return;
   }
 
   if (document.signee) {

@@ -30,6 +30,7 @@ import {
   setArchivedWith,
   setNotificationSignedWith,
 } from "@/lib/audit-trail.ts";
+import { forDigitalSignature } from "@/lib/pdf.ts";
 import { CertificatePasswordError } from "@/lib/signature/certificate.ts";
 import { requestOrigin, verifyUrlFor } from "@/lib/signature/documents.ts";
 import { SigningError, signNewDocumentWith } from "@/lib/signing.ts";
@@ -410,7 +411,10 @@ export async function signNotification(
     : [];
   const origin = await requestOrigin();
   try {
-    const pdf = await renderNotificationPdf(tenant, view, entries);
+    // Signed here, digitally: the note in place of the line to sign.
+    const pdf = await forDigitalSignature(() =>
+      renderNotificationPdf(tenant, view, entries),
+    );
     const signed = await signNewDocumentWith(
       db,
       tenant.slug,

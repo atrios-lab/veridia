@@ -4,6 +4,7 @@ import {
   renderNotificationPdf,
 } from "@/lib/audit-documents.ts";
 import { findNotificationWith, listAuditWith } from "@/lib/audit-trail.ts";
+import { renderingFor } from "@/lib/pdf.ts";
 import { pdfResponse } from "@/lib/signature/documents.ts";
 import { findSignedDocumentWith } from "@/lib/signing.ts";
 import { readStoredFile } from "@/lib/uploads.ts";
@@ -12,7 +13,7 @@ import { auditAccess } from "../../../access.ts";
 export const runtime = "nodejs";
 
 /** The notification to print: the signed version when there is one. */
-export async function GET(
+async function handle(
   _request: Request,
   { params }: { params: Promise<{ id: string }> },
 ): Promise<Response> {
@@ -46,4 +47,12 @@ export async function GET(
     name,
     true,
   );
+}
+
+/**
+ * "Assinar digitalmente" asks for the version without the line to sign by
+ * hand (`?assinatura=digital`); printing gets the line.
+ */
+export function GET(...args: Parameters<typeof handle>) {
+  return renderingFor(args[0], () => handle(...args));
 }

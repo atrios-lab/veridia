@@ -6,8 +6,10 @@ import { AdminIcon } from "./icon";
  * panel offers it next to its print link (decision of 11/11/2026).
  */
 export function signHref(pdfHref: string, title: string): string {
+  // The digital version: a note in place of the line to sign by hand.
+  const digital = `${pdfHref}${pdfHref.includes("?") ? "&" : "?"}assinatura=digital`;
   return `/admin/utilitarios/assinador?${new URLSearchParams({
-    origem: pdfHref,
+    origem: digital,
     titulo: title,
   })}#assinar`;
 }

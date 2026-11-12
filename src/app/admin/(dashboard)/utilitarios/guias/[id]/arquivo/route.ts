@@ -1,6 +1,7 @@
 import { can } from "@/core/auth/roles.ts";
 import { guideFileName } from "@/core/guides/document.ts";
 import { renderGuideDocx, renderGuidePdf } from "@/lib/guide-files.ts";
+import { renderingFor } from "@/lib/pdf.ts";
 import { getSession } from "@/lib/session.ts";
 import { findGuide, getGuideSettings } from "@/lib/tax-guides.ts";
 import { getTenant } from "@/lib/tenant.ts";
@@ -11,7 +12,7 @@ const DOCX =
   "application/vnd.openxmlformats-officedocument.wordprocessingml.document";
 
 /** The guia as a PDF (inline, to print) or a Word file (to edit). */
-export async function GET(
+async function handle(
   request: Request,
   { params }: { params: Promise<{ id: string }> },
 ): Promise<Response> {
@@ -44,4 +45,12 @@ export async function GET(
       "Cache-Control": "private, no-store",
     },
   });
+}
+
+/**
+ * "Assinar digitalmente" asks for the version without the line to sign by
+ * hand (`?assinatura=digital`); printing gets the line.
+ */
+export function GET(...args: Parameters<typeof handle>) {
+  return renderingFor(args[0], () => handle(...args));
 }
