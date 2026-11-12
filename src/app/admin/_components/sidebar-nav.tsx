@@ -3,6 +3,7 @@
 import { ExternalLink } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useEffect, useRef } from "react";
 import {
   SidebarContent,
   SidebarGroup,
@@ -11,6 +12,7 @@ import {
   SidebarMenuBadge,
   SidebarMenuButton,
   SidebarMenuItem,
+  useSidebar,
 } from "../_ui/sidebar.tsx";
 import { ATTENTION_CLASS } from "./attention.ts";
 import { AdminIcon } from "./icon.tsx";
@@ -38,6 +40,19 @@ export function AdminSidebarNav({
   counts: Record<string, number>;
 }) {
   const pathname = usePathname();
+  // On a phone the sidebar is a drawer over the screen: it closes as soon
+  // as an item is tapped, and on any change of page (decision of
+  // 12/11/2026), so the person lands on the screen they chose instead of
+  // having to tap outside the drawer.
+  const { isMobile, setOpenMobile } = useSidebar();
+  // Only when the path really changes: on a phone this list mounts when
+  // the drawer opens, and closing on mount would shut it at once.
+  const lastPath = useRef(pathname);
+  useEffect(() => {
+    if (lastPath.current === pathname) return;
+    lastPath.current = pathname;
+    setOpenMobile(false);
+  }, [pathname, setOpenMobile]);
 
   // Every group open, always (decision of 11/11/2026): with the groups
   // folded, people could not find the screens. The titles only organize.
@@ -70,6 +85,9 @@ export function AdminSidebarNav({
                         // the panel by lunchtime.
                         target={item.external ? "zoho" : undefined}
                         rel={item.external ? "noreferrer" : undefined}
+                        onClick={() => {
+                          if (isMobile) setOpenMobile(false);
+                        }}
                       />
                     }
                   >
