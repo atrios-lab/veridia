@@ -22,7 +22,7 @@ Rode a mesma bateria do CI (`.github/workflows/verify.yml`), nesta ordem, e só 
 verde:
 
 ```bash
-pnpm typecheck && pnpm lint && pnpm test && pnpm check:dashes && pnpm check:tokens && pnpm check:destructive
+pnpm typecheck && pnpm lint && pnpm test && pnpm check:dashes && pnpm check:tokens && pnpm check:admin-scale && pnpm check:destructive
 pnpm dlx @fission-ai/openspec@1.5.0 validate --all
 pnpm build
 ```
