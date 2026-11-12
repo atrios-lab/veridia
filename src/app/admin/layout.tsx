@@ -1,9 +1,11 @@
 import type { Metadata } from "next";
 import { IBM_Plex_Sans } from "next/font/google";
+import { cookies } from "next/headers";
 import { Toaster } from "sonner";
 import { rootMetadata } from "@/lib/root-metadata.ts";
 import { getSiteOrigin } from "@/lib/site-origin.ts";
 import { getTenant } from "@/lib/tenant.ts";
+import { DARK, THEME_COOKIE } from "./_components/theme.ts";
 import "./admin.css";
 
 // The panel's one face, the same for every office (painel-neutro-shadcn).
@@ -32,11 +34,17 @@ export async function generateMetadata(): Promise<Metadata> {
  * from the site to the panel is a full page load, which only happens at
  * sign-in and sign-out.
  */
-export default function AdminLayout({
+export default async function AdminLayout({
   children,
 }: Readonly<{ children: React.ReactNode }>) {
+  // The theme the person chose (theme-toggle.tsx), applied here so the page
+  // arrives in it.
+  const dark = (await cookies()).get(THEME_COOKIE)?.value === DARK;
   return (
-    <html lang="pt-BR" className={plexSans.variable}>
+    <html
+      lang="pt-BR"
+      className={dark ? `${plexSans.variable} dark` : plexSans.variable}
+    >
       <body className="min-h-screen bg-background text-foreground antialiased">
         {children}
         <Toaster

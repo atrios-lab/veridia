@@ -92,7 +92,7 @@ function ThemeCard({
       <span className="min-w-0 flex-1">
         <span
           data-theme={theme}
-          className={`${SERIF[theme].variable} block font-serif text-[15px] font-semibold text-brand-primary`}
+          className={`${SERIF[theme].variable} block font-serif text-[15px] font-semibold text-brand-primary dark:text-foreground`}
         >
           {meta.label}
         </span>

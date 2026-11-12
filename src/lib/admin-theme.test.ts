@@ -2,17 +2,24 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { test } from "node:test";
 
-// The panel's theme is checked here rather than by eye: every text and
+// The panel's themes are checked here rather than by eye: every text and
 // background pair the panel draws must reach 4.5:1 (WCAG 1.4.3), and the
-// edge of a control 3:1 (WCAG 1.4.11). Change a colour in admin.css and
-// this says which pair broke and by how much.
+// edge of a control 3:1 (WCAG 1.4.11), in the light theme and in the dark
+// one. Change a colour in admin.css and this says which pair broke, in
+// which theme and by how much.
 const stylesheet = readFileSync("src/app/admin/admin.css", "utf8");
 
-function token(name: string): string {
+type Theme = "claro" | "escuro";
+const THEMES: readonly Theme[] = ["claro", "escuro"];
+
+/** The light value is the token itself; the dark one, its --palette-dark-*. */
+function token(name: string, theme: Theme): string {
+  const variable =
+    theme === "claro" ? `--color-${name}` : `--palette-dark-${name}`;
   const value = stylesheet.match(
-    new RegExp(`--color-${name}:\\s*(#[0-9a-fA-F]{6})\\s*;`),
+    new RegExp(`${variable}:\\s*(#[0-9a-fA-F]{6})\\s*;`),
   )?.[1];
-  assert.ok(value, `--color-${name} is not declared as a hex in admin.css`);
+  assert.ok(value, `${variable} is not declared as a hex in admin.css`);
   return value;
 }
 
@@ -53,21 +60,47 @@ const TEXT: [foreground: string, backgrounds: string[]][] = [
   ["sidebar-primary-foreground", ["sidebar-primary"]],
 ];
 
-test("every text colour of the panel reaches 4.5:1 on its backgrounds", () => {
-  for (const [foreground, backgrounds] of TEXT) {
-    for (const background of backgrounds) {
-      const ratio = contrast(token(foreground), token(background));
+for (const theme of THEMES) {
+  test(`tema ${theme}: every text colour reaches 4.5:1 on its backgrounds`, () => {
+    for (const [foreground, backgrounds] of TEXT) {
+      for (const background of backgrounds) {
+        const ratio = contrast(
+          token(foreground, theme),
+          token(background, theme),
+        );
+        assert.ok(
+          ratio >= 4.5,
+          `${theme}: ${foreground} on ${background}: ${ratio.toFixed(2)}:1`,
+        );
+      }
+    }
+  });
+
+  test(`tema ${theme}: the edge of a field reaches 3:1 against the page`, () => {
+    for (const background of ["background", "surface", "card", "muted"]) {
+      const ratio = contrast(token("input", theme), token(background, theme));
       assert.ok(
-        ratio >= 4.5,
-        `${foreground} on ${background}: ${ratio.toFixed(2)}:1`,
+        ratio >= 3,
+        `${theme}: input on ${background}: ${ratio.toFixed(2)}:1`,
       );
     }
-  }
-});
+  });
+}
 
-test("the edge of a field reaches 3:1 against the page", () => {
-  for (const background of ["background", "surface", "card", "muted"]) {
-    const ratio = contrast(token("input"), token(background));
-    assert.ok(ratio >= 3, `input on ${background}: ${ratio.toFixed(2)}:1`);
-  }
+test("every token of the light theme has a dark value", () => {
+  // The light theme's tokens, minus the messenger's personal colours (the
+  // title bar each person picks and the presence dots), which stay the same
+  // in both themes.
+  const light = [...stylesheet.matchAll(/^ {2}--color-([a-z-]+):\s*#/gm)]
+    .map((m) => m[1])
+    .filter(
+      (name) =>
+        !name.startsWith("msg-") || ["msg-pane", "msg-mine"].includes(name),
+    );
+  const swapped = [
+    ...stylesheet.matchAll(
+      /--color-([a-z-]+):\s*var\(\s*--palette-dark-\1\s*\)/g,
+    ),
+  ].map((m) => m[1]);
+  assert.deepEqual(swapped.toSorted(), light.toSorted());
 });

@@ -154,6 +154,18 @@ Tamanhos: `sm` (32px, linha densa), padrão (36px), `lg` (40px, envio de formul�
   `text-destructive`. Envio à direita no computador, largura cheia no celular.
 - **Aviso**: `Alert` ou caixa `rounded-lg border bg-*-soft text-*-text p-4`.
 
+### Tema escuro
+
+O botão de sol e lua no topo troca entre o tema claro e o escuro. A escolha fica no cookie
+`painel_tema`, que o layout raiz lê para já entregar a página no tema certo. Cada token do tema
+claro tem o seu valor escuro em `--palette-dark-*` (`admin.css`), trocado sob a classe `.dark`
+no `<html>`. O teste de contraste confere os dois temas e falha se um token claro ficar sem
+valor escuro.
+
+No escuro, o destaque é um anil claro (`#8f9af2`): o navy da Átrios some sobre fundo escuro.
+Cor fixa (`bg-white`, `text-black`) não acompanha o tema; use sempre o token. Tela nova precisa
+ser vista nos dois temas.
+
 ### Movimento
 
 Entrada e saída de camada (diálogo, menu, aviso) e mudança de estado. O que tem pendência na
