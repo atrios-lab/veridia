@@ -4,6 +4,7 @@ import {
   renderAppointmentReceipt,
 } from "@/lib/appointment-receipt.ts";
 import { findAppointmentById } from "@/lib/appointments.ts";
+import { renderingFor } from "@/lib/pdf.ts";
 import { getSession } from "@/lib/session.ts";
 import { getTenant } from "@/lib/tenant.ts";
 
@@ -14,7 +15,7 @@ export const runtime = "nodejs";
  * phone or for a citizen who arrived without theirs. GET and no token: the
  * operator is authenticated by the session, same as the requerimento print.
  */
-export async function GET(
+async function handle(
   request: Request,
   { params }: { params: Promise<{ id: string }> },
 ): Promise<Response> {
@@ -42,4 +43,12 @@ export async function GET(
       "Cache-Control": "private, no-store",
     },
   });
+}
+
+/**
+ * "Assinar digitalmente" asks for the version without the line to sign by
+ * hand (`?assinatura=digital`); printing gets the line.
+ */
+export function GET(...args: Parameters<typeof handle>) {
+  return renderingFor(args[0], () => handle(...args));
 }

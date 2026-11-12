@@ -6,13 +6,14 @@ import {
   renderBookPdf,
   snapshotOf,
 } from "@/lib/daily-book.ts";
+import { renderingFor } from "@/lib/pdf.ts";
 import { getSession } from "@/lib/session.ts";
 import { getTenant } from "@/lib/tenant.ts";
 
 export const runtime = "nodejs";
 
 /** The book's page as generated, to print or sign; or as a spreadsheet. */
-export async function GET(
+async function handle(
   request: Request,
   { params }: { params: Promise<{ id: string }> },
 ): Promise<Response> {
@@ -45,4 +46,12 @@ export async function GET(
       "Cache-Control": "private, no-store",
     },
   });
+}
+
+/**
+ * "Assinar digitalmente" asks for the version without the line to sign by
+ * hand (`?assinatura=digital`); printing gets the line.
+ */
+export function GET(...args: Parameters<typeof handle>) {
+  return renderingFor(args[0], () => handle(...args));
 }

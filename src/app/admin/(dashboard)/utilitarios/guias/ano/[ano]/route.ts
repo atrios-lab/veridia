@@ -1,5 +1,6 @@
 import { can } from "@/core/auth/roles.ts";
 import { renderGuidesPdf } from "@/lib/guide-files.ts";
+import { renderingFor } from "@/lib/pdf.ts";
 import { getSession } from "@/lib/session.ts";
 import { getGuideSettings, listGuides } from "@/lib/tax-guides.ts";
 import { getTenant } from "@/lib/tenant.ts";
@@ -7,7 +8,7 @@ import { getTenant } from "@/lib/tenant.ts";
 export const runtime = "nodejs";
 
 /** Every live guia of a year as one PDF, oldest number first, to archive. */
-export async function GET(
+async function handle(
   _request: Request,
   { params }: { params: Promise<{ ano: string }> },
 ): Promise<Response> {
@@ -37,4 +38,12 @@ export async function GET(
       "Cache-Control": "private, no-store",
     },
   });
+}
+
+/**
+ * "Assinar digitalmente" asks for the version without the line to sign by
+ * hand (`?assinatura=digital`); printing gets the line.
+ */
+export function GET(...args: Parameters<typeof handle>) {
+  return renderingFor(args[0], () => handle(...args));
 }
