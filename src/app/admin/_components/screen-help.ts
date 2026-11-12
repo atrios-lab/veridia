@@ -670,7 +670,7 @@ export const JUSTICA_ABERTA_HELP: ScreenHelp = {
     {
       term: "Receita terceiros - Outros",
       meaning:
-        "O repasse do FCRCPN recebido no semestre, no Registro Civil das Pessoas Naturais.",
+        "O repasse do FCRCPN recebido no semestre, no Registro Civil das Pessoas Naturais. O valor líquido (já descontado o imposto de renda retido pela associação) também é lançado no Livro Diário como receita do Registro Civil, no dia do recebimento; para corrigir ou excluir, use esta tela.",
     },
     {
       term: "Despesas de funcionamento",

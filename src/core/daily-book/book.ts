@@ -218,6 +218,9 @@ export interface BookEntry {
   fiscalNote: string;
   explanation: string;
   hasAttachment: boolean;
+  /** Where the line came from: typed in, a receipt read, a productivity
+   * report, or the FCRCPN repasse (kept in Justiça Aberta). */
+  source?: string;
 }
 
 const money = (c: number) => `R$ ${formatMoneyBRL(c)}`;
@@ -760,7 +763,7 @@ function monthTable(s: BookSnapshot): RequerimentoSection["table"] {
       { label: "Atos", align: "right", weight: 0.6 },
       { label: "Arrecadação bruta (R$)", align: "right" },
       { label: "Fundos e ISS (R$)", align: "right" },
-      { label: "Emolumentos (R$)", align: "right" },
+      { label: "Receitas (R$)", align: "right" },
       { label: "Despesas (R$)", align: "right" },
       { label: "Líquido (R$)", align: "right" },
     ],
@@ -824,7 +827,7 @@ export function buildAnnualDocument(
                   value: t.acts.toLocaleString("pt-BR"),
                 },
                 {
-                  label: "Arrecadação bruta (emolumentos, fundos e ISS)",
+                  label: "Arrecadação bruta (receitas, fundos e ISS)",
                   value: money(t.grossCents),
                 },
                 {
@@ -834,7 +837,7 @@ export function buildAnnualDocument(
               ]
             : []),
           {
-            label: "Receitas: emolumentos (art. 190, § 3º)",
+            label: "Receitas",
             value: money(revenue),
           },
           { label: "Despesas", value: money(expenses) },

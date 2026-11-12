@@ -228,9 +228,11 @@ export default async function JusticaAbertaPage({
               Repasse do FCRCPN no semestre
             </h2>
             <p className="text-sm text-muted-foreground">
-              Compensação dos atos gratuitos do Registro Civil. O valor recebido
-              entra em "Receita terceiros - Outros" do Registro Civil das
-              Pessoas Naturais. Conta pela data em que o dinheiro entrou.
+              Compensação dos atos gratuitos do Registro Civil, repassada já com
+              o imposto de renda retido. O valor líquido entra no Livro Diário
+              como receita do Registro Civil das Pessoas Naturais, no dia em que
+              o dinheiro entrou, e no formulário em "Receita terceiros -
+              Outros".
             </p>
           </div>
           {f.fcrcpn.length > 0 ? (
@@ -249,8 +251,9 @@ export default async function JusticaAbertaPage({
                       ? ` · competência ${r.competence.slice(5, 7)}/${r.competence.slice(0, 4)}`
                       : ""}
                     {r.withheldCents
-                      ? ` · IR retido ${money(r.withheldCents)}`
+                      ? ` · bruto ${money(r.receivedCents + r.withheldCents)}, IR retido ${money(r.withheldCents)}`
                       : ""}
+                    {r.entryId ? " · lançado no livro" : ""}
                   </span>
                   <span className="ml-auto font-semibold tabular-nums text-foreground">
                     {money(r.receivedCents)}

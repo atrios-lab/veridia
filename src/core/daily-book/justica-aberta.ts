@@ -147,6 +147,8 @@ export interface FcrcpnRepasse {
   removedAt?: string;
   removedBy?: string;
   removeReason?: string;
+  /** The line it is in the Livro Diário (receita, valor líquido). */
+  entryId?: string;
 }
 
 /** What is kept: the repasses, and the semesters declared without one. */
@@ -154,6 +156,23 @@ export interface FcrcpnRecord {
   repasses: FcrcpnRepasse[];
   /** Semesters the office said had no repasse. */
   noneIn: SemesterId[];
+}
+
+/**
+ * The line in the Livro Diário for a repasse (decision of 12/11/2026): the
+ * net amount received, as revenue of the Registro Civil das Pessoas
+ * Naturais, with the income tax withheld at source said in the line.
+ */
+export function fcrcpnEntryDescription(
+  r: Pick<FcrcpnRepasse, "competence" | "payer" | "withheldCents">,
+): string {
+  const competence = r.competence
+    ? `, competência ${r.competence.slice(5, 7)}/${r.competence.slice(0, 4)}`
+    : "";
+  const withheld = r.withheldCents
+    ? `; imposto de renda retido na fonte: R$ ${formatMoneyBRL(r.withheldCents)}`
+    : "";
+  return `Compensação dos atos gratuitos do Registro Civil (FCRCPN)${competence}, repassada por ${r.payer.trim()}, valor líquido recebido${withheld}`;
 }
 
 export function repassesIn(
@@ -233,6 +252,10 @@ export function justicaAbertaFigures(
       expenses += e.amountCents;
       continue;
     }
+    // The FCRCPN repasse is in the book as revenue (decision of
+    // 12/11/2026), but the form takes it under "Receita terceiros -
+    // Outros", from the repasses themselves: not twice.
+    if (e.source === "fcrcpn") continue;
     funds += e.fundsCents;
     iss += e.issCents;
     withRevenue.add(e.date.slice(0, 7));

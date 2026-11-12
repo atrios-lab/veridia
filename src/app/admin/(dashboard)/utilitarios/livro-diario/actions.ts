@@ -32,6 +32,7 @@ import {
   addEntryWith,
   DailyBookError,
   type EntryInput,
+  findEntryWith,
   getBookSettingsWith,
   importProductivityWith,
   issueBookReportWith,
@@ -101,6 +102,20 @@ function fail(error: unknown): BookFormState {
     status: "error",
     message: "Não foi possível salvar agora. Tente de novo em instantes.",
   };
+}
+
+/**
+ * The FCRCPN repasse's line belongs to Livro › Justiça Aberta, which keeps
+ * the repasse and its line together: corrected or removed there, never
+ * apart.
+ */
+const FCRCPN_LINE =
+  "Este lançamento é o repasse do FCRCPN. Corrija ou exclua em Livro › Justiça Aberta, para o repasse e o livro continuarem iguais.";
+
+async function isFcrcpnLine(tenantSlug: string, id: string): Promise<boolean> {
+  if (!id) return false;
+  const row = await findEntryWith(db, tenantSlug, id).catch(() => undefined);
+  return row?.source === "fcrcpn";
 }
 
 function pdfFile(formData: FormData, name: string): File | null {
@@ -416,6 +431,9 @@ export async function saveEntry(
     };
   }
   const id = field(formData, "id", 40);
+  if (id && (await isFcrcpnLine(ok.tenant.slug, id))) {
+    return { status: "error", message: FCRCPN_LINE };
+  }
   // The notices of checks.ts are shown on the form; none refuses the entry.
   const explanation = field(formData, "explicacao", LONG_TEXT_MAX);
   try {
@@ -474,6 +492,9 @@ export async function removeEntry(
   if (!ok) return { status: "error", message: NO_PERMISSION };
   const problem = justify(formData);
   if (problem) return { status: "error", message: problem };
+  if (await isFcrcpnLine(ok.tenant.slug, field(formData, "id", 40))) {
+    return { status: "error", message: FCRCPN_LINE };
+  }
   try {
     await removeEntryWith(
       db,

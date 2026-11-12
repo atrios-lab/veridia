@@ -126,6 +126,7 @@ export function entryOf(row: StoredEntry): BookEntry {
     fiscalNote: row.fiscalNote,
     explanation: row.explanation,
     hasAttachment: Boolean(row.attachmentPath),
+    source: row.source,
   };
 }
 
@@ -189,7 +190,9 @@ export interface EntryInput {
   fiscalNote: string;
   explanation: string;
   attachment?: { path: string; name: string } | null;
-  source?: "manual" | "comprovante";
+  /** "fcrcpn": the repasse booked from Livro › Justiça Aberta, which owns
+   * it; it counts no act. */
+  source?: "manual" | "comprovante" | "fcrcpn";
 }
 
 function checkEntry(input: EntryInput): void {
@@ -221,7 +224,8 @@ const values = (input: EntryInput) => ({
   category: input.kind === "despesa" ? input.category : "",
   actCode: input.actCode,
   description: input.description.trim(),
-  quantity: Math.max(1, input.quantity || 1),
+  // The FCRCPN repasse compensates acts already counted on their own day.
+  quantity: input.source === "fcrcpn" ? 0 : Math.max(1, input.quantity || 1),
   amountCents: input.amountCents,
   fundsCents: input.kind === "receita" ? input.fundsCents : 0,
   issCents: input.kind === "receita" ? input.issCents : 0,
