@@ -26,10 +26,13 @@ export function SignedFormReviewNotice({
   return (
     <section
       aria-live="polite"
-      className="flex flex-col gap-2.5 rounded-[10px] border-[1.5px] border-brand-accent bg-brand-accent-soft px-3.5 py-3"
+      // Blinking, like the step that still waits on the signature (decision
+      // of 12/11/2026): the citizen has to see it is a warning.
+      className="flex flex-col gap-2.5 rounded-[10px] border-2 border-brand-alert bg-brand-accent-soft px-3.5 py-3 animate-signature-blink motion-reduce:animate-none"
     >
-      <span className="text-[13px] font-bold text-brand-primary">
-        Requerimento em análise
+      <span className="flex items-center gap-2 text-[13px] font-bold text-brand-alert">
+        <Icon name="alert" className="h-4 w-4 shrink-0" strokeWidth={2.2} />
+        Atenção: requerimento em análise
       </span>
       <span className="text-[12.5px] leading-relaxed text-brand-accent-ink">
         {SIGNED_FORM_MESSAGES.review}
