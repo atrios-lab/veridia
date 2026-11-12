@@ -1241,3 +1241,124 @@ export function SettingsForm({
     </form>
   );
 }
+
+/* ------------------------------------------------------------------ terms */
+
+/** One term of the book: generated (open it) or a button to generate it. */
+function TermBlock({
+  kind,
+  title,
+  description,
+  done,
+  today,
+  disabled,
+  primary,
+}: {
+  kind: "abertura" | "encerramento";
+  title: string;
+  description: string;
+  done: { href: string; date: string } | null;
+  today: string;
+  disabled: string | null;
+  primary: boolean;
+}) {
+  const [state, action, pending] = useActionState(issueReport, IDLE);
+  return (
+    <div className="flex flex-col gap-3 rounded-[12px] border border-admin-border bg-admin-input-bg px-4 py-4">
+      <div>
+        <p className="font-serif text-[16px] font-semibold text-admin-primary">
+          {title}
+        </p>
+        <p className="mt-1 text-[12.5px] text-admin-muted">{description}</p>
+      </div>
+      {done ? (
+        <div className="flex flex-wrap items-center gap-2">
+          <span className="rounded-full bg-admin-success-bg px-3 py-1 text-[12px] font-semibold text-admin-success-text">
+            Gerado em {br(done.date)}
+          </span>
+          <a href={done.href} className="btn btn-admin-secondary btn-md">
+            Abrir, assinar ou imprimir
+          </a>
+        </div>
+      ) : (
+        <form action={action} className="flex flex-wrap items-end gap-2">
+          <Feedback state={state} />
+          <input type="hidden" name="tipo" value={kind} />
+          <div>
+            <label htmlFor={`term-${kind}`} className={LABEL}>
+              Data do termo
+            </label>
+            <input
+              id={`term-${kind}`}
+              name="data"
+              type="date"
+              required
+              defaultValue={today}
+              className={`${FIELD} max-w-[180px]`}
+            />
+          </div>
+          <button
+            type="submit"
+            disabled={pending || Boolean(disabled)}
+            title={disabled ?? undefined}
+            className={`btn ${primary ? "btn-admin-primary" : "btn-admin-secondary"} btn-md`}
+          >
+            {pending ? "Gerando..." : `Gerar ${title.toLowerCase()}`}
+          </button>
+          {disabled && <span className={HINT}>{disabled}</span>}
+        </form>
+      )}
+    </div>
+  );
+}
+
+/**
+ * The book's opening and closing terms (CN art. 186), in plain sight
+ * (decision of 12/11/2026): the clerk sees at once whether the book is
+ * open and generates either term with one click.
+ */
+export function BookTermsPanel({
+  bookNumber,
+  sheetCount,
+  usedSheets,
+  opening,
+  closing,
+  today,
+}: {
+  bookNumber: number;
+  sheetCount: number;
+  usedSheets: number;
+  opening: { href: string; date: string } | null;
+  closing: { href: string; date: string } | null;
+  today: string;
+}) {
+  const noSheets = sheetCount
+    ? null
+    : "Informe antes o número de folhas do livro em Configurar.";
+  return (
+    <div className="grid gap-3 md:grid-cols-2">
+      <TermBlock
+        kind="abertura"
+        title="Termo de abertura"
+        description={`Primeira folha do livro nº ${bookNumber}: número do livro, finalidade, quantidade de folhas e declaração de que todas estão rubricadas.`}
+        done={opening}
+        today={today}
+        disabled={noSheets}
+        primary
+      />
+      <TermBlock
+        kind="encerramento"
+        title="Termo de encerramento"
+        description={
+          sheetCount
+            ? `Última folha do livro nº ${bookNumber}. Folhas usadas: ${usedSheets} de ${sheetCount}. Gere quando as folhas acabarem.`
+            : `Última folha do livro nº ${bookNumber}. Gere quando as folhas acabarem.`
+        }
+        done={closing}
+        today={today}
+        disabled={opening ? null : "Gere primeiro o termo de abertura."}
+        primary={false}
+      />
+    </div>
+  );
+}

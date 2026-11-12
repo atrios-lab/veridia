@@ -7,6 +7,8 @@ import { getBookSettingsWith } from "@/lib/daily-book.ts";
 import { listExcessWith } from "@/lib/daily-book-excess.ts";
 import { getTenant, today } from "@/lib/tenant.ts";
 import { AdminPageHeader } from "../../../../_components/page-header.tsx";
+import { EXCESS_CALCULATOR_HELP } from "../../../../_components/screen-help.ts";
+import { ScreenHelpButton } from "../../../../_components/screen-help-button.tsx";
 import { requireBookAccess } from "../_lib/access.ts";
 import { ExcessForm } from "./forms.tsx";
 
@@ -44,7 +46,7 @@ export default async function ExcessPage({
           href: "/admin/utilitarios/livro-diario",
           label: "Livro Diário Auxiliar",
         }}
-        description="Calculadora do que passa de 90,25% do subsídio de ministro do STF (Código Nacional de Normas, art. 194). Clique no ! para a explicação com exemplos."
+        description="Calcula a parte da renda líquida da serventia vaga que ultrapassa 90,25% do subsídio de ministro do STF (Código Nacional de Normas, art. 194). O ! ao lado do título explica a regra, com exemplos."
       />
       <main className="flex max-w-[1000px] flex-col gap-5 px-[30px] py-7 max-md:px-4">
         {query.feito === "excluido" && (
@@ -52,6 +54,25 @@ export default async function ExcessPage({
             Cálculo excluído. Ele continua guardado.
           </p>
         )}
+        <section className="flex flex-wrap items-center gap-3 rounded-[14px] border-2 border-admin-primary-soft bg-admin-card px-5 py-4">
+          <div className="flex min-w-[260px] flex-1 flex-col gap-1">
+            <div className="flex flex-wrap items-center gap-2.5">
+              <h2 className="font-serif text-[18px] font-semibold text-admin-primary">
+                Como usar a calculadora
+              </h2>
+              <ScreenHelpButton
+                help={EXCESS_CALCULATOR_HELP}
+                canConfigure={false}
+                label="Como preencher a calculadora, passo a passo"
+              />
+            </div>
+            <p className="text-[13px] text-admin-muted">
+              Preencha os passos 1 a 3. O passo 4 mostra, enquanto você digita,
+              se há valor a depositar para o Tribunal de Justiça e quanto fica
+              com o interino.
+            </p>
+          </div>
+        </section>
         <ExcessForm
           initial={{
             period: settings.interimPeriod,

@@ -24,11 +24,14 @@ import { getGuideSettings } from "@/lib/tax-guides.ts";
 import { getTenant, today } from "@/lib/tenant.ts";
 import { AdminIcon } from "../../../_components/icon.tsx";
 import { AdminPageHeader } from "../../../_components/page-header.tsx";
-import { INTERIM_EXCESS_HELP } from "../../../_components/screen-help.ts";
+import {
+  BOOK_TERMS_HELP,
+  INTERIM_EXCESS_HELP,
+} from "../../../_components/screen-help.ts";
 import { ScreenHelpButton } from "../../../_components/screen-help-button.tsx";
 import { monthPeriod, requireBookAccess } from "./_lib/access.ts";
 import { sendMonthToBulletin } from "./actions.ts";
-import { RemoveEntryButton, ReportForm } from "./forms.tsx";
+import { BookTermsPanel, RemoveEntryButton, ReportForm } from "./forms.tsx";
 
 export const metadata = { title: "Livro Diário Auxiliar" };
 
@@ -91,12 +94,20 @@ export default async function DailyBookPage({
     interim: settings.interim,
     interimPeriod: settings.interimPeriod,
   });
-  // Art. 186: the book is opened by the holder before it is written in.
-  const opened = reports.some(
-    (r) =>
-      r.kind === "abertura" &&
-      !r.removedAt &&
-      snapshotOf(r).book?.number === settings.bookNumber,
+  const base = "/admin/utilitarios/livro-diario";
+  // Art. 186: the current book's terms and the sheets it has used.
+  const ofBook = reports.filter(
+    (r) => snapshotOf(r).book?.number === settings.bookNumber,
+  );
+  const term = (kind: "abertura" | "encerramento") => {
+    const row = ofBook.find((r) => r.kind === kind && !r.removedAt);
+    return row
+      ? { href: `${base}/paginas/${row.id}`, date: snapshotOf(row).issuedOn }
+      : null;
+  };
+  const usedSheets = ofBook.reduce(
+    (most, r) => Math.max(most, snapshotOf(r).book?.lastSheet ?? 0),
+    0,
   );
   const live = rows.filter((r) => !r.removedAt).map(entryOf);
   const sum = summarize(live);
@@ -105,7 +116,6 @@ export default async function DailyBookPage({
   const lastDays =
     month === now.slice(0, 7) &&
     Number(period.end.slice(8)) - Number(now.slice(8)) < 5;
-  const base = "/admin/utilitarios/livro-diario";
 
   return (
     <>
@@ -136,15 +146,6 @@ export default async function DailyBookPage({
             </Link>
             {settings.interim && (
               <Link
-                href={`${base}/excedente`}
-                className="btn btn-admin-secondary btn-md"
-              >
-                <AdminIcon name="grid" className="h-4 w-4" /> Calculadora do
-                excedente
-              </Link>
-            )}
-            {settings.interim && (
-              <Link
                 href={`${base}/lancamento?tipo=deposito`}
                 className="btn btn-admin-secondary btn-md"
               >
@@ -159,35 +160,6 @@ export default async function DailyBookPage({
         {done && (
           <p className="rounded-[12px] bg-admin-success-bg px-4 py-3 text-[13px] font-semibold text-admin-success-text">
             {done}
-          </p>
-        )}
-        {settings.interim && (
-          <div className="flex flex-wrap items-center gap-2.5 rounded-[12px] border border-admin-border bg-admin-card px-4 py-3 text-[13px] text-admin-text">
-            <strong className="text-admin-primary">
-              Interino: excedente de 90,25% do subsídio de ministro do STF
-            </strong>
-            <ScreenHelpButton
-              help={INTERIM_EXCESS_HELP}
-              canConfigure
-              label="O que é o excedente de 90,25% do STF, com exemplos"
-            />
-            <Link
-              href={`${base}/excedente`}
-              className="ml-auto text-[12.5px] font-semibold text-admin-primary underline"
-            >
-              Abrir a calculadora
-            </Link>
-          </div>
-        )}
-        {!opened && (
-          <p className="rounded-[12px] border border-admin-warning-soft-border bg-admin-warning-soft-bg px-4 py-3 text-[13px] text-admin-warning-text">
-            <strong>
-              Livro nº {settings.bookNumber} sem termo de abertura:
-            </strong>{" "}
-            &quot;Os livros previstos neste Capítulo serão abertos, numerados,
-            autenticados e encerrados pelo delegatário&quot; (art. 186). Confira
-            o número do livro e de folhas em Configurar e gere o termo de
-            abertura em &quot;Gerar PDF do livro&quot;.
           </p>
         )}
         {duties.map((d) => (
@@ -209,6 +181,59 @@ export default async function DailyBookPage({
             {brDate(period.end)} (art. 191-A), com o comprovante.
           </p>
         )}
+
+        {/* Art. 186: the terms in plain sight (decision of 12/11/2026). */}
+        <section className="rounded-[14px] border-2 border-admin-primary-soft bg-admin-card px-5 py-4">
+          <div className="mb-3 flex flex-wrap items-center gap-2.5">
+            <h2 className="font-serif text-[19px] font-semibold text-admin-primary">
+              Abertura e encerramento do livro nº {settings.bookNumber}
+            </h2>
+            <ScreenHelpButton
+              help={BOOK_TERMS_HELP}
+              canConfigure
+              label="O que são os termos de abertura e de encerramento"
+            />
+            {!term("abertura") && (
+              <span className="rounded-full bg-admin-warning-soft-bg px-3 py-1 text-[12px] font-semibold text-admin-warning-text">
+                Livro ainda não aberto
+              </span>
+            )}
+          </div>
+          <BookTermsPanel
+            bookNumber={settings.bookNumber}
+            sheetCount={settings.sheetCount}
+            usedSheets={usedSheets}
+            opening={term("abertura")}
+            closing={term("encerramento")}
+            today={now}
+          />
+        </section>
+
+        <section className="flex flex-wrap items-center gap-4 rounded-[14px] border-2 border-admin-primary-soft bg-admin-card px-5 py-4">
+          <div className="flex min-w-[260px] flex-1 flex-col gap-1">
+            <div className="flex flex-wrap items-center gap-2.5">
+              <h2 className="font-serif text-[19px] font-semibold text-admin-primary">
+                Calculadora do excedente do interino
+              </h2>
+              <ScreenHelpButton
+                help={INTERIM_EXCESS_HELP}
+                canConfigure
+                label="O que é o excedente de 90,25% do STF, com exemplos"
+              />
+            </div>
+            <p className="text-[13px] text-admin-muted">
+              Para serventia vaga: calcula quanto da renda líquida ultrapassa
+              90,25% do subsídio de ministro do STF e deve ser depositado à
+              disposição do Tribunal de Justiça (art. 194).
+            </p>
+          </div>
+          <Link
+            href={`${base}/excedente`}
+            className="btn btn-admin-primary btn-md"
+          >
+            <AdminIcon name="grid" className="h-4 w-4" /> Abrir a calculadora
+          </Link>
+        </section>
 
         <div className="flex flex-wrap items-center gap-3">
           <Link
