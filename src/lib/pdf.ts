@@ -471,20 +471,22 @@ function drawDocumentBody(
   // ("CERTIDÃO DE REGISTRO/ÔNUS"); the kind of act above it, the protocol
   // and date below.
   const width = contentWidth(pdf);
+  // The kind of document, set large enough to read at a glance (decision
+  // of 12/11/2026: at 10.5 pt it was lost above the title).
   pdf
     .font("Times-Bold")
-    .fontSize(10.5)
+    .fontSize(13)
     .fillColor(NEUTRALS.text)
     .text(document.eyebrow.toLocaleUpperCase("pt-BR"), MARGIN, pdf.y, {
       width,
       align: "center",
-      characterSpacing: 0.6,
+      characterSpacing: 1.1,
     });
   pdf
     .font("Times-Bold")
     .fontSize(17)
     .fillColor(NEUTRALS.text)
-    .text(document.title.toLocaleUpperCase("pt-BR"), MARGIN, pdf.y + 4, {
+    .text(document.title.toLocaleUpperCase("pt-BR"), MARGIN, pdf.y + 6, {
       width,
       align: "center",
     });

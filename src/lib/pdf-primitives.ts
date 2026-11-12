@@ -32,10 +32,14 @@ export function drawEyebrow(
   color: string,
   width: number,
   x: number = MARGIN,
+  size = 11,
 ): void {
   pdf
     .font("Times-Bold")
-    .fontSize(11)
+    .fontSize(size)
     .fillColor(color)
-    .text(text.toUpperCase(), x, pdf.y, { width, characterSpacing: 0.4 });
+    .text(text.toUpperCase(), x, pdf.y, {
+      width,
+      characterSpacing: size > 11 ? 1 : 0.4,
+    });
 }
