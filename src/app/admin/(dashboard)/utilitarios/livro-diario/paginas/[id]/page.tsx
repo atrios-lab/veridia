@@ -1,14 +1,17 @@
 import { notFound } from "next/navigation";
 import {
+  annualTotals,
   BOOK_DOC_LABELS,
   type BookDocKind,
   brDate,
+  defaultOficioAddressee,
   monthLabel,
   summarize,
 } from "@/core/daily-book/book.ts";
 import { formatMoneyBRL } from "@/core/transparency/bulletin.ts";
 import { db } from "@/db/index.ts";
 import { findBookReportWith, snapshotOf } from "@/lib/daily-book.ts";
+import { getSecurityPaperSettingsWith } from "@/lib/security-paper.ts";
 import { getGuideSettings } from "@/lib/tax-guides.ts";
 import { getTenant } from "@/lib/tenant.ts";
 import { AdminIcon } from "../../../../../_components/icon.tsx";
@@ -16,7 +19,11 @@ import { AdminPageHeader } from "../../../../../_components/page-header.tsx";
 import { SignOrPrint } from "../../../../../_components/sign-or-print.tsx";
 import { buttonVariants } from "../../../../../_ui/button.tsx";
 import { requireBookAccess } from "../../_lib/access.ts";
-import { RemoveReportButton, ReportEditForm } from "../../forms.tsx";
+import {
+  BalanceOficioForm,
+  RemoveReportButton,
+  ReportEditForm,
+} from "../../forms.tsx";
 
 export const metadata = { title: "Página do Livro Diário" };
 
@@ -57,6 +64,11 @@ export default async function BookPagePage({
       ? s.months.reduce((a, x) => a + x.expensesCents, 0)
       : sum.expensesCents;
   const pdf = `/admin/utilitarios/livro-diario/paginas/${row.id}/arquivo`;
+  const annual = s.kind === "ano";
+  const oficioPdf = `/admin/utilitarios/livro-diario/paginas/${row.id}/oficio`;
+  const corregedoria = annual
+    ? await getSecurityPaperSettingsWith(db, tenant)
+    : null;
   return (
     <>
       <AdminPageHeader
@@ -108,6 +120,49 @@ export default async function BookPagePage({
             <AdminIcon name="grid" className="h-4 w-4" /> Baixar planilha
           </a>
         </section>
+        {annual && !row.removedAt && !annualTotals(s).detailed && (
+          <p className="rounded-lg border border-warning/30 bg-warning-soft px-4 py-3 text-sm text-warning-text">
+            Este balanço foi gerado antes das colunas de atos, arrecadação bruta
+            e fundos e ISS. Para incluí-las, edite abaixo e marque "Refazer com
+            os lançamentos de agora".
+          </p>
+        )}
+        {annual && !row.removedAt && corregedoria && (
+          <section className="flex flex-col gap-3">
+            <div>
+              <h2 className="text-lg font-semibold text-foreground">
+                Ofício de encaminhamento à Corregedoria
+              </h2>
+              <p className="text-xs text-muted-foreground">
+                {tenant.location.state === "RN"
+                  ? "O balanço é remetido à Corregedoria Geral de Justiça até 5 dias depois de sua conclusão (CGJ/RN art. 62). "
+                  : ""}
+                O ofício vai na primeira página, seguido do balanço.
+              </p>
+            </div>
+            <BalanceOficioForm
+              id={row.id}
+              initial={{
+                number: s.oficio?.number ?? "",
+                addressee:
+                  s.oficio?.addressee ?? defaultOficioAddressee(corregedoria),
+                date: s.oficio?.date ?? s.issuedOn,
+              }}
+            />
+            {s.oficio && (
+              <div className="flex flex-wrap items-center gap-3 rounded-xl border bg-card px-5 py-4">
+                <p className="mr-auto text-sm font-semibold text-foreground">
+                  Ofício nº {s.oficio.number} com o balanço de{" "}
+                  {s.start.slice(0, 4)}
+                </p>
+                <SignOrPrint
+                  pdfHref={oficioPdf}
+                  title={`Ofício nº ${s.oficio.number}, balanço anual de ${s.start.slice(0, 4)}`}
+                />
+              </div>
+            )}
+          </section>
+        )}
         {!row.removedAt && (
           <>
             <div className="flex flex-wrap items-center justify-between gap-2">

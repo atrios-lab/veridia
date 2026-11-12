@@ -39,6 +39,7 @@ import {
   numberSheetsWith,
   removeBookReportWith,
   removeEntryWith,
+  saveBalanceOficioWith,
   saveBookBulletinWith,
   saveBookSettingsWith,
   updateBookReportWith,
@@ -658,4 +659,46 @@ export async function saveSettings(
   }
   revalidatePath(HOME);
   return { status: "saved", message: "Configuração salva." };
+}
+
+/* ---------------------------------------------------------------- ofício */
+
+/**
+ * The ofício that sends the year's balance to the Corregedoria (CGJ/RN art.
+ * 62): its number, as the office numbers its ofícios, the address and the
+ * day. Saved with the balance; the PDF puts it first.
+ */
+export async function saveBalanceOficio(
+  _previous: BookFormState,
+  formData: FormData,
+): Promise<BookFormState> {
+  const ok = await access();
+  if (!ok) return { status: "error", message: NO_PERMISSION };
+  const id = field(formData, "id", 40);
+  const number = field(formData, "numero", 40);
+  const addressee = field(formData, "destinatario", 600);
+  const date = field(formData, "data", 10);
+  if (!number) {
+    return { status: "error", message: "Informe o número do ofício." };
+  }
+  if (!addressee) {
+    return { status: "error", message: "Informe o destinatário." };
+  }
+  if (!isDate(date)) return { status: "error", message: "Confira a data." };
+  try {
+    await saveBalanceOficioWith(
+      db,
+      ok.tenant.slug,
+      id,
+      { number, addressee, date },
+      ok.session.user.id,
+    );
+  } catch (error) {
+    return fail(error);
+  }
+  revalidatePath(`${HOME}/paginas/${id}`);
+  return {
+    status: "saved",
+    message: "Ofício salvo. Assine digitalmente ou imprima com o balanço.",
+  };
 }

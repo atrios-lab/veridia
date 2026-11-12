@@ -187,7 +187,8 @@ Regras: `src/core/daily-book/` (`book.ts`, `checks.ts`, `deadlines.ts`). Banco: 
 | 191-A, § 2º | Vedadas despesas exclusivamente pessoais ou estranhas ao serviço | Texto do § 2º exibido no formulário de despesa |
 | 191-A, § 3º | Comprovantes por 5 anos no mínimo | Comprovante guardado com o lançamento; excluir não apaga do banco |
 | 192 | Soma mensal em separado e saldo líquido positivo ou negativo | "Apuração do mês (art. 192)" na página do mês |
-| 193 | Balanço anual: receitas, despesas e resultado líquido | "Balanço anual (art. 193)", com o mês a mês |
+| 193 | Balanço anual: receitas, despesas e resultado líquido | "Balanço anual (art. 193)", com o mês a mês: atos, arrecadação bruta, fundos e ISS (não lançados como receita), emolumentos, despesas e líquido |
+| CGJ/RN art. 62 | Balanço remetido à Corregedoria Geral de Justiça até 5 dias depois de concluído | Na página do balanço: "Ofício de encaminhamento à Corregedoria", com número, data e destinatário; o PDF traz o ofício e, em seguida, o balanço, para assinar digitalmente ou imprimir. O envio é feito pelos canais oficiais do Tribunal |
 | 193-A, § 2º | Identificar despesas com tratamento fiscal distinto | Marcação "Tratamento fiscal distinto" na despesa, com a nota, impressa no livro |
 | 194, I | Interino lança o excedente depositado, com data e conta | Lançamento "Depósito do excedente", que exige a conta; não soma como receita nem despesa |
 | 194, IV | Despesas abatidas na apuração do excedente | Apuração do interino: receitas menos despesas do período, sem a remuneração do interino (CGJ/RN art. 26, I) |
