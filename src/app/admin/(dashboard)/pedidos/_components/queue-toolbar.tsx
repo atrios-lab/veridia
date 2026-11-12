@@ -71,7 +71,7 @@ export function QueueToolbar({
       <form
         method="get"
         action={QUEUE_PATH}
-        aria-label="Buscar nesta aba"
+        aria-label="Buscar nesta etapa"
         className="relative flex min-w-[260px] flex-1 items-center md:max-w-[420px]"
       >
         {query.tab !== "new" && (

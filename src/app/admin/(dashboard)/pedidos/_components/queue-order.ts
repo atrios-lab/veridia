@@ -37,18 +37,27 @@ export interface QueueTab {
   /** What the tab says when the row is too narrow for the full label. */
   shortLabel?: string;
   tone: Tone;
+  /** What the stage is waiting on, in a few words (queue and Visão geral). */
+  hint: string;
   statuses: readonly ServiceRequestStatus[];
 }
 
 export const CLOSED_TAB: QueueTabId = "closed";
 
 export const QUEUE_TABS: readonly QueueTab[] = [
-  { id: "new", label: "Novo", tone: "waiting", statuses: ["new"] },
+  {
+    id: "new",
+    label: "Novo",
+    tone: "waiting",
+    hint: "aguarda o cartório",
+    statuses: ["new"],
+  },
   {
     id: "awaiting-compliance",
     label: "Aguardando cumprimento de exigência",
     shortLabel: "Exigência",
     tone: "blocked",
+    hint: "parado: exigência com o cliente",
     statuses: ["awaiting-compliance"],
   },
   {
@@ -56,6 +65,7 @@ export const QUEUE_TABS: readonly QueueTab[] = [
     label: "Aguardando pagamento",
     shortLabel: "Aguard. pagamento",
     tone: "waiting",
+    hint: "aguarda o pagamento",
     // The office's own fees and the fisco's guia alike: money the party
     // still has to pay before the act goes on.
     statuses: ["awaiting-payment", "awaiting-guide-payment"],
@@ -65,6 +75,7 @@ export const QUEUE_TABS: readonly QueueTab[] = [
     label: "Pagamento informado",
     shortLabel: "Pgto. informado",
     tone: "waiting",
+    hint: "conferir o comprovante",
     statuses: ["payment-reported"],
   },
   {
@@ -72,6 +83,7 @@ export const QUEUE_TABS: readonly QueueTab[] = [
     label: "Em processamento",
     shortLabel: "Processamento",
     tone: "working",
+    hint: "em trabalho no cartório",
     statuses: ["processing"],
   },
   {
@@ -79,12 +91,14 @@ export const QUEUE_TABS: readonly QueueTab[] = [
     label: "Disponível p/ retirada",
     shortLabel: "P/ retirada",
     tone: "delivered",
+    hint: "aguarda a retirada",
     statuses: ["ready-for-pickup"],
   },
   {
     id: CLOSED_TAB,
     label: "Finalizados",
     tone: "closed",
+    hint: "concluídos, indeferidos, cancelados e arquivados",
     statuses: ["done", "rejected", "cancelled", "archived"],
   },
 ];
