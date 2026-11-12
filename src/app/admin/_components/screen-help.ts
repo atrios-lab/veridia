@@ -188,6 +188,7 @@ const ENTRIES: Record<string, ScreenHelp> = {
     steps: [
       "Abertura (art. 186): em Configurar, informe o número do livro e o de folhas; em 'Gerar PDF do livro', gere o termo de abertura. Cada página gerada depois recebe as folhas seguintes do livro, numeradas.",
       "Receita (art. 190): em 'Anexar produtividade', envie o relatório de um dia. A receita é lançada 'no dia da prática do ato', por especialidade, com o nº do ato, ou o livro e a folha, ou o protocolo, quando existente.",
+      "Boletim mensal: no mesmo envio da produtividade, marque 'Enviar ao boletim mensal'. O boletim da Transparência abre já preenchido no mês; confira, marque 'Conferi os valores', assine se quiser e publique. As duas opções são facultativas: só o livro, só o boletim ou os dois. O relatório do mês inteiro vai só ao boletim. O botão 'Enviar o mês ao boletim' manda a soma dos dias já lançados.",
       "Despesa (art. 191-A): em 'Lançar despesa', informe a data, a categoria do § 1º e os elementos de identificação e comprovação, até o encerramento do mês em que se efetivou. Anexe o comprovante.",
       "Todo lançamento tem 'Editar' e 'Excluir' (fica guardado, com a justificativa) e um campo de explicação que sai no livro.",
       "Em 'Gerar PDF do livro': o dia, o mês (apuração do art. 192), o balanço anual (art. 193) ou os termos (art. 186). Assine digitalmente ou imprima.",

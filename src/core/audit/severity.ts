@@ -104,6 +104,7 @@ const EXACT: Record<string, AuditLevel> = {
   "daily-book.entry-add": "analise",
   "daily-book.import": "analise",
   "daily-book.report-issue": "analise",
+  "daily-book.bulletin-prepare": "analise",
   "daily-book.report-edit": "atencao",
   "signing-certificate.disable": "atencao",
   "signed-document.restore": "atencao",

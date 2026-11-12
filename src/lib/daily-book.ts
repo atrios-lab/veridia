@@ -1,5 +1,5 @@
 import "server-only";
-import { and, asc, desc, eq, gte, isNull, lte } from "drizzle-orm";
+import { and, asc, desc, eq, gte, isNotNull, isNull, lte } from "drizzle-orm";
 import { PDFDocument } from "pdf-lib";
 import {
   type BookDocKind,
@@ -14,6 +14,12 @@ import {
   SHEET_KINDS,
   summarize,
 } from "@/core/daily-book/book.ts";
+import {
+  type BookBulletin,
+  monthEnd,
+  sumReadings,
+} from "@/core/daily-book/bulletin.ts";
+import type { ReportFigures } from "@/core/iss/notaris-report.ts";
 import type { Tenant } from "@/core/tenant/schema.ts";
 import { type Database, db } from "@/db/index.ts";
 import {
@@ -24,7 +30,10 @@ import {
 } from "@/db/schema.ts";
 import { recordAuditWith } from "./audit.ts";
 import { brandFor } from "./document-brand.ts";
-import { OFFICE_DAILY_BOOK_KEY } from "./office-config.ts";
+import {
+  OFFICE_BOOK_BULLETIN_KEY,
+  OFFICE_DAILY_BOOK_KEY,
+} from "./office-config.ts";
 import { renderDocument } from "./pdf.ts";
 
 export class DailyBookError extends Error {}
@@ -773,3 +782,139 @@ export async function renderBookPdf(
 
 export const getBookSettings = (tenantSlug: string) =>
   getBookSettingsWith(db, tenantSlug);
+
+/* --------------------------------------------------------------- bulletin */
+
+/**
+ * The month's bulletin from the book: the totals of each day's
+ * productivity report read into it whose lines are still in the book (a
+ * report replaced or removed leaves out). Days read before the totals were
+ * kept have no reading and are not counted.
+ */
+export async function monthBulletinFromBookWith(
+  database: Database,
+  tenantSlug: string,
+  month: string,
+): Promise<BookBulletin> {
+  const start = `${month}-01`;
+  const end = monthEnd(month);
+  const imports = await database
+    .select({
+      id: dailyBookImports.id,
+      start: dailyBookImports.periodStart,
+      end: dailyBookImports.periodEnd,
+      reading: dailyBookImports.reading,
+    })
+    .from(dailyBookImports)
+    .where(
+      and(
+        eq(dailyBookImports.tenantSlug, tenantSlug),
+        gte(dailyBookImports.periodStart, start),
+        lte(dailyBookImports.periodStart, end),
+        isNotNull(dailyBookImports.reading),
+      ),
+    )
+    .orderBy(asc(dailyBookImports.periodStart));
+  const live = new Set(
+    (
+      await database
+        .selectDistinct({ id: dailyBookEntries.importId })
+        .from(dailyBookEntries)
+        .where(
+          and(
+            eq(dailyBookEntries.tenantSlug, tenantSlug),
+            isNull(dailyBookEntries.removedAt),
+            isNotNull(dailyBookEntries.importId),
+            gte(dailyBookEntries.occurredOn, start),
+            lte(dailyBookEntries.occurredOn, end),
+          ),
+        )
+    ).map((r) => r.id),
+  );
+  const kept = imports.filter(
+    (i) => i.start === i.end && live.has(i.id) && isReading(i.reading),
+  );
+  const entries = (
+    await listEntriesWith(database, tenantSlug, { start, end })
+  ).map(entryOf);
+  return {
+    month,
+    figures: sumReadings(kept.map((i) => i.reading as ReportFigures)),
+    source: "dias",
+    days: [...new Set(kept.map((i) => i.start))],
+    bookExpensesCents: summarize(entries).expensesCents,
+  };
+}
+
+function isReading(value: unknown): value is ReportFigures {
+  return (
+    typeof value === "object" &&
+    value !== null &&
+    (value as { kind?: unknown }).kind === "produtividade"
+  );
+}
+
+async function readBookBulletins(
+  database: Database,
+  tenantSlug: string,
+): Promise<Record<string, BookBulletin>> {
+  const [row] = await database
+    .select({ published: tenantContent.published })
+    .from(tenantContent)
+    .where(
+      and(
+        eq(tenantContent.tenantSlug, tenantSlug),
+        eq(tenantContent.key, OFFICE_BOOK_BULLETIN_KEY),
+      ),
+    )
+    .limit(1);
+  const value = row?.published;
+  return value && typeof value === "object"
+    ? (value as Record<string, BookBulletin>)
+    : {};
+}
+
+/** Keeps the month's figures for the bulletin's form to open with. */
+export async function saveBookBulletinWith(
+  database: Database,
+  tenantSlug: string,
+  bulletin: BookBulletin,
+  actorId: string,
+): Promise<void> {
+  const all = await readBookBulletins(database, tenantSlug);
+  const published = { ...all, [bulletin.month]: bulletin };
+  const now = new Date();
+  await database
+    .insert(tenantContent)
+    .values({
+      tenantSlug,
+      key: OFFICE_BOOK_BULLETIN_KEY,
+      published,
+      publishedAt: now,
+      updatedBy: actorId,
+    })
+    .onConflictDoUpdate({
+      target: [tenantContent.tenantSlug, tenantContent.key],
+      set: { published, publishedAt: now, updatedAt: now, updatedBy: actorId },
+    });
+  await recordAuditWith(database, {
+    tenantSlug,
+    actorId,
+    action: "daily-book.bulletin-prepare",
+    targetType: "daily-book",
+    targetId: bulletin.month,
+  });
+}
+
+/** The figures the book left for a month, if any. */
+export async function bookBulletinWith(
+  database: Database,
+  tenantSlug: string,
+  month: string,
+): Promise<BookBulletin | null> {
+  try {
+    return (await readBookBulletins(database, tenantSlug))[month] ?? null;
+  } catch {
+    return null;
+  }
+}

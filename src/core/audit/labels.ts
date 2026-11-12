@@ -51,6 +51,8 @@ const EXACT: Record<string, string> = {
     "Excluiu um lançamento do Livro Diário Auxiliar (fica guardado)",
   "daily-book.report-issue": "Gerou uma página do Livro Diário Auxiliar",
   "daily-book.report-edit": "Editou uma página do Livro Diário Auxiliar",
+  "daily-book.bulletin-prepare":
+    "Preparou o boletim mensal a partir do Livro Diário Auxiliar",
   "daily-book.report-remove":
     "Excluiu uma página do Livro Diário Auxiliar (fica guardada)",
   "paper-supplier.create": "Cadastrou uma empresa de papéis de segurança",
@@ -338,6 +340,8 @@ const EXPLANATIONS: Record<string, string> = {
     "Foi gerada a página do dia, do mês ou o balanço anual do Livro Diário Auxiliar.",
   "daily-book.report-edit":
     "Uma página do Livro Diário Auxiliar foi editada ou refeita com os lançamentos atuais.",
+  "daily-book.bulletin-prepare":
+    "Levou os valores dos relatórios de produtividade do mês para o formulário do boletim mensal, para conferir e publicar.",
   "daily-book.report-remove":
     "Uma página do Livro Diário Auxiliar foi excluída, com justificativa. Ela continua guardada.",
   "paper-supplier.create":

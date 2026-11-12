@@ -99,6 +99,14 @@ export function ImportForm({ specialties }: { specialties: string[] }) {
   );
   const [costs, setCosts] = useState<number | null>(null);
   const [rows, setRows] = useState<Row[]>([]);
+  // One upload, two optional destinations (decision of 11/11/2026).
+  const [scope, setScope] = useState({
+    oneDay: true,
+    oneMonth: true,
+    canBulletin: false,
+  });
+  const [toBook, setToBook] = useState(true);
+  const [toBulletin, setToBulletin] = useState(false);
 
   const read = (form: HTMLFormElement | null) => {
     const file = (
@@ -118,6 +126,13 @@ export function ImportForm({ specialties }: { specialties: string[] }) {
       }
       setPeriod({ start: result.start, end: result.end });
       setCosts(result.costsCents);
+      setScope({
+        oneDay: result.oneDay,
+        oneMonth: result.oneMonth,
+        canBulletin: result.canBulletin,
+      });
+      setToBook(result.oneDay);
+      setToBulletin(!result.oneDay && result.oneMonth && result.canBulletin);
       setRows(
         result.lines.map((l, i) => ({
           ...l,
@@ -128,7 +143,9 @@ export function ImportForm({ specialties }: { specialties: string[] }) {
         })),
       );
       setNote(
-        `Relatório do dia ${br(result.start)}: ${result.lines.length} linha(s) lida(s). Confira, informe o nº do ato, ou o livro e a folha, ou o protocolo de cada linha (art. 190) e clique em Lançar.`,
+        result.oneDay
+          ? `Relatório do dia ${br(result.start)}: ${result.lines.length} linha(s) lida(s). Escolha abaixo o que fazer com ele.`
+          : `Relatório de ${br(result.start)} a ${br(result.end)}. O livro recebe só o relatório de um dia (art. 190); este pode ir ao boletim mensal.`,
       );
     });
   };
@@ -167,8 +184,9 @@ export function ImportForm({ specialties }: { specialties: string[] }) {
             className={FIELD}
           />
           <span className={HINT}>
-            Do dia (De: 05/10 até 05/10) ou do mês. O arquivo fica guardado
-            junto do lançamento.
+            Do dia (De: 05/10 até 05/10), para o livro e o boletim; do mês, só
+            para o boletim mensal. No livro, o arquivo fica guardado junto do
+            lançamento.
           </span>
         </div>
         <button
@@ -186,7 +204,64 @@ export function ImportForm({ specialties }: { specialties: string[] }) {
         </output>
       )}
 
-      {rows.length > 0 && (
+      {period && (
+        <fieldset className="flex flex-col gap-2 rounded-[12px] bg-admin-input-bg px-4 py-3.5 text-[13px] text-admin-text">
+          <legend className="sr-only">O que fazer com este relatório</legend>
+          <p className="font-bold text-admin-primary">
+            O que fazer com este relatório
+          </p>
+          <label className="flex items-start gap-2">
+            <input
+              type="checkbox"
+              name="livro"
+              checked={toBook}
+              disabled={!scope.oneDay}
+              onChange={(e) => setToBook(e.target.checked)}
+              className="mt-0.5"
+            />
+            <span>
+              <strong>Lançar no Livro Diário Auxiliar</strong>: a receita do
+              dia, por especialidade (art. 190).
+              {!scope.oneDay && (
+                <span className={HINT}>
+                  Só o relatório de um dia: &quot;no dia da prática do ato&quot;
+                  (art. 190).
+                </span>
+              )}
+            </span>
+          </label>
+          {scope.canBulletin ? (
+            <label className="flex items-start gap-2">
+              <input
+                type="checkbox"
+                name="boletim"
+                checked={toBulletin}
+                disabled={!scope.oneMonth}
+                onChange={(e) => setToBulletin(e.target.checked)}
+                className="mt-0.5"
+              />
+              <span>
+                <strong>Enviar ao boletim mensal (Transparência)</strong>: abre
+                o boletim do mês já preenchido para você conferir, assinar se
+                quiser e publicar. Nada é publicado sem a sua confirmação.
+                <span className={HINT}>
+                  {scope.oneDay
+                    ? "Com o relatório do dia, o boletim recebe a soma dos relatórios do mês lançados no livro."
+                    : scope.oneMonth
+                      ? "O boletim recebe os totais deste relatório."
+                      : "O boletim é mensal: este relatório passa de um mês."}
+                </span>
+              </span>
+            </label>
+          ) : (
+            <p className={HINT}>
+              O boletim mensal precisa da permissão da Transparência.
+            </p>
+          )}
+        </fieldset>
+      )}
+
+      {rows.length > 0 && toBook && (
         <>
           <div className="overflow-x-auto rounded-[12px] border border-admin-border">
             <table className="w-full min-w-[760px]">
@@ -337,12 +412,20 @@ export function ImportForm({ specialties }: { specialties: string[] }) {
             Substituir as receitas já lidas desse período (as anteriores ficam
             guardadas como excluídas)
           </label>
-          <Submit
-            pending={pending}
-            label="Lançar no livro"
-            busy="Lançando..."
-          />
         </>
+      )}
+      {period && (toBook || toBulletin) && (
+        <Submit
+          pending={pending}
+          label={
+            toBook && toBulletin
+              ? "Lançar no livro e conferir o boletim"
+              : toBook
+                ? "Lançar no livro"
+                : "Conferir o boletim"
+          }
+          busy="Enviando..."
+        />
       )}
     </form>
   );
