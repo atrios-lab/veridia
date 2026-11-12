@@ -32,3 +32,26 @@ export function takeHandedOffAccess(
     return undefined;
   }
 }
+
+/**
+ * The key carried by the link in the e-mail (decision of 12/11/2026: the
+ * citizen only clicks). It rides after the "#", the part of an address a
+ * browser never sends to the server, so it reaches no access log; taken
+ * once, it is wiped from the address bar at once. The e-mail itself
+ * already carries the key in writing.
+ */
+export function takeKeyFromLink(): string | undefined {
+  try {
+    const hash = new URLSearchParams(window.location.hash.slice(1));
+    const key = hash.get("chave")?.trim();
+    if (!key) return undefined;
+    window.history.replaceState(
+      null,
+      "",
+      window.location.pathname + window.location.search,
+    );
+    return key.slice(0, 40);
+  } catch {
+    return undefined;
+  }
+}
