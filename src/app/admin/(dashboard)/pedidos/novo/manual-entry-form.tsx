@@ -629,7 +629,7 @@ export function ManualEntryForm({
               className={FIELD_CLASS}
             />
             <FieldError message={fieldErrors.contact} />
-            <p className="mt-1 text-[11.5px] leading-snug text-admin-muted">
+            <p className="mt-1 text-xs leading-snug text-admin-muted">
               Com e-mail, o cliente recebe o protocolo, a chave de acesso e o
               passo a passo para acompanhar o pedido.
             </p>
@@ -1119,7 +1119,7 @@ function SuccessScreen({ state }: { state: SuccessState }) {
           {state.emailWarning}
         </p>
       ) : state.contact && isEmailContact(state.contact) ? (
-        <p className="flex items-start gap-2.5 rounded-[14px] bg-admin-success-bg px-4 py-3 text-[13px] text-admin-success-text">
+        <p className="flex items-start gap-2.5 rounded-xl bg-admin-success-bg px-4 py-3 text-sm text-admin-success-text">
           <AdminIcon
             name="mail"
             className="mt-0.5 h-4 w-4 flex-none"
@@ -1132,7 +1132,7 @@ function SuccessScreen({ state }: { state: SuccessState }) {
           </span>
         </p>
       ) : (
-        <p className="rounded-[14px] bg-admin-warning-bg px-4 py-3 text-[13px] font-semibold text-admin-warning-text">
+        <p className="rounded-xl bg-admin-warning-bg px-4 py-3 text-sm font-semibold text-admin-warning-text">
           Sem e-mail informado, nada foi enviado ao cliente. Entregue o
           comprovante impresso, que traz o protocolo e a chave de acesso.
         </p>
