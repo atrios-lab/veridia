@@ -224,10 +224,16 @@ export async function listAuditWith(
     accountIds.length
       ? (
           await database
-            .select({ id: user.id, name: user.name })
+            .select({ id: user.id, name: user.name, role: user.role })
             .from(user)
             .where(inArray(user.id, accountIds))
-        ).map((person) => [person.id, person.name])
+        )
+          // The Átrios account leaves no name behind (decision of
+          // 13/11/2026): an act it marked as read reads with no name.
+          .filter(
+            (person) => filter.includePlatform || person.role !== "superadmin",
+          )
+          .map((person) => [person.id, person.name])
       : [],
   );
   return rows.map(({ reviewedBy, ...row }) => ({

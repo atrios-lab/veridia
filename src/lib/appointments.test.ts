@@ -7,11 +7,13 @@ import {
   hashCancelToken,
 } from "@/core/scheduling/appointment.ts";
 import { TENANTS } from "@/core/tenant/resolve.ts";
+import { user } from "@/db/auth-schema.ts";
 import type { Database } from "@/db/index.ts";
 import { appointments } from "@/db/schema.ts";
 import { createTestDb } from "@/db/test-db.ts";
 import {
   addAppointmentAttachmentsWith,
+  addAppointmentNoteWith,
   appointmentsOnWith,
   bookAppointmentWith,
   cancelAppointmentWith,
@@ -19,6 +21,7 @@ import {
   findAppointmentByProtocolWithKeyWith,
   findByCancelTokenWith,
   listAppointmentAttachmentsWith,
+  listAppointmentNotesWith,
   markAttendedWith,
   markNoShowWith,
   type NewAppointment,
@@ -461,4 +464,55 @@ test("cancelar devolve a vaga", async () => {
     2,
   );
   assert.equal(again.seat, 1);
+});
+
+test("a nota da conta Átrios num agendamento não aparece para a serventia", async () => {
+  // Fictitious accounts only (LGPD).
+  await db.insert(user).values([
+    {
+      id: "nota-escrevente",
+      name: "João Fictício de Souza",
+      email: "joao.nota@exemplo.com",
+      tenantSlug: TENANT.slug,
+      role: "staff",
+    },
+    {
+      id: "nota-plataforma",
+      name: "Átrios",
+      email: "mestre.nota@exemplo.com",
+      tenantSlug: "atrios",
+      role: "superadmin",
+    },
+  ]);
+  const booked = await bookAppointmentWith(
+    db,
+    TENANT.slug,
+    newAppointment({ date: "2098-04-02", slotTime: "11:00" }),
+  );
+  await addAppointmentNoteWith(
+    db,
+    TENANT.slug,
+    booked.id,
+    { id: "nota-escrevente", name: "João Fictício de Souza" },
+    "Cliente avisou que chega 10 minutos antes.",
+  );
+  await addAppointmentNoteWith(
+    db,
+    TENANT.slug,
+    booked.id,
+    { id: "nota-plataforma", name: "Átrios" },
+    "Teste da plataforma.",
+  );
+  const office = await listAppointmentNotesWith(db, TENANT.slug, booked.id);
+  assert.deepEqual(
+    office.map((note) => note.authorName),
+    ["João Fictício de Souza"],
+  );
+  const atrios = await listAppointmentNotesWith(
+    db,
+    TENANT.slug,
+    booked.id,
+    true,
+  );
+  assert.equal(atrios.length, 2);
 });

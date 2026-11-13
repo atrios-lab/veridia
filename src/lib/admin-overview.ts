@@ -243,6 +243,9 @@ async function lastOfficeActionAt(
         eq(auditLog.tenantSlug, tenantSlug),
         // A null actor is the citizen filing, never the office.
         isNotNull(auditLog.actorId),
+        // Nor is the Átrios account: an act of its own leaves the item on
+        // the office's desk, which never sees that act.
+        notByPlatform(),
         inArray(auditLog.action, OFFICE_ANSWER_ACTIONS),
         inArray(auditLog.targetId, [...targetIds]),
       ),

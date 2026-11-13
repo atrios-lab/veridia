@@ -1167,7 +1167,10 @@ export async function listRequirementMessages(
       author: serviceRequestRequirementMessages.author,
       body: serviceRequestRequirementMessages.body,
       createdAt: serviceRequestRequirementMessages.createdAt,
-      authorName: user.name,
+      // The Átrios account writes as the office: no name of its own.
+      authorName: sql<
+        string | null
+      >`case when ${user.role} = 'superadmin' then null else ${user.name} end`,
     })
     .from(serviceRequestRequirementMessages)
     .leftJoin(user, eq(serviceRequestRequirementMessages.authorUserId, user.id))

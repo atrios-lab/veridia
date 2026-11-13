@@ -105,7 +105,11 @@ export default async function PublicationDetailPage({
 
   const day = today();
   const file = publicationAttachmentStatus(row, day);
-  const history = await publicationHistory(tenant.slug, row.id);
+  const history = await publicationHistory(
+    tenant.slug,
+    row.id,
+    session.user.role === "superadmin",
+  );
   const createdBy = history.find(
     (entry) => entry.action === "publication.create",
   )?.actorName;

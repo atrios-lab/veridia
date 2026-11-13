@@ -1,5 +1,5 @@
 import "server-only";
-import { type SQL, sql } from "drizzle-orm";
+import { type AnyColumn, type SQL, sql } from "drizzle-orm";
 import { type Database, db } from "../db/index.ts";
 import { auditLog } from "../db/schema.ts";
 import { currentJustification } from "./audit-reason.ts";
@@ -43,7 +43,17 @@ export async function recordAuditWith(
  * system) stays.
  */
 export function notByPlatform(): SQL {
-  return sql`(${auditLog.actorId} is null or ${auditLog.actorId} not in (select "id" from "user" where "role" = 'superadmin'))`;
+  return notPlatformAccount(auditLog.actorId);
+}
+
+/**
+ * The same rule for any column that holds who wrote something (a note's
+ * author, who marked an act as reviewed): what the Átrios account wrote
+ * leaves no trace an office can read (decision of 13/11/2026). A null
+ * author stays.
+ */
+export function notPlatformAccount(column: AnyColumn): SQL {
+  return sql`(${column} is null or ${column} not in (select "id" from "user" where "role" = 'superadmin'))`;
 }
 
 /** The production singleton, for callers that do not test against it. */
