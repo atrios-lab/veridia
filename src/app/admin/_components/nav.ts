@@ -1,6 +1,20 @@
 import type { Permission } from "@/core/auth/roles.ts";
 import type { AdminIconName } from "./icon.tsx";
 
+/**
+ * A screen inside an item, drawn as shadcn's collapsible sub-menu (the item
+ * folds, its screens hang from a guide line). Only the tools of Utilitários
+ * use it so far: each is a small module with its own list, form and
+ * configuration, and the person reached those only through the buttons of
+ * the tool's first screen.
+ */
+export interface AdminNavSubItem {
+  label: string;
+  href: string;
+  /** Absent means whoever sees the parent item sees this one too. */
+  permission?: Permission;
+}
+
 export interface AdminNavItem {
   /** Section heading the item sits under in the sidebar. */
   group: string;
@@ -23,6 +37,12 @@ export interface AdminNavItem {
    * do, like the training; spent on everything, it stops meaning anything.
    */
   attention?: true;
+  /**
+   * The item's own screens. With these the item becomes a fold: it opens
+   * the list instead of leading anywhere, so the first entry must be the
+   * item's own `href`, or the tool's main screen would have no way in.
+   */
+  children?: readonly AdminNavSubItem[];
 }
 
 /**
@@ -115,6 +135,15 @@ export const ADMIN_NAV: readonly AdminNavItem[] = [
     href: "/admin/utilitarios/guias",
     icon: "calculator",
     permission: "guides.manage",
+    children: [
+      { label: "Guias emitidas", href: "/admin/utilitarios/guias" },
+      { label: "Nova guia", href: "/admin/utilitarios/guias/nova" },
+      {
+        label: "Leis e alíquotas",
+        href: "/admin/utilitarios/guias/configuracao",
+        permission: "content.edit",
+      },
+    ],
   },
   {
     // The month's ISS on the emolumentos to the municipal tax office, with
@@ -124,6 +153,15 @@ export const ADMIN_NAV: readonly AdminNavItem[] = [
     href: "/admin/utilitarios/iss",
     icon: "clipboard",
     permission: "iss.manage",
+    children: [
+      { label: "Declarações", href: "/admin/utilitarios/iss" },
+      { label: "Nova declaração", href: "/admin/utilitarios/iss/nova" },
+      {
+        label: "Configuração",
+        href: "/admin/utilitarios/iss/configuracao",
+        permission: "content.edit",
+      },
+    ],
   },
   {
     // The Livro Diário Auxiliar da Receita e da Despesa (decision of
@@ -134,6 +172,29 @@ export const ADMIN_NAV: readonly AdminNavItem[] = [
     href: "/admin/utilitarios/livro-diario",
     icon: "grid",
     permission: "daily-book.manage",
+    children: [
+      { label: "Visão do livro", href: "/admin/utilitarios/livro-diario" },
+      {
+        label: "Lançamento",
+        href: "/admin/utilitarios/livro-diario/lancamento",
+      },
+      {
+        label: "Anexar produtividade",
+        href: "/admin/utilitarios/livro-diario/importar",
+      },
+      {
+        label: "Excedente do interino",
+        href: "/admin/utilitarios/livro-diario/excedente",
+      },
+      {
+        label: "Justiça Aberta",
+        href: "/admin/utilitarios/livro-diario/justica-aberta",
+      },
+      {
+        label: "Configuração",
+        href: "/admin/utilitarios/livro-diario/configuracao",
+      },
+    ],
   },
   {
     // Papel de segurança (decision of 11/11/2026): the classificador of the
@@ -144,6 +205,25 @@ export const ADMIN_NAV: readonly AdminNavItem[] = [
     href: "/admin/utilitarios/papel-seguranca",
     icon: "shield",
     permission: "security-paper.manage",
+    children: [
+      { label: "Estoque e lotes", href: "/admin/utilitarios/papel-seguranca" },
+      {
+        label: "Cadastrar lote",
+        href: "/admin/utilitarios/papel-seguranca/novo-lote",
+      },
+      {
+        label: "Lançar uso ou ocorrência",
+        href: "/admin/utilitarios/papel-seguranca/lancar",
+      },
+      {
+        label: "Gerar ofício ou relatório",
+        href: "/admin/utilitarios/papel-seguranca/gerar",
+      },
+      {
+        label: "Configuração",
+        href: "/admin/utilitarios/papel-seguranca/configuracao",
+      },
+    ],
   },
   {
     // Orders of security paper (and ribbons, labels) to the suppliers, in
@@ -153,6 +233,17 @@ export const ADMIN_NAV: readonly AdminNavItem[] = [
     href: "/admin/utilitarios/solicitacao-papeis",
     icon: "inbox",
     permission: "paper-orders.manage",
+    children: [
+      { label: "Pedidos", href: "/admin/utilitarios/solicitacao-papeis" },
+      {
+        label: "Novo pedido",
+        href: "/admin/utilitarios/solicitacao-papeis/novo",
+      },
+      {
+        label: "Dados do cartório",
+        href: "/admin/utilitarios/solicitacao-papeis/configuracao",
+      },
+    ],
   },
   {
     // PAdES signatures with the office's A1 certificates (ICP-Brasil), each
@@ -162,6 +253,14 @@ export const ADMIN_NAV: readonly AdminNavItem[] = [
     href: "/admin/utilitarios/assinador",
     icon: "lock",
     permission: "signer.use",
+    children: [
+      { label: "Assinar documento", href: "/admin/utilitarios/assinador" },
+      {
+        label: "Certificados A1",
+        href: "/admin/configuracoes/certificados",
+        permission: "certificates.manage",
+      },
+    ],
   },
   {
     group: "Serventia",
@@ -243,4 +342,20 @@ export function navGroups(
     else groups.push({ group: item.group, items: [item] });
   }
   return groups;
+}
+
+/**
+ * Which of the screens is the current one: the exact path, or else the
+ * longest one the path sits under, so a record opened from a list (a guia,
+ * a lote) still lights the list it came from.
+ */
+export function currentChild(
+  children: readonly AdminNavSubItem[],
+  pathname: string,
+): string | undefined {
+  const exact = children.find((child) => child.href === pathname);
+  if (exact) return exact.href;
+  return children
+    .filter((child) => pathname.startsWith(`${child.href}/`))
+    .sort((a, b) => b.href.length - a.href.length)[0]?.href;
 }

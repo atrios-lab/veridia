@@ -1,9 +1,14 @@
 "use client";
 
-import { ExternalLink } from "lucide-react";
+import { ChevronRight, ExternalLink } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from "../_ui/collapsible.tsx";
 import {
   SidebarContent,
   SidebarGroup,
@@ -12,11 +17,19 @@ import {
   SidebarMenuBadge,
   SidebarMenuButton,
   SidebarMenuItem,
+  SidebarMenuSub,
+  SidebarMenuSubButton,
+  SidebarMenuSubItem,
   useSidebar,
 } from "../_ui/sidebar.tsx";
 import { ATTENTION_CLASS } from "./attention.ts";
 import { AdminIcon } from "./icon.tsx";
-import { type AdminNavItem, navGroups } from "./nav.ts";
+import {
+  type AdminNavItem,
+  type AdminNavSubItem,
+  currentChild,
+  navGroups,
+} from "./nav.ts";
 
 /**
  * The navigation list, on the client.
@@ -63,6 +76,16 @@ export function AdminSidebarNav({
           <SidebarGroupLabel>{group}</SidebarGroupLabel>
           <SidebarMenu>
             {groupItems.map((item) => {
+              if (item.children?.length)
+                return (
+                  <AdminSidebarFold
+                    key={item.href}
+                    item={item}
+                    screens={item.children}
+                    pathname={pathname}
+                    count={counts[item.href]}
+                  />
+                );
               const current = pathname === item.href;
               const count = counts[item.href];
               return (
@@ -116,5 +139,120 @@ export function AdminSidebarNav({
         </SidebarGroup>
       ))}
     </SidebarContent>
+  );
+}
+
+/**
+ * An item with screens of its own, as shadcn's sidebar draws it: the item
+ * folds and unfolds, and its screens hang from a guide line under it. It
+ * opens by itself when the person is on one of its screens, so the current
+ * page is never hidden in a closed fold.
+ *
+ * With the sidebar shrunk to its icons there is no room for the list: the
+ * icon then leads straight to the tool's first screen, like any other item.
+ */
+function AdminSidebarFold({
+  item,
+  screens,
+  pathname,
+  count,
+}: {
+  item: AdminNavItem;
+  screens: readonly AdminNavSubItem[];
+  pathname: string;
+  count?: number;
+}) {
+  const { isMobile, state, setOpenMobile } = useSidebar();
+  const active = currentChild(screens, pathname);
+  const [open, setOpen] = useState(Boolean(active));
+  // Arriving on one of its screens from elsewhere (a link inside a page,
+  // the search) unfolds it; leaving does not fold it back, the person
+  // may have opened it on purpose.
+  useEffect(() => {
+    if (active) setOpen(true);
+  }, [active]);
+
+  const badge = Boolean(count) && (
+    <SidebarMenuBadge className={open ? "hidden" : undefined}>
+      {count}
+    </SidebarMenuBadge>
+  );
+
+  if (state === "collapsed" && !isMobile) {
+    return (
+      <SidebarMenuItem>
+        <SidebarMenuButton
+          isActive={Boolean(active)}
+          tooltip={item.label}
+          render={
+            <Link
+              href={item.href}
+              aria-current={active === pathname ? "page" : undefined}
+            />
+          }
+        >
+          <AdminIcon name={item.icon} />
+          <span className="min-w-0 flex-1">{item.label}</span>
+        </SidebarMenuButton>
+        {badge}
+      </SidebarMenuItem>
+    );
+  }
+
+  return (
+    <Collapsible
+      open={open}
+      onOpenChange={setOpen}
+      render={<SidebarMenuItem />}
+    >
+      <CollapsibleTrigger
+        render={
+          <SidebarMenuButton
+            tooltip={item.label}
+            className={count && !open ? "pr-9" : undefined}
+          />
+        }
+      >
+        <AdminIcon name={item.icon} />
+        <span className="min-w-0 flex-1">{item.label}</span>
+        <ChevronRight
+          aria-hidden
+          className={[
+            "text-sidebar-label transition-transform duration-200",
+            open ? "rotate-90" : "",
+            count && !open ? "hidden" : "",
+          ].join(" ")}
+        />
+      </CollapsibleTrigger>
+      {badge}
+      <CollapsibleContent className="h-(--collapsible-panel-height) overflow-hidden transition-[height] duration-200 ease-out data-ending-style:h-0 data-starting-style:h-0">
+        <SidebarMenuSub className="mt-1">
+          {screens.map((child) => {
+            const current = active === child.href;
+            return (
+              <SidebarMenuSubItem key={child.href}>
+                <SidebarMenuSubButton
+                  isActive={current}
+                  className="h-auto min-h-7 py-1"
+                  render={
+                    <Link
+                      href={child.href}
+                      aria-current={
+                        child.href === pathname ? "page" : undefined
+                      }
+                      onClick={() => {
+                        if (isMobile) setOpenMobile(false);
+                      }}
+                    />
+                  }
+                >
+                  <span>{child.label}</span>
+                </SidebarMenuSubButton>
+              </SidebarMenuSubItem>
+            );
+          })}
+        </SidebarMenuSub>
+      </CollapsibleContent>
+    </Collapsible>
   );
 }

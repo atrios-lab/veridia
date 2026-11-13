@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { ADMIN_NAV, navGroups } from "./nav.ts";
+import { ADMIN_NAV, currentChild, navGroups } from "./nav.ts";
 
 test("every group heading appears once: items of a group stay adjacent", () => {
   const headings = navGroups(ADMIN_NAV).map((entry) => entry.group);
@@ -80,4 +80,32 @@ test("os utilitários têm cada um a sua permissão", () => {
   const tools = ADMIN_NAV.filter((item) => item.group === "Utilitários");
   const permissions = tools.map((item) => item.permission);
   assert.deepEqual(permissions, [...new Set(permissions)]);
+});
+
+test("cada utilitário abre em subitens, e o primeiro é a tela principal dele", () => {
+  const tools = ADMIN_NAV.filter((item) => item.group === "Utilitários");
+  for (const tool of tools) {
+    assert.ok(tool.children?.length, `${tool.label}: sem subitens`);
+    assert.equal(tool.children?.[0]?.href, tool.href, tool.label);
+    const hrefs = tool.children?.map((child) => child.href) ?? [];
+    assert.deepEqual(hrefs, [...new Set(hrefs)], tool.label);
+  }
+});
+
+test("o subitem atual é o da rota exata, ou a lista de onde o registro veio", () => {
+  const guias = ADMIN_NAV.find(
+    (item) => item.href === "/admin/utilitarios/guias",
+  )?.children;
+  assert.ok(guias);
+  assert.equal(
+    currentChild(guias, "/admin/utilitarios/guias/nova"),
+    "/admin/utilitarios/guias/nova",
+  );
+  assert.equal(
+    currentChild(guias, "/admin/utilitarios/guias/abc123"),
+    "/admin/utilitarios/guias",
+  );
+  assert.equal(currentChild(guias, "/admin/pedidos"), undefined);
+  // A sibling route that only shares the prefix is not inside the tool.
+  assert.equal(currentChild(guias, "/admin/utilitarios/guiasx"), undefined);
 });
