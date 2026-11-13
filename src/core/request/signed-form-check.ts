@@ -112,3 +112,48 @@ export const SIGNED_FORM_DIRECT_PATH =
 
 /** The gov.br signer, where the citizen signs the PDF for free. */
 export const GOVBR_SIGNER_URL = "https://assinador.iti.br/";
+
+/** How long after filing a file still counts as part of the filing: the
+ * form's own uploads land seconds after the row. */
+const FILING_WINDOW_MS = 10 * 60 * 1000;
+
+/**
+ * Whether a pedido is still on the citizen's side, waiting on the signed
+ * requerimento, and so off the office's desk (decisions of 12/11/2026 and
+ * 13/11/2026). A pedido from the site that is not a consulta:
+ * - with the status that says so ("awaiting-signed-form");
+ * - or filed before that status existed, still "new", with no signed
+ *   requerimento attached.
+ * It reaches the desk as soon as the citizen does something after filing
+ * (a file, an answer to an exigência) or sends a requerimento the office
+ * has to check.
+ */
+export function waitsOnSignedForm(r: {
+  status: string;
+  details: unknown;
+  createdAt: Date;
+  /** The act is a consulta (a busca): nothing to sign. */
+  consultation: boolean;
+  hasSignedForm: boolean;
+  /** The citizen's latest file or message, if any. */
+  lastCitizenActivityAt?: Date;
+}): boolean {
+  if (r.consultation) return false;
+  if (readSignedFormCheck(r.details)?.verdict === "review") return false;
+  const details = (r.details ?? {}) as {
+    channel?: unknown;
+    consents?: unknown;
+  };
+  // The counter and the chat file with the person there: nothing to wait on.
+  const fromSite =
+    details.channel === undefined && details.consents !== undefined;
+  const waiting =
+    r.status === "awaiting-signed-form" ||
+    (r.status === "new" && fromSite && !r.hasSignedForm);
+  if (!waiting) return false;
+  const acted =
+    r.lastCitizenActivityAt !== undefined &&
+    r.lastCitizenActivityAt.getTime() - r.createdAt.getTime() >
+      FILING_WINDOW_MS;
+  return !acted;
+}

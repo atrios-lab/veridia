@@ -1,4 +1,5 @@
-import { readSignedFormCheck } from "@/core/request/signed-form-check.ts";
+import { getAct } from "@/core/acts/catalog.ts";
+import { waitsOnSignedForm } from "@/core/request/signed-form-check.ts";
 import "server-only";
 import {
   and,
@@ -334,6 +335,25 @@ async function lastCitizenAttachmentAt(
   );
 }
 
+/** The pedidos, among these, that carry a signed requerimento. */
+async function withSignedForm(
+  tenantSlug: string,
+  requestIds: readonly string[],
+): Promise<Set<string>> {
+  if (requestIds.length === 0) return new Set();
+  const rows = await db
+    .selectDistinct({ requestId: serviceRequestAttachments.requestId })
+    .from(serviceRequestAttachments)
+    .where(
+      and(
+        eq(serviceRequestAttachments.tenantSlug, tenantSlug),
+        eq(serviceRequestAttachments.kind, "signed-form"),
+        inArray(serviceRequestAttachments.requestId, [...requestIds]),
+      ),
+    );
+  return new Set(rows.flatMap((row) => (row.requestId ? [row.requestId] : [])));
+}
+
 export interface DeskRecord {
   kind: RequestKind;
   id: string;
@@ -371,6 +391,7 @@ export async function listDeskItems(
       status: serviceRequests.status,
       createdAt: serviceRequests.createdAt,
       details: serviceRequests.details,
+      actId: serviceRequests.actId,
     })
     .from(serviceRequests)
     .where(
@@ -393,24 +414,39 @@ export async function listDeskItems(
   const serviceRequestIds = rows
     .filter((row) => row.kind === "service-request")
     .map((row) => row.id);
-  const [officeAt, citizenMessageAt, citizenAttachmentAt] = await Promise.all([
-    lastOfficeActionAt(tenantSlug, [
-      ...rows.map((row) => row.id),
-      ...rows.map((row) => row.protocolNumber),
-    ]),
-    lastCitizenMessageAt(tenantSlug, serviceRequestIds),
-    lastCitizenAttachmentAt(tenantSlug, serviceRequestIds),
-  ]);
+  const [officeAt, citizenMessageAt, citizenAttachmentAt, signedForms] =
+    await Promise.all([
+      lastOfficeActionAt(tenantSlug, [
+        ...rows.map((row) => row.id),
+        ...rows.map((row) => row.protocolNumber),
+      ]),
+      lastCitizenMessageAt(tenantSlug, serviceRequestIds),
+      lastCitizenAttachmentAt(tenantSlug, serviceRequestIds),
+      withSignedForm(tenantSlug, serviceRequestIds),
+    ]);
 
   // A pedido from the site waiting on its signed requerimento has not
-  // reached the office (decision of 12/11/2026): off the desk, unless it
-  // carries a scan or a photo for the office to check.
+  // reached the office (decisions of 12/11/2026 and 13/11/2026), the ones
+  // filed before that step existed included: off the desk until the
+  // citizen does something there, or sends a scan for the office to check.
   const reached = rows.filter(
     (row) =>
-      row.status !== "awaiting-signed-form" ||
-      readSignedFormCheck(row.details)?.verdict === "review",
+      row.kind !== "service-request" ||
+      !waitsOnSignedForm({
+        status: row.status,
+        details: row.details,
+        createdAt: row.createdAt,
+        consultation: Boolean(row.actId && getAct(row.actId)?.consultation),
+        hasSignedForm: signedForms.has(row.id),
+        lastCitizenActivityAt: [
+          citizenMessageAt.get(row.id),
+          citizenAttachmentAt.get(row.id),
+        ]
+          .filter((at): at is Date => at !== undefined)
+          .sort((a, b) => b.getTime() - a.getTime())[0],
+      }),
   );
-  return reached.map((row) => {
+  return reached.map(({ actId: _actId, ...row }) => {
     const office = [officeAt.get(row.id), officeAt.get(row.protocolNumber)]
       .filter((at) => at !== undefined)
       .sort((a, b) => b.getTime() - a.getTime())[0];
