@@ -30,6 +30,7 @@ import {
   Trash2,
   Upload,
   Users,
+  Wrench,
   X,
 } from "lucide-react";
 
@@ -69,6 +70,7 @@ const ICONS = {
   trash: Trash2,
   play: Play,
   alert: CircleAlert,
+  wrench: Wrench,
 } satisfies Record<string, LucideIcon>;
 
 export type AdminIconName = keyof typeof ICONS;
