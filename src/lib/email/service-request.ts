@@ -158,6 +158,7 @@ const ACCESS_KEY_SUBJECTS: Record<SendAccessKeyParams["reason"], string> = {
   received: "Pedido recebido: protocolo e chave de acesso",
   counter: "Pedido protocolado: protocolo e chave de acesso",
   recovered: "Nova chave de acesso",
+  office: "Nova chave de acesso do seu pedido",
 };
 
 /**

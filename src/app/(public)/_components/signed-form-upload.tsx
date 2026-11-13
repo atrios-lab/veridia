@@ -16,6 +16,7 @@ import {
 } from "../_lib/attachments.tsx";
 import { type AttachState, attachSignedForm } from "../solicitar/actions.ts";
 import { Icon } from "./icon.tsx";
+import { SignedFormAcceptedNotice } from "./signed-form-accepted-notice.tsx";
 import { SignedFormReviewNotice } from "./signed-form-review-notice.tsx";
 
 const LABELS: Record<SignedFormDocument, string> = {
@@ -92,6 +93,11 @@ export function SignedFormUpload({
         onReplace={() => setReplacing(true)}
       />
     );
+  }
+
+  // The requerimento accepted: said in full (decision of 13/11/2026).
+  if (!showForm && checking && state.status === "success") {
+    return <SignedFormAcceptedNotice />;
   }
 
   if (!showForm) {

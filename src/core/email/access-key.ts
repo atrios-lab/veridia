@@ -8,7 +8,9 @@
  * citizen only clicks: never in the query, which servers log.
  */
 
-export type AccessKeyReason = "received" | "counter" | "recovered";
+/** "office": the office issued a new key from the panel (decision of
+ * 13/11/2026), for a client who lost it or gave a wrong e-mail. */
+export type AccessKeyReason = "received" | "counter" | "recovered" | "office";
 
 /**
  * The consult with the protocol filled in and, given the key, opened
@@ -34,6 +36,8 @@ export const ACCESS_KEY_INTROS: Record<AccessKeyReason, string> = {
     "O seu pedido foi protocolado no balcão da serventia. Seguem o número do protocolo e a chave de acesso, com os quais você acompanha o andamento pela internet.",
   recovered:
     "Uma chave de acesso nova foi gerada para o seu pedido. Use-a com o número do protocolo abaixo.",
+  office:
+    "A serventia gerou uma nova chave de acesso para o seu pedido. Seguem o número do protocolo e a nova chave, com os quais você acompanha o andamento.",
 };
 
 export const ACCESS_KEY_BUTTON = "Acompanhar o pedido";

@@ -94,7 +94,7 @@ export function readSignedFormCheck(details: unknown): SignedFormCheck | null {
 /** What the citizen reads, by verdict. */
 export const SIGNED_FORM_MESSAGES = {
   accepted:
-    "Requerimento conferido: é o requerimento deste protocolo e a assinatura digital foi reconhecida. O pedido seguiu para o cartório. Agora anexe os documentos pedidos.",
+    "Seu requerimento foi aceito: é o requerimento deste protocolo, com assinatura digital reconhecida. O pedido agora segue para a análise do cartório. Anexe os documentos pedidos.",
   review:
     "Seu requerimento está em análise pelo cartório porque não segue o padrão correto ou não contém assinatura digital. Requerimento assinado a punho deve ter firma reconhecida.",
   wrong:
