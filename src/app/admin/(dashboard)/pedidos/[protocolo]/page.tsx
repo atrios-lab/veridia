@@ -755,6 +755,8 @@ export default async function ServiceRequestDetailPage({
 
           <div className="flex flex-col gap-4">
             <KeySection
+              requestId={request.id}
+              protocolNumber={request.protocolNumber}
               contact={request.contact}
               issuedLabel={formatDate(
                 toIsoDate(request.createdAt, OFFICE_TIME_ZONE),

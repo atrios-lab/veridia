@@ -28,6 +28,7 @@ import {
   resolveIdentityEdit,
   resolveVariantEdit,
 } from "@/core/request/edit.ts";
+import { isEmailContact } from "@/core/request/form.ts";
 import {
   EXEMPTION_DECISION_OUTCOMES,
   isAllowedTransition,
@@ -49,7 +50,7 @@ import { officialName } from "@/core/tenant/identification.ts";
 import type { Tenant } from "@/core/tenant/schema.ts";
 import { db } from "@/db/index.ts";
 import { justify } from "@/lib/audit-reason.ts";
-import { notifyCitizen } from "@/lib/email/service-request.ts";
+import { notifyCitizen, sendAccessKey } from "@/lib/email/service-request.ts";
 import {
   AttachmentInUseError,
   answerSearch,
@@ -62,6 +63,7 @@ import {
   listRequirements,
   reconcileDeadlinePause,
   registerRequirement,
+  reissueAccessKey,
   renameDeliveredAttachment,
   resolveRequirement,
   setExemptionDecision,
@@ -1400,4 +1402,62 @@ export async function returnSignedFormAction(
   }
   revalidateAdmin();
   return { status: "success", emailWarning };
+}
+
+export type ReissueKeyState =
+  | { status: "idle" }
+  | { status: "error"; message: string }
+  | {
+      status: "success";
+      /** Shown once, to read out or print: the database keeps only its
+       * hash. */
+      accessKey: string;
+      /** Where it went, or null when the contact is not an e-mail. */
+      sentTo: string | null;
+      emailWarning: string | null;
+    };
+
+/**
+ * A new access key for a client who lost it or gave a wrong e-mail
+ * (decision of 13/11/2026). The key on file cannot be read back (only its
+ * hash is kept), so the office issues a new one: the old one stops working,
+ * the new one goes to the e-mail on file with the link that opens the
+ * pedido, and is shown here once, to print the receipt for the client.
+ * Correct the e-mail first, in "Dados do solicitante", if it was wrong.
+ */
+export async function reissueKeyAction(
+  _previous: ReissueKeyState,
+  formData: FormData,
+): Promise<ReissueKeyState> {
+  const session = await authorize();
+  if (!session) return { status: "error", message: NO_PERMISSION };
+  const requestId = String(formData.get("requestId") ?? "");
+  try {
+    const tenant = await getTenant();
+    const request = await findById(tenant.slug, requestId);
+    if (!request) return { status: "error", message: "Pedido não encontrado." };
+    const accessKey = await reissueAccessKey(
+      tenant.slug,
+      requestId,
+      session.user.id,
+    );
+    const email =
+      request.contact && isEmailContact(request.contact)
+        ? request.contact.trim()
+        : null;
+    const emailWarning = email
+      ? await sendAccessKey({
+          tenant,
+          contact: email,
+          protocolNumber: request.protocolNumber,
+          accessKey,
+          reason: "office",
+        })
+      : null;
+    revalidateAdmin();
+    return { status: "success", accessKey, sentTo: email, emailWarning };
+  } catch (error) {
+    console.error("pedidos.reissue-key", error);
+    return { status: "error", message: GENERIC_ERROR };
+  }
 }

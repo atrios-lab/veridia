@@ -1560,9 +1560,9 @@ export async function updateRequestData(
  * `actorId` is null when the citizen is the one recovering their own key
  * from the consult page (`recoverAccessKeyAction`): there is no operator
  * behind that request, the same reasoning `createRecord` already applies to
- * a pedido's own creation. The panel no longer calls this with a real
- * operator id: `reissueKeyAction` was removed with the change that made
- * recovery the citizen's own path.
+ * a pedido's own creation. The panel calls it with the operator's id from
+ * "Chave de acesso" (`reissueKeyAction`, decision of 13/11/2026), for a
+ * client who lost the key or gave a wrong e-mail.
  */
 export async function reissueAccessKeyWith(
   database: Database,

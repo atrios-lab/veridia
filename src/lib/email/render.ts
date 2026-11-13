@@ -165,6 +165,7 @@ export interface AccessKeyEmail {
 function accessKeyFootnote(reason: AccessKeyEmail["reason"]): string {
   const base =
     "Guarde este e-mail. Não compartilhe a chave de acesso com ninguém: a serventia nunca a pede por telefone ou mensagem.";
+  if (reason === "office") return `${base} A chave anterior deixou de valer.`;
   if (reason !== "recovered") return base;
   return `${base} A chave anterior deixou de valer. Se você não pediu uma chave nova, alguém informou o seu protocolo e o seu e-mail na consulta; a chave só chega aqui, então o seu pedido continua só seu.`;
 }

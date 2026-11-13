@@ -33,6 +33,7 @@ import {
 import { useLiveVersion } from "../../_components/use-live-version.ts";
 import { Icon } from "../_components/icon.tsx";
 import { SearchAnswerCard } from "../_components/search-answer-card.tsx";
+import { SignedFormAcceptedNotice } from "../_components/signed-form-accepted-notice.tsx";
 import { SignedFormReviewNotice } from "../_components/signed-form-review-notice.tsx";
 import { SignedFormUpload } from "../_components/signed-form-upload.tsx";
 import {
@@ -2082,6 +2083,14 @@ function ServiceRequestTrilho({
           </div>
 
           <div className="flex min-w-0 flex-col gap-4">
+            {/* Accepted, and still waiting for the office to start
+                (decision of 13/11/2026): said, so nobody wonders whether it
+                went through. */}
+            {result.signedFormCheck?.verdict === "accepted" &&
+              (result.requestStatus === "new" ||
+                result.requestStatus === "awaiting-signed-form") && (
+                <SignedFormAcceptedNotice />
+              )}
             {showSign && (
               <SignCard
                 protocolNumber={result.protocolNumber}

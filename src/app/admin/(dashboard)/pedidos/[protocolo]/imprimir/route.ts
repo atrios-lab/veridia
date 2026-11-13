@@ -61,14 +61,11 @@ export async function GET(
 }
 
 /**
- * The access receipt. The only caller left is `pedidos/novo` (lançamento no
- * balcão), which has the key in hand from the same response that just
- * created the pedido and posts it straight back here. The detail page for
- * an existing pedido has no path to this route any more: the panel cannot
- * produce a fresh key for a request that already exists (the database holds
- * only its hash), and reissuing one is the citizen's own job now, from the
- * consult page's "Perdi a chave de acesso", which never shows the key back
- * to whoever asked, so it has nothing to post here either.
+ * The access receipt. Two callers, each with the key in hand from the
+ * response that produced it: `pedidos/novo` (lançamento no balcão), right
+ * after creating the pedido, and the detail page's "Chave de acesso", right
+ * after the office issued a new key (decision of 13/11/2026). The key on
+ * file cannot be read back (the database holds only its hash).
  *
  * A download, not an inline page: the browser's PDF viewer saves a file by
  * fetching the tab's URL again, by GET, and this document only exists in
