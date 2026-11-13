@@ -49,6 +49,10 @@ export const assessmentSettingsSchema = z.object({
     .int("Intervalo inválido.")
     .min(0, "O intervalo não pode ser negativo.")
     .max(168, "O intervalo passa de uma semana."),
+  /** "participation": no assessment; the certificate follows the videos. */
+  certificateKind: z.enum(["completion", "participation"], {
+    message: "Escolha o tipo de certificado.",
+  }),
 });
 
 export type AssessmentSettings = z.output<typeof assessmentSettingsSchema>;

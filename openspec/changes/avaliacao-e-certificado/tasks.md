@@ -40,3 +40,12 @@
 - [ ] 6.3.2 No site da Átrios: página `/certificado/[codigo]` consultando `https://<host do Veridia>/api/certificados/<código>`
 - [ ] 6.4 Em produção: configurar o curso de LGPD (70%, 2 h, 5 h), cadastrar as 10 questões, publicar o Encerramento, emitir um certificado de teste e conferir a assinatura em validar.iti.gov.br (feito em 08/11/2026: curso, questões e Encerramento; falta o certificado de teste, que depende do A1)
 - [x] 6.5 Redesenhar o PDF com a identidade do site da Átrios (faixa escura, azuis, Space Grotesk e IBM Plex embutidas como subconjunto), assinatura pousada na linha sobre o nome e verso com o conteúdo programático lido das aulas publicadas do curso
+
+## 7. Certificado de participação
+
+- [x] 7.1 Coluna `courses.certificate_kind` (conclusão ou participação, padrão conclusão) e `certificates.score` aceitando vazio (migração 0059, só acrescenta)
+- [x] 7.2 Curso de participação: sem avaliação, estado "pronto" depois de todos os vídeos, emissão sem tentativa e sem nota, com a conferência dos vídeos repetida no servidor
+- [x] 7.3 PDF, frase, prévia e consulta pública com "participação", sem aproveitamento e sem a avaliação no verso
+- [x] 7.4 Gerenciamento: escolha do tipo de certificado na seção "Avaliação e certificado" de cada curso
+- [ ] 7.5 Antes do merge, aplicar a migração 0059 em produção via `POSTGRES_URL_NON_POOLING`
+- [ ] 7.6 Em produção: configurar o curso sobre o Provimento 213 como participação, com 1 hora

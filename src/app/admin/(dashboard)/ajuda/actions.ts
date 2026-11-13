@@ -151,6 +151,8 @@ export type IssueActionState =
 
 const ISSUE_REFUSED: Record<string, string> = {
   "not-passed": "O certificado é emitido depois da aprovação na avaliação.",
+  "videos-left":
+    "O certificado é emitido depois que você assistir a todos os vídeos do curso.",
   "already-issued": "O seu certificado deste curso já foi emitido.",
   "no-certificate": "Este curso não emite certificado.",
 };

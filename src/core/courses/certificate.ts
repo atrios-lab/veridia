@@ -74,8 +74,20 @@ export interface CertificateFacts {
   tenantName: string;
   courseTitle: string;
   workloadHours: number;
-  score: number;
+  /** The passed attempt's score; null on a participation certificate,
+   * which attests every video watched and no assessment. */
+  score: number | null;
   issuedAt: Date;
+}
+
+export type CertificateKind = "completion" | "participation";
+
+/** A certificate with a score attests a passed assessment; one without, the
+ * course watched to the end. */
+export function certificateKind(facts: {
+  score: number | null;
+}): CertificateKind {
+  return facts.score === null ? "participation" : "completion";
 }
 
 /**
@@ -108,11 +120,19 @@ export function certificateSentence(
   const shownCpf = cpf === "full" ? formatCpf(facts.cpf) : publicCpf(facts.cpf);
   const hours =
     facts.workloadHours === 1 ? "1 hora" : `${facts.workloadHours} horas`;
-  return (
+  const who =
     `Certificamos que ${facts.fullName}, CPF ${shownCpf}, ${facts.roleTitle} ` +
-    `do ${facts.tenantName}, concluiu o curso "${facts.courseTitle}", com ` +
-    `carga horária de ${hours} e aproveitamento de ${facts.score}%, em ` +
-    `${formatCertificateDate(facts.issuedAt)}.`
+    `do ${facts.tenantName}`;
+  const date = formatCertificateDate(facts.issuedAt);
+  if (facts.score === null) {
+    return (
+      `${who}, participou do curso "${facts.courseTitle}", com carga ` +
+      `horária de ${hours}, em ${date}.`
+    );
+  }
+  return (
+    `${who}, concluiu o curso "${facts.courseTitle}", com carga horária de ` +
+    `${hours} e aproveitamento de ${facts.score}%, em ${date}.`
   );
 }
 
@@ -143,13 +163,16 @@ export const CERTIFICATE_CHECK_ORIGINS: readonly string[] = [
 export interface PublicCertificate {
   valid: true;
   code: string;
+  /** "participation": no assessment, so no score. */
+  kind: CertificateKind;
   fullName: string;
   cpf: string;
   roleTitle: string;
   tenantName: string;
   courseTitle: string;
   workloadHours: number;
-  score: number;
+  /** Null on a participation certificate. */
+  score: number | null;
   /** YYYY-MM-DD, in the RN clock. */
   issuedOn: string;
   /** dd/mm/aaaa, ready to print. */
@@ -169,6 +192,7 @@ export function publicCertificate(
   return {
     valid: true,
     code: facts.code,
+    kind: certificateKind(facts),
     fullName: facts.fullName,
     cpf: publicCpf(facts.cpf),
     roleTitle: facts.roleTitle,

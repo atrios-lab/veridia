@@ -72,7 +72,11 @@ async function activeQuestions(
 
 /** Whether the course gives a certificate and has something to ask. */
 function hasAssessment(course: CourseRow, questions: readonly Question[]) {
-  return course.workloadHours !== null && questions.length > 0;
+  return (
+    course.workloadHours !== null &&
+    course.certificateKind === "completion" &&
+    questions.length > 0
+  );
 }
 
 /** How many of the course's published videos this person has not watched.
@@ -153,6 +157,9 @@ export type AssessmentState =
   | { kind: "open"; attemptId: string; questions: ShownQuestion[] }
   | { kind: "wait"; remainingMs: number; last: LastResult }
   | { kind: "passed"; score: number }
+  /** A participation course, every video watched: the certificate is
+   * there to issue, with no assessment before it. */
+  | { kind: "ready" }
   | { kind: "certified"; code: string; issuedAt: Date };
 
 export async function assessmentStateWith(
@@ -163,8 +170,14 @@ export async function assessmentStateWith(
 ): Promise<AssessmentState> {
   const course = await courseRow(database, courseId);
   if (!course) return { kind: "none" };
-  const questions = await activeQuestions(database, courseId);
-  if (!hasAssessment(course, questions)) return { kind: "none" };
+  const participation =
+    course.workloadHours !== null && course.certificateKind === "participation";
+  const questions = participation
+    ? []
+    : await activeQuestions(database, courseId);
+  if (!participation && !hasAssessment(course, questions)) {
+    return { kind: "none" };
+  }
 
   const [certificate] = await database
     .select({ code: certificates.code, issuedAt: certificates.issuedAt })
@@ -176,6 +189,7 @@ export async function assessmentStateWith(
 
   const videosLeft = await videosLeftWith(database, userId, courseId);
   if (videosLeft > 0) return { kind: "locked", videosLeft };
+  if (participation) return { kind: "ready" };
 
   const open = await openAttempt(database, userId, courseId);
   if (open) {

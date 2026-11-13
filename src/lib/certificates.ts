@@ -8,10 +8,10 @@ import { type Database, db } from "@/db/index.ts";
 import { certificates, courses } from "@/db/schema.ts";
 import { recordAuditWith } from "./audit.ts";
 import { cohortOfficeNameWith } from "./cohorts.ts";
-import { passedAttemptWith } from "./quiz.ts";
+import { passedAttemptWith, videosLeftWith } from "./quiz.ts";
 
-// Course certificates: issued once per person and course from a passed
-// attempt, read back by their owner (for the PDF) and by code (for the
+// Course certificates: issued once per person and course, from a passed
+// attempt or, on a participation course, from every video watched; read back by their owner (for the PDF) and by code (for the
 // public check). What a certificate says is the snapshot taken at issue.
 
 export type CertificateRow = typeof certificates.$inferSelect;
@@ -29,12 +29,17 @@ export type IssueResult =
   | { status: "issued"; certificate: CertificateRow }
   | {
       status: "refused";
-      reason: "not-passed" | "already-issued" | "no-certificate";
+      reason:
+        | "not-passed"
+        | "videos-left"
+        | "already-issued"
+        | "no-certificate";
     };
 
 /**
- * Issues the person's certificate for the course. Needs a passed attempt
- * and a course that gives certificates; refuses a second one. The code is
+ * Issues the person's certificate for the course. Needs a course that gives
+ * certificates and either a passed attempt or, on a participation course,
+ * every published video watched; refuses a second one. The code is
  * random; a collision (60 bits, so in theory) is retried.
  */
 export async function issueCertificateWith(
@@ -45,7 +50,11 @@ export async function issueCertificateWith(
   now: Date,
 ): Promise<IssueResult> {
   const [course] = await database
-    .select({ title: courses.title, workloadHours: courses.workloadHours })
+    .select({
+      title: courses.title,
+      workloadHours: courses.workloadHours,
+      certificateKind: courses.certificateKind,
+    })
     .from(courses)
     .where(eq(courses.id, context.courseId));
   if (!course || course.workloadHours === null) {
@@ -57,12 +66,25 @@ export async function issueCertificateWith(
     context.courseId,
   );
   if (existing) return { status: "refused", reason: "already-issued" };
-  const passed = await passedAttemptWith(
-    database,
-    context.userId,
-    context.courseId,
-  );
-  if (!passed) return { status: "refused", reason: "not-passed" };
+  // What the certificate rests on: the passed attempt, or (participation)
+  // nothing to point at but the videos, checked here again.
+  let attempt: { id: string; score: number } | null = null;
+  if (course.certificateKind === "participation") {
+    const left = await videosLeftWith(
+      database,
+      context.userId,
+      context.courseId,
+    );
+    if (left > 0) return { status: "refused", reason: "videos-left" };
+  } else {
+    const passed = await passedAttemptWith(
+      database,
+      context.userId,
+      context.courseId,
+    );
+    if (!passed) return { status: "refused", reason: "not-passed" };
+    attempt = passed;
+  }
   // A course learner works at their cohort's office, not at the courses
   // office their account lives in: the certificate names the cohort's,
   // typed by the platform account, never by the learner.
@@ -83,7 +105,7 @@ export async function issueCertificateWith(
         code,
         userId: context.userId,
         courseId: context.courseId,
-        attemptId: passed.id,
+        attemptId: attempt?.id ?? null,
         fullName: request.fullName,
         cpf: request.cpf,
         roleTitle: request.roleTitle,
@@ -92,7 +114,7 @@ export async function issueCertificateWith(
         issuedHost: context.host,
         courseTitle: course.title,
         workloadHours: course.workloadHours,
-        score: passed.score,
+        score: attempt?.score ?? null,
         issuedAt: now,
       })
       .returning();

@@ -82,6 +82,26 @@ test("the sentence carries the facts, with the CPF full or masked", () => {
   );
 });
 
+test("a participation certificate says the person took part, with no score", () => {
+  const facts = {
+    fullName: "Maria da Silva",
+    cpf: CPF,
+    roleTitle: "Escrevente",
+    tenantName: "Ofício Único de Serra Verde / RN",
+    courseTitle: "Segurança da informação no cartório",
+    workloadHours: 1,
+    score: null,
+    issuedAt: new Date("2026-11-07T15:00:00Z"),
+  };
+  assert.equal(
+    certificateSentence(facts, "full"),
+    'Certificamos que Maria da Silva, CPF 529.982.247-25, Escrevente do Ofício Único de Serra Verde / RN, participou do curso "Segurança da informação no cartório", com carga horária de 1 hora, em 07/11/2026.',
+  );
+  const view = publicCertificate({ ...facts, code: "AB12-CD34-EF56" });
+  assert.equal(view.kind, "participation");
+  assert.equal(view.score, null);
+});
+
 test("the check address is the Átrios site, overridable", () => {
   assert.equal(
     certificateCheckUrl("AB12-CD34-EF56"),
@@ -116,6 +136,7 @@ test("the public view masks the CPF and carries nothing else of the row", () => 
     "fullName",
     "issuedOn",
     "issuedOnText",
+    "kind",
     "roleTitle",
     "score",
     "signedBy",

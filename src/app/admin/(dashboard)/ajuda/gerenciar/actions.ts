@@ -480,6 +480,7 @@ export async function saveAssessmentSettingsAction(
     passingScore: Number(formData.get("passingScore")),
     workloadHours: hours === "" ? null : Number(hours),
     retryHours: Number(formData.get("retryHours")),
+    certificateKind: String(formData.get("certificateKind") ?? "completion"),
   });
   if (!parsed.success) {
     const fieldErrors: Record<string, string> = {};

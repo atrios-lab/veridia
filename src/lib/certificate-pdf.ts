@@ -322,6 +322,7 @@ async function drawFront(
   doc: CertificateDocument,
   signer: SigningCertificate | null,
 ): Promise<void> {
+  const participation = doc.score === null;
   const W = pdf.page.width;
   const H = pdf.page.height;
 
@@ -354,7 +355,10 @@ async function drawFront(
       lineBreak: false,
     })
     .fillColor(BLUE_LIGHT)
-    .text("conclusão", { characterSpacing: -0.6, lineBreak: false });
+    .text(participation ? "participação" : "conclusão", {
+      characterSpacing: -0.6,
+      lineBreak: false,
+    });
 
   // Who, and what they finished.
   const x = MARGIN_LEFT;
@@ -382,7 +386,14 @@ async function drawFront(
     .font("sans")
     .fontSize(11.25)
     .fillColor(GREY)
-    .text("concluiu o curso", x, pdf.y + 14, { width });
+    .text(
+      participation ? "participou do curso" : "concluiu o curso",
+      x,
+      pdf.y + 14,
+      {
+        width,
+      },
+    );
   pdf
     .font("grotesk")
     .fontSize(19.5)
@@ -392,7 +403,9 @@ async function drawFront(
   const hours =
     doc.workloadHours === 1 ? "1 hora" : `${doc.workloadHours} horas`;
   const first = drawChip(pdf, hours, x, chipsY);
-  drawChip(pdf, `${doc.score}% de aproveitamento`, x + first + 6, chipsY);
+  if (doc.score !== null) {
+    drawChip(pdf, `${doc.score}% de aproveitamento`, x + first + 6, chipsY);
+  }
 
   // The instructor: the name under the line, the handwritten signature on
   // the line with its loop running over the name, as one signs by hand.
@@ -567,14 +580,17 @@ function drawBack(pdf: Pdf, doc: CertificateDocument): void {
     title: item.title,
     description: plainDescription(item.description),
   }));
-  items.push({
-    key: "·",
-    title: "Avaliação final",
-    description:
-      doc.passingScore !== undefined
-        ? `Questões de múltipla escolha; aprovação com ${doc.passingScore}% de acertos.`
-        : "Questões de múltipla escolha sobre as aulas.",
-  });
+  // A participation certificate had no assessment to list.
+  if (doc.score !== null) {
+    items.push({
+      key: "·",
+      title: "Avaliação final",
+      description:
+        doc.passingScore !== undefined
+          ? `Questões de múltipla escolha; aprovação com ${doc.passingScore}% de acertos.`
+          : "Questões de múltipla escolha sobre as aulas.",
+    });
+  }
 
   // Two columns, the first holding the larger half, as a printed programme.
   const gap = 42;
@@ -702,7 +718,10 @@ export async function renderCertificatePdf(
   if (!signer) return unsigned;
   const withPlaceholder = plainAddPlaceholder({
     pdfBuffer: unsigned,
-    reason: "Certificado de conclusão de curso",
+    reason:
+      doc.score === null
+        ? "Certificado de participação em curso"
+        : "Certificado de conclusão de curso",
     contactInfo: "",
     name: signer.holder.name,
     location: "Brasil",

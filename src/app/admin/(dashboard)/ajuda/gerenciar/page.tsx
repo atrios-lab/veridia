@@ -64,6 +64,7 @@ export default async function ManageTutorialsPage() {
       passingScore: row.passingScore,
       workloadHours: row.workloadHours,
       retryHours: row.retryHours,
+      certificateKind: row.certificateKind,
     },
     questions: (questions.get(row.id) ?? []).map((q) => ({
       id: q.id,

@@ -414,6 +414,13 @@
       "when": 1794436314280,
       "tag": "0058_livro_diario_auxiliar",
       "breakpoints": true
+    },
+    {
+      "idx": 59,
+      "version": "7",
+      "when": 1794538814914,
+      "tag": "0059_certificado_de_participacao",
+      "breakpoints": true
     }
   ]
 }
