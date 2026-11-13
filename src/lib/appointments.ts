@@ -37,7 +37,7 @@ import {
   tenantContent,
 } from "@/db/schema.ts";
 import { OFFICE_AGENDA_KEY } from "@/lib/office-config.ts";
-import { recordAudit, recordAuditWith } from "./audit.ts";
+import { notPlatformAccount, recordAudit, recordAuditWith } from "./audit.ts";
 import { nextNumberWith } from "./document-numbering.ts";
 import { findPermanentBounceWith } from "./email/bounces.ts";
 import type { StoredAttachment } from "./uploads.ts";
@@ -1015,6 +1015,9 @@ export async function listAppointmentNotesWith(
   database: Database,
   tenantSlug: string,
   appointmentId: string,
+  /** A note of the Átrios account is as invisible to the office as its
+   * acts: only the Átrios account reads it. */
+  includePlatform = false,
 ): Promise<AppointmentNote[]> {
   return database
     .select()
@@ -1023,6 +1026,9 @@ export async function listAppointmentNotesWith(
       and(
         eq(appointmentNotes.tenantSlug, tenantSlug),
         eq(appointmentNotes.appointmentId, appointmentId),
+        includePlatform
+          ? undefined
+          : notPlatformAccount(appointmentNotes.authorId),
       ),
     )
     .orderBy(asc(appointmentNotes.createdAt));
@@ -1031,8 +1037,14 @@ export async function listAppointmentNotesWith(
 export function listAppointmentNotes(
   tenantSlug: string,
   appointmentId: string,
+  includePlatform = false,
 ): Promise<AppointmentNote[]> {
-  return listAppointmentNotesWith(db, tenantSlug, appointmentId);
+  return listAppointmentNotesWith(
+    db,
+    tenantSlug,
+    appointmentId,
+    includePlatform,
+  );
 }
 
 /** A note from the panel. Internal: the citizen never reads it. */

@@ -563,7 +563,9 @@ export default async function AuditPage({
                 level: entry.level,
                 reason: entry.reason,
                 reviewed: entry.reviewedAt
-                  ? `Lido e ok por ${entry.reviewerName ?? "Tabelião/Registrador"} em ${formatOfficeDateTime(entry.reviewedAt)}`
+                  ? entry.reviewerName
+                    ? `Lido e ok por ${entry.reviewerName} em ${formatOfficeDateTime(entry.reviewedAt)}`
+                    : `Lido e ok em ${formatOfficeDateTime(entry.reviewedAt)}`
                   : null,
                 // The person's own sign-in names them once, not twice.
                 target: (() => {

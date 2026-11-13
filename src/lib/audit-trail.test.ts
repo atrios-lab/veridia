@@ -537,6 +537,17 @@ test("a conta da Átrios é invisível para a serventia: atos, anotações, resu
       (p) => p.actorId === "plataforma",
     ),
   );
+  // An office act it marked as read keeps no name of it (13/11/2026).
+  await markReviewedWith(db, "all", [entryId], "plataforma", now);
+  const reviewed = (await listAuditWith(db, { tenantSlugs: [OFFICE] })).find(
+    (e) => e.id === entryId,
+  );
+  assert.ok(reviewed?.reviewedAt);
+  assert.equal(reviewed?.reviewerName, null);
+  const reviewedForAtrios = (
+    await listAuditWith(db, { tenantSlugs: [OFFICE], includePlatform: true })
+  ).find((e) => e.id === entryId);
+  assert.equal(reviewedForAtrios?.reviewerName, "Átrios");
   // Its urgent act never alerts the holder.
   const before = await pendingUrgentCountWith(db, OFFICE, "titular", now);
   await db.insert(auditLog).values({

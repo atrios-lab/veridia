@@ -13,7 +13,7 @@ import { user } from "@/db/auth-schema.ts";
 import { db } from "@/db/index.ts";
 import { auditLog, officePublications } from "@/db/schema.ts";
 import { today } from "@/lib/office-config.ts";
-import { recordAudit } from "./audit.ts";
+import { notByPlatform, recordAudit } from "./audit.ts";
 import { deleteStoredFile } from "./uploads.ts";
 
 export type PublicationRow = typeof officePublications.$inferSelect;
@@ -157,6 +157,8 @@ export interface PublicationHistoryEntry {
 export async function publicationHistory(
   tenantSlug: string,
   id: string,
+  /** The Átrios account's own acts: only the Átrios account sees them. */
+  includePlatform = false,
 ): Promise<PublicationHistoryEntry[]> {
   const rows = await db
     .select({
@@ -171,6 +173,7 @@ export async function publicationHistory(
         eq(auditLog.tenantSlug, tenantSlug),
         eq(auditLog.targetType, "publication"),
         eq(auditLog.targetId, id),
+        includePlatform ? undefined : notByPlatform(),
       ),
     )
     .orderBy(asc(auditLog.createdAt));

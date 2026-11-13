@@ -58,7 +58,11 @@ export default async function AppointmentDetailPage({
   const [config, files, notes] = await Promise.all([
     getAgendaConfig(tenant.slug),
     listAppointmentAttachments(tenant.slug, [appointment.id]).catch(() => []),
-    listAppointmentNotes(tenant.slug, appointment.id).catch(() => []),
+    listAppointmentNotes(
+      tenant.slug,
+      appointment.id,
+      session.user.role === "superadmin",
+    ).catch(() => []),
   ]);
   const citizenFiles = files.filter((file) => !file.uploadedBy);
   const officeFiles = files.filter((file) => file.uploadedBy);
