@@ -220,9 +220,6 @@ function AppointmentRow({
         ) : appointment.status === "attended" ? (
           <span className="col-span-2 flex flex-wrap gap-1.5 @2xl:col-span-1 @2xl:justify-end">
             <ReceiptLink id={appointment.id} />
-            {appointment.canDeclare && (
-              <DeclarationLink id={appointment.id} signers={signers} />
-            )}
             <RevertButton id={appointment.id} />
             <RemoveButton
               id={appointment.id}
@@ -241,6 +238,17 @@ function AppointmentRow({
           </span>
         )}
       </div>
+
+      {/* The declaration on a band of its own: in the actions column its
+          signer list pushed over the name and the status badge. */}
+      {appointment.status === "attended" && appointment.canDeclare && (
+        <div className="mt-2.5 flex flex-col gap-2 rounded-lg border bg-card px-3 py-2.5 @2xl:ml-22">
+          <span className="text-xs font-semibold text-foreground">
+            Declaração de comparecimento
+          </span>
+          <DeclarationLink id={appointment.id} signers={signers} />
+        </div>
+      )}
 
       {appointment.awaitingConfirmation && (
         <p className="mt-1.5 inline-flex rounded-md bg-warning px-2.5 py-1 text-xs font-medium text-warning-foreground">
@@ -535,13 +543,13 @@ function DeclarationLink({ id, signers }: { id: string; signers: Signer[] }) {
   const pdf = `/admin/agenda/comparecimento/${id}${signer ? `?assina=${signer}` : ""}`;
   const sign = signHref(pdf, "Declaração de comparecimento");
   return (
-    <span className="inline-flex flex-wrap items-center gap-1.5">
+    <span className="flex min-w-0 flex-wrap items-center gap-1.5">
       <NativeSelect
         size="sm"
         aria-label="Quem assina a declaração"
         value={signer}
         onChange={(event) => setSigner(event.target.value)}
-        className="bg-background"
+        className="max-w-full bg-background"
       >
         {signers.map((s, index) => (
           <NativeSelectOption key={`${s.name}-${index}`} value={String(index)}>
@@ -553,7 +561,7 @@ function DeclarationLink({ id, signers }: { id: string; signers: Signer[] }) {
         </NativeSelectOption>
       </NativeSelect>
       <a href={sign} className={buttonVariants({ size: "sm" })}>
-        Declaração: assinar digitalmente
+        Assinar digitalmente
       </a>
       <a
         href={pdf}
