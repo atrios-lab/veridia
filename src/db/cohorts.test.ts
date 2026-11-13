@@ -109,7 +109,12 @@ before(async () => {
   await updateAssessmentSettingsWith(
     db,
     lgpdId,
-    { passingScore: 70, workloadHours: 2, retryHours: 5 },
+    {
+      passingScore: 70,
+      workloadHours: 2,
+      retryHours: 5,
+      certificateKind: "completion",
+    },
     ATRIOS,
   );
   for (const kind of ["intro", "lesson", "outro"] as const) {

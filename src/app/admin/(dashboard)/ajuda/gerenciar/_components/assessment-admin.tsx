@@ -43,6 +43,7 @@ export interface AssessmentSettingsItem {
   passingScore: number;
   workloadHours: number | null;
   retryHours: number;
+  certificateKind: "completion" | "participation";
 }
 
 function Message({ state }: { state: SaveTutorialState }) {
@@ -78,6 +79,42 @@ function SettingsForm({
   }, [state]);
   return (
     <form action={formAction} className="flex flex-col gap-3">
+      <fieldset className="flex flex-col gap-2">
+        <legend className="mb-1.5 text-sm font-medium text-foreground">
+          Tipo de certificado
+        </legend>
+        <label className="flex items-start gap-2 text-sm text-foreground">
+          <input
+            type="radio"
+            name="certificateKind"
+            value="completion"
+            defaultChecked={settings.certificateKind === "completion"}
+            className="mt-1"
+          />
+          <span>
+            Conclusão, com avaliação
+            <span className="block text-xs text-muted-foreground">
+              Sai depois da aprovação, com o aproveitamento.
+            </span>
+          </span>
+        </label>
+        <label className="flex items-start gap-2 text-sm text-foreground">
+          <input
+            type="radio"
+            name="certificateKind"
+            value="participation"
+            defaultChecked={settings.certificateKind === "participation"}
+            className="mt-1"
+          />
+          <span>
+            Participação, sem avaliação
+            <span className="block text-xs text-muted-foreground">
+              Sai para quem assistiu a todos os vídeos. As questões, se houver,
+              não aparecem.
+            </span>
+          </span>
+        </label>
+      </fieldset>
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
         <div>
           <Label className="mb-1.5" htmlFor={`${formId}-hours`}>
@@ -122,8 +159,9 @@ function SettingsForm({
       </div>
       <p className="text-xs text-muted-foreground">
         Sem carga horária, o curso não tem avaliação nem certificado. Com carga
-        horária e ao menos uma questão ativa, a avaliação abre para quem
-        assistiu a todos os vídeos.
+        horária, o certificado de conclusão exige ao menos uma questão ativa e a
+        aprovação; o de participação sai depois de todos os vídeos. A nota e o
+        intervalo só valem para o de conclusão.
       </p>
       <Message state={state} />
       <div>
@@ -283,9 +321,11 @@ export function AssessmentAdmin({
           Avaliação e certificado
         </span>
         <span className="text-xs text-muted-foreground">
-          {settings.workloadHours
-            ? `${settings.workloadHours} h · nota ${settings.passingScore}% · ${active} ${active === 1 ? "questão ativa" : "questões ativas"}`
-            : "sem certificado"}
+          {!settings.workloadHours
+            ? "sem certificado"
+            : settings.certificateKind === "participation"
+              ? `${settings.workloadHours} h · certificado de participação`
+              : `${settings.workloadHours} h · nota ${settings.passingScore}% · ${active} ${active === 1 ? "questão ativa" : "questões ativas"}`}
         </span>
       </button>
       {open && (

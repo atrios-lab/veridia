@@ -37,6 +37,7 @@ export type PanelState =
       last: { correct: number; total: number };
     }
   | { kind: "passed"; score: number }
+  | { kind: "ready" }
   | { kind: "certified"; code: string; issuedAt: string };
 
 function Alert({ message }: { message: string }) {
@@ -66,6 +67,7 @@ export function AssessmentPanel({
   tenantName,
   accountName,
   checkUrl,
+  participation,
   state,
 }: {
   courseId: string;
@@ -78,6 +80,8 @@ export function AssessmentPanel({
   accountName: string;
   /** The Átrios site's check address for a code, minus the code. */
   checkUrl: string;
+  /** A participation certificate: no assessment, issued after the videos. */
+  participation: boolean;
   state: PanelState;
 }) {
   return (
@@ -86,7 +90,7 @@ export function AssessmentPanel({
       className="rounded-xl border bg-card p-6"
     >
       <span className="text-xs font-medium text-muted-foreground">
-        Avaliação e certificado
+        {participation ? "Certificado" : "Avaliação e certificado"}
       </span>
       <h2
         id="assessment-title"
@@ -96,12 +100,18 @@ export function AssessmentPanel({
           ? "Curso concluído"
           : state.kind === "passed"
             ? "Você foi aprovado"
-            : "Avaliação do curso"}
+            : state.kind === "ready"
+              ? "Você assistiu a todo o curso"
+              : participation
+                ? "Certificado de participação"
+                : "Avaliação do curso"}
       </h2>
       <div className="mt-3">
         {state.kind === "locked" && (
           <p className="text-sm text-muted-foreground">
-            Abre depois que você assistir a todos os vídeos do curso. Falta
+            {participation
+              ? "O certificado de participação sai depois que você assistir a todos os vídeos do curso. Falta"
+              : "Abre depois que você assistir a todos os vídeos do curso. Falta"}
             {state.videosLeft === 1
               ? " 1 vídeo"
               : `m ${state.videosLeft} vídeos`}
@@ -130,6 +140,14 @@ export function AssessmentPanel({
             </strong>
             .
           </p>
+        )}
+        {state.kind === "ready" && (
+          <IssueForm
+            courseId={courseId}
+            score={null}
+            facts={{ courseTitle, workloadHours, tenantName, score: null }}
+            accountName={accountName}
+          />
         )}
         {state.kind === "passed" && (
           <IssueForm
@@ -343,7 +361,8 @@ function IssueForm({
   accountName,
 }: {
   courseId: string;
-  score: number;
+  /** Null on a participation certificate. */
+  score: number | null;
   facts: Pick<
     CertificateFacts,
     "courseTitle" | "workloadHours" | "tenantName" | "score"
@@ -385,10 +404,12 @@ function IssueForm({
   return (
     <form action={formAction} className="flex flex-col gap-4">
       <p className="text-sm text-muted-foreground">
-        Aproveitamento de {score}%. Para emitir o certificado, confira os seus
-        dados. Eles são usados só para emitir e validar o certificado; o CPF
-        aparece completo apenas no seu PDF. Depois de emitido, o certificado não
-        pode ser alterado por aqui.
+        {score === null
+          ? "Para emitir o seu certificado de participação, confira os seus dados."
+          : `Aproveitamento de ${score}%. Para emitir o certificado, confira os seus dados.`}{" "}
+        Eles são usados só para emitir e validar o certificado; o CPF aparece
+        completo apenas no seu PDF. Depois de emitido, o certificado não pode
+        ser alterado por aqui.
       </p>
       <div className="grid grid-cols-1 gap-4 md:grid-cols-[2fr_1fr_1fr]">
         <div>
