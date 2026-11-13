@@ -345,17 +345,53 @@ export function navGroups(
 }
 
 /**
- * Which of the screens is the current one: the exact path, or else the
- * longest one the path sits under, so a record opened from a list (a guia,
- * a lote) still lights the list it came from.
+ * Groups drawn as one topic instead of a heading (decision of 13/11/2026):
+ * "Utilitários" folds as a single item, and its tools hang from it as
+ * subtopics, each with its own screens one level further down. The data
+ * stays flat, item by item, because the help screens read it to name the
+ * panel's routes (ajuda/): only the sidebar draws the fold.
  */
-export function currentChild(
-  children: readonly AdminNavSubItem[],
+export const FOLDED_GROUPS: Readonly<Record<string, AdminIconName>> = {
+  Utilitários: "wrench",
+};
+
+/** Anything the sidebar draws as a line: an item, a tool, a screen. */
+export interface AdminNavNode {
+  label: string;
+  href: string;
+  children?: readonly AdminNavNode[];
+}
+
+function hrefsIn(nodes: readonly AdminNavNode[]): string[] {
+  return nodes.flatMap((node) => [node.href, ...hrefsIn(node.children ?? [])]);
+}
+
+/**
+ * Which line of the tree is the current page: the exact path, or else the
+ * longest one the path sits under, so a record opened from a list (a guia,
+ * a lote) still lights the list it came from. Undefined when the page is
+ * outside the tree, which also says whether a fold holds the current page.
+ */
+export function currentHref(
+  nodes: readonly AdminNavNode[],
   pathname: string,
 ): string | undefined {
-  const exact = children.find((child) => child.href === pathname);
-  if (exact) return exact.href;
-  return children
-    .filter((child) => pathname.startsWith(`${child.href}/`))
-    .sort((a, b) => b.href.length - a.href.length)[0]?.href;
+  const hrefs = hrefsIn(nodes);
+  if (hrefs.includes(pathname)) return pathname;
+  return hrefs
+    .filter((href) => pathname.startsWith(`${href}/`))
+    .sort((a, b) => b.length - a.length)[0];
+}
+
+/**
+ * What a closed fold carries in its badge: the counts of everything inside.
+ * A tool's count is keyed by its own href, which is also its first screen's,
+ * so it is summed once, at the leaf.
+ */
+export function countIn(
+  node: AdminNavNode,
+  counts: Readonly<Record<string, number>>,
+): number {
+  if (!node.children?.length) return counts[node.href] ?? 0;
+  return node.children.reduce((sum, child) => sum + countIn(child, counts), 0);
 }

@@ -1,6 +1,12 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { ADMIN_NAV, currentChild, navGroups } from "./nav.ts";
+import {
+  ADMIN_NAV,
+  countIn,
+  currentHref,
+  FOLDED_GROUPS,
+  navGroups,
+} from "./nav.ts";
 
 test("every group heading appears once: items of a group stay adjacent", () => {
   const headings = navGroups(ADMIN_NAV).map((entry) => entry.group);
@@ -93,19 +99,38 @@ test("cada utilitário abre em subitens, e o primeiro é a tela principal dele",
 });
 
 test("o subitem atual é o da rota exata, ou a lista de onde o registro veio", () => {
-  const guias = ADMIN_NAV.find(
-    (item) => item.href === "/admin/utilitarios/guias",
-  )?.children;
-  assert.ok(guias);
+  const tools = ADMIN_NAV.filter((item) => item.group === "Utilitários");
   assert.equal(
-    currentChild(guias, "/admin/utilitarios/guias/nova"),
+    currentHref(tools, "/admin/utilitarios/guias/nova"),
     "/admin/utilitarios/guias/nova",
   );
   assert.equal(
-    currentChild(guias, "/admin/utilitarios/guias/abc123"),
+    currentHref(tools, "/admin/utilitarios/guias/abc123"),
     "/admin/utilitarios/guias",
   );
-  assert.equal(currentChild(guias, "/admin/pedidos"), undefined);
+  assert.equal(
+    currentHref(tools, "/admin/utilitarios/livro-diario/paginas/7"),
+    "/admin/utilitarios/livro-diario",
+  );
+  assert.equal(currentHref(tools, "/admin/pedidos"), undefined);
   // A sibling route that only shares the prefix is not inside the tool.
-  assert.equal(currentChild(guias, "/admin/utilitarios/guiasx"), undefined);
+  assert.equal(currentHref(tools, "/admin/utilitarios/guiasx"), undefined);
+});
+
+test("Utilitários é um tópico só, com os utilitários como subtópicos", () => {
+  assert.deepEqual(Object.keys(FOLDED_GROUPS), ["Utilitários"]);
+  const group = navGroups(ADMIN_NAV).find(
+    (entry) => entry.group === "Utilitários",
+  );
+  assert.equal(group?.items.length, 6);
+});
+
+test("o tópico fechado soma os avisos de dentro, sem contar duas vezes", () => {
+  const guias = ADMIN_NAV.find(
+    (item) => item.href === "/admin/utilitarios/guias",
+  );
+  assert.ok(guias);
+  // The tool's own href is its first screen's: counted once.
+  assert.equal(countIn(guias, { "/admin/utilitarios/guias": 2 }), 2);
+  assert.equal(countIn(guias, {}), 0);
 });
