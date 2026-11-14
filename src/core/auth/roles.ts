@@ -86,6 +86,8 @@ export const OFFICE_PERMISSIONS = [
   // The guides of the attributions (decision of 14/11/2026): books,
   // indexes and deadlines of each specialty, as the law sets them.
   "attributions.view",
+  // Sending each attribution its files (decision of 14/11/2026).
+  "attributions.import",
   // The office's audit trail in full, and the formal notifications that ask
   // a person to explain an act: the Tabelião/Registrador's alone.
   "audit.manage",
@@ -122,6 +124,7 @@ export const GRANTABLE_PERMISSIONS = [
   "rcpn.import",
   "rcpn.certidao",
   "attributions.view",
+  "attributions.import",
 ] as const;
 export type GrantablePermission = (typeof GRANTABLE_PERMISSIONS)[number];
 
@@ -152,6 +155,8 @@ export const DERIVED_FROM: Partial<Record<GrantablePermission, Permission>> = {
   "rcpn.certidao": "security-paper.manage",
   // Everyone at the desk reads the guides.
   "attributions.view": "desk.access",
+  // Whoever loads the Registro Civil's base loads the others' files.
+  "attributions.import": "rcpn.import",
 };
 
 /**
@@ -381,4 +386,6 @@ export const GRANTABLE_LABELS: Record<GrantablePermission, string> = {
     "Registro Civil: emitir, corrigir e excluir certidões (com selo e anexo)",
   "attributions.view":
     "Atribuições: consultar os guias de cada especialidade (livros, índices e prazos da lei)",
+  "attributions.import":
+    "Atribuições: enviar e excluir arquivos de cada atribuição (com justificativa)",
 };

@@ -1,18 +1,42 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import { formatSize } from "@/core/attributions/files.ts";
 import {
   type AttributionGuide,
   CODIGO_DE_NORMAS_RN,
   type GuideBook,
   guideFor,
 } from "@/core/attributions/guides.ts";
+import { can } from "@/core/auth/roles.ts";
+import { formatOfficeDateTime } from "@/core/time/office-time.ts";
+import { db } from "@/db/index.ts";
+import {
+  attributionFolder,
+  listAttributionFilesWith,
+} from "@/lib/attribution-files.ts";
+import { getTenant } from "@/lib/tenant.ts";
+import { blobUploadEnabled } from "@/lib/uploads.ts";
 import { BackLink } from "../../../_components/back-link.tsx";
 import { AdminIcon } from "../../../_components/icon.tsx";
 import { AdminPageHeader } from "../../../_components/page-header.tsx";
 import type { ScreenHelp } from "../../../_components/screen-help.ts";
 import { ScreenHelpButton } from "../../../_components/screen-help-button.tsx";
+import { Badge } from "../../../_ui/badge.tsx";
 import { buttonVariants } from "../../../_ui/button.tsx";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "../../../_ui/table.tsx";
 import { GUIDE_ICONS, requireGuides } from "../_lib.ts";
+import {
+  AttributionUploadForm,
+  RemoveAttributionFileButton,
+  RoutineChecklist,
+} from "../files-forms.tsx";
 
 export async function generateMetadata({
   params,
@@ -141,10 +165,17 @@ export default async function AttributionGuidePage({
 }: {
   params: Promise<{ slug: string }>;
 }) {
-  await requireGuides();
+  const session = await requireGuides();
   const guide = guideFor((await params).slug);
   if (!guide) notFound();
   const help = helpOf(guide);
+  const tenant = await getTenant();
+  const canSend = can(
+    session.user.role ?? "",
+    "attributions.import",
+    session.user.permissions,
+  );
+  const files = await listAttributionFilesWith(db, tenant.slug, guide.slug);
 
   return (
     <>
@@ -183,6 +214,147 @@ export default async function AttributionGuidePage({
             ))}
           </div>
         </section>
+
+        {(guide.routines?.length ?? 0) > 0 && (
+          <Section
+            title="Roteiros dos atos"
+            help={{
+              purpose:
+                "Listas para seguir na hora de fazer o ato: cada item é um requisito do artigo citado. Marque conforme confere.",
+              steps: [
+                "Abra o roteiro do ato que vai fazer.",
+                "Marque cada item quando conferir no documento. A marcação não fica salva.",
+                "O quadro amarelo, quando aparece, diz o que conferir na norma antes de seguir.",
+              ],
+            }}
+            label="Como usar os roteiros dos atos"
+          >
+            <div className="grid gap-4 lg:grid-cols-2">
+              {guide.routines?.map((routine, index) => (
+                <div
+                  key={routine.title}
+                  className="flex flex-col gap-3 rounded-lg border p-4"
+                >
+                  <div>
+                    <p className="font-semibold text-foreground">
+                      {routine.title}
+                    </p>
+                    <p className="text-xs text-muted-foreground">
+                      {routine.source}
+                    </p>
+                  </div>
+                  <RoutineChecklist
+                    id={`${guide.slug}-roteiro-${index}`}
+                    items={routine.items}
+                  />
+                  {routine.check && (
+                    <p className="rounded-lg bg-warning-soft px-3 py-2 text-xs text-warning-text text-justify hyphens-auto">
+                      {routine.check}
+                    </p>
+                  )}
+                </div>
+              ))}
+            </div>
+          </Section>
+        )}
+
+        <Section
+          title="Arquivos"
+          help={{
+            purpose:
+              "Os arquivos desta atribuição no painel: livros e índices exportados do sistema, remessas e retornos das centrais, PDFs, imagens digitalizadas e modelos.",
+            steps: [
+              "Escolha o arquivo, em qualquer formato, e diga do que se trata.",
+              "O painel reconhece o tipo pelo conteúdo e guarda como veio.",
+              "O mesmo arquivo não entra duas vezes.",
+              "Excluir pede justificativa: o arquivo sai da lista e continua guardado na auditoria.",
+            ],
+            terms: [
+              {
+                term: "Remessa e retorno",
+                meaning:
+                  "Os arquivos trocados com as centrais (por exemplo, a CRA e a CENPROT no protesto, o ONR no registro de imóveis).",
+              },
+            ],
+          }}
+          label="Como enviar arquivos a esta atribuição"
+        >
+          {guide.slug === "registro-civil" && (
+            <p className="text-sm text-muted-foreground text-justify hyphens-auto">
+              Os arquivos do sistema do registro civil que alimentam o índice
+              entram em{" "}
+              <Link
+                href="/admin/rcpn/importar"
+                className="font-medium text-primary underline-offset-4 hover:underline"
+              >
+                Registro Civil › Importar arquivos
+              </Link>
+              . Aqui ficam os demais (modelos, ofícios, imagens).
+            </p>
+          )}
+          {canSend ? (
+            <AttributionUploadForm
+              attribution={guide.slug}
+              folder={attributionFolder(tenant.slug)}
+              direct={blobUploadEnabled()}
+            />
+          ) : (
+            <p className="text-sm text-muted-foreground">
+              Para enviar arquivos, peça ao Tabelião/Registrador a permissão
+              "Atribuições: enviar e excluir arquivos".
+            </p>
+          )}
+          {files.length === 0 ? (
+            <p className="text-sm text-muted-foreground">
+              Nenhum arquivo enviado ainda.
+            </p>
+          ) : (
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Arquivo</TableHead>
+                  <TableHead>Tipo</TableHead>
+                  <TableHead>Tamanho</TableHead>
+                  <TableHead>Enviado em</TableHead>
+                  <TableHead>
+                    <span className="sr-only">Ações</span>
+                  </TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {files.map((file) => (
+                  <TableRow key={file.id}>
+                    <TableCell className="align-top whitespace-normal">
+                      <a
+                        href={`/admin/atribuicoes/${guide.slug}/arquivos/${file.id}`}
+                        className="font-medium text-primary underline-offset-4 hover:underline"
+                      >
+                        {file.fileName}
+                      </a>
+                      {file.description && (
+                        <span className="block text-xs text-muted-foreground">
+                          {file.description}
+                        </span>
+                      )}
+                    </TableCell>
+                    <TableCell className="align-top">
+                      <Badge variant="outline">{file.format}</Badge>
+                    </TableCell>
+                    <TableCell className="align-top text-sm tabular-nums">
+                      {formatSize(file.sizeBytes)}
+                    </TableCell>
+                    <TableCell className="align-top text-sm">
+                      {formatOfficeDateTime(file.createdAt)}
+                    </TableCell>
+                    <TableCell className="align-top">
+                      {canSend && <RemoveAttributionFileButton id={file.id} />}
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          )}
+        </Section>
 
         <Section
           title="A lei"

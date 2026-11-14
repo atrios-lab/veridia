@@ -53,6 +53,17 @@ export interface AttributionGuide {
   /** What the state norm sets and must be checked there. */
   checkLocal: string[];
   /**
+   * Checklists for doing an act, each item a requirement of the article
+   * cited (decision of 14/11/2026: "fácil de fazer os atos, já com
+   * sugestões e modelos").
+   */
+  routines?: {
+    title: string;
+    source: string;
+    items: string[];
+    check?: string;
+  }[];
+  /**
    * How the main document of the attribution is laid out, part by part,
    * as the office's own model does it (the matrícula, in the Registro de
    * Imóveis).
@@ -232,6 +243,22 @@ export const ATTRIBUTION_GUIDES: readonly AttributionGuide[] = [
         does: "Enviar os arquivos do sistema do registro civil para o índice.",
       },
     ],
+    routines: [
+      {
+        title: "Certidão de nascimento, casamento ou óbito",
+        source:
+          "Modelos únicos do Código Nacional de Normas (Provimento CNJ nº 182/2024); Lei nº 6.015/1973, art. 19",
+        items: [
+          "Localizar o registro no índice (Registro Civil › Pesquisar) e abrir o livro.",
+          "Emitir pelo painel no modelo nacional, conferindo cada campo com o livro.",
+          "Conferir a matrícula de 32 dígitos.",
+          "Transcrever as anotações e averbações do registro.",
+          "Colar o selo digital do lote e lançar os emolumentos.",
+          "Imprimir no papel de segurança e assinar, ou assinar digitalmente.",
+          "Anexar a via assinada no painel.",
+        ],
+      },
+    ],
     checkLocal: [
       "Os modelos de termo de abertura e encerramento dos livros e a forma das fichas.",
       "As comunicações à Justiça Eleitoral, ao INSS e às demais repartições, e seus prazos.",
@@ -406,9 +433,9 @@ export const ATTRIBUTION_GUIDES: readonly AttributionGuide[] = [
         {
           name: "Cabeçalho",
           holds:
-            "Registro de Imóveis, Registro Geral, ficha, data de abertura, CNS da serventia, CNM (Código Nacional de Matrícula) e o número da matrícula.",
+            "Registro de Imóveis, Registro Geral, ficha, data de abertura, CNS da serventia, CNM (Código Nacional de Matrícula, gerado e validado no ONR) e o número da matrícula.",
           source:
-            "Lei nº 6.015/1973, art. 176, § 1º, II, 1 e 2 (número de ordem e data); CNM: normas do CNJ",
+            "Lei nº 6.015/1973, art. 176, § 1º, II, 1 e 2 (número de ordem e data); CNM: Provimento CNJ nº 143/2023",
         },
         {
           name: "Imóvel",
@@ -447,6 +474,33 @@ export const ATTRIBUTION_GUIDES: readonly AttributionGuide[] = [
         },
       ],
     },
+    routines: [
+      {
+        title: "Registro na matrícula",
+        source: "Lei nº 6.015/1973, art. 176, § 1º, III",
+        items: [
+          "A data.",
+          "O nome, o domicílio e a nacionalidade do transmitente ou do devedor, com o CPF ou o CNPJ.",
+          "O nome, o domicílio e a nacionalidade do adquirente ou do credor, com o CPF ou o CNPJ.",
+          "O título da transmissão ou do ônus.",
+          "A forma do título, a sua procedência e caracterização.",
+          "O valor do contrato, da coisa ou da dívida, o prazo, as condições e as demais especificações, inclusive os juros.",
+        ],
+      },
+      {
+        title: "Do protocolo ao registro",
+        source: "Lei nº 6.015/1973, arts. 182, 186, 188, 198 e 205",
+        items: [
+          "Lançar o título no Livro nº 1 (Protocolo), na ordem de chegada: o número dá a prioridade.",
+          "Qualificar o título (conferir os requisitos da lei e os documentos).",
+          "Registrar ou emitir a nota devolutiva no prazo do art. 188.",
+          "Na nota devolutiva, escrever cada exigência de forma clara; havendo discordância, o interessado pode pedir a suscitação de dúvida.",
+          "Controlar o prazo da prenotação (art. 205).",
+        ],
+        check:
+          "A Lei nº 14.382/2022 passou a contar os prazos registrais em dias úteis: confira a contagem no texto da lei.",
+      },
+    ],
     checkLocal: [
       "A forma de escriturar o Protocolo, as fichas e os indicadores, e o modelo de matrícula.",
       "Os prazos de certidão e as regras do atendimento eletrônico no estado.",
@@ -545,6 +599,18 @@ export const ATTRIBUTION_GUIDES: readonly AttributionGuide[] = [
         does: "Os pedidos de registro e de certidão que chegam pelo site.",
       },
     ],
+    routines: [
+      {
+        title: "Notificação",
+        source: "Lei nº 6.015/1973, art. 160",
+        items: [
+          "Registrar ou averbar antes o documento a notificar.",
+          "Notificar, a pedido do apresentante, os demais interessados que figurarem no documento e os terceiros que ele indicar.",
+          "Para quem mora em outro município, requisitar a notificação ao oficial de lá.",
+          "Certificar o que foi feito.",
+        ],
+      },
+    ],
     checkLocal: [
       "Os procedimentos de notificação (prazos, diligências, certidão) e o registro eletrônico no estado.",
     ],
@@ -629,6 +695,21 @@ export const ATTRIBUTION_GUIDES: readonly AttributionGuide[] = [
         label: "Pedidos de serviço",
         href: "/admin/pedidos",
         does: "Os pedidos que chegam pelo site.",
+      },
+    ],
+    routines: [
+      {
+        title: "Registro do ato constitutivo",
+        source: "Lei nº 6.015/1973, art. 120",
+        items: [
+          "Número de ordem, data da apresentação e espécie do ato constitutivo.",
+          "Denominação, fundo social (quando houver), fins, sede e tempo de duração.",
+          "Modo de administração e representação, ativa e passiva, judicial e extrajudicial.",
+          "Se o estatuto é reformável quanto à administração, e de que modo.",
+          "Se os membros respondem ou não, subsidiariamente, pelas obrigações sociais.",
+          "Condições de extinção e destino do patrimônio.",
+          "Nomes dos fundadores ou instituidores e dos membros da diretoria, com nacionalidade, estado civil e profissão, e o nome e a residência do apresentante.",
+        ],
       },
     ],
     checkLocal: [
@@ -748,6 +829,34 @@ export const ATTRIBUTION_GUIDES: readonly AttributionGuide[] = [
         label: "Pedidos de serviço",
         href: "/admin/pedidos",
         does: "Os pedidos de certidão e de cancelamento que chegam pelo site.",
+      },
+    ],
+    routines: [
+      {
+        title: "Intimação do devedor",
+        source: "Lei nº 9.492/1997, art. 14, § 2º",
+        items: [
+          "Nome e endereço do devedor.",
+          "Elementos de identificação do título ou documento de dívida.",
+          "Prazo limite para cumprir a obrigação no tabelionato.",
+          "Número do protocolo.",
+          "Valor a ser pago.",
+        ],
+      },
+      {
+        title: "Registro do protesto e instrumento",
+        source: "Lei nº 9.492/1997, arts. 12 e 22",
+        items: [
+          "Data e número da protocolização.",
+          "Nome e endereço do apresentante.",
+          "Reprodução ou transcrição do documento ou das indicações do apresentante, com as declarações nele inseridas.",
+          "Certidão das intimações feitas e das respostas oferecidas.",
+          "Indicação dos intervenientes voluntários e das firmas que honraram.",
+          "A aquiescência do portador ao aceite por honra.",
+          "Nome, número do documento de identificação e endereço do devedor.",
+          "Data e assinatura do tabelião ou do substituto, e o selo.",
+          "Registrar em até 3 dias úteis da protocolização.",
+        ],
       },
     ],
     checkLocal: [
@@ -930,6 +1039,53 @@ export const ATTRIBUTION_GUIDES: readonly AttributionGuide[] = [
         does: "Assinar com certificado ICP-Brasil os PDFs da serventia.",
       },
     ],
+    routines: [
+      {
+        title: "Escritura pública",
+        source: "Código Civil, art. 215, § 1º",
+        items: [
+          "Data e local da realização.",
+          "Reconhecimento da identidade e da capacidade das partes e dos que comparecerem.",
+          "Nome, nacionalidade, estado civil, profissão, domicílio e residência das partes e dos demais comparecentes, e, se for o caso, do regime de bens e do outro cônjuge e da filiação.",
+          "Manifestação clara da vontade das partes e dos intervenientes.",
+          "Referência ao cumprimento das exigências legais e fiscais do ato.",
+          "Declaração de que foi lida na presença das partes ou de que todos a leram.",
+          "Assinatura das partes, dos comparecentes e do tabelião ou do substituto.",
+        ],
+      },
+      {
+        title: "Ata notarial",
+        source: "Código de Processo Civil, art. 384",
+        items: [
+          "Requerimento do interessado.",
+          "Descrever a existência e o modo de existir do fato presenciado ou constatado pelo tabelião.",
+          "Quando for o caso, fazer constar dados de imagem ou som gravados em arquivo eletrônico.",
+        ],
+      },
+      {
+        title: "Inventário e partilha por escritura",
+        source: "Código de Processo Civil, art. 610, §§ 1º e 2º",
+        items: [
+          "Todos os interessados capazes e concordes.",
+          "Todas as partes assistidas por advogado ou defensor público, com qualificação e assinatura no ato.",
+          "Exigências fiscais (ITCD) cumpridas e referidas na escritura.",
+        ],
+        check:
+          "Os casos especiais (por exemplo, herdeiro incapaz ou testamento) seguem as normas do CNJ sobre atos extrajudiciais: confira antes de lavrar.",
+      },
+      {
+        title: "Divórcio ou extinção de união estável consensual",
+        source: "Código de Processo Civil, art. 733",
+        items: [
+          "Consenso das partes e requisitos legais cumpridos.",
+          "Não haver nascituro nem filhos incapazes, salvo o que as normas do CNJ permitirem.",
+          "Partes assistidas por advogado ou defensor público.",
+          "Disposições sobre partilha, pensão e nome, quando houver.",
+        ],
+        check:
+          "As normas do CNJ sobre divórcio extrajudicial com filhos incapazes mudaram nos últimos anos: confira a regra atual.",
+      },
+    ],
     checkLocal: [
       "Os livros de notas (escrituras, procurações, testamentos) e o livro ou fichário de firmas: a forma é do Código de Normas.",
       "Os índices das escrituras e procurações e a sua escrituração.",
@@ -945,6 +1101,11 @@ export const ATTRIBUTION_GUIDES: readonly AttributionGuide[] = [
       {
         name: "Lei nº 10.169/2000",
         about: "As normas gerais dos emolumentos.",
+      },
+      {
+        name: "Lei Estadual nº 11.038/2021 (RN)",
+        about:
+          "As custas e os emolumentos do RN, com as taxas do FDJ e do FCRCPN.",
       },
       {
         name: LNR,
@@ -1030,6 +1191,21 @@ export const ATTRIBUTION_GUIDES: readonly AttributionGuide[] = [
         label: "Solicitação de papéis",
         href: "/admin/utilitarios/solicitacao-papeis",
         does: "Pedir papel de segurança às empresas.",
+      },
+    ],
+    routines: [
+      {
+        title: "Fechamento do ato no caixa",
+        items: [
+          "Selo digital do TJRN no ato, no recibo e na certidão.",
+          "Emolumentos e as taxas do estado (FDJ e FCRCPN) separados, conforme a tabela vigente.",
+          "Recibo ao usuário com os valores do ato.",
+          "Lançamento da receita no Livro Diário Auxiliar no mesmo dia.",
+        ],
+        source:
+          "Lei nº 10.169/2000; Lei Estadual nº 11.038/2021 (custas e emolumentos do RN); Código de Normas do RN",
+        check:
+          "As tabelas de emolumentos e taxas do RN são atualizadas por lei estadual: confira a tabela vigente.",
       },
     ],
     checkLocal: [
