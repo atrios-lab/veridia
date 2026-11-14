@@ -10,12 +10,14 @@ import {
   centsFrom,
   channelFor,
   deadlineOf,
+  doiIn,
   emptyTransfer,
   operationIn,
   partiesFromText,
   type TitleTransfer,
   taxBaseIn,
   transferProblems,
+  validMne,
 } from "./titularidade.ts";
 
 // Fictitious parties only (LGPD). 529.982.247-25 is a test CPF that
@@ -154,4 +156,32 @@ test("planilha com o código da DOI, aberta no Excel", () => {
   const [, row] = csv.trim().split("\r\n");
   assert.match(row ?? "", /;11;Compra e venda;urbano;1\.234;/);
   assert.match(row ?? "", /150000,00;120000,00/);
+});
+
+test("MNE com dígito verificador módulo 97 e campos da DOI lidos do título", () => {
+  // 22 números e os 2 dígitos da ISO 7064 (módulo 97 base 10): 98 menos
+  // o resto de (número × 100) por 97.
+  const body = "1234562026111400000001";
+  let rest = 0;
+  for (const d of `${body}00`) rest = (rest * 10 + Number(d)) % 97;
+  const ok = `${body}${String(98 - rest).padStart(2, "0")}`;
+  assert.equal(ok.length, 24);
+  assert.equal(validMne(ok), true);
+  assert.equal(
+    validMne(`${ok.slice(0, 23)}${(Number(ok[23]) + 1) % 10}`),
+    false,
+  );
+  assert.equal(validMne("123"), false);
+  const read = doiIn(
+    "Casa residencial com área de 200,00 m², área construída de 80 m², CEP 59.490-000, transmitida em sua totalidade, pelo preço pago à vista. MNE 123456.2026.11.14.00000001-23",
+    "11",
+  );
+  assert.equal(read.propertyType, "67");
+  assert.equal(read.area, "200,00");
+  assert.equal(read.builtArea, "80");
+  assert.equal(read.cep, "59490000");
+  assert.equal(read.paymentForm, "5");
+  assert.deepEqual([read.partType, read.partValue], ["1", "100"]);
+  assert.equal(read.mne, "123456202611140000000123");
+  assert.equal(doiIn("Escritura de doação", "67").paymentForm, "9");
 });

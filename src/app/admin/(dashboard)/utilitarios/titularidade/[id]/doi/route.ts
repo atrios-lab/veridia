@@ -1,4 +1,4 @@
-import { doiJson, doiXml } from "@/core/titularidade/exports.ts";
+import { doiJson, doiPgd, doiXml } from "@/core/titularidade/exports.ts";
 import { db } from "@/db/index.ts";
 import { getTenant } from "@/lib/tenant.ts";
 import { getTransferWith } from "@/lib/title-transfers.ts";
@@ -17,9 +17,16 @@ export async function GET(
   const tenant = await getTenant();
   const found = await getTransferWith(db, tenant.slug, (await params).id);
   if (!found) return new Response("Não encontrado", { status: 404 });
-  const xml = new URL(request.url).searchParams.get("formato") === "xml";
+  const formato = new URL(request.url).searchParams.get("formato");
   const name = `doi-${found.transfer.actDate || found.competence}`;
-  return xml
+  if (formato === "pgd") {
+    return download(
+      doiPgd([found.transfer], tenant.location.city, tenant.location.state),
+      "DOI.TXT",
+      "text/plain",
+    );
+  }
+  return formato === "xml"
     ? download(doiXml([found.transfer]), `${name}.xml`, "application/xml")
     : download(doiJson([found.transfer]), `${name}.json`, "application/json");
 }

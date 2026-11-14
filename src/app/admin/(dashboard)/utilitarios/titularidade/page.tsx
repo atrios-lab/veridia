@@ -211,6 +211,15 @@ export default async function TitularidadePage({
                         DOI (JSON)
                       </a>
                       <a
+                        href={`${BASE}/${id}/doi?formato=pgd`}
+                        className={buttonVariants({
+                          variant: "ghost",
+                          size: "sm",
+                        })}
+                      >
+                        DOI (PGD)
+                      </a>
+                      <a
                         href={`${BASE}/${id}/doi?formato=xml`}
                         className={buttonVariants({
                           variant: "ghost",
@@ -234,14 +243,17 @@ export default async function TitularidadePage({
           </h2>
           <p className="mt-1 text-sm text-muted-foreground text-justify hyphens-auto">
             A Carga CTP (Comunicação de Transações às Prefeituras) e a DOI saem
-            dos atos lançados. Baixe no formato que o sistema da plataforma, da
-            prefeitura ou da Receita aceitar e anexe lá. O ofício em PDF e em
-            Word fica na página de cada ofício gerado.
+            dos atos lançados. A CTP segue o esquema oficial do CENSEC: o
+            cabeçalho com o CNS e o mês, e as fichas da DOI, só com os atos de
+            notas (o registro de imóveis comunica pelo ONR). No CENSEC: CTP ›
+            Cargas, escolha o mês e anexe o JSON; depois faça o fechamento do
+            mês. Mês sem ato não tem arquivo: faça o fechamento negativo. O
+            ofício em PDF e em Word fica na página de cada ofício gerado.
           </p>
           <div className="mt-4 grid gap-3 sm:grid-cols-2">
             <div className="flex flex-col gap-2 rounded-lg border px-4 py-3">
               <p className="text-sm font-semibold text-foreground">
-                Carga CTP · prefeitura
+                Carga CTP · CENSEC e prefeitura
               </p>
               <span className="flex flex-wrap gap-2">
                 {(["ctp-xml", "ctp-json", "ctp-txt", "ctp-csv"] as const).map(
@@ -255,7 +267,13 @@ export default async function TitularidadePage({
                       })}
                       title={EXPORT_FORMATS[f].label}
                     >
-                      {EXPORT_FORMATS[f].ext.toUpperCase()}
+                      {f === "ctp-json"
+                        ? "JSON (CENSEC)"
+                        : f === "ctp-txt"
+                          ? "TXT (relação)"
+                          : f === "ctp-csv"
+                            ? "Planilha CSV"
+                            : "XML"}
                     </a>
                   ),
                 )}
@@ -266,7 +284,7 @@ export default async function TitularidadePage({
                 DOI · Receita Federal
               </p>
               <span className="flex flex-wrap gap-2">
-                {(["doi-json", "doi-xml"] as const).map((f) => (
+                {(["doi-json", "doi-pgd", "doi-xml"] as const).map((f) => (
                   <a
                     key={f}
                     href={`${BASE}/arquivo?mes=${mes}&formato=${f}`}
@@ -276,14 +294,20 @@ export default async function TitularidadePage({
                     })}
                     title={EXPORT_FORMATS[f].label}
                   >
-                    {f === "doi-json" ? "JSON (DOI-Web)" : "XML"}
+                    {f === "doi-json"
+                      ? "JSON (DOI-Web)"
+                      : f === "doi-pgd"
+                        ? "TXT (PGD)"
+                        : "XML"}
                   </a>
                 ))}
               </span>
               <p className="text-xs text-muted-foreground">
-                Com os nomes de campo do manual de importação da DOI-Web. Na
-                primeira importação, confira o que a DOI-Web apontar como
-                pendente (forma de pagamento, áreas, CEP).
+                No leiaute oficial da DOI-Web (layout-doiweb.json da Receita):
+                na DOI-Web, Importar arquivo de declarações, escolha Formato
+                DOIWEB para o JSON ou Formato PGD para o TXT. O que o título não
+                traz (forma de pagamento, parte transacionada, código IBGE)
+                aparece como pendência lá; preencha no ato antes de baixar.
               </p>
             </div>
           </div>

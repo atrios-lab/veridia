@@ -6,6 +6,8 @@ import {
   CHANNELS,
   type Channel,
   OPERATIONS,
+  PAYMENT_FORMS,
+  PROPERTY_TYPES,
   SERVICES,
 } from "@/core/titularidade/titularidade.ts";
 import { ConfirmAction } from "../../../_components/confirm-action.tsx";
@@ -213,6 +215,13 @@ function Fields({
           hint="Ex.: R-3 ou AV-5."
           base={base}
         />
+        <Text
+          name="mne"
+          label="Matrícula notarial eletrônica (MNE)"
+          value={v("mne")}
+          hint="Só na escritura, se houver: 24 números (CCCCCC.AAAA.MM.DD.NNNNNNNN-DD)."
+          base={base}
+        />
       </Box>
       <Box
         title="Operação"
@@ -231,6 +240,58 @@ function Fields({
           label="Qual operação (se Outras)"
           value={v("operationOther")}
           wide
+          base={base}
+        />
+        <Choice
+          name="paymentForm"
+          label="Forma de pagamento"
+          value={v("paymentForm")}
+          options={[["", "Escolha"], ...Object.entries(PAYMENT_FORMS)]}
+          base={base}
+        />
+        <Choice
+          name="exchange"
+          label="Houve permuta de bens?"
+          value={v("exchange")}
+          options={[
+            ["", "Não"],
+            ["sim", "Sim"],
+          ]}
+          base={base}
+        />
+        <Choice
+          name="cash"
+          label="Houve pagamento em espécie?"
+          value={v("cash")}
+          options={[
+            ["", "Não"],
+            ["sim", "Sim"],
+          ]}
+          base={base}
+        />
+        <Text
+          name="cashValue"
+          label="Valor pago em espécie (R$)"
+          value={v("cashValue")}
+          hint="Só se houve pagamento em espécie."
+          base={base}
+        />
+        <Choice
+          name="partType"
+          label="Parte do imóvel transacionada"
+          value={v("partType")}
+          options={[
+            ["", "Escolha"],
+            ["1", "Em percentual (%)"],
+            ["2", "Em área (ha/m²)"],
+          ]}
+          base={base}
+        />
+        <Text
+          name="partValue"
+          label="% ou ha/m² objeto da operação"
+          value={v("partValue")}
+          hint="Ex.: 100 para o imóvel inteiro."
           base={base}
         />
       </Box>
@@ -279,6 +340,54 @@ function Fields({
           label="Descrição"
           value={v("description")}
           rows={2}
+          base={base}
+        />
+        <Choice
+          name="propertyType"
+          label="Tipo do imóvel"
+          value={v("propertyType")}
+          options={[["", "Escolha"], ...Object.entries(PROPERTY_TYPES)]}
+          base={base}
+        />
+        <Text name="cep" label="CEP" value={v("cep")} base={base} />
+        <Text
+          name="area"
+          label="Área do imóvel (m² ou ha)"
+          value={v("area")}
+          base={base}
+        />
+        <Text
+          name="builtArea"
+          label="Área construída (m²)"
+          value={v("builtArea")}
+          base={base}
+        />
+        <Text
+          name="cib"
+          label="CIB (imóvel rural)"
+          value={v("cib")}
+          hint="Cadastro Imobiliário Brasileiro, se o imóvel rural tiver."
+          base={base}
+        />
+        <Text
+          name="city"
+          label="Município do imóvel"
+          value={v("city")}
+          hint="Em branco, o da serventia."
+          base={base}
+        />
+        <Text
+          name="ibge"
+          label="Código IBGE do município"
+          value={v("ibge")}
+          hint="7 números (ibge.gov.br). A DOI-Web pede para localizar o imóvel."
+          base={base}
+        />
+        <Text
+          name="incra"
+          label="Código do INCRA (imóvel rural)"
+          value={v("incra")}
+          hint="Do CCIR, 13 números."
           base={base}
         />
       </Box>

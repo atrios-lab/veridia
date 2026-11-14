@@ -23,3 +23,8 @@
   e XML, do mês e de cada ato; ofício em Word.
 - [x] 4.2 Mês negativo; ofício com Editar, Modificar numeração e Excluir; ato com Editar e Excluir.
 - [x] 4.3 Pergunta na guia de ITIV e ITCD para gerar a comunicação já preenchida.
+- [x] 4.4 Carga CTP em JSON e XML no leiaute da DOI (CENSEC); campos MNE, forma de pagamento,
+  permuta, espécie, parte transacionada, tipo do imóvel, áreas, CEP e CIB, lidos do título quando
+  o texto traz.
+- [x] 4.5 DOI em JSON no esquema oficial da DOI-Web (testado contra o layout-doiweb.json) e no
+  formato PGD (DOI.TXT); município, código IBGE e INCRA no ato.

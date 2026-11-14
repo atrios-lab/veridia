@@ -860,7 +860,7 @@ ENTRIES["/admin/utilitarios/titularidade"] = {
     "Confira cada campo. A operação é obrigatória (compra e venda, doação, permuta, usucapião...; a lista é a da DOI). Partes: uma por linha, nome; CPF ou CNPJ; participação.",
     "Salve: o ato entra no mês em que foi praticado. Errou? Altere ou exclua, com justificativa.",
     "Até o último dia útil do mês seguinte, clique em Gerar ofício do mês; se não houve ato, em Mês negativo. Assine digitalmente, imprima ou baixe em Word. No ofício há Editar (refaz com os atos de agora), Modificar numeração e Excluir.",
-    "Em Arquivos do mês, baixe a Carga CTP (XML, JSON, TXT ou planilha) e a DOI (JSON para a DOI-Web, ou XML), no formato que cada sistema aceita, e anexe lá. Cada ato também tem a sua DOI.",
+    "Em Arquivos do mês, baixe a Carga CTP em JSON e envie no CENSEC (Área do Cartório › Carga - CTP, mês e formato Json), e a DOI em JSON para a DOI-Web. Há também XML, a relação em TXT e a planilha. Cada ato tem a sua DOI.",
     "Na guia de ITIV ou ITCD, a pergunta Deseja gerar a comunicação à prefeitura e a DOI? abre o ato já preenchido com as partes, o imóvel e o valor da guia.",
     "Envie por meio eletrônico, à plataforma do CNB/CF (Notas) ou do ONR (Registro de Imóveis), usando a planilha do mês (art. 184-A, § 2º). Registre a data, a plataforma e o número do recibo de entrega, que é obrigatório, e anexe o comprovante. A entrega do ofício à SEMUT é opcional e não substitui o envio eletrônico.",
   ],

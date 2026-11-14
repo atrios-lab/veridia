@@ -119,6 +119,97 @@ export interface TitleTransfer {
   transmitentes: TransferParty[];
   adquirentes: TransferParty[];
   notes: string;
+  /**
+   * What the DOI and the CENSEC's "Registro de CTP" ask besides the above
+   * (decision of 14/11/2026, from the CENSEC screens and the RFB's DOI
+   * manual). Absent in the acts saved before: `doiOf` fills the defaults.
+   */
+  doi?: Partial<DoiDetails>;
+}
+
+/** DOI "Tabela 7, Forma de pagamento". */
+export const PAYMENT_FORMS: Record<string, string> = {
+  "5": "Quitado à vista",
+  "10": "Quitado a prazo",
+  "11": "Quitado sem informação da forma de pagamento",
+  "7": "A prazo",
+  "9": "Não se aplica",
+};
+
+/** DOI "Tabela 12, Tipo do imóvel". */
+export const PROPERTY_TYPES: Record<string, string> = {
+  "67": "Casa",
+  "65": "Apartamento",
+  "71": "Terreno/fração",
+  "69": "Fazenda/sítio/chácara",
+  "15": "Loja",
+  "31": "Galpão",
+  "90": "Sala",
+  "91": "Conjunto de salas",
+  "92": "Sobreloja",
+  "93": "Vaga de garagem",
+  "94": "Laje",
+  "95": "Estacionamento",
+  "96": "Barraco",
+  "89": "Outros",
+};
+
+export interface DoiDetails {
+  /** Matrícula Notarial Eletrônica, digits only (24). */
+  mne: string;
+  paymentForm: string;
+  /** Houve permuta de bens? */
+  exchange: boolean;
+  /** Houve pagamento em espécie? And how much, until the act. */
+  cash: boolean;
+  cashCents: number | null;
+  /** DOI "Tabela 8": 1 = %, 2 = ha/m². */
+  partType: "" | "1" | "2";
+  partValue: string;
+  propertyType: string;
+  area: string;
+  builtArea: string;
+  cep: string;
+  /** Cadastro Imobiliário Brasileiro (rural). */
+  cib: string;
+  /** Município of the imóvel (blank: the office's) and its IBGE code. */
+  city: string;
+  ibge: string;
+  /** Rural: código do INCRA (CCIR) and the denomination of the imóvel. */
+  incra: string;
+}
+
+export function doiOf(t: TitleTransfer): DoiDetails {
+  return {
+    mne: "",
+    paymentForm: "",
+    exchange: false,
+    cash: false,
+    cashCents: null,
+    partType: "",
+    partValue: "",
+    propertyType: "",
+    area: "",
+    builtArea: "",
+    cep: "",
+    cib: "",
+    city: "",
+    ibge: "",
+    incra: "",
+    ...t.doi,
+  };
+}
+
+/**
+ * The MNE's check digits: ISO 7064, module 97 base 10, as the DOI manual
+ * asks; the whole 24 digits leave 1 when divided by 97.
+ */
+export function validMne(value: string): boolean {
+  const digits = value.replace(/\D/g, "");
+  if (digits.length !== 24) return false;
+  let rest = 0;
+  for (const d of digits) rest = (rest * 10 + Number(d)) % 97;
+  return rest === 1;
 }
 
 export function emptyTransfer(service: Service = "notas"): TitleTransfer {
@@ -245,6 +336,24 @@ export function transferWarnings(t: TitleTransfer): string[] {
   }
   for (const p of [...t.transmitentes, ...t.adquirentes]) {
     if (!p.taxId.trim()) warnings.push(`${p.name}: sem CPF ou CNPJ no título.`);
+  }
+  const doi = doiOf(t);
+  if (doi.mne && !validMne(doi.mne)) {
+    warnings.push(
+      "A MNE não confere no dígito verificador: confira os 24 números.",
+    );
+  }
+  if (!doi.paymentForm)
+    warnings.push("Sem forma de pagamento: a DOI e o CENSEC pedem.");
+  if (t.service === "notas" && !/^\d{7}$/.test(doi.ibge)) {
+    warnings.push(
+      "Sem o código IBGE do município do imóvel (7 números): o CENSEC exige na Carga CTP.",
+    );
+  }
+  if (!doi.partType || !doi.partValue) {
+    warnings.push(
+      "Sem a parte do imóvel transacionada (% ou ha/m²): a DOI e o CENSEC pedem.",
+    );
   }
   return warnings;
 }
@@ -467,6 +576,21 @@ export const FORM_KEYS = [
   "transmitentes",
   "adquirentes",
   "notes",
+  "mne",
+  "paymentForm",
+  "exchange",
+  "cash",
+  "cashValue",
+  "partType",
+  "partValue",
+  "propertyType",
+  "area",
+  "builtArea",
+  "cep",
+  "cib",
+  "city",
+  "ibge",
+  "incra",
 ] as const;
 
 const line = (value: string, max = 300) =>
@@ -534,6 +658,33 @@ export function transferFromForm(form: Record<string, string>): {
       transmitentes: partiesFromText(get("transmitentes")),
       adquirentes: partiesFromText(get("adquirentes")),
       notes: longText(get("notes")),
+      doi: {
+        mne: get("mne").replace(/\D/g, "").slice(0, 24),
+        paymentForm: PAYMENT_FORMS[get("paymentForm")]
+          ? get("paymentForm")
+          : "",
+        exchange: get("exchange") === "sim",
+        cash: get("cash") === "sim",
+        cashCents:
+          get("cash") === "sim"
+            ? money("cashValue", "Valor pago em espécie")
+            : null,
+        partType:
+          get("partType") === "1" || get("partType") === "2"
+            ? (get("partType") as "1" | "2")
+            : "",
+        partValue: line(get("partValue"), 24).replace(/[^\d.,]/g, ""),
+        propertyType: PROPERTY_TYPES[get("propertyType")]
+          ? get("propertyType")
+          : "",
+        area: line(get("area"), 24).replace(/[^\d.,]/g, ""),
+        builtArea: line(get("builtArea"), 24).replace(/[^\d.,]/g, ""),
+        cep: get("cep").replace(/\D/g, "").slice(0, 8),
+        cib: line(get("cib"), 20),
+        city: line(get("city"), 60),
+        ibge: get("ibge").replace(/\D/g, "").slice(0, 7),
+        incra: get("incra").replace(/\D/g, "").slice(0, 13),
+      },
     },
     problems,
   };
@@ -565,6 +716,26 @@ export function transferToForm(t: TitleTransfer): Record<string, string> {
     transmitentes: partiesToText(t.transmitentes),
     adquirentes: partiesToText(t.adquirentes),
     notes: t.notes,
+    ...(() => {
+      const d = doiOf(t);
+      return {
+        mne: d.mne,
+        paymentForm: d.paymentForm,
+        exchange: d.exchange ? "sim" : "",
+        cash: d.cash ? "sim" : "",
+        cashValue: money(d.cashCents),
+        partType: d.partType,
+        partValue: d.partValue,
+        propertyType: d.propertyType,
+        area: d.area,
+        builtArea: d.builtArea,
+        cep: d.cep,
+        cib: d.cib,
+        city: d.city,
+        ibge: d.ibge,
+        incra: d.incra,
+      };
+    })(),
   };
 }
 
@@ -648,4 +819,51 @@ export function transferFromGuide(guide: GuideLike): TitleTransfer {
     transmitentes: side("transmitente"),
     adquirentes: side("adquirente"),
   };
+}
+
+/** Operations with nothing paid: the payment form does not apply. */
+const FREE_OPERATIONS = new Set(["55", "57", "67", "69", "70", "73", "74"]);
+
+/**
+ * What the title says of the DOI's extra fields (decision of 14/11/2026:
+ * "ao anexar a escritura, contrato ou registro, já puxe essas informações
+ * automaticamente"). Only what is written; the rest stays blank.
+ */
+export function doiIn(text: string, operation: string): Partial<DoiDetails> {
+  const flat = text.replace(/\s+/g, " ");
+  const out: Partial<DoiDetails> = {};
+  const mne = /\b(\d{6}\.\d{4}\.\d{2}\.\d{2}\.\d{8}-\d{2})\b/.exec(flat)?.[1];
+  if (mne) out.mne = mne.replace(/\D/g, "");
+  if (FREE_OPERATIONS.has(operation)) out.paymentForm = "9";
+  else if (/(?:^|[\s,(])[àa]\s+vista\b/i.test(flat)) {
+    out.paymentForm = "5";
+  }
+  if (/\b(?:em\s+esp[ée]cie|em\s+dinheiro)\b/i.test(flat)) out.cash = true;
+  if (/\btotalidade\b|\b100\s*%/i.test(flat)) {
+    out.partType = "1";
+    out.partValue = "100";
+  }
+  const types: [RegExp, string][] = [
+    [/\bapartamento\b/i, "65"],
+    [/\b(?:fazenda|s[íi]tio|ch[áa]cara)\b/i, "69"],
+    [/\b(?:terreno|lote)\b/i, "71"],
+    [/\b(?:casa|resid[êe]ncia)\b/i, "67"],
+    [/\bgalp[ãa]o\b/i, "31"],
+    [/\bloja\b/i, "15"],
+  ];
+  const type = types.find(([re]) => re.test(flat.slice(0, 4000)));
+  if (type) out.propertyType = type[1];
+  const area =
+    /[áa]rea\s+(?:total\s+|do\s+terreno\s+)?de\s+([\d.]+(?:,\d+)?)\s*m(?:²|2|etros\s+quadrados)/i.exec(
+      flat,
+    )?.[1];
+  if (area) out.area = area;
+  const built =
+    /[áa]rea\s+constru[íi]da\s+de\s+([\d.]+(?:,\d+)?)\s*m(?:²|2)/i.exec(
+      flat,
+    )?.[1];
+  if (built) out.builtArea = built;
+  const cep = /\bCEP\s*:?\s*(\d{2}\.?\d{3}-?\d{3})\b/i.exec(flat)?.[1];
+  if (cep) out.cep = cep.replace(/\D/g, "");
+  return out;
 }
