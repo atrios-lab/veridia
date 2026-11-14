@@ -22,6 +22,7 @@ import {
   serviceRequests,
   taxGuides,
   tenantContent,
+  titleTransferFilings,
 } from "@/db/schema.ts";
 import { OFFICE_NUMBERING_KEY } from "@/lib/office-config.ts";
 import { recordAuditWith } from "./audit.ts";
@@ -51,6 +52,19 @@ export async function lastUsedWith(
   series: NumberSeries,
   year: number,
 ): Promise<number> {
+  if (series === "titularidade") {
+    // A removed ofício keeps its number: it may have reached the prefeitura.
+    const [row] = await database
+      .select({ last: max(titleTransferFilings.sequence) })
+      .from(titleTransferFilings)
+      .where(
+        and(
+          eq(titleTransferFilings.tenantSlug, tenantSlug),
+          eq(titleTransferFilings.year, year),
+        ),
+      );
+    return row?.last ?? 0;
+  }
   if (series === "habilitacao") {
     // A canceled processo keeps its number: it is still in the history.
     const [row] = await database

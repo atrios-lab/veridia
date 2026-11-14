@@ -2211,6 +2211,75 @@ export const rcpnHabilitacaoChanges = pgTable(
 );
 
 /**
+ * An act that changed the ownership of an imóvel, to be told to the
+ * prefeitura (CNN, art. 184-A; change comunicacao-titularidade-prefeitura,
+ * decision of 14/11/2026): read from the escritura or the registro, checked
+ * by the person, kept by competence (the act's month). Removed by a mark,
+ * with who, when and why: never deleted.
+ */
+export const titleTransfers = pgTable(
+  "title_transfers",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    tenantSlug,
+    /** "YYYY-MM": the month of the act. */
+    competence: text("competence").notNull(),
+    /** core/titularidade TitleTransfer. */
+    data: jsonb("data").notNull(),
+    /** The file it was read from, when it was. */
+    sourceName: text("source_name").notNull().default(""),
+    createdBy: text("created_by").notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    updatedBy: text("updated_by"),
+    updatedAt: timestamp("updated_at", { withTimezone: true }),
+    removedAt: timestamp("removed_at", { withTimezone: true }),
+    removedBy: text("removed_by"),
+    removedReason: text("removed_reason"),
+  },
+  (t) => [index("title_transfers_competence").on(t.tenantSlug, t.competence)],
+);
+
+/**
+ * The month's ofício to the Secretaria Municipal de Tributação: numbered,
+ * with the acts as they stood when it was made (so the paper can be drawn
+ * again the same), and the sending: when, how and the receipt.
+ */
+export const titleTransferFilings = pgTable(
+  "title_transfer_filings",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    tenantSlug,
+    competence: text("competence").notNull(),
+    year: integer("year").notNull(),
+    sequence: integer("sequence").notNull(),
+    /** core/titularidade TitleTransfer[] as sent. */
+    transfers: jsonb("transfers").notNull().default(sql`'[]'::jsonb`),
+    /** The ofício's date (ISO). */
+    issuedOn: text("issued_on").notNull(),
+    /** When and how it reached the prefeitura or the platform. */
+    sentOn: text("sent_on").notNull().default(""),
+    channel: text("channel").notNull().default(""),
+    receipt: text("receipt").notNull().default(""),
+    createdBy: text("created_by").notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    removedAt: timestamp("removed_at", { withTimezone: true }),
+    removedBy: text("removed_by"),
+    removedReason: text("removed_reason"),
+  },
+  (t) => [
+    uniqueIndex("title_transfer_filings_tenant_year_sequence").on(
+      t.tenantSlug,
+      t.year,
+      t.sequence,
+    ),
+  ],
+);
+
+/**
  * Files sent to an attribution (decision of 14/11/2026: "em todos deixe o
  * campo de importar os arquivos"): any format, kept as it came. An
  * exclusion only marks the row, with who, when and why.

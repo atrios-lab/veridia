@@ -25,6 +25,7 @@ export const NUMBER_SERIES = [
   "oficio-papel",
   "pedido-papel",
   "habilitacao",
+  "titularidade",
 ] as const;
 export type NumberSeries = (typeof NUMBER_SERIES)[number];
 
@@ -96,6 +97,12 @@ export const SERIES_INFO: Record<NumberSeries, SeriesInfo> = {
     label: "Habilitações de casamento",
     hint: "Registro Civil › Habilitação de casamento: o número do processo.",
     format: (year, sequence) => `${sequence}/${year}`,
+    max: 99_999,
+  },
+  titularidade: {
+    label: "Ofícios de titularidade à prefeitura",
+    hint: "Utilitários › Titularidade à prefeitura: o ofício do mês à SEMUT.",
+    format: formatGuideNumber,
     max: 99_999,
   },
 };

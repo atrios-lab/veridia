@@ -22,7 +22,7 @@ export interface GuideFilesReading {
   notes: string[];
 }
 
-async function pdfText(bytes: Uint8Array): Promise<string> {
+export async function pdfText(bytes: Uint8Array): Promise<string> {
   const { extractText, getDocumentProxy } = await import("unpdf");
   const pdf = await getDocumentProxy(bytes);
   const { text } = await extractText(pdf, { mergePages: true });

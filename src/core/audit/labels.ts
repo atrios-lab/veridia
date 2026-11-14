@@ -66,6 +66,17 @@ const EXACT: Record<string, string> = {
   "rcpn.record.restore":
     "Estornou o cancelamento de um registro do Registro Civil",
   "rcpn.habilitacao.create": "Abriu um processo de habilitação de casamento",
+  "titularidade.create":
+    "Lançou um ato de mudança de titularidade para comunicar à prefeitura",
+  "titularidade.edit":
+    "Corrigiu um ato de mudança de titularidade a comunicar à prefeitura",
+  "titularidade.remove":
+    "Excluiu um ato de mudança de titularidade (fica guardado)",
+  "titularidade.filing": "Gerou o ofício do mês de titularidade à prefeitura",
+  "titularidade.sent":
+    "Registrou o envio do ofício de titularidade à prefeitura",
+  "titularidade.filing-remove":
+    "Excluiu um ofício de titularidade à prefeitura (fica guardado)",
   "rcpn.habilitacao.edit": "Alterou um processo de habilitação de casamento",
   "rcpn.habilitacao.edital":
     "Publicou no site o edital de proclamas de uma habilitação",
@@ -399,6 +410,18 @@ const EXPLANATIONS: Record<string, string> = {
     "O cancelamento de um registro do Registro Civil foi desfeito (estorno), com justificativa.",
   "rcpn.habilitacao.create":
     "Um processo de habilitação para o casamento foi aberto no painel, com número do ano.",
+  "titularidade.create":
+    "Um ato que mudou o dono de um imóvel foi lançado para a comunicação mensal à prefeitura (Código Nacional de Normas, art. 184-A).",
+  "titularidade.edit":
+    "Um ato de mudança de titularidade foi corrigido, com justificativa, antes de ir para a prefeitura.",
+  "titularidade.remove":
+    "Um ato de mudança de titularidade foi excluído da comunicação, com justificativa. Ele continua guardado.",
+  "titularidade.filing":
+    "O ofício do mês com as mudanças de titularidade foi gerado, com número, para a Secretaria Municipal de Tributação.",
+  "titularidade.sent":
+    "Foi registrado quando e como o ofício de titularidade chegou à prefeitura ou à plataforma, com o recibo.",
+  "titularidade.filing-remove":
+    "Um ofício de titularidade foi excluído, com justificativa. Ele continua guardado com o número.",
   "rcpn.habilitacao.edit":
     "Um processo de habilitação para o casamento foi alterado. O histórico do processo guarda o que era antes e o que ficou.",
   "rcpn.habilitacao.edital":
@@ -586,6 +609,7 @@ const NUMBERED: Record<string, string> = {
   notificacao: "notificações",
   "declaracao-iss": "declarações de ISS",
   habilitacao: "habilitações de casamento",
+  titularidade: "ofícios de titularidade à prefeitura",
 };
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
