@@ -11,7 +11,7 @@ import type { IsoDate } from "@/core/scheduling/calendar.ts";
 import { NEUTRALS } from "@/core/tenant/palette.ts";
 import type { Tenant } from "@/core/tenant/schema.ts";
 import { brandFor } from "./document-brand.ts";
-import { DIGITAL_SIGNATURE_NOTE, isDigitalSigning } from "./pdf.ts";
+import { ABNT, DIGITAL_SIGNATURE_NOTE, isDigitalSigning } from "./pdf.ts";
 import {
   drawCenteredIdentification,
   drawIdentificationFooter,
@@ -68,11 +68,20 @@ interface Layout {
   top: number;
 }
 
+/**
+ * Every value is justified (decision of 14/11/2026: "justifique os textos e
+ * lembre das normas ABNT"); a one-line value sits as it would anyway.
+ */
+const VALUE_TEXT = { align: "justify" as const };
+
 function measure(pdf: Pdf, width: number, label: string, value: string) {
   pdf.font("Helvetica-Bold").fontSize(LABEL_SIZE);
   const l = pdf.heightOfString(label, { width: width - PAD * 2 });
   pdf.font("Helvetica").fontSize(VALUE_SIZE);
-  const v = pdf.heightOfString(value || " ", { width: width - PAD * 2 });
+  const v = pdf.heightOfString(value || " ", {
+    width: width - PAD * 2,
+    ...VALUE_TEXT,
+  });
   return { label: l, height: PAD + l + 2 + v + PAD };
 }
 
@@ -99,7 +108,44 @@ function box(
     .fillColor(NEUTRALS.text)
     .text(value || " ", x + PAD, y + PAD + label + 2, {
       width: width - PAD * 2,
+      ...VALUE_TEXT,
     });
+}
+
+/**
+ * The inteiro teor is a text, not a box: by ABNT NBR 14724, 12 pt, line
+ * spacing 1.5, a 1.25 cm indent on each paragraph's first line, justified.
+ * It runs over as many sheets as the registro takes.
+ */
+function drawTeor(
+  pdf: Pdf,
+  left: number,
+  width: number,
+  field: CertidaoField,
+  value: string,
+  rule: string,
+) {
+  pdf.rect(left, pdf.y, width, 0.6).fill(rule);
+  pdf.y += 3;
+  pdf
+    .font("Helvetica-Bold")
+    .fontSize(LABEL_SIZE)
+    .fillColor(NEUTRALS.textSoft)
+    .text(field.label, left, pdf.y, { width });
+  pdf.y += 4;
+  pdf
+    .font("Helvetica")
+    .fontSize(ABNT.fontSize)
+    .fillColor(NEUTRALS.text)
+    .text(value || " ", left, pdf.y, {
+      width,
+      align: "justify",
+      lineGap: ABNT.lineGap,
+      indent: ABNT.indent,
+    });
+  pdf.y += 4;
+  pdf.rect(left, pdf.y, width, 0.6).fill(rule);
+  pdf.y += GAP + 2;
 }
 
 /** The model's rows: fields with the same `row`, side by side. */
@@ -170,8 +216,9 @@ export async function renderCertidao(
           top: SECURITY_PAPER.titleTop,
         };
 
-  // Each sheet: the letterhead (digital) or the free top of the paper.
-  const startPage = () => {
+  // Each sheet: the letterhead (digital) or the free top of the paper. On
+  // `pageAdded`, so the sheets a long inteiro teor flows onto get it too.
+  pdf.on("pageAdded", () => {
     const { left, width } = layout();
     if (digital) {
       const y = drawCenteredIdentification(pdf, identification, {
@@ -188,14 +235,20 @@ export async function renderCertidao(
         matricula ? `Matrícula ${matricula}` : "",
         { rule: brand.palette.border, text: NEUTRALS.textSoft },
       );
+      // Text that flows onto the next sheet starts under the letterhead.
+      pdf.options.margins = {
+        top: y + 12,
+        bottom: MARGIN,
+        left: MARGIN,
+        right: MARGIN,
+      };
       pdf.y = y + 12;
     } else {
       pdf.y = SECURITY_PAPER.titleTop;
     }
-  };
+  });
   const newPage = () => {
     pdf.addPage();
-    startPage();
   };
 
   newPage();
@@ -208,6 +261,11 @@ export async function renderCertidao(
   pdf.y += 8;
 
   for (const row of rowsOf(model.fields)) {
+    const only = row[0];
+    if (row.length === 1 && only?.key === "teor") {
+      drawTeor(pdf, left, width, only, certidao.fields.teor ?? "", rule);
+      continue;
+    }
     const total = row.reduce((sum, f) => sum + (f.span ?? 1), 0);
     const room = width - GAP * (row.length - 1);
     const widths = row.map((f) => (room * (f.span ?? 1)) / total);

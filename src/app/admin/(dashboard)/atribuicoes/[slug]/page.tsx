@@ -126,7 +126,9 @@ function BookCards({ items }: { items: GuideBook[] }) {
       {items.map((book) => (
         <div key={book.name} className="rounded-lg border p-4">
           <p className="font-semibold text-foreground">{book.name}</p>
-          <p className="mt-1 text-sm text-foreground">{book.holds}</p>
+          <p className="mt-1 text-sm text-foreground text-justify hyphens-auto">
+            {book.holds}
+          </p>
           <p className="mt-2 text-xs text-muted-foreground">{book.source}</p>
         </div>
       ))}
@@ -174,7 +176,7 @@ export default async function AttributionGuidePage({
                 className="flex flex-col gap-1 rounded-lg border p-4 transition-colors hover:border-primary/40"
               >
                 <span className="font-medium text-primary">{link.label}</span>
-                <span className="text-sm text-muted-foreground">
+                <span className="text-sm text-muted-foreground text-justify hyphens-auto">
                   {link.does}
                 </span>
               </Link>
@@ -189,7 +191,7 @@ export default async function AttributionGuidePage({
         >
           <ul className="flex flex-col gap-2">
             {guide.laws.map((law) => (
-              <li key={law.name} className="text-sm">
+              <li key={law.name} className="text-justify text-sm hyphens-auto">
                 <span className="font-semibold text-foreground">
                   {law.name}
                 </span>
@@ -208,7 +210,9 @@ export default async function AttributionGuidePage({
             {guide.acts.map((act) => (
               <div key={act.name} className="rounded-lg border p-4">
                 <p className="font-semibold text-foreground">{act.name}</p>
-                <p className="mt-1 text-sm text-foreground">{act.about}</p>
+                <p className="mt-1 text-sm text-foreground text-justify hyphens-auto">
+                  {act.about}
+                </p>
                 {act.source && (
                   <p className="mt-2 text-xs text-muted-foreground">
                     {act.source}
@@ -231,7 +235,7 @@ export default async function AttributionGuidePage({
             }}
             label={`Explicação: ${guide.structure.title.toLowerCase()}`}
           >
-            <p className="text-sm text-muted-foreground">
+            <p className="text-sm text-muted-foreground text-justify hyphens-auto">
               {guide.structure.intro}
             </p>
             <ol className="flex flex-col gap-2">
@@ -247,7 +251,7 @@ export default async function AttributionGuidePage({
                     <span className="font-semibold text-foreground">
                       {part.name}
                     </span>
-                    <span className="text-sm text-foreground">
+                    <span className="text-sm text-foreground text-justify hyphens-auto">
                       {part.holds}
                     </span>
                     <span className="text-xs text-muted-foreground">
@@ -268,7 +272,7 @@ export default async function AttributionGuidePage({
           {guide.books.length > 0 ? (
             <BookCards items={guide.books} />
           ) : (
-            <p className="text-sm text-muted-foreground">
+            <p className="text-sm text-muted-foreground text-justify hyphens-auto">
               A lei federal não lista os livros desta atribuição: eles estão no{" "}
               {CODIGO_DE_NORMAS_RN}. Veja o quadro Conferir no Código de Normas,
               abaixo.
@@ -284,7 +288,7 @@ export default async function AttributionGuidePage({
           {guide.indexes.length > 0 ? (
             <BookCards items={guide.indexes} />
           ) : (
-            <p className="text-sm text-muted-foreground">
+            <p className="text-sm text-muted-foreground text-justify hyphens-auto">
               A lei federal não fixa o índice desta atribuição: a forma está no{" "}
               {CODIGO_DE_NORMAS_RN}.
             </p>
@@ -303,7 +307,9 @@ export default async function AttributionGuidePage({
                   key={line.what}
                   className="flex flex-col gap-0.5 border-l-2 border-primary/40 pl-3"
                 >
-                  <span className="text-sm text-foreground">{line.what}</span>
+                  <span className="text-sm text-foreground text-justify hyphens-auto">
+                    {line.what}
+                  </span>
                   <span className="text-xs text-muted-foreground">
                     {line.source}
                   </span>
@@ -321,7 +327,7 @@ export default async function AttributionGuidePage({
             {guide.terms.map((t) => (
               <div key={t.term} className="rounded-lg border p-4">
                 <dt className="font-semibold text-foreground">{t.term}</dt>
-                <dd className="mt-1 text-sm text-muted-foreground">
+                <dd className="mt-1 text-sm text-muted-foreground text-justify hyphens-auto">
                   {t.meaning}
                 </dd>
               </div>
@@ -340,7 +346,7 @@ export default async function AttributionGuidePage({
               label="Por que conferir no Código de Normas"
             />
           </div>
-          <ul className="list-disc pl-5 text-sm">
+          <ul className="list-disc pl-5 text-justify text-sm hyphens-auto">
             {guide.checkLocal.map((item) => (
               <li key={item}>{item}</li>
             ))}

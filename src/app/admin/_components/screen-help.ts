@@ -709,12 +709,12 @@ const RCPN_TERMS: { term: string; meaning: string }[] = [
   {
     term: "Livro A, B e C",
     meaning:
-      "Livro A: nascimentos. Livro B: casamentos. Livro C: óbitos (Lei 6.015/1973, art. 33).",
+      "Livro A: nascimentos. Livro B: casamentos. Livro C: óbitos (Lei nº 6.015/1973, art. 33).",
   },
   {
     term: "Natimorto (Livro C Auxiliar)",
     meaning:
-      "A criança que nasceu morta. O registro é feito no Livro C Auxiliar (Lei 6.015/1973, art. 33, V, e art. 53, § 1º). Aqui ele aparece dentro de Óbitos, com contagem própria.",
+      "A criança que nasceu morta. O registro é feito no Livro C Auxiliar (Lei nº 6.015/1973, art. 33, V, e art. 53, § 1º). Aqui ele aparece dentro de Óbitos, com contagem própria.",
   },
   {
     term: "Semelhante",
@@ -850,7 +850,7 @@ export const RCPN_KINDS_HELP: ScreenHelp = {
   steps: [
     "Nascimentos: Livro A.",
     "Casamentos: Livro B.",
-    "Óbitos: Livro C. Dentro deles, os natimortos, registrados no Livro C Auxiliar (Lei 6.015/1973, art. 33, V, e art. 53, § 1º).",
+    "Óbitos: Livro C. Dentro deles, os natimortos, registrados no Livro C Auxiliar (Lei nº 6.015/1973, art. 33, V, e art. 53, § 1º).",
   ],
   terms: RCPN_TERMS.filter(
     (t) => t.term.startsWith("Natimorto") || t.term === "Índice",
