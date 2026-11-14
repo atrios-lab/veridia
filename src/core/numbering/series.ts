@@ -24,6 +24,7 @@ export const NUMBER_SERIES = [
   "declaracao-iss",
   "oficio-papel",
   "pedido-papel",
+  "habilitacao",
 ] as const;
 export type NumberSeries = (typeof NUMBER_SERIES)[number];
 
@@ -89,6 +90,12 @@ export const SERIES_INFO: Record<NumberSeries, SeriesInfo> = {
     label: "Pedidos de papéis de segurança",
     hint: "Utilitários › Solicitação de papéis de segurança.",
     format: formatGuideNumber,
+    max: 99_999,
+  },
+  habilitacao: {
+    label: "Habilitações de casamento",
+    hint: "Registro Civil › Habilitação de casamento: o número do processo.",
+    format: (year, sequence) => `${sequence}/${year}`,
     max: 99_999,
   },
 };

@@ -118,6 +118,13 @@ const EXACT: Record<string, AuditLevel> = {
   "rcpn.record.edit": "atencao",
   "rcpn.record.cancel": "urgente",
   "rcpn.record.restore": "atencao",
+  // The habilitação para o casamento: a correction or a cancellation is
+  // for the Tabelião to read.
+  "rcpn.habilitacao.create": "rotina",
+  "rcpn.habilitacao.edit": "analise",
+  "rcpn.habilitacao.edital": "analise",
+  "rcpn.habilitacao.cancel": "urgente",
+  "rcpn.habilitacao.restore": "atencao",
   "daily-book.report-issue": "analise",
   "daily-book.bulletin-prepare": "analise",
   "daily-book.excess-save": "analise",

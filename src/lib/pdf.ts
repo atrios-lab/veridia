@@ -549,6 +549,10 @@ function drawDocumentBody(
       });
   }
 
+  if (document.signatures?.length) {
+    drawPartySignatures(pdf, document.signatures, brand);
+  }
+
   if (digital) {
     drawDigitalSignatureNote(pdf, brand);
     return;
@@ -585,6 +589,61 @@ function drawDocumentBody(
       align: "center",
     });
   }
+}
+
+/**
+ * The parties who sign by hand (nubentes, witnesses), two to a row: room to
+ * sign, the rule, the name and the role under it. Whoever cannot sign gets
+ * a box for the thumbprint instead of a rule.
+ */
+function drawPartySignatures(
+  pdf: PDFKit.PDFDocument,
+  signatures: NonNullable<RequerimentoDocument["signatures"]>,
+  brand: DocumentBrand,
+): void {
+  const gap = 24;
+  const width = (contentWidth(pdf) - gap) / 2;
+  const rowHeight = 92;
+  pdf.moveDown(1);
+  for (let i = 0; i < signatures.length; i += 2) {
+    if (pdf.y + rowHeight > bottom(pdf)) pdf.addPage();
+    const top = pdf.y;
+    for (const [column, signature] of signatures.slice(i, i + 2).entries()) {
+      const left = MARGIN + column * (width + gap);
+      if (signature.fingerprint) {
+        const box = 64;
+        pdf
+          .lineWidth(0.8)
+          .strokeColor(NEUTRALS.text)
+          .rect(left + (width - box) / 2, top + 4, box, box)
+          .stroke();
+      } else {
+        pdf.rect(left + 10, top + 46, width - 20, 0.8).fill(NEUTRALS.text);
+      }
+      pdf
+        .font("Times-Roman")
+        .fontSize(10)
+        .fillColor(NEUTRALS.text)
+        .text(
+          signature.name,
+          left,
+          top + 52 + (signature.fingerprint ? 20 : 0),
+          {
+            width,
+            align: "center",
+          },
+        );
+      pdf
+        .fontSize(8.5)
+        .fillColor(brand.palette.muted)
+        .text(signature.role, left, pdf.y + 1, { width, align: "center" });
+    }
+    pdf.y =
+      top +
+      rowHeight +
+      (signatures.slice(i, i + 2).some((s) => s.fingerprint) ? 20 : 0);
+  }
+  pdf.x = MARGIN;
 }
 
 /**

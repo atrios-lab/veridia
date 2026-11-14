@@ -2142,6 +2142,75 @@ export const rcpnCertidoes = pgTable(
 );
 
 /**
+ * A processo de habilitação para o casamento (change
+ * habilitacao-de-casamento, decision of 14/11/2026): numbered per year, its
+ * data typed once as fields (core/rcpn/habilitacao), every document drawn
+ * from them. Canceled by a mark, with who, when and why: never deleted.
+ */
+export const rcpnHabilitacoes = pgTable(
+  "rcpn_habilitacoes",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    tenantSlug,
+    year: integer("year").notNull(),
+    sequence: integer("sequence").notNull(),
+    /** core/rcpn/habilitacao field key → value. */
+    fields: jsonb("fields").notNull().default(sql`'{}'::jsonb`),
+    /** The edital published on the site from here, when it was. */
+    publicationId: uuid("publication_id"),
+    createdBy: text("created_by").notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    canceledAt: timestamp("canceled_at", { withTimezone: true }),
+    canceledBy: text("canceled_by"),
+    cancelReason: text("cancel_reason"),
+  },
+  (t) => [
+    uniqueIndex("rcpn_habilitacoes_tenant_year_sequence").on(
+      t.tenantSlug,
+      t.year,
+      t.sequence,
+    ),
+    index("rcpn_habilitacoes_tenant").on(t.tenantSlug, t.createdAt),
+  ],
+);
+
+/**
+ * Everything done to a habilitação: opened, corrected, edital published,
+ * canceled, restored. Who, when, why and each field before and after.
+ * Only added to.
+ */
+export const rcpnHabilitacaoChanges = pgTable(
+  "rcpn_habilitacao_changes",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    tenantSlug,
+    habilitacaoId: uuid("habilitacao_id")
+      .notNull()
+      .references(() => rcpnHabilitacoes.id),
+    /** abertura | edicao | edital | cancelamento | estorno */
+    kind: text("kind").notNull(),
+    reason: text("reason").notNull().default(""),
+    /** [{ key, label, before, after }] (core/rcpn/habilitacao). */
+    changes: jsonb("changes").notNull().default(sql`'[]'::jsonb`),
+    actorId: text("actor_id").notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (t) => [
+    index("rcpn_habilitacao_changes_habilitacao").on(
+      t.habilitacaoId,
+      t.createdAt,
+    ),
+  ],
+);
+
+/**
  * Files sent to an attribution (decision of 14/11/2026: "em todos deixe o
  * campo de importar os arquivos"): any format, kept as it came. An
  * exclusion only marks the row, with who, when and why.

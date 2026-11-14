@@ -17,6 +17,7 @@ import {
   auditNotifications,
   issDeclarations,
   paperOrders,
+  rcpnHabilitacoes,
   securityPaperReports,
   serviceRequests,
   taxGuides,
@@ -50,6 +51,19 @@ export async function lastUsedWith(
   series: NumberSeries,
   year: number,
 ): Promise<number> {
+  if (series === "habilitacao") {
+    // A canceled processo keeps its number: it is still in the history.
+    const [row] = await database
+      .select({ last: max(rcpnHabilitacoes.sequence) })
+      .from(rcpnHabilitacoes)
+      .where(
+        and(
+          eq(rcpnHabilitacoes.tenantSlug, tenantSlug),
+          eq(rcpnHabilitacoes.year, year),
+        ),
+      );
+    return row?.last ?? 0;
+  }
   if (series === "guia") {
     // A deleted guia frees its number, as in the guias' own list.
     const [row] = await database
