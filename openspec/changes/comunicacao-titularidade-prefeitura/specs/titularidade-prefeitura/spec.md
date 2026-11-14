@@ -125,3 +125,13 @@ de 365 posições, registros 1, 2, 3 e 9, códigos do PGD), para a opção "Form
 #### Scenario: Conferência pelo esquema
 - **WHEN** os testes geram a DOI de um ato completo, de registro de imóveis, rural e de um mês vazio
 - **THEN** cada arquivo passa no esquema oficial sem nenhuma violação
+
+### Requirement: DOI do registro de imóveis
+A DOI do registro de imóveis DEVE (SHALL) levar a natureza do título, o Código Nacional de Matrícula,
+se o título diz que a DOI já foi emitida, a localização do imóvel rural e a matrícula e o número do
+registro com 7 dígitos, completados com zeros à esquerda; a leitura do título DEVE (SHALL) preencher
+o CNM, a natureza do título e a menção à DOI já emitida quando o texto traz.
+
+#### Scenario: Registro de imóvel rural
+- **WHEN** a serventia baixa a DOI de um registro de imóvel rural com matrícula 633
+- **THEN** a declaração leva a matrícula 0000633, a natureza do título e o município em municipiosUF

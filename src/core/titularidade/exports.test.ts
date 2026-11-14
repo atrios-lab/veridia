@@ -183,7 +183,8 @@ test("DOI com os códigos e campos do leiaute, sem nome e sem inventar", () => {
   assert.equal(d.numeroLivro, "12");
   assert.equal(d.folha, "34/35");
   assert.equal(d.matriculaNotarialEletronica, "123456202611140000000123");
-  assert.equal(d.matricula, "1234");
+  // Zeros on the left up to 7 digits, as the DOI-Web prints it.
+  assert.equal(d.matricula, "0001234");
   assert.equal(d.tipoOperacaoImobiliaria, "11");
   assert.equal(d.valorOperacaoImobiliaria, 150000);
   assert.equal(d.indicadorNaoConstaValorBaseCalculoItbiItcmd, true);
@@ -197,7 +198,9 @@ test("DOI com os códigos e campos do leiaute, sem nome e sem inventar", () => {
   assert.equal(d.tipoImovel, "67");
   assert.equal(d.areaImovel, 200.5);
   assert.equal(d.nomeLogradouro, "das Flores Fictícias");
-  assert.deepEqual(d.municipiosUF, [{ codigoIbge: "2400000" }]);
+  // Urban: the IBGE code at the root; the list is for the rural imóvel.
+  assert.equal(d.codigoIbge, "2400000");
+  assert.equal("municipiosUF" in d, false);
   assert.equal(d.alienantes[0]?.ni, "52998224725");
   assert.ok(
     !("nome" in (d.alienantes[0] ?? {})),
@@ -310,6 +313,56 @@ test("Carga CTP para o CENSEC: cabeçalho e o esquema oficial do CENSEC", () => 
   );
   assert.equal(txt.filter((l) => l.startsWith("D|")).length, 2);
   assert.deepEqual(JSON.parse(ctpJson(OFFICE, "2026-09", [])).declaracoes, []);
+});
+
+test("DOI do registro de imóveis: imóvel rural, natureza do título, CNM e DOI anterior", () => {
+  const ri: TitleTransfer = {
+    ...act(),
+    service: "ri",
+    act: "registro",
+    book: "",
+    page: "1",
+    entry: "R-1-633",
+    operation: "67",
+    destination: "rural",
+    matricula: "633",
+    fiscalRegistration: "",
+    address: "",
+    description: "Fazenda Fictícia",
+    valueCents: 60000000,
+    taxBaseCents: 60000000,
+    doi: {
+      ...act().doi,
+      mne: "",
+      paymentForm: "9",
+      cash: false,
+      partType: "2",
+      partValue: "164,31",
+      propertyType: "69",
+      area: "164,31",
+      builtArea: "",
+      cep: "",
+      cib: "12345678",
+      incra: "1234567890123",
+      location: "Estrada fictícia, km 3",
+      titleNature: "2",
+      cnm: "0000002000063300",
+      previousDoi: true,
+    },
+  };
+  const d = doiDeclaration(ri) as Record<string, unknown>;
+  assert.deepEqual(validate({ declaracoes: [d] }, LAYOUT), []);
+  assert.equal(d.tipoServico, "2");
+  assert.equal(d.tipoAto, "4");
+  assert.equal(d.matricula, "0000633");
+  assert.equal(d.numeroRegistroAverbacao, "0000001");
+  assert.equal(d.folha, "1");
+  assert.equal(d.naturezaTitulo, "2");
+  assert.equal(d.existeDoiAnterior, true);
+  assert.equal(d.codigoNacionalMatricula, "0000002000063300");
+  assert.equal(d.localizacao, "Estrada fictícia, km 3");
+  assert.deepEqual(d.municipiosUF, [{ codigoIbge: "2400000" }]);
+  assert.equal("numeroLivro" in d, false);
 });
 
 test("da guia de ITIV sai a comunicação, sem data nem livro", () => {

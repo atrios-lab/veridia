@@ -177,7 +177,24 @@ export interface DoiDetails {
   ibge: string;
   /** Rural: código do INCRA (CCIR) and the denomination of the imóvel. */
   incra: string;
+  /** Rural: what helps find the imóvel (distrito, estrada, gleba...). */
+  location: string;
+  /** Registro de imóveis: DOI "Natureza do título" (1 to 5). */
+  titleNature: string;
+  /** Código Nacional de Matrícula, digits only (16). */
+  cnm: string;
+  /** Registro de imóveis: the title says "emitida a DOI". */
+  previousDoi: boolean;
 }
+
+/** DOI "Natureza do título" (registro de imóveis). */
+export const TITLE_NATURES: Record<string, string> = {
+  "1": "Instrumento particular com força de escritura pública",
+  "2": "Escritura pública",
+  "3": "Título judicial",
+  "4": "Contratos ou termos administrativos",
+  "5": "Atos autênticos de países estrangeiros",
+};
 
 export function doiOf(t: TitleTransfer): DoiDetails {
   return {
@@ -196,6 +213,10 @@ export function doiOf(t: TitleTransfer): DoiDetails {
     city: "",
     ibge: "",
     incra: "",
+    location: "",
+    titleNature: "",
+    cnm: "",
+    previousDoi: false,
     ...t.doi,
   };
 }
@@ -591,6 +612,10 @@ export const FORM_KEYS = [
   "city",
   "ibge",
   "incra",
+  "location",
+  "titleNature",
+  "cnm",
+  "previousDoi",
 ] as const;
 
 const line = (value: string, max = 300) =>
@@ -684,6 +709,12 @@ export function transferFromForm(form: Record<string, string>): {
         city: line(get("city"), 60),
         ibge: get("ibge").replace(/\D/g, "").slice(0, 7),
         incra: get("incra").replace(/\D/g, "").slice(0, 13),
+        location: line(get("location"), 200),
+        titleNature: TITLE_NATURES[get("titleNature")]
+          ? get("titleNature")
+          : "",
+        cnm: get("cnm").replace(/\D/g, "").slice(0, 16),
+        previousDoi: get("previousDoi") === "sim",
       },
     },
     problems,
@@ -734,6 +765,10 @@ export function transferToForm(t: TitleTransfer): Record<string, string> {
         city: d.city,
         ibge: d.ibge,
         incra: d.incra,
+        location: d.location,
+        titleNature: d.titleNature,
+        cnm: d.cnm,
+        previousDoi: d.previousDoi ? "sim" : "",
       };
     })(),
   };
@@ -865,5 +900,22 @@ export function doiIn(text: string, operation: string): Partial<DoiDetails> {
   if (built) out.builtArea = built;
   const cep = /\bCEP\s*:?\s*(\d{2}\.?\d{3}-?\d{3})\b/i.exec(flat)?.[1];
   if (cep) out.cep = cep.replace(/\D/g, "");
+  // CNM: CCCCCC.L.NNNNNNN-DD (Provimento CNJ nº 143/2023).
+  const cnm = /\b(\d{6}\.?\d\.?\d{7}-?\d{2})\b/.exec(flat)?.[1];
+  if (cnm && /c[óo]digo\s+nacional\s+de\s+matr[íi]cula|\bCNM\b/i.test(flat)) {
+    out.cnm = cnm.replace(/\D/g, "");
+  }
+  if (/emitida\s+(?:a\s+)?DOI|DOI\s+(?:foi\s+)?emitida/i.test(flat)) {
+    out.previousDoi = true;
+  }
+  if (/escritura\s+p[úu]blica/i.test(flat)) out.titleNature = "2";
+  else if (/instrumento\s+particular/i.test(flat)) out.titleNature = "1";
+  else if (
+    /carta\s+de\s+(?:sentença|adjudica|arremata)|formal\s+de\s+partilha|mandado\s+judicial/i.test(
+      flat,
+    )
+  ) {
+    out.titleNature = "3";
+  }
   return out;
 }

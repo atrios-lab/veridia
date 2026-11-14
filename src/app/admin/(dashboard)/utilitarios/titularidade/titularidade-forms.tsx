@@ -9,6 +9,7 @@ import {
   PAYMENT_FORMS,
   PROPERTY_TYPES,
   SERVICES,
+  TITLE_NATURES,
 } from "@/core/titularidade/titularidade.ts";
 import { ConfirmAction } from "../../../_components/confirm-action.tsx";
 import { Button, buttonVariants } from "../../../_ui/button.tsx";
@@ -222,6 +223,23 @@ function Fields({
           hint="Só na escritura, se houver: 24 números (CCCCCC.AAAA.MM.DD.NNNNNNNN-DD)."
           base={base}
         />
+        <Choice
+          name="titleNature"
+          label="Natureza do título (Imóveis)"
+          value={v("titleNature")}
+          options={[["", "Escolha"], ...Object.entries(TITLE_NATURES)]}
+          base={base}
+        />
+        <Choice
+          name="previousDoi"
+          label="O título diz que a DOI já foi emitida? (Imóveis)"
+          value={v("previousDoi")}
+          options={[
+            ["", "Não"],
+            ["sim", "Sim"],
+          ]}
+          base={base}
+        />
       </Box>
       <Box
         title="Operação"
@@ -320,6 +338,14 @@ function Fields({
           name="matricula"
           label="Matrícula"
           value={v("matricula")}
+          hint="A DOI leva com 7 números, completando com zeros à esquerda."
+          base={base}
+        />
+        <Text
+          name="cnm"
+          label="Código Nacional de Matrícula (CNM)"
+          value={v("cnm")}
+          hint="16 números, se a matrícula tiver."
           base={base}
         />
         <Text
@@ -388,6 +414,14 @@ function Fields({
           label="Código do INCRA (imóvel rural)"
           value={v("incra")}
           hint="Do CCIR, 13 números."
+          base={base}
+        />
+        <Text
+          name="location"
+          label="Localização (imóvel rural)"
+          value={v("location")}
+          hint="Estrada, distrito, povoado, gleba: o que ajuda a achar o imóvel."
+          wide
           base={base}
         />
       </Box>
