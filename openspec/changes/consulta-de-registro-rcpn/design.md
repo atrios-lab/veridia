@@ -275,6 +275,36 @@ modelos RTF enviados pela serventia, todos de preenchimento: nenhum traz dado de
   de ler o registro completo, só no painel e só na hora de emitir: do arquivo original
   guardado, ou de uma camada restrita própria. Isso fica para aquela mudança decidir.
 
+## Modelos em uso no RN: nascimento e óbito (análise de 14/11/2026)
+
+Os pacotes de nascimento e óbito são diferentes dos modelos de MG, e são a base certa para a
+emissão futura:
+
+- **Nascimento:** 61 modelos, todos com campos:
+  - livros, inclusive a rogo, adoção, mãe solteira, mandado, adulto e remissão recíproca;
+  - certidões pelo Provimento CNJ 63/2017 e pelo "Prov. 182", paga, isenta, 2ª via, inteiro
+    teor e verbum ad verbum;
+  - declarações de mãe solteira, requerimentos de registro tardio, comunicações, termos de
+    abertura e encerramento.
+- **Óbito:** 43 modelos (certidões, livros, termos, comunicações).
+- **Já trazem o texto do RN.** Os trechos abaixo vêm dos próprios modelos e precisam ser
+  conferidos na fonte antes de usar:
+  - a estampa "Selo Digital de Fiscalização … Confira em: https://selodigital.tjrn.jus.br";
+  - a discriminação de valores (emolumento, ISSQN, taxa de fiscalização e fundos), com valores
+    digitados no texto;
+  - a isenção "conforme Art. 10 do Provimento 07/2026 da CGJ/TJRN";
+  - a dispensa de custas da "Portaria Conjunta nº 10 - TJRN de 04/03/2022".
+- **Valores e normas vêm da configuração, nunca de texto fixo.** Valores digitados num modelo
+  envelhecem a cada tabela nova. Na plataforma, os valores saem da tabela de emolumentos
+  vigente e as normas da configuração da serventia.
+- **Onde está a profissão**, confirmando a análise do banco: `na_pais.no_profiss_pai`,
+  `na_pais.no_profiss_mae`, `obito.no_profissao`, `ob_pais.profiss_pai` e `_mae`. Os modelos
+  também usam a profissão do declarante e das testemunhas (`na_declarante.no_profissao`,
+  `na_testemunha.profissao_*`, `ob_declarante.profissao`). Essas a consulta não mostra; a
+  leitura descarta (decisão 5).
+- Um modelo de livro ainda tem o nome de um município de MG no título: sobra dos modelos de
+  origem.
+
 ## Manuais da CRC e do selo do TJRN (análise de 14/11/2026)
 
 Registrado para a mudança futura de emissão. Fontes: manuais do Cartosoft enviados pela
