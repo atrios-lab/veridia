@@ -10,14 +10,9 @@ import { writtenDate } from "@/core/scheduling/attendance.ts";
 import type { IsoDate } from "@/core/scheduling/calendar.ts";
 import { NEUTRALS } from "@/core/tenant/palette.ts";
 import type { Tenant } from "@/core/tenant/schema.ts";
-import { brandFor } from "./document-brand.ts";
 import { ABNT, DIGITAL_SIGNATURE_NOTE, isDigitalSigning } from "./pdf.ts";
-import {
-  drawCenteredIdentification,
-  drawIdentificationFooter,
-  identificationOf,
-} from "./pdf-letterhead.ts";
-import { MARGIN, type Pdf } from "./pdf-primitives.ts";
+import { brasaoWidth, drawBrasao } from "./pdf-letterhead.ts";
+import type { Pdf } from "./pdf-primitives.ts";
 
 /**
  * The certidão of the Registro Civil, two ways.
@@ -50,6 +45,35 @@ export interface CertidaoToDraw {
    * "PRÉVIA", so it never passes for a certidão.
    */
   preview?: boolean;
+}
+
+/**
+ * The top of the national model, as the security paper has it printed:
+ * the arms of the Republic and "REPÚBLICA FEDERATIVA DO BRASIL / REGISTRO
+ * CIVIL DAS PESSOAS NATURAIS", above where the title starts.
+ */
+function drawNationalHeader(pdf: Pdf): void {
+  const arms = 52;
+  const top = 1.7 * CM;
+  drawBrasao(pdf, (pdf.page.width - brasaoWidth(arms)) / 2, top, arms);
+  const width = pdf.page.width - SECURITY_PAPER.side * 2;
+  pdf
+    .font("Times-Roman")
+    .fontSize(13)
+    .fillColor(NEUTRALS.text)
+    .text(
+      "REPÚBLICA FEDERATIVA DO BRASIL",
+      SECURITY_PAPER.side,
+      top + arms + 8,
+      {
+        width,
+        align: "center",
+      },
+    )
+    .text("REGISTRO CIVIL DAS PESSOAS NATURAIS", SECURITY_PAPER.side, pdf.y, {
+      width,
+      align: "center",
+    });
 }
 
 /** The mark across a preview sheet, light, under nothing it hides. */
@@ -225,24 +249,21 @@ export async function renderCertidao(
   tenant: Tenant,
   certidao: CertidaoToDraw,
 ): Promise<Buffer> {
-  const brand = await brandFor(tenant);
-  const identification = identificationOf(brand, [tenant.name]);
   // The model it was issued in: an old casamento or óbito keeps its own.
   const model = certidaoModel(certidao.kind, certidao.form, certidao.fields);
   const digital = isDigitalSigning();
   const rule = NEUTRALS.text;
-  const matricula = certidao.fields.matricula ?? "";
 
   const pdf = new PDFDocument({
     size: "A4",
-    margins: digital
-      ? { top: MARGIN, bottom: MARGIN, left: MARGIN, right: MARGIN }
-      : {
-          top: SECURITY_PAPER.titleTop,
-          bottom: SECURITY_PAPER.bottom,
-          left: SECURITY_PAPER.side,
-          right: SECURITY_PAPER.side,
-        },
+    // The same sheet printed or signed digitally (decision of 14/11/2026:
+    // "todas devem seguir esse padrão mesmo sendo digital").
+    margins: {
+      top: SECURITY_PAPER.titleTop,
+      bottom: SECURITY_PAPER.bottom,
+      left: SECURITY_PAPER.side,
+      right: SECURITY_PAPER.side,
+    },
     autoFirstPage: false,
     info: {
       Title: model.title.toLowerCase().replace(/^./, (c) => c.toUpperCase()),
@@ -254,52 +275,21 @@ export async function renderCertidao(
     pdf.on("end", () => resolve(Buffer.concat(chunks))),
   );
 
-  const layout = (): Layout =>
-    digital
-      ? {
-          left: MARGIN,
-          width: pdf.page.width - MARGIN * 2,
-          bottom: pdf.page.height - MARGIN,
-          top: 0,
-        }
-      : {
-          left: SECURITY_PAPER.side,
-          width: pdf.page.width - SECURITY_PAPER.side * 2,
-          bottom: pdf.page.height - SECURITY_PAPER.bottom - 10,
-          top: SECURITY_PAPER.titleTop,
-        };
+  const layout = (): Layout => ({
+    left: SECURITY_PAPER.side,
+    width: pdf.page.width - SECURITY_PAPER.side * 2,
+    bottom: pdf.page.height - SECURITY_PAPER.bottom - 10,
+    top: SECURITY_PAPER.titleTop,
+  });
 
-  // Each sheet: the letterhead (digital) or the free top of the paper. On
-  // `pageAdded`, so the sheets a long inteiro teor flows onto get it too.
+  // Each sheet: the security paper brings the arms and the two lines of
+  // the national model printed; the digital one draws them in the same
+  // place, so both come out the same (Provimento nº 182/2024, Anexos IV a
+  // VII). On `pageAdded`, so a long inteiro teor gets them on every sheet.
   pdf.on("pageAdded", () => {
     if (certidao.preview) drawPreviewMark(pdf);
-    const { left, width } = layout();
-    if (digital) {
-      const y = drawCenteredIdentification(pdf, identification, {
-        top: 34,
-        arms: 38,
-        heading: 10,
-        small: 8,
-        sideRoom: 30,
-      });
-      pdf.rect(left, y, width, 0.6).fill(brand.palette.border);
-      drawIdentificationFooter(
-        pdf,
-        identification,
-        matricula ? `Matrícula ${matricula}` : "",
-        { rule: brand.palette.border, text: NEUTRALS.textSoft },
-      );
-      // Text that flows onto the next sheet starts under the letterhead.
-      pdf.options.margins = {
-        top: y + 12,
-        bottom: MARGIN,
-        left: MARGIN,
-        right: MARGIN,
-      };
-      pdf.y = y + 12;
-    } else {
-      pdf.y = SECURITY_PAPER.titleTop;
-    }
+    if (digital) drawNationalHeader(pdf);
+    pdf.y = SECURITY_PAPER.titleTop;
   });
   const newPage = () => {
     pdf.addPage();
@@ -394,9 +384,9 @@ export async function renderCertidao(
       2 +
     (digital ? 8 + 3 * 11 : 30) +
     2 * 12;
+  pdf.fontSize(8);
   const feesHeight = certidao.fees
-    ? (pdf.fontSize(8),
-      pdf.heightOfString(certidao.fees, { width, align: "justify" })) + 6
+    ? pdf.heightOfString(certidao.fees, { width, align: "justify" }) + 6
     : 0;
   const sealHeight = sealLines.length > 0 ? sealLines.length * 10 + 8 + 10 : 0;
   const closing =

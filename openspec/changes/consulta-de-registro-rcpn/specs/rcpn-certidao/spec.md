@@ -72,6 +72,10 @@ cadastro) DEVEM (SHALL) ficar fora da certidão quando vazios. Uma certidão de 
 emitida antes no modelo antigo DEVE (SHALL) continuar sendo reimpressa e corrigida no modelo em
 que saiu, sem perder dados.
 
+#### Scenario: Digital igual à impressa
+- **WHEN** a certidão é gerada para assinatura digital
+- **THEN** sai na mesma folha e posições da impressa, com o brasão e "REPÚBLICA FEDERATIVA DO BRASIL / REGISTRO CIVIL DAS PESSOAS NATURAIS" no alto e a nota de assinatura digital no lugar da linha
+
 #### Scenario: Nascimento sem gêmeo
 - **WHEN** o registro não tem gêmeo
 - **THEN** a certidão sai sem a linha "Gêmeo", como manda o Anexo IV
