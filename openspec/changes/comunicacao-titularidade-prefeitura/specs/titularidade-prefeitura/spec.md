@@ -97,3 +97,25 @@ e a DOI, e abrir o ato preenchido com as partes, o imóvel, a operação e o val
 #### Scenario: Da guia ao ato
 - **WHEN** a serventia clica em "Sim, gerar a comunicação" numa guia de ITIV
 - **THEN** o formulário abre com transmitentes, adquirentes, imóvel e valor da guia, faltando a data, o livro e as folhas
+
+### Requirement: Carga CTP no leiaute do CENSEC
+A Carga CTP em JSON DEVE (SHALL) sair no leiaute da DOI, uma declaração por ato, porque o "Registro
+de CTP" do CENSEC pede as mesmas fichas (dados iniciais, operação imobiliária, imóvel, alienantes,
+adquirentes) e a carga é enviada em JSON por mês. O ato DEVE (SHALL) guardar e o arquivo levar,
+quando informados: MNE, forma de pagamento, permuta, pagamento em espécie e valor, parte do imóvel
+transacionada (% ou ha/m²) e valor, tipo do imóvel, áreas, CEP e CIB; a leitura do título DEVE
+(SHALL) preencher os que o texto traz.
+
+#### Scenario: Mês negativo no CENSEC
+- **WHEN** a serventia baixa a Carga CTP de um mês sem ato
+- **THEN** o arquivo traz a lista de declarações vazia
+
+### Requirement: DOI no leiaute oficial e no formato PGD
+A DOI em JSON DEVE (SHALL) seguir o esquema oficial da DOI-Web (layout-doiweb.json da Receita
+Federal): declaração plana, sem campo fora do leiaute, com os tamanhos e as tabelas do esquema, e as
+partes identificadas pelo CPF ou CNPJ. A DOI DEVE (SHALL) sair também no formato PGD (DOI.TXT, linhas
+de 365 posições, registros 1, 2, 3 e 9, códigos do PGD), para a opção "Formato PGD" da importação.
+
+#### Scenario: Conferência pelo esquema
+- **WHEN** os testes geram a DOI de um ato completo, de registro de imóveis, rural e de um mês vazio
+- **THEN** cada arquivo passa no esquema oficial sem nenhuma violação

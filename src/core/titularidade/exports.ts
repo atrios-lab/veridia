@@ -1,6 +1,7 @@
 import {
-  competenceLabel,
+  doiOf,
   OPERATIONS,
+  PROPERTY_TYPES as PROPERTY_LABELS,
   SERVICES,
   type TitleTransfer,
   type TransferParty,
@@ -24,14 +25,18 @@ import {
  */
 
 export const EXPORT_FORMATS = {
-  "ctp-xml": { label: "Carga CTP em XML", ext: "xml", type: "application/xml" },
+  "ctp-xml": {
+    label: "Carga CTP em XML (leiaute da DOI)",
+    ext: "xml",
+    type: "application/xml",
+  },
   "ctp-json": {
-    label: "Carga CTP em JSON",
+    label: "Carga CTP em JSON para o CENSEC (leiaute da DOI)",
     ext: "json",
     type: "application/json",
   },
   "ctp-txt": {
-    label: "Carga CTP em TXT (separado por |)",
+    label: "Relação em TXT (separado por |)",
     ext: "txt",
     type: "text/plain",
   },
@@ -46,6 +51,11 @@ export const EXPORT_FORMATS = {
     type: "application/json",
   },
   "doi-xml": { label: "DOI em XML", ext: "xml", type: "application/xml" },
+  "doi-pgd": {
+    label: "DOI no formato PGD (DOI.TXT, linhas de 365 posições)",
+    ext: "txt",
+    type: "text/plain",
+  },
 } as const;
 export type ExportFormat = keyof typeof EXPORT_FORMATS;
 
@@ -89,84 +99,28 @@ function compact<T extends Record<string, unknown>>(object: T): Partial<T> {
 
 // ---------------------------------------------------------------- CTP
 
-function partyOut(p: TransferParty) {
-  return compact({
-    nome: p.name,
-    cpfCnpj: digits(p.taxId) || undefined,
-    participacao: shareOf(p.share),
-  });
-}
-
-/** One act of the Carga CTP, with the words beside the DOI codes. */
-function ctpAct(t: TitleTransfer, index: number) {
-  return compact({
-    sequencia: index + 1,
-    servico: SERVICES[t.service].label,
-    ato: (SERVICES[t.service].acts as Record<string, string>)[t.act] ?? t.act,
-    dataAto: t.actDate,
-    livro: t.book,
-    folhas: t.page,
-    registroAverbacao: t.entry,
-    codigoOperacaoDoi: t.operation,
-    operacao:
-      t.operation === "39" && t.operationOther
-        ? t.operationOther
-        : OPERATIONS[t.operation],
-    imovel: compact({
-      destinacao: t.destination,
-      matricula: t.matricula,
-      registroImoveis: t.registry,
-      inscricaoImobiliaria: t.fiscalRegistration,
-      endereco: t.address,
-      descricao: t.description,
-    }),
-    valorDeclarado: money(t.valueCents),
-    baseCalculoItbiItcmd: money(t.taxBaseCents),
-    transmitentes: t.transmitentes.map(partyOut),
-    adquirentes: t.adquirentes.map(partyOut),
-    observacoes: t.notes,
-  });
-}
-
-export function ctpObject(
-  office: OfficeForExport,
-  competence: string,
-  transfers: TitleTransfer[],
-) {
-  return {
-    comunicacaoTitularidade: compact({
-      fundamento:
-        "Código Nacional de Normas (Provimento CNJ nº 149/2023), art. 184-A; Resolução CNJ nº 547/2024, art. 4º",
-      serventia: office.name,
-      cns: office.cns,
-      municipio: `${office.city}/${office.state}`,
-      competencia: competence,
-      descricaoCompetencia: competenceLabel(competence),
-      semMovimento: transfers.length === 0,
-      quantidadeAtos: transfers.length,
-      atos: transfers.map(ctpAct),
-    }),
-  };
-}
-
+/**
+ * The Carga CTP as the CENSEC takes it ("Abertura de Carga - CTP", file
+ * in JSON by month): its "Registro de CTP" asks, step by step, the same
+ * fichas as the DOI (dados iniciais, operação imobiliária, imóvel,
+ * alienantes, adquirentes), since art. 184-A, § 1º, makes the cases the
+ * DOI's. So the file is the DOI's layout, one declaration per act; an
+ * empty month (mês negativo) is an empty list.
+ */
 export function ctpJson(
-  office: OfficeForExport,
-  competence: string,
+  _office: OfficeForExport,
+  _competence: string,
   transfers: TitleTransfer[],
 ): string {
-  return `${JSON.stringify(ctpObject(office, competence, transfers), null, 2)}\n`;
+  return doiJson(transfers);
 }
 
 export function ctpXml(
-  office: OfficeForExport,
-  competence: string,
+  _office: OfficeForExport,
+  _competence: string,
   transfers: TitleTransfer[],
 ): string {
-  return toXml(ctpObject(office, competence, transfers), {
-    atos: "ato",
-    transmitentes: "transmitente",
-    adquirentes: "adquirente",
-  });
+  return doiXml(transfers);
 }
 
 const pipe = (value: unknown) =>
@@ -267,69 +221,107 @@ const ACT_CODE: Record<string, string> = {
   registro: "4",
 };
 
+const cut = (value: string, max: number) =>
+  value.trim().slice(0, max) || undefined;
+
+/**
+ * One party as the DOI-Web's schema takes it (layout-doiweb.json,
+ * AlienanteDTO/AdquirenteDTO): identified by the NI (CPF or CNPJ), never
+ * by the name, with the four indicators the schema requires.
+ */
 function doiParty(p: TransferParty) {
   const ni = digits(p.taxId);
   const share = shareOf(p.share);
   return compact({
-    indicadorNiIdentificado: ni.length > 0,
+    indicadorNiIdentificado: ni.length >= 11,
     // DOI "Tabela 10": 2 = não consta no documento.
-    motivoNaoIdentificacaoNi: ni ? undefined : "2",
-    ni: ni || undefined,
-    nome: p.name,
+    motivoNaoIdentificacaoNi: ni.length >= 11 ? undefined : "2",
+    ni: ni.length >= 11 ? ni.slice(0, 14) : undefined,
     participacao: share,
-    indicadorNaoConstaParticipacaoOperacao:
-      share === undefined ? true : undefined,
-    indicadorEspolio: /^esp[óo]lio\b/i.test(p.name) || undefined,
+    indicadorNaoConstaParticipacaoOperacao: share === undefined,
+    indicadorEstrangeiro: false,
+    indicadorEspolio: /^esp[óo]lio\b/i.test(p.name),
   });
 }
 
-/** One DOI declaration from an act, in the DOI-Web's field names. */
+/** "1.234,56" → 1234.56; blank → undefined. */
+const decimal = (text: string) => {
+  const t = text.trim();
+  if (!t) return undefined;
+  const n = Number(
+    t.includes(",") ? t.replace(/\./g, "").replace(",", ".") : t,
+  );
+  return Number.isFinite(n) && n > 0 ? n : undefined;
+};
+
+/**
+ * One declaration in the DOI-Web's import layout (the RFB's
+ * layout-doiweb.json, DeclaracaoDadosBasicosDTO, received from the office
+ * on 14/11/2026): a flat object, no field outside the schema, each one
+ * within its size; a field the title does not have is left out.
+ */
 export function doiDeclaration(t: TitleTransfer) {
   const notas = t.service === "notas";
+  const d = doiOf(t);
+  const rural = t.destination === "rural";
+  const address = rural ? {} : addressParts(t.address);
+  const area = decimal(d.area);
+  const built = decimal(d.builtArea);
+  const matricula = digits(t.matricula);
   return {
     ...compact({
+      // DOI "Tabela 1": 0 = original, the only one the import takes.
+      tipoDeclaracao: "0",
       tipoServico: notas ? "1" : "2",
       dataLavraturaRegistroAverbacao: t.actDate,
       tipoAto: ACT_CODE[t.act],
-      tipoLivro: notas ? undefined : t.matricula ? "1" : undefined,
-      numeroLivro: notas ? t.book : undefined,
-      folha: notas ? t.page : undefined,
-      matricula: notas ? undefined : digits(t.matricula) || undefined,
-      numeroRegistroAverbacao: notas ? undefined : t.entry,
-    }),
-    operacaoImobiliaria: compact({
+      tipoLivro: notas ? undefined : matricula ? "1" : undefined,
+      numeroLivro: notas ? cut(t.book, 7) : undefined,
+      folha: notas ? cut(t.page, 7) : undefined,
+      matriculaNotarialEletronica:
+        notas && d.mne ? d.mne.slice(0, 24) : undefined,
+      matricula: matricula && matricula.length <= 7 ? matricula : undefined,
+      numeroRegistroAverbacao: notas ? undefined : cut(digits(t.entry), 7),
       dataNegocioJuridico: t.actDate,
       tipoOperacaoImobiliaria: t.operation,
       descricaoOutrasOperacoesImobiliarias:
-        t.operation === "39" ? t.operationOther.slice(0, 30) : undefined,
+        t.operation === "39" ? cut(t.operationOther, 30) : undefined,
       valorOperacaoImobiliaria: money(t.valueCents),
-      indicadorNaoConstaValorOperacaoImobiliaria:
-        t.valueCents === null ? true : undefined,
+      indicadorNaoConstaValorOperacaoImobiliaria: t.valueCents === null,
       valorBaseCalculoItbiItcmd: money(t.taxBaseCents),
-      indicadorNaoConstaValorBaseCalculoItbiItcmd:
-        t.taxBaseCents === null ? true : undefined,
-    }),
-    imovel: compact({
+      indicadorNaoConstaValorBaseCalculoItbiItcmd: t.taxBaseCents === null,
+      formaPagamento: d.paymentForm,
+      indicadorPermutaBens: d.exchange,
+      indicadorPagamentoDinheiro: d.cash,
+      valorPagoMoedaCorrenteDataAto: d.cash ? money(d.cashCents) : undefined,
+      tipoParteTransacionada: d.partType,
+      valorParteTransacionada: d.partType ? decimal(d.partValue) : undefined,
       // DOI "Tabela 9": 1 urbano, 3 rural.
-      destinacao:
-        t.destination === "rural"
-          ? "3"
-          : t.destination === "urbano"
-            ? "1"
-            : undefined,
-      matricula: digits(t.matricula) || undefined,
-      inscricaoMunicipal: t.fiscalRegistration,
-      ...(t.destination === "rural" ? {} : addressParts(t.address)),
-      denominacao:
-        t.destination === "rural" ? t.description.slice(0, 200) : undefined,
+      destinacao: rural ? "3" : t.destination === "urbano" ? "1" : undefined,
+      indicadorImovelPublicoUniao: false,
+      cib: rural ? cut(d.cib, 8) : undefined,
+      codigoIncra: rural ? cut(d.incra, 13) : undefined,
+      denominacao: rural ? cut(t.description, 200) : undefined,
+      inscricaoMunicipal: cut(t.fiscalRegistration, 45),
+      tipoImovel: d.propertyType,
+      areaImovel: area,
+      indicadorAreaLoteNaoConsta: area === undefined,
+      areaConstruida: built,
+      indicadorAreaConstruidaNaoConsta: built === undefined,
+      tipoLogradouro: cut(address.tipoLogradouro ?? "", 30),
+      nomeLogradouro: cut(address.nomeLogradouro ?? "", 150),
+      numeroImovel: cut(address.numeroImovel ?? "", 10),
+      bairro: cut(address.bairro ?? "", 150),
+      cep: d.cep.length === 8 ? d.cep : undefined,
     }),
+    ...(d.ibge.length === 7 ? { municipiosUF: [{ codigoIbge: d.ibge }] } : {}),
     alienantes: t.transmitentes.map(doiParty),
     adquirentes: t.adquirentes.map(doiParty),
   };
 }
 
 export function doiObject(transfers: TitleTransfer[]) {
-  return { declaracoes: transfers.map(doiDeclaration) };
+  return { declaracoes: transfers.map((t) => doiDeclaration(t)) };
 }
 
 export function doiJson(transfers: TitleTransfer[]): string {
@@ -341,7 +333,181 @@ export function doiXml(transfers: TitleTransfer[]): string {
     declaracoes: "declaracao",
     alienantes: "alienante",
     adquirentes: "adquirente",
+    municipiosUF: "municipio",
   });
+}
+
+// ---------------------------------------------------------------- PGD
+
+/**
+ * DOI-Web operation codes → the PGD's ("Tipo da transação", ajuda DOI
+ * importação PGD, versão 6.1). The PGD's older list has no own code for
+ * some: they go as 39 (outros) with the description.
+ */
+const PGD_OPERATION: Record<string, string> = {
+  "11": "11",
+  "13": "13",
+  "15": "15",
+  "19": "19",
+  "21": "21",
+  "31": "31",
+  "33": "33",
+  "35": "35",
+  "37": "37",
+  "41": "41",
+  "45": "45",
+  "47": "47",
+  "55": "55",
+  "63": "25",
+  "64": "25",
+  "67": "53",
+  "69": "27",
+  "70": "49",
+  "71": "51",
+  "72": "51",
+};
+
+const PGD_PROPERTY: Record<string, string> = {
+  "67": "67",
+  "65": "65",
+  "15": "15",
+  "90": "17",
+  "91": "17",
+  "71": "71",
+  "31": "31",
+  "69": "69",
+};
+
+/** DOI-Web payment form → PGD: 5 à vista, 7 a prazo, 9 não se aplica. */
+const PGD_PAYMENT: Record<string, string> = {
+  "5": "5",
+  "10": "7",
+  "7": "7",
+  "9": "9",
+};
+
+const asciiUpper = (value: string) =>
+  value
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[^\x20-\x7E]/g, " ")
+    .toUpperCase();
+
+/** Left-aligned text, cut and padded with spaces. */
+const alpha = (value: string, size: number) =>
+  asciiUpper(value).slice(0, size).padEnd(size, " ");
+/** Right-aligned, padded with spaces (alphanumeric rule). */
+const right = (value: string, size: number) =>
+  asciiUpper(value).slice(-size).padStart(size, " ");
+/** Right-aligned with zeros (numeric rule). */
+const zeros = (value: string, size: number) =>
+  value.slice(-size).padStart(size, "0");
+/** "20000,00", no thousands point, two decimals, zero-padded. */
+const pgdMoney = (cents: number | null, size: number) =>
+  cents === null
+    ? " ".repeat(size)
+    : zeros((cents / 100).toFixed(2).replace(".", ","), size);
+const pgdDate = (iso: string) =>
+  /^\d{4}-\d{2}-\d{2}$/.test(iso)
+    ? `${iso.slice(8, 10)}/${iso.slice(5, 7)}/${iso.slice(0, 4)}`
+    : " ".repeat(10);
+
+const RECORD = 365;
+
+function pgdParty(kind: "2" | "3", p: TransferParty): string {
+  const ni = digits(p.taxId);
+  const share = shareOf(p.share);
+  const line =
+    kind +
+    " ".repeat(10) +
+    (ni ? right(ni, 14) : " ".repeat(14)) +
+    " ".repeat(115) +
+    (share === undefined
+      ? " ".repeat(6)
+      : zeros(share.toFixed(2).replace(".", ","), 6)) +
+    " ".repeat(11);
+  return line.padEnd(RECORD, " ");
+}
+
+/**
+ * The DOI in the PGD's import file (DOI.TXT): records of 365 positions
+ * plus CRLF, type 1 per declaration followed by its alienantes (2) and
+ * adquirentes (3), and the type 9 with the count, as the RFB's "Ajuda DOI,
+ * leiaute para importar" (versão 6.1) sets them.
+ */
+export function doiPgd(
+  transfers: TitleTransfer[],
+  officeCity: string,
+  officeUf: string,
+): string {
+  const lines: string[] = [];
+  for (const t of transfers) {
+    const d = doiOf(t);
+    const address = addressParts(t.address);
+    const operation = PGD_OPERATION[t.operation] ?? "39";
+    const property =
+      PGD_PROPERTY[d.propertyType] ?? (d.propertyType ? "89" : "  ");
+    const area = decimal(d.area);
+    const record =
+      "1" +
+      " ".repeat(10) +
+      pgdDate(t.actDate) +
+      right(t.service === "notas" ? t.book : "", 7) +
+      right(t.service === "notas" ? (t.page.split(/[/-]/)[0] ?? "") : "", 5) +
+      right(digits(t.matricula), 15) +
+      right(t.service === "ri" ? t.entry : "", 15) +
+      "0" +
+      (t.service === "notas" ? "1" : "2") +
+      zeros(operation, 2) +
+      alpha(
+        operation === "39"
+          ? t.operationOther || (OPERATIONS[t.operation] ?? "")
+          : "",
+        30,
+      ) +
+      "0" +
+      pgdDate(t.actDate) +
+      (PGD_PAYMENT[d.paymentForm] ?? "9") +
+      (t.valueCents === null ? "1" : "0") +
+      pgdMoney(t.valueCents, 15) +
+      pgdMoney(t.taxBaseCents, 15) +
+      property +
+      alpha(
+        property === "89" ? (PROPERTY_LABELS[d.propertyType] ?? "") : "",
+        30,
+      ) +
+      (d.propertyType === "71" ? "2" : decimal(d.builtArea) ? "0" : "2") +
+      (t.destination === "rural" ? "3" : "1") +
+      (area === undefined ? "1" : "0") +
+      (area === undefined
+        ? " ".repeat(17)
+        : zeros(area.toFixed(2).replace(".", ","), 17)) +
+      alpha(
+        [address.tipoLogradouro, address.nomeLogradouro]
+          .filter(Boolean)
+          .join(" "),
+        40,
+      ) +
+      alpha(address.numeroImovel ?? "", 6) +
+      alpha("", 21) +
+      alpha(address.bairro ?? "", 20) +
+      alpha(d.cep, 8) +
+      alpha(d.city || officeCity, 30) +
+      alpha(officeUf, 2) +
+      alpha(digits(t.fiscalRegistration), 15) +
+      (t.taxBaseCents === null ? "1" : "0") +
+      " ".repeat(30);
+    lines.push(record.padEnd(RECORD, " ").slice(0, RECORD));
+    for (const p of t.transmitentes) lines.push(pgdParty("2", p));
+    for (const p of t.adquirentes) lines.push(pgdParty("3", p));
+  }
+  lines.push(
+    `9${" ".repeat(16)}${zeros(String(lines.length + 1), 6)}`.padEnd(
+      RECORD,
+      " ",
+    ),
+  );
+  return `${lines.join("\r\n")}\r\n`;
 }
 
 // ---------------------------------------------------------------- XML

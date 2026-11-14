@@ -4,6 +4,7 @@ import {
   ctpTxt,
   ctpXml,
   doiJson,
+  doiPgd,
   doiXml,
   EXPORT_FORMATS,
   isExportFormat,
@@ -41,8 +42,12 @@ export async function GET(request: Request): Promise<Response> {
     "ctp-csv": () => transfersCsv(transfers),
     "doi-json": () => doiJson(transfers),
     "doi-xml": () => doiXml(transfers),
+    "doi-pgd": () =>
+      doiPgd(transfers, tenant.location.city, tenant.location.state),
   }[formato]();
   const info = EXPORT_FORMATS[formato];
+  // The PGD imports a file named DOI.TXT.
+  if (formato === "doi-pgd") return download(body, "DOI.TXT", info.type);
   const prefix = formato.startsWith("doi") ? "doi" : "carga-ctp";
   return download(body, `${prefix}-${mes}.${info.ext}`, info.type);
 }

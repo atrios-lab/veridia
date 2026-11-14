@@ -5,6 +5,7 @@ import {
   actDateIn,
   addressIn,
   bookAndPageIn,
+  doiIn,
   emptyTransfer,
   operationIn,
   type Service,
@@ -123,6 +124,7 @@ export async function readTitleFile(
       .filter((p) => p.role === "adquirente")
       .map((p) => ({ name: p.name, taxId: p.taxId, share: "" })),
   };
+  transfer.doi = doiIn(text, transfer.operation);
   const unplaced = reading.parties.filter((p) => !p.role);
   if (unplaced.length > 0) {
     transfer.notes = `Pessoas lidas sem saber se transmitem ou adquirem (mova para o lado certo): ${unplaced
