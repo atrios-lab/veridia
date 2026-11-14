@@ -345,6 +345,11 @@ export function transferWarnings(t: TitleTransfer): string[] {
   }
   if (!doi.paymentForm)
     warnings.push("Sem forma de pagamento: a DOI e o CENSEC pedem.");
+  if (t.service === "notas" && !/^\d{7}$/.test(doi.ibge)) {
+    warnings.push(
+      "Sem o código IBGE do município do imóvel (7 números): o CENSEC exige na Carga CTP.",
+    );
+  }
   if (!doi.partType || !doi.partValue) {
     warnings.push(
       "Sem a parte do imóvel transacionada (% ou ha/m²): a DOI e o CENSEC pedem.",

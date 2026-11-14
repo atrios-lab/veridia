@@ -99,16 +99,22 @@ e a DOI, e abrir o ato preenchido com as partes, o imóvel, a operação e o val
 - **THEN** o formulário abre com transmitentes, adquirentes, imóvel e valor da guia, faltando a data, o livro e as folhas
 
 ### Requirement: Carga CTP no leiaute do CENSEC
-A Carga CTP em JSON DEVE (SHALL) sair no leiaute da DOI, uma declaração por ato, porque o "Registro
-de CTP" do CENSEC pede as mesmas fichas (dados iniciais, operação imobiliária, imóvel, alienantes,
-adquirentes) e a carga é enviada em JSON por mês. O ato DEVE (SHALL) guardar e o arquivo levar,
+A Carga CTP em JSON DEVE (SHALL) seguir o esquema oficial do CENSEC (Swagger, Doi.CtpData): o
+cabeçalho com o CNS e a competência (quinzenaReferencia 2, o mês pelo nome da tabela do CENSEC) e
+uma declaração por ato de notas, com as fichas da DOI (dados iniciais, operação imobiliária, imóvel,
+alienantes, adquirentes), os códigos traduzidos para os nomes que o CENSEC aceita e o código IBGE
+do município na raiz; os atos do registro de imóveis ficam de fora, porque comunicam pelo ONR. O ato DEVE (SHALL) guardar e o arquivo levar,
 quando informados: MNE, forma de pagamento, permuta, pagamento em espécie e valor, parte do imóvel
 transacionada (% ou ha/m²) e valor, tipo do imóvel, áreas, CEP e CIB; a leitura do título DEVE
 (SHALL) preencher os que o texto traz.
 
 #### Scenario: Mês negativo no CENSEC
 - **WHEN** a serventia baixa a Carga CTP de um mês sem ato
-- **THEN** o arquivo traz a lista de declarações vazia
+- **THEN** o arquivo traz a lista de declarações vazia, e a tela orienta o fechamento negativo
+
+#### Scenario: Arquivo conferido com o esquema do CENSEC
+- **WHEN** a serventia baixa a Carga CTP de um mês com atos de notas completos
+- **THEN** o arquivo não tem campo fora do esquema nem valor fora das tabelas do CENSEC
 
 ### Requirement: DOI no leiaute oficial e no formato PGD
 A DOI em JSON DEVE (SHALL) seguir o esquema oficial da DOI-Web (layout-doiweb.json da Receita

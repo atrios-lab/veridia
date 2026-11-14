@@ -242,10 +242,12 @@ export default async function TitularidadePage({
             Arquivos do mês para baixar e anexar
           </h2>
           <p className="mt-1 text-sm text-muted-foreground text-justify hyphens-auto">
-            A A Carga CTP (Comunicação de Transações às Prefeituras) e a DOI
-            saem dos atos lançados, no mesmo leiaute, porque o CENSEC pede no
-            Registro de CTP as mesmas fichas da DOI. No CENSEC: Área do Cartório
-            › Carga - CTP, escolha o mês, o formato Json e arraste o arquivo. O
+            A Carga CTP (Comunicação de Transações às Prefeituras) e a DOI saem
+            dos atos lançados. A CTP segue o esquema oficial do CENSEC: o
+            cabeçalho com o CNS e o mês, e as fichas da DOI, só com os atos de
+            notas (o registro de imóveis comunica pelo ONR). No CENSEC: CTP ›
+            Cargas, escolha o mês e anexe o JSON; depois faça o fechamento do
+            mês. Mês sem ato não tem arquivo: faça o fechamento negativo. O
             ofício em PDF e em Word fica na página de cada ofício gerado.
           </p>
           <div className="mt-4 grid gap-3 sm:grid-cols-2">

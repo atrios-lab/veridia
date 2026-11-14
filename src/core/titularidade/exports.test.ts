@@ -1,5 +1,7 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
+import censec from "../censec/censec-carga.schema.json" with { type: "json" };
+import { schemaProblems } from "../censec/schema.ts";
 import {
   addressParts,
   ctpJson,
@@ -258,9 +260,46 @@ test("participação e endereço em partes", () => {
   });
 });
 
-test("Carga CTP para o CENSEC no leiaute da DOI, a relação em TXT e o mês negativo", () => {
+test("Carga CTP para o CENSEC: cabeçalho e o esquema oficial do CENSEC", () => {
   const json = JSON.parse(ctpJson(OFFICE, "2026-10", [act()]));
-  assert.deepEqual(validate(json, LAYOUT), []);
+  assert.deepEqual(json.quinzena, {
+    anoReferencia: 2026,
+    mesReferencia: "Outubro",
+    quinzenaReferencia: 2,
+  });
+  assert.equal(json.cns, 0);
+  assert.deepEqual(schemaProblems(json, censec), []);
+  const [declaration] = json.declaracoes;
+  assert.equal(declaration.codigoIbge, "2400000");
+  assert.equal(
+    declaration.matriculaNotarialEletronica,
+    "123456202611140000000123",
+  );
+  assert.equal("municipiosUF" in declaration, false);
+  assert.equal("tipoLivro" in declaration, false);
+  assert.equal(declaration.tipoOperacaoImobiliaria, "CompraEVenda");
+  assert.equal(declaration.formaPagamento, "QuitadoAVista");
+  assert.equal(declaration.tipoParteTransacionada, "Percentual");
+  assert.equal(
+    declaration.adquirentes[0].motivoNaoIdentificacaoNi,
+    "NaoConstaNoDocumento",
+  );
+  // Without the IBGE code the CENSEC refuses, and the check says so.
+  const noIbge = act();
+  noIbge.doi = { ...noIbge.doi, ibge: "" };
+  assert.match(
+    schemaProblems(
+      JSON.parse(ctpJson(OFFICE, "2026-10", [noIbge])),
+      censec,
+    ).join(),
+    /código IBGE do município: obrigatório/,
+  );
+  // The registro de imóveis informs the ONR: its acts stay out.
+  const ri = { ...act(), service: "ri" as const, act: "registro" };
+  assert.equal(
+    JSON.parse(ctpJson(OFFICE, "2026-10", [ri])).declaracoes.length,
+    0,
+  );
   const xml = ctpXml(OFFICE, "2026-10", [act()]);
   assert.match(xml, /^<\?xml version="1.0" encoding="UTF-8"\?>/);
   assert.match(xml, /<declaracoes>\s*<declaracao>/);
@@ -270,9 +309,7 @@ test("Carga CTP para o CENSEC no leiaute da DOI, a relação em TXT e o mês neg
     "H|Cartório Fictício|000000|Cidade Fictícia/RN|2026-10|1",
   );
   assert.equal(txt.filter((l) => l.startsWith("D|")).length, 2);
-  assert.deepEqual(JSON.parse(ctpJson(OFFICE, "2026-09", [])), {
-    declaracoes: [],
-  });
+  assert.deepEqual(JSON.parse(ctpJson(OFFICE, "2026-09", [])).declaracoes, []);
 });
 
 test("da guia de ITIV sai a comunicação, sem data nem livro", () => {

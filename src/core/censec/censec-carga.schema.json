@@ -1,0 +1,1744 @@
+{
+  "$comment": "Esquemas da carga da CENSEC, copiados sem alteração do Swagger oficial (censec.org.br/swagger/api/swagger.json, CENSEC API 2.74.0 RTM), consultado em 14/11/2026. Só os que a requisição de carga (Cargas.UploadCargaRequest) usa.",
+  "$ref": "#/$defs/Cargas.UploadCargaRequest",
+  "$defs": {
+    "Cargas.UploadCargaRequest": {
+      "required": ["cns", "quinzena"],
+      "type": "object",
+      "properties": {
+        "atosCep": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/Atos.AtoCepData"
+          },
+          "nullable": true
+        },
+        "atosCesdi": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/Atos.AtoCesdiData"
+          },
+          "nullable": true
+        },
+        "testamentos": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/Atos.TestamentoData"
+          },
+          "nullable": true
+        },
+        "declaracoes": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/Doi.CtpData"
+          },
+          "nullable": true
+        },
+        "cns": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "quinzena": {
+          "$ref": "#/$defs/Lotes.QuinzenaModel"
+        }
+      },
+      "additionalProperties": false
+    },
+    "Atos.AtoCepData": {
+      "required": ["data", "folha", "livro", "partes", "tipoAtoCep"],
+      "type": "object",
+      "properties": {
+        "tipoAtoCep": {
+          "enum": [
+            "Escritura",
+            "Procuracao",
+            "ProcuracaoParaFinsPrevidenciarios",
+            "RenunciaDeProcuracao",
+            "RevogacaoDeProcuracao",
+            "Substabelecimento",
+            "AtaNotarial",
+            "AtaNotarialDeUsucapiao",
+            "ProcuracaoPrivada",
+            "ProcuracaoAutoridadeEstrangeira"
+          ],
+          "type": "string"
+        },
+        "naturezaEscritura": {
+          "enum": [
+            "AcordoExtrajudicial",
+            "AlienacaoFiduciaria",
+            "Cessao",
+            "CompraEVenda",
+            "ConfissaoDeDividaOuDacaoEmPagamento",
+            "Declaracao",
+            "DeclaratoriaDeUniaoEstavel",
+            "DeclaratoriaDeUniaoEstavelHomoafetiva",
+            "Desapropriacao",
+            "DissolucaoDeUniaoEstavel",
+            "Distrato",
+            "Doacao",
+            "Emancipacao",
+            "Hipoteca",
+            "Incorporacao",
+            "BemDeFamilia",
+            "Locacao",
+            "PactoAnteNupcial",
+            "Penhor",
+            "PromessaDeCessaoDeDireitosAquisitivos",
+            "Quitacao",
+            "Rerratificacao",
+            "ReconhecimentoDePaternidade",
+            "RegistroDeChancelaMecanica",
+            "RemissaoDeForoELaudemios",
+            "SemValorDeclarado",
+            "Servidao",
+            "Usufruto",
+            "Condominio",
+            "Parcelamento",
+            "SociedadeEFundacoes",
+            "Transacao",
+            "DireitoDeUsoOuSuperficie",
+            "Divisao",
+            "Fianca",
+            "DiretivasAntecipadasDeVontade",
+            "ConferenciaDeBens",
+            "Novacao",
+            "CreditoComGarantia",
+            "EmissaoDeCedula",
+            "EmissaoDeDebentures",
+            "Revogacao",
+            "RenunciaDeDireitosHereditarios",
+            "ComodatoOuMutuo",
+            "PrestacaoDeServico",
+            "ArrendamentoMercantil",
+            "ConcessaoDeDominio",
+            "ContratoDeNamoro",
+            "Conciliacao",
+            "Mediacao",
+            "Afetacao",
+            "Autocuratela",
+            "DeclaratoriaComDiretivasDeCuratela",
+            "PromessaDeCompraEVenda",
+            "CessaoDeDireitosHereditarios",
+            "CessaoDeContratos",
+            "CessaoDeDireitoCreditorio",
+            "CessaoDePosse",
+            "CessaoDePrecatorios"
+          ],
+          "type": "string",
+          "nullable": true
+        },
+        "naturezaAtaNotarialDeUsucapiao": {
+          "enum": [
+            "Ordinaria",
+            "Extraordinaria",
+            "EspecialRural",
+            "EspecialUrbana",
+            "EspecialFamiliar"
+          ],
+          "type": "string",
+          "nullable": true
+        },
+        "livro": {
+          "maxLength": 15,
+          "minLength": 1,
+          "pattern": "^\\d+$",
+          "type": "string"
+        },
+        "folha": {
+          "maxLength": 10,
+          "minLength": 1,
+          "pattern": "^\\d+$",
+          "type": "string"
+        },
+        "livroComplemento": {
+          "maxLength": 50,
+          "type": "string",
+          "nullable": true
+        },
+        "folhaComplemento": {
+          "maxLength": 50,
+          "type": "string",
+          "nullable": true
+        },
+        "data": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "dataValidade": {
+          "type": "string",
+          "format": "date-time",
+          "nullable": true
+        },
+        "valor": {
+          "type": "number",
+          "format": "double",
+          "nullable": true
+        },
+        "desconhecidoOutros": {
+          "maxLength": 200,
+          "type": "string",
+          "description": "Corresponde ao campo \"Desconhecido\" do envio XML e TXT",
+          "nullable": true
+        },
+        "naturezaLitigio": {
+          "enum": [
+            "Bancario",
+            "ConcessionariaDeAgua",
+            "ConcessionariaDeGas",
+            "ConcessionariaDeLuz",
+            "Consumidor",
+            "Contrato",
+            "Empresarial",
+            "Familia",
+            "Locacao",
+            "Mobiliario",
+            "Previdencia",
+            "Saude",
+            "Seguro",
+            "ServicoPublico",
+            "Sucessoes",
+            "Telefonia",
+            "Transporte",
+            "TransporteAviao",
+            "TransporteBarco",
+            "TransporteMetro",
+            "TransporteOnibus"
+          ],
+          "type": "string",
+          "nullable": true
+        },
+        "acordo": {
+          "type": "boolean",
+          "nullable": true
+        },
+        "complementacao": {
+          "type": "string",
+          "nullable": true
+        },
+        "partes": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/Atos.AtoCepParteData"
+          }
+        },
+        "referentes": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/Atos.AtoCepReferenteData"
+          },
+          "nullable": true
+        },
+        "bensImoveis": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/Atos.AtoCepBemEDireitoData"
+          },
+          "description": "O campo BensImoveis foi descontinuado. Utilize o atributo BensEDireitos nos próximos envios.",
+          "nullable": true,
+          "deprecated": true
+        },
+        "bensEDireitos": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/Atos.AtoCepBemEDireitoData"
+          },
+          "nullable": true
+        },
+        "mne": {
+          "maxLength": 24,
+          "minLength": 24,
+          "pattern": "^\\d+$",
+          "type": "string",
+          "nullable": true
+        },
+        "existeBemEDireito": {
+          "type": "boolean",
+          "nullable": true
+        },
+        "comReservaDePoderes": {
+          "type": "boolean",
+          "description": "Indica se o substabelecimento foi realizado com ou sem reserva de poderes. Aplicável apenas para atos do tipo Substabelecimento.",
+          "nullable": true
+        },
+        "dataContrato": {
+          "type": "string",
+          "format": "date-time",
+          "nullable": true
+        },
+        "formaPagamento": {
+          "enum": [
+            "Cheque",
+            "Dinheiro",
+            "NotaPromissoria",
+            "Permuta",
+            "Transferencia",
+            "Outras"
+          ],
+          "type": "string",
+          "description": "O campo FormaPagamento foi descontinuado. Utilize o atributo FormaPagamento dentro dos itens do atributo BensEDireitos nos próximos envios.",
+          "nullable": true,
+          "deprecated": true
+        },
+        "prazoPagamento": {
+          "enum": ["AVista", "APrazo", "Antecipado", "Aditamento"],
+          "type": "string",
+          "description": "O campo PrazoPagamento foi descontinuado. Utilize o atributo PrazoPagamento dentro dos itens do atributo BensEDireitos nos próximos envios.",
+          "nullable": true,
+          "deprecated": true
+        },
+        "regimeBens": {
+          "enum": [
+            "ComunhaoParcial",
+            "ComunhaoUniversal",
+            "ParticipacaoFinalNosAquestos",
+            "SeparacaoTotal",
+            "SeparacaoObrigatoria",
+            "RegimeEspecificoAtribuidoEmPactoAntenupcial"
+          ],
+          "type": "string",
+          "nullable": true
+        }
+      },
+      "additionalProperties": false
+    },
+    "Atos.AtoCepParteData": {
+      "required": ["nome", "qualidade", "tipoDocumento"],
+      "type": "object",
+      "properties": {
+        "nome": {
+          "maxLength": 250,
+          "minLength": 1,
+          "type": "string"
+        },
+        "qualidade": {
+          "enum": [
+            "Outorgado",
+            "Outorgante",
+            "Interveniente",
+            "Usufrutuario",
+            "Requerente",
+            "Requerido",
+            "Conciliador",
+            "Mediador"
+          ],
+          "type": "string"
+        },
+        "identidade": {
+          "maxLength": 25,
+          "type": "string",
+          "nullable": true
+        },
+        "orgaoEmissor": {
+          "maxLength": 20,
+          "type": "string",
+          "nullable": true
+        },
+        "numeroDocumento": {
+          "maxLength": 50,
+          "type": "string",
+          "nullable": true
+        },
+        "tipoDocumento": {
+          "enum": [
+            "Cpf",
+            "Cnpj",
+            "Desconhecido",
+            "Rnm",
+            "Cin",
+            "Rg",
+            "Rne",
+            "Passaporte",
+            "Cnh",
+            "Ctps",
+            "CarteiraIdentidadeMilitar",
+            "Crnm",
+            "Dprnm"
+          ],
+          "type": "string"
+        },
+        "estrangeiro": {
+          "type": "boolean"
+        }
+      },
+      "additionalProperties": false
+    },
+    "Atos.AtoCepReferenteData": {
+      "type": "object",
+      "properties": {
+        "tipoAtoCep": {
+          "enum": [
+            "Escritura",
+            "Procuracao",
+            "ProcuracaoParaFinsPrevidenciarios",
+            "RenunciaDeProcuracao",
+            "RevogacaoDeProcuracao",
+            "Substabelecimento",
+            "AtaNotarial",
+            "AtaNotarialDeUsucapiao",
+            "ProcuracaoPrivada",
+            "ProcuracaoAutoridadeEstrangeira"
+          ],
+          "type": "string",
+          "nullable": true
+        },
+        "livro": {
+          "maxLength": 20,
+          "pattern": "^\\d+$",
+          "type": "string",
+          "nullable": true
+        },
+        "folha": {
+          "maxLength": 20,
+          "pattern": "^\\d+$",
+          "type": "string",
+          "nullable": true
+        },
+        "livroComplemento": {
+          "maxLength": 50,
+          "type": "string",
+          "nullable": true
+        },
+        "folhaComplemento": {
+          "maxLength": 50,
+          "type": "string",
+          "nullable": true
+        },
+        "cns": {
+          "type": "integer",
+          "format": "int32",
+          "nullable": true
+        },
+        "referentePais": {
+          "type": "string",
+          "description": "Nome ou código do país, para o referente do tipo Procuração de Autoridade Estrangeira",
+          "nullable": true
+        }
+      },
+      "additionalProperties": false
+    },
+    "Atos.AtoCepBemEDireitoData": {
+      "type": "object",
+      "properties": {
+        "descricaoPormenorizada": {
+          "type": "string",
+          "nullable": true
+        },
+        "valorImovel": {
+          "type": "number",
+          "description": "O campo ValorImovel foi descontinuado. Utilize o atributo ValorBemEDireito nos próximos envios.",
+          "format": "double",
+          "nullable": true,
+          "deprecated": true
+        },
+        "valorBemEDireito": {
+          "type": "number",
+          "format": "double",
+          "nullable": true
+        },
+        "valorFiscal": {
+          "type": "number",
+          "format": "double",
+          "nullable": true
+        },
+        "formaPagamento": {
+          "enum": [
+            "Cheque",
+            "Dinheiro",
+            "NotaPromissoria",
+            "Permuta",
+            "Transferencia",
+            "Outras"
+          ],
+          "type": "string",
+          "nullable": true
+        },
+        "prazoPagamento": {
+          "enum": ["AVista", "APrazo", "Antecipado", "Aditamento"],
+          "type": "string",
+          "nullable": true
+        },
+        "codigoNacionalMatricula": {
+          "maxLength": 50,
+          "type": "string",
+          "nullable": true
+        },
+        "matricula": {
+          "maxLength": 15,
+          "type": "string",
+          "nullable": true
+        }
+      },
+      "additionalProperties": false
+    },
+    "Atos.AtoCesdiData": {
+      "required": ["data", "folha", "livro", "partes", "tipoAtoCesdi"],
+      "type": "object",
+      "properties": {
+        "tipoAtoCesdi": {
+          "enum": [
+            "Separacao",
+            "Reconciliacao",
+            "ConversaoDeSeparacaoEmDivorcio",
+            "DivorcioDireto",
+            "Inventario",
+            "Sobrepartilha",
+            "Retificacao",
+            "NomeacaoDeInventariante",
+            "Partilha",
+            "InventarioComMenorOuIncapaz",
+            "RetificacaoAtoNaoNotarial"
+          ],
+          "type": "string"
+        },
+        "dataCasamento": {
+          "type": "string",
+          "format": "date-time",
+          "nullable": true
+        },
+        "data": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "livro": {
+          "maxLength": 20,
+          "minLength": 1,
+          "pattern": "^\\d+$",
+          "type": "string"
+        },
+        "folha": {
+          "maxLength": 20,
+          "minLength": 1,
+          "pattern": "^\\d+$",
+          "type": "string"
+        },
+        "livroComplemento": {
+          "maxLength": 50,
+          "type": "string",
+          "nullable": true
+        },
+        "folhaComplemento": {
+          "maxLength": 50,
+          "type": "string",
+          "nullable": true
+        },
+        "regimeBens": {
+          "enum": [
+            "ComunhaoParcial",
+            "ComunhaoUniversal",
+            "ParticipacaoFinalNosAquestos",
+            "SeparacaoTotal",
+            "SeparacaoObrigatoria",
+            "RegimeEspecificoAtribuidoEmPactoAntenupcial"
+          ],
+          "type": "string",
+          "nullable": true
+        },
+        "quantidadeFilhosMaiores": {
+          "type": "integer",
+          "format": "int32",
+          "nullable": true
+        },
+        "quantidadeFilhosMenores": {
+          "type": "integer",
+          "format": "int32",
+          "nullable": true
+        },
+        "responsavel": {
+          "enum": [
+            "Conjuge1",
+            "Conjuge2",
+            "AmbosConjuges",
+            "Outros",
+            "SemDeclaracao"
+          ],
+          "type": "string",
+          "nullable": true
+        },
+        "partes": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/Atos.AtoCesdiParteData"
+          }
+        },
+        "mne": {
+          "maxLength": 24,
+          "minLength": 24,
+          "pattern": "^\\d+$",
+          "type": "string",
+          "nullable": true
+        },
+        "existeBemEDireito": {
+          "type": "boolean",
+          "nullable": true
+        },
+        "bensImoveis": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/Atos.AtoCesdiBemEDireitoData"
+          },
+          "nullable": true,
+          "deprecated": true
+        },
+        "bensEDireitos": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/Atos.AtoCesdiBemEDireitoData"
+          },
+          "nullable": true
+        },
+        "referentes": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/Atos.AtoCesdiReferenteData"
+          },
+          "nullable": true
+        }
+      },
+      "additionalProperties": false
+    },
+    "Atos.AtoCesdiParteData": {
+      "required": ["documentos", "nome", "qualidade"],
+      "type": "object",
+      "properties": {
+        "nome": {
+          "maxLength": 150,
+          "minLength": 1,
+          "type": "string"
+        },
+        "conjugeTipo": {
+          "enum": ["Conjuge1", "Conjuge2"],
+          "type": "string",
+          "nullable": true
+        },
+        "qualidade": {
+          "enum": [
+            "Separando",
+            "Advogado",
+            "CessionarioAdjudicatarios",
+            "Cedente",
+            "Interveniente",
+            "Anuente",
+            "Reconciliando",
+            "Divorciando",
+            "Falecido",
+            "Viuvo",
+            "Herdeiro",
+            "Inventariante",
+            "Companheiro"
+          ],
+          "type": "string"
+        },
+        "dataNascimento": {
+          "type": "string",
+          "format": "date-time",
+          "nullable": true
+        },
+        "localNascimentoPais": {
+          "type": "string",
+          "description": "Nome do país de nascimento",
+          "nullable": true
+        },
+        "localNascimentoUf": {
+          "enum": [
+            "AC",
+            "AL",
+            "AP",
+            "AM",
+            "BA",
+            "CE",
+            "DF",
+            "ES",
+            "GO",
+            "MA",
+            "MT",
+            "MS",
+            "MG",
+            "PA",
+            "PB",
+            "PR",
+            "PE",
+            "PI",
+            "RJ",
+            "RN",
+            "RS",
+            "RO",
+            "RR",
+            "SC",
+            "SP",
+            "SE",
+            "TO"
+          ],
+          "type": "string",
+          "nullable": true
+        },
+        "localResidenciaPais": {
+          "type": "string",
+          "description": "Nome do país de residência",
+          "nullable": true
+        },
+        "localResidenciaMunicipio": {
+          "type": "string",
+          "description": "Código Ibge ou nome do município de residência",
+          "nullable": true
+        },
+        "localResidenciaUf": {
+          "enum": [
+            "AC",
+            "AL",
+            "AP",
+            "AM",
+            "BA",
+            "CE",
+            "DF",
+            "ES",
+            "GO",
+            "MA",
+            "MT",
+            "MS",
+            "MG",
+            "PA",
+            "PB",
+            "PR",
+            "PE",
+            "PI",
+            "RJ",
+            "RN",
+            "RS",
+            "RO",
+            "RR",
+            "SC",
+            "SP",
+            "SE",
+            "TO"
+          ],
+          "type": "string",
+          "nullable": true
+        },
+        "sexo": {
+          "enum": ["F", "M"],
+          "type": "string",
+          "nullable": true
+        },
+        "documentos": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/Atos.AtoCesdiParteDocumentoData"
+          }
+        },
+        "estrangeiro": {
+          "type": "boolean"
+        }
+      },
+      "additionalProperties": false
+    },
+    "Atos.AtoCesdiParteDocumentoData": {
+      "required": ["documentoTipo", "prioridade"],
+      "type": "object",
+      "properties": {
+        "documentoTipo": {
+          "enum": [
+            "Cpf",
+            "Cnpj",
+            "Oab",
+            "Rg",
+            "Outros",
+            "Desconhecido",
+            "Rnm",
+            "Cin",
+            "Rne",
+            "Passaporte",
+            "Cnh",
+            "Ctps",
+            "CarteiraIdentidadeMilitar",
+            "Crnm",
+            "Dprnm"
+          ],
+          "type": "string"
+        },
+        "prioridade": {
+          "enum": ["Primario", "Secundario"],
+          "type": "string"
+        },
+        "uf": {
+          "enum": [
+            "AC",
+            "AL",
+            "AP",
+            "AM",
+            "BA",
+            "CE",
+            "DF",
+            "ES",
+            "GO",
+            "MA",
+            "MT",
+            "MS",
+            "MG",
+            "PA",
+            "PB",
+            "PR",
+            "PE",
+            "PI",
+            "RJ",
+            "RN",
+            "RS",
+            "RO",
+            "RR",
+            "SC",
+            "SP",
+            "SE",
+            "TO"
+          ],
+          "type": "string",
+          "nullable": true
+        },
+        "documento": {
+          "maxLength": 50,
+          "type": "string",
+          "nullable": true
+        }
+      },
+      "additionalProperties": false
+    },
+    "Atos.AtoCesdiBemEDireitoData": {
+      "type": "object",
+      "properties": {
+        "descricaoPormenorizada": {
+          "type": "string",
+          "nullable": true
+        },
+        "valorImovel": {
+          "type": "number",
+          "format": "double",
+          "nullable": true,
+          "deprecated": true
+        },
+        "valorBemEDireito": {
+          "type": "number",
+          "format": "double",
+          "nullable": true
+        },
+        "valorFiscal": {
+          "type": "number",
+          "format": "double",
+          "nullable": true
+        },
+        "formaPagamento": {
+          "enum": [
+            "Cheque",
+            "Dinheiro",
+            "NotaPromissoria",
+            "Permuta",
+            "Transferencia",
+            "Outras"
+          ],
+          "type": "string",
+          "nullable": true
+        },
+        "prazoPagamento": {
+          "enum": ["AVista", "APrazo", "Antecipado", "Aditamento"],
+          "type": "string",
+          "nullable": true
+        }
+      },
+      "additionalProperties": false
+    },
+    "Atos.AtoCesdiReferenteData": {
+      "type": "object",
+      "properties": {
+        "tipoAtoCesdi": {
+          "enum": [
+            "Separacao",
+            "Reconciliacao",
+            "ConversaoDeSeparacaoEmDivorcio",
+            "DivorcioDireto",
+            "Inventario",
+            "Sobrepartilha",
+            "Retificacao",
+            "NomeacaoDeInventariante",
+            "Partilha",
+            "InventarioComMenorOuIncapaz",
+            "RetificacaoAtoNaoNotarial"
+          ],
+          "type": "string",
+          "nullable": true
+        },
+        "livro": {
+          "maxLength": 20,
+          "pattern": "^\\d+$",
+          "type": "string",
+          "nullable": true
+        },
+        "folha": {
+          "maxLength": 20,
+          "pattern": "^\\d+$",
+          "type": "string",
+          "nullable": true
+        },
+        "livroComplemento": {
+          "maxLength": 50,
+          "type": "string",
+          "nullable": true
+        },
+        "folhaComplemento": {
+          "maxLength": 50,
+          "type": "string",
+          "nullable": true
+        },
+        "cns": {
+          "type": "integer",
+          "format": "int32",
+          "nullable": true
+        }
+      },
+      "additionalProperties": false
+    },
+    "Atos.TestamentoData": {
+      "required": [
+        "cpf",
+        "dataNascimento",
+        "dataTestamento",
+        "folha",
+        "livro",
+        "nome",
+        "tipoTestamento"
+      ],
+      "type": "object",
+      "properties": {
+        "nome": {
+          "maxLength": 150,
+          "minLength": 1,
+          "type": "string"
+        },
+        "cpf": {
+          "maxLength": 11,
+          "minLength": 1,
+          "pattern": "^\\d+$",
+          "type": "string"
+        },
+        "tipoTestamento": {
+          "enum": [
+            "Aditamento",
+            "Cerrado",
+            "Revogacao",
+            "Testamento",
+            "TestamentoComRevogacao",
+            "TestamentoSemConteudoPatrimonial"
+          ],
+          "type": "string"
+        },
+        "tipoDocumento": {
+          "enum": ["Rg", "Rne", "Oab", "Cpf", "Cnpj", "Outros"],
+          "type": "string",
+          "nullable": true
+        },
+        "documento": {
+          "maxLength": 20,
+          "type": "string",
+          "nullable": true
+        },
+        "documentoComplemento": {
+          "maxLength": 20,
+          "type": "string",
+          "nullable": true
+        },
+        "nomeMae": {
+          "maxLength": 150,
+          "type": "string",
+          "nullable": true
+        },
+        "dataTestamento": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "nomePai": {
+          "maxLength": 150,
+          "type": "string",
+          "nullable": true
+        },
+        "dataNascimento": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "livro": {
+          "maxLength": 15,
+          "minLength": 1,
+          "pattern": "^\\d+$",
+          "type": "string"
+        },
+        "livroComplemento": {
+          "maxLength": 50,
+          "type": "string",
+          "nullable": true
+        },
+        "folha": {
+          "maxLength": 12,
+          "minLength": 1,
+          "pattern": "^\\d+$",
+          "type": "string"
+        },
+        "folhaComplemento": {
+          "maxLength": 50,
+          "type": "string",
+          "nullable": true
+        },
+        "revogacaoCartorioCns": {
+          "type": "integer",
+          "format": "int32",
+          "nullable": true
+        },
+        "revogacaoCidade": {
+          "type": "string",
+          "description": "Código Ibge ou nome do município de revogação",
+          "nullable": true
+        },
+        "revogacaoUf": {
+          "enum": [
+            "AC",
+            "AL",
+            "AP",
+            "AM",
+            "BA",
+            "CE",
+            "DF",
+            "ES",
+            "GO",
+            "MA",
+            "MT",
+            "MS",
+            "MG",
+            "PA",
+            "PB",
+            "PR",
+            "PE",
+            "PI",
+            "RJ",
+            "RN",
+            "RS",
+            "RO",
+            "RR",
+            "SC",
+            "SP",
+            "SE",
+            "TO"
+          ],
+          "type": "string",
+          "nullable": true
+        },
+        "revogacaoDataTestamento": {
+          "type": "string",
+          "format": "date-time",
+          "nullable": true
+        },
+        "revogacaoLivro": {
+          "maxLength": 15,
+          "pattern": "^\\d+$",
+          "type": "string",
+          "nullable": true
+        },
+        "revogacaoLivroComplemento": {
+          "maxLength": 50,
+          "type": "string",
+          "nullable": true
+        },
+        "revogacaoFolha": {
+          "maxLength": 12,
+          "pattern": "^\\d+$",
+          "type": "string",
+          "nullable": true
+        },
+        "revogacaoFolhaComplemento": {
+          "maxLength": 50,
+          "type": "string",
+          "nullable": true
+        },
+        "observacoes": {
+          "maxLength": 2000,
+          "type": "string",
+          "nullable": true
+        },
+        "desconhecidoOutros": {
+          "type": "string",
+          "nullable": true
+        },
+        "mne": {
+          "maxLength": 24,
+          "minLength": 24,
+          "pattern": "^\\d+$",
+          "type": "string",
+          "nullable": true
+        }
+      },
+      "additionalProperties": false
+    },
+    "Doi.CtpData": {
+      "required": [
+        "adquirentes",
+        "codigoIbge",
+        "dataLavraturaRegistroAverbacao",
+        "destinacao",
+        "folha",
+        "formaPagamento",
+        "indicadorImovelPublicoUniao",
+        "indicadorPagamentoDinheiro",
+        "indicadorPermutaBens",
+        "numeroLivro",
+        "tipoAto",
+        "tipoDeclaracao",
+        "tipoOperacaoImobiliaria",
+        "tipoParteTransacionada",
+        "valorParteTransacionada"
+      ],
+      "type": "object",
+      "properties": {
+        "tipoDeclaracao": {
+          "enum": ["Original", "Retificadora", "Canceladora", "Desconhecido"],
+          "type": "string",
+          "description": "Tipo da declaração"
+        },
+        "dataLavraturaRegistroAverbacao": {
+          "type": "string",
+          "description": "Informar a data de lavratura / registro / averbação",
+          "format": "date-time"
+        },
+        "tipoAto": {
+          "enum": ["Desconhecido", "Escritura", "Procuracao"],
+          "type": "string",
+          "description": "Selecionar o tipo do ato"
+        },
+        "numeroLivro": {
+          "maxLength": 100,
+          "minLength": 1,
+          "type": "string",
+          "description": "Informar o número do livro em que o ato foi escriturado ou o título foi registrado"
+        },
+        "folha": {
+          "maxLength": 100,
+          "minLength": 1,
+          "type": "string"
+        },
+        "matriculaNotarialEletronica": {
+          "maxLength": 24,
+          "pattern": "^\\d+$",
+          "type": "string",
+          "description": "Informar a Matrícula Notarial Eletrônica (MNE). Formato: CCCCCCAAAAMMDDNNNNNNNNDD - A MNE deve ser validada através do DV informado, seguindo o algoritmo módulo 97 base 10, conforme norma ISO 7064:2023",
+          "nullable": true
+        },
+        "matricula": {
+          "maxLength": 15,
+          "type": "string",
+          "description": "Informar o número de ordem da matrícula do imóvel",
+          "nullable": true
+        },
+        "codigoNacionalMatricula": {
+          "maxLength": 50,
+          "type": "string",
+          "description": "Informar o Código Nacional de Matrícula (CNM). Formato: CCCCCCLNNNNNNNDD - O CNM informado será validado através do DV informado, seguindo o algoritmo módulo 97 base 10, conforme norma ISO 7064:2023",
+          "nullable": true
+        },
+        "dataNegocioJuridico": {
+          "type": "string",
+          "description": "Informar a data da celebração do negócio jurídico",
+          "format": "date-time",
+          "nullable": true
+        },
+        "tipoOperacaoImobiliaria": {
+          "enum": [
+            "Desconhecido",
+            "CompraEVenda",
+            "Permuta",
+            "Adjudicacao",
+            "DacaoEmPagamento",
+            "DistratoDeNegocio",
+            "RetificacaoDoAto",
+            "Desapropriacao",
+            "HerancaLegadoOuMeacao",
+            "ProcuracaoEmCausaPropria",
+            "PromessaDeCompraEVenda",
+            "PromessaDeCessaoDeDireitos",
+            "CessaoDeDireitos",
+            "Outros",
+            "AlienacaoPorIniciativaParticularOuLeilaoJudicial",
+            "DissolucaoDeSociedade",
+            "IncorporacaoELoteamento",
+            "IntegralizacaoSubscricaoDeCapital",
+            "PartilhaAmigavelOuLitigiosa",
+            "RetornoDeCapitalProprio",
+            "Doacao",
+            "DoacaoEmAdiantamentoDaLegitima",
+            "Aforamento",
+            "CasamentoEmComunhaoUniversalDeBens",
+            "CisaoTotalOuParcial",
+            "CompraEVendaDeImovelGravadoPorEnfiteuse",
+            "ConcessaoDeDireitoRealDeUsoCDRU",
+            "ConcessaoDeUsoEspecialParaFinsDeMoradiaCUEM",
+            "ConsolidacaoDaPropriedadeEmNomeDoFiduciario",
+            "DesapropriacaoParaFinsDeReformaAgraria",
+            "DesapropriacaoExcetoParaReformaAgraria",
+            "DireitoDeLaje",
+            "DireitoDeSuperficie",
+            "DoacaoExcetoEmAdiantamentoDeLegitima",
+            "Incorporacao",
+            "Inventario",
+            "PartSeparacaoDivorcioUniaoEstavel",
+            "RetornoDeCapitalProprioNaExtincaoDePessoaJuridica",
+            "RetornoDeCapitalProprioExcetoNaExtincaoDePessoaJuridica",
+            "TituloDeDominioTD",
+            "Usucapiao"
+          ],
+          "type": "string",
+          "description": "Selecionar o tipo de operação imobiliária dentre as opções da caixa"
+        },
+        "descricaoOutrasOperacoesImobiliarias": {
+          "maxLength": 30,
+          "type": "string",
+          "description": "Descrever a operação imobiliária se o valor selecionado na caixa for \\\"Outras Operações Imobiliárias\\\"",
+          "nullable": true
+        },
+        "valorOperacaoImobiliaria": {
+          "type": "number",
+          "description": "Informar o valor da operação imobiliária. Até o limite de 18 inteiros e 2 casas decimais",
+          "format": "double",
+          "nullable": true
+        },
+        "indicadorNaoConstaValorOperacaoImobiliaria": {
+          "type": "boolean",
+          "description": "Assinalar a caixa se o valor da operação imobiliária não constar do documento",
+          "nullable": true
+        },
+        "valorBaseCalculoItbiItcmd": {
+          "type": "number",
+          "description": "Informar o valor da base de cálculo do ITBI ou do ITCMD. Até o limite de 18 inteiros e 2 casas decimais",
+          "format": "double",
+          "nullable": true
+        },
+        "indicadorNaoConstaValorBaseCalculoItbiItcmd": {
+          "type": "boolean",
+          "description": "Assinalar a caixa se o valor da base de cálculo do ITBI/ITCMD não constar do documento",
+          "nullable": true
+        },
+        "formaPagamento": {
+          "enum": [
+            "Desconhecido",
+            "QuitadoAVista",
+            "APrazo",
+            "NaoSeAplica",
+            "QuitadoAPrazo",
+            "QuitadoSemInformacaoDaFormaDePagamento"
+          ],
+          "type": "string",
+          "description": "Selecionar a forma de pagamento dentre as opções da caixa"
+        },
+        "indicadorAlienacaoFiduciaria": {
+          "type": "boolean",
+          "description": "Informar se o imóvel foi objeto de alienação fiduciária na operação",
+          "nullable": true
+        },
+        "mesAnoUltimaParcela": {
+          "type": "string",
+          "description": "Informar o mês e o ano de vencimento da última parcela para pagamento a prazo",
+          "format": "date-time",
+          "nullable": true
+        },
+        "valorPagoAteDataAto": {
+          "type": "number",
+          "description": "Informar o valor pago até a data do ato. Este campo somente deve ser  incluído se a opção \\\"A prazo\\\" do campo \\\"forma de pagamento\\\" for escolhida. Até o limite de 18 inteiros e 2 casas decimais",
+          "format": "double",
+          "nullable": true
+        },
+        "indicadorPermutaBens": {
+          "type": "boolean",
+          "description": "Informar se houve permuta de bens na operação imobiliária"
+        },
+        "indicadorPagamentoDinheiro": {
+          "type": "boolean",
+          "description": "Informar se houve pagamento em dinheiro"
+        },
+        "valorPagoMoedaCorrenteDataAto": {
+          "type": "number",
+          "description": "Informar o valor pago em espécie até a data do ato. Este campo somente deve ser  incluído se a informação no campo “indicadorPagamentoDinheiro” for True. Até o limite de 18 inteiros e 2 casas decimais",
+          "format": "double",
+          "nullable": true
+        },
+        "tipoParteTransacionada": {
+          "enum": ["Desconhecido", "Percentual", "HaM2"],
+          "type": "string",
+          "description": "Selecionar se a informação da parte transacionada do  imóvel será em percentual ou área"
+        },
+        "valorParteTransacionada": {
+          "type": "number",
+          "description": "Informar a quantidade de metros/hectares ou o percentual que foi objeto da operação imobiliária, conforme opção no campo tipoParteTransacionada. Até o limite de 18 inteiros e 2 casas decimais",
+          "format": "double"
+        },
+        "cib": {
+          "maxLength": 8,
+          "type": "string",
+          "description": "Informar o código do imóvel no Cadastro Imobiliário Brasileiro (CIB). Cálculo do DV quando os caracteres originais são exclusivamente numéricos:algoritimo utilizado pelo Nirf, segundo a regra do Módulo 11. Cálculo do DV quando os caracteres originais não são exclusivamente numéricos: a) para cada caractere codificado, o seu valor será multiplicado pela sequência de fatores 4,3,9,5,7,1, e 8; b) a soma dos produtos será dividida por 31",
+          "nullable": true
+        },
+        "destinacao": {
+          "enum": ["Desconhecido", "Urbano", "Rural"],
+          "type": "string",
+          "description": "Indica se o imóvel é rual ou urbano"
+        },
+        "indicadorImovelPublicoUniao": {
+          "type": "boolean",
+          "description": "Informar se o imóvel objeto da operação imobiliária é imóvel público da União"
+        },
+        "registroImobiliarioPatrimonial": {
+          "maxLength": 13,
+          "type": "string",
+          "description": "Informar a identificação do imóvel no cadastro da Secretaria de Patrimônio da União (SPU), ou seja, o número do Registro Imobiliário Patrimonial (RIP)",
+          "nullable": true
+        },
+        "certidaoAutorizacaoTransferencia": {
+          "maxLength": 11,
+          "type": "string",
+          "description": "Informar o número da Certidão de Autorização para Transferência (CAT) emitida pela Secretaria de Patrimônio da União (SPU)",
+          "nullable": true
+        },
+        "inscricaoMunicipal": {
+          "maxLength": 45,
+          "type": "string",
+          "description": "Código da inscrição imobiliária",
+          "nullable": true
+        },
+        "codigoIbge": {
+          "maxLength": 7,
+          "minLength": 7,
+          "pattern": "^\\d+$",
+          "type": "string",
+          "description": "Informar o código IBGE do município onde se localiza o imóvel"
+        },
+        "areaImovel": {
+          "type": "number",
+          "description": "Área do lote urbano em m2 ou área do imóvel rural em ha. Informar de acordo com a matrícula. Até o limite de 13 inteiros e 2 casas decimais",
+          "format": "double",
+          "nullable": true
+        },
+        "indicadorAreaLoteNaoConsta": {
+          "type": "boolean",
+          "description": "Indicador de que a área do imóvel não consta nos Documentos. Vide Observações",
+          "nullable": true
+        },
+        "areaConstruida": {
+          "type": "number",
+          "description": "Área Construída (m2). Informar de acordo com a matrícula. Até o limite de 12 inteiros e 4 casas decimais. Preenchimento em m2",
+          "format": "double",
+          "nullable": true
+        },
+        "indicadorAreaConstruidaNaoConsta": {
+          "type": "boolean",
+          "description": "Indicador de que a área de construção do imóvel não consta nos Documentos",
+          "nullable": true
+        },
+        "tipoImovel": {
+          "enum": [
+            "Loja",
+            "SalaConjunto",
+            "Galpao",
+            "PredioComercial",
+            "PredioResidencial",
+            "Apartamento",
+            "Casa",
+            "FazendaSitioChacara",
+            "TerrenoFracao",
+            "SalaLoja",
+            "Construcoes",
+            "Desmembramento",
+            "Outros",
+            "Sala",
+            "ConjuntoDeSalas",
+            "Sobreloja",
+            "VagaDeGaragem",
+            "Laje",
+            "Estacionamento",
+            "Barraco"
+          ],
+          "type": "string",
+          "description": "Classificação de acordo com o uso finalistico da UI",
+          "nullable": true
+        },
+        "tipoLogradouro": {
+          "maxLength": 30,
+          "type": "string",
+          "description": "Tipo logradouro do endereço do imóvel",
+          "nullable": true
+        },
+        "nomeLogradouro": {
+          "maxLength": 255,
+          "type": "string",
+          "description": "Logradouro do endereço do imóvel",
+          "nullable": true
+        },
+        "numeroImovel": {
+          "maxLength": 10,
+          "type": "string",
+          "description": "Número do endereço do imóvel",
+          "nullable": true
+        },
+        "complementoNumeroImovel": {
+          "maxLength": 10,
+          "type": "string",
+          "description": "Complemente do número do endereço do imóvel",
+          "nullable": true
+        },
+        "complementoEndereco": {
+          "maxLength": 100,
+          "type": "string",
+          "description": "Complemento do endereço do imóvel",
+          "nullable": true
+        },
+        "bairro": {
+          "maxLength": 150,
+          "type": "string",
+          "description": "Bairro do endereço do imóvel",
+          "nullable": true
+        },
+        "cep": {
+          "maxLength": 9,
+          "minLength": 8,
+          "pattern": "^\\d{5}-?\\d{3}$",
+          "type": "string",
+          "description": "CEP do endereço do imóvel",
+          "nullable": true
+        },
+        "codigoIncra": {
+          "maxLength": 13,
+          "type": "string",
+          "description": "Informar o código do imóvel no Sistema Nacional de Cadastro Rural (SNCR)",
+          "nullable": true
+        },
+        "denominacao": {
+          "maxLength": 200,
+          "type": "string",
+          "description": "Informar o nome do imóvel rural que consta no documento (título a ser registrado, matrícula/transcrição,escritura pública etc), caso exista",
+          "nullable": true
+        },
+        "localizacao": {
+          "maxLength": 200,
+          "type": "string",
+          "description": "Informar dados que possam ajudar na localização do imóvel, tais como: distrito, povoado, colônia, núcleo, rodovia/km, ramal, gleba, lote, etc. Exemplo: Partindo da Sede do Município,margem esquerda da BR 101, Km 60",
+          "nullable": true
+        },
+        "tipoServico": {
+          "enum": ["Notarial", "RegistroImoveis", "RegistroTitulosDocumentos"],
+          "type": "string",
+          "nullable": true
+        },
+        "municipiosUF": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/Doi.CtpMunicipioImovelData"
+          },
+          "description": "Demais municipios do imóvel rural",
+          "nullable": true
+        },
+        "alienantes": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/Doi.CtpAlienanteData"
+          },
+          "nullable": true
+        },
+        "adquirentes": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/Doi.CtpAdquirenteData"
+          }
+        }
+      },
+      "additionalProperties": false
+    },
+    "Doi.CtpMunicipioImovelData": {
+      "required": ["codigoIbge"],
+      "type": "object",
+      "properties": {
+        "codigoIbge": {
+          "maxLength": 7,
+          "minLength": 7,
+          "pattern": "^\\d+$",
+          "type": "string",
+          "description": "Informar o código IBGE do município do imóvel"
+        }
+      },
+      "additionalProperties": false
+    },
+    "Doi.CtpAlienanteData": {
+      "required": [
+        "indicadorEspolio",
+        "indicadorEstrangeiro",
+        "indicadorNaoConstaParticipacaoOperacao",
+        "indicadorNiIdentificado",
+        "indicadorRepresentante"
+      ],
+      "type": "object",
+      "properties": {
+        "indicadorNiIdentificado": {
+          "type": "boolean",
+          "description": "Informar se consta CPF da(s) parte(s) no documento (título a ser registrado, matrícula/transcrição, escritura pública etc)"
+        },
+        "motivoNaoIdentificacaoNi": {
+          "enum": [
+            "SemCPFCNPJDecisaoJudicial",
+            "NaoConstaNoDocumento",
+            "SemCnpjOperacaoAnteriorIn200",
+            "SemCpfOperacaoAnteriorIn190"
+          ],
+          "type": "string",
+          "description": "Informar o motivo da ausência do CPF da parte",
+          "nullable": true
+        },
+        "ni": {
+          "maxLength": 14,
+          "minLength": 11,
+          "pattern": "^\\d+$",
+          "type": "string",
+          "description": "Identificador da parte",
+          "nullable": true
+        },
+        "participacao": {
+          "type": "number",
+          "description": "Informar percentual conforme a participação de cada parte na operação levada a cartório. Exemplo: transmissão em razão de falecimento de 50% do imóvel. São dois herdeiros. Cada um tem 50% de participação na operação, pois ficou com metade da parte transmitida. A soma das participações não poderá ser inferior a 99,00% ou superior 100,00%. Até o limite de 3 inteiros e 4 casas decimais.",
+          "format": "double",
+          "nullable": true
+        },
+        "indicadorNaoConstaParticipacaoOperacao": {
+          "type": "boolean",
+          "description": "Indicador que sinaliza que o percentual de participação não consta nos documentos"
+        },
+        "indicadorEstrangeiro": {
+          "type": "boolean",
+          "description": "Informar se o adquirente (s) é estrangeiro"
+        },
+        "indicadorEspolio": {
+          "type": "boolean",
+          "description": "Informar se a aquisição foi feita em nome de espólio."
+        },
+        "cpfInventariante": {
+          "maxLength": 11,
+          "minLength": 11,
+          "pattern": "^\\d+$",
+          "type": "string",
+          "description": "CPF do Inventariante",
+          "nullable": true
+        },
+        "indicadorConjuge": {
+          "type": "boolean",
+          "description": "Informar se o adquirente possui cônjuge"
+        },
+        "indicadorConjugeParticipa": {
+          "type": "boolean",
+          "description": "Informar se o cônjuge participa da operação",
+          "nullable": true
+        },
+        "regimeBens": {
+          "enum": [
+            "SeparacaoDeBens",
+            "ComunhaoParcialDeBens",
+            "ComunhaoUniversalDeBens",
+            "ParticipacaoFinalNosAquestos",
+            "SeparacaoObrigatoria"
+          ],
+          "type": "string",
+          "description": "Informar o regime de bens no casamento",
+          "nullable": true
+        },
+        "indicadorCpfConjugeIdentificado": {
+          "type": "boolean",
+          "description": "Informar se consta o CPF do cônjuge no documento (título a ser registrado, matrícula/transcrição,escritura pública etc)",
+          "nullable": true
+        },
+        "cpfConjuge": {
+          "maxLength": 11,
+          "minLength": 11,
+          "pattern": "^\\d+$",
+          "type": "string",
+          "description": "Informar o CPF do cônjuge que consta no documento (título a ser registrado, matrícula/transcrição,escritura pública etc)",
+          "nullable": true
+        },
+        "indicadorRepresentante": {
+          "type": "boolean",
+          "description": "Indicador que sinaliza que o(s) alienante(s) outorgou (aram) mandato a pessoa física ou jurídica para representá-lo(s) na operação imobiliária informada pela serventia"
+        },
+        "representantes": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/Doi.CtpRepresentanteData"
+          },
+          "description": "Lista de Objetos no formato JSON com dados dos representantes",
+          "nullable": true
+        }
+      },
+      "additionalProperties": false
+    },
+    "Doi.CtpRepresentanteData": {
+      "required": ["ni"],
+      "type": "object",
+      "properties": {
+        "ni": {
+          "maxLength": 14,
+          "minLength": 11,
+          "pattern": "^\\d+$",
+          "type": "string"
+        }
+      },
+      "additionalProperties": false
+    },
+    "Doi.CtpAdquirenteData": {
+      "required": [
+        "indicadorEspolio",
+        "indicadorEstrangeiro",
+        "indicadorNaoConstaParticipacaoOperacao",
+        "indicadorNiIdentificado",
+        "indicadorRepresentante"
+      ],
+      "type": "object",
+      "properties": {
+        "indicadorNiIdentificado": {
+          "type": "boolean",
+          "description": "Informar se consta CPF da(s) parte(s) no documento (título a ser registrado, matrícula/transcrição, escritura pública etc)"
+        },
+        "motivoNaoIdentificacaoNi": {
+          "enum": [
+            "SemCPFCNPJDecisaoJudicial",
+            "NaoConstaNoDocumento",
+            "SemCnpjOperacaoAnteriorIn200",
+            "SemCpfOperacaoAnteriorIn190"
+          ],
+          "type": "string",
+          "description": "Informar o motivo da ausência do CPF da parte",
+          "nullable": true
+        },
+        "ni": {
+          "maxLength": 14,
+          "minLength": 11,
+          "pattern": "^\\d+$",
+          "type": "string",
+          "description": "Identificador da parte",
+          "nullable": true
+        },
+        "participacao": {
+          "type": "number",
+          "description": "Informar percentual conforme a participação de cada parte na operação levada a cartório. Exemplo: transmissão em razão de falecimento de 50% do imóvel. São dois herdeiros. Cada um tem 50% de participação na operação, pois ficou com metade da parte transmitida. A soma das participações não poderá ser inferior a 99,00% ou superior 100,00%. Até o limite de 3 inteiros e 4 casas decimais.",
+          "format": "double",
+          "nullable": true
+        },
+        "indicadorNaoConstaParticipacaoOperacao": {
+          "type": "boolean",
+          "description": "Indicador que sinaliza que o percentual de participação não consta nos documentos"
+        },
+        "indicadorEstrangeiro": {
+          "type": "boolean",
+          "description": "Informar se o adquirente (s) é estrangeiro"
+        },
+        "indicadorEspolio": {
+          "type": "boolean",
+          "description": "Informar se a aquisição foi feita em nome de espólio."
+        },
+        "cpfInventariante": {
+          "maxLength": 11,
+          "minLength": 11,
+          "pattern": "^\\d+$",
+          "type": "string",
+          "description": "CPF do Inventariante",
+          "nullable": true
+        },
+        "indicadorConjuge": {
+          "type": "boolean",
+          "description": "Informar se o adquirente possui cônjuge"
+        },
+        "indicadorConjugeParticipa": {
+          "type": "boolean",
+          "description": "Informar se o cônjuge participa da operação",
+          "nullable": true
+        },
+        "regimeBens": {
+          "enum": [
+            "SeparacaoDeBens",
+            "ComunhaoParcialDeBens",
+            "ComunhaoUniversalDeBens",
+            "ParticipacaoFinalNosAquestos",
+            "SeparacaoObrigatoria"
+          ],
+          "type": "string",
+          "description": "Informar o regime de bens no casamento",
+          "nullable": true
+        },
+        "indicadorCpfConjugeIdentificado": {
+          "type": "boolean",
+          "description": "Informar se consta o CPF do cônjuge no documento (título a ser registrado, matrícula/transcrição,escritura pública etc)",
+          "nullable": true
+        },
+        "cpfConjuge": {
+          "maxLength": 11,
+          "minLength": 11,
+          "pattern": "^\\d+$",
+          "type": "string",
+          "description": "Informar o CPF do cônjuge que consta no documento (título a ser registrado, matrícula/transcrição,escritura pública etc)",
+          "nullable": true
+        },
+        "indicadorRepresentante": {
+          "type": "boolean",
+          "description": "Indicador que sinaliza que o(s) alienante(s) outorgou (aram) mandato a pessoa física ou jurídica para representá-lo(s) na operação imobiliária informada pela serventia"
+        },
+        "representantes": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/Doi.CtpRepresentanteData"
+          },
+          "description": "Lista de Objetos no formato JSON com dados dos representantes",
+          "nullable": true
+        }
+      },
+      "additionalProperties": false
+    },
+    "Lotes.QuinzenaModel": {
+      "type": "object",
+      "properties": {
+        "anoReferencia": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "quinzenaReferencia": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "mesReferencia": {
+          "enum": [
+            "Janeiro",
+            "Fevereiro",
+            "Marco",
+            "Abril",
+            "Maio",
+            "Junho",
+            "Julho",
+            "Agosto",
+            "Setembro",
+            "Outubro",
+            "Novembro",
+            "Dezembro"
+          ],
+          "type": "string"
+        },
+        "primeiroDiaQuinzenal": {
+          "type": "string",
+          "format": "date-time",
+          "readOnly": true
+        },
+        "ultimoDiaQuizenal": {
+          "type": "string",
+          "format": "date-time",
+          "readOnly": true
+        },
+        "primeiroDiaMensal": {
+          "type": "string",
+          "format": "date-time",
+          "readOnly": true
+        }
+      },
+      "additionalProperties": false
+    }
+  }
+}

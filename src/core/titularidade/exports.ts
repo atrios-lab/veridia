@@ -26,12 +26,12 @@ import {
 
 export const EXPORT_FORMATS = {
   "ctp-xml": {
-    label: "Carga CTP em XML (leiaute da DOI)",
+    label: "Carga CTP em XML (sistemas da prefeitura que leem XML)",
     ext: "xml",
     type: "application/xml",
   },
   "ctp-json": {
-    label: "Carga CTP em JSON para o CENSEC (leiaute da DOI)",
+    label: "Carga CTP em JSON para o CENSEC (cabeçalho e leiaute da DOI)",
     ext: "json",
     type: "application/json",
   },
@@ -99,28 +99,259 @@ function compact<T extends Record<string, unknown>>(object: T): Partial<T> {
 
 // ---------------------------------------------------------------- CTP
 
-/**
- * The Carga CTP as the CENSEC takes it ("Abertura de Carga - CTP", file
- * in JSON by month): its "Registro de CTP" asks, step by step, the same
- * fichas as the DOI (dados iniciais, operação imobiliária, imóvel,
- * alienantes, adquirentes), since art. 184-A, § 1º, makes the cases the
- * DOI's. So the file is the DOI's layout, one declaration per act; an
- * empty month (mês negativo) is an empty list.
- */
-export function ctpJson(
-  _office: OfficeForExport,
-  _competence: string,
-  transfers: TitleTransfer[],
-): string {
-  return doiJson(transfers);
+/** The CNS as the CENSEC takes it: "09.461-5" → 94615. */
+export function cnsNumber(cns: string | undefined): number {
+  const n = Number(digits(cns ?? ""));
+  return Number.isFinite(n) ? n : 0;
 }
 
-export function ctpXml(
-  _office: OfficeForExport,
-  _competence: string,
+/**
+ * The fields of the CENSEC's own CTP declaration (Swagger of censec.org.br,
+ * schema Doi.CtpData, additionalProperties false). It is the DOI's layout
+ * ("mesmo layout JSON da Receita Federal, com a adição do cabeçalho"),
+ * with three differences: the IBGE code of the municipality goes at the
+ * root and is required, there is no tipoLivro nor numeroRegistroAverbacao
+ * (the CTP is the notary's; the registro de imóveis informs the ONR), and
+ * municipiosUF lists only the other municipalities of a rural imóvel.
+ */
+const CTP_FIELDS = new Set([
+  "tipoDeclaracao",
+  "dataLavraturaRegistroAverbacao",
+  "tipoAto",
+  "numeroLivro",
+  "folha",
+  "matriculaNotarialEletronica",
+  "matricula",
+  "codigoNacionalMatricula",
+  "dataNegocioJuridico",
+  "tipoOperacaoImobiliaria",
+  "descricaoOutrasOperacoesImobiliarias",
+  "valorOperacaoImobiliaria",
+  "indicadorNaoConstaValorOperacaoImobiliaria",
+  "valorBaseCalculoItbiItcmd",
+  "indicadorNaoConstaValorBaseCalculoItbiItcmd",
+  "formaPagamento",
+  "indicadorAlienacaoFiduciaria",
+  "mesAnoUltimaParcela",
+  "valorPagoAteDataAto",
+  "indicadorPermutaBens",
+  "indicadorPagamentoDinheiro",
+  "valorPagoMoedaCorrenteDataAto",
+  "tipoParteTransacionada",
+  "valorParteTransacionada",
+  "cib",
+  "destinacao",
+  "indicadorImovelPublicoUniao",
+  "registroImobiliarioPatrimonial",
+  "certidaoAutorizacaoTransferencia",
+  "inscricaoMunicipal",
+  "codigoIbge",
+  "areaImovel",
+  "indicadorAreaLoteNaoConsta",
+  "areaConstruida",
+  "indicadorAreaConstruidaNaoConsta",
+  "tipoImovel",
+  "tipoLogradouro",
+  "nomeLogradouro",
+  "numeroImovel",
+  "complementoNumeroImovel",
+  "complementoEndereco",
+  "bairro",
+  "cep",
+  "codigoIncra",
+  "denominacao",
+  "localizacao",
+  "tipoServico",
+  "municipiosUF",
+  "alienantes",
+  "adquirentes",
+]);
+
+/**
+ * The CENSEC takes the DOI's tables by name, not by code (the enums of its
+ * Swagger, Doi.CtpData, in the order of the DOI's tables).
+ */
+const CTP_NAMES: Record<string, Record<string, string>> = {
+  tipoDeclaracao: { "0": "Original" },
+  tipoServico: { "1": "Notarial", "2": "RegistroImoveis" },
+  tipoAto: { "1": "Escritura", "2": "Procuracao" },
+  tipoOperacaoImobiliaria: {
+    "11": "CompraEVenda",
+    "13": "Permuta",
+    "15": "Adjudicacao",
+    "19": "DacaoEmPagamento",
+    "21": "DistratoDeNegocio",
+    "23": "RetificacaoDoAto",
+    "25": "Desapropriacao",
+    "27": "HerancaLegadoOuMeacao",
+    "31": "ProcuracaoEmCausaPropria",
+    "33": "PromessaDeCompraEVenda",
+    "35": "PromessaDeCessaoDeDireitos",
+    "37": "CessaoDeDireitos",
+    "39": "Outros",
+    "41": "AlienacaoPorIniciativaParticularOuLeilaoJudicial",
+    "43": "DissolucaoDeSociedade",
+    "45": "IncorporacaoELoteamento",
+    "47": "IntegralizacaoSubscricaoDeCapital",
+    "49": "PartilhaAmigavelOuLitigiosa",
+    "51": "RetornoDeCapitalProprio",
+    "53": "Doacao",
+    "55": "DoacaoEmAdiantamentoDaLegitima",
+    "56": "Aforamento",
+    "57": "CasamentoEmComunhaoUniversalDeBens",
+    "58": "CisaoTotalOuParcial",
+    "59": "CompraEVendaDeImovelGravadoPorEnfiteuse",
+    "60": "ConcessaoDeDireitoRealDeUsoCDRU",
+    "61": "ConcessaoDeUsoEspecialParaFinsDeMoradiaCUEM",
+    "62": "ConsolidacaoDaPropriedadeEmNomeDoFiduciario",
+    "63": "DesapropriacaoParaFinsDeReformaAgraria",
+    "64": "DesapropriacaoExcetoParaReformaAgraria",
+    "65": "DireitoDeLaje",
+    "66": "DireitoDeSuperficie",
+    "67": "DoacaoExcetoEmAdiantamentoDeLegitima",
+    "68": "Incorporacao",
+    "69": "Inventario",
+    "70": "PartSeparacaoDivorcioUniaoEstavel",
+    "71": "RetornoDeCapitalProprioNaExtincaoDePessoaJuridica",
+    "72": "RetornoDeCapitalProprioExcetoNaExtincaoDePessoaJuridica",
+    "73": "TituloDeDominioTD",
+    "74": "Usucapiao",
+  },
+  formaPagamento: {
+    "5": "QuitadoAVista",
+    "7": "APrazo",
+    "9": "NaoSeAplica",
+    "10": "QuitadoAPrazo",
+    "11": "QuitadoSemInformacaoDaFormaDePagamento",
+  },
+  tipoParteTransacionada: { "1": "Percentual", "2": "HaM2" },
+  destinacao: { "1": "Urbano", "3": "Rural" },
+  tipoImovel: {
+    "15": "Loja",
+    "17": "SalaConjunto",
+    "31": "Galpao",
+    "33": "PredioComercial",
+    "35": "PredioResidencial",
+    "65": "Apartamento",
+    "67": "Casa",
+    "69": "FazendaSitioChacara",
+    "71": "TerrenoFracao",
+    "73": "SalaLoja",
+    "85": "Construcoes",
+    "87": "Desmembramento",
+    "89": "Outros",
+    "90": "Sala",
+    "91": "ConjuntoDeSalas",
+    "92": "Sobreloja",
+    "93": "VagaDeGaragem",
+    "94": "Laje",
+    "95": "Estacionamento",
+    "96": "Barraco",
+  },
+  motivoNaoIdentificacaoNi: {
+    "1": "SemCPFCNPJDecisaoJudicial",
+    "2": "NaoConstaNoDocumento",
+  },
+};
+
+/** The month as the CENSEC's QuinzenaModel names it. */
+export const CENSEC_MONTHS = [
+  "Janeiro",
+  "Fevereiro",
+  "Marco",
+  "Abril",
+  "Maio",
+  "Junho",
+  "Julho",
+  "Agosto",
+  "Setembro",
+  "Outubro",
+  "Novembro",
+  "Dezembro",
+] as const;
+
+function named<T extends Record<string, unknown>>(object: T) {
+  return Object.fromEntries(
+    Object.entries(object).map(([key, value]) => {
+      const names = CTP_NAMES[key];
+      return [
+        key,
+        names && typeof value === "string" ? (names[value] ?? value) : value,
+      ];
+    }),
+  );
+}
+
+/** A party of the CTP: the DOI's, with the representante indicator. */
+function ctpParty(p: TransferParty) {
+  return named({ ...doiParty(p), indicadorRepresentante: false });
+}
+
+/** One act of notas as the CENSEC's "Registro de CTP" takes it. */
+export function ctpDeclaration(t: TitleTransfer) {
+  const d = doiOf(t);
+  const base: Record<string, unknown> = { ...doiDeclaration(t) };
+  delete base.municipiosUF;
+  if (d.ibge.length === 7) base.codigoIbge = d.ibge;
+  // The CTP's manual: with the CEP really unknown, "n/c" in the street
+  // keeps the other parts of the address from being checked.
+  if (!base.cep && t.destination !== "rural") base.nomeLogradouro = "n/c";
+  const kept = Object.fromEntries(
+    Object.entries(base).filter(([key]) => CTP_FIELDS.has(key)),
+  );
+  return {
+    ...named(kept),
+    alienantes: t.transmitentes.map(ctpParty),
+    adquirentes: t.adquirentes.map(ctpParty),
+  };
+}
+
+/**
+ * The Carga CTP as the CENSEC takes it, by upload (CTP › Cargas, the month
+ * and the JSON file) or by its API: the header with the office's CNS and
+ * the competence ("como a CTP tem periodicidade mensal, informe
+ * quinzenaReferencia com 2"), then one declaration per act of notas. An
+ * empty month (mês negativo) has no file: the CENSEC asks only the
+ * fechamento negativo, and the empty list is kept for the office's file.
+ */
+export function ctpObject(
+  office: OfficeForExport,
+  competence: string,
+  transfers: TitleTransfer[],
+) {
+  return {
+    cns: cnsNumber(office.cns),
+    quinzena: {
+      anoReferencia: Number(competence.slice(0, 4)),
+      mesReferencia: CENSEC_MONTHS[Number(competence.slice(5, 7)) - 1],
+      quinzenaReferencia: 2,
+    },
+    declaracoes: transfers
+      .filter((t) => t.service === "notas")
+      .map((t) => ctpDeclaration(t)),
+  };
+}
+
+export function ctpJson(
+  office: OfficeForExport,
+  competence: string,
   transfers: TitleTransfer[],
 ): string {
-  return doiXml(transfers);
+  return `${JSON.stringify(ctpObject(office, competence, transfers), null, 2)}\n`;
+}
+
+/** The same in XML, for the municipal systems that read XML. */
+export function ctpXml(
+  office: OfficeForExport,
+  competence: string,
+  transfers: TitleTransfer[],
+): string {
+  return toXml(ctpObject(office, competence, transfers), {
+    declaracoes: "declaracao",
+    alienantes: "alienante",
+    adquirentes: "adquirente",
+    municipiosUF: "municipio",
+  });
 }
 
 const pipe = (value: unknown) =>
