@@ -883,6 +883,48 @@ ENTRIES["/admin/utilitarios/titularidade"] = {
   ],
 };
 
+ENTRIES["/admin/utilitarios/censec"] = {
+  purpose:
+    "Montar as cargas quinzenais da CENSEC: escrituras e procurações no CEP, separações, divórcios e inventários no CESDI, testamentos no RCTO (Código Nacional de Normas, arts. 265 a 272). O sistema lê os documentos anexados e gera os arquivos no leiaute oficial do CNB/CF.",
+  steps: [
+    "Clique em Anexar documentos e escolha todos os arquivos de uma vez, ou um PDF único com todos os atos da quinzena. O sistema separa cada ato, põe na central e na quinzena certas e mostra o relatório: quantos arquivos, quantos atos encontrados e lançados, e o que ficou pendente. Os arquivos não ficam guardados.",
+    "Confira cada ato em Editar: tudo é editável (tipo, natureza, livro, folha, partes, qualidade, documentos, bens, casal, testador). Ato sem arquivo com texto: Lançar à mão. Ato errado: Excluir, com justificativa.",
+    "Em Arquivos da quinzena, baixe o JSON das três centrais (o formato que o CNB/CF recomenda) ou o JSON, XML ou TXT de cada central. Só entram os atos sem pendência, e o arquivo é conferido com o esquema oficial da CENSEC.",
+    "No CENSEC: Área do Cartório › Carga da central › escolha a quinzena e anexe o arquivo; depois faça o fechamento. Quinzena sem ato: fechamento negativo, sem arquivo.",
+    "Volte aqui e registre o fechamento de cada central, com a data e o protocolo. O relatório da quinzena (PDF) mostra quantos eram e quantos foram.",
+    "Escrituras, inventários e partilhas com imóvel podem entrar também na comunicação à prefeitura (Carga CTP) e na DOI: deixe marcado Aproveitar ao anexar.",
+  ],
+  terms: [
+    {
+      term: "Prazo",
+      meaning:
+        "1ª quinzena (dias 1 a 15): até o dia 20 do mês. 2ª quinzena: até o dia 5 do mês seguinte. Caindo em dia sem expediente, no próximo dia útil (CNN, arts. 267, 270 e 272, § 1º).",
+    },
+    {
+      term: "Pendência",
+      meaning:
+        "O que a CENSEC recusa: falta de tipo, data, livro ou folha só com números, CPF inválido, parte sem qualidade, revogação sem o ato de origem. O ato com pendência fica fora do arquivo até ser completado.",
+    },
+    {
+      term: "MNE",
+      meaning:
+        "Matrícula Notarial Eletrônica, obrigatória só no ato feito pelo e-Notariado: 24 números com dígito verificador.",
+    },
+  ],
+};
+
+ENTRIES["/admin/utilitarios/censec/anexar"] = {
+  purpose:
+    "Enviar os documentos dos atos para o sistema ler e lançar nas cargas da CENSEC, sem guardar os arquivos.",
+  steps: [
+    "Escolha vários arquivos de uma vez (Ctrl ou Command + clique) ou um PDF único com todos os atos. Até 60 arquivos, 50 MB cada, 100 MB por envio.",
+    "PDF grande? Reduza: no Word, Salvar como PDF com Tamanho mínimo; no Acrobat, PDF de tamanho reduzido; ou ilovepdf.com e smallpdf.com, opção Comprimir PDF.",
+    "O PDF precisa ter texto. Foto ou digitalização como imagem não tem o que ler: lance esse ato à mão.",
+    "Clique em Ler e lançar e confira o relatório. Cada ato tem Completar ou Conferir.",
+  ],
+  terms: [],
+};
+
 ENTRIES["/admin/rcpn/habilitacao"] = {
   purpose:
     "Processar a habilitação para o casamento: um processo por casal, com número do ano, preenchido uma vez. Requerimento, declaração das testemunhas, edital, certidão de proclamas e certificado saem dos mesmos dados.",

@@ -81,6 +81,12 @@ const EXACT: Record<string, string> = {
     "Atualizou um ofício de titularidade com os atos do mês",
   "titularidade.filing-renumber":
     "Mudou o número de um ofício de titularidade à prefeitura",
+  "censec.create": "Lançou um ato para a carga da CENSEC",
+  "censec.edit": "Corrigiu um ato da carga da CENSEC",
+  "censec.remove": "Excluiu um ato da carga da CENSEC (fica guardado)",
+  "censec.closing": "Registrou o fechamento de uma quinzena na CENSEC",
+  "censec.closing-remove":
+    "Excluiu o registro de um fechamento da CENSEC (fica guardado)",
   "rcpn.habilitacao.edit": "Alterou um processo de habilitação de casamento",
   "rcpn.habilitacao.edital":
     "Publicou no site o edital de proclamas de uma habilitação",
@@ -430,6 +436,15 @@ const EXPLANATIONS: Record<string, string> = {
     "Um ofício de titularidade foi refeito com os atos do mês como estão agora, com justificativa. O número continua o mesmo.",
   "titularidade.filing-renumber":
     "O número de um ofício de titularidade foi mudado, com justificativa.",
+  "censec.create":
+    "Um ato (escritura, procuração, ata, inventário, divórcio ou testamento) foi lido do documento anexado e lançado para a carga quinzenal da CENSEC. O documento não é guardado.",
+  "censec.edit": "Um ato da carga da CENSEC foi corrigido, com justificativa.",
+  "censec.remove":
+    "Um ato da carga da CENSEC foi excluído, com justificativa. Ele continua guardado.",
+  "censec.closing":
+    "Foi registrado o fechamento de uma quinzena na CENSEC (positivo ou negativo), com a data e o protocolo.",
+  "censec.closing-remove":
+    "O registro de um fechamento da CENSEC foi excluído, com justificativa. Ele continua guardado.",
   "rcpn.habilitacao.edit":
     "Um processo de habilitação para o casamento foi alterado. O histórico do processo guarda o que era antes e o que ficou.",
   "rcpn.habilitacao.edital":

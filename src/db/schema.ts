@@ -2289,6 +2289,67 @@ export const titleTransferFilings = pgTable(
 );
 
 /**
+ * An act told to the CENSEC (CNN, arts. 265 to 272; change
+ * cargas-censec, decision of 14/11/2026): read from the escritura,
+ * procuração, ata or testamento attached, which is never kept; checked by
+ * the person and kept by quinzena and central. Removed by a mark, with
+ * who, when and why: never deleted.
+ */
+export const censecActs = pgTable(
+  "censec_acts",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    tenantSlug,
+    /** "YYYY-MM-1" or "YYYY-MM-2": the act's fortnight. */
+    quinzena: text("quinzena").notNull(),
+    /** core/censec Central: cep, cesdi, rcto. */
+    central: text("central").notNull(),
+    /** core/censec CensecAct. */
+    data: jsonb("data").notNull(),
+    /** The name of the file it was read from (the file is not kept). */
+    sourceName: text("source_name").notNull().default(""),
+    createdBy: text("created_by").notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    updatedBy: text("updated_by"),
+    updatedAt: timestamp("updated_at", { withTimezone: true }),
+    removedAt: timestamp("removed_at", { withTimezone: true }),
+    removedBy: text("removed_by"),
+    removedReason: text("removed_reason"),
+  },
+  (t) => [index("censec_acts_quinzena").on(t.tenantSlug, t.quinzena)],
+);
+
+/**
+ * The fechamento of a central's quinzena in the CENSEC, positive or
+ * negative (CNN, arts. 267, 270 and 272: "arquivando-se digitalmente o
+ * comprovante"): the day, the protocol the CENSEC gave and how many acts
+ * went. Removed by a mark, with the reason.
+ */
+export const censecClosings = pgTable(
+  "censec_closings",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    tenantSlug,
+    quinzena: text("quinzena").notNull(),
+    central: text("central").notNull(),
+    /** How many acts went; 0 is the informação negativa. */
+    acts: integer("acts").notNull().default(0),
+    sentOn: text("sent_on").notNull(),
+    protocol: text("protocol").notNull().default(""),
+    createdBy: text("created_by").notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    removedAt: timestamp("removed_at", { withTimezone: true }),
+    removedBy: text("removed_by"),
+    removedReason: text("removed_reason"),
+  },
+  (t) => [index("censec_closings_quinzena").on(t.tenantSlug, t.quinzena)],
+);
+
+/**
  * Files sent to an attribution (decision of 14/11/2026: "em todos deixe o
  * campo de importar os arquivos"): any format, kept as it came. An
  * exclusion only marks the row, with who, when and why.

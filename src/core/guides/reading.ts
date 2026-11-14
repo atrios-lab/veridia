@@ -51,6 +51,21 @@ const NAME = new RegExp(
   "u",
 );
 
+const NAMES = new RegExp(NAME.source, "gu");
+
+/** A label in capitals before the name ("OUTORGANTE VENDEDORA, MARIA..."). */
+const ROLE_LABEL =
+  /^(?:(?:OUTORGAD|OUTORGANT|VENDEDOR|COMPRADOR|DOADOR|DONAT[ÁA]RI|TRANSMITENTE|ADQUIRENTE|CEDENTE|CESSION[ÁA]RI|HERDEIR|INVENTARIANTE|DIVORCIAND|SEPARAND|TESTADOR|REQUERENTE|REQUERID|INTERVENIENTE|ANUENTE|PROCURADOR|PROMITENTE|PERMUTANTE|CREDOR|DEVEDOR|USUFRUTU|MEEIR|VI[ÚU]V)[A-ZÀ-Ú]*\s*(?:E\s+|D[AEO]S?\s+)?)+$/u;
+
+/** The person's name in the qualification, past any role label. */
+export function nameIn(chunk: string): string | undefined {
+  for (const match of chunk.matchAll(NAMES)) {
+    const name = match[1]?.trim();
+    if (name && !ROLE_LABEL.test(name)) return name;
+  }
+  return undefined;
+}
+
 const TRANSMITS =
   /(vendedor|vendedora|outorgantes?|transmitente|doador|doadora|cedente|propriet[áa]ri[oa]s?\s+atua(?:l|is))/gi;
 const ACQUIRES =
@@ -126,7 +141,7 @@ function partiesOf(text: string): ReadParty[] {
     previousEnd = at + raw.length;
     // The qualification starts after the last ";" or label colon.
     const chunk = before.split(/;|:\s/).at(-1) ?? before;
-    const name = NAME.exec(chunk)?.[1]?.trim();
+    const name = nameIn(chunk);
     if (!name || seen.has(digits)) continue;
     seen.add(digits);
     const after = text.slice(at, at + 400);

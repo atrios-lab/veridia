@@ -25,11 +25,12 @@ import { pdfText } from "./guide-reading.ts";
 
 export const TITLE_READ_MAX_BYTES = 15 * 1024 * 1024;
 
-async function docxText(bytes: Uint8Array): Promise<string> {
+export async function docxText(bytes: Uint8Array): Promise<string> {
   const zip = await JSZip.loadAsync(bytes);
   const xml = await zip.file("word/document.xml")?.async("string");
   if (!xml) return "";
   return xml
+    .replace(/<w:br\s+w:type="page"\s*\/>/g, "\f")
     .replace(/<w:tab\/>/g, " ")
     .replace(/<\/w:p>/g, "\n")
     .replace(/<[^>]+>/g, "")
@@ -101,6 +102,19 @@ export async function readTitleFile(
       note: `${name}: sem texto para ler (PDF digitalizado). Preencha os campos à mão.`,
     };
   }
+  return readTitleText(text, name, fallback);
+}
+
+/**
+ * The same reading from text already extracted (the CENSEC's loads read
+ * each act once and reuse it here: decision of 14/11/2026, "vai
+ * aproveitando informações de outros").
+ */
+export function readTitleText(
+  text: string,
+  name: string,
+  fallback: Service,
+): TitleReading {
   const reading = readGuideText(text);
   const where = bookAndPageIn(text);
   const transfer: TitleTransfer = {
