@@ -60,3 +60,26 @@ ir para a auditoria.
 #### Scenario: Conferir antes de emitir
 - **WHEN** a escrevente clica em "Visualizar e imprimir prévia" no formulário
 - **THEN** abre em outra aba o PDF com o que está digitado e a marca "PRÉVIA", e nenhuma certidão é emitida
+
+### Requirement: Modelos do Provimento nº 182/2024 sem alteração
+As certidões DEVEM (SHALL) seguir os Anexos IV (nascimento), V (casamento), VI (óbito ou natimorto)
+e VII (inteiro teor) do Provimento nº 182/2024 do CNJ: os mesmos campos, legendas e ordem; nome e
+matrícula centralizados, sem caixa; dia, mês e ano em números; o rodapé com a serventia à
+esquerda e a fé, a data e a assinatura à direita. O painel NÃO DEVE (SHALL NOT) permitir mudar
+campos ou legendas do modelo; só os valores vêm do registro. Os campos que o modelo manda
+mostrar só quando existirem (segundo genitor e seus avós, gêmeo, anotações voluntárias de
+cadastro) DEVEM (SHALL) ficar fora da certidão quando vazios. Uma certidão de casamento ou óbito
+emitida antes no modelo antigo DEVE (SHALL) continuar sendo reimpressa e corrigida no modelo em
+que saiu, sem perder dados.
+
+#### Scenario: Digital igual à impressa
+- **WHEN** a certidão é gerada para assinatura digital
+- **THEN** sai na mesma folha e posições da impressa, com o brasão e "REPÚBLICA FEDERATIVA DO BRASIL / REGISTRO CIVIL DAS PESSOAS NATURAIS" no alto e a nota de assinatura digital no lugar da linha
+
+#### Scenario: Nascimento sem gêmeo
+- **WHEN** o registro não tem gêmeo
+- **THEN** a certidão sai sem a linha "Gêmeo", como manda o Anexo IV
+
+#### Scenario: Óbito no Anexo VI
+- **WHEN** a escrevente emite a certidão de óbito
+- **THEN** ela traz data e horário do falecimento, último cônjuge ou convivente, idade, genitores, causa, médico ou testemunhas com o documento, sepultamento, declarante, existência de bens e de filhos

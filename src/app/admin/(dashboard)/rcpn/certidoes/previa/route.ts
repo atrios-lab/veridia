@@ -1,9 +1,5 @@
 import { can } from "@/core/auth/roles.ts";
-import {
-  certidaoModel,
-  cleanCertidaoFields,
-  isCertidaoForm,
-} from "@/core/rcpn/certidao.ts";
+import { cleanCertidaoFields, isCertidaoForm } from "@/core/rcpn/certidao.ts";
 import { toIsoDate } from "@/core/scheduling/calendar.ts";
 import { OFFICE_TIME_ZONE } from "@/core/time/office-time.ts";
 import { renderingFor } from "@/lib/pdf.ts";
@@ -38,8 +34,10 @@ async function handle(request: Request): Promise<Response> {
   const via = text("via");
   const form = isCertidaoForm(via) ? via : "breve";
   const typed: Record<string, string> = {};
-  for (const field of certidaoModel(kind, form).fields) {
-    typed[field.key] = text(`campo.${field.key}`);
+  for (const [name, value] of formData.entries()) {
+    if (name.startsWith("campo.") && typeof value === "string") {
+      typed[name.slice("campo.".length)] = value.slice(0, 20000);
+    }
   }
   let signerName = text("assinanteNome");
   let signerTitle = text("assinanteCargo");

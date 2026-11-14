@@ -56,9 +56,13 @@ async function inputOf(
 ): Promise<Omit<CertidaoInput, "recordId">> {
   const via = text(formData, "via");
   const form: CertidaoForm = isCertidaoForm(via) ? via : "breve";
+  // Every field the form sent: the model is told by them (an old casamento
+  // or óbito is corrected in the model it was issued in).
   const fields: Record<string, string> = {};
-  for (const field of certidaoModel(kind, form).fields) {
-    fields[field.key] = text(formData, `campo.${field.key}`);
+  for (const [name, value] of formData.entries()) {
+    if (name.startsWith("campo.") && typeof value === "string") {
+      fields[name.slice("campo.".length)] = value;
+    }
   }
   let signerName = text(formData, "assinanteNome");
   let signerTitle = text(formData, "assinanteCargo");

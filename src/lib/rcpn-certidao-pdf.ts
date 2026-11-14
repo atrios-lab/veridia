@@ -10,14 +10,9 @@ import { writtenDate } from "@/core/scheduling/attendance.ts";
 import type { IsoDate } from "@/core/scheduling/calendar.ts";
 import { NEUTRALS } from "@/core/tenant/palette.ts";
 import type { Tenant } from "@/core/tenant/schema.ts";
-import { brandFor } from "./document-brand.ts";
 import { ABNT, DIGITAL_SIGNATURE_NOTE, isDigitalSigning } from "./pdf.ts";
-import {
-  drawCenteredIdentification,
-  drawIdentificationFooter,
-  identificationOf,
-} from "./pdf-letterhead.ts";
-import { MARGIN, type Pdf } from "./pdf-primitives.ts";
+import { brasaoWidth, drawBrasao } from "./pdf-letterhead.ts";
+import type { Pdf } from "./pdf-primitives.ts";
 
 /**
  * The certidão of the Registro Civil, two ways.
@@ -50,6 +45,35 @@ export interface CertidaoToDraw {
    * "PRÉVIA", so it never passes for a certidão.
    */
   preview?: boolean;
+}
+
+/**
+ * The top of the national model, as the security paper has it printed:
+ * the arms of the Republic and "REPÚBLICA FEDERATIVA DO BRASIL / REGISTRO
+ * CIVIL DAS PESSOAS NATURAIS", above where the title starts.
+ */
+function drawNationalHeader(pdf: Pdf): void {
+  const arms = 52;
+  const top = 1.7 * CM;
+  drawBrasao(pdf, (pdf.page.width - brasaoWidth(arms)) / 2, top, arms);
+  const width = pdf.page.width - SECURITY_PAPER.side * 2;
+  pdf
+    .font("Times-Roman")
+    .fontSize(13)
+    .fillColor(NEUTRALS.text)
+    .text(
+      "REPÚBLICA FEDERATIVA DO BRASIL",
+      SECURITY_PAPER.side,
+      top + arms + 8,
+      {
+        width,
+        align: "center",
+      },
+    )
+    .text("REGISTRO CIVIL DAS PESSOAS NATURAIS", SECURITY_PAPER.side, pdf.y, {
+      width,
+      align: "center",
+    });
 }
 
 /** The mark across a preview sheet, light, under nothing it hides. */
@@ -137,8 +161,37 @@ function box(
     .fillColor(NEUTRALS.text)
     .text(value || " ", x + PAD, y + PAD + label + 2, {
       width: width - PAD * 2,
-      ...VALUE_TEXT,
+      ...(field.center ? { align: "center" as const } : VALUE_TEXT),
     });
+}
+
+/**
+ * The name and the matrícula as the models draw them (Provimento nº
+ * 182/2024, Anexos IV a VII): the small label centered, the value under
+ * it, centered, without a box; the name in capitals.
+ */
+function heading(
+  pdf: Pdf,
+  left: number,
+  width: number,
+  field: CertidaoField,
+  value: string,
+) {
+  pdf
+    .font("Helvetica")
+    .fontSize(LABEL_SIZE)
+    .fillColor(NEUTRALS.textSoft)
+    .text(field.label, left, pdf.y, { width, align: "center" });
+  const text =
+    field.heading === "name"
+      ? value.toLocaleUpperCase("pt-BR")
+      : value.replace(/\n+/g, " ");
+  pdf
+    .font("Helvetica-Bold")
+    .fontSize(field.heading === "name" ? 12 : 11)
+    .fillColor(NEUTRALS.text)
+    .text(text || " ", left, pdf.y + 1, { width, align: "center" });
+  pdf.y += GAP;
 }
 
 /**
@@ -183,13 +236,7 @@ function rowsOf(fields: CertidaoField[]): CertidaoField[][] {
   for (const field of fields) {
     const last = rows.at(-1);
     const head = last?.[0];
-    if (
-      last &&
-      head &&
-      field.row !== undefined &&
-      head.row === field.row &&
-      !field.multiline
-    ) {
+    if (last && head && field.row !== undefined && head.row === field.row) {
       last.push(field);
     } else {
       rows.push([field]);
@@ -202,23 +249,21 @@ export async function renderCertidao(
   tenant: Tenant,
   certidao: CertidaoToDraw,
 ): Promise<Buffer> {
-  const brand = await brandFor(tenant);
-  const identification = identificationOf(brand, [tenant.name]);
-  const model = certidaoModel(certidao.kind, certidao.form);
+  // The model it was issued in: an old casamento or óbito keeps its own.
+  const model = certidaoModel(certidao.kind, certidao.form, certidao.fields);
   const digital = isDigitalSigning();
   const rule = NEUTRALS.text;
-  const matricula = certidao.fields.matricula ?? "";
 
   const pdf = new PDFDocument({
     size: "A4",
-    margins: digital
-      ? { top: MARGIN, bottom: MARGIN, left: MARGIN, right: MARGIN }
-      : {
-          top: SECURITY_PAPER.titleTop,
-          bottom: SECURITY_PAPER.bottom,
-          left: SECURITY_PAPER.side,
-          right: SECURITY_PAPER.side,
-        },
+    // The same sheet printed or signed digitally (decision of 14/11/2026:
+    // "todas devem seguir esse padrão mesmo sendo digital").
+    margins: {
+      top: SECURITY_PAPER.titleTop,
+      bottom: SECURITY_PAPER.bottom,
+      left: SECURITY_PAPER.side,
+      right: SECURITY_PAPER.side,
+    },
     autoFirstPage: false,
     info: {
       Title: model.title.toLowerCase().replace(/^./, (c) => c.toUpperCase()),
@@ -230,52 +275,21 @@ export async function renderCertidao(
     pdf.on("end", () => resolve(Buffer.concat(chunks))),
   );
 
-  const layout = (): Layout =>
-    digital
-      ? {
-          left: MARGIN,
-          width: pdf.page.width - MARGIN * 2,
-          bottom: pdf.page.height - MARGIN,
-          top: 0,
-        }
-      : {
-          left: SECURITY_PAPER.side,
-          width: pdf.page.width - SECURITY_PAPER.side * 2,
-          bottom: pdf.page.height - SECURITY_PAPER.bottom - 10,
-          top: SECURITY_PAPER.titleTop,
-        };
+  const layout = (): Layout => ({
+    left: SECURITY_PAPER.side,
+    width: pdf.page.width - SECURITY_PAPER.side * 2,
+    bottom: pdf.page.height - SECURITY_PAPER.bottom - 10,
+    top: SECURITY_PAPER.titleTop,
+  });
 
-  // Each sheet: the letterhead (digital) or the free top of the paper. On
-  // `pageAdded`, so the sheets a long inteiro teor flows onto get it too.
+  // Each sheet: the security paper brings the arms and the two lines of
+  // the national model printed; the digital one draws them in the same
+  // place, so both come out the same (Provimento nº 182/2024, Anexos IV a
+  // VII). On `pageAdded`, so a long inteiro teor gets them on every sheet.
   pdf.on("pageAdded", () => {
     if (certidao.preview) drawPreviewMark(pdf);
-    const { left, width } = layout();
-    if (digital) {
-      const y = drawCenteredIdentification(pdf, identification, {
-        top: 34,
-        arms: 38,
-        heading: 10,
-        small: 8,
-        sideRoom: 30,
-      });
-      pdf.rect(left, y, width, 0.6).fill(brand.palette.border);
-      drawIdentificationFooter(
-        pdf,
-        identification,
-        matricula ? `Matrícula ${matricula}` : "",
-        { rule: brand.palette.border, text: NEUTRALS.textSoft },
-      );
-      // Text that flows onto the next sheet starts under the letterhead.
-      pdf.options.margins = {
-        top: y + 12,
-        bottom: MARGIN,
-        left: MARGIN,
-        right: MARGIN,
-      };
-      pdf.y = y + 12;
-    } else {
-      pdf.y = SECURITY_PAPER.titleTop;
-    }
+    if (digital) drawNationalHeader(pdf);
+    pdf.y = SECURITY_PAPER.titleTop;
   });
   const newPage = () => {
     pdf.addPage();
@@ -294,6 +308,17 @@ export async function renderCertidao(
     const only = row[0];
     if (row.length === 1 && only?.key === "teor") {
       drawTeor(pdf, left, width, only, certidao.fields.teor ?? "", rule);
+      continue;
+    }
+    if (row.length === 1 && only?.heading) {
+      heading(pdf, left, width, only, certidao.fields[only.key] ?? "");
+      continue;
+    }
+    // "Só deve aparecer quando existir": a blank optional row is left out.
+    if (
+      row.every((f) => f.optional) &&
+      row.every((f) => !certidao.fields[f.key]?.trim())
+    ) {
       continue;
     }
     const total = row.reduce((sum, f) => sum + (f.span ?? 1), 0);
@@ -317,7 +342,10 @@ export async function renderCertidao(
     pdf.y = y + height + GAP;
   }
 
-  // The office, as the model closes: CNS, name, the officer, the address.
+  // The closing as the models lay it out (Provimento nº 182/2024, Anexos
+  // IV a VII): the office on the left (CNS, the Oficial de Registro Civil,
+  // the address); on the right the faith, the place and date, and the
+  // signature of the Oficial or Escrevente.
   const office = [
     `CNS nº ${tenant.cns}`,
     tenant.name,
@@ -334,108 +362,125 @@ export async function renderCertidao(
         "Confira em: https://selodigital.tjrn.jus.br",
       ]
     : [];
+  const COLUMN_GAP = 18;
+  const column = (width - COLUMN_GAP) / 2;
+  const right = left + column + COLUMN_GAP;
+  const signer = [certidao.signerName, certidao.signerTitle]
+    .filter(Boolean)
+    .join(", ");
+
   // What the closing takes, measured, so it never splits from the text.
   pdf.font("Helvetica").fontSize(8);
-  const lineOf8 = pdf.currentLineHeight(true);
+  const officeHeight = office.reduce(
+    (sum, line) =>
+      sum + pdf.heightOfString(line, { width: column, align: "center" }),
+    0,
+  );
+  pdf.fontSize(9.5);
+  const faithHeight =
+    pdf.heightOfString("O conteúdo da certidão é verdadeiro. Dou fé.", {
+      width: column,
+    }) *
+      2 +
+    (digital ? 8 + 3 * 11 : 30) +
+    2 * 12;
+  pdf.fontSize(8);
   const feesHeight = certidao.fees
-    ? pdf.heightOfString(certidao.fees, { width, align: "justify" }) + 4
+    ? pdf.heightOfString(certidao.fees, { width, align: "justify" }) + 6
     : 0;
-  const sealHeight = sealLines.length > 0 ? sealLines.length * 10 + 8 + 14 : 0;
+  const sealHeight = sealLines.length > 0 ? sealLines.length * 10 + 8 + 10 : 0;
   const closing =
-    4 +
-    office.length * lineOf8 +
-    feesHeight +
-    sealHeight +
-    4 +
-    2 * 12 +
-    (digital ? 8 + 3 * 11 : 28 + 3) +
-    2 * 11;
+    6 + Math.max(officeHeight, faithHeight) + feesHeight + sealHeight + 6;
   if (pdf.y + closing > layout().bottom) newPage();
 
-  pdf.y += 4;
+  const top = pdf.y + 6;
   pdf.font("Helvetica").fontSize(8).fillColor(NEUTRALS.text);
-  for (const line of office) pdf.text(line, left, pdf.y, { width });
+  pdf.y = top;
+  for (const line of office) {
+    pdf.text(line, left, pdf.y, { width: column, align: "center" });
+  }
+  const leftEnd = pdf.y;
+
+  pdf
+    .font("Helvetica")
+    .fontSize(9.5)
+    .fillColor(NEUTRALS.text)
+    .text("O conteúdo da certidão é verdadeiro. Dou fé.", right, top, {
+      width: column,
+      align: "center",
+    });
+  pdf.text(
+    `${tenant.location.city}, ${writtenDate(certidao.issuedOn)}.`,
+    right,
+    pdf.y + 2,
+    { width: column, align: "center" },
+  );
+  if (digital) {
+    pdf.y += 6;
+    pdf
+      .font("Helvetica-Oblique")
+      .fontSize(8)
+      .fillColor(NEUTRALS.textSoft)
+      .text(DIGITAL_SIGNATURE_NOTE, right, pdf.y, {
+        width: column,
+        align: "center",
+      });
+  } else {
+    pdf.y += 26;
+    const line = Math.min(column - 10, 220);
+    pdf.rect(right + (column - line) / 2, pdf.y, line, 0.8).fill(NEUTRALS.text);
+    pdf.y += 3;
+  }
+  pdf
+    .font("Helvetica")
+    .fontSize(8.5)
+    .fillColor(NEUTRALS.text)
+    .text(
+      signer || "Assinatura do Oficial / Substituto / Escrevente",
+      right,
+      pdf.y + 2,
+      { width: column, align: "center" },
+    );
+  pdf
+    .fontSize(7)
+    .fillColor(NEUTRALS.textSoft)
+    .text("Sinal Público em CRC e CENSEC", right, pdf.y + 1, {
+      width: column,
+      align: "center",
+    });
+  pdf.y = Math.max(leftEnd, pdf.y) + 6;
+
   if (certidao.fees) {
+    pdf
+      .font("Helvetica")
+      .fontSize(8)
+      .fillColor(NEUTRALS.text)
+      .text(certidao.fees, left, pdf.y, { width, align: "justify" });
     pdf.y += 4;
-    pdf.text(certidao.fees, left, pdf.y, { width, align: "justify" });
   }
 
   if (sealLines.length > 0) {
-    pdf.y += 8;
-    const top = pdf.y;
+    pdf.y += 4;
+    const sealTop = pdf.y;
     const sealWidth = 250;
-    const x = left + (width - sealWidth) / 2;
-    const sealHeight = sealLines.length * 10 + 8;
+    const sealBoxHeight = sealLines.length * 10 + 8;
     pdf
       .lineWidth(0.8)
       .strokeColor(NEUTRALS.text)
-      .rect(x, top, sealWidth, sealHeight)
+      .rect(left, sealTop, sealWidth, sealBoxHeight)
       .stroke();
-    let y = top + 4;
+    let y = sealTop + 4;
     const code = sealLines.length - 2;
     sealLines.forEach((text, index) => {
       pdf
         .font(index === code ? "Helvetica-Bold" : "Helvetica")
         .fontSize(index === code ? 8.5 : 7.5)
         .fillColor(NEUTRALS.text)
-        .text(text, x, y, { width: sealWidth, align: "center" });
+        .text(text, left, y, { width: sealWidth, align: "center" });
       y += 10;
     });
-    pdf.y = top + sealHeight + 6;
+    pdf.y = sealTop + sealBoxHeight + 6;
   }
-
-  pdf.y += 4;
-  pdf
-    .font("Helvetica")
-    .fontSize(10)
-    .fillColor(NEUTRALS.text)
-    .text("O conteúdo da certidão é verdadeiro. Dou fé.", left, pdf.y, {
-      width,
-      align: "center",
-    });
-  pdf.text(
-    `${tenant.location.city}, ${writtenDate(certidao.issuedOn)}.`,
-    left,
-    pdf.y + 2,
-    { width, align: "center" },
-  );
-
-  if (digital) {
-    pdf.y += 8;
-    pdf
-      .font("Helvetica-Oblique")
-      .fontSize(8.5)
-      .fillColor(NEUTRALS.textSoft)
-      .text(DIGITAL_SIGNATURE_NOTE, left + 20, pdf.y, {
-        width: width - 40,
-        align: "center",
-      });
-  } else {
-    pdf.y += 28;
-    const line = 240;
-    pdf.rect(left + (width - line) / 2, pdf.y, line, 0.8).fill(NEUTRALS.text);
-    pdf.y += 3;
-  }
-  const signer = [certidao.signerName, certidao.signerTitle]
-    .filter(Boolean)
-    .join(", ");
-  pdf
-    .font("Helvetica")
-    .fontSize(9)
-    .fillColor(NEUTRALS.text)
-    .text(
-      signer || "Assinatura do Oficial / Substituto / Escrevente",
-      left,
-      pdf.y + 2,
-      { width, align: "center" },
-    );
-  pdf
-    .fontSize(7.5)
-    .fillColor(NEUTRALS.textSoft)
-    .text("Sinal Público em CRC e CENSEC", left, pdf.y + 2, {
-      width,
-      align: "center",
-    });
 
   pdf.end();
   return done;

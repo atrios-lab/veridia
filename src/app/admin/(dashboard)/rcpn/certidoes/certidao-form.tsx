@@ -140,7 +140,7 @@ export function CertidaoForm({
     IDLE,
   );
   const base = useId();
-  const model = certidaoModel(initial.kind, initial.form);
+  const model = certidaoModel(initial.kind, initial.form, initial.fields);
   const known = signers.findIndex(
     (s) => s.name === initial.signerName && s.title === initial.signerTitle,
   );

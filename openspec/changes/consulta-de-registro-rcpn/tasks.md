@@ -147,3 +147,9 @@
   "PRÉVIA" em cada folha, para conferir e imprimir; nada é gravado e o selo não é usado.
 - [x] 11.11 Instruções de envio na tela: até 500 MB por envio, compactar em .zip, fechar o sistema
   antes de copiar o banco; aviso antes de enviar arquivo maior.
+- [x] 11.12 Certidões nos Anexos IV a VII do Provimento nº 182/2024: legendas e ordem do modelo,
+  nome e matrícula centralizados, datas em números, campos "só quando existir" fora quando
+  vazios, rodapé em duas colunas; casamento e óbito antigos continuam no modelo em que saíram.
+- [x] 11.13 A certidão digital segue a mesma folha da impressa: mesmas margens e posições, com o
+  brasão e "REPÚBLICA FEDERATIVA DO BRASIL / REGISTRO CIVIL DAS PESSOAS NATURAIS" no alto, onde o
+  papel de segurança os traz; a nota de assinatura digital no lugar da linha de assinatura.

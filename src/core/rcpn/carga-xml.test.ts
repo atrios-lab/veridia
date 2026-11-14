@@ -100,15 +100,18 @@ test("carga de óbito: natimorto pelo livro C Auxiliar e a certidão preenchida"
   );
   assert.equal(fields.sexo, "MASCULINO");
   assert.equal(fields.cor, undefined, "IGNORADA fica para o livro");
-  assert.equal(fields.estadoCivilIdade, "casado(a), 80 anos");
-  assert.equal(fields.eleitor, "SIM");
-  assert.equal(fields.documento, "RG 123 RN");
-  assert.equal(fields.medico, "Médico Fictício, CRM 999");
+  assert.equal(fields.estadoCivil, "casado(a)");
+  assert.equal(fields.idade, "80 anos");
+  assert.equal(obito?.details?.eleitor, "SIM");
+  assert.equal(obito?.details?.documento, "RG 123 RN");
+  assert.equal(fields.medico, "Médico Fictício");
+  assert.equal(fields.medicoDocumento, "CRM 999");
   assert.equal(fields.causaMorte, "Causa fictícia");
   assert.equal(
-    fields.dataHoraFalecimento,
-    "primeiro de março de dois mil e vinte, às 07:30",
+    fields.dataFalecimentoExtenso,
+    "primeiro de março de dois mil e vinte",
   );
+  assert.equal(fields.horaFalecimento, "07:30 horas");
 });
 
 test("carga de nascimento: filiação completa, nacionalidade e gêmeos", () => {
