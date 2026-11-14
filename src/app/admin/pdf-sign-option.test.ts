@@ -22,6 +22,7 @@ const OFFERS_DIGITAL_SIGNATURE = new Set([
   "(dashboard)/utilitarios/livro-diario/paginas/[id]/oficio",
   "(dashboard)/utilitarios/livro-diario/justica-aberta/arquivo",
   "(dashboard)/utilitarios/livro-diario/excedente/[id]/arquivo",
+  "(dashboard)/rcpn/certidoes/[id]/arquivo",
   // Signed on its own screen (Auditoria › notificação › assinar).
   "(dashboard)/auditoria/notificacao/[id]/pdf",
 ]);
@@ -46,6 +47,8 @@ const NOT_SIGNED_BY_THE_OFFICE: Record<string, string> = {
     "comprovante de despesa anexado, não gerado",
   "(dashboard)/utilitarios/papel-seguranca/lotes/[id]/nota":
     "nota fiscal anexada, não gerada",
+  "(dashboard)/rcpn/certidoes/[id]/anexo":
+    "certidão assinada anexada, não gerada",
 };
 
 const ROOT = new URL(".", import.meta.url).pathname;

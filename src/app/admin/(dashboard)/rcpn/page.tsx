@@ -23,7 +23,12 @@ import {
   TableHeader,
   TableRow,
 } from "../../_ui/table.tsx";
-import { canImport, requireRcpn } from "./_lib/access.ts";
+import {
+  canImport,
+  canIssue,
+  canReadGuides,
+  requireRcpn,
+} from "./_lib/access.ts";
 
 export const metadata = { title: "Registro Civil" };
 
@@ -48,6 +53,8 @@ export default async function RcpnPage({
       : Promise.resolve([]),
   ]);
   const total = coverage.reduce((sum, c) => sum + c.count, 0);
+  const issue = canIssue(session);
+  const guide = canReadGuides(session);
 
   return (
     <>
@@ -56,14 +63,32 @@ export default async function RcpnPage({
         title="Registro Civil"
         description="Índice dos registros de nascimento, casamento e óbito desta serventia, lido dos arquivos do sistema do registro civil. Use para responder a busca no balcão. O índice orienta; quem prova é a certidão."
         actions={
-          canImport(session) ? (
-            <Link
-              href="/admin/rcpn/importar"
-              className={buttonVariants({ variant: "outline" })}
-            >
-              Importar arquivos
-            </Link>
-          ) : undefined
+          <span className="inline-flex flex-wrap gap-2">
+            {guide && (
+              <Link
+                href="/admin/atribuicoes/registro-civil"
+                className={buttonVariants({ variant: "ghost" })}
+              >
+                Guia: livros e prazos
+              </Link>
+            )}
+            {issue && (
+              <Link
+                href="/admin/rcpn/certidoes"
+                className={buttonVariants({ variant: "outline" })}
+              >
+                Certidões
+              </Link>
+            )}
+            {canImport(session) && (
+              <Link
+                href="/admin/rcpn/importar"
+                className={buttonVariants({ variant: "outline" })}
+              >
+                Importar arquivos
+              </Link>
+            )}
+          </span>
         }
       />
       <main className="flex max-w-[1100px] flex-col gap-6 px-4 py-7 md:px-8">
@@ -177,6 +202,11 @@ export default async function RcpnPage({
                     <TableHead>Registro</TableHead>
                     <TableHead>Filiação</TableHead>
                     <TableHead>Profissão declarada</TableHead>
+                    {issue && (
+                      <TableHead>
+                        <span className="sr-only">Certidão</span>
+                      </TableHead>
+                    )}
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -264,6 +294,19 @@ export default async function RcpnPage({
                             </span>
                           )}
                       </TableCell>
+                      {issue && (
+                        <TableCell className="align-top">
+                          <Link
+                            href={`/admin/rcpn/certidoes/nova?registro=${record.id}`}
+                            className={buttonVariants({
+                              variant: "outline",
+                              size: "sm",
+                            })}
+                          >
+                            Emitir certidão
+                          </Link>
+                        </TableCell>
+                      )}
                     </TableRow>
                   ))}
                 </TableBody>

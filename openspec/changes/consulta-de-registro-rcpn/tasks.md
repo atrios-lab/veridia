@@ -53,3 +53,30 @@
 - [x] 4.3 "!" explicativo nas telas e nos quadros do índice.
 - [x] 4.4 Arquivo original apagado do painel ao publicar ou descartar.
 - [x] 4.5 Grupo "Atribuições" na barra lateral, com o Registro Civil.
+
+## 5. Certidões pelo painel (14/11/2026)
+
+- [x] 5.1 Modelos nacionais de nascimento, casamento e óbito, matrícula em blocos, data por
+  extenso e preenchimento pelo índice. Testes.
+- [x] 5.2 Tabela só nova (0060), emissão com conferência do livro, selo colado (sem repetir),
+  correção e exclusão com justificativa (exclusão só marca), anexo da via assinada, auditoria.
+- [x] 5.3 PDF para imprimir ou assinar digitalmente; permissão própria; "!" na tela.
+- [x] 5.4 Verificar no navegador com dados fictícios.
+- [ ] 5.5 Selo puxado do Caixa (quando o Caixa existir), em vez de colado.
+- [x] 5.6 Nascimento e inteiro teor no modelo do Provimento 182; impressão no papel de segurança
+  (topo livre, medidas do modelo), uma folha.
+- [ ] 5.7 Casamento e óbito no modelo do Provimento 182, quando a serventia enviar os modelos.
+
+## 6. Guias das atribuições (14/11/2026)
+
+- [x] 6.1 Guias de Registro Civil, Imóveis, Títulos e Documentos, Pessoas Jurídicas, Protesto,
+  Distribuição, Notas e Caixa, só com a lei federal citada artigo por artigo; o resto marcado
+  para conferir no Código de Normas do RN. Testes dos atalhos e das fontes.
+- [x] 6.2 Barra lateral com uma entrada por atribuição; Atribuições e Utilitários minimizáveis.
+- [x] 6.3 Permissão própria e "!" em cada parte do guia; verificar no navegador.
+- [ ] 6.4 Índices digitais de cada atribuição (como o do Registro Civil), com os arquivos do
+  sistema da serventia.
+- [ ] 6.5 Incluir no guia os artigos do Código de Normas do RN quando a serventia conferir.
+- [x] 6.6 Estrutura da matrícula (modelo da serventia, Lei 6.015/1973, arts. 176 e 232) no guia
+  do Registro de Imóveis, sem dado de cliente.
+- [ ] 6.7 Abrir e imprimir matrícula e certidão de matrícula pelo painel.

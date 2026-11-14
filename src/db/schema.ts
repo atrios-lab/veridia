@@ -2046,3 +2046,47 @@ export const rcpnPeople = pgTable(
     index("rcpn_people_birth").on(t.tenantSlug, t.birthDate),
   ],
 );
+
+/**
+ * A certidão of the Registro Civil issued from the panel, in the national
+ * standard (change consulta-de-registro-rcpn, decision of 14/11/2026): the
+ * fields as the person checked them against the book, the selo pasted from
+ * the TJRN lot, and the signed or scanned file attached later. Edited with a
+ * justification, removed by a mark: never deleted.
+ */
+export const rcpnCertidoes = pgTable(
+  "rcpn_certidoes",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    tenantSlug,
+    kind: text("kind").notNull(),
+    /** "natimorto" when issued for one; "" otherwise. */
+    subtype: text("subtype").notNull().default(""),
+    /** core/rcpn/certidao CertidaoForm: "breve" or "inteiro-teor". */
+    form: text("form").notNull().default("breve"),
+    recordId: uuid("record_id").references(() => rcpnRecords.id),
+    /** core/rcpn/certidao field key → value, as printed. */
+    fields: jsonb("fields").notNull(),
+    /** The selo code pasted from the TJRN lot (no caixa yet). */
+    seal: text("seal").notNull().default(""),
+    /** Normal or isento, as the lot says. */
+    sealKind: text("seal_kind").notNull().default(""),
+    /** The amounts line, as the office prints it (optional). */
+    fees: text("fees").notNull().default(""),
+    /** Who signs: name and title. */
+    signerName: text("signer_name").notNull().default(""),
+    signerTitle: text("signer_title").notNull().default(""),
+    attachmentPath: text("attachment_path"),
+    attachmentName: text("attachment_name"),
+    createdBy: text("created_by"),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    updatedBy: text("updated_by"),
+    updatedAt: timestamp("updated_at", { withTimezone: true }),
+    removedAt: timestamp("removed_at", { withTimezone: true }),
+    removedBy: text("removed_by"),
+    removedReason: text("removed_reason"),
+  },
+  (t) => [index("rcpn_certidoes_tenant").on(t.tenantSlug, t.createdAt)],
+);

@@ -20,3 +20,23 @@ export function canImport(
 ): boolean {
   return can(session.user.role ?? "", "rcpn.import", session.user.permissions);
 }
+
+export function canIssue(
+  session: Awaited<ReturnType<typeof requireRcpn>>,
+): boolean {
+  return can(
+    session.user.role ?? "",
+    "rcpn.certidao",
+    session.user.permissions,
+  );
+}
+
+export function canReadGuides(
+  session: Awaited<ReturnType<typeof requireRcpn>>,
+): boolean {
+  return can(
+    session.user.role ?? "",
+    "attributions.view",
+    session.user.permissions,
+  );
+}

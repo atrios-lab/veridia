@@ -80,6 +80,12 @@ export const OFFICE_PERMISSIONS = [
   // answers the counter is not always who loads the office's whole base.
   "rcpn.search",
   "rcpn.import",
+  // The certidões of the Registro Civil issued from the index (decision of
+  // 14/11/2026): issue, correct, attach the signed one, exclude.
+  "rcpn.certidao",
+  // The guides of the attributions (decision of 14/11/2026): books,
+  // indexes and deadlines of each specialty, as the law sets them.
+  "attributions.view",
   // The office's audit trail in full, and the formal notifications that ask
   // a person to explain an act: the Tabelião/Registrador's alone.
   "audit.manage",
@@ -114,6 +120,8 @@ export const GRANTABLE_PERMISSIONS = [
   "daily-book.manage",
   "rcpn.search",
   "rcpn.import",
+  "rcpn.certidao",
+  "attributions.view",
 ] as const;
 export type GrantablePermission = (typeof GRANTABLE_PERMISSIONS)[number];
 
@@ -140,6 +148,10 @@ export const DERIVED_FROM: Partial<Record<GrantablePermission, Permission>> = {
   // Whoever answers the búsca at the counter searches the index. Loading
   // the base derives from nothing: the Tabelião/Registrador grants it.
   "rcpn.search": "requests.manage",
+  // Whoever issued certidões on the paper issues them here.
+  "rcpn.certidao": "security-paper.manage",
+  // Everyone at the desk reads the guides.
+  "attributions.view": "desk.access",
 };
 
 /**
@@ -365,4 +377,8 @@ export const GRANTABLE_LABELS: Record<GrantablePermission, string> = {
   "rcpn.search": "Registro Civil: pesquisar o índice de registros",
   "rcpn.import":
     "Registro Civil: enviar os arquivos do sistema do registro civil ao índice",
+  "rcpn.certidao":
+    "Registro Civil: emitir, corrigir e excluir certidões (com selo e anexo)",
+  "attributions.view":
+    "Atribuições: consultar os guias de cada especialidade (livros, índices e prazos da lei)",
 };

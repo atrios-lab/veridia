@@ -1,5 +1,6 @@
 import {
   ArrowLeft,
+  Building2,
   Calculator,
   Calendar,
   Check,
@@ -11,10 +12,14 @@ import {
   Copy,
   Eye,
   EyeOff,
+  FileStack,
   FileText,
+  Gavel,
   Globe,
+  House,
   Inbox,
   LayoutGrid,
+  Library,
   Lock,
   type LucideIcon,
   Mail,
@@ -27,9 +32,12 @@ import {
   Search,
   Settings,
   Shield,
+  Shuffle,
+  Signature,
   Trash2,
   Upload,
   Users,
+  Wallet,
   X,
 } from "lucide-react";
 
@@ -69,6 +77,14 @@ const ICONS = {
   trash: Trash2,
   play: Play,
   alert: CircleAlert,
+  house: House,
+  building: Building2,
+  files: FileStack,
+  gavel: Gavel,
+  shuffle: Shuffle,
+  signature: Signature,
+  wallet: Wallet,
+  library: Library,
 } satisfies Record<string, LucideIcon>;
 
 export type AdminIconName = keyof typeof ICONS;

@@ -774,6 +774,75 @@ ENTRIES["/admin/rcpn/importar"] = {
   ],
 };
 
+const CERTIDAO_TERMS: { term: string; meaning: string }[] = [
+  {
+    term: "Modelo nacional",
+    meaning:
+      "Os campos e a ordem das certidões de nascimento, casamento e óbito usados em todo o país, com a matrícula no alto (normas do CNJ, hoje no Código Nacional de Normas). São os mesmos dos modelos do sistema da serventia.",
+  },
+  {
+    term: "Selo digital de fiscalização",
+    meaning:
+      "O código do selo do Tribunal de Justiça que vai em todo ato. Enquanto o Caixa não existe, copie o selo do lote da serventia e cole no campo. Ele sai no pé da certidão com o endereço de conferência do TJRN.",
+  },
+  {
+    term: "Normal e isento",
+    meaning:
+      "Como o selo está no lote: normal (ato pago) ou isento (ato gratuito). Na gratuidade, escreva a lei no campo de emolumentos, como a serventia já faz.",
+  },
+  {
+    term: "Conferi com o livro",
+    meaning:
+      "O índice orienta; quem dá fé é o livro. A certidão só é emitida depois que a pessoa confirma que leu cada campo no registro.",
+  },
+  {
+    term: "Corrigir",
+    meaning:
+      "Muda o texto de uma certidão já emitida (erro de digitação, selo, assinante), com justificativa. A correção vai para a auditoria. O índice não muda.",
+  },
+  {
+    term: "Excluir",
+    meaning:
+      "Tira a certidão da lista, com justificativa. Ela continua guardada e aparece na auditoria.",
+  },
+];
+
+ENTRIES["/admin/rcpn/certidoes"] = {
+  purpose:
+    "Emitir certidões de nascimento, casamento e óbito (natimorto dentro de óbito) no modelo nacional, com matrícula, já pelo site: imprimir para assinar à mão ou assinar digitalmente.",
+  steps: [
+    "Em Registro Civil, pesquise o registro e clique em Emitir certidão: os dados do índice já vêm preenchidos. Para um registro fora do índice, comece em branco aqui.",
+    "Abra o livro, confira cada campo e complete o que o índice não tem (hora, local, avós, DNV, causa da morte, averbações). Qualquer campo pode ser corrigido.",
+    "Cole o selo do lote do TJRN, escreva os emolumentos como a serventia imprime e escolha quem assina.",
+    "Marque que conferiu com o livro e emita. Depois imprima para assinar à mão ou assine digitalmente.",
+    "Anexe a via assinada (digitalizada ou o PDF assinado). Errou? Corrija com justificativa.",
+  ],
+  terms: CERTIDAO_TERMS,
+};
+
+ENTRIES["/admin/atribuicoes"] = {
+  purpose:
+    "Os guias de cada atribuição da serventia: o que faz, a lei, os livros e índices que a lei exige, os prazos e o que o painel já faz por ela.",
+  steps: [
+    "Escolha a atribuição na barra lateral (grupo Atribuições) ou nos cartões.",
+    'Em cada parte do guia, o "!" explica o que ela é e como ler.',
+    "Use os atalhos de O que já dá para fazer no painel para ir direto à tela de trabalho.",
+    "O quadro amarelo lista o que é do Código de Normas do RN: confira lá antes de seguir.",
+  ],
+  terms: [
+    {
+      term: "Atribuição",
+      meaning:
+        "Cada especialidade que a serventia exerce: registro civil, imóveis, títulos e documentos, pessoas jurídicas, protesto, distribuição e notas.",
+    },
+    {
+      term: "Código de Normas",
+      meaning:
+        "As normas da Corregedoria Geral de Justiça do RN para os cartórios (Provimento nº 156/2016-CGJ/RN). Complementa a lei federal.",
+    },
+  ],
+};
+
 /** The "!" beside the counts of the index: what each kind holds. */
 export const RCPN_KINDS_HELP: ScreenHelp = {
   purpose:

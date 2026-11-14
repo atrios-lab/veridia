@@ -52,6 +52,11 @@ const EXACT: Record<string, string> = {
   "rcpn.import.publish": "Publicou registros no índice do Registro Civil",
   "rcpn.import.discard":
     "Descartou um arquivo enviado ao índice do Registro Civil",
+  "rcpn.certidao.issue": "Emitiu uma certidão do Registro Civil",
+  "rcpn.certidao.edit": "Corrigiu uma certidão do Registro Civil",
+  "rcpn.certidao.attach": "Anexou a certidão assinada ou digitalizada",
+  "rcpn.certidao.remove":
+    "Excluiu uma certidão do Registro Civil (fica guardada)",
   "daily-book.import": "Anexou um relatório ao Livro Diário Auxiliar",
   "daily-book.entry-add": "Fez um lançamento no Livro Diário Auxiliar",
   "daily-book.entry-edit": "Editou um lançamento do Livro Diário Auxiliar",
@@ -354,6 +359,14 @@ const EXPLANATIONS: Record<string, string> = {
     "Registros lidos de um arquivo foram conferidos e publicados no índice do Registro Civil, que alimenta a pesquisa e a consulta do site. Registros já existentes só foram substituídos quando a pessoa escolheu.",
   "rcpn.import.discard":
     "Um arquivo enviado ao índice do Registro Civil foi descartado sem publicar. O arquivo foi apagado do painel; nada mudou no índice.",
+  "rcpn.certidao.issue":
+    "Uma certidão de nascimento, casamento ou óbito foi emitida pelo painel, com os dados conferidos com o livro e o selo colado do lote do TJRN.",
+  "rcpn.certidao.edit":
+    "Uma certidão emitida foi corrigida (erro de digitação, selo ou assinante), com justificativa. O índice do Registro Civil não muda.",
+  "rcpn.certidao.attach":
+    "A certidão assinada à mão e digitalizada, ou a assinada digitalmente, foi anexada à certidão emitida.",
+  "rcpn.certidao.remove":
+    "Uma certidão emitida foi excluída, com justificativa. Ela continua guardada e aparece na auditoria.",
   "daily-book.import":
     "Um relatório de produtividade foi anexado e os atos lidos foram lançados como receita no Livro Diário Auxiliar.",
   "daily-book.entry-add":

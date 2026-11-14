@@ -111,13 +111,63 @@ export const ADMIN_NAV: readonly AdminNavItem[] = [
     // specialty, each where its files are loaded and its acts worked. The
     // first is the Registro Civil (change consulta-de-registro-rcpn); the
     // others (Imóveis, Títulos e Documentos, Pessoas Jurídicas, Protesto,
-    // Distribuição, Notas) and the Caixa join as their screens land, never
-    // before: an entry that leads nowhere spends the office's trust.
+    // Distribuição, Notas) and the Caixa have their guide (books, indexes
+    // and deadlines of the law, core/attributions/guides.ts) and link to
+    // what the panel already does for them.
     group: "Atribuições",
     label: "Registro Civil",
     href: "/admin/rcpn",
     icon: "file",
     permission: "rcpn.search",
+  },
+  {
+    group: "Atribuições",
+    label: "Registro de Imóveis",
+    href: "/admin/atribuicoes/registro-de-imoveis",
+    icon: "house",
+    permission: "attributions.view",
+  },
+  {
+    group: "Atribuições",
+    label: "Títulos e Documentos",
+    href: "/admin/atribuicoes/titulos-e-documentos",
+    icon: "files",
+    permission: "attributions.view",
+  },
+  {
+    group: "Atribuições",
+    label: "Pessoas Jurídicas",
+    href: "/admin/atribuicoes/pessoas-juridicas",
+    icon: "building",
+    permission: "attributions.view",
+  },
+  {
+    group: "Atribuições",
+    label: "Protesto",
+    href: "/admin/atribuicoes/protesto",
+    icon: "gavel",
+    permission: "attributions.view",
+  },
+  {
+    group: "Atribuições",
+    label: "Distribuição",
+    href: "/admin/atribuicoes/distribuicao",
+    icon: "shuffle",
+    permission: "attributions.view",
+  },
+  {
+    group: "Atribuições",
+    label: "Notas",
+    href: "/admin/atribuicoes/notas",
+    icon: "signature",
+    permission: "attributions.view",
+  },
+  {
+    group: "Atribuições",
+    label: "Caixa",
+    href: "/admin/atribuicoes/caixa",
+    icon: "wallet",
+    permission: "attributions.view",
   },
   {
     // Tools for the deed desk. The first: the guias de transmissão de bens (ITIV,
