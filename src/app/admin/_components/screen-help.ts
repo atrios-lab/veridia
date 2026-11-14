@@ -852,6 +852,36 @@ ENTRIES["/admin/rcpn/certidoes"] = {
   terms: CERTIDAO_TERMS,
 };
 
+ENTRIES["/admin/rcpn/habilitacao"] = {
+  purpose:
+    "Processar a habilitação para o casamento: um processo por casal, com número do ano, preenchido uma vez. Requerimento, declaração das testemunhas, edital, certidão de proclamas e certificado saem dos mesmos dados.",
+  steps: [
+    "Clique em Nova habilitação e escolha o tipo: casamento civil, religioso com efeito civil ou conversão de união estável. Preencha o que tiver; o resto pode ser completado depois, em Alterar.",
+    "Imprima o requerimento e a declaração das testemunhas para assinarem, ou assine digitalmente. Quem não sabe assinar tem campo para quem assina a rogo e para a impressão digital.",
+    "Resolva o que aparece em O que falta (idade, autorização, casamento anterior, pacto, testemunhas). Para conferir traz os avisos que não travam, como causa suspensiva e maior de 70 anos.",
+    "Clique em Publicar o edital no site: ele vai para os proclamas só com nome, estado civil, filiação e domicílio (Código Nacional de Normas, art. 122).",
+    "Em até 5 dias da publicação, clique em Extrair certificado hoje (Lei nº 6.015/1973, art. 67, § 1º). O certificado vale 90 dias (Código Civil, art. 1.532); a tela avisa quando está perto de vencer.",
+    "Errou? Altere com justificativa. Desistiram? Cancele com justificativa: o processo fica guardado e pode ser estornado.",
+  ],
+  terms: [
+    {
+      term: "Edital de proclamas",
+      meaning:
+        "A publicação da habilitação, em meio eletrônico, para que quem souber de impedimento o declare por escrito.",
+    },
+    {
+      term: "Certificado de habilitação",
+      meaning:
+        "O documento que diz que os nubentes podem casar. No casamento religioso, chama-se certidão de habilitação e vai para o celebrante.",
+    },
+    {
+      term: "Causa suspensiva",
+      meaning:
+        "Situação que não impede o casamento, mas obriga a separação de bens se não for resolvida (Código Civil, art. 1.523).",
+    },
+  ],
+};
+
 ENTRIES["/admin/atribuicoes"] = {
   purpose:
     "Os guias de cada atribuição da serventia: o que faz, a lei, os livros e índices que a lei exige, os prazos e o que o painel já faz por ela.",

@@ -159,6 +159,11 @@ export const ADMIN_NAV: readonly AdminNavItem[] = [
         permission: "rcpn.certidao",
       },
       {
+        label: "Habilitação de casamento",
+        href: "/admin/rcpn/habilitacao",
+        permission: "rcpn.habilitacao",
+      },
+      {
         label: "Importar arquivos",
         href: "/admin/rcpn/importar",
         permission: "rcpn.import",
