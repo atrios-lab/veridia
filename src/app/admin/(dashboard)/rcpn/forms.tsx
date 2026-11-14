@@ -112,12 +112,15 @@ export interface ChangedItem {
 export function PublishForm({
   id,
   newCount,
+  completeCount = 0,
   changed,
   changedTotal = changed.length,
   editedTotal = 0,
 }: {
   id: string;
   newCount: number;
+  /** Registros the file only completes (blanks filled): go in by themselves. */
+  completeCount?: number;
   /** The first changed registros, to mark one by one. */
   changed: ChangedItem[];
   /** All the changed ones, including those not on the screen. */
@@ -241,12 +244,12 @@ export function PublishForm({
       )}
       <Button
         type="submit"
-        disabled={pending || newCount + replaced === 0}
+        disabled={pending || newCount + completeCount + replaced === 0}
         className="self-start"
       >
         {pending
           ? "Publicando..."
-          : `Publicar no índice (${newCount} novo${newCount === 1 ? "" : "s"}${replaced > 0 ? `, ${replaced} substituído${replaced === 1 ? "" : "s"}` : ""})`}
+          : `Publicar no índice (${newCount} novo${newCount === 1 ? "" : "s"}${completeCount > 0 ? `, ${completeCount} completado${completeCount === 1 ? "" : "s"}` : ""}${replaced > 0 ? `, ${replaced} substituído${replaced === 1 ? "" : "s"}` : ""})`}
       </Button>
     </form>
   );

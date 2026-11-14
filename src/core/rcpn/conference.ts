@@ -1,5 +1,6 @@
 import {
   isMatricula,
+  mergeSources,
   RCPN_KINDS,
   type RcpnKind,
   type RcpnPerson,
@@ -53,7 +54,13 @@ export interface KindSummary {
   lastYear: number | null;
 }
 
-export type Comparison = "novo" | "igual" | "alterado";
+/**
+ * "completa": the file only fills fields the index has blank (decision of
+ * 14/11/2026: the office keeps sending what its system generates and the
+ * panel completes the registros); it goes in without asking. "alterado":
+ * some field holds a different value; it is only replaced when marked.
+ */
+export type Comparison = "novo" | "igual" | "completa" | "alterado";
 
 export interface CheckedRecord {
   key: string;
@@ -93,6 +100,8 @@ export interface ChangeDetail {
   label: string;
   before: string;
   after: string;
+  /** Fills a blank of the index: completes, does not replace. */
+  fills?: boolean;
 }
 
 const RECORD_LABELS = {
@@ -120,21 +129,33 @@ export function changeDetails(
         label: RECORD_LABELS[field],
         before: current[field],
         after: incoming[field],
+        fills: !current[field],
       });
     }
   }
-  // The book's other data: one line saying how many fields differ.
-  const changedData = Object.entries(incoming.details ?? {}).filter(
+  // The book's other data: how many fields it fills and how many differ.
+  const data = Object.entries(incoming.details ?? {}).filter(
     ([key, value]) => value && value !== current.details?.[key],
-  ).length;
-  if (changedData > 0) {
+  );
+  const filled = data.filter(([key]) => !current.details?.[key]?.trim());
+  const differs = data.length - filled.length;
+  if (filled.length > 0) {
+    details.push({
+      label: "dados completos do registro",
+      before: "em branco no painel",
+      after:
+        filled.length === 1
+          ? "1 campo preenchido"
+          : `${filled.length} campos preenchidos`,
+      fills: true,
+    });
+  }
+  if (differs > 0) {
     details.push({
       label: "dados completos do registro",
       before: "como estão no painel",
       after:
-        changedData === 1
-          ? "1 campo diferente"
-          : `${changedData} campos diferentes`,
+        differs === 1 ? "1 campo diferente" : `${differs} campos diferentes`,
     });
   }
   for (const person of incoming.people) {
@@ -152,6 +173,7 @@ export function changeDetails(
           label: FIELD_LABELS[field],
           before: before[field],
           after: person[field],
+          fills: !before[field],
         });
       }
     }
@@ -206,16 +228,27 @@ export function conferenceOf(
       summary.lastYear =
         summary.lastYear === null ? year : Math.max(summary.lastYear, year);
     }
-    const problems = problemsOf(record);
     seen.set(key, (seen.get(key) ?? 0) + 1);
     const current = existing.get(key);
+    // A registro already in the index is judged as it will stand after
+    // the file completes it: a file that only brings the missing fields
+    // (no name, say) is not "sem nome" when the index has the name.
+    const problems = problemsOf(
+      current ? (mergeSources([[record], [current]])[0] ?? record) : record,
+    );
     const details = current ? changeDetails(record, current) : [];
     const changes = [...new Set(details.map((d) => d.label))];
     checked.push({
       key,
       record,
       problems,
-      comparison: !current ? "novo" : changes.length > 0 ? "alterado" : "igual",
+      comparison: !current
+        ? "novo"
+        : details.length === 0
+          ? "igual"
+          : details.every((d) => d.fills)
+            ? "completa"
+            : "alterado",
       changes,
       details,
     });
@@ -232,6 +265,7 @@ export function conferenceOf(
   const counts = {
     novo: 0,
     igual: 0,
+    completa: 0,
     alterado: 0,
     withProblems: 0,
     blocked: 0,
@@ -246,16 +280,22 @@ export function conferenceOf(
 
 /**
  * What a publication writes: every new registro without a blocking
- * problem, plus the changed ones the office chose to replace. The same
- * ones are left alone.
+ * problem, the ones the file only completes (blanks filled), and the
+ * changed ones the office chose to replace. The same ones are left alone.
+ * `keep`: registros not completed by themselves (corrected by hand in the
+ * panel), unless marked in `replace`.
  */
 export function toPublish(
   conference: Conference,
   replace: ReadonlySet<string>,
+  keep: ReadonlySet<string> = new Set(),
 ): CheckedRecord[] {
   return conference.checked.filter((item) => {
     if (item.problems.some((p) => BLOCKING.includes(p))) return false;
     if (item.comparison === "novo") return true;
+    if (item.comparison === "completa") {
+      return !keep.has(item.key) || replace.has(item.key);
+    }
     return item.comparison === "alterado" && replace.has(item.key);
   });
 }

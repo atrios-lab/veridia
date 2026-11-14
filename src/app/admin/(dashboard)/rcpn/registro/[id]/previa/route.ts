@@ -1,5 +1,6 @@
 import { can } from "@/core/auth/roles.ts";
 import { isCertidaoForm, prefillCertidao } from "@/core/rcpn/certidao.ts";
+import { applyFicha, fichaFields } from "@/core/rcpn/ficha.ts";
 import { toIsoDate } from "@/core/scheduling/calendar.ts";
 import { OFFICE_TIME_ZONE } from "@/core/time/office-time.ts";
 import { db } from "@/db/index.ts";
@@ -22,15 +23,32 @@ async function handle(
   { params }: { params: Promise<{ id: string }> },
 ): Promise<Response> {
   const session = await getSession();
+  const role = session?.user.role ?? "";
+  const permissions = session?.user.permissions;
   if (
     !session ||
-    !can(session.user.role ?? "", "rcpn.certidao", session.user.permissions)
+    !(
+      can(role, "rcpn.certidao", permissions) ||
+      can(role, "rcpn.edit", permissions)
+    )
   ) {
     return new Response("Não autorizado", { status: 403 });
   }
   const tenant = await getTenant();
-  const record = await getRecordWith(db, tenant.slug, (await params).id);
-  if (!record) return new Response("Registro não encontrado", { status: 404 });
+  const stored = await getRecordWith(db, tenant.slug, (await params).id);
+  if (!stored) return new Response("Registro não encontrado", { status: 404 });
+  // From the Alterar screen (POST): the ficha as it is typed, not saved,
+  // to see how the certidão will come out before saving.
+  let record: typeof stored = stored;
+  if (request.method === "POST") {
+    const form = await request.formData();
+    const values: Record<string, string> = {};
+    for (const field of fichaFields(stored.kind)) {
+      const value = form.get(field.key);
+      if (typeof value === "string") values[field.key] = value;
+    }
+    record = { ...applyFicha(stored, values).record, id: stored.id };
+  }
   const via = new URL(request.url).searchParams.get("via");
   const form = isCertidaoForm(via) ? via : "breve";
   const signer = (await getGuideSettings(tenant)).signers[0];
@@ -56,5 +74,9 @@ async function handle(
 }
 
 export function GET(...args: Parameters<typeof handle>) {
+  return renderingFor(args[0], () => handle(...args));
+}
+
+export function POST(...args: Parameters<typeof handle>) {
   return renderingFor(args[0], () => handle(...args));
 }

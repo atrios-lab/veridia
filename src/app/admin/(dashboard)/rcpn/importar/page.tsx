@@ -49,7 +49,18 @@ export default async function ImportPage() {
             sistema ficam de fora. O arquivo enviado é apagado do painel quando
             a importação é publicada ou descartada.
           </p>
-          <div className="mt-4 mb-5 rounded-lg border border-primary/25 bg-primary/5 px-4 py-3 text-sm text-foreground">
+          <div className="mt-4 rounded-lg border border-success/30 bg-success-soft px-4 py-3 text-sm text-success-text">
+            <p className="font-semibold">Vá alimentando aos poucos</p>
+            <p className="mt-1 text-justify hyphens-auto">
+              Envie aqui sempre que gerar os arquivos do sistema do registro
+              civil, mesmo que sejam os mesmos de antes ou só uma parte. O
+              painel completa sozinho o que estava em branco em cada registro; o
+              que vier diferente do que já está no painel aparece na conferência
+              para você decidir. O que nenhum arquivo trouxer, complete à mão na
+              ficha do registro, em Alterar.
+            </p>
+          </div>
+          <div className="mt-3 mb-5 rounded-lg border border-primary/25 bg-primary/5 px-4 py-3 text-sm text-foreground">
             <p className="font-semibold">
               Como enviar arquivos grandes (até {RCPN_MAX_MB} MB por envio)
             </p>

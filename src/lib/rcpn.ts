@@ -292,22 +292,24 @@ export async function publishImportWith(
   // "all": every changed registro takes the file's data (the screen shows
   // only the first ones to mark one by one), except those corrected by
   // hand in the panel: those only when marked one by one (decision of
-  // 14/11/2026).
-  const edited =
-    replace === "all" ? await editedKeysWith(database, tenantSlug) : null;
+  // 14/11/2026). The ones the file only completes go in by themselves,
+  // also except those corrected by hand.
+  const edited = await editedKeysWith(database, tenantSlug);
   const chosen = toPublish(
     conference,
     replace === "all"
-      ? new Set(
-          conference.checked
+      ? new Set([
+          ...conference.checked
             .filter(
               (c) =>
                 c.comparison === "alterado" &&
-                (!edited?.has(c.key) || marked.has(c.key)),
+                (!edited.has(c.key) || marked.has(c.key)),
             )
             .map((c) => c.key),
-        )
+          ...marked,
+        ])
       : replace,
+    edited,
   );
 
   // In batches (decision of 14/11/2026, after a whole base of ~24 thousand

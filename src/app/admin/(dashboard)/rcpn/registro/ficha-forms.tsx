@@ -134,11 +134,26 @@ export function FichaForm({
             {state.message}
           </p>
         )}
-        <div>
+        <div className="flex flex-wrap items-center gap-2">
           <Button type="submit" disabled={pending}>
             {pending ? "Salvando..." : "Salvar alterações"}
           </Button>
+          <Button
+            type="submit"
+            variant="outline"
+            formAction={`/admin/rcpn/registro/${id}/previa`}
+            formMethod="post"
+            formTarget="_blank"
+            formNoValidate
+          >
+            Visualizar como vai ficar
+          </Button>
         </div>
+        <p className="text-xs text-muted-foreground">
+          "Visualizar como vai ficar" abre em outra aba a certidão com o que
+          está digitado agora, marcada como prévia. Nada é salvo até você clicar
+          em "Salvar alterações".
+        </p>
       </section>
     </form>
   );
