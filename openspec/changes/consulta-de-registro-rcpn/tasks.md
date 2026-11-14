@@ -124,3 +124,16 @@
 - [x] 10.2 Telas de erro em português no painel, no site e geral ("em manutenção"), dizendo se foi
   tamanho, tempo, conexão ou outro erro, com o código para o suporte.
 - [x] 10.3 Registro das etapas do envio no servidor (tempo e tamanho, sem dado pessoal).
+
+## 11. Ficha completa e pesquisa por livro (14/11/2026)
+
+- [x] 11.1 Leitura de todos os campos da carga XML e do banco (NA, CA, OB): filiação completa,
+  avós, declarante, testemunhas, anotações, cônjuges e óbito; códigos numéricos sem adivinhar.
+- [x] 11.2 Carga e banco no mesmo envio juntados pela matrícula.
+- [x] 11.3 Abas Nascimentos, Casamentos e Óbitos (tela e barra lateral) com pesquisa por nome,
+  filiação, avós, termo, livro, matrícula, DNV, CPF e datas.
+- [x] 11.4 Ficha completa do registro, alterar com justificativa e histórico, cancelar e estornar;
+  permissão própria em Perfis e permissões; auditoria; migração só acrescenta.
+- [x] 11.5 Importação não sobrescreve registro corrigido no painel com "Substituir todos".
+- [x] 11.6 Tudo editável para retificação ou erro de digitação, menos a matrícula (ficha e
+  certidão de um registro), também no servidor.

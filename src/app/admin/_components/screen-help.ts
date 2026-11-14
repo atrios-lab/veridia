@@ -730,14 +730,44 @@ const RCPN_TERMS: { term: string; meaning: string }[] = [
 
 ENTRIES["/admin/rcpn"] = {
   purpose:
-    "Pesquisar no índice dos registros de nascimento, casamento e óbito desta serventia (natimortos dentro de óbitos), para responder a busca no balcão sem procurar nos livros.",
+    "Achar um registro de nascimento, casamento ou óbito desta serventia (natimortos dentro de óbitos), abrir a ficha completa e emitir a certidão, sem procurar nos livros. Cada tipo tem a sua aba, como cada um tem o seu livro.",
   steps: [
-    "Digite o nome, em qualquer ordem. Se quiser filtrar, informe também o nome da mãe e a data de nascimento.",
-    "Confira o resultado: o tipo do registro, livro, folha, termo, matrícula, filiação e a profissão declarada.",
-    "Resultado marcado 'Semelhante' tem uma ou duas letras de diferença: confira no livro.",
-    "Nada encontrado não quer dizer que o registro não exista: ele pode estar só no livro ou fora do período do índice (veja os quadros no alto).",
+    "Escolha a aba: Nascimentos (Livro A), Casamentos (Livros B e B Auxiliar) ou Óbitos (Livros C e C Auxiliar).",
+    "Escolha por onde pesquisar: nome, filiação, avós, número do termo, livro, matrícula, DNV ou CPF. O nome pode vir em qualquer ordem; termo, livro e documentos valem pelos números.",
+    "Se quiser, limite entre duas datas: de nascimento, do registro, do casamento ou do falecimento.",
+    "Abra o registro para ver a ficha completa, emitir a certidão ou corrigir. 'Semelhante' tem uma letra de diferença; 'Cancelado' foi cancelado no painel e continua guardado.",
+    "Nada encontrado não quer dizer que o registro não exista: ele pode estar só no livro ou fora do período dos arquivos enviados (veja as abas no alto).",
   ],
   terms: RCPN_TERMS,
+};
+
+ENTRIES["/admin/rcpn/registro"] = {
+  purpose:
+    "A ficha do registro: tudo o que os arquivos do sistema do registro civil trouxeram, na ordem do termo no livro (Lei nº 6.015/1973, arts. 54, 70 e 80), com o histórico do que foi corrigido no painel.",
+  steps: [
+    "Confira a ficha com o livro. O campo 'Não veio nos arquivos' pode ser completado em Alterar.",
+    "Alterar: corrija o que estiver diferente do termo (retificação ou erro de digitação) e escreva a justificativa. Todos os campos se alteram, menos a matrícula. Cada campo, como era e como ficou, fica no histórico e na auditoria.",
+    "Cancelar registro: tira o registro do uso sem apagar. Ele fica marcado, com quem cancelou, quando e por quê, e não sai certidão enquanto estiver cancelado.",
+    "Estornar cancelamento: desfaz o cancelamento, também com justificativa.",
+    "Uma importação nova não escreve por cima do que foi corrigido aqui, a não ser que o registro seja marcado um por um na conferência.",
+  ],
+  terms: [
+    {
+      term: "Anotações e averbações",
+      meaning:
+        "O que está escrito à margem do termo depois do registro: casamento, divórcio, reconhecimento de filho, mudança de nome e outros atos (Lei nº 6.015/1973, arts. 97 a 108).",
+    },
+    {
+      term: "Cancelado",
+      meaning:
+        "Registro tirado do uso no painel, com justificativa. Continua guardado e pode ser estornado. Não altera o livro.",
+    },
+    {
+      term: "Estorno",
+      meaning:
+        "Desfazer o cancelamento. Fica no histórico junto com o cancelamento.",
+    },
+  ],
 };
 
 ENTRIES["/admin/rcpn/importar"] = {

@@ -83,6 +83,9 @@ export const OFFICE_PERMISSIONS = [
   // The certidões of the Registro Civil issued from the index (decision of
   // 14/11/2026): issue, correct, attach the signed one, exclude.
   "rcpn.certidao",
+  // Correcting a registro of the index, cancelling it and restoring it
+  // (decision of 14/11/2026), always with a justification.
+  "rcpn.edit",
   // The guides of the attributions (decision of 14/11/2026): books,
   // indexes and deadlines of each specialty, as the law sets them.
   "attributions.view",
@@ -123,6 +126,7 @@ export const GRANTABLE_PERMISSIONS = [
   "rcpn.search",
   "rcpn.import",
   "rcpn.certidao",
+  "rcpn.edit",
   "attributions.view",
   "attributions.import",
 ] as const;
@@ -153,6 +157,8 @@ export const DERIVED_FROM: Partial<Record<GrantablePermission, Permission>> = {
   "rcpn.search": "requests.manage",
   // Whoever issued certidões on the paper issues them here.
   "rcpn.certidao": "security-paper.manage",
+  // Whoever loads the base corrects it.
+  "rcpn.edit": "rcpn.import",
   // Everyone at the desk reads the guides.
   "attributions.view": "desk.access",
   // Whoever loads the Registro Civil's base loads the others' files.
@@ -384,6 +390,8 @@ export const GRANTABLE_LABELS: Record<GrantablePermission, string> = {
     "Registro Civil: enviar os arquivos do sistema do registro civil ao índice",
   "rcpn.certidao":
     "Registro Civil: emitir, corrigir e excluir certidões (com selo e anexo)",
+  "rcpn.edit":
+    "Registro Civil: alterar, cancelar e estornar registros do índice (com justificativa)",
   "attributions.view":
     "Atribuições: consultar os guias de cada especialidade (livros, índices e prazos da lei)",
   "attributions.import":

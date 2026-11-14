@@ -131,10 +131,9 @@ export async function publishImportAction(
       message: "Sem permissão para publicar no índice.",
     };
   const id = String(formData.get("id") ?? "");
+  const marked = new Set(formData.getAll("substituir").map(String));
   const replace: ReadonlySet<string> | "all" =
-    formData.get("substituirTodos") === "1"
-      ? "all"
-      : new Set(formData.getAll("substituir").map(String));
+    formData.get("substituirTodos") === "1" ? "all" : marked;
   let count: number;
   try {
     count = await rcpn.publish(
@@ -142,6 +141,7 @@ export async function publishImportAction(
       id,
       gate.session.user.id,
       replace,
+      marked,
     );
   } catch (error) {
     if (error instanceof RcpnImportError)

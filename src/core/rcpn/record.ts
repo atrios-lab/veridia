@@ -152,3 +152,71 @@ export function formatIsoDate(iso: string): string {
   const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(iso);
   return match ? `${match[3]}/${match[2]}/${match[1]}` : "";
 }
+
+/**
+ * The same registro read from two sources of one sending (the carga XML
+ * and the registry system's database, decision of 14/11/2026): one
+ * registro, each source filling what the other leaves blank. The sources
+ * come in order of preference: the first one's value stays where both
+ * have one. Repeats inside one source are kept as they are, so the
+ * conference still shows them.
+ */
+export function mergeSources(sources: RcpnRecord[][]): RcpnRecord[] {
+  const [first = [], ...rest] = sources;
+  const out: RcpnRecord[] = first.map((r) => ({
+    ...r,
+    people: r.people.map((p) => ({ ...p })),
+    details: { ...(r.details ?? {}) },
+  }));
+  for (const source of rest) {
+    const byKey = new Map<string, RcpnRecord>();
+    for (const r of out) {
+      const key = `${r.kind}:${recordKey(r)}`;
+      if (!byKey.has(key)) byKey.set(key, r);
+    }
+    for (const incoming of source) {
+      const target = byKey.get(`${incoming.kind}:${recordKey(incoming)}`);
+      if (!target) {
+        out.push(incoming);
+        continue;
+      }
+      fillBlanks(target, incoming);
+    }
+  }
+  return out;
+}
+
+function fillBlanks(target: RcpnRecord, incoming: RcpnRecord): void {
+  const columns = [
+    "matricula",
+    "book",
+    "page",
+    "term",
+    "registeredOn",
+    "eventOn",
+  ] as const;
+  for (const column of columns) {
+    if (!target[column] && incoming[column]) target[column] = incoming[column];
+  }
+  if (!target.subtype && incoming.subtype) target.subtype = incoming.subtype;
+  if (!target.details) target.details = {};
+  const details = target.details;
+  for (const [key, value] of Object.entries(incoming.details ?? {})) {
+    if (value && !details[key]?.trim()) details[key] = value;
+  }
+  for (const person of incoming.people) {
+    const same = target.people.find((p) => p.role === person.role);
+    if (!same) {
+      target.people.push({ ...person });
+      continue;
+    }
+    for (const [key, value] of Object.entries(person) as [
+      keyof RcpnPerson,
+      string,
+    ][]) {
+      if (key !== "role" && value && !same[key]) {
+        (same as unknown as Record<string, string>)[key] = value;
+      }
+    }
+  }
+}

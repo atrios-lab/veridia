@@ -2,7 +2,7 @@
 
 import { ChevronRight, ExternalLink } from "lucide-react";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useSearchParams } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import {
   Collapsible,
@@ -55,6 +55,9 @@ export function AdminSidebarNav({
   counts: Record<string, number>;
 }) {
   const pathname = usePathname();
+  // The tab of a screen with tabs in the menu (the Registro Civil's books).
+  const search = useSearchParams().toString();
+  const location = search ? `${pathname}?${search}` : pathname;
   // On a phone the sidebar is a drawer over the screen: it closes as soon
   // as an item is tapped, and on any change of page (decision of
   // 12/11/2026), so the person lands on the screen they chose instead of
@@ -85,7 +88,7 @@ export function AdminSidebarNav({
                   label={group}
                   icon={foldIcon}
                   nodes={groupItems}
-                  pathname={pathname}
+                  pathname={location}
                   counts={counts}
                 />
               </SidebarMenu>
@@ -103,7 +106,7 @@ export function AdminSidebarNav({
                       label={item.label}
                       icon={item.icon}
                       nodes={item.children}
-                      pathname={pathname}
+                      pathname={location}
                       counts={counts}
                     />
                   );
@@ -309,7 +312,7 @@ function NavBranch({
           render={
             <Link
               href={node.href}
-              aria-current={node.href === pathname ? "page" : undefined}
+              aria-current={active === node.href ? "page" : undefined}
               onClick={() => {
                 if (isMobile) setOpenMobile(false);
               }}

@@ -145,3 +145,54 @@ ter um "!" próprio. A área DEVE (SHALL) ficar no grupo "Atribuições" da barr
 #### Scenario: Escrevente sem saber o que é Livro C Auxiliar
 - **WHEN** a pessoa abre o "!" ao lado de "O que o índice tem"
 - **THEN** lê que o natimorto é registrado no Livro C Auxiliar e aparece dentro de Óbitos
+
+### Requirement: Registro Civil separado por livro, com pesquisa completa
+O painel DEVE (SHALL) separar nascimentos, casamentos e óbitos em abas (e na barra lateral), cada
+uma pesquisando só o seu livro, por nome, filiação, avós (nascimento), número do termo, livro,
+matrícula, DNV (nascimento) ou CPF, e entre duas datas (nascimento, registro, casamento ou
+falecimento). Nome DEVE (SHALL) ser comparado em qualquer ordem e com uma letra de tolerância;
+números, pelos dígitos. O registro cancelado DEVE (SHALL) aparecer marcado como cancelado.
+
+#### Scenario: Pesquisa por termo
+- **WHEN** a pessoa escolhe Casamentos, "Número do termo" e digita 15
+- **THEN** aparece o casamento do termo 0000015, e nenhum nascimento ou óbito
+
+#### Scenario: Livro escrito de outro jeito
+- **WHEN** a pessoa procura o livro "A08"
+- **THEN** aparecem os registros do livro "A-8"
+
+### Requirement: Leitura de todos os dados dos arquivos, juntando carga e banco
+A leitura DEVE (SHALL) guardar tudo o que a carga XML e o banco do sistema do registro civil trazem
+de cada registro (filiação com nascimento, idade, nacionalidade e residência; avós; declarante;
+testemunhas; anotações e averbações; cônjuges; dados do óbito), e DEVE (SHALL) juntar pela
+matrícula o mesmo registro vindo da carga e do banco num envio só, cada um completando o que o
+outro não tem, com a carga valendo no livro, folha e termo. Um código numérico cujo significado
+não está no arquivo (cor, estado civil, sexo 0/1) NÃO DEVE (SHALL NOT) ser adivinhado.
+
+#### Scenario: Carga e banco no mesmo envio
+- **WHEN** o zip traz a carga XML e o banco com o mesmo nascimento
+- **THEN** a conferência mostra um registro só, com os avós vindos do banco e o sexo vindo da carga
+
+#### Scenario: Código numérico
+- **WHEN** o banco traz a cor do falecido como "5"
+- **THEN** o campo fica em branco, para completar pelo livro
+
+### Requirement: Ficha completa, alteração, cancelamento e estorno
+O registro aberto DEVE (SHALL) mostrar a ficha completa na ordem do termo (Lei 6.015/1973, arts.
+54, 70 e 80) e o histórico. Quem tem a permissão "alterar, cancelar e estornar" DEVE (SHALL)
+poder corrigir qualquer campo, menos a matrícula, com justificativa, guardando cada campo como era e como ficou;
+cancelar o registro com justificativa, sem apagar, e estornar o cancelamento. Tudo DEVE (SHALL)
+ir para a auditoria. Um registro corrigido no painel NÃO DEVE (SHALL NOT) ser sobrescrito por
+"Substituir todos" numa importação: só se for marcado um por um.
+
+#### Scenario: Correção com justificativa
+- **WHEN** a escrevente corrige o nome da avó e justifica "conferido com o livro"
+- **THEN** a ficha mostra o novo nome e o histórico mostra o antes, o depois, quem e quando
+
+#### Scenario: Matrícula não se altera
+- **WHEN** alguém tenta mudar a matrícula na ficha ou na certidão de um registro
+- **THEN** a matrícula continua a do registro; os outros campos mudam normalmente
+
+#### Scenario: Cancelado não emite certidão
+- **WHEN** o registro está cancelado
+- **THEN** a ficha mostra "Registro cancelado" com a justificativa e não oferece emitir certidão até o estorno

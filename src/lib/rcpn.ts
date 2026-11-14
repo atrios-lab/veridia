@@ -21,6 +21,7 @@ import {
 import { type Database, db } from "@/db/index.ts";
 import { rcpnImports, rcpnPeople, rcpnRecords } from "@/db/schema.ts";
 import { recordAuditWith } from "./audit.ts";
+import { editedKeysWith } from "./rcpn-ficha.ts";
 import { readImportFile } from "./rcpn-reader.ts";
 import { assertDiskFallbackAllowed, deleteStoredFile } from "./uploads.ts";
 
@@ -272,6 +273,8 @@ export async function publishImportWith(
   id: string,
   actorId: string,
   replace: ReadonlySet<string> | "all",
+  /** With "all": the ones marked one by one, corrected by hand or not. */
+  marked: ReadonlySet<string> = new Set(),
 ): Promise<number> {
   const row = await getImportWith(database, tenantSlug, id);
   if (!row || row.status !== "lida") {
@@ -287,13 +290,21 @@ export async function publishImportWith(
     existing,
   );
   // "all": every changed registro takes the file's data (the screen shows
-  // only the first ones to mark one by one).
+  // only the first ones to mark one by one), except those corrected by
+  // hand in the panel: those only when marked one by one (decision of
+  // 14/11/2026).
+  const edited =
+    replace === "all" ? await editedKeysWith(database, tenantSlug) : null;
   const chosen = toPublish(
     conference,
     replace === "all"
       ? new Set(
           conference.checked
-            .filter((c) => c.comparison === "alterado")
+            .filter(
+              (c) =>
+                c.comparison === "alterado" &&
+                (!edited?.has(c.key) || marked.has(c.key)),
+            )
             .map((c) => c.key),
         )
       : replace,
@@ -578,7 +589,8 @@ export const rcpn = {
     id: string,
     actorId: string,
     replace: ReadonlySet<string> | "all",
-  ) => publishImportWith(db, tenantSlug, id, actorId, replace),
+    marked?: ReadonlySet<string>,
+  ) => publishImportWith(db, tenantSlug, id, actorId, replace, marked),
   discard: (tenantSlug: string, id: string, actorId: string) =>
     discardImportWith(db, tenantSlug, id, actorId),
   coverage: (tenantSlug: string) => coverageWith(db, tenantSlug),

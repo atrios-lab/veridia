@@ -25,9 +25,24 @@ export type Tables = Record<string, Row[]>;
 
 /** The tables the model reads, by kind. */
 export const CARTOSOFT_TABLES = {
-  nascimento: ["NASCIMENTO", "NA_PAIS", "NA_AVOS", "NA_ANOAVE", "NA_GEMEOS"],
-  casamento: ["CASAMENTO", "CA_PAIS", "CA_COMPLEMENTO"],
-  obito: ["OBITO", "OB_PAIS", "OB_DECLARANTE", "OB_RESUMO"],
+  nascimento: [
+    "NASCIMENTO",
+    "NA_PAIS",
+    "NA_AVOS",
+    "NA_ANOAVE",
+    "NA_GEMEOS",
+    "NA_DECLARANTE",
+    "NA_TESTEMUNHA",
+  ],
+  casamento: ["CASAMENTO", "CA_PAIS", "CA_COMPLEMENTO", "CA_TESTEMUNHAS"],
+  obito: [
+    "OBITO",
+    "OB_PAIS",
+    "OB_DECLARANTE",
+    "OB_RESUMO",
+    "OB_ELEITOR",
+    "OB_MOTIVO_MORTE",
+  ],
 } as const;
 
 /** The columns each table is read for: the rest stays in the file. */
@@ -48,6 +63,7 @@ export const CARTOSOFT_COLUMNS: Record<string, readonly string[]> = {
     "no_cidade",
     "no_estado",
     "no_local",
+    "no_pais",
   ],
   NA_PAIS: [
     "ID",
@@ -59,6 +75,44 @@ export const CARTOSOFT_COLUMNS: Record<string, readonly string[]> = {
     "no_estado_mae",
     "no_natural_pai",
     "no_estado_pai",
+    "dt_nasci_mae",
+    "dt_nasci_pai",
+    "nu_idade_mae",
+    "nu_idade_pai",
+    "no_nac_mae",
+    "no_nac_pai",
+    "no_ender_mae",
+    "no_cidade_ender_mae",
+    "no_uf_ender_mae",
+    "no_ender_pai",
+    "no_cidade_ender_pai",
+    "no_uf_ender_pai",
+    "IDEN_MAE",
+    "IDEN_PAI",
+  ],
+  NA_DECLARANTE: [
+    "ID",
+    "NO_NOME",
+    "nu_docto",
+    "no_profissao",
+    "no_endereco",
+    "no_cidade",
+    "cd_uf",
+  ],
+  NA_TESTEMUNHA: [
+    "ID",
+    "qualif_testemunhas",
+    "compl_qualif_testemunhas",
+    "nome_1",
+    "documento_1",
+    "no_profiss_1",
+    "profissao_1",
+    "ender_1",
+    "nome_2",
+    "documento_2",
+    "no_profiss_2",
+    "profissao_2",
+    "ender_2",
   ],
   NA_AVOS: ["ID", "no_pai_pai", "no_mae_pai", "no_pai_mae", "no_mae_mae"],
   NA_ANOAVE: ["ID", "TEXTO"],
@@ -88,7 +142,25 @@ export const CARTOSOFT_COLUMNS: Record<string, readonly string[]> = {
     "no_observacao_3",
     "no_observacao_4",
     "no_observacao_5",
+    "no_obs",
     "nu_matriculaCNJ",
+    "estcivil_noivo",
+    "estcivil_noiva",
+    "endereco_noivo",
+    "endereco_noiva",
+    "cidade_res_noivo",
+    "estado_res_noivo",
+    "cidade_res_noiva",
+    "estado_res_noiva",
+    "nu_docto_noivo",
+    "nu_docto_noiva",
+    "ho_casamento",
+    "no_juiz_paz",
+    "local_casamento",
+    "nu_processo",
+    "nu_edital",
+    "dt_edital",
+    "dt_habilitacao",
   ],
   CA_PAIS: [
     "nu_sequencia",
@@ -102,6 +174,19 @@ export const CARTOSOFT_COLUMNS: Record<string, readonly string[]> = {
     "profiss_mae_noiva",
   ],
   CA_COMPLEMENTO: ["nu_sequencia", "no_noivo_casado"],
+  CA_TESTEMUNHAS: [
+    "nu_sequencia",
+    "qualif_testemunhas",
+    "compl_qualif_testemunhas",
+    "no_testemunha1",
+    "nu_documento1",
+    "profissao1",
+    "endereco1",
+    "no_testemunha2",
+    "nu_documento2",
+    "profissao2",
+    "endereco2",
+  ],
   OBITO: [
     "ID",
     "nu_registro",
@@ -136,10 +221,27 @@ export const CARTOSOFT_COLUMNS: Record<string, readonly string[]> = {
     "no_medico",
     "nu_crm_medico",
     "obs",
+    "no_conjuge",
+    "nu_benef_INSS",
+    "deixou_filhos",
+    "no_teste1",
+    "nu_doc_teste1",
+    "no_teste2",
+    "nu_doc_teste2",
   ],
   OB_PAIS: ["ID", "no_pai", "no_mae", "profiss_pai", "profiss_mae"],
-  OB_DECLARANTE: ["ID", "no_declarante"],
+  OB_DECLARANTE: ["ID", "no_declarante", "nu_documento", "profissao", "ender"],
   OB_RESUMO: ["ID", "obs1", "obs2", "obs3", "obs4", "obs5"],
+  OB_ELEITOR: ["ID", "nu_tit_eleitoral", "nu_zona", "nu_secao"],
+  OB_MOTIVO_MORTE: [
+    "ID",
+    "causa_morte1",
+    "causa_morte2",
+    "causa_morte3",
+    "causa_morte4",
+    "causa_morte5",
+    "causa_morte6",
+  ],
 };
 
 /** Whether these tables look like a Cartosoft export of the kind. */
@@ -175,12 +277,55 @@ export function timeOf(value: unknown): string {
   return match ? `${(match[1] ?? "").padStart(2, "0")}:${match[2]}` : "";
 }
 
-/** "M"/"F" (or the word) as the certidão writes it. */
+/**
+ * "M"/"F" (or the word) as the certidão writes it. A numeric code (the
+ * nascimento table writes 0 and 1) is not read: its meaning is not in
+ * the file, and a guess would print the wrong sex.
+ */
 export function sexOf(value: unknown): string {
   const text = cleanText(value).toUpperCase();
   if (text === "M" || text.startsWith("MASC")) return "MASCULINO";
   if (text === "F" || text.startsWith("FEM")) return "FEMININO";
-  return cleanText(value);
+  return wordOf(value);
+}
+
+/**
+ * A text column that some versions fill with a numeric code (cor,
+ * estado civil, nacionalidade): only words are read; a number, a "-1" or a
+ * bracket left by the system is not printed.
+ */
+export function wordOf(value: unknown): string {
+  const text = cleanText(value).replace(/^\[+/, "").trim();
+  return /\p{L}/u.test(text) ? text : "";
+}
+
+/** An age column: "0" is "not informed", not a newborn parent. */
+function yearsOf(value: unknown): string {
+  const n = Number(cleanText(value));
+  return Number.isInteger(n) && n > 0 && n < 130 ? `${n} anos` : "";
+}
+
+/** "S"/"N" or the word; a numeric code is not read (see `wordOf`). */
+function yesNo(value: unknown): string {
+  const text = cleanText(value).toUpperCase();
+  if (text === "S" || text === "SIM") return "SIM";
+  if (text === "N" || text === "NAO" || text === "NÃO") return "NÃO";
+  return "";
+}
+
+/** The witnesses as the book writes them, in one text (both tables). */
+function witnessText(row: Row | undefined): string {
+  return [
+    long(row, "qualif_testemunhas"),
+    long(row, "compl_qualif_testemunhas"),
+  ]
+    .filter((text) => wordOf(text))
+    .join("\n");
+}
+
+/** "Fulano, RG 123, pedreiro, Rua X": the parts the book gives. */
+function qualification(parts: string[]): string {
+  return parts.filter(Boolean).join(", ");
 }
 
 const joined = (parts: string[], sep = ", ") => parts.filter(Boolean).join(sep);
@@ -217,6 +362,8 @@ export function readCartosoft(tables: Tables): RcpnRecord[] {
     const parents = byKey(tables.NA_PAIS, "ID");
     const grandparents = byKey(tables.NA_AVOS, "ID");
     const notes = byKey(tables.NA_ANOAVE, "ID");
+    const declarants = byKey(tables.NA_DECLARANTE, "ID");
+    const witnessRows = byKey(tables.NA_TESTEMUNHA, "ID");
     const twins = new Map<string, Row[]>();
     for (const twin of tables.NA_GEMEOS ?? []) {
       const id = cleanText(twin.ID);
@@ -226,6 +373,33 @@ export function readCartosoft(tables: Tables): RcpnRecord[] {
       const id = cleanText(row.ID);
       const p = parents.get(id);
       const a = grandparents.get(id);
+      const dec = declarants.get(id);
+      const w = witnessRows.get(id);
+      const witness = (n: 1 | 2) => ({
+        [`testemunha${n}`]: t(w, `nome_${n}`),
+        [`testemunha${n}Qualificacao`]: t(w, `nome_${n}`)
+          ? qualification([
+              t(w, `documento_${n}`) && `documento ${t(w, `documento_${n}`)}`,
+              wordOf(w?.[`no_profiss_${n}`]) || wordOf(w?.[`profissao_${n}`]),
+              t(w, `ender_${n}`),
+            ])
+          : "",
+      });
+      const parent = (n: 1 | 2, who: "mae" | "pai") => ({
+        [`genitor${n}Nascimento`]: toIsoDate(p?.[`dt_nasci_${who}`]),
+        [`genitor${n}Idade`]: yearsOf(p?.[`nu_idade_${who}`]),
+        [`genitor${n}Nacionalidade`]: wordOf(
+          p?.[`no_nac_${who}`],
+        ).toUpperCase(),
+        [`genitor${n}Endereco`]: joined([
+          t(p, `no_ender_${who}`),
+          joined(
+            [t(p, `no_cidade_ender_${who}`), t(p, `no_uf_ender_${who}`)],
+            "/",
+          ),
+        ]),
+        [`genitor${n}Documento`]: t(p, who === "mae" ? "IDEN_MAE" : "IDEN_PAI"),
+      });
       const registeredOn = toIsoDate(row.dt_registro);
       const city = t(row, "no_cidade");
       const state = t(row, "no_estado");
@@ -261,6 +435,23 @@ export function readCartosoft(tables: Tables): RcpnRecord[] {
           avos2: joined([t(a, "no_pai_pai"), t(a, "no_mae_pai")], "; "),
           gemeo: twinList.join("; "),
           dnv: t(row, "nu_dn"),
+          nacionalidade: /^brasil/i.test(t(row, "no_pais")) ? "BRASILEIRA" : "",
+          ...parent(1, "mae"),
+          ...parent(2, "pai"),
+          declarante: t(dec, "NO_NOME"),
+          declaranteQualificacao: t(dec, "NO_NOME")
+            ? qualification([
+                t(dec, "nu_docto") && `documento ${t(dec, "nu_docto")}`,
+                wordOf(dec?.no_profissao),
+                joined([
+                  t(dec, "no_endereco"),
+                  joined([t(dec, "no_cidade"), t(dec, "cd_uf")], "/"),
+                ]),
+              ])
+            : "",
+          ...witness(1),
+          ...witness(2),
+          testemunhas: witnessText(w),
           observacoes: long(notes.get(id), "TEXTO"),
         }),
         kind: "nascimento",
@@ -288,10 +479,42 @@ export function readCartosoft(tables: Tables): RcpnRecord[] {
   if (hasCartosoftTables(tables, "CASAMENTO")) {
     const parents = byKey(tables.CA_PAIS, "nu_sequencia");
     const extra = byKey(tables.CA_COMPLEMENTO, "nu_sequencia");
+    const witnessRows = byKey(tables.CA_TESTEMUNHAS, "nu_sequencia");
     for (const row of tables.CASAMENTO ?? []) {
       const key = cleanText(row.nu_sequencia);
       const p = parents.get(key);
       const c = extra.get(key);
+      const w = witnessRows.get(key);
+      const witness = (n: 1 | 2) => ({
+        [`testemunha${n}`]: t(w, `no_testemunha${n}`),
+        [`testemunha${n}Qualificacao`]: t(w, `no_testemunha${n}`)
+          ? qualification([
+              t(w, `nu_documento${n}`) &&
+                `documento ${t(w, `nu_documento${n}`)}`,
+              wordOf(w?.[`profissao${n}`]),
+              t(w, `endereco${n}`),
+            ])
+          : "",
+      });
+      const spouseDetails = (n: 1 | 2, who: "noivo" | "noiva") => ({
+        [`conjuge${n}EstadoCivil`]: wordOf(row[`estcivil_${who}`]),
+        [`conjuge${n}Nacionalidade`]: wordOf(
+          row[`nacionalidade_${who}`],
+        ).toUpperCase(),
+        [`conjuge${n}Naturalidade`]: joined(
+          [t(row, `naturalidade_${who}`), t(row, `uf_natural_${who}`)],
+          "/",
+        ),
+        [`conjuge${n}Documento`]: t(row, `nu_docto_${who}`),
+        [`conjuge${n}Endereco`]: joined([
+          t(row, `endereco_${who}`),
+          joined(
+            [t(row, `cidade_res_${who}`), t(row, `estado_res_${who}`)],
+            "/",
+          ),
+        ]),
+      });
+      const weddingHour = timeOf(row.ho_casamento);
       const spouse = (who: "noivo" | "noiva", name: string) =>
         joined([
           name,
@@ -318,6 +541,24 @@ export function readCartosoft(tables: Tables): RcpnRecord[] {
             .filter(Boolean)
             .join("\n"),
           regime: t(row, "regime_casamento"),
+          horaCasamento: weddingHour && `${weddingHour} horas`,
+          juiz: t(row, "no_juiz_paz"),
+          localCasamento: wordOf(row.local_casamento),
+          habilitacao: t(row, "nu_processo"),
+          edital: joined(
+            [
+              t(row, "nu_edital") && `nº ${t(row, "nu_edital")}`,
+              toIsoDate(row.dt_edital) &&
+                `de ${toIsoDate(row.dt_edital).split("-").reverse().join("/")}`,
+            ],
+            " ",
+          ),
+          dataHabilitacao: toIsoDate(row.dt_habilitacao),
+          ...spouseDetails(1, "noivo"),
+          ...spouseDetails(2, "noiva"),
+          ...witness(1),
+          ...witness(2),
+          testemunhas: witnessText(w),
           observacoes: [
             "no_observacao",
             "no_observacao_2",
@@ -326,6 +567,7 @@ export function readCartosoft(tables: Tables): RcpnRecord[] {
             "no_observacao_5",
           ]
             .map((column) => t(row, column))
+            .concat(long(row, "no_obs"))
             .filter(Boolean)
             .join("\n"),
         }),
@@ -368,19 +610,29 @@ export function readCartosoft(tables: Tables): RcpnRecord[] {
     const parents = byKey(tables.OB_PAIS, "ID");
     const declarants = byKey(tables.OB_DECLARANTE, "ID");
     const summaries = byKey(tables.OB_RESUMO, "ID");
+    const voters = byKey(tables.OB_ELEITOR, "ID");
+    const causes = byKey(tables.OB_MOTIVO_MORTE, "ID");
     for (const row of tables.OBITO ?? []) {
       const id = cleanText(row.ID);
       const p = parents.get(id);
       const hour = timeOf(row.hora_falecimento);
-      const voter = t(row, "cd_eleitor").toUpperCase();
       const summary = summaries.get(id);
+      const dec = declarants.get(id);
+      const v = voters.get(id);
+      const cause = causes.get(id);
+      const witness = (n: 1 | 2) => ({
+        [`testemunha${n}`]: t(row, `no_teste${n}`),
+        [`testemunha${n}Qualificacao`]:
+          t(row, `nu_doc_teste${n}`) &&
+          `documento ${t(row, `nu_doc_teste${n}`)}`,
+      });
       records.push({
         details: filled({
           sexo: sexOf(row.cd_sexo),
-          cor: t(row, "no_cor"),
+          cor: wordOf(row.no_cor).toUpperCase(),
           estadoCivilIdade: joined([
-            t(row, "est_civil_pessoa"),
-            t(row, "idade_pessoa") && `${t(row, "idade_pessoa")} anos`,
+            wordOf(row.est_civil_pessoa),
+            yearsOf(row.idade_pessoa),
           ]),
           naturalidade: joined(
             [t(row, "natural_pessoa"), t(row, "est_natural_pessoa")],
@@ -394,7 +646,26 @@ export function readCartosoft(tables: Tables): RcpnRecord[] {
             ],
             "; ",
           ),
-          eleitor: voter === "S" ? "SIM" : voter === "N" ? "NÃO" : voter,
+          eleitor: yesNo(row.cd_eleitor),
+          tituloEleitor: joined([
+            t(v, "nu_tit_eleitoral") && `título ${t(v, "nu_tit_eleitoral")}`,
+            t(v, "nu_zona") && `zona ${t(v, "nu_zona")}`,
+            t(v, "nu_secao") && `seção ${t(v, "nu_secao")}`,
+          ]),
+          conjuge: t(row, "no_conjuge"),
+          beneficio: t(row, "nu_benef_INSS"),
+          filhos: wordOf(row.deixou_filhos) ? long(row, "deixou_filhos") : "",
+          endereco: joined([
+            t(row, "ender_pessoa"),
+            joined(
+              [t(row, "cidade_res_pessoa"), t(row, "estado_res_pessoa")],
+              "/",
+            ),
+          ]),
+          causaMorte: [1, 2, 3, 4, 5, 6]
+            .map((n) => t(cause, `causa_morte${n}`))
+            .filter(Boolean)
+            .join("; "),
           filiacaoResidencia: joined(
             [
               joined([t(p, "no_pai"), t(p, "no_mae")], " e "),
@@ -419,7 +690,16 @@ export function readCartosoft(tables: Tables): RcpnRecord[] {
             [t(row, "local_sepultamento"), t(row, "uf_sepultamento")],
             "/",
           ),
-          declarante: t(declarants.get(id), "no_declarante"),
+          declarante: t(dec, "no_declarante"),
+          declaranteQualificacao: t(dec, "no_declarante")
+            ? qualification([
+                t(dec, "nu_documento") && `documento ${t(dec, "nu_documento")}`,
+                wordOf(dec?.profissao),
+                t(dec, "ender"),
+              ])
+            : "",
+          ...witness(1),
+          ...witness(2),
           medico: joined([
             t(row, "no_medico"),
             t(row, "nu_crm_medico") && `CRM ${t(row, "nu_crm_medico")}`,

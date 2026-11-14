@@ -9,7 +9,7 @@ import {
   readCartosoft,
   type Tables,
 } from "@/core/rcpn/cartosoft.ts";
-import type { RcpnRecord } from "@/core/rcpn/record.ts";
+import { mergeSources, type RcpnRecord } from "@/core/rcpn/record.ts";
 
 /**
  * Reads whatever the office sends (design, decisions 1 and 2): any file is
@@ -25,6 +25,12 @@ export interface Reading {
   records: RcpnRecord[];
   /** One line per file: what was read, or why it was not. */
   notes: string[];
+}
+
+/** While reading: each source apart, joined at the end (mergeSources). */
+interface Collecting extends Reading {
+  fromXml: RcpnRecord[];
+  fromAccess: RcpnRecord[];
 }
 
 /** A package that unpacks past this is left closed. */
@@ -59,7 +65,7 @@ function decodeText(bytes: Uint8Array): string {
   }
 }
 
-function readAccess(bytes: Uint8Array, name: string, out: Reading): void {
+function readAccess(bytes: Uint8Array, name: string, out: Collecting): void {
   let reader: MDBReader;
   try {
     reader = new MDBReader(Buffer.from(bytes));
@@ -87,7 +93,7 @@ function readAccess(bytes: Uint8Array, name: string, out: Reading): void {
     );
     return;
   }
-  out.records.push(...records);
+  out.fromAccess.push(...records);
   out.notes.push(
     `${name}: banco do Cartosoft, ${records.length} registros lidos.`,
   );
@@ -95,7 +101,7 @@ function readAccess(bytes: Uint8Array, name: string, out: Reading): void {
     out.format = join(out.format, "cartosoft-access");
 }
 
-function readXml(bytes: Uint8Array, name: string, out: Reading): void {
+function readXml(bytes: Uint8Array, name: string, out: Collecting): void {
   const text = decodeText(bytes).replace(/encoding="[^"]*"/i, "");
   let tree: unknown;
   try {
@@ -110,7 +116,7 @@ function readXml(bytes: Uint8Array, name: string, out: Reading): void {
   }
   if (isCargaXml(tree)) {
     const { records, unknownMovements } = readCargaXml(tree);
-    out.records.push(...records);
+    out.fromXml.push(...records);
     out.notes.push(`${name}: carga XML, ${records.length} registros lidos.`);
     if (unknownMovements.length > 0) {
       out.notes.push(
@@ -145,7 +151,7 @@ interface Budget {
 async function readAny(
   bytes: Uint8Array,
   name: string,
-  out: Reading,
+  out: Collecting,
   depth: number,
   budget: Budget,
 ): Promise<void> {
@@ -186,7 +192,7 @@ async function readAny(
 async function unpack(
   bytes: Uint8Array,
   name: string,
-  out: Reading,
+  out: Collecting,
   budget: Budget,
 ): Promise<{ name: string; bytes: Uint8Array }[]> {
   const entries: { name: string; bytes: Uint8Array }[] = [];
@@ -233,8 +239,21 @@ export async function readImportFile(
   bytes: Uint8Array,
   name: string,
 ): Promise<Reading> {
-  const out: Reading = { format: "", records: [], notes: [] };
+  const out: Collecting = {
+    format: "",
+    records: [],
+    notes: [],
+    fromXml: [],
+    fromAccess: [],
+  };
   await readAny(bytes, name, out, 0, { unpacked: 0, files: 0 });
+  // The carga first: its book, folha and termo come from the matrícula,
+  // the same way for every registro; the database fills the rest (avós,
+  // testemunhas, declarante, anotações).
+  out.records = mergeSources([out.fromXml, out.fromAccess]);
+  const both = out.fromXml.length > 0 && out.fromAccess.length > 0;
+  const joinedCount =
+    out.fromXml.length + out.fromAccess.length - out.records.length;
   // A package of many cargas (one file per batch) reads as one line, by
   // kind; any other note stays as it is.
   const carga = /: carga XML, (\d+) registros lidos\.$/;
@@ -250,5 +269,10 @@ export async function readImportFile(
       ...out.notes.filter((n) => !carga.test(n)),
     ];
   }
-  return out;
+  if (both) {
+    out.notes.push(
+      `${joinedCount} registros estavam na carga e no banco ao mesmo tempo: foram juntados pela matrícula, cada arquivo completando o que o outro não tinha.`,
+    );
+  }
+  return { format: out.format, records: out.records, notes: out.notes };
 }

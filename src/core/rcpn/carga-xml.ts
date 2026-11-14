@@ -92,6 +92,31 @@ const CIVIL: Record<string, string> = {
   SEPARADO: "separado(a)",
 };
 const AGE_UNIT: Record<string, string> = { A: "anos", M: "meses", D: "dias" };
+const YES_NO: Record<string, string> = { S: "SIM", N: "NÃO" };
+
+/**
+ * The carga writes nationality and country as the numeric code of ISO
+ * 3166: 076 is Brazil. Any other code is left blank for the book, not
+ * guessed.
+ */
+const nationality = (code: string) => (code === "076" ? "BRASILEIRA" : "");
+
+/** "30" + "A" → "30 anos"; a number without its unit is not printed. */
+function ageOf(node: Node | undefined): string {
+  const age = text(node, "IDADE");
+  const unit = AGE_UNIT[text(node, "IDADE_DIAS_MESES_ANOS").toUpperCase()];
+  return age && unit ? `${age} ${unit}` : "";
+}
+
+/** Street, number, complement and district, as the carga splits them. */
+function addressOf(node: Node | undefined, suffix = ""): string {
+  return joined([
+    text(node, `LOGRADOURO${suffix}`),
+    text(node, `NUMEROLOGRADOURO${suffix}`),
+    text(node, `COMPLEMENTOLOGRADOURO${suffix}`),
+    text(node, `BAIRRO${suffix}`),
+  ]);
+}
 
 /** A code the carga leaves undecided: nothing to print. */
 const known = (value: string) =>
@@ -122,6 +147,18 @@ function documentsOf(r: Node, owner: string): string {
       ),
     )
     .join("; ");
+}
+
+/** What the carga says of a parent, besides the name. */
+function genitorDetails(n: 1 | 2, p: Node | undefined) {
+  return {
+    [`genitor${n}Municipio`]: text(p, "TEXTOLIVREMUNICIPIONAT"),
+    [`genitor${n}Nascimento`]: toIsoDate(p?.DATANASCIMENTO),
+    [`genitor${n}Idade`]: ageOf(p),
+    [`genitor${n}Nacionalidade`]: nationality(text(p, "NACIONALIDADE")),
+    [`genitor${n}Endereco`]: addressOf(p),
+    [`genitor${n}Documento`]: text(p, "CPF") && `CPF ${text(p, "CPF")}`,
+  };
 }
 
 function nascimento(r: Node): RcpnRecord {
@@ -162,10 +199,31 @@ function nascimento(r: Node): RcpnRecord {
       sexo: SEX[text(r, "SEXO").toUpperCase()] ?? "",
       dnv: text(r, "DNV"),
       gemeo: text(r, "POSSUIGEMEOS").toUpperCase() === "S" ? "SIM" : "",
-      genitor1Municipio: text(mother, "TEXTOLIVREMUNICIPIONAT"),
-      genitor2Municipio: text(other, "TEXTOLIVREMUNICIPIONAT"),
+      nacionalidade: nationality(text(r, "NACIONALIDADE")),
+      ...genitorDetails(1, mother),
+      ...genitorDetails(2, other),
       observacoes: text(r, "OBSERVACOES"),
     }),
+  };
+}
+
+/** What the carga says of a spouse, besides name and filiação. */
+function spouseDetails(r: Node, n: "1" | "2") {
+  const cpf = text(r, `CPFCONJUGE${n}`);
+  return {
+    [`conjuge${n}Cpf`]: cpf,
+    [`conjuge${n}Nacionalidade`]: nationality(
+      text(r, `NACIONALIDADECONJUGE${n}`),
+    ),
+    [`conjuge${n}Naturalidade`]: text(r, `TEXTOLIVREMUNNATCONJUGE${n}`),
+    [`conjuge${n}Documento`]: documentsOf(r, `CONJUGE${n}`),
+    [`conjuge${n}Endereco`]: joined([
+      text(r, `LOGRADOURO${n}`),
+      text(r, `NUMEROLOGRADOURO${n}`),
+      text(r, `COMPLEMENTOLOGRADOURO${n}`),
+      text(r, `BAIRRO${n}`),
+      text(r, `DOMICILIOESTRANGEIRO${n}`),
+    ]),
   };
 }
 
@@ -214,6 +272,8 @@ function casamento(r: Node): RcpnRecord {
       conjuges: [line(one), line(two)].filter(Boolean).join("\n"),
       regime: REGIMES[text(r, "REGIMECASAMENTO").toUpperCase()] ?? "",
       nomesAdotados: [one.married, two.married].filter(Boolean).join("\n"),
+      ...spouseDetails(r, "1"),
+      ...spouseDetails(r, "2"),
       observacoes: text(r, "OBSERVACOES"),
     }),
   };
@@ -222,24 +282,16 @@ function casamento(r: Node): RcpnRecord {
 function obito(r: Node): RcpnRecord {
   const matricula = matriculaDigits(r.MATRICULA);
   const place = placeOf(matricula);
-  const age = text(r, "IDADE");
-  const unit = AGE_UNIT[text(r, "IDADE_DIAS_MESES_ANOS").toUpperCase()] ?? "";
   const voter = text(r, "ELEITOR").toUpperCase();
-  const address = joined([
-    text(r, "LOGRADOURO"),
-    text(r, "NUMEROLOGRADOURO"),
-    text(r, "COMPLEMENTOLOGRADOURO"),
-    text(r, "BAIRRO"),
-  ]);
+  const address = addressOf(r);
   const deathPlace = joined([
     text(r, "LUGARFALECIMENTO"),
-    joined([
-      text(r, "LOGRADOUROOBITO"),
-      text(r, "NUMEROLOGRADOUROOBITO"),
-      text(r, "COMPLEMENTOLOGRADOUROOBITO"),
-      text(r, "BAIRROOBITO"),
-    ]),
+    addressOf(r, "OBITO"),
   ]);
+  const benefits = asList(r.BENEFICIOS_PREVIDENCIARIOS)
+    .map((b) => text(b, "NUMEROBENEFICIO"))
+    .filter(Boolean)
+    .join("; ");
   const causes = [
     "CAUSAMORTEANTECEDENTES_A",
     "CAUSAMORTEANTECEDENTES_B",
@@ -278,14 +330,20 @@ function obito(r: Node): RcpnRecord {
       cor: known(text(r, "CORPELE")),
       estadoCivilIdade: joined([
         CIVIL[text(r, "ESTADOCIVIL").toUpperCase()] ?? "",
-        age && unit ? `${age} ${unit}` : "",
+        ageOf(r),
       ]),
+      nacionalidade: nationality(text(r, "NACIONALIDADE")),
+      endereco: address,
+      tipoMorte: known(text(r, "TIPOMORTE")),
+      numeroDO: text(r, "NUMDECLARACAOOBITO"),
+      beneficio: benefits,
+      bens: YES_NO[text(r, "POSSUIBENS").toUpperCase()] ?? "",
       naturalidade: text(r, "TEXTOLIVREMUNICIPIONAT"),
       documento: joined(
         [cpf && `CPF ${cpf}`, documentsOf(r, "FALECIDO")],
         "; ",
       ),
-      eleitor: voter === "S" ? "SIM" : voter === "N" ? "NÃO" : "",
+      eleitor: YES_NO[voter] ?? "",
       filiacaoResidencia: joined(
         [joined([text(r, "NOMEPAI"), text(r, "NOMEMAE")], " e "), address],
         "\n",

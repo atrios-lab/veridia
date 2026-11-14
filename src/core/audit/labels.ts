@@ -60,6 +60,11 @@ const EXACT: Record<string, string> = {
   "rcpn.certidao.attach": "Anexou a certidão assinada ou digitalizada",
   "rcpn.certidao.remove":
     "Excluiu uma certidão do Registro Civil (fica guardada)",
+  "rcpn.record.edit": "Alterou um registro do Registro Civil",
+  "rcpn.record.cancel":
+    "Cancelou um registro do Registro Civil (fica guardado)",
+  "rcpn.record.restore":
+    "Estornou o cancelamento de um registro do Registro Civil",
   "daily-book.import": "Anexou um relatório ao Livro Diário Auxiliar",
   "daily-book.entry-add": "Fez um lançamento no Livro Diário Auxiliar",
   "daily-book.entry-edit": "Editou um lançamento do Livro Diário Auxiliar",
@@ -378,6 +383,12 @@ const EXPLANATIONS: Record<string, string> = {
     "A certidão assinada à mão e digitalizada, ou a assinada digitalmente, foi anexada à certidão emitida.",
   "rcpn.certidao.remove":
     "Uma certidão emitida foi excluída, com justificativa. Ela continua guardada e aparece na auditoria.",
+  "rcpn.record.edit":
+    "Um registro do índice do Registro Civil foi corrigido no painel, com justificativa. A ficha guarda o que era antes e o que ficou.",
+  "rcpn.record.cancel":
+    "Um registro do índice do Registro Civil foi cancelado, com justificativa. Ele continua guardado, marcado como cancelado, e pode ser estornado.",
+  "rcpn.record.restore":
+    "O cancelamento de um registro do Registro Civil foi desfeito (estorno), com justificativa.",
   "daily-book.import":
     "Um relatório de produtividade foi anexado e os atos lidos foram lançados como receita no Livro Diário Auxiliar.",
   "daily-book.entry-add":
