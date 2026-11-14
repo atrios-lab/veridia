@@ -106,7 +106,10 @@
   só acrescenta); campo em branco não apaga.
 - [x] 8.2 Livros e índice de cada livro; página do registro com a certidão como vai sair.
 - [x] 8.3 Certidão preenchida com o índice e os dados do livro. Testes com dados fictícios.
-- [ ] 8.4 Os mesmos dados completos a partir da carga XML (hoje ela traz só o índice).
+- [x] 8.4 Os mesmos dados completos a partir da carga XML (leiaute CRC/SIRC: NA_INC, CA_INC,
+  OB_INC), com livro, folha e termo tirados da matrícula; natimorto pelo Livro C Auxiliar.
+- [x] 8.5 Base inteira num envio (cerca de 24 mil registros): publicação em lotes de 500 e tempo
+  maior para as telas de importar e conferir.
 
 ## 9. Atribuições que a serventia oferece (14/11/2026)
 

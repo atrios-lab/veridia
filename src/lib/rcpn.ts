@@ -288,39 +288,34 @@ export async function publishImportWith(
   );
   const chosen = toPublish(conference, replace);
 
+  // In batches (decision of 14/11/2026, after a whole base of ~24 thousand
+  // registros did not fit one request): one insert per 500 registros and
+  // one per their people, instead of two per registro.
+  const BATCH = 500;
+  const now = new Date();
   await database.transaction(async (tx) => {
-    for (const item of chosen) {
-      const current = existing.get(item.key);
-      const record = {
-        ...merged(item.record, current),
-        // Key by key: a blank in the new file never erases what the book
-        // sent before.
-        details: merged(item.record.details ?? {}, current?.details ?? {}),
-      };
-      const [saved] = await tx
+    for (let i = 0; i < chosen.length; i += BATCH) {
+      const slice = chosen.slice(i, i + BATCH).map((item) => {
+        const current = existing.get(item.key);
+        return {
+          item,
+          current,
+          record: {
+            ...merged(item.record, current),
+            // Key by key: a blank in the new file never erases what the
+            // book sent before.
+            details: merged(item.record.details ?? {}, current?.details ?? {}),
+          },
+        };
+      });
+      const saved = await tx
         .insert(rcpnRecords)
-        .values({
-          tenantSlug,
-          kind: record.kind,
-          subtype: record.subtype ?? "",
-          recordKey: recordKey(item.record),
-          matricula: record.matricula,
-          book: record.book,
-          page: record.page,
-          term: record.term,
-          registeredOn: record.registeredOn,
-          eventOn: record.eventOn,
-          details: record.details ?? {},
-          importId: row.id,
-        })
-        .onConflictDoUpdate({
-          target: [
-            rcpnRecords.tenantSlug,
-            rcpnRecords.kind,
-            rcpnRecords.recordKey,
-          ],
-          set: {
+        .values(
+          slice.map(({ item, record }) => ({
+            tenantSlug,
+            kind: record.kind,
             subtype: record.subtype ?? "",
+            recordKey: recordKey(item.record),
             matricula: record.matricula,
             book: record.book,
             page: record.page,
@@ -329,39 +324,78 @@ export async function publishImportWith(
             eventOn: record.eventOn,
             details: record.details ?? {},
             importId: row.id,
-            updatedAt: new Date(),
+          })),
+        )
+        .onConflictDoUpdate({
+          target: [
+            rcpnRecords.tenantSlug,
+            rcpnRecords.kind,
+            rcpnRecords.recordKey,
+          ],
+          set: {
+            subtype: sql`excluded.subtype`,
+            matricula: sql`excluded.matricula`,
+            book: sql`excluded.book`,
+            page: sql`excluded.page`,
+            term: sql`excluded.term`,
+            registeredOn: sql`excluded.registered_on`,
+            eventOn: sql`excluded.event_on`,
+            details: sql`excluded.details`,
+            importId: sql`excluded.import_id`,
+            updatedAt: now,
           },
         })
-        .returning({ id: rcpnRecords.id });
-      if (!saved) continue;
-      for (const incoming of item.record.people) {
-        const person = merged(
-          incoming,
-          current?.people.find((p) => p.role === incoming.role),
-        );
-        const values = {
-          name: person.name,
-          nameNorm: normalizeName(person.name),
-          marriedName: person.marriedName,
-          motherName: person.motherName,
-          motherNorm: normalizeName(person.motherName),
-          fatherName: person.fatherName,
-          birthDate: person.birthDate,
-          profession: person.profession,
-          fatherProfession: person.fatherProfession,
-          motherProfession: person.motherProfession,
-        };
+        .returning({
+          id: rcpnRecords.id,
+          kind: rcpnRecords.kind,
+          recordKey: rcpnRecords.recordKey,
+        });
+      const idOf = new Map(
+        saved.map((r) => [`${r.kind}:${r.recordKey}`, r.id]),
+      );
+      const people = slice.flatMap(({ item, current }) => {
+        const recordId = idOf.get(item.key);
+        if (!recordId) return [];
+        return item.record.people.map((incoming) => {
+          const person = merged(
+            incoming,
+            current?.people.find((p) => p.role === incoming.role),
+          );
+          return {
+            tenantSlug,
+            recordId,
+            role: person.role,
+            name: person.name,
+            nameNorm: normalizeName(person.name),
+            marriedName: person.marriedName,
+            motherName: person.motherName,
+            motherNorm: normalizeName(person.motherName),
+            fatherName: person.fatherName,
+            birthDate: person.birthDate,
+            profession: person.profession,
+            fatherProfession: person.fatherProfession,
+            motherProfession: person.motherProfession,
+          };
+        });
+      });
+      if (people.length > 0) {
         await tx
           .insert(rcpnPeople)
-          .values({
-            tenantSlug,
-            recordId: saved.id,
-            role: person.role,
-            ...values,
-          })
+          .values(people)
           .onConflictDoUpdate({
             target: [rcpnPeople.recordId, rcpnPeople.role],
-            set: values,
+            set: {
+              name: sql`excluded.name`,
+              nameNorm: sql`excluded.name_norm`,
+              marriedName: sql`excluded.married_name`,
+              motherName: sql`excluded.mother_name`,
+              motherNorm: sql`excluded.mother_norm`,
+              fatherName: sql`excluded.father_name`,
+              birthDate: sql`excluded.birth_date`,
+              profession: sql`excluded.profession`,
+              fatherProfession: sql`excluded.father_profession`,
+              motherProfession: sql`excluded.mother_profession`,
+            },
           });
       }
     }

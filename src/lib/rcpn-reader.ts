@@ -111,9 +111,7 @@ function readXml(bytes: Uint8Array, name: string, out: Reading): void {
   if (isCargaXml(tree)) {
     const { records, unknownMovements } = readCargaXml(tree);
     out.records.push(...records);
-    out.notes.push(
-      `${name}: carga XML, ${records.length} registros de nascimento lidos.`,
-    );
+    out.notes.push(`${name}: carga XML, ${records.length} registros lidos.`);
     if (unknownMovements.length > 0) {
       out.notes.push(
         `${name}: movimentos ainda não lidos pelo sistema (${unknownMovements.join(", ")}). Envie um exemplo para incluirmos.`,
@@ -237,5 +235,20 @@ export async function readImportFile(
 ): Promise<Reading> {
   const out: Reading = { format: "", records: [], notes: [] };
   await readAny(bytes, name, out, 0, { unpacked: 0, files: 0 });
+  // A package of many cargas (one file per batch) reads as one line, by
+  // kind; any other note stays as it is.
+  const carga = /: carga XML, (\d+) registros lidos\.$/;
+  const cargaNotes = out.notes.filter((n) => carga.test(n));
+  if (cargaNotes.length > 3) {
+    const count = (kind: string) =>
+      out.records.filter((r) => r.kind === kind).length;
+    const natimortos = out.records.filter(
+      (r) => r.subtype === "natimorto",
+    ).length;
+    out.notes = [
+      `${cargaNotes.length} arquivos de carga XML lidos: ${count("nascimento")} nascimentos, ${count("casamento")} casamentos e ${count("obito")} óbitos${natimortos ? ` (${natimortos} natimortos)` : ""}.`,
+      ...out.notes.filter((n) => !carga.test(n)),
+    ];
+  }
   return out;
 }

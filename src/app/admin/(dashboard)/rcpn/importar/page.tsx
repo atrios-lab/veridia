@@ -18,6 +18,11 @@ import { UploadForm } from "../forms.tsx";
 
 export const metadata = { title: "Importar arquivos do Registro Civil" };
 
+// A whole registry base (tens of thousands of registros) is read, checked
+// and published from here: more time than the default (decision of
+// 14/11/2026, after a full carga did not fit).
+export const maxDuration = 300;
+
 export default async function ImportPage() {
   await requireRcpn("rcpn.import");
   const tenant = await getTenant();
