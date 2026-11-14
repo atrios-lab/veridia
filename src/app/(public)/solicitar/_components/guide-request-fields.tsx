@@ -1,8 +1,9 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState, useTransition } from "react";
 import { GUIDE_KIND_INFO } from "@/core/guides/catalog.ts";
 import { CIVIL_STATUS_LABELS } from "@/core/guides/qualification.ts";
+import type { GuideReading } from "@/core/guides/reading.ts";
 import type {
   PublicGuideParty,
   PublicGuideRequest,
@@ -13,6 +14,7 @@ import {
   OFFERED_GUIDE_KINDS,
 } from "@/core/guides/schema.ts";
 import { LONG_TEXT_MAX } from "@/core/text-limits.ts";
+import { readGuideDocumentsAction } from "../actions.ts";
 
 const input =
   "w-full rounded-xl border border-brand-border bg-brand-card px-3.5 py-3 text-sm text-brand-text outline-none placeholder:text-brand-faint focus:border-brand-accent";
@@ -72,6 +74,78 @@ export function GuideRequestFields({
   });
   const [value, setValue] = useState("");
   const info = GUIDE_KIND_INFO[kind];
+
+  // The documents read to fill the guia (decision of 14/11/2026): they go
+  // with the request in "anexos", the field the attachments already use.
+  const [readFiles, setReadFiles] = useState<File[]>([]);
+  const [notes, setNotes] = useState<string[]>([]);
+  const [reading, startReading] = useTransition();
+  const filesInput = useRef<HTMLInputElement>(null);
+
+  const keepFiles = (next: File[]) => {
+    setReadFiles(next);
+    const transfer = new DataTransfer();
+    for (const file of next) transfer.items.add(file);
+    if (filesInput.current) filesInput.current.files = transfer.files;
+  };
+
+  /** Fills what is blank with what the documents say; never overwrites. */
+  const apply = (found: GuideReading) => {
+    setProperty((current) => ({
+      type: found.property.type ?? current.type,
+      description: current.description || found.property.description || "",
+      fiscalRegistration:
+        current.fiscalRegistration || found.property.fiscalRegistration || "",
+      registration: current.registration || found.property.registration || "",
+    }));
+    if (!value && found.declaredValueCents) {
+      setValue(
+        (found.declaredValueCents / 100).toLocaleString("pt-BR", {
+          minimumFractionDigits: 2,
+        }),
+      );
+    }
+    setParties((current) => {
+      const next = [...current];
+      for (const person of found.parties) {
+        const digits = person.taxId.replace(/\D/g, "");
+        if (next.some((p) => p.taxId.replace(/\D/g, "") === digits)) continue;
+        const role = person.role ?? "transmitente";
+        const filled: PublicGuideParty = {
+          ...blankParty(role),
+          name: person.name,
+          taxId: person.taxId,
+          gender: person.gender ?? "feminino",
+          civilStatus: person.civilStatus,
+          profession: person.profession ?? "",
+          address: person.address ?? "",
+        };
+        const blank = next.findIndex(
+          (p) => p.role === role && !p.name.trim() && !p.taxId.trim(),
+        );
+        if (blank >= 0) next[blank] = filled;
+        else next.push(filled);
+      }
+      return next;
+    });
+  };
+
+  const readDocuments = (picked: FileList | null) => {
+    if (!picked || picked.length === 0) return;
+    const chosen = [...picked];
+    keepFiles([...readFiles, ...chosen].slice(0, 5));
+    const data = new FormData();
+    for (const file of chosen) data.append("documentos", file);
+    startReading(async () => {
+      const result = await readGuideDocumentsAction(data);
+      if (result.status === "read") {
+        apply(result.reading);
+        setNotes((current) => [...current, ...result.notes]);
+      } else if (result.status === "error") {
+        setNotes((current) => [...current, result.message]);
+      }
+    });
+  };
   const cents = parseMoney(value);
 
   const payload: PublicGuideRequest = {
@@ -91,6 +165,86 @@ export function GuideRequestFields({
         Dados para a guia
       </legend>
       <input type="hidden" name="guia" value={JSON.stringify(payload)} />
+
+      <div className="rounded-xl border-[1.5px] border-dashed border-brand-border bg-brand-card p-4">
+        <p className="text-[13px] font-bold text-brand-primary">
+          Anexe os documentos e o sistema preenche
+        </p>
+        <p className="mt-1 text-[12.5px] leading-relaxed text-brand-muted">
+          Certidão da matrícula do imóvel, escritura ou contrato e os documentos
+          das partes. O sistema lê e preenche os campos abaixo; você só confere.
+          Para o sistema conseguir ler, envie em{" "}
+          <strong className="font-semibold text-brand-text">
+            PDF pesquisável
+          </strong>{" "}
+          (em que dá para selecionar o texto) ou digitalizado em ótima
+          qualidade. Foto ou digitalização sem texto vai anexada, mas os campos
+          você preenche. Estes documentos seguem com o pedido, junto dos demais
+          anexos.
+        </p>
+        <label className="mt-3 inline-flex cursor-pointer items-center gap-2 rounded-xl border border-brand-border px-3.5 py-2.5 text-[13px] font-semibold text-brand-primary hover:border-brand-accent has-[:focus-visible]:border-brand-accent">
+          {reading ? "Lendo os documentos..." : "Anexar e ler documentos"}
+          <input
+            type="file"
+            multiple
+            accept="application/pdf,image/*"
+            className="sr-only"
+            disabled={reading}
+            onChange={(event) => {
+              readDocuments(event.target.files);
+              event.target.value = "";
+            }}
+          />
+        </label>
+        {/* The files themselves, in the request's own attachments field. */}
+        <input
+          ref={filesInput}
+          type="file"
+          name="anexos"
+          multiple
+          className="hidden"
+          tabIndex={-1}
+          aria-hidden="true"
+        />
+        {readFiles.map((file) => (
+          <input
+            key={`${file.name}-${file.lastModified}`}
+            type="hidden"
+            name="anexosName"
+            value="Documento para a guia"
+          />
+        ))}
+        {readFiles.length > 0 && (
+          <ul className="mt-3 flex flex-col gap-1.5">
+            {readFiles.map((file, index) => (
+              <li
+                key={`${file.name}-${file.lastModified}`}
+                className="flex items-center gap-2 text-[12.5px] text-brand-text"
+              >
+                <span className="min-w-0 flex-1 truncate">{file.name}</span>
+                <button
+                  type="button"
+                  className="shrink-0 text-[12px] font-semibold text-brand-muted hover:text-brand-alert"
+                  onClick={() =>
+                    keepFiles(readFiles.filter((_, i) => i !== index))
+                  }
+                >
+                  Remover
+                </button>
+              </li>
+            ))}
+          </ul>
+        )}
+        {notes.length > 0 && (
+          <ul className="mt-2 flex flex-col gap-1">
+            {notes.map((note) => (
+              <li key={note} className="text-[12px] text-brand-muted">
+                {note}
+              </li>
+            ))}
+          </ul>
+        )}
+      </div>
 
       <div className="grid gap-4 md:grid-cols-2">
         <label className="block">
