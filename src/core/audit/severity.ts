@@ -128,6 +128,8 @@ const EXACT: Record<string, AuditLevel> = {
   "titularidade.filing": "analise",
   "titularidade.sent": "rotina",
   "titularidade.filing-remove": "atencao",
+  "titularidade.filing-edit": "analise",
+  "titularidade.filing-renumber": "atencao",
   "rcpn.habilitacao.edit": "analise",
   "rcpn.habilitacao.edital": "analise",
   "rcpn.habilitacao.cancel": "urgente",

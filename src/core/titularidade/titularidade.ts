@@ -592,3 +592,60 @@ export function channelFor(services: Service[]): Channel {
   if (notas && ri) return "cnb-onr";
   return ri ? "onr" : "cnb";
 }
+
+// ---------------------------------------------------------------- guias
+
+/** What a guia of transmission says, as a communication to complete. */
+export interface GuideLike {
+  kind: string;
+  nature: string;
+  declaredValueCents: number;
+  property: {
+    type: "urbano" | "rural";
+    description: string;
+    fiscalRegistration: string;
+    registration: string;
+  };
+  parties: {
+    role: "transmitente" | "adquirente";
+    name: string;
+    taxId: string;
+  }[];
+}
+
+/**
+ * The communication drawn from a guia of ITIV or ITCD already read
+ * (decision of 14/11/2026: "já que as guias de ITIV já leem, faça a
+ * pergunta se deseja gerar esse arquivo"): parties, imóvel, value and the
+ * operation the guia names. The act's date, livro and folhas come from the
+ * escritura, which is lavrada after the guia: they stay blank.
+ */
+export function transferFromGuide(guide: GuideLike): TitleTransfer {
+  const byKind: Record<string, string> = {
+    "itcd-doacao": "67",
+    "itcd-causa-mortis": "69",
+  };
+  const matricula =
+    /matr[íi]cula\s*(?:n[º°o]\.?)?\s*([\d.]+)/i.exec(
+      guide.property.registration,
+    )?.[1] ??
+    (/^[\d.]+$/.test(guide.property.registration.trim())
+      ? guide.property.registration.trim()
+      : "");
+  const side = (role: "transmitente" | "adquirente") =>
+    guide.parties
+      .filter((p) => p.role === role && p.name.trim())
+      .map((p) => ({ name: p.name.trim(), taxId: p.taxId, share: "" }));
+  return {
+    ...emptyTransfer("notas"),
+    operation: operationIn(guide.nature) || byKind[guide.kind] || "",
+    destination: guide.property.type,
+    matricula,
+    fiscalRegistration: guide.property.fiscalRegistration,
+    address: addressIn(guide.property.description),
+    description: guide.property.description.slice(0, 1000),
+    valueCents: guide.declaredValueCents > 0 ? guide.declaredValueCents : null,
+    transmitentes: side("transmitente"),
+    adquirentes: side("adquirente"),
+  };
+}

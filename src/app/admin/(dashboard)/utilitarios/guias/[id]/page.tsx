@@ -37,6 +37,11 @@ export default async function GuidePage({
   ]);
   if (!stored) notFound();
   const number = formatGuideNumber(stored.year, stored.sequence);
+  const canCommunicate = can(
+    session.user.role ?? "",
+    "titularidade.manage",
+    session.user.permissions,
+  );
   const base = `/admin/utilitarios/guias/${stored.id}/arquivo`;
   const issued = (await searchParams).emitida === "1";
 
@@ -70,6 +75,27 @@ export default async function GuidePage({
             <AdminIcon name="file" className="h-4 w-4" /> Word (editável)
           </a>
         </section>
+        {canCommunicate && stored.guide.kind !== "certidao-imobiliaria" && (
+          <section className="flex flex-col gap-3 rounded-xl border border-primary/25 bg-primary/5 px-5 py-4 sm:flex-row sm:items-center sm:justify-between">
+            <div className="text-sm">
+              <p className="font-semibold text-foreground">
+                Deseja gerar a comunicação à prefeitura e a DOI com estes dados?
+              </p>
+              <p className="text-muted-foreground text-justify hyphens-auto">
+                Depois de lavrada a escritura, a mudança de titularidade vai na
+                Carga CTP do mês à prefeitura (Código Nacional de Normas, art.
+                184-A) e na DOI. As partes, o imóvel e o valor desta guia já
+                entram preenchidos; falta só a data, o livro e as folhas.
+              </p>
+            </div>
+            <a
+              href={`/admin/utilitarios/titularidade/nova?guia=${stored.id}`}
+              className={buttonVariants()}
+            >
+              Sim, gerar a comunicação
+            </a>
+          </section>
+        )}
         <GuideNumber
           id={stored.id}
           year={stored.year}

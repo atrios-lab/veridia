@@ -9,7 +9,7 @@ import {
   SERVICES,
 } from "@/core/titularidade/titularidade.ts";
 import { ConfirmAction } from "../../../_components/confirm-action.tsx";
-import { Button } from "../../../_ui/button.tsx";
+import { Button, buttonVariants } from "../../../_ui/button.tsx";
 import { Input } from "../../../_ui/input.tsx";
 import { Label } from "../../../_ui/label.tsx";
 import { NativeSelect } from "../../../_ui/native-select.tsx";
@@ -18,8 +18,10 @@ import {
   createFilingAction,
   markSentAction,
   readTitleAction,
+  refreshFilingAction,
   removeFilingAction,
   removeTransferAction,
+  renumberFilingAction,
   saveTransferAction,
   type TitularidadeState,
 } from "./actions.ts";
@@ -465,7 +467,7 @@ export function CreateFilingButton({
           {pending
             ? "Gerando..."
             : count === 0
-              ? "Gerar ofício sem movimento"
+              ? "Mês negativo (sem atos)"
               : "Gerar ofício do mês"}
         </Button>
       </div>
@@ -616,6 +618,78 @@ export function RemoveFilingButton({ id }: { id: string }) {
       pendingLabel="Excluindo..."
     >
       <input type="hidden" name="id" value={id} />
+    </ConfirmAction>
+  );
+}
+
+export function RefreshFilingButton({
+  id,
+  issuedOn,
+}: {
+  id: string;
+  issuedOn: string;
+}) {
+  const [state, action, pending] = useActionState(refreshFilingAction, IDLE);
+  const base = useId();
+  return (
+    <ConfirmAction
+      action={action}
+      pending={pending}
+      error={state.status === "error" ? state.message : null}
+      trigger="Editar ofício"
+      triggerClassName={buttonVariants({ variant: "outline", size: "sm" })}
+      question="Refazer o ofício com os atos do mês como estão agora?"
+      consequence="O número continua o mesmo. Os atos corrigidos, incluídos ou excluídos depois entram no ofício."
+      confirmLabel="Salvar"
+      pendingLabel="Salvando..."
+    >
+      <input type="hidden" name="id" value={id} />
+      <div className="flex flex-col gap-1.5">
+        <Label htmlFor={`${base}-issuedOn`}>Data do ofício</Label>
+        <Input
+          id={`${base}-issuedOn`}
+          name="issuedOn"
+          type="date"
+          defaultValue={issuedOn}
+          required
+        />
+      </div>
+    </ConfirmAction>
+  );
+}
+
+export function RenumberFilingButton({
+  id,
+  sequence,
+}: {
+  id: string;
+  sequence: number;
+}) {
+  const [state, action, pending] = useActionState(renumberFilingAction, IDLE);
+  const base = useId();
+  return (
+    <ConfirmAction
+      action={action}
+      pending={pending}
+      error={state.status === "error" ? state.message : null}
+      trigger="Modificar numeração"
+      triggerClassName={buttonVariants({ variant: "outline", size: "sm" })}
+      question="Qual número este ofício deve ter?"
+      consequence="Só aceita um número do ano que nenhum outro ofício use. A mudança vai para a auditoria."
+      confirmLabel="Mudar número"
+      pendingLabel="Mudando..."
+    >
+      <input type="hidden" name="id" value={id} />
+      <div className="flex flex-col gap-1.5">
+        <Label htmlFor={`${base}-sequence`}>Novo número</Label>
+        <Input
+          id={`${base}-sequence`}
+          name="sequence"
+          inputMode="numeric"
+          defaultValue={String(sequence)}
+          required
+        />
+      </div>
     </ConfirmAction>
   );
 }

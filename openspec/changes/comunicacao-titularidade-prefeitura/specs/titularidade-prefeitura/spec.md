@@ -70,3 +70,30 @@ Perfis e permissões.
 #### Scenario: Excluir em duplicidade
 - **WHEN** um ato lançado duas vezes é excluído com justificativa
 - **THEN** ele sai do mês e fica guardado, com quem excluiu, quando e por quê
+
+### Requirement: Arquivos da Carga CTP e da DOI
+O painel DEVE (SHALL) gerar, dos atos do mês, a Carga CTP (Comunicação de Transações às
+Prefeituras) em XML, JSON, TXT separado por "|" e CSV, e a DOI com os nomes de campo e os códigos do
+manual de importação da DOI-Web (JSON) e em XML; e a DOI de cada ato. O ofício DEVE (SHALL) sair
+também em Word. Campo que o título não traz NÃO DEVE (SHALL NOT) ser inventado nem enviado vazio.
+
+#### Scenario: Baixar a DOI do mês
+- **WHEN** a serventia escolhe "DOI · JSON (DOI-Web)"
+- **THEN** recebe `doi-AAAA-MM.json` com uma declaração por ato, operação, partes e imóvel com os códigos da DOI
+
+### Requirement: Mês negativo e numeração do ofício
+Sem ato no mês, o botão DEVE (SHALL) ser "Mês negativo". O ofício DEVE (SHALL) ter Editar (refazer
+com os atos atuais e a data), Modificar numeração (número do ano não usado por outro ofício) e
+Excluir, todos com justificativa; cada ato DEVE (SHALL) ter Editar e Excluir.
+
+#### Scenario: Número já usado
+- **WHEN** alguém tenta dar a um ofício o número de outro
+- **THEN** o painel recusa e diz qual número já está em uso
+
+### Requirement: Pergunta na guia
+A guia de ITIV ou ITCD DEVE (SHALL) perguntar se a serventia deseja gerar a comunicação à prefeitura
+e a DOI, e abrir o ato preenchido com as partes, o imóvel, a operação e o valor da guia.
+
+#### Scenario: Da guia ao ato
+- **WHEN** a serventia clica em "Sim, gerar a comunicação" numa guia de ITIV
+- **THEN** o formulário abre com transmitentes, adquirentes, imóvel e valor da guia, faltando a data, o livro e as folhas

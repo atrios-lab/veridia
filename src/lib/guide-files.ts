@@ -8,7 +8,11 @@ import {
   ImageRun,
   Packer,
   Paragraph,
+  Table,
+  TableCell,
+  TableRow,
   TextRun,
+  WidthType,
 } from "docx";
 import { buildGuideDocument } from "@/core/guides/document.ts";
 import type { GuideSettings } from "@/core/guides/schema.ts";
@@ -87,7 +91,19 @@ export async function renderGuideDocx(
   settings: GuideSettings,
   stored: StoredGuide,
 ): Promise<Buffer> {
-  const document = guideDocumentFor(tenant, settings, stored);
+  return renderDocumentDocx(tenant, guideDocumentFor(tenant, settings, stored));
+}
+
+/**
+ * Any document the core assembled as a Word file, with the same arms,
+ * identification, type (Times New Roman 12) and ABNT paragraphs as the
+ * guias: the ofício of titularidade uses it too (decision of 14/11/2026).
+ * Tables come out as Word tables.
+ */
+export async function renderDocumentDocx(
+  tenant: Tenant,
+  document: RequerimentoDocument,
+): Promise<Buffer> {
   const id = officeIdentification(tenant);
   const armsHeight = 64;
 
@@ -159,7 +175,7 @@ export async function renderGuideDocx(
     ],
   });
 
-  const body: Paragraph[] = [
+  const body: (Paragraph | Table)[] = [
     new Paragraph({
       alignment: AlignmentType.CENTER,
       spacing: { before: 120, after: 60 },
@@ -193,6 +209,29 @@ export async function renderGuideDocx(
         new Paragraph({
           spacing: { after: 60 },
           children: [run(`${row.label}: `, { bold: true }), run(row.value)],
+        }),
+      );
+    }
+    if (section.table) {
+      const table = section.table;
+      const cell = (text: string, bold = false) =>
+        new TableCell({
+          children: [
+            new Paragraph({ children: [run(text, { bold, size: 18 })] }),
+          ],
+        });
+      body.push(
+        new Table({
+          width: { size: 100, type: WidthType.PERCENTAGE },
+          rows: [
+            new TableRow({
+              tableHeader: true,
+              children: table.columns.map((c) => cell(c.label, true)),
+            }),
+            ...table.rows.map(
+              (row) => new TableRow({ children: row.map((v) => cell(v)) }),
+            ),
+          ],
         }),
       );
     }

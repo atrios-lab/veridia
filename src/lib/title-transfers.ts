@@ -34,6 +34,8 @@ export interface StoredTransfer {
 export interface Filing {
   id: string;
   number: string;
+  year: number;
+  sequence: number;
   competence: string;
   transfers: TitleTransfer[];
   issuedOn: string;
@@ -232,6 +234,8 @@ export async function removeTransferWith(
 const toFiling = (row: typeof titleTransferFilings.$inferSelect): Filing => ({
   id: row.id,
   number: formatGuideNumber(row.year, row.sequence),
+  year: row.year,
+  sequence: row.sequence,
   competence: row.competence,
   transfers: (row.transfers ?? []) as TitleTransfer[],
   issuedOn: row.issuedOn,
@@ -436,4 +440,91 @@ export async function removeFilingWith(
       reason: why,
     });
   });
+}
+
+/**
+ * "Editar": the ofício taken again from the month's acts as they stand
+ * now, with a new date if given. The number stays. With a justification.
+ */
+export async function refreshFilingWith(
+  database: Database,
+  tenantSlug: string,
+  id: string,
+  issuedOn: string,
+  actorId: string,
+  reason: string,
+): Promise<void> {
+  const why = mustReason(reason);
+  const found = await getFilingWith(database, tenantSlug, id);
+  if (!found) throw new TitularidadeError("Ofício não encontrado.");
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(issuedOn)) {
+    throw new TitularidadeError("Informe a data do ofício.");
+  }
+  const transfers = (
+    await listTransfersWith(database, tenantSlug, found.competence)
+  ).map((s) => s.transfer);
+  await database.transaction(async (tx) => {
+    await tx
+      .update(titleTransferFilings)
+      .set({ transfers, issuedOn })
+      .where(eq(titleTransferFilings.id, found.id));
+    await recordAuditWith(tx as unknown as Database, {
+      tenantSlug,
+      actorId,
+      action: "titularidade.filing-edit",
+      targetType: "title-transfer-filing",
+      targetId: found.number,
+      reason: why,
+    });
+  });
+}
+
+/**
+ * "Modificar numeração": the ofício takes another number of its year, one
+ * no other ofício of the office holds. With a justification.
+ */
+export async function renumberFilingWith(
+  database: Database,
+  tenantSlug: string,
+  id: string,
+  sequence: number,
+  actorId: string,
+  reason: string,
+): Promise<void> {
+  const why = mustReason(reason);
+  if (!Number.isInteger(sequence) || sequence < 1 || sequence > 99_999) {
+    throw new TitularidadeError(
+      "Número inválido: use um número inteiro a partir de 1.",
+    );
+  }
+  const found = await getFilingWith(database, tenantSlug, id);
+  if (!found) throw new TitularidadeError("Ofício não encontrado.");
+  const [row] = await database
+    .select({ year: titleTransferFilings.year })
+    .from(titleTransferFilings)
+    .where(eq(titleTransferFilings.id, found.id));
+  const year = row?.year ?? 0;
+  try {
+    await database.transaction(async (tx) => {
+      await tx
+        .update(titleTransferFilings)
+        .set({ sequence })
+        .where(eq(titleTransferFilings.id, found.id));
+      await recordAuditWith(tx as unknown as Database, {
+        tenantSlug,
+        actorId,
+        action: "titularidade.filing-renumber",
+        targetType: "title-transfer-filing",
+        targetId: `${found.number} → ${formatGuideNumber(year, sequence)}`,
+        reason: why,
+      });
+    });
+  } catch (error) {
+    if (isPostgresError(error, UNIQUE_VIOLATION)) {
+      throw new TitularidadeError(
+        `O nº ${formatGuideNumber(year, sequence)} já é de outro ofício.`,
+      );
+    }
+    throw error;
+  }
 }

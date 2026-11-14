@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { officeHolidays } from "@/core/scheduling/calendar.ts";
+import { EXPORT_FORMATS } from "@/core/titularidade/exports.ts";
 import {
   CHANNELS,
   competenceLabel,
@@ -136,12 +137,12 @@ export default async function TitularidadePage({
               Atos de {competenceLabel(mes)}
             </h2>
             <span className="flex flex-wrap gap-2">
-              <a
-                href={`${BASE}/planilha?mes=${mes}`}
+              <Link
+                href={`${BASE}/nova?mes=${mes}`}
                 className={buttonVariants({ variant: "outline" })}
               >
-                Planilha do mês
-              </a>
+                Lançar ato
+              </Link>
               <CreateFilingButton mes={mes} count={transfers.length} />
             </span>
           </div>
@@ -189,7 +190,7 @@ export default async function TitularidadePage({
                         </p>
                       )}
                     </div>
-                    <span className="flex flex-none gap-2">
+                    <span className="flex flex-none flex-wrap gap-2">
                       <Link
                         href={`${BASE}/${id}/alterar`}
                         className={buttonVariants({
@@ -197,8 +198,27 @@ export default async function TitularidadePage({
                           size: "sm",
                         })}
                       >
-                        Alterar
+                        Editar
                       </Link>
+                      <a
+                        href={`${BASE}/${id}/doi?formato=json`}
+                        className={buttonVariants({
+                          variant: "ghost",
+                          size: "sm",
+                        })}
+                        title="Declaração sobre Operações Imobiliárias deste ato, para importar na DOI-Web"
+                      >
+                        DOI (JSON)
+                      </a>
+                      <a
+                        href={`${BASE}/${id}/doi?formato=xml`}
+                        className={buttonVariants({
+                          variant: "ghost",
+                          size: "sm",
+                        })}
+                      >
+                        DOI (XML)
+                      </a>
                       <RemoveTransferButton id={id} mes={mes} />
                     </span>
                   </li>
@@ -206,6 +226,67 @@ export default async function TitularidadePage({
               })}
             </ul>
           )}
+        </section>
+
+        <section className="rounded-xl border bg-card p-6 shadow-xs">
+          <h2 className="text-lg font-semibold text-foreground">
+            Arquivos do mês para baixar e anexar
+          </h2>
+          <p className="mt-1 text-sm text-muted-foreground text-justify hyphens-auto">
+            A Carga CTP (Comunicação de Transações às Prefeituras) e a DOI saem
+            dos atos lançados. Baixe no formato que o sistema da plataforma, da
+            prefeitura ou da Receita aceitar e anexe lá. O ofício em PDF e em
+            Word fica na página de cada ofício gerado.
+          </p>
+          <div className="mt-4 grid gap-3 sm:grid-cols-2">
+            <div className="flex flex-col gap-2 rounded-lg border px-4 py-3">
+              <p className="text-sm font-semibold text-foreground">
+                Carga CTP · prefeitura
+              </p>
+              <span className="flex flex-wrap gap-2">
+                {(["ctp-xml", "ctp-json", "ctp-txt", "ctp-csv"] as const).map(
+                  (f) => (
+                    <a
+                      key={f}
+                      href={`${BASE}/arquivo?mes=${mes}&formato=${f}`}
+                      className={buttonVariants({
+                        variant: "outline",
+                        size: "sm",
+                      })}
+                      title={EXPORT_FORMATS[f].label}
+                    >
+                      {EXPORT_FORMATS[f].ext.toUpperCase()}
+                    </a>
+                  ),
+                )}
+              </span>
+            </div>
+            <div className="flex flex-col gap-2 rounded-lg border px-4 py-3">
+              <p className="text-sm font-semibold text-foreground">
+                DOI · Receita Federal
+              </p>
+              <span className="flex flex-wrap gap-2">
+                {(["doi-json", "doi-xml"] as const).map((f) => (
+                  <a
+                    key={f}
+                    href={`${BASE}/arquivo?mes=${mes}&formato=${f}`}
+                    className={buttonVariants({
+                      variant: "outline",
+                      size: "sm",
+                    })}
+                    title={EXPORT_FORMATS[f].label}
+                  >
+                    {f === "doi-json" ? "JSON (DOI-Web)" : "XML"}
+                  </a>
+                ))}
+              </span>
+              <p className="text-xs text-muted-foreground">
+                Com os nomes de campo do manual de importação da DOI-Web. Na
+                primeira importação, confira o que a DOI-Web apontar como
+                pendente (forma de pagamento, áreas, CEP).
+              </p>
+            </div>
+          </div>
         </section>
 
         <section className="rounded-xl border bg-card shadow-xs">

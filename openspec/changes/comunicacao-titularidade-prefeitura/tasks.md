@@ -16,3 +16,10 @@
 - [x] 3.2 Ofício: assinar ou imprimir, registrar o envio à plataforma com o recibo de entrega
   obrigatório e o comprovante (§ 2º), entrega à SEMUT à parte, excluir.
 - [x] 3.3 Menu, ajuda "!" e testes.
+
+## 4. Arquivos, numeração e guias
+
+- [x] 4.1 Carga CTP em XML, JSON, TXT e CSV; DOI em JSON (campos e códigos do manual da DOI-Web)
+  e XML, do mês e de cada ato; ofício em Word.
+- [x] 4.2 Mês negativo; ofício com Editar, Modificar numeração e Excluir; ato com Editar e Excluir.
+- [x] 4.3 Pergunta na guia de ITIV e ITCD para gerar a comunicação já preenchida.
