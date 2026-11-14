@@ -64,6 +64,12 @@ export default async function RcpnPage({
         description="Índice dos registros de nascimento, casamento e óbito desta serventia, lido dos arquivos do sistema do registro civil. Use para responder a busca no balcão. O índice orienta; quem prova é a certidão."
         actions={
           <span className="inline-flex flex-wrap gap-2">
+            <Link
+              href="/admin/rcpn/livros"
+              className={buttonVariants({ variant: "outline" })}
+            >
+              Livros
+            </Link>
             {guide && (
               <Link
                 href="/admin/atribuicoes/registro-civil"
@@ -296,6 +302,15 @@ export default async function RcpnPage({
                       </TableCell>
                       {issue && (
                         <TableCell className="align-top">
+                          <Link
+                            href={`/admin/rcpn/registro/${record.id}`}
+                            className={buttonVariants({
+                              variant: "ghost",
+                              size: "sm",
+                            })}
+                          >
+                            Abrir
+                          </Link>
                           <Link
                             href={`/admin/rcpn/certidoes/nova?registro=${record.id}`}
                             className={buttonVariants({

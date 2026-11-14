@@ -1,4 +1,5 @@
 import Image from "next/image";
+import { offersGuide } from "@/core/attributions/guides.ts";
 import { can, type Permission } from "@/core/auth/roles.ts";
 import type { Tenant } from "@/core/tenant/schema.ts";
 import { Sidebar, SidebarHeader, SidebarRail } from "../_ui/sidebar.tsx";
@@ -78,9 +79,14 @@ export function AdminSidebar({
   // yet: the route answers either way, it just has nothing to show.
   const allowed = (permission?: Permission) =>
     !permission || can(role, permission, permissions);
+  // An attribution the office does not offer is not in the panel at all
+  // (decision of 14/11/2026).
+  const offered = (attribution?: string) =>
+    !attribution || offersGuide({ attribution }, tenant);
   const items = ADMIN_NAV.filter(
     (item) =>
       allowed(item.permission) &&
+      offered(item.attribution) &&
       !(item.href === "/admin/ajuda" && !showTutorials),
   ).map((item) =>
     item.children

@@ -2,7 +2,11 @@ import assert from "node:assert/strict";
 import { existsSync } from "node:fs";
 import { join } from "node:path";
 import { test } from "node:test";
-import { ATTRIBUTION_GUIDES, guideFor } from "@/core/attributions/guides.ts";
+import {
+  ATTRIBUTION_GUIDES,
+  guideFor,
+  offersGuide,
+} from "@/core/attributions/guides.ts";
 import { ADMIN_NAV } from "./_components/nav.ts";
 
 const DASHBOARD = join(new URL(".", import.meta.url).pathname, "(dashboard)");
@@ -53,4 +57,24 @@ test("todo livro, índice e prazo diz o artigo; nada sem fonte", () => {
     new Set(ATTRIBUTION_GUIDES.map((g) => g.slug)).size,
     ATTRIBUTION_GUIDES.length,
   );
+});
+
+test("só aparece o que a serventia oferece; o Caixa sempre", () => {
+  const office = { attributions: ["RCPN", "NOTAS", "PROTESTO"] };
+  const shown = ATTRIBUTION_GUIDES.filter((g) => offersGuide(g, office)).map(
+    (g) => g.slug,
+  );
+  assert.deepEqual(shown, ["registro-civil", "protesto", "notas", "caixa"]);
+  assert.ok(
+    offersGuide(
+      { attribution: "DISTRIBUICAO" },
+      { ...office, offersDistribution: true },
+    ),
+  );
+  // Every item of the group says which attribution it belongs to, so the
+  // sidebar can leave out what is not offered (the Caixa has none).
+  for (const item of ADMIN_NAV.filter((i) => i.group === "Atribuições")) {
+    if (item.label === "Caixa") assert.equal(item.attribution, undefined);
+    else assert.ok(item.attribution, `${item.label} sem atribuição`);
+  }
 });

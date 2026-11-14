@@ -38,6 +38,12 @@ export interface AdminNavItem {
    */
   attention?: true;
   /**
+   * The attribution the item belongs to (core/tenant ATTRIBUTIONS, or
+   * "DISTRIBUICAO"): shown only when the office marked it offers it
+   * (decision of 14/11/2026).
+   */
+  attribution?: string;
+  /**
    * The item's own screens. With these the item becomes a fold: it opens
    * the list instead of leading anywhere, so the first entry must be the
    * item's own `href`, or the tool's main screen would have no way in.
@@ -136,11 +142,13 @@ export const ADMIN_NAV: readonly AdminNavItem[] = [
     // what the panel already does for them.
     group: "Atribuições",
     label: "Registro Civil",
+    attribution: "RCPN",
     href: "/admin/rcpn",
     icon: "file",
     permission: "rcpn.search",
     children: [
       { label: "Pesquisar no índice", href: "/admin/rcpn" },
+      { label: "Livros", href: "/admin/rcpn/livros" },
       {
         label: "Certidões",
         href: "/admin/rcpn/certidoes",
@@ -161,6 +169,7 @@ export const ADMIN_NAV: readonly AdminNavItem[] = [
   {
     group: "Atribuições",
     label: "Registro de Imóveis",
+    attribution: "RI",
     href: "/admin/atribuicoes/registro-de-imoveis",
     icon: "house",
     permission: "attributions.view",
@@ -168,6 +177,7 @@ export const ADMIN_NAV: readonly AdminNavItem[] = [
   {
     group: "Atribuições",
     label: "Títulos e Documentos",
+    attribution: "RTD",
     href: "/admin/atribuicoes/titulos-e-documentos",
     icon: "files",
     permission: "attributions.view",
@@ -175,6 +185,7 @@ export const ADMIN_NAV: readonly AdminNavItem[] = [
   {
     group: "Atribuições",
     label: "Pessoas Jurídicas",
+    attribution: "RCPJ",
     href: "/admin/atribuicoes/pessoas-juridicas",
     icon: "building",
     permission: "attributions.view",
@@ -182,6 +193,7 @@ export const ADMIN_NAV: readonly AdminNavItem[] = [
   {
     group: "Atribuições",
     label: "Protesto",
+    attribution: "PROTESTO",
     href: "/admin/atribuicoes/protesto",
     icon: "gavel",
     permission: "attributions.view",
@@ -189,6 +201,7 @@ export const ADMIN_NAV: readonly AdminNavItem[] = [
   {
     group: "Atribuições",
     label: "Distribuição",
+    attribution: "DISTRIBUICAO",
     href: "/admin/atribuicoes/distribuicao",
     icon: "shuffle",
     permission: "attributions.view",
@@ -196,6 +209,7 @@ export const ADMIN_NAV: readonly AdminNavItem[] = [
   {
     group: "Atribuições",
     label: "Notas",
+    attribution: "NOTAS",
     href: "/admin/atribuicoes/notas",
     icon: "signature",
     permission: "attributions.view",

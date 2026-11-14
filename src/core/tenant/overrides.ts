@@ -198,6 +198,20 @@ export const OfficeIdentificationOverrideSchema =
   OfficeIdentificationSchema.partial();
 
 /**
+ * The attributions the office marks it offers, who answers for each, and
+ * whether it keeps the Registro de Distribuição. Saved whole; at least one
+ * of the six.
+ */
+export const OfficeAttributionsSchema = TenantSchema.pick({
+  attributions: true,
+  attributionRegimes: true,
+  offersDistribution: true,
+});
+export type OfficeAttributionsSettings = z.infer<
+  typeof OfficeAttributionsSchema
+>;
+
+/**
  * Lays the office's own edits over its configuration.
  *
  * Each row that fails to parse is ignored rather than thrown: an override is
@@ -207,11 +221,12 @@ export const OfficeIdentificationOverrideSchema =
  * corrupted brand row does not take the contact override down with it, or the
  * other way around.
  *
- * Attributions are deliberately not overridable, here or anywhere. They are a
- * delegation from the court, and they decide which sections the public site
- * offers and which acts a citizen may ask for. The pick in both schemas above
- * is what keeps that true even for a row someone writes into the database by
- * hand.
+ * Attributions are the office's to mark (decision of 14/11/2026, reversing
+ * the earlier rule: "no próprio CNJ o cartório quem marca o que ele oferece
+ * ou não"). They decide which sections the public site offers, which acts a
+ * citizen may ask for and which attributions the panel shows, so they come
+ * only from their own row (OfficeAttributionsSchema): no other override
+ * can touch them.
  *
  * A record, not positional arguments: four `unknown` blobs in a row is a
  * trap where swapping two by mistake still compiles. Each key is independent
@@ -229,6 +244,7 @@ export function applyTenantOverrides(
     bulletin?: unknown;
     holidays?: unknown;
     identification?: unknown;
+    attributions?: unknown;
   },
 ): Tenant {
   let merged = tenant;
@@ -273,6 +289,11 @@ export function applyTenantOverrides(
   if (identification.success) {
     merged = { ...merged, ...identification.data };
   }
+
+  const attributions = OfficeAttributionsSchema.safeParse(
+    overrides.attributions,
+  );
+  if (attributions.success) merged = { ...merged, ...attributions.data };
 
   return merged;
 }

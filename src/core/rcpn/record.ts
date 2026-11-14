@@ -79,6 +79,13 @@ export interface RcpnRecord {
   /** "YYYY-MM-DD": the marriage or the death, for those kinds. */
   eventOn: string;
   people: RcpnPerson[];
+  /**
+   * The rest of the registro, as the certidão prints it (decision of
+   * 14/11/2026: "pegar os dados para ... imprimir a Certidão já pronta"):
+   * certidão field key (core/rcpn/certidao.ts) → value. Absent or blank
+   * fields stay for the person to fill from the book.
+   */
+  details?: Record<string, string>;
 }
 
 /** The CNJ matrícula has 32 digits (CNJ rules, now in the CNN). */

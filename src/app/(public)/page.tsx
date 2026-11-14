@@ -301,6 +301,47 @@ export default async function Home() {
               className="h-4 w-4 text-brand-primary-soft md:hidden"
             />
           </Link>
+          {/* What the office offers (decision of 14/11/2026): only the
+              attributions it marked in the panel, as at the CNJ. */}
+          {(() => {
+            const offered = [
+              ...tenant.attributions.map((a) => ATTRIBUTION_SHORT_NAMES[a]),
+              ...(tenant.offersDistribution ? ["Distribuição"] : []),
+            ];
+            const body = (
+              <>
+                <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-brand-tint text-brand-accent md:mb-3 md:h-11 md:w-11">
+                  <Icon name="columns" className="h-5 w-5" />
+                </span>
+                <span className="flex-1">
+                  <span className="block font-serif text-base font-semibold text-brand-primary md:text-lg">
+                    Atribuições
+                  </span>
+                  <span className="block text-xs text-brand-muted md:mt-1 md:text-[13px]">
+                    {offered.length === 1
+                      ? offered[0]
+                      : `${offered.slice(0, -1).join(", ")} e ${offered.at(-1)}`}
+                  </span>
+                </span>
+              </>
+            );
+            const box =
+              "flex items-center gap-3 rounded-2xl border border-brand-border bg-brand-card p-4 md:flex-col md:items-start md:gap-0 md:p-5";
+            return isSectionEnabled(tenant, "pedidos") ? (
+              <Link
+                href={SECTION_ROUTES.pedidos}
+                className={`${box} hover:border-brand-accent`}
+              >
+                {body}
+                <Icon
+                  name="arrowRight"
+                  className="h-4 w-4 text-brand-primary-soft md:hidden"
+                />
+              </Link>
+            ) : (
+              <div className={box}>{body}</div>
+            );
+          })()}
         </section>
 
         {/* Only exists on the site at all when there is a live publication:

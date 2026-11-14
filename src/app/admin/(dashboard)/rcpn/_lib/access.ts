@@ -2,8 +2,12 @@ import "server-only";
 import { notFound } from "next/navigation";
 import { can, type Permission } from "@/core/auth/roles.ts";
 import { getSession } from "@/lib/session.ts";
+import { getTenant } from "@/lib/tenant.ts";
 
-/** The Registro Civil screens answer 404 without their permission. */
+/**
+ * The Registro Civil screens answer 404 without their permission, or when
+ * the office does not offer the Registro Civil (decision of 14/11/2026).
+ */
 export async function requireRcpn(permission: Permission = "rcpn.search") {
   const session = await getSession();
   if (
@@ -12,6 +16,7 @@ export async function requireRcpn(permission: Permission = "rcpn.search") {
   ) {
     notFound();
   }
+  if (!(await getTenant()).attributions.includes("RCPN")) notFound();
   return session;
 }
 

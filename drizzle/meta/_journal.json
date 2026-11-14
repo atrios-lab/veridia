@@ -435,6 +435,13 @@
       "when": 1794625031132,
       "tag": "0061_arquivos_das_atribuicoes",
       "breakpoints": true
+    },
+    {
+      "idx": 62,
+      "version": "7",
+      "when": 1794658700684,
+      "tag": "0062_registro_civil_dados_completos",
+      "breakpoints": true
     }
   ]
 }

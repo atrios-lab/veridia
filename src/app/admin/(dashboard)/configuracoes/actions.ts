@@ -5,11 +5,13 @@ import { can } from "@/core/auth/roles.ts";
 import { agendaIdOf, agendaRules } from "@/core/scheduling/agenda.ts";
 import { whyNotOffered } from "@/core/scheduling/slots.ts";
 import {
+  OfficeAttributionsSchema,
   OfficeContactSchema,
   OfficeDeadlineSchema,
   OfficeHolidaysSchema,
   OfficeIdentificationSchema,
 } from "@/core/tenant/overrides.ts";
+import { ATTRIBUTIONS } from "@/core/tenant/schema.ts";
 import { db } from "@/db/index.ts";
 import { tenantContent } from "@/db/schema.ts";
 import { bookedFrom, getAgendaConfig } from "@/lib/appointments.ts";
@@ -17,6 +19,7 @@ import { recordAudit } from "@/lib/audit.ts";
 import { getSession } from "@/lib/session.ts";
 import {
   getTenant,
+  OFFICE_ATTRIBUTIONS_KEY,
   OFFICE_CONTACT_KEY,
   OFFICE_DEADLINE_KEY,
   OFFICE_HOLIDAYS_KEY,
@@ -525,6 +528,88 @@ export async function saveOfficeIdentification(
   });
 
   // Every document the site prints from now on reads it.
+  revalidatePath("/", "layout");
+  return { status: "saved" };
+}
+
+export type OfficeAttributionsState =
+  | { status: "idle" }
+  | { status: "saved" }
+  | { status: "error"; message: string };
+
+/**
+ * The attributions the office marks it offers, who answers for each
+ * (delegado, interino, interventor), and the Registro de Distribuição
+ * (decision of 14/11/2026: the office marks them, as it does at the CNJ).
+ * The Tabelião/Registrador's alone: it changes what the site offers.
+ */
+export async function saveOfficeAttributions(
+  _previous: OfficeAttributionsState,
+  formData: FormData,
+): Promise<OfficeAttributionsState> {
+  const session = await getSession();
+  if (
+    !session ||
+    !can(session.user.role ?? "", "user.manage", session.user.permissions)
+  ) {
+    return {
+      status: "error",
+      message: "Só o Tabelião/Registrador marca as atribuições da serventia.",
+    };
+  }
+  const tenant = await getTenant();
+  const offered = ATTRIBUTIONS.filter(
+    (a) => formData.get(`oferece.${a}`) === "on",
+  );
+  const distribution = formData.get("oferece.DISTRIBUICAO") === "on";
+  const regimes: Record<string, string> = {};
+  for (const key of [...offered, ...(distribution ? ["DISTRIBUICAO"] : [])]) {
+    regimes[key] = String(formData.get(`regime.${key}`) ?? "delegado");
+  }
+  const parsed = OfficeAttributionsSchema.safeParse({
+    attributions: offered,
+    attributionRegimes: regimes,
+    offersDistribution: distribution,
+  });
+  if (!parsed.success) {
+    return {
+      status: "error",
+      message:
+        offered.length === 0
+          ? "Marque pelo menos uma atribuição."
+          : "Confira o regime de cada atribuição.",
+    };
+  }
+  try {
+    await db
+      .insert(tenantContent)
+      .values({
+        tenantSlug: tenant.slug,
+        key: OFFICE_ATTRIBUTIONS_KEY,
+        published: parsed.data,
+        publishedAt: new Date(),
+        updatedBy: session.user.id,
+      })
+      .onConflictDoUpdate({
+        target: [tenantContent.tenantSlug, tenantContent.key],
+        set: {
+          published: parsed.data,
+          publishedAt: new Date(),
+          updatedAt: new Date(),
+          updatedBy: session.user.id,
+        },
+      });
+  } catch {
+    return { status: "error", message: GENERIC_ERROR };
+  }
+  await recordAudit({
+    tenantSlug: tenant.slug,
+    actorId: session.user.id,
+    action: "office-settings.attributions",
+    targetType: "tenant-content",
+    targetId: OFFICE_ATTRIBUTIONS_KEY,
+  });
+  // The site's sections, the request catalog and the panel all read it.
   revalidatePath("/", "layout");
   return { status: "saved" };
 }

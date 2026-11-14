@@ -32,6 +32,11 @@ export interface GuideLink {
 
 export interface AttributionGuide {
   slug: string;
+  /**
+   * The attribution of the office's register it depends on (core/tenant
+   * ATTRIBUTIONS, or "DISTRIBUICAO"); null: always shown (the Caixa).
+   */
+  attribution: string | null;
   /** The name in the sidebar. */
   name: string;
   /** The full name. */
@@ -84,6 +89,7 @@ const LNR = "Lei nº 8.935/1994 (Lei dos Notários e Registradores)";
 export const ATTRIBUTION_GUIDES: readonly AttributionGuide[] = [
   {
     slug: "registro-civil",
+    attribution: "RCPN",
     name: "Registro Civil",
     title: "Registro Civil das Pessoas Naturais",
     summary:
@@ -266,6 +272,7 @@ export const ATTRIBUTION_GUIDES: readonly AttributionGuide[] = [
   },
   {
     slug: "registro-de-imoveis",
+    attribution: "RI",
     name: "Registro de Imóveis",
     title: "Registro de Imóveis",
     summary:
@@ -508,6 +515,7 @@ export const ATTRIBUTION_GUIDES: readonly AttributionGuide[] = [
   },
   {
     slug: "titulos-e-documentos",
+    attribution: "RTD",
     name: "Títulos e Documentos",
     title: "Registro de Títulos e Documentos",
     summary:
@@ -617,6 +625,7 @@ export const ATTRIBUTION_GUIDES: readonly AttributionGuide[] = [
   },
   {
     slug: "pessoas-juridicas",
+    attribution: "RCPJ",
     name: "Pessoas Jurídicas",
     title: "Registro Civil das Pessoas Jurídicas",
     summary:
@@ -719,6 +728,7 @@ export const ATTRIBUTION_GUIDES: readonly AttributionGuide[] = [
   },
   {
     slug: "protesto",
+    attribution: "PROTESTO",
     name: "Protesto",
     title: "Tabelionato de Protesto de Títulos",
     summary:
@@ -866,6 +876,7 @@ export const ATTRIBUTION_GUIDES: readonly AttributionGuide[] = [
   },
   {
     slug: "distribuicao",
+    attribution: "DISTRIBUICAO",
     name: "Distribuição",
     title: "Registro de Distribuição",
     summary:
@@ -929,6 +940,7 @@ export const ATTRIBUTION_GUIDES: readonly AttributionGuide[] = [
   },
   {
     slug: "notas",
+    attribution: "NOTAS",
     name: "Notas",
     title: "Tabelionato de Notas",
     summary:
@@ -1093,6 +1105,7 @@ export const ATTRIBUTION_GUIDES: readonly AttributionGuide[] = [
   },
   {
     slug: "caixa",
+    attribution: null,
     name: "Caixa",
     title: "Caixa da serventia",
     summary:
@@ -1214,6 +1227,22 @@ export const ATTRIBUTION_GUIDES: readonly AttributionGuide[] = [
     ],
   },
 ];
+
+/**
+ * Whether the office offers what a guide is about (decision of 14/11/2026:
+ * "lá só deve aparecer o que o cartório oferece"): the attributions it
+ * marked, the Distribuição when it keeps it, and the Caixa always.
+ */
+export function offersGuide(
+  guide: Pick<AttributionGuide, "attribution">,
+  office: { attributions: readonly string[]; offersDistribution?: boolean },
+): boolean {
+  if (guide.attribution === null) return true;
+  if (guide.attribution === "DISTRIBUICAO") {
+    return office.offersDistribution === true;
+  }
+  return office.attributions.includes(guide.attribution);
+}
 
 export function guideFor(slug: string): AttributionGuide | undefined {
   return ATTRIBUTION_GUIDES.find((g) => g.slug === slug);

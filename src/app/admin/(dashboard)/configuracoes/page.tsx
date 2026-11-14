@@ -5,12 +5,17 @@ import {
   officeHolidays,
   upcomingLawHolidays,
 } from "@/core/scheduling/calendar.ts";
-import { ATTRIBUTIONS, type Attribution } from "@/core/tenant/schema.ts";
+import {
+  ATTRIBUTION_REGIME_LABELS,
+  ATTRIBUTIONS,
+  type Attribution,
+} from "@/core/tenant/schema.ts";
 import { getSession } from "@/lib/session.ts";
 import { getTenant, today } from "@/lib/tenant.ts";
 import { AdminIcon } from "../../_components/icon.tsx";
 import { AdminPageHeader } from "../../_components/page-header.tsx";
 import { ConfiguracoesTabs } from "./_components/tabs.tsx";
+import { OfficeAttributionsForm } from "./office-attributions-form.tsx";
 import { OfficeContactForm } from "./office-contact-form.tsx";
 import { OfficeDeadlineForm } from "./office-deadline-form.tsx";
 import { OfficeHolidaysForm } from "./office-holidays-form.tsx";
@@ -72,9 +77,11 @@ const ATTRIBUTION_PANEL_LABELS: Record<
 function AttributionRow({
   attribution,
   delegated,
+  regime,
 }: {
   attribution: Attribution;
   delegated: boolean;
+  regime: string;
 }) {
   const { label, gloss } = ATTRIBUTION_PANEL_LABELS[attribution];
   return (
@@ -111,7 +118,7 @@ function AttributionRow({
           delegated ? "text-primary" : "text-muted-foreground"
         }`}
       >
-        {delegated ? "Delegada" : "Não delegada"}
+        {delegated ? regime : "Não oferece"}
       </span>
     </div>
   );
@@ -134,6 +141,11 @@ export default async function SettingsPage() {
   const role = session.user.role ?? "";
   const granted = session.user.permissions;
   const canBrand = can(role, "branding.edit", granted);
+  // The Tabelião/Registrador marks what the office offers (decision of
+  // 14/11/2026); the others see it stated.
+  const canMarkAttributions = can(role, "user.manage", granted);
+  const regimeOf = (key: string) =>
+    tenant.attributionRegimes?.[key] ?? "delegado";
 
   return (
     <>
@@ -181,20 +193,42 @@ export default async function SettingsPage() {
             <h3 className="mt-5.5 mb-3 text-xs font-medium text-muted-foreground">
               Atribuições da serventia
             </h3>
-            <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-2 lg:grid-cols-3">
-              {ATTRIBUTIONS.map((attribution) => (
-                <AttributionRow
-                  key={attribution}
-                  attribution={attribution}
-                  delegated={tenant.attributions.includes(attribution)}
-                />
-              ))}
-            </div>
+            {canMarkAttributions ? (
+              <OfficeAttributionsForm
+                choices={[
+                  ...ATTRIBUTIONS.map((attribution) => ({
+                    key: attribution,
+                    ...ATTRIBUTION_PANEL_LABELS[attribution],
+                    offered: tenant.attributions.includes(attribution),
+                    regime: regimeOf(attribution),
+                  })),
+                  {
+                    key: "DISTRIBUICAO",
+                    label: "Distribuição",
+                    gloss: "Registro de Distribuição",
+                    offered: tenant.offersDistribution ?? false,
+                    regime: regimeOf("DISTRIBUICAO"),
+                  },
+                ]}
+              />
+            ) : (
+              <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-2 lg:grid-cols-3">
+                {ATTRIBUTIONS.map((attribution) => (
+                  <AttributionRow
+                    key={attribution}
+                    attribution={attribution}
+                    delegated={tenant.attributions.includes(attribution)}
+                    regime={ATTRIBUTION_REGIME_LABELS[regimeOf(attribution)]}
+                  />
+                ))}
+              </div>
+            )}
             <p className="mt-3 text-xs leading-relaxed text-muted-foreground">
-              A atribuição é uma delegação do tribunal, não uma preferência da
-              serventia, por isso não tem como alterar por aqui. É ela que
-              decide quais seções o site oferece e quais atos o cidadão pode
-              pedir; para atualizar, fale com o suporte. Logotipo, estilo e
+              A serventia marca o que oferece, como faz no CNJ, e em cada
+              atribuição quem responde: o delegado (titular), um interino ou um
+              interventor. Só o Tabelião/Registrador altera. É essa marcação que
+              decide quais seções o site oferece, quais atos o cidadão pode
+              pedir e o que aparece em Atribuições no painel. Logotipo, estilo e
               seções da página inicial ficam na aba{" "}
               {canBrand ? (
                 <Link

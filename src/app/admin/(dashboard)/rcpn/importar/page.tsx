@@ -28,7 +28,7 @@ export default async function ImportPage() {
         maxWidth={1100}
         title="Importar arquivos do Registro Civil"
         back={{ href: "/admin/rcpn", label: "Registro Civil" }}
-        description="Envie o arquivo gerado no sistema do registro civil sempre que houver registro novo. O sistema lê, mostra o que leu e só publica no índice depois da sua conferência. Registros que já existem no índice com dados diferentes só são substituídos se você marcar."
+        description="Envie as informações gerais do sistema do registro civil (o banco completo, com os dados de cada livro, folha, termo e matrícula) sempre que houver registro novo. O painel monta o índice de cada livro e guarda os dados de cada registro, para a certidão sair pronta. Nada entra antes da sua conferência, e um registro que já existe com dados diferentes só é substituído se você marcar."
       />
       <main className="flex max-w-[1100px] flex-col gap-6 px-4 py-7 md:px-8">
         <section className="rounded-xl border bg-card p-6 shadow-xs">

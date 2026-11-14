@@ -205,6 +205,7 @@ export async function existingFor(
         term: row.term,
         registeredOn: row.registeredOn,
         eventOn: row.eventOn,
+        details: (row.details ?? {}) as Record<string, string>,
         people: people.filter((p) => p.recordId === row.id).map(PERSON_FIELDS),
       });
     }
@@ -290,7 +291,12 @@ export async function publishImportWith(
   await database.transaction(async (tx) => {
     for (const item of chosen) {
       const current = existing.get(item.key);
-      const record = merged(item.record, current);
+      const record = {
+        ...merged(item.record, current),
+        // Key by key: a blank in the new file never erases what the book
+        // sent before.
+        details: merged(item.record.details ?? {}, current?.details ?? {}),
+      };
       const [saved] = await tx
         .insert(rcpnRecords)
         .values({
@@ -304,6 +310,7 @@ export async function publishImportWith(
           term: record.term,
           registeredOn: record.registeredOn,
           eventOn: record.eventOn,
+          details: record.details ?? {},
           importId: row.id,
         })
         .onConflictDoUpdate({
@@ -320,6 +327,7 @@ export async function publishImportWith(
             term: record.term,
             registeredOn: record.registeredOn,
             eventOn: record.eventOn,
+            details: record.details ?? {},
             importId: row.id,
             updatedAt: new Date(),
           },
@@ -531,4 +539,118 @@ export const rcpn = {
   coverage: (tenantSlug: string) => coverageWith(db, tenantSlug),
   search: (tenantSlug: string, query: SearchQuery) =>
     searchWith(db, tenantSlug, query),
+  books: (tenantSlug: string) => booksWith(db, tenantSlug),
+  bookIndex: (tenantSlug: string, kind: RcpnKind, book: string) =>
+    bookIndexWith(db, tenantSlug, kind, book),
 };
+
+/** One book of the index: its kind, how many registros, from which term. */
+export interface BookSummary {
+  kind: RcpnKind;
+  subtype: "" | "natimorto";
+  book: string;
+  count: number;
+  first: string;
+  last: string;
+}
+
+/**
+ * The books the office sent, each with its registros (decision of
+ * 14/11/2026: "fazer cada índice com base nos livros que enviei").
+ */
+export async function booksWith(
+  database: Database,
+  tenantSlug: string,
+): Promise<BookSummary[]> {
+  const rows = await database
+    .select({
+      kind: rcpnRecords.kind,
+      subtype: rcpnRecords.subtype,
+      book: rcpnRecords.book,
+      count: sql<number>`count(*)::int`,
+      first: sql<string>`min(${rcpnRecords.registeredOn})`,
+      last: sql<string>`max(${rcpnRecords.registeredOn})`,
+    })
+    .from(rcpnRecords)
+    .where(eq(rcpnRecords.tenantSlug, tenantSlug))
+    .groupBy(rcpnRecords.kind, rcpnRecords.subtype, rcpnRecords.book);
+  const order = (kind: string) => RCPN_KINDS.indexOf(kind as RcpnKind);
+  return rows
+    .map((r) => ({
+      kind: r.kind as RcpnKind,
+      subtype: (r.subtype === "natimorto" ? "natimorto" : "") as
+        | ""
+        | "natimorto",
+      book: r.book,
+      count: Number(r.count),
+      first: r.first ?? "",
+      last: r.last ?? "",
+    }))
+    .sort(
+      (a, b) =>
+        order(a.kind) - order(b.kind) ||
+        a.subtype.localeCompare(b.subtype) ||
+        a.book.localeCompare(b.book, "pt-BR", { numeric: true }),
+    );
+}
+
+export interface BookEntry {
+  id: string;
+  page: string;
+  term: string;
+  matricula: string;
+  registeredOn: string;
+  eventOn: string;
+  names: string[];
+  complete: boolean;
+}
+
+/** The index of one book: its registros by folha and termo. */
+export async function bookIndexWith(
+  database: Database,
+  tenantSlug: string,
+  kind: RcpnKind,
+  book: string,
+): Promise<BookEntry[]> {
+  const records = await database
+    .select()
+    .from(rcpnRecords)
+    .where(
+      and(
+        eq(rcpnRecords.tenantSlug, tenantSlug),
+        eq(rcpnRecords.kind, kind),
+        eq(rcpnRecords.book, book),
+      ),
+    )
+    .limit(5000);
+  if (records.length === 0) return [];
+  const people = await database
+    .select({
+      recordId: rcpnPeople.recordId,
+      role: rcpnPeople.role,
+      name: rcpnPeople.name,
+    })
+    .from(rcpnPeople)
+    .where(
+      inArray(
+        rcpnPeople.recordId,
+        records.map((r) => r.id),
+      ),
+    );
+  const num = (v: string) => Number.parseInt(v.replace(/\D/g, ""), 10) || 0;
+  return records
+    .map((r) => ({
+      id: r.id,
+      page: r.page,
+      term: r.term,
+      matricula: r.matricula,
+      registeredOn: r.registeredOn,
+      eventOn: r.eventOn,
+      names: people
+        .filter((p) => p.recordId === r.id)
+        .sort((a, b) => a.role.localeCompare(b.role))
+        .map((p) => p.name),
+      complete: Object.keys((r.details ?? {}) as object).length > 0,
+    }))
+    .sort((a, b) => num(a.page) - num(b.page) || num(a.term) - num(b.term));
+}

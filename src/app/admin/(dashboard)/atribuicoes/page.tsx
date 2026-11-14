@@ -1,5 +1,6 @@
 import Link from "next/link";
-import { ATTRIBUTION_GUIDES } from "@/core/attributions/guides.ts";
+import { ATTRIBUTION_GUIDES, offersGuide } from "@/core/attributions/guides.ts";
+import { getTenant } from "@/lib/tenant.ts";
 import { AdminIcon } from "../../_components/icon.tsx";
 import { AdminPageHeader } from "../../_components/page-header.tsx";
 import { GUIDE_ICONS, requireGuides } from "./_lib.ts";
@@ -8,6 +9,8 @@ export const metadata = { title: "Atribuições" };
 
 export default async function AttributionsPage() {
   await requireGuides();
+  const tenant = await getTenant();
+  const guides = ATTRIBUTION_GUIDES.filter((g) => offersGuide(g, tenant));
   return (
     <>
       <AdminPageHeader
@@ -16,7 +19,7 @@ export default async function AttributionsPage() {
         description="Cada especialidade da serventia: o que faz, a lei, os livros e índices que a lei exige, os prazos e o que o painel já faz por ela."
       />
       <main className="grid max-w-[1100px] gap-4 px-4 py-7 sm:grid-cols-2 md:px-8 lg:grid-cols-3">
-        {ATTRIBUTION_GUIDES.map((guide) => (
+        {guides.map((guide) => (
           <Link
             key={guide.slug}
             href={`/admin/atribuicoes/${guide.slug}`}

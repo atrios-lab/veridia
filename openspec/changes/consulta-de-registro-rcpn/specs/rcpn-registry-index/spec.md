@@ -49,15 +49,28 @@ quem é.
 - **WHEN** a serventia importa uma planilha de um sistema sem modelo e liga as colunas
 - **THEN** a ligação fica salva com o nome dado, e a próxima planilha do mesmo sistema já vem ligada
 
-### Requirement: Só os campos do índice entram
-A leitura DEVE (SHALL) extrair apenas os campos do índice e descartar todos os demais,
-incluindo CPF, RG, CTPS, PIS, número de benefício, causa da morte, médico, cor, telefones,
-endereços e dados de usuários e senhas do sistema de origem. O arquivo original DEVE (SHALL)
-ficar acessível só no painel, a quem tem a permissão de importar.
+### Requirement: Informações gerais por livro, guardadas só no painel
+A leitura DEVE (SHALL) guardar, das informações gerais que a serventia envia do sistema do
+registro civil por livro, folha, termo e matrícula (decisão de 14/11/2026), além dos campos do índice, os dados que a certidão imprime (por exemplo hora, local,
+sexo, DNV, avós, gêmeos, anotações e averbações; no casamento, regime e qualificação dos
+cônjuges; no óbito, hora, local, sepultamento, documento, eleitor, médico e declarante), para a
+certidão sair pronta. Usuários, senhas, registros de uso do sistema e as demais tabelas NÃO DEVEM
+(SHALL NOT) ser lidos. Esses dados DEVEM (SHALL) ficar só no painel, para quem tem a permissão do
+Registro Civil; a consulta pública NÃO DEVE (SHALL NOT) mostrá-los. Campo em branco no arquivo NÃO
+DEVE (SHALL NOT) apagar o que o painel já tem.
 
-#### Scenario: Banco com CPF e causa da morte
-- **WHEN** o banco de óbitos importado traz CPF e causa da morte
-- **THEN** o índice guarda nome, datas, livro, folha, termo, matrícula e profissão, e não guarda CPF nem causa da morte
+#### Scenario: Banco completo do Cartosoft
+- **WHEN** a serventia envia os bancos NA, CA e OB do Cartosoft
+- **THEN** cada registro fica com os dados da certidão, e a certidão de nascimento sai com hora, local, avós, DNV e anotações já preenchidos
+
+### Requirement: Índice de cada livro
+O painel DEVE (SHALL) mostrar os livros recebidos por tipo de registro (Livro A, B, B Auxiliar,
+C, C Auxiliar e os demais), cada um com o número de registros e o período, e o índice de cada
+livro por folha e termo, com o acesso ao registro e à emissão da certidão já preenchida.
+
+#### Scenario: Abrir um livro
+- **WHEN** a pessoa abre Registro Civil › Livros › Livro A-12
+- **THEN** vê os registros por folha e termo e, ao abrir um deles, a certidão como vai sair, com os campos que faltam marcados para completar com o livro
 
 ### Requirement: Conferência antes de publicar
 Nenhum registro lido DEVE (SHALL) aparecer na pesquisa ou na consulta pública antes da

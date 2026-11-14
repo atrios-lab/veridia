@@ -152,6 +152,8 @@ const EXACT: Record<string, AuditLevel> = {
   "office-settings.access-hours": "atencao",
 
   "office-settings.save": "analise",
+  // What the site offers changes with it.
+  "office-settings.attributions": "atencao",
   "office-brand.save": "analise",
   "office-dpo.save": "analise",
   "agenda.settings": "analise",

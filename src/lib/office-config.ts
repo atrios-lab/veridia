@@ -45,6 +45,8 @@ export const OFFICE_DEADLINE_KEY = "office-deadline";
 export const OFFICE_BULLETIN_KEY = "office-bulletin";
 export const OFFICE_HOLIDAYS_KEY = "office-holidays";
 export const OFFICE_IDENTIFICATION_KEY = "office-identification";
+/** The attributions the office marks it offers, and who answers for each. */
+export const OFFICE_ATTRIBUTIONS_KEY = "office-attributions";
 export const OFFICE_GUIDES_KEY = "office-tax-guides";
 /** Declaração de ISS: rate, law, the office's CNPJ, the law attached. */
 export const OFFICE_ISS_KEY = "office-iss";
