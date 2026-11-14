@@ -455,6 +455,12 @@ const ACT_CODE: Record<string, string> = {
 const cut = (value: string, max: number) =>
   value.trim().slice(0, max) || undefined;
 
+/** "R-3-633" or "AV.2" → the entry's number, 7 digits: "0000003". */
+function registryEntry(entry: string): string | undefined {
+  const number = /(?:R|AV)\D{0,3}(\d{1,7})/i.exec(entry)?.[1] ?? digits(entry);
+  return number && number.length <= 7 ? number.padStart(7, "0") : undefined;
+}
+
 /**
  * One party as the DOI-Web's schema takes it (layout-doiweb.json,
  * AlienanteDTO/AdquirenteDTO): identified by the NI (CPF or CNPJ), never
@@ -508,11 +514,18 @@ export function doiDeclaration(t: TitleTransfer) {
       tipoAto: ACT_CODE[t.act],
       tipoLivro: notas ? undefined : matricula ? "1" : undefined,
       numeroLivro: notas ? cut(t.book, 7) : undefined,
-      folha: notas ? cut(t.page, 7) : undefined,
+      folha: cut(t.page, 7),
       matriculaNotarialEletronica:
         notas && d.mne ? d.mne.slice(0, 24) : undefined,
-      matricula: matricula && matricula.length <= 7 ? matricula : undefined,
-      numeroRegistroAverbacao: notas ? undefined : cut(digits(t.entry), 7),
+      // The DOI manual: zeros on the left up to the 7 digits.
+      matricula:
+        matricula && matricula.length <= 7
+          ? matricula.padStart(7, "0")
+          : undefined,
+      codigoNacionalMatricula: d.cnm.length === 16 ? d.cnm : undefined,
+      numeroRegistroAverbacao: notas ? undefined : registryEntry(t.entry),
+      naturezaTitulo: notas ? undefined : d.titleNature || undefined,
+      existeDoiAnterior: notas ? undefined : d.previousDoi,
       dataNegocioJuridico: t.actDate,
       tipoOperacaoImobiliaria: t.operation,
       descricaoOutrasOperacoesImobiliarias:
@@ -533,6 +546,8 @@ export function doiDeclaration(t: TitleTransfer) {
       cib: rural ? cut(d.cib, 8) : undefined,
       codigoIncra: rural ? cut(d.incra, 13) : undefined,
       denominacao: rural ? cut(t.description, 200) : undefined,
+      localizacao: rural ? cut(d.location, 200) : undefined,
+      codigoIbge: d.ibge.length === 7 ? d.ibge : undefined,
       inscricaoMunicipal: cut(t.fiscalRegistration, 45),
       tipoImovel: d.propertyType,
       areaImovel: area,
@@ -545,7 +560,11 @@ export function doiDeclaration(t: TitleTransfer) {
       bairro: cut(address.bairro ?? "", 150),
       cep: d.cep.length === 8 ? d.cep : undefined,
     }),
-    ...(d.ibge.length === 7 ? { municipiosUF: [{ codigoIbge: d.ibge }] } : {}),
+    // The rural imóvel lists its municipalities (the DOI-Web prints them
+    // under "Municípios"); the urban one has its code at the root only.
+    ...(rural && d.ibge.length === 7
+      ? { municipiosUF: [{ codigoIbge: d.ibge }] }
+      : {}),
     alienantes: t.transmitentes.map(doiParty),
     adquirentes: t.adquirentes.map(doiParty),
   };

@@ -28,3 +28,4 @@
   o texto traz.
 - [x] 4.5 DOI em JSON no esquema oficial da DOI-Web (testado contra o layout-doiweb.json) e no
   formato PGD (DOI.TXT); município, código IBGE e INCRA no ato.
+- [x] 4.6 DOI do registro de imóveis (natureza do título, CNM, DOI anterior, localização, 7 dígitos)

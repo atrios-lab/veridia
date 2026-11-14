@@ -185,3 +185,14 @@ test("MNE com dígito verificador módulo 97 e campos da DOI lidos do título", 
   assert.equal(read.mne, "123456202611140000000123");
   assert.equal(doiIn("Escritura de doação", "67").paymentForm, "9");
 });
+
+test("do registro, a leitura tira o CNM, a natureza do título e a DOI já emitida", () => {
+  // Fictitious text, as a registro cites its title.
+  const text =
+    "R-1-633. Por escritura pública de doação lavrada no Livro 10, folhas 5, emitida a DOI. Código Nacional de Matrícula (CNM): 000000.2.0000633-00.";
+  const read = doiIn(text, "67");
+  assert.equal(read.titleNature, "2");
+  assert.equal(read.previousDoi, true);
+  assert.equal(read.cnm, "0000002000063300");
+  assert.equal(read.paymentForm, "9");
+});
