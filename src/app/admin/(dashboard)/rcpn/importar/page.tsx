@@ -75,6 +75,9 @@ export default async function ImportPage() {
               20260717 1001.sql"), compacte em .zip e envie aqui: uma cópia de
               100 MB costuma ficar com menos de 10 MB. O arquivo é lido como
               texto, nada nele é executado, e só saem os dados dos registros.
+              Para uma cópia do dia, no HeidiSQL use Ferramentas › Exportar
+              banco de dados como SQL, com o banco do Cartosoft marcado e Dados
+              em "Inserir": o arquivo gerado também serve.
             </p>
           </div>
           <div className="mt-3 mb-5 rounded-lg border border-primary/25 bg-primary/5 px-4 py-3 text-sm text-foreground">

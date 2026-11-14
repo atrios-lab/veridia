@@ -2,7 +2,8 @@ import type { Row, Tables } from "./cartosoft.ts";
 
 /**
  * A MySQL backup (`.sql`, as the Cartosoft's "Backup_Cartosoft_Mysql"
- * writes it, analysis of 14/11/2026) read as text: never executed. Only
+ * writes it, analysis of 14/11/2026, or as HeidiSQL's "Exportar banco de
+ * dados como SQL" writes it) read as text: never executed. Only
  * the `CREATE TABLE` column lists and the `INSERT INTO ... VALUES` rows of
  * the wanted tables are taken, and of each row only the wanted columns.
  * Everything else in the file (users, logs, custas, selos) stays behind.
@@ -14,7 +15,7 @@ import type { Row, Tables } from "./cartosoft.ts";
 
 /** Whether the text looks like a SQL dump (by content, not by name). */
 export function isSqlDump(head: string): boolean {
-  return /(^|\n)\s*(--\s*MySQL|CREATE\s+TABLE|INSERT\s+INTO|DROP\s+TABLE\s+IF\s+EXISTS)/i.test(
+  return /(^|\n)\s*(--\s*MySQL|--\s*HeidiSQL|CREATE\s+(TABLE|DATABASE)|(INSERT|REPLACE)\s+INTO|DROP\s+TABLE\s+IF\s+EXISTS)/i.test(
     head.replace(/^﻿/, ""),
   );
 }
@@ -155,7 +156,7 @@ export function readSqlDump(
   const columns = readColumns(text);
   const tables: Tables = {};
   const insert =
-    /INSERT\s+(?:IGNORE\s+)?INTO\s+((?:`[^`]+`|\w+)(?:\.(?:`[^`]+`|\w+))?)\s*(\([^)]*\))?\s*VALUES\s*/gi;
+    /(?:INSERT\s+(?:IGNORE\s+)?|REPLACE\s+)INTO\s+((?:`[^`]+`|\w+)(?:\.(?:`[^`]+`|\w+))?)\s*(\([^)]*\))?\s*VALUES\s*/gi;
   for (let m = insert.exec(text); m; m = insert.exec(text)) {
     const lower = bareName(m[1] ?? "").toLowerCase();
     const model = byLower.get(lower);

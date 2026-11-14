@@ -110,3 +110,37 @@ test("da cópia .sql sai o mesmo registro que sai do banco Access", () => {
   assert.equal(other?.registeredOn, "", "ano impossível fica em branco");
   assert.equal(other?.details?.hora, undefined, "hora zerada não é hora");
 });
+
+test("cópia feita pelo HeidiSQL (Exportar banco de dados como SQL) também é lida", () => {
+  const heidi = `-- --------------------------------------------------------
+-- Servidor:                     127.0.0.1
+-- Versão do servidor:           5.6.28 - MySQL Community Server (GPL)
+-- HeidiSQL Versão:              12.10.0.7000
+-- --------------------------------------------------------
+
+/*!40101 SET NAMES utf8 */;
+-- Copiando estrutura do banco de dados para bd_ficticio
+CREATE DATABASE IF NOT EXISTS \`bd_ficticio\`;
+USE \`bd_ficticio\`;
+
+-- Copiando estrutura para tabela bd_ficticio.na_avos
+CREATE TABLE IF NOT EXISTS \`na_avos\` (
+  \`ID\` int(11) NOT NULL,
+  \`no_pai_mae\` varchar(100) DEFAULT NULL,
+  \`no_mae_mae\` varchar(100) DEFAULT NULL
+) ENGINE=MyISAM DEFAULT CHARSET=latin1;
+
+-- Copiando dados para a tabela bd_ficticio.na_avos: 2 rows
+/*!40000 ALTER TABLE \`na_avos\` DISABLE KEYS */;
+REPLACE INTO \`na_avos\` (\`ID\`, \`no_pai_mae\`, \`no_mae_mae\`) VALUES
+\t(7, 'Avô D\\'Exemplo', 'Avó Fictícia'),
+\t(8, NULL, 'Outra Avó');
+/*!40000 ALTER TABLE \`na_avos\` ENABLE KEYS */;
+`;
+  assert.equal(isSqlDump(heidi.slice(0, 300)), true);
+  const rows = readSqlDump(heidi, CARTOSOFT_COLUMNS).NA_AVOS ?? [];
+  assert.equal(rows.length, 2);
+  assert.equal(rows[0]?.no_pai_mae, "Avô D'Exemplo");
+  assert.equal(rows[1]?.no_pai_mae, null);
+  assert.equal(rows[1]?.no_mae_mae, "Outra Avó");
+});

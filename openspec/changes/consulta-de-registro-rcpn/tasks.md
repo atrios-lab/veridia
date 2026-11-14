@@ -161,3 +161,5 @@
 - [x] 11.16 Cópia de segurança .sql do MySQL do Cartosoft: lida como texto, nunca executada, só as
   tabelas e colunas do modelo (as mesmas do Access); data zerada e ano impossível em branco;
   instruções na tela de importação (pasta das cópias, compactar em .zip).
+- [x] 11.17 A cópia exportada pelo HeidiSQL ("Exportar banco de dados como SQL", com INSERT ou
+  REPLACE) também é lida; a tela explica como gerar a cópia do dia.
