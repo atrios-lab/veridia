@@ -62,12 +62,12 @@ test("nascimento: o livro traz o que a certidão imprime", () => {
       people: [],
     },
   );
-  assert.equal(fields.nome, "Criança Fictícia");
+  assert.equal(fields.nome, "CRIANÇA FICTÍCIA");
   assert.equal(fields.genitor1, "Mãe Fictícia");
   assert.equal(fields.genitor1Municipio, "Natal");
   assert.equal(fields.dnv, "12345678901");
   assert.equal(fields.hora, "08:05 horas");
-  assert.equal(fields.gemeo, "NÃO CONSTA");
+  assert.equal(fields.gemeo, undefined, "gêmeo só aparece quando existir");
 });
 
 test("depois de 2017 a naturalidade fica para o livro", () => {
@@ -121,12 +121,14 @@ test("óbito: data e hora por extenso, documento, médico e declarante", () => {
     },
   );
   assert.equal(
-    fields.dataHoraFalecimento,
-    "primeiro de fevereiro de dois mil e vinte, às 14:30",
+    fields.dataFalecimentoExtenso,
+    "primeiro de fevereiro de dois mil e vinte",
   );
-  assert.equal(fields.documento, "RG 123 SSP/RN");
-  assert.equal(fields.eleitor, "SIM");
-  assert.equal(fields.medico, "Médico Fictício, CRM 999");
+  assert.equal(fields.horaFalecimento, "14:30 horas");
+  assert.equal(record?.details?.documento, "RG 123 SSP/RN");
+  assert.equal(record?.details?.eleitor, "SIM");
+  assert.equal(fields.medico, "Médico Fictício");
+  assert.equal(fields.medicoDocumento, "CRM 999");
   assert.equal(fields.declarante, "Declarante Fictício");
 });
 
@@ -257,7 +259,8 @@ test("óbito: códigos numéricos ficam em branco; eleitor, causa e filhos", () 
   });
   const d = record?.details ?? {};
   assert.equal(d.cor, undefined);
-  assert.equal(d.estadoCivilIdade, "80 anos");
+  assert.equal(d.estadoCivil, undefined);
+  assert.equal(d.idade, "80 anos");
   assert.equal(d.eleitor, undefined);
   assert.equal(d.tituloEleitor, "título 123, zona 6, seção 7");
   assert.equal(d.causaMorte, "Causa A; Causa B");

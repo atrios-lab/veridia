@@ -328,10 +328,9 @@ function obito(r: Node): RcpnRecord {
     details: filled({
       sexo: SEX[text(r, "SEXO").toUpperCase()] ?? "",
       cor: known(text(r, "CORPELE")),
-      estadoCivilIdade: joined([
-        CIVIL[text(r, "ESTADOCIVIL").toUpperCase()] ?? "",
-        ageOf(r),
-      ]),
+      cpf,
+      estadoCivil: CIVIL[text(r, "ESTADOCIVIL").toUpperCase()] ?? "",
+      idade: ageOf(r),
       nacionalidade: nationality(text(r, "NACIONALIDADE")),
       endereco: address,
       tipoMorte: known(text(r, "TIPOMORTE")),
@@ -344,20 +343,15 @@ function obito(r: Node): RcpnRecord {
         "; ",
       ),
       eleitor: YES_NO[voter] ?? "",
-      filiacaoResidencia: joined(
-        [joined([text(r, "NOMEPAI"), text(r, "NOMEMAE")], " e "), address],
-        "\n",
-      ),
       horaFalecimento: hour(text(r, "HORAOBITO")),
       localFalecimento: deathPlace,
       causaMorte: causes.join("; "),
       sepultamento: text(r, "LUGARSEPULTAMENTOCEMITERIO"),
       declarante: text(r, "NOMEDECLARANTE"),
-      medico: joined([
-        text(r, "NOMEATESTANTEPRIMARIO"),
+      medico: text(r, "NOMEATESTANTEPRIMARIO"),
+      medicoDocumento:
         text(r, "CRMATESTANTEPRIMARIO") &&
-          `CRM ${text(r, "CRMATESTANTEPRIMARIO")}`,
-      ]),
+        `CRM ${text(r, "CRMATESTANTEPRIMARIO")}`,
       observacoes: text(r, "OBSERVACOES"),
     }),
   };

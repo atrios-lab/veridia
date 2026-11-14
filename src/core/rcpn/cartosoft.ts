@@ -729,10 +729,9 @@ export function readCartosoft(tables: Tables): RcpnRecord[] {
         details: filled({
           sexo: sexOf(row.cd_sexo),
           cor: wordOf(row.no_cor).toUpperCase(),
-          estadoCivilIdade: joined([
-            wordOf(row.est_civil_pessoa),
-            yearsOf(row.idade_pessoa),
-          ]),
+          estadoCivil: wordOf(row.est_civil_pessoa),
+          idade: yearsOf(row.idade_pessoa),
+          cpf: t(row, "nu_cpf"),
           naturalidade: joined(
             [t(row, "natural_pessoa"), t(row, "est_natural_pessoa")],
             "/",
@@ -765,30 +764,14 @@ export function readCartosoft(tables: Tables): RcpnRecord[] {
             .map((n) => t(cause, `causa_morte${n}`))
             .filter(Boolean)
             .join("; "),
-          filiacaoResidencia: joined(
-            [
-              joined([t(p, "no_pai"), t(p, "no_mae")], " e "),
-              joined([
-                t(row, "ender_pessoa"),
-                joined(
-                  [t(row, "cidade_res_pessoa"), t(row, "estado_res_pessoa")],
-                  "/",
-                ),
-              ]),
-            ],
-            "\n",
-          ),
           // Not a certidão field: the prefill writes the date in words
           // with it (core/rcpn/certidao.ts).
           horaFalecimento: hour,
-          localFalecimento: joined([
-            t(row, "local_falecimento"),
-            joined([t(row, "no_cidade_fale"), t(row, "uf_cidade_fale")], "/"),
-          ]),
-          sepultamento: joined(
-            [t(row, "local_sepultamento"), t(row, "uf_sepultamento")],
-            "/",
-          ),
+          localFalecimento: t(row, "local_falecimento"),
+          municipioFalecimento: t(row, "no_cidade_fale"),
+          municipioFalecimentoUf: t(row, "uf_cidade_fale"),
+          sepultamento: t(row, "local_sepultamento"),
+          sepultamentoUf: t(row, "uf_sepultamento"),
           declarante: t(dec, "no_declarante"),
           declaranteQualificacao: t(dec, "no_declarante")
             ? qualification([
@@ -799,10 +782,9 @@ export function readCartosoft(tables: Tables): RcpnRecord[] {
             : "",
           ...witness(1),
           ...witness(2),
-          medico: joined([
-            t(row, "no_medico"),
+          medico: t(row, "no_medico"),
+          medicoDocumento:
             t(row, "nu_crm_medico") && `CRM ${t(row, "nu_crm_medico")}`,
-          ]),
           observacoes: [
             long(row, "obs"),
             ...["obs1", "obs2", "obs3", "obs4", "obs5"].map((c) =>

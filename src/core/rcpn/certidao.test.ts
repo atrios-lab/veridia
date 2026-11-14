@@ -55,11 +55,12 @@ test("nascimento: o índice preenche nome, matrícula, datas e filiação", () =
     ],
   };
   const fields = prefillCertidao(record);
-  assert.equal(fields.nome, "Criança Fictícia da Silva");
+  // Anexo IV: the name in capitals.
+  assert.equal(fields.nome, "CRIANÇA FICTÍCIA DA SILVA");
   assert.equal(fields.matricula, formatMatricula(M));
   assert.deepEqual(
     [fields.nascimentoDia, fields.nascimentoMes, fields.nascimentoAno],
-    ["10", "agosto", "2025"],
+    ["10", "08", "2025"],
   );
   // Provimento 182: the mother's line first, then the father's.
   assert.equal(fields.genitor1, "Mãe Fictícia");
@@ -69,8 +70,10 @@ test("nascimento: o índice preenche nome, matrícula, datas e filiação", () =
     fields.dataRegistroExtenso,
     "dois de setembro de dois mil e vinte e cinco",
   );
-  // What the index does not keep stays blank for the book.
+  // What the index does not keep stays blank for the book, and the gêmeo
+  // only appears when there is one (Anexo IV).
   assert.equal(fields.hora, undefined);
+  assert.equal(fields.gemeo, undefined);
   assert.deepEqual(
     certidaoProblems("nascimento", cleanCertidaoFields("nascimento", fields)),
     [],
@@ -105,26 +108,38 @@ test("casamento: os dois cônjuges e o nome que passaram a usar", () => {
       },
     ],
   });
-  assert.equal(fields.nomes, "Noivo Fictício\nNoiva Fictícia");
-  assert.equal(fields.nomesAdotados, "Noiva Fictícia Casada");
-  assert.equal(fields.dataRegistro, "01/01/2020");
+  // Anexo V: the current names on top, each spouse with the name at the
+  // habilitação and the one adopted.
+  assert.equal(fields.nomes, "NOIVO FICTÍCIO\nNOIVA FICTÍCIA CASADA");
+  assert.equal(fields.cpfs, "NÃO CONSTA\nNÃO CONSTA");
+  assert.equal(fields.conjuge2Nome, "Noiva Fictícia");
+  assert.equal(fields.conjuge2NomeAdotado, "Noiva Fictícia Casada");
+  assert.equal(fields.conjuge1NomeAdotado, "Noivo Fictício");
+  assert.deepEqual(
+    [fields.registroDia, fields.registroMes, fields.registroAno],
+    ["01", "01", "2020"],
+  );
+  assert.equal(
+    fields.dataCelebracaoExtenso,
+    "primeiro de janeiro de dois mil e vinte",
+  );
 });
 
 test("só os campos do modelo, e o que falta para emitir", () => {
   const clean = cleanCertidaoFields("obito", {
     nome: "  Pessoa Fictícia  ",
     matricula: "123",
-    cpf: "não entra",
+    cor: "não entra",
   });
   assert.equal(clean.nome, "Pessoa Fictícia");
-  assert.equal("cpf" in clean, false);
+  assert.equal("cor" in clean, false, "cor não está no Anexo VI");
   assert.equal(Object.keys(clean).length, CERTIDAO_MODELS.obito.fields.length);
   assert.deepEqual(certidaoProblems("obito", clean), [
     "A matrícula precisa ter 32 dígitos.",
   ]);
   assert.deepEqual(
     certidaoProblems("casamento", cleanCertidaoFields("casamento", {})),
-    ["Preencha nomes.", "Preencha matrícula."],
+    ["Preencha nome atual dos cônjuges.", "Preencha matrícula."],
   );
 });
 
@@ -145,6 +160,35 @@ test("inteiro teor: nome, CPF, matrícula e o registro transcrito", () => {
     "inteiro-teor",
   );
   assert.deepEqual(certidaoProblems("nascimento", clean, "inteiro-teor"), [
-    "Preencha inteiro teor.",
+    "Preencha texto do registro.",
   ]);
+});
+
+test("certidão antiga de casamento ou óbito continua no modelo em que saiu", () => {
+  const old = { nomes: "A\nB", matricula: M, conjuges: "texto antigo" };
+  assert.equal(
+    certidaoModel("casamento", "breve", old).fields.some(
+      (f) => f.key === "conjuges",
+    ),
+    true,
+  );
+  assert.equal(cleanCertidaoFields("casamento", old).conjuges, "texto antigo");
+  assert.equal(
+    certidaoModel("casamento").fields.some((f) => f.key === "conjuges"),
+    false,
+  );
+});
+
+test("Anexos IV a VI: legendas do Provimento nº 182/2024", () => {
+  const labels = (kind: "nascimento" | "casamento" | "obito") =>
+    certidaoModel(kind).fields.map((f) => f.label);
+  assert.deepEqual(labels("nascimento").slice(0, 3), [
+    "Nome",
+    "Número do CPF",
+    "Matrícula",
+  ]);
+  assert.ok(labels("nascimento").includes("Avô(ó)(s) respectivo(s)"));
+  assert.ok(labels("casamento").includes("Nome atual dos cônjuges"));
+  assert.ok(labels("obito").includes("Nome do último cônjuge ou convivente"));
+  assert.ok(labels("obito").includes("Existência de filhos"));
 });
