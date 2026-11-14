@@ -42,6 +42,9 @@ test("datas: Date do Access, dd/mm/aaaa, aaaammdd; dia impossível vira vazio", 
   assert.equal(toIsoDate(typo), "");
   assert.equal(toIsoDate("03/05/1987"), "1987-05-03");
   assert.equal(toIsoDate("19870503"), "1987-05-03");
+  // Ano digitado errado num texto ("4979" no lugar de 1979): em branco.
+  assert.equal(toIsoDate("4979-05-03 00:00:00"), "");
+  assert.equal(toIsoDate("1979-05-03 00:00:00"), "1979-05-03");
   assert.equal(toIsoDate("31/02/1987"), "");
   assert.equal(toIsoDate("sem data"), "");
 });

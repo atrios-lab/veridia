@@ -10,13 +10,15 @@ import {
   type Tables,
 } from "@/core/rcpn/cartosoft.ts";
 import { mergeSources, type RcpnRecord } from "@/core/rcpn/record.ts";
+import { isSqlDump, readSqlDump } from "@/core/rcpn/sql-dump.ts";
 
 /**
  * Reads whatever the office sends (design, decisions 1 and 2): any file is
  * accepted; the format is told by its content, not its name; packages are
  * opened; what is not understood is reported, never refused and never
  * guessed. Nothing read here is executed: an Access file is parsed, a
- * `.sql` would be text, a package only listed and unpacked within limits.
+ * `.sql` backup is read as text (never run), a package only listed and
+ * unpacked within limits.
  */
 
 export interface Reading {
@@ -78,7 +80,7 @@ const MAX_UNPACKED = 600 * 1024 * 1024;
 const MAX_DEPTH = 3;
 const MAX_FILES = 3000;
 
-type Kind = "access" | "zip" | "rar" | "xml" | "lock" | "other";
+type Kind = "access" | "zip" | "rar" | "xml" | "sql" | "lock" | "other";
 
 function kindOf(bytes: Uint8Array, name: string): Kind {
   const head = Buffer.from(bytes.subarray(0, 32)).toString("latin1");
@@ -92,6 +94,8 @@ function kindOf(bytes: Uint8Array, name: string): Kind {
   if (head.startsWith("Rar!")) return "rar";
   const text = head.replace(/^﻿|^ï»¿/, "").trimStart();
   if (text.startsWith("<")) return "xml";
+  if (isSqlDump(Buffer.from(bytes.subarray(0, 4096)).toString("latin1")))
+    return "sql";
   if (/\.(ldb|laccdb)$/i.test(name)) return "lock";
   return "other";
 }
@@ -139,6 +143,29 @@ function readAccess(bytes: Uint8Array, name: string, out: Collecting): void {
   );
   if (!out.format.includes("cartosoft-access"))
     out.format = join(out.format, "cartosoft-access");
+}
+
+/**
+ * The Cartosoft's MySQL backup (folder Backup_Cartosoft_Mysql,
+ * analysis of 14/11/2026): the same tables and columns as the Access base,
+ * with the registros of every year. Read as text, never executed.
+ */
+function readSql(bytes: Uint8Array, name: string, out: Collecting): void {
+  const tables = readSqlDump(decodeText(bytes), CARTOSOFT_COLUMNS);
+  const records = readCartosoft(tables);
+  if (records.length === 0) {
+    out.notes.push(
+      `${name}: cópia de segurança .sql sem as tabelas de registro do Cartosoft (nascimento, casamento, obito). Guardada sem leitura.`,
+    );
+    return;
+  }
+  out.fromAccess.push(...records);
+  const count = (kind: string) => records.filter((r) => r.kind === kind).length;
+  out.notes.push(
+    `${name}: cópia de segurança do banco do Cartosoft (MySQL), ${records.length} registros lidos: ${count("nascimento")} nascimentos, ${count("casamento")} casamentos e ${count("obito")} óbitos.`,
+  );
+  if (!out.format.includes("cartosoft-mysql"))
+    out.format = join(out.format, "cartosoft-mysql");
 }
 
 function readXml(bytes: Uint8Array, name: string, out: Collecting): void {
@@ -205,6 +232,8 @@ async function readAny(
       return readAccess(bytes, name, out);
     case "xml":
       return readXml(bytes, name, out);
+    case "sql":
+      return readSql(bytes, name, out);
     case "lock":
       out.notes.push(`${name}: arquivo de trava do Access, ignorado.`);
       return;

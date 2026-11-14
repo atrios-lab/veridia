@@ -60,6 +60,23 @@ export default async function ImportPage() {
               ficha do registro, em Alterar.
             </p>
           </div>
+          <div className="mt-3 rounded-lg border border-primary/25 bg-primary/5 px-4 py-3 text-sm text-foreground">
+            <p className="font-semibold">
+              O arquivo mais completo: a cópia de segurança do Cartosoft
+            </p>
+            <p className="mt-1 text-justify hyphens-auto">
+              O Cartosoft guarda uma cópia de todo o banco na pasta{" "}
+              <span className="font-mono break-all">
+                C:\Cartosoft\Backup_Cartosoft_Mysql
+              </span>
+              , em arquivos .sql. Ela traz os nascimentos, casamentos e óbitos
+              de todos os anos, com avós, declarante, testemunhas e anotações.
+              Pegue o .sql mais recente (o nome traz a data, como "New Project
+              20260717 1001.sql"), compacte em .zip e envie aqui: uma cópia de
+              100 MB costuma ficar com menos de 10 MB. O arquivo é lido como
+              texto, nada nele é executado, e só saem os dados dos registros.
+            </p>
+          </div>
           <div className="mt-3 mb-5 rounded-lg border border-primary/25 bg-primary/5 px-4 py-3 text-sm text-foreground">
             <p className="font-semibold">
               Como enviar arquivos grandes (até {RCPN_MAX_MB} MB por envio)
@@ -77,9 +94,9 @@ export default async function ImportPage() {
                 costuma ficar com menos de 5 MB).
               </li>
               <li>
-                Ponha no mesmo .zip os bancos (NA, CA e OB) e a carga XML: o
-                sistema junta tudo pela matrícula. O RC.mdb não precisa ir,
-                porque não tem registros.
+                Ponha no mesmo .zip a cópia .sql, os bancos (NA, CA e OB) e a
+                carga XML, o que tiver: o sistema junta tudo pela matrícula. O
+                RC.mdb não precisa ir, porque não tem registros.
               </li>
               <li>
                 Se ainda passar de {RCPN_MAX_MB} MB, envie cada banco num .zip
