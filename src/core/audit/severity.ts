@@ -121,6 +121,13 @@ const EXACT: Record<string, AuditLevel> = {
   // The habilitação para o casamento: a correction or a cancellation is
   // for the Tabelião to read.
   "rcpn.habilitacao.create": "rotina",
+  // Titularidade à prefeitura (CNN, art. 184-A).
+  "titularidade.create": "rotina",
+  "titularidade.edit": "analise",
+  "titularidade.remove": "atencao",
+  "titularidade.filing": "analise",
+  "titularidade.sent": "rotina",
+  "titularidade.filing-remove": "atencao",
   "rcpn.habilitacao.edit": "analise",
   "rcpn.habilitacao.edital": "analise",
   "rcpn.habilitacao.cancel": "urgente",

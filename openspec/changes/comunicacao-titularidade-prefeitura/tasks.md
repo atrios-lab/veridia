@@ -1,0 +1,18 @@
+## 1. Núcleo
+
+- [x] 1.1 Operações da DOI, ato, partes, valores, conferência (art. 184-A, § 3º) e avisos.
+- [x] 1.2 Prazo no último dia útil do mês seguinte, com o calendário da serventia.
+- [x] 1.3 Leitura: operação, data por extenso ou numérica, livro e folhas, base de cálculo, endereço.
+- [x] 1.4 Ofício do mês (ou sem movimento) e planilha CSV.
+
+## 2. Banco e permissões
+
+- [x] 2.1 Tabelas `title_transfers` e `title_transfer_filings` (migração só aditiva).
+- [x] 2.2 Série de numeração `titularidade`, permissão `titularidade.manage`, auditoria.
+
+## 3. Painel
+
+- [x] 3.1 Mês dos atos com prazo, lista, alterar e excluir; lançar com leitura de PDF ou Word.
+- [x] 3.2 Ofício: assinar ou imprimir, registrar o envio à plataforma com o recibo de entrega
+  obrigatório e o comprovante (§ 2º), entrega à SEMUT à parte, excluir.
+- [x] 3.3 Menu, ajuda "!" e testes.
