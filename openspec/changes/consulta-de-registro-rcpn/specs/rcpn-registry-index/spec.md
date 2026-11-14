@@ -206,3 +206,18 @@ corrigido à mão no painel NÃO DEVE (SHALL NOT) ser completado sem ser marcado
 #### Scenario: Banco enviado depois da carga
 - **WHEN** a serventia envia o banco com os avós de registros que vieram antes só pela carga
 - **THEN** a conferência mostra "só completam campos que estavam em branco" e, ao publicar, os avós entram sem marcar um por um
+
+### Requirement: Cópia de segurança .sql do sistema do registro civil
+A importação DEVE (SHALL) ler a cópia de segurança do banco MySQL do Cartosoft (arquivo .sql, solto
+ou num pacote), reconhecida pelo conteúdo, com as mesmas tabelas e colunas do banco Access, sem
+diferença de maiúsculas no nome das tabelas. O arquivo NÃO DEVE (SHALL NOT) ser executado: é lido
+como texto, e só saem as colunas do modelo; usuários, senhas, registros de uso, custas e selos
+ficam no arquivo. A data zerada do MySQL e o ano impossível DEVEM (SHALL) ficar em branco.
+
+#### Scenario: Backup com todos os anos
+- **WHEN** a serventia envia o .zip com o .sql mais recente da pasta de cópias do Cartosoft
+- **THEN** a importação lê os nascimentos, casamentos e óbitos com avós, declarante, testemunhas e anotações, e junta pela matrícula com a carga XML enviada no mesmo pacote
+
+#### Scenario: .sql de outro sistema
+- **WHEN** o .sql não tem as tabelas de registro do Cartosoft
+- **THEN** o arquivo fica guardado sem leitura, com a nota dizendo isso

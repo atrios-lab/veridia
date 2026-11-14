@@ -53,3 +53,49 @@ test("tabelas do Access exportadas em XML são lidas juntas, com a certidão imp
   );
   assert.ok(reading.notes.some((n) => n.includes("lidas juntas: 1 registros")));
 });
+
+test("cópia de segurança .sql do MySQL, compactada, junta com a carga pela matrícula", async () => {
+  const sql = [
+    "-- MySQL Administrator dump 1.4",
+    "CREATE TABLE `nascimento` (",
+    "  `ID` int(11) NOT NULL,",
+    "  `no_pessoa` varchar(100) default NULL,",
+    "  `nu_matriculaCNJ` varchar(40) default NULL,",
+    "  `dt_registro` datetime default NULL",
+    ");",
+    `INSERT INTO \`nascimento\` (\`ID\`,\`no_pessoa\`,\`nu_matriculaCNJ\`,\`dt_registro\`) VALUES (7,'Criança Fictícia','${M}','2020-07-07 00:00:00');`,
+    "INSERT INTO `na_avos` (`ID`,`no_pai_mae`,`no_mae_mae`) VALUES (7,'Avô Materno','Avó Materna');",
+    "INSERT INTO `na_anoave` (`ID`,`TEXTO`) VALUES (7,'Anotação fictícia.');",
+  ].join("\n");
+  const carga = `<?xml version="1.0" encoding="UTF-8"?><CARGAREGISTROS><MOVIMENTONASCIMENTOTN><REGISTRONASCIMENTOINCLUSAO><NOMEREGISTRADO>Criança Fictícia</NOMEREGISTRADO><MATRICULA>${M}</MATRICULA><DATAREGISTRO>07/07/2020</DATAREGISTRO></REGISTRONASCIMENTOINCLUSAO></MOVIMENTONASCIMENTOTN></CARGAREGISTROS>`;
+  const zip = new JSZip();
+  zip.file("New Project 20260717 1001.sql", sql);
+  zip.file("NA_INC.xml", carga);
+  const reading = await readImportFile(
+    await zip.generateAsync({ type: "uint8array" }),
+    "Backup.zip",
+  );
+  assert.equal(reading.records.length, 1, "o mesmo registro, juntado");
+  const [r] = reading.records;
+  assert.equal(r?.details?.avos1, "Avô Materno; Avó Materna");
+  assert.equal(r?.details?.observacoes, "Anotação fictícia.");
+  assert.ok(reading.format.includes("cartosoft-mysql"));
+  assert.ok(
+    reading.notes.some((n) =>
+      n.includes(
+        "cópia de segurança do banco do Cartosoft (MySQL), 1 registros lidos: 1 nascimentos",
+      ),
+    ),
+  );
+});
+
+test("arquivo .sql sem registro civil fica guardado sem leitura", async () => {
+  const reading = await readImportFile(
+    new TextEncoder().encode(
+      "-- MySQL dump\nINSERT INTO `se_selos` (`id`) VALUES (1);",
+    ),
+    "custas.sql",
+  );
+  assert.equal(reading.records.length, 0);
+  assert.ok(reading.notes[0]?.includes("sem as tabelas de registro"));
+});

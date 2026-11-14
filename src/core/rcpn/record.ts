@@ -142,6 +142,7 @@ export function toIsoDate(value: unknown): string {
   const date = new Date(Date.UTC(y, m - 1, d));
   if (
     y < 1800 ||
+    y > new Date().getUTCFullYear() + 1 ||
     date.getUTCFullYear() !== y ||
     date.getUTCMonth() !== m - 1 ||
     date.getUTCDate() !== d
