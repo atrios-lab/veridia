@@ -6,6 +6,7 @@ import {
   CODIGO_DE_NORMAS_RN,
   type GuideBook,
   guideFor,
+  offersGuide,
 } from "@/core/attributions/guides.ts";
 import { can } from "@/core/auth/roles.ts";
 import { formatOfficeDateTime } from "@/core/time/office-time.ts";
@@ -170,6 +171,8 @@ export default async function AttributionGuidePage({
   if (!guide) notFound();
   const help = helpOf(guide);
   const tenant = await getTenant();
+  // What the office does not offer is not in the panel (14/11/2026).
+  if (!offersGuide(guide, tenant)) notFound();
   const canSend = can(
     session.user.role ?? "",
     "attributions.import",

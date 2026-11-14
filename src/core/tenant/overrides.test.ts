@@ -619,3 +619,33 @@ test("marcar feriado por lei sem dizer qual é recusado", () => {
     "Informe a lei que cria o feriado.",
   );
 });
+
+test("a serventia marca as atribuições que oferece e o regime de cada uma", () => {
+  const merged = applyTenantOverrides(cartorioMarinho, {
+    attributions: {
+      attributions: ["RCPN", "NOTAS", "PROTESTO"],
+      attributionRegimes: {
+        RCPN: "delegado",
+        NOTAS: "interino",
+        PROTESTO: "interventor",
+      },
+      offersDistribution: false,
+    },
+  });
+  assert.deepEqual(merged.attributions, ["RCPN", "NOTAS", "PROTESTO"]);
+  assert.equal(merged.attributionRegimes?.NOTAS, "interino");
+  assert.equal(merged.name, cartorioMarinho.name);
+});
+
+test("marcação vazia ou com regime inválido não vale: fica o cadastro", () => {
+  for (const raw of [
+    { attributions: [] },
+    { attributions: ["RCPN"], attributionRegimes: { RCPN: "substituto" } },
+    { attributions: ["NAO-EXISTE"] },
+  ]) {
+    assert.deepEqual(
+      applyTenantOverrides(cartorioMarinho, { attributions: raw }).attributions,
+      cartorioMarinho.attributions,
+    );
+  }
+});

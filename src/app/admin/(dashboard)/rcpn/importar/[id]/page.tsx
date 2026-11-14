@@ -25,6 +25,11 @@ import { type ChangedItem, DiscardForm, PublishForm } from "../../forms.tsx";
 
 export const metadata = { title: "Conferir arquivo do Registro Civil" };
 
+// A whole registry base (tens of thousands of registros) is read, checked
+// and published from here: more time than the default (decision of
+// 14/11/2026, after a full carga did not fit).
+export const maxDuration = 300;
+
 /** How a registro reads in a list: who, and where in the books. */
 function labelOf(record: RcpnRecord): string {
   const names = record.people.map((p) => p.name || "(sem nome)").join(" e ");

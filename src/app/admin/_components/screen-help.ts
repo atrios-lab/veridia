@@ -742,12 +742,13 @@ ENTRIES["/admin/rcpn"] = {
 
 ENTRIES["/admin/rcpn/importar"] = {
   purpose:
-    "Alimentar o índice com os arquivos do sistema do registro civil. Envie sempre que houver registro novo.",
+    "Receber as informações gerais do sistema do registro civil: com elas o painel monta o índice de cada livro e guarda os dados de cada registro, para abrir e imprimir a certidão já pronta. Envie sempre que houver registro novo.",
   steps: [
-    "Gere o arquivo no sistema do registro civil (banco do Cartosoft, carga XML ou um pacote .zip ou .rar com eles) e envie aqui. Qualquer formato é aceito; o que o sistema não conhece fica guardado e anotado.",
+    "Gere no sistema do registro civil o envio das informações gerais (os bancos do Cartosoft NA, CA e OB, ou um pacote .zip ou .rar com eles; a carga XML também serve) e envie aqui. Qualquer formato é aceito; o que o sistema não conhece fica guardado e anotado.",
     "O sistema lê e mostra o que leu: quantos nascimentos, casamentos e óbitos (natimortos à parte), de que período e com quais pendências.",
     "Compare com o índice: os novos entram ao publicar; os iguais ficam como estão; os que já existem com dados diferentes aparecem com o valor antigo e o novo, e só são substituídos se você marcar.",
     "Publique ou descarte. Nos dois casos o arquivo é apagado do painel; o original continua no sistema do registro civil.",
+    "Depois, em Livros, abra o livro, o registro, e emita a certidão: os campos que o sistema enviou (hora, local, avós, DNV, anotações e os demais) já vêm preenchidos.",
   ],
   terms: [
     {

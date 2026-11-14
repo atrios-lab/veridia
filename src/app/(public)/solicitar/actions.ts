@@ -525,3 +525,40 @@ export async function attachSignedForm(
     return { status: "error", message: GENERIC_ERROR };
   }
 }
+
+export type GuideReadState =
+  | { status: "idle" }
+  | {
+      status: "read";
+      reading: import("@/core/guides/reading.ts").GuideReading;
+      notes: string[];
+    }
+  | { status: "error"; message: string };
+
+/**
+ * Reads the documents the citizen attached to the guia's fields and
+ * returns what they say, to fill the form (decision of 14/11/2026).
+ * Nothing is stored: the files go with the request in "anexos".
+ */
+export async function readGuideDocumentsAction(
+  formData: FormData,
+): Promise<GuideReadState> {
+  const files = formData
+    .getAll("documentos")
+    .filter((f): f is File => f instanceof File && f.size > 0);
+  if (files.length === 0) {
+    return { status: "error", message: "Escolha os documentos." };
+  }
+  try {
+    const { readGuideFiles } = await import("@/lib/guide-reading.ts");
+    const { reading, notes } = await readGuideFiles(files);
+    return { status: "read", reading, notes };
+  } catch (error) {
+    console.error("guia.leitura", error);
+    return {
+      status: "error",
+      message:
+        "Não foi possível ler agora. Preencha os campos ou tente de novo.",
+    };
+  }
+}

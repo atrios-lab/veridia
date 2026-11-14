@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState, useState } from "react";
+import { useActionState, useState, useTransition } from "react";
 import { GUIDE_KIND_INFO } from "@/core/guides/catalog.ts";
 import { addressee, guideAmount, localLaw } from "@/core/guides/document.ts";
 import {
@@ -10,6 +10,7 @@ import {
   qualify,
   STABLE_UNION_LABELS,
 } from "@/core/guides/qualification.ts";
+import { fillGuide } from "@/core/guides/reading.ts";
 import {
   CIVIL_STATUSES,
   emptyParty,
@@ -30,7 +31,11 @@ import { Input } from "../../../_ui/input.tsx";
 import { Label } from "../../../_ui/label.tsx";
 import { NativeSelect } from "../../../_ui/native-select.tsx";
 import { Textarea } from "../../../_ui/textarea.tsx";
-import { type GuideFormState, saveGuide } from "./actions.ts";
+import {
+  type GuideFormState,
+  readGuideDocumentsAdmin,
+  saveGuide,
+} from "./actions.ts";
 
 const LABEL = "mb-1.5 block text-sm font-medium text-foreground";
 
@@ -330,6 +335,27 @@ export function GuideForm({
   );
   const errors = state.status === "error" ? state.fieldErrors : {};
   const info = GUIDE_KIND_INFO[guide.kind];
+  const [reading, startReading] = useTransition();
+  const [readNotes, setReadNotes] = useState<string[]>([]);
+  /** The documents fill what is blank; the clerk checks and saves. */
+  const readDocuments = (picked: FileList | null) => {
+    if (!picked || picked.length === 0) return;
+    const data = new FormData();
+    for (const file of picked) data.append("documentos", file);
+    startReading(async () => {
+      const result = await readGuideDocumentsAdmin(data);
+      if (result.status === "read") {
+        const filled = fillGuide(guide, result.reading);
+        setGuide(filled);
+        if (!value.trim() && filled.declaredValueCents) {
+          setValue(formatMoneyBRL(filled.declaredValueCents));
+        }
+        setReadNotes((current) => [...current, ...result.notes]);
+      } else {
+        setReadNotes((current) => [...current, result.message]);
+      }
+    });
+  };
 
   const cents = parseMoney(value);
   const overrideCents = taxOverride.trim() ? parseMoney(taxOverride) : null;
@@ -363,6 +389,40 @@ export function GuideForm({
     <form action={formAction} className="flex flex-col gap-5">
       <input type="hidden" name="guide" value={JSON.stringify(draft)} />
       {id && <input type="hidden" name="id" value={id} />}
+
+      <section className="flex flex-col gap-2 rounded-xl border border-dashed bg-card p-4">
+        <p className="text-sm font-semibold text-foreground">
+          Anexe os documentos e o sistema preenche
+        </p>
+        <p className="text-sm text-muted-foreground text-justify hyphens-auto">
+          Certidão da matrícula, escritura ou contrato e documentos das partes,
+          em PDF pesquisável: o sistema lê e preenche os campos em branco, e
+          você confere e salva. A leitura não guarda o arquivo. Os documentos
+          que o cliente envia ficam no pedido até 30 dias depois do
+          encerramento: baixe e guarde no arquivo da serventia (nuvem ou HD).
+        </p>
+        <label className="inline-flex w-fit cursor-pointer items-center gap-2 rounded-md border px-3 py-2 text-sm font-medium text-foreground hover:bg-muted has-[:focus-visible]:ring-2 has-[:focus-visible]:ring-ring">
+          {reading ? "Lendo os documentos..." : "Anexar e ler documentos"}
+          <input
+            type="file"
+            multiple
+            accept="application/pdf,image/*"
+            className="sr-only"
+            disabled={reading}
+            onChange={(event) => {
+              readDocuments(event.target.files);
+              event.target.value = "";
+            }}
+          />
+        </label>
+        {readNotes.length > 0 && (
+          <ul className="flex flex-col gap-1 text-xs text-muted-foreground">
+            {readNotes.map((note) => (
+              <li key={note}>{note}</li>
+            ))}
+          </ul>
+        )}
+      </section>
 
       <section className="grid grid-cols-1 gap-3 md:grid-cols-3">
         <Select

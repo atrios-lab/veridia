@@ -22,6 +22,24 @@ export const ATTRIBUTIONS = [
 export const AttributionSchema = z.enum(ATTRIBUTIONS);
 export type Attribution = z.infer<typeof AttributionSchema>;
 
+/**
+ * Who answers for each attribution (decision of 14/11/2026): the delegated
+ * holder (titular by concurso), an interim (interino) or a court-appointed
+ * intervenor (interventor). The office marks it, attribution by attribution.
+ */
+export const ATTRIBUTION_REGIMES = [
+  "delegado",
+  "interino",
+  "interventor",
+] as const;
+export const AttributionRegimeSchema = z.enum(ATTRIBUTION_REGIMES);
+export type AttributionRegime = z.infer<typeof AttributionRegimeSchema>;
+export const ATTRIBUTION_REGIME_LABELS: Record<AttributionRegime, string> = {
+  delegado: "Delegado (titular)",
+  interino: "Interino",
+  interventor: "Interventor",
+};
+
 // Sections of the public site. The values are route slugs, so they stay in
 // Portuguese: they are user visible URLs, not identifiers.
 export const SECTIONS = [
@@ -229,6 +247,13 @@ export const TenantSchema = z.object({
   about: z.string().min(1, "Escreva o texto de apresentação do cartório."),
   cns: z.string().min(1),
   attributions: z.array(AttributionSchema).nonempty(),
+  // Who answers for each attribution, by sigla ("RCPN", "NOTAS"... and
+  // "DISTRIBUICAO"). Absent: the office has not said; read as delegated.
+  attributionRegimes: z.record(z.string(), AttributionRegimeSchema).optional(),
+  // The Registro de Distribuição (Lei nº 8.935/1994, art. 13), apart from
+  // the six because no act of the site's catalog belongs to it: it only
+  // decides whether its guide shows in the panel.
+  offersDistribution: z.boolean().optional(),
   // Sender address for this office's transactional email (the "From").
   // The address's domain must be verified in Postmark (DKIM + Return-Path);
   // absent, delivery falls back to the platform-wide sender (see

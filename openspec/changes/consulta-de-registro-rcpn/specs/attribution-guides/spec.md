@@ -54,3 +54,16 @@ depende de norma do CNJ ou do estado, o roteiro DEVE (SHALL) dizer o que conferi
 #### Scenario: Escrevente lavrando escritura
 - **WHEN** a pessoa abre Atribuições › Notas
 - **THEN** vê o roteiro da escritura pública com os sete requisitos do art. 215, § 1º, para marcar
+
+### Requirement: A serventia marca o que oferece
+Em Configurações, o Tabelião/Registrador DEVE (SHALL) poder marcar e desmarcar as atribuições
+que a serventia oferece (RCPN, Notas, RI, Protesto, RTD, RCPJ e a Distribuição), como faz no CNJ
+(decisão de 14/11/2026), e marcar em cada uma quem responde: delegado (titular), interino ou
+interventor. A marcação DEVE (SHALL) exigir pelo menos uma das seis, ir para a auditoria e valer
+para o site (seções, atos que o cidadão pode pedir e o cartão "Atribuições" da página inicial) e
+para o painel: o grupo Atribuições, os guias e as telas do Registro Civil DEVEM (SHALL) mostrar só
+o que a serventia oferece; o Caixa aparece sempre.
+
+#### Scenario: Serventia só de RCPN, Notas e Protesto
+- **WHEN** o Tabelião marca só RCPN, Notas e Protesto e salva
+- **THEN** o painel mostra em Atribuições só Registro Civil, Protesto, Notas e Caixa, o guia do Registro de Imóveis responde 404 e o site mostra "Registro Civil, Notas e Protesto"

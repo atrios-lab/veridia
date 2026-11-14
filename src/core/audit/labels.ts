@@ -131,6 +131,8 @@ const EXACT: Record<string, string> = {
   "signing-certificate.disable": "Desativou um certificado digital",
   "signing-certificate.signers": "Alterou quem assina com um certificado",
   "office-settings.save": "Alterou uma configuração da serventia",
+  "office-settings.attributions":
+    "Alterou as atribuições da serventia (o que oferece e o regime de cada uma)",
   "office-settings.role-permissions": "Alterou as permissões dos cargos",
   "platform.two-step-off": "Átrios desligou a verificação em duas etapas",
   "platform.two-step-on": "Átrios religou a verificação em duas etapas",
@@ -284,6 +286,8 @@ const EXPLANATIONS: Record<string, string> = {
   "user.email-changed": "O e-mail de uma conta foi trocado.",
   "user.password-reset-link-issued":
     "Foi gerado um link para a pessoa criar uma senha nova.",
+  "office-settings.attributions":
+    "A serventia marcou as atribuições que oferece e, em cada uma, se responde o delegado, um interino ou um interventor. Isso muda o que o site oferece ao cidadão e o que o painel mostra em Atribuições.",
   "office-settings.save":
     "Uma configuração da serventia foi alterada (dados do site, horários, numeração, notificações e afins).",
   "office-settings.role-permissions":

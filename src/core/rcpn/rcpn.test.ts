@@ -176,7 +176,7 @@ test("carga XML: a mãe é a primeira filiação feminina; sem profissão", () =
           ],
         },
       },
-      MOVIMENTOOBITOTN: {},
+      MOVIMENTOPROCLAMASTP: {},
     },
   });
   assert.equal(records.length, 1);
@@ -184,7 +184,7 @@ test("carga XML: a mãe é a primeira filiação feminina; sem profissão", () =
   assert.equal(p.motherName, "Lara Exemplo");
   assert.equal(p.fatherName, "Kauã Exemplo");
   assert.equal(p.profession, "");
-  assert.deepEqual(unknownMovements, ["MOVIMENTOOBITOTN"]);
+  assert.deepEqual(unknownMovements, ["MOVIMENTOPROCLAMASTP"]);
 });
 
 test("conferência: novo, igual e alterado; alterado só entra se escolhido", () => {

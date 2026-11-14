@@ -123,6 +123,20 @@ export function changeDetails(
       });
     }
   }
+  // The book's other data: one line saying how many fields differ.
+  const changedData = Object.entries(incoming.details ?? {}).filter(
+    ([key, value]) => value && value !== current.details?.[key],
+  ).length;
+  if (changedData > 0) {
+    details.push({
+      label: "dados completos do registro",
+      before: "como estão no painel",
+      after:
+        changedData === 1
+          ? "1 campo diferente"
+          : `${changedData} campos diferentes`,
+    });
+  }
   for (const person of incoming.people) {
     const before = current.people.find((p) => p.role === person.role);
     if (!before) {

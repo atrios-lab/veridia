@@ -2014,6 +2014,11 @@ export const rcpnRecords = pgTable(
     term: text("term").notNull().default(""),
     registeredOn: text("registered_on").notNull().default(""),
     eventOn: text("event_on").notNull().default(""),
+    /**
+     * The rest of the registro, as the certidão prints it (core/rcpn
+     * RcpnRecord.details): kept so the certidão comes out ready.
+     */
+    details: jsonb("details").notNull().default(sql`'{}'::jsonb`),
     importId: uuid("import_id").references(() => rcpnImports.id),
     updatedAt: timestamp("updated_at", { withTimezone: true })
       .notNull()

@@ -98,3 +98,21 @@
   TJRN o leiaute e o prazo do SIEX).
 - [ ] 7.6 Calendário de dias úteis (feriados do RN e do município) para os prazos registrais e do
   protesto.
+
+## 8. Informações gerais por livro (14/11/2026)
+
+- [x] 8.1 Leitura dos dados da certidão no banco do Cartosoft (NA, CA, OB), com as colunas
+  apontadas pelo modelo do Provimento 182 da serventia; coluna nova `details` (migração 0062,
+  só acrescenta); campo em branco não apaga.
+- [x] 8.2 Livros e índice de cada livro; página do registro com a certidão como vai sair.
+- [x] 8.3 Certidão preenchida com o índice e os dados do livro. Testes com dados fictícios.
+- [x] 8.4 Os mesmos dados completos a partir da carga XML (leiaute CRC/SIRC: NA_INC, CA_INC,
+  OB_INC), com livro, folha e termo tirados da matrícula; natimorto pelo Livro C Auxiliar.
+- [x] 8.5 Base inteira num envio (cerca de 24 mil registros): publicação em lotes de 500 e tempo
+  maior para as telas de importar e conferir.
+
+## 9. Atribuições que a serventia oferece (14/11/2026)
+
+- [x] 9.1 Marcar e desmarcar as atribuições em Configurações (só o Tabelião), com o regime de cada
+  uma (delegado, interino, interventor) e a Distribuição; auditoria.
+- [x] 9.2 Painel e site mostram só o que a serventia oferece; cartão "Atribuições" na página inicial.

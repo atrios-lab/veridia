@@ -320,6 +320,24 @@ export function prefillCertidao(
   record: RcpnRecord,
   form: CertidaoForm = "breve",
 ): Record<string, string> {
+  const base = prefillFromIndex(record, form);
+  // What the book sent (the whole registro): every field of the model it
+  // has, so the certidão comes out ready (decision of 14/11/2026). The
+  // index's own values and a "NÃO CONSTA" give way to the book's.
+  const keys = new Set(
+    certidaoModel(record.kind, form).fields.map((f) => f.key),
+  );
+  for (const [key, value] of Object.entries(record.details ?? {})) {
+    if (!keys.has(key) || !value.trim()) continue;
+    if (!base[key]?.trim() || base[key] === NAO_CONSTA) base[key] = value;
+  }
+  return base;
+}
+
+function prefillFromIndex(
+  record: RcpnRecord,
+  form: CertidaoForm,
+): Record<string, string> {
   const matricula = formatMatricula(record.matricula);
   const p = record.people[0];
   if (form === "inteiro-teor") {
@@ -359,10 +377,14 @@ export function prefillCertidao(
     };
   }
   if (record.kind === "obito") {
+    const hour = record.details?.horaFalecimento ?? "";
     return {
       nome: p?.name ?? "",
       matricula,
       filiacaoResidencia: p ? parents(p) : "",
+      dataHoraFalecimento: [dateInWords(record.eventOn), hour && `às ${hour}`]
+        .filter(Boolean)
+        .join(", "),
       dataFalecimento: formatIsoDate(record.eventOn),
     };
   }

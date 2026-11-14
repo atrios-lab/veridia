@@ -14,6 +14,7 @@ import type { Tenant } from "@/core/tenant/schema.ts";
 import { db } from "@/db/index.ts";
 import { tenantContent } from "@/db/schema.ts";
 import {
+  OFFICE_ATTRIBUTIONS_KEY,
   OFFICE_BRAND_KEY,
   OFFICE_BULLETIN_KEY,
   OFFICE_CONTACT_KEY,
@@ -53,6 +54,7 @@ async function readTenantOverrides(tenantSlug: string): Promise<{
   bulletin: unknown;
   holidays: unknown;
   identification: unknown;
+  attributions: unknown;
 }> {
   try {
     const rows = await db
@@ -70,6 +72,7 @@ async function readTenantOverrides(tenantSlug: string): Promise<{
             OFFICE_BULLETIN_KEY,
             OFFICE_HOLIDAYS_KEY,
             OFFICE_IDENTIFICATION_KEY,
+            OFFICE_ATTRIBUTIONS_KEY,
           ]),
         ),
       );
@@ -88,6 +91,8 @@ async function readTenantOverrides(tenantSlug: string): Promise<{
       identification:
         rows.find((r) => r.key === OFFICE_IDENTIFICATION_KEY)?.published ??
         null,
+      attributions:
+        rows.find((r) => r.key === OFFICE_ATTRIBUTIONS_KEY)?.published ?? null,
     };
   } catch {
     return {
@@ -99,6 +104,7 @@ async function readTenantOverrides(tenantSlug: string): Promise<{
       bulletin: null,
       holidays: null,
       identification: null,
+      attributions: null,
     };
   }
 }

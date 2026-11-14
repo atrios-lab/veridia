@@ -140,6 +140,7 @@ export async function getRecordWith(
     term: row.term,
     registeredOn: row.registeredOn,
     eventOn: row.eventOn,
+    details: (row.details ?? {}) as Record<string, string>,
     people: people.map((p) => ({
       role: p.role as RcpnRole,
       name: p.name,

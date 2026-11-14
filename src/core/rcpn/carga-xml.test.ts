@@ -1,0 +1,112 @@
+import assert from "node:assert/strict";
+import { test } from "node:test";
+import { placeOf, readCargaXml } from "./carga-xml.ts";
+import { prefillCertidao } from "./certidao.ts";
+
+// Fictitious registros only (LGPD). Matrícula: CNS 094615, acervo 01,
+// serviço 55, ano 2014, tipo de livro, livro 00005, folha 012, termo
+// 0000123, dígito 45 (fictitious).
+const M = (type: string) => `09461501552014${type}000050120000123` + "45";
+
+test("matrícula: livro, folha e termo", () => {
+  assert.deepEqual(placeOf(M("1")), {
+    book: "A-5",
+    page: "12",
+    term: "123",
+    bookType: "1",
+  });
+  assert.equal(placeOf(M("5")).book, "C Auxiliar-5");
+  assert.equal(placeOf("123").book, "");
+});
+
+test("carga de casamento: cônjuges, nome adotado, regime e livro B", () => {
+  const { records, unknownMovements } = readCargaXml({
+    CARGAREGISTROS: {
+      MOVIMENTOCASAMENTOTC: {
+        REGISTROCASAMENTOINCLUSAO: {
+          NOMECONJUGE1: "Noivo Fictício",
+          NOVONOMECONJUGE1: "",
+          DATANASCIMENTOCONJUGE1: "01/02/1990",
+          NOMEPAICONJUGE1: "Pai Um",
+          NOMEMAECONJUGE1: "Mãe Um",
+          TEXTOLIVREMUNNATCONJUGE1: "Natal/RN",
+          NOMECONJUGE2: "Noiva Fictícia",
+          NOVONOMECONJUGE2: "Noiva Fictícia Casada",
+          MATRICULA: M("2"),
+          DATAREGISTRO: "10/10/2014",
+          DATACASAMENTO: "10/10/2014",
+          REGIMECASAMENTO: "COMUNHAO_PARCIAL",
+        },
+      },
+    },
+  });
+  assert.deepEqual(unknownMovements, []);
+  const [r] = records;
+  assert.equal(r?.kind, "casamento");
+  assert.equal(r?.book, "B-5");
+  assert.equal(r?.people[1]?.marriedName, "Noiva Fictícia Casada");
+  assert.equal(r?.details?.regime, "Comunhão parcial de bens");
+  assert.match(r?.details?.conjuges ?? "", /natural de Natal\/RN/);
+});
+
+test("carga de óbito: natimorto pelo livro C Auxiliar e a certidão preenchida", () => {
+  const { records } = readCargaXml({
+    CARGAREGISTROS: {
+      MOVIMENTOOBITOTO: {
+        REGISTROOBITOINCLUSAO: [
+          {
+            NOMEFALECIDO: "Falecido Fictício",
+            MATRICULA: M("4"),
+            DATAREGISTRO: "02/03/2020",
+            DATAOBITO: "01/03/2020",
+            HORAOBITO: "07:30",
+            SEXO: "M",
+            CORPELE: "IGNORADA",
+            ESTADOCIVIL: "CASADO",
+            IDADE: "80",
+            IDADE_DIAS_MESES_ANOS: "A",
+            ELEITOR: "S",
+            LUGARSEPULTAMENTOCEMITERIO: "Cemitério Fictício",
+            NOMEDECLARANTE: "Declarante Fictício",
+            NOMEATESTANTEPRIMARIO: "Médico Fictício",
+            CRMATESTANTEPRIMARIO: "999",
+            CAUSAMORTEANTECEDENTES_A: "Causa fictícia",
+            DOCUMENTOS: {
+              DONO: "FALECIDO",
+              TIPO_DOC: "RG",
+              NUMERO: "123",
+              UF_EMISSAO: "RN",
+            },
+          },
+          { NOMEFALECIDO: "Natimorto Fictício", MATRICULA: M("5") },
+        ],
+      },
+    },
+  });
+  const [obito, natimorto] = records;
+  assert.equal(natimorto?.subtype, "natimorto");
+  assert.equal(obito?.book, "C-5");
+  const fields = prefillCertidao(
+    obito ?? {
+      kind: "obito",
+      matricula: "",
+      book: "",
+      page: "",
+      term: "",
+      registeredOn: "",
+      eventOn: "",
+      people: [],
+    },
+  );
+  assert.equal(fields.sexo, "MASCULINO");
+  assert.equal(fields.cor, undefined, "IGNORADA fica para o livro");
+  assert.equal(fields.estadoCivilIdade, "casado(a), 80 anos");
+  assert.equal(fields.eleitor, "SIM");
+  assert.equal(fields.documento, "RG 123 RN");
+  assert.equal(fields.medico, "Médico Fictício, CRM 999");
+  assert.equal(fields.causaMorte, "Causa fictícia");
+  assert.equal(
+    fields.dataHoraFalecimento,
+    "primeiro de março de dois mil e vinte, às 07:30",
+  );
+});

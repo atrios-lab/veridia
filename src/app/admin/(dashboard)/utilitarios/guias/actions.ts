@@ -309,3 +309,41 @@ export async function recordAlertSnapshotAction(): Promise<
     return null;
   }
 }
+
+export type GuideReadResult =
+  | {
+      status: "read";
+      reading: import("@/core/guides/reading.ts").GuideReading;
+      notes: string[];
+    }
+  | { status: "error"; message: string };
+
+/**
+ * Reads the documents the clerk attached to fill the guia (decision of
+ * 14/11/2026). In memory only: nothing is stored here.
+ */
+export async function readGuideDocumentsAdmin(
+  formData: FormData,
+): Promise<GuideReadResult> {
+  const session = await getSession();
+  if (
+    !session ||
+    !can(session.user.role ?? "", "guides.manage", session.user.permissions)
+  ) {
+    return { status: "error", message: "Sem permissão para as guias." };
+  }
+  const files = formData
+    .getAll("documentos")
+    .filter((f): f is File => f instanceof File && f.size > 0);
+  if (files.length === 0) {
+    return { status: "error", message: "Escolha os documentos." };
+  }
+  try {
+    const { readGuideFiles } = await import("@/lib/guide-reading.ts");
+    const { reading, notes } = await readGuideFiles(files);
+    return { status: "read", reading, notes };
+  } catch (error) {
+    console.error("guia.leitura-painel", error);
+    return { status: "error", message: "Não foi possível ler agora." };
+  }
+}
