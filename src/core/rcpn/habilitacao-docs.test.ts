@@ -31,6 +31,7 @@ const VALUES = {
   "n1.nomeApos": "Ana Exemplo Modelo",
   "n2.nome": "Bia Modelo",
   "n2.estadoCivil": "divorciado",
+  "n2.dissolucao": "Divórcio averbado no registro fictício.",
   "n2.domicilio": "Outra Cidade/RN",
   regime: "comunhao-parcial",
   "t1.nome": "Testemunha Um",
@@ -80,6 +81,7 @@ test("o requerimento qualifica, declara e leva as assinaturas de cada caso", () 
   assert.match(all, /ANA EXEMPLO passará a usar o nome ANA EXEMPLO MODELO/);
   assert.match(all, /BIA MODELO continuará a usar o mesmo nome/);
   assert.match(all, /material informativo/);
+  assert.ok(!all.includes(".."), "o ponto final digitado não se repete");
   assert.deepEqual(
     doc.signatures?.map((s) => s.role),
     [

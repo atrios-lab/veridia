@@ -89,6 +89,10 @@ export function documentBlocker(
 const v = (values: HabilitacaoValues, key: string) =>
   (values[key] ?? "").trim();
 
+/** Typed text joined into a sentence: its own last period goes. */
+const bare = (text: string) =>
+  text.replace(/\n+/g, "; ").replace(/[\s.;,]+$/, "");
+
 const dated = (iso: string) => (iso ? writtenDate(iso) : "");
 
 function nome(values: HabilitacaoValues, n: 1 | 2): string {
@@ -140,7 +144,7 @@ function regimeSentence(values: HabilitacaoValues): string {
   }
   const pacto = v(values, "pacto");
   if (pacto && regime !== "comunhao-parcial") {
-    return `o regime da ${label}, conforme pacto antenupcial: ${pacto.replace(/\n+/g, "; ")}`;
+    return `o regime da ${label}, conforme pacto antenupcial: ${bare(pacto)}`;
   }
   return `o regime da ${label}`;
 }
@@ -230,7 +234,7 @@ export function requerimentoDocument(
     const lines: string[] = [];
     if (procurador) {
       lines.push(
-        `${name} é representado(a) por procurador(a): ${procurador.replace(/\n+/g, "; ")}.`,
+        `${name} é representado(a) por procurador(a): ${bare(procurador)}.`,
       );
     } else if (v(values, `n${n}.assina`) === "sim") {
       lines.push(
@@ -240,14 +244,12 @@ export function requerimentoDocument(
     const autorizacao = v(values, `n${n}.autorizacao`);
     if (autorizacao) {
       lines.push(
-        `Autorização para o casamento de ${name}: ${autorizacao.replace(/\n+/g, "; ")}.`,
+        `Autorização para o casamento de ${name}: ${bare(autorizacao)}.`,
       );
     }
     const dissolucao = v(values, `n${n}.dissolucao`);
     if (dissolucao) {
-      lines.push(
-        `Casamento anterior de ${name}: ${dissolucao.replace(/\n+/g, "; ")}.`,
-      );
+      lines.push(`Casamento anterior de ${name}: ${bare(dissolucao)}.`);
     }
     return lines;
   });
@@ -255,7 +257,7 @@ export function requerimentoDocument(
     .map(
       (n) =>
         v(values, `n${n}.pais`) &&
-        `dos pais de ${v(values, `n${n}.nome`)}: ${v(values, `n${n}.pais`).replace(/\n+/g, "; ")}`,
+        `dos pais de ${v(values, `n${n}.nome`)}: ${bare(v(values, `n${n}.pais`))}`,
     )
     .filter(Boolean);
   const documentos = v(values, "documentos")
