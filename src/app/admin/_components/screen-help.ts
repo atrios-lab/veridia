@@ -852,6 +852,35 @@ ENTRIES["/admin/rcpn/certidoes"] = {
   terms: CERTIDAO_TERMS,
 };
 
+ENTRIES["/admin/utilitarios/titularidade"] = {
+  purpose:
+    "Comunicar à prefeitura, todo mês, as escrituras e os registros que mudaram o dono de um imóvel, para a Secretaria de Tributação atualizar o cadastro do IPTU (Código Nacional de Normas, art. 184-A, incluído pelo Provimento CN nº 174/2024).",
+  steps: [
+    "Em Lançar escritura ou registro, envie o PDF pesquisável ou o Word do traslado ou da certidão e clique em Ler documento. O sistema preenche o ato, a data, a operação, o imóvel, os valores e as partes.",
+    "Confira cada campo. A operação é obrigatória (compra e venda, doação, permuta, usucapião...; a lista é a da DOI). Partes: uma por linha, nome; CPF ou CNPJ; participação.",
+    "Salve: o ato entra no mês em que foi praticado. Errou? Altere ou exclua, com justificativa.",
+    "Até o último dia útil do mês seguinte, clique em Gerar ofício do mês (ou sem movimento, se não houve ato). Assine digitalmente ou imprima.",
+    "Envie pela plataforma do CNB/CF (Notas) ou do ONR (Registro de Imóveis), usando a planilha do mês, e entregue o ofício à SEMUT se a prefeitura pedir. Registre o envio e o recibo.",
+  ],
+  terms: [
+    {
+      term: "DOI",
+      meaning:
+        "Declaração sobre Operações Imobiliárias, entregue à Receita Federal. O art. 184-A manda comunicar à prefeitura os mesmos casos.",
+    },
+    {
+      term: "Prazo",
+      meaning:
+        "Último dia útil do mês seguinte ao ato. A tela mostra quantos dias faltam e avisa quando venceu.",
+    },
+    {
+      term: "Emolumentos",
+      meaning:
+        "Não se cobra do município por estas informações (art. 184-A, § 9º, com o Provimento CN nº 212/2026).",
+    },
+  ],
+};
+
 ENTRIES["/admin/rcpn/habilitacao"] = {
   purpose:
     "Processar a habilitação para o casamento: um processo por casal, com número do ano, preenchido uma vez. Requerimento, declaração das testemunhas, edital, certidão de proclamas e certificado saem dos mesmos dados.",

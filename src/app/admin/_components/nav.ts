@@ -268,6 +268,22 @@ export const ADMIN_NAV: readonly AdminNavItem[] = [
     ],
   },
   {
+    // The changes of ownership of imóveis told to the prefeitura every month
+    // (CNN, art. 184-A; decision of 14/11/2026).
+    group: "Utilitários",
+    label: "Titularidade à prefeitura",
+    href: "/admin/utilitarios/titularidade",
+    icon: "house",
+    permission: "titularidade.manage",
+    children: [
+      { label: "Comunicação do mês", href: "/admin/utilitarios/titularidade" },
+      {
+        label: "Lançar escritura ou registro",
+        href: "/admin/utilitarios/titularidade/nova",
+      },
+    ],
+  },
+  {
     // The Livro Diário Auxiliar da Receita e da Despesa (decision of
     // 11/11/2026): the productivity report read act by act, the expenses
     // with their receipts, the day's and the month's pages, the year.

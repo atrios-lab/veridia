@@ -31,7 +31,7 @@ import { formatTaxId, isValidTaxId } from "../tax-id.ts";
  * guessed: what the document does not say stays blank for the person.
  */
 
-/** DOI "Tabela 6 – Tipo da operação imobiliária", code → description. */
+/** DOI "Tabela 6, Tipo da operação imobiliária", code → description. */
 export const OPERATIONS: Record<string, string> = {
   "11": "Compra e venda",
   "13": "Permuta",
