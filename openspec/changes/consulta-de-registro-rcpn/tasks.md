@@ -137,3 +137,13 @@
 - [x] 11.5 Importação não sobrescreve registro corrigido no painel com "Substituir todos".
 - [x] 11.6 Tudo editável para retificação ou erro de digitação, menos a matrícula (ficha e
   certidão de um registro), também no servidor.
+- [x] 11.7 Tabelas do Access exportadas em XML (dataroot) lidas juntas, como um banco; a
+  certidão impressa (CV_NASCIMENTO) completa, pela matrícula, o que o registro deixou em branco;
+  segundo declarante; aviso de que o .xsd não traz registros.
+- [x] 11.8 Versão nova das tabelas de nascimento: naturalidade escrita, CPF do registrado e dos
+  pais, e NA_FILIACAO (genitores com os seus pais, os avós) onde as tabelas antigas deixam em branco.
+- [x] 11.9 Datas com ano impossível no banco (digitado errado) ficam em branco, sem adivinhar.
+- [x] 11.10 Prévia da certidão antes de emitir, na ficha (breve e inteiro teor) e no formulário, com
+  "PRÉVIA" em cada folha, para conferir e imprimir; nada é gravado e o selo não é usado.
+- [x] 11.11 Instruções de envio na tela: até 500 MB por envio, compactar em .zip, fechar o sistema
+  antes de copiar o banco; aviso antes de enviar arquivo maior.

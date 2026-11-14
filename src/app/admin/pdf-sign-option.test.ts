@@ -49,6 +49,10 @@ const NOT_SIGNED_BY_THE_OFFICE: Record<string, string> = {
     "nota fiscal anexada, não gerada",
   "(dashboard)/rcpn/certidoes/[id]/anexo":
     "certidão assinada anexada, não gerada",
+  "(dashboard)/rcpn/registro/[id]/previa":
+    "prévia marcada 'sem valor de certidão', para conferir antes de emitir",
+  "(dashboard)/rcpn/certidoes/previa":
+    "prévia marcada 'sem valor de certidão', para conferir antes de emitir",
 };
 
 const ROOT = new URL(".", import.meta.url).pathname;

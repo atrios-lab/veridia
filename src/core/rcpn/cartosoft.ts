@@ -33,6 +33,8 @@ export const CARTOSOFT_TABLES = {
     "NA_GEMEOS",
     "NA_DECLARANTE",
     "NA_TESTEMUNHA",
+    "CV_NASCIMENTO",
+    "NA_FILIACAO",
   ],
   casamento: ["CASAMENTO", "CA_PAIS", "CA_COMPLEMENTO", "CA_TESTEMUNHAS"],
   obito: [
@@ -64,6 +66,9 @@ export const CARTOSOFT_COLUMNS: Record<string, readonly string[]> = {
     "no_estado",
     "no_local",
     "no_pais",
+    "CPF_Registrado",
+    "no_naturalidade",
+    "no_uf_naturalidade",
   ],
   NA_PAIS: [
     "ID",
@@ -89,10 +94,34 @@ export const CARTOSOFT_COLUMNS: Record<string, readonly string[]> = {
     "no_uf_ender_pai",
     "IDEN_MAE",
     "IDEN_PAI",
+    "nu_cpf_mae",
+    "nu_cpf_pai",
+  ],
+  // The newer versions keep each genitor here, with its parents (the
+  // avós): read where the older tables leave the registro blank.
+  NA_FILIACAO: [
+    "IDNA",
+    ...[1, 2].flatMap((n) => [
+      `Nome${n}`,
+      `DTNascimento${n}`,
+      `Idade${n}`,
+      `Profissao${n}`,
+      `CPF${n}`,
+      `CidadeNatural${n}`,
+      `UFNatural${n}`,
+      `Endereco${n}`,
+      `NUEndereco${n}`,
+      `CidadeEnder${n}`,
+      `UFCidadeEnder${n}`,
+      `Pai${n}`,
+      `Mae${n}`,
+    ]),
   ],
   NA_DECLARANTE: [
     "ID",
     "NO_NOME",
+    "no_nome_2",
+    "nu_docto_2",
     "nu_docto",
     "no_profissao",
     "no_endereco",
@@ -117,6 +146,19 @@ export const CARTOSOFT_COLUMNS: Record<string, readonly string[]> = {
   NA_AVOS: ["ID", "no_pai_pai", "no_mae_pai", "no_pai_mae", "no_mae_mae"],
   NA_ANOAVE: ["ID", "TEXTO"],
   NA_GEMEOS: ["ID", "no_irmao", "nu_matriculaCNJ"],
+  // The certidões the system already printed, field by field (analysis of
+  // 14/11/2026): used, by matrícula, only where the registro is blank.
+  CV_NASCIMENTO: [
+    "CV_MATRICULA_CNJ",
+    "CV_HORA_NASCIMENTO",
+    "CV_LOCAL_NASCIMENTO",
+    "CV_SEXO",
+    "CV_AVOS_PATERNOS",
+    "CV_AVOS_MATERNOS",
+    "CV_NOME_MATRICULA_GEMEOS",
+    "CV_NUMERO_DNV",
+    "CV_OBSERVACOES_AVERBACOES",
+  ],
   CASAMENTO: [
     "nu_sequencia",
     "nu_registro",
@@ -364,6 +406,12 @@ export function readCartosoft(tables: Tables): RcpnRecord[] {
     const notes = byKey(tables.NA_ANOAVE, "ID");
     const declarants = byKey(tables.NA_DECLARANTE, "ID");
     const witnessRows = byKey(tables.NA_TESTEMUNHA, "ID");
+    const genitors = byKey(tables.NA_FILIACAO, "IDNA");
+    const printed = new Map<string, Row>();
+    for (const cv of tables.CV_NASCIMENTO ?? []) {
+      const m = matriculaDigits(cv.CV_MATRICULA_CNJ);
+      if (m && !printed.has(m)) printed.set(m, cv);
+    }
     const twins = new Map<string, Row[]>();
     for (const twin of tables.NA_GEMEOS ?? []) {
       const id = cleanText(twin.ID);
@@ -375,6 +423,41 @@ export function readCartosoft(tables: Tables): RcpnRecord[] {
       const a = grandparents.get(id);
       const dec = declarants.get(id);
       const w = witnessRows.get(id);
+      const cv = printed.get(matriculaDigits(row.nu_matriculaCNJ));
+      const fil = genitors.get(id);
+      // NA_FILIACAO, genitor by genitor, under the older tables.
+      const fromFiliacao = (n: 1 | 2) =>
+        filled({
+          [`genitor${n}Nascimento`]: toIsoDate(fil?.[`DTNascimento${n}`]),
+          [`genitor${n}Idade`]: yearsOf(fil?.[`Idade${n}`]),
+          [`genitor${n}Municipio`]: t(fil, `CidadeNatural${n}`),
+          [`genitor${n}Uf`]: t(fil, `UFNatural${n}`),
+          [`genitor${n}Endereco`]: joined([
+            t(fil, `Endereco${n}`),
+            t(fil, `NUEndereco${n}`),
+            joined(
+              [t(fil, `CidadeEnder${n}`), t(fil, `UFCidadeEnder${n}`)],
+              "/",
+            ),
+          ]),
+          [`genitor${n}Documento`]:
+            t(fil, `CPF${n}`) && `CPF ${t(fil, `CPF${n}`)}`,
+          [`avos${n}`]: joined([t(fil, `Pai${n}`), t(fil, `Mae${n}`)], "; "),
+        });
+      const cvHour = timeOf(cv?.CV_HORA_NASCIMENTO);
+      // What the printed certidão says, under what the registro says.
+      const fromCertidao = filled({
+        hora: cvHour && `${cvHour} horas`,
+        localNascimento: t(cv, "CV_LOCAL_NASCIMENTO"),
+        sexo: sexOf(cv?.CV_SEXO),
+        avos1: t(cv, "CV_AVOS_MATERNOS"),
+        avos2: t(cv, "CV_AVOS_PATERNOS"),
+        gemeo: wordOf(cv?.CV_NOME_MATRICULA_GEMEOS)
+          ? long(cv, "CV_NOME_MATRICULA_GEMEOS")
+          : "",
+        dnv: t(cv, "CV_NUMERO_DNV"),
+        observacoes: long(cv, "CV_OBSERVACOES_AVERBACOES"),
+      });
       const witness = (n: 1 | 2) => ({
         [`testemunha${n}`]: t(w, `nome_${n}`),
         [`testemunha${n}Qualificacao`]: t(w, `nome_${n}`)
@@ -398,7 +481,10 @@ export function readCartosoft(tables: Tables): RcpnRecord[] {
             "/",
           ),
         ]),
-        [`genitor${n}Documento`]: t(p, who === "mae" ? "IDEN_MAE" : "IDEN_PAI"),
+        [`genitor${n}Documento`]: joined([
+          t(p, who === "mae" ? "IDEN_MAE" : "IDEN_PAI"),
+          t(p, `nu_cpf_${who}`) && `CPF ${t(p, `nu_cpf_${who}`)}`,
+        ]),
       });
       const registeredOn = toIsoDate(row.dt_registro);
       const city = t(row, "no_cidade");
@@ -414,46 +500,59 @@ export function readCartosoft(tables: Tables): RcpnRecord[] {
         )
         .filter(Boolean);
       records.push({
-        details: filled({
-          hora: hour && `${hour} horas`,
-          // Before the option of Lei nº 13.484/2017, the naturalidade was
-          // the place of birth; after it, the declarant chose, so the book
-          // says which and the person fills it.
-          naturalidade:
-            registeredOn && registeredOn < NATURALIDADE_OPTION ? city : "",
-          naturalidadeUf:
-            registeredOn && registeredOn < NATURALIDADE_OPTION ? state : "",
-          localNascimento: t(row, "no_local"),
-          municipioNascimento: city,
-          municipioNascimentoUf: state,
-          sexo: sexOf(row.cd_sexo),
-          genitor1Municipio: t(p, "no_natural_mae"),
-          genitor1Uf: t(p, "no_estado_mae"),
-          avos1: joined([t(a, "no_pai_mae"), t(a, "no_mae_mae")], "; "),
-          genitor2Municipio: t(p, "no_natural_pai"),
-          genitor2Uf: t(p, "no_estado_pai"),
-          avos2: joined([t(a, "no_pai_pai"), t(a, "no_mae_pai")], "; "),
-          gemeo: twinList.join("; "),
-          dnv: t(row, "nu_dn"),
-          nacionalidade: /^brasil/i.test(t(row, "no_pais")) ? "BRASILEIRA" : "",
-          ...parent(1, "mae"),
-          ...parent(2, "pai"),
-          declarante: t(dec, "NO_NOME"),
-          declaranteQualificacao: t(dec, "NO_NOME")
-            ? qualification([
-                t(dec, "nu_docto") && `documento ${t(dec, "nu_docto")}`,
-                wordOf(dec?.no_profissao),
-                joined([
-                  t(dec, "no_endereco"),
-                  joined([t(dec, "no_cidade"), t(dec, "cd_uf")], "/"),
-                ]),
-              ])
-            : "",
-          ...witness(1),
-          ...witness(2),
-          testemunhas: witnessText(w),
-          observacoes: long(notes.get(id), "TEXTO"),
-        }),
+        details: {
+          ...fromCertidao,
+          ...fromFiliacao(1),
+          ...fromFiliacao(2),
+          ...filled({
+            hora: hour && `${hour} horas`,
+            // Before the option of Lei nº 13.484/2017, the naturalidade was
+            // the place of birth; after it, the declarant chose, so the book
+            // says which and the person fills it. The newer versions write
+            // the naturalidade itself, and that is taken as it is.
+            naturalidade:
+              t(row, "no_naturalidade") ||
+              (registeredOn && registeredOn < NATURALIDADE_OPTION ? city : ""),
+            naturalidadeUf: t(row, "no_naturalidade")
+              ? t(row, "no_uf_naturalidade")
+              : registeredOn && registeredOn < NATURALIDADE_OPTION
+                ? state
+                : "",
+            cpf: t(row, "CPF_Registrado"),
+            localNascimento: t(row, "no_local"),
+            municipioNascimento: city,
+            municipioNascimentoUf: state,
+            sexo: sexOf(row.cd_sexo),
+            genitor1Municipio: t(p, "no_natural_mae"),
+            genitor1Uf: t(p, "no_estado_mae"),
+            avos1: joined([t(a, "no_pai_mae"), t(a, "no_mae_mae")], "; "),
+            genitor2Municipio: t(p, "no_natural_pai"),
+            genitor2Uf: t(p, "no_estado_pai"),
+            avos2: joined([t(a, "no_pai_pai"), t(a, "no_mae_pai")], "; "),
+            gemeo: twinList.join("; "),
+            dnv: t(row, "nu_dn"),
+            nacionalidade: /^brasil/i.test(t(row, "no_pais"))
+              ? "BRASILEIRA"
+              : "",
+            ...parent(1, "mae"),
+            ...parent(2, "pai"),
+            declarante: joined([t(dec, "NO_NOME"), t(dec, "no_nome_2")], " e "),
+            declaranteQualificacao: t(dec, "NO_NOME")
+              ? qualification([
+                  t(dec, "nu_docto") && `documento ${t(dec, "nu_docto")}`,
+                  wordOf(dec?.no_profissao),
+                  joined([
+                    t(dec, "no_endereco"),
+                    joined([t(dec, "no_cidade"), t(dec, "cd_uf")], "/"),
+                  ]),
+                ])
+              : "",
+            ...witness(1),
+            ...witness(2),
+            testemunhas: witnessText(w),
+            observacoes: long(notes.get(id), "TEXTO"),
+          }),
+        },
         kind: "nascimento",
         matricula: matriculaDigits(row.nu_matriculaCNJ),
         book: t(row, "nu_livro"),

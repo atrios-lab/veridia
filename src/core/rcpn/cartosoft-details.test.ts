@@ -264,3 +264,39 @@ test("óbito: códigos numéricos ficam em branco; eleitor, causa e filhos", () 
   assert.equal(d.conjuge, "Cônjuge Fictício");
   assert.equal(d.filhos, "Filho Um e Filha Dois");
 });
+
+test("nascimento na versão nova: naturalidade escrita, CPF e NA_FILIACAO", () => {
+  const [record] = readCartosoft({
+    NASCIMENTO: [
+      {
+        ID: 9,
+        no_pessoa: "Criança Fictícia",
+        dt_registro: "10/10/2022",
+        no_cidade: "Cidade do Hospital",
+        no_naturalidade: "Cidade da Mãe",
+        no_uf_naturalidade: "RN",
+        CPF_Registrado: "111.222.333-44",
+      },
+    ],
+    NA_PAIS: [{ ID: 9, NO_MAE: "Mãe Fictícia", nu_cpf_mae: "555" }],
+    NA_FILIACAO: [
+      {
+        IDNA: 9,
+        Nome1: "Mãe Fictícia",
+        DTNascimento1: "01/01/1990",
+        Pai1: "Avô Fictício",
+        Mae1: "Avó Fictícia",
+        CidadeNatural1: "Natal",
+        UFNatural1: "RN",
+      },
+    ],
+  });
+  const d = record?.details ?? {};
+  assert.equal(d.naturalidade, "Cidade da Mãe");
+  assert.equal(d.naturalidadeUf, "RN");
+  assert.equal(d.cpf, "111.222.333-44");
+  assert.equal(d.genitor1Documento, "CPF 555");
+  assert.equal(d.genitor1Nascimento, "1990-01-01");
+  assert.equal(d.avos1, "Avô Fictício; Avó Fictícia");
+  assert.equal(d.genitor1Municipio, "Natal");
+});

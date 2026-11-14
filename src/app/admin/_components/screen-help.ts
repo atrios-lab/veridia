@@ -774,7 +774,7 @@ ENTRIES["/admin/rcpn/importar"] = {
   purpose:
     "Receber as informações gerais do sistema do registro civil: com elas o painel monta o índice de cada livro e guarda os dados de cada registro, para abrir e imprimir a certidão já pronta. Envie sempre que houver registro novo.",
   steps: [
-    "Gere no sistema do registro civil o envio das informações gerais (os bancos do Cartosoft NA, CA e OB, ou um pacote .zip ou .rar com eles; a carga XML também serve) e envie aqui. Qualquer formato é aceito; o que o sistema não conhece fica guardado e anotado.",
+    "Gere no sistema do registro civil o envio das informações gerais (os bancos do Cartosoft NA, CA e OB, ou um pacote .zip ou .rar com eles; a carga XML também serve) e envie aqui, até 500 MB. Feche o sistema antes de copiar os bancos. Se um banco for grande demais, exporte as tabelas do Access em XML (os arquivos .xml; o .xsd só descreve as colunas) e envie num .zip: elas são lidas juntas. Qualquer formato é aceito; o que o sistema não conhece fica guardado e anotado.",
     "O sistema lê e mostra o que leu: quantos nascimentos, casamentos e óbitos (natimortos à parte), de que período e com quais pendências.",
     "Compare com o índice: os novos entram ao publicar; os iguais ficam como estão; os que já existem com dados diferentes aparecem com o valor antigo e o novo, e só são substituídos se você marcar.",
     "Publique ou descarte. Nos dois casos o arquivo é apagado do painel; o original continua no sistema do registro civil.",

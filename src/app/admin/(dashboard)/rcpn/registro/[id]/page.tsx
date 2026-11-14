@@ -103,6 +103,26 @@ export default async function RcpnRecordPage({
                 </Link>
               </>
             )}
+            {canIssue(session) && (
+              <>
+                <a
+                  href={`/admin/rcpn/registro/${record.id}/previa`}
+                  target="_blank"
+                  rel="noopener"
+                  className={buttonVariants({ variant: "outline" })}
+                >
+                  Visualizar certidão
+                </a>
+                <a
+                  href={`/admin/rcpn/registro/${record.id}/previa?via=inteiro-teor`}
+                  target="_blank"
+                  rel="noopener"
+                  className={buttonVariants({ variant: "ghost" })}
+                >
+                  Visualizar inteiro teor
+                </a>
+              </>
+            )}
             {edit && !canceled && (
               <Link
                 href={`/admin/rcpn/registro/${record.id}/alterar`}

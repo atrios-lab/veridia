@@ -1,11 +1,12 @@
 import { type HandleUploadBody, handleUpload } from "@vercel/blob/client";
 import { can } from "@/core/auth/roles.ts";
+import { RCPN_MAX_BYTES } from "@/core/rcpn/limits.ts";
 import { rcpnFolder } from "@/lib/rcpn.ts";
 import { getSession } from "@/lib/session.ts";
 import { getTenant } from "@/lib/tenant.ts";
 
 /** The registry system's exports can be large: the whole base, packed. */
-const MAX_BYTES = 500 * 1024 * 1024;
+const MAX_BYTES = RCPN_MAX_BYTES;
 
 /**
  * Issues the short-lived token the browser needs to send one RCPN file

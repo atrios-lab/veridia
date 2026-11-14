@@ -339,7 +339,7 @@ export function CertidaoForm({
             {state.message}
           </p>
         )}
-        <div>
+        <div className="flex flex-wrap items-center gap-2">
           <Button type="submit" disabled={pending}>
             {pending
               ? "Salvando..."
@@ -347,7 +347,22 @@ export function CertidaoForm({
                 ? "Salvar correção"
                 : "Emitir certidão"}
           </Button>
+          <Button
+            type="submit"
+            variant="outline"
+            formAction="/admin/rcpn/certidoes/previa"
+            formMethod="post"
+            formTarget="_blank"
+            formNoValidate
+          >
+            Visualizar e imprimir prévia
+          </Button>
         </div>
+        <p className="text-xs text-muted-foreground">
+          A prévia abre em outra aba como a certidão vai sair, com a marca
+          "PRÉVIA" em cada folha. Dá para conferir e imprimir; nada é emitido
+          nem gravado, e o selo não é usado.
+        </p>
       </section>
     </form>
   );

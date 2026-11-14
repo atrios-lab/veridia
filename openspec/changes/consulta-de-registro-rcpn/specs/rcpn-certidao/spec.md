@@ -50,3 +50,13 @@ emitir, corrigir e excluir certidões" DEVE (SHALL) aparecer em Perfis e permiss
 #### Scenario: Correção de digitação
 - **WHEN** a pessoa corrige o nome da mãe com a justificativa "erro de digitação"
 - **THEN** o PDF sai com o nome corrigido e a auditoria registra a correção com a justificativa
+
+### Requirement: Prévia antes de emitir
+O painel DEVE (SHALL) permitir visualizar e imprimir a certidão antes de emitir, a partir da ficha
+do registro (breve relato e inteiro teor) e do formulário de emissão, com a marca "PRÉVIA · SEM
+VALOR DE CERTIDÃO" em cada folha. A prévia NÃO DEVE (SHALL NOT) gravar a certidão, usar o selo nem
+ir para a auditoria.
+
+#### Scenario: Conferir antes de emitir
+- **WHEN** a escrevente clica em "Visualizar e imprimir prévia" no formulário
+- **THEN** abre em outra aba o PDF com o que está digitado e a marca "PRÉVIA", e nenhuma certidão é emitida
