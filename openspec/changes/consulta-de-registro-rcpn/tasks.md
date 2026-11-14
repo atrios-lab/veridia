@@ -81,3 +81,20 @@
 - [x] 6.6 Estrutura da matrícula (modelo da serventia, Lei 6.015/1973, arts. 176 e 232) no guia
   do Registro de Imóveis, sem dado de cliente.
 - [ ] 6.7 Abrir e imprimir matrícula e certidão de matrícula pelo painel.
+
+## 7. Arquivos e roteiros em todas as atribuições (14/11/2026)
+
+- [x] 7.1 Arquivos em todas as atribuições: qualquer formato, tipo pelo conteúdo, sem repetir,
+  envio direto, exclusão com justificativa que só marca (migração 0061, só cria tabela).
+- [x] 7.2 Roteiros dos atos com os requisitos da lei (Notas, Protesto, RI, RTD, RCPJ, Registro
+  Civil, Caixa).
+- [ ] 7.3 Leitores dos formatos das centrais, pela pesquisa de 14/11/2026 (conferir os leiautes
+  oficiais antes): títulos XML do ONR, remessa e retorno da CRA, atualização diária da CENPROT
+  (XML), carga da CRC e do SIRC, DOI (JSON).
+- [ ] 7.4 Livros e índices digitais de cada atribuição (como o do Registro Civil): RI (livros 1 a
+  5, CNM), RTD (livros A a D), RCPJ (livros A e B), Protesto (protocolo e registro, com guarda de
+  3 e 10 anos), Notas (escrituras, procurações, testamentos, CENSEC).
+- [ ] 7.5 Minutas de atos com os campos preenchidos e o selo do SIEX/TJRN em todo ato (pedir ao
+  TJRN o leiaute e o prazo do SIEX).
+- [ ] 7.6 Calendário de dias úteis (feriados do RN e do município) para os prazos registrais e do
+  protesto.

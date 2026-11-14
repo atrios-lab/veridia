@@ -52,6 +52,9 @@ const EXACT: Record<string, string> = {
   "rcpn.import.publish": "Publicou registros no índice do Registro Civil",
   "rcpn.import.discard":
     "Descartou um arquivo enviado ao índice do Registro Civil",
+  "attributions.file.upload": "Enviou um arquivo a uma atribuição",
+  "attributions.file.remove":
+    "Excluiu um arquivo de uma atribuição (fica guardado)",
   "rcpn.certidao.issue": "Emitiu uma certidão do Registro Civil",
   "rcpn.certidao.edit": "Corrigiu uma certidão do Registro Civil",
   "rcpn.certidao.attach": "Anexou a certidão assinada ou digitalizada",
@@ -359,6 +362,10 @@ const EXPLANATIONS: Record<string, string> = {
     "Registros lidos de um arquivo foram conferidos e publicados no índice do Registro Civil, que alimenta a pesquisa e a consulta do site. Registros já existentes só foram substituídos quando a pessoa escolheu.",
   "rcpn.import.discard":
     "Um arquivo enviado ao índice do Registro Civil foi descartado sem publicar. O arquivo foi apagado do painel; nada mudou no índice.",
+  "attributions.file.upload":
+    "Um arquivo (livro, índice, remessa de central, modelo ou documento) foi enviado à área de uma atribuição e guardado como veio.",
+  "attributions.file.remove":
+    "Um arquivo de uma atribuição foi excluído da lista, com justificativa. Ele continua guardado e aparece na auditoria.",
   "rcpn.certidao.issue":
     "Uma certidão de nascimento, casamento ou óbito foi emitida pelo painel, com os dados conferidos com o livro e o selo colado do lote do TJRN.",
   "rcpn.certidao.edit":

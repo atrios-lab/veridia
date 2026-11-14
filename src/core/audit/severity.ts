@@ -106,6 +106,8 @@ const EXACT: Record<string, AuditLevel> = {
   "rcpn.import.upload": "analise",
   "rcpn.import.publish": "atencao",
   "rcpn.import.discard": "analise",
+  "attributions.file.upload": "analise",
+  "attributions.file.remove": "atencao",
   "rcpn.certidao.issue": "analise",
   // A certidão is a public document: a correction or an exclusion is read.
   "rcpn.certidao.edit": "atencao",

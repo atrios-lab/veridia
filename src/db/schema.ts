@@ -2097,3 +2097,40 @@ export const rcpnCertidoes = pgTable(
   },
   (t) => [index("rcpn_certidoes_tenant").on(t.tenantSlug, t.createdAt)],
 );
+
+/**
+ * Files sent to an attribution (decision of 14/11/2026: "em todos deixe o
+ * campo de importar os arquivos"): any format, kept as it came. An
+ * exclusion only marks the row, with who, when and why.
+ */
+export const attributionFiles = pgTable(
+  "attribution_files",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    tenantSlug,
+    /** core/attributions/guides slug: "registro-de-imoveis", "notas"... */
+    attribution: text("attribution").notNull(),
+    fileName: text("file_name").notNull(),
+    /** What the person says the file is (optional). */
+    description: text("description").notNull().default(""),
+    sizeBytes: integer("size_bytes").notNull(),
+    sha256: text("sha256").notNull(),
+    storedPath: text("stored_path").notNull(),
+    /** core/attributions/files recognizeFile label. */
+    format: text("format").notNull(),
+    uploadedBy: text("uploaded_by"),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    removedAt: timestamp("removed_at", { withTimezone: true }),
+    removedBy: text("removed_by"),
+    removedReason: text("removed_reason"),
+  },
+  (t) => [
+    index("attribution_files_list").on(
+      t.tenantSlug,
+      t.attribution,
+      t.createdAt,
+    ),
+  ],
+);
