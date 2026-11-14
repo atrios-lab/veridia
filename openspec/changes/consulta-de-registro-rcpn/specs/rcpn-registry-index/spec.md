@@ -2,9 +2,12 @@
 
 ### Requirement: Importação aceita qualquer arquivo
 A área RCPN do painel DEVE (SHALL) aceitar o envio de arquivos de qualquer extensão, sem
-recusar nenhum por formato. Todo arquivo enviado DEVE (SHALL) ser guardado como veio, com a
-data, quem enviou e o hash SHA-256 do conteúdo; um arquivo idêntico já guardado DEVE (SHALL)
-ser reconhecido como repetido, sem nova cópia. Arquivos maiores que o limite de envio direto
+recusar nenhum por formato. Todo arquivo enviado DEVE (SHALL) ser guardado como veio enquanto
+a importação estiver aberta, com a data, quem enviou e o hash SHA-256 do conteúdo, e DEVE
+(SHALL) ser apagado do painel quando a importação for publicada ou descartada, ficando a data,
+quem enviou, o hash e o resultado (decisão de 14/11/2026: o original continua no sistema do
+registro civil). Um arquivo idêntico a outro não descartado DEVE (SHALL) ser recusado com a data
+do primeiro envio. Arquivos maiores que o limite de envio direto
 da hospedagem DEVEM (SHALL) subir direto ao armazenamento, em partes. Nenhum arquivo enviado
 DEVE (SHALL) ser executado.
 
@@ -13,8 +16,8 @@ DEVE (SHALL) ser executado.
 - **THEN** o arquivo fica guardado, a importação aparece como "guardado, não lido" e a tela orienta exportar do sistema de origem em formato aberto (Access, planilha, CSV, XML)
 
 #### Scenario: Mesmo arquivo enviado duas vezes
-- **WHEN** a serventia envia um arquivo com o mesmo conteúdo de um já guardado
-- **THEN** o sistema avisa que o arquivo já foi recebido, com a data do primeiro envio, e não guarda segunda cópia
+- **WHEN** a serventia envia um arquivo com o mesmo conteúdo de um já enviado e não descartado
+- **THEN** o sistema avisa que o arquivo já foi recebido, com a data do primeiro envio, e não abre nova importação
 
 ### Requirement: Leitura pelo conteúdo e abertura de pacotes
 O sistema DEVE (SHALL) reconhecer o formato pelo conteúdo do arquivo, e não só pela extensão.
@@ -93,3 +96,39 @@ aparecem.
 #### Scenario: Pessoa só com pesquisa
 - **WHEN** uma pessoa com "RCPN: pesquisar" e sem "RCPN: importar arquivos" abre a área
 - **THEN** ela vê a pesquisa e não vê o envio, a conferência nem os arquivos originais
+
+### Requirement: Registro que já existe no índice
+A cada envio, a conferência DEVE (SHALL) comparar cada registro com o índice pela matrícula
+(ou livro, folha e termo, sem matrícula) e separar: novo, já no índice sem mudança, e já no
+índice com dados diferentes. O registro com dados diferentes DEVE (SHALL) ser mostrado com o
+valor do índice e o do arquivo, campo a campo, e só DEVE (SHALL) ser substituído se a pessoa o
+marcar (decisão de 14/11/2026). Campo em branco no arquivo NÃO DEVE (SHALL NOT) apagar o que o
+índice já tem.
+
+#### Scenario: Envio diário com um registro corrigido
+- **WHEN** o arquivo traz um registro novo e outro já indexado com o nome da mãe corrigido
+- **THEN** a conferência mostra 1 novo e 1 com dados diferentes, com "mãe: antigo → novo", e publicar sem marcar grava só o novo
+
+#### Scenario: Carga sem profissão
+- **WHEN** a carga XML traz um registro já indexado, igual em tudo, mas sem a profissão
+- **THEN** o registro conta como sem mudança e a profissão do índice continua lá
+
+### Requirement: Natimortos dentro de óbitos
+O índice DEVE (SHALL) reconhecer como natimorto o óbito registrado no Livro C Auxiliar (Lei
+6.015/1973, art. 33, V, e art. 53, § 1º) e mostrá-lo como subdivisão de Óbitos: contagem própria
+nos quadros do índice e da conferência, e "Óbito · Natimorto" no resultado da pesquisa.
+
+#### Scenario: Óbito do Livro C Auxiliar
+- **WHEN** um óbito importado é do livro "C AUX 1"
+- **THEN** ele conta em Óbitos e na linha "natimortos (Livro C Auxiliar)", e a pesquisa o mostra como "Óbito · Natimorto"
+
+### Requirement: Explicações com "!" e lugar na barra lateral
+Cada tela da área RCPN DEVE (SHALL) ter o "!" ao lado do título, explicando para que serve, como
+usar e os termos (índice, matrícula, livros A, B, C e C Auxiliar, natimorto, semelhante,
+profissão declarada, novo, alterado, pendência), e os quadros do que o índice tem DEVEM (SHALL)
+ter um "!" próprio. A área DEVE (SHALL) ficar no grupo "Atribuições" da barra lateral (decisão de
+14/11/2026), onde as demais atribuições da serventia entram quando suas telas existirem.
+
+#### Scenario: Escrevente sem saber o que é Livro C Auxiliar
+- **WHEN** a pessoa abre o "!" ao lado de "O que o índice tem"
+- **THEN** lê que o natimorto é registrado no Livro C Auxiliar e aparece dentro de Óbitos

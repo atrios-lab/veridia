@@ -689,3 +689,101 @@ ENTRIES["/admin/utilitarios/livro-diario/justica-aberta"] = JUSTICA_ABERTA_HELP;
 
 /** Every screen with help, for the test that keeps the links honest. */
 export const SCREEN_HELP = ENTRIES;
+
+/**
+ * Registro Civil (change consulta-de-registro-rcpn, decision of 14/11/2026):
+ * what the index is, how to search it, how to feed it, and the words of
+ * the screens explained, natimortos included.
+ */
+const RCPN_TERMS: { term: string; meaning: string }[] = [
+  {
+    term: "Índice",
+    meaning:
+      "A lista dos registros desta serventia lida dos arquivos do sistema do registro civil. Serve para achar um registro rápido; não substitui o livro nem a certidão.",
+  },
+  {
+    term: "Matrícula",
+    meaning:
+      "O número nacional do registro, com 32 dígitos (normas do CNJ, hoje no Código Nacional de Normas). Identifica a serventia, o livro, a folha e o termo. É por ela que o sistema reconhece um registro que já está no índice.",
+  },
+  {
+    term: "Livro A, B e C",
+    meaning:
+      "Livro A: nascimentos. Livro B: casamentos. Livro C: óbitos (Lei 6.015/1973, art. 33).",
+  },
+  {
+    term: "Natimorto (Livro C Auxiliar)",
+    meaning:
+      "A criança que nasceu morta. O registro é feito no Livro C Auxiliar (Lei 6.015/1973, art. 33, V, e art. 53, § 1º). Aqui ele aparece dentro de Óbitos, com contagem própria.",
+  },
+  {
+    term: "Semelhante",
+    meaning:
+      "O nome do índice bate com o pesquisado com uma ou duas letras de diferença. Confira no livro antes de responder.",
+  },
+  {
+    term: "Profissão declarada",
+    meaning:
+      "A profissão como consta no registro: no nascimento, a do pai e a da mãe; no casamento, a de cada cônjuge; no óbito, a do falecido. 'Não está nos dados digitais' quer dizer que o arquivo não trouxe; o livro pode trazer.",
+  },
+];
+
+ENTRIES["/admin/rcpn"] = {
+  purpose:
+    "Pesquisar no índice dos registros de nascimento, casamento e óbito desta serventia (natimortos dentro de óbitos), para responder a busca no balcão sem procurar nos livros.",
+  steps: [
+    "Digite o nome, em qualquer ordem. Se quiser filtrar, informe também o nome da mãe e a data de nascimento.",
+    "Confira o resultado: o tipo do registro, livro, folha, termo, matrícula, filiação e a profissão declarada.",
+    "Resultado marcado 'Semelhante' tem uma ou duas letras de diferença: confira no livro.",
+    "Nada encontrado não quer dizer que o registro não exista: ele pode estar só no livro ou fora do período do índice (veja os quadros no alto).",
+  ],
+  terms: RCPN_TERMS,
+};
+
+ENTRIES["/admin/rcpn/importar"] = {
+  purpose:
+    "Alimentar o índice com os arquivos do sistema do registro civil. Envie sempre que houver registro novo.",
+  steps: [
+    "Gere o arquivo no sistema do registro civil (banco do Cartosoft, carga XML ou um pacote .zip ou .rar com eles) e envie aqui. Qualquer formato é aceito; o que o sistema não conhece fica guardado e anotado.",
+    "O sistema lê e mostra o que leu: quantos nascimentos, casamentos e óbitos (natimortos à parte), de que período e com quais pendências.",
+    "Compare com o índice: os novos entram ao publicar; os iguais ficam como estão; os que já existem com dados diferentes aparecem com o valor antigo e o novo, e só são substituídos se você marcar.",
+    "Publique ou descarte. Nos dois casos o arquivo é apagado do painel; o original continua no sistema do registro civil.",
+  ],
+  terms: [
+    {
+      term: "Novo",
+      meaning: "O registro não está no índice. Entra ao publicar.",
+    },
+    {
+      term: "Já no índice, sem mudança",
+      meaning: "O mesmo registro, com os mesmos dados. Nada muda.",
+    },
+    {
+      term: "Já no índice com dados diferentes",
+      meaning:
+        "O mesmo registro (mesma matrícula) com algum dado diferente. Só é substituído se você marcar. Campo em branco no arquivo nunca apaga o que o índice tem.",
+    },
+    {
+      term: "Pendência",
+      meaning:
+        "Falta nome, data de nascimento, nome da mãe ou matrícula completa. Sem nome ou repetido no próprio arquivo fica fora da publicação; o resto entra com a pendência anotada.",
+    },
+    ...RCPN_TERMS.filter(
+      (t) => t.term.startsWith("Natimorto") || t.term === "Matrícula",
+    ),
+  ],
+};
+
+/** The "!" beside the counts of the index: what each kind holds. */
+export const RCPN_KINDS_HELP: ScreenHelp = {
+  purpose:
+    "Quantos registros o índice tem de cada tipo e de que período. O índice só tem o que foi enviado: registros mais antigos ou mais novos que o período podem estar só no livro.",
+  steps: [
+    "Nascimentos: Livro A.",
+    "Casamentos: Livro B.",
+    "Óbitos: Livro C. Dentro deles, os natimortos, registrados no Livro C Auxiliar (Lei 6.015/1973, art. 33, V, e art. 53, § 1º).",
+  ],
+  terms: RCPN_TERMS.filter(
+    (t) => t.term.startsWith("Natimorto") || t.term === "Índice",
+  ),
+};

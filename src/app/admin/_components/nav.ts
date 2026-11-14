@@ -107,6 +107,19 @@ export const ADMIN_NAV: readonly AdminNavItem[] = [
     permission: "chat.manage",
   },
   {
+    // The office's attributions (decision of 14/11/2026): one entry per
+    // specialty, each where its files are loaded and its acts worked. The
+    // first is the Registro Civil (change consulta-de-registro-rcpn); the
+    // others (Imóveis, Títulos e Documentos, Pessoas Jurídicas, Protesto,
+    // Distribuição, Notas) and the Caixa join as their screens land, never
+    // before: an entry that leads nowhere spends the office's trust.
+    group: "Atribuições",
+    label: "Registro Civil",
+    href: "/admin/rcpn",
+    icon: "file",
+    permission: "rcpn.search",
+  },
+  {
     // Tools for the deed desk. The first: the guias de transmissão de bens (ITIV,
     // ITCD, laudêmio, certidão imobiliária) the notary signs and the party
     // takes to the fisco before the escritura.

@@ -75,6 +75,11 @@ export const OFFICE_PERMISSIONS = [
   "paper-orders.manage",
   // Livro Diário Auxiliar da Receita e da Despesa (decision of 11/11/2026).
   "daily-book.manage",
+  // The RCPN index (change consulta-de-registro-rcpn): searching it, and
+  // sending the registry system's files that feed it. Two lines: who
+  // answers the counter is not always who loads the office's whole base.
+  "rcpn.search",
+  "rcpn.import",
   // The office's audit trail in full, and the formal notifications that ask
   // a person to explain an act: the Tabelião/Registrador's alone.
   "audit.manage",
@@ -107,6 +112,8 @@ export const GRANTABLE_PERMISSIONS = [
   "security-paper.manage",
   "paper-orders.manage",
   "daily-book.manage",
+  "rcpn.search",
+  "rcpn.import",
 ] as const;
 export type GrantablePermission = (typeof GRANTABLE_PERMISSIONS)[number];
 
@@ -130,6 +137,9 @@ export const DERIVED_FROM: Partial<Record<GrantablePermission, Permission>> = {
   "paper-orders.manage": "security-paper.manage",
   // Whoever declares the ISS works the book the ISS comes from.
   "daily-book.manage": "iss.manage",
+  // Whoever answers the búsca at the counter searches the index. Loading
+  // the base derives from nothing: the Tabelião/Registrador grants it.
+  "rcpn.search": "requests.manage",
 };
 
 /**
@@ -352,4 +362,7 @@ export const GRANTABLE_LABELS: Record<GrantablePermission, string> = {
     "Solicitação de papéis de segurança (empresas, modelos e pedidos)",
   "daily-book.manage":
     "Livro Diário Auxiliar da Receita e da Despesa (lançamentos, PDFs e balanço)",
+  "rcpn.search": "Registro Civil: pesquisar o índice de registros",
+  "rcpn.import":
+    "Registro Civil: enviar os arquivos do sistema do registro civil ao índice",
 };

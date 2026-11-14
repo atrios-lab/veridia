@@ -3,28 +3,31 @@
 - [ ] 0.1 Confirmar com a serventia se há banco do Cartosoft posterior a 2016 e em que formato.
 - [ ] 0.2 Confirmar a lista de finalidades e se a consulta aceita "sou pai ou mãe no
   registro".
-- [ ] 0.3 Criar bancos Access, planilha e pacote de teste **fictícios**, na estrutura do
-  Cartosoft, para os testes. Nenhum dado real no código.
+- [x] 0.3 Dados de teste **fictícios** (tabelas do Cartosoft e cargas XML) nos testes. Nenhum
+  dado real no código.
+- [ ] 0.4 Banco Access e pacotes ZIP e RAR fictícios para testes automáticos da leitura (hoje a
+  leitura de Access e RAR foi conferida à mão com o banco da serventia, só em contagens).
 
 ## 1. Fase 1: painel (índice)
 
-- [ ] 1.1 Núcleo puro: campos do índice, normalização de nome (acentos, partículas),
+- [x] 1.1 Núcleo puro: campos do índice, normalização de nome (acentos, partículas),
   validação de matrícula CNJ, conferência (contagens, problemas, duplicados). Testes.
-- [ ] 1.2 Migração só com tabelas novas: arquivos, importações, modelos de ligação, registros,
-  ligação de imagem, consultas públicas.
-- [ ] 1.3 Envio direto ao armazenamento em partes, hash SHA-256 e repetidos.
-- [ ] 1.4 Reconhecimento pelo conteúdo e abertura de pacotes, com limites. Testes com
-  pacotes fictícios.
-- [ ] 1.5 Leitores: Access, dBase, SQLite, sql (só leitura), planilhas, texto delimitado e
-  fixo, XML, JSON. Cada um vira "tabelas e colunas".
-- [ ] 1.6 Modelo pronto do Cartosoft (Access): nascimento, casamento e óbito, descartando os
+- [x] 1.2 Migração só com tabelas novas: importações, registros e pessoas (0059). Modelos de
+  ligação, imagens e consultas públicas entram com as tarefas 1.7, 1.12 e 2.3.
+- [x] 1.3 Envio direto ao armazenamento em partes, hash SHA-256 e repetidos.
+- [x] 1.4 Reconhecimento pelo conteúdo e abertura de pacotes ZIP e RAR, com limites (ver 0.4).
+- [ ] 1.5 Leitores: Access e carga XML prontos (com ZIP e RAR); faltam dBase, SQLite, sql
+  (só leitura), planilhas, texto delimitado e fixo, JSON e os demais XMLs (certidão da CRC,
+  e-Proclamas, óbito da carga).
+- [x] 1.6 Modelo pronto do Cartosoft (Access): nascimento, casamento e óbito, descartando os
   campos fora do índice.
 - [ ] 1.7 Tela de ligação de colunas e modelos salvos.
-- [ ] 1.8 Tela de conferência e publicação (substitui pela matrícula), com auditoria e rótulos.
-- [ ] 1.9 Pesquisa interna tolerante a grafia; detalhe do registro; período coberto.
-- [ ] 1.10 Permissões "RCPN: pesquisar" e "RCPN: importar arquivos" em Perfis e permissões;
+- [ ] 1.12 Imagens das folhas (TIFF, JPG, PDF) ligadas ao registro.
+- [x] 1.8 Tela de conferência e publicação (substitui pela matrícula), com auditoria e rótulos.
+- [x] 1.9 Pesquisa interna tolerante a grafia e período coberto.
+- [x] 1.10 Permissões "RCPN: pesquisar" e "RCPN: importar arquivos" em Perfis e permissões;
   item na barra lateral.
-- [ ] 1.11 Verificar no navegador com dados fictícios; bateria completa.
+- [x] 1.11 Verificar no navegador com dados fictícios; bateria completa.
 
 ## 2. Fase 2: site (consulta pública)
 
@@ -42,3 +45,11 @@
 
 - [ ] 3.1 Certidão pelo portal: conferir na norma (portal próprio ou Central do Registro Civil),
   modelos oficiais e selo do TJRN antes de propor.
+
+## 4. Acrescentado em 14/11/2026
+
+- [x] 4.1 Registro que já existe: conferência com valor antigo e novo; substitui só o marcado.
+- [x] 4.2 Natimortos (Livro C Auxiliar) como subdivisão de Óbitos.
+- [x] 4.3 "!" explicativo nas telas e nos quadros do índice.
+- [x] 4.4 Arquivo original apagado do painel ao publicar ou descartar.
+- [x] 4.5 Grupo "Atribuições" na barra lateral, com o Registro Civil.

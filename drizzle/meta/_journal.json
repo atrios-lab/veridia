@@ -414,6 +414,13 @@
       "when": 1794436314280,
       "tag": "0058_livro_diario_auxiliar",
       "breakpoints": true
+    },
+    {
+      "idx": 59,
+      "version": "7",
+      "when": 1794618085718,
+      "tag": "0059_rcpn_indice",
+      "breakpoints": true
     }
   ]
 }
