@@ -153,3 +153,8 @@
 - [x] 11.13 A certidão digital segue a mesma folha da impressa: mesmas margens e posições, com o
   brasão e "REPÚBLICA FEDERATIVA DO BRASIL / REGISTRO CIVIL DAS PESSOAS NATURAIS" no alto, onde o
   papel de segurança os traz; a nota de assinatura digital no lugar da linha de assinatura.
+- [x] 11.14 Ir alimentando: o envio que só preenche campos em branco completa o registro sozinho
+  ("completa"), sem marcar; o que diverge continua pedindo confirmação; registro corrigido à mão
+  só muda se marcado. Pendências julgadas pelo registro já completado.
+- [x] 11.15 Na tela Alterar, "Visualizar como vai ficar": a certidão com o que está digitado, como
+  prévia, sem salvar.

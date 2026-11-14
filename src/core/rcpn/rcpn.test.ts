@@ -349,3 +349,51 @@ test("carga e banco do mesmo envio viram um registro só", () => {
   assert.equal(one?.people[0]?.fatherName, "Pai Fictício");
   assert.equal(one?.people[0]?.motherProfession, "agricultora");
 });
+
+test("arquivo que só preenche o que estava em branco completa sem pedir; diferente espera ser marcado", () => {
+  const M = "09461501552014100050120000123456";
+  const person = {
+    role: "registrado" as const,
+    name: "Registrada Fictícia",
+    marriedName: "",
+    motherName: "Mãe Fictícia",
+    fatherName: "",
+    birthDate: "2014-05-01",
+    profession: "",
+    fatherProfession: "",
+    motherProfession: "",
+  };
+  const current = {
+    kind: "nascimento" as const,
+    matricula: M,
+    book: "A-5",
+    page: "12",
+    term: "123",
+    registeredOn: "2014-05-05",
+    eventOn: "",
+    people: [person],
+    details: { sexo: "FEMININO" },
+  };
+  const existing = new Map([[`nascimento:${M}`, current]]);
+  const fills = {
+    ...current,
+    people: [{ ...person, fatherName: "Pai Fictício" }],
+    details: { sexo: "FEMININO", avos1: "Avô; Avó" },
+  };
+  const completes = conferenceOf([fills], existing);
+  assert.equal(completes.checked[0]?.comparison, "completa");
+  assert.equal(toPublish(completes, new Set()).length, 1, "entra sem marcar");
+  assert.equal(
+    toPublish(completes, new Set(), new Set([`nascimento:${M}`])).length,
+    0,
+    "corrigido à mão só se marcado",
+  );
+
+  const differs = {
+    ...fills,
+    details: { sexo: "MASCULINO", avos1: "Avô; Avó" },
+  };
+  const conf = conferenceOf([differs], existing);
+  assert.equal(conf.checked[0]?.comparison, "alterado");
+  assert.equal(toPublish(conf, new Set()).length, 0, "diferente espera marcar");
+});

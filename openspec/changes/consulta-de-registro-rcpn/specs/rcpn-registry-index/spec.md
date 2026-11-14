@@ -196,3 +196,13 @@ ir para a auditoria. Um registro corrigido no painel NÃO DEVE (SHALL NOT) ser s
 #### Scenario: Cancelado não emite certidão
 - **WHEN** o registro está cancelado
 - **THEN** a ficha mostra "Registro cancelado" com a justificativa e não oferece emitir certidão até o estorno
+
+### Requirement: Completar sem perguntar o que estava em branco
+A importação DEVE (SHALL) completar sozinha, ao publicar, o registro já indexado quando o arquivo
+só preenche campos que estavam em branco, sem pedir que seja marcado. O registro em que algum campo
+vem diferente do que está no índice DEVE (SHALL) continuar esperando ser marcado, e o registro
+corrigido à mão no painel NÃO DEVE (SHALL NOT) ser completado sem ser marcado.
+
+#### Scenario: Banco enviado depois da carga
+- **WHEN** a serventia envia o banco com os avós de registros que vieram antes só pela carga
+- **THEN** a conferência mostra "só completam campos que estavam em branco" e, ao publicar, os avós entram sem marcar um por um

@@ -67,13 +67,21 @@ export default async function ImportDetailPage({
   // Corrected by hand in the panel: listed first, so they can be marked
   // one by one; "Substituir todos" leaves them as they are.
   const edited = open ? await editedKeysWith(db, tenant.slug) : new Set();
+  const usable = (c: { problems: string[] }) =>
+    !c.problems.some((p) => BLOCKING.includes(p as (typeof BLOCKING)[number]));
+  // Corrected by hand: even a file that only completes waits to be marked.
   const allChanged = (
     conference?.checked.filter(
       (c) =>
-        c.comparison === "alterado" &&
-        !c.problems.some((p) => BLOCKING.includes(p)),
+        usable(c) &&
+        (c.comparison === "alterado" ||
+          (c.comparison === "completa" && edited.has(c.key))),
     ) ?? []
   ).sort((a, b) => Number(edited.has(b.key)) - Number(edited.has(a.key)));
+  const completeCount =
+    conference?.checked.filter(
+      (c) => usable(c) && c.comparison === "completa" && !edited.has(c.key),
+    ).length ?? 0;
   const editedTotal = allChanged.filter((c) => edited.has(c.key)).length;
   // Only the first ones go to the screen, one by one: a whole base sent
   // again can differ in thousands, and the page must stay small (the
@@ -193,9 +201,16 @@ export default async function ImportDetailPage({
                 </li>
                 <li>
                   <span className="font-semibold text-foreground">
+                    {completeCount}
+                  </span>{" "}
+                  só completam campos que estavam em branco: entram ao publicar,
+                  sem precisar marcar
+                </li>
+                <li>
+                  <span className="font-semibold text-foreground">
                     {conference.counts.alterado}
                   </span>{" "}
-                  já no índice com dados diferentes
+                  já no índice com dados diferentes: só mudam se marcados
                 </li>
                 <li>
                   <span className="font-semibold text-foreground">
@@ -208,6 +223,7 @@ export default async function ImportDetailPage({
                 <PublishForm
                   id={row.id}
                   newCount={newCount}
+                  completeCount={completeCount}
                   changed={changed}
                   changedTotal={allChanged.length}
                   editedTotal={editedTotal}
