@@ -31,6 +31,46 @@ export interface Reading {
 interface Collecting extends Reading {
   fromXml: RcpnRecord[];
   fromAccess: RcpnRecord[];
+  /**
+   * Tables the office exported from the Access base as XML, one file per
+   * table (decision of 14/11/2026, when the whole base did not fit one
+   * upload): read together at the end, as if they were one base.
+   */
+  exported: Tables;
+  exportedFiles: number;
+}
+
+/**
+ * An Access table exported as XML ("Exportar › Arquivo XML"): the root is
+ * `dataroot` and each row is an element named after the table. Only the
+ * Cartosoft tables and their listed columns are taken.
+ */
+function readAccessXml(tree: unknown, name: string, out: Collecting): boolean {
+  const root = (tree as Record<string, unknown> | undefined)?.dataroot;
+  if (!root || typeof root !== "object") return false;
+  let rows = 0;
+  for (const [table, value] of Object.entries(
+    root as Record<string, unknown>,
+  )) {
+    const wanted = CARTOSOFT_COLUMNS[table];
+    if (!wanted) continue;
+    const list = (Array.isArray(value) ? value : [value]).filter(
+      (row): row is Record<string, unknown> =>
+        Boolean(row) && typeof row === "object",
+    );
+    const kept = list.map((row) =>
+      Object.fromEntries(wanted.map((c) => [c, row[c] ?? ""])),
+    );
+    out.exported[table] = [...(out.exported[table] ?? []), ...kept];
+    rows += kept.length;
+  }
+  out.exportedFiles++;
+  out.notes.push(
+    rows > 0
+      ? `${name}: tabela exportada do Access em XML, ${rows} linhas lidas.`
+      : `${name}: XML exportado do Access, sem tabela do registro civil. Guardado sem leitura.`,
+  );
+  return true;
 }
 
 /** A package that unpacks past this is left closed. */
@@ -114,6 +154,7 @@ function readXml(bytes: Uint8Array, name: string, out: Collecting): void {
     out.notes.push(`${name}: XML com erro de estrutura. Guardado sem leitura.`);
     return;
   }
+  if (readAccessXml(tree, name, out)) return;
   if (isCargaXml(tree)) {
     const { records, unknownMovements } = readCargaXml(tree);
     out.fromXml.push(...records);
@@ -132,6 +173,8 @@ function readXml(bytes: Uint8Array, name: string, out: Collecting): void {
       ? Object.keys(tree).find((k) => k !== "?xml")
       : undefined;
   const known: Record<string, string> = {
+    "xsd:schema":
+      "esquema de tabela do Access (.xsd): descreve as colunas, sem registros. Os dados ficam no arquivo .xml de mesmo nome",
     certidao: "certidão on-line da CRC",
     edital_proclama: "edital de proclamas eletrônico (e-Proclamas)",
     InscricaoCPF: "inscrição de CPF",
@@ -245,8 +288,21 @@ export async function readImportFile(
     notes: [],
     fromXml: [],
     fromAccess: [],
+    exported: {},
+    exportedFiles: 0,
   };
   await readAny(bytes, name, out, 0, { unpacked: 0, files: 0 });
+  if (Object.keys(out.exported).length > 0) {
+    const exported = readCartosoft(out.exported);
+    out.fromAccess.push(...exported);
+    if (exported.length > 0) {
+      out.notes.push(
+        `Tabelas exportadas do Access em XML (${out.exportedFiles} arquivos), lidas juntas: ${exported.length} registros.`,
+      );
+      if (!out.format.includes("cartosoft-xml"))
+        out.format = join(out.format, "cartosoft-xml");
+    }
+  }
   // The carga first: its book, folha and termo come from the matrícula,
   // the same way for every registro; the database fills the rest (avós,
   // testemunhas, declarante, anotações).
