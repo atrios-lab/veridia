@@ -104,10 +104,14 @@ export function PublishForm({
   id,
   newCount,
   changed,
+  changedTotal = changed.length,
 }: {
   id: string;
   newCount: number;
+  /** The first changed registros, to mark one by one. */
   changed: ChangedItem[];
+  /** All the changed ones, including those not on the screen. */
+  changedTotal?: number;
 }) {
   const [state, action, pending] = useActionState<CloseState, FormData>(
     publishImportAction,
@@ -122,24 +126,46 @@ export function PublishForm({
       return next;
     });
   const all = changed.length > 0 && marked.size === changed.length;
+  const [everything, setEverything] = useState(false);
+  const hidden = changedTotal - changed.length;
+  const replaced = everything ? changedTotal : marked.size;
 
   return (
     <form action={action} className="flex flex-col gap-4">
       <input type="hidden" name="id" value={id} />
+      {everything && <input type="hidden" name="substituirTodos" value="1" />}
       {changed.length > 0 && (
         <section className="flex flex-col gap-3 rounded-xl border border-warning/30 bg-warning-soft p-4">
           <div>
             <h3 className="text-sm font-semibold text-warning-text">
-              {changed.length === 1
+              {changedTotal === 1
                 ? "1 registro já existe no índice com dados diferentes"
-                : `${changed.length} registros já existem no índice com dados diferentes`}
+                : `${changedTotal} registros já existem no índice com dados diferentes`}
             </h3>
             <p className="mt-1 text-xs text-warning-text">
               Deseja substituir? Marque os que devem receber os dados deste
               arquivo. Os não marcados ficam como estão. Campos em branco no
               arquivo nunca apagam o que o índice já tem.
             </p>
+            {hidden > 0 && (
+              <p className="mt-1 text-xs text-warning-text">
+                Aparecem aqui os {changed.length} primeiros. Para receber os
+                dados do arquivo em todos os {changedTotal}, marque "Substituir
+                todos".
+              </p>
+            )}
           </div>
+          {hidden > 0 && (
+            <label className="flex items-center gap-2 text-sm font-semibold text-foreground">
+              <input
+                type="checkbox"
+                checked={everything}
+                onChange={() => setEverything((v) => !v)}
+                className="checkbox-admin"
+              />
+              Substituir todos os {changedTotal}
+            </label>
+          )}
           <label className="flex items-center gap-2 text-xs font-semibold text-foreground">
             <input
               type="checkbox"
@@ -183,12 +209,12 @@ export function PublishForm({
       )}
       <Button
         type="submit"
-        disabled={pending || newCount + marked.size === 0}
+        disabled={pending || newCount + replaced === 0}
         className="self-start"
       >
         {pending
           ? "Publicando..."
-          : `Publicar no índice (${newCount} novo${newCount === 1 ? "" : "s"}${marked.size > 0 ? `, ${marked.size} substituído${marked.size === 1 ? "" : "s"}` : ""})`}
+          : `Publicar no índice (${newCount} novo${newCount === 1 ? "" : "s"}${replaced > 0 ? `, ${replaced} substituído${replaced === 1 ? "" : "s"}` : ""})`}
       </Button>
     </form>
   );

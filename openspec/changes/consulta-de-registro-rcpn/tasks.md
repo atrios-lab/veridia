@@ -116,3 +116,11 @@
 - [x] 9.1 Marcar e desmarcar as atribuições em Configurações (só o Tabelião), com o regime de cada
   uma (delegado, interino, interventor) e a Distribuição; auditoria.
 - [x] 9.2 Painel e site mostram só o que a serventia oferece; cartão "Atribuições" na página inicial.
+
+## 10. Envio grande e erros em português (14/11/2026)
+
+- [x] 10.1 Conferência com muitos registros alterados: os 200 primeiros para marcar e "Substituir
+  todos", para a tela ficar abaixo do limite de resposta da hospedagem (4,5 MB).
+- [x] 10.2 Telas de erro em português no painel, no site e geral ("em manutenção"), dizendo se foi
+  tamanho, tempo, conexão ou outro erro, com o código para o suporte.
+- [x] 10.3 Registro das etapas do envio no servidor (tempo e tamanho, sem dado pessoal).

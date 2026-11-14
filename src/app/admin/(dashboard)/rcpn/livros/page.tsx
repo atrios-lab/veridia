@@ -1,9 +1,5 @@
 import Link from "next/link";
-import {
-  formatIsoDate,
-  RCPN_KIND_PLURALS,
-  RCPN_KINDS,
-} from "@/core/rcpn/record.ts";
+import { RCPN_KIND_PLURALS, RCPN_KINDS } from "@/core/rcpn/record.ts";
 import { rcpn } from "@/lib/rcpn.ts";
 import { getTenant } from "@/lib/tenant.ts";
 import { BackLink } from "../../../_components/back-link.tsx";
