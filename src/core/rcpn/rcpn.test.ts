@@ -7,6 +7,7 @@ import { nameFit, normalizeName } from "./names.ts";
 import {
   isLivroCAuxiliar,
   isMatricula,
+  mergeSources,
   recordKey,
   toIsoDate,
 } from "./record.ts";
@@ -295,4 +296,52 @@ test("natimorto: óbito do Livro C Auxiliar, contado à parte dentro de óbitos"
   const conf = conferenceOf(records, new Map());
   assert.equal(conf.byKind.obito.count, 2);
   assert.equal(conf.byKind.obito.natimortos, 1);
+});
+
+test("carga e banco do mesmo envio viram um registro só", () => {
+  const M = "09461501552014100050120000123456";
+  const fromXml = {
+    kind: "nascimento" as const,
+    matricula: M,
+    book: "A-5",
+    page: "12",
+    term: "123",
+    registeredOn: "2014-05-05",
+    eventOn: "",
+    people: [
+      {
+        role: "registrado" as const,
+        name: "Registrada Fictícia",
+        marriedName: "",
+        motherName: "Mãe Fictícia",
+        fatherName: "",
+        birthDate: "2014-05-01",
+        profession: "",
+        fatherProfession: "",
+        motherProfession: "",
+      },
+    ],
+    details: { sexo: "FEMININO" },
+  };
+  const fromDb = {
+    ...fromXml,
+    book: "A05",
+    people: [
+      {
+        ...fromXml.people[0],
+        fatherName: "Pai Fictício",
+        motherProfession: "agricultora",
+      },
+    ],
+    details: { sexo: "", avos1: "Avô; Avó", observacoes: "Anotação fictícia." },
+  };
+  const other = { ...fromXml, matricula: "", term: "999", details: {} };
+  const merged = mergeSources([[fromXml], [fromDb, other]]);
+  assert.equal(merged.length, 2);
+  const [one] = merged;
+  assert.equal(one?.book, "A-5", "a carga tem a preferência");
+  assert.equal(one?.details?.sexo, "FEMININO");
+  assert.equal(one?.details?.avos1, "Avô; Avó");
+  assert.equal(one?.people[0]?.fatherName, "Pai Fictício");
+  assert.equal(one?.people[0]?.motherProfession, "agricultora");
 });

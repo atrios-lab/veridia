@@ -93,6 +93,8 @@ export interface ChangedItem {
   key: string;
   label: string;
   changes: string[];
+  /** Corrected by hand in the panel. */
+  edited?: boolean;
 }
 
 /**
@@ -105,6 +107,7 @@ export function PublishForm({
   newCount,
   changed,
   changedTotal = changed.length,
+  editedTotal = 0,
 }: {
   id: string;
   newCount: number;
@@ -112,6 +115,8 @@ export function PublishForm({
   changed: ChangedItem[];
   /** All the changed ones, including those not on the screen. */
   changedTotal?: number;
+  /** Of the changed ones, those corrected by hand in the panel. */
+  editedTotal?: number;
 }) {
   const [state, action, pending] = useActionState<CloseState, FormData>(
     publishImportAction,
@@ -128,7 +133,12 @@ export function PublishForm({
   const all = changed.length > 0 && marked.size === changed.length;
   const [everything, setEverything] = useState(false);
   const hidden = changedTotal - changed.length;
-  const replaced = everything ? changedTotal : marked.size;
+  const markedEdited = changed.filter(
+    (c) => c.edited && marked.has(c.key),
+  ).length;
+  const replaced = everything
+    ? changedTotal - editedTotal + markedEdited
+    : marked.size;
 
   return (
     <form action={action} className="flex flex-col gap-4">
@@ -163,8 +173,18 @@ export function PublishForm({
                 onChange={() => setEverything((v) => !v)}
                 className="checkbox-admin"
               />
-              Substituir todos os {changedTotal}
+              Substituir todos os {changedTotal - editedTotal}
+              {editedTotal > 0 && " que não foram corrigidos no painel"}
             </label>
+          )}
+          {editedTotal > 0 && (
+            <p className="text-xs text-warning-text">
+              {editedTotal === 1
+                ? "1 registro foi corrigido à mão no painel e aparece primeiro na lista."
+                : `${editedTotal} registros foram corrigidos à mão no painel e aparecem primeiro na lista.`}{" "}
+              Eles só recebem os dados do arquivo se forem marcados um por um,
+              para a correção não se perder.
+            </p>
           )}
           <label className="flex items-center gap-2 text-xs font-semibold text-foreground">
             <input
@@ -192,6 +212,11 @@ export function PublishForm({
                     <span className="font-medium text-foreground">
                       {item.label}
                     </span>
+                    {item.edited && (
+                      <span className="ml-2 rounded-full bg-warning-soft px-2 py-0.5 text-xs font-semibold text-warning-text">
+                        Corrigido no painel
+                      </span>
+                    )}
                     <span className="block text-xs text-muted-foreground">
                       {item.changes.join("; ")}
                     </span>

@@ -6,7 +6,7 @@ import { prefillCertidao } from "./certidao.ts";
 // Fictitious registros only (LGPD). Matrícula: CNS 094615, acervo 01,
 // serviço 55, ano 2014, tipo de livro, livro 00005, folha 012, termo
 // 0000123, dígito 45 (fictitious).
-const M = (type: string) => `09461501552014${type}000050120000123` + "45";
+const M = (type: string) => `09461501552014${type}00005012000012345`;
 
 test("matrícula: livro, folha e termo", () => {
   assert.deepEqual(placeOf(M("1")), {
@@ -109,4 +109,72 @@ test("carga de óbito: natimorto pelo livro C Auxiliar e a certidão preenchida"
     fields.dataHoraFalecimento,
     "primeiro de março de dois mil e vinte, às 07:30",
   );
+});
+
+test("carga de nascimento: filiação completa, nacionalidade e gêmeos", () => {
+  const { records } = readCargaXml({
+    CARGAREGISTROS: {
+      MOVIMENTONASCIMENTOTN: {
+        REGISTRONASCIMENTOINCLUSAO: {
+          NOMEREGISTRADO: "Registrada Fictícia",
+          MATRICULA: M("1"),
+          DATAREGISTRO: "05/05/2014",
+          DATANASCIMENTO: "01/05/2014",
+          NACIONALIDADE: "076",
+          POSSUIGEMEOS: "S",
+          NUMEROGEMEOS: "1",
+          FILIACAONASCIMENTO: [
+            {
+              NOME: "Mãe Fictícia",
+              SEXO: "F",
+              DATANASCIMENTO: "10/10/1990",
+              IDADE: "23",
+              IDADE_DIAS_MESES_ANOS: "A",
+              NACIONALIDADE: "076",
+              LOGRADOURO: "Rua Fictícia",
+              BAIRRO: "Centro",
+              TEXTOLIVREMUNICIPIONAT: "Cidade Fictícia",
+            },
+            { NOME: "Pai Fictício", SEXO: "M", NACIONALIDADE: "999" },
+          ],
+        },
+      },
+    },
+  });
+  const d = records[0]?.details ?? {};
+  assert.equal(d.nacionalidade, "BRASILEIRA");
+  assert.equal(d.gemeo, "SIM");
+  assert.equal(d.genitor1Nascimento, "1990-10-10");
+  assert.equal(d.genitor1Idade, "23 anos");
+  assert.equal(d.genitor1Endereco, "Rua Fictícia, Centro");
+  assert.equal(d.genitor1Municipio, "Cidade Fictícia");
+  assert.equal(
+    d.genitor2Nacionalidade,
+    undefined,
+    "código desconhecido fica em branco",
+  );
+});
+
+test("carga de óbito: tipo de morte, bens, DO e benefício", () => {
+  const { records } = readCargaXml({
+    CARGAREGISTROS: {
+      MOVIMENTOOBITOTO: {
+        REGISTROOBITOINCLUSAO: {
+          NOMEFALECIDO: "Falecida Fictícia",
+          MATRICULA: M("4"),
+          TIPOMORTE: "NATURAL",
+          POSSUIBENS: "N",
+          NUMDECLARACAOOBITO: "123456",
+          BENEFICIOS_PREVIDENCIARIOS: { NUMEROBENEFICIO: "999" },
+          LOGRADOURO: "Rua Fictícia",
+        },
+      },
+    },
+  });
+  const d = records[0]?.details ?? {};
+  assert.equal(d.tipoMorte, "NATURAL");
+  assert.equal(d.bens, "NÃO");
+  assert.equal(d.numeroDO, "123456");
+  assert.equal(d.beneficio, "999");
+  assert.equal(d.endereco, "Rua Fictícia");
 });

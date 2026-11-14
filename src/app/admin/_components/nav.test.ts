@@ -160,3 +160,28 @@ test("o tópico fechado soma os avisos de dentro, sem contar duas vezes", () => 
   assert.equal(countIn(guias, { "/admin/utilitarios/guias": 2 }), 2);
   assert.equal(countIn(guias, {}), 0);
 });
+
+test("Registro Civil: o menu marca a aba aberta (nascimentos, casamentos, óbitos)", () => {
+  const nodes = [
+    {
+      label: "Registro Civil",
+      href: "/admin/rcpn",
+      children: [
+        { label: "Nascimentos", href: "/admin/rcpn" },
+        { label: "Casamentos", href: "/admin/rcpn?tipo=casamento" },
+        { label: "Óbitos", href: "/admin/rcpn?tipo=obito" },
+        { label: "Livros", href: "/admin/rcpn/livros" },
+      ],
+    },
+  ];
+  assert.equal(currentHref(nodes, "/admin/rcpn"), "/admin/rcpn");
+  assert.equal(
+    currentHref(nodes, "/admin/rcpn?tipo=obito&por=nome&q=x"),
+    "/admin/rcpn?tipo=obito",
+  );
+  assert.equal(currentHref(nodes, "/admin/rcpn?q=x"), "/admin/rcpn");
+  assert.equal(
+    currentHref(nodes, "/admin/rcpn/livros/a"),
+    "/admin/rcpn/livros",
+  );
+});

@@ -61,10 +61,13 @@ function FieldInput({
   id,
   field,
   value,
+  locked = false,
 }: {
   id: string;
   field: CertidaoField;
   value: string;
+  /** The registro's matrícula: shown, not changed. */
+  locked?: boolean;
 }) {
   return (
     <div
@@ -83,6 +86,17 @@ function FieldInput({
           rows={field.key === "teor" ? 14 : 3}
           maxLength={field.key === "teor" ? 20000 : LONG_TEXT_MAX}
         />
+      ) : locked ? (
+        <>
+          <input type="hidden" name={`campo.${field.key}`} value={value} />
+          <Input
+            id={id}
+            value={value}
+            readOnly
+            aria-readonly="true"
+            className="bg-muted font-mono text-muted-foreground"
+          />
+        </>
       ) : (
         <Input
           id={id}
@@ -95,8 +109,9 @@ function FieldInput({
       )}
       {field.key === "matricula" && (
         <p className="text-xs text-muted-foreground">
-          32 dígitos, em nove blocos (6 2 2 4 1 5 3 7 2): serventia, acervo,
-          serviço, ano, tipo de livro, livro, folha, termo e dígito verificador.
+          {locked
+            ? "A matrícula é a do registro e não se altera."
+            : "32 dígitos, em nove blocos (6 2 2 4 1 5 3 7 2): serventia, acervo, serviço, ano, tipo de livro, livro, folha, termo e dígito verificador."}
         </p>
       )}
       {field.hint && (
@@ -183,6 +198,11 @@ export function CertidaoForm({
                   id={`${base}-campo-${field.key}`}
                   field={field}
                   value={initial.fields[field.key] ?? ""}
+                  locked={
+                    field.key === "matricula" &&
+                    Boolean(initial.recordId) &&
+                    Boolean(initial.fields.matricula?.trim())
+                  }
                 />
               ))}
             </div>

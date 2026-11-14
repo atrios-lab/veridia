@@ -113,6 +113,11 @@ const EXACT: Record<string, AuditLevel> = {
   "rcpn.certidao.edit": "atencao",
   "rcpn.certidao.attach": "analise",
   "rcpn.certidao.remove": "atencao",
+  // A registro of the index corrected or cancelled by hand: read by the
+  // Tabelião (decision of 14/11/2026).
+  "rcpn.record.edit": "atencao",
+  "rcpn.record.cancel": "urgente",
+  "rcpn.record.restore": "atencao",
   "daily-book.report-issue": "analise",
   "daily-book.bulletin-prepare": "analise",
   "daily-book.excess-save": "analise",

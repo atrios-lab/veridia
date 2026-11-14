@@ -118,6 +118,7 @@ export default async function CertidaoPage({
           signers={signers}
           initial={{
             id: row.id,
+            recordId: row.recordId ?? undefined,
             kind,
             form: isCertidaoForm(row.form) ? row.form : "breve",
             natimorto: row.subtype === "natimorto",

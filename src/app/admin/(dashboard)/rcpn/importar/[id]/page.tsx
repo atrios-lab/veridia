@@ -7,7 +7,9 @@ import {
   RCPN_KINDS,
   type RcpnRecord,
 } from "@/core/rcpn/record.ts";
+import { db } from "@/db/index.ts";
 import { rcpn } from "@/lib/rcpn.ts";
+import { editedKeysWith } from "@/lib/rcpn-ficha.ts";
 import { getTenant } from "@/lib/tenant.ts";
 import { AdminPageHeader } from "../../../../_components/page-header.tsx";
 import { Badge } from "../../../../_ui/badge.tsx";
@@ -62,12 +64,17 @@ export default async function ImportDetailPage({
   const notes = (row.notes ?? []) as string[];
   const open = row.status === "lida";
   const conference = open ? await rcpn.conference(tenant.slug, row) : null;
-  const allChanged =
+  // Corrected by hand in the panel: listed first, so they can be marked
+  // one by one; "Substituir todos" leaves them as they are.
+  const edited = open ? await editedKeysWith(db, tenant.slug) : new Set();
+  const allChanged = (
     conference?.checked.filter(
       (c) =>
         c.comparison === "alterado" &&
         !c.problems.some((p) => BLOCKING.includes(p)),
-    ) ?? [];
+    ) ?? []
+  ).sort((a, b) => Number(edited.has(b.key)) - Number(edited.has(a.key)));
+  const editedTotal = allChanged.filter((c) => edited.has(c.key)).length;
   // Only the first ones go to the screen, one by one: a whole base sent
   // again can differ in thousands, and the page must stay small (the
   // hosting refuses answers above 4.5 MB). The rest are replaced with
@@ -77,6 +84,7 @@ export default async function ImportDetailPage({
     .map((c) => ({
       key: c.key,
       label: labelOf(c.record),
+      edited: edited.has(c.key),
       changes: c.details.map(
         (d) => `${d.label}: ${d.before || "(vazio)"} → ${d.after}`,
       ),
@@ -202,6 +210,7 @@ export default async function ImportDetailPage({
                   newCount={newCount}
                   changed={changed}
                   changedTotal={allChanged.length}
+                  editedTotal={editedTotal}
                 />
                 <DiscardForm id={row.id} />
               </div>

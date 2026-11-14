@@ -2023,10 +2023,48 @@ export const rcpnRecords = pgTable(
     updatedAt: timestamp("updated_at", { withTimezone: true })
       .notNull()
       .defaultNow(),
+    /**
+     * Corrected by hand in the panel (decision of 14/11/2026): a later
+     * import does not write over it unless the person chooses to.
+     */
+    editedAt: timestamp("edited_at", { withTimezone: true }),
+    editedBy: text("edited_by"),
+    /**
+     * Cancelled in the panel (decision of 14/11/2026, "como no sistema
+     * atual"): the registro stays, marked, and can be restored (estorno).
+     */
+    canceledAt: timestamp("canceled_at", { withTimezone: true }),
+    canceledBy: text("canceled_by"),
+    cancelReason: text("cancel_reason"),
   },
   (t) => [
     uniqueIndex("rcpn_records_key").on(t.tenantSlug, t.kind, t.recordKey),
   ],
+);
+
+/**
+ * Every correction, cancellation and estorno of a registro of the index:
+ * who, when, why, and the fields before and after. Only added to.
+ */
+export const rcpnRecordChanges = pgTable(
+  "rcpn_record_changes",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    tenantSlug,
+    recordId: uuid("record_id")
+      .notNull()
+      .references(() => rcpnRecords.id),
+    /** edicao | cancelamento | estorno */
+    kind: text("kind").notNull(),
+    reason: text("reason").notNull(),
+    /** [{ key, label, before, after }] (core/rcpn/ficha FichaChange). */
+    changes: jsonb("changes").notNull().default(sql`'[]'::jsonb`),
+    actorId: text("actor_id").notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (t) => [index("rcpn_record_changes_record").on(t.recordId, t.createdAt)],
 );
 
 /** A person of a registro: the one searched by name, mother and birth. */

@@ -442,6 +442,13 @@
       "when": 1794658700684,
       "tag": "0062_registro_civil_dados_completos",
       "breakpoints": true
+    },
+    {
+      "idx": 63,
+      "version": "7",
+      "when": 1794666025776,
+      "tag": "0063_registro_civil_ficha",
+      "breakpoints": true
     }
   ]
 }

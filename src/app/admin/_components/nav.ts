@@ -147,7 +147,11 @@ export const ADMIN_NAV: readonly AdminNavItem[] = [
     icon: "file",
     permission: "rcpn.search",
     children: [
-      { label: "Pesquisar no índice", href: "/admin/rcpn" },
+      // One line per book (decision of 14/11/2026: separated by
+      // nascimento, casamento and óbito, each with its own search).
+      { label: "Nascimentos", href: "/admin/rcpn" },
+      { label: "Casamentos", href: "/admin/rcpn?tipo=casamento" },
+      { label: "Óbitos", href: "/admin/rcpn?tipo=obito" },
       { label: "Livros", href: "/admin/rcpn/livros" },
       {
         label: "Certidões",
@@ -465,16 +469,30 @@ function hrefsIn(nodes: readonly AdminNavNode[]): string[] {
 }
 
 /**
- * Which line of the tree is the current page: the exact path, or else the
+ * Which line of the tree is the current page (`location`: the path, with
+ * the query when there is one): a line naming the page's tab, the exact
+ * path, or else the
  * longest one the path sits under, so a record opened from a list (a guia,
  * a lote) still lights the list it came from. Undefined when the page is
  * outside the tree, which also says whether a fold holds the current page.
  */
 export function currentHref(
   nodes: readonly AdminNavNode[],
-  pathname: string,
+  location: string,
 ): string | undefined {
+  const [pathname = "", search = ""] = location.split("?");
   const hrefs = hrefsIn(nodes);
+  // A line that names a tab ("/admin/rcpn?tipo=obito") wins on its path
+  // when the page is on that tab.
+  const params = new URLSearchParams(search);
+  const tab = hrefs.find((href) => {
+    const [path, query] = href.split("?");
+    if (path !== pathname || !query) return false;
+    return [...new URLSearchParams(query)].every(
+      ([key, value]) => params.get(key) === value,
+    );
+  });
+  if (tab) return tab;
   if (hrefs.includes(pathname)) return pathname;
   return hrefs
     .filter((href) => pathname.startsWith(`${href}/`))

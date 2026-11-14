@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { readCartosoft, sexOf, timeOf } from "./cartosoft.ts";
+import { readCartosoft, sexOf, timeOf, wordOf } from "./cartosoft.ts";
 import { prefillCertidao } from "./certidao.ts";
 
 // Fictitious registros only (LGPD).
@@ -135,4 +135,132 @@ test("hora e sexo como a certidão escreve", () => {
   assert.equal(timeOf("07:45"), "07:45");
   assert.equal(sexOf("m"), "MASCULINO");
   assert.equal(sexOf("ignorado"), "ignorado");
+  assert.equal(sexOf("1"), "", "código numérico não é adivinhado");
+  assert.equal(wordOf("5"), "");
+  assert.equal(wordOf("-1"), "");
+  assert.equal(wordOf("[brasileira"), "brasileira");
+});
+
+test("nascimento: declarante, testemunhas e pais completos", () => {
+  const [record] = readCartosoft({
+    NASCIMENTO: [{ ID: 4, no_pessoa: "Criança Fictícia", cd_sexo: "1" }],
+    NA_PAIS: [
+      {
+        ID: 4,
+        NO_MAE: "Mãe Fictícia",
+        dt_nasci_mae: "10/10/1990",
+        nu_idade_mae: "23",
+        nu_idade_pai: "0",
+        no_nac_mae: "[brasileira ",
+        no_nac_pai: " ",
+        no_ender_mae: "Rua Fictícia, 1",
+        no_cidade_ender_mae: "Cidade Fictícia",
+        no_uf_ender_mae: "RN",
+      },
+    ],
+    NA_DECLARANTE: [
+      {
+        ID: 4,
+        NO_NOME: "Declarante Fictício",
+        nu_docto: "123",
+        no_profissao: "agricultor",
+      },
+    ],
+    NA_TESTEMUNHA: [
+      {
+        ID: 4,
+        nome_1: "Testemunha Fictícia",
+        documento_1: "456",
+        profissao_1: "-1",
+      },
+    ],
+  });
+  const d = record?.details ?? {};
+  assert.equal(d.sexo, undefined, "0/1 não vira sexo");
+  assert.equal(d.genitor1Nascimento, "1990-10-10");
+  assert.equal(d.genitor1Idade, "23 anos");
+  assert.equal(d.genitor2Idade, undefined, "idade 0 é não informada");
+  assert.equal(d.genitor1Nacionalidade, "BRASILEIRA");
+  assert.equal(d.genitor2Nacionalidade, undefined);
+  assert.equal(d.genitor1Endereco, "Rua Fictícia, 1, Cidade Fictícia/RN");
+  assert.equal(d.declarante, "Declarante Fictício");
+  assert.equal(d.declaranteQualificacao, "documento 123, agricultor");
+  assert.equal(d.testemunha1, "Testemunha Fictícia");
+  assert.equal(d.testemunha1Qualificacao, "documento 456");
+});
+
+test("casamento: estado civil, residência, juiz, edital e testemunhas", () => {
+  const [record] = readCartosoft({
+    CASAMENTO: [
+      {
+        nu_sequencia: 2,
+        no_noivo: "Noivo Fictício",
+        no_noiva: "Noiva Fictícia",
+        estcivil_noivo: "solteiro ",
+        estcivil_noiva: "1",
+        endereco_noivo: "Rua Fictícia",
+        cidade_res_noivo: "Cidade Fictícia",
+        estado_res_noivo: "RN",
+        ho_casamento: new Date(Date.UTC(1899, 11, 30, 16, 0)),
+        no_juiz_paz: "Juiz Fictício",
+        nu_processo: "15",
+        nu_edital: "15",
+        dt_edital: "01/02/2020",
+        no_obs: "Ato registrado no livro fictício.",
+      },
+    ],
+    CA_TESTEMUNHAS: [
+      {
+        nu_sequencia: 2,
+        no_testemunha1: "Testemunha Fictícia",
+        profissao1: "professora",
+        qualif_testemunhas: "Testemunhas: Fulana Fictícia e Beltrano Fictício.",
+      },
+    ],
+  });
+  const d = record?.details ?? {};
+  assert.equal(d.conjuge1EstadoCivil, "solteiro");
+  assert.equal(d.conjuge2EstadoCivil, undefined, "código não é adivinhado");
+  assert.equal(d.conjuge1Endereco, "Rua Fictícia, Cidade Fictícia/RN");
+  assert.equal(d.horaCasamento, "16:00 horas");
+  assert.equal(d.juiz, "Juiz Fictício");
+  assert.equal(d.habilitacao, "15");
+  assert.equal(d.edital, "nº 15 de 01/02/2020");
+  assert.equal(d.testemunha1Qualificacao, "professora");
+  assert.equal(
+    d.testemunhas,
+    "Testemunhas: Fulana Fictícia e Beltrano Fictício.",
+  );
+  assert.equal(d.observacoes, "Ato registrado no livro fictício.");
+});
+
+test("óbito: códigos numéricos ficam em branco; eleitor, causa e filhos", () => {
+  const [record] = readCartosoft({
+    OBITO: [
+      {
+        ID: 5,
+        no_pessoa: "Falecida Fictícia",
+        no_cor: "5",
+        est_civil_pessoa: "1",
+        idade_pessoa: "80",
+        cd_eleitor: "1",
+        no_conjuge: "Cônjuge Fictício",
+        deixou_filhos: "Filho Um e Filha Dois",
+      },
+    ],
+    OB_ELEITOR: [
+      { ID: 5, nu_tit_eleitoral: "123", nu_zona: "6", nu_secao: "7" },
+    ],
+    OB_MOTIVO_MORTE: [
+      { ID: 5, causa_morte1: "Causa A", causa_morte2: "Causa B" },
+    ],
+  });
+  const d = record?.details ?? {};
+  assert.equal(d.cor, undefined);
+  assert.equal(d.estadoCivilIdade, "80 anos");
+  assert.equal(d.eleitor, undefined);
+  assert.equal(d.tituloEleitor, "título 123, zona 6, seção 7");
+  assert.equal(d.causaMorte, "Causa A; Causa B");
+  assert.equal(d.conjuge, "Cônjuge Fictício");
+  assert.equal(d.filhos, "Filho Um e Filha Dois");
 });

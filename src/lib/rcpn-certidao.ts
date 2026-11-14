@@ -5,6 +5,7 @@ import {
   certidaoModel,
   certidaoProblems,
   cleanCertidaoFields,
+  formatMatricula,
   isCertidaoForm,
 } from "@/core/rcpn/certidao.ts";
 import {
@@ -161,16 +162,22 @@ export async function issueCertidaoWith(
   input: CertidaoInput,
   actorId: string,
 ): Promise<string> {
-  const values = prepare(input);
-  await assertSealFree(database, tenantSlug, values.seal);
   let recordId: string | null = null;
+  let fields = input.fields;
   if (input.recordId) {
     const record = await getRecordWith(database, tenantSlug, input.recordId);
-    if (!record || record.kind !== values.kind) {
+    if (!record || record.kind !== input.kind) {
       throw new CertidaoError("O registro escolhido não está no índice.");
     }
     recordId = record.id;
+    // The matrícula is the registro's, never typed over (decision of
+    // 14/11/2026: "tudo é editável, menos a matrícula").
+    if (record.matricula) {
+      fields = { ...fields, matricula: formatMatricula(record.matricula) };
+    }
   }
+  const values = prepare({ ...input, fields });
+  await assertSealFree(database, tenantSlug, values.seal);
   const [row] = await database
     .insert(rcpnCertidoes)
     .values({ tenantSlug, recordId, ...values, createdBy: actorId })
@@ -237,8 +244,15 @@ export async function updateCertidaoWith(
   actorId: string,
 ): Promise<void> {
   const current = await mustExist(database, tenantSlug, id);
+  // A certidão of a registro keeps the matrícula it was issued with.
+  const issued = (current.fields ?? {}) as Record<string, string>;
+  const fields =
+    current.recordId && issued.matricula
+      ? { ...input.fields, matricula: issued.matricula }
+      : input.fields;
   const values = prepare({
     ...input,
+    fields,
     kind: current.kind as RcpnKind,
     form: isCertidaoForm(current.form) ? current.form : "breve",
     recordId: current.recordId,
