@@ -44,6 +44,35 @@ export interface CertidaoToDraw {
   signerTitle: string;
   /** The day it is dated: "YYYY-MM-DD". */
   issuedOn: IsoDate;
+  /**
+   * A look before issuing (decision of 14/11/2026: "visualizar o documento
+   * antes de emitir e ter a opção de imprimir"): every sheet crossed with
+   * "PRÉVIA", so it never passes for a certidão.
+   */
+  preview?: boolean;
+}
+
+/** The mark across a preview sheet, light, under nothing it hides. */
+function drawPreviewMark(pdf: Pdf): void {
+  const { x, y } = pdf;
+  const cx = pdf.page.width / 2;
+  const cy = pdf.page.height / 2;
+  pdf.save();
+  pdf.rotate(-40, { origin: [cx, cy] });
+  pdf
+    .fillColor(NEUTRALS.faint)
+    .fillOpacity(0.14)
+    .font("Helvetica-Bold")
+    .fontSize(40)
+    .text("PRÉVIA · SEM VALOR DE CERTIDÃO", cx - 380, cy - 22, {
+      width: 760,
+      align: "center",
+      lineBreak: false,
+    });
+  pdf.restore();
+  pdf.fillOpacity(1);
+  pdf.x = x;
+  pdf.y = y;
 }
 
 /** 1 cm in PDF points. */
@@ -219,6 +248,7 @@ export async function renderCertidao(
   // Each sheet: the letterhead (digital) or the free top of the paper. On
   // `pageAdded`, so the sheets a long inteiro teor flows onto get it too.
   pdf.on("pageAdded", () => {
+    if (certidao.preview) drawPreviewMark(pdf);
     const { left, width } = layout();
     if (digital) {
       const y = drawCenteredIdentification(pdf, identification, {

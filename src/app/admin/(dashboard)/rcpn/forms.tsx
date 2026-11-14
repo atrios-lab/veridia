@@ -2,6 +2,7 @@
 
 import { upload } from "@vercel/blob/client";
 import { useActionState, useState, useTransition } from "react";
+import { RCPN_MAX_BYTES, RCPN_MAX_MB } from "@/core/rcpn/limits.ts";
 import { FilePicker } from "../../_components/file-picker.tsx";
 import { Button } from "../../_ui/button.tsx";
 import {
@@ -43,6 +44,12 @@ export function UploadForm({
       setNote("Escolha o arquivo exportado do sistema do registro civil.");
       return;
     }
+    if (file.size > RCPN_MAX_BYTES) {
+      setNote(
+        `O arquivo é muito grande (${Math.ceil(file.size / 1024 / 1024)} MB). O máximo por envio é ${RCPN_MAX_MB} MB: compacte em .zip ou envie cada banco separado.`,
+      );
+      return;
+    }
     setNote("");
     startSending(async () => {
       try {
@@ -75,7 +82,7 @@ export function UploadForm({
         accept=""
         required
         label="Arquivo do sistema do registro civil"
-        hint="Qualquer formato: banco do Cartosoft (.mdb), carga XML, pacote .zip ou .rar com vários arquivos. O sistema lê o que conhece e guarda o resto."
+        hint={`Até ${RCPN_MAX_MB} MB por envio. Qualquer formato: banco do Cartosoft (.mdb), carga XML, pacote .zip ou .rar com vários arquivos (recomendado para arquivos grandes). O sistema lê o que conhece e guarda o resto.`}
       />
       {message && (
         <p role="alert" className="text-sm font-medium text-destructive">

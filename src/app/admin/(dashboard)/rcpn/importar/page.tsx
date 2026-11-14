@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { RCPN_MAX_MB } from "@/core/rcpn/limits.ts";
 import { rcpn, rcpnFolder } from "@/lib/rcpn.ts";
 import { getTenant } from "@/lib/tenant.ts";
 import { blobUploadEnabled } from "@/lib/uploads.ts";
@@ -40,12 +41,41 @@ export default async function ImportPage() {
           <h2 className="text-lg font-semibold text-foreground">
             Enviar arquivo
           </h2>
-          <p className="mt-1 mb-4 text-sm text-muted-foreground">
-            Só os dados de que o índice precisa são lidos (nome, filiação,
-            nascimento, livro, folha, termo, matrícula e profissões). CPF,
-            documentos e causa da morte ficam de fora. O arquivo enviado é
-            apagado do painel quando a importação é publicada ou descartada.
+          <p className="mt-1 text-sm text-muted-foreground text-justify hyphens-auto">
+            São lidos os dados de cada registro que a certidão e a ficha usam:
+            nomes, filiação, avós, datas, livro, folha, termo, matrícula,
+            declarante, testemunhas, anotações e averbações, CPF e documentos e,
+            no óbito, a causa da morte. Usuários, senhas e registros de uso do
+            sistema ficam de fora. O arquivo enviado é apagado do painel quando
+            a importação é publicada ou descartada.
           </p>
+          <div className="mt-4 mb-5 rounded-lg border border-primary/25 bg-primary/5 px-4 py-3 text-sm text-foreground">
+            <p className="font-semibold">
+              Como enviar arquivos grandes (até {RCPN_MAX_MB} MB por envio)
+            </p>
+            <ol className="mt-2 list-decimal space-y-1 pl-5 text-justify hyphens-auto">
+              <li>
+                Feche o sistema do registro civil em todos os computadores. Com
+                ele aberto, o banco fica travado (aparece um arquivo .ldb ao
+                lado) e a cópia pode sair incompleta.
+              </li>
+              <li>
+                Compacte em .zip: no Windows, clique com o botão direito na
+                pasta ou nos arquivos e escolha Enviar para › Pasta compactada.
+                O banco do Access encolhe muito no .zip (um banco de 45 MB
+                costuma ficar com menos de 5 MB).
+              </li>
+              <li>
+                Ponha no mesmo .zip os bancos (NA, CA e OB) e a carga XML: o
+                sistema junta tudo pela matrícula. O RC.mdb não precisa ir,
+                porque não tem registros.
+              </li>
+              <li>
+                Se ainda passar de {RCPN_MAX_MB} MB, envie cada banco num .zip
+                separado. Pode também usar .rar.
+              </li>
+            </ol>
+          </div>
           <UploadForm
             direct={blobUploadEnabled()}
             folder={rcpnFolder(tenant.slug)}

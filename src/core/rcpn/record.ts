@@ -126,7 +126,11 @@ const pad = (n: number) => String(n).padStart(2, "0");
 export function toIsoDate(value: unknown): string {
   if (value instanceof Date) {
     if (Number.isNaN(value.getTime())) return "";
-    return `${value.getUTCFullYear()}-${pad(value.getUTCMonth() + 1)}-${pad(value.getUTCDate())}`;
+    // A year typed wrong in the source ("988" for 1988) is not a date:
+    // blank, to correct in the ficha, never a guess.
+    const year = value.getUTCFullYear();
+    if (year < 1800 || year > new Date().getUTCFullYear() + 1) return "";
+    return `${year}-${pad(value.getUTCMonth() + 1)}-${pad(value.getUTCDate())}`;
   }
   const text = cleanText(value);
   const parts =

@@ -36,6 +36,10 @@ test("nomes no painel: ordem livre, exato ou com uma letra trocada", () => {
 
 test("datas: Date do Access, dd/mm/aaaa, aaaammdd; dia impossível vira vazio", () => {
   assert.equal(toIsoDate(new Date(Date.UTC(1987, 4, 3))), "1987-05-03");
+  // Ano digitado errado no banco ("988" no lugar de 1988): fica em branco.
+  const typo = new Date(Date.UTC(2000, 0, 1));
+  typo.setUTCFullYear(988);
+  assert.equal(toIsoDate(typo), "");
   assert.equal(toIsoDate("03/05/1987"), "1987-05-03");
   assert.equal(toIsoDate("19870503"), "1987-05-03");
   assert.equal(toIsoDate("31/02/1987"), "");
