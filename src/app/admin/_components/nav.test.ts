@@ -126,9 +126,9 @@ test("Utilitários é um tópico só, com os utilitários como subtópicos", () 
   const group = navGroups(ADMIN_NAV).find(
     (entry) => entry.group === "Utilitários",
   );
-  // Guias, ISS, titularidade à prefeitura, Livro Diário, papel de
-  // segurança, solicitação de papéis e assinador.
-  assert.equal(group?.items.length, 7);
+  // Guias, ISS, titularidade à prefeitura, cargas da CENSEC, Livro
+  // Diário, papel de segurança, solicitação de papéis e assinador.
+  assert.equal(group?.items.length, 8);
 });
 
 test("Atribuições é um tópico só: Registro Civil, as outras seis e o Caixa", () => {

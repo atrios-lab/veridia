@@ -284,6 +284,19 @@ export const ADMIN_NAV: readonly AdminNavItem[] = [
     ],
   },
   {
+    // The CENSEC's quinzenal loads: CEP, CESDI and RCTO (CNN, arts. 265
+    // to 272; decision of 14/11/2026), read from the documents attached.
+    group: "Utilitários",
+    label: "Cargas da CENSEC",
+    href: "/admin/utilitarios/censec",
+    icon: "upload",
+    permission: "censec.manage",
+    children: [
+      { label: "Quinzena", href: "/admin/utilitarios/censec" },
+      { label: "Anexar documentos", href: "/admin/utilitarios/censec/anexar" },
+    ],
+  },
+  {
     // The Livro Diário Auxiliar da Receita e da Despesa (decision of
     // 11/11/2026): the productivity report read act by act, the expenses
     // with their receipts, the day's and the month's pages, the year.

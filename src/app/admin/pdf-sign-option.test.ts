@@ -38,6 +38,8 @@ const NOT_SIGNED_BY_THE_OFFICE: Record<string, string> = {
     "requerimento e declaração: quem assina é o cliente",
   "(dashboard)/auditoria/relatorio":
     "relatório gerado na hora de uma seleção, para leitura",
+  "(dashboard)/utilitarios/censec/relatorio":
+    "relatório da quinzena para conferência, não é documento assinado",
   "(dashboard)/ajuda/[curso]/apostila": "material de treinamento",
   "(dashboard)/ajuda/[curso]/certificado": "certificado de curso",
   "(dashboard)/publicacoes/[id]/arquivo": "arquivo enviado, não gerado",
