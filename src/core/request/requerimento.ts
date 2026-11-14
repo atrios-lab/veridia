@@ -149,6 +149,14 @@ export interface RequerimentoDocument {
    * is dated, drawn centred after the last section, above the signature.
    */
   dateLine?: string;
+  /**
+   * Everyone who signs by hand besides the office (the nubentes, the
+   * witnesses of a habilitação): drawn two to a row after the date, each
+   * with room to sign, the rule, the name and the role. `fingerprint`
+   * draws the box for the thumbprint of whoever cannot sign (Lei nº
+   * 6.015/1973, art. 70, 10º).
+   */
+  signatures?: { name: string; role: string; fingerprint?: boolean }[];
   signee?: string;
   signature: string[];
   footer: string;

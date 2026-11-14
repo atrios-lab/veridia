@@ -65,6 +65,14 @@ const EXACT: Record<string, string> = {
     "Cancelou um registro do Registro Civil (fica guardado)",
   "rcpn.record.restore":
     "Estornou o cancelamento de um registro do Registro Civil",
+  "rcpn.habilitacao.create": "Abriu um processo de habilitação de casamento",
+  "rcpn.habilitacao.edit": "Alterou um processo de habilitação de casamento",
+  "rcpn.habilitacao.edital":
+    "Publicou no site o edital de proclamas de uma habilitação",
+  "rcpn.habilitacao.cancel":
+    "Cancelou um processo de habilitação de casamento (fica guardado)",
+  "rcpn.habilitacao.restore":
+    "Estornou o cancelamento de um processo de habilitação de casamento",
   "daily-book.import": "Anexou um relatório ao Livro Diário Auxiliar",
   "daily-book.entry-add": "Fez um lançamento no Livro Diário Auxiliar",
   "daily-book.entry-edit": "Editou um lançamento do Livro Diário Auxiliar",
@@ -389,6 +397,16 @@ const EXPLANATIONS: Record<string, string> = {
     "Um registro do índice do Registro Civil foi cancelado, com justificativa. Ele continua guardado, marcado como cancelado, e pode ser estornado.",
   "rcpn.record.restore":
     "O cancelamento de um registro do Registro Civil foi desfeito (estorno), com justificativa.",
+  "rcpn.habilitacao.create":
+    "Um processo de habilitação para o casamento foi aberto no painel, com número do ano.",
+  "rcpn.habilitacao.edit":
+    "Um processo de habilitação para o casamento foi alterado. O histórico do processo guarda o que era antes e o que ficou.",
+  "rcpn.habilitacao.edital":
+    "O edital de proclamas de uma habilitação foi publicado no site da serventia, só com o que a norma permite (nome, estado civil, filiação e domicílio).",
+  "rcpn.habilitacao.cancel":
+    "Um processo de habilitação para o casamento foi cancelado, com justificativa. Ele continua guardado e pode ser estornado.",
+  "rcpn.habilitacao.restore":
+    "O cancelamento de um processo de habilitação foi desfeito (estorno), com justificativa.",
   "daily-book.import":
     "Um relatório de produtividade foi anexado e os atos lidos foram lançados como receita no Livro Diário Auxiliar.",
   "daily-book.entry-add":
@@ -567,6 +585,7 @@ const NUMBERED: Record<string, string> = {
   guia: "guias",
   notificacao: "notificações",
   "declaracao-iss": "declarações de ISS",
+  habilitacao: "habilitações de casamento",
 };
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
