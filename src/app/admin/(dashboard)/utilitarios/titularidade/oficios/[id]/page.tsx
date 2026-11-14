@@ -13,8 +13,14 @@ import { getFilingWith } from "@/lib/title-transfers.ts";
 import { BackLink } from "../../../../../_components/back-link.tsx";
 import { AdminPageHeader } from "../../../../../_components/page-header.tsx";
 import { SignOrPrint } from "../../../../../_components/sign-or-print.tsx";
+import { buttonVariants } from "../../../../../_ui/button.tsx";
 import { requireTitularidade } from "../../_access.ts";
-import { MarkSentForm, RemoveFilingButton } from "../../titularidade-forms.tsx";
+import {
+  MarkSentForm,
+  RefreshFilingButton,
+  RemoveFilingButton,
+  RenumberFilingButton,
+} from "../../titularidade-forms.tsx";
 
 export const metadata = { title: "Ofício de titularidade" };
 
@@ -26,7 +32,11 @@ export default async function FilingPage({
   searchParams,
 }: {
   params: Promise<{ id: string }>;
-  searchParams: Promise<{ enviado?: string }>;
+  searchParams: Promise<{
+    enviado?: string;
+    editado?: string;
+    renumerado?: string;
+  }>;
 }) {
   await requireTitularidade();
   const tenant = await getTenant();
@@ -52,6 +62,13 @@ export default async function FilingPage({
           href={`/admin/utilitarios/titularidade?mes=${filing.competence}`}
           label="Titularidade à prefeitura"
         />
+        {(query.editado || query.renumerado) && (
+          <output className="block rounded-xl border border-success/30 bg-success-soft px-4 py-3 text-sm font-medium text-success-text">
+            {query.editado
+              ? "Ofício atualizado com os atos do mês."
+              : `Número alterado: agora é o ofício nº ${filing.number}.`}
+          </output>
+        )}
         {query.enviado && (
           <output className="block rounded-xl border border-success/30 bg-success-soft px-4 py-3 text-sm font-medium text-success-text">
             Envio registrado.
@@ -65,10 +82,23 @@ export default async function FilingPage({
             endereço e secretário). Assine digitalmente pelo painel ou imprima
             para assinar à mão.
           </p>
-          <SignOrPrint
-            pdfHref={pdf}
-            title={`Ofício ${filing.number} · titularidade à prefeitura`}
-          />
+          <span className="flex flex-wrap gap-2">
+            <SignOrPrint
+              pdfHref={pdf}
+              title={`Ofício ${filing.number} · titularidade à prefeitura`}
+            />
+            <a
+              href={`/admin/utilitarios/titularidade/oficios/${filing.id}/word`}
+              className={buttonVariants({ variant: "outline" })}
+            >
+              Word (.docx)
+            </a>
+          </span>
+          <span className="flex flex-wrap gap-2 border-t pt-3">
+            <RefreshFilingButton id={filing.id} issuedOn={filing.issuedOn} />
+            <RenumberFilingButton id={filing.id} sequence={filing.sequence} />
+            <RemoveFilingButton id={filing.id} />
+          </span>
         </section>
         <section className="flex flex-col gap-3 rounded-xl border bg-card p-6 shadow-xs">
           <h2 className="text-lg font-semibold text-foreground">
@@ -114,14 +144,6 @@ export default async function FilingPage({
             hasReceiptFile={Boolean(filing.receiptPath)}
             today={today()}
           />
-        </section>
-        <section className="flex flex-col gap-3 rounded-xl border border-destructive/20 bg-card p-6 shadow-xs sm:flex-row sm:items-center sm:justify-between">
-          <p className="text-sm text-muted-foreground text-justify hyphens-auto">
-            Errou o mês ou faltou um ato? Corrija os atos e gere outro ofício;
-            este pode ser excluído com justificativa e fica guardado com o
-            número.
-          </p>
-          <RemoveFilingButton id={filing.id} />
         </section>
       </main>
     </>

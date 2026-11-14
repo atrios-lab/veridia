@@ -18,8 +18,10 @@ import {
   createFilingWith,
   createTransferWith,
   markSentWith,
+  refreshFilingWith,
   removeFilingWith,
   removeTransferWith,
+  renumberFilingWith,
   TitularidadeError,
   updateTransferWith,
 } from "@/lib/title-transfers.ts";
@@ -256,4 +258,54 @@ export async function removeFilingAction(
   }
   revalidatePath(BASE);
   redirect(BASE);
+}
+
+export async function refreshFilingAction(
+  _previous: TitularidadeState,
+  formData: FormData,
+): Promise<TitularidadeState> {
+  const why = justify(formData);
+  if (why) return { status: "error", message: why };
+  const ok = await access();
+  if (!ok) return { status: "error", message: NO_PERMISSION };
+  const id = String(formData.get("id") ?? "");
+  try {
+    await refreshFilingWith(
+      db,
+      ok.tenant.slug,
+      id,
+      String(formData.get("issuedOn") ?? ""),
+      ok.session.user.id,
+      currentJustification() ?? "",
+    );
+  } catch (error) {
+    return failure(error, "titularidade.filing-edit");
+  }
+  revalidatePath(`${BASE}/oficios/${id}`);
+  redirect(`${BASE}/oficios/${id}?editado=1`);
+}
+
+export async function renumberFilingAction(
+  _previous: TitularidadeState,
+  formData: FormData,
+): Promise<TitularidadeState> {
+  const why = justify(formData);
+  if (why) return { status: "error", message: why };
+  const ok = await access();
+  if (!ok) return { status: "error", message: NO_PERMISSION };
+  const id = String(formData.get("id") ?? "");
+  try {
+    await renumberFilingWith(
+      db,
+      ok.tenant.slug,
+      id,
+      Number(String(formData.get("sequence") ?? "").replace(/\D/g, "")),
+      ok.session.user.id,
+      currentJustification() ?? "",
+    );
+  } catch (error) {
+    return failure(error, "titularidade.filing-renumber");
+  }
+  revalidatePath(BASE);
+  redirect(`${BASE}/oficios/${id}?renumerado=1`);
 }

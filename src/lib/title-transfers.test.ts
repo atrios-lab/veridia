@@ -15,7 +15,9 @@ import {
   listFilingsWith,
   listTransfersWith,
   markSentWith,
+  refreshFilingWith,
   removeTransferWith,
+  renumberFilingWith,
   TitularidadeError,
   updateTransferWith,
 } from "./title-transfers.ts";
@@ -180,4 +182,42 @@ test("ofício numerado com os atos do mês, ou sem movimento, e o envio", async 
   assert.equal(sent?.receipt, "CNB-2026-000123");
   assert.equal(sent?.receiptName, "recibo.pdf");
   assert.equal(sent?.semutReceipt, "Protocolo 45/2026");
+});
+
+test("editar o ofício com os atos atuais e modificar a numeração", async () => {
+  const now = new Date("2026-11-14T12:00:00Z");
+  const id = await createFilingWith(
+    db,
+    OFFICE,
+    "2026-09",
+    "2026-11-14",
+    "escrevente",
+    now,
+  );
+  await createTransferWith(db, OFFICE, act("2026-09-10"), "", "escrevente");
+  await refreshFilingWith(
+    db,
+    OFFICE,
+    id,
+    "2026-11-15",
+    "escrevente",
+    "Faltava um ato.",
+  );
+  let filing = (await listFilingsWith(db, OFFICE)).find((f) => f.id === id);
+  assert.equal(filing?.issuedOn, "2026-11-15");
+  assert.equal(filing?.transfers.length, 2);
+  await assert.rejects(
+    renumberFilingWith(db, OFFICE, id, 1, "tabeliao", "Ajuste."),
+    /já é de outro ofício/,
+  );
+  await renumberFilingWith(
+    db,
+    OFFICE,
+    id,
+    40,
+    "tabeliao",
+    "Seguir a numeração do livro.",
+  );
+  filing = (await listFilingsWith(db, OFFICE)).find((f) => f.id === id);
+  assert.equal(filing?.number, "040/2026");
 });

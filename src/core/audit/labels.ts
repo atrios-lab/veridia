@@ -77,6 +77,10 @@ const EXACT: Record<string, string> = {
     "Registrou o envio do ofício de titularidade à prefeitura",
   "titularidade.filing-remove":
     "Excluiu um ofício de titularidade à prefeitura (fica guardado)",
+  "titularidade.filing-edit":
+    "Atualizou um ofício de titularidade com os atos do mês",
+  "titularidade.filing-renumber":
+    "Mudou o número de um ofício de titularidade à prefeitura",
   "rcpn.habilitacao.edit": "Alterou um processo de habilitação de casamento",
   "rcpn.habilitacao.edital":
     "Publicou no site o edital de proclamas de uma habilitação",
@@ -422,6 +426,10 @@ const EXPLANATIONS: Record<string, string> = {
     "Foi registrado quando e como o ofício de titularidade chegou à prefeitura ou à plataforma, com o recibo.",
   "titularidade.filing-remove":
     "Um ofício de titularidade foi excluído, com justificativa. Ele continua guardado com o número.",
+  "titularidade.filing-edit":
+    "Um ofício de titularidade foi refeito com os atos do mês como estão agora, com justificativa. O número continua o mesmo.",
+  "titularidade.filing-renumber":
+    "O número de um ofício de titularidade foi mudado, com justificativa.",
   "rcpn.habilitacao.edit":
     "Um processo de habilitação para o casamento foi alterado. O histórico do processo guarda o que era antes e o que ficou.",
   "rcpn.habilitacao.edital":
