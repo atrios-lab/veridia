@@ -1959,3 +1959,141 @@ export const messengerMessages = pgTable(
     index("messenger_messages_conversation").on(t.conversationId, t.createdAt),
   ],
 );
+
+/**
+ * RCPN index (change `consulta-de-registro-rcpn`): each file the office sends
+ * from its registry system. The reading waits here, with its conference,
+ * until someone publishes it or discards it; the original file is kept only
+ * while the import is open and removed after (design, decision 5): the
+ * office keeps its own original in its registry system.
+ */
+export const rcpnImports = pgTable(
+  "rcpn_imports",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    tenantSlug,
+    fileName: text("file_name").notNull(),
+    sizeBytes: integer("size_bytes").notNull(),
+    /** SHA-256 of the file: the same file is never imported twice. */
+    sha256: text("sha256").notNull(),
+    /** Blob URL or disk path while open; null once published or discarded. */
+    storedPath: text("stored_path"),
+    /** What the reader recognised: "cartosoft-access", "carga-xml"... */
+    format: text("format").notNull().default(""),
+    /** lida | nao-lida | publicada | descartada */
+    status: text("status").notNull(),
+    /** The readable notes: what was read, what was not and why. */
+    notes: jsonb("notes").notNull().default(sql`'[]'::jsonb`),
+    /** The records read (core/rcpn RcpnRecord[]), until published. */
+    records: jsonb("records"),
+    publishedCount: integer("published_count"),
+    uploadedBy: text("uploaded_by"),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    closedAt: timestamp("closed_at", { withTimezone: true }),
+    closedBy: text("closed_by"),
+  },
+  (t) => [index("rcpn_imports_tenant").on(t.tenantSlug, t.createdAt)],
+);
+
+/** One registro of the index: nascimento, casamento or óbito. */
+export const rcpnRecords = pgTable(
+  "rcpn_records",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    tenantSlug,
+    kind: text("kind").notNull(),
+    /** "natimorto" for an óbito of the Livro C Auxiliar; "" otherwise. */
+    subtype: text("subtype").notNull().default(""),
+    /** core/rcpn recordKey: the matrícula, or book/page/term without one. */
+    recordKey: text("record_key").notNull(),
+    matricula: text("matricula").notNull().default(""),
+    book: text("book").notNull().default(""),
+    page: text("page").notNull().default(""),
+    term: text("term").notNull().default(""),
+    registeredOn: text("registered_on").notNull().default(""),
+    eventOn: text("event_on").notNull().default(""),
+    importId: uuid("import_id").references(() => rcpnImports.id),
+    updatedAt: timestamp("updated_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (t) => [
+    uniqueIndex("rcpn_records_key").on(t.tenantSlug, t.kind, t.recordKey),
+  ],
+);
+
+/** A person of a registro: the one searched by name, mother and birth. */
+export const rcpnPeople = pgTable(
+  "rcpn_people",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    tenantSlug,
+    recordId: uuid("record_id")
+      .notNull()
+      .references(() => rcpnRecords.id),
+    /** registrado | conjuge1 | conjuge2 | falecido */
+    role: text("role").notNull(),
+    name: text("name").notNull(),
+    /** core/rcpn normalizeName: what the lookups compare. */
+    nameNorm: text("name_norm").notNull(),
+    marriedName: text("married_name").notNull().default(""),
+    motherName: text("mother_name").notNull().default(""),
+    motherNorm: text("mother_norm").notNull().default(""),
+    fatherName: text("father_name").notNull().default(""),
+    birthDate: text("birth_date").notNull().default(""),
+    profession: text("profession").notNull().default(""),
+    fatherProfession: text("father_profession").notNull().default(""),
+    motherProfession: text("mother_profession").notNull().default(""),
+  },
+  (t) => [
+    uniqueIndex("rcpn_people_role").on(t.recordId, t.role),
+    index("rcpn_people_lookup").on(t.tenantSlug, t.nameNorm, t.birthDate),
+    index("rcpn_people_birth").on(t.tenantSlug, t.birthDate),
+  ],
+);
+
+/**
+ * A certidão of the Registro Civil issued from the panel, in the national
+ * standard (change consulta-de-registro-rcpn, decision of 14/11/2026): the
+ * fields as the person checked them against the book, the selo pasted from
+ * the TJRN lot, and the signed or scanned file attached later. Edited with a
+ * justification, removed by a mark: never deleted.
+ */
+export const rcpnCertidoes = pgTable(
+  "rcpn_certidoes",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    tenantSlug,
+    kind: text("kind").notNull(),
+    /** "natimorto" when issued for one; "" otherwise. */
+    subtype: text("subtype").notNull().default(""),
+    /** core/rcpn/certidao CertidaoForm: "breve" or "inteiro-teor". */
+    form: text("form").notNull().default("breve"),
+    recordId: uuid("record_id").references(() => rcpnRecords.id),
+    /** core/rcpn/certidao field key → value, as printed. */
+    fields: jsonb("fields").notNull(),
+    /** The selo code pasted from the TJRN lot (no caixa yet). */
+    seal: text("seal").notNull().default(""),
+    /** Normal or isento, as the lot says. */
+    sealKind: text("seal_kind").notNull().default(""),
+    /** The amounts line, as the office prints it (optional). */
+    fees: text("fees").notNull().default(""),
+    /** Who signs: name and title. */
+    signerName: text("signer_name").notNull().default(""),
+    signerTitle: text("signer_title").notNull().default(""),
+    attachmentPath: text("attachment_path"),
+    attachmentName: text("attachment_name"),
+    createdBy: text("created_by"),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    updatedBy: text("updated_by"),
+    updatedAt: timestamp("updated_at", { withTimezone: true }),
+    removedAt: timestamp("removed_at", { withTimezone: true }),
+    removedBy: text("removed_by"),
+    removedReason: text("removed_reason"),
+  },
+  (t) => [index("rcpn_certidoes_tenant").on(t.tenantSlug, t.createdAt)],
+);

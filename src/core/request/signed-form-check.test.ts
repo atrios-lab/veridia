@@ -1,6 +1,10 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { judgeSignedForm, readSignedFormCheck } from "./signed-form-check.ts";
+import {
+  judgeSignedForm,
+  readSignedFormCheck,
+  waitsOnSignedForm,
+} from "./signed-form-check.ts";
 
 const OURS =
   "Registro Civil REQUERIMENTO Protocolo REQ.2026.000148 · 12/11/2026 Do requerimento Termos em que pede deferimento.";
@@ -88,4 +92,71 @@ test("leitura guardada no pedido", () => {
     })?.verdict,
     "review",
   );
+});
+
+// Fictitious records only (LGPD).
+const FILED = new Date("2026-11-09T12:00:00Z");
+const SITE = { consents: { lgpd: "2026-11-09T12:00:00Z" } };
+const base = {
+  status: "new",
+  details: SITE as unknown,
+  createdAt: FILED,
+  consultation: false,
+  hasSignedForm: false,
+};
+
+test("mesa: pedido do site esperando o requerimento assinado fica fora", () => {
+  assert.equal(
+    waitsOnSignedForm({ ...base, status: "awaiting-signed-form" }),
+    true,
+  );
+  // Filed before the status existed: still "new", no requerimento.
+  assert.equal(waitsOnSignedForm(base), true);
+  // The form's own uploads, seconds after filing, are not a new move.
+  assert.equal(
+    waitsOnSignedForm({
+      ...base,
+      lastCitizenActivityAt: new Date(FILED.getTime() + 30_000),
+    }),
+    true,
+  );
+});
+
+test("mesa: o pedido chega quando o cliente age ou o requerimento precisa de conferência", () => {
+  assert.equal(waitsOnSignedForm({ ...base, hasSignedForm: true }), false);
+  assert.equal(
+    waitsOnSignedForm({
+      ...base,
+      lastCitizenActivityAt: new Date("2026-11-11T09:00:00Z"),
+    }),
+    false,
+  );
+  assert.equal(
+    waitsOnSignedForm({
+      ...base,
+      status: "awaiting-signed-form",
+      details: {
+        ...SITE,
+        signedFormCheck: {
+          verdict: "review",
+          reason: "Foto",
+          checkedAt: "2026-11-10T10:00:00Z",
+        },
+      },
+    }),
+    false,
+  );
+});
+
+test("mesa: balcão, chat, consulta e pedido já em andamento não esperam requerimento", () => {
+  assert.equal(
+    waitsOnSignedForm({ ...base, details: { channel: "counter" } }),
+    false,
+  );
+  assert.equal(
+    waitsOnSignedForm({ ...base, details: { channel: "chat" } }),
+    false,
+  );
+  assert.equal(waitsOnSignedForm({ ...base, consultation: true }), false);
+  assert.equal(waitsOnSignedForm({ ...base, status: "in-review" }), false);
 });

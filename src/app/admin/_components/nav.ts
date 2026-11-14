@@ -127,6 +127,87 @@ export const ADMIN_NAV: readonly AdminNavItem[] = [
     permission: "chat.manage",
   },
   {
+    // The office's attributions (decision of 14/11/2026): one entry per
+    // specialty, each where its files are loaded and its acts worked. The
+    // first is the Registro Civil (change consulta-de-registro-rcpn); the
+    // others (Imóveis, Títulos e Documentos, Pessoas Jurídicas, Protesto,
+    // Distribuição, Notas) and the Caixa have their guide (books, indexes
+    // and deadlines of the law, core/attributions/guides.ts) and link to
+    // what the panel already does for them.
+    group: "Atribuições",
+    label: "Registro Civil",
+    href: "/admin/rcpn",
+    icon: "file",
+    permission: "rcpn.search",
+    children: [
+      { label: "Pesquisar no índice", href: "/admin/rcpn" },
+      {
+        label: "Certidões",
+        href: "/admin/rcpn/certidoes",
+        permission: "rcpn.certidao",
+      },
+      {
+        label: "Importar arquivos",
+        href: "/admin/rcpn/importar",
+        permission: "rcpn.import",
+      },
+      {
+        label: "Guia: livros e prazos",
+        href: "/admin/atribuicoes/registro-civil",
+        permission: "attributions.view",
+      },
+    ],
+  },
+  {
+    group: "Atribuições",
+    label: "Registro de Imóveis",
+    href: "/admin/atribuicoes/registro-de-imoveis",
+    icon: "house",
+    permission: "attributions.view",
+  },
+  {
+    group: "Atribuições",
+    label: "Títulos e Documentos",
+    href: "/admin/atribuicoes/titulos-e-documentos",
+    icon: "files",
+    permission: "attributions.view",
+  },
+  {
+    group: "Atribuições",
+    label: "Pessoas Jurídicas",
+    href: "/admin/atribuicoes/pessoas-juridicas",
+    icon: "building",
+    permission: "attributions.view",
+  },
+  {
+    group: "Atribuições",
+    label: "Protesto",
+    href: "/admin/atribuicoes/protesto",
+    icon: "gavel",
+    permission: "attributions.view",
+  },
+  {
+    group: "Atribuições",
+    label: "Distribuição",
+    href: "/admin/atribuicoes/distribuicao",
+    icon: "shuffle",
+    permission: "attributions.view",
+  },
+  {
+    group: "Atribuições",
+    label: "Notas",
+    href: "/admin/atribuicoes/notas",
+    icon: "signature",
+    permission: "attributions.view",
+  },
+  {
+    group: "Atribuições",
+    label: "Caixa",
+    href: "/admin/atribuicoes/caixa",
+    icon: "wallet",
+    permission: "attributions.view",
+  },
+  {
     // Tools for the deed desk. The first: the guias de transmissão de bens (ITIV,
     // ITCD, laudêmio, certidão imobiliária) the notary signs and the party
     // takes to the fisco before the escritura.
@@ -352,6 +433,9 @@ export function navGroups(
  * panel's routes (ajuda/): only the sidebar draws the fold.
  */
 export const FOLDED_GROUPS: Readonly<Record<string, AdminIconName>> = {
+  // Decision of 14/11/2026: "atribuições fique igual utilitários,
+  // minimizado".
+  Atribuições: "library",
   Utilitários: "wrench",
 };
 

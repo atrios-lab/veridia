@@ -118,11 +118,37 @@ test("o subitem atual é o da rota exata, ou a lista de onde o registro veio", (
 });
 
 test("Utilitários é um tópico só, com os utilitários como subtópicos", () => {
-  assert.deepEqual(Object.keys(FOLDED_GROUPS), ["Utilitários"]);
+  // Atribuições folds the same way (decision of 14/11/2026).
+  assert.deepEqual(Object.keys(FOLDED_GROUPS).sort(), [
+    "Atribuições",
+    "Utilitários",
+  ]);
   const group = navGroups(ADMIN_NAV).find(
     (entry) => entry.group === "Utilitários",
   );
   assert.equal(group?.items.length, 6);
+});
+
+test("Atribuições é um tópico só: Registro Civil, as outras seis e o Caixa", () => {
+  const group = navGroups(ADMIN_NAV).find(
+    (entry) => entry.group === "Atribuições",
+  );
+  assert.deepEqual(
+    group?.items.map((item) => item.label),
+    [
+      "Registro Civil",
+      "Registro de Imóveis",
+      "Títulos e Documentos",
+      "Pessoas Jurídicas",
+      "Protesto",
+      "Distribuição",
+      "Notas",
+      "Caixa",
+    ],
+  );
+  // The Registro Civil's own screen comes first among its screens.
+  const civil = group?.items[0];
+  assert.equal(civil?.children?.[0]?.href, civil?.href);
 });
 
 test("o tópico fechado soma os avisos de dentro, sem contar duas vezes", () => {

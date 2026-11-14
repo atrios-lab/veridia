@@ -95,6 +95,11 @@ const signing = new AsyncLocalStorage<"digital">();
 export const DIGITAL_SIGNATURE_NOTE =
   "Documento assinado digitalmente com certificado ICP-Brasil, nos termos do art. 10, § 1º, da Medida Provisória nº 2.200-2/2001, dispensada a assinatura de próprio punho. A identificação do signatário e o código de verificação de autenticidade constam da margem lateral.";
 
+/** Whether the document being drawn is the version to sign digitally. */
+export function isDigitalSigning(): boolean {
+  return signing.getStore() === "digital";
+}
+
 /** Draws what `run` renders as documents to be signed digitally. */
 export function forDigitalSignature<T>(run: () => Promise<T>): Promise<T> {
   return signing.run("digital", run);

@@ -75,6 +75,17 @@ export const OFFICE_PERMISSIONS = [
   "paper-orders.manage",
   // Livro Diário Auxiliar da Receita e da Despesa (decision of 11/11/2026).
   "daily-book.manage",
+  // The RCPN index (change consulta-de-registro-rcpn): searching it, and
+  // sending the registry system's files that feed it. Two lines: who
+  // answers the counter is not always who loads the office's whole base.
+  "rcpn.search",
+  "rcpn.import",
+  // The certidões of the Registro Civil issued from the index (decision of
+  // 14/11/2026): issue, correct, attach the signed one, exclude.
+  "rcpn.certidao",
+  // The guides of the attributions (decision of 14/11/2026): books,
+  // indexes and deadlines of each specialty, as the law sets them.
+  "attributions.view",
   // The office's audit trail in full, and the formal notifications that ask
   // a person to explain an act: the Tabelião/Registrador's alone.
   "audit.manage",
@@ -107,6 +118,10 @@ export const GRANTABLE_PERMISSIONS = [
   "security-paper.manage",
   "paper-orders.manage",
   "daily-book.manage",
+  "rcpn.search",
+  "rcpn.import",
+  "rcpn.certidao",
+  "attributions.view",
 ] as const;
 export type GrantablePermission = (typeof GRANTABLE_PERMISSIONS)[number];
 
@@ -130,6 +145,13 @@ export const DERIVED_FROM: Partial<Record<GrantablePermission, Permission>> = {
   "paper-orders.manage": "security-paper.manage",
   // Whoever declares the ISS works the book the ISS comes from.
   "daily-book.manage": "iss.manage",
+  // Whoever answers the búsca at the counter searches the index. Loading
+  // the base derives from nothing: the Tabelião/Registrador grants it.
+  "rcpn.search": "requests.manage",
+  // Whoever issued certidões on the paper issues them here.
+  "rcpn.certidao": "security-paper.manage",
+  // Everyone at the desk reads the guides.
+  "attributions.view": "desk.access",
 };
 
 /**
@@ -352,4 +374,11 @@ export const GRANTABLE_LABELS: Record<GrantablePermission, string> = {
     "Solicitação de papéis de segurança (empresas, modelos e pedidos)",
   "daily-book.manage":
     "Livro Diário Auxiliar da Receita e da Despesa (lançamentos, PDFs e balanço)",
+  "rcpn.search": "Registro Civil: pesquisar o índice de registros",
+  "rcpn.import":
+    "Registro Civil: enviar os arquivos do sistema do registro civil ao índice",
+  "rcpn.certidao":
+    "Registro Civil: emitir, corrigir e excluir certidões (com selo e anexo)",
+  "attributions.view":
+    "Atribuições: consultar os guias de cada especialidade (livros, índices e prazos da lei)",
 };
