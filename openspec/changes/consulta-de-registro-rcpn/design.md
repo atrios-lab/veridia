@@ -201,6 +201,48 @@ Pelos nomes, parece ser a remessa estatística do registro civil (nascidos vivos
 óbitos, óbitos fetais); "24" é o código IBGE do RN. O `.sis` deve ser o ".sys" citado pela
 serventia. Com a senha, dá para confirmar o leiaute.
 
+Mais quatro XMLs (`NA6650`, `NA17198`, `NA930`, `CA485`) têm a raiz `certidao`. É a
+certidão on-line da CRC gerada pelo Cartosoft, com:
+
+- dados da certidão (nome, matrícula, filiação, avós, DNV, observações e averbações);
+- o selo (`num_selo`, `cod_selo`, `desc_selo`) e `codigo_hash`;
+- anotações de cadastro (CPF, título de eleitor, documentos);
+- campos de rejeição.
+
+Esses XMLs também não trazem profissão.
+
+O `eProclamas-0.XML` (`edital_proclama`, versão 1.3) é o edital de proclamas eletrônico. Ele
+traz a ocupação dos dois noivos (`texto_livre_ocupacao_conjuge_1` e `_2`), a filiação e o
+novo nome: é mais uma fonte de profissão no casamento.
+
+**Codificação:** todos declaram UTF-8 e vêm em Windows-1252. O leitor de XML precisa
+detectar a codificação real e não confiar na declaração; senão, recusa o arquivo.
+
+## Modelos de casamento e habilitação (análise de 14/11/2026)
+
+A serventia enviou cerca de 50 modelos do processo de casamento, para uma mudança futura de
+habilitação:
+
+- edital de proclamas (próprio e para outro cartório), certidões de edital e certificado de
+  habilitação;
+- consentimentos, declarações dos contraentes (analfabeto, divorciado ou viúvo, com ou sem
+  pacto, residência, dia e hora, mudança de horário);
+- petição ao juiz de paz e capa do processo;
+- livros de casamento: civil, religioso com efeito civil, remissão recíproca, conversão de
+  união estável;
+- comunicações de casamento ao registro de nascimento e de casamento anterior;
+- certidões pelo Provimento CNJ 63/2017, inclusive inteiro teor, isenta e com selo.
+
+Citam o Código Civil e a Lei 6.015. Três ainda trazem Minas Gerais: o edital para outro
+cartório, a petição de conversão de união estável e o selo eletrônico da certidão. Um modelo
+é próprio da serventia (edital de proclamas "IM"). A mesma regra vale: texto normativo de MG
+não vai para documento do RN.
+
+**Cuidado com material real:** um dos arquivos do lote não era modelo. Era um documento de
+trabalho com dados reais de pessoas, inclusive dado de saúde. A cópia de análise foi apagada;
+nada dele entrou no repositório. Modelos para a plataforma devem vir sempre em branco (com os
+campos `<%...%>`).
+
 ## Modelos de certidão do Cartosoft (análise de 14/11/2026)
 
 Esta seção registra, para a mudança futura de emissão, o que os modelos mostram. Foram 29
