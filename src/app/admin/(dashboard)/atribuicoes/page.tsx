@@ -33,7 +33,7 @@ export default async function AttributionsPage() {
                 {guide.title}
               </span>
             </span>
-            <span className="text-sm text-muted-foreground">
+            <span className="text-sm text-muted-foreground text-justify hyphens-auto">
               {guide.summary}
             </span>
             <span className="mt-auto pt-2 text-xs text-muted-foreground">

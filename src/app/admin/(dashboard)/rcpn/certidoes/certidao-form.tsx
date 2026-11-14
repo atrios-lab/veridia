@@ -166,8 +166,8 @@ export function CertidaoForm({
               className="checkbox-admin mt-0.5"
             />
             <span>
-              Natimorto (registro no Livro C Auxiliar, Lei 6.015/1973, art. 33,
-              V, e art. 53, § 1º)
+              Natimorto (registro no Livro C Auxiliar, Lei nº 6.015/1973, art.
+              33, V, e art. 53, § 1º)
             </span>
           </label>
         )}
