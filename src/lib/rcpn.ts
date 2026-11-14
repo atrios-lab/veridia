@@ -271,7 +271,7 @@ export async function publishImportWith(
   tenantSlug: string,
   id: string,
   actorId: string,
-  replace: ReadonlySet<string>,
+  replace: ReadonlySet<string> | "all",
 ): Promise<number> {
   const row = await getImportWith(database, tenantSlug, id);
   if (!row || row.status !== "lida") {
@@ -286,7 +286,18 @@ export async function publishImportWith(
     (row.records ?? []) as RcpnRecord[],
     existing,
   );
-  const chosen = toPublish(conference, replace);
+  // "all": every changed registro takes the file's data (the screen shows
+  // only the first ones to mark one by one).
+  const chosen = toPublish(
+    conference,
+    replace === "all"
+      ? new Set(
+          conference.checked
+            .filter((c) => c.comparison === "alterado")
+            .map((c) => c.key),
+        )
+      : replace,
+  );
 
   // In batches (decision of 14/11/2026, after a whole base of ~24 thousand
   // registros did not fit one request): one insert per 500 registros and
@@ -566,7 +577,7 @@ export const rcpn = {
     tenantSlug: string,
     id: string,
     actorId: string,
-    replace: ReadonlySet<string>,
+    replace: ReadonlySet<string> | "all",
   ) => publishImportWith(db, tenantSlug, id, actorId, replace),
   discard: (tenantSlug: string, id: string, actorId: string) =>
     discardImportWith(db, tenantSlug, id, actorId),

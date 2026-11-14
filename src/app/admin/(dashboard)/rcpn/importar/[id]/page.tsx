@@ -30,6 +30,8 @@ export const metadata = { title: "Conferir arquivo do Registro Civil" };
 // 14/11/2026, after a full carga did not fit).
 export const maxDuration = 300;
 
+const CHANGED_ON_SCREEN = 200;
+
 /** How a registro reads in a list: who, and where in the books. */
 function labelOf(record: RcpnRecord): string {
   const names = record.people.map((p) => p.name || "(sem nome)").join(" e ");
@@ -60,20 +62,25 @@ export default async function ImportDetailPage({
   const notes = (row.notes ?? []) as string[];
   const open = row.status === "lida";
   const conference = open ? await rcpn.conference(tenant.slug, row) : null;
-  const changed: ChangedItem[] =
-    conference?.checked
-      .filter(
-        (c) =>
-          c.comparison === "alterado" &&
-          !c.problems.some((p) => BLOCKING.includes(p)),
-      )
-      .map((c) => ({
-        key: c.key,
-        label: labelOf(c.record),
-        changes: c.details.map(
-          (d) => `${d.label}: ${d.before || "(vazio)"} → ${d.after}`,
-        ),
-      })) ?? [];
+  const allChanged =
+    conference?.checked.filter(
+      (c) =>
+        c.comparison === "alterado" &&
+        !c.problems.some((p) => BLOCKING.includes(p)),
+    ) ?? [];
+  // Only the first ones go to the screen, one by one: a whole base sent
+  // again can differ in thousands, and the page must stay small (the
+  // hosting refuses answers above 4.5 MB). The rest are replaced with
+  // "Substituir todos".
+  const changed: ChangedItem[] = allChanged
+    .slice(0, CHANGED_ON_SCREEN)
+    .map((c) => ({
+      key: c.key,
+      label: labelOf(c.record),
+      changes: c.details.map(
+        (d) => `${d.label}: ${d.before || "(vazio)"} → ${d.after}`,
+      ),
+    }));
   const newCount =
     conference?.checked.filter(
       (c) =>
@@ -194,6 +201,7 @@ export default async function ImportDetailPage({
                   id={row.id}
                   newCount={newCount}
                   changed={changed}
+                  changedTotal={allChanged.length}
                 />
                 <DiscardForm id={row.id} />
               </div>

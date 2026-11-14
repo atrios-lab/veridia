@@ -59,6 +59,15 @@ export async function uploadImportAction(
     };
   const { session, tenant } = gate;
   let id: string;
+  // Each step's time and size in the server's log, with no personal data:
+  // what the support needs when an upload fails (decision of 14/11/2026).
+  const started = Date.now();
+  const step = (name: string, extra: Record<string, unknown> = {}) =>
+    console.info("rcpn.upload.etapa", {
+      etapa: name,
+      ms: Date.now() - started,
+      ...extra,
+    });
   try {
     const url = String(formData.get("url") ?? "");
     let bytes: Uint8Array;
@@ -85,16 +94,18 @@ export async function uploadImportAction(
       fileName = file.name;
       storedPath = await storeImportFile(tenant.slug, bytes, fileName);
     }
+    step("arquivo recebido", { bytes: bytes.byteLength, direto: Boolean(url) });
     ({ id } = await rcpn.createImport(tenant.slug, {
       fileName,
       bytes,
       storedPath,
       uploadedBy: session.user.id,
     }));
+    step("lido e guardado");
   } catch (error) {
     if (error instanceof RcpnImportError)
       return { status: "error", message: error.message };
-    console.error("rcpn.upload", error);
+    console.error("rcpn.upload", { ms: Date.now() - started }, error);
     return {
       status: "error",
       message: "Não foi possível ler o arquivo. Tente de novo.",
@@ -120,7 +131,10 @@ export async function publishImportAction(
       message: "Sem permissão para publicar no índice.",
     };
   const id = String(formData.get("id") ?? "");
-  const replace = new Set(formData.getAll("substituir").map(String));
+  const replace: ReadonlySet<string> | "all" =
+    formData.get("substituirTodos") === "1"
+      ? "all"
+      : new Set(formData.getAll("substituir").map(String));
   let count: number;
   try {
     count = await rcpn.publish(
