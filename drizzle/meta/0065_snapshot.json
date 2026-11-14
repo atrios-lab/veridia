@@ -1,5 +1,5 @@
 {
-  "id": "6133174d-46fd-4aea-a527-9a43a19a9d43",
+  "id": "bb4af1b1-cfbd-4a88-9f4c-086e0f7c7b8c",
   "prevId": "6a491fed-327f-4264-ad1d-052dbd875359",
   "version": "7",
   "dialect": "postgresql",
@@ -6952,6 +6952,32 @@
         },
         "receipt": {
           "name": "receipt",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "''"
+        },
+        "receipt_path": {
+          "name": "receipt_path",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "receipt_name": {
+          "name": "receipt_name",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "semut_on": {
+          "name": "semut_on",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "''"
+        },
+        "semut_receipt": {
+          "name": "semut_receipt",
           "type": "text",
           "primaryKey": false,
           "notNull": true,

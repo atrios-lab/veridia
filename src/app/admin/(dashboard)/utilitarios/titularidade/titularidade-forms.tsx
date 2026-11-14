@@ -2,7 +2,12 @@
 
 import { useActionState, useId } from "react";
 import { LONG_TEXT_MAX, MIN_JUSTIFICATION } from "@/core/text-limits.ts";
-import { OPERATIONS, SERVICES } from "@/core/titularidade/titularidade.ts";
+import {
+  CHANNELS,
+  type Channel,
+  OPERATIONS,
+  SERVICES,
+} from "@/core/titularidade/titularidade.ts";
 import { ConfirmAction } from "../../../_components/confirm-action.tsx";
 import { Button } from "../../../_ui/button.tsx";
 import { Input } from "../../../_ui/input.tsx";
@@ -478,12 +483,19 @@ export function MarkSentForm({
   sentOn,
   channel,
   receipt,
+  semutOn,
+  semutReceipt,
+  hasReceiptFile,
   today,
 }: {
   id: string;
   sentOn: string;
-  channel: string;
+  /** The platform already registered, or the one the acts call for. */
+  channel: Channel;
   receipt: string;
+  semutOn: string;
+  semutReceipt: string;
+  hasReceiptFile: boolean;
   today: string;
 }) {
   const [state, action, pending] = useActionState(markSentAction, IDLE);
@@ -502,34 +514,77 @@ export function MarkSentForm({
         />
       </div>
       <div className="flex flex-col gap-1.5">
-        <Label htmlFor={`${base}-channel`}>Como</Label>
+        <Label htmlFor={`${base}-channel`}>Plataforma</Label>
         <NativeSelect
           id={`${base}-channel`}
           name="channel"
-          defaultValue={channel || "Protocolo na SEMUT"}
+          defaultValue={channel}
           className="w-full"
         >
-          <option>Protocolo na SEMUT</option>
-          <option>E-mail à SEMUT</option>
-          <option>Plataforma do CNB/CF (Notas)</option>
-          <option>Plataforma do ONR (Registro de Imóveis)</option>
-          <option>Sistema da prefeitura</option>
+          {Object.entries(CHANNELS).map(([value, label]) => (
+            <option key={value} value={value}>
+              {label}
+            </option>
+          ))}
         </NativeSelect>
       </div>
-      <div className="flex flex-col gap-1.5 sm:col-span-2">
-        <Label htmlFor={`${base}-receipt`}>Recibo ou protocolo</Label>
+      <div className="flex flex-col gap-1.5">
+        <Label htmlFor={`${base}-receipt`}>Número do recibo de entrega</Label>
         <Input
           id={`${base}-receipt`}
           name="receipt"
           defaultValue={receipt}
           maxLength={300}
-          placeholder="Número do protocolo ou do recibo de entrega"
+          required
+          minLength={3}
+          placeholder="Como a plataforma informa"
         />
-        <p className="text-xs text-muted-foreground">
-          O envio é eletrônico e mediante recibo (Código Nacional de Normas,
-          art. 184-A, § 2º). Guarde aqui o número.
-        </p>
       </div>
+      <div className="flex flex-col gap-1.5">
+        <Label htmlFor={`${base}-recibo`}>
+          Comprovante{" "}
+          {hasReceiptFile
+            ? "(já anexado; envie outro para trocar)"
+            : "(PDF ou imagem)"}
+        </Label>
+        <Input
+          id={`${base}-recibo`}
+          name="recibo"
+          type="file"
+          accept="application/pdf,image/png,image/jpeg"
+        />
+      </div>
+      <p className="text-xs text-muted-foreground text-justify hyphens-auto sm:col-span-2">
+        As informações devem ser remetidas por meio eletrônico e mediante recibo
+        de entrega: o Tabelionato de Notas à plataforma do CNB/CF, o Registro de
+        Imóveis à do ONR (Código Nacional de Normas, art. 184-A, § 2º). O recibo
+        é a prova do envio.
+      </p>
+      <fieldset className="grid gap-4 rounded-lg border px-4 py-3 sm:col-span-2 sm:grid-cols-2">
+        <legend className="px-1 text-sm font-medium">
+          Entrega do ofício à SEMUT (opcional)
+        </legend>
+        <div className="flex flex-col gap-1.5">
+          <Label htmlFor={`${base}-semutOn`}>Entregue em</Label>
+          <Input
+            id={`${base}-semutOn`}
+            name="semutOn"
+            type="date"
+            defaultValue={semutOn}
+          />
+        </div>
+        <div className="flex flex-col gap-1.5">
+          <Label htmlFor={`${base}-semutReceipt`}>
+            Protocolo na prefeitura
+          </Label>
+          <Input
+            id={`${base}-semutReceipt`}
+            name="semutReceipt"
+            defaultValue={semutReceipt}
+            maxLength={300}
+          />
+        </div>
+      </fieldset>
       {state.status === "error" && (
         <p
           role="alert"
@@ -540,7 +595,7 @@ export function MarkSentForm({
       )}
       <div className="sm:col-span-2">
         <Button type="submit" disabled={pending}>
-          {pending ? "Salvando..." : "Registrar envio"}
+          {pending ? "Salvando..." : "Registrar envio e recibo"}
         </Button>
       </div>
     </form>

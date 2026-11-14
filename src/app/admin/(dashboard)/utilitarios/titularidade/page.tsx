@@ -1,9 +1,11 @@
 import Link from "next/link";
 import { officeHolidays } from "@/core/scheduling/calendar.ts";
 import {
+  CHANNELS,
   competenceLabel,
   deadlineOf,
   formatCents,
+  isChannel,
   OPERATIONS,
   transferWarnings,
 } from "@/core/titularidade/titularidade.ts";
@@ -122,7 +124,7 @@ export default async function TitularidadePage({
             </p>
             <p>
               {sent
-                ? `${sent.channel}${sent.receipt ? ` · recibo ${sent.receipt}` : ""}`
+                ? `${isChannel(sent.channel) ? CHANNELS[sent.channel] : sent.channel} · recibo ${sent.receipt}`
                 : `Último dia útil do mês seguinte a ${competenceLabel(mes)}${late ? "" : days >= 0 ? ` (${days} dia${days === 1 ? "" : "s"})` : ""}.`}
             </p>
           </div>

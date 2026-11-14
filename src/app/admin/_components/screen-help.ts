@@ -860,7 +860,7 @@ ENTRIES["/admin/utilitarios/titularidade"] = {
     "Confira cada campo. A operação é obrigatória (compra e venda, doação, permuta, usucapião...; a lista é a da DOI). Partes: uma por linha, nome; CPF ou CNPJ; participação.",
     "Salve: o ato entra no mês em que foi praticado. Errou? Altere ou exclua, com justificativa.",
     "Até o último dia útil do mês seguinte, clique em Gerar ofício do mês (ou sem movimento, se não houve ato). Assine digitalmente ou imprima.",
-    "Envie pela plataforma do CNB/CF (Notas) ou do ONR (Registro de Imóveis), usando a planilha do mês, e entregue o ofício à SEMUT se a prefeitura pedir. Registre o envio e o recibo.",
+    "Envie por meio eletrônico, à plataforma do CNB/CF (Notas) ou do ONR (Registro de Imóveis), usando a planilha do mês (art. 184-A, § 2º). Registre a data, a plataforma e o número do recibo de entrega, que é obrigatório, e anexe o comprovante. A entrega do ofício à SEMUT é opcional e não substitui o envio eletrônico.",
   ],
   terms: [
     {

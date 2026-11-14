@@ -2258,10 +2258,19 @@ export const titleTransferFilings = pgTable(
     transfers: jsonb("transfers").notNull().default(sql`'[]'::jsonb`),
     /** The ofício's date (ISO). */
     issuedOn: text("issued_on").notNull(),
-    /** When and how it reached the prefeitura or the platform. */
+    /**
+     * The electronic sending with its receipt (CNN, art. 184-A, § 2º): the
+     * day, the platform (core/titularidade CHANNELS: cnb, onr, cnb-onr), the
+     * receipt's number and, when attached, the receipt itself.
+     */
     sentOn: text("sent_on").notNull().default(""),
     channel: text("channel").notNull().default(""),
     receipt: text("receipt").notNull().default(""),
+    receiptPath: text("receipt_path"),
+    receiptName: text("receipt_name"),
+    /** The signed ofício delivered to the SEMUT too, when it was. */
+    semutOn: text("semut_on").notNull().default(""),
+    semutReceipt: text("semut_receipt").notNull().default(""),
     createdBy: text("created_by").notNull(),
     createdAt: timestamp("created_at", { withTimezone: true })
       .notNull()

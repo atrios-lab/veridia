@@ -34,11 +34,25 @@ Os atos DEVEM (SHALL) ser agrupados pelo mês em que foram praticados, com o pra
 O painel DEVE (SHALL) gerar o ofício numerado do mês, com o destinatário, a fundamentação (CNN,
 art. 184-A; Resolução CNJ nº 547/2024, art. 4º), a gratuidade (§ 9º), a relação e a ficha de cada
 ato; sem ato, o ofício sem movimento. O ofício DEVE (SHALL) poder ser assinado digitalmente ou
-impresso, e o envio registrado com data, canal e recibo.
+impresso.
+
+#### Scenario: Mês sem ato
+- **WHEN** o mês não teve ato de mudança de titularidade
+- **THEN** o painel gera o ofício sem movimento, com a mesma fundamentação
+
+### Requirement: Envio eletrônico mediante recibo de entrega
+O envio DEVE (SHALL) ser registrado como remessa por meio eletrônico à plataforma do CNB/CF
+(notas), do ONR (registro de imóveis) ou às duas (CNN, art. 184-A, § 2º), com a data e o número do
+recibo de entrega, que é obrigatório; o comprovante PODE (MAY) ser anexado. A entrega do ofício em
+papel à SEMUT PODE (MAY) ser registrada à parte e NÃO DEVE (SHALL NOT) contar como o envio.
 
 #### Scenario: Registrar o envio
-- **WHEN** a serventia informa a data, o canal e o recibo
-- **THEN** o mês aparece como enviado, com o recibo
+- **WHEN** a serventia informa a data, a plataforma e o recibo de entrega
+- **THEN** o mês aparece como enviado, com a plataforma, o recibo e o comprovante
+
+#### Scenario: Só protocolo na prefeitura
+- **WHEN** alguém tenta registrar o envio sem plataforma ou sem recibo
+- **THEN** o painel recusa e cita o art. 184-A, § 2º
 
 ### Requirement: Planilha do mês
 O painel DEVE (SHALL) oferecer a planilha do mês, com o código da operação da DOI ao lado da

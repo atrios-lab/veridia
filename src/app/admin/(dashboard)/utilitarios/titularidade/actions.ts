@@ -24,6 +24,7 @@ import {
   updateTransferWith,
 } from "@/lib/title-transfers.ts";
 import { readTitleFile } from "@/lib/titularidade-reading.ts";
+import { AttachmentError, storeAttachments } from "@/lib/uploads.ts";
 
 export type TitularidadeState =
   | { status: "idle" }
@@ -197,6 +198,15 @@ export async function markSentAction(
   if (!ok) return { status: "error", message: NO_PERMISSION };
   const id = String(formData.get("id") ?? "");
   try {
+    const file = formData.get("recibo");
+    const [stored] =
+      file instanceof File && file.size > 0
+        ? await storeAttachments([file], {
+            tenantSlug: ok.tenant.slug,
+            kind: "Recibo de entrega",
+            limit: 1,
+          })
+        : [];
     await markSentWith(
       db,
       ok.tenant.slug,
@@ -205,10 +215,19 @@ export async function markSentAction(
         sentOn: String(formData.get("sentOn") ?? ""),
         channel: String(formData.get("channel") ?? ""),
         receipt: String(formData.get("receipt") ?? ""),
+        receiptFile:
+          stored && file instanceof File
+            ? { path: stored.path, name: file.name || "recibo.pdf" }
+            : undefined,
+        semutOn: String(formData.get("semutOn") ?? ""),
+        semutReceipt: String(formData.get("semutReceipt") ?? ""),
       },
       ok.session.user.id,
     );
   } catch (error) {
+    if (error instanceof AttachmentError) {
+      return { status: "error", message: error.message };
+    }
     return failure(error, "titularidade.sent");
   }
   revalidatePath(`${BASE}/oficios/${id}`);

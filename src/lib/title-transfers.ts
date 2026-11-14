@@ -4,6 +4,7 @@ import { formatGuideNumber } from "@/core/guides/schema.ts";
 import { officeYear } from "@/core/time/office-time.ts";
 import {
   competenceOf,
+  isChannel,
   type TitleTransfer,
   transferProblems,
 } from "@/core/titularidade/titularidade.ts";
@@ -39,6 +40,10 @@ export interface Filing {
   sentOn: string;
   channel: string;
   receipt: string;
+  receiptPath: string | null;
+  receiptName: string | null;
+  semutOn: string;
+  semutReceipt: string;
   createdAt: Date;
 }
 
@@ -233,6 +238,10 @@ const toFiling = (row: typeof titleTransferFilings.$inferSelect): Filing => ({
   sentOn: row.sentOn,
   channel: row.channel,
   receipt: row.receipt,
+  receiptPath: row.receiptPath,
+  receiptName: row.receiptName,
+  semutOn: row.semutOn,
+  semutReceipt: row.semutReceipt,
   createdAt: row.createdAt,
 });
 
@@ -334,12 +343,27 @@ export async function getFilingWith(
   return row ? toFiling(row) : null;
 }
 
-/** When and how the ofício reached the prefeitura or the platform. */
+export interface Sending {
+  sentOn: string;
+  channel: string;
+  receipt: string;
+  /** The receipt itself, when attached (stored file). */
+  receiptFile?: { path: string; name: string };
+  /** The signed ofício delivered to the SEMUT too (optional). */
+  semutOn?: string;
+  semutReceipt?: string;
+}
+
+/**
+ * The electronic sending with its receipt of delivery (CNN, art. 184-A,
+ * § 2º): the platform and the receipt's number are required; the receipt
+ * file and the delivery to the SEMUT are optional.
+ */
 export async function markSentWith(
   database: Database,
   tenantSlug: string,
   id: string,
-  sending: { sentOn: string; channel: string; receipt: string },
+  sending: Sending,
   actorId: string,
 ): Promise<void> {
   const found = await getFilingWith(database, tenantSlug, id);
@@ -347,13 +371,35 @@ export async function markSentWith(
   if (!/^\d{4}-\d{2}-\d{2}$/.test(sending.sentOn)) {
     throw new TitularidadeError("Informe a data do envio.");
   }
+  if (!isChannel(sending.channel)) {
+    throw new TitularidadeError(
+      "Escolha a plataforma: o envio é eletrônico, à plataforma do CNB/CF (Notas) ou do ONR (Registro de Imóveis) (Código Nacional de Normas, art. 184-A, § 2º).",
+    );
+  }
+  if (sending.receipt.trim().length < 3) {
+    throw new TitularidadeError(
+      "Informe o número do recibo de entrega que a plataforma deu (art. 184-A, § 2º).",
+    );
+  }
+  const semutOn = sending.semutOn?.trim() ?? "";
+  if (semutOn && !/^\d{4}-\d{2}-\d{2}$/.test(semutOn)) {
+    throw new TitularidadeError("Data da entrega à SEMUT inválida.");
+  }
   await database.transaction(async (tx) => {
     await tx
       .update(titleTransferFilings)
       .set({
         sentOn: sending.sentOn,
-        channel: sending.channel.trim().slice(0, 200),
+        channel: sending.channel,
         receipt: sending.receipt.trim().slice(0, 300),
+        ...(sending.receiptFile
+          ? {
+              receiptPath: sending.receiptFile.path,
+              receiptName: sending.receiptFile.name.slice(0, 200),
+            }
+          : {}),
+        semutOn,
+        semutReceipt: (sending.semutReceipt ?? "").trim().slice(0, 300),
       })
       .where(eq(titleTransferFilings.id, found.id));
     await recordAuditWith(tx as unknown as Database, {

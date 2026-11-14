@@ -49,6 +49,8 @@ const NOT_SIGNED_BY_THE_OFFICE: Record<string, string> = {
     "comprovante de despesa anexado, não gerado",
   "(dashboard)/utilitarios/papel-seguranca/lotes/[id]/nota":
     "nota fiscal anexada, não gerada",
+  "(dashboard)/utilitarios/titularidade/oficios/[id]/recibo":
+    "recibo de entrega da plataforma, enviado pela serventia",
   "(dashboard)/rcpn/certidoes/[id]/anexo":
     "certidão assinada anexada, não gerada",
   "(dashboard)/rcpn/registro/[id]/previa":

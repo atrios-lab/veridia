@@ -8,6 +8,7 @@ import {
   addressIn,
   bookAndPageIn,
   centsFrom,
+  channelFor,
   deadlineOf,
   emptyTransfer,
   operationIn,
@@ -70,6 +71,13 @@ test("o ato precisa dizer a operação, as partes e o imóvel (art. 184-A, § 3�
   });
   assert.deepEqual(bad, ["João: CPF ou CNPJ inválido (111.111.111-11)."]);
   assert.deepEqual(transferProblems(complete()), []);
+});
+
+test("plataforma do envio pelo serviço dos atos (art. 184-A, § 2º)", () => {
+  assert.equal(channelFor(["notas"]), "cnb");
+  assert.equal(channelFor(["ri", "ri"]), "onr");
+  assert.equal(channelFor(["notas", "ri"]), "cnb-onr");
+  assert.equal(channelFor([]), "cnb");
 });
 
 test("prazo: último dia útil do mês seguinte", () => {

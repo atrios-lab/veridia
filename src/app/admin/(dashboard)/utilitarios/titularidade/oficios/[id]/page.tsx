@@ -1,8 +1,11 @@
 import { notFound } from "next/navigation";
 import { officeHolidays } from "@/core/scheduling/calendar.ts";
 import {
+  CHANNELS,
+  channelFor,
   competenceLabel,
   deadlineOf,
+  isChannel,
 } from "@/core/titularidade/titularidade.ts";
 import { db } from "@/db/index.ts";
 import { getTenant, today } from "@/lib/tenant.ts";
@@ -32,6 +35,7 @@ export default async function FilingPage({
   const query = await searchParams;
   const deadline = deadlineOf(filing.competence, officeHolidays(tenant));
   const pdf = `/admin/utilitarios/titularidade/oficios/${filing.id}/arquivo`;
+  const suggested = channelFor(filing.transfers.map((t) => t.service));
   return (
     <>
       <AdminPageHeader
@@ -68,21 +72,46 @@ export default async function FilingPage({
         </section>
         <section className="flex flex-col gap-3 rounded-xl border bg-card p-6 shadow-xs">
           <h2 className="text-lg font-semibold text-foreground">
-            2. Enviar e registrar
+            2. Enviar à plataforma e registrar o recibo
           </h2>
           <p className="text-sm text-muted-foreground text-justify hyphens-auto">
             Prazo: até {br(deadline)}, o último dia útil do mês seguinte (art.
-            184-A). O Código manda a remessa eletrônica, com recibo, à
-            plataforma do CNB/CF (Notas) ou do ONR (Registro de Imóveis); a
-            planilha do mês serve para lançar lá. Entregue também o ofício
-            assinado à SEMUT, se a prefeitura pedir, e registre aqui quando e
-            como.
+            184-A). Lance os atos na {CHANNELS[suggested]} com a planilha do mês
+            e anexe o ofício assinado; depois registre aqui o número do recibo
+            de entrega e, se puder, o comprovante. A entrega à SEMUT em papel é
+            complementar e não substitui o envio eletrônico (§ 2º).
           </p>
+          {filing.sentOn && (
+            <p className="rounded-lg border border-success/30 bg-success-soft px-3 py-2 text-sm text-success-text">
+              Enviado em {br(filing.sentOn)} ·{" "}
+              {isChannel(filing.channel)
+                ? CHANNELS[filing.channel]
+                : filing.channel}{" "}
+              · recibo {filing.receipt}
+              {filing.receiptPath && (
+                <>
+                  {" · "}
+                  <a
+                    href={`/admin/utilitarios/titularidade/oficios/${filing.id}/recibo`}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="underline underline-offset-2"
+                  >
+                    ver comprovante
+                  </a>
+                </>
+              )}
+              {filing.semutOn && ` · entregue à SEMUT em ${br(filing.semutOn)}`}
+            </p>
+          )}
           <MarkSentForm
             id={filing.id}
             sentOn={filing.sentOn}
-            channel={filing.channel}
+            channel={isChannel(filing.channel) ? filing.channel : suggested}
             receipt={filing.receipt}
+            semutOn={filing.semutOn}
+            semutReceipt={filing.semutReceipt}
+            hasReceiptFile={Boolean(filing.receiptPath)}
             today={today()}
           />
         </section>

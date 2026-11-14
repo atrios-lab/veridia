@@ -13,5 +13,6 @@
 ## 3. Painel
 
 - [x] 3.1 Mês dos atos com prazo, lista, alterar e excluir; lançar com leitura de PDF ou Word.
-- [x] 3.2 Ofício: assinar ou imprimir, registrar o envio, excluir.
+- [x] 3.2 Ofício: assinar ou imprimir, registrar o envio à plataforma com o recibo de entrega
+  obrigatório e o comprovante (§ 2º), entrega à SEMUT à parte, excluir.
 - [x] 3.3 Menu, ajuda "!" e testes.

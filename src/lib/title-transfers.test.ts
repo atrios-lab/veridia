@@ -141,17 +141,43 @@ test("ofício numerado com os atos do mês, ou sem movimento, e o envio", async 
     ),
     /data do envio/,
   );
+  await assert.rejects(
+    markSentWith(
+      db,
+      OFFICE,
+      id,
+      { sentOn: "2026-11-20", channel: "Protocolo na SEMUT", receipt: "123" },
+      "escrevente",
+    ),
+    /plataforma/,
+    "só a plataforma vale como envio (§ 2º)",
+  );
+  await assert.rejects(
+    markSentWith(
+      db,
+      OFFICE,
+      id,
+      { sentOn: "2026-11-20", channel: "cnb", receipt: "" },
+      "escrevente",
+    ),
+    /recibo de entrega/,
+  );
   await markSentWith(
     db,
     OFFICE,
     id,
     {
       sentOn: "2026-11-20",
-      channel: "Protocolo na SEMUT",
-      receipt: "123/2026",
+      channel: "cnb",
+      receipt: "CNB-2026-000123",
+      receiptFile: { path: "titularidade/recibo.pdf", name: "recibo.pdf" },
+      semutOn: "2026-11-21",
+      semutReceipt: "Protocolo 45/2026",
     },
     "escrevente",
   );
   const sent = (await listFilingsWith(db, OFFICE)).find((f) => f.id === id);
-  assert.equal(sent?.receipt, "123/2026");
+  assert.equal(sent?.receipt, "CNB-2026-000123");
+  assert.equal(sent?.receiptName, "recibo.pdf");
+  assert.equal(sent?.semutReceipt, "Protocolo 45/2026");
 });

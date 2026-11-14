@@ -567,3 +567,28 @@ export function transferToForm(t: TitleTransfer): Record<string, string> {
     notes: t.notes,
   };
 }
+
+// ---------------------------------------------------------------- sending
+
+/**
+ * Where the communication goes, electronically and against a receipt of
+ * delivery (CNN, art. 184-A, § 2º): notas to the CNB/CF's platform,
+ * registro de imóveis to the ONR's. An office with both sends to both.
+ */
+export const CHANNELS = {
+  cnb: "Plataforma do Colégio Notarial do Brasil (CNB/CF)",
+  onr: "Plataforma do Operador Nacional do Registro Eletrônico de Imóveis (ONR)",
+  "cnb-onr": "Plataformas do CNB/CF e do ONR",
+} as const;
+export type Channel = keyof typeof CHANNELS;
+
+export const isChannel = (value: string): value is Channel =>
+  Object.hasOwn(CHANNELS, value);
+
+/** The platform the acts of the month go to, by the services they are from. */
+export function channelFor(services: Service[]): Channel {
+  const notas = services.includes("notas");
+  const ri = services.includes("ri");
+  if (notas && ri) return "cnb-onr";
+  return ri ? "onr" : "cnb";
+}
