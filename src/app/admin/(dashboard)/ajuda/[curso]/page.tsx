@@ -141,6 +141,7 @@ export default async function CoursePage({
               process.env.CERTIFICATE_CHECK_BASE_URL ||
               DEFAULT_CERTIFICATE_CHECK_BASE
             }
+            participation={settings.certificateKind === "participation"}
             state={panelState}
           />
         )}

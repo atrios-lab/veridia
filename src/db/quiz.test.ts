@@ -135,7 +135,12 @@ test("a course without hours has no assessment", async () => {
   await updateAssessmentSettingsWith(
     db,
     courseId,
-    { passingScore: 70, workloadHours: 2, retryHours: 5 },
+    {
+      passingScore: 70,
+      workloadHours: 2,
+      retryHours: 5,
+      certificateKind: "completion",
+    },
     ATRIOS,
   );
 });
@@ -359,4 +364,107 @@ test("a question already shown is never deleted; a fresh one is", async () => {
   );
   assert.equal(await deleteQuestionWith(db, fresh.id, ATRIOS), "deleted");
   assert.equal(await deleteQuestionWith(db, fresh.id, ATRIOS), "not-found");
+});
+
+test("a participation course: no assessment, the certificate after every video", async () => {
+  const course = await createCourseWith(
+    db,
+    {
+      title: "Segurança da informação",
+      slug: "provimento-213",
+      description: "",
+      sequential: true,
+    },
+    { posterUrl: null, materialUrl: null },
+    ATRIOS,
+  );
+  await setCoursePublishedWith(db, course.id, true, ATRIOS);
+  await updateAssessmentSettingsWith(
+    db,
+    course.id,
+    {
+      passingScore: 70,
+      workloadHours: 1,
+      retryHours: 5,
+      certificateKind: "participation",
+    },
+    ATRIOS,
+  );
+  // A question left over does not bring an assessment back.
+  await createQuestionWith(
+    db,
+    course.id,
+    { prompt: "Sobrou?", options: ["A", "B", "C", "D"], correctIndex: 0 },
+    ATRIOS,
+  );
+  const ids: string[] = [];
+  for (const kind of ["intro", "lesson"] as const) {
+    const id = randomUUID();
+    await createTutorialWith(
+      db,
+      id,
+      {
+        title: kind,
+        description: "",
+        durationSeconds: 60,
+        route: null,
+        trail: false,
+        courseId: course.id,
+        kind,
+      },
+      {
+        videoUrl: `https://store.example.test/treinamento/${id}.mp4`,
+        captionsUrl: null,
+        posterUrl: null,
+      },
+      ATRIOS,
+    );
+    await setTutorialPublishedWith(db, id, true, ATRIOS);
+    ids.push(id);
+  }
+  const context = {
+    userId: ANA,
+    courseId: course.id,
+    tenantSlug: "marinho",
+    tenantName: "Ofício Único de Ielmo Marinho / RN",
+    host: "marinho.atrioss.com",
+  };
+  const request = { fullName: "Ana Souza", cpf: CPF, roleTitle: "Escrevente" };
+
+  await markWatchedWith(db, ANA, ids[0]);
+  assert.deepEqual(await assessmentStateWith(db, ANA, course.id, T0), {
+    kind: "locked",
+    videosLeft: 1,
+  });
+  assert.deepEqual(
+    await issueCertificateWith(db, context, request, randomBytes, T0),
+    { status: "refused", reason: "videos-left" },
+  );
+
+  await markWatchedWith(db, ANA, ids[1]);
+  assert.deepEqual(await assessmentStateWith(db, ANA, course.id, T0), {
+    kind: "ready",
+  });
+  assert.deepEqual(await startAttemptWith(db, ANA, course.id, seeded(3), T0), {
+    status: "refused",
+    reason: "no-assessment",
+  });
+
+  const issued = await issueCertificateWith(
+    db,
+    context,
+    request,
+    randomBytes,
+    T0,
+  );
+  assert.equal(issued.status, "issued");
+  if (issued.status !== "issued") return;
+  assert.equal(issued.certificate.score, null);
+  assert.equal(issued.certificate.attemptId, null);
+  assert.equal(issued.certificate.workloadHours, 1);
+  assert.deepEqual(await assessmentStateWith(db, ANA, course.id, T0), {
+    kind: "certified",
+    code: issued.certificate.code,
+    issuedAt: issued.certificate.issuedAt,
+  });
 });

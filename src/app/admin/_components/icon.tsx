@@ -38,6 +38,7 @@ import {
   Upload,
   Users,
   Wallet,
+  Wrench,
   X,
 } from "lucide-react";
 
@@ -85,6 +86,7 @@ const ICONS = {
   signature: Signature,
   wallet: Wallet,
   library: Library,
+  wrench: Wrench,
 } satisfies Record<string, LucideIcon>;
 
 export type AdminIconName = keyof typeof ICONS;

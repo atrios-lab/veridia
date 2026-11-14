@@ -1,5 +1,5 @@
 import Image from "next/image";
-import { can } from "@/core/auth/roles.ts";
+import { can, type Permission } from "@/core/auth/roles.ts";
 import type { Tenant } from "@/core/tenant/schema.ts";
 import { Sidebar, SidebarHeader, SidebarRail } from "../_ui/sidebar.tsx";
 import { ADMIN_NAV } from "./nav.ts";
@@ -76,10 +76,19 @@ export function AdminSidebar({
   // server, so a person who types the URL still gets refused there. The
   // tutorials item is hidden for a different reason, nothing published
   // yet: the route answers either way, it just has nothing to show.
+  const allowed = (permission?: Permission) =>
+    !permission || can(role, permission, permissions);
   const items = ADMIN_NAV.filter(
     (item) =>
-      (!item.permission || can(role, item.permission, permissions)) &&
+      allowed(item.permission) &&
       !(item.href === "/admin/ajuda" && !showTutorials),
+  ).map((item) =>
+    item.children
+      ? {
+          ...item,
+          children: item.children.filter((child) => allowed(child.permission)),
+        }
+      : item,
   );
 
   return (

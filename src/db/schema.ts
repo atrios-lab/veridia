@@ -896,6 +896,12 @@ export const courses = pgTable(
     workloadHours: integer("workload_hours"),
     /** How long after a failed attempt the next one opens. */
     retryHours: integer("retry_hours").notNull().default(5),
+    /** What the certificate attests. "completion": a passed assessment.
+     * "participation": every video watched, no assessment at all. */
+    certificateKind: text("certificate_kind")
+      .$type<"completion" | "participation">()
+      .notNull()
+      .default("completion"),
     position: integer("position").notNull(),
     publishedAt: timestamp("published_at", { withTimezone: true }),
     createdAt: timestamp("created_at", { withTimezone: true })
@@ -1074,7 +1080,8 @@ export const certificates = pgTable(
     issuedHost: text("issued_host").notNull(),
     courseTitle: text("course_title").notNull(),
     workloadHours: integer("workload_hours").notNull(),
-    score: integer("score").notNull(),
+    /** The passed attempt's score; null on a participation certificate. */
+    score: integer("score"),
     issuedAt: timestamp("issued_at", { withTimezone: true })
       .notNull()
       .defaultNow(),

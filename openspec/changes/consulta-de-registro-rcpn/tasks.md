@@ -12,7 +12,7 @@
 
 - [x] 1.1 Núcleo puro: campos do índice, normalização de nome (acentos, partículas),
   validação de matrícula CNJ, conferência (contagens, problemas, duplicados). Testes.
-- [x] 1.2 Migração só com tabelas novas: importações, registros e pessoas (0059). Modelos de
+- [x] 1.2 Migração só com tabelas novas: importações, registros e pessoas (0060). Modelos de
   ligação, imagens e consultas públicas entram com as tarefas 1.7, 1.12 e 2.3.
 - [x] 1.3 Envio direto ao armazenamento em partes, hash SHA-256 e repetidos.
 - [x] 1.4 Reconhecimento pelo conteúdo e abertura de pacotes ZIP e RAR, com limites (ver 0.4).
@@ -58,7 +58,7 @@
 
 - [x] 5.1 Modelos nacionais de nascimento, casamento e óbito, matrícula em blocos, data por
   extenso e preenchimento pelo índice. Testes.
-- [x] 5.2 Tabela só nova (0060), emissão com conferência do livro, selo colado (sem repetir),
+- [x] 5.2 Tabela só nova (na mesma 0060), emissão com conferência do livro, selo colado (sem repetir),
   correção e exclusão com justificativa (exclusão só marca), anexo da via assinada, auditoria.
 - [x] 5.3 PDF para imprimir ou assinar digitalmente; permissão própria; "!" na tela.
 - [x] 5.4 Verificar no navegador com dados fictícios.
@@ -72,7 +72,8 @@
 - [x] 6.1 Guias de Registro Civil, Imóveis, Títulos e Documentos, Pessoas Jurídicas, Protesto,
   Distribuição, Notas e Caixa, só com a lei federal citada artigo por artigo; o resto marcado
   para conferir no Código de Normas do RN. Testes dos atalhos e das fontes.
-- [x] 6.2 Barra lateral com uma entrada por atribuição; Atribuições e Utilitários minimizáveis.
+- [x] 6.2 Barra lateral com uma entrada por atribuição; Atribuições recolhível como Utilitários,
+  com as telas do Registro Civil como subitens.
 - [x] 6.3 Permissão própria e "!" em cada parte do guia; verificar no navegador.
 - [ ] 6.4 Índices digitais de cada atribuição (como o do Registro Civil), com os arquivos do
   sistema da serventia.

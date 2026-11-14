@@ -1,6 +1,6 @@
 {
-  "id": "0b2e50c8-548e-42fd-9f80-d2dc82b5557e",
-  "prevId": "4b03a5e4-3ba4-4172-9414-905994849416",
+  "id": "1ecc2857-0ae3-4760-b3cb-f4bb7a267114",
+  "prevId": "80c75384-fbef-4f9a-9c21-1f187cf32e97",
   "version": "7",
   "dialect": "postgresql",
   "tables": {
@@ -1136,7 +1136,7 @@
           "name": "score",
           "type": "integer",
           "primaryKey": false,
-          "notNull": true
+          "notNull": false
         },
         "issued_at": {
           "name": "issued_at",
@@ -2017,6 +2017,13 @@
           "primaryKey": false,
           "notNull": true,
           "default": 5
+        },
+        "certificate_kind": {
+          "name": "certificate_kind",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'completion'"
         },
         "position": {
           "name": "position",

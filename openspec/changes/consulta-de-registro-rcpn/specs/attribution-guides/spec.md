@@ -22,11 +22,12 @@ DEVE (SHALL) aparecer em Perfis e permissões.
 - **WHEN** a pessoa abre o "!" da parte Índices
 - **THEN** lê que o indicador real é o índice pelos imóveis e o pessoal, pelas pessoas
 
-### Requirement: Grupos minimizados
-Os grupos "Atribuições" e "Utilitários" da barra lateral DEVEM (SHALL) poder ser minimizados
-(decisão de 14/11/2026), mostrando quantas telas guardam. O grupo DEVE (SHALL) abrir sozinho
-quando a pessoa está numa das suas telas, e a escolha DEVE (SHALL) ser lembrada no computador.
+### Requirement: Atribuições minimizado como Utilitários
+O grupo "Atribuições" da barra lateral DEVE (SHALL) ser desenhado como um tópico recolhível, igual
+ao de "Utilitários" (decisão de 14/11/2026), e DEVE (SHALL) abrir sozinho quando a pessoa está numa
+das suas telas. O Registro Civil DEVE (SHALL) mostrar as suas telas como subitens (pesquisa,
+certidões, importar arquivos e o guia), cada uma só para quem tem a permissão.
 
 #### Scenario: Grupo minimizado
-- **WHEN** a pessoa está na Visão geral e o grupo Utilitários está minimizado
-- **THEN** a barra mostra "Utilitários 6" e, ao clicar, o grupo abre com as seis telas
+- **WHEN** a pessoa está na Visão geral
+- **THEN** a barra mostra "Atribuições" fechado e, ao clicar, o tópico abre com as atribuições

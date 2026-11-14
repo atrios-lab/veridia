@@ -1,3 +1,27 @@
+CREATE TABLE "rcpn_certidoes" (
+	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
+	"tenant_slug" text NOT NULL,
+	"kind" text NOT NULL,
+	"subtype" text DEFAULT '' NOT NULL,
+	"form" text DEFAULT 'breve' NOT NULL,
+	"record_id" uuid,
+	"fields" jsonb NOT NULL,
+	"seal" text DEFAULT '' NOT NULL,
+	"seal_kind" text DEFAULT '' NOT NULL,
+	"fees" text DEFAULT '' NOT NULL,
+	"signer_name" text DEFAULT '' NOT NULL,
+	"signer_title" text DEFAULT '' NOT NULL,
+	"attachment_path" text,
+	"attachment_name" text,
+	"created_by" text,
+	"created_at" timestamp with time zone DEFAULT now() NOT NULL,
+	"updated_by" text,
+	"updated_at" timestamp with time zone,
+	"removed_at" timestamp with time zone,
+	"removed_by" text,
+	"removed_reason" text
+);
+--> statement-breakpoint
 CREATE TABLE "rcpn_imports" (
 	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
 	"tenant_slug" text NOT NULL,
@@ -49,8 +73,10 @@ CREATE TABLE "rcpn_records" (
 	"updated_at" timestamp with time zone DEFAULT now() NOT NULL
 );
 --> statement-breakpoint
+ALTER TABLE "rcpn_certidoes" ADD CONSTRAINT "rcpn_certidoes_record_id_rcpn_records_id_fk" FOREIGN KEY ("record_id") REFERENCES "public"."rcpn_records"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "rcpn_people" ADD CONSTRAINT "rcpn_people_record_id_rcpn_records_id_fk" FOREIGN KEY ("record_id") REFERENCES "public"."rcpn_records"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "rcpn_records" ADD CONSTRAINT "rcpn_records_import_id_rcpn_imports_id_fk" FOREIGN KEY ("import_id") REFERENCES "public"."rcpn_imports"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
+CREATE INDEX "rcpn_certidoes_tenant" ON "rcpn_certidoes" USING btree ("tenant_slug","created_at");--> statement-breakpoint
 CREATE INDEX "rcpn_imports_tenant" ON "rcpn_imports" USING btree ("tenant_slug","created_at");--> statement-breakpoint
 CREATE UNIQUE INDEX "rcpn_people_role" ON "rcpn_people" USING btree ("record_id","role");--> statement-breakpoint
 CREATE INDEX "rcpn_people_lookup" ON "rcpn_people" USING btree ("tenant_slug","name_norm","birth_date");--> statement-breakpoint

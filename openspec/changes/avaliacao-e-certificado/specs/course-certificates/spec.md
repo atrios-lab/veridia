@@ -2,7 +2,7 @@
 
 ### Requirement: Avaliação configurada por curso
 
-Um curso SHALL ter avaliação quando tem carga horária definida e ao menos uma questão ativa. A avaliação SHALL ter nota mínima em percentual (padrão 70) e intervalo entre tentativas em horas (padrão 5), definidos pela plataforma.
+Um curso SHALL ter avaliação quando tem carga horária definida, certificado do tipo conclusão e ao menos uma questão ativa. A avaliação SHALL ter nota mínima em percentual (padrão 70) e intervalo entre tentativas em horas (padrão 5), definidos pela plataforma.
 
 Cada questão SHALL ter:
 - um enunciado;
@@ -16,6 +16,32 @@ Cada questão SHALL ter:
 #### Scenario: Curso sem avaliação
 - **WHEN** o curso "Uso do painel" não tem carga horária
 - **THEN** a página dele não mostra avaliação nem certificado
+
+### Requirement: Certificado de participação
+
+A plataforma SHALL configurar, por curso com carga horária, o tipo de certificado:
+- conclusão (padrão): exige a aprovação na avaliação;
+- participação: sem avaliação, emitido a quem assistiu a todos os vídeos publicados do curso, inclusive o Encerramento.
+
+Num curso de participação, a página NÃO SHALL oferecer avaliação, mesmo que haja questões cadastradas, e o servidor SHALL recusar o início de tentativa. A emissão SHALL seguir as mesmas regras de nome, CPF, função, serventia e uma única emissão do certificado de conclusão, e o servidor SHALL conferir de novo, na emissão, que não falta vídeo.
+
+O certificado de participação SHALL dizer "Certificado de participação" e "participou do curso", sem aproveitamento, e o verso NÃO SHALL listar a avaliação. A consulta pública SHALL indicar o tipo do certificado e devolver o aproveitamento vazio.
+
+#### Scenario: Participação depois de todos os vídeos
+- **WHEN** a pessoa termina o último vídeo do curso sobre o Provimento 213, configurado como participação
+- **THEN** a página oferece o formulário de emissão, sem avaliação
+
+#### Scenario: Falta vídeo
+- **WHEN** a pessoa tenta emitir o certificado de participação com um vídeo por assistir
+- **THEN** o servidor recusa e nada é emitido
+
+#### Scenario: Questão esquecida no curso de participação
+- **WHEN** um curso de participação ainda tem uma questão ativa
+- **THEN** a página não mostra avaliação e o início de tentativa é recusado
+
+#### Scenario: Texto do certificado de participação
+- **WHEN** o certificado de participação é emitido
+- **THEN** o PDF diz "Certificado de participação" e "participou do curso", com a carga horária e sem aproveitamento
 
 ### Requirement: Avaliação abre depois de assistir a tudo
 
@@ -164,7 +190,8 @@ A validação SHALL ficar no site da Átrios (`atrioss.com/certificado/<código>
 - o nome;
 - o CPF mascarado, com os 3 primeiros e os 2 últimos dígitos ocultos;
 - a função e a serventia;
-- o curso, a carga horária, o aproveitamento e a data;
+- o curso, a carga horária, o aproveitamento (vazio no certificado de participação) e a data;
+- o tipo do certificado, conclusão ou participação;
 - a indicação de assinatura digital da Átrios.
 
 A consulta NÃO SHALL devolver nenhum outro dado do certificado. Para um código inexistente ou malformado, SHALL responder 404 sem distinguir os dois casos. A consulta SHALL permitir leitura pelo navegador apenas a partir de `https://atrioss.com` e `https://www.atrioss.com`, SHALL limitar consultas por IP e SHALL dispensar esse limite para o servidor da Átrios autenticado por token. A resposta NÃO SHALL ser guardada em cache nem indexada.

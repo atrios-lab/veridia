@@ -1,6 +1,12 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { ADMIN_NAV, navGroups } from "./nav.ts";
+import {
+  ADMIN_NAV,
+  countIn,
+  currentHref,
+  FOLDED_GROUPS,
+  navGroups,
+} from "./nav.ts";
 
 test("every group heading appears once: items of a group stay adjacent", () => {
   const headings = navGroups(ADMIN_NAV).map((entry) => entry.group);
@@ -80,4 +86,77 @@ test("os utilitários têm cada um a sua permissão", () => {
   const tools = ADMIN_NAV.filter((item) => item.group === "Utilitários");
   const permissions = tools.map((item) => item.permission);
   assert.deepEqual(permissions, [...new Set(permissions)]);
+});
+
+test("cada utilitário abre em subitens, e o primeiro é a tela principal dele", () => {
+  const tools = ADMIN_NAV.filter((item) => item.group === "Utilitários");
+  for (const tool of tools) {
+    assert.ok(tool.children?.length, `${tool.label}: sem subitens`);
+    assert.equal(tool.children?.[0]?.href, tool.href, tool.label);
+    const hrefs = tool.children?.map((child) => child.href) ?? [];
+    assert.deepEqual(hrefs, [...new Set(hrefs)], tool.label);
+  }
+});
+
+test("o subitem atual é o da rota exata, ou a lista de onde o registro veio", () => {
+  const tools = ADMIN_NAV.filter((item) => item.group === "Utilitários");
+  assert.equal(
+    currentHref(tools, "/admin/utilitarios/guias/nova"),
+    "/admin/utilitarios/guias/nova",
+  );
+  assert.equal(
+    currentHref(tools, "/admin/utilitarios/guias/abc123"),
+    "/admin/utilitarios/guias",
+  );
+  assert.equal(
+    currentHref(tools, "/admin/utilitarios/livro-diario/paginas/7"),
+    "/admin/utilitarios/livro-diario",
+  );
+  assert.equal(currentHref(tools, "/admin/pedidos"), undefined);
+  // A sibling route that only shares the prefix is not inside the tool.
+  assert.equal(currentHref(tools, "/admin/utilitarios/guiasx"), undefined);
+});
+
+test("Utilitários é um tópico só, com os utilitários como subtópicos", () => {
+  // Atribuições folds the same way (decision of 14/11/2026).
+  assert.deepEqual(Object.keys(FOLDED_GROUPS).sort(), [
+    "Atribuições",
+    "Utilitários",
+  ]);
+  const group = navGroups(ADMIN_NAV).find(
+    (entry) => entry.group === "Utilitários",
+  );
+  assert.equal(group?.items.length, 6);
+});
+
+test("Atribuições é um tópico só: Registro Civil, as outras seis e o Caixa", () => {
+  const group = navGroups(ADMIN_NAV).find(
+    (entry) => entry.group === "Atribuições",
+  );
+  assert.deepEqual(
+    group?.items.map((item) => item.label),
+    [
+      "Registro Civil",
+      "Registro de Imóveis",
+      "Títulos e Documentos",
+      "Pessoas Jurídicas",
+      "Protesto",
+      "Distribuição",
+      "Notas",
+      "Caixa",
+    ],
+  );
+  // The Registro Civil's own screen comes first among its screens.
+  const civil = group?.items[0];
+  assert.equal(civil?.children?.[0]?.href, civil?.href);
+});
+
+test("o tópico fechado soma os avisos de dentro, sem contar duas vezes", () => {
+  const guias = ADMIN_NAV.find(
+    (item) => item.href === "/admin/utilitarios/guias",
+  );
+  assert.ok(guias);
+  // The tool's own href is its first screen's: counted once.
+  assert.equal(countIn(guias, { "/admin/utilitarios/guias": 2 }), 2);
+  assert.equal(countIn(guias, {}), 0);
 });
