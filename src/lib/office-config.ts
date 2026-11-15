@@ -93,3 +93,8 @@ export const OFFICE_INTERIM_EXCESS_KEY = "office-interim-excess";
  * the semesters the office declared without one.
  */
 export const OFFICE_FCRCPN_KEY = "office-fcrcpn";
+/**
+ * The AI (decision of 15/11/2026): on or off, set by the
+ * Tabelião/Registrador; off by default (lib/ai.ts).
+ */
+export const OFFICE_AI_KEY = "office-ai";

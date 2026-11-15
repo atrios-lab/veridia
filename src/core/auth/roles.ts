@@ -70,6 +70,9 @@ export const OFFICE_PERMISSIONS = [
   // The DOI to the Receita Federal (IN RFB nº 2.186/2024), its own item
   // (decision of 15/11/2026: "a DOI tem que ficar no item à parte").
   "doi.manage",
+  // The legal base the AI is taught with (decision of 15/11/2026): laws,
+  // provimentos, jurisprudence and models, kept as Markdown.
+  "knowledge.manage",
   "signer.use",
   "transparency.manage",
   "numbering.manage",
@@ -130,6 +133,7 @@ export const GRANTABLE_PERMISSIONS = [
   "titularidade.manage",
   "censec.manage",
   "doi.manage",
+  "knowledge.manage",
   "signer.use",
   "transparency.manage",
   "numbering.manage",
@@ -185,6 +189,8 @@ export const DERIVED_FROM: Partial<Record<GrantablePermission, Permission>> = {
   "attributions.view": "desk.access",
   // Whoever loads the Registro Civil's base loads the others' files.
   "attributions.import": "rcpn.import",
+  // Whoever loads the attributions' files loads the legal base.
+  "knowledge.manage": "attributions.import",
 };
 
 /**
@@ -401,6 +407,8 @@ export const GRANTABLE_LABELS: Record<GrantablePermission, string> = {
   "censec.manage":
     "Cargas da CENSEC: CEP, CESDI e RCTO por quinzena (CNN, arts. 265 a 272)",
   "doi.manage": "Carga da DOI à Receita Federal (IN RFB nº 2.186/2024)",
+  "knowledge.manage":
+    "Base jurídica da IA: enviar, corrigir e excluir leis, provimentos, jurisprudência e modelos",
   "signer.use": "Assinador digital (assinar documentos)",
   "transparency.manage": "Transparência (boletim mensal e documentos)",
   "numbering.manage": "Numeração de documentos",

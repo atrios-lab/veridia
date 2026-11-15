@@ -907,6 +907,55 @@ ENTRIES["/admin/utilitarios/doi"] = {
   ],
 };
 
+ENTRIES["/admin/utilitarios/base-juridica"] = {
+  purpose:
+    "Ensinar a IA da qualificação de títulos com as fontes do direito: leis, decretos, provimentos do CNJ e da Corregedoria, jurisprudência, enunciados, doutrina e modelos. A IA não conversa: ninguém faz pergunta a ela. A serventia só alimenta esta base.",
+  steps: [
+    "Em Enviar fontes, importe o texto vigente do site oficial (as normas básicas já estão na lista) ou envie arquivos: PDF, Word, ODT, RTF, texto, HTML, ZIP com vários e fotos. Também dá para colar o texto.",
+    "Cada documento vira Markdown, dividido por artigo, e o arquivo é descartado: só o texto fica guardado. Na fonte, Baixar em .md entrega o texto como ficou.",
+    "Ao ler, o sistema confere se o arquivo parece o certo. Com alerta (não parece jurídico, número da referência ausente, CPF de pessoa, fonte repetida ou texto lido pela IA), a fonte fica Em conferência e não é usada até alguém confirmar ou trocar o arquivo.",
+    "Anexou o arquivo errado? Na fonte, Alterar dados ou trocar o arquivo: o arquivo certo vira a versão nova e a anterior fica guardada, fora da base.",
+    "Com a IA ligada, Conferir na fonte oficial faz a IA procurar a norma só nos sites oficiais. Se ela mudou ou foi revogada, aparece um pedido no alto da lista; responda pelos botões: importar do site oficial, enviar o documento ou dispensar com o motivo.",
+    "Em Pesquisar, o sistema acha os artigos pela hierarquia: a lei antes das normas, da jurisprudência, da doutrina e dos modelos. Fonte revogada, versão antiga e fonte em conferência ficam de fora.",
+  ],
+  terms: [
+    {
+      term: "Markdown",
+      meaning:
+        "Texto simples com marcas de organização: o artigo vira título, o parágrafo fica em negrito e os incisos viram lista. Abre em qualquer editor de texto.",
+    },
+    {
+      term: "Em conferência",
+      meaning:
+        "Fonte guardada que ainda não é usada, porque o sistema achou algo que parece erro no arquivo. Confira, e confirme ou troque o arquivo.",
+    },
+    {
+      term: "Fonte jurídica oficial",
+      meaning:
+        "Os sites oficiais onde a norma é publicada: Planalto, Diário Oficial da União, CNJ, STF, STJ, tribunais e corregedorias (jus.br), Câmara e Senado.",
+    },
+  ],
+  configure: {
+    href: "/admin/configuracoes/inteligencia-artificial",
+    label: "Configurações › Inteligência artificial",
+    permission: "user.manage",
+    steps: [
+      "Só o Tabelião liga ou desliga a IA, com o motivo, que vai para a auditoria. Ela começa desligada.",
+      "Desligada, a base funciona do mesmo jeito; só a leitura de fotos e PDFs digitalizados e a conferência na fonte oficial ficam paradas.",
+    ],
+  },
+};
+
+ENTRIES["/admin/configuracoes/inteligencia-artificial"] = {
+  purpose:
+    "Ligar ou desligar a IA da plataforma (Claude, da Anthropic), que tem uma finalidade só: a qualificação de títulos. Ninguém conversa com ela.",
+  steps: [
+    "Clique em Ligar ou Desligar e escreva o motivo; ele vai para a auditoria com quem mudou e quando.",
+    "Ligada, a IA lê fotos e PDFs digitalizados enviados à Base jurídica e confere as fontes nos sites oficiais. Os documentos vão à Anthropic só para a leitura e não ficam guardados.",
+    "A IA só funciona depois que a chave de acesso for cadastrada no ambiente da plataforma; enquanto isso, a tela avisa.",
+  ],
+};
+
 ENTRIES["/admin/utilitarios/censec"] = {
   purpose:
     "Montar as cargas quinzenais da CENSEC: escrituras e procurações no CEP, separações, divórcios e inventários no CESDI, testamentos no RCTO (Código Nacional de Normas, arts. 265 a 272). O sistema lê os documentos anexados e gera os arquivos no leiaute oficial do CNB/CF.",
