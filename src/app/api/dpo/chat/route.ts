@@ -1,5 +1,8 @@
 import { can } from "@/core/auth/roles.ts";
 import { DPO_COPY } from "@/core/dpo/copy.ts";
+import { officePlaceholders } from "@/core/dpo/placeholders.ts";
+import { toIsoDate } from "@/core/scheduling/calendar.ts";
+import { OFFICE_TIME_ZONE } from "@/core/time/office-time.ts";
 import { db } from "@/db/index.ts";
 import { askDpoWith, type DpoEvent } from "@/lib/dpo/assistant.ts";
 import { dpoBlocked, dpoModels } from "@/lib/dpo/models.ts";
@@ -58,6 +61,7 @@ export async function POST(request: Request): Promise<Response> {
     message,
     officeContext: await officeContextFor(tenant, now),
     now,
+    officeValues: officePlaceholders(tenant, toIsoDate(now, OFFICE_TIME_ZONE)),
   });
 
   const encoder = new TextEncoder();

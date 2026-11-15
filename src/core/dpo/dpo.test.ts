@@ -1,5 +1,6 @@
 import assert from "node:assert/strict";
 import { describe, test } from "node:test";
+import { TENANTS } from "../tenant/resolve.ts";
 import { resolveCitations, segmentAnswer } from "./citations.ts";
 import { describeOffice } from "./context.ts";
 import { describeMasked } from "./copy.ts";
@@ -289,6 +290,59 @@ test("a resposta ao titular sai como documento, com o requerimento identificado 
     doc.signature[0],
     "Encarregado(a) pelo tratamento de dados pessoais",
   );
+});
+
+test("o texto sai pronto: lacunas são detectadas e os dados da serventia preenchidos", async () => {
+  const { hasGaps, officePlaceholders, fillPlaceholders } = await import(
+    "./placeholders.ts"
+  );
+  const { answerInstructions, replyDraftInstructions } = await import(
+    "./prompts.ts"
+  );
+  for (const rules of [
+    answerInstructions("Serventia fictícia."),
+    replyDraftInstructions("Serventia fictícia."),
+  ]) {
+    assert.doesNotMatch(rules, /\[COMPLETAR/);
+    assert.match(rules, /proibido deixar lacunas/);
+  }
+  assert.equal(hasGaps("[COMPLETAR: dados encontrados]"), true);
+  assert.equal(hasGaps("[COMPLETAR]"), true);
+  assert.equal(hasGaps("Nome: ________"), true);
+  assert.equal(hasGaps("[inserir o prazo]"), true);
+  assert.equal(
+    hasGaps(
+      "Prezado(a) [TITULAR], protocolo [PROTOCOLO], CPF [CPF], art. 18 [[fonte:lgpd-art-18]]. [SERVENTIA], [CIDADE], [DATA].",
+    ),
+    false,
+  );
+  const tenant = TENANTS["cartorio-marinho"];
+  assert.ok(tenant);
+  const values = officePlaceholders(tenant, "2026-11-15");
+  const filled = fillPlaceholders("[SERVENTIA] · [CIDADE], [DATA]", values);
+  assert.doesNotMatch(filled, /\[/);
+  assert.match(filled, /15 de novembro de 2026/);
+});
+
+test("o documento do chat sai com título, parágrafos e assinatura do encarregado", async () => {
+  const { buildDpoDocument, documentPart } = await import("./chat-document.ts");
+  const tenant = TENANTS["cartorio-marinho"];
+  assert.ok(tenant);
+  const answer =
+    "Segue a resposta.\n\n---\n**Resposta ao titular**\n\nPrezado(a) titular,\n\nOs dados ficam no livro.\n\n- Cadastro do site: eliminado.\n- Livro: conservado.";
+  const text = documentPart(answer);
+  assert.match(text, /^\*\*Resposta ao titular/);
+  assert.equal(documentPart("Sem documento."), "");
+  const doc = buildDpoDocument(tenant, { text, issuedOn: "2026-11-15" });
+  assert.equal(doc.title, "Resposta ao titular");
+  assert.deepEqual(doc.sections[0]?.paragraphs, [
+    "Prezado(a) titular,",
+    "Os dados ficam no livro.",
+    "• Cadastro do site: eliminado.",
+    "• Livro: conservado.",
+  ]);
+  assert.match(doc.dateLine ?? "", /15 de novembro de 2026/);
+  assert.match(doc.signature[0] ?? "", /Encarregado/);
 });
 
 test("na conversa do requerimento, o Assistente Virtual orienta e quem decide é o encarregado ou o Tabelião", async () => {

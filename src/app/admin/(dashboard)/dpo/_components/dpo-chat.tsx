@@ -5,7 +5,8 @@ import { useEffect, useRef, useState } from "react";
 import { segmentAnswer } from "@/core/dpo/citations.ts";
 import { DPO_COPY } from "@/core/dpo/copy.ts";
 import type { DpoEvent, SourceView } from "@/lib/dpo/assistant.ts";
-import { Button } from "../../../_ui/button.tsx";
+import { SignOrPrint } from "../../../_components/sign-or-print.tsx";
+import { Button, buttonVariants } from "../../../_ui/button.tsx";
 import {
   Dialog,
   DialogContent,
@@ -17,6 +18,8 @@ import { Label } from "../../../_ui/label.tsx";
 import { Textarea } from "../../../_ui/textarea.tsx";
 
 export interface ChatMessage {
+  /** The stored answer's id: the document's download reads it. */
+  id?: string;
   role: "user" | "assistant" | "refusal" | "error";
   content: string;
   maskedNotice?: string;
@@ -118,11 +121,33 @@ function AssistantMessage({
       )}
       {document && (
         <div className="rounded-lg border bg-muted/40 p-3">
-          <div className="mb-2 flex items-center justify-between gap-2">
+          <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
             <span className="text-xs font-medium text-muted-foreground">
-              Rascunho
+              Documento pronto
             </span>
-            {!message.pending && <CopyButton text={document} />}
+            {!message.pending && (
+              <div className="flex flex-wrap items-center gap-2">
+                {message.id && (
+                  <>
+                    <SignOrPrint
+                      pdfHref={`/admin/dpo/documento/${message.id}`}
+                      title="Documento do encarregado de dados"
+                      size="sm"
+                    />
+                    <a
+                      href={`/admin/dpo/documento/${message.id}/word`}
+                      className={buttonVariants({
+                        variant: "outline",
+                        size: "sm",
+                      })}
+                    >
+                      Baixar Word
+                    </a>
+                  </>
+                )}
+                <CopyButton text={document} />
+              </div>
+            )}
           </div>
           <AnswerText
             text={document}
@@ -232,6 +257,7 @@ export function DpoChat({
         break;
       case "done":
         patchLast(() => ({
+          id: event.messageId,
           role: "assistant",
           content: event.text,
           sources: event.sources,

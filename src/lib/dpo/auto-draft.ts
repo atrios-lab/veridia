@@ -1,6 +1,9 @@
 import "server-only";
 import { and, eq, sql } from "drizzle-orm";
-import { fillPlaceholders } from "@/core/dpo/placeholders.ts";
+import {
+  fillPlaceholders,
+  officePlaceholders,
+} from "@/core/dpo/placeholders.ts";
 import { parseDetails } from "@/core/request/kinds.ts";
 import { formatDate, toIsoDate } from "@/core/scheduling/calendar.ts";
 import type { Tenant } from "@/core/tenant/schema.ts";
@@ -23,14 +26,14 @@ export function fillReply(
     protocolNumber: string;
     createdAt: Date;
   },
-  tenant: Pick<Tenant, "subtitle" | "dpo">,
+  tenant: Pick<Tenant, "subtitle" | "dpo" | "location">,
+  now = new Date(),
 ): string {
   return fillPlaceholders(draft, {
+    ...officePlaceholders(tenant, toIsoDate(now, OFFICE_TIME_ZONE)),
     TITULAR: request.applicantName,
     PROTOCOLO: request.protocolNumber,
     DATA_DO_PEDIDO: formatDate(toIsoDate(request.createdAt, OFFICE_TIME_ZONE)),
-    SERVENTIA: tenant.subtitle,
-    ENCARREGADO: tenant.dpo.name,
   });
 }
 
