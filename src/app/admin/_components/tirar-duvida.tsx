@@ -58,8 +58,9 @@ export function TirarDuvida({ topic }: { topic: QuestionTopicKey }) {
       <p className="text-xs text-muted-foreground text-justify hyphens-auto">
         O Assistente Virtual responde só sobre {label}, com base na base
         jurídica da serventia e nas fontes oficiais, e cita o dispositivo. É
-        orientação: a decisão é do oficial. Não escreva nomes, CPF ou outros
-        dados de pessoas; se escrever, eles são ocultados antes do envio.
+        orientação: a decisão é do oficial. Não escreva nomes nem dados de
+        pessoas: CPF, RG, e-mail e telefone viram marcadores antes do envio, mas
+        nomes não são reconhecidos. A pergunta e a resposta não ficam guardadas.
       </p>
       <form action={action} className="flex flex-col gap-2">
         <input type="hidden" name="tema" value={topic} />

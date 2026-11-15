@@ -124,8 +124,10 @@ export function AlignmentSection({
           pedido: o que a serventia pode guardar e por quê, o que precisa
           entregar, corrigir ou apagar. Ele pergunta o que precisa saber e vocês
           alinham a resposta. A decisão final é do encarregado de dados ou do
-          Tabelião. Nomes, CPF, e-mails e telefones escritos aqui são trocados
-          por marcadores antes de ir ao Assistente Virtual, e a conversa fica
+          Tabelião. O nome e o pedido escrito pelo titular não vão ao Assistente
+          Virtual. CPF, RG, matrícula, e-mail, telefone, endereço e data de
+          nascimento escritos aqui viram marcadores antes do envio; nomes de
+          pessoas não são reconhecidos, então não escreva nomes. A conversa fica
           guardada neste requerimento.
         </p>
       </div>
