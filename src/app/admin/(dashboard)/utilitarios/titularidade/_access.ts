@@ -33,3 +33,15 @@ export async function requireDoi() {
   }
   return session;
 }
+
+/** The Carga CTP's screens, inside the CENSEC's (decision of 15/11/2026). */
+export async function requireCtp() {
+  const session = await getSession();
+  if (
+    !session ||
+    !can(session.user.role ?? "", "censec.manage", session.user.permissions)
+  ) {
+    notFound();
+  }
+  return session;
+}

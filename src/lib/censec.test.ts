@@ -162,3 +162,22 @@ test("fechamento positivo ou negativo, e a exclusão do registro com justificati
   );
   assert.equal((await listClosingsWith(db, office, "2026-11-1")).length, 0);
 });
+
+test("a Carga CTP tem um fechamento único no mês, guardado como a 2ª quinzena", async () => {
+  const office = "cartorio-censec-ctp";
+  await recordClosingWith(
+    db,
+    office,
+    {
+      quinzena: "2026-10-2",
+      central: "ctp",
+      acts: 0,
+      sentOn: "2026-11-27",
+      protocol: "",
+    },
+    "escrevente",
+  );
+  const [closing] = await listClosingsWith(db, office, "2026-10-2");
+  assert.equal(closing?.central, "ctp");
+  assert.equal(closing?.acts, 0);
+});

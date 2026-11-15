@@ -30,3 +30,4 @@
   formato PGD (DOI.TXT); município, código IBGE e INCRA no ato.
 - [x] 4.6 DOI do registro de imóveis (natureza do título, CNM, DOI anterior, localização, 7 dígitos)
 - [x] 4.7 Carga da DOI em item próprio de Utilitários, com permissão própria, pendências pelo esquema da Receita e arquivo do mês só com as DOI prontas
+- [x] 4.8 Carga CTP em Cargas da CENSEC (mensal), com pendências pelo esquema do CENSEC, arquivos e fechamento único do mês
