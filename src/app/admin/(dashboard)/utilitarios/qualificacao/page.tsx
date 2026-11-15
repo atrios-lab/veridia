@@ -15,6 +15,7 @@ import {
 } from "@/lib/qualificacao.ts";
 import { getTenant, today } from "@/lib/tenant.ts";
 import { AdminPageHeader } from "../../../_components/page-header.tsx";
+import { TirarDuvida } from "../../../_components/tirar-duvida.tsx";
 import { buttonVariants } from "../../../_ui/button.tsx";
 import { requireQualificacao } from "./_access.ts";
 
@@ -84,6 +85,7 @@ export default async function QualificationsPage({
         description="Cada título apresentado é examinado e recebe a nota devolutiva, com as exigências de uma só vez e fundamentadas, ou a qualificação positiva. Todas as atribuições da serventia, começando pelo Registro Civil."
       />
       <main className="flex max-w-[1100px] flex-col gap-6 px-4 py-7 md:px-8">
+        <TirarDuvida topic="qualificacao" />
         <div className="flex flex-wrap gap-2">
           <Link href={`${BASE}/nova`} className={buttonVariants()}>
             Nova qualificação

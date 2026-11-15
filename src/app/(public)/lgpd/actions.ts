@@ -1,6 +1,7 @@
 "use server";
 
 import { headers } from "next/headers";
+import { after } from "next/server";
 import { generateAccessKey, hashAccessKey } from "@/core/request/access-key.ts";
 import {
   dataRightsDeadline,
@@ -12,6 +13,9 @@ import { parseDetails } from "@/core/request/kinds.ts";
 import { formatProtocolNumber } from "@/core/request/protocol.ts";
 import { isSectionEnabled } from "@/core/tenant/gating.ts";
 import { officeYear } from "@/core/time/office-time.ts";
+import { db } from "@/db/index.ts";
+import { autoDraftDataRightsWith } from "@/lib/dpo/auto-draft.ts";
+import { dpoBlocked, dpoModels } from "@/lib/dpo/models.ts";
 import {
   notifyCitizen,
   notifyOfficeDataRightsSubmitted,
@@ -100,7 +104,7 @@ export async function submitDataRights(
     });
 
     const accessKey = generateAccessKey();
-    const { protocolNumber } = await createRecord(
+    const { id: requestId, protocolNumber } = await createRecord(
       tenant,
       "data-rights",
       {
@@ -128,6 +132,16 @@ export async function submitDataRights(
       body: "Recebemos o seu requerimento. Guarde o número do protocolo e a chave de acesso mostrados na tela de envio.",
     });
     notifyOfficeDataRightsSubmitted({ tenant, protocolNumber, right });
+    // The Assistente Virtual drafts the answer for the office once the
+    // titular has the screen (decision of 15/11/2026); off, it waits.
+    after(async () => {
+      try {
+        if (await dpoBlocked(tenant.slug)) return;
+        await autoDraftDataRightsWith(db, dpoModels(), tenant, requestId);
+      } catch (error) {
+        console.error("lgpd.auto-draft", error);
+      }
+    });
 
     return {
       status: "success",

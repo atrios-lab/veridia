@@ -245,3 +245,19 @@ test("prazo por atribuição: o da lei como sugestão, o da serventia quando def
   answered.rounds[0] = { ...must(answered.rounds[0]), result: "exigencia" };
   assert.equal(qualificationDeadline(answered, own, "2026-12-30"), null);
 });
+
+test("cada assunto do campo Tirar dúvida tem tema e a permissão da própria tela", async () => {
+  const { QUESTION_TOPICS, isQuestionTopic } = await import(
+    "../assistente/duvidas.ts"
+  );
+  const { OFFICE_PERMISSIONS } = await import("../auth/roles.ts");
+  for (const [key, topic] of Object.entries(QUESTION_TOPICS)) {
+    assert.ok(isQuestionTopic(key));
+    assert.ok(topic.scope.length > 40, key);
+    assert.ok(
+      (OFFICE_PERMISSIONS as readonly string[]).includes(topic.permission),
+      key,
+    );
+  }
+  assert.equal(isQuestionTopic("qualquer-coisa"), false);
+});

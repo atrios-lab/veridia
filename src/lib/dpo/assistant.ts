@@ -315,7 +315,8 @@ export async function draftReplyWith(
   models: DpoModels,
   input: {
     tenantSlug: string;
-    userId: string;
+    /** Null when the system drafts on arrival, with no one asking. */
+    userId: string | null;
     userRole: string;
     right: DataRight;
     note: string;

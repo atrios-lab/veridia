@@ -265,3 +265,28 @@ describe("describeOffice", () => {
     assert.doesNotMatch(text, /@/);
   });
 });
+
+test("a resposta ao titular sai como documento, com o requerimento identificado e quem assina", async () => {
+  const { buildDataRightsReply } = await import("./reply-document.ts");
+  const { TENANTS } = await import("../tenant/resolve.ts");
+  const tenant = TENANTS["cartorio-marinho"];
+  if (!tenant) throw new Error("sem serventia de teste");
+  const doc = buildDataRightsReply(tenant, {
+    protocol: "SOL-2026-000001",
+    applicantName: "Titular Fictícia",
+    right: "access",
+    requestedOn: "2026-11-10",
+    text: "Prezada titular,\n\nSegue a resposta fictícia.\nEm duas linhas.",
+    issuedOn: "2026-11-15",
+  });
+  assert.equal(doc.title, "Resposta ao requerimento do titular");
+  assert.match(doc.subtitle, /SOL-2026-000001/);
+  assert.deepEqual(doc.sections[1]?.paragraphs, [
+    "Prezada titular,",
+    "Segue a resposta fictícia. Em duas linhas.",
+  ]);
+  assert.equal(
+    doc.signature[0],
+    "Encarregado(a) pelo tratamento de dados pessoais",
+  );
+});

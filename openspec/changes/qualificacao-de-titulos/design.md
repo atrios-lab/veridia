@@ -94,6 +94,15 @@ integração com IA.
     aponta o provável erro (não jurídico, referência ausente do texto, CPF, repetida, lida pela IA)
     e a fonte fica "em conferência", fora da pesquisa e da IA, até confirmação ou troca.
 
+13. **Nome e dúvidas da equipe (15/11/2026).** Para a serventia, a IA se chama **Assistente
+    Virtual** em todo texto visível, sem o nome do fornecedor. A decisão 10 passa a admitir um
+    campo "Tirar dúvida" nas telas em que ele ajuda (qualificação, base jurídica, CENSEC, DOI,
+    titularidade, registro civil): a pergunta é só sobre o assunto da tela, vai sem dados pessoais,
+    é respondida com a base jurídica e a fonte oficial, citando o dispositivo, e fora do assunto é
+    recusada. Nada da pergunta fica guardado. Nos requerimentos LGPD, o Assistente do DPO prepara
+    sozinho o rascunho da resposta quando o pedido chega (só o tipo do pedido vai ao modelo), e a
+    resposta revisada sai como documento para assinar digital ou fisicamente.
+
 ## Risks / Trade-offs
 
 - [A IA erra ou inventa um fundamento] → Rascunho sempre revisado. Cada exigência mostra o trecho do

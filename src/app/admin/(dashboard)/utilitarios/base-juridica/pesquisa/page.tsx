@@ -9,6 +9,7 @@ import { searchKnowledgeWith } from "@/lib/knowledge.ts";
 import { getTenant } from "@/lib/tenant.ts";
 import { BackLink } from "../../../../_components/back-link.tsx";
 import { AdminPageHeader } from "../../../../_components/page-header.tsx";
+import { TirarDuvida } from "../../../../_components/tirar-duvida.tsx";
 import { Button } from "../../../../_ui/button.tsx";
 import { Input } from "../../../../_ui/input.tsx";
 import { NativeSelect } from "../../../../_ui/native-select.tsx";
@@ -44,6 +45,7 @@ export default async function SearchPage({
         description="Pesquisa feita pelo próprio sistema, sem o Assistente Virtual, só nas fontes em uso: vigentes, conferidas e na versão mais nova. A lei vem antes das normas, da jurisprudência, da doutrina e dos modelos."
       />
       <main className="flex max-w-[1000px] flex-col gap-5 px-4 py-7 md:px-8">
+        <TirarDuvida topic="base-juridica" />
         <BackLink
           href="/admin/utilitarios/base-juridica"
           label="Base jurídica do Assistente Virtual"

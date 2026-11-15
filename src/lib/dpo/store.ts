@@ -59,7 +59,8 @@ export async function createConversationWith(
   database: Database,
   input: {
     tenantSlug: string;
-    userId: string;
+    /** Null: the system's own run (the draft made when a pedido arrives). */
+    userId: string | null;
     userRole: string;
     kind: DpoConversationKind;
     firstMessage: string;

@@ -17,6 +17,7 @@ import {
   listTransfersWith,
 } from "@/lib/title-transfers.ts";
 import { AdminPageHeader } from "../../../_components/page-header.tsx";
+import { TirarDuvida } from "../../../_components/tirar-duvida.tsx";
 import { buttonVariants } from "../../../_ui/button.tsx";
 import { Input } from "../../../_ui/input.tsx";
 import { requireTitularidade } from "./_access.ts";
@@ -77,6 +78,7 @@ export default async function TitularidadePage({
         }
       />
       <main className="flex max-w-[1100px] flex-col gap-5 px-4 py-7 md:px-8">
+        <TirarDuvida topic="titularidade" />
         {query.salvo && (
           <output className="block rounded-xl border border-success/30 bg-success-soft px-4 py-3 text-sm font-medium text-success-text">
             Ato salvo na comunicação de {competenceLabel(mes)}.

@@ -20,6 +20,7 @@ import { getTenant } from "@/lib/tenant.ts";
 import { AdminPageHeader } from "../../_components/page-header.tsx";
 import { RCPN_KINDS_HELP } from "../../_components/screen-help.ts";
 import { ScreenHelpButton } from "../../_components/screen-help-button.tsx";
+import { TirarDuvida } from "../../_components/tirar-duvida.tsx";
 import { Badge } from "../../_ui/badge.tsx";
 import { Button, buttonVariants } from "../../_ui/button.tsx";
 import { Input } from "../../_ui/input.tsx";
@@ -186,6 +187,7 @@ export default async function RcpnPage({
         }
       />
       <main className="flex max-w-[1100px] flex-col gap-6 px-4 py-7 md:px-8">
+        <TirarDuvida topic="registro-civil" />
         <nav aria-label="Tipo de registro" className="flex flex-col gap-2">
           <div className="flex items-center gap-2">
             <h2 className="text-sm font-semibold text-foreground">

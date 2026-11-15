@@ -9,6 +9,7 @@ import { db } from "@/db/index.ts";
 import { listRequestsWith, listSourcesWith } from "@/lib/knowledge.ts";
 import { getTenant } from "@/lib/tenant.ts";
 import { AdminPageHeader } from "../../../_components/page-header.tsx";
+import { TirarDuvida } from "../../../_components/tirar-duvida.tsx";
 import { buttonVariants } from "../../../_ui/button.tsx";
 import { requireKnowledge } from "./_access.ts";
 import { DismissRequestButton } from "./knowledge-forms.tsx";
@@ -46,6 +47,7 @@ export default async function KnowledgePage({
         description="Onde a serventia ensina o Assistente Virtual da qualificação: leis, provimentos, jurisprudência, doutrina e modelos. Todo documento vira Markdown e o arquivo é descartado. O Assistente Virtual não conversa: só aprende com estas fontes e consulta a fonte jurídica oficial."
       />
       <main className="flex max-w-[1100px] flex-col gap-6 px-4 py-7 md:px-8">
+        <TirarDuvida topic="base-juridica" />
         <div className="flex flex-wrap gap-2">
           <Link href={`${BASE}/enviar`} className={buttonVariants()}>
             Enviar fontes

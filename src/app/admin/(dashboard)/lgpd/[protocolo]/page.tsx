@@ -22,6 +22,8 @@ import { requestFileGoneLabel } from "../../../_components/attachment-link.ts";
 import { AttachmentRow } from "../../../_components/attachment-row.tsx";
 import { AdminPageHeader } from "../../../_components/page-header.tsx";
 import { RequestFilesNotice } from "../../../_components/request-files-notice.tsx";
+import { SignOrPrint } from "../../../_components/sign-or-print.tsx";
+import { buttonVariants } from "../../../_ui/button.tsx";
 import { DeadlineBadge } from "../_components/deadline-badge.tsx";
 import { ReplySection } from "./_components/reply-section.tsx";
 import { deleteAttachmentAction } from "./actions.ts";
@@ -165,6 +167,41 @@ export default async function DataRightsDetailPage({
                 </div>
               )}
 
+              {(request.status === "new"
+                ? Boolean(details.draftReply?.trim())
+                : Boolean(request.officeReply?.trim())) && (
+                <div className="mt-5 flex flex-col gap-2 rounded-lg border px-3.5 py-3">
+                  <span className="text-sm font-medium text-foreground">
+                    Documento da resposta
+                  </span>
+                  <p className="text-xs text-muted-foreground text-justify hyphens-auto">
+                    {request.status === "new"
+                      ? "Sai com o texto do rascunho como foi salvo por último, no papel da serventia, para assinar digitalmente ou imprimir e assinar."
+                      : "A resposta enviada, no papel da serventia, para assinar digitalmente ou imprimir e assinar."}
+                  </p>
+                  <div className="flex flex-wrap gap-2">
+                    <SignOrPrint
+                      pdfHref={`/admin/lgpd/${encodeURIComponent(request.protocolNumber)}/resposta`}
+                      title={`Resposta ao requerimento ${request.protocolNumber}`}
+                    />
+                    <a
+                      href={`/admin/lgpd/${encodeURIComponent(request.protocolNumber)}/resposta/word`}
+                      className={buttonVariants({ variant: "outline" })}
+                    >
+                      Word (.docx)
+                    </a>
+                  </div>
+                </div>
+              )}
+              {request.status === "new" &&
+                details.draftAuto &&
+                details.draftReply && (
+                  <p className="mt-5 rounded-lg border border-primary/25 bg-primary/5 px-3.5 py-3 text-sm text-foreground text-justify hyphens-auto">
+                    O Assistente Virtual preparou um rascunho da resposta quando
+                    o pedido chegou. Revise com atenção, ajuste ao caso e só
+                    então emita o documento e envie ao titular.
+                  </p>
+                )}
               {request.status === "new" ? (
                 <ReplySection
                   requestId={request.id}

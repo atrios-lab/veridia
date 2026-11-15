@@ -161,6 +161,8 @@ const EXACT: Record<string, AuditLevel> = {
   "ai.transcribe": "rotina",
   "ai.check": "rotina",
   "dpo.purge": "rotina",
+  "ai.question": "rotina",
+  "data-rights.auto-draft": "rotina",
   "ai.qualify": "rotina",
   "knowledge.confirm": "analise",
   "knowledge.request-done": "rotina",

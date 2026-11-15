@@ -33,6 +33,7 @@ import {
 import { getTenant, today } from "@/lib/tenant.ts";
 import { listTransfersWith } from "@/lib/title-transfers.ts";
 import { AdminPageHeader } from "../../../_components/page-header.tsx";
+import { TirarDuvida } from "../../../_components/tirar-duvida.tsx";
 import { buttonVariants } from "../../../_ui/button.tsx";
 import { officeForExport } from "../titularidade/_files.ts";
 import { requireCensec } from "./_access.ts";
@@ -132,6 +133,7 @@ export default async function CensecPage({
         }
       />
       <main className="flex max-w-[1100px] flex-col gap-5 px-4 py-7 md:px-8">
+        <TirarDuvida topic="censec" />
         {query.salvo && (
           <output className="block rounded-xl border border-success/30 bg-success-soft px-4 py-3 text-sm font-medium text-success-text">
             Ato salvo na {quinzenaLabel(q)}.

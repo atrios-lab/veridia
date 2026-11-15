@@ -9,6 +9,7 @@ import { listLibraryWith } from "@/lib/qualificacao.ts";
 import { getTenant } from "@/lib/tenant.ts";
 import { BackLink } from "../../../../_components/back-link.tsx";
 import { AdminPageHeader } from "../../../../_components/page-header.tsx";
+import { TirarDuvida } from "../../../../_components/tirar-duvida.tsx";
 import { buttonVariants } from "../../../../_ui/button.tsx";
 import { requireQualificacao } from "../_access.ts";
 import { LibraryItemForm, MarkLibraryButton } from "../qualificacao-forms.tsx";
@@ -39,6 +40,7 @@ export default async function LibraryPage({
         description="Exigências padronizadas por atribuição e ato, com o que falta, como cumprir e o fundamento. As mais usadas aparecem primeiro. Confira os fundamentos antes de usar: são um ponto de partida, editável."
       />
       <main className="flex max-w-[1100px] flex-col gap-6 px-4 py-7 md:px-8">
+        <TirarDuvida topic="qualificacao" />
         <BackLink
           href="/admin/utilitarios/qualificacao"
           label="Qualificação de títulos"

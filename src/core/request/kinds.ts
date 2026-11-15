@@ -1189,6 +1189,9 @@ export const dataRightsDetailsSchema = z.object({
   // The office's answer in progress, never read by the citizen's consult:
   // only `officeReply` is. Cleared once the final answer is sent.
   draftReply: z.string().optional(),
+  // The draft above was made by the Assistente Virtual when the pedido
+  // arrived, and nobody saved over it yet: the screen says to review it.
+  draftAuto: z.boolean().optional(),
 });
 export type DataRightsDetails = z.infer<typeof dataRightsDetailsSchema>;
 

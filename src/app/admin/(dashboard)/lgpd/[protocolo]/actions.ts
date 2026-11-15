@@ -3,13 +3,11 @@
 import { revalidatePath } from "next/cache";
 import { can } from "@/core/auth/roles.ts";
 import { DPO_COPY } from "@/core/dpo/copy.ts";
-import { fillPlaceholders } from "@/core/dpo/placeholders.ts";
 import { parseDetails } from "@/core/request/kinds.ts";
-import { formatDate, toIsoDate } from "@/core/scheduling/calendar.ts";
-import { OFFICE_TIME_ZONE } from "@/core/time/office-time.ts";
 import { db } from "@/db/index.ts";
 import { justify } from "@/lib/audit-reason.ts";
 import { draftReplyWith } from "@/lib/dpo/assistant.ts";
+import { fillReply } from "@/lib/dpo/auto-draft.ts";
 import { dpoBlocked, dpoModels } from "@/lib/dpo/models.ts";
 import { officeContextFor } from "@/lib/dpo/office.ts";
 import { notifyCitizen } from "@/lib/email/service-request.ts";
@@ -246,14 +244,6 @@ export async function draftDataRightsReply(
   }
   return {
     status: "ok",
-    draft: fillPlaceholders(result.draft, {
-      TITULAR: request.applicantName,
-      PROTOCOLO: request.protocolNumber,
-      DATA_DO_PEDIDO: formatDate(
-        toIsoDate(request.createdAt, OFFICE_TIME_ZONE),
-      ),
-      SERVENTIA: tenant.subtitle,
-      ENCARREGADO: tenant.dpo.name,
-    }),
+    draft: fillReply(result.draft, request, tenant),
   };
 }
