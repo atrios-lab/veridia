@@ -119,8 +119,10 @@ const EXACT: Record<string, string> = {
     "Pediu ao Assistente Virtual a conferência de uma fonte no site oficial",
   "data-rights.auto-draft":
     "Assistente Virtual: rascunho da resposta a um requerimento LGPD",
-  "data-rights.intake":
-    "Respondeu às perguntas do Assistente Virtual sobre um requerimento LGPD",
+  "data-rights.align":
+    "Conversou com o Assistente Virtual sobre um requerimento LGPD",
+  "data-rights.approve":
+    "Aprovou a resposta a um requerimento LGPD (decisão final)",
   "ai.question": "Tirou uma dúvida com o Assistente Virtual",
   "dpo.purge":
     "As conversas do Assistente do DPO com mais de 12 meses desde a última mensagem foram removidas pela guarda automática (LGPD: guardar só o necessário). Fica registrado quantas.",
@@ -537,9 +539,11 @@ const EXPLANATIONS: Record<string, string> = {
   "ai.transcribe":
     "Imagens ou PDFs digitalizados foram enviados ao Assistente Virtual para leitura do texto. O conteúdo não fica na auditoria e o arquivo não é guardado.",
   "data-rights.auto-draft":
-    "Depois que a serventia respondeu às perguntas sobre o requerimento LGPD, o Assistente Virtual preparou um rascunho da resposta para revisão. Foram ao Assistente Virtual o tipo do pedido e as respostas, sem dados pessoais; nada foi enviado ao titular.",
-  "data-rights.intake":
-    "A serventia respondeu às perguntas sobre o requerimento LGPD (identidade conferida, dados que guarda, prazos de guarda) antes do rascunho da resposta. Os arquivos mandados só para leitura do Assistente Virtual não são guardados.",
+    "O Assistente Virtual preparou a resposta a um requerimento LGPD com o que a equipe alinhou na conversa. Foram ao Assistente Virtual o tipo do pedido e a conversa, sem dados pessoais; nada foi enviado ao titular.",
+  "data-rights.align":
+    "Um funcionário conversou com o Assistente Virtual sobre um requerimento LGPD, para alinhar a resposta com base na lei. A conversa fica no requerimento, com nomes, CPF, e-mails e telefones trocados por marcadores.",
+  "data-rights.approve":
+    "O encarregado de dados ou o Tabelião aprovou o texto da resposta ao titular. Se o texto mudar depois, precisa de nova aprovação antes do envio.",
   "ai.question":
     "Um funcionário tirou uma dúvida com o Assistente Virtual sobre o assunto da tela. A pergunta foi sem dados pessoais e o conteúdo não fica guardado nem na auditoria.",
   "dpo.purge":

@@ -118,6 +118,12 @@ export const OFFICE_PERMISSIONS = [
   // Everyone at the desk has it from day one (decision of 15/11/2026:
   // "todos que usam a plataforma"); the Tabelião/Registrador may take it.
   "dpo.assist",
+  // The final decision on the answer to an LGPD requerimento (decision of
+  // 15/11/2026: "a decisão final é do DPO e tabelião"): approve the text
+  // the team aligned with the Assistente Virtual, or send it directly.
+  // Derived from nothing: the Tabelião/Registrador grants it to the
+  // encarregado.
+  "lgpd.decide",
 ] as const;
 
 /**
@@ -160,6 +166,7 @@ export const GRANTABLE_PERMISSIONS = [
   "attributions.view",
   "attributions.import",
   "dpo.assist",
+  "lgpd.decide",
 ] as const;
 export type GrantablePermission = (typeof GRANTABLE_PERMISSIONS)[number];
 
@@ -454,4 +461,6 @@ export const GRANTABLE_LABELS: Record<GrantablePermission, string> = {
     "Atribuições: enviar e excluir arquivos de cada atribuição (com justificativa)",
   "dpo.assist":
     "Assistente do DPO: dúvidas de proteção de dados e rascunho de resposta à LGPD",
+  "lgpd.decide":
+    "Requerimento LGPD: decisão final sobre a resposta ao titular (aprovar e enviar)",
 };

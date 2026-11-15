@@ -1192,16 +1192,19 @@ export const dataRightsDetailsSchema = z.object({
   // The draft above was made by the Assistente Virtual when the pedido
   // arrived, and nobody saved over it yet: the screen says to review it.
   draftAuto: z.boolean().optional(),
-  // What the office answered to the Assistente Virtual's questions before
-  // the draft (core/dpo/intake.ts).
-  intake: z
+  // The conversation with the Assistente Virtual about this requerimento
+  // (core/dpo/alinhamento.ts), shared by the team.
+  alignment: z.object({ conversationId: z.string() }).optional(),
+  // The final decision on the answer (`lgpd.decide`): the exact text the
+  // encarregado or the Tabelião approved. A change to the text needs a new
+  // approval before it goes to the titular.
+  approval: z
     .object({
-      answers: z.record(
-        z.string(),
-        z.object({ choice: z.string().max(200), note: z.string().max(1000) }),
-      ),
-      notes: z.string().max(4000),
-      answeredAt: z.string().optional(),
+      text: z.string(),
+      byId: z.string(),
+      byName: z.string(),
+      byRole: z.string(),
+      at: z.string(),
     })
     .optional(),
 });

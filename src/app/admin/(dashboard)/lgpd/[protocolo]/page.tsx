@@ -1,7 +1,7 @@
 import { notFound } from "next/navigation";
 import { BackLink } from "@/app/admin/_components/back-link";
 import { can } from "@/core/auth/roles.ts";
-import { intakeQuestions } from "@/core/dpo/intake.ts";
+import { approvalStatus } from "@/core/dpo/alinhamento.ts";
 import { REQUEST_FILE_RETENTION_DAYS } from "@/core/request/attachment-retention.ts";
 import {
   dataRightOption,
@@ -11,6 +11,8 @@ import {
 import { parseDetails } from "@/core/request/kinds.ts";
 import { toIsoDate } from "@/core/scheduling/calendar.ts";
 import { formatOfficeDayMonthTime } from "@/core/time/office-time.ts";
+import { db } from "@/db/index.ts";
+import { alignmentMessagesWith } from "@/lib/dpo/alignment.ts";
 import {
   findByProtocol,
   listAttachments,
@@ -27,9 +29,10 @@ import { SignOrPrint } from "../../../_components/sign-or-print.tsx";
 import { buttonVariants } from "../../../_ui/button.tsx";
 import { DeadlineBadge } from "../_components/deadline-badge.tsx";
 import {
+  AlignmentSection,
+  ApprovalBlock,
   AttachForTitular,
-  IntakeSection,
-} from "./_components/intake-section.tsx";
+} from "./_components/alignment-section.tsx";
 import { ReplySection } from "./_components/reply-section.tsx";
 import { deleteAttachmentAction } from "./actions.ts";
 
@@ -39,6 +42,10 @@ const HISTORY_LABELS: Record<string, string> = {
   "data-rights.create": "registrou o requerimento",
   "data-rights.respond": "respondeu ao titular",
   "data-rights.draft": "salvou um rascunho de resposta",
+  "data-rights.align": "conversou com o Assistente Virtual",
+  "data-rights.auto-draft":
+    "preparou a resposta com o que foi alinhado na conversa",
+  "data-rights.approve": "aprovou a resposta (decisão final)",
   "data-rights.attachment-purge": `apagou um arquivo, ${REQUEST_FILE_RETENTION_DAYS} dias após o encerramento`,
 };
 
@@ -79,7 +86,17 @@ export default async function DataRightsDetailPage({
   const option = dataRightOption(details.right);
   const requestedOn = toIsoDate(request.createdAt, OFFICE_TIME_ZONE);
 
-  const [attachments, history] = await Promise.all([
+  const canAssist = can(
+    session.user.role ?? "",
+    "dpo.assist",
+    session.user.permissions,
+  );
+  const canDecide = can(
+    session.user.role ?? "",
+    "lgpd.decide",
+    session.user.permissions,
+  );
+  const [attachments, history, conversation] = await Promise.all([
     listAttachments(tenant.slug, request.id),
     listRecordHistory(
       tenant.slug,
@@ -88,7 +105,11 @@ export default async function DataRightsDetailPage({
       request.protocolNumber,
       session?.user.role === "superadmin",
     ),
+    request.status === "new" && canAssist
+      ? alignmentMessagesWith(db, tenant.slug, request.id)
+      : Promise.resolve([]),
   ]);
+  const approval = approvalStatus(details.approval, details.draftReply ?? "");
   const citizenAttachments = attachments.filter((a) => a.kind !== "office");
   const reportAttachments = attachments.filter((a) => a.kind === "office");
   const todayIso = today();
@@ -203,18 +224,18 @@ export default async function DataRightsDetailPage({
                 </div>
               )}
 
-              {request.status === "new" &&
-                can(
-                  session.user.role ?? "",
-                  "dpo.assist",
-                  session.user.permissions,
-                ) && (
-                  <IntakeSection
-                    requestId={request.id}
-                    questions={intakeQuestions(details.right)}
-                    initial={details.intake}
-                  />
-                )}
+              {request.status === "new" && canAssist && (
+                <AlignmentSection
+                  requestId={request.id}
+                  messages={conversation.map((m) => ({
+                    id: m.id,
+                    role: m.role,
+                    content: m.content,
+                    sources: m.sources,
+                    atLabel: formatOfficeDayMonthTime(m.createdAt),
+                  }))}
+                />
+              )}
 
               {(request.status === "new"
                 ? Boolean(details.draftReply?.trim())
@@ -246,20 +267,29 @@ export default async function DataRightsDetailPage({
                 details.draftAuto &&
                 details.draftReply && (
                   <p className="mt-5 rounded-lg border border-primary/25 bg-primary/5 px-3.5 py-3 text-sm text-foreground text-justify hyphens-auto">
-                    O Assistente Virtual preparou um rascunho da resposta quando
-                    o pedido chegou. Revise com atenção, ajuste ao caso e só
-                    então emita o documento e envie ao titular.
+                    O Assistente Virtual preparou a resposta com o que foi
+                    alinhado na conversa. Revise com atenção e ajuste ao caso
+                    antes de pedir a aprovação.
                   </p>
                 )}
+              {request.status === "new" && (
+                <ApprovalBlock
+                  requestId={request.id}
+                  status={approval}
+                  approvedBy={
+                    details.approval
+                      ? `${details.approval.byName} em ${formatOfficeDayMonthTime(new Date(details.approval.at))}`
+                      : null
+                  }
+                  canDecide={canDecide}
+                  hasDraft={Boolean(details.draftReply?.trim())}
+                />
+              )}
               {request.status === "new" ? (
                 <ReplySection
                   requestId={request.id}
                   initialDraft={details.draftReply ?? ""}
-                  canDraft={can(
-                    session.user.role ?? "",
-                    "dpo.assist",
-                    session.user.permissions,
-                  )}
+                  canDraft={canAssist}
                 />
               ) : (
                 <div className="mt-5 border-t pt-4">

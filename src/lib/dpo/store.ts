@@ -1,4 +1,4 @@
-import { and, asc, count, desc, eq, lt, max, sql } from "drizzle-orm";
+import { and, asc, count, desc, eq, lt, max, ne, sql } from "drizzle-orm";
 import type { MaskCounts } from "@/core/dpo/mask.ts";
 import type { Database } from "@/db/index.ts";
 import {
@@ -16,7 +16,11 @@ import { recordAuditWith } from "../audit.ts";
  * owner in the query, never filtered afterwards.
  */
 
-export type DpoConversationKind = "chat" | "reply-draft";
+/**
+ * "chat" (the DPO page), "reply-draft" (the draft button) or "data-rights"
+ * (the conversation on one LGPD requerimento, shared by the team).
+ */
+export type DpoConversationKind = "chat" | "reply-draft" | "data-rights";
 export type DpoMessageRole = "user" | "assistant" | "refusal";
 
 export interface DpoConversation {
@@ -171,6 +175,8 @@ export async function listOwnConversationsWith(
       and(
         eq(dpoConversations.tenantSlug, input.tenantSlug),
         eq(dpoConversations.userId, input.userId),
+        // A requerimento's conversation lives on the requerimento.
+        ne(dpoConversations.kind, "data-rights"),
       ),
     )
     .orderBy(desc(dpoConversations.lastMessageAt));

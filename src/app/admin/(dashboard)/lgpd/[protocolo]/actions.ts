@@ -2,22 +2,22 @@
 
 import { revalidatePath } from "next/cache";
 import { can } from "@/core/auth/roles.ts";
-import { DPO_COPY } from "@/core/dpo/copy.ts";
 import {
-  intakeNote,
-  intakeProblems,
-  intakeQuestions,
-} from "@/core/dpo/intake.ts";
-import { maskPersonalData } from "@/core/dpo/mask.ts";
+  APPROVAL_NEEDED,
+  alignmentTranscript,
+  mayAnswer,
+} from "@/core/dpo/alinhamento.ts";
+import { DPO_COPY } from "@/core/dpo/copy.ts";
 import { parseDetails } from "@/core/request/kinds.ts";
 import { db } from "@/db/index.ts";
 import { justify } from "@/lib/audit-reason.ts";
-import { draftReplyWith } from "@/lib/dpo/assistant.ts";
 import {
-  autoDraftDataRightsWith,
-  fillReply,
-  saveDataRightsIntakeWith,
-} from "@/lib/dpo/auto-draft.ts";
+  alignDataRightsWith,
+  alignmentStoredWith,
+  approveDataRightsReplyWith,
+} from "@/lib/dpo/alignment.ts";
+import { draftReplyWith } from "@/lib/dpo/assistant.ts";
+import { autoDraftDataRightsWith, fillReply } from "@/lib/dpo/auto-draft.ts";
 import { dpoBlocked, dpoModels } from "@/lib/dpo/models.ts";
 import { officeContextFor } from "@/lib/dpo/office.ts";
 import { notifyCitizen } from "@/lib/email/service-request.ts";
@@ -92,6 +92,23 @@ export async function respondDataRights(
     const request = await findById(tenant.slug, requestId);
     if (!request) {
       return { status: "error", message: "Requerimento não encontrado." };
+    }
+    // The final decision is the encarregado's or the Tabelião's (decision
+    // of 15/11/2026): anyone else sends only the text they approved.
+    const canDecide = can(
+      session.user.role ?? "",
+      "lgpd.decide",
+      session.user.permissions,
+    );
+    if (
+      request.kind === "data-rights" &&
+      !mayAnswer(
+        canDecide,
+        parseDetails("data-rights", request.details).approval,
+        reply,
+      )
+    ) {
+      return { status: "error", message: APPROVAL_NEEDED };
     }
 
     const files = formData
@@ -241,12 +258,17 @@ export async function draftDataRightsReply(
   }
   const { right } = parseDetails("data-rights", request.details);
   const now = new Date();
+  const typed = String(formData.get("note") ?? "").trim();
+  const aligned = alignmentTranscript(
+    await alignmentStoredWith(db, tenant.slug, request.id),
+    3800 - typed.length,
+  );
   const result = await draftReplyWith(db, dpoModels(), {
     tenantSlug: tenant.slug,
     userId: session.user.id,
     userRole: session.user.role ?? "",
     right,
-    note: String(formData.get("note") ?? ""),
+    note: [aligned, typed].filter(Boolean).join("\n\n"),
     officeContext: await officeContextFor(tenant, now),
     now,
   });
@@ -259,24 +281,101 @@ export async function draftDataRightsReply(
   };
 }
 
-export type IntakeState =
+export type AlignState =
   | { status: "idle" }
   | { status: "error"; message: string }
-  | { status: "saved"; drafted: boolean; message: string };
+  | { status: "ok"; at: number };
+
+async function assistSession() {
+  const session = await authorize();
+  if (
+    !session ||
+    !can(session.user.role ?? "", "dpo.assist", session.user.permissions)
+  ) {
+    return null;
+  }
+  return session;
+}
 
 /**
- * The office answers the Assistente Virtual's questions (core/dpo/intake),
- * may attach a document for it to read (read here and dropped, its text
- * masked like the notes), and the draft is made from the answers. The
- * answers stay on the requerimento; the document does not.
+ * One turn of the conversation on the requerimento (decision of
+ * 15/11/2026): the team writes, may attach a document for the Assistente
+ * Virtual to read (read here and dropped), and it answers from the norms.
+ * An empty first message opens the analysis.
  */
-export async function answerIntakeAction(
-  _previous: IntakeState,
+export async function alignAction(
+  _previous: AlignState,
   formData: FormData,
-): Promise<IntakeState> {
-  const session = await authorize();
+): Promise<AlignState> {
+  const session = await assistSession();
   if (!session) return { status: "error", message: NO_PERMISSION };
+  if (await isDpoRateLimited(session.user.id)) {
+    return { status: "error", message: DPO_COPY.rateLimited };
+  }
   const tenant = await getTenant();
+  const blocked = await dpoBlocked(tenant.slug);
+  if (blocked) return { status: "error", message: blocked };
+
+  // The document for the Assistente Virtual: read now, never stored.
+  let fileText = "";
+  const files = formData
+    .getAll("paraAssistente")
+    .filter((f): f is File => f instanceof File && f.size > 0)
+    .slice(0, 3);
+  if (files.length) {
+    const read = await readKnowledgeFiles(files);
+    fileText = read.documents
+      .map((d) => d.markdown)
+      .join("\n\n")
+      .slice(0, 2500);
+    if (!fileText.trim()) {
+      return {
+        status: "error",
+        message: "Não foi possível ler o texto do arquivo anexado.",
+      };
+    }
+  }
+
+  const now = new Date();
+  try {
+    const result = await alignDataRightsWith(db, dpoModels(), {
+      tenant,
+      requestId: String(formData.get("requestId") ?? ""),
+      userId: session.user.id,
+      userRole: session.user.role ?? "",
+      message: String(formData.get("message") ?? ""),
+      fileText,
+      officeContext: await officeContextFor(tenant, now),
+      now,
+    });
+    if (result.status !== "ok") {
+      return { status: "error", message: result.message };
+    }
+  } catch (error) {
+    console.error("lgpd.align", error);
+    return { status: "error", message: DPO_COPY.failed };
+  }
+  revalidateAdmin();
+  return { status: "ok", at: now.getTime() };
+}
+
+/**
+ * "Preparar a resposta com o que alinhamos": the draft from the
+ * conversation, saved on the requerimento as the Assistente Virtual's.
+ * A text a person already saved is never replaced.
+ */
+export async function prepareFromAlignmentAction(
+  _previous: AlignState,
+  formData: FormData,
+): Promise<AlignState> {
+  const session = await assistSession();
+  if (!session) return { status: "error", message: NO_PERMISSION };
+  if (await isDpoRateLimited(session.user.id)) {
+    return { status: "error", message: DPO_COPY.rateLimited };
+  }
+  const tenant = await getTenant();
+  const blocked = await dpoBlocked(tenant.slug);
+  if (blocked) return { status: "error", message: blocked };
   const request = await findById(
     tenant.slug,
     String(formData.get("requestId") ?? ""),
@@ -284,85 +383,76 @@ export async function answerIntakeAction(
   if (!request || request.kind !== "data-rights" || request.status !== "new") {
     return { status: "error", message: "Requerimento não encontrado." };
   }
-  const details = parseDetails("data-rights", request.details);
-  const answers: Record<string, { choice: string; note: string }> = {};
-  for (const q of intakeQuestions(details.right)) {
-    answers[q.id] = {
-      choice: String(formData.get(`q-${q.id}`) ?? "").slice(0, 200),
-      note: String(formData.get(`n-${q.id}`) ?? "")
-        .trim()
-        .slice(0, 1000),
+  const note = alignmentTranscript(
+    await alignmentStoredWith(db, tenant.slug, request.id),
+  );
+  if (!note) {
+    return {
+      status: "error",
+      message:
+        "Converse com o Assistente Virtual antes de preparar a resposta.",
     };
   }
-  const intake = {
-    answers,
-    notes: String(formData.get("observacoes") ?? "")
-      .trim()
-      .slice(0, 4000),
-  };
-  const problems = intakeProblems(details.right, intake);
-  if (problems.length) return { status: "error", message: problems[0] ?? "" };
-
-  // The document for the Assistente Virtual: read now, never stored.
-  let fromFile = "";
-  const files = formData
-    .getAll("paraAssistente")
-    .filter((f): f is File => f instanceof File && f.size > 0)
-    .slice(0, 3);
-  if (files.length) {
-    const read = await readKnowledgeFiles(files);
-    fromFile = read.documents
-      .map((d) => d.markdown)
-      .join("\n\n")
-      .slice(0, 2500);
+  let outcome: "drafted" | "skipped";
+  try {
+    outcome = await autoDraftDataRightsWith(
+      db,
+      dpoModels(),
+      tenant,
+      request.id,
+      new Date(),
+      officeContextFor,
+      note,
+      session.user.id,
+    );
+  } catch (error) {
+    console.error("lgpd.prepare", error);
+    return { status: "error", message: DPO_COPY.failed };
   }
-
-  await saveDataRightsIntakeWith(
-    db,
-    tenant.slug,
-    request.id,
-    {
-      ...intake,
-      answeredAt: new Date().toISOString(),
-    },
-    session.user.id,
-  );
-
-  let drafted = false;
-  if (!(await dpoBlocked(tenant.slug))) {
-    const note = maskPersonalData(
-      [
-        intakeNote(details.right, intake),
-        fromFile
-          ? `Trecho do documento anexado pela serventia:\n${fromFile}`
-          : "",
-      ]
-        .filter(Boolean)
-        .join("\n\n"),
-    ).text;
-    try {
-      drafted =
-        (await autoDraftDataRightsWith(
-          db,
-          dpoModels(),
-          tenant,
-          request.id,
-          new Date(),
-          officeContextFor,
-          note,
-        )) === "drafted";
-    } catch (error) {
-      console.error("lgpd.intake-draft", error);
-    }
+  if (outcome !== "drafted") {
+    return {
+      status: "error",
+      message:
+        'A resposta não foi preparada: já há um texto salvo pela equipe (use "Rascunhar resposta" no campo da resposta para trocar) ou o limite do mês foi atingido.',
+    };
   }
   revalidateAdmin();
-  return {
-    status: "saved",
-    drafted,
-    message: drafted
-      ? "Respostas salvas. O Assistente Virtual preparou o rascunho abaixo: revise antes de enviar."
-      : "Respostas salvas. O rascunho não foi preparado agora (Assistente Virtual desligado, sem chave ou rascunho já escrito por alguém).",
-  };
+  return { status: "ok", at: Date.now() };
+}
+
+/**
+ * The final decision (`lgpd.decide`): the encarregado or the Tabelião
+ * approves the draft as saved. Any later change needs a new approval.
+ */
+export async function approveReplyAction(
+  _previous: ActionState,
+  formData: FormData,
+): Promise<ActionState> {
+  const session = await authorize();
+  if (
+    !session ||
+    !can(session.user.role ?? "", "lgpd.decide", session.user.permissions)
+  ) {
+    return {
+      status: "error",
+      message:
+        "Só o encarregado de dados ou o Tabelião aprovam a resposta ao titular.",
+    };
+  }
+  const tenant = await getTenant();
+  const result = await approveDataRightsReplyWith(
+    db,
+    tenant.slug,
+    String(formData.get("requestId") ?? ""),
+    {
+      id: session.user.id,
+      name: session.user.name ?? "",
+      role: session.user.role ?? "",
+    },
+  );
+  if (result.status !== "ok") return result;
+  revalidateAdmin();
+  return { status: "success" };
 }
 
 /**

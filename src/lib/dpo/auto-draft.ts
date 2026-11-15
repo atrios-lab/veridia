@@ -35,11 +35,10 @@ export function fillReply(
 }
 
 /**
- * The draft of the answer to an LGPD requerimento, made once the office
- * answered the Assistente Virtual's questions (decisions of 15/11/2026:
- * "ele já dá a resposta para o cartório", and "antes de preparar as
- * respostas, ele deve perguntar algumas coisas ao cartório"). Only the
- * right asked and the office's masked answers go to the model. Never
+ * The draft of the answer to an LGPD requerimento, made from what the
+ * team and the Assistente Virtual aligned in the requerimento's
+ * conversation (decisions of 15/11/2026). Only the right asked and the
+ * masked conversation go to the model. Never
  * replaces a draft someone already wrote; never sends anything to the
  * titular. Quiet when the Assistente Virtual is off or over the month's
  * limit: the button stays for later.
@@ -52,8 +51,10 @@ export async function autoDraftDataRightsWith(
   now = new Date(),
   /** The office's figures for the model (lib/dpo/office.ts by default). */
   contextFor: (tenant: Tenant, now: Date) => Promise<string> = officeContextFor,
-  /** The office's answers (core/dpo/intake), masked inside the draft. */
+  /** What was aligned in the conversation (core/dpo/alinhamento). */
   note = "",
+  /** Who asked for it; null when the system drafts on its own. */
+  actorId: string | null = null,
 ): Promise<"drafted" | "skipped"> {
   const [request] = await database
     .select()
@@ -69,7 +70,7 @@ export async function autoDraftDataRightsWith(
   }
   const details = parseDetails("data-rights", request.details);
   // A draft a person wrote is never replaced; the Assistente Virtual's own
-  // is redone when the office answers the questions again.
+  // is redone when the team asks again after more conversation.
   if (details.draftReply?.trim() && details.draftAuto !== true)
     return "skipped";
   const result = await draftReplyWith(database, models, {
@@ -93,49 +94,11 @@ export async function autoDraftDataRightsWith(
       .where(eq(serviceRequests.id, request.id));
     await recordAuditWith(tx as unknown as Database, {
       tenantSlug: tenant.slug,
-      actorId: null,
+      actorId,
       action: "data-rights.auto-draft",
       targetType: "data-rights",
       targetId: request.protocolNumber,
     });
   });
   return "drafted";
-}
-
-/** The office's answers to the Assistente Virtual's questions, kept on the requerimento. */
-export async function saveDataRightsIntakeWith(
-  database: Database,
-  tenantSlug: string,
-  requestId: string,
-  intake: {
-    answers: Record<string, { choice: string; note: string }>;
-    notes: string;
-    answeredAt: string;
-  },
-  actorId: string,
-): Promise<void> {
-  await database.transaction(async (tx) => {
-    const [row] = await tx
-      .update(serviceRequests)
-      .set({
-        details: sql`${serviceRequests.details} || ${JSON.stringify({ intake })}::jsonb`,
-        updatedAt: new Date(),
-      })
-      .where(
-        and(
-          eq(serviceRequests.tenantSlug, tenantSlug),
-          eq(serviceRequests.id, requestId),
-          eq(serviceRequests.kind, "data-rights"),
-        ),
-      )
-      .returning({ protocolNumber: serviceRequests.protocolNumber });
-    if (!row) return;
-    await recordAuditWith(tx as unknown as Database, {
-      tenantSlug,
-      actorId,
-      action: "data-rights.intake",
-      targetType: "data-rights",
-      targetId: row.protocolNumber,
-    });
-  });
 }

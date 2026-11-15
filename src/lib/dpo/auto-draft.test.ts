@@ -8,10 +8,7 @@ import type { Database } from "@/db/index.ts";
 import { auditLog, serviceRequests } from "@/db/schema.ts";
 import { createTestDb } from "@/db/test-db.ts";
 import { createRecordWith, saveDraftReplyWith } from "../service-request.ts";
-import {
-  autoDraftDataRightsWith,
-  saveDataRightsIntakeWith,
-} from "./auto-draft.ts";
+import { autoDraftDataRightsWith } from "./auto-draft.ts";
 
 // Fictitious titular only (LGPD).
 const TENANT = TENANTS["cartorio-marinho"];
@@ -56,7 +53,7 @@ after(async () => {
   await close();
 });
 
-test("o rascunho da resposta LGPD sai depois das respostas da serventia, sem o nome do titular ir ao modelo", async () => {
+test("a resposta LGPD sai do que foi alinhado, sem o nome do titular ir ao modelo", async () => {
   const { id, protocolNumber } = await createRecordWith(
     db,
     TENANT,
@@ -84,32 +81,8 @@ test("o rascunho da resposta LGPD sai depois das respostas da serventia, sem o n
   const trail = (await db.select().from(auditLog)).map((a) => a.action);
   assert.ok(trail.includes("data-rights.auto-draft"));
 
-  // The office answers the questions: they are kept, audited, and the
-  // Assistente Virtual's own draft is redone with them.
-  await saveDataRightsIntakeWith(
-    db,
-    TENANT.slug,
-    id,
-    {
-      answers: { identidade: { choice: "conferida", note: "" } },
-      notes: "Só há o cadastro do pedido de certidão.",
-      answeredAt: NOW.toISOString(),
-    },
-    "encarregada",
-  );
-  const [withIntake] = await db
-    .select()
-    .from(serviceRequests)
-    .where(eq(serviceRequests.id, id));
-  assert.equal(
-    parseDetails("data-rights", withIntake?.details).intake?.answers.identidade
-      ?.choice,
-    "conferida",
-  );
-  const intakeAudit = (await db.select().from(auditLog)).find(
-    (a) => a.action === "data-rights.intake",
-  );
-  assert.equal(intakeAudit?.targetId, protocolNumber);
+  // Asked again after more conversation, the Assistente Virtual's own
+  // draft is redone with what was aligned.
   assert.equal(
     await autoDraftDataRightsWith(
       db,
@@ -118,7 +91,7 @@ test("o rascunho da resposta LGPD sai depois das respostas da serventia, sem o n
       id,
       NOW,
       context,
-      "Identidade: conferida. Só há o cadastro do pedido de certidão.",
+      "Equipe: Só há o cadastro do pedido de certidão.",
     ),
     "drafted",
   );

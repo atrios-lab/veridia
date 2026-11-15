@@ -291,26 +291,49 @@ test("a resposta ao titular sai como documento, com o requerimento identificado 
   );
 });
 
-test("antes do rascunho, o cartório responde às perguntas do tipo de pedido", async () => {
-  const { intakeNote, intakeProblems, intakeQuestions } = await import(
-    "./intake.ts"
-  );
-  const ids = intakeQuestions("deletion").map((q) => q.id);
-  assert.deepEqual(ids, ["identidade", "dados", "publicidade", "guarda"]);
-  const blank = { answers: {}, notes: "" };
-  assert.equal(intakeProblems("deletion", blank).length, 4);
-  const done = {
-    answers: {
-      identidade: { choice: "Sim", note: "" },
-      dados: { choice: "Sim", note: "livro de notas" },
-      publicidade: { choice: "Sim", note: "" },
-      guarda: { choice: "Sim", note: "" },
+test("na conversa do requerimento, o Assistente Virtual orienta e quem decide é o encarregado ou o Tabelião", async () => {
+  const {
+    ALIGNMENT_START,
+    ALIGNMENT_TOPICS,
+    alignmentInstructions,
+    alignmentTranscript,
+    approvalStatus,
+    mayAnswer,
+  } = await import("./alinhamento.ts");
+  const rules = alignmentInstructions("Serventia fictícia.", "deletion");
+  assert.match(rules, /eliminação/);
+  assert.match(rules, /\[\[fonte:ID\]\]/);
+  assert.match(rules, /decisão final é do encarregado de dados ou do Tabelião/);
+  for (const topic of ALIGNMENT_TOPICS.deletion)
+    assert.ok(rules.includes(topic));
+  assert.doesNotMatch(rules, /\u2013|\u2014/);
+
+  // The transcript for the draft: no opening prompt, no source markers.
+  const transcript = alignmentTranscript([
+    { role: "user", content: ALIGNMENT_START },
+    {
+      role: "assistant",
+      content: "O livro fica, por dever de conservação [[fonte:cnn-1]].",
     },
-    notes: "Pedido feito por e-mail também.",
+    { role: "user", content: "Há também o contato no cadastro do site." },
+  ]);
+  assert.match(transcript, /Assistente Virtual: O livro fica/);
+  assert.match(transcript, /Equipe: Há também o contato/);
+  assert.doesNotMatch(transcript, /fonte:|Analise este requerimento/);
+
+  // The decision: approved word for word, or it needs a new approval.
+  const approval = {
+    text: "Resposta aprovada.",
+    byId: "u1",
+    byName: "Encarregada Fictícia",
+    byRole: "staff",
+    at: "2026-11-15T15:00:00.000Z",
   };
-  assert.deepEqual(intakeProblems("deletion", done), []);
-  const note = intakeNote("deletion", done);
-  assert.match(note, /obrigação legal de guardar.*Sim/);
-  assert.match(note, /\(livro de notas\)/);
-  assert.match(note, /Observações: Pedido feito/);
+  assert.equal(approvalStatus(undefined, "x"), "pending");
+  assert.equal(approvalStatus(approval, " Resposta aprovada. "), "approved");
+  assert.equal(approvalStatus(approval, "Resposta mudada."), "changed");
+  assert.equal(mayAnswer(false, undefined, "x"), false);
+  assert.equal(mayAnswer(false, approval, "Resposta mudada."), false);
+  assert.equal(mayAnswer(false, approval, "Resposta aprovada."), true);
+  assert.equal(mayAnswer(true, undefined, "x"), true);
 });
