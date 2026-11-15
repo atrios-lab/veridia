@@ -108,6 +108,8 @@ const EXACT: Record<string, string> = {
     "Excluiu uma exigência da biblioteca (fica guardada)",
   "qualificacao.library-restore": "Estornou uma exigência da biblioteca",
   "knowledge.version": "Enviou nova versão de uma fonte da base jurídica",
+  "knowledge.revoke-auto":
+    "Fonte da base jurídica marcada como revogada pelo texto de outra",
   "knowledge.edit": "Corrigiu os dados de uma fonte da base jurídica",
   "knowledge.remove": "Excluiu uma fonte da base jurídica (fica guardada)",
   "knowledge.restore": "Estornou uma fonte excluída da base jurídica",
@@ -526,6 +528,8 @@ const EXPLANATIONS: Record<string, string> = {
     "Uma exigência excluída voltou à biblioteca, com justificativa.",
   "knowledge.create":
     "Uma fonte (lei, provimento, jurisprudência, doutrina ou modelo) foi lida, convertida em Markdown e guardada na base jurídica do Assistente Virtual. O arquivo enviado não é guardado.",
+  "knowledge.revoke-auto":
+    "Ao enviar uma norma que revoga outra por inteiro, a plataforma marcou a antiga como revogada (continua guardada, deixa de ser usada pelo Assistente Virtual). Dá para desfazer editando a situação da fonte.",
   "knowledge.version":
     "Uma fonte da base jurídica ganhou nova versão, com justificativa. A versão anterior continua guardada e sai da pesquisa.",
   "knowledge.edit":

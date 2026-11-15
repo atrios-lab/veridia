@@ -192,6 +192,17 @@ export async function sendAction(
           viaAi: document.viaAi,
           pending: created.pending,
         });
+        // When one revokes the other (decision of 15/11/2026), it shows.
+        if (created.revoked.length) {
+          report.notes.push(
+            `${title}: revoga ${created.revoked.join(", ")}, que ${created.revoked.length > 1 ? "foram marcadas" : "foi marcada"} como revogada${created.revoked.length > 1 ? "s" : ""} e deixa${created.revoked.length > 1 ? "m" : ""} de ser usada${created.revoked.length > 1 ? "s" : ""}.`,
+          );
+        }
+        if (created.revokedBy) {
+          report.notes.push(
+            `${title}: entrou como revogada, porque ${created.revokedBy}, já na base, a revoga.`,
+          );
+        }
       } catch (error) {
         report.notes.push(
           `${document.name}: ${error instanceof KnowledgeError ? error.message : "não foi possível guardar."}`,

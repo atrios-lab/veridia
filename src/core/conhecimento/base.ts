@@ -439,6 +439,7 @@ export function rankPassages(
   const hits: Hit[] = [];
   for (const c of candidates) {
     if (c.status === "revogada") continue;
+    if (isRevokedPassage(c.text)) continue;
     const text = fold(`${c.heading} ${c.text}`);
     let matched = 0;
     let frequency = 0;
@@ -724,4 +725,96 @@ export function sourceWarnings(
     );
   }
   return warnings;
+}
+
+/* ------------------------------------------------ norms revoked by a text */
+
+/**
+ * A norm named in a text, as a key to compare: its kind, number and year
+ * ("provimento:149:2023"). The year may be missing.
+ */
+export interface NormRef {
+  kind: string;
+  number: string;
+  year?: string;
+}
+
+const NORM_KINDS =
+  "lei complementar|lei|decreto-lei|decreto|provimento|resolu[cç][aã]o|portaria|instru[cç][aã]o normativa|recomenda[cç][aã]o|medida provis[oó]ria|ato normativo";
+const NORM_MENTION = new RegExp(
+  `\\b(${NORM_KINDS})(?:s|es)?\\b([^.;\\n]{0,80}?)\\bn(?:º|°|o|\\.)?(?:s)?\\.?\\s*((?:[\\d.]+(?:\\s*\\/\\s*\\d{2,4})?)(?:\\s*(?:,|e)\\s*[\\d.]+(?:\\s*\\/\\s*\\d{2,4})?)*)(?:,?\\s*de\\s+(?:\\d{1,2}\\s+de\\s+[a-zç]+\\s+de\\s+)?(\\d{4}))?`,
+  "gi",
+);
+
+function kindKey(kind: string): string {
+  return fold(kind).replace(/\s+/g, "-");
+}
+
+/** Every norm a stretch of text names, with its number and year. */
+export function normsIn(text: string): NormRef[] {
+  const found: NormRef[] = [];
+  for (const m of text.matchAll(NORM_MENTION)) {
+    const kind = kindKey(m[1] ?? "");
+    const years = m[4];
+    for (const part of (m[3] ?? "").split(/\s*(?:,|\be\b)\s*/)) {
+      const [num, y] = part.split("/").map((p) => p.trim());
+      const number = (num ?? "").replace(/\./g, "");
+      if (!/^\d+$/.test(number)) continue;
+      const year = y ? (y.length === 2 ? `20${y}` : y) : years;
+      found.push({ kind, number, ...(year ? { year } : {}) });
+    }
+  }
+  return found;
+}
+
+/** The norm a source is, by its reference or, without one, its title. */
+export function normOf(meta: Pick<SourceMeta, "reference" | "title">) {
+  return normsIn(meta.reference)[0] ?? normsIn(meta.title)[0];
+}
+
+export function sameNorm(a: NormRef, b: NormRef): boolean {
+  return (
+    a.kind === b.kind &&
+    a.number === b.number &&
+    (!a.year || !b.year || a.year === b.year)
+  );
+}
+
+const PARTIAL =
+  /\bart(?:igo)?s?\.?\s*\d|\bincisos?\b|\bpar[aá]grafos?\b|§|\bal[ií]neas?\b|\bcaput\b/i;
+
+/**
+ * The norms a text revokes in full (decision of 15/11/2026: when one
+ * revokes the other, the system knows): "Fica revogado o Provimento nº
+ * 7/2020", "Revogam-se a Resolução nº 5/2018 e o Provimento nº 10/2019".
+ * A clause that revokes only an article, an inciso or a paragraph is not
+ * the norm revoked, nor is "revogam-se as disposições em contrário".
+ */
+export function revokedNorms(text: string): NormRef[] {
+  const out: NormRef[] = [];
+  for (const sentence of text.split(/(?<=[.;])\s+|\n+/)) {
+    const at = sentence.search(/revog/i);
+    if (at < 0) continue;
+    const after = sentence.slice(at);
+    for (const m of after.matchAll(NORM_MENTION)) {
+      const before = after.slice(0, m.index ?? 0);
+      if (PARTIAL.test(before) || PARTIAL.test(m[2] ?? "")) continue;
+      for (const norm of normsIn(m[0])) {
+        if (!out.some((o) => sameNorm(o, norm))) out.push(norm);
+      }
+    }
+  }
+  return out;
+}
+
+/**
+ * An article that only says it was revoked or vetoed ("Art. 5º (Revogado
+ * pela Lei nº 1/2020)."): kept in the text for history, never an answer.
+ */
+export function isRevokedPassage(text: string): boolean {
+  const body = text
+    .replace(/^##\s+.*$/m, "")
+    .replace(/^\s*art(?:igo)?\.?\s*[\d.]+[º°o]?(?:-[a-z])?\s*[.:-]?/i, "")
+    .trim();
+  return /^\(?\s*(revogad[oa]s?|vetad[oa]s?)\b[^)]*\)?\.?$/i.test(body);
 }
