@@ -5,6 +5,7 @@ import {
   officeIdentification,
   officeWithJurisdiction,
   officialName,
+  printedSite,
   serviceLine,
 } from "./identification.ts";
 import { applyTenantOverrides } from "./overrides.ts";
@@ -25,7 +26,7 @@ test("cabeçalho de Ielmo Marinho como nas certidões da serventia", () => {
   assert.equal(id.attributions, undefined);
   assert.deepEqual(id.footer, [
     "Rua José Camilo Bezerra, 44, Centro, Ielmo Marinho / RN, 59490-000",
-    "Fone (84) 4042-0940 · E-mail: contato@cartorioielmomarinhorn.com · cartorioielmomarinhorn.com",
+    "Fone (84) 4042-0940 · E-mail: contato@cartorioielmomarinhorn.com · www.cartorioielmomarinhorn.com",
   ]);
 });
 
@@ -183,4 +184,14 @@ test("a UF da comarca pode ser outra que a do cadastro", () => {
     }),
     "Comarca de Juazeiro/BA",
   );
+});
+
+test("o site sai com www., como se escreve; endereço local fica como está", () => {
+  assert.equal(
+    printedSite("cartorioielmomarinhorn.com"),
+    "www.cartorioielmomarinhorn.com",
+  );
+  assert.equal(printedSite("www.cartorio.exemplo"), "www.cartorio.exemplo");
+  assert.equal(printedSite("marinho.localhost"), "marinho.localhost");
+  assert.equal(printedSite("127.0.0.1:3000"), "127.0.0.1:3000");
 });

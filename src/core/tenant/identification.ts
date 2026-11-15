@@ -132,9 +132,29 @@ export function defaultFooter(tenant: Tenant): string[] {
   ].filter(Boolean);
 }
 
-/** The site's bare domain, for the foot of the page. */
+/** The site's address, as the foot of the page prints it. */
 function siteDomain(hosts: readonly string[]): string | undefined {
-  return hosts.find((host) => !host.endsWith(".localhost"));
+  const host = hosts.find((h) => !h.endsWith(".localhost"));
+  return host ? printedSite(host) : undefined;
+}
+
+/**
+ * The office's site as people write it, with "www." (decision of
+ * 15/11/2026: "faltou o www no site"). A local or numeric host is left as
+ * it is.
+ */
+export function printedSite(host: string): string {
+  const bare = host.trim().toLowerCase();
+  if (
+    !bare ||
+    bare.startsWith("www.") ||
+    bare === "localhost" ||
+    bare.endsWith(".localhost") ||
+    /^[\d.:]+$/.test(bare)
+  ) {
+    return bare;
+  }
+  return `www.${bare}`;
 }
 
 const upper = (text: string) => text.toLocaleUpperCase("pt-BR");
