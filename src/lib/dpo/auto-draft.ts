@@ -35,10 +35,11 @@ export function fillReply(
 }
 
 /**
- * The draft made when an LGPD requerimento arrives (decision of
- * 15/11/2026: "se alguém fizer alguma solicitação ele já dá a resposta
- * para o cartório"), so the encarregado opens it with the answer ready to
- * review. Only the right asked goes to the model, as in the button. Never
+ * The draft of the answer to an LGPD requerimento, made once the office
+ * answered the Assistente Virtual's questions (decisions of 15/11/2026:
+ * "ele já dá a resposta para o cartório", and "antes de preparar as
+ * respostas, ele deve perguntar algumas coisas ao cartório"). Only the
+ * right asked and the office's masked answers go to the model. Never
  * replaces a draft someone already wrote; never sends anything to the
  * titular. Quiet when the Assistente Virtual is off or over the month's
  * limit: the button stays for later.
@@ -51,6 +52,8 @@ export async function autoDraftDataRightsWith(
   now = new Date(),
   /** The office's figures for the model (lib/dpo/office.ts by default). */
   contextFor: (tenant: Tenant, now: Date) => Promise<string> = officeContextFor,
+  /** The office's answers (core/dpo/intake), masked inside the draft. */
+  note = "",
 ): Promise<"drafted" | "skipped"> {
   const [request] = await database
     .select()
@@ -65,13 +68,16 @@ export async function autoDraftDataRightsWith(
     return "skipped";
   }
   const details = parseDetails("data-rights", request.details);
-  if (details.draftReply?.trim()) return "skipped";
+  // A draft a person wrote is never replaced; the Assistente Virtual's own
+  // is redone when the office answers the questions again.
+  if (details.draftReply?.trim() && details.draftAuto !== true)
+    return "skipped";
   const result = await draftReplyWith(database, models, {
     tenantSlug: tenant.slug,
     userId: null,
     userRole: "sistema",
     right: details.right,
-    note: "",
+    note: note.slice(0, 3900),
     officeContext: await contextFor(tenant, now),
     now,
   });
@@ -94,4 +100,42 @@ export async function autoDraftDataRightsWith(
     });
   });
   return "drafted";
+}
+
+/** The office's answers to the Assistente Virtual's questions, kept on the requerimento. */
+export async function saveDataRightsIntakeWith(
+  database: Database,
+  tenantSlug: string,
+  requestId: string,
+  intake: {
+    answers: Record<string, { choice: string; note: string }>;
+    notes: string;
+    answeredAt: string;
+  },
+  actorId: string,
+): Promise<void> {
+  await database.transaction(async (tx) => {
+    const [row] = await tx
+      .update(serviceRequests)
+      .set({
+        details: sql`${serviceRequests.details} || ${JSON.stringify({ intake })}::jsonb`,
+        updatedAt: new Date(),
+      })
+      .where(
+        and(
+          eq(serviceRequests.tenantSlug, tenantSlug),
+          eq(serviceRequests.id, requestId),
+          eq(serviceRequests.kind, "data-rights"),
+        ),
+      )
+      .returning({ protocolNumber: serviceRequests.protocolNumber });
+    if (!row) return;
+    await recordAuditWith(tx as unknown as Database, {
+      tenantSlug,
+      actorId,
+      action: "data-rights.intake",
+      targetType: "data-rights",
+      targetId: row.protocolNumber,
+    });
+  });
 }

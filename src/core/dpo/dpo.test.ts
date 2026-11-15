@@ -290,3 +290,27 @@ test("a resposta ao titular sai como documento, com o requerimento identificado 
     "Encarregado(a) pelo tratamento de dados pessoais",
   );
 });
+
+test("antes do rascunho, o cartório responde às perguntas do tipo de pedido", async () => {
+  const { intakeNote, intakeProblems, intakeQuestions } = await import(
+    "./intake.ts"
+  );
+  const ids = intakeQuestions("deletion").map((q) => q.id);
+  assert.deepEqual(ids, ["identidade", "dados", "publicidade", "guarda"]);
+  const blank = { answers: {}, notes: "" };
+  assert.equal(intakeProblems("deletion", blank).length, 4);
+  const done = {
+    answers: {
+      identidade: { choice: "Sim", note: "" },
+      dados: { choice: "Sim", note: "livro de notas" },
+      publicidade: { choice: "Sim", note: "" },
+      guarda: { choice: "Sim", note: "" },
+    },
+    notes: "Pedido feito por e-mail também.",
+  };
+  assert.deepEqual(intakeProblems("deletion", done), []);
+  const note = intakeNote("deletion", done);
+  assert.match(note, /obrigação legal de guardar.*Sim/);
+  assert.match(note, /\(livro de notas\)/);
+  assert.match(note, /Observações: Pedido feito/);
+});

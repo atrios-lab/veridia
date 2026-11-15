@@ -3,14 +3,25 @@
 import { revalidatePath } from "next/cache";
 import { can } from "@/core/auth/roles.ts";
 import { DPO_COPY } from "@/core/dpo/copy.ts";
+import {
+  intakeNote,
+  intakeProblems,
+  intakeQuestions,
+} from "@/core/dpo/intake.ts";
+import { maskPersonalData } from "@/core/dpo/mask.ts";
 import { parseDetails } from "@/core/request/kinds.ts";
 import { db } from "@/db/index.ts";
 import { justify } from "@/lib/audit-reason.ts";
 import { draftReplyWith } from "@/lib/dpo/assistant.ts";
-import { fillReply } from "@/lib/dpo/auto-draft.ts";
+import {
+  autoDraftDataRightsWith,
+  fillReply,
+  saveDataRightsIntakeWith,
+} from "@/lib/dpo/auto-draft.ts";
 import { dpoBlocked, dpoModels } from "@/lib/dpo/models.ts";
 import { officeContextFor } from "@/lib/dpo/office.ts";
 import { notifyCitizen } from "@/lib/email/service-request.ts";
+import { readKnowledgeFiles } from "@/lib/knowledge-reading.ts";
 import { isDpoRateLimited } from "@/lib/rate-limit.ts";
 import {
   AttachmentInUseError,
@@ -246,4 +257,151 @@ export async function draftDataRightsReply(
     status: "ok",
     draft: fillReply(result.draft, request, tenant),
   };
+}
+
+export type IntakeState =
+  | { status: "idle" }
+  | { status: "error"; message: string }
+  | { status: "saved"; drafted: boolean; message: string };
+
+/**
+ * The office answers the Assistente Virtual's questions (core/dpo/intake),
+ * may attach a document for it to read (read here and dropped, its text
+ * masked like the notes), and the draft is made from the answers. The
+ * answers stay on the requerimento; the document does not.
+ */
+export async function answerIntakeAction(
+  _previous: IntakeState,
+  formData: FormData,
+): Promise<IntakeState> {
+  const session = await authorize();
+  if (!session) return { status: "error", message: NO_PERMISSION };
+  const tenant = await getTenant();
+  const request = await findById(
+    tenant.slug,
+    String(formData.get("requestId") ?? ""),
+  );
+  if (!request || request.kind !== "data-rights" || request.status !== "new") {
+    return { status: "error", message: "Requerimento não encontrado." };
+  }
+  const details = parseDetails("data-rights", request.details);
+  const answers: Record<string, { choice: string; note: string }> = {};
+  for (const q of intakeQuestions(details.right)) {
+    answers[q.id] = {
+      choice: String(formData.get(`q-${q.id}`) ?? "").slice(0, 200),
+      note: String(formData.get(`n-${q.id}`) ?? "")
+        .trim()
+        .slice(0, 1000),
+    };
+  }
+  const intake = {
+    answers,
+    notes: String(formData.get("observacoes") ?? "")
+      .trim()
+      .slice(0, 4000),
+  };
+  const problems = intakeProblems(details.right, intake);
+  if (problems.length) return { status: "error", message: problems[0] ?? "" };
+
+  // The document for the Assistente Virtual: read now, never stored.
+  let fromFile = "";
+  const files = formData
+    .getAll("paraAssistente")
+    .filter((f): f is File => f instanceof File && f.size > 0)
+    .slice(0, 3);
+  if (files.length) {
+    const read = await readKnowledgeFiles(files);
+    fromFile = read.documents
+      .map((d) => d.markdown)
+      .join("\n\n")
+      .slice(0, 2500);
+  }
+
+  await saveDataRightsIntakeWith(
+    db,
+    tenant.slug,
+    request.id,
+    {
+      ...intake,
+      answeredAt: new Date().toISOString(),
+    },
+    session.user.id,
+  );
+
+  let drafted = false;
+  if (!(await dpoBlocked(tenant.slug))) {
+    const note = maskPersonalData(
+      [
+        intakeNote(details.right, intake),
+        fromFile
+          ? `Trecho do documento anexado pela serventia:\n${fromFile}`
+          : "",
+      ]
+        .filter(Boolean)
+        .join("\n\n"),
+    ).text;
+    try {
+      drafted =
+        (await autoDraftDataRightsWith(
+          db,
+          dpoModels(),
+          tenant,
+          request.id,
+          new Date(),
+          officeContextFor,
+          note,
+        )) === "drafted";
+    } catch (error) {
+      console.error("lgpd.intake-draft", error);
+    }
+  }
+  revalidateAdmin();
+  return {
+    status: "saved",
+    drafted,
+    message: drafted
+      ? "Respostas salvas. O Assistente Virtual preparou o rascunho abaixo: revise antes de enviar."
+      : "Respostas salvas. O rascunho não foi preparado agora (Assistente Virtual desligado, sem chave ou rascunho já escrito por alguém).",
+  };
+}
+
+/**
+ * A document the office sends to the titular, any time while the
+ * requerimento is open (decision of 15/11/2026): it shows in the titular's
+ * consult, behind the protocol and the key.
+ */
+export async function attachForTitularAction(
+  _previous: ActionState,
+  formData: FormData,
+): Promise<ActionState> {
+  const session = await authorize();
+  if (!session) return { status: "error", message: NO_PERMISSION };
+  const tenant = await getTenant();
+  const requestId = String(formData.get("requestId") ?? "");
+  const request = await findById(tenant.slug, requestId);
+  if (!request || request.kind !== "data-rights") {
+    return { status: "error", message: "Requerimento não encontrado." };
+  }
+  const files = formData
+    .getAll("paraTitular")
+    .filter((f): f is File => f instanceof File && f.size > 0);
+  if (files.length === 0) {
+    return { status: "error", message: "Escolha o arquivo para o titular." };
+  }
+  try {
+    const stored = await storeAttachments(files, {
+      tenantSlug: tenant.slug,
+      kind: "office",
+      name: String(formData.get("paraTitularName") ?? ""),
+    });
+    await attachToRequest(tenant.slug, request.id, stored, "office");
+  } catch (error) {
+    if (error instanceof AttachmentError) {
+      return { status: "error", message: error.message };
+    }
+    console.error("lgpd.attach-for-titular", error);
+    return { status: "error", message: GENERIC_ERROR };
+  }
+  revalidateAdmin();
+  return { status: "success" };
 }

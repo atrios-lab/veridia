@@ -8,7 +8,10 @@ import type { Database } from "@/db/index.ts";
 import { auditLog, serviceRequests } from "@/db/schema.ts";
 import { createTestDb } from "@/db/test-db.ts";
 import { createRecordWith, saveDraftReplyWith } from "../service-request.ts";
-import { autoDraftDataRightsWith } from "./auto-draft.ts";
+import {
+  autoDraftDataRightsWith,
+  saveDataRightsIntakeWith,
+} from "./auto-draft.ts";
 
 // Fictitious titular only (LGPD).
 const TENANT = TENANTS["cartorio-marinho"];
@@ -53,7 +56,7 @@ after(async () => {
   await close();
 });
 
-test("o pedido LGPD que chega já ganha o rascunho da resposta, sem o nome do titular ir ao modelo", async () => {
+test("o rascunho da resposta LGPD sai depois das respostas da serventia, sem o nome do titular ir ao modelo", async () => {
   const { id, protocolNumber } = await createRecordWith(
     db,
     TENANT,
@@ -81,11 +84,47 @@ test("o pedido LGPD que chega já ganha o rascunho da resposta, sem o nome do ti
   const trail = (await db.select().from(auditLog)).map((a) => a.action);
   assert.ok(trail.includes("data-rights.auto-draft"));
 
-  // Never over a draft already there; a person's save clears the mark.
-  assert.equal(
-    await autoDraftDataRightsWith(db, models(), TENANT, id, NOW, context),
-    "skipped",
+  // The office answers the questions: they are kept, audited, and the
+  // Assistente Virtual's own draft is redone with them.
+  await saveDataRightsIntakeWith(
+    db,
+    TENANT.slug,
+    id,
+    {
+      answers: { identidade: { choice: "conferida", note: "" } },
+      notes: "Só há o cadastro do pedido de certidão.",
+      answeredAt: NOW.toISOString(),
+    },
+    "encarregada",
   );
+  const [withIntake] = await db
+    .select()
+    .from(serviceRequests)
+    .where(eq(serviceRequests.id, id));
+  assert.equal(
+    parseDetails("data-rights", withIntake?.details).intake?.answers.identidade
+      ?.choice,
+    "conferida",
+  );
+  const intakeAudit = (await db.select().from(auditLog)).find(
+    (a) => a.action === "data-rights.intake",
+  );
+  assert.equal(intakeAudit?.targetId, protocolNumber);
+  assert.equal(
+    await autoDraftDataRightsWith(
+      db,
+      models(),
+      TENANT,
+      id,
+      NOW,
+      context,
+      "Identidade: conferida. Só há o cadastro do pedido de certidão.",
+    ),
+    "drafted",
+  );
+  assert.match(sent, /pedido de certidão/);
+
+  // A person's save clears the mark, and that draft is never replaced.
   await saveDraftReplyWith(
     db,
     TENANT.slug,
@@ -99,4 +138,8 @@ test("o pedido LGPD que chega já ganha o rascunho da resposta, sem o nome do ti
     .from(serviceRequests)
     .where(eq(serviceRequests.id, id));
   assert.equal(parseDetails("data-rights", saved?.details).draftAuto, false);
+  assert.equal(
+    await autoDraftDataRightsWith(db, models(), TENANT, id, NOW, context),
+    "skipped",
+  );
 });

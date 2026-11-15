@@ -1,6 +1,7 @@
 import { notFound } from "next/navigation";
 import { BackLink } from "@/app/admin/_components/back-link";
 import { can } from "@/core/auth/roles.ts";
+import { intakeQuestions } from "@/core/dpo/intake.ts";
 import { REQUEST_FILE_RETENTION_DAYS } from "@/core/request/attachment-retention.ts";
 import {
   dataRightOption,
@@ -25,6 +26,10 @@ import { RequestFilesNotice } from "../../../_components/request-files-notice.ts
 import { SignOrPrint } from "../../../_components/sign-or-print.tsx";
 import { buttonVariants } from "../../../_ui/button.tsx";
 import { DeadlineBadge } from "../_components/deadline-badge.tsx";
+import {
+  AttachForTitular,
+  IntakeSection,
+} from "./_components/intake-section.tsx";
 import { ReplySection } from "./_components/reply-section.tsx";
 import { deleteAttachmentAction } from "./actions.ts";
 
@@ -84,7 +89,7 @@ export default async function DataRightsDetailPage({
       session?.user.role === "superadmin",
     ),
   ]);
-  const identityAttachment = attachments.find((a) => a.kind !== "office");
+  const citizenAttachments = attachments.filter((a) => a.kind !== "office");
   const reportAttachments = attachments.filter((a) => a.kind === "office");
   const todayIso = today();
 
@@ -141,31 +146,75 @@ export default async function DataRightsDetailPage({
                 />
               </div>
 
-              {identityAttachment && (
-                <div className="mt-4">
-                  <AttachmentRow
-                    requestId={request.id}
-                    attachment={{
-                      id: identityAttachment.id,
-                      displayName: identityAttachment.displayName,
-                      createdAtLabel: formatOfficeDayMonthTime(
-                        identityAttachment.createdAt,
-                      ),
-                      sizeBytes: identityAttachment.sizeBytes,
-                      goneLabel: requestFileGoneLabel(
-                        identityAttachment.purgedAt,
-                        requestFileStatusOf(
-                          identityAttachment,
-                          request,
-                          todayIso,
+              {citizenAttachments.length > 0 && (
+                <div className="mt-4 flex flex-col gap-2">
+                  <span className="text-xs font-medium text-muted-foreground">
+                    Enviados pelo titular
+                  </span>
+                  {citizenAttachments.map((a) => (
+                    <AttachmentRow
+                      key={a.id}
+                      requestId={request.id}
+                      attachment={{
+                        id: a.id,
+                        displayName: a.displayName,
+                        createdAtLabel: formatOfficeDayMonthTime(a.createdAt),
+                        sizeBytes: a.sizeBytes,
+                        goneLabel: requestFileGoneLabel(
+                          a.purgedAt,
+                          requestFileStatusOf(a, request, todayIso),
                         ),
-                      ),
-                    }}
-                    meta="enviado em"
-                    onDelete={deleteAttachmentAction}
-                  />
+                      }}
+                      meta="enviado em"
+                      onDelete={deleteAttachmentAction}
+                    />
+                  ))}
                 </div>
               )}
+
+              {request.status === "new" && (
+                <div className="mt-4 flex flex-col gap-2 rounded-lg border px-3.5 py-3">
+                  <span className="text-sm font-medium text-foreground">
+                    Documentos da serventia para o titular
+                  </span>
+                  <p className="text-xs text-muted-foreground text-justify hyphens-auto">
+                    Aparecem na consulta do titular, com o protocolo e a chave.
+                    Também dá para anexar junto com a resposta, ao concluir.
+                  </p>
+                  {reportAttachments.map((a) => (
+                    <AttachmentRow
+                      key={a.id}
+                      requestId={request.id}
+                      attachment={{
+                        id: a.id,
+                        displayName: a.displayName,
+                        createdAtLabel: formatOfficeDayMonthTime(a.createdAt),
+                        sizeBytes: a.sizeBytes,
+                        goneLabel: requestFileGoneLabel(
+                          a.purgedAt,
+                          requestFileStatusOf(a, request, todayIso),
+                        ),
+                      }}
+                      meta="enviado em"
+                      onDelete={deleteAttachmentAction}
+                    />
+                  ))}
+                  <AttachForTitular requestId={request.id} />
+                </div>
+              )}
+
+              {request.status === "new" &&
+                can(
+                  session.user.role ?? "",
+                  "dpo.assist",
+                  session.user.permissions,
+                ) && (
+                  <IntakeSection
+                    requestId={request.id}
+                    questions={intakeQuestions(details.right)}
+                    initial={details.intake}
+                  />
+                )}
 
               {(request.status === "new"
                 ? Boolean(details.draftReply?.trim())

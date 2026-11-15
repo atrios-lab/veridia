@@ -1192,6 +1192,18 @@ export const dataRightsDetailsSchema = z.object({
   // The draft above was made by the Assistente Virtual when the pedido
   // arrived, and nobody saved over it yet: the screen says to review it.
   draftAuto: z.boolean().optional(),
+  // What the office answered to the Assistente Virtual's questions before
+  // the draft (core/dpo/intake.ts).
+  intake: z
+    .object({
+      answers: z.record(
+        z.string(),
+        z.object({ choice: z.string().max(200), note: z.string().max(1000) }),
+      ),
+      notes: z.string().max(4000),
+      answeredAt: z.string().optional(),
+    })
+    .optional(),
 });
 export type DataRightsDetails = z.infer<typeof dataRightsDetailsSchema>;
 
