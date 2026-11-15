@@ -33,6 +33,7 @@ import {
   saveAction,
   saveDeadlinesAction,
   saveLibraryAction,
+  sendNoteToRequestAction,
 } from "./actions.ts";
 
 const IDLE: QualificationState = { status: "idle" };
@@ -1204,5 +1205,176 @@ export function AiProposeForm({
       )}
       <ErrorLine state={state} />
     </form>
+  );
+}
+
+/**
+ * The nota devolutiva to the client through the pedido (decision of
+ * 15/11/2026: "que ofereça todas as opções"): the exigência as text, the
+ * way the office writes it today, with the note's PDF and/or another file
+ * attached if wanted. Printing and editing stay with the buttons above.
+ */
+export function SendNoteForm({
+  noteId,
+  protocol,
+  initialText,
+  requestHref,
+  certificates = [],
+  signHref,
+}: {
+  noteId: string;
+  protocol: string;
+  /** The exigências of the note, ready to send and editable. */
+  initialText: string;
+  requestHref: string;
+  /** The person's A1 certificates, to sign the note's PDF here. */
+  certificates?: { id: string; label: string }[];
+  /** The assinador with this note (A1 or A3 token), to sign there. */
+  signHref: string;
+}) {
+  const [state, action, pending] = useActionState(
+    sendNoteToRequestAction,
+    IDLE,
+  );
+  const [text, setText] = useState(initialText);
+  const [pdfMode, setPdfMode] = useState("sem-assinatura");
+  const fid = useId();
+  useEffect(() => {
+    if (state.status === "saved") toast.success(state.message);
+  }, [state]);
+  return (
+    <details className="rounded-lg border bg-muted/30 px-3.5 py-2.5">
+      <summary className="cursor-pointer text-sm font-medium text-foreground">
+        Enviar ao cliente pelo pedido {protocol}
+      </summary>
+      <form action={action} className="mt-3 flex flex-col gap-3">
+        <input type="hidden" name="noteId" value={noteId} />
+        <p className="text-xs text-muted-foreground text-justify hyphens-auto">
+          Escolha como a nota chega ao cliente: como texto na exigência do
+          pedido (como se escreve hoje), com a nota em PDF anexada, com outro
+          arquivo (por exemplo, a nota já assinada), ou tudo junto. Para
+          imprimir ou editar, use os botões de PDF e Word acima.
+        </p>
+        <div className="flex min-w-0 flex-col gap-1.5">
+          <Label htmlFor={`${fid}-text`}>
+            Texto da exigência (o cliente lê na consulta do pedido)
+          </Label>
+          <Textarea
+            id={`${fid}-text`}
+            name="text"
+            rows={10}
+            value={text}
+            onChange={(event) => setText(event.target.value)}
+            className="field-sizing-fixed bg-background"
+          />
+        </div>
+        <fieldset className="flex flex-col gap-2 rounded-lg border bg-card px-3 py-2.5">
+          <legend className="px-1 text-sm font-medium text-foreground">
+            A nota em PDF
+          </legend>
+          {[
+            ["sem-assinatura", "Anexar o PDF sem assinatura digital"],
+            ["a1", "Assinar digitalmente com o meu certificado A1 e anexar"],
+            [
+              "pessoalmente",
+              "Imprimir, assinar à mão e entregar ao cliente pessoalmente",
+            ],
+            [
+              "nenhum",
+              "Não anexar o PDF (só o texto e, se quiser, um arquivo)",
+            ],
+          ].map(([value, label]) => (
+            <label
+              key={value}
+              className="flex items-start gap-2 text-sm text-foreground"
+            >
+              <input
+                type="radio"
+                name="pdfModo"
+                value={value}
+                checked={pdfMode === value}
+                onChange={() => setPdfMode(value)}
+                className="mt-0.5"
+              />
+              <span>{label}</span>
+            </label>
+          ))}
+          {pdfMode === "a1" &&
+            (certificates.length > 0 ? (
+              <div className="grid grid-cols-1 gap-2 md:grid-cols-2">
+                <div className="flex min-w-0 flex-col gap-1.5">
+                  <Label htmlFor={`${fid}-cert`}>Certificado</Label>
+                  <NativeSelect id={`${fid}-cert`} name="certificateId">
+                    {certificates.map((c) => (
+                      <option key={c.id} value={c.id}>
+                        {c.label}
+                      </option>
+                    ))}
+                  </NativeSelect>
+                </div>
+                <div className="flex min-w-0 flex-col gap-1.5">
+                  <Label htmlFor={`${fid}-pass`}>Senha do certificado</Label>
+                  <Input
+                    id={`${fid}-pass`}
+                    name="password"
+                    type="password"
+                    autoComplete="off"
+                  />
+                </div>
+              </div>
+            ) : (
+              <p className="text-xs text-muted-foreground text-justify hyphens-auto">
+                Você não tem certificado A1 liberado na plataforma. Assine no{" "}
+                <a
+                  href={signHref}
+                  className="font-medium text-primary underline"
+                >
+                  assinador
+                </a>{" "}
+                (A1 ou A3 no token), baixe o PDF assinado e anexe abaixo, em
+                "Anexar outro arquivo", marcando "Não anexar o PDF".
+              </p>
+            ))}
+          {pdfMode === "pessoalmente" && (
+            <p className="text-xs text-muted-foreground text-justify hyphens-auto">
+              Use "Imprimir para assinar à mão" ou "Word" acima. A exigência
+              fica registrada no pedido com a observação de que a nota foi
+              entregue pessoalmente. Se preferir, digitalize a nota assinada e
+              anexe abaixo.
+            </p>
+          )}
+        </fieldset>
+        <div className="flex min-w-0 flex-col gap-1.5">
+          <Label htmlFor={`${fid}-file`}>Anexar outro arquivo (opcional)</Label>
+          <Input
+            id={`${fid}-file`}
+            name="arquivo"
+            type="file"
+            multiple
+            accept="application/pdf,image/jpeg,image/png,image/webp,image/heic"
+          />
+          <p className="text-xs text-muted-foreground">
+            Por exemplo, a nota digitalizada depois de assinada à mão, ou
+            assinada no assinador com certificado A3.
+          </p>
+        </div>
+        <div className="flex flex-wrap items-center gap-2">
+          <Button type="submit" disabled={pending || !text.trim()}>
+            {pending
+              ? pdfMode === "a1"
+                ? "Assinando e registrando..."
+                : "Registrando..."
+              : "Registrar a exigência no pedido"}
+          </Button>
+          <a
+            href={requestHref}
+            className={buttonVariants({ variant: "outline" })}
+          >
+            Abrir o pedido
+          </a>
+        </div>
+        <ErrorLine state={state} />
+      </form>
+    </details>
   );
 }

@@ -264,3 +264,33 @@ export function buildPositive(
     footer: `${officialName(tenant)} · ${tenant.legalFooter}`,
   };
 }
+
+/**
+ * The nota devolutiva as the text of an exigência in the pedido (decision
+ * of 15/11/2026: "a opção de enviar o texto direto na exigência, como já
+ * escrevemos hoje"): what is missing, numbered, how to comply and on which
+ * basis, and the right to the dúvida. The office can still edit it.
+ */
+export function requirementTextFromNote(input: {
+  number: string;
+  data: QualificationData;
+  roundIndex: number;
+}): string {
+  const round = input.data.rounds[input.roundIndex];
+  if (!round) return "";
+  const items = pendingOf(round).map((r, i) => {
+    const lines = [`${i + 1}. ${r.title.trim()}`];
+    if (r.description.trim()) lines.push(r.description.trim());
+    if (r.howToComply.trim())
+      lines.push(`Como cumprir: ${r.howToComply.trim()}`);
+    if (r.basis.trim()) lines.push(`Fundamento: ${r.basis.trim()}`);
+    if (r.status === "parcial" && r.note.trim())
+      lines.push(`Cumprida em parte: ${r.note.trim()}`);
+    return lines.join("\n");
+  });
+  return [
+    `Nota devolutiva nº ${input.number}. Para seguir com o pedido, é preciso atender às exigências abaixo:`,
+    ...items,
+    doubtLine(input.data.attribution),
+  ].join("\n\n");
+}
