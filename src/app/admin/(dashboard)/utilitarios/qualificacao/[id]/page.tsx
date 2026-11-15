@@ -13,8 +13,11 @@ import {
   STATUS_LABELS,
 } from "@/core/qualificacao/qualificacao.ts";
 import { isOpenStatus } from "@/core/request/kinds.ts";
-import { officeHolidays } from "@/core/scheduling/calendar.ts";
-import { formatOfficeDateTime } from "@/core/time/office-time.ts";
+import { officeHolidays, toIsoDate } from "@/core/scheduling/calendar.ts";
+import {
+  formatOfficeDateTime,
+  OFFICE_TIME_ZONE,
+} from "@/core/time/office-time.ts";
 import { db } from "@/db/index.ts";
 import { aiBlockedWith } from "@/lib/ai.ts";
 import {
@@ -25,11 +28,15 @@ import {
   requestDocumentsWith,
 } from "@/lib/qualificacao.ts";
 import { findByProtocol } from "@/lib/service-request.ts";
+import { certificatesForSignerWith } from "@/lib/signing.ts";
 import { getTenant, today } from "@/lib/tenant.ts";
 import { BackLink } from "../../../../_components/back-link.tsx";
 import { AdminPageHeader } from "../../../../_components/page-header.tsx";
 import { ROLE_LABELS } from "../../../../_components/role-labels.ts";
-import { SignOrPrint } from "../../../../_components/sign-or-print.tsx";
+import {
+  SignOrPrint,
+  signHref,
+} from "../../../../_components/sign-or-print.tsx";
 import { TirarDuvida } from "../../../../_components/tirar-duvida.tsx";
 import { buttonVariants } from "../../../../_ui/button.tsx";
 import { requireQualificacao } from "../_access.ts";
@@ -66,17 +73,25 @@ export default async function QualificationPage({
   const tenant = await getTenant();
   const q = await getQualificationWith(db, tenant.slug, id);
   if (!q) notFound();
-  const [notes, library, deadlines, aiBlocked, clientDocs, linkedRequest] =
-    await Promise.all([
-      listNotesWith(db, tenant.slug, q.id),
-      listLibraryWith(db, tenant.slug, q.data.attribution),
-      getDeadlineSettingsWith(db, tenant.slug),
-      aiBlockedWith(db, tenant.slug),
-      requestDocumentsWith(db, tenant.slug, q.data.protocol),
-      q.data.protocol.trim()
-        ? findByProtocol(tenant.slug, q.data.protocol.trim())
-        : Promise.resolve(null),
-    ]);
+  const [
+    notes,
+    library,
+    deadlines,
+    aiBlocked,
+    clientDocs,
+    linkedRequest,
+    certificates,
+  ] = await Promise.all([
+    listNotesWith(db, tenant.slug, q.id),
+    listLibraryWith(db, tenant.slug, q.data.attribution),
+    getDeadlineSettingsWith(db, tenant.slug),
+    aiBlockedWith(db, tenant.slug),
+    requestDocumentsWith(db, tenant.slug, q.data.protocol),
+    q.data.protocol.trim()
+      ? findByProtocol(tenant.slug, q.data.protocol.trim())
+      : Promise.resolve(null),
+    certificatesForSignerWith(db, tenant.slug, session.user.id).catch(() => []),
+  ]);
   const round = currentRound(q.data);
   const now = today();
   const active = !q.removedAt;
@@ -251,6 +266,14 @@ export default async function QualificationPage({
                           noteId={n.id}
                           protocol={linkedRequest.protocolNumber}
                           requestHref={`/admin/pedidos/${encodeURIComponent(linkedRequest.protocolNumber)}`}
+                          certificates={certificates.map((c) => ({
+                            id: c.id,
+                            label: `${c.label || c.holderName} (até ${isoDate(toIsoDate(c.notAfter, OFFICE_TIME_ZONE))})`,
+                          }))}
+                          signHref={signHref(
+                            `${BASE}/notas/${n.id}/arquivo`,
+                            `Nota devolutiva nº ${n.number}`,
+                          )}
                           initialText={requirementTextFromNote({
                             number: n.number,
                             data: n.snapshot,

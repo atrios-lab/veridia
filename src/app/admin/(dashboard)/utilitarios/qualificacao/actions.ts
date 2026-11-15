@@ -18,6 +18,7 @@ import {
 } from "@/core/qualificacao/qualificacao.ts";
 import { isOpenStatus } from "@/core/request/kinds.ts";
 import { requirementTextSchema } from "@/core/request/requirement.ts";
+import { officialName } from "@/core/tenant/identification.ts";
 import { db } from "@/db/index.ts";
 import {
   AI_IMAGE_MAX_BYTES,
@@ -37,7 +38,7 @@ import {
   searchKnowledgeWith,
 } from "@/lib/knowledge.ts";
 import { readKnowledgeFiles } from "@/lib/knowledge-reading.ts";
-import { renderDocument } from "@/lib/pdf.ts";
+import { forDigitalSignature, renderDocument } from "@/lib/pdf.ts";
 import {
   applyAiProposalWith,
   createLibraryItemWith,
@@ -64,6 +65,14 @@ import {
   registerRequirement,
 } from "@/lib/service-request.ts";
 import { getSession } from "@/lib/session.ts";
+import { CertificatePasswordError } from "@/lib/signature/certificate.ts";
+import { requestOrigin, verifyUrlFor } from "@/lib/signature/documents.ts";
+import { PdfNotSignableError } from "@/lib/signature/pades.ts";
+import {
+  findSignedDocumentWith,
+  SigningError,
+  signNewDocumentWith,
+} from "@/lib/signing.ts";
 import { getTenant, today } from "@/lib/tenant.ts";
 import {
   AttachmentError,
@@ -655,7 +664,11 @@ export async function sendNoteToRequestAction(
       message: parsed.error.issues[0]?.message ?? "Texto inválido.",
     };
   }
-  const withPdf = formData.get("anexarPdf") === "on";
+  // How the note's PDF goes (decision of 15/11/2026): not at all, as it
+  // is, signed with the person's A1 certificate, or printed, signed by
+  // hand and handed over in person.
+  const pdfMode = field(formData, "pdfModo");
+  const withPdf = pdfMode === "sem-assinatura" || pdfMode === "a1";
   const picked = formData
     .getAll("arquivo")
     .filter((f): f is File => typeof f === "object" && f.size > 0);
@@ -693,10 +706,41 @@ export async function sendNoteToRequestAction(
         signer: note.signer,
         roundIndex: note.roundIndex,
       });
-      const pdf = await renderDocument(document, await brandFor(ok.tenant));
+      const brand = await brandFor(ok.tenant);
+      let pdf: Uint8Array<ArrayBuffer>;
+      if (pdfMode === "a1") {
+        // The version for a digital signature (no line to sign by hand),
+        // signed by the platform's assinador: band, QR and record.
+        const unsigned = await forDigitalSignature(() =>
+          renderDocument(document, brand),
+        );
+        const origin = await requestOrigin();
+        const signed = await signNewDocumentWith(
+          db,
+          ok.tenant.slug,
+          {
+            certificateId: field(formData, "certificateId"),
+            password: String(formData.get("password") ?? ""),
+            pdf: Buffer.from(unsigned),
+            title: `Nota devolutiva nº ${note.number}`,
+            originalName: `nota-devolutiva-${note.number.replace("/", "-")}.pdf`,
+            verifyUrl: (code) => verifyUrlFor(ok.tenant, origin, code),
+            location: `${ok.tenant.location.city}/${ok.tenant.location.state}`,
+            officeName: officialName(ok.tenant),
+          },
+          ok.session.user.id,
+        );
+        const view = await findSignedDocumentWith(db, ok.tenant.slug, {
+          id: signed.id,
+        });
+        if (!view?.filePath) throw new SigningError("Assinatura sem arquivo.");
+        pdf = new Uint8Array(await readStoredFile(view.filePath));
+      } else {
+        pdf = new Uint8Array(await renderDocument(document, brand));
+      }
       files.push(
         new File(
-          [new Uint8Array(pdf)],
+          [pdf],
           `nota-devolutiva-${note.number.replace("/", "-")}.pdf`,
           { type: "application/pdf" },
         ),
@@ -714,10 +758,14 @@ export async function sendNoteToRequestAction(
           ),
         })
       : [];
+    const text =
+      pdfMode === "pessoalmente"
+        ? `${parsed.data}\n\nA nota devolutiva assinada foi entregue pessoalmente pela serventia.`
+        : parsed.data;
     const { id: requirementId } = await registerRequirement(
       ok.tenant.slug,
       request.id,
-      parsed.data,
+      text,
       ok.session.user.id,
     );
     if (stored.length) {
@@ -745,7 +793,12 @@ export async function sendNoteToRequestAction(
         : "Há uma exigência no seu pedido. Consulte o protocolo com a sua chave de acesso para ver o que foi solicitado e responder.",
     });
   } catch (error) {
-    if (error instanceof AttachmentError) {
+    if (
+      error instanceof AttachmentError ||
+      error instanceof SigningError ||
+      error instanceof CertificatePasswordError ||
+      error instanceof PdfNotSignableError
+    ) {
       return { status: "error", message: error.message };
     }
     return failure(error, "qualificacao.send-note");
