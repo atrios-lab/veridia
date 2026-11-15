@@ -61,6 +61,6 @@ export function buildDpoDocument(
     dateLine: `${tenant.location.city}/${tenant.location.state}, ${writtenDate(input.issuedOn as Parameters<typeof writtenDate>[0])}.`,
     signee: tenant.dpo.name || tenant.holderName || officialName(tenant),
     signature: ["Encarregado(a) pelo tratamento de dados pessoais"],
-    footer: `${officialName(tenant)} · ${tenant.legalFooter}`,
+    footer: `${officialName(tenant)} · Encarregado de dados · ${tenant.legalFooter}`,
   };
 }

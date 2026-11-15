@@ -67,6 +67,6 @@ export function buildDataRightsReply(
     dateLine: `${tenant.location.city}/${tenant.location.state}, ${writtenDate(input.issuedOn)}.`,
     signee: tenant.dpo.name || tenant.holderName || officialName(tenant),
     signature: ["Encarregado(a) pelo tratamento de dados pessoais"],
-    footer: `${officialName(tenant)} · ${tenant.legalFooter}`,
+    footer: `${officialName(tenant)} · Resposta ao titular · Protocolo ${input.protocol} · ${tenant.legalFooter}`,
   };
 }

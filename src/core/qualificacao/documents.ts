@@ -220,8 +220,14 @@ export function buildNote(
     sections,
     dateLine: `${tenant.location.city}/${tenant.location.state}, ${writtenDate(input.issuedOn)}.`,
     ...signerLines(tenant, input.signer),
-    footer: `${officialName(tenant)} · ${tenant.legalFooter}`,
+    footer: footerOf(tenant, `Nota devolutiva nº ${input.number}`, data),
   };
+}
+
+/** The footer of every page, as the other documents of the panel. */
+function footerOf(tenant: Tenant, label: string, data: QualificationData) {
+  const protocol = data.protocol.trim();
+  return `${officialName(tenant)} · ${label}${protocol ? ` · Protocolo ${protocol}` : ""} · ${tenant.legalFooter}`;
 }
 
 /** The termo de qualificação positiva: the título is fit for the act. */
@@ -261,7 +267,7 @@ export function buildPositive(
     ],
     dateLine: `${tenant.location.city}/${tenant.location.state}, ${writtenDate(input.issuedOn)}.`,
     ...signerLines(tenant, input.signer),
-    footer: `${officialName(tenant)} · ${tenant.legalFooter}`,
+    footer: footerOf(tenant, `Qualificação positiva nº ${input.number}`, data),
   };
 }
 
@@ -279,7 +285,7 @@ export function requirementTextFromNote(input: {
   const round = input.data.rounds[input.roundIndex];
   if (!round) return "";
   const items = pendingOf(round).map((r, i) => {
-    const lines = [`${i + 1}. ${r.title.trim()}`];
+    const lines = [`${i + 1}. ${r.title.trim().replace(/\.$/, "")}.`];
     if (r.description.trim()) lines.push(r.description.trim());
     if (r.howToComply.trim())
       lines.push(`Como cumprir: ${r.howToComply.trim()}`);
@@ -289,8 +295,10 @@ export function requirementTextFromNote(input: {
     return lines.join("\n");
   });
   return [
-    `Nota devolutiva nº ${input.number}. Para seguir com o pedido, é preciso atender às exigências abaixo:`,
+    `Nota devolutiva nº ${input.number}`,
+    "Para seguir com o pedido, é preciso atender às exigências abaixo.",
     ...items,
-    doubtLine(input.data.attribution),
+    "Caso não consiga cumprir alguma exigência, anexe aqui a justificativa da impossibilidade, para que seja analisada pela serventia.",
+    "Não cumpridas as exigências, o documento poderá ser enviado para decisão de dúvida junto ao juízo competente.",
   ].join("\n\n");
 }
