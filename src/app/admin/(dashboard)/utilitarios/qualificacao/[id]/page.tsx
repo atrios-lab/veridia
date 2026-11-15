@@ -20,6 +20,7 @@ import {
   getQualificationWith,
   listLibraryWith,
   listNotesWith,
+  requestDocumentsWith,
 } from "@/lib/qualificacao.ts";
 import { getTenant, today } from "@/lib/tenant.ts";
 import { BackLink } from "../../../../_components/back-link.tsx";
@@ -61,11 +62,12 @@ export default async function QualificationPage({
   const tenant = await getTenant();
   const q = await getQualificationWith(db, tenant.slug, id);
   if (!q) notFound();
-  const [notes, library, deadlines, aiBlocked] = await Promise.all([
+  const [notes, library, deadlines, aiBlocked, clientDocs] = await Promise.all([
     listNotesWith(db, tenant.slug, q.id),
     listLibraryWith(db, tenant.slug, q.data.attribution),
     getDeadlineSettingsWith(db, tenant.slug),
     aiBlockedWith(db, tenant.slug),
+    requestDocumentsWith(db, tenant.slug, q.data.protocol),
   ]);
   const round = currentRound(q.data);
   const now = today();
@@ -250,7 +252,12 @@ export default async function QualificationPage({
         )}
         {active && round.result === "aberta" && (
           <>
-            <AiProposeForm id={q.id} blocked={aiBlocked} />
+            <AiProposeForm
+              id={q.id}
+              blocked={aiBlocked}
+              protocol={q.data.protocol}
+              clientDocuments={clientDocs.map((d) => d.displayName)}
+            />
             <RoundEditor
               id={q.id}
               initial={q.data}

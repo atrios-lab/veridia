@@ -27,6 +27,8 @@ import {
   qualificationLibrary,
   qualificationNotes,
   qualifications,
+  serviceRequestAttachments,
+  serviceRequests,
   tenantContent,
 } from "@/db/schema.ts";
 import { recordAuditWith } from "./audit.ts";
@@ -1038,4 +1040,59 @@ export async function saveDeadlineSettingsWith(
       targetId: OFFICE_QUALIFICATION_KEY,
     });
   });
+}
+
+/** What the client sent with the pedido: their documents and the signed requerimento. */
+const CLIENT_KINDS = ["citizen", "signed-form"];
+
+export interface RequestDocument {
+  id: string;
+  displayName: string;
+  mimeType: string;
+  path: string;
+}
+
+/**
+ * The documents the client attached to the pedido this qualification came
+ * from (decision of 15/11/2026: the Assistente Virtual reads what the
+ * client already sent, a new file is optional). Only files still stored:
+ * one purged after the retention period is gone, and says so elsewhere.
+ */
+export async function requestDocumentsWith(
+  database: Database,
+  tenantSlug: string,
+  protocol: string,
+): Promise<RequestDocument[]> {
+  const number = protocol.trim();
+  if (!number) return [];
+  const rows = await database
+    .select({
+      id: serviceRequestAttachments.id,
+      displayName: serviceRequestAttachments.displayName,
+      mimeType: serviceRequestAttachments.mimeType,
+      path: serviceRequestAttachments.path,
+    })
+    .from(serviceRequestAttachments)
+    .innerJoin(
+      serviceRequests,
+      eq(serviceRequests.id, serviceRequestAttachments.requestId),
+    )
+    .where(
+      and(
+        eq(serviceRequests.tenantSlug, tenantSlug),
+        eq(serviceRequests.protocolNumber, number),
+        eq(serviceRequestAttachments.tenantSlug, tenantSlug),
+        inArray(serviceRequestAttachments.kind, CLIENT_KINDS),
+        isNull(serviceRequestAttachments.purgedAt),
+      ),
+    )
+    .orderBy(asc(serviceRequestAttachments.createdAt));
+  return rows
+    .filter((r): r is typeof r & { path: string } => Boolean(r.path))
+    .map(({ id, displayName, mimeType, path }) => ({
+      id,
+      displayName,
+      mimeType,
+      path,
+    }));
 }

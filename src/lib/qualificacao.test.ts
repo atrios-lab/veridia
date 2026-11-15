@@ -488,3 +488,57 @@ test("no reexame o Assistente Virtual sugere a situação de cada exigência ant
   assert.match(positiveProblems(must(q.data.rounds[1])).join(" "), /conferid/);
   assert.match(noteProblems(must(q.data.rounds[1])).join(" "), /positiva/);
 });
+
+test("a proposta lê os documentos que o cliente anexou no pedido, só os dele e ainda guardados", async () => {
+  const { TENANTS } = await import("@/core/tenant/resolve.ts");
+  const { parseDetails } = await import("@/core/request/kinds.ts");
+  const { serviceRequestAttachments } = await import("@/db/schema.ts");
+  const { createRecordWith } = await import("./service-request.ts");
+  const { requestDocumentsWith } = await import("./qualificacao.ts");
+  const tenant = TENANTS["cartorio-marinho"];
+  assert.ok(tenant);
+  const { id, protocolNumber } = await createRecordWith(
+    db,
+    tenant,
+    "data-rights",
+    {
+      applicantName: "Cliente Fictício",
+      contact: "cliente@exemplo.com",
+      description: "Pedido fictício.",
+      details: parseDetails("data-rights", { right: "access" }),
+    },
+  );
+  const file = (
+    kind: string,
+    displayName: string,
+    extra: { path?: string | null; purgedAt?: Date } = {},
+  ) => ({
+    tenantSlug: tenant.slug,
+    requestId: id,
+    kind,
+    storedName: `${displayName}.pdf`,
+    displayName,
+    path: extra.path === undefined ? `/tmp/${displayName}.pdf` : extra.path,
+    mimeType: "application/pdf",
+    sizeBytes: 10,
+    purgedAt: extra.purgedAt ?? null,
+  });
+  await db
+    .insert(serviceRequestAttachments)
+    .values([
+      file("citizen", "Título fictício"),
+      file("signed-form", "Requerimento assinado"),
+      file("office", "Resposta da serventia"),
+      file("citizen", "Apagado após o prazo", { path: null, purgedAt: NOW }),
+    ]);
+  const docs = await requestDocumentsWith(db, tenant.slug, protocolNumber);
+  assert.deepEqual(
+    docs.map((d) => d.displayName),
+    ["Título fictício", "Requerimento assinado"],
+  );
+  assert.deepEqual(await requestDocumentsWith(db, tenant.slug, ""), []);
+  assert.deepEqual(
+    await requestDocumentsWith(db, "outra-serventia", protocolNumber),
+    [],
+  );
+});
