@@ -37,7 +37,7 @@ export default async function SendPage({
       <main className="flex max-w-[1000px] flex-col gap-6 px-4 py-7 md:px-8">
         <BackLink
           href="/admin/utilitarios/base-juridica"
-          label="Base jurídica da IA"
+          label="Base jurídica do Assistente Virtual"
         />
         <section
           id="oficial"
@@ -55,7 +55,7 @@ export default async function SendPage({
             </p>
             {open && (
               <p className="mt-2 rounded-lg bg-warning-soft px-3 py-2 text-sm text-foreground">
-                Respondendo ao pedido da IA: {open.topic}
+                Respondendo ao pedido do Assistente Virtual: {open.topic}
               </p>
             )}
           </div>
@@ -70,7 +70,8 @@ export default async function SendPage({
           </h2>
           {aiOff && (
             <p className="text-sm text-muted-foreground">
-              Fotos e PDFs digitalizados só são lidos com a IA ligada. {aiOff}
+              Fotos e PDFs digitalizados só são lidos com o Assistente Virtual
+              ligado. {aiOff}
             </p>
           )}
           <SendForm />
@@ -83,7 +84,7 @@ export default async function SendPage({
             <li>
               Se o documento parece jurídico, se o número da referência aparece
               no texto, se há CPF de cliente (LGPD), se a fonte já existe e se o
-              texto veio da leitura da IA.
+              texto veio da leitura do Assistente Virtual.
             </li>
             <li>
               Com qualquer alerta, a fonte fica Em conferência e não é usada até

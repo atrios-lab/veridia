@@ -338,7 +338,7 @@ test("a qualificação aberta pelo pedido do balcão online fica ligada ao proto
   );
 });
 
-test("a proposta da IA entra como rascunho e trava a nota até a pessoa conferir", async () => {
+test("a proposta do Assistente Virtual entra como rascunho e trava a nota até a pessoa conferir", async () => {
   const { applyAiProposalWith } = await import("./qualificacao.ts");
   const { noteProblems } = await import("@/core/qualificacao/qualificacao.ts");
   const id = await createQualificationWith(
@@ -372,7 +372,7 @@ test("a proposta da IA entra como rascunho e trava a nota até a pessoa conferir
         },
         {
           libraryId: "inexistente",
-          title: "Exigência redigida pela IA",
+          title: "Exigência redigida pelo Assistente Virtual",
           description: "Falta algo fictício.",
           howToComply: "Apresentar algo fictício.",
           basis: "Lei nº 6.015/1973, art. 29, § 1º.",
@@ -422,7 +422,7 @@ test("a proposta da IA entra como rascunho e trava a nota até a pessoa conferir
   );
 });
 
-test("no reexame a IA sugere a situação de cada exigência anterior, e a pessoa confere", async () => {
+test("no reexame o Assistente Virtual sugere a situação de cada exigência anterior, e a pessoa confere", async () => {
   const { applyAiProposalWith } = await import("./qualificacao.ts");
   const { noteProblems, positiveProblems } = await import(
     "@/core/qualificacao/qualificacao.ts"
@@ -482,7 +482,7 @@ test("no reexame a IA sugere a situação de cada exigência anterior, e a pesso
   const q = must(await getQualificationWith(db, OFFICE, id));
   const old = must(must(q.data.rounds[1]).requirements[0]);
   assert.equal(old.status, "cumprida");
-  assert.match(old.note, /Sugestão da IA/);
+  assert.match(old.note, /Sugestão do Assistente Virtual/);
   assert.ok(old.fromAi && !old.reviewed);
   // Met, but not checked: neither note nor positiva goes out.
   assert.match(positiveProblems(must(q.data.rounds[1])).join(" "), /conferid/);

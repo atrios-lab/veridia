@@ -1,6 +1,7 @@
 import { notFound } from "next/navigation";
 import { BackLink } from "@/app/admin/_components/back-link";
 import { can } from "@/core/auth/roles.ts";
+import { approvalStatus } from "@/core/dpo/alinhamento.ts";
 import { REQUEST_FILE_RETENTION_DAYS } from "@/core/request/attachment-retention.ts";
 import {
   dataRightOption,
@@ -10,6 +11,8 @@ import {
 import { parseDetails } from "@/core/request/kinds.ts";
 import { toIsoDate } from "@/core/scheduling/calendar.ts";
 import { formatOfficeDayMonthTime } from "@/core/time/office-time.ts";
+import { db } from "@/db/index.ts";
+import { alignmentMessagesWith } from "@/lib/dpo/alignment.ts";
 import {
   findByProtocol,
   listAttachments,
@@ -22,7 +25,14 @@ import { requestFileGoneLabel } from "../../../_components/attachment-link.ts";
 import { AttachmentRow } from "../../../_components/attachment-row.tsx";
 import { AdminPageHeader } from "../../../_components/page-header.tsx";
 import { RequestFilesNotice } from "../../../_components/request-files-notice.tsx";
+import { SignOrPrint } from "../../../_components/sign-or-print.tsx";
+import { buttonVariants } from "../../../_ui/button.tsx";
 import { DeadlineBadge } from "../_components/deadline-badge.tsx";
+import {
+  AlignmentSection,
+  ApprovalBlock,
+  AttachForTitular,
+} from "./_components/alignment-section.tsx";
 import { ReplySection } from "./_components/reply-section.tsx";
 import { deleteAttachmentAction } from "./actions.ts";
 
@@ -32,6 +42,10 @@ const HISTORY_LABELS: Record<string, string> = {
   "data-rights.create": "registrou o requerimento",
   "data-rights.respond": "respondeu ao titular",
   "data-rights.draft": "salvou um rascunho de resposta",
+  "data-rights.align": "conversou com o Assistente Virtual",
+  "data-rights.auto-draft":
+    "preparou a resposta com o que foi alinhado na conversa",
+  "data-rights.approve": "aprovou a resposta (decisão final)",
   "data-rights.attachment-purge": `apagou um arquivo, ${REQUEST_FILE_RETENTION_DAYS} dias após o encerramento`,
 };
 
@@ -72,7 +86,17 @@ export default async function DataRightsDetailPage({
   const option = dataRightOption(details.right);
   const requestedOn = toIsoDate(request.createdAt, OFFICE_TIME_ZONE);
 
-  const [attachments, history] = await Promise.all([
+  const canAssist = can(
+    session.user.role ?? "",
+    "dpo.assist",
+    session.user.permissions,
+  );
+  const canDecide = can(
+    session.user.role ?? "",
+    "lgpd.decide",
+    session.user.permissions,
+  );
+  const [attachments, history, conversation] = await Promise.all([
     listAttachments(tenant.slug, request.id),
     listRecordHistory(
       tenant.slug,
@@ -81,8 +105,12 @@ export default async function DataRightsDetailPage({
       request.protocolNumber,
       session?.user.role === "superadmin",
     ),
+    request.status === "new" && canAssist
+      ? alignmentMessagesWith(db, tenant.slug, request.id)
+      : Promise.resolve([]),
   ]);
-  const identityAttachment = attachments.find((a) => a.kind !== "office");
+  const approval = approvalStatus(details.approval, details.draftReply ?? "");
+  const citizenAttachments = attachments.filter((a) => a.kind !== "office");
   const reportAttachments = attachments.filter((a) => a.kind === "office");
   const todayIso = today();
 
@@ -139,41 +167,129 @@ export default async function DataRightsDetailPage({
                 />
               </div>
 
-              {identityAttachment && (
-                <div className="mt-4">
-                  <AttachmentRow
-                    requestId={request.id}
-                    attachment={{
-                      id: identityAttachment.id,
-                      displayName: identityAttachment.displayName,
-                      createdAtLabel: formatOfficeDayMonthTime(
-                        identityAttachment.createdAt,
-                      ),
-                      sizeBytes: identityAttachment.sizeBytes,
-                      goneLabel: requestFileGoneLabel(
-                        identityAttachment.purgedAt,
-                        requestFileStatusOf(
-                          identityAttachment,
-                          request,
-                          todayIso,
+              {citizenAttachments.length > 0 && (
+                <div className="mt-4 flex flex-col gap-2">
+                  <span className="text-xs font-medium text-muted-foreground">
+                    Enviados pelo titular
+                  </span>
+                  {citizenAttachments.map((a) => (
+                    <AttachmentRow
+                      key={a.id}
+                      requestId={request.id}
+                      attachment={{
+                        id: a.id,
+                        displayName: a.displayName,
+                        createdAtLabel: formatOfficeDayMonthTime(a.createdAt),
+                        sizeBytes: a.sizeBytes,
+                        goneLabel: requestFileGoneLabel(
+                          a.purgedAt,
+                          requestFileStatusOf(a, request, todayIso),
                         ),
-                      ),
-                    }}
-                    meta="enviado em"
-                    onDelete={deleteAttachmentAction}
-                  />
+                      }}
+                      meta="enviado em"
+                      onDelete={deleteAttachmentAction}
+                    />
+                  ))}
                 </div>
               )}
 
+              {request.status === "new" && (
+                <div className="mt-4 flex flex-col gap-2 rounded-lg border px-3.5 py-3">
+                  <span className="text-sm font-medium text-foreground">
+                    Documentos da serventia para o titular
+                  </span>
+                  <p className="text-xs text-muted-foreground text-justify hyphens-auto">
+                    Aparecem na consulta do titular, com o protocolo e a chave.
+                    Também dá para anexar junto com a resposta, ao concluir.
+                  </p>
+                  {reportAttachments.map((a) => (
+                    <AttachmentRow
+                      key={a.id}
+                      requestId={request.id}
+                      attachment={{
+                        id: a.id,
+                        displayName: a.displayName,
+                        createdAtLabel: formatOfficeDayMonthTime(a.createdAt),
+                        sizeBytes: a.sizeBytes,
+                        goneLabel: requestFileGoneLabel(
+                          a.purgedAt,
+                          requestFileStatusOf(a, request, todayIso),
+                        ),
+                      }}
+                      meta="enviado em"
+                      onDelete={deleteAttachmentAction}
+                    />
+                  ))}
+                  <AttachForTitular requestId={request.id} />
+                </div>
+              )}
+
+              {request.status === "new" && canAssist && (
+                <AlignmentSection
+                  requestId={request.id}
+                  messages={conversation.map((m) => ({
+                    id: m.id,
+                    role: m.role,
+                    content: m.content,
+                    sources: m.sources,
+                    atLabel: formatOfficeDayMonthTime(m.createdAt),
+                  }))}
+                />
+              )}
+
+              {(request.status === "new"
+                ? Boolean(details.draftReply?.trim())
+                : Boolean(request.officeReply?.trim())) && (
+                <div className="mt-5 flex flex-col gap-2 rounded-lg border px-3.5 py-3">
+                  <span className="text-sm font-medium text-foreground">
+                    Documento da resposta
+                  </span>
+                  <p className="text-xs text-muted-foreground text-justify hyphens-auto">
+                    {request.status === "new"
+                      ? "Sai com o texto do rascunho como foi salvo por último, no papel da serventia, para assinar digitalmente ou imprimir e assinar."
+                      : "A resposta enviada, no papel da serventia, para assinar digitalmente ou imprimir e assinar."}
+                  </p>
+                  <div className="flex flex-wrap gap-2">
+                    <SignOrPrint
+                      pdfHref={`/admin/lgpd/${encodeURIComponent(request.protocolNumber)}/resposta`}
+                      title={`Resposta ao requerimento ${request.protocolNumber}`}
+                    />
+                    <a
+                      href={`/admin/lgpd/${encodeURIComponent(request.protocolNumber)}/resposta/word`}
+                      className={buttonVariants({ variant: "outline" })}
+                    >
+                      Word (.docx)
+                    </a>
+                  </div>
+                </div>
+              )}
+              {request.status === "new" &&
+                details.draftAuto &&
+                details.draftReply && (
+                  <p className="mt-5 rounded-lg border border-primary/25 bg-primary/5 px-3.5 py-3 text-sm text-foreground text-justify hyphens-auto">
+                    O Assistente Virtual preparou a resposta com o que foi
+                    alinhado na conversa. Revise com atenção e ajuste ao caso
+                    antes de pedir a aprovação.
+                  </p>
+                )}
+              {request.status === "new" && (
+                <ApprovalBlock
+                  requestId={request.id}
+                  status={approval}
+                  approvedBy={
+                    details.approval
+                      ? `${details.approval.byName} em ${formatOfficeDayMonthTime(new Date(details.approval.at))}`
+                      : null
+                  }
+                  canDecide={canDecide}
+                  hasDraft={Boolean(details.draftReply?.trim())}
+                />
+              )}
               {request.status === "new" ? (
                 <ReplySection
                   requestId={request.id}
                   initialDraft={details.draftReply ?? ""}
-                  canDraft={can(
-                    session.user.role ?? "",
-                    "dpo.assist",
-                    session.user.permissions,
-                  )}
+                  canDraft={canAssist}
                 />
               ) : (
                 <div className="mt-5 border-t pt-4">

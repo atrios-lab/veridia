@@ -1,4 +1,4 @@
-import { and, asc, count, desc, eq, lt, max, sql } from "drizzle-orm";
+import { and, asc, count, desc, eq, lt, max, ne, sql } from "drizzle-orm";
 import type { MaskCounts } from "@/core/dpo/mask.ts";
 import type { Database } from "@/db/index.ts";
 import {
@@ -16,7 +16,11 @@ import { recordAuditWith } from "../audit.ts";
  * owner in the query, never filtered afterwards.
  */
 
-export type DpoConversationKind = "chat" | "reply-draft";
+/**
+ * "chat" (the DPO page), "reply-draft" (the draft button) or "data-rights"
+ * (the conversation on one LGPD requerimento, shared by the team).
+ */
+export type DpoConversationKind = "chat" | "reply-draft" | "data-rights";
 export type DpoMessageRole = "user" | "assistant" | "refusal";
 
 export interface DpoConversation {
@@ -59,7 +63,8 @@ export async function createConversationWith(
   database: Database,
   input: {
     tenantSlug: string;
-    userId: string;
+    /** Null: the system's own run (the draft made when a pedido arrives). */
+    userId: string | null;
     userRole: string;
     kind: DpoConversationKind;
     firstMessage: string;
@@ -170,6 +175,8 @@ export async function listOwnConversationsWith(
       and(
         eq(dpoConversations.tenantSlug, input.tenantSlug),
         eq(dpoConversations.userId, input.userId),
+        // A requerimento's conversation lives on the requerimento.
+        ne(dpoConversations.kind, "data-rights"),
       ),
     )
     .orderBy(desc(dpoConversations.lastMessageAt));
@@ -333,14 +340,38 @@ export async function listTenantOverviewWith(
   });
 }
 
-/** Deletes conversations whose last message is older than `cutoff`. */
+/**
+ * Deletes conversations whose last message is older than `cutoff` (12
+ * months: LGPD, keep only what is needed; decision of 15/11/2026, "pode
+ * limpar após 12 meses"), and leaves the trail: one audit entry per office
+ * with how many went, by the system, in the same transaction.
+ */
 export async function purgeConversationsBeforeWith(
   database: Database,
   cutoff: Date,
 ): Promise<number> {
-  const removed = await database
-    .delete(dpoConversations)
-    .where(lt(dpoConversations.lastMessageAt, cutoff))
-    .returning({ id: dpoConversations.id });
-  return removed.length;
+  return database.transaction(async (tx) => {
+    const removed = await tx
+      .delete(dpoConversations)
+      .where(lt(dpoConversations.lastMessageAt, cutoff))
+      .returning({
+        id: dpoConversations.id,
+        tenantSlug: dpoConversations.tenantSlug,
+      });
+    const byOffice = new Map<string, number>();
+    for (const row of removed) {
+      byOffice.set(row.tenantSlug, (byOffice.get(row.tenantSlug) ?? 0) + 1);
+    }
+    for (const [tenantSlug, count] of byOffice) {
+      await recordAuditWith(tx as unknown as Database, {
+        tenantSlug,
+        actorId: null,
+        action: "dpo.purge",
+        targetType: "tenant",
+        targetId: tenantSlug,
+        reason: `${count} ${count === 1 ? "conversa" : "conversas"} do Assistente do DPO com mais de 12 meses, removida${count === 1 ? "" : "s"} pela guarda automática.`,
+      });
+    }
+    return removed.length;
+  });
 }

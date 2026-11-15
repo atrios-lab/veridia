@@ -265,3 +265,75 @@ describe("describeOffice", () => {
     assert.doesNotMatch(text, /@/);
   });
 });
+
+test("a resposta ao titular sai como documento, com o requerimento identificado e quem assina", async () => {
+  const { buildDataRightsReply } = await import("./reply-document.ts");
+  const { TENANTS } = await import("../tenant/resolve.ts");
+  const tenant = TENANTS["cartorio-marinho"];
+  if (!tenant) throw new Error("sem serventia de teste");
+  const doc = buildDataRightsReply(tenant, {
+    protocol: "SOL-2026-000001",
+    applicantName: "Titular Fictícia",
+    right: "access",
+    requestedOn: "2026-11-10",
+    text: "Prezada titular,\n\nSegue a resposta fictícia.\nEm duas linhas.",
+    issuedOn: "2026-11-15",
+  });
+  assert.equal(doc.title, "Resposta ao requerimento do titular");
+  assert.match(doc.subtitle, /SOL-2026-000001/);
+  assert.deepEqual(doc.sections[1]?.paragraphs, [
+    "Prezada titular,",
+    "Segue a resposta fictícia. Em duas linhas.",
+  ]);
+  assert.equal(
+    doc.signature[0],
+    "Encarregado(a) pelo tratamento de dados pessoais",
+  );
+});
+
+test("na conversa do requerimento, o Assistente Virtual orienta e quem decide é o encarregado ou o Tabelião", async () => {
+  const {
+    ALIGNMENT_START,
+    ALIGNMENT_TOPICS,
+    alignmentInstructions,
+    alignmentTranscript,
+    approvalStatus,
+    mayAnswer,
+  } = await import("./alinhamento.ts");
+  const rules = alignmentInstructions("Serventia fictícia.", "deletion");
+  assert.match(rules, /eliminação/);
+  assert.match(rules, /\[\[fonte:ID\]\]/);
+  assert.match(rules, /decisão final é do encarregado de dados ou do Tabelião/);
+  for (const topic of ALIGNMENT_TOPICS.deletion)
+    assert.ok(rules.includes(topic));
+  assert.doesNotMatch(rules, /\u2013|\u2014/);
+
+  // The transcript for the draft: no opening prompt, no source markers.
+  const transcript = alignmentTranscript([
+    { role: "user", content: ALIGNMENT_START },
+    {
+      role: "assistant",
+      content: "O livro fica, por dever de conservação [[fonte:cnn-1]].",
+    },
+    { role: "user", content: "Há também o contato no cadastro do site." },
+  ]);
+  assert.match(transcript, /Assistente Virtual: O livro fica/);
+  assert.match(transcript, /Equipe: Há também o contato/);
+  assert.doesNotMatch(transcript, /fonte:|Analise este requerimento/);
+
+  // The decision: approved word for word, or it needs a new approval.
+  const approval = {
+    text: "Resposta aprovada.",
+    byId: "u1",
+    byName: "Encarregada Fictícia",
+    byRole: "staff",
+    at: "2026-11-15T15:00:00.000Z",
+  };
+  assert.equal(approvalStatus(undefined, "x"), "pending");
+  assert.equal(approvalStatus(approval, " Resposta aprovada. "), "approved");
+  assert.equal(approvalStatus(approval, "Resposta mudada."), "changed");
+  assert.equal(mayAnswer(false, undefined, "x"), false);
+  assert.equal(mayAnswer(false, approval, "Resposta mudada."), false);
+  assert.equal(mayAnswer(false, approval, "Resposta aprovada."), true);
+  assert.equal(mayAnswer(true, undefined, "x"), true);
+});

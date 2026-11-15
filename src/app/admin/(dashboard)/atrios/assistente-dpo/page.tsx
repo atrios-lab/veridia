@@ -135,7 +135,9 @@ export default async function DpoOversightPage({
                   {ROLE_NAMES[c.userRole] ?? c.userRole}
                   {c.kind === "reply-draft"
                     ? " · rascunho de resposta LGPD"
-                    : ""}{" "}
+                    : c.kind === "data-rights"
+                      ? " · conversa de requerimento LGPD"
+                      : ""}{" "}
                   · {formatOfficeDateTime(c.lastMessageAt)}
                 </span>
               </Link>

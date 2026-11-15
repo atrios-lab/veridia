@@ -356,7 +356,7 @@ export const ADMIN_NAV: readonly AdminNavItem[] = [
     // The legal base the AI is taught with (decision of 15/11/2026): laws,
     // provimentos, jurisprudence and models, kept as Markdown.
     group: "Utilitários",
-    label: "Base jurídica da IA",
+    label: "Base jurídica do Assistente Virtual",
     href: "/admin/utilitarios/base-juridica",
     icon: "library",
     permission: "knowledge.manage",

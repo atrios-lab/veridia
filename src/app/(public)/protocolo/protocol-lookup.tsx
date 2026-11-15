@@ -2058,6 +2058,8 @@ export function DataRightsCard({
             </div>
           )}
 
+          <DataRightsFiles result={result} />
+
           <Timeline>
             <TimelineStep
               done
@@ -2300,6 +2302,145 @@ export function OmbudsmanCard({
         <Link href="/protocolo" className="btn btn-ghost btn-sm mt-4">
           Nova consulta
         </Link>
+      )}
+    </div>
+  );
+}
+
+/**
+ * The requerimento's files (decision of 15/11/2026): what the office sent
+ * the titular, to download with the protocol and the key, what the titular
+ * sent, and, while it is open, a way to send more.
+ */
+function DataRightsFiles({ result }: { result: DataRightsDetail }) {
+  const [sent, setSent] = useState(result.citizenDocuments);
+  const [docState, docAction, savingDoc] = useActionState<
+    AttachDocumentState,
+    FormData
+  >(attachExtraDocument, { status: "idle" });
+  const docUpload = useAttachmentUpload(docAction);
+  const sending = savingDoc || docUpload.uploading;
+  useEffect(() => {
+    if (docState.status === "success") {
+      setSent((prev) => [...prev, ...docState.documents]);
+    }
+  }, [docState]);
+  if (
+    !result.open &&
+    result.officeDocuments.length === 0 &&
+    sent.length === 0
+  ) {
+    return null;
+  }
+  return (
+    <div className="rounded-2xl border border-brand-border bg-brand-card p-4">
+      <span className="text-[11px] font-bold uppercase tracking-[0.16em] text-brand-accent-ink">
+        Documentos
+      </span>
+      {result.officeDocuments.length > 0 && (
+        <div className="mt-2.5 flex flex-col gap-2">
+          {result.officeDocuments.map((doc) => (
+            <form
+              key={doc.id}
+              action="/protocolo/documento"
+              method="post"
+              className="flex items-center gap-2.5 border-b border-brand-border pb-2 last:border-b-0 last:pb-0"
+            >
+              <Icon
+                name="file"
+                className="h-4.5 w-4.5 shrink-0 text-brand-accent"
+              />
+              <div className="flex-1">
+                <div className="text-[13px] font-semibold text-brand-primary">
+                  {doc.displayName || "Documento da serventia"}
+                </div>
+                <div className="text-[11px] text-brand-faint">
+                  enviado pela serventia em {formatDate(doc.createdAt)}
+                  {doc.gone && " · já não está disponível"}
+                </div>
+              </div>
+              <ProtocolFields result={result} />
+              <input type="hidden" name="attachmentId" value={doc.id} />
+              {!doc.gone && (
+                <button type="submit" className="btn btn-ghost btn-sm">
+                  Baixar
+                </button>
+              )}
+            </form>
+          ))}
+        </div>
+      )}
+      {sent.length > 0 && (
+        <div className="mt-3 flex flex-col gap-1.5">
+          <span className="text-[11.5px] font-semibold text-brand-muted">
+            Enviados por você
+          </span>
+          {sent.map((doc) => (
+            <div
+              key={doc.id}
+              className="flex items-center gap-2 text-[12.5px] text-brand-text-soft"
+            >
+              <Icon
+                name="file"
+                className="h-4 w-4 shrink-0 text-brand-accent"
+              />
+              <span className="flex-1 [overflow-wrap:anywhere]">
+                {doc.displayName}
+              </span>
+              <span className="text-[11px] text-brand-faint">
+                {formatDate(doc.createdAt)}
+              </span>
+            </div>
+          ))}
+        </div>
+      )}
+      {result.open && (
+        <form
+          onSubmit={(event) => {
+            event.preventDefault();
+            void docUpload.send(event.currentTarget, "documento", 1);
+          }}
+          className="mt-3"
+        >
+          <ProtocolFields result={result} />
+          <div className="mb-2.5">
+            <DocumentNameField
+              field="documento"
+              tone="public"
+              suggestions={CITIZEN_DOCUMENT_NAMES}
+            />
+          </div>
+          <label
+            className={`flex cursor-pointer items-center justify-center gap-2 rounded-xl border-[1.5px] border-dashed border-brand-border px-3 py-3 text-[12.5px] font-semibold text-brand-primary hover:border-brand-accent ${sending ? "opacity-60" : ""}`}
+          >
+            <Icon name="plus" className="h-3.5 w-3.5 text-brand-accent" />
+            {sending ? "Enviando..." : "Enviar um documento à serventia"}
+            <input
+              type="file"
+              name="documento"
+              accept={ATTACHMENT_ACCEPT}
+              className="sr-only"
+              disabled={sending}
+              onChange={(event) => {
+                if (event.target.files?.length) {
+                  event.target.form?.requestSubmit();
+                }
+              }}
+            />
+          </label>
+          {(docUpload.error || docState.status !== "idle") && (
+            <output
+              className={`mt-1.5 block text-[11.5px] font-semibold ${
+                docUpload.error || docState.status === "error"
+                  ? "text-brand-alert"
+                  : "text-brand-primary-soft"
+              }`}
+            >
+              {docUpload.error ??
+                (docState.status !== "idle" && docState.message)}
+            </output>
+          )}
+        </form>
       )}
     </div>
   );

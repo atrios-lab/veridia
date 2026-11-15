@@ -572,7 +572,7 @@ export async function applyAiProposalWith(
   const round = found.data.rounds[index];
   if (!round || round.result !== "aberta") {
     throw new QualificationError(
-      "A IA propõe só na rodada aberta: registre a reapresentação primeiro.",
+      "O Assistente Virtual propõe só na rodada aberta: registre a reapresentação primeiro.",
     );
   }
   const library = new Set(
@@ -617,7 +617,7 @@ export async function applyAiProposalWith(
                   ? {
                       ...existing,
                       status: seen.status,
-                      note: `Sugestão da IA: ${seen.reason.trim().slice(0, 1000)}`,
+                      note: `Sugestão do Assistente Virtual: ${seen.reason.trim().slice(0, 1000)}`,
                       fromAi: true,
                       reviewed: false,
                     }

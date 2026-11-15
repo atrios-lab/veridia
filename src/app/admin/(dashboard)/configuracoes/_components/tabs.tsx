@@ -28,6 +28,11 @@ const GROUPS: { label: string; tabs: Tab[] }[] = [
         permission: "content.edit",
       },
       {
+        label: "Assistente Virtual",
+        href: "/admin/configuracoes/assistente-virtual",
+        permission: "user.manage",
+      },
+      {
         label: "Identidade visual",
         href: "/admin/configuracoes/identidade-visual",
         permission: "branding.edit",
@@ -86,11 +91,6 @@ const GROUPS: { label: string; tabs: Tab[] }[] = [
         label: "Horário de acesso",
         href: "/admin/configuracoes/horario-de-acesso",
         permission: "access.manage",
-      },
-      {
-        label: "Inteligência artificial",
-        href: "/admin/configuracoes/inteligencia-artificial",
-        permission: "user.manage",
       },
     ],
   },

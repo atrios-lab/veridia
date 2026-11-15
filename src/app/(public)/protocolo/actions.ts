@@ -260,6 +260,12 @@ export interface DataRightsDetail extends BaseDetail {
   dpoName: string;
   reply?: string;
   repliedAt?: string;
+  /** Files the office sent the titular (decision of 15/11/2026). */
+  officeDocuments: DeliveredDocumentView[];
+  /** Files the titular sent, at filing time and later. */
+  citizenDocuments: CitizenDocumentView[];
+  /** Still open: the titular may send more. */
+  open: boolean;
 }
 
 export interface OmbudsmanDetail extends BaseDetail {
@@ -454,6 +460,7 @@ export async function lookupProtocolDetail(
     // the same neutral "not found" as any other unknown number.
     if (kind === "data-rights") {
       const { right } = parseDetails("data-rights", record.details);
+      const files = await listAttachments(tenant.slug, record.id);
       const requestedOn = toIsoDate(record.createdAt, OFFICE_TIME_ZONE);
       return {
         ...base,
@@ -464,6 +471,22 @@ export async function lookupProtocolDetail(
         dpoName: tenant.dpo.name,
         reply: record.officeReply ?? undefined,
         repliedAt: record.officeRepliedAt?.toISOString(),
+        officeDocuments: files
+          .filter((a) => a.kind === "office" && !a.heldForSignatureAt)
+          .map((a) => ({
+            id: a.id,
+            createdAt: a.createdAt.toISOString(),
+            displayName: a.displayName,
+            gone: !a.path,
+          })),
+        citizenDocuments: files
+          .filter((a) => a.kind !== "office")
+          .map((a) => ({
+            id: a.id,
+            createdAt: a.createdAt.toISOString(),
+            displayName: a.displayName,
+          })),
+        open: record.status === "new",
       };
     }
 
@@ -837,6 +860,15 @@ export async function attachExtraDocument(
     accessKey,
   );
   if (!request) return { status: "error", message: NOT_FOUND };
+  // A data-rights requerimento takes the titular's files only while it is
+  // open (decision of 15/11/2026): once answered, it is closed.
+  if (request.kind === "data-rights" && request.status !== "new") {
+    return {
+      status: "error",
+      message:
+        "Este requerimento já foi respondido. Para um pedido novo, abra outro requerimento.",
+    };
+  }
   // First the signed requerimento, then the documents (decision of
   // 12/11/2026): until it is accepted, nothing else goes in.
   if (request.status === "awaiting-signed-form") {

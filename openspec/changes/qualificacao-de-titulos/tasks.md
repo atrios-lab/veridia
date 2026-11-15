@@ -1,6 +1,6 @@
 ## 1. Base legal e modelos
 
-- [ ] 1.1 Conferir no compilado oficial o texto vigente da Lei nº 6.015/1973 (arts. 188, 198 a 205 e os de títulos e documentos e pessoas jurídicas), da Lei nº 8.935/1994 (art. 28) e do Código Nacional de Normas, e registrar os prazos por atribuição.
+- [ ] 1.1 Conferir no compilado oficial o texto vigente da Lei nº 6.015/1973 (arts. 188, 198 a 205 e os de títulos e documentos e pessoas jurídicas), da Lei nº 8.935/1994 (art. 28) e do Código Nacional de Normas, e registrar os prazos por atribuição. Em 15/11/2026: Código Nacional de Normas conferido no texto compilado do CNJ (socioafetiva, arts. 505 e seguintes; alteração de nome, arts. 515-A e seguintes; CNIB, arts. 320 e seguintes; dúvida no Registro Civil pelos arts. 198 e 296 da Lei nº 6.015/1973). As leis federais não puderam ser lidas daqui: o Planalto barra acessos de fora do Brasil e a leitura em normas.leg.br foi bloqueada pelas permissões da sessão; a importação de leis no painel passou a rodar na região de São Paulo da Vercel.
 - [x] 1.2 Reescrever as exigências e os fundamentos dos modelos enviados em forma genérica, com dados fictícios, como biblioteca inicial, para todas as atribuições na ordem RCPN, RI, Notas, RTD, RCPJ e Protesto.
 
 ## 1A. Base jurídica da IA

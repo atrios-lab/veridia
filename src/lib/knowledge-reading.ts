@@ -134,7 +134,7 @@ async function readBytes(
   ): Promise<void> => {
     if (!options.transcribe) {
       report.notes.push(
-        `${name}: ${what} só é lido pela IA. ${options.aiOff ?? "A IA está desligada."}`,
+        `${name}: ${what} só é lido pelo Assistente Virtual. ${options.aiOff ?? "O Assistente Virtual está desligado."}`,
       );
       return;
     }
@@ -142,7 +142,7 @@ async function readBytes(
       mediaType === "application/pdf" ? AI_PDF_MAX_BYTES : AI_IMAGE_MAX_BYTES;
     if (bytes.length > max) {
       report.notes.push(
-        `${name}: ${what} maior que ${max / 1024 / 1024} MB para a IA; reduza e envie de novo.`,
+        `${name}: ${what} maior que ${max / 1024 / 1024} MB para o Assistente Virtual; reduza e envie de novo.`,
       );
       return;
     }
@@ -155,7 +155,7 @@ async function readBytes(
       });
     } catch (error) {
       report.notes.push(
-        `${name}: ${error instanceof Error ? error.message : "a IA não leu este arquivo."}`,
+        `${name}: ${error instanceof Error ? error.message : "o Assistente Virtual não leu este arquivo."}`,
       );
     }
   };

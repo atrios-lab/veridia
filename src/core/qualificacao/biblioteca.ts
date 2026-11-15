@@ -4,9 +4,11 @@ import type { Attribution } from "./qualificacao.ts";
  * The first exigências of the library (decision of 15/11/2026), written
  * for this panel in generic words: no client's data, no copy of another
  * office's text. Each office edits, adds and excludes its own in the
- * panel; these only seed it. The fundamentos name the provisions in
- * force as read in the compiled text; the office confirms them before
- * using, and the panel says so.
+ * panel; these only seed it. The citations of the Código Nacional de
+ * Normas were checked on 15/11/2026 in the CNJ's compiled text (socio-
+ * afetiva, arts. 505 ff.; alteração de nome, arts. 515-A ff.; CNIB, arts.
+ * 320 ff.); the laws' articles are confirmed by the office before using,
+ * and the panel says so.
  */
 export interface LibrarySeed {
   key: string;
@@ -108,7 +110,7 @@ export const LIBRARY_SEEDS: LibrarySeed[] = [
       "A alteração imotivada de prenome no cartório cabe à pessoa maior de 18 anos, uma única vez; o requerimento não demonstra esses requisitos.",
     howToComply:
       "Apresentar documento que comprove a maioridade e declarar, no requerimento, que não houve alteração imotivada anterior; para menor de 18 anos, a alteração depende de outra via prevista em lei.",
-    basis: `${LRP}, art. 56.`,
+    basis: `${LRP}, art. 56; ${CNN}, arts. 515-A e seguintes.`,
   },
   {
     key: "rcpn-prenome-certidoes",
@@ -119,7 +121,7 @@ export const LIBRARY_SEEDS: LibrarySeed[] = [
       "Não foram apresentados todos os documentos e certidões que a norma nacional exige para a alteração de nome no cartório.",
     howToComply:
       "Apresentar os documentos e certidões relacionados pela serventia conforme o Código Nacional de Normas, todos atualizados.",
-    basis: `${LRP}, arts. 56 e 57; ${CNN}.`,
+    basis: `${LRP}, arts. 56 e 57; ${CNN}, arts. 515-A e seguintes.`,
   },
   {
     key: "rcpn-sobrenome-hipotese",
@@ -130,7 +132,7 @@ export const LIBRARY_SEEDS: LibrarySeed[] = [
       "O pedido de alteração de sobrenome não se enquadra, ou não demonstra se enquadrar, em hipótese em que a lei a admite diretamente no cartório.",
     howToComply:
       "Indicar a hipótese legal do pedido e apresentar o documento que a comprove (por exemplo, a certidão que mostra o sobrenome de família a incluir).",
-    basis: `${LRP}, art. 57.`,
+    basis: `${LRP}, art. 57; ${CNN}, arts. 515-A e seguintes.`,
   },
   {
     key: "rcpn-filiacao-anuencia",
@@ -152,7 +154,7 @@ export const LIBRARY_SEEDS: LibrarySeed[] = [
       "Não foram demonstrados os requisitos do reconhecimento voluntário da filiação socioafetiva no cartório (idade do filho, consentimento, prova do vínculo).",
     howToComply:
       "Apresentar os documentos que provem o vínculo socioafetivo e o consentimento exigido, conforme a seção do Código Nacional de Normas sobre o tema.",
-    basis: `${CNN}, reconhecimento voluntário da filiação socioafetiva.`,
+    basis: `${CNN}, arts. 505 e seguintes (parentalidade socioafetiva).`,
   },
   {
     key: "rcpn-divorcio-titulo",
@@ -374,7 +376,7 @@ export const LIBRARY_SEEDS: LibrarySeed[] = [
       "A consulta à Central Nacional de Indisponibilidade de Bens em nome do alienante indicou ordem de indisponibilidade que impede o ato.",
     howToComply:
       "Apresentar a decisão que levantou a indisponibilidade, ou a autorização judicial para o ato.",
-    basis: `${CNN}, Central Nacional de Indisponibilidade de Bens.`,
+    basis: `${CNN}, arts. 320 e seguintes (Central Nacional de Indisponibilidade de Bens).`,
   },
   {
     key: "notas-inventario-advogado",

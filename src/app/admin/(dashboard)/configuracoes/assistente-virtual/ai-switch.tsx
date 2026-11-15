@@ -33,7 +33,9 @@ export function AiSwitch({
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
           <h3 className="text-base font-semibold text-foreground">
-            {enabled ? "IA: ligada" : "IA: desligada"}
+            {enabled
+              ? "Assistente Virtual: ligado"
+              : "Assistente Virtual: desligado"}
           </h3>
           {changedLine && (
             <p className="mt-1 text-xs text-muted-foreground">{changedLine}</p>
@@ -69,8 +71,8 @@ export function AiSwitch({
               {pending
                 ? "Salvando..."
                 : enabled
-                  ? "Desligar a IA"
-                  : "Ligar a IA"}
+                  ? "Desligar o Assistente Virtual"
+                  : "Ligar o Assistente Virtual"}
             </Button>
             <Button
               type="button"

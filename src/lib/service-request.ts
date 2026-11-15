@@ -335,12 +335,16 @@ export async function saveDraftReplyWith(
   id: string,
   kind: RequestKind,
   draftReply: string,
-  actorId: string,
+  actorId: string | null,
 ): Promise<void> {
   await database
     .update(serviceRequests)
     .set({
-      details: sql`${serviceRequests.details} || ${JSON.stringify({ draftReply })}::jsonb`,
+      details: sql`${serviceRequests.details} || ${JSON.stringify(
+        kind === "data-rights"
+          ? { draftReply, draftAuto: false }
+          : { draftReply },
+      )}::jsonb`,
       updatedAt: new Date(),
     })
     .where(

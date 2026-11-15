@@ -26,6 +26,7 @@ import { BackLink } from "../../../../_components/back-link.tsx";
 import { AdminPageHeader } from "../../../../_components/page-header.tsx";
 import { ROLE_LABELS } from "../../../../_components/role-labels.ts";
 import { SignOrPrint } from "../../../../_components/sign-or-print.tsx";
+import { TirarDuvida } from "../../../../_components/tirar-duvida.tsx";
 import { buttonVariants } from "../../../../_ui/button.tsx";
 import { requireQualificacao } from "../_access.ts";
 import {
@@ -87,6 +88,7 @@ export default async function QualificationPage({
         description={`${ATTRIBUTIONS[q.data.attribution]} · ${STATUS_LABELS[q.status]} · ${daysSince(q.data.receivedOn, now)} dias desde a apresentação`}
       />
       <main className="flex max-w-[1000px] flex-col gap-6 px-4 py-7 md:px-8">
+        <TirarDuvida topic="qualificacao" />
         <BackLink href={BASE} label="Qualificação de títulos" />
         {emitida && live.length > 0 && (
           <p
@@ -105,8 +107,8 @@ export default async function QualificationPage({
             className="rounded-xl border border-primary/25 bg-primary/5 px-5 py-3 text-sm text-foreground"
           >
             {Number(ia) > 0
-              ? `A IA propôs ${ia} ${Number(ia) === 1 ? "exigência" : "exigências"}, marcadas abaixo. Confira cada uma (o fato, o fundamento e a redação), corrija ou tire, e salve antes de emitir.`
-              : "A IA não propôs exigência. Confira o resumo abaixo antes de emitir."}
+              ? `O Assistente Virtual propôs ${ia} ${Number(ia) === 1 ? "exigência" : "exigências"}, marcadas abaixo. Confira cada uma (o fato, o fundamento e a redação), corrija ou tire, e salve antes de emitir.`
+              : "O Assistente Virtual não propôs exigência. Confira o resumo abaixo antes de emitir."}
           </p>
         )}
         {due && (

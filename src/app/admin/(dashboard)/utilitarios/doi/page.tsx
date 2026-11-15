@@ -11,6 +11,7 @@ import { db } from "@/db/index.ts";
 import { getTenant, today } from "@/lib/tenant.ts";
 import { competencesWith, listTransfersWith } from "@/lib/title-transfers.ts";
 import { AdminPageHeader } from "../../../_components/page-header.tsx";
+import { TirarDuvida } from "../../../_components/tirar-duvida.tsx";
 import { buttonVariants } from "../../../_ui/button.tsx";
 import { Input } from "../../../_ui/input.tsx";
 import { requireDoi } from "../titularidade/_access.ts";
@@ -84,6 +85,7 @@ export default async function DoiPage({
         }
       />
       <main className="flex max-w-[1100px] flex-col gap-5 px-4 py-7 md:px-8">
+        <TirarDuvida topic="doi" />
         {justSaved && (
           <section className="flex flex-col gap-3 rounded-xl border border-success/30 bg-success-soft p-5 text-sm text-success-text">
             <p className="font-semibold">

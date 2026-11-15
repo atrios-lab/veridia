@@ -428,7 +428,7 @@ export async function proposeAction(
       return {
         status: "error",
         message:
-          "A IA propõe só na rodada aberta: registre a reapresentação primeiro.",
+          "O Assistente Virtual propõe só na rodada aberta: registre a reapresentação primeiro.",
       };
     }
     const titleFiles: TitleFile[] = [];
@@ -437,7 +437,9 @@ export async function proposeAction(
     for (const file of files) {
       total += file.size;
       if (total > TOTAL_AI_BYTES) {
-        notes.push(`${file.name}: passou de 30 MB no envio à IA.`);
+        notes.push(
+          `${file.name}: passou de 30 MB no envio ao Assistente Virtual.`,
+        );
         continue;
       }
       const bytes = new Uint8Array(await file.arrayBuffer());
@@ -513,7 +515,7 @@ export async function proposeAction(
       {
         summary: [
           proposal.resultado === "positiva"
-            ? "A IA não encontrou exigência: sugere a qualificação positiva."
+            ? "O Assistente Virtual não encontrou exigência: sugere a qualificação positiva."
             : "",
           proposal.resumo,
           notes.length ? `Arquivos não lidos: ${notes.join(" ")}` : "",
@@ -543,7 +545,7 @@ export async function proposeAction(
         ok.tenant.slug,
         {
           topic: missing.tema,
-          detail: `Apontada pela IA ao qualificar ${act.toLowerCase()}.`,
+          detail: `Apontada pelo Assistente Virtual ao qualificar ${act.toLowerCase()}.`,
           officialUrl: missing.endereco,
         },
         ok.session.user.id,

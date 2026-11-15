@@ -44,8 +44,8 @@ export default async function EditSourcePage({
         />
         {open && (
           <p className="rounded-xl border border-warning/30 bg-warning-soft px-5 py-3 text-sm text-foreground">
-            Respondendo ao pedido da IA: {open.topic} Envie abaixo o documento
-            atualizado.
+            Respondendo ao pedido do Assistente Virtual: {open.topic} Envie
+            abaixo o documento atualizado.
           </p>
         )}
         <div id="trocar">

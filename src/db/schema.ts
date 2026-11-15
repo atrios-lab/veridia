@@ -2587,7 +2587,7 @@ export const dpoConversations = pgTable(
     }),
     /** The position at the time, so the platform reads it without a name. */
     userRole: text("user_role").notNull(),
-    /** "chat" or "reply-draft" (the LGPD requerimento's draft button). */
+    /** "chat", "reply-draft" (the draft button) or "data-rights" (a requerimento's conversation). */
     kind: text("kind").notNull().default("chat"),
     /** The first question, already masked, cut short. */
     title: text("title").notNull(),

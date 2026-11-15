@@ -110,6 +110,15 @@ export default async function DpoAssistantPage({
           initialConversationId={conversationId}
           initialMessages={initialMessages}
           blockedReason={blockedReason}
+          settingsHref={
+            can(
+              session.user.role ?? "",
+              "user.manage",
+              session.user.permissions,
+            )
+              ? "/admin/configuracoes/assistente-virtual"
+              : null
+          }
           usage={{
             answered: usage.answered,
             limit: effectiveLimit(configuredLimit),

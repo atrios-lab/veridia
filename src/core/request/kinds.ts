@@ -1189,6 +1189,24 @@ export const dataRightsDetailsSchema = z.object({
   // The office's answer in progress, never read by the citizen's consult:
   // only `officeReply` is. Cleared once the final answer is sent.
   draftReply: z.string().optional(),
+  // The draft above was made by the Assistente Virtual when the pedido
+  // arrived, and nobody saved over it yet: the screen says to review it.
+  draftAuto: z.boolean().optional(),
+  // The conversation with the Assistente Virtual about this requerimento
+  // (core/dpo/alinhamento.ts), shared by the team.
+  alignment: z.object({ conversationId: z.string() }).optional(),
+  // The final decision on the answer (`lgpd.decide`): the exact text the
+  // encarregado or the Tabelião approved. A change to the text needs a new
+  // approval before it goes to the titular.
+  approval: z
+    .object({
+      text: z.string(),
+      byId: z.string(),
+      byName: z.string(),
+      byRole: z.string(),
+      at: z.string(),
+    })
+    .optional(),
 });
 export type DataRightsDetails = z.infer<typeof dataRightsDetailsSchema>;
 

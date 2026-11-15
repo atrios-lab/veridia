@@ -916,7 +916,7 @@ ENTRIES["/admin/utilitarios/qualificacao"] = {
     "Formule todas as exigências de uma só vez (Lei nº 6.015/1973, art. 198). Depois, emita a nota devolutiva: ela sai numerada, com os fundamentos, a forma de cumprimento e o direito de pedir a suscitação de dúvida. Assine digitalmente ou imprima, ou baixe em Word.",
     "Quando o título voltar, registre a reapresentação: abre o reexame com as exigências que faltavam. Marque cada uma como cumprida, cumprida em parte ou pendente. Exigência nova que não decorre de documento novo gera aviso.",
     "Sem exigência pendente, emita a qualificação positiva.",
-    "Com a IA ligada, Pedir a proposta à IA lê o título anexado (o arquivo não fica guardado), consulta a biblioteca e a base jurídica e propõe as exigências como rascunho, com o trecho do título que motivou cada uma. Nada sai sem você marcar Conferi em cada exigência proposta, ou tirá-la.",
+    "Com o Assistente Virtual ligado, Pedir a proposta ao Assistente Virtual lê o título anexado (o arquivo não fica guardado), consulta a biblioteca e a base jurídica e propõe as exigências como rascunho, com o trecho do título que motivou cada uma. Nada sai sem você marcar Conferi em cada exigência proposta, ou tirá-la.",
     "Do pedido do balcão online, use Qualificar o título deste pedido: a qualificação abre com o apresentante, o protocolo e a data do pedido, e o pedido passa a mostrar as notas emitidas.",
     "Em Prazos, defina o prazo de cada atribuição em dias úteis. A lista mostra o que vence e o que venceu, primeiro.",
     "Emitiu errado? Exclua a nota com justificativa: ela fica guardada com o número, que não volta a ser usado, e a rodada reabre para corrigir. Também dá para modificar o número.",
@@ -962,13 +962,13 @@ ENTRIES["/admin/utilitarios/qualificacao/biblioteca"] = {
 
 ENTRIES["/admin/utilitarios/base-juridica"] = {
   purpose:
-    "Ensinar a IA da qualificação de títulos com as fontes do direito: leis, decretos, provimentos do CNJ e da Corregedoria, jurisprudência, enunciados, doutrina e modelos. A IA não conversa: ninguém faz pergunta a ela. A serventia só alimenta esta base.",
+    "Ensinar o Assistente Virtual da qualificação de títulos com as fontes do direito: leis, decretos, provimentos do CNJ e da Corregedoria, jurisprudência, enunciados, doutrina e modelos. O Assistente Virtual não conversa: ninguém faz pergunta a ela. A serventia só alimenta esta base.",
   steps: [
     "Em Enviar fontes, importe o texto vigente do site oficial (as normas básicas já estão na lista) ou envie arquivos: PDF, Word, ODT, RTF, texto, HTML, ZIP com vários e fotos. Também dá para colar o texto.",
     "Cada documento vira Markdown, dividido por artigo, e o arquivo é descartado: só o texto fica guardado. Na fonte, Baixar em .md entrega o texto como ficou.",
-    "Ao ler, o sistema confere se o arquivo parece o certo. Com alerta (não parece jurídico, número da referência ausente, CPF de pessoa, fonte repetida ou texto lido pela IA), a fonte fica Em conferência e não é usada até alguém confirmar ou trocar o arquivo.",
+    "Ao ler, o sistema confere se o arquivo parece o certo. Com alerta (não parece jurídico, número da referência ausente, CPF de pessoa, fonte repetida ou texto lido pelo Assistente Virtual), a fonte fica Em conferência e não é usada até alguém confirmar ou trocar o arquivo.",
     "Anexou o arquivo errado? Na fonte, Alterar dados ou trocar o arquivo: o arquivo certo vira a versão nova e a anterior fica guardada, fora da base.",
-    "Com a IA ligada, Conferir na fonte oficial faz a IA procurar a norma só nos sites oficiais. Se ela mudou ou foi revogada, aparece um pedido no alto da lista; responda pelos botões: importar do site oficial, enviar o documento ou dispensar com o motivo.",
+    "Com o Assistente Virtual ligado, Conferir na fonte oficial faz o Assistente Virtual procurar a norma só nos sites oficiais. Se ela mudou ou foi revogada, aparece um pedido no alto da lista; responda pelos botões: importar do site oficial, enviar o documento ou dispensar com o motivo.",
     "Em Pesquisar, o sistema acha os artigos pela hierarquia: a lei antes das normas, da jurisprudência, da doutrina e dos modelos. Fonte revogada, versão antiga e fonte em conferência ficam de fora.",
   ],
   terms: [
@@ -989,23 +989,23 @@ ENTRIES["/admin/utilitarios/base-juridica"] = {
     },
   ],
   configure: {
-    href: "/admin/configuracoes/inteligencia-artificial",
-    label: "Configurações › Inteligência artificial",
+    href: "/admin/configuracoes/assistente-virtual",
+    label: "Configurações › Assistente Virtual",
     permission: "user.manage",
     steps: [
-      "Só o Tabelião liga ou desliga a IA, com o motivo, que vai para a auditoria. Ela começa desligada.",
+      "Só o Tabelião liga ou desliga o Assistente Virtual, com o motivo, que vai para a auditoria. Ele começa desligado.",
       "Desligada, a base funciona do mesmo jeito; só a leitura de fotos e PDFs digitalizados e a conferência na fonte oficial ficam paradas.",
     ],
   },
 };
 
-ENTRIES["/admin/configuracoes/inteligencia-artificial"] = {
+ENTRIES["/admin/configuracoes/assistente-virtual"] = {
   purpose:
-    "Ligar ou desligar a IA da plataforma (Claude, da Anthropic), que tem uma finalidade só: a qualificação de títulos. Ninguém conversa com ela.",
+    "Ligar ou desligar o Assistente Virtual da plataforma, que só executa tarefas fixas: ler documentos para a Base jurídica, propor a qualificação de títulos e responder no Assistente do DPO. Ninguém conversa com ele.",
   steps: [
     "Clique em Ligar ou Desligar e escreva o motivo; ele vai para a auditoria com quem mudou e quando.",
-    "Ligada, a IA lê fotos e PDFs digitalizados enviados à Base jurídica e confere as fontes nos sites oficiais. Os documentos vão à Anthropic só para a leitura e não ficam guardados.",
-    "A IA só funciona depois que a chave de acesso for cadastrada no ambiente da plataforma; enquanto isso, a tela avisa.",
+    "Ligado, o Assistente Virtual lê fotos e PDFs digitalizados enviados à Base jurídica e confere as fontes nos sites oficiais. Os documentos vão ao serviço do Assistente Virtual só para a leitura e não ficam guardados.",
+    "O Assistente Virtual só funciona depois que a chave de acesso for cadastrada no ambiente da plataforma; enquanto isso, a tela avisa.",
   ],
 };
 

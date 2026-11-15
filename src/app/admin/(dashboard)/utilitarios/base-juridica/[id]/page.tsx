@@ -52,7 +52,7 @@ export default async function SourcePage({
     <>
       <AdminPageHeader maxWidth={1000} title={m.title} />
       <main className="flex max-w-[1000px] flex-col gap-5 px-4 py-7 md:px-8">
-        <BackLink href={BASE} label="Base jurídica da IA" />
+        <BackLink href={BASE} label="Base jurídica do Assistente Virtual" />
         {nova === "1" && (
           <p
             aria-live="polite"
@@ -68,7 +68,7 @@ export default async function SourcePage({
           >
             Conferência feita: {CHECK_LABELS[m.check.result]}.
             {m.check.result === "alterada" || m.check.result === "revogada"
-              ? " A IA deixou um pedido na lista da base."
+              ? " O Assistente Virtual deixou um pedido na lista da base."
               : ""}
           </p>
         )}
@@ -177,7 +177,7 @@ export default async function SourcePage({
               Conferência na fonte oficial: {CHECK_LABELS[m.check.result]}
             </h2>
             <p className="mt-1 text-xs text-muted-foreground">
-              Pela IA, só nos sites oficiais, em{" "}
+              Pelo Assistente Virtual, só nos sites oficiais, em{" "}
               {m.check.on
                 ? formatOfficeDateTime(new Date(m.check.on))
                 : "data não registrada"}
@@ -219,7 +219,7 @@ export default async function SourcePage({
               </Link>
               {aiOff ? (
                 <span className="self-center text-xs text-muted-foreground">
-                  Conferência pela IA: {aiOff}
+                  Conferência pelo Assistente Virtual: {aiOff}
                 </span>
               ) : (
                 <CheckSourceButton id={source.id} />
