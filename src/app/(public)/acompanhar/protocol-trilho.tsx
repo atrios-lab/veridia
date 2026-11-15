@@ -1098,7 +1098,7 @@ function RequirementCard({
           pedido feito em {formatDate(requirement.createdAt)}
         </span>
       </div>
-      <p className="text-[15.5px] font-semibold leading-snug text-brand-primary">
+      <p className="whitespace-pre-line [overflow-wrap:anywhere] text-[15.5px] font-semibold leading-snug text-brand-primary">
         {requirement.text}
       </p>
       {requirement.forms.length > 0 && (
@@ -1674,7 +1674,9 @@ function ResolvedRequirement({
               : ""}
           </span>
         </div>
-        <p className="text-sm leading-relaxed">{requirement.text}</p>
+        <p className="whitespace-pre-line [overflow-wrap:anywhere] text-sm leading-relaxed">
+          {requirement.text}
+        </p>
       </div>
     </div>
   );

@@ -204,7 +204,7 @@ export function emptyQualification(
  */
 export const GENERAL_FUNDAMENTALS = [
   "Compete ao oficial, com independência no exercício de suas atribuições, examinar a legalidade e a regularidade formal do título apresentado antes de praticar o ato pedido (Lei nº 8.935/1994, art. 28).",
-  "Havendo exigência a satisfazer, ela é indicada por escrito, de uma só vez, articuladamente, de forma clara e objetiva, para que o interessado possa satisfazê-la ou, não se conformando ou não sendo possível cumpri-la, requerer que o título e a declaração de dúvida sejam remetidos ao juízo competente (Lei nº 6.015/1973, art. 198).",
+  "Havendo exigência a satisfazer, ela é indicada por escrito, de uma só vez, articuladamente, de forma clara e objetiva, para que o interessado possa satisfazê-la (Lei nº 6.015/1973, art. 198).",
 ] as const;
 
 export const actName = (

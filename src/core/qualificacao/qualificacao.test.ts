@@ -98,7 +98,10 @@ test("a nota sai com as exigências agrupadas, numeradas, fundamentadas e com o 
   assert.match(text, /1\. Exigência a\./);
   assert.match(text, /2\. Exigência c\./);
   assert.match(text, /3\. Exigência b\./);
-  assert.match(text, /art\. 198, II/);
+  // The same closing as the text sent to the pedido (one standard).
+  assert.match(text, /anexe ao pedido a justificativa da impossibilidade/);
+  assert.match(text, /decisão de dúvida junto ao juízo competente/);
+  assert.doesNotMatch(text, /remetidos ao juízo/);
   assert.match(text, /Fundamento: Lei nº 6\.015\/1973/);
   assert.doesNotMatch(text, /\u2013|\u2014/);
 });
@@ -274,14 +277,18 @@ test("a nota devolutiva vira o texto da exigência do pedido, numerada e com o d
     data,
     roundIndex: 0,
   });
-  assert.match(text, /^Nota devolutiva nº 3\/2026/);
-  assert.match(text, /1\. Exigência a\n/);
+  assert.match(text, /^Nota devolutiva nº 3\/2026\n\n/);
+  assert.match(text, /\n\n1\. Exigência a\.\n/);
   assert.match(text, /Como cumprir: Apresentar o documento a\./);
   assert.match(text, /Fundamento: Lei nº 6\.015\/1973/);
   // What was already met does not go to the client again.
   assert.doesNotMatch(text, /Exigência b/);
   assert.match(text, /2\. Exigência c/);
-  assert.match(text, /art\. 198, II, e art\. 296/);
+  // Each part apart, the impossibility to justify, the dúvida at the end.
+  assert.match(text, /Fundamento: [^\n]+\n\n2\. Exigência c/);
+  assert.match(text, /anexe ao pedido a justificativa da impossibilidade/);
+  assert.match(text, /decisão de dúvida junto ao juízo competente\.$/);
+  assert.doesNotMatch(text, /interessado pode requerer/);
   assert.doesNotMatch(text, /\u2013|\u2014/);
   assert.equal(
     requirementTextFromNote({ number: "1", data, roundIndex: 5 }),

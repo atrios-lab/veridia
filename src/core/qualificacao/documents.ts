@@ -101,24 +101,14 @@ function signerLines(
 }
 
 /**
- * The right to the dúvida, as the law gives it to each attribution: the
- * registros by the Lei nº 6.015/1973 (art. 198, II, and art. 296 for the
- * registros other than the imóveis, as the Código Nacional de Normas
- * itself applies it); notas and protesto, before the competent juízo.
+ * How every nota devolutiva ends, in the text sent to the pedido, the PDF
+ * and the Word alike (decision of 15/11/2026: "deixe todos no mesmo
+ * padrão"): the impossibility to justify, then the dúvida.
  */
-function doubtLine(attribution: QualificationData["attribution"]): string {
-  const ask =
-    "Não se conformando com as exigências, ou não sendo possível cumpri-las, o interessado pode requerer que o título e a declaração de dúvida sejam remetidos ao juízo competente para dirimi-la";
-  if (attribution === "ri") return `${ask} (Lei nº 6.015/1973, art. 198, II).`;
-  if (
-    attribution === "rcpn" ||
-    attribution === "rtd" ||
-    attribution === "rcpj"
-  ) {
-    return `${ask} (Lei nº 6.015/1973, art. 198, II, e art. 296).`;
-  }
-  return "Não se conformando com as exigências, ou não sendo possível cumpri-las, o interessado pode levar a questão ao juízo competente.";
-}
+export const NOTE_CLOSING = [
+  "Caso não consiga cumprir alguma exigência, anexe ao pedido a justificativa da impossibilidade, para que seja analisada pela serventia.",
+  "Não cumpridas as exigências, o documento poderá ser enviado para decisão de dúvida junto ao juízo competente.",
+] as const;
 
 /** The nota devolutiva: the first qualificação or a reexame. */
 export function buildNote(
@@ -196,8 +186,9 @@ export function buildNote(
       heading: "Conclusão",
       paragraphs: [
         "Pelo exposto, o título é devolvido sem a prática do ato pedido, até o cumprimento das exigências acima.",
+        NOTE_CLOSING[0],
       ],
-      highlight: doubtLine(data.attribution),
+      highlight: NOTE_CLOSING[1],
     },
   );
   if (data.observations.trim()) {
@@ -220,8 +211,14 @@ export function buildNote(
     sections,
     dateLine: `${tenant.location.city}/${tenant.location.state}, ${writtenDate(input.issuedOn)}.`,
     ...signerLines(tenant, input.signer),
-    footer: `${officialName(tenant)} · ${tenant.legalFooter}`,
+    footer: footerOf(tenant, `Nota devolutiva nº ${input.number}`, data),
   };
+}
+
+/** The footer of every page, as the other documents of the panel. */
+function footerOf(tenant: Tenant, label: string, data: QualificationData) {
+  const protocol = data.protocol.trim();
+  return `${officialName(tenant)} · ${label}${protocol ? ` · Protocolo ${protocol}` : ""} · ${tenant.legalFooter}`;
 }
 
 /** The termo de qualificação positiva: the título is fit for the act. */
@@ -261,7 +258,7 @@ export function buildPositive(
     ],
     dateLine: `${tenant.location.city}/${tenant.location.state}, ${writtenDate(input.issuedOn)}.`,
     ...signerLines(tenant, input.signer),
-    footer: `${officialName(tenant)} · ${tenant.legalFooter}`,
+    footer: footerOf(tenant, `Qualificação positiva nº ${input.number}`, data),
   };
 }
 
@@ -279,7 +276,7 @@ export function requirementTextFromNote(input: {
   const round = input.data.rounds[input.roundIndex];
   if (!round) return "";
   const items = pendingOf(round).map((r, i) => {
-    const lines = [`${i + 1}. ${r.title.trim()}`];
+    const lines = [`${i + 1}. ${r.title.trim().replace(/\.$/, "")}.`];
     if (r.description.trim()) lines.push(r.description.trim());
     if (r.howToComply.trim())
       lines.push(`Como cumprir: ${r.howToComply.trim()}`);
@@ -289,8 +286,9 @@ export function requirementTextFromNote(input: {
     return lines.join("\n");
   });
   return [
-    `Nota devolutiva nº ${input.number}. Para seguir com o pedido, é preciso atender às exigências abaixo:`,
+    `Nota devolutiva nº ${input.number}`,
+    "Para seguir com o pedido, é preciso atender às exigências abaixo.",
     ...items,
-    doubtLine(input.data.attribution),
+    ...NOTE_CLOSING,
   ].join("\n\n");
 }
