@@ -45,12 +45,14 @@ import {
   reexamWith,
   removeNoteWith,
   renumberNoteWith,
+  requestDocumentsWith,
   saveDeadlineSettingsWith,
   saveQualificationWith,
   updateLibraryItemWith,
 } from "@/lib/qualificacao.ts";
 import { getSession } from "@/lib/session.ts";
 import { getTenant, today } from "@/lib/tenant.ts";
+import { readStoredFile } from "@/lib/uploads.ts";
 
 export type QualificationState =
   | { status: "idle" }
@@ -395,6 +397,30 @@ export async function saveDeadlinesAction(
 
 const TOTAL_AI_BYTES = 30 * 1024 * 1024;
 
+const EXTENSION_OF: Record<string, string> = {
+  "application/pdf": "pdf",
+  "image/jpeg": "jpg",
+  "image/png": "png",
+  "image/webp": "webp",
+  "image/gif": "gif",
+  "image/heic": "heic",
+  "application/vnd.openxmlformats-officedocument.wordprocessingml.document":
+    "docx",
+  "application/vnd.oasis.opendocument.text": "odt",
+  "application/rtf": "rtf",
+  "text/plain": "txt",
+  "application/zip": "zip",
+};
+
+/** A stored attachment's name with the extension its type says. */
+function fileNameFor(doc: { displayName: string; mimeType: string }): string {
+  const ext = EXTENSION_OF[doc.mimeType];
+  const base = doc.displayName.trim() || "documento";
+  return ext && !base.toLowerCase().endsWith(`.${ext}`)
+    ? `${base}.${ext}`
+    : base;
+}
+
 /**
  * The AI's fixed task (phase 2): the título's documents are read and
  * dropped, the office's library and legal base go along, and the proposal
@@ -409,20 +435,45 @@ export async function proposeAction(
   const blocked = await aiBlockedWith(db, ok.tenant.slug);
   if (blocked) return { status: "error", message: blocked };
   const id = field(formData, "id");
-  const files = formData
+  // A new file is optional (decision of 15/11/2026): what the client
+  // already attached to the pedido is read first.
+  const uploaded = formData
     .getAll("titulo")
     .filter((f): f is File => typeof f === "object" && f.size > 0);
-  if (files.length === 0) {
-    return {
-      status: "error",
-      message: "Anexe o título e os documentos que vieram com ele.",
-    };
-  }
   let count = 0;
   try {
     const q = await getQualificationWith(db, ok.tenant.slug, id);
     if (!q || q.removedAt) {
       return { status: "error", message: "Qualificação não encontrada." };
+    }
+    const fromRequest: File[] = [];
+    const unread: string[] = [];
+    for (const doc of await requestDocumentsWith(
+      db,
+      ok.tenant.slug,
+      q.data.protocol,
+    )) {
+      try {
+        const bytes = await readStoredFile(doc.path);
+        fromRequest.push(
+          new File([new Uint8Array(bytes)], fileNameFor(doc), {
+            type: doc.mimeType,
+          }),
+        );
+      } catch {
+        unread.push(
+          `${doc.displayName}: não foi possível abrir o arquivo do pedido.`,
+        );
+      }
+    }
+    const files = [...fromRequest, ...uploaded];
+    if (files.length === 0) {
+      return {
+        status: "error",
+        message: q.data.protocol.trim()
+          ? "O pedido não tem documentos do cliente disponíveis. Anexe o título e os documentos para o Assistente Virtual ler."
+          : "Anexe o título e os documentos que vieram com ele.",
+      };
     }
     if (currentRound(q.data).result !== "aberta") {
       return {
@@ -432,7 +483,7 @@ export async function proposeAction(
       };
     }
     const titleFiles: TitleFile[] = [];
-    const notes: string[] = [];
+    const notes: string[] = [...unread];
     let total = 0;
     for (const file of files) {
       total += file.size;

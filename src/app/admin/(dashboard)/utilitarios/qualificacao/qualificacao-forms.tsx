@@ -1122,10 +1122,16 @@ export function DeadlinesForm({
 export function AiProposeForm({
   id,
   blocked,
+  protocol = "",
+  clientDocuments = [],
 }: {
   id: string;
   /** Why the AI cannot run now, or null. */
   blocked: string | null;
+  /** The pedido this qualification came from, if any. */
+  protocol?: string;
+  /** What the client attached to that pedido: read without a new upload. */
+  clientDocuments?: string[];
 }) {
   const [state, action, pending] = useActionState(proposeAction, IDLE);
   const fid = useId();
@@ -1139,17 +1145,42 @@ export function AiProposeForm({
         Proposta do Assistente Virtual (opcional)
       </h2>
       <p className="text-sm text-muted-foreground text-justify hyphens-auto">
-        O Assistente Virtual lê o título e os documentos anexados, consulta a
-        biblioteca e a base jurídica da serventia, confere só nos sites oficiais
-        e propõe as exigências como rascunho. Nada sai sem você conferir cada
-        uma. Os arquivos não ficam guardados.
+        O Assistente Virtual lê os documentos que o cliente anexou no pedido e
+        os que você anexar aqui, consulta a biblioteca e a base jurídica da
+        serventia, confere só nos sites oficiais e propõe as exigências como
+        rascunho. Nada sai sem você conferir cada uma. Os arquivos anexados aqui
+        não ficam guardados.
       </p>
+      {clientDocuments.length > 0 ? (
+        <div className="rounded-lg border bg-card px-3.5 py-2.5 text-sm">
+          <span className="font-medium text-foreground">
+            Documentos do cliente no pedido {protocol} (lidos automaticamente)
+          </span>
+          <ul className="mt-1.5 flex flex-col gap-1 text-xs text-muted-foreground">
+            {clientDocuments.map((name, i) => (
+              // biome-ignore lint/suspicious/noArrayIndexKey: names can repeat; the list is fixed
+              <li key={`${name}-${i}`} className="[overflow-wrap:anywhere]">
+                {name}
+              </li>
+            ))}
+          </ul>
+        </div>
+      ) : protocol.trim() ? (
+        <p className="text-xs text-muted-foreground">
+          O pedido {protocol} não tem documentos do cliente disponíveis: anexe o
+          título abaixo.
+        </p>
+      ) : null}
       {blocked ? (
         <p className="text-sm text-muted-foreground">{blocked}</p>
       ) : (
         <>
           <div className="flex min-w-0 flex-col gap-1.5">
-            <Label htmlFor={`${fid}-files`}>Título e documentos</Label>
+            <Label htmlFor={`${fid}-files`}>
+              {clientDocuments.length > 0
+                ? "Outro documento (opcional)"
+                : "Título e documentos"}
+            </Label>
             <Input
               id={`${fid}-files`}
               name="titulo"
@@ -1165,7 +1196,7 @@ export function AiProposeForm({
           <div>
             <Button type="submit" disabled={pending}>
               {pending
-                ? "O Assistente Virtual está lendo o título..."
+                ? "O Assistente Virtual está lendo os documentos..."
                 : "Pedir a proposta ao Assistente Virtual"}
             </Button>
           </div>
