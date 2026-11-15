@@ -7,6 +7,7 @@ import { usageMonth } from "@/core/dpo/quota.ts";
 import { user } from "@/db/auth-schema.ts";
 import type { Database } from "@/db/index.ts";
 import {
+  auditLog,
   dpoConversations,
   dpoMessages,
   dpoMonthlyUsage,
@@ -326,6 +327,14 @@ test("conversations older than the cutoff are purged with their messages", async
     1,
   );
   assert.equal((await db.select().from(dpoMessages)).length, 0);
+  // The purge leaves its trail: how many went, by the system.
+  const trail = (await db.select().from(auditLog)).filter(
+    (a) => a.action === "dpo.purge",
+  );
+  assert.equal(trail.length, 1);
+  assert.equal(trail[0]?.tenantSlug, TENANT);
+  assert.equal(trail[0]?.actorId, null);
+  assert.match(trail[0]?.reason ?? "", /^1 conversa /);
 });
 
 test("usage increments add up when they arrive together", async () => {

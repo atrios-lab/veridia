@@ -333,14 +333,38 @@ export async function listTenantOverviewWith(
   });
 }
 
-/** Deletes conversations whose last message is older than `cutoff`. */
+/**
+ * Deletes conversations whose last message is older than `cutoff` (12
+ * months: LGPD, keep only what is needed; decision of 15/11/2026, "pode
+ * limpar após 12 meses"), and leaves the trail: one audit entry per office
+ * with how many went, by the system, in the same transaction.
+ */
 export async function purgeConversationsBeforeWith(
   database: Database,
   cutoff: Date,
 ): Promise<number> {
-  const removed = await database
-    .delete(dpoConversations)
-    .where(lt(dpoConversations.lastMessageAt, cutoff))
-    .returning({ id: dpoConversations.id });
-  return removed.length;
+  return database.transaction(async (tx) => {
+    const removed = await tx
+      .delete(dpoConversations)
+      .where(lt(dpoConversations.lastMessageAt, cutoff))
+      .returning({
+        id: dpoConversations.id,
+        tenantSlug: dpoConversations.tenantSlug,
+      });
+    const byOffice = new Map<string, number>();
+    for (const row of removed) {
+      byOffice.set(row.tenantSlug, (byOffice.get(row.tenantSlug) ?? 0) + 1);
+    }
+    for (const [tenantSlug, count] of byOffice) {
+      await recordAuditWith(tx as unknown as Database, {
+        tenantSlug,
+        actorId: null,
+        action: "dpo.purge",
+        targetType: "tenant",
+        targetId: tenantSlug,
+        reason: `${count} ${count === 1 ? "conversa" : "conversas"} do Assistente do DPO com mais de 12 meses, removida${count === 1 ? "" : "s"} pela guarda automática.`,
+      });
+    }
+    return removed.length;
+  });
 }

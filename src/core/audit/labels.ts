@@ -117,6 +117,8 @@ const EXACT: Record<string, string> = {
     "Pediu ao Assistente Virtual a leitura de imagem ou PDF digitalizado",
   "ai.check":
     "Pediu ao Assistente Virtual a conferência de uma fonte no site oficial",
+  "dpo.purge":
+    "As conversas do Assistente do DPO com mais de 12 meses desde a última mensagem foram removidas pela guarda automática (LGPD: guardar só o necessário). Fica registrado quantas.",
   "ai.qualify":
     "Pediu ao Assistente Virtual a proposta de qualificação de um título",
   "knowledge.confirm": "Confirmou uma fonte que estava em conferência",
@@ -529,6 +531,8 @@ const EXPLANATIONS: Record<string, string> = {
   "ai.off": "O Tabelião desligou o Assistente Virtual da serventia.",
   "ai.transcribe":
     "Imagens ou PDFs digitalizados foram enviados ao Assistente Virtual para leitura do texto. O conteúdo não fica na auditoria e o arquivo não é guardado.",
+  "dpo.purge":
+    "As conversas do Assistente do DPO com mais de 12 meses desde a última mensagem foram removidas pela guarda automática (LGPD: guardar só o necessário). Fica registrado quantas.",
   "ai.qualify":
     "O Assistente Virtual leu o título anexado e propôs exigências como rascunho, que só valem depois de conferidas por pessoa da serventia. O conteúdo não fica na auditoria e o arquivo não é guardado.",
   "ai.check":
