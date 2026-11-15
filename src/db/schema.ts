@@ -2289,6 +2289,86 @@ export const titleTransferFilings = pgTable(
 );
 
 /**
+ * A source of the legal base the AI is taught with (change
+ * qualificacao-de-titulos, decision of 15/11/2026): a law, a provimento, a
+ * decision, a model. The file it came in is never kept; only its text, in
+ * knowledge_passages. Removed by a mark, with who, when and why.
+ */
+export const knowledgeSources = pgTable(
+  "knowledge_sources",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    tenantSlug,
+    /** core/conhecimento SourceMeta. */
+    meta: jsonb("meta").notNull(),
+    /** Where the text came from: the file's name, "colado" or the URL. */
+    origin: text("origin").notNull().default(""),
+    characters: integer("characters").notNull().default(0),
+    createdBy: text("created_by").notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    updatedBy: text("updated_by"),
+    updatedAt: timestamp("updated_at", { withTimezone: true }),
+    removedAt: timestamp("removed_at", { withTimezone: true }),
+    removedBy: text("removed_by"),
+    removedReason: text("removed_reason"),
+  },
+  (t) => [index("knowledge_sources_tenant").on(t.tenantSlug)],
+);
+
+/** A source's text, split by article or passage, for the search. */
+export const knowledgePassages = pgTable(
+  "knowledge_passages",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    tenantSlug,
+    sourceId: uuid("source_id").notNull(),
+    ordinal: integer("ordinal").notNull(),
+    heading: text("heading").notNull(),
+    text: text("text").notNull(),
+  },
+  (t) => [
+    index("knowledge_passages_source").on(t.sourceId, t.ordinal),
+    index("knowledge_passages_tenant").on(t.tenantSlug),
+  ],
+);
+
+/**
+ * What the AI asks the office for the legal base (decision of 15/11/2026:
+ * "caso ela precise, ela pergunte se o cartório gostaria de inserir um
+ * documento, leis etc. atualizada, mas que ela sempre busque na base legal
+ * da rede"): a norma missing or changed, found on the official sites. Not
+ * a chat: the office answers with a button (import, send, dismiss with a
+ * reason). Kept with how it was answered; never deleted.
+ */
+export const knowledgeRequests = pgTable(
+  "knowledge_requests",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    tenantSlug,
+    /** "Lei nº 6.015/1973 alterada pela Lei nº 14.382/2022". */
+    topic: text("topic").notNull(),
+    /** Why the AI asks, with what it found on the official site. */
+    detail: text("detail").notNull().default(""),
+    /** The official address of the text in force, when found. */
+    officialUrl: text("official_url").notNull().default(""),
+    /** The source it concerns, when it is an update. */
+    sourceId: uuid("source_id"),
+    /** open, done or dismissed. */
+    status: text("status").notNull().default("open"),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    createdBy: text("created_by").notNull(),
+    resolvedAt: timestamp("resolved_at", { withTimezone: true }),
+    resolvedBy: text("resolved_by"),
+    resolvedNote: text("resolved_note"),
+  },
+  (t) => [index("knowledge_requests_tenant").on(t.tenantSlug, t.status)],
+);
+
+/**
  * An act told to the CENSEC (CNN, arts. 265 to 272; change
  * cargas-censec, decision of 14/11/2026): read from the escritura,
  * procuração, ata or testamento attached, which is never kept; checked by

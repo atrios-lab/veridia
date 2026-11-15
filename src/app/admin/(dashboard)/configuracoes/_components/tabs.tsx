@@ -87,6 +87,11 @@ const GROUPS: { label: string; tabs: Tab[] }[] = [
         href: "/admin/configuracoes/horario-de-acesso",
         permission: "access.manage",
       },
+      {
+        label: "Inteligência artificial",
+        href: "/admin/configuracoes/inteligencia-artificial",
+        permission: "user.manage",
+      },
     ],
   },
 ];

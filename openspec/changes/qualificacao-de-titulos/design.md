@@ -68,9 +68,31 @@ integração com IA.
    qualificação), sem o conteúdo.
    *Alternativa:* leitura por regras, como as cargas; descartada, porque qualificar exige entender o
    título e confrontá-lo com a matrícula.
-8. **Documentos anexados.** Ficam ligados à qualificação enquanto ela está aberta (o reexame precisa
+8. **Base jurídica em Markdown.** Todo documento recebido (PDF, Word, ODT, RTF, texto, HTML e ZIP
+   com qualquer deles) é lido em memória, convertido em Markdown (artigos como títulos, parágrafos em
+   negrito, incisos e alíneas em lista, títulos e capítulos como seções) e descartado. A fonte guarda
+   só o Markdown dividido por artigo; reimportar cria uma fonte nova e marca a anterior, nunca apaga.
+   A pesquisa pondera a hierarquia das fontes e ignora as revogadas; na fase 2, os trechos achados
+   vão à IA com a referência, e ela só fundamenta com o que está na base.
+9. **Documentos anexados.** Ficam ligados à qualificação enquanto ela está aberta (o reexame precisa
    deles). Depois da emissão, a serventia escolhe se guarda ou descarta, como pede a decisão de não
    encher o banco.
+
+10. **IA de finalidade única, sem interação.** Decisão de 15/11/2026: o cartório não conversa com a
+    IA. Não há chat nem campo de pergunta livre. A serventia só alimenta a base jurídica (o
+    aprendizado) e dispara as tarefas fixas da plataforma: transcrever documentos para a base e,
+    na fase 2, qualificar o título. Cada tarefa tem instrução fixa no código, e toda chamada leva a
+    mesma instrução de papel ("só qualificação e aprendizado para ela"). Nenhum texto digitado por
+    pessoa vai à IA como instrução, e o conteúdo dos documentos é tratado como dado: ordem escrita
+    dentro de um documento é ignorada. A pesquisa da base é feita pelo próprio sistema, sem IA.
+11. **A IA pergunta por botão e só consulta a fonte jurídica oficial.** Quando precisa (norma
+    alterada ou revogada, texto que falta), a IA deixa um pedido na base ("Deseja inserir o texto
+    atualizado?"), respondido por botão: importar do site oficial, enviar o documento ou dispensar
+    com motivo. A consulta à internet usa as ferramentas de busca e leitura da API limitadas por
+    domínio aos sites oficiais (planalto.gov.br, in.gov.br, jus.br, camara.leg.br, senado.leg.br).
+12. **Arquivo errado.** Trocar o arquivo cria versão nova e guarda a anterior. Na leitura, o núcleo
+    aponta o provável erro (não jurídico, referência ausente do texto, CPF, repetida, lida pela IA)
+    e a fonte fica "em conferência", fora da pesquisa e da IA, até confirmação ou troca.
 
 ## Risks / Trade-offs
 
@@ -95,8 +117,7 @@ integração com IA.
 
 ## Open Questions
 
-- Por qual atribuição começar, se não for por todas (imóveis, títulos e documentos, pessoas
-  jurídicas)? Decisão provisória: as três.
+- Atribuições: decidido em 15/11/2026, todas, nesta ordem: RCPN, RI, Notas, RTD, RCPJ e Protesto.
 - A serventia autoriza o uso da Claude (Anthropic) e fornecerá a chave de API? Decisão provisória:
   sim, na fase 2, desligada por padrão.
 - Há modelo de qualificação positiva? Decisão provisória: o mesmo padrão visual das notas.

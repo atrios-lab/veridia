@@ -314,6 +314,23 @@ export const ADMIN_NAV: readonly AdminNavItem[] = [
     ],
   },
   {
+    // The legal base the AI is taught with (decision of 15/11/2026): laws,
+    // provimentos, jurisprudence and models, kept as Markdown.
+    group: "Utilitários",
+    label: "Base jurídica da IA",
+    href: "/admin/utilitarios/base-juridica",
+    icon: "library",
+    permission: "knowledge.manage",
+    children: [
+      { label: "Fontes", href: "/admin/utilitarios/base-juridica" },
+      {
+        label: "Enviar fontes",
+        href: "/admin/utilitarios/base-juridica/enviar",
+      },
+      { label: "Pesquisar", href: "/admin/utilitarios/base-juridica/pesquisa" },
+    ],
+  },
+  {
     // The Livro Diário Auxiliar da Receita e da Despesa (decision of
     // 11/11/2026): the productivity report read act by act, the expenses
     // with their receipts, the day's and the month's pages, the year.

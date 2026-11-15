@@ -26,6 +26,7 @@
     "check:destructive": "node scripts/check-destructive.mjs"
   },
   "dependencies": {
+    "@anthropic-ai/sdk": "^1.8.0",
     "@base-ui/react": "1.9.0",
     "@hookform/resolvers": "^5.7.1",
     "@signpdf/placeholder-plain": "4.0.0",

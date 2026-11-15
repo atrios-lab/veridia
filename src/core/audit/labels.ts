@@ -90,6 +90,18 @@ const EXACT: Record<string, string> = {
   "censec.closing": "Registrou o fechamento de uma quinzena na CENSEC",
   "censec.closing-remove":
     "Excluiu o registro de um fechamento da CENSEC (fica guardado)",
+  "knowledge.create": "Enviou uma fonte para a base jurídica da IA",
+  "knowledge.version": "Enviou nova versão de uma fonte da base jurídica",
+  "knowledge.edit": "Corrigiu os dados de uma fonte da base jurídica",
+  "knowledge.remove": "Excluiu uma fonte da base jurídica (fica guardada)",
+  "knowledge.restore": "Estornou uma fonte excluída da base jurídica",
+  "ai.on": "Ligou a inteligência artificial da serventia",
+  "ai.off": "Desligou a inteligência artificial da serventia",
+  "ai.transcribe": "Pediu à IA a leitura de imagem ou PDF digitalizado",
+  "ai.check": "Pediu à IA a conferência de uma fonte no site oficial",
+  "knowledge.confirm": "Confirmou uma fonte que estava em conferência",
+  "knowledge.request-done": "Atendeu um pedido da IA de fonte atualizada",
+  "knowledge.request-dismiss": "Dispensou um pedido da IA de fonte atualizada",
   "rcpn.habilitacao.edit": "Alterou um processo de habilitação de casamento",
   "rcpn.habilitacao.edital":
     "Publicou no site o edital de proclamas de uma habilitação",
@@ -452,6 +464,29 @@ const EXPLANATIONS: Record<string, string> = {
     "Foi registrado o fechamento de uma quinzena na CENSEC (positivo ou negativo), com a data e o protocolo.",
   "censec.closing-remove":
     "O registro de um fechamento da CENSEC foi excluído, com justificativa. Ele continua guardado.",
+  "knowledge.create":
+    "Uma fonte (lei, provimento, jurisprudência, doutrina ou modelo) foi lida, convertida em Markdown e guardada na base jurídica da IA. O arquivo enviado não é guardado.",
+  "knowledge.version":
+    "Uma fonte da base jurídica ganhou nova versão, com justificativa. A versão anterior continua guardada e sai da pesquisa.",
+  "knowledge.edit":
+    "Os dados de uma fonte da base jurídica (título, tipo, referência, situação) foram corrigidos, com justificativa.",
+  "knowledge.remove":
+    "Uma fonte da base jurídica foi excluída, com justificativa. Ela continua guardada e pode ser estornada.",
+  "knowledge.restore":
+    "Uma fonte excluída voltou à base jurídica, com justificativa.",
+  "ai.on":
+    "O Tabelião ligou a inteligência artificial (Claude, da Anthropic) para a serventia.",
+  "ai.off": "O Tabelião desligou a inteligência artificial da serventia.",
+  "ai.transcribe":
+    "Imagens ou PDFs digitalizados foram enviados à IA para leitura do texto. O conteúdo não fica na auditoria e o arquivo não é guardado.",
+  "ai.check":
+    "A IA conferiu uma fonte da base só nos sites oficiais (Planalto, Diário Oficial, Judiciário, Congresso) e guardou o resultado; se a norma mudou, abriu um pedido ao cartório.",
+  "knowledge.confirm":
+    "Uma fonte que o sistema deixou em conferência (arquivo com cara de errado, CPF, referência que não aparece no texto, leitura pela IA) foi conferida e passou a ser usada, com justificativa.",
+  "knowledge.request-done":
+    "Um pedido da IA (norma alterada ou revogada na fonte oficial) foi atendido com o texto atualizado.",
+  "knowledge.request-dismiss":
+    "Um pedido da IA de fonte atualizada foi dispensado, com justificativa.",
   "rcpn.habilitacao.edit":
     "Um processo de habilitação para o casamento foi alterado. O histórico do processo guarda o que era antes e o que ficou.",
   "rcpn.habilitacao.edital":

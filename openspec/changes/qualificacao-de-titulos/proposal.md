@@ -20,10 +20,18 @@ prazos.
 ## What Changes
 
 - **Utilitários › Qualificação de títulos**, com permissão própria em Perfis e permissões.
+- **Todas as atribuições da serventia (cartório de atribuições cumuladas)**, nesta ordem de
+  implantação: Registro Civil das Pessoas Naturais, Registro de Imóveis, Notas, Títulos e Documentos,
+  Pessoas Jurídicas e Protesto de Títulos (decisão de 15/11/2026).
 - **Abertura da qualificação:** a partir de um pedido do balcão online (o protocolo REQ já existente)
-  ou do balcão presencial; título e documentos anexados; atribuição (registro de imóveis, títulos e
-  documentos, pessoas jurídicas) e ato pedido (registro, averbação, retificação, cancelamento,
-  abertura de matrícula).
+  ou do balcão presencial; título e documentos anexados; atribuição e ato pedido (registro,
+  averbação, retificação, cancelamento, abertura de matrícula, protesto, entre outros, conforme a
+  atribuição).
+- **Base jurídica da IA:** fontes classificadas pela hierarquia (lei, decreto, normas do CNJ e da
+  Corregedoria, jurisprudência, enunciados, doutrina, modelos da serventia e de outros cartórios),
+  enviadas em qualquer formato, inclusive ZIP, ou importadas do endereço oficial. Todo documento vira
+  Markdown organizado (artigos como títulos, parágrafos e incisos em lista) e o arquivo é descartado;
+  fica só o texto, dividido por artigo, que pode ser pesquisado e baixado em .md.
 - **Biblioteca de exigências:** exigências padronizadas com título, descrição, o que apresentar para
   cumprir e fundamento legal; criada a partir dos modelos da serventia (reescritos de forma genérica,
   sem dados de clientes) e ampliada com as aprovadas no uso. Tudo editável, exclusão com
@@ -51,9 +59,9 @@ prazos.
 
 ### New Capabilities
 
-- `qualificacao-titulos`: abertura da qualificação, biblioteca de exigências e de fundamentos, nota
-  devolutiva, reexame, qualificação positiva, numeração, prazos, assinatura e envio, e o rascunho
-  proposto pela IA com aprovação humana.
+- `qualificacao-titulos`: abertura da qualificação em todas as atribuições, biblioteca de exigências
+  e de fundamentos, nota devolutiva, reexame, qualificação positiva, numeração, prazos, assinatura e
+  envio, base jurídica da IA em Markdown e o rascunho proposto pela IA com aprovação humana.
 
 ### Modified Capabilities
 
