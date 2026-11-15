@@ -14,6 +14,7 @@ import {
   createTransferWith,
   listFilingsWith,
   listTransfersWith,
+  markDoiSentWith,
   markSentWith,
   refreshFilingWith,
   removeTransferWith,
@@ -220,4 +221,43 @@ test("editar o ofício com os atos atuais e modificar a numeração", async () =
   );
   filing = (await listFilingsWith(db, OFFICE)).find((f) => f.id === id);
   assert.equal(filing?.number, "040/2026");
+});
+
+test("DOI entregue na hora da escritura: marca, e desmarca só com justificativa", async () => {
+  const office = "cartorio-doi-entregue";
+  const id = await createTransferWith(
+    db,
+    office,
+    act("2026-08-10"),
+    "",
+    "escrevente",
+  );
+  await assert.rejects(
+    markDoiSentWith(db, office, id, { sentOn: "", receipt: "" }, "escrevente"),
+    TitularidadeError,
+  );
+  await markDoiSentWith(
+    db,
+    office,
+    id,
+    { sentOn: "2026-08-10", receipt: "123" },
+    "escrevente",
+  );
+  let [stored] = await listTransfersWith(db, office, "2026-08");
+  assert.equal(stored?.transfer.doi?.sentOn, "2026-08-10");
+  assert.equal(stored?.transfer.doi?.receipt, "123");
+  await assert.rejects(
+    markDoiSentWith(db, office, id, null, "escrevente", ""),
+    TitularidadeError,
+  );
+  await markDoiSentWith(
+    db,
+    office,
+    id,
+    null,
+    "escrevente",
+    "marcada no ato errado",
+  );
+  [stored] = await listTransfersWith(db, office, "2026-08");
+  assert.equal(stored?.transfer.doi?.sentOn, "");
 });

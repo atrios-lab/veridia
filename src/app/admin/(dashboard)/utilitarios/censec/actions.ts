@@ -64,9 +64,12 @@ function afterClosing(
   quinzena: string,
   extra = "",
 ): string {
-  return formData.get("voltar") === "ctp"
-    ? `${BASE}/ctp?mes=${quinzena.slice(0, 7)}${extra ? `&${extra}` : ""}`
-    : `${BASE}?q=${quinzena}${extra ? `&${extra}` : ""}`;
+  const tail = extra ? `&${extra}` : "";
+  if (formData.get("voltar") === "ctp") {
+    return `${BASE}/ctp?mes=${quinzena.slice(0, 7)}${tail}`;
+  }
+  const back = String(formData.get("voltarq") ?? "");
+  return `${BASE}?q=${isQuinzena(back) ? back : quinzena}${tail}`;
 }
 
 async function access() {

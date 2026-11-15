@@ -3,6 +3,7 @@ import { officeHolidays } from "@/core/scheduling/calendar.ts";
 import {
   competenceLabel,
   deadlineOf,
+  doiOf,
   formatCents,
   OPERATIONS,
 } from "@/core/titularidade/titularidade.ts";
@@ -13,7 +14,11 @@ import { AdminPageHeader } from "../../../_components/page-header.tsx";
 import { buttonVariants } from "../../../_ui/button.tsx";
 import { Input } from "../../../_ui/input.tsx";
 import { requireDoi } from "../titularidade/_access.ts";
-import { RemoveTransferButton } from "../titularidade/titularidade-forms.tsx";
+import {
+  MarkDoiSentForm,
+  RemoveTransferButton,
+  UnmarkDoiSentButton,
+} from "../titularidade/titularidade-forms.tsx";
 import { doiPending } from "./_files.ts";
 
 export const metadata = { title: "Carga da DOI" };
@@ -50,8 +55,15 @@ export default async function DoiPage({
     listTransfersWith(db, tenant.slug, mes),
     competencesWith(db, tenant.slug),
   ]);
-  const acts = stored.map((s) => ({ ...s, pending: doiPending(s.transfer) }));
-  const ready = acts.filter((a) => a.pending.length === 0).length;
+  const acts = stored.map((s) => ({
+    ...s,
+    pending: doiPending(s.transfer),
+    sent: doiOf(s.transfer),
+  }));
+  const delivered = acts.filter((a) => a.sent.sentOn).length;
+  const toDeliver = acts.filter((a) => !a.sent.sentOn);
+  const ready = toDeliver.filter((a) => a.pending.length === 0).length;
+  const justSaved = acts.find((a) => a.id === query.salvo);
   const deadline = deadlineOf(mes, officeHolidays(tenant));
   const late = on > deadline;
   const days = Math.round(
@@ -72,7 +84,53 @@ export default async function DoiPage({
         }
       />
       <main className="flex max-w-[1100px] flex-col gap-5 px-4 py-7 md:px-8">
-        {query.salvo && (
+        {justSaved && (
+          <section className="flex flex-col gap-3 rounded-xl border border-success/30 bg-success-soft p-5 text-sm text-success-text">
+            <p className="font-semibold">
+              Ato salvo. Se a serventia entrega a DOI na hora da escritura, faça
+              agora:
+            </p>
+            {justSaved.pending.length > 0 ? (
+              <p>
+                Antes, complete em Editar:{" "}
+                {justSaved.pending.slice(0, 4).join("; ")}.
+              </p>
+            ) : (
+              <>
+                <p>
+                  1. Baixe a DOI deste ato e importe na DOI-Web (Formato DOIWEB
+                  para o JSON, Formato PGD para o DOI.TXT).
+                </p>
+                <span className="flex flex-wrap gap-2">
+                  <a
+                    href={`${BASE}/${justSaved.id}/arquivo?formato=json`}
+                    className={buttonVariants({ size: "sm" })}
+                  >
+                    DOI deste ato (JSON)
+                  </a>
+                  <a
+                    href={`${BASE}/${justSaved.id}/arquivo?formato=pgd`}
+                    className={buttonVariants({
+                      variant: "outline",
+                      size: "sm",
+                    })}
+                  >
+                    DOI.TXT (PGD)
+                  </a>
+                </span>
+                <p>
+                  2. Depois de transmitir, marque como entregue: ela sai do
+                  arquivo do mês. Quem entrega a cada 30 dias pode deixar para o
+                  arquivo do mês.
+                </p>
+                {!justSaved.sent.sentOn && (
+                  <MarkDoiSentForm id={justSaved.id} today={on} />
+                )}
+              </>
+            )}
+          </section>
+        )}
+        {query.salvo && !justSaved && (
           <output className="block rounded-xl border border-success/30 bg-success-soft px-4 py-3 text-sm font-medium text-success-text">
             Ato salvo na DOI de {competenceLabel(mes)}.
           </output>
@@ -125,11 +183,12 @@ export default async function DoiPage({
           </div>
         </section>
 
-        <section className="grid gap-3 sm:grid-cols-3">
+        <section className="grid gap-3 sm:grid-cols-4">
           {[
             ["Atos do mês", String(acts.length)],
-            ["DOI prontas", String(ready)],
-            ["Com pendência", String(acts.length - ready)],
+            ["Já entregues", String(delivered)],
+            ["Prontas para entregar", String(ready)],
+            ["Com pendência", String(toDeliver.length - ready)],
           ].map(([label, value]) => (
             <div
               key={label}
@@ -146,11 +205,12 @@ export default async function DoiPage({
             Arquivo do mês
           </h2>
           <p className="mt-1 text-sm text-muted-foreground text-justify hyphens-auto">
-            Na DOI-Web: Importar arquivo de declarações, escolha Formato DOIWEB
-            para o JSON ou Formato PGD para o DOI.TXT, e anexe. O arquivo do mês
-            leva só as DOI prontas, conferidas com o esquema oficial da Receita
-            (layout-doiweb.json); as com pendência ficam de fora até serem
-            completadas em Editar.
+            Entregue do jeito da serventia: ato por ato, na hora da escritura
+            (botões de cada ato), ou todas de uma vez com o arquivo do mês. Na
+            DOI-Web: Importar arquivo de declarações, Formato DOIWEB para o JSON
+            ou Formato PGD para o DOI.TXT. O arquivo do mês leva só as DOI
+            prontas e ainda não entregues, conferidas com o esquema oficial da
+            Receita; depois de transmitir, marque cada uma como entregue.
           </p>
           <span className="mt-4 flex flex-wrap gap-2">
             <a
@@ -202,7 +262,7 @@ export default async function DoiPage({
             </p>
           ) : (
             <ul className="divide-y">
-              {acts.map(({ id, transfer: t, pending }) => (
+              {acts.map(({ id, transfer: t, pending, sent }) => (
                 <li
                   key={id}
                   className="flex flex-col gap-2 px-6 py-4 sm:flex-row sm:items-start sm:justify-between"
@@ -287,6 +347,7 @@ export default async function DoiPage({
                     >
                       XML
                     </a>
+                    {sent.sentOn && <UnmarkDoiSentButton id={id} />}
                     <RemoveTransferButton id={id} mes={mes} back="doi" />
                   </span>
                 </li>

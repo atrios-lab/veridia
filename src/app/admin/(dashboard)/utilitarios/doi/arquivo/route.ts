@@ -1,4 +1,5 @@
 import { doiJson, doiPgd, doiXml } from "@/core/titularidade/exports.ts";
+import { doiOf } from "@/core/titularidade/titularidade.ts";
 import { db } from "@/db/index.ts";
 import { getTenant } from "@/lib/tenant.ts";
 import { listTransfersWith } from "@/lib/title-transfers.ts";
@@ -9,8 +10,8 @@ export const runtime = "nodejs";
 
 /**
  * The month's DOI (IN RFB nº 2.186/2024): one declaration per act, in the
- * DOI-Web's JSON, the PGD's DOI.TXT or XML. Only the acts the RFB's schema
- * accepts go in; the others are completed first.
+ * DOI-Web's JSON, the PGD's DOI.TXT or XML. Only the acts not yet
+ * delivered and that the RFB's schema accepts go in.
  */
 export async function GET(request: Request): Promise<Response> {
   if (!(await mayDownloadDoi())) {
@@ -25,7 +26,9 @@ export async function GET(request: Request): Promise<Response> {
   const tenant = await getTenant();
   const transfers = (await listTransfersWith(db, tenant.slug, mes))
     .map((r) => r.transfer)
-    .filter((t) => doiPending(t).length === 0);
+    // Already delivered (act by act, at the lavratura) stays out: nothing
+    // is declared twice.
+    .filter((t) => !doiOf(t).sentOn && doiPending(t).length === 0);
   if (formato === "pgd") {
     return download(
       doiPgd(transfers, tenant.location.city, tenant.location.state),

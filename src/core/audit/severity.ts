@@ -130,6 +130,8 @@ const EXACT: Record<string, AuditLevel> = {
   "titularidade.filing-remove": "atencao",
   "titularidade.filing-edit": "analise",
   "titularidade.filing-renumber": "atencao",
+  "titularidade.doi-sent": "rotina",
+  "titularidade.doi-unsent": "atencao",
   "censec.create": "rotina",
   "censec.edit": "analise",
   "censec.remove": "atencao",
