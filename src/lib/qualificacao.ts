@@ -2,6 +2,10 @@ import "server-only";
 import { and, asc, desc, eq, inArray, isNull, sql } from "drizzle-orm";
 import { LIBRARY_SEEDS, servesAct } from "@/core/qualificacao/biblioteca.ts";
 import {
+  type DeadlineSettings,
+  parseDeadlineSettings,
+} from "@/core/qualificacao/prazos.ts";
+import {
   type Attribution,
   currentRound,
   isAttribution,
@@ -12,6 +16,7 @@ import {
   type QualificationStatus,
   qualificationFrom,
   qualificationProblems,
+  type RequirementStatus,
   requirementProblems,
   statusOf,
 } from "@/core/qualificacao/qualificacao.ts";
@@ -22,9 +27,11 @@ import {
   qualificationLibrary,
   qualificationNotes,
   qualifications,
+  tenantContent,
 } from "@/db/schema.ts";
 import { recordAuditWith } from "./audit.ts";
 import { nextNumberWith } from "./document-numbering.ts";
+import { OFFICE_QUALIFICATION_KEY } from "./office-config.ts";
 
 /**
  * The qualificação de títulos (change qualificacao-de-titulos, decision of
@@ -114,6 +121,9 @@ function mustItem(input: LibraryInput): LibraryInput {
     note: "",
     round: 1,
     fromNewDocument: false,
+    fromAi: false,
+    reviewed: false,
+    excerpt: "",
   });
   if (problems.length) throw new QualificationError(problems.join(" "));
   return clean;
@@ -425,6 +435,34 @@ export async function listQualificationsWith(
   return rows.map(toQualification);
 }
 
+/** The qualificações opened for a pedido of the online counter. */
+export async function qualificationsOfProtocolWith(
+  database: Database,
+  tenantSlug: string,
+  protocol: string,
+): Promise<(StoredQualification & { notes: StoredNote[] })[]> {
+  if (!protocol.trim()) return [];
+  const rows = await database
+    .select()
+    .from(qualifications)
+    .where(
+      and(
+        eq(qualifications.tenantSlug, tenantSlug),
+        isNull(qualifications.removedAt),
+        sql`${qualifications.data}->>'protocol' = ${protocol.trim()}`,
+      ),
+    )
+    .orderBy(desc(qualifications.createdAt));
+  return Promise.all(
+    rows.map(async (row) => ({
+      ...toQualification(row),
+      notes: (await listNotesWith(database, tenantSlug, row.id)).filter(
+        (n) => !n.removedAt,
+      ),
+    })),
+  );
+}
+
 /**
  * The qualificação saved as edited. Only the open round's exigências may
  * change; a round already answered by a note stays as issued (exclude the
@@ -494,6 +532,122 @@ export async function saveQualificationWith(
       ...(why ? { reason: why } : {}),
     });
   });
+}
+
+/** What the AI proposed, as it is written into the open round. */
+export interface AiProposalInput {
+  summary: string;
+  /** In a reexame: the situation the AI sees for each earlier exigência. */
+  previous?: { id: string; status: RequirementStatus; reason: string }[];
+  requirements: {
+    libraryId: string;
+    title: string;
+    description: string;
+    howToComply: string;
+    basis: string;
+    reference: string;
+    excerpt: string;
+  }[];
+}
+
+/**
+ * The AI's proposal written into the open round as drafts (decision of
+ * 15/11/2026: nothing goes out without a person): each exigência marked
+ * as the AI's and not checked; the note is blocked until a person checks
+ * or removes each one. A library id the office does not have is dropped.
+ */
+export async function applyAiProposalWith(
+  database: Database,
+  tenantSlug: string,
+  id: string,
+  proposal: AiProposalInput,
+  actorId: string,
+  newId: () => string = () => crypto.randomUUID(),
+): Promise<number> {
+  const found = await getQualificationWith(database, tenantSlug, id);
+  if (!found || found.removedAt) {
+    throw new QualificationError("Qualificação não encontrada.");
+  }
+  const index = found.data.rounds.length - 1;
+  const round = found.data.rounds[index];
+  if (!round || round.result !== "aberta") {
+    throw new QualificationError(
+      "A IA propõe só na rodada aberta: registre a reapresentação primeiro.",
+    );
+  }
+  const library = new Set(
+    (await listLibraryWith(database, tenantSlug, found.data.attribution)).map(
+      (l) => l.id,
+    ),
+  );
+  const drafts = proposal.requirements
+    .filter((r) => r.title.trim())
+    .slice(0, 40)
+    .map((r) => ({
+      id: newId(),
+      ...(library.has(r.libraryId) ? { libraryId: r.libraryId } : {}),
+      title: r.title.trim().slice(0, 300),
+      description: r.description.trim().slice(0, 5000),
+      howToComply: r.howToComply.trim().slice(0, 5000),
+      basis: r.basis.trim().slice(0, 1000),
+      reference: r.reference.trim().slice(0, 200),
+      status: "pendente" as const,
+      note: "",
+      round: round.n,
+      fromNewDocument: round.n > 1,
+      fromAi: true,
+      reviewed: false,
+      excerpt: r.excerpt.trim().slice(0, 2000),
+    }));
+  const next: QualificationData = {
+    ...found.data,
+    rounds: found.data.rounds.map((r, i) =>
+      i === index
+        ? {
+            ...r,
+            aiNote: proposal.summary.trim().slice(0, 3000),
+            requirements: [
+              ...r.requirements.map((existing) => {
+                const seen = proposal.previous?.find(
+                  (p) => p.id === existing.id,
+                );
+                // A suggestion only on what came from an earlier note; it
+                // waits for a person like any other proposal.
+                return seen && existing.round < r.n
+                  ? {
+                      ...existing,
+                      status: seen.status,
+                      note: `Sugestão da IA: ${seen.reason.trim().slice(0, 1000)}`,
+                      fromAi: true,
+                      reviewed: false,
+                    }
+                  : existing;
+              }),
+              ...drafts,
+            ],
+          }
+        : r,
+    ),
+  };
+  await database.transaction(async (tx) => {
+    await tx
+      .update(qualifications)
+      .set({
+        data: next,
+        status: statusOf(next),
+        updatedAt: new Date(),
+        updatedBy: actorId,
+      })
+      .where(eq(qualifications.id, found.id));
+    await recordAuditWith(tx as unknown as Database, {
+      tenantSlug,
+      actorId,
+      action: "ai.qualify",
+      targetType: "qualification",
+      targetId: next.protocol || next.document.slice(0, 80),
+    });
+  });
+  return drafts.length;
 }
 
 /** The título came back: a new round with what is still pending. */
@@ -826,4 +980,62 @@ export async function renumberNoteWith(
     }
     throw error;
   }
+}
+
+// -------------------------------------------------------------- deadlines
+
+export async function getDeadlineSettingsWith(
+  database: Database,
+  tenantSlug: string,
+): Promise<DeadlineSettings> {
+  const [row] = await database
+    .select({ published: tenantContent.published })
+    .from(tenantContent)
+    .where(
+      and(
+        eq(tenantContent.tenantSlug, tenantSlug),
+        eq(tenantContent.key, OFFICE_QUALIFICATION_KEY),
+      ),
+    )
+    .limit(1);
+  const raw = row?.published as { deadlines?: unknown } | undefined;
+  return parseDeadlineSettings(raw?.deadlines);
+}
+
+/** The office's terms by attribution; an attribution left out uses the law's. */
+export async function saveDeadlineSettingsWith(
+  database: Database,
+  tenantSlug: string,
+  deadlines: DeadlineSettings,
+  actorId: string,
+  now = new Date(),
+): Promise<void> {
+  const published = { deadlines: parseDeadlineSettings(deadlines) };
+  await database.transaction(async (tx) => {
+    await tx
+      .insert(tenantContent)
+      .values({
+        tenantSlug,
+        key: OFFICE_QUALIFICATION_KEY,
+        published,
+        publishedAt: now,
+        updatedBy: actorId,
+      })
+      .onConflictDoUpdate({
+        target: [tenantContent.tenantSlug, tenantContent.key],
+        set: {
+          published,
+          publishedAt: now,
+          updatedAt: now,
+          updatedBy: actorId,
+        },
+      });
+    await recordAuditWith(tx as unknown as Database, {
+      tenantSlug,
+      actorId,
+      action: "qualificacao.deadlines",
+      targetType: "tenant-content",
+      targetId: OFFICE_QUALIFICATION_KEY,
+    });
+  });
 }

@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import type { Role } from "@/core/auth/roles.ts";
+import { qualificationDeadline, ruleFor } from "@/core/qualificacao/prazos.ts";
 import {
   ATTRIBUTIONS,
   actName,
@@ -10,9 +11,12 @@ import {
   positiveProblems,
   STATUS_LABELS,
 } from "@/core/qualificacao/qualificacao.ts";
+import { officeHolidays } from "@/core/scheduling/calendar.ts";
 import { formatOfficeDateTime } from "@/core/time/office-time.ts";
 import { db } from "@/db/index.ts";
+import { aiBlockedWith } from "@/lib/ai.ts";
 import {
+  getDeadlineSettingsWith,
   getQualificationWith,
   listLibraryWith,
   listNotesWith,
@@ -25,6 +29,7 @@ import { SignOrPrint } from "../../../../_components/sign-or-print.tsx";
 import { buttonVariants } from "../../../../_ui/button.tsx";
 import { requireQualificacao } from "../_access.ts";
 import {
+  AiProposeForm,
   IssueForm,
   MarkQualificationButton,
   ReexamForm,
@@ -47,21 +52,27 @@ export default async function QualificationPage({
   searchParams,
 }: {
   params: Promise<{ id: string }>;
-  searchParams: Promise<{ emitida?: string }>;
+  searchParams: Promise<{ emitida?: string; ia?: string }>;
 }) {
   const session = await requireQualificacao();
   const { id } = await params;
-  const { emitida } = await searchParams;
+  const { emitida, ia } = await searchParams;
   const tenant = await getTenant();
   const q = await getQualificationWith(db, tenant.slug, id);
   if (!q) notFound();
-  const [notes, library] = await Promise.all([
+  const [notes, library, deadlines, aiBlocked] = await Promise.all([
     listNotesWith(db, tenant.slug, q.id),
     listLibraryWith(db, tenant.slug, q.data.attribution),
+    getDeadlineSettingsWith(db, tenant.slug),
+    aiBlockedWith(db, tenant.slug),
   ]);
   const round = currentRound(q.data);
   const now = today();
   const active = !q.removedAt;
+  const due = active
+    ? qualificationDeadline(q.data, deadlines, now, officeHolidays(tenant))
+    : null;
+  const rule = ruleFor(q.data.attribution, deadlines);
   const signer = {
     name: session.user.name ?? "",
     role: ROLE_LABELS[(session.user.role ?? "") as Role] ?? "",
@@ -86,6 +97,32 @@ export default async function QualificationPage({
               ? "Qualificação positiva emitida."
               : "Nota devolutiva emitida."}{" "}
             Assine digitalmente ou imprima abaixo e entregue ao apresentante.
+          </p>
+        )}
+        {ia !== undefined && (
+          <p
+            aria-live="polite"
+            className="rounded-xl border border-primary/25 bg-primary/5 px-5 py-3 text-sm text-foreground"
+          >
+            {Number(ia) > 0
+              ? `A IA propôs ${ia} ${Number(ia) === 1 ? "exigência" : "exigências"}, marcadas abaixo. Confira cada uma (o fato, o fundamento e a redação), corrija ou tire, e salve antes de emitir.`
+              : "A IA não propôs exigência. Confira o resumo abaixo antes de emitir."}
+          </p>
+        )}
+        {due && (
+          <p
+            className={`rounded-xl border px-5 py-3 text-sm text-foreground ${
+              due.late
+                ? "border-destructive/30 bg-destructive/5"
+                : due.soon
+                  ? "border-warning/30 bg-warning-soft"
+                  : "bg-card"
+            }`}
+          >
+            {due.late
+              ? "Prazo vencido em "
+              : "Prazo para registrar ou devolver com a nota: até "}
+            {isoDate(due.due)} ({rule.days} dias úteis). {rule.basis}
           </p>
         )}
         {q.removedAt && (
@@ -211,6 +248,7 @@ export default async function QualificationPage({
         )}
         {active && round.result === "aberta" && (
           <>
+            <AiProposeForm id={q.id} blocked={aiBlocked} />
             <RoundEditor
               id={q.id}
               initial={q.data}

@@ -916,6 +916,9 @@ ENTRIES["/admin/utilitarios/qualificacao"] = {
     "Formule todas as exigências de uma só vez (Lei nº 6.015/1973, art. 198). Depois, emita a nota devolutiva: ela sai numerada, com os fundamentos, a forma de cumprimento e o direito de pedir a suscitação de dúvida. Assine digitalmente ou imprima, ou baixe em Word.",
     "Quando o título voltar, registre a reapresentação: abre o reexame com as exigências que faltavam. Marque cada uma como cumprida, cumprida em parte ou pendente. Exigência nova que não decorre de documento novo gera aviso.",
     "Sem exigência pendente, emita a qualificação positiva.",
+    "Com a IA ligada, Pedir a proposta à IA lê o título anexado (o arquivo não fica guardado), consulta a biblioteca e a base jurídica e propõe as exigências como rascunho, com o trecho do título que motivou cada uma. Nada sai sem você marcar Conferi em cada exigência proposta, ou tirá-la.",
+    "Do pedido do balcão online, use Qualificar o título deste pedido: a qualificação abre com o apresentante, o protocolo e a data do pedido, e o pedido passa a mostrar as notas emitidas.",
+    "Em Prazos, defina o prazo de cada atribuição em dias úteis. A lista mostra o que vence e o que venceu, primeiro.",
     "Emitiu errado? Exclua a nota com justificativa: ela fica guardada com o número, que não volta a ser usado, e a rodada reabre para corrigir. Também dá para modificar o número.",
   ],
   terms: [

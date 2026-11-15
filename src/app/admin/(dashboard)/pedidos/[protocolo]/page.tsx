@@ -95,6 +95,7 @@ import { DeliverySection } from "./_components/delivery-section.tsx";
 import { ExemptionDecisionControl } from "./_components/exemption-decision.tsx";
 import { KeySection } from "./_components/key-section.tsx";
 import { LiveRequest } from "./_components/live-request.tsx";
+import { QualificationSection } from "./_components/qualification-section.tsx";
 import type { RequirementItem } from "./_components/requirements-section.tsx";
 import { RequirementsSection } from "./_components/requirements-section.tsx";
 import { SearchAnswerSection } from "./_components/search-answer-section.tsx";
@@ -630,6 +631,17 @@ export default async function ServiceRequestDetailPage({
               attachments={citizenAttachments}
               hasExemption={Boolean(exemption)}
             />
+
+            {can(
+              session.user.role ?? "",
+              "qualificacao.manage",
+              session.user.permissions,
+            ) && (
+              <QualificationSection
+                tenantSlug={tenant.slug}
+                protocol={request.protocolNumber}
+              />
+            )}
 
             {act?.taxGuide && (
               <section className="rounded-xl border bg-card p-6">

@@ -105,6 +105,12 @@ export interface Requirement {
    * at once (Lei nº 6.015/1973, art. 198).
    */
   fromNewDocument: boolean;
+  /** Proposed by the AI (phase 2): a draft until a person checks it. */
+  fromAi: boolean;
+  /** A person checked the AI's proposal; only then the note goes out. */
+  reviewed: boolean;
+  /** The passage of the título that led to it, as the AI read it. */
+  excerpt: string;
 }
 
 export type RoundResult = "aberta" | "exigencia" | "positiva";
@@ -117,6 +123,8 @@ export interface Round {
   requirements: Requirement[];
   /** In a reexame: what came back with the título. */
   newDocuments: string;
+  /** The AI's summary of its proposal, when one was asked. */
+  aiNote: string;
 }
 
 export interface Presenter {
@@ -156,6 +164,9 @@ export const emptyRequirement = (id: string, round = 1): Requirement => ({
   note: "",
   round,
   fromNewDocument: false,
+  fromAi: false,
+  reviewed: false,
+  excerpt: "",
 });
 
 export function emptyQualification(
@@ -180,6 +191,7 @@ export function emptyQualification(
         result: "aberta",
         requirements: [],
         newDocuments: "",
+        aiNote: "",
       },
     ],
   };
@@ -242,6 +254,7 @@ export const currentRound = (data: QualificationData): Round =>
     result: "aberta",
     requirements: [],
     newDocuments: "",
+    aiNote: "",
   };
 
 /** What the exigências of a round ask that is still not met. */
@@ -254,12 +267,23 @@ export function noteProblems(round: Round): string[] {
   if (pending.length === 0) {
     return ["Não há exigência pendente: emita a qualificação positiva."];
   }
-  return pending.flatMap(requirementProblems);
+  return [...pending.flatMap(requirementProblems), ...unreviewed(round)];
+}
+
+/** The AI's proposals nobody checked yet: nothing goes out with them. */
+export function unreviewed(round: Round): string[] {
+  const left = round.requirements.filter((r) => r.fromAi && !r.reviewed);
+  return left.length
+    ? [
+        `${left.length === 1 ? "1 exigência proposta pela IA ainda não foi conferida" : `${left.length} exigências propostas pela IA ainda não foram conferidas`}: confira cada uma, ou tire-a.`,
+      ]
+    : [];
 }
 
 /** The positiva can go out: nothing pending in the round. */
 export function positiveProblems(round: Round): string[] {
   const pending = pendingOf(round);
+  if (!pending.length && unreviewed(round).length) return unreviewed(round);
   return pending.length
     ? [
         `Ainda há ${pending.length} ${pending.length === 1 ? "exigência pendente" : "exigências pendentes"}: marque como cumprida ou emita a nota devolutiva.`,
@@ -287,6 +311,7 @@ export function openReexam(
         date: today,
         result: "aberta",
         newDocuments: newDocuments.trim(),
+        aiNote: "",
         requirements: pendingOf(last).map((r) => ({
           ...r,
           status: "pendente" as const,
@@ -421,6 +446,9 @@ function requirementFrom(raw: unknown, round: number): Requirement | null {
         ? (r.round as number)
         : round,
     fromNewDocument: r.fromNewDocument === true,
+    fromAi: r.fromAi === true,
+    reviewed: r.reviewed === true,
+    excerpt: text(r.excerpt, 2000),
   };
 }
 
@@ -448,6 +476,7 @@ export function qualificationFrom(raw: unknown): QualificationData {
         date: ISO_DAY.test(text(x.date)) ? text(x.date) : "",
         result: RESULTS.has(result) ? result : "aberta",
         newDocuments: text(x.newDocuments),
+        aiNote: text(x.aiNote),
         requirements: (Array.isArray(x.requirements) ? x.requirements : [])
           .map((q) => requirementFrom(q, n))
           .filter((q): q is Requirement => q !== null),
@@ -481,7 +510,40 @@ export function qualificationFrom(raw: unknown): QualificationData {
             result: "aberta",
             requirements: [],
             newDocuments: "",
+            aiNote: "",
           },
         ],
+  };
+}
+
+/**
+ * A qualificação opened from a pedido of the online counter: the presenter,
+ * the protocol, the day and the attribution come from it; the act asked is
+ * named in the título, to be chosen among the attribution's acts.
+ */
+export function qualificationFromRequest(input: {
+  protocol: string;
+  applicantName: string;
+  contact: string;
+  /** ISO day the pedido came in. */
+  receivedOn: string;
+  /** The catalog's attribution ("RCPN", "RI"...). */
+  attribution?: string;
+  actName?: string;
+}): QualificationData {
+  const lower = (input.attribution ?? "").toLowerCase();
+  const attribution: Attribution = isAttribution(lower) ? lower : "rcpn";
+  const base = emptyQualification(attribution, input.receivedOn);
+  return {
+    ...base,
+    presenter: {
+      name: input.applicantName.slice(0, 300),
+      document: "",
+      contact: input.contact.slice(0, 300),
+    },
+    protocol: input.protocol.slice(0, 60),
+    document: input.actName
+      ? `Pedido de ${input.actName.toLowerCase()} pelo balcão online, com os documentos anexados.`
+      : "",
   };
 }

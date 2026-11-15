@@ -242,6 +242,275 @@ export const LIBRARY_SEEDS: LibrarySeed[] = [
       "Apresentar a declaração de óbito assinada pelo médico ou, na falta, a declaração de duas testemunhas, e o documento de identificação do declarante.",
     basis: `${LRP}, arts. 77 e 80.`,
   },
+  // ------------------------------------------------ Registro de Imóveis
+  {
+    key: "ri-continuidade",
+    attribution: "ri",
+    acts: ["registro", "averbacao"],
+    title: "Continuidade: registro anterior em nome do transmitente",
+    description:
+      "O imóvel não está matriculado ou registrado em nome de quem o transmite ou onera no título.",
+    howToComply:
+      "Apresentar para registro o título anterior que põe o imóvel em nome do transmitente, ou retificar o título para constar o titular registral.",
+    basis: `${LRP}, arts. 195 e 237.`,
+  },
+  {
+    key: "ri-especialidade-objetiva",
+    attribution: "ri",
+    acts: ["registro", "abertura-matricula", "retificacao"],
+    title: "Descrição do imóvel igual à da matrícula",
+    description:
+      "A descrição do imóvel no título não coincide com a da matrícula ou do registro anterior (medidas, confrontações, área ou localização).",
+    howToComply:
+      "Retificar o título para que a descrição do imóvel corresponda à da matrícula, ou promover antes a retificação do registro.",
+    basis: `${LRP}, arts. 176, § 1º, e 225.`,
+  },
+  {
+    key: "ri-especialidade-subjetiva",
+    attribution: "ri",
+    acts: [],
+    title: "Qualificação completa das partes",
+    description:
+      "O título não traz a qualificação completa de todas as partes (nome, nacionalidade, estado civil, profissão, documento, CPF ou CNPJ, domicílio e, se casadas, o regime de bens).",
+    howToComply:
+      "Retificar o título, ou apresentar declaração com os dados que faltam acompanhada dos documentos que os comprovem.",
+    basis: `${LRP}, art. 176, § 1º, III.`,
+  },
+  {
+    key: "ri-imposto-transmissao",
+    attribution: "ri",
+    acts: ["registro"],
+    title: "Imposto de transmissão",
+    description:
+      "Não foi comprovado o pagamento, a isenção ou a não incidência do imposto de transmissão (ITBI ou ITCD) devido pelo ato.",
+    howToComply:
+      "Apresentar a guia quitada do imposto, ou a declaração de isenção ou de não incidência expedida pelo fisco.",
+    basis: `${LRP}, art. 289.`,
+  },
+  {
+    key: "ri-rural-ccir-itr",
+    attribution: "ri",
+    acts: ["registro", "abertura-matricula"],
+    title: "Imóvel rural: CCIR e ITR",
+    description:
+      "Para imóvel rural não foram apresentados o Certificado de Cadastro de Imóvel Rural (CCIR) quitado e a prova de quitação do ITR dos últimos exercícios.",
+    howToComply:
+      "Apresentar o CCIR do exercício, quitado, e a certidão negativa (ou positiva com efeito de negativa) de débitos do ITR.",
+    basis: "Lei nº 4.947/1966, art. 22; Lei nº 9.393/1996, art. 21.",
+  },
+  {
+    key: "ri-georreferenciamento",
+    attribution: "ri",
+    acts: ["registro", "abertura-matricula", "retificacao"],
+    title: "Georreferenciamento do imóvel rural",
+    description:
+      "O ato exige a identificação do imóvel rural por georreferenciamento certificado pelo INCRA, nos casos e prazos da lei, que não foi apresentada.",
+    howToComply:
+      "Apresentar a planta e o memorial descritivo georreferenciados, com a certificação do INCRA, e as anuências dos confrontantes quando exigidas.",
+    basis: `${LRP}, art. 176, §§ 3º e 4º; Decreto nº 4.449/2002.`,
+  },
+  {
+    key: "ri-outorga-conjugal",
+    attribution: "ri",
+    acts: ["registro"],
+    title: "Outorga do cônjuge",
+    description:
+      "O transmitente é casado em regime que exige a autorização do outro cônjuge para alienar ou gravar imóvel, e ela não consta do título.",
+    howToComply:
+      "Apresentar o título com o comparecimento ou a anuência do cônjuge, ou o suprimento judicial da outorga.",
+    basis: "Código Civil, art. 1.647, I.",
+  },
+  {
+    key: "ri-titulo-habil",
+    attribution: "ri",
+    acts: [],
+    title: "Título hábil a registro",
+    description:
+      "O documento apresentado não é título admitido a registro (escritura pública, escrito particular autorizado em lei com firmas reconhecidas, ato estrangeiro legalizado, carta de sentença ou formal de partilha, entre outros).",
+    howToComply:
+      "Apresentar o ato na forma de título que a lei admite a registro, com os requisitos próprios dele.",
+    basis: `${LRP}, art. 221.`,
+  },
+  {
+    key: "ri-titulo-judicial",
+    attribution: "ri",
+    acts: [],
+    title: "Título judicial: peças e trânsito em julgado",
+    description:
+      "A carta de sentença, o formal de partilha ou o mandado não traz as peças necessárias ou a certidão do trânsito em julgado.",
+    howToComply:
+      "Apresentar o título judicial completo, com as peças exigidas e a certidão do trânsito em julgado (ou a decisão que autoriza o cumprimento).",
+    basis: `${LRP}, art. 221, IV.`,
+  },
+  // ------------------------------------------------ Notas
+  {
+    key: "notas-certidoes-imovel",
+    attribution: "notas",
+    acts: ["escritura"],
+    title: "Certidões do imóvel e fiscais",
+    description:
+      "Para lavrar a escritura relativa a imóvel faltam a certidão de propriedade e de ônus reais atualizada, as certidões fiscais e a prova do pagamento do imposto de transmissão.",
+    howToComply:
+      "Apresentar a certidão de inteiro teor da matrícula com ônus reais, atualizada, as certidões fiscais do imóvel e a guia quitada do ITBI ou ITCD (ou a declaração de isenção).",
+    basis: "Lei nº 7.433/1985, art. 1º, § 2º; Decreto nº 93.240/1986.",
+  },
+  {
+    key: "notas-identificacao-partes",
+    attribution: "notas",
+    acts: [],
+    title: "Identificação e capacidade das partes",
+    description:
+      "Não foram apresentados os documentos de identificação e de estado civil das partes, necessários à qualificação na escritura.",
+    howToComply:
+      "Apresentar documento oficial com foto, CPF e certidão de nascimento ou casamento atualizada de cada parte.",
+    basis: "Código Civil, art. 215, § 1º.",
+  },
+  {
+    key: "notas-indisponibilidade",
+    attribution: "notas",
+    acts: ["escritura"],
+    title: "Consulta de indisponibilidade de bens",
+    description:
+      "A consulta à Central Nacional de Indisponibilidade de Bens em nome do alienante indicou ordem de indisponibilidade que impede o ato.",
+    howToComply:
+      "Apresentar a decisão que levantou a indisponibilidade, ou a autorização judicial para o ato.",
+    basis: `${CNN}, Central Nacional de Indisponibilidade de Bens.`,
+  },
+  {
+    key: "notas-inventario-advogado",
+    attribution: "notas",
+    acts: ["escritura"],
+    title: "Inventário, partilha ou divórcio: advogado e requisitos",
+    description:
+      "O inventário, a partilha ou o divórcio extrajudicial exige partes capazes e concordes e a assistência de advogado, que não foram demonstradas.",
+    howToComply:
+      "Apresentar a qualificação e a procuração do advogado que assistirá as partes e os documentos que provem os requisitos da via extrajudicial.",
+    basis: "Código de Processo Civil, arts. 610, §§ 1º e 2º, e 733.",
+  },
+  {
+    key: "notas-procuracao",
+    attribution: "notas",
+    acts: [],
+    title: "Procuração com a forma e os poderes do ato",
+    description:
+      "A parte será representada por procuração que não tem a forma pública exigida para o ato ou não traz os poderes especiais e expressos necessários.",
+    howToComply:
+      "Apresentar procuração por instrumento público, atualizada, com poderes especiais e expressos para o ato.",
+    basis: "Código Civil, arts. 657 e 661, § 1º.",
+  },
+  // ------------------------------------------------ Títulos e Documentos
+  {
+    key: "rtd-traducao",
+    attribution: "rtd",
+    acts: [],
+    title: "Documento em língua estrangeira",
+    description:
+      "O documento está em língua estrangeira e não veio acompanhado da tradução para o português.",
+    howToComply:
+      "Apresentar a tradução por tradutor público, para ser registrada junto com o original.",
+    basis: `${LRP}, art. 148.`,
+  },
+  {
+    key: "rtd-cabimento",
+    attribution: "rtd",
+    acts: ["registro"],
+    title: "Cabimento do registro em Títulos e Documentos",
+    description:
+      "O documento apresentado não se enquadra nas hipóteses de registro em Títulos e Documentos indicadas no pedido, ou o pedido não diz se o registro é para conservação ou para valer contra terceiros.",
+    howToComply:
+      "Indicar no requerimento a finalidade do registro (conservação ou eficácia contra terceiros) e a hipótese legal em que o documento se enquadra.",
+    basis: `${LRP}, arts. 127 e 129.`,
+  },
+  {
+    key: "rtd-notificacao-endereco",
+    attribution: "rtd",
+    acts: ["notificacao"],
+    title: "Notificação: destinatário e endereço",
+    description:
+      "O pedido de notificação não traz a qualificação completa do destinatário e o endereço em que ele deve ser procurado.",
+    howToComply:
+      "Completar o requerimento com o nome, o documento e o endereço completo do destinatário.",
+    basis: `${LRP}, art. 160.`,
+  },
+  // ------------------------------------------------ Pessoas Jurídicas
+  {
+    key: "rcpj-requisitos-estatuto",
+    attribution: "rcpj",
+    acts: ["registro", "averbacao"],
+    title: "Requisitos do estatuto ou contrato social",
+    description:
+      "O estatuto ou contrato não traz todos os elementos que a lei exige (denominação, fins, sede, tempo de duração, administração, representação, reforma do estatuto, destino do patrimônio na extinção, entre outros).",
+    howToComply:
+      "Apresentar o estatuto ou o contrato reformado com os elementos que faltam, aprovado na forma que ele mesmo prevê.",
+    basis: `Código Civil, arts. 46 e 54; ${LRP}, art. 120.`,
+  },
+  {
+    key: "rcpj-visto-advogado",
+    attribution: "rcpj",
+    acts: ["registro"],
+    title: "Visto de advogado no ato constitutivo",
+    description:
+      "O ato constitutivo da pessoa jurídica não traz o visto de advogado, sem o qual não pode ser admitido a registro.",
+    howToComply:
+      "Apresentar o ato constitutivo visado por advogado, com o nome e o número de inscrição na OAB.",
+    basis: "Lei nº 8.906/1994, art. 1º, § 2º.",
+  },
+  {
+    key: "rcpj-ata-assembleia",
+    attribution: "rcpj",
+    acts: ["averbacao"],
+    title: "Ata: convocação, quórum e presença",
+    description:
+      "A ata não demonstra a convocação, o quórum e a deliberação exigidos pelo estatuto para a matéria, ou não veio acompanhada da lista de presença.",
+    howToComply:
+      "Apresentar a ata com a menção à convocação, o quórum de instalação e de deliberação, e a lista de presença assinada.",
+    basis: "Código Civil, art. 59; estatuto da entidade.",
+  },
+  // ------------------------------------------------ Protesto
+  {
+    key: "protesto-requisitos-formais",
+    attribution: "protesto",
+    acts: ["protesto"],
+    title: "Requisitos formais do título",
+    description:
+      "O título ou documento de dívida apresentado tem vício formal que impede o protesto (falta de requisito essencial, rasura, valor ou vencimento ilegíveis).",
+    howToComply:
+      "Apresentar o título sem o vício, ou o documento de dívida com todos os requisitos que a lei própria dele exige.",
+    basis: "Lei nº 9.492/1997, art. 9º.",
+  },
+  {
+    key: "protesto-devedor-endereco",
+    attribution: "protesto",
+    acts: ["protesto"],
+    title: "Identificação e endereço do devedor",
+    description:
+      "A indicação do devedor não traz o documento de identificação (CPF ou CNPJ) ou o endereço para a intimação.",
+    howToComply:
+      "Completar a indicação com o nome, o CPF ou CNPJ e o endereço completo do devedor.",
+    basis: "Lei nº 9.492/1997, arts. 9º e 14.",
+  },
+  {
+    key: "protesto-duplicata",
+    attribution: "protesto",
+    acts: ["protesto"],
+    title: "Duplicata sem aceite: comprovação do negócio",
+    description:
+      "A duplicata sem aceite foi apresentada sem a declaração ou o comprovante da entrega da mercadoria ou da prestação do serviço.",
+    howToComply:
+      "Apresentar a declaração do sacador de que mantém o comprovante da entrega ou da prestação, ou o próprio comprovante.",
+    basis: "Lei nº 5.474/1968, arts. 13 e 15; Lei nº 9.492/1997, art. 8º.",
+  },
+  {
+    key: "protesto-cancelamento",
+    attribution: "protesto",
+    acts: ["cancelamento"],
+    title: "Cancelamento: título original ou anuência",
+    description:
+      "O pedido de cancelamento não veio com o título protestado original ou com a carta de anuência do credor com a firma reconhecida.",
+    howToComply:
+      "Apresentar o título original ou a declaração de anuência do credor, com a identificação e a firma reconhecida.",
+    basis: "Lei nº 9.492/1997, art. 26.",
+  },
 ];
 
 /** The seeds of an attribution, as the panel shows them before editing. */

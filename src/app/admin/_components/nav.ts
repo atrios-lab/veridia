@@ -335,6 +335,7 @@ export const ADMIN_NAV: readonly AdminNavItem[] = [
         label: "Biblioteca de exigências",
         href: "/admin/utilitarios/qualificacao/biblioteca",
       },
+      { label: "Prazos", href: "/admin/utilitarios/qualificacao/prazos" },
     ],
   },
   {

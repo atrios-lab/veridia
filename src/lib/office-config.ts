@@ -98,3 +98,5 @@ export const OFFICE_FCRCPN_KEY = "office-fcrcpn";
  * Tabelião/Registrador; off by default (lib/ai.ts).
  */
 export const OFFICE_AI_KEY = "office-ai";
+/** The qualificação's terms by attribution (core/qualificacao/prazos). */
+export const OFFICE_QUALIFICATION_KEY = "office-qualification";
