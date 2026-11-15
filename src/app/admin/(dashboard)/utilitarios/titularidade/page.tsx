@@ -200,34 +200,6 @@ export default async function TitularidadePage({
                       >
                         Editar
                       </Link>
-                      <a
-                        href={`${BASE}/${id}/doi?formato=json`}
-                        className={buttonVariants({
-                          variant: "ghost",
-                          size: "sm",
-                        })}
-                        title="Declaração sobre Operações Imobiliárias deste ato, para importar na DOI-Web"
-                      >
-                        DOI (JSON)
-                      </a>
-                      <a
-                        href={`${BASE}/${id}/doi?formato=pgd`}
-                        className={buttonVariants({
-                          variant: "ghost",
-                          size: "sm",
-                        })}
-                      >
-                        DOI (PGD)
-                      </a>
-                      <a
-                        href={`${BASE}/${id}/doi?formato=xml`}
-                        className={buttonVariants({
-                          variant: "ghost",
-                          size: "sm",
-                        })}
-                      >
-                        DOI (XML)
-                      </a>
                       <RemoveTransferButton id={id} mes={mes} />
                     </span>
                   </li>
@@ -242,13 +214,13 @@ export default async function TitularidadePage({
             Arquivos do mês para baixar e anexar
           </h2>
           <p className="mt-1 text-sm text-muted-foreground text-justify hyphens-auto">
-            A Carga CTP (Comunicação de Transações às Prefeituras) e a DOI saem
-            dos atos lançados. A CTP segue o esquema oficial do CENSEC: o
-            cabeçalho com o CNS e o mês, e as fichas da DOI, só com os atos de
-            notas (o registro de imóveis comunica pelo ONR). No CENSEC: CTP ›
-            Cargas, escolha o mês e anexe o JSON; depois faça o fechamento do
-            mês. Mês sem ato não tem arquivo: faça o fechamento negativo. O
-            ofício em PDF e em Word fica na página de cada ofício gerado.
+            A Carga CTP (Comunicação de Transações às Prefeituras) sai dos atos
+            lançados. Ela segue o esquema oficial do CENSEC: o cabeçalho com o
+            CNS e o mês, e as fichas da DOI, só com os atos de notas (o registro
+            de imóveis comunica pelo ONR). No CENSEC: CTP › Cargas, escolha o
+            mês e anexe o JSON; depois faça o fechamento do mês. Mês sem ato não
+            tem arquivo: faça o fechamento negativo. O ofício em PDF e em Word
+            fica na página de cada ofício gerado.
           </p>
           <div className="mt-4 grid gap-3 sm:grid-cols-2">
             <div className="flex flex-col gap-2 rounded-lg border px-4 py-3">
@@ -283,32 +255,18 @@ export default async function TitularidadePage({
               <p className="text-sm font-semibold text-foreground">
                 DOI · Receita Federal
               </p>
-              <span className="flex flex-wrap gap-2">
-                {(["doi-json", "doi-pgd", "doi-xml"] as const).map((f) => (
-                  <a
-                    key={f}
-                    href={`${BASE}/arquivo?mes=${mes}&formato=${f}`}
-                    className={buttonVariants({
-                      variant: "outline",
-                      size: "sm",
-                    })}
-                    title={EXPORT_FORMATS[f].label}
-                  >
-                    {f === "doi-json"
-                      ? "JSON (DOI-Web)"
-                      : f === "doi-pgd"
-                        ? "TXT (PGD)"
-                        : "XML"}
-                  </a>
-                ))}
-              </span>
-              <p className="text-xs text-muted-foreground">
-                No leiaute oficial da DOI-Web (layout-doiweb.json da Receita):
-                na DOI-Web, Importar arquivo de declarações, escolha Formato
-                DOIWEB para o JSON ou Formato PGD para o TXT. O que o título não
-                traz (forma de pagamento, parte transacionada, código IBGE)
-                aparece como pendência lá; preencha no ato antes de baixar.
+              <p className="text-sm text-muted-foreground text-justify hyphens-auto">
+                A DOI de cada ato fica no item próprio Carga da DOI, com os
+                mesmos atos lançados aqui.
               </p>
+              <span>
+                <Link
+                  href={`/admin/utilitarios/doi?mes=${mes}`}
+                  className={buttonVariants({ variant: "outline", size: "sm" })}
+                >
+                  Abrir a Carga da DOI
+                </Link>
+              </span>
             </div>
           </div>
         </section>

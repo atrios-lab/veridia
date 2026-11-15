@@ -477,9 +477,12 @@ function Fields({
 export function TransferForm({
   id,
   values,
+  back,
 }: {
   id?: string;
   values: Record<string, string>;
+  /** Opened from the Carga da DOI: saving goes back there. */
+  back?: "doi";
 }) {
   const [readState, read, reading] = useActionState(readTitleAction, IDLE);
   const [saveState, save, saving] = useActionState(saveTransferAction, IDLE);
@@ -488,6 +491,7 @@ export function TransferForm({
   return (
     <form className="flex flex-col gap-5">
       {id && <input type="hidden" name="id" value={id} />}
+      {back && <input type="hidden" name="voltar" value={back} />}
       <input
         type="hidden"
         name="sourceName"
@@ -575,7 +579,15 @@ export function TransferForm({
   );
 }
 
-export function RemoveTransferButton({ id, mes }: { id: string; mes: string }) {
+export function RemoveTransferButton({
+  id,
+  mes,
+  back,
+}: {
+  id: string;
+  mes: string;
+  back?: "doi";
+}) {
   const [state, action, pending] = useActionState(removeTransferAction, IDLE);
   return (
     <ConfirmAction
@@ -590,6 +602,7 @@ export function RemoveTransferButton({ id, mes }: { id: string; mes: string }) {
     >
       <input type="hidden" name="id" value={id} />
       <input type="hidden" name="mes" value={mes} />
+      {back && <input type="hidden" name="voltar" value={back} />}
     </ConfirmAction>
   );
 }

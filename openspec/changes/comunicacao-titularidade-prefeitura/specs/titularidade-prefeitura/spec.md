@@ -135,3 +135,16 @@ o CNM, a natureza do título e a menção à DOI já emitida quando o texto traz
 #### Scenario: Registro de imóvel rural
 - **WHEN** a serventia baixa a DOI de um registro de imóvel rural com matrícula 633
 - **THEN** a declaração leva a matrícula 0000633, a natureza do título e o município em municipiosUF
+
+### Requirement: Carga da DOI em item próprio
+A DOI DEVE (SHALL) ficar no item próprio "Carga da DOI" de Utilitários, com permissão própria em
+Perfis e permissões: os atos do mês com a situação de cada DOI (pronta ou o que falta, conferido
+com o esquema oficial da Receita), editar e excluir com justificativa, lançar escritura ou registro
+lendo o documento, o arquivo de cada ato e o do mês (JSON para a DOI-Web, DOI.TXT para o PGD, XML),
+este só com as DOI prontas, e o prazo do último dia útil do mês seguinte ao do ato (IN RFB nº
+2.186/2024). A tela da titularidade DEVE (SHALL) apontar para ela, sem repetir os arquivos da DOI.
+
+#### Scenario: DOI com pendência fora do arquivo do mês
+- **WHEN** um ato do mês não tem a forma de pagamento
+- **THEN** a Carga da DOI mostra a pendência no ato e o arquivo do mês sai sem ele
+

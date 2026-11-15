@@ -860,7 +860,7 @@ ENTRIES["/admin/utilitarios/titularidade"] = {
     "Confira cada campo. A operação é obrigatória (compra e venda, doação, permuta, usucapião...; a lista é a da DOI). Partes: uma por linha, nome; CPF ou CNPJ; participação.",
     "Salve: o ato entra no mês em que foi praticado. Errou? Altere ou exclua, com justificativa.",
     "Até o último dia útil do mês seguinte, clique em Gerar ofício do mês; se não houve ato, em Mês negativo. Assine digitalmente, imprima ou baixe em Word. No ofício há Editar (refaz com os atos de agora), Modificar numeração e Excluir.",
-    "Em Arquivos do mês, baixe a Carga CTP em JSON e envie no CENSEC (Área do Cartório › Carga - CTP, mês e formato Json), e a DOI em JSON para a DOI-Web. Há também XML, a relação em TXT e a planilha. Cada ato tem a sua DOI.",
+    "Em Arquivos do mês, baixe a Carga CTP em JSON e envie no CENSEC (CTP › Cargas, mês e arquivo). Há também XML, a relação em TXT e a planilha. A DOI fica no item próprio Carga da DOI.",
     "Na guia de ITIV ou ITCD, a pergunta Deseja gerar a comunicação à prefeitura e a DOI? abre o ato já preenchido com as partes, o imóvel e o valor da guia.",
     "Envie por meio eletrônico, à plataforma do CNB/CF (Notas) ou do ONR (Registro de Imóveis), usando a planilha do mês (art. 184-A, § 2º). Registre a data, a plataforma e o número do recibo de entrega, que é obrigatório, e anexe o comprovante. A entrega do ofício à SEMUT é opcional e não substitui o envio eletrônico.",
   ],
@@ -879,6 +879,30 @@ ENTRIES["/admin/utilitarios/titularidade"] = {
       term: "Emolumentos",
       meaning:
         "Não se cobra do município por estas informações (art. 184-A, § 9º, com o Provimento CN nº 212/2026).",
+    },
+  ],
+};
+
+ENTRIES["/admin/utilitarios/doi"] = {
+  purpose:
+    "Entregar à Receita Federal a Declaração sobre Operações Imobiliárias (DOI) de cada escritura ou registro que transmitiu imóvel (Instrução Normativa RFB nº 2.186/2024).",
+  steps: [
+    "Em Lançar escritura ou registro, anexe o traslado ou a certidão em PDF pesquisável ou Word. O sistema lê e preenche a DOI: operação, imóvel, valores, partes, forma de pagamento, MNE, natureza do título. O arquivo não fica guardado.",
+    "Na lista do mês, cada ato mostra se a DOI está pronta ou o que falta (conferido com o esquema oficial da Receita). Complete em Editar; exclua com justificativa se lançou errado.",
+    "Baixe o arquivo do mês: JSON para a DOI-Web (Formato DOIWEB) ou DOI.TXT (Formato PGD). Só entram as DOI prontas. Cada ato tem também o seu arquivo.",
+    "Entregue até as 23h59 do último dia útil do mês seguinte ao do ato; depois disso a Receita cobra multa por atraso.",
+    "Os atos são os mesmos da Titularidade à prefeitura e das Cargas da CENSEC (com Aproveitar marcado): lançados num lugar, aparecem nos outros.",
+  ],
+  terms: [
+    {
+      term: "DOI",
+      meaning:
+        "Declaração sobre Operações Imobiliárias: uma para cada imóvel alienado ou adquirido em ato de notas, registro de imóveis ou títulos e documentos.",
+    },
+    {
+      term: "Pendência",
+      meaning:
+        "Campo que a DOI-Web exige e o título não trouxe, como forma de pagamento, parte transacionada ou destinação do imóvel.",
     },
   ],
 };

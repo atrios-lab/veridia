@@ -44,21 +44,31 @@ const NO_PERMISSION =
   "Você não tem permissão para a comunicação de titularidade à prefeitura. Peça ao Tabelião em Perfis e permissões.";
 const GENERIC = "Não foi possível salvar agora. Tente de novo em instantes.";
 const BASE = "/admin/utilitarios/titularidade";
+const DOI_BASE = "/admin/utilitarios/doi";
 
-async function access() {
+/**
+ * The acts are read, saved and removed from the titularidade and from the
+ * Carga da DOI (decision of 15/11/2026): either permission opens them.
+ */
+async function access(alsoDoi = false) {
   const session = await getSession();
+  const role = session?.user.role ?? "";
+  const permissions = session?.user.permissions;
   if (
     !session ||
-    !can(
-      session.user.role ?? "",
-      "titularidade.manage",
-      session.user.permissions,
+    !(
+      can(role, "titularidade.manage", permissions) ||
+      (alsoDoi && can(role, "doi.manage", permissions))
     )
   ) {
     return undefined;
   }
   return { session, tenant: await getTenant() };
 }
+
+/** Back to the screen the act was opened from. */
+const backOf = (formData: FormData) =>
+  formData.get("voltar") === "doi" ? DOI_BASE : BASE;
 
 function formOf(formData: FormData): Record<string, string> {
   return Object.fromEntries(
@@ -79,7 +89,7 @@ export async function readTitleAction(
   _previous: TitularidadeState,
   formData: FormData,
 ): Promise<TitularidadeState> {
-  const ok = await access();
+  const ok = await access(true);
   if (!ok) return { status: "error", message: NO_PERMISSION };
   const file = formData.get("arquivo");
   if (!(file instanceof File) || file.size === 0) {
@@ -114,7 +124,7 @@ export async function saveTransferAction(
     const why = justify(formData);
     if (why) return { status: "error", message: why };
   }
-  const ok = await access();
+  const ok = await access(true);
   if (!ok) return { status: "error", message: NO_PERMISSION };
   const { transfer, problems } = transferFromForm(formOf(formData));
   if (problems.length > 0) {
@@ -143,7 +153,8 @@ export async function saveTransferAction(
     return failure(error, "titularidade.save");
   }
   revalidatePath(BASE);
-  redirect(`${BASE}?mes=${competenceOf(transfer.actDate)}&salvo=1`);
+  revalidatePath(DOI_BASE);
+  redirect(`${backOf(formData)}?mes=${competenceOf(transfer.actDate)}&salvo=1`);
 }
 
 export async function removeTransferAction(
@@ -152,7 +163,7 @@ export async function removeTransferAction(
 ): Promise<TitularidadeState> {
   const why = justify(formData);
   if (why) return { status: "error", message: why };
-  const ok = await access();
+  const ok = await access(true);
   if (!ok) return { status: "error", message: NO_PERMISSION };
   const mes = String(formData.get("mes") ?? "");
   try {
@@ -167,7 +178,8 @@ export async function removeTransferAction(
     return failure(error, "titularidade.remove");
   }
   revalidatePath(BASE);
-  redirect(`${BASE}?mes=${mes}`);
+  revalidatePath(DOI_BASE);
+  redirect(`${backOf(formData)}?mes=${mes}`);
 }
 
 export async function createFilingAction(
