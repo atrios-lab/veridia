@@ -33,6 +33,7 @@ import {
   saveAction,
   saveDeadlinesAction,
   saveLibraryAction,
+  sendNoteToRequestAction,
 } from "./actions.ts";
 
 const IDLE: QualificationState = { status: "idle" };
@@ -1204,5 +1205,98 @@ export function AiProposeForm({
       )}
       <ErrorLine state={state} />
     </form>
+  );
+}
+
+/**
+ * The nota devolutiva to the client through the pedido (decision of
+ * 15/11/2026: "que ofereça todas as opções"): the exigência as text, the
+ * way the office writes it today, with the note's PDF and/or another file
+ * attached if wanted. Printing and editing stay with the buttons above.
+ */
+export function SendNoteForm({
+  noteId,
+  protocol,
+  initialText,
+  requestHref,
+}: {
+  noteId: string;
+  protocol: string;
+  /** The exigências of the note, ready to send and editable. */
+  initialText: string;
+  requestHref: string;
+}) {
+  const [state, action, pending] = useActionState(
+    sendNoteToRequestAction,
+    IDLE,
+  );
+  const [text, setText] = useState(initialText);
+  const fid = useId();
+  useEffect(() => {
+    if (state.status === "saved") toast.success(state.message);
+  }, [state]);
+  return (
+    <details className="rounded-lg border bg-muted/30 px-3.5 py-2.5">
+      <summary className="cursor-pointer text-sm font-medium text-foreground">
+        Enviar ao cliente pelo pedido {protocol}
+      </summary>
+      <form action={action} className="mt-3 flex flex-col gap-3">
+        <input type="hidden" name="noteId" value={noteId} />
+        <p className="text-xs text-muted-foreground text-justify hyphens-auto">
+          Escolha como a nota chega ao cliente: como texto na exigência do
+          pedido (como se escreve hoje), com a nota em PDF anexada, com outro
+          arquivo (por exemplo, a nota já assinada), ou tudo junto. Para
+          imprimir ou editar, use os botões de PDF e Word acima.
+        </p>
+        <div className="flex min-w-0 flex-col gap-1.5">
+          <Label htmlFor={`${fid}-text`}>
+            Texto da exigência (o cliente lê na consulta do pedido)
+          </Label>
+          <Textarea
+            id={`${fid}-text`}
+            name="text"
+            rows={10}
+            value={text}
+            onChange={(event) => setText(event.target.value)}
+            className="field-sizing-fixed bg-background"
+          />
+        </div>
+        <label className="flex items-start gap-2 text-sm text-foreground">
+          <input
+            type="checkbox"
+            name="anexarPdf"
+            defaultChecked
+            className="mt-0.5"
+          />
+          <span>Anexar também a nota em PDF, gerada pela plataforma</span>
+        </label>
+        <div className="flex min-w-0 flex-col gap-1.5">
+          <Label htmlFor={`${fid}-file`}>Anexar outro arquivo (opcional)</Label>
+          <Input
+            id={`${fid}-file`}
+            name="arquivo"
+            type="file"
+            multiple
+            accept="application/pdf,image/jpeg,image/png,image/webp,image/heic"
+          />
+          <p className="text-xs text-muted-foreground">
+            Por exemplo, a nota assinada digitalmente ou digitalizada depois de
+            assinada à mão.
+          </p>
+        </div>
+        <div className="flex flex-wrap items-center gap-2">
+          <Button type="submit" disabled={pending || !text.trim()}>
+            {pending ? "Registrando..." : "Registrar a exigência no pedido"}
+          </Button>
+          <a
+            href={requestHref}
+            className={buttonVariants({ variant: "outline" })}
+          >
+            Abrir o pedido
+          </a>
+        </div>
+        <ErrorLine state={state} />
+      </form>
+    </details>
   );
 }

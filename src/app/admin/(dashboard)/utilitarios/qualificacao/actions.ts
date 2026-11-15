@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { can } from "@/core/auth/roles.ts";
+import { buildNote } from "@/core/qualificacao/documents.ts";
 import {
   ATTRIBUTION_ORDER,
   type DeadlineSettings,
@@ -15,6 +16,8 @@ import {
   isAttribution,
   qualificationFrom,
 } from "@/core/qualificacao/qualificacao.ts";
+import { isOpenStatus } from "@/core/request/kinds.ts";
+import { requirementTextSchema } from "@/core/request/requirement.ts";
 import { db } from "@/db/index.ts";
 import {
   AI_IMAGE_MAX_BYTES,
@@ -27,15 +30,19 @@ import {
   transcribeToMarkdown,
 } from "@/lib/ai.ts";
 import { currentJustification, justify } from "@/lib/audit-reason.ts";
+import { brandFor } from "@/lib/document-brand.ts";
+import { notifyCitizen } from "@/lib/email/service-request.ts";
 import {
   createKnowledgeRequestWith,
   searchKnowledgeWith,
 } from "@/lib/knowledge.ts";
 import { readKnowledgeFiles } from "@/lib/knowledge-reading.ts";
+import { renderDocument } from "@/lib/pdf.ts";
 import {
   applyAiProposalWith,
   createLibraryItemWith,
   createQualificationWith,
+  getNoteWith,
   getQualificationWith,
   issueNoteWith,
   listLibraryWith,
@@ -50,9 +57,19 @@ import {
   saveQualificationWith,
   updateLibraryItemWith,
 } from "@/lib/qualificacao.ts";
+import {
+  attachToRequest,
+  findByProtocol,
+  reconcileDeadlinePause,
+  registerRequirement,
+} from "@/lib/service-request.ts";
 import { getSession } from "@/lib/session.ts";
 import { getTenant, today } from "@/lib/tenant.ts";
-import { readStoredFile } from "@/lib/uploads.ts";
+import {
+  AttachmentError,
+  readStoredFile,
+  storeAttachments,
+} from "@/lib/uploads.ts";
 
 export type QualificationState =
   | { status: "idle" }
@@ -607,4 +624,136 @@ export async function proposeAction(
   }
   revalidatePath(`${BASE}/${id}`);
   redirect(`${BASE}/${id}?ia=${count}`);
+}
+
+/**
+ * The nota devolutiva sent to the client through the pedido it came from
+ * (decision of 15/11/2026: "que ofereça todas as opções"): the exigência
+ * written as text, as the office does today, and, if chosen, the note's
+ * PDF made by the platform and/or a file the office picks (the note
+ * signed, for instance). The citizen is told, as with any exigência.
+ */
+export async function sendNoteToRequestAction(
+  _previous: QualificationState,
+  formData: FormData,
+): Promise<QualificationState> {
+  const ok = await access();
+  if (
+    !ok ||
+    !can(
+      ok.session.user.role ?? "",
+      "requests.manage",
+      ok.session.user.permissions,
+    )
+  ) {
+    return { status: "error", message: NO_PERMISSION };
+  }
+  const parsed = requirementTextSchema.safeParse(field(formData, "text"));
+  if (!parsed.success) {
+    return {
+      status: "error",
+      message: parsed.error.issues[0]?.message ?? "Texto inválido.",
+    };
+  }
+  const withPdf = formData.get("anexarPdf") === "on";
+  const picked = formData
+    .getAll("arquivo")
+    .filter((f): f is File => typeof f === "object" && f.size > 0);
+  try {
+    const note = await getNoteWith(
+      db,
+      ok.tenant.slug,
+      field(formData, "noteId"),
+    );
+    if (!note || note.removedAt || note.kind !== "devolutiva") {
+      return { status: "error", message: "Nota não encontrada." };
+    }
+    const request = await findByProtocol(
+      ok.tenant.slug,
+      note.snapshot.protocol,
+    );
+    if (!request || request.kind !== "service-request") {
+      return {
+        status: "error",
+        message: "Esta qualificação não está ligada a um pedido do balcão.",
+      };
+    }
+    if (!isOpenStatus("service-request", request.status)) {
+      return {
+        status: "error",
+        message: "O pedido já foi encerrado: não recebe exigência nova.",
+      };
+    }
+    const files: File[] = [];
+    if (withPdf) {
+      const document = buildNote(ok.tenant, {
+        number: note.number,
+        data: note.snapshot,
+        issuedOn: note.issuedOn,
+        signer: note.signer,
+        roundIndex: note.roundIndex,
+      });
+      const pdf = await renderDocument(document, await brandFor(ok.tenant));
+      files.push(
+        new File(
+          [new Uint8Array(pdf)],
+          `nota-devolutiva-${note.number.replace("/", "-")}.pdf`,
+          { type: "application/pdf" },
+        ),
+      );
+    }
+    files.push(...picked);
+    const stored = files.length
+      ? await storeAttachments(files, {
+          tenantSlug: ok.tenant.slug,
+          kind: "formulario-exigencia",
+          name: files.map((f, i) =>
+            withPdf && i === 0
+              ? `Nota devolutiva nº ${note.number}`
+              : f.name.replace(/\.[a-z0-9]+$/i, ""),
+          ),
+        })
+      : [];
+    const { id: requirementId } = await registerRequirement(
+      ok.tenant.slug,
+      request.id,
+      parsed.data,
+      ok.session.user.id,
+    );
+    if (stored.length) {
+      await attachToRequest(
+        ok.tenant.slug,
+        request.id,
+        stored,
+        "office",
+        requirementId,
+      );
+    }
+    await reconcileDeadlinePause(
+      ok.tenant,
+      request.id,
+      ok.session.user.id,
+      today(),
+    );
+    await notifyCitizen({
+      tenant: ok.tenant,
+      contact: request.contact,
+      protocolNumber: request.protocolNumber,
+      subject: "Exigência registrada",
+      body: stored.length
+        ? "Há uma exigência no seu pedido, com documento anexo. Consulte o protocolo com a sua chave de acesso para ver o que foi solicitado e responder."
+        : "Há uma exigência no seu pedido. Consulte o protocolo com a sua chave de acesso para ver o que foi solicitado e responder.",
+    });
+  } catch (error) {
+    if (error instanceof AttachmentError) {
+      return { status: "error", message: error.message };
+    }
+    return failure(error, "qualificacao.send-note");
+  }
+  revalidatePath(BASE, "layout");
+  revalidatePath("/admin/pedidos", "layout");
+  return {
+    status: "saved",
+    message: "Exigência registrada no pedido. O cliente foi avisado.",
+  };
 }

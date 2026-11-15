@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import type { Role } from "@/core/auth/roles.ts";
+import { requirementTextFromNote } from "@/core/qualificacao/documents.ts";
 import { qualificationDeadline, ruleFor } from "@/core/qualificacao/prazos.ts";
 import {
   ATTRIBUTIONS,
@@ -11,6 +12,7 @@ import {
   positiveProblems,
   STATUS_LABELS,
 } from "@/core/qualificacao/qualificacao.ts";
+import { isOpenStatus } from "@/core/request/kinds.ts";
 import { officeHolidays } from "@/core/scheduling/calendar.ts";
 import { formatOfficeDateTime } from "@/core/time/office-time.ts";
 import { db } from "@/db/index.ts";
@@ -22,6 +24,7 @@ import {
   listNotesWith,
   requestDocumentsWith,
 } from "@/lib/qualificacao.ts";
+import { findByProtocol } from "@/lib/service-request.ts";
 import { getTenant, today } from "@/lib/tenant.ts";
 import { BackLink } from "../../../../_components/back-link.tsx";
 import { AdminPageHeader } from "../../../../_components/page-header.tsx";
@@ -38,6 +41,7 @@ import {
   RemoveNoteButton,
   RenumberNoteButton,
   RoundEditor,
+  SendNoteForm,
 } from "../qualificacao-forms.tsx";
 
 export const metadata = { title: "Qualificação do título" };
@@ -62,13 +66,17 @@ export default async function QualificationPage({
   const tenant = await getTenant();
   const q = await getQualificationWith(db, tenant.slug, id);
   if (!q) notFound();
-  const [notes, library, deadlines, aiBlocked, clientDocs] = await Promise.all([
-    listNotesWith(db, tenant.slug, q.id),
-    listLibraryWith(db, tenant.slug, q.data.attribution),
-    getDeadlineSettingsWith(db, tenant.slug),
-    aiBlockedWith(db, tenant.slug),
-    requestDocumentsWith(db, tenant.slug, q.data.protocol),
-  ]);
+  const [notes, library, deadlines, aiBlocked, clientDocs, linkedRequest] =
+    await Promise.all([
+      listNotesWith(db, tenant.slug, q.id),
+      listLibraryWith(db, tenant.slug, q.data.attribution),
+      getDeadlineSettingsWith(db, tenant.slug),
+      aiBlockedWith(db, tenant.slug),
+      requestDocumentsWith(db, tenant.slug, q.data.protocol),
+      q.data.protocol.trim()
+        ? findByProtocol(tenant.slug, q.data.protocol.trim())
+        : Promise.resolve(null),
+    ]);
   const round = currentRound(q.data);
   const now = today();
   const active = !q.removedAt;
@@ -235,6 +243,21 @@ export default async function QualificationPage({
                         )}
                       </div>
                     )}
+                    {!n.removedAt &&
+                      n.kind === "devolutiva" &&
+                      linkedRequest?.kind === "service-request" &&
+                      isOpenStatus("service-request", linkedRequest.status) && (
+                        <SendNoteForm
+                          noteId={n.id}
+                          protocol={linkedRequest.protocolNumber}
+                          requestHref={`/admin/pedidos/${encodeURIComponent(linkedRequest.protocolNumber)}`}
+                          initialText={requirementTextFromNote({
+                            number: n.number,
+                            data: n.snapshot,
+                            roundIndex: n.roundIndex,
+                          })}
+                        />
+                      )}
                   </li>
                 );
               })}
