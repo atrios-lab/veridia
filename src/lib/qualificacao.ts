@@ -24,6 +24,7 @@ import { officeYear } from "@/core/time/office-time.ts";
 import { isPostgresError, UNIQUE_VIOLATION } from "@/db/errors.ts";
 import type { Database } from "@/db/index.ts";
 import {
+  auditLog,
   qualificationLibrary,
   qualificationNotes,
   qualifications,
@@ -1095,4 +1096,59 @@ export async function requestDocumentsWith(
       mimeType,
       path,
     }));
+}
+
+/**
+ * A note with an exigência the Assistente Virtual proposed goes to the
+ * client only after the Tabelião validates it (decision of 15/11/2026: "o
+ * tabelião valida para postar ou enviar"). The validation is an act in
+ * the audit trail, with who and when.
+ */
+export function noteNeedsValidation(
+  note: Pick<StoredNote, "snapshot" | "roundIndex">,
+): boolean {
+  return Boolean(
+    note.snapshot.rounds[note.roundIndex]?.requirements.some((r) => r.fromAi),
+  );
+}
+
+export async function validateNoteWith(
+  database: Database,
+  tenantSlug: string,
+  noteId: string,
+  actorId: string,
+): Promise<void> {
+  const note = await getNoteWith(database, tenantSlug, noteId);
+  if (!note || note.removedAt) {
+    throw new QualificationError("Nota não encontrada.");
+  }
+  await recordAuditWith(database, {
+    tenantSlug,
+    actorId,
+    action: "qualificacao.note-validate",
+    targetType: "qualification-note",
+    targetId: note.id,
+    reason: `Nota ${note.kind === "positiva" ? "de qualificação positiva" : "devolutiva"} nº ${note.number} validada para ir ao cliente.`,
+  });
+}
+
+/** When the note was validated, or null. */
+export async function noteValidatedAtWith(
+  database: Database,
+  tenantSlug: string,
+  noteId: string,
+): Promise<Date | null> {
+  const [row] = await database
+    .select({ at: auditLog.createdAt })
+    .from(auditLog)
+    .where(
+      and(
+        eq(auditLog.tenantSlug, tenantSlug),
+        eq(auditLog.action, "qualificacao.note-validate"),
+        eq(auditLog.targetId, noteId),
+      ),
+    )
+    .orderBy(desc(auditLog.createdAt))
+    .limit(1);
+  return row?.at ?? null;
 }

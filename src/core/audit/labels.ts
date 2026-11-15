@@ -102,6 +102,8 @@ const EXACT: Record<string, string> = {
   "qualificacao.note-renumber": "Mudou o número de uma nota emitida",
   "qualificacao.remove": "Excluiu uma qualificação (fica guardada)",
   "qualificacao.restore": "Estornou uma qualificação excluída",
+  "qualificacao.note-validate":
+    "Validou a nota com exigência do Assistente Virtual para ir ao cliente",
   "qualificacao.library-create": "Criou uma exigência na biblioteca",
   "qualificacao.library-edit": "Alterou uma exigência da biblioteca",
   "qualificacao.library-remove":
@@ -518,6 +520,8 @@ const EXPLANATIONS: Record<string, string> = {
     "Uma qualificação foi excluída, com justificativa. Ela continua guardada e pode ser estornada.",
   "qualificacao.restore":
     "Uma qualificação excluída voltou, com justificativa.",
+  "qualificacao.note-validate":
+    "O Tabelião (ou quem ele autorizou) conferiu a nota que tinha exigência proposta pelo Assistente Virtual e liberou o envio ao cliente.",
   "qualificacao.library-create":
     "Foi criada uma exigência padronizada na biblioteca da qualificação.",
   "qualificacao.library-edit":

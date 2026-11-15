@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { can } from "@/core/auth/roles.ts";
 import { buildNote } from "@/core/qualificacao/documents.ts";
+import { checkProposalSources } from "@/core/qualificacao/fontes.ts";
 import {
   ATTRIBUTION_ORDER,
   type DeadlineSettings,
@@ -49,6 +50,8 @@ import {
   listLibraryWith,
   markLibraryItemWith,
   markQualificationWith,
+  noteNeedsValidation,
+  noteValidatedAtWith,
   QualificationError,
   reexamWith,
   removeNoteWith,
@@ -57,6 +60,7 @@ import {
   saveDeadlineSettingsWith,
   saveQualificationWith,
   updateLibraryItemWith,
+  validateNoteWith,
 } from "@/lib/qualificacao.ts";
 import {
   attachToRequest,
@@ -585,6 +589,12 @@ export async function proposeAction(
         .requirements.filter((r) => r.round < currentRound(q.data).n)
         .map((r) => ({ id: r.id, title: r.title, howToComply: r.howToComply })),
     });
+    // Never invented (decision of 15/11/2026): an exigência whose
+    // fundamento cannot be checked is set aside and named in the summary.
+    const checked = checkProposalSources(proposal.exigencias, {
+      libraryIds: library.map((l) => l.id),
+      references: passages.map((p) => `${p.reference} ${p.title}`),
+    });
     count = await applyAiProposalWith(
       db,
       ok.tenant.slug,
@@ -595,6 +605,9 @@ export async function proposeAction(
             ? "O Assistente Virtual não encontrou exigência: sugere a qualificação positiva."
             : "",
           proposal.resumo,
+          checked.setAside.length
+            ? `Deixadas de fora por não terem fundamento conferido na base, na biblioteca ou em site oficial (confira antes de incluir): ${checked.setAside.join("; ")}.`
+            : "",
           notes.length ? `Arquivos não lidos: ${notes.join(" ")}` : "",
         ]
           .filter(Boolean)
@@ -604,12 +617,14 @@ export async function proposeAction(
           status: a.situacao,
           reason: a.motivo,
         })),
-        requirements: proposal.exigencias.map((e) => ({
+        requirements: checked.kept.map((e) => ({
           libraryId: e.biblioteca,
           title: e.titulo,
           description: e.descricao,
           howToComply: e.comoCumprir,
-          basis: e.fundamento,
+          basis: e.endereco
+            ? `${e.fundamento} (fonte oficial: ${e.endereco})`
+            : e.fundamento,
           reference: e.referencia,
           excerpt: e.trecho,
         })),
@@ -680,6 +695,22 @@ export async function sendNoteToRequestAction(
     );
     if (!note || note.removedAt || note.kind !== "devolutiva") {
       return { status: "error", message: "Nota não encontrada." };
+    }
+    // What the Assistente Virtual proposed goes out only validated.
+    if (
+      noteNeedsValidation(note) &&
+      !can(
+        ok.session.user.role ?? "",
+        "qualificacao.validate",
+        ok.session.user.permissions,
+      ) &&
+      !(await noteValidatedAtWith(db, ok.tenant.slug, note.id))
+    ) {
+      return {
+        status: "error",
+        message:
+          "Esta nota tem exigência proposta pelo Assistente Virtual: o Tabelião precisa validá-la antes de ir ao cliente.",
+      };
     }
     const request = await findByProtocol(
       ok.tenant.slug,
@@ -851,5 +882,41 @@ export async function saveRequirementToLibraryAction(input: {
     status: "saved",
     message:
       "Exigência guardada na biblioteca. Ela aparece nas próximas qualificações deste ato.",
+  };
+}
+
+/** The Tabelião validates the note for the client (`qualificacao.validate`). */
+export async function validateNoteAction(
+  _previous: QualificationState,
+  formData: FormData,
+): Promise<QualificationState> {
+  const ok = await access();
+  if (
+    !ok ||
+    !can(
+      ok.session.user.role ?? "",
+      "qualificacao.validate",
+      ok.session.user.permissions,
+    )
+  ) {
+    return {
+      status: "error",
+      message: "Só o Tabelião (ou quem ele autorizar) valida a nota.",
+    };
+  }
+  try {
+    await validateNoteWith(
+      db,
+      ok.tenant.slug,
+      field(formData, "noteId"),
+      ok.session.user.id,
+    );
+  } catch (error) {
+    return failure(error, "qualificacao.note-validate");
+  }
+  revalidatePath(BASE, "layout");
+  return {
+    status: "saved",
+    message: "Nota validada. Ela já pode ir ao cliente.",
   };
 }

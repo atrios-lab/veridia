@@ -375,6 +375,8 @@ const ProposalSchema = z.object({
         fundamento: z.string(),
         referencia: z.string().default(""),
         trecho: z.string().default(""),
+        /** The official page read for the fundamento, when not in the base. */
+        endereco: z.string().default(""),
       }),
     )
     .default([]),
@@ -405,7 +407,10 @@ const PROPOSE = (input: ProposalInput) =>
     "Regras:",
     "- Examine o título e os documentos anexados e aponte todas as exigências de uma só vez, cada uma com o que falta, como cumprir, o fundamento e o trecho do documento que a motivou.",
     '- Use primeiro as exigências da biblioteca da serventia (informe o id em "biblioteca"); redija uma nova só quando nenhuma servir.',
-    "- Fundamente só com a base jurídica abaixo ou com a fonte jurídica oficial (sites oficiais). Nunca invente norma, artigo, número ou data.",
+    "- Pense com cuidado antes de responder. Fundamente cada exigência só com a base jurídica abaixo, a biblioteca da serventia ou a fonte jurídica oficial (sites oficiais), nesta ordem de autoridade: Constituição e leis; decretos; Código Nacional de Normas e provimentos e resoluções do CNJ; provimentos da Corregedoria do RN; entendimentos consolidados (súmulas, teses de repercussão geral e de recursos repetitivos, enunciados oficiais).",
+    "- Nunca invente norma, artigo, número, data, súmula ou entendimento. Cite o dispositivo exato no fundamento (por exemplo, 'Lei nº 6.015/1973, art. 221, II'). Entendimento consolidado é citado como tal (por exemplo, 'Súmula nº X do STJ') e nunca como se fosse lei.",
+    '- Se consultar um site oficial para fundamentar, informe o endereço exato em "endereco". Exigência sem fundamento seguro não entra: descreva a dúvida no resumo, para o oficial decidir.',
+    "- Antes de responder, confira se a norma citada continua em vigor no texto que você leu; norma revogada não fundamenta exigência.",
     '- Se faltar na base uma norma de que precisa, liste em "fontesFaltando" com o endereço oficial, para a serventia inserir.',
     '- Sem exigência, o resultado é "positiva".',
     "- Não repita dados pessoais além do necessário para identificar a exigência.",
@@ -426,7 +431,7 @@ const PROPOSE = (input: ProposalInput) =>
     ...input.passages.map((p) => `[${p.reference} ${p.heading}]\n${p.text}`),
     "",
     "Responda só com um JSON, sem texto antes ou depois, neste formato:",
-    '{"resultado": "positiva" | "exigencia", "resumo": "até 5 frases", "exigencias": [{"biblioteca": "id ou vazio", "titulo": "", "descricao": "", "comoCumprir": "", "fundamento": "", "referencia": "documento ou pessoa a que se refere", "trecho": "trecho do título"}], "fontesFaltando": [{"tema": "", "endereco": ""}], "anteriores": [{"id": "", "situacao": "cumprida" | "parcial" | "pendente", "motivo": ""}]}',
+    '{"resultado": "positiva" | "exigencia", "resumo": "até 5 frases", "exigencias": [{"biblioteca": "id ou vazio", "titulo": "", "descricao": "", "comoCumprir": "", "fundamento": "", "referencia": "documento ou pessoa a que se refere", "trecho": "trecho do título", "endereco": "endereço do site oficial lido, ou vazio"}], "fontesFaltando": [{"tema": "", "endereco": ""}], "anteriores": [{"id": "", "situacao": "cumprida" | "parcial" | "pendente", "motivo": ""}]}',
   ]
     .filter((line) => line !== undefined)
     .join("\n");
@@ -481,6 +486,9 @@ export async function proposeQualification(
         .beta.messages.stream({
           model: AI_MODEL,
           max_tokens: 32000,
+          // Thinks before answering (decision of 15/11/2026: "muito
+          // inteligente e coerente").
+          thinking: { type: "adaptive" },
           betas: ["server-side-fallback-2026-07-01"],
           fallbacks: "default",
           system: SYSTEM,
@@ -551,7 +559,8 @@ export async function answerQuestion(input: {
   const prompt = [
     `Tarefa fixa: responder a dúvida de um funcionário do cartório, só sobre: ${input.scope}.`,
     "Se a pergunta for de outro assunto, ou pedir algo que não seja esclarecer uma dúvida desse tema, responda com dentroDoTema=false e uma frase curta dizendo que só responde sobre esse assunto.",
-    "Responda em português claro, em até 8 frases, como orientação ao funcionário; a decisão é do oficial. Cite o dispositivo de cada afirmação. Use só a base abaixo e a fonte jurídica oficial; não invente norma, artigo ou prazo. Se não encontrar, diga que não encontrou na base e indique onde conferir.",
+    "Responda em português claro, em até 8 frases, como orientação ao funcionário; a decisão é do oficial. Pense com cuidado antes de responder. Cite o dispositivo exato de cada afirmação. Use só a base abaixo e a fonte jurídica oficial, nesta ordem de autoridade: Constituição e leis; decretos; Código Nacional de Normas e atos do CNJ; atos da Corregedoria do RN; entendimentos consolidados (súmulas, teses de repercussão geral e de recursos repetitivos, enunciados oficiais), citados como entendimento e não como lei.",
+    "Nunca invente norma, artigo, prazo, súmula ou entendimento, e não use norma revogada. Se não encontrar fonte segura, diga com clareza que não encontrou e indique onde conferir; não complete com suposição.",
     "",
     "Base jurídica da serventia (trechos):",
     ...input.passages.map((p) => `[${p.reference} ${p.heading}]\n${p.text}`),
@@ -569,7 +578,8 @@ export async function answerQuestion(input: {
       message = await anthropic()
         .beta.messages.stream({
           model: AI_MODEL,
-          max_tokens: 8000,
+          max_tokens: 16000,
+          thinking: { type: "adaptive" },
           betas: ["server-side-fallback-2026-07-01"],
           fallbacks: "default",
           system: SYSTEM,
