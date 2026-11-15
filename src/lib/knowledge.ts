@@ -6,14 +6,20 @@ import {
   type Hit,
   metaFrom,
   metaProblems,
+  type NormRef,
+  normOf,
   rankPassages,
+  revokedNorms,
   type SourceArea,
   type SourceCheck,
   type SourceMeta,
+  sameNorm,
   searchTerms,
   sourceWarnings,
   splitPassages,
 } from "@/core/conhecimento/base.ts";
+import { toIsoDate } from "@/core/scheduling/calendar.ts";
+import { OFFICE_TIME_ZONE } from "@/core/time/office-time.ts";
 import type { Database } from "@/db/index.ts";
 import {
   knowledgePassages,
@@ -86,7 +92,14 @@ export async function createSourceWith(
     viaAi?: boolean;
   },
   actorId: string,
-): Promise<{ id: string; pending: string[] }> {
+): Promise<{
+  id: string;
+  pending: string[];
+  /** Sources this text revoked, marked so (decision of 15/11/2026). */
+  revoked: string[];
+  /** Set when a source already in the base revokes this one. */
+  revokedBy?: string;
+}> {
   const {
     pending: _ignored,
     check: _check,
@@ -132,9 +145,31 @@ export async function createSourceWith(
       );
     }
   }
+  const own = normOf(meta);
+  const revokes =
+    meta.status === "vigente"
+      ? revokedNorms(markdown).filter((n) => !own || !sameNorm(n, own))
+      : [];
+  // Sent after the norm that revoked it: it comes in revoked.
+  const revokedBy =
+    own && meta.status === "vigente"
+      ? await revokerOfWith(database, tenantSlug, own, input.replaces)
+      : undefined;
   return database.transaction(async (tx) => {
+    const today = toIsoDate(new Date(), OFFICE_TIME_ZONE);
     const stored: SourceMeta = {
       ...meta,
+      ...(revokedBy
+        ? {
+            status: "revogada" as const,
+            notes: [
+              meta.notes,
+              `Revogada por ${revokedBy} (identificado no texto da base em ${today.split("-").reverse().join("/")}).`,
+            ]
+              .filter(Boolean)
+              .join("\n"),
+          }
+        : {}),
       ...(previous ? { replaces: previous.id } : {}),
       ...(pending.length ? { pending } : {}),
     };
@@ -179,8 +214,99 @@ export async function createSourceWith(
       targetId: row.id,
       ...(reason ? { reason } : {}),
     });
-    return { id: row.id, pending };
+    const revoked: string[] = [];
+    if (revokes.length) {
+      const name = meta.reference || meta.title;
+      const others = await tx
+        .select()
+        .from(knowledgeSources)
+        .where(
+          and(
+            eq(knowledgeSources.tenantSlug, tenantSlug),
+            isNull(knowledgeSources.removedAt),
+            sql`coalesce(${knowledgeSources.meta}->>'replacedBy', '') = ''`,
+            sql`${knowledgeSources.meta}->>'status' = 'vigente'`,
+          ),
+        );
+      for (const other of others) {
+        if (other.id === row.id || other.id === previous?.id) continue;
+        const otherMeta = metaFrom(other.meta);
+        const norm = normOf(otherMeta);
+        if (!norm || !revokes.some((r) => sameNorm(r, norm))) continue;
+        const why = `Revogada por ${name} (identificado no texto ao enviar em ${today.split("-").reverse().join("/")}).`;
+        await tx
+          .update(knowledgeSources)
+          .set({
+            meta: {
+              ...otherMeta,
+              status: "revogada",
+              notes: [otherMeta.notes, why].filter(Boolean).join("\n"),
+            },
+            updatedAt: new Date(),
+            updatedBy: actorId,
+          })
+          .where(eq(knowledgeSources.id, other.id));
+        await recordAuditWith(tx as unknown as Database, {
+          tenantSlug,
+          actorId,
+          action: "knowledge.revoke-auto",
+          targetType: "knowledge-source",
+          targetId: other.id,
+          reason: why,
+        });
+        revoked.push(otherMeta.reference || otherMeta.title);
+      }
+    }
+    return {
+      id: row.id,
+      pending,
+      revoked,
+      ...(revokedBy ? { revokedBy } : {}),
+    };
   });
+}
+
+/**
+ * A source already in the base whose text revokes this norm, by its
+ * name; undefined when none does. Only passages that speak of revoking
+ * and carry the norm's number are read.
+ */
+async function revokerOfWith(
+  database: Database,
+  tenantSlug: string,
+  norm: NormRef,
+  except?: string,
+): Promise<string | undefined> {
+  const rows = await database
+    .select({
+      sourceId: knowledgePassages.sourceId,
+      text: knowledgePassages.text,
+      meta: knowledgeSources.meta,
+    })
+    .from(knowledgePassages)
+    .innerJoin(
+      knowledgeSources,
+      eq(knowledgeSources.id, knowledgePassages.sourceId),
+    )
+    .where(
+      and(
+        eq(knowledgePassages.tenantSlug, tenantSlug),
+        isNull(knowledgeSources.removedAt),
+        sql`coalesce(${knowledgeSources.meta}->>'replacedBy', '') = ''`,
+        sql`${knowledgeSources.meta}->>'status' = 'vigente'`,
+        sql`lower(${knowledgePassages.text}) like '%revog%'`,
+        sql`replace(${knowledgePassages.text}, '.', '') like ${`%${norm.number}%`}`,
+      ),
+    )
+    .limit(200);
+  for (const row of rows) {
+    if (row.sourceId === except) continue;
+    if (revokedNorms(row.text).some((r) => sameNorm(r, norm))) {
+      const meta = metaFrom(row.meta);
+      return meta.reference || meta.title;
+    }
+  }
+  return undefined;
 }
 
 async function getSourceRowWith(

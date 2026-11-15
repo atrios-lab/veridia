@@ -153,6 +153,7 @@ const EXACT: Record<string, AuditLevel> = {
   "qualificacao.library-remove": "atencao",
   "qualificacao.library-restore": "atencao",
   "knowledge.version": "analise",
+  "knowledge.revoke-auto": "analise",
   "knowledge.edit": "analise",
   "knowledge.remove": "atencao",
   "knowledge.restore": "atencao",
