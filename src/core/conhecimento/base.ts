@@ -619,15 +619,19 @@ export const OFFICIAL_HOSTS = [
  * The legal sources' own sites, the only ones the AI consults (decision of
  * 15/11/2026: "buscar apenas na fonte jurídica"): the federal laws and
  * decrees, the Diário Oficial, the Judiciary (CNJ, STF, STJ, tribunais and
- * their corregedorias, all under jus.br) and the Congress. A subdomain of
+ * their corregedorias, all under jus.br), LexML and the legislatures (the
+ * Senado's compiled texts at normas.leg.br, which answers from abroad when
+ * the Planalto does not). A subdomain of
  * one of these counts; any other site does not.
  */
 export const LEGAL_SOURCE_DOMAINS = [
   "planalto.gov.br",
   "in.gov.br",
+  "lexml.gov.br",
   "jus.br",
-  "camara.leg.br",
-  "senado.leg.br",
+  // The legislatures: Câmara, Senado (and its compiled texts at
+  // normas.leg.br) and the state assemblies.
+  "leg.br",
 ] as const;
 
 export function isOfficialUrl(url: string): boolean {

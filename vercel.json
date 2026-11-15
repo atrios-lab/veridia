@@ -7,6 +7,9 @@
     },
     "src/app/(public)/selo/captcha/route.ts": {
       "regions": ["gru1"]
+    },
+    "src/app/admin/(dashboard)/utilitarios/base-juridica/enviar/page.tsx": {
+      "regions": ["gru1"]
     }
   },
   "crons": [

@@ -100,6 +100,13 @@ test("fonte precisa de título; endereço oficial só dos sites oficiais", () =>
   );
   assert.equal(isOfficialUrl("https://www.tjsp.jus.br/Corregedoria"), true);
   assert.equal(isOfficialUrl("https://jus.br.exemplo.com/x"), false);
+  assert.equal(
+    isOfficialUrl(
+      "https://normas.leg.br/?urn=urn:lex:br:federal:lei:1973-12-31;6015",
+    ),
+    true,
+  );
+  assert.equal(isOfficialUrl("https://exemplo.leg.br.com/x"), false);
   assert.equal(isOfficialUrl("http://www.planalto.gov.br/x"), false);
   assert.equal(isOfficialUrl("https://exemplo.com/lei"), false);
 });
