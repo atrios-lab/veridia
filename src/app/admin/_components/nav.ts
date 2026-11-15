@@ -133,6 +133,20 @@ export const ADMIN_NAV: readonly AdminNavItem[] = [
     permission: "chat.manage",
   },
   {
+    // The DPO assistant (change assistente-do-dpo): an AI that answers only
+    // on data protection, for everyone at the desk (decision of
+    // 15/11/2026). Its own group: it is the officer's tool, not a channel.
+    group: "Proteção de dados",
+    label: "DPO",
+    href: "/admin/dpo",
+    icon: "shield",
+    permission: "dpo.assist",
+    children: [
+      { label: "Perguntar", href: "/admin/dpo" },
+      { label: "Minhas conversas", href: "/admin/dpo/conversas" },
+    ],
+  },
+  {
     // The office's attributions (decision of 14/11/2026): one entry per
     // specialty, each where its files are loaded and its acts worked. The
     // first is the Registro Civil (change consulta-de-registro-rcpn); the
@@ -506,6 +520,15 @@ export const ADMIN_NAV: readonly AdminNavItem[] = [
     href: "/admin/atrios/liberacao-de-acesso",
     icon: "shield",
     permission: "access.release",
+  },
+  {
+    // The DPO assistant's oversight: usage, conversations and ceiling of
+    // every office. The Átrios master account only.
+    group: "Átrios",
+    label: "Assistente do DPO",
+    href: "/admin/atrios/assistente-dpo",
+    icon: "chat",
+    permission: "dpo.oversee",
   },
   {
     // The platform's video tutorials: no permission, every panel user may

@@ -2570,3 +2570,94 @@ export const attributionFiles = pgTable(
     ),
   ],
 );
+
+/**
+ * The DPO assistant's conversations (change `assistente-do-dpo`). Every
+ * text stored here went through `core/dpo/mask.ts` first: what a person
+ * typed is never kept as typed. Each person sees only their own; the
+ * platform account reads all of them.
+ */
+export const dpoConversations = pgTable(
+  "dpo_conversations",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    tenantSlug,
+    userId: text("user_id").references(() => user.id, {
+      onDelete: "set null",
+    }),
+    /** The position at the time, so the platform reads it without a name. */
+    userRole: text("user_role").notNull(),
+    /** "chat" or "reply-draft" (the LGPD requerimento's draft button). */
+    kind: text("kind").notNull().default("chat"),
+    /** The first question, already masked, cut short. */
+    title: text("title").notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    lastMessageAt: timestamp("last_message_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (t) => [
+    index("dpo_conversations_owner").on(
+      t.tenantSlug,
+      t.userId,
+      t.lastMessageAt,
+    ),
+    index("dpo_conversations_last_message_at").on(t.lastMessageAt),
+  ],
+);
+
+export const dpoMessages = pgTable(
+  "dpo_messages",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    conversationId: uuid("conversation_id")
+      .notNull()
+      .references(() => dpoConversations.id, { onDelete: "cascade" }),
+    tenantSlug,
+    /** "user", "assistant" or "refusal". */
+    role: text("role").notNull(),
+    content: text("content").notNull(),
+    /** core/dpo/mask MaskCounts: what was hidden from a "user" message. */
+    maskedCounts: jsonb("masked_counts").notNull().default(sql`'{}'::jsonb`),
+    /** Knowledge base ids the answer cites, validated by the platform. */
+    sources: jsonb("sources").notNull().default(sql`'[]'::jsonb`),
+    /** Ids the model wrote that were not delivered to it: for review. */
+    invalidCitations: jsonb("invalid_citations")
+      .notNull()
+      .default(sql`'[]'::jsonb`),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (t) => [
+    index("dpo_messages_conversation_created_at").on(
+      t.conversationId,
+      t.createdAt,
+    ),
+  ],
+);
+
+/** Answered and refused questions per office and month (office's clock). */
+export const dpoMonthlyUsage = pgTable(
+  "dpo_monthly_usage",
+  {
+    tenantSlug,
+    /** "2026-11". */
+    month: text("month").notNull(),
+    answered: integer("answered").notNull().default(0),
+    refused: integer("refused").notNull().default(0),
+  },
+  (t) => [primaryKey({ columns: [t.tenantSlug, t.month] })],
+);
+
+/** The office's own monthly ceiling; absent or null means the default. */
+export const dpoTenantSettings = pgTable("dpo_tenant_settings", {
+  tenantSlug: text("tenant_slug").primaryKey(),
+  monthlyLimit: integer("monthly_limit"),
+  updatedAt: timestamp("updated_at", { withTimezone: true })
+    .notNull()
+    .defaultNow(),
+  updatedBy: text("updated_by"),
+});

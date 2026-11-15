@@ -2,8 +2,18 @@
 
 import { revalidatePath } from "next/cache";
 import { can } from "@/core/auth/roles.ts";
+import { DPO_COPY } from "@/core/dpo/copy.ts";
+import { fillPlaceholders } from "@/core/dpo/placeholders.ts";
+import { parseDetails } from "@/core/request/kinds.ts";
+import { formatDate, toIsoDate } from "@/core/scheduling/calendar.ts";
+import { OFFICE_TIME_ZONE } from "@/core/time/office-time.ts";
+import { db } from "@/db/index.ts";
 import { justify } from "@/lib/audit-reason.ts";
+import { draftReplyWith } from "@/lib/dpo/assistant.ts";
+import { dpoBlocked, dpoModels } from "@/lib/dpo/models.ts";
+import { officeContextFor } from "@/lib/dpo/office.ts";
 import { notifyCitizen } from "@/lib/email/service-request.ts";
+import { isDpoRateLimited } from "@/lib/rate-limit.ts";
 import {
   AttachmentInUseError,
   attachToRequest,
@@ -182,4 +192,68 @@ export async function deleteAttachmentAction(
   }
   revalidateAdmin();
   return { status: "success" };
+}
+
+export type DraftState =
+  | { status: "idle" }
+  | { status: "error"; message: string }
+  | { status: "ok"; draft: string };
+
+/**
+ * "Rascunhar resposta" (change assistente-do-dpo): the DPO assistant writes
+ * a draft from the right asked alone, with markers where the data subject's
+ * data goes; the markers are filled in here, on the platform's server. The
+ * data subject's name, text and protocol never reach the model. Nothing is
+ * saved or sent: the draft goes back to the reply field for review.
+ */
+export async function draftDataRightsReply(
+  _previous: DraftState,
+  formData: FormData,
+): Promise<DraftState> {
+  const session = await authorize();
+  if (
+    !session ||
+    !can(session.user.role ?? "", "dpo.assist", session.user.permissions)
+  ) {
+    return { status: "error", message: NO_PERMISSION };
+  }
+  if (await isDpoRateLimited(session.user.id)) {
+    return { status: "error", message: DPO_COPY.rateLimited };
+  }
+  const tenant = await getTenant();
+  const blocked = await dpoBlocked(tenant.slug);
+  if (blocked) return { status: "error", message: blocked };
+  const request = await findById(
+    tenant.slug,
+    String(formData.get("requestId") ?? ""),
+  );
+  if (!request || request.kind !== "data-rights") {
+    return { status: "error", message: "Requerimento não encontrado." };
+  }
+  const { right } = parseDetails("data-rights", request.details);
+  const now = new Date();
+  const result = await draftReplyWith(db, dpoModels(), {
+    tenantSlug: tenant.slug,
+    userId: session.user.id,
+    userRole: session.user.role ?? "",
+    right,
+    note: String(formData.get("note") ?? ""),
+    officeContext: await officeContextFor(tenant, now),
+    now,
+  });
+  if (result.status !== "ok") {
+    return { status: "error", message: result.message };
+  }
+  return {
+    status: "ok",
+    draft: fillPlaceholders(result.draft, {
+      TITULAR: request.applicantName,
+      PROTOCOLO: request.protocolNumber,
+      DATA_DO_PEDIDO: formatDate(
+        toIsoDate(request.createdAt, OFFICE_TIME_ZONE),
+      ),
+      SERVENTIA: tenant.subtitle,
+      ENCARREGADO: tenant.dpo.name,
+    }),
+  };
 }
