@@ -348,7 +348,9 @@ function RequirementCard({
         <span className="text-xs text-muted-foreground">
           {r.fromAi && (
             <span className="mr-2 rounded-full bg-primary/10 px-2 py-0.5 text-foreground">
-              {carried ? "Situação sugerida pela IA" : "Proposta pela IA"}
+              {carried
+                ? "Situação sugerida pelo Assistente Virtual"
+                : "Proposta pelo Assistente Virtual"}
             </span>
           )}
           {carried
@@ -455,8 +457,8 @@ function RequirementCard({
             onChange={(e) => onChange({ ...r, reviewed: e.target.checked })}
           />
           <span className="text-justify hyphens-auto">
-            Conferi esta exigência proposta pela IA: o fato, o fundamento e a
-            redação estão certos.
+            Conferi esta exigência proposta pelo Assistente Virtual: o fato, o
+            fundamento e a redação estão certos.
           </span>
         </label>
       )}
@@ -559,7 +561,9 @@ export function RoundEditor({
         </div>
         {round.aiNote && (
           <p className="rounded-lg border border-primary/25 bg-primary/5 px-4 py-3 text-sm text-foreground text-justify hyphens-auto">
-            <strong className="font-medium">Resumo da IA: </strong>
+            <strong className="font-medium">
+              Resumo do Assistente Virtual:{" "}
+            </strong>
             {round.aiNote}
           </p>
         )}
@@ -1132,13 +1136,13 @@ export function AiProposeForm({
     >
       <input type="hidden" name="id" value={id} />
       <h2 className="text-base font-semibold text-foreground">
-        Proposta da IA (opcional)
+        Proposta do Assistente Virtual (opcional)
       </h2>
       <p className="text-sm text-muted-foreground text-justify hyphens-auto">
-        A IA lê o título e os documentos anexados, consulta a biblioteca e a
-        base jurídica da serventia, confere só nos sites oficiais e propõe as
-        exigências como rascunho. Nada sai sem você conferir cada uma. Os
-        arquivos não ficam guardados.
+        O Assistente Virtual lê o título e os documentos anexados, consulta a
+        biblioteca e a base jurídica da serventia, confere só nos sites oficiais
+        e propõe as exigências como rascunho. Nada sai sem você conferir cada
+        uma. Os arquivos não ficam guardados.
       </p>
       {blocked ? (
         <p className="text-sm text-muted-foreground">{blocked}</p>
@@ -1161,8 +1165,8 @@ export function AiProposeForm({
           <div>
             <Button type="submit" disabled={pending}>
               {pending
-                ? "A IA está lendo o título..."
-                : "Pedir a proposta à IA"}
+                ? "O Assistente Virtual está lendo o título..."
+                : "Pedir a proposta ao Assistente Virtual"}
             </Button>
           </div>
         </>

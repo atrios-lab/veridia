@@ -13,7 +13,7 @@ import { buttonVariants } from "../../../_ui/button.tsx";
 import { requireKnowledge } from "./_access.ts";
 import { DismissRequestButton } from "./knowledge-forms.tsx";
 
-export const metadata = { title: "Base jurídica da IA" };
+export const metadata = { title: "Base jurídica do Assistente Virtual" };
 
 const BASE = "/admin/utilitarios/base-juridica";
 
@@ -42,8 +42,8 @@ export default async function KnowledgePage({
     <>
       <AdminPageHeader
         maxWidth={1100}
-        title="Base jurídica da IA"
-        description="Onde a serventia ensina a IA da qualificação: leis, provimentos, jurisprudência, doutrina e modelos. Todo documento vira Markdown e o arquivo é descartado. A IA não conversa: só aprende com estas fontes e consulta a fonte jurídica oficial."
+        title="Base jurídica do Assistente Virtual"
+        description="Onde a serventia ensina o Assistente Virtual da qualificação: leis, provimentos, jurisprudência, doutrina e modelos. Todo documento vira Markdown e o arquivo é descartado. O Assistente Virtual não conversa: só aprende com estas fontes e consulta a fonte jurídica oficial."
       />
       <main className="flex max-w-[1100px] flex-col gap-6 px-4 py-7 md:px-8">
         <div className="flex flex-wrap gap-2">
@@ -77,12 +77,12 @@ export default async function KnowledgePage({
         {requests.length > 0 && (
           <section className="flex flex-col gap-3 rounded-xl border border-warning/30 bg-warning-soft p-5">
             <h2 className="text-base font-semibold text-foreground">
-              A IA pergunta ({requests.length})
+              O Assistente Virtual pergunta ({requests.length})
             </h2>
             <p className="text-sm text-foreground text-justify hyphens-auto">
-              Ao conferir as fontes nos sites oficiais, a IA achou norma
-              alterada ou revogada. Responda pelos botões: importar o texto
-              vigente do site oficial, enviar o documento atualizado ou
+              Ao conferir as fontes nos sites oficiais, o Assistente Virtual
+              achou norma alterada ou revogada. Responda pelos botões: importar
+              o texto vigente do site oficial, enviar o documento atualizado ou
               dispensar, com o motivo.
             </p>
             <ul className="flex flex-col gap-3">

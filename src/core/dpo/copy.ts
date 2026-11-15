@@ -9,7 +9,7 @@ export const DPO_COPY = {
   refusal:
     "Eu só posso ajudar com proteção de dados pessoais: LGPD, Provimento 213/2026, papel do encarregado (DPO), direitos do titular, respostas ao titular e à ANPD, incidentes e adequação da serventia. Reformule a pergunta dentro desse tema.",
   dataNotice:
-    'Não informe nomes, CPF, endereços ou outros dados de pessoas. Descreva a situação, por exemplo: "um titular pediu a exclusão dos seus dados". Se algum dado for enviado, ele será ocultado automaticamente antes de chegar à inteligência artificial.',
+    'Não informe nomes, CPF, endereços ou outros dados de pessoas. Descreva a situação, por exemplo: "um titular pediu a exclusão dos seus dados". Se algum dado for enviado, ele será ocultado automaticamente antes de chegar ao Assistente Virtual.',
   oversightNotice:
     "As conversas ficam guardadas por 12 meses e podem ser lidas pela equipe de suporte da plataforma, para suporte e melhoria do assistente.",
   notAdvice:

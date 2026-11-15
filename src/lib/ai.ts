@@ -119,13 +119,13 @@ export async function aiBlockedWith(
   tenantSlug: string,
 ): Promise<string | null> {
   if (!aiConfigured()) {
-    return "A IA ainda não tem a chave de acesso configurada no ambiente.";
+    return "O Assistente Virtual ainda não tem a chave de acesso configurada no ambiente.";
   }
   const policy = await getAiPolicyWith(database, tenantSlug).catch(() => ({
     enabled: false,
   }));
   if (!policy.enabled) {
-    return "A IA está desligada. O Tabelião liga em Configurações › Inteligência artificial.";
+    return "O Assistente Virtual está desligado. O Tabelião liga em Configurações › Serventia › Assistente Virtual.";
   }
   return null;
 }
@@ -197,13 +197,16 @@ export async function transcribeToMarkdown(input: {
       })
       .finalMessage();
     if (message.stop_reason === "refusal") {
-      throw new AiError("A IA recusou ler este documento.");
+      throw new AiError("O Assistente Virtual recusou ler este documento.");
     }
     const text = message.content
       .flatMap((part) => (part.type === "text" ? [part.text] : []))
       .join("\n")
       .trim();
-    if (!text) throw new AiError("A IA não achou texto neste documento.");
+    if (!text)
+      throw new AiError(
+        "O Assistente Virtual não achou texto neste documento.",
+      );
     return text;
   } catch (error) {
     throw aiFailure(error);
@@ -214,22 +217,28 @@ export async function transcribeToMarkdown(input: {
 function aiFailure(error: unknown): AiError {
   if (error instanceof AiError) return error;
   if (error instanceof Anthropic.AuthenticationError) {
-    return new AiError("A chave de acesso da IA não foi aceita.");
+    return new AiError(
+      "A chave de acesso do Assistente Virtual não foi aceita.",
+    );
   }
   if (error instanceof Anthropic.RateLimitError) {
     return new AiError(
-      "A IA está ocupada agora; tente de novo em alguns minutos.",
+      "O Assistente Virtual está ocupado agora; tente de novo em alguns minutos.",
     );
   }
   if (error instanceof Anthropic.BadRequestError) {
     console.error("ai", error.message);
-    return new AiError("A IA não aceitou o pedido (tamanho ou formato).");
+    return new AiError(
+      "O Assistente Virtual não aceitou o pedido (tamanho ou formato).",
+    );
   }
   if (error instanceof Anthropic.APIError) {
-    return new AiError("A IA não respondeu; tente de novo mais tarde.");
+    return new AiError(
+      "O Assistente Virtual não respondeu; tente de novo mais tarde.",
+    );
   }
   console.error("ai", error);
-  return new AiError("Não foi possível falar com a IA.");
+  return new AiError("Não foi possível falar com o Assistente Virtual.");
 }
 
 const CheckSchema = z.object({
@@ -299,7 +308,7 @@ export async function checkOfficialSource(
       messages.push({ role: "assistant", content: message.content });
     }
     if (!message || message.stop_reason === "refusal") {
-      throw new AiError("A IA recusou conferir esta fonte.");
+      throw new AiError("O Assistente Virtual recusou conferir esta fonte.");
     }
     const text = message.content
       .flatMap((part) => (part.type === "text" ? [part.text] : []))
@@ -310,7 +319,7 @@ export async function checkOfficialSource(
       parsed = CheckSchema.parse(JSON.parse(json));
     } catch {
       throw new AiError(
-        "A IA não respondeu no formato esperado; tente de novo.",
+        "O Assistente Virtual não respondeu no formato esperado; tente de novo.",
       );
     }
     return {
@@ -497,7 +506,7 @@ export async function proposeQualification(
       messages.push({ role: "assistant", content: message.content });
     }
     if (!message || message.stop_reason === "refusal") {
-      throw new AiError("A IA recusou qualificar este título.");
+      throw new AiError("O Assistente Virtual recusou qualificar este título.");
     }
     const text = message.content
       .flatMap((part) => (part.type === "text" ? [part.text] : []))
@@ -507,7 +516,7 @@ export async function proposeQualification(
       return ProposalSchema.parse(JSON.parse(json));
     } catch {
       throw new AiError(
-        "A IA não respondeu no formato esperado; tente de novo.",
+        "O Assistente Virtual não respondeu no formato esperado; tente de novo.",
       );
     }
   } catch (error) {

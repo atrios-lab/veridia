@@ -105,8 +105,8 @@ export default async function QualificationPage({
             className="rounded-xl border border-primary/25 bg-primary/5 px-5 py-3 text-sm text-foreground"
           >
             {Number(ia) > 0
-              ? `A IA propôs ${ia} ${Number(ia) === 1 ? "exigência" : "exigências"}, marcadas abaixo. Confira cada uma (o fato, o fundamento e a redação), corrija ou tire, e salve antes de emitir.`
-              : "A IA não propôs exigência. Confira o resumo abaixo antes de emitir."}
+              ? `O Assistente Virtual propôs ${ia} ${Number(ia) === 1 ? "exigência" : "exigências"}, marcadas abaixo. Confira cada uma (o fato, o fundamento e a redação), corrija ou tire, e salve antes de emitir.`
+              : "O Assistente Virtual não propôs exigência. Confira o resumo abaixo antes de emitir."}
           </p>
         )}
         {due && (

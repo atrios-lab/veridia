@@ -90,7 +90,8 @@ const EXACT: Record<string, string> = {
   "censec.closing": "Registrou o fechamento de uma quinzena na CENSEC",
   "censec.closing-remove":
     "Excluiu o registro de um fechamento da CENSEC (fica guardado)",
-  "knowledge.create": "Enviou uma fonte para a base jurídica da IA",
+  "knowledge.create":
+    "Enviou uma fonte para a base jurídica do Assistente Virtual",
   "qualificacao.create": "Abriu a qualificação de um título",
   "qualificacao.deadlines": "Alterou os prazos da qualificação de títulos",
   "qualificacao.edit": "Alterou a qualificação de um título",
@@ -110,14 +111,19 @@ const EXACT: Record<string, string> = {
   "knowledge.edit": "Corrigiu os dados de uma fonte da base jurídica",
   "knowledge.remove": "Excluiu uma fonte da base jurídica (fica guardada)",
   "knowledge.restore": "Estornou uma fonte excluída da base jurídica",
-  "ai.on": "Ligou a inteligência artificial da serventia",
-  "ai.off": "Desligou a inteligência artificial da serventia",
-  "ai.transcribe": "Pediu à IA a leitura de imagem ou PDF digitalizado",
-  "ai.check": "Pediu à IA a conferência de uma fonte no site oficial",
-  "ai.qualify": "Pediu à IA a proposta de qualificação de um título",
+  "ai.on": "Ligou o Assistente Virtual da serventia",
+  "ai.off": "Desligou o Assistente Virtual da serventia",
+  "ai.transcribe":
+    "Pediu ao Assistente Virtual a leitura de imagem ou PDF digitalizado",
+  "ai.check":
+    "Pediu ao Assistente Virtual a conferência de uma fonte no site oficial",
+  "ai.qualify":
+    "Pediu ao Assistente Virtual a proposta de qualificação de um título",
   "knowledge.confirm": "Confirmou uma fonte que estava em conferência",
-  "knowledge.request-done": "Atendeu um pedido da IA de fonte atualizada",
-  "knowledge.request-dismiss": "Dispensou um pedido da IA de fonte atualizada",
+  "knowledge.request-done":
+    "Atendeu um pedido do Assistente Virtual de fonte atualizada",
+  "knowledge.request-dismiss":
+    "Dispensou um pedido do Assistente Virtual de fonte atualizada",
   "rcpn.habilitacao.edit": "Alterou um processo de habilitação de casamento",
   "rcpn.habilitacao.edital":
     "Publicou no site o edital de proclamas de uma habilitação",
@@ -510,7 +516,7 @@ const EXPLANATIONS: Record<string, string> = {
   "qualificacao.library-restore":
     "Uma exigência excluída voltou à biblioteca, com justificativa.",
   "knowledge.create":
-    "Uma fonte (lei, provimento, jurisprudência, doutrina ou modelo) foi lida, convertida em Markdown e guardada na base jurídica da IA. O arquivo enviado não é guardado.",
+    "Uma fonte (lei, provimento, jurisprudência, doutrina ou modelo) foi lida, convertida em Markdown e guardada na base jurídica do Assistente Virtual. O arquivo enviado não é guardado.",
   "knowledge.version":
     "Uma fonte da base jurídica ganhou nova versão, com justificativa. A versão anterior continua guardada e sai da pesquisa.",
   "knowledge.edit":
@@ -519,21 +525,20 @@ const EXPLANATIONS: Record<string, string> = {
     "Uma fonte da base jurídica foi excluída, com justificativa. Ela continua guardada e pode ser estornada.",
   "knowledge.restore":
     "Uma fonte excluída voltou à base jurídica, com justificativa.",
-  "ai.on":
-    "O Tabelião ligou a inteligência artificial (Claude, da Anthropic) para a serventia.",
-  "ai.off": "O Tabelião desligou a inteligência artificial da serventia.",
+  "ai.on": "O Tabelião ligou o Assistente Virtual da serventia.",
+  "ai.off": "O Tabelião desligou o Assistente Virtual da serventia.",
   "ai.transcribe":
-    "Imagens ou PDFs digitalizados foram enviados à IA para leitura do texto. O conteúdo não fica na auditoria e o arquivo não é guardado.",
+    "Imagens ou PDFs digitalizados foram enviados ao Assistente Virtual para leitura do texto. O conteúdo não fica na auditoria e o arquivo não é guardado.",
   "ai.qualify":
-    "A IA leu o título anexado e propôs exigências como rascunho, que só valem depois de conferidas por pessoa da serventia. O conteúdo não fica na auditoria e o arquivo não é guardado.",
+    "O Assistente Virtual leu o título anexado e propôs exigências como rascunho, que só valem depois de conferidas por pessoa da serventia. O conteúdo não fica na auditoria e o arquivo não é guardado.",
   "ai.check":
-    "A IA conferiu uma fonte da base só nos sites oficiais (Planalto, Diário Oficial, Judiciário, Congresso) e guardou o resultado; se a norma mudou, abriu um pedido ao cartório.",
+    "O Assistente Virtual conferiu uma fonte da base só nos sites oficiais (Planalto, Diário Oficial, Judiciário, Congresso) e guardou o resultado; se a norma mudou, abriu um pedido ao cartório.",
   "knowledge.confirm":
-    "Uma fonte que o sistema deixou em conferência (arquivo com cara de errado, CPF, referência que não aparece no texto, leitura pela IA) foi conferida e passou a ser usada, com justificativa.",
+    "Uma fonte que o sistema deixou em conferência (arquivo com cara de errado, CPF, referência que não aparece no texto, leitura pelo Assistente Virtual) foi conferida e passou a ser usada, com justificativa.",
   "knowledge.request-done":
-    "Um pedido da IA (norma alterada ou revogada na fonte oficial) foi atendido com o texto atualizado.",
+    "Um pedido do Assistente Virtual (norma alterada ou revogada na fonte oficial) foi atendido com o texto atualizado.",
   "knowledge.request-dismiss":
-    "Um pedido da IA de fonte atualizada foi dispensado, com justificativa.",
+    "Um pedido do Assistente Virtual de fonte atualizada foi dispensado, com justificativa.",
   "rcpn.habilitacao.edit":
     "Um processo de habilitação para o casamento foi alterado. O histórico do processo guarda o que era antes e o que ficou.",
   "rcpn.habilitacao.edital":

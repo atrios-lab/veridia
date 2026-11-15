@@ -275,7 +275,7 @@ export function unreviewed(round: Round): string[] {
   const left = round.requirements.filter((r) => r.fromAi && !r.reviewed);
   return left.length
     ? [
-        `${left.length === 1 ? "1 exigência proposta pela IA ainda não foi conferida" : `${left.length} exigências propostas pela IA ainda não foram conferidas`}: confira cada uma, ou tire-a.`,
+        `${left.length === 1 ? "1 exigência proposta pelo Assistente Virtual ainda não foi conferida" : `${left.length} exigências propostas pelo Assistente Virtual ainda não foram conferidas`}: confira cada uma, ou tire-a.`,
       ]
     : [];
 }

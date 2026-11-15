@@ -271,7 +271,7 @@ export function SendForm() {
                       {s.pending.length
                         ? "Em conferência: não é usada até confirmar"
                         : "Em uso na base"}
-                      {s.viaAi ? " · lida pela IA" : ""}
+                      {s.viaAi ? " · lida pelo Assistente Virtual" : ""}
                     </span>
                   </div>
                   {s.pending.map((p) => (
@@ -457,7 +457,7 @@ export function ConfirmSourceButton({ id }: { id: string }) {
       trigger="Conferi: usar esta fonte"
       triggerClassName={buttonVariants({ size: "sm" })}
       question="Confirmar esta fonte?"
-      consequence="Os alertas foram conferidos e a fonte passa a ser usada pela IA e na pesquisa."
+      consequence="Os alertas foram conferidos e a fonte passa a ser usada pelo Assistente Virtual e na pesquisa."
       confirmLabel="Confirmar"
       pendingLabel="Confirmando..."
     >
@@ -512,7 +512,7 @@ export function CheckSourceButton({ id }: { id: string }) {
       <Button type="submit" variant="outline" size="sm" disabled={pending}>
         {pending
           ? "Conferindo nos sites oficiais..."
-          : "Conferir na fonte oficial (IA)"}
+          : "Conferir na fonte oficial (Assistente Virtual)"}
       </Button>
       <ErrorLine state={state} />
     </form>

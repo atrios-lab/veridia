@@ -62,7 +62,7 @@ function requirementParagraphs(list: Requirement[], start = 1): string[] {
       `${start + i}. ${r.title.trim()}.`,
       r.description.trim(),
       r.status === "parcial" && r.note.trim()
-        ? `Cumprida em parte: ${r.note.replace(/^Sugestão da IA:\s*/, "").trim()}`
+        ? `Cumprida em parte: ${r.note.replace(/^Sugestão do Assistente Virtual:\s*/, "").trim()}`
         : "",
       `Fundamento: ${r.basis.trim()}`,
     ]

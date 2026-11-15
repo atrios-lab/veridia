@@ -41,12 +41,12 @@ export default async function SearchPage({
       <AdminPageHeader
         maxWidth={1000}
         title="Pesquisar na base jurídica"
-        description="Pesquisa feita pelo próprio sistema, sem IA, só nas fontes em uso: vigentes, conferidas e na versão mais nova. A lei vem antes das normas, da jurisprudência, da doutrina e dos modelos."
+        description="Pesquisa feita pelo próprio sistema, sem o Assistente Virtual, só nas fontes em uso: vigentes, conferidas e na versão mais nova. A lei vem antes das normas, da jurisprudência, da doutrina e dos modelos."
       />
       <main className="flex max-w-[1000px] flex-col gap-5 px-4 py-7 md:px-8">
         <BackLink
           href="/admin/utilitarios/base-juridica"
-          label="Base jurídica da IA"
+          label="Base jurídica do Assistente Virtual"
         />
         <form className="flex flex-wrap items-end gap-3 rounded-xl border bg-card p-5 shadow-xs">
           <label

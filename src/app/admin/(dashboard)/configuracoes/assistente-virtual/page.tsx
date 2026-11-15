@@ -9,7 +9,7 @@ import { AdminPageHeader } from "../../../_components/page-header.tsx";
 import { ConfiguracoesTabs } from "../_components/tabs.tsx";
 import { AiSwitch } from "./ai-switch.tsx";
 
-export const metadata = { title: "Inteligência artificial" };
+export const metadata = { title: "Assistente Virtual" };
 
 export default async function AiSettingsPage() {
   const session = await getSession();
@@ -38,30 +38,29 @@ export default async function AiSettingsPage() {
         />
         <section className="rounded-xl border bg-card px-5 py-4">
           <h2 className="text-lg font-semibold text-foreground">
-            Inteligência artificial
+            Assistente Virtual
           </h2>
           <div className="mt-2 flex flex-col gap-2 text-sm leading-relaxed text-muted-foreground text-justify hyphens-auto">
             <p>
-              A IA da plataforma (Claude, da Anthropic) tem uma finalidade só: a
-              qualificação de títulos. Ninguém conversa com ela nem faz
-              perguntas livres. A serventia apenas a alimenta pela Base jurídica
-              da IA (leis, provimentos, jurisprudência e modelos), e ela executa
-              só as tarefas fixas do sistema: ler imagens e PDFs digitalizados
-              enviados à base e, depois, propor a qualificação do título, sempre
-              revisada e aprovada por pessoa da serventia.
+              O Assistente Virtual da plataforma só executa tarefas fixas: ler
+              imagens e PDFs digitalizados enviados à Base jurídica, conferir as
+              fontes nos sites oficiais, propor a qualificação de títulos
+              (sempre conferida e aprovada por pessoa da serventia) e responder
+              no Assistente do DPO, restrito à proteção de dados.
             </p>
             <p>
-              Começa desligada. Ligada, os documentos enviados a essas tarefas
-              vão à Anthropic para leitura e não ficam guardados. Cada uso fica
-              na auditoria, sem o conteúdo. Desligue quando quiser: o resto do
-              painel continua funcionando sem a IA.
+              Começa desligado. Ligado, os documentos enviados a essas tarefas
+              são lidos pelo serviço do Assistente Virtual e não ficam
+              guardados. Cada uso fica na auditoria, sem o conteúdo. Desligue
+              quando quiser: o resto do painel continua funcionando normalmente.
             </p>
           </div>
         </section>
         {!configured && (
           <p className="rounded-xl border border-warning/30 bg-warning-soft px-5 py-4 text-sm text-foreground">
-            A chave de acesso da IA ainda não foi configurada no ambiente da
-            plataforma. Mesmo ligada aqui, a IA só funciona depois disso.
+            A chave de acesso do Assistente Virtual ainda não foi configurada no
+            ambiente da plataforma. Mesmo ligado aqui, ele só funciona depois
+            disso.
           </p>
         )}
         <AiSwitch enabled={policy.enabled} changedLine={changedLine} />

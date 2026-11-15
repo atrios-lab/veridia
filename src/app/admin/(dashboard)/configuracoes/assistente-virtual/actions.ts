@@ -23,7 +23,10 @@ export async function setOfficeAi(
     !session ||
     !can(session.user.role ?? "", "user.manage", session.user.permissions)
   ) {
-    return { status: "error", message: "Só o Tabelião liga ou desliga a IA." };
+    return {
+      status: "error",
+      message: "Só o Tabelião liga ou desliga o Assistente Virtual.",
+    };
   }
   const enabled = formData.get("ai") === "on";
   const reason = String(formData.get("reason") ?? "").trim();
@@ -35,9 +38,11 @@ export async function setOfficeAi(
   }
   const tenant = await getTenant();
   await setAiPolicyWith(db, tenant.slug, enabled, reason, session.user.id);
-  revalidatePath("/admin/configuracoes/inteligencia-artificial");
+  revalidatePath("/admin/configuracoes/assistente-virtual");
   return {
     status: "saved",
-    message: enabled ? "IA ligada." : "IA desligada.",
+    message: enabled
+      ? "Assistente Virtual ligado."
+      : "Assistente Virtual desligado.",
   };
 }

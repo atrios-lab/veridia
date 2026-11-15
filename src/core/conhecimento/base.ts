@@ -715,7 +715,7 @@ export function sourceWarnings(
   }
   if (viaAi) {
     warnings.push(
-      "O texto foi lido pela IA a partir de imagem ou PDF digitalizado. Confira a transcrição antes de usar.",
+      "O texto foi lido pelo Assistente Virtual a partir de imagem ou PDF digitalizado. Confira a transcrição antes de usar.",
     );
   }
   return warnings;

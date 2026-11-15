@@ -163,12 +163,15 @@ export function DpoChat({
   initialConversationId,
   initialMessages,
   blockedReason,
+  settingsHref,
   usage,
 }: {
   initialConversationId: string | null;
   initialMessages: ChatMessage[];
   /** Why the AI cannot answer here (no key, or the office turned it off). */
   blockedReason: string | null;
+  /** Where to turn the Assistente Virtual on, for who may. */
+  settingsHref?: string | null;
   usage: { answered: number; limit: number };
 }) {
   const router = useRouter();
@@ -367,9 +370,17 @@ export function DpoChat({
           {blocked}
         </p>
       ) : blockedReason ? (
-        <p className="rounded-xl border bg-card px-4 py-3 text-sm text-muted-foreground">
-          {blockedReason}
-        </p>
+        <div className="flex flex-col gap-2 rounded-xl border bg-card px-4 py-3 text-sm text-muted-foreground">
+          <p>{blockedReason}</p>
+          {settingsHref && (
+            <a
+              href={settingsHref}
+              className="self-start font-medium text-primary underline underline-offset-4"
+            >
+              Ligar o Assistente Virtual
+            </a>
+          )}
+        </div>
       ) : (
         <form
           className="sticky bottom-0 flex flex-col gap-2 rounded-xl border bg-card p-3 shadow-xs"

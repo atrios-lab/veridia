@@ -425,7 +425,7 @@ export const GRANTABLE_LABELS: Record<GrantablePermission, string> = {
     "Cargas da CENSEC: CEP, CESDI e RCTO por quinzena (CNN, arts. 265 a 272)",
   "doi.manage": "Carga da DOI à Receita Federal (IN RFB nº 2.186/2024)",
   "knowledge.manage":
-    "Base jurídica da IA: enviar, corrigir e excluir leis, provimentos, jurisprudência e modelos",
+    "Base jurídica do Assistente Virtual: enviar, corrigir e excluir leis, provimentos, jurisprudência e modelos",
   "qualificacao.manage":
     "Qualificação de títulos: notas devolutivas, reexames, qualificações positivas e biblioteca de exigências",
   "signer.use": "Assinador digital (assinar documentos)",
