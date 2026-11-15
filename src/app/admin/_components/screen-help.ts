@@ -860,7 +860,7 @@ ENTRIES["/admin/utilitarios/titularidade"] = {
     "Confira cada campo. A operação é obrigatória (compra e venda, doação, permuta, usucapião...; a lista é a da DOI). Partes: uma por linha, nome; CPF ou CNPJ; participação.",
     "Salve: o ato entra no mês em que foi praticado. Errou? Altere ou exclua, com justificativa.",
     "Até o último dia útil do mês seguinte, clique em Gerar ofício do mês; se não houve ato, em Mês negativo. Assine digitalmente, imprima ou baixe em Word. No ofício há Editar (refaz com os atos de agora), Modificar numeração e Excluir.",
-    "Em Arquivos do mês, baixe a Carga CTP em JSON e envie no CENSEC (CTP › Cargas, mês e arquivo). Há também XML, a relação em TXT e a planilha. A DOI fica no item próprio Carga da DOI.",
+    "A Carga CTP fica em Cargas da CENSEC › Carga CTP (mensal), e a DOI no item próprio Carga da DOI, com os mesmos atos lançados aqui.",
     "Na guia de ITIV ou ITCD, a pergunta Deseja gerar a comunicação à prefeitura e a DOI? abre o ato já preenchido com as partes, o imóvel e o valor da guia.",
     "Envie por meio eletrônico, à plataforma do CNB/CF (Notas) ou do ONR (Registro de Imóveis), usando a planilha do mês (art. 184-A, § 2º). Registre a data, a plataforma e o número do recibo de entrega, que é obrigatório, e anexe o comprovante. A entrega do ofício à SEMUT é opcional e não substitui o envio eletrônico.",
   ],
@@ -933,6 +933,25 @@ ENTRIES["/admin/utilitarios/censec"] = {
       term: "MNE",
       meaning:
         "Matrícula Notarial Eletrônica, obrigatória só no ato feito pelo e-Notariado: 24 números com dígito verificador.",
+    },
+  ],
+};
+
+ENTRIES["/admin/utilitarios/censec/ctp"] = {
+  purpose:
+    "Enviar ao CENSEC, todo mês, a Comunicação de Transações às Prefeituras (CTP): as escrituras que mudaram o dono de um imóvel (Código Nacional de Normas, art. 184-A, § 2º).",
+  steps: [
+    "Os atos são os da Titularidade à prefeitura e das Cargas da CENSEC (com Aproveitar marcado). Para lançar aqui, use Lançar escritura: anexe o traslado e o sistema preenche.",
+    "Cada escritura mostra se está pronta ou o que o CENSEC pede e falta (código IBGE do município, forma de pagamento, parte transacionada...). Complete em Editar; exclua com justificativa se lançou errado.",
+    "Baixe o JSON (CENSEC) e envie no CENSEC: CTP › Cargas, escolha o mês e anexe. Só entram as escrituras prontas. XML, TXT e planilha servem aos sistemas da prefeitura.",
+    "Faça o fechamento do mês no CENSEC e registre aqui, com a data e o protocolo. Mês sem escritura: fechamento negativo, sem arquivo.",
+    "Prazo: último dia útil do mês seguinte ao do ato. Os atos do registro de imóveis não entram: o registro comunica pelo ONR.",
+  ],
+  terms: [
+    {
+      term: "CTP",
+      meaning:
+        "Comunicação de Transações às Prefeituras: o mesmo leiaute da DOI, com o cabeçalho do CNS e do mês, enviado pelo CENSEC.",
     },
   ],
 };

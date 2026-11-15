@@ -1,6 +1,5 @@
 import Link from "next/link";
 import { officeHolidays } from "@/core/scheduling/calendar.ts";
-import { EXPORT_FORMATS } from "@/core/titularidade/exports.ts";
 import {
   CHANNELS,
   competenceLabel,
@@ -211,64 +210,28 @@ export default async function TitularidadePage({
 
         <section className="rounded-xl border bg-card p-6 shadow-xs">
           <h2 className="text-lg font-semibold text-foreground">
-            Arquivos do mês para baixar e anexar
+            Carga CTP e DOI deste mês
           </h2>
           <p className="mt-1 text-sm text-muted-foreground text-justify hyphens-auto">
-            A Carga CTP (Comunicação de Transações às Prefeituras) sai dos atos
-            lançados. Ela segue o esquema oficial do CENSEC: o cabeçalho com o
-            CNS e o mês, e as fichas da DOI, só com os atos de notas (o registro
-            de imóveis comunica pelo ONR). No CENSEC: CTP › Cargas, escolha o
-            mês e anexe o JSON; depois faça o fechamento do mês. Mês sem ato não
-            tem arquivo: faça o fechamento negativo. O ofício em PDF e em Word
-            fica na página de cada ofício gerado.
+            Os atos lançados aqui são os mesmos da Carga CTP, que fica em Cargas
+            da CENSEC (envio eletrônico das escrituras pelo CENSEC, art. 184-A,
+            § 2º), e da Carga da DOI à Receita Federal. O ofício à prefeitura,
+            em PDF e em Word, fica na página de cada ofício gerado abaixo.
           </p>
-          <div className="mt-4 grid gap-3 sm:grid-cols-2">
-            <div className="flex flex-col gap-2 rounded-lg border px-4 py-3">
-              <p className="text-sm font-semibold text-foreground">
-                Carga CTP · CENSEC e prefeitura
-              </p>
-              <span className="flex flex-wrap gap-2">
-                {(["ctp-xml", "ctp-json", "ctp-txt", "ctp-csv"] as const).map(
-                  (f) => (
-                    <a
-                      key={f}
-                      href={`${BASE}/arquivo?mes=${mes}&formato=${f}`}
-                      className={buttonVariants({
-                        variant: "outline",
-                        size: "sm",
-                      })}
-                      title={EXPORT_FORMATS[f].label}
-                    >
-                      {f === "ctp-json"
-                        ? "JSON (CENSEC)"
-                        : f === "ctp-txt"
-                          ? "TXT (relação)"
-                          : f === "ctp-csv"
-                            ? "Planilha CSV"
-                            : "XML"}
-                    </a>
-                  ),
-                )}
-              </span>
-            </div>
-            <div className="flex flex-col gap-2 rounded-lg border px-4 py-3">
-              <p className="text-sm font-semibold text-foreground">
-                DOI · Receita Federal
-              </p>
-              <p className="text-sm text-muted-foreground text-justify hyphens-auto">
-                A DOI de cada ato fica no item próprio Carga da DOI, com os
-                mesmos atos lançados aqui.
-              </p>
-              <span>
-                <Link
-                  href={`/admin/utilitarios/doi?mes=${mes}`}
-                  className={buttonVariants({ variant: "outline", size: "sm" })}
-                >
-                  Abrir a Carga da DOI
-                </Link>
-              </span>
-            </div>
-          </div>
+          <span className="mt-4 flex flex-wrap gap-2">
+            <Link
+              href={`/admin/utilitarios/censec/ctp?mes=${mes}`}
+              className={buttonVariants({ variant: "outline" })}
+            >
+              Abrir a Carga CTP (CENSEC)
+            </Link>
+            <Link
+              href={`/admin/utilitarios/doi?mes=${mes}`}
+              className={buttonVariants({ variant: "outline" })}
+            >
+              Abrir a Carga da DOI
+            </Link>
+          </span>
         </section>
 
         <section className="rounded-xl border bg-card shadow-xs">

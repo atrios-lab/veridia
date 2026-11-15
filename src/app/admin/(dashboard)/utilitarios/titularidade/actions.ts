@@ -45,12 +45,14 @@ const NO_PERMISSION =
 const GENERIC = "Não foi possível salvar agora. Tente de novo em instantes.";
 const BASE = "/admin/utilitarios/titularidade";
 const DOI_BASE = "/admin/utilitarios/doi";
+const CTP_BASE = "/admin/utilitarios/censec/ctp";
 
 /**
- * The acts are read, saved and removed from the titularidade and from the
- * Carga da DOI (decision of 15/11/2026): either permission opens them.
+ * The acts are read, saved and removed from the titularidade, the Carga da
+ * DOI and the Carga CTP of the CENSEC (decisions of 15/11/2026): any of
+ * the three permissions opens them.
  */
-async function access(alsoDoi = false) {
+async function access(elsewhere = false) {
   const session = await getSession();
   const role = session?.user.role ?? "";
   const permissions = session?.user.permissions;
@@ -58,7 +60,9 @@ async function access(alsoDoi = false) {
     !session ||
     !(
       can(role, "titularidade.manage", permissions) ||
-      (alsoDoi && can(role, "doi.manage", permissions))
+      (elsewhere &&
+        (can(role, "doi.manage", permissions) ||
+          can(role, "censec.manage", permissions)))
     )
   ) {
     return undefined;
@@ -68,7 +72,11 @@ async function access(alsoDoi = false) {
 
 /** Back to the screen the act was opened from. */
 const backOf = (formData: FormData) =>
-  formData.get("voltar") === "doi" ? DOI_BASE : BASE;
+  formData.get("voltar") === "doi"
+    ? DOI_BASE
+    : formData.get("voltar") === "ctp"
+      ? CTP_BASE
+      : BASE;
 
 function formOf(formData: FormData): Record<string, string> {
   return Object.fromEntries(
@@ -154,6 +162,7 @@ export async function saveTransferAction(
   }
   revalidatePath(BASE);
   revalidatePath(DOI_BASE);
+  revalidatePath(CTP_BASE);
   redirect(`${backOf(formData)}?mes=${competenceOf(transfer.actDate)}&salvo=1`);
 }
 
@@ -179,6 +188,7 @@ export async function removeTransferAction(
   }
   revalidatePath(BASE);
   revalidatePath(DOI_BASE);
+  revalidatePath(CTP_BASE);
   redirect(`${backOf(formData)}?mes=${mes}`);
 }
 

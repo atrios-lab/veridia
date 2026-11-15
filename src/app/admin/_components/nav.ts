@@ -294,6 +294,7 @@ export const ADMIN_NAV: readonly AdminNavItem[] = [
     children: [
       { label: "Quinzena", href: "/admin/utilitarios/censec" },
       { label: "Anexar documentos", href: "/admin/utilitarios/censec/anexar" },
+      { label: "Carga CTP (mensal)", href: "/admin/utilitarios/censec/ctp" },
     ],
   },
   {

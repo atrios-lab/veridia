@@ -148,3 +148,15 @@ este só com as DOI prontas, e o prazo do último dia útil do mês seguinte ao 
 - **WHEN** um ato do mês não tem a forma de pagamento
 - **THEN** a Carga da DOI mostra a pendência no ato e o arquivo do mês sai sem ele
 
+### Requirement: Carga CTP nas Cargas da CENSEC
+A Carga CTP DEVE (SHALL) ficar em Cargas da CENSEC, como carga mensal: as escrituras do mês com a
+situação de cada uma (pronta ou o que falta, conferido com o esquema do CENSEC), editar e excluir com
+justificativa, lançar escritura lendo o traslado, o JSON do CENSEC só com as prontas, o XML, a relação
+em TXT e a planilha, e o registro do fechamento único do mês, positivo ou negativo, com a data e o
+protocolo. A tela da titularidade DEVE (SHALL) ficar com o ofício à prefeitura e apontar para a
+Carga CTP e para a Carga da DOI.
+
+#### Scenario: Mês sem escritura
+- **WHEN** não há escritura com mudança de dono no mês
+- **THEN** a Carga CTP oferece o registro do fechamento negativo, sem arquivo
+

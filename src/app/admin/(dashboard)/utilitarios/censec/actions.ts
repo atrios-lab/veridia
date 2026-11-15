@@ -58,6 +58,17 @@ const NO_PERMISSION =
 const GENERIC = "Não foi possível salvar agora. Tente de novo em instantes.";
 const BASE = "/admin/utilitarios/censec";
 
+/** After a fechamento: the quinzena, or the Carga CTP's month. */
+function afterClosing(
+  formData: FormData,
+  quinzena: string,
+  extra = "",
+): string {
+  return formData.get("voltar") === "ctp"
+    ? `${BASE}/ctp?mes=${quinzena.slice(0, 7)}${extra ? `&${extra}` : ""}`
+    : `${BASE}?q=${quinzena}${extra ? `&${extra}` : ""}`;
+}
+
 async function access() {
   const session = await getSession();
   if (
@@ -307,7 +318,8 @@ export async function closingAction(
     return failure(error, "censec.closing");
   }
   revalidatePath(BASE);
-  redirect(`${BASE}?q=${quinzena}&fechado=1`);
+  revalidatePath(`${BASE}/ctp`);
+  redirect(afterClosing(formData, quinzena, "fechado=1"));
 }
 
 export async function removeClosingAction(
@@ -331,5 +343,6 @@ export async function removeClosingAction(
     return failure(error, "censec.closing-remove");
   }
   revalidatePath(BASE);
-  redirect(`${BASE}?q=${quinzena}`);
+  revalidatePath(`${BASE}/ctp`);
+  redirect(afterClosing(formData, quinzena));
 }

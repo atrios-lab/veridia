@@ -21,7 +21,7 @@ import {
  */
 
 export interface ReportClosing {
-  central: Central;
+  central: Central | "ctp";
   sentOn: string;
   acts: number;
   protocol: string;

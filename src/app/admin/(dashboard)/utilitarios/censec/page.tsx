@@ -96,6 +96,12 @@ export default async function CensecPage({
               Anexar documentos
             </Link>
             <Link
+              href={`${BASE}/ctp?mes=${q.slice(0, 7)}`}
+              className={buttonVariants({ variant: "outline" })}
+            >
+              Carga CTP (mensal)
+            </Link>
+            <Link
               href={`${BASE}/novo?q=${q}`}
               className={buttonVariants({ variant: "outline" })}
             >

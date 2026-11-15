@@ -31,10 +31,19 @@ export interface StoredCensecAct {
   updatedAt: Date | null;
 }
 
+/**
+ * The fechamentos: the three quinzenal centrals and the CTP, monthly
+ * ("fechamento único por mês", kept as the month's 2nd quinzena, as the
+ * CENSEC itself takes it: "informe quinzenaReferencia com 2").
+ */
+export type ClosingCentral = Central | "ctp";
+const isClosingCentral = (value: string): value is ClosingCentral =>
+  value === "ctp" || isCentral(value);
+
 export interface Closing {
   id: string;
   quinzena: string;
-  central: Central;
+  central: ClosingCentral;
   acts: number;
   sentOn: string;
   protocol: string;
@@ -230,7 +239,7 @@ export async function removeCensecActWith(
 const toClosing = (row: typeof censecClosings.$inferSelect): Closing => ({
   id: row.id,
   quinzena: row.quinzena,
-  central: (isCentral(row.central) ? row.central : "cep") as Central,
+  central: isClosingCentral(row.central) ? row.central : "cep",
   acts: row.acts,
   sentOn: row.sentOn,
   protocol: row.protocol,
@@ -254,7 +263,9 @@ export async function recordClosingWith(
   actorId: string,
 ): Promise<string> {
   if (!isQuinzena(input.quinzena)) throw new CensecError("Quinzena inválida.");
-  if (!isCentral(input.central)) throw new CensecError("Escolha a central.");
+  if (!isClosingCentral(input.central)) {
+    throw new CensecError("Escolha a central.");
+  }
   if (!/^\d{4}-\d{2}-\d{2}$/.test(input.sentOn)) {
     throw new CensecError("Informe a data do fechamento.");
   }

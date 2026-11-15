@@ -1128,7 +1128,8 @@ export function ClosingForm({
   today,
 }: {
   quinzena: string;
-  central: Central;
+  /** "ctp": the month's single fechamento of the Carga CTP. */
+  central: Central | "ctp";
   acts: number;
   today: string;
 }) {
@@ -1142,6 +1143,7 @@ export function ClosingForm({
       <input type="hidden" name="quinzena" value={quinzena} />
       <input type="hidden" name="central" value={central} />
       <input type="hidden" name="acts" value={acts} />
+      {central === "ctp" && <input type="hidden" name="voltar" value="ctp" />}
       <div className="flex flex-col gap-1.5">
         <Label htmlFor={`${id}-sent`}>Fechado em</Label>
         <Input
@@ -1183,9 +1185,11 @@ export function ClosingForm({
 export function RemoveClosingButton({
   id,
   quinzena,
+  back,
 }: {
   id: string;
   quinzena: string;
+  back?: "ctp";
 }) {
   const [state, action, pending] = useActionState(removeClosingAction, IDLE);
   return (
@@ -1201,6 +1205,7 @@ export function RemoveClosingButton({
     >
       <input type="hidden" name="id" value={id} />
       <input type="hidden" name="quinzena" value={quinzena} />
+      {back && <input type="hidden" name="voltar" value={back} />}
     </ConfirmAction>
   );
 }

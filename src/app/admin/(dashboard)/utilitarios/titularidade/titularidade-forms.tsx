@@ -481,8 +481,8 @@ export function TransferForm({
 }: {
   id?: string;
   values: Record<string, string>;
-  /** Opened from the Carga da DOI: saving goes back there. */
-  back?: "doi";
+  /** Opened from the Carga da DOI or the Carga CTP: saving goes back. */
+  back?: "doi" | "ctp";
 }) {
   const [readState, read, reading] = useActionState(readTitleAction, IDLE);
   const [saveState, save, saving] = useActionState(saveTransferAction, IDLE);
@@ -586,7 +586,7 @@ export function RemoveTransferButton({
 }: {
   id: string;
   mes: string;
-  back?: "doi";
+  back?: "doi" | "ctp";
 }) {
   const [state, action, pending] = useActionState(removeTransferAction, IDLE);
   return (
