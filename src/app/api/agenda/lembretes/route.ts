@@ -1,5 +1,8 @@
+import { retentionCutoff } from "@/core/dpo/quota.ts";
 import { isSectionEnabled } from "@/core/tenant/gating.ts";
+import { db } from "@/db/index.ts";
 import { sendDueReminders } from "@/lib/appointment-reminders.ts";
+import { purgeConversationsBeforeWith } from "@/lib/dpo/store.ts";
 import { sendSecurityPaperReminders } from "@/lib/security-paper-reminders.ts";
 import { allTenantsWithOverrides, officeNow } from "@/lib/tenant.ts";
 
@@ -44,5 +47,16 @@ export async function GET(request: Request): Promise<Response> {
       console.error("agenda.reminders", tenant.slug, error);
     }
   }
-  return Response.json({ day: now.date, results, securityPaper });
+  // The DPO assistant's conversations go 12 months after their last
+  // message (change assistente-do-dpo). Platform-wide, once a day.
+  let dpoPurged = 0;
+  try {
+    dpoPurged = await purgeConversationsBeforeWith(
+      db,
+      retentionCutoff(new Date()),
+    );
+  } catch (error) {
+    console.error("dpo.purge", error);
+  }
+  return Response.json({ day: now.date, results, securityPaper, dpoPurged });
 }

@@ -484,6 +484,13 @@
       "when": 1794718186569,
       "tag": "0068_qualificacao_titulos",
       "breakpoints": true
+    },
+    {
+      "idx": 69,
+      "version": "7",
+      "when": 1794720431851,
+      "tag": "0069_assistente_do_dpo",
+      "breakpoints": true
     }
   ]
 }
