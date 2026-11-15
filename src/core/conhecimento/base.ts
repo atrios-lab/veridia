@@ -46,6 +46,9 @@ export const SOURCE_AREAS = {
   notas: "Notas",
   rcpn: "Registro Civil",
   protesto: "Protesto",
+  // The Assistente do DPO reads these too (decision of 15/11/2026: the
+  // office teaches the DPO through the Base jurídica).
+  lgpd: "Proteção de dados (LGPD)",
   geral: "Geral",
 } as const;
 export type SourceArea = keyof typeof SOURCE_AREAS;
@@ -406,6 +409,8 @@ export function articleIn(query: string): string | undefined {
 
 export interface Candidate {
   sourceId: string;
+  /** The passage itself, when it came from the database. */
+  passageId?: string;
   kind: SourceKind;
   status: SourceMeta["status"];
   reference: string;

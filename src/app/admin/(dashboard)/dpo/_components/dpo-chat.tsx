@@ -213,6 +213,10 @@ export function DpoChat({
   const [conversationId, setConversationId] = useState(initialConversationId);
   const [messages, setMessages] = useState<ChatMessage[]>(initialMessages);
   const [input, setInput] = useState("");
+  // A document for this question (decision of 15/11/2026): read on the
+  // server, its text goes masked with the question, the file is dropped.
+  const [file, setFile] = useState<File | null>(null);
+  const fileRef = useRef<HTMLInputElement>(null);
   const [busy, setBusy] = useState(false);
   const [blocked, setBlocked] = useState<string | null>(null);
   const [answered, setAnswered] = useState(usage.answered);
@@ -303,10 +307,24 @@ export function DpoChat({
       { role: "user", content: text },
     ]);
     try {
+      let body: BodyInit;
+      const headers: HeadersInit = {};
+      if (file) {
+        const form = new FormData();
+        form.set("message", text);
+        if (conversationId) form.set("conversationId", conversationId);
+        form.set("documento", file);
+        body = form;
+      } else {
+        headers["content-type"] = "application/json";
+        body = JSON.stringify({ message: text, conversationId });
+      }
+      setFile(null);
+      if (fileRef.current) fileRef.current.value = "";
       const response = await fetch("/api/dpo/chat", {
         method: "POST",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify({ message: text, conversationId }),
+        headers,
+        body,
       });
       if (!response.ok || !response.body) {
         const body = (await response.json().catch(() => null)) as {
@@ -447,6 +465,24 @@ export function DpoChat({
             placeholder="Escreva sua dúvida sobre proteção de dados…"
             className="field-sizing-fixed bg-background"
           />
+          <label className="flex cursor-pointer flex-wrap items-center gap-2 rounded-md border border-dashed border-input px-3 py-2 text-xs transition-colors hover:bg-muted/50 focus-within:border-ring focus-within:ring-3 focus-within:ring-ring/50">
+            <span className="font-medium text-primary">
+              {file
+                ? `Anexado: ${file.name}`
+                : "Anexar documento para o assistente ler (opcional)"}
+            </span>
+            <span className="text-muted-foreground">
+              PDF, Word ou texto. Lido e descartado, não fica guardado.
+            </span>
+            <input
+              ref={fileRef}
+              type="file"
+              accept="application/pdf,.docx,.odt,.rtf,.txt"
+              className="sr-only"
+              disabled={busy}
+              onChange={(event) => setFile(event.target.files?.[0] ?? null)}
+            />
+          </label>
           <div className="flex flex-wrap items-center justify-between gap-2">
             <span className="text-xs text-muted-foreground">
               {remaining} de {usage.limit} perguntas disponíveis neste mês para

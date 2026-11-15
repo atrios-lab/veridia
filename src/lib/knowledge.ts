@@ -432,6 +432,7 @@ export async function searchKnowledgeWith(
   ];
   const rows = await database
     .select({
+      passageId: knowledgePassages.id,
       sourceId: knowledgePassages.sourceId,
       heading: knowledgePassages.heading,
       text: knowledgePassages.text,
@@ -467,6 +468,7 @@ export async function searchKnowledgeWith(
     }
     candidates.push({
       sourceId: row.sourceId,
+      passageId: row.passageId,
       kind: meta.kind,
       status: meta.status,
       reference: meta.reference,

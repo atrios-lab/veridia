@@ -6,8 +6,8 @@ import { KNOWLEDGE_BASE_UPDATED_AT } from "@/core/dpo/knowledge/index.ts";
 import { effectiveLimit, usageMonth } from "@/core/dpo/quota.ts";
 import { formatDate } from "@/core/scheduling/calendar.ts";
 import { db } from "@/db/index.ts";
-import { type SourceView, sourceView } from "@/lib/dpo/assistant.ts";
 import { dpoBlocked } from "@/lib/dpo/models.ts";
+import { sourceViewsWith } from "@/lib/dpo/office-base.ts";
 import {
   getOwnConversationWith,
   listMessagesWith,
@@ -47,28 +47,28 @@ export default async function DpoAssistantPage({
     });
     if (!conversation) notFound();
     conversationId = conversation.id;
-    initialMessages = (await listMessagesWith(db, conversation.id)).map(
-      (m): ChatMessage => {
-        if (m.role === "user") {
+    initialMessages = await Promise.all(
+      (await listMessagesWith(db, conversation.id)).map(
+        async (m): Promise<ChatMessage> => {
+          if (m.role === "user") {
+            return {
+              role: "user",
+              content: m.content,
+              maskedNotice: describeMasked(m.maskedCounts),
+            };
+          }
+          if (m.role === "refusal")
+            return { role: "refusal", content: m.content };
+          const sources = await sourceViewsWith(db, tenant.slug, m.sources);
           return {
-            role: "user",
+            id: m.id,
+            role: "assistant",
             content: m.content,
-            maskedNotice: describeMasked(m.maskedCounts),
+            sources,
+            noSource: sources.length === 0 && conversation.kind === "chat",
           };
-        }
-        if (m.role === "refusal")
-          return { role: "refusal", content: m.content };
-        const sources = m.sources
-          .map(sourceView)
-          .filter((s): s is SourceView => s !== null);
-        return {
-          id: m.id,
-          role: "assistant",
-          content: m.content,
-          sources,
-          noSource: sources.length === 0 && conversation.kind === "chat",
-        };
-      },
+        },
+      ),
     );
   }
 

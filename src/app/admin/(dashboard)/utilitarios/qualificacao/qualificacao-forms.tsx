@@ -1,6 +1,12 @@
 "use client";
 
-import { useActionState, useEffect, useId, useState } from "react";
+import {
+  useActionState,
+  useEffect,
+  useId,
+  useState,
+  useTransition,
+} from "react";
 import { toast } from "sonner";
 import {
   ACTS,
@@ -33,6 +39,7 @@ import {
   saveAction,
   saveDeadlinesAction,
   saveLibraryAction,
+  saveRequirementToLibraryAction,
   sendNoteToRequestAction,
 } from "./actions.ts";
 
@@ -331,14 +338,41 @@ function RequirementCard({
   roundN,
   onChange,
   onRemove,
+  attribution,
+  act,
 }: {
   r: Requirement;
   index: number;
   roundN: number;
   onChange: (next: Requirement) => void;
   onRemove?: () => void;
+  /** Where "Guardar na biblioteca" files the exigência. */
+  attribution: string;
+  act: string;
 }) {
   const id = useId();
+  const [saving, startSaving] = useTransition();
+  const [savedToLibrary, setSavedToLibrary] = useState(false);
+  const complete = Boolean(
+    r.title.trim() && r.howToComply.trim() && r.basis.trim(),
+  );
+  const saveToLibrary = () =>
+    startSaving(async () => {
+      const result = await saveRequirementToLibraryAction({
+        attribution,
+        act,
+        title: r.title,
+        description: r.description,
+        howToComply: r.howToComply,
+        basis: r.basis,
+      });
+      if (result.status === "saved") {
+        setSavedToLibrary(true);
+        toast.success(result.message);
+      } else if (result.status === "error") {
+        toast.error(result.message);
+      }
+    });
   const carried = r.round < roundN;
   return (
     <li className="flex flex-col gap-3 rounded-lg border bg-card p-4">
@@ -478,13 +512,34 @@ function RequirementCard({
           </span>
         </label>
       )}
-      {onRemove && (
-        <div>
+      <div className="flex flex-wrap items-center gap-2">
+        {!r.libraryId && !savedToLibrary && (
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            disabled={!complete || saving}
+            onClick={saveToLibrary}
+            title={
+              complete
+                ? "Vira modelo para as próximas qualificações deste ato"
+                : "Preencha título, como cumprir e fundamento para guardar"
+            }
+          >
+            {saving ? "Guardando..." : "Guardar na biblioteca"}
+          </Button>
+        )}
+        {(r.libraryId || savedToLibrary) && (
+          <span className="text-xs text-muted-foreground">
+            {savedToLibrary ? "Guardada na biblioteca." : "Veio da biblioteca."}
+          </span>
+        )}
+        {onRemove && (
           <Button type="button" variant="ghost" size="sm" onClick={onRemove}>
             Tirar esta exigência
           </Button>
-        </div>
-      )}
+        )}
+      </div>
     </li>
   );
 }
@@ -580,6 +635,8 @@ export function RoundEditor({
                 r={r}
                 index={i}
                 roundN={round.n}
+                attribution={data.attribution}
+                act={data.act}
                 onChange={(next) =>
                   setRequirements(
                     round.requirements.map((x) => (x.id === r.id ? next : x)),
