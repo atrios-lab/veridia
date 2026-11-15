@@ -810,3 +810,46 @@ export async function sendNoteToRequestAction(
     message: "Exigência registrada no pedido. O cliente foi avisado.",
   };
 }
+
+/**
+ * "Guardar na biblioteca" (decision of 15/11/2026): an exigência written
+ * in a note becomes a model for the next ones, for the same attribution
+ * and act. What the office keeps teaching the Assistente Virtual.
+ */
+export async function saveRequirementToLibraryAction(input: {
+  attribution: string;
+  act: string;
+  title: string;
+  description: string;
+  howToComply: string;
+  basis: string;
+}): Promise<QualificationState> {
+  const ok = await access();
+  if (!ok) return { status: "error", message: NO_PERMISSION };
+  if (!isAttribution(input.attribution)) {
+    return { status: "error", message: "Atribuição inválida." };
+  }
+  try {
+    await createLibraryItemWith(
+      db,
+      ok.tenant.slug,
+      {
+        attribution: input.attribution,
+        acts: input.act && input.act !== "outro" ? [input.act] : [],
+        title: input.title.trim(),
+        description: input.description.trim(),
+        howToComply: input.howToComply.trim(),
+        basis: input.basis.trim(),
+      },
+      ok.session.user.id,
+    );
+  } catch (error) {
+    return failure(error, "qualificacao.library-from-note");
+  }
+  revalidatePath(`${BASE}/biblioteca`);
+  return {
+    status: "saved",
+    message:
+      "Exigência guardada na biblioteca. Ela aparece nas próximas qualificações deste ato.",
+  };
+}

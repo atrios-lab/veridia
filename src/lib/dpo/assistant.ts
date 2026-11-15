@@ -39,6 +39,11 @@ import type { DataRight } from "@/core/request/kinds.ts";
 import { formatDate } from "@/core/scheduling/calendar.ts";
 import type { Database } from "@/db/index.ts";
 import {
+  formatOfficeExcerpts,
+  officeExcerptsWith,
+  officeView,
+} from "./office-base.ts";
+import {
   appendMessageWith,
   countUsageWith,
   createConversationWith,
@@ -130,6 +135,8 @@ export interface AskInput {
   now: Date;
   /** The office's markers (core/dpo/placeholders), filled in the answer. */
   officeValues?: PlaceholderValues;
+  /** Text read from a document attached to the question (file dropped). */
+  fileText?: string;
 }
 
 interface QuotaState {
@@ -184,7 +191,13 @@ export async function* askDpoWith(
     return;
   }
 
-  const masked = maskPersonalData(message);
+  // A document attached to the question goes as text, masked like the
+  // question itself; the file was read and dropped by the caller.
+  const masked = maskPersonalData(
+    input.fileText?.trim()
+      ? `${message}\n\nTrecho do documento anexado (lido e descartado):\n${input.fileText.trim().slice(0, 3000)}`
+      : message,
+  );
 
   let conversation: DpoConversation | null;
   if (input.conversationId) {
@@ -262,11 +275,17 @@ export async function* askDpoWith(
     `${triage.searchQuery} ${masked.text}`,
     EXCERPTS,
   );
+  // What the office taught through its Base jurídica (area LGPD).
+  const office = await officeExcerptsWith(
+    database,
+    input.tenantSlug,
+    `${triage.searchQuery} ${message}`,
+  );
 
   let failure: unknown = null;
   const result = streamText({
     model: models.answer,
-    instructions: `${answerInstructions(input.officeContext)}\n\n${formatExcerpts(excerpts, sourceName)}`,
+    instructions: `${answerInstructions(input.officeContext)}\n\n${formatExcerpts(excerpts, sourceName)}${formatOfficeExcerpts(office)}`,
     messages: [...history, { role: "user", content: masked.text }],
     providerOptions: models.providerOptions,
     maxOutputTokens: 2500,
@@ -289,7 +308,10 @@ export async function* askDpoWith(
     return;
   }
 
-  const resolved = resolveCitations(full, new Set(excerpts.map((e) => e.id)));
+  const resolved = resolveCitations(
+    full,
+    new Set([...excerpts.map((e) => e.id), ...office.map((e) => e.id)]),
+  );
   // The office's own data goes in on the platform's side: the text comes
   // out ready (decision of 15/11/2026), never with the office to complete.
   const text = input.officeValues
@@ -308,7 +330,10 @@ export async function* askDpoWith(
     messageId,
     text,
     sources: resolved.cited
-      .map(sourceView)
+      .map((id) => {
+        const own = office.find((e) => e.id === id);
+        return own ? officeView(own) : sourceView(id);
+      })
       .filter((s): s is SourceView => s !== null),
     noSource: resolved.cited.length === 0,
     usage: { answered: quota.answered + 1, limit: quota.limit },
@@ -365,12 +390,17 @@ export async function draftReplyWith(
     REPLY_DRAFT_QUERIES[input.right],
     EXCERPTS,
   );
+  const office = await officeExcerptsWith(
+    database,
+    input.tenantSlug,
+    REPLY_DRAFT_QUERIES[input.right],
+  );
 
   let draft: string;
   try {
     const result = await generateText({
       model: models.answer,
-      instructions: `${replyDraftInstructions(input.officeContext)}\n\n${formatExcerpts(excerpts, sourceName)}`,
+      instructions: `${replyDraftInstructions(input.officeContext)}\n\n${formatExcerpts(excerpts, sourceName)}${formatOfficeExcerpts(office)}`,
       prompt,
       providerOptions: models.providerOptions,
       maxOutputTokens: 2000,
@@ -381,7 +411,7 @@ export async function draftReplyWith(
     if (hasGaps(draft)) {
       const again = await generateText({
         model: models.answer,
-        instructions: `${replyDraftInstructions(input.officeContext)}\n\n${formatExcerpts(excerpts, sourceName)}`,
+        instructions: `${replyDraftInstructions(input.officeContext)}\n\n${formatExcerpts(excerpts, sourceName)}${formatOfficeExcerpts(office)}`,
         messages: [
           { role: "user", content: prompt },
           { role: "assistant", content: draft },

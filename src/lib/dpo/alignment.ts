@@ -28,7 +28,12 @@ import type { Tenant } from "@/core/tenant/schema.ts";
 import type { Database } from "@/db/index.ts";
 import { serviceRequests } from "@/db/schema.ts";
 import { recordAuditWith } from "../audit.ts";
-import { type DpoModels, type SourceView, sourceView } from "./assistant.ts";
+import type { DpoModels, SourceView } from "./assistant.ts";
+import {
+  formatOfficeExcerpts,
+  officeExcerptsWith,
+  sourceViewsWith,
+} from "./office-base.ts";
 import {
   appendMessageWith,
   countUsageWith,
@@ -110,17 +115,18 @@ export async function alignmentMessagesWith(
     parseDetails("data-rights", request.details),
   );
   if (!conversation) return [];
-  return (await listMessagesWith(database, conversation.id))
-    .filter((m) => !(m.role === "user" && m.content === ALIGNMENT_START))
-    .map((m) => ({
+  const messages = (await listMessagesWith(database, conversation.id)).filter(
+    (m) => !(m.role === "user" && m.content === ALIGNMENT_START),
+  );
+  return Promise.all(
+    messages.map(async (m) => ({
       id: m.id,
       role: m.role,
       content: m.content,
-      sources: m.sources
-        .map(sourceView)
-        .filter((s): s is SourceView => s !== null),
+      sources: await sourceViewsWith(database, tenantSlug, m.sources),
       createdAt: m.createdAt,
-    }));
+    })),
+  );
 }
 
 export type AlignResult =
@@ -200,11 +206,16 @@ export async function alignDataRightsWith(
     `${ALIGNMENT_QUERIES[details.right]} ${masked.text}`,
     EXCERPTS,
   );
+  const office = await officeExcerptsWith(
+    database,
+    input.tenant.slug,
+    `${ALIGNMENT_QUERIES[details.right]} ${typed}`,
+  );
   let text: string;
   try {
     const result = await generateText({
       model: models.answer,
-      instructions: `${alignmentInstructions(input.officeContext, details.right, (request.description ?? "").slice(0, 3000))}\n\n${formatExcerpts(excerpts, sourceName)}`,
+      instructions: `${alignmentInstructions(input.officeContext, details.right, (request.description ?? "").slice(0, 3000))}\n\n${formatExcerpts(excerpts, sourceName)}${formatOfficeExcerpts(office)}`,
       messages: [...history, { role: "user", content: masked.text }],
       providerOptions: models.providerOptions,
       maxOutputTokens: 2500,
@@ -214,7 +225,10 @@ export async function alignDataRightsWith(
     return { status: "error", message: DPO_COPY.failed };
   }
   if (!text) return { status: "error", message: DPO_COPY.failed };
-  const resolved = resolveCitations(text, new Set(excerpts.map((e) => e.id)));
+  const resolved = resolveCitations(
+    text,
+    new Set([...excerpts.map((e) => e.id), ...office.map((e) => e.id)]),
+  );
 
   await database.transaction(async (tx) => {
     const t = tx as unknown as Database;
