@@ -41,6 +41,7 @@ import {
   saveLibraryAction,
   saveRequirementToLibraryAction,
   sendNoteToRequestAction,
+  validateNoteAction,
 } from "./actions.ts";
 
 const IDLE: QualificationState = { status: "idle" };
@@ -1433,5 +1434,51 @@ export function SendNoteForm({
         <ErrorLine state={state} />
       </form>
     </details>
+  );
+}
+
+/**
+ * The Tabelião's validation of a note with an exigência the Assistente
+ * Virtual proposed (decision of 15/11/2026): until then it does not go to
+ * the client.
+ */
+export function NoteValidation({
+  noteId,
+  validatedLabel,
+  canValidate,
+}: {
+  noteId: string;
+  /** "em 15/11/2026 às 14:00", or null while not validated. */
+  validatedLabel: string | null;
+  canValidate: boolean;
+}) {
+  const [state, action, pending] = useActionState(validateNoteAction, IDLE);
+  useEffect(() => {
+    if (state.status === "saved") toast.success(state.message);
+  }, [state]);
+  if (validatedLabel) {
+    return (
+      <p className="rounded-md border border-success/30 bg-success-soft px-3 py-2 text-xs font-medium text-success-text">
+        Validada pelo Tabelião {validatedLabel}. Pode ir ao cliente.
+      </p>
+    );
+  }
+  return (
+    <form
+      action={action}
+      className="flex flex-wrap items-center gap-2 rounded-md border border-warning/30 bg-warning-soft px-3 py-2 text-xs text-warning-text"
+    >
+      <input type="hidden" name="noteId" value={noteId} />
+      <span className="flex-1">
+        Tem exigência proposta pelo Assistente Virtual: o Tabelião valida a nota
+        antes de ela ir ao cliente.
+      </span>
+      {canValidate && (
+        <Button type="submit" size="sm" disabled={pending}>
+          {pending ? "Validando..." : "Validar a nota"}
+        </Button>
+      )}
+      <ErrorLine state={state} />
+    </form>
   );
 }

@@ -124,6 +124,10 @@ export const OFFICE_PERMISSIONS = [
   // Derived from nothing: the Tabelião/Registrador grants it to the
   // encarregado.
   "lgpd.decide",
+  // The Tabelião validates what the Assistente Virtual proposed before it
+  // goes to the client (decision of 15/11/2026: "o tabelião valida para
+  // postar ou enviar"). Derived from nothing: the Tabelião grants it.
+  "qualificacao.validate",
 ] as const;
 
 /**
@@ -167,6 +171,7 @@ export const GRANTABLE_PERMISSIONS = [
   "attributions.import",
   "dpo.assist",
   "lgpd.decide",
+  "qualificacao.validate",
 ] as const;
 export type GrantablePermission = (typeof GRANTABLE_PERMISSIONS)[number];
 
@@ -463,4 +468,6 @@ export const GRANTABLE_LABELS: Record<GrantablePermission, string> = {
     "Assistente do DPO: dúvidas de proteção de dados e rascunho de resposta à LGPD",
   "lgpd.decide":
     "Requerimento LGPD: decisão final sobre a resposta ao titular (aprovar e enviar)",
+  "qualificacao.validate":
+    "Qualificação: validar a nota com exigência do Assistente Virtual antes de ir ao cliente",
 };

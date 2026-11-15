@@ -148,6 +148,7 @@ const EXACT: Record<string, AuditLevel> = {
   "qualificacao.note-renumber": "atencao",
   "qualificacao.remove": "atencao",
   "qualificacao.restore": "atencao",
+  "qualificacao.note-validate": "rotina",
   "qualificacao.library-create": "rotina",
   "qualificacao.library-edit": "analise",
   "qualificacao.library-remove": "atencao",

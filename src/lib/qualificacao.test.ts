@@ -542,3 +542,48 @@ test("a proposta lê os documentos que o cliente anexou no pedido, só os dele e
     [],
   );
 });
+
+test("nota com exigência do Assistente Virtual pede a validação do Tabelião, que fica na auditoria", async () => {
+  const { noteNeedsValidation, noteValidatedAtWith, validateNoteWith } =
+    await import("./qualificacao.ts");
+  const id = await createQualificationWith(
+    db,
+    OFFICE,
+    divorcio(),
+    "escrevente",
+  );
+  const data = must(await getQualificationWith(db, OFFICE, id)).data;
+  data.rounds[0] = {
+    ...must(data.rounds[0]),
+    requirements: [
+      {
+        ...emptyRequirement("ia"),
+        title: "Exigência fictícia proposta",
+        description: "Falta documento fictício.",
+        howToComply: "Apresentar documento fictício.",
+        basis: "Lei nº 6.015/1973, art. 29.",
+        fromAi: true,
+        reviewed: true,
+      },
+    ],
+  };
+  assert.equal(noteNeedsValidation({ snapshot: data, roundIndex: 0 }), true);
+  assert.equal(
+    noteNeedsValidation({ snapshot: divorcio(), roundIndex: 0 }),
+    false,
+  );
+  await saveQualificationWith(db, OFFICE, id, data, "escrevente");
+  const noteId = await issueNoteWith(
+    db,
+    OFFICE,
+    id,
+    "devolutiva",
+    { issuedOn: "2026-11-15", signer: SIGNER },
+    "escrevente",
+    NOW,
+  );
+  assert.equal(await noteValidatedAtWith(db, OFFICE, noteId), null);
+  await validateNoteWith(db, OFFICE, noteId, "tabeliao");
+  assert.ok(await noteValidatedAtWith(db, OFFICE, noteId));
+  assert.equal(await noteValidatedAtWith(db, "outra-serventia", noteId), null);
+});

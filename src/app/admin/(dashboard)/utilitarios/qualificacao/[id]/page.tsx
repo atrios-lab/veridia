@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import type { Role } from "@/core/auth/roles.ts";
+import { can, type Role } from "@/core/auth/roles.ts";
 import { requirementTextFromNote } from "@/core/qualificacao/documents.ts";
 import { qualificationDeadline, ruleFor } from "@/core/qualificacao/prazos.ts";
 import {
@@ -25,6 +25,8 @@ import {
   getQualificationWith,
   listLibraryWith,
   listNotesWith,
+  noteNeedsValidation,
+  noteValidatedAtWith,
   requestDocumentsWith,
 } from "@/lib/qualificacao.ts";
 import { findByProtocol } from "@/lib/service-request.ts";
@@ -44,6 +46,7 @@ import {
   AiProposeForm,
   IssueForm,
   MarkQualificationButton,
+  NoteValidation,
   ReexamForm,
   RemoveNoteButton,
   RenumberNoteButton,
@@ -93,6 +96,23 @@ export default async function QualificationPage({
     certificatesForSignerWith(db, tenant.slug, session.user.id).catch(() => []),
   ]);
   const round = currentRound(q.data);
+  // The Tabelião's validation of the notes with the Assistente Virtual's
+  // exigências (decision of 15/11/2026).
+  const validations = new Map(
+    await Promise.all(
+      notes
+        .filter((n) => !n.removedAt && noteNeedsValidation(n))
+        .map(
+          async (n) =>
+            [n.id, await noteValidatedAtWith(db, tenant.slug, n.id)] as const,
+        ),
+    ),
+  );
+  const canValidate = can(
+    session.user.role ?? "",
+    "qualificacao.validate",
+    session.user.permissions,
+  );
   const now = today();
   const active = !q.removedAt;
   const due = active
@@ -257,6 +277,16 @@ export default async function QualificationPage({
                           </>
                         )}
                       </div>
+                    )}
+                    {validations.has(n.id) && (
+                      <NoteValidation
+                        noteId={n.id}
+                        canValidate={canValidate}
+                        validatedLabel={(() => {
+                          const at = validations.get(n.id);
+                          return at ? `em ${formatOfficeDateTime(at)}` : null;
+                        })()}
+                      />
                     )}
                     {!n.removedAt &&
                       n.kind === "devolutiva" &&

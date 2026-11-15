@@ -295,3 +295,53 @@ test("a nota devolutiva vira o texto da exigência do pedido, numerada e com o d
     "",
   );
 });
+
+test("o Assistente Virtual não inventa: exigência sem fundamento conferido fica de fora", async () => {
+  const { checkProposalSources } = await import("./fontes.ts");
+  const known = {
+    libraryIds: ["lib-1"],
+    references: ["Lei nº 6.015/1973 Lei dos Registros Públicos"],
+  };
+  const { kept, setAside } = checkProposalSources(
+    [
+      // From the office's library.
+      { biblioteca: "lib-1", titulo: "Da biblioteca", fundamento: "" },
+      // A norm that is in the legal base given to it.
+      {
+        biblioteca: "",
+        titulo: "Na base",
+        fundamento: "Lei nº 6.015, de 1973, art. 221, II.",
+      },
+      // Read on an official site.
+      {
+        biblioteca: "",
+        titulo: "Site oficial",
+        fundamento: "Provimento CNJ nº 149/2023, art. 440.",
+        endereco: "https://atos.cnj.jus.br/atos/detalhar/5243",
+      },
+      // Not in the base, no official page: set aside.
+      {
+        biblioteca: "",
+        titulo: "Sem fonte",
+        fundamento: "Lei nº 99.999/2099, art. 1º.",
+      },
+      {
+        biblioteca: "",
+        titulo: "Sem norma",
+        fundamento: "Costume da serventia.",
+      },
+      {
+        biblioteca: "",
+        titulo: "Blog",
+        fundamento: "Lei nº 99.999/2099.",
+        endereco: "https://blog.exemplo.com/lei",
+      },
+    ],
+    known,
+  );
+  assert.deepEqual(
+    kept.map((k) => k.titulo),
+    ["Da biblioteca", "Na base", "Site oficial"],
+  );
+  assert.deepEqual(setAside, ["Sem fonte", "Sem norma", "Blog"]);
+});

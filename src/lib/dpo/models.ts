@@ -12,7 +12,9 @@ import type { DpoModels } from "./assistant.ts";
  * small fast model sorts what is on topic; a stronger one answers.
  */
 const TRIAGE_MODEL = "claude-haiku-5-5";
-const ANSWER_MODEL = "claude-sonnet-5-5";
+// The strongest model answers (decision of 15/11/2026: "muito inteligente
+// e coerente e jamais inventar nada").
+const ANSWER_MODEL = "claude-opus-5-5";
 
 export function dpoModels(): DpoModels {
   return {
