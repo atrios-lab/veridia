@@ -25,11 +25,13 @@ import {
   issueAction,
   markAction,
   markLibraryAction,
+  proposeAction,
   type QualificationState,
   reexamAction,
   removeNoteAction,
   renumberNoteAction,
   saveAction,
+  saveDeadlinesAction,
   saveLibraryAction,
 } from "./actions.ts";
 
@@ -344,6 +346,11 @@ function RequirementCard({
           {index + 1}. {r.title || "Exigência nova"}
         </p>
         <span className="text-xs text-muted-foreground">
+          {r.fromAi && (
+            <span className="mr-2 rounded-full bg-primary/10 px-2 py-0.5 text-foreground">
+              {carried ? "Situação sugerida pela IA" : "Proposta pela IA"}
+            </span>
+          )}
           {carried
             ? `Da ${r.round}ª qualificação`
             : roundN > 1
@@ -434,6 +441,25 @@ function RequirementCard({
           onChange={(e) => onChange({ ...r, basis: e.target.value })}
         />
       </div>
+      {r.fromAi && r.excerpt && (
+        <p className="rounded-md bg-muted px-3 py-2 text-xs text-muted-foreground text-justify hyphens-auto">
+          Trecho do título que motivou: “{r.excerpt}”
+        </p>
+      )}
+      {r.fromAi && (
+        <label className="flex items-start gap-2 rounded-md border border-primary/25 bg-primary/5 px-3 py-2 text-sm">
+          <input
+            type="checkbox"
+            className="mt-1"
+            checked={r.reviewed}
+            onChange={(e) => onChange({ ...r, reviewed: e.target.checked })}
+          />
+          <span className="text-justify hyphens-auto">
+            Conferi esta exigência proposta pela IA: o fato, o fundamento e a
+            redação estão certos.
+          </span>
+        </label>
+      )}
       {!carried && roundN > 1 && (
         <label className="flex items-start gap-2 text-sm">
           <input
@@ -531,6 +557,12 @@ export function RoundEditor({
             qualificação positiva.
           </p>
         </div>
+        {round.aiNote && (
+          <p className="rounded-lg border border-primary/25 bg-primary/5 px-4 py-3 text-sm text-foreground text-justify hyphens-auto">
+            <strong className="font-medium">Resumo da IA: </strong>
+            {round.aiNote}
+          </p>
+        )}
         {round.requirements.length === 0 ? (
           <p className="text-sm text-muted-foreground">
             Nenhuma exigência ainda.
@@ -994,5 +1026,148 @@ export function MarkLibraryButton({
       <input type="hidden" name="atribuicao" value={attribution} />
       {restore && <input type="hidden" name="estornar" value="1" />}
     </ConfirmAction>
+  );
+}
+
+// ------------------------------------------------------------ deadlines
+
+export function DeadlinesForm({
+  rows,
+}: {
+  rows: {
+    attribution: Attribution;
+    lawDays: number | null;
+    lawBasis: string;
+    mode: "lei" | "sem" | "proprio";
+    days: number | null;
+  }[];
+}) {
+  const [state, action, pending] = useActionState(saveDeadlinesAction, IDLE);
+  useEffect(() => {
+    if (state.status === "saved") toast.success(state.message);
+  }, [state]);
+  const [modes, setModes] = useState(
+    Object.fromEntries(rows.map((r) => [r.attribution, r.mode])),
+  );
+  return (
+    <form
+      action={action}
+      className="flex flex-col gap-4 rounded-xl border bg-card p-6 shadow-xs"
+    >
+      <ul className="flex flex-col divide-y">
+        {rows.map((r) => (
+          <li key={r.attribution} className="flex flex-col gap-2 py-3">
+            <p className="text-sm font-semibold text-foreground">
+              {ATTRIBUTIONS[r.attribution]}
+            </p>
+            <p className="text-xs text-muted-foreground text-justify hyphens-auto">
+              Sugestão: {r.lawDays ? `${r.lawDays} dias úteis` : "sem prazo"}.{" "}
+              {r.lawBasis}
+            </p>
+            <div className="flex flex-wrap items-center gap-x-5 gap-y-2 text-sm">
+              {(
+                [
+                  ["lei", "Usar a sugestão"],
+                  ["proprio", "Prazo da serventia"],
+                  ["sem", "Sem prazo"],
+                ] as const
+              ).map(([value, label]) => (
+                <label key={value} className="flex items-center gap-2">
+                  <input
+                    type="radio"
+                    name={`modo-${r.attribution}`}
+                    value={value}
+                    checked={modes[r.attribution] === value}
+                    onChange={() =>
+                      setModes({ ...modes, [r.attribution]: value })
+                    }
+                  />
+                  {label}
+                </label>
+              ))}
+              {modes[r.attribution] === "proprio" && (
+                <span className="flex items-center gap-2">
+                  <Input
+                    name={`dias-${r.attribution}`}
+                    inputMode="numeric"
+                    defaultValue={r.days ? String(r.days) : ""}
+                    className="w-20"
+                    aria-label={`Dias úteis: ${ATTRIBUTIONS[r.attribution]}`}
+                  />
+                  dias úteis
+                </span>
+              )}
+            </div>
+          </li>
+        ))}
+      </ul>
+      <div>
+        <Button type="submit" disabled={pending}>
+          {pending ? "Salvando..." : "Salvar os prazos"}
+        </Button>
+      </div>
+      <ErrorLine state={state} />
+    </form>
+  );
+}
+
+/**
+ * The AI's proposal, asked with a button (no question is typed): the
+ * título's files go to the AI and are dropped; what comes back is a draft.
+ */
+export function AiProposeForm({
+  id,
+  blocked,
+}: {
+  id: string;
+  /** Why the AI cannot run now, or null. */
+  blocked: string | null;
+}) {
+  const [state, action, pending] = useActionState(proposeAction, IDLE);
+  const fid = useId();
+  return (
+    <form
+      action={action}
+      className="flex flex-col gap-3 rounded-xl border border-primary/25 bg-primary/5 p-5"
+    >
+      <input type="hidden" name="id" value={id} />
+      <h2 className="text-base font-semibold text-foreground">
+        Proposta da IA (opcional)
+      </h2>
+      <p className="text-sm text-muted-foreground text-justify hyphens-auto">
+        A IA lê o título e os documentos anexados, consulta a biblioteca e a
+        base jurídica da serventia, confere só nos sites oficiais e propõe as
+        exigências como rascunho. Nada sai sem você conferir cada uma. Os
+        arquivos não ficam guardados.
+      </p>
+      {blocked ? (
+        <p className="text-sm text-muted-foreground">{blocked}</p>
+      ) : (
+        <>
+          <div className="flex min-w-0 flex-col gap-1.5">
+            <Label htmlFor={`${fid}-files`}>Título e documentos</Label>
+            <Input
+              id={`${fid}-files`}
+              name="titulo"
+              type="file"
+              multiple
+              accept=".pdf,.docx,.odt,.rtf,.txt,.zip,.jpg,.jpeg,.png,.gif,.webp"
+            />
+            <p className="text-xs text-muted-foreground">
+              PDF (inclusive digitalizado), Word, fotos ou ZIP. Até 30 MB no
+              total.
+            </p>
+          </div>
+          <div>
+            <Button type="submit" disabled={pending}>
+              {pending
+                ? "A IA está lendo o título..."
+                : "Pedir a proposta à IA"}
+            </Button>
+          </div>
+        </>
+      )}
+      <ErrorLine state={state} />
+    </form>
   );
 }

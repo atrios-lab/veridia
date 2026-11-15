@@ -92,6 +92,7 @@ const EXACT: Record<string, string> = {
     "Excluiu o registro de um fechamento da CENSEC (fica guardado)",
   "knowledge.create": "Enviou uma fonte para a base jurídica da IA",
   "qualificacao.create": "Abriu a qualificação de um título",
+  "qualificacao.deadlines": "Alterou os prazos da qualificação de títulos",
   "qualificacao.edit": "Alterou a qualificação de um título",
   "qualificacao.reexam": "Registrou a reapresentação de um título para reexame",
   "qualificacao.note": "Emitiu uma nota devolutiva",
@@ -113,6 +114,7 @@ const EXACT: Record<string, string> = {
   "ai.off": "Desligou a inteligência artificial da serventia",
   "ai.transcribe": "Pediu à IA a leitura de imagem ou PDF digitalizado",
   "ai.check": "Pediu à IA a conferência de uma fonte no site oficial",
+  "ai.qualify": "Pediu à IA a proposta de qualificação de um título",
   "knowledge.confirm": "Confirmou uma fonte que estava em conferência",
   "knowledge.request-done": "Atendeu um pedido da IA de fonte atualizada",
   "knowledge.request-dismiss": "Dispensou um pedido da IA de fonte atualizada",
@@ -478,6 +480,8 @@ const EXPLANATIONS: Record<string, string> = {
     "Foi registrado o fechamento de uma quinzena na CENSEC (positivo ou negativo), com a data e o protocolo.",
   "censec.closing-remove":
     "O registro de um fechamento da CENSEC foi excluído, com justificativa. Ele continua guardado.",
+  "qualificacao.deadlines":
+    "Os prazos para registrar ou devolver o título com a nota, por atribuição, foram alterados em Qualificação de títulos.",
   "qualificacao.create":
     "Um título apresentado foi lançado para qualificação, com o apresentante, o ato pedido e a data. O documento apresentado não é guardado.",
   "qualificacao.edit":
@@ -519,6 +523,8 @@ const EXPLANATIONS: Record<string, string> = {
   "ai.off": "O Tabelião desligou a inteligência artificial da serventia.",
   "ai.transcribe":
     "Imagens ou PDFs digitalizados foram enviados à IA para leitura do texto. O conteúdo não fica na auditoria e o arquivo não é guardado.",
+  "ai.qualify":
+    "A IA leu o título anexado e propôs exigências como rascunho, que só valem depois de conferidas por pessoa da serventia. O conteúdo não fica na auditoria e o arquivo não é guardado.",
   "ai.check":
     "A IA conferiu uma fonte da base só nos sites oficiais (Planalto, Diário Oficial, Judiciário, Congresso) e guardou o resultado; se a norma mudou, abriu um pedido ao cartório.",
   "knowledge.confirm":
@@ -702,6 +708,7 @@ const SETTINGS: Record<string, string> = {
   "office-access-codes": "verificação em duas etapas",
   "office-role-permissions": "permissões dos cargos",
   "office-numbering": "numeração dos documentos",
+  "office-qualification": "prazos da qualificação de títulos",
   "platform-access-policy": "liberação de acesso",
   "office-identification": "identificação da serventia",
   "office-contact": "atendimento e contato",

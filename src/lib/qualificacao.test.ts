@@ -301,3 +301,190 @@ test("qualifica, emite a nota numerada, reexamina e emite a positiva, sem apagar
     assert.ok(actions.includes(action), action);
   }
 });
+
+test("a qualificação aberta pelo pedido do balcão online fica ligada ao protocolo", async () => {
+  const { qualificationFromRequest } = await import(
+    "@/core/qualificacao/qualificacao.ts"
+  );
+  const { qualificationsOfProtocolWith } = await import("./qualificacao.ts");
+  const data = qualificationFromRequest({
+    protocol: "REQ-2026-000099",
+    applicantName: "Pedro Fictício",
+    contact: "pedro@exemplo.com",
+    receivedOn: "2026-11-14",
+    attribution: "RI",
+    actName: "Registro de escritura",
+  });
+  assert.equal(data.attribution, "ri");
+  assert.equal(data.presenter.name, "Pedro Fictício");
+  const id = await createQualificationWith(
+    db,
+    OFFICE,
+    { ...data, act: "registro" },
+    "escrevente",
+  );
+  const linked = await qualificationsOfProtocolWith(
+    db,
+    OFFICE,
+    "REQ-2026-000099",
+  );
+  assert.deepEqual(
+    linked.map((q) => q.id),
+    [id],
+  );
+  assert.deepEqual(
+    await qualificationsOfProtocolWith(db, OFFICE, "REQ-2026-000098"),
+    [],
+  );
+});
+
+test("a proposta da IA entra como rascunho e trava a nota até a pessoa conferir", async () => {
+  const { applyAiProposalWith } = await import("./qualificacao.ts");
+  const { noteProblems } = await import("@/core/qualificacao/qualificacao.ts");
+  const id = await createQualificationWith(
+    db,
+    OFFICE,
+    divorcio(),
+    "escrevente",
+  );
+  const library = await listLibraryWith(db, OFFICE, "rcpn", {
+    act: "divorcio",
+  });
+  const titulo = must(
+    library.find((i) => i.seedKey === "rcpn-divorcio-titulo"),
+  );
+  let count = 0;
+  const added = await applyAiProposalWith(
+    db,
+    OFFICE,
+    id,
+    {
+      summary: "Falta o título hábil.",
+      requirements: [
+        {
+          libraryId: titulo.id,
+          title: titulo.title,
+          description: titulo.description,
+          howToComply: titulo.howToComply,
+          basis: titulo.basis,
+          reference: "Escritura",
+          excerpt: "Trecho fictício do título.",
+        },
+        {
+          libraryId: "inexistente",
+          title: "Exigência redigida pela IA",
+          description: "Falta algo fictício.",
+          howToComply: "Apresentar algo fictício.",
+          basis: "Lei nº 6.015/1973, art. 29, § 1º.",
+          reference: "",
+          excerpt: "",
+        },
+      ],
+    },
+    "escrevente",
+    () => `ia-${++count}`,
+  );
+  assert.equal(added, 2);
+  const q = must(await getQualificationWith(db, OFFICE, id));
+  const round = must(q.data.rounds[0]);
+  assert.equal(round.aiNote, "Falta o título hábil.");
+  assert.equal(round.requirements[0]?.libraryId, titulo.id);
+  assert.equal(round.requirements[1]?.libraryId, undefined);
+  assert.ok(round.requirements.every((r) => r.fromAi && !r.reviewed));
+  assert.match(noteProblems(round).join(" "), /ainda não foram conferidas/);
+  await assert.rejects(
+    issueNoteWith(
+      db,
+      OFFICE,
+      id,
+      "devolutiva",
+      { issuedOn: "2026-11-12", signer: SIGNER },
+      "escrevente",
+      NOW,
+    ),
+    /conferidas/,
+  );
+  const checked = structuredClone(q.data);
+  for (const r of must(checked.rounds[0]).requirements) r.reviewed = true;
+  await saveQualificationWith(db, OFFICE, id, checked, "escrevente");
+  await issueNoteWith(
+    db,
+    OFFICE,
+    id,
+    "devolutiva",
+    { issuedOn: "2026-11-12", signer: SIGNER },
+    "escrevente",
+    NOW,
+  );
+  assert.equal(
+    must(await getQualificationWith(db, OFFICE, id)).status,
+    "exigencia",
+  );
+});
+
+test("no reexame a IA sugere a situação de cada exigência anterior, e a pessoa confere", async () => {
+  const { applyAiProposalWith } = await import("./qualificacao.ts");
+  const { noteProblems, positiveProblems } = await import(
+    "@/core/qualificacao/qualificacao.ts"
+  );
+  const id = await createQualificationWith(
+    db,
+    OFFICE,
+    divorcio(),
+    "escrevente",
+  );
+  const q0 = must(await getQualificationWith(db, OFFICE, id));
+  const data = structuredClone(q0.data);
+  must(data.rounds[0]).requirements = [
+    {
+      ...emptyRequirement("antiga"),
+      title: "Título hábil",
+      description: "Falta a escritura.",
+      howToComply: "Apresentar a escritura.",
+      basis: "Lei nº 6.015/1973, art. 29, § 1º.",
+    },
+  ];
+  await saveQualificationWith(db, OFFICE, id, data, "escrevente");
+  await issueNoteWith(
+    db,
+    OFFICE,
+    id,
+    "devolutiva",
+    { issuedOn: "2026-11-12", signer: SIGNER },
+    "escrevente",
+    NOW,
+  );
+  await reexamWith(
+    db,
+    OFFICE,
+    id,
+    "Escritura fictícia",
+    "2026-11-20",
+    "escrevente",
+  );
+  await applyAiProposalWith(
+    db,
+    OFFICE,
+    id,
+    {
+      summary: "A escritura veio.",
+      previous: [
+        {
+          id: "antiga",
+          status: "cumprida",
+          reason: "A escritura foi juntada.",
+        },
+      ],
+      requirements: [],
+    },
+    "escrevente",
+  );
+  const q = must(await getQualificationWith(db, OFFICE, id));
+  const old = must(must(q.data.rounds[1]).requirements[0]);
+  assert.equal(old.status, "cumprida");
+  assert.match(old.note, /Sugestão da IA/);
+  assert.ok(old.fromAi && !old.reviewed);
+  // Met, but not checked: neither note nor positiva goes out.
+  assert.match(positiveProblems(must(q.data.rounds[1])).join(" "), /conferid/);
+  assert.match(noteProblems(must(q.data.rounds[1])).join(" "), /positiva/);
+});

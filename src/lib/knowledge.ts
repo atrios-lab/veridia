@@ -670,3 +670,29 @@ export async function resolveRequestWith(
     });
   });
 }
+
+/**
+ * A source the AI missed while qualifying a título: asked to the office as
+ * a request answered by a button. Only an official address is kept.
+ */
+export async function createKnowledgeRequestWith(
+  database: Database,
+  tenantSlug: string,
+  input: { topic: string; detail: string; officialUrl: string },
+  actorId: string,
+): Promise<string | null> {
+  const topic = input.topic.trim().slice(0, 500);
+  if (!topic) return null;
+  const { isOfficialUrl } = await import("@/core/conhecimento/base.ts");
+  const [row] = await database
+    .insert(knowledgeRequests)
+    .values({
+      tenantSlug,
+      topic: `Falta na base: ${topic}. Deseja inserir?`,
+      detail: input.detail.trim().slice(0, 3000),
+      officialUrl: isOfficialUrl(input.officialUrl) ? input.officialUrl : "",
+      createdBy: actorId,
+    })
+    .returning({ id: knowledgeRequests.id });
+  return row?.id ?? null;
+}

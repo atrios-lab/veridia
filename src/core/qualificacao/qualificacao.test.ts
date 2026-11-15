@@ -206,10 +206,42 @@ test("a biblioteca inicial do Registro Civil é genérica, completa e serve aos 
       /\d{3}\.\d{3}\.\d{3}-\d{2}/,
     );
   }
+  // Every attribution of the office starts with its own library.
+  for (const attribution of Object.keys(ACTS) as (keyof typeof ACTS)[]) {
+    const seeds = seedsOf(attribution);
+    assert.ok(seeds.length >= 3, attribution);
+    for (const seed of seeds) {
+      for (const act of seed.acts) {
+        assert.ok(ACTS[attribution][act], `${seed.key}: ${act}`);
+      }
+    }
+  }
   const forDivorce = rcpn
     .filter((s) => servesAct(s, "divorcio"))
     .map((s) => s.key);
   assert.ok(forDivorce.includes("rcpn-divorcio-titulo"));
   assert.ok(forDivorce.includes("rcpn-identificacao"));
   assert.ok(!forDivorce.includes("rcpn-obito-atestado"));
+});
+
+test("prazo por atribuição: o da lei como sugestão, o da serventia quando definido, em dias úteis", async () => {
+  const { qualificationDeadline, ruleFor, parseDeadlineSettings } =
+    await import("./prazos.ts");
+  const ri = { ...divorcio(), attribution: "ri" as const, act: "registro" };
+  // Friday 2026-11-13: ten business days later, skipping weekends.
+  ri.receivedOn = "2026-11-13";
+  const state = qualificationDeadline(ri, {}, "2026-11-20");
+  assert.ok(state);
+  assert.equal(state?.late, false);
+  assert.ok((state?.due ?? "") >= "2026-11-27");
+  assert.equal(qualificationDeadline(divorcio(), {}, "2026-11-20"), null);
+  const own = parseDeadlineSettings({ rcpn: 5, ri: null, x: 3, notas: 0 });
+  assert.deepEqual(own, { rcpn: 5, ri: null });
+  assert.equal(ruleFor("rcpn", own).days, 5);
+  assert.equal(ruleFor("ri", own).days, null);
+  assert.ok(qualificationDeadline(divorcio(), own, "2026-12-30")?.late);
+  // Answered by a note: no term running.
+  const answered = divorcio();
+  answered.rounds[0] = { ...must(answered.rounds[0]), result: "exigencia" };
+  assert.equal(qualificationDeadline(answered, own, "2026-12-30"), null);
 });

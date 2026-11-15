@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { qualificationDeadline } from "@/core/qualificacao/prazos.ts";
 import {
   ATTRIBUTIONS,
   actName,
@@ -6,8 +7,12 @@ import {
   isAttribution,
   STATUS_LABELS,
 } from "@/core/qualificacao/qualificacao.ts";
+import { officeHolidays } from "@/core/scheduling/calendar.ts";
 import { db } from "@/db/index.ts";
-import { listQualificationsWith } from "@/lib/qualificacao.ts";
+import {
+  getDeadlineSettingsWith,
+  listQualificationsWith,
+} from "@/lib/qualificacao.ts";
 import { getTenant, today } from "@/lib/tenant.ts";
 import { AdminPageHeader } from "../../../_components/page-header.tsx";
 import { buttonVariants } from "../../../_ui/button.tsx";
@@ -37,12 +42,29 @@ export default async function QualificationsPage({
   const attribution = isAttribution(atribuicao) ? atribuicao : undefined;
   const removedView = excluidas === "1";
   const tenant = await getTenant();
-  const all = await listQualificationsWith(db, tenant.slug, {
-    attribution,
-    removed: removedView,
-  });
-  const shown = situacao ? all.filter((q) => q.status === situacao) : all;
+  const [all, deadlines] = await Promise.all([
+    listQualificationsWith(db, tenant.slug, {
+      attribution,
+      removed: removedView,
+    }),
+    getDeadlineSettingsWith(db, tenant.slug),
+  ]);
+  const holidays = officeHolidays(tenant);
   const now = today();
+  const withDue = all.map((q) => ({
+    q,
+    due: removedView
+      ? null
+      : qualificationDeadline(q.data, deadlines, now, holidays),
+  }));
+  const filtered = situacao
+    ? withDue.filter(({ q }) => q.status === situacao)
+    : withDue;
+  // What is late, then what is due, first: the rest in the order received.
+  const rank = (d: (typeof withDue)[number]["due"]) =>
+    d?.late ? 0 : d?.soon ? 1 : 2;
+  const shown = [...filtered].sort((a, b) => rank(a.due) - rank(b.due));
+  const lateCount = withDue.filter(({ due }) => due?.late).length;
   const query = (extra: Record<string, string>) => {
     const params = new URLSearchParams({
       ...(attribution ? { atribuicao: attribution } : {}),
@@ -73,12 +95,25 @@ export default async function QualificationsPage({
             Biblioteca de exigências
           </Link>
           <Link
+            href={`${BASE}/prazos`}
+            className={buttonVariants({ variant: "outline" })}
+          >
+            Prazos
+          </Link>
+          <Link
             href={removedView ? BASE : `${BASE}?excluidas=1`}
             className={buttonVariants({ variant: "ghost" })}
           >
             {removedView ? "Voltar à lista" : "Ver excluídas"}
           </Link>
         </div>
+        {lateCount > 0 && (
+          <p className="rounded-xl border border-destructive/30 bg-destructive/5 px-5 py-3 text-sm text-foreground">
+            {lateCount === 1
+              ? "1 título passou do prazo para registrar ou devolver com a nota."
+              : `${lateCount} títulos passaram do prazo para registrar ou devolver com a nota.`}
+          </p>
+        )}
         {!removedView && (
           <nav aria-label="Filtros" className="flex flex-wrap gap-2 text-sm">
             <Link
@@ -144,7 +179,7 @@ export default async function QualificationsPage({
             </p>
           ) : (
             <ul className="divide-y">
-              {shown.map((q) => (
+              {shown.map(({ q, due }) => (
                 <li
                   key={q.id}
                   className="flex flex-col gap-1 px-5 py-3 text-sm sm:flex-row sm:items-start sm:justify-between"
@@ -168,6 +203,20 @@ export default async function QualificationsPage({
                     >
                       {STATUS_LABELS[q.status]}
                     </span>
+                    {due && (
+                      <span
+                        className={`rounded-full px-2 py-0.5 ${
+                          due.late
+                            ? "bg-destructive/10 text-destructive"
+                            : due.soon
+                              ? "bg-warning-soft text-warning-text"
+                              : "bg-muted text-muted-foreground"
+                        }`}
+                      >
+                        {due.late ? "Venceu em " : "Prazo até "}
+                        {due.due.split("-").reverse().join("/")}
+                      </span>
+                    )}
                     <span className="text-muted-foreground">
                       {daysSince(q.data.receivedOn, now)} dias desde a
                       apresentação

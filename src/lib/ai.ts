@@ -324,3 +324,193 @@ export async function checkOfficialSource(
     throw aiFailure(error);
   }
 }
+
+// ------------------------------------------------- the qualificação task
+
+/** A document of the título, as it goes to the AI (and is then dropped). */
+export type TitleFile =
+  | { kind: "pdf"; name: string; bytes: Uint8Array }
+  | { kind: "image"; name: string; bytes: Uint8Array; mediaType: AiImageType }
+  | { kind: "text"; name: string; text: string };
+
+export interface ProposalInput {
+  attribution: string;
+  act: string;
+  /** What is asked, and the título as the office described it. */
+  object: string;
+  document: string;
+  /** The office's library of exigências for the attribution. */
+  library: {
+    id: string;
+    title: string;
+    description: string;
+    howToComply: string;
+    basis: string;
+  }[];
+  /** Passages of the legal base, best first (core/conhecimento). */
+  passages: { reference: string; heading: string; text: string }[];
+  files: TitleFile[];
+  /** In a reexame: the exigências of the previous note, to be checked. */
+  previous: { id: string; title: string; howToComply: string }[];
+}
+
+const ProposalSchema = z.object({
+  resultado: z.enum(["positiva", "exigencia"]),
+  resumo: z.string(),
+  exigencias: z
+    .array(
+      z.object({
+        biblioteca: z.string().default(""),
+        titulo: z.string(),
+        descricao: z.string(),
+        comoCumprir: z.string(),
+        fundamento: z.string(),
+        referencia: z.string().default(""),
+        trecho: z.string().default(""),
+      }),
+    )
+    .default([]),
+  fontesFaltando: z
+    .array(z.object({ tema: z.string(), endereco: z.string().default("") }))
+    .default([]),
+  anteriores: z
+    .array(
+      z.object({
+        id: z.string(),
+        situacao: z.enum(["cumprida", "parcial", "pendente"]),
+        motivo: z.string().default(""),
+      }),
+    )
+    .default([]),
+});
+export type Proposal = z.infer<typeof ProposalSchema>;
+
+const PROPOSE = (input: ProposalInput) =>
+  [
+    "Tarefa fixa: qualificar o título anexado, como apoio ao oficial, que decide.",
+    `Atribuição: ${input.attribution}. Ato pedido: ${input.act}.`,
+    input.object ? `Objeto: ${input.object}` : "",
+    input.document
+      ? `Título, como descrito pela serventia: ${input.document}`
+      : "",
+    "",
+    "Regras:",
+    "- Examine o título e os documentos anexados e aponte todas as exigências de uma só vez, cada uma com o que falta, como cumprir, o fundamento e o trecho do documento que a motivou.",
+    '- Use primeiro as exigências da biblioteca da serventia (informe o id em "biblioteca"); redija uma nova só quando nenhuma servir.',
+    "- Fundamente só com a base jurídica abaixo ou com a fonte jurídica oficial (sites oficiais). Nunca invente norma, artigo, número ou data.",
+    '- Se faltar na base uma norma de que precisa, liste em "fontesFaltando" com o endereço oficial, para a serventia inserir.',
+    '- Sem exigência, o resultado é "positiva".',
+    "- Não repita dados pessoais além do necessário para identificar a exigência.",
+    ...(input.previous.length
+      ? [
+          "",
+          'Reexame: o título voltou. Para cada exigência da nota anterior abaixo, diga em "anteriores" se os documentos agora anexados a cumprem (cumprida, parcial ou pendente) e por quê. Exigência nova só se decorrer de documento apresentado agora.',
+          ...input.previous.map(
+            (p) => `${p.id} | ${p.title} | cumpre-se com: ${p.howToComply}`,
+          ),
+        ]
+      : []),
+    "",
+    "Biblioteca da serventia (id | título | fundamento):",
+    ...input.library.map((l) => `${l.id} | ${l.title} | ${l.basis}`),
+    "",
+    "Base jurídica (trechos):",
+    ...input.passages.map((p) => `[${p.reference} ${p.heading}]\n${p.text}`),
+    "",
+    "Responda só com um JSON, sem texto antes ou depois, neste formato:",
+    '{"resultado": "positiva" | "exigencia", "resumo": "até 5 frases", "exigencias": [{"biblioteca": "id ou vazio", "titulo": "", "descricao": "", "comoCumprir": "", "fundamento": "", "referencia": "documento ou pessoa a que se refere", "trecho": "trecho do título"}], "fontesFaltando": [{"tema": "", "endereco": ""}], "anteriores": [{"id": "", "situacao": "cumprida" | "parcial" | "pendente", "motivo": ""}]}',
+  ]
+    .filter((line) => line !== undefined)
+    .join("\n");
+
+/**
+ * The AI's fixed task in the qualificação (phase 2): a proposal, never a
+ * decision. It reads the título's documents (sent and dropped), the
+ * office's library and the legal base, may check only the official sites,
+ * and answers in a fixed structure the panel turns into draft exigências
+ * that a person checks one by one.
+ */
+export async function proposeQualification(
+  input: ProposalInput,
+): Promise<Proposal> {
+  const domains = [...LEGAL_SOURCE_DOMAINS];
+  const blocks: Anthropic.Beta.BetaContentBlockParam[] = [];
+  for (const file of input.files) {
+    if (file.kind === "pdf") {
+      blocks.push({
+        type: "document",
+        title: file.name.slice(0, 200),
+        source: {
+          type: "base64",
+          media_type: "application/pdf",
+          data: Buffer.from(file.bytes).toString("base64"),
+        },
+      });
+    } else if (file.kind === "image") {
+      blocks.push({
+        type: "image",
+        source: {
+          type: "base64",
+          media_type: file.mediaType,
+          data: Buffer.from(file.bytes).toString("base64"),
+        },
+      });
+    } else {
+      blocks.push({
+        type: "text",
+        text: `Documento "${file.name}":\n${file.text.slice(0, 200_000)}`,
+      });
+    }
+  }
+  blocks.push({ type: "text", text: PROPOSE(input) });
+  const messages: Anthropic.Beta.BetaMessageParam[] = [
+    { role: "user", content: blocks },
+  ];
+  try {
+    let message: Anthropic.Beta.BetaMessage | undefined;
+    for (let turn = 0; turn < 4; turn += 1) {
+      message = await anthropic()
+        .beta.messages.stream({
+          model: AI_MODEL,
+          max_tokens: 32000,
+          betas: ["server-side-fallback-2026-07-01"],
+          fallbacks: "default",
+          system: SYSTEM,
+          tools: [
+            {
+              type: "web_search_20260209",
+              name: "web_search",
+              max_uses: 5,
+              allowed_domains: domains,
+            },
+            {
+              type: "web_fetch_20260209",
+              name: "web_fetch",
+              max_uses: 5,
+              allowed_domains: domains,
+            },
+          ],
+          messages,
+        })
+        .finalMessage();
+      if (message.stop_reason !== "pause_turn") break;
+      messages.push({ role: "assistant", content: message.content });
+    }
+    if (!message || message.stop_reason === "refusal") {
+      throw new AiError("A IA recusou qualificar este título.");
+    }
+    const text = message.content
+      .flatMap((part) => (part.type === "text" ? [part.text] : []))
+      .join("\n");
+    const json = text.slice(text.indexOf("{"), text.lastIndexOf("}") + 1);
+    try {
+      return ProposalSchema.parse(JSON.parse(json));
+    } catch {
+      throw new AiError(
+        "A IA não respondeu no formato esperado; tente de novo.",
+      );
+    }
+  } catch (error) {
+    throw aiFailure(error);
+  }
+}
