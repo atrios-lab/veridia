@@ -78,8 +78,9 @@ function AssistantDraft({
           className="field-sizing-fixed bg-background"
         />
         <p className="text-xs text-muted-foreground">
-          Ao assistente vai só o tipo do pedido e esta observação, sem nomes nem
-          documentos. Os dados do titular são preenchidos pela plataforma.
+          Ao assistente vão o pedido escrito pelo titular, a conversa e esta
+          observação. O nome, o protocolo e as datas a plataforma preenche: a
+          resposta sai completa.
         </p>
         <div className="flex flex-wrap gap-2">
           <Button type="submit" size="sm" disabled={pending}>

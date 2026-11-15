@@ -242,24 +242,31 @@ export default async function DataRightsDetailPage({
                 : Boolean(request.officeReply?.trim())) && (
                 <div className="mt-5 flex flex-col gap-2 rounded-lg border px-3.5 py-3">
                   <span className="text-sm font-medium text-foreground">
-                    Documento da resposta
+                    Arquivo da resposta (PDF ou Word)
                   </span>
                   <p className="text-xs text-muted-foreground text-justify hyphens-auto">
                     {request.status === "new"
-                      ? "Sai com o texto do rascunho como foi salvo por último, no papel da serventia, para assinar digitalmente ou imprimir e assinar."
-                      : "A resposta enviada, no papel da serventia, para assinar digitalmente ou imprimir e assinar."}
+                      ? 'A resposta pronta, no papel da serventia, com o texto do rascunho como foi salvo por último. Baixe em PDF ou Word, assine (digitalmente ou à mão) e anexe de volta ao titular em "Documentos da serventia para o titular" ou junto com a resposta, ao concluir.'
+                      : "A resposta enviada, no papel da serventia, em PDF ou Word."}
                   </p>
                   <div className="flex flex-wrap gap-2">
-                    <SignOrPrint
-                      pdfHref={`/admin/lgpd/${encodeURIComponent(request.protocolNumber)}/resposta`}
-                      title={`Resposta ao requerimento ${request.protocolNumber}`}
-                    />
+                    <a
+                      href={`/admin/lgpd/${encodeURIComponent(request.protocolNumber)}/resposta`}
+                      download={`resposta-${request.protocolNumber}.pdf`}
+                      className={buttonVariants({ variant: "outline" })}
+                    >
+                      Baixar PDF
+                    </a>
                     <a
                       href={`/admin/lgpd/${encodeURIComponent(request.protocolNumber)}/resposta/word`}
                       className={buttonVariants({ variant: "outline" })}
                     >
-                      Word (.docx)
+                      Baixar Word
                     </a>
+                    <SignOrPrint
+                      pdfHref={`/admin/lgpd/${encodeURIComponent(request.protocolNumber)}/resposta`}
+                      title={`Resposta ao requerimento ${request.protocolNumber}`}
+                    />
                   </div>
                 </div>
               )}

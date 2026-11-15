@@ -16,6 +16,11 @@ import {
 } from "@/core/dpo/knowledge/index.ts";
 import { maskPersonalData } from "@/core/dpo/mask.ts";
 import {
+  fillPlaceholders,
+  hasGaps,
+  type PlaceholderValues,
+} from "@/core/dpo/placeholders.ts";
+import {
   answerInstructions,
   formatExcerpts,
   REPLY_DRAFT_QUERIES,
@@ -107,6 +112,8 @@ export type DpoEvent =
   | { type: "delta"; text: string }
   | {
       type: "done";
+      /** The stored answer, for the document's download. */
+      messageId: string;
       text: string;
       sources: SourceView[];
       noSource: boolean;
@@ -121,6 +128,8 @@ export interface AskInput {
   message: string;
   officeContext: string;
   now: Date;
+  /** The office's markers (core/dpo/placeholders), filled in the answer. */
+  officeValues?: PlaceholderValues;
 }
 
 interface QuotaState {
@@ -281,17 +290,23 @@ export async function* askDpoWith(
   }
 
   const resolved = resolveCitations(full, new Set(excerpts.map((e) => e.id)));
-  await appendMessageWith(database, {
+  // The office's own data goes in on the platform's side: the text comes
+  // out ready (decision of 15/11/2026), never with the office to complete.
+  const text = input.officeValues
+    ? fillPlaceholders(resolved.text, input.officeValues)
+    : resolved.text;
+  const messageId = await appendMessageWith(database, {
     conversation,
     role: "assistant",
-    content: resolved.text,
+    content: text,
     sources: resolved.cited,
     invalidCitations: resolved.invalid,
   });
   await countUsageWith(database, input.tenantSlug, quota.month, "answered");
   yield {
     type: "done",
-    text: resolved.text,
+    messageId,
+    text,
     sources: resolved.cited
       .map(sourceView)
       .filter((s): s is SourceView => s !== null),
@@ -306,7 +321,9 @@ export type DraftReplyResult =
 
 /**
  * The LGPD requerimento's "Rascunhar resposta": the model gets only the
- * right asked and the team's masked note, never anything the data subject
+ * right asked, what the titular wrote in the requerimento (decision of
+ * 15/11/2026: "os dados deles eles mesmo informaram") and the team's
+ * masked note. Never anything the data subject
  * wrote or who they are. The draft comes back with markers, which the
  * caller fills in on the platform's side (core/dpo/placeholders.ts).
  */
@@ -320,6 +337,8 @@ export async function draftReplyWith(
     userRole: string;
     right: DataRight;
     note: string;
+    /** What the titular wrote in the requerimento, in their own words. */
+    titularRequest?: string;
     officeContext: string;
     now: Date;
   },
@@ -336,7 +355,11 @@ export async function draftReplyWith(
   }
 
   const note = maskPersonalData(input.note);
-  const prompt = replyDraftPrompt(input.right, note.text);
+  const prompt = replyDraftPrompt(
+    input.right,
+    note.text,
+    (input.titularRequest ?? "").slice(0, 3000),
+  );
   const excerpts = search(
     knowledgeIndex(),
     REPLY_DRAFT_QUERIES[input.right],
@@ -354,6 +377,28 @@ export async function draftReplyWith(
     });
     // The letter goes to a citizen: no source markers in it.
     draft = result.text.replace(/\s*\[\[fonte:[a-z0-9-]+\]\]/g, "").trim();
+    // Nothing left to complete (decision of 15/11/2026): one rewrite.
+    if (hasGaps(draft)) {
+      const again = await generateText({
+        model: models.answer,
+        instructions: `${replyDraftInstructions(input.officeContext)}\n\n${formatExcerpts(excerpts, sourceName)}`,
+        messages: [
+          { role: "user", content: prompt },
+          { role: "assistant", content: draft },
+          {
+            role: "user",
+            content:
+              "O texto ainda tem lacunas ou campos para completar. Reescreva a resposta inteira, completa e definitiva, sem nenhum campo para preencher, usando só os marcadores permitidos.",
+          },
+        ],
+        providerOptions: models.providerOptions,
+        maxOutputTokens: 2000,
+      });
+      const rewritten = again.text
+        .replace(/\s*\[\[fonte:[a-z0-9-]+\]\]/g, "")
+        .trim();
+      if (rewritten) draft = rewritten;
+    }
   } catch {
     return { status: "error", message: DPO_COPY.failed };
   }

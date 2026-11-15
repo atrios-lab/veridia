@@ -97,7 +97,9 @@ test("a conversa do requerimento pesquisa a lei, cita a fonte, oculta dados pess
   assert.deepEqual(await turn(""), { status: "ok" });
   assert.match(system, /<trecho id=/);
   assert.match(system, /eliminação/);
-  assert.doesNotMatch(sent, /Titular Fictícia|titular@exemplo|apaguem/);
+  // What the titular wrote goes; the name and the e-mail never do.
+  assert.match(system, /Quero que apaguem meus dados/);
+  assert.doesNotMatch(sent, /Titular Fictícia|titular@exemplo/);
 
   // The team answers, with a CPF and a document to read: both masked.
   assert.deepEqual(

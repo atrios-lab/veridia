@@ -269,6 +269,7 @@ export async function draftDataRightsReply(
     userRole: session.user.role ?? "",
     right,
     note: [aligned, typed].filter(Boolean).join("\n\n"),
+    titularRequest: request.description ?? "",
     officeContext: await officeContextFor(tenant, now),
     now,
   });

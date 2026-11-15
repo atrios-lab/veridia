@@ -108,7 +108,7 @@ export function AlignmentSection({
   useEffect(() => {
     if (prepState.status === "ok")
       toast.success(
-        "Resposta preparada no campo abaixo. Revise antes de pedir a aprovação.",
+        'Resposta pronta. O arquivo em PDF ou Word está logo abaixo, em "Arquivo da resposta".',
       );
   }, [prepState]);
   const started = messages.length > 0;
@@ -124,11 +124,12 @@ export function AlignmentSection({
           pedido: o que a serventia pode guardar e por quê, o que precisa
           entregar, corrigir ou apagar. Ele pergunta o que precisa saber e vocês
           alinham a resposta. A decisão final é do encarregado de dados ou do
-          Tabelião. O nome e o pedido escrito pelo titular não vão ao Assistente
-          Virtual. CPF, RG, matrícula, e-mail, telefone, endereço e data de
-          nascimento escritos aqui viram marcadores antes do envio; nomes de
-          pessoas não são reconhecidos, então não escreva nomes. A conversa fica
-          guardada neste requerimento.
+          Tabelião. O pedido escrito pelo titular vai ao Assistente Virtual,
+          para a resposta sair completa; o nome, o protocolo e as datas a
+          plataforma preenche. O que a equipe escreve aqui tem CPF, RG,
+          matrícula, e-mail, telefone, endereço e nascimento trocados por
+          marcadores; nomes não são reconhecidos, então não escreva nomes de
+          outras pessoas. A conversa fica guardada neste requerimento.
         </p>
       </div>
 
@@ -237,8 +238,9 @@ export function AlignmentSection({
             </Button>
           </div>
           <p className="text-xs text-muted-foreground">
-            O texto vai para o campo da resposta. Nada é enviado ao titular sem
-            a aprovação do encarregado ou do Tabelião.
+            A resposta sai completa no campo da resposta e como arquivo (PDF ou
+            Word) para baixar, assinar e anexar de volta ao titular. Nada é
+            enviado ao titular sem a aprovação do encarregado ou do Tabelião.
           </p>
           {prepState.status === "error" && (
             <p role="alert" className="text-sm font-medium text-destructive">

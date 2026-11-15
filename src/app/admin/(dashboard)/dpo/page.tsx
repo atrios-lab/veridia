@@ -62,6 +62,7 @@ export default async function DpoAssistantPage({
           .map(sourceView)
           .filter((s): s is SourceView => s !== null);
         return {
+          id: m.id,
           role: "assistant",
           content: m.content,
           sources,

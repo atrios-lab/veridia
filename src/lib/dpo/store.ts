@@ -126,22 +126,26 @@ export async function appendMessageWith(
     invalidCitations?: string[];
     at?: Date;
   },
-): Promise<void> {
+): Promise<string> {
   const at = input.at ?? new Date();
-  await database.insert(dpoMessages).values({
-    conversationId: input.conversation.id,
-    tenantSlug: input.conversation.tenantSlug,
-    role: input.role,
-    content: input.content,
-    maskedCounts: input.maskedCounts ?? {},
-    sources: input.sources ?? [],
-    invalidCitations: input.invalidCitations ?? [],
-    createdAt: at,
-  });
+  const [row] = await database
+    .insert(dpoMessages)
+    .values({
+      conversationId: input.conversation.id,
+      tenantSlug: input.conversation.tenantSlug,
+      role: input.role,
+      content: input.content,
+      maskedCounts: input.maskedCounts ?? {},
+      sources: input.sources ?? [],
+      invalidCitations: input.invalidCitations ?? [],
+      createdAt: at,
+    })
+    .returning({ id: dpoMessages.id });
   await database
     .update(dpoConversations)
     .set({ lastMessageAt: at })
     .where(eq(dpoConversations.id, input.conversation.id));
+  return row.id;
 }
 
 export async function listMessagesWith(
@@ -374,4 +378,31 @@ export async function purgeConversationsBeforeWith(
     }
     return removed.length;
   });
+}
+
+/**
+ * One answer of the Assistente do DPO, only from a conversation of this
+ * person's own, in this office: what the document's download reads.
+ */
+export async function ownAssistantMessageWith(
+  database: Database,
+  input: { tenantSlug: string; userId: string; messageId: string },
+): Promise<{ content: string } | null> {
+  if (!/^[0-9a-f-]{36}$/i.test(input.messageId)) return null;
+  const [row] = await database
+    .select({ content: dpoMessages.content })
+    .from(dpoMessages)
+    .innerJoin(
+      dpoConversations,
+      eq(dpoConversations.id, dpoMessages.conversationId),
+    )
+    .where(
+      and(
+        eq(dpoMessages.id, input.messageId),
+        eq(dpoMessages.role, "assistant"),
+        eq(dpoConversations.tenantSlug, input.tenantSlug),
+        eq(dpoConversations.userId, input.userId),
+      ),
+    );
+  return row ?? null;
 }
