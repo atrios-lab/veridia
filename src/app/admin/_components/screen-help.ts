@@ -907,6 +907,56 @@ ENTRIES["/admin/utilitarios/doi"] = {
   ],
 };
 
+ENTRIES["/admin/utilitarios/qualificacao"] = {
+  purpose:
+    "Qualificar os títulos apresentados à serventia, em todas as atribuições, começando pelo Registro Civil: examinar o título e responder com a nota devolutiva (as exigências) ou com a qualificação positiva (título apto ao ato).",
+  steps: [
+    "Em Nova qualificação, lance quem apresentou, o título, o ato pedido, o protocolo e a data. O documento apresentado não é guardado.",
+    "Na qualificação, acrescente as exigências da biblioteca (as do ato pedido aparecem primeiro) ou escreva novas. Cada uma tem o que falta, como cumprir e o fundamento; o campo Refere-se a agrupa as exigências na nota. Salve.",
+    "Formule todas as exigências de uma só vez (Lei nº 6.015/1973, art. 198). Depois, emita a nota devolutiva: ela sai numerada, com os fundamentos, a forma de cumprimento e o direito de pedir a suscitação de dúvida. Assine digitalmente ou imprima, ou baixe em Word.",
+    "Quando o título voltar, registre a reapresentação: abre o reexame com as exigências que faltavam. Marque cada uma como cumprida, cumprida em parte ou pendente. Exigência nova que não decorre de documento novo gera aviso.",
+    "Sem exigência pendente, emita a qualificação positiva.",
+    "Emitiu errado? Exclua a nota com justificativa: ela fica guardada com o número, que não volta a ser usado, e a rodada reabre para corrigir. Também dá para modificar o número.",
+  ],
+  terms: [
+    {
+      term: "Nota devolutiva",
+      meaning:
+        "O documento que devolve o título sem praticar o ato, com as exigências a cumprir, cada uma fundamentada.",
+    },
+    {
+      term: "Reexame",
+      meaning:
+        "Nova qualificação do título reapresentado, que diz o que foi atendido, o que permanece e o que é novo.",
+    },
+    {
+      term: "Suscitação de dúvida",
+      meaning:
+        "Pedido do interessado que não concorda com a exigência, ou não consegue cumpri-la, para que o juiz decida (Lei nº 6.015/1973, art. 198, II).",
+    },
+  ],
+  configure: {
+    href: "/admin/utilitarios/qualificacao/biblioteca",
+    label: "Biblioteca de exigências",
+    permission: "qualificacao.manage",
+    steps: [
+      "Crie, altere e exclua as exigências padronizadas de cada atribuição e ato. A biblioteca do Registro Civil já começa preenchida, com textos genéricos.",
+      "Confira os fundamentos antes de usar: são um ponto de partida, e a serventia responde pela qualificação.",
+    ],
+  },
+};
+
+ENTRIES["/admin/utilitarios/qualificacao/biblioteca"] = {
+  purpose:
+    "As exigências padronizadas da qualificação, por atribuição e ato, com o que falta, como cumprir e o fundamento.",
+  steps: [
+    "Escolha a atribuição no alto. As exigências mais usadas aparecem primeiro.",
+    "Em Nova exigência, marque os atos a que ela serve (nenhum: todos os atos da atribuição).",
+    "Alterar e Excluir pedem justificativa, que vai para a auditoria. A exigência excluída fica guardada e pode ser estornada; as notas já emitidas não mudam.",
+    "A biblioteca do Registro Civil começa com exigências escritas de forma genérica, sem dados de clientes. Confira os fundamentos e ajuste ao entendimento da serventia.",
+  ],
+};
+
 ENTRIES["/admin/utilitarios/base-juridica"] = {
   purpose:
     "Ensinar a IA da qualificação de títulos com as fontes do direito: leis, decretos, provimentos do CNJ e da Corregedoria, jurisprudência, enunciados, doutrina e modelos. A IA não conversa: ninguém faz pergunta a ela. A serventia só alimenta esta base.",

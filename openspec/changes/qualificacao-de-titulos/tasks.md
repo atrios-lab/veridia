@@ -1,7 +1,7 @@
 ## 1. Base legal e modelos
 
 - [ ] 1.1 Conferir no compilado oficial o texto vigente da Lei nº 6.015/1973 (arts. 188, 198 a 205 e os de títulos e documentos e pessoas jurídicas), da Lei nº 8.935/1994 (art. 28) e do Código Nacional de Normas, e registrar os prazos por atribuição.
-- [ ] 1.2 Reescrever as exigências e os fundamentos dos modelos enviados em forma genérica, com dados fictícios, como biblioteca inicial, para todas as atribuições na ordem RCPN, RI, Notas, RTD, RCPJ e Protesto.
+- [ ] 1.2 (Registro Civil feito em 15/11/2026; as demais atribuições a seguir) Reescrever as exigências e os fundamentos dos modelos enviados em forma genérica, com dados fictícios, como biblioteca inicial, para todas as atribuições na ordem RCPN, RI, Notas, RTD, RCPJ e Protesto.
 
 ## 1A. Base jurídica da IA
 
@@ -14,23 +14,23 @@
 
 ## 2. Núcleo (fase 1)
 
-- [ ] 2.1 Tipos da qualificação, da exigência estruturada e da biblioteca em `src/core/qualificacao`.
-- [ ] 2.2 Montagem da nota devolutiva (primeira qualificação), agrupada por imóvel ou documento, com forma de cumprimento, conclusão e referências.
-- [ ] 2.3 Montagem do reexame (atendido, permanecem, novas, providências) e aviso do art. 198 para exigência nova sem documento novo.
-- [ ] 2.4 Termo de qualificação positiva.
+- [x] 2.1 Tipos da qualificação, da exigência estruturada e da biblioteca em `src/core/qualificacao`.
+- [x] 2.2 Montagem da nota devolutiva (primeira qualificação), agrupada por imóvel ou documento, com forma de cumprimento, conclusão e referências.
+- [x] 2.3 Montagem do reexame (atendido, permanecem, novas, providências) e aviso do art. 198 para exigência nova sem documento novo.
+- [x] 2.4 Termo de qualificação positiva.
 - [ ] 2.5 Prazos por atribuição com o calendário da serventia, e testes.
 
 ## 3. Banco, permissões e numeração
 
-- [ ] 3.1 Tabelas da qualificação, das notas e da biblioteca (migração que só cria tabelas).
-- [ ] 3.2 Permissão própria em Perfis e permissões, auditoria e série anual "nota devolutiva" na numeração.
+- [x] 3.1 Tabelas da qualificação, das notas e da biblioteca (migração que só cria tabelas).
+- [x] 3.2 Permissão própria em Perfis e permissões, auditoria e série anual "nota devolutiva" na numeração.
 
 ## 4. Telas (fase 1)
 
-- [ ] 4.1 Utilitários › Qualificação de títulos: lista com prazos, abrir pelo pedido ou pelo balcão presencial, anexos.
-- [ ] 4.2 Edição da qualificação: exigências da biblioteca ou redigidas, tudo editável, exclusão com justificativa.
-- [ ] 4.3 Emissão da nota e da qualificação positiva em PDF e Word, assinatura digital ou física, editar, excluir e modificar numeração.
-- [ ] 4.4 Biblioteca de exigências e de fundamentos: listar, criar, alterar, excluir com justificativa.
+- [x] 4.1 Utilitários › Qualificação de títulos: lista com prazos, abrir pelo pedido ou pelo balcão presencial, anexos.
+- [x] 4.2 Edição da qualificação: exigências da biblioteca ou redigidas, tudo editável, exclusão com justificativa.
+- [x] 4.3 Emissão da nota e da qualificação positiva em PDF e Word, assinatura digital ou física, editar, excluir e modificar numeração.
+- [x] 4.4 Biblioteca de exigências e de fundamentos: listar, criar, alterar, excluir com justificativa.
 - [ ] 4.5 Pedido: enviar à qualificação e mostrar a nota ou a qualificação positiva ao operador e ao apresentante.
 - [ ] 4.6 Menu, ajuda de tela e bateria completa.
 

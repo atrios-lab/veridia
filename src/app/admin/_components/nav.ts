@@ -314,6 +314,30 @@ export const ADMIN_NAV: readonly AdminNavItem[] = [
     ],
   },
   {
+    // The qualificação de títulos (change qualificacao-de-titulos): the
+    // nota devolutiva, the reexame and the qualificação positiva, for every
+    // attribution, starting with the Registro Civil.
+    group: "Utilitários",
+    label: "Qualificação de títulos",
+    href: "/admin/utilitarios/qualificacao",
+    icon: "gavel",
+    permission: "qualificacao.manage",
+    children: [
+      {
+        label: "Títulos em qualificação",
+        href: "/admin/utilitarios/qualificacao",
+      },
+      {
+        label: "Nova qualificação",
+        href: "/admin/utilitarios/qualificacao/nova",
+      },
+      {
+        label: "Biblioteca de exigências",
+        href: "/admin/utilitarios/qualificacao/biblioteca",
+      },
+    ],
+  },
+  {
     // The legal base the AI is taught with (decision of 15/11/2026): laws,
     // provimentos, jurisprudence and models, kept as Markdown.
     group: "Utilitários",

@@ -477,6 +477,13 @@
       "when": 1794715455275,
       "tag": "0067_base_juridica",
       "breakpoints": true
+    },
+    {
+      "idx": 68,
+      "version": "7",
+      "when": 1794718186569,
+      "tag": "0068_qualificacao_titulos",
+      "breakpoints": true
     }
   ]
 }
