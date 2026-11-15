@@ -123,12 +123,22 @@ function AssistantMessage({
         <div className="rounded-lg border bg-muted/40 p-3">
           <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
             <span className="text-xs font-medium text-muted-foreground">
-              Documento pronto
+              Arquivo pronto (PDF ou Word)
             </span>
             {!message.pending && (
               <div className="flex flex-wrap items-center gap-2">
                 {message.id && (
                   <>
+                    <a
+                      href={`/admin/dpo/documento/${message.id}`}
+                      download="documento-encarregado.pdf"
+                      className={buttonVariants({
+                        variant: "outline",
+                        size: "sm",
+                      })}
+                    >
+                      Baixar PDF
+                    </a>
                     <SignOrPrint
                       pdfHref={`/admin/dpo/documento/${message.id}`}
                       title="Documento do encarregado de dados"

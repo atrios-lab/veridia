@@ -108,7 +108,7 @@ export function AlignmentSection({
   useEffect(() => {
     if (prepState.status === "ok")
       toast.success(
-        "Resposta preparada no campo abaixo. Revise antes de pedir a aprovação.",
+        'Resposta pronta. O arquivo em PDF ou Word está logo abaixo, em "Arquivo da resposta".',
       );
   }, [prepState]);
   const started = messages.length > 0;
@@ -238,8 +238,9 @@ export function AlignmentSection({
             </Button>
           </div>
           <p className="text-xs text-muted-foreground">
-            O texto vai para o campo da resposta. Nada é enviado ao titular sem
-            a aprovação do encarregado ou do Tabelião.
+            A resposta sai completa no campo da resposta e como arquivo (PDF ou
+            Word) para baixar, assinar e anexar de volta ao titular. Nada é
+            enviado ao titular sem a aprovação do encarregado ou do Tabelião.
           </p>
           {prepState.status === "error" && (
             <p role="alert" className="text-sm font-medium text-destructive">
