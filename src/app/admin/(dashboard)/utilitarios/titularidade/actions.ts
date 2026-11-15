@@ -17,6 +17,7 @@ import { getTenant, today } from "@/lib/tenant.ts";
 import {
   createFilingWith,
   createTransferWith,
+  markDoiSentWith,
   markSentWith,
   refreshFilingWith,
   removeFilingWith,
@@ -138,6 +139,7 @@ export async function saveTransferAction(
   if (problems.length > 0) {
     return { status: "error", message: problems.join(" ") };
   }
+  let savedId = id;
   try {
     if (id) {
       await updateTransferWith(
@@ -149,7 +151,7 @@ export async function saveTransferAction(
         currentJustification() ?? "",
       );
     } else {
-      await createTransferWith(
+      savedId = await createTransferWith(
         db,
         ok.tenant.slug,
         transfer,
@@ -163,7 +165,11 @@ export async function saveTransferAction(
   revalidatePath(BASE);
   revalidatePath(DOI_BASE);
   revalidatePath(CTP_BASE);
-  redirect(`${backOf(formData)}?mes=${competenceOf(transfer.actDate)}&salvo=1`);
+  // The act just saved: the DOI screen offers its DOI at once, for the
+  // offices that deliver it at the lavratura.
+  redirect(
+    `${backOf(formData)}?mes=${competenceOf(transfer.actDate)}&salvo=${savedId}`,
+  );
 }
 
 export async function removeTransferAction(
@@ -330,4 +336,56 @@ export async function renumberFilingAction(
   }
   revalidatePath(BASE);
   redirect(`${BASE}/oficios/${id}?renumerado=1`);
+}
+
+/** The act's DOI delivered on the DOI-Web: the day and the receipt. */
+export async function markDoiSentAction(
+  _previous: TitularidadeState,
+  formData: FormData,
+): Promise<TitularidadeState> {
+  const ok = await access(true);
+  if (!ok) return { status: "error", message: NO_PERMISSION };
+  let mes = "";
+  try {
+    mes = await markDoiSentWith(
+      db,
+      ok.tenant.slug,
+      String(formData.get("id") ?? ""),
+      {
+        sentOn: String(formData.get("sentOn") ?? ""),
+        receipt: String(formData.get("receipt") ?? ""),
+      },
+      ok.session.user.id,
+    );
+  } catch (error) {
+    return failure(error, "titularidade.doi-sent");
+  }
+  revalidatePath(DOI_BASE);
+  redirect(`${DOI_BASE}?mes=${mes}`);
+}
+
+/** Undo the mark, with the reason: the DOI goes back to the month's file. */
+export async function unmarkDoiSentAction(
+  _previous: TitularidadeState,
+  formData: FormData,
+): Promise<TitularidadeState> {
+  const why = justify(formData);
+  if (why) return { status: "error", message: why };
+  const ok = await access(true);
+  if (!ok) return { status: "error", message: NO_PERMISSION };
+  let mes = "";
+  try {
+    mes = await markDoiSentWith(
+      db,
+      ok.tenant.slug,
+      String(formData.get("id") ?? ""),
+      null,
+      ok.session.user.id,
+      currentJustification() ?? "",
+    );
+  } catch (error) {
+    return failure(error, "titularidade.doi-unsent");
+  }
+  revalidatePath(DOI_BASE);
+  redirect(`${DOI_BASE}?mes=${mes}`);
 }

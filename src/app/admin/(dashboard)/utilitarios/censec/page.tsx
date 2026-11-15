@@ -20,6 +20,10 @@ import schema from "@/core/censec/censec-carga.schema.json" with {
 import { censecObject, hasTxt } from "@/core/censec/exports.ts";
 import { schemaProblems } from "@/core/censec/schema.ts";
 import { officeHolidays } from "@/core/scheduling/calendar.ts";
+import {
+  competenceLabel,
+  deadlineOf,
+} from "@/core/titularidade/titularidade.ts";
 import { db } from "@/db/index.ts";
 import {
   censecQuinzenasWith,
@@ -27,14 +31,17 @@ import {
   listClosingsWith,
 } from "@/lib/censec.ts";
 import { getTenant, today } from "@/lib/tenant.ts";
+import { listTransfersWith } from "@/lib/title-transfers.ts";
 import { AdminPageHeader } from "../../../_components/page-header.tsx";
 import { buttonVariants } from "../../../_ui/button.tsx";
+import { officeForExport } from "../titularidade/_files.ts";
 import { requireCensec } from "./_access.ts";
 import {
   ClosingForm,
   RemoveActButton,
   RemoveClosingButton,
 } from "./censec-forms.tsx";
+import { ctpPending } from "./ctp/_ctp.ts";
 
 export const metadata = { title: "Cargas da CENSEC" };
 
@@ -59,6 +66,20 @@ export default async function CensecPage({
   const query = await searchParams;
   const on = today();
   const q = isQuinzena(query.q ?? "") ? (query.q as string) : currentDue(on);
+  // The CTP is monthly: the month of the quinzena shown, its own
+  // fechamento kept as the month's 2nd quinzena.
+  const month = q.slice(0, 7);
+  const office = officeForExport(tenant);
+  const [monthActs, ctpClosings] = await Promise.all([
+    listTransfersWith(db, tenant.slug, month),
+    listClosingsWith(db, tenant.slug, `${month}-2`),
+  ]);
+  const ctpActs = monthActs.filter((s) => s.transfer.service === "notas");
+  const ctpReady = ctpActs.filter(
+    (s) => ctpPending(office, month, s.transfer).length === 0,
+  ).length;
+  const ctpClosing = ctpClosings.find((x) => x.central === "ctp");
+  const ctpDeadline = deadlineOf(month, officeHolidays(tenant));
   const [stored, quinzenas, closings] = await Promise.all([
     listCensecActsWith(db, tenant.slug, q),
     censecQuinzenasWith(db, tenant.slug),
@@ -293,6 +314,79 @@ export default async function CensecPage({
                 )}
               </div>
             ))}
+          </div>
+        </section>
+
+        <section className="rounded-xl border bg-card shadow-xs">
+          <div className="border-b px-6 py-4">
+            <h2 className="text-lg font-semibold text-foreground">
+              CTP: Comunicação de Transações às Prefeituras
+            </h2>
+            <p className="text-xs text-muted-foreground">
+              Mensal, CNN, art. 184-A · {competenceLabel(month)} ·{" "}
+              {ctpActs.length} escritura(s) · prazo até {br(ctpDeadline)}
+            </p>
+          </div>
+          <div className="flex flex-col gap-3 px-6 py-4 text-sm">
+            {ctpActs.length === 0 ? (
+              <p className="text-muted-foreground text-justify hyphens-auto">
+                Nenhuma escritura com mudança de dono neste mês: faça o
+                fechamento negativo no CENSEC, sem arquivo, e registre aqui.
+              </p>
+            ) : (
+              <>
+                <p className="text-muted-foreground">
+                  {ctpReady} pronta(s) para o arquivo
+                  {ctpActs.length - ctpReady > 0
+                    ? `, ${ctpActs.length - ctpReady} com pendência`
+                    : ""}
+                  .
+                </p>
+                <span className="flex flex-wrap gap-2">
+                  <a
+                    href={`${BASE}/ctp/arquivo?mes=${month}&formato=ctp-json`}
+                    className={buttonVariants({ size: "sm" })}
+                  >
+                    JSON da CTP (CENSEC)
+                  </a>
+                  <Link
+                    href={`${BASE}/ctp?mes=${month}`}
+                    className={buttonVariants({
+                      variant: "outline",
+                      size: "sm",
+                    })}
+                  >
+                    Ver e editar as escrituras
+                  </Link>
+                </span>
+              </>
+            )}
+          </div>
+          <div className="flex flex-col gap-3 border-t px-6 py-4">
+            {ctpClosing ? (
+              <div className="flex flex-col gap-2 text-sm sm:flex-row sm:items-center sm:justify-between">
+                <p className="text-success-text">
+                  Fechada em {br(ctpClosing.sentOn)}
+                  {ctpClosing.acts === 0
+                    ? " (negativa)"
+                    : ` com ${ctpClosing.acts} ato(s)`}
+                  {ctpClosing.protocol ? ` · ${ctpClosing.protocol}` : ""}
+                </p>
+                <RemoveClosingButton
+                  id={ctpClosing.id}
+                  quinzena={`${month}-2`}
+                  returnQ={q}
+                />
+              </div>
+            ) : (
+              <ClosingForm
+                quinzena={`${month}-2`}
+                central="ctp"
+                acts={ctpReady}
+                today={on}
+                returnQ={q}
+              />
+            )}
           </div>
         </section>
 

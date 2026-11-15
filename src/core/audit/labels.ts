@@ -81,6 +81,9 @@ const EXACT: Record<string, string> = {
     "Atualizou um ofício de titularidade com os atos do mês",
   "titularidade.filing-renumber":
     "Mudou o número de um ofício de titularidade à prefeitura",
+  "titularidade.doi-sent": "Marcou a DOI de um ato como entregue à Receita",
+  "titularidade.doi-unsent":
+    "Desfez a marca de DOI entregue de um ato, com justificativa",
   "censec.create": "Lançou um ato para a carga da CENSEC",
   "censec.edit": "Corrigiu um ato da carga da CENSEC",
   "censec.remove": "Excluiu um ato da carga da CENSEC (fica guardado)",
@@ -436,6 +439,10 @@ const EXPLANATIONS: Record<string, string> = {
     "Um ofício de titularidade foi refeito com os atos do mês como estão agora, com justificativa. O número continua o mesmo.",
   "titularidade.filing-renumber":
     "O número de um ofício de titularidade foi mudado, com justificativa.",
+  "titularidade.doi-sent":
+    "A DOI de um ato foi marcada como entregue na DOI-Web, com a data e o recibo; ela sai do arquivo do mês.",
+  "titularidade.doi-unsent":
+    "A marca de DOI entregue de um ato foi desfeita, com justificativa; a DOI volta ao arquivo do mês.",
   "censec.create":
     "Um ato (escritura, procuração, ata, inventário, divórcio ou testamento) foi lido do documento anexado e lançado para a carga quinzenal da CENSEC. O documento não é guardado.",
   "censec.edit": "Um ato da carga da CENSEC foi corrigido, com justificativa.",

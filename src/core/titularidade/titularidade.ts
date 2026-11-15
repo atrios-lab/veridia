@@ -185,6 +185,14 @@ export interface DoiDetails {
   cnm: string;
   /** Registro de imóveis: the title says "emitida a DOI". */
   previousDoi: boolean;
+  /**
+   * The DOI already delivered to the Receita (decision of 15/11/2026: some
+   * offices deliver it act by act, at the lavratura; others in the month):
+   * the day and the receipt's number. A delivered DOI stays out of the
+   * month's file, so nothing is declared twice.
+   */
+  sentOn: string;
+  receipt: string;
 }
 
 /** DOI "Natureza do título" (registro de imóveis). */
@@ -217,6 +225,8 @@ export function doiOf(t: TitleTransfer): DoiDetails {
     titleNature: "",
     cnm: "",
     previousDoi: false,
+    sentOn: "",
+    receipt: "",
     ...t.doi,
   };
 }
@@ -616,6 +626,8 @@ export const FORM_KEYS = [
   "titleNature",
   "cnm",
   "previousDoi",
+  "doiSentOn",
+  "doiReceipt",
 ] as const;
 
 const line = (value: string, max = 300) =>
@@ -715,6 +727,12 @@ export function transferFromForm(form: Record<string, string>): {
           : "",
         cnm: get("cnm").replace(/\D/g, "").slice(0, 16),
         previousDoi: get("previousDoi") === "sim",
+        sentOn: (() => {
+          const iso = isoOf(get("doiSentOn"));
+          if (iso === null) problems.push("Data de entrega da DOI inválida.");
+          return iso ?? "";
+        })(),
+        receipt: line(get("doiReceipt"), 30),
       },
     },
     problems,
@@ -769,6 +787,8 @@ export function transferToForm(t: TitleTransfer): Record<string, string> {
         titleNature: d.titleNature,
         cnm: d.cnm,
         previousDoi: d.previousDoi ? "sim" : "",
+        doiSentOn: d.sentOn,
+        doiReceipt: d.receipt,
       };
     })(),
   };

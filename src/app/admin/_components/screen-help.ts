@@ -889,7 +889,7 @@ ENTRIES["/admin/utilitarios/doi"] = {
   steps: [
     "Em Lançar escritura ou registro, anexe o traslado ou a certidão em PDF pesquisável ou Word. O sistema lê e preenche a DOI: operação, imóvel, valores, partes, forma de pagamento, MNE, natureza do título. O arquivo não fica guardado.",
     "Na lista do mês, cada ato mostra se a DOI está pronta ou o que falta (conferido com o esquema oficial da Receita). Complete em Editar; exclua com justificativa se lançou errado.",
-    "Baixe o arquivo do mês: JSON para a DOI-Web (Formato DOIWEB) ou DOI.TXT (Formato PGD). Só entram as DOI prontas. Cada ato tem também o seu arquivo.",
+    "Entregue do jeito da serventia. Na hora da escritura: ao salvar o ato, a tela já oferece a DOI dele (JSON ou DOI.TXT); importe na DOI-Web e marque como entregue. A cada 30 dias: baixe o arquivo do mês, que leva só as DOI prontas e ainda não entregues, e depois marque as entregues.",
     "Entregue até as 23h59 do último dia útil do mês seguinte ao do ato; depois disso a Receita cobra multa por atraso.",
     "Os atos são os mesmos da Titularidade à prefeitura e das Cargas da CENSEC (com Aproveitar marcado): lançados num lugar, aparecem nos outros.",
   ],
@@ -916,6 +916,7 @@ ENTRIES["/admin/utilitarios/censec"] = {
     "Em Arquivos da quinzena, baixe o JSON das três centrais (o formato que o CNB/CF recomenda) ou o JSON, XML ou TXT de cada central. Só entram os atos sem pendência, e o arquivo é conferido com o esquema oficial da CENSEC.",
     "No CENSEC: Área do Cartório › Carga da central › escolha a quinzena e anexe o arquivo; depois faça o fechamento. Quinzena sem ato: fechamento negativo, sem arquivo.",
     "Volte aqui e registre o fechamento de cada central, com a data e o protocolo. O relatório da quinzena (PDF) mostra quantos eram e quantos foram.",
+    "A CTP aparece na mesma tela, mensal: com escritura, baixe o JSON da CTP e registre o fechamento; sem escritura, registre a negativa direto, sem arquivo.",
     "Escrituras, inventários e partilhas com imóvel podem entrar também na comunicação à prefeitura (Carga CTP) e na DOI: deixe marcado Aproveitar ao anexar.",
   ],
   terms: [

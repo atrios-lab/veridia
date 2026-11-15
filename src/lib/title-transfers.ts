@@ -203,6 +203,49 @@ export async function updateTransferWith(
   });
 }
 
+/**
+ * The act's DOI delivered on the DOI-Web (or undone, with the reason):
+ * the day and the receipt, so the month's file leaves it out.
+ */
+export async function markDoiSentWith(
+  database: Database,
+  tenantSlug: string,
+  id: string,
+  delivery: { sentOn: string; receipt: string } | null,
+  actorId: string,
+  reason = "",
+): Promise<string> {
+  const found = await getTransferWith(database, tenantSlug, id);
+  if (!found) throw new TitularidadeError("Ato não encontrado.");
+  const why = delivery ? "" : mustReason(reason);
+  if (delivery && !/^\d{4}-\d{2}-\d{2}$/.test(delivery.sentOn)) {
+    throw new TitularidadeError("Informe a data em que a DOI foi entregue.");
+  }
+  const transfer: TitleTransfer = {
+    ...found.transfer,
+    doi: {
+      ...found.transfer.doi,
+      sentOn: delivery?.sentOn ?? "",
+      receipt: delivery?.receipt.trim().slice(0, 30) ?? "",
+    },
+  };
+  await database.transaction(async (tx) => {
+    await tx
+      .update(titleTransfers)
+      .set({ data: transfer, updatedBy: actorId, updatedAt: new Date() })
+      .where(eq(titleTransfers.id, found.id));
+    await recordAuditWith(tx as unknown as Database, {
+      tenantSlug,
+      actorId,
+      action: delivery ? "titularidade.doi-sent" : "titularidade.doi-unsent",
+      targetType: "title-transfer",
+      targetId: found.id,
+      ...(why ? { reason: why } : {}),
+    });
+  });
+  return found.competence;
+}
+
 export async function removeTransferWith(
   database: Database,
   tenantSlug: string,

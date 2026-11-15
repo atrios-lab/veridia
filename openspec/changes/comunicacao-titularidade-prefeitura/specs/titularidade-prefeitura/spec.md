@@ -160,3 +160,15 @@ Carga CTP e para a Carga da DOI.
 - **WHEN** não há escritura com mudança de dono no mês
 - **THEN** a Carga CTP oferece o registro do fechamento negativo, sem arquivo
 
+### Requirement: DOI entregue ato por ato ou no mês
+A Carga da DOI DEVE (SHALL) servir à serventia que entrega a DOI na hora da escritura e à que entrega
+a cada 30 dias: ao salvar o ato, a tela oferece a DOI dele para baixar; cada ato pode ser marcado
+como entregue, com a data e o recibo, e desmarcado com justificativa; o arquivo do mês DEVE (SHALL)
+levar só as DOI prontas e ainda não entregues, para nada ser declarado duas vezes. A CTP DEVE
+(SHALL) aparecer na tela das cargas da CENSEC como as outras centrais: com escritura, o arquivo e o
+fechamento; sem escritura, o fechamento negativo direto.
+
+#### Scenario: DOI entregue na lavratura
+- **WHEN** a serventia marca a DOI de um ato como entregue
+- **THEN** o arquivo do mês sai sem esse ato
+

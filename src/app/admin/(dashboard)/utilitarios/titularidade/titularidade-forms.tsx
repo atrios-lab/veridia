@@ -19,6 +19,7 @@ import { NativeSelect } from "../../../_ui/native-select.tsx";
 import { Textarea } from "../../../_ui/textarea.tsx";
 import {
   createFilingAction,
+  markDoiSentAction,
   markSentAction,
   readTitleAction,
   refreshFilingAction,
@@ -27,6 +28,7 @@ import {
   renumberFilingAction,
   saveTransferAction,
   type TitularidadeState,
+  unmarkDoiSentAction,
 } from "./actions.ts";
 
 const IDLE: TitularidadeState = { status: "idle" };
@@ -457,6 +459,24 @@ function Fields({
           base={base}
         />
       </Box>
+      <Box
+        title="Entrega da DOI"
+        hint="Se a DOI deste ato já foi entregue na DOI-Web (na hora da escritura, por exemplo), informe a data e o recibo: ela sai do arquivo do mês, para não ser declarada duas vezes."
+      >
+        <Text
+          name="doiSentOn"
+          label="DOI entregue em"
+          type="date"
+          value={v("doiSentOn")}
+          base={base}
+        />
+        <Text
+          name="doiReceipt"
+          label="Número do recibo da DOI"
+          value={v("doiReceipt")}
+          base={base}
+        />
+      </Box>
       <Box title="Observações">
         <Long
           name="notes"
@@ -846,6 +866,66 @@ export function RenumberFilingButton({
           required
         />
       </div>
+    </ConfirmAction>
+  );
+}
+
+/** Mark the act's DOI as delivered on the DOI-Web (date and receipt). */
+export function MarkDoiSentForm({ id, today }: { id: string; today: string }) {
+  const [state, action, pending] = useActionState(markDoiSentAction, IDLE);
+  const base = useId();
+  return (
+    <form
+      action={action}
+      className="flex flex-col gap-2 sm:flex-row sm:items-end"
+    >
+      <input type="hidden" name="id" value={id} />
+      <div className="flex flex-col gap-1.5">
+        <Label htmlFor={`${base}-sent`}>Entregue em</Label>
+        <Input
+          id={`${base}-sent`}
+          name="sentOn"
+          type="date"
+          defaultValue={today}
+          required
+          className="w-44"
+        />
+      </div>
+      <div className="flex min-w-0 flex-1 flex-col gap-1.5">
+        <Label htmlFor={`${base}-receipt`}>Recibo da DOI</Label>
+        <Input
+          id={`${base}-receipt`}
+          name="receipt"
+          maxLength={30}
+          placeholder="Número do recibo de entrega"
+        />
+      </div>
+      <Button type="submit" variant="outline" size="sm" disabled={pending}>
+        {pending ? "Marcando..." : "Marcar como entregue"}
+      </Button>
+      {state.status === "error" && (
+        <p role="alert" className="text-sm font-medium text-destructive">
+          {state.message}
+        </p>
+      )}
+    </form>
+  );
+}
+
+export function UnmarkDoiSentButton({ id }: { id: string }) {
+  const [state, action, pending] = useActionState(unmarkDoiSentAction, IDLE);
+  return (
+    <ConfirmAction
+      action={action}
+      pending={pending}
+      error={state.status === "error" ? state.message : null}
+      trigger="Desfazer entrega"
+      question="Desfazer a marca de DOI entregue?"
+      consequence="A DOI volta a entrar no arquivo do mês. A alteração fica na auditoria com a justificativa."
+      confirmLabel="Desfazer"
+      pendingLabel="Desfazendo..."
+    >
+      <input type="hidden" name="id" value={id} />
     </ConfirmAction>
   );
 }

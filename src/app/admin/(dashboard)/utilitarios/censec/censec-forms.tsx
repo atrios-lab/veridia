@@ -1126,12 +1126,18 @@ export function ClosingForm({
   central,
   acts,
   today,
+  back,
+  returnQ,
 }: {
   quinzena: string;
   /** "ctp": the month's single fechamento of the Carga CTP. */
   central: Central | "ctp";
   acts: number;
   today: string;
+  /** Back to the Carga CTP's page. */
+  back?: "ctp";
+  /** Back to this quinzena of the loads' page. */
+  returnQ?: string;
 }) {
   const [state, action, pending] = useActionState(closingAction, IDLE);
   const id = useId();
@@ -1143,7 +1149,8 @@ export function ClosingForm({
       <input type="hidden" name="quinzena" value={quinzena} />
       <input type="hidden" name="central" value={central} />
       <input type="hidden" name="acts" value={acts} />
-      {central === "ctp" && <input type="hidden" name="voltar" value="ctp" />}
+      {back && <input type="hidden" name="voltar" value={back} />}
+      {returnQ && <input type="hidden" name="voltarq" value={returnQ} />}
       <div className="flex flex-col gap-1.5">
         <Label htmlFor={`${id}-sent`}>Fechado em</Label>
         <Input
@@ -1186,10 +1193,12 @@ export function RemoveClosingButton({
   id,
   quinzena,
   back,
+  returnQ,
 }: {
   id: string;
   quinzena: string;
   back?: "ctp";
+  returnQ?: string;
 }) {
   const [state, action, pending] = useActionState(removeClosingAction, IDLE);
   return (
@@ -1206,6 +1215,7 @@ export function RemoveClosingButton({
       <input type="hidden" name="id" value={id} />
       <input type="hidden" name="quinzena" value={quinzena} />
       {back && <input type="hidden" name="voltar" value={back} />}
+      {returnQ && <input type="hidden" name="voltarq" value={returnQ} />}
     </ConfirmAction>
   );
 }
