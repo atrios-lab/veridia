@@ -1,6 +1,7 @@
 import "server-only";
 import { isRemoteMode } from "@/core/scheduling/agenda.ts";
 import { buildAttendanceDeclaration } from "@/core/scheduling/attendance.ts";
+import { printedSite } from "@/core/tenant/identification.ts";
 import type { Tenant } from "@/core/tenant/schema.ts";
 import type { Appointment } from "./appointments.ts";
 import { attendanceCode, attendanceUrl } from "./attendance-code.ts";
@@ -31,7 +32,7 @@ export function officeSite(
 } {
   const host = tenant.hosts[0];
   return host
-    ? { origin: `https://${host}`, domain: host }
+    ? { origin: `https://${host}`, domain: printedSite(host) }
     : { origin: fallbackOrigin, domain: new URL(fallbackOrigin).host };
 }
 
