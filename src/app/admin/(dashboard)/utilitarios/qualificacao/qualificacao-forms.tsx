@@ -1,0 +1,998 @@
+"use client";
+
+import { useActionState, useEffect, useId, useState } from "react";
+import { toast } from "sonner";
+import {
+  ACTS,
+  ATTRIBUTIONS,
+  type Attribution,
+  emptyRequirement,
+  type QualificationData,
+  REQUIREMENT_STATUS,
+  type Requirement,
+  type RequirementStatus,
+  reexamView,
+} from "@/core/qualificacao/qualificacao.ts";
+import { MIN_JUSTIFICATION } from "@/core/text-limits.ts";
+import { ConfirmAction } from "../../../_components/confirm-action.tsx";
+import { Button, buttonVariants } from "../../../_ui/button.tsx";
+import { Input } from "../../../_ui/input.tsx";
+import { Label } from "../../../_ui/label.tsx";
+import { NativeSelect } from "../../../_ui/native-select.tsx";
+import { Textarea } from "../../../_ui/textarea.tsx";
+import {
+  createAction,
+  issueAction,
+  markAction,
+  markLibraryAction,
+  type QualificationState,
+  reexamAction,
+  removeNoteAction,
+  renumberNoteAction,
+  saveAction,
+  saveLibraryAction,
+} from "./actions.ts";
+
+const IDLE: QualificationState = { status: "idle" };
+
+/** What the editor needs of a library item. */
+export interface LibraryChoice {
+  id: string;
+  acts: string[];
+  title: string;
+  description: string;
+  howToComply: string;
+  basis: string;
+}
+
+function ErrorLine({ state }: { state: QualificationState }) {
+  return state.status === "error" ? (
+    <p role="alert" className="text-sm font-medium text-destructive">
+      {state.message}
+    </p>
+  ) : null;
+}
+
+const newId = () =>
+  typeof crypto !== "undefined" && "randomUUID" in crypto
+    ? crypto.randomUUID()
+    : `${Date.now()}-${Math.random().toString(36).slice(2)}`;
+
+// ------------------------------------------------------------ presentation
+
+function PresentationFields({
+  data,
+  set,
+}: {
+  data: QualificationData;
+  set: (next: QualificationData) => void;
+}) {
+  const id = useId();
+  const acts = ACTS[data.attribution];
+  return (
+    <div className="grid gap-4 sm:grid-cols-2">
+      <div className="flex min-w-0 flex-col gap-1.5">
+        <Label htmlFor={`${id}-attr`}>Atribuição</Label>
+        <NativeSelect
+          id={`${id}-attr`}
+          value={data.attribution}
+          onChange={(e) =>
+            set({
+              ...data,
+              attribution: e.target.value as Attribution,
+              act: "",
+            })
+          }
+        >
+          {Object.entries(ATTRIBUTIONS).map(([value, label]) => (
+            <option key={value} value={value}>
+              {label}
+            </option>
+          ))}
+        </NativeSelect>
+      </div>
+      <div className="flex min-w-0 flex-col gap-1.5">
+        <Label htmlFor={`${id}-act`}>Ato pedido</Label>
+        <NativeSelect
+          id={`${id}-act`}
+          value={data.act}
+          onChange={(e) => set({ ...data, act: e.target.value })}
+        >
+          <option value="">Escolha</option>
+          {Object.entries(acts).map(([value, label]) => (
+            <option key={value} value={value}>
+              {label}
+            </option>
+          ))}
+        </NativeSelect>
+      </div>
+      {data.act === "outro" && (
+        <div className="flex min-w-0 flex-col gap-1.5 sm:col-span-2">
+          <Label htmlFor={`${id}-other`}>Qual ato</Label>
+          <Input
+            id={`${id}-other`}
+            value={data.actOther}
+            maxLength={200}
+            onChange={(e) => set({ ...data, actOther: e.target.value })}
+          />
+        </div>
+      )}
+      <div className="flex min-w-0 flex-col gap-1.5">
+        <Label htmlFor={`${id}-name`}>Apresentante</Label>
+        <Input
+          id={`${id}-name`}
+          value={data.presenter.name}
+          maxLength={300}
+          onChange={(e) =>
+            set({
+              ...data,
+              presenter: { ...data.presenter, name: e.target.value },
+            })
+          }
+        />
+      </div>
+      <div className="flex min-w-0 flex-col gap-1.5">
+        <Label htmlFor={`${id}-doc`}>
+          Documento do apresentante (opcional)
+        </Label>
+        <Input
+          id={`${id}-doc`}
+          value={data.presenter.document}
+          maxLength={200}
+          placeholder="CPF ou RG"
+          onChange={(e) =>
+            set({
+              ...data,
+              presenter: { ...data.presenter, document: e.target.value },
+            })
+          }
+        />
+      </div>
+      <div className="flex min-w-0 flex-col gap-1.5">
+        <Label htmlFor={`${id}-contact`}>Contato (opcional)</Label>
+        <Input
+          id={`${id}-contact`}
+          value={data.presenter.contact}
+          maxLength={300}
+          placeholder="E-mail ou telefone"
+          onChange={(e) =>
+            set({
+              ...data,
+              presenter: { ...data.presenter, contact: e.target.value },
+            })
+          }
+        />
+      </div>
+      <div className="grid grid-cols-2 gap-4">
+        <div className="flex min-w-0 flex-col gap-1.5">
+          <Label htmlFor={`${id}-protocol`}>Protocolo</Label>
+          <Input
+            id={`${id}-protocol`}
+            value={data.protocol}
+            maxLength={60}
+            placeholder="REQ-2026-000001"
+            onChange={(e) => set({ ...data, protocol: e.target.value })}
+          />
+        </div>
+        <div className="flex min-w-0 flex-col gap-1.5">
+          <Label htmlFor={`${id}-date`}>Apresentado em</Label>
+          <Input
+            id={`${id}-date`}
+            type="date"
+            value={data.receivedOn}
+            onChange={(e) => set({ ...data, receivedOn: e.target.value })}
+          />
+        </div>
+      </div>
+      <div className="flex min-w-0 flex-col gap-1.5 sm:col-span-2">
+        <Label htmlFor={`${id}-title`}>Título apresentado</Label>
+        <Textarea
+          id={`${id}-title`}
+          rows={2}
+          maxLength={2000}
+          value={data.document}
+          placeholder="Ex.: escritura pública de divórcio, livro e folhas, serventia que lavrou"
+          onChange={(e) => set({ ...data, document: e.target.value })}
+        />
+      </div>
+      <div className="flex min-w-0 flex-col gap-1.5 sm:col-span-2">
+        <Label htmlFor={`${id}-object`}>Objeto (o que se pede, opcional)</Label>
+        <Textarea
+          id={`${id}-object`}
+          rows={2}
+          value={data.object}
+          placeholder="Ex.: averbação do divórcio à margem do assento de casamento"
+          onChange={(e) => set({ ...data, object: e.target.value })}
+        />
+      </div>
+    </div>
+  );
+}
+
+/** Opens a qualificação: the presentation only; the exigências come next. */
+export function NewQualificationForm({
+  initial,
+}: {
+  initial: QualificationData;
+}) {
+  const [data, setData] = useState(initial);
+  const [state, action, pending] = useActionState(createAction, IDLE);
+  return (
+    <form
+      action={action}
+      className="flex flex-col gap-5 rounded-xl border border-primary/25 bg-primary/5 p-6"
+    >
+      <input type="hidden" name="data" value={JSON.stringify(data)} />
+      <PresentationFields data={data} set={setData} />
+      <div>
+        <Button type="submit" disabled={pending}>
+          {pending ? "Abrindo..." : "Abrir a qualificação"}
+        </Button>
+      </div>
+      <ErrorLine state={state} />
+    </form>
+  );
+}
+
+/** The presentation, the fundamentos and the observações, corrected. */
+export function PresentationForm({
+  id,
+  initial,
+  issued,
+}: {
+  id: string;
+  initial: QualificationData;
+  issued: boolean;
+}) {
+  const [data, setData] = useState(initial);
+  const [state, action, pending] = useActionState(saveAction, IDLE);
+  const fid = useId();
+  return (
+    <form
+      action={action}
+      className="flex flex-col gap-5 rounded-xl border bg-card p-6 shadow-xs"
+    >
+      <input type="hidden" name="id" value={id} />
+      <input type="hidden" name="voltar" value="ficha" />
+      <input type="hidden" name="data" value={JSON.stringify(data)} />
+      <PresentationFields data={data} set={setData} />
+      <TextBlocks data={data} set={setData} />
+      {issued && (
+        <div className="flex min-w-0 flex-col gap-1.5">
+          <Label htmlFor={`${fid}-why`}>
+            Justificativa (já há nota emitida; vai para a auditoria)
+          </Label>
+          <Input
+            id={`${fid}-why`}
+            name="justificativa"
+            required
+            minLength={MIN_JUSTIFICATION}
+          />
+        </div>
+      )}
+      <div>
+        <Button type="submit" disabled={pending}>
+          {pending ? "Salvando..." : "Salvar"}
+        </Button>
+      </div>
+      <ErrorLine state={state} />
+    </form>
+  );
+}
+
+/** The general fundamentos (one paragraph each) and the observações. */
+function TextBlocks({
+  data,
+  set,
+}: {
+  data: QualificationData;
+  set: (next: QualificationData) => void;
+}) {
+  const id = useId();
+  return (
+    <div className="flex flex-col gap-4">
+      <div className="flex min-w-0 flex-col gap-1.5">
+        <Label htmlFor={`${id}-fund`}>
+          Fundamentos gerais da nota (um parágrafo por linha em branco)
+        </Label>
+        <Textarea
+          id={`${id}-fund`}
+          rows={6}
+          value={data.fundamentals.join("\n\n")}
+          onChange={(e) =>
+            set({
+              ...data,
+              fundamentals: e.target.value.split(/\n\s*\n/),
+            })
+          }
+        />
+      </div>
+      <div className="flex min-w-0 flex-col gap-1.5">
+        <Label htmlFor={`${id}-obs`}>Observações (opcional)</Label>
+        <Textarea
+          id={`${id}-obs`}
+          rows={3}
+          value={data.observations}
+          onChange={(e) => set({ ...data, observations: e.target.value })}
+        />
+      </div>
+    </div>
+  );
+}
+
+// ------------------------------------------------------------ the round
+
+function RequirementCard({
+  r,
+  index,
+  roundN,
+  onChange,
+  onRemove,
+}: {
+  r: Requirement;
+  index: number;
+  roundN: number;
+  onChange: (next: Requirement) => void;
+  onRemove?: () => void;
+}) {
+  const id = useId();
+  const carried = r.round < roundN;
+  return (
+    <li className="flex flex-col gap-3 rounded-lg border bg-card p-4">
+      <div className="flex flex-wrap items-baseline justify-between gap-2">
+        <p className="text-sm font-semibold text-foreground">
+          {index + 1}. {r.title || "Exigência nova"}
+        </p>
+        <span className="text-xs text-muted-foreground">
+          {carried
+            ? `Da ${r.round}ª qualificação`
+            : roundN > 1
+              ? "Nova neste reexame"
+              : r.libraryId
+                ? "Da biblioteca"
+                : "Redigida"}
+        </span>
+      </div>
+      {carried && (
+        <div className="grid gap-3 sm:grid-cols-[14rem_1fr]">
+          <div className="flex min-w-0 flex-col gap-1.5">
+            <Label htmlFor={`${id}-status`}>Situação</Label>
+            <NativeSelect
+              id={`${id}-status`}
+              value={r.status}
+              onChange={(e) =>
+                onChange({ ...r, status: e.target.value as RequirementStatus })
+              }
+            >
+              {Object.entries(REQUIREMENT_STATUS).map(([value, label]) => (
+                <option key={value} value={value}>
+                  {label}
+                </option>
+              ))}
+            </NativeSelect>
+          </div>
+          <div className="flex min-w-0 flex-col gap-1.5">
+            <Label htmlFor={`${id}-note`}>O que se viu no reexame</Label>
+            <Input
+              id={`${id}-note`}
+              value={r.note}
+              onChange={(e) => onChange({ ...r, note: e.target.value })}
+            />
+          </div>
+        </div>
+      )}
+      <div className="grid gap-3 sm:grid-cols-2">
+        <div className="flex min-w-0 flex-col gap-1.5">
+          <Label htmlFor={`${id}-title`}>Título</Label>
+          <Input
+            id={`${id}-title`}
+            value={r.title}
+            maxLength={300}
+            disabled={carried}
+            onChange={(e) => onChange({ ...r, title: e.target.value })}
+          />
+        </div>
+        <div className="flex min-w-0 flex-col gap-1.5">
+          <Label htmlFor={`${id}-ref`}>Refere-se a (agrupa na nota)</Label>
+          <Input
+            id={`${id}-ref`}
+            value={r.reference}
+            maxLength={200}
+            disabled={carried}
+            placeholder="Ex.: Escritura, Requerente, Certidão de casamento"
+            onChange={(e) => onChange({ ...r, reference: e.target.value })}
+          />
+        </div>
+      </div>
+      <div className="flex min-w-0 flex-col gap-1.5">
+        <Label htmlFor={`${id}-desc`}>O que falta ou está errado</Label>
+        <Textarea
+          id={`${id}-desc`}
+          rows={3}
+          value={r.description}
+          disabled={carried}
+          onChange={(e) => onChange({ ...r, description: e.target.value })}
+        />
+      </div>
+      <div className="flex min-w-0 flex-col gap-1.5">
+        <Label htmlFor={`${id}-how`}>Como cumprir</Label>
+        <Textarea
+          id={`${id}-how`}
+          rows={2}
+          value={r.howToComply}
+          disabled={carried}
+          onChange={(e) => onChange({ ...r, howToComply: e.target.value })}
+        />
+      </div>
+      <div className="flex min-w-0 flex-col gap-1.5">
+        <Label htmlFor={`${id}-basis`}>Fundamento</Label>
+        <Input
+          id={`${id}-basis`}
+          value={r.basis}
+          maxLength={1000}
+          disabled={carried}
+          onChange={(e) => onChange({ ...r, basis: e.target.value })}
+        />
+      </div>
+      {!carried && roundN > 1 && (
+        <label className="flex items-start gap-2 text-sm">
+          <input
+            type="checkbox"
+            className="mt-1"
+            checked={r.fromNewDocument}
+            onChange={(e) =>
+              onChange({ ...r, fromNewDocument: e.target.checked })
+            }
+          />
+          <span className="text-justify hyphens-auto">
+            Decorre de documento apresentado só agora, na reapresentação.
+          </span>
+        </label>
+      )}
+      {onRemove && (
+        <div>
+          <Button type="button" variant="ghost" size="sm" onClick={onRemove}>
+            Tirar esta exigência
+          </Button>
+        </div>
+      )}
+    </li>
+  );
+}
+
+/**
+ * The open round: the exigências from the library or written, the
+ * situation of those that came back, the fundamentos and observações.
+ */
+export function RoundEditor({
+  id,
+  initial,
+  library,
+}: {
+  id: string;
+  initial: QualificationData;
+  library: LibraryChoice[];
+}) {
+  const [data, setData] = useState(initial);
+  const [pick, setPick] = useState("");
+  const [onlyAct, setOnlyAct] = useState(true);
+  const [state, action, pending] = useActionState(saveAction, IDLE);
+  const fid = useId();
+  useEffect(() => {
+    if (state.status === "saved") toast.success(state.message);
+  }, [state]);
+  const index = data.rounds.length - 1;
+  const round = data.rounds[index];
+  if (!round) return null;
+  const setRequirements = (requirements: Requirement[]) =>
+    setData({
+      ...data,
+      rounds: data.rounds.map((r, i) =>
+        i === index ? { ...r, requirements } : r,
+      ),
+    });
+  const choices = library.filter(
+    (l) =>
+      !round.requirements.some((r) => r.libraryId === l.id) &&
+      (!onlyAct || l.acts.length === 0 || l.acts.includes(data.act)),
+  );
+  const add = (from?: LibraryChoice) => {
+    const base = emptyRequirement(newId(), round.n);
+    setRequirements([
+      ...round.requirements,
+      from
+        ? {
+            ...base,
+            libraryId: from.id,
+            title: from.title,
+            description: from.description,
+            howToComply: from.howToComply,
+            basis: from.basis,
+          }
+        : base,
+    ]);
+  };
+  const view = round.n > 1 ? reexamView(data) : null;
+
+  return (
+    <form action={action} className="flex flex-col gap-5">
+      <input type="hidden" name="id" value={id} />
+      <input type="hidden" name="data" value={JSON.stringify(data)} />
+      <section className="flex flex-col gap-4 rounded-xl border bg-card p-6 shadow-xs">
+        <div>
+          <h2 className="text-lg font-semibold text-foreground">
+            {round.n > 1
+              ? `Reexame (${round.n}ª qualificação)`
+              : "Exigências desta qualificação"}
+          </h2>
+          <p className="mt-1 text-sm text-muted-foreground text-justify hyphens-auto">
+            Formule todas as exigências de uma só vez, cada uma com o que falta,
+            como cumprir e o fundamento. Sem exigência pendente, emita a
+            qualificação positiva.
+          </p>
+        </div>
+        {round.requirements.length === 0 ? (
+          <p className="text-sm text-muted-foreground">
+            Nenhuma exigência ainda.
+          </p>
+        ) : (
+          <ol className="flex flex-col gap-3">
+            {round.requirements.map((r, i) => (
+              <RequirementCard
+                key={r.id}
+                r={r}
+                index={i}
+                roundN={round.n}
+                onChange={(next) =>
+                  setRequirements(
+                    round.requirements.map((x) => (x.id === r.id ? next : x)),
+                  )
+                }
+                onRemove={
+                  r.round === round.n
+                    ? () =>
+                        setRequirements(
+                          round.requirements.filter((x) => x.id !== r.id),
+                        )
+                    : undefined
+                }
+              />
+            ))}
+          </ol>
+        )}
+        <div className="flex flex-col gap-2 rounded-lg border border-dashed p-4">
+          <Label htmlFor={`${fid}-lib`}>Acrescentar da biblioteca</Label>
+          <div className="flex flex-wrap items-center gap-2">
+            <NativeSelect
+              id={`${fid}-lib`}
+              value={pick}
+              onChange={(e) => setPick(e.target.value)}
+              className="min-w-0 flex-1"
+            >
+              <option value="">Escolha a exigência</option>
+              {choices.map((l) => (
+                <option key={l.id} value={l.id}>
+                  {l.title}
+                </option>
+              ))}
+            </NativeSelect>
+            <Button
+              type="button"
+              variant="outline"
+              disabled={!pick}
+              onClick={() => {
+                const chosen = library.find((l) => l.id === pick);
+                if (chosen) add(chosen);
+                setPick("");
+              }}
+            >
+              Acrescentar
+            </Button>
+            <Button type="button" variant="outline" onClick={() => add()}>
+              Escrever exigência nova
+            </Button>
+          </div>
+          <label className="flex items-center gap-2 text-xs text-muted-foreground">
+            <input
+              type="checkbox"
+              checked={onlyAct}
+              onChange={(e) => setOnlyAct(e.target.checked)}
+            />
+            Mostrar só as do ato pedido
+          </label>
+        </div>
+        {view?.warnings.length ? (
+          <ul
+            aria-live="polite"
+            className="flex list-disc flex-col gap-1 rounded-lg border border-warning/30 bg-warning-soft py-3 pr-4 pl-8 text-sm text-foreground"
+          >
+            {view.warnings.map((w) => (
+              <li key={w}>{w}</li>
+            ))}
+          </ul>
+        ) : null}
+      </section>
+      <section className="rounded-xl border bg-card p-6 shadow-xs">
+        <TextBlocks data={data} set={setData} />
+      </section>
+      <div>
+        <Button type="submit" disabled={pending}>
+          {pending ? "Salvando..." : "Salvar as exigências"}
+        </Button>
+      </div>
+      <ErrorLine state={state} />
+    </form>
+  );
+}
+
+// ------------------------------------------------------------ issue, reexam
+
+export function IssueForm({
+  id,
+  kind,
+  today,
+  problems,
+  signer,
+}: {
+  id: string;
+  kind: "devolutiva" | "positiva";
+  today: string;
+  /** Why it cannot go out yet; empty when it can. */
+  problems: string[];
+  signer: { name: string; role: string };
+}) {
+  const [state, action, pending] = useActionState(issueAction, IDLE);
+  const fid = useId();
+  const label =
+    kind === "devolutiva"
+      ? "Emitir a nota devolutiva"
+      : "Emitir a qualificação positiva";
+  return (
+    <form action={action} className="flex flex-col gap-3 rounded-lg border p-4">
+      <input type="hidden" name="id" value={id} />
+      <input type="hidden" name="tipo" value={kind} />
+      <p className="text-sm font-semibold text-foreground">{label}</p>
+      <div className="grid gap-3 sm:grid-cols-3">
+        <div className="flex min-w-0 flex-col gap-1.5">
+          <Label htmlFor={`${fid}-date`}>Data</Label>
+          <Input
+            id={`${fid}-date`}
+            name="data"
+            type="date"
+            defaultValue={today}
+          />
+        </div>
+        <div className="flex min-w-0 flex-col gap-1.5">
+          <Label htmlFor={`${fid}-who`}>Quem assina</Label>
+          <Input
+            id={`${fid}-who`}
+            name="assinante"
+            defaultValue={signer.name}
+            placeholder="Vazio: o titular"
+          />
+        </div>
+        <div className="flex min-w-0 flex-col gap-1.5">
+          <Label htmlFor={`${fid}-role`}>Cargo</Label>
+          <Input
+            id={`${fid}-role`}
+            name="cargo"
+            defaultValue={signer.role}
+            placeholder="Escrevente, substituto..."
+          />
+        </div>
+      </div>
+      {problems.length > 0 && (
+        <ul className="flex list-disc flex-col gap-1 pl-5 text-xs text-muted-foreground">
+          {problems.map((p) => (
+            <li key={p}>{p}</li>
+          ))}
+        </ul>
+      )}
+      <div>
+        <Button
+          type="submit"
+          variant={kind === "devolutiva" ? "default" : "outline"}
+          disabled={pending || problems.length > 0}
+        >
+          {pending ? "Emitindo..." : label}
+        </Button>
+      </div>
+      <ErrorLine state={state} />
+    </form>
+  );
+}
+
+export function ReexamForm({ id, today }: { id: string; today: string }) {
+  const [state, action, pending] = useActionState(reexamAction, IDLE);
+  const fid = useId();
+  return (
+    <form
+      action={action}
+      className="flex flex-col gap-3 rounded-xl border border-primary/25 bg-primary/5 p-5"
+    >
+      <input type="hidden" name="id" value={id} />
+      <h2 className="text-base font-semibold text-foreground">
+        O título voltou? Registre a reapresentação
+      </h2>
+      <div className="grid gap-3 sm:grid-cols-[12rem_1fr]">
+        <div className="flex min-w-0 flex-col gap-1.5">
+          <Label htmlFor={`${fid}-date`}>Data</Label>
+          <Input
+            id={`${fid}-date`}
+            name="data"
+            type="date"
+            defaultValue={today}
+          />
+        </div>
+        <div className="flex min-w-0 flex-col gap-1.5">
+          <Label htmlFor={`${fid}-docs`}>O que veio junto</Label>
+          <Input
+            id={`${fid}-docs`}
+            name="documentos"
+            placeholder="Ex.: certidão de casamento atualizada e procuração"
+          />
+        </div>
+      </div>
+      <div>
+        <Button type="submit" disabled={pending}>
+          {pending ? "Abrindo o reexame..." : "Abrir o reexame"}
+        </Button>
+      </div>
+      <ErrorLine state={state} />
+    </form>
+  );
+}
+
+// ------------------------------------------------------------ notes, marks
+
+export function RemoveNoteButton({ id }: { id: string }) {
+  const [state, action, pending] = useActionState(removeNoteAction, IDLE);
+  return (
+    <ConfirmAction
+      action={action}
+      pending={pending}
+      error={state.status === "error" ? state.message : null}
+      trigger="Excluir"
+      question="Excluir esta nota?"
+      consequence="Ela fica guardada com o número, que não é usado de novo, e a rodada volta a ficar aberta para corrigir e emitir outra."
+      confirmLabel="Excluir"
+      pendingLabel="Excluindo..."
+    >
+      <input type="hidden" name="id" value={id} />
+    </ConfirmAction>
+  );
+}
+
+export function RenumberNoteButton({
+  id,
+  qualificationId,
+  sequence,
+}: {
+  id: string;
+  qualificationId: string;
+  sequence: number;
+}) {
+  const [state, action, pending] = useActionState(renumberNoteAction, IDLE);
+  const base = useId();
+  return (
+    <ConfirmAction
+      action={action}
+      pending={pending}
+      error={state.status === "error" ? state.message : null}
+      trigger="Modificar numeração"
+      triggerClassName={buttonVariants({ variant: "outline", size: "sm" })}
+      question="Qual número esta nota deve ter?"
+      consequence="Só aceita um número do ano que nenhuma outra nota do mesmo tipo use. A mudança vai para a auditoria."
+      confirmLabel="Mudar número"
+      pendingLabel="Mudando..."
+    >
+      <input type="hidden" name="id" value={id} />
+      <input type="hidden" name="qualificacao" value={qualificationId} />
+      <div className="flex flex-col gap-1.5">
+        <Label htmlFor={`${base}-sequence`}>Novo número</Label>
+        <Input
+          id={`${base}-sequence`}
+          name="sequence"
+          inputMode="numeric"
+          defaultValue={String(sequence)}
+          required
+        />
+      </div>
+    </ConfirmAction>
+  );
+}
+
+export function MarkQualificationButton({
+  id,
+  restore = false,
+}: {
+  id: string;
+  restore?: boolean;
+}) {
+  const [state, action, pending] = useActionState(markAction, IDLE);
+  return (
+    <ConfirmAction
+      action={action}
+      pending={pending}
+      error={state.status === "error" ? state.message : null}
+      trigger={restore ? "Estornar a exclusão" : "Excluir a qualificação"}
+      triggerClassName={
+        restore ? buttonVariants({ variant: "outline", size: "sm" }) : undefined
+      }
+      question={
+        restore
+          ? "Trazer esta qualificação de volta?"
+          : "Excluir esta qualificação?"
+      }
+      consequence={
+        restore
+          ? "Ela volta para a lista, com as notas que já tinha."
+          : "Ela sai da lista, mas fica guardada com as notas, com quem excluiu, quando e por quê, e pode ser estornada."
+      }
+      confirmLabel={restore ? "Estornar" : "Excluir"}
+      pendingLabel={restore ? "Estornando..." : "Excluindo..."}
+    >
+      <input type="hidden" name="id" value={id} />
+      {restore && <input type="hidden" name="estornar" value="1" />}
+    </ConfirmAction>
+  );
+}
+
+// ------------------------------------------------------------ library
+
+export function LibraryItemForm({
+  item,
+}: {
+  item?: LibraryChoice & { attribution: Attribution };
+}) {
+  const [attribution, setAttribution] = useState<Attribution>(
+    item?.attribution ?? "rcpn",
+  );
+  const [state, action, pending] = useActionState(saveLibraryAction, IDLE);
+  const id = useId();
+  return (
+    <form
+      action={action}
+      className="flex flex-col gap-4 rounded-xl border bg-card p-6 shadow-xs"
+    >
+      {item && <input type="hidden" name="id" value={item.id} />}
+      <div className="grid gap-4 sm:grid-cols-2">
+        <div className="flex min-w-0 flex-col gap-1.5">
+          <Label htmlFor={`${id}-attr`}>Atribuição</Label>
+          <NativeSelect
+            id={`${id}-attr`}
+            name="atribuicao"
+            value={attribution}
+            onChange={(e) => setAttribution(e.target.value as Attribution)}
+          >
+            {Object.entries(ATTRIBUTIONS).map(([value, label]) => (
+              <option key={value} value={value}>
+                {label}
+              </option>
+            ))}
+          </NativeSelect>
+        </div>
+        <div className="flex min-w-0 flex-col gap-1.5">
+          <Label htmlFor={`${id}-title`}>Título</Label>
+          <Input
+            id={`${id}-title`}
+            name="titulo"
+            maxLength={300}
+            required
+            defaultValue={item?.title}
+          />
+        </div>
+      </div>
+      <fieldset className="flex flex-col gap-1.5">
+        <legend className="text-sm font-medium text-foreground">
+          Atos (nenhum marcado: serve a todos da atribuição)
+        </legend>
+        <div className="mt-1.5 flex flex-wrap gap-x-5 gap-y-2">
+          {Object.entries(ACTS[attribution]).map(([value, label]) => (
+            <label key={value} className="flex items-center gap-2 text-sm">
+              <input
+                type="checkbox"
+                name="atos"
+                value={value}
+                defaultChecked={item?.acts.includes(value) ?? false}
+              />
+              {label}
+            </label>
+          ))}
+        </div>
+      </fieldset>
+      <div className="flex min-w-0 flex-col gap-1.5">
+        <Label htmlFor={`${id}-desc`}>O que falta ou está errado</Label>
+        <Textarea
+          id={`${id}-desc`}
+          name="descricao"
+          rows={3}
+          required
+          defaultValue={item?.description}
+        />
+      </div>
+      <div className="flex min-w-0 flex-col gap-1.5">
+        <Label htmlFor={`${id}-how`}>Como cumprir</Label>
+        <Textarea
+          id={`${id}-how`}
+          name="cumprimento"
+          rows={2}
+          required
+          defaultValue={item?.howToComply}
+        />
+      </div>
+      <div className="flex min-w-0 flex-col gap-1.5">
+        <Label htmlFor={`${id}-basis`}>Fundamento</Label>
+        <Input
+          id={`${id}-basis`}
+          name="fundamento"
+          maxLength={1000}
+          required
+          defaultValue={item?.basis}
+        />
+      </div>
+      {item && (
+        <div className="flex min-w-0 flex-col gap-1.5">
+          <Label htmlFor={`${id}-why`}>
+            Justificativa (vai para a auditoria)
+          </Label>
+          <Input
+            id={`${id}-why`}
+            name="justificativa"
+            required
+            minLength={MIN_JUSTIFICATION}
+          />
+        </div>
+      )}
+      <div>
+        <Button type="submit" disabled={pending}>
+          {pending
+            ? "Salvando..."
+            : item
+              ? "Salvar a alteração"
+              : "Criar a exigência"}
+        </Button>
+      </div>
+      <ErrorLine state={state} />
+    </form>
+  );
+}
+
+export function MarkLibraryButton({
+  id,
+  attribution,
+  restore = false,
+}: {
+  id: string;
+  attribution: Attribution;
+  restore?: boolean;
+}) {
+  const [state, action, pending] = useActionState(markLibraryAction, IDLE);
+  return (
+    <ConfirmAction
+      action={action}
+      pending={pending}
+      error={state.status === "error" ? state.message : null}
+      trigger={restore ? "Estornar" : "Excluir"}
+      triggerClassName={
+        restore ? buttonVariants({ variant: "outline", size: "sm" }) : undefined
+      }
+      question={
+        restore
+          ? "Trazer esta exigência de volta?"
+          : "Excluir esta exigência da biblioteca?"
+      }
+      consequence={
+        restore
+          ? "Ela volta a aparecer na biblioteca."
+          : "Ela deixa de aparecer na biblioteca, mas fica guardada; as notas já emitidas não mudam."
+      }
+      confirmLabel={restore ? "Estornar" : "Excluir"}
+      pendingLabel={restore ? "Estornando..." : "Excluindo..."}
+    >
+      <input type="hidden" name="id" value={id} />
+      <input type="hidden" name="atribuicao" value={attribution} />
+      {restore && <input type="hidden" name="estornar" value="1" />}
+    </ConfirmAction>
+  );
+}

@@ -91,6 +91,20 @@ const EXACT: Record<string, string> = {
   "censec.closing-remove":
     "Excluiu o registro de um fechamento da CENSEC (fica guardado)",
   "knowledge.create": "Enviou uma fonte para a base jurídica da IA",
+  "qualificacao.create": "Abriu a qualificação de um título",
+  "qualificacao.edit": "Alterou a qualificação de um título",
+  "qualificacao.reexam": "Registrou a reapresentação de um título para reexame",
+  "qualificacao.note": "Emitiu uma nota devolutiva",
+  "qualificacao.positive": "Emitiu uma qualificação positiva",
+  "qualificacao.note-remove": "Excluiu uma nota emitida (fica guardada)",
+  "qualificacao.note-renumber": "Mudou o número de uma nota emitida",
+  "qualificacao.remove": "Excluiu uma qualificação (fica guardada)",
+  "qualificacao.restore": "Estornou uma qualificação excluída",
+  "qualificacao.library-create": "Criou uma exigência na biblioteca",
+  "qualificacao.library-edit": "Alterou uma exigência da biblioteca",
+  "qualificacao.library-remove":
+    "Excluiu uma exigência da biblioteca (fica guardada)",
+  "qualificacao.library-restore": "Estornou uma exigência da biblioteca",
   "knowledge.version": "Enviou nova versão de uma fonte da base jurídica",
   "knowledge.edit": "Corrigiu os dados de uma fonte da base jurídica",
   "knowledge.remove": "Excluiu uma fonte da base jurídica (fica guardada)",
@@ -464,6 +478,32 @@ const EXPLANATIONS: Record<string, string> = {
     "Foi registrado o fechamento de uma quinzena na CENSEC (positivo ou negativo), com a data e o protocolo.",
   "censec.closing-remove":
     "O registro de um fechamento da CENSEC foi excluído, com justificativa. Ele continua guardado.",
+  "qualificacao.create":
+    "Um título apresentado foi lançado para qualificação, com o apresentante, o ato pedido e a data. O documento apresentado não é guardado.",
+  "qualificacao.edit":
+    "A qualificação de um título foi alterada (exigências da rodada aberta ou dados da apresentação). Com nota já emitida, com justificativa.",
+  "qualificacao.reexam":
+    "O título voltou com documentos e foi aberta uma nova rodada de qualificação (reexame), com as exigências ainda não cumpridas.",
+  "qualificacao.note":
+    "Foi emitida uma nota devolutiva numerada, com as exigências formuladas de uma só vez e o direito à dúvida (Lei nº 6.015/1973, art. 198).",
+  "qualificacao.positive":
+    "Foi emitida uma qualificação positiva numerada: o título está apto ao ato pedido.",
+  "qualificacao.note-remove":
+    "Uma nota emitida foi excluída, com justificativa. Ela continua guardada com o número, que não é reaproveitado, e a rodada foi reaberta para correção.",
+  "qualificacao.note-renumber":
+    "O número de uma nota emitida foi mudado, com justificativa.",
+  "qualificacao.remove":
+    "Uma qualificação foi excluída, com justificativa. Ela continua guardada e pode ser estornada.",
+  "qualificacao.restore":
+    "Uma qualificação excluída voltou, com justificativa.",
+  "qualificacao.library-create":
+    "Foi criada uma exigência padronizada na biblioteca da qualificação.",
+  "qualificacao.library-edit":
+    "Uma exigência da biblioteca foi alterada, com justificativa.",
+  "qualificacao.library-remove":
+    "Uma exigência da biblioteca foi excluída, com justificativa. Ela continua guardada.",
+  "qualificacao.library-restore":
+    "Uma exigência excluída voltou à biblioteca, com justificativa.",
   "knowledge.create":
     "Uma fonte (lei, provimento, jurisprudência, doutrina ou modelo) foi lida, convertida em Markdown e guardada na base jurídica da IA. O arquivo enviado não é guardado.",
   "knowledge.version":
@@ -675,6 +715,8 @@ const NUMBERED: Record<string, string> = {
   "declaracao-iss": "declarações de ISS",
   habilitacao: "habilitações de casamento",
   titularidade: "ofícios de titularidade à prefeitura",
+  "nota-devolutiva": "notas devolutivas",
+  "qualificacao-positiva": "qualificações positivas",
 };
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;

@@ -73,6 +73,10 @@ export const OFFICE_PERMISSIONS = [
   // The legal base the AI is taught with (decision of 15/11/2026): laws,
   // provimentos, jurisprudence and models, kept as Markdown.
   "knowledge.manage",
+  // The qualificação de títulos (change qualificacao-de-titulos): the
+  // notas devolutivas, the reexames, the qualificações positivas and the
+  // library of exigências.
+  "qualificacao.manage",
   "signer.use",
   "transparency.manage",
   "numbering.manage",
@@ -134,6 +138,7 @@ export const GRANTABLE_PERMISSIONS = [
   "censec.manage",
   "doi.manage",
   "knowledge.manage",
+  "qualificacao.manage",
   "signer.use",
   "transparency.manage",
   "numbering.manage",
@@ -191,6 +196,8 @@ export const DERIVED_FROM: Partial<Record<GrantablePermission, Permission>> = {
   "attributions.import": "rcpn.import",
   // Whoever loads the attributions' files loads the legal base.
   "knowledge.manage": "attributions.import",
+  // Whoever answers the pedidos at the counter qualifies the títulos.
+  "qualificacao.manage": "requests.manage",
 };
 
 /**
@@ -409,6 +416,8 @@ export const GRANTABLE_LABELS: Record<GrantablePermission, string> = {
   "doi.manage": "Carga da DOI à Receita Federal (IN RFB nº 2.186/2024)",
   "knowledge.manage":
     "Base jurídica da IA: enviar, corrigir e excluir leis, provimentos, jurisprudência e modelos",
+  "qualificacao.manage":
+    "Qualificação de títulos: notas devolutivas, reexames, qualificações positivas e biblioteca de exigências",
   "signer.use": "Assinador digital (assinar documentos)",
   "transparency.manage": "Transparência (boletim mensal e documentos)",
   "numbering.manage": "Numeração de documentos",

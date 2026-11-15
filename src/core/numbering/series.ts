@@ -26,6 +26,8 @@ export const NUMBER_SERIES = [
   "pedido-papel",
   "habilitacao",
   "titularidade",
+  "nota-devolutiva",
+  "qualificacao-positiva",
 ] as const;
 export type NumberSeries = (typeof NUMBER_SERIES)[number];
 
@@ -103,6 +105,18 @@ export const SERIES_INFO: Record<NumberSeries, SeriesInfo> = {
     label: "Ofícios de titularidade à prefeitura",
     hint: "Utilitários › Titularidade à prefeitura: o ofício do mês à SEMUT.",
     format: formatGuideNumber,
+    max: 99_999,
+  },
+  "nota-devolutiva": {
+    label: "Notas devolutivas",
+    hint: "Utilitários › Qualificação de títulos: a nota de exigência de cada qualificação e reexame.",
+    format: (year, sequence) => `${sequence}/${year}`,
+    max: 99_999,
+  },
+  "qualificacao-positiva": {
+    label: "Qualificações positivas",
+    hint: "Utilitários › Qualificação de títulos: o termo de título apto ao ato.",
+    format: (year, sequence) => `${sequence}/${year}`,
     max: 99_999,
   },
 };
