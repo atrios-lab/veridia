@@ -106,6 +106,11 @@ export const OFFICE_PERMISSIONS = [
   // The office's audit trail in full, and the formal notifications that ask
   // a person to explain an act: the Tabelião/Registrador's alone.
   "audit.manage",
+  // The DPO assistant (change assistente-do-dpo): questions on data
+  // protection to the AI, and the draft reply of an LGPD requerimento.
+  // Everyone at the desk has it from day one (decision of 15/11/2026:
+  // "todos que usam a plataforma"); the Tabelião/Registrador may take it.
+  "dpo.assist",
 ] as const;
 
 /**
@@ -145,6 +150,7 @@ export const GRANTABLE_PERMISSIONS = [
   "rcpn.habilitacao",
   "attributions.view",
   "attributions.import",
+  "dpo.assist",
 ] as const;
 export type GrantablePermission = (typeof GRANTABLE_PERMISSIONS)[number];
 
@@ -185,6 +191,7 @@ export const DERIVED_FROM: Partial<Record<GrantablePermission, Permission>> = {
   "attributions.view": "desk.access",
   // Whoever loads the Registro Civil's base loads the others' files.
   "attributions.import": "rcpn.import",
+  "dpo.assist": "desk.access",
 };
 
 /**
@@ -217,6 +224,9 @@ export const PLATFORM_PERMISSIONS = [
   // Liberação de acesso: turning the panel's two-step access off or on for
   // any office (lib/access-policy.ts). The Átrios master account only.
   "access.release",
+  // The DPO assistant's oversight: every office's usage, conversations and
+  // monthly ceiling (lib/dpo/store.ts). The Átrios master account only.
+  "dpo.oversee",
 ] as const;
 
 export const PERMISSIONS = [
@@ -425,4 +435,6 @@ export const GRANTABLE_LABELS: Record<GrantablePermission, string> = {
     "Atribuições: consultar os guias de cada especialidade (livros, índices e prazos da lei)",
   "attributions.import":
     "Atribuições: enviar e excluir arquivos de cada atribuição (com justificativa)",
+  "dpo.assist":
+    "Assistente do DPO: dúvidas de proteção de dados e rascunho de resposta à LGPD",
 };

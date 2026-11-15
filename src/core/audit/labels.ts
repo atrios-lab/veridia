@@ -173,6 +173,7 @@ const EXACT: Record<string, string> = {
   "office-settings.role-permissions": "Alterou as permissões dos cargos",
   "platform.two-step-off": "Átrios desligou a verificação em duas etapas",
   "platform.two-step-on": "Átrios religou a verificação em duas etapas",
+  "platform.dpo-limit": "Átrios ajustou o teto mensal do assistente do DPO",
   "office.two-step-off": "Desligou a verificação em duas etapas da serventia",
   "office.two-step-on": "Religou a verificação em duas etapas da serventia",
   "audit.notification": "Enviou uma notificação de auditoria",
@@ -542,6 +543,8 @@ const EXPLANATIONS: Record<string, string> = {
     "A Átrios desligou a verificação em duas etapas desta serventia.",
   "platform.two-step-on":
     "A Átrios religou a verificação em duas etapas desta serventia.",
+  "platform.dpo-limit":
+    "A Átrios mudou quantas perguntas por mês a serventia pode fazer ao assistente do DPO. A justificativa traz o valor anterior e o novo.",
   "messenger.lunch-request":
     "A pessoa pediu um horário de almoço (até 1 hora por dia). Ele só vale depois que o Tabelião/Registrador aprovar.",
   "messenger.lunch-approve":

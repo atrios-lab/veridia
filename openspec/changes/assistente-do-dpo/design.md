@@ -110,7 +110,7 @@ A data da última atualização fica em `KNOWLEDGE_BASE_UPDATED_AT`.
 A busca é lexical, em memória, pura, com tokens em minúsculas e sem acento, um radical simples
 do português e pontuação BM25. Ela devolve os 8 a 12 dispositivos mais relevantes.
 
-A base também tem uma fonte própria, **"Orientação da Átrios"**. São notas curtas, marcadas como
+A base também tem uma fonte própria, **"Orientação"**. São notas curtas, marcadas como
 orientação e não como norma, para as sutilezas que já custaram retrabalho:
 
 - os 15 dias valem para o acesso por lei (art. 19, II); para os outros direitos é regra da casa;
@@ -270,7 +270,7 @@ contado no Postgres e vale em qualquer ambiente.
   tentativa de mudar instruções como fora do tema. O assistente não tem ferramentas que gravem,
   enviem ou leiam dados de pessoas. O pior caso é uma resposta fora do tema, não um vazamento.
 - **[Base desatualizada]** → A data fica visível na tela. Toda norma nova do CNJ, da ANPD ou da
-  CGJ-RN sobre o tema entra por PR. A "Orientação da Átrios" registra a data em que foi escrita.
+  CGJ-RN sobre o tema entra por PR. A "Orientação" registra a data em que foi escrita.
 - **[Custo acima do previsto]** → Triagem barata, recusas sem modelo principal, teto por
   serventia e uso por serventia visível para a Átrios. O histórico enviado ao modelo é cortado
   nas últimas 10 trocas.

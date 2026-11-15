@@ -48,7 +48,7 @@ mantido pela Átrios, cita o artigo de onde tirou cada resposta e nunca recebe d
   - Dentro da serventia, cada pessoa vê só as próprias conversas.
   - A Átrios (superadmin) vê as conversas de todas as serventias, o uso do mês e o teto de cada
     uma.
-  - A tela do assistente avisa que as conversas ficam visíveis à equipe da Átrios.
+  - A tela do assistente avisa que as conversas ficam visíveis à equipe de suporte da plataforma. O nome da Átrios não aparece em nenhum texto que a serventia vê (decisão de 15/11/2026).
 - **Guarda por 12 meses.** Cada conversa é apagada 12 meses depois da última mensagem.
 - Dependências novas: AI SDK e Vercel AI Gateway (com retenção zero de dados no provedor).
 

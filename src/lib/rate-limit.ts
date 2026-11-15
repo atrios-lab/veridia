@@ -186,3 +186,24 @@ export async function countWrongAccessCode(userId: string): Promise<void> {
   if (!accessCodeLimiter) return;
   await accessCodeLimiter.limit(userId);
 }
+
+// The DPO assistant: each question spends model time the platform pays for
+// (the assistant is included for every office). Six a minute per person is
+// more than anyone types and less than a script wants; the monthly ceiling
+// per office lives in the database (lib/dpo/store.ts) and holds even where
+// Upstash is off.
+const dpoLimiter = configured
+  ? new Ratelimit({
+      redis: Redis.fromEnv(),
+      limiter: Ratelimit.slidingWindow(6, "1 m"),
+      prefix: "veridia:dpo",
+      analytics: false,
+    })
+  : null;
+
+/** The DPO assistant's per-person pace, keyed by the user's id. */
+export async function isDpoRateLimited(userId: string): Promise<boolean> {
+  if (!dpoLimiter) return false;
+  const { success } = await dpoLimiter.limit(userId);
+  return !success;
+}

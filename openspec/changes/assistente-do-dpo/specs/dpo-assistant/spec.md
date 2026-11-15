@@ -57,7 +57,7 @@ fora do tema.
 ### Requirement: Respostas apoiadas na base de normas, com citação
 
 O assistente SHALL responder com base em uma base de normas selecionada, versionada pela Átrios
-e dividida por dispositivo (artigo, parágrafo, inciso). Ela reúne a LGPD, o Provimento CN 213/2026
+e dividida por artigo (os anexos, por item). Ela reúne a LGPD, o Provimento CN 213/2026
 consolidado, os trechos aplicáveis do Código Nacional de Normas, as resoluções da ANPD e os atos
 da CGJ-RN sobre o tema. Toda resposta que afirme uma regra SHALL citar o dispositivo da base em
 que se apoia. A tela SHALL mostrar as fontes da resposta, e cada fonte SHALL abrir o texto
@@ -67,14 +67,15 @@ a data da última atualização da base.
 
 #### Scenario: Fonte citada abre o texto
 
-- **WHEN** uma resposta cita "LGPD, art. 18, VI"
-- **THEN** a resposta mostra a fonte, e abri-la exibe o texto daquele inciso como está na base
+- **WHEN** uma resposta cita o art. 18 da LGPD
+- **THEN** a resposta mostra a fonte "LGPD, art. 18", e abri-la exibe o texto do artigo como está
+  na base
 
 #### Scenario: Pergunta sem fundamento na base
 
 - **WHEN** a pessoa pergunta algo do tema que nenhum dispositivo da base cobre
 - **THEN** o assistente diz que não encontrou fundamento na base e sugere consultar o suporte da
-  Átrios, sem citar dispositivo inexistente
+  plataforma, sem citar dispositivo inexistente
 
 #### Scenario: Data da base visível
 
@@ -184,7 +185,7 @@ teto do mês a serventia já usou.
 As conversas SHALL ser gravadas por serventia e por pessoa, já com os dados ocultados. Em
 "Minhas conversas", cada pessoa SHALL ver só as próprias conversas e poder retomá-las. Nem o
 Tabelião/Registrador SHALL ver as conversas de outra pessoa da equipe. A tela do assistente SHALL
-avisar, de forma fixa, que as conversas ficam visíveis à equipe da Átrios para suporte e
+avisar, de forma fixa, que as conversas ficam visíveis à equipe de suporte da plataforma para
 melhoria. Uma conversa SHALL ser apagada definitivamente 12 meses depois da última mensagem.
 
 #### Scenario: Conversa de colega não aparece

@@ -169,6 +169,11 @@ export default async function DataRightsDetailPage({
                 <ReplySection
                   requestId={request.id}
                   initialDraft={details.draftReply ?? ""}
+                  canDraft={can(
+                    session.user.role ?? "",
+                    "dpo.assist",
+                    session.user.permissions,
+                  )}
                 />
               ) : (
                 <div className="mt-5 border-t pt-4">
