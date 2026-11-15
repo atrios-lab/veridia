@@ -67,6 +67,9 @@ export const OFFICE_PERMISSIONS = [
   // The CENSEC's quinzenal loads (CNN, arts. 265 to 272): read the
   // escrituras, procurações and testamentos, the files, the fechamento.
   "censec.manage",
+  // The DOI to the Receita Federal (IN RFB nº 2.186/2024), its own item
+  // (decision of 15/11/2026: "a DOI tem que ficar no item à parte").
+  "doi.manage",
   "signer.use",
   "transparency.manage",
   "numbering.manage",
@@ -126,6 +129,7 @@ export const GRANTABLE_PERMISSIONS = [
   "iss.manage",
   "titularidade.manage",
   "censec.manage",
+  "doi.manage",
   "signer.use",
   "transparency.manage",
   "numbering.manage",
@@ -156,6 +160,8 @@ export const DERIVED_FROM: Partial<Record<GrantablePermission, Permission>> = {
   "titularidade.manage": "guides.manage",
   // Whoever tells the prefeitura the month's escrituras loads the CENSEC.
   "censec.manage": "titularidade.manage",
+  // Whoever told the prefeitura the month's acts declares them to the RFB.
+  "doi.manage": "titularidade.manage",
   "signer.use": "desk.access",
   "transparency.manage": "content.edit",
   "numbering.manage": "content.edit",
@@ -394,6 +400,7 @@ export const GRANTABLE_LABELS: Record<GrantablePermission, string> = {
     "Comunicação de mudança de titularidade de imóveis à prefeitura (CNN, art. 184-A)",
   "censec.manage":
     "Cargas da CENSEC: CEP, CESDI e RCTO por quinzena (CNN, arts. 265 a 272)",
+  "doi.manage": "Carga da DOI à Receita Federal (IN RFB nº 2.186/2024)",
   "signer.use": "Assinador digital (assinar documentos)",
   "transparency.manage": "Transparência (boletim mensal e documentos)",
   "numbering.manage": "Numeração de documentos",

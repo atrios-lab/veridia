@@ -2,16 +2,17 @@ import { doiJson, doiPgd, doiXml } from "@/core/titularidade/exports.ts";
 import { db } from "@/db/index.ts";
 import { getTenant } from "@/lib/tenant.ts";
 import { getTransferWith } from "@/lib/title-transfers.ts";
-import { download, mayDownload } from "../../_files.ts";
+import { download } from "../../../titularidade/_files.ts";
+import { mayDownloadDoi } from "../../_files.ts";
 
 export const runtime = "nodejs";
 
-/** One act's DOI, to import in the DOI-Web (JSON) or keep (XML). */
+/** One act's DOI: JSON for the DOI-Web, DOI.TXT for the PGD, or XML. */
 export async function GET(
   request: Request,
   { params }: { params: Promise<{ id: string }> },
 ): Promise<Response> {
-  if (!(await mayDownload())) {
+  if (!(await mayDownloadDoi())) {
     return new Response("Não autorizado", { status: 403 });
   }
   const tenant = await getTenant();

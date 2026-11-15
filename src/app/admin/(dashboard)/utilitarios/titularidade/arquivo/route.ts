@@ -3,9 +3,6 @@ import {
   ctpJson,
   ctpTxt,
   ctpXml,
-  doiJson,
-  doiPgd,
-  doiXml,
   EXPORT_FORMATS,
   isExportFormat,
 } from "@/core/titularidade/exports.ts";
@@ -18,7 +15,7 @@ export const runtime = "nodejs";
 
 /**
  * The month's files to attach to the systems that take them: the Carga
- * CTP (XML, JSON, TXT, CSV) and the DOI (JSON for the DOI-Web, XML).
+ * CTP (XML, JSON, TXT, CSV).
  */
 export async function GET(request: Request): Promise<Response> {
   if (!(await mayDownload())) {
@@ -27,7 +24,12 @@ export async function GET(request: Request): Promise<Response> {
   const url = new URL(request.url);
   const mes = url.searchParams.get("mes") ?? "";
   const formato = url.searchParams.get("formato") ?? "";
-  if (!/^\d{4}-\d{2}$/.test(mes) || !isExportFormat(formato)) {
+  // The DOI has its own item and route (Carga da DOI).
+  if (
+    !/^\d{4}-\d{2}$/.test(mes) ||
+    !isExportFormat(formato) ||
+    formato.startsWith("doi")
+  ) {
     return new Response("Escolha o mês e o formato.", { status: 400 });
   }
   const tenant = await getTenant();
@@ -40,14 +42,7 @@ export async function GET(request: Request): Promise<Response> {
     "ctp-json": () => ctpJson(office, mes, transfers),
     "ctp-txt": () => ctpTxt(office, mes, transfers),
     "ctp-csv": () => transfersCsv(transfers),
-    "doi-json": () => doiJson(transfers),
-    "doi-xml": () => doiXml(transfers),
-    "doi-pgd": () =>
-      doiPgd(transfers, tenant.location.city, tenant.location.state),
-  }[formato]();
+  }[formato as "ctp-xml" | "ctp-json" | "ctp-txt" | "ctp-csv"]();
   const info = EXPORT_FORMATS[formato];
-  // The PGD imports a file named DOI.TXT.
-  if (formato === "doi-pgd") return download(body, "DOI.TXT", info.type);
-  const prefix = formato.startsWith("doi") ? "doi" : "carga-ctp";
-  return download(body, `${prefix}-${mes}.${info.ext}`, info.type);
+  return download(body, `carga-ctp-${mes}.${info.ext}`, info.type);
 }

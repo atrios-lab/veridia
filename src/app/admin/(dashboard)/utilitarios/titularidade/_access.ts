@@ -18,3 +18,18 @@ export async function requireTitularidade() {
   }
   return session;
 }
+
+/**
+ * The Carga da DOI's screens (decision of 15/11/2026): its own permission;
+ * the acts are the same as the titularidade's, edited from either side.
+ */
+export async function requireDoi() {
+  const session = await getSession();
+  if (
+    !session ||
+    !can(session.user.role ?? "", "doi.manage", session.user.permissions)
+  ) {
+    notFound();
+  }
+  return session;
+}

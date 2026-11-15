@@ -297,6 +297,22 @@ export const ADMIN_NAV: readonly AdminNavItem[] = [
     ],
   },
   {
+    // The DOI to the Receita Federal, its own item (decision of
+    // 15/11/2026), from the acts read for the titularidade.
+    group: "Utilitários",
+    label: "Carga da DOI",
+    href: "/admin/utilitarios/doi",
+    icon: "files",
+    permission: "doi.manage",
+    children: [
+      { label: "DOI do mês", href: "/admin/utilitarios/doi" },
+      {
+        label: "Lançar escritura ou registro",
+        href: "/admin/utilitarios/doi/nova",
+      },
+    ],
+  },
+  {
     // The Livro Diário Auxiliar da Receita e da Despesa (decision of
     // 11/11/2026): the productivity report read act by act, the expenses
     // with their receipts, the day's and the month's pages, the year.
