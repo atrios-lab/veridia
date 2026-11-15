@@ -321,7 +321,9 @@ export type DraftReplyResult =
 
 /**
  * The LGPD requerimento's "Rascunhar resposta": the model gets only the
- * right asked and the team's masked note, never anything the data subject
+ * right asked, what the titular wrote in the requerimento (decision of
+ * 15/11/2026: "os dados deles eles mesmo informaram") and the team's
+ * masked note. Never anything the data subject
  * wrote or who they are. The draft comes back with markers, which the
  * caller fills in on the platform's side (core/dpo/placeholders.ts).
  */
@@ -335,6 +337,8 @@ export async function draftReplyWith(
     userRole: string;
     right: DataRight;
     note: string;
+    /** What the titular wrote in the requerimento, in their own words. */
+    titularRequest?: string;
     officeContext: string;
     now: Date;
   },
@@ -351,7 +355,11 @@ export async function draftReplyWith(
   }
 
   const note = maskPersonalData(input.note);
-  const prompt = replyDraftPrompt(input.right, note.text);
+  const prompt = replyDraftPrompt(
+    input.right,
+    note.text,
+    (input.titularRequest ?? "").slice(0, 3000),
+  );
   const excerpts = search(
     knowledgeIndex(),
     REPLY_DRAFT_QUERIES[input.right],

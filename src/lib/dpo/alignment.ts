@@ -44,7 +44,9 @@ import {
  * The conversation on one LGPD requerimento (core/dpo/alinhamento.ts):
  * the team writes, the Assistente Virtual answers from the norms' base and
  * asks what it needs. Everything here is masked before it is stored or
- * sent; the titular's own text and identity never reach the model.
+ * sent, except what the titular wrote in the requerimento, which goes as
+ * it is (decision of 15/11/2026: "os dados deles eles mesmo informaram").
+ * The name, protocol and dates are filled in by the platform.
  */
 
 const HISTORY = 16;
@@ -202,7 +204,7 @@ export async function alignDataRightsWith(
   try {
     const result = await generateText({
       model: models.answer,
-      instructions: `${alignmentInstructions(input.officeContext, details.right)}\n\n${formatExcerpts(excerpts, sourceName)}`,
+      instructions: `${alignmentInstructions(input.officeContext, details.right, (request.description ?? "").slice(0, 3000))}\n\n${formatExcerpts(excerpts, sourceName)}`,
       messages: [...history, { role: "user", content: masked.text }],
       providerOptions: models.providerOptions,
       maxOutputTokens: 2500,

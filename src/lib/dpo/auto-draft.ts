@@ -82,6 +82,7 @@ export async function autoDraftDataRightsWith(
     userRole: "sistema",
     right: details.right,
     note: note.slice(0, 3900),
+    titularRequest: request.description ?? "",
     officeContext: await contextFor(tenant, now),
     now,
   });

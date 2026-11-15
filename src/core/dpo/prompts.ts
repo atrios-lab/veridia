@@ -85,10 +85,17 @@ DADOS DA SERVENTIA
 ${officeContext}`;
 }
 
-export function replyDraftPrompt(right: DataRight, note: string): string {
+export function replyDraftPrompt(
+  right: DataRight,
+  note: string,
+  /** What the titular wrote in the requerimento, in their own words. */
+  titularRequest = "",
+): string {
   return `Direito pedido pelo titular: ${RIGHT_NAMES[right]}.${
-    note.trim() ? `\nObservação da equipe: ${note.trim()}` : ""
-  }\nRedija o rascunho da resposta.`;
+    titularRequest.trim()
+      ? `\nPedido escrito pelo titular: """${titularRequest.trim()}"""\nResponda a cada ponto desse pedido.`
+      : ""
+  }${note.trim() ? `\nObservação da equipe: ${note.trim()}` : ""}\nRedija a resposta completa.`;
 }
 
 /** The search terms for a reply draft, by the right asked. */

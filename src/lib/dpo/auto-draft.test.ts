@@ -70,6 +70,8 @@ test("a resposta LGPD sai do que foi alinhado, sem o nome do titular ir ao model
     "drafted",
   );
   assert.doesNotMatch(sent, /Titular Fictícia|titular@exemplo/);
+  // The titular's own request goes, so the answer covers what was asked.
+  assert.match(sent, /Quero saber quais dados meus/);
   const [row] = await db
     .select()
     .from(serviceRequests)
