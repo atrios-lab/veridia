@@ -162,12 +162,13 @@ function AssistantMessage({
 export function DpoChat({
   initialConversationId,
   initialMessages,
-  available,
+  blockedReason,
   usage,
 }: {
   initialConversationId: string | null;
   initialMessages: ChatMessage[];
-  available: boolean;
+  /** Why the AI cannot answer here (no key, or the office turned it off). */
+  blockedReason: string | null;
   usage: { answered: number; limit: number };
 }) {
   const router = useRouter();
@@ -365,9 +366,9 @@ export function DpoChat({
         <p className="rounded-xl border border-warning/30 bg-warning-soft px-4 py-3 text-sm font-medium text-warning-text">
           {blocked}
         </p>
-      ) : !available ? (
+      ) : blockedReason ? (
         <p className="rounded-xl border bg-card px-4 py-3 text-sm text-muted-foreground">
-          {DPO_COPY.unavailable}
+          {blockedReason}
         </p>
       ) : (
         <form

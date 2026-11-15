@@ -72,27 +72,32 @@ O passo 4 vem antes de tudo o que grava ou sai do servidor. Nenhum caminho do c�
 texto original depois dele. A ocultação é feita no Route Handler, e a função recebe o corpo da
 requisição e devolve só a versão ocultada.
 
-### 2. AI SDK com o Vercel AI Gateway
+### 2. AI SDK sobre a Anthropic, com a chave e o interruptor da plataforma
 
-**Escolha.**
+**Escolha (revista na implementação, depois do merge da base jurídica, PR #332).**
 
-- O pacote `ai` (AI SDK) no servidor: `generateObject` na triagem e `streamText` na resposta.
-- `@ai-sdk/react` (`useChat`) na tela.
-- Os modelos são chamados pelo Gateway como texto `"provedor/modelo"`, configurável, com
-  retenção zero de dados ligada.
-- Candidatos iniciais: um modelo pequeno e rápido para a triagem (família Haiku) e um modelo
-  forte para a resposta (família Sonnet).
+- O pacote `ai` (AI SDK) no servidor, com o provedor `@ai-sdk/anthropic`: `generateText` com
+  saída estruturada na triagem e `streamText` na resposta.
+- Modelos: `claude-haiku-5-5` na triagem e `claude-sonnet-5-5` na resposta, em
+  `src/lib/dpo/models.ts`.
+- A mesma `ANTHROPIC_API_KEY` e o mesmo interruptor "Inteligência artificial" da serventia que a
+  base jurídica usa (`lib/ai.ts`, `aiBlockedWith`): sem chave ou com a IA desligada pelo
+  Tabelião/Registrador, a tela diz por quê e nada é enviado.
+- A tela lê a resposta como linhas JSON (`DpoEvent`) num Route Handler da própria origem, sem o
+  `useChat`: o protocolo próprio leva o texto ocultado, as fontes validadas e o uso do mês.
 
 **Por quê.**
 
-- O Gateway dá observabilidade de custo por chamada e troca de modelo sem trocar código.
-- Na Vercel ele autentica por OIDC, sem segredo novo em Produção e Preview.
-- O streaming roda no Node (Fluid Compute), sem `runtime = "edge"`.
+- Uma chave, um fornecedor e um interruptor para toda a IA da plataforma: a serventia decide
+  num lugar só se usa IA.
+- O AI SDK dá o modelo falso (`MockLanguageModelV4`) que os testes em processo usam.
+- O streaming roda no Node, sem `runtime = "edge"`.
 
 **Alternativas.**
 
-- SDK direto de um provedor: descartado, porque prende a um fornecedor e duplica a gestão de
-  chaves.
+- Vercel AI Gateway com retenção zero: era a proposta inicial. Descartada porque a plataforma
+  já tinha adotado a Anthropic direto com chave própria; dois caminhos para a mesma IA seriam
+  dois lugares para configurar e auditar.
 - Modelo próprio hospedado: descartado pelo custo e pela operação, desproporcionais ao uso.
 
 ### 3. Base de normas versionada no repositório e busca em memória
@@ -283,8 +288,8 @@ contado no Postgres e vale em qualquer ambiente.
 
 1. Migração aditiva com as quatro tabelas, aplicada pelo `db:migrate` do build de produção. No
    Homolog, aplicar à mão pelo pooler, porque o Preview não migra.
-2. Configurar o AI Gateway no projeto da Vercel (OIDC em Produção e Preview) e ligar a retenção
-   zero. Localmente, usar `vercel env pull` ou deixar sem chave e ver a tela "indisponível".
+2. Usar a `ANTHROPIC_API_KEY` que a base jurídica já exige em Produção e Preview. Cada
+   serventia só usa o assistente depois que o Tabelião/Registrador liga a IA em Configurações.
 3. Publicar com a base de normas inicial. O item aparece para todos os cargos com `desk.access`.
 4. Avisar as serventias: o que o assistente faz, o aviso sobre dados e a supervisão da Átrios.
 5. **Reversão:** retirar o item da navegação e responder "indisponível" no Route Handler. As
@@ -292,8 +297,8 @@ contado no Postgres e vale em qualquer ambiente.
 
 ## Open Questions
 
-- **Retenção zero:** confirmar se o plano da conta cobre retenção zero para o provedor e os
-  modelos escolhidos. Se não cobrir, trocar o modelo antes de publicar.
+- **Retenção no provedor:** confirmar a política de retenção da conta da Anthropic (o texto já
+  chega ocultado, mas a retenção zero é a segunda trava).
 - **Modelos:** definir a dupla final (triagem e resposta) depois de um teste com 30 a 50
   perguntas reais de encarregados, comparando qualidade da citação e custo.
 - **Texto legal:** redação do trecho da política de privacidade e da linha do inventário de

@@ -2289,6 +2289,191 @@ export const titleTransferFilings = pgTable(
 );
 
 /**
+ * A source of the legal base the AI is taught with (change
+ * qualificacao-de-titulos, decision of 15/11/2026): a law, a provimento, a
+ * decision, a model. The file it came in is never kept; only its text, in
+ * knowledge_passages. Removed by a mark, with who, when and why.
+ */
+export const knowledgeSources = pgTable(
+  "knowledge_sources",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    tenantSlug,
+    /** core/conhecimento SourceMeta. */
+    meta: jsonb("meta").notNull(),
+    /** Where the text came from: the file's name, "colado" or the URL. */
+    origin: text("origin").notNull().default(""),
+    characters: integer("characters").notNull().default(0),
+    createdBy: text("created_by").notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    updatedBy: text("updated_by"),
+    updatedAt: timestamp("updated_at", { withTimezone: true }),
+    removedAt: timestamp("removed_at", { withTimezone: true }),
+    removedBy: text("removed_by"),
+    removedReason: text("removed_reason"),
+  },
+  (t) => [index("knowledge_sources_tenant").on(t.tenantSlug)],
+);
+
+/** A source's text, split by article or passage, for the search. */
+export const knowledgePassages = pgTable(
+  "knowledge_passages",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    tenantSlug,
+    sourceId: uuid("source_id").notNull(),
+    ordinal: integer("ordinal").notNull(),
+    heading: text("heading").notNull(),
+    text: text("text").notNull(),
+  },
+  (t) => [
+    index("knowledge_passages_source").on(t.sourceId, t.ordinal),
+    index("knowledge_passages_tenant").on(t.tenantSlug),
+  ],
+);
+
+/**
+ * A título under qualificação (change qualificacao-de-titulos, decision of
+ * 15/11/2026), in any attribution: the presentation, the rounds and their
+ * exigências as items (core/qualificacao QualificationData). The documents
+ * presented are not kept here. Removed by a mark, with who, when and why.
+ */
+export const qualifications = pgTable(
+  "qualifications",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    tenantSlug,
+    /** core/qualificacao Attribution. */
+    attribution: text("attribution").notNull(),
+    /** core/qualificacao QualificationStatus, kept for the list. */
+    status: text("status").notNull(),
+    data: jsonb("data").notNull(),
+    createdBy: text("created_by").notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    updatedBy: text("updated_by"),
+    updatedAt: timestamp("updated_at", { withTimezone: true }),
+    removedAt: timestamp("removed_at", { withTimezone: true }),
+    removedBy: text("removed_by"),
+    removedReason: text("removed_reason"),
+  },
+  (t) => [index("qualifications_tenant").on(t.tenantSlug, t.status)],
+);
+
+/**
+ * A nota devolutiva or a termo de qualificação positiva issued, numbered
+ * per year, with the qualificação as it was when issued (so the paper is
+ * drawn again exactly). Excluded by a mark; the number is never reused.
+ */
+export const qualificationNotes = pgTable(
+  "qualification_notes",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    tenantSlug,
+    qualificationId: uuid("qualification_id").notNull(),
+    /** devolutiva or positiva. */
+    kind: text("kind").notNull(),
+    year: integer("year").notNull(),
+    sequence: integer("sequence").notNull(),
+    roundIndex: integer("round_index").notNull(),
+    snapshot: jsonb("snapshot").notNull(),
+    /** ISO day the paper is dated. */
+    issuedOn: text("issued_on").notNull(),
+    signerName: text("signer_name").notNull().default(""),
+    signerRole: text("signer_role").notNull().default(""),
+    createdBy: text("created_by").notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    removedAt: timestamp("removed_at", { withTimezone: true }),
+    removedBy: text("removed_by"),
+    removedReason: text("removed_reason"),
+  },
+  (t) => [
+    uniqueIndex("qualification_notes_number").on(
+      t.tenantSlug,
+      t.kind,
+      t.year,
+      t.sequence,
+    ),
+    index("qualification_notes_qualification").on(t.qualificationId),
+  ],
+);
+
+/**
+ * The office's library of exigências, by attribution and act: seeded from
+ * core/qualificacao/biblioteca once, then the office's own (edited,
+ * added, excluded by a mark). `uses` puts the most used first.
+ */
+export const qualificationLibrary = pgTable(
+  "qualification_library",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    tenantSlug,
+    attribution: text("attribution").notNull(),
+    /** ACTS keys it serves; empty: all. */
+    acts: jsonb("acts").notNull().default([]),
+    title: text("title").notNull(),
+    description: text("description").notNull(),
+    howToComply: text("how_to_comply").notNull(),
+    basis: text("basis").notNull(),
+    /** The seed it came from (core/qualificacao/biblioteca), when it did. */
+    seedKey: text("seed_key"),
+    uses: integer("uses").notNull().default(0),
+    createdBy: text("created_by").notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    updatedBy: text("updated_by"),
+    updatedAt: timestamp("updated_at", { withTimezone: true }),
+    removedAt: timestamp("removed_at", { withTimezone: true }),
+    removedBy: text("removed_by"),
+    removedReason: text("removed_reason"),
+  },
+  (t) => [
+    index("qualification_library_tenant").on(t.tenantSlug, t.attribution),
+    uniqueIndex("qualification_library_seed").on(t.tenantSlug, t.seedKey),
+  ],
+);
+
+/**
+ * What the AI asks the office for the legal base (decision of 15/11/2026:
+ * "caso ela precise, ela pergunte se o cartório gostaria de inserir um
+ * documento, leis etc. atualizada, mas que ela sempre busque na base legal
+ * da rede"): a norma missing or changed, found on the official sites. Not
+ * a chat: the office answers with a button (import, send, dismiss with a
+ * reason). Kept with how it was answered; never deleted.
+ */
+export const knowledgeRequests = pgTable(
+  "knowledge_requests",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    tenantSlug,
+    /** "Lei nº 6.015/1973 alterada pela Lei nº 14.382/2022". */
+    topic: text("topic").notNull(),
+    /** Why the AI asks, with what it found on the official site. */
+    detail: text("detail").notNull().default(""),
+    /** The official address of the text in force, when found. */
+    officialUrl: text("official_url").notNull().default(""),
+    /** The source it concerns, when it is an update. */
+    sourceId: uuid("source_id"),
+    /** open, done or dismissed. */
+    status: text("status").notNull().default("open"),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    createdBy: text("created_by").notNull(),
+    resolvedAt: timestamp("resolved_at", { withTimezone: true }),
+    resolvedBy: text("resolved_by"),
+    resolvedNote: text("resolved_note"),
+  },
+  (t) => [index("knowledge_requests_tenant").on(t.tenantSlug, t.status)],
+);
+
+/**
  * An act told to the CENSEC (CNN, arts. 265 to 272; change
  * cargas-censec, decision of 14/11/2026): read from the escritura,
  * procuração, ata or testamento attached, which is never kept; checked by

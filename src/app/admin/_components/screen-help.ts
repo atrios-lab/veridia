@@ -907,6 +907,105 @@ ENTRIES["/admin/utilitarios/doi"] = {
   ],
 };
 
+ENTRIES["/admin/utilitarios/qualificacao"] = {
+  purpose:
+    "Qualificar os títulos apresentados à serventia, em todas as atribuições, começando pelo Registro Civil: examinar o título e responder com a nota devolutiva (as exigências) ou com a qualificação positiva (título apto ao ato).",
+  steps: [
+    "Em Nova qualificação, lance quem apresentou, o título, o ato pedido, o protocolo e a data. O documento apresentado não é guardado.",
+    "Na qualificação, acrescente as exigências da biblioteca (as do ato pedido aparecem primeiro) ou escreva novas. Cada uma tem o que falta, como cumprir e o fundamento; o campo Refere-se a agrupa as exigências na nota. Salve.",
+    "Formule todas as exigências de uma só vez (Lei nº 6.015/1973, art. 198). Depois, emita a nota devolutiva: ela sai numerada, com os fundamentos, a forma de cumprimento e o direito de pedir a suscitação de dúvida. Assine digitalmente ou imprima, ou baixe em Word.",
+    "Quando o título voltar, registre a reapresentação: abre o reexame com as exigências que faltavam. Marque cada uma como cumprida, cumprida em parte ou pendente. Exigência nova que não decorre de documento novo gera aviso.",
+    "Sem exigência pendente, emita a qualificação positiva.",
+    "Emitiu errado? Exclua a nota com justificativa: ela fica guardada com o número, que não volta a ser usado, e a rodada reabre para corrigir. Também dá para modificar o número.",
+  ],
+  terms: [
+    {
+      term: "Nota devolutiva",
+      meaning:
+        "O documento que devolve o título sem praticar o ato, com as exigências a cumprir, cada uma fundamentada.",
+    },
+    {
+      term: "Reexame",
+      meaning:
+        "Nova qualificação do título reapresentado, que diz o que foi atendido, o que permanece e o que é novo.",
+    },
+    {
+      term: "Suscitação de dúvida",
+      meaning:
+        "Pedido do interessado que não concorda com a exigência, ou não consegue cumpri-la, para que o juiz decida (Lei nº 6.015/1973, art. 198, II).",
+    },
+  ],
+  configure: {
+    href: "/admin/utilitarios/qualificacao/biblioteca",
+    label: "Biblioteca de exigências",
+    permission: "qualificacao.manage",
+    steps: [
+      "Crie, altere e exclua as exigências padronizadas de cada atribuição e ato. A biblioteca do Registro Civil já começa preenchida, com textos genéricos.",
+      "Confira os fundamentos antes de usar: são um ponto de partida, e a serventia responde pela qualificação.",
+    ],
+  },
+};
+
+ENTRIES["/admin/utilitarios/qualificacao/biblioteca"] = {
+  purpose:
+    "As exigências padronizadas da qualificação, por atribuição e ato, com o que falta, como cumprir e o fundamento.",
+  steps: [
+    "Escolha a atribuição no alto. As exigências mais usadas aparecem primeiro.",
+    "Em Nova exigência, marque os atos a que ela serve (nenhum: todos os atos da atribuição).",
+    "Alterar e Excluir pedem justificativa, que vai para a auditoria. A exigência excluída fica guardada e pode ser estornada; as notas já emitidas não mudam.",
+    "A biblioteca do Registro Civil começa com exigências escritas de forma genérica, sem dados de clientes. Confira os fundamentos e ajuste ao entendimento da serventia.",
+  ],
+};
+
+ENTRIES["/admin/utilitarios/base-juridica"] = {
+  purpose:
+    "Ensinar a IA da qualificação de títulos com as fontes do direito: leis, decretos, provimentos do CNJ e da Corregedoria, jurisprudência, enunciados, doutrina e modelos. A IA não conversa: ninguém faz pergunta a ela. A serventia só alimenta esta base.",
+  steps: [
+    "Em Enviar fontes, importe o texto vigente do site oficial (as normas básicas já estão na lista) ou envie arquivos: PDF, Word, ODT, RTF, texto, HTML, ZIP com vários e fotos. Também dá para colar o texto.",
+    "Cada documento vira Markdown, dividido por artigo, e o arquivo é descartado: só o texto fica guardado. Na fonte, Baixar em .md entrega o texto como ficou.",
+    "Ao ler, o sistema confere se o arquivo parece o certo. Com alerta (não parece jurídico, número da referência ausente, CPF de pessoa, fonte repetida ou texto lido pela IA), a fonte fica Em conferência e não é usada até alguém confirmar ou trocar o arquivo.",
+    "Anexou o arquivo errado? Na fonte, Alterar dados ou trocar o arquivo: o arquivo certo vira a versão nova e a anterior fica guardada, fora da base.",
+    "Com a IA ligada, Conferir na fonte oficial faz a IA procurar a norma só nos sites oficiais. Se ela mudou ou foi revogada, aparece um pedido no alto da lista; responda pelos botões: importar do site oficial, enviar o documento ou dispensar com o motivo.",
+    "Em Pesquisar, o sistema acha os artigos pela hierarquia: a lei antes das normas, da jurisprudência, da doutrina e dos modelos. Fonte revogada, versão antiga e fonte em conferência ficam de fora.",
+  ],
+  terms: [
+    {
+      term: "Markdown",
+      meaning:
+        "Texto simples com marcas de organização: o artigo vira título, o parágrafo fica em negrito e os incisos viram lista. Abre em qualquer editor de texto.",
+    },
+    {
+      term: "Em conferência",
+      meaning:
+        "Fonte guardada que ainda não é usada, porque o sistema achou algo que parece erro no arquivo. Confira, e confirme ou troque o arquivo.",
+    },
+    {
+      term: "Fonte jurídica oficial",
+      meaning:
+        "Os sites oficiais onde a norma é publicada: Planalto, Diário Oficial da União, CNJ, STF, STJ, tribunais e corregedorias (jus.br), Câmara e Senado.",
+    },
+  ],
+  configure: {
+    href: "/admin/configuracoes/inteligencia-artificial",
+    label: "Configurações › Inteligência artificial",
+    permission: "user.manage",
+    steps: [
+      "Só o Tabelião liga ou desliga a IA, com o motivo, que vai para a auditoria. Ela começa desligada.",
+      "Desligada, a base funciona do mesmo jeito; só a leitura de fotos e PDFs digitalizados e a conferência na fonte oficial ficam paradas.",
+    ],
+  },
+};
+
+ENTRIES["/admin/configuracoes/inteligencia-artificial"] = {
+  purpose:
+    "Ligar ou desligar a IA da plataforma (Claude, da Anthropic), que tem uma finalidade só: a qualificação de títulos. Ninguém conversa com ela.",
+  steps: [
+    "Clique em Ligar ou Desligar e escreva o motivo; ele vai para a auditoria com quem mudou e quando.",
+    "Ligada, a IA lê fotos e PDFs digitalizados enviados à Base jurídica e confere as fontes nos sites oficiais. Os documentos vão à Anthropic só para a leitura e não ficam guardados.",
+    "A IA só funciona depois que a chave de acesso for cadastrada no ambiente da plataforma; enquanto isso, a tela avisa.",
+  ],
+};
+
 ENTRIES["/admin/utilitarios/censec"] = {
   purpose:
     "Montar as cargas quinzenais da CENSEC: escrituras e procurações no CEP, separações, divórcios e inventários no CESDI, testamentos no RCTO (Código Nacional de Normas, arts. 265 a 272). O sistema lê os documentos anexados e gera os arquivos no leiaute oficial do CNB/CF.",

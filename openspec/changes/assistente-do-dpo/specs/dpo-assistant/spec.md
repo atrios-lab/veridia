@@ -201,15 +201,21 @@ melhoria. Uma conversa SHALL ser apagada definitivamente 12 meses depois da últ
 
 ### Requirement: Assistente indisponível sem configuração
 
-Quando o provedor de IA não estiver configurado no ambiente, `/admin/dpo` SHALL informar que o
-assistente está indisponível neste ambiente e NÃO SHALL quebrar o painel. Uma falha do provedor
+A tela `/admin/dpo` SHALL dizer o motivo, sem chamar o modelo e sem quebrar o painel, quando o
+provedor de IA não estiver configurado no ambiente ou quando a IA da serventia estiver desligada
+em Configurações. Uma falha do provedor
 durante a resposta SHALL aparecer como mensagem de erro com a opção de tentar de novo, e a
 pergunta que falhou NÃO SHALL consumir o teto.
 
 #### Scenario: Desenvolvimento local sem chave
 
-- **WHEN** o painel roda sem a variável do AI Gateway e a pessoa abre `/admin/dpo`
-- **THEN** a tela mostra que o assistente está indisponível neste ambiente
+- **WHEN** o painel roda sem a chave da IA e a pessoa abre `/admin/dpo`
+- **THEN** a tela diz que a IA não tem a chave configurada e não oferece o campo de pergunta
+
+#### Scenario: IA desligada pela serventia
+
+- **WHEN** o Tabelião/Registrador não ligou a IA em Configurações
+- **THEN** a tela diz que a IA está desligada e onde ligá-la
 
 #### Scenario: Provedor falha no meio da resposta
 

@@ -2,7 +2,7 @@ import { can } from "@/core/auth/roles.ts";
 import { DPO_COPY } from "@/core/dpo/copy.ts";
 import { db } from "@/db/index.ts";
 import { askDpoWith, type DpoEvent } from "@/lib/dpo/assistant.ts";
-import { dpoModels, isDpoAssistantConfigured } from "@/lib/dpo/models.ts";
+import { dpoBlocked, dpoModels } from "@/lib/dpo/models.ts";
 import { officeContextFor } from "@/lib/dpo/office.ts";
 import { isDpoRateLimited } from "@/lib/rate-limit.ts";
 import { getSession } from "@/lib/session.ts";
@@ -32,9 +32,6 @@ export async function POST(request: Request): Promise<Response> {
   ) {
     return Response.json({ error: "Não encontrado." }, { status: 404 });
   }
-  if (!isDpoAssistantConfigured()) {
-    return Response.json({ error: DPO_COPY.unavailable }, { status: 503 });
-  }
   if (await isDpoRateLimited(session.user.id)) {
     return Response.json({ error: DPO_COPY.rateLimited }, { status: 429 });
   }
@@ -50,8 +47,10 @@ export async function POST(request: Request): Promise<Response> {
     typeof body.conversationId === "string" ? body.conversationId : null;
 
   const tenant = await getTenant();
+  const blocked = await dpoBlocked(tenant.slug);
+  if (blocked) return Response.json({ error: blocked }, { status: 503 });
   const now = new Date();
-  const events = askDpoWith(db, dpoModels(tenant.slug), {
+  const events = askDpoWith(db, dpoModels(), {
     tenantSlug: tenant.slug,
     userId: session.user.id,
     userRole: session.user.role ?? "",

@@ -127,9 +127,9 @@ test("Utilitários é um tópico só, com os utilitários como subtópicos", () 
     (entry) => entry.group === "Utilitários",
   );
   // Guias, ISS, titularidade à prefeitura, cargas da CENSEC, carga da
-  // DOI, Livro Diário, papel de segurança, solicitação de papéis e
-  // assinador.
-  assert.equal(group?.items.length, 9);
+  // DOI, qualificação de títulos, base jurídica da IA, Livro Diário,
+  // papel de segurança, solicitação de papéis e assinador.
+  assert.equal(group?.items.length, 11);
 });
 
 test("Atribuições é um tópico só: Registro Civil, as outras seis e o Caixa", () => {

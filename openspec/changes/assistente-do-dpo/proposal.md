@@ -50,7 +50,8 @@ mantido pela Átrios, cita o artigo de onde tirou cada resposta e nunca recebe d
     uma.
   - A tela do assistente avisa que as conversas ficam visíveis à equipe de suporte da plataforma. O nome da Átrios não aparece em nenhum texto que a serventia vê (decisão de 15/11/2026).
 - **Guarda por 12 meses.** Cada conversa é apagada 12 meses depois da última mensagem.
-- Dependências novas: AI SDK e Vercel AI Gateway (com retenção zero de dados no provedor).
+- Dependências novas: AI SDK (`ai`, `@ai-sdk/anthropic`, `@ai-sdk/react`), sobre a mesma chave
+  e o mesmo interruptor de IA da serventia que a base jurídica usa.
 
 ## Non-goals
 
@@ -114,9 +115,8 @@ mantido pela Átrios, cita o artigo de onde tirou cada resposta e nunca recebe d
   rascunho.
 - **Pacotes e ambiente:**
   - pacotes `ai` (AI SDK);
-  - variável do AI Gateway em Produção e Preview.
-  - Sem a variável (desenvolvimento local), a tela diz que o assistente está indisponível neste
-    ambiente.
+  - a `ANTHROPIC_API_KEY` que a plataforma já usa.
+  - Sem a chave, ou com a IA da serventia desligada, a tela diz por quê.
 - **Documentos legais:** a política de privacidade da plataforma passa a citar o uso de um
-  provedor de IA (sem dado pessoal, com retenção zero). O inventário de tratamento da Átrios
+  provedor de IA (sem dado pessoal). O inventário de tratamento da Átrios
   ganha a linha correspondente.

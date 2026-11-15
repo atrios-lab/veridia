@@ -58,7 +58,7 @@ import {
 export interface DpoModels {
   triage: LanguageModel;
   answer: LanguageModel;
-  /** Gateway options: zero data retention, no prompt training. */
+  /** Provider options passed to every call, if any. */
   providerOptions?: Parameters<typeof generateText>[0]["providerOptions"];
 }
 

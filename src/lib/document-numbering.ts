@@ -17,6 +17,7 @@ import {
   auditNotifications,
   issDeclarations,
   paperOrders,
+  qualificationNotes,
   rcpnHabilitacoes,
   securityPaperReports,
   serviceRequests,
@@ -61,6 +62,24 @@ export async function lastUsedWith(
         and(
           eq(titleTransferFilings.tenantSlug, tenantSlug),
           eq(titleTransferFilings.year, year),
+        ),
+      );
+    return row?.last ?? 0;
+  }
+  if (series === "nota-devolutiva" || series === "qualificacao-positiva") {
+    // An issued note keeps its number even when excluded: it may have
+    // reached the presenter.
+    const [row] = await database
+      .select({ last: max(qualificationNotes.sequence) })
+      .from(qualificationNotes)
+      .where(
+        and(
+          eq(qualificationNotes.tenantSlug, tenantSlug),
+          eq(
+            qualificationNotes.kind,
+            series === "nota-devolutiva" ? "devolutiva" : "positiva",
+          ),
+          eq(qualificationNotes.year, year),
         ),
       );
     return row?.last ?? 0;

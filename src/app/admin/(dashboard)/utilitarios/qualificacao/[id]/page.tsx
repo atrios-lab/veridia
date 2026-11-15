@@ -1,0 +1,259 @@
+import Link from "next/link";
+import { notFound } from "next/navigation";
+import type { Role } from "@/core/auth/roles.ts";
+import {
+  ATTRIBUTIONS,
+  actName,
+  currentRound,
+  daysSince,
+  noteProblems,
+  positiveProblems,
+  STATUS_LABELS,
+} from "@/core/qualificacao/qualificacao.ts";
+import { formatOfficeDateTime } from "@/core/time/office-time.ts";
+import { db } from "@/db/index.ts";
+import {
+  getQualificationWith,
+  listLibraryWith,
+  listNotesWith,
+} from "@/lib/qualificacao.ts";
+import { getTenant, today } from "@/lib/tenant.ts";
+import { BackLink } from "../../../../_components/back-link.tsx";
+import { AdminPageHeader } from "../../../../_components/page-header.tsx";
+import { ROLE_LABELS } from "../../../../_components/role-labels.ts";
+import { SignOrPrint } from "../../../../_components/sign-or-print.tsx";
+import { buttonVariants } from "../../../../_ui/button.tsx";
+import { requireQualificacao } from "../_access.ts";
+import {
+  IssueForm,
+  MarkQualificationButton,
+  ReexamForm,
+  RemoveNoteButton,
+  RenumberNoteButton,
+  RoundEditor,
+} from "../qualificacao-forms.tsx";
+
+export const metadata = { title: "Qualificação do título" };
+
+const BASE = "/admin/utilitarios/qualificacao";
+
+const isoDate = (iso: string) =>
+  /^\d{4}-\d{2}-\d{2}$/.test(iso)
+    ? `${iso.slice(8, 10)}/${iso.slice(5, 7)}/${iso.slice(0, 4)}`
+    : "";
+
+export default async function QualificationPage({
+  params,
+  searchParams,
+}: {
+  params: Promise<{ id: string }>;
+  searchParams: Promise<{ emitida?: string }>;
+}) {
+  const session = await requireQualificacao();
+  const { id } = await params;
+  const { emitida } = await searchParams;
+  const tenant = await getTenant();
+  const q = await getQualificationWith(db, tenant.slug, id);
+  if (!q) notFound();
+  const [notes, library] = await Promise.all([
+    listNotesWith(db, tenant.slug, q.id),
+    listLibraryWith(db, tenant.slug, q.data.attribution),
+  ]);
+  const round = currentRound(q.data);
+  const now = today();
+  const active = !q.removedAt;
+  const signer = {
+    name: session.user.name ?? "",
+    role: ROLE_LABELS[(session.user.role ?? "") as Role] ?? "",
+  };
+  const live = notes.filter((n) => !n.removedAt);
+
+  return (
+    <>
+      <AdminPageHeader
+        maxWidth={1000}
+        title={`${actName(q.data)} · ${q.data.presenter.name}`}
+        description={`${ATTRIBUTIONS[q.data.attribution]} · ${STATUS_LABELS[q.status]} · ${daysSince(q.data.receivedOn, now)} dias desde a apresentação`}
+      />
+      <main className="flex max-w-[1000px] flex-col gap-6 px-4 py-7 md:px-8">
+        <BackLink href={BASE} label="Qualificação de títulos" />
+        {emitida && live.length > 0 && (
+          <p
+            aria-live="polite"
+            className="rounded-xl border border-primary/25 bg-primary/5 px-5 py-3 text-sm text-foreground"
+          >
+            {emitida === "positiva"
+              ? "Qualificação positiva emitida."
+              : "Nota devolutiva emitida."}{" "}
+            Assine digitalmente ou imprima abaixo e entregue ao apresentante.
+          </p>
+        )}
+        {q.removedAt && (
+          <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border bg-muted px-5 py-3 text-sm text-foreground">
+            <span>
+              Excluída em {formatOfficeDateTime(q.removedAt)}
+              {q.removedReason ? `: ${q.removedReason}` : ""}. Fica guardada.
+            </span>
+            <MarkQualificationButton id={q.id} restore />
+          </div>
+        )}
+
+        <section className="rounded-xl border bg-card p-6 shadow-xs">
+          <div className="flex flex-wrap items-baseline justify-between gap-2">
+            <h2 className="text-lg font-semibold text-foreground">
+              Apresentação
+            </h2>
+            {active && (
+              <Link
+                href={`${BASE}/${q.id}/dados`}
+                className={buttonVariants({ variant: "outline", size: "sm" })}
+              >
+                Alterar dados, fundamentos e observações
+              </Link>
+            )}
+          </div>
+          <dl className="mt-3 grid gap-x-6 gap-y-3 text-sm sm:grid-cols-2">
+            {[
+              ["Apresentante", q.data.presenter.name],
+              [
+                "Documento do apresentante",
+                q.data.presenter.document || "Não informado",
+              ],
+              ["Contato", q.data.presenter.contact || "Não informado"],
+              ["Protocolo", q.data.protocol || "Não informado"],
+              ["Apresentado em", isoDate(q.data.receivedOn)],
+              ["Ato pedido", actName(q.data)],
+              ["Título apresentado", q.data.document],
+              ...(q.data.object ? [["Objeto", q.data.object]] : []),
+            ].map(([label, value]) => (
+              <div key={label}>
+                <dt className="text-xs text-muted-foreground">{label}</dt>
+                <dd className="text-foreground [overflow-wrap:anywhere]">
+                  {value}
+                </dd>
+              </div>
+            ))}
+          </dl>
+        </section>
+
+        {notes.length > 0 && (
+          <section className="rounded-xl border bg-card p-6 shadow-xs">
+            <h2 className="text-lg font-semibold text-foreground">
+              Notas emitidas
+            </h2>
+            <ul className="mt-3 flex flex-col divide-y">
+              {notes.map((n) => {
+                const label =
+                  n.kind === "positiva"
+                    ? `Qualificação positiva nº ${n.number}`
+                    : `Nota devolutiva nº ${n.number}`;
+                return (
+                  <li key={n.id} className="flex flex-col gap-2 py-3 text-sm">
+                    <div className="flex flex-wrap items-baseline justify-between gap-2">
+                      <span className="font-medium text-foreground">
+                        {label}
+                        {n.snapshot.rounds[n.roundIndex] &&
+                        (n.snapshot.rounds[n.roundIndex]?.n ?? 1) > 1
+                          ? ` (reexame)`
+                          : ""}
+                      </span>
+                      <span className="text-xs text-muted-foreground">
+                        {isoDate(n.issuedOn)}
+                        {n.signer.name ? ` · ${n.signer.name}` : ""}
+                      </span>
+                    </div>
+                    {n.removedAt ? (
+                      <p className="text-xs text-muted-foreground">
+                        Excluída em {formatOfficeDateTime(n.removedAt)}
+                        {n.removedReason ? `: ${n.removedReason}` : ""}. O
+                        número não é usado de novo.
+                      </p>
+                    ) : (
+                      <div className="flex flex-wrap gap-2">
+                        <SignOrPrint
+                          pdfHref={`${BASE}/notas/${n.id}/arquivo`}
+                          title={label}
+                        />
+                        <a
+                          href={`${BASE}/notas/${n.id}/word`}
+                          className={buttonVariants({ variant: "outline" })}
+                        >
+                          Word (.docx)
+                        </a>
+                        {active && (
+                          <>
+                            <RenumberNoteButton
+                              id={n.id}
+                              qualificationId={q.id}
+                              sequence={n.sequence}
+                            />
+                            {n.roundIndex === q.data.rounds.length - 1 && (
+                              <RemoveNoteButton id={n.id} />
+                            )}
+                          </>
+                        )}
+                      </div>
+                    )}
+                  </li>
+                );
+              })}
+            </ul>
+          </section>
+        )}
+
+        {active && round.result === "exigencia" && (
+          <ReexamForm id={q.id} today={now} />
+        )}
+        {active && round.result === "positiva" && (
+          <p className="rounded-xl border bg-card px-5 py-4 text-sm text-foreground">
+            Título qualificado positivamente: pode seguir para a prática do ato.
+          </p>
+        )}
+        {active && round.result === "aberta" && (
+          <>
+            <RoundEditor
+              id={q.id}
+              initial={q.data}
+              library={library.map((l) => ({
+                id: l.id,
+                acts: l.acts,
+                title: l.title,
+                description: l.description,
+                howToComply: l.howToComply,
+                basis: l.basis,
+              }))}
+            />
+            <section className="flex flex-col gap-3 rounded-xl border bg-card p-6 shadow-xs">
+              <h2 className="text-lg font-semibold text-foreground">Emitir</h2>
+              <p className="text-sm text-muted-foreground text-justify hyphens-auto">
+                Salve as exigências antes de emitir. A nota sai numerada, no
+                padrão da serventia, para assinar digitalmente ou imprimir.
+              </p>
+              <div className="grid gap-3 lg:grid-cols-2">
+                <IssueForm
+                  id={q.id}
+                  kind="devolutiva"
+                  today={now}
+                  problems={noteProblems(round)}
+                  signer={signer}
+                />
+                <IssueForm
+                  id={q.id}
+                  kind="positiva"
+                  today={now}
+                  problems={positiveProblems(round)}
+                  signer={signer}
+                />
+              </div>
+            </section>
+          </>
+        )}
+        {active && (
+          <div>
+            <MarkQualificationButton id={q.id} />
+          </div>
+        )}
+      </main>
+    </>
+  );
+}

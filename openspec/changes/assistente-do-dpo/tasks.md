@@ -59,7 +59,7 @@
 ## 6. Integração com o modelo
 
 - [x] 6.1 Adicionar `ai` e `@ai-sdk/react` e configurar os ids dos modelos (triagem e resposta)
-      em um só lugar. Detectar quando o Gateway não está configurado
+      em um só lugar. Respeitar a chave e o interruptor de IA da serventia
 - [x] 6.2 Implementar `answerDpoQuestionWith(db, deps, input)` em `src/lib/dpo/`, seguindo o
       fluxo do design (decisão 1). O modelo vem por injeção (`deps`), para testar com um modelo
       falso do AI SDK
@@ -106,8 +106,8 @@
 ## 9. Expurgo, ambiente e documentos
 
 - [x] 9.1 Chamar o expurgo de conversas na rotina diária `/api/agenda/lembretes`
-- [ ] 9.2 Configurar o AI Gateway na Vercel (OIDC em Produção e Preview) e confirmar a retenção
-      zero para os modelos escolhidos
+- [ ] 9.2 Confirmar a `ANTHROPIC_API_KEY` em Produção e Preview e a política de retenção da
+      conta da Anthropic
 - [ ] 9.3 Aplicar a migração no Homolog pelo pooler e testar no Preview com o host de uma
       serventia
 - [ ] 9.4 Rodar 30 a 50 perguntas reais de encarregado e conferir a triagem, a citação e o

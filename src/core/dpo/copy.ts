@@ -15,7 +15,6 @@ export const DPO_COPY = {
   notAdvice:
     "O assistente orienta com base nas normas citadas. A decisão e a assinatura continuam sendo do encarregado.",
   noSource: "Resposta sem fonte na base de normas: confirme antes de usar.",
-  unavailable: "O assistente do DPO está indisponível neste ambiente.",
   rateLimited: "Muitas perguntas seguidas. Aguarde um minuto e tente de novo.",
   failed:
     "Não foi possível obter a resposta agora. Tente de novo em instantes.",

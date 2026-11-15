@@ -7,7 +7,7 @@ import { effectiveLimit, usageMonth } from "@/core/dpo/quota.ts";
 import { formatDate } from "@/core/scheduling/calendar.ts";
 import { db } from "@/db/index.ts";
 import { type SourceView, sourceView } from "@/lib/dpo/assistant.ts";
-import { isDpoAssistantConfigured } from "@/lib/dpo/models.ts";
+import { dpoBlocked } from "@/lib/dpo/models.ts";
 import {
   getOwnConversationWith,
   listMessagesWith,
@@ -72,9 +72,10 @@ export default async function DpoAssistantPage({
   }
 
   const month = usageMonth(new Date());
-  const [usage, configuredLimit] = await Promise.all([
+  const [usage, configuredLimit, blockedReason] = await Promise.all([
     monthUsageWith(db, tenant.slug, month),
     monthlyLimitWith(db, tenant.slug),
+    dpoBlocked(tenant.slug),
   ]);
 
   return (
@@ -108,7 +109,7 @@ export default async function DpoAssistantPage({
           key={conversationId ?? "nova"}
           initialConversationId={conversationId}
           initialMessages={initialMessages}
-          available={isDpoAssistantConfigured()}
+          blockedReason={blockedReason}
           usage={{
             answered: usage.answered,
             limit: effectiveLimit(configuredLimit),

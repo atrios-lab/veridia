@@ -10,7 +10,7 @@ import { OFFICE_TIME_ZONE } from "@/core/time/office-time.ts";
 import { db } from "@/db/index.ts";
 import { justify } from "@/lib/audit-reason.ts";
 import { draftReplyWith } from "@/lib/dpo/assistant.ts";
-import { dpoModels, isDpoAssistantConfigured } from "@/lib/dpo/models.ts";
+import { dpoBlocked, dpoModels } from "@/lib/dpo/models.ts";
 import { officeContextFor } from "@/lib/dpo/office.ts";
 import { notifyCitizen } from "@/lib/email/service-request.ts";
 import { isDpoRateLimited } from "@/lib/rate-limit.ts";
@@ -217,13 +217,12 @@ export async function draftDataRightsReply(
   ) {
     return { status: "error", message: NO_PERMISSION };
   }
-  if (!isDpoAssistantConfigured()) {
-    return { status: "error", message: DPO_COPY.unavailable };
-  }
   if (await isDpoRateLimited(session.user.id)) {
     return { status: "error", message: DPO_COPY.rateLimited };
   }
   const tenant = await getTenant();
+  const blocked = await dpoBlocked(tenant.slug);
+  if (blocked) return { status: "error", message: blocked };
   const request = await findById(
     tenant.slug,
     String(formData.get("requestId") ?? ""),
@@ -233,7 +232,7 @@ export async function draftDataRightsReply(
   }
   const { right } = parseDetails("data-rights", request.details);
   const now = new Date();
-  const result = await draftReplyWith(db, dpoModels(tenant.slug), {
+  const result = await draftReplyWith(db, dpoModels(), {
     tenantSlug: tenant.slug,
     userId: session.user.id,
     userRole: session.user.role ?? "",

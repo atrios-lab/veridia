@@ -70,6 +70,13 @@ export const OFFICE_PERMISSIONS = [
   // The DOI to the Receita Federal (IN RFB nº 2.186/2024), its own item
   // (decision of 15/11/2026: "a DOI tem que ficar no item à parte").
   "doi.manage",
+  // The legal base the AI is taught with (decision of 15/11/2026): laws,
+  // provimentos, jurisprudence and models, kept as Markdown.
+  "knowledge.manage",
+  // The qualificação de títulos (change qualificacao-de-titulos): the
+  // notas devolutivas, the reexames, the qualificações positivas and the
+  // library of exigências.
+  "qualificacao.manage",
   "signer.use",
   "transparency.manage",
   "numbering.manage",
@@ -135,6 +142,8 @@ export const GRANTABLE_PERMISSIONS = [
   "titularidade.manage",
   "censec.manage",
   "doi.manage",
+  "knowledge.manage",
+  "qualificacao.manage",
   "signer.use",
   "transparency.manage",
   "numbering.manage",
@@ -191,6 +200,10 @@ export const DERIVED_FROM: Partial<Record<GrantablePermission, Permission>> = {
   "attributions.view": "desk.access",
   // Whoever loads the Registro Civil's base loads the others' files.
   "attributions.import": "rcpn.import",
+  // Whoever loads the attributions' files loads the legal base.
+  "knowledge.manage": "attributions.import",
+  // Whoever answers the pedidos at the counter qualifies the títulos.
+  "qualificacao.manage": "requests.manage",
   "dpo.assist": "desk.access",
 };
 
@@ -411,6 +424,10 @@ export const GRANTABLE_LABELS: Record<GrantablePermission, string> = {
   "censec.manage":
     "Cargas da CENSEC: CEP, CESDI e RCTO por quinzena (CNN, arts. 265 a 272)",
   "doi.manage": "Carga da DOI à Receita Federal (IN RFB nº 2.186/2024)",
+  "knowledge.manage":
+    "Base jurídica da IA: enviar, corrigir e excluir leis, provimentos, jurisprudência e modelos",
+  "qualificacao.manage":
+    "Qualificação de títulos: notas devolutivas, reexames, qualificações positivas e biblioteca de exigências",
   "signer.use": "Assinador digital (assinar documentos)",
   "transparency.manage": "Transparência (boletim mensal e documentos)",
   "numbering.manage": "Numeração de documentos",
