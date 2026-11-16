@@ -34,6 +34,7 @@ import { publishedTutorialCount } from "@/lib/tutorials.ts";
 import { AccessClosed } from "../_components/access-closed.tsx";
 import { AccessHoursWatch } from "../_components/access-hours-watch.tsx";
 import { AgendaAlerts } from "../_components/agenda-alerts.tsx";
+import { AlertDock } from "../_components/alert-dock.tsx";
 import {
   CHAT_SHAKE_TARGET_ID,
   ChatAlerts,
@@ -223,10 +224,7 @@ export default async function DashboardLayout({
         <SidebarProvider
           id={CHAT_SHAKE_TARGET_ID}
           defaultOpen={sidebarOpen}
-          // --content-left: where the content column starts, for the alerts
-          // that float at its left edge (agenda-alerts, record-alerts). It
-          // follows the sidebar when it collapses to its icons.
-          className="h-svh min-h-0 overflow-hidden [--content-left:var(--sidebar-width)] has-[[data-slot=sidebar][data-state=collapsed]]:[--content-left:var(--sidebar-width-icon)]"
+          className="h-svh min-h-0 overflow-hidden"
         >
           <AdminSidebar
             tenant={tenant}
@@ -294,25 +292,29 @@ export default async function DashboardLayout({
               {can(role, "chat.manage", granted) && (
                 <ChatAlerts setting={alerts.chat} />
               )}
-              {/* Same for the agenda: who is coming today, who just booked. */}
-              {can(role, "channels.manage", granted) && (
-                <AgendaAlerts setting={alerts.agenda} />
-              )}
-              {/* And the guias de transmissão de bens: a new one, or one the citizen moved. */}
-              {can(role, "requests.manage", granted) && (
-                <GuideAlerts setting={alerts.guias} />
-              )}
-              {/* New requests, LGPD and ouvidoria, each as the office chose. */}
-              {(can(role, "requests.manage", granted) ||
-                can(role, "channels.manage", granted)) && (
-                <RecordAlerts
-                  settings={{
-                    pedidos: alerts.pedidos,
-                    lgpd: alerts.lgpd,
-                    ouvidoria: alerts.ouvidoria,
-                  }}
-                />
-              )}
+              {/* The alerts share one column (top right), so they never pile
+                  on each other: the agenda (who is coming today, who just
+                  booked), the guias de transmissão de bens (a new one, or one
+                  the citizen moved) and the new requests, LGPD and ouvidoria,
+                  each as the office chose. */}
+              <AlertDock>
+                {can(role, "channels.manage", granted) && (
+                  <AgendaAlerts setting={alerts.agenda} />
+                )}
+                {can(role, "requests.manage", granted) && (
+                  <GuideAlerts setting={alerts.guias} />
+                )}
+                {(can(role, "requests.manage", granted) ||
+                  can(role, "channels.manage", granted)) && (
+                  <RecordAlerts
+                    settings={{
+                      pedidos: alerts.pedidos,
+                      lgpd: alerts.lgpd,
+                      ouvidoria: alerts.ouvidoria,
+                    }}
+                  />
+                )}
+              </AlertDock>
             </div>
           </div>
         </SidebarProvider>

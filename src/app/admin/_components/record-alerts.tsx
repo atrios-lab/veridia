@@ -11,11 +11,14 @@ import type {
   RecordAlertItem,
 } from "@/lib/guide-requests.ts";
 import { recordAlertSnapshotAction } from "../(dashboard)/utilitarios/guias/actions.ts";
+import { AlertOverflow } from "./alert-dock.tsx";
 import { AdminIcon } from "./icon.tsx";
 import { announce } from "./office-alert.ts";
 
 const POLL_MS = 60_000;
 const STORAGE_KEY = "record-alerts";
+/** Cards on screen; the rest collapse into one "Mais N" row. */
+const MAX_CARDS = 3;
 
 const TITLES: Record<RecordAlertChannel, string> = {
   pedidos: "Novo pedido de serviço",
@@ -62,16 +65,20 @@ export function RecordAlerts({
   const [seen, setSeen] = useState<Seen | null>(null);
   const announced = useRef(new Set<string>());
 
-  const dismiss = useCallback((key: string) => {
+  const dismissMany = useCallback((keys: string[]) => {
     setSeen((current) => {
       const next = {
         since: current?.since ?? new Date().toISOString(),
-        dismissed: [...(current?.dismissed ?? []), key],
+        dismissed: [...(current?.dismissed ?? []), ...keys],
       };
       writeSeen(next);
       return next;
     });
   }, []);
+  const dismiss = useCallback(
+    (key: string) => dismissMany([key]),
+    [dismissMany],
+  );
 
   useEffect(() => {
     const stored = readSeen() ?? {
@@ -125,16 +132,19 @@ export function RecordAlerts({
     }
   }, [fresh, settings]);
 
-  const cards = fresh.filter((item) => settings[item.channel].popup);
+  // Newest first.
+  const cards = fresh
+    .filter((item) => settings[item.channel].popup)
+    .sort((a, b) => b.at.localeCompare(a.at));
   if (cards.length === 0) return null;
+  const hidden = cards.slice(MAX_CARDS);
   return (
-    // Top left, beside the sidebar: the guias take the top right, the
-    // agenda the bottom left and the chat the bottom right.
-    <div className="pointer-events-none fixed top-20 left-4 z-40 flex w-[min(320px,calc(100vw-2rem))] flex-col gap-2 md:left-[calc(var(--content-left)+1rem)]">
-      {cards.slice(0, 4).map((item) => (
+    // Inside the alert dock (top right), under the agenda's cards.
+    <div className="pointer-events-auto flex flex-col gap-2">
+      {cards.slice(0, MAX_CARDS).map((item) => (
         <output
           key={item.key}
-          className="pointer-events-auto flex items-start gap-3 rounded-xl border bg-card px-4 py-3 text-card-foreground shadow-lg"
+          className="flex items-start gap-3 rounded-xl border bg-card px-4 py-3 text-card-foreground shadow-lg"
         >
           <AdminIcon
             name="inbox"
@@ -166,6 +176,11 @@ export function RecordAlerts({
           </button>
         </output>
       ))}
+      <AlertOverflow
+        hidden={hidden.length}
+        noun={hidden.length === 1 ? "aviso novo" : "avisos novos"}
+        onDismissAll={() => dismissMany(hidden.map((item) => item.key))}
+      />
     </div>
   );
 }
