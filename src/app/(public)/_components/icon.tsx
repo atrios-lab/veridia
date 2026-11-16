@@ -38,6 +38,12 @@ const PATHS = {
     "M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12Z",
     "M12 9a3 3 0 1 0 0 6 3 3 0 0 0 0-6Z",
   ],
+  // The open eye crossed out: a password that is shown, to hide it again.
+  eyeOff: [
+    "M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12Z",
+    "M12 9a3 3 0 1 0 0 6 3 3 0 0 0 0-6Z",
+    "M3 3l18 18",
+  ],
   // Same glyph as the panel's `file`, so an attachment reads the same on the
   // two sides of one conversation.
   file: [
