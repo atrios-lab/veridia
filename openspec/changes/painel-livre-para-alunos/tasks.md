@@ -42,13 +42,14 @@
 - [x] 6.2 Conferir que cartório cliente e Serra Verde não mudam: sem faixa, e-mails saem, Mensagens abre para o escrevente
 - [x] 6.3 Bateria do CI: typecheck, lint, test, check:dashes, check:tokens, check:admin-scale, check:destructive, `openspec validate --all` e build
 - [ ] 6.4 Aplicar a migração no Homolog e rodar o seed do tenant de cursos lá
-- [ ] 6.5 Usuário aplica a migração em produção à mão e roda o seed do tenant de cursos, antes do merge (a IA já fica recusada no código, sem passo manual)
+- [x] 6.5 Migração `0072` em produção: roda sozinha no deploy depois do merge da #353 (a IA já fica recusada no código, sem passo manual)
+- [ ] 6.5.1 Usuário preenche a mesa do tenant de cursos em produção: seed uma vez ou o botão de limpeza
 - [x] 6.6 Abrir a PR 1 (#353)
 
 ## 7. Limpeza do cartório (PR 2, ⚠️ apaga dados do banco)
 
-- [ ] 7.1 `DEMO_RESET_TABLES`, lista fechada, e `resetDemoOfficeWith(db, store, slug)`: recusa slug não fictício ou sem `demo`, apaga por `tenant_slug` numa transação, apaga os arquivos do store, roda o seed e grava auditoria da plataforma
-- [ ] 7.2 Testes contra PGlite com dois tenants: apaga só o tenant de cursos; não toca contas, turmas, progresso, avaliações, certificados, cursos, vídeos nem auditoria; recusa cartório real
-- [ ] 7.3 Botão "Limpar o cartório de demonstração" na tela de Turmas, com `cohorts.manage` e confirmação digitada
-- [ ] 7.4 Testar no banco local de teste; nunca rodar contra a produção
-- [ ] 7.5 Abrir a PR 2 com "⚠️ Apaga dados do banco" no título e no topo da descrição, dizendo o que é apagado e como desfazer; deixar aberta para outra pessoa revisar, sem merge e sem auto-merge
+- [x] 7.1 `DEMO_RESET_TABLES`, lista fechada, e `resetDemoOfficeWith(db, store, slug)`: recusa slug não fictício ou sem `demo`, apaga por `tenant_slug` numa transação, apaga os arquivos do store, roda o seed e grava auditoria da plataforma
+- [x] 7.2 Testes contra PGlite com dois tenants: apaga só o tenant de cursos; não toca contas, turmas, progresso, avaliações, certificados, cursos, vídeos nem auditoria; recusa cartório real
+- [x] 7.3 Botão "Limpar o cartório de demonstração" na tela de Turmas, com `cohorts.manage` e confirmação digitada
+- [x] 7.4 Testar no banco local de teste; nunca rodar contra a produção (testes contra PGlite; no banco local, a recusa com a confirmação errada e, com o ok do usuário, a limpeza pelo botão: 28 registros apagados, seed de volta, contas, turma e auditoria intactas)
+- [x] 7.5 Abrir a PR 2 (#354; mergeada na branch da #353, que já tinha ido para a main; segue para a main numa PR nova) com "⚠️ Apaga dados do banco" no título e no topo da descrição, dizendo o que é apagado e como desfazer; deixar aberta para outra pessoa revisar, sem merge e sem auto-merge
