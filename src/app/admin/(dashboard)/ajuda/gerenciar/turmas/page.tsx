@@ -78,7 +78,7 @@ export default async function CohortsPage() {
                         Link vale até{" "}
                         {formatDate(lastValidDay(cohort.expiresAt))}
                       </p>
-                      <div className="mt-2 max-w-[440px]">
+                      <div className="mt-2">
                         <CopyLink url={`${origin}/turma/${cohort.code}`} />
                       </div>
                     </div>

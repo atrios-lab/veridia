@@ -21,7 +21,7 @@ export function CohortCreateForm({
   const sent = state.status === "error" ? state.values : undefined;
 
   return (
-    <div className="rounded-xl border bg-card p-6">
+    <div id="nova-turma" className="scroll-mt-20 rounded-xl border bg-card p-6">
       <h2 className="text-lg font-semibold text-foreground">Nova turma</h2>
       <p className="mt-0.5 text-sm text-muted-foreground">
         Um link por cartório. O responsável repassa para a equipe, e cada pessoa
