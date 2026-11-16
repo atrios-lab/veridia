@@ -7,6 +7,7 @@ import {
   formatOfficeDayMonth,
   formatOfficeDayMonthTime,
 } from "@/core/time/office-time.ts";
+import type { ReviewView } from "@/lib/qualificacao-revisao.ts";
 import type { AttachmentItem } from "../../../../_components/attachment-link.ts";
 import {
   attachmentLabel,
@@ -37,6 +38,11 @@ import {
   UnsignedNotice,
 } from "./delivery-section.tsx";
 import {
+  DocumentReviewPanel,
+  ReviewSummary,
+  useDocumentReview,
+} from "./document-review.tsx";
+import {
   SignatureChoice,
   type SignatureDecision,
   useSignatureCheck,
@@ -65,6 +71,8 @@ export interface RequirementItem {
   seen?: SeenLabels;
   /** The citizen's ciência of each document attached to it, by id. */
   formsSeen: Record<string, SeenLabels>;
+  /** How the review of each document came out (document-review.tsx). */
+  formsReview: Record<string, ReviewView>;
   /** The conversation inside this requirement, oldest first. */
   messages: RequirementMessageItem[];
 }
@@ -138,6 +146,10 @@ function AttachFormButton({
   const formRef = useRef<HTMLFormElement>(null);
   const choiceRef = useRef<HTMLInputElement>(null);
   const { check, inspect, reset } = useSignatureCheck();
+  // The note is read as soon as it is picked (decision of 16/11/2026): the
+  // signature question waits for the review, and for the clerk's call when
+  // something was found.
+  const review = useDocumentReview(requestId);
   const send = (choice: SignatureDecision) => {
     if (choiceRef.current) choiceRef.current.value = choice;
     reset();
@@ -145,8 +157,11 @@ function AttachFormButton({
   };
   const cancel = () => {
     reset();
+    review.reset();
     formRef.current?.reset();
   };
+  const reviewId = review.status.kind === "done" ? review.status.review.id : "";
+  // biome-ignore lint/correctness/useExhaustiveDependencies: reacts to the action's answer only.
   useEffect(() => {
     if (state.status === "error") toast.error(state.message);
     if (state.status === "success") {
@@ -156,6 +171,7 @@ function AttachFormButton({
           : "Documento anexado à exigência. O cidadão já vê na consulta.",
       );
       formRef.current?.reset();
+      review.reset();
     }
   }, [state]);
 
@@ -163,16 +179,23 @@ function AttachFormButton({
     <form
       action={action}
       ref={formRef}
-      className={check.kind === "idle" ? "ml-auto" : "basis-full border-t pt-3"}
+      className={
+        check.kind === "idle" && review.status.kind === "idle"
+          ? "ml-auto"
+          : "basis-full border-t pt-3"
+      }
     >
       <input type="hidden" name="requestId" value={requestId} />
       <input type="hidden" name="requirementId" value={requirementId} />
       <input type="hidden" name="assinatura" ref={choiceRef} />
+      <input type="hidden" name="revisao" value={reviewId} />
+      <input type="hidden" name="decisao" value={review.decision} />
       <label
         className={cn(
           buttonVariants({ variant: "outline", size: "sm" }),
           "relative cursor-pointer focus-within:border-ring focus-within:ring-3 focus-within:ring-ring/50",
-          (pending || check.kind !== "idle") && "cursor-not-allowed opacity-60",
+          (pending || check.kind !== "idle" || review.status.kind !== "idle") &&
+            "cursor-not-allowed opacity-60",
         )}
       >
         {pending ? "Enviando…" : "Anexar documento à exigência"}
@@ -184,18 +207,31 @@ function AttachFormButton({
           disabled={pending}
           onChange={(event) => {
             const file = event.target.files?.[0];
-            if (file) void inspect(file);
+            if (!file) return;
+            void inspect(file);
+            void review.start(file);
           }}
         />
       </label>
-      <SignatureChoice
-        check={check}
-        field="formulario"
-        suggestions={FORM_NAMES}
-        defaultName="Formulário da exigência"
-        onSend={send}
-        onCancel={cancel}
+      <DocumentReviewPanel
+        status={review.status}
+        decision={review.decision}
+        onKeep={() => review.setDecision("manteve")}
+        onChange={() => {
+          cancel();
+          toast.info("Altere a nota e anexe de novo quando estiver pronta.");
+        }}
       />
+      {review.cleared && (
+        <SignatureChoice
+          check={check}
+          field="formulario"
+          suggestions={FORM_NAMES}
+          defaultName="Formulário da exigência"
+          onSend={send}
+          onCancel={cancel}
+        />
+      )}
     </form>
   );
 }
@@ -670,6 +706,7 @@ function RequirementCard({
                       seen={requirement.formsSeen[form.id]}
                       className="mt-1 ml-1"
                     />
+                    <ReviewSummary review={requirement.formsReview[form.id]} />
                     {/* The name the citizen sees, editable (decision of
                         16/11/2026: "pode renomear esses arquivos"). */}
                     <RenameDelivered
@@ -698,6 +735,7 @@ function RequirementCard({
                     seen={requirement.formsSeen[form.id]}
                     className="mt-1 ml-1"
                   />
+                  <ReviewSummary review={requirement.formsReview[form.id]} />
                   <RenameDelivered
                     requestId={requestId}
                     attachmentId={form.id}

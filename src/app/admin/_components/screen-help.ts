@@ -64,6 +64,7 @@ const ENTRIES: Record<string, ScreenHelp> = {
       "Confira os documentos enviados e, se faltar algo, faça uma exigência (o cidadão é avisado).",
       "Informe o valor quando houver cobrança; o cidadão paga pelo Pix.",
       "Anexe o documento final em 'Entrega ao cidadão' (dê o nome e escolha assinar digitalmente ou enviar como está).",
+      "Ao anexar uma nota ou documento à exigência, o Assistente Virtual analisa na hora: aponta o que diverge da lei ou cita norma revogada, com o fundamento, e sugere manter ou alterar. A decisão é sua.",
       "Mude o andamento até 'Concluído'.",
     ],
     configure: {
@@ -957,6 +958,8 @@ ENTRIES["/admin/utilitarios/qualificacao/biblioteca"] = {
     "Em Nova exigência, marque os atos a que ela serve (nenhum: todos os atos da atribuição).",
     "Alterar e Excluir pedem justificativa, que vai para a auditoria. A exigência excluída fica guardada e pode ser estornada; as notas já emitidas não mudam.",
     "A biblioteca do Registro Civil começa com exigências escritas de forma genérica, sem dados de clientes. Confira os fundamentos e ajuste ao entendimento da serventia.",
+    "As marcadas Aprendida vieram das notas que a equipe anexou às exigências: o Assistente Virtual escreve cada exigência como modelo genérico, com fundamento e sem dados pessoais. Confira e ajuste como qualquer outra.",
+    "Em Aprender com as notas já anexadas, clique em Aprender agora para ler as notas antigas. As que tiverem divergência com a lei ou norma revogada aparecem na lista, com o pedido.",
   ],
 };
 

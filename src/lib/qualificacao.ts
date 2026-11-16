@@ -69,6 +69,8 @@ export interface LibraryItem {
   howToComply: string;
   basis: string;
   seedKey: string | null;
+  /** "aprendida": learned from a note the team attached. */
+  origin: "serventia" | "aprendida";
   uses: number;
   removedAt: Date | null;
   removedReason: string | null;
@@ -96,6 +98,7 @@ const toItem = (
   howToComply: row.howToComply,
   basis: row.basis,
   seedKey: row.seedKey,
+  origin: row.origin === "aprendida" ? "aprendida" : "serventia",
   uses: row.uses,
   removedAt: row.removedAt,
   removedReason: row.removedReason,

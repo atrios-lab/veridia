@@ -2464,6 +2464,12 @@ export const qualificationLibrary = pgTable(
     basis: text("basis").notNull(),
     /** The seed it came from (core/qualificacao/biblioteca), when it did. */
     seedKey: text("seed_key"),
+    /**
+     * "serventia": written or kept by the office (and the seeds);
+     * "aprendida": learned from a note the team attached (decision of
+     * 16/11/2026: "sempre aprenda"), generic and with no personal data.
+     */
+    origin: text("origin").notNull().default("serventia"),
     uses: integer("uses").notNull().default(0),
     createdBy: text("created_by").notNull(),
     createdAt: timestamp("created_at", { withTimezone: true })
@@ -2478,6 +2484,53 @@ export const qualificationLibrary = pgTable(
   (t) => [
     index("qualification_library_tenant").on(t.tenantSlug, t.attribution),
     uniqueIndex("qualification_library_seed").on(t.tenantSlug, t.seedKey),
+  ],
+);
+
+/**
+ * The review of a note (or any document) the team attaches to an exigência
+ * (decision of 16/11/2026): what the office's legal base and the AI found
+ * against the law, what the clerk decided, and what was learned from it.
+ * One per file per office (by the file's hash): the same file attached
+ * twice is reviewed once. Nothing of the file itself is kept here, only
+ * the findings and the generic models, with no personal data.
+ */
+export const qualificationDocumentReviews = pgTable(
+  "qualification_document_reviews",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    tenantSlug,
+    fileHash: text("file_hash").notNull(),
+    fileName: text("file_name").notNull(),
+    requestId: uuid("request_id").references(() => serviceRequests.id, {
+      onDelete: "set null",
+    }),
+    attachmentId: uuid("attachment_id").references(
+      () => serviceRequestAttachments.id,
+      { onDelete: "set null" },
+    ),
+    attribution: text("attribution"),
+    /** core/qualificacao/revisao ReviewResult. */
+    result: jsonb("result").notNull(),
+    /** Why the AI did not review it, when it did not (the base still did). */
+    aiError: text("ai_error"),
+    reviewedBy: text("reviewed_by"),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    /** "manteve" | "alterou": the clerk's call, after the warning. */
+    decision: text("decision"),
+    decidedBy: text("decided_by"),
+    decidedAt: timestamp("decided_at", { withTimezone: true }),
+    learnedAt: timestamp("learned_at", { withTimezone: true }),
+    learnedCount: integer("learned_count").notNull().default(0),
+  },
+  (t) => [
+    uniqueIndex("qualification_document_reviews_file").on(
+      t.tenantSlug,
+      t.fileHash,
+    ),
+    index("qualification_document_reviews_attachment").on(t.attachmentId),
   ],
 );
 

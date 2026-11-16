@@ -6,6 +6,7 @@ import {
 } from "@/core/qualificacao/qualificacao.ts";
 import { db } from "@/db/index.ts";
 import { listLibraryWith } from "@/lib/qualificacao.ts";
+import { pendingLearningCountWith } from "@/lib/qualificacao-revisao.ts";
 import { getTenant } from "@/lib/tenant.ts";
 import { BackLink } from "../../../../_components/back-link.tsx";
 import { AdminPageHeader } from "../../../../_components/page-header.tsx";
@@ -13,6 +14,7 @@ import { TirarDuvida } from "../../../../_components/tirar-duvida.tsx";
 import { buttonVariants } from "../../../../_ui/button.tsx";
 import { requireQualificacao } from "../_access.ts";
 import { LibraryItemForm, MarkLibraryButton } from "../qualificacao-forms.tsx";
+import { LearnAttached } from "./learn-attached.tsx";
 
 export const metadata = { title: "Biblioteca de exigências" };
 
@@ -28,9 +30,10 @@ export default async function LibraryPage({
   const attribution = isAttribution(atribuicao) ? atribuicao : "rcpn";
   const removedView = excluidas === "1";
   const tenant = await getTenant();
-  const items = await listLibraryWith(db, tenant.slug, attribution, {
-    removed: removedView,
-  });
+  const [items, pendingLearning] = await Promise.all([
+    listLibraryWith(db, tenant.slug, attribution, { removed: removedView }),
+    pendingLearningCountWith(db, tenant.slug).catch(() => 0),
+  ]);
 
   return (
     <>
@@ -45,6 +48,7 @@ export default async function LibraryPage({
           href="/admin/utilitarios/qualificacao"
           label="Qualificação de títulos"
         />
+        <LearnAttached pending={pendingLearning} />
         <nav aria-label="Atribuições" className="flex flex-wrap gap-2 text-sm">
           {Object.entries(ATTRIBUTIONS).map(([value, label]) => (
             <Link
@@ -96,6 +100,14 @@ export default async function LibraryPage({
                   <div className="flex flex-wrap items-baseline justify-between gap-2">
                     <p className="font-semibold text-foreground">
                       {item.title}
+                      {item.origin === "aprendida" && (
+                        <span
+                          title="Aprendida de uma nota que a equipe anexou: confira e ajuste se precisar."
+                          className="ml-2 rounded-full bg-primary/10 px-2 py-0.5 align-middle text-xs font-medium text-primary"
+                        >
+                          Aprendida
+                        </span>
+                      )}
                     </p>
                     <span className="text-xs text-muted-foreground">
                       {item.acts.length
