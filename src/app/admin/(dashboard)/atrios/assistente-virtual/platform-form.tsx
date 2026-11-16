@@ -86,7 +86,9 @@ export function PlatformForm({
   };
 
   const summary = [
-    changeAi ? `IA ${ai}` : "",
+    changeAi
+      ? `Assistente Virtual ${ai === "liberada" ? "liberado" : "suspenso"}`
+      : "",
     changeNotes ? `análise das notas: ${NOTE_REVIEW_MODES[notes].label}` : "",
   ]
     .filter(Boolean)
@@ -204,7 +206,7 @@ export function PlatformForm({
                             {o.name}
                           </span>
                           <span className="text-xs text-muted-foreground">
-                            {o.aiAllowed ? "liberada" : "suspensa"}
+                            {o.aiAllowed ? "liberado" : "suspenso"}
                           </span>
                         </label>
                       </li>
@@ -237,7 +239,7 @@ export function PlatformForm({
               checked={changeAi}
               onChange={(e) => setChangeAi(e.target.checked)}
             />
-            Assistente Virtual (IA) em geral
+            Assistente Virtual em geral
           </label>
           {changeAi && (
             <div className="ml-6 flex flex-col gap-2">
@@ -253,7 +255,8 @@ export function PlatformForm({
                 <span>
                   <span className="font-medium">Liberar</span>
                   <span className="block text-xs text-muted-foreground">
-                    A serventia usa a IA onde o Tabelião deixou ligada.
+                    A serventia usa o Assistente Virtual onde o Tabelião deixou
+                    ligado.
                   </span>
                 </span>
               </label>
@@ -269,10 +272,10 @@ export function PlatformForm({
                 <span>
                   <span className="font-medium">Suspender</span>
                   <span className="block text-xs text-muted-foreground">
-                    Nenhuma chamada à IA e nenhum crédito gasto (qualificação,
-                    DPO, base jurídica, tirar dúvida, análise das notas). A
-                    serventia vê só que o Assistente Virtual está indisponível
-                    no momento.
+                    Nenhuma chamada ao Assistente Virtual e nenhum crédito gasto
+                    (qualificação, DPO, base jurídica, tirar dúvida, análise das
+                    notas). A serventia vê só que o Assistente Virtual está
+                    indisponível no momento.
                   </span>
                 </span>
               </label>
@@ -314,9 +317,9 @@ export function PlatformForm({
               )}
               {changeAi && ai === "suspensa" && notes === "ia" && (
                 <p className="text-xs text-warning-text">
-                  Com a IA suspensa, &quot;Com o Assistente Virtual&quot;
-                  funciona como &quot;Só pela base jurídica&quot;: nada é
-                  cobrado.
+                  Com o Assistente Virtual suspenso, a opção &quot;Com o
+                  Assistente Virtual&quot; funciona como &quot;Só pela base
+                  jurídica&quot;: nada é cobrado.
                 </p>
               )}
             </div>
@@ -390,7 +393,8 @@ function OfficeStatus({
             Situação das serventias
           </span>
           <span className="text-xs text-muted-foreground">
-            {offices.length} serventias · {suspended} com a IA suspensa
+            {offices.length} serventias · {suspended} com o Assistente Virtual
+            suspenso
           </span>
         </span>
         <AdminIcon
@@ -419,7 +423,7 @@ function OfficeStatus({
                 <span
                   className={`rounded-full px-2 py-0.5 text-xs font-medium ${o.aiAllowed ? "bg-success-soft text-success-text" : "bg-warning-soft text-warning-text"}`}
                 >
-                  IA {o.aiAllowed ? "liberada" : "suspensa"}
+                  Assistente Virtual {o.aiAllowed ? "liberado" : "suspenso"}
                 </span>
                 <span className="text-xs text-muted-foreground">
                   {NOTE_REVIEW_MODES[o.noteReview].label} · botão do Tabelião:{" "}

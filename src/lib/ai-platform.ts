@@ -71,7 +71,7 @@ export async function setAiPlatformWith(
     actorId,
     action: "ai.platform",
     targetType: "tenant",
-    targetId: `${tenantSlug} · IA ${published.aiAllowed ? "liberada" : "suspensa"} · análise das notas: ${published.noteReview}`,
+    targetId: `${tenantSlug} · Assistente Virtual ${published.aiAllowed ? "liberado" : "suspenso"} · análise das notas: ${published.noteReview}`,
     ...(reason ? { reason } : {}),
   });
   return published;

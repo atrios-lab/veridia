@@ -65,7 +65,7 @@ export function LearnAttached({
           <p className="text-sm text-muted-foreground">
             {usesAi
               ? "O Assistente Virtual lê as notas e documentos que a equipe já anexou às exigências, aponta o que diverge da lei ou cita norma revogada e guarda aqui os modelos de exigência"
-              : "As notas e documentos que a equipe já anexou às exigências são lidos pela base jurídica da serventia, sem gastar crédito da IA: aponta norma ou artigo revogado e exigência sem fundamento, e guarda aqui os modelos de exigência"}
+              : "As notas e documentos que a equipe já anexou às exigências são lidos pela base jurídica da serventia, sem gastar crédito do Assistente Virtual: aponta norma ou artigo revogado e exigência sem fundamento, e guarda aqui os modelos de exigência"}
             , sem dados pessoais, marcados como <strong>Aprendida</strong>. Toda
             nota nova anexada passa por isso sozinha.
           </p>

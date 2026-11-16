@@ -44,11 +44,14 @@ import {
   noteItems,
   unfoundedItems,
 } from "@/core/qualificacao/revisao-base.ts";
+import { officialName } from "@/core/tenant/identification.ts";
+import { TENANTS } from "@/core/tenant/resolve.ts";
 import type { Database } from "@/db/index.ts";
 import {
   knowledgePassages,
   qualificationDocumentReviews,
   qualificationLibrary,
+  qualificationNotes,
   serviceRequestAttachments,
   serviceRequests,
 } from "@/db/schema.ts";
@@ -100,7 +103,9 @@ function resultOf(raw: unknown): ReviewResult {
     style: Array.isArray(r.style)
       ? r.style.filter((s): s is string => typeof s === "string")
       : [],
-    ...(r.via === "ia" || r.via === "base" ? { via: r.via } : {}),
+    ...(r.via === "ia" || r.via === "base" || r.via === "plataforma"
+      ? { via: r.via }
+      : {}),
   };
 }
 
@@ -208,6 +213,48 @@ async function revokedArticlesWith(
   return out;
 }
 
+/**
+ * The note of the platform's Qualificação this text is, by what its every
+ * page prints: "Nota devolutiva nº 5/2026" (or "Qualificação positiva"), a
+ * note of this office's that exists and was not excluded, and, when the
+ * note has one, its protocol. A note of another system with the same number
+ * does not pass: the protocol and the office's name must be there too.
+ */
+async function platformNoteIn(
+  database: Database,
+  tenantSlug: string,
+  text: string,
+): Promise<string | undefined> {
+  const m =
+    /(Nota devolutiva|Qualifica[cç][aã]o positiva)\s+n[º°o.]*\s*(\d{1,6})\s*\/\s*(\d{4})/i.exec(
+      text,
+    );
+  if (!m) return undefined;
+  const kind = /^nota/i.test(m[1] ?? "") ? "devolutiva" : "positiva";
+  const [row] = await database
+    .select({ snapshot: qualificationNotes.snapshot })
+    .from(qualificationNotes)
+    .where(
+      and(
+        eq(qualificationNotes.tenantSlug, tenantSlug),
+        eq(qualificationNotes.kind, kind),
+        eq(qualificationNotes.year, Number(m[3])),
+        eq(qualificationNotes.sequence, Number(m[2])),
+        isNull(qualificationNotes.removedAt),
+      ),
+    )
+    .limit(1);
+  if (!row) return undefined;
+  const flat = text.replace(/\s+/g, " ");
+  const protocol = String(
+    (row.snapshot as { protocol?: unknown } | null)?.protocol ?? "",
+  ).trim();
+  if (protocol && !flat.includes(protocol)) return undefined;
+  const tenant = TENANTS[tenantSlug];
+  if (tenant && !flat.includes(officialName(tenant))) return undefined;
+  return `${kind === "devolutiva" ? "Nota devolutiva" : "Qualificação positiva"} nº ${m[2]}/${m[3]}`;
+}
+
 /** "Lei nº 6.015/1973": a cited norm, written back for the clerk. */
 function normLabel(norm: NormRef): string {
   const kind = norm.kind.replace(/-/g, " ");
@@ -291,14 +338,58 @@ export async function reviewDocumentWith(
   // now and did not then (failed, or the office was on the base alone).
   if (known) {
     const before = resultOf(known.result);
-    const aiRanThen = !known.aiError && before.via !== "base";
-    if (aiRanThen || !wantsAi || input.aiBlocked) return toView(known);
+    const done =
+      before.via === "plataforma" || (!known.aiError && before.via !== "base");
+    if (done || !wantsAi || input.aiBlocked) return toView(known);
   }
 
   const [text, norms] = await Promise.all([
     plainText(input.bytes, input.name, input.mimeType),
     baseNormsWith(database, tenantSlug),
   ]);
+  // A note the platform's own Qualificação issued was already checked
+  // against the law and the base there (decision of 16/11/2026: "não faz
+  // sentido ele fazer uma reanálise"): no second review, no credit, and
+  // nothing to learn from the platform's own text.
+  const issued = await platformNoteIn(database, tenantSlug, text);
+  if (issued) {
+    const result: ReviewResult = {
+      recommendation: "manter",
+      summary: `${issued} emitida pela qualificação da plataforma: já foi conferida com a lei, as normas em vigor e a base jurídica ao qualificar. Não é analisada de novo; siga para a assinatura.`,
+      findings: [],
+      learned: [],
+      style: [],
+      via: "plataforma",
+    };
+    if (known) {
+      await database
+        .update(qualificationDocumentReviews)
+        .set({ result, aiError: null, learnedAt: new Date() })
+        .where(eq(qualificationDocumentReviews.id, known.id));
+      return toView({ ...known, result, aiError: null });
+    }
+    await database
+      .insert(qualificationDocumentReviews)
+      .values({
+        tenantSlug,
+        fileHash,
+        fileName: input.name.slice(0, 300) || issued,
+        requestId: input.requestId ?? null,
+        attribution: input.attribution ?? null,
+        result,
+        reviewedBy: input.actorId ?? null,
+        learnedAt: new Date(),
+      })
+      .onConflictDoNothing({
+        target: [
+          qualificationDocumentReviews.tenantSlug,
+          qualificationDocumentReviews.fileHash,
+        ],
+      });
+    const stored = await reviewByHashWith(database, tenantSlug, fileHash);
+    if (!stored) throw new Error("revisão não gravada");
+    return toView(stored);
+  }
   const items = noteItems(text);
   const base = [
     ...revokedCitations(text, norms.revoked),

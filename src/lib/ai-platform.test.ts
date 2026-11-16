@@ -48,7 +48,7 @@ test("a suspensão da plataforma vale acima do botão do Tabelião e pode voltar
   assert.equal((await getAiPlatformWith(db, OFFICE)).noteReview, "desligada");
 });
 
-test("mudar só a análise das notas mantém a IA como estava", async () => {
+test("mudar só a análise das notas mantém o Assistente Virtual como estava", async () => {
   const office = "cartorio-ia-parcial";
   await setAiPlatformWith(
     db,

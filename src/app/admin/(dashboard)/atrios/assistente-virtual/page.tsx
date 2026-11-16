@@ -63,27 +63,29 @@ export default async function AiPlatformPage() {
       <AdminPageHeader
         maxWidth={1000}
         title="Assistente Virtual"
-        description="Liberar ou suspender a IA e escolher como as notas anexadas às exigências são analisadas: só nesta serventia, em todas ou nas que você escolher. Vale na hora e pode ser mudado a qualquer momento."
+        description="Liberar ou suspender o Assistente Virtual e escolher como as notas anexadas às exigências são analisadas: só nesta serventia, em todas ou nas que você escolher. Vale na hora e pode ser mudado a qualquer momento."
       />
       <main className="flex max-w-[1000px] flex-col gap-4 px-4 pt-6 pb-8 md:px-8">
         <section className="rounded-xl border bg-card p-5 text-sm leading-relaxed text-muted-foreground shadow-xs">
           <p>
-            <strong className="text-foreground">Suspender a IA</strong> corta
-            todo gasto de crédito da serventia (qualificação, DPO, base
+            <strong className="text-foreground">
+              Suspender o Assistente Virtual
+            </strong>{" "}
+            corta todo gasto de crédito da serventia (qualificação, DPO, base
             jurídica, tirar dúvida e análise das notas), acima do botão do
             Tabelião.{" "}
             <strong className="text-foreground">A análise das notas</strong> tem
-            três modos: com IA (mais completa, gasta crédito), só pela base
-            jurídica (instantânea, sem crédito) ou desligada (anexa como antes).
-            Nos três, a serventia continua aprendendo os modelos de exigência;
-            sem IA, pelo próprio texto das notas e sem gastar crédito. Só o que
-            você marcar em &quot;O que alterar&quot; muda; o resto fica como
-            está.
+            três modos: com o Assistente Virtual (mais completa, gasta crédito),
+            só pela base jurídica (instantânea, sem crédito) ou desligada (anexa
+            como antes). Nos três, a serventia continua aprendendo os modelos de
+            exigência; sem o Assistente Virtual, pelo próprio texto das notas e
+            sem gastar crédito. Só o que você marcar em &quot;O que
+            alterar&quot; muda; o resto fica como está.
           </p>
           {!aiConfigured() && (
             <p className="mt-2 font-medium text-warning-text">
-              A chave da IA não está configurada neste ambiente: nenhuma
-              serventia usa a IA até ela ser cadastrada.
+              A chave do Assistente Virtual não está configurada neste ambiente:
+              nenhuma serventia o usa até ela ser cadastrada.
             </p>
           )}
         </section>

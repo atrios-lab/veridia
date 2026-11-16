@@ -207,8 +207,8 @@ export function DocumentReviewPanel({
       )}
       {review.result.via === "base" && !review.aiError && (
         <p className="mt-1.5 text-xs text-muted-foreground">
-          Análise feita pela base jurídica da serventia, sem gastar crédito da
-          IA.
+          Análise feita pela base jurídica da serventia, sem gastar crédito do
+          Assistente Virtual.
         </p>
       )}
       {review.aiError && (
@@ -238,10 +238,12 @@ export function DocumentReviewPanel({
           </span>
         </div>
       )}
-      <p className="mt-2 text-xs text-muted-foreground">
-        A serventia aprende com cada nota enviada: os modelos de exigência, sem
-        dados pessoais, vão para a Biblioteca de exigências.
-      </p>
+      {review.result.via !== "plataforma" && (
+        <p className="mt-2 text-xs text-muted-foreground">
+          A serventia aprende com cada nota enviada: os modelos de exigência,
+          sem dados pessoais, vão para a Biblioteca de exigências.
+        </p>
+      )}
     </div>
   );
 }
