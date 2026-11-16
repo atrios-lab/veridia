@@ -51,4 +51,4 @@
 - [x] 7.2 Testes contra PGlite com dois tenants: apaga só o tenant de cursos; não toca contas, turmas, progresso, avaliações, certificados, cursos, vídeos nem auditoria; recusa cartório real
 - [x] 7.3 Botão "Limpar o cartório de demonstração" na tela de Turmas, com `cohorts.manage` e confirmação digitada
 - [x] 7.4 Testar no banco local de teste; nunca rodar contra a produção (testes contra PGlite; no banco local, a recusa com a confirmação errada e, com o ok do usuário, a limpeza pelo botão: 28 registros apagados, seed de volta, contas, turma e auditoria intactas)
-- [ ] 7.5 Abrir a PR 2 com "⚠️ Apaga dados do banco" no título e no topo da descrição, dizendo o que é apagado e como desfazer; deixar aberta para outra pessoa revisar, sem merge e sem auto-merge
+- [x] 7.5 Abrir a PR 2 (#354) com "⚠️ Apaga dados do banco" no título e no topo da descrição, dizendo o que é apagado e como desfazer; deixar aberta para outra pessoa revisar, sem merge e sem auto-merge
