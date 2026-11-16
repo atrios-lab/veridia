@@ -6,6 +6,11 @@ import {
   NativeSelect,
   NativeSelectOption,
 } from "../../../_ui/native-select.tsx";
+import {
+  requestStationSignatureAction,
+  sharedCertificatesAction,
+  stationSignatureStatusAction,
+} from "./station-sign-actions.ts";
 
 /**
  * The Assinador Veridia on the office's computer (tools/assinador-local):
@@ -23,13 +28,34 @@ export interface TokenCertificate {
   validade: string;
   certificado: string;
   cadeia: string[];
+  /**
+   * A token plugged into another computer of the office, shared through
+   * its signing station (decision of 16/11/2026): signed there, not here.
+   */
+  estacao?: {
+    id: string;
+    nome: string;
+    online: boolean;
+    modo: "periodo" | "cada";
+    liberadoAte: string | null;
+  };
 }
+
+/** The id a shared certificate takes in the list (never a local one's). */
+const sharedId = (c: { id: string; estacao?: { id: string } }) =>
+  c.estacao ? `estacao:${c.estacao.id}:${c.id}` : c.id;
 
 type LocalState =
   | { kind: "procurando" }
   | { kind: "ausente" }
   | { kind: "negado"; message: string }
-  | { kind: "pronto"; versao: string; certificados: TokenCertificate[] };
+  | {
+      kind: "pronto";
+      versao: string;
+      certificados: TokenCertificate[];
+      /** The Assinador answered on this computer (else only shared ones). */
+      local: boolean;
+    };
 
 async function call<T>(path: string, init?: RequestInit): Promise<T> {
   const response = await fetch(`${LOCAL}${path}`, {
@@ -64,23 +90,71 @@ export function useLocalSigner(enabled: boolean) {
 
   const refresh = useCallback(async () => {
     setState({ kind: "procurando" });
+    // The tokens shared with this person through the office's stations,
+    // looked up at the same time as this computer's own.
+    const sharedPromise = sharedCertificatesAction()
+      .then((list) =>
+        list.map((c): TokenCertificate => ({ ...c, id: sharedId(c) })),
+      )
+      .catch((): TokenCertificate[] => []);
+    const pick = (certificados: TokenCertificate[]) =>
+      setChosen((current) =>
+        certificados.some((c) => c.id === current)
+          ? current
+          : (certificados.find((c) => !c.estacao)?.id ??
+            certificados[0]?.id ??
+            ""),
+      );
     try {
       const status = await call<{ versao: string }>("/v1/status");
       try {
         const { certificados } = await call<{
           certificados: TokenCertificate[];
         }>("/v1/certificados");
-        setState({ kind: "pronto", versao: status.versao, certificados });
-        setChosen((current) =>
-          certificados.some((c) => c.id === current)
-            ? current
-            : (certificados[0]?.id ?? ""),
-        );
+        // The station's own computer: its token is here already.
+        const all = [
+          ...certificados,
+          ...(await sharedPromise).filter(
+            (shared) =>
+              !certificados.some(
+                (local) => local.id === shared.id.split(":").at(-1),
+              ),
+          ),
+        ];
+        setState({
+          kind: "pronto",
+          versao: status.versao,
+          certificados: all,
+          local: true,
+        });
+        pick(all);
       } catch (error) {
-        setState({ kind: "negado", message: (error as Error).message });
+        const shared = await sharedPromise;
+        if (shared.length) {
+          setState({
+            kind: "pronto",
+            versao: "",
+            certificados: shared,
+            local: false,
+          });
+          pick(shared);
+        } else {
+          setState({ kind: "negado", message: (error as Error).message });
+        }
       }
     } catch {
-      setState({ kind: "ausente" });
+      const shared = await sharedPromise;
+      if (shared.length) {
+        setState({
+          kind: "pronto",
+          versao: "",
+          certificados: shared,
+          local: false,
+        });
+        pick(shared);
+      } else {
+        setState({ kind: "ausente" });
+      }
     }
   }, []);
 
@@ -95,11 +169,49 @@ export function useLocalSigner(enabled: boolean) {
   return { state, refresh, chosen, setChosen, certificate };
 }
 
+const wait = (ms: number) => new Promise((done) => setTimeout(done, ms));
+
+/**
+ * A shared token signs at its station: the request goes to the platform,
+ * the station picks it up, signs and answers; this waits for the answer.
+ */
+async function signAtStation(
+  certificate: TokenCertificate & {
+    estacao: NonNullable<TokenCertificate["estacao"]>;
+  },
+  toBeSigned: string,
+  title: string,
+): Promise<string> {
+  const asked = await requestStationSignatureAction({
+    stationId: certificate.estacao.id,
+    certificateKey: certificate.id.split(":").at(-1) ?? "",
+    toBeSigned,
+    title,
+  });
+  if (asked.status === "error") throw new Error(asked.message);
+  // The station calls in every few seconds; "cada" waits for a person there.
+  for (let i = 0; i < 140; i += 1) {
+    await wait(1500);
+    const status = await stationSignatureStatusAction(asked.id);
+    if (status.status === "assinada") return status.signature;
+    if (status.status === "falhou") throw new Error(status.message);
+  }
+  throw new Error("A estação não respondeu a tempo.");
+}
+
 /** Signs on the token what the platform prepared (base64 in, base64 out). */
 export async function signOnToken(
   certificate: TokenCertificate,
   toBeSigned: string,
+  title = typeof document === "undefined" ? "Documento" : document.title,
 ): Promise<string> {
+  if (certificate.estacao) {
+    return signAtStation(
+      { ...certificate, estacao: certificate.estacao },
+      toBeSigned,
+      title || "Documento",
+    );
+  }
   const { assinatura } = await call<{ assinatura: string }>("/v1/assinar", {
     method: "POST",
     body: JSON.stringify({ id: certificate.id, dados: toBeSigned }),
@@ -236,7 +348,9 @@ export function LocalSignerPicker({
         >
           {state.certificados.map((certificate) => (
             <NativeSelectOption key={certificate.id} value={certificate.id}>
-              {certificateLabel(certificate)}
+              {certificate.estacao
+                ? `${certificateLabel(certificate)} · compartilhado na estação ${certificate.estacao.nome}${certificate.estacao.online ? "" : " (desligada)"}`
+                : certificateLabel(certificate)}
             </NativeSelectOption>
           ))}
         </NativeSelect>
@@ -249,9 +363,51 @@ export function LocalSignerPicker({
           Atualizar lista
         </Button>
       </div>
+      <SharedNote
+        certificate={state.certificados.find((c) => c.id === chosen)}
+      />
+      {!state.local && (
+        <p className="mt-1 text-xs text-muted-foreground">
+          Este computador não tem o Assinador Veridia: aparecem só os
+          certificados compartilhados pelas estações do cartório.
+        </p>
+      )}
+    </div>
+  );
+}
+
+/** What signing with the chosen certificate means, in one line. */
+function SharedNote({ certificate }: { certificate?: TokenCertificate }) {
+  if (!certificate?.estacao) {
+    return (
       <p className="mt-1 text-xs text-muted-foreground">
         O PIN é pedido pela janela do próprio token. A chave nunca sai dele.
       </p>
-    </div>
+    );
+  }
+  const { estacao } = certificate;
+  if (!estacao.online) {
+    return (
+      <p className="mt-1 text-xs text-warning-text">
+        A estação {estacao.nome} está desligada agora. Ligue o computador com o
+        token e abra o Assinador Veridia.
+      </p>
+    );
+  }
+  if (estacao.modo === "periodo" && !estacao.liberadoAte) {
+    return (
+      <p className="mt-1 text-xs text-warning-text">
+        O uso deste certificado não está liberado agora. Peça ao Tabelião para
+        liberar em Configurações › Certificados.
+      </p>
+    );
+  }
+  return (
+    <p className="mt-1 text-xs text-muted-foreground">
+      {estacao.modo === "periodo"
+        ? `Assinado na estação ${estacao.nome}, liberado até ${new Date(estacao.liberadoAte ?? "").toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })}.`
+        : `Assinado na estação ${estacao.nome}: alguém lá confirma cada assinatura.`}{" "}
+      A chave nunca sai do token e cada uso fica registrado.
+    </p>
   );
 }

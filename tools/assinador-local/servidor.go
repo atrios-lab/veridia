@@ -17,7 +17,7 @@ import (
 )
 
 // Versao do Assinador Veridia, mostrada no painel.
-const Versao = "1.0.0"
+const Versao = "1.1.0"
 
 // Porta fixa: o painel procura o assinador nela.
 const Porta = 47820
@@ -37,6 +37,15 @@ type Servidor struct {
 	mu        sync.Mutex
 	perguntas sync.Mutex
 	liberado  map[string]time.Time
+
+	// estacao, quando há: este computador assina para o cartório todo.
+	estacao *Estacao
+}
+
+// ComEstacao liga as rotas de pareamento da estação de assinatura.
+func (s *Servidor) ComEstacao(e *Estacao) *Servidor {
+	s.estacao = e
+	return s
 }
 
 func NovoServidor(repo Repositorio, origens *Origens, confirmar func(string, string) bool) *Servidor {
@@ -126,6 +135,8 @@ func (s *Servidor) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		responder(w, http.StatusOK, map[string]any{"certificados": lista})
 	case r.URL.Path == "/v1/assinar" && r.Method == http.MethodPost:
 		s.assinar(w, r, origem)
+	case strings.HasPrefix(r.URL.Path, "/v1/estacao") && s.estacao != nil:
+		s.rotaEstacao(w, r, origem)
 	default:
 		erro(w, http.StatusNotFound, "não encontrado")
 	}
@@ -226,4 +237,38 @@ func (s *Servidor) renovar(origem string) {
 	s.mu.Lock()
 	s.liberado[origem] = s.agora().Add(JanelaDeAssinatura)
 	s.mu.Unlock()
+}
+
+// rotaEstacao: o painel, aberto neste computador por um site aprovado,
+// liga, consulta ou desliga a estação de assinatura.
+func (s *Servidor) rotaEstacao(w http.ResponseWriter, r *http.Request, origem string) {
+	if !s.aprovada(origem) {
+		erro(w, http.StatusForbidden, "este site não foi autorizado no Assinador Veridia")
+		return
+	}
+	switch {
+	case r.URL.Path == "/v1/estacao" && r.Method == http.MethodGet:
+		responder(w, http.StatusOK, s.estacao.Situacao())
+	case r.URL.Path == "/v1/estacao" && r.Method == http.MethodPost:
+		var c ConfigEstacao
+		if err := json.NewDecoder(io.LimitReader(r.Body, 8<<10)).Decode(&c); err != nil {
+			erro(w, http.StatusBadRequest, "pedido inválido")
+			return
+		}
+		if !s.confirmar("Assinador Veridia: estação de assinatura",
+			fmt.Sprintf("Tornar este computador uma estação de assinatura do site %s?\n\nAs pessoas que o Tabelião autorizar poderão pedir assinaturas com os certificados A3 plugados aqui. Cada uso fica registrado na plataforma.", origem)) {
+			erro(w, http.StatusForbidden, ErrCancelado.Error())
+			return
+		}
+		if err := s.estacao.Configurar(origem, c); err != nil {
+			erro(w, http.StatusBadRequest, err.Error())
+			return
+		}
+		responder(w, http.StatusOK, s.estacao.Situacao())
+	case r.URL.Path == "/v1/estacao/desligar" && r.Method == http.MethodPost:
+		s.estacao.Desligar()
+		responder(w, http.StatusOK, s.estacao.Situacao())
+	default:
+		erro(w, http.StatusNotFound, "não encontrado")
+	}
 }
