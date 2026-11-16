@@ -20,7 +20,7 @@ import {
 import {
   certificateFields,
   LocalSignerPicker,
-  signOnToken,
+  signOnTokenWithJob,
   type TokenCertificate,
   useLocalSigner,
 } from "./a3.tsx";
@@ -33,6 +33,7 @@ import {
   setDocumentRemoved,
   signOneDocument,
 } from "./actions.ts";
+import { linkStationJobAction } from "./station-sign-actions.ts";
 
 const LABEL = "mb-1.5 block text-sm font-medium text-foreground";
 const IDLE: SignState = { status: "idle" };
@@ -192,8 +193,12 @@ export async function signThroughToken(
     return { status: "error", message: prepared.message, stop: false };
   }
   let signature: string;
+  let jobId: string | undefined;
   try {
-    signature = await signOnToken(certificate, prepared.toBeSigned);
+    ({ signature, jobId } = await signOnTokenWithJob(
+      certificate,
+      prepared.toBeSigned,
+    ));
   } catch (error) {
     const message = (error as Error).message || "O token não assinou.";
     return {
@@ -209,6 +214,10 @@ export async function signThroughToken(
   data.set("signature", signature);
   for (const [key, value] of Object.entries(extra)) data.set(key, value);
   const done = await finish(data);
+  // Through a station: the record of the use says which document it was.
+  if (done.status === "signed" && jobId) {
+    await linkStationJobAction(jobId, done.id).catch(() => undefined);
+  }
   return done.status === "signed"
     ? done
     : { status: "error", message: done.message, stop: false };

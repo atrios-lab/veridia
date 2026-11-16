@@ -1181,3 +1181,34 @@ ENTRIES["/admin/dpo/conversas"] = {
     "Para começar outra, use Perguntar no menu.",
   ],
 };
+
+/**
+ * The certificates of the office, A1 and A3 (decision of 16/11/2026: "um
+ * gerenciador de compartilhamento de certificado").
+ */
+ENTRIES["/admin/configuracoes/certificados"] = {
+  purpose:
+    "O gerenciador dos certificados digitais da serventia: os A1 guardados na plataforma e os A3 (token ou cartão) compartilhados por uma estação de assinatura, com quem pode assinar com cada um.",
+  steps: [
+    "A1: envie o arquivo .pfx e marque quem pode assinar com ele. A senha não é guardada: quem assina digita a cada vez.",
+    "A3 compartilhado: abra esta tela no computador onde o token fica plugado, com o Assinador Veridia instalado e aberto, dê um nome ao computador e clique em Ligar como estação. Responda Sim na janela do Assinador.",
+    "Na estação que aparece, marque Compartilhar no certificado, escolha como o titular autoriza (liberação por período ou confirmar cada assinatura) e marque quem pode assinar. Salve.",
+    "Para cada pessoa, em Ajustar o que e quando: marque os tipos de documento que ela pode assinar (nenhum marcado: todos), o horário (ex.: das 08:00 às 18:00) e até que dia a autorização vale. Fora disso o pedido é recusado e a pessoa vê o motivo.",
+    "No modo liberação por período, clique em Liberar por algumas horas (ex.: o expediente). Fora desse período, ninguém assina pela estação.",
+    "Quem foi autorizado vê o certificado na lista de A3 de qualquer tela de assinatura, com o nome da estação, mesmo num computador sem token.",
+    "O computador da estação precisa ficar ligado, com o token conectado e o Assinador aberto.",
+    "Em Histórico das assinaturas pelas estações você vê quem pediu, com o certificado de quem, o tipo e o nome do documento, quando, como terminou e o link para verificar o documento assinado. Filtre por pessoa ou por tipo.",
+  ],
+  terms: [
+    {
+      term: "Estação de assinatura",
+      meaning:
+        "O computador do cartório onde o token A3 fica plugado e que assina para as pessoas autorizadas. Só o resumo do documento vai até ele; a chave nunca sai do token.",
+    },
+    {
+      term: "Titular",
+      meaning:
+        "A pessoa (ou a serventia, no e-CNPJ) em nome de quem o certificado assina. A assinatura vale como dela: compartilhe só com a autorização dela.",
+    },
+  ],
+};

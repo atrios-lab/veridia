@@ -50,7 +50,11 @@ func main() {
 		avisar("Assinador Veridia",
 			"O Assinador Veridia está ativo.\n\nEle abre sozinho quando o Windows inicia e encontra os certificados A3 (token ou cartão) instalados, inclusive os que você instalar depois.\n\nVolte ao painel e escolha \"Assinar com certificado A3\".")
 	}
-	servidor := NovoServidor(novoRepositorio(), CarregarOrigens(filepath.Join(dir, "sites.json")), confirmar)
+	repo := novoRepositorio()
+	// A estação de assinatura, se este computador foi ligado como uma.
+	estacao := NovaEstacao(repo, filepath.Join(dir, "estacao.json"), confirmar)
+	go estacao.Rodar()
+	servidor := NovoServidor(repo, CarregarOrigens(filepath.Join(dir, "sites.json")), confirmar).ComEstacao(estacao)
 	log.Printf("Assinador Veridia %s ouvindo em %s", Versao, ouvinte.Addr())
 	servico := &http.Server{
 		Handler:           servidor,

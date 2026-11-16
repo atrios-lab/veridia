@@ -219,6 +219,16 @@ const EXACT: Record<string, string> = {
   "signing-certificate.add": "Cadastrou um certificado digital",
   "signing-certificate.disable": "Desativou um certificado digital",
   "signing-certificate.signers": "Alterou quem assina com um certificado",
+  "signing-station.create":
+    "Ligou um computador como estação de assinatura (A3)",
+  "signing-station.policy": "Alterou o compartilhamento de um certificado A3",
+  "signing-station.release": "Liberou o uso de um certificado A3 compartilhado",
+  "signing-station.release-end":
+    "Encerrou a liberação de um certificado A3 compartilhado",
+  "signing-station.revoke": "Desligou uma estação de assinatura (A3)",
+  "signing-station.signed": "Assinou com um certificado A3 compartilhado",
+  "signing-station.refused":
+    "Pedido de assinatura com A3 compartilhado não foi assinado",
   "office-settings.save": "Alterou uma configuração da serventia",
   "office-settings.attributions":
     "Alterou as atribuições da serventia (o que oferece e o regime de cada uma)",
@@ -651,6 +661,20 @@ const EXPLANATIONS: Record<string, string> = {
   "signing-certificate.disable": "Um certificado digital foi desativado.",
   "signing-certificate.signers":
     "Foi alterado quem pode assinar com um certificado digital.",
+  "signing-station.create":
+    "Um computador do cartório passou a ser estação de assinatura: os certificados A3 plugados nele podem ser compartilhados.",
+  "signing-station.policy":
+    "Mudou quem pode assinar com um certificado A3 da estação e como o titular autoriza o uso.",
+  "signing-station.release":
+    "O uso de um certificado A3 compartilhado foi liberado por algumas horas: as pessoas autorizadas assinam pela estação sem confirmação.",
+  "signing-station.release-end":
+    "A liberação de um certificado A3 compartilhado foi encerrada.",
+  "signing-station.revoke":
+    "Uma estação de assinatura foi desligada: os certificados dela não assinam mais para o cartório. O histórico fica guardado.",
+  "signing-station.signed":
+    "Um documento foi assinado com um certificado A3 compartilhado, pela estação. Quem pediu está no registro.",
+  "signing-station.refused":
+    "Um pedido de assinatura com A3 compartilhado não foi assinado (recusado na estação, token desconectado ou uso não liberado).",
   "appointment.remove": "Um agendamento foi excluído.",
   "appointment.correct": "Os dados de um agendamento foram corrigidos.",
   "appointment.note": "Foi feita uma anotação num agendamento.",

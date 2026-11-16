@@ -65,6 +65,9 @@ import {
   signedDocuments,
   signingCertificateSigners,
   signingCertificates,
+  signingStations,
+  stationCertificatePolicies,
+  stationSignJobs,
   taxGuides,
   tenantBranding,
   tenantContent,
@@ -155,6 +158,15 @@ export const DEMO_RESET_KEPT: readonly { table: PgTable; reason: string }[] = [
   { table: signingCertificateSigners, reason: "credencial real" },
   { table: signedDocuments, reason: "assinador, fechado aos participantes" },
   { table: signedDocumentSignatures, reason: "assinador" },
+  {
+    table: signingStations,
+    reason: "estação de assinatura: credencial real do computador do token",
+  },
+  {
+    table: stationCertificatePolicies,
+    reason: "quem pode usar o A3 compartilhado",
+  },
+  { table: stationSignJobs, reason: "o registro de cada uso do A3" },
   {
     table: knowledgeSources,
     reason: "base jurídica, fechada aos participantes",

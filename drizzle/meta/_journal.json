@@ -512,6 +512,13 @@
       "when": 1794837733653,
       "tag": "0072_demo_outbox",
       "breakpoints": true
+    },
+    {
+      "idx": 73,
+      "version": "7",
+      "when": 1794870528128,
+      "tag": "0073_estacoes_de_assinatura",
+      "breakpoints": true
     }
   ]
 }

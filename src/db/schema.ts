@@ -1696,6 +1696,115 @@ export const signingCertificateSigners = pgTable(
 );
 
 /**
+ * A computer of the office where an A3 token stays plugged, lent to the
+ * whole office (decision of 16/11/2026: "um gerenciador de compartilhamento
+ * de certificado"). The Assinador Veridia there calls the platform with its
+ * key (only the hash is kept), reports the certificates plugged in and signs
+ * what is asked. Switched off by a mark, never deleted.
+ */
+export const signingStations = pgTable(
+  "signing_stations",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    tenantSlug,
+    /** What the office calls the computer: "Balcão 1", "Sala do Tabelião". */
+    name: text("name").notNull(),
+    keyHash: text("key_hash").notNull(),
+    createdBy: text("created_by").notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    lastSeenAt: timestamp("last_seen_at", { withTimezone: true }),
+    version: text("version"),
+    /** The public part of each certificate plugged in, as last reported. */
+    certificates: jsonb("certificates").notNull().default([]),
+    revokedAt: timestamp("revoked_at", { withTimezone: true }),
+    revokedBy: text("revoked_by"),
+  },
+  (t) => [
+    uniqueIndex("signing_stations_key").on(t.keyHash),
+    index("signing_stations_tenant").on(t.tenantSlug),
+  ],
+);
+
+/**
+ * How one certificate of a station is shared (decision of 16/11/2026: the
+ * Tabelião chooses per certificate): who may ask and, for each person, what
+ * kinds of document, at what hours and until when (`grants`, see
+ * core/signature/station StationGrant), and whether each use is confirmed
+ * at the station ("cada") or released for a while ("periodo", until
+ * `releasedUntil`).
+ */
+export const stationCertificatePolicies = pgTable(
+  "station_certificate_policies",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    tenantSlug,
+    stationId: uuid("station_id")
+      .notNull()
+      .references(() => signingStations.id),
+    /** The certificate's SHA-1 fingerprint, as the station reports it. */
+    certificateKey: text("certificate_key").notNull(),
+    shared: boolean("shared").notNull().default(false),
+    mode: text("mode").notNull().default("cada"),
+    grants: jsonb("grants").notNull().default([]),
+    releasedUntil: timestamp("released_until", { withTimezone: true }),
+    updatedBy: text("updated_by").notNull(),
+    updatedAt: timestamp("updated_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (t) => [
+    uniqueIndex("station_certificate_policies_cert").on(
+      t.stationId,
+      t.certificateKey,
+    ),
+  ],
+);
+
+/**
+ * One signature asked of a station: who asked, for what, and how it ended.
+ * Only the bytes to be signed travel (the signed attributes), never the
+ * document; the row stays as the record of the use.
+ */
+export const stationSignJobs = pgTable(
+  "station_sign_jobs",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    tenantSlug,
+    stationId: uuid("station_id")
+      .notNull()
+      .references(() => signingStations.id),
+    certificateKey: text("certificate_key").notNull(),
+    /** Whose certificate it is, as it read when asked. */
+    holderName: text("holder_name").notNull().default(""),
+    requestedBy: text("requested_by").notNull(),
+    requestedByName: text("requested_by_name").notNull(),
+    /** The kind of document, by the screen it came from (SIGN_KINDS). */
+    kind: text("kind").notNull().default("outros"),
+    title: text("title").notNull(),
+    /** The signed document it became, when the platform knows it. */
+    signedDocumentId: uuid("signed_document_id"),
+    signedCode: text("signed_code"),
+    toBeSigned: text("to_be_signed").notNull(),
+    mode: text("mode").notNull(),
+    /** pendente, enviada, assinada, recusada, expirada. */
+    status: text("status").notNull().default("pendente"),
+    signature: text("signature"),
+    error: text("error"),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    sentAt: timestamp("sent_at", { withTimezone: true }),
+    doneAt: timestamp("done_at", { withTimezone: true }),
+  },
+  (t) => [
+    index("station_sign_jobs_station").on(t.stationId, t.status),
+    index("station_sign_jobs_tenant").on(t.tenantSlug, t.createdAt),
+  ],
+);
+
+/**
  * A document signed in the platform. The record is kept for good (anyone
  * may verify years later); the signed PDF only for six months (decision of
  * 10/11/2026), then its file goes and `filePurgedAt` says when.
