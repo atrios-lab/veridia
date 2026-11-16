@@ -627,7 +627,7 @@ function UnsignedNotice({
 }
 
 /** Gives a delivered document the name the citizen sees, after the fact. */
-function RenameDelivered({
+export function RenameDelivered({
   requestId,
   attachmentId,
   suggestions,

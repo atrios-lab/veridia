@@ -23,6 +23,7 @@ export interface LibrarySeed {
 
 const LRP = "Lei nº 6.015/1973";
 const CNN = "Código Nacional de Normas (Provimento CNJ nº 149/2023)";
+const CNRN = "Código de Normas da CGJ/RN (Provimento CGJ/RN nº 156/2016)";
 
 export const LIBRARY_SEEDS: LibrarySeed[] = [
   // ------------------------------------------------ RCPN, any act
@@ -344,6 +345,152 @@ export const LIBRARY_SEEDS: LibrarySeed[] = [
       "Apresentar o título judicial completo, com as peças exigidas e a certidão do trânsito em julgado (ou a decisão que autoriza o cumprimento).",
     basis: `${LRP}, art. 221, IV.`,
   },
+  // ------------------------- Registro de Imóveis: retificação de área e
+  // georreferenciamento (decision of 16/11/2026: "aprenda isso para a base
+  // jurídica"). Taken, generic and without anyone's data, from a
+  // qualificação-modelo the office sent, whose fundamentos it checked in
+  // the official sources on 15/11/2026.
+  ...[
+    {
+      key: "ri-geo-requerimento",
+      title: "Requerimento do proprietário",
+      description:
+        "Não há requerimento do proprietário pedindo a averbação do georreferenciamento e a retificação de área.",
+      howToComply:
+        "Apresentar requerimento do proprietário, com firma reconhecida ou assinatura eletrônica avançada ou qualificada, dizendo o que se pede (averbação do georreferenciamento e retificação da área, da área registrada para a área levantada) e o destino das glebas, quando forem mais de uma (encerramento da matrícula e abertura de uma matrícula por gleba).",
+      basis: `${LRP}, art. 213, II; Decreto nº 4.449/2002, art. 9º, § 5º; ${CNN}, art. 440-AX, caput e §§ 2º, 4º a 6º; ${CNRN}, arts. 338, 414 e 418.`,
+    },
+    {
+      key: "ri-geo-averbacoes-previas",
+      title: "Averbações prévias do proprietário",
+      description:
+        "Os dados do proprietário na matrícula estão desatualizados (por exemplo, estado civil, nome ou CPF).",
+      howToComply:
+        "Requerer, com os documentos que provam a mudança (certidão de casamento, documento com o CPF), a averbação do casamento, da alteração do nome e do CPF antes da retificação.",
+      basis: `${CNN}, arts. 440-AS, I e II, e 440-AU.`,
+    },
+    {
+      key: "ri-geo-itr",
+      title: "ITR dos últimos cinco exercícios e NIRF ou CIB",
+      description:
+        "Não foi comprovada a quitação do ITR dos últimos cinco exercícios nem informado o número do imóvel na Receita Federal.",
+      howToComply:
+        "Apresentar a certidão negativa de débitos do ITR, ou as guias pagas dos últimos cinco exercícios, e informar o NIRF ou o CIB do imóvel.",
+      basis: `Decreto nº 4.449/2002, art. 9º, § 5º; ${CNN}, art. 440-AQ, IV, b; ${CNRN}, art. 413, VII.`,
+    },
+    {
+      key: "ri-geo-ccir",
+      title: "CCIR do último exercício",
+      description:
+        "O CCIR apresentado não é do último exercício ou está vencido.",
+      howToComply:
+        "Apresentar o CCIR do último exercício, quitado, ou o protocolo de recadastramento com o certificado anterior.",
+      basis: `Decreto nº 4.449/2002, art. 9º, § 5º; ${CNRN}, arts. 410 e 413, VI.`,
+    },
+    {
+      key: "ri-geo-memorial-certificado",
+      title: "Memorial descritivo igual ao certificado pelo SIGEF",
+      description:
+        "O memorial descritivo apresentado diverge do memorial certificado no SIGEF (em azimutes, distâncias, sistema de cálculo ou texto incompleto).",
+      howToComply:
+        "Apresentar o memorial de cada gleba idêntico ao certificado pelo SIGEF, com o número da certificação, assinado pelo responsável técnico e sem lacunas.",
+      basis: `${LRP}, art. 213, § 14; Decreto nº 4.449/2002, art. 9º, §§ 5º e 9º; ${CNRN}, art. 413, I.`,
+    },
+    {
+      key: "ri-geo-planta",
+      title: "Planta assinada pelo responsável técnico",
+      description:
+        "A planta apresentada não está assinada pelo responsável técnico ou não indica os confrontantes.",
+      howToComply:
+        "Apresentar a planta de cada gleba assinada pelo responsável técnico, com os confrontantes e as matrículas deles, as vias públicas e as faixas de servidão ou de domínio que cortam ou limitam o imóvel.",
+      basis: `${LRP}, art. 213, II; ${CNRN}, arts. 339 e 413, I.`,
+    },
+    {
+      key: "ri-geo-assinaturas-verificaveis",
+      title: "Assinaturas das anuências verificáveis",
+      description:
+        "As anuências foram apresentadas como digitalização de folhas impressas, sem assinatura digital embutida, e as assinaturas eletrônicas não podem ser validadas.",
+      howToComply:
+        "Apresentar os PDFs originais assinados, verificáveis no validador do ITI, ou as vias com firma reconhecida.",
+      basis: `${CNN}, art. 440-AX, § 2º; ${CNRN}, art. 339.`,
+    },
+    {
+      key: "ri-geo-confrontante-falecido",
+      title: "Confrontante falecido: herdeiros ou inventariante",
+      description:
+        "A anuência em nome do espólio ou dos herdeiros de confrontante falecido veio sem prova de quem a assina.",
+      howToComply:
+        "Apresentar a certidão de óbito e a prova da qualidade de herdeiro de quem assina ou, havendo inventário, o termo de inventariante com a anuência deste. Informar a matrícula do imóvel confrontante. Cabe ao oficial dizer se a anuência de um herdeiro basta.",
+      basis: `${LRP}, art. 213, § 10, I; Código Civil, art. 1.791, parágrafo único; ${CNRN}, art. 339.`,
+    },
+    {
+      key: "ri-geo-correspondencia",
+      title: "Correspondência entre o polígono medido e a matrícula",
+      description:
+        "As confrontações, a orientação ou a área do levantamento não coincidem com as da matrícula, e não há explicação técnica de que se trata do mesmo imóvel.",
+      howToComply:
+        "Apresentar declaração do responsável técnico, ou laudo, que demonstre que o polígono medido é o imóvel da matrícula, explicando a mudança de orientação e de confrontantes e justificando a diferença de área.",
+      basis: `${CNN}, art. 440-AX, §§ 7º e 8º; ${CNRN}, arts. 342, III, e 346, I.`,
+    },
+    {
+      key: "ri-geo-faixa-terceiros",
+      title: "Faixa de servidão ou de terceiro sem anuência",
+      description:
+        "Há trechos do perímetro confrontando com faixa de duto, linha ou outra servidão, sem anuência e sem esclarecer a natureza da faixa.",
+      howToComply:
+        "Esclarecer se a faixa é servidão sobre o imóvel vizinho (então o confrontante é o dono desse imóvel, e a anuência dele deve abranger os trechos) ou área de domínio de terceiro (então é preciso a anuência do titular). Informar se a servidão dentro do imóvel tem título inscrito. A dispensa de anuência vale só para águas públicas e vias de uso comum.",
+      basis: `${LRP}, art. 213, § 10; ${CNN}, art. 440-AX, § 3º, II; ${CNRN}, art. 346, II.`,
+    },
+    {
+      key: "ri-geo-declaracao-limites",
+      title: "Declaração de respeito de limites coerente",
+      description:
+        "A declaração de respeito de limites troca proprietários, diverge do memorial e das anuências ou deixa as matrículas em branco.",
+      howToComply:
+        "Corrigir a declaração para que coincida com o memorial e as anuências, com as matrículas dos confrontantes, e reapresentá-la assinada.",
+      basis: `Decreto nº 4.449/2002, art. 9º, § 5º; ${CNRN}, art. 413, V.`,
+    },
+    {
+      key: "ri-geo-matriculas-confrontantes",
+      title: "Matrícula ou transcrição de cada confrontante",
+      description:
+        "Não foram informadas as matrículas ou transcrições dos imóveis confrontantes.",
+      howToComply:
+        "Informar a matrícula ou transcrição e a serventia de cada confrontante. Para quem não tiver registro, declarar que se trata de área de posse.",
+      basis: `${CNRN}, art. 339 e parágrafo único.`,
+    },
+    {
+      key: "ri-geo-via-publica",
+      title: "Via pública no perímetro",
+      description:
+        "O imóvel confronta com estrada ou via pública, que não está indicada na planta e no memorial com a faixa excluída.",
+      howToComply:
+        "Indicar na planta e no memorial a via pública que limita ou separa as glebas e a faixa excluída. A anuência do ente público é dispensada, respeitada a faixa de domínio.",
+      basis: `${CNN}, art. 440-AX, § 3º, II, b.`,
+    },
+    {
+      key: "ri-geo-pontos-cardeais",
+      title: "Confrontações pelos pontos cardeais",
+      description:
+        "O memorial e a declaração de limites não indicam o lado (Norte, Sul, Leste, Oeste) em que fica cada confrontante.",
+      howToComply:
+        "Reapresentar o memorial de cada gleba e a declaração de limites com as confrontações pelos pontos cardeais, indicando o lado de cada confrontante e a extensão desse lado; em lados inclinados, podem constar os colaterais.",
+      basis: `${LRP}, art. 176, § 1º, II, 3, a; ${CNRN}, art. 312, IV. Entendimento: CSM/SP, Apelação 990.10.019.093-8 (no imóvel rural, as confrontações se referem aos pontos cardeais).`,
+    },
+    {
+      key: "ri-geo-localizacao",
+      title: "Ponto de referência e distrito do imóvel rural",
+      description:
+        "O memorial e o requerimento não localizam o imóvel em relação à via ou ao ponto de referência mais próximo, nem informam o distrito ou povoado.",
+      howToComply:
+        "Indicar a distância métrica e a direção do imóvel até o cruzamento de vias ou ponto de referência mais próximo, e o distrito ou povoado.",
+      basis: `${LRP}, arts. 176, § 1º, II, 3, a, e 225, caput; ${CNN}, art. 440-AQ, § 2º, b e c; ${CNRN}, art. 312, III.`,
+    },
+  ].map((seed) => ({
+    ...seed,
+    attribution: "ri" as const,
+    acts: ["retificacao", "averbacao"],
+  })),
   // ------------------------------------------------ Notas
   {
     key: "notas-certidoes-imovel",

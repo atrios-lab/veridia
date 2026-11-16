@@ -702,6 +702,8 @@ export async function attachRequirementFormAction(
     const stored = await storeAttachments(files, {
       tenantSlug: tenant.slug,
       kind: "formulario-exigencia",
+      // The name typed for it; blank keeps "Formulário da exigência".
+      name: String(formData.get("formularioName") ?? ""),
     });
     if (stored.length === 0) {
       return { status: "error", message: "Escolha um arquivo para anexar." };
