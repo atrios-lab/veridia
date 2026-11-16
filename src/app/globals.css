@@ -4,3 +4,8 @@
  */
 @import "tailwindcss";
 @import "./brand.css";
+
+/* The panel's sources stay out, the mirror of admin.css: without this every
+   shadcn utility the panel writes (data-*, group-data-*, has-*) landed in
+   the stylesheet every citizen downloads, most of its 150 KB. */
+@source not "./admin";
