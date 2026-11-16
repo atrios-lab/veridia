@@ -131,12 +131,24 @@ export function JoinForm({
 
       <div className="flex items-start gap-2.5 rounded-xl bg-brand-tint px-3.5 py-3 text-[12.5px] leading-relaxed text-brand-primary">
         <Icon name="shield" className="mt-0.5 h-4 w-4 shrink-0" />
-        <p>
-          Seu nome e seu e-mail servem para criar a sua conta, guardar o seu
-          progresso e emitir o certificado. Quem cuida desses dados é a Átrios.
-          O CPF só é pedido no fim, para o certificado. Se você marcou a caixa
-          acima, o e-mail também pode ser usado para falarmos da plataforma.
-        </p>
+        <div className="flex flex-col gap-2">
+          <p>
+            Seu nome e seu e-mail servem para criar a sua conta, guardar o seu
+            progresso e emitir o certificado. Quem cuida desses dados é a
+            Átrios. O CPF só é pedido no fim, para o certificado. Se você marcou
+            a caixa acima, o e-mail também pode ser usado para falarmos da
+            plataforma.
+          </p>
+          {/* The shared demonstration desk (change painel-livre-para-alunos),
+              in the words the user approved on 16/11/2026. */}
+          <p>
+            Com a sua conta, você também pode usar o painel de um cartório de
+            demonstração, que não existe. O que você digitar ou alterar nele
+            fica visível para os outros participantes, junto com o seu nome
+            quando o painel mostra quem fez a alteração, e pode ser apagado a
+            qualquer momento. Por isso, não use dados reais ali.
+          </p>
+        </div>
       </div>
 
       {state.status === "error" && (
