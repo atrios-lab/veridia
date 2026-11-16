@@ -1,17 +1,22 @@
 "use client";
 
-import { useActionState } from "react";
+import { useActionState, useEffect, useState } from "react";
 import { DEFAULT_COHORT_DAYS } from "@/core/cohorts/cohort.ts";
+import type { OfficeEntry } from "@/core/cohorts/offices.ts";
 import { Button } from "../../../../../_ui/button.tsx";
 import { Input } from "../../../../../_ui/input.tsx";
 import { NativeSelect } from "../../../../../_ui/native-select.tsx";
 import { type CohortFormState, createCohortAction } from "../actions.ts";
 import { Field, FormError } from "./fields.tsx";
+import { OfficeSearchField } from "./office-search-field.tsx";
 
 export function CohortCreateForm({
   courses,
+  offices,
 }: {
   courses: { id: string; title: string }[];
+  /** The official list the Cartório field searches (core/cohorts). */
+  offices: readonly OfficeEntry[];
 }) {
   const [state, formAction, pending] = useActionState<
     CohortFormState,
@@ -19,6 +24,27 @@ export function CohortCreateForm({
   >(createCohortAction, { status: "idle" });
   const errors = state.status === "error" ? state.fieldErrors : {};
   const sent = state.status === "error" ? state.values : undefined;
+  // Held here, not in the inputs, so picking an office can fill the city,
+  // the contact and the telephone; a refused submit puts back what was sent.
+  const [office, setOffice] = useState({
+    officeName: "",
+    officeCity: "",
+    contactName: "",
+    contactPhone: "",
+  });
+  const [picked, setPicked] = useState<OfficeEntry | null>(null);
+  useEffect(() => {
+    if (state.status !== "error") return;
+    setOffice({
+      officeName: state.values.officeName ?? "",
+      officeCity: state.values.officeCity ?? "",
+      contactName: state.values.contactName ?? "",
+      contactPhone: state.values.contactPhone ?? "",
+    });
+  }, [state]);
+  const field =
+    (key: keyof typeof office) => (event: { target: { value: string } }) =>
+      setOffice((current) => ({ ...current, [key]: event.target.value }));
 
   return (
     <div id="nova-turma" className="scroll-mt-20 rounded-xl border bg-card p-6">
@@ -54,21 +80,47 @@ export function CohortCreateForm({
             name="officeName"
             label="Cartório"
             error={errors.officeName}
-            hint="Como deve sair no certificado."
+            hint="Busque na lista oficial do RN pelo nome, cidade ou CNS: a cidade, o responsável e o telefone vêm junto. Não achou? Digite o nome como deve sair no certificado."
           >
-            <Input
-              id="officeName"
-              name="officeName"
-              defaultValue={sent?.officeName}
-              placeholder="2º Ofício de Notas de Exemplo/RN"
-              aria-invalid={errors.officeName ? true : undefined}
+            <OfficeSearchField
+              offices={offices}
+              value={office.officeName}
+              // Typing another name drops what the last pick filled in and
+              // the person has not changed since: an office typed by hand
+              // never keeps the city and contact of the one picked before.
+              onChange={(value) => {
+                setOffice((current) => {
+                  const next = { ...current, officeName: value };
+                  if (!picked || value === picked.name) return next;
+                  if (current.officeCity === picked.city) next.officeCity = "";
+                  if (current.contactName === (picked.contactName ?? ""))
+                    next.contactName = "";
+                  if (current.contactPhone === (picked.contactPhone ?? ""))
+                    next.contactPhone = "";
+                  return next;
+                });
+                if (picked && value !== picked.name) setPicked(null);
+              }}
+              // The four together: what the list lacks stays empty to type,
+              // never a value left from the office picked before.
+              onPick={(entry) => {
+                setPicked(entry);
+                setOffice({
+                  officeName: entry.name,
+                  officeCity: entry.city,
+                  contactName: entry.contactName ?? "",
+                  contactPhone: entry.contactPhone ?? "",
+                });
+              }}
+              invalid={Boolean(errors.officeName)}
             />
           </Field>
           <Field name="officeCity" label="Cidade" error={errors.officeCity}>
             <Input
               id="officeCity"
               name="officeCity"
-              defaultValue={sent?.officeCity}
+              value={office.officeCity}
+              onChange={field("officeCity")}
               placeholder="Exemplo/RN"
               aria-invalid={errors.officeCity ? true : undefined}
             />
@@ -82,7 +134,8 @@ export function CohortCreateForm({
               <Input
                 id="contactName"
                 name="contactName"
-                defaultValue={sent?.contactName}
+                value={office.contactName}
+                onChange={field("contactName")}
                 aria-invalid={errors.contactName ? true : undefined}
               />
             </Field>
@@ -95,7 +148,8 @@ export function CohortCreateForm({
                 id="contactPhone"
                 name="contactPhone"
                 type="tel"
-                defaultValue={sent?.contactPhone}
+                value={office.contactPhone}
+                onChange={field("contactPhone")}
                 aria-invalid={errors.contactPhone ? true : undefined}
               />
             </Field>
