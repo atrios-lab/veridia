@@ -57,6 +57,8 @@ export interface ReviewResult {
   learned: LearnedRequirement[];
   /** How the office writes its notes: structure and wording, generic. */
   style: string[];
+  /** Who read it: the AI, or the office's legal base alone (no credit). */
+  via?: "ia" | "base";
 }
 
 /** A source the base holds as revoked, by the norm it is. */
@@ -148,6 +150,7 @@ export function mergeReview(
     findings,
     learned: ai?.learned ?? [],
     style: ai?.style ?? [],
+    via: ai ? "ia" : "base",
   };
 }
 

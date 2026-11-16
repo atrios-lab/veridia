@@ -9,8 +9,10 @@ import {
   type SourceMeta,
 } from "@/core/conhecimento/base.ts";
 import type { ReviewResult } from "@/core/qualificacao/revisao.ts";
+import { AI_SUSPENDED } from "@/core/qualificacao/revisao-base.ts";
 import type { Database } from "@/db/index.ts";
 import { tenantContent } from "@/db/schema.ts";
+import { getAiPlatformWith } from "./ai-platform.ts";
 import { recordAuditWith } from "./audit.ts";
 import { OFFICE_AI_KEY } from "./office-config.ts";
 
@@ -122,6 +124,12 @@ export async function aiBlockedWith(
   if (!aiConfigured()) {
     return "O Assistente Virtual ainda não tem a chave de acesso configurada no ambiente.";
   }
+  // Held back for this office by the platform (decision of 16/11/2026),
+  // above the Tabelião's own switch; the office reads no more than this.
+  const platform = await getAiPlatformWith(database, tenantSlug).catch(
+    () => null,
+  );
+  if (platform && !platform.aiAllowed) return AI_SUSPENDED;
   const policy = await getAiPolicyWith(database, tenantSlug).catch(() => ({
     enabled: false,
   }));

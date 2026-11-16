@@ -4,13 +4,20 @@ import {
   and,
   desc,
   eq,
+  ilike,
   inArray,
   isNotNull,
   isNull,
   or,
   sql,
 } from "drizzle-orm";
-import { normOf } from "@/core/conhecimento/base.ts";
+import {
+  isRevokedPassage,
+  type NormRef,
+  normOf,
+  normsIn,
+  sameNorm,
+} from "@/core/conhecimento/base.ts";
 import {
   ATTRIBUTIONS,
   type Attribution,
@@ -29,8 +36,17 @@ import {
   revokedCitations,
   revokerIn,
 } from "@/core/qualificacao/revisao.ts";
+import {
+  type ArticleCitation,
+  articleCitations,
+  baseSummary,
+  learnWithoutAi,
+  noteItems,
+  unfoundedItems,
+} from "@/core/qualificacao/revisao-base.ts";
 import type { Database } from "@/db/index.ts";
 import {
+  knowledgePassages,
   qualificationDocumentReviews,
   qualificationLibrary,
   serviceRequestAttachments,
@@ -84,6 +100,7 @@ function resultOf(raw: unknown): ReviewResult {
     style: Array.isArray(r.style)
       ? r.style.filter((s): s is string => typeof s === "string")
       : [],
+    ...(r.via === "ia" || r.via === "base" ? { via: r.via } : {}),
   };
 }
 
@@ -111,25 +128,92 @@ export function qualificationAttribution(
   return isAttribution(key) ? key : undefined;
 }
 
+/** The office's legal base, by norm: what is in force and what is revoked. */
+interface BaseNorms {
+  revoked: RevokedNorm[];
+  inForce: { id: string; norm: NormRef; label: string }[];
+}
+
+async function baseNormsWith(
+  database: Database,
+  tenantSlug: string,
+): Promise<BaseNorms> {
+  const sources = await listSourcesWith(database, tenantSlug);
+  const out: BaseNorms = { revoked: [], inForce: [] };
+  for (const source of sources) {
+    const norm = normOf(source.meta);
+    if (!norm) continue;
+    const label = source.meta.reference || source.meta.title;
+    if (source.meta.status === "revogada") {
+      const by = revokerIn(source.meta.notes ?? "");
+      out.revoked.push({ norm, label, ...(by ? { by } : {}) });
+    } else {
+      out.inForce.push({ id: source.id, norm, label });
+    }
+  }
+  return out;
+}
+
 /** What the office's legal base holds as revoked, by norm. */
 export async function revokedNormsWith(
   database: Database,
   tenantSlug: string,
 ): Promise<RevokedNorm[]> {
-  const sources = await listSourcesWith(database, tenantSlug);
-  const out: RevokedNorm[] = [];
-  for (const source of sources) {
-    if (source.meta.status !== "revogada") continue;
-    const norm = normOf(source.meta);
-    if (!norm) continue;
-    const by = revokerIn(source.meta.notes ?? "");
+  return (await baseNormsWith(database, tenantSlug)).revoked;
+}
+
+/**
+ * Articles the note cites that the base holds as revoked inside a norm in
+ * force ("Art. 9º (Revogado)"): certain, and with no credit spent.
+ */
+async function revokedArticlesWith(
+  database: Database,
+  tenantSlug: string,
+  base: BaseNorms,
+  citations: readonly ArticleCitation[],
+): Promise<ReviewFinding[]> {
+  const out: ReviewFinding[] = [];
+  for (const citation of citations) {
+    const source = base.inForce.find((s) => sameNorm(s.norm, citation.norm));
+    if (!source) continue;
+    const rows = await database
+      .select({
+        heading: knowledgePassages.heading,
+        text: knowledgePassages.text,
+      })
+      .from(knowledgePassages)
+      .where(
+        and(
+          eq(knowledgePassages.tenantSlug, tenantSlug),
+          eq(knowledgePassages.sourceId, source.id),
+          ilike(knowledgePassages.heading, `Art. ${citation.article}%`),
+        ),
+      )
+      .limit(5);
+    const exact = new RegExp(`^Art\\.?\\s*${citation.article}(?![\\d-])`, "i");
+    const hit = rows.find(
+      (r) => exact.test(r.heading) && isRevokedPassage(r.text),
+    );
+    if (!hit) continue;
     out.push({
-      norm,
-      label: source.meta.reference || source.meta.title,
-      ...(by ? { by } : {}),
+      kind: "revogada",
+      excerpt: citation.excerpt,
+      problem: `A nota cita o art. ${citation.article} da ${source.label}, que a base jurídica da serventia traz como revogado.`,
+      basis: `${source.label}, art. ${citation.article} (revogado, base jurídica da serventia).`,
+      suggestion:
+        "Confira o dispositivo que hoje trata do assunto e troque a citação, ou retire a exigência se ela não tiver mais fundamento.",
+      source: "base",
     });
   }
   return out;
+}
+
+/** "Lei nº 6.015/1973": a cited norm, written back for the clerk. */
+function normLabel(norm: NormRef): string {
+  const kind = norm.kind.replace(/-/g, " ");
+  // "6015" back to "6.015", as the norms are written.
+  const number = norm.number.replace(/\B(?=(\d{3})+(?!\d))/g, ".");
+  return `${kind.charAt(0).toUpperCase()}${kind.slice(1)} nº ${number}${norm.year ? `/${norm.year}` : ""}`;
 }
 
 export function fileHashOf(bytes: Uint8Array): string {
@@ -192,29 +276,48 @@ export async function reviewDocumentWith(
     actorId?: string;
     /** Null when the AI may not run here, with why. */
     aiBlocked: string | null;
+    /**
+     * "ia": the AI reads it (credit); "base": the office's legal base alone,
+     * at once and with no credit (decision of 16/11/2026).
+     */
+    mode?: "ia" | "base";
   },
   reviewer: Reviewer = reviewRequirementDocument,
 ): Promise<ReviewView> {
   const fileHash = fileHashOf(input.bytes);
+  const wantsAi = (input.mode ?? "ia") === "ia";
   const known = await reviewByHashWith(database, tenantSlug, fileHash);
-  // Reviewed already: answered from what was stored, unless the AI failed
-  // then and may run now.
-  if (known && !(known.aiError && !input.aiBlocked)) return toView(known);
+  // Reviewed already: answered from what was stored, unless the AI may run
+  // now and did not then (failed, or the office was on the base alone).
+  if (known) {
+    const before = resultOf(known.result);
+    const aiRanThen = !known.aiError && before.via !== "base";
+    if (aiRanThen || !wantsAi || input.aiBlocked) return toView(known);
+  }
 
-  const [text, revoked] = await Promise.all([
+  const [text, norms] = await Promise.all([
     plainText(input.bytes, input.name, input.mimeType),
-    revokedNormsWith(database, tenantSlug),
+    baseNormsWith(database, tenantSlug),
   ]);
-  const base = revokedCitations(text, revoked);
+  const items = noteItems(text);
+  const base = [
+    ...revokedCitations(text, norms.revoked),
+    ...(await revokedArticlesWith(
+      database,
+      tenantSlug,
+      norms,
+      articleCitations(items),
+    )),
+  ];
 
   let ai: ReviewResult | null = null;
-  let aiError: string | null = input.aiBlocked;
+  let aiError: string | null = wantsAi ? input.aiBlocked : null;
   const file = titleFile(input.bytes, input.name, input.mimeType);
-  if (!aiError && !file) {
+  if (wantsAi && !aiError && !file) {
     aiError =
       "O Assistente Virtual lê PDF de até 30 MB e imagem de até 5 MB; este arquivo foi conferido só pela base jurídica.";
   }
-  if (!aiError && file) {
+  if (wantsAi && !aiError && file) {
     try {
       const [passages, library] = await Promise.all([
         searchKnowledgeWith(
@@ -239,7 +342,7 @@ export async function reviewDocumentWith(
           ? { attribution: ATTRIBUTIONS[input.attribution] }
           : {}),
         ...(input.act ? { act: input.act } : {}),
-        revoked: revoked.map((r) =>
+        revoked: norms.revoked.map((r) =>
           r.by ? `${r.label}, revogada por ${r.by}` : `${r.label}, revogada`,
         ),
         passages: passages.map((p) => ({
@@ -258,10 +361,22 @@ export async function reviewDocumentWith(
     }
   }
 
-  const merged = mergeReview(base, ai);
+  // Without the AI, the base goes further on its own (no credit): what
+  // has no fundamento, and the norms it could not check; and what is
+  // learned comes from the note's own text.
+  const extra = ai ? [] : unfoundedItems(items);
+  const merged = mergeReview([...base, ...extra], ai);
+  const inBase = [...norms.inForce, ...norms.revoked];
+  const missing = ai
+    ? []
+    : normsIn(text)
+        .filter((cited) => !inBase.some((n) => sameNorm(n.norm, cited)))
+        .map(normLabel)
+        .filter((label, i, all) => all.indexOf(label) === i);
   const result: ReviewResult = {
     ...merged,
-    learned: cleanLearned(merged.learned),
+    ...(ai ? {} : { summary: baseSummary(merged.findings, missing) }),
+    learned: ai ? cleanLearned(merged.learned) : learnWithoutAi(text),
     style: cleanStyle(merged.style),
   };
   if (known) {
@@ -282,9 +397,6 @@ export async function reviewDocumentWith(
       result,
       aiError,
       reviewedBy: input.actorId ?? null,
-      // A file the AI cannot take (type or size) will never be learned:
-      // done, so it is not offered again.
-      ...(file ? {} : { learnedAt: new Date() }),
     })
     .onConflictDoNothing({
       target: [
@@ -422,9 +534,6 @@ export async function learnFromReviewWith(
     )
     .limit(1);
   if (!row || row.learnedAt) return row?.learnedCount ?? 0;
-  // The AI did not read it: nothing generic to learn yet. It stays
-  // unlearned, so "Aprender com as notas já anexadas" takes it again.
-  if (row.aiError) return 0;
   const area = attribution ?? qualificationAttribution(row.attribution);
   let count = 0;
   if (area) {
@@ -582,6 +691,8 @@ export async function learnNextExistingWith(
   tenantSlug: string,
   aiBlocked: string | null,
   reviewer: Reviewer = reviewRequirementDocument,
+  /** "base": no AI and no credit (the office's choice). */
+  mode: "ia" | "base" = "ia",
 ): Promise<LearnedExisting | null> {
   const [next] = await database
     .select({
@@ -621,12 +732,13 @@ export async function learnNextExistingWith(
       requestId: next.requestId,
       ...(attribution ? { attribution } : {}),
       aiBlocked,
+      mode,
     },
     reviewer,
   );
   // The AI failed now (busy, out of reach): nothing is linked, so the
   // next run tries this note again.
-  if (review.aiError && !review.learned && !aiBlocked) {
+  if (mode === "ia" && review.aiError && !review.learned && !aiBlocked) {
     throw new AiError(review.aiError);
   }
   // Already sent: there is no decision to record, only the link.
@@ -654,9 +766,12 @@ export async function learnNextExistingWith(
       learnedAt: new Date(),
     });
   }
-  const learned = review.aiError
-    ? 0
-    : await learnFromReviewWith(database, tenantSlug, review.id, attribution);
+  const learned = await learnFromReviewWith(
+    database,
+    tenantSlug,
+    review.id,
+    attribution,
+  );
   return {
     review: (await getReviewWith(database, tenantSlug, review.id)) ?? review,
     protocolNumber: next.protocolNumber,

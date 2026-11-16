@@ -115,6 +115,11 @@ const EXACT: Record<string, string> = {
   "knowledge.edit": "Corrigiu os dados de uma fonte da base jurídica",
   "knowledge.remove": "Excluiu uma fonte da base jurídica (fica guardada)",
   "knowledge.restore": "Estornou uma fonte excluída da base jurídica",
+  "qualificacao.note-review-kept":
+    "Enviou a nota da exigência mantendo-a depois do aviso da análise",
+  "qualificacao.library-learn":
+    "A biblioteca aprendeu exigências de uma nota anexada",
+  "ai.platform": "Alterou o uso do Assistente Virtual da serventia",
   "ai.on": "Ligou o Assistente Virtual da serventia",
   "ai.off": "Desligou o Assistente Virtual da serventia",
   "ai.transcribe":
@@ -542,6 +547,12 @@ const EXPLANATIONS: Record<string, string> = {
     "Uma fonte da base jurídica foi excluída, com justificativa. Ela continua guardada e pode ser estornada.",
   "knowledge.restore":
     "Uma fonte excluída voltou à base jurídica, com justificativa.",
+  "qualificacao.note-review-kept":
+    "A análise da nota anexada apontou divergência ou norma revogada e o funcionário decidiu mantê-la e enviar. O que foi apontado consta na justificativa.",
+  "qualificacao.library-learn":
+    "Modelos genéricos de exigência, sem dados pessoais, foram guardados na Biblioteca de exigências a partir de uma nota anexada.",
+  "ai.platform":
+    "O uso do Assistente Virtual e a análise das notas anexadas foram ajustados para a serventia.",
   "ai.on": "O Tabelião ligou o Assistente Virtual da serventia.",
   "ai.off": "O Tabelião desligou o Assistente Virtual da serventia.",
   "ai.transcribe":

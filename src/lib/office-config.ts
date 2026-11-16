@@ -98,5 +98,11 @@ export const OFFICE_FCRCPN_KEY = "office-fcrcpn";
  * Tabelião/Registrador; off by default (lib/ai.ts).
  */
 export const OFFICE_AI_KEY = "office-ai";
+/**
+ * What the Átrios account decides over an office's AI (decision of
+ * 16/11/2026): allowed or held back, above the Tabelião's switch, and how
+ * the notes attached to exigências are reviewed (core/qualificacao/revisao-base).
+ */
+export const PLATFORM_AI_KEY = "platform-ai-policy";
 /** The qualificação's terms by attribution (core/qualificacao/prazos). */
 export const OFFICE_QUALIFICATION_KEY = "office-qualification";

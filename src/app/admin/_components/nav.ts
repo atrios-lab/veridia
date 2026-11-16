@@ -531,6 +531,15 @@ export const ADMIN_NAV: readonly AdminNavItem[] = [
     permission: "dpo.oversee",
   },
   {
+    // The Assistente Virtual of every office: allowed or held back, and
+    // how notes are reviewed. The Átrios master account only.
+    group: "Átrios",
+    label: "Assistente Virtual",
+    href: "/admin/atrios/assistente-virtual",
+    icon: "sparkles",
+    permission: "ai.oversee",
+  },
+  {
     // The platform's video tutorials: no permission, every panel user may
     // watch. The sidebar still omits it while the catalog is empty (see
     // sidebar.tsx), the one case where the route exists and the item does

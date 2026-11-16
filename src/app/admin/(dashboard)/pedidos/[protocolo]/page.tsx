@@ -68,6 +68,7 @@ import {
   formatOfficeDayMonthTime,
 } from "@/core/time/office-time.ts";
 import { db } from "@/db/index.ts";
+import { getAiPlatformWith } from "@/lib/ai-platform.ts";
 import { linkedConversations } from "@/lib/chat.ts";
 import { citizenCienciaWith } from "@/lib/citizen-views.ts";
 import {
@@ -294,6 +295,10 @@ export default async function ServiceRequestDetailPage({
       () => new Map<string, Ciencia>(),
     ),
   ]);
+  // How the office reviews the notes attached (decision of 16/11/2026).
+  const noteReviewMode = (
+    await getAiPlatformWith(db, tenant.slug).catch(() => null)
+  )?.noteReview;
   // The review of each document of the exigências (decision of 16/11/2026).
   const reviews = await reviewsOfAttachmentsWith(
     db,
@@ -688,6 +693,7 @@ export default async function ServiceRequestDetailPage({
             <RequirementsSection
               requestId={request.id}
               requirements={requirements}
+              reviewBeforeSending={noteReviewMode !== "desligada"}
               signing={{
                 unsigned: [...unsignedForms],
                 held: requirementForms

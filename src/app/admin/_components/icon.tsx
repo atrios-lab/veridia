@@ -34,6 +34,7 @@ import {
   Shield,
   Shuffle,
   Signature,
+  Sparkles,
   Trash2,
   Upload,
   Users,
@@ -87,6 +88,7 @@ const ICONS = {
   wallet: Wallet,
   library: Library,
   wrench: Wrench,
+  sparkles: Sparkles,
 } satisfies Record<string, LucideIcon>;
 
 export type AdminIconName = keyof typeof ICONS;
