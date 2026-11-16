@@ -32,6 +32,7 @@ import {
   FOLDED_GROUPS,
   navGroups,
 } from "./nav.ts";
+import { NavHint } from "./nav-hint.tsx";
 
 /**
  * The navigation list, on the client.
@@ -49,10 +50,13 @@ import {
 export function AdminSidebarNav({
   items,
   counts,
+  hints = {},
 }: {
   items: readonly AdminNavItem[];
   /** Badge count per item href, e.g. open requests for "/admin/pedidos". */
   counts: Record<string, number>;
+  /** What each service is for, by href: the discreet "!" (nav-hint.tsx). */
+  hints?: Record<string, string>;
 }) {
   const pathname = usePathname();
   // The tab of a screen with tabs in the menu (the Registro Civil's books).
@@ -90,6 +94,8 @@ export function AdminSidebarNav({
                   nodes={groupItems}
                   pathname={location}
                   counts={counts}
+                  hint={GROUP_HINTS[group]}
+                  hints={hints}
                 />
               </SidebarMenu>
             </SidebarGroup>
@@ -108,10 +114,12 @@ export function AdminSidebarNav({
                       nodes={item.children}
                       pathname={location}
                       counts={counts}
+                      hint={hints[item.href]}
                     />
                   );
                 const current = pathname === item.href;
                 const count = counts[item.href];
+                const hint = hints[item.href];
                 return (
                   <SidebarMenuItem key={item.href}>
                     <SidebarMenuButton
@@ -120,7 +128,7 @@ export function AdminSidebarNav({
                       // An `attention` item calls until the person answers
                       // it: on its own screen it is just the current item.
                       className={[
-                        count ? "pr-9" : "",
+                        count ? (hint ? "pr-14" : "pr-9") : hint ? "pr-8" : "",
                         !current && item.attention ? ATTENTION_CLASS : "",
                       ].join(" ")}
                       render={
@@ -153,6 +161,13 @@ export function AdminSidebarNav({
                         </>
                       )}
                     </SidebarMenuButton>
+                    {hint && (
+                      <NavHint
+                        label={item.label}
+                        text={hint}
+                        className={count ? "right-8" : "right-2"}
+                      />
+                    )}
                     {Boolean(count) && (
                       <SidebarMenuBadge>{count}</SidebarMenuBadge>
                     )}
@@ -166,6 +181,17 @@ export function AdminSidebarNav({
     </SidebarContent>
   );
 }
+
+/**
+ * The "!" of a topic that holds several services: what is inside, in one
+ * breath; each service inside has its own.
+ */
+const GROUP_HINTS: Record<string, string> = {
+  Utilitários:
+    "As ferramentas do dia a dia da serventia: guias, declarações, livros, cargas para as centrais, qualificação de títulos, base jurídica e assinador. Cada uma tem o seu ! com a explicação.",
+  Atribuições:
+    "As especialidades que a serventia exerce, cada uma com os seus livros, índices e prazos da lei e os atalhos para o trabalho no painel. Cada uma tem o seu ! com a explicação.",
+};
 
 /** The unfold animation of shadcn's collapsible menu. */
 const FOLD_PANEL =
@@ -224,12 +250,22 @@ function NavFold({
   nodes,
   pathname,
   counts,
+  hint,
+  hints,
 }: {
   label: string;
   icon: AdminIconName;
   nodes: readonly AdminNavNode[];
   pathname: string;
   counts: Record<string, number>;
+  /** What the topic is for: its own "!". */
+  hint?: string;
+  /**
+   * The services inside, each with its "!": only for a topic that groups
+   * services (Utilitários). An item's own screens ("Perguntar", "Minhas
+   * conversas") share the item's.
+   */
+  hints?: Record<string, string>;
 }) {
   const { isMobile, state, setOpen: setSidebarOpen } = useSidebar();
   const active = currentHref(nodes, pathname);
@@ -254,7 +290,15 @@ function NavFold({
           <SidebarMenuButton
             tooltip={label}
             isActive={iconOnly && Boolean(active)}
-            className={showTotal ? "pr-9" : undefined}
+            className={
+              hint
+                ? showTotal
+                  ? "pr-14"
+                  : "pr-8"
+                : showTotal
+                  ? "pr-9"
+                  : undefined
+            }
           />
         }
       >
@@ -262,6 +306,13 @@ function NavFold({
         <span className="min-w-0 flex-1">{label}</span>
         <Chevron open={open} hidden={showTotal} />
       </CollapsibleTrigger>
+      {hint && (
+        <NavHint
+          label={label}
+          text={hint}
+          className={`top-4! ${showTotal ? "right-8" : "right-2"}`}
+        />
+      )}
       {showTotal && <SidebarMenuBadge>{total}</SidebarMenuBadge>}
       <CollapsibleContent className={FOLD_PANEL}>
         <SidebarMenuSub className="mt-1">
@@ -272,6 +323,7 @@ function NavFold({
               active={active}
               pathname={pathname}
               counts={counts}
+              hint={hints?.[node.href]}
             />
           ))}
         </SidebarMenuSub>
@@ -290,11 +342,14 @@ function NavBranch({
   active,
   pathname,
   counts,
+  hint,
 }: {
   node: AdminNavNode;
   active: string | undefined;
   pathname: string;
   counts: Record<string, number>;
+  /** What the service is for: its "!" (only the services of a topic). */
+  hint?: string;
 }) {
   const { isMobile, setOpenMobile } = useSidebar();
   const screens = node.children ?? [];
@@ -308,7 +363,7 @@ function NavBranch({
       <SidebarMenuSubItem>
         <SidebarMenuSubButton
           isActive={active === node.href}
-          className={SUB_BUTTON}
+          className={hint ? `${SUB_BUTTON} pr-7` : SUB_BUTTON}
           render={
             <Link
               href={node.href}
@@ -324,6 +379,9 @@ function NavBranch({
           </span>
           {Boolean(count) && <SubBadge count={count} />}
         </SidebarMenuSubButton>
+        {hint && (
+          <NavHint label={node.label} text={hint} className="right-1.5" />
+        )}
       </SidebarMenuSubItem>
     );
   }
@@ -338,7 +396,7 @@ function NavBranch({
       <CollapsibleTrigger
         render={
           <SidebarMenuSubButton
-            className={`${SUB_BUTTON} w-full`}
+            className={`${SUB_BUTTON} w-full ${hint ? "pr-7" : ""}`}
             render={<button type="button" />}
           />
         }
@@ -350,6 +408,13 @@ function NavBranch({
           <Chevron open={open} />
         )}
       </CollapsibleTrigger>
+      {hint && (
+        <NavHint
+          label={node.label}
+          text={hint}
+          className="top-3.5! right-1.5"
+        />
+      )}
       <CollapsibleContent className={FOLD_PANEL}>
         {/* A third level: a shorter indent, or the screens' names
             would wrap in the narrow column. */}
