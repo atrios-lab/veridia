@@ -14,5 +14,5 @@ export const ROLE_LABELS: Record<Role, string> = {
   contador: "Contador",
   rh: "RH",
   superadmin: "Átrios",
-  learner: "Aluno",
+  learner: "Participante",
 };

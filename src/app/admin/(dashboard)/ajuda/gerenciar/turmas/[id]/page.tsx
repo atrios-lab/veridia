@@ -112,7 +112,7 @@ export default async function CohortPage({ params }: { params: Params }) {
 
           <section className="rounded-xl border bg-card">
             <div className="border-b px-5 py-3.5 text-lg font-semibold text-foreground">
-              Alunos
+              Participantes
             </div>
             {detail.learners.length === 0 ? (
               <p className="px-5 py-6 text-sm text-muted-foreground">
@@ -126,7 +126,7 @@ export default async function CohortPage({ params }: { params: Params }) {
                       scope="col"
                       className="px-5 text-xs text-muted-foreground"
                     >
-                      Aluno
+                      Participante
                     </TableHead>
                     <TableHead
                       scope="col"

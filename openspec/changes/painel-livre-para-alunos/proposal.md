@@ -5,7 +5,7 @@ O aluno de turma já vê o site público do Cartório Vale do Silício, o lado d
 ## What Changes
 
 - **Painel liberado para o aluno.** No tenant de demonstração, o papel de aluno passa a usar o painel como um funcionário: atende pedidos, mexe na agenda, responde LGPD e ouvidoria, publica editais, preenche transparência e usa as ferramentas. Tudo isso com os dados fictícios do Cartório Vale do Silício.
-- **Cartório compartilhado** (decisão do usuário em 16/11/2026). Todos os alunos mexem no mesmo cartório e veem o que os outros fizeram, inclusive o que aparece no site público de demonstração. Uma faixa fixa no painel avisa: "Painel de demonstração do Cartório Vale do Silício, que não existe. O que você fizer aqui fica visível para os outros alunos e pode ser apagado a qualquer momento. Não use dados reais."
+- **Cartório compartilhado** (decisão do usuário em 16/11/2026). Todos os alunos mexem no mesmo cartório e veem o que os outros fizeram, inclusive o que aparece no site público de demonstração. Uma faixa fixa no painel avisa: "Painel de demonstração do Cartório Vale do Silício, que não existe. O que você fizer aqui fica visível para os outros participantes e pode ser apagado a qualquer momento. Não use dados reais."
 - **O que continua fechado**, porque expõe outras pessoas, prende o cartório de todos, custa dinheiro ou envolve credencial real:
   - Usuários, Perfis e permissões e Auditoria;
   - Mensagens internas;

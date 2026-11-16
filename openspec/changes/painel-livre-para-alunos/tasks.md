@@ -3,7 +3,8 @@
 - [x] 1.1 Painel livre, com cartório compartilhado por todos os alunos (usuário, 16/11/2026)
 - [x] 1.2 Nenhum e-mail sai do tenant de demonstração; o painel mostra o que teria sido enviado (usuário, 16/11/2026)
 - [x] 1.3 Limpeza só pelo botão da Átrios, sem rodar sozinha (usuário, 16/11/2026)
-- [ ] 1.4 Usuário aprova o texto da faixa do painel e o trecho novo do aviso de privacidade do cadastro (o que o aluno digita fica visível aos outros alunos e pode ser apagado a qualquer momento)
+- [ ] 1.4 Usuário aprova o texto da faixa do painel e o trecho novo do aviso de privacidade do cadastro (o que o participante digita fica visível aos outros participantes, junto com o nome dele quando o painel mostra quem alterou, e pode ser apagado a qualquer momento)
+- [x] 1.6 Na tela, o papel se chama "Participante": rótulo do papel e tela de Turmas já trocados; a faixa e o aviso do cadastro usam "participantes" (usuário, 16/11/2026)
 - [x] 1.5 "E-mails de demonstração" fica fora do menu, só pelos links do histórico (usuário, 16/11/2026)
 
 ## 2. Permissões do aluno (PR 1)

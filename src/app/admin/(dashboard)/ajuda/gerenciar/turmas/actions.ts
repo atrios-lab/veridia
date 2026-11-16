@@ -157,7 +157,7 @@ export async function updateCohortAction(
       status: "error",
       message: "Confira os campos destacados.",
       fieldErrors: {
-        seats: `A turma já tem ${result.members} ${result.members === 1 ? "aluno" : "alunos"}: as vagas não podem ficar abaixo disso.`,
+        seats: `A turma já tem ${result.members} ${result.members === 1 ? "participante" : "participantes"}: as vagas não podem ficar abaixo disso.`,
       },
       values,
     };

@@ -10,6 +10,8 @@ Como o painel controla acesso hoje:
 - `sendEmail` (`src/lib/email/send.ts`) não sabe de tenant. Quem chama monta remetente e destinatário.
 - A IA de cada serventia pode ser desligada pela conta da Átrios (`src/lib/ai-platform.ts`, change #351).
 
+Na tela, o papel `learner` se chama **Participante** (decisão do usuário em 16/11/2026), e não "aluno" nem "cliente". Neste documento, "aluno" segue designando o papel.
+
 O usuário decidiu em 16/11/2026: o painel fica livre para o aluno mexer, num cartório **compartilhado** por todos os alunos, e **nenhum e-mail sai**: o painel mostra o que teria sido enviado.
 
 ## Goals / Non-Goals
@@ -17,7 +19,7 @@ O usuário decidiu em 16/11/2026: o painel fica livre para o aluno mexer, num ca
 **Goals:**
 - O aluno usa o painel do Vale do Silício como um funcionário usaria.
 - Nada do que o aluno faz sai da plataforma: nenhum e-mail, nenhuma chamada à IA, nenhum envio a sistema externo.
-- O aluno não vê nome, e-mail nem ações das contas dos outros alunos, nem a lista deles.
+- O aluno não vê a lista dos outros alunos, nem o e-mail deles, nem a auditoria. O nome de outro aluno aparece só onde o painel já mostra quem fez uma alteração, como no histórico do pedido (`actorName` em `listRecordHistory`), e o aviso do cadastro diz isso.
 - O aluno não consegue trancar o cartório para os outros nem trocar a chave Pix do site de demonstração.
 - O cartório volta ao estado inicial por uma rotina revisada, sem tocar em conta, turma ou certificado.
 
@@ -101,7 +103,7 @@ O IndexNow avisa buscadores de páginas novas do site. No tenant de cursos ele f
 
 ### 6. Faixa no painel
 
-Faixa fixa no topo do conteúdo do painel, para toda sessão de aluno no tenant `demo`: "Painel de demonstração do Cartório Vale do Silício, que não existe. O que você fizer aqui fica visível para os outros alunos e pode ser apagado a qualquer momento. Não use dados reais." O texto fica em `src/core/tenant/`, ao lado do aviso do site. A conta da Átrios não vê a faixa.
+Faixa fixa no topo do conteúdo do painel, para toda sessão de aluno no tenant `demo`: "Painel de demonstração do Cartório Vale do Silício, que não existe. O que você fizer aqui fica visível para os outros participantes e pode ser apagado a qualquer momento. Não use dados reais." O texto fica em `src/core/tenant/`, ao lado do aviso do site. A conta da Átrios não vê a faixa.
 
 ### 7. Seed
 

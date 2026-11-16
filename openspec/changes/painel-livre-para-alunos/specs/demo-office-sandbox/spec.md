@@ -50,7 +50,7 @@ Mensagens internas SHALL exigir uma permissão própria, derivada da permissão 
 
 ### Requirement: Faixa do painel de demonstração
 
-Toda tela do painel aberta por um aluno no tenant de demonstração SHALL mostrar, fixa no topo do conteúdo, uma faixa dizendo que o cartório não existe, que o que ele fizer fica visível para os outros alunos e pode ser apagado a qualquer momento, e que não deve usar dados reais. A faixa NÃO SHALL aparecer para a conta da Átrios.
+Toda tela do painel aberta por um aluno no tenant de demonstração SHALL mostrar, fixa no topo do conteúdo, uma faixa dizendo que o cartório não existe, que o que ele fizer fica visível para os outros participantes e pode ser apagado a qualquer momento, e que não deve usar dados reais. A faixa NÃO SHALL aparecer para a conta da Átrios.
 
 #### Scenario: Faixa para o aluno
 - **WHEN** um aluno abre a fila de pedidos no tenant de cursos
