@@ -241,7 +241,7 @@ test("IA fora do ar: fica a conferência da base, e a próxima vez tenta a IA de
   assert.equal(retried.id, failed.id);
 });
 
-test("as notas já anexadas são lidas uma a uma, e a lida sem IA volta para aprender", async () => {
+test("notas já anexadas: sem IA aprende pelo texto, sem gastar crédito; falha passageira da IA tenta de novo", async () => {
   const { id: requestId } = await createRecordWith(
     db,
     TENANT,
@@ -258,66 +258,72 @@ test("as notas já anexadas são lidas uma a uma, e a lida sem IA volta para apr
     .values({ tenantSlug: TENANT.slug, requestId, text: "Juntar documentos." })
     .returning({ id: serviceRequestRequirements.id });
   const dir = await mkdtemp(join(tmpdir(), "revisao-"));
-  const path = join(dir, "nota-04.pdf");
-  const bytes = await notePdf([
-    "NOTA DEVOLUTIVA 04/2026",
-    "1. Juntar a certidao de casamento.",
-  ]);
-  await writeFile(path, bytes);
-  const [attachment] = await db
-    .insert(serviceRequestAttachments)
-    .values({
+  const attach = async (name: string, lines: string[]) => {
+    const bytes = await notePdf(lines);
+    const path = join(dir, name);
+    await writeFile(path, bytes);
+    await db.insert(serviceRequestAttachments).values({
       tenantSlug: TENANT.slug,
       requestId,
       requirementId: requirement?.id,
       kind: "office",
-      storedName: "nota-04.pdf",
-      displayName: "Nota devolutiva 04",
+      storedName: name,
+      displayName: name,
       path,
       mimeType: "application/pdf",
       sizeBytes: bytes.byteLength,
-    })
-    .returning({ id: serviceRequestAttachments.id });
+    });
+  };
+  await attach("nota-04.pdf", [
+    "NOTA DEVOLUTIVA 04/2026",
+    "1. Apresentar a certidao de onus reais atualizada (Lei n 6.015/1973, art. 225).",
+    "2. Recolher as custas do registro.",
+  ]);
+  const before = await pendingLearningCountWith(db, TENANT.slug);
+  assert.ok(before >= 1);
 
-  // Attached while the AI was off: reviewed by the base only, not learned.
-  const offline = await reviewDocumentWith(db, TENANT.slug, {
-    bytes,
-    name: "nota-04.pdf",
-    mimeType: "application/pdf",
-    attribution: "ri",
-    aiBlocked: "O Assistente Virtual está desligado.",
-  });
-  await linkReviewWith(db, TENANT.slug, {
-    reviewId: offline.id,
-    attachmentId: attachment?.id ?? "",
-    requestId,
-    actorId: "escrevente",
-  });
-  assert.equal(await learnFromReviewWith(db, TENANT.slug, offline.id), 0);
-  assert.equal(await pendingLearningCountWith(db, TENANT.slug), 1);
+  // Office on the legal base alone: the AI is never called.
+  const never = async (): Promise<ReviewResult> => {
+    throw new Error("a IA não deveria ser chamada");
+  };
+  const first = await learnNextExistingWith(
+    db,
+    TENANT.slug,
+    null,
+    never,
+    "base",
+  );
+  assert.equal(first?.review.result.via, "base");
+  assert.equal(first?.learned, 1);
+  assert.ok(
+    first?.review.result.findings.some((f) => f.kind === "sem-fundamento"),
+    "a exigência sem fundamento é apontada pela base",
+  );
+  const learned = (await db.select().from(qualificationLibrary)).filter(
+    (r) => r.origin === "aprendida" && r.basis.includes("6.015/1973, art. 225"),
+  );
+  assert.equal(learned.length, 1);
 
+  // With the AI on, a passing failure leaves the note to be read again.
+  await attach("nota-05.pdf", [
+    "NOTA DEVOLUTIVA 05/2026",
+    "1. Juntar a planta do imovel.",
+  ]);
+  const pending = await pendingLearningCountWith(db, TENANT.slug);
+  await assert.rejects(
+    learnNextExistingWith(db, TENANT.slug, null, async () => {
+      throw new AiError("O Assistente Virtual está ocupado agora.");
+    }),
+    AiError,
+  );
+  assert.equal(await pendingLearningCountWith(db, TENANT.slug), pending);
   const calls = { n: 0 };
   const next = await learnNextExistingWith(
     db,
     TENANT.slug,
     null,
-    fakeAi(calls, {
-      learned: [
-        {
-          title: "Juntar a certidão de casamento atualizada",
-          description:
-            "Falta a certidão de casamento atualizada do requerente.",
-          howToComply: "Junte a certidão expedida há menos de noventa dias.",
-          basis: "Lei nº 6.015/1973, art. 167, II, 14",
-        },
-      ],
-    }),
+    fakeAi(calls),
   );
   assert.equal(calls.n, 1);
-  assert.equal(next?.learned, 1);
-  assert.equal(await pendingLearningCountWith(db, TENANT.slug), 0);
-  assert.equal(
-    await learnNextExistingWith(db, TENANT.slug, null, fakeAi(calls)),
-    null,
-  );
+  assert.equal(next?.review.result.via, "ia");
 });

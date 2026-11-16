@@ -22,12 +22,17 @@ export type ReviewStatus =
  * started as soon as the file is chosen, side by side with the check of
  * the signature, so the clerk waits once.
  */
-export function useDocumentReview(requestId: string) {
+export function useDocumentReview(
+  requestId: string,
+  /** Off: no review before sending, as it was (the office's mode). */
+  enabled = true,
+) {
   const [status, setStatus] = useState<ReviewStatus>({ kind: "idle" });
   const [decision, setDecision] = useState<"" | "manteve" | "alterou">("");
   // A file picked again before the first answer came: only the last counts.
   const turn = useRef(0);
   const start = async (file: File) => {
+    if (!enabled) return;
     const mine = ++turn.current;
     setDecision("");
     setStatus({ kind: "loading" });
@@ -59,6 +64,7 @@ export function useDocumentReview(requestId: string) {
   };
   /** The clerk may go on: nothing to decide, or decided to keep it. */
   const cleared =
+    !enabled ||
     status.kind === "failed" ||
     (status.kind === "done" &&
       (status.review.result.findings.length === 0 || decision === "manteve"));
@@ -197,6 +203,12 @@ export function DocumentReviewPanel({
       {review.result.summary && (
         <p className="mt-1.5 text-sm text-foreground">
           {review.result.summary}
+        </p>
+      )}
+      {review.result.via === "base" && !review.aiError && (
+        <p className="mt-1.5 text-xs text-muted-foreground">
+          Análise feita pela base jurídica da serventia, sem gastar crédito da
+          IA.
         </p>
       )}
       {review.aiError && (

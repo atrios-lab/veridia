@@ -15,7 +15,14 @@ type Done = NonNullable<Extract<LearnState, { status: "success" }>["item"]>;
  * note per call, so the clerk sees each one go by and can stop at any
  * moment; the notes with something to check are listed with their request.
  */
-export function LearnAttached({ pending }: { pending: number }) {
+export function LearnAttached({
+  pending,
+  usesAi,
+}: {
+  pending: number;
+  /** The office's mode reads with the AI (credit); else the base alone. */
+  usesAi: boolean;
+}) {
   const router = useRouter();
   const [running, setRunning] = useState(false);
   const [remaining, setRemaining] = useState(pending);
@@ -56,11 +63,11 @@ export function LearnAttached({ pending }: { pending: number }) {
             Aprender com as notas já anexadas
           </h2>
           <p className="text-sm text-muted-foreground">
-            O Assistente Virtual lê as notas e documentos que a equipe já anexou
-            às exigências, aponta o que diverge da lei ou cita norma revogada e
-            guarda aqui os modelos de exigência, sem dados pessoais, marcados
-            como <strong>Aprendida</strong>. Toda nota nova anexada passa por
-            isso sozinha.
+            {usesAi
+              ? "O Assistente Virtual lê as notas e documentos que a equipe já anexou às exigências, aponta o que diverge da lei ou cita norma revogada e guarda aqui os modelos de exigência"
+              : "As notas e documentos que a equipe já anexou às exigências são lidos pela base jurídica da serventia, sem gastar crédito da IA: aponta norma ou artigo revogado e exigência sem fundamento, e guarda aqui os modelos de exigência"}
+            , sem dados pessoais, marcados como <strong>Aprendida</strong>. Toda
+            nota nova anexada passa por isso sozinha.
           </p>
         </div>
         {running ? (

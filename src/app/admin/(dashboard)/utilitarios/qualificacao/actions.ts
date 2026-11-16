@@ -32,6 +32,7 @@ import {
   type TitleFile,
   transcribeToMarkdown,
 } from "@/lib/ai.ts";
+import { getAiPlatformWith } from "@/lib/ai-platform.ts";
 import { currentJustification, justify } from "@/lib/audit-reason.ts";
 import { brandFor } from "@/lib/document-brand.ts";
 import { notifyCitizen } from "@/lib/email/service-request.ts";
@@ -836,7 +837,13 @@ export async function sendNoteToRequestAction(
         const act = actName(note.snapshot);
         after(async () => {
           try {
-            const aiBlocked = await aiBlockedWith(db, tenantSlug);
+            const [aiBlocked, platform] = await Promise.all([
+              aiBlockedWith(db, tenantSlug),
+              getAiPlatformWith(db, tenantSlug),
+            ]);
+            // With the AI only when the office's mode says so; otherwise
+            // by the legal base alone, with no credit.
+            const mode = platform.noteReview === "ia" ? "ia" : "base";
             const rows = (await listAttachments(tenantSlug, requestId)).filter(
               (a) => pickedNames.includes(a.storedName) && a.path,
             );
@@ -850,6 +857,7 @@ export async function sendNoteToRequestAction(
                 act,
                 actorId,
                 aiBlocked,
+                mode,
               });
               await linkReviewWith(db, tenantSlug, {
                 reviewId: review.id,
@@ -857,14 +865,7 @@ export async function sendNoteToRequestAction(
                 requestId,
                 actorId,
               });
-              if (!review.aiError) {
-                await learnFromReviewWith(
-                  db,
-                  tenantSlug,
-                  review.id,
-                  attribution,
-                );
-              }
+              await learnFromReviewWith(db, tenantSlug, review.id, attribution);
             }
           } catch (error) {
             console.error("qualificacao.review-picked", error);
@@ -1010,10 +1011,21 @@ export type LearnState =
 export async function learnNextAttachedAction(): Promise<LearnState> {
   const ok = await access();
   if (!ok) return { status: "error", message: NO_PERMISSION };
-  const blocked = await aiBlockedWith(db, ok.tenant.slug);
-  if (blocked) return { status: "error", message: blocked };
   try {
-    const next = await learnNextExistingWith(db, ok.tenant.slug, null);
+    // With the AI only in the office's "ia" mode and when it may run; else
+    // from the notes' own text and the legal base, with no credit.
+    const [blocked, platform] = await Promise.all([
+      aiBlockedWith(db, ok.tenant.slug),
+      getAiPlatformWith(db, ok.tenant.slug),
+    ]);
+    const mode = platform.noteReview === "ia" && !blocked ? "ia" : "base";
+    const next = await learnNextExistingWith(
+      db,
+      ok.tenant.slug,
+      blocked,
+      undefined,
+      mode,
+    );
     const remaining = await pendingLearningCountWith(db, ok.tenant.slug);
     revalidatePath(`${BASE}/biblioteca`);
     if (!next) return { status: "success", done: true, remaining };

@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
+import { after } from "next/server";
 import { z } from "zod";
 import { getActForTenant } from "@/core/acts/catalog.ts";
 import { can } from "@/core/auth/roles.ts";
@@ -50,6 +51,7 @@ import { officialName } from "@/core/tenant/identification.ts";
 import type { Tenant } from "@/core/tenant/schema.ts";
 import { db } from "@/db/index.ts";
 import { aiBlockedWith } from "@/lib/ai.ts";
+import { getAiPlatformWith } from "@/lib/ai-platform.ts";
 import { justify } from "@/lib/audit-reason.ts";
 import { notifyCitizen, sendAccessKey } from "@/lib/email/service-request.ts";
 import {
@@ -103,6 +105,7 @@ import { getTenant, OFFICE_TIME_ZONE, today } from "@/lib/tenant.ts";
 import {
   AttachmentError,
   deleteStoredFile,
+  readStoredFile,
   storeAttachments,
 } from "@/lib/uploads.ts";
 
@@ -704,6 +707,15 @@ export async function reviewRequirementDocumentAction(
     return { status: "error", message: "Escolha o arquivo." };
   }
   try {
+    // The office's mode (decision of 16/11/2026): with the AI, by the legal
+    // base alone (no credit), or off (no review before sending).
+    const platform = await getAiPlatformWith(db, tenant.slug);
+    if (platform.noteReview === "desligada") {
+      return {
+        status: "error",
+        message: "A análise antes de enviar está desligada nesta serventia.",
+      };
+    }
     const request = await findById(tenant.slug, requestId);
     if (!request) return { status: "error", message: "Pedido não encontrado." };
     const act = request.actId
@@ -713,6 +725,7 @@ export async function reviewRequirementDocumentAction(
       request.attribution ?? act?.attribution,
     );
     const review = await reviewDocumentWith(db, tenant.slug, {
+      mode: platform.noteReview === "base" ? "base" : "ia",
       bytes: new Uint8Array(await file.arrayBuffer()),
       name: file.name,
       mimeType: file.type || "application/pdf",
@@ -810,6 +823,45 @@ export async function attachRequirementFormAction(
     const firstStored = attached.find(
       (a) => a.storedName === stored[0]?.storedName,
     );
+    if (!reviewId && firstStored?.path) {
+      // No review before sending (the office's mode, or it failed): the
+      // note is still read by the legal base and learned from, after the
+      // answer and with no credit (decision of 16/11/2026: "você continua
+      // aprendendo, porém não analisa antes de enviar").
+      const tenantSlug = tenant.slug;
+      const owner = await findById(tenantSlug, requestId);
+      const act = owner?.actId
+        ? getActForTenant(tenant, owner.actId)
+        : undefined;
+      const attribution = qualificationAttribution(
+        owner?.attribution ?? act?.attribution,
+      );
+      const file = firstStored;
+      const actorId = session.user.id;
+      after(async () => {
+        try {
+          const review = await reviewDocumentWith(db, tenantSlug, {
+            bytes: new Uint8Array(await readStoredFile(file.path ?? "")),
+            name: file.displayName,
+            mimeType: file.mimeType,
+            requestId,
+            ...(attribution ? { attribution } : {}),
+            actorId,
+            aiBlocked: null,
+            mode: "base",
+          });
+          await linkReviewWith(db, tenantSlug, {
+            reviewId: review.id,
+            attachmentId: file.id,
+            requestId,
+            actorId,
+          });
+          await learnFromReviewWith(db, tenantSlug, review.id, attribution);
+        } catch (error) {
+          console.error("pedidos.review-after", error);
+        }
+      });
+    }
     if (reviewId && firstStored) {
       const owner = await findById(tenant.slug, requestId);
       await linkReviewWith(db, tenant.slug, {

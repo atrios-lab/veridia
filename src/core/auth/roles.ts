@@ -252,6 +252,11 @@ export const PLATFORM_PERMISSIONS = [
   // The DPO assistant's oversight: every office's usage, conversations and
   // monthly ceiling (lib/dpo/store.ts). The Átrios master account only.
   "dpo.oversee",
+  // The Assistente Virtual of each office (decision of 16/11/2026): held
+  // back or allowed above the Tabelião's switch, and how the notes attached
+  // to exigências are reviewed (IA, base alone, off). The Átrios master
+  // account only; the office never sees it.
+  "ai.oversee",
 ] as const;
 
 export const PERMISSIONS = [

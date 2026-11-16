@@ -134,9 +134,12 @@ function formatDayMonthTime(date: Date): string {
 function AttachFormButton({
   requestId,
   requirementId,
+  reviewBeforeSending,
 }: {
   requestId: string;
   requirementId: string;
+  /** The office's mode lets the note be reviewed before it goes. */
+  reviewBeforeSending: boolean;
 }) {
   const [state, action, pending] = useActionState<ActionState, FormData>(
     attachRequirementFormAction,
@@ -149,7 +152,7 @@ function AttachFormButton({
   // The note is read as soon as it is picked (decision of 16/11/2026): the
   // signature question waits for the review, and for the clerk's call when
   // something was found.
-  const review = useDocumentReview(requestId);
+  const review = useDocumentReview(requestId, reviewBeforeSending);
   const send = (choice: SignatureDecision) => {
     if (choiceRef.current) choiceRef.current.value = choice;
     reset();
@@ -576,10 +579,12 @@ function RequirementCard({
   requirement,
   requestId,
   signing,
+  reviewBeforeSending,
 }: {
   requirement: RequirementItem;
   requestId: string;
   signing: RequirementSigning;
+  reviewBeforeSending: boolean;
 }) {
   const pendingReq = requirement.status === "pending";
   const last = requirement.messages.at(-1);
@@ -773,6 +778,7 @@ function RequirementCard({
               <AttachFormButton
                 requestId={requestId}
                 requirementId={requirement.id}
+                reviewBeforeSending={reviewBeforeSending}
               />
             </div>
           )}
@@ -786,10 +792,13 @@ export function RequirementsSection({
   requestId,
   requirements,
   signing,
+  reviewBeforeSending = true,
 }: {
   requestId: string;
   requirements: RequirementItem[];
   signing: RequirementSigning;
+  /** Off when the office's mode is "desligada" (decision of 16/11/2026). */
+  reviewBeforeSending?: boolean;
 }) {
   const [editing, setEditing] = useState(false);
   const [state, action, pending] = useActionState<ActionState, FormData>(
@@ -901,6 +910,7 @@ export function RequirementsSection({
               requirement={requirement}
               requestId={requestId}
               signing={signing}
+              reviewBeforeSending={reviewBeforeSending}
             />
           ))}
         </div>

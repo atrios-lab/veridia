@@ -5,6 +5,7 @@ import {
   isAttribution,
 } from "@/core/qualificacao/qualificacao.ts";
 import { db } from "@/db/index.ts";
+import { getAiPlatformWith } from "@/lib/ai-platform.ts";
 import { listLibraryWith } from "@/lib/qualificacao.ts";
 import { pendingLearningCountWith } from "@/lib/qualificacao-revisao.ts";
 import { getTenant } from "@/lib/tenant.ts";
@@ -30,9 +31,10 @@ export default async function LibraryPage({
   const attribution = isAttribution(atribuicao) ? atribuicao : "rcpn";
   const removedView = excluidas === "1";
   const tenant = await getTenant();
-  const [items, pendingLearning] = await Promise.all([
+  const [items, pendingLearning, platform] = await Promise.all([
     listLibraryWith(db, tenant.slug, attribution, { removed: removedView }),
     pendingLearningCountWith(db, tenant.slug).catch(() => 0),
+    getAiPlatformWith(db, tenant.slug).catch(() => null),
   ]);
 
   return (
@@ -48,7 +50,10 @@ export default async function LibraryPage({
           href="/admin/utilitarios/qualificacao"
           label="Qualificação de títulos"
         />
-        <LearnAttached pending={pendingLearning} />
+        <LearnAttached
+          pending={pendingLearning}
+          usesAi={(platform?.noteReview ?? "ia") === "ia"}
+        />
         <nav aria-label="Atribuições" className="flex flex-wrap gap-2 text-sm">
           {Object.entries(ATTRIBUTIONS).map(([value, label]) => (
             <Link
