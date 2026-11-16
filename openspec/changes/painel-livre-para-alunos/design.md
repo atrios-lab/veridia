@@ -156,7 +156,7 @@ resetDemoOfficeWith(db, slug, actorId, { listFiles, seed })   (src/lib/demo-rese
 **PR 1, painel livre (só adições):**
 1. Migração com `CREATE TABLE demo_outbox` e índice. Nada é apagado nem alterado, e `pnpm check:destructive` passa sem exceção.
 2. Aplicar no banco local de teste e no Homolog, rodar o seed do tenant de cursos e testar em `curso.localhost`.
-3. Antes do merge, o usuário aplica a migração em produção à mão e roda o seed do tenant de cursos.
+3. A migração roda sozinha no deploy de produção (`pnpm build:vercel` roda `pnpm db:migrate` antes do build). Depois do merge, o usuário preenche a mesa do tenant de cursos: roda o seed uma vez ou, com a limpeza já na `main`, usa o botão de limpeza, que semeia de novo.
 4. Merge.
 
 Rollback: reverter o código. A tabela nova fica sem efeito.
