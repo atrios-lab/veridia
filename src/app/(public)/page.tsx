@@ -110,7 +110,11 @@ export default async function Home() {
           src={tenant.heroImage ?? "/hero-home.jpg"}
           alt=""
           fill
-          priority
+          // The photograph is the LCP element. Since Next 16 `priority` only
+          // adds the preload link; the request's own high priority has to be
+          // asked for, or the browser queues it behind the scripts.
+          preload
+          fetchPriority="high"
           sizes="100vw"
           className="object-cover"
         />
