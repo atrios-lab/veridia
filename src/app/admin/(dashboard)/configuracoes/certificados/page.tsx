@@ -2,6 +2,11 @@ import { notFound } from "next/navigation";
 import { can } from "@/core/auth/roles.ts";
 import { maskHolderDocument } from "@/core/signature/policy.ts";
 import {
+  isSignKind,
+  SIGN_KINDS,
+  type SignKind,
+} from "@/core/signature/station.ts";
+import {
   formatOfficeDate,
   formatOfficeDateTime,
   formatOfficeTime,
@@ -12,10 +17,18 @@ import {
   listCertificatesWith,
   officeSignerCandidatesWith,
 } from "@/lib/signing.ts";
-import { listStationsWith, recentJobsWith } from "@/lib/signing-stations.ts";
+import {
+  listStationsWith,
+  stationHistoryWith,
+} from "@/lib/signing-stations.ts";
 import { getTenant } from "@/lib/tenant.ts";
 import { AdminPageHeader } from "../../../_components/page-header.tsx";
 import { Badge } from "../../../_ui/badge.tsx";
+import { buttonVariants } from "../../../_ui/button.tsx";
+import {
+  NativeSelect,
+  NativeSelectOption,
+} from "../../../_ui/native-select.tsx";
 import { ConfiguracoesTabs } from "../_components/tabs.tsx";
 import {
   AddCertificateForm,
@@ -41,7 +54,14 @@ const JOB_LABELS: Record<string, string> = {
   expirada: "Sem resposta da estação",
 };
 
-export default async function CertificatesPage() {
+const kindLabel = (kind: SignKind) => SIGN_KINDS[kind].split(":")[0];
+
+export default async function CertificatesPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ pessoa?: string; tipo?: string }>;
+}) {
+  const query = await searchParams;
   const session = await getSession();
   if (
     !session ||
@@ -53,12 +73,19 @@ export default async function CertificatesPage() {
   )
     notFound();
   const tenant = await getTenant();
+  const filterKind =
+    query.tipo && isSignKind(query.tipo) ? query.tipo : undefined;
+  const filterPerson = query.pessoa?.slice(0, 64) || undefined;
   const [certificates, people, stations, jobs] = await Promise.all([
     listCertificatesWith(db, tenant.slug),
     officeSignerCandidatesWith(db, tenant.slug),
     listStationsWith(db, tenant.slug).catch(() => []),
-    recentJobsWith(db, tenant.slug, 20).catch(() => []),
+    stationHistoryWith(db, tenant.slug, {
+      userId: filterPerson,
+      kind: filterKind,
+    }).catch(() => []),
   ]);
+  const filtering = Boolean(filterKind || filterPerson);
   const now = Date.now();
 
   return (
@@ -229,7 +256,7 @@ export default async function CertificatesPage() {
                       people={people}
                       shared={certificate.policy.shared}
                       mode={certificate.policy.mode}
-                      signerIds={certificate.policy.signerIds}
+                      grants={certificate.policy.grants}
                     />
                     {certificate.policy.shared &&
                       certificate.policy.mode === "periodo" && (
@@ -251,35 +278,128 @@ export default async function CertificatesPage() {
 
         <PairStation />
 
-        {jobs.length > 0 && (
-          <section className="rounded-xl border bg-card px-5 py-4">
+        {(stations.length > 0 || jobs.length > 0) && (
+          <section
+            id="historico"
+            className="rounded-xl border bg-card px-5 py-4"
+          >
             <h2 className="text-base font-semibold text-foreground">
-              Últimas assinaturas pelas estações
+              Histórico das assinaturas pelas estações
             </h2>
-            <ul className="mt-2 flex flex-col divide-y text-sm">
-              {jobs.map((job) => (
-                <li
-                  key={job.id}
-                  className="flex flex-wrap items-baseline gap-x-2 py-2"
+            <p className="mt-1 text-sm text-muted-foreground">
+              Cada pedido fica registrado: quem pediu, com o certificado de
+              quem, o que foi assinado, quando e como terminou. Os documentos
+              assinados têm o link de verificação.
+            </p>
+            <form
+              method="get"
+              action="#historico"
+              className="mt-3 flex flex-wrap items-end gap-2 text-sm"
+            >
+              <label
+                htmlFor="filtro-pessoa"
+                className="flex flex-col gap-1 font-medium"
+              >
+                Pessoa
+                <NativeSelect
+                  id="filtro-pessoa"
+                  name="pessoa"
+                  defaultValue={filterPerson ?? ""}
+                  className="font-normal"
                 >
-                  <span className="font-medium text-foreground">
-                    {job.title}
-                  </span>
-                  <span className="text-xs text-muted-foreground">
-                    {job.requestedByName} · {job.stationName} ·{" "}
-                    {formatOfficeDateTime(job.createdAt)}
-                  </span>
-                  <span
-                    className={`ml-auto text-xs font-medium ${job.status === "assinada" ? "text-success-text" : job.status === "pendente" || job.status === "enviada" ? "text-muted-foreground" : "text-warning-text"}`}
-                  >
-                    {JOB_LABELS[job.status] ?? job.status}
-                    {job.error && job.status !== "assinada"
-                      ? `: ${job.error}`
-                      : ""}
-                  </span>
-                </li>
-              ))}
-            </ul>
+                  <NativeSelectOption value="">Todas</NativeSelectOption>
+                  {people.map((person) => (
+                    <NativeSelectOption key={person.id} value={person.id}>
+                      {person.name}
+                    </NativeSelectOption>
+                  ))}
+                </NativeSelect>
+              </label>
+              <label
+                htmlFor="filtro-tipo"
+                className="flex flex-col gap-1 font-medium"
+              >
+                Tipo de documento
+                <NativeSelect
+                  id="filtro-tipo"
+                  name="tipo"
+                  defaultValue={filterKind ?? ""}
+                  className="font-normal"
+                >
+                  <NativeSelectOption value="">Todos</NativeSelectOption>
+                  {(Object.keys(SIGN_KINDS) as SignKind[]).map((kind) => (
+                    <NativeSelectOption key={kind} value={kind}>
+                      {kindLabel(kind)}
+                    </NativeSelectOption>
+                  ))}
+                </NativeSelect>
+              </label>
+              <button
+                type="submit"
+                className={buttonVariants({ variant: "outline", size: "sm" })}
+              >
+                Filtrar
+              </button>
+              {filtering && (
+                <a
+                  href="?#historico"
+                  className="text-sm underline underline-offset-4"
+                >
+                  Limpar filtro
+                </a>
+              )}
+            </form>
+            {jobs.length === 0 ? (
+              <p className="mt-3 text-sm text-muted-foreground">
+                {filtering
+                  ? "Nenhuma assinatura com este filtro."
+                  : "Nenhuma assinatura pedida às estações ainda."}
+              </p>
+            ) : (
+              <ul className="mt-3 flex flex-col divide-y text-sm">
+                {jobs.map((job) => (
+                  <li key={job.id} className="flex flex-col gap-0.5 py-2.5">
+                    <div className="flex flex-wrap items-baseline gap-x-2">
+                      <span className="font-medium text-foreground">
+                        {job.title}
+                      </span>
+                      <span className="rounded bg-muted px-1.5 py-0.5 text-xs text-muted-foreground">
+                        {kindLabel(job.kind)}
+                      </span>
+                      <span
+                        className={`ml-auto text-xs font-medium ${job.status === "assinada" ? "text-success-text" : job.status === "pendente" || job.status === "enviada" ? "text-muted-foreground" : "text-warning-text"}`}
+                      >
+                        {JOB_LABELS[job.status] ?? job.status}
+                        {job.error && job.status !== "assinada"
+                          ? `: ${job.error}`
+                          : ""}
+                      </span>
+                    </div>
+                    <span className="text-xs text-muted-foreground">
+                      Pedido por <strong>{job.requestedByName}</strong>
+                      {job.holderName
+                        ? ` · certificado de ${job.holderName}`
+                        : ""}{" "}
+                      · estação {job.stationName} ·{" "}
+                      {formatOfficeDateTime(job.createdAt)}
+                      {job.doneAt && job.status === "assinada"
+                        ? ` · assinado às ${formatOfficeTime(job.doneAt)}`
+                        : ""}
+                    </span>
+                    {job.signedCode && (
+                      <a
+                        href={`/verificar/${job.signedCode}`}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="w-fit text-xs font-medium underline underline-offset-4"
+                      >
+                        Verificar o documento assinado ({job.signedCode})
+                      </a>
+                    )}
+                  </li>
+                ))}
+              </ul>
+            )}
           </section>
         )}
       </main>

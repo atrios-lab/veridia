@@ -3,9 +3,11 @@
 import { revalidatePath } from "next/cache";
 import { can } from "@/core/auth/roles.ts";
 import {
+  isSignKind,
   isStationMode,
   RELEASE_HOURS,
   releaseUntil,
+  type StationGrant,
 } from "@/core/signature/station.ts";
 import { db } from "@/db/index.ts";
 import { getSession } from "@/lib/session.ts";
@@ -79,6 +81,27 @@ export async function createStationAction(
   }
 }
 
+/**
+ * The per-person authorizations from the form: "pessoa" lists who is
+ * authorized; for each, "tipos:<id>" (none: all), "das:<id>", "ate:<id>"
+ * and "validade:<id>".
+ */
+function grantsFromForm(formData: FormData): StationGrant[] {
+  return formData.getAll("pessoa").map((raw) => {
+    const id = String(raw);
+    const text = (name: string) => String(formData.get(`${name}:${id}`) ?? "");
+    const from = text("das");
+    const until = text("ate");
+    const expiresOn = text("validade");
+    return {
+      userId: id,
+      kinds: formData.getAll(`tipos:${id}`).map(String).filter(isSignKind),
+      ...(from && until ? { from, until } : {}),
+      ...(expiresOn ? { expiresOn } : {}),
+    };
+  });
+}
+
 /** Whether, how and with whom a certificate of a station is shared. */
 export async function setStationPolicyAction(
   _previous: StationState,
@@ -100,7 +123,7 @@ export async function setStationPolicyAction(
         certificateKey: String(formData.get("certificateKey") ?? ""),
         shared: formData.get("compartilhar") === "1",
         mode,
-        signerIds: formData.getAll("signers").map(String),
+        grants: grantsFromForm(formData),
       },
       session.user.id,
     );

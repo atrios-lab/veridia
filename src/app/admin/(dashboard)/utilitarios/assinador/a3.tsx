@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
+import { describeGrant, type StationGrant } from "@/core/signature/station.ts";
 import { Button, buttonVariants } from "../../../_ui/button.tsx";
 import {
   NativeSelect,
@@ -38,6 +39,8 @@ export interface TokenCertificate {
     online: boolean;
     modo: "periodo" | "cada";
     liberadoAte: string | null;
+    /** What this person may sign with it, and when. */
+    autorizacao?: StationGrant;
   };
 }
 
@@ -181,7 +184,7 @@ async function signAtStation(
   },
   toBeSigned: string,
   title: string,
-): Promise<string> {
+): Promise<{ signature: string; jobId: string }> {
   const asked = await requestStationSignatureAction({
     stationId: certificate.estacao.id,
     certificateKey: certificate.id.split(":").at(-1) ?? "",
@@ -193,18 +196,23 @@ async function signAtStation(
   for (let i = 0; i < 140; i += 1) {
     await wait(1500);
     const status = await stationSignatureStatusAction(asked.id);
-    if (status.status === "assinada") return status.signature;
+    if (status.status === "assinada") {
+      return { signature: status.signature, jobId: asked.id };
+    }
     if (status.status === "falhou") throw new Error(status.message);
   }
   throw new Error("A estação não respondeu a tempo.");
 }
 
-/** Signs on the token what the platform prepared (base64 in, base64 out). */
-export async function signOnToken(
+/**
+ * Signs on the token what the platform prepared (base64 in, base64 out);
+ * through a station, also the id of the request, for its record.
+ */
+export async function signOnTokenWithJob(
   certificate: TokenCertificate,
   toBeSigned: string,
   title = typeof document === "undefined" ? "Documento" : document.title,
-): Promise<string> {
+): Promise<{ signature: string; jobId?: string }> {
   if (certificate.estacao) {
     return signAtStation(
       { ...certificate, estacao: certificate.estacao },
@@ -216,7 +224,16 @@ export async function signOnToken(
     method: "POST",
     body: JSON.stringify({ id: certificate.id, dados: toBeSigned }),
   });
-  return assinatura;
+  return { signature: assinatura };
+}
+
+/** Signs on the token what the platform prepared (base64 in, base64 out). */
+export async function signOnToken(
+  certificate: TokenCertificate,
+  toBeSigned: string,
+  title?: string,
+): Promise<string> {
+  return (await signOnTokenWithJob(certificate, toBeSigned, title)).signature;
 }
 
 /** The certificate fields every A3 step sends to the platform. */
@@ -408,6 +425,11 @@ function SharedNote({ certificate }: { certificate?: TokenCertificate }) {
         ? `Assinado na estação ${estacao.nome}, liberado até ${new Date(estacao.liberadoAte ?? "").toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })}.`
         : `Assinado na estação ${estacao.nome}: alguém lá confirma cada assinatura.`}{" "}
       A chave nunca sai do token e cada uso fica registrado.
+      {estacao.autorizacao && (
+        <span className="mt-0.5 block">
+          Sua autorização: {describeGrant(estacao.autorizacao)}.
+        </span>
+      )}
     </p>
   );
 }

@@ -1,5 +1,5 @@
 {
-  "id": "8f497a09-f6a0-4d60-933e-8d9f01e7ca04",
+  "id": "ab3a0394-d660-4ba2-b1e2-eb52c89ea3cb",
   "prevId": "71590bb9-a4ac-46d5-99e9-6a9181a3b374",
   "version": "7",
   "dialect": "postgresql",
@@ -8325,8 +8325,8 @@
           "notNull": true,
           "default": "'cada'"
         },
-        "signer_ids": {
-          "name": "signer_ids",
+        "grants": {
+          "name": "grants",
           "type": "jsonb",
           "primaryKey": false,
           "notNull": true,
@@ -8421,6 +8421,13 @@
           "primaryKey": false,
           "notNull": true
         },
+        "holder_name": {
+          "name": "holder_name",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "''"
+        },
         "requested_by": {
           "name": "requested_by",
           "type": "text",
@@ -8433,11 +8440,30 @@
           "primaryKey": false,
           "notNull": true
         },
+        "kind": {
+          "name": "kind",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'outros'"
+        },
         "title": {
           "name": "title",
           "type": "text",
           "primaryKey": false,
           "notNull": true
+        },
+        "signed_document_id": {
+          "name": "signed_document_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "signed_code": {
+          "name": "signed_code",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
         },
         "to_be_signed": {
           "name": "to_be_signed",

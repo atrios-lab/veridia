@@ -1192,10 +1192,12 @@ ENTRIES["/admin/configuracoes/certificados"] = {
   steps: [
     "A1: envie o arquivo .pfx e marque quem pode assinar com ele. A senha não é guardada: quem assina digita a cada vez.",
     "A3 compartilhado: abra esta tela no computador onde o token fica plugado, com o Assinador Veridia instalado e aberto, dê um nome ao computador e clique em Ligar como estação. Responda Sim na janela do Assinador.",
-    "Na estação que aparece, marque Compartilhar no certificado, escolha como o titular autoriza (liberação por período ou confirmar cada assinatura) e quem pode assinar. Salve.",
+    "Na estação que aparece, marque Compartilhar no certificado, escolha como o titular autoriza (liberação por período ou confirmar cada assinatura) e marque quem pode assinar. Salve.",
+    "Para cada pessoa, em Ajustar o que e quando: marque os tipos de documento que ela pode assinar (nenhum marcado: todos), o horário (ex.: das 08:00 às 18:00) e até que dia a autorização vale. Fora disso o pedido é recusado e a pessoa vê o motivo.",
     "No modo liberação por período, clique em Liberar por algumas horas (ex.: o expediente). Fora desse período, ninguém assina pela estação.",
     "Quem foi autorizado vê o certificado na lista de A3 de qualquer tela de assinatura, com o nome da estação, mesmo num computador sem token.",
-    "O computador da estação precisa ficar ligado, com o token conectado e o Assinador aberto. Em Últimas assinaturas pelas estações você vê quem pediu, o quê e como terminou.",
+    "O computador da estação precisa ficar ligado, com o token conectado e o Assinador aberto.",
+    "Em Histórico das assinaturas pelas estações você vê quem pediu, com o certificado de quem, o tipo e o nome do documento, quando, como terminou e o link para verificar o documento assinado. Filtre por pessoa ou por tipo.",
   ],
   terms: [
     {

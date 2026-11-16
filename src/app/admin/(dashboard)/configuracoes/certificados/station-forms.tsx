@@ -3,8 +3,12 @@
 import { useActionState, useEffect, useState } from "react";
 import { toast } from "sonner";
 import {
+  describeGrant,
   RELEASE_HOURS,
+  SIGN_KINDS,
+  type SignKind,
   STATION_MODES,
+  type StationGrant,
   type StationMode,
 } from "@/core/signature/station.ts";
 import { Button, buttonVariants } from "../../../_ui/button.tsx";
@@ -168,6 +172,159 @@ export function PairStation() {
   );
 }
 
+const KIND_KEYS = Object.keys(SIGN_KINDS) as SignKind[];
+
+/**
+ * One person's authorization on the certificate (decision of 16/11/2026:
+ * "quem assina, até que horas, o que está autorizado a assinar"): on or
+ * off, which kinds of document (none ticked: all), the hours of the day
+ * and until which day.
+ */
+function GrantRow({
+  person,
+  grant,
+}: {
+  person: { id: string; name: string };
+  grant: StationGrant | undefined;
+}) {
+  const [on, setOn] = useState(Boolean(grant));
+  const [open, setOpen] = useState(false);
+  const [kinds, setKinds] = useState<SignKind[]>(grant?.kinds ?? []);
+  const [from, setFrom] = useState(grant?.from ?? "");
+  const [until, setUntil] = useState(grant?.until ?? "");
+  const [expiresOn, setExpiresOn] = useState(grant?.expiresOn ?? "");
+  const id = person.id;
+  const summary = describeGrant({
+    userId: id,
+    kinds,
+    ...(from && until ? { from, until } : {}),
+    ...(expiresOn ? { expiresOn } : {}),
+  });
+  return (
+    <div className="rounded-lg border px-3 py-2">
+      <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
+        <label className="flex items-center gap-2 text-sm font-medium">
+          <input
+            type="checkbox"
+            name="pessoa"
+            value={id}
+            checked={on}
+            onChange={(e) => {
+              setOn(e.target.checked);
+              if (e.target.checked) setOpen(true);
+            }}
+          />
+          {person.name}
+        </label>
+        {on && (
+          <>
+            <span className="text-xs text-muted-foreground">{summary}</span>
+            <button
+              type="button"
+              onClick={() => setOpen((v) => !v)}
+              aria-expanded={open}
+              className="ml-auto text-xs font-medium underline underline-offset-4"
+            >
+              {open ? "Fechar" : "Ajustar o que e quando"}
+            </button>
+          </>
+        )}
+      </div>
+      {on && (
+        <div className={open ? "mt-3 flex flex-col gap-3" : "hidden"}>
+          <fieldset className="flex flex-col gap-1">
+            <legend className="mb-1 text-xs font-medium text-foreground">
+              O que pode assinar (nenhum marcado: todos os documentos)
+            </legend>
+            <div className="grid gap-1 sm:grid-cols-2">
+              {KIND_KEYS.map((kind) => (
+                <label key={kind} className="flex items-start gap-2 text-xs">
+                  <input
+                    type="checkbox"
+                    name={`tipos:${id}`}
+                    value={kind}
+                    checked={kinds.includes(kind)}
+                    onChange={(e) =>
+                      setKinds((current) =>
+                        e.target.checked
+                          ? [...current, kind]
+                          : current.filter((k) => k !== kind),
+                      )
+                    }
+                    className="mt-0.5"
+                  />
+                  {SIGN_KINDS[kind]}
+                </label>
+              ))}
+            </div>
+          </fieldset>
+          <div className="flex flex-wrap items-end gap-3 text-xs">
+            <label
+              htmlFor={`das-${id}`}
+              className="flex flex-col gap-1 font-medium"
+            >
+              Das
+              <Input
+                id={`das-${id}`}
+                type="time"
+                name={`das:${id}`}
+                value={from}
+                onChange={(e) => setFrom(e.target.value)}
+                className="w-28 font-normal"
+              />
+            </label>
+            <label
+              htmlFor={`ate-${id}`}
+              className="flex flex-col gap-1 font-medium"
+            >
+              Às
+              <Input
+                id={`ate-${id}`}
+                type="time"
+                name={`ate:${id}`}
+                value={until}
+                onChange={(e) => setUntil(e.target.value)}
+                className="w-28 font-normal"
+              />
+            </label>
+            <label
+              htmlFor={`validade-${id}`}
+              className="flex flex-col gap-1 font-medium"
+            >
+              Autorizado até o dia
+              <Input
+                id={`validade-${id}`}
+                type="date"
+                name={`validade:${id}`}
+                value={expiresOn}
+                onChange={(e) => setExpiresOn(e.target.value)}
+                className="w-40 font-normal"
+              />
+            </label>
+            {(from || until || expiresOn) && (
+              <button
+                type="button"
+                onClick={() => {
+                  setFrom("");
+                  setUntil("");
+                  setExpiresOn("");
+                }}
+                className="text-xs underline underline-offset-4"
+              >
+                Sem limite de horário e data
+              </button>
+            )}
+          </div>
+          <p className="text-xs text-muted-foreground">
+            Horário de Brasília do cartório. Sem horário, pode a qualquer hora;
+            sem data, vale até você mudar.
+          </p>
+        </div>
+      )}
+    </div>
+  );
+}
+
 /** Whether, how and with whom one certificate of the station is shared. */
 export function CertificatePolicyForm({
   stationId,
@@ -175,14 +332,14 @@ export function CertificatePolicyForm({
   people,
   shared,
   mode,
-  signerIds,
+  grants,
 }: {
   stationId: string;
   certificateKey: string;
   people: { id: string; name: string }[];
   shared: boolean;
   mode: StationMode;
-  signerIds: string[];
+  grants: StationGrant[];
 }) {
   const [state, action, pending] = useActionState(setStationPolicyAction, IDLE);
   useToast(state);
@@ -201,59 +358,44 @@ export function CertificatePolicyForm({
         />
         Compartilhar este certificado com o cartório
       </label>
-      {on && (
-        <>
-          <fieldset className="ml-6 flex flex-col gap-2">
-            <legend className="mb-1 text-sm font-medium text-foreground">
-              Como o titular autoriza o uso
-            </legend>
-            {(Object.keys(STATION_MODES) as StationMode[]).map((value) => (
-              <label key={value} className="flex items-start gap-2 text-sm">
-                <input
-                  type="radio"
-                  name="modo"
-                  value={value}
-                  defaultChecked={mode === value}
-                  className="mt-1"
-                />
-                <span>
-                  <span className="font-medium">
-                    {STATION_MODES[value].label}
-                  </span>
-                  <span className="block text-xs text-muted-foreground">
-                    {STATION_MODES[value].description}
-                  </span>
+      <div className={on ? "contents" : "hidden"}>
+        <fieldset className="ml-6 flex flex-col gap-2">
+          <legend className="mb-1 text-sm font-medium text-foreground">
+            Como o titular autoriza o uso
+          </legend>
+          {(Object.keys(STATION_MODES) as StationMode[]).map((value) => (
+            <label key={value} className="flex items-start gap-2 text-sm">
+              <input
+                type="radio"
+                name="modo"
+                value={value}
+                defaultChecked={mode === value}
+                className="mt-1"
+              />
+              <span>
+                <span className="font-medium">
+                  {STATION_MODES[value].label}
                 </span>
-              </label>
-            ))}
-          </fieldset>
-          <fieldset className="ml-6 flex flex-col gap-1">
-            <legend className="mb-1 text-sm font-medium text-foreground">
-              Quem pode assinar com ele
-            </legend>
-            {people.map((person) => (
-              <label
-                key={person.id}
-                className="flex items-center gap-2 text-sm"
-              >
-                <input
-                  type="checkbox"
-                  name="signers"
-                  value={person.id}
-                  defaultChecked={signerIds.includes(person.id)}
-                />
-                {person.name}
-              </label>
-            ))}
-          </fieldset>
-        </>
-      )}
-      {/* Off keeps the choices, for when it is shared again. */}
-      {!on && <input type="hidden" name="modo" value={mode} />}
-      {!on &&
-        signerIds.map((id) => (
-          <input key={id} type="hidden" name="signers" value={id} />
-        ))}
+                <span className="block text-xs text-muted-foreground">
+                  {STATION_MODES[value].description}
+                </span>
+              </span>
+            </label>
+          ))}
+        </fieldset>
+        <fieldset className="ml-6 flex flex-col gap-2">
+          <legend className="mb-1 text-sm font-medium text-foreground">
+            Quem pode assinar, o quê e quando
+          </legend>
+          {people.map((person) => (
+            <GrantRow
+              key={person.id}
+              person={person}
+              grant={grants.find((g) => g.userId === person.id)}
+            />
+          ))}
+        </fieldset>
+      </div>
       <div>
         <Button type="submit" size="sm" disabled={pending}>
           {pending ? "Salvando…" : "Salvar compartilhamento"}

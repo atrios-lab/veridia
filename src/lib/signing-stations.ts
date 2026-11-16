@@ -2,10 +2,15 @@ import "server-only";
 import { createHash, randomBytes } from "node:crypto";
 import { and, desc, eq, inArray, isNull, or } from "drizzle-orm";
 import {
+  grantsFrom,
+  isSignKind,
   isStationMode,
   jobExpired,
   mayRequest,
+  requestContextAt,
+  type SignKind,
   type StationCertificate,
+  type StationGrant,
   type StationMode,
   type StationPolicy,
   stationCertificatesFrom,
@@ -14,6 +19,7 @@ import {
 import { user } from "@/db/auth-schema.ts";
 import type { Database } from "@/db/index.ts";
 import {
+  signedDocuments,
   signingStations,
   stationCertificatePolicies,
   stationSignJobs,
@@ -98,11 +104,7 @@ async function policiesOf(
       {
         shared: row.shared,
         mode: isStationMode(row.mode) ? row.mode : "cada",
-        signerIds: Array.isArray(row.signerIds)
-          ? (row.signerIds as unknown[]).filter(
-              (v): v is string => typeof v === "string",
-            )
-          : [],
+        grants: grantsFrom(row.grants),
         releasedUntil: row.releasedUntil,
         updatedAt: row.updatedAt,
       },
@@ -170,10 +172,12 @@ export async function pulseWith(
     // Already handed over: it is the station's now; never sent twice (it
     // would be signed twice). It ends answered, or given up above.
     if (job.status === "enviada") continue;
+    // Checked again at hand-over: the rule may have changed meanwhile.
     const allowed = mayRequest(
       policies.get(`${station.id}:${job.certificateKey}`),
       job.requestedBy,
       now,
+      requestContextAt(isSignKind(job.kind) ? job.kind : "outros", now),
     );
     if (!allowed.ok) {
       await database
@@ -288,7 +292,7 @@ export async function listStationsWith(
       policy: policies.get(`${row.id}:${c.id}`) ?? {
         shared: false,
         mode: "cada",
-        signerIds: [],
+        grants: [],
         releasedUntil: null,
       },
     })),
@@ -327,7 +331,7 @@ export async function setPolicyWith(
     certificateKey: string;
     shared: boolean;
     mode: StationMode;
-    signerIds: string[];
+    grants: StationGrant[];
   },
   actorId: string,
 ): Promise<void> {
@@ -338,24 +342,38 @@ export async function setPolicyWith(
   if (!known) {
     throw new StationError("Este certificado não está plugado na estação.");
   }
-  // Only people of this office.
-  const allowed = input.signerIds.length
-    ? (
-        await database
-          .select({ id: user.id })
-          .from(user)
-          .where(
-            and(
-              eq(user.tenantSlug, tenantSlug),
-              inArray(user.id, input.signerIds),
-            ),
-          )
-      ).map((r) => r.id)
-    : [];
+  // Only people of this office, each once, with valid hours and dates.
+  const clean = grantsFrom(input.grants);
+  const office = clean.length
+    ? new Set(
+        (
+          await database
+            .select({ id: user.id })
+            .from(user)
+            .where(
+              and(
+                eq(user.tenantSlug, tenantSlug),
+                inArray(
+                  user.id,
+                  clean.map((g) => g.userId),
+                ),
+              ),
+            )
+        ).map((r) => r.id),
+      )
+    : new Set<string>();
+  const grants = clean.filter((g) => office.has(g.userId));
+  for (const g of grants) {
+    if (g.from && g.until && g.from >= g.until) {
+      throw new StationError(
+        "O horário de início precisa ser antes do horário de fim.",
+      );
+    }
+  }
   const values = {
     shared: input.shared,
     mode: input.mode,
-    signerIds: allowed,
+    grants,
     updatedBy: actorId,
     updatedAt: new Date(),
     // Changing the mode ends a release that was running.
@@ -381,7 +399,7 @@ export async function setPolicyWith(
     actorId,
     action: "signing-station.policy",
     targetType: "signing-station",
-    targetId: `${station.name} · ${known.nome.split(":")[0]} · ${input.shared ? `compartilhado (${input.mode === "periodo" ? "liberação por período" : "confirmar cada assinatura"}) com ${allowed.length} pessoa(s)` : "não compartilhado"}`,
+    targetId: `${station.name} · ${known.nome.split(":")[0]} · ${input.shared ? `compartilhado (${input.mode === "periodo" ? "liberação por período" : "confirmar cada assinatura"}) com ${grants.length} pessoa(s)` : "não compartilhado"}`,
   });
 }
 
@@ -454,6 +472,8 @@ export interface SharedCertificate extends StationCertificate {
     online: boolean;
     modo: StationMode;
     liberadoAte: string | null;
+    /** What this person may sign with it, and when. */
+    autorizacao: StationGrant;
   };
 }
 
@@ -469,7 +489,8 @@ export async function sharedForUserWith(
   for (const station of stations) {
     for (const certificate of station.certificates) {
       const { policy, ...cert } = certificate;
-      if (!policy.shared || !policy.signerIds.includes(userId)) continue;
+      const grant = policy.grants.find((g) => g.userId === userId);
+      if (!policy.shared || !grant) continue;
       out.push({
         ...cert,
         estacao: {
@@ -481,6 +502,7 @@ export async function sharedForUserWith(
             policy.releasedUntil && policy.releasedUntil > now
               ? policy.releasedUntil.toISOString()
               : null,
+          autorizacao: grant,
         },
       });
     }
@@ -497,6 +519,7 @@ export async function requestJobWith(
     certificateKey: string;
     toBeSigned: string;
     title: string;
+    kind: SignKind;
   },
   requester: { id: string; name: string },
   now = new Date(),
@@ -508,7 +531,12 @@ export async function requestJobWith(
   const policy = (await policiesOf(database, [station.id])).get(
     `${station.id}:${input.certificateKey}`,
   );
-  const allowed = mayRequest(policy, requester.id, now);
+  const allowed = mayRequest(
+    policy,
+    requester.id,
+    now,
+    requestContextAt(input.kind, now),
+  );
   if (!allowed.ok) throw new StationError(allowed.message);
   if (!stationOnline(station.lastSeenAt, now)) {
     throw new StationError(
@@ -526,6 +554,12 @@ export async function requestJobWith(
       title: input.title.trim().slice(0, 200) || "Documento",
       toBeSigned: input.toBeSigned,
       mode: policy?.mode ?? "cada",
+      kind: input.kind,
+      holderName: (
+        stationCertificatesFrom(station.certificates)
+          .find((c) => c.id === input.certificateKey)
+          ?.nome.split(":")[0] ?? ""
+      ).slice(0, 200),
     })
     .returning({ id: stationSignJobs.id });
   if (!row) throw new StationError("Não foi possível pedir a assinatura.");
@@ -579,39 +613,108 @@ export async function jobStatusWith(
   return { status: "falhou", message: row.error || "A estação não assinou." };
 }
 
+/**
+ * Ties a signed job to the document it produced, so the record says what
+ * was signed: the person's own job, signed, and a document of this office.
+ */
+export async function linkJobWith(
+  database: Database,
+  tenantSlug: string,
+  jobId: string,
+  userId: string,
+  signedId: string,
+): Promise<boolean> {
+  const uuid = /^[0-9a-f-]{36}$/i;
+  if (!uuid.test(jobId) || !uuid.test(signedId)) return false;
+  const [doc] = await database
+    .select({ title: signedDocuments.title, code: signedDocuments.code })
+    .from(signedDocuments)
+    .where(
+      and(
+        eq(signedDocuments.tenantSlug, tenantSlug),
+        eq(signedDocuments.id, signedId),
+      ),
+    )
+    .limit(1);
+  if (!doc) return false;
+  const [row] = await database
+    .update(stationSignJobs)
+    .set({
+      signedDocumentId: signedId,
+      signedCode: doc.code,
+      title: doc.title.slice(0, 200) || "Documento",
+    })
+    .where(
+      and(
+        eq(stationSignJobs.tenantSlug, tenantSlug),
+        eq(stationSignJobs.id, jobId),
+        eq(stationSignJobs.requestedBy, userId),
+        eq(stationSignJobs.status, "assinada"),
+        isNull(stationSignJobs.signedDocumentId),
+      ),
+    )
+    .returning({ id: stationSignJobs.id });
+  return Boolean(row);
+}
+
 export interface JobRecord {
   id: string;
   stationName: string;
+  requestedBy: string;
   requestedByName: string;
+  holderName: string;
+  kind: SignKind;
   title: string;
+  signedCode: string | null;
   status: string;
   error: string | null;
   createdAt: Date;
+  doneAt: Date | null;
 }
 
-/** The latest signatures asked of the office's stations. */
-export async function recentJobsWith(
+/**
+ * The signatures asked of the office's stations, newest first: who asked,
+ * whose certificate, what kind, what document, when and how it ended.
+ */
+export async function stationHistoryWith(
   database: Database,
   tenantSlug: string,
-  limit = 30,
+  filter: { userId?: string; kind?: SignKind } = {},
+  limit = 50,
 ): Promise<JobRecord[]> {
   const rows = await database
     .select({
       id: stationSignJobs.id,
       stationName: signingStations.name,
+      requestedBy: stationSignJobs.requestedBy,
       requestedByName: stationSignJobs.requestedByName,
+      holderName: stationSignJobs.holderName,
+      kind: stationSignJobs.kind,
       title: stationSignJobs.title,
+      signedCode: stationSignJobs.signedCode,
       status: stationSignJobs.status,
       error: stationSignJobs.error,
       createdAt: stationSignJobs.createdAt,
+      doneAt: stationSignJobs.doneAt,
     })
     .from(stationSignJobs)
     .innerJoin(
       signingStations,
       eq(signingStations.id, stationSignJobs.stationId),
     )
-    .where(eq(stationSignJobs.tenantSlug, tenantSlug))
+    .where(
+      and(
+        eq(stationSignJobs.tenantSlug, tenantSlug),
+        filter.userId
+          ? eq(stationSignJobs.requestedBy, filter.userId)
+          : undefined,
+        filter.kind ? eq(stationSignJobs.kind, filter.kind) : undefined,
+      ),
+    )
     .orderBy(desc(stationSignJobs.createdAt))
     .limit(limit);
-  return rows;
+  return rows.map((r) => ({
+    ...r,
+    kind: isSignKind(r.kind) ? r.kind : "outros",
+  }));
 }

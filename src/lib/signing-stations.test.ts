@@ -2,11 +2,13 @@ import assert from "node:assert/strict";
 import { after, before, test } from "node:test";
 import { user } from "@/db/auth-schema.ts";
 import type { Database } from "@/db/index.ts";
+import { signedDocuments, stationCertificatePolicies } from "@/db/schema.ts";
 import { createTestDb } from "@/db/test-db.ts";
 import {
   createStationWith,
   finishJobWith,
   jobStatusWith,
+  linkJobWith,
   listStationsWith,
   pulseWith,
   releaseWith,
@@ -15,6 +17,7 @@ import {
   setPolicyWith,
   sharedForUserWith,
   stationByKeyWith,
+  stationHistoryWith,
 } from "./signing-stations.ts";
 
 // Fictitious office, people and certificate only.
@@ -78,6 +81,7 @@ test("estação compartilha o A3: pede, assina uma vez só, devolve, e desliga",
         certificateKey: CERT.id,
         toBeSigned: "AAAA",
         title: "Doc",
+        kind: "pedidos",
       },
       { id: "escrevente", name: "Escrevente" },
       t0,
@@ -94,7 +98,10 @@ test("estação compartilha o A3: pede, assina uma vez só, devolve, e desliga",
       certificateKey: CERT.id,
       shared: true,
       mode: "periodo",
-      signerIds: ["escrevente", "outra-pessoa"],
+      grants: [
+        { userId: "escrevente", kinds: ["pedidos"] },
+        { userId: "outra-pessoa", kinds: [] },
+      ],
     },
     "tabeliao",
   );
@@ -111,6 +118,7 @@ test("estação compartilha o A3: pede, assina uma vez só, devolve, e desliga",
         certificateKey: CERT.id,
         toBeSigned: "AAAA",
         title: "Doc",
+        kind: "pedidos",
       },
       { id: "escrevente", name: "Escrevente" },
       t0,
@@ -136,6 +144,7 @@ test("estação compartilha o A3: pede, assina uma vez só, devolve, e desliga",
         certificateKey: CERT.id,
         toBeSigned: "AAAA",
         title: "Doc",
+        kind: "pedidos",
       },
       { id: "auxiliar", name: "Auxiliar" },
       t0,
@@ -150,6 +159,7 @@ test("estação compartilha o A3: pede, assina uma vez só, devolve, e desliga",
       certificateKey: CERT.id,
       toBeSigned: "AAAA",
       title: "Certidão de teste",
+      kind: "pedidos",
     },
     { id: "escrevente", name: "Escrevente Fictícia" },
     t0,
@@ -214,7 +224,7 @@ test("estação desligada não recebe pedido; no modo confirmar não precisa de 
       certificateKey: CERT.id,
       shared: true,
       mode: "cada",
-      signerIds: ["escrevente"],
+      grants: [{ userId: "escrevente", kinds: [] }],
     },
     "tabeliao",
   );
@@ -228,6 +238,7 @@ test("estação desligada não recebe pedido; no modo confirmar não precisa de 
         certificateKey: CERT.id,
         toBeSigned: "AAAA",
         title: "Doc",
+        kind: "pedidos",
       },
       { id: "escrevente", name: "Escrevente" },
       later,
@@ -242,6 +253,7 @@ test("estação desligada não recebe pedido; no modo confirmar não precisa de 
       certificateKey: CERT.id,
       toBeSigned: "AAAA",
       title: "Nota",
+      kind: "pedidos",
     },
     { id: "escrevente", name: "Escrevente" },
     new Date("2026-11-16T14:00:05Z"),
@@ -264,4 +276,158 @@ test("estação desligada não recebe pedido; no modo confirmar não precisa de 
     ),
     { status: "falhou", message: "recusada na estação" },
   );
+});
+
+test("controle total: o que cada um assina, até que horas, e o histórico do que assinou", async () => {
+  // 13:00 UTC = 10:00 no cartório.
+  const t0 = new Date("2026-11-16T13:00:00Z");
+  const { key } = await createStationWith(db, OFFICE, "Sala 2", "tabeliao");
+  const station = await stationByKeyWith(db, key);
+  assert.ok(station);
+  await pulseWith(db, station, { certificates: [CERT] }, t0);
+  await setPolicyWith(
+    db,
+    OFFICE,
+    {
+      stationId: station.id,
+      certificateKey: CERT.id,
+      shared: true,
+      mode: "cada",
+      grants: [
+        {
+          userId: "escrevente",
+          kinds: ["assinador"],
+          from: "08:00",
+          until: "12:00",
+          expiresOn: "2026-11-30",
+        },
+        // Someone from outside the office never gets in.
+        { userId: "de-fora", kinds: [] },
+      ],
+    },
+    "tabeliao",
+  );
+  const [policy] = await db
+    .select({ grants: stationCertificatePolicies.grants })
+    .from(stationCertificatePolicies);
+  assert.ok(policy);
+  const saved = (await sharedForUserWith(db, OFFICE, "escrevente", t0)).find(
+    (c) => c.estacao.id === station.id,
+  );
+  assert.deepEqual(saved?.estacao.autorizacao, {
+    userId: "escrevente",
+    kinds: ["assinador"],
+    from: "08:00",
+    until: "12:00",
+    expiresOn: "2026-11-30",
+  });
+  assert.equal((await sharedForUserWith(db, OFFICE, "de-fora", t0)).length, 0);
+  await assert.rejects(
+    setPolicyWith(
+      db,
+      OFFICE,
+      {
+        stationId: station.id,
+        certificateKey: CERT.id,
+        shared: true,
+        mode: "cada",
+        grants: [
+          { userId: "escrevente", kinds: [], from: "18:00", until: "08:00" },
+        ],
+      },
+      "tabeliao",
+    ),
+    /antes do horário de fim/,
+  );
+
+  const ask = (kind: "assinador" | "iss", at: Date) =>
+    requestJobWith(
+      db,
+      OFFICE,
+      {
+        stationId: station.id,
+        certificateKey: CERT.id,
+        toBeSigned: "AAAA",
+        title: "Documento",
+        kind,
+      },
+      { id: "escrevente", name: "Escrevente Fictícia" },
+      at,
+    );
+  await assert.rejects(ask("iss", t0), /não está autorizado a assinar/);
+  // 15:30 UTC = 12:30 no cartório: fora do horário. (The station was seen
+  // at t0; a fresh pulse keeps it on.)
+  const lunch = new Date("2026-11-16T15:30:00Z");
+  await pulseWith(db, station, { certificates: [CERT] }, lunch);
+  await assert.rejects(ask("assinador", lunch), /das 08:00 às 12:00/);
+  // Dezembro: a autorização venceu.
+  const december = new Date("2026-12-01T13:00:00Z");
+  await pulseWith(db, station, { certificates: [CERT] }, december);
+  await assert.rejects(ask("assinador", december), /venceu/);
+
+  const t1 = new Date("2026-11-16T13:10:00Z");
+  await pulseWith(db, station, { certificates: [CERT] }, t1);
+  const jobId = await ask("assinador", t1);
+  const [task] = await pulseWith(
+    db,
+    station,
+    { certificates: [CERT] },
+    new Date("2026-11-16T13:10:03Z"),
+  );
+  assert.equal(task?.id, jobId);
+  await finishJobWith(db, station, jobId, {
+    assinatura: "c2lnbmF0dXJlLWZpY3RpY2lh",
+  });
+  const [doc] = await db
+    .insert(signedDocuments)
+    .values({
+      tenantSlug: OFFICE,
+      code: "AB12CD34EF56",
+      title: "Declaração fictícia",
+      originalName: "declaracao.pdf",
+      originalSha256: "0".repeat(64),
+      pageCount: 1,
+      fileExpiresAt: new Date("2027-11-16T00:00:00Z"),
+    })
+    .returning({ id: signedDocuments.id });
+  assert.ok(doc);
+  // Only the person who asked links it, and only once.
+  assert.equal(await linkJobWith(db, OFFICE, jobId, "auxiliar", doc.id), false);
+  assert.equal(
+    await linkJobWith(db, OFFICE, jobId, "escrevente", doc.id),
+    true,
+  );
+  assert.equal(
+    await linkJobWith(db, OFFICE, jobId, "escrevente", doc.id),
+    false,
+  );
+
+  const mine = await stationHistoryWith(db, OFFICE, {
+    userId: "escrevente",
+    kind: "assinador",
+  });
+  assert.equal(mine.length, 1);
+  assert.deepEqual(
+    {
+      title: mine[0]?.title,
+      code: mine[0]?.signedCode,
+      holder: mine[0]?.holderName,
+      kind: mine[0]?.kind,
+      status: mine[0]?.status,
+      station: mine[0]?.stationName,
+    },
+    {
+      title: "Declaração fictícia",
+      code: "AB12CD34EF56",
+      holder: "TABELIAO FICTICIO",
+      kind: "assinador",
+      status: "assinada",
+      station: "Sala 2",
+    },
+  );
+  assert.deepEqual(
+    await stationHistoryWith(db, OFFICE, { userId: "auxiliar" }),
+    [],
+  );
+  assert.ok((await stationHistoryWith(db, OFFICE)).length >= 3);
 });

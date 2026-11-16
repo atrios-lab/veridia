@@ -1729,9 +1729,11 @@ export const signingStations = pgTable(
 
 /**
  * How one certificate of a station is shared (decision of 16/11/2026: the
- * Tabelião chooses per certificate): who may ask, and whether each use is
- * confirmed at the station ("cada") or the use is released for a while
- * ("periodo", until `releasedUntil`).
+ * Tabelião chooses per certificate): who may ask and, for each person, what
+ * kinds of document, at what hours and until when (`grants`, see
+ * core/signature/station StationGrant), and whether each use is confirmed
+ * at the station ("cada") or released for a while ("periodo", until
+ * `releasedUntil`).
  */
 export const stationCertificatePolicies = pgTable(
   "station_certificate_policies",
@@ -1745,7 +1747,7 @@ export const stationCertificatePolicies = pgTable(
     certificateKey: text("certificate_key").notNull(),
     shared: boolean("shared").notNull().default(false),
     mode: text("mode").notNull().default("cada"),
-    signerIds: jsonb("signer_ids").notNull().default([]),
+    grants: jsonb("grants").notNull().default([]),
     releasedUntil: timestamp("released_until", { withTimezone: true }),
     updatedBy: text("updated_by").notNull(),
     updatedAt: timestamp("updated_at", { withTimezone: true })
@@ -1774,9 +1776,16 @@ export const stationSignJobs = pgTable(
       .notNull()
       .references(() => signingStations.id),
     certificateKey: text("certificate_key").notNull(),
+    /** Whose certificate it is, as it read when asked. */
+    holderName: text("holder_name").notNull().default(""),
     requestedBy: text("requested_by").notNull(),
     requestedByName: text("requested_by_name").notNull(),
+    /** The kind of document, by the screen it came from (SIGN_KINDS). */
+    kind: text("kind").notNull().default("outros"),
     title: text("title").notNull(),
+    /** The signed document it became, when the platform knows it. */
+    signedDocumentId: uuid("signed_document_id"),
+    signedCode: text("signed_code"),
     toBeSigned: text("to_be_signed").notNull(),
     mode: text("mode").notNull(),
     /** pendente, enviada, assinada, recusada, expirada. */
