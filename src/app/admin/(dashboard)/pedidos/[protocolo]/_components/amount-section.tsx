@@ -5,14 +5,18 @@ import { documentHref } from "../../../../_components/attachment-link.ts";
 import { Button } from "../../../../_ui/button.tsx";
 import { Input } from "../../../../_ui/input.tsx";
 import { type ActionState, setAmountAction } from "../actions.ts";
+import { CitizenSeen, type SeenLabels } from "./citizen-seen.tsx";
 
 export function AmountSection({
   requestId,
   amountLabel,
   receipt,
+  seen,
 }: {
   requestId: string;
   amountLabel?: string;
+  /** The citizen's ciência of the amount in force. */
+  seen?: SeenLabels;
   /** The comprovante the citizen sent via "Já paguei", if any: the most
    * recent one, if they sent more than one. */
   receipt?: { id: string; displayName: string; sentAtLabel: string };
@@ -63,6 +67,7 @@ export function AmountSection({
           ? `Valor atual: ${amountLabel}`
           : "Ainda não informado. Ao salvar o valor, o pedido passa sozinho para Aguardando pagamento e o cliente vê o Pix (QR Code) na consulta do protocolo."}
       </p>
+      {amountLabel && <CitizenSeen seen={seen} className="mt-1" />}
       {receipt && (
         <p className="mt-1.5 text-sm text-foreground">
           Pagamento informado em {receipt.sentAtLabel} ·{" "}

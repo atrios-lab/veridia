@@ -13,6 +13,7 @@ import { test } from "node:test";
 const OFFERS_DIGITAL_SIGNATURE = new Set([
   "(dashboard)/agenda/comparecimento/[id]",
   "(dashboard)/agenda/comprovante/[id]",
+  "(dashboard)/pedidos/[protocolo]/ciencia",
   "(dashboard)/utilitarios/guias/[id]/arquivo",
   "(dashboard)/utilitarios/guias/ano/[ano]",
   "(dashboard)/utilitarios/iss/[id]/arquivo",

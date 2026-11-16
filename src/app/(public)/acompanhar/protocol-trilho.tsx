@@ -1096,6 +1096,9 @@ function RequirementCard({
         </span>
         <span className="text-xs text-brand-muted">
           pedido feito em {formatDate(requirement.createdAt)}
+          {requirement.seenAt
+            ? ` · ciência registrada em ${formatDateTime(requirement.seenAt)}`
+            : ""}
         </span>
       </div>
       <p className="whitespace-pre-line [overflow-wrap:anywhere] text-[15.5px] font-semibold leading-snug text-brand-primary">
@@ -1104,7 +1107,7 @@ function RequirementCard({
       {requirement.forms.length > 0 && (
         <div className="flex flex-col gap-1.5">
           <span className="text-xs font-semibold text-brand-muted">
-            Se preferir, imprima e preencha à mão
+            Documentos da serventia para esta exigência
           </span>
           {requirement.forms.map((form, index) => (
             <form
@@ -1117,10 +1120,18 @@ function RequirementCard({
                 name="file"
                 className="h-4 w-4 shrink-0 text-brand-accent"
               />
-              <span className="flex-1 truncate text-sm">
-                {requirement.forms.length > 1
-                  ? `Formulário ${index + 1}`
-                  : "Formulário"}
+              <span className="min-w-0 flex-1">
+                <span className="block truncate text-sm">
+                  {form.displayName ??
+                    (requirement.forms.length > 1
+                      ? `Formulário ${index + 1}`
+                      : "Formulário")}
+                </span>
+                {form.openedAt && (
+                  <span className="block text-xs text-brand-muted">
+                    aberto em {formatDateTime(form.openedAt)}
+                  </span>
+                )}
               </span>
               <input
                 type="hidden"
@@ -1548,6 +1559,9 @@ function DoneCard({
                     // request is closed; before that, the earliest it can be.
                     result.filesUntil ?? addCalendarDays(doc.createdAt, 30),
                   )}`}
+              {doc.openedAt
+                ? ` · aberto em ${formatDateTime(doc.openedAt)}`
+                : ""}
             </div>
           </div>
           <input type="hidden" name="protocolNumber" value={protocolNumber} />
@@ -2181,6 +2195,8 @@ function ServiceRequestTrilho({
           ))}
       </div>
 
+      <CienciaNotice />
+
       <FilesSection
         result={result}
         hasSignedForm={hasSignedForm}
@@ -2206,6 +2222,32 @@ function ServiceRequestTrilho({
           Consultar outro pedido
         </button>
       </div>
+    </div>
+  );
+}
+
+/**
+ * Tells the citizen that what they see here is recorded (decision of
+ * 16/11/2026): the date and the hour of each exigência, amount and document
+ * seen, and of each document opened, certify the delivery to the office.
+ */
+function CienciaNotice() {
+  return (
+    <div className="flex items-start gap-3 rounded-2xl border border-brand-border bg-brand-card px-4 py-3.5 text-[13px] leading-relaxed text-brand-muted">
+      <Icon
+        name="eye"
+        className="mt-0.5 h-4 w-4 shrink-0 text-brand-accent"
+        strokeWidth={2}
+      />
+      <p className="m-0">
+        <span className="font-semibold text-brand-text">
+          Registro de ciência.
+        </span>{" "}
+        A serventia registra a data e a hora em que você vê nesta consulta as
+        exigências, o valor e os documentos, e em que abre ou baixa cada
+        documento. Esse registro certifica ao cartório que a entrega foi feita a
+        você.
+      </p>
     </div>
   );
 }
@@ -2344,6 +2386,8 @@ function ConsultationTrilho({
         citizenDocuments={citizenDocuments}
         onDocument={(docs) => setCitizenDocuments((prev) => [...prev, ...docs])}
       />
+
+      <CienciaNotice />
 
       <div className="flex flex-wrap items-center justify-between gap-x-6 gap-y-4 border-t border-brand-border pt-[clamp(28px,4vw,40px)]">
         <div className="flex flex-1 basis-64 flex-col gap-1">

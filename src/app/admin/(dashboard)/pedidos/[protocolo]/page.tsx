@@ -16,6 +16,12 @@ import {
   requestFileServable,
 } from "@/core/request/attachment-retention.ts";
 import {
+  type Ciencia,
+  firstSeenAt,
+  type ViewTarget,
+  viewKey,
+} from "@/core/request/citizen-view.ts";
+import {
   dayOfDeadline,
   deadlineDate,
   effectiveDeadline,
@@ -63,6 +69,7 @@ import {
 } from "@/core/time/office-time.ts";
 import { db } from "@/db/index.ts";
 import { linkedConversations } from "@/lib/chat.ts";
+import { citizenCienciaWith } from "@/lib/citizen-views.ts";
 import {
   findByProtocol,
   listAttachments,
@@ -85,11 +92,13 @@ import {
 } from "../../../_components/attachment-link.ts";
 import { AdminPageHeader } from "../../../_components/page-header.tsx";
 import { RequestFilesNotice } from "../../../_components/request-files-notice.tsx";
+import { SignOrPrint } from "../../../_components/sign-or-print.tsx";
 import { Badge } from "../../../_ui/badge.tsx";
 import { DeadlineBadge } from "../_components/deadline-badge.tsx";
 import { AmountSection } from "./_components/amount-section.tsx";
 import { ApplicantSection } from "./_components/applicant-section.tsx";
 import { AttachmentsSection } from "./_components/attachments-section.tsx";
+import type { SeenLabels } from "./_components/citizen-seen.tsx";
 import { DangerSection } from "./_components/danger-section.tsx";
 import { DeliverySection } from "./_components/delivery-section.tsx";
 import { ExemptionDecisionControl } from "./_components/exemption-decision.tsx";
@@ -238,10 +247,25 @@ export default async function ServiceRequestDetailPage({
     .map(row);
   // Which delivered PDFs carry no digital signature, and what this clerk
   // may sign them with: the delivery section reminds and offers to sign.
-  const [unsignedDelivered, signingCertificates] = await Promise.all([
-    unsignedDeliveries(ownAttachments).catch(() => new Set<string>()),
-    certificatesForSignerWith(db, tenant.slug, session.user.id).catch(() => []),
-  ]);
+  const requirementForms = attachments.filter((a) => a.requirementId);
+  const [unsignedDelivered, signingCertificates, unsignedForms] =
+    await Promise.all([
+      unsignedDeliveries(ownAttachments).catch(() => new Set<string>()),
+      certificatesForSignerWith(db, tenant.slug, session.user.id).catch(
+        () => [],
+      ),
+      unsignedDeliveries(requirementForms).catch(() => new Set<string>()),
+    ]);
+  const physicalLabel = (a: (typeof attachments)[number]) =>
+    `${a.physicalSignatureBy ?? "a serventia"} em ${formatOfficeDateTime(a.physicalSignatureAt as Date)}`;
+  const canManageCertificates = can(
+    session.user.role ?? "",
+    "user.manage",
+    session.user.permissions,
+  );
+  const certificateOptions = signingCertificates.map(
+    ({ id, label, holderName }) => ({ id, label, holderName }),
+  );
   // The most recent one: a corrected resend (wrong file the first time) is
   // what the operator should check, not the first try.
   const paymentReceipt = ownAttachments
@@ -256,9 +280,26 @@ export default async function ServiceRequestDetailPage({
 
   // One read per requirement: an office raises a handful on a request, and a
   // join would fan the request's rows out per message.
-  const requirementMessages = await Promise.all(
-    requirementRows.map((r) => listRequirementMessages(tenant.slug, r.id)),
-  );
+  const [requirementMessages, ciencia] = await Promise.all([
+    Promise.all(
+      requirementRows.map((r) => listRequirementMessages(tenant.slug, r.id)),
+    ),
+    // The citizen's ciência (decision of 16/11/2026): when they saw each
+    // thing on the consult and opened each document.
+    citizenCienciaWith(db, tenant.slug, request.id).catch(
+      () => new Map<string, Ciencia>(),
+    ),
+  ]);
+  const seenOf = (target: ViewTarget, id: string): SeenLabels => {
+    const mark = ciencia.get(viewKey(target, id));
+    const first = firstSeenAt(mark);
+    return {
+      viewed: first ? formatOfficeDateTime(first) : undefined,
+      opened: mark?.downloadedAt
+        ? formatOfficeDateTime(mark.downloadedAt)
+        : undefined,
+    };
+  };
 
   const requirements: RequirementItem[] = requirementRows.map((r, i) => ({
     id: r.id,
@@ -271,6 +312,12 @@ export default async function ServiceRequestDetailPage({
       : undefined,
     resolutionAttachmentId: r.resolutionAttachmentId ?? undefined,
     forms: attachments.filter((a) => a.requirementId === r.id).map(row),
+    seen: seenOf("requirement", r.id),
+    formsSeen: Object.fromEntries(
+      attachments
+        .filter((a) => a.requirementId === r.id)
+        .map((a) => [a.id, seenOf("document", a.id)]),
+    ),
     messages: requirementMessages[i].map((m) => ({
       id: m.id,
       author: m.author,
@@ -285,6 +332,7 @@ export default async function ServiceRequestDetailPage({
       attachments: m.attachments.map((a) => ({
         id: a.id,
         displayName: a.displayName,
+        seen: m.author === "staff" ? seenOf("document", a.id) : undefined,
       })),
     })),
   }));
@@ -624,7 +672,41 @@ export default async function ServiceRequestDetailPage({
             <RequirementsSection
               requestId={request.id}
               requirements={requirements}
+              signing={{
+                unsigned: [...unsignedForms],
+                held: requirementForms
+                  .filter((a) => a.heldForSignatureAt)
+                  .map((a) => a.id),
+                physical: Object.fromEntries(
+                  requirementForms
+                    .filter((a) => a.physicalSignatureAt)
+                    .map((a) => [a.id, physicalLabel(a)]),
+                ),
+                certificates: certificateOptions,
+                canManageCertificates,
+              }}
             />
+
+            {/* The citizen's ciência (decision of 16/11/2026), gathered in a
+                comprovante that certifies the delivery. */}
+            <div className="rounded-xl border bg-card p-6">
+              <h4 className="text-base font-semibold text-foreground">
+                Ciência do cidadão
+              </h4>
+              <p className="mt-1 text-sm leading-normal text-muted-foreground">
+                O olho fechado mostra o que o cidadão ainda não viu na consulta
+                do protocolo; aberto, a data e a hora em que viu. Nos documentos
+                aparece também quando ele abriu ou baixou. O comprovante reúne
+                tudo, para certificar a entrega.
+              </p>
+              <div className="mt-3">
+                <SignOrPrint
+                  size="sm"
+                  pdfHref={`/admin/pedidos/${encodeURIComponent(request.protocolNumber)}/ciencia`}
+                  title={`Comprovante de ciência · ${request.protocolNumber}`}
+                />
+              </div>
+            </div>
 
             <AttachmentsSection
               requestId={request.id}
@@ -713,6 +795,12 @@ export default async function ServiceRequestDetailPage({
               <DeliverySection
                 requestId={request.id}
                 delivered={deliveredAttachments}
+                seen={Object.fromEntries(
+                  deliveredAttachments.map((a) => [
+                    a.id,
+                    seenOf("document", a.id),
+                  ]),
+                )}
                 unsigned={[...unsignedDelivered]}
                 held={ownAttachments
                   .filter((a) => a.kind === "office" && a.heldForSignatureAt)
@@ -746,6 +834,11 @@ export default async function ServiceRequestDetailPage({
 
             <AmountSection
               requestId={request.id}
+              seen={
+                request.amountCents != null
+                  ? seenOf("amount", String(request.amountCents))
+                  : undefined
+              }
               amountLabel={
                 request.amountCents != null
                   ? formatCents(request.amountCents)

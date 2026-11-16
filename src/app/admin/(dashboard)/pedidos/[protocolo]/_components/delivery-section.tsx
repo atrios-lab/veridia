@@ -43,27 +43,18 @@ import {
   renameDeliveredAction,
   signDeliveredAction,
 } from "../actions.ts";
+import { CitizenSeen, type SeenLabels } from "./citizen-seen.tsx";
+import {
+  SignatureChoice,
+  type SignatureDecision,
+  useSignatureCheck,
+} from "./signature-choice.tsx";
 
 export interface DeliveryCertificate {
   id: string;
   label: string;
   holderName: string;
 }
-
-/** The same check the server makes (lib/signature/pades.ts hasSignature). */
-async function carriesSignature(file: File): Promise<boolean> {
-  if (file.type !== "application/pdf" && !/\.pdf$/i.test(file.name)) {
-    return false;
-  }
-  const text = new TextDecoder("latin1").decode(await file.arrayBuffer());
-  return /\/ByteRange\s*\[/.test(text);
-}
-
-type Check =
-  | { kind: "idle" }
-  | { kind: "checking" }
-  | { kind: "signed"; name: string }
-  | { kind: "unsigned"; name: string; pdf: boolean };
 
 export function DeliverySection({
   requestId,
@@ -75,9 +66,12 @@ export function DeliverySection({
   canManageCertificates,
   nameSuggestions,
   defaultName,
+  seen,
 }: {
   requestId: string;
   delivered: AttachmentItem[];
+  /** The citizen's ciência of each document, by id. */
+  seen: Record<string, SeenLabels>;
   /** Names built from the act and the protocol (core/request/delivery-name). */
   nameSuggestions: string[];
   /** What a delivery with no name typed is called. */
@@ -99,32 +93,17 @@ export function DeliverySection({
   useEmailWarning(state);
   const formRef = useRef<HTMLFormElement>(null);
   const choiceRef = useRef<HTMLInputElement>(null);
-  const [check, setCheck] = useState<Check>({ kind: "idle" });
-  const [confirmed, setConfirmed] = useState(false);
+  const { check, inspect, reset } = useSignatureCheck();
 
   // Every file for the client is checked before it goes (decision of
   // 11/11/2026): signed digitally, or the clerk decides what to do.
-  const inspect = async (file: File) => {
-    setConfirmed(false);
-    setCheck({ kind: "checking" });
-    const signed = await carriesSignature(file).catch(() => false);
-    setCheck(
-      signed
-        ? { kind: "signed", name: file.name }
-        : {
-            kind: "unsigned",
-            name: file.name,
-            pdf: file.type === "application/pdf" || /\.pdf$/i.test(file.name),
-          },
-    );
-  };
-  const send = (choice: "" | "digital" | "fisica" | "sem") => {
+  const send = (choice: SignatureDecision) => {
     if (choiceRef.current) choiceRef.current.value = choice;
-    setCheck({ kind: "idle" });
+    reset();
     formRef.current?.requestSubmit();
   };
   const cancel = () => {
-    setCheck({ kind: "idle" });
+    reset();
     formRef.current?.reset();
   };
 
@@ -166,6 +145,13 @@ export function DeliverySection({
                 }
                 onDelete={deleteAttachmentAction}
               />
+              {!held.includes(attachment.id) && (
+                <CitizenSeen
+                  document
+                  seen={seen[attachment.id]}
+                  className="mt-1 ml-1 flex"
+                />
+              )}
               {!attachment.goneLabel && (
                 <a
                   href={documentHref(requestId, attachment.id)}
@@ -235,123 +221,14 @@ export function DeliverySection({
             }}
           />
         </label>
-        {check.kind === "checking" && (
-          <p className="mt-2 text-sm text-muted-foreground">
-            Conferindo a assinatura digital do documento...
-          </p>
-        )}
-        {check.kind === "signed" && (
-          <div className="mt-3 rounded-lg border border-success/30 bg-success-soft p-4 text-sm text-success-text">
-            <p className="font-semibold">
-              ✓ &quot;{check.name}&quot; tem assinatura digital.
-            </p>
-            <div className="mt-2 mb-1 text-foreground">
-              <DocumentNameField
-                field="documento"
-                tone="admin"
-                suggestions={nameSuggestions}
-                placeholder={defaultName}
-                hint={`Como o cidadão vai ver o arquivo. Sem nome, sai como "${defaultName}".`}
-              />
-            </div>
-            <div className="mt-2 flex flex-wrap gap-2">
-              <Button type="button" size="sm" onClick={() => send("")}>
-                Enviar ao cliente
-              </Button>
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                onClick={cancel}
-              >
-                Cancelar
-              </Button>
-            </div>
-          </div>
-        )}
-        {check.kind === "unsigned" && (
-          <div
-            role="alertdialog"
-            aria-label="Documento sem assinatura digital"
-            className="mt-3 rounded-lg border border-warning/30 bg-warning-soft p-4 text-sm text-warning-text"
-          >
-            <p className="font-semibold">
-              ⚠ O documento anexado não contém assinatura digital.
-            </p>
-            <p className="mt-0.5">&quot;{check.name}&quot;</p>
-            <div className="text-foreground">
-              <div className="mt-2 mb-1">
-                <DocumentNameField
-                  field="documento"
-                  tone="admin"
-                  suggestions={nameSuggestions}
-                  placeholder={defaultName}
-                  hint={`Como o cidadão vai ver o arquivo. Sem nome, sai como "${defaultName}".`}
-                />
-              </div>
-            </div>
-            {check.pdf && (
-              <>
-                <p className="mt-2 font-semibold">
-                  Deseja assinar o documento digitalmente?
-                </p>
-                <Button
-                  type="button"
-                  size="sm"
-                  onClick={() => send("digital")}
-                  className="mt-1.5"
-                >
-                  Sim, assinar antes de enviar
-                </Button>
-                <p className="mt-1 text-xs">
-                  O documento fica retido aqui: o cidadão só o vê depois de
-                  assinado.
-                </p>
-              </>
-            )}
-            <label className="mt-3 flex items-start gap-2 text-sm">
-              <input
-                type="checkbox"
-                checked={confirmed}
-                onChange={(event) => setConfirmed(event.target.checked)}
-                className="checkbox-admin mt-0.5"
-              />
-              Confirmo que é um documento desmaterializado, apenas com
-              assinatura física, que foi digitalizado.
-            </label>
-            <div className="mt-2 flex flex-wrap gap-2">
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                disabled={!confirmed}
-                onClick={() => send("fisica")}
-              >
-                Enviar como documento físico digitalizado
-              </Button>
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                onClick={() => send("sem")}
-              >
-                Enviar sem assinatura assim mesmo
-              </Button>
-              <Button
-                type="button"
-                variant="link"
-                size="sm"
-                onClick={cancel}
-                className="text-warning-text"
-              >
-                Cancelar
-              </Button>
-            </div>
-            <p className="mt-2 text-xs">
-              A escolha fica registrada na auditoria.
-            </p>
-          </div>
-        )}
+        <SignatureChoice
+          check={check}
+          field="documento"
+          suggestions={nameSuggestions}
+          defaultName={defaultName}
+          onSend={send}
+          onCancel={cancel}
+        />
       </form>
       {state.status === "error" && (
         <p role="alert" className="mt-2 text-sm font-medium text-destructive">
@@ -366,7 +243,7 @@ export function DeliverySection({
  * The reminder under a delivered PDF that carries no digital signature, and
  * the way to sign it right there with the office's certificate.
  */
-function UnsignedNotice({
+export function UnsignedNotice({
   requestId,
   attachmentId,
   held,

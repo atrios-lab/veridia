@@ -7,7 +7,6 @@ import {
   formatOfficeDayMonth,
   formatOfficeDayMonthTime,
 } from "@/core/time/office-time.ts";
-import { DocumentNameField } from "../../../../../_components/document-name-field.tsx";
 import type { AttachmentItem } from "../../../../_components/attachment-link.ts";
 import {
   attachmentLabel,
@@ -31,7 +30,17 @@ import {
   replyRequirementAction,
   resolveRequirementAction,
 } from "../actions.ts";
-import { RenameDelivered } from "./delivery-section.tsx";
+import { CitizenSeen, type SeenLabels } from "./citizen-seen.tsx";
+import {
+  type DeliveryCertificate,
+  RenameDelivered,
+  UnsignedNotice,
+} from "./delivery-section.tsx";
+import {
+  SignatureChoice,
+  type SignatureDecision,
+  useSignatureCheck,
+} from "./signature-choice.tsx";
 
 export interface RequirementMessageItem {
   id: string;
@@ -39,7 +48,7 @@ export interface RequirementMessageItem {
   authorName: string;
   body: string;
   createdAt: Date;
-  attachments: Array<{ id: string; displayName: string }>;
+  attachments: Array<{ id: string; displayName: string; seen?: SeenLabels }>;
 }
 
 export interface RequirementItem {
@@ -52,8 +61,55 @@ export interface RequirementItem {
   resolutionAttachmentId?: string;
   /** Forms the office attached for the citizen to print and present. */
   forms: AttachmentItem[];
+  /** The citizen's ciência of the exigência itself. */
+  seen?: SeenLabels;
+  /** The citizen's ciência of each document attached to it, by id. */
+  formsSeen: Record<string, SeenLabels>;
   /** The conversation inside this requirement, oldest first. */
   messages: RequirementMessageItem[];
+}
+
+/** How each document of the exigências stands as to its signature. */
+export interface RequirementSigning {
+  /** PDFs with no digital signature (see lib/signing.ts). */
+  unsigned: string[];
+  /** Held back until signed here: the citizen does not see them yet. */
+  held: string[];
+  /** Confirmed as signed by hand and scanned: id to "who, when". */
+  physical: Record<string, string>;
+  certificates: DeliveryCertificate[];
+  canManageCertificates: boolean;
+}
+
+/** Under each document: the signature it carries, and signing it here. */
+function FormSignature({
+  requestId,
+  attachmentId,
+  signing,
+}: {
+  requestId: string;
+  attachmentId: string;
+  signing: RequirementSigning;
+}) {
+  return (
+    <>
+      {signing.physical[attachmentId] && (
+        <p className="mt-1 rounded-md bg-muted px-2.5 py-1.5 text-xs text-muted-foreground">
+          📄 Documento assinado fisicamente e digitalizado, sem assinatura
+          digital · confirmado por {signing.physical[attachmentId]}
+        </p>
+      )}
+      {signing.unsigned.includes(attachmentId) && (
+        <UnsignedNotice
+          requestId={requestId}
+          attachmentId={attachmentId}
+          held={signing.held.includes(attachmentId)}
+          certificates={signing.certificates}
+          canManageCertificates={signing.canManageCertificates}
+        />
+      )}
+    </>
+  );
 }
 
 function formatDayMonthTime(date: Date): string {
@@ -63,8 +119,9 @@ function formatDayMonthTime(date: Date): string {
 /**
  * The form the citizen has to print and present. It lives in the requirement's
  * card on both sides, here and in the protocol consult, and nowhere near the
- * request's deliveries. The button is the whole control: picking a file sends
- * it.
+ * request's deliveries. Picking the file opens the same question the delivery
+ * asks (decision of 16/11/2026): the name the citizen sees, and how it goes,
+ * signed digitally here first, signed by hand and scanned, or unsigned.
  */
 function AttachFormButton({
   requestId,
@@ -77,34 +134,48 @@ function AttachFormButton({
     attachRequirementFormAction,
     { status: "idle" },
   );
+  useEmailWarning(state);
+  const formRef = useRef<HTMLFormElement>(null);
+  const choiceRef = useRef<HTMLInputElement>(null);
+  const { check, inspect, reset } = useSignatureCheck();
+  const send = (choice: SignatureDecision) => {
+    if (choiceRef.current) choiceRef.current.value = choice;
+    reset();
+    formRef.current?.requestSubmit();
+  };
+  const cancel = () => {
+    reset();
+    formRef.current?.reset();
+  };
   useEffect(() => {
     if (state.status === "error") toast.error(state.message);
+    if (state.status === "success") {
+      toast.success(
+        state.held
+          ? "Documento anexado e retido. Assine logo abaixo: o cidadão só vê depois de assinado."
+          : "Documento anexado à exigência. O cidadão já vê na consulta.",
+      );
+      formRef.current?.reset();
+    }
   }, [state]);
 
   return (
     <form
       action={action}
-      className="ml-auto flex flex-wrap items-end justify-end gap-2"
+      ref={formRef}
+      className={check.kind === "idle" ? "ml-auto" : "basis-full border-t pt-3"}
     >
       <input type="hidden" name="requestId" value={requestId} />
       <input type="hidden" name="requirementId" value={requirementId} />
-      {/* The name the citizen sees, typed before picking the file. */}
-      <div className="min-w-48">
-        <DocumentNameField
-          field="formulario"
-          tone="admin"
-          suggestions={FORM_NAMES}
-          placeholder="Nome do documento"
-        />
-      </div>
+      <input type="hidden" name="assinatura" ref={choiceRef} />
       <label
         className={cn(
           buttonVariants({ variant: "outline", size: "sm" }),
           "relative cursor-pointer focus-within:border-ring focus-within:ring-3 focus-within:ring-ring/50",
-          pending && "cursor-not-allowed opacity-60",
+          (pending || check.kind !== "idle") && "cursor-not-allowed opacity-60",
         )}
       >
-        {pending ? "Enviando…" : "Anexar formulário"}
+        {pending ? "Enviando…" : "Anexar documento à exigência"}
         <input
           type="file"
           name="formulario"
@@ -112,12 +183,19 @@ function AttachFormButton({
           className="sr-only"
           disabled={pending}
           onChange={(event) => {
-            if (event.target.files?.length) {
-              event.target.form?.requestSubmit();
-            }
+            const file = event.target.files?.[0];
+            if (file) void inspect(file);
           }}
         />
       </label>
+      <SignatureChoice
+        check={check}
+        field="formulario"
+        suggestions={FORM_NAMES}
+        defaultName="Formulário da exigência"
+        onSend={send}
+        onCancel={cancel}
+      />
     </form>
   );
 }
@@ -329,6 +407,14 @@ function RequirementConversation({
                       <span className="truncate">{file.displayName}</span>
                     </a>
                   ))}
+                  {staff &&
+                    message.attachments.map((file) => (
+                      <CitizenSeen
+                        key={`seen-${file.id}`}
+                        document
+                        seen={file.seen}
+                      />
+                    ))}
                 </div>
               </div>
             );
@@ -453,9 +539,11 @@ function DeleteRequirement({ requirement }: { requirement: RequirementItem }) {
 function RequirementCard({
   requirement,
   requestId,
+  signing,
 }: {
   requirement: RequirementItem;
   requestId: string;
+  signing: RequirementSigning;
 }) {
   const pendingReq = requirement.status === "pending";
   const last = requirement.messages.at(-1);
@@ -515,6 +603,15 @@ function RequirementCard({
         )}
         {!open && awaitingOffice && <Badge className="flex-none">Novo</Badge>}
         <AdminIcon
+          name={requirement.seen?.viewed ? "eye" : "eyeOff"}
+          aria-label={
+            requirement.seen?.viewed
+              ? `Vista pelo cidadão em ${requirement.seen.viewed}`
+              : "Ainda não vista pelo cidadão"
+          }
+          className={`size-4 flex-none ${requirement.seen?.viewed ? "text-success-text" : "text-muted-foreground"}`}
+        />
+        <AdminIcon
           name="chevronDown"
           strokeWidth={2}
           className={`size-4 flex-none text-muted-foreground transition-transform duration-300 ${open ? "rotate-180" : ""}`}
@@ -526,6 +623,7 @@ function RequirementCard({
           <p className="whitespace-pre-line [overflow-wrap:anywhere] text-sm leading-normal text-foreground">
             {requirement.text}
           </p>
+          <CitizenSeen seen={requirement.seen} />
           {/* Kept for requirements resolved before the office took over the
               verdict: the file the citizen sent then closed it by itself. New
               ones carry their answers in the conversation, listed next. */}
@@ -567,12 +665,22 @@ function RequirementCard({
                       meta="anexado em"
                       onDelete={deleteAttachmentAction}
                     />
+                    <CitizenSeen
+                      document
+                      seen={requirement.formsSeen[form.id]}
+                      className="mt-1 ml-1"
+                    />
                     {/* The name the citizen sees, editable (decision of
                         16/11/2026: "pode renomear esses arquivos"). */}
                     <RenameDelivered
                       requestId={requestId}
                       attachmentId={form.id}
                       suggestions={FORM_NAMES}
+                    />
+                    <FormSignature
+                      requestId={requestId}
+                      attachmentId={form.id}
+                      signing={signing}
                     />
                   </div>
                 ))}
@@ -585,10 +693,20 @@ function RequirementCard({
                     name={attachmentLabel(form.displayName)}
                     meta={`anexado em ${form.createdAtLabel}`}
                   />
+                  <CitizenSeen
+                    document
+                    seen={requirement.formsSeen[form.id]}
+                    className="mt-1 ml-1"
+                  />
                   <RenameDelivered
                     requestId={requestId}
                     attachmentId={form.id}
                     suggestions={FORM_NAMES}
+                  />
+                  <FormSignature
+                    requestId={requestId}
+                    attachmentId={form.id}
+                    signing={signing}
                   />
                 </div>
               ))
@@ -629,9 +747,11 @@ function RequirementCard({
 export function RequirementsSection({
   requestId,
   requirements,
+  signing,
 }: {
   requestId: string;
   requirements: RequirementItem[];
+  signing: RequirementSigning;
 }) {
   const [editing, setEditing] = useState(false);
   const [state, action, pending] = useActionState<ActionState, FormData>(
@@ -742,6 +862,7 @@ export function RequirementsSection({
               key={requirement.id}
               requirement={requirement}
               requestId={requestId}
+              signing={signing}
             />
           ))}
         </div>
