@@ -6,10 +6,12 @@ import { after, before, test } from "node:test";
 import { PDFDocument, StandardFonts } from "pdf-lib";
 import { emptyMeta, toMarkdown } from "@/core/conhecimento/base.ts";
 import type { ReviewResult } from "@/core/qualificacao/revisao.ts";
+import { officialName } from "@/core/tenant/identification.ts";
 import { TENANTS } from "@/core/tenant/resolve.ts";
 import type { Database } from "@/db/index.ts";
 import {
   qualificationLibrary,
+  qualificationNotes,
   serviceRequestAttachments,
   serviceRequestRequirements,
 } from "@/db/schema.ts";
@@ -326,4 +328,61 @@ test("notas já anexadas: sem o Assistente Virtual aprende pelo texto, sem gasta
   );
   assert.equal(calls.n, 1);
   assert.equal(next?.review.result.via, "ia");
+});
+
+test("nota emitida pela qualificação da plataforma não é analisada de novo; a de outro sistema com o mesmo número é", async () => {
+  await db.insert(qualificationNotes).values({
+    tenantSlug: TENANT.slug,
+    qualificationId: "00000000-0000-4000-8000-000000000001",
+    kind: "devolutiva",
+    year: 2026,
+    sequence: 7,
+    roundIndex: 0,
+    snapshot: { protocol: "PED-2026-000777" },
+    issuedOn: "2026-11-16",
+    createdBy: "escrevente",
+  });
+  const footer = `${officialName(TENANT)} - Nota devolutiva n 7/2026 - Protocolo PED-2026-000777`;
+  const never = async (): Promise<ReviewResult> => {
+    throw new Error("o Assistente Virtual não deveria ser chamado");
+  };
+  const ours = await reviewDocumentWith(
+    db,
+    TENANT.slug,
+    {
+      bytes: await notePdf([
+        "NOTA DEVOLUTIVA",
+        "1. Juntar a certidao.",
+        footer,
+      ]),
+      name: "nota-07.pdf",
+      mimeType: "application/pdf",
+      attribution: "ri",
+      aiBlocked: null,
+    },
+    never,
+  );
+  assert.equal(ours.result.via, "plataforma");
+  assert.equal(ours.headline, "Já conferida na qualificação");
+  assert.equal(ours.learned, true, "nada a aprender do próprio texto");
+
+  const calls = { n: 0 };
+  const theirs = await reviewDocumentWith(
+    db,
+    TENANT.slug,
+    {
+      bytes: await notePdf([
+        "NOTA DEVOLUTIVA n 7/2026",
+        "Protocolo 99999 do sistema antigo",
+        "1. Juntar a planta.",
+      ]),
+      name: "nota-antiga.pdf",
+      mimeType: "application/pdf",
+      attribution: "ri",
+      aiBlocked: null,
+    },
+    fakeAi(calls),
+  );
+  assert.equal(calls.n, 1);
+  assert.equal(theirs.result.via, "ia");
 });

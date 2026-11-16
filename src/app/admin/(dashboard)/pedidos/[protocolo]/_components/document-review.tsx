@@ -238,10 +238,12 @@ export function DocumentReviewPanel({
           </span>
         </div>
       )}
-      <p className="mt-2 text-xs text-muted-foreground">
-        A serventia aprende com cada nota enviada: os modelos de exigência, sem
-        dados pessoais, vão para a Biblioteca de exigências.
-      </p>
+      {review.result.via !== "plataforma" && (
+        <p className="mt-2 text-xs text-muted-foreground">
+          A serventia aprende com cada nota enviada: os modelos de exigência,
+          sem dados pessoais, vão para a Biblioteca de exigências.
+        </p>
+      )}
     </div>
   );
 }

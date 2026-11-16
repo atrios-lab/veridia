@@ -57,8 +57,11 @@ export interface ReviewResult {
   learned: LearnedRequirement[];
   /** How the office writes its notes: structure and wording, generic. */
   style: string[];
-  /** Who read it: the AI, or the office's legal base alone (no credit). */
-  via?: "ia" | "base";
+  /**
+   * Who read it: the AI, the office's legal base alone (no credit), or
+   * nobody again because the platform's own Qualificação issued it.
+   */
+  via?: "ia" | "base" | "plataforma";
 }
 
 /** A source the base holds as revoked, by the norm it is. */
@@ -156,6 +159,7 @@ export function mergeReview(
 
 /** One line for the screen: how the review came out. */
 export function reviewHeadline(result: ReviewResult): string {
+  if (result.via === "plataforma") return "Já conferida na qualificação";
   const count = result.findings.length;
   if (count === 0) return "Nenhuma divergência encontrada";
   return count === 1 ? "1 ponto de atenção" : `${count} pontos de atenção`;
