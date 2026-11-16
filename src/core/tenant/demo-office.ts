@@ -52,3 +52,7 @@ export const DEMO_PANEL_NOTICE = {
 
 /** What the history of a record says where an e-mail would have gone. */
 export const DEMO_EMAIL_HELD_LABEL = "Demonstração: e-mail não enviado";
+
+/** What the platform account types to confirm the cleaning of the
+ * demonstration office (lib/demo-reset.ts): a click alone never wipes it. */
+export const DEMO_RESET_CONFIRMATION = "LIMPAR";

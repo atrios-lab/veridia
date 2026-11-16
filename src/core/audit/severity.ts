@@ -63,6 +63,8 @@ const EXACT: Record<string, AuditLevel> = {
   "signed-document.remove": "urgente",
   "appointment.remove": "urgente",
   "compliance-intake.detach": "urgente",
+  // Wipes what every course participant did in the demonstration office.
+  "demo.reset": "urgente",
 
   "service-request.amount": "atencao",
   "service-request.deadline": "atencao",

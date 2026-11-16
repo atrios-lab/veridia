@@ -47,8 +47,8 @@
 
 ## 7. Limpeza do cartório (PR 2, ⚠️ apaga dados do banco)
 
-- [ ] 7.1 `DEMO_RESET_TABLES`, lista fechada, e `resetDemoOfficeWith(db, store, slug)`: recusa slug não fictício ou sem `demo`, apaga por `tenant_slug` numa transação, apaga os arquivos do store, roda o seed e grava auditoria da plataforma
-- [ ] 7.2 Testes contra PGlite com dois tenants: apaga só o tenant de cursos; não toca contas, turmas, progresso, avaliações, certificados, cursos, vídeos nem auditoria; recusa cartório real
-- [ ] 7.3 Botão "Limpar o cartório de demonstração" na tela de Turmas, com `cohorts.manage` e confirmação digitada
-- [ ] 7.4 Testar no banco local de teste; nunca rodar contra a produção
+- [x] 7.1 `DEMO_RESET_TABLES`, lista fechada, e `resetDemoOfficeWith(db, store, slug)`: recusa slug não fictício ou sem `demo`, apaga por `tenant_slug` numa transação, apaga os arquivos do store, roda o seed e grava auditoria da plataforma
+- [x] 7.2 Testes contra PGlite com dois tenants: apaga só o tenant de cursos; não toca contas, turmas, progresso, avaliações, certificados, cursos, vídeos nem auditoria; recusa cartório real
+- [x] 7.3 Botão "Limpar o cartório de demonstração" na tela de Turmas, com `cohorts.manage` e confirmação digitada
+- [ ] 7.4 Testar no banco local de teste; nunca rodar contra a produção (feito: testes contra PGlite e, no banco local, a recusa com a confirmação errada; a limpeza de verdade no banco local espera o ok do usuário)
 - [ ] 7.5 Abrir a PR 2 com "⚠️ Apaga dados do banco" no título e no topo da descrição, dizendo o que é apagado e como desfazer; deixar aberta para outra pessoa revisar, sem merge e sem auto-merge

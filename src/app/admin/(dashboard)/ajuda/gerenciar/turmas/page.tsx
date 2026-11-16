@@ -11,6 +11,7 @@ import { getSession } from "@/lib/session.ts";
 import { AdminPageHeader } from "../../../../_components/page-header.tsx";
 import { CohortCreateForm } from "./_components/cohort-create-form.tsx";
 import { CopyLink } from "./_components/copy-link.tsx";
+import { DemoResetForm } from "./_components/demo-reset-form.tsx";
 import { CohortStateBadge } from "./_components/state-badge.tsx";
 import { cohortPath } from "./paths.ts";
 
@@ -104,7 +105,10 @@ export default async function CohortsPage() {
           )}
         </div>
 
-        <CohortCreateForm courses={courses} />
+        <div className="flex min-w-0 flex-col gap-4.5">
+          <CohortCreateForm courses={courses} />
+          <DemoResetForm />
+        </div>
       </main>
     </>
   );

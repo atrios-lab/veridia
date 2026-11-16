@@ -10,10 +10,10 @@ import type { IsoDate } from "@/core/scheduling/calendar.ts";
 import { toIsoDate } from "@/core/scheduling/calendar.ts";
 import { OFFICE_TIME_ZONE } from "@/core/time/office-time.ts";
 import { user } from "@/db/auth-schema.ts";
-import { db } from "@/db/index.ts";
+import { type Database, db } from "@/db/index.ts";
 import { auditLog, officePublications } from "@/db/schema.ts";
 import { today } from "@/lib/office-config.ts";
-import { notByPlatform, recordAudit } from "./audit.ts";
+import { notByPlatform, recordAudit, recordAuditWith } from "./audit.ts";
 import { deleteStoredFile } from "./uploads.ts";
 
 export type PublicationRow = typeof officePublications.$inferSelect;
@@ -186,7 +186,17 @@ export async function createPublication(
   actorId: string,
   file?: PublicationAttachment,
 ): Promise<{ id: string }> {
-  const [created] = await db
+  return createPublicationWith(db, tenantSlug, data, actorId, file);
+}
+
+export async function createPublicationWith(
+  database: Database,
+  tenantSlug: string,
+  data: PublicationFormInput,
+  actorId: string,
+  file?: PublicationAttachment,
+): Promise<{ id: string }> {
+  const [created] = await database
     .insert(officePublications)
     .values({
       tenantSlug,
@@ -201,7 +211,7 @@ export async function createPublication(
       ...attachmentColumns(file),
     })
     .returning({ id: officePublications.id });
-  await recordAudit({
+  await recordAuditWith(database, {
     tenantSlug,
     actorId,
     action: "publication.create",
