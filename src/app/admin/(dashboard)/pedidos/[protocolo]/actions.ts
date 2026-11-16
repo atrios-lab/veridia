@@ -698,7 +698,33 @@ export async function attachRequirementFormAction(
     }
     const files = formData
       .getAll("formulario")
-      .filter((f): f is File => f instanceof File);
+      .filter((f): f is File => f instanceof File && f.size > 0);
+    // The same question the delivery asks (decision of 16/11/2026): a file
+    // with no digital signature goes only after the clerk chose to sign it
+    // here first (held back until then), to confirm it was signed by hand
+    // and scanned, or to send it unsigned all the same.
+    const choice = String(formData.get("assinatura") ?? "");
+    const unsigned: boolean[] = await Promise.all(
+      files.map(
+        async (file) =>
+          !fileHasDigitalSignature(
+            Buffer.from(await file.arrayBuffer()),
+            file.type || "",
+          ),
+      ),
+    );
+    if (
+      unsigned.some(Boolean) &&
+      choice !== "digital" &&
+      choice !== "fisica" &&
+      choice !== "sem"
+    ) {
+      return {
+        status: "error",
+        message:
+          "O documento anexado não contém assinatura digital. Escolha assinar digitalmente, enviar como assinado fisicamente ou sem assinatura.",
+      };
+    }
     const stored = await storeAttachments(files, {
       tenantSlug: tenant.slug,
       kind: "formulario-exigencia",
@@ -715,6 +741,37 @@ export async function attachRequirementFormAction(
       "office",
       requirementId,
     );
+    const unsignedStored = stored.filter((_, index) => unsigned[index]);
+    if (choice === "digital" && unsignedStored.length) {
+      await holdForSignatureWith(
+        db,
+        tenant.slug,
+        requestId,
+        unsignedStored.map((s) => s.storedName),
+        session.user.id,
+      );
+      // Nothing reaches the citizen yet: the e-mail goes once it is signed.
+      revalidateAdmin();
+      return { status: "success", held: true };
+    }
+    if (choice === "sem" && unsignedStored.length) {
+      await recordUnsignedDeliveryWith(
+        db,
+        tenant.slug,
+        requestId,
+        unsignedStored.map((s) => s.displayName),
+        session.user.id,
+      );
+    }
+    if (choice === "fisica" && unsignedStored.length) {
+      await confirmPhysicalSignatureWith(
+        db,
+        tenant.slug,
+        requestId,
+        unsignedStored.map((s) => s.storedName),
+        { id: session.user.id, name: session.user.name },
+      );
+    }
 
     // Same courtesy the delivered document gets: the form is something the
     // citizen has to print and bring, and one sitting unseen behind the
@@ -725,8 +782,8 @@ export async function attachRequirementFormAction(
         tenant,
         contact: request.contact,
         protocolNumber: request.protocolNumber,
-        subject: "Formulário disponível",
-        body: "A serventia anexou um formulário à exigência do seu pedido. Consulte o protocolo com a sua chave de acesso para baixá-lo e imprimi-lo.",
+        subject: "Documento da exigência disponível",
+        body: "A serventia anexou um documento à exigência do seu pedido. Consulte o protocolo com a sua chave de acesso para vê-lo e baixá-lo.",
       });
     }
   } catch (error) {

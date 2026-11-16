@@ -850,8 +850,8 @@ function RequirementForms({
     <div className="mt-2.5 flex flex-col gap-1.5">
       <span className="text-[11px] font-semibold text-brand-muted">
         {forms.length > 1
-          ? "Formulários para imprimir e apresentar"
-          : "Formulário para imprimir e apresentar"}
+          ? "Documentos da serventia para esta exigência"
+          : "Documento da serventia para esta exigência"}
       </span>
       {forms.map((form, index) => (
         <form
@@ -865,7 +865,8 @@ function RequirementForms({
             className="h-3.5 w-3.5 shrink-0 text-brand-accent"
           />
           <span className="flex-1 truncate text-[12.5px] text-brand-text">
-            {forms.length > 1 ? `Formulário ${index + 1}` : "Formulário"}
+            {form.displayName ??
+              (forms.length > 1 ? `Formulário ${index + 1}` : "Formulário")}
           </span>
           <input type="hidden" name="protocolNumber" value={protocolNumber} />
           <input type="hidden" name="accessKey" value={accessKey} />
@@ -1113,6 +1114,9 @@ function RequirementRow({
         </span>
         <span className="text-[11px] text-brand-faint">
           registrada em {formatDate(requirement.createdAt)}
+          {requirement.seenAt
+            ? ` · ciência registrada em ${formatDate(requirement.seenAt)}`
+            : ""}
         </span>
       </div>
       <p className="mt-2 whitespace-pre-line [overflow-wrap:anywhere] text-[13px] font-semibold leading-relaxed text-brand-primary">
@@ -1158,6 +1162,13 @@ function RequirementsCard({ result }: { result: ServiceRequestDetail }) {
           />
         ))}
       </div>
+      {/* The citizen is told the ciência is recorded (decision of 16/11/2026). */}
+      <p className="mt-2.5 text-[11.5px] leading-relaxed text-brand-faint">
+        A serventia registra a data e a hora em que você vê as exigências, o
+        valor e os documentos nesta consulta, e em que abre ou baixa cada
+        documento. Esse registro certifica ao cartório que a entrega foi feita a
+        você.
+      </p>
     </div>
   );
 }

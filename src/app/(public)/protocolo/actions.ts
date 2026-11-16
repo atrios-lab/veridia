@@ -13,6 +13,14 @@ import {
   dataRightsDeadline,
 } from "@/core/request/channels.ts";
 import {
+  type Ciencia,
+  firstSeenAt,
+  isOfficeDocumentKind,
+  type ViewTarget,
+  viewedMarks,
+  viewKey,
+} from "@/core/request/citizen-view.ts";
+import {
   dayOfDeadline,
   deadlineClock,
   deadlineDate,
@@ -69,6 +77,11 @@ import {
   recoverAppointmentKey,
 } from "@/lib/appointments.ts";
 import {
+  citizenCienciaWith,
+  recordCitizenViewsWith,
+} from "@/lib/citizen-views.ts";
+import { clientIp } from "@/lib/client-ip.ts";
+import {
   notifyOfficePaymentReported,
   notifyOfficeRequirementReply,
   sendAccessKey,
@@ -91,6 +104,7 @@ import {
   updateRequestStatus,
   writeCitizenMessage,
 } from "@/lib/service-request.ts";
+import { getPendingSession } from "@/lib/session.ts";
 import { getTenant, OFFICE_TIME_ZONE, today } from "@/lib/tenant.ts";
 import {
   AttachmentError,
@@ -136,7 +150,15 @@ export interface RequirementView {
   fulfilledAt?: string;
   resolutionFileName?: string;
   /** Forms the office attached for the citizen to print and present. */
-  forms: Array<{ id: string; createdAt: string }>;
+  forms: Array<{
+    id: string;
+    createdAt: string;
+    displayName?: string;
+    /** When the citizen first opened or downloaded it (their ciência). */
+    openedAt?: string;
+  }>;
+  /** When the citizen first saw this exigência on the consult (ciência). */
+  seenAt?: string;
   /** The conversation inside this requirement, oldest first. */
   messages: RequirementMessageView[];
 }
@@ -145,6 +167,8 @@ export interface DeliveredDocumentView {
   id: string;
   createdAt: string;
   displayName: string;
+  /** When the citizen first opened or downloaded it (their ciência). */
+  openedAt?: string;
   /**
    * Deleted by the 30-day rule (or past it, which the route already
    * refuses): listed so the citizen knows it was there, with no download.
@@ -215,6 +239,8 @@ export interface ServiceRequestDetail extends BaseDetail {
   /** Files the citizen sent, at filing time and later, downloadable here. */
   citizenDocuments: CitizenDocumentView[];
   amountLabel?: string;
+  /** When the citizen first saw this amount on the consult (ciência). */
+  amountSeenAt?: string;
   /** True once the office marked the request "Pago" or moved it past that
    * point: the amount still shows as a receipt, but nothing invites the
    * citizen to pay again. */
@@ -404,6 +430,39 @@ async function appointmentDetail(
   };
 }
 
+/**
+ * Records what a consult showed as seen by the citizen, and reads back the
+ * request's ciência. Someone signed in to the panel is the office checking
+ * the consult, not the citizen: nothing is recorded then. A failure here
+ * never costs the citizen the consult.
+ */
+async function registerCiencia(
+  tenantSlug: string,
+  requestId: string,
+  shown: Parameters<typeof viewedMarks>[0],
+): Promise<Map<string, Ciencia>> {
+  try {
+    const staff = await getPendingSession().catch(() => null);
+    if (!staff) {
+      const headerList = await headers();
+      await recordCitizenViewsWith(
+        db,
+        tenantSlug,
+        requestId,
+        viewedMarks(shown),
+        {
+          ip: clientIp(headerList),
+          userAgent: headerList.get("user-agent") ?? undefined,
+        },
+      );
+    }
+    return await citizenCienciaWith(db, tenantSlug, requestId);
+  } catch (error) {
+    console.error("protocolo.ciencia", error);
+    return new Map();
+  }
+}
+
 export async function lookupProtocolDetail(
   _previous: LookupState,
   formData: FormData,
@@ -564,6 +623,41 @@ export async function lookupProtocolDetail(
       officeHolidays(tenant),
     );
 
+    // The citizen's ciência (decision of 16/11/2026): what this consult puts
+    // in front of them is recorded as seen, with the date and the hour.
+    const searchAnswer = act.consultation
+      ? readSearchAnswer(record.details)
+      : undefined;
+    const ciencia = await registerCiencia(tenant.slug, record.id, {
+      requirementIds: requirements.map((r) => r.id),
+      documentIds: [
+        ...requestOwnAttachments(allAttachments)
+          .filter(
+            (a) =>
+              isOfficeDocumentKind(a.kind) &&
+              !a.heldForSignatureAt &&
+              !isGone(a),
+          )
+          .map((a) => a.id),
+        ...attachments
+          .filter(
+            (a) =>
+              a.requirementId && a.kind === "office" && !a.heldForSignatureAt,
+          )
+          .map((a) => a.id),
+        ...conversations
+          .flat()
+          .filter((m) => m.author === "staff")
+          .flatMap((m) => m.attachments.map((a) => a.id)),
+      ],
+      amountCents: record.amountCents,
+      answeredAt: searchAnswer?.answeredAt,
+    });
+    const seenAt = (target: ViewTarget, id: string) =>
+      firstSeenAt(ciencia.get(viewKey(target, id)))?.toISOString();
+    const openedAt = (id: string) =>
+      ciencia.get(viewKey("document", id))?.downloadedAt?.toISOString();
+
     return {
       ...base,
       kind: "service-request",
@@ -574,9 +668,7 @@ export async function lookupProtocolDetail(
       signatureCaveat: signatureCaveatFor(act),
       attributionName: ATTRIBUTION_NAMES[act.attribution],
       consultation: Boolean(act.consultation),
-      searchAnswer: act.consultation
-        ? readSearchAnswer(record.details)
-        : undefined,
+      searchAnswer,
       hasSignedForm: Boolean(signedForm),
       ...(() => {
         const check = readSignedFormCheck(record.details);
@@ -600,6 +692,10 @@ export async function lookupProtocolDetail(
       amountLabel:
         record.amountCents != null
           ? formatCents(record.amountCents)
+          : undefined,
+      amountSeenAt:
+        record.amountCents != null
+          ? seenAt("amount", String(record.amountCents))
           : undefined,
       deadline: open
         ? {
@@ -661,6 +757,7 @@ export async function lookupProtocolDetail(
           createdAt: a.createdAt.toISOString(),
           displayName: deliveryLabel(a.displayName),
           gone: isGone(a),
+          openedAt: openedAt(a.id),
         })),
       filesUntil,
       // The signed copies sit in the same list as the other files the
@@ -688,9 +785,19 @@ export async function lookupProtocolDetail(
           ? allAttachments.find((a) => a.id === r.resolutionAttachmentId)
               ?.displayName
           : undefined,
+        // A document held back until signed is not the citizen's yet.
         forms: attachments
-          .filter((a) => a.requirementId === r.id)
-          .map((a) => ({ id: a.id, createdAt: a.createdAt.toISOString() })),
+          .filter((a) => a.requirementId === r.id && !a.heldForSignatureAt)
+          .map((a) => ({
+            id: a.id,
+            createdAt: a.createdAt.toISOString(),
+            // The name the office gave it; none typed reads "Formulário".
+            displayName: /^formulario-exigencia(-\d+)?$/.test(a.displayName)
+              ? undefined
+              : a.displayName,
+            openedAt: openedAt(a.id),
+          })),
+        seenAt: seenAt("requirement", r.id),
         messages: conversations[i].map((m) => ({
           id: m.id,
           author: m.author,

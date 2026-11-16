@@ -3,12 +3,17 @@ import {
   REQUEST_FILE_GONE,
   requestFileServable,
 } from "@/core/request/attachment-retention.ts";
+import { isOfficeDocumentKind } from "@/core/request/citizen-view.ts";
+import { db } from "@/db/index.ts";
+import { recordCitizenViewsWith } from "@/lib/citizen-views.ts";
+import { clientIp } from "@/lib/client-ip.ts";
 import { today } from "@/lib/office-config.ts";
 import {
   findByProtocolWithKey,
   getAttachment,
   requestFileStatusOf,
 } from "@/lib/service-request.ts";
+import { getPendingSession } from "@/lib/session.ts";
 import { getTenant } from "@/lib/tenant.ts";
 
 export const runtime = "nodejs";
@@ -61,6 +66,26 @@ export async function POST(request: Request): Promise<Response> {
   const bytes = path.startsWith("http")
     ? Buffer.from(await (await fetch(path)).arrayBuffer())
     : await readFile(path);
+
+  // The citizen's ciência (decision of 16/11/2026): the first time they open
+  // or download a document from the office is recorded, with the date and
+  // the hour. Not the office's own check of the consult, and never at the
+  // cost of the download.
+  if (isOfficeDocumentKind(attachment.kind)) {
+    const staff = await getPendingSession().catch(() => null);
+    if (!staff) {
+      await recordCitizenViewsWith(
+        db,
+        tenant.slug,
+        stored.id,
+        [{ target: "document", targetId: attachment.id, action: "downloaded" }],
+        {
+          ip: clientIp(request.headers),
+          userAgent: request.headers.get("user-agent") ?? undefined,
+        },
+      ).catch((error) => console.error("protocolo.ciencia-download", error));
+    }
+  }
 
   return new Response(new Uint8Array(bytes), {
     headers: {

@@ -334,6 +334,48 @@ export const serviceRequestRequirementMessages = pgTable(
 );
 
 /**
+ * The citizen's ciência (decision of 16/11/2026): when the citizen first saw
+ * what the office put on the request (an exigência, a document, the amount,
+ * the answer to a consultation) and when they first opened or downloaded a
+ * document. It certifies the delivery, so the first moment is never
+ * overwritten: a later visit only moves `lastAt` and `times`. One row per
+ * thing and action. `targetId` is the row's id, or the amount in cents for
+ * "amount" (a new value is a new thing to see). The address and the browser
+ * of the first time are kept as evidence of who opened it; the citizen is
+ * told on the consult that this is recorded.
+ */
+export const serviceRequestCitizenViews = pgTable(
+  "service_request_citizen_views",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    tenantSlug,
+    requestId: uuid("request_id")
+      .notNull()
+      .references(() => serviceRequests.id, { onDelete: "cascade" }),
+    // "requirement" | "document" | "amount" | "answer".
+    target: text("target").notNull(),
+    targetId: text("target_id").notNull(),
+    // "viewed" | "downloaded".
+    action: text("action").notNull(),
+    firstAt: timestamp("first_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    lastAt: timestamp("last_at", { withTimezone: true }).notNull().defaultNow(),
+    times: integer("times").notNull().default(1),
+    firstIp: text("first_ip"),
+    firstUserAgent: text("first_user_agent"),
+  },
+  (t) => [
+    uniqueIndex("service_request_citizen_views_unique").on(
+      t.requestId,
+      t.target,
+      t.targetId,
+      t.action,
+    ),
+  ],
+);
+
+/**
  * What a serventia publishes to the "Proclamas e avisos" home section:
  * marriage banns, a general notice, or a formal notice. `publishAt` and
  * `expireAt` are calendar dates, not instants: a publication is on the site
