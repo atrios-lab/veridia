@@ -207,8 +207,8 @@ export function DocumentReviewPanel({
       )}
       {review.result.via === "base" && !review.aiError && (
         <p className="mt-1.5 text-xs text-muted-foreground">
-          Análise feita pela base jurídica da serventia, sem gastar crédito da
-          IA.
+          Análise feita pela base jurídica da serventia, sem gastar crédito do
+          Assistente Virtual.
         </p>
       )}
       {review.aiError && (

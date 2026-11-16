@@ -95,7 +95,7 @@ const fakeAi =
     };
   };
 
-test("a nota é revisada uma vez: a base acha a revogada, a IA aprende sem dado pessoal", async () => {
+test("a nota é revisada uma vez: a base acha a revogada, o Assistente Virtual aprende sem dado pessoal", async () => {
   const bytes = await notePdf([
     "NOTA DEVOLUTIVA 01/2026",
     "1. Apresentar certidao atualizada, conforme o Provimento n 12/2001.",
@@ -134,7 +134,7 @@ test("a nota é revisada uma vez: a base acha a revogada, a IA aprende sem dado 
     },
     fakeAi(calls),
   );
-  assert.equal(calls.n, 1, "o mesmo arquivo não volta à IA");
+  assert.equal(calls.n, 1, "o mesmo arquivo não volta ao Assistente Virtual");
   assert.equal(again.id, view.id);
 });
 
@@ -213,7 +213,7 @@ test("o anexo leva a revisão; aprende uma vez só e marca como aprendida", asyn
   assert.equal(byAttachment.get(attachment?.id ?? "")?.learned, true);
 });
 
-test("IA fora do ar: fica a conferência da base, e a próxima vez tenta a IA de novo", async () => {
+test("Assistente Virtual fora do ar: fica a conferência da base, e a próxima vez tenta o Assistente Virtual de novo", async () => {
   const bytes = await notePdf([
     "NOTA DEVOLUTIVA 03/2026",
     "1. Juntar a planta.",
@@ -241,7 +241,7 @@ test("IA fora do ar: fica a conferência da base, e a próxima vez tenta a IA de
   assert.equal(retried.id, failed.id);
 });
 
-test("notas já anexadas: sem IA aprende pelo texto, sem gastar crédito; falha passageira da IA tenta de novo", async () => {
+test("notas já anexadas: sem o Assistente Virtual aprende pelo texto, sem gastar crédito; falha passageira do Assistente Virtual tenta de novo", async () => {
   const { id: requestId } = await createRecordWith(
     db,
     TENANT,
@@ -284,7 +284,7 @@ test("notas já anexadas: sem IA aprende pelo texto, sem gastar crédito; falha 
 
   // Office on the legal base alone: the AI is never called.
   const never = async (): Promise<ReviewResult> => {
-    throw new Error("a IA não deveria ser chamada");
+    throw new Error("o Assistente Virtual não deveria ser chamada");
   };
   const first = await learnNextExistingWith(
     db,

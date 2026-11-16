@@ -17,17 +17,17 @@ export const NOTE_REVIEW_MODES = {
   ia: {
     label: "Com o Assistente Virtual",
     description:
-      "Antes de enviar, o Assistente Virtual lê a nota contra a lei, a base jurídica e os sites oficiais, aponta divergências com o fundamento e sugere manter ou alterar. Aprende com cada nota. Gasta crédito da IA.",
+      "Antes de enviar, o Assistente Virtual lê a nota contra a lei, a base jurídica e os sites oficiais, aponta divergências com o fundamento e sugere manter ou alterar. Aprende com cada nota. Gasta crédito do Assistente Virtual.",
   },
   base: {
     label: "Só pela base jurídica, sem gastar crédito",
     description:
-      "Antes de enviar, confere a nota só com o que já está na base jurídica da serventia: norma ou artigo revogado e exigência sem fundamento. É instantâneo. Aprende os modelos pelo texto da nota, sem IA.",
+      "Antes de enviar, confere a nota só com o que já está na base jurídica da serventia: norma ou artigo revogado e exigência sem fundamento. É instantâneo. Aprende os modelos pelo texto da nota, sem o Assistente Virtual.",
   },
   desligada: {
     label: "Desligada (como era antes)",
     description:
-      "Anexa direto, sem análise antes de enviar. Continua aprendendo em segundo plano, pelo texto da nota e sem IA. A IA segue só na qualificação de títulos.",
+      "Anexa direto, sem análise antes de enviar. Continua aprendendo em segundo plano, pelo texto da nota e sem o Assistente Virtual. O Assistente Virtual segue só na qualificação de títulos.",
   },
 } as const;
 export type NoteReviewMode = keyof typeof NOTE_REVIEW_MODES;
@@ -275,8 +275,8 @@ export function baseSummary(
 ): string {
   const parts = [
     findings.length
-      ? "Conferida pela base jurídica da serventia, sem IA."
-      : "Conferida pela base jurídica da serventia, sem IA: nada a apontar.",
+      ? "Conferida pela base jurídica da serventia, sem o Assistente Virtual."
+      : "Conferida pela base jurídica da serventia, sem o Assistente Virtual: nada a apontar.",
   ];
   if (missing.length) {
     parts.push(
@@ -328,7 +328,7 @@ export function platformChange(input: {
     return { error: "Marque o que deseja alterar." };
   }
   if (input.changeAi && input.ai !== "liberada" && input.ai !== "suspensa") {
-    return { error: "Escolha liberar ou suspender a IA." };
+    return { error: "Escolha liberar ou suspender o Assistente Virtual." };
   }
   if (input.changeNotes && !isNoteReviewMode(input.notes)) {
     return { error: "Escolha como as notas são analisadas." };

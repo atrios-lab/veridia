@@ -31,7 +31,7 @@ test("a nota se divide nas suas exigências numeradas", () => {
   );
 });
 
-test("exigência sem fundamento é apontada pela base, sem IA", () => {
+test("exigência sem fundamento é apontada pela base, sem o Assistente Virtual", () => {
   const found = unfoundedItems(noteItems(NOTE));
   assert.equal(found.length, 1);
   assert.equal(found[0]?.kind, "sem-fundamento");
@@ -60,7 +60,7 @@ test("nomes de pessoas saem; termos do ofício ficam", () => {
   );
 });
 
-test("aprende sem IA só a exigência com fundamento e sem nome de pessoa", () => {
+test("aprende sem o Assistente Virtual só a exigência com fundamento e sem nome de pessoa", () => {
   const learned = learnWithoutAi(NOTE);
   assert.deepEqual(
     learned.map((l) => [l.title, l.basis]),
@@ -77,8 +77,8 @@ test("aprende sem IA só a exigência com fundamento e sem nome de pessoa", () =
   );
 });
 
-test("o resumo da base diz que foi sem IA e o que falta na base", () => {
-  assert.match(baseSummary([], []), /sem IA: nada a apontar/);
+test("o resumo da base diz que foi sem o Assistente Virtual e o que falta na base", () => {
+  assert.match(baseSummary([], []), /sem o Assistente Virtual: nada a apontar/);
   assert.match(
     baseSummary([], ["Decreto nº 4.449/2002"]),
     /ainda não tem Decreto nº 4\.449\/2002/,

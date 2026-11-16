@@ -54,7 +54,7 @@ const ai = (over: Partial<ReviewResult> = {}): ReviewResult => ({
   ...over,
 });
 
-test("norma revogada pela base pede alterar, mesmo que a IA diga manter", () => {
+test("norma revogada pela base pede alterar, mesmo que o Assistente Virtual diga manter", () => {
   const base = revokedCitations("Conforme o Provimento nº 12/2001.", REVOKED);
   const merged = mergeReview(base, ai());
   assert.equal(merged.recommendation, "alterar");
@@ -66,7 +66,7 @@ test("norma revogada pela base pede alterar, mesmo que a IA diga manter", () => 
   assert.equal(mergeReview([], null).recommendation, "manter");
 });
 
-test("o mesmo achado da base e da IA aparece uma vez só", () => {
+test("o mesmo achado da base e do Assistente Virtual aparece uma vez só", () => {
   const base = revokedCitations("Conforme o Provimento nº 12/2001.", REVOKED);
   const merged = mergeReview(
     base,
