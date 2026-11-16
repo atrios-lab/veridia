@@ -2,8 +2,8 @@
 
 - [x] 1.1 Painel livre, com cartório compartilhado por todos os alunos (usuário, 16/11/2026)
 - [x] 1.2 Nenhum e-mail sai do tenant de demonstração; o painel mostra o que teria sido enviado (usuário, 16/11/2026)
-- [ ] 1.3 Usuário decide se a limpeza roda sozinha (e com que frequência) ou só pelo botão
-- [ ] 1.4 Usuário aprova o texto da faixa do painel e o trecho novo do aviso de privacidade do cadastro (o que o aluno digita fica visível aos outros e é apagado na limpeza)
+- [x] 1.3 Limpeza só pelo botão da Átrios, sem rodar sozinha (usuário, 16/11/2026)
+- [ ] 1.4 Usuário aprova o texto da faixa do painel e o trecho novo do aviso de privacidade do cadastro (o que o aluno digita fica visível aos outros alunos e pode ser apagado a qualquer momento)
 - [x] 1.5 "E-mails de demonstração" fica fora do menu, só pelos links do histórico (usuário, 16/11/2026)
 
 ## 2. Permissões do aluno (PR 1)
@@ -49,6 +49,5 @@
 - [ ] 7.1 `DEMO_RESET_TABLES`, lista fechada, e `resetDemoOfficeWith(db, store, slug)`: recusa slug não fictício ou sem `demo`, apaga por `tenant_slug` numa transação, apaga os arquivos do store, roda o seed e grava auditoria da plataforma
 - [ ] 7.2 Testes contra PGlite com dois tenants: apaga só o tenant de cursos; não toca contas, turmas, progresso, avaliações, certificados, cursos, vídeos nem auditoria; recusa cartório real
 - [ ] 7.3 Botão "Limpar o cartório de demonstração" na tela de Turmas, com `cohorts.manage` e confirmação digitada
-- [ ] 7.4 Se o usuário decidir pela limpeza automática (1.3), Vercel Cron com a frequência escolhida, autenticado como os crons que já existem
-- [ ] 7.5 Testar no banco local de teste; nunca rodar contra a produção
-- [ ] 7.6 Abrir a PR 2 com "⚠️ Apaga dados do banco" no título e no topo da descrição, dizendo o que é apagado e como desfazer; deixar aberta para outra pessoa revisar, sem merge e sem auto-merge
+- [ ] 7.4 Testar no banco local de teste; nunca rodar contra a produção
+- [ ] 7.5 Abrir a PR 2 com "⚠️ Apaga dados do banco" no título e no topo da descrição, dizendo o que é apagado e como desfazer; deixar aberta para outra pessoa revisar, sem merge e sem auto-merge

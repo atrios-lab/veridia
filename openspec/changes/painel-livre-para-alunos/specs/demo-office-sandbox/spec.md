@@ -50,7 +50,7 @@ Mensagens internas SHALL exigir uma permissão própria, derivada da permissão 
 
 ### Requirement: Faixa do painel de demonstração
 
-Toda tela do painel aberta por um aluno no tenant de demonstração SHALL mostrar, fixa no topo do conteúdo, uma faixa dizendo que o cartório não existe, que o que ele fizer fica visível para os outros alunos e é apagado na limpeza periódica, e que não deve usar dados reais. A faixa NÃO SHALL aparecer para a conta da Átrios.
+Toda tela do painel aberta por um aluno no tenant de demonstração SHALL mostrar, fixa no topo do conteúdo, uma faixa dizendo que o cartório não existe, que o que ele fizer fica visível para os outros alunos e pode ser apagado a qualquer momento, e que não deve usar dados reais. A faixa NÃO SHALL aparecer para a conta da Átrios.
 
 #### Scenario: Faixa para o aluno
 - **WHEN** um aluno abre a fila de pedidos no tenant de cursos
@@ -122,7 +122,7 @@ O seed de dados fictícios SHALL criar no tenant de cursos pedidos em vários es
 
 ### Requirement: Limpeza do cartório de demonstração
 
-A conta da Átrios SHALL poder limpar o cartório de demonstração: apagar as linhas do tenant de demonstração numa lista fechada de tabelas do escritório e os arquivos delas, e rodar o seed de novo. A limpeza SHALL recusar qualquer tenant fora da lista de tenants fictícios ou sem `demo`. A limpeza NÃO SHALL tocar contas, sessões, turmas, membros de turma, progresso, avaliações, certificados, cursos, vídeos nem a auditoria, nem linhas de outro tenant. Cada limpeza SHALL ficar registrada na auditoria da plataforma, com quantas linhas foram apagadas por tabela.
+A conta da Átrios SHALL poder limpar o cartório de demonstração: apagar as linhas do tenant de demonstração numa lista fechada de tabelas do escritório e os arquivos delas, e rodar o seed de novo. A limpeza SHALL recusar qualquer tenant fora da lista de tenants fictícios ou sem `demo`. A limpeza NÃO SHALL tocar contas, sessões, turmas, membros de turma, progresso, avaliações, certificados, cursos, vídeos nem a auditoria, nem linhas de outro tenant. A limpeza SHALL rodar só quando a conta da Átrios pede, e NÃO SHALL rodar sozinha por agendamento. Cada limpeza SHALL ficar registrada na auditoria da plataforma, com quantas linhas foram apagadas por tabela.
 
 #### Scenario: Limpeza volta ao estado inicial
 - **WHEN** a conta da Átrios confirma a limpeza do tenant de cursos
@@ -135,6 +135,10 @@ A conta da Átrios SHALL poder limpar o cartório de demonstração: apagar as l
 #### Scenario: Outro tenant intocado
 - **WHEN** a limpeza roda para o tenant de cursos
 - **THEN** nenhuma linha do Serra Verde nem de cartório cliente muda
+
+#### Scenario: Sem limpeza automática
+- **WHEN** passa uma semana sem a conta da Átrios pedir a limpeza
+- **THEN** o que os alunos fizeram continua no cartório de demonstração
 
 #### Scenario: Recusa cartório real
 - **WHEN** a limpeza é chamada com o slug de um cartório cliente

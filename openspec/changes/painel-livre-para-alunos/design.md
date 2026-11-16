@@ -101,7 +101,7 @@ O IndexNow avisa buscadores de páginas novas do site. No tenant de cursos ele f
 
 ### 6. Faixa no painel
 
-Faixa fixa no topo do conteúdo do painel, para toda sessão de aluno no tenant `demo`: "Painel de demonstração do Cartório Vale do Silício, que não existe. O que você fizer aqui fica visível para os outros alunos e é apagado na limpeza periódica. Não use dados reais." O texto fica em `src/core/tenant/`, ao lado do aviso do site. A conta da Átrios não vê a faixa.
+Faixa fixa no topo do conteúdo do painel, para toda sessão de aluno no tenant `demo`: "Painel de demonstração do Cartório Vale do Silício, que não existe. O que você fizer aqui fica visível para os outros alunos e pode ser apagado a qualquer momento. Não use dados reais." O texto fica em `src/core/tenant/`, ao lado do aviso do site. A conta da Átrios não vê a faixa.
 
 ### 7. Seed
 
@@ -109,7 +109,7 @@ Faixa fixa no topo do conteúdo do painel, para toda sessão de aluno no tenant 
 
 O seed roda no banco local e no Homolog pelo agente. Em produção, quem roda é o usuário.
 
-### 8. Limpeza periódica (⚠️ apaga dados, PR separada)
+### 8. Limpeza pelo botão (⚠️ apaga dados, PR separada)
 
 ```
 resetDemoOfficeWith(db, store, slug)
@@ -123,14 +123,14 @@ resetDemoOfficeWith(db, store, slug)
 
 - **`DEMO_RESET_TABLES`** contém as tabelas do escritório: pedidos e anexos, exigências, agendamentos, publicações, transparência, livro diário, papel de segurança, guias, ISS, RCPN, CENSEC, DOI, qualificação e `demo_outbox`.
 - **Nunca entram**: `user`, `account`, `session`, `course_cohorts`, `cohort_members`, `tutorial_progress`, `quiz_attempts`, `certificates`, `courses`, `tutorials` e `audit_log`. A auditoria é a prova do que cada aluno fez. Um teste com PGlite prova que a limpeza não toca nenhuma delas nem nenhuma linha de outro tenant.
-- **Quem dispara**: um botão "Limpar o cartório de demonstração" na tela de Turmas, com `cohorts.manage` e confirmação digitada. A frequência automática fica em aberto (ver Open Questions).
+- **Quem dispara**: só um botão "Limpar o cartório de demonstração" na tela de Turmas, com `cohorts.manage` e confirmação digitada. Não há limpeza automática (decisão do usuário em 16/11/2026).
 - **Entrega**: PR própria, com "⚠️ Apaga dados do banco" no título e no topo da descrição, dizendo o que é apagado e como desfazer (não há volta das linhas apagadas; o seed recria o estado inicial). Ela fica aberta para outra pessoa revisar e fazer o merge, sem auto-merge, como manda o CLAUDE.md. A primeira PR, com o painel livre, não depende dela.
 
 *Alternativa considerada*: sem limpeza, só o seed somando dados. Descartada: em semanas a fila fica ilegível, e o que os alunos digitaram fica guardado sem prazo.
 
 ## Risks / Trade-offs
 
-- [Aluno vê o que outro aluno digitou, inclusive dado real] → decisão do usuário. Mitigação: faixa no painel e no site, aviso de privacidade no cadastro e limpeza periódica, que também limita quanto tempo o dado fica.
+- [Aluno vê o que outro aluno digitou, inclusive dado real] → decisão do usuário. Mitigação: faixa no painel e no site, aviso de privacidade no cadastro e limpeza pelo botão, que também limita quanto tempo o dado fica.
 - [Aluno publica conteúdo ofensivo no site de demonstração] → a auditoria registra quem fez, a Átrios limpa pelo botão, e o link da turma pode ser encerrado.
 - [Aluno apaga tudo pelo painel] → a limpeza com seed recria o estado inicial.
 - [Uma permissão nova expõe pessoas e o aluno ganha por padrão] → o teste de classificação obriga a decidir na mesma PR.
@@ -153,5 +153,4 @@ Rollback: reverter o código. A tabela nova fica sem efeito.
 
 ## Open Questions
 
-- A limpeza roda sozinha (por exemplo, todo domingo de madrugada, por Vercel Cron) ou só pelo botão da Átrios?
 - O texto da faixa do painel e o aviso de privacidade do cadastro precisam da aprovação do usuário.
