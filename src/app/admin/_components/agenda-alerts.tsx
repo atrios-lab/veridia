@@ -25,6 +25,7 @@ import {
   attendAppointment,
   markAppointmentNoShow,
 } from "../(dashboard)/agenda/actions.ts";
+import { AlertOverflow } from "./alert-dock.tsx";
 import { AdminIcon } from "./icon.tsx";
 import { announce } from "./office-alert.ts";
 
@@ -32,6 +33,9 @@ import { announce } from "./office-alert.ts";
  * fifteen minutes is worth knowing about whatever screen is open. */
 const POLL_MS = 60_000;
 const STORAGE_KEY = "agenda-alerts";
+/** Cards per group; the rest collapse into one "Mais N" row. */
+const MAX_SOON = 2;
+const MAX_NEW = 3;
 
 interface Seen {
   /** Bookings made before this instant are not news. */
@@ -82,16 +86,20 @@ export function AgendaAlerts({ setting }: { setting: ChannelAlert }) {
   const [later, setLater] = useState<Set<string>>(new Set());
   const pollRef = useRef<() => Promise<void>>(async () => {});
 
-  const dismiss = useCallback((key: string) => {
+  const dismissMany = useCallback((keys: string[]) => {
     setSeen((current) => {
       const next = {
         since: current?.since ?? new Date().toISOString(),
-        dismissed: [...(current?.dismissed ?? []), key],
+        dismissed: [...(current?.dismissed ?? []), ...keys],
       };
       writeSeen(next);
       return next;
     });
   }, []);
+  const dismiss = useCallback(
+    (key: string) => dismissMany([key]),
+    [dismissMany],
+  );
 
   useEffect(() => {
     // The first visit ever starts from now: last week's bookings are not
@@ -172,11 +180,19 @@ export function AgendaAlerts({ setting }: { setting: ChannelAlert }) {
     return null;
   }
 
+  // Newest booking first, so the card that pulses is the one just arrived.
+  const newest = [...fresh].reverse();
+  const shownSoon = soon.slice(0, MAX_SOON);
+  const shownNew = newest.slice(0, MAX_NEW);
+  const hiddenCards =
+    soon.length - shownSoon.length + (newest.length - shownNew.length);
+  const hiddenKeys = [
+    ...soon.slice(MAX_SOON).map((item) => `soon:${item.id}`),
+    ...newest.slice(MAX_NEW).map((item) => `new:${item.id}`),
+  ];
+
   return (
-    <section
-      aria-label="Avisos da agenda"
-      className="fixed bottom-4 left-4 z-40 flex w-[min(340px,calc(100vw-2rem))] flex-col gap-2.5 md:left-[calc(var(--content-left)+1rem)]"
-    >
+    <div className="pointer-events-auto flex flex-col gap-2.5">
       {shownPending.map((item) => (
         <ConfirmCard
           key={`confirm-${item.id}`}
@@ -194,10 +210,11 @@ export function AgendaAlerts({ setting }: { setting: ChannelAlert }) {
           Mais {pending.length - shownPending.length} aguardando confirmação
         </Link>
       )}
-      {soon.map((item) => (
+      {shownSoon.map((item, index) => (
         <Card
           key={`soon-${item.id}`}
           tone="strong"
+          pulse={index === 0}
           title={`Às ${item.slotTime}: ${item.citizenName}`}
           body={`${item.serviceLabel} · ${item.agendaName} · chega em até ${ARRIVING_SOON_MINUTES} minutos`}
           href={agendaHref(item)}
@@ -205,10 +222,11 @@ export function AgendaAlerts({ setting }: { setting: ChannelAlert }) {
           onDismiss={() => dismiss(`soon:${item.id}`)}
         />
       ))}
-      {fresh.map((item) => (
+      {shownNew.map((item, index) => (
         <Card
           key={`new-${item.id}`}
           tone="strong"
+          pulse={index === 0}
           title="Novo agendamento pelo site"
           body={`${item.citizenName} · ${formatShortDate(item.date)} às ${item.slotTime} · ${item.agendaName}`}
           href={agendaHref(item)}
@@ -216,6 +234,11 @@ export function AgendaAlerts({ setting }: { setting: ChannelAlert }) {
           onDismiss={() => dismiss(`new:${item.id}`)}
         />
       ))}
+      <AlertOverflow
+        hidden={hiddenCards}
+        noun={hiddenCards === 1 ? "aviso da agenda" : "avisos da agenda"}
+        onDismissAll={() => dismissMany(hiddenKeys)}
+      />
       {showDay && (
         <Card
           tone="soft"
@@ -229,7 +252,7 @@ export function AgendaAlerts({ setting }: { setting: ChannelAlert }) {
           onDismiss={() => dismiss(dayKey)}
         />
       )}
-    </section>
+    </div>
   );
 }
 
@@ -366,6 +389,7 @@ function ConfirmCard({
 
 function Card({
   tone,
+  pulse = false,
   title,
   body,
   href,
@@ -373,6 +397,8 @@ function Card({
   onDismiss,
 }: {
   tone: "strong" | "soft";
+  /** Only the newest card calls attention; a row of pulsing ones is noise. */
+  pulse?: boolean;
   title: string;
   body: string;
   href: string;
@@ -384,8 +410,9 @@ function Card({
       className={cn(
         "flex items-start gap-3 rounded-xl px-4 py-3 shadow-lg",
         tone === "strong"
-          ? "bg-primary text-primary-foreground motion-safe:animate-attention-pulse"
+          ? "bg-primary text-primary-foreground"
           : "border bg-card text-card-foreground",
+        pulse && "motion-safe:animate-attention-pulse",
       )}
     >
       <AdminIcon name="calendar" className="mt-0.5 h-4.5 w-4.5 flex-none" />
