@@ -7,8 +7,12 @@ import {
   formatOfficeDayMonth,
   formatOfficeDayMonthTime,
 } from "@/core/time/office-time.ts";
+import { DocumentNameField } from "../../../../../_components/document-name-field.tsx";
 import type { AttachmentItem } from "../../../../_components/attachment-link.ts";
-import { documentHref } from "../../../../_components/attachment-link.ts";
+import {
+  attachmentLabel,
+  documentHref,
+} from "../../../../_components/attachment-link.ts";
 import { AttachmentRow } from "../../../../_components/attachment-row.tsx";
 import { ConfirmAction } from "../../../../_components/confirm-action.tsx";
 import { AdminIcon } from "../../../../_components/icon.tsx";
@@ -27,6 +31,7 @@ import {
   replyRequirementAction,
   resolveRequirementAction,
 } from "../actions.ts";
+import { RenameDelivered } from "./delivery-section.tsx";
 
 export interface RequirementMessageItem {
   id: string;
@@ -77,9 +82,21 @@ function AttachFormButton({
   }, [state]);
 
   return (
-    <form action={action} className="ml-auto">
+    <form
+      action={action}
+      className="ml-auto flex flex-wrap items-end justify-end gap-2"
+    >
       <input type="hidden" name="requestId" value={requestId} />
       <input type="hidden" name="requirementId" value={requirementId} />
+      {/* The name the citizen sees, typed before picking the file. */}
+      <div className="min-w-48">
+        <DocumentNameField
+          field="formulario"
+          tone="admin"
+          suggestions={FORM_NAMES}
+          placeholder="Nome do documento"
+        />
+      </div>
       <label
         className={cn(
           buttonVariants({ variant: "outline", size: "sm" }),
@@ -104,6 +121,16 @@ function AttachFormButton({
     </form>
   );
 }
+
+/** Names the office gives what it attaches to an exigência. */
+const FORM_NAMES = [
+  "Nota devolutiva",
+  "Nota devolutiva assinada",
+  "Formulário a preencher",
+  "Modelo de requerimento",
+  "Modelo de declaração",
+  "Orientações para cumprir a exigência",
+];
 
 /** One file, in a line: icon, name, and when it came. */
 function FileLine({
@@ -533,23 +560,37 @@ function RequirementCard({
             (pendingReq ? (
               <div className="flex flex-col gap-2">
                 {requirement.forms.map((form) => (
-                  <AttachmentRow
-                    key={form.id}
-                    requestId={requestId}
-                    attachment={form}
-                    meta="anexado em"
-                    onDelete={deleteAttachmentAction}
-                  />
+                  <div key={form.id}>
+                    <AttachmentRow
+                      requestId={requestId}
+                      attachment={form}
+                      meta="anexado em"
+                      onDelete={deleteAttachmentAction}
+                    />
+                    {/* The name the citizen sees, editable (decision of
+                        16/11/2026: "pode renomear esses arquivos"). */}
+                    <RenameDelivered
+                      requestId={requestId}
+                      attachmentId={form.id}
+                      suggestions={FORM_NAMES}
+                    />
+                  </div>
                 ))}
               </div>
             ) : (
               requirement.forms.map((form) => (
-                <FileLine
-                  key={form.id}
-                  href={documentHref(requestId, form.id)}
-                  name={form.displayName}
-                  meta={`anexado em ${form.createdAtLabel}`}
-                />
+                <div key={form.id}>
+                  <FileLine
+                    href={documentHref(requestId, form.id)}
+                    name={attachmentLabel(form.displayName)}
+                    meta={`anexado em ${form.createdAtLabel}`}
+                  />
+                  <RenameDelivered
+                    requestId={requestId}
+                    attachmentId={form.id}
+                    suggestions={FORM_NAMES}
+                  />
+                </div>
               ))
             ))}
 

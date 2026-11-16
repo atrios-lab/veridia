@@ -606,6 +606,21 @@ export const OFFICIAL_CATALOG: (SourceMeta & { key: string })[] = [
     areas: ["geral"],
     notes: "",
   },
+  {
+    // The state's Código de Normas, used throughout the qualificação of
+    // the RN offices (decision of 16/11/2026: the qualificação-modelo of
+    // retificação de área cites it in almost every exigência).
+    key: "prov-cgj-rn-156",
+    kind: "provimento-cgj",
+    title: "Código de Normas da Corregedoria Geral de Justiça do RN",
+    reference: "Provimento CGJ/RN nº 156/2016",
+    issuer: "Corregedoria Geral de Justiça do Rio Grande do Norte",
+    date: "",
+    status: "vigente",
+    url: "https://atos-corregedoria.tjrn.jus.br/atos/detalhar/33262",
+    areas: ["geral"],
+    notes: "",
+  },
 ];
 
 /** The hosts an official text may be imported from. */
@@ -615,6 +630,7 @@ export const OFFICIAL_HOSTS = [
   "atos.cnj.jus.br",
   "www.cnj.jus.br",
   "www.tjrn.jus.br",
+  "atos-corregedoria.tjrn.jus.br",
   "www.stj.jus.br",
   "scon.stj.jus.br",
   "portal.stf.jus.br",
