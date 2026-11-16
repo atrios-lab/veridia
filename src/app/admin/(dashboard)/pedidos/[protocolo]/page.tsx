@@ -71,6 +71,10 @@ import { db } from "@/db/index.ts";
 import { linkedConversations } from "@/lib/chat.ts";
 import { citizenCienciaWith } from "@/lib/citizen-views.ts";
 import {
+  type ReviewView,
+  reviewsOfAttachmentsWith,
+} from "@/lib/qualificacao-revisao.ts";
+import {
   findByProtocol,
   listAttachments,
   listRequestHistory,
@@ -290,6 +294,12 @@ export default async function ServiceRequestDetailPage({
       () => new Map<string, Ciencia>(),
     ),
   ]);
+  // The review of each document of the exigências (decision of 16/11/2026).
+  const reviews = await reviewsOfAttachmentsWith(
+    db,
+    tenant.slug,
+    attachments.filter((a) => a.requirementId).map((a) => a.id),
+  ).catch(() => new Map<string, ReviewView>());
   const seenOf = (target: ViewTarget, id: string): SeenLabels => {
     const mark = ciencia.get(viewKey(target, id));
     const first = firstSeenAt(mark);
@@ -313,6 +323,12 @@ export default async function ServiceRequestDetailPage({
     resolutionAttachmentId: r.resolutionAttachmentId ?? undefined,
     forms: attachments.filter((a) => a.requirementId === r.id).map(row),
     seen: seenOf("requirement", r.id),
+    formsReview: Object.fromEntries(
+      attachments.flatMap((a) => {
+        const review = a.requirementId === r.id ? reviews.get(a.id) : undefined;
+        return review ? [[a.id, review]] : [];
+      }),
+    ),
     formsSeen: Object.fromEntries(
       attachments
         .filter((a) => a.requirementId === r.id)

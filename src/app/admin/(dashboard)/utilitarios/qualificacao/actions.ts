@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
+import { after } from "next/server";
 import { can } from "@/core/auth/roles.ts";
 import { buildNote } from "@/core/qualificacao/documents.ts";
 import { checkProposalSources } from "@/core/qualificacao/fontes.ts";
@@ -63,8 +64,17 @@ import {
   validateNoteWith,
 } from "@/lib/qualificacao.ts";
 import {
+  learnedStyleWith,
+  learnFromReviewWith,
+  learnNextExistingWith,
+  linkReviewWith,
+  pendingLearningCountWith,
+  reviewDocumentWith,
+} from "@/lib/qualificacao-revisao.ts";
+import {
   attachToRequest,
   findByProtocol,
+  listAttachments,
   reconcileDeadlinePause,
   registerRequirement,
 } from "@/lib/service-request.ts";
@@ -556,7 +566,7 @@ export async function proposeAction(
       };
     }
     const act = actName(q.data);
-    const [library, passages] = await Promise.all([
+    const [library, passages, style] = await Promise.all([
       listLibraryWith(db, ok.tenant.slug, q.data.attribution, {
         act: q.data.act,
       }),
@@ -566,8 +576,12 @@ export async function proposeAction(
         `${act} ${q.data.object}`.slice(0, 300),
         { area: q.data.attribution, limit: 12 },
       ),
+      learnedStyleWith(db, ok.tenant.slug, q.data.attribution).catch(
+        (): string[] => [],
+      ),
     ]);
     const proposal = await proposeQualification({
+      style,
       attribution: ATTRIBUTIONS[q.data.attribution],
       act,
       object: q.data.object,
@@ -807,6 +821,56 @@ export async function sendNoteToRequestAction(
         "office",
         requirementId,
       );
+      // The files the clerk added (external notes) are reviewed and
+      // learned from after the answer (decision of 16/11/2026), so the
+      // send is not slowed: the review shows under each file on the
+      // request, and the library gains the generic models.
+      const pickedNames = stored
+        .slice(withPdf ? 1 : 0)
+        .map((s) => s.storedName);
+      if (pickedNames.length) {
+        const tenantSlug = ok.tenant.slug;
+        const actorId = ok.session.user.id;
+        const requestId = request.id;
+        const attribution = note.snapshot.attribution;
+        const act = actName(note.snapshot);
+        after(async () => {
+          try {
+            const aiBlocked = await aiBlockedWith(db, tenantSlug);
+            const rows = (await listAttachments(tenantSlug, requestId)).filter(
+              (a) => pickedNames.includes(a.storedName) && a.path,
+            );
+            for (const row of rows) {
+              const review = await reviewDocumentWith(db, tenantSlug, {
+                bytes: new Uint8Array(await readStoredFile(row.path ?? "")),
+                name: row.displayName,
+                mimeType: row.mimeType,
+                requestId,
+                attribution,
+                act,
+                actorId,
+                aiBlocked,
+              });
+              await linkReviewWith(db, tenantSlug, {
+                reviewId: review.id,
+                attachmentId: row.id,
+                requestId,
+                actorId,
+              });
+              if (!review.aiError) {
+                await learnFromReviewWith(
+                  db,
+                  tenantSlug,
+                  review.id,
+                  attribution,
+                );
+              }
+            }
+          } catch (error) {
+            console.error("qualificacao.review-picked", error);
+          }
+        });
+      }
     }
     await reconcileDeadlinePause(
       ok.tenant,
@@ -919,4 +983,57 @@ export async function validateNoteAction(
     status: "saved",
     message: "Nota validada. Ela já pode ir ao cliente.",
   };
+}
+
+export type LearnState =
+  | { status: "error"; message: string }
+  | {
+      status: "success";
+      /** Nothing left to read. */
+      done: boolean;
+      remaining: number;
+      item?: {
+        protocolNumber: string;
+        fileName: string;
+        headline: string;
+        findings: number;
+        learned: number;
+      };
+    };
+
+/**
+ * One note already attached, reviewed and learned from (decision of
+ * 16/11/2026: "se tiver algo já anexado nas plataformas já pode aprender a
+ * partir de agora"). The screen calls it again until nothing is left, so
+ * each call is one note and the clerk sees the progress.
+ */
+export async function learnNextAttachedAction(): Promise<LearnState> {
+  const ok = await access();
+  if (!ok) return { status: "error", message: NO_PERMISSION };
+  const blocked = await aiBlockedWith(db, ok.tenant.slug);
+  if (blocked) return { status: "error", message: blocked };
+  try {
+    const next = await learnNextExistingWith(db, ok.tenant.slug, null);
+    const remaining = await pendingLearningCountWith(db, ok.tenant.slug);
+    revalidatePath(`${BASE}/biblioteca`);
+    if (!next) return { status: "success", done: true, remaining };
+    return {
+      status: "success",
+      done: remaining === 0,
+      remaining,
+      item: {
+        protocolNumber: next.protocolNumber,
+        fileName: next.review.fileName,
+        headline: next.review.headline,
+        findings: next.review.result.findings.length,
+        learned: next.learned,
+      },
+    };
+  } catch (error) {
+    if (error instanceof AiError) {
+      return { status: "error", message: error.message };
+    }
+    console.error("qualificacao.learn-attached", error);
+    return { status: "error", message: GENERIC };
+  }
 }

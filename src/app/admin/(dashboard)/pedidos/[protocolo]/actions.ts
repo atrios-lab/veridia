@@ -49,8 +49,16 @@ import { toIsoDate } from "@/core/scheduling/calendar.ts";
 import { officialName } from "@/core/tenant/identification.ts";
 import type { Tenant } from "@/core/tenant/schema.ts";
 import { db } from "@/db/index.ts";
+import { aiBlockedWith } from "@/lib/ai.ts";
 import { justify } from "@/lib/audit-reason.ts";
 import { notifyCitizen, sendAccessKey } from "@/lib/email/service-request.ts";
+import {
+  learnFromReviewWith,
+  linkReviewWith,
+  qualificationAttribution,
+  type ReviewView,
+  reviewDocumentWith,
+} from "@/lib/qualificacao-revisao.ts";
 import {
   AttachmentInUseError,
   answerSearch,
@@ -673,6 +681,58 @@ export async function deliverDocumentAction(
   return { status: "success", emailWarning };
 }
 
+export type ReviewState =
+  | { status: "idle" }
+  | { status: "error"; message: string }
+  | { status: "success"; review: ReviewView };
+
+/**
+ * Reads the note picked for an exigência before it goes (decision of
+ * 16/11/2026): the office's legal base at once, the AI when it may run.
+ * What diverges or is revoked comes back with the fundamento and a
+ * suggestion; the clerk keeps or changes it.
+ */
+export async function reviewRequirementDocumentAction(
+  formData: FormData,
+): Promise<ReviewState> {
+  const session = await authorize();
+  if (!session) return { status: "error", message: NO_PERMISSION };
+  const tenant = await getTenant();
+  const requestId = String(formData.get("requestId") ?? "");
+  const file = formData.get("formulario");
+  if (!(file instanceof File) || file.size === 0) {
+    return { status: "error", message: "Escolha o arquivo." };
+  }
+  try {
+    const request = await findById(tenant.slug, requestId);
+    if (!request) return { status: "error", message: "Pedido não encontrado." };
+    const act = request.actId
+      ? getActForTenant(tenant, request.actId)
+      : undefined;
+    const attribution = qualificationAttribution(
+      request.attribution ?? act?.attribution,
+    );
+    const review = await reviewDocumentWith(db, tenant.slug, {
+      bytes: new Uint8Array(await file.arrayBuffer()),
+      name: file.name,
+      mimeType: file.type || "application/pdf",
+      requestId,
+      ...(attribution ? { attribution } : {}),
+      ...(act ? { act: act.name } : {}),
+      actorId: session.user.id,
+      aiBlocked: await aiBlockedWith(db, tenant.slug),
+    });
+    return { status: "success", review };
+  } catch (error) {
+    console.error("pedidos.review-document", error);
+    return {
+      status: "error",
+      message:
+        "Não foi possível analisar o documento agora. Você pode enviar assim mesmo.",
+    };
+  }
+}
+
 /**
  * The form the office attaches to a requirement, for the citizen to print and
  * present. It is stored against the requirement, so it never reaches the
@@ -741,6 +801,31 @@ export async function attachRequirementFormAction(
       "office",
       requirementId,
     );
+    // The review made when the file was picked (decision of 16/11/2026):
+    // it points at the file now, the clerk's call goes to the audit, and
+    // what the note teaches goes to the library.
+    const reviewId = String(formData.get("revisao") ?? "");
+    const decision = String(formData.get("decisao") ?? "");
+    const attached = await listAttachments(tenant.slug, requestId);
+    const firstStored = attached.find(
+      (a) => a.storedName === stored[0]?.storedName,
+    );
+    if (reviewId && firstStored) {
+      const owner = await findById(tenant.slug, requestId);
+      await linkReviewWith(db, tenant.slug, {
+        reviewId,
+        attachmentId: firstStored.id,
+        requestId,
+        ...(decision === "manteve" || decision === "alterou"
+          ? { decision }
+          : {}),
+        actorId: session.user.id,
+        ...(owner ? { protocolNumber: owner.protocolNumber } : {}),
+      }).catch((error) => console.error("pedidos.review-link", error));
+      await learnFromReviewWith(db, tenant.slug, reviewId).catch((error) =>
+        console.error("pedidos.review-learn", error),
+      );
+    }
     const unsignedStored = stored.filter((_, index) => unsigned[index]);
     if (choice === "digital" && unsignedStored.length) {
       await holdForSignatureWith(
