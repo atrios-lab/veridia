@@ -116,19 +116,25 @@ O seed roda no banco local e no Homolog pelo agente. Em produção, quem roda é
 ### 8. Limpeza pelo botão (⚠️ apaga dados, PR separada)
 
 ```
-resetDemoOfficeWith(db, store, slug)
-  - recusa qualquer slug fora de FICTIONAL_SLUGS e qualquer tenant sem demo
-  - inclui as alterações de configuração feitas pelos alunos (tenant_content,
-    tenant_branding), menos a chave de IA da plataforma
-  - numa transação, DELETE ... WHERE tenant_slug = slug em DEMO_RESET_TABLES,
-    lista fechada e escrita à mão, na ordem das chaves estrangeiras
-  - apaga do store os arquivos dessas linhas
-  - roda o seed do tenant
-  - grava auditoria sob a plataforma: quantas linhas por tabela
+resetDemoOfficeWith(db, slug, actorId, { listFiles, seed })   (src/lib/demo-reset.ts)
+  - recusa qualquer tenant que não esteja registrado com demo (só o de
+    cursos; o Serra Verde, sem demo, também é recusado)
+  - numa transação:
+      desfaz a ligação exigência → anexo que a resolveu (as duas tabelas
+        apontam uma para a outra)
+      apaga os membros das conversas internas do tenant (sem tenant_slug)
+      DELETE ... WHERE tenant_slug = slug em DEMO_RESET_TABLES, na ordem das
+        chaves estrangeiras; em tenant_content, menos as chaves platform-*
+      grava auditoria sob a plataforma (demo.reset, urgente): linhas por tabela
+  - depois do commit: lista os arquivos do tenant no store (anexos/<slug>/,
+    marca/<slug>/, rcpn/<slug>/) e apaga os que nenhuma tabela mantida cita
+  - roda o seed do tenant (src/lib/demo-seed.ts, o mesmo do script)
 ```
 
-- **`DEMO_RESET_TABLES`** contém as tabelas do escritório: pedidos e anexos, exigências, agendamentos, publicações, transparência, livro diário, papel de segurança, guias, ISS, RCPN, CENSEC, DOI, qualificação e `demo_outbox`.
-- **Nunca entram**: `user`, `account`, `session`, `course_cohorts`, `cohort_members`, `tutorial_progress`, `quiz_attempts`, `certificates`, `courses`, `tutorials` e `audit_log`. A auditoria é a prova do que cada aluno fez. Um teste com PGlite prova que a limpeza não toca nenhuma delas nem nenhuma linha de outro tenant.
+- **`DEMO_RESET_TABLES`** contém as tabelas do escritório: pedidos, anexos, exigências e mensagens das exigências, ciência do cidadão, chat, guias, agendamentos, publicações, transparência, adequação, ISS, papel de segurança, solicitação de papéis, livro diário, mensagens internas, RCPN, habilitação, titularidade, qualificação, CENSEC, `demo_outbox`, identidade visual e as configurações do escritório.
+- **`DEMO_RESET_KEPT`** lista as tabelas com `tenant_slug` que nunca são tocadas, cada uma com o motivo: contas (`user`), auditoria (as cinco tabelas), certificados, devoluções de e-mail, assinador e certificados digitais, base jurídica, arquivos das atribuições e as do Assistente do DPO. Sem `tenant_slug`, também nunca são tocadas: sessões, turmas, membros de turma, progresso, avaliações, cursos e vídeos. Um teste falha se uma tabela com `tenant_slug` não estiver em exatamente uma das duas listas, e foi esse teste que lembrou de pôr `user` na lista das mantidas.
+- **Arquivos**: os das tabelas mantidas (documentos assinados, arquivos da auditoria, arquivos das atribuições) ficam no store, mesmo dentro das pastas do tenant.
+- **Seed no app**: o conteúdo do seed saiu de `scripts/seed-demo-data.ts` para `src/lib/demo-seed.ts`, com `...With(db, ...)`, para a limpeza semear de novo pelo próprio app. O script passa a chamar essas funções.
 - **Quem dispara**: só um botão "Limpar o cartório de demonstração" na tela de Turmas, com `cohorts.manage` e confirmação digitada. Não há limpeza automática (decisão do usuário em 16/11/2026).
 - **Entrega**: PR própria, com "⚠️ Apaga dados do banco" no título e no topo da descrição, dizendo o que é apagado e como desfazer (não há volta das linhas apagadas; o seed recria o estado inicial). Ela fica aberta para outra pessoa revisar e fazer o merge, sem auto-merge, como manda o CLAUDE.md. A primeira PR, com o painel livre, não depende dela.
 

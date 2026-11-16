@@ -287,6 +287,7 @@ const EXACT: Record<string, string> = {
   "user.password-reset-request": "Pediu nova senha para uma conta",
   "user.password-reset-self-request": "Pediu nova senha (a própria)",
   "cohort.join": "Entrou por link de turma",
+  "demo.reset": "Limpou o cartório de demonstração",
   "course.certificate.issue": "Emitiu certificado do treinamento",
 };
 

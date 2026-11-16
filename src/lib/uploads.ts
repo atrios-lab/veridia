@@ -1,8 +1,15 @@
 import "server-only";
 import { randomUUID } from "node:crypto";
-import { mkdir, readFile, unlink, writeFile } from "node:fs/promises";
+import {
+  mkdir,
+  readdir,
+  readFile,
+  stat,
+  unlink,
+  writeFile,
+} from "node:fs/promises";
 import { dirname, join, resolve } from "node:path";
-import { del, head, put } from "@vercel/blob";
+import { del, head, list, put } from "@vercel/blob";
 import {
   checkAttachments,
   checkUploadedAttachments,
@@ -472,4 +479,76 @@ export async function storeSupplierModel(
     `${tenantSlug}/modelos/${randomUUID()}.docx`,
     "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
   );
+}
+
+/** One file an office holds in the store, as its rows name it. */
+export interface TenantStoredFile {
+  /** What a row holds for it: the blob URL, or the path on disk (the
+   * public `/uploads/marca/...` path for a brand image in development). */
+  ref: string;
+  remove: () => Promise<void>;
+}
+
+const SAFE_SLUG = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
+
+/**
+ * Every file stored under one office's own folders: the attachments and
+ * generated PDFs (`anexos/<slug>/`), the brand images (`marca/<slug>/`) and
+ * the RCPN imports (`rcpn/<slug>/`). The attribution files, kept by the
+ * demonstration office's cleaning, are not listed. Only the cleaning of the
+ * demonstration office (lib/demo-reset.ts) calls this.
+ *
+ * Refuses a slug that is not a plain office slug: an empty one would make
+ * every prefix the whole store.
+ */
+export async function listTenantStoredFiles(
+  tenantSlug: string,
+): Promise<TenantStoredFile[]> {
+  if (!SAFE_SLUG.test(tenantSlug)) {
+    throw new Error(`Slug de serventia inválido: "${tenantSlug}".`);
+  }
+  if (process.env.BLOB_READ_WRITE_TOKEN) {
+    const found: TenantStoredFile[] = [];
+    for (const prefix of [
+      `anexos/${tenantSlug}/`,
+      `marca/${tenantSlug}/`,
+      `rcpn/${tenantSlug}/`,
+    ]) {
+      let cursor: string | undefined;
+      do {
+        const page = await list({ prefix, cursor, limit: 1000 });
+        for (const blob of page.blobs) {
+          found.push({ ref: blob.url, remove: () => del(blob.url) });
+        }
+        cursor = page.hasMore ? page.cursor : undefined;
+      } while (cursor);
+    }
+    return found;
+  }
+  const onDisk = async (
+    dir: string,
+    refOf: (relative: string, absolute: string) => string,
+  ): Promise<TenantStoredFile[]> => {
+    const names = await readdir(dir, { recursive: true }).catch(() => []);
+    const files: TenantStoredFile[] = [];
+    for (const name of names) {
+      const absolute = join(dir, String(name));
+      // `readdir` also lists the folders inside; only files go.
+      if (!(await stat(absolute).catch(() => null))?.isFile()) continue;
+      const relative = String(name).split("\\").join("/");
+      files.push({
+        ref: refOf(relative, absolute),
+        remove: () => unlink(absolute).catch(() => {}),
+      });
+    }
+    return files;
+  };
+  return [
+    ...(await onDisk(join(uploadDir(), tenantSlug), (_, abs) => abs)),
+    ...(await onDisk(join(uploadDir(), "rcpn", tenantSlug), (_, abs) => abs)),
+    ...(await onDisk(
+      join(brandImageDevDir(), tenantSlug),
+      (rel) => `/uploads/marca/${tenantSlug}/${rel}`,
+    )),
+  ];
 }
