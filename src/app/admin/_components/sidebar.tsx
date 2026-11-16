@@ -3,8 +3,30 @@ import { offersGuide } from "@/core/attributions/guides.ts";
 import { can, type Permission } from "@/core/auth/roles.ts";
 import type { Tenant } from "@/core/tenant/schema.ts";
 import { Sidebar, SidebarHeader, SidebarRail } from "../_ui/sidebar.tsx";
-import { ADMIN_NAV } from "./nav.ts";
+import { ADMIN_NAV, type AdminNavNode } from "./nav.ts";
+import { screenHelpFor } from "./screen-help.ts";
 import { AdminSidebarNav } from "./sidebar-nav.tsx";
+
+/**
+ * What each service of the menu is for, for its discreet "!" (decision of
+ * 16/11/2026): the purpose written in the screen's own help, read here on
+ * the server so the whole help text never travels to the browser. The
+ * Registro Civil's books are tabs of one screen and share its text.
+ */
+export function navHints(
+  nodes: readonly AdminNavNode[],
+): Record<string, string> {
+  const hints: Record<string, string> = {};
+  const walk = (list: readonly AdminNavNode[]) => {
+    for (const node of list) {
+      const purpose = screenHelpFor(node.href.split("?")[0] ?? "")?.purpose;
+      if (purpose) hints[node.href] = purpose;
+      if (node.children) walk(node.children);
+    }
+  };
+  walk(nodes);
+  return hints;
+}
 
 /**
  * Two letters for the avatar. Accounts born from an invite may have no name
@@ -105,7 +127,7 @@ export function AdminSidebar({
       <SidebarHeader className="h-14 flex-none justify-center py-0">
         <OfficeMark tenant={tenant} />
       </SidebarHeader>
-      <AdminSidebarNav items={items} counts={counts} />
+      <AdminSidebarNav items={items} counts={counts} hints={navHints(items)} />
       <SidebarRail />
     </Sidebar>
   );

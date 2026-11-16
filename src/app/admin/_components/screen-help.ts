@@ -1137,3 +1137,44 @@ export const RCPN_KINDS_HELP: ScreenHelp = {
     (t) => t.term.startsWith("Natimorto") || t.term === "Índice",
   ),
 };
+
+/**
+ * The Assistente do DPO (decision of 16/11/2026: "explicar ao funcionário
+ * que aqui ele é auxiliado pelo DPO para pedir auxílio e gerar respostas").
+ */
+ENTRIES["/admin/dpo"] = {
+  purpose:
+    "O seu auxiliar em proteção de dados (LGPD). Aqui você tira dúvidas sobre dados pessoais no atendimento, pede ajuda para responder a um titular e gera a resposta pronta, com a lei citada. A decisão final é sempre do encarregado (DPO) e do Tabelião.",
+  steps: [
+    "Escreva a pergunta como falaria com o encarregado: por exemplo, se a serventia pode guardar uma cópia de documento, por quanto tempo, ou como responder a um pedido de acesso aos dados.",
+    "Se quiser, anexe o documento ou o pedido do titular: o assistente lê e responde com base nele.",
+    "A resposta vem com as fontes (lei, normas da Corregedoria e da ANPD). Clique nelas para conferir. Sem fonte segura, o assistente diz que não sabe em vez de inventar.",
+    "Quando pedir um documento (resposta ao titular, ofício, parecer), use Baixar PDF ou Baixar Word para editar, assinar digitalmente ou imprimir.",
+    "Antes de enviar qualquer resposta ao titular, leve ao encarregado e ao Tabelião para validar.",
+  ],
+  terms: [
+    {
+      term: "DPO ou encarregado",
+      meaning:
+        "A pessoa indicada pela serventia para cuidar da proteção de dados pessoais e falar com os titulares e com a ANPD (LGPD, art. 41).",
+    },
+    {
+      term: "Titular",
+      meaning: "A pessoa a quem os dados pessoais se referem.",
+    },
+    {
+      term: "Dados ocultados",
+      meaning:
+        "Antes de a pergunta sair do painel, CPF, CNPJ, e-mail, telefone, endereço, CEP e números de documento são trocados por marcas. Nomes próprios não são reconhecidos: evite escrevê-los.",
+    },
+  ],
+};
+
+ENTRIES["/admin/dpo/conversas"] = {
+  purpose:
+    "As suas conversas com o Assistente do DPO, para retomar uma dúvida ou baixar de novo um documento gerado. Só você vê as suas conversas.",
+  steps: [
+    "Clique em uma conversa para abri-la e continuar de onde parou.",
+    "Para começar outra, use Perguntar no menu.",
+  ],
+};
