@@ -43,7 +43,7 @@
 - [x] 6.3 Bateria do CI: typecheck, lint, test, check:dashes, check:tokens, check:admin-scale, check:destructive, `openspec validate --all` e build
 - [ ] 6.4 Aplicar a migração no Homolog e rodar o seed do tenant de cursos lá
 - [ ] 6.5 Usuário aplica a migração em produção à mão e roda o seed do tenant de cursos, antes do merge (a IA já fica recusada no código, sem passo manual)
-- [ ] 6.6 Abrir a PR 1
+- [x] 6.6 Abrir a PR 1 (#353)
 
 ## 7. Limpeza do cartório (PR 2, ⚠️ apaga dados do banco)
 
