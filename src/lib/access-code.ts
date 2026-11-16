@@ -152,6 +152,8 @@ export async function sendAccessCode(
   const spaced = `${code.slice(0, 3)} ${code.slice(3)}`;
   const name = pending.user.name;
   await sendEmail({
+    tenant: tenant,
+    kind: "account",
     to,
     fromName: tenant.name,
     fromAddress: tenant.emailFrom,
@@ -266,6 +268,8 @@ export async function sendEmailChangeCode(
   });
   const spaced = `${code.slice(0, 3)} ${code.slice(3)}`;
   await sendEmail({
+    tenant: tenant,
+    kind: "account",
     to: newEmail,
     fromName: tenant.name,
     fromAddress: tenant.emailFrom,

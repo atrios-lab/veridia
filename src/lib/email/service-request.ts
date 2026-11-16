@@ -74,6 +74,7 @@ function plainText(params: NotifyCitizenParams): string {
  */
 async function deliverCitizenEmail(params: {
   tenant: Tenant;
+  protocolNumber: string;
   contact: string | null;
   logTag: string;
   build: (
@@ -104,6 +105,9 @@ async function deliverCitizenEmail(params: {
     try {
       const { subject, html, text } = params.build(trimmed, host);
       await sendEmail({
+        tenant: params.tenant,
+        kind: "office",
+        related: { kind: "request", protocol: params.protocolNumber },
         to: trimmed,
         fromName: params.tenant.name,
         fromAddress: params.tenant.emailFrom,
@@ -124,6 +128,7 @@ export async function notifyCitizen(
 ): Promise<string | null> {
   return deliverCitizenEmail({
     tenant: params.tenant,
+    protocolNumber: params.protocolNumber,
     contact: params.contact,
     logTag: "email.notify-citizen",
     build: (_contact, host) => ({
@@ -175,6 +180,7 @@ export async function sendAccessKey(
 ): Promise<string | null> {
   return deliverCitizenEmail({
     tenant: params.tenant,
+    protocolNumber: params.protocolNumber,
     contact: params.contact,
     logTag: "email.send-access-key",
     build: (_contact, host) => {
@@ -240,6 +246,9 @@ export function notifyOfficePaymentReported(
       const identity = tenantEmailIdentity(tenant);
 
       await sendEmail({
+        tenant: tenant,
+        kind: "office",
+        related: { kind: "request", protocol: protocolNumber },
         to: tenant.contacts.email,
         fromName: tenant.name,
         fromAddress: tenant.emailFrom,
@@ -303,6 +312,9 @@ export function notifyOfficeRequirementReply(
       const identity = tenantEmailIdentity(tenant);
 
       await sendEmail({
+        tenant: tenant,
+        kind: "office",
+        related: { kind: "request", protocol: protocolNumber },
         to: tenant.contacts.email,
         fromName: tenant.name,
         fromAddress: tenant.emailFrom,
@@ -360,6 +372,9 @@ export function notifyOfficeDataRightsSubmitted(
       const identity = tenantEmailIdentity(tenant);
 
       await sendEmail({
+        tenant: tenant,
+        kind: "office",
+        related: { kind: "request", protocol: protocolNumber },
         to: tenant.contacts.email,
         fromName: tenant.name,
         fromAddress: tenant.emailFrom,
@@ -413,6 +428,9 @@ export function notifyOfficeManifestationSubmitted(
       const identity = tenantEmailIdentity(tenant);
 
       await sendEmail({
+        tenant: tenant,
+        kind: "office",
+        related: { kind: "request", protocol: protocolNumber },
         to: tenant.contacts.email,
         fromName: tenant.name,
         fromAddress: tenant.emailFrom,

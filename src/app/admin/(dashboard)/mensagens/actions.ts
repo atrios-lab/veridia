@@ -44,7 +44,7 @@ import { storeMessengerFile } from "@/lib/uploads.ts";
 async function messengerAccess() {
   const session = await getSession();
   const role = session?.user.role ?? "";
-  if (!session || !can(role, "desk.access", session.user.permissions)) {
+  if (!session || !can(role, "messages.use", session.user.permissions)) {
     return null;
   }
   const tenant = await getTenant();

@@ -3,6 +3,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { can } from "@/core/auth/roles.ts";
 import { COHORT_STATE_LABELS, lastValidDay } from "@/core/cohorts/cohort.ts";
+import { RN_OFFICES } from "@/core/cohorts/rn-offices.ts";
 import { formatDate } from "@/core/scheduling/calendar.ts";
 import { coursesOrigin } from "@/core/tenant/courses-tenant.ts";
 import { resolveOrigin } from "@/lib/auth-tokens.ts";
@@ -11,6 +12,7 @@ import { getSession } from "@/lib/session.ts";
 import { AdminPageHeader } from "../../../../_components/page-header.tsx";
 import { CohortCreateForm } from "./_components/cohort-create-form.tsx";
 import { CopyLink } from "./_components/copy-link.tsx";
+import { DemoResetForm } from "./_components/demo-reset-form.tsx";
 import { CohortStateBadge } from "./_components/state-badge.tsx";
 import { cohortPath } from "./paths.ts";
 
@@ -77,7 +79,7 @@ export default async function CohortsPage() {
                         Link vale até{" "}
                         {formatDate(lastValidDay(cohort.expiresAt))}
                       </p>
-                      <div className="mt-2 max-w-[440px]">
+                      <div className="mt-2">
                         <CopyLink url={`${origin}/turma/${cohort.code}`} />
                       </div>
                     </div>
@@ -104,7 +106,10 @@ export default async function CohortsPage() {
           )}
         </div>
 
-        <CohortCreateForm courses={courses} />
+        <div className="flex min-w-0 flex-col gap-4.5">
+          <CohortCreateForm courses={courses} offices={RN_OFFICES} />
+          <DemoResetForm />
+        </div>
       </main>
     </>
   );

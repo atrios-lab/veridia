@@ -1,4 +1,5 @@
 import { headers } from "next/headers";
+import Link from "next/link";
 import { notFound } from "next/navigation";
 import { can } from "@/core/auth/roles.ts";
 import { COHORT_STATE_LABELS, lastValidDay } from "@/core/cohorts/cohort.ts";
@@ -9,8 +10,9 @@ import { formatOfficeDate } from "@/core/time/office-time.ts";
 import { resolveOrigin } from "@/lib/auth-tokens.ts";
 import { cohortDetail } from "@/lib/cohorts.ts";
 import { getSession } from "@/lib/session.ts";
+import { AdminIcon } from "../../../../../_components/icon.tsx";
 import { AdminPageHeader } from "../../../../../_components/page-header.tsx";
-import { Button } from "../../../../../_ui/button.tsx";
+import { Button, buttonVariants } from "../../../../../_ui/button.tsx";
 import {
   Table,
   TableBody,
@@ -19,6 +21,7 @@ import {
   TableHeader,
   TableRow,
 } from "../../../../../_ui/table.tsx";
+import { CohortDelete } from "../_components/cohort-delete.tsx";
 import { CohortEditForm } from "../_components/cohort-edit-form.tsx";
 import { CopyLink } from "../_components/copy-link.tsx";
 import { CohortStateBadge } from "../_components/state-badge.tsx";
@@ -55,6 +58,19 @@ export default async function CohortPage({ params }: { params: Params }) {
       <AdminPageHeader
         title={cohort.officeName}
         back={{ href: COHORTS_PATH, label: "Turmas" }}
+        actions={
+          // The way to the next office's link, where the eye looks for it:
+          // the form on the right of this page edits THIS cohort, and
+          // filling it in for another office renamed the cohort and kept
+          // its link (found on 16/11/2026).
+          <Link
+            href={`${COHORTS_PATH}#nova-turma`}
+            className={buttonVariants({ size: "sm" })}
+          >
+            <AdminIcon name="plus" className="h-4 w-4" />
+            Criar outra turma
+          </Link>
+        }
         description={`${cohort.officeCity} · ${detail.courseTitle} · responsável: ${cohort.contactName}, ${cohort.contactPhone}`}
       />
       <main className="grid grid-cols-1 gap-4.5 px-4 py-6 md:px-8 xl:grid-cols-[minmax(0,1fr)_380px] xl:items-start">
@@ -112,7 +128,7 @@ export default async function CohortPage({ params }: { params: Params }) {
 
           <section className="rounded-xl border bg-card">
             <div className="border-b px-5 py-3.5 text-lg font-semibold text-foreground">
-              Alunos
+              Participantes
             </div>
             {detail.learners.length === 0 ? (
               <p className="px-5 py-6 text-sm text-muted-foreground">
@@ -126,7 +142,7 @@ export default async function CohortPage({ params }: { params: Params }) {
                       scope="col"
                       className="px-5 text-xs text-muted-foreground"
                     >
-                      Aluno
+                      Participante
                     </TableHead>
                     <TableHead
                       scope="col"
@@ -185,22 +201,34 @@ export default async function CohortPage({ params }: { params: Params }) {
           </section>
         </div>
 
-        <section className="rounded-xl border bg-card p-6">
-          <h2 className="mb-4 text-lg font-semibold text-foreground">
-            Dados da turma
-          </h2>
-          <CohortEditForm
-            cohortId={cohort.id}
-            current={{
-              officeName: cohort.officeName,
-              officeCity: cohort.officeCity,
-              contactName: cohort.contactName,
-              contactPhone: cohort.contactPhone,
-              seats: cohort.seats,
-              lastDay: lastValidDay(cohort.expiresAt),
-            }}
-          />
-        </section>
+        <div className="flex min-w-0 flex-col gap-4.5">
+          <section className="rounded-xl border bg-card p-6">
+            <CohortEditForm
+              cohortId={cohort.id}
+              current={{
+                officeName: cohort.officeName,
+                officeCity: cohort.officeCity,
+                contactName: cohort.contactName,
+                contactPhone: cohort.contactPhone,
+                seats: cohort.seats,
+                lastDay: lastValidDay(cohort.expiresAt),
+              }}
+            />
+          </section>
+
+          <section className="rounded-xl border bg-card p-6">
+            <h2 className="text-lg font-semibold text-foreground">
+              Excluir esta turma
+            </h2>
+            <div className="mt-3">
+              <CohortDelete
+                cohortId={cohort.id}
+                officeName={cohort.officeName}
+                members={detail.learners.length}
+              />
+            </div>
+          </section>
+        </div>
       </main>
     </>
   );

@@ -107,6 +107,8 @@ export async function sendSecurityPaperReminders(
   const url = `${host ? `https://${host}` : ""}/admin/utilitarios/papel-seguranca`;
   try {
     await sendEmail({
+      tenant: tenant,
+      kind: "office",
       to: tenant.contacts.email,
       fromName: tenant.name,
       fromAddress: tenant.emailFrom,

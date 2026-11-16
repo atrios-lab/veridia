@@ -90,11 +90,14 @@ async function confirmedSession() {
     role === "admin" || role === "superadmin"
       ? undefined
       : await getRolePermissions(session.user.tenantSlug ?? "");
+  // The tenant decides only for a course participant: the demonstration
+  // office opens its desk to them (change painel-livre-para-alunos).
+  const tenant = role === "learner" ? await getTenant() : undefined;
   return {
     ...session,
     user: {
       ...session.user,
-      permissions: effectivePermissions(role, configured),
+      permissions: effectivePermissions(role, configured, tenant),
     },
   };
 }

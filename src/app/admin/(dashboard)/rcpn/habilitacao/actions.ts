@@ -224,7 +224,7 @@ export async function publishEditalAction(
   revalidatePath(path(id));
   revalidatePath("/admin/publicacoes");
   revalidatePath("/");
-  notifyIndexNow(await getSiteOrigin(), ["/editais"]);
+  notifyIndexNow(ok.tenant, await getSiteOrigin(), ["/editais"]);
   redirect(`${path(id)}?edital=1`);
 }
 

@@ -112,13 +112,12 @@ export function GuideAlerts({ setting }: { setting: ChannelAlert }) {
 
   if (fresh.length === 0 || !setting.enabled || !setting.popup) return null;
   return (
-    // Top right: the agenda's cards take the bottom left and the chat's the
-    // bottom right.
-    <div className="pointer-events-none fixed top-20 right-4 z-40 flex w-[min(320px,calc(100vw-2rem))] flex-col gap-2">
+    // Inside the alert dock (top right); the chat takes the bottom right.
+    <div className="pointer-events-auto flex flex-col gap-2">
       {fresh.slice(0, 4).map((item) => (
         <output
           key={item.key}
-          className="pointer-events-auto flex items-start gap-3 rounded-xl bg-primary px-4 py-3 text-primary-foreground shadow-lg"
+          className="flex items-start gap-3 rounded-xl bg-primary px-4 py-3 text-primary-foreground shadow-lg"
         >
           <AdminIcon
             name="calculator"

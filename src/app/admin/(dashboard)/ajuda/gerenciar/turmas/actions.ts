@@ -8,9 +8,11 @@ import {
   cohortCreateSchema,
   cohortUpdateSchema,
 } from "@/core/cohorts/cohort.ts";
+import { justify } from "@/lib/audit-reason.ts";
 import {
   CohortCourseError,
   createCohort,
+  deleteCohort,
   setCohortClosed,
   updateCohort,
 } from "@/lib/cohorts.ts";
@@ -157,7 +159,7 @@ export async function updateCohortAction(
       status: "error",
       message: "Confira os campos destacados.",
       fieldErrors: {
-        seats: `A turma já tem ${result.members} ${result.members === 1 ? "aluno" : "alunos"}: as vagas não podem ficar abaixo disso.`,
+        seats: `A turma já tem ${result.members} ${result.members === 1 ? "participante" : "participantes"}: as vagas não podem ficar abaixo disso.`,
       },
       values,
     };
@@ -178,4 +180,41 @@ export async function setCohortClosedAction(
   await setCohortClosed(cohortId, closed, actorId);
   revalidatePath(COHORTS_PATH);
   revalidatePath(cohortPath(cohortId));
+}
+
+export type CohortDeleteState =
+  | { status: "idle" }
+  | { status: "error"; message: string };
+
+/**
+ * ⚠️ Deletes a cohort nobody joined (lib/cohorts.ts, deleteCohortWith),
+ * with the reason for the audit, then back to the list. A cohort with
+ * learners is refused here as there, and the message points to closing it.
+ */
+export async function deleteCohortAction(
+  cohortId: string,
+  _previous: CohortDeleteState,
+  formData: FormData,
+): Promise<CohortDeleteState> {
+  const why = justify(formData);
+  if (why) return { status: "error", message: why };
+  const actorId = await platformActor();
+  if (!actorId) {
+    return {
+      status: "error",
+      message: "Você não tem permissão para excluir turmas.",
+    };
+  }
+  const result = await deleteCohort(cohortId, actorId);
+  if (result.status === "not-found") {
+    return { status: "error", message: "Essa turma não existe mais." };
+  }
+  if (result.status === "has-members") {
+    return {
+      status: "error",
+      message: `A turma já tem ${result.members} ${result.members === 1 ? "participante" : "participantes"} e não pode ser excluída. Use "Encerrar inscrições" para parar o link.`,
+    };
+  }
+  revalidatePath(COHORTS_PATH);
+  redirect(COHORTS_PATH);
 }
