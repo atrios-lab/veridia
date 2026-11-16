@@ -149,6 +149,49 @@ export async function updateCohortWith(
 }
 
 /** Closes the link by hand, or opens it again. Nothing else changes. */
+export type CohortDeleteResult =
+  | { status: "deleted"; officeName: string }
+  | { status: "not-found" }
+  | { status: "has-members"; members: number };
+
+/**
+ * ⚠️ Deletes a cohort, and only one nobody joined (decision of 16/11/2026):
+ * the cohorts made by mistake, for a test or twice. One with learners stays,
+ * whatever is asked: their accounts, progress and certificates hang on it
+ * (and `cohort_members` restricts the delete anyway); closing it is the way
+ * to stop its link. The row is locked while the members are counted, so a
+ * sign-up racing the delete either lands first and stops it, or finds the
+ * link gone.
+ */
+export async function deleteCohortWith(
+  database: Database,
+  cohortId: string,
+  actorId: string,
+): Promise<CohortDeleteResult> {
+  return database.transaction(async (txRaw) => {
+    const tx = txRaw as unknown as Database;
+    const [cohort] = await tx
+      .select({ id: courseCohorts.id, officeName: courseCohorts.officeName })
+      .from(courseCohorts)
+      .where(eq(courseCohorts.id, cohortId))
+      .for("update");
+    if (!cohort) return { status: "not-found" };
+    const members = await memberCountWith(tx, cohortId);
+    if (members > 0) return { status: "has-members", members };
+    await tx.delete(courseCohorts).where(eq(courseCohorts.id, cohortId));
+    // The same trail as auditPlatform, written out here: a delete and its
+    // audit stay in one function (scripts/check-destructive.mjs).
+    await recordAuditWith(tx, {
+      tenantSlug: SUPERADMIN_TENANT_SLUG,
+      actorId,
+      action: "cohort.delete",
+      targetType: "cohort",
+      targetId: cohortId,
+    });
+    return { status: "deleted", officeName: cohort.officeName };
+  });
+}
+
 export async function setCohortClosedWith(
   database: Database,
   cohortId: string,
@@ -520,6 +563,13 @@ export function updateCohort(
   actorId: string,
 ): Promise<CohortUpdateResult> {
   return updateCohortWith(db, cohortId, input, actorId);
+}
+
+export function deleteCohort(
+  cohortId: string,
+  actorId: string,
+): Promise<CohortDeleteResult> {
+  return deleteCohortWith(db, cohortId, actorId);
 }
 
 export function setCohortClosed(

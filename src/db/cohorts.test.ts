@@ -21,6 +21,7 @@ import {
   cohortByCodeWith,
   cohortDetailWith,
   createCohortWith,
+  deleteCohortWith,
   joinCohortWith,
   listCohortsWith,
   setCohortClosedWith,
@@ -500,4 +501,53 @@ test("someone outside any cohort keeps their own office on the certificate", asy
   if (issued.status === "issued") {
     assert.equal(issued.certificate.tenantName, "Cartório Ielmo Marinho");
   }
+});
+
+// ⚠️ Deleting a cohort (decision of 16/11/2026): only one nobody joined.
+
+test("a cohort nobody joined is deleted, its link stops and the audit keeps it", async () => {
+  const cohort = await newCohort({
+    officeName: "Cartório Criado por Engano/RN",
+  });
+  const result = await deleteCohortWith(db, cohort.id, ATRIOS);
+  assert.deepEqual(result, {
+    status: "deleted",
+    officeName: "Cartório Criado por Engano/RN",
+  });
+  assert.equal(await cohortByCodeWith(db, cohort.code, NOW), undefined);
+  const [entry] = await db
+    .select()
+    .from(auditLog)
+    .where(
+      and(
+        eq(auditLog.action, "cohort.delete"),
+        eq(auditLog.targetId, cohort.id),
+      ),
+    );
+  assert.ok(entry);
+  assert.equal(entry.actorId, ATRIOS);
+});
+
+test("a cohort with a learner is never deleted, and nothing changes", async () => {
+  const cohort = await newCohort();
+  const joined = await joinCohortWith(db, cohort.code, learner(901), deps, NOW);
+  assert.equal(joined.status, "joined");
+  const result = await deleteCohortWith(db, cohort.id, ATRIOS);
+  assert.deepEqual(result, { status: "has-members", members: 1 });
+  const [still] = await db
+    .select({ id: courseCohorts.id })
+    .from(courseCohorts)
+    .where(eq(courseCohorts.id, cohort.id));
+  assert.ok(still);
+  const members = await db
+    .select()
+    .from(cohortMembers)
+    .where(eq(cohortMembers.cohortId, cohort.id));
+  assert.equal(members.length, 1);
+});
+
+test("deleting a cohort that is gone says so", async () => {
+  assert.deepEqual(await deleteCohortWith(db, randomUUID(), ATRIOS), {
+    status: "not-found",
+  });
 });

@@ -21,6 +21,7 @@ import {
   TableHeader,
   TableRow,
 } from "../../../../../_ui/table.tsx";
+import { CohortDelete } from "../_components/cohort-delete.tsx";
 import { CohortEditForm } from "../_components/cohort-edit-form.tsx";
 import { CopyLink } from "../_components/copy-link.tsx";
 import { CohortStateBadge } from "../_components/state-badge.tsx";
@@ -200,19 +201,34 @@ export default async function CohortPage({ params }: { params: Params }) {
           </section>
         </div>
 
-        <section className="rounded-xl border bg-card p-6">
-          <CohortEditForm
-            cohortId={cohort.id}
-            current={{
-              officeName: cohort.officeName,
-              officeCity: cohort.officeCity,
-              contactName: cohort.contactName,
-              contactPhone: cohort.contactPhone,
-              seats: cohort.seats,
-              lastDay: lastValidDay(cohort.expiresAt),
-            }}
-          />
-        </section>
+        <div className="flex min-w-0 flex-col gap-4.5">
+          <section className="rounded-xl border bg-card p-6">
+            <CohortEditForm
+              cohortId={cohort.id}
+              current={{
+                officeName: cohort.officeName,
+                officeCity: cohort.officeCity,
+                contactName: cohort.contactName,
+                contactPhone: cohort.contactPhone,
+                seats: cohort.seats,
+                lastDay: lastValidDay(cohort.expiresAt),
+              }}
+            />
+          </section>
+
+          <section className="rounded-xl border bg-card p-6">
+            <h2 className="text-lg font-semibold text-foreground">
+              Excluir esta turma
+            </h2>
+            <div className="mt-3">
+              <CohortDelete
+                cohortId={cohort.id}
+                officeName={cohort.officeName}
+                members={detail.learners.length}
+              />
+            </div>
+          </section>
+        </div>
       </main>
     </>
   );
