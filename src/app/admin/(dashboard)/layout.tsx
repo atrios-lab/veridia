@@ -43,6 +43,7 @@ import { DemoPanelBanner } from "../_components/demo-panel-banner.tsx";
 import { GlobalSearchProvider } from "../_components/global-search.tsx";
 import { GuideAlerts } from "../_components/guide-alerts.tsx";
 import { MessengerWatch } from "../_components/messenger-watch.tsx";
+import { OfficeAlertsOutlet } from "../_components/office-alerts-outlet.tsx";
 import { RecordAlerts } from "../_components/record-alerts.tsx";
 import { ShortcutListener } from "../_components/shortcut-listener.tsx";
 import { AdminSidebar } from "../_components/sidebar.tsx";
@@ -287,34 +288,38 @@ export default async function DashboardLayout({
                     initialUnread={messenger[0].unread}
                   />
                 )}
-              {/* Every screen, not only the queue: the attendant hears and sees
-              the chat wherever they are working in the panel. */}
-              {can(role, "chat.manage", granted) && (
-                <ChatAlerts setting={alerts.chat} />
-              )}
-              {/* The alerts share one column (top right), so they never pile
-                  on each other: the agenda (who is coming today, who just
-                  booked), the guias de transmissão de bens (a new one, or one
-                  the citizen moved) and the new requests, LGPD and ouvidoria,
-                  each as the office chose. */}
-              <AlertDock>
-                {can(role, "channels.manage", granted) && (
-                  <AgendaAlerts setting={alerts.agenda} />
+              {/* Off on the quiet screens (the cohorts, quiet-screens.ts), where
+                  the dock's corner holds the forms; on everywhere else. */}
+              <OfficeAlertsOutlet>
+                {/* Every screen, not only the queue: the attendant hears and sees
+                the chat wherever they are working in the panel. */}
+                {can(role, "chat.manage", granted) && (
+                  <ChatAlerts setting={alerts.chat} />
                 )}
-                {can(role, "requests.manage", granted) && (
-                  <GuideAlerts setting={alerts.guias} />
-                )}
-                {(can(role, "requests.manage", granted) ||
-                  can(role, "channels.manage", granted)) && (
-                  <RecordAlerts
-                    settings={{
-                      pedidos: alerts.pedidos,
-                      lgpd: alerts.lgpd,
-                      ouvidoria: alerts.ouvidoria,
-                    }}
-                  />
-                )}
-              </AlertDock>
+                {/* The alerts share one column (top right), so they never pile
+                    on each other: the agenda (who is coming today, who just
+                    booked), the guias de transmissão de bens (a new one, or one
+                    the citizen moved) and the new requests, LGPD and ouvidoria,
+                    each as the office chose. */}
+                <AlertDock>
+                  {can(role, "channels.manage", granted) && (
+                    <AgendaAlerts setting={alerts.agenda} />
+                  )}
+                  {can(role, "requests.manage", granted) && (
+                    <GuideAlerts setting={alerts.guias} />
+                  )}
+                  {(can(role, "requests.manage", granted) ||
+                    can(role, "channels.manage", granted)) && (
+                    <RecordAlerts
+                      settings={{
+                        pedidos: alerts.pedidos,
+                        lgpd: alerts.lgpd,
+                        ouvidoria: alerts.ouvidoria,
+                      }}
+                    />
+                  )}
+                </AlertDock>
+              </OfficeAlertsOutlet>
             </div>
           </div>
         </SidebarProvider>

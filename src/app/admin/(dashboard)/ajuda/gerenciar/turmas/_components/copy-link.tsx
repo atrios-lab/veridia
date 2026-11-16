@@ -21,7 +21,11 @@ export function CopyLink({ url }: { url: string }) {
         value={url}
         aria-label="Link da turma"
         onFocus={(event) => event.currentTarget.select()}
-        className="min-w-0 flex-1 font-mono text-xs md:text-xs"
+        // As wide as the whole link (decision of 16/11/2026), in a
+        // monospaced face, so every character shows; never wider than the
+        // row, where a phone narrows it and the field scrolls.
+        style={{ width: `calc(${url.length}ch + 1.5rem)` }}
+        className="min-w-0 max-w-full shrink font-mono text-xs md:text-xs"
       />
       <Button
         type="button"

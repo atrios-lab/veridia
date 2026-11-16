@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useActionState } from "react";
+import { useActionState, useState } from "react";
 import { Icon } from "../../_components/icon.tsx";
 import { type JoinState, joinCohortAction } from "./actions.ts";
 
@@ -25,6 +25,7 @@ export function JoinForm({
   code: string;
   loginHref: string;
 }) {
+  const [showPassword, setShowPassword] = useState(false);
   const [state, formAction, pending] = useActionState<JoinState, FormData>(
     joinCohortAction.bind(null, code),
     { status: "idle" },
@@ -91,19 +92,35 @@ export function JoinForm({
         <label htmlFor="password" className={labelClass}>
           Crie uma senha
         </label>
-        <input
-          id="password"
-          name="password"
-          type="password"
-          autoComplete="new-password"
-          required
-          minLength={8}
-          aria-invalid={Boolean(errors.password)}
-          aria-describedby={
-            errors.password ? "password-error" : "password-hint"
-          }
-          className={inputClass}
-        />
+        <div className="relative">
+          <input
+            id="password"
+            name="password"
+            type={showPassword ? "text" : "password"}
+            autoComplete="new-password"
+            required
+            minLength={8}
+            aria-invalid={Boolean(errors.password)}
+            aria-describedby={
+              errors.password ? "password-error" : "password-hint"
+            }
+            className={`${inputClass} pr-11`}
+          />
+          {/* The eye (decision of 16/11/2026): the person sees what they
+              typed before the account is created with it. */}
+          <button
+            type="button"
+            onClick={() => setShowPassword((shown) => !shown)}
+            aria-label={showPassword ? "Ocultar senha" : "Mostrar senha"}
+            aria-controls="password"
+            className="absolute inset-y-0 right-0 flex w-11 items-center justify-center rounded-r-xl text-brand-muted hover:text-brand-primary focus-visible:text-brand-primary"
+          >
+            <Icon
+              name={showPassword ? "eyeOff" : "eye"}
+              className="h-4.5 w-4.5"
+            />
+          </button>
+        </div>
         {errors.password ? (
           <FieldError id="password-error" message={errors.password} />
         ) : (
@@ -129,15 +146,40 @@ export function JoinForm({
         </span>
       </label>
 
-      <div className="flex items-start gap-2.5 rounded-xl bg-brand-tint px-3.5 py-3 text-[12.5px] leading-relaxed text-brand-primary">
-        <Icon name="shield" className="mt-0.5 h-4 w-4 shrink-0" />
-        <p>
-          Seu nome e seu e-mail servem para criar a sua conta, guardar o seu
-          progresso e emitir o certificado. Quem cuida desses dados é a Átrios.
-          O CPF só é pedido no fim, para o certificado. Se você marcou a caixa
-          acima, o e-mail também pode ser usado para falarmos da plataforma.
-        </p>
-      </div>
+      {/* Folded to one small line (decision of 16/11/2026): the whole notice
+          opens on a click, which works on a phone too, where nothing hovers. */}
+      <details className="group text-[12px] leading-relaxed text-brand-muted">
+        <summary className="flex cursor-pointer list-none items-center gap-1.5 [&::-webkit-details-marker]:hidden">
+          <Icon name="shield" className="h-3.5 w-3.5 shrink-0" />
+          <span>
+            Privacidade e painel de demonstração.{" "}
+            <span className="font-semibold text-brand-primary underline underline-offset-2 group-open:hidden">
+              Ler
+            </span>
+            <span className="hidden font-semibold text-brand-primary underline underline-offset-2 group-open:inline">
+              Fechar
+            </span>
+          </span>
+        </summary>
+        <div className="mt-2 flex flex-col gap-2 rounded-xl bg-brand-tint px-3.5 py-3 text-[12.5px] text-brand-primary">
+          <p>
+            Seu nome e seu e-mail servem para criar a sua conta, guardar o seu
+            progresso e emitir o certificado. Quem cuida desses dados é a
+            Átrios. O CPF só é pedido no fim, para o certificado. Se você marcou
+            a caixa acima, o e-mail também pode ser usado para falarmos da
+            plataforma.
+          </p>
+          {/* The shared demonstration desk (change painel-livre-para-alunos),
+              in the words the user approved on 16/11/2026. */}
+          <p>
+            Com a sua conta, você também pode usar o painel de um cartório de
+            demonstração, que não existe. O que você digitar ou alterar nele
+            fica visível para os outros participantes, junto com o seu nome
+            quando o painel mostra quem fez a alteração, e pode ser apagado a
+            qualquer momento. Por isso, não use dados reais ali.
+          </p>
+        </div>
+      </details>
 
       {state.status === "error" && (
         <p
