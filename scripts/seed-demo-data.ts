@@ -6,9 +6,15 @@
 //   requests in a few states, data rights requests, ombudsman
 //   manifestations, appointments for today and tomorrow, two publications.
 // - Vale do Silício (src/core/tenant/tenants/vale-do-silicio.ts), where the
-//   course cohorts land: the public site a learner browses. Proclamas, an
-//   edital of every other sector, a notice and three monthly bulletins. No
-//   citizen filings: nobody reads that office's queue.
+//   course cohorts land: the public site a participant browses (proclamas,
+//   an edital of every other sector, a notice and three monthly bulletins)
+//   and the desk every participant works in (change
+//   painel-livre-para-alunos): the same requests, data rights requests,
+//   ombudsman manifestations and appointments as Serra Verde's.
+//
+// Every e-mail address is under example.com, the domain reserved for
+// examples: the demonstration office holds its messages, but Serra Verde
+// sends them, and a made-up address must never be a real mailbox.
 //
 //   node --conditions=react-server --env-file=.env.local \
 //     --import ./scripts/test-resolve.mjs scripts/seed-demo-data.ts [slug]
@@ -84,27 +90,28 @@ function act(id: string) {
 
 const key = () => hashAccessKey(generateAccessKey());
 
-async function fillDesk(): Promise<void> {
+/** The desk's records: requests, data rights, ombudsman, appointments. */
+async function fillDeskRecords(): Promise<void> {
   // Service requests: the queue's usual mix, newest first on the desk.
   const requests = [
     {
       act: act("rcpn-certidao"),
       applicantName: "Joana Beatriz Farias",
-      contact: "joana.farias@exemplo.com",
+      contact: "joana.farias@example.com",
       cpf: "529.982.247-25",
       status: "new",
     },
     {
       act: act("notas-certidao"),
       applicantName: "Carlos Eduardo Menezes",
-      contact: "carlos.menezes@exemplo.com",
+      contact: "carlos.menezes@example.com",
       cpf: "168.995.350-09",
       status: "awaiting-payment",
     },
     {
       act: act("rcpn-habilitacao-casamento"),
       applicantName: "Luana Ribeiro Tavares",
-      contact: "luana.tavares@exemplo.com",
+      contact: "luana.tavares@example.com",
       cpf: "854.713.240-04",
       status: "awaiting-compliance",
     },
@@ -117,7 +124,7 @@ async function fillDesk(): Promise<void> {
     {
       act: act("notas-abertura-firma"),
       applicantName: "Renata Quintela Sousa",
-      contact: "renata.sousa@exemplo.com",
+      contact: "renata.sousa@example.com",
       cpf: "406.912.130-00",
       status: "ready-for-pickup",
     },
@@ -147,14 +154,14 @@ async function fillDesk(): Promise<void> {
   for (const d of [
     {
       applicantName: "Marcos Vinícius Leal",
-      contact: "marcos.leal@exemplo.com",
+      contact: "marcos.leal@example.com",
       description:
         "Quero saber quais dados meus constam no cadastro do cartório.",
       right: "access",
     },
     {
       applicantName: "Sílvia Regina Dantas",
-      contact: "silvia.dantas@exemplo.com",
+      contact: "silvia.dantas@example.com",
       description:
         "Meu endereço está desatualizado na certidão emitida em 2024.",
       right: "rectification",
@@ -179,14 +186,14 @@ async function fillDesk(): Promise<void> {
   for (const m of [
     {
       applicantName: "Dona Terezinha Alves",
-      contact: "terezinha.alves@exemplo.com",
+      contact: "terezinha.alves@example.com",
       description:
         "Fui muito bem atendida na retirada da certidão do meu neto. Parabéns à equipe.",
       manifestationType: "praise",
     },
     {
       applicantName: "Fábio Henrique Costa",
-      contact: "fabio.costa@exemplo.com",
+      contact: "fabio.costa@example.com",
       description:
         "Esperei mais de quarenta minutos na fila do reconhecimento de firma na terça.",
       manifestationType: "complaint",
@@ -221,7 +228,7 @@ async function fillDesk(): Promise<void> {
         date: a.date,
         slotTime: a.slotTime,
         citizenName: a.citizenName,
-        email: `${a.citizenName.split(" ")[0].toLowerCase()}@exemplo.com`,
+        email: `${a.citizenName.split(" ")[0].toLowerCase()}@example.com`,
         phone: "(84) 99777-0000",
         serviceId: "rcpn-certidao",
         serviceLabel: "Certidão",
@@ -236,7 +243,12 @@ async function fillDesk(): Promise<void> {
       );
     }
   }
+}
 
+/** Serra Verde's desk: the records, and two publications of its own. */
+async function fillDesk(): Promise<void> {
+  await fillDeskRecords();
+  const day = today();
   // Publications: one proclamas on the site, one notice scheduled.
   await createPublication(
     SLUG,
@@ -384,6 +396,7 @@ if (SLUG === DESK_SLUG) {
   console.log(`Mesa da serventia ${SLUG} preenchida.`);
 } else {
   await fillPublicSite();
-  console.log(`Site da serventia ${SLUG} preenchido.`);
+  await fillDeskRecords();
+  console.log(`Site e mesa da serventia ${SLUG} preenchidos.`);
 }
 process.exit(0);

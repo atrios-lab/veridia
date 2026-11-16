@@ -17,7 +17,7 @@ export async function GET(
 ): Promise<Response> {
   const session = await getSession();
   const role = session?.user.role ?? "";
-  if (!session || !can(role, "desk.access", session.user.permissions)) {
+  if (!session || !can(role, "messages.use", session.user.permissions)) {
     return new Response("Não encontrado", { status: 404 });
   }
   const tenant = await getTenant();

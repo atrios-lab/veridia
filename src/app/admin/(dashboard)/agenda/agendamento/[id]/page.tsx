@@ -1,5 +1,6 @@
 import { notFound } from "next/navigation";
 import { BackLink } from "@/app/admin/_components/back-link";
+import { DemoHeldEmails } from "@/app/admin/_components/demo-held-emails.tsx";
 import { can } from "@/core/auth/roles.ts";
 import {
   AGENDA_NAMES,
@@ -197,6 +198,16 @@ export default async function AppointmentDetailPage({
           )}
           <OfficeFilesForm id={appointment.id} />
         </section>
+
+        {appointment.protocolNumber && (
+          <DemoHeldEmails
+            tenant={tenant}
+            related={{
+              kind: "appointment",
+              protocol: appointment.protocolNumber,
+            }}
+          />
+        )}
 
         <section className="rounded-xl border bg-card px-5 py-4">
           <h3 className="text-sm font-semibold text-foreground">

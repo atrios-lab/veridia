@@ -66,3 +66,17 @@ test("mudar só a análise das notas mantém o Assistente Virtual como estava", 
   assert.equal(policy.aiAllowed, false);
   assert.equal(policy.noteReview, "base");
 });
+
+test("the demonstration office never reaches the model, even with every switch on", async () => {
+  const { COURSES_TENANT_SLUG } = await import(
+    "@/core/tenant/courses-tenant.ts"
+  );
+  await setAiPolicyWith(db, COURSES_TENANT_SLUG, true, "", "tabeliao");
+  await setAiPlatformWith(
+    db,
+    COURSES_TENANT_SLUG,
+    { aiAllowed: true, noteReview: "ia", reason: "" },
+    "conta-mestre",
+  );
+  assert.equal(await aiBlockedWith(db, COURSES_TENANT_SLUG), AI_SUSPENDED);
+});

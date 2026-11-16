@@ -1,6 +1,12 @@
 import "server-only";
 import { resolveRecipient } from "@/core/email/recipient.ts";
-import { AddressDoesNotReceiveError, findPermanentBounce } from "./bounces.ts";
+import { type EmailKind, holdsEmail } from "@/core/tenant/demo-office.ts";
+import { type Database, db } from "@/db/index.ts";
+import { demoOutbox } from "@/db/schema.ts";
+import {
+  AddressDoesNotReceiveError,
+  findPermanentBounceWith,
+} from "./bounces.ts";
 
 export interface EmailAttachment {
   filename: string;
@@ -17,6 +23,18 @@ function attachmentType(filename: string): string {
 }
 
 export interface OutgoingEmail {
+  /**
+   * The office the message speaks for. Required, so that every message says
+   * whether it comes from the demonstration office, where the office's own
+   * messages never leave (change painel-livre-para-alunos).
+   */
+  tenant: { slug: string; demo?: boolean };
+  /** The person's own way in, or the office talking to someone (see
+   * `EmailKind`). Required for the same reason. */
+  kind: EmailKind;
+  /** The record the message is about, for the history to point at what
+   * would have gone out of the demonstration office. */
+  related?: { kind: "request" | "appointment"; protocol: string };
   to: string;
   /** Display name shown to the recipient, the tenant's own name. */
   fromName: string;
@@ -57,6 +75,27 @@ const REDIRECT_TO = process.env.EMAIL_REDIRECT_TO;
  * provider does not log the messages it sends through its API.
  */
 export async function sendEmail(email: OutgoingEmail): Promise<void> {
+  await sendEmailWith(db, email);
+}
+
+export async function sendEmailWith(
+  database: Database,
+  email: OutgoingEmail,
+): Promise<void> {
+  // The demonstration office's own messages stay on the platform, before
+  // anything else: no provider, no redirect, no bounce lookup.
+  if (holdsEmail(email.tenant, email.kind)) {
+    await database.insert(demoOutbox).values({
+      tenantSlug: email.tenant.slug,
+      to: email.to,
+      subject: email.subject,
+      text: email.text,
+      relatedKind: email.related?.kind ?? null,
+      relatedProtocol: email.related?.protocol ?? null,
+    });
+    return;
+  }
+
   const token = process.env.POSTMARK_SERVER_TOKEN;
   if (!token) {
     console.log(
@@ -86,7 +125,7 @@ export async function sendEmail(email: OutgoingEmail): Promise<void> {
   // that, past ten per cent, silences every serventia), and what reaches the
   // screen is the receiving server's own reason instead of the provider's
   // generic "não aceitou o envio".
-  const bounced = await findPermanentBounce(recipient.to);
+  const bounced = await findPermanentBounceWith(database, recipient.to);
   if (bounced) {
     throw new AddressDoesNotReceiveError(recipient.to, bounced.detail);
   }

@@ -16,7 +16,7 @@ export default async function MessagesPage({
 }) {
   const session = await getSession();
   const role = session?.user.role ?? "";
-  if (!session || !can(role, "desk.access", session.user.permissions)) {
+  if (!session || !can(role, "messages.use", session.user.permissions)) {
     notFound();
   }
   // The Átrios account only reads: straight to every conversation.

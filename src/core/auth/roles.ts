@@ -47,6 +47,11 @@ export const OFFICE_PERMISSIONS = [
   // mailbox. Every role that works for an office has it; a course learner,
   // who only came for the training, does not.
   "desk.access",
+  // The internal messenger, split off the desk (change
+  // painel-livre-para-alunos): a course participant has the desk of the
+  // demonstration office but not the conversations between the people in
+  // it, who are other participants.
+  "messages.use",
   "content.edit",
   "content.publish",
   "branding.edit",
@@ -139,6 +144,7 @@ export const RESERVED_PERMISSIONS = ["user.manage", "audit.manage"] as const;
 /** What the Tabelião/Registrador may grant to the other positions. */
 export const GRANTABLE_PERMISSIONS = [
   "desk.access",
+  "messages.use",
   "content.edit",
   "content.publish",
   "branding.edit",
@@ -190,6 +196,8 @@ export const DERIVED_FROM: Partial<Record<GrantablePermission, Permission>> = {
   // Whoever told the prefeitura the month's acts declares them to the RFB.
   "doi.manage": "titularidade.manage",
   "signer.use": "desk.access",
+  // Everyone at the desk kept the messenger the day it got its own line.
+  "messages.use": "desk.access",
   "transparency.manage": "content.edit",
   "numbering.manage": "content.edit",
   "access.manage": "user.manage",
@@ -264,6 +272,66 @@ export const PERMISSIONS = [
   ...PLATFORM_PERMISSIONS,
 ] as const;
 export type Permission = (typeof PERMISSIONS)[number];
+
+/**
+ * What a course participant may NOT do in the demonstration office (change
+ * painel-livre-para-alunos), where everything else of the office is theirs
+ * to use with made-up data. Each line closes something that would show the
+ * other participants (their list, their conversations, the audit of what
+ * they did), lock the office for all of them (two steps, hours), point the
+ * citizen's money somewhere (Pix), take a real credential or a real office's
+ * base (signer, certificates, imports), or spend AI credit.
+ */
+export const DEMO_CLOSED_PERMISSIONS = [
+  "user.manage",
+  "audit.manage",
+  "access.manage",
+  "messages.use",
+  "billing.edit",
+  "chat.manage",
+  "chat.settings",
+  "signer.use",
+  "certificates.manage",
+  "rcpn.import",
+  "attributions.import",
+  "knowledge.manage",
+  "dpo.assist",
+  "qualificacao.validate",
+] as const satisfies readonly OfficePermission[];
+
+/**
+ * What a course participant may do in the demonstration office: the rest,
+ * each one reviewed. Never derived from the list above by subtraction: a
+ * permission added to the office later is in neither list until someone
+ * decides, and roles.test.ts fails until they do.
+ */
+export const DEMO_OPEN_PERMISSIONS = [
+  "desk.access",
+  "content.edit",
+  "content.publish",
+  "branding.edit",
+  "requests.manage",
+  "channels.manage",
+  "guides.manage",
+  "iss.manage",
+  "titularidade.manage",
+  "censec.manage",
+  "doi.manage",
+  "qualificacao.manage",
+  "transparency.manage",
+  "numbering.manage",
+  "security-paper.manage",
+  "paper-orders.manage",
+  "daily-book.manage",
+  "rcpn.search",
+  "rcpn.certidao",
+  "rcpn.edit",
+  "rcpn.habilitacao",
+  "attributions.view",
+  "lgpd.decide",
+] as const satisfies readonly OfficePermission[];
+
+type OfficePermission = (typeof OFFICE_PERMISSIONS)[number];
 
 const ROLE_PERMISSIONS: Record<Role, readonly Permission[]> = {
   // The office owner: everything the office has, nothing the platform has.
@@ -341,9 +409,15 @@ export function defaultPermissions(role: string): readonly Permission[] {
 export function effectivePermissions(
   role: string,
   configured?: Partial<Record<string, readonly string[]>>,
+  tenant?: { demo?: boolean },
 ): readonly Permission[] {
   if (!isRole(role)) return [];
-  if (role === "admin" || role === "superadmin" || role === "learner") {
+  if (role === "learner") {
+    return tenant?.demo
+      ? ["admin.access", ...DEMO_OPEN_PERMISSIONS]
+      : ROLE_PERMISSIONS.learner;
+  }
+  if (role === "admin" || role === "superadmin") {
     return ROLE_PERMISSIONS[role];
   }
   const chosen = configured?.[role];
@@ -419,13 +493,19 @@ export function canAccessTenant(
  * learner's panel is the training and nothing else, so the overview, all
  * empty cards for them, is skipped. Null: the overview is the home.
  */
-export function homeFor(role: string): string | null {
-  return role === "learner" ? "/admin/ajuda" : null;
+export function homeFor(
+  role: string,
+  tenant?: { demo?: boolean },
+): string | null {
+  // In the demonstration office the participant has the desk, and the
+  // overview is where it starts (change painel-livre-para-alunos).
+  return role === "learner" && !tenant?.demo ? "/admin/ajuda" : null;
 }
 
 /** What each grantable permission opens, in the office's words. */
 export const GRANTABLE_LABELS: Record<GrantablePermission, string> = {
   "desk.access": "Visão geral e mesa de trabalho",
+  "messages.use": "Mensagens internas",
   "content.edit": "Editar o site e as configurações da serventia",
   "content.publish": "Publicar no site (editais, notícias, documentos)",
   "branding.edit": "Identidade visual (cores e logotipos)",

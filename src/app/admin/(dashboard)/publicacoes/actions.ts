@@ -170,7 +170,8 @@ export async function savePublication(
   // Bing, Yandex and Naver read IndexNow; Google does not and is unaffected.
   // Only on the instant this notice actually goes live, matching the
   // permission check above, not on every edit of an already-published one.
-  if (isFirstPublish) notifyIndexNow(await getSiteOrigin(), ["/editais"]);
+  if (isFirstPublish)
+    notifyIndexNow(tenant, await getSiteOrigin(), ["/editais"]);
   return { status: "success", fileUntil };
 }
 

@@ -56,6 +56,8 @@ export async function sendComplianceSubmittedEmails(
 
   const results = await Promise.allSettled([
     sendEmail({
+      tenant: tenant,
+      kind: "office",
       to: tenant.contacts.email,
       fromName: tenant.name,
       fromAddress: tenant.emailFrom,
@@ -64,6 +66,8 @@ export async function sendComplianceSubmittedEmails(
       text: renderEmailCardText(receipt, params.panelUrl),
     }),
     sendEmail({
+      tenant: tenant,
+      kind: "office",
       to: ATRIOS_INBOX,
       fromName: tenant.name,
       fromAddress: tenant.emailFrom,

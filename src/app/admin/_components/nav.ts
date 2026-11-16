@@ -102,7 +102,7 @@ export const ADMIN_NAV: readonly AdminNavItem[] = [
     label: "Mensagens internas",
     href: "/admin/mensagens",
     icon: "chat",
-    permission: "desk.access",
+    permission: "messages.use",
   },
   {
     group: "Canais do cidadão",

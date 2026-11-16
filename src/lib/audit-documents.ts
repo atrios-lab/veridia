@@ -71,6 +71,8 @@ export async function emailNotification(
   const number = notificationNumber(view);
   const deadline = formatOfficeDateTime(view.deadlineAt);
   await sendEmail({
+    tenant: tenant,
+    kind: "office",
     to: view.targetEmail,
     fromName: tenant.name,
     fromAddress: tenant.emailFrom,
@@ -97,6 +99,8 @@ export async function emailAuditReport(
   count: number,
 ): Promise<void> {
   await sendEmail({
+    tenant: tenant,
+    kind: "office",
     to,
     fromName: tenant.name,
     fromAddress: tenant.emailFrom,
@@ -116,6 +120,8 @@ export async function emailAnswerArrived(
   const number = notificationNumber(view);
   for (const holder of holders) {
     await sendEmail({
+      tenant: tenant,
+      kind: "office",
       to: holder.email,
       fromName: tenant.name,
       fromAddress: tenant.emailFrom,

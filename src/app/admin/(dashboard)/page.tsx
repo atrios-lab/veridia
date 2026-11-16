@@ -135,10 +135,11 @@ export default async function AdminHome() {
   if (!session) return null;
   const role = session.user.role ?? "";
   const granted = session.user.permissions;
-  // A role with no desk of its own (a course learner) starts somewhere else.
-  const home = homeFor(role);
-  if (home) redirect(home);
   const tenant = await getTenant();
+  // A role with no desk of its own (a course participant outside the
+  // demonstration office) starts somewhere else.
+  const home = homeFor(role, tenant);
+  if (home) redirect(home);
 
   const canRequests = can(role, "requests.manage", granted);
   const canChannels = can(role, "channels.manage", granted);
